@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: f8f18b49e656fc2488ee03d9b55c437e
+TextScriptImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 369088
+  packageName: 'Hand-painted Fantasy Weapons: Cosmic, Ghost, Fire & Medieval'
+  packageVersion: 1.0
+  assetPath: Assets/FBXFactory/MultiThemeStylizedWeapons/Info/README_FantasyWeapons.txt
+  uploadId: 889406

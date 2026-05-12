@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 29e03b21ae23fe641a37d867ee6fa3e1
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 369088
+  packageName: 'Hand-painted Fantasy Weapons: Cosmic, Ghost, Fire & Medieval'
+  packageVersion: 1.0
+  assetPath: Assets/FBXFactory/MultiThemeStylizedWeapons/URP/Prefabs/CosmicTheme/SM_Arrow_Cosmic_Pref
+    - URP.prefab
+  uploadId: 889406

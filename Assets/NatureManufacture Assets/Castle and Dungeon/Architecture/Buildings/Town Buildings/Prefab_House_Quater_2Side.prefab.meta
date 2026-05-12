@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 3e4d1e1bbf8b2b2439e629cbfd7924be
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 277180
+  packageName: Modular Castle & Dungeon
+  packageVersion: 1.0.2
+  assetPath: Assets/NatureManufacture Assets/Castle and Dungeon/Architecture/Buildings/Town
+    Buildings/Prefab_House_Quater_2Side.prefab
+  uploadId: 738007

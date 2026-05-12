@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: dc5fca33c46c6dd4ebe5bfb402809320
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 277180
+  packageName: Modular Castle & Dungeon
+  packageVersion: 1.0.2
+  assetPath: Assets/NatureManufacture Assets/Castle and Dungeon/Architecture/Buildings/Big
+    Tower/Prefab_Big_Tower_Socket.prefab
+  uploadId: 738007

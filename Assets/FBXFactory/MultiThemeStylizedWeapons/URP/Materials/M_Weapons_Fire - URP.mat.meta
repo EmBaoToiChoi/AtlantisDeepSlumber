@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: f17854db754d81e47acecad0e1cf9d20
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 369088
+  packageName: 'Hand-painted Fantasy Weapons: Cosmic, Ghost, Fire & Medieval'
+  packageVersion: 1.0
+  assetPath: Assets/FBXFactory/MultiThemeStylizedWeapons/URP/Materials/M_Weapons_Fire
+    - URP.mat
+  uploadId: 889406

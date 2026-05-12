@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 8a69d9ab7906d7a4f8932defd430da60
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 369088
+  packageName: 'Hand-painted Fantasy Weapons: Cosmic, Ghost, Fire & Medieval'
+  packageVersion: 1.0
+  assetPath: Assets/FBXFactory/MultiThemeStylizedWeapons/URP/Prefabs/GhostTheme/SM_Hammer_Ghost_Pref
+    - URP.prefab
+  uploadId: 889406

@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 71b9f6e7815076c4e9431d707f32f73a
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 277180
+  packageName: Modular Castle & Dungeon
+  packageVersion: 1.0.2
+  assetPath: Assets/NatureManufacture Assets/Castle and Dungeon/Architecture/Buildings/Octagon
+    Towers/Prefab_Tower_octagon_Long_Doors.prefab
+  uploadId: 738007

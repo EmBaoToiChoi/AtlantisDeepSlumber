@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 6b6a47dca58a3c444950a258738cc0c8
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 369088
+  packageName: 'Hand-painted Fantasy Weapons: Cosmic, Ghost, Fire & Medieval'
+  packageVersion: 1.0
+  assetPath: Assets/FBXFactory/MultiThemeStylizedWeapons/HDRP/Materials/M_Weapons_Ghost
+    - HDRP.mat
+  uploadId: 889406

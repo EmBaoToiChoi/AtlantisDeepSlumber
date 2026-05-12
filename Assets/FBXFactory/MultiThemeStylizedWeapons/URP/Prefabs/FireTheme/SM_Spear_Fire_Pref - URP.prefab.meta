@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 90207b1735f06af42be30814438278a4
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 369088
+  packageName: 'Hand-painted Fantasy Weapons: Cosmic, Ghost, Fire & Medieval'
+  packageVersion: 1.0
+  assetPath: Assets/FBXFactory/MultiThemeStylizedWeapons/URP/Prefabs/FireTheme/SM_Spear_Fire_Pref
+    - URP.prefab
+  uploadId: 889406

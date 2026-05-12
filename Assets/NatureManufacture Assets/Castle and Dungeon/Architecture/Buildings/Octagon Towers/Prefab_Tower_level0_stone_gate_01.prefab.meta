@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 20864bd9b1da08a42a13af73f8aa4b69
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 277180
+  packageName: Modular Castle & Dungeon
+  packageVersion: 1.0.2
+  assetPath: Assets/NatureManufacture Assets/Castle and Dungeon/Architecture/Buildings/Octagon
+    Towers/Prefab_Tower_level0_stone_gate_01.prefab
+  uploadId: 738007

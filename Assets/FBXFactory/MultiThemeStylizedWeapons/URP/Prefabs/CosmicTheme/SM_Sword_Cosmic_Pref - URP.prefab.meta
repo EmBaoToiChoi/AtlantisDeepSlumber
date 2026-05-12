@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: cfe8dee003e8aba428e7add73e674c20
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 369088
+  packageName: 'Hand-painted Fantasy Weapons: Cosmic, Ghost, Fire & Medieval'
+  packageVersion: 1.0
+  assetPath: Assets/FBXFactory/MultiThemeStylizedWeapons/URP/Prefabs/CosmicTheme/SM_Sword_Cosmic_Pref
+    - URP.prefab
+  uploadId: 889406

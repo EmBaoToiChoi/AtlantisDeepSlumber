@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: a02eccaad34e34a4bb4854e265e654bf
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 369088
+  packageName: 'Hand-painted Fantasy Weapons: Cosmic, Ghost, Fire & Medieval'
+  packageVersion: 1.0
+  assetPath: Assets/FBXFactory/MultiThemeStylizedWeapons/HDRP/Prefabs/CosmicTheme/SM_Shield_Cosmic_Pref.prefab
+  uploadId: 889406

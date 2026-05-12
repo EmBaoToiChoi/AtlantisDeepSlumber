@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: d72128d41e962bb4ebf49685cc2aedda
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 277180
+  packageName: Modular Castle & Dungeon
+  packageVersion: 1.0.2
+  assetPath: Assets/NatureManufacture Assets/Castle and Dungeon/Architecture/Buildings/Interior
+    Segments/Prefabs/Prefab_interior_segment_small_03.prefab
+  uploadId: 738007

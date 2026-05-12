@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: b2aaf4318dc26e74a9ee2899977cce27
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 277180
+  packageName: Modular Castle & Dungeon
+  packageVersion: 1.0.2
+  assetPath: Assets/NatureManufacture Assets/Castle and Dungeon/Architecture/Buildings/Town
+    Buildings/Prefab_Building_Support.prefab
+  uploadId: 738007

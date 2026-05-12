@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 72ae526d748d8f44c8911bbe39574d1a
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 277180
+  packageName: Modular Castle & Dungeon
+  packageVersion: 1.0.2
+  assetPath: Assets/NatureManufacture Assets/Castle and Dungeon/Architecture/Buildings/Main
+    Gates/Prefab_Main_Gate_2.prefab
+  uploadId: 738007

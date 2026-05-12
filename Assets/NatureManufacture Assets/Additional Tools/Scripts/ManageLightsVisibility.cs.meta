@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: da5c0f14bcfe5b54fb7c583e4c4f3c2a
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 277180
+  packageName: Modular Castle & Dungeon
+  packageVersion: 1.0.2
+  assetPath: Assets/NatureManufacture Assets/Additional Tools/Scripts/ManageLightsVisibility.cs
+  uploadId: 738007
