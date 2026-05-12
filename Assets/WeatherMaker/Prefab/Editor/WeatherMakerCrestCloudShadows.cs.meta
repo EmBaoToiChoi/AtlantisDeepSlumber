@@ -1,9 +1,0 @@
-fileFormatVersion: 2
-guid: 34a11f2e784807845847fc0dc8fb16f2
-AssetOrigin:
-  serializedVersion: 1
-  productId: 60955
-  packageName: Weather Maker - Volumetric Clouds and Weather System for Unity
-  packageVersion: 8.0.4
-  assetPath: Assets/WeatherMaker/Prefab/Editor/WeatherMakerCrestCloudShadows.cs
-  uploadId: 875042
