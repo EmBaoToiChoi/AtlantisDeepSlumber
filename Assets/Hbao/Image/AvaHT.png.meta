@@ -1,5 +1,5 @@
 fileFormatVersion: 2
-guid: 6c0fe9e81e765ba47bde26fb305b4ca0
+guid: cccffab409d7b574686157f7d5af82f2
 TextureImporter:
   internalIDToNameTable: []
   externalObjects: {}
@@ -110,177 +110,67 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: Slider_0
+      name: AvaHT_0
       rect:
         serializedVersion: 2
-        x: 0
+        x: 12
         y: 0
-        width: 611
+        width: 1513
         height: 1024
       alignment: 0
-      pivot: {x: 0.5, y: 0.5}
+      pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 04e90ee54183a1b42a2744c30715f32b
-      internalID: 1435778270
+      spriteID: 2713716aa97db8141bfc4efc7bf8a218
+      internalID: -150279910
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Slider_1
+      name: AvaHT_1
       rect:
         serializedVersion: 2
-        x: 84
-        y: 1015
-        width: 4
-        height: 5
-      alignment: 0
-      pivot: {x: 0.5, y: 0.5}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: 9b609b9f30bc8d4458ed334130235cab
-      internalID: -1731101268
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: Slider_2
-      rect:
-        serializedVersion: 2
-        x: 1382
-        y: 626
-        width: 154
-        height: 197
-      alignment: 0
-      pivot: {x: 0.5, y: 0.5}
-      border: {x: 151, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: eb18ff91f98397f4eb5843ffe578ecf7
-      internalID: -1920775487
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: Slider_3
-      rect:
-        serializedVersion: 2
-        x: 84
-        y: 983
-        width: 4
-        height: 7
-      alignment: 0
-      pivot: {x: 0.5, y: 0.5}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: a337cb6ee4e63d34993bedcfa6b5d250
-      internalID: -562861573
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: Slider_4
-      rect:
-        serializedVersion: 2
-        x: 84
-        y: 975
-        width: 4
-        height: 5
-      alignment: 0
-      pivot: {x: 0.5, y: 0.5}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: 29a49f9390e8f3c4882d8a28eecc7693
-      internalID: -280944467
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: Slider_5
-      rect:
-        serializedVersion: 2
-        x: 84
-        y: 952
-        width: 4
+        x: 83
+        y: 328
+        width: 5
         height: 4
       alignment: 0
-      pivot: {x: 0.5, y: 0.5}
+      pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: f88123b153e1da048a328bdc079f2e86
-      internalID: 1111840686
+      spriteID: 64d37b41f7f55dc4eb84e7407011a4c4
+      internalID: 329946784
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Slider_6
+      name: AvaHT_2
       rect:
         serializedVersion: 2
-        x: 1382
-        y: 437
-        width: 149
-        height: 177
+        x: 83
+        y: 168
+        width: 5
+        height: 4
       alignment: 0
-      pivot: {x: 0.5, y: 0.5}
-      border: {x: 149, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: e9a2b86d5d9d434409af6e319c59f8d7
-      internalID: 642091058
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: Slider_7
-      rect:
-        serializedVersion: 2
-        x: 1385
-        y: 246
-        width: 151
-        height: 183
-      alignment: 0
-      pivot: {x: 0.5, y: 0.5}
+      pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 79cd43ed9c34d984dbc0ceb6c45b5ff2
-      internalID: 1829162711
+      spriteID: c4ce0156ff8c29d478c2055102191357
+      internalID: -1227561504
       vertices: []
       indices: 
       edges: []
@@ -289,7 +179,7 @@ TextureImporter:
     customData: 
     physicsShape: []
     bones: []
-    spriteID: 8b59091f37a65e04a9cc140d22bfeca5
+    spriteID: e5c4d6b222b9ba74b92bd9e621ff0cbe
     internalID: 0
     vertices: []
     indices: 
@@ -299,14 +189,9 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      Slider_0: 1435778270
-      Slider_1: -1731101268
-      Slider_2: -1920775487
-      Slider_3: -562861573
-      Slider_4: -280944467
-      Slider_5: 1111840686
-      Slider_6: 642091058
-      Slider_7: 1829162711
+      AvaHT_0: -150279910
+      AvaHT_1: 329946784
+      AvaHT_2: -1227561504
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 
