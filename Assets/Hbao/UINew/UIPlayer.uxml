@@ -1,0 +1,8 @@
+<ui:UXML xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
+    <ui:VisualElement name="HUD_Player" style="flex-grow: 1;">
+        <ui:VisualElement name="Avatar" style="flex-grow: 1; width: 100px; height: 100px; border-top-left-radius: 50px; border-top-right-radius: 50px; border-bottom-right-radius: 50px; border-bottom-left-radius: 50px;" />
+        <ui:ProgressBar value="22" title="my-progress" name="HPBar" />
+        <ui:ProgressBar value="22" title="my-progress" name="MPBar" />
+        <ui:ProgressBar value="22" title="my-progress" name="ExpBar" />
+    </ui:VisualElement>
+</ui:UXML>
