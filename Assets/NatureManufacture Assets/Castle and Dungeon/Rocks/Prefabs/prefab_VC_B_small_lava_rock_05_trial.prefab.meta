@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 752c6213bb439b34088cf9e09e1a6167
+timeCreated: 1517581605
+licenseType: Store
+NativeFormatImporter:
+  mainObjectFileID: 100100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 277180
+  packageName: Modular Castle & Dungeon
+  packageVersion: 1.0.2
+  assetPath: Assets/NatureManufacture Assets/Castle and Dungeon/Rocks/Prefabs/prefab_VC_B_small_lava_rock_05_trial.prefab
+  uploadId: 738007

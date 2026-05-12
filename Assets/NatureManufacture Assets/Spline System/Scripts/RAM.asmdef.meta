@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 2035512de29620a4cae72e2bad67e7a8
+AssemblyDefinitionImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 277180
+  packageName: Modular Castle & Dungeon
+  packageVersion: 1.0.2
+  assetPath: Assets/NatureManufacture Assets/Spline System/Scripts/RAM.asmdef
+  uploadId: 738007

@@ -1,0 +1,17 @@
+fileFormatVersion: 2
+guid: 305a9c249d081a54a8aa36a778da851d
+ShaderImporter:
+  externalObjects: {}
+  defaultTextures: []
+  nonModifiableTextures: []
+  preprocessorOverride: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 277180
+  packageName: Modular Castle & Dungeon
+  packageVersion: 1.0.2
+  assetPath: Assets/NatureManufacture Assets/Particle Shaders/NM_2023_Volcano Distortion.shader
+  uploadId: 738007

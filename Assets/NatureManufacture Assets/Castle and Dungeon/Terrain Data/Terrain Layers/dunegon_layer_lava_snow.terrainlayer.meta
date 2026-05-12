@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: c605eb25ebb53364394d206074c20304
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 8574412962073106934
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 277180
+  packageName: Modular Castle & Dungeon
+  packageVersion: 1.0.2
+  assetPath: Assets/NatureManufacture Assets/Castle and Dungeon/Terrain Data/Terrain
+    Layers/dunegon_layer_lava_snow.terrainlayer
+  uploadId: 738007

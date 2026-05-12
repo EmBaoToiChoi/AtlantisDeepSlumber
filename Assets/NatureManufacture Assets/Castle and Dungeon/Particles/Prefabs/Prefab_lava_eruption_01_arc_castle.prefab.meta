@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: ddaf12dbc4f0eed4d9fbb819a4c05bc5
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 277180
+  packageName: Modular Castle & Dungeon
+  packageVersion: 1.0.2
+  assetPath: Assets/NatureManufacture Assets/Castle and Dungeon/Particles/Prefabs/Prefab_lava_eruption_01_arc_castle.prefab
+  uploadId: 738007

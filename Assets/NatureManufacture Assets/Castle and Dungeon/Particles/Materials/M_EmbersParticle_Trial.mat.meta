@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 6becc6c88f3fae9438547d5cf8e93670
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 277180
+  packageName: Modular Castle & Dungeon
+  packageVersion: 1.0.2
+  assetPath: Assets/NatureManufacture Assets/Castle and Dungeon/Particles/Materials/M_EmbersParticle_Trial.mat
+  uploadId: 738007

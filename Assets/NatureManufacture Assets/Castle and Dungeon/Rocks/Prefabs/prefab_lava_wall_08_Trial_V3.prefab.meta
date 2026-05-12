@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 320fc75c0a0afe74aaa9f10ea93ff6dd
+timeCreated: 1519114739
+licenseType: Store
+NativeFormatImporter:
+  mainObjectFileID: 100100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 277180
+  packageName: Modular Castle & Dungeon
+  packageVersion: 1.0.2
+  assetPath: Assets/NatureManufacture Assets/Castle and Dungeon/Rocks/Prefabs/prefab_lava_wall_08_Trial_V3.prefab
+  uploadId: 738007
