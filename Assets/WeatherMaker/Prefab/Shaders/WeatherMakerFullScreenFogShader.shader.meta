@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: f86ade4d77234ec45b41d91a84392861
+timeCreated: 1478993629
+licenseType: Store
+ShaderImporter:
+  defaultTextures: []
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 60955
+  packageName: Weather Maker - Volumetric Clouds and Weather System for Unity
+  packageVersion: 8.0.4
+  assetPath: Assets/WeatherMaker/Prefab/Shaders/WeatherMakerFullScreenFogShader.shader
+  uploadId: 875042

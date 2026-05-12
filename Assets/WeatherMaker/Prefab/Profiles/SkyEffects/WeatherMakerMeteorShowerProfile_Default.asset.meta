@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 5d7a91a2f2c6aae49b26268bb4d61f52
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 11400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 60955
+  packageName: Weather Maker - Volumetric Clouds and Weather System for Unity
+  packageVersion: 8.0.4
+  assetPath: Assets/WeatherMaker/Prefab/Profiles/SkyEffects/WeatherMakerMeteorShowerProfile_Default.asset
+  uploadId: 875042

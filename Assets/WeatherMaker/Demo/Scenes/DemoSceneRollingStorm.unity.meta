@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: c902aa954397acd49a4f2cc2511021b7
+timeCreated: 1484928473
+licenseType: Store
+DefaultImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 60955
+  packageName: Weather Maker - Volumetric Clouds and Weather System for Unity
+  packageVersion: 8.0.4
+  assetPath: Assets/WeatherMaker/Demo/Scenes/DemoSceneRollingStorm.unity
+  uploadId: 875042

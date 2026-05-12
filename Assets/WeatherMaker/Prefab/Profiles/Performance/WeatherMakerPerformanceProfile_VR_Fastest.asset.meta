@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 9c57f8995b72826408384e0e50e859c7
+timeCreated: 1542214077
+licenseType: Store
+NativeFormatImporter:
+  mainObjectFileID: 11400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 60955
+  packageName: Weather Maker - Volumetric Clouds and Weather System for Unity
+  packageVersion: 8.0.4
+  assetPath: Assets/WeatherMaker/Prefab/Profiles/Performance/WeatherMakerPerformanceProfile_VR_Fastest.asset
+  uploadId: 875042

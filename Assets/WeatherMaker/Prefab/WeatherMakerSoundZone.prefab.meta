@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 02b10113a80fe214da778944e6604c94
+timeCreated: 1504058674
+licenseType: Store
+NativeFormatImporter:
+  mainObjectFileID: 100100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 60955
+  packageName: Weather Maker - Volumetric Clouds and Weather System for Unity
+  packageVersion: 8.0.4
+  assetPath: Assets/WeatherMaker/Prefab/WeatherMakerSoundZone.prefab
+  uploadId: 875042

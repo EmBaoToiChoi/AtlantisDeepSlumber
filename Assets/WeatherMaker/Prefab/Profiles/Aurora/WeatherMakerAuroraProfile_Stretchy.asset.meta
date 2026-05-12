@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 57b9d1272f350a04fbaff10ce7e4a7c5
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 11400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 60955
+  packageName: Weather Maker - Volumetric Clouds and Weather System for Unity
+  packageVersion: 8.0.4
+  assetPath: Assets/WeatherMaker/Prefab/Profiles/Aurora/WeatherMakerAuroraProfile_Stretchy.asset
+  uploadId: 875042

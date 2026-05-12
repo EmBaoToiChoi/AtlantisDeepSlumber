@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: cf8c4c22a2fd5c0499b147feba5d890b
+timeCreated: 1479423324
+licenseType: Store
+NativeFormatImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 60955
+  packageName: Weather Maker - Volumetric Clouds and Weather System for Unity
+  packageVersion: 8.0.4
+  assetPath: Assets/WeatherMaker/Prefab/Material/Core/WeatherMakerFullScreenBlurWetnessOverlayMaterial.mat
+  uploadId: 875042

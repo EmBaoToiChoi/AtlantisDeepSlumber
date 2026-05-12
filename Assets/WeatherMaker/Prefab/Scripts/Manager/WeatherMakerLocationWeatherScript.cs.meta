@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: c6d3cdead5487dc4e84f01bccd4541de
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 60955
+  packageName: Weather Maker - Volumetric Clouds and Weather System for Unity
+  packageVersion: 8.0.4
+  assetPath: Assets/WeatherMaker/Prefab/Scripts/Manager/WeatherMakerLocationWeatherScript.cs
+  uploadId: 875042

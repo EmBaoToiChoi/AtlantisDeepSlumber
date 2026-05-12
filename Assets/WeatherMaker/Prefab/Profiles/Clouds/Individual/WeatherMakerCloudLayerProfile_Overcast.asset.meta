@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 878b0ea7909ea1344a0360fc3a392dac
+timeCreated: 1511550698
+licenseType: Store
+NativeFormatImporter:
+  mainObjectFileID: 11400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 60955
+  packageName: Weather Maker - Volumetric Clouds and Weather System for Unity
+  packageVersion: 8.0.4
+  assetPath: Assets/WeatherMaker/Prefab/Profiles/Clouds/Individual/WeatherMakerCloudLayerProfile_Overcast.asset
+  uploadId: 875042

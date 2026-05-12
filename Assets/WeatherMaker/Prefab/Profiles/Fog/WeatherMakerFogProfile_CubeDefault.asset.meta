@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: fbc56b59c83f6e744bf93f3dd6076a23
+timeCreated: 1511283395
+licenseType: Store
+NativeFormatImporter:
+  mainObjectFileID: 11400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 60955
+  packageName: Weather Maker - Volumetric Clouds and Weather System for Unity
+  packageVersion: 8.0.4
+  assetPath: Assets/WeatherMaker/Prefab/Profiles/Fog/WeatherMakerFogProfile_CubeDefault.asset
+  uploadId: 875042

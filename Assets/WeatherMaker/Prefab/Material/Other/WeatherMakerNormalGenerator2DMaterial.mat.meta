@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 74e7829f8e5595546884d45c3c35dadd
+timeCreated: 1506537079
+licenseType: Store
+NativeFormatImporter:
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 60955
+  packageName: Weather Maker - Volumetric Clouds and Weather System for Unity
+  packageVersion: 8.0.4
+  assetPath: Assets/WeatherMaker/Prefab/Material/Other/WeatherMakerNormalGenerator2DMaterial.mat
+  uploadId: 875042

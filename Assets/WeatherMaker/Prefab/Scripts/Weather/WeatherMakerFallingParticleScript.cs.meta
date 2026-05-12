@@ -1,0 +1,19 @@
+fileFormatVersion: 2
+guid: 5fadb2792073be54387ad764e856d440
+timeCreated: 1448044358
+licenseType: Store
+MonoImporter:
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 60955
+  packageName: Weather Maker - Volumetric Clouds and Weather System for Unity
+  packageVersion: 8.0.4
+  assetPath: Assets/WeatherMaker/Prefab/Scripts/Weather/WeatherMakerFallingParticleScript.cs
+  uploadId: 875042

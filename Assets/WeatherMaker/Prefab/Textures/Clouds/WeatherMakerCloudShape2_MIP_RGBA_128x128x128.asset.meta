@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: be1ad71395d88014287b3a86a01067da
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 60955
+  packageName: Weather Maker - Volumetric Clouds and Weather System for Unity
+  packageVersion: 8.0.4
+  assetPath: Assets/WeatherMaker/Prefab/Textures/Clouds/WeatherMakerCloudShape2_MIP_RGBA_128x128x128.asset
+  uploadId: 875042

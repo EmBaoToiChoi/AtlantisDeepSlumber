@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: fdfca6407acbe1f4a992105d1214f392
+timeCreated: 1511939852
+licenseType: Store
+DefaultImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 60955
+  packageName: Weather Maker - Volumetric Clouds and Weather System for Unity
+  packageVersion: 8.0.4
+  assetPath: Assets/WeatherMaker/Prefab/Textures/Precipitation/RipplesOrig.zip
+  uploadId: 875042

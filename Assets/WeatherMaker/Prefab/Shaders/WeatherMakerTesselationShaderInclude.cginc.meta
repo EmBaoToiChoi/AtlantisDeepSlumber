@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: c6702d008d0fd1045bbeeb4ac8c64e57
+timeCreated: 1538966183
+licenseType: Store
+ShaderImporter:
+  defaultTextures: []
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 60955
+  packageName: Weather Maker - Volumetric Clouds and Weather System for Unity
+  packageVersion: 8.0.4
+  assetPath: Assets/WeatherMaker/Prefab/Shaders/WeatherMakerTesselationShaderInclude.cginc
+  uploadId: 875042

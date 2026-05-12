@@ -1,0 +1,12 @@
+fileFormatVersion: 2
+guid: 54fbbf098d116effa00081aba8ad6659
+NativeFormatImporter:
+  userData: 
+  assetBundleName: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 60955
+  packageName: Weather Maker - Volumetric Clouds and Weather System for Unity
+  packageVersion: 8.0.4
+  assetPath: Assets/WeatherMaker/Prefab/Flares/WeatherMakerFlare50mmZoom.flare
+  uploadId: 875042

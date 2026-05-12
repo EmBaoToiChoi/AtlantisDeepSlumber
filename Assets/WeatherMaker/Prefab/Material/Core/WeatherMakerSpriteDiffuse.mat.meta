@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 14944f4f5f5b06448ae56ce31b80c33c
+timeCreated: 1458331623
+licenseType: Store
+NativeFormatImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 60955
+  packageName: Weather Maker - Volumetric Clouds and Weather System for Unity
+  packageVersion: 8.0.4
+  assetPath: Assets/WeatherMaker/Prefab/Material/Core/WeatherMakerSpriteDiffuse.mat
+  uploadId: 875042

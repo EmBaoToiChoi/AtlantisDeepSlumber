@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 03edec7f26c292e49b6b51fe0bc08a8c
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 60955
+  packageName: Weather Maker - Volumetric Clouds and Weather System for Unity
+  packageVersion: 8.0.4
+  assetPath: Assets/WeatherMaker/Prefab/Shaders/Resources/WeatherMakerBlitMaterial.mat
+  uploadId: 875042

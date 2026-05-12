@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: fb9e9dd4674a53e4ea363051247edbd9
+ShaderImporter:
+  externalObjects: {}
+  defaultTextures: []
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 60955
+  packageName: Weather Maker - Volumetric Clouds and Weather System for Unity
+  packageVersion: 8.0.4
+  assetPath: Assets/WeatherMaker/Prefab/Shaders/WeatherMakerCloudParticleShader.shader
+  uploadId: 875042

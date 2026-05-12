@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 3e56087fe9ae1b2429abe3ce90c89800
+timeCreated: 1508182311
+licenseType: Store
+NativeFormatImporter:
+  mainObjectFileID: 11400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 60955
+  packageName: Weather Maker - Volumetric Clouds and Weather System for Unity
+  packageVersion: 8.0.4
+  assetPath: Assets/WeatherMaker/Prefab/Profiles/Clouds/Profiles/WeatherMakerCloudProfileVolumetric_Hurricane.asset
+  uploadId: 875042

@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: a4bf6bd342cbc4e4cab59a122194d93d
+timeCreated: 1447976461
+licenseType: Store
+NativeFormatImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 60955
+  packageName: Weather Maker - Volumetric Clouds and Weather System for Unity
+  packageVersion: 8.0.4
+  assetPath: Assets/WeatherMaker/Demo/DemoResources/Background.prefab
+  uploadId: 875042

@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 45a8203c07403734387bbd9cfbbe6555
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 11400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 60955
+  packageName: Weather Maker - Volumetric Clouds and Weather System for Unity
+  packageVersion: 8.0.4
+  assetPath: Assets/WeatherMaker/Prefab/Profiles/Clouds/NoiseGenerator/Default/Shape/WeatherMakerCloudNoiseProfile_ShapeA_Default.asset
+  uploadId: 875042

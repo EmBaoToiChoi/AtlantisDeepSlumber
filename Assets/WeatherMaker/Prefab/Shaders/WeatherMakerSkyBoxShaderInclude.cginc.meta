@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: bad293523eecaf74dabfb6ce614160b5
+timeCreated: 1488469583
+licenseType: Store
+ShaderImporter:
+  defaultTextures: []
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 60955
+  packageName: Weather Maker - Volumetric Clouds and Weather System for Unity
+  packageVersion: 8.0.4
+  assetPath: Assets/WeatherMaker/Prefab/Shaders/WeatherMakerSkyBoxShaderInclude.cginc
+  uploadId: 875042

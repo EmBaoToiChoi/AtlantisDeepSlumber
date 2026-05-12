@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: e13b3a1f0e0e43645b376e91d4fb1a91
+DefaultImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 60955
+  packageName: Weather Maker - Volumetric Clouds and Weather System for Unity
+  packageVersion: 8.0.4
+  assetPath: Assets/WeatherMaker/Demo/Scenes/DemoSceneHorizon.unity
+  uploadId: 875042
