@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 7ed1c1da341363d46975e044a3404ded
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 277180
+  packageName: Modular Castle & Dungeon
+  packageVersion: 1.0.2
+  assetPath: Assets/NatureManufacture Assets/Castle and Dungeon/Architecture/Walls
+    and Floors/Prefabs/Prefab_Wall_01_Door_Small.prefab
+  uploadId: 738007

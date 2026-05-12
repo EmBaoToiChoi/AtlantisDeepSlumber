@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 0c09b5ac3f2b3a44eb92ef6fc544e56e
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 277180
+  packageName: Modular Castle & Dungeon
+  packageVersion: 1.0.2
+  assetPath: Assets/NatureManufacture Assets/Castle and Dungeon/Architecture/Walls
+    and Floors/Prefabs/Prefab_Wall_Tower_Octagon_Short_Doors_Windows.prefab
+  uploadId: 738007
