@@ -1,8 +1,7 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
     <Style src="project://database/Assets/PLuan/MainMenu/Code/AtlantisMenu.uss?fileID=7433441132597879392&amp;guid=8fa4b76500634d046bac501785335e61&amp;type=3#AtlantisMenu" />
-    <ui:VisualElement class="root-screen" style="background-image: url(&quot;project://database/Assets/PLuan/MainMenu/IMG/background1.jpg?fileID=2800000&amp;guid=18cde0b174f4d2c409dd71cb4711659b&amp;type=3#background1&quot;);">
+    <ui:VisualElement class="root-screen" style="-unity-font-definition: url(&quot;project://database/Assets/TextMesh%20Pro/Examples%20&amp;%20Extras/Fonts/Electronic%20Highway%20Sign.TTF?fileID=12800000&amp;guid=8a2b9e2a607dd2143b58c44bc32410b4&amp;type=3#Electronic Highway Sign&quot;);">
         <ui:VisualElement name="main-menu-panel" class="menu-container">
-            <ui:VisualElement name="game-logo" class="game-logo" style="background-image: url(&quot;project://database/Assets/PLuan/MainMenu/IMG/logo.png?fileID=2800000&amp;guid=fc849ccb21b4464458f4eb354745fdfa&amp;type=3#logo&quot;);" />
             <ui:VisualElement class="button-group">
                 <ui:Button name="btn-play" text="PLAY" class="menu-btn" />
                 <ui:Button name="btn-options" text="OPTIONS" class="menu-btn" />
@@ -10,7 +9,6 @@
             </ui:VisualElement>
             <ui:Label text="Atlantis: Deep Slumber // Pre-Alpha 0.2" class="version-text" />
         </ui:VisualElement>
-        
         <ui:VisualElement name="network-menu-panel" class="menu-container hidden-panel">
             <ui:Label text="SESSION LOBBY" class="panel-title" />
             <ui:VisualElement class="button-group">
@@ -20,7 +18,6 @@
             </ui:VisualElement>
             <ui:Label text="Network System // Ready" class="version-text" />
         </ui:VisualElement>
-        
         <ui:VisualElement name="create-room-panel" class="menu-container hidden-panel">
             <ui:Label text="HOST SESSION" class="panel-title" />
             <ui:VisualElement class="form-group">
@@ -43,7 +40,6 @@
                 <ui:Button name="btn-create-back" text="&lt; BACK" class="menu-btn back-btn" />
             </ui:VisualElement>
         </ui:VisualElement>
-        
         <ui:VisualElement name="join-room-panel" class="menu-container large-panel hidden-panel">
             <ui:Label text="SESSION BROWSER" class="panel-title" />
             <ui:VisualElement class="join-id-bar">
@@ -57,7 +53,7 @@
                 <ui:Label text="PLAYERS" class="col-players" />
                 <ui:Label text="ACTION" class="col-action" />
             </ui:VisualElement>
-                    <ui:ScrollView class="room-list" mode="Vertical">
+            <ui:ScrollView mode="Vertical" class="room-list">
                 <ui:VisualElement class="room-item">
                     <ui:Label text="[P] #849201" class="room-col col-id" />
                     <ui:Label text="🔒 Abyss Crawlers" class="room-col col-name" />
@@ -65,7 +61,6 @@
                     <ui:Label text="4/5" class="room-col col-players" />
                     <ui:Button name="btn-join-item-1" text="JOIN" class="join-mini-btn room-col col-action" />
                 </ui:VisualElement>
-                
                 <ui:VisualElement class="room-item">
                     <ui:Label text="    #310294" class="room-col col-id" />
                     <ui:Label text="Deep Slumber #1" class="room-col col-name" />
@@ -78,7 +73,6 @@
                 <ui:Button name="btn-join-back" text="&lt; BACK" class="menu-btn back-btn" />
             </ui:VisualElement>
         </ui:VisualElement>
-        
         <ui:VisualElement name="join-auth-panel" class="menu-container hidden-panel">
             <ui:Label text="ENTER PASSWORD" class="panel-title" />
             <ui:Label name="auth-room-name" text="SESSION: ..." class="auth-room-label" />
@@ -91,7 +85,6 @@
                 <ui:Button name="btn-auth-cancel" text="&lt; CANCEL" class="menu-btn back-btn" />
             </ui:VisualElement>
         </ui:VisualElement>
-        
         <ui:VisualElement name="options-menu-panel" class="menu-container large-panel hidden-panel">
             <ui:Label text="SYSTEM OPTIONS" class="panel-title" />
             <ui:VisualElement class="options-tabs">

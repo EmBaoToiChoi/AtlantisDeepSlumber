@@ -1,9 +1,14 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UIElements;
+using UnityEngine.Video; // Bổ sung thư viện xử lý Video
 
 public class AtlantisMenuController : MonoBehaviour
 {
+    [Header("Video Background Config")]
+    [SerializeField] private VideoPlayer _videoPlayer;
+    [SerializeField] private RenderTexture _videoRenderTexture;
+
     private UIDocument _uiDocument;
     private VisualElement _root;
 
@@ -14,7 +19,7 @@ public class AtlantisMenuController : MonoBehaviour
     private VisualElement _joinRoomPanel;
     private VisualElement _joinAuthPanel;
     private VisualElement _optionsMenuPanel;
-    private VisualElement _gameLogo;
+    // Đã xóa biến _gameLogo
 
     // Cấu trúc Dữ liệu đồng bộ HTML5 Particle
     private class ParticleData
@@ -33,7 +38,6 @@ public class AtlantisMenuController : MonoBehaviour
     }
 
     private List<ParticleData> _particles = new List<ParticleData>();
-    private float _glowTimer = 0f;
     private string _currentTargetRoomName = "";
     private const string DefaultRoomNamePlaceholder = "Atlantis Explorer";
 
@@ -50,7 +54,21 @@ public class AtlantisMenuController : MonoBehaviour
         _joinRoomPanel = _root.Q<VisualElement>("join-room-panel");
         _joinAuthPanel = _root.Q<VisualElement>("join-auth-panel");
         _optionsMenuPanel = _root.Q<VisualElement>("options-menu-panel");
-        _gameLogo = _root.Q<VisualElement>("game-logo");
+
+        // Gán Video RenderTexture làm nền tự động co dãn cho root-screen
+        var rootScreen = _root.Q<VisualElement>(className: "root-screen") ?? _root;
+        if (_videoRenderTexture != null)
+        {
+            // Dùng Background.FromRenderTexture để chuyển đổi chuẩn xác sang Background
+            rootScreen.style.backgroundImage = new StyleBackground(Background.FromRenderTexture(_videoRenderTexture));
+        }
+
+        // Đảm bảo Video tự động lặp (Loop) và chạy
+        if (_videoPlayer != null)
+        {
+            _videoPlayer.isLooping = true;
+            _videoPlayer.Play();
+        }
 
         // 2. Gán sự kiện Điều hướng
         _root.Q<Button>("btn-play").clicked += () => ShowPanel(_networkMenuPanel);
@@ -129,8 +147,6 @@ public class AtlantisMenuController : MonoBehaviour
         _particles.Clear();
         float screenWidth = Screen.width > 0 ? Screen.width : 1920f;
 
-        // Công thức tính mật độ hạt gốc: window.innerWidth / 15
-        // Tối ưu hóa trên giao diện game để tránh quá tải layout: chia cho hệ số an toàn hơn
         int targetParticleCount = Mathf.Clamp(Mathf.FloorToInt(screenWidth / 25f), 40, 80);
 
         var rootScreen = _root.Q<VisualElement>(className: "root-screen") ?? _root;
@@ -138,7 +154,6 @@ public class AtlantisMenuController : MonoBehaviour
         for (int i = 0; i < targetParticleCount; i++)
         {
             var p = new ParticleData();
-            // Tỷ lệ xuất hiện: 15% là Bọt khí (Bubble), 85% là Đốm sáng (Plankton)
             p.IsBubble = Random.value < 0.15f;
 
             p.RootElement = new VisualElement();
@@ -147,7 +162,6 @@ public class AtlantisMenuController : MonoBehaviour
             {
                 p.RootElement.AddToClassList("bubble-fx");
 
-                // Tạo lõi highlight đặc trưng của HTML5 Canvas
                 p.CoreElement = new VisualElement();
                 p.CoreElement.AddToClassList("bubble-core");
                 p.RootElement.Add(p.CoreElement);
@@ -170,25 +184,19 @@ public class AtlantisMenuController : MonoBehaviour
 
             foreach (var p in _particles)
             {
-                // Cập nhật vị trí Y
                 p.Y -= p.SpeedY;
-
-                // Cập nhật dao động ngang (Wobble)
                 p.Wobble += p.WobbleSpeed;
                 float currentX = p.X + Mathf.Sin(p.Wobble) * p.WobbleAmp;
 
-                // Tái tạo lại hạt khi trôi qua trần
                 if (p.Y < -50f)
                 {
                     ResetParticle(p, false);
                 }
                 else
                 {
-                    // Cập nhật CSS Trực tiếp
                     p.RootElement.style.top = p.Y;
                     p.RootElement.style.left = currentX;
 
-                    // Giả lập hiệu ứng Twinkle/Glow chớp tắt mượt mà cho đốm sáng
                     if (!p.IsBubble)
                     {
                         float dynamicOpacity = Mathf.Lerp(p.Opacity * 0.3f, p.Opacity, (Mathf.Sin(p.Wobble * 2f) + 1f) / 2f);
@@ -196,16 +204,7 @@ public class AtlantisMenuController : MonoBehaviour
                     }
                 }
             }
-
-            // Hiệu ứng Backlight thở đằng sau Logo (Tinh chỉnh dải Alpha mượt mà để quầng sáng thoát nền tự nhiên)
-            if (_gameLogo != null)
-            {
-                _glowTimer += 0.025f;
-                // Hạ dải Alpha dao động xuống (0.0f -> 0.12f) để tạo luồng hào quang mờ ảo, không bị gắt
-                float alpha = Mathf.Lerp(0.0f, 0.12f, (Mathf.Sin(_glowTimer) + 1f) / 2f);
-                _gameLogo.style.backgroundColor = new StyleColor(new Color(0.31f, 1.0f, 0.7f, alpha));
-            }
-
+            // Đã lược bỏ hoàn toàn phần code hiệu ứng thở (glow) nền logo tĩnh
         }).Every(16);
     }
 
@@ -220,12 +219,10 @@ public class AtlantisMenuController : MonoBehaviour
 
         if (p.IsBubble)
         {
-            // Bán kính gốc: Math.random() * 5 + 2 (Đường kính: 4px -> 14px)
-            // Phóng to nhẹ trên UI Toolkit để sắc nét hơn
             p.Radius = Random.Range(6f, 18f);
-            p.SpeedY = Random.Range(0.8f, 2.5f); // Bay nhanh hơn
+            p.SpeedY = Random.Range(0.8f, 2.5f);
             p.WobbleSpeed = 0.04f;
-            p.WobbleAmp = 25f; // Lắc ngang rộng (0.4 trong mã gốc)
+            p.WobbleAmp = 25f;
             p.Opacity = Random.Range(0.25f, 0.55f);
 
             p.RootElement.style.width = p.Radius;
@@ -235,11 +232,9 @@ public class AtlantisMenuController : MonoBehaviour
             p.RootElement.style.borderRightColor = new StyleColor(new Color(1f, 1f, 1f, p.Opacity * 0.7f));
             p.RootElement.style.borderBottomColor = new StyleColor(new Color(1f, 1f, 1f, p.Opacity * 0.3f));
 
-            // Định vị chính xác Lõi Highlight góc trên bên trái:
-            // ctx.arc(x - radius*0.3, y - radius*0.3, radius*0.2)
             if (p.CoreElement != null)
             {
-                float coreSize = p.Radius * 0.4f; // Đường kính lõi
+                float coreSize = p.Radius * 0.4f;
                 p.CoreElement.style.width = coreSize;
                 p.CoreElement.style.height = coreSize;
                 p.CoreElement.style.top = p.Radius * 0.15f;
@@ -249,12 +244,10 @@ public class AtlantisMenuController : MonoBehaviour
         }
         else
         {
-            // Bán kính gốc: Math.random() * 1.5 + 0.2 (Đường kính: 0.4px -> 3.4px)
-            // Ánh xạ sang kích thước pixel an toàn hiển thị
             p.Radius = Random.Range(2f, 5f);
-            p.SpeedY = Random.Range(0.2f, 0.8f); // Trôi cực chậm
+            p.SpeedY = Random.Range(0.2f, 0.8f);
             p.WobbleSpeed = 0.02f;
-            p.WobbleAmp = 8f; // Lắc ngang hẹp (0.15 trong mã gốc)
+            p.WobbleAmp = 8f;
             p.Opacity = Random.Range(0.25f, 0.85f);
 
             p.RootElement.style.width = p.Radius;
@@ -263,9 +256,6 @@ public class AtlantisMenuController : MonoBehaviour
         }
     }
 
-    // =========================================================================
-    // CÁC HÀM XỬ LÝ SỰ KIỆN UI CHUNG
-    // =========================================================================
     private void ConfirmCreateRoom()
     {
         string roomName = _root.Q<TextField>("input-room-name").value;
