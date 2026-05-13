@@ -5,164 +5,166 @@
     align-items: flex-start;
     width: 100%;
     height: 100%;
-    background-image: url('./background1.jpg');
     -unity-background-scale-mode: scale-and-crop;
-    background-color: rgb(0, 5, 10);
+    background-color: rgb(0, 4, 8);
+    
+    /* Gán Font Asset của bạn vào đây */
+    /* -unity-font-definition: url('project://database/Assets/YourPath/Orbitron-Regular.asset'); */
 }
 
 /* --- MENU & PANELS --- */
 .menu-container {
     margin-left: 6%;
-    width: 380px;
-    padding: 40px 30px;
-    background-color: rgba(2, 11, 15, 0.88);
-    border-left-width: 3px;
-    border-left-color: rgb(80, 200, 160);
-    border-top-right-radius: 20px;
-    border-bottom-left-radius: 20px;
+    width: 500px; /* Tăng từ 380px lên 450px để trông bề thế hơn */
+    padding: 45px 35px;
+    background-color: rgba(2, 9, 16, 0.88);
+    
+    border-left-width: 4px;
+    border-left-color: rgb(0, 190, 255);
+    border-top-right-radius: 25px;
+    border-bottom-left-radius: 25px;
     border-top-left-radius: 4px;
     border-bottom-right-radius: 4px;
+    
     border-width: 1px;
-    border-color: rgba(80, 200, 160, 0.2);
+    border-color: rgba(0, 190, 255, 0.25);
+    /* Đổ bóng khối sâu hơn */
+    text-shadow: 0 0 12px rgba(0, 0, 0, 0.8);
 }
 
 .large-panel {
-    width: 720px;
-    padding: 40px;
+    width: 1000px; 
+    padding: 45px 50px;
 }
 
 .hidden-panel { display: none; }
 .hidden-element { display: none; }
 
-/* --- LOGO GAME --- */
-.game-logo {
-    width: 100%;
-    height: 180px;
-    margin-bottom: 40px;
-    background-image: url('./logo.png');
-    -unity-background-scale-mode: scale-to-fit;
-    /* Lớp nền mờ ban đầu tạo cảm giác chìm vào khung bóng */
-    background-color: rgba(80, 255, 180, 0.05); 
-    border-radius: 25px; 
-    border-width: 2px;
-    border-color: rgba(80, 255, 180, 0.25);
-}
-
 /* --- TIÊU ĐỀ PANELS --- */
 .panel-title {
-    color: rgb(176, 240, 208);
-    font-size: 24px;
-    letter-spacing: 4px;
-    margin-bottom: 30px;
-    border-bottom-width: 1px;
-    border-bottom-color: rgba(80, 200, 160, 0.3);
-    padding-bottom: 10px;
+    color: rgb(160, 230, 255);
+    font-size: 26px;
+    letter-spacing: 5px;
     -unity-font-style: bold;
-    text-shadow: 0 0 15px rgba(80, 200, 160, 0.6);
+    text-shadow: 0 0 12px rgba(0, 190, 255, 0.6);
+    border-bottom-color: rgba(0, 190, 255, 0.4);
+    padding-bottom: 15px;
 }
-
 .button-group { width: 100%; flex-direction: column; }
 
 /* --- MAIN BUTTONS --- */
 .menu-btn {
-    background-color: rgba(80, 200, 160, 0.05);
+    background-color: rgba(0, 190, 255, 0.05);
     border-width: 0;
     border-left-width: 2px;
-    border-left-color: rgba(80, 200, 160, 0.4);
-    color: rgb(160, 222, 192);
+    border-left-color: rgba(0, 190, 255, 0.4);
+    color: rgb(140, 210, 245);
     padding: 14px 20px;
     font-size: 18px;
     letter-spacing: 3px;
     -unity-text-align: middle-left;
     margin-bottom: 12px;
-    transition: all 0.2s ease-out;
+    
+    /* Tăng thời gian transition để mượt mà hơn [cite: 13] */
+    transition: all 0.3s ease-in-out;
+    
     white-space: nowrap;
     text-overflow: ellipsis;
     -unity-font-style: bold;
-    border-radius: 4px;
+    border-radius: 2px; /* Bo góc nhẹ hơn tạo vẻ sắc sảo */
     text-shadow: 1px 1px 4px rgba(0, 0, 0, 0.9);
 }
 
-/* Tái hiện chuẩn xác Glow Text rực rỡ khi Hover */
+/* Glow Text rực rỡ dải Cyan khi Hover */
 .menu-btn:hover {
     color: rgb(255, 255, 255);
-    border-left-color: rgb(150, 255, 180);
-    padding-left: 30px;
-    background-color: rgba(80, 200, 160, 0.25);
-    text-shadow: 0 0 10px rgba(150, 255, 180, 0.8);
+    /* 1. Viền trái dày lên và sáng rực [cite: 15] */
+    border-left-width: 6px;
+    border-left-color: rgb(0, 255, 255);
+    
+    /* 2. Hiệu ứng phóng lớn (Scale) */
+    scale: 1.05 1.05;
+    
+    /* 3. Đẩy chữ sang phải [cite: 15] */
+    padding-left: 35px;
+    
+    /* 4. Giãn cách chữ tạo hiệu ứng "Scanning" */
+    letter-spacing: 6px;
+    
+    /* 5. Nền sáng hơn với dải gradient Cyan */
+    background-color: rgba(0, 190, 255, 0.3);
+    
+    /* 6. Hào quang (Glow) cực mạnh [cite: 16] */
+    text-shadow: 0 0 20px rgba(0, 255, 255, 1);
 }
-.menu-btn:active { scale: 0.98 0.98; }
+.menu-btn:active {
+    scale: 0.95 0.95;
+    background-color: rgba(0, 255, 255, 0.5);
+    transition: all 0.05s;
+}
 
-/* Nút Back */
+/* Nút Back - Đổi sang tone Ice Blue dịu mắt */
 .back-btn { 
-    color: rgb(121, 156, 138); 
-    border-left-color: rgba(121, 156, 138, 0.3);
-    background-color: rgba(121, 156, 138, 0.05); 
+    color: rgb(100, 150, 180); 
+    border-left-color: rgba(100, 150, 180, 0.3); 
+    background-color: rgba(100, 150, 180, 0.05); 
     margin-top: 15px; 
 }
 .back-btn:hover { 
-    color: rgb(194, 255, 224); 
-    border-left-color: rgb(194, 255, 224);
-    background-color: rgba(121, 156, 138, 0.15); 
-    text-shadow: 0 0 10px rgba(194, 255, 224, 0.6);
+    color: rgb(180, 230, 255); 
+    border-left-color: rgb(180, 230, 255); 
+    background-color: rgba(100, 150, 180, 0.15); 
+    text-shadow: 0 0 10px rgba(180, 230, 255, 0.6); 
 }
 
-/* Nút Quit */
+/* Nút Quit - Giữ sắc đỏ nhưng tinh chỉnh để hợp với nền tối */
 .quit-btn { 
-    color: rgb(200, 140, 140); 
-    border-left-color: rgba(220, 80, 80, 0.4);
-    background-color: rgba(120, 50, 50, 0.1); 
+    color: rgb(220, 120, 120); 
+    border-left-color: rgba(220, 60, 60, 0.4); 
+    background-color: rgba(140, 40, 40, 0.1); 
     margin-top: 25px; 
 }
 .quit-btn:hover { 
-    color: rgb(255, 200, 200); 
-    border-left-color: rgb(255, 100, 100);
-    background-color: rgba(200, 80, 80, 0.25); 
-    text-shadow: 0 0 10px rgba(255, 110, 110, 0.8);
+    color: rgb(255, 150, 150); 
+    border-left-color: rgb(255, 50, 50); 
+    background-color: rgba(220, 60, 60, 0.3); 
+    /* Đổ bóng đỏ rực */
+    text-shadow: 0 0 15px rgba(255, 0, 0, 0.8);
+    scale: 1.05 1.05;
 }
 
-.version-text { margin-top: 40px; color: rgb(64, 112, 96); font-size: 11px; letter-spacing: 2px; }
+.version-text { margin-top: 40px; color: rgb(50, 110, 140); font-size: 11px; letter-spacing: 2px; }
 
 /* --- FORM INPUTS --- */
 .form-group { width: 100%; margin-bottom: 22px; }
-.form-label { color: rgb(120, 220, 180); font-size: 12px; letter-spacing: 2px; margin-bottom: 8px; -unity-font-style: bold; text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.9); }
+.form-label { color: rgb(100, 200, 240); font-size: 12px; letter-spacing: 2px; margin-bottom: 8px; -unity-font-style: bold; text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.9); }
 
 .form-input .unity-base-text-field__input {
-    background-color: rgba(0, 8, 12, 0.8);
+    background-color: rgba(0, 6, 12, 0.8);
     border-width: 1px;
-    border-color: rgba(80, 200, 160, 0.3);
+    border-color: rgba(0, 190, 255, 0.3);
     color: rgb(255, 255, 255);
     font-size: 14px;
     padding: 10px 12px;
     border-radius: 4px;
     transition: border-color 0.2s, background-color 0.2s;
 }
-.form-input .unity-base-text-field__input:focus { border-color: rgb(150, 255, 180); background-color: rgba(0, 15, 22, 0.95); }
+.form-input .unity-base-text-field__input:focus { border-color: rgb(60, 220, 255); background-color: rgba(0, 12, 22, 0.95); }
 
-/* --- RADIO BUTTONS LÀM RÕ RÀNG --- */
+/* --- RADIO BUTTONS --- */
 .radio-group { flex-direction: row; margin-top: 4px; }
 .radio-group .unity-radio-button { margin-right: 25px; align-items: center; }
-.radio-group .unity-radio-button__label {
-    color: rgb(160, 222, 192);
-    font-size: 14px;
-    -unity-font-style: bold;
-    margin-left: 8px;
-    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.9);
-}
-.radio-group .unity-radio-button__checkmark-background {
-    background-color: rgba(0, 8, 12, 0.8);
-    border-color: rgba(80, 200, 160, 0.5);
-    border-width: 1px;
-}
-.radio-group .unity-radio-button__indicator { background-color: rgb(150, 255, 180); }
-.radio-text-public, .radio-text-private { color: rgb(150, 255, 180);}
+.radio-group .unity-radio-button__label { color: rgb(140, 210, 245); font-size: 14px; -unity-font-style: bold; margin-left: 8px; text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.9); }
+.radio-group .unity-radio-button__checkmark-background { background-color: rgba(0, 6, 12, 0.8); border-color: rgba(0, 190, 255, 0.5); border-width: 1px; }
+.radio-group .unity-radio-button__indicator { background-color: rgb(60, 220, 255); }
+.radio-text-public, .radio-text-private { color: rgb(60, 220, 255); }
 
 /* --- NÚT MINI & LOBBY ACTIONS --- */
 .join-mini-btn {
-    background-color: rgba(80, 200, 160, 0.15);
+    background-color: rgba(0, 190, 255, 0.15);
     border-width: 1px;
-    border-color: rgb(80, 200, 160);
-    color: rgb(150, 255, 180);
+    border-color: rgb(0, 190, 255);
+    color: rgb(120, 230, 255);
     padding: 8px 16px;
     font-size: 12px;
     letter-spacing: 1px;
@@ -170,197 +172,165 @@
     border-radius: 4px;
     transition: all 0.15s ease-out;
 }
-.join-mini-btn:hover { background-color: rgb(80, 200, 160); color: rgb(0, 10, 15); scale: 1.03 1.03; }
+.join-mini-btn:hover { background-color: rgb(0, 190, 255); color: rgb(0, 8, 16); scale: 1.03 1.03; }
 .join-mini-btn:active { scale: 0.96 0.96; }
 
-.cancel-btn { background-color: transparent; border-color: rgb(121, 156, 138); color: rgb(121, 156, 138); margin-left: 15px; }
-.cancel-btn:hover { background-color: rgba(121, 156, 138, 0.2); color: rgb(255, 255, 255); }
+.cancel-btn { background-color: transparent; border-color: rgb(100, 150, 180); color: rgb(100, 150, 180); margin-left: 15px; }
+.cancel-btn:hover { background-color: rgba(100, 150, 180, 0.2); color: rgb(255, 255, 255); }
 
 /* --- BROWSER TABLE & LIST --- */
-.join-id-bar { 
-    flex-direction: row; 
-    width: 100%; 
-    height: 42px; 
-    margin-bottom: 25px; 
-    align-items: center; 
-    justify-content: space-between; 
-}
+.join-id-bar { flex-direction: row; width: 100%; height: 42px; margin-bottom: 25px; align-items: center; justify-content: space-between; }
 .id-input { flex-grow: 1; height: 100%; margin-right: 12px; }
-.id-input .unity-base-text-field__input { height: 100%; font-size: 16px; letter-spacing: 6px; -unity-font-style: bold; color: rgb(150, 255, 180); -unity-text-align: middle-center; padding: 0; }
+.id-input .unity-base-text-field__input { height: 100%; font-size: 16px; letter-spacing: 6px; -unity-font-style: bold; color: rgb(60, 220, 255); -unity-text-align: middle-center; padding: 0; }
 .id-btn { height: 100%; padding: 0 20px; justify-content: center; }
 
-/* Header bảng: Bù trừ chính xác khoảng padding của row bên dưới + thanh cuộn dọc */
-.table-header { 
-    flex-direction: row; 
-    width: 100%; 
-    border-bottom-width: 1px; 
-    border-bottom-color: rgba(80, 200, 160, 0.4); 
-    padding-bottom: 10px; 
-    margin-bottom: 12px; 
-    padding-left: 12px;  /* Khớp với padding-left của .room-item */
-    padding-right: 18px; /* Khớp với padding-right của .room-item (12px) + Scrollbar (6px) */
-}
-.table-header Label { 
-    color: rgb(80, 200, 160); 
-    font-size: 11px; 
-    -unity-font-style: bold; 
-    letter-spacing: 2px; 
-}
+.table-header { flex-direction: row; width: 100%; border-bottom-width: 1px; border-bottom-color: rgba(0, 190, 255, 0.4); padding-bottom: 10px; margin-bottom: 12px; padding-left: 12px; padding-right: 18px; }
+.table-header Label { color: rgb(0, 190, 255); font-size: 11px; -unity-font-style: bold; letter-spacing: 2px; }
 
-/* ScrollView Container */
-.room-list { 
-    flex-grow: 1; 
-    height: 240px; 
-    width: 100%; 
-}
-.room-list .unity-scroll-view__content-container {
-    width: 100%;
-    overflow: hidden;
-}
-.room-list .unity-scroll-view__horizontal-scroller { 
-    display: none; 
-}
+.room-list { flex-grow: 1; height: 240px; width: 100%; }
+.room-list .unity-scroll-view__content-container { width: 100%; overflow: hidden; }
+.room-list .unity-scroll-view__horizontal-scroller { display: none; }
 
-/* Từng hàng (Room Item) */
 .room-item {
-    flex-direction: row; 
+    flex-direction: row;
     align-items: center;
-    background-color: rgba(0, 10, 15, 0.6);
+    background-color: rgba(0, 8, 14, 0.6);
     border-left-width: 3px;
-    border-left-color: rgba(80, 200, 160, 0.5);
-    border-width: 1px; 
-    border-color: rgba(80, 200, 160, 0.1);
-    padding: 8px 12px; /* Tối ưu padding ngang để chừa không gian cho nút Join */
-    margin-bottom: 8px; 
+    border-left-color: rgba(0, 190, 255, 0.5);
+    border-width: 1px;
+    border-color: rgba(0, 190, 255, 0.1);
+    padding: 8px 12px;
+    margin-bottom: 8px;
     border-radius: 4px;
     width: 100%;
     transition: background-color 0.15s, border-left-color 0.15s, border-color 0.15s;
 }
-.room-item:hover { background-color: rgba(80, 200, 160, 0.2); border-left-color: rgb(150, 255, 180); border-color: rgba(150, 255, 180, 0.3); }
+.room-item:hover { background-color: rgba(0, 190, 255, 0.2); border-left-color: rgb(60, 220, 255); border-color: rgba(60, 220, 255, 0.3); }
+.room-item Label { text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.9); font-size: 13px; }
 
-.room-item Label { 
-    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.9); 
-    font-size: 13px; 
-}
+.col-id { width: 90px; color: rgb(100, 150, 180); -unity-font-style: bold; flex-shrink: 0; }
+.col-name { flex-grow: 1; flex-shrink: 1; color: rgb(255, 255, 255); -unity-font-style: bold; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-right: 10px; }
+.col-host { width: 120px; color: rgb(140, 210, 245); flex-shrink: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.col-players { width: 60px; color: rgb(60, 220, 255); -unity-font-style: bold; -unity-text-align: middle-center; flex-shrink: 0; }
+.col-action { width: 75px; -unity-text-align: middle-right; flex-shrink: 0; }
+.room-item .col-action { padding: 6px 0; -unity-text-align: middle-center; }
 
-/* =========================================================================
-   CÔNG THỨC CHIA CỘT TUYỆT ĐỐI (KHÔNG DÙNG % ĐỂ TRÁNH DÃN/OVERLAY)
-   ========================================================================= */
-
-/* 1. Cột ID: Cố định 90px */
-.col-id { 
-    width: 90px; 
-    color: rgb(121, 156, 138); 
-    -unity-font-style: bold; 
-    flex-shrink: 0; 
-}
-
-/* 2. Cột Tên phòng: Tự động dãn chiếm trọn khoảng trống ở giữa (flex-grow: 1) */
-.col-name { 
-    flex-grow: 1; 
-    flex-shrink: 1;
-    color: rgb(255, 255, 255); 
-    -unity-font-style: bold; 
-    overflow: hidden; 
-    text-overflow: ellipsis; /* Tự cắt thành "..." nếu tên quá dài */
-    white-space: nowrap; 
-    padding-right: 10px;
-}
-
-/* 3. Cột Host: Cố định 120px */
-.col-host { 
-    width: 120px; 
-    color: rgb(160, 222, 192); 
-    flex-shrink: 0; 
-    overflow: hidden; 
-    text-overflow: ellipsis; 
-    white-space: nowrap; 
-}
-
-/* 4. Cột Số người: Cố định 60px */
-.col-players { 
-    width: 60px; 
-    color: rgb(150, 255, 180); 
-    -unity-font-style: bold; 
-    -unity-text-align: middle-center; 
-    flex-shrink: 0; 
-}
-
-/* 5. Cột Action (Nút JOIN): Cố định 75px */
-.col-action { 
-    width: 75px; 
-    -unity-text-align: middle-right; 
-    flex-shrink: 0; 
-}
-
-/* Ghi đè padding riêng cho nút JOIN để vừa vặn hoàn hảo trong giới hạn 75px */
-.room-item .col-action {
-    padding: 6px 0;
-    -unity-text-align: middle-center;
-}
-
-/* Tùy chỉnh thanh cuộn dọc */
 .room-list .unity-scroller--vertical { width: 6px; margin-left: 4px; }
-.room-list .unity-base-slider__tracker { background-color: rgba(0, 5, 10, 0.8); border-width: 0; }
-.room-list .unity-base-slider__dragger { background-color: rgba(80, 200, 160, 0.4); border-radius: 3px; }
-.room-list .unity-base-slider__dragger:hover { background-color: rgb(80, 200, 160); }
+.room-list .unity-base-slider__tracker { background-color: rgba(0, 4, 8, 0.8); border-width: 0; }
+.room-list .unity-base-slider__dragger { background-color: rgba(0, 190, 255, 0.4); border-radius: 3px; }
+.room-list .unity-base-slider__dragger:hover { background-color: rgb(0, 190, 255); }
 
 /* --- OPTIONS & CUSTOM SLIDERS --- */
-.options-tabs { flex-direction: row; border-bottom-width: 1px; border-bottom-color: rgba(80, 200, 160, 0.3); margin-bottom: 30px; }
-.tab-btn { background-color: transparent; border-width: 0; border-bottom-width: 2px; border-bottom-color: transparent; color: rgb(121, 156, 138); font-size: 14px; -unity-font-style: bold; padding: 10px 20px; border-radius: 0; }
-.tab-btn:hover { color: rgb(160, 222, 192); }
-.tab-btn.active { color: rgb(150, 255, 180); border-bottom-color: rgb(80, 200, 160); }
+.options-tabs { flex-direction: row; border-bottom-width: 1px; border-bottom-color: rgba(0, 190, 255, 0.3); margin-bottom: 30px; }
+.tab-btn { background-color: transparent; border-width: 0; border-bottom-width: 2px; border-bottom-color: transparent; color: rgb(100, 150, 180); font-size: 14px; -unity-font-style: bold; padding: 10px 20px; border-radius: 0; }
+.tab-btn:hover { color: rgb(140, 210, 245); }
+.tab-btn.active { color: rgb(60, 220, 255); border-bottom-color: rgb(0, 190, 255); }
 
 .slider-header { flex-direction: row; justify-content: space-between; width: 100%; }
-.slider-val { color: rgb(150, 255, 180); -unity-font-style: bold; font-size: 13px; }
+.slider-val { color: rgb(60, 220, 255); -unity-font-style: bold; font-size: 13px; }
 .options-actions { flex-direction: row; margin-top: 35px; }
-.auth-room-label { color: rgb(150, 255, 180); font-size: 14px; -unity-font-style: bold; margin-bottom: 25px; }
+.auth-room-label { color: rgb(60, 220, 255); font-size: 14px; -unity-font-style: bold; margin-bottom: 25px; }
 
-.custom-select .unity-base-popup-field__text { color: rgb(150, 255, 180); -unity-font-style: bold; }
-.custom-select .unity-base-popup-field__input { background-color: rgba(0, 8, 12, 0.8); border-color: rgba(80, 200, 160, 0.4); padding: 8px; border-radius: 4px; }
+.custom-select .unity-base-popup-field__text { color: rgb(60, 220, 255); -unity-font-style: bold; }
+.custom-select .unity-base-popup-field__input { background-color: rgba(0, 6, 12, 0.8); border-color: rgba(0, 190, 255, 0.4); padding: 8px; border-radius: 4px; }
 
-.checkbox-label .unity-toggle__label { color: rgb(160, 222, 192); margin-left: 10px; font-size: 13px; -unity-font-style: bold; }
-.checkbox-label .unity-toggle__checkmark { background-color: rgba(0, 8, 12, 0.8); border-color: rgb(80, 200, 160); }
+.checkbox-label .unity-toggle__label { color: rgb(140, 210, 245); margin-left: 10px; font-size: 13px; -unity-font-style: bold; }
+.checkbox-label .unity-toggle__checkmark { background-color: rgba(0, 6, 12, 0.8); border-color: rgb(0, 190, 255); }
 
-.custom-slider .unity-slider__tracker { background-color: rgba(0, 5, 10, 0.9); border-color: rgba(80, 200, 160, 0.3); border-width: 1px; height: 6px; border-radius: 3px; margin-top: -3px; }
-.custom-slider .unity-slider__dragger { background-color: rgb(80, 200, 160); border-color: rgb(255, 255, 255); border-width: 1px; width: 16px; height: 16px; border-radius: 8px; margin-top: -8px; transition: scale 0.1s; }
-.custom-slider .unity-slider__dragger:hover { background-color: rgb(150, 255, 180); scale: 1.25 1.25; }
+.custom-slider .unity-slider__tracker { background-color: rgba(0, 4, 8, 0.9); border-color: rgba(0, 190, 255, 0.3); border-width: 1px; height: 6px; border-radius: 3px; margin-top: -3px; }
+.custom-slider .unity-slider__dragger { background-color: rgb(0, 190, 255); border-color: rgb(255, 255, 255); border-width: 1px; width: 16px; height: 16px; border-radius: 8px; margin-top: -8px; transition: scale 0.1s; }
+.custom-slider .unity-slider__dragger:hover { background-color: rgb(120, 230, 255); scale: 1.25 1.25; }
 
-/* =========================================================================
-   HỆ THỐNG HẠT V3: ĐỒNG BỘ CHUẨN HTML5 CANVAS
-   ========================================================================= */
-
-/* --- BỌT KHÍ: LỚP VIÈN NGOÀI --- */
-.bubble-fx {
-    position: absolute;
-    border-radius: 50%;
-    /* Khung viền màu trắng trong suốt tương đương ctx.strokeStyle */
+/* --- HỆ THỐNG HẠT V3 --- */
+.bubble-fx { position: absolute; border-radius: 50%; border-width: 1px; border-color: rgba(255, 255, 255, 0.35); background-color: transparent; picking-mode: ignore; transition: none; }
+.bubble-core { position: absolute; border-radius: 50%; background-color: rgba(255, 255, 255, 0.7); picking-mode: ignore; transition: none; }
+/* Đốm sáng trôi nổi được chuyển sang dải Cyan phát quang để hòa vào năng lượng của khu di tích */
+.ambient-spot { position: absolute; border-radius: 50%; background-color: rgb(120, 230, 255); border-width: 2px; border-color: rgba(120, 230, 255, 0.25); picking-mode: ignore; transition: none; }
+/* --- CUSTOM SLIDERS (HIGH-TECH STYLE) --- */
+/* Đường ray thanh trượt (Tracker) */
+.custom-slider .unity-base-slider__tracker {
+    background-color: rgba(0, 4, 8, 0.95);
+    border-color: rgba(0, 190, 255, 0.4);
     border-width: 1px;
-    border-color: rgba(255, 255, 255, 0.35);
-    background-color: transparent;
-    picking-mode: ignore;
-    transition: none;
+    height: 6px;
+    border-radius: 3px;
+    margin-top: -3px; /* Căn giữa hoàn hảo */
+    /* Tạo hiệu ứng dải sáng chạy ngầm bên dưới */
+    box-shadow: 0 0 4px rgba(0, 190, 255, 0.2);
 }
 
-/* --- BỌT KHÍ: LÕI BẮT SÁNG (HIGHLIGHT) --- */
-.bubble-core {
-    position: absolute;
-    border-radius: 50%;
-    /* Lõi trắng sáng tương đương ctx.fillStyle */
-    background-color: rgba(255, 255, 255, 0.7);
-    picking-mode: ignore;
-    transition: none;
-}
-
-/* --- ĐỐM SÁNG XANH LƠ (MARINE SNOW / PLANKTON) --- */
-.ambient-spot {
-    position: absolute;
-    border-radius: 50%;
-    /* Màu xanh lục bảo pha lơ sáng chuẩn HTML5: rgba(180, 255, 220) */
-    background-color: rgb(180, 255, 220);
-    /* Dùng đường viền mờ dày để giả lập quầng sáng ctx.shadowBlur */
+/* Nút kéo (Dragger) */
+.custom-slider .unity-base-slider__dragger {
+    background-color: rgb(0, 190, 255);
+    border-color: rgb(255, 255, 255);
     border-width: 2px;
-    border-color: rgba(180, 255, 220, 0.25);
-    picking-mode: ignore;
-    transition: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 9px; /* Bo tròn tuyệt đối */
+    margin-top: -9px; /* Căn giữa tâm nút kéo với tracker */
+    transition: scale 0.15s ease-out, background-color 0.15s;
+}
+
+/* Hiệu ứng khi di chuột hoặc kéo thanh trượt */
+.custom-slider .unity-base-slider__dragger:hover,
+.custom-slider .unity-base-slider__dragger:focus {
+    background-color: rgb(120, 240, 255);
+    border-color: rgb(255, 255, 255);
+    scale: 1.3 1.3; /* Phóng to rực rỡ khi chạm vào */
+}
+
+/* --- DROPDOWN INPUT FIELD --- */
+.custom-select .unity-base-popup-field__text { 
+    color: rgb(120, 230, 255); 
+    -unity-font-style: bold; 
+    font-size: 14px;
+}
+
+.custom-select .unity-base-popup-field__input { 
+    background-color: rgba(0, 6, 12, 0.9); 
+    border-color: rgba(0, 190, 255, 0.5); 
+    border-width: 1px;
+    padding: 10px 12px; 
+    border-radius: 4px; 
+    transition: border-color 0.2s;
+}
+
+.custom-select .unity-base-popup-field__input:hover {
+    border-color: rgb(0, 255, 255);
+    background-color: rgba(0, 10, 18, 0.95);
+}
+
+/* --- DROPDOWN OVERLAY MENU LIST (BẢNG XỔ XUỐNG) --- */
+/* Khung chứa danh sách các lựa chọn */
+.unity-base-dropdown__container {
+    background-color: rgba(2, 9, 16, 0.98);
+    border-width: 1px;
+    border-color: rgb(0, 190, 255);
+    border-radius: 4px;
+    /* Hiệu ứng viền sáng bao quanh bảng chọn */
+    box-shadow: 0 0 15px rgba(0, 190, 255, 0.35);
+}
+
+/* Từng dòng mục chọn bên trong danh sách */
+.unity-base-dropdown__item {
+    padding: 10px 15px;
+    background-color: transparent;
+}
+
+/* Đổi màu nền khi rê chuột vào từng mục */
+.unity-base-dropdown__item:hover {
+    background-color: rgba(0, 190, 255, 0.25);
+}
+
+/* Chữ hiển thị trong bảng xổ xuống */
+.unity-base-dropdown__label {
+    color: rgb(140, 210, 245);
+    font-size: 14px;
+    -unity-font-style: bold;
+}
+
+/* Đổi màu rực rỡ cho mục đang được trỏ/chọn */
+.unity-base-dropdown__item:hover .unity-base-dropdown__label {
+    color: rgb(255, 255, 255);
+    text-shadow: 0 0 8px rgba(0, 255, 255, 0.8);
 }
