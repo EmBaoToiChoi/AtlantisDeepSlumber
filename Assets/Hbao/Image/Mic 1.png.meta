@@ -1,12 +1,12 @@
 fileFormatVersion: 2
-guid: 71d0b569acebd2844808c85d88e9eced
+guid: 8315893ae6402734cab54940b270a236
 TextureImporter:
   internalIDToNameTable: []
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
     mipMapMode: 0
-    enableMipMap: 0
+    enableMipMap: 1
     sRGBTexture: 1
     linearTexture: 0
     fadeOut: 0
@@ -37,8 +37,8 @@ TextureImporter:
     filterMode: 1
     aniso: 1
     mipBias: 0
-    wrapU: 1
-    wrapV: 1
+    wrapU: 0
+    wrapV: 0
     wrapW: 0
   nPOTScale: 0
   lightmap: 0
@@ -52,9 +52,9 @@ TextureImporter:
   spriteBorder: {x: 0, y: 0, z: 0, w: 0}
   spriteGenerateFallbackPhysicsShape: 1
   alphaUsage: 1
-  alphaIsTransparency: 1
+  alphaIsTransparency: 0
   spriteTessellationDetail: -1
-  textureType: 8
+  textureType: 0
   textureShape: 1
   singleChannelComponent: 0
   flipbookRows: 1
@@ -110,23 +110,23 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: Mic_0
+      name: Mic 1_0
       rect:
         serializedVersion: 2
-        x: 12
-        y: 284
-        width: 586
-        height: 740
+        x: 0
+        y: 0
+        width: 336
+        height: 582
       alignment: 0
-      pivot: {x: 0.5, y: 0.5}
+      pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: a5901940dc8d9db4da426125637e5e6d
-      internalID: 166628304
+      spriteID: 4b7fe6b9a0b1e7946a7cc8f783446fa4
+      internalID: -1307236600
       vertices: []
       indices: 
       edges: []
@@ -135,7 +135,7 @@ TextureImporter:
     customData: 
     physicsShape: []
     bones: []
-    spriteID: 875e20dfd657caf4d8ef75dda9ddd106
+    spriteID: ce058f977c8ac424fb8a3f310310e2f2
     internalID: 0
     vertices: []
     indices: 
@@ -145,16 +145,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      Mic_0: 166628304
-      Mic_1: 1021148901
-      Mic_2: 1529762568
-      Mic_3: 1919280167
-      Mic_4: 1369675160
-      Mic_5: 255489915
-      Mic_6: -1423789812
-      Mic_7: 2060528726
-      Mic_8: 2114657967
-      Mic_9: 1834423956
+      Mic 1_0: -1307236600
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

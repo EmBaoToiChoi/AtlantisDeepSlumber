@@ -1,0 +1,140 @@
+.hud-main-wrapper {
+    flex-direction: row;
+    position: absolute;
+    bottom: 25px;
+    left: 25px;
+    padding: 8px 14px;
+    background-color: rgba(5, 5, 8, 0.3);
+    border-radius: 12px;
+    align-items: center;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.05);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.85);
+}
+
+.player-avatar-container {
+    width: 76px;
+    height: 76px;
+    border-radius: 50%;
+    background-color: rgba(0, 0, 0, 0.45);
+    justify-content: center;
+    align-items: center;
+    margin-right: 14px;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.18);
+    box-shadow: 0 0 12px rgba(255, 255, 255, 0.1);
+}
+
+.raw-player-image {
+    width: 68px;
+    height: 68px;
+    border-radius: 50%;
+    -unity-background-scale-mode: scale-to-fit;
+}
+
+.stats-wrapper {
+    flex-direction: column;
+    justify-content: center;
+}
+
+.level-label {
+    color: rgb(255, 255, 255);
+    font-size: 15px;
+    -unity-font-style: bold;
+    margin-bottom: 5px;
+    padding: 0;
+    letter-spacing: 0.5px;
+    text-shadow: 1px 2px 3px rgba(0, 0, 0, 0.95);
+}
+
+.track-bg {
+    background-color: rgba(5, 5, 8, 0.65);
+    margin-bottom: 5px;
+    position: relative;
+    overflow: hidden;
+    border-width: 0.5px;
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+.hp-track {
+    width: 240px;
+    height: 12px;
+    border-radius: 2px;
+    border-top-color: rgba(255, 255, 255, 0.25);
+}
+
+.mp-track {
+    width: 190px;
+    height: 7px;
+    border-radius: 3.5px;
+}
+
+.exp-track {
+    width: 150px;
+    height: 4px;
+    border-radius: 2px;
+    margin-bottom: 0;
+}
+
+.fill-core {
+    height: 100%;
+    width: 100%;
+    transition-property: width;
+    transition-duration: 0.15s;
+    transition-timing-function: ease-out-quad;
+}
+
+.segments-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+}
+
+.divider {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 1.5px;
+    background-color: rgba(0, 0, 0, 0.75);
+}
+
+.hp-fill {
+    background-color: rgb(255, 255, 255);
+    border-radius: 2px;
+}
+
+.mp-fill {
+    background-color: rgb(24, 144, 255);
+    border-radius: 3.5px;
+}
+
+.exp-fill {
+    background-color: rgb(255, 204, 0);
+    border-radius: 2px;
+}
+
+.mic-icon-base {
+    position: absolute;
+    bottom: 30px;
+    right: 30px;
+    width: 48px;
+    height: 48px;
+    -unity-background-scale-mode: scale-to-fit;
+    transition-property: scale;
+    transition-duration: 0.15s;
+    transition-timing-function: ease-out-quad;
+}
+
+.mic-off {
+    background-image: url("project://database/Assets/Hbao/Image/Mic%20-%20Copy.png?fileID=2800000&guid=c224a90ad5cf9ad41a4c9076f3490624&type=3#Mic - Copy");
+    opacity: 0.75;
+    scale: 0.95 0.95;
+}
+
+.mic-on {
+    background-image: url("project://database/Assets/Hbao/Image/Mic%201.png?fileID=2800000&guid=8315893ae6402734cab54940b270a236&type=3#Mic 1");
+    opacity: 1;
+    scale: 1.05 1.05;
+}
