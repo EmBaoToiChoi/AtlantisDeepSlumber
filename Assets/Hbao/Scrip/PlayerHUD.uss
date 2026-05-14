@@ -1,82 +1,89 @@
-/* Khung bọc tổng thể */
 .hud-main-wrapper {
     flex-direction: row;
     position: absolute;
-    top: 25px;
+    bottom: 25px;
     left: 25px;
-    padding: 12px 16px;
-    background-color: rgba(10, 10, 14, 0.65);
-    border-radius: 16px;
-    border-width: 1px;
-    border-color: rgba(255, 255, 255, 0.12);
+    padding: 8px 14px;
+    background-color: rgba(5, 5, 8, 0.3);
+    border-radius: 12px;
     align-items: center;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.05);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.85);
 }
 
-/* Ảnh Player: Giảm khoảng cách margin-right để gần 3 thanh hơn */
+.player-avatar-container {
+    width: 76px;
+    height: 76px;
+    border-radius: 50%;
+    background-color: rgba(0, 0, 0, 0.45);
+    justify-content: center;
+    align-items: center;
+    margin-right: 14px;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.18);
+    box-shadow: 0 0 12px rgba(255, 255, 255, 0.1);
+}
+
 .raw-player-image {
-    width: 80px;
-    height: 80px;
-    margin-right: 10px; /* Cũ là 16px, đã giảm để gom gần lại */
+    width: 68px;
+    height: 68px;
+    border-radius: 50%;
     -unity-background-scale-mode: scale-to-fit;
 }
 
-/* Khu vực cột thông số */
 .stats-wrapper {
-    justify-content: center;
     flex-direction: column;
+    justify-content: center;
 }
 
-/* Chữ Level */
 .level-label {
     color: rgb(255, 255, 255);
-    font-size: 16px;
-    font-weight: bold;
-    margin-bottom: 6px; /* Gom gần lại với thanh máu */
+    font-size: 15px;
+    -unity-font-style: bold;
+    margin-bottom: 5px;
     padding: 0;
-    letter-spacing: 1px;
+    letter-spacing: 0.5px;
+    text-shadow: 1px 2px 3px rgba(0, 0, 0, 0.95);
 }
 
-/* Style chung cho các rãnh nền */
 .track-bg {
-    background-color: rgba(0, 0, 0, 0.7);
-    margin-bottom: 4px; /* Cũ là 6px, đã giảm để 3 thanh sát nhau hơn */
-    position: relative; /* Để căn chỉnh lớp vạch chia overlay bên trong */
+    background-color: rgba(5, 5, 8, 0.65);
+    margin-bottom: 5px;
+    position: relative;
+    overflow: hidden;
+    border-width: 0.5px;
+    border-color: rgba(255, 255, 255, 0.08);
 }
 
-/* 1. Thanh Máu: Khung vuông vức hoàn toàn */
 .hp-track {
-    width: 260px;
-    height: 14px;
-    border-radius: 0; /* Khung vuông */
+    width: 240px;
+    height: 12px;
+    border-radius: 2px;
+    border-top-color: rgba(255, 255, 255, 0.25);
 }
 
-/* 2. Thanh Mana: Khung vuông để đồng bộ, hoặc bạn có thể bo nhẹ tùy ý */
 .mp-track {
-    width: 200px;
-    height: 10px;
-    border-radius: 0; 
+    width: 190px;
+    height: 7px;
+    border-radius: 3.5px;
 }
 
-/* 3. Thanh EXP */
 .exp-track {
     width: 150px;
-    height: 6px;
-    border-radius: 0;
+    height: 4px;
+    border-radius: 2px;
     margin-bottom: 0;
 }
 
-/* Style chung cho lõi Fill */
 .fill-core {
     height: 100%;
     width: 100%;
     transition-property: width;
-    transition-duration: 0.2s;
-    transition-timing-function: ease-out-cubic;
+    transition-duration: 0.15s;
+    transition-timing-function: ease-out-quad;
 }
 
-/* --- LỚP PHỦ VẠCH CHIA KHÚC (OVERLAY DIVIDERS) --- */
-
-/* Lớp phủ nằm trên cùng, không ảnh hưởng đến thanh fill ở dưới */
 .segments-overlay {
     position: absolute;
     top: 0;
@@ -85,25 +92,49 @@
     bottom: 0;
 }
 
-/* Đường vạch chia khúc: Dùng màu nền trùng với màu background rãnh (đen) */
 .divider {
     position: absolute;
     top: 0;
     bottom: 0;
-    width: 2px; /* Độ dày của vạch cắt */
-    background-color: rgb(0, 0, 0); /* Trùng màu rãnh nền tạo cảm giác bị cắt rời */
+    width: 1.5px;
+    background-color: rgba(0, 0, 0, 0.75);
 }
 
-/* --- MÀU SẮC FILL --- */
-
 .hp-fill {
-    background-color: rgb(255, 255, 255); /* Trắng */
+    background-color: rgb(255, 255, 255);
+    border-radius: 2px;
 }
 
 .mp-fill {
-    background-color: rgb(24, 144, 255); /* Xanh dương */
+    background-color: rgb(24, 144, 255);
+    border-radius: 3.5px;
 }
 
 .exp-fill {
-    background-color: rgb(255, 204, 0); /* Vàng */
+    background-color: rgb(255, 204, 0);
+    border-radius: 2px;
+}
+
+.mic-icon-base {
+    position: absolute;
+    bottom: 30px;
+    right: 30px;
+    width: 48px;
+    height: 48px;
+    -unity-background-scale-mode: scale-to-fit;
+    transition-property: scale;
+    transition-duration: 0.15s;
+    transition-timing-function: ease-out-quad;
+}
+
+.mic-off {
+    background-image: url("project://database/Assets/Hbao/Image/Mic%20-%20Copy.png?fileID=2800000&guid=c224a90ad5cf9ad41a4c9076f3490624&type=3#Mic - Copy");
+    opacity: 0.75;
+    scale: 0.95 0.95;
+}
+
+.mic-on {
+    background-image: url("project://database/Assets/Hbao/Image/Mic%201.png?fileID=2800000&guid=8315893ae6402734cab54940b270a236&type=3#Mic 1");
+    opacity: 1;
+    scale: 1.05 1.05;
 }

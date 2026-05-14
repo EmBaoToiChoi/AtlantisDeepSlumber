@@ -1,18 +1,14 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
-    <Style src="PlayerHUD.uss" />
-
+    <Style src="project://database/Assets/Hbao/Scrip/PlayerHUD.uss?fileID=7433441132597879392&amp;guid=70193741e3d26714d859986fce3cd4df&amp;type=3#PlayerHUD" />
     <ui:VisualElement class="hud-main-wrapper">
-        
-        <ui:VisualElement class="raw-player-image" style="background-image: url(&quot;project://database/Assets/Hbao/Image/AvaST.png?fileID=2800000&amp;guid=d74474e1ade5e1a438e24f8f7417dae9&amp;type=3#AvaST&quot;);" />
-
+        <ui:VisualElement class="player-avatar-container">
+            <ui:VisualElement class="raw-player-image" style="background-image: url(&quot;project://database/Assets/Hbao/Image/AvaST.png?fileID=1013639804&amp;guid=d74474e1ade5e1a438e24f8f7417dae9&amp;type=3#AvaST_0&quot;);" />
+        </ui:VisualElement>
         <ui:VisualElement class="stats-wrapper">
-            
             <ui:Label text="Lv. 15" class="level-label" />
-
             <ui:VisualElement class="track-bg hp-track">
                 <ui:VisualElement name="hp-fill" class="fill-core hp-fill" />
             </ui:VisualElement>
-
             <ui:VisualElement class="track-bg mp-track">
                 <ui:VisualElement name="mp-fill" class="fill-core mp-fill" />
                 <ui:VisualElement class="segments-overlay">
@@ -20,7 +16,6 @@
                     <ui:VisualElement class="divider" style="left: 66.66%;" />
                 </ui:VisualElement>
             </ui:VisualElement>
-
             <ui:VisualElement class="track-bg exp-track">
                 <ui:VisualElement name="exp-fill" class="fill-core exp-fill" />
                 <ui:VisualElement class="segments-overlay">
@@ -35,7 +30,7 @@
                     <ui:VisualElement class="divider" style="left: 90%;" />
                 </ui:VisualElement>
             </ui:VisualElement>
-
         </ui:VisualElement>
     </ui:VisualElement>
+    <ui:VisualElement name="mic-icon" class="mic-icon-base mic-off" style="background-image: none;" />
 </ui:UXML>

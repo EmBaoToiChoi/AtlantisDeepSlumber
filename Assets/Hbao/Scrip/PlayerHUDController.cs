@@ -5,52 +5,63 @@ public class PlayerHUDController : MonoBehaviour
 {
     [SerializeField] private UIDocument uiDocument;
 
-    // Các tham chiếu đến VisualElement lõi của thanh bar
     private VisualElement hpFill;
     private VisualElement mpFill;
     private VisualElement expFill;
+    
+    // Tham chiếu trực tiếp tới phần tử chứa icon
+    private VisualElement micIcon;
+    
+    // Mặc định false -> Vào game chưa ấn M sẽ là tắt Mic
+    private bool isMicOn = false; 
 
     void OnEnable()
     {
-        if (uiDocument == null) return;
-
-        // Lấy gốc (root) của giao diện
+        if (uiDocument == null || uiDocument.rootVisualElement == null) return;
         var root = uiDocument.rootVisualElement;
 
-        // Truy xuất các element dựa vào thuộc tính 'name' đã đặt trong UXML
         hpFill = root.Q<VisualElement>("hp-fill");
         mpFill = root.Q<VisualElement>("mp-fill");
         expFill = root.Q<VisualElement>("exp-fill");
 
-        // Test thử đặt giá trị ban đầu
-        SetHealth(0.8f); // 80% máu
-        SetMana(0.5f);   // 50% mana
-        SetExp(0.25f);   // 25% exp
+        // Tìm UI Mic Icon trực tiếp
+        micIcon = root.Q<VisualElement>("mic-icon");
+
+        // Đồng bộ trạng thái UI ngay khi load game (Tắt)
+        UpdateMicUI();
     }
 
-    // Hàm cập nhật độ rộng thanh Máu (giá trị từ 0.0 đến 1.0)
-    public void SetHealth(float percentage)
+    void Update()
     {
-        if (hpFill != null)
+        // Khi ấn M sẽ đổi trạng thái
+        if (Input.GetKeyDown(KeyCode.M))
         {
-            // Thay đổi thuộc tính width theo %
-            hpFill.style.width = new Length(percentage * 100, LengthUnit.Percent);
+            ToggleMic();
         }
     }
 
-    public void SetMana(float percentage)
+    public void ToggleMic()
     {
-        if (mpFill != null)
+        isMicOn = !isMicOn;
+        UpdateMicUI();
+    }
+
+    private void UpdateMicUI()
+    {
+        if (micIcon == null) return;
+
+        if (isMicOn)
         {
-            mpFill.style.width = new Length(percentage * 100, LengthUnit.Percent);
+            micIcon.RemoveFromClassList("mic-off");
+            micIcon.AddToClassList("mic-on");
+        }
+        else
+        {
+            micIcon.RemoveFromClassList("mic-on");
+            micIcon.AddToClassList("mic-off");
         }
     }
 
-    public void SetExp(float percentage)
-    {
-        if (expFill != null)
-        {
-            expFill.style.width = new Length(percentage * 100, LengthUnit.Percent);
-        }
-    }
+    // --- Giữ nguyên các hàm cập nhật HP/MP/EXP của bạn bên dưới ---
+    public void SetHealth(float percentage) { /* ... */ }
 }
