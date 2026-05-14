@@ -247,7 +247,7 @@
     border-radius: 12px;
     background-color: rgba(15, 25, 40, 0.35); /* Nền mờ mờ trong suốt (Glassmorphism) cực đẹp */
     border-width: 2px;
-    border-color: rgba(192, 192, 192, 0.3); /* Viền bạc mờ mờ */
+    border-color: rgba(150, 150, 150, 0.8); /* Đổi màu viền thành màu Xám */
     margin-top: 15px; /* Cách ô trên một khoảng */
     position: relative;
     overflow: hidden;
@@ -257,26 +257,42 @@
     transition-timing-function: ease-out; 
 }
 
-/* Nền bọc phím 1 và 2 */
-.weapon-hotkey-container {
+/* Khung màu xanh bọc ngoài cùng chứa phím tắt */
+.weapon-hotkey-wrapper {
     position: absolute;
-    top: 10px; /* Thụt hẳn vào bên trong khung */
-    left: 10px;
-    width: 28px;
-    height: 28px;
-    background-color: rgba(0, 0, 0, 0.35); /* Nền mờ tối bọc lấy số */
+    top: 2px; /* Cách lề trên 2px */
+    left: 2px; /* Cách lề trái 2px */
+    width: 34px; 
+    height: 34px;
+    background-color: rgba(20, 60, 120, 0.7); /* Nền xanh lam đậm để tạo chiều sâu */
     border-radius: 6px;
     border-width: 1px;
-    border-color: rgba(255, 255, 255, 0.15); /* Viền kính rất nhạt */
+    border-color: rgba(80, 160, 255, 0.4); /* Viền mờ cho khung ngoài */
     justify-content: center;
     align-items: center;
-    box-shadow: 0 0 15px rgba(0, 0, 0, 0.8); /* Đổ bóng mờ bọc quanh số */
+}
+
+/* Nền bọc phím 1 và 2 (Ô vuông nhỏ chứa phím tắt màu xanh) */
+.weapon-hotkey-container {
+    position: relative; /* Thay đổi từ absolute sang relative để nằm giữa wrapper */
+    top: 0; 
+    left: 0; 
+    width: 26px; 
+    height: 26px;
+    background-color: rgba(40, 110, 220, 0.9); /* Nền màu xanh dương */
+    border-radius: 4px; /* Hơi bo nhẹ cho đẹp */
+    border-width: 2px;
+    border-color: rgba(80, 160, 255, 1); /* Viền màu xanh dương nhạt hơn một chút */
+    justify-content: center;
+    align-items: center;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5); /* Đổ bóng đen nhẹ tách biệt khỏi nền vũ khí */
 }
 
 .weapon-hotkey {
-    color: rgba(255, 255, 255, 0.9); /* Chữ trắng dịu */
+    color: rgb(255, 255, 255); /* Chữ màu trắng tinh */
     -unity-font-style: bold;
-    font-size: 16px;
+    font-size: 15px; 
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.4); /* Chữ đổ bóng cho rõ nét */
     padding: 0;
     margin: 0;
 }
@@ -321,19 +337,19 @@
     -unity-background-scale-mode: scale-to-fit;
 }
 
-/* Trạng thái Đang Chọn (Sáng bạc, Mờ ảo sang trọng) */
+/* Trạng thái Đang Chọn (Sáng xám/trắng, Mờ ảo sang trọng) */
 .weapon-active {
     scale: 1.15 1.15;
     opacity: 1;
     background-color: rgba(20, 35, 55, 0.5); /* Nền sáng lên một chút xíu nhưng vẫn mờ mờ */
-    border-color: rgba(192, 192, 192, 0.8); /* Viền bạc sáng lên */
-    box-shadow: 0 0 30px rgba(192, 192, 192, 0.25), inset 0 0 20px rgba(255, 255, 255, 0.05); /* Đổ bóng tỏa bạc xung quanh thay vì xanh chóe */
+    border-color: rgba(170, 170, 170, 0.9); /* Viền màu Xám sáng lên */
+    box-shadow: 0 0 25px rgba(150, 150, 150, 0.3), inset 0 0 20px rgba(255, 255, 255, 0.05); /* Đổ bóng tỏa xám bạc xung quanh */
 }
 
 /* Trạng thái Tắt */
 .weapon-inactive {
     scale: 0.85 0.85; /* Thu nhỏ lùi về sau */
     opacity: 0.35; /* Mờ hơn nữa */
-    border-color: rgba(192, 192, 192, 0.15); /* Viền nhạt gần như biến mất */
+    border-color: rgba(100, 100, 100, 0.3); /* Viền xám tối mờ đi */
     box-shadow: none; /* Tắt bóng */
 }
