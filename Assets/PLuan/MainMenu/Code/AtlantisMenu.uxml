@@ -56,16 +56,16 @@
             <ui:ScrollView mode="Vertical" class="room-list">
                 <ui:VisualElement class="room-item">
                     <ui:Label text="[P] #849201" class="room-col col-id" />
-                    <ui:Label text="🔒 Abyss Crawlers" class="room-col col-name" />
+                        <ui:Label text="[Lock] Abyss Crawlers" class="room-col col-name" />
                     <ui:Label text="CaptainNemo" class="room-col col-host" />
-                    <ui:Label text="4/5" class="room-col col-players" />
+                    <ui:Label text="3/4" class="room-col col-players" />
                     <ui:Button name="btn-join-item-1" text="JOIN" class="join-mini-btn room-col col-action" />
                 </ui:VisualElement>
                 <ui:VisualElement class="room-item">
-                    <ui:Label text="    #310294" class="room-col col-id" />
-                    <ui:Label text="Deep Slumber #1" class="room-col col-name" />
+                    <ui:Label text="[O] #310294" class="room-col col-id" />
+                        <ui:Label text="Deep Slumber #1" class="room-col col-name" />
                     <ui:Label text="BaoDev" class="room-col col-host" />
-                    <ui:Label text="2/5" class="room-col col-players" />
+                    <ui:Label text="2/4" class="room-col col-players" />
                     <ui:Button name="btn-join-item-2" text="JOIN" class="join-mini-btn room-col col-action" />
                 </ui:VisualElement>
             </ui:ScrollView>
@@ -118,11 +118,17 @@
             <ui:VisualElement name="tab-graphics" class="tab-content hidden-element">
                 <ui:VisualElement class="form-group">
                     <ui:Label text="RESOLUTION" class="form-label" />
-                    <ui:DropdownField name="opt-resolution" choices="3840x2160 (4K),2560x1440 (2K),1920x1080 (FHD),1280x720 (HD)" value="1920x1080 (FHD)" class="custom-select" />
+                    <ui:VisualElement name="opt-resolution" class="custom-dropdown">
+                        <ui:Label name="opt-resolution-value" text="1920x1080 (FHD)" class="custom-dropdown-value" />
+                        <ui:Label text="&#9660;" class="custom-dropdown-arrow" />
+                    </ui:VisualElement>
                 </ui:VisualElement>
                 <ui:VisualElement class="form-group">
                     <ui:Label text="GRAPHICS QUALITY" class="form-label" />
-                    <ui:DropdownField name="opt-quality" choices="Ultra (Cinematic),High,Medium,Low (Performance)" value="High" class="custom-select" />
+                    <ui:VisualElement name="opt-quality" class="custom-dropdown">
+                        <ui:Label name="opt-quality-value" text="High" class="custom-dropdown-value" />
+                        <ui:Label text="&#9660;" class="custom-dropdown-arrow" />
+                    </ui:VisualElement>
                 </ui:VisualElement>
                 <ui:VisualElement class="checkbox-group-wrapper">
                     <ui:Toggle name="opt-fullscreen" label="FULLSCREEN MODE" value="true" class="checkbox-label" />
@@ -147,4 +153,17 @@
             </ui:VisualElement>
         </ui:VisualElement>
     </ui:VisualElement>
+
+    <!-- CONFIRMATION OVERLAY -->
+    <ui:VisualElement name="confirm-overlay" class="confirm-overlay hidden-element">
+        <ui:VisualElement class="confirm-dialog">
+            <ui:Label text="APPLY SETTINGS?" class="confirm-title" />
+            <ui:Label text="Changes will be applied immediately to your session." class="confirm-subtitle" />
+            <ui:VisualElement class="confirm-buttons">
+                <ui:Button name="btn-confirm-yes" text="CONFIRM" class="confirm-btn confirm-btn-yes" />
+                <ui:Button name="btn-confirm-no" text="CANCEL" class="confirm-btn confirm-btn-no" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+    </ui:VisualElement>
+
 </ui:UXML>

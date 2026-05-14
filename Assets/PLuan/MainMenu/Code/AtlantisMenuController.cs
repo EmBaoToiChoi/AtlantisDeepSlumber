@@ -9,6 +9,7 @@ public class AtlantisMenuController : MonoBehaviour
     [SerializeField] private VideoPlayer _videoPlayer;
     [SerializeField] private RenderTexture _videoRenderTexture;
 
+
     private UIDocument _uiDocument;
     private VisualElement _root;
 
@@ -40,6 +41,17 @@ public class AtlantisMenuController : MonoBehaviour
     private List<ParticleData> _particles = new List<ParticleData>();
     private string _currentTargetRoomName = "";
     private const string DefaultRoomNamePlaceholder = "Atlantis Explorer";
+
+    // Applied Settings State
+    private string _appliedResolution = "1920x1080 (FHD)";
+    private string _appliedQuality    = "High";
+    private bool _appliedFullscreen   = true;
+    private bool _appliedVsync        = true;
+
+    // Custom Dropdown State
+    private VisualElement _activeDropdownPopup;
+    private string _resolutionValue = "1920x1080 (FHD)";
+    private string _qualityValue    = "High";
 
     void OnEnable()
     {
@@ -111,11 +123,22 @@ public class AtlantisMenuController : MonoBehaviour
         _root.Q<Button>("btn-auth-cancel").clicked += () => ShowPanel(_joinRoomPanel);
         _root.Q<Button>("btn-confirm-join-private").clicked += ConfirmJoinPrivateRoom;
 
-        _root.Q<Button>("btn-cancel-options").clicked += () => ShowPanel(_mainMenuPanel);
-        _root.Q<Button>("btn-save-options").clicked += SaveOptions;
+        _root.Q<Button>("btn-cancel-options").clicked += () => 
+        {
+            RevertOptionsUI();
+            ShowPanel(_mainMenuPanel);
+        };
+        _root.Q<Button>("btn-save-options").clicked += ShowConfirmOverlay;
+        
+        var btnYes = _root.Q<Button>("btn-confirm-yes");
+        if (btnYes != null) btnYes.clicked += SaveOptions;
+        
+        var btnNo = _root.Q<Button>("btn-confirm-no");
+        if (btnNo != null) btnNo.clicked += HideConfirmOverlay;
 
         SetupOptionsTabs();
         SetupSliders();
+        SetupCustomDropdowns();
 
         // Khởi tạo trọn bộ Động cơ Hạt đồng bộ HTML5
         InitSyncedParticleEngine();
@@ -138,6 +161,109 @@ public class AtlantisMenuController : MonoBehaviour
         HideAllPanels();
         panelToShow.RemoveFromClassList("hidden-panel");
     }
+
+    // =========================================================================
+    // CUSTOM DROPDOWN
+    // =========================================================================
+    private static readonly string[] ResolutionChoices = { "3840x2160 (4K)", "2560x1440 (2K)", "1920x1080 (FHD)", "1280x720 (HD)" };
+    private static readonly string[] QualityChoices    = { "Ultra (Cinematic)", "High", "Medium", "Low (Performance)" };
+
+    private void SetupCustomDropdowns()
+    {
+        // Đóng popup khi click ra ngoài
+        _root.RegisterCallback<PointerDownEvent>(evt =>
+        {
+            if (_activeDropdownPopup == null) return;
+            if (!_activeDropdownPopup.worldBound.Contains(evt.position))
+                CloseDropdownPopup();
+        }, TrickleDown.TrickleDown);
+
+        var resEl = _root.Q<VisualElement>("opt-resolution");
+        var qualEl = _root.Q<VisualElement>("opt-quality");
+
+        if (resEl != null)
+            resEl.RegisterCallback<PointerUpEvent>(evt =>
+            {
+                evt.StopPropagation();
+                ToggleDropdown(resEl, ResolutionChoices, ref _resolutionValue, "opt-resolution-value");
+            });
+
+        if (qualEl != null)
+            qualEl.RegisterCallback<PointerUpEvent>(evt =>
+            {
+                evt.StopPropagation();
+                ToggleDropdown(qualEl, QualityChoices, ref _qualityValue, "opt-quality-value");
+            });
+    }
+
+    private void ToggleDropdown(VisualElement trigger, string[] choices, ref string currentValue, string valueLabelName)
+    {
+        // Nếu popup này đang mở thì đóng lại
+        if (_activeDropdownPopup != null)
+        {
+            CloseDropdownPopup();
+            return;
+        }
+
+        string captured = currentValue;
+        string capturedLabelName = valueLabelName;
+        string[] capturedChoices = choices;
+
+        // Tạo popup và gắn vào root-screen (position: absolute)
+        var rootScreen = _root.Q<VisualElement>(className: "root-screen") ?? _root;
+        var popup = new VisualElement();
+        popup.AddToClassList("custom-dropdown-popup");
+
+        foreach (var choice in capturedChoices)
+        {
+            var choiceCapture = choice;
+            var btn = new Button();
+            btn.text = choiceCapture;
+            btn.AddToClassList("custom-dropdown-item");
+            if (choiceCapture == captured)
+                btn.AddToClassList("custom-dropdown-item--selected");
+
+            btn.clicked += () =>
+            {
+                // Cập nhật giá trị qua tên label (tránh ref capture)
+                var lbl = _root.Q<Label>(capturedLabelName);
+                if (lbl != null) lbl.text = choiceCapture;
+
+                // Lưu vào đúng biến
+                if (capturedLabelName == "opt-resolution-value") _resolutionValue = choiceCapture;
+                else if (capturedLabelName == "opt-quality-value")  _qualityValue    = choiceCapture;
+
+                CloseDropdownPopup();
+            };
+            popup.Add(btn);
+        }
+
+        rootScreen.Add(popup);
+        _activeDropdownPopup = popup;
+
+        // Canh vị trí popup ngay dưới trigger, dùng GeometryChangedEvent để đảm bảo layout xong
+        popup.RegisterCallback<GeometryChangedEvent>(_ => PositionPopup(popup, trigger, rootScreen));
+        PositionPopup(popup, trigger, rootScreen);
+    }
+
+    private void PositionPopup(VisualElement popup, VisualElement trigger, VisualElement container)
+    {
+        var triggerRect  = trigger.worldBound;
+        var containerRect = container.worldBound;
+        float left = triggerRect.xMin - containerRect.xMin;
+        float top  = triggerRect.yMax - containerRect.yMin + 2f;
+        popup.style.left  = left;
+        popup.style.top   = top;
+        popup.style.width = triggerRect.width;
+    }
+
+    private void CloseDropdownPopup()
+    {
+        _activeDropdownPopup?.RemoveFromHierarchy();
+        _activeDropdownPopup = null;
+    }
+
+
 
     // =========================================================================
     // ĐỘNG CƠ HẠT ĐỒNG BỘ (HTML5 PARTICLE ENGINE)
@@ -337,5 +463,80 @@ public class AtlantisMenuController : MonoBehaviour
         }
     }
 
-    private void SaveOptions() => ShowPanel(_mainMenuPanel);
-}
+    private void ShowConfirmOverlay()
+    {
+        _root.Q<VisualElement>("confirm-overlay")?.RemoveFromClassList("hidden-element");
+    }
+
+    private void HideConfirmOverlay()
+    {
+        _root.Q<VisualElement>("confirm-overlay")?.AddToClassList("hidden-element");
+    }
+
+    private void RevertOptionsUI()
+    {
+        _resolutionValue = _appliedResolution;
+        _qualityValue = _appliedQuality;
+
+        var resLbl = _root.Q<Label>("opt-resolution-value");
+        if (resLbl != null) resLbl.text = _resolutionValue;
+
+        var qualLbl = _root.Q<Label>("opt-quality-value");
+        if (qualLbl != null) qualLbl.text = _qualityValue;
+
+        var fsToggle = _root.Q<Toggle>("opt-fullscreen");
+        if (fsToggle != null) fsToggle.value = _appliedFullscreen;
+
+        var vsyncToggle = _root.Q<Toggle>("opt-vsync");
+        if (vsyncToggle != null) vsyncToggle.value = _appliedVsync;
+    }
+
+    private void SaveOptions()
+    {
+        HideConfirmOverlay();
+
+        _appliedResolution = _resolutionValue;
+        _appliedQuality = _qualityValue;
+        _appliedFullscreen = _root.Q<Toggle>("opt-fullscreen")?.value ?? true;
+        _appliedVsync = _root.Q<Toggle>("opt-vsync")?.value ?? true;
+
+        // --- RESOLUTION ---
+        // Parse "WxH (label)" → e.g. "1920x1080 (FHD)" → 1920, 1080
+        bool fullscreen = _appliedFullscreen;
+        ParseResolution(_resolutionValue, out int w, out int h);
+        if (w > 0 && h > 0)
+            Screen.SetResolution(w, h, fullscreen ? FullScreenMode.FullScreenWindow : FullScreenMode.Windowed);
+
+        // --- V-SYNC ---
+        bool vsync = _appliedVsync;
+        QualitySettings.vSyncCount = vsync ? 1 : 0;
+
+        // --- GRAPHICS QUALITY ---
+        int qualityIndex = _qualityValue switch
+        {
+            "Ultra (Cinematic)" => QualitySettings.names.Length - 1,
+            "High"              => Mathf.Max(0, QualitySettings.names.Length - 2),
+            "Medium"            => Mathf.Max(0, QualitySettings.names.Length / 2),
+            _                   => 0, // Low (Performance)
+        };
+        QualitySettings.SetQualityLevel(qualityIndex, true);
+
+        Debug.Log($"[Options] Applied: {w}x{h} | Fullscreen={fullscreen} | VSync={vsync} | Quality={_qualityValue} (idx {qualityIndex})");
+
+        ShowPanel(_mainMenuPanel);
+    }
+
+    private static void ParseResolution(string resStr, out int width, out int height)
+    {
+        // Dạng: "1920x1080 (FHD)" — lấy phần trước dấu cách
+        width = height = 0;
+        int spaceIdx = resStr.IndexOf(' ');
+        string pair = spaceIdx > 0 ? resStr.Substring(0, spaceIdx) : resStr;
+        var parts = pair.Split('x');
+        if (parts.Length == 2)
+        {
+            int.TryParse(parts[0], out width);
+            int.TryParse(parts[1], out height);
+        }
+    }
+}
