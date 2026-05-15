@@ -3,7 +3,102 @@ guid: aca397372b69d524280cae2d36e44205
 ModelImporter:
   serializedVersion: 22200
   internalIDToNameTable: []
-  externalObjects: {}
+  externalObjects:
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Arm
+    second: {fileID: 2100000, guid: 2877e3d3f1e3f2a479bade4ccd2c4b03, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Body
+    second: {fileID: 2100000, guid: c36e4dda300776f4787bd32557d42f48, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Cloth GrayColor
+    second: {fileID: 2100000, guid: 07a002f462b3f1340a80057d6d892b64, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Eye
+    second: {fileID: 2100000, guid: 0204e4a53acb1ab4f8a14db717501045, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Eyelash
+    second: {fileID: 2100000, guid: dcd72498ead2a144d9901f60bfaac0e8, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Hair
+    second: {fileID: 2100000, guid: f98447f531d57ee4f84f03553f7ebfc9, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Head
+    second: {fileID: 2100000, guid: 4cb0396b19cbc2645873ba5084c67966, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Leg
+    second: {fileID: 2100000, guid: 5ed4af50329a8a745977c99e8bcda0aa, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Staff
+    second: {fileID: 2100000, guid: 7012b6ce61a1cd54db65b61c268b3fb6, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Teeth
+    second: {fileID: 2100000, guid: a1b82db170b80c74aa1fe5a8efd2ed69, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Tongue
+    second: {fileID: 2100000, guid: e3dbb87bc82f91a47acad83b651a5b76, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: UnderWear
+    second: {fileID: 2100000, guid: ff0f0a54c0474a74b8f23bfd26de9aa7, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: cs_buttons.001
+    second: {fileID: 2100000, guid: c9ab36c2646545a43bb953b06252fc39, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: cs_solid_black.001
+    second: {fileID: 2100000, guid: 84951ad8faaa1ed458525d86dcc03f95, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: cs_solid_blue.001
+    second: {fileID: 2100000, guid: 6ebb3da1b8f2e7a47b1bd7b384524c38, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: cs_solid_green.001
+    second: {fileID: 2100000, guid: 7373af125c8235b4c9dc7d9af7813ee2, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: cs_solid_grey.001
+    second: {fileID: 2100000, guid: 47fb83a81d9cad94b81dc37c96e6af6c, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: cs_solid_red.001
+    second: {fileID: 2100000, guid: d9036430440f68b478c89f10acd0013e, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: nail
+    second: {fileID: 2100000, guid: 2d07d249c2935404c82c6341fa2d5577, type: 2}
   materials:
     materialImportMode: 2
     materialName: 0

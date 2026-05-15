@@ -6,6 +6,8 @@ const jwt = require('jsonwebtoken');
 const nodemailer = require('nodemailer');
 const cors = require('cors');
 const User = require('./models/User');
+const Room = require('./models/Room');
+
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -276,6 +278,115 @@ app.post('/api/login', async (req, res) => {
         res.status(500).json({ success: false, message: 'Lỗi máy chủ. Vui lòng thử lại.' });
     }
 });
+
+// ─── Room Routes ──────────────────────────────────────────────────────────────
+
+function generateRoomId() {
+    const chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    let result = '';
+    for (let i = 0; i < 6; i++) {
+        result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return result;
+}
+
+// Middleware xác thực JWT
+const authenticateToken = (req, res, next) => {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+    if (!token) return res.status(401).json({ success: false, message: 'Thiếu token xác thực.' });
+
+    jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
+        if (err) return res.status(403).json({ success: false, message: 'Token không hợp lệ hoặc đã hết hạn.' });
+        req.user = user;
+        next();
+    });
+};
+
+// POST /api/rooms/create
+app.post('/api/rooms/create', authenticateToken, async (req, res) => {
+    try {
+        const { roomName, isPrivate, password } = req.body;
+        if (!roomName) return res.status(400).json({ success: false, message: 'Thiếu tên phòng.' });
+
+        const roomId = generateRoomId();
+        const room = new Room({
+            roomId,
+            roomName,
+            host: req.user.userId,
+            players: [{
+                user: req.user.userId,
+                displayName: req.user.displayName,
+                slot: 1
+            }],
+            isPrivate: !!isPrivate,
+            password: isPrivate ? password : null
+        });
+
+        await room.save();
+        res.json({ success: true, message: 'Tạo phòng thành công!', room });
+    } catch (err) {
+        console.error('[CreateRoom]', err);
+        res.status(500).json({ success: false, message: 'Lỗi khi tạo phòng.' });
+    }
+});
+
+// POST /api/rooms/join
+app.post('/api/rooms/join', authenticateToken, async (req, res) => {
+    try {
+        const { roomId, password } = req.body;
+        const room = await Room.findOne({ roomId: roomId.toUpperCase(), status: 'waiting' });
+
+        if (!room) return res.status(404).json({ success: false, message: 'Không tìm thấy phòng hoặc phòng đã bắt đầu.' });
+        if (room.players.length >= room.maxPlayers) return res.status(400).json({ success: false, message: 'Phòng đã đầy.' });
+
+        // Kiểm tra password nếu là phòng private
+        if (room.isPrivate && room.password !== password) {
+            return res.status(403).json({ success: false, message: 'Mật khẩu không đúng.' });
+        }
+
+        // Kiểm tra player đã trong phòng chưa
+        if (room.players.find(p => p.user.toString() === req.user.userId)) {
+            return res.json({ success: true, message: 'Bạn đã ở trong phòng này.', room });
+        }
+
+        // Tìm slot trống
+        const occupiedSlots = room.players.map(p => p.slot);
+        let assignedSlot = -1;
+        for (let i = 1; i <= 4; i++) {
+            if (!occupiedSlots.includes(i)) {
+                assignedSlot = i;
+                break;
+            }
+        }
+
+        room.players.push({
+            user: req.user.userId,
+            displayName: req.user.displayName,
+            slot: assignedSlot
+        });
+
+        await room.save();
+        res.json({ success: true, message: 'Tham gia phòng thành công!', room });
+    } catch (err) {
+        console.error('[JoinRoom]', err);
+        res.status(500).json({ success: false, message: 'Lỗi khi tham gia phòng.' });
+    }
+});
+
+// GET /api/rooms/:roomId
+app.get('/api/rooms/:roomId', authenticateToken, async (req, res) => {
+    try {
+        const room = await Room.findOne({ roomId: req.params.roomId.toUpperCase() });
+        if (!room) return res.status(404).json({ success: false, message: 'Không tìm thấy phòng.' });
+
+        res.json({ success: true, room });
+    } catch (err) {
+        console.error('[GetRoom]', err);
+        res.status(500).json({ success: false, message: 'Lỗi khi lấy thông tin phòng.' });
+    }
+});
+
 
 // ─── Start ────────────────────────────────────────────────────────────────────
 app.listen(PORT, () => {

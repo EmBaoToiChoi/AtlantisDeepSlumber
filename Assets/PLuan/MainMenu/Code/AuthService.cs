@@ -14,6 +14,53 @@ public class AuthResponse
     public bool needsVerification;
 }
 
+
+
+[System.Serializable]
+public class RoomPlayer
+{
+    public string user;
+    public string displayName;
+    public int slot;
+}
+
+[System.Serializable]
+public class RoomData
+{
+    public string _id;
+    public string roomId;
+    public string roomName;
+    public string host;
+    public bool isPrivate;
+    public int maxPlayers;
+    public string status;
+    public RoomPlayer[] players;
+}
+
+[System.Serializable]
+public class RoomResponse
+{
+    public bool success;
+    public string message;
+    public RoomData room;
+}
+
+[System.Serializable]
+public class CreateRoomRequest
+{
+    public string roomName;
+    public bool isPrivate;
+    public string password;
+}
+
+[System.Serializable]
+public class JoinRoomRequest
+{
+    public string roomId;
+    public string password;
+}
+
+
 [System.Serializable]
 public class RegisterRequest
 {
@@ -74,6 +121,66 @@ public static class AuthService
         string json = JsonUtility.ToJson(reqObj);
         return await SendRequest($"{BASE_URL}/resend-otp", json);
     }
+
+    // --- Room APIs ---
+
+    public static async Task<RoomResponse> CreateRoom(string roomName, bool isPrivate, string password)
+    {
+        var reqObj = new CreateRoomRequest { roomName = roomName, isPrivate = isPrivate, password = password };
+        string json = JsonUtility.ToJson(reqObj);
+        return await SendRoomRequest($"{BASE_URL}/rooms/create", "POST", json);
+    }
+
+    public static async Task<RoomResponse> JoinRoom(string roomId, string password)
+    {
+        var reqObj = new JoinRoomRequest { roomId = roomId, password = password };
+        string json = JsonUtility.ToJson(reqObj);
+        return await SendRoomRequest($"{BASE_URL}/rooms/join", "POST", json);
+    }
+
+    public static async Task<RoomResponse> GetRoomStatus(string roomId)
+    {
+        return await SendRoomRequest($"{BASE_URL}/rooms/{roomId}", "GET", null);
+    }
+
+    private static async Task<RoomResponse> SendRoomRequest(string url, string method, string jsonBody)
+    {
+        using (UnityWebRequest req = new UnityWebRequest(url, method))
+        {
+            if (!string.IsNullOrEmpty(jsonBody))
+            {
+                byte[] bodyRaw = Encoding.UTF8.GetBytes(jsonBody);
+                req.uploadHandler = new UploadHandlerRaw(bodyRaw);
+            }
+            req.downloadHandler = new DownloadHandlerBuffer();
+            req.SetRequestHeader("Content-Type", "application/json");
+
+            // Thêm Authorization header nếu có token
+            string token = PlayerPrefs.GetString("AuthToken", "");
+            if (!string.IsNullOrEmpty(token))
+            {
+                req.SetRequestHeader("Authorization", $"Bearer {token}");
+            }
+
+            var operation = req.SendWebRequest();
+            while (!operation.isDone)
+                await Task.Yield();
+
+            string responseText = req.downloadHandler.text;
+            if (req.result == UnityWebRequest.Result.ConnectionError)
+                return new RoomResponse { success = false, message = "Network Error!" };
+
+            try
+            {
+                return JsonUtility.FromJson<RoomResponse>(responseText);
+            }
+            catch
+            {
+                return new RoomResponse { success = false, message = "Parse error: " + responseText };
+            }
+        }
+    }
+
 
     private static async Task<AuthResponse> SendRequest(string url, string jsonBody)
     {
