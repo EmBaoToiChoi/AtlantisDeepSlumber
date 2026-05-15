@@ -15,6 +15,21 @@ public class PlayerHUDController : MonoBehaviour
     private VisualElement weaponSlot1;
     private VisualElement weaponSlot2;
     
+    // Kỹ năng
+    private VisualElement cooldownF;
+    private VisualElement cooldownR;
+    private Label cooldownTextF;
+    private Label cooldownTextR;
+    private float cooldownTimeF = 10f; // Thời gian hồi chiêu F
+    private float cooldownTimeR = 15f; // Thời gian hồi chiêu R
+    private float currentCooldownF = 0f;
+    private float currentCooldownR = 0f;
+    
+    // Khóa kỹ năng
+    private VisualElement lockF;
+    private VisualElement lockR;
+    private bool isSkillsUnlocked = false; // Trạng thái đã mở khóa kỹ năng hay chưa
+    
     // Mặc định false -> Vào game chưa ấn M sẽ là tắt Mic
     private bool isMicOn = false; 
 
@@ -32,6 +47,15 @@ public class PlayerHUDController : MonoBehaviour
         
         weaponSlot1 = root.Q<VisualElement>("weapon-slot-1");
         weaponSlot2 = root.Q<VisualElement>("weapon-slot-2");
+
+        // Tìm UI Kỹ năng
+        cooldownF = root.Q<VisualElement>("skill-cooldown-f");
+        cooldownR = root.Q<VisualElement>("skill-cooldown-r");
+        cooldownTextF = root.Q<Label>("skill-cooldown-text-f");
+        cooldownTextR = root.Q<Label>("skill-cooldown-text-r");
+        
+        lockF = root.Q<VisualElement>("skill-lock-f");
+        lockR = root.Q<VisualElement>("skill-lock-r");
 
         // Đồng bộ trạng thái UI ngay khi load game (Tắt)
         UpdateMicUI();
@@ -58,6 +82,77 @@ public class PlayerHUDController : MonoBehaviour
             {
                 SelectWeapon(2);
             }
+
+            // Mở khóa kỹ năng bằng phím L
+            if (Keyboard.current.lKey.wasPressedThisFrame && !isSkillsUnlocked)
+            {
+                isSkillsUnlocked = true;
+                Debug.Log("Đã mở khóa Kỹ năng!");
+                
+                // Thêm class để kích hoạt hiệu ứng rớt ổ khóa trong USS
+                if (lockF != null) lockF.AddToClassList("unlocked-anim");
+                if (lockR != null) lockR.AddToClassList("unlocked-anim");
+            }
+
+            // Kích hoạt Skill F (chỉ khi đã mở khóa)
+            if (isSkillsUnlocked && Keyboard.current.fKey.wasPressedThisFrame && currentCooldownF <= 0f)
+            {
+                currentCooldownF = cooldownTimeF;
+                Debug.Log("Đã dùng kỹ năng F");
+            }
+
+            // Kích hoạt Skill R (chỉ khi đã mở khóa)
+            if (isSkillsUnlocked && Keyboard.current.rKey.wasPressedThisFrame && currentCooldownR <= 0f)
+            {
+                currentCooldownR = cooldownTimeR;
+                Debug.Log("Đã dùng kỹ năng R");
+            }
+        }
+
+        // Cập nhật hiệu ứng hồi chiêu F
+        if (currentCooldownF > 0f)
+        {
+            currentCooldownF -= Time.deltaTime;
+            if (cooldownF != null)
+            {
+                float percent = Mathf.Clamp01(currentCooldownF / cooldownTimeF) * 100f;
+                cooldownF.style.height = Length.Percent(percent);
+            }
+            if (cooldownTextF != null)
+            {
+                cooldownTextF.text = Mathf.CeilToInt(currentCooldownF).ToString();
+                cooldownTextF.style.display = DisplayStyle.Flex;
+            }
+        }
+        else
+        {
+            if (cooldownF != null && cooldownF.style.height.value.value > 0)
+                cooldownF.style.height = Length.Percent(0);
+            if (cooldownTextF != null && cooldownTextF.style.display == DisplayStyle.Flex)
+                cooldownTextF.style.display = DisplayStyle.None;
+        }
+
+        // Cập nhật hiệu ứng hồi chiêu R
+        if (currentCooldownR > 0f)
+        {
+            currentCooldownR -= Time.deltaTime;
+            if (cooldownR != null)
+            {
+                float percent = Mathf.Clamp01(currentCooldownR / cooldownTimeR) * 100f;
+                cooldownR.style.height = Length.Percent(percent);
+            }
+            if (cooldownTextR != null)
+            {
+                cooldownTextR.text = Mathf.CeilToInt(currentCooldownR).ToString();
+                cooldownTextR.style.display = DisplayStyle.Flex;
+            }
+        }
+        else
+        {
+            if (cooldownR != null && cooldownR.style.height.value.value > 0)
+                cooldownR.style.height = Length.Percent(0);
+            if (cooldownTextR != null && cooldownTextR.style.display == DisplayStyle.Flex)
+                cooldownTextR.style.display = DisplayStyle.None;
         }
     }
 
