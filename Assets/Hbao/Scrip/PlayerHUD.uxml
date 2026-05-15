@@ -1,6 +1,5 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
     <Style src="project://database/Assets/Hbao/Scrip/PlayerHUD.uss?fileID=7433441132597879392&amp;guid=70193741e3d26714d859986fce3cd4df&amp;type=3#PlayerHUD" />
-    
     <ui:VisualElement class="hud-main-wrapper" style="-unity-font-definition: url(&quot;project://database/Assets/TextMesh%20Pro/Examples%20&amp;%20Extras/Fonts/Electronic%20Highway%20Sign.TTF?fileID=12800000&amp;guid=8a2b9e2a607dd2143b58c44bc32410b4&amp;type=3#Electronic Highway Sign&quot;);">
         <ui:VisualElement class="player-avatar-container">
             <ui:VisualElement class="raw-player-image" style="background-image: url(&quot;project://database/Assets/Hbao/Image/AvaST.png?fileID=1013639804&amp;guid=d74474e1ade5e1a438e24f8f7417dae9&amp;type=3#AvaST_0&quot;);" />
@@ -34,7 +33,6 @@
             <ui:VisualElement name="mic-icon" class="mic-icon-base mic-off" />
         </ui:VisualElement>
     </ui:VisualElement>
-
     <ui:VisualElement name="minimap-container" class="minimap-wrapper">
         <ui:VisualElement class="minimap-mask">
             <ui:VisualElement name="minimap-content" class="minimap-content" />
@@ -49,7 +47,6 @@
         <ui:VisualElement class="minimap-deco-dot" style="top: 95px; right: -2px;" />
         <ui:Label text="N" class="minimap-compass-n" />
     </ui:VisualElement>
-
     <ui:VisualElement class="hud-weapons-wrapper" style="-unity-font-definition: url(&quot;project://database/Assets/TextMesh%20Pro/Examples%20&amp;%20Extras/Fonts/Electronic%20Highway%20Sign.TTF?fileID=12800000&amp;guid=8a2b9e2a607dd2143b58c44bc32410b4&amp;type=3#Electronic Highway Sign&quot;);">
         <ui:VisualElement name="weapon-slot-1" class="weapon-slot weapon-active">
             <ui:VisualElement class="weapon-hotkey-wrapper">
@@ -57,16 +54,33 @@
                     <ui:Label text="1" class="weapon-hotkey" />
                 </ui:VisualElement>
             </ui:VisualElement>
-            <ui:VisualElement name="weapon-img-1" class="weapon-image" />
+            <ui:VisualElement name="weapon-img-1" class="weapon-image" style="background-image: url(&quot;project://database/Assets/Hbao/Image/N%E1%BA%A5m%20%C4%91%E1%BA%A5m.png?fileID=2800000&amp;guid=14531db39fa39224290fb66a20930bcc&amp;type=3#Nấm đấm&quot;); width: 240px; height: 107px; top: -16px; right: 28px;" />
         </ui:VisualElement>
-        
         <ui:VisualElement name="weapon-slot-2" class="weapon-slot weapon-inactive">
             <ui:VisualElement class="weapon-hotkey-wrapper">
                 <ui:VisualElement class="weapon-hotkey-container">
                     <ui:Label text="2" class="weapon-hotkey" />
                 </ui:VisualElement>
             </ui:VisualElement>
-            <ui:VisualElement name="weapon-img-2" class="weapon-image" />
+            <ui:VisualElement name="weapon-img-2" class="weapon-image" style="background-image: url(&quot;project://database/Assets/Hbao/Image/VukhiPLayer1.png?fileID=2800000&amp;guid=e5e54aaec41889f4383d000dfe69d050&amp;type=3#VukhiPLayer1&quot;); height: 139px; width: 296px; top: -22px; right: -24px;" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+    <ui:VisualElement class="hud-skills-wrapper" style="-unity-font-definition: url(&quot;project://database/Assets/TextMesh%20Pro/Examples%20&amp;%20Extras/Fonts/Electronic%20Highway%20Sign.TTF?fileID=12800000&amp;guid=8a2b9e2a607dd2143b58c44bc32410b4&amp;type=3#Electronic Highway Sign&quot;);">
+        <ui:VisualElement class="skill-slot">
+            <ui:VisualElement name="skill-img-f" class="skill-image" />
+            <ui:VisualElement name="skill-cooldown-f" class="skill-cooldown-overlay" style="height: 0%;" />
+            <ui:Label name="skill-cooldown-text-f" class="skill-cooldown-text" />
+            <ui:VisualElement name="skill-lock-f" class="skill-lock-overlay">
+                <ui:VisualElement class="skill-lock-icon" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+        <ui:VisualElement class="skill-slot">
+            <ui:VisualElement name="skill-img-r" class="skill-image" />
+            <ui:VisualElement name="skill-cooldown-r" class="skill-cooldown-overlay" style="height: 0%;" />
+            <ui:Label name="skill-cooldown-text-r" class="skill-cooldown-text" />
+            <ui:VisualElement name="skill-lock-r" class="skill-lock-overlay">
+                <ui:VisualElement class="skill-lock-icon" />
+            </ui:VisualElement>
         </ui:VisualElement>
     </ui:VisualElement>
 </ui:UXML>
