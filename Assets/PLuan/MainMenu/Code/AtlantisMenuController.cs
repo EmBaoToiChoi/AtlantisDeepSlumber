@@ -22,6 +22,12 @@ public class AtlantisMenuController : MonoBehaviour
     private VisualElement _joinAuthPanel;
     private VisualElement _optionsMenuPanel;
     
+    [Header("Waiting Room Manager")]
+    [SerializeField] private WaittingRoom _waitingRoomManager;
+
+
+
+    
     // Authentication Panels
     private VisualElement _loginPanel;
     private VisualElement _registerPanel;
@@ -91,6 +97,8 @@ public class AtlantisMenuController : MonoBehaviour
         _userProfileContainer = _root.Q<VisualElement>("user-profile-container");
         _lblDisplayName = _root.Q<Label>("lbl-display-name");
 
+
+
         LocalizationManager.Initialize();
         RefreshLocalization();
 
@@ -146,6 +154,10 @@ public class AtlantisMenuController : MonoBehaviour
 
         _root.Q<Button>("btn-create-back").clicked += () => ShowPanel(_networkMenuPanel);
         _root.Q<Button>("btn-confirm-create").clicked += ConfirmCreateRoom;
+
+        // btn-leave-room và btn-start-game đã chuyển sang WaittingRoom script quản lý UI riêng
+
+
 
         var radioGroup = _root.Q<RadioButtonGroup>("radio-privacy");
         var pwdGroup = _root.Q<VisualElement>("password-group");
@@ -449,35 +461,104 @@ public class AtlantisMenuController : MonoBehaviour
         }
     }
 
-    private void ConfirmCreateRoom()
+    private async void ConfirmCreateRoom()
     {
         string roomName = _root.Q<TextField>("input-room-name").value;
         if (string.IsNullOrWhiteSpace(roomName) || roomName == DefaultRoomNamePlaceholder) return;
-        Debug.Log($"[HOST] Đã tạo phòng: {roomName}");
+
+        bool isPrivate = _root.Q<RadioButtonGroup>("radio-privacy").value == 1;
+        string password = _root.Q<TextField>("input-room-password").value;
+
+        Debug.Log($"[HOST] Đang tạo phòng: {roomName} (Private: {isPrivate})");
+        
+        var response = await AuthService.CreateRoom(roomName, isPrivate, password);
+        if (response != null && response.success)
+        {
+            EnterWaitingRoom(response.room);
+        }
+        else
+        {
+            Debug.LogError($"[HOST] Lỗi tạo phòng: {response?.message}");
+        }
     }
 
-    private void JoinByID()
+    private async void JoinByID()
     {
         string inputID = _root.Q<TextField>("input-room-id").value.Trim();
-        if (inputID.Length == 6) Debug.Log($"[JOIN] Kết nối tới ID: #{inputID}");
+        if (inputID.Length != 6) return;
+
+        Debug.Log($"[JOIN] Kết nối tới ID: #{inputID}");
+        var response = await AuthService.JoinRoom(inputID, "");
+        if (response != null && response.success)
+        {
+            EnterWaitingRoom(response.room);
+        }
+        else
+        {
+            Debug.LogError($"[JOIN] Lỗi tham gia: {response?.message}");
+        }
     }
 
     private void JoinSpecificRoom(string roomName, bool isPrivate)
     {
         _currentTargetRoomName = roomName;
+        // Giả sử roomName ở đây là ID hoặc có cách map ID
+        // Trong demo này ta sẽ mở panel nhập pass nếu là private
         if (isPrivate)
         {
             _root.Q<Label>("auth-room-name").text = $"SESSION: {roomName}";
             ShowPanel(_joinAuthPanel);
         }
-        else Debug.Log($"[JOIN] Vào phòng: {roomName}");
+        else 
+        {
+            Debug.Log($"[JOIN] Vào phòng: {roomName}");
+            // Thực tế sẽ gọi JoinRoom với ID của room đó
+        }
     }
 
-    private void ConfirmJoinPrivateRoom()
+    private async void ConfirmJoinPrivateRoom()
     {
         string pwd = _root.Q<TextField>("input-join-password").value;
-        if (!string.IsNullOrWhiteSpace(pwd)) Debug.Log($"[JOIN] Vào phòng {_currentTargetRoomName} với mật khẩu.");
+        // Ở đây cần ID của phòng đang chọn, giả sử ta đã lưu nó
+        string roomId = "DEMO12"; // Mock ID
+        
+        var response = await AuthService.JoinRoom(roomId, pwd);
+        if (response != null && response.success)
+        {
+            EnterWaitingRoom(response.room);
+        }
+        else
+        {
+            Debug.LogError($"[JOIN] Sai mật khẩu hoặc lỗi: {response?.message}");
+        }
     }
+
+    private void EnterWaitingRoom(RoomData room)
+    {
+        // Ẩn UI menu chính trước
+        if (_currentActivePanel != null)
+        {
+            _currentActivePanel.AddToClassList("hidden-panel");
+            _currentActivePanel = null;
+        }
+
+        if (_waitingRoomManager != null)
+        {
+            _waitingRoomManager.StartWaiting(room);
+        }
+    }
+
+    public void LeaveRoom()
+    {
+        if (_waitingRoomManager != null)
+        {
+            _waitingRoomManager.StopWaiting();
+            _waitingRoomManager.gameObject.SetActive(false);
+        }
+        ShowPanel(_networkMenuPanel);
+    }
+
+
 
     private void QuitGame() => Application.Quit();
 
@@ -690,6 +771,8 @@ public class AtlantisMenuController : MonoBehaviour
         _joinAuthPanel.AddToClassList("hidden-panel");
         _optionsMenuPanel.AddToClassList("hidden-panel");
     }
+
+
 
     private void ShowPanelImmediately(VisualElement panel)
     {

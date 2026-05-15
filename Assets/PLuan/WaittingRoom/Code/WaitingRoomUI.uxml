@@ -1,0 +1,21 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
+    <Style src="project://database/Assets/PLuan/WaittingRoom/Code/WaitingRoomUI.uss" />
+    <ui:VisualElement name="waiting-room-root" class="waiting-room-overlay">
+        <!-- TOP INFO BAR -->
+        <ui:VisualElement class="waiting-top-bar">
+            <ui:Label name="lbl-room-name" text="SESSION: EXPLORER" class="room-title" />
+            <ui:Label name="lbl-room-id" text="ID: #XXXXXX" class="room-id-badge" />
+        </ui:VisualElement>
+
+        <!-- PLAYER SLOTS LIST (Optional overlay if needed) -->
+        <ui:VisualElement class="players-status-container">
+            <ui:Label name="lbl-player-count" text="PLAYERS: 1/4" class="status-text" />
+        </ui:VisualElement>
+
+        <!-- BOTTOM ACTION BUTTONS -->
+        <ui:VisualElement class="waiting-bottom-bar">
+            <ui:Button name="btn-start" text="START EXPEDITION" class="action-btn start-btn hidden-element" />
+            <ui:Button name="btn-leave" text="LEAVE SESSION" class="action-btn leave-btn" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>
