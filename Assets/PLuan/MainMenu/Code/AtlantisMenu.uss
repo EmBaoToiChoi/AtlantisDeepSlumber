@@ -15,7 +15,7 @@
 /* --- MENU & PANELS --- */
 .menu-container {
     margin-left: 6%;
-    width: 500px; /* Tăng từ 380px lên 450px để trông bề thế hơn */
+    width: 500px; 
     padding: 45px 35px;
     background-color: rgba(2, 9, 16, 0.88);
     
@@ -28,8 +28,12 @@
     
     border-width: 1px;
     border-color: rgba(0, 190, 255, 0.25);
-    /* Đổ bóng khối sâu hơn */
     text-shadow: 0 0 12px rgba(0, 0, 0, 0.8);
+
+    /* Animation Transition */
+    transition-property: opacity, scale;
+    transition-duration: 0.4s;
+    transition-timing-function: ease-out-back;
 }
 
 .large-panel {
@@ -37,7 +41,20 @@
     padding: 45px 50px;
 }
 
-.hidden-panel { display: none; }
+.hidden-panel { 
+    display: none;
+    opacity: 0;
+    scale: 0.9;
+    pointer-events: none;
+}
+
+/* Lớp trung gian để xử lý animation trước khi display: none */
+.panel-fade-out {
+    opacity: 0;
+    scale: 0.9;
+    pointer-events: none;
+}
+
 .hidden-element { display: none; }
 
 /* --- TIÊU ĐỀ PANELS --- */
@@ -564,3 +581,100 @@
     box-shadow: 0 0 15px rgba(255, 80, 80, 0.5);
     color: rgb(255, 180, 180);
 }
+
+/* =========================================================================
+   AUTHENTICATION & USER PROFILE
+   ========================================================================= */
+.error-text {
+    color: rgb(255, 80, 80);
+    font-size: 13px;
+    -unity-font-style: bold;
+    margin-bottom: 15px;
+    white-space: normal;
+}
+.info-text {
+    color: rgb(120, 230, 255);
+    font-size: 13px;
+    margin-bottom: 15px;
+    white-space: normal;
+}
+.otp-input .unity-base-text-field__input {
+    letter-spacing: 12px;
+    -unity-text-align: middle-center;
+    font-size: 20px;
+    -unity-font-style: bold;
+}
+.user-profile-box {
+    position: absolute;
+    top: 25px;
+    right: 35px;
+    background-color: rgba(2, 12, 20, 0.95);
+    border-width: 1px;
+    border-color: rgba(0, 230, 255, 0.3);
+    border-left-width: 4px;
+    border-left-color: rgb(0, 230, 255);
+    border-radius: 2px 8px 2px 8px;
+    padding: 12px 20px;
+    align-items: center;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.6);
+}
+.user-profile-label {
+    color: rgba(0, 230, 255, 0.5);
+    font-size: 11px;
+    letter-spacing: 3px;
+    margin-bottom: 2px;
+}
+.user-profile-name {
+    color: rgb(255, 255, 255);
+    font-size: 22px;
+    -unity-font-style: bold;
+    text-shadow: 0 0 12px rgba(0, 230, 255, 0.8);
+    letter-spacing: 1px;
+}
+.logout-btn {
+    margin-top: 10px;
+    padding: 6px 14px;
+    font-size: 11px;
+    background-color: rgba(255, 60, 60, 0.1);
+    border-color: rgba(255, 60, 60, 0.4);
+    color: rgb(255, 120, 120);
+    border-radius: 4px;
+    transition-duration: 0.2s;
+}
+.logout-btn:hover {
+    background-color: rgba(255, 60, 60, 0.3);
+    border-color: rgb(255, 80, 80);
+    color: rgb(255, 255, 255);
+}
+
+.spam-note {
+    color: rgba(0, 200, 255, 0.6);
+    font-size: 11px;
+    -unity-font-style: italic;
+    margin-top: 4px;
+    margin-bottom: 4px;
+}
+
+/* --- WAITING ROOM STYLES --- */
+.waiting-info-box {
+    margin-top: 15px;
+    margin-bottom: 15px;
+    padding: 15px;
+    background-color: rgba(0, 190, 255, 0.05);
+    border-width: 1px;
+    border-color: rgba(0, 190, 255, 0.2);
+    border-radius: 4px;
+}
+
+.waiting-info-text {
+    color: rgb(160, 230, 255);
+    font-size: 16px;
+    margin-bottom: 8px;
+    -unity-font-style: bold;
+    letter-spacing: 2px;
+}
+
+#lbl-room-id-display {
+    color: rgb(0, 255, 255);
+    text-shadow: 0 0 8px rgba(0, 255, 255, 0.6);
+}
