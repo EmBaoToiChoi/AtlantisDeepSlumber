@@ -408,8 +408,8 @@
 
 /* Ổ khóa */
 .skill-lock-icon {
-    width: 100px;
-    height: 100px;
+    width: 80px;
+    height: 75px;
     -unity-background-scale-mode: scale-to-fit;
     background-image: url("project://database/Assets/Hbao/Image/Okhoa.png?fileID=2800000&guid=a6762048aa50f61429b3f9b9877b5028&type=3#Okhoa");
     transition-property: translate, opacity, rotate;
