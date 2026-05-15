@@ -1,18 +1,15 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
     <Style src="project://database/Assets/PLuan/MainMenu/Code/AtlantisMenu.uss?fileID=7433441132597879392&amp;guid=8fa4b76500634d046bac501785335e61&amp;type=3#AtlantisMenu" />
-    <ui:VisualElement class="root-screen" style="-unity-font-definition: url(&quot;project://database/Assets/TextMesh%20Pro/Examples%20&amp;%20Extras/Fonts/Electronic%20Highway%20Sign.TTF?fileID=12800000&amp;guid=8a2b9e2a607dd2143b58c44bc32410b4&amp;type=3#Electronic Highway Sign&quot;);">
-        
-        <!-- USER PROFILE (TOP RIGHT) -->
+    <ui:VisualElement class="root-screen" style="-unity-font-definition: url(&quot;project://database/Assets/PLuan/MainMenu/Font/Elms_Sans/static/ElmsSans-BoldItalic.ttf?fileID=12800000&amp;guid=516a0c13403c3af48ac760e7a0157fee&amp;type=3#ElmsSans-BoldItalic&quot;);">
+
         <ui:VisualElement name="user-profile-container" class="user-profile-box hidden-element">
             <ui:Label name="lbl-profile-hint" text="LOGGED IN AS:" class="user-profile-label" />
             <ui:Label name="lbl-display-name" text="PLAYER_NAME" class="user-profile-name" />
             <ui:Button name="btn-logout" text="LOGOUT" class="join-mini-btn logout-btn" />
         </ui:VisualElement>
-
-        <!-- 1. LOGIN PANEL -->
         <ui:VisualElement name="login-panel" class="menu-container hidden-panel">
             <ui:Label name="lbl-login-title" text="USER LOGIN" class="panel-title" />
-            <ui:Label name="lbl-login-error" text="" class="error-text hidden-element" />
+            <ui:Label name="lbl-login-error" class="error-text hidden-element" />
             <ui:VisualElement class="form-group">
                 <ui:Label name="lbl-login-email" text="EMAIL" class="form-label" />
                 <ui:TextField name="input-login-email" class="form-input" />
@@ -26,11 +23,9 @@
                 <ui:Button name="btn-goto-register" text="CREATE ACCOUNT" class="menu-btn back-btn" />
             </ui:VisualElement>
         </ui:VisualElement>
-
-        <!-- 2. REGISTER PANEL -->
         <ui:VisualElement name="register-panel" class="menu-container large-panel hidden-panel">
             <ui:Label name="lbl-reg-title" text="NEW ACCOUNT" class="panel-title" />
-            <ui:Label name="lbl-reg-error" text="" class="error-text hidden-element" />
+            <ui:Label name="lbl-reg-error" class="error-text hidden-element" />
             <ui:VisualElement class="form-group">
                 <ui:Label name="lbl-reg-name" text="DISPLAY NAME" class="form-label" />
                 <ui:TextField name="input-reg-name" class="form-input" />
@@ -52,16 +47,14 @@
                 <ui:Button name="btn-goto-login" text="&lt; BACK TO LOGIN" class="menu-btn back-btn" />
             </ui:VisualElement>
         </ui:VisualElement>
-
-        <!-- 3. VERIFY OTP PANEL -->
         <ui:VisualElement name="verify-otp-panel" class="menu-container hidden-panel">
             <ui:Label name="lbl-otp-title" text="VERIFY EMAIL" class="panel-title" />
-            <ui:Label name="lbl-otp-msg" text="We've sent a code to your email." class="info-text" />
-            <ui:Label name="lbl-otp-spam-note" text="* Don't see it? Check your Spam/Junk folder." class="spam-note" />
-            <ui:Label name="lbl-otp-error" text="" class="error-text hidden-element" />
+            <ui:Label name="lbl-otp-msg" text="We&apos;ve sent a code to your email." class="info-text" />
+            <ui:Label name="lbl-otp-spam-note" text="* Don&apos;t see it? Check your Spam/Junk folder." class="spam-note" />
+            <ui:Label name="lbl-otp-error" class="error-text hidden-element" />
             <ui:VisualElement class="form-group" style="margin-top: 10px;">
                 <ui:Label name="lbl-otp-code" text="OTP CODE" class="form-label" />
-                <ui:TextField name="input-otp" class="form-input otp-input" max-length="6" />
+                <ui:TextField name="input-otp" max-length="6" class="form-input otp-input" />
             </ui:VisualElement>
             <ui:VisualElement class="button-group" style="margin-top: 15px;">
                 <ui:Button name="btn-verify-otp" text="VERIFY" class="menu-btn" />
@@ -69,8 +62,6 @@
                 <ui:Button name="btn-cancel-otp" text="&lt; CANCEL" class="menu-btn cancel-btn" style="margin-left: 0; margin-top: 10px; border-left-width: 2px;" />
             </ui:VisualElement>
         </ui:VisualElement>
-
-        <!-- 4. MAIN MENU PANEL -->
         <ui:VisualElement name="main-menu-panel" class="menu-container hidden-panel">
             <ui:VisualElement class="button-group">
                 <ui:Button name="btn-play" text="PLAY" class="menu-btn" />
@@ -79,8 +70,6 @@
             </ui:VisualElement>
             <ui:Label text="Atlantis: Deep Slumber // Pre-Alpha 0.2" class="version-text" />
         </ui:VisualElement>
-
-        <!-- 5. NETWORK MENU PANEL -->
         <ui:VisualElement name="network-menu-panel" class="menu-container hidden-panel">
             <ui:Label name="lbl-lobby-title" text="SESSION LOBBY" class="panel-title" />
             <ui:VisualElement class="button-group">
@@ -89,8 +78,6 @@
                 <ui:Button name="btn-lobby-back" text="&lt; BACK" class="menu-btn back-btn" />
             </ui:VisualElement>
         </ui:VisualElement>
-
-        <!-- 6. CREATE ROOM PANEL -->
         <ui:VisualElement name="create-room-panel" class="menu-container hidden-panel">
             <ui:Label name="lbl-host-title" text="HOST SESSION" class="panel-title" />
             <ui:VisualElement class="form-group">
@@ -113,8 +100,6 @@
                 <ui:Button name="btn-create-back" text="&lt; BACK" class="menu-btn back-btn" />
             </ui:VisualElement>
         </ui:VisualElement>
-
-        <!-- 7. JOIN ROOM PANEL -->
         <ui:VisualElement name="join-room-panel" class="menu-container large-panel hidden-panel">
             <ui:Label name="lbl-browser-title" text="SESSION BROWSER" class="panel-title" />
             <ui:VisualElement class="join-id-bar">
@@ -148,8 +133,6 @@
                 <ui:Button name="btn-join-back" text="&lt; BACK" class="menu-btn back-btn" />
             </ui:VisualElement>
         </ui:VisualElement>
-
-        <!-- 8. JOIN AUTH PANEL -->
         <ui:VisualElement name="join-auth-panel" class="menu-container hidden-panel">
             <ui:Label name="lbl-auth-title" text="ENTER PASSWORD" class="panel-title" />
             <ui:Label name="auth-room-name" text="SESSION: ..." class="auth-room-label" />
@@ -162,9 +145,6 @@
                 <ui:Button name="btn-auth-cancel" text="&lt; CANCEL" class="menu-btn back-btn" />
             </ui:VisualElement>
         </ui:VisualElement>
-
-        <!-- 9. OPTIONS MENU PANEL -->
-
         <ui:VisualElement name="options-menu-panel" class="menu-container large-panel hidden-panel">
             <ui:Label name="lbl-options-title" text="SYSTEM OPTIONS" class="panel-title" />
             <ui:VisualElement class="options-tabs">
@@ -173,19 +153,15 @@
                 <ui:Button name="tab-graphics-btn" text="GRAPHICS" class="tab-btn" />
                 <ui:Button name="tab-controls-btn" text="CONTROLS" class="tab-btn" />
             </ui:VisualElement>
-
-            <!-- GENERAL TAB -->
             <ui:VisualElement name="tab-general" class="tab-content">
                 <ui:VisualElement class="form-group">
                     <ui:Label name="lbl-opt-language" text="LANGUAGE" class="form-label" />
                     <ui:VisualElement name="opt-language" class="custom-dropdown">
                         <ui:Label name="opt-language-value" text="English" class="custom-dropdown-value" />
-                        <ui:Label text="&#9660;" class="custom-dropdown-arrow" />
+                        <ui:Label text="▼" class="custom-dropdown-arrow" />
                     </ui:VisualElement>
                 </ui:VisualElement>
             </ui:VisualElement>
-
-            <!-- AUDIO TAB -->
             <ui:VisualElement name="tab-audio" class="tab-content hidden-element">
                 <ui:VisualElement class="form-group">
                     <ui:VisualElement class="slider-header">
@@ -209,21 +185,19 @@
                     <ui:Slider name="slider-sfx" low-value="0" high-value="100" value="90" class="custom-slider" />
                 </ui:VisualElement>
             </ui:VisualElement>
-
-            <!-- GRAPHICS TAB -->
             <ui:VisualElement name="tab-graphics" class="tab-content hidden-element">
                 <ui:VisualElement class="form-group">
                     <ui:Label name="lbl-resolution" text="RESOLUTION" class="form-label" />
                     <ui:VisualElement name="opt-resolution" class="custom-dropdown">
                         <ui:Label name="opt-resolution-value" text="1920x1080 (FHD)" class="custom-dropdown-value" />
-                        <ui:Label text="&#9660;" class="custom-dropdown-arrow" />
+                        <ui:Label text="▼" class="custom-dropdown-arrow" />
                     </ui:VisualElement>
                 </ui:VisualElement>
                 <ui:VisualElement class="form-group">
                     <ui:Label name="lbl-graphics-quality" text="GRAPHICS QUALITY" class="form-label" />
                     <ui:VisualElement name="opt-quality" class="custom-dropdown">
                         <ui:Label name="opt-quality-value" text="High" class="custom-dropdown-value" />
-                        <ui:Label text="&#9660;" class="custom-dropdown-arrow" />
+                        <ui:Label text="▼" class="custom-dropdown-arrow" />
                     </ui:VisualElement>
                 </ui:VisualElement>
                 <ui:VisualElement class="checkbox-group-wrapper">
@@ -231,8 +205,6 @@
                     <ui:Toggle name="opt-vsync" label="ENABLE V-SYNC" value="true" class="checkbox-label" />
                 </ui:VisualElement>
             </ui:VisualElement>
-
-            <!-- CONTROLS TAB -->
             <ui:VisualElement name="tab-controls" class="tab-content hidden-element">
                 <ui:VisualElement class="form-group">
                     <ui:VisualElement class="slider-header">
@@ -245,15 +217,12 @@
                     <ui:Toggle name="opt-invert-y" label="INVERT Y-AXIS" value="false" class="checkbox-label" />
                 </ui:VisualElement>
             </ui:VisualElement>
-
             <ui:VisualElement class="options-actions">
                 <ui:Button name="btn-save-options" text="APPLY" class="join-mini-btn" style="padding: 10px 25px;" />
                 <ui:Button name="btn-cancel-options" text="CANCEL" class="join-mini-btn cancel-btn" />
             </ui:VisualElement>
         </ui:VisualElement>
     </ui:VisualElement>
-
-    <!-- CONFIRMATION OVERLAY -->
     <ui:VisualElement name="confirm-overlay" class="confirm-overlay hidden-element">
         <ui:VisualElement class="confirm-dialog">
             <ui:Label name="lbl-confirm-title" text="APPLY SETTINGS?" class="confirm-title" />
