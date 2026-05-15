@@ -49,13 +49,13 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
-    - _GlossMapScale: 0
+    - _GlossMapScale: 0.238
     - _Glossiness: 0.5
     - _Metallic: 0
     - _OcclusionStrength: 1
     - _Parallax: 0.005
     m_Colors:
-    - _Color: {r: 0.3735848, g: 0.3735848, b: 0.3735848, a: 1}
+    - _Color: {r: 0.8050314, g: 0.8050314, b: 0.8050314, a: 0.8392157}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
