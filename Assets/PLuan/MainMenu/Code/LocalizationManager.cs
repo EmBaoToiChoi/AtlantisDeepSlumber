@@ -106,8 +106,10 @@ public static class LocalizationManager
             ["btn_confirm_yes"] = "CONFIRM",
             ["btn_confirm_no"] = "CANCEL",
             ["btn_save_yes"] = "SAVE",
-            ["btn_save_no"] = "DON'T SAVE"
+            ["btn_save_no"] = "DON'T SAVE",
+            ["lobby_empty"] = "NO ACTIVE SESSIONS FOUND"
         },
+
         [Language.Vietnamese] = new Dictionary<string, string>
         {
             // Login
@@ -206,8 +208,10 @@ public static class LocalizationManager
             ["btn_confirm_yes"] = "XÁC NHẬN",
             ["btn_confirm_no"] = "HỦY",
             ["btn_save_yes"] = "CÓ, LƯU LẠI",
-            ["btn_save_no"] = "KHÔNG LƯU"
+            ["btn_save_no"] = "KHÔNG LƯU",
+            ["lobby_empty"] = "HIỆN KHÔNG CÓ PHÒNG NÀO TRỐNG"
         }
+
     };
 
     public static void Initialize()
