@@ -8,15 +8,26 @@
             <ui:Label name="lbl-room-id" text="ID: #XXXXXX" class="room-id-badge" />
         </ui:VisualElement>
 
-        <!-- PLAYER SLOTS LIST (Optional overlay if needed) -->
-        <ui:VisualElement class="players-status-container">
-            <ui:Label name="lbl-player-count" text="PLAYERS: 1/4" class="status-text" />
-        </ui:VisualElement>
+        <!-- MIDDLE AREA (SPACER) -->
+        <ui:VisualElement style="flex-grow: 1;" />
 
-        <!-- BOTTOM ACTION BUTTONS -->
-        <ui:VisualElement class="waiting-bottom-bar">
-            <ui:Button name="btn-start" text="START EXPEDITION" class="action-btn start-btn hidden-element" />
-            <ui:Button name="btn-leave" text="LEAVE SESSION" class="action-btn leave-btn" />
+        <!-- BOTTOM AREA (FOOTER) -->
+        <ui:VisualElement class="waiting-footer">
+            <!-- LEFT ACTIONS -->
+            <ui:VisualElement class="left-actions">
+                <ui:Button name="btn-ready" text="READY" class="action-btn ready-btn" />
+                <ui:Button name="btn-leave" text="LEAVE SESSION" class="action-btn leave-btn" />
+            </ui:VisualElement>
+
+            <!-- CENTER START (HOST ONLY) -->
+            <ui:VisualElement class="start-game-center">
+                <ui:Button name="btn-start" text="START EXPEDITION" class="action-btn start-btn hidden-element" />
+            </ui:VisualElement>
+
+            <!-- RIGHT PLAYER COUNT -->
+            <ui:VisualElement class="player-count-container">
+                <ui:Label name="lbl-player-count" text="PLAYERS: 1/4" class="status-text" />
+            </ui:VisualElement>
         </ui:VisualElement>
     </ui:VisualElement>
 </ui:UXML>

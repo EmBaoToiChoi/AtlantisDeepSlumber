@@ -1,0 +1,100 @@
+/* --- ATLANTIS ROOM ITEM STYLE (ĐỒNG BỘ 100%) --- */
+
+.room-item {
+    flex-direction: row;
+    align-items: center;
+    background-color: rgba(0, 8, 14, 0.6);
+    border-left-width: 3px;
+    border-left-color: rgba(0, 190, 255, 0.5);
+    border-width: 1px;
+    border-color: rgba(0, 190, 255, 0.1);
+    padding: 8px 12px;
+    margin-bottom: 8px;
+    border-radius: 4px;
+    width: 100%;
+    transition: background-color 0.15s, border-left-color 0.15s, border-color 0.15s;
+}
+
+.room-item:hover {
+    background-color: rgba(0, 190, 255, 0.2);
+    border-left-color: rgb(60, 220, 255);
+    border-color: rgba(60, 220, 255, 0.3);
+}
+
+.room-item Label {
+    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.9);
+    font-size: 13px;
+    color: white;
+}
+
+/* Các cột dữ liệu */
+.room-col {
+    padding: 0 5px;
+}
+
+.col-id {
+    width: 115px;
+    color: rgb(100, 150, 180) !important;
+    -unity-font-style: bold;
+    flex-shrink: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.col-name {
+    flex-grow: 1;
+    flex-shrink: 1;
+    color: rgb(255, 255, 255) !important;
+    -unity-font-style: bold;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.col-host {
+    width: 110px;
+    color: rgb(140, 210, 245) !important;
+    flex-shrink: 0;
+    overflow: hidden;
+}
+
+.col-players {
+    width: 60px;
+    color: rgb(60, 220, 255) !important;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    flex-shrink: 0;
+}
+
+.col-action {
+    width: 75px;
+    -unity-text-align: middle-center;
+    flex-shrink: 0;
+}
+
+/* Nút Join Mini */
+.join-mini-btn {
+    background-color: rgba(0, 190, 255, 0.15);
+    border-width: 1px;
+    border-color: rgb(0, 190, 255);
+    color: rgb(120, 230, 255);
+    padding: 6px 12px;
+    font-size: 11px;
+    letter-spacing: 1px;
+    -unity-font-style: bold;
+    border-radius: 4px;
+    transition: all 0.15s ease-out;
+}
+
+.room-item:hover .join-mini-btn {
+    background-color: rgb(0, 190, 255);
+    color: rgb(0, 8, 16);
+    scale: 1.05 1.05;
+}
+
+/* Icon khóa (nếu có) */
+.lock-icon {
+    width: 14px;
+    height: 14px;
+    margin-right: 5px;
+    tint-color: #ff4d4d;
+}
