@@ -1,5 +1,6 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
-    <Style src="project://database/Assets/PLuan/WaittingRoom/Code/WaitingRoomUI.uss" />
+    <Style src="./WaitingRoomUI.uss" />
+
     <ui:VisualElement name="waiting-room-root" class="waiting-room-overlay">
         <!-- TOP INFO BAR -->
         <ui:VisualElement class="waiting-top-bar">
