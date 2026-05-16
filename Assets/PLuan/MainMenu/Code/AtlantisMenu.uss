@@ -225,11 +225,11 @@
 .room-item:hover { background-color: rgba(0, 190, 255, 0.2); border-left-color: rgb(60, 220, 255); border-color: rgba(60, 220, 255, 0.3); }
 .room-item Label { text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.9); font-size: 13px; }
 
-.col-id { width: 115px; color: rgb(100, 150, 180); -unity-font-style: bold; flex-shrink: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.col-name { flex-grow: 1; flex-shrink: 1; color: rgb(255, 255, 255); -unity-font-style: bold; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-right: 10px; }
-.col-host { width: 110px; color: rgb(140, 210, 245); flex-shrink: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.col-players { width: 60px; color: rgb(60, 220, 255); -unity-font-style: bold; -unity-text-align: middle-center; flex-shrink: 0; }
-.col-action { width: 75px; -unity-text-align: middle-right; flex-shrink: 0; }
+.col-id { width: 120px; color: rgb(100, 150, 180); -unity-font-style: bold; flex-shrink: 0; }
+.col-name { flex-grow: 1; color: rgb(255, 255, 255); -unity-font-style: bold; padding-right: 10px; }
+.col-host { width: 150px; color: rgb(140, 210, 245); flex-shrink: 0; }
+.col-players { width: 100px; color: rgb(60, 220, 255); -unity-font-style: bold; -unity-text-align: middle-center; flex-shrink: 0; }
+.col-action { width: 100px; -unity-text-align: middle-right; flex-shrink: 0; }
 .room-item .col-action { padding: 6px 0; -unity-text-align: middle-center; }
 
 .room-list .unity-scroller--vertical { width: 6px; margin-left: 4px; }
