@@ -1010,6 +1010,7 @@ public class AtlantisMenuController : MonoBehaviour
 
     private async void DoRegister()
     {
+        var btn = _root.Q<Button>("btn-register");
         var name = _root.Q<TextField>("input-reg-name").value;
         var email = _root.Q<TextField>("input-reg-email").value;
         var pwd = _root.Q<TextField>("input-reg-password").value;
@@ -1020,6 +1021,13 @@ public class AtlantisMenuController : MonoBehaviour
         {
             ShowError(lblErr, "Passwords do not match.");
             return;
+        }
+
+        // Chống spam: Disable nút
+        if (btn != null)
+        {
+            btn.SetEnabled(false);
+            btn.text = "PROCESSING...";
         }
 
         lblErr.AddToClassList("hidden-element");
@@ -1036,7 +1044,15 @@ public class AtlantisMenuController : MonoBehaviour
         {
             ShowError(lblErr, res.message);
         }
+
+        // Re-enable nút nếu lỗi hoặc sau khi xử lý xong
+        if (btn != null)
+        {
+            btn.SetEnabled(true);
+            btn.text = "CREATE ACCOUNT";
+        }
     }
+
 
     private async void DoVerifyOTP()
     {
