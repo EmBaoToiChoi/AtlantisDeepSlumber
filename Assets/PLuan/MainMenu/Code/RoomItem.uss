@@ -33,32 +33,28 @@
 }
 
 .col-id {
-    width: 115px;
+    width: 120px;
     color: rgb(100, 150, 180) !important;
     -unity-font-style: bold;
     flex-shrink: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
 }
 
 .col-name {
     flex-grow: 1;
-    flex-shrink: 1;
     color: rgb(255, 255, 255) !important;
     -unity-font-style: bold;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    padding-left: 10px;
 }
 
 .col-host {
-    width: 110px;
+    width: 150px;
     color: rgb(140, 210, 245) !important;
     flex-shrink: 0;
-    overflow: hidden;
+    -unity-text-align: middle-left;
 }
 
 .col-players {
-    width: 60px;
+    width: 100px;
     color: rgb(60, 220, 255) !important;
     -unity-font-style: bold;
     -unity-text-align: middle-center;
@@ -66,10 +62,12 @@
 }
 
 .col-action {
-    width: 75px;
-    -unity-text-align: middle-center;
+    width: 100px;
+    -unity-text-align: middle-right;
     flex-shrink: 0;
 }
+
+
 
 /* Nút Join Mini */
 .join-mini-btn {

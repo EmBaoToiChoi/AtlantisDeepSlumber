@@ -19,9 +19,18 @@ public class AuthResponse
 [System.Serializable]
 public class RoomPlayer
 {
+    public string _id; // Thêm trường này để khớp với ID từ VPS
     public string user;
     public string displayName;
     public int slot;
+}
+
+
+[System.Serializable]
+public class HostData
+{
+    public string _id;
+    public string displayName;
 }
 
 [System.Serializable]
@@ -30,12 +39,13 @@ public class RoomData
     public string _id;
     public string roomId;
     public string roomName;
-    public string host;
+    public HostData host; // Chuyển từ string sang HostData object
     public bool isPrivate;
     public int maxPlayers;
     public string status;
     public RoomPlayer[] players;
 }
+
 
 [System.Serializable]
 public class RoomResponse

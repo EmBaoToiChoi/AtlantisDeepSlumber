@@ -45,17 +45,17 @@ public class NetworkWaitingRoom : NetworkBehaviour
         public bool Equals(PlayerNetData other) => ClientId == other.ClientId;
     }
 
-    private void Awake() { NetPlayers = new NetworkList<PlayerNetData>(); }
-
-    private void OnEnable()
-    {
-        StartCoroutine(SetupUIWithRetry());
-    }
-
-    private IEnumerator SetupUIWithRetry()
-    {
-        yield return new WaitForSeconds(0.1f);
-        if (_uiDocument == null) yield break;
+    private void Awake() 
+    { 
+        Debug.Log("[EMERGENCY] Awake đã chạy!");
+        NetPlayers = new NetworkList<PlayerNetData>(); 
+        
+        if (_uiDocument == null) _uiDocument = GetComponent<UIDocument>();
+        if (_uiDocument == null)
+        {
+            Debug.LogError("[Lobby] KHÔNG TÌM THẤY UIDocument!");
+            return;
+        }
 
         _root = _uiDocument.rootVisualElement;
         _lblRoomName = _root.Q<Label>("lbl-room-name");
@@ -72,8 +72,33 @@ public class NetworkWaitingRoom : NetworkBehaviour
         if (_btnStart != null) _btnStart.clicked += StartGame;
     }
 
+    private void OnEnable()
+    {
+        Debug.Log("[EMERGENCY] OnEnable đã chạy!");
+    }
+
+
+
+    private void Start()
+
+    {
+        Debug.Log("[Lobby] Script NetworkWaitingRoom đã bắt đầu chạy (Start).");
+        
+        // KIỂM TRA NẾU NETWORK CHƯA CHẠY (Dành cho việc nhấn Play ngay tại cảnh này để Test)
+        if (NetworkManager.Singleton != null && !NetworkManager.Singleton.IsServer && !NetworkManager.Singleton.IsClient)
+        {
+            Debug.LogWarning("[Lobby] NetworkManager chưa chạy! Đang tự động bật Host để Test...");
+            NetworkManager.Singleton.StartHost();
+        }
+
+        if (_uiDocument == null) Debug.LogError("[Lobby] THẤT BẠI: Bạn chưa kéo UI Document!");
+        if (slots == null || slots.Length == 0) Debug.LogError("[Lobby] THẤT BẠI: Danh sách Slots đang trống!");
+    }
+
     public override void OnNetworkSpawn()
     {
+        Debug.Log("[Lobby] OnNetworkSpawn đã kích hoạt!");
+
         if (IsServer)
         {
             NetworkManager.Singleton.OnClientConnectedCallback += OnClientConnected;
@@ -181,24 +206,56 @@ public class NetworkWaitingRoom : NetworkBehaviour
     }
 
     private void AddPlayer(ulong clientId, string name) {
+        // KIỂM TRA CHỐNG TRÙNG: Nếu Client này đã có trong danh sách thì bỏ qua
+        foreach (var p in NetPlayers) {
+            if (p.ClientId == clientId) return;
+        }
+
+        Debug.Log($"[DEBUG] Bắt đầu AddPlayer cho: {name} (ID: {clientId})");
+
+        
         int slotIdx = FindEmptySlot();
         if (slotIdx == -1) {
-            Debug.LogError($"[SPAWN] Không tìm thấy slot trống cho {name}");
+            Debug.LogError($"[SPAWN] THẤT BẠI: Không còn slot trống!");
             return;
         }
 
         NetPlayers.Add(new PlayerNetData { Name = name, Slot = slotIdx, ClientId = clientId, IsReady = false });
-        Debug.Log($"[SPAWN] Đã thêm {name} vào danh sách NetPlayers. Đang chuẩn bị tạo nhân vật...");
 
         if (playerNetworkPrefab != null) {
-            GameObject go = Instantiate(playerNetworkPrefab, slots[slotIdx].position, slots[slotIdx].rotation);
-            go.GetComponent<NetworkObject>().SpawnWithOwnership(clientId);
-            Debug.Log($"[SPAWN] Thành công! Đã tạo nhân vật cho {name} tại Slot {slotIdx}");
+            Vector3 spawnPos = slots[slotIdx].position;
+            Quaternion spawnRot = slots[slotIdx].rotation;
+            
+            Debug.Log($"[SPAWN] Đang Instantiate tại vị trí: {spawnPos}");
+
+            GameObject go = Instantiate(playerNetworkPrefab, spawnPos, spawnRot);
+            
+            if (go == null) {
+                Debug.LogError("[SPAWN] THẤT BẠI: Lệnh Instantiate trả về null!");
+                return;
+            }
+
+            var netObj = go.GetComponent<NetworkObject>();
+            if (netObj == null) {
+                Debug.LogError("[SPAWN] THẤT BẠI: Prefab nhân vật thiếu thành phần NetworkObject!");
+                return;
+            }
+
+            // Kiểm tra xem đã đăng ký Prefab chưa
+            try {
+                netObj.SpawnAsPlayerObject(clientId, true);
+                Debug.Log($"[SPAWN] ĐÃ GỌI LỆNH SPAWN THÀNH CÔNG cho {name}!");
+            }
+            catch (System.Exception e) {
+                Debug.LogError($"[SPAWN] LỖI KHI GỌI SPAWN: {e.Message}. Hãy kiểm tra xem bạn đã thêm Prefab vào NetworkManager chưa!");
+            }
         }
         else {
-            Debug.LogError("[SPAWN] THẤT BẠI: Bạn chưa kéo nhân vật vào ô 'Player Network Prefab' trong Inspector!");
+            Debug.LogError("[SPAWN] THẤT BẠI: Bạn chưa kéo nhân vật vào ô 'Player Network Prefab'!");
         }
     }
+
+
 
 
     private int FindEmptySlot() {

@@ -562,21 +562,42 @@ public class AtlantisMenuController : MonoBehaviour
         if (_roomItemTemplate == null) return;
         var item = _roomItemTemplate.Instantiate();
         
+        // 1. Gán ID phòng
+        var idLbl = item.Q<Label>("lbl-room-id");
+        if (idLbl != null) idLbl.text = $"#{room.roomId}";
+
+        // 2. Gán Tên phòng
         var nameLbl = item.Q<Label>("lbl-room-name");
         if (nameLbl != null) nameLbl.text = room.roomName;
         
+        // 3. Hiển thị tên Chủ phòng trực tiếp từ đối tượng host
         var hostLbl = item.Q<Label>("lbl-host-name");
-        if (hostLbl != null) hostLbl.text = $"HOST: {room.host ?? "Unknown"}";
-        
-        var playersLbl = item.Q<Label>("lbl-players");
-        if (playersLbl != null) playersLbl.text = $"{room.players?.Length ?? 0}/4";
-        
-        var lockIcon = item.Q<VisualElement>("icon-lock");
-        if (lockIcon != null) lockIcon.style.display = room.isPrivate ? DisplayStyle.Flex : DisplayStyle.None;
+        if (hostLbl != null) 
+        {
+            hostLbl.text = room.host?.displayName ?? "Unknown Host";
+        }
 
-        item.RegisterCallback<ClickEvent>(evt => JoinSpecificRoom(room.roomId, room.roomName, room.isPrivate));
+
+        
+        // 4. Gán số lượng người chơi
+        var playersLbl = item.Q<Label>("lbl-players");
+        if (playersLbl != null) 
+        {
+            int current = room.players?.Length ?? 0;
+            playersLbl.text = $"{current}/{room.maxPlayers}";
+        }
+        
+        // 5. Chỉ khi nhấn NÚT JOIN mới thực hiện Join
+        var joinBtn = item.Q<Button>("btn-join-room");
+        if (joinBtn != null)
+        {
+            joinBtn.clicked += () => JoinSpecificRoom(room.roomId, room.roomName, room.isPrivate);
+        }
+
         _roomScrollView.Add(item);
     }
+
+
 
     private bool _isProcessingRoom = false; // Flag chống spam
 
