@@ -1,0 +1,43 @@
+.main-container {
+    align-items: center;
+    justify-content: center;
+    padding: 10px;
+}
+
+.enemy-name {
+    color: rgb(255, 255, 255);
+    font-size: 16px;
+    -unity-font-style: bold;
+    text-shadow: 2px 2px 2px rgba(0, 0, 0, 0.8);
+    margin-bottom: 4px;
+    letter-spacing: 1px;
+}
+
+.container {
+    width: 220px;
+    height: 25px;
+}
+
+.background {
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+    border-width: 2px;
+    border-color: rgb(255, 255, 255); /* Viền trắng */
+    border-radius: 6px;
+    overflow: hidden;
+    padding: 2px;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 100%;
+    background-color: rgb(255, 0, 0); /* Máu đỏ tươi */
+    border-radius: 3px;
+    transition-property: width;
+    transition-duration: 0.3s;
+    transition-timing-function: ease-out-back;
+    
+    /* Hiệu ứng gradient và glow */
+    background-image: linear-gradient(to bottom, rgba(255, 255, 255, 0.4), rgba(0, 0, 0, 0.2));
+}
