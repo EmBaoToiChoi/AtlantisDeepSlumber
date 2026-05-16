@@ -580,6 +580,16 @@ public class AtlantisMenuController : MonoBehaviour
         var res = await AuthService.GetRooms();
         if (res != null && res.success)
         {
+            if (res.rooms == null || res.rooms.Length == 0)
+            {
+                var emptyLabel = new Label(LocalizationManager.Get("lobby_empty"));
+                emptyLabel.style.unityTextAlign = TextAnchor.MiddleCenter;
+                emptyLabel.style.marginTop = 20;
+                emptyLabel.style.color = new StyleColor(new Color(0.5f, 0.5f, 0.5f, 0.8f));
+                _roomScrollView.Add(emptyLabel);
+                return;
+            }
+
             foreach (var room in res.rooms)
             {
                 var item = CreateRoomItem(room);
@@ -587,6 +597,7 @@ public class AtlantisMenuController : MonoBehaviour
             }
         }
     }
+
 
     private VisualElement CreateRoomItem(RoomData room)
     {
