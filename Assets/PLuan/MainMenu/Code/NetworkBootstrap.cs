@@ -24,7 +24,10 @@ public class NetworkBootstrap : MonoBehaviour
     {
         if (NetworkManager.Singleton == null) return;
         
-        // Thiết lập địa chỉ IP của VPS trước khi kết nối
+        // Đảm bảo dọn sạch kết nối cũ nếu còn sót
+        if (NetworkManager.Singleton.IsListening || NetworkManager.Singleton.IsConnectedClient)
+            NetworkManager.Singleton.Shutdown();
+
         var transport = NetworkManager.Singleton.GetComponent<UnityTransport>();
         if (transport != null)
         {
@@ -39,7 +42,13 @@ public class NetworkBootstrap : MonoBehaviour
     public void StartServerAsHost()
     {
         if (NetworkManager.Singleton == null) return;
+
+        // Đảm bảo dọn sạch kết nối cũ nếu còn sót
+        if (NetworkManager.Singleton.IsListening || NetworkManager.Singleton.IsConnectedClient)
+            NetworkManager.Singleton.Shutdown();
+
         NetworkManager.Singleton.StartHost();
         Debug.Log("[NETWORK] Host Started locally...");
     }
+
 }
