@@ -489,13 +489,16 @@ public class AtlantisMenuController : MonoBehaviour
         var response = await AuthService.CreateRoom(roomName, isPrivate, password);
         if (response != null && response.success)
         {
-            // Với Dedicated Server, người tạo phòng cũng vào với tư cách Client kết nối tới VPS
+            // Lưu lại thông tin mình là chủ phòng
+            PlayerPrefs.SetString("CurrentRoomID", response.room.roomId);
+            PlayerPrefs.SetInt("IsRoomHost", 1); 
+            PlayerPrefs.Save();
+
             if (_netBootstrap != null)
             {
                 _netBootstrap.StartClientAsPlayer();
             }
         }
-
         else
         {
             Debug.LogError($"[HOST] Lỗi tạo phòng: {response?.message}");
@@ -511,12 +514,17 @@ public class AtlantisMenuController : MonoBehaviour
         var response = await AuthService.JoinRoom(inputID, "");
         if (response != null && response.success)
         {
-            // Client kết nối tới VPS
+            // Lưu lại thông tin mình là khách
+            PlayerPrefs.SetString("CurrentRoomID", inputID);
+            PlayerPrefs.SetInt("IsRoomHost", 0);
+            PlayerPrefs.Save();
+
             if (_netBootstrap != null)
             {
                 _netBootstrap.StartClientAsPlayer();
             }
         }
+
 
         else
         {
@@ -578,15 +586,41 @@ public class AtlantisMenuController : MonoBehaviour
 
         Debug.Log("[LOBBY] Fetching real rooms...");
         var res = await AuthService.GetRooms();
-        if (res != null && res.success)
+        
+        if (res == null)
         {
+            Debug.LogError("[LOBBY] Response is NULL! Check server connection.");
+            return;
+        }
+
+        if (res.success)
+        {
+            int count = res.rooms?.Length ?? 0;
+            Debug.Log($"[LOBBY] Successfully fetched {count} rooms.");
+
+            if (count == 0)
+            {
+                var emptyLabel = new Label(LocalizationManager.Get("lobby_empty"));
+                emptyLabel.style.unityTextAlign = TextAnchor.MiddleCenter;
+                emptyLabel.style.marginTop = 20;
+                emptyLabel.style.color = new StyleColor(new Color(0.5f, 0.5f, 0.5f, 0.8f));
+                _roomScrollView.Add(emptyLabel);
+                return;
+            }
+
             foreach (var room in res.rooms)
             {
                 var item = CreateRoomItem(room);
                 _roomScrollView.Add(item);
             }
         }
+        else
+        {
+            Debug.LogError($"[LOBBY] Fetch failed: {res.message}");
+        }
     }
+
+
 
     private VisualElement CreateRoomItem(RoomData room)
     {
