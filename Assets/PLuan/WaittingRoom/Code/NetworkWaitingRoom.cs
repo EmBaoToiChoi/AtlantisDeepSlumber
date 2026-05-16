@@ -239,10 +239,26 @@ public class NetworkWaitingRoom : NetworkBehaviour
         response.Approved = true;
         response.CreatePlayerObject = false;
 
-        string playerName = "Unknown";
+        string playerName = "Explorer";
         if (request.Payload != null && request.Payload.Length > 0)
         {
-            playerName = System.Text.Encoding.UTF8.GetString(request.Payload);
+            string comboData = System.Text.Encoding.UTF8.GetString(request.Payload);
+            string[] parts = comboData.Split('|');
+            
+            // Phần 1: Tên người chơi
+            if (parts.Length > 0) playerName = parts[0];
+
+            // Phần 2 & 3: Thông tin phòng (Chỉ cập nhật lần đầu hoặc khi có người tạo phòng vào)
+            if (parts.Length >= 3)
+            {
+                string rName = parts[1];
+                string rId = parts[2];
+                
+                // Nếu là Server, ta cập nhật biến mạng để đồng bộ cho tất cả
+                NetRoomName.Value = rName;
+                NetRoomId.Value = rId;
+                Debug.Log($"[SERVER] Cập nhật phòng từ Client: {rName} (#{rId})");
+            }
         }
         
         _pendingPlayerNames[request.ClientNetworkId] = playerName;
