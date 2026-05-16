@@ -56,23 +56,28 @@ public class NetworkWaitingRoom : NetworkBehaviour
     private void OnEnable()
     {
         if (_uiDocument == null) {
-            Debug.LogError("[WAITING ROOM] UI Document is NOT assigned in the inspector!");
+            Debug.LogError("[WAITING ROOM] UI Document is NOT assigned!");
             return;
         }
         _root = _uiDocument.rootVisualElement;
         
+        // Tìm theo Name
         _lblRoomName = _root.Q<Label>("lbl-room-name");
         _lblRoomId = _root.Q<Label>("lbl-room-id");
         _lblPlayerCount = _root.Q<Label>("lbl-player-count");
         _btnStart = _root.Q<Button>("btn-start");
         _btnLeave = _root.Q<Button>("btn-leave");
 
-        if (_lblRoomName == null) Debug.LogWarning("[WAITING ROOM] Could not find Label 'lbl-room-name' in UXML!");
-        if (_lblRoomId == null) Debug.LogWarning("[WAITING ROOM] Could not find Label 'lbl-room-id' in UXML!");
+        // Nếu không tìm thấy theo Name, thử tìm theo Class (đề phòng bạn đặt tên khác)
+        if (_lblRoomName == null) _lblRoomName = _root.Q<Label>(className: "waiting-room-name");
+        if (_lblRoomId == null) _lblRoomId = _root.Q<Label>(className: "waiting-room-id");
+
+        if (_lblRoomName == null) Debug.LogWarning("[WAITING ROOM] Cảnh báo: Không tìm thấy Label tên 'lbl-room-name' hoặc class 'waiting-room-name'!");
 
         if (_btnLeave != null) _btnLeave.clicked += LeaveRoom;
         if (_btnStart != null) _btnStart.clicked += StartGame;
     }
+
 
 
     public override void OnNetworkSpawn()
@@ -115,10 +120,17 @@ public class NetworkWaitingRoom : NetworkBehaviour
     {
         if (!IsServer) return;
         
-        // Mock tên: Thực tế nên lấy từ ConnectionData gửi từ Client lên
+        // Trên VPS (Dedicated Server) không có PlayerPrefs, nên ta dùng tên mặc định hoặc lấy từ ConnectionData
         string pName = $"Explorer_{clientId}";
+        
+        // Nếu là Host (Local Host) thì mới có PlayerPrefs
+        if (!UnityEngine.Application.isBatchMode && clientId == NetworkManager.ServerClientId) {
+            pName = PlayerPrefs.GetString("AuthDisplayName", "Host");
+        }
+
         AddPlayer(clientId, pName);
     }
+
 
     private void OnClientDisconnected(ulong clientId)
     {
@@ -167,9 +179,19 @@ public class NetworkWaitingRoom : NetworkBehaviour
         // NetworkManager.Singleton.SceneManager.LoadScene("GameplayScene", UnityEngine.SceneManagement.LoadSceneMode.Single);
     }
 
-    private void LeaveRoom()
+    private async void LeaveRoom()
     {
-        NetworkManager.Singleton.Shutdown();
+        string roomId = PlayerPrefs.GetString("CurrentRoomID", "");
+
+        if (!string.IsNullOrEmpty(roomId))
+        {
+            Debug.Log($"[Lobby] Leaving room {roomId}...");
+            await AuthService.LeaveRoom(roomId);
+        }
+
+        if (NetworkManager.Singleton != null) NetworkManager.Singleton.Shutdown();
         UnityEngine.SceneManagement.SceneManager.LoadScene("MainMenu");
     }
+
+
 }
