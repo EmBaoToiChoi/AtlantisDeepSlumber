@@ -8,36 +8,35 @@ public class EnemyHealthBar : MonoBehaviour
     public Enemy1_DapBua enemy;
     public UIDocument uiDocument;
 
-    private VisualElement progressBar;
+    private VisualElement progressBar; 
+    private VisualElement yellowBar;
+    private Label nameLabel;
     private Camera mainCamera;
 
     private void OnEnable()
     {
+        mainCamera = Camera.main;
         if (uiDocument == null) uiDocument = GetComponent<UIDocument>();
 
         if (uiDocument != null)
         {
             var root = uiDocument.rootVisualElement;
-            progressBar = root.Q<VisualElement>("progress-bar");
-            var nameLabel = root.Q<Label>("enemy-name");
+            progressBar = root.Q<VisualElement>("progress-bar"); 
+            yellowBar = root.Q<VisualElement>("yellow-bar");
+            nameLabel = root.Q<Label>("enemy-name");
             
             if (nameLabel != null && enemy != null)
             {
-                nameLabel.text = enemy.gameObject.name; // Hoặc gán tên tùy chỉnh
+                nameLabel.text = enemy.gameObject.name;
             }
         }
 
-        if (enemy == null)
-        {
-            enemy = GetComponentInParent<Enemy1_DapBua>();
-        }
+        if (enemy == null) enemy = GetComponentInParent<Enemy1_DapBua>();
 
         if (enemy != null)
         {
-            // Cập nhật giá trị ban đầu
-            UpdateHealthUI(0, enemy.currentHealth.Value);
-            
-            // Lắng nghe sự thay đổi của máu từ NetworkVariable
+            // Cập nhật máu ban đầu dựa trên maxHealth thực tế của Enemy
+            UpdateHealthUI(0f, enemy.currentHealth.Value);
             enemy.currentHealth.OnValueChanged += UpdateHealthUI;
         }
     }
@@ -50,26 +49,25 @@ public class EnemyHealthBar : MonoBehaviour
         }
     }
 
-    private void Start()
+    // Sửa kiểu dữ liệu từ int sang float để hết lỗi CS0123 và CS1503
+    private void UpdateHealthUI(float oldVal, float newVal)
     {
-        mainCamera = Camera.main;
-    }
-
-    private void UpdateHealthUI(float previousValue, float newValue)
-    {
-        if (progressBar != null && enemy != null)
+        if (enemy != null)
         {
-            float percentage = Mathf.Clamp01(newValue / enemy.maxHealth) * 100f;
-            progressBar.style.width = new Length(percentage, LengthUnit.Percent);
+            float maxHp = enemy.maxHealth > 0 ? enemy.maxHealth : 100f; 
+            float percent = Mathf.Clamp01(newVal / maxHp) * 100f;
+            
+            if (progressBar != null) progressBar.style.width = Length.Percent(percent);
+            if (yellowBar != null) yellowBar.style.width = Length.Percent(percent);
         }
     }
 
-    private void LateUpdate()
+    private void Update()
     {
-        // Tìm camera nếu chưa có
+        // Luôn kiểm tra camera nếu bị mất (ví dụ khi đổi scene)
         if (mainCamera == null) mainCamera = Camera.main;
 
-        // Làm cho thanh máu luôn hướng về phía Camera (Billboard effect)
+        // Billboard logic: Luôn hướng về Camera
         if (mainCamera != null)
         {
             transform.LookAt(transform.position + mainCamera.transform.rotation * Vector3.forward,
@@ -77,3 +75,4 @@ public class EnemyHealthBar : MonoBehaviour
         }
     }
 }
+
