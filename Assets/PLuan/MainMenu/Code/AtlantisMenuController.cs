@@ -1185,4 +1185,4 @@ public class AtlantisMenuController : MonoBehaviour
         if (el is Label lbl) lbl.text = val;
         else if (el is Button btn && locKey != null) btn.text = val;
     }
-}
+}
