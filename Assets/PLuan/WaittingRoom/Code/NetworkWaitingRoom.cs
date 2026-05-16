@@ -102,31 +102,45 @@ public class NetworkWaitingRoom : NetworkBehaviour
             
             if (IsServer)
             {
+                Debug.Log($"[SERVER] Đang chạy trên VPS. Đang có {NetworkManager.Singleton.ConnectedClients.Count} người kết nối.");
+                
                 NetRoomName.Value = PlayerPrefs.GetString("CurrentRoomName", "ATLANTIS LOBBY");
                 NetRoomId.Value = PlayerPrefs.GetString("CurrentRoomID", "000000");
                 
-                // QUAN TRỌNG: Kiểm tra xem có ai đã kết nối TRƯỚC KHI script này chạy không
-                // (Đặc biệt là người đầu tiên tạo phòng)
                 foreach (var client in NetworkManager.Singleton.ConnectedClientsList)
                 {
-                    Debug.Log($"[Lobby] Phát hiện người chơi đã chờ sẵn: {client.ClientId}. Đang tiến hành spawn...");
+                    Debug.Log($"[SERVER] Tự động Spawn cho ClientID: {client.ClientId}");
                     OnClientConnected(client.ClientId);
                 }
             }
-
-            else if (IsClient)
+            else
             {
-                 Debug.Log("[Lobby] Tôi là Client, đang chờ Server xác nhận để hiển thị...");
+                Debug.Log($"[CLIENT] Đã kết nối thành công với ClientID: {NetworkManager.Singleton.LocalClientId}");
             }
         }
+        else
+        {
+            Debug.LogError("[Lobby] NetworkManager.Singleton bị NULL!");
+        }
 
-        NetRoomName.OnValueChanged += (o, n) => UpdateRoomUI();
-        NetRoomId.OnValueChanged += (o, n) => UpdateRoomUI();
-        NetPlayers.OnListChanged += (e) => UpdatePlayerUI();
+        NetRoomName.OnValueChanged += (o, n) => {
+            Debug.Log($"[Lobby] Tên phòng đổi thành: {n}");
+            UpdateRoomUI();
+        };
+        NetRoomId.OnValueChanged += (o, n) => {
+            Debug.Log($"[Lobby] ID phòng đổi thành: {n}");
+            UpdateRoomUI();
+        };
+        NetPlayers.OnListChanged += (e) => {
+            Debug.Log($"[Lobby] Danh sách người chơi thay đổi! Số lượng: {NetPlayers.Count}");
+            UpdatePlayerUI();
+        };
+
 
         UpdateRoomUI();
         UpdatePlayerUI();
     }
+
 
 
     private void RefreshLocalUI()

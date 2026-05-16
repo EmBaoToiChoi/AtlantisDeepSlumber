@@ -509,10 +509,11 @@ public class AtlantisMenuController : MonoBehaviour
 
             if (_netBootstrap != null)
             {
-                Debug.Log("[Room] Khởi động Host...");
+                Debug.Log("[Room] Đang kết nối về VPS...");
                 _netBootstrap.StartServerAsHost();
-                _ = SceneLoader.Instance.LoadSceneAsync("Waiting hall", "PREPARING LOBBY...");
+                // KHÔNG gọi LoadSceneAsync tại đây, Server sẽ tự đồng bộ cảnh cho bạn.
             }
+
             else
             {
                 Debug.LogError("[Room] THẤT BẠI: Không tìm thấy NetworkBootstrap trong cảnh!");
