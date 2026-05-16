@@ -1,143 +1,157 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UIElements;
+using Unity.Netcode;
 using TMPro;
-using System.Threading.Tasks;
 
-public class WaitingRoomManager : MonoBehaviour
+public class WaitingRoomManager : NetworkBehaviour
 {
-    [Header("Room Config")]
-    public string currentRoomId;
-    public float pollInterval = 2.0f;
-
+    [Header("UI Toolkit")]
+    [SerializeField] private UIDocument _uiDocument;
+    
     [Header("Slots (Transform points)")]
     public Transform[] slots = new Transform[4];
 
     [Header("Prefabs")]
-    public GameObject playerPrefab; // Kéo thả prefab nhân vật vào đây
-    public GameObject nameTagPrefab; // Prefab chứa TextMeshPro (World Space)
+    public GameObject playerNetworkPrefab; 
 
-    private Dictionary<int, GameObject> _spawnedPlayers = new Dictionary<int, GameObject>();
-    private bool _isPolling = false;
+    // NetworkVariables để đồng bộ thông tin phòng
+    public NetworkVariable<Unity.Collections.FixedString64Bytes> NetRoomName = new NetworkVariable<Unity.Collections.FixedString64Bytes>(writePerm: NetworkVariableWritePermission.Server);
+    public NetworkVariable<Unity.Collections.FixedString64Bytes> NetRoomId = new NetworkVariable<Unity.Collections.FixedString64Bytes>(writePerm: NetworkVariableWritePermission.Server);
 
-    public void StartWaiting(string roomId)
+    private VisualElement _root;
+    private Label _lblRoomName;
+    private Label _lblRoomId;
+    private Label _lblPlayerCount;
+    private Button _btnStart;
+    private Button _btnLeave;
+
+    private NetworkList<PlayerNetData> _netPlayers = new NetworkList<PlayerNetData>();
+
+    public struct PlayerNetData : INetworkSerializable, System.IEquatable<PlayerNetData>
     {
-        currentRoomId = roomId;
-        _isPolling = true;
-        PollRoomStatus();
-    }
+        public Unity.Collections.FixedString64Bytes Name;
+        public int Slot;
+        public ulong ClientId;
 
-    public void StopWaiting()
-    {
-        _isPolling = false;
-        ClearAllSlots();
-    }
-
-    private async void PollRoomStatus()
-    {
-        while (_isPolling)
+        public void NetworkSerialize<T>(BufferSerializer<T> serializer) where T : IReaderWriter
         {
-            if (string.IsNullOrEmpty(currentRoomId)) break;
-
-            var response = await AuthService.GetRoomStatus(currentRoomId);
-            if (response != null && response.success)
-            {
-                UpdatePlayers(response.room.players);
-            }
-
-            await Task.Delay((int)(pollInterval * 1000));
-        }
-    }
-
-    private void UpdatePlayers(RoomPlayer[] players)
-    {
-        // Danh sách các slot đang có người trong response
-        HashSet<int> activeSlots = new HashSet<int>();
-
-        foreach (var p in players)
-        {
-            activeSlots.Add(p.slot);
-
-            // Nếu chưa có model ở slot này, spawn mới
-            if (!_spawnedPlayers.ContainsKey(p.slot))
-            {
-                SpawnPlayer(p);
-            }
-            else
-            {
-                // Cập nhật tên nếu cần (trường hợp đổi tên hoặc logic khác)
-                UpdateNameTag(p.slot, p.displayName);
-            }
+            serializer.SerializeValue(ref Name);
+            serializer.SerializeValue(ref Slot);
+            serializer.SerializeValue(ref ClientId);
         }
 
-        // Xóa những người không còn trong danh sách (đã thoát)
-        List<int> slotsToRemove = new List<int>();
-        foreach (var slot in _spawnedPlayers.Keys)
-        {
-            if (!activeSlots.Contains(slot))
-            {
-                slotsToRemove.Add(slot);
-            }
-        }
-
-        foreach (var slot in slotsToRemove)
-        {
-            DespawnPlayer(slot);
-        }
+        public bool Equals(PlayerNetData other) => ClientId == other.ClientId;
     }
 
-    private void SpawnPlayer(RoomPlayer p)
+    private void OnEnable()
     {
-        if (p.slot < 1 || p.slot > 4) return;
-        Transform slotTransform = slots[p.slot - 1];
-        if (slotTransform == null) return;
+        if (_uiDocument == null) return;
+        _root = _uiDocument.rootVisualElement;
+        _lblRoomName = _root.Q<Label>("lbl-room-name");
+        _lblRoomId = _root.Q<Label>("lbl-room-id");
+        _lblPlayerCount = _root.Q<Label>("lbl-player-count");
+        _btnStart = _root.Q<Button>("btn-start");
+        _btnLeave = _root.Q<Button>("btn-leave");
 
-        GameObject model = Instantiate(playerPrefab, slotTransform.position, slotTransform.rotation, slotTransform);
-        _spawnedPlayers[p.slot] = model;
+        if (_btnLeave != null) _btnLeave.clicked += LeaveRoom;
+        if (_btnStart != null) _btnStart.clicked += StartGame;
+    }
 
-        // Tạo Name Tag
-        if (nameTagPrefab != null)
+    public override void OnNetworkSpawn()
+    {
+        if (IsServer)
         {
-            GameObject nameTag = Instantiate(nameTagPrefab, model.transform);
-            // Vị trí trên đầu (giả định y = 2.0f, có thể điều chỉnh tùy model)
-            nameTag.transform.localPosition = new Vector3(0, 2.2f, 0);
+            NetworkManager.Singleton.OnClientConnectedCallback += OnClientConnected;
+            NetworkManager.Singleton.OnClientDisconnectCallback += OnClientDisconnected;
             
-            var tmp = nameTag.GetComponentInChildren<TextMeshPro>();
-            if (tmp != null)
+            // Server (VPS) nên lấy thông tin từ DB hoặc truyền qua ConnectionData
+            // Tạm thời set demo nếu chưa có hệ thống truyền dữ liệu phức tạp
+            if (string.IsNullOrEmpty(NetRoomName.Value.ToString()))
             {
-                tmp.text = p.displayName;
-                // Nếu là slot 1 (chủ phòng), có thể thêm icon hoặc màu khác
-                if (p.slot == 1) tmp.color = Color.yellow; 
+                NetRoomName.Value = "ATLANTIS EXPEDITION";
+                NetRoomId.Value = "VPSDEDICATED";
             }
         }
 
-        Debug.Log($"[Lobby] Spawned {p.displayName} at Slot {p.slot}");
+        // Đăng ký callback khi NetworkVariable thay đổi (cho Client cập nhật UI)
+        NetRoomName.OnValueChanged += (oldVal, newVal) => UpdateRoomUI();
+        NetRoomId.OnValueChanged += (oldVal, newVal) => UpdateRoomUI();
+        
+        _netPlayers.OnListChanged += (changeEvent) => UpdateUI();
+        
+        UpdateRoomUI();
+        UpdateUI();
     }
 
-    private void UpdateNameTag(int slot, string displayName)
+    private void UpdateRoomUI()
     {
-        if (_spawnedPlayers.TryGetValue(slot, out GameObject model))
+        if (_lblRoomName != null) _lblRoomName.text = $"SESSION: {NetRoomName.Value.ToString().ToUpper()}";
+        if (_lblRoomId != null) _lblRoomId.text = $"ID: #{NetRoomId.Value.ToString()}";
+    }
+
+    private void OnClientConnected(ulong clientId)
+    {
+        if (!IsServer) return;
+        string pName = (clientId == NetworkManager.ServerClientId) ? PlayerPrefs.GetString("AuthDisplayName", "Host") : $"Explorer_{clientId}";
+        AddPlayer(clientId, pName);
+    }
+
+    private void OnClientDisconnected(ulong clientId)
+    {
+        if (!IsServer) return;
+        for (int i = 0; i < _netPlayers.Count; i++)
         {
-            var tmp = model.GetComponentInChildren<TextMeshPro>();
-            if (tmp != null) tmp.text = displayName;
+            if (_netPlayers[i].ClientId == clientId)
+            {
+                _netPlayers.RemoveAt(i);
+                break;
+            }
         }
     }
 
-    private void DespawnPlayer(int slot)
+    private void AddPlayer(ulong clientId, string name)
     {
-        if (_spawnedPlayers.TryGetValue(slot, out GameObject model))
-        {
-            Destroy(model);
-            _spawnedPlayers.Remove(slot);
-            Debug.Log($"[Lobby] Player left Slot {slot}");
-        }
+        int slotIdx = FindEmptySlot();
+        if (slotIdx == -1) return;
+
+        _netPlayers.Add(new PlayerNetData 
+        { 
+            Name = name, 
+            Slot = slotIdx, 
+            ClientId = clientId 
+        });
+
+        GameObject go = Instantiate(playerNetworkPrefab, slots[slotIdx].position, slots[slotIdx].rotation);
+        go.GetComponent<NetworkObject>().SpawnWithOwnership(clientId);
     }
 
-    private void ClearAllSlots()
+    private int FindEmptySlot()
     {
-        foreach (var model in _spawnedPlayers.Values)
+        for (int i = 0; i < 4; i++)
         {
-            Destroy(model);
+            bool occupied = false;
+            foreach (var p in _netPlayers) if (p.Slot == i) occupied = true;
+            if (!occupied) return i;
         }
-        _spawnedPlayers.Clear();
+        return -1;
+    }
+
+    private void UpdateUI()
+    {
+        if (_lblPlayerCount != null) _lblPlayerCount.text = $"PLAYERS: {_netPlayers.Count}/4";
+        if (_btnStart != null) _btnStart.style.display = IsHost ? DisplayStyle.Flex : DisplayStyle.None;
+    }
+
+    private void StartGame()
+    {
+        if (!IsHost) return;
+        Debug.Log("[Lobby] Starting Game Expedition...");
+    }
+
+    private void LeaveRoom()
+    {
+        NetworkManager.Singleton.Shutdown();
+        UnityEngine.SceneManagement.SceneManager.LoadScene("MainMenu");
     }
 }

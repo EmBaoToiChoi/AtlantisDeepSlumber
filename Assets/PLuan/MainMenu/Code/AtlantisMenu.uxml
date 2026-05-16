@@ -113,22 +113,10 @@
                 <ui:Label name="lbl-col-players" text="PLAYERS" class="col-players" />
                 <ui:Label name="lbl-col-action" text="ACTION" class="col-action" />
             </ui:VisualElement>
-            <ui:ScrollView mode="Vertical" class="room-list">
-                <ui:VisualElement class="room-item">
-                    <ui:Label text="[P] #849201" class="room-col col-id" />
-                    <ui:Label text="Abyss Crawlers" class="room-col col-name" />
-                    <ui:Label text="CaptainNemo" class="room-col col-host" />
-                    <ui:Label text="3/4" class="room-col col-players" />
-                    <ui:Button name="btn-join-item-1" text="JOIN" class="join-mini-btn room-col col-action" />
-                </ui:VisualElement>
-                <ui:VisualElement class="room-item">
-                    <ui:Label text="[O] #310294" class="room-col col-id" />
-                    <ui:Label text="Deep Slumber #1" class="room-col col-name" />
-                    <ui:Label text="BaoDev" class="room-col col-host" />
-                    <ui:Label text="2/4" class="room-col col-players" />
-                    <ui:Button name="btn-join-item-2" text="JOIN" class="join-mini-btn room-col col-action" />
-                </ui:VisualElement>
+            <ui:ScrollView mode="Vertical" name="room-scroll-view" class="room-list">
+                <!-- Dynamically populated -->
             </ui:ScrollView>
+
             <ui:VisualElement class="button-group" style="margin-top: 25px; width: 150px;">
                 <ui:Button name="btn-join-back" text="&lt; BACK" class="menu-btn back-btn" />
             </ui:VisualElement>
