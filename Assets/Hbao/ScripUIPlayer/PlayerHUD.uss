@@ -501,77 +501,109 @@
     scale: 1;
 }
 
-/* --- Sub-Skill (Inner/Outer) Styles --- */
-.skill-sub-wrapper {
-    flex-direction: row;
-    position: absolute;
-    top: -60px; /* Vị trí phía trên cụm skill chính */
-    left: 50%;
-    translate: -50% 0;
-}
-
-.skill-sub-slot {
-    width: 50px;
-    height: 50px;
-    margin: 0 15px;
-    background-color: rgba(68, 138, 186, 0.45); /* Màu xanh như hình 2 */
-    border-radius: 12px;
-    border-width: 2.5px;
-    border-color: rgba(105, 175, 218, 0.9); /* Viền xanh sáng */
-    justify-content: center;
-    align-items: center;
-    transition-property: background-color, scale, border-color, box-shadow;
-    transition-duration: 0.2s;
-    overflow: hidden;
-}
-
-.skill-sub-slot:hover {
-    background-color: rgba(88, 158, 206, 0.6);
-    scale: 1.1;
-    border-color: rgba(140, 215, 255, 1);
-}
-
-.skill-sub-label {
-    color: white;
-    -unity-font-style: bold;
-    font-size: 16px;
-    -unity-text-align: middle-center;
-    padding: 0;
-    margin: 0;
-    text-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
-}
-
-.skill-sub-icon {
-    position: absolute;
-    width: 70%;
-    height: 70%;
-    opacity: 0.3;
-    -unity-background-scale-mode: scale-to-fit;
-}
-
-/* --- Skill Hotkey Indicators --- */
+/* --- Skill Hotkey Indicators (Final Style) --- */
 .skill-hotkey-container {
     position: absolute;
-    top: 8px;
-    left: 8px;
-    width: 28px;
-    height: 28px;
-    background-color: rgba(20, 20, 20, 0.6);
+    bottom: 2px; /* Sát mép dưới hơn */
+    right: 2px;  /* Sát mép phải hơn */
+    width: 24px;
+    height: 24px;
+    background-color: rgba(10, 10, 10, 0.65); /* Nền tối đổ bóng */
     border-radius: 6px;
-    border-width: 2px;
-    border-color: rgba(255, 255, 255, 0.9);
+    border-width: 1.5px;
+    border-color: rgba(255, 255, 255, 0.95); /* Viền trắng nổi bật */
     justify-content: center;
     align-items: center;
-    z-index: 5;
+    z-index: 10;
 }
 
 .skill-hotkey {
     color: white;
     -unity-font-style: bold;
-    font-size: 14px;
+    font-size: 13px;
     -unity-text-align: middle-center;
     padding: 0;
     margin: 0;
+    text-shadow: 0 0 5px rgba(0, 0, 0, 0.8);
 }
+
+/* --- Minimap Hotkey (M) --- */
+.minimap-hotkey-container {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 32px;
+    height: 32px;
+    background-color: rgba(10, 15, 25, 0.8);
+    border-radius: 8px;
+    border-width: 2px;
+    border-color: rgba(255, 255, 255, 0.95);
+    justify-content: center;
+    align-items: center;
+    z-index: 20;
+}
+
+.minimap-hotkey {
+    color: white;
+    -unity-font-style: bold;
+    font-size: 16px;
+    padding: 0;
+    margin: 0;
+}
+
+/* --- World Map Overlay (Animated) --- */
+.world-map-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.75);
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    opacity: 0;
+    visibility: hidden;
+    transition-property: opacity, visibility;
+    transition-duration: 0.3s; /* Nhanh hơn một chút để mượt hơn */
+    transition-timing-function: ease-in-out;
+}
+
+.world-map-overlay.show-map {
+    opacity: 1;
+    visibility: visible;
+}
+
+.world-map-frame {
+    width: 90%;
+    height: 90%;
+    background-color: rgba(5, 10, 15, 0.98);
+    border-radius: 20px;
+    border-width: 3.5px;
+    border-color: rgba(255, 255, 255, 0.95);
+    padding: 0;
+    align-items: center;
+    justify-content: center;
+    -unity-font-definition: url("project://database/Assets/UI%20Toolkit/UnityThemes/UnityDefaultRuntimeTheme.tss?fileID=2230732570650464555&guid=8dcf67e479d58bd47908bf0d5e1cc1d0&type=3#NotInter-Regular");
+    
+    /* Trạng thái ẩn: Thu nhỏ mượt mà về phía Minimap */
+    scale: 0 0;
+    opacity: 0;
+    transform-origin: 92% 8%; /* Căn chỉnh đúng vị trí Minimap */
+    
+    transition-property: scale, opacity;
+    transition-duration: 0.4s;
+    transition-timing-function: ease-out-circ; /* Hiệu ứng mượt mà, tự nhiên */
+}
+
+.world-map-overlay.show-map .world-map-frame {
+    scale: 1 1;
+    opacity: 1;
+}
+
+
+
+
+
 
 

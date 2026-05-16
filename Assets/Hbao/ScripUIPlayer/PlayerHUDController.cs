@@ -34,14 +34,11 @@ public class PlayerHUDController : MonoBehaviour
     private VisualElement skillImgR; // Tham chiếu tới hình ảnh kỹ năng để ẩn
     private bool isSkillsUnlocked = false; // Trạng thái đã mở khóa kỹ năng hay chưa
     
-    // Nút Nội/Ngoại mới
-    private VisualElement skillInner;
-    private VisualElement skillOuter;
-    
     // Mặc định false -> Vào game chưa ấn M sẽ là tắt Mic
     private bool isMicOn = false; 
 
     // Cảnh báo vũ khí
+    private VisualElement worldMapOverlay;
     private Label weaponWarning;
     private VisualElement weaponLock2; // Tham chiếu tới overlay khóa vũ khí
     private VisualElement lockIcon2;   // Tham chiếu tới icon ổ khóa để rung
@@ -80,10 +77,6 @@ public class PlayerHUDController : MonoBehaviour
         skillImgF = root.Q<VisualElement>("skill-img-f");
         skillImgR = root.Q<VisualElement>("skill-img-r");
 
-        // Tìm nút Nội/Ngoại mới
-        skillInner = root.Q<VisualElement>("skill-inner");
-        skillOuter = root.Q<VisualElement>("skill-outer");
-
         // Ẩn kỹ năng ngay từ đầu nếu đang khóa
         if (!isSkillsUnlocked)
         {
@@ -92,6 +85,7 @@ public class PlayerHUDController : MonoBehaviour
         }
 
         // Tìm Label cảnh báo và Overlay khóa
+        worldMapOverlay = root.Q<VisualElement>("world-map-overlay");
         weaponWarning = root.Q<Label>("weapon-warning");
         weaponLock2 = root.Q<VisualElement>("weapon-lock-2");
         if (weaponLock2 != null) lockIcon2 = weaponLock2.Q<VisualElement>(null, "weapon-lock-icon");
@@ -146,6 +140,18 @@ public class PlayerHUDController : MonoBehaviour
                     weaponImg2.style.visibility = Visibility.Visible;
                 }
             }
+
+            // Mở/đóng Bản đồ thế giới bằng phím M
+            if (Keyboard.current.mKey.wasPressedThisFrame)
+            {
+                if (worldMapOverlay != null)
+                {
+                    worldMapOverlay.ToggleInClassList("show-map");
+                    bool isNowVisible = worldMapOverlay.ClassListContains("show-map");
+                    Debug.Log("Đã " + (isNowVisible ? "mở" : "đóng") + " Bản đồ thế giới với hiệu ứng");
+                }
+            }
+
 
             // Mở khóa kỹ năng bằng phím L
             if (Keyboard.current.lKey.wasPressedThisFrame && !isSkillsUnlocked)
