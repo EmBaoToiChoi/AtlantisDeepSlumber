@@ -46,6 +46,15 @@ public class RoomResponse
 }
 
 [System.Serializable]
+public class RoomListResponse
+{
+    public bool success;
+    public string message;
+    public RoomData[] rooms;
+}
+
+
+[System.Serializable]
 public class CreateRoomRequest
 {
     public string roomName;
@@ -142,6 +151,35 @@ public static class AuthService
     {
         return await SendRoomRequest($"{BASE_URL}/rooms/{roomId}", "GET", null);
     }
+
+    public static async Task<RoomListResponse> GetRooms()
+    {
+        using (UnityWebRequest req = UnityWebRequest.Get($"{BASE_URL}/rooms"))
+        {
+            // Thêm Authorization header nếu có token
+            string token = PlayerPrefs.GetString("AuthToken", "");
+            if (!string.IsNullOrEmpty(token))
+            {
+                req.SetRequestHeader("Authorization", $"Bearer {token}");
+            }
+
+            var operation = req.SendWebRequest();
+            while (!operation.isDone) await Task.Yield();
+
+            if (req.result == UnityWebRequest.Result.ConnectionError)
+                return new RoomListResponse { success = false, message = "Network Error" };
+
+            try
+            {
+                return JsonUtility.FromJson<RoomListResponse>(req.downloadHandler.text);
+            }
+            catch
+            {
+                return new RoomListResponse { success = false, message = "Parse Error" };
+            }
+        }
+    }
+
 
     private static async Task<RoomResponse> SendRoomRequest(string url, string method, string jsonBody)
     {
