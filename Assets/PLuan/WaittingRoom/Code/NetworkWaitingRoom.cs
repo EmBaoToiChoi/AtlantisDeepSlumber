@@ -85,11 +85,28 @@ public class NetworkWaitingRoom : NetworkBehaviour
     {
         Debug.Log("[Lobby] Script NetworkWaitingRoom đã bắt đầu chạy (Start).");
         
-        // Nếu dùng VPS làm Server, thì tại đây ta chỉ cần chờ NetworkManager kết nối xong.
-        // Việc Spawn nhân vật sẽ được xử lý khi OnNetworkSpawn kích hoạt.
-
         if (_uiDocument == null) Debug.LogError("[Lobby] THẤT BẠI: Bạn chưa kéo UI Document!");
         if (slots == null || slots.Length == 0) Debug.LogError("[Lobby] THẤT BẠI: Danh sách Slots đang trống!");
+
+        // TỰ ĐỘNG KIỂM TRA NẾU VÀO PHÒNG MUỘN
+        InvokeRepeating(nameof(CheckForSpawn), 0.5f, 1.0f);
+    }
+
+    private void CheckForSpawn()
+    {
+        if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsClient && !IsSpawned)
+        {
+            if (NetworkManager.Singleton.IsConnectedClient)
+            {
+                Debug.Log("[Lobby] Đã thấy kết nối mạng, đang thử kích hoạt đồng bộ thủ công...");
+                OnNetworkSpawn();
+                CancelInvoke(nameof(CheckForSpawn));
+            }
+        }
+        else if (IsSpawned)
+        {
+            CancelInvoke(nameof(CheckForSpawn));
+        }
     }
 
     public override void OnNetworkSpawn()
