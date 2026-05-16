@@ -1,5 +1,5 @@
 fileFormatVersion: 2
-guid: c224a90ad5cf9ad41a4c9076f3490624
+guid: 3b19951324983074db9340edef2efdad
 TextureImporter:
   internalIDToNameTable: []
   externalObjects: {}
@@ -108,56 +108,12 @@ TextureImporter:
     forceMaximumCompressionQuality_BC6H_BC7: 0
   spriteSheet:
     serializedVersion: 2
-    sprites:
-    - serializedVersion: 2
-      name: Mic - Copy_0
-      rect:
-        serializedVersion: 2
-        x: 7
-        y: 0
-        width: 353
-        height: 583
-      alignment: 0
-      pivot: {x: 0, y: 0}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: 43eafc82e2a1bf547990fa6991a52fdb
-      internalID: 89066504
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: Mic - Copy_1
-      rect:
-        serializedVersion: 2
-        x: 163
-        y: 563
-        width: 4
-        height: 4
-      alignment: 0
-      pivot: {x: 0, y: 0}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: fa18d8a84b1fa314481241ef944a4eb6
-      internalID: -1325868566
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
+    sprites: []
     outline: []
     customData: 
     physicsShape: []
     bones: []
-    spriteID: ac85a9835505b164e8f5ea915b012c99
+    spriteID: 
     internalID: 0
     vertices: []
     indices: 
@@ -166,9 +122,7 @@ TextureImporter:
     secondaryTextures: []
     spriteCustomMetadata:
       entries: []
-    nameFileIdTable:
-      Mic - Copy_0: 89066504
-      Mic - Copy_1: -1325868566
+    nameFileIdTable: {}
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 
