@@ -113,10 +113,10 @@ TextureImporter:
       name: Skill 1_0
       rect:
         serializedVersion: 2
-        x: 31
-        y: 2
-        width: 1473
-        height: 1021
+        x: 12
+        y: 1
+        width: 1500
+        height: 1023
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -125,8 +125,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 2989acdda91f0eb43b5975798c68045b
-      internalID: 33607663
+      spriteID: 3559b88dd4618d749a88d75a84c414f3
+      internalID: 160942999
       vertices: []
       indices: 
       edges: []
@@ -135,7 +135,7 @@ TextureImporter:
     customData: 
     physicsShape: []
     bones: []
-    spriteID: 54f6793798fa59040bbfdeb205d7d71c
+    spriteID: 936185cbb93e706459137a063e89c697
     internalID: 0
     vertices: []
     indices: 
@@ -145,7 +145,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      Skill 1_0: 33607663
+      Skill 1_0: 160942999
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 
