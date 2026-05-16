@@ -500,3 +500,78 @@
     translate: -50% -20px;
     scale: 1;
 }
+
+/* --- Sub-Skill (Inner/Outer) Styles --- */
+.skill-sub-wrapper {
+    flex-direction: row;
+    position: absolute;
+    top: -60px; /* Vị trí phía trên cụm skill chính */
+    left: 50%;
+    translate: -50% 0;
+}
+
+.skill-sub-slot {
+    width: 50px;
+    height: 50px;
+    margin: 0 15px;
+    background-color: rgba(68, 138, 186, 0.45); /* Màu xanh như hình 2 */
+    border-radius: 12px;
+    border-width: 2.5px;
+    border-color: rgba(105, 175, 218, 0.9); /* Viền xanh sáng */
+    justify-content: center;
+    align-items: center;
+    transition-property: background-color, scale, border-color, box-shadow;
+    transition-duration: 0.2s;
+    overflow: hidden;
+}
+
+.skill-sub-slot:hover {
+    background-color: rgba(88, 158, 206, 0.6);
+    scale: 1.1;
+    border-color: rgba(140, 215, 255, 1);
+}
+
+.skill-sub-label {
+    color: white;
+    -unity-font-style: bold;
+    font-size: 16px;
+    -unity-text-align: middle-center;
+    padding: 0;
+    margin: 0;
+    text-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+}
+
+.skill-sub-icon {
+    position: absolute;
+    width: 70%;
+    height: 70%;
+    opacity: 0.3;
+    -unity-background-scale-mode: scale-to-fit;
+}
+
+/* --- Skill Hotkey Indicators --- */
+.skill-hotkey-container {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    width: 28px;
+    height: 28px;
+    background-color: rgba(20, 20, 20, 0.6);
+    border-radius: 6px;
+    border-width: 2px;
+    border-color: rgba(255, 255, 255, 0.9);
+    justify-content: center;
+    align-items: center;
+    z-index: 5;
+}
+
+.skill-hotkey {
+    color: white;
+    -unity-font-style: bold;
+    font-size: 14px;
+    -unity-text-align: middle-center;
+    padding: 0;
+    margin: 0;
+}
+
+

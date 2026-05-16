@@ -34,6 +34,10 @@ public class PlayerHUDController : MonoBehaviour
     private VisualElement skillImgR; // Tham chiếu tới hình ảnh kỹ năng để ẩn
     private bool isSkillsUnlocked = false; // Trạng thái đã mở khóa kỹ năng hay chưa
     
+    // Nút Nội/Ngoại mới
+    private VisualElement skillInner;
+    private VisualElement skillOuter;
+    
     // Mặc định false -> Vào game chưa ấn M sẽ là tắt Mic
     private bool isMicOn = false; 
 
@@ -75,6 +79,10 @@ public class PlayerHUDController : MonoBehaviour
         
         skillImgF = root.Q<VisualElement>("skill-img-f");
         skillImgR = root.Q<VisualElement>("skill-img-r");
+
+        // Tìm nút Nội/Ngoại mới
+        skillInner = root.Q<VisualElement>("skill-inner");
+        skillOuter = root.Q<VisualElement>("skill-outer");
 
         // Ẩn kỹ năng ngay từ đầu nếu đang khóa
         if (!isSkillsUnlocked)
