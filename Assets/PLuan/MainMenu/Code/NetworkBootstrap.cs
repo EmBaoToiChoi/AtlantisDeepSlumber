@@ -62,16 +62,19 @@ public class NetworkBootstrap : MonoBehaviour
         if (NetworkManager.Singleton.IsListening || NetworkManager.Singleton.IsConnectedClient)
             NetworkManager.Singleton.Shutdown();
 
-        // Gửi tên người chơi kèm theo khi kết nối
+        // GỬI COMBO THÔNG TIN: Tên|TênPhòng|IDPhòng
         string playerName = PlayerPrefs.GetString("AuthDisplayName", "Explorer");
-        byte[] payload = System.Text.Encoding.UTF8.GetBytes(playerName);
+        string roomName = PlayerPrefs.GetString("CurrentRoomName", "Atlantis Lobby");
+        string roomId = PlayerPrefs.GetString("CurrentRoomID", "000000");
+        
+        string comboData = $"{playerName}|{roomName}|{roomId}";
+        byte[] payload = System.Text.Encoding.UTF8.GetBytes(comboData);
 
         var transport = NetworkManager.Singleton.GetComponent<UnityTransport>();
         if (transport != null)
         {
             transport.ConnectionData.Address = "165.99.14.40"; 
             transport.ConnectionData.Port = 7777;
-
             NetworkManager.Singleton.NetworkConfig.ConnectionData = payload;
         }
 
