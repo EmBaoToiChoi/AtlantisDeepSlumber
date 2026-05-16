@@ -21,13 +21,19 @@ public class Enemy1_DapBua : NetworkBehaviour
         NetworkVariableWritePermission.Server
     );
 
-    [Header("Network State")]
-    // Đồng bộ trạng thái từ Server xuống tất cả Client
     public NetworkVariable<EnemyState> currentState = new NetworkVariable<EnemyState>(
         EnemyState.Idle, 
         NetworkVariableReadPermission.Everyone, 
         NetworkVariableWritePermission.Server
     );
+
+    [Header("Advanced AI Sync")]
+    // Đồng bộ hit để mọi người thấy bị trúng đòn
+    public NetworkVariable<int> hitCounter = new NetworkVariable<int>(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+    // Đồng bộ kiểu tấn công (0: Left, 1: Right, 2: Combo)
+    public NetworkVariable<int> attackType = new NetworkVariable<int>(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+
+    private bool isNextAttackLeft = true;
 
     [Header("Components")]
     public NavMeshAgent agent;
@@ -59,6 +65,11 @@ public class Enemy1_DapBua : NetworkBehaviour
             currentHealth.Value = maxHealth;
             ChangeState(EnemyState.Idle);
         }
+
+        // Lắng nghe hit để chạy hiệu ứng dính đòn cho mọi Client
+        hitCounter.OnValueChanged += (oldVal, newVal) => {
+            if (anim != null) anim.SetTrigger("Hit");
+        };
     }
 
     public override void OnNetworkDespawn()
@@ -182,10 +193,12 @@ public class Enemy1_DapBua : NetworkBehaviour
 
     private void HandleRun()
     {
-        if (targetPlayer == null) return;
-
         agent.isStopped = false;
-        agent.speed = 5f; // Tốc độ chạy
+        
+        // Phase 2: Dưới 50% máu chạy nhanh hơn
+        bool isEnraged = currentHealth.Value <= maxHealth * 0.5f;
+        agent.speed = isEnraged ? 7f : 5f; 
+        
         agent.SetDestination(targetPlayer.position);
 
         // Kiểm tra khoảng cách để tấn công (Dùng khoảng cách thay vì Sphere Collider cho mượt)
@@ -195,25 +208,40 @@ public class Enemy1_DapBua : NetworkBehaviour
             ChangeState(EnemyState.Attack);
         }
     }
-
     private void HandleAttack()
     {
+        if (targetPlayer == null) 
+        {
+            ChangeState(EnemyState.Idle);
+            return;
+        }
+
         agent.isStopped = true;
         transform.LookAt(new Vector3(targetPlayer.position.x, transform.position.y, targetPlayer.position.z));
 
-        // Đợi hết Animation tấn công (giả sử mất 1.5s), sau đó kiểm tra lại
         stateTimer -= Time.deltaTime;
         if (stateTimer <= 0)
         {
-            float distanceToPlayer = Vector3.Distance(transform.position, targetPlayer.position);
-            if (distanceToPlayer <= attackRange)
+            // Quyết định kiểu đánh tiếp theo (Server quyết định và đồng bộ qua attackType)
+            if (currentHealth.Value <= maxHealth * 0.5f)
             {
-                // Vẫn ở gần thì đánh tiếp
-                ChangeState(EnemyState.Attack); 
+                attackType.Value = 2; // Combo
+                stateTimer = 2.0f; // Combo lâu hơn chút
             }
             else
             {
-                // Chạy theo tiếp
+                attackType.Value = isNextAttackLeft ? 0 : 1;
+                isNextAttackLeft = !isNextAttackLeft;
+                stateTimer = 1.2f;
+            }
+            
+            // Đồng bộ animation
+            OnAttackTypeChanged(0, attackType.Value);
+
+            // Kiểm tra xem sau đòn đánh có còn trong tầm không
+            float distanceToPlayer = Vector3.Distance(transform.position, targetPlayer.position);
+            if (distanceToPlayer > attackRange)
+            {
                 ChangeState(EnemyState.Run);
             }
         }
@@ -224,6 +252,8 @@ public class Enemy1_DapBua : NetworkBehaviour
         if (!IsServer || currentState.Value == EnemyState.Dead) return;
 
         currentHealth.Value -= damage;
+        hitCounter.Value++; // Tăng counter để tất cả Client chạy Anim Hit
+
         if (currentHealth.Value <= 0)
         {
             ChangeState(EnemyState.Dead);
@@ -260,35 +290,46 @@ public class Enemy1_DapBua : NetworkBehaviour
 
     #region Client Animation Sync
 
-    // Hàm này chạy trên TẤT CẢ các Client khi NetworkVariable currentState thay đổi
+        // Hàm này chạy trên TẤT CẢ các Client khi NetworkVariable currentState thay đổi
     private void OnStateChanged(EnemyState previousValue, EnemyState newValue)
     {
-        // Reset tất cả trigger để tránh kẹt animation
+        // Reset các trigger cũ để tránh kẹt
         anim.ResetTrigger("Idle");
         anim.ResetTrigger("Walk");
         anim.ResetTrigger("Run");
-        anim.ResetTrigger("Attack");
 
-        // Kích hoạt animation tương ứng (Đảm bảo bạn có setup các Trigger này trong Animator)
         switch (newValue)
         {
             case EnemyState.Idle:
-                anim.SetTrigger("Idle");
+                anim.SetTrigger("Idle"); // Khớp với Parameter "Idle" của bạn
                 break;
             case EnemyState.Walk:
-                anim.SetTrigger("Walk");
+                anim.SetTrigger("Walk"); // Khớp với Parameter "Walk" của bạn
                 break;
             case EnemyState.Run:
-                anim.SetTrigger("Run");
-                break;
-            case EnemyState.Attack:
-                anim.SetTrigger("Attack");
+                anim.SetTrigger("Run");   // Khớp với Parameter "Run" của bạn
                 break;
             case EnemyState.Dead:
-                anim.SetTrigger("Die"); // Đảm bảo có trigger "Die" trong Animator
+                anim.SetTrigger("Die");   // Khớp với trigger "Die" của bạn
                 break;
         }
     }
+
+    private void OnAttackTypeChanged(int oldVal, int newVal)
+    {
+        if (currentState.Value != EnemyState.Attack) return;
+        
+        // Reset các trigger tấn công
+        anim.ResetTrigger("AttLeft");
+        anim.ResetTrigger("quai1Attackphai");
+        anim.ResetTrigger("Combo");
+
+        // Gọi đúng tên trigger bạn đặt trong Animator ở Hình 2
+        if (newVal == 0) anim.SetTrigger("AttLeft");
+        else if (newVal == 1) anim.SetTrigger("quai1Attackphai");
+        else if (newVal == 2) anim.SetTrigger("Combo");
+    }
+
 
     #endregion
 
