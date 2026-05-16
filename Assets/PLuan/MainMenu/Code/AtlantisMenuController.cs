@@ -22,9 +22,9 @@ public class AtlantisMenuController : MonoBehaviour
     private VisualElement _joinAuthPanel;
     private VisualElement _optionsMenuPanel;
     
-    [Header("Network & Loading")]
+    [Header("Network & Lobby")]
     [SerializeField] private NetworkBootstrap _netBootstrap;
-    [SerializeField] private SceneLoader _sceneLoader;
+    [SerializeField] private VisualTreeAsset _roomItemTemplate; 
     
 
 
@@ -189,10 +189,10 @@ public class AtlantisMenuController : MonoBehaviour
         if (btnJoinById != null) btnJoinById.clicked += JoinByID;
         
         var btnJoinItem1 = _root.Q<Button>("btn-join-item-1");
-        if (btnJoinItem1 != null) btnJoinItem1.clicked += () => JoinSpecificRoom("Abyss Crawlers", true);
+        if (btnJoinItem1 != null) btnJoinItem1.clicked += () => JoinSpecificRoom("DEMO1", "Abyss Crawlers", true);
         
         var btnJoinItem2 = _root.Q<Button>("btn-join-item-2");
-        if (btnJoinItem2 != null) btnJoinItem2.clicked += () => JoinSpecificRoom("Deep Slumber #1", false);
+        if (btnJoinItem2 != null) btnJoinItem2.clicked += () => JoinSpecificRoom("DEMO2", "Deep Slumber #1", false);
         
         var btnAuthCancel = _root.Q<Button>("btn-auth-cancel");
         if (btnAuthCancel != null) btnAuthCancel.clicked += () => ShowPanel(_joinRoomPanel);
@@ -555,131 +555,121 @@ public class AtlantisMenuController : MonoBehaviour
     }
 
 
-    private void JoinSpecificRoom(string roomName, bool isPrivate)
+
+
+    private void CreateRoomItem(RoomData room)
     {
-        _currentTargetRoomName = roomName;
-        // Giả sử roomName ở đây là ID hoặc có cách map ID
-        // Trong demo này ta sẽ mở panel nhập pass nếu là private
+        if (_roomItemTemplate == null) return;
+        var item = _roomItemTemplate.Instantiate();
+        
+        var nameLbl = item.Q<Label>("lbl-room-name");
+        if (nameLbl != null) nameLbl.text = room.roomName;
+        
+        var hostLbl = item.Q<Label>("lbl-host-name");
+        if (hostLbl != null) hostLbl.text = $"HOST: {room.host ?? "Unknown"}";
+        
+        var playersLbl = item.Q<Label>("lbl-players");
+        if (playersLbl != null) playersLbl.text = $"{room.players?.Length ?? 0}/4";
+        
+        var lockIcon = item.Q<VisualElement>("icon-lock");
+        if (lockIcon != null) lockIcon.style.display = room.isPrivate ? DisplayStyle.Flex : DisplayStyle.None;
+
+        item.RegisterCallback<ClickEvent>(evt => JoinSpecificRoom(room.roomId, room.roomName, room.isPrivate));
+        _roomScrollView.Add(item);
+    }
+
+    private bool _isProcessingRoom = false; // Flag chống spam
+
+    private async void JoinSpecificRoom(string roomId, string roomName, bool isPrivate)
+    {
+        if (_isProcessingRoom) return; // Nếu đang xử lý thì bỏ qua
+        _isProcessingRoom = true;
+
+        Debug.Log($"[JOIN] Yêu cầu vào phòng: {roomName} (#{roomId})");
+        
         if (isPrivate)
         {
-            _root.Q<Label>("auth-room-name").text = $"SESSION: {roomName}";
+            _currentTargetRoomName = roomName;
+            PlayerPrefs.SetString("PendingJoinID", roomId); 
             ShowPanel(_joinAuthPanel);
+            _isProcessingRoom = false; // Mở lại để nhập pass
+            return;
         }
-        else 
+
+        var response = await AuthService.JoinRoom(roomId, "");
+        if (response != null && response.success)
         {
-            Debug.Log($"[JOIN] Vào phòng: {roomName}");
-            // Thực tế sẽ gọi JoinRoom với ID của room đó
+            PlayerPrefs.SetString("CurrentRoomID", roomId);
+            PlayerPrefs.SetString("CurrentRoomName", roomName);
+            PlayerPrefs.SetInt("IsRoomHost", 0);
+            PlayerPrefs.Save();
+
+            if (_netBootstrap != null)
+            {
+                _netBootstrap.StartClientAsPlayer();
+                _ = SceneLoader.Instance.LoadSceneAsync("Waiting hall", "JOINING EXPEDITION...");
+            }
+        }
+        else
+        {
+            Debug.LogError($"[JOIN] Lỗi: {response?.message}");
+            _isProcessingRoom = false; // Thất bại thì mở lại để chọn phòng khác
         }
     }
 
     private async void ConfirmJoinPrivateRoom()
     {
+        if (_isProcessingRoom) return;
+        _isProcessingRoom = true;
+
         string pwd = _root.Q<TextField>("input-join-password").value;
-        // Ở đây cần ID của phòng đang chọn, giả sử ta đã lưu nó
-        string roomId = "DEMO12"; // Mock ID
+        string roomId = PlayerPrefs.GetString("PendingJoinID", "");
         
         var response = await AuthService.JoinRoom(roomId, pwd);
         if (response != null && response.success)
         {
+            PlayerPrefs.SetString("CurrentRoomID", roomId);
+            PlayerPrefs.SetString("CurrentRoomName", _currentTargetRoomName);
+            PlayerPrefs.SetInt("IsRoomHost", 0);
+            PlayerPrefs.Save();
+
             if (_netBootstrap != null)
             {
                 _netBootstrap.StartClientAsPlayer();
+                _ = SceneLoader.Instance.LoadSceneAsync("Waiting hall", "ACCESS GRANTED...");
             }
         }
-
         else
         {
-            Debug.LogError($"[JOIN] Sai mật khẩu hoặc lỗi: {response?.message}");
+            Debug.LogError($"[JOIN] Sai mật khẩu: {response?.message}");
+            _isProcessingRoom = false;
         }
     }
 
-
-
-    public void LeaveRoom()
-    {
-        // Khi ở MainMenu, LeaveRoom chỉ đơn giản là quay lại bảng chọn Lobby
-        ShowPanel(_networkMenuPanel);
-    }
 
     private async void RefreshRoomList()
     {
         if (_roomScrollView == null) return;
         _roomScrollView.Clear();
 
-        Debug.Log("[LOBBY] Fetching real rooms...");
         var res = await AuthService.GetRooms();
-        
-        if (res == null)
+        if (res != null && res.success)
         {
-            Debug.LogError("[LOBBY] Response is NULL! Check server connection.");
-            return;
-        }
-
-        if (res.success)
-        {
-            int count = res.rooms?.Length ?? 0;
-            Debug.Log($"[LOBBY] Successfully fetched {count} rooms.");
-
-            if (count == 0)
+            if (res.rooms == null || res.rooms.Length == 0)
             {
                 var emptyLabel = new Label(LocalizationManager.Get("lobby_empty"));
                 emptyLabel.style.unityTextAlign = TextAnchor.MiddleCenter;
                 emptyLabel.style.marginTop = 20;
                 emptyLabel.style.color = new StyleColor(new Color(0.5f, 0.5f, 0.5f, 0.8f));
                 _roomScrollView.Add(emptyLabel);
-                return;
             }
-
-            foreach (var room in res.rooms)
+            else
             {
-                var item = CreateRoomItem(room);
-                _roomScrollView.Add(item);
+                foreach (var room in res.rooms) CreateRoomItem(room);
             }
         }
-        else
-        {
-            Debug.LogError($"[LOBBY] Fetch failed: {res.message}");
-        }
     }
 
-
-
-    private VisualElement CreateRoomItem(RoomData room)
-    {
-        var item = new VisualElement();
-        item.AddToClassList("room-item");
-
-        string privacyIcon = room.isPrivate ? "[P]" : "[O]";
-        var idLabel = new Label($"{privacyIcon} #{room.roomId}");
-        idLabel.AddToClassList("room-col");
-        idLabel.AddToClassList("col-id");
-
-        var nameLabel = new Label(room.roomName);
-        nameLabel.AddToClassList("room-col");
-        nameLabel.AddToClassList("col-name");
-
-        var hostLabel = new Label(room.host);
-        hostLabel.AddToClassList("room-col");
-        hostLabel.AddToClassList("col-host");
-
-        var playersLabel = new Label($"{room.players.Length}/{room.maxPlayers}");
-        playersLabel.AddToClassList("room-col");
-        playersLabel.AddToClassList("col-players");
-
-        var joinBtn = new Button(() => JoinSpecificRoom(room.roomId, room.isPrivate));
-        joinBtn.text = "JOIN";
-        joinBtn.AddToClassList("join-mini-btn");
-        joinBtn.AddToClassList("room-col");
-        joinBtn.AddToClassList("col-action");
-
-        item.Add(idLabel);
-        item.Add(nameLabel);
-        item.Add(hostLabel);
-        item.Add(playersLabel);
-        item.Add(joinBtn);
-
-        return item;
-    }
 
 
 
