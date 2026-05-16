@@ -206,7 +206,13 @@ public class NetworkWaitingRoom : NetworkBehaviour
     }
 
     private void AddPlayer(ulong clientId, string name) {
+        // KIỂM TRA CHỐNG TRÙNG: Nếu Client này đã có trong danh sách thì bỏ qua
+        foreach (var p in NetPlayers) {
+            if (p.ClientId == clientId) return;
+        }
+
         Debug.Log($"[DEBUG] Bắt đầu AddPlayer cho: {name} (ID: {clientId})");
+
         
         int slotIdx = FindEmptySlot();
         if (slotIdx == -1) {
