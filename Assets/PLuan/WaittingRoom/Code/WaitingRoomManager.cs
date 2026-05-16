@@ -15,6 +15,10 @@ public class WaitingRoomManager : NetworkBehaviour
     [Header("Prefabs")]
     public GameObject playerNetworkPrefab; 
 
+    // NetworkVariables để đồng bộ thông tin phòng
+    public NetworkVariable<Unity.Collections.FixedString64Bytes> NetRoomName = new NetworkVariable<Unity.Collections.FixedString64Bytes>(writePerm: NetworkVariableWritePermission.Server);
+    public NetworkVariable<Unity.Collections.FixedString64Bytes> NetRoomId = new NetworkVariable<Unity.Collections.FixedString64Bytes>(writePerm: NetworkVariableWritePermission.Server);
+
     private VisualElement _root;
     private Label _lblRoomName;
     private Label _lblRoomId;
@@ -22,7 +26,6 @@ public class WaitingRoomManager : NetworkBehaviour
     private Button _btnStart;
     private Button _btnLeave;
 
-    // NetworkList để đồng bộ danh sách người chơi
     private NetworkList<PlayerNetData> _netPlayers = new NetworkList<PlayerNetData>();
 
     public struct PlayerNetData : INetworkSerializable, System.IEquatable<PlayerNetData>
@@ -62,22 +65,37 @@ public class WaitingRoomManager : NetworkBehaviour
             NetworkManager.Singleton.OnClientConnectedCallback += OnClientConnected;
             NetworkManager.Singleton.OnClientDisconnectCallback += OnClientDisconnected;
             
-            // Add Host
-            AddPlayer(NetworkManager.ServerClientId, PlayerPrefs.GetString("AuthDisplayName", "Host"));
+            // Server (VPS) nên lấy thông tin từ DB hoặc truyền qua ConnectionData
+            // Tạm thời set demo nếu chưa có hệ thống truyền dữ liệu phức tạp
+            if (string.IsNullOrEmpty(NetRoomName.Value.ToString()))
+            {
+                NetRoomName.Value = "ATLANTIS EXPEDITION";
+                NetRoomId.Value = "VPSDEDICATED";
+            }
         }
 
+        // Đăng ký callback khi NetworkVariable thay đổi (cho Client cập nhật UI)
+        NetRoomName.OnValueChanged += (oldVal, newVal) => UpdateRoomUI();
+        NetRoomId.OnValueChanged += (oldVal, newVal) => UpdateRoomUI();
+        
         _netPlayers.OnListChanged += (changeEvent) => UpdateUI();
+        
+        UpdateRoomUI();
         UpdateUI();
+    }
+
+    private void UpdateRoomUI()
+    {
+        if (_lblRoomName != null) _lblRoomName.text = $"SESSION: {NetRoomName.Value.ToString().ToUpper()}";
+        if (_lblRoomId != null) _lblRoomId.text = $"ID: #{NetRoomId.Value.ToString()}";
     }
 
     private void OnClientConnected(ulong clientId)
     {
         if (!IsServer) return;
-        // Lấy tên thật từ PlayerPrefs nếu là Host, hoặc dùng placeholder cho Client (thực tế nên truyền qua ConnectionData)
         string pName = (clientId == NetworkManager.ServerClientId) ? PlayerPrefs.GetString("AuthDisplayName", "Host") : $"Explorer_{clientId}";
         AddPlayer(clientId, pName);
     }
-
 
     private void OnClientDisconnected(ulong clientId)
     {
@@ -104,7 +122,6 @@ public class WaitingRoomManager : NetworkBehaviour
             ClientId = clientId 
         });
 
-        // Spawn nhân vật tại slot (Netcode tự đồng bộ)
         GameObject go = Instantiate(playerNetworkPrefab, slots[slotIdx].position, slots[slotIdx].rotation);
         go.GetComponent<NetworkObject>().SpawnWithOwnership(clientId);
     }
@@ -130,7 +147,6 @@ public class WaitingRoomManager : NetworkBehaviour
     {
         if (!IsHost) return;
         Debug.Log("[Lobby] Starting Game Expedition...");
-        // NetworkManager.Singleton.SceneManager.LoadScene("MainGame", UnityEngine.SceneManagement.LoadSceneMode.Single);
     }
 
     private void LeaveRoom()
