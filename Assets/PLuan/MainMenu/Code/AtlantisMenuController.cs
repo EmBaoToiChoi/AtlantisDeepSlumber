@@ -478,52 +478,74 @@ public class AtlantisMenuController : MonoBehaviour
 
     private async void ConfirmCreateRoom()
     {
+        var btnConfirm = _root.Q<Button>("btn-confirm-create");
+        if (btnConfirm != null && !btnConfirm.enabledSelf) return; // Đã đang tạo, không cho nhấn thêm
+
         string roomName = _root.Q<TextField>("input-room-name").value;
         if (string.IsNullOrWhiteSpace(roomName) || roomName == DefaultRoomNamePlaceholder) return;
 
         bool isPrivate = _root.Q<RadioButtonGroup>("radio-privacy").value == 1;
         string password = _root.Q<TextField>("input-room-password").value;
 
+        // Khóa nút và đổi chữ để báo hiệu đang xử lý
+        if (btnConfirm != null) {
+            btnConfirm.SetEnabled(false);
+            btnConfirm.text = "CREATING...";
+        }
+
         Debug.Log($"[HOST] Đang tạo phòng: {roomName}");
         
         var response = await AuthService.CreateRoom(roomName, isPrivate, password);
         if (response != null && response.success)
         {
-            // Lưu lại thông tin mình là chủ phòng
+            // Lưu lại thông tin phòng thật
             PlayerPrefs.SetString("CurrentRoomID", response.room.roomId);
+            PlayerPrefs.SetString("CurrentRoomName", response.room.roomName);
             PlayerPrefs.SetInt("IsRoomHost", 1); 
             PlayerPrefs.Save();
 
             if (_netBootstrap != null)
             {
                 _netBootstrap.StartClientAsPlayer();
+                _ = SceneLoader.Instance.LoadSceneAsync("Waiting hall", "PREPARING LOBBY...");
             }
         }
         else
         {
             Debug.LogError($"[HOST] Lỗi tạo phòng: {response?.message}");
+            // Mở lại nút nếu lỗi để người dùng thử lại
+            if (btnConfirm != null) {
+                btnConfirm.SetEnabled(true);
+                btnConfirm.text = "CONFIRM";
+            }
         }
     }
 
+
     private async void JoinByID()
     {
-        string inputID = _root.Q<TextField>("input-room-id").value.Trim();
+        string inputID = _root.Q<TextField>("input-room-id").value.Trim().ToUpper();
         if (inputID.Length != 6) return;
 
         Debug.Log($"[JOIN] Kết nối tới ID: #{inputID}");
         var response = await AuthService.JoinRoom(inputID, "");
         if (response != null && response.success)
         {
-            // Lưu lại thông tin mình là khách
+            // Lưu lại thông tin phòng thật
             PlayerPrefs.SetString("CurrentRoomID", inputID);
+            PlayerPrefs.SetString("CurrentRoomName", response.room.roomName);
             PlayerPrefs.SetInt("IsRoomHost", 0);
             PlayerPrefs.Save();
 
             if (_netBootstrap != null)
             {
                 _netBootstrap.StartClientAsPlayer();
+                // Chuyển sang cảnh phòng chờ
+                _ = SceneLoader.Instance.LoadSceneAsync("Waiting hall", "CONNECTING TO SESSION...");
             }
         }
+
+
 
 
         else
