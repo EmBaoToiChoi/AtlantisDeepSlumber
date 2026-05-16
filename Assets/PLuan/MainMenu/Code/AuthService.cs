@@ -166,12 +166,18 @@ public static class AuthService
             var operation = req.SendWebRequest();
             while (!operation.isDone) await Task.Yield();
 
-            if (req.result == UnityWebRequest.Result.ConnectionError)
-                return new RoomListResponse { success = false, message = "Network Error" };
+            if (req.result != UnityWebRequest.Result.Success)
+            {
+                Debug.LogError($"[AUTH SERVICE] GetRooms Error: {req.error}");
+                return new RoomListResponse { success = false, message = req.error };
+            }
+
+            string json = req.downloadHandler.text;
+            Debug.Log($"[AUTH SERVICE] GetRooms Response: {json}");
 
             try
             {
-                return JsonUtility.FromJson<RoomListResponse>(req.downloadHandler.text);
+                return JsonUtility.FromJson<RoomListResponse>(json);
             }
             catch
             {
@@ -181,7 +187,16 @@ public static class AuthService
     }
 
 
+
+    public static async Task<RoomResponse> LeaveRoom(string roomId)
+    {
+        string json = "{\"roomId\":\"" + roomId + "\"}";
+        return await SendRoomRequest($"{BASE_URL}/rooms/leave", "POST", json);
+    }
+
+
     private static async Task<RoomResponse> SendRoomRequest(string url, string method, string jsonBody)
+
     {
         using (UnityWebRequest req = new UnityWebRequest(url, method))
         {

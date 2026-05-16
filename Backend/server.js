@@ -374,8 +374,25 @@ app.post('/api/rooms/join', authenticateToken, async (req, res) => {
     }
 });
 
+// GET /api/rooms (Lấy danh sách tất cả các phòng đang chờ)
+app.get('/api/rooms', async (req, res) => {
+    try {
+        // Chỉ lấy những phòng đang ở trạng thái 'waiting'
+        // Đồng thời lấy thêm thông tin displayName của host từ bảng User
+        const rooms = await Room.find({ status: 'waiting' })
+            .populate('host', 'displayName')
+            .sort({ createdAt: -1 });
+
+        res.json({ success: true, rooms });
+    } catch (err) {
+        console.error('[GetRooms List]', err);
+        res.status(500).json({ success: false, message: 'Lỗi khi lấy danh sách phòng.' });
+    }
+});
+
 // GET /api/rooms/:roomId
 app.get('/api/rooms/:roomId', authenticateToken, async (req, res) => {
+
     try {
         const room = await Room.findOne({ roomId: req.params.roomId.toUpperCase() });
         if (!room) return res.status(404).json({ success: false, message: 'Không tìm thấy phòng.' });
@@ -388,7 +405,43 @@ app.get('/api/rooms/:roomId', authenticateToken, async (req, res) => {
 });
 
 
+// POST /api/rooms/leave (Rời phòng & Nhượng quyền chủ phòng)
+app.post('/api/rooms/leave', authenticateToken, async (req, res) => {
+    try {
+        const { roomId } = req.body;
+        const room = await Room.findOne({ roomId: roomId.toUpperCase() });
+        
+        if (!room) return res.status(404).json({ success: false, message: 'Không tìm thấy phòng.' });
+
+        // Xóa player khỏi danh sách
+        const playerIndex = room.players.findIndex(p => p.user.toString() === req.user.userId);
+        if (playerIndex > -1) {
+            room.players.splice(playerIndex, 1);
+        }
+
+        // Nếu phòng không còn ai -> Xóa phòng
+        if (room.players.length === 0) {
+            await Room.deleteOne({ _id: room._id });
+            return res.json({ success: true, message: 'Phòng trống, đã xóa phòng.' });
+        }
+
+        // Nếu người rời đi là Host -> Nhượng quyền cho người đầu tiên còn lại
+        if (room.host.toString() === req.user.userId) {
+            room.host = room.players[0].user;
+            console.log(`[Room] Host migration: New host is ${room.players[0].displayName}`);
+        }
+
+        await room.save();
+        res.json({ success: true, message: 'Đã rời phòng thành công.', room });
+    } catch (err) {
+        console.error('[LeaveRoom]', err);
+        res.status(500).json({ success: false, message: 'Lỗi khi rời phòng.' });
+    }
+});
+
+
 // ─── Start ────────────────────────────────────────────────────────────────────
+
 app.listen(PORT, () => {
     console.log(`[Server] Atlantis Auth Backend running on port ${PORT}`);
 });
