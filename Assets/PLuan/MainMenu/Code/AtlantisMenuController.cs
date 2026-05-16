@@ -22,8 +22,12 @@ public class AtlantisMenuController : MonoBehaviour
     private VisualElement _joinAuthPanel;
     private VisualElement _optionsMenuPanel;
     
-    [Header("Waiting Room Manager")]
-    [SerializeField] private WaittingRoom _waitingRoomManager;
+    [Header("Network & Loading")]
+    [SerializeField] private NetworkBootstrap _netBootstrap;
+    [SerializeField] private SceneLoader _sceneLoader;
+    
+
+
 
 
 
@@ -54,7 +58,15 @@ public class AtlantisMenuController : MonoBehaviour
     }
 
     private List<ParticleData> _particles = new List<ParticleData>();
-    private string _currentTargetRoomName = "";
+    private string _currentTargetRoomName;
+    private ScrollView _roomScrollView;
+
+    private async void Start()
+    {
+        // Khởi tạo logic bất đồng bộ tại đây nếu cần
+        await Task.Yield();
+    }
+
     private const string DefaultRoomNamePlaceholder = "Atlantis Explorer";
 
     // Applied Settings State
@@ -89,6 +101,7 @@ public class AtlantisMenuController : MonoBehaviour
         _joinRoomPanel = _root.Q<VisualElement>("join-room-panel");
         _joinAuthPanel = _root.Q<VisualElement>("join-auth-panel");
         _optionsMenuPanel = _root.Q<VisualElement>("options-menu-panel");
+        _roomScrollView = _root.Q<ScrollView>("room-scroll-view");
 
         // Auth Panels
         _loginPanel = _root.Q<VisualElement>("login-panel");
@@ -133,7 +146,9 @@ public class AtlantisMenuController : MonoBehaviour
         if (btnCreateHost != null) btnCreateHost.clicked += () => ShowPanel(_createRoomPanel);
         
         var btnJoinClient = _root.Q<Button>("btn-join-client");
-        if (btnJoinClient != null) btnJoinClient.clicked += () => ShowPanel(_joinRoomPanel);
+        if (btnJoinClient != null) {
+            btnJoinClient.clicked += () => { RefreshRoomList(); ShowPanel(_joinRoomPanel); };
+        }
         
         var btnLobbyBack = _root.Q<Button>("btn-lobby-back");
         if (btnLobbyBack != null) btnLobbyBack.clicked += () => ShowPanel(_mainMenuPanel);
@@ -469,13 +484,18 @@ public class AtlantisMenuController : MonoBehaviour
         bool isPrivate = _root.Q<RadioButtonGroup>("radio-privacy").value == 1;
         string password = _root.Q<TextField>("input-room-password").value;
 
-        Debug.Log($"[HOST] Đang tạo phòng: {roomName} (Private: {isPrivate})");
+        Debug.Log($"[HOST] Đang tạo phòng: {roomName}");
         
         var response = await AuthService.CreateRoom(roomName, isPrivate, password);
         if (response != null && response.success)
         {
-            EnterWaitingRoom(response.room);
+            // Với Dedicated Server, người tạo phòng cũng vào với tư cách Client kết nối tới VPS
+            if (_netBootstrap != null)
+            {
+                _netBootstrap.StartClientAsPlayer();
+            }
         }
+
         else
         {
             Debug.LogError($"[HOST] Lỗi tạo phòng: {response?.message}");
@@ -491,13 +511,19 @@ public class AtlantisMenuController : MonoBehaviour
         var response = await AuthService.JoinRoom(inputID, "");
         if (response != null && response.success)
         {
-            EnterWaitingRoom(response.room);
+            // Client kết nối tới VPS
+            if (_netBootstrap != null)
+            {
+                _netBootstrap.StartClientAsPlayer();
+            }
         }
+
         else
         {
             Debug.LogError($"[JOIN] Lỗi tham gia: {response?.message}");
         }
     }
+
 
     private void JoinSpecificRoom(string roomName, bool isPrivate)
     {
@@ -525,38 +551,82 @@ public class AtlantisMenuController : MonoBehaviour
         var response = await AuthService.JoinRoom(roomId, pwd);
         if (response != null && response.success)
         {
-            EnterWaitingRoom(response.room);
+            if (_netBootstrap != null)
+            {
+                _netBootstrap.StartClientAsPlayer();
+            }
         }
+
         else
         {
             Debug.LogError($"[JOIN] Sai mật khẩu hoặc lỗi: {response?.message}");
         }
     }
 
-    private void EnterWaitingRoom(RoomData room)
-    {
-        // Ẩn UI menu chính trước
-        if (_currentActivePanel != null)
-        {
-            _currentActivePanel.AddToClassList("hidden-panel");
-            _currentActivePanel = null;
-        }
 
-        if (_waitingRoomManager != null)
-        {
-            _waitingRoomManager.StartWaiting(room);
-        }
-    }
 
     public void LeaveRoom()
     {
-        if (_waitingRoomManager != null)
-        {
-            _waitingRoomManager.StopWaiting();
-            _waitingRoomManager.gameObject.SetActive(false);
-        }
+        // Khi ở MainMenu, LeaveRoom chỉ đơn giản là quay lại bảng chọn Lobby
         ShowPanel(_networkMenuPanel);
     }
+
+    private async void RefreshRoomList()
+    {
+        if (_roomScrollView == null) return;
+        _roomScrollView.Clear();
+
+        Debug.Log("[LOBBY] Fetching real rooms...");
+        var res = await AuthService.GetRooms();
+        if (res != null && res.success)
+        {
+            foreach (var room in res.rooms)
+            {
+                var item = CreateRoomItem(room);
+                _roomScrollView.Add(item);
+            }
+        }
+    }
+
+    private VisualElement CreateRoomItem(RoomData room)
+    {
+        var item = new VisualElement();
+        item.AddToClassList("room-item");
+
+        string privacyIcon = room.isPrivate ? "[P]" : "[O]";
+        var idLabel = new Label($"{privacyIcon} #{room.roomId}");
+        idLabel.AddToClassList("room-col");
+        idLabel.AddToClassList("col-id");
+
+        var nameLabel = new Label(room.roomName);
+        nameLabel.AddToClassList("room-col");
+        nameLabel.AddToClassList("col-name");
+
+        var hostLabel = new Label(room.host);
+        hostLabel.AddToClassList("room-col");
+        hostLabel.AddToClassList("col-host");
+
+        var playersLabel = new Label($"{room.players.Length}/{room.maxPlayers}");
+        playersLabel.AddToClassList("room-col");
+        playersLabel.AddToClassList("col-players");
+
+        var joinBtn = new Button(() => JoinSpecificRoom(room.roomId, room.isPrivate));
+        joinBtn.text = "JOIN";
+        joinBtn.AddToClassList("join-mini-btn");
+        joinBtn.AddToClassList("room-col");
+        joinBtn.AddToClassList("col-action");
+
+        item.Add(idLabel);
+        item.Add(nameLabel);
+        item.Add(hostLabel);
+        item.Add(playersLabel);
+        item.Add(joinBtn);
+
+        return item;
+    }
+
+
+
 
 
 
@@ -940,6 +1010,7 @@ public class AtlantisMenuController : MonoBehaviour
 
     private async void DoRegister()
     {
+        var btn = _root.Q<Button>("btn-register");
         var name = _root.Q<TextField>("input-reg-name").value;
         var email = _root.Q<TextField>("input-reg-email").value;
         var pwd = _root.Q<TextField>("input-reg-password").value;
@@ -950,6 +1021,13 @@ public class AtlantisMenuController : MonoBehaviour
         {
             ShowError(lblErr, "Passwords do not match.");
             return;
+        }
+
+        // Chống spam: Disable nút
+        if (btn != null)
+        {
+            btn.SetEnabled(false);
+            btn.text = "PROCESSING...";
         }
 
         lblErr.AddToClassList("hidden-element");
@@ -966,7 +1044,15 @@ public class AtlantisMenuController : MonoBehaviour
         {
             ShowError(lblErr, res.message);
         }
+
+        // Re-enable nút nếu lỗi hoặc sau khi xử lý xong
+        if (btn != null)
+        {
+            btn.SetEnabled(true);
+            btn.text = "CREATE ACCOUNT";
+        }
     }
+
 
     private async void DoVerifyOTP()
     {

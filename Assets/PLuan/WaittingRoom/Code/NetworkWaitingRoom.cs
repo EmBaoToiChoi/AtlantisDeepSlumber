@@ -4,20 +4,16 @@ using UnityEngine.UIElements;
 using Unity.Netcode;
 using TMPro;
 
-public class WaitingRoomManager : NetworkBehaviour
+public class NetworkWaitingRoom : NetworkBehaviour
 {
     [Header("UI Toolkit")]
     [SerializeField] private UIDocument _uiDocument;
     
-    [Header("Slots (Transform points)")]
+    [Header("Slots")]
     public Transform[] slots = new Transform[4];
 
     [Header("Prefabs")]
-    public GameObject playerNetworkPrefab; 
-
-    // NetworkVariables để đồng bộ thông tin phòng
-    public NetworkVariable<Unity.Collections.FixedString64Bytes> NetRoomName = new NetworkVariable<Unity.Collections.FixedString64Bytes>(writePerm: NetworkVariableWritePermission.Server);
-    public NetworkVariable<Unity.Collections.FixedString64Bytes> NetRoomId = new NetworkVariable<Unity.Collections.FixedString64Bytes>(writePerm: NetworkVariableWritePermission.Server);
+    public GameObject playerNetworkPrefab; // Prefab có NetworkObject
 
     private VisualElement _root;
     private Label _lblRoomName;
@@ -26,7 +22,8 @@ public class WaitingRoomManager : NetworkBehaviour
     private Button _btnStart;
     private Button _btnLeave;
 
-    private NetworkList<PlayerNetData> _netPlayers = new NetworkList<PlayerNetData>();
+    // Đồng bộ danh sách người chơi qua Network
+    private NetworkList<PlayerNetData> _players = new NetworkList<PlayerNetData>();
 
     public struct PlayerNetData : INetworkSerializable, System.IEquatable<PlayerNetData>
     {
@@ -54,8 +51,8 @@ public class WaitingRoomManager : NetworkBehaviour
         _btnStart = _root.Q<Button>("btn-start");
         _btnLeave = _root.Q<Button>("btn-leave");
 
-        if (_btnLeave != null) _btnLeave.clicked += LeaveRoom;
-        if (_btnStart != null) _btnStart.clicked += StartGame;
+        _btnLeave.clicked += LeaveRoom;
+        _btnStart.clicked += StartGame;
     }
 
     public override void OnNetworkSpawn()
@@ -65,46 +62,29 @@ public class WaitingRoomManager : NetworkBehaviour
             NetworkManager.Singleton.OnClientConnectedCallback += OnClientConnected;
             NetworkManager.Singleton.OnClientDisconnectCallback += OnClientDisconnected;
             
-            // Server (VPS) nên lấy thông tin từ DB hoặc truyền qua ConnectionData
-            // Tạm thời set demo nếu chưa có hệ thống truyền dữ liệu phức tạp
-            if (string.IsNullOrEmpty(NetRoomName.Value.ToString()))
-            {
-                NetRoomName.Value = "ATLANTIS EXPEDITION";
-                NetRoomId.Value = "VPSDEDICATED";
-            }
+            // Add host
+            AddPlayer(NetworkManager.ServerClientId, PlayerPrefs.GetString("AuthDisplayName", "Host"));
         }
 
-        // Đăng ký callback khi NetworkVariable thay đổi (cho Client cập nhật UI)
-        NetRoomName.OnValueChanged += (oldVal, newVal) => UpdateRoomUI();
-        NetRoomId.OnValueChanged += (oldVal, newVal) => UpdateRoomUI();
-        
-        _netPlayers.OnListChanged += (changeEvent) => UpdateUI();
-        
-        UpdateRoomUI();
+        _players.OnListChanged += (changeEvent) => UpdateUI();
         UpdateUI();
-    }
-
-    private void UpdateRoomUI()
-    {
-        if (_lblRoomName != null) _lblRoomName.text = $"SESSION: {NetRoomName.Value.ToString().ToUpper()}";
-        if (_lblRoomId != null) _lblRoomId.text = $"ID: #{NetRoomId.Value.ToString()}";
     }
 
     private void OnClientConnected(ulong clientId)
     {
         if (!IsServer) return;
-        string pName = (clientId == NetworkManager.ServerClientId) ? PlayerPrefs.GetString("AuthDisplayName", "Host") : $"Explorer_{clientId}";
-        AddPlayer(clientId, pName);
+        // Trong thực tế, bạn sẽ lấy tên từ Auth hoặc Metadata khi kết nối
+        AddPlayer(clientId, $"Player {clientId}");
     }
 
     private void OnClientDisconnected(ulong clientId)
     {
         if (!IsServer) return;
-        for (int i = 0; i < _netPlayers.Count; i++)
+        for (int i = 0; i < _players.Count; i++)
         {
-            if (_netPlayers[i].ClientId == clientId)
+            if (_players[i].ClientId == clientId)
             {
-                _netPlayers.RemoveAt(i);
+                _players.RemoveAt(i);
                 break;
             }
         }
@@ -112,17 +92,18 @@ public class WaitingRoomManager : NetworkBehaviour
 
     private void AddPlayer(ulong clientId, string name)
     {
-        int slotIdx = FindEmptySlot();
-        if (slotIdx == -1) return;
+        int slot = FindEmptySlot();
+        if (slot == -1) return;
 
-        _netPlayers.Add(new PlayerNetData 
+        _players.Add(new PlayerNetData 
         { 
             Name = name, 
-            Slot = slotIdx, 
+            Slot = slot, 
             ClientId = clientId 
         });
 
-        GameObject go = Instantiate(playerNetworkPrefab, slots[slotIdx].position, slots[slotIdx].rotation);
+        // Spawn nhân vật tại slot
+        GameObject go = Instantiate(playerNetworkPrefab, slots[slot].position, slots[slot].rotation);
         go.GetComponent<NetworkObject>().SpawnWithOwnership(clientId);
     }
 
@@ -131,7 +112,7 @@ public class WaitingRoomManager : NetworkBehaviour
         for (int i = 0; i < 4; i++)
         {
             bool occupied = false;
-            foreach (var p in _netPlayers) if (p.Slot == i) occupied = true;
+            foreach (var p in _players) if (p.Slot == i) occupied = true;
             if (!occupied) return i;
         }
         return -1;
@@ -139,14 +120,15 @@ public class WaitingRoomManager : NetworkBehaviour
 
     private void UpdateUI()
     {
-        if (_lblPlayerCount != null) _lblPlayerCount.text = $"PLAYERS: {_netPlayers.Count}/4";
-        if (_btnStart != null) _btnStart.style.display = IsHost ? DisplayStyle.Flex : DisplayStyle.None;
+        if (_lblPlayerCount != null) _lblPlayerCount.text = $"PLAYERS: {_players.Count}/4";
+        _btnStart.style.display = IsHost ? DisplayStyle.Flex : DisplayStyle.None;
     }
 
     private void StartGame()
     {
         if (!IsHost) return;
-        Debug.Log("[Lobby] Starting Game Expedition...");
+        Debug.Log("Starting Game...");
+        // NetworkManager.Singleton.SceneManager.LoadScene("MainGame", LoadSceneMode.Single);
     }
 
     private void LeaveRoom()

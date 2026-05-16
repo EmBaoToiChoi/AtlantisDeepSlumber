@@ -1,0 +1,12 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
+    <Style src="./LoadingScreen.uss" />
+    <ui:VisualElement name="loading-root" class="loading-overlay hidden-element">
+        <ui:VisualElement class="loading-content">
+            <ui:Label name="lbl-loading-title" text="INITIALIZING SYSTEM..." class="loading-title" />
+            <ui:VisualElement class="progress-container">
+                <ui:VisualElement name="progress-fill" class="progress-fill" />
+            </ui:VisualElement>
+            <ui:Label name="lbl-status" text="CONNECTING TO ATLANTIS NETWORK..." class="loading-status" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>
