@@ -107,10 +107,9 @@ public class NetworkWaitingRoom : NetworkBehaviour
             NetRoomName.Value = PlayerPrefs.GetString("CurrentRoomName", "ATLANTIS LOBBY");
             NetRoomId.Value = PlayerPrefs.GetString("CurrentRoomID", "000000");
 
-            // QUAN TRỌNG: Spawn luôn nhân vật cho Host vì Host kết nối trước khi callback kịp đăng ký
-            if (!UnityEngine.Application.isBatchMode) // Nếu không phải Dedicated Server (là Host thật)
+            if (!UnityEngine.Application.isBatchMode) 
             {
-                OnClientConnected(NetworkManager.ServerClientId);
+                SpawnHostWithDelay();
             }
         }
 
@@ -122,6 +121,16 @@ public class NetworkWaitingRoom : NetworkBehaviour
         UpdatePlayerUI();
     }
 
+    private async void SpawnHostWithDelay()
+    {
+        await System.Threading.Tasks.Task.Delay(100);
+        if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsServer)
+        {
+            Debug.Log("[EMERGENCY] Host đang tự spawn sau 100ms delay...");
+            OnClientConnected(NetworkManager.Singleton.LocalClientId);
+        }
+    }
+
     private void RefreshLocalUI()
     {
         string localName = PlayerPrefs.GetString("CurrentRoomName", "UNKNOWN");
@@ -129,6 +138,7 @@ public class NetworkWaitingRoom : NetworkBehaviour
         if (_lblRoomName != null) _lblRoomName.text = $"SESSION: {localName.ToUpper()}";
         if (_lblRoomId != null) _lblRoomId.text = $"ID: #{localId}";
     }
+
 
     private void UpdateRoomUI()
     {

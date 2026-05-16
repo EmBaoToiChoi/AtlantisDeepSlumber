@@ -63,9 +63,10 @@ public class AtlantisMenuController : MonoBehaviour
 
     private async void Start()
     {
-        // Khởi tạo logic bất đồng bộ tại đây nếu cần
+        _isProcessingRoom = false; // Reset cờ chống spam
         await Task.Yield();
     }
+
 
     private const string DefaultRoomNamePlaceholder = "Atlantis Explorer";
 
@@ -504,11 +505,23 @@ public class AtlantisMenuController : MonoBehaviour
             PlayerPrefs.SetInt("IsRoomHost", 1); 
             PlayerPrefs.Save();
 
+            if (_netBootstrap == null) _netBootstrap = FindFirstObjectByType<NetworkBootstrap>();
+
             if (_netBootstrap != null)
             {
-                _netBootstrap.StartClientAsPlayer();
+                Debug.Log("[Room] Khởi động Host...");
+                _netBootstrap.StartServerAsHost();
                 _ = SceneLoader.Instance.LoadSceneAsync("Waiting hall", "PREPARING LOBBY...");
             }
+            else
+            {
+                Debug.LogError("[Room] THẤT BẠI: Không tìm thấy NetworkBootstrap trong cảnh!");
+                if (btnConfirm != null) {
+                    btnConfirm.SetEnabled(true);
+                    btnConfirm.text = "CONFIRM";
+                }
+            }
+
         }
         else
         {
