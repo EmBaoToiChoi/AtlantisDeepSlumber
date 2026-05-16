@@ -44,8 +44,15 @@ public class NetworkBootstrap : MonoBehaviour
         NetworkManager.Singleton.StartServer();
         Debug.Log("[SERVER] Dedicated Server đã bắt đầu lắng nghe tại cổng 7777...");
 
-        // VPS PHẢI CHUYỂN SANG CẢNH PHÒNG CHỜ ĐỂ ĐỒNG BỘ VỚI CLIENT
-        UnityEngine.SceneManagement.SceneManager.LoadScene("Waiting hall");
+        // SỬ DỤNG NETWORK SCENE MANAGER ĐỂ ĐỒNG BỘ CẢNH CHUẨN
+        if (NetworkManager.Singleton.SceneManager != null)
+        {
+            NetworkManager.Singleton.SceneManager.LoadScene("Waiting hall", UnityEngine.SceneManagement.LoadSceneMode.Single);
+        }
+        else
+        {
+            UnityEngine.SceneManagement.SceneManager.LoadScene("Waiting hall");
+        }
     }
 
     public void StartClientAsPlayer()
