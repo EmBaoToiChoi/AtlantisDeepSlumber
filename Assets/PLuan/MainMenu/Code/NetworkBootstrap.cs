@@ -24,31 +24,27 @@ public class NetworkBootstrap : MonoBehaviour
     {
         if (NetworkManager.Singleton == null) return;
         
-        // Đảm bảo dọn sạch kết nối cũ nếu còn sót
         if (NetworkManager.Singleton.IsListening || NetworkManager.Singleton.IsConnectedClient)
             NetworkManager.Singleton.Shutdown();
 
         var transport = NetworkManager.Singleton.GetComponent<UnityTransport>();
         if (transport != null)
         {
-            transport.ConnectionData.Address = "165.99.14.40";
+            // Kết nối tới VPS trung tâm
+            transport.ConnectionData.Address = "165.99.14.40"; 
             transport.ConnectionData.Port = 7777;
         }
 
         NetworkManager.Singleton.StartClient();
-        Debug.Log("[NETWORK] Client Started connecting to VPS...");
+        Debug.Log($"[NETWORK] Connecting to VPS: {transport?.ConnectionData.Address}");
     }
 
     public void StartServerAsHost()
     {
-        if (NetworkManager.Singleton == null) return;
-
-        // Đảm bảo dọn sạch kết nối cũ nếu còn sót
-        if (NetworkManager.Singleton.IsListening || NetworkManager.Singleton.IsConnectedClient)
-            NetworkManager.Singleton.Shutdown();
-
-        NetworkManager.Singleton.StartHost();
-        Debug.Log("[NETWORK] Host Started locally...");
+        // TRƯỜNG HỢP DÙNG VPS: Cả người tạo phòng cũng là Client
+        // Vì Server thực sự đã chạy sẵn trên VPS rồi.
+        StartClientAsPlayer();
     }
+
 
 }

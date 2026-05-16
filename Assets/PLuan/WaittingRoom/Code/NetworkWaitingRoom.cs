@@ -80,16 +80,11 @@ public class NetworkWaitingRoom : NetworkBehaviour
 
 
     private void Start()
-
     {
         Debug.Log("[Lobby] Script NetworkWaitingRoom đã bắt đầu chạy (Start).");
         
-        // KIỂM TRA NẾU NETWORK CHƯA CHẠY (Dành cho việc nhấn Play ngay tại cảnh này để Test)
-        if (NetworkManager.Singleton != null && !NetworkManager.Singleton.IsServer && !NetworkManager.Singleton.IsClient)
-        {
-            Debug.LogWarning("[Lobby] NetworkManager chưa chạy! Đang tự động bật Host để Test...");
-            NetworkManager.Singleton.StartHost();
-        }
+        // Nếu dùng VPS làm Server, thì tại đây ta chỉ cần chờ NetworkManager kết nối xong.
+        // Việc Spawn nhân vật sẽ được xử lý khi OnNetworkSpawn kích hoạt.
 
         if (_uiDocument == null) Debug.LogError("[Lobby] THẤT BẠI: Bạn chưa kéo UI Document!");
         if (slots == null || slots.Length == 0) Debug.LogError("[Lobby] THẤT BẠI: Danh sách Slots đang trống!");
@@ -99,17 +94,29 @@ public class NetworkWaitingRoom : NetworkBehaviour
     {
         Debug.Log("[Lobby] OnNetworkSpawn đã kích hoạt!");
 
-        if (IsServer)
+        // Dù là Server hay Client, ta đều đăng ký callback để biết khi có người vào
+        if (NetworkManager.Singleton != null)
         {
             NetworkManager.Singleton.OnClientConnectedCallback += OnClientConnected;
             NetworkManager.Singleton.OnClientDisconnectCallback += OnClientDisconnected;
             
-            NetRoomName.Value = PlayerPrefs.GetString("CurrentRoomName", "ATLANTIS LOBBY");
-            NetRoomId.Value = PlayerPrefs.GetString("CurrentRoomID", "000000");
-
-            if (!UnityEngine.Application.isBatchMode) 
+            if (IsServer)
             {
-                SpawnHostWithDelay();
+                NetRoomName.Value = PlayerPrefs.GetString("CurrentRoomName", "ATLANTIS LOBBY");
+                NetRoomId.Value = PlayerPrefs.GetString("CurrentRoomID", "000000");
+                
+                // QUAN TRỌNG: Kiểm tra xem có ai đã kết nối TRƯỚC KHI script này chạy không
+                // (Đặc biệt là người đầu tiên tạo phòng)
+                foreach (var client in NetworkManager.Singleton.ConnectedClientsList)
+                {
+                    Debug.Log($"[Lobby] Phát hiện người chơi đã chờ sẵn: {client.ClientId}. Đang tiến hành spawn...");
+                    OnClientConnected(client.ClientId);
+                }
+            }
+
+            else if (IsClient)
+            {
+                 Debug.Log("[Lobby] Tôi là Client, đang chờ Server xác nhận để hiển thị...");
             }
         }
 
@@ -119,31 +126,6 @@ public class NetworkWaitingRoom : NetworkBehaviour
 
         UpdateRoomUI();
         UpdatePlayerUI();
-    }
-
-    private async void SpawnHostWithDelay()
-    {
-        // Tăng delay lên 500ms để chắc chắn cảnh đã load xong và Network ổn định
-        await System.Threading.Tasks.Task.Delay(500);
-        
-        if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsServer)
-        {
-            ulong hostId = NetworkManager.Singleton.LocalClientId;
-            Debug.Log($"[EMERGENCY] Host (ID: {hostId}) đang tự spawn sau 500ms delay...");
-            
-            // Kiểm tra xem Host đã có trong danh sách chưa để tránh spawn đè
-            bool alreadyExists = false;
-            foreach (var p in NetPlayers) if (p.ClientId == hostId) alreadyExists = true;
-
-            if (!alreadyExists)
-            {
-                OnClientConnected(hostId);
-            }
-            else
-            {
-                Debug.Log("[EMERGENCY] Host đã tồn tại trong danh sách, không spawn thêm.");
-            }
-        }
     }
 
 
