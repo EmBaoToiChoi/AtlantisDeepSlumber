@@ -123,13 +123,29 @@ public class NetworkWaitingRoom : NetworkBehaviour
 
     private async void SpawnHostWithDelay()
     {
-        await System.Threading.Tasks.Task.Delay(100);
+        // Tăng delay lên 500ms để chắc chắn cảnh đã load xong và Network ổn định
+        await System.Threading.Tasks.Task.Delay(500);
+        
         if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsServer)
         {
-            Debug.Log("[EMERGENCY] Host đang tự spawn sau 100ms delay...");
-            OnClientConnected(NetworkManager.Singleton.LocalClientId);
+            ulong hostId = NetworkManager.Singleton.LocalClientId;
+            Debug.Log($"[EMERGENCY] Host (ID: {hostId}) đang tự spawn sau 500ms delay...");
+            
+            // Kiểm tra xem Host đã có trong danh sách chưa để tránh spawn đè
+            bool alreadyExists = false;
+            foreach (var p in NetPlayers) if (p.ClientId == hostId) alreadyExists = true;
+
+            if (!alreadyExists)
+            {
+                OnClientConnected(hostId);
+            }
+            else
+            {
+                Debug.Log("[EMERGENCY] Host đã tồn tại trong danh sách, không spawn thêm.");
+            }
         }
     }
+
 
     private void RefreshLocalUI()
     {
