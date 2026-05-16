@@ -6,6 +6,10 @@ public class NetworkBootstrap : MonoBehaviour
 {
     public static NetworkBootstrap Instance { get; private set; }
 
+    public static System.Collections.Generic.Dictionary<ulong, string> PendingPlayerNames = new System.Collections.Generic.Dictionary<ulong, string>();
+    public static string ServerRoomName = "Atlantis Lobby";
+    public static string ServerRoomId = "000000";
+
     private void Awake()
     {
         if (Instance == null)
@@ -41,6 +45,9 @@ public class NetworkBootstrap : MonoBehaviour
             transport.ConnectionData.Port = 7777;
         }
 
+        // ĐĂNG KÝ TRƯỚC KHI BẬT SERVER (RẤT QUAN TRỌNG)
+        NetworkManager.Singleton.ConnectionApprovalCallback = ApprovalCheck;
+
         NetworkManager.Singleton.StartServer();
         Debug.Log("[SERVER] Dedicated Server đã bắt đầu lắng nghe tại cổng 7777...");
 
@@ -55,6 +62,36 @@ public class NetworkBootstrap : MonoBehaviour
         }
     }
 
+    private void ApprovalCheck(NetworkManager.ConnectionApprovalRequest request, NetworkManager.ConnectionApprovalResponse response)
+    {
+        response.Approved = true;
+        response.CreatePlayerObject = false;
+
+        string playerName = "Explorer";
+        if (request.Payload != null && request.Payload.Length > 0)
+        {
+            try {
+                string json = System.Text.Encoding.UTF8.GetString(request.Payload);
+                var data = JsonUtility.FromJson<ConnectionPayload>(json);
+                playerName = data.playerName;
+                ServerRoomName = data.roomName;
+                ServerRoomId = data.roomId;
+                Debug.Log($"[SERVER] Nhận dữ liệu JSON: {playerName} | {ServerRoomName}");
+            } catch {
+                Debug.LogError("[SERVER] Lỗi phân giải JSON kết nối!");
+            }
+        }
+        
+        PendingPlayerNames[request.ClientNetworkId] = playerName;
+    }
+
+    [System.Serializable]
+    public class ConnectionPayload {
+        public string playerName;
+        public string roomName;
+        public string roomId;
+    }
+
     public void StartClientAsPlayer()
     {
         if (NetworkManager.Singleton == null) return;
@@ -62,13 +99,16 @@ public class NetworkBootstrap : MonoBehaviour
         if (NetworkManager.Singleton.IsListening || NetworkManager.Singleton.IsConnectedClient)
             NetworkManager.Singleton.Shutdown();
 
-        // GỬI COMBO THÔNG TIN: Tên|TênPhòng|IDPhòng
-        string playerName = PlayerPrefs.GetString("AuthDisplayName", "Explorer");
-        string roomName = PlayerPrefs.GetString("CurrentRoomName", "Atlantis Lobby");
-        string roomId = PlayerPrefs.GetString("CurrentRoomID", "000000");
+        // ĐÓNG GÓI JSON CHO CHẮC CHẮN
+        var data = new ConnectionPayload {
+            playerName = PlayerPrefs.GetString("AuthDisplayName", "Explorer"),
+            roomName = PlayerPrefs.GetString("CurrentRoomName", "Atlantis Lobby"),
+            roomId = PlayerPrefs.GetString("CurrentRoomID", "000000")
+        };
         
-        string comboData = $"{playerName}|{roomName}|{roomId}";
-        byte[] payload = System.Text.Encoding.UTF8.GetBytes(comboData);
+        string json = JsonUtility.ToJson(data);
+        Debug.Log($"[CLIENT] Đang gửi gói tin JSON: {json}");
+        byte[] payload = System.Text.Encoding.UTF8.GetBytes(json);
 
         var transport = NetworkManager.Singleton.GetComponent<UnityTransport>();
         if (transport != null)
@@ -86,7 +126,7 @@ public class NetworkBootstrap : MonoBehaviour
         };
 
         NetworkManager.Singleton.StartClient();
-        Debug.Log($"[NETWORK] Đang thử kết nối tới 165.99.14.40:7777... (Tên: {playerName})");
+        Debug.Log($"[NETWORK] Đang thử kết nối tới 165.99.14.40:7777... (Tên: {data.playerName})");
 
     }
 

@@ -45,7 +45,7 @@ public class NetworkWaitingRoom : NetworkBehaviour
         public bool Equals(PlayerNetData other) => ClientId == other.ClientId;
     }
 
-    private static System.Collections.Generic.Dictionary<ulong, string> _pendingPlayerNames = new System.Collections.Generic.Dictionary<ulong, string>();
+    // private static System.Collections.Generic.Dictionary<ulong, string> _pendingPlayerNames = new System.Collections.Generic.Dictionary<ulong, string>();
     
     private void Awake() 
     { 
@@ -121,13 +121,11 @@ public class NetworkWaitingRoom : NetworkBehaviour
             
             if (IsServer)
             {
-                // Đăng ký bộ lọc kết nối để lấy tên người chơi
-                NetworkManager.Singleton.ConnectionApprovalCallback = ApprovalCheck;
-
                 Debug.Log($"[SERVER] Đang chạy trên VPS. Đang có {NetworkManager.Singleton.ConnectedClients.Count} người kết nối.");
                 
-                NetRoomName.Value = PlayerPrefs.GetString("CurrentRoomName", "ATLANTIS LOBBY");
-                NetRoomId.Value = PlayerPrefs.GetString("CurrentRoomID", "000000");
+                // LẤY DỮ LIỆU TỪ BOOTSTRAP (DO VPS KHÔNG CÓ PLAYERPREFS)
+                NetRoomName.Value = NetworkBootstrap.ServerRoomName;
+                NetRoomId.Value = NetworkBootstrap.ServerRoomId;
                 
                 foreach (var client in NetworkManager.Singleton.ConnectedClientsList)
                 {
@@ -161,6 +159,64 @@ public class NetworkWaitingRoom : NetworkBehaviour
 
         UpdateRoomUI();
         UpdatePlayerUI();
+
+        // NẾU LÀ MÁY KHÁCH, ĐỢI 1 GIÂY RỒI MỚI GỬI LỆNH ÉP VPS CẬP NHẬT (TRÁNH XUNG ĐỘT)
+        if (IsClient && !IsServer)
+        {
+            StartCoroutine(DelayUpdateRoomRPC());
+        }
+    }
+
+    private IEnumerator DelayUpdateRoomRPC()
+    {
+        yield return new WaitForSeconds(2.0f);
+        string pName = PlayerPrefs.GetString("AuthDisplayName", "Explorer");
+        string rName = PlayerPrefs.GetString("CurrentRoomName", "Atlantis Lobby");
+        string rId = PlayerPrefs.GetString("CurrentRoomID", "000000");
+        Debug.Log($"[CLIENT] Đang gửi lệnh ServerRpc: {pName} | {rName}");
+        UpdateRoomInfoServerRpc(pName, rName, rId);
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    private void UpdateRoomInfoServerRpc(string playerName, string roomName, string roomId, ServerRpcParams rpcParams = default)
+    {
+        ulong clientId = rpcParams.Receive.SenderClientId;
+        Debug.Log($"[SERVER] RPC: Cập nhật phòng '{roomName}' và Player '{playerName}' cho Client {clientId}");
+
+        // 1. Cập nhật tên phòng toàn cục
+        NetRoomName.Value = roomName;
+        NetRoomId.Value = roomId;
+
+        // 2. Cập nhật tên người chơi trong danh sách
+        bool found = false;
+        for (int i = 0; i < NetPlayers.Count; i++)
+        {
+            if (NetPlayers[i].ClientId == clientId)
+            {
+                var p = NetPlayers[i];
+                p.Name = playerName;
+                NetPlayers[i] = p;
+                found = true;
+                Debug.Log($"[SERVER] Đã đổi tên Client {clientId} thành {playerName}");
+                break;
+            }
+        }
+
+        if (!found)
+        {
+            Debug.LogWarning($"[SERVER] Chưa tìm thấy Client {clientId} trong danh sách NetPlayers để đổi tên!");
+        }
+
+        // 3. Cập nhật trực tiếp vào biến mạng trên nhân vật (Để đồng bộ tag tên)
+        if (NetworkManager.Singleton.ConnectedClients.TryGetValue(clientId, out var client))
+        {
+            var playerUI = client.PlayerObject.GetComponent<PlayerWaitingRoomUI>();
+            if (playerUI != null)
+            {
+                playerUI.NetName.Value = playerName;
+                Debug.Log($"[SERVER] Đã cập nhật NetName trực tiếp cho nhân vật của Client {clientId}");
+            }
+        }
     }
 
 
@@ -234,46 +290,25 @@ public class NetworkWaitingRoom : NetworkBehaviour
         }
     }
 
+    // Đã chuyển sang NetworkBootstrap.cs
+    /*
     private void ApprovalCheck(NetworkManager.ConnectionApprovalRequest request, NetworkManager.ConnectionApprovalResponse response)
-    {
-        response.Approved = true;
-        response.CreatePlayerObject = false;
-
-        string playerName = "Explorer";
-        if (request.Payload != null && request.Payload.Length > 0)
-        {
-            string comboData = System.Text.Encoding.UTF8.GetString(request.Payload);
-            string[] parts = comboData.Split('|');
-            
-            // Phần 1: Tên người chơi
-            if (parts.Length > 0) playerName = parts[0];
-
-            // Phần 2 & 3: Thông tin phòng (Chỉ cập nhật lần đầu hoặc khi có người tạo phòng vào)
-            if (parts.Length >= 3)
-            {
-                string rName = parts[1];
-                string rId = parts[2];
-                
-                // Nếu là Server, ta cập nhật biến mạng để đồng bộ cho tất cả
-                NetRoomName.Value = rName;
-                NetRoomId.Value = rId;
-                Debug.Log($"[SERVER] Cập nhật phòng từ Client: {rName} (#{rId})");
-            }
-        }
-        
-        _pendingPlayerNames[request.ClientNetworkId] = playerName;
-        Debug.Log($"[SERVER] ApprovalCheck: {playerName} (ID: {request.ClientNetworkId})");
-    }
+    ...
+    */
 
     private void OnClientConnected(ulong clientId)
     {
         if (!IsServer) return;
 
+        // CẬP NHẬT LẠI THÔNG TIN PHÒNG TỪ BOOTSTRAP (MỖI KHI CÓ NGƯỜI VÀO CHO CHẮC)
+        NetRoomName.Value = NetworkBootstrap.ServerRoomName;
+        NetRoomId.Value = NetworkBootstrap.ServerRoomId;
+
         string playerName = "Guest_" + clientId;
-        if (_pendingPlayerNames.ContainsKey(clientId))
+        if (NetworkBootstrap.PendingPlayerNames.ContainsKey(clientId))
         {
-            playerName = _pendingPlayerNames[clientId];
-            _pendingPlayerNames.Remove(clientId);
+            playerName = NetworkBootstrap.PendingPlayerNames[clientId];
+            NetworkBootstrap.PendingPlayerNames.Remove(clientId);
         }
 
         foreach (var p in NetPlayers) if (p.ClientId == clientId) return;
