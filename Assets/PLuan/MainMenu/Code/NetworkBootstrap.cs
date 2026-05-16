@@ -30,13 +30,18 @@ public class NetworkBootstrap : MonoBehaviour
         var transport = NetworkManager.Singleton.GetComponent<UnityTransport>();
         if (transport != null)
         {
-            // Kết nối tới VPS trung tâm
             transport.ConnectionData.Address = "165.99.14.40"; 
             transport.ConnectionData.Port = 7777;
+
+            // Gửi tên người chơi kèm theo khi kết nối
+            string playerName = PlayerPrefs.GetString("Username", "Unknown");
+            byte[] payload = System.Text.Encoding.UTF8.GetBytes(playerName);
+            NetworkManager.Singleton.NetworkConfig.ConnectionData = payload;
         }
 
         NetworkManager.Singleton.StartClient();
-        Debug.Log($"[NETWORK] Connecting to VPS: {transport?.ConnectionData.Address}");
+        Debug.Log($"[NETWORK] Connecting to VPS with name: {PlayerPrefs.GetString("Username", "Unknown")}");
+
     }
 
     public void StartServerAsHost()

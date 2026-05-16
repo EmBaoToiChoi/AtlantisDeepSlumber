@@ -511,8 +511,9 @@ public class AtlantisMenuController : MonoBehaviour
             {
                 Debug.Log("[Room] Đang kết nối về VPS...");
                 _netBootstrap.StartServerAsHost();
-                // KHÔNG gọi LoadSceneAsync tại đây, Server sẽ tự đồng bộ cảnh cho bạn.
+                _ = SceneLoader.Instance.LoadSceneAsync("Waiting hall", "PREPARING LOBBY...");
             }
+
 
             else
             {

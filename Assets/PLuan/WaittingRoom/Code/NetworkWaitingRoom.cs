@@ -45,6 +45,8 @@ public class NetworkWaitingRoom : NetworkBehaviour
         public bool Equals(PlayerNetData other) => ClientId == other.ClientId;
     }
 
+    private static System.Collections.Generic.Dictionary<ulong, string> _pendingPlayerNames = new System.Collections.Generic.Dictionary<ulong, string>();
+    
     private void Awake() 
     { 
         Debug.Log("[EMERGENCY] Awake đã chạy!");
@@ -102,6 +104,9 @@ public class NetworkWaitingRoom : NetworkBehaviour
             
             if (IsServer)
             {
+                // Đăng ký bộ lọc kết nối để lấy tên người chơi
+                NetworkManager.Singleton.ConnectionApprovalCallback = ApprovalCheck;
+
                 Debug.Log($"[SERVER] Đang chạy trên VPS. Đang có {NetworkManager.Singleton.ConnectedClients.Count} người kết nối.");
                 
                 NetRoomName.Value = PlayerPrefs.GetString("CurrentRoomName", "ATLANTIS LOBBY");
@@ -212,43 +217,86 @@ public class NetworkWaitingRoom : NetworkBehaviour
         }
     }
 
-    private void OnClientConnected(ulong clientId) {
-        if (!IsServer) return;
-        string pName = $"Explorer_{clientId}";
-        if (!UnityEngine.Application.isBatchMode && clientId == NetworkManager.ServerClientId) 
-            pName = PlayerPrefs.GetString("AuthDisplayName", "Host");
-        AddPlayer(clientId, pName);
-    }
+    private void ApprovalCheck(NetworkManager.ConnectionApprovalRequest request, NetworkManager.ConnectionApprovalResponse response)
+    {
+        response.Approved = true;
+        response.CreatePlayerObject = false;
 
-    private void OnClientDisconnected(ulong clientId) {
-        if (!IsServer) return;
-        for (int i = 0; i < NetPlayers.Count; i++) {
-            if (NetPlayers[i].ClientId == clientId) { NetPlayers.RemoveAt(i); break; }
+        string playerName = "Unknown";
+        if (request.Payload != null && request.Payload.Length > 0)
+        {
+            playerName = System.Text.Encoding.UTF8.GetString(request.Payload);
         }
-    }
-
-    private void AddPlayer(ulong clientId, string name) {
-        // KIỂM TRA CHỐNG TRÙNG: Nếu Client này đã có trong danh sách thì bỏ qua
-        foreach (var p in NetPlayers) {
-            if (p.ClientId == clientId) return;
-        }
-
-        Debug.Log($"[DEBUG] Bắt đầu AddPlayer cho: {name} (ID: {clientId})");
-
         
-        int slotIdx = FindEmptySlot();
-        if (slotIdx == -1) {
-            Debug.LogError($"[SPAWN] THẤT BẠI: Không còn slot trống!");
-            return;
+        _pendingPlayerNames[request.ClientNetworkId] = playerName;
+        Debug.Log($"[SERVER] ApprovalCheck: {playerName} (ID: {request.ClientNetworkId})");
+    }
+
+    private void OnClientConnected(ulong clientId)
+    {
+        if (!IsServer) return;
+
+        string playerName = "Guest_" + clientId;
+        if (_pendingPlayerNames.ContainsKey(clientId))
+        {
+            playerName = _pendingPlayerNames[clientId];
+            _pendingPlayerNames.Remove(clientId);
         }
 
-        NetPlayers.Add(new PlayerNetData { Name = name, Slot = slotIdx, ClientId = clientId, IsReady = false });
+        foreach (var p in NetPlayers) if (p.ClientId == clientId) return;
 
-        if (playerNetworkPrefab != null) {
+        AddPlayer(clientId, playerName);
+    }
+
+    private void OnClientDisconnected(ulong clientId)
+    {
+        if (!IsServer) return;
+        for (int i = 0; i < NetPlayers.Count; i++)
+        {
+            if (NetPlayers[i].ClientId == clientId)
+            {
+                NetPlayers.RemoveAt(i);
+                break;
+            }
+        }
+    }
+
+    private void AddPlayer(ulong clientId, string playerName)
+    {
+        if (!IsServer) return;
+        
+        int slot = FindEmptySlot();
+        if (slot == -1) return;
+
+        var newData = new PlayerNetData
+        {
+            Name = playerName,
+            Slot = slot,
+            ClientId = clientId,
+            IsReady = false
+        };
+
+        NetPlayers.Add(newData);
+        Debug.Log($"[Lobby] Đã thêm {playerName} vào Slot {slot}");
+        
+        SpawnPlayerObject(clientId);
+    }
+
+    private void SpawnPlayerObject(ulong clientId)
+    {
+        if (!IsServer) return;
+        
+        // Tìm thông tin player vừa add
+        int slotIdx = -1;
+        foreach (var p in NetPlayers) if (p.ClientId == clientId) slotIdx = p.Slot;
+        
+        if (slotIdx == -1) return;
+
+        if (playerNetworkPrefab != null)
+        {
             Vector3 spawnPos = slots[slotIdx].position;
             Quaternion spawnRot = slots[slotIdx].rotation;
             
-            Debug.Log($"[SPAWN] Đang Instantiate tại vị trí: {spawnPos}");
 
             GameObject go = Instantiate(playerNetworkPrefab, spawnPos, spawnRot);
             
