@@ -2,14 +2,14 @@ using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.AI;
 
-public class Enemy1_DapBua : NetworkBehaviour
+public class Enemy2_Zombie : NetworkBehaviour
 {
     public enum EnemyState
     {
         Idle,
         Walk,
         Run,
-        Search,    // Trạng thái săn tìm player tại vị trí cuối cùng
+        Search,    // Trạng thái săn tìm player tại vị trí cuối cùng khi mất dấu
         Stagger,   // Trạng thái bị khựng / choáng khi nhận sát thương lớn
         Attack,
         Dead
@@ -30,67 +30,58 @@ public class Enemy1_DapBua : NetworkBehaviour
     );
 
     [Header("Advanced AI Sync")]
-    // Đồng bộ hit để mọi người thấy bị trúng đòn
+    // Đồng bộ hit để mọi client đều thấy hoạt ảnh dính đòn "Anhit"
     public NetworkVariable<int> hitCounter = new NetworkVariable<int>(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
-    // Đồng bộ kiểu tấn công (0: Left, 1: Right, 2: Combo)
+    // Đồng bộ kiểu tấn công (0: Cào cơ bản)
     public NetworkVariable<int> attackType = new NetworkVariable<int>(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
-
-    private bool isNextAttackLeft = true;
 
     [Header("Components")]
     public NavMeshAgent agent;
     public Animator anim;
-    public Transform eyeTransform; // Vị trí mắt của Enemy để bắn Raycast
+    public Transform eyeTransform; // Vị trí mắt để dò quét Player bằng Raycast
 
     [Header("AI Settings")]
-    public float sightRange = 15f;      // Tầm nhìn xa
-    public float fieldOfView = 90f;     // Góc nhìn (độ)
-    public float attackRange = 2f;      // Khoảng cách ra đòn
-    public float walkRadius = 10f;      // Bán kính đi dạo ngẫu nhiên
-    public float idleTimeMax = 4f;      // Thời gian đứng im tối đa
+    public float sightRange = 12f;      // Tầm nhìn xa của Zombie
+    public float fieldOfView = 110f;    // Góc nhìn rộng của Zombie
+    public float attackRange = 1.8f;    // Khoảng cách cào cơ bản
+    public float walkRadius = 8f;       // Bán kính đi dạo tuần tra ngẫu nhiên
+    public float idleTimeMax = 5f;      // Thời gian đứng im tối đa
     
     [Header("Layers")]
     public LayerMask playerLayer;       // Layer của Player
-    public LayerMask obstacleLayer;     // Layer của vật cản (tường, đất...)
+    public LayerMask obstacleLayer;     // Layer của vật cản
 
-    [Header("Pro AI Combat Settings")]
+    [Header("Zombie Special Combat")]
     private Transform targetPlayer;
     private float stateTimer;
     private bool hasDestination;
 
-    // Các biến phụ trợ cho Pro AI
+    // Biến điều khiển Pro AI
     private Vector3 lastKnownPlayerPosition;
     private float searchTimer;
     private float searchLookTimer;
     private float searchLookDirection = 1f;
     
     private float detectionTimer;
-    private const float DETECTION_INTERVAL = 0.15f; // Quét mục tiêu 0.15s một lần để tiết kiệm CPU
+    private const float DETECTION_INTERVAL = 0.15f; // Quét 0.15s một lần để tiết kiệm CPU tối đa
 
     private float staggerTimer;
-    private bool isEnraged = false;
-    private bool hasRoared = false;
-
     private float attackCooldownTimer;
     private float tacticalTimer;
-    private int tacticalState = 0; // 0: Chạy thẳng, 1: Né sang sườn trái, 2: Né sang sườn phải
-
-    private bool isDodging = false;
-    private float dodgeTimer;
+    private int tacticalState = 0; // 0: Lao trực diện, 1: Đi vòng hông trái, 2: Đi vòng hông phải
 
     private float lastDamageTime;
     private int recentHitCount;
 
-    private bool hasDealtDamage1;
-    private bool hasDealtDamage2;
+    private bool hasDealtDamage;
     private float attackDuration;
 
     public override void OnNetworkSpawn()
     {
-        // Lắng nghe sự thay đổi trạng thái để chạy Animation trên các Client
+        // Lắng nghe sự thay đổi trạng thái để đồng bộ hoạt ảnh trên các Client
         currentState.OnValueChanged += OnStateChanged;
         
-        // Đăng ký đồng bộ hoạt ảnh tấn công để các Client khác cũng nhìn thấy vung búa
+        // Đăng ký đồng bộ kiểu tấn công
         attackType.OnValueChanged += OnAttackTypeChanged;
 
         if (IsServer)
@@ -99,9 +90,13 @@ public class Enemy1_DapBua : NetworkBehaviour
             ChangeState(EnemyState.Idle);
         }
 
-        // Lắng nghe hit để chạy hiệu ứng dính đòn cho mọi Client
+        // Đồng bộ dính đòn (Hit) chạy hoạt ảnh "Anhit" cho toàn bộ Client
         hitCounter.OnValueChanged += (oldVal, newVal) => {
-            if (anim != null) anim.SetTrigger("Hit");
+            if (anim != null) 
+            {
+                anim.ResetTrigger("Anhit");
+                anim.SetTrigger("Anhit");
+            }
         };
     }
 
@@ -127,7 +122,7 @@ public class Enemy1_DapBua : NetworkBehaviour
             DetectPlayer();
         }
 
-        // Xử lý logic tùy theo trạng thái hiện tại
+        // Xử lý logic AI tùy theo trạng thái hiện tại
         switch (currentState.Value)
         {
             case EnemyState.Idle:
@@ -155,10 +150,10 @@ public class Enemy1_DapBua : NetworkBehaviour
 
     private void DetectPlayer()
     {
-        // Nếu đã chết hoặc đang bị stagger choáng thì tạm không quét mục tiêu mới
+        // Nếu đã chết hoặc đang bị stagger thì tạm dừng phát hiện
         if (currentState.Value == EnemyState.Dead || currentState.Value == EnemyState.Stagger) return;
 
-        // Nếu đang trong đòn đánh thì không đổi mục tiêu
+        // Nếu đang trong đòn tấn công thì không đổi mục tiêu
         if (currentState.Value == EnemyState.Attack) return;
 
         Collider[] playersInSight = Physics.OverlapSphere(transform.position, sightRange, playerLayer);
@@ -168,7 +163,7 @@ public class Enemy1_DapBua : NetworkBehaviour
         {
             Transform potentialTarget = p.transform;
 
-            // Chỉ nhắm vào Player còn sống
+            // Bỏ qua nếu Player đã chết
             SimplePlayerTest playerScript = potentialTarget.GetComponentInParent<SimplePlayerTest>();
             if (playerScript != null && playerScript.currentHealth.Value <= 0)
             {
@@ -177,15 +172,14 @@ public class Enemy1_DapBua : NetworkBehaviour
 
             Vector3 directionToTarget = (potentialTarget.position - eyeTransform.position).normalized;
 
-            // Kiểm tra xem player có nằm trong góc nhìn (Field of View) không
+            // Kiểm tra xem player có nằm trong góc nhìn rộng (Field of View) của Zombie không
             if (Vector3.Angle(transform.forward, directionToTarget) < fieldOfView / 2)
             {
                 float distanceToTarget = Vector3.Distance(eyeTransform.position, potentialTarget.position);
 
-                // Bắn Raycast từ mắt tới player xem có bị khuất tường không
+                // Bắn Raycast từ mắt tới player xem có bị khuất vật cản không
                 if (!Physics.Raycast(eyeTransform.position, directionToTarget, distanceToTarget, obstacleLayer))
                 {
-                    // Nhìn thấy Player -> Đuổi theo
                     targetPlayer = potentialTarget;
                     playerFound = true;
                     if (currentState.Value != EnemyState.Run)
@@ -197,12 +191,12 @@ public class Enemy1_DapBua : NetworkBehaviour
             }
         }
 
-        // Nếu mất dấu mục tiêu khi đang chạy
+        // Nếu mất dấu mục tiêu khi đang chạy đuổi
         if (!playerFound && currentState.Value == EnemyState.Run)
         {
             if (targetPlayer != null)
             {
-                // Lưu vị trí cuối cùng để chuyển sang trạng thái Tìm kiếm thông minh
+                // Chuyển sang trạng thái Tìm kiếm thông minh tại vị trí mất dấu cuối cùng
                 lastKnownPlayerPosition = targetPlayer.position;
                 targetPlayer = null;
                 ChangeState(EnemyState.Search);
@@ -221,7 +215,7 @@ public class Enemy1_DapBua : NetworkBehaviour
 
         if (stateTimer <= 0)
         {
-            // Random: 50% tiếp tục đứng im, 50% đi dạo
+            // Đi tuần ngẫu nhiên (50% tiếp tục đứng im nghỉ ngơi, 50% đi dạo chơi)
             int rand = Random.Range(0, 2);
             if (rand == 0)
             {
@@ -229,7 +223,7 @@ public class Enemy1_DapBua : NetworkBehaviour
             }
             else
             {
-                stateTimer = Random.Range(2f, idleTimeMax); // Reset timer đứng im
+                stateTimer = Random.Range(2f, idleTimeMax); // Reset đứng im
             }
         }
     }
@@ -239,7 +233,7 @@ public class Enemy1_DapBua : NetworkBehaviour
         if (agent.isActiveAndEnabled)
         {
             agent.isStopped = false;
-            agent.speed = 2f; // Tốc độ đi bộ
+            agent.speed = 1.5f; // Đi dạo lờ đờ
         }
 
         if (!hasDestination)
@@ -254,7 +248,7 @@ public class Enemy1_DapBua : NetworkBehaviour
             }
         }
 
-        // Nếu đã đến nơi
+        // Nếu đã đến vị trí tuần tra
         if (hasDestination && agent.isActiveAndEnabled && agent.remainingDistance <= agent.stoppingDistance)
         {
             hasDestination = false;
@@ -270,39 +264,30 @@ public class Enemy1_DapBua : NetworkBehaviour
             return;
         }
 
-        // Phản xạ né đòn (Dodge step): Di chuyển theo đích đến né và không đổi đích trong 0.35s
-        if (isDodging)
-        {
-            dodgeTimer -= Time.deltaTime;
-            if (dodgeTimer <= 0)
-            {
-                isDodging = false;
-                if (agent.isActiveAndEnabled) agent.speed = isEnraged ? 7.5f : 5f;
-            }
-            return;
-        }
+        // Kiểm tra xem máu có dưới 40% không để kích hoạt TẤN CÔNG ĐIÊN CUỒNG
+        bool isFrantic = currentHealth.Value <= maxHealth * 0.4f;
 
         if (agent.isActiveAndEnabled)
         {
             agent.isStopped = false;
-            agent.speed = isEnraged ? 7.5f : 5f; 
+            agent.speed = isFrantic ? 6.5f : 4.5f; // Chạy điên cuồng nhanh hơn khi máu thấp!
         }
 
         float distanceToPlayer = Vector3.Distance(transform.position, targetPlayer.position);
 
-        // Cơ chế di chuyển chiến thuật vòng sườn (Circle Chase) ở cự ly gần
-        if (distanceToPlayer <= 8f)
+        // Chiến thuật di chuyển vòng sườn (Circle Chase) để tránh đòn bắn trực diện của Player
+        if (distanceToPlayer <= 6f)
         {
             tacticalTimer -= Time.deltaTime;
             if (tacticalTimer <= 0)
             {
-                // Thay đổi cách tiếp cận ngẫu nhiên (50% lao trực diện, 50% quành sang sườn trái/phải)
+                // Chọn cách tiếp cận ngẫu nhiên (50% chạy thẳng, 50% đi vòng sườn trái/phải)
                 float rand = Random.value;
                 if (rand < 0.5f) tacticalState = 0;
                 else if (rand < 0.75f) tacticalState = 1;
                 else tacticalState = 2;
 
-                tacticalTimer = Random.Range(1.2f, 2.2f);
+                tacticalTimer = Random.Range(1f, 2f);
             }
 
             if (tacticalState == 0)
@@ -311,16 +296,16 @@ public class Enemy1_DapBua : NetworkBehaviour
             }
             else
             {
-                // Chạy bo sườn: Tính vector tiếp tuyến vuông góc với hướng tới Player
+                // Di chuyển xiên vòng: Tính toán hướng tiếp tuyến vuông góc với Player
                 Vector3 toPlayer = (targetPlayer.position - transform.position).normalized;
                 Vector3 tangent = new Vector3(-toPlayer.z, 0, toPlayer.x);
                 float sideDir = (tacticalState == 1) ? 1f : -1f;
 
-                // Tạo điểm đích chếch về bên sườn Player
-                Vector3 targetOffset = targetPlayer.position - toPlayer * 2.5f + tangent * sideDir * 3f;
+                // Điểm đích bo sườn
+                Vector3 targetOffset = targetPlayer.position - toPlayer * 2.2f + tangent * sideDir * 2.5f;
                 
                 NavMeshHit hit;
-                if (NavMesh.SamplePosition(targetOffset, out hit, 4f, NavMesh.AllAreas))
+                if (NavMesh.SamplePosition(targetOffset, out hit, 3.5f, NavMesh.AllAreas))
                 {
                     if (agent.isActiveAndEnabled) agent.SetDestination(hit.position);
                 }
@@ -332,11 +317,11 @@ public class Enemy1_DapBua : NetworkBehaviour
         }
         else
         {
-            // Khoảng cách xa thì cứ lao thẳng trực diện
+            // Ở xa thì đuổi trực tiếp
             if (agent.isActiveAndEnabled) agent.SetDestination(targetPlayer.position);
         }
 
-        // Kiểm tra khoảng cách để tấn công (chỉ đánh khi đã hết hồi chiêu)
+        // Vào tầm cào cơ bản cận chiến
         if (distanceToPlayer <= attackRange && attackCooldownTimer <= 0)
         {
             ChangeState(EnemyState.Attack);
@@ -348,25 +333,25 @@ public class Enemy1_DapBua : NetworkBehaviour
         if (agent.isActiveAndEnabled)
         {
             agent.isStopped = false;
-            agent.speed = isEnraged ? 5.5f : 4f;
+            agent.speed = 3.5f;
             agent.SetDestination(lastKnownPlayerPosition);
         }
 
-        // Đã đến vị trí mất dấu cuối cùng
+        // Đã đến vị trí cuối cùng nhìn thấy Player
         if (agent.isActiveAndEnabled && agent.remainingDistance <= agent.stoppingDistance + 0.1f)
         {
             agent.isStopped = true;
             searchTimer -= Time.deltaTime;
 
-            // Xoay đầu quét tìm kiếm liên tục qua lại
+            // Xoay người lục lọi tìm kiếm qua lại
             searchLookTimer -= Time.deltaTime;
             if (searchLookTimer <= 0)
             {
                 searchLookDirection = -searchLookDirection;
-                searchLookTimer = 0.8f;
+                searchLookTimer = 0.6f;
             }
 
-            transform.Rotate(Vector3.up, searchLookDirection * 120f * Time.deltaTime);
+            transform.Rotate(Vector3.up, searchLookDirection * 150f * Time.deltaTime);
 
             if (searchTimer <= 0)
             {
@@ -380,20 +365,8 @@ public class Enemy1_DapBua : NetworkBehaviour
         if (agent.isActiveAndEnabled) agent.isStopped = true;
         staggerTimer -= Time.deltaTime;
 
-        // Nếu là Stagger đặc biệt do Phase 2 Roar gầm rú phẫn nộ
-        if (isEnraged && !hasRoared)
-        {
-            // Phóng to scale dần dần thêm 1.15 lần tạo cảm giác đột biến
-            transform.localScale = Vector3.Lerp(transform.localScale, Vector3.one * 1.15f, Time.deltaTime * 3f);
-        }
-
         if (staggerTimer <= 0)
         {
-            if (isEnraged && !hasRoared)
-            {
-                hasRoared = true; // Kết thúc roar chuyển sang phẫn nộ chiến đấu
-            }
-
             if (targetPlayer != null)
             {
                 ChangeState(EnemyState.Run);
@@ -407,7 +380,7 @@ public class Enemy1_DapBua : NetworkBehaviour
 
     private void HandleAttack()
     {
-        if (targetPlayer == null) 
+        if (targetPlayer == null)
         {
             ChangeState(EnemyState.Idle);
             return;
@@ -418,9 +391,8 @@ public class Enemy1_DapBua : NetworkBehaviour
         stateTimer -= Time.deltaTime;
         float elapsed = attackDuration - stateTimer;
 
-        // Rotation Lock: Chỉ xoay về hướng player trong 35% thời gian đầu (chuẩn bị vung búa)
-        // Khi vung búa đập xuống (từ 35% trở đi), AI khóa hướng xoay giúp Player né được sang bên
-        if (elapsed < attackDuration * 0.35f)
+        // Khóa góc xoay hướng đòn cào ở 40% thời gian hoạt ảnh giúp Player dễ lướt tránh
+        if (elapsed < attackDuration * 0.4f)
         {
             Vector3 lookDir = (targetPlayer.position - transform.position);
             lookDir.y = 0;
@@ -430,47 +402,24 @@ public class Enemy1_DapBua : NetworkBehaviour
             }
         }
 
-        // Tính toán gây sát thương diện rộng hình nón khớp hoàn toàn với thời điểm chạm đất của Animation
-        if (attackType.Value == 2) // Combo attack (2 hit)
+        // Máu thấp cào nhanh hơn (0.24s so với 0.4s) và gây sát thương nhiều hơn (15 so với 12)
+        bool isFrantic = currentHealth.Value <= maxHealth * 0.4f;
+        float hitPointTime = isFrantic ? 0.24f : 0.4f;
+
+        // Gây sát thương cào móng vuốt
+        if (elapsed >= hitPointTime && !hasDealtDamage)
         {
-            // Hit 1: Ở giây thứ 0.5
-            if (elapsed >= 0.5f && !hasDealtDamage1)
-            {
-                hasDealtDamage1 = true;
-                DealConeDamage(10f, attackRange + 0.5f, 80f, 6f);
-            }
-            // Hit 2: Slam cực mạnh ở giây thứ 1.2
-            if (elapsed >= 1.2f && !hasDealtDamage2)
-            {
-                hasDealtDamage2 = true;
-                DealConeDamage(25f, attackRange + 1.2f, 95f, 15f);
-            }
-        }
-        else // Đòn thường Left hoặc Right
-        {
-            // Hit đơn: Ở giây thứ 0.5
-            if (elapsed >= 0.5f && !hasDealtDamage1)
-            {
-                hasDealtDamage1 = true;
-                DealConeDamage(15f, attackRange + 0.5f, 80f, 8f);
-            }
+            hasDealtDamage = true;
+            float damageDealt = isFrantic ? 15f : 12f;
+            DealConeDamage(damageDealt, 2.0f, 90f, 4f); // Sát thương cào diện rộng, đẩy lùi nhẹ
         }
 
-        // Đòn đánh hoàn tất
+        // Đòn đánh hoàn thành
         if (stateTimer <= 0)
         {
-            // Giãn cách đòn đánh (hồi chiêu) để không bị spam quá nhanh, quái phẫn nộ sẽ hồi chiêu nhanh hơn
-            attackCooldownTimer = isEnraged ? 0.4f : 0.8f;
-            
-            float distanceToPlayer = Vector3.Distance(transform.position, targetPlayer.position);
-            if (distanceToPlayer > attackRange)
-            {
-                ChangeState(EnemyState.Run);
-            }
-            else
-            {
-                ChangeState(EnemyState.Run); // Chuyển về chạy để tiếp tục tính toán di chuyển sườn
-            }
+            // Giãn cách hồi đòn đánh: máu thấp chỉ hồi 0.15s (gần như liên tục), bình thường hồi 0.6s
+            attackCooldownTimer = isFrantic ? 0.15f : 0.6f;
+            ChangeState(EnemyState.Run);
         }
     }
 
@@ -482,20 +431,20 @@ public class Enemy1_DapBua : NetworkBehaviour
             Transform player = col.transform;
             Vector3 dirToPlayer = (player.position - transform.position).normalized;
 
-            // Kiểm tra góc hình nón phía trước mặt của Enemy
+            // Kiểm tra góc hình nón phía trước mặt của Zombie
             if (Vector3.Angle(transform.forward, dirToPlayer) <= angle / 2f)
             {
                 float distanceToPlayer = Vector3.Distance(transform.position, player.position);
-                // Đảm bảo đòn đánh không xuyên tường/vật cản
+                // Đảm bảo không cào xuyên qua tường
                 if (!Physics.Raycast(eyeTransform.position, dirToPlayer, distanceToPlayer, obstacleLayer))
                 {
                     SimplePlayerTest playerScript = player.GetComponentInParent<SimplePlayerTest>();
                     if (playerScript != null)
                     {
-                        // Gây sát thương thực sự cho Player
+                        // Gây sát thương lên Player
                         playerScript.TakeDamage(damage);
                         
-                        // Áp dụng lực đẩy lùi vật lý mượt mà (Knockback)
+                        // Đẩy lùi Player mượt mà
                         Vector3 knockbackDir = dirToPlayer;
                         knockbackDir.y = 0;
                         knockbackDir.Normalize();
@@ -511,7 +460,7 @@ public class Enemy1_DapBua : NetworkBehaviour
         if (!IsServer || currentState.Value == EnemyState.Dead) return;
 
         currentHealth.Value -= damage;
-        hitCounter.Value++; // Tăng counter để tất cả Client chạy Anim Hit
+        hitCounter.Value++; // Tăng counter đồng bộ client chạy trigger dính đòn "Anhit"
 
         if (currentHealth.Value <= 0)
         {
@@ -519,19 +468,7 @@ public class Enemy1_DapBua : NetworkBehaviour
             return;
         }
 
-        // Kích hoạt Phase 2 Phẫn nộ gầm rú cực ngầu khi máu dưới 50%
-        if (currentHealth.Value <= maxHealth * 0.5f && !isEnraged)
-        {
-            isEnraged = true;
-            staggerTimer = 1.2f; // Khóa di chuyển 1.2s để roar gầm thét
-            ChangeState(EnemyState.Stagger);
-            
-            // Đồng bộ tiếng thét / animation bằng cách gọi trigger Combo
-            attackType.Value = 2; 
-            return;
-        }
-
-        // Tính toán sát thương nhận dồn để khựng choáng (Stagger)
+        // Trạng thái khựng choáng khi bị đánh dồn dập
         float now = Time.time;
         if (now - lastDamageTime > 3f)
         {
@@ -540,59 +477,22 @@ public class Enemy1_DapBua : NetworkBehaviour
         recentHitCount++;
         lastDamageTime = now;
 
-        // Nếu sát thương lớn >= 25 HP hoặc bị hit 3 lần liên tiếp trong 3s thì khựng choáng (Stagger)
-        bool shouldStagger = (damage >= 25f || recentHitCount >= 3) && (currentState.Value != EnemyState.Stagger);
+        // Bị dính đòn >= 20 HP hoặc dính 3 hit liên tiếp -> Khựng lại chơi hoạt ảnh Anhit
+        bool shouldStagger = (damage >= 20f || recentHitCount >= 3) && (currentState.Value != EnemyState.Stagger);
 
         if (shouldStagger)
         {
             recentHitCount = 0;
-            staggerTimer = 0.6f; // Thời gian choáng 0.6s
+            staggerTimer = 0.5f; // Choáng khựng 0.5s cắt đứt đòn cào của Zombie
             ChangeState(EnemyState.Stagger);
-        }
-        else
-        {
-            // Phản xạ né đòn (Dodge Step) ngẫu nhiên 30% khi bị đánh lúc đang di chuyển
-            if (!isDodging && Random.value < 0.3f && (currentState.Value == EnemyState.Run || currentState.Value == EnemyState.Walk))
-            {
-                ExecuteDodge();
-            }
-        }
-    }
-
-    private void ExecuteDodge()
-    {
-        if (targetPlayer == null) return;
-
-        // Tính hướng né vuông góc sang sườn với hướng đối diện Player
-        Vector3 toPlayer = (targetPlayer.position - transform.position).normalized;
-        Vector3 perpendicular = new Vector3(-toPlayer.z, 0, toPlayer.x);
-        
-        // Ngẫu nhiên chọn né bên trái hay bên phải
-        if (Random.value < 0.5f) perpendicular = -perpendicular;
-
-        Vector3 dodgeTarget = transform.position + perpendicular * 3f;
-        
-        NavMeshHit hit;
-        // Kiểm tra xem vị trí lướt né có thuộc NavMesh hợp lệ không để tránh lướt xuyên tường/kẹt
-        if (NavMesh.SamplePosition(dodgeTarget, out hit, 3f, NavMesh.AllAreas))
-        {
-            isDodging = true;
-            dodgeTimer = 0.35f; // Lướt nhanh trong 0.35s
-            if (agent.isActiveAndEnabled)
-            {
-                agent.isStopped = false;
-                agent.speed = isEnraged ? 14f : 10f; // Lướt đi với tốc độ cực cao
-                agent.SetDestination(hit.position);
-            }
         }
     }
 
     private void Die()
     {
-        // Tắt agent tránh quái chết vẫn cản đường vật lý
         if (agent.isActiveAndEnabled) agent.isStopped = true;
         
-        // Despawn Enemy sau 2 giây chơi animation chết
+        // Hủy quái sau 2 giây chơi hoạt ảnh chết
         Invoke(nameof(DespawnEnemy), 2f);
     }
 
@@ -621,20 +521,32 @@ public class Enemy1_DapBua : NetworkBehaviour
         }
         if (newState == EnemyState.Run) 
         {
-            isDodging = false;
             if (agent.isActiveAndEnabled) agent.isStopped = false;
         }
         if (newState == EnemyState.Search)
         {
-            searchTimer = 3.0f; // Đứng tìm kiếm 3 giây
+            searchTimer = 3.0f; // Đi tuần kiếm tìm trong 3 giây
             searchLookTimer = 0f;
             if (agent.isActiveAndEnabled) agent.isStopped = false;
         }
         if (newState == EnemyState.Stagger)
         {
             if (agent.isActiveAndEnabled) agent.isStopped = true;
-            // Nếu staggerTimer không được gán sẵn (như gầm rú), đặt mặc định choáng 0.6s
-            if (staggerTimer <= 0) staggerTimer = 0.6f;
+            if (staggerTimer <= 0) staggerTimer = 0.5f;
+        }
+        if (newState == EnemyState.Attack)
+        {
+            hasDealtDamage = false;
+            attackType.Value = 0; // Luôn dùng đòn cào cơ bản
+
+            // Khi máu thấp, đòn đánh cào nhanh điên cuồng hơn (hoạt ảnh rút ngắn còn 0.6s thay vì 1.0s)
+            bool isFrantic = currentHealth.Value <= maxHealth * 0.4f;
+            attackDuration = isFrantic ? 0.6f : 1.0f;
+
+            stateTimer = attackDuration;
+
+            // Kích hoạt animation đồng bộ
+            OnAttackTypeChanged(0, attackType.Value);
         }
         if (newState == EnemyState.Dead) Die();
     }
@@ -643,16 +555,16 @@ public class Enemy1_DapBua : NetworkBehaviour
 
     #region Client Animation Sync
 
-    // Hàm này chạy trên TẤT CẢ các Client khi NetworkVariable currentState thay đổi
     private void OnStateChanged(EnemyState previousValue, EnemyState newValue)
     {
         if (anim == null) return;
 
-        // Reset các trigger cũ để tránh kẹt
+        // Reset các trigger cũ để tránh kẹt hoạt ảnh
         anim.ResetTrigger("Idle");
         anim.ResetTrigger("Walk");
         anim.ResetTrigger("Run");
-        anim.ResetTrigger("Hit");
+        anim.ResetTrigger("Anhit");
+        anim.ResetTrigger("Die");
 
         switch (newValue)
         {
@@ -666,10 +578,10 @@ public class Enemy1_DapBua : NetworkBehaviour
                 anim.SetTrigger("Run");   
                 break;
             case EnemyState.Stagger:
-                anim.SetTrigger("Hit"); // Đồng bộ khựng choáng dính đòn lên toàn client
+                anim.SetTrigger("Anhit"); // Dính đòn choáng khựng đồng bộ trigger "Anhit"
                 break;
             case EnemyState.Dead:
-                anim.SetTrigger("Die");   
+                anim.SetTrigger("Die"); // Đồng bộ trigger Die hoạt ảnh chết (quai2Die)
                 break;
         }
     }
@@ -678,43 +590,38 @@ public class Enemy1_DapBua : NetworkBehaviour
     {
         if (anim == null) return;
         
-        // Reset các trigger tấn công
-        anim.ResetTrigger("AttLeft");
-        anim.ResetTrigger("quai1Attackphai");
-        anim.ResetTrigger("Combo");
+        anim.ResetTrigger("Attack"); 
 
-        // Gọi đúng tên trigger được thiết lập trong Animator
-        if (newVal == 0) anim.SetTrigger("AttLeft");
-        else if (newVal == 1) anim.SetTrigger("quai1Attackphai");
-        else if (newVal == 2) anim.SetTrigger("Combo");
+        // Kích hoạt duy nhất trigger "Attack" để chơi hoạt ảnh cào cơ bản (quai2-attackcoban)
+        anim.SetTrigger("Attack"); 
     }
 
     #endregion
 
-    // Vẽ vùng nhìn thấy và vùng đập búa trên Editor để dễ dàng debug căn cự ly
+    // Vẽ visual debug các vùng quét trên màn hình Scene Editor giúp căn cự ly siêu tốt
     private void OnDrawGizmosSelected()
     {
         if (eyeTransform != null)
         {
-            // Vẽ vòng tròn phạm vi nhìn thấy (màu vàng)
+            // Vùng nhìn thấy của Zombie (Vàng)
             Gizmos.color = Color.yellow;
             Gizmos.DrawWireSphere(eyeTransform.position, sightRange);
 
-            // Vẽ góc FOV nhìn thấy của Enemy (màu vàng nhạt)
+            // Hai hướng giới hạn góc nhìn FOV (Vàng)
             Vector3 leftLimit = Quaternion.AngleAxis(-fieldOfView / 2f, Vector3.up) * transform.forward;
             Vector3 rightLimit = Quaternion.AngleAxis(fieldOfView / 2f, Vector3.up) * transform.forward;
             Gizmos.DrawRay(eyeTransform.position, leftLimit * sightRange);
             Gizmos.DrawRay(eyeTransform.position, rightLimit * sightRange);
 
-            // Vẽ vòng tròn tầm đánh cơ bản (màu đỏ)
+            // Vùng cào móng vuốt cơ bản (Đỏ)
             Gizmos.color = Color.red;
             Gizmos.DrawWireSphere(transform.position, attackRange);
             
-            // Vẽ góc tấn công diện rộng hình nón khi đang ở trạng thái Attack
+            // Vẽ góc nêm quét sát thương hình nón khi đang cào
             if (currentState.Value == EnemyState.Attack)
             {
-                float currentAngle = (attackType.Value == 2) ? 95f : 80f;
-                float currentRange = (attackType.Value == 2) ? attackRange + 1.2f : attackRange + 0.5f;
+                float currentAngle = 90f;
+                float currentRange = 2.0f;
                 Vector3 attackLeft = Quaternion.AngleAxis(-currentAngle / 2f, Vector3.up) * transform.forward;
                 Vector3 attackRight = Quaternion.AngleAxis(currentAngle / 2f, Vector3.up) * transform.forward;
                 Gizmos.DrawRay(transform.position, attackLeft * currentRange);

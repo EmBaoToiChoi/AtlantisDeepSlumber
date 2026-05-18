@@ -3,14 +3,66 @@ using UnityEngine;
 
 public class SimplePlayerTest : NetworkBehaviour
 {
+    [Header("Movement & Attack Settings")]
     public float moveSpeed = 5f;
     public float damageAmount = 20f;
     public float attackRange = 3f;
+
+    [Header("Player Health Settings")]
+    public float maxHealth = 100f;
+    public NetworkVariable<float> currentHealth = new NetworkVariable<float>(
+        100f,
+        NetworkVariableReadPermission.Everyone,
+        NetworkVariableWritePermission.Server
+    );
+
+    [Header("Knockback Settings")]
+    private Vector3 knockbackVelocity;
+
+    public override void OnNetworkSpawn()
+    {
+        // Chỉ Local Owner mới lắng nghe sự thay đổi của máu để cập nhật lên UI HUD cá nhân
+        if (IsOwner)
+        {
+            currentHealth.OnValueChanged += OnHealthChanged;
+            UpdateHealthHUD(currentHealth.Value);
+        }
+    }
+
+    public override void OnNetworkDespawn()
+    {
+        if (IsOwner)
+        {
+            currentHealth.OnValueChanged -= OnHealthChanged;
+        }
+    }
+
+    private void OnHealthChanged(float oldHealth, float newHealth)
+    {
+        UpdateHealthHUD(newHealth);
+    }
+
+    private void UpdateHealthHUD(float health)
+    {
+        PlayerHUDController hud = FindObjectOfType<PlayerHUDController>();
+        if (hud != null)
+        {
+            // Đồng bộ HP phần trăm lên UI HUD chính thức
+            hud.SetHealth(health / maxHealth);
+        }
+    }
 
     void Update()
     {
         // Chỉ điều khiển nếu là máy của mình (Local Player)
         if (!IsOwner) return;
+
+        // Áp dụng lực đẩy lùi (Knockback) vật lý giảm dần mượt mà theo thời gian
+        if (knockbackVelocity.magnitude > 0.01f)
+        {
+            transform.Translate(knockbackVelocity * Time.deltaTime, Space.World);
+            knockbackVelocity = Vector3.Lerp(knockbackVelocity, Vector3.zero, Time.deltaTime * 8f);
+        }
 
         // 1. Logic Di chuyển đơn giản
         float moveX = Input.GetAxis("Horizontal");
@@ -48,5 +100,43 @@ public class SimplePlayerTest : NetworkBehaviour
         
         // Vẽ tia đỏ trong Scene để dễ nhìn thấy tầm đánh
         Debug.DrawRay(transform.position, transform.forward * attackRange, Color.red, 0.5f);
+    }
+
+    /// <summary>
+    /// Hàm nhận sát thương (chỉ được gọi trên Server)
+    /// </summary>
+    public void TakeDamage(float damage)
+    {
+        if (!IsServer) return;
+
+        currentHealth.Value = Mathf.Max(currentHealth.Value - damage, 0f);
+        Debug.Log($"[Server] {gameObject.name} nhận {damage} sát thương. Máu còn lại: {currentHealth.Value}");
+
+        if (currentHealth.Value <= 0)
+        {
+            Debug.LogWarning($"[Server] {gameObject.name} đã chết!");
+            // Thêm các logic khi Player chết tại đây nếu cần (hồi sinh, vô hiệu hóa di chuyển...)
+        }
+    }
+
+    /// <summary>
+    /// Nhận lực đẩy lùi từ bên ngoài (Server gọi và phát xuống Client sở hữu)
+    /// </summary>
+    [ClientRpc]
+    public void ApplyKnockbackClientRpc(Vector3 force)
+    {
+        if (IsOwner)
+        {
+            knockbackVelocity = force;
+        }
+    }
+
+    /// <summary>
+    /// Giao diện áp dụng Knockback (Server-authoritative)
+    /// </summary>
+    public void ApplyKnockback(Vector3 force)
+    {
+        if (!IsServer) return;
+        ApplyKnockbackClientRpc(force);
     }
 }

@@ -288,7 +288,14 @@ public class PlayerHUDController : MonoBehaviour
     }
 
     // --- Giữ nguyên các hàm cập nhật HP/MP/EXP của bạn bên dưới ---
-    public void SetHealth(float percentage) { /* ... */ }
+    public void SetHealth(float percentage)
+    {
+        if (hpFill != null)
+        {
+            // Cập nhật chiều rộng của hp-fill theo phần trăm máu thực tế (0% đến 100%)
+            hpFill.style.width = Length.Percent(Mathf.Clamp(percentage * 100f, 0f, 100f));
+        }
+    }
 
     private void SelectWeapon(int index)
     {
