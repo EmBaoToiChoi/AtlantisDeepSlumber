@@ -15,7 +15,7 @@ GameObject:
   - component: {fileID: 3944334248527431092}
   - component: {fileID: 9051157719724141966}
   - component: {fileID: 7848332753692984834}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: playerrrrrrrr
   m_TagString: Player
   m_Icon: {fileID: 0}
@@ -133,7 +133,7 @@ Rigidbody:
   m_ExcludeLayers:
     serializedVersion: 2
     m_Bits: 0
-  m_ImplicitCom: 1
+  m_ImplicitCom: 0
   m_ImplicitTensor: 1
   m_UseGravity: 1
   m_IsKinematic: 0
@@ -178,7 +178,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   ShowTopMostFoldoutHeaderGroup: 1
-  moveSpeed: 7
+  moveSpeed: 5
   crouchSpeed: 3
   isCrouchingNet:
     UpdateTraits:
