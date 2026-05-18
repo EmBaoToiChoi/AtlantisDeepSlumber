@@ -1,11 +1,23 @@
 fileFormatVersion: 2
 guid: b6ae12b60bf7ffb44871c6aeae394edd
+AssetOrigin:
+  serializedVersion: 1
+  productId: 280201
+  packageName: Storage Shelves
+  packageVersion: 1.0
+  assetPath: Assets/Storage_Shelves/Meshes/Storage_Shelves.fbx
+  uploadId: 807816
 ModelImporter:
   serializedVersion: 22200
   internalIDToNameTable: []
-  externalObjects: {}
+  externalObjects:
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Storage_Shelves
+    second: {fileID: 2100000, guid: 74268676ba0dbba409f1e0d811ef13b9, type: 2}
   materials:
-    materialImportMode: 0
+    materialImportMode: 2
     materialName: 0
     materialSearch: 1
     materialLocation: 1
@@ -16,8 +28,6 @@ ModelImporter:
     optimizeGameObjects: 0
     removeConstantScaleCurves: 1
     motionNodeName: 
-    rigImportErrors: 
-    rigImportWarnings: 
     animationImportErrors: 
     animationImportWarnings: 
     animationRetargetingWarnings: 
@@ -107,10 +117,3 @@ ModelImporter:
   userData: 
   assetBundleName: 
   assetBundleVariant: 
-AssetOrigin:
-  serializedVersion: 1
-  productId: 280201
-  packageName: Storage Shelves
-  packageVersion: 1.0
-  assetPath: Assets/Storage_Shelves/Meshes/Storage_Shelves.fbx
-  uploadId: 807816
