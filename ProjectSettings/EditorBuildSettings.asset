@@ -11,6 +11,9 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/Waiting hall.unity
     guid: fa61aed9cceda6e4daebb6137cd5194e
+  - enabled: 1
+    path: Assets/HHoang/minigame/minigame/minigame.unity
+    guid: 0f31ff22cea0cdd4a96458b7449822a6
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 289c1b55c9541489481df5cc06664110, type: 3}
   m_UseUCBPForAssetBundles: 0
