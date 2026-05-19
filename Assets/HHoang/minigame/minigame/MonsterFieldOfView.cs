@@ -9,18 +9,23 @@ public class MonsterFieldOfView : NetworkBehaviour
     public float viewRadius = 10f;
     [Tooltip("Góc nhìn (độ)")]
     [Range(0, 360)]
-    public float viewAngle = 90f;
-    [Tooltip("Độ sâu của vùng 'block' tầm nhìn (kệ sách)")]
-    public float visionObscureDepth = 1f;
+    public float viewAngle = 145f;
 
     [Header("Cấu hình Mạng & Layer")]
     public LayerMask targetMask; // Layer của Player
     public LayerMask obstacleMask; // Layer của Kệ Sách/Tường
 
-    private List<Transform> spottedPlayers = new List<Transform>();
-    private MonsterAI monsterAI; // Khai báo biến để lưu kết nối tới Quái AI cha
+    [Header("Cấu hình Đèn Pha (Spotlight)")]
+    [Tooltip("Độ sáng mạnh yếu của đèn pha rọi xuống đất")]
+    public float lightIntensity = 50f;
+    [Tooltip("Góc nghiêng chúi xuống đất của đèn pha (Độ)")]
+    public float lightPitchAngle = 25f;
 
-    void Start()
+    private List<Transform> spottedPlayers = new List<Transform>();
+    private MonsterAI monsterAI; 
+    private Light spotlight;
+
+    public override void OnNetworkSpawn()
     {
         monsterAI = transform.GetComponentInParent<MonsterAI>();
         
@@ -29,15 +34,37 @@ public class MonsterFieldOfView : NetworkBehaviour
             monsterAI = transform.parent.GetComponent<MonsterAI>();
         }
 
-        if (monsterAI == null)
-        {
-            Debug.LogError("🚨 LỖI: Không tìm thấy script MonsterAI trên Object cha! Ông check xem đã gắn MonsterAI vào enemyyyyyy chưa nha.");
-        }
+        // 🔥 FIX LỖI TÍM: Tự tạo đèn Spotlight chuẩn, không dùng Particle Shader cũ gây lỗi render
+        CreateSearchlightEffect();
 
         if (IsServer)
         {
-            InvokeRepeating("FindTargetsWithDelay", 0.1f, 0.2f);
+            Debug.Log("<color=green>[FOV] Đã kích hoạt hệ thống quét tầm nhìn thành công trên Server!</color>");
+            InvokeRepeating("FindTargetsWithDelay", 0.5f, 0.2f);
         }
+    }
+
+    private void CreateSearchlightEffect()
+    {
+        // Kiểm tra xem đã có đèn pha cũ chưa để tránh sinh lặp lại khi Re-spawn
+        Transform oldLight = transform.Find("Monster_Searchlight");
+        if (oldLight != null) Destroy(oldLight.gameObject);
+
+        // Tạo Object Đèn Spotlight con nằm ngay tâm đầu quái (Cube)
+        GameObject lightObj = new GameObject("Monster_Searchlight");
+        lightObj.transform.SetParent(this.transform);
+        lightObj.transform.localPosition = Vector3.zero; 
+        lightObj.transform.localRotation = Quaternion.Euler(lightPitchAngle, 0, 0); // Chúi xuống đất
+
+        spotlight = lightObj.AddComponent<Light>();
+        spotlight.type = LightType.Spot;
+        spotlight.color = Color.red; // Đèn màu đỏ rực
+        spotlight.intensity = lightIntensity;
+        spotlight.range = viewRadius + 3f; // Tầm rọi dài hơn tầm quét một chút cho đẹp
+        spotlight.spotAngle = viewAngle;   // Khớp góc quạt nhìn của quái
+
+        // Đảm bảo đèn có thể đổ bóng vật lý xuyên qua kệ sách nếu dự án có bật Shadow
+        spotlight.shadows = LightShadows.Soft;
     }
 
     void FindTargetsWithDelay()
@@ -45,7 +72,6 @@ public class MonsterFieldOfView : NetworkBehaviour
         FindSpottedPlayers();
     }
 
-    // --- HÀM TÌM NGƯỜI CHƠI TRONG VÙNG NHÌN (ĐÃ FIX SĂN PHẲNG TRỤC Y) ---
     private void FindSpottedPlayers()
     {
         spottedPlayers.Clear();
@@ -55,21 +81,39 @@ public class MonsterFieldOfView : NetworkBehaviour
         {
             Transform target = targetsInViewRadius[i].transform;
             
-            // 🔥 ĐÃ FIX CHÍ MẠNG: Đưa vị trí Player về cùng độ cao Y với cái mặt quái để tính hướng không bị cắm xuống đất
-            Vector3 targetPositionAtSameHeight = new Vector3(target.position.x, transform.position.y, target.position.z);
-            Vector3 directionToTarget = (targetPositionAtSameHeight - transform.position).normalized;
+            // Xử lý góc nhìn ngang
+            Vector3 targetPosHorizontal = new Vector3(target.position.x, transform.position.y, target.position.z);
+            Vector3 directionToTarget = (targetPosHorizontal - transform.position).normalized;
 
-            // Kiểm tra góc nhìn dựa trên hướng đã san phẳng Y
             if (Vector3.Angle(transform.forward, directionToTarget) < viewAngle / 2)
             {
-                float dstToTarget = Vector3.Distance(transform.position, targetPositionAtSameHeight);
+                float playerHeight = 2.0f;
+                CapsuleCollider playerCollider = target.GetComponent<CapsuleCollider>();
+                if (playerCollider != null)
+                {
+                    playerHeight = playerCollider.height * target.localScale.y;
+                }
 
-                // Bắn tia Raycast song song với mặt đất (không lo bị đập trúng sàn nhà)
-                if (!Physics.Raycast(transform.position, directionToTarget, dstToTarget, obstacleMask))
+                Vector3 playerFoot = target.position;
+                Vector3 playerCenter = target.position + Vector3.up * (playerHeight / 2f);
+                Vector3 playerHead = target.position + Vector3.up * playerHeight;
+
+                float dstToTarget = Vector3.Distance(transform.position, playerCenter);
+
+                // Thuật toán 3 tia tam giác quét chống mù địa hình
+                bool canSeeHead = !Physics.Raycast(transform.position, (playerHead - transform.position).normalized, dstToTarget, obstacleMask);
+                bool canSeeCenter = !Physics.Raycast(transform.position, (playerCenter - transform.position).normalized, dstToTarget, obstacleMask);
+                bool canSeeFoot = !Physics.Raycast(transform.position, (playerFoot - transform.position).normalized, dstToTarget, obstacleMask);
+
+                Debug.DrawLine(transform.position, playerHead, canSeeHead ? Color.green : Color.yellow, 0.2f);
+                Debug.DrawLine(transform.position, playerCenter, canSeeCenter ? Color.green : Color.yellow, 0.2f);
+                Debug.DrawLine(transform.position, playerFoot, canSeeFoot ? Color.green : Color.yellow, 0.2f);
+
+                if (canSeeHead || canSeeCenter || canSeeFoot)
                 {
                     spottedPlayers.Add(target);
+                    Debug.Log($"<color=red>🎯 [FOV] ĐÃ PHÁT HIỆN PLAYER: {target.name} bằng tầm nhìn!</color>");
                     
-                    // Ra lệnh cho quái cha dí liền!
                     if (monsterAI != null)
                     {
                         monsterAI.SpottedPlayerByVision(target.position);
@@ -79,7 +123,6 @@ public class MonsterFieldOfView : NetworkBehaviour
         }
     }
 
-    // --- HÀM TÍNH HƯỚNG THEO GÓC ---
     public Vector3 DirFromAngle(float angleInDegrees, bool angleIsGlobal)
     {
         if (!angleIsGlobal)
@@ -89,17 +132,15 @@ public class MonsterFieldOfView : NetworkBehaviour
         return new Vector3(Mathf.Sin(angleInDegrees * Mathf.Deg2Rad), 0, Mathf.Cos(angleInDegrees * Mathf.Deg2Rad));
     }
 
-    // --- HÀM VẼ VÙNG NHÌN TRONG EDITOR ---
     private void OnDrawGizmos()
     {
-        Gizmos.color = new Color(1f, 0f, 0f, 0.5f); 
+        Gizmos.color = new Color(1f, 0f, 0f, 0.3f); 
         Vector3 viewAngleA = DirFromAngle(-viewAngle / 2, false);
         Vector3 viewAngleB = DirFromAngle(viewAngle / 2, false);
 
         Gizmos.DrawLine(transform.position, transform.position + viewAngleA * viewRadius);
         Gizmos.DrawLine(transform.position, transform.position + viewAngleB * viewRadius);
 
-        Gizmos.color = new Color(1f, 0f, 0f, 0.1f); 
         int segments = 10; 
         Vector3 previousPoint = transform.position + viewAngleA * viewRadius;
         
@@ -112,15 +153,6 @@ public class MonsterFieldOfView : NetworkBehaviour
             Gizmos.DrawLine(transform.position, currentPoint);
             Gizmos.DrawLine(previousPoint, currentPoint);
             previousPoint = currentPoint;
-        }
-
-        Gizmos.color = Color.red;
-        for (int i = 0; i < spottedPlayers.Count; i++)
-        {
-            if (spottedPlayers[i] != null)
-            {
-                Gizmos.DrawLine(transform.position, spottedPlayers[i].position);
-            }
         }
     }
 }
