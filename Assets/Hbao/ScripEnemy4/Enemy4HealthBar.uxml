@@ -1,0 +1,12 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
+    <Style src="./Enemy4HealthBar.uss" />
+    <ui:VisualElement name="main-container" class="main-container">
+        <ui:Label name="enemy-name" text="Enemy 4" class="enemy-name" />
+        <ui:VisualElement name="health-bar-container" class="container">
+            <ui:VisualElement name="background" class="background">
+                <ui:VisualElement name="yellow-bar" class="yellow-bar" />
+                <ui:VisualElement name="progress-bar" class="progress-bar" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>
