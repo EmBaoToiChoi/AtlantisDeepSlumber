@@ -48,6 +48,9 @@ public class NetworkBootstrap : MonoBehaviour
         // ĐĂNG KÝ TRƯỚC KHI BẬT SERVER (RẤT QUAN TRỌNG)
         NetworkManager.Singleton.ConnectionApprovalCallback = ApprovalCheck;
 
+        // ĐĂNG KÝ THEO DÕI NGẮT KẾT NỐI ĐỂ TỰ ĐỘNG RESET KHI PHÒNG TRỐNG
+        NetworkManager.Singleton.OnClientDisconnectCallback += OnServerClientDisconnected;
+
         NetworkManager.Singleton.StartServer();
         Debug.Log("[SERVER] Dedicated Server đã bắt đầu lắng nghe tại cổng 7777...");
 
@@ -59,6 +62,34 @@ public class NetworkBootstrap : MonoBehaviour
         else
         {
             UnityEngine.SceneManagement.SceneManager.LoadScene("Waiting hall");
+        }
+    }
+
+    private void OnServerClientDisconnected(ulong clientId)
+    {
+        if (!NetworkManager.Singleton.IsServer) return;
+        // Chờ 1 giây để danh sách ConnectedClientsList được cập nhật chính xác
+        StartCoroutine(CheckServerEmptyDelayed());
+    }
+
+    private System.Collections.IEnumerator CheckServerEmptyDelayed()
+    {
+        yield return new WaitForSeconds(1.0f);
+        
+        if (NetworkManager.Singleton != null && NetworkManager.Singleton.ConnectedClientsList.Count == 0)
+        {
+            Debug.Log("[SERVER] Không còn người chơi nào! Đang tự động reset VPS về cảnh Sảnh Chờ 'Waiting hall'...");
+            
+            // Xóa sạch dữ liệu chờ và đưa về mặc định
+            PendingPlayerNames.Clear();
+            ServerRoomName = "Atlantis Lobby";
+            ServerRoomId = "000000";
+
+            // Đưa VPS quay về cảnh Waiting Room đón lượt chơi mới
+            if (NetworkManager.Singleton.SceneManager != null)
+            {
+                NetworkManager.Singleton.SceneManager.LoadScene("Waiting hall", UnityEngine.SceneManagement.LoadSceneMode.Single);
+            }
         }
     }
 
