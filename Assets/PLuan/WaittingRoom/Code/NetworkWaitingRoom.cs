@@ -42,7 +42,13 @@ public class NetworkWaitingRoom : NetworkBehaviour
             serializer.SerializeValue(ref ClientId);
             serializer.SerializeValue(ref IsReady);
         }
-        public bool Equals(PlayerNetData other) => ClientId == other.ClientId;
+        public bool Equals(PlayerNetData other) 
+        {
+            return ClientId == other.ClientId && 
+                   IsReady == other.IsReady && 
+                   Name.Equals(other.Name) && 
+                   Slot == other.Slot;
+        }
     }
 
     // private static System.Collections.Generic.Dictionary<ulong, string> _pendingPlayerNames = new System.Collections.Generic.Dictionary<ulong, string>();
@@ -50,7 +56,7 @@ public class NetworkWaitingRoom : NetworkBehaviour
     private void Awake() 
     { 
         Debug.Log("[EMERGENCY] Awake đã chạy!");
-        NetPlayers = new NetworkList<PlayerNetData>(); 
+        // Giữ nguyên reference biên dịch gốc của NetworkList để tránh hỏng đồng bộ Netcode
         
         if (_uiDocument == null) _uiDocument = GetComponent<UIDocument>();
         if (_uiDocument == null)
@@ -66,6 +72,8 @@ public class NetworkWaitingRoom : NetworkBehaviour
         _btnReady = _root.Q<Button>("btn-ready");
         _btnStart = _root.Q<Button>("btn-start");
         _btnLeave = _root.Q<Button>("btn-leave");
+
+        Debug.Log($"[Lobby] UI Binding: _btnReady={_btnReady!=null}, _btnStart={_btnStart!=null}, _btnLeave={_btnLeave!=null}");
 
         RefreshLocalUI();
 
@@ -167,6 +175,16 @@ public class NetworkWaitingRoom : NetworkBehaviour
         }
     }
 
+    public override void OnNetworkDespawn()
+    {
+        Debug.Log("[Lobby] OnNetworkDespawn đã kích hoạt! Đang hủy đăng ký callback...");
+        if (NetworkManager.Singleton != null)
+        {
+            NetworkManager.Singleton.OnClientConnectedCallback -= OnClientConnected;
+            NetworkManager.Singleton.OnClientDisconnectCallback -= OnClientDisconnected;
+        }
+    }
+
     private IEnumerator DelayUpdateRoomRPC()
     {
         yield return new WaitForSeconds(2.0f);
@@ -240,14 +258,40 @@ public class NetworkWaitingRoom : NetworkBehaviour
     {
         if (_lblPlayerCount != null) _lblPlayerCount.text = $"PLAYERS: {NetPlayers.Count}/4";
         
-        bool allReady = NetPlayers.Count == 4;
-        foreach (var p in NetPlayers) if (!p.IsReady) allReady = false;
+        // KIỂM TRA ĐIỀU KIỆN READY: Chỉ cần ít nhất 1 người chơi sẵn sàng (Testing)
+        // Khi lên sản phẩm thực tế, có thể đổi lại thành NetPlayers.Count == 4 && readyCount == 4
+        int readyCount = 0;
+        foreach (var p in NetPlayers) if (p.IsReady) readyCount++;
+        bool allReady = readyCount >= 1;
+
+        // KIỂM TRA XEM LOCAL CLIENT CÓ PHẢI LÀ CHỦ PHÒNG (SLOT 0) KHÔNG
+        bool isRoomHost = false;
+        if (NetworkManager.Singleton != null)
+        {
+            foreach (var p in NetPlayers)
+            {
+                if (p.ClientId == NetworkManager.Singleton.LocalClientId && p.Slot == 0)
+                {
+                    isRoomHost = true;
+                    break;
+                }
+            }
+        }
 
         if (_btnStart != null)
         {
-            _btnStart.style.display = IsServer ? DisplayStyle.Flex : DisplayStyle.None;
+            // Chỉ hiển thị nút Start cho Chủ phòng (Slot 0) để bấm bắt đầu
+            _btnStart.style.display = isRoomHost ? DisplayStyle.Flex : DisplayStyle.None;
             _btnStart.SetEnabled(allReady);
-            if (allReady) _btnStart.RemoveFromClassList("hidden-element");
+            
+            if (allReady && isRoomHost)
+            {
+                _btnStart.RemoveFromClassList("hidden-element");
+            }
+            else
+            {
+                _btnStart.AddToClassList("hidden-element");
+            }
         }
 
         // Cập nhật màu nút Ready cho bản thân
@@ -271,6 +315,7 @@ public class NetworkWaitingRoom : NetworkBehaviour
 
     private void ToggleReady()
     {
+        Debug.Log($"[CLIENT] Nút Ready được click! LocalClientId={NetworkManager.Singleton.LocalClientId}");
         ToggleReadyServerRpc();
     }
 
@@ -278,6 +323,8 @@ public class NetworkWaitingRoom : NetworkBehaviour
     private void ToggleReadyServerRpc(ServerRpcParams rpcParams = default)
     {
         ulong clientId = rpcParams.Receive.SenderClientId;
+        Debug.Log($"[SERVER] Nhận lệnh ToggleReady từ ClientId={clientId}");
+        bool found = false;
         for (int i = 0; i < NetPlayers.Count; i++)
         {
             if (NetPlayers[i].ClientId == clientId)
@@ -285,8 +332,14 @@ public class NetworkWaitingRoom : NetworkBehaviour
                 var data = NetPlayers[i];
                 data.IsReady = !data.IsReady;
                 NetPlayers[i] = data;
+                found = true;
+                Debug.Log($"[SERVER] Cập nhật trạng thái IsReady của ClientId={clientId} thành: {data.IsReady}");
                 break;
             }
+        }
+        if (!found)
+        {
+            Debug.LogWarning($"[SERVER] Không tìm thấy ClientId={clientId} trong danh sách NetPlayers để chuyển trạng thái Ready!");
         }
     }
 
@@ -406,9 +459,17 @@ public class NetworkWaitingRoom : NetworkBehaviour
     }
 
     private void StartGame() { 
+        Debug.Log("[CLIENT] Chủ phòng click START EXPEDITION! Đang gửi lệnh ServerRpc khởi động...");
+        StartGameServerRpc();
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    private void StartGameServerRpc() {
         if (IsServer) {
-            Debug.Log("[Lobby] All players ready! Starting expedition...");
-            // NetworkManager.Singleton.SceneManager.LoadScene("GameplayScene", LoadSceneMode.Single);
+            Debug.Log("[SERVER] Nhận lệnh khởi động game! Đang chuyển tất cả người chơi sang cảnh 'minigame'...");
+            if (NetworkManager.Singleton != null && NetworkManager.Singleton.SceneManager != null) {
+                NetworkManager.Singleton.SceneManager.LoadScene("minigame", UnityEngine.SceneManagement.LoadSceneMode.Single);
+            }
         }
     }
 
