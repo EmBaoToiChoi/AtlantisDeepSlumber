@@ -36,12 +36,113 @@ public class EnemySpawner : NetworkBehaviour
 
     private void Start()
     {
+#if UNITY_EDITOR
+        // Tự động kiểm tra và tạo NetworkManager nếu thiếu khi test trực tiếp scene HBao trong Editor
+        if (NetworkManager.Singleton == null)
+        {
+            CreateEditorNetworkManager();
+        }
+
+        if (playerPrefab == null)
+        {
+            Debug.LogWarning("[EnemySpawner] 'playerPrefab' chưa được gán trong Inspector! Vui lòng gán Player Prefab vào EnemySpawner để tự động sinh Player.");
+        }
+#endif
+
         // Listen for client connection to spawn player for late-joining clients
         if (NetworkManager.Singleton != null)
         {
             NetworkManager.Singleton.OnClientConnectedCallback += OnClientConnected;
+
+#if UNITY_EDITOR
+            // Tự động bật Host nếu chưa có Network nào chạy (khi ấn Play trực tiếp scene HBao)
+            if (!NetworkManager.Singleton.IsServer && !NetworkManager.Singleton.IsClient)
+            {
+                Debug.Log("[EnemySpawner] Đang tự động khởi chạy NetworkManager dưới vai trò HOST để test game trực tiếp...");
+                EnsurePrefabsRegistered(NetworkManager.Singleton);
+                NetworkManager.Singleton.StartHost();
+            }
+#endif
+        }
+        else
+        {
+            Debug.LogError("[EnemySpawner] Không tìm thấy NetworkManager trong Scene! Hãy thêm NetworkManager để chạy Netcode.");
         }
     }
+
+#if UNITY_EDITOR
+    /// <summary>
+    /// Tự động tạo NetworkManager giả định phục vụ việc test nhanh trực tiếp trong Unity Editor
+    /// </summary>
+    private void CreateEditorNetworkManager()
+    {
+        Debug.Log("[EnemySpawner] Không tìm thấy NetworkManager trong Scene. Đang khởi tạo NetworkManager tạm thời để phục vụ playtest...");
+        
+        GameObject netManagerObj = new GameObject("NetworkManager_EditorDebug");
+        NetworkManager netManager = netManagerObj.AddComponent<NetworkManager>();
+        
+        // Thêm UnityTransport mặc định
+        var transport = netManagerObj.AddComponent<Unity.Netcode.Transports.UTP.UnityTransport>();
+        
+        // Khởi tạo NetworkConfig mặc định
+        netManager.NetworkConfig = new NetworkConfig();
+        netManager.NetworkConfig.NetworkTransport = transport;
+        
+        // Đăng ký các Prefab
+        EnsurePrefabsRegistered(netManager);
+    }
+
+    /// <summary>
+    /// Đảm bảo tất cả các Prefab Player và Enemy đều được đăng ký trong NetworkPrefabs của NetworkManager
+    /// </summary>
+    private void EnsurePrefabsRegistered(NetworkManager netManager)
+    {
+        if (netManager == null || netManager.NetworkConfig == null) return;
+
+        if (netManager.NetworkConfig.Prefabs == null)
+        {
+            netManager.NetworkConfig.Prefabs = new System.Collections.Generic.List<NetworkPrefab>();
+        }
+
+        System.Action<GameObject> registerIfMissing = (prefab) =>
+        {
+            if (prefab == null) return;
+            if (prefab.GetComponent<NetworkObject>() == null)
+            {
+                Debug.LogError($"[EnemySpawner] Prefab '{prefab.name}' thiếu thành phần NetworkObject! Không thể đăng ký.");
+                return;
+            }
+
+            bool exists = false;
+            foreach (var netPrefab in netManager.NetworkConfig.Prefabs)
+            {
+                if (netPrefab.Prefab == prefab)
+                {
+                    exists = true;
+                    break;
+                }
+            }
+
+            if (!exists)
+            {
+                netManager.NetworkConfig.Prefabs.Add(new NetworkPrefab { Prefab = prefab });
+                Debug.Log($"[EnemySpawner] Đã tự động đăng ký Prefab '{prefab.name}' vào danh sách NetworkPrefabs.");
+            }
+        };
+
+        // Đăng ký Player Prefab
+        registerIfMissing(playerPrefab);
+
+        // Đăng ký tất cả Enemy Prefab
+        if (enemyConfigs != null)
+        {
+            foreach (var config in enemyConfigs)
+            {
+                registerIfMissing(config.enemyPrefab);
+            }
+        }
+    }
+#endif
 
     private void OnDestroy()
     {
