@@ -97,6 +97,32 @@ public class Enemy5_PhuThuy : NetworkBehaviour
     private bool hasCastSpell;
     private float attackDuration = 1.2f; // Thời gian thực thi hoạt ảnh chưởng phép
 
+    private void Awake()
+    {
+        if (anim == null)
+        {
+            anim = GetComponent<Animator>();
+            if (anim == null)
+            {
+                anim = GetComponentInChildren<Animator>();
+            }
+        }
+
+        var netAnim = GetComponent<Unity.Netcode.Components.NetworkAnimator>();
+        if (netAnim != null && netAnim.Animator == null)
+        {
+            if (anim != null)
+            {
+                netAnim.Animator = anim;
+                Debug.Log($"[{gameObject.name}] Đã tự động gán Animator '{anim.name}' vào NetworkAnimator để tránh lỗi NullReferenceException.");
+            }
+            else
+            {
+                Debug.LogError($"[{gameObject.name}] Không tìm thấy Animator nào trên đối tượng để gán cho NetworkAnimator!");
+            }
+        }
+    }
+
     public override void OnNetworkSpawn()
     {
         // Đồng bộ hóa Animation trên các máy Client khi biến mạng thay đổi

@@ -164,9 +164,12 @@ public class EnemySpawner : NetworkBehaviour
             // 2. Auto spawn player for existing clients on scene start (Đặc biệt hữu ích khi Editor playtest trực tiếp)
             if (autoSpawnPlayer && playerPrefab != null)
             {
-                foreach (var client in NetworkManager.Singleton.ConnectedClientsList)
+                // Chỉ tự động spawn ngay lập tức cho Host khi chạy trực tiếp scene này (không qua chuyển cảnh từ sảnh chờ)
+                // Các client thật từ xa sẽ tự động gửi RequestSpawnPlayerServerRpc hoặc được xử lý qua OnSceneLoadEventCompleted khi load xong.
+                if (NetworkManager.Singleton.IsHost)
                 {
-                    SpawnPlayerForClient(client.ClientId);
+                    Debug.Log("[EnemySpawner] Phát hiện chế độ Host. Tự động khởi tạo Player lập tức cho Host...");
+                    SpawnPlayerForClient(NetworkManager.Singleton.LocalClientId);
                 }
             }
 
@@ -226,10 +229,10 @@ public class EnemySpawner : NetworkBehaviour
 
     private void OnClientConnected(ulong clientId)
     {
-        if (IsServer && autoSpawnPlayer)
-        {
-            SpawnPlayerForClient(clientId);
-        }
+        // Khi client kết nối, họ đang bắt đầu tải Scene. Không sinh Player ngay lúc này vì sẽ bị lỗi Client chưa tải xong Scene.
+        // Player sẽ được sinh tự động khi client hoàn tất tải cảnh thông qua sự kiện OnSceneLoadEventCompleted
+        // Hoặc khi Client gửi yêu cầu RequestSpawnPlayerServerRpc().
+        Debug.Log($"[EnemySpawner] Client {clientId} đã kết nối. Đợi Client tải xong Scene để sinh Player...");
     }
 
     private void Update()

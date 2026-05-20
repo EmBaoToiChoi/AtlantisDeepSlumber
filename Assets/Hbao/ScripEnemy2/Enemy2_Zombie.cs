@@ -83,6 +83,32 @@ public class Enemy2_Zombie : NetworkBehaviour
     private readonly Collider[] detectionResults = new Collider[8];
     private readonly Collider[] damageResults = new Collider[8];
 
+    private void Awake()
+    {
+        if (anim == null)
+        {
+            anim = GetComponent<Animator>();
+            if (anim == null)
+            {
+                anim = GetComponentInChildren<Animator>();
+            }
+        }
+
+        var netAnim = GetComponent<Unity.Netcode.Components.NetworkAnimator>();
+        if (netAnim != null && netAnim.Animator == null)
+        {
+            if (anim != null)
+            {
+                netAnim.Animator = anim;
+                Debug.Log($"[{gameObject.name}] Đã tự động gán Animator '{anim.name}' vào NetworkAnimator để tránh lỗi NullReferenceException.");
+            }
+            else
+            {
+                Debug.LogError($"[{gameObject.name}] Không tìm thấy Animator nào trên đối tượng để gán cho NetworkAnimator!");
+            }
+        }
+    }
+
     public override void OnNetworkSpawn()
     {
         // Lắng nghe sự thay đổi trạng thái để đồng bộ hoạt ảnh trên các Client
