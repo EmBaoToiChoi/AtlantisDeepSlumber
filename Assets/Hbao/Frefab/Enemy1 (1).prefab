@@ -291,7 +291,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  GlobalObjectIdHash: 3082764754
+  GlobalObjectIdHash: 4253473851
   InScenePlacedSourceGlobalObjectIdHash: 0
   DeferredDespawnTick: 0
   Ownership: 1
@@ -328,6 +328,11 @@ MonoBehaviour:
       MinSecondsBetweenUpdates: 0
       MaxSecondsBetweenUpdates: 0
     m_InternalValue: 0
+  isEnraged:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 0
   hitCounter:
     UpdateTraits:
       MinSecondsBetweenUpdates: 0
@@ -341,6 +346,9 @@ MonoBehaviour:
   agent: {fileID: 6010815556074807129}
   anim: {fileID: 8959402703388595290}
   eyeTransform: {fileID: 8471565042693031626}
+  hammerHitbox: {fileID: 0}
+  hammerHitboxLeft: {fileID: 0}
+  hammerHitboxRight: {fileID: 0}
   sightRange: 15
   fieldOfView: 90
   attackRange: 2
@@ -348,7 +356,7 @@ MonoBehaviour:
   idleTimeMax: 4
   playerLayer:
     serializedVersion: 2
-    m_Bits: 0
+    m_Bits: 8
   obstacleLayer:
     serializedVersion: 2
     m_Bits: 0
