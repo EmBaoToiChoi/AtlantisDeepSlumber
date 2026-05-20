@@ -40,6 +40,12 @@ public class Enemy5_PhuThuy : NetworkBehaviour
     public Transform staffTipTransform; // Điểm xuất phát của quả cầu phép (Staff/Hand tip)
     public Renderer[] modelRenderers;
 
+    // Bộ đệm tránh phân bổ rác (GC Alloc) khi quét va chạm
+    private readonly Collider[] detectionResults = new Collider[8];
+
+    private bool wasEnraged = false;
+    private MaterialPropertyBlock propBlock;
+
     [Header("Spell Settings")]
     public GameObject spellProjectilePrefab; // Prefab Quả cầu phép đồng bộ mạng
     public float spellSpeed = 12f;
@@ -96,6 +102,18 @@ public class Enemy5_PhuThuy : NetworkBehaviour
         // Đồng bộ hóa Animation trên các máy Client khi biến mạng thay đổi
         currentState.OnValueChanged += OnStateChanged;
 
+        // Khởi tạo hoạt ảnh ban đầu khớp với trạng thái hiện tại (đặc biệt cho người chơi vào sau)
+        OnStateChanged(currentState.Value, currentState.Value);
+
+        // Tối ưu hóa đồng bộ chuyển động siêu nhỏ cho mọi Client cùng quan sát
+        var netTransform = GetComponent<Unity.Netcode.Components.NetworkTransform>();
+        if (netTransform != null)
+        {
+            netTransform.PositionThreshold = 0.001f;
+            netTransform.RotAngleThreshold = 0.01f;
+            netTransform.ScaleThreshold = 0.01f;
+        }
+
         if (IsServer)
         {
             currentHealth.Value = maxHealth;
@@ -103,23 +121,29 @@ public class Enemy5_PhuThuy : NetworkBehaviour
         }
 
         // Lắng nghe hitCounter để chơi hoạt ảnh ăn đòn Quai5Anhit trên mọi Client
-        hitCounter.OnValueChanged += (oldVal, newVal) =>
-        {
-            if (anim != null)
-            {
-                anim.ResetTrigger(hitTriggerName);
-                anim.SetTrigger(hitTriggerName);
-            }
-        };
+        hitCounter.OnValueChanged += OnHitCounterChanged;
     }
 
     public override void OnNetworkDespawn()
     {
         currentState.OnValueChanged -= OnStateChanged;
+        hitCounter.OnValueChanged -= OnHitCounterChanged;
+    }
+
+    private void OnHitCounterChanged(int oldVal, int newVal)
+    {
+        if (anim != null)
+        {
+            anim.ResetTrigger(hitTriggerName);
+            anim.SetTrigger(hitTriggerName);
+        }
     }
 
     private void Update()
     {
+        // Cập nhật hiệu ứng cuồng nộ màu sắc (chạy trên cả server/client để mượt mà)
+        UpdateEnrageVisuals();
+
         // Chỉ Server mới xử lý bộ não AI
         if (!IsServer) return;
 
@@ -178,11 +202,13 @@ public class Enemy5_PhuThuy : NetworkBehaviour
         if (currentState.Value == EnemyState.Dead || currentState.Value == EnemyState.Stagger) return;
         if (currentState.Value == EnemyState.Attack) return;
 
-        Collider[] players = Physics.OverlapSphere(transform.position, sightRange, playerLayer);
+        int numPlayers = Physics.OverlapSphereNonAlloc(transform.position, sightRange, detectionResults, playerLayer);
         bool found = false;
 
-        foreach (Collider col in players)
+        for (int i = 0; i < numPlayers; i++)
         {
+            Collider col = detectionResults[i];
+            if (col == null) continue;
             Transform playerTrans = col.transform;
 
             SimplePlayerTest playerScript = playerTrans.GetComponentInParent<SimplePlayerTest>();
@@ -429,7 +455,6 @@ public class Enemy5_PhuThuy : NetworkBehaviour
         if (agent.isActiveAndEnabled) agent.isStopped = true;
 
         stateTimer -= Time.deltaTime;
-        float elapsed = attackDuration - stateTimer;
 
         // Quay mặt đối diện Player trong quá trình tụ lực chưởng
         Vector3 lookDir = (targetPlayer.position - transform.position);
@@ -439,8 +464,8 @@ public class Enemy5_PhuThuy : NetworkBehaviour
             transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(lookDir), Time.deltaTime * 10f);
         }
 
-        // TẠO QUẢ CẦU PHÉP PHÓNG ĐI (Khớp nhịp chưởng phép ở giây 0.45s)
-        if (elapsed >= 0.45f && !hasCastSpell)
+        // BẮN PHÒNG HỜ: Nếu hoạt ảnh sắp kết thúc mà chưa kích hoạt Event, tự động phóng chưởng làm fallback
+        if (stateTimer <= 0.1f && !hasCastSpell)
         {
             hasCastSpell = true;
             LaunchSpellBall();
@@ -645,12 +670,8 @@ public class Enemy5_PhuThuy : NetworkBehaviour
             hasCastSpell = false;
             stateTimer = attackDuration;
 
-            // Kích hoạt animation chưởng trên client
-            if (anim != null)
-            {
-                anim.ResetTrigger(attackTriggerName);
-                anim.SetTrigger(attackTriggerName);
-            }
+            // Kích hoạt đồng bộ hóa hoạt ảnh tấn công qua ClientRpc đến toàn bộ client
+            PlayAttackAnimationClientRpc();
         }
         if (newState == EnemyState.Dead) Die();
     }
@@ -688,6 +709,73 @@ public class Enemy5_PhuThuy : NetworkBehaviour
             case EnemyState.Dead:
                 anim.SetTrigger(dieTriggerName); // Chơi hoạt ảnh Quai5Die
                 break;
+        }
+    }
+
+    [ClientRpc]
+    private void PlayAttackAnimationClientRpc()
+    {
+        if (anim == null) return;
+
+        anim.ResetTrigger(attackTriggerName);
+        anim.SetTrigger(attackTriggerName); // Kích hoạt quai5Attack
+    }
+
+    #endregion
+
+    #region Animation Events & Spell Launch Control
+
+    // Hàm này được gọi từ Animation Event tại keyframe chưởng để chưởng ra quả cầu phép
+    public void TriggerSpellLaunch()
+    {
+        // Chỉ Server mới thực hiện sinh quả cầu phép và tính toán sát thương
+        if (!IsServer || currentState.Value != EnemyState.Attack || hasCastSpell) return;
+
+        hasCastSpell = true;
+        LaunchSpellBall();
+    }
+
+    #endregion
+
+    #region Visual Effects (Enrage)
+
+    private void UpdateEnrageVisuals()
+    {
+        if (modelRenderers == null || modelRenderers.Length == 0) return;
+
+        if (propBlock == null) propBlock = new MaterialPropertyBlock();
+
+        bool isEnraged = currentHealth.Value < maxHealth * 0.5f;
+
+        if (isEnraged)
+        {
+            wasEnraged = true;
+            // Nhấp nháy màu xanh dương/cyan huyền ảo biểu thị phép thuật cuồng nộ thức tỉnh
+            float pingPong = Mathf.PingPong(Time.time * 3f, 1f);
+            Color enrageColor = Color.Lerp(Color.white, new Color(0f, 0.6f, 1f), pingPong); // Cyan/Blue phép thuật
+            
+            foreach (var r in modelRenderers)
+            {
+                if (r != null)
+                {
+                    r.GetPropertyBlock(propBlock);
+                    propBlock.SetColor("_Color", enrageColor);
+                    r.SetPropertyBlock(propBlock);
+                }
+            }
+        }
+        else if (wasEnraged)
+        {
+            wasEnraged = false;
+            foreach (var r in modelRenderers)
+            {
+                if (r != null)
+                {
+                    r.GetPropertyBlock(propBlock);
+                    propBlock.SetColor("_Color", Color.white);
+                    r.SetPropertyBlock(propBlock);
+                }
+            }
         }
     }
 

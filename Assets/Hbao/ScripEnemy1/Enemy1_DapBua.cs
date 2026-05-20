@@ -29,6 +29,12 @@ public class Enemy1_DapBua : NetworkBehaviour
         NetworkVariableWritePermission.Server
     );
 
+    public NetworkVariable<bool> isEnraged = new NetworkVariable<bool>(
+        false,
+        NetworkVariableReadPermission.Everyone,
+        NetworkVariableWritePermission.Server
+    );
+
     [Header("Advanced AI Sync")]
     // Đồng bộ hit để mọi người thấy bị trúng đòn
     public NetworkVariable<int> hitCounter = new NetworkVariable<int>(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
@@ -41,6 +47,11 @@ public class Enemy1_DapBua : NetworkBehaviour
     public NavMeshAgent agent;
     public Animator anim;
     public Transform eyeTransform; // Vị trí mắt của Enemy để bắn Raycast
+
+    [Header("Melee Hitbox Settings")]
+    public GameObject hammerHitbox; // Kéo GameObject vùng đánh (box collider ở tay/búa) vào đây (Giữ để tránh mất ref cũ)
+    public GameObject hammerHitboxLeft;  // Hitbox búa/vũ khí bên trái
+    public GameObject hammerHitboxRight; // Hitbox búa/vũ khí bên phải
 
     [Header("AI Settings")]
     public float sightRange = 15f;      // Tầm nhìn xa
@@ -68,7 +79,6 @@ public class Enemy1_DapBua : NetworkBehaviour
     private const float DETECTION_INTERVAL = 0.15f; // Quét mục tiêu 0.15s một lần để tiết kiệm CPU
 
     private float staggerTimer;
-    private bool isEnraged = false;
     private bool hasRoared = false;
 
     private float attackCooldownTimer;
@@ -85,34 +95,79 @@ public class Enemy1_DapBua : NetworkBehaviour
     private bool hasDealtDamage2;
     private float attackDuration;
 
+    // Bộ đệm tránh phân bổ rác (GC Alloc) khi quét va chạm
+    private readonly Collider[] detectionResults = new Collider[8];
+    private readonly Collider[] damageResults = new Collider[8];
+
     public override void OnNetworkSpawn()
     {
         // Lắng nghe sự thay đổi trạng thái để chạy Animation trên các Client
         currentState.OnValueChanged += OnStateChanged;
-        
-        // Đăng ký đồng bộ hoạt ảnh tấn công để các Client khác cũng nhìn thấy vung búa
-        attackType.OnValueChanged += OnAttackTypeChanged;
+
+        // Khởi tạo hoạt ảnh ban đầu khớp với trạng thái hiện tại (đặc biệt cho người chơi vào sau)
+        OnStateChanged(currentState.Value, currentState.Value);
+
+        // Tối ưu hóa đồng bộ chuyển động siêu nhỏ cho mọi Client cùng quan sát
+        var netTransform = GetComponent<Unity.Netcode.Components.NetworkTransform>();
+        if (netTransform != null)
+        {
+            netTransform.PositionThreshold = 0.001f;
+            netTransform.RotAngleThreshold = 0.01f;
+            netTransform.ScaleThreshold = 0.01f;
+        }
 
         if (IsServer)
         {
             currentHealth.Value = maxHealth;
+            isEnraged.Value = false;
             ChangeState(EnemyState.Idle);
+        }
+
+        // Đảm bảo các hitbox búa ban đầu được tắt
+        if (hammerHitbox != null)
+        {
+            hammerHitbox.SetActive(false);
+        }
+        if (hammerHitboxLeft != null)
+        {
+            hammerHitboxLeft.SetActive(false);
+        }
+        if (hammerHitboxRight != null)
+        {
+            hammerHitboxRight.SetActive(false);
         }
 
         // Lắng nghe hit để chạy hiệu ứng dính đòn cho mọi Client
         hitCounter.OnValueChanged += (oldVal, newVal) => {
-            if (anim != null) anim.SetTrigger("Hit");
+            if (anim != null)
+            {
+                // Không chạy trigger Hit bình thường nếu đang thực hiện gầm rú Phẫn nộ
+                if (currentState.Value == EnemyState.Stagger && isEnraged.Value && !hasRoared)
+                {
+                    return;
+                }
+                anim.SetTrigger("Hit");
+            }
         };
     }
 
     public override void OnNetworkDespawn()
     {
         currentState.OnValueChanged -= OnStateChanged;
-        attackType.OnValueChanged -= OnAttackTypeChanged;
     }
 
     private void Update()
     {
+        // Xử lý phóng to quái khi phẫn nộ (chạy trên cả Server và Client)
+        if (isEnraged.Value && !hasRoared)
+        {
+            transform.localScale = Vector3.Lerp(transform.localScale, Vector3.one * 1.15f, Time.deltaTime * 3f);
+            if (transform.localScale.x >= 1.14f)
+            {
+                hasRoared = true;
+            }
+        }
+
         // Chỉ Server mới được phép tính toán AI
         if (!IsServer) return;
 
@@ -161,11 +216,13 @@ public class Enemy1_DapBua : NetworkBehaviour
         // Nếu đang trong đòn đánh thì không đổi mục tiêu
         if (currentState.Value == EnemyState.Attack) return;
 
-        Collider[] playersInSight = Physics.OverlapSphere(transform.position, sightRange, playerLayer);
+        int numPlayers = Physics.OverlapSphereNonAlloc(transform.position, sightRange, detectionResults, playerLayer);
         bool playerFound = false;
 
-        foreach (Collider p in playersInSight)
+        for (int i = 0; i < numPlayers; i++)
         {
+            Collider p = detectionResults[i];
+            if (p == null) continue;
             Transform potentialTarget = p.transform;
 
             // Chỉ nhắm vào Player còn sống
@@ -277,7 +334,7 @@ public class Enemy1_DapBua : NetworkBehaviour
             if (dodgeTimer <= 0)
             {
                 isDodging = false;
-                if (agent.isActiveAndEnabled) agent.speed = isEnraged ? 7.5f : 5f;
+                if (agent.isActiveAndEnabled) agent.speed = isEnraged.Value ? 7.5f : 5f;
             }
             return;
         }
@@ -285,7 +342,7 @@ public class Enemy1_DapBua : NetworkBehaviour
         if (agent.isActiveAndEnabled)
         {
             agent.isStopped = false;
-            agent.speed = isEnraged ? 7.5f : 5f; 
+            agent.speed = isEnraged.Value ? 7.5f : 5f; 
         }
 
         float distanceToPlayer = Vector3.Distance(transform.position, targetPlayer.position);
@@ -348,7 +405,7 @@ public class Enemy1_DapBua : NetworkBehaviour
         if (agent.isActiveAndEnabled)
         {
             agent.isStopped = false;
-            agent.speed = isEnraged ? 5.5f : 4f;
+            agent.speed = isEnraged.Value ? 5.5f : 4f;
             agent.SetDestination(lastKnownPlayerPosition);
         }
 
@@ -380,16 +437,9 @@ public class Enemy1_DapBua : NetworkBehaviour
         if (agent.isActiveAndEnabled) agent.isStopped = true;
         staggerTimer -= Time.deltaTime;
 
-        // Nếu là Stagger đặc biệt do Phase 2 Roar gầm rú phẫn nộ
-        if (isEnraged && !hasRoared)
-        {
-            // Phóng to scale dần dần thêm 1.15 lần tạo cảm giác đột biến
-            transform.localScale = Vector3.Lerp(transform.localScale, Vector3.one * 1.15f, Time.deltaTime * 3f);
-        }
-
         if (staggerTimer <= 0)
         {
-            if (isEnraged && !hasRoared)
+            if (isEnraged.Value && !hasRoared)
             {
                 hasRoared = true; // Kết thúc roar chuyển sang phẫn nộ chiến đấu
             }
@@ -460,7 +510,7 @@ public class Enemy1_DapBua : NetworkBehaviour
         if (stateTimer <= 0)
         {
             // Giãn cách đòn đánh (hồi chiêu) để không bị spam quá nhanh, quái phẫn nộ sẽ hồi chiêu nhanh hơn
-            attackCooldownTimer = isEnraged ? 0.4f : 0.8f;
+            attackCooldownTimer = isEnraged.Value ? 0.4f : 0.8f;
             
             float distanceToPlayer = Vector3.Distance(transform.position, targetPlayer.position);
             if (distanceToPlayer > attackRange)
@@ -476,9 +526,11 @@ public class Enemy1_DapBua : NetworkBehaviour
 
     private void DealConeDamage(float damage, float range, float angle, float knockback)
     {
-        Collider[] hitColliders = Physics.OverlapSphere(transform.position, range, playerLayer);
-        foreach (var col in hitColliders)
+        int numPlayers = Physics.OverlapSphereNonAlloc(transform.position, range, damageResults, playerLayer);
+        for (int i = 0; i < numPlayers; i++)
         {
+            Collider col = damageResults[i];
+            if (col == null) continue;
             Transform player = col.transform;
             Vector3 dirToPlayer = (player.position - transform.position).normalized;
 
@@ -520,14 +572,14 @@ public class Enemy1_DapBua : NetworkBehaviour
         }
 
         // Kích hoạt Phase 2 Phẫn nộ gầm rú cực ngầu khi máu dưới 50%
-        if (currentHealth.Value <= maxHealth * 0.5f && !isEnraged)
+        if (currentHealth.Value <= maxHealth * 0.5f && !isEnraged.Value)
         {
-            isEnraged = true;
+            isEnraged.Value = true;
             staggerTimer = 1.2f; // Khóa di chuyển 1.2s để roar gầm thét
             ChangeState(EnemyState.Stagger);
             
-            // Đồng bộ tiếng thét / animation bằng cách gọi trigger Combo
-            attackType.Value = 2; 
+            // Đồng bộ tiếng thét / animation bằng cách gọi ClientRpc
+            PlayRoarAnimationClientRpc();
             return;
         }
 
@@ -581,7 +633,7 @@ public class Enemy1_DapBua : NetworkBehaviour
             if (agent.isActiveAndEnabled)
             {
                 agent.isStopped = false;
-                agent.speed = isEnraged ? 14f : 10f; // Lướt đi với tốc độ cực cao
+                agent.speed = isEnraged.Value ? 14f : 10f; // Lướt đi với tốc độ cực cao
                 agent.SetDestination(hit.position);
             }
         }
@@ -606,6 +658,12 @@ public class Enemy1_DapBua : NetworkBehaviour
 
     private void ChangeState(EnemyState newState)
     {
+        // Tự động tắt hitbox vũ khí nếu trạng thái chuyển từ Attack sang trạng thái khác (tránh lỗi kẹt hitbox khi bị khựng/chết)
+        if (currentState.Value == EnemyState.Attack && newState != EnemyState.Attack)
+        {
+            DisableWeaponHitbox();
+        }
+
         currentState.Value = newState;
 
         // Reset các biến liên quan khi chuyển trạng thái
@@ -635,6 +693,31 @@ public class Enemy1_DapBua : NetworkBehaviour
             if (agent.isActiveAndEnabled) agent.isStopped = true;
             // Nếu staggerTimer không được gán sẵn (như gầm rú), đặt mặc định choáng 0.6s
             if (staggerTimer <= 0) staggerTimer = 0.6f;
+        }
+        if (newState == EnemyState.Attack)
+        {
+            if (agent.isActiveAndEnabled) agent.isStopped = true;
+            
+            hasDealtDamage1 = false;
+            hasDealtDamage2 = false;
+
+            // Lựa chọn kiểu đòn đánh
+            if (isEnraged.Value && Random.value < 0.4f)
+            {
+                attackType.Value = 2; // Combo
+                attackDuration = 1.8f;
+            }
+            else
+            {
+                attackType.Value = isNextAttackLeft ? 0 : 1;
+                isNextAttackLeft = !isNextAttackLeft;
+                attackDuration = 1.1f;
+            }
+
+            stateTimer = attackDuration;
+
+            // Kích hoạt đồng bộ hóa hoạt ảnh tấn công qua ClientRpc
+            PlayAttackAnimationClientRpc(attackType.Value);
         }
         if (newState == EnemyState.Dead) Die();
     }
@@ -666,7 +749,17 @@ public class Enemy1_DapBua : NetworkBehaviour
                 anim.SetTrigger("Run");   
                 break;
             case EnemyState.Stagger:
-                anim.SetTrigger("Hit"); // Đồng bộ khựng choáng dính đòn lên toàn client
+                // Nếu là Stagger đặc biệt khi gầm rú phẫn nộ (máu <= 50%), Client tự chạy Combo để gầm rú
+                // Ngược lại chạy Hit bình thường
+                if (isEnraged.Value && !hasRoared)
+                {
+                    anim.ResetTrigger("Combo");
+                    anim.SetTrigger("Combo");
+                }
+                else
+                {
+                    anim.SetTrigger("Hit"); // Đồng bộ khựng choáng dính đòn lên toàn client
+                }
                 break;
             case EnemyState.Dead:
                 anim.SetTrigger("Die");   
@@ -688,6 +781,89 @@ public class Enemy1_DapBua : NetworkBehaviour
         else if (newVal == 1) anim.SetTrigger("quai1Attackphai");
         else if (newVal == 2) anim.SetTrigger("Combo");
     }
+
+    [ClientRpc]
+    private void PlayAttackAnimationClientRpc(int type)
+    {
+        if (anim == null) return;
+        
+        anim.ResetTrigger("AttLeft");
+        anim.ResetTrigger("quai1Attackphai");
+        anim.ResetTrigger("Combo");
+
+        if (type == 0) anim.SetTrigger("AttLeft");
+        else if (type == 1) anim.SetTrigger("quai1Attackphai");
+        else if (type == 2) anim.SetTrigger("Combo");
+    }
+
+    [ClientRpc]
+    private void PlayRoarAnimationClientRpc()
+    {
+        if (anim == null) return;
+        anim.ResetTrigger("Hit");
+        anim.ResetTrigger("Combo");
+        anim.SetTrigger("Combo"); // Combo là hoạt ảnh tiếng thét / gầm rú phẫn nộ
+    }
+
+    #region Animation Events & Hitbox Control
+
+    // Hàm này được gọi từ Animation Event tại frame vung búa để bật Box Collider tay/búa (hoặc cả hai)
+    public void EnableWeaponHitbox()
+    {
+        if (hammerHitbox != null)
+        {
+            hammerHitbox.SetActive(true);
+        }
+        EnableLeftWeaponHitbox();
+        EnableRightWeaponHitbox();
+    }
+
+    // Hàm này được gọi từ Animation Event tại frame vung búa xong hoặc kết thúc đòn đánh để tắt Box Collider (hoặc cả hai)
+    public void DisableWeaponHitbox()
+    {
+        if (hammerHitbox != null)
+        {
+            hammerHitbox.SetActive(false);
+        }
+        DisableLeftWeaponHitbox();
+        DisableRightWeaponHitbox();
+    }
+
+    // Bật/tắt riêng biệt cho tay/vũ khí bên trái
+    public void EnableLeftWeaponHitbox()
+    {
+        if (hammerHitboxLeft != null)
+        {
+            hammerHitboxLeft.SetActive(true);
+        }
+    }
+
+    public void DisableLeftWeaponHitbox()
+    {
+        if (hammerHitboxLeft != null)
+        {
+            hammerHitboxLeft.SetActive(false);
+        }
+    }
+
+    // Bật/tắt riêng biệt cho tay/vũ khí bên phải
+    public void EnableRightWeaponHitbox()
+    {
+        if (hammerHitboxRight != null)
+        {
+            hammerHitboxRight.SetActive(true);
+        }
+    }
+
+    public void DisableRightWeaponHitbox()
+    {
+        if (hammerHitboxRight != null)
+        {
+            hammerHitboxRight.SetActive(false);
+        }
+    }
+
+    #endregion
 
     #endregion
 

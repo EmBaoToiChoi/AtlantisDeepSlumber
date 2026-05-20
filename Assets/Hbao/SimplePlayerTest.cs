@@ -19,6 +19,13 @@ public class SimplePlayerTest : NetworkBehaviour
     [Header("Knockback Settings")]
     private Vector3 knockbackVelocity;
 
+    [Header("Camera Follow Settings")]
+    public bool enableCameraFollow = true;
+    public Vector3 cameraOffset = new Vector3(0f, 12f, -8f);
+    public float cameraSmoothSpeed = 5f;
+    public bool cameraLookAtPlayer = true;
+    private Camera targetCamera;
+
     public override void OnNetworkSpawn()
     {
         // Chỉ Local Owner mới lắng nghe sự thay đổi của máu để cập nhật lên UI HUD cá nhân
@@ -26,6 +33,13 @@ public class SimplePlayerTest : NetworkBehaviour
         {
             currentHealth.OnValueChanged += OnHealthChanged;
             UpdateHealthHUD(currentHealth.Value);
+
+            // Tìm camera chính hoặc bất kỳ camera nào trong Scene
+            targetCamera = Camera.main;
+            if (targetCamera == null)
+            {
+                targetCamera = FindObjectOfType<Camera>();
+            }
         }
     }
 
@@ -80,6 +94,46 @@ public class SimplePlayerTest : NetworkBehaviour
         if (Input.GetMouseButtonDown(0))
         {
             AttackServerRpc();
+        }
+    }
+
+    void LateUpdate()
+    {
+        // Chỉ Camera Follow hoạt động với Local Owner
+        if (!IsOwner || !enableCameraFollow) return;
+
+        if (targetCamera == null)
+        {
+            targetCamera = Camera.main;
+            if (targetCamera == null)
+            {
+                targetCamera = FindObjectOfType<Camera>();
+            }
+        }
+
+        if (targetCamera != null)
+        {
+            // Tính toán vị trí camera mục tiêu dựa trên offset
+            Vector3 targetPosition = transform.position + cameraOffset;
+
+            // Di chuyển camera mượt mà
+            targetCamera.transform.position = Vector3.Lerp(
+                targetCamera.transform.position,
+                targetPosition,
+                Time.deltaTime * cameraSmoothSpeed
+            );
+
+            // Tự động xoay camera hướng về phía Player nếu được bật
+            if (cameraLookAtPlayer)
+            {
+                // Thêm Vector3.up để camera hướng vào phần thân của Player (tránh nhìn vào chân)
+                Quaternion targetRotation = Quaternion.LookRotation((transform.position + Vector3.up * 1f) - targetCamera.transform.position);
+                targetCamera.transform.rotation = Quaternion.Slerp(
+                    targetCamera.transform.rotation,
+                    targetRotation,
+                    Time.deltaTime * cameraSmoothSpeed
+                );
+            }
         }
     }
 

@@ -41,6 +41,13 @@ public class Enemy3_Buaa : NetworkBehaviour
     public Transform eyeTransform; // Vị trí mắt để dò quét Player bằng Raycast
     public Renderer[] modelRenderers; // Dùng để đổi màu sắc cảnh báo khi quái cuồng bạo
 
+    [Header("Melee Hitbox Settings")]
+    public GameObject hammerHitbox; // Kéo GameObject vùng đánh (box collider ở tay/búa) vào đây
+
+    // Bộ đệm tránh phân bổ rác (GC Alloc) khi quét va chạm
+    private readonly Collider[] detectionResults = new Collider[8];
+    private readonly Collider[] damageResults = new Collider[8];
+
     [Header("AI Vision & Combat Settings")]
     public float sightRange = 15f;      // Tầm nhìn xa
     public float fieldOfView = 100f;    // Góc nhìn rộng
@@ -102,7 +109,18 @@ public class Enemy3_Buaa : NetworkBehaviour
     {
         // Đồng bộ hóa trạng thái di chuyển và các trigger trên Client
         currentState.OnValueChanged += OnStateChanged;
-        attackType.OnValueChanged += OnAttackTypeChanged;
+
+        // Khởi tạo hoạt ảnh ban đầu khớp với trạng thái hiện tại (đặc biệt cho người chơi vào sau)
+        OnStateChanged(currentState.Value, currentState.Value);
+
+        // Tối ưu hóa đồng bộ chuyển động siêu nhỏ cho mọi Client cùng quan sát
+        var netTransform = GetComponent<Unity.Netcode.Components.NetworkTransform>();
+        if (netTransform != null)
+        {
+            netTransform.PositionThreshold = 0.001f;
+            netTransform.RotAngleThreshold = 0.01f;
+            netTransform.ScaleThreshold = 0.01f;
+        }
 
         // Lưu kích thước ban đầu để phóng to khi phẫn nộ
         originalScale = transform.localScale;
@@ -111,6 +129,12 @@ public class Enemy3_Buaa : NetworkBehaviour
         {
             currentHealth.Value = maxHealth;
             ChangeState(EnemyState.Idle);
+        }
+
+        // Đảm bảo hitbox búa ban đầu được tắt
+        if (hammerHitbox != null)
+        {
+            hammerHitbox.SetActive(false);
         }
 
         // Lắng nghe hitCounter để chơi hoạt ảnh dính đòn (Hit/Anhit) trên mọi Client
@@ -126,7 +150,6 @@ public class Enemy3_Buaa : NetworkBehaviour
     public override void OnNetworkDespawn()
     {
         currentState.OnValueChanged -= OnStateChanged;
-        attackType.OnValueChanged -= OnAttackTypeChanged;
     }
 
     private void Update()
@@ -191,12 +214,14 @@ public class Enemy3_Buaa : NetworkBehaviour
         if (currentState.Value == EnemyState.Dead || currentState.Value == EnemyState.Stagger) return;
         if (currentState.Value == EnemyState.Attack) return;
 
-        Collider[] playersInSight = Physics.OverlapSphere(transform.position, sightRange, playerLayer);
+        int numPlayers = Physics.OverlapSphereNonAlloc(transform.position, sightRange, detectionResults, playerLayer);
         bool playerFound = false;
 
-        foreach (Collider p in playersInSight)
+        for (int i = 0; i < numPlayers; i++)
         {
-            Transform potentialTarget = p.transform;
+            Collider col = detectionResults[i];
+            if (col == null) continue;
+            Transform potentialTarget = col.transform;
 
             // Bỏ qua nếu Player đã chết
             SimplePlayerTest playerScript = potentialTarget.GetComponentInParent<SimplePlayerTest>();
@@ -492,9 +517,11 @@ public class Enemy3_Buaa : NetworkBehaviour
 
     private void DealConeDamage(float damage, float range, float angle, float knockback)
     {
-        Collider[] hitColliders = Physics.OverlapSphere(transform.position, range, playerLayer);
-        foreach (var col in hitColliders)
+        int numPlayers = Physics.OverlapSphereNonAlloc(transform.position, range, damageResults, playerLayer);
+        for (int i = 0; i < numPlayers; i++)
         {
+            Collider col = damageResults[i];
+            if (col == null) continue;
             Transform player = col.transform;
             Vector3 dirToPlayer = (player.position - transform.position).normalized;
 
@@ -675,6 +702,12 @@ public class Enemy3_Buaa : NetworkBehaviour
 
     private void ChangeState(EnemyState newState)
     {
+        // Tự động tắt hitbox vũ khí nếu trạng thái chuyển từ Attack sang trạng thái khác (tránh lỗi kẹt hitbox khi bị khựng/chết)
+        if (currentState.Value == EnemyState.Attack && newState != EnemyState.Attack)
+        {
+            DisableWeaponHitbox();
+        }
+
         currentState.Value = newState;
 
         if (newState == EnemyState.Idle) 
@@ -732,8 +765,8 @@ public class Enemy3_Buaa : NetworkBehaviour
 
             stateTimer = attackDuration;
 
-            // Kích hoạt đồng bộ hóa hoạt ảnh tấn công
-            OnAttackTypeChanged(0, attackType.Value);
+            // Kích hoạt đồng bộ hóa hoạt ảnh tấn công qua ClientRpc đến toàn bộ client
+            PlayAttackAnimationClientRpc(attackType.Value);
         }
         if (newState == EnemyState.Dead) Die();
     }
@@ -774,8 +807,8 @@ public class Enemy3_Buaa : NetworkBehaviour
         }
     }
 
-    // Chạy trên TẤT CẢ Client khi kiểu tấn công thay đổi để vung búa đồng bộ
-    private void OnAttackTypeChanged(int oldVal, int newVal)
+    [ClientRpc]
+    private void PlayAttackAnimationClientRpc(int type)
     {
         if (anim == null) return;
 
@@ -783,9 +816,31 @@ public class Enemy3_Buaa : NetworkBehaviour
         anim.ResetTrigger(attack2TriggerName);
         anim.ResetTrigger(attack3TriggerName);
 
-        if (newVal == 0) anim.SetTrigger(attack1TriggerName);      // Kích hoạt quai3attack
-        else if (newVal == 1) anim.SetTrigger(attack2TriggerName); // Kích hoạt quai3combo
-        else if (newVal == 2) anim.SetTrigger(attack3TriggerName); // Kích hoạt quai3runlumpattack
+        if (type == 0) anim.SetTrigger(attack1TriggerName);      // Kích hoạt quai3attack
+        else if (type == 1) anim.SetTrigger(attack2TriggerName); // Kích hoạt quai3combo
+        else if (type == 2) anim.SetTrigger(attack3TriggerName); // Kích hoạt quai3runlumpattack
+    }
+
+    #endregion
+
+    #region Animation Events & Hitbox Control
+
+    // Hàm này được gọi từ Animation Event tại frame vung búa để bật Box Collider búa
+    public void EnableWeaponHitbox()
+    {
+        if (hammerHitbox != null)
+        {
+            hammerHitbox.SetActive(true);
+        }
+    }
+
+    // Hàm này được gọi từ Animation Event tại frame vung búa xong hoặc kết thúc đòn đánh để tắt Box Collider
+    public void DisableWeaponHitbox()
+    {
+        if (hammerHitbox != null)
+        {
+            hammerHitbox.SetActive(false);
+        }
     }
 
     #endregion

@@ -466,9 +466,9 @@ public class NetworkWaitingRoom : NetworkBehaviour
     [ServerRpc(RequireOwnership = false)]
     private void StartGameServerRpc() {
         if (IsServer) {
-            Debug.Log("[SERVER] Nhận lệnh khởi động game! Đang chuyển tất cả người chơi sang cảnh 'minigame'...");
+            Debug.Log("[SERVER] Nhận lệnh khởi động game! Đang chuyển tất cả người chơi sang cảnh 'HBao'...");
             if (NetworkManager.Singleton != null && NetworkManager.Singleton.SceneManager != null) {
-                NetworkManager.Singleton.SceneManager.LoadScene("minigame", UnityEngine.SceneManagement.LoadSceneMode.Single);
+                NetworkManager.Singleton.SceneManager.LoadScene("HBao", UnityEngine.SceneManagement.LoadSceneMode.Single);
             }
         }
     }
