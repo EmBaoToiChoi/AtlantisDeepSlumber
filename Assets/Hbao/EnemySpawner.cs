@@ -153,29 +153,55 @@ public class EnemySpawner : NetworkBehaviour
 
     public override void OnNetworkSpawn()
     {
-        // Only the Server/Host manages spawning of networked objects
-        if (!IsServer) return;
-
-        // 1. Đăng ký sự kiện chuyển cảnh thành công để tự động sinh Player cho tất cả các Client khi load xong
-        if (NetworkManager.Singleton != null && NetworkManager.Singleton.SceneManager != null)
+        if (IsServer)
         {
-            NetworkManager.Singleton.SceneManager.OnLoadEventCompleted += OnSceneLoadEventCompleted;
-        }
-
-        // 2. Auto spawn player for existing clients on scene start (Đặc biệt hữu ích khi Editor playtest trực tiếp)
-        if (autoSpawnPlayer && playerPrefab != null)
-        {
-            foreach (var client in NetworkManager.Singleton.ConnectedClientsList)
+            // 1. Đăng ký sự kiện chuyển cảnh thành công để tự động sinh Player cho tất cả các Client khi load xong
+            if (NetworkManager.Singleton != null && NetworkManager.Singleton.SceneManager != null)
             {
-                SpawnPlayerForClient(client.ClientId);
+                NetworkManager.Singleton.SceneManager.OnLoadEventCompleted += OnSceneLoadEventCompleted;
+            }
+
+            // 2. Auto spawn player for existing clients on scene start (Đặc biệt hữu ích khi Editor playtest trực tiếp)
+            if (autoSpawnPlayer && playerPrefab != null)
+            {
+                // Chỉ tự động spawn ngay lập tức cho Host khi chạy trực tiếp scene này (không qua chuyển cảnh từ sảnh chờ)
+                // Các client thật từ xa sẽ tự động gửi RequestSpawnPlayerServerRpc hoặc được xử lý qua OnSceneLoadEventCompleted khi load xong.
+                if (NetworkManager.Singleton.IsHost)
+                {
+                    Debug.Log("[EnemySpawner] Phát hiện chế độ Host. Tự động khởi tạo Player lập tức cho Host...");
+                    SpawnPlayerForClient(NetworkManager.Singleton.LocalClientId);
+                }
+            }
+
+            // 3. Auto spawn enemies
+            if (autoSpawnOnStart)
+            {
+                SpawnAllConfiguredEnemies();
             }
         }
 
-        // 3. Auto spawn enemies
-        if (autoSpawnOnStart)
+        if (IsClient)
         {
-            SpawnAllConfiguredEnemies();
+            // Phía máy khách (Client) sau khi load xong scene và EnemySpawner được đồng bộ hóa
+            // Sẽ gửi yêu cầu ServerRpc chủ động đòi Server sinh Player cho mình.
+            // Điều này đảm bảo 100% Client có Player khi di chuyển từ Lobby Room sang scene này.
+            Debug.Log($"[EnemySpawner] [CLIENT] Đã load xong scene gameplay. Gửi ServerRpc yêu cầu sinh Player cho Client ID: {NetworkManager.Singleton.LocalClientId}");
+            RequestSpawnPlayerServerRpc();
         }
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    private void RequestSpawnPlayerServerRpc(ServerRpcParams rpcParams = default)
+    {
+        ulong clientId = rpcParams.Receive.SenderClientId;
+        Debug.Log($"[EnemySpawner] [SERVER] Nhận được yêu cầu sinh Player từ Client ID {clientId} qua ServerRpc.");
+        SpawnPlayerForClient(clientId);
+    }
+
+    [ClientRpc]
+    private void NotifySpawningErrorClientRpc(string errorMessage, ClientRpcParams rpcParams = default)
+    {
+        Debug.LogError($"[EnemySpawner] [LỖI TỪ VPS SERVER] {errorMessage}");
     }
 
     public override void OnNetworkDespawn()
@@ -203,10 +229,10 @@ public class EnemySpawner : NetworkBehaviour
 
     private void OnClientConnected(ulong clientId)
     {
-        if (IsServer && autoSpawnPlayer)
-        {
-            SpawnPlayerForClient(clientId);
-        }
+        // Khi client kết nối, họ đang bắt đầu tải Scene. Không sinh Player ngay lúc này vì sẽ bị lỗi Client chưa tải xong Scene.
+        // Player sẽ được sinh tự động khi client hoàn tất tải cảnh thông qua sự kiện OnSceneLoadEventCompleted
+        // Hoặc khi Client gửi yêu cầu RequestSpawnPlayerServerRpc().
+        Debug.Log($"[EnemySpawner] Client {clientId} đã kết nối. Đợi Client tải xong Scene để sinh Player...");
     }
 
     private void Update()
@@ -249,7 +275,15 @@ public class EnemySpawner : NetworkBehaviour
 
         if (playerPrefab == null)
         {
-            Debug.LogError("[EnemySpawner] KHÔNG THỂ SPAWN PLAYER: 'playerPrefab' chưa được gán trong Inspector! Vui lòng kéo thả Player Prefab vào EnemySpawner.");
+            string errMsg = "KHÔNG THỂ SPAWN PLAYER: 'playerPrefab' chưa được gán trong Inspector trên VPS! Vui lòng mở scene 'HBao', kéo thả Player Prefab vào ô của EnemySpawner, sau đó thực hiện BUILD và UPLOAD lại Server lên VPS.";
+            Debug.LogError("[EnemySpawner] " + errMsg);
+            
+            // Gửi thông báo lỗi về máy khách để hiện trên Console của họ
+            ClientRpcParams clientRpcParams = new ClientRpcParams
+            {
+                Send = new ClientRpcSendParams { TargetClientIds = new ulong[] { clientId } }
+            };
+            NotifySpawningErrorClientRpc(errMsg, clientRpcParams);
             return;
         }
 
@@ -292,8 +326,16 @@ public class EnemySpawner : NetworkBehaviour
         }
         else
         {
-            Debug.LogError("[EnemySpawner] LỖI: Player Prefab được gán thiếu thành phần NetworkObject!");
+            string errMsg = $"Player Prefab '{playerPrefab.name}' thiếu thành phần NetworkObject! Vui lòng mở Prefab và thêm component NetworkObject vào.";
+            Debug.LogError("[EnemySpawner] " + errMsg);
             Destroy(playerObj);
+
+            // Gửi thông báo lỗi về máy khách
+            ClientRpcParams clientRpcParams = new ClientRpcParams
+            {
+                Send = new ClientRpcSendParams { TargetClientIds = new ulong[] { clientId } }
+            };
+            NotifySpawningErrorClientRpc(errMsg, clientRpcParams);
         }
     }
 

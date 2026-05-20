@@ -15,7 +15,7 @@ public class Enemy4HealthBar : MonoBehaviour
     private void OnEnable()
     {
         mainCamera = Camera.main;
-        if (uiDocument == null) uiDocument = GetComponent<UIDocument>();
+        if (uiDocument == null) uiDocument = GetComponentInChildren<UIDocument>();
 
         if (uiDocument != null)
         {
@@ -67,7 +67,17 @@ public class Enemy4HealthBar : MonoBehaviour
         // Xoay mặt phẳng UI đối diện với hướng camera của người chơi (Billboard Effect)
         if (mainCamera != null)
         {
-            transform.LookAt(transform.position + mainCamera.transform.rotation * Vector3.forward,
+            // Sửa lỗi: Nếu script này được gắn ở Root của Enemy, ta chỉ quay Transform của UI Document (hoặc Canvas con)
+            // để tránh làm quay cả thân quái (cúi mặt xuống đất)
+            Transform targetRotationTransform = (uiDocument != null) ? uiDocument.transform : transform;
+            
+            // Nếu targetRotationTransform vẫn là root của Enemy (có script di chuyển/AI và Animator), ta BỎ QUA không quay để tránh lỗi cúi đầu
+            if (targetRotationTransform == transform && GetComponent<Animator>() != null)
+            {
+                return;
+            }
+
+            targetRotationTransform.LookAt(targetRotationTransform.position + mainCamera.transform.rotation * Vector3.forward,
                              mainCamera.transform.rotation * Vector3.up);
         }
     }
