@@ -97,12 +97,7 @@ public class EnemySpawner : NetworkBehaviour
     /// </summary>
     private void EnsurePrefabsRegistered(NetworkManager netManager)
     {
-        if (netManager == null || netManager.NetworkConfig == null) return;
-
-        if (netManager.NetworkConfig.Prefabs == null)
-        {
-            netManager.NetworkConfig.Prefabs = new System.Collections.Generic.List<NetworkPrefab>();
-        }
+        if (netManager == null || netManager.NetworkConfig == null || netManager.NetworkConfig.Prefabs == null) return;
 
         System.Action<GameObject> registerIfMissing = (prefab) =>
         {
@@ -114,12 +109,15 @@ public class EnemySpawner : NetworkBehaviour
             }
 
             bool exists = false;
-            foreach (var netPrefab in netManager.NetworkConfig.Prefabs)
+            if (netManager.NetworkConfig.Prefabs.Prefabs != null)
             {
-                if (netPrefab.Prefab == prefab)
+                foreach (var netPrefab in netManager.NetworkConfig.Prefabs.Prefabs)
                 {
-                    exists = true;
-                    break;
+                    if (netPrefab.Prefab == prefab)
+                    {
+                        exists = true;
+                        break;
+                    }
                 }
             }
 
@@ -158,7 +156,13 @@ public class EnemySpawner : NetworkBehaviour
         // Only the Server/Host manages spawning of networked objects
         if (!IsServer) return;
 
-        // Auto spawn player for existing clients on scene start
+        // 1. Đăng ký sự kiện chuyển cảnh thành công để tự động sinh Player cho tất cả các Client khi load xong
+        if (NetworkManager.Singleton != null && NetworkManager.Singleton.SceneManager != null)
+        {
+            NetworkManager.Singleton.SceneManager.OnLoadEventCompleted += OnSceneLoadEventCompleted;
+        }
+
+        // 2. Auto spawn player for existing clients on scene start (Đặc biệt hữu ích khi Editor playtest trực tiếp)
         if (autoSpawnPlayer && playerPrefab != null)
         {
             foreach (var client in NetworkManager.Singleton.ConnectedClientsList)
@@ -170,10 +174,43 @@ public class EnemySpawner : NetworkBehaviour
             }
         }
 
-        // Auto spawn enemies
+        // 3. Auto spawn enemies
         if (autoSpawnOnStart)
         {
             SpawnAllConfiguredEnemies();
+        }
+    }
+
+    public override void OnNetworkDespawn()
+    {
+        if (IsServer)
+        {
+            if (NetworkManager.Singleton != null && NetworkManager.Singleton.SceneManager != null)
+            {
+                NetworkManager.Singleton.SceneManager.OnLoadEventCompleted -= OnSceneLoadEventCompleted;
+            }
+        }
+    }
+
+    private void OnSceneLoadEventCompleted(string sceneName, UnityEngine.SceneManagement.LoadSceneMode loadSceneMode, System.Collections.Generic.List<ulong> clientsCompleted, System.Collections.Generic.List<ulong> clientsTimedOut)
+    {
+        if (!IsServer || !autoSpawnPlayer || playerPrefab == null) return;
+
+        Debug.Log($"[EnemySpawner] Phát hiện Scene '{sceneName}' đã load xong cho toàn bộ clients. Tiến hành sinh Player.");
+
+        foreach (ulong clientId in clientsCompleted)
+        {
+            if (NetworkManager.Singleton.ConnectedClients.TryGetValue(clientId, out var client))
+            {
+                if (client.PlayerObject == null)
+                {
+                    SpawnPlayerForClient(clientId);
+                }
+                else
+                {
+                    Debug.Log($"[EnemySpawner] Client {clientId} đã có PlayerObject, bỏ qua không sinh trùng lặp.");
+                }
+            }
         }
     }
 
