@@ -98,6 +98,8 @@ public class Enemy4_Bongtoi : NetworkBehaviour
 
     private bool wasEnraged = false;
     private MaterialPropertyBlock propBlock;
+    private EnemyState clientLocalState = (EnemyState)(-1);
+    private int framesSinceActive = 0;
 
     private void Awake()
     {
@@ -106,21 +108,27 @@ public class Enemy4_Bongtoi : NetworkBehaviour
             anim = GetComponent<Animator>();
             if (anim == null)
             {
-                anim = GetComponentInChildren<Animator>();
+                anim = GetComponentInChildren<Animator>(true);
             }
         }
 
         var netAnim = GetComponent<Unity.Netcode.Components.NetworkAnimator>();
-        if (netAnim != null && netAnim.Animator == null)
+        if (netAnim != null)
         {
-            if (anim != null)
+            if (anim == null)
             {
-                netAnim.Animator = anim;
-                Debug.Log($"[{gameObject.name}] Đã tự động gán Animator '{anim.name}' vào NetworkAnimator để tránh lỗi NullReferenceException.");
+                Debug.LogError($"[{gameObject.name}] KHÔNG TÌM THẤY component Animator trên đối tượng này hoặc con của nó! Đang vô hiệu hóa NetworkAnimator để tránh lỗi crash game NullReferenceException.");
+                netAnim.enabled = false;
+            }
+            else if (anim.runtimeAnimatorController == null)
+            {
+                Debug.LogError($"[{gameObject.name}] PHÁT HIỆN LỖI: Animator tồn tại nhưng CHƯA ĐƯỢC GÁN 'Animator Controller' trong cửa sổ Inspector của Prefab! Vui lòng kéo Animator Controller của quái 4 vào thành phần Animator của nó trong Prefab. Đang vô hiệu hóa NetworkAnimator để tránh crash game NullReferenceException.");
+                netAnim.enabled = false;
             }
             else
             {
-                Debug.LogError($"[{gameObject.name}] Không tìm thấy Animator nào trên đối tượng để gán cho NetworkAnimator!");
+                netAnim.Animator = anim;
+                Debug.Log($"[{gameObject.name}] Đã liên kết tự động thành công Animator '{anim.name}' vào NetworkAnimator.");
             }
         }
     }
@@ -146,6 +154,20 @@ public class Enemy4_Bongtoi : NetworkBehaviour
         {
             currentHealth.Value = maxHealth;
             ChangeState(EnemyState.Idle);
+
+            // Warp snap quái vào NavMesh khi sinh ra để tránh kẹt
+            if (agent != null && agent.isActiveAndEnabled)
+            {
+                if (!agent.isOnNavMesh)
+                {
+                    NavMeshHit hit;
+                    if (NavMesh.SamplePosition(transform.position, out hit, 10f, NavMesh.AllAreas))
+                    {
+                        agent.Warp(hit.position);
+                        Debug.Log($"[{gameObject.name}] Snapped to NavMesh on spawn at {hit.position}");
+                    }
+                }
+            }
         }
 
         // Đảm bảo các hitbox ban đầu được tắt
@@ -176,8 +198,38 @@ public class Enemy4_Bongtoi : NetworkBehaviour
         // Hiệu ứng màu sắc cuồng bạo nhấp nháy tím khi yếu máu (chạy trên cả server/client để mượt mà)
         UpdateEnrageVisuals();
 
+        // Đồng bộ hóa an toàn hoạt ảnh di chuyển trên Client
+        if (anim != null && anim.isActiveAndEnabled && anim.runtimeAnimatorController != null)
+        {
+            framesSinceActive++;
+            if (clientLocalState != currentState.Value)
+            {
+                if (SyncAnimationState(currentState.Value))
+                {
+                    if (framesSinceActive >= 10)
+                    {
+                        clientLocalState = currentState.Value;
+                    }
+                }
+            }
+        }
+        else
+        {
+            framesSinceActive = 0;
+        }
+
         // Chỉ Server mới có quyền tính toán và ra quyết định AI
         if (!IsServer) return;
+
+        // Tự động snap quái lại vào NavMesh nếu vô tình bị đẩy văng ra ngoài
+        if (agent != null && agent.isActiveAndEnabled && !agent.isOnNavMesh)
+        {
+            NavMeshHit hit;
+            if (NavMesh.SamplePosition(transform.position, out hit, 5f, NavMesh.AllAreas))
+            {
+                agent.Warp(hit.position);
+            }
+        }
 
         // Giảm thời gian hồi chiêu
         if (attackCooldownTimer > 0) attackCooldownTimer -= Time.deltaTime;
@@ -234,7 +286,29 @@ public class Enemy4_Bongtoi : NetworkBehaviour
         if (currentState.Value == EnemyState.Attack) return;
 
         int numPlayers = Physics.OverlapSphereNonAlloc(transform.position, sightRange, detectionResults, playerLayer);
+        
+        // Quét dự phòng theo Tag "Player" nếu LayerMask không trả về kết quả
+        if (numPlayers == 0)
+        {
+            GameObject[] players = GameObject.FindGameObjectsWithTag("Player");
+            int count = 0;
+            foreach (var p in players)
+            {
+                if (count >= detectionResults.Length) break;
+                if (Vector3.Distance(transform.position, p.transform.position) <= sightRange)
+                {
+                    Collider col = p.GetComponent<Collider>();
+                    if (col != null)
+                    {
+                        detectionResults[count++] = col;
+                    }
+                }
+            }
+            numPlayers = count;
+        }
+
         bool found = false;
+        Vector3 eyePos = eyeTransform != null ? eyeTransform.position : transform.position + Vector3.up * 1.5f;
 
         for (int i = 0; i < numPlayers; i++)
         {
@@ -246,15 +320,15 @@ public class Enemy4_Bongtoi : NetworkBehaviour
             SimplePlayerTest playerScript = playerTrans.GetComponentInParent<SimplePlayerTest>();
             if (playerScript != null && playerScript.currentHealth.Value <= 0) continue;
 
-            Vector3 direction = (playerTrans.position - eyeTransform.position).normalized;
+            Vector3 direction = (playerTrans.position - eyePos).normalized;
 
             // Kiểm tra góc FOV
             if (Vector3.Angle(transform.forward, direction) < fieldOfView / 2f)
             {
-                float distance = Vector3.Distance(eyeTransform.position, playerTrans.position);
+                float distance = Vector3.Distance(eyePos, playerTrans.position);
 
                 // Bắn Raycast kiểm tra vật cản (tránh nhìn xuyên tường)
-                if (!Physics.Raycast(eyeTransform.position, direction, distance, obstacleLayer))
+                if (!Physics.Raycast(eyePos, direction, distance, obstacleLayer))
                 {
                     targetPlayer = playerTrans;
                     found = true;
@@ -290,8 +364,7 @@ public class Enemy4_Bongtoi : NetworkBehaviour
 
         if (stateTimer <= 0)
         {
-            // Luân phiên ngẫu nhiên 3 trạng thái khi đứng yên hết thời gian:
-            // 40% Đi dạo (Walk), 30% Đứng tiếp (Idle), 30% Chạy tuần tra nhanh (Run)
+            // Tự nhiên ngẫu nhiên: 40% đi dạo, 30% chạy dạo tuần tra, 30% đứng nghỉ ngơi
             float rand = Random.value;
             if (rand < 0.4f)
             {
@@ -300,8 +373,6 @@ public class Enemy4_Bongtoi : NetworkBehaviour
             else if (rand < 0.7f)
             {
                 ChangeState(EnemyState.Run);
-                // Tạo điểm tuần tra xa hơn một chút khi chạy
-                hasDestination = false;
             }
             else
             {
@@ -331,11 +402,10 @@ public class Enemy4_Bongtoi : NetworkBehaviour
         if (hasDestination && agent.isActiveAndEnabled && agent.remainingDistance <= agent.stoppingDistance)
         {
             hasDestination = false;
-            // 50% đứng im (Idle), 50% chuyển sang chạy dạo (Run) hoặc đi tiếp
             float rand = Random.value;
-            if (rand < 0.5f) ChangeState(EnemyState.Idle);
-            else if (rand < 0.8f) ChangeState(EnemyState.Run);
-            else hasDestination = false; // đi tiếp điểm mới
+            if (rand < 0.4f) ChangeState(EnemyState.Idle);
+            else if (rand < 0.8f) ChangeState(EnemyState.Walk);
+            else ChangeState(EnemyState.Run);
         }
     }
 
@@ -363,10 +433,17 @@ public class Enemy4_Bongtoi : NetworkBehaviour
             if (hasDestination && agent.isActiveAndEnabled && agent.remainingDistance <= agent.stoppingDistance)
             {
                 hasDestination = false;
-                // Kết thúc chạy tuần tra -> 60% chuyển sang Idle nghỉ ngơi, 40% chuyển sang đi bộ dạo
                 ChangeState(Random.value < 0.6f ? EnemyState.Idle : EnemyState.Walk);
             }
             return;
+        }
+
+        // Quay mặt cực nhanh khóa chặt Player khi phát hiện và truy đuổi
+        Vector3 lookDir = (targetPlayer.position - transform.position);
+        lookDir.y = 0;
+        if (lookDir != Vector3.zero)
+        {
+            transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(lookDir), Time.deltaTime * 15f);
         }
 
         // 2. Trường hợp Đuổi theo Player (Chase mode)
@@ -493,14 +570,14 @@ public class Enemy4_Bongtoi : NetworkBehaviour
         float elapsed = attackDuration - stateTimer;
 
         // Khóa hướng xoay ở 30% đầu của hoạt ảnh chuẩn bị đánh để tăng độ chính xác,
-        // Sau đó người chơi có thể lướt hoặc di chuyển né sang sườn
+        // Nâng tốc độ slerp lên 18f để snappy khóa mục tiêu
         if (elapsed < attackDuration * 0.3f)
         {
             Vector3 lookDir = (targetPlayer.position - transform.position);
             lookDir.y = 0;
             if (lookDir != Vector3.zero)
             {
-                transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(lookDir), Time.deltaTime * 11f);
+                transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(lookDir), Time.deltaTime * 18f);
             }
         }
 
@@ -541,6 +618,28 @@ public class Enemy4_Bongtoi : NetworkBehaviour
     private void DealConeDamage(float damage, float range, float angle, float knockback)
     {
         int numHits = Physics.OverlapSphereNonAlloc(transform.position, range, damageResults, playerLayer);
+        
+        if (numHits == 0)
+        {
+            GameObject[] players = GameObject.FindGameObjectsWithTag("Player");
+            int count = 0;
+            foreach (var p in players)
+            {
+                if (count >= damageResults.Length) break;
+                if (Vector3.Distance(transform.position, p.transform.position) <= range)
+                {
+                    Collider col = p.GetComponent<Collider>();
+                    if (col != null)
+                    {
+                        damageResults[count++] = col;
+                    }
+                }
+            }
+            numHits = count;
+        }
+
+        Vector3 eyePos = eyeTransform != null ? eyeTransform.position : transform.position + Vector3.up * 1.5f;
+
         for (int i = 0; i < numHits; i++)
         {
             Collider col = damageResults[i];
@@ -553,7 +652,7 @@ public class Enemy4_Bongtoi : NetworkBehaviour
             {
                 float dist = Vector3.Distance(transform.position, player.position);
                 // Tránh cào xuyên tường cản
-                if (!Physics.Raycast(eyeTransform.position, dir, dist, obstacleLayer))
+                if (!Physics.Raycast(eyePos, dir, dist, obstacleLayer))
                 {
                     SimplePlayerTest playerScript = player.GetComponentInParent<SimplePlayerTest>();
                     if (playerScript != null)
@@ -762,7 +861,12 @@ public class Enemy4_Bongtoi : NetworkBehaviour
     // Hàm chạy trên toàn bộ máy Client khi currentState đổi để đồng bộ Animator chuyển động
     private void OnStateChanged(EnemyState previousValue, EnemyState newValue)
     {
-        if (anim == null) return;
+        clientLocalState = (EnemyState)(-1);
+    }
+
+    private bool SyncAnimationState(EnemyState newState)
+    {
+        if (anim == null || !anim.isActiveAndEnabled || anim.runtimeAnimatorController == null) return false;
 
         // Reset toàn bộ trigger cũ để tránh xung đột chuyển động
         anim.ResetTrigger(idleTriggerName);
@@ -771,7 +875,7 @@ public class Enemy4_Bongtoi : NetworkBehaviour
         anim.ResetTrigger(hitTriggerName);
         anim.ResetTrigger(dieTriggerName);
 
-        switch (newValue)
+        switch (newState)
         {
             case EnemyState.Idle:
                 anim.SetTrigger(idleTriggerName); 
@@ -789,6 +893,7 @@ public class Enemy4_Bongtoi : NetworkBehaviour
                 anim.SetTrigger(dieTriggerName); // Chạy hoạt ảnh Qual4Dle
                 break;
         }
+        return true;
     }
 
     [ClientRpc]

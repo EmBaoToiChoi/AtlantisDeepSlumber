@@ -34,6 +34,8 @@ public class EnemySpawner : NetworkBehaviour
     [Tooltip("Enable keyboard hotkeys to dynamically spawn enemies during playtesting.")]
     public bool enableHotkeys = true;
 
+    private int nextEnemySpawnIndex = 0;
+
     private void Start()
     {
 #if UNITY_EDITOR
@@ -258,11 +260,24 @@ public class EnemySpawner : NetworkBehaviour
             SpawnAllConfiguredEnemies();
         }
 
-        // Press 'P' to spawn/respawn player for Host
+        // Press 'P' to spawn next enemy sequentially
         if (Input.GetKeyDown(KeyCode.P))
         {
-            Debug.Log("[EnemySpawner] Hotkey 'P' pressed. Spawning player for Host client.");
-            SpawnPlayerForClient(NetworkManager.Singleton.LocalClientId);
+            // Find a valid enemy to spawn (skip unassigned configs if any, to avoid printing warnings)
+            int attempts = 0;
+            while (attempts < enemyConfigs.Length)
+            {
+                EnemySpawnConfig config = enemyConfigs[nextEnemySpawnIndex];
+                if (config.enemyPrefab != null)
+                {
+                    Debug.Log($"[EnemySpawner] Hotkey 'P' pressed. Spawning {config.enemyName} (Index {nextEnemySpawnIndex}).");
+                    SpawnEnemyAtIndex(nextEnemySpawnIndex);
+                    nextEnemySpawnIndex = (nextEnemySpawnIndex + 1) % enemyConfigs.Length;
+                    break;
+                }
+                nextEnemySpawnIndex = (nextEnemySpawnIndex + 1) % enemyConfigs.Length;
+                attempts++;
+            }
         }
     }
 
