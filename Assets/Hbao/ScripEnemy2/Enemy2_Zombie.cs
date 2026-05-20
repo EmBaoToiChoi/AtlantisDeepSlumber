@@ -83,6 +83,9 @@ public class Enemy2_Zombie : NetworkBehaviour
     private readonly Collider[] detectionResults = new Collider[8];
     private readonly Collider[] damageResults = new Collider[8];
 
+    private EnemyState clientLocalState = (EnemyState)(-1);
+    private int framesSinceActive = 0;
+
     private void Awake()
     {
         if (anim == null)
@@ -90,21 +93,27 @@ public class Enemy2_Zombie : NetworkBehaviour
             anim = GetComponent<Animator>();
             if (anim == null)
             {
-                anim = GetComponentInChildren<Animator>();
+                anim = GetComponentInChildren<Animator>(true);
             }
         }
 
         var netAnim = GetComponent<Unity.Netcode.Components.NetworkAnimator>();
-        if (netAnim != null && netAnim.Animator == null)
+        if (netAnim != null)
         {
-            if (anim != null)
+            if (anim == null)
             {
-                netAnim.Animator = anim;
-                Debug.Log($"[{gameObject.name}] Đã tự động gán Animator '{anim.name}' vào NetworkAnimator để tránh lỗi NullReferenceException.");
+                Debug.LogError($"[{gameObject.name}] KHÔNG TÌM THẤY component Animator trên đối tượng này hoặc con của nó! Đang vô hiệu hóa NetworkAnimator để tránh lỗi crash game NullReferenceException.");
+                netAnim.enabled = false;
+            }
+            else if (anim.runtimeAnimatorController == null)
+            {
+                Debug.LogError($"[{gameObject.name}] PHÁT HIỆN LỖI: Animator tồn tại nhưng CHƯA ĐƯỢC GÁN 'Animator Controller' trong cửa sổ Inspector của Prefab! Vui lòng kéo Animator Controller của quái 2 vào thành phần Animator của nó trong Prefab. Đang vô hiệu hóa NetworkAnimator để tránh crash game NullReferenceException.");
+                netAnim.enabled = false;
             }
             else
             {
-                Debug.LogError($"[{gameObject.name}] Không tìm thấy Animator nào trên đối tượng để gán cho NetworkAnimator!");
+                netAnim.Animator = anim;
+                Debug.Log($"[{gameObject.name}] Đã liên kết tự động thành công Animator '{anim.name}' vào NetworkAnimator.");
             }
         }
     }
@@ -130,6 +139,20 @@ public class Enemy2_Zombie : NetworkBehaviour
         {
             currentHealth.Value = maxHealth;
             ChangeState(EnemyState.Idle);
+
+            // Warp snap quái vào NavMesh khi sinh ra để tránh kẹt
+            if (agent != null && agent.isActiveAndEnabled)
+            {
+                if (!agent.isOnNavMesh)
+                {
+                    NavMeshHit hit;
+                    if (NavMesh.SamplePosition(transform.position, out hit, 10f, NavMesh.AllAreas))
+                    {
+                        agent.Warp(hit.position);
+                        Debug.Log($"[{gameObject.name}] Snapped to NavMesh on spawn at {hit.position}");
+                    }
+                }
+            }
         }
 
         // Đảm bảo hitbox vuốt ban đầu được tắt
@@ -155,8 +178,38 @@ public class Enemy2_Zombie : NetworkBehaviour
 
     private void Update()
     {
+        // Đồng bộ hóa an toàn hoạt ảnh di chuyển trên Client
+        if (anim != null && anim.isActiveAndEnabled && anim.runtimeAnimatorController != null)
+        {
+            framesSinceActive++;
+            if (clientLocalState != currentState.Value)
+            {
+                if (SyncAnimationState(currentState.Value))
+                {
+                    if (framesSinceActive >= 10)
+                    {
+                        clientLocalState = currentState.Value;
+                    }
+                }
+            }
+        }
+        else
+        {
+            framesSinceActive = 0;
+        }
+
         // Chỉ Server mới được phép tính toán AI
         if (!IsServer) return;
+
+        // Tự động snap quái lại vào NavMesh nếu vô tình bị đẩy văng ra ngoài
+        if (agent != null && agent.isActiveAndEnabled && !agent.isOnNavMesh)
+        {
+            NavMeshHit hit;
+            if (NavMesh.SamplePosition(transform.position, out hit, 5f, NavMesh.AllAreas))
+            {
+                agent.Warp(hit.position);
+            }
+        }
 
         // Giảm thời gian hồi đòn đánh
         if (attackCooldownTimer > 0) attackCooldownTimer -= Time.deltaTime;
@@ -204,7 +257,29 @@ public class Enemy2_Zombie : NetworkBehaviour
         if (currentState.Value == EnemyState.Attack) return;
 
         int numPlayers = Physics.OverlapSphereNonAlloc(transform.position, sightRange, detectionResults, playerLayer);
+        
+        // Quét dự phòng theo Tag "Player" nếu LayerMask không trả về kết quả
+        if (numPlayers == 0)
+        {
+            GameObject[] players = GameObject.FindGameObjectsWithTag("Player");
+            int count = 0;
+            foreach (var p in players)
+            {
+                if (count >= detectionResults.Length) break;
+                if (Vector3.Distance(transform.position, p.transform.position) <= sightRange)
+                {
+                    Collider col = p.GetComponent<Collider>();
+                    if (col != null)
+                    {
+                        detectionResults[count++] = col;
+                    }
+                }
+            }
+            numPlayers = count;
+        }
+
         bool playerFound = false;
+        Vector3 eyePos = eyeTransform != null ? eyeTransform.position : transform.position + Vector3.up * 1.5f;
 
         for (int i = 0; i < numPlayers; i++)
         {
@@ -219,15 +294,15 @@ public class Enemy2_Zombie : NetworkBehaviour
                 continue;
             }
 
-            Vector3 directionToTarget = (potentialTarget.position - eyeTransform.position).normalized;
+            Vector3 directionToTarget = (potentialTarget.position - eyePos).normalized;
 
             // Kiểm tra xem player có nằm trong góc nhìn rộng (Field of View) của Zombie không
             if (Vector3.Angle(transform.forward, directionToTarget) < fieldOfView / 2)
             {
-                float distanceToTarget = Vector3.Distance(eyeTransform.position, potentialTarget.position);
+                float distanceToTarget = Vector3.Distance(eyePos, potentialTarget.position);
 
                 // Bắn Raycast từ mắt tới player xem có bị khuất vật cản không
-                if (!Physics.Raycast(eyeTransform.position, directionToTarget, distanceToTarget, obstacleLayer))
+                if (!Physics.Raycast(eyePos, directionToTarget, distanceToTarget, obstacleLayer))
                 {
                     targetPlayer = potentialTarget;
                     playerFound = true;
@@ -264,15 +339,19 @@ public class Enemy2_Zombie : NetworkBehaviour
 
         if (stateTimer <= 0)
         {
-            // Đi tuần ngẫu nhiên (50% tiếp tục đứng im nghỉ ngơi, 50% đi dạo chơi)
-            int rand = Random.Range(0, 2);
-            if (rand == 0)
+            // Tự nhiên ngẫu nhiên: 40% đi dạo, 30% chạy dạo tuần tra, 30% đứng nghỉ ngơi
+            float rand = Random.value;
+            if (rand < 0.4f)
             {
                 ChangeState(EnemyState.Walk);
             }
+            else if (rand < 0.7f)
+            {
+                ChangeState(EnemyState.Run);
+            }
             else
             {
-                stateTimer = Random.Range(2f, idleTimeMax); // Reset đứng im
+                stateTimer = Random.Range(1.5f, idleTimeMax);
             }
         }
     }
@@ -282,7 +361,7 @@ public class Enemy2_Zombie : NetworkBehaviour
         if (agent.isActiveAndEnabled)
         {
             agent.isStopped = false;
-            agent.speed = 1.5f; // Đi dạo lờ đờ
+            agent.speed = 1.5f; // Đi dạo lờ đờ tuần tra
         }
 
         if (!hasDestination)
@@ -297,20 +376,54 @@ public class Enemy2_Zombie : NetworkBehaviour
             }
         }
 
-        // Nếu đã đến vị trí tuần tra
+        // Khi đi dạo tới đích
         if (hasDestination && agent.isActiveAndEnabled && agent.remainingDistance <= agent.stoppingDistance)
         {
             hasDestination = false;
-            ChangeState(EnemyState.Idle);
+            float rand = Random.value;
+            if (rand < 0.4f) ChangeState(EnemyState.Idle);
+            else if (rand < 0.8f) ChangeState(EnemyState.Walk);
+            else ChangeState(EnemyState.Run);
         }
     }
 
     private void HandleRun()
     {
+        // 1. Trường hợp chạy tuần tra dạo chơi không có Player
         if (targetPlayer == null)
         {
-            ChangeState(EnemyState.Idle);
+            if (agent.isActiveAndEnabled)
+            {
+                agent.isStopped = false;
+                agent.speed = 3.5f; // Chạy nhanh tuần tra dạo chơi
+            }
+
+            if (!hasDestination)
+            {
+                Vector3 randomDirection = Random.insideUnitSphere * walkRadius * 1.5f;
+                randomDirection += transform.position;
+                NavMeshHit hit;
+                if (NavMesh.SamplePosition(randomDirection, out hit, walkRadius * 1.5f, 1))
+                {
+                    if (agent.isActiveAndEnabled) agent.SetDestination(hit.position);
+                    hasDestination = true;
+                }
+            }
+
+            if (hasDestination && agent.isActiveAndEnabled && agent.remainingDistance <= agent.stoppingDistance)
+            {
+                hasDestination = false;
+                ChangeState(Random.value < 0.6f ? EnemyState.Idle : EnemyState.Walk);
+            }
             return;
+        }
+
+        // Quay mặt cực nhanh khóa chặt Player khi phát hiện và truy đuổi
+        Vector3 lookDir = (targetPlayer.position - transform.position);
+        lookDir.y = 0;
+        if (lookDir != Vector3.zero)
+        {
+            transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(lookDir), Time.deltaTime * 15f);
         }
 
         // Kiểm tra xem máu có dưới 40% không để kích hoạt TẤN CÔNG ĐIÊN CUỒNG
@@ -441,13 +554,14 @@ public class Enemy2_Zombie : NetworkBehaviour
         float elapsed = attackDuration - stateTimer;
 
         // Khóa góc xoay hướng đòn cào ở 40% thời gian hoạt ảnh giúp Player dễ lướt tránh
+        // Nâng tốc độ xoay lên 18f thay vì 10f để snappy khóa mục tiêu trước khi vung đòn
         if (elapsed < attackDuration * 0.4f)
         {
             Vector3 lookDir = (targetPlayer.position - transform.position);
             lookDir.y = 0;
             if (lookDir != Vector3.zero)
             {
-                transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(lookDir), Time.deltaTime * 10f);
+                transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(lookDir), Time.deltaTime * 18f);
             }
         }
 
@@ -475,6 +589,29 @@ public class Enemy2_Zombie : NetworkBehaviour
     private void DealConeDamage(float damage, float range, float angle, float knockback)
     {
         int numPlayers = Physics.OverlapSphereNonAlloc(transform.position, range, damageResults, playerLayer);
+        
+        // Quét dự phòng theo Tag "Player" nếu LayerMask không trả về kết quả
+        if (numPlayers == 0)
+        {
+            GameObject[] players = GameObject.FindGameObjectsWithTag("Player");
+            int count = 0;
+            foreach (var p in players)
+            {
+                if (count >= damageResults.Length) break;
+                if (Vector3.Distance(transform.position, p.transform.position) <= range)
+                {
+                    Collider col = p.GetComponent<Collider>();
+                    if (col != null)
+                    {
+                        damageResults[count++] = col;
+                    }
+                }
+            }
+            numPlayers = count;
+        }
+
+        Vector3 eyePos = eyeTransform != null ? eyeTransform.position : transform.position + Vector3.up * 1.5f;
+
         for (int i = 0; i < numPlayers; i++)
         {
             Collider col = damageResults[i];
@@ -487,7 +624,7 @@ public class Enemy2_Zombie : NetworkBehaviour
             {
                 float distanceToPlayer = Vector3.Distance(transform.position, player.position);
                 // Đảm bảo không cào xuyên qua tường
-                if (!Physics.Raycast(eyeTransform.position, dirToPlayer, distanceToPlayer, obstacleLayer))
+                if (!Physics.Raycast(eyePos, dirToPlayer, distanceToPlayer, obstacleLayer))
                 {
                     SimplePlayerTest playerScript = player.GetComponentInParent<SimplePlayerTest>();
                     if (playerScript != null)
@@ -616,7 +753,13 @@ public class Enemy2_Zombie : NetworkBehaviour
 
     private void OnStateChanged(EnemyState previousValue, EnemyState newValue)
     {
-        if (anim == null) return;
+        // Gán bằng -1 để Update() tự động thực hiện đồng bộ hóa an toàn và liên tục
+        clientLocalState = (EnemyState)(-1);
+    }
+
+    private bool SyncAnimationState(EnemyState newState)
+    {
+        if (anim == null || !anim.isActiveAndEnabled || anim.runtimeAnimatorController == null) return false;
 
         // Reset các trigger cũ để tránh kẹt hoạt ảnh
         anim.ResetTrigger("Idle");
@@ -625,7 +768,7 @@ public class Enemy2_Zombie : NetworkBehaviour
         anim.ResetTrigger("Anhit");
         anim.ResetTrigger("Die");
 
-        switch (newValue)
+        switch (newState)
         {
             case EnemyState.Idle:
                 anim.SetTrigger("Idle"); 
@@ -643,6 +786,7 @@ public class Enemy2_Zombie : NetworkBehaviour
                 anim.SetTrigger("Die"); // Đồng bộ trigger Die hoạt ảnh chết (quai2Die)
                 break;
         }
+        return true;
     }
 
     private void OnAttackTypeChanged(int oldVal, int newVal)

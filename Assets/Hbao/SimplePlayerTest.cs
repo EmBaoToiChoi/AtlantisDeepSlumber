@@ -142,18 +142,54 @@ public class SimplePlayerTest : NetworkBehaviour
     {
         // Bắn Raycast từ vị trí Cube ra phía trước để tìm Enemy
         RaycastHit hit;
-        if (Physics.Raycast(transform.position, transform.forward, out hit, attackRange))
+        // Bắn raycast từ vị trí cao hơn mặt đất một chút để chắc chắn không trượt qua dưới chân hoặc trên đầu
+        Vector3 rayStart = transform.position + Vector3.up * 0.5f;
+        if (Physics.Raycast(rayStart, transform.forward, out hit, attackRange))
         {
-            Enemy1_DapBua enemy = hit.collider.GetComponentInParent<Enemy1_DapBua>();
-            if (enemy != null)
+            // Kiểm tra và gây sát thương cho toàn bộ 5 loại Enemy
+            var enemy1 = hit.collider.GetComponentInParent<Enemy1_DapBua>();
+            if (enemy1 != null)
             {
-                enemy.TakeDamage(damageAmount);
-                Debug.Log("Đã gây " + damageAmount + " sát thương lên " + enemy.gameObject.name);
+                enemy1.TakeDamage(damageAmount);
+                Debug.Log("Đã gây " + damageAmount + " sát thương lên " + enemy1.gameObject.name);
+                return;
+            }
+            
+            var enemy2 = hit.collider.GetComponentInParent<Enemy2_Zombie>();
+            if (enemy2 != null)
+            {
+                enemy2.TakeDamage(damageAmount);
+                Debug.Log("Đã gây " + damageAmount + " sát thương lên " + enemy2.gameObject.name);
+                return;
+            }
+            
+            var enemy3 = hit.collider.GetComponentInParent<Enemy3_Buaa>();
+            if (enemy3 != null)
+            {
+                enemy3.TakeDamage(damageAmount);
+                Debug.Log("Đã gây " + damageAmount + " sát thương lên " + enemy3.gameObject.name);
+                return;
+            }
+            
+            var enemy4 = hit.collider.GetComponentInParent<Enemy4_Bongtoi>();
+            if (enemy4 != null)
+            {
+                enemy4.TakeDamage(damageAmount);
+                Debug.Log("Đã gây " + damageAmount + " sát thương lên " + enemy4.gameObject.name);
+                return;
+            }
+            
+            var enemy5 = hit.collider.GetComponentInParent<Enemy5_PhuThuy>();
+            if (enemy5 != null)
+            {
+                enemy5.TakeDamage(damageAmount);
+                Debug.Log("Đã gây " + damageAmount + " sát thương lên " + enemy5.gameObject.name);
+                return;
             }
         }
         
         // Vẽ tia đỏ trong Scene để dễ nhìn thấy tầm đánh
-        Debug.DrawRay(transform.position, transform.forward * attackRange, Color.red, 0.5f);
+        Debug.DrawRay(rayStart, transform.forward * attackRange, Color.red, 0.5f);
     }
 
     /// <summary>

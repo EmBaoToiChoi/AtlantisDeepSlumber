@@ -96,6 +96,8 @@ public class Enemy5_PhuThuy : NetworkBehaviour
 
     private bool hasCastSpell;
     private float attackDuration = 1.2f; // Thời gian thực thi hoạt ảnh chưởng phép
+    private EnemyState clientLocalState = (EnemyState)(-1);
+    private int framesSinceActive = 0;
 
     private void Awake()
     {
@@ -104,21 +106,27 @@ public class Enemy5_PhuThuy : NetworkBehaviour
             anim = GetComponent<Animator>();
             if (anim == null)
             {
-                anim = GetComponentInChildren<Animator>();
+                anim = GetComponentInChildren<Animator>(true);
             }
         }
 
         var netAnim = GetComponent<Unity.Netcode.Components.NetworkAnimator>();
-        if (netAnim != null && netAnim.Animator == null)
+        if (netAnim != null)
         {
-            if (anim != null)
+            if (anim == null)
             {
-                netAnim.Animator = anim;
-                Debug.Log($"[{gameObject.name}] Đã tự động gán Animator '{anim.name}' vào NetworkAnimator để tránh lỗi NullReferenceException.");
+                Debug.LogError($"[{gameObject.name}] KHÔNG TÌM THẤY component Animator trên đối tượng này hoặc con của nó! Đang vô hiệu hóa NetworkAnimator để tránh lỗi crash game NullReferenceException.");
+                netAnim.enabled = false;
+            }
+            else if (anim.runtimeAnimatorController == null)
+            {
+                Debug.LogError($"[{gameObject.name}] PHÁT HIỆN LỖI: Animator tồn tại nhưng CHƯA ĐƯỢC GÁN 'Animator Controller' trong cửa sổ Inspector của Prefab! Vui lòng kéo Animator Controller của quái 5 vào thành phần Animator của nó trong Prefab. Đang vô hiệu hóa NetworkAnimator để tránh crash game NullReferenceException.");
+                netAnim.enabled = false;
             }
             else
             {
-                Debug.LogError($"[{gameObject.name}] Không tìm thấy Animator nào trên đối tượng để gán cho NetworkAnimator!");
+                netAnim.Animator = anim;
+                Debug.Log($"[{gameObject.name}] Đã liên kết tự động thành công Animator '{anim.name}' vào NetworkAnimator.");
             }
         }
     }
@@ -144,6 +152,20 @@ public class Enemy5_PhuThuy : NetworkBehaviour
         {
             currentHealth.Value = maxHealth;
             ChangeState(EnemyState.Idle);
+
+            // Warp snap quái vào NavMesh khi sinh ra để tránh kẹt
+            if (agent != null && agent.isActiveAndEnabled)
+            {
+                if (!agent.isOnNavMesh)
+                {
+                    NavMeshHit hit;
+                    if (NavMesh.SamplePosition(transform.position, out hit, 10f, NavMesh.AllAreas))
+                    {
+                        agent.Warp(hit.position);
+                        Debug.Log($"[{gameObject.name}] Snapped to NavMesh on spawn at {hit.position}");
+                    }
+                }
+            }
         }
 
         // Lắng nghe hitCounter để chơi hoạt ảnh ăn đòn Quai5Anhit trên mọi Client
@@ -170,8 +192,38 @@ public class Enemy5_PhuThuy : NetworkBehaviour
         // Cập nhật hiệu ứng cuồng nộ màu sắc (chạy trên cả server/client để mượt mà)
         UpdateEnrageVisuals();
 
+        // Đồng bộ hóa an toàn hoạt ảnh di chuyển trên Client
+        if (anim != null && anim.isActiveAndEnabled && anim.runtimeAnimatorController != null)
+        {
+            framesSinceActive++;
+            if (clientLocalState != currentState.Value)
+            {
+                if (SyncAnimationState(currentState.Value))
+                {
+                    if (framesSinceActive >= 10)
+                    {
+                        clientLocalState = currentState.Value;
+                    }
+                }
+            }
+        }
+        else
+        {
+            framesSinceActive = 0;
+        }
+
         // Chỉ Server mới xử lý bộ não AI
         if (!IsServer) return;
+
+        // Tự động snap quái lại vào NavMesh nếu vô tình bị đẩy văng ra ngoài
+        if (agent != null && agent.isActiveAndEnabled && !agent.isOnNavMesh)
+        {
+            NavMeshHit hit;
+            if (NavMesh.SamplePosition(transform.position, out hit, 5f, NavMesh.AllAreas))
+            {
+                agent.Warp(hit.position);
+            }
+        }
 
         // Giảm hồi chiêu đòn đánh và thoái lui
         if (attackCooldownTimer > 0) attackCooldownTimer -= Time.deltaTime;
@@ -229,7 +281,29 @@ public class Enemy5_PhuThuy : NetworkBehaviour
         if (currentState.Value == EnemyState.Attack) return;
 
         int numPlayers = Physics.OverlapSphereNonAlloc(transform.position, sightRange, detectionResults, playerLayer);
+        
+        // Quét dự phòng theo Tag "Player" nếu LayerMask không trả về kết quả
+        if (numPlayers == 0)
+        {
+            GameObject[] players = GameObject.FindGameObjectsWithTag("Player");
+            int count = 0;
+            foreach (var p in players)
+            {
+                if (count >= detectionResults.Length) break;
+                if (Vector3.Distance(transform.position, p.transform.position) <= sightRange)
+                {
+                    Collider col = p.GetComponent<Collider>();
+                    if (col != null)
+                    {
+                        detectionResults[count++] = col;
+                    }
+                }
+            }
+            numPlayers = count;
+        }
+
         bool found = false;
+        Vector3 eyePos = eyeTransform != null ? eyeTransform.position : transform.position + Vector3.up * 1.5f;
 
         for (int i = 0; i < numPlayers; i++)
         {
@@ -240,15 +314,15 @@ public class Enemy5_PhuThuy : NetworkBehaviour
             SimplePlayerTest playerScript = playerTrans.GetComponentInParent<SimplePlayerTest>();
             if (playerScript != null && playerScript.currentHealth.Value <= 0) continue;
 
-            Vector3 direction = (playerTrans.position - eyeTransform.position).normalized;
+            Vector3 direction = (playerTrans.position - eyePos).normalized;
 
             // Kiểm tra FOV quét góc
             if (Vector3.Angle(transform.forward, direction) < fieldOfView / 2f)
             {
-                float distance = Vector3.Distance(eyeTransform.position, playerTrans.position);
+                float distance = Vector3.Distance(eyePos, playerTrans.position);
 
                 // Bắn Raycast cản địa hình
-                if (!Physics.Raycast(eyeTransform.position, direction, distance, obstacleLayer))
+                if (!Physics.Raycast(eyePos, direction, distance, obstacleLayer))
                 {
                     targetPlayer = playerTrans;
                     found = true;
@@ -277,7 +351,7 @@ public class Enemy5_PhuThuy : NetworkBehaviour
 
         if (stateTimer <= 0)
         {
-            // Luân phiên ngẫu nhiên trạng thái tuần tra
+            // Tự nhiên ngẫu nhiên: 40% đi dạo, 30% chạy dạo tuần tra, 30% đứng nghỉ ngơi
             float rand = Random.value;
             if (rand < 0.4f)
             {
@@ -286,7 +360,6 @@ public class Enemy5_PhuThuy : NetworkBehaviour
             else if (rand < 0.7f)
             {
                 ChangeState(EnemyState.Run);
-                hasDestination = false;
             }
             else
             {
@@ -318,8 +391,8 @@ public class Enemy5_PhuThuy : NetworkBehaviour
             hasDestination = false;
             float rand = Random.value;
             if (rand < 0.5f) ChangeState(EnemyState.Idle);
-            else if (rand < 0.8f) ChangeState(EnemyState.Run);
-            else hasDestination = false;
+            else if (rand < 0.8f) ChangeState(EnemyState.Walk);
+            else ChangeState(EnemyState.Run);
         }
     }
 
@@ -350,6 +423,14 @@ public class Enemy5_PhuThuy : NetworkBehaviour
                 ChangeState(Random.value < 0.6f ? EnemyState.Idle : EnemyState.Walk);
             }
             return;
+        }
+
+        // Quay mặt cực nhanh khóa chặt Player khi phát hiện và truy đuổi/kiting
+        Vector3 lookDir = (targetPlayer.position - transform.position);
+        lookDir.y = 0;
+        if (lookDir != Vector3.zero)
+        {
+            transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(lookDir), Time.deltaTime * 15f);
         }
 
         // 2. Trường hợp Đuổi / Kiting Player (Ranged Combat Chase Mode)
@@ -392,14 +473,6 @@ public class Enemy5_PhuThuy : NetworkBehaviour
         if (distance >= minAttackRange && distance <= maxAttackRange)
         {
             if (agent.isActiveAndEnabled) agent.isStopped = true;
-
-            // Xoay hướng trực tiếp mặt đối diện Player
-            Vector3 lookDir = (targetPlayer.position - transform.position);
-            lookDir.y = 0;
-            if (lookDir != Vector3.zero)
-            {
-                transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(lookDir), Time.deltaTime * 12f);
-            }
 
             if (attackCooldownTimer <= 0)
             {
@@ -482,12 +555,12 @@ public class Enemy5_PhuThuy : NetworkBehaviour
 
         stateTimer -= Time.deltaTime;
 
-        // Quay mặt đối diện Player trong quá trình tụ lực chưởng
+        // Quay mặt đối diện Player trong quá trình tụ lực chưởng cực nhanh
         Vector3 lookDir = (targetPlayer.position - transform.position);
         lookDir.y = 0;
         if (lookDir != Vector3.zero)
         {
-            transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(lookDir), Time.deltaTime * 10f);
+            transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(lookDir), Time.deltaTime * 18f);
         }
 
         // BẮN PHÒNG HỜ: Nếu hoạt ảnh sắp kết thúc mà chưa kích hoạt Event, tự động phóng chưởng làm fallback
@@ -706,10 +779,14 @@ public class Enemy5_PhuThuy : NetworkBehaviour
 
     #region Client Animation Synchronization
 
-    // Đồng bộ trigger chuyển động trên toàn bộ máy client khi currentState đổi
     private void OnStateChanged(EnemyState previousValue, EnemyState newValue)
     {
-        if (anim == null) return;
+        clientLocalState = (EnemyState)(-1);
+    }
+
+    private bool SyncAnimationState(EnemyState newState)
+    {
+        if (anim == null || !anim.isActiveAndEnabled || anim.runtimeAnimatorController == null) return false;
 
         // Reset toàn bộ trigger di chuyển và trạng thái đặc biệt
         anim.ResetTrigger(idleTriggerName);
@@ -718,7 +795,7 @@ public class Enemy5_PhuThuy : NetworkBehaviour
         anim.ResetTrigger(hitTriggerName);
         anim.ResetTrigger(dieTriggerName);
 
-        switch (newValue)
+        switch (newState)
         {
             case EnemyState.Idle:
                 anim.SetTrigger(idleTriggerName); 
@@ -736,6 +813,7 @@ public class Enemy5_PhuThuy : NetworkBehaviour
                 anim.SetTrigger(dieTriggerName); // Chơi hoạt ảnh Quai5Die
                 break;
         }
+        return true;
     }
 
     [ClientRpc]

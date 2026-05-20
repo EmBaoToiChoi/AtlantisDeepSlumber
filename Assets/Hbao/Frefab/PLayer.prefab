@@ -158,6 +158,6 @@ MonoBehaviour:
       MaxSecondsBetweenUpdates: 0
     m_InternalValue: 100
   enableCameraFollow: 1
-  cameraOffset: {x: 0, y: 12, z: -8}
+  cameraOffset: {x: 0, y: 2, z: -10}
   cameraSmoothSpeed: 5
   cameraLookAtPlayer: 1
