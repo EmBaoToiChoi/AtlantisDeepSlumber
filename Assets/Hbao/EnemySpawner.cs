@@ -167,10 +167,7 @@ public class EnemySpawner : NetworkBehaviour
         {
             foreach (var client in NetworkManager.Singleton.ConnectedClientsList)
             {
-                if (client.PlayerObject == null)
-                {
-                    SpawnPlayerForClient(client.ClientId);
-                }
+                SpawnPlayerForClient(client.ClientId);
             }
         }
 
@@ -200,17 +197,7 @@ public class EnemySpawner : NetworkBehaviour
 
         foreach (ulong clientId in clientsCompleted)
         {
-            if (NetworkManager.Singleton.ConnectedClients.TryGetValue(clientId, out var client))
-            {
-                if (client.PlayerObject == null)
-                {
-                    SpawnPlayerForClient(clientId);
-                }
-                else
-                {
-                    Debug.Log($"[EnemySpawner] Client {clientId} đã có PlayerObject, bỏ qua không sinh trùng lặp.");
-                }
-            }
+            SpawnPlayerForClient(clientId);
         }
     }
 
@@ -258,15 +245,38 @@ public class EnemySpawner : NetworkBehaviour
     /// </summary>
     public void SpawnPlayerForClient(ulong clientId)
     {
-        if (!IsServer || playerPrefab == null) return;
+        if (!IsServer) return;
 
-        // Double check if client already has a player object registered
+        if (playerPrefab == null)
+        {
+            Debug.LogError("[EnemySpawner] KHÔNG THỂ SPAWN PLAYER: 'playerPrefab' chưa được gán trong Inspector! Vui lòng kéo thả Player Prefab vào EnemySpawner.");
+            return;
+        }
+
+        Debug.Log($"[EnemySpawner] Đang kiểm tra yêu cầu sinh Player cho Client {clientId}...");
+
         if (NetworkManager.Singleton.ConnectedClients.TryGetValue(clientId, out var client))
         {
             if (client.PlayerObject != null)
             {
-                Debug.Log($"[EnemySpawner] Client {clientId} already has a player object assigned.");
-                return;
+                // Kiểm tra xem PlayerObject hiện tại có phải là nhân vật chơi chính thức (có SimplePlayerTest) hay không
+                if (client.PlayerObject.GetComponent<SimplePlayerTest>() != null)
+                {
+                    Debug.Log($"[EnemySpawner] Client {clientId} đã có nhân vật gameplay Player chính thức. Bỏ qua không spawn trùng lặp.");
+                    return;
+                }
+                
+                // Nếu là PlayerObject cũ (ví dụ Lobby Player từ Waiting Room hoặc Missing reference), ta tiến hành thu hồi sạch sẽ
+                Debug.Log($"[EnemySpawner] Phát hiện Client {clientId} đang giữ PlayerObject cũ (Lobby Avatar). Đang thu hồi...");
+                NetworkObject oldPlayerObj = client.PlayerObject;
+                if (oldPlayerObj.IsSpawned)
+                {
+                    oldPlayerObj.Despawn(true); // Despawn và hủy GameObject
+                }
+                else
+                {
+                    Destroy(oldPlayerObj.gameObject);
+                }
             }
         }
 
@@ -278,11 +288,11 @@ public class EnemySpawner : NetworkBehaviour
         if (netObj != null)
         {
             netObj.SpawnAsPlayerObject(clientId, true);
-            Debug.Log($"[EnemySpawner] Spawned Player for Client ID {clientId} successfully.");
+            Debug.Log($"[EnemySpawner] Đã sinh thành công gameplay Player cho Client ID {clientId} tại vị trí {pos}.");
         }
         else
         {
-            Debug.LogError("[EnemySpawner] Player Prefab is missing a NetworkObject component!");
+            Debug.LogError("[EnemySpawner] LỖI: Player Prefab được gán thiếu thành phần NetworkObject!");
             Destroy(playerObj);
         }
     }
