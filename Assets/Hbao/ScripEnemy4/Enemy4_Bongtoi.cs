@@ -41,6 +41,14 @@ public class Enemy4_Bongtoi : NetworkBehaviour
     public Transform eyeTransform;    // Điểm bắn Raycast dò Player (ví dụ: ở đầu/mắt quái)
     public Renderer[] modelRenderers; // Thay đổi sắc thái để tăng hiệu ứng hình ảnh khi yếu máu hoặc cuồng nộ
 
+    [Header("Melee Hitbox Settings")]
+    public GameObject clawHitbox;      // Vùng đánh vuốt/cào (kéo Collider ở tay/vuốt vào đây)
+    public GameObject weaponHitbox;    // Vùng đánh bằng vũ khí phụ trợ
+
+    // Bộ đệm tránh phân bổ rác (GC Alloc) khi quét va chạm
+    private readonly Collider[] detectionResults = new Collider[8];
+    private readonly Collider[] damageResults = new Collider[8];
+
     [Header("AI Vision & Combat Settings")]
     public float sightRange = 15f;      // Tầm nhìn xa phát hiện Player
     public float fieldOfView = 100f;    // Góc nhìn (độ)
@@ -88,11 +96,25 @@ public class Enemy4_Bongtoi : NetworkBehaviour
     private bool hasDealtDamage;
     private float attackDuration;
 
+    private bool wasEnraged = false;
+    private MaterialPropertyBlock propBlock;
+
     public override void OnNetworkSpawn()
     {
         // Đăng ký đồng bộ hóa Animation trên Client khi biến mạng thay đổi
         currentState.OnValueChanged += OnStateChanged;
-        attackType.OnValueChanged += OnAttackTypeChanged;
+
+        // Khởi tạo hoạt ảnh ban đầu khớp với trạng thái hiện tại (đặc biệt cho người chơi vào sau)
+        OnStateChanged(currentState.Value, currentState.Value);
+
+        // Tối ưu hóa đồng bộ chuyển động siêu nhỏ cho mọi Client cùng quan sát
+        var netTransform = GetComponent<Unity.Netcode.Components.NetworkTransform>();
+        if (netTransform != null)
+        {
+            netTransform.PositionThreshold = 0.001f;
+            netTransform.RotAngleThreshold = 0.01f;
+            netTransform.ScaleThreshold = 0.01f;
+        }
 
         if (IsServer)
         {
@@ -100,25 +122,34 @@ public class Enemy4_Bongtoi : NetworkBehaviour
             ChangeState(EnemyState.Idle);
         }
 
+        // Đảm bảo các hitbox ban đầu được tắt
+        if (clawHitbox != null) clawHitbox.SetActive(false);
+        if (weaponHitbox != null) weaponHitbox.SetActive(false);
+
         // Đăng ký hiệu ứng dính đòn (Hit/Anhit) khi hitCounter tăng
-        hitCounter.OnValueChanged += (oldVal, newVal) =>
-        {
-            if (anim != null)
-            {
-                anim.ResetTrigger(hitTriggerName);
-                anim.SetTrigger(hitTriggerName);
-            }
-        };
+        hitCounter.OnValueChanged += OnHitCounterChanged;
     }
 
     public override void OnNetworkDespawn()
     {
         currentState.OnValueChanged -= OnStateChanged;
-        attackType.OnValueChanged -= OnAttackTypeChanged;
+        hitCounter.OnValueChanged -= OnHitCounterChanged;
+    }
+
+    private void OnHitCounterChanged(int oldVal, int newVal)
+    {
+        if (anim != null)
+        {
+            anim.ResetTrigger(hitTriggerName);
+            anim.SetTrigger(hitTriggerName);
+        }
     }
 
     private void Update()
     {
+        // Hiệu ứng màu sắc cuồng bạo nhấp nháy tím khi yếu máu (chạy trên cả server/client để mượt mà)
+        UpdateEnrageVisuals();
+
         // Chỉ Server mới có quyền tính toán và ra quyết định AI
         if (!IsServer) return;
 
@@ -176,11 +207,13 @@ public class Enemy4_Bongtoi : NetworkBehaviour
         if (currentState.Value == EnemyState.Dead || currentState.Value == EnemyState.Stagger) return;
         if (currentState.Value == EnemyState.Attack) return;
 
-        Collider[] players = Physics.OverlapSphere(transform.position, sightRange, playerLayer);
+        int numPlayers = Physics.OverlapSphereNonAlloc(transform.position, sightRange, detectionResults, playerLayer);
         bool found = false;
 
-        foreach (Collider col in players)
+        for (int i = 0; i < numPlayers; i++)
         {
+            Collider col = detectionResults[i];
+            if (col == null) continue;
             Transform playerTrans = col.transform;
 
             // Bỏ qua nếu Player đã chết
@@ -481,9 +514,11 @@ public class Enemy4_Bongtoi : NetworkBehaviour
 
     private void DealConeDamage(float damage, float range, float angle, float knockback)
     {
-        Collider[] hits = Physics.OverlapSphere(transform.position, range, playerLayer);
-        foreach (var col in hits)
+        int numHits = Physics.OverlapSphereNonAlloc(transform.position, range, damageResults, playerLayer);
+        for (int i = 0; i < numHits; i++)
         {
+            Collider col = damageResults[i];
+            if (col == null) continue;
             Transform player = col.transform;
             Vector3 dir = (player.position - transform.position).normalized;
 
@@ -623,6 +658,13 @@ public class Enemy4_Bongtoi : NetworkBehaviour
 
     private void ChangeState(EnemyState newState)
     {
+        // Tự động tắt hitbox vũ khí/vuốt khi chuyển từ Attack sang trạng thái khác để tránh kẹt sát thương
+        if (currentState.Value == EnemyState.Attack && newState != EnemyState.Attack)
+        {
+            DisableClawHitbox();
+            DisableWeaponHitbox();
+        }
+
         currentState.Value = newState;
 
         if (newState == EnemyState.Idle) 
@@ -681,8 +723,8 @@ public class Enemy4_Bongtoi : NetworkBehaviour
 
             stateTimer = attackDuration;
 
-            // Client vung tay tấn công đồng bộ ngay lập tức
-            OnAttackTypeChanged(0, attackType.Value);
+            // Kích hoạt đồng bộ hóa hoạt ảnh tấn công qua ClientRpc đến toàn bộ client
+            PlayAttackAnimationClientRpc(attackType.Value);
         }
         if (newState == EnemyState.Dead) Die();
     }
@@ -723,21 +765,102 @@ public class Enemy4_Bongtoi : NetworkBehaviour
         }
     }
 
-    // Hàm chạy trên toàn bộ client khi đổi đòn đánh để đồng bộ hoạt ảnh vung tay đấm/chém
-    private void OnAttackTypeChanged(int oldVal, int newVal)
+    [ClientRpc]
+    private void PlayAttackAnimationClientRpc(int type)
     {
         if (anim == null) return;
 
         anim.ResetTrigger(attack1TriggerName);
         anim.ResetTrigger(attackComboTriggerName);
 
-        if (newVal == 0)
+        if (type == 0)
         {
             anim.SetTrigger(attack1TriggerName); // Kích hoạt qual44attack
         }
-        else if (newVal == 1)
+        else if (type == 1)
         {
             anim.SetTrigger(attackComboTriggerName); // Kích hoạt qual4combo
+        }
+    }
+
+    #endregion
+
+    #region Animation Events & Hitbox Control
+
+    // Các hàm này được gọi từ Animation Events tại các keyframe vung tay/vuốt để bật/tắt collider gây sát thương
+    public void EnableClawHitbox()
+    {
+        if (clawHitbox != null)
+        {
+            clawHitbox.SetActive(true);
+        }
+    }
+
+    public void DisableClawHitbox()
+    {
+        if (clawHitbox != null)
+        {
+            clawHitbox.SetActive(false);
+        }
+    }
+
+    public void EnableWeaponHitbox()
+    {
+        if (weaponHitbox != null)
+        {
+            weaponHitbox.SetActive(true);
+        }
+    }
+
+    public void DisableWeaponHitbox()
+    {
+        if (weaponHitbox != null)
+        {
+            weaponHitbox.SetActive(false);
+        }
+    }
+
+    #endregion
+
+    #region Visual Effects (Enrage)
+
+    private void UpdateEnrageVisuals()
+    {
+        if (modelRenderers == null || modelRenderers.Length == 0) return;
+
+        if (propBlock == null) propBlock = new MaterialPropertyBlock();
+
+        bool isEnraged = currentHealth.Value < maxHealth * 0.5f;
+
+        if (isEnraged)
+        {
+            wasEnraged = true;
+            // Nhấp nháy màu tím huyền bí biểu thị bóng tối thức tỉnh cuồng nộ
+            float pingPong = Mathf.PingPong(Time.time * 3f, 1f);
+            Color enrageColor = Color.Lerp(Color.white, new Color(0.5f, 0f, 0.8f), pingPong); // Tím huyền ảo
+            
+            foreach (var r in modelRenderers)
+            {
+                if (r != null)
+                {
+                    r.GetPropertyBlock(propBlock);
+                    propBlock.SetColor("_Color", enrageColor);
+                    r.SetPropertyBlock(propBlock);
+                }
+            }
+        }
+        else if (wasEnraged)
+        {
+            wasEnraged = false;
+            foreach (var r in modelRenderers)
+            {
+                if (r != null)
+                {
+                    r.GetPropertyBlock(propBlock);
+                    propBlock.SetColor("_Color", Color.white);
+                    r.SetPropertyBlock(propBlock);
+                }
+            }
         }
     }
 

@@ -39,6 +39,9 @@ public class Enemy2_Zombie : NetworkBehaviour
     public NavMeshAgent agent;
     public Animator anim;
     public Transform eyeTransform; // Vị trí mắt để dò quét Player bằng Raycast
+    
+    [Header("Melee Hitbox Settings")]
+    public GameObject clawHitbox; // Kéo GameObject vùng đánh (box collider ở tay/vuốt) vào đây
 
     [Header("AI Settings")]
     public float sightRange = 12f;      // Tầm nhìn xa của Zombie
@@ -76,18 +79,37 @@ public class Enemy2_Zombie : NetworkBehaviour
     private bool hasDealtDamage;
     private float attackDuration;
 
+    // Bộ đệm tránh phân bổ rác (GC Alloc) khi quét va chạm
+    private readonly Collider[] detectionResults = new Collider[8];
+    private readonly Collider[] damageResults = new Collider[8];
+
     public override void OnNetworkSpawn()
     {
         // Lắng nghe sự thay đổi trạng thái để đồng bộ hoạt ảnh trên các Client
         currentState.OnValueChanged += OnStateChanged;
-        
-        // Đăng ký đồng bộ kiểu tấn công
-        attackType.OnValueChanged += OnAttackTypeChanged;
+
+        // Khởi tạo hoạt ảnh ban đầu khớp với trạng thái hiện tại (đặc biệt cho người chơi vào sau)
+        OnStateChanged(currentState.Value, currentState.Value);
+
+        // Tối ưu hóa đồng bộ chuyển động siêu nhỏ cho mọi Client cùng quan sát
+        var netTransform = GetComponent<Unity.Netcode.Components.NetworkTransform>();
+        if (netTransform != null)
+        {
+            netTransform.PositionThreshold = 0.001f;
+            netTransform.RotAngleThreshold = 0.01f;
+            netTransform.ScaleThreshold = 0.01f;
+        }
 
         if (IsServer)
         {
             currentHealth.Value = maxHealth;
             ChangeState(EnemyState.Idle);
+        }
+
+        // Đảm bảo hitbox vuốt ban đầu được tắt
+        if (clawHitbox != null)
+        {
+            clawHitbox.SetActive(false);
         }
 
         // Đồng bộ dính đòn (Hit) chạy hoạt ảnh "Anhit" cho toàn bộ Client
@@ -103,7 +125,6 @@ public class Enemy2_Zombie : NetworkBehaviour
     public override void OnNetworkDespawn()
     {
         currentState.OnValueChanged -= OnStateChanged;
-        attackType.OnValueChanged -= OnAttackTypeChanged;
     }
 
     private void Update()
@@ -156,11 +177,13 @@ public class Enemy2_Zombie : NetworkBehaviour
         // Nếu đang trong đòn tấn công thì không đổi mục tiêu
         if (currentState.Value == EnemyState.Attack) return;
 
-        Collider[] playersInSight = Physics.OverlapSphere(transform.position, sightRange, playerLayer);
+        int numPlayers = Physics.OverlapSphereNonAlloc(transform.position, sightRange, detectionResults, playerLayer);
         bool playerFound = false;
 
-        foreach (Collider p in playersInSight)
+        for (int i = 0; i < numPlayers; i++)
         {
+            Collider p = detectionResults[i];
+            if (p == null) continue;
             Transform potentialTarget = p.transform;
 
             // Bỏ qua nếu Player đã chết
@@ -425,9 +448,11 @@ public class Enemy2_Zombie : NetworkBehaviour
 
     private void DealConeDamage(float damage, float range, float angle, float knockback)
     {
-        Collider[] hitColliders = Physics.OverlapSphere(transform.position, range, playerLayer);
-        foreach (var col in hitColliders)
+        int numPlayers = Physics.OverlapSphereNonAlloc(transform.position, range, damageResults, playerLayer);
+        for (int i = 0; i < numPlayers; i++)
         {
+            Collider col = damageResults[i];
+            if (col == null) continue;
             Transform player = col.transform;
             Vector3 dirToPlayer = (player.position - transform.position).normalized;
 
@@ -506,6 +531,12 @@ public class Enemy2_Zombie : NetworkBehaviour
 
     private void ChangeState(EnemyState newState)
     {
+        // Tự động tắt hitbox vuốt nếu trạng thái chuyển từ Attack sang trạng thái khác (tránh lỗi kẹt hitbox khi bị khựng/chết)
+        if (currentState.Value == EnemyState.Attack && newState != EnemyState.Attack)
+        {
+            DisableClawHitbox();
+        }
+
         currentState.Value = newState;
 
         // Reset các biến liên quan khi chuyển trạng thái
@@ -536,6 +567,8 @@ public class Enemy2_Zombie : NetworkBehaviour
         }
         if (newState == EnemyState.Attack)
         {
+            if (agent.isActiveAndEnabled) agent.isStopped = true;
+            
             hasDealtDamage = false;
             attackType.Value = 0; // Luôn dùng đòn cào cơ bản
 
@@ -545,8 +578,8 @@ public class Enemy2_Zombie : NetworkBehaviour
 
             stateTimer = attackDuration;
 
-            // Kích hoạt animation đồng bộ
-            OnAttackTypeChanged(0, attackType.Value);
+            // Kích hoạt animation đồng bộ qua ClientRpc
+            PlayAttackAnimationClientRpc();
         }
         if (newState == EnemyState.Dead) Die();
     }
@@ -594,6 +627,37 @@ public class Enemy2_Zombie : NetworkBehaviour
 
         // Kích hoạt duy nhất trigger "Attack" để chơi hoạt ảnh cào cơ bản (quai2-attackcoban)
         anim.SetTrigger("Attack"); 
+    }
+
+    [ClientRpc]
+    private void PlayAttackAnimationClientRpc()
+    {
+        if (anim == null) return;
+        
+        anim.ResetTrigger("Attack"); 
+        anim.SetTrigger("Attack"); 
+    }
+
+    #endregion
+
+    #region Animation Events & Hitbox Control
+
+    // Hàm này được gọi từ Animation Event tại frame cào để bật Box Collider vuốt
+    public void EnableClawHitbox()
+    {
+        if (clawHitbox != null)
+        {
+            clawHitbox.SetActive(true);
+        }
+    }
+
+    // Hàm này được gọi từ Animation Event tại frame cào xong hoặc kết thúc đòn đánh để tắt Box Collider
+    public void DisableClawHitbox()
+    {
+        if (clawHitbox != null)
+        {
+            clawHitbox.SetActive(false);
+        }
     }
 
     #endregion
