@@ -135,7 +135,7 @@ GameObject:
   - component: {fileID: 737090022745369023}
   - component: {fileID: 5818080817487145746}
   m_Layer: 0
-  m_Name: Enemy3_DapBua
+  m_Name: "Qu\xE1i V\u1EADt \u0110\u1ED9t Bi\u1EBFn"
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

@@ -70,7 +70,7 @@ GameObject:
   - component: {fileID: 5378572118952591907}
   - component: {fileID: 5873148896593057074}
   m_Layer: 0
-  m_Name: Enemy1_Maychem
+  m_Name: Zombie 2
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

@@ -16,7 +16,7 @@ GameObject:
   - component: {fileID: 6077345777495361529}
   - component: {fileID: 1224762273549751842}
   m_Layer: 0
-  m_Name: Enemy5_PhuThuy
+  m_Name: "Ng\u01B0\u1EDDi Chim"
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
