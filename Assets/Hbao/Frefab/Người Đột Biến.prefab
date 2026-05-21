@@ -82,7 +82,7 @@ GameObject:
   - component: {fileID: 900439734633752184}
   - component: {fileID: 5677635899682825825}
   m_Layer: 0
-  m_Name: Enemy4_BongDem
+  m_Name: "Ng\u01B0\u1EDDi \u0110\u1ED9t Bi\u1EBFn"
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
