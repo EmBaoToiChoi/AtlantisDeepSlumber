@@ -24,8 +24,8 @@ public class Enemy3_Buaa : NetworkBehaviour
     );
 
     public NetworkVariable<EnemyState> currentState = new NetworkVariable<EnemyState>(
-        EnemyState.Idle, 
-        NetworkVariableReadPermission.Everyone, 
+        EnemyState.Idle,
+        NetworkVariableReadPermission.Everyone,
         NetworkVariableWritePermission.Server
     );
 
@@ -54,7 +54,7 @@ public class Enemy3_Buaa : NetworkBehaviour
     public float attackRange = 2.2f;    // Khoảng cách ra đòn búa cận chiến
     public float walkRadius = 9f;       // Bán kính đi dạo ngẫu nhiên
     public float idleTimeMax = 4.5f;    // Thời gian đứng im nghỉ ngơi tối đa
-    
+
     [Header("Layers")]
     public LayerMask playerLayer;       // Layer của Player
     public LayerMask obstacleLayer;     // Layer của vật cản địa hình (tường, đá...)
@@ -78,7 +78,7 @@ public class Enemy3_Buaa : NetworkBehaviour
     private float searchTimer;
     private float searchLookTimer;
     private float searchLookDirection = 1f;
-    
+
     private float detectionTimer;
     private const float DETECTION_INTERVAL = 0.15f; // Chu kỳ quét 0.15s một lần tối ưu hiệu năng CPU
 
@@ -194,7 +194,8 @@ public class Enemy3_Buaa : NetworkBehaviour
         }
 
         // Lắng nghe hitCounter để chơi hoạt ảnh dính đòn (Hit/Anhit) trên mọi Client
-        hitCounter.OnValueChanged += (oldVal, newVal) => {
+        hitCounter.OnValueChanged += (oldVal, newVal) =>
+        {
             if (anim != null)
             {
                 anim.ResetTrigger(hitTriggerName);
@@ -295,7 +296,7 @@ public class Enemy3_Buaa : NetworkBehaviour
         if (currentState.Value == EnemyState.Attack) return;
 
         int numPlayers = Physics.OverlapSphereNonAlloc(transform.position, sightRange, detectionResults, playerLayer);
-        
+
         bool playerFound = false;
         Vector3 eyePos = eyeTransform != null ? eyeTransform.position : transform.position + Vector3.up * 1.5f;
 
@@ -312,14 +313,14 @@ public class Enemy3_Buaa : NetworkBehaviour
                 continue;
             }
 
-            Vector3 directionToTarget = (potentialTarget.position - eyePos).normalized;
+            // Nâng tâm ngắm lên ngực Player (cao 1.0f) thay vì nhìn xuống chân
+            Vector3 targetCenterPos = potentialTarget.position + Vector3.up * 1.0f;
+            Vector3 directionToTarget = (targetCenterPos - eyePos).normalized;
 
-            // Kiểm tra xem góc giữa hướng quái nhìn và player có nhỏ hơn góc FOV quy định không
             if (Vector3.Angle(transform.forward, directionToTarget) < fieldOfView / 2)
             {
-                float distanceToTarget = Vector3.Distance(eyePos, potentialTarget.position);
-
-                // Bắn tia Raycast để chắc chắn không có tường cản giữa quái và Player
+                float distanceToTarget = Vector3.Distance(eyePos, targetCenterPos);
+                // Bắn tia Raycast kiểm tra vật cản
                 if (!Physics.Raycast(eyePos, directionToTarget, distanceToTarget, obstacleLayer))
                 {
                     targetPlayer = potentialTarget;
@@ -328,7 +329,7 @@ public class Enemy3_Buaa : NetworkBehaviour
                     {
                         ChangeState(EnemyState.Run);
                     }
-                    break; 
+                    break;
                 }
             }
         }
@@ -394,7 +395,7 @@ public class Enemy3_Buaa : NetworkBehaviour
         }
 
         // Khi đi dạo tới đích
-        if (hasDestination && agent.isActiveAndEnabled && agent.remainingDistance <= agent.stoppingDistance)
+        if (hasDestination && agent.isActiveAndEnabled && !agent.pathPending && agent.remainingDistance <= agent.stoppingDistance + 0.2f)
         {
             hasDestination = false;
             float rand = Random.value;
@@ -427,7 +428,7 @@ public class Enemy3_Buaa : NetworkBehaviour
                 }
             }
 
-            if (hasDestination && agent.isActiveAndEnabled && agent.remainingDistance <= agent.stoppingDistance)
+            if (hasDestination && agent.isActiveAndEnabled && !agent.pathPending && agent.remainingDistance <= agent.stoppingDistance + 0.2f)
             {
                 hasDestination = false;
                 ChangeState(Random.value < 0.6f ? EnemyState.Idle : EnemyState.Walk);
@@ -478,7 +479,7 @@ public class Enemy3_Buaa : NetworkBehaviour
 
                 // Điểm đích bo sườn chếch xiên góc
                 Vector3 targetOffset = targetPlayer.position - toPlayer * 2.0f + tangent * sideDir * 2.8f;
-                
+
                 NavMeshHit hit;
                 if (NavMesh.SamplePosition(targetOffset, out hit, 3.5f, NavMesh.AllAreas))
                 {
@@ -513,7 +514,7 @@ public class Enemy3_Buaa : NetworkBehaviour
         }
 
         // Đã đến vị trí cuối cùng nhìn thấy Player
-        if (agent.isActiveAndEnabled && agent.remainingDistance <= agent.stoppingDistance + 0.1f)
+        if (agent.isActiveAndEnabled && !agent.pathPending && agent.remainingDistance <= agent.stoppingDistance + 0.2f)
         {
             agent.isStopped = true;
             searchTimer -= Time.deltaTime;
@@ -660,7 +661,7 @@ public class Enemy3_Buaa : NetworkBehaviour
                     if (playerScript != null)
                     {
                         playerScript.TakeDamage(damage);
-                        
+
                         // Đẩy lùi Player mượt mà vật lý
                         Vector3 knockbackDir = dirToPlayer;
                         knockbackDir.y = 0;
@@ -695,7 +696,7 @@ public class Enemy3_Buaa : NetworkBehaviour
             isFrenzied = true;
             staggerTimer = 1.3f; // Khóa di chuyển 1.3s để gầm rú cuồng bạo
             ChangeState(EnemyState.Stagger);
-            
+
             // Đồng bộ kích hoạt kỹ thuật thét lớn bằng cách kích hoạt trigger skill 3
             attackType.Value = 2;
             return;
@@ -706,7 +707,7 @@ public class Enemy3_Buaa : NetworkBehaviour
             isEnraged = true;
             staggerTimer = 1.1f; // Khóa di chuyển 1.1s gầm thét phẫn nộ
             ChangeState(EnemyState.Stagger);
-            
+
             // Kích hoạt thét bằng cách chạy trigger Combo
             attackType.Value = 1;
             return;
@@ -746,12 +747,12 @@ public class Enemy3_Buaa : NetworkBehaviour
 
         Vector3 toPlayer = (targetPlayer.position - transform.position).normalized;
         Vector3 perpendicular = new Vector3(-toPlayer.z, 0, toPlayer.x);
-        
+
         // Ngẫu nhiên chọn né trái hay phải
         if (Random.value < 0.5f) perpendicular = -perpendicular;
 
         Vector3 dodgeTarget = transform.position + perpendicular * 3.2f;
-        
+
         NavMeshHit hit;
         if (NavMesh.SamplePosition(dodgeTarget, out hit, 3.5f, NavMesh.AllAreas))
         {
@@ -785,7 +786,7 @@ public class Enemy3_Buaa : NetworkBehaviour
             // Nhấp nháy màu đỏ cam rực lửa biểu thị cuồng bạo tột đỉnh
             float pingPong = Mathf.PingPong(Time.time * 4f, 1f);
             Color frenzyColor = Color.Lerp(Color.white, new Color(1f, 0.25f, 0f), pingPong);
-            
+
             foreach (var r in modelRenderers)
             {
                 if (r != null && r.material != null)
@@ -811,7 +812,7 @@ public class Enemy3_Buaa : NetworkBehaviour
     private void Die()
     {
         if (agent.isActiveAndEnabled) agent.isStopped = true;
-        
+
         // Hủy quái sau 2.5 giây chơi hoàn tất hoạt ảnh nằm xuống chết
         Invoke(nameof(DespawnEnemy), 2.5f);
     }
@@ -834,17 +835,17 @@ public class Enemy3_Buaa : NetworkBehaviour
 
         currentState.Value = newState;
 
-        if (newState == EnemyState.Idle) 
+        if (newState == EnemyState.Idle)
         {
             stateTimer = Random.Range(2f, idleTimeMax);
             if (agent.isActiveAndEnabled) agent.isStopped = true;
         }
-        if (newState == EnemyState.Walk) 
+        if (newState == EnemyState.Walk)
         {
             hasDestination = false;
             if (agent.isActiveAndEnabled) agent.isStopped = false;
         }
-        if (newState == EnemyState.Run) 
+        if (newState == EnemyState.Run)
         {
             isDodging = false;
             if (agent.isActiveAndEnabled) agent.isStopped = false;
@@ -872,7 +873,7 @@ public class Enemy3_Buaa : NetworkBehaviour
             {
                 // Dùng Skill 3: RunLumpAttack
                 attackType.Value = 2;
-                attackDuration = 1.9f; 
+                attackDuration = 1.9f;
             }
             else if (hpPercent <= 0.7f)
             {
@@ -919,13 +920,13 @@ public class Enemy3_Buaa : NetworkBehaviour
         switch (newState)
         {
             case EnemyState.Idle:
-                anim.SetTrigger(idleTriggerName); 
+                anim.SetTrigger(idleTriggerName);
                 break;
             case EnemyState.Walk:
-                anim.SetTrigger(walkTriggerName); 
+                anim.SetTrigger(walkTriggerName);
                 break;
             case EnemyState.Run:
-                anim.SetTrigger(runTriggerName);   
+                anim.SetTrigger(runTriggerName);
                 break;
             case EnemyState.Stagger:
                 anim.SetTrigger(hitTriggerName); // Hoạt ảnh dính đòn quai3Anhit
@@ -993,16 +994,16 @@ public class Enemy3_Buaa : NetworkBehaviour
             // Vòng tròn cự ly ra đòn búa cận chiến (Màu Đỏ Neon)
             Gizmos.color = Color.red;
             Gizmos.DrawWireSphere(transform.position, attackRange);
-            
+
             // Vẽ góc quét sát thương thực tế hình nêm nón lúc ra đòn tấn công
             if (currentState.Value == EnemyState.Attack)
             {
                 float currentAngle = (attackType.Value == 2) ? 110f : ((attackType.Value == 1) ? 90f : 80f);
                 float currentRange = (attackType.Value == 2) ? attackRange + 1.5f : ((attackType.Value == 1) ? attackRange + 1.0f : attackRange + 0.5f);
-                
+
                 Vector3 attackLeft = Quaternion.AngleAxis(-currentAngle / 2f, Vector3.up) * transform.forward;
                 Vector3 attackRight = Quaternion.AngleAxis(currentAngle / 2f, Vector3.up) * transform.forward;
-                
+
                 Gizmos.color = new Color(1f, 0.2f, 0.2f, 0.7f);
                 Gizmos.DrawRay(transform.position, attackLeft * currentRange);
                 Gizmos.DrawRay(transform.position, attackRight * currentRange);

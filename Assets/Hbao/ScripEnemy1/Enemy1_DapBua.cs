@@ -332,12 +332,12 @@ public class Enemy1_DapBua : NetworkBehaviour
 
         switch (CurrentStateValue)
         {
-            case EnemyState.Idle:    HandleIdle();    break;
-            case EnemyState.Walk:    HandleWalk();    break;
-            case EnemyState.Run:     HandleRun();     break;
-            case EnemyState.Search:  HandleSearch();  break;
+            case EnemyState.Idle: HandleIdle(); break;
+            case EnemyState.Walk: HandleWalk(); break;
+            case EnemyState.Run: HandleRun(); break;
+            case EnemyState.Search: HandleSearch(); break;
             case EnemyState.Stagger: HandleStagger(); break;
-            case EnemyState.Attack:  HandleAttack();  break;
+            case EnemyState.Attack: HandleAttack(); break;
         }
     }
 
@@ -396,10 +396,14 @@ public class Enemy1_DapBua : NetworkBehaviour
             SimplePlayerTest playerScript = potentialTarget.GetComponentInParent<SimplePlayerTest>();
             if (playerScript != null && playerScript.CurrentHealth <= 0) continue;
 
-            Vector3 directionToTarget = (potentialTarget.position - eyePos).normalized;
+            // Nâng tâm ngắm lên ngực Player (cao 1.0f) thay vì nhìn xuống chân
+            Vector3 targetCenterPos = potentialTarget.position + Vector3.up * 1.0f;
+            Vector3 directionToTarget = (targetCenterPos - eyePos).normalized;
+
             if (Vector3.Angle(transform.forward, directionToTarget) < fieldOfView / 2)
             {
-                float distanceToTarget = Vector3.Distance(eyePos, potentialTarget.position);
+                float distanceToTarget = Vector3.Distance(eyePos, targetCenterPos);
+                // Bắn tia Raycast kiểm tra vật cản
                 if (!Physics.Raycast(eyePos, directionToTarget, distanceToTarget, obstacleLayer))
                 {
                     targetPlayer = potentialTarget;
@@ -459,7 +463,7 @@ public class Enemy1_DapBua : NetworkBehaviour
             }
         }
 
-        if (hasDestination && AgentReady && !agent.pathPending && agent.remainingDistance <= agent.stoppingDistance)
+        if (hasDestination && AgentReady && !agent.pathPending && agent.remainingDistance <= agent.stoppingDistance + 0.2f)
         {
             hasDestination = false;
             float rand = Random.value;
@@ -771,9 +775,9 @@ public class Enemy1_DapBua : NetworkBehaviour
         anim.ResetTrigger("Idle"); anim.ResetTrigger("Walk"); anim.ResetTrigger("Run"); anim.ResetTrigger("Hit");
         switch (newState)
         {
-            case EnemyState.Idle:    anim.SetTrigger("Idle"); break;
-            case EnemyState.Walk:    anim.SetTrigger("Walk"); break;
-            case EnemyState.Run:     anim.SetTrigger("Run");  break;
+            case EnemyState.Idle: anim.SetTrigger("Idle"); break;
+            case EnemyState.Walk: anim.SetTrigger("Walk"); break;
+            case EnemyState.Run: anim.SetTrigger("Run"); break;
             case EnemyState.Stagger:
                 if (IsEnragedValue && !hasRoared) { anim.ResetTrigger("Combo"); anim.SetTrigger("Combo"); }
                 else anim.SetTrigger("Hit");
@@ -816,9 +820,9 @@ public class Enemy1_DapBua : NetworkBehaviour
     // ------------------------------------------------------------------
     public void EnableWeaponHitbox() { if (hammerHitbox != null) hammerHitbox.SetActive(true); EnableLeftWeaponHitbox(); EnableRightWeaponHitbox(); }
     public void DisableWeaponHitbox() { if (hammerHitbox != null) hammerHitbox.SetActive(false); DisableLeftWeaponHitbox(); DisableRightWeaponHitbox(); }
-    public void EnableLeftWeaponHitbox()  { if (hammerHitboxLeft  != null) hammerHitboxLeft.SetActive(true); }
-    public void DisableLeftWeaponHitbox() { if (hammerHitboxLeft  != null) hammerHitboxLeft.SetActive(false); }
-    public void EnableRightWeaponHitbox()  { if (hammerHitboxRight != null) hammerHitboxRight.SetActive(true); }
+    public void EnableLeftWeaponHitbox() { if (hammerHitboxLeft != null) hammerHitboxLeft.SetActive(true); }
+    public void DisableLeftWeaponHitbox() { if (hammerHitboxLeft != null) hammerHitboxLeft.SetActive(false); }
+    public void EnableRightWeaponHitbox() { if (hammerHitboxRight != null) hammerHitboxRight.SetActive(true); }
     public void DisableRightWeaponHitbox() { if (hammerHitboxRight != null) hammerHitboxRight.SetActive(false); }
 
     private void OnDrawGizmosSelected()
@@ -827,9 +831,9 @@ public class Enemy1_DapBua : NetworkBehaviour
         {
             Gizmos.color = Color.yellow;
             Gizmos.DrawWireSphere(eyeTransform.position, sightRange);
-            Vector3 leftLimit  = Quaternion.AngleAxis(-fieldOfView / 2f, Vector3.up) * transform.forward;
-            Vector3 rightLimit = Quaternion.AngleAxis( fieldOfView / 2f, Vector3.up) * transform.forward;
-            Gizmos.DrawRay(eyeTransform.position, leftLimit  * sightRange);
+            Vector3 leftLimit = Quaternion.AngleAxis(-fieldOfView / 2f, Vector3.up) * transform.forward;
+            Vector3 rightLimit = Quaternion.AngleAxis(fieldOfView / 2f, Vector3.up) * transform.forward;
+            Gizmos.DrawRay(eyeTransform.position, leftLimit * sightRange);
             Gizmos.DrawRay(eyeTransform.position, rightLimit * sightRange);
             Gizmos.color = Color.red;
             Gizmos.DrawWireSphere(transform.position, attackRange);

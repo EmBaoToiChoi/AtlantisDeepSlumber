@@ -24,8 +24,8 @@ public class Enemy4_Bongtoi : NetworkBehaviour
     );
 
     public NetworkVariable<EnemyState> currentState = new NetworkVariable<EnemyState>(
-        EnemyState.Idle, 
-        NetworkVariableReadPermission.Everyone, 
+        EnemyState.Idle,
+        NetworkVariableReadPermission.Everyone,
         NetworkVariableWritePermission.Server
     );
 
@@ -301,12 +301,14 @@ public class Enemy4_Bongtoi : NetworkBehaviour
             SimplePlayerTest playerScript = playerTrans.GetComponentInParent<SimplePlayerTest>();
             if (playerScript != null && playerScript.currentHealth.Value <= 0) continue;
 
-            Vector3 direction = (playerTrans.position - eyePos).normalized;
+            // Nâng tâm ngắm lên ngực Player (cao 1.0f)
+            Vector3 targetCenterPos = playerTrans.position + Vector3.up * 1.0f;
+            Vector3 direction = (targetCenterPos - eyePos).normalized;
 
             // Kiểm tra góc FOV
             if (Vector3.Angle(transform.forward, direction) < fieldOfView / 2f)
             {
-                float distance = Vector3.Distance(eyePos, playerTrans.position);
+                float distance = Vector3.Distance(eyePos, targetCenterPos);
 
                 // Bắn Raycast kiểm tra vật cản (tránh nhìn xuyên tường)
                 if (!Physics.Raycast(eyePos, direction, distance, obstacleLayer))
@@ -380,7 +382,7 @@ public class Enemy4_Bongtoi : NetworkBehaviour
             }
         }
 
-        if (hasDestination && agent.isActiveAndEnabled && agent.remainingDistance <= agent.stoppingDistance)
+        if (hasDestination && agent.isActiveAndEnabled && !agent.pathPending && agent.remainingDistance <= agent.stoppingDistance + 0.2f)
         {
             hasDestination = false;
             float rand = Random.value;
@@ -411,7 +413,7 @@ public class Enemy4_Bongtoi : NetworkBehaviour
                 }
             }
 
-            if (hasDestination && agent.isActiveAndEnabled && agent.remainingDistance <= agent.stoppingDistance)
+            if (hasDestination && agent.isActiveAndEnabled && !agent.pathPending && agent.remainingDistance <= agent.stoppingDistance + 0.2f)
             {
                 hasDestination = false;
                 ChangeState(Random.value < 0.6f ? EnemyState.Idle : EnemyState.Walk);
@@ -463,7 +465,7 @@ public class Enemy4_Bongtoi : NetworkBehaviour
 
                 // Điểm bo sườn chếch xiên một góc đẹp mắt
                 Vector3 targetOffset = targetPlayer.position - toPlayer * 1.5f + tangent * sideDir * 2.5f;
-                
+
                 NavMeshHit hit;
                 if (NavMesh.SamplePosition(targetOffset, out hit, 3f, NavMesh.AllAreas))
                 {
@@ -497,7 +499,7 @@ public class Enemy4_Bongtoi : NetworkBehaviour
             agent.SetDestination(lastKnownPlayerPosition);
         }
 
-        if (agent.isActiveAndEnabled && agent.remainingDistance <= agent.stoppingDistance + 0.1f)
+        if (agent.isActiveAndEnabled && !agent.pathPending && agent.remainingDistance <= agent.stoppingDistance + 0.2f)
         {
             agent.isStopped = true;
             searchTimer -= Time.deltaTime;
@@ -620,7 +622,7 @@ public class Enemy4_Bongtoi : NetworkBehaviour
                     if (playerScript != null)
                     {
                         playerScript.TakeDamage(damage);
-                        
+
                         // Đẩy lùi Player mượt mà bằng vật lý
                         Vector3 kbDir = dir;
                         kbDir.y = 0;
@@ -679,12 +681,12 @@ public class Enemy4_Bongtoi : NetworkBehaviour
 
         Vector3 toPlayer = (targetPlayer.position - transform.position).normalized;
         Vector3 perpendicular = new Vector3(-toPlayer.z, 0, toPlayer.x);
-        
+
         // Ngẫu nhiên chọn né bên trái hay bên phải
         if (Random.value < 0.5f) perpendicular = -perpendicular;
 
         Vector3 dodgeTarget = transform.position + perpendicular * 3.0f;
-        
+
         NavMeshHit hit;
         if (NavMesh.SamplePosition(dodgeTarget, out hit, 3f, NavMesh.AllAreas))
         {
@@ -730,7 +732,7 @@ public class Enemy4_Bongtoi : NetworkBehaviour
     {
         if (agent.isActiveAndEnabled) agent.isStopped = true;
         // Tắt va chạm hoặc thực hiện các hiệu ứng chết khác ở đây nếu cần
-        
+
         // Hủy đối tượng qua mạng sau 2 giây chơi hoàn tất hoạt ảnh chết
         Invoke(nameof(DespawnEnemy), 2.0f);
     }
@@ -754,17 +756,17 @@ public class Enemy4_Bongtoi : NetworkBehaviour
 
         currentState.Value = newState;
 
-        if (newState == EnemyState.Idle) 
+        if (newState == EnemyState.Idle)
         {
             stateTimer = Random.Range(1.5f, idleTimeMax);
             if (agent.isActiveAndEnabled) agent.isStopped = true;
         }
-        if (newState == EnemyState.Walk) 
+        if (newState == EnemyState.Walk)
         {
             hasDestination = false;
             if (agent.isActiveAndEnabled) agent.isStopped = false;
         }
-        if (newState == EnemyState.Run) 
+        if (newState == EnemyState.Run)
         {
             isDodging = false;
             hasDestination = false;
@@ -804,7 +806,7 @@ public class Enemy4_Bongtoi : NetworkBehaviour
             else
             {
                 // Khoảng giữa 50% - 99%: sử dụng đòn vung đơn Attack 1 làm mặc định chiến đấu
-                attackType.Value = 0; 
+                attackType.Value = 0;
                 attackDuration = 1.0f;
             }
 
@@ -840,13 +842,13 @@ public class Enemy4_Bongtoi : NetworkBehaviour
         switch (newState)
         {
             case EnemyState.Idle:
-                anim.SetTrigger(idleTriggerName); 
+                anim.SetTrigger(idleTriggerName);
                 break;
             case EnemyState.Walk:
-                anim.SetTrigger(walkTriggerName); 
+                anim.SetTrigger(walkTriggerName);
                 break;
             case EnemyState.Run:
-                anim.SetTrigger(runTriggerName);   
+                anim.SetTrigger(runTriggerName);
                 break;
             case EnemyState.Stagger:
                 anim.SetTrigger(hitTriggerName); // Chạy hoạt ảnh Qual4Anhit
@@ -931,7 +933,7 @@ public class Enemy4_Bongtoi : NetworkBehaviour
             // Nhấp nháy màu tím huyền bí biểu thị bóng tối thức tỉnh cuồng nộ
             float pingPong = Mathf.PingPong(Time.time * 3f, 1f);
             Color enrageColor = Color.Lerp(Color.white, new Color(0.5f, 0f, 0.8f), pingPong); // Tím huyền ảo
-            
+
             foreach (var r in modelRenderers)
             {
                 if (r != null)
