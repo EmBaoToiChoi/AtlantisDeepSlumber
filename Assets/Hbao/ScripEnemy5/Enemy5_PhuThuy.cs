@@ -202,14 +202,18 @@ public class Enemy5_PhuThuy : NetworkBehaviour
         UpdateEnrageVisuals();
 
         // Đồng bộ hóa an toàn hoạt ảnh di chuyển trên Client
+        // Đồng bộ hóa an toàn hoạt ảnh di chuyển trên Client
         if (anim != null && anim.isActiveAndEnabled && anim.runtimeAnimatorController != null)
         {
             if (clientLocalState != currentState.Value)
             {
-                if (SyncAnimationState(currentState.Value))
+                // FIX LỖI TRƯỢT BĂNG
+                bool isAIAuthoritative = IsServer;
+                if (isAIAuthoritative)
                 {
-                    clientLocalState = currentState.Value; // Cập nhật lập tức
+                    SyncAnimationState(currentState.Value);
                 }
+                clientLocalState = currentState.Value;
             }
         }
 
@@ -550,14 +554,11 @@ public class Enemy5_PhuThuy : NetworkBehaviour
 
         if (staggerTimer <= 0)
         {
-            if (targetPlayer != null)
-            {
-                ChangeState(EnemyState.Run);
-            }
-            else
-            {
-                ChangeState(EnemyState.Idle);
-            }
+            // (Riêng Enemy 1 có thêm dòng roar thì bạn giữ lại: if (IsEnragedValue && !hasRoared) hasRoared = true;)
+
+            targetPlayer = null;
+            ChangeState(EnemyState.Idle);
+            detectionTimer = 0f;
         }
     }
 
@@ -590,9 +591,13 @@ public class Enemy5_PhuThuy : NetworkBehaviour
 
         if (stateTimer <= 0)
         {
-            // Hồi đòn chưởng: Máu thấp chưởng dồn dập (hồi 0.4s), bình thường hồi 0.9s
-            attackCooldownTimer = (currentHealth.Value < maxHealth * 0.5f) ? 0.4f : 0.9f;
-            ChangeState(EnemyState.Run);
+            // (Giữ nguyên dòng tính attackCooldownTimer của bạn ở đây. Ví dụ của Enemy 4:)
+            attackCooldownTimer = (currentHealth.Value < maxHealth * 0.5f) ? 0.3f : 0.7f;
+
+            // THÊM 3 DÒNG NÀY ĐỂ FIX KẸT ANIMATION:
+            targetPlayer = null; // Xóa mục tiêu cũ để AI reset
+            ChangeState(EnemyState.Idle); // Đưa về trạm trung chuyển Idle
+            detectionTimer = 0f; // Ép AI quét lại và chuyển sang Run NGAY LẬP TỨC ở frame sau!
         }
     }
 
@@ -821,7 +826,7 @@ public class Enemy5_PhuThuy : NetworkBehaviour
             case EnemyState.Walk:
                 anim.SetTrigger(walkTriggerName);
                 break;
-                case EnemyState.Search: anim.SetTrigger(runTriggerName); break;
+            case EnemyState.Search: anim.SetTrigger(runTriggerName); break;
             case EnemyState.Run:
                 anim.SetTrigger(runTriggerName);
                 break;
