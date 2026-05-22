@@ -97,7 +97,6 @@ public class Enemy5_PhuThuy : NetworkBehaviour
     private bool hasCastSpell;
     private float attackDuration = 1.2f; // Thời gian thực thi hoạt ảnh chưởng phép
     private EnemyState clientLocalState = (EnemyState)(-1);
-    private int framesSinceActive = 0;
 
     private void Awake()
     {
@@ -189,27 +188,21 @@ public class Enemy5_PhuThuy : NetworkBehaviour
 
     private void Update()
     {
+        if (!IsSpawned) return; // Ngăn code chạy khi chưa kết nối mạng hoàn chỉnh
+
         // Cập nhật hiệu ứng cuồng nộ màu sắc (chạy trên cả server/client để mượt mà)
         UpdateEnrageVisuals();
 
         // Đồng bộ hóa an toàn hoạt ảnh di chuyển trên Client
         if (anim != null && anim.isActiveAndEnabled && anim.runtimeAnimatorController != null)
         {
-            framesSinceActive++;
             if (clientLocalState != currentState.Value)
             {
                 if (SyncAnimationState(currentState.Value))
                 {
-                    if (framesSinceActive >= 10)
-                    {
-                        clientLocalState = currentState.Value;
-                    }
+                    clientLocalState = currentState.Value; // Cập nhật lập tức
                 }
             }
-        }
-        else
-        {
-            framesSinceActive = 0;
         }
 
         // Chỉ Server mới xử lý bộ não AI
@@ -281,26 +274,6 @@ public class Enemy5_PhuThuy : NetworkBehaviour
         if (currentState.Value == EnemyState.Attack) return;
 
         int numPlayers = Physics.OverlapSphereNonAlloc(transform.position, sightRange, detectionResults, playerLayer);
-        
-        // Quét dự phòng theo Tag "Player" nếu LayerMask không trả về kết quả
-        if (numPlayers == 0)
-        {
-            GameObject[] players = GameObject.FindGameObjectsWithTag("Player");
-            int count = 0;
-            foreach (var p in players)
-            {
-                if (count >= detectionResults.Length) break;
-                if (Vector3.Distance(transform.position, p.transform.position) <= sightRange)
-                {
-                    Collider col = p.GetComponent<Collider>();
-                    if (col != null)
-                    {
-                        detectionResults[count++] = col;
-                    }
-                }
-            }
-            numPlayers = count;
-        }
 
         bool found = false;
         Vector3 eyePos = eyeTransform != null ? eyeTransform.position : transform.position + Vector3.up * 1.5f;
