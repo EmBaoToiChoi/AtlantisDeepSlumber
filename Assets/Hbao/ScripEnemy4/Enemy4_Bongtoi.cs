@@ -99,7 +99,6 @@ public class Enemy4_Bongtoi : NetworkBehaviour
     private bool wasEnraged = false;
     private MaterialPropertyBlock propBlock;
     private EnemyState clientLocalState = (EnemyState)(-1);
-    private int framesSinceActive = 0;
 
     private void Awake()
     {
@@ -195,27 +194,21 @@ public class Enemy4_Bongtoi : NetworkBehaviour
 
     private void Update()
     {
+        if (!IsSpawned) return; // Ngăn code chạy khi chưa kết nối mạng hoàn chỉnh
+
         // Hiệu ứng màu sắc cuồng bạo nhấp nháy tím khi yếu máu (chạy trên cả server/client để mượt mà)
         UpdateEnrageVisuals();
 
         // Đồng bộ hóa an toàn hoạt ảnh di chuyển trên Client
         if (anim != null && anim.isActiveAndEnabled && anim.runtimeAnimatorController != null)
         {
-            framesSinceActive++;
             if (clientLocalState != currentState.Value)
             {
                 if (SyncAnimationState(currentState.Value))
                 {
-                    if (framesSinceActive >= 10)
-                    {
-                        clientLocalState = currentState.Value;
-                    }
+                    clientLocalState = currentState.Value; // Cập nhật ngay lập tức
                 }
             }
-        }
-        else
-        {
-            framesSinceActive = 0;
         }
 
         // Chỉ Server mới có quyền tính toán và ra quyết định AI
@@ -286,26 +279,6 @@ public class Enemy4_Bongtoi : NetworkBehaviour
         if (currentState.Value == EnemyState.Attack) return;
 
         int numPlayers = Physics.OverlapSphereNonAlloc(transform.position, sightRange, detectionResults, playerLayer);
-        
-        // Quét dự phòng theo Tag "Player" nếu LayerMask không trả về kết quả
-        if (numPlayers == 0)
-        {
-            GameObject[] players = GameObject.FindGameObjectsWithTag("Player");
-            int count = 0;
-            foreach (var p in players)
-            {
-                if (count >= detectionResults.Length) break;
-                if (Vector3.Distance(transform.position, p.transform.position) <= sightRange)
-                {
-                    Collider col = p.GetComponent<Collider>();
-                    if (col != null)
-                    {
-                        detectionResults[count++] = col;
-                    }
-                }
-            }
-            numPlayers = count;
-        }
 
         bool found = false;
         Vector3 eyePos = eyeTransform != null ? eyeTransform.position : transform.position + Vector3.up * 1.5f;
@@ -618,25 +591,6 @@ public class Enemy4_Bongtoi : NetworkBehaviour
     private void DealConeDamage(float damage, float range, float angle, float knockback)
     {
         int numHits = Physics.OverlapSphereNonAlloc(transform.position, range, damageResults, playerLayer);
-        
-        if (numHits == 0)
-        {
-            GameObject[] players = GameObject.FindGameObjectsWithTag("Player");
-            int count = 0;
-            foreach (var p in players)
-            {
-                if (count >= damageResults.Length) break;
-                if (Vector3.Distance(transform.position, p.transform.position) <= range)
-                {
-                    Collider col = p.GetComponent<Collider>();
-                    if (col != null)
-                    {
-                        damageResults[count++] = col;
-                    }
-                }
-            }
-            numHits = count;
-        }
 
         Vector3 eyePos = eyeTransform != null ? eyeTransform.position : transform.position + Vector3.up * 1.5f;
 

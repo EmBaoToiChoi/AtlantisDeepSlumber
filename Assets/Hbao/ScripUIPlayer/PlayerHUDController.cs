@@ -6,32 +6,60 @@ public class PlayerHUDController : MonoBehaviour
 {
     [SerializeField] private UIDocument uiDocument;
 
+    [System.Serializable]
+    public struct PlayerHUDProfile
+    {
+        public string className;
+        public Sprite avatarSprite;
+        public Sprite weapon1Sprite;
+        public Sprite weapon2Sprite;
+        public Sprite skillQSprite;
+        public Sprite skillRSprite;
+        public Sprite skillESprite;
+    }
+
+    [Header("Player Profiles (4 Players)")]
+    public System.Collections.Generic.List<PlayerHUDProfile> hudProfiles;
+    
+    [Header("UI Testing")]
+    [Tooltip("Chọn index từ 0 đến 3 để test nhanh giao diện lớp nhân vật khi ấn Play")]
+    public int testProfileIndex = 0;
+
     private VisualElement hpFill;
     private VisualElement mpFill;
     private VisualElement expFill;
     
     // Tham chiếu trực tiếp tới phần tử chứa icon
     private VisualElement micIcon;
+    private VisualElement rawPlayerImage; // Tham chiếu tới Avatar Player để đổi ảnh động
     private VisualElement weaponSlot1;
     private VisualElement weaponSlot2;
+    private VisualElement weaponImg1; // Tham chiếu tới ảnh vũ khí 1 để đổi ảnh động
     
     // Kỹ năng
-    private VisualElement cooldownF;
+    private VisualElement cooldownQ;
     private VisualElement cooldownR;
-    private Label cooldownTextF;
+    private VisualElement cooldownE;
+    private Label cooldownTextQ;
     private Label cooldownTextR;
-    private float cooldownTimeF = 10f; // Thời gian hồi chiêu F
+    private Label cooldownTextE;
+    private float cooldownTimeQ = 10f; // Thời gian hồi chiêu Q
     private float cooldownTimeR = 15f; // Thời gian hồi chiêu R
-    private float currentCooldownF = 0f;
+    private float cooldownTimeE = 12f; // Thời gian hồi chiêu E
+    private float currentCooldownQ = 0f;
     private float currentCooldownR = 0f;
+    private float currentCooldownE = 0f;
     
     // Khóa kỹ năng
-    private VisualElement lockF;
+    private VisualElement lockQ;
     private VisualElement lockR;
-    private VisualElement lockIconF; // Tham chiếu tới icon ổ khóa để rung
+    private VisualElement lockE;
+    private VisualElement lockIconQ; // Tham chiếu tới icon ổ khóa để rung
     private VisualElement lockIconR; // Tham chiếu tới icon ổ khóa để rung
-    private VisualElement skillImgF; // Tham chiếu tới hình ảnh kỹ năng để ẩn
+    private VisualElement lockIconE; // Tham chiếu tới icon ổ khóa để rung
+    private VisualElement skillImgQ; // Tham chiếu tới hình ảnh kỹ năng để ẩn
     private VisualElement skillImgR; // Tham chiếu tới hình ảnh kỹ năng để ẩn
+    private VisualElement skillImgE; // Tham chiếu tới hình ảnh kỹ năng để ẩn
     private bool isSkillsUnlocked = false; // Trạng thái đã mở khóa kỹ năng hay chưa
     
     // Mặc định false -> Vào game chưa ấn M sẽ là tắt Mic
@@ -58,30 +86,38 @@ public class PlayerHUDController : MonoBehaviour
 
         // Tìm UI Mic Icon trực tiếp
         micIcon = root.Q<VisualElement>("mic-icon");
+        rawPlayerImage = root.Q<VisualElement>("raw-player-image");
         
         weaponSlot1 = root.Q<VisualElement>("weapon-slot-1");
         weaponSlot2 = root.Q<VisualElement>("weapon-slot-2");
+        weaponImg1 = root.Q<VisualElement>("weapon-img-1");
 
         // Tìm UI Kỹ năng
-        cooldownF = root.Q<VisualElement>("skill-cooldown-f");
+        cooldownQ = root.Q<VisualElement>("skill-cooldown-q");
         cooldownR = root.Q<VisualElement>("skill-cooldown-r");
-        cooldownTextF = root.Q<Label>("skill-cooldown-text-f");
+        cooldownE = root.Q<VisualElement>("skill-cooldown-e");
+        cooldownTextQ = root.Q<Label>("skill-cooldown-text-q");
         cooldownTextR = root.Q<Label>("skill-cooldown-text-r");
+        cooldownTextE = root.Q<Label>("skill-cooldown-text-e");
         
-        lockF = root.Q<VisualElement>("skill-lock-f");
+        lockQ = root.Q<VisualElement>("skill-lock-q");
         lockR = root.Q<VisualElement>("skill-lock-r");
+        lockE = root.Q<VisualElement>("skill-lock-e");
         
-        if (lockF != null) lockIconF = lockF.Q<VisualElement>(null, "skill-lock-icon");
+        if (lockQ != null) lockIconQ = lockQ.Q<VisualElement>(null, "skill-lock-icon");
         if (lockR != null) lockIconR = lockR.Q<VisualElement>(null, "skill-lock-icon");
+        if (lockE != null) lockIconE = lockE.Q<VisualElement>(null, "skill-lock-icon");
         
-        skillImgF = root.Q<VisualElement>("skill-img-f");
+        skillImgQ = root.Q<VisualElement>("skill-img-q");
         skillImgR = root.Q<VisualElement>("skill-img-r");
+        skillImgE = root.Q<VisualElement>("skill-img-e");
 
         // Ẩn kỹ năng ngay từ đầu nếu đang khóa
         if (!isSkillsUnlocked)
         {
-            if (skillImgF != null) skillImgF.style.visibility = Visibility.Hidden;
+            if (skillImgQ != null) skillImgQ.style.visibility = Visibility.Hidden;
             if (skillImgR != null) skillImgR.style.visibility = Visibility.Hidden;
+            if (skillImgE != null) skillImgE.style.visibility = Visibility.Hidden;
         }
 
         // Tìm Label cảnh báo và Overlay khóa
@@ -100,16 +136,22 @@ public class PlayerHUDController : MonoBehaviour
         // Đồng bộ trạng thái UI ngay khi load game (Tắt)
         UpdateMicUI();
         SelectWeapon(1); // Mặc định chọn vũ khí 1 khi vào game
+
+        // Test nhanh giao diện (Nếu danh sách profiles đã được setup trong Inspector)
+        if (hudProfiles != null && hudProfiles.Count > 0)
+        {
+            SetupPlayerProfile(testProfileIndex);
+        }
     }
 
     void Update()
     {
         if (Keyboard.current != null)
         {
-            // Khi ấn e sẽ đổi trạng thái (Sử dụng Input System mới)
-            if (Keyboard.current.eKey.wasPressedThisFrame)
+            // Khi ấn T sẽ đổi trạng thái (Sử dụng Input System mới)
+            if (Keyboard.current.tKey.wasPressedThisFrame)
             {
-                Debug.Log("Đã ấn E để chuyển đổi trạng thái Mic");
+                Debug.Log("Đã ấn T để chuyển đổi trạng thái Mic");
                 ToggleMic();
             }
 
@@ -160,28 +202,30 @@ public class PlayerHUDController : MonoBehaviour
                 Debug.Log("Đã mở khóa Kỹ năng!");
                 
                 // Thêm class để kích hoạt hiệu ứng rớt ổ khóa trong USS
-                if (lockF != null) lockF.AddToClassList("unlocked-anim");
+                if (lockQ != null) lockQ.AddToClassList("unlocked-anim");
                 if (lockR != null) lockR.AddToClassList("unlocked-anim");
+                if (lockE != null) lockE.AddToClassList("unlocked-anim");
 
                 // Hiện lại hình ảnh kỹ năng khi mở khóa
-                if (skillImgF != null) skillImgF.style.visibility = Visibility.Visible;
+                if (skillImgQ != null) skillImgQ.style.visibility = Visibility.Visible;
                 if (skillImgR != null) skillImgR.style.visibility = Visibility.Visible;
+                if (skillImgE != null) skillImgE.style.visibility = Visibility.Visible;
             }
 
-            // Kích hoạt Skill F (chỉ khi đã mở khóa)
-            if (Keyboard.current.fKey.wasPressedThisFrame)
+            // Kích hoạt Skill Q (chỉ khi đã mở khóa)
+            if (Keyboard.current.qKey.wasPressedThisFrame)
             {
                 if (isSkillsUnlocked)
                 {
-                    if (currentCooldownF <= 0f)
+                    if (currentCooldownQ <= 0f)
                     {
-                        currentCooldownF = cooldownTimeF;
-                        Debug.Log("Đã dùng kỹ năng F");
+                        currentCooldownQ = cooldownTimeQ;
+                        Debug.Log("Đã dùng kỹ năng Q");
                     }
                 }
                 else
                 {
-                    ShowSkillWarning(lockIconF);
+                    ShowSkillWarning(lockIconQ);
                 }
             }
 
@@ -201,29 +245,46 @@ public class PlayerHUDController : MonoBehaviour
                     ShowSkillWarning(lockIconR);
                 }
             }
+
+            // Kích hoạt Skill E (chỉ khi đã mở khóa)
+            if (Keyboard.current.eKey.wasPressedThisFrame)
+            {
+                if (isSkillsUnlocked)
+                {
+                    if (currentCooldownE <= 0f)
+                    {
+                        currentCooldownE = cooldownTimeE;
+                        Debug.Log("Đã dùng kỹ năng E");
+                    }
+                }
+                else
+                {
+                    ShowSkillWarning(lockIconE);
+                }
+            }
         }
 
-        // Cập nhật hiệu ứng hồi chiêu F
-        if (currentCooldownF > 0f)
+        // Cập nhật hiệu ứng hồi chiêu Q
+        if (currentCooldownQ > 0f)
         {
-            currentCooldownF -= Time.deltaTime;
-            if (cooldownF != null)
+            currentCooldownQ -= Time.deltaTime;
+            if (cooldownQ != null)
             {
-                float percent = Mathf.Clamp01(currentCooldownF / cooldownTimeF) * 100f;
-                cooldownF.style.height = Length.Percent(percent);
+                float percent = Mathf.Clamp01(currentCooldownQ / cooldownTimeQ) * 100f;
+                cooldownQ.style.height = Length.Percent(percent);
             }
-            if (cooldownTextF != null)
+            if (cooldownTextQ != null)
             {
-                cooldownTextF.text = Mathf.CeilToInt(currentCooldownF).ToString();
-                cooldownTextF.style.display = DisplayStyle.Flex;
+                cooldownTextQ.text = Mathf.CeilToInt(currentCooldownQ).ToString();
+                cooldownTextQ.style.display = DisplayStyle.Flex;
             }
         }
         else
         {
-            if (cooldownF != null && cooldownF.style.height.value.value > 0)
-                cooldownF.style.height = Length.Percent(0);
-            if (cooldownTextF != null && cooldownTextF.style.display == DisplayStyle.Flex)
-                cooldownTextF.style.display = DisplayStyle.None;
+            if (cooldownQ != null && cooldownQ.style.height.value.value > 0)
+                cooldownQ.style.height = Length.Percent(0);
+            if (cooldownTextQ != null && cooldownTextQ.style.display == DisplayStyle.Flex)
+                cooldownTextQ.style.display = DisplayStyle.None;
         }
 
         // Cập nhật hiệu ứng hồi chiêu R
@@ -247,6 +308,29 @@ public class PlayerHUDController : MonoBehaviour
                 cooldownR.style.height = Length.Percent(0);
             if (cooldownTextR != null && cooldownTextR.style.display == DisplayStyle.Flex)
                 cooldownTextR.style.display = DisplayStyle.None;
+        }
+
+        // Cập nhật hiệu ứng hồi chiêu E
+        if (currentCooldownE > 0f)
+        {
+            currentCooldownE -= Time.deltaTime;
+            if (cooldownE != null)
+            {
+                float percent = Mathf.Clamp01(currentCooldownE / cooldownTimeE) * 100f;
+                cooldownE.style.height = Length.Percent(percent);
+            }
+            if (cooldownTextE != null)
+            {
+                cooldownTextE.text = Mathf.CeilToInt(currentCooldownE).ToString();
+                cooldownTextE.style.display = DisplayStyle.Flex;
+            }
+        }
+        else
+        {
+            if (cooldownE != null && cooldownE.style.height.value.value > 0)
+                cooldownE.style.height = Length.Percent(0);
+            if (cooldownTextE != null && cooldownTextE.style.display == DisplayStyle.Flex)
+                cooldownTextE.style.display = DisplayStyle.None;
         }
 
         // Cập nhật timer cảnh báo
@@ -392,5 +476,51 @@ public class PlayerHUDController : MonoBehaviour
                 lockIcon2.RemoveFromClassList("shake-right");
             }).StartingIn(240);
         }
+    }
+
+    /// <summary>
+    /// Đồng bộ động toàn bộ giao diện (Avatar, Vũ khí, Kỹ năng) theo Player Profile của người chơi
+    /// </summary>
+    public void SetupPlayerProfile(int profileIndex)
+    {
+        if (hudProfiles == null || profileIndex < 0 || profileIndex >= hudProfiles.Count)
+        {
+            Debug.LogWarning($"[PlayerHUDController] Index profile {profileIndex} không hợp lệ hoặc danh sách Profiles trống!");
+            return;
+        }
+
+        var profile = hudProfiles[profileIndex];
+
+        // 1. Cập nhật Avatar
+        if (rawPlayerImage != null && profile.avatarSprite != null)
+        {
+            rawPlayerImage.style.backgroundImage = new StyleBackground(profile.avatarSprite);
+        }
+
+        // 2. Cập nhật ảnh Vũ khí
+        if (weaponImg1 != null && profile.weapon1Sprite != null)
+        {
+            weaponImg1.style.backgroundImage = new StyleBackground(profile.weapon1Sprite);
+        }
+        if (weaponImg2 != null && profile.weapon2Sprite != null)
+        {
+            weaponImg2.style.backgroundImage = new StyleBackground(profile.weapon2Sprite);
+        }
+
+        // 3. Cập nhật ảnh Kỹ năng
+        if (skillImgQ != null && profile.skillQSprite != null)
+        {
+            skillImgQ.style.backgroundImage = new StyleBackground(profile.skillQSprite);
+        }
+        if (skillImgR != null && profile.skillRSprite != null)
+        {
+            skillImgR.style.backgroundImage = new StyleBackground(profile.skillRSprite);
+        }
+        if (skillImgE != null && profile.skillESprite != null)
+        {
+            skillImgE.style.backgroundImage = new StyleBackground(profile.skillESprite);
+        }
+
+        Debug.Log($"[PlayerHUDController] Đã thiết lập thành công giao diện cho lớp nhân vật: {profile.className} (Index {profileIndex})");
     }
 }
