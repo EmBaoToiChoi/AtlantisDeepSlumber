@@ -251,7 +251,7 @@ MonoBehaviour:
   idleTimeMax: 4.5
   playerLayer:
     serializedVersion: 2
-    m_Bits: 0
+    m_Bits: 8
   obstacleLayer:
     serializedVersion: 2
     m_Bits: 0

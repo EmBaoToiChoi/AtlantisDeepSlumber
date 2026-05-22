@@ -14,7 +14,7 @@ GameObject:
   - component: {fileID: 6398699265447207813}
   - component: {fileID: 4142710120742810481}
   - component: {fileID: 6900434042573246661}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: PLayer
   m_TagString: Player
   m_Icon: {fileID: 0}
@@ -157,6 +157,7 @@ MonoBehaviour:
       MinSecondsBetweenUpdates: 0
       MaxSecondsBetweenUpdates: 0
     m_InternalValue: 100
+  characterClassIndex: 0
   enableCameraFollow: 1
   cameraOffset: {x: 0, y: 2, z: -10}
   cameraSmoothSpeed: 5
