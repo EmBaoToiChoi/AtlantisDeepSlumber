@@ -452,19 +452,20 @@ public class Enemy5_PhuThuy : NetworkBehaviour
         }
 
         // B. CỰ LY BẮN PHÉP LÝ TƯỞNG (Từ 5.5m đến 13m):
+        // B. CỰ LY BẮN PHÉP LÝ TƯỞNG (Từ 5.5m đến 13m):
         if (distance >= minAttackRange && distance <= maxAttackRange)
         {
-            if (agent.isActiveAndEnabled) agent.isStopped = true;
-
+            // Chỉ dừng lại và tấn công NẾU ĐÃ HỒI CHIÊU XONG
             if (attackCooldownTimer <= 0)
             {
-                ChangeState(EnemyState.Attack); // Đủ điều kiện thì chưởng
+                if (agent.isActiveAndEnabled) agent.isStopped = true;
+                ChangeState(EnemyState.Attack);
+                return;
             }
-            else
-            {
-                ChangeState(EnemyState.Idle); // Chưa hồi chiêu xong thì đứng Idle chờ đợi
-            }
-            return;
+
+            // NẾU CHƯA HỒI CHIÊU XONG: 
+            // Không làm gì cả (Không stop, không chuyển sang Idle).
+            // Phù thủy sẽ tiếp tục ở state Run và vừa chạy lờn vờn vừa lùa Player!
         }
 
         // C. CỰ LY QUÁ XA (> 13m):

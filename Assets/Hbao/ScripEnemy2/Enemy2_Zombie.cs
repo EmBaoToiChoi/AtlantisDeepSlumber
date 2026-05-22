@@ -180,8 +180,12 @@ public class Enemy2_Zombie : NetworkBehaviour
         {
             framesSinceActive++;
             if (clientLocalState != CurrentStateValue)
-                if (SyncAnimationState(CurrentStateValue) && framesSinceActive >= 10)
-                    clientLocalState = CurrentStateValue;
+            {
+                if (SyncAnimationState(CurrentStateValue))
+                {
+                    clientLocalState = CurrentStateValue; // Cập nhật ngay lập tức, bỏ qua delay!
+                }
+            }
         }
         else framesSinceActive = 0;
 
@@ -335,16 +339,14 @@ public class Enemy2_Zombie : NetworkBehaviour
         }
         else { if (AgentReady) agent.SetDestination(targetPlayer.position); }
 
-        if ( dist <= attackRange)
+        // ĐOẠN CODE ĐÚNG SAU KHI SỬA
+        if (dist <= attackRange)
         {
             if (attackCooldownTimer <= 0)
             {
-                ChangeState(EnemyState.Attack); // Đủ điều kiện thì chém
+                ChangeState(EnemyState.Attack);
             }
-            else
-            {
-                ChangeState(EnemyState.Idle); // Chưa hồi chiêu xong thì chuyển về Idle đứng chờ
-            }
+            // Bỏ qua bước chuyển sang Idle. Quái sẽ giữ state Run và chạy bám đuôi Player!
         }
     }
 

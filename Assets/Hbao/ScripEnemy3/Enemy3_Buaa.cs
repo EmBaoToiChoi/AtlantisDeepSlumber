@@ -498,16 +498,14 @@ public class Enemy3_Buaa : NetworkBehaviour
         }
 
         // Vào tầm đánh búa cận chiến và hết thời gian hồi chiêu
+        // ĐOẠN CODE ĐÚNG SAU KHI SỬA
         if (distanceToPlayer <= attackRange)
         {
             if (attackCooldownTimer <= 0)
             {
-                ChangeState(EnemyState.Attack); // Đủ điều kiện thì chém
+                ChangeState(EnemyState.Attack);
             }
-            else
-            {
-                ChangeState(EnemyState.Idle); // Chưa hồi chiêu xong thì chuyển về Idle đứng chờ
-            }
+            // Bỏ qua bước chuyển sang Idle. Quái sẽ giữ state Run và chạy bám đuôi Player!
         }
     }
 
