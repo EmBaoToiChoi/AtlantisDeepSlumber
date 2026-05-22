@@ -208,14 +208,18 @@ public class Enemy4_Bongtoi : NetworkBehaviour
         UpdateEnrageVisuals();
 
         // Đồng bộ hóa an toàn hoạt ảnh di chuyển trên Client
+        // Đồng bộ hóa an toàn hoạt ảnh di chuyển trên Client
         if (anim != null && anim.isActiveAndEnabled && anim.runtimeAnimatorController != null)
         {
             if (clientLocalState != currentState.Value)
             {
-                if (SyncAnimationState(currentState.Value))
+                // FIX LỖI TRƯỢT BĂNG
+                bool isAIAuthoritative = IsServer;
+                if (isAIAuthoritative)
                 {
-                    clientLocalState = currentState.Value; // Cập nhật ngay lập tức
+                    SyncAnimationState(currentState.Value);
                 }
+                clientLocalState = currentState.Value;
             }
         }
 
@@ -555,14 +559,11 @@ public class Enemy4_Bongtoi : NetworkBehaviour
 
         if (staggerTimer <= 0)
         {
-            if (targetPlayer != null)
-            {
-                ChangeState(EnemyState.Run);
-            }
-            else
-            {
-                ChangeState(EnemyState.Idle);
-            }
+            // (Riêng Enemy 1 có thêm dòng roar thì bạn giữ lại: if (IsEnragedValue && !hasRoared) hasRoared = true;)
+
+            targetPlayer = null;
+            ChangeState(EnemyState.Idle);
+            detectionTimer = 0f;
         }
     }
 
@@ -619,9 +620,13 @@ public class Enemy4_Bongtoi : NetworkBehaviour
 
         if (stateTimer <= 0)
         {
-            // Thời gian hồi chiêu: bình thường hồi 0.7s, khi máu thấp hồi siêu tốc 0.3s cực kỳ thông minh hung hãn
+            // (Giữ nguyên dòng tính attackCooldownTimer của bạn ở đây. Ví dụ của Enemy 4:)
             attackCooldownTimer = (currentHealth.Value < maxHealth * 0.5f) ? 0.3f : 0.7f;
-            ChangeState(EnemyState.Run);
+
+            // THÊM 3 DÒNG NÀY ĐỂ FIX KẸT ANIMATION:
+            targetPlayer = null; // Xóa mục tiêu cũ để AI reset
+            ChangeState(EnemyState.Idle); // Đưa về trạm trung chuyển Idle
+            detectionTimer = 0f; // Ép AI quét lại và chuyển sang Run NGAY LẬP TỨC ở frame sau!
         }
     }
 
@@ -874,7 +879,7 @@ public class Enemy4_Bongtoi : NetworkBehaviour
             case EnemyState.Walk:
                 anim.SetTrigger(walkTriggerName);
                 break;
-                case EnemyState.Search: anim.SetTrigger(runTriggerName); break;
+            case EnemyState.Search: anim.SetTrigger(runTriggerName); break;
             case EnemyState.Run:
                 anim.SetTrigger(runTriggerName);
                 break;

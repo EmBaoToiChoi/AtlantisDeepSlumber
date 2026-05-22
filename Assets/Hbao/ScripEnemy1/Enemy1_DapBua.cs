@@ -102,6 +102,12 @@ public class Enemy1_DapBua : NetworkBehaviour
     public float idleTimeMax = 4f;
 
     [Header("Layers")]
+    [Header("Animator Parameter/Trigger Names")]
+    public string idleTriggerName = "quai1Idle";
+    public string walkTriggerName = "quai1walk";
+    public string runTriggerName = "quai1Run";
+    public string hitTriggerName = "Hit";
+    public string dieTriggerName = "Die";
     public LayerMask playerLayer;
     public LayerMask obstacleLayer;
 
@@ -296,15 +302,19 @@ public class Enemy1_DapBua : NetworkBehaviour
         }
 
         // Đồng bộ animation (client side)
+        // Đồng bộ animation (client side)
+        // Đồng bộ animation (client side)
         if (anim != null && anim.isActiveAndEnabled && anim.runtimeAnimatorController != null)
         {
             framesSinceActive++;
             if (clientLocalState != CurrentStateValue)
             {
-                if (SyncAnimationState(CurrentStateValue))
+                // FIX LỖI TRƯỢT BĂNG: Kiểm tra thẳng điều kiện thay vì tạo biến trùng tên
+                if (isStandaloneMode || IsServer)
                 {
-                    clientLocalState = CurrentStateValue; // Cập nhật ngay lập tức, bỏ qua delay!
+                    SyncAnimationState(CurrentStateValue);
                 }
+                clientLocalState = CurrentStateValue; // Cập nhật ngay lập tức
             }
         }
         else
@@ -605,12 +615,13 @@ public class Enemy1_DapBua : NetworkBehaviour
 
     private void HandleStagger()
     {
-        if (AgentReady) agent.isStopped = true;
-        staggerTimer -= Time.deltaTime;
         if (staggerTimer <= 0)
         {
             if (IsEnragedValue && !hasRoared) hasRoared = true;
-            ChangeState(targetPlayer != null ? EnemyState.Run : EnemyState.Idle);
+
+            targetPlayer = null;
+            ChangeState(EnemyState.Idle);
+            detectionTimer = 0f;
         }
     }
 
@@ -641,8 +652,13 @@ public class Enemy1_DapBua : NetworkBehaviour
 
         if (stateTimer <= 0)
         {
-            attackCooldownTimer = IsEnragedValue ? 0.4f : 0.8f;
-            ChangeState(EnemyState.Run);
+            // (Giữ nguyên dòng tính attackCooldownTimer của bạn ở đây. Ví dụ của Enemy 4:)
+            attackCooldownTimer = (currentHealth.Value < maxHealth * 0.5f) ? 0.3f : 0.7f;
+
+            // THÊM 3 DÒNG NÀY ĐỂ FIX KẸT ANIMATION:
+            targetPlayer = null; // Xóa mục tiêu cũ để AI reset
+            ChangeState(EnemyState.Idle); // Đưa về trạm trung chuyển Idle
+            detectionTimer = 0f; // Ép AI quét lại và chuyển sang Run NGAY LẬP TỨC ở frame sau!
         }
     }
 
@@ -807,18 +823,23 @@ public class Enemy1_DapBua : NetworkBehaviour
     private bool SyncAnimationState(EnemyState newState)
     {
         if (anim == null || !anim.isActiveAndEnabled || anim.runtimeAnimatorController == null) return false;
-        anim.ResetTrigger("Idle"); anim.ResetTrigger("Walk"); anim.ResetTrigger("Run"); anim.ResetTrigger("Hit");
+
+        // Reset sạch sẽ cả trigger đánh để tránh kẹt
+        anim.ResetTrigger(idleTriggerName); anim.ResetTrigger(walkTriggerName);
+        anim.ResetTrigger(runTriggerName); anim.ResetTrigger(hitTriggerName);
+        anim.ResetTrigger("AttLeft"); anim.ResetTrigger("quai1Attackphai"); anim.ResetTrigger("Combo");
+
         switch (newState)
         {
-            case EnemyState.Idle: anim.SetTrigger("Idle"); break;
-            case EnemyState.Walk: anim.SetTrigger("Walk"); break;
-            case EnemyState.Search: anim.SetTrigger("Run"); break;
-            case EnemyState.Run: anim.SetTrigger("Run"); break;
+            case EnemyState.Idle: anim.SetTrigger(idleTriggerName); break;
+            case EnemyState.Walk: anim.SetTrigger(walkTriggerName); break;
+            case EnemyState.Search: anim.SetTrigger(runTriggerName); break;
+            case EnemyState.Run: anim.SetTrigger(runTriggerName); break;
             case EnemyState.Stagger:
                 if (IsEnragedValue && !hasRoared) { anim.ResetTrigger("Combo"); anim.SetTrigger("Combo"); }
-                else anim.SetTrigger("Hit");
+                else anim.SetTrigger(hitTriggerName);
                 break;
-            case EnemyState.Dead: anim.SetTrigger("Die"); break;
+            case EnemyState.Dead: anim.SetTrigger(dieTriggerName); break;
         }
         return true;
     }
