@@ -140,6 +140,14 @@ public class Enemy2_Zombie : NetworkBehaviour
         var nt = GetComponent<Unity.Netcode.Components.NetworkTransform>();
         if (nt != null) { nt.PositionThreshold = 0.001f; nt.RotAngleThreshold = 0.01f; nt.ScaleThreshold = 0.01f; }
         if (IsServer) { currentHealth.Value = maxHealth; ChangeState(EnemyState.Idle); SnapToNavMesh(); }
+        else // ---> THÊM ĐOẠN NÀY VÀO <---
+        {
+            // TẮT NavMeshAgent trên Client để NetworkTransform của Server thoải mái cập nhật vị trí
+            if (agent != null)
+            {
+                agent.enabled = false;
+            }
+        }
         if (clawHitbox != null) clawHitbox.SetActive(false);
         hitCounter.OnValueChanged += (o, n) => { if (anim != null) { anim.ResetTrigger("Anhit"); anim.SetTrigger("Anhit"); } };
     }

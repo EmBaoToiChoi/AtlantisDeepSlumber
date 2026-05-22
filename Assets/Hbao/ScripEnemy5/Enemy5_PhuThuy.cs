@@ -166,6 +166,14 @@ public class Enemy5_PhuThuy : NetworkBehaviour
                 }
             }
         }
+        else // ---> THÊM ĐOẠN NÀY VÀO <---
+        {
+            // TẮT NavMeshAgent trên Client để NetworkTransform của Server thoải mái cập nhật vị trí
+            if (agent != null)
+            {
+                agent.enabled = false;
+            }
+        }
 
         // Lắng nghe hitCounter để chơi hoạt ảnh ăn đòn Quai5Anhit trên mọi Client
         hitCounter.OnValueChanged += OnHitCounterChanged;
