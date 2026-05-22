@@ -484,9 +484,16 @@ public class Enemy4_Bongtoi : NetworkBehaviour
         }
 
         // Vào tầm đánh cận chiến và hết thời gian hồi chiêu
-        if (distance <= attackRange && attackCooldownTimer <= 0)
+        if (distance <= attackRange)
         {
-            ChangeState(EnemyState.Attack);
+            if (attackCooldownTimer <= 0)
+            {
+                ChangeState(EnemyState.Attack); // Đủ điều kiện thì chém
+            }
+            else
+            {
+                ChangeState(EnemyState.Idle); // Chưa hồi chiêu xong thì chuyển về Idle đứng chờ
+            }
         }
     }
 

@@ -452,14 +452,17 @@ public class Enemy5_PhuThuy : NetworkBehaviour
         }
 
         // B. CỰ LY BẮN PHÉP LÝ TƯỞNG (Từ 5.5m đến 13m):
-        // Dừng lại quay mặt về Player và chưởng phép!
         if (distance >= minAttackRange && distance <= maxAttackRange)
         {
             if (agent.isActiveAndEnabled) agent.isStopped = true;
 
             if (attackCooldownTimer <= 0)
             {
-                ChangeState(EnemyState.Attack);
+                ChangeState(EnemyState.Attack); // Đủ điều kiện thì chưởng
+            }
+            else
+            {
+                ChangeState(EnemyState.Idle); // Chưa hồi chiêu xong thì đứng Idle chờ đợi
             }
             return;
         }

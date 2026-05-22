@@ -335,7 +335,17 @@ public class Enemy2_Zombie : NetworkBehaviour
         }
         else { if (AgentReady) agent.SetDestination(targetPlayer.position); }
 
-        if (dist <= attackRange && attackCooldownTimer <= 0) ChangeState(EnemyState.Attack);
+        if ( dist <= attackRange)
+        {
+            if (attackCooldownTimer <= 0)
+            {
+                ChangeState(EnemyState.Attack); // Đủ điều kiện thì chém
+            }
+            else
+            {
+                ChangeState(EnemyState.Idle); // Chưa hồi chiêu xong thì chuyển về Idle đứng chờ
+            }
+        }
     }
 
     private void HandleSearch()

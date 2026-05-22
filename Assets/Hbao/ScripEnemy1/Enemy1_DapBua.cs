@@ -549,8 +549,17 @@ public class Enemy1_DapBua : NetworkBehaviour
             if (AgentReady) agent.SetDestination(targetPlayer.position);
         }
 
-        if (distanceToPlayer <= attackRange && attackCooldownTimer <= 0)
-            ChangeState(EnemyState.Attack);
+        if (distanceToPlayer <= attackRange)
+        {
+            if (attackCooldownTimer <= 0)
+            {
+                ChangeState(EnemyState.Attack); // Đủ điều kiện thì chém
+            }
+            else
+            {
+                ChangeState(EnemyState.Idle); // Chưa hồi chiêu xong thì chuyển về Idle đứng chờ
+            }
+        }
     }
 
     private void HandleSearch()
