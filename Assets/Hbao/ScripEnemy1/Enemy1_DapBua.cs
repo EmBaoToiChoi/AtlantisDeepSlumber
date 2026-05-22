@@ -230,6 +230,14 @@ public class Enemy1_DapBua : NetworkBehaviour
             ChangeState(EnemyState.Idle);
             SnapToNavMesh();
         }
+        else // ---> THÊM ĐOẠN NÀY VÀO <---
+        {
+            // TẮT NavMeshAgent trên Client để NetworkTransform của Server thoải mái cập nhật vị trí
+            if (agent != null)
+            {
+                agent.enabled = false;
+            }
+        }
 
         if (hammerHitbox != null) hammerHitbox.SetActive(false);
         if (hammerHitboxLeft != null) hammerHitboxLeft.SetActive(false);

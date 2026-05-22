@@ -168,6 +168,14 @@ public class Enemy4_Bongtoi : NetworkBehaviour
                 }
             }
         }
+        else // ---> THÊM ĐOẠN NÀY VÀO <---
+        {
+            // TẮT NavMeshAgent trên Client để NetworkTransform của Server thoải mái cập nhật vị trí
+            if (agent != null)
+            {
+                agent.enabled = false;
+            }
+        }
 
         // Đảm bảo các hitbox ban đầu được tắt
         if (clawHitbox != null) clawHitbox.SetActive(false);

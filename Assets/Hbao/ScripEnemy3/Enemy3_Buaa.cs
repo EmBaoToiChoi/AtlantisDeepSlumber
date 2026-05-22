@@ -178,6 +178,14 @@ public class Enemy3_Buaa : NetworkBehaviour
                 }
             }
         }
+        else // ---> THÊM ĐOẠN NÀY VÀO <---
+        {
+            // TẮT NavMeshAgent trên Client để NetworkTransform của Server thoải mái cập nhật vị trí
+            if (agent != null)
+            {
+                agent.enabled = false;
+            }
+        }
 
         // Đảm bảo hitbox búa ban đầu được tắt
         if (hammerHitbox != null)
