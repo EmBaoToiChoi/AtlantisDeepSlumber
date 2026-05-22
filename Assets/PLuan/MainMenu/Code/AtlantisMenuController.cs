@@ -91,6 +91,9 @@ public class AtlantisMenuController : MonoBehaviour
 
     void OnEnable()
     {
+        if (_netBootstrap == null) _netBootstrap = FindFirstObjectByType<NetworkBootstrap>();
+        if (_netBootstrap == null) _netBootstrap = NetworkBootstrap.Instance;
+
         _uiDocument = GetComponent<UIDocument>();
         if (_uiDocument == null) return;
         _root = _uiDocument.rootVisualElement;
@@ -117,6 +120,7 @@ public class AtlantisMenuController : MonoBehaviour
         RefreshLocalization();
 
         BindAuthEvents();
+        AuthService.OnTokenExpired += HandleTokenExpired;
 
         // Gán Video RenderTexture làm nền tự động co dãn cho root-screen
         var rootScreen = _root.Q<VisualElement>(className: "root-screen") ?? _root;
@@ -234,6 +238,18 @@ public class AtlantisMenuController : MonoBehaviour
         {
             ShowPanelImmediately(_loginPanel);
         }
+    }
+
+    void OnDisable()
+    {
+        AuthService.OnTokenExpired -= HandleTokenExpired;
+    }
+
+    private void HandleTokenExpired()
+    {
+        Debug.LogWarning("[AUTH] Token expired or invalid. Logging out...");
+        DoLogout();
+        ShowError(_root.Q<Label>("lbl-login-error"), "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
     }
 
 
