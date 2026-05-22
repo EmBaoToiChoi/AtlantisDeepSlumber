@@ -1,11 +1,11 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
-    <Style src="./Enemy4HealthBar.uss" />
+    <Style src="project://database/Assets/Hbao/ScripEnemy4/Enemy4HealthBar.uss?fileID=7433441132597879392&amp;guid=c3170140764045a46870876176823965&amp;type=3#Enemy4HealthBar" />
     <ui:VisualElement name="main-container" class="main-container">
         <ui:Label name="enemy-name" text="Enemy 4" class="enemy-name" />
         <ui:VisualElement name="health-bar-container" class="container">
             <ui:VisualElement name="background" class="background">
                 <ui:VisualElement name="yellow-bar" class="yellow-bar" />
-                <ui:VisualElement name="progress-bar" class="progress-bar" />
+                <ui:VisualElement name="progress-bar" class="progress-bar" style="background-image: none;" />
             </ui:VisualElement>
         </ui:VisualElement>
     </ui:VisualElement>

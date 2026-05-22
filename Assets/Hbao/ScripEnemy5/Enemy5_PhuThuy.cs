@@ -202,14 +202,18 @@ public class Enemy5_PhuThuy : NetworkBehaviour
         UpdateEnrageVisuals();
 
         // Đồng bộ hóa an toàn hoạt ảnh di chuyển trên Client
+        // Đồng bộ hóa an toàn hoạt ảnh di chuyển trên Client
         if (anim != null && anim.isActiveAndEnabled && anim.runtimeAnimatorController != null)
         {
             if (clientLocalState != currentState.Value)
             {
-                if (SyncAnimationState(currentState.Value))
+                // FIX LỖI TRƯỢT BĂNG
+                bool isAIAuthoritative = IsServer;
+                if (isAIAuthoritative)
                 {
-                    clientLocalState = currentState.Value; // Cập nhật lập tức
+                    SyncAnimationState(currentState.Value);
                 }
+                clientLocalState = currentState.Value;
             }
         }
 
@@ -283,47 +287,67 @@ public class Enemy5_PhuThuy : NetworkBehaviour
 
         int numPlayers = Physics.OverlapSphereNonAlloc(transform.position, sightRange, detectionResults, playerLayer);
 
-        bool found = false;
+        bool playerFound = false;
+        Transform closestPlayer = null;
+        float minDistance = float.MaxValue;
         Vector3 eyePos = eyeTransform != null ? eyeTransform.position : transform.position + Vector3.up * 1.5f;
 
         for (int i = 0; i < numPlayers; i++)
         {
-            Collider col = detectionResults[i];
-            if (col == null) continue;
-            Transform playerTrans = col.transform;
+            Collider p = detectionResults[i];
+            if (p == null) continue;
+            Transform potentialTarget = p.transform;
 
-            SimplePlayerTest playerScript = playerTrans.GetComponentInParent<SimplePlayerTest>();
-            if (playerScript != null && playerScript.currentHealth.Value <= 0) continue;
+            // 1. TÍNH NĂNG MỚI: Bỏ qua Player nếu họ đã chết
+            SimplePlayerTest playerScript = potentialTarget.GetComponentInParent<SimplePlayerTest>();
+            if (playerScript != null && playerScript.CurrentHealth <= 0) continue;
 
-            // Nâng tâm ngắm lên ngực Player (cao 1.0f)
-            Vector3 targetCenterPos = playerTrans.position + Vector3.up * 1.0f;
-            Vector3 direction = (targetCenterPos - eyePos).normalized;
+            Vector3 targetCenterPos = potentialTarget.position + Vector3.up * 1.0f;
+            float distanceToTarget = Vector3.Distance(eyePos, targetCenterPos);
+            Vector3 directionToTarget = (targetCenterPos - eyePos).normalized;
 
-            // Kiểm tra góc FOV
-            if (Vector3.Angle(transform.forward, direction) < fieldOfView / 2f)
+            // 2. FIX LỖI TRƯỢT BĂNG: Nằm trong góc FOV HOẶC đang là mục tiêu hiện tại.
+            // Điều này giúp quái xoay 360 độ vẫn bám theo mục tiêu cũ, không bị mất dấu khi Player lách qua sườn!
+            bool inFOV = Vector3.Angle(transform.forward, directionToTarget) < (fieldOfView / 2f);
+            bool isCurrentTarget = (targetPlayer == potentialTarget);
+
+            if (inFOV || isCurrentTarget)
             {
-                float distance = Vector3.Distance(eyePos, targetCenterPos);
-
-                // Bắn Raycast kiểm tra vật cản (tránh nhìn xuyên tường)
-                if (!Physics.Raycast(eyePos, direction, distance, obstacleLayer))
+                // Bắn tia kiểm tra vật cản
+                if (!Physics.Raycast(eyePos, directionToTarget, distanceToTarget, obstacleLayer))
                 {
-                    targetPlayer = playerTrans;
-                    found = true;
-                    if (currentState.Value != EnemyState.Run)
+                    // 3. TÍNH NĂNG MỚI: Luôn ưu tiên khóa mục tiêu vào Player đứng gần nhất
+                    if (distanceToTarget < minDistance)
                     {
-                        ChangeState(EnemyState.Run);
+                        minDistance = distanceToTarget;
+                        closestPlayer = potentialTarget;
+                        playerFound = true;
                     }
-                    break;
                 }
             }
         }
 
-        // Mất dấu -> Chuyển sang tìm kiếm
-        if (!found && currentState.Value == EnemyState.Run && targetPlayer != null)
+        // 4. Áp dụng mục tiêu gần nhất tìm được
+        if (playerFound && closestPlayer != null)
         {
-            lastKnownPlayerPosition = targetPlayer.position;
-            targetPlayer = null;
-            ChangeState(EnemyState.Search);
+            targetPlayer = closestPlayer;
+            if (currentState.Value != EnemyState.Run)
+            {
+                ChangeState(EnemyState.Run);
+            }
+        }
+        else if (currentState.Value == EnemyState.Run)
+        {
+            if (targetPlayer != null)
+            {
+                lastKnownPlayerPosition = targetPlayer.position;
+                targetPlayer = null;
+                ChangeState(EnemyState.Search);
+            }
+            else
+            {
+                ChangeState(EnemyState.Idle);
+            }
         }
     }
 
@@ -381,6 +405,17 @@ public class Enemy5_PhuThuy : NetworkBehaviour
 
     private void HandleRun()
     {
+        // TÍNH NĂNG MỚI: Quay về trạng thái tuần tra thông minh nếu mục tiêu đang đuổi bị chết
+        if (targetPlayer != null)
+        {
+            SimplePlayerTest ps = targetPlayer.GetComponentInParent<SimplePlayerTest>();
+            if (ps != null && ps.CurrentHealth <= 0)
+            {
+                targetPlayer = null;
+                ChangeState(EnemyState.Idle);
+                return;
+            }
+        }
         // 1. Trường hợp tuần tra tự do không có mục tiêu Player
         if (targetPlayer == null)
         {
@@ -519,14 +554,11 @@ public class Enemy5_PhuThuy : NetworkBehaviour
 
         if (staggerTimer <= 0)
         {
-            if (targetPlayer != null)
-            {
-                ChangeState(EnemyState.Run);
-            }
-            else
-            {
-                ChangeState(EnemyState.Idle);
-            }
+            // (Riêng Enemy 1 có thêm dòng roar thì bạn giữ lại: if (IsEnragedValue && !hasRoared) hasRoared = true;)
+
+            targetPlayer = null;
+            ChangeState(EnemyState.Idle);
+            detectionTimer = 0f;
         }
     }
 
@@ -559,9 +591,13 @@ public class Enemy5_PhuThuy : NetworkBehaviour
 
         if (stateTimer <= 0)
         {
-            // Hồi đòn chưởng: Máu thấp chưởng dồn dập (hồi 0.4s), bình thường hồi 0.9s
-            attackCooldownTimer = (currentHealth.Value < maxHealth * 0.5f) ? 0.4f : 0.9f;
-            ChangeState(EnemyState.Run);
+            // (Giữ nguyên dòng tính attackCooldownTimer của bạn ở đây. Ví dụ của Enemy 4:)
+            attackCooldownTimer = (currentHealth.Value < maxHealth * 0.5f) ? 0.3f : 0.7f;
+
+            // THÊM 3 DÒNG NÀY ĐỂ FIX KẸT ANIMATION:
+            targetPlayer = null; // Xóa mục tiêu cũ để AI reset
+            ChangeState(EnemyState.Idle); // Đưa về trạm trung chuyển Idle
+            detectionTimer = 0f; // Ép AI quét lại và chuyển sang Run NGAY LẬP TỨC ở frame sau!
         }
     }
 
@@ -790,6 +826,7 @@ public class Enemy5_PhuThuy : NetworkBehaviour
             case EnemyState.Walk:
                 anim.SetTrigger(walkTriggerName);
                 break;
+            case EnemyState.Search: anim.SetTrigger(runTriggerName); break;
             case EnemyState.Run:
                 anim.SetTrigger(runTriggerName);
                 break;
