@@ -298,44 +298,55 @@ public class Enemy3_Buaa : NetworkBehaviour
         int numPlayers = Physics.OverlapSphereNonAlloc(transform.position, sightRange, detectionResults, playerLayer);
 
         bool playerFound = false;
+        Transform closestPlayer = null;
+        float minDistance = float.MaxValue;
         Vector3 eyePos = eyeTransform != null ? eyeTransform.position : transform.position + Vector3.up * 1.5f;
 
         for (int i = 0; i < numPlayers; i++)
         {
-            Collider col = detectionResults[i];
-            if (col == null) continue;
-            Transform potentialTarget = col.transform;
+            Collider p = detectionResults[i];
+            if (p == null) continue;
+            Transform potentialTarget = p.transform;
 
-            // Bỏ qua nếu Player đã chết
+            // 1. TÍNH NĂNG MỚI: Bỏ qua Player nếu họ đã chết
             SimplePlayerTest playerScript = potentialTarget.GetComponentInParent<SimplePlayerTest>();
-            if (playerScript != null && playerScript.currentHealth.Value <= 0)
-            {
-                continue;
-            }
+            if (playerScript != null && playerScript.CurrentHealth <= 0) continue;
 
-            // Nâng tâm ngắm lên ngực Player (cao 1.0f) thay vì nhìn xuống chân
             Vector3 targetCenterPos = potentialTarget.position + Vector3.up * 1.0f;
+            float distanceToTarget = Vector3.Distance(eyePos, targetCenterPos);
             Vector3 directionToTarget = (targetCenterPos - eyePos).normalized;
 
-            if (Vector3.Angle(transform.forward, directionToTarget) < fieldOfView / 2)
+            // 2. FIX LỖI TRƯỢT BĂNG: Nằm trong góc FOV HOẶC đang là mục tiêu hiện tại.
+            // Điều này giúp quái xoay 360 độ vẫn bám theo mục tiêu cũ, không bị mất dấu khi Player lách qua sườn!
+            bool inFOV = Vector3.Angle(transform.forward, directionToTarget) < (fieldOfView / 2f);
+            bool isCurrentTarget = (targetPlayer == potentialTarget);
+
+            if (inFOV || isCurrentTarget)
             {
-                float distanceToTarget = Vector3.Distance(eyePos, targetCenterPos);
-                // Bắn tia Raycast kiểm tra vật cản
+                // Bắn tia kiểm tra vật cản
                 if (!Physics.Raycast(eyePos, directionToTarget, distanceToTarget, obstacleLayer))
                 {
-                    targetPlayer = potentialTarget;
-                    playerFound = true;
-                    if (currentState.Value != EnemyState.Run)
+                    // 3. TÍNH NĂNG MỚI: Luôn ưu tiên khóa mục tiêu vào Player đứng gần nhất
+                    if (distanceToTarget < minDistance)
                     {
-                        ChangeState(EnemyState.Run);
+                        minDistance = distanceToTarget;
+                        closestPlayer = potentialTarget;
+                        playerFound = true;
                     }
-                    break;
                 }
             }
         }
 
-        // Mất dấu Player khi đang truy đuổi -> Chuyển sang tìm kiếm thông minh tại vị trí cuối cùng
-        if (!playerFound && currentState.Value == EnemyState.Run)
+        // 4. Áp dụng mục tiêu gần nhất tìm được
+        if (playerFound && closestPlayer != null)
+        {
+            targetPlayer = closestPlayer;
+            if (currentState.Value != EnemyState.Run)
+            {
+                ChangeState(EnemyState.Run);
+            }
+        }
+        else if (currentState.Value == EnemyState.Run)
         {
             if (targetPlayer != null)
             {
@@ -407,6 +418,17 @@ public class Enemy3_Buaa : NetworkBehaviour
 
     private void HandleRun()
     {
+        // TÍNH NĂNG MỚI: Quay về trạng thái tuần tra thông minh nếu mục tiêu đang đuổi bị chết
+        if (targetPlayer != null)
+        {
+            SimplePlayerTest ps = targetPlayer.GetComponentInParent<SimplePlayerTest>();
+            if (ps != null && ps.CurrentHealth <= 0)
+            {
+                targetPlayer = null;
+                ChangeState(EnemyState.Idle);
+                return;
+            }
+        }
         // 1. Trường hợp chạy tuần tra dạo chơi không có Player
         if (targetPlayer == null)
         {
@@ -930,6 +952,7 @@ public class Enemy3_Buaa : NetworkBehaviour
             case EnemyState.Walk:
                 anim.SetTrigger(walkTriggerName);
                 break;
+                case EnemyState.Search: anim.SetTrigger(runTriggerName); break;
             case EnemyState.Run:
                 anim.SetTrigger(runTriggerName);
                 break;

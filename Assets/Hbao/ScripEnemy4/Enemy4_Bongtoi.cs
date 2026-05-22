@@ -288,44 +288,56 @@ public class Enemy4_Bongtoi : NetworkBehaviour
 
         int numPlayers = Physics.OverlapSphereNonAlloc(transform.position, sightRange, detectionResults, playerLayer);
 
-        bool found = false;
+        bool playerFound = false;
+        Transform closestPlayer = null;
+        float minDistance = float.MaxValue;
         Vector3 eyePos = eyeTransform != null ? eyeTransform.position : transform.position + Vector3.up * 1.5f;
 
         for (int i = 0; i < numPlayers; i++)
         {
-            Collider col = detectionResults[i];
-            if (col == null) continue;
-            Transform playerTrans = col.transform;
+            Collider p = detectionResults[i];
+            if (p == null) continue;
+            Transform potentialTarget = p.transform;
 
-            // Bỏ qua nếu Player đã chết
-            SimplePlayerTest playerScript = playerTrans.GetComponentInParent<SimplePlayerTest>();
-            if (playerScript != null && playerScript.currentHealth.Value <= 0) continue;
+            // 1. TÍNH NĂNG MỚI: Bỏ qua Player nếu họ đã chết
+            SimplePlayerTest playerScript = potentialTarget.GetComponentInParent<SimplePlayerTest>();
+            if (playerScript != null && playerScript.CurrentHealth <= 0) continue;
 
-            // Nâng tâm ngắm lên ngực Player (cao 1.0f)
-            Vector3 targetCenterPos = playerTrans.position + Vector3.up * 1.0f;
-            Vector3 direction = (targetCenterPos - eyePos).normalized;
+            Vector3 targetCenterPos = potentialTarget.position + Vector3.up * 1.0f;
+            float distanceToTarget = Vector3.Distance(eyePos, targetCenterPos);
+            Vector3 directionToTarget = (targetCenterPos - eyePos).normalized;
 
-            // Kiểm tra góc FOV
-            if (Vector3.Angle(transform.forward, direction) < fieldOfView / 2f)
+            // 2. FIX LỖI TRƯỢT BĂNG: Nằm trong góc FOV HOẶC đang là mục tiêu hiện tại.
+            // Điều này giúp quái xoay 360 độ vẫn bám theo mục tiêu cũ, không bị mất dấu khi Player lách qua sườn!
+            bool inFOV = Vector3.Angle(transform.forward, directionToTarget) < (fieldOfView / 2f);
+            bool isCurrentTarget = (targetPlayer == potentialTarget);
+
+            if (inFOV || isCurrentTarget)
             {
-                float distance = Vector3.Distance(eyePos, targetCenterPos);
-
-                // Bắn Raycast kiểm tra vật cản (tránh nhìn xuyên tường)
-                if (!Physics.Raycast(eyePos, direction, distance, obstacleLayer))
+                // Bắn tia kiểm tra vật cản
+                if (!Physics.Raycast(eyePos, directionToTarget, distanceToTarget, obstacleLayer))
                 {
-                    targetPlayer = playerTrans;
-                    found = true;
-                    if (currentState.Value != EnemyState.Run)
+                    // 3. TÍNH NĂNG MỚI: Luôn ưu tiên khóa mục tiêu vào Player đứng gần nhất
+                    if (distanceToTarget < minDistance)
                     {
-                        ChangeState(EnemyState.Run);
+                        minDistance = distanceToTarget;
+                        closestPlayer = potentialTarget;
+                        playerFound = true;
                     }
-                    break;
                 }
             }
         }
 
-        // Mất dấu -> Chuyển sang tìm kiếm
-        if (!found && currentState.Value == EnemyState.Run)
+        // 4. Áp dụng mục tiêu gần nhất tìm được
+        if (playerFound && closestPlayer != null)
+        {
+            targetPlayer = closestPlayer;
+            if (currentState.Value != EnemyState.Run)
+            {
+                ChangeState(EnemyState.Run);
+            }
+        }
+        else if (currentState.Value == EnemyState.Run)
         {
             if (targetPlayer != null)
             {
@@ -394,6 +406,17 @@ public class Enemy4_Bongtoi : NetworkBehaviour
 
     private void HandleRun()
     {
+        // TÍNH NĂNG MỚI: Quay về trạng thái tuần tra thông minh nếu mục tiêu đang đuổi bị chết
+        if (targetPlayer != null)
+        {
+            SimplePlayerTest ps = targetPlayer.GetComponentInParent<SimplePlayerTest>();
+            if (ps != null && ps.CurrentHealth <= 0)
+            {
+                targetPlayer = null;
+                ChangeState(EnemyState.Idle);
+                return;
+            }
+        }
         // 1. Trường hợp tuần tra tự do (không có mục tiêu Player)
         if (targetPlayer == null)
         {
@@ -851,6 +874,7 @@ public class Enemy4_Bongtoi : NetworkBehaviour
             case EnemyState.Walk:
                 anim.SetTrigger(walkTriggerName);
                 break;
+                case EnemyState.Search: anim.SetTrigger(runTriggerName); break;
             case EnemyState.Run:
                 anim.SetTrigger(runTriggerName);
                 break;

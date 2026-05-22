@@ -79,17 +79,17 @@ public class EnemySpawner : NetworkBehaviour
     private void CreateEditorNetworkManager()
     {
         Debug.Log("[EnemySpawner] Không tìm thấy NetworkManager trong Scene. Đang khởi tạo NetworkManager tạm thời để phục vụ playtest...");
-        
+
         GameObject netManagerObj = new GameObject("NetworkManager_EditorDebug");
         NetworkManager netManager = netManagerObj.AddComponent<NetworkManager>();
-        
+
         // Thêm UnityTransport mặc định
         var transport = netManagerObj.AddComponent<Unity.Netcode.Transports.UTP.UnityTransport>();
-        
+
         // Khởi tạo NetworkConfig mặc định
         netManager.NetworkConfig = new NetworkConfig();
         netManager.NetworkConfig.NetworkTransport = transport;
-        
+
         // Đăng ký các Prefab
         EnsurePrefabsRegistered(netManager);
     }
@@ -252,7 +252,7 @@ public class EnemySpawner : NetworkBehaviour
         if (Input.GetKeyDown(KeyCode.Alpha4)) SpawnEnemyAtIndex(3);
         // Press '5' to spawn Enemy index 4
         if (Input.GetKeyDown(KeyCode.Alpha5)) SpawnEnemyAtIndex(4);
-        
+
         // Press 'G' to spawn all enemies at once
         if (Input.GetKeyDown(KeyCode.G))
         {
@@ -292,7 +292,7 @@ public class EnemySpawner : NetworkBehaviour
         {
             string errMsg = "KHÔNG THỂ SPAWN PLAYER: 'playerPrefab' chưa được gán trong Inspector trên VPS! Vui lòng mở scene 'HBao', kéo thả Player Prefab vào ô của EnemySpawner, sau đó thực hiện BUILD và UPLOAD lại Server lên VPS.";
             Debug.LogError("[EnemySpawner] " + errMsg);
-            
+
             // Gửi thông báo lỗi về máy khách để hiện trên Console của họ
             ClientRpcParams clientRpcParams = new ClientRpcParams
             {
@@ -314,7 +314,7 @@ public class EnemySpawner : NetworkBehaviour
                     Debug.Log($"[EnemySpawner] Client {clientId} đã có nhân vật gameplay Player chính thức. Bỏ qua không spawn trùng lặp.");
                     return;
                 }
-                
+
                 // Nếu là PlayerObject cũ (ví dụ Lobby Player từ Waiting Room hoặc Missing reference), ta tiến hành thu hồi sạch sẽ
                 Debug.Log($"[EnemySpawner] Phát hiện Client {clientId} đang giữ PlayerObject cũ (Lobby Avatar). Đang thu hồi...");
                 NetworkObject oldPlayerObj = client.PlayerObject;
@@ -354,12 +354,24 @@ public class EnemySpawner : NetworkBehaviour
         }
     }
 
+    // Thêm biến chốt chặn này ở ngay trên hàm
+    private bool hasSpawnedEnemies = false;
+
     /// <summary>
     /// Spawns all configured enemies at the available spawn points.
     /// </summary>
     public void SpawnAllConfiguredEnemies()
     {
         if (!IsServer) return;
+
+        // TÍNH NĂNG MỚI: Khóa chặn. Nếu đã spawn rồi thì tuyệt đối không spawn thêm nữa!
+        if (hasSpawnedEnemies)
+        {
+            Debug.Log("[EnemySpawner] Đã spawn quái rồi, chặn lệnh spawn trùng lặp!");
+            return;
+        }
+
+        hasSpawnedEnemies = true; // Đánh dấu là đã spawn xong đợt 1
 
         for (int i = 0; i < enemyConfigs.Length; i++)
         {
@@ -408,7 +420,7 @@ public class EnemySpawner : NetworkBehaviour
 
         // Instantiate and Spawn across the network
         GameObject enemyObj = Instantiate(config.enemyPrefab, spawnPosition, spawnRotation);
-        
+
         NetworkObject netObj = enemyObj.GetComponent<NetworkObject>();
         if (netObj != null)
         {
