@@ -284,7 +284,7 @@ public class Enemy2_Zombie : NetworkBehaviour
             if (NavMesh.SamplePosition(Random.insideUnitSphere * walkRadius + transform.position, out hit, walkRadius, 1))
             { if (AgentReady) agent.SetDestination(hit.position); hasDestination = true; }
         }
-        if (hasDestination && AgentReady && agent.remainingDistance <= agent.stoppingDistance)
+        if (hasDestination && AgentReady && !agent.pathPending && agent.remainingDistance <= agent.stoppingDistance)
         {
             hasDestination = false;
             float r = Random.value;
@@ -303,7 +303,7 @@ public class Enemy2_Zombie : NetworkBehaviour
                 if (NavMesh.SamplePosition(Random.insideUnitSphere * walkRadius * 1.5f + transform.position, out hit, walkRadius * 1.5f, 1))
                 { if (AgentReady) agent.SetDestination(hit.position); hasDestination = true; }
             }
-            if (hasDestination && AgentReady && agent.remainingDistance <= agent.stoppingDistance)
+            if (hasDestination && AgentReady && !agent.pathPending && agent.remainingDistance <= agent.stoppingDistance)
             { hasDestination = false; ChangeState(Random.value < 0.6f ? EnemyState.Idle : EnemyState.Walk); }
             return;
         }
