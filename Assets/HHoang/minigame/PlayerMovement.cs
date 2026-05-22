@@ -1,9 +1,7 @@
 using UnityEngine;
-// BẮT BUỘC: Thêm thư viện Input System mới để Unity nhận diện được lệnh
 using UnityEngine.InputSystem; 
-using Unity.Netcode; // BẮT BUỘC: Thêm thư viện Netcode để làm game Multiplayer
+using Unity.Netcode; 
 
-// ĐỔI TỪ MonoBehaviour SANG NetworkBehaviour ĐỂ CHẠY MẠNG
 public class PlayerMovement : NetworkBehaviour
 {
     private Rigidbody rb;
@@ -15,32 +13,42 @@ public class PlayerMovement : NetworkBehaviour
     [Tooltip("Tốc độ di chuyển chậm lại khi ngồi (Giống game DOORS)")]
     public float crouchSpeed = 3f; 
 
-    [Header("Trạng thái Mạng (Quái AI sẽ check cái này)")]
+    [Header("Trạng thái Mạng")]
+    // Biến mạng: Đóng/Mở quyền di chuyển (True: đi được, False: khóa chân đứng yên gạt cần)
+    public NetworkVariable<bool> canMoveNet = new NetworkVariable<bool>(
+        true, 
+        NetworkVariableReadPermission.Everyone, 
+        NetworkVariableWritePermission.Server
+    );
+
     // Biến mạng: Tự động đồng bộ nút ngồi từ Server xuống tất cả các máy Client
-    // Đúng (True) nếu đang ngồi, Sai (False) nếu đang đứng
     public NetworkVariable<bool> isCrouchingNet = new NetworkVariable<bool>(
         false, 
         NetworkVariableReadPermission.Everyone, 
         NetworkVariableWritePermission.Server
     );
 
-    // Biến check xem nhân vật có đang di chuyển (bước đi) không
     public bool isMoving = false;
-
     private Vector2 moveInput;
 
     void Start()
     {
-        // Tự động tìm Component Rigidbody gắn trên Player
         rb = GetComponent<Rigidbody>();
     }
 
     void Update()
     {
-        // CHỈ MÁY CỦA CHÍNH BẠN (LOCAL PLAYER) MỚI ĐƯỢC ĐIỀU KHIỂN NÚT BẤM
         if (!IsOwner) return;
 
-        // --- XỬ LÝ DI CHUYỂN ---
+        // NẾU BỊ KHÓA DI CHUYỂN (canMoveNet = false): Ép đứng yên tại chỗ và không nhận phím đi bộ
+        if (!canMoveNet.Value)
+        {
+            moveInput = Vector2.zero;
+            isMoving = false;
+            return; 
+        }
+
+        // --- XỬ LÝ DI CHUYỂN BÌNH THƯỜNG ---
         Vector2 keyboardInput = Vector2.zero;
 
         if (Keyboard.current != null)
@@ -57,17 +65,13 @@ public class PlayerMovement : NetworkBehaviour
         }
 
         moveInput = keyboardInput;
-
-        // Cập nhật trạng thái xem người chơi có đang di chuyển hay không dựa vào phím bấm
         isMoving = moveInput.magnitude > 0.1f;
 
-        // --- XỬ LÝ NÚT NGỒI (C HOẶC SHIFT) ---
+        // --- XỬ LÝ NÚT NGỒI ---
         if (Keyboard.current != null)
         {
-            // Kiểm tra xem hiện tại có đang đè nút C hoặc nút Left Shift không
             bool isPressingCrouch = Keyboard.current.cKey.isPressed || Keyboard.current.leftShiftKey.isPressed;
 
-            // Nếu trạng thái bấm nút thay đổi so với trên mạng hiện tại, gửi lệnh lên Server để đồng bộ
             if (isPressingCrouch != isCrouchingNet.Value)
             {
                 UpdateCrouchStatusServerRpc(isPressingCrouch);
@@ -77,41 +81,40 @@ public class PlayerMovement : NetworkBehaviour
 
     void FixedUpdate()
     {
-        // CHỈ MÁY LOCAL MỚI ĐƯỢC ÁP DỤNG LỰC DI CHUYỂN, TRÁNH XUNG ĐỘT MẠNG
         if (!IsOwner) return;
 
-        // QUYẾT ĐỊNH TỐC ĐỘ: Nếu biến mạng báo đang ngồi -> dùng crouchSpeed, ngược lại dùng moveSpeed
-        float currentSpeed = isCrouchingNet.Value ? crouchSpeed : moveSpeed;
-
-        // Áp dụng vận tốc di chuyển vào Rigidbody theo trục X và Z
-        Vector3 targetVelocity = new Vector3(moveInput.x * currentSpeed, rb.linearVelocity.y, moveInput.y * currentSpeed);
-        
-        // Khi NGƯỜI CHƠI BẤM PHÍM: Di chuyển bình thường
-        if (moveInput.magnitude > 0.1f)
-        {
-            rb.linearVelocity = targetVelocity;
-
-            // Xoay mặt nhân vật hướng về phía đang chạy
-            Vector3 lookDirection = new Vector3(moveInput.x, 0f, moveInput.y);
-            Quaternion targetRotation = Quaternion.LookRotation(lookDirection);
-            transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, 15f * Time.fixedDeltaTime);
-        }
-        // KHI NGƯỜI CHƠI BUÔNG TAY: Phanh lại lập tức!
-        else
+        // KHI BỊ KHÓA DI CHUYỂN HOẶC BUÔNG TAY: Phanh cứng ngắc liền lập tức!
+        if (!canMoveNet.Value || moveInput.magnitude <= 0.1f)
         {
             rb.linearVelocity = new Vector3(0f, rb.linearVelocity.y, 0f);
+            return;
         }
+
+        // Áp dụng tốc độ chạy
+        float currentSpeed = isCrouchingNet.Value ? crouchSpeed : moveSpeed;
+        Vector3 targetVelocity = new Vector3(moveInput.x * currentSpeed, rb.linearVelocity.y, moveInput.y * currentSpeed);
+        
+        rb.linearVelocity = targetVelocity;
+
+        // Xoay mặt
+        Vector3 lookDirection = new Vector3(moveInput.x, 0f, moveInput.y);
+        Quaternion targetRotation = Quaternion.LookRotation(lookDirection);
+        transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, 15f * Time.fixedDeltaTime);
     }
 
-    // ServerRpc: Hàm chạy trên Server để thay đổi biến mạng, tự động đồng bộ cho cả phòng
+    // ServerRpc đổi trạng thái Đóng/Mở di chuyển công bằng cho mạng
+    [ServerRpc(RequireOwnership = false)]
+    public void SetCanMoveServerRpc(bool state)
+    {
+        canMoveNet.Value = state;
+    }
+
     [ServerRpc]
     private void UpdateCrouchStatusServerRpc(bool crouchState)
     {
         isCrouchingNet.Value = crouchState;
     }
 
-    // HÀM QUAN TRỌNG ĐỂ CON QUÁI AI GỌI CHECK TIẾNG ĐỘNG: 
-    // Nếu ĐANG ĐI (isMoving) VÀ KHÔNG NGỒI (!isCrouchingNet.Value) -> Làm ồn (True)
     public bool IsMakingNoise()
     {
         return isMoving && !isCrouchingNet.Value;
