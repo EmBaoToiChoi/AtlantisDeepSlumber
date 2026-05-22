@@ -110,6 +110,8 @@ public class ResendOTPRequest
 
 public static class AuthService
 {
+    public static System.Action OnTokenExpired;
+
     // Có thể cấu hình URL này qua config file sau này khi deploy
     private static readonly string BASE_URL = "http://165.99.14.40:3000/api";
 
@@ -235,7 +237,12 @@ public static class AuthService
 
             try
             {
-                return JsonUtility.FromJson<RoomResponse>(responseText);
+                RoomResponse res = JsonUtility.FromJson<RoomResponse>(responseText);
+                if (res != null && !res.success && (res.message == "Token không hợp lệ hoặc đã hết hạn." || res.message == "Thiếu token xác thực."))
+                {
+                    OnTokenExpired?.Invoke();
+                }
+                return res;
             }
             catch
             {

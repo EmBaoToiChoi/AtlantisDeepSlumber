@@ -6,6 +6,7 @@ public class PlayerWaitingRoomUI : NetworkBehaviour
 {
     [SerializeField] private TMP_Text _nameTag; 
     private NetworkWaitingRoom _manager;
+    private int _lastCharId = -1;
 
     public NetworkVariable<Unity.Collections.FixedString64Bytes> NetName = new NetworkVariable<Unity.Collections.FixedString64Bytes>(
         "Guest", NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
@@ -14,25 +15,45 @@ public class PlayerWaitingRoomUI : NetworkBehaviour
     {
         _manager = FindFirstObjectByType<NetworkWaitingRoom>();
         if (_nameTag == null) _nameTag = GetComponentInChildren<TMP_Text>();
+
+        // Tự động thêm CapsuleCollider nếu chưa có để hỗ trợ tính năng Raycast Shift + Left Click
+        if (GetComponent<Collider>() == null)
+        {
+            var col = gameObject.AddComponent<CapsuleCollider>();
+            col.center = new Vector3(0, 1f, 0);
+            col.radius = 0.5f;
+            col.height = 2f;
+            Debug.Log($"[PlayerUI] Đã tự động thêm CapsuleCollider cho nhân vật ClientId={OwnerClientId} để phục vụ Raycast.");
+        }
     }
 
     private void Update()
     {
         if (_manager == null || _nameTag == null) return;
 
-        // Tìm trạng thái Ready với phong cách Sci-Fi cao cấp có viền khung phát sáng (Capsule Background - dùng tag <mark>)
+        // Tìm trạng thái Ready và nhân vật đã chọn
+        int currentCharId = -1;
         string status = "<b><size=70%><mark=#ff386033><color=#ff3860>  ● NOT READY  </color></mark></size></b>";
         foreach (var p in _manager.NetPlayers)
         {
             if (p.ClientId == OwnerClientId)
             {
+                currentCharId = p.CharacterId;
                 if (p.IsReady) status = "<b><size=70%><mark=#23d16033><color=#23d160>  ▲ READY  </color></mark></size></b>";
                 break;
             }
         }
 
-        // Tên hiển thị màu Cyan Neon bắt mắt kết hợp với khung trạng thái
-        _nameTag.text = $"<color=#00e5ff><b>{NetName.Value}</b></color>\n\n{status}";
+        // Nếu nhân vật thay đổi, kích hoạt hook sự kiện đổi mesh 3D
+        if (currentCharId != _lastCharId)
+        {
+            OnCharacterChanged(currentCharId);
+            _lastCharId = currentCharId;
+        }
+
+        // Tên hiển thị màu Cyan Neon bắt mắt kết hợp với tên nhân vật trong ngoặc đơn và khung trạng thái
+        string charSub = currentCharId >= 0 && currentCharId < 4 ? GetCharacterName(currentCharId) : "EXPLORER";
+        _nameTag.text = $"<color=#00e5ff><b>{NetName.Value}</b></color> <size=80%><color=#80c8ff>({charSub})</color></size>\n\n{status}";
 
         // Cách xoay Billboard chuẩn nhất: Xoay cùng hướng với Camera
         if (Camera.main != null)
@@ -41,4 +62,27 @@ public class PlayerWaitingRoomUI : NetworkBehaviour
         }
     }
 
+    private string GetCharacterName(int id)
+    {
+        switch (id)
+        {
+            case 0: return "ATLAS";
+            case 1: return "NYX";
+            case 2: return "AURELIA";
+            case 3: return "TITAN";
+            default: return "EXPLORER";
+        }
+    }
+
+    private void OnCharacterChanged(int newCharId)
+    {
+        Debug.Log($"[PlayerUI] ClientId={OwnerClientId} đã chuyển sang nhân vật {GetCharacterName(newCharId)} (ID: {newCharId})");
+        
+        // HOOK ĐỂ DEV THAY ĐỔI MESH 3D SAU NÀY:
+        // switch (newCharId) {
+        //     case 0: ActiveAtlasMesh(); break;
+        //     case 1: ActiveNyxMesh(); break;
+        //     ...
+        // }
+    }
 }

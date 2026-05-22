@@ -8,8 +8,58 @@
             <ui:Label name="lbl-room-id" text="ID: #XXXXXX" class="room-id-badge" />
         </ui:VisualElement>
 
-        <!-- MIDDLE AREA (SPACER) -->
-        <ui:VisualElement style="flex-grow: 1;" />
+        <!-- MIDDLE MAIN AREA -->
+        <ui:VisualElement class="waiting-middle-container">
+            <!-- LEFT SIDE (EMPTY FOR 3D CHARACTER DISPLAY) -->
+            <ui:VisualElement class="waiting-viewport-spacer" />
+
+            <!-- RIGHT SIDE (CHARACTER SELECTION) -->
+            <ui:VisualElement name="char-select-panel" class="char-select-panel glass-panel glow-border">
+                <ui:Label text="CHOOSE YOUR EXPLORER" class="panel-section-title" />
+                <ui:VisualElement class="char-cards-container">
+                    <!-- Character Card 0 -->
+                    <ui:VisualElement name="char-card-0" class="char-card select-active">
+                        <ui:VisualElement name="char-img-0" class="char-card-portrait atlas-img" />
+                        <ui:VisualElement class="char-card-text-container">
+                            <ui:Label text="ATLAS" class="char-card-name" />
+                            <ui:Label text="VANGUARD" class="char-card-role" />
+                        </ui:VisualElement>
+                        <ui:Label name="char-status-0" text="SELECTED BY YOU" class="char-card-status active-status" />
+                    </ui:VisualElement>
+
+                    <!-- Character Card 1 -->
+                    <ui:VisualElement name="char-card-1" class="char-card">
+                        <ui:VisualElement name="char-img-1" class="char-card-portrait nyx-img" />
+                        <ui:VisualElement class="char-card-text-container">
+                            <ui:Label text="NYX" class="char-card-name" />
+                            <ui:Label text="INFILTRATOR" class="char-card-role" />
+                        </ui:VisualElement>
+                        <ui:Label name="char-status-1" text="AVAILABLE" class="char-card-status" />
+                    </ui:VisualElement>
+
+                    <!-- Character Card 2 -->
+                    <ui:VisualElement name="char-card-2" class="char-card">
+                        <ui:VisualElement name="char-img-2" class="char-card-portrait aurelia-img" />
+                        <ui:VisualElement class="char-card-text-container">
+                            <ui:Label text="AURELIA" class="char-card-name" />
+                            <ui:Label text="TECH BIOLOGIST" class="char-card-role" />
+                        </ui:VisualElement>
+                        <ui:Label name="char-status-2" text="AVAILABLE" class="char-card-status" />
+                    </ui:VisualElement>
+
+                    <!-- Character Card 3 -->
+                    <ui:VisualElement name="char-card-3" class="char-card">
+                        <ui:VisualElement name="char-img-3" class="char-card-portrait titan-img" />
+                        <ui:VisualElement class="char-card-text-container">
+                            <ui:Label text="TITAN" class="char-card-name" />
+                            <ui:Label text="HEAVY GUARDIAN" class="char-card-role" />
+                        </ui:VisualElement>
+                        <ui:Label name="char-status-3" text="AVAILABLE" class="char-card-status" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+                <ui:Label text="Hold SHIFT + Left Click to Inspect" class="char-inspect-tip" />
+            </ui:VisualElement>
+        </ui:VisualElement>
 
         <!-- BOTTOM AREA (FOOTER) -->
         <ui:VisualElement class="waiting-footer">
@@ -20,14 +70,68 @@
             </ui:VisualElement>
 
             <!-- CENTER START (HOST ONLY) -->
-            <ui:VisualElement class="start-game-center">
+            <ui:VisualElement class="start-game-center" style="flex-direction: column; align-items: center;">
+                <ui:Label name="lbl-warning" text="DUPLICATE CHARACTER DETECTED!" class="warning-text hidden-element" />
                 <ui:Button name="btn-start" text="START EXPEDITION" class="action-btn start-btn hidden-element" />
             </ui:VisualElement>
 
-            <!-- RIGHT PLAYER COUNT -->
-            <ui:VisualElement class="player-count-container">
-                <ui:Label name="lbl-player-count" text="PLAYERS: 1/4" class="status-text" />
+            <!-- RIGHT ACTIONS & PLAYER COUNT -->
+            <ui:VisualElement style="flex-direction: row; align-items: center;">
+                <ui:Button name="btn-toggle-char-panel" text="CHOOSE EXPLORER" class="action-btn toggle-char-panel-btn ready-btn" style="margin-right: 15px;" />
+                <ui:VisualElement class="player-count-container">
+                    <ui:Label name="lbl-player-count" text="PLAYERS: 1/4" class="status-text" />
+                </ui:VisualElement>
             </ui:VisualElement>
         </ui:VisualElement>
+
+        <!-- CHARACTER DETAILS POPUP (MODAL) -->
+        <ui:VisualElement name="char-details-modal" class="details-modal hidden-element">
+            <ui:VisualElement class="details-container glow-border">
+                <ui:Button name="btn-close-details" class="close-btn-hitbox">
+                    <ui:VisualElement class="close-btn-visual">
+                        <ui:Label text="X" class="close-btn-text" />
+                    </ui:VisualElement>
+                </ui:Button>
+                <ui:VisualElement class="details-header">
+                    <ui:VisualElement name="details-portrait" class="details-large-portrait atlas-img" />
+                    <ui:VisualElement style="justify-content: center;">
+                        <ui:Label name="details-name" text="ATLAS" class="details-char-name" />
+                        <ui:Label name="details-role" text="VANGUARD EXPLORER" class="details-char-role" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+                <ui:Label name="details-desc" text="A fearless pioneer in trench exploration, Atlas uses customized pressurized gear to survive the deepest oceanic abysses." class="details-char-desc" />
+                
+                <ui:Label text="SPECIALIST SKILLS" class="details-section-title" />
+                <ui:VisualElement name="skills-container" class="details-skills-container">
+                    <!-- Skill 0 -->
+                    <ui:VisualElement name="details-skill-box-0" class="details-skill-box">
+                        <ui:VisualElement name="details-skill-img-0" class="details-skill-icon skill-icon-img" />
+                        <ui:VisualElement style="flex-shrink: 1; margin-left: 15px; flex-grow: 1;">
+                            <ui:Label name="details-skill-name-0" text="Trench Dash" class="details-skill-title" />
+                            <ui:Label name="details-skill-desc-0" text="Dashes forward a short distance, granting immunity to physical pressure damage for 3 seconds." class="details-skill-desc" />
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+
+                    <!-- Skill 1 -->
+                    <ui:VisualElement name="details-skill-box-1" class="details-skill-box">
+                        <ui:VisualElement name="details-skill-img-1" class="details-skill-icon skill-icon-img" />
+                        <ui:VisualElement style="flex-shrink: 1; margin-left: 15px; flex-grow: 1;">
+                            <ui:Label name="details-skill-name-1" text="Sonar Scan" class="details-skill-title" />
+                            <ui:Label name="details-skill-desc-1" text="Emits a high-frequency acoustic pulse that reveals nearby resources." class="details-skill-desc" />
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+
+                    <!-- Skill 2 -->
+                    <ui:VisualElement name="details-skill-box-2" class="details-skill-box">
+                        <ui:VisualElement name="details-skill-img-2" class="details-skill-icon skill-icon-img" />
+                        <ui:VisualElement style="flex-shrink: 1; margin-left: 15px; flex-grow: 1;">
+                            <ui:Label name="details-skill-name-2" text="Pressure Stabilizer" class="details-skill-title" />
+                            <ui:Label name="details-skill-desc-2" text="Overcharges dive suit exoskeleton, reducing environmental damage." class="details-skill-desc" />
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                </ui:VisualElement>
+            </ui:VisualElement>
+        </ui:VisualElement>
+
     </ui:VisualElement>
 </ui:UXML>
