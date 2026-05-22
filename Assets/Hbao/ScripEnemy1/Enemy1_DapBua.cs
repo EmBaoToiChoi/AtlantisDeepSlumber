@@ -459,7 +459,7 @@ public class Enemy1_DapBua : NetworkBehaviour
             }
         }
 
-        if (hasDestination && AgentReady && agent.remainingDistance <= agent.stoppingDistance)
+        if (hasDestination && AgentReady && !agent.pathPending && agent.remainingDistance <= agent.stoppingDistance)
         {
             hasDestination = false;
             float rand = Random.value;
@@ -484,7 +484,7 @@ public class Enemy1_DapBua : NetworkBehaviour
                     hasDestination = true;
                 }
             }
-            if (hasDestination && AgentReady && agent.remainingDistance <= agent.stoppingDistance)
+            if (hasDestination && AgentReady && !agent.pathPending && agent.remainingDistance <= agent.stoppingDistance)
             {
                 hasDestination = false;
                 ChangeState(Random.value < 0.6f ? EnemyState.Idle : EnemyState.Walk);
