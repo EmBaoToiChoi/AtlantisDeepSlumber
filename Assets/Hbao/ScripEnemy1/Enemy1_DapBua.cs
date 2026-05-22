@@ -384,6 +384,8 @@ public class Enemy1_DapBua : NetworkBehaviour
         }
 
         bool playerFound = false;
+        Transform closestPlayer = null;
+        float minDistance = float.MaxValue;
         Vector3 eyePos = eyeTransform != null ? eyeTransform.position : transform.position + Vector3.up * 1.5f;
 
         for (int i = 0; i < numPlayers; i++)
@@ -392,29 +394,45 @@ public class Enemy1_DapBua : NetworkBehaviour
             if (p == null) continue;
             Transform potentialTarget = p.transform;
 
+            // 1. TÍNH NĂNG MỚI: Bỏ qua Player nếu họ đã chết
             SimplePlayerTest playerScript = potentialTarget.GetComponentInParent<SimplePlayerTest>();
             if (playerScript != null && playerScript.CurrentHealth <= 0) continue;
 
-            // Nâng tâm ngắm lên ngực Player (cao 1.0f) thay vì nhìn xuống chân
             Vector3 targetCenterPos = potentialTarget.position + Vector3.up * 1.0f;
+            float distanceToTarget = Vector3.Distance(eyePos, targetCenterPos);
             Vector3 directionToTarget = (targetCenterPos - eyePos).normalized;
 
-            if (Vector3.Angle(transform.forward, directionToTarget) < fieldOfView / 2)
+            // 2. FIX LỖI TRƯỢT BĂNG: Nằm trong góc FOV HOẶC đang là mục tiêu hiện tại.
+            // Điều này giúp quái xoay 360 độ vẫn bám theo mục tiêu cũ, không bị mất dấu khi Player lách qua sườn!
+            bool inFOV = Vector3.Angle(transform.forward, directionToTarget) < (fieldOfView / 2f);
+            bool isCurrentTarget = (targetPlayer == potentialTarget);
+
+            if (inFOV || isCurrentTarget)
             {
-                float distanceToTarget = Vector3.Distance(eyePos, targetCenterPos);
-                // Bắn tia Raycast kiểm tra vật cản
+                // Bắn tia kiểm tra vật cản
                 if (!Physics.Raycast(eyePos, directionToTarget, distanceToTarget, obstacleLayer))
                 {
-                    targetPlayer = potentialTarget;
-                    playerFound = true;
-                    if (CurrentStateValue != EnemyState.Run)
-                        ChangeState(EnemyState.Run);
-                    break;
+                    // 3. TÍNH NĂNG MỚI: Luôn ưu tiên khóa mục tiêu vào Player đứng gần nhất
+                    if (distanceToTarget < minDistance)
+                    {
+                        minDistance = distanceToTarget;
+                        closestPlayer = potentialTarget;
+                        playerFound = true;
+                    }
                 }
             }
         }
 
-        if (!playerFound && CurrentStateValue == EnemyState.Run)
+        // 4. Áp dụng mục tiêu gần nhất tìm được
+        if (playerFound && closestPlayer != null)
+        {
+            targetPlayer = closestPlayer;
+            if (CurrentStateValue != EnemyState.Run)
+            {
+                ChangeState(EnemyState.Run);
+            }
+        }
+        else if (CurrentStateValue == EnemyState.Run)
         {
             if (targetPlayer != null)
             {
@@ -474,6 +492,17 @@ public class Enemy1_DapBua : NetworkBehaviour
 
     private void HandleRun()
     {
+        // TÍNH NĂNG MỚI: Quay về trạng thái tuần tra thông minh nếu mục tiêu đang đuổi bị chết
+        if (targetPlayer != null)
+        {
+            SimplePlayerTest ps = targetPlayer.GetComponentInParent<SimplePlayerTest>();
+            if (ps != null && ps.CurrentHealth <= 0)
+            {
+                targetPlayer = null;
+                ChangeState(EnemyState.Idle);
+                return;
+            }
+        }
         if (targetPlayer == null)
         {
             if (AgentReady) { agent.isStopped = false; agent.speed = 4.0f; }
@@ -783,6 +812,7 @@ public class Enemy1_DapBua : NetworkBehaviour
         {
             case EnemyState.Idle: anim.SetTrigger("Idle"); break;
             case EnemyState.Walk: anim.SetTrigger("Walk"); break;
+            case EnemyState.Search: anim.SetTrigger("Run"); break;
             case EnemyState.Run: anim.SetTrigger("Run"); break;
             case EnemyState.Stagger:
                 if (IsEnragedValue && !hasRoared) { anim.ResetTrigger("Combo"); anim.SetTrigger("Combo"); }
