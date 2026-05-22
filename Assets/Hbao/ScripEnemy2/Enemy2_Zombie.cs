@@ -25,7 +25,7 @@ public class Enemy2_Zombie : NetworkBehaviour
 
     [Header("Advanced AI Sync")]
     public NetworkVariable<int> hitCounter = new NetworkVariable<int>(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
-    public NetworkVariable<int> attackType  = new NetworkVariable<int>(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+    public NetworkVariable<int> attackType = new NetworkVariable<int>(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
     // ------------------------------------------------------------------
     //  Standalone Fallback
@@ -57,11 +57,11 @@ public class Enemy2_Zombie : NetworkBehaviour
     public GameObject clawHitbox;
 
     [Header("AI Settings")]
-    public float sightRange   = 12f;
-    public float fieldOfView  = 110f;
-    public float attackRange  = 1.8f;
-    public float walkRadius   = 8f;
-    public float idleTimeMax  = 5f;
+    public float sightRange = 12f;
+    public float fieldOfView = 110f;
+    public float attackRange = 1.8f;
+    public float walkRadius = 8f;
+    public float idleTimeMax = 5f;
 
     [Header("Layers")]
     public LayerMask playerLayer;
@@ -91,7 +91,7 @@ public class Enemy2_Zombie : NetworkBehaviour
     private float attackDuration;
 
     private readonly Collider[] detectionResults = new Collider[8];
-    private readonly Collider[] damageResults    = new Collider[8];
+    private readonly Collider[] damageResults = new Collider[8];
 
     private EnemyState clientLocalState = (EnemyState)(-1);
     private int framesSinceActive = 0;
@@ -196,12 +196,12 @@ public class Enemy2_Zombie : NetworkBehaviour
 
         switch (CurrentStateValue)
         {
-            case EnemyState.Idle:    HandleIdle();    break;
-            case EnemyState.Walk:    HandleWalk();    break;
-            case EnemyState.Run:     HandleRun();     break;
-            case EnemyState.Search:  HandleSearch();  break;
+            case EnemyState.Idle: HandleIdle(); break;
+            case EnemyState.Walk: HandleWalk(); break;
+            case EnemyState.Run: HandleRun(); break;
+            case EnemyState.Search: HandleSearch(); break;
             case EnemyState.Stagger: HandleStagger(); break;
-            case EnemyState.Attack:  HandleAttack();  break;
+            case EnemyState.Attack: HandleAttack(); break;
         }
     }
 
@@ -247,10 +247,13 @@ public class Enemy2_Zombie : NetworkBehaviour
             Transform pt = p.transform;
             var ps = pt.GetComponentInParent<SimplePlayerTest>();
             if (ps != null && ps.CurrentHealth <= 0) continue;
-            Vector3 dir = (pt.position - eyePos).normalized;
+            // Nâng tâm ngắm lên ngực Player (cao 1.0f)
+            Vector3 targetCenterPos = pt.position + Vector3.up * 1.0f;
+            Vector3 dir = (targetCenterPos - eyePos).normalized;
+
             if (Vector3.Angle(transform.forward, dir) < fieldOfView / 2)
             {
-                float dist = Vector3.Distance(eyePos, pt.position);
+                float dist = Vector3.Distance(eyePos, targetCenterPos);
                 if (!Physics.Raycast(eyePos, dir, dist, obstacleLayer))
                 { targetPlayer = pt; playerFound = true; if (CurrentStateValue != EnemyState.Run) ChangeState(EnemyState.Run); break; }
             }
@@ -284,7 +287,7 @@ public class Enemy2_Zombie : NetworkBehaviour
             if (NavMesh.SamplePosition(Random.insideUnitSphere * walkRadius + transform.position, out hit, walkRadius, 1))
             { if (AgentReady) agent.SetDestination(hit.position); hasDestination = true; }
         }
-        if (hasDestination && AgentReady && !agent.pathPending && agent.remainingDistance <= agent.stoppingDistance)
+        if (hasDestination && AgentReady && !agent.pathPending && agent.remainingDistance <= agent.stoppingDistance + 0.2f)
         {
             hasDestination = false;
             float r = Random.value;
@@ -303,7 +306,7 @@ public class Enemy2_Zombie : NetworkBehaviour
                 if (NavMesh.SamplePosition(Random.insideUnitSphere * walkRadius * 1.5f + transform.position, out hit, walkRadius * 1.5f, 1))
                 { if (AgentReady) agent.SetDestination(hit.position); hasDestination = true; }
             }
-            if (hasDestination && AgentReady && !agent.pathPending && agent.remainingDistance <= agent.stoppingDistance)
+            if (hasDestination && AgentReady && !agent.pathPending && agent.remainingDistance <= agent.stoppingDistance + 0.2f)
             { hasDestination = false; ChangeState(Random.value < 0.6f ? EnemyState.Idle : EnemyState.Walk); }
             return;
         }
@@ -332,7 +335,17 @@ public class Enemy2_Zombie : NetworkBehaviour
         }
         else { if (AgentReady) agent.SetDestination(targetPlayer.position); }
 
-        if (dist <= attackRange && attackCooldownTimer <= 0) ChangeState(EnemyState.Attack);
+        if ( dist <= attackRange)
+        {
+            if (attackCooldownTimer <= 0)
+            {
+                ChangeState(EnemyState.Attack); // Đủ điều kiện thì chém
+            }
+            else
+            {
+                ChangeState(EnemyState.Idle); // Chưa hồi chiêu xong thì chuyển về Idle đứng chờ
+            }
+        }
     }
 
     private void HandleSearch()
@@ -436,11 +449,11 @@ public class Enemy2_Zombie : NetworkBehaviour
     {
         if (CurrentStateValue == EnemyState.Attack && newState != EnemyState.Attack && clawHitbox != null) clawHitbox.SetActive(false);
         CurrentStateValue = newState;
-        if (newState == EnemyState.Idle)   { stateTimer = Random.Range(2f, idleTimeMax); if (AgentReady) agent.isStopped = true; }
-        if (newState == EnemyState.Walk)   { hasDestination = false; if (AgentReady) agent.isStopped = false; }
-        if (newState == EnemyState.Run)    { if (AgentReady) agent.isStopped = false; }
+        if (newState == EnemyState.Idle) { stateTimer = Random.Range(2f, idleTimeMax); if (AgentReady) agent.isStopped = true; }
+        if (newState == EnemyState.Walk) { hasDestination = false; if (AgentReady) agent.isStopped = false; }
+        if (newState == EnemyState.Run) { if (AgentReady) agent.isStopped = false; }
         if (newState == EnemyState.Search) { searchTimer = 3.0f; searchLookTimer = 0f; if (AgentReady) agent.isStopped = false; }
-        if (newState == EnemyState.Stagger){ if (AgentReady) agent.isStopped = true; if (staggerTimer <= 0) staggerTimer = 0.5f; }
+        if (newState == EnemyState.Stagger) { if (AgentReady) agent.isStopped = true; if (staggerTimer <= 0) staggerTimer = 0.5f; }
         if (newState == EnemyState.Attack)
         {
             if (AgentReady) agent.isStopped = true;
@@ -461,11 +474,11 @@ public class Enemy2_Zombie : NetworkBehaviour
         anim.ResetTrigger("Idle"); anim.ResetTrigger("Walk"); anim.ResetTrigger("Run"); anim.ResetTrigger("Anhit"); anim.ResetTrigger("Die");
         switch (s)
         {
-            case EnemyState.Idle:    anim.SetTrigger("Idle");  break;
-            case EnemyState.Walk:    anim.SetTrigger("Walk");  break;
-            case EnemyState.Run:     anim.SetTrigger("Run");   break;
+            case EnemyState.Idle: anim.SetTrigger("Idle"); break;
+            case EnemyState.Walk: anim.SetTrigger("Walk"); break;
+            case EnemyState.Run: anim.SetTrigger("Run"); break;
             case EnemyState.Stagger: anim.SetTrigger("Anhit"); break;
-            case EnemyState.Dead:    anim.SetTrigger("Die");   break;
+            case EnemyState.Dead: anim.SetTrigger("Die"); break;
         }
         return true;
     }
@@ -474,12 +487,12 @@ public class Enemy2_Zombie : NetworkBehaviour
 
     [ClientRpc] private void PlayAttackAnimationClientRpc() { PlayAttackAnimationLocal(); }
 
-    public void EnableClawHitbox()  { if (clawHitbox != null) clawHitbox.SetActive(true); }
+    public void EnableClawHitbox() { if (clawHitbox != null) clawHitbox.SetActive(true); }
     public void DisableClawHitbox() { if (clawHitbox != null) clawHitbox.SetActive(false); }
 
     private void OnDrawGizmosSelected()
     {
         Gizmos.color = Color.yellow; Gizmos.DrawWireSphere(transform.position, sightRange);
-        Gizmos.color = Color.red;   Gizmos.DrawWireSphere(transform.position, attackRange);
+        Gizmos.color = Color.red; Gizmos.DrawWireSphere(transform.position, attackRange);
     }
 }

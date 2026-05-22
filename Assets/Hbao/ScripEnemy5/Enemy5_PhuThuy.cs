@@ -24,8 +24,8 @@ public class Enemy5_PhuThuy : NetworkBehaviour
     );
 
     public NetworkVariable<EnemyState> currentState = new NetworkVariable<EnemyState>(
-        EnemyState.Idle, 
-        NetworkVariableReadPermission.Everyone, 
+        EnemyState.Idle,
+        NetworkVariableReadPermission.Everyone,
         NetworkVariableWritePermission.Server
     );
 
@@ -295,14 +295,16 @@ public class Enemy5_PhuThuy : NetworkBehaviour
             SimplePlayerTest playerScript = playerTrans.GetComponentInParent<SimplePlayerTest>();
             if (playerScript != null && playerScript.currentHealth.Value <= 0) continue;
 
-            Vector3 direction = (playerTrans.position - eyePos).normalized;
+            // Nâng tâm ngắm lên ngực Player (cao 1.0f)
+            Vector3 targetCenterPos = playerTrans.position + Vector3.up * 1.0f;
+            Vector3 direction = (targetCenterPos - eyePos).normalized;
 
-            // Kiểm tra FOV quét góc
+            // Kiểm tra góc FOV
             if (Vector3.Angle(transform.forward, direction) < fieldOfView / 2f)
             {
-                float distance = Vector3.Distance(eyePos, playerTrans.position);
+                float distance = Vector3.Distance(eyePos, targetCenterPos);
 
-                // Bắn Raycast cản địa hình
+                // Bắn Raycast kiểm tra vật cản (tránh nhìn xuyên tường)
                 if (!Physics.Raycast(eyePos, direction, distance, obstacleLayer))
                 {
                     targetPlayer = playerTrans;
@@ -367,7 +369,7 @@ public class Enemy5_PhuThuy : NetworkBehaviour
             }
         }
 
-        if (hasDestination && agent.isActiveAndEnabled && agent.remainingDistance <= agent.stoppingDistance)
+        if (hasDestination && agent.isActiveAndEnabled && !agent.pathPending && agent.remainingDistance <= agent.stoppingDistance + 0.2f)
         {
             hasDestination = false;
             float rand = Random.value;
@@ -398,7 +400,7 @@ public class Enemy5_PhuThuy : NetworkBehaviour
                 }
             }
 
-            if (hasDestination && agent.isActiveAndEnabled && agent.remainingDistance <= agent.stoppingDistance)
+            if (hasDestination && agent.isActiveAndEnabled && !agent.pathPending && agent.remainingDistance <= agent.stoppingDistance + 0.2f)
             {
                 hasDestination = false;
                 ChangeState(Random.value < 0.6f ? EnemyState.Idle : EnemyState.Walk);
@@ -450,14 +452,17 @@ public class Enemy5_PhuThuy : NetworkBehaviour
         }
 
         // B. CỰ LY BẮN PHÉP LÝ TƯỞNG (Từ 5.5m đến 13m):
-        // Dừng lại quay mặt về Player và chưởng phép!
         if (distance >= minAttackRange && distance <= maxAttackRange)
         {
             if (agent.isActiveAndEnabled) agent.isStopped = true;
 
             if (attackCooldownTimer <= 0)
             {
-                ChangeState(EnemyState.Attack);
+                ChangeState(EnemyState.Attack); // Đủ điều kiện thì chưởng
+            }
+            else
+            {
+                ChangeState(EnemyState.Idle); // Chưa hồi chiêu xong thì đứng Idle chờ đợi
             }
             return;
         }
@@ -484,7 +489,7 @@ public class Enemy5_PhuThuy : NetworkBehaviour
             agent.SetDestination(lastKnownPlayerPosition);
         }
 
-        if (agent.isActiveAndEnabled && agent.remainingDistance <= agent.stoppingDistance + 0.1f)
+        if (agent.isActiveAndEnabled && !agent.pathPending && agent.remainingDistance <= agent.stoppingDistance + 0.2f)
         {
             agent.isStopped = true;
             searchTimer -= Time.deltaTime;
@@ -570,7 +575,7 @@ public class Enemy5_PhuThuy : NetworkBehaviour
         {
             // Khởi tạo quả cầu phép đồng bộ qua mạng
             GameObject proj = Instantiate(spellProjectilePrefab, spawnPoint, Quaternion.LookRotation(shootDirection));
-            
+
             // Nếu quả cầu phép có thành phần đẩy lực vật lý Rigidbody
             Rigidbody rb = proj.GetComponent<Rigidbody>();
             if (rb != null)
@@ -589,7 +594,7 @@ public class Enemy5_PhuThuy : NetworkBehaviour
         {
             // FALLBACK CHUYÊN NGHIỆP: Nếu chưa có prefab quả cầu phép, tự động gây sát thương tầm xa bằng tia chưởng phép
             Debug.LogWarning("Chưa gán spellProjectilePrefab cho Phù Thủy! Đang kích hoạt chế độ Fallback chưởng phép tia quét.");
-            
+
             // Vẽ hiệu ứng raycast mô phỏng
             if (Physics.Raycast(spawnPoint, shootDirection, out RaycastHit hit, maxAttackRange + 2f))
             {
@@ -650,13 +655,13 @@ public class Enemy5_PhuThuy : NetworkBehaviour
 
         Vector3 toPlayer = (targetPlayer.position - transform.position).normalized;
         Vector3 perpendicular = new Vector3(-toPlayer.z, 0, toPlayer.x);
-        
+
         // Ngẫu nhiên chọn né bên trái hay bên phải
         if (Random.value < 0.5f) perpendicular = -perpendicular;
 
         // Quãng đường lướt né xa 3.2m
         Vector3 blinkTarget = transform.position + perpendicular * 3.2f;
-        
+
         NavMeshHit hit;
         if (NavMesh.SamplePosition(blinkTarget, out hit, 3.2f, NavMesh.AllAreas))
         {
@@ -701,7 +706,7 @@ public class Enemy5_PhuThuy : NetworkBehaviour
     private void Die()
     {
         if (agent.isActiveAndEnabled) agent.isStopped = true;
-        
+
         // Despawn Enemy qua mạng sau 2 giây chơi hoạt ảnh chết
         Invoke(nameof(DespawnEnemy), 2.0f);
     }
@@ -718,17 +723,17 @@ public class Enemy5_PhuThuy : NetworkBehaviour
     {
         currentState.Value = newState;
 
-        if (newState == EnemyState.Idle) 
+        if (newState == EnemyState.Idle)
         {
             stateTimer = Random.Range(1.5f, idleTimeMax);
             if (agent.isActiveAndEnabled) agent.isStopped = true;
         }
-        if (newState == EnemyState.Walk) 
+        if (newState == EnemyState.Walk)
         {
             hasDestination = false;
             if (agent.isActiveAndEnabled) agent.isStopped = false;
         }
-        if (newState == EnemyState.Run) 
+        if (newState == EnemyState.Run)
         {
             isBlinking = false;
             hasDestination = false;
@@ -779,13 +784,13 @@ public class Enemy5_PhuThuy : NetworkBehaviour
         switch (newState)
         {
             case EnemyState.Idle:
-                anim.SetTrigger(idleTriggerName); 
+                anim.SetTrigger(idleTriggerName);
                 break;
             case EnemyState.Walk:
-                anim.SetTrigger(walkTriggerName); 
+                anim.SetTrigger(walkTriggerName);
                 break;
             case EnemyState.Run:
-                anim.SetTrigger(runTriggerName);   
+                anim.SetTrigger(runTriggerName);
                 break;
             case EnemyState.Stagger:
                 anim.SetTrigger(hitTriggerName); // Chơi hoạt ảnh Quai5Anhit
@@ -838,7 +843,7 @@ public class Enemy5_PhuThuy : NetworkBehaviour
             // Nhấp nháy màu xanh dương/cyan huyền ảo biểu thị phép thuật cuồng nộ thức tỉnh
             float pingPong = Mathf.PingPong(Time.time * 3f, 1f);
             Color enrageColor = Color.Lerp(Color.white, new Color(0f, 0.6f, 1f), pingPong); // Cyan/Blue phép thuật
-            
+
             foreach (var r in modelRenderers)
             {
                 if (r != null)
