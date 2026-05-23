@@ -1,10 +1,25 @@
+/* Atlantis Deep Slumber - Lobby UI Stylesheet */
+
 .waiting-room-overlay {
     flex-grow: 1;
     width: 100%;
     height: 100%;
-    padding: 60px;
-    background-color: rgba(0, 4, 8, 0.4); 
+    padding: 30px;
+    background-color: rgba(1, 6, 12, 0.4); /* Soft dark blue vignette overlay over 3D lobby */
     justify-content: space-between;
+}
+
+/* GLASSMORPHISM & SCI-FI CORE */
+.glass-panel {
+    background-color: rgba(2, 10, 22, 0.85);
+    border-width: 1px;
+    border-color: rgba(0, 229, 255, 0.2);
+    border-radius: 8px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+}
+
+.glow-border {
+    border-color: rgba(0, 229, 255, 0.4);
 }
 
 /* TOP BAR */
@@ -13,107 +28,484 @@
     justify-content: space-between;
     align-items: center;
     border-bottom-width: 2px;
-    border-bottom-color: rgba(0, 190, 255, 0.5);
-    padding-bottom: 20px;
-    background-color: rgba(2, 9, 16, 0.8);
-    padding-left: 30px;
-    padding-right: 30px;
-    border-radius: 4px;
+    border-bottom-color: rgba(0, 229, 255, 0.4);
+    padding-bottom: 12px;
+    padding-top: 12px;
+    background-color: rgba(2, 10, 22, 0.9);
+    padding-left: 25px;
+    padding-right: 25px;
+    border-radius: 6px;
+    border-width: 1px;
+    border-color: rgba(0, 229, 255, 0.15);
 }
 
 .room-title {
-    color: rgb(160, 230, 255);
-    font-size: 32px;
+    color: rgb(180, 240, 255);
+    font-size: 20px;
     -unity-font-style: bold;
-    letter-spacing: 5px;
-    text-shadow: 0 0 15px rgba(0, 190, 255, 0.8);
+    letter-spacing: 4px;
+    text-shadow: 0 0 10px rgba(0, 229, 255, 0.6);
 }
 
 .room-id-badge {
-    background-color: rgba(0, 190, 255, 0.2);
+    background-color: rgba(0, 229, 255, 0.12);
     border-width: 1px;
-    border-color: rgb(0, 190, 255);
+    border-color: rgba(0, 229, 255, 0.4);
     color: rgb(0, 255, 255);
-    padding: 8px 20px;
-    font-size: 20px;
+    padding: 6px 16px;
+    font-size: 13px;
     border-radius: 4px;
     -unity-font-style: bold;
+    letter-spacing: 2px;
+    text-shadow: 0 0 8px rgba(0, 255, 255, 0.4);
+}
+
+/* MIDDLE MAIN CONTAINER */
+.waiting-middle-container {
+    flex-direction: row;
+    flex-grow: 1;
+    margin-top: 15px;
+    margin-bottom: 15px;
+}
+
+.waiting-viewport-spacer {
+    flex-grow: 1;
+}
+
+/* CHARACTER SELECTION SIDEBAR */
+.char-select-panel {
+    width: 290px;
+    padding: 14px;
+    justify-content: flex-start;
+    margin-left: 20px;
+    background-color: rgba(2, 10, 22, 0.9);
+    border-radius: 8px;
+    border-width: 1px;
+    border-color: rgba(0, 229, 255, 0.35);
+}
+
+.panel-section-title {
+    color: rgb(0, 229, 255);
+    font-size: 13px;
+    -unity-font-style: bold;
+    letter-spacing: 1.5px;
+    margin-bottom: 12px;
+    text-shadow: 0 0 8px rgba(0, 229, 255, 0.4);
+    border-bottom-width: 1px;
+    border-bottom-color: rgba(0, 229, 255, 0.2);
+    padding-bottom: 6px;
+    text-align: center;
+}
+
+.char-cards-container {
+    flex-grow: 1;
+    justify-content: flex-start;
+}
+
+/* CHARACTER CARDS */
+.char-card {
+    flex-direction: row;
+    align-items: center;
+    background-color: rgba(2, 16, 32, 0.4);
+    border-radius: 6px;
+    padding: 8px 12px;
+    margin-bottom: 8px;
+    border-left-width: 3px;
+    border-left-color: rgba(0, 229, 255, 0.15);
+    border-width: 1px;
+    border-color: rgba(0, 229, 255, 0.1);
+    transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.char-card:hover {
+    background-color: rgba(0, 36, 72, 0.5);
+    border-left-color: rgb(0, 255, 255);
+    border-color: rgba(0, 255, 255, 0.4);
+    scale: 1.02;
+}
+
+.select-active {
+    background-color: rgba(0, 229, 255, 0.12);
+    border-left-color: rgb(0, 255, 255);
+    border-width: 1px;
+    border-color: rgba(0, 255, 255, 0.45);
+    box-shadow: 0 0 12px rgba(0, 229, 255, 0.2);
+}
+
+.char-card-portrait {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border-width: 1.5px;
+    border-color: rgba(0, 229, 255, 0.5);
+    background-size: cover;
+}
+
+/* Character text container for vertical Name & Role alignment */
+.char-card-text-container {
+    flex-direction: column;
+    justify-content: center;
+    flex-grow: 1;
+    margin-left: 10px;
+    margin-right: 90px; /* Crucial: leaves exact space on the right for absolute status badges */
+}
+
+.char-card-name {
+    color: white;
+    font-size: 13px;
+    -unity-font-style: bold;
+    letter-spacing: 1.2px;
+    margin-bottom: 2px;
+}
+
+.char-card-role {
+    color: rgb(130, 190, 230);
+    font-size: 9.5px;
+    letter-spacing: 0.8px;
+    -unity-font-style: bold;
+}
+
+.char-card-status {
+    position: absolute;
+    right: 10px;
+    font-size: 8px;
+    -unity-font-style: bold;
+    color: rgba(255, 255, 255, 0.4);
+    letter-spacing: 0.5px;
+    background-color: rgba(0, 0, 0, 0.55);
+    padding: 3px 6px;
+    border-radius: 4px;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+.active-status {
+    color: rgb(0, 255, 128);
+    text-shadow: 0 0 6px rgba(0, 255, 128, 0.7);
+    border-color: rgba(0, 255, 128, 0.3);
+    background-color: rgba(0, 255, 128, 0.08);
+}
+
+.char-inspect-tip {
+    color: rgba(0, 229, 255, 0.4);
+    font-size: 9px;
+    text-align: center;
+    -unity-font-style: italic;
+    margin-top: 8px;
+}
+
+/* PORTRAIT GRAPHICS */
+.atlas-img {
+    background-image: url("project://database/Assets/PLuan/WaittingRoom/Textures/atlas.png");
+}
+
+.nyx-img {
+    background-image: url("project://database/Assets/PLuan/WaittingRoom/Textures/nyx.png");
+}
+
+.aurelia-img {
+    background-image: url("project://database/Assets/PLuan/WaittingRoom/Textures/aurelia.png");
+}
+
+.titan-img {
+    background-image: url("project://database/Assets/PLuan/WaittingRoom/Textures/titan.png");
+}
+
+.skill-icon-img {
+    background-image: url("project://database/Assets/PLuan/WaittingRoom/Textures/skill_icon.png");
+}
+
+/* CHARACTER DETAILS MODAL */
+.details-modal {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    left: 0;
+    top: 0;
+    background-color: rgba(1, 5, 10, 0.85); /* Premium solid dark backdrop */
+    justify-content: center;
+    align-items: center;
+}
+
+.details-container {
+    width: 500px;
+    padding: 25px;
+    border-left-width: 6px;
+    border-left-color: rgb(0, 229, 255);
+    background-color: rgba(2, 12, 26, 0.95);
+}
+
+/* CLOSE BUTTON EXPANDED HITBOX SYSTEM */
+.close-btn-hitbox {
+    position: absolute;
+    right: -10px;
+    top: -10px;
+    width: 76px;
+    height: 76px;
+    background-color: rgba(0, 0, 0, 0.01); /* Pro Unity UI trick: non-zero alpha guarantees click detection */
+    border-width: 0;
+    margin: 0;
+    padding: 0;
+    align-items: center;
+    justify-content: center;
+}
+
+.close-btn-visual {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background-color: rgba(2, 10, 22, 0.85);
+    border-width: 1.5px;
+    border-color: rgba(0, 229, 255, 0.35);
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.15s ease-out, border-color 0.15s ease-out;
+}
+
+.close-btn-text {
+    color: rgb(0, 229, 255);
+    font-size: 16px;
+    -unity-font-style: bold;
+    margin: 0;
+    padding: 0;
+    text-align: center;
+    transition: color 0.15s ease-out;
+}
+
+/* Hover effects applied to visual child elements through the parent hitbox state */
+.close-btn-hitbox:hover .close-btn-visual {
+    background-color: rgb(255, 71, 87);
+    border-color: rgb(255, 71, 87);
+}
+
+.close-btn-hitbox:hover .close-btn-text {
+    color: white;
+    text-shadow: 0 0 5px rgba(255, 255, 255, 0.8);
+}
+
+.details-header {
+    flex-direction: row;
+    margin-bottom: 15px;
+}
+
+.details-large-portrait {
+    width: 90px;
+    height: 90px;
+    border-radius: 8px;
+    border-width: 2px;
+    border-color: rgb(0, 229, 255);
+    background-size: cover;
+    margin-right: 20px;
+}
+
+.details-char-name {
+    color: white;
+    font-size: 26px;
+    -unity-font-style: bold;
     letter-spacing: 3px;
+}
+
+.details-char-role {
+    color: rgb(0, 229, 255);
+    font-size: 13px;
+    letter-spacing: 2px;
+    -unity-font-style: bold;
+}
+
+.details-char-desc {
+    color: rgb(180, 210, 230);
+    font-size: 13px;
+    line-height: 20px;
+    margin-bottom: 20px;
+    white-space: normal;
+    -unity-text-wrap: true;
+}
+
+.details-section-title {
+    color: rgb(0, 229, 255);
+    font-size: 12px;
+    -unity-font-style: bold;
+    letter-spacing: 1.5px;
+    margin-bottom: 10px;
+}
+
+.details-skills-container {
+    flex-direction: column;
+}
+
+.details-skill-box {
+    flex-direction: row;
+    background-color: rgba(0, 229, 255, 0.05);
+    border-radius: 6px;
+    padding: 10px 15px;
+    margin-bottom: 8px;
+    border-width: 1px;
+    border-color: rgba(0, 229, 255, 0.15);
+    align-items: center;
+}
+
+.details-skill-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 4px;
+    border-width: 1px;
+    border-color: rgb(0, 229, 255);
+    background-size: cover;
+}
+
+.details-skill-title {
+    color: white;
+    font-size: 14px;
+    -unity-font-style: bold;
+    margin-bottom: 2px;
+}
+
+.details-skill-desc {
+    color: rgb(140, 180, 200);
+    font-size: 10.5px;
+    line-height: 14px;
+    white-space: normal;
+    -unity-text-wrap: true;
+}
+
+/* WARNING TEXT */
+.warning-text {
+    color: rgb(255, 71, 87);
+    font-size: 14px;
+    -unity-font-style: bold;
+    letter-spacing: 1.5px;
+    margin-bottom: 12px;
+    text-shadow: 0 0 10px rgba(255, 71, 87, 0.7);
+    text-align: center;
 }
 
 /* BOTTOM AREA */
 .waiting-footer {
     flex-direction: row;
     justify-content: space-between;
-    align-items: flex-end;
+    align-items: center;
+    background-color: rgba(2, 10, 22, 0.85);
+    padding: 15px 25px;
+    border-radius: 8px;
+    border-width: 1px;
+    border-color: rgba(0, 229, 255, 0.15);
+    margin-top: 10px;
 }
 
 .left-actions {
     flex-direction: row;
+    align-items: center;
 }
 
+/* ACTION BUTTON SYSTEM */
 .action-btn {
-    padding: 15px 40px;
-    font-size: 18px;
+    height: 46px;
+    padding: 0 30px;
+    font-size: 14px;
     -unity-font-style: bold;
-    letter-spacing: 2px;
-    margin-right: 20px;
-    border-radius: 4px;
+    letter-spacing: 1.5px;
+    margin-right: 15px;
+    border-radius: 6px;
     transition: all 0.2s ease-out;
-    border-width: 0;
-    border-left-width: 4px;
+    border-width: 1px;
+    border-left-width: 3px;
+    align-items: center;
+    justify-content: center;
 }
 
 .ready-btn {
-    background-color: rgba(0, 190, 255, 0.1);
-    border-left-color: rgb(0, 255, 255);
-    color: rgb(0, 255, 255);
+    background-color: rgba(0, 229, 255, 0.08);
+    border-color: rgba(0, 229, 255, 0.2);
+    border-left-color: rgb(0, 229, 255);
+    color: rgb(0, 229, 255);
 }
 
 .ready-btn:hover {
-    background-color: rgb(0, 190, 255);
+    background-color: rgb(0, 229, 255);
     color: rgb(0, 8, 16);
+    scale: 1.03;
 }
 
 .ready-active {
-    background-color: #32ff7e;
-    border-left-color: #ffffff;
-    color: #000000;
+    background-color: rgba(46, 213, 115, 0.15);
+    border-color: rgba(46, 213, 115, 0.3);
+    border-left-color: rgb(46, 213, 115);
+    color: rgb(46, 213, 115);
+    text-shadow: 0 0 8px rgba(46, 213, 115, 0.4);
+}
+
+.ready-active:hover {
+    background-color: rgb(46, 213, 115);
+    color: rgb(0, 8, 16);
 }
 
 .leave-btn {
-    background-color: rgba(255, 60, 60, 0.05);
-    border-left-color: rgb(255, 80, 80);
+    background-color: rgba(255, 71, 87, 0.08);
+    border-color: rgba(255, 71, 87, 0.2);
+    border-left-color: rgb(255, 71, 87);
     color: rgb(255, 120, 120);
 }
 
 .leave-btn:hover {
-    background-color: rgb(255, 60, 60);
+    background-color: rgb(255, 71, 87);
     color: white;
+    scale: 1.03;
 }
 
-/* RIGHT SIDE STATUS */
+/* TOGGLE CHARACTER PANEL BUTTON (NOW A STANDARD FOOTER ACTION) */
+.toggle-char-panel-btn {
+    background-color: rgba(0, 229, 255, 0.08);
+    border-color: rgba(0, 229, 255, 0.2);
+    border-left-color: rgb(0, 229, 255);
+    color: rgb(0, 229, 255);
+}
+
+.toggle-char-panel-btn:hover {
+    background-color: rgb(0, 229, 255);
+    color: rgb(0, 8, 16);
+    scale: 1.03;
+}
+
+.start-btn {
+    background-color: rgba(255, 165, 0, 0.12);
+    border-color: rgba(255, 165, 0, 0.3);
+    border-left-color: rgb(255, 165, 0);
+    color: rgb(255, 165, 0);
+    text-shadow: 0 0 8px rgba(255, 165, 0, 0.4);
+}
+
+.start-btn:hover {
+    background-color: rgb(255, 165, 0);
+    color: rgb(10, 5, 0);
+    scale: 1.03;
+}
+
+/* RIGHT SIDE STATUS (UNIFIED HEIGHT FOR SYMMETRY) */
 .player-count-container {
-    padding: 15px 25px;
-    background-color: rgba(2, 9, 16, 0.8);
+    height: 46px;
+    padding: 0 20px;
+    background-color: rgba(2, 10, 22, 0.6);
     border-width: 1px;
-    border-color: rgba(0, 190, 255, 0.4);
-    border-radius: 4px;
+    border-color: rgba(0, 229, 255, 0.2);
+    border-radius: 6px;
     align-items: center;
+    justify-content: center;
 }
 
 .status-text {
-    color: rgb(0, 255, 255);
-    font-size: 26px;
+    color: rgb(0, 229, 255);
+    font-size: 14px;
     -unity-font-style: bold;
-    text-shadow: 0 0 10px rgba(0, 255, 255, 0.6);
+    letter-spacing: 1px;
+    text-shadow: 0 0 6px rgba(0, 229, 255, 0.4);
 }
 
 .start-game-center {
     position: absolute;
     left: 50%;
     translate: -50% 0;
-    bottom: 0;
+    bottom: 15px;
+    align-items: center;
 }
 
 .hidden-element {
