@@ -1,23 +1,28 @@
 using UnityEngine;
-using Unity.Netcode; // Đảm bảo có thư viện Netcode
+using Unity.Netcode;
+using DG.Tweening; // Nhớ đảm bảo dự án đã có DOTween
 
 public class GearRotator : NetworkBehaviour 
 {
     [Header("Cấu hình quay")]
-    [Tooltip("Tốc độ quay của bánh răng (độ/giây)")]
     public float rotationSpeed = 50f;
-
-    [Tooltip("Tích chọn nếu muốn quay ngược chiều kim đồng hồ")]
     public bool reverseDirection = false;
 
-    // Biến mạng đồng bộ tốc độ thực tế (Server quản lý)
-    // Mặc định bằng 0, khi game chạy Server sẽ cấp phát tốc độ cho Client
+    [Header("Cấu hình trượt mở cổng")]
+    public Vector3 openOffset = new Vector3(-5f, 0, 0); // Vị trí trượt tới
+    public float moveDuration = 2f; // Thời gian trượt
+    private Vector3 originalPosition;
+
     private NetworkVariable<float> currentSpeed = new NetworkVariable<float>(0f, 
         NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
+    void Awake()
+    {
+        originalPosition = transform.localPosition;
+    }
+
     public override void OnNetworkSpawn()
     {
-        // Khi object mạng khởi tạo, Server sẽ gán tốc độ dựa trên cấu hình Inspector
         if (IsServer)
         {
             float direction = reverseDirection ? -1f : 1f;
@@ -27,21 +32,56 @@ public class GearRotator : NetworkBehaviour
 
     void Update()
     {
-        // Sử dụng phương pháp xoay bằng Rotate + Space.Self để không bao giờ bị lỗi trục X = -90
-        // Cả Server và Client đều tự xoay dựa trên vận tốc đồng bộ từ Server
         if (currentSpeed.Value != 0)
         {
             transform.Rotate(Vector3.up * currentSpeed.Value * Time.deltaTime, Space.Self);
         }
     }
-    // COPY ĐOẠN NÀY DÁN VÀO CUỐI FILE GEARROTATOR.CS
+
+    // --- CÁC HÀM ĐIỀU KHIỂN BÁNH RĂNG ---
+
+    public bool IsSpining()
+    {
+        return currentSpeed.Value != 0f;
+    }
+
     public void UpdateSpeedFromServer(float newSpeed)
     {
         if (IsServer)
         {
-            // Nếu muốn giữ đúng hướng quay ban đầu (thuận/ngược chiều kim đồng hồ)
             float direction = reverseDirection ? -1f : 1f;
             currentSpeed.Value = newSpeed == 0f ? 0f : newSpeed * direction;
+        }
+    }
+
+    // Hàm mở cổng (Gọi từ MiniGameManager)
+    public void OpenGear()
+    {
+        transform.DOKill();
+        transform.DOLocalMove(originalPosition + openOffset, moveDuration).SetEase(Ease.InOutCubic);
+    }
+
+    // Hàm đóng cổng
+    public void CloseGear()
+    {
+        transform.DOKill();
+        transform.DOLocalMove(originalPosition, moveDuration).SetEase(Ease.InOutCubic);
+    }
+
+    // --- XỬ LÝ VA CHẠM ---
+    private void OnTriggerEnter(Collider other)
+    {
+        if (!IsServer) return;
+
+        if (other.CompareTag("Player"))
+        {
+            // Chỉ nghiền nát nếu bánh răng đang quay
+            if (IsSpining())
+            {
+                // Reset vị trí player (Bạn thay vector3 này bằng vị trí hồi sinh/checkpoint)
+                other.transform.position = new Vector3(0f, 1f, 0f);
+                Debug.Log("Người chơi bị bánh răng nghiền nát!");
+            }
         }
     }
 }
