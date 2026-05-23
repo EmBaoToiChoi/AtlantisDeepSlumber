@@ -3,12 +3,30 @@ using Unity.Netcode;
 
 public class CrystalCore : NetworkBehaviour
 {
+    // NetworkVariable để đồng bộ ID người cầm lõi giữa các máy
     private NetworkVariable<ulong> currentHolderId = new NetworkVariable<ulong>(0, 
         NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
     public bool IsBeingHeld => currentHolderId.Value != 0;
 
-    // Hàm gọi khi nhấn E để nhặt
+    void Update()
+    {
+        // Chỉ server mới tính toán vị trí, sau đó NetworkTransform sẽ tự đồng bộ cho Client
+        if (IsServer && IsBeingHeld)
+        {
+            if (NetworkManager.Singleton.ConnectedClients.TryGetValue(currentHolderId.Value, out var client))
+            {
+                var playerMovement = client.PlayerObject.GetComponent<PlayerMovement>();
+                if (playerMovement != null && playerMovement.holdPoint != null)
+                {
+                    transform.position = playerMovement.holdPoint.position;
+                    transform.rotation = playerMovement.holdPoint.rotation;
+                }
+            }
+        }
+    }
+
+    // Hàm gọi từ PlayerMovement (Chạy trên Client của người nhặt)
     public void RequestPickup(ulong playerId)
     {
         RequestPickupServerRpc(playerId);
@@ -20,7 +38,7 @@ public class CrystalCore : NetworkBehaviour
         currentHolderId.Value = playerId;
     }
 
-    // Hàm gọi khi thả lõi
+    // Hàm gọi từ PlayerMovement (Chạy trên Client của người thả)
     public void RequestDrop()
     {
         RequestDropServerRpc();

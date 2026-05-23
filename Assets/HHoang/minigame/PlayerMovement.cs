@@ -10,9 +10,11 @@ public class PlayerMovement : NetworkBehaviour
     [Header("Cấu hình Di Chuyển")]
     public float moveSpeed = 7f;
     public float crouchSpeed = 3f; 
-    
-    [Tooltip("Tốc độ khi ôm 1 lõi tinh thể")]
     public float carryCoreSpeed = 3.5f;
+
+    [Header("Cấu hình Nhặt Đồ")]
+    public Transform holdPoint; // Kéo Empty Object ở ngực vào đây
+    public LayerMask interactableLayer; // Chọn Layer "Interactable"
 
     [Header("Trạng thái Mạng")]
     public NetworkVariable<bool> canMoveNet = new NetworkVariable<bool>(true, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
@@ -21,11 +23,11 @@ public class PlayerMovement : NetworkBehaviour
 
     public bool isMoving = false;
     private Vector2 moveInput;
+    private CrystalCore currentHeldCore = null;
 
     void Awake()
     {
         rb = GetComponent<Rigidbody>();
-        // Đảm bảo Rigidbody không bị xoay trục X/Z để nhân vật không bị đổ
         rb.freezeRotation = true;
     }
 
@@ -33,7 +35,13 @@ public class PlayerMovement : NetworkBehaviour
     {
         if (!IsOwner) return;
 
-        // Nếu không được phép di chuyển (ví dụ đang dùng MiniGame), reset input
+        // Xử lý phím E để Nhặt / Thả (Không dùng SetParent để tránh lỗi Netcode)
+        if (Input.GetKeyDown(KeyCode.E))
+        {
+            if (currentHeldCore == null) TryPickupCore();
+            else DropCore();
+        }
+
         if (!canMoveNet.Value)
         {
             moveInput = Vector2.zero;
@@ -56,7 +64,6 @@ public class PlayerMovement : NetworkBehaviour
         moveInput = keyboardInput;
         isMoving = moveInput.magnitude > 0.1f;
 
-        // Xử lý nút crouch
         if (Keyboard.current != null)
         {
             bool isPressingCrouch = Keyboard.current.cKey.isPressed || Keyboard.current.leftShiftKey.isPressed;
@@ -77,23 +84,13 @@ public class PlayerMovement : NetworkBehaviour
             return;
         }
 
-        // --- TÍNH TOÁN TỐC ĐỘ DỰA TRÊN TRẠNG THÁI ---
-        // Ưu tiên Crouch trước, sau đó tới CarryingCore
         float currentSpeed = moveSpeed;
-
-        if (isCrouchingNet.Value)
-        {
-            currentSpeed = crouchSpeed;
-        }
-        else if (isCarryingCore.Value) 
-        {
-            currentSpeed = carryCoreSpeed;
-        }
+        if (isCrouchingNet.Value) currentSpeed = crouchSpeed;
+        else if (isCarryingCore.Value) currentSpeed = carryCoreSpeed;
         
         Vector3 targetVelocity = new Vector3(moveInput.x * currentSpeed, rb.linearVelocity.y, moveInput.y * currentSpeed);
         rb.linearVelocity = targetVelocity;
 
-        // Xoay nhân vật theo hướng di chuyển
         Vector3 lookDirection = new Vector3(moveInput.x, 0f, moveInput.y);
         if (lookDirection != Vector3.zero)
         {
@@ -102,28 +99,41 @@ public class PlayerMovement : NetworkBehaviour
         }
     }
 
-    // --- CÁC HÀM GIAO TIẾP VỚI SERVER ---
-    
-    [ServerRpc(RequireOwnership = false)]
-    public void SetCarryingCoreServerRpc(bool state)
+    // --- LOGIC NHẶT / THẢ LÕI ---
+    void TryPickupCore()
     {
-        isCarryingCore.Value = state;
+        Collider[] hitColliders = Physics.OverlapSphere(transform.position, 2f, interactableLayer);
+        foreach (var hit in hitColliders)
+        {
+            CrystalCore core = hit.GetComponent<CrystalCore>();
+            if (core != null && !core.IsBeingHeld)
+            {
+                currentHeldCore = core;
+                currentHeldCore.RequestPickup(OwnerClientId);
+                // KHÔNG DÙNG SetParent ở đây để tránh lỗi Netcode
+                SetCarryingCoreServerRpc(true);
+                break;
+            }
+        }
     }
+
+    void DropCore()
+    {
+        if (currentHeldCore != null)
+        {
+            currentHeldCore.RequestDrop();
+            SetCarryingCoreServerRpc(false);
+            currentHeldCore = null;
+        }
+    }
+
+    // --- CÁC HÀM GIAO TIẾP VỚI SERVER ---
+    [ServerRpc(RequireOwnership = false)]
+    public void SetCarryingCoreServerRpc(bool state) { isCarryingCore.Value = state; }
 
     [ServerRpc(RequireOwnership = false)]
-    public void SetCanMoveServerRpc(bool state) 
-    { 
-        canMoveNet.Value = state; 
-    }
+    public void SetCanMoveServerRpc(bool state) { canMoveNet.Value = state; }
 
     [ServerRpc(RequireOwnership = false)]
-    private void UpdateCrouchStatusServerRpc(bool crouchState) 
-    { 
-        isCrouchingNet.Value = crouchState; 
-    }
-
-    public bool IsMakingNoise() 
-    { 
-        return isMoving && !isCrouchingNet.Value; 
-    }
+    private void UpdateCrouchStatusServerRpc(bool crouchState) { isCrouchingNet.Value = crouchState; }
 }
