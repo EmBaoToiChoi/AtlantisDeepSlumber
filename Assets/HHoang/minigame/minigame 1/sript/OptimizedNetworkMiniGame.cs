@@ -18,7 +18,7 @@ public class OptimizedNetworkMiniGame : NetworkBehaviour
     public float greenZoneMin = 85f;  
     public float greenZoneMax = 100f; 
 
-    [Tooltip("Số người cần đạt vùng xanh để dừng cưa (Chỉnh 1 để test 1 mình)")]
+    [Tooltip("Số người cần đạt vùng xanh để dừng cưa")]
     public int requiredPlayers = 2;    
 
     public Color normalColor = new Color(0.2f, 0.2f, 0.2f, 0.4f); 
@@ -30,12 +30,13 @@ public class OptimizedNetworkMiniGame : NetworkBehaviour
     private float originalSpeed1;
     private float originalSpeed2;
     
-    // Biến trạng thái để tránh gọi tween liên tục
     private bool isCurrentlyOpen = false;
 
-    // CHỈ CẦN 1 THANH SLIDER CHO CẢ 2 TRẠM
     private NetworkVariable<float> syncSlider = new NetworkVariable<float>(0f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     private NetworkVariable<int> targetButton = new NetworkVariable<int>(1, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+    
+    // BIẾN MỚI: Đếm số người đang tương tác
+    private NetworkVariable<int> playersInteracting = new NetworkVariable<int>(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
     private bool isPlaying = false;
 
@@ -44,7 +45,6 @@ public class OptimizedNetworkMiniGame : NetworkBehaviour
         if (miniGamePlayZone != null) miniGamePlayZone.SetActive(false);
         ResetButtonVisual(imgA);
         ResetButtonVisual(imgD);
-
         if (gear1 != null) originalSpeed1 = gear1.rotationSpeed;
         if (gear2 != null) originalSpeed2 = gear2.rotationSpeed;
     }
@@ -56,9 +56,15 @@ public class OptimizedNetworkMiniGame : NetworkBehaviour
         if (isOpening) UpdateTargetButtonVisual();
     }
 
+    // Hàm gọi từ InteractBox khi người chơi bật/tắt trạm
+    [ServerRpc(RequireOwnership = false)]
+    public void UpdateInteractingCountServerRpc(bool isJoining)
+    {
+        playersInteracting.Value += isJoining ? 1 : -1;
+    }
+
     void Update()
     {
-        // Cập nhật giá trị hiển thị trên máy local
         if (localSlider != null) localSlider.value = syncSlider.Value;
 
         if (isPlaying)
@@ -69,20 +75,19 @@ public class OptimizedNetworkMiniGame : NetworkBehaviour
 
         if (IsServer)
         {
-            // Trừ tiến trình tự động
             if (syncSlider.Value > 0) syncSlider.Value -= drainSpeed * Time.deltaTime;
 
-            // Kiểm tra vùng xanh
+            // KIỂM TRA ĐIỀU KIỆN KÉP
             bool isInGreenZone = (syncSlider.Value >= greenZoneMin && syncSlider.Value <= greenZoneMax);
+            bool hasEnoughPlayers = (playersInteracting.Value >= requiredPlayers);
 
-            if (isInGreenZone)
+            if (isInGreenZone && hasEnoughPlayers)
             {
                 if (!isCurrentlyOpen)
                 {
                     isCurrentlyOpen = true;
                     gear1.UpdateSpeedFromServer(0f);
                     gear2.UpdateSpeedFromServer(0f);
-                    // Gọi hàm mở cổng (đã setup trong GearRotator)
                     gear1.OpenGear(); 
                     gear2.OpenGear();
                 }

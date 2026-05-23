@@ -1,20 +1,30 @@
 using UnityEngine;
 using Unity.Netcode;
+using System.Collections.Generic;
 
 public class CrystalCore : NetworkBehaviour
 {
-    // NetworkVariable để đồng bộ ID người cầm lõi giữa các máy
-    private NetworkVariable<ulong> currentHolderId = new NetworkVariable<ulong>(0, 
-        NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+    // Danh sách các Client ID đang cùng khiêng lõi
+    public NetworkList<ulong> holders;
 
-    public bool IsBeingHeld => currentHolderId.Value != 0;
+    void Awake()
+    {
+        holders = new NetworkList<ulong>();
+    }
+
+    // Trả về hệ số tốc độ dựa trên số người khiêng
+    public float GetMoveSpeedMultiplier()
+    {
+        // 2 người khiêng = 100% tốc độ (buff), 1 người khiêng = 60% tốc độ (bị chậm)
+        return holders.Count >= 2 ? 1.0f : 0.6f;
+    }
 
     void Update()
     {
-        // Chỉ server mới tính toán vị trí, sau đó NetworkTransform sẽ tự đồng bộ cho Client
-        if (IsServer && IsBeingHeld)
+        // Server tính toán vị trí của lõi theo người chơi đầu tiên trong danh sách
+        if (IsServer && holders.Count > 0)
         {
-            if (NetworkManager.Singleton.ConnectedClients.TryGetValue(currentHolderId.Value, out var client))
+            if (NetworkManager.Singleton.ConnectedClients.TryGetValue(holders[0], out var client))
             {
                 var playerMovement = client.PlayerObject.GetComponent<PlayerMovement>();
                 if (playerMovement != null && playerMovement.holdPoint != null)
@@ -26,27 +36,18 @@ public class CrystalCore : NetworkBehaviour
         }
     }
 
-    // Hàm gọi từ PlayerMovement (Chạy trên Client của người nhặt)
-    public void RequestPickup(ulong playerId)
-    {
-        RequestPickupServerRpc(playerId);
-    }
+    public void RequestPickup(ulong playerId) => RequestPickupServerRpc(playerId);
+    public void RequestDrop(ulong playerId) => RequestDropServerRpc(playerId);
 
     [ServerRpc(RequireOwnership = false)]
     private void RequestPickupServerRpc(ulong playerId)
     {
-        currentHolderId.Value = playerId;
-    }
-
-    // Hàm gọi từ PlayerMovement (Chạy trên Client của người thả)
-    public void RequestDrop()
-    {
-        RequestDropServerRpc();
+        if (!holders.Contains(playerId)) holders.Add(playerId);
     }
 
     [ServerRpc(RequireOwnership = false)]
-    private void RequestDropServerRpc()
+    private void RequestDropServerRpc(ulong playerId)
     {
-        currentHolderId.Value = 0;
+        if (holders.Contains(playerId)) holders.Remove(playerId);
     }
 }
