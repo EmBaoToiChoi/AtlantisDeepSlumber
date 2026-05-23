@@ -30,6 +30,9 @@ public class InteractBox : MonoBehaviour
                 gameManager.ToggleMiniGame(stationIndex, true);
                 isUsingStation = true;
                 
+                // THÔNG BÁO CHO SERVER: Có 1 người bắt đầu tương tác
+                gameManager.UpdateInteractingCountServerRpc(true);
+                
                 // 2. KHÓA CHÂN: Gọi ServerRpc để khóa di chuyển của chính mình
                 if (localPlayerMovement != null)
                 {
@@ -38,12 +41,12 @@ public class InteractBox : MonoBehaviour
             }
             else
             {
-                // TẮT UI và mở khóa chân (Nếu nhấn E lần nữa)
+                // TẮT UI và mở khóa chân
                 ExitStation();
             }
         }
 
-        // Nếu đang chơi mà bấm ESC thì tự động thoát ra ngoài và mở khóa chân
+        // Nếu đang chơi mà bấm ESC thì tự động thoát ra ngoài
         if (isUsingStation && Input.GetKeyDown(KeyCode.Escape))
         {
             ExitStation();
@@ -52,7 +55,13 @@ public class InteractBox : MonoBehaviour
 
     private void ExitStation()
     {
+        if (!isUsingStation) return; // Tránh gọi nhiều lần
+
         gameManager.ToggleMiniGame(stationIndex, false);
+        
+        // THÔNG BÁO CHO SERVER: Có 1 người dừng tương tác
+        gameManager.UpdateInteractingCountServerRpc(false);
+        
         isUsingStation = false;
 
         // MỞ KHÓA CHÂN: Cho phép nhân vật đi lại bình thường
@@ -71,8 +80,6 @@ public class InteractBox : MonoBehaviour
             if (networkObject != null && networkObject.IsOwner)
             {
                 isPlayerInside = true;
-                
-                // Lấy script di chuyển của chính chủ máy này lưu lại để xử lý khóa/mở khóa
                 localPlayerMovement = other.GetComponent<PlayerMovement>();
             }
         }
@@ -87,12 +94,11 @@ public class InteractBox : MonoBehaviour
             if (networkObject != null && networkObject.IsOwner)
             {
                 isPlayerInside = false;
+                // Nếu đi ra ngoài khi đang đứng ở trạm thì thoát trạm luôn
                 if (isUsingStation)
                 {
                     ExitStation();
                 }
-                
-                // Xóa tham chiếu khi đi ra ngoài hẳn
                 localPlayerMovement = null;
             }
         }
