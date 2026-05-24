@@ -79,16 +79,18 @@ public class PlayerMovement : NetworkBehaviour
         rb.linearVelocity = new Vector3(moveInput.x * targetSpeed, rb.linearVelocity.y, moveInput.y * targetSpeed);
     }
 
+// Trong PlayerMovement.cs
     void TryPickupCore()
     {
         Collider[] hitColliders = Physics.OverlapSphere(transform.position, 2f, interactableLayer);
         foreach (var hit in hitColliders)
         {
             CrystalCore core = hit.GetComponent<CrystalCore>();
+            // Chỉ cần core tồn tại là được, không cần quan tâm nó đã có người giữ chưa
             if (core != null)
             {
                 currentHeldCore = core;
-                currentHeldCore.RequestPickup(OwnerClientId);
+                core.RequestPickup(OwnerClientId); // Server sẽ xử lý việc add vào list
                 SetCarryingCoreServerRpc(true);
                 break;
             }

@@ -996,7 +996,7 @@ public class NetworkWaitingRoom : NetworkBehaviour
 
         Debug.Log("[SERVER] Nhận lệnh khởi động game! Đang chuyển tất cả người chơi sang cảnh 'HBao'...");
         if (NetworkManager.Singleton != null && NetworkManager.Singleton.SceneManager != null) {
-            NetworkManager.Singleton.SceneManager.LoadScene("HBao", UnityEngine.SceneManagement.LoadSceneMode.Single);
+            NetworkManager.Singleton.SceneManager.LoadScene("minigame 1", UnityEngine.SceneManagement.LoadSceneMode.Single);
         }
     }
 
