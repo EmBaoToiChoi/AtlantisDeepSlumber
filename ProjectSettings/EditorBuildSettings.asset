@@ -15,9 +15,6 @@ EditorBuildSettings:
     path: Assets/HHoang/minigame/minigame 1/minigame 1.unity
     guid: fbbb47fe9956ae24fa554d28239c3b5b
   - enabled: 1
-    path: Assets/HHoang/minigame/minigame/minigame.unity
-    guid: 0f31ff22cea0cdd4a96458b7449822a6
-  - enabled: 1
     path: Assets/Scenes/HBao.unity
     guid: 3e4b1ccd16d877443bf7c71464225cc2
   m_configObjects:

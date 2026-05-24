@@ -19,19 +19,32 @@ public class CrystalCore : NetworkBehaviour
         return holders.Count >= 2 ? 1.0f : 0.6f;
     }
 
+    // Trong CrystalCore.cs
     void Update()
     {
-        // Server tính toán vị trí của lõi theo người chơi đầu tiên trong danh sách
         if (IsServer && holders.Count > 0)
         {
-            if (NetworkManager.Singleton.ConnectedClients.TryGetValue(holders[0], out var client))
+            Vector3 targetPos = Vector3.zero;
+            int activeHolders = 0;
+
+            // Tính vị trí trung bình của các điểm giữ (holdPoints)
+            foreach (ulong clientId in holders)
             {
-                var playerMovement = client.PlayerObject.GetComponent<PlayerMovement>();
-                if (playerMovement != null && playerMovement.holdPoint != null)
+                if (NetworkManager.Singleton.ConnectedClients.TryGetValue(clientId, out var client))
                 {
-                    transform.position = playerMovement.holdPoint.position;
-                    transform.rotation = playerMovement.holdPoint.rotation;
+                    var playerMovement = client.PlayerObject.GetComponent<PlayerMovement>();
+                    if (playerMovement != null && playerMovement.holdPoint != null)
+                    {
+                        targetPos += playerMovement.holdPoint.position;
+                        activeHolders++;
+                    }
                 }
+            }
+
+            if (activeHolders > 0)
+            {
+                // Lõi sẽ nằm ở giữa 2 người, hoặc theo người đầu tiên nếu chỉ có 1 người
+                transform.position = targetPos / activeHolders;
             }
         }
     }
