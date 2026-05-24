@@ -4,6 +4,7 @@ using System.Collections.Generic;
 
 public class CrystalCore : NetworkBehaviour
 {
+    public int crystalID;
     // Danh sách các Client ID đang cùng khiêng lõi
     public NetworkList<ulong> holders;
 

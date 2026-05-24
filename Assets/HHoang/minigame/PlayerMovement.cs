@@ -21,7 +21,7 @@ public class PlayerMovement : NetworkBehaviour
     public NetworkVariable<bool> isCarryingCore = new NetworkVariable<bool>(false);
 
     private Vector2 moveInput;
-    private CrystalCore currentHeldCore = null;
+    public CrystalCore currentHeldCore = null;
 
     void Awake()
     {
@@ -33,11 +33,38 @@ public class PlayerMovement : NetworkBehaviour
     {
         if (!IsOwner) return;
 
+        // --- ĐOẠN ĐÃ SỬA CÓ LOGIC CẮM TRỤ ---
         if (Input.GetKeyDown(KeyCode.E))
         {
-            if (currentHeldCore == null) TryPickupCore();
-            else DropCore();
+            if (currentHeldCore == null) 
+            {
+                TryPickupCore();
+            }
+            else 
+            {
+                // Tìm tất cả các Trụ trong Scene
+                PillarStation[] stations = Object.FindObjectsByType<PillarStation>(FindObjectsSortMode.None);
+                bool snapped = false;
+                
+                // Kiểm tra xem người chơi có đang đứng gần trụ nào không
+                foreach (var station in stations)
+                {
+                    // Nếu TryInteract trả về true, nghĩa là đã cắm thành công vào trụ
+                    if (station.TryInteract(this)) 
+                    { 
+                        snapped = true; 
+                        break; 
+                    }
+                }
+
+                // Nếu KHÔNG cắm vào trụ nào, thì mới thực hiện thả đồ xuống đất
+                if (!snapped) 
+                {
+                    DropCore();
+                }
+            }
         }
+        // --- KẾT THÚC ĐOẠN ĐÃ SỬA ---
 
         if (!canMoveNet.Value) { moveInput = Vector2.zero; return; }
 
