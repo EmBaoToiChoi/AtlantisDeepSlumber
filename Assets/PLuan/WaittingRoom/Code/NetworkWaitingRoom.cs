@@ -1001,9 +1001,10 @@ public class NetworkWaitingRoom : NetworkBehaviour
             return;
         }
 
-        Debug.Log("[SERVER] Nhận lệnh khởi động game! Đang chuyển tất cả người chơi sang cảnh 'HBao'...");
+        Debug.Log("--- ĐANG GỌI LOAD SCENE: minigame2........................................ ---");
         if (NetworkManager.Singleton != null && NetworkManager.Singleton.SceneManager != null) {
-            NetworkManager.Singleton.SceneManager.LoadScene("HBao", UnityEngine.SceneManagement.LoadSceneMode.Single);
+            //NetworkManager.Singleton.SceneManager.LoadScene("minigame2", UnityEngine.SceneManagement.LoadSceneMode.Single);
+            NetworkManager.Singleton.SceneManager.LoadScene("minigame2", UnityEngine.SceneManagement.LoadSceneMode.Single);
         }
     }
 
