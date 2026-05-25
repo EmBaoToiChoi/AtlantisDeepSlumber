@@ -108,12 +108,122 @@ TextureImporter:
     forceMaximumCompressionQuality_BC6H_BC7: 0
   spriteSheet:
     serializedVersion: 2
-    sprites: []
+    sprites:
+    - serializedVersion: 2
+      name: HT_skill1_0
+      rect:
+        serializedVersion: 2
+        x: 12
+        y: 1
+        width: 1511
+        height: 1023
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 3758556dd0c758643bce5f3ed5884a28
+      internalID: 987293040
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: HT_skill1_1
+      rect:
+        serializedVersion: 2
+        x: 83
+        y: 352
+        width: 4
+        height: 4
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: df96645ef28b1b24ab490e48cdc05061
+      internalID: 1993301160
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: HT_skill1_2
+      rect:
+        serializedVersion: 2
+        x: 86
+        y: 342
+        width: 4
+        height: 4
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 52044a8df561a2d4cb60b74a3169d5e2
+      internalID: 1405663681
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: HT_skill1_3
+      rect:
+        serializedVersion: 2
+        x: 83
+        y: 328
+        width: 5
+        height: 4
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: c30593a6327644d42bc98333232ba73e
+      internalID: 2027383215
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: HT_skill1_4
+      rect:
+        serializedVersion: 2
+        x: 83
+        y: 286
+        width: 7
+        height: 5
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 20032710db1705e498da051640bf6b05
+      internalID: 128833230
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
     outline: []
     customData: 
     physicsShape: []
     bones: []
-    spriteID: 
+    spriteID: ff8ecedcdfb993041a10feb4ba90a13a
     internalID: 0
     vertices: []
     indices: 
@@ -122,7 +232,12 @@ TextureImporter:
     secondaryTextures: []
     spriteCustomMetadata:
       entries: []
-    nameFileIdTable: {}
+    nameFileIdTable:
+      HT_skill1_0: 987293040
+      HT_skill1_1: 1993301160
+      HT_skill1_2: 1405663681
+      HT_skill1_3: 2027383215
+      HT_skill1_4: 128833230
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

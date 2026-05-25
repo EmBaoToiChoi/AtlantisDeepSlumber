@@ -108,12 +108,56 @@ TextureImporter:
     forceMaximumCompressionQuality_BC6H_BC7: 0
   spriteSheet:
     serializedVersion: 2
-    sprites: []
+    sprites:
+    - serializedVersion: 2
+      name: tanker-skill1_0
+      rect:
+        serializedVersion: 2
+        x: 14
+        y: 1
+        width: 1483
+        height: 1020
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 002ba16e1d8844a4fa3780a6c476ac68
+      internalID: 1222851142
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: tanker-skill1_1
+      rect:
+        serializedVersion: 2
+        x: 52
+        y: 394
+        width: 4
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 85c18805593883b4faed71281ef99ac8
+      internalID: 1988268303
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
     outline: []
     customData: 
     physicsShape: []
     bones: []
-    spriteID: 
+    spriteID: 9f66d6d48f559264fa26cd734f8780f6
     internalID: 0
     vertices: []
     indices: 
@@ -122,7 +166,9 @@ TextureImporter:
     secondaryTextures: []
     spriteCustomMetadata:
       entries: []
-    nameFileIdTable: {}
+    nameFileIdTable:
+      tanker-skill1_0: 1222851142
+      tanker-skill1_1: 1988268303
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

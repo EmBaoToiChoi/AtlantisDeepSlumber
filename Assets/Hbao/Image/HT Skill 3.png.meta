@@ -108,12 +108,144 @@ TextureImporter:
     forceMaximumCompressionQuality_BC6H_BC7: 0
   spriteSheet:
     serializedVersion: 2
-    sprites: []
+    sprites:
+    - serializedVersion: 2
+      name: HT Skill 3_0
+      rect:
+        serializedVersion: 2
+        x: 86
+        y: 123
+        width: 1450
+        height: 784
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: e356821584abbcd49868ca0427a4dacc
+      internalID: -656385695
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: HT Skill 3_4
+      rect:
+        serializedVersion: 2
+        x: 996
+        y: 148
+        width: 4
+        height: 4
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: de05d53cc91b45d4cb89da5b887fd816
+      internalID: 1385434177
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: HT Skill 3_5
+      rect:
+        serializedVersion: 2
+        x: 996
+        y: 75
+        width: 4
+        height: 4
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 22be744f7bbb34c4b9a25f61eb2855de
+      internalID: 1389281460
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: HT Skill 3_8
+      rect:
+        serializedVersion: 2
+        x: 1042
+        y: 152
+        width: 5
+        height: 6
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: f7fb317019a84d04a9d1e8739156fb2a
+      internalID: -1568409351
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: HT Skill 3_9
+      rect:
+        serializedVersion: 2
+        x: 1500
+        y: 485
+        width: 4
+        height: 5
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: e3b378f566663f846ba40d5299d58d96
+      internalID: 887933671
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: HT Skill 3_10
+      rect:
+        serializedVersion: 2
+        x: 1500
+        y: 302
+        width: 5
+        height: 4
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: c099d6dd16df28d49a1f632a4c24633d
+      internalID: 1455575540
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
     outline: []
     customData: 
     physicsShape: []
     bones: []
-    spriteID: 
+    spriteID: e42972ae757c99f45b292a3a83197e25
     internalID: 0
     vertices: []
     indices: 
@@ -122,7 +254,18 @@ TextureImporter:
     secondaryTextures: []
     spriteCustomMetadata:
       entries: []
-    nameFileIdTable: {}
+    nameFileIdTable:
+      HT Skill 3_0: -656385695
+      HT Skill 3_1: -59197164
+      HT Skill 3_10: 1455575540
+      HT Skill 3_2: 285645047
+      HT Skill 3_3: -1575782418
+      HT Skill 3_4: 1385434177
+      HT Skill 3_5: 1389281460
+      HT Skill 3_6: -789188730
+      HT Skill 3_7: -1841333368
+      HT Skill 3_8: -1568409351
+      HT Skill 3_9: 887933671
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 
