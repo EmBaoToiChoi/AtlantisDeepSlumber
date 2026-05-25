@@ -108,12 +108,166 @@ TextureImporter:
     forceMaximumCompressionQuality_BC6H_BC7: 0
   spriteSheet:
     serializedVersion: 2
-    sprites: []
+    sprites:
+    - serializedVersion: 2
+      name: HT skill2_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 1
+        width: 928
+        height: 1022
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 78c98509d4c9ef446b1776c5ae7a8501
+      internalID: 1286180194
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: HT skill2_1
+      rect:
+        serializedVersion: 2
+        x: 491
+        y: 976
+        width: 13
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: fb39b966a5820ba4a82265fa98945193
+      internalID: 1056038874
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: HT skill2_2
+      rect:
+        serializedVersion: 2
+        x: 517
+        y: 957
+        width: 14
+        height: 23
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: a7687953f9ca815478f0948e92c41ca1
+      internalID: -1875088545
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: HT skill2_3
+      rect:
+        serializedVersion: 2
+        x: 492
+        y: 968
+        width: 6
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 9945ab547a1b6ca409bdec14df582c33
+      internalID: 941338143
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: HT skill2_4
+      rect:
+        serializedVersion: 2
+        x: 398
+        y: 95
+        width: 5
+        height: 10
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: a9857bfed7478a54e9d0483d9e999e32
+      internalID: 874411440
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: HT skill2_5
+      rect:
+        serializedVersion: 2
+        x: 399
+        y: 75
+        width: 4
+        height: 4
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 41becc9060131d244b818fac911c30c8
+      internalID: -1780833585
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: HT skill2_6
+      rect:
+        serializedVersion: 2
+        x: 398
+        y: 25
+        width: 4
+        height: 5
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 0745319aac42abf4dbedcbcc3b101330
+      internalID: 273181808
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
     outline: []
     customData: 
     physicsShape: []
     bones: []
-    spriteID: 
+    spriteID: c3f3093b296557244bf201ad5d3fa4a9
     internalID: 0
     vertices: []
     indices: 
@@ -122,7 +276,14 @@ TextureImporter:
     secondaryTextures: []
     spriteCustomMetadata:
       entries: []
-    nameFileIdTable: {}
+    nameFileIdTable:
+      HT skill2_0: 1286180194
+      HT skill2_1: 1056038874
+      HT skill2_2: -1875088545
+      HT skill2_3: 941338143
+      HT skill2_4: 874411440
+      HT skill2_5: -1780833585
+      HT skill2_6: 273181808
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 
