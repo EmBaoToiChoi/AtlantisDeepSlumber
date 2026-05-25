@@ -196,4 +196,3 @@ public class EnemyHealthBar : MonoBehaviour
         }
     }
 }
-

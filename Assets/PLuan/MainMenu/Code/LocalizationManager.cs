@@ -107,7 +107,22 @@ public static class LocalizationManager
             ["btn_confirm_no"] = "CANCEL",
             ["btn_save_yes"] = "SAVE",
             ["btn_save_no"] = "DON'T SAVE",
-            ["lobby_empty"] = "NO ACTIVE SESSIONS FOUND"
+            ["lobby_empty"] = "NO ACTIVE SESSIONS FOUND",
+
+            // HUD / Inventory
+            ["hud_tab_close"] = "Press [TAB] to close",
+            ["hud_upgrades_title"] = "STATS UPGRADES",
+            ["hud_points_format"] = "Points: {0}",
+            ["hud_stat_hp"] = "HEALTH (HP)",
+            ["hud_stat_mp"] = "MANA (MP)",
+            ["hud_stat_cooldown"] = "COOLDOWN (-%)",
+            ["hud_stat_damage"] = "DAMAGE",
+            ["hud_upgrade_lv_hp"] = "Lv. {0} (+{1} HP)",
+            ["hud_upgrade_lv_mp"] = "Lv. {0} (+{1} MP)",
+            ["hud_upgrade_lv_cooldown"] = "Lv. {0} ({1}% reduction)",
+            ["hud_upgrade_lv_damage"] = "Lv. {0} (+{1} Damage)",
+            ["hud_warning_skill_locked"] = "SKILLS ARE CURRENTLY LOCKED!",
+            ["hud_warning_weapon_locked"] = "WEAPON IS CURRENTLY LOCKED!"
         },
 
         [Language.Vietnamese] = new Dictionary<string, string>
@@ -209,7 +224,22 @@ public static class LocalizationManager
             ["btn_confirm_no"] = "HỦY",
             ["btn_save_yes"] = "CÓ, LƯU LẠI",
             ["btn_save_no"] = "KHÔNG LƯU",
-            ["lobby_empty"] = "HIỆN KHÔNG CÓ PHÒNG NÀO TRỐNG"
+            ["lobby_empty"] = "HIỆN KHÔNG CÓ PHÒNG NÀO TRỐNG",
+
+            // HUD / Inventory
+            ["hud_tab_close"] = "Ấn phím [TAB] để đóng",
+            ["hud_upgrades_title"] = "NÂNG CẤP CHỈ SỐ",
+            ["hud_points_format"] = "Điểm cộng: {0}",
+            ["hud_stat_hp"] = "MÁU (HP)",
+            ["hud_stat_mp"] = "MANA (MP)",
+            ["hud_stat_cooldown"] = "HỒI CHIÊU (-%)",
+            ["hud_stat_damage"] = "SÁT THƯƠNG",
+            ["hud_upgrade_lv_hp"] = "Lv. {0} (+{1} HP)",
+            ["hud_upgrade_lv_mp"] = "Lv. {0} (+{1} MP)",
+            ["hud_upgrade_lv_cooldown"] = "Lv. {0} ({1}% giảm)",
+            ["hud_upgrade_lv_damage"] = "Lv. {0} (+{1} S.Thương)",
+            ["hud_warning_skill_locked"] = "Kỹ Năng Đang Bị Khóa!",
+            ["hud_warning_weapon_locked"] = "Vũ Khí Đang Bị Khóa!"
         }
 
     };

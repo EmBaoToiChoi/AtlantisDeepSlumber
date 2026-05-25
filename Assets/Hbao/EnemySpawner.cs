@@ -21,6 +21,13 @@ public class EnemySpawner : NetworkBehaviour
     [Header("Player Spawning Configuration")]
     [Tooltip("Prefab of the player to spawn. Usually contains SimplePlayerTest script.")]
     public GameObject playerPrefab;
+    
+    [Header("Character Class Prefabs Configuration")]
+    public GameObject arthurPrefab; // Index 3
+    public GameObject elenaPrefab;  // Index 2
+    public GameObject leoPrefab;    // Index 0
+    public GameObject mayaPrefab;   // Index 1
+
     [Tooltip("Where the player will spawn. If empty, uses this Spawner's position.")]
     public Transform playerSpawnPoint;
     [Tooltip("If true, automatically spawns a player object for connected clients if they don't have one.")]
@@ -171,7 +178,8 @@ public class EnemySpawner : NetworkBehaviour
                 if (NetworkManager.Singleton.IsHost)
                 {
                     Debug.Log("[EnemySpawner] Phát hiện chế độ Host. Tự động khởi tạo Player lập tức cho Host...");
-                    SpawnPlayerForClient(NetworkManager.Singleton.LocalClientId);
+                    int selectedChar = PlayerPrefs.GetInt("SelectedCharacterId", 0);
+                    SpawnPlayerForClient(NetworkManager.Singleton.LocalClientId, selectedChar);
                 }
             }
 
@@ -187,17 +195,18 @@ public class EnemySpawner : NetworkBehaviour
             // Phía máy khách (Client) sau khi load xong scene và EnemySpawner được đồng bộ hóa
             // Sẽ gửi yêu cầu ServerRpc chủ động đòi Server sinh Player cho mình.
             // Điều này đảm bảo 100% Client có Player khi di chuyển từ Lobby Room sang scene này.
-            Debug.Log($"[EnemySpawner] [CLIENT] Đã load xong scene gameplay. Gửi ServerRpc yêu cầu sinh Player cho Client ID: {NetworkManager.Singleton.LocalClientId}");
-            RequestSpawnPlayerServerRpc();
+            int selectedChar = PlayerPrefs.GetInt("SelectedCharacterId", 0);
+            Debug.Log($"[EnemySpawner] [CLIENT] Đã load xong scene gameplay. Gửi ServerRpc yêu cầu sinh Player cho Client ID: {NetworkManager.Singleton.LocalClientId} với CharacterId={selectedChar}");
+            RequestSpawnPlayerServerRpc(selectedChar);
         }
     }
 
     [ServerRpc(RequireOwnership = false)]
-    private void RequestSpawnPlayerServerRpc(ServerRpcParams rpcParams = default)
+    private void RequestSpawnPlayerServerRpc(int characterId, ServerRpcParams rpcParams = default)
     {
         ulong clientId = rpcParams.Receive.SenderClientId;
-        Debug.Log($"[EnemySpawner] [SERVER] Nhận được yêu cầu sinh Player từ Client ID {clientId} qua ServerRpc.");
-        SpawnPlayerForClient(clientId);
+        Debug.Log($"[EnemySpawner] [SERVER] Nhận được yêu cầu sinh Player từ Client ID {clientId} với CharacterId={characterId} qua ServerRpc.");
+        SpawnPlayerForClient(clientId, characterId);
     }
 
     [ClientRpc]
@@ -223,9 +232,10 @@ public class EnemySpawner : NetworkBehaviour
 
         Debug.Log($"[EnemySpawner] Phát hiện Scene '{sceneName}' đã load xong cho toàn bộ clients. Tiến hành sinh Player.");
 
-        foreach (ulong clientId in clientsCompleted)
+        if (NetworkManager.Singleton.IsHost)
         {
-            SpawnPlayerForClient(clientId);
+            int selectedChar = PlayerPrefs.GetInt("SelectedCharacterId", 0);
+            SpawnPlayerForClient(NetworkManager.Singleton.LocalClientId, selectedChar);
         }
     }
 
@@ -281,28 +291,34 @@ public class EnemySpawner : NetworkBehaviour
         }
     }
 
+    private GameObject GetPlayerPrefab(int characterId)
+    {
+        switch (characterId)
+        {
+            case 0: return leoPrefab != null ? leoPrefab : playerPrefab;
+            case 1: return mayaPrefab != null ? mayaPrefab : playerPrefab;
+            case 2: return elenaPrefab != null ? elenaPrefab : playerPrefab;
+            case 3: return arthurPrefab != null ? arthurPrefab : playerPrefab;
+            default: return playerPrefab;
+        }
+    }
+
     /// <summary>
     /// Spawns a Player object for a specific client ID and registers it as their player object.
     /// </summary>
-    public void SpawnPlayerForClient(ulong clientId)
+    public void SpawnPlayerForClient(ulong clientId, int characterId = 0)
     {
         if (!IsServer) return;
 
-        if (playerPrefab == null)
+        GameObject selectedPrefab = GetPlayerPrefab(characterId);
+        if (selectedPrefab == null)
         {
-            string errMsg = "KHÔNG THỂ SPAWN PLAYER: 'playerPrefab' chưa được gán trong Inspector trên VPS! Vui lòng mở scene 'HBao', kéo thả Player Prefab vào ô của EnemySpawner, sau đó thực hiện BUILD và UPLOAD lại Server lên VPS.";
+            string errMsg = $"KHÔNG THỂ SPAWN PLAYER: Prefab cho CharacterId={characterId} chưa được gán!";
             Debug.LogError("[EnemySpawner] " + errMsg);
-
-            // Gửi thông báo lỗi về máy khách để hiện trên Console của họ
-            ClientRpcParams clientRpcParams = new ClientRpcParams
-            {
-                Send = new ClientRpcSendParams { TargetClientIds = new ulong[] { clientId } }
-            };
-            NotifySpawningErrorClientRpc(errMsg, clientRpcParams);
             return;
         }
 
-        Debug.Log($"[EnemySpawner] Đang kiểm tra yêu cầu sinh Player cho Client {clientId}...");
+        Debug.Log($"[EnemySpawner] Đang kiểm tra yêu cầu sinh Player cho Client {clientId} (CharacterId={characterId})...");
 
         if (NetworkManager.Singleton.ConnectedClients.TryGetValue(clientId, out var client))
         {
@@ -332,16 +348,16 @@ public class EnemySpawner : NetworkBehaviour
         Vector3 pos = playerSpawnPoint != null ? playerSpawnPoint.position : transform.position;
         Quaternion rot = playerSpawnPoint != null ? playerSpawnPoint.rotation : transform.rotation;
 
-        GameObject playerObj = Instantiate(playerPrefab, pos, rot);
+        GameObject playerObj = Instantiate(selectedPrefab, pos, rot);
         NetworkObject netObj = playerObj.GetComponent<NetworkObject>();
         if (netObj != null)
         {
             netObj.SpawnAsPlayerObject(clientId, true);
-            Debug.Log($"[EnemySpawner] Đã sinh thành công gameplay Player cho Client ID {clientId} tại vị trí {pos}.");
+            Debug.Log($"[EnemySpawner] Đã sinh thành công gameplay Player cho Client ID {clientId} với prefab '{selectedPrefab.name}' tại vị trí {pos}.");
         }
         else
         {
-            string errMsg = $"Player Prefab '{playerPrefab.name}' thiếu thành phần NetworkObject! Vui lòng mở Prefab và thêm component NetworkObject vào.";
+            string errMsg = $"Player Prefab '{selectedPrefab.name}' thiếu thành phần NetworkObject! Vui lòng mở Prefab và thêm component NetworkObject vào.";
             Debug.LogError("[EnemySpawner] " + errMsg);
             Destroy(playerObj);
 

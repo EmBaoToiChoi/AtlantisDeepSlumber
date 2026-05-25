@@ -108,12 +108,37 @@ public class ResendOTPRequest
     public string email;
 }
 
+[System.Serializable]
+public class PlayerStateData
+{
+    public float health;
+    public int activeWeaponIndex;
+    public bool isWeapon2Locked;
+    public bool isSkillsUnlocked;
+    public string[] inventorySlots;
+    public int upgradePoints;
+    public int hpLevel;
+    public int mpLevel;
+    public int cooldownLevel;
+    public int damageLevel;
+}
+
+[System.Serializable]
+public class PlayerStateResponse
+{
+    public bool success;
+    public string message;
+    public PlayerStateData playerState;
+}
+
 public static class AuthService
 {
     public static System.Action OnTokenExpired;
 
-    // Có thể cấu hình URL này qua config file sau này khi deploy
-    private static readonly string BASE_URL = "http://165.99.14.40:3000/api";
+    // Thay đổi đường dẫn về localhost để test lưu/tải MongoDB cục bộ:
+    private static readonly string BASE_URL = "http://localhost:3000/api";
+    // Đường dẫn VPS thực tế khi deploy:
+    // private static readonly string BASE_URL = "http://165.99.14.40:3000/api";
 
     public static async Task<AuthResponse> Register(string displayName, string email, string password)
     {
@@ -285,6 +310,73 @@ public static class AuthService
             catch
             {
                 return new AuthResponse { success = false, message = "Server response parse error." };
+            }
+        }
+    }
+
+    // --- Player State APIs (MongoDB Sync) ---
+
+    public static async Task<PlayerStateResponse> GetPlayerState()
+    {
+        string url = $"{BASE_URL}/player/state";
+        using (UnityWebRequest req = UnityWebRequest.Get(url))
+        {
+            req.SetRequestHeader("Content-Type", "application/json");
+            string token = PlayerPrefs.GetString("AuthToken", "");
+            if (!string.IsNullOrEmpty(token))
+            {
+                req.SetRequestHeader("Authorization", $"Bearer {token}");
+            }
+
+            var operation = req.SendWebRequest();
+            while (!operation.isDone) await Task.Yield();
+
+            string responseText = req.downloadHandler.text;
+            if (req.result == UnityWebRequest.Result.ConnectionError)
+                return new PlayerStateResponse { success = false, message = "Network Error!" };
+
+            try
+            {
+                return JsonUtility.FromJson<PlayerStateResponse>(responseText);
+            }
+            catch
+            {
+                return new PlayerStateResponse { success = false, message = "Parse error: " + responseText };
+            }
+        }
+    }
+
+    public static async Task<AuthResponse> SavePlayerState(PlayerStateData stateData)
+    {
+        string url = $"{BASE_URL}/player/state";
+        string json = JsonUtility.ToJson(stateData);
+        using (UnityWebRequest req = new UnityWebRequest(url, "POST"))
+        {
+            byte[] bodyRaw = Encoding.UTF8.GetBytes(json);
+            req.uploadHandler = new UploadHandlerRaw(bodyRaw);
+            req.downloadHandler = new DownloadHandlerBuffer();
+            req.SetRequestHeader("Content-Type", "application/json");
+
+            string token = PlayerPrefs.GetString("AuthToken", "");
+            if (!string.IsNullOrEmpty(token))
+            {
+                req.SetRequestHeader("Authorization", $"Bearer {token}");
+            }
+
+            var operation = req.SendWebRequest();
+            while (!operation.isDone) await Task.Yield();
+
+            string responseText = req.downloadHandler.text;
+            if (req.result == UnityWebRequest.Result.ConnectionError)
+                return new AuthResponse { success = false, message = "Network Error!" };
+
+            try
+            {
+                return JsonUtility.FromJson<AuthResponse>(responseText);
+            }
+            catch
+            {
+                return new AuthResponse { success = false, message = "Parse error: " + responseText };
             }
         }
     }

@@ -376,6 +376,8 @@ public class NetworkWaitingRoom : NetworkBehaviour
     private void SelectCharacter(int charId)
     {
         Debug.Log($"[CLIENT] Yêu cầu chọn nhân vật: {charId}");
+        PlayerPrefs.SetInt("SelectedCharacterId", charId);
+        PlayerPrefs.Save();
         ChangeCharacterServerRpc(charId);
     }
 
@@ -578,6 +580,11 @@ public class NetworkWaitingRoom : NetworkBehaviour
         foreach (var p in NetPlayers)
         {
             int charId = p.CharacterId;
+            if (NetworkManager.Singleton != null && p.ClientId == NetworkManager.Singleton.LocalClientId)
+            {
+                PlayerPrefs.SetInt("SelectedCharacterId", charId);
+                PlayerPrefs.Save();
+            }
             if (charId == 0)
             {
                 if (p.ClientId == NetworkManager.Singleton.LocalClientId) selectorsPerChar0.Insert(0, "YOU");

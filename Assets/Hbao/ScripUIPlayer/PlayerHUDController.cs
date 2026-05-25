@@ -61,13 +61,27 @@ public class PlayerHUDController : MonoBehaviour
     private VisualElement skillImgR; // Tham chiếu tới hình ảnh kỹ năng để ẩn
     private VisualElement skillImgE; // Tham chiếu tới hình ảnh kỹ năng để ẩn
     private bool isSkillsUnlocked = false; // Trạng thái đã mở khóa kỹ năng hay chưa
+    public int currentSelectedWeapon = 1; // Thêm biến lưu vũ khí đang chọn
     
     // Mặc định false -> Vào game chưa ấn M sẽ là tắt Mic
     private bool isMicOn = false; 
 
-    // Cảnh báo vũ khí
+    // Cảnh báo vũ khí và Hành trang (Tab)
     private VisualElement worldMapOverlay;
+    private VisualElement inventoryOverlay;
     private Label weaponWarning;
+    
+    // UI nâng cấp chỉ số
+    private Label upgradePointsText;
+    private Label hpLevelText;
+    private Label mpLevelText;
+    private Label cooldownLevelText;
+    private Label damageLevelText;
+    private Button btnUpgradeHp;
+    private Button btnUpgradeMp;
+    private Button btnUpgradeCooldown;
+    private Button btnUpgradeDamage;
+
     private VisualElement weaponLock2; // Tham chiếu tới overlay khóa vũ khí
     private VisualElement lockIcon2;   // Tham chiếu tới icon ổ khóa để rung
     private VisualElement weaponImg2;  // Tham chiếu tới hình ảnh vũ khí để ẩn
@@ -120,8 +134,9 @@ public class PlayerHUDController : MonoBehaviour
             if (skillImgE != null) skillImgE.style.visibility = Visibility.Hidden;
         }
 
-        // Tìm Label cảnh báo và Overlay khóa
+        // Tìm Label cảnh báo, Overlay bản đồ và Hành trang
         worldMapOverlay = root.Q<VisualElement>("world-map-overlay");
+        inventoryOverlay = root.Q<VisualElement>("inventory-overlay");
         weaponWarning = root.Q<Label>("weapon-warning");
         weaponLock2 = root.Q<VisualElement>("weapon-lock-2");
         if (weaponLock2 != null) lockIcon2 = weaponLock2.Q<VisualElement>(null, "weapon-lock-icon");
@@ -133,6 +148,34 @@ public class PlayerHUDController : MonoBehaviour
             weaponImg2.style.visibility = Visibility.Hidden;
         }
 
+        // Tìm kiếm nhãn tên thực tế của tài khoản từ PlayerPrefs
+        var charNameLabel = root.Q<Label>("character-name-label");
+        if (charNameLabel != null)
+        {
+            charNameLabel.text = PlayerPrefs.GetString("AuthDisplayName", "HERO").ToUpper();
+        }
+
+        // Tìm kiếm các thành phần giao diện nâng cấp
+        upgradePointsText = root.Q<Label>("upgrade-points-text");
+        hpLevelText = root.Q<Label>("hp-level-text");
+        mpLevelText = root.Q<Label>("mp-level-text");
+        cooldownLevelText = root.Q<Label>("cooldown-level-text");
+        damageLevelText = root.Q<Label>("damage-level-text");
+
+        btnUpgradeHp = root.Q<Button>("btn-upgrade-hp");
+        btnUpgradeMp = root.Q<Button>("btn-upgrade-mp");
+        btnUpgradeCooldown = root.Q<Button>("btn-upgrade-cooldown");
+        btnUpgradeDamage = root.Q<Button>("btn-upgrade-damage");
+
+        if (btnUpgradeHp != null) btnUpgradeHp.clicked += () => UpgradeStat(0);
+        if (btnUpgradeMp != null) btnUpgradeMp.clicked += () => UpgradeStat(1);
+        if (btnUpgradeCooldown != null) btnUpgradeCooldown.clicked += () => UpgradeStat(2);
+        if (btnUpgradeDamage != null) btnUpgradeDamage.clicked += () => UpgradeStat(3);
+
+        // Khởi tạo và dịch ngôn ngữ giao diện HUD
+        LocalizationManager.Initialize();
+        ApplyHUDLocalization();
+
         // Đồng bộ trạng thái UI ngay khi load game (Tắt)
         UpdateMicUI();
         SelectWeapon(1); // Mặc định chọn vũ khí 1 khi vào game
@@ -142,6 +185,33 @@ public class PlayerHUDController : MonoBehaviour
         {
             SetupPlayerProfile(testProfileIndex);
         }
+    }
+
+    /// <summary>
+    /// Áp dụng dịch đa ngôn ngữ cho toàn bộ các nhãn tĩnh của HUD/Hành trang
+    /// </summary>
+    private void ApplyHUDLocalization()
+    {
+        if (uiDocument == null || uiDocument.rootVisualElement == null) return;
+        var root = uiDocument.rootVisualElement;
+
+        var inventorySubtitle = root.Q<Label>("inventory-subtitle");
+        if (inventorySubtitle != null) inventorySubtitle.text = LocalizationManager.Get("hud_tab_close");
+
+        var upgradesTitle = root.Q<Label>("upgrades-title");
+        if (upgradesTitle != null) upgradesTitle.text = LocalizationManager.Get("hud_upgrades_title");
+
+        var upgradeNameHp = root.Q<Label>("upgrade-name-hp");
+        if (upgradeNameHp != null) upgradeNameHp.text = LocalizationManager.Get("hud_stat_hp");
+
+        var upgradeNameMp = root.Q<Label>("upgrade-name-mp");
+        if (upgradeNameMp != null) upgradeNameMp.text = LocalizationManager.Get("hud_stat_mp");
+
+        var upgradeNameCooldown = root.Q<Label>("upgrade-name-cooldown");
+        if (upgradeNameCooldown != null) upgradeNameCooldown.text = LocalizationManager.Get("hud_stat_cooldown");
+
+        var upgradeNameDamage = root.Q<Label>("upgrade-name-damage");
+        if (upgradeNameDamage != null) upgradeNameDamage.text = LocalizationManager.Get("hud_stat_damage");
     }
 
     void Update()
@@ -181,6 +251,7 @@ public class PlayerHUDController : MonoBehaviour
                 {
                     weaponImg2.style.visibility = Visibility.Visible;
                 }
+                NotifyHUDChange();
             }
 
             // Mở/đóng Bản đồ thế giới bằng phím M
@@ -192,6 +263,12 @@ public class PlayerHUDController : MonoBehaviour
                     bool isNowVisible = worldMapOverlay.ClassListContains("show-map");
                     Debug.Log("Đã " + (isNowVisible ? "mở" : "đóng") + " Bản đồ thế giới với hiệu ứng");
                 }
+            }
+
+            // Mở/đóng Hành trang bằng phím Tab
+            if (Keyboard.current.tabKey.wasPressedThisFrame)
+            {
+                ToggleInventory();
             }
 
 
@@ -210,6 +287,7 @@ public class PlayerHUDController : MonoBehaviour
                 if (skillImgQ != null) skillImgQ.style.visibility = Visibility.Visible;
                 if (skillImgR != null) skillImgR.style.visibility = Visibility.Visible;
                 if (skillImgE != null) skillImgE.style.visibility = Visibility.Visible;
+                NotifyHUDChange();
             }
 
             // Kích hoạt Skill Q (chỉ khi đã mở khóa)
@@ -351,6 +429,26 @@ public class PlayerHUDController : MonoBehaviour
         UpdateMicUI();
     }
 
+    public void ToggleInventory()
+    {
+        if (inventoryOverlay != null)
+        {
+            inventoryOverlay.ToggleInClassList("show-inventory");
+            bool isNowVisible = inventoryOverlay.ClassListContains("show-inventory");
+            Debug.Log("Đã " + (isNowVisible ? "mở" : "đóng") + " hành trang");
+            
+            // Tự động lưu trạng thái người chơi vào MongoDB khi đóng hành trang
+            if (!isNowVisible)
+            {
+                var localPlayer = FindObjectOfType<SimplePlayerTest>();
+                if (localPlayer != null && localPlayer.IsSpawned && localPlayer.IsOwner)
+                {
+                    localPlayer.SavePlayerStateToDatabase();
+                }
+            }
+        }
+    }
+
     private void UpdateMicUI()
     {
         if (micIcon == null)
@@ -381,7 +479,7 @@ public class PlayerHUDController : MonoBehaviour
         }
     }
 
-    private void SelectWeapon(int index)
+    public void SelectWeapon(int index)
     {
         if (weaponSlot1 == null || weaponSlot2 == null) return;
 
@@ -392,6 +490,8 @@ public class PlayerHUDController : MonoBehaviour
 
             weaponSlot2.RemoveFromClassList("weapon-active");
             weaponSlot2.AddToClassList("weapon-inactive");
+            currentSelectedWeapon = 1;
+            NotifyHUDChange();
         }
         else if (index == 2)
         {
@@ -407,6 +507,8 @@ public class PlayerHUDController : MonoBehaviour
 
             weaponSlot1.RemoveFromClassList("weapon-active");
             weaponSlot1.AddToClassList("weapon-inactive");
+            currentSelectedWeapon = 2;
+            NotifyHUDChange();
         }
     }
 
@@ -415,6 +517,7 @@ public class PlayerHUDController : MonoBehaviour
         if (weaponWarning == null) return;
 
         Debug.Log("Kỹ năng đang bị khóa");
+        weaponWarning.text = LocalizationManager.Get("hud_warning_skill_locked");
         weaponWarning.AddToClassList("show-warning");
         warningTimer = WARNING_DURATION;
 
@@ -448,6 +551,7 @@ public class PlayerHUDController : MonoBehaviour
         if (weaponWarning == null) return;
 
         Debug.Log("Vũ khí đang bị khóa");
+        weaponWarning.text = LocalizationManager.Get("hud_warning_weapon_locked");
         weaponWarning.AddToClassList("show-warning");
         warningTimer = WARNING_DURATION;
 
@@ -475,6 +579,105 @@ public class PlayerHUDController : MonoBehaviour
             lockIcon2.schedule.Execute(() => {
                 lockIcon2.RemoveFromClassList("shake-right");
             }).StartingIn(240);
+        }
+    }
+
+    private void NotifyHUDChange()
+    {
+        var localPlayer = FindObjectOfType<SimplePlayerTest>();
+        if (localPlayer != null && localPlayer.IsSpawned && localPlayer.IsOwner)
+        {
+            localPlayer.UpdateStateFromHUD(currentSelectedWeapon, isWeapon2Locked, isSkillsUnlocked);
+        }
+    }
+
+    public void SetSkillsUnlocked(bool unlocked, bool playAnim = false)
+    {
+        isSkillsUnlocked = unlocked;
+        if (unlocked)
+        {
+            if (lockQ != null) { if (playAnim) lockQ.AddToClassList("unlocked-anim"); else lockQ.style.display = DisplayStyle.None; }
+            if (lockR != null) { if (playAnim) lockR.AddToClassList("unlocked-anim"); else lockR.style.display = DisplayStyle.None; }
+            if (lockE != null) { if (playAnim) lockE.AddToClassList("unlocked-anim"); else lockE.style.display = DisplayStyle.None; }
+            
+            if (skillImgQ != null) skillImgQ.style.visibility = Visibility.Visible;
+            if (skillImgR != null) skillImgR.style.visibility = Visibility.Visible;
+            if (skillImgE != null) skillImgE.style.visibility = Visibility.Visible;
+        }
+        else
+        {
+            if (lockQ != null) { lockQ.RemoveFromClassList("unlocked-anim"); lockQ.style.display = DisplayStyle.Flex; }
+            if (lockR != null) { lockR.RemoveFromClassList("unlocked-anim"); lockR.style.display = DisplayStyle.Flex; }
+            if (lockE != null) { lockE.RemoveFromClassList("unlocked-anim"); lockE.style.display = DisplayStyle.Flex; }
+            
+            if (skillImgQ != null) skillImgQ.style.visibility = Visibility.Hidden;
+            if (skillImgR != null) skillImgR.style.visibility = Visibility.Hidden;
+            if (skillImgE != null) skillImgE.style.visibility = Visibility.Hidden;
+        }
+    }
+
+    public void SetWeapon2Locked(bool locked, bool playAnim = false)
+    {
+        isWeapon2Locked = locked;
+        if (!locked)
+        {
+            if (weaponLock2 != null) { if (playAnim) weaponLock2.AddToClassList("unlocked-anim"); else weaponLock2.style.display = DisplayStyle.None; }
+            if (weaponImg2 != null) weaponImg2.style.visibility = Visibility.Visible;
+        }
+        else
+        {
+            if (weaponLock2 != null) { weaponLock2.RemoveFromClassList("unlocked-anim"); weaponLock2.style.display = DisplayStyle.Flex; }
+            if (weaponImg2 != null) weaponImg2.style.visibility = Visibility.Hidden;
+        }
+    }
+
+    public void SetInventorySlots(string[] slots)
+    {
+        // 10 ô hòm đồ hiện tại đã xóa nhãn số La Mã tĩnh theo yêu cầu
+    }
+
+    public void UpdateUpgradeUI(int points, int hpLv, int mpLv, int cdLv, int dmgLv)
+    {
+        LocalizationManager.Initialize();
+
+        if (upgradePointsText != null)
+        {
+            upgradePointsText.text = string.Format(LocalizationManager.Get("hud_points_format"), points);
+        }
+        if (hpLevelText != null)
+        {
+            hpLevelText.text = string.Format(LocalizationManager.Get("hud_upgrade_lv_hp"), hpLv, hpLv * 20);
+        }
+        if (mpLevelText != null)
+        {
+            mpLevelText.text = string.Format(LocalizationManager.Get("hud_upgrade_lv_mp"), mpLv, mpLv * 10);
+        }
+        if (cooldownLevelText != null)
+        {
+            cooldownLevelText.text = string.Format(LocalizationManager.Get("hud_upgrade_lv_cooldown"), cdLv, cdLv * 2);
+        }
+        if (damageLevelText != null)
+        {
+            damageLevelText.text = string.Format(LocalizationManager.Get("hud_upgrade_lv_damage"), dmgLv, dmgLv * 5);
+        }
+
+        // Giảm thời gian hồi chiêu tương ứng (2% mỗi cấp độ)
+        cooldownTimeQ = 10f * (1f - cdLv * 0.02f);
+        cooldownTimeR = 15f * (1f - cdLv * 0.02f);
+        cooldownTimeE = 12f * (1f - cdLv * 0.02f);
+    }
+
+    private void UpgradeStat(int statType)
+    {
+        var localPlayer = FindObjectOfType<SimplePlayerTest>();
+        if (localPlayer != null && localPlayer.IsSpawned && localPlayer.IsOwner)
+        {
+            localPlayer.UpgradeStatFromHUD(statType);
+        }
+        else if (localPlayer != null && localPlayer.isStandaloneMode)
+        {
+            // Hỗ trợ nâng cấp thử ở chế độ standalone không có Netcode
+            localPlayer.StandaloneUpgradeStat(statType);
         }
     }
 

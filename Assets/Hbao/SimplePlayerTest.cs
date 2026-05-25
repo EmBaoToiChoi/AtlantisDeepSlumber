@@ -16,6 +16,60 @@ public class SimplePlayerTest : NetworkBehaviour
         NetworkVariableWritePermission.Server
     );
 
+    [Header("Network Sync Variables")]
+    public NetworkVariable<int> activeWeaponIndex = new NetworkVariable<int>(
+        1,
+        NetworkVariableReadPermission.Everyone,
+        NetworkVariableWritePermission.Server
+    );
+    public NetworkVariable<bool> isWeapon2Locked = new NetworkVariable<bool>(
+        true,
+        NetworkVariableReadPermission.Everyone,
+        NetworkVariableWritePermission.Server
+    );
+    public NetworkVariable<bool> isSkillsUnlocked = new NetworkVariable<bool>(
+        false,
+        NetworkVariableReadPermission.Everyone,
+        NetworkVariableWritePermission.Server
+    );
+
+    [Header("Upgrade Sync Variables")]
+    public NetworkVariable<int> upgradePoints = new NetworkVariable<int>(
+        5,
+        NetworkVariableReadPermission.Everyone,
+        NetworkVariableWritePermission.Server
+    );
+    public NetworkVariable<int> hpLevel = new NetworkVariable<int>(
+        0,
+        NetworkVariableReadPermission.Everyone,
+        NetworkVariableWritePermission.Server
+    );
+    public NetworkVariable<int> mpLevel = new NetworkVariable<int>(
+        0,
+        NetworkVariableReadPermission.Everyone,
+        NetworkVariableWritePermission.Server
+    );
+    public NetworkVariable<int> cooldownLevel = new NetworkVariable<int>(
+        0,
+        NetworkVariableReadPermission.Everyone,
+        NetworkVariableWritePermission.Server
+    );
+    public NetworkVariable<int> damageLevel = new NetworkVariable<int>(
+        0,
+        NetworkVariableReadPermission.Everyone,
+        NetworkVariableWritePermission.Server
+    );
+
+    [Header("Local State & Inventory")]
+    public string[] inventorySlots = new string[10] { "", "", "", "", "", "", "", "", "", "" };
+    
+    // Biến lưu nâng cấp cho chế độ chơi đơn (Standalone)
+    private int localUpgradePoints = 5;
+    private int localHpLevel = 0;
+    private int localMpLevel = 0;
+    private int localCooldownLevel = 0;
+    private int localDamageLevel = 0;
+
     [Header("Player Class Settings")]
     [Tooltip("0 = Sát Thủ, 1 = Hỏa Thuật, 2 = Cung Thủ, 3 = Tanker")]
     public int characterClassIndex = 0;
@@ -34,7 +88,8 @@ public class SimplePlayerTest : NetworkBehaviour
     //  Biến nội bộ cho chế độ Standalone (không có Netcode)
     // ------------------------------------------------------------------
     private float localHealth;
-    private bool isStandaloneMode = false; // true khi chạy đơn lẻ không qua NetworkManager
+    public bool isStandaloneMode = false; // true khi chạy đơn lẻ không qua NetworkManager
+    private bool isSyncingFromDb = false; // true khi đang đồng bộ dữ liệu ban đầu từ DB tránh hồi máu ảo
 
     /// <summary>
     /// Trả về true nếu NetworkManager đang hoạt động và đã kết nối/host.
@@ -82,7 +137,8 @@ public class SimplePlayerTest : NetworkBehaviour
         if (hud != null)
         {
             hud.SetupPlayerProfile(characterClassIndex);
-            hud.SetHealth(1f); // Máu đầy khi vào
+            ApplyUpgradedStats();
+            UpdateUpgradeHUD();
         }
     }
 
@@ -92,6 +148,18 @@ public class SimplePlayerTest : NetworkBehaviour
     public override void OnNetworkSpawn()
     {
         isStandaloneMode = false;
+
+        // Đăng ký sự kiện đồng bộ Netcode
+        activeWeaponIndex.OnValueChanged += OnWeaponIndexChanged;
+        isWeapon2Locked.OnValueChanged += OnWeapon2LockedChanged;
+        isSkillsUnlocked.OnValueChanged += OnSkillsUnlockedChanged;
+
+        // Đăng ký các sự kiện nâng cấp chỉ số
+        upgradePoints.OnValueChanged += OnUpgradePointsChanged;
+        hpLevel.OnValueChanged += OnHpLevelChanged;
+        mpLevel.OnValueChanged += OnMpLevelChanged;
+        cooldownLevel.OnValueChanged += OnCooldownLevelChanged;
+        damageLevel.OnValueChanged += OnDamageLevelChanged;
 
         if (IsOwner)
         {
@@ -105,18 +173,69 @@ public class SimplePlayerTest : NetworkBehaviour
             targetCamera = Camera.main;
             if (targetCamera == null)
                 targetCamera = FindObjectOfType<Camera>();
+
+            // Tải dữ liệu từ MongoDB Atlas
+            LoadPlayerStateFromDatabase();
+
+            // Áp dụng và cập nhật UI chỉ số ban đầu cục bộ
+            ApplyUpgradedStats();
+            UpdateUpgradeHUD();
         }
     }
 
     public override void OnNetworkDespawn()
     {
+        activeWeaponIndex.OnValueChanged -= OnWeaponIndexChanged;
+        isWeapon2Locked.OnValueChanged -= OnWeapon2LockedChanged;
+        isSkillsUnlocked.OnValueChanged -= OnSkillsUnlockedChanged;
+
+        // Hủy đăng ký các sự kiện nâng cấp chỉ số
+        upgradePoints.OnValueChanged -= OnUpgradePointsChanged;
+        hpLevel.OnValueChanged -= OnHpLevelChanged;
+        mpLevel.OnValueChanged -= OnMpLevelChanged;
+        cooldownLevel.OnValueChanged -= OnCooldownLevelChanged;
+        damageLevel.OnValueChanged -= OnDamageLevelChanged;
+
         if (IsOwner)
             currentHealth.OnValueChanged -= OnHealthChanged;
+    }
+
+    private void OnWeaponIndexChanged(int oldVal, int newVal)
+    {
+        if (IsOwner)
+        {
+            PlayerHUDController hud = FindObjectOfType<PlayerHUDController>();
+            if (hud != null) hud.SelectWeapon(newVal);
+        }
+    }
+
+    private void OnWeapon2LockedChanged(bool oldVal, bool newVal)
+    {
+        if (IsOwner)
+        {
+            PlayerHUDController hud = FindObjectOfType<PlayerHUDController>();
+            if (hud != null) hud.SetWeapon2Locked(newVal, true);
+        }
+    }
+
+    private void OnSkillsUnlockedChanged(bool oldVal, bool newVal)
+    {
+        if (IsOwner)
+        {
+            PlayerHUDController hud = FindObjectOfType<PlayerHUDController>();
+            if (hud != null) hud.SetSkillsUnlocked(newVal, true);
+        }
     }
 
     private void OnHealthChanged(float oldHealth, float newHealth)
     {
         UpdateHealthHUD(newHealth);
+        
+        // Tự động lưu lên DB khi máu thay đổi
+        if (IsOwner)
+        {
+            SavePlayerStateToDatabase();
+        }
     }
 
     private void UpdateHealthHUD(float health)
@@ -124,6 +243,172 @@ public class SimplePlayerTest : NetworkBehaviour
         PlayerHUDController hud = FindObjectOfType<PlayerHUDController>();
         if (hud != null)
             hud.SetHealth(health / maxHealth);
+    }
+
+    // ------------------------------------------------------------------
+    //  Bộ lắng nghe sự kiện thay đổi của các NetworkVariable nâng cấp chỉ số
+    // ------------------------------------------------------------------
+    private void OnUpgradePointsChanged(int oldVal, int newVal)
+    {
+        if (IsOwner)
+        {
+            UpdateUpgradeHUD();
+        }
+    }
+
+    private void OnHpLevelChanged(int oldVal, int newVal)
+    {
+        if (IsServer || IsOwner)
+        {
+            ApplyUpgradedStats();
+        }
+        if (IsOwner)
+        {
+            UpdateUpgradeHUD();
+        }
+    }
+
+    private void OnMpLevelChanged(int oldVal, int newVal)
+    {
+        if (IsServer || IsOwner)
+        {
+            ApplyUpgradedStats();
+        }
+        if (IsOwner)
+        {
+            UpdateUpgradeHUD();
+        }
+    }
+
+    private void OnCooldownLevelChanged(int oldVal, int newVal)
+    {
+        if (IsServer || IsOwner)
+        {
+            ApplyUpgradedStats();
+        }
+        if (IsOwner)
+        {
+            UpdateUpgradeHUD();
+        }
+    }
+
+    private void OnDamageLevelChanged(int oldVal, int newVal)
+    {
+        if (IsServer || IsOwner)
+        {
+            ApplyUpgradedStats();
+        }
+        if (IsOwner)
+        {
+            UpdateUpgradeHUD();
+        }
+    }
+
+    // ------------------------------------------------------------------
+    //  Áp dụng chỉ số nâng cấp vào các giá trị thực tế
+    // ------------------------------------------------------------------
+    private void ApplyUpgradedStats()
+    {
+        if (isSyncingFromDb) return;
+
+        int hpLv = isStandaloneMode ? localHpLevel : hpLevel.Value;
+        int dmgLv = isStandaloneMode ? localDamageLevel : damageLevel.Value;
+
+        float oldMaxHealth = maxHealth;
+        maxHealth = 100f + hpLv * 20f;
+        damageAmount = 20f + dmgLv * 5f;
+
+        if (isStandaloneMode)
+        {
+            if (maxHealth > oldMaxHealth)
+            {
+                localHealth += (maxHealth - oldMaxHealth);
+            }
+            UpdateHealthHUD(localHealth);
+        }
+        else if (IsServer)
+        {
+            if (maxHealth > oldMaxHealth)
+            {
+                currentHealth.Value += (maxHealth - oldMaxHealth);
+            }
+        }
+    }
+
+    // ------------------------------------------------------------------
+    //  Cập nhật UI nâng cấp chỉ số
+    // ------------------------------------------------------------------
+    private void UpdateUpgradeHUD()
+    {
+        PlayerHUDController hud = FindObjectOfType<PlayerHUDController>();
+        if (hud != null)
+        {
+            int pts = isStandaloneMode ? localUpgradePoints : upgradePoints.Value;
+            int hp = isStandaloneMode ? localHpLevel : hpLevel.Value;
+            int mp = isStandaloneMode ? localMpLevel : mpLevel.Value;
+            int cd = isStandaloneMode ? localCooldownLevel : cooldownLevel.Value;
+            int dmg = isStandaloneMode ? localDamageLevel : damageLevel.Value;
+
+            hud.UpdateUpgradeUI(pts, hp, mp, cd, dmg);
+            hud.SetHealth(CurrentHealth / maxHealth);
+        }
+    }
+
+    // ------------------------------------------------------------------
+    //  Nâng cấp chỉ số cho chơi đơn (Standalone Mode)
+    // ------------------------------------------------------------------
+    public void StandaloneUpgradeStat(int statType)
+    {
+        if (localUpgradePoints <= 0)
+        {
+            Debug.LogWarning("[Standalone] Hết điểm nâng cấp!");
+            return;
+        }
+
+        localUpgradePoints--;
+        switch (statType)
+        {
+            case 0: localHpLevel++; break;
+            case 1: localMpLevel++; break;
+            case 2: localCooldownLevel++; break;
+            case 3: localDamageLevel++; break;
+        }
+
+        ApplyUpgradedStats();
+        UpdateUpgradeHUD();
+        Debug.Log($"[Standalone] Đã nâng cấp Stat {statType}. Cấp độ mới: HP={localHpLevel}, MP={localMpLevel}, Cooldown={localCooldownLevel}, Damage={localDamageLevel}. Điểm còn: {localUpgradePoints}");
+    }
+
+    // ------------------------------------------------------------------
+    //  Nâng cấp chỉ số online qua Server RPC (Netcode Mode)
+    // ------------------------------------------------------------------
+    public void UpgradeStatFromHUD(int statType)
+    {
+        if (!IsSpawned || !IsOwner) return;
+        UpgradeStatServerRpc(statType);
+    }
+
+    [ServerRpc]
+    private void UpgradeStatServerRpc(int statType)
+    {
+        if (upgradePoints.Value <= 0)
+        {
+            Debug.LogWarning("[Server] Người chơi không còn điểm nâng cấp!");
+            return;
+        }
+
+        upgradePoints.Value--;
+        switch (statType)
+        {
+            case 0: hpLevel.Value++; break;
+            case 1: mpLevel.Value++; break;
+            case 2: cooldownLevel.Value++; break;
+            case 3: damageLevel.Value++; break;
+        }
+
+        ApplyUpgradedStats();
+        SavePlayerStateToDatabase();
+        Debug.Log($"[Server] Đã nâng cấp Stat {statType} cho {gameObject.name}. HP Lv={hpLevel.Value}, MP Lv={mpLevel.Value}, CD Lv={cooldownLevel.Value}, DMG Lv={damageLevel.Value}. Điểm còn lại: {upgradePoints.Value}");
     }
 
     // ------------------------------------------------------------------
@@ -334,5 +619,149 @@ public class SimplePlayerTest : NetworkBehaviour
     {
         if (IsOwner)
             knockbackVelocity = force;
+    }
+
+    // ==================================================================
+    //  MongoDB & Netcode Integration Logic
+    // ==================================================================
+
+    public void UpdateStateFromHUD(int weaponIndex, bool weapon2Locked, bool skillsUnlocked)
+    {
+        if (!IsSpawned || !IsOwner) return;
+        UpdateStateServerRpc(weaponIndex, weapon2Locked, skillsUnlocked);
+    }
+
+    [ServerRpc]
+    private void UpdateStateServerRpc(int weaponIndex, bool weapon2Locked, bool skillsUnlocked)
+    {
+        activeWeaponIndex.Value = weaponIndex;
+        isWeapon2Locked.Value = weapon2Locked;
+        isSkillsUnlocked.Value = skillsUnlocked;
+    }
+
+    private async void LoadPlayerStateFromDatabase()
+    {
+        Debug.Log("[DB] Bắt đầu tải trạng thái người chơi từ MongoDB Atlas...");
+        try
+        {
+            var res = await AuthService.GetPlayerState();
+            if (res != null && res.success && res.playerState != null)
+            {
+                var state = res.playerState;
+                Debug.Log($"[DB] Đã tải thành công trạng thái người chơi từ MongoDB! Máu: {state.health}");
+                
+                SyncPlayerStateServerRpc(
+                    state.health, 
+                    state.activeWeaponIndex, 
+                    state.isWeapon2Locked, 
+                    state.isSkillsUnlocked,
+                    state.upgradePoints,
+                    state.hpLevel,
+                    state.mpLevel,
+                    state.cooldownLevel,
+                    state.damageLevel
+                );
+
+                if (state.inventorySlots != null)
+                {
+                    for (int i = 0; i < inventorySlots.Length && i < state.inventorySlots.Length; i++)
+                    {
+                        inventorySlots[i] = state.inventorySlots[i];
+                    }
+                }
+
+                PlayerHUDController hud = FindObjectOfType<PlayerHUDController>();
+                if (hud != null)
+                {
+                    hud.SetInventorySlots(inventorySlots);
+                    hud.SetSkillsUnlocked(state.isSkillsUnlocked, false);
+                    hud.SetWeapon2Locked(state.isWeapon2Locked, false);
+                    hud.SelectWeapon(state.activeWeaponIndex);
+                    // Cập nhật lại UI sau khi các NetworkVariables được đồng bộ
+                    hud.UpdateUpgradeUI(state.upgradePoints, state.hpLevel, state.mpLevel, state.cooldownLevel, state.damageLevel);
+                    hud.SetHealth(state.health / (100f + state.hpLevel * 20f));
+                }
+            }
+            else
+            {
+                Debug.LogWarning("[DB] Không có dữ liệu cũ hoặc lỗi kết nối. Đồng bộ dữ liệu ban đầu.");
+                SyncPlayerStateServerRpc(maxHealth, 1, true, false, 5, 0, 0, 0, 0);
+            }
+        }
+        catch (System.Exception ex)
+        {
+            Debug.LogError($"[DB] Lỗi khi kết nối API tải dữ liệu MongoDB: {ex.Message}");
+            SyncPlayerStateServerRpc(maxHealth, 1, true, false, 5, 0, 0, 0, 0);
+        }
+    }
+
+    [ServerRpc]
+    private void SyncPlayerStateServerRpc(
+        float health, 
+        int weaponIndex, 
+        bool weapon2Locked, 
+        bool skillsUnlocked,
+        int pts,
+        int hp,
+        int mp,
+        int cd,
+        int dmg
+    )
+    {
+        isSyncingFromDb = true;
+
+        upgradePoints.Value = pts;
+        hpLevel.Value = hp;
+        mpLevel.Value = mp;
+        cooldownLevel.Value = cd;
+        damageLevel.Value = dmg;
+
+        // Đồng bộ trước maxHealth tác động của chỉ số lên server
+        maxHealth = 100f + hp * 20f;
+        damageAmount = 20f + dmg * 5f;
+
+        currentHealth.Value = health;
+        activeWeaponIndex.Value = weaponIndex;
+        isWeapon2Locked.Value = weapon2Locked;
+        isSkillsUnlocked.Value = skillsUnlocked;
+
+        isSyncingFromDb = false;
+    }
+
+    public async void SavePlayerStateToDatabase()
+    {
+        if (!IsSpawned || !IsOwner) return;
+
+        Debug.Log("[DB] Đang tự động lưu trạng thái nhân vật lên MongoDB...");
+        try
+        {
+            var stateData = new PlayerStateData
+            {
+                health = CurrentHealth,
+                activeWeaponIndex = activeWeaponIndex.Value,
+                isWeapon2Locked = isWeapon2Locked.Value,
+                isSkillsUnlocked = isSkillsUnlocked.Value,
+                inventorySlots = inventorySlots,
+                upgradePoints = upgradePoints.Value,
+                hpLevel = hpLevel.Value,
+                mpLevel = mpLevel.Value,
+                cooldownLevel = cooldownLevel.Value,
+                damageLevel = damageLevel.Value
+            };
+
+            var res = await AuthService.SavePlayerState(stateData);
+            if (res != null && res.success)
+            {
+                Debug.Log("[DB] Đã lưu trạng thái nhân vật lên MongoDB Atlas thành công!");
+            }
+            else
+            {
+                Debug.LogError($"[DB] Lỗi lưu trữ MongoDB: {res?.message}");
+            }
+        }
+        catch (System.Exception ex)
+        {
+            Debug.LogError($"[DB] Lỗi khi gọi API lưu trạng thái MongoDB: {ex.Message}");
+        }
     }
 }
