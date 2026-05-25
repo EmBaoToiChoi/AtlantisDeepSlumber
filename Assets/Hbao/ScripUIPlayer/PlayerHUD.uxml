@@ -83,7 +83,7 @@
                 <ui:VisualElement class="skill-lock-icon" />
             </ui:VisualElement>
         </ui:VisualElement>
-        <ui:VisualElement class="skill-slot skill-slot-main">
+        <ui:VisualElement class="skill-slot skill-slot-center">
             <ui:VisualElement class="skill-hotkey-container">
                 <ui:Label text="R" class="skill-hotkey" />
             </ui:VisualElement>
@@ -109,5 +109,90 @@
     <ui:Label name="weapon-warning" text="Kỹ Năng Đang Bị Khóa" parse-escape-sequences="false" class="weapon-warning-label" style="-unity-font-definition: url(&quot;project://database/Assets/UI%20Toolkit/UnityThemes/UnityDefaultRuntimeTheme.tss?fileID=2230732570650464555&amp;guid=8dcf67e479d58bd47908bf0d5e1cc1d0&amp;type=3#NotInter-Regular&quot;);" />
     <ui:VisualElement name="world-map-overlay" class="world-map-overlay">
         <ui:VisualElement class="world-map-frame" />
+    </ui:VisualElement>
+
+    <!-- UI Inventory (Hành Trang) Overlay -->
+    <ui:VisualElement name="inventory-overlay" class="inventory-overlay">
+        <ui:VisualElement class="inventory-frame">
+            <!-- Header -->
+            <ui:VisualElement class="inventory-header">
+                <ui:Label name="inventory-subtitle" text="Ấn phím [TAB] để đóng" class="inventory-subtitle" />
+            </ui:VisualElement>
+            
+            <ui:VisualElement class="inventory-divider" />
+            
+            <!-- Main Content Grid -->
+            <ui:VisualElement class="inventory-content">
+                <!-- Left panel: 10 Grid slots + Stats Upgrades -->
+                <ui:VisualElement class="inventory-left-panel">
+                    <ui:VisualElement class="inventory-slots-container">
+                        <ui:VisualElement class="inventory-slot" />
+                        <ui:VisualElement class="inventory-slot" />
+                        <ui:VisualElement class="inventory-slot" />
+                        <ui:VisualElement class="inventory-slot" />
+                        <ui:VisualElement class="inventory-slot" />
+                        <ui:VisualElement class="inventory-slot" />
+                        <ui:VisualElement class="inventory-slot" />
+                        <ui:VisualElement class="inventory-slot" />
+                        <ui:VisualElement class="inventory-slot" />
+                        <ui:VisualElement class="inventory-slot" />
+                    </ui:VisualElement>
+                    
+                    <!-- Stats Upgrades Section -->
+                    <ui:VisualElement class="upgrades-container">
+                        <ui:VisualElement class="upgrades-header">
+                            <ui:Label name="upgrades-title" text="NÂNG CẤP CHỈ SỐ" class="upgrades-title" />
+                            <ui:Label name="upgrade-points-text" text="Điểm cộng: 5" class="upgrades-points" />
+                        </ui:VisualElement>
+                        
+                        <ui:VisualElement class="upgrade-row-container">
+                            <!-- HP Upgrade -->
+                            <ui:VisualElement class="upgrade-row">
+                                <ui:Label name="upgrade-name-hp" text="MÁU (HP)" class="upgrade-name" />
+                                <ui:Label name="hp-level-text" text="Lv. 0 (+0 HP)" class="upgrade-value" />
+                                <ui:Button name="btn-upgrade-hp" text="+" class="upgrade-button" />
+                            </ui:VisualElement>
+                            
+                            <!-- MP Upgrade -->
+                            <ui:VisualElement class="upgrade-row">
+                                <ui:Label name="upgrade-name-mp" text="MANA (MP)" class="upgrade-name" />
+                                <ui:Label name="mp-level-text" text="Lv. 0 (+0 MP)" class="upgrade-value" />
+                                <ui:Button name="btn-upgrade-mp" text="+" class="upgrade-button" />
+                            </ui:VisualElement>
+                            
+                            <!-- Cooldown Upgrade -->
+                            <ui:VisualElement class="upgrade-row">
+                                <ui:Label name="upgrade-name-cooldown" text="HỒI CHIÊU (-%)" class="upgrade-name" />
+                                <ui:Label name="cooldown-level-text" text="Lv. 0 (0% giảm)" class="upgrade-value" />
+                                <ui:Button name="btn-upgrade-cooldown" text="+" class="upgrade-button" />
+                            </ui:VisualElement>
+                            
+                            <!-- Damage Upgrade -->
+                            <ui:VisualElement class="upgrade-row">
+                                <ui:Label name="upgrade-name-damage" text="SÁT THƯƠNG" class="upgrade-name" />
+                                <ui:Label name="damage-level-text" text="Lv. 0 (+0 S.Thương)" class="upgrade-value" />
+                                <ui:Button name="btn-upgrade-damage" text="+" class="upgrade-button" />
+                            </ui:VisualElement>
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                </ui:VisualElement>
+                
+                <!-- Right panel: Character Preview -->
+                <ui:VisualElement class="inventory-preview-container">
+                    <ui:VisualElement class="inventory-preview-card">
+                        <ui:Label name="inventory-preview-title" text="" class="inventory-preview-title" />
+                        <ui:VisualElement class="character-preview-viewport">
+                            <ui:VisualElement class="character-preview-stand" />
+                            <!-- Container cho Model 3D Player xoay chuyển -->
+                            <ui:VisualElement name="character-preview-model-container" class="character-preview-model-container" />
+                        </ui:VisualElement>
+                        <ui:VisualElement class="preview-stats-row">
+                            <ui:Label name="character-level-badge" text="LV. 15" class="preview-stat-badge" />
+                            <ui:Label name="character-name-label" text="SHADOW THIEF" class="preview-stat-name" />
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                </ui:VisualElement>
+            </ui:VisualElement>
+        </ui:VisualElement>
     </ui:VisualElement>
 </ui:UXML>

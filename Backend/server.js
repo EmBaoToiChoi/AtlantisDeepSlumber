@@ -437,6 +437,62 @@ app.post('/api/rooms/leave', authenticateToken, async (req, res) => {
         console.error('[LeaveRoom]', err);
         res.status(500).json({ success: false, message: 'Lỗi khi rời phòng.' });
     }
+
+// ─── Player State Routes (Network Sync & Save) ─────────────────────────────────
+
+// GET /api/player/state (Lấy trạng thái nhân vật)
+app.get('/api/player/state', authenticateToken, async (req, res) => {
+    try {
+        const user = await User.findById(req.user.userId);
+        if (!user) return res.status(404).json({ success: false, message: 'Không tìm thấy người chơi.' });
+
+        // Trả về playerState đã lưu, hoặc các giá trị mặc định
+        const state = user.playerState || {
+            health: 100,
+            activeWeaponIndex: 1,
+            isWeapon2Locked: true,
+            isSkillsUnlocked: false,
+            inventorySlots: ["", "", "", "", "", "", "", "", "", ""],
+            upgradePoints: 5,
+            hpLevel: 0,
+            mpLevel: 0,
+            cooldownLevel: 0,
+            damageLevel: 0
+        };
+
+        res.json({ success: true, playerState: state });
+    } catch (err) {
+        console.error('[GetPlayerState]', err);
+        res.status(500).json({ success: false, message: 'Lỗi khi lấy trạng thái nhân vật.' });
+    }
+});
+
+// POST /api/player/state (Lưu trạng thái nhân vật)
+app.post('/api/player/state', authenticateToken, async (req, res) => {
+    try {
+        const { health, activeWeaponIndex, isWeapon2Locked, isSkillsUnlocked, inventorySlots, upgradePoints, hpLevel, mpLevel, cooldownLevel, damageLevel } = req.body;
+        const user = await User.findById(req.user.userId);
+        if (!user) return res.status(404).json({ success: false, message: 'Không tìm thấy người chơi.' });
+
+        user.playerState = {
+            health: health ?? 100,
+            activeWeaponIndex: activeWeaponIndex ?? 1,
+            isWeapon2Locked: isWeapon2Locked ?? true,
+            isSkillsUnlocked: isSkillsUnlocked ?? false,
+            inventorySlots: inventorySlots ?? ["", "", "", "", "", "", "", "", "", ""],
+            upgradePoints: upgradePoints ?? 5,
+            hpLevel: hpLevel ?? 0,
+            mpLevel: mpLevel ?? 0,
+            cooldownLevel: cooldownLevel ?? 0,
+            damageLevel: damageLevel ?? 0
+        };
+
+        await user.save();
+        res.json({ success: true, message: 'Lưu trạng thái nhân vật thành công!', playerState: user.playerState });
+    } catch (err) {
+        console.error('[SavePlayerState]', err);
+        res.status(500).json({ success: false, message: 'Lỗi khi lưu trạng thái nhân vật.' });
+    }
 });
 
 

@@ -36,6 +36,19 @@ const userSchema = new mongoose.Schema({
         type: Number,
         default: 0
     },
+    playerState: {
+        health: { type: Number, default: 100 },
+        activeWeaponIndex: { type: Number, default: 1 },
+        isWeapon2Locked: { type: Boolean, default: true },
+        isSkillsUnlocked: { type: Boolean, default: false },
+        inventorySlots: { type: [String], default: ["", "", "", "", "", "", "", "", "", ""] },
+        // Upgrade System Stats
+        upgradePoints: { type: Number, default: 5 },
+        hpLevel: { type: Number, default: 0 },
+        mpLevel: { type: Number, default: 0 },
+        cooldownLevel: { type: Number, default: 0 },
+        damageLevel: { type: Number, default: 0 }
+    },
     createdAt: {
         type: Date,
         default: Date.now

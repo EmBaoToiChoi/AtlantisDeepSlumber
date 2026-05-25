@@ -103,9 +103,9 @@ public class Enemy1_DapBua : NetworkBehaviour
 
     [Header("Layers")]
     [Header("Animator Parameter/Trigger Names")]
-    public string idleTriggerName = "quai1Idle";
-    public string walkTriggerName = "quai1walk";
-    public string runTriggerName = "quai1Run";
+    public string idleTriggerName = "Idle";
+    public string walkTriggerName = "Walk";
+    public string runTriggerName = "Run";
     public string hitTriggerName = "Hit";
     public string dieTriggerName = "Die";
     public LayerMask playerLayer;
@@ -823,12 +823,12 @@ public class Enemy1_DapBua : NetworkBehaviour
     private bool SyncAnimationState(EnemyState newState)
     {
         if (anim == null || !anim.isActiveAndEnabled || anim.runtimeAnimatorController == null) return false;
-
+ 
         // Reset sạch sẽ cả trigger đánh để tránh kẹt
         anim.ResetTrigger(idleTriggerName); anim.ResetTrigger(walkTriggerName);
         anim.ResetTrigger(runTriggerName); anim.ResetTrigger(hitTriggerName);
-        anim.ResetTrigger("AttLeft"); anim.ResetTrigger("quai1Attackphai"); anim.ResetTrigger("Combo");
-
+        anim.ResetTrigger("AttackLeft"); anim.ResetTrigger("AttackRight"); anim.ResetTrigger("AttackCombo");
+ 
         switch (newState)
         {
             case EnemyState.Idle: anim.SetTrigger(idleTriggerName); break;
@@ -836,28 +836,28 @@ public class Enemy1_DapBua : NetworkBehaviour
             case EnemyState.Search: anim.SetTrigger(runTriggerName); break;
             case EnemyState.Run: anim.SetTrigger(runTriggerName); break;
             case EnemyState.Stagger:
-                if (IsEnragedValue && !hasRoared) { anim.ResetTrigger("Combo"); anim.SetTrigger("Combo"); }
+                if (IsEnragedValue && !hasRoared) { anim.ResetTrigger("AttackCombo"); anim.SetTrigger("AttackCombo"); }
                 else anim.SetTrigger(hitTriggerName);
                 break;
             case EnemyState.Dead: anim.SetTrigger(dieTriggerName); break;
         }
         return true;
     }
-
+ 
     private void PlayAttackAnimation(int type)
     {
         if (anim == null) return;
-        anim.ResetTrigger("AttLeft"); anim.ResetTrigger("quai1Attackphai"); anim.ResetTrigger("Combo");
-        if (type == 0) anim.SetTrigger("AttLeft");
-        else if (type == 1) anim.SetTrigger("quai1Attackphai");
-        else anim.SetTrigger("Combo");
+        anim.ResetTrigger("AttackLeft"); anim.ResetTrigger("AttackRight"); anim.ResetTrigger("AttackCombo");
+        if (type == 0) anim.SetTrigger("AttackLeft");
+        else if (type == 1) anim.SetTrigger("AttackRight");
+        else anim.SetTrigger("AttackCombo");
     }
-
+ 
     private void PlayRoarAnimation()
     {
         if (anim == null) return;
-        anim.ResetTrigger("Hit"); anim.ResetTrigger("Combo");
-        anim.SetTrigger("Combo");
+        anim.ResetTrigger("Hit"); anim.ResetTrigger("AttackCombo");
+        anim.SetTrigger("AttackCombo");
     }
 
     [ClientRpc]

@@ -64,7 +64,7 @@ public class Enemy5_PhuThuy : NetworkBehaviour
     public LayerMask obstacleLayer;       // Layer của tường / địa hình cản tia Raycast
 
     [Header("Animator Parameter/Trigger Names")]
-    public string idleTriggerName = "quai4IDLE";       // Khớp với trạng thái cam quai4IDLE ở Base Layer
+    public string idleTriggerName = "quai5IDLE";       // Khớp với trạng thái cam quai5IDLE ở Base Layer
     public string walkTriggerName = "quai5walk";       // Khớp với quai5walk
     public string runTriggerName = "quai5Run";         // Khớp với quai5Run
     public string hitTriggerName = "Quai5Anhit";       // Trigger ở layer Anhit
