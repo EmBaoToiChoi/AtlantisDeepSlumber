@@ -3,21 +3,20 @@ using UnityEngine;
 
 public class AutoNetworkManager : MonoBehaviour
 {
+    // Kéo thả vào Inspector để chọn chế độ khi nhấn Play
+    public bool isHost = true; 
+
     void Start()
     {
-        // Kiểm tra xem có tham số dòng lệnh "host" không
-        // Nếu muốn test nhanh, bạn có thể chỉnh mặc định ở đây
-        if (SystemInfo.deviceType == DeviceType.Desktop)
+        if (isHost)
         {
-            // Mặc định nhấn Play là làm Host
             NetworkManager.Singleton.StartHost();
-            Debug.Log("Started as Host");
+            Debug.Log("Đã bắt đầu làm HOST");
         }
         else
         {
-            // Hoặc bạn có thể thêm logic để tự join Client
             NetworkManager.Singleton.StartClient();
-            Debug.Log("Started as Client");
+            Debug.Log("Đã bắt đầu làm CLIENT");
         }
     }
 }
