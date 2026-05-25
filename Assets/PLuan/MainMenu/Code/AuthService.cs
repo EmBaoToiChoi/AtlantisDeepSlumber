@@ -136,9 +136,9 @@ public static class AuthService
     public static System.Action OnTokenExpired;
 
     // Thay đổi đường dẫn về localhost để test lưu/tải MongoDB cục bộ:
-    private static readonly string BASE_URL = "http://localhost:3000/api";
+    // private static readonly string BASE_URL = "http://localhost:3000/api";
     // Đường dẫn VPS thực tế khi deploy:
-    // private static readonly string BASE_URL = "http://165.99.14.40:3000/api";
+    private static readonly string BASE_URL = "http://165.99.14.40:3000/api";
 
     public static async Task<AuthResponse> Register(string displayName, string email, string password)
     {
