@@ -13,8 +13,8 @@ GameObject:
   - component: {fileID: 7834590398085315693}
   - component: {fileID: 6398699265447207813}
   - component: {fileID: 4142710120742810481}
-  - component: {fileID: 6900434042573246661}
   - component: {fileID: -4184731566620188725}
+  - component: {fileID: 2494289036910832648}
   m_Layer: 3
   m_Name: PLayer
   m_TagString: Player
@@ -136,33 +136,6 @@ MonoBehaviour:
   AutoObjectParentSync: 1
   SyncOwnerTransformWhenParented: 1
   AllowOwnerToParent: 0
---- !u!114 &6900434042573246661
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3312299106363896264}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 6d15bbd4f67f3a648a763b4e45373773, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  ShowTopMostFoldoutHeaderGroup: 1
-  moveSpeed: 5
-  damageAmount: 20
-  attackRange: 3
-  maxHealth: 100
-  currentHealth:
-    UpdateTraits:
-      MinSecondsBetweenUpdates: 0
-      MaxSecondsBetweenUpdates: 0
-    m_InternalValue: 100
-  characterClassIndex: 0
-  enableCameraFollow: 1
-  cameraOffset: {x: 0, y: 2, z: -10}
-  cameraSmoothSpeed: 5
-  cameraLookAtPlayer: 1
 --- !u!114 &-4184731566620188725
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -209,3 +182,82 @@ MonoBehaviour:
   SwitchTransformSpaceWhenParented: 0
   Interpolate: 1
   SlerpPosition: 0
+--- !u!114 &2494289036910832648
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3312299106363896264}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7c545e8f9a08f924884cf718da4f7f57, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  ShowTopMostFoldoutHeaderGroup: 1
+  moveSpeed: 5
+  damageAmount: 20
+  attackRange: 3
+  maxHealth: 100
+  currentHealth:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 100
+  activeWeaponIndex:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 1
+  isWeapon2Locked:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 1
+  isSkillsUnlocked:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 0
+  upgradePoints:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 5
+  hpLevel:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 0
+  mpLevel:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 0
+  cooldownLevel:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 0
+  damageLevel:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 0
+  inventorySlots:
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  characterClassIndex: 0
+  enableCameraFollow: 1
+  cameraOffset: {x: 0, y: 12, z: -8}
+  cameraSmoothSpeed: 5
+  cameraLookAtPlayer: 1
+  isStandaloneMode: 0
