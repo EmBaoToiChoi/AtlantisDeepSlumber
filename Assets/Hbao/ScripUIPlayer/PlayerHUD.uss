@@ -23,10 +23,10 @@
 }
 
 .raw-player-image {
-    width: 72px;
-    height: 72px;
-    border-radius: 36px;
-    -unity-background-scale-mode: scale-to-fit;
+    width: 76px;
+    height: 76px;
+    border-radius: 38px;
+    -unity-background-scale-mode: scale-and-crop;
 }
 
 .stats-wrapper {
@@ -362,9 +362,24 @@
     width: 100%;
     height: 100%;
     margin: 0%;
-    -unity-background-scale-mode: scale-to-fit;
+    -unity-background-scale-mode: scale-and-crop;
     background-color: transparent;
-    scale: 1.2; /* Phóng đại hình ảnh lên vượt khung để nhìn cho rõ */
+}
+
+.skill-img-q-maya {
+    -unity-background-scale-mode: stretch-to-fill;
+}
+
+.skill-img-q-elena {
+    -unity-background-scale-mode: stretch-to-fill;
+}
+
+.skill-slot .skill-image {
+    border-radius: 10px;
+}
+
+.skill-slot-center .skill-image {
+    border-radius: 14px;
 }
 
 .skill-cooldown-overlay {
@@ -811,6 +826,7 @@
 .preview-stats-row {
     flex-direction: row;
     align-items: center;
+    justify-content: center;
     background-color: rgba(0, 0, 0, 0.55);
     border-radius: 10px;
     padding: 6px 14px;
@@ -883,24 +899,26 @@
     padding: 7px 0;
 }
 
-/* Khối trái: level + tên xếp chồng dọc */
-.upgrade-stat-block {
-    flex-direction: column;
-    justify-content: center;
-    flex-grow: 1;
+.upgrades-header-left {
+    flex-direction: row;
+    align-items: center;
 }
 
-/* Nhãn level nhỏ phía trên */
-.upgrade-level-label {
-    color: rgba(255, 255, 255, 0.45);
-    font-size: 10px;
+.character-level-badge {
+    margin-left: 8px;
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+.upgrade-value {
+    color: rgba(255, 255, 255, 0.55);
+    font-size: 12px;
     -unity-font-style: bold;
     letter-spacing: 0.5px;
-    margin-bottom: 1px;
+    flex-grow: 1;
+    -unity-text-align: middle-left;
     padding: 0;
 }
-
-/* Bonus text xuất hiện khi level > 0 — thêm vào upgrade-level-label qua code */
 
 .upgrade-name {
     color: rgba(255, 255, 255, 0.9);
@@ -908,6 +926,7 @@
     -unity-font-style: bold;
     letter-spacing: 0.5px;
     padding: 0;
+    width: 120px;
 }
 
 /* Nút upgrade — viền trắng, nền đen, click → trắng */

@@ -654,7 +654,7 @@ public class PlayerHUDController : MonoBehaviour
         if (mpLevelText != null)
         {
             int mpBonus = mpLv * 10;
-            mpLevelText.text = mpLv > 0 ? $"Lv. {mpLv}  (+{mpBonus} MP)" : $"Lv. {mpLv}";
+            mpLevelText.text = mpLv > 0 ? $"Lv. {mpLv}  (+{mpBonus} Stamina)" : $"Lv. {mpLv}";
         }
         if (cooldownLevelText != null)
         {
@@ -717,9 +717,22 @@ public class PlayerHUDController : MonoBehaviour
         }
 
         // 3. Cập nhật ảnh Kỹ năng
-        if (skillImgQ != null && profile.skillQSprite != null)
+        if (skillImgQ != null)
         {
-            skillImgQ.style.backgroundImage = new StyleBackground(profile.skillQSprite);
+            skillImgQ.RemoveFromClassList("skill-img-q-maya");
+            skillImgQ.RemoveFromClassList("skill-img-q-elena");
+            if (profile.skillQSprite != null)
+            {
+                skillImgQ.style.backgroundImage = new StyleBackground(profile.skillQSprite);
+                if (profileIndex == 1) // Maya Support
+                {
+                    skillImgQ.AddToClassList("skill-img-q-maya");
+                }
+                else if (profileIndex == 2) // Elena Archer
+                {
+                    skillImgQ.AddToClassList("skill-img-q-elena");
+                }
+            }
         }
         if (skillImgR != null && profile.skillRSprite != null)
         {

@@ -1001,10 +1001,10 @@ public class NetworkWaitingRoom : NetworkBehaviour
             return;
         }
 
-        Debug.Log("--- ĐANG GỌI LOAD SCENE: minigame2........................................ ---");
+        Debug.Log("--- ĐANG GỌI LOAD SCENE: HBao........................................ ---");
         if (NetworkManager.Singleton != null && NetworkManager.Singleton.SceneManager != null) {
-            //NetworkManager.Singleton.SceneManager.LoadScene("minigame2", UnityEngine.SceneManagement.LoadSceneMode.Single);
-            NetworkManager.Singleton.SceneManager.LoadScene("minigame2", UnityEngine.SceneManagement.LoadSceneMode.Single);
+            //NetworkManager.Singleton.SceneManager.LoadScene("HBao", UnityEngine.SceneManagement.LoadSceneMode.Single);
+            NetworkManager.Singleton.SceneManager.LoadScene("HBao", UnityEngine.SceneManagement.LoadSceneMode.Single);
         }
     }
 

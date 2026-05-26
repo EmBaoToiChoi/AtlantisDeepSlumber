@@ -437,6 +437,7 @@ app.post('/api/rooms/leave', authenticateToken, async (req, res) => {
         console.error('[LeaveRoom]', err);
         res.status(500).json({ success: false, message: 'Lỗi khi rời phòng.' });
     }
+});
 
 // ─── Player State Routes (Network Sync & Save) ─────────────────────────────────
 
