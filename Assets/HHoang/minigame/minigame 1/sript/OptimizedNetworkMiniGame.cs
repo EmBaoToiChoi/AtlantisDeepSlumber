@@ -1,44 +1,42 @@
 using UnityEngine;
 using UnityEngine.UI;
 using Unity.Netcode;
-using DG.Tweening; 
+using DG.Tweening;
 
 public class OptimizedNetworkMiniGame : NetworkBehaviour
 {
     [Header("Cụm UI Duy Nhất Trên Canvas")]
-    public GameObject miniGamePlayZone; 
-    public Slider localSlider;          
-    public Image imgA;                  
-    public Image imgD;                  
+    public GameObject miniGamePlayZone;
+    public Slider localSlider;
+    public Image imgA;
+    public Image imgD;
 
     [Header("Cấu hình Thông Số")]
-    public float drainSpeed = 15f;    
-    public float pushAmount = 8f;      
-    public float penaltyAmount = 6f;   
-    public float greenZoneMin = 85f;  
-    public float greenZoneMax = 100f; 
+    public float drainSpeed = 15f;
+    public float pushAmount = 8f;
+    public float penaltyAmount = 6f;
+    public float greenZoneMin = 85f;
+    public float greenZoneMax = 100f;
 
-    [Tooltip("Số người cần đạt vùng xanh để dừng cưa")]
-    public int requiredPlayers = 2;    
-
-    public Color normalColor = new Color(0.2f, 0.2f, 0.2f, 0.4f); 
-    public Color activeColor = Color.white;                    
+    [Header("Màu sắc")]
+    public Color normalColor = new Color(0.2f, 0.2f, 0.2f, 0.4f);
+    public Color activeColor = Color.white;
 
     [Header("Bánh Răng Mạng")]
     public GearRotator gear1;
     public GearRotator gear2;
     private float originalSpeed1;
     private float originalSpeed2;
-    
+
     private bool isCurrentlyOpen = false;
+    private bool isPlaying = false;
+
+    // QUAN TRỌNG: Lưu ID người chơi đang chiếm trạm để đảm bảo 1 người 1 nút
+    public NetworkVariable<ulong> station1Owner = new NetworkVariable<ulong>(ulong.MaxValue);
+    public NetworkVariable<ulong> station2Owner = new NetworkVariable<ulong>(ulong.MaxValue);
 
     private NetworkVariable<float> syncSlider = new NetworkVariable<float>(0f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     private NetworkVariable<int> targetButton = new NetworkVariable<int>(1, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
-    
-    // BIẾN MỚI: Đếm số người đang tương tác
-    private NetworkVariable<int> playersInteracting = new NetworkVariable<int>(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
-
-    private bool isPlaying = false;
 
     void Start()
     {
@@ -49,18 +47,36 @@ public class OptimizedNetworkMiniGame : NetworkBehaviour
         if (gear2 != null) originalSpeed2 = gear2.rotationSpeed;
     }
 
+    // HÀM GỌI TỪ INTERACTBOX
+    [ServerRpc(RequireOwnership = false)]
+    public void RequestStationAccessServerRpc(int stationIndex, ulong clientId)
+    {
+        // Kiểm tra trạm 1
+        if (stationIndex == 1)
+        {
+            if (station1Owner.Value == ulong.MaxValue) 
+                station1Owner.Value = clientId; 
+        }
+        // Kiểm tra trạm 2
+        else if (stationIndex == 2)
+        {
+            if (station2Owner.Value == ulong.MaxValue) 
+                station2Owner.Value = clientId;
+        }
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    public void ReleaseStationServerRpc(int stationIndex, ulong clientId)
+    {
+        if (stationIndex == 1 && station1Owner.Value == clientId) station1Owner.Value = ulong.MaxValue;
+        else if (stationIndex == 2 && station2Owner.Value == clientId) station2Owner.Value = ulong.MaxValue;
+    }
+
     public void ToggleMiniGame(int stationIndex, bool isOpening)
     {
         isPlaying = isOpening;
         if (miniGamePlayZone != null) miniGamePlayZone.SetActive(isOpening);
         if (isOpening) UpdateTargetButtonVisual();
-    }
-
-    // Hàm gọi từ InteractBox khi người chơi bật/tắt trạm
-    [ServerRpc(RequireOwnership = false)]
-    public void UpdateInteractingCountServerRpc(bool isJoining)
-    {
-        playersInteracting.Value += isJoining ? 1 : -1;
     }
 
     void Update()
@@ -77,9 +93,9 @@ public class OptimizedNetworkMiniGame : NetworkBehaviour
         {
             if (syncSlider.Value > 0) syncSlider.Value -= drainSpeed * Time.deltaTime;
 
-            // KIỂM TRA ĐIỀU KIỆN KÉP
+            // KIỂM TRA ĐIỀU KIỆN: Cả 2 trạm đều phải có người chiếm
             bool isInGreenZone = (syncSlider.Value >= greenZoneMin && syncSlider.Value <= greenZoneMax);
-            bool hasEnoughPlayers = (playersInteracting.Value >= requiredPlayers);
+            bool hasEnoughPlayers = (station1Owner.Value != ulong.MaxValue && station2Owner.Value != ulong.MaxValue);
 
             if (isInGreenZone && hasEnoughPlayers)
             {
@@ -88,7 +104,7 @@ public class OptimizedNetworkMiniGame : NetworkBehaviour
                     isCurrentlyOpen = true;
                     gear1.UpdateSpeedFromServer(0f);
                     gear2.UpdateSpeedFromServer(0f);
-                    gear1.OpenGear(); 
+                    gear1.OpenGear();
                     gear2.OpenGear();
                 }
             }

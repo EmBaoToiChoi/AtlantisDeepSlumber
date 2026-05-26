@@ -2,10 +2,9 @@ using UnityEngine;
 using Unity.Netcode;
 using UnityEngine.InputSystem;
 
-public class InteractBox : MonoBehaviour
+public class InteractBox : NetworkBehaviour
 {
     [Header("Cấu hình Mini-game")]
-    [Tooltip("Điền số 1 nếu là Hộp 1, điền số 2 nếu là Hộp 2")]
     public int stationIndex = 1; 
 
     private OptimizedNetworkMiniGame gameManager;
@@ -15,12 +14,15 @@ public class InteractBox : MonoBehaviour
 
     void Start()
     {
+        // Cách tìm gameManager an toàn hơn cho NetworkBehaviour
         gameManager = Object.FindFirstObjectByType<OptimizedNetworkMiniGame>();
     }
 
     void Update()
     {
-        // Chỉ xử lý bật/tắt Mini-game
+        // Chỉ owner mới được điều khiển trạm của họ
+       // if (!IsOwner) return;
+
         if (isPlayerInside && Keyboard.current != null && Keyboard.current.eKey.wasPressedThisFrame)
         {
             if (!isUsingStation) OpenStation();
@@ -30,9 +32,17 @@ public class InteractBox : MonoBehaviour
 
     private void OpenStation()
     {
+        if (gameManager == null) return;
+
+        // Lấy ID chuẩn của người chơi này
+        ulong myId = GetComponentInParent<NetworkObject>().OwnerClientId; 
+        
+        // Chỉ gọi 1 lần duy nhất lên Server
+        gameManager.RequestStationAccessServerRpc(stationIndex, myId);
+        
+        // Cập nhật trạng thái cục bộ
         gameManager.ToggleMiniGame(stationIndex, true);
         isUsingStation = true;
-        gameManager.UpdateInteractingCountServerRpc(true);
         
         if (localPlayerMovement != null)
             localPlayerMovement.SetCanMoveServerRpc(false);
@@ -40,10 +50,10 @@ public class InteractBox : MonoBehaviour
 
     private void ExitStation()
     {
-        if (!isUsingStation) return;
+        if (gameManager == null) return;
 
+        gameManager.ReleaseStationServerRpc(stationIndex, OwnerClientId);
         gameManager.ToggleMiniGame(stationIndex, false);
-        gameManager.UpdateInteractingCountServerRpc(false);
         isUsingStation = false;
 
         if (localPlayerMovement != null)
@@ -52,10 +62,11 @@ public class InteractBox : MonoBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
+        // Bỏ qua check IsOwner ở đây, chỉ cần là Player là được
         if (other.CompareTag("Player"))
         {
             var networkObject = other.GetComponent<NetworkObject>();
-            if (networkObject != null && networkObject.IsOwner)
+            if (networkObject != null)
             {
                 isPlayerInside = true;
                 localPlayerMovement = other.GetComponent<PlayerMovement>();
@@ -65,15 +76,12 @@ public class InteractBox : MonoBehaviour
 
     private void OnTriggerExit(Collider other)
     {
-        if (other.CompareTag("Player"))
+        var networkObject = other.GetComponent<NetworkObject>();
+        if (networkObject != null && networkObject.IsOwner && other.CompareTag("Player"))
         {
-            var networkObject = other.GetComponent<NetworkObject>();
-            if (networkObject != null && networkObject.IsOwner)
-            {
-                isPlayerInside = false;
-                if (isUsingStation) ExitStation();
-                localPlayerMovement = null;
-            }
+            isPlayerInside = false;
+            if (isUsingStation) ExitStation();
+            localPlayerMovement = null;
         }
     }
 }
