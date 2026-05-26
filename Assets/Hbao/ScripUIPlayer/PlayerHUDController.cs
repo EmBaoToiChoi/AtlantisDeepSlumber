@@ -644,21 +644,27 @@ public class PlayerHUDController : MonoBehaviour
         {
             upgradePointsText.text = string.Format(LocalizationManager.Get("hud_points_format"), points);
         }
+
+        // Chỉ hiện bonus khi đã nâng cấp (level > 0), còn không chỉ hiện "Lv. X"
         if (hpLevelText != null)
         {
-            hpLevelText.text = string.Format(LocalizationManager.Get("hud_upgrade_lv_hp"), hpLv, hpLv * 20);
+            int hpBonus = hpLv * 20;
+            hpLevelText.text = hpLv > 0 ? $"Lv. {hpLv}  (+{hpBonus} HP)" : $"Lv. {hpLv}";
         }
         if (mpLevelText != null)
         {
-            mpLevelText.text = string.Format(LocalizationManager.Get("hud_upgrade_lv_mp"), mpLv, mpLv * 10);
+            int mpBonus = mpLv * 10;
+            mpLevelText.text = mpLv > 0 ? $"Lv. {mpLv}  (+{mpBonus} MP)" : $"Lv. {mpLv}";
         }
         if (cooldownLevelText != null)
         {
-            cooldownLevelText.text = string.Format(LocalizationManager.Get("hud_upgrade_lv_cooldown"), cdLv, cdLv * 2);
+            int cdBonus = cdLv * 2;
+            cooldownLevelText.text = cdLv > 0 ? $"Lv. {cdLv}  (-{cdBonus}%)" : $"Lv. {cdLv}";
         }
         if (damageLevelText != null)
         {
-            damageLevelText.text = string.Format(LocalizationManager.Get("hud_upgrade_lv_damage"), dmgLv, dmgLv * 5);
+            int dmgBonus = dmgLv * 5;
+            damageLevelText.text = dmgLv > 0 ? $"Lv. {dmgLv}  (+{dmgBonus} DMG)" : $"Lv. {dmgLv}";
         }
 
         // Giảm thời gian hồi chiêu tương ứng (2% mỗi cấp độ)
