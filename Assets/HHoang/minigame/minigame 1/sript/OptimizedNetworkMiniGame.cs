@@ -5,166 +5,161 @@ using DG.Tweening;
 
 public class OptimizedNetworkMiniGame : NetworkBehaviour
 {
-    [Header("Cụm UI Duy Nhất Trên Canvas")]
+    [Header("UI & Controls")]
     public GameObject miniGamePlayZone;
     public Slider localSlider;
     public Image imgA;
     public Image imgD;
 
-    [Header("Cấu hình Thông Số")]
+    [Header("Cấu hình Mini-game")]
     public float drainSpeed = 15f;
     public float pushAmount = 8f;
     public float penaltyAmount = 6f;
     public float greenZoneMin = 85f;
     public float greenZoneMax = 100f;
 
-    [Header("Màu sắc")]
+    [Header("Visual Settings")]
     public Color normalColor = new Color(0.2f, 0.2f, 0.2f, 0.4f);
     public Color activeColor = Color.white;
 
-    [Header("Bánh Răng Mạng")]
+    [Header("Bánh Răng")]
     public GearRotator gear1;
     public GearRotator gear2;
-    private float originalSpeed1;
-    private float originalSpeed2;
 
-    private bool isCurrentlyOpen = false;
+    private NetworkList<float> stationValues;
+    private NetworkList<ulong> stationOwners;
+    
+    private int currentStationIndex = 0;
     private bool isPlaying = false;
+    private bool isCurrentlyOpen = false;
 
-    // QUAN TRỌNG: Lưu ID người chơi đang chiếm trạm để đảm bảo 1 người 1 nút
-    public NetworkVariable<ulong> station1Owner = new NetworkVariable<ulong>(ulong.MaxValue);
-    public NetworkVariable<ulong> station2Owner = new NetworkVariable<ulong>(ulong.MaxValue);
+    // Biến đồng bộ trạng thái nút nào đang sáng (true = A, false = D)
+    private NetworkVariable<bool> isANeeded = new NetworkVariable<bool>(true);
 
-    private NetworkVariable<float> syncSlider = new NetworkVariable<float>(0f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
-    private NetworkVariable<int> targetButton = new NetworkVariable<int>(1, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+    void Awake()
+    {
+        stationValues = new NetworkList<float>(new float[] { 0, 0, 0, 0 });
+        stationOwners = new NetworkList<ulong>(new ulong[] { ulong.MaxValue, ulong.MaxValue, ulong.MaxValue, ulong.MaxValue });
+    }
 
-    void Start()
+    public override void OnNetworkSpawn()
     {
         if (miniGamePlayZone != null) miniGamePlayZone.SetActive(false);
-        ResetButtonVisual(imgA);
-        ResetButtonVisual(imgD);
-        if (gear1 != null) originalSpeed1 = gear1.rotationSpeed;
-        if (gear2 != null) originalSpeed2 = gear2.rotationSpeed;
-    }
-
-    // HÀM GỌI TỪ INTERACTBOX
-    [ServerRpc(RequireOwnership = false)]
-    public void RequestStationAccessServerRpc(int stationIndex, ulong clientId)
-    {
-        // Kiểm tra trạm 1
-        if (stationIndex == 1)
-        {
-            if (station1Owner.Value == ulong.MaxValue) 
-                station1Owner.Value = clientId; 
-        }
-        // Kiểm tra trạm 2
-        else if (stationIndex == 2)
-        {
-            if (station2Owner.Value == ulong.MaxValue) 
-                station2Owner.Value = clientId;
-        }
     }
 
     [ServerRpc(RequireOwnership = false)]
-    public void ReleaseStationServerRpc(int stationIndex, ulong clientId)
+    public void UpdateSliderServerRpc(int index, float amount)
     {
-        if (stationIndex == 1 && station1Owner.Value == clientId) station1Owner.Value = ulong.MaxValue;
-        else if (stationIndex == 2 && station2Owner.Value == clientId) station2Owner.Value = ulong.MaxValue;
+        if (index < 0 || index >= stationValues.Count) return;
+        stationValues[index] = Mathf.Clamp(stationValues[index] + amount, 0f, 100f);
     }
 
-    public void ToggleMiniGame(int stationIndex, bool isOpening)
+    [ServerRpc(RequireOwnership = false)]
+    void RandomizeButtonServerRpc()
+    {
+        isANeeded.Value = Random.value > 0.5f;
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    public void RequestStationAccessServerRpc(int index, ulong clientId)
+    {
+        if (index >= 0 && index < stationOwners.Count && stationOwners[index] == ulong.MaxValue)
+            stationOwners[index] = clientId;
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    public void ReleaseStationServerRpc(int index, ulong clientId)
+    {
+        if (index >= 0 && index < stationOwners.Count && stationOwners[index] == clientId)
+        {
+            stationOwners[index] = ulong.MaxValue;
+            stationValues[index] = 0f;
+        }
+    }
+
+    public void ToggleMiniGame(int index, bool isOpening)
     {
         isPlaying = isOpening;
+        currentStationIndex = index;
         if (miniGamePlayZone != null) miniGamePlayZone.SetActive(isOpening);
-        if (isOpening) UpdateTargetButtonVisual();
     }
 
     void Update()
     {
-        if (localSlider != null) localSlider.value = syncSlider.Value;
-
+        // 1. Cập nhật UI & Input (Chỉ chạy khi đang chơi)
         if (isPlaying)
         {
-            UpdateTargetButtonVisual();
+            if (localSlider != null && currentStationIndex < stationValues.Count) 
+                localSlider.value = stationValues[currentStationIndex];
+            
+            // Cập nhật màu nút dựa trên trạng thái Network
+            imgA.color = isANeeded.Value ? activeColor : normalColor;
+            imgD.color = !isANeeded.Value ? activeColor : normalColor;
+            
             HandleQTEInput();
         }
 
+        // 2. Logic cho Server (LUÔN CHẠY)
         if (IsServer)
         {
-            if (syncSlider.Value > 0) syncSlider.Value -= drainSpeed * Time.deltaTime;
+            int activeInGreenZone = 0;
+            int totalOccupied = 0;
 
-            // KIỂM TRA ĐIỀU KIỆN: Cả 2 trạm đều phải có người chiếm
-            bool isInGreenZone = (syncSlider.Value >= greenZoneMin && syncSlider.Value <= greenZoneMax);
-            bool hasEnoughPlayers = (station1Owner.Value != ulong.MaxValue && station2Owner.Value != ulong.MaxValue);
-
-            if (isInGreenZone && hasEnoughPlayers)
+            for (int i = 0; i < stationValues.Count; i++)
             {
-                if (!isCurrentlyOpen)
+                if (stationValues[i] > 0) stationValues[i] -= drainSpeed * Time.deltaTime;
+                if (stationOwners[i] != ulong.MaxValue)
                 {
-                    isCurrentlyOpen = true;
-                    gear1.UpdateSpeedFromServer(0f);
-                    gear2.UpdateSpeedFromServer(0f);
-                    gear1.OpenGear();
-                    gear2.OpenGear();
+                    totalOccupied++;
+                    if (stationValues[i] >= greenZoneMin && stationValues[i] <= greenZoneMax)
+                        activeInGreenZone++;
                 }
             }
-            else
+
+            if (totalOccupied >= 2 && activeInGreenZone == totalOccupied)
             {
-                if (isCurrentlyOpen)
-                {
-                    isCurrentlyOpen = false;
-                    gear1.UpdateSpeedFromServer(originalSpeed1);
-                    gear2.UpdateSpeedFromServer(originalSpeed2);
-                    gear1.CloseGear();
-                    gear2.CloseGear();
-                }
+                if (!isCurrentlyOpen) { isCurrentlyOpen = true; gear1.OpenGear(); gear2.OpenGear(); }
+            }
+            else if (isCurrentlyOpen)
+            {
+                isCurrentlyOpen = false;
+                gear1.CloseGear(); gear2.CloseGear();
             }
         }
     }
-
-    void UpdateTargetButtonVisual()
-    {
-        if (targetButton.Value == 1) { SetButtonActive(imgA); SetButtonPassive(imgD); }
-        else { SetButtonActive(imgD); SetButtonPassive(imgA); }
-    }
-
-    void SetButtonActive(Image targetImg) { targetImg.color = activeColor; targetImg.transform.localScale = Vector3.one; }
-    void SetButtonPassive(Image targetImg) { targetImg.color = normalColor; targetImg.transform.localScale = Vector3.one; }
-    void ResetButtonVisual(Image targetImg) { targetImg.color = normalColor; targetImg.transform.localScale = Vector3.one; }
 
     void HandleQTEInput()
     {
-        if (Input.GetKeyDown(KeyCode.A))
+        if (Input.GetKeyDown(KeyCode.A)) ProcessInput(true, isANeeded.Value);
+        else if (Input.GetKeyDown(KeyCode.D)) ProcessInput(false, !isANeeded.Value);
+    }
+
+    void ProcessInput(bool isA, bool isCorrect)
+    {
+        if (isCorrect)
         {
-            if (targetButton.Value == 1) { PlaySuccessTween(imgA); SubmitQTEResultServerRpc(true); }
-            else { PlayFailTween(imgA); SubmitQTEResultServerRpc(false); }
+            PlaySuccessTween(isA ? imgA : imgD);
+            UpdateSliderServerRpc(currentStationIndex, pushAmount);
+            RandomizeButtonServerRpc(); // Random lại nút ngay khi nhấn đúng
         }
-        if (Input.GetKeyDown(KeyCode.D))
+        else
         {
-            if (targetButton.Value == 2) { PlaySuccessTween(imgD); SubmitQTEResultServerRpc(true); }
-            else { PlayFailTween(imgD); SubmitQTEResultServerRpc(false); }
+            PlayFailTween(isA ? imgA : imgD);
+            UpdateSliderServerRpc(currentStationIndex, -penaltyAmount);
         }
     }
 
     void PlaySuccessTween(Image targetImg)
     {
         targetImg.transform.DOKill();
-        Sequence seq = DOTween.Sequence();
-        seq.Append(targetImg.transform.DOScale(1.2f, 0.05f));
-        seq.Append(targetImg.transform.DOScale(1.0f, 0.05f));
+        targetImg.transform.DOScale(1.2f, 0.1f).OnComplete(() => targetImg.transform.DOScale(1f, 0.1f));
+        targetImg.DOColor(Color.green, 0.1f).OnComplete(() => targetImg.DOColor(activeColor, 0.2f));
     }
 
     void PlayFailTween(Image targetImg)
     {
         targetImg.transform.DOKill();
-        targetImg.transform.DOPunchPosition(new Vector3(10f, 0f, 0f), 0.2f, 15, 0.5f);
-    }
-
-    [ServerRpc(RequireOwnership = false)]
-    void SubmitQTEResultServerRpc(bool isCorrect)
-    {
-        float amount = isCorrect ? pushAmount : -penaltyAmount;
-        syncSlider.Value = Mathf.Clamp(syncSlider.Value + amount, 0f, 100f);
-        if (isCorrect) targetButton.Value = Random.Range(1, 3);
+        targetImg.transform.DOPunchPosition(new Vector3(10f, 0f, 0f), 0.2f, 10, 0.5f);
+        targetImg.DOColor(Color.red, 0.1f).OnComplete(() => targetImg.DOColor(normalColor, 0.2f));
     }
 }
