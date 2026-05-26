@@ -10,7 +10,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e651dbb3fbac04af2b8f5abf007ddc23, type: 3}
-  m_Name: DefaultNetworkPrefabs
+  m_Name: player
   m_EditorClassIdentifier: 
   IsDefault: 1
   List:
@@ -25,17 +25,7 @@ MonoBehaviour:
     SourceHashToOverride: 0
     OverridingTargetPrefab: {fileID: 0}
   - Override: 0
-    Prefab: {fileID: 3312299106363896264, guid: 28f3fdf72bbdbde4ca1d825e306d75f4, type: 3}
-    SourcePrefabToOverride: {fileID: 0}
-    SourceHashToOverride: 0
-    OverridingTargetPrefab: {fileID: 0}
-  - Override: 0
-    Prefab: {fileID: 3312299106363896264, guid: 2bbf7caab727d35428036169efc87507, type: 3}
-    SourcePrefabToOverride: {fileID: 0}
-    SourceHashToOverride: 0
-    OverridingTargetPrefab: {fileID: 0}
-  - Override: 0
-    Prefab: {fileID: 3312299106363896264, guid: 9caf8020115831041b3740bf04e693b7, type: 3}
+    Prefab: {fileID: 7471273757543151, guid: e22ba8db40dfe12409fb0a1c96940584, type: 3}
     SourcePrefabToOverride: {fileID: 0}
     SourceHashToOverride: 0
     OverridingTargetPrefab: {fileID: 0}
@@ -110,12 +100,17 @@ MonoBehaviour:
     SourceHashToOverride: 0
     OverridingTargetPrefab: {fileID: 0}
   - Override: 0
-    Prefab: {fileID: 7471273757543151, guid: e22ba8db40dfe12409fb0a1c96940584, type: 3}
+    Prefab: {fileID: 3312299106363896264, guid: 28f3fdf72bbdbde4ca1d825e306d75f4, type: 3}
     SourcePrefabToOverride: {fileID: 0}
     SourceHashToOverride: 0
     OverridingTargetPrefab: {fileID: 0}
   - Override: 0
-    Prefab: {fileID: 7471273757543151, guid: 48cf0127d18d6d340b77d7dbd43ab167, type: 3}
+    Prefab: {fileID: 3312299106363896264, guid: 2bbf7caab727d35428036169efc87507, type: 3}
+    SourcePrefabToOverride: {fileID: 0}
+    SourceHashToOverride: 0
+    OverridingTargetPrefab: {fileID: 0}
+  - Override: 0
+    Prefab: {fileID: 3312299106363896264, guid: 9caf8020115831041b3740bf04e693b7, type: 3}
     SourcePrefabToOverride: {fileID: 0}
     SourceHashToOverride: 0
     OverridingTargetPrefab: {fileID: 0}
