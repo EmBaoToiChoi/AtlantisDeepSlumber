@@ -20,7 +20,10 @@ public class PlayerMovement : NetworkBehaviour
     public NetworkVariable<bool> isCrouchingNet = new NetworkVariable<bool>(false);
     public NetworkVariable<bool> isCarryingCore = new NetworkVariable<bool>(false);
 
-    private Vector2 moveInput;
+    // Biến lưu trạm hiện tại nhân vật đang đứng
+    public PillarStation currentStation = null; 
+
+    private NetworkVariable<Vector2> networkMoveInput = new NetworkVariable<Vector2>();
     public CrystalCore currentHeldCore = null;
 
     void Awake()
@@ -31,10 +34,9 @@ public class PlayerMovement : NetworkBehaviour
 
     void Update()
     {
-        if (!IsOwner) return;
+    if (!IsOwner) return;
 
-        // --- ĐOẠN ĐÃ SỬA CÓ LOGIC CẮM TRỤ ---
-        if (Input.GetKeyDown(KeyCode.E))
+        if (Keyboard.current != null && Keyboard.current.eKey.wasPressedThisFrame)
         {
             if (currentHeldCore == null) 
             {
@@ -42,43 +44,32 @@ public class PlayerMovement : NetworkBehaviour
             }
             else 
             {
-                // Tìm tất cả các Trụ trong Scene
-                PillarStation[] stations = Object.FindObjectsByType<PillarStation>(FindObjectsSortMode.None);
-                bool snapped = false;
-                
-                // Kiểm tra xem người chơi có đang đứng gần trụ nào không
-                foreach (var station in stations)
+                // Kiểm tra xem có đang đứng gần trạm nào không
+                if (currentStation != null)
                 {
-                    // Nếu TryInteract trả về true, nghĩa là đã cắm thành công vào trụ
-                    if (station.TryInteract(this)) 
-                    { 
-                        snapped = true; 
-                        break; 
-                    }
+                    // Gọi TryInteract của trụ đó
+                    bool success = currentStation.TryInteract(this);
+                    if (!success) DropCore(); // Nếu trạm từ chối, mới thả xuống đất
                 }
-
-                // Nếu KHÔNG cắm vào trụ nào, thì mới thực hiện thả đồ xuống đất
-                if (!snapped) 
+                else
                 {
                     DropCore();
                 }
             }
         }
-        // --- KẾT THÚC ĐOẠN ĐÃ SỬA ---
 
-        if (!canMoveNet.Value) { moveInput = Vector2.zero; return; }
-
-        // Input logic
-        Vector2 keyboardInput = Vector2.zero;
-        if (Keyboard.current != null)
+        // 2. Xử lý di chuyển
+        Vector2 input = Vector2.zero;
+        if (canMoveNet.Value && Keyboard.current != null)
         {
             float x = (Keyboard.current.aKey.isPressed ? -1 : 0) + (Keyboard.current.dKey.isPressed ? 1 : 0);
             float y = (Keyboard.current.sKey.isPressed ? -1 : 0) + (Keyboard.current.wKey.isPressed ? 1 : 0);
-            keyboardInput = new Vector2(x, y).normalized;
+            input = new Vector2(x, y).normalized;
         }
-        moveInput = keyboardInput;
+        
+        UpdateInputServerRpc(input);
 
-        // Crouch logic
+        // 3. Crouch logic
         if (Keyboard.current != null)
         {
             bool isPressingCrouch = Keyboard.current.cKey.isPressed || Keyboard.current.leftShiftKey.isPressed;
@@ -88,36 +79,28 @@ public class PlayerMovement : NetworkBehaviour
 
     void FixedUpdate()
     {
-        if (!IsOwner || !canMoveNet.Value || moveInput.magnitude <= 0.1f)
+        float targetSpeed = isCrouchingNet.Value ? crouchSpeed : moveSpeed;
+        if (isCarryingCore.Value && currentHeldCore != null) 
         {
-            rb.linearVelocity = new Vector3(0f, rb.linearVelocity.y, 0f);
-            return;
-        }
-
-        // TÍNH TOÁN TỐC ĐỘ ĐỘNG
-        float targetSpeed = moveSpeed;
-        if (isCrouchingNet.Value) targetSpeed = crouchSpeed;
-        else if (isCarryingCore.Value && currentHeldCore != null) 
-        {
-            // Nhân tốc độ cơ bản với hệ số từ Lõi (1.0 nếu 2 người, 0.6 nếu 1 người)
             targetSpeed = moveSpeed * currentHeldCore.GetMoveSpeedMultiplier();
         }
         
-        rb.linearVelocity = new Vector3(moveInput.x * targetSpeed, rb.linearVelocity.y, moveInput.y * targetSpeed);
+        rb.linearVelocity = new Vector3(networkMoveInput.Value.x * targetSpeed, rb.linearVelocity.y, networkMoveInput.Value.y * targetSpeed);
     }
 
-// Trong PlayerMovement.cs
+    [ServerRpc]
+    private void UpdateInputServerRpc(Vector2 input) => networkMoveInput.Value = input;
+
     void TryPickupCore()
     {
         Collider[] hitColliders = Physics.OverlapSphere(transform.position, 2f, interactableLayer);
         foreach (var hit in hitColliders)
         {
             CrystalCore core = hit.GetComponent<CrystalCore>();
-            // Chỉ cần core tồn tại là được, không cần quan tâm nó đã có người giữ chưa
             if (core != null)
             {
                 currentHeldCore = core;
-                core.RequestPickup(OwnerClientId); // Server sẽ xử lý việc add vào list
+                core.RequestPickup(OwnerClientId);
                 SetCarryingCoreServerRpc(true);
                 break;
             }
