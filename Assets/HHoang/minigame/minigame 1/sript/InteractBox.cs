@@ -33,19 +33,20 @@ public class InteractBox : NetworkBehaviour
     private void OpenStation()
     {
         if (gameManager == null) return;
+        if (localPlayerMovement == null) return; // Bảo vệ nếu chưa lấy được movement
 
-        // Lấy ID chuẩn của người chơi này
-        ulong myId = GetComponentInParent<NetworkObject>().OwnerClientId; 
+        // Lấy ID từ chính player đang đứng trong trigger
+        ulong myId = localPlayerMovement.OwnerClientId; 
         
-        // Chỉ gọi 1 lần duy nhất lên Server
+        // Yêu cầu Server kiểm tra
         gameManager.RequestStationAccessServerRpc(stationIndex, myId);
         
         // Cập nhật trạng thái cục bộ
         gameManager.ToggleMiniGame(stationIndex, true);
         isUsingStation = true;
         
-        if (localPlayerMovement != null)
-            localPlayerMovement.SetCanMoveServerRpc(false);
+        // Chặn di chuyển
+        localPlayerMovement.SetCanMoveServerRpc(false);
     }
 
     private void ExitStation()
