@@ -352,8 +352,8 @@
     margin: 0 12px;
     background-color: rgba(25, 25, 25, 0.5);
     border-radius: 16px;
-    border-width: 2.8px;
-    border-color: rgba(50, 180, 255, 0.95);
+    border-width: 2px;
+    border-color: rgba(255, 255, 255, 0.85);
     position: relative;
     overflow: hidden;
 }
@@ -620,7 +620,7 @@
 }
 
 /* ========================================================================= */
-/* --- Inventory System Styles (TAB) --- */
+/* --- Inventory System Styles (TAB) — Premium White Border Redesign ---     */
 /* ========================================================================= */
 
 .inventory-overlay {
@@ -629,12 +629,11 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background-color: rgba(0, 0, 0, 0.7);
+    background-color: rgba(0, 0, 0, 0.78);
     justify-content: center;
     align-items: center;
     z-index: 999;
     
-    /* Fade/Visibility transition */
     opacity: 0;
     visibility: hidden;
     transition-property: opacity, visibility;
@@ -647,17 +646,17 @@
     visibility: visible;
 }
 
+/* Khung chính — viền trắng, nền đen sâu tạo bóng đổ bên trong */
 .inventory-frame {
     width: 820px;
     height: 520px;
-    background-color: rgba(12, 20, 32, 0.96);
-    border-radius: 20px;
-    border-width: 2.5px;
-    border-color: rgba(50, 160, 255, 0.65);
+    background-color: rgba(5, 8, 18, 0.96);
+    border-radius: 22px;
+    border-width: 2px;
+    border-color: rgba(255, 255, 255, 0.88);
     padding: 24px;
     flex-direction: column;
     
-    /* Premium scale entrance */
     scale: 0.85 0.85;
     opacity: 0;
     transition-property: scale, opacity;
@@ -675,29 +674,29 @@
     flex-direction: row;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 12px;
+    margin-bottom: 10px;
 }
 
 .inventory-title {
     color: rgb(255, 255, 255);
     font-size: 24px;
     -unity-font-style: bold;
-    letter-spacing: 2px;
-    -unity-text-outline-width: 0.5px;
-    -unity-text-outline-color: rgba(0, 0, 0, 0.5);
-    text-shadow: 0 0 10px rgba(50, 160, 255, 0.5);
+    letter-spacing: 3px;
+    -unity-text-outline-width: 0;
+    text-shadow: 0 0 14px rgba(0, 0, 0, 0.95);
 }
 
 .inventory-subtitle {
-    color: rgba(180, 220, 255, 0.7);
+    color: rgba(220, 220, 220, 0.6);
     font-size: 13px;
     -unity-font-style: italic;
 }
 
+/* Divider — white thin line */
 .inventory-divider {
-    height: 2px;
-    background-color: rgba(50, 160, 255, 0.3);
-    margin-bottom: 20px;
+    height: 1px;
+    background-color: rgba(255, 255, 255, 0.25);
+    margin-bottom: 18px;
 }
 
 /* Main Layout Grid & Panel styling */
@@ -706,7 +705,13 @@
     flex-grow: 1;
 }
 
-/* Left panel: 10 Grid Slots */
+/* Left panel */
+.inventory-left-panel {
+    width: 440px;
+    flex-direction: column;
+    justify-content: flex-start;
+}
+
 .inventory-slots-container {
     width: 440px;
     flex-direction: row;
@@ -715,33 +720,34 @@
     align-content: flex-start;
 }
 
+/* Ô inventory — viền trắng mờ, nền đen, hover sáng lên */
 .inventory-slot {
     width: 80px;
     height: 80px;
-    background-color: rgba(10, 15, 25, 0.75);
-    border-radius: 12px;
+    background-color: rgba(0, 0, 0, 0.55);
+    border-radius: 13px;
     border-width: 1.5px;
-    border-color: rgba(50, 160, 255, 0.35);
+    border-color: rgba(255, 255, 255, 0.35);
     margin: 4px;
     position: relative;
     justify-content: center;
     align-items: center;
     transition-property: border-color, background-color, scale;
-    transition-duration: 0.2s;
+    transition-duration: 0.18s;
     transition-timing-function: ease-out;
 }
 
 .inventory-slot:hover {
-    border-color: rgba(40, 180, 255, 0.95);
-    background-color: rgba(20, 35, 55, 0.8);
-    scale: 1.05 1.05;
+    border-color: rgba(255, 255, 255, 0.95);
+    background-color: rgba(20, 25, 40, 0.85);
+    scale: 1.06 1.06;
 }
 
 .inventory-slot-index {
     position: absolute;
     top: 4px;
     left: 6px;
-    color: rgba(255, 255, 255, 0.25);
+    color: rgba(255, 255, 255, 0.22);
     font-size: 11px;
     -unity-font-style: bold;
 }
@@ -749,24 +755,25 @@
 /* Right panel: Character Preview */
 .inventory-preview-container {
     flex-grow: 1;
-    margin-left: 24px;
+    margin-left: 22px;
     justify-content: center;
     align-items: stretch;
 }
 
+/* Preview card — viền trắng + nền đen tạo cảm giác đổ bóng vào trong */
 .inventory-preview-card {
     flex-grow: 1;
-    background-color: rgba(8, 14, 24, 0.8);
-    border-radius: 16px;
+    background-color: rgba(0, 0, 0, 0.55);
+    border-radius: 18px;
     border-width: 1.5px;
-    border-color: rgba(50, 160, 255, 0.45);
+    border-color: rgba(255, 255, 255, 0.6);
     padding: 16px;
     align-items: center;
     justify-content: space-between;
 }
 
 .inventory-preview-title {
-    color: rgba(255, 255, 255, 0.9);
+    color: rgba(255, 255, 255, 0.0);
     font-size: 14px;
     -unity-font-style: bold;
     letter-spacing: 1.5px;
@@ -788,11 +795,10 @@
     width: 120px;
     height: 16px;
     border-radius: 60px;
-    background-color: rgba(50, 160, 255, 0.25);
-    border-width: 1.5px;
-    border-color: rgba(50, 160, 255, 0.8);
+    background-color: rgba(255, 255, 255, 0.08);
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.5);
     scale: 1 0.4;
-    text-shadow: 0 0 15px rgba(50, 160, 255, 0.9);
 }
 
 .character-preview-model-container {
@@ -801,24 +807,27 @@
     background-color: transparent;
 }
 
+/* Preview stat rows — viền trắng mờ */
 .preview-stats-row {
     flex-direction: row;
     align-items: center;
-    background-color: rgba(10, 15, 25, 0.85);
-    border-radius: 8px;
-    padding: 6px 12px;
+    background-color: rgba(0, 0, 0, 0.55);
+    border-radius: 10px;
+    padding: 6px 14px;
     border-width: 1px;
-    border-color: rgba(50, 160, 255, 0.3);
+    border-color: rgba(255, 255, 255, 0.3);
 }
 
 .preview-stat-badge {
     color: rgb(255, 255, 255);
-    background-color: rgb(50, 160, 255);
-    border-radius: 4px;
+    background-color: rgba(255, 255, 255, 0.15);
+    border-radius: 5px;
     font-size: 11px;
     -unity-font-style: bold;
     padding: 2px 6px;
     margin-right: 8px;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.5);
 }
 
 .preview-stat-name {
@@ -829,22 +838,16 @@
 }
 
 /* ========================================================================= */
-/* --- Stats Upgrades Panel CSS --- */
+/* --- Stats Upgrades Panel CSS — White Border Theme ---                      */
 /* ========================================================================= */
 
-.inventory-left-panel {
-    width: 440px;
-    flex-direction: column;
-    justify-content: flex-start;
-}
-
 .upgrades-container {
-    margin-top: 16px;
+    margin-top: 14px;
     padding: 12px 16px;
-    background-color: rgba(8, 14, 24, 0.8);
-    border-radius: 16px;
+    background-color: rgba(0, 0, 0, 0.55);
+    border-radius: 18px;
     border-width: 1.5px;
-    border-color: rgba(50, 160, 255, 0.45);
+    border-color: rgba(255, 255, 255, 0.55);
 }
 
 .upgrades-header {
@@ -858,14 +861,15 @@
     color: rgba(255, 255, 255, 0.95);
     font-size: 13px;
     -unity-font-style: bold;
-    letter-spacing: 1px;
+    letter-spacing: 1.5px;
+    text-shadow: 0 0 8px rgba(0, 0, 0, 0.9);
 }
 
 .upgrades-points {
-    color: rgb(0, 230, 255);
+    color: rgb(255, 255, 255);
     font-size: 13px;
     -unity-font-style: bold;
-    text-shadow: 0 0 5px rgba(0, 230, 255, 0.6);
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
 }
 
 .upgrade-row-container {
@@ -876,33 +880,45 @@
     flex-direction: row;
     justify-content: space-between;
     align-items: center;
-    padding: 6px 0;
-    border-bottom-width: 1px;
-    border-color: rgba(50, 160, 255, 0.15);
+    padding: 7px 0;
 }
+
+/* Khối trái: level + tên xếp chồng dọc */
+.upgrade-stat-block {
+    flex-direction: column;
+    justify-content: center;
+    flex-grow: 1;
+}
+
+/* Nhãn level nhỏ phía trên */
+.upgrade-level-label {
+    color: rgba(255, 255, 255, 0.45);
+    font-size: 10px;
+    -unity-font-style: bold;
+    letter-spacing: 0.5px;
+    margin-bottom: 1px;
+    padding: 0;
+}
+
+/* Bonus text xuất hiện khi level > 0 — thêm vào upgrade-level-label qua code */
 
 .upgrade-name {
-    color: rgba(255, 255, 255, 0.7);
+    color: rgba(255, 255, 255, 0.9);
     font-size: 12px;
-    width: 110px;
-}
-
-.upgrade-value {
-    color: rgba(255, 255, 255, 0.95);
-    font-size: 11px;
     -unity-font-style: bold;
-    flex-grow: 1;
-    -unity-text-align: middle-left;
+    letter-spacing: 0.5px;
+    padding: 0;
 }
 
+/* Nút upgrade — viền trắng, nền đen, click → trắng */
 .upgrade-button {
-    width: 24px;
-    height: 24px;
-    border-radius: 6px;
-    background-color: rgba(50, 160, 255, 0.25);
+    width: 26px;
+    height: 26px;
+    border-radius: 7px;
+    background-color: rgba(0, 0, 0, 0.6);
     border-width: 1.5px;
-    border-color: rgba(50, 160, 255, 0.7);
-    color: rgb(0, 230, 255);
+    border-color: rgba(255, 255, 255, 0.8);
+    color: rgb(255, 255, 255);
     font-size: 14px;
     -unity-font-style: bold;
     justify-content: center;
@@ -911,23 +927,17 @@
     margin: 0;
     transition-property: scale, background-color, border-color;
     transition-duration: 0.15s;
+    text-shadow: 0 0 6px rgba(0, 0, 0, 0.8);
 }
 
 .upgrade-button:hover {
-    background-color: rgba(0, 230, 255, 0.4);
-    border-color: rgb(0, 230, 255);
-    scale: 1.1 1.1;
+    background-color: rgba(255, 255, 255, 0.18);
+    border-color: rgba(255, 255, 255, 1.0);
+    scale: 1.12 1.12;
 }
 
 .upgrade-button:active {
-    background-color: rgb(0, 230, 255);
+    background-color: rgba(255, 255, 255, 0.9);
     color: rgb(0, 0, 0);
     scale: 0.95 0.95;
 }
-
-
-
-
-
-
-
