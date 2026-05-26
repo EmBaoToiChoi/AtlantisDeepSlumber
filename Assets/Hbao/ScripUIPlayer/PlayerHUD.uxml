@@ -148,29 +148,37 @@
                         <ui:VisualElement class="upgrade-row-container">
                             <!-- HP Upgrade -->
                             <ui:VisualElement class="upgrade-row">
-                                <ui:Label name="upgrade-name-hp" text="MÁU (HP)" class="upgrade-name" />
-                                <ui:Label name="hp-level-text" text="Lv. 0 (+0 HP)" class="upgrade-value" />
+                                <ui:VisualElement class="upgrade-stat-block">
+                                    <ui:Label name="hp-level-text" text="Lv. 0" class="upgrade-level-label" />
+                                    <ui:Label name="upgrade-name-hp" text="MÁU" class="upgrade-name" />
+                                </ui:VisualElement>
                                 <ui:Button name="btn-upgrade-hp" text="+" class="upgrade-button" />
                             </ui:VisualElement>
-                            
+
                             <!-- MP Upgrade -->
                             <ui:VisualElement class="upgrade-row">
-                                <ui:Label name="upgrade-name-mp" text="MANA (MP)" class="upgrade-name" />
-                                <ui:Label name="mp-level-text" text="Lv. 0 (+0 MP)" class="upgrade-value" />
+                                <ui:VisualElement class="upgrade-stat-block">
+                                    <ui:Label name="mp-level-text" text="Lv. 0" class="upgrade-level-label" />
+                                    <ui:Label name="upgrade-name-mp" text="MANA" class="upgrade-name" />
+                                </ui:VisualElement>
                                 <ui:Button name="btn-upgrade-mp" text="+" class="upgrade-button" />
                             </ui:VisualElement>
-                            
+
                             <!-- Cooldown Upgrade -->
                             <ui:VisualElement class="upgrade-row">
-                                <ui:Label name="upgrade-name-cooldown" text="HỒI CHIÊU (-%)" class="upgrade-name" />
-                                <ui:Label name="cooldown-level-text" text="Lv. 0 (0% giảm)" class="upgrade-value" />
+                                <ui:VisualElement class="upgrade-stat-block">
+                                    <ui:Label name="cooldown-level-text" text="Lv. 0" class="upgrade-level-label" />
+                                    <ui:Label name="upgrade-name-cooldown" text="HỒI CHIÊU" class="upgrade-name" />
+                                </ui:VisualElement>
                                 <ui:Button name="btn-upgrade-cooldown" text="+" class="upgrade-button" />
                             </ui:VisualElement>
-                            
+
                             <!-- Damage Upgrade -->
                             <ui:VisualElement class="upgrade-row">
-                                <ui:Label name="upgrade-name-damage" text="SÁT THƯƠNG" class="upgrade-name" />
-                                <ui:Label name="damage-level-text" text="Lv. 0 (+0 S.Thương)" class="upgrade-value" />
+                                <ui:VisualElement class="upgrade-stat-block">
+                                    <ui:Label name="damage-level-text" text="Lv. 0" class="upgrade-level-label" />
+                                    <ui:Label name="upgrade-name-damage" text="SÁT THƯƠNG" class="upgrade-name" />
+                                </ui:VisualElement>
                                 <ui:Button name="btn-upgrade-damage" text="+" class="upgrade-button" />
                             </ui:VisualElement>
                         </ui:VisualElement>
