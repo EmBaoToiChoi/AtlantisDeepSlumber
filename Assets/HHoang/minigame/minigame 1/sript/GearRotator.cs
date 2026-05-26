@@ -1,16 +1,17 @@
 using UnityEngine;
 using Unity.Netcode;
-using DG.Tweening; // Nhớ đảm bảo dự án đã có DOTween
+using DG.Tweening;
 
 public class GearRotator : NetworkBehaviour 
 {
     [Header("Cấu hình quay")]
     public float rotationSpeed = 50f;
     public bool reverseDirection = false;
+    private float originalSpeed;
 
     [Header("Cấu hình trượt mở cổng")]
-    public Vector3 openOffset = new Vector3(-5f, 0, 0); // Vị trí trượt tới
-    public float moveDuration = 2f; // Thời gian trượt
+    public Vector3 openOffset = new Vector3(-5f, 0, 0);
+    public float moveDuration = 2f;
     private Vector3 originalPosition;
 
     private NetworkVariable<float> currentSpeed = new NetworkVariable<float>(0f, 
@@ -19,10 +20,12 @@ public class GearRotator : NetworkBehaviour
     void Awake()
     {
         originalPosition = transform.localPosition;
+        originalSpeed = rotationSpeed;
     }
 
     public override void OnNetworkSpawn()
     {
+        base.OnNetworkSpawn();
         if (IsServer)
         {
             float direction = reverseDirection ? -1f : 1f;
@@ -38,34 +41,41 @@ public class GearRotator : NetworkBehaviour
         }
     }
 
-    // --- CÁC HÀM ĐIỀU KHIỂN BÁNH RĂNG ---
+    public bool IsSpining() => currentSpeed.Value != 0f;
 
-    public bool IsSpining()
-    {
-        return currentSpeed.Value != 0f;
-    }
+    // --- CÁC HÀM GỌI TỪ SERVER ĐỂ ĐỒNG BỘ CLIENT ---
 
-    public void UpdateSpeedFromServer(float newSpeed)
-    {
-        if (IsServer)
-        {
-            float direction = reverseDirection ? -1f : 1f;
-            currentSpeed.Value = newSpeed == 0f ? 0f : newSpeed * direction;
-        }
-    }
-
-    // Hàm mở cổng (Gọi từ MiniGameManager)
     public void OpenGear()
+    {
+        OpenGearClientRpc();
+    }
+
+    [ClientRpc]
+    private void OpenGearClientRpc()
     {
         transform.DOKill();
         transform.DOLocalMove(originalPosition + openOffset, moveDuration).SetEase(Ease.InOutCubic);
     }
 
-    // Hàm đóng cổng
     public void CloseGear()
+    {
+        // Server thực hiện việc cập nhật biến tốc độ
+        if (IsServer)
+        {
+            float direction = reverseDirection ? -1f : 1f;
+            currentSpeed.Value = originalSpeed * direction;
+        }
+        
+        // Gọi ClientRpc để tất cả Client cùng chạy hiệu ứng đóng
+        CloseGearClientRpc();
+    }
+
+    [ClientRpc]
+    private void CloseGearClientRpc()
     {
         transform.DOKill();
         transform.DOLocalMove(originalPosition, moveDuration).SetEase(Ease.InOutCubic);
+        Debug.Log("Client đã nhận lệnh đóng bánh răng và reset vị trí");
     }
 
     // --- XỬ LÝ VA CHẠM ---
@@ -73,15 +83,10 @@ public class GearRotator : NetworkBehaviour
     {
         if (!IsServer) return;
 
-        if (other.CompareTag("Player"))
+        if (other.CompareTag("Player") && IsSpining())
         {
-            // Chỉ nghiền nát nếu bánh răng đang quay
-            if (IsSpining())
-            {
-                // Reset vị trí player (Bạn thay vector3 này bằng vị trí hồi sinh/checkpoint)
-                other.transform.position = new Vector3(0f, 1f, 0f);
-                Debug.Log("Người chơi bị bánh răng nghiền nát!");
-            }
+            other.transform.position = new Vector3(0f, 1f, 0f);
+            Debug.Log("Người chơi bị bánh răng nghiền nát!");
         }
     }
 }
