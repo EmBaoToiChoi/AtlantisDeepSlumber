@@ -3,29 +3,38 @@ using UnityEngine;
 
 public class PlayerSpawner : MonoBehaviour
 {
-    public GameObject hostPlayerPrefab;   // Kéo con playerrrrrrr vào đây
-    public GameObject clientPlayerPrefab; // Kéo con playerrrrrrr 1 vào đây
+    public GameObject hostPlayerPrefab;
+    public GameObject clientPlayerPrefab;
 
     void Start()
     {
-        // Chỉ Server mới có quyền điều khiển spawn
+        // Đảm bảo chỉ Server mới thực hiện logic này
         NetworkManager.Singleton.OnServerStarted += () => {
-            NetworkManager.Singleton.ConnectionApprovalCallback = ApprovalCheck;
+            if (NetworkManager.Singleton.IsServer)
+            {
+                NetworkManager.Singleton.OnClientConnectedCallback += OnClientConnected;
+                
+                // Spawn cho Host ngay khi Server vừa start
+                SpawnPlayer(0); 
+            }
         };
     }
 
-    private void ApprovalCheck(NetworkManager.ConnectionApprovalRequest request, NetworkManager.ConnectionApprovalResponse response)
+    private void OnClientConnected(ulong clientId)
     {
-        // Khi client kết nối, chúng ta spawn nhân vật tương ứng
-        ulong clientId = request.ClientNetworkId;
-        
-        // Nếu là Host (ID 0) thì spawn con host, còn lại spawn con client
+        // Khi client kết nối, spawn cho client
+        if (clientId != 0) // ID 0 là Host, đã spawn ở trên
+        {
+            SpawnPlayer(clientId);
+        }
+    }
+
+    private void SpawnPlayer(ulong clientId)
+    {
         GameObject prefabToSpawn = (clientId == 0) ? hostPlayerPrefab : clientPlayerPrefab;
-        
         GameObject playerInstance = Instantiate(prefabToSpawn);
-        playerInstance.GetComponent<NetworkObject>().SpawnAsPlayerObject(clientId);
         
-        response.Approved = true;
-        response.CreatePlayerObject = false; // Chúng ta đã tự spawn ở trên rồi
+        // SpawnAsPlayerObject gắn quyền điều khiển cho client đó
+        playerInstance.GetComponent<NetworkObject>().SpawnAsPlayerObject(clientId);
     }
 }
