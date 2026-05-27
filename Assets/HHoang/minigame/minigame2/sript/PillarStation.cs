@@ -6,6 +6,7 @@ public class PillarStation : NetworkBehaviour
     public int stationIndex;
     public AscensionManager manager; // Kéo AscensionController vào đây
     public Transform snapPosition;
+    public bool isOccupied = false;
 
     // ĐÃ BỎ: isPlayerInZone, OnTriggerEnter, OnTriggerExit
     // Vì giờ đây PlayerMovement tự biết nó đang đứng ở trạm nào thông qua InteractBox
@@ -13,6 +14,8 @@ public class PillarStation : NetworkBehaviour
     // Gọi hàm này từ InteractBox/PlayerMovement khi nhấn E
     public bool TryInteract(PlayerMovement player)
     {
+        // Kiểm tra nếu trụ đã có đồ thì từ chối hành động
+        if (isOccupied) return false;
         // Chỉ cần player cầm bóng là thực hiện cắm trụ luôn (InteractBox đã lọc điều kiện đứng trong vùng rồi)
         if (player.currentHeldCore != null)
         {
@@ -23,6 +26,8 @@ public class PillarStation : NetworkBehaviour
             player.currentHeldCore.RequestDrop(player.OwnerClientId);
             player.currentHeldCore = null;
             player.SetCarryingCoreServerRpc(false);
+
+            isOccupied = true; // Đánh dấu là đã có đồ
             
             return true; // Báo cho PlayerMovement là đã cắm thành công
         }
@@ -39,6 +44,32 @@ public class PillarStation : NetworkBehaviour
             if (manager != null && crystal != null)
             {
                 manager.SnapCrystalToPillar(crystal, index);
+                isOccupied = true; // Đồng bộ trạng thái trên server
+            }
+        }
+    }
+
+    // Thêm vào PillarStation.cs
+    private void OnTriggerEnter(Collider other)
+    {
+        if (other.CompareTag("Player")) // Đảm bảo Player có tag là "Player"
+        {
+            var player = other.GetComponent<PlayerMovement>();
+            if (player != null)
+            {
+                player.currentStation = this; // Gán trạm hiện tại cho người chơi
+            }
+        }
+    }
+
+    private void OnTriggerExit(Collider other)
+    {
+        if (other.CompareTag("Player"))
+        {
+            var player = other.GetComponent<PlayerMovement>();
+            if (player != null && player.currentStation == this)
+            {
+                player.currentStation = null; // Rời khỏi vùng thì set về null
             }
         }
     }

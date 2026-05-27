@@ -24,18 +24,17 @@ public class AscensionManager : NetworkBehaviour
         PillarStation station = pillarPositions[stationIndex].GetComponent<PillarStation>();
         if (station == null) return;
 
-        // 1. Đặt vị trí và khóa vật lý
+        // 1. Đặt vị trí, khóa vật lý và đánh dấu đã cắm
         crystal.transform.position = station.snapPosition.position;
         crystal.transform.rotation = station.snapPosition.rotation;
         Rigidbody rb = crystal.GetComponent<Rigidbody>();
         if (rb != null) rb.isKinematic = true;
+        
+        crystal.isSnapped = true; // <--- CẬP NHẬT: Khóa không cho nhặt
 
-        // 2. Lưu thông tin: Lưu cả crystalID vào pillarStates để lát nữa kiểm tra
+        // 2. Lưu thông tin
         pillarStates[stationIndex] = crystal.crystalID; 
-        if (!placedCrystals.Contains(crystal))
-        {
-            placedCrystals.Add(crystal);
-        }
+        if (!placedCrystals.Contains(crystal)) placedCrystals.Add(crystal);
 
         // 3. Bắt đầu đếm giờ nếu là viên đầu tiên
         if (!isTimerRunning && placedCrystals.Count == 1)
@@ -44,7 +43,6 @@ public class AscensionManager : NetworkBehaviour
             timerCoroutine = StartCoroutine(TimerCountdown());
         }
         
-        // 4. Luôn kiểm tra điều kiện sau khi đặt
         CheckWinCondition();
     }
 
@@ -96,6 +94,13 @@ public class AscensionManager : NetworkBehaviour
                     rb.AddForce(new Vector3(Random.Range(-2f, 2f), 5f, Random.Range(-2f, 2f)), ForceMode.Impulse);
                 }
             }
+        }
+
+        // RESET TRẠNG THÁI TRỤ
+        foreach (var pillar in pillarPositions)
+        {
+            PillarStation station = pillar.GetComponent<PillarStation>();
+            if (station != null) station.isOccupied = false; // Mở khóa trụ
         }
 
         // Reset hệ thống

@@ -5,6 +5,7 @@ using System.Collections.Generic;
 public class CrystalCore : NetworkBehaviour
 {
     public int crystalID;
+    public bool isSnapped = false; // Thêm biến này
     // Danh sách các Client ID đang cùng khiêng lõi
     public NetworkList<ulong> holders;
 
