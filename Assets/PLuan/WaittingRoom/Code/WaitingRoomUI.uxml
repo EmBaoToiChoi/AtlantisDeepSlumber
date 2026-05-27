@@ -4,15 +4,21 @@
     <ui:VisualElement name="waiting-room-root" class="waiting-room-overlay">
         <!-- TOP INFO BAR -->
         <ui:VisualElement class="waiting-top-bar">
-            <ui:VisualElement class="top-bar-left">
-                <ui:Label name="lbl-room-name" text="SESSION: EXPLORER" class="room-title" />
+            <!-- Left spacer to push combined panel to the right -->
+            <ui:VisualElement class="waiting-viewport-spacer" />
+            
+            <!-- Combined Info Panel -->
+            <ui:VisualElement class="top-info-panel">
+                <ui:VisualElement class="top-info-row">
+                    <ui:Label name="lbl-room-name" text="SESSION: EXPLORER" class="room-title" />
+                    <ui:Label name="lbl-room-id" text="ID: #XXXXXX" class="room-id-badge" />
+                </ui:VisualElement>
                 <ui:VisualElement class="top-bar-decor-row">
                     <ui:Label text="SECURE CONNECTION" class="top-bar-decor-tag" />
                     <ui:Label text="●" class="top-bar-decor-dot active-dot" />
                     <ui:Label text="DEEP SECTOR: ATLANTIS" class="top-bar-decor-tag" />
                 </ui:VisualElement>
             </ui:VisualElement>
-            <ui:Label name="lbl-room-id" text="ID: #XXXXXX" class="room-id-badge" />
         </ui:VisualElement>
 
         <!-- MIDDLE MAIN AREA -->

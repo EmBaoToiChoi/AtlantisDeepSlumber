@@ -407,7 +407,7 @@ public class SimplePlayerTest : NetworkBehaviour
         }
 
         ApplyUpgradedStats();
-        SavePlayerStateToDatabase();
+        SavePlayerStateClientRpc();
         Debug.Log($"[Server] Đã nâng cấp Stat {statType} cho {gameObject.name}. HP Lv={hpLevel.Value}, MP Lv={mpLevel.Value}, CD Lv={cooldownLevel.Value}, DMG Lv={damageLevel.Value}. Điểm còn lại: {upgradePoints.Value}");
     }
 
@@ -637,6 +637,7 @@ public class SimplePlayerTest : NetworkBehaviour
         activeWeaponIndex.Value = weaponIndex;
         isWeapon2Locked.Value = weapon2Locked;
         isSkillsUnlocked.Value = skillsUnlocked;
+        SavePlayerStateClientRpc();
     }
 
     private async void LoadPlayerStateFromDatabase()
@@ -686,6 +687,7 @@ public class SimplePlayerTest : NetworkBehaviour
             {
                 Debug.LogWarning("[DB] Không có dữ liệu cũ hoặc lỗi kết nối. Đồng bộ dữ liệu ban đầu.");
                 SyncPlayerStateServerRpc(maxHealth, 1, true, false, 5, 0, 0, 0, 0);
+                SavePlayerStateToDatabase();
             }
         }
         catch (System.Exception ex)
@@ -762,6 +764,15 @@ public class SimplePlayerTest : NetworkBehaviour
         catch (System.Exception ex)
         {
             Debug.LogError($"[DB] Lỗi khi gọi API lưu trạng thái MongoDB: {ex.Message}");
+        }
+    }
+
+    [ClientRpc]
+    private void SavePlayerStateClientRpc()
+    {
+        if (IsOwner)
+        {
+            SavePlayerStateToDatabase();
         }
     }
 }

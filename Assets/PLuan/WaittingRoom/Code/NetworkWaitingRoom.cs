@@ -187,7 +187,7 @@ public class NetworkWaitingRoom : NetworkBehaviour
         // Ẩn mặc định cho đỡ vướng
         if (_charSelectPanel != null)
         {
-            _charSelectPanel.AddToClassList("hidden-element");
+            _charSelectPanel.AddToClassList("panel-hidden-state");
             _charSelectPanel.style.display = DisplayStyle.None;
         }
         if (_btnToggleCharPanel != null)
@@ -229,23 +229,39 @@ public class NetworkWaitingRoom : NetworkBehaviour
         }
     }
 
+    private Coroutine _charPanelAnimCoroutine;
+
     private void ToggleCharacterPanel()
     {
         if (_charSelectPanel == null || _btnToggleCharPanel == null) return;
         
-        bool isHidden = _charSelectPanel.ClassListContains("hidden-element") || _charSelectPanel.style.display == DisplayStyle.None;
+        if (_charPanelAnimCoroutine != null) StopCoroutine(_charPanelAnimCoroutine);
+        
+        bool isHidden = _charSelectPanel.ClassListContains("panel-hidden-state") || _charSelectPanel.style.display == DisplayStyle.None;
         if (isHidden)
         {
-            _charSelectPanel.RemoveFromClassList("hidden-element");
             _charSelectPanel.style.display = DisplayStyle.Flex;
+            _charPanelAnimCoroutine = StartCoroutine(ShowCharPanelCoroutine());
             _btnToggleCharPanel.text = "HIDE SELECTION";
         }
         else
         {
-            _charSelectPanel.AddToClassList("hidden-element");
-            _charSelectPanel.style.display = DisplayStyle.None;
+            _charPanelAnimCoroutine = StartCoroutine(HideCharPanelCoroutine());
             _btnToggleCharPanel.text = "CHOOSE EXPLORER";
         }
+    }
+
+    private IEnumerator ShowCharPanelCoroutine()
+    {
+        yield return null; // Đợi 1 frame để layout nhận trạng thái display: flex
+        _charSelectPanel.RemoveFromClassList("panel-hidden-state");
+    }
+
+    private IEnumerator HideCharPanelCoroutine()
+    {
+        _charSelectPanel.AddToClassList("panel-hidden-state");
+        yield return new WaitForSeconds(0.3f); // Đợi kết thúc transition trong USS (0.3s)
+        _charSelectPanel.style.display = DisplayStyle.None;
     }
 
     private void OnEnable()
