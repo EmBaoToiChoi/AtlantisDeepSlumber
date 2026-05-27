@@ -98,7 +98,7 @@ public class AscensionManager : NetworkBehaviour
             if (crystal != null)
             {
                 // CẬP NHẬT: Phải set về false để nhặt lại được
-                UpdateSnappedStateServerRpc(crystal.NetworkObject, false); 
+                UpdateSnappedStateServerRpc(crystal.NetworkObject, false);
                 
                 Rigidbody rb = crystal.GetComponent<Rigidbody>();
                 if (rb != null) 
@@ -115,7 +115,7 @@ public class AscensionManager : NetworkBehaviour
             PillarStation station = pillar.GetComponent<PillarStation>();
             if (station != null) 
             {
-                // Reset qua .Value
+                // SỬA: Phải set .Value = false ở đây thì Client mới hết lỗi
                 station.isOccupied.Value = false; 
             }
         }
@@ -154,7 +154,13 @@ public class AscensionManager : NetworkBehaviour
         }
         else
         {
-            Debug.Log("Có viên đặt sai vị trí! Văng hết ra!");
+            Debug.Log("Có viên sai! Chờ tí rồi văng ra...");
+            StartCoroutine(DelayEject()); // Thay vì gọi thẳng EjectAllCrystals()
+        }
+
+        IEnumerator DelayEject()
+        {
+            yield return new WaitForSeconds(0.2f); // Đợi 0.2s cho mọi thứ ổn định
             EjectAllCrystals();
         }
     }
