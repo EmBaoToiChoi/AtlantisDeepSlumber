@@ -5,48 +5,71 @@
     width: 100%;
     height: 100%;
     padding: 35px;
-    background-color: rgba(0, 4, 8, 0.35);
-    /* Abyssal vignette to highlight center viewport and panels */
-    background-image: linear-gradient(180deg, rgba(0, 8, 16, 0.8) 0%, rgba(0, 4, 8, 0.2) 25%, rgba(0, 4, 8, 0.2) 75%, rgba(0, 4, 10, 0.85) 100%);
+    background-color: transparent;
     justify-content: space-between;
 }
 
 /* GLASSMORPHISM & SCI-FI CORE */
 .glass-panel {
-    background-image: linear-gradient(180deg, rgba(2, 12, 26, 0.95), rgba(1, 6, 15, 0.97));
+    background-color: rgba(2, 16, 32, 0.65);
     border-width: 1px;
-    border-color: rgba(0, 229, 255, 0.25);
+    border-color: rgba(0, 229, 255, 0.35);
     border-radius: 8px;
-    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.75);
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4);
 }
 
 .glow-border {
     border-color: rgba(0, 229, 255, 0.45);
 }
 
-/* HUD DECORATIONS & TAGS */
-.top-bar-left {
+/* TOP INFO COMBINED WIDGET */
+.top-info-panel {
     flex-direction: column;
     justify-content: center;
+    align-items: flex-start;
+    background-color: rgba(2, 16, 32, 0.65); /* Translucent ice-blue glass */
+    padding: 12px 20px;
+    border-width: 1px;
+    border-color: rgba(0, 229, 255, 0.35);
+    border-left-width: 4px;
+    border-left-color: rgb(0, 229, 255);
+    /* Cyber diagonal cuts matching sidebar below it */
+    border-top-right-radius: 12px;
+    border-bottom-left-radius: 12px;
+    border-top-left-radius: 2px;
+    border-bottom-right-radius: 2px;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.45);
+    width: 320px; /* Symmetrical vertical alignment with character selection panel */
+}
+
+.top-info-row {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    align-self: stretch;
 }
 
 .top-bar-decor-row {
     flex-direction: row;
     align-items: center;
-    margin-top: 4px;
+    margin-top: 8px;
+    border-top-width: 1px;
+    border-top-color: rgba(0, 229, 255, 0.15);
+    padding-top: 6px;
+    width: 100%;
 }
 
 .top-bar-decor-tag {
     color: rgba(0, 190, 255, 0.5);
-    font-size: 9px;
-    letter-spacing: 2px;
+    font-size: 8.5px;
+    letter-spacing: 1.5px;
     -unity-font-style: bold;
 }
 
 .top-bar-decor-dot {
     color: rgb(0, 255, 128);
     font-size: 8px;
-    margin: 0 8px;
+    margin: 0 6px;
     text-shadow: 0 0 6px rgb(0, 255, 128);
 }
 
@@ -54,52 +77,48 @@
     color: rgb(0, 255, 128);
 }
 
-/* TOP BAR */
+/* TOP BAR CONTAINER */
 .waiting-top-bar {
     flex-direction: row;
     justify-content: space-between;
     align-items: center;
-    padding: 14px 30px;
-    background-image: linear-gradient(135deg, rgba(2, 12, 24, 0.95), rgba(1, 8, 16, 0.9));
-    border-width: 1px;
-    border-color: rgba(0, 229, 255, 0.25);
-    border-bottom-width: 3px;
-    border-bottom-color: rgb(0, 229, 255);
-    /* Cyber cut corners */
-    border-bottom-left-radius: 16px;
-    border-bottom-right-radius: 16px;
-    border-top-left-radius: 4px;
-    border-top-right-radius: 4px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    padding: 12px 0;
+    background-color: transparent;
+    border-width: 0;
+    box-shadow: none;
 }
 
 .room-title {
     color: rgb(200, 245, 255);
-    font-size: 22px;
+    font-size: 15px;
     -unity-font-style: bold;
-    letter-spacing: 4px;
-    text-shadow: 0 0 12px rgba(0, 229, 255, 0.7);
+    letter-spacing: 2px;
+    text-shadow: 0 0 8px rgba(0, 229, 255, 0.4);
+    flex-shrink: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .room-id-badge {
-    background-color: rgba(0, 229, 255, 0.08);
-    border-width: 1.5px;
+    background-color: rgba(0, 229, 255, 0.12);
+    border-width: 1px;
     border-color: rgba(0, 229, 255, 0.45);
     color: rgb(0, 255, 255);
-    padding: 8px 18px;
-    font-size: 13px;
-    border-radius: 6px;
+    padding: 4px 10px;
+    font-size: 11px;
+    border-radius: 4px;
     -unity-font-style: bold;
-    letter-spacing: 2.5px;
-    text-shadow: 0 0 8px rgba(0, 255, 255, 0.5);
-    transition: all 0.25s ease-out;
+    letter-spacing: 1px;
+    text-shadow: 0 0 6px rgba(0, 255, 255, 0.4);
+    transition: all 0.2s ease-out;
+    flex-shrink: 0;
+    margin-left: 12px;
 }
 
 .room-id-badge:hover {
+    scale: 1.05;
     background-color: rgba(0, 229, 255, 0.2);
     border-color: rgb(0, 255, 255);
-    scale: 1.05;
-    text-shadow: 0 0 12px rgb(0, 255, 255);
 }
 
 /* MIDDLE MAIN CONTAINER */
@@ -120,9 +139,9 @@
     padding: 22px 18px;
     justify-content: flex-start;
     margin-left: 25px;
-    background-image: linear-gradient(180deg, rgba(2, 12, 26, 0.96), rgba(1, 6, 15, 0.98));
+    background-color: rgba(2, 16, 32, 0.65);
     border-width: 1px;
-    border-color: rgba(0, 229, 255, 0.25);
+    border-color: rgba(0, 229, 255, 0.35);
     border-left-width: 4px;
     border-left-color: rgb(0, 229, 255);
     /* Cyber diagonal radius matching Main Menu */
@@ -130,8 +149,13 @@
     border-bottom-left-radius: 20px;
     border-top-left-radius: 4px;
     border-bottom-right-radius: 4px;
-    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.6);
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
     transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.panel-hidden-state {
+    opacity: 0;
+    translate: 350px 0;
 }
 
 .panel-section-title {
@@ -165,7 +189,7 @@
 .char-card {
     flex-direction: row;
     align-items: center;
-    background-image: linear-gradient(to right, rgba(2, 20, 38, 0.65), rgba(1, 10, 20, 0.35));
+    background-color: rgba(2, 16, 32, 0.4);
     border-radius: 6px;
     padding: 10px 14px;
     margin-bottom: 10px;
@@ -177,7 +201,7 @@
 }
 
 .char-card:hover {
-    background-image: linear-gradient(to right, rgba(0, 42, 80, 0.8), rgba(2, 20, 42, 0.5));
+    background-color: rgba(0, 36, 72, 0.55);
     border-left-color: rgb(0, 255, 255);
     border-color: rgba(0, 255, 255, 0.45);
     scale: 1.03;
@@ -187,7 +211,7 @@
 }
 
 .select-active {
-    background-image: linear-gradient(to right, rgba(0, 229, 255, 0.16), rgba(0, 229, 255, 0.04));
+    background-color: rgba(0, 229, 255, 0.12);
     border-left-width: 5px;
     border-left-color: rgb(0, 255, 255);
     border-color: rgba(0, 255, 255, 0.5);
@@ -308,7 +332,7 @@
     border-left-color: rgb(0, 229, 255);
     border-width: 1px;
     border-color: rgba(0, 229, 255, 0.25);
-    background-image: linear-gradient(135deg, rgba(2, 14, 30, 0.98), rgba(1, 8, 18, 0.99));
+    background-color: rgba(2, 16, 32, 0.85);
     /* Diagonal cut style matching panels */
     border-top-right-radius: 24px;
     border-bottom-left-radius: 24px;
@@ -423,8 +447,7 @@
 }
 
 .details-skill-box {
-    flex-direction: row;
-    background-image: linear-gradient(to right, rgba(0, 229, 255, 0.06), rgba(0, 229, 255, 0.01));
+    background-color: rgba(0, 229, 255, 0.05);
     border-radius: 6px;
     padding: 12px 18px;
     margin-bottom: 10px;
@@ -435,7 +458,7 @@
 }
 
 .details-skill-box:hover {
-    background-image: linear-gradient(to right, rgba(0, 229, 255, 0.14), rgba(0, 229, 255, 0.03));
+    background-color: rgba(0, 229, 255, 0.1);
     border-color: rgba(0, 229, 255, 0.4);
     scale: 1.02;
     translate: 4px 0;
@@ -481,24 +504,16 @@
     text-align: center;
 }
 
-/* BOTTOM AREA */
+/* BOTTOM AREA (FLOATING & TRANSPARENT) */
 .waiting-footer {
     flex-direction: row;
     justify-content: space-between;
     align-items: center;
-    background-image: linear-gradient(to top, rgba(2, 12, 26, 0.96), rgba(1, 6, 15, 0.94));
-    padding: 18px 30px;
-    /* Diagonal/cyber feel */
-    border-top-left-radius: 16px;
-    border-top-right-radius: 16px;
-    border-bottom-left-radius: 4px;
-    border-bottom-right-radius: 4px;
-    border-width: 1px;
-    border-color: rgba(0, 229, 255, 0.25);
-    border-top-width: 3px;
-    border-top-color: rgb(0, 229, 255);
+    background-color: transparent;
+    padding: 15px 0;
+    border-width: 0;
     margin-top: 15px;
-    box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.5);
+    box-shadow: none;
 }
 
 .left-actions {
@@ -586,7 +601,6 @@
 }
 
 .start-btn {
-    background-color: rgba(255, 165, 橙, 0.12); /* Note: Fix any non-unicode or mistranslated color if copy-pasted */
     background-color: rgba(255, 165, 0, 0.12);
     border-color: rgba(255, 165, 0, 0.35);
     border-left-color: rgb(255, 165, 0);
