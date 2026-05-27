@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using Unity.Netcode;
 using DG.Tweening;
+using System.Collections.Generic;
 
 public class OptimizedNetworkMiniGame : NetworkBehaviour
 {
@@ -22,9 +23,9 @@ public class OptimizedNetworkMiniGame : NetworkBehaviour
     public Color normalColor = new Color(0.2f, 0.2f, 0.2f, 0.4f);
     public Color activeColor = Color.white;
 
-    [Header("Bánh Răng")]
-    public GearRotator gear1;
-    public GearRotator gear2;
+
+    [Header("Danh sách Bánh Răng")]
+    public List<GearRotator> gearList; // Bạn có thể thêm bao nhiêu bánh răng tùy thích trong Inspector
 
     private NetworkList<float> stationValues;
     private NetworkList<ulong> stationOwners;
@@ -116,50 +117,61 @@ public class OptimizedNetworkMiniGame : NetworkBehaviour
                 }
             }
 
+            // Thay đổi ở đây: Kiểm tra danh sách bánh răng
             if (totalOccupied >= 2 && activeInGreenZone == totalOccupied)
             {
-                if (!isCurrentlyOpen) { isCurrentlyOpen = true; gear1.OpenGear(); gear2.OpenGear(); }
+                if (!isCurrentlyOpen) 
+                { 
+                    isCurrentlyOpen = true; 
+                    foreach (var gear in gearList) // Dùng vòng lặp duyệt qua danh sách
+                    {
+                        if (gear != null) gear.OpenGear();
+                    }
+                }
             }
             else if (isCurrentlyOpen)
             {
                 isCurrentlyOpen = false;
-                gear1.CloseGear(); gear2.CloseGear();
+                foreach (var gear in gearList) // Dùng vòng lặp đóng tất cả
+                {
+                    if (gear != null) gear.CloseGear();
+                }
             }
         }
-    }
 
-    void HandleQTEInput()
-    {
-        if (Input.GetKeyDown(KeyCode.A)) ProcessInput(true, isANeeded.Value);
-        else if (Input.GetKeyDown(KeyCode.D)) ProcessInput(false, !isANeeded.Value);
-    }
-
-    void ProcessInput(bool isA, bool isCorrect)
-    {
-        if (isCorrect)
+        void HandleQTEInput()
         {
-            PlaySuccessTween(isA ? imgA : imgD);
-            UpdateSliderServerRpc(currentStationIndex, pushAmount);
-            RandomizeButtonServerRpc(); // Random lại nút ngay khi nhấn đúng
+            if (Input.GetKeyDown(KeyCode.A)) ProcessInput(true, isANeeded.Value);
+            else if (Input.GetKeyDown(KeyCode.D)) ProcessInput(false, !isANeeded.Value);
         }
-        else
+
+        void ProcessInput(bool isA, bool isCorrect)
         {
-            PlayFailTween(isA ? imgA : imgD);
-            UpdateSliderServerRpc(currentStationIndex, -penaltyAmount);
+            if (isCorrect)
+            {
+                PlaySuccessTween(isA ? imgA : imgD);
+                UpdateSliderServerRpc(currentStationIndex, pushAmount);
+                RandomizeButtonServerRpc(); // Random lại nút ngay khi nhấn đúng
+            }
+            else
+            {
+                PlayFailTween(isA ? imgA : imgD);
+                UpdateSliderServerRpc(currentStationIndex, -penaltyAmount);
+            }
         }
-    }
 
-    void PlaySuccessTween(Image targetImg)
-    {
-        targetImg.transform.DOKill();
-        targetImg.transform.DOScale(1.2f, 0.1f).OnComplete(() => targetImg.transform.DOScale(1f, 0.1f));
-        targetImg.DOColor(Color.green, 0.1f).OnComplete(() => targetImg.DOColor(activeColor, 0.2f));
-    }
+        void PlaySuccessTween(Image targetImg)
+        {
+            targetImg.transform.DOKill();
+            targetImg.transform.DOScale(1.2f, 0.1f).OnComplete(() => targetImg.transform.DOScale(1f, 0.1f));
+            targetImg.DOColor(Color.green, 0.1f).OnComplete(() => targetImg.DOColor(activeColor, 0.2f));
+        }
 
-    void PlayFailTween(Image targetImg)
-    {
-        targetImg.transform.DOKill();
-        targetImg.transform.DOPunchPosition(new Vector3(10f, 0f, 0f), 0.2f, 10, 0.5f);
-        targetImg.DOColor(Color.red, 0.1f).OnComplete(() => targetImg.DOColor(normalColor, 0.2f));
+        void PlayFailTween(Image targetImg)
+        {
+            targetImg.transform.DOKill();
+            targetImg.transform.DOPunchPosition(new Vector3(10f, 0f, 0f), 0.2f, 10, 0.5f);
+            targetImg.DOColor(Color.red, 0.1f).OnComplete(() => targetImg.DOColor(normalColor, 0.2f));
+        }
     }
 }
