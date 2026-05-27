@@ -4,7 +4,14 @@
     <ui:VisualElement name="waiting-room-root" class="waiting-room-overlay">
         <!-- TOP INFO BAR -->
         <ui:VisualElement class="waiting-top-bar">
-            <ui:Label name="lbl-room-name" text="SESSION: EXPLORER" class="room-title" />
+            <ui:VisualElement class="top-bar-left">
+                <ui:Label name="lbl-room-name" text="SESSION: EXPLORER" class="room-title" />
+                <ui:VisualElement class="top-bar-decor-row">
+                    <ui:Label text="SECURE CONNECTION" class="top-bar-decor-tag" />
+                    <ui:Label text="●" class="top-bar-decor-dot active-dot" />
+                    <ui:Label text="DEEP SECTOR: ATLANTIS" class="top-bar-decor-tag" />
+                </ui:VisualElement>
+            </ui:VisualElement>
             <ui:Label name="lbl-room-id" text="ID: #XXXXXX" class="room-id-badge" />
         </ui:VisualElement>
 
@@ -16,6 +23,7 @@
             <!-- RIGHT SIDE (CHARACTER SELECTION) -->
             <ui:VisualElement name="char-select-panel" class="char-select-panel glass-panel glow-border">
                 <ui:Label text="CHOOSE YOUR EXPLORER" class="panel-section-title" />
+                <ui:Label text="GRID COORDINATE: EXP-88" class="panel-section-subtitle" />
                 <ui:VisualElement class="char-cards-container">
                     <!-- Character Card 0 -->
                     <ui:VisualElement name="char-card-0" class="char-card select-active">
@@ -77,7 +85,7 @@
 
             <!-- RIGHT ACTIONS & PLAYER COUNT -->
             <ui:VisualElement style="flex-direction: row; align-items: center;">
-                <ui:Button name="btn-toggle-char-panel" text="CHOOSE EXPLORER" class="action-btn toggle-char-panel-btn ready-btn" style="margin-right: 15px;" />
+                <ui:Button name="btn-toggle-char-panel" text="CHOOSE EXPLORER" class="action-btn toggle-char-panel-btn" style="margin-right: 15px;" />
                 <ui:VisualElement class="player-count-container">
                     <ui:Label name="lbl-player-count" text="PLAYERS: 1/4" class="status-text" />
                 </ui:VisualElement>
