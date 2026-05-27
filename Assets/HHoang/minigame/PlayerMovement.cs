@@ -97,8 +97,8 @@ public class PlayerMovement : NetworkBehaviour
         foreach (var hit in hitColliders)
         {
             CrystalCore core = hit.GetComponent<CrystalCore>();
-            // CẬP NHẬT: Chỉ nhặt nếu core khác null VÀ chưa bị cắm trụ (isSnapped == false)
-            if (core != null && !core.isSnapped) 
+            // Kiểm tra .Value của NetworkVariable
+            if (core != null && !core.isSnapped.Value) 
             {
                 currentHeldCore = core;
                 core.RequestPickup(OwnerClientId);

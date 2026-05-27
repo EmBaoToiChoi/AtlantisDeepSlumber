@@ -30,7 +30,8 @@ public class AscensionManager : NetworkBehaviour
         Rigidbody rb = crystal.GetComponent<Rigidbody>();
         if (rb != null) rb.isKinematic = true;
         
-        crystal.isSnapped = true; // <--- CẬP NHẬT: Khóa không cho nhặt
+        //Gọi ServerRpc để cập nhật trạng thái đồng bộ
+        UpdateSnappedStateServerRpc(crystal.NetworkObject, true);
 
         // 2. Lưu thông tin
         pillarStates[stationIndex] = crystal.crystalID; 
@@ -44,6 +45,15 @@ public class AscensionManager : NetworkBehaviour
         }
         
         CheckWinCondition();
+    }
+    [ServerRpc(RequireOwnership = false)]
+    private void UpdateSnappedStateServerRpc(NetworkObjectReference crystalRef, bool state)
+    {
+        if (crystalRef.TryGet(out NetworkObject netObj))
+        {
+            var crystal = netObj.GetComponent<CrystalCore>();
+            if (crystal != null) crystal.isSnapped.Value = state;
+        }
     }
 
     IEnumerator TimerCountdown()
@@ -86,32 +96,24 @@ public class AscensionManager : NetworkBehaviour
         {
             if (crystal != null)
             {
+                UpdateSnappedStateServerRpc(crystal.NetworkObject, false);
                 Rigidbody rb = crystal.GetComponent<Rigidbody>();
                 if (rb != null) 
                 {
                     rb.isKinematic = false;
-                    // Đẩy tinh thể văng ra
                     rb.AddForce(new Vector3(Random.Range(-2f, 2f), 5f, Random.Range(-2f, 2f)), ForceMode.Impulse);
                 }
             }
         }
-
-        // RESET TRẠNG THÁI TRỤ
         foreach (var pillar in pillarPositions)
         {
             PillarStation station = pillar.GetComponent<PillarStation>();
-            if (station != null) station.isOccupied = false; // Mở khóa trụ
+            if (station != null) station.isOccupied = false;
         }
-
-        // Reset hệ thống
         placedCrystals.Clear();
         for (int i = 0; i < pillarStates.Length; i++) pillarStates[i] = 0;
-        
-        // Dừng đếm giờ nếu đang chạy
         if (timerCoroutine != null) StopCoroutine(timerCoroutine);
         isTimerRunning = false;
-        
-        Debug.Log("Hệ thống đã reset toàn bộ.");
     }
 
     void CheckWinCondition()
