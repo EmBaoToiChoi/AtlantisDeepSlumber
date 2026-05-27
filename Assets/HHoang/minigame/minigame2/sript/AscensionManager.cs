@@ -90,13 +90,16 @@ public class AscensionManager : NetworkBehaviour
         isTimerRunning = false;
     }
 
+    // Trong AscensionManager.cs, sửa hàm EjectAllCrystals
     void EjectAllCrystals()
     {
         foreach (var crystal in placedCrystals)
         {
             if (crystal != null)
             {
-                UpdateSnappedStateServerRpc(crystal.NetworkObject, false);
+                // CẬP NHẬT: Phải set về false để nhặt lại được
+                UpdateSnappedStateServerRpc(crystal.NetworkObject, false); 
+                
                 Rigidbody rb = crystal.GetComponent<Rigidbody>();
                 if (rb != null) 
                 {
@@ -105,15 +108,25 @@ public class AscensionManager : NetworkBehaviour
                 }
             }
         }
+
+        // RESET TRẠNG THÁI TRỤ
         foreach (var pillar in pillarPositions)
         {
             PillarStation station = pillar.GetComponent<PillarStation>();
-            if (station != null) station.isOccupied = false;
+            if (station != null) 
+            {
+                // Reset qua .Value
+                station.isOccupied.Value = false; 
+            }
         }
+
         placedCrystals.Clear();
         for (int i = 0; i < pillarStates.Length; i++) pillarStates[i] = 0;
+        
         if (timerCoroutine != null) StopCoroutine(timerCoroutine);
         isTimerRunning = false;
+        
+        Debug.Log("Hệ thống đã reset toàn bộ và mở khóa tinh thể.");
     }
 
     void CheckWinCondition()
