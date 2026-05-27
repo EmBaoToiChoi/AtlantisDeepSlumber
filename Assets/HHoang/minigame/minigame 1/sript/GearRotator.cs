@@ -12,6 +12,7 @@ public class GearRotator : NetworkBehaviour
     [Header("Cấu hình trượt mở cổng")]
     public Vector3 openOffset = new Vector3(-5f, 0, 0);
     public float moveDuration = 2f;
+    public Vector3 rotationAxis = Vector3.up;
     private Vector3 originalPosition;
 
     private NetworkVariable<float> currentSpeed = new NetworkVariable<float>(0f, 
@@ -37,7 +38,7 @@ public class GearRotator : NetworkBehaviour
     {
         if (currentSpeed.Value != 0)
         {
-            transform.Rotate(Vector3.up * currentSpeed.Value * Time.deltaTime, Space.Self);
+            transform.Rotate(rotationAxis.normalized * currentSpeed.Value * Time.deltaTime, Space.Self);
         }
     }
 
