@@ -4,34 +4,28 @@ using Unity.Netcode;
 public class PillarStation : NetworkBehaviour
 {
     public int stationIndex;
-    public AscensionManager manager; // Kéo AscensionController vào đây
+    public AscensionManager manager;
     public Transform snapPosition;
-    // Thay dòng cũ bằng dòng này
-    public NetworkVariable<bool> isOccupied = new NetworkVariable<bool>(false);
 
-    // ĐÃ BỎ: isPlayerInZone, OnTriggerEnter, OnTriggerExit
-    // Vì giờ đây PlayerMovement tự biết nó đang đứng ở trạm nào thông qua InteractBox
+    // SỬA: Phải dùng NetworkVariable để đồng bộ mạng
+    public NetworkVariable<bool> isOccupied = new NetworkVariable<bool>(false);
 
     // Gọi hàm này từ InteractBox/PlayerMovement khi nhấn E
     public bool TryInteract(PlayerMovement player)
     {
-        // Đọc giá trị .Value của NetworkVariable
+        Debug.Log($"Trụ {stationIndex} báo Occupied: {isOccupied.Value}");
+        Debug.Log($"Player đang cầm: {player.currentHeldCore}"); // XEM NÓ CÓ BỊ NULL KHÔNG
         if (isOccupied.Value) return false; 
 
         if (player.currentHeldCore != null)
         {
-            // 1. Gửi lệnh lên Server để "hút" tinh thể (vẫn giữ nguyên)
             RequestSnapServerRpc(player.currentHeldCore.NetworkObject.NetworkObjectId, stationIndex);
             
-            // 2. Tắt liên kết với player
             player.currentHeldCore.RequestDrop(player.OwnerClientId);
             player.currentHeldCore = null;
             player.SetCarryingCoreServerRpc(false);
             
-            // KHÔNG GÁN isOccupied = true TẠI ĐÂY NỮA
-            // Vì hành động này phải do Server thực hiện để đồng bộ cho tất cả mọi người
-            
-            return true; 
+            return true;
         }
         return false;
     }
@@ -45,8 +39,7 @@ public class PillarStation : NetworkBehaviour
             if (manager != null && crystal != null)
             {
                 manager.SnapCrystalToPillar(crystal, index);
-                
-                // CẬP NHẬT GIÁ TRỊ QUA .Value
+                // SỬA: Cập nhật .Value trên Server, nó sẽ tự gửi xuống Client
                 isOccupied.Value = true; 
             }
         }
