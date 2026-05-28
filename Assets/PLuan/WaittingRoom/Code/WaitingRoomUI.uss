@@ -374,10 +374,12 @@
 .close-btn-visual {
     width: 38px;
     height: 38px;
-    border-radius: 50%;
-    background-color: rgba(2, 10, 22, 0.85);
-    border-width: 1.5px;
-    border-color: rgba(0, 229, 255, 0.35);
+    border-top-left-radius: 100%;
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 100%;
+    border-bottom-left-radius: 50%;
+    border-width: 1px;
+    border-color: rgba(0, 255, 128, 0.35);
     align-items: center;
     justify-content: center;
     transition: background-color 0.2s ease-out, border-color 0.2s ease-out, scale 0.2s;
