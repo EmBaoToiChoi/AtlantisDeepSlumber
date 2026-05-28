@@ -5,6 +5,11 @@ using Unity.Netcode;
 public class PlayerWaitingRoomUI : NetworkBehaviour
 {
     [SerializeField] private TMP_Text _nameTag; 
+    
+    [Header("3D Character Models")]
+    [Tooltip("Gán 4 GameObject/Mesh của 4 nhân vật tương ứng: 0=Atlas, 1=Nyx, 2=Aurelia, 3=Titan")]
+    [SerializeField] private GameObject[] _characterModels = new GameObject[4];
+
     private NetworkWaitingRoom _manager;
     private int _lastCharId = -1;
 
@@ -15,6 +20,27 @@ public class PlayerWaitingRoomUI : NetworkBehaviour
     {
         _manager = FindFirstObjectByType<NetworkWaitingRoom>();
         if (_nameTag == null) _nameTag = GetComponentInChildren<TMP_Text>();
+
+        // Tự động tìm kiếm các model/mesh trong con nếu chưa được gán trong Inspector
+        if (_characterModels == null || _characterModels.Length == 0 || (_characterModels.Length == 4 && _characterModels[0] == null))
+        {
+            _characterModels = new GameObject[4];
+            Transform childAtlas = transform.Find("Atlas");
+            if (childAtlas == null) childAtlas = transform.Find("atlas");
+            if (childAtlas != null) _characterModels[0] = childAtlas.gameObject;
+
+            Transform childNyx = transform.Find("Nyx");
+            if (childNyx == null) childNyx = transform.Find("nyx");
+            if (childNyx != null) _characterModels[1] = childNyx.gameObject;
+
+            Transform childAurelia = transform.Find("Aurelia");
+            if (childAurelia == null) childAurelia = transform.Find("aurelia");
+            if (childAurelia != null) _characterModels[2] = childAurelia.gameObject;
+
+            Transform childTitan = transform.Find("Titan");
+            if (childTitan == null) childTitan = transform.Find("titan");
+            if (childTitan != null) _characterModels[3] = childTitan.gameObject;
+        }
 
         // Tự động thêm CapsuleCollider nếu chưa có để hỗ trợ tính năng Raycast Shift + Left Click
         if (GetComponent<Collider>() == null)
@@ -95,11 +121,15 @@ public class PlayerWaitingRoomUI : NetworkBehaviour
     {
         Debug.Log($"[PlayerUI] ClientId={OwnerClientId} đã chuyển sang nhân vật {GetCharacterName(newCharId)} (ID: {newCharId})");
         
-        // HOOK ĐỂ DEV THAY ĐỔI MESH 3D SAU NÀY:
-        // switch (newCharId) {
-        //     case 0: ActiveAtlasMesh(); break;
-        //     case 1: ActiveNyxMesh(); break;
-        //     ...
-        // }
+        if (_characterModels == null || _characterModels.Length == 0) return;
+
+        // Bật GameObject của nhân vật được chọn và tắt tất cả các nhân vật khác
+        for (int i = 0; i < _characterModels.Length; i++)
+        {
+            if (_characterModels[i] != null)
+            {
+                _characterModels[i].SetActive(i == newCharId);
+            }
+        }
     }
 }

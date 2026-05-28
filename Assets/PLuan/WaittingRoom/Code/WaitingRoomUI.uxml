@@ -9,6 +9,16 @@
             
             <!-- Combined Info Panel -->
             <ui:VisualElement class="top-info-panel">
+                <ui:VisualElement class="panel-seaweed-top-right">
+                    <ui:VisualElement class="seaweed-leaf leaf-1" />
+                    <ui:VisualElement class="seaweed-leaf leaf-2" />
+                    <ui:VisualElement class="seaweed-leaf leaf-3" />
+                </ui:VisualElement>
+                <ui:VisualElement class="panel-seaweed-bottom-left">
+                    <ui:VisualElement class="seaweed-leaf leaf-1" />
+                    <ui:VisualElement class="seaweed-leaf leaf-2" />
+                    <ui:VisualElement class="seaweed-leaf leaf-3" />
+                </ui:VisualElement>
                 <ui:VisualElement class="top-info-row">
                     <ui:Label name="lbl-room-name" text="SESSION: EXPLORER" class="room-title" />
                     <ui:Label name="lbl-room-id" text="ID: #XXXXXX" class="room-id-badge" />
@@ -28,6 +38,16 @@
 
             <!-- RIGHT SIDE (CHARACTER SELECTION) -->
             <ui:VisualElement name="char-select-panel" class="char-select-panel glass-panel glow-border">
+                <ui:VisualElement class="panel-seaweed-top-right">
+                    <ui:VisualElement class="seaweed-leaf leaf-1" />
+                    <ui:VisualElement class="seaweed-leaf leaf-2" />
+                    <ui:VisualElement class="seaweed-leaf leaf-3" />
+                </ui:VisualElement>
+                <ui:VisualElement class="panel-seaweed-bottom-left">
+                    <ui:VisualElement class="seaweed-leaf leaf-1" />
+                    <ui:VisualElement class="seaweed-leaf leaf-2" />
+                    <ui:VisualElement class="seaweed-leaf leaf-3" />
+                </ui:VisualElement>
                 <ui:Label text="CHOOSE YOUR EXPLORER" class="panel-section-title" />
                 <ui:Label text="GRID COORDINATE: EXP-88" class="panel-section-subtitle" />
                 <ui:VisualElement class="char-cards-container">
@@ -102,6 +122,16 @@
         <!-- CHARACTER DETAILS POPUP (MODAL) -->
         <ui:VisualElement name="char-details-modal" class="details-modal hidden-element">
             <ui:VisualElement class="details-container glow-border">
+                <ui:VisualElement class="panel-seaweed-top-right">
+                    <ui:VisualElement class="seaweed-leaf leaf-1" />
+                    <ui:VisualElement class="seaweed-leaf leaf-2" />
+                    <ui:VisualElement class="seaweed-leaf leaf-3" />
+                </ui:VisualElement>
+                <ui:VisualElement class="panel-seaweed-bottom-left">
+                    <ui:VisualElement class="seaweed-leaf leaf-1" />
+                    <ui:VisualElement class="seaweed-leaf leaf-2" />
+                    <ui:VisualElement class="seaweed-leaf leaf-3" />
+                </ui:VisualElement>
                 <ui:Button name="btn-close-details" class="close-btn-hitbox">
                     <ui:VisualElement class="close-btn-visual">
                         <ui:Label text="X" class="close-btn-text" />
@@ -151,6 +181,16 @@
         <!-- SWAP REQUEST MODAL -->
         <ui:VisualElement name="swap-request-modal" class="details-modal hidden-element">
             <ui:VisualElement class="details-container glow-border" style="width: 420px; padding: 30px; align-items: center; border-left-color: rgb(255, 165, 0);">
+                <ui:VisualElement class="panel-seaweed-top-right">
+                    <ui:VisualElement class="seaweed-leaf leaf-1" />
+                    <ui:VisualElement class="seaweed-leaf leaf-2" />
+                    <ui:VisualElement class="seaweed-leaf leaf-3" />
+                </ui:VisualElement>
+                <ui:VisualElement class="panel-seaweed-bottom-left">
+                    <ui:VisualElement class="seaweed-leaf leaf-1" />
+                    <ui:VisualElement class="seaweed-leaf leaf-2" />
+                    <ui:VisualElement class="seaweed-leaf leaf-3" />
+                </ui:VisualElement>
                 <ui:Label text="CHARACTER SWAP REQUEST" class="details-char-role" style="font-size: 16px; letter-spacing: 2px; color: rgb(255, 165, 0); margin-bottom: 15px; -unity-font-style: bold;" />
                 <ui:Label name="lbl-swap-request-msg" text="Player 2 wants to swap Atlas with your Nyx." class="details-char-desc" style="text-align: center; font-size: 14px; margin-bottom: 25px; white-space: normal; -unity-text-wrap: true;" />
                 
