@@ -218,6 +218,21 @@
     box-shadow: 0 0 15px rgba(0, 229, 255, 0.25);
 }
 
+.card-locked {
+    opacity: 0.45;
+    border-left-color: rgba(255, 71, 87, 0.4);
+    border-color: rgba(255, 71, 87, 0.2);
+}
+
+.card-locked:hover {
+    background-color: rgba(2, 16, 32, 0.4);
+    border-left-color: rgba(255, 71, 87, 0.4);
+    border-color: rgba(255, 71, 87, 0.2);
+    scale: 1;
+    translate: 0 0;
+    box-shadow: none;
+}
+
 .char-card-portrait {
     width: 46px;
     height: 46px;

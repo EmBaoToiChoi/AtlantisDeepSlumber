@@ -18,7 +18,13 @@ app.use(express.json());
 
 // ─── MongoDB ──────────────────────────────────────────────────────────────────
 mongoose.connect(process.env.MONGO_URI)
-    .then(() => console.log('[DB] MongoDB Atlas connected'))
+    .then(() => {
+        console.log('[DB] MongoDB Atlas connected');
+        // Tự động đồng bộ các index để xóa bỏ những index cũ (như unique index của host cũ)
+        Room.syncIndexes()
+            .then(() => console.log('[DB] Room indexes synced successfully'))
+            .catch(err => console.error('[DB] Room index sync error:', err));
+    })
     .catch(err => { console.error('[DB] Connection error:', err); process.exit(1); });
 
 // ─── Nodemailer ───────────────────────────────────────────────────────────────
@@ -327,7 +333,7 @@ app.post('/api/rooms/create', authenticateToken, async (req, res) => {
         res.json({ success: true, message: 'Tạo phòng thành công!', room });
     } catch (err) {
         console.error('[CreateRoom]', err);
-        res.status(500).json({ success: false, message: 'Lỗi khi tạo phòng.' });
+        res.status(500).json({ success: false, message: `Lỗi khi tạo phòng: ${err.message}` });
     }
 });
 
@@ -370,7 +376,7 @@ app.post('/api/rooms/join', authenticateToken, async (req, res) => {
         res.json({ success: true, message: 'Tham gia phòng thành công!', room });
     } catch (err) {
         console.error('[JoinRoom]', err);
-        res.status(500).json({ success: false, message: 'Lỗi khi tham gia phòng.' });
+        res.status(500).json({ success: false, message: `Lỗi khi tham gia phòng: ${err.message}` });
     }
 });
 
@@ -386,7 +392,7 @@ app.get('/api/rooms', async (req, res) => {
         res.json({ success: true, rooms });
     } catch (err) {
         console.error('[GetRooms List]', err);
-        res.status(500).json({ success: false, message: 'Lỗi khi lấy danh sách phòng.' });
+        res.status(500).json({ success: false, message: `Lỗi khi lấy danh sách phòng: ${err.message}` });
     }
 });
 
@@ -400,7 +406,7 @@ app.get('/api/rooms/:roomId', authenticateToken, async (req, res) => {
         res.json({ success: true, room });
     } catch (err) {
         console.error('[GetRoom]', err);
-        res.status(500).json({ success: false, message: 'Lỗi khi lấy thông tin phòng.' });
+        res.status(500).json({ success: false, message: `Lỗi khi lấy thông tin phòng: ${err.message}` });
     }
 });
 
@@ -435,7 +441,7 @@ app.post('/api/rooms/leave', authenticateToken, async (req, res) => {
         res.json({ success: true, message: 'Đã rời phòng thành công.', room });
     } catch (err) {
         console.error('[LeaveRoom]', err);
-        res.status(500).json({ success: false, message: 'Lỗi khi rời phòng.' });
+        res.status(500).json({ success: false, message: `Lỗi khi rời phòng: ${err.message}` });
     }
 });
 
@@ -464,7 +470,7 @@ app.get('/api/player/state', authenticateToken, async (req, res) => {
         res.json({ success: true, playerState: state });
     } catch (err) {
         console.error('[GetPlayerState]', err);
-        res.status(500).json({ success: false, message: 'Lỗi khi lấy trạng thái nhân vật.' });
+        res.status(500).json({ success: false, message: `Lỗi khi lấy trạng thái nhân vật: ${err.message}` });
     }
 });
 
@@ -492,7 +498,7 @@ app.post('/api/player/state', authenticateToken, async (req, res) => {
         res.json({ success: true, message: 'Lưu trạng thái nhân vật thành công!', playerState: user.playerState });
     } catch (err) {
         console.error('[SavePlayerState]', err);
-        res.status(500).json({ success: false, message: 'Lỗi khi lưu trạng thái nhân vật.' });
+        res.status(500).json({ success: false, message: `Lỗi khi lưu trạng thái nhân vật: ${err.message}` });
     }
 });
 

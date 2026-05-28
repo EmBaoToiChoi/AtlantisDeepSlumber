@@ -51,14 +51,31 @@ public class PlayerWaitingRoomUI : NetworkBehaviour
             _lastCharId = currentCharId;
         }
 
+        // Tự động ẩn/hiện Mesh Renderers tùy theo trạng thái đã chọn hay chưa (ẩn khi = -1)
+        SetMeshVisibility(currentCharId != -1);
+
         // Tên hiển thị màu Cyan Neon bắt mắt kết hợp với tên nhân vật trong ngoặc đơn và khung trạng thái
-        string charSub = currentCharId >= 0 && currentCharId < 4 ? GetCharacterName(currentCharId) : "EXPLORER";
+        string charSub = currentCharId >= 0 && currentCharId < 4 ? GetCharacterName(currentCharId) : "SELECTING...";
         _nameTag.text = $"<color=#00e5ff><b>{NetName.Value}</b></color> <size=80%><color=#80c8ff>({charSub})</color></size>\n\n{status}";
 
         // Cách xoay Billboard chuẩn nhất: Xoay cùng hướng với Camera
         if (Camera.main != null)
         {
             _nameTag.transform.rotation = Camera.main.transform.rotation;
+        }
+    }
+
+    private void SetMeshVisibility(bool visible)
+    {
+        Renderer[] renderers = GetComponentsInChildren<Renderer>(true);
+        foreach (var r in renderers)
+        {
+            // Không làm ẩn name tag / billboard text
+            if (_nameTag != null && (r.gameObject == _nameTag.gameObject || r.transform.IsChildOf(_nameTag.transform)))
+            {
+                continue;
+            }
+            r.enabled = visible;
         }
     }
 
@@ -70,7 +87,7 @@ public class PlayerWaitingRoomUI : NetworkBehaviour
             case 1: return "NYX";
             case 2: return "AURELIA";
             case 3: return "TITAN";
-            default: return "EXPLORER";
+            default: return "SELECTING...";
         }
     }
 
