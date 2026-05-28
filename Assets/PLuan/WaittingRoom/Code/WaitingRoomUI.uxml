@@ -148,5 +148,18 @@
             </ui:VisualElement>
         </ui:VisualElement>
 
+        <!-- SWAP REQUEST MODAL -->
+        <ui:VisualElement name="swap-request-modal" class="details-modal hidden-element">
+            <ui:VisualElement class="details-container glow-border" style="width: 420px; padding: 30px; align-items: center; border-left-color: rgb(255, 165, 0);">
+                <ui:Label text="CHARACTER SWAP REQUEST" class="details-char-role" style="font-size: 16px; letter-spacing: 2px; color: rgb(255, 165, 0); margin-bottom: 15px; -unity-font-style: bold;" />
+                <ui:Label name="lbl-swap-request-msg" text="Player 2 wants to swap Atlas with your Nyx." class="details-char-desc" style="text-align: center; font-size: 14px; margin-bottom: 25px; white-space: normal; -unity-text-wrap: true;" />
+                
+                <ui:VisualElement style="flex-direction: row; justify-content: space-around; width: 100%;">
+                    <ui:Button name="btn-swap-accept" text="ACCEPT" class="action-btn ready-btn" style="width: 150px; margin: 0; background-color: rgba(46, 213, 115, 0.15); border-left-color: rgb(46, 213, 115); color: rgb(46, 213, 115);" />
+                    <ui:Button name="btn-swap-decline" text="DECLINE" class="action-btn leave-btn" style="width: 150px; margin: 0;" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+        </ui:VisualElement>
+
     </ui:VisualElement>
 </ui:UXML>
