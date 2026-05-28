@@ -56,6 +56,15 @@ public class Enemy2_Zombie : NetworkBehaviour
     [Header("Melee Hitbox Settings")]
     public GameObject clawHitbox;
 
+    [Header("Experience Drops")]
+    public GameObject expGemPrefab;
+    public float expDropAmount = 20f;
+    public Transform expDropPoint; // Kéo Transform dưới chân quái vào đây
+
+    [Header("Item Drop Settings")]
+    public GameObject repairItemPrefab;
+    [Range(0f, 1f)] public float repairItemDropChance = 0.3f;
+
     [Header("AI Settings")]
     public float sightRange = 12f;
     public float fieldOfView = 110f;
@@ -382,18 +391,27 @@ public class Enemy2_Zombie : NetworkBehaviour
         bool isFrantic = CurrentHealthValue <= maxHealth * 0.4f;
         if (AgentReady) { agent.isStopped = false; agent.speed = isFrantic ? 6.5f : 4.5f; }
 
-        if (dist <= 6f)
+        if (dist <= 6f && dist > 3f)
         {
             tacticalTimer -= Time.deltaTime;
-            if (tacticalTimer <= 0) { float r = Random.value; if (r < 0.5f) tacticalState = 0; else if (r < 0.75f) tacticalState = 1; else tacticalState = 2; tacticalTimer = Random.Range(1f, 2f); }
+            if (tacticalTimer <= 0)
+            {
+                float r = Random.value;
+                // Tăng xác suất lao thẳng để tránh circling
+                if (r < 0.65f) tacticalState = 0;
+                else if (r < 0.82f) tacticalState = 1;
+                else tacticalState = 2;
+                tacticalTimer = Random.Range(1.5f, 2.5f);
+            }
             if (tacticalState == 0) { if (AgentReady) agent.SetDestination(targetPlayer.position); }
             else
             {
                 Vector3 tp = (targetPlayer.position - transform.position).normalized;
                 Vector3 tg = new Vector3(-tp.z, 0, tp.x); float sd = (tacticalState == 1) ? 1f : -1f;
-                Vector3 toff = targetPlayer.position - tp * 2.2f + tg * sd * 2.5f;
+                // Giảm offset ngang
+                Vector3 toff = targetPlayer.position + tg * sd * 2f;
                 NavMeshHit hit;
-                if (NavMesh.SamplePosition(toff, out hit, 3.5f, NavMesh.AllAreas)) { if (AgentReady) agent.SetDestination(hit.position); }
+                if (NavMesh.SamplePosition(toff, out hit, 3f, NavMesh.AllAreas)) { if (AgentReady) agent.SetDestination(hit.position); }
                 else { if (AgentReady) agent.SetDestination(targetPlayer.position); }
             }
         }
@@ -433,7 +451,13 @@ public class Enemy2_Zombie : NetworkBehaviour
         bool isFrantic = CurrentHealthValue <= maxHealth * 0.4f;
         float hitT = isFrantic ? 0.24f : 0.4f;
         if (elapsed >= hitT && !hasDealtDamage) { hasDealtDamage = true; DealConeDamage(isFrantic ? 15f : 12f, 2.0f, 90f, 4f); }
-        if (stateTimer <= 0) { attackCooldownTimer = isFrantic ? 0.15f : 0.6f; ChangeState(EnemyState.Run); }
+        if (stateTimer <= 0)
+        {
+            attackCooldownTimer = isFrantic ? 0.15f : 0.6f;
+            // Về Idle để AI clean-reset, frame sau sẽ phát hiện Player và tự chuyển Run
+            ChangeState(EnemyState.Idle);
+            detectionTimer = 0f;
+        }
     }
 
     private void DealConeDamage(float damage, float range, float angle, float knockback)
@@ -488,7 +512,78 @@ public class Enemy2_Zombie : NetworkBehaviour
     private void Die()
     {
         if (AgentReady) agent.isStopped = true;
+        DropExperience();
+        DropItems();
         Invoke(nameof(DespawnEnemy), 2f);
+    }
+
+    private void DropExperience()
+    {
+        if (expGemPrefab == null) return;
+        
+        string uniqueDropId = System.Guid.NewGuid().ToString();
+        Transform spawnPoint = expDropPoint != null ? expDropPoint : transform;
+        Vector3 basePos = spawnPoint.position;
+        
+        // Cấu hình khoảng cách cố định cách nhau 0.6m tạo thành hình vuông quanh tâm chân quái
+        float dist = 0.6f;
+        Vector3[] spawnPositions = new Vector3[]
+        {
+            basePos + new Vector3(dist, 0.1f, dist),
+            basePos + new Vector3(-dist, 0.1f, dist),
+            basePos + new Vector3(dist, 0.1f, -dist),
+            basePos + new Vector3(-dist, 0.1f, -dist)
+        };
+        
+        for (int i = 0; i < 4; i++)
+        {
+            Vector3 spawnPos = spawnPositions[i];
+            
+            if (isStandaloneMode)
+            {
+                GameObject gem = Instantiate(expGemPrefab, spawnPos, Quaternion.identity);
+                var gemScript = gem.GetComponent<ExperienceGem>();
+                if (gemScript != null)
+                {
+                    gemScript.expAmount = expDropAmount;
+                    gemScript.DropGroupId = uniqueDropId;
+                }
+            }
+            else if (IsServer)
+            {
+                GameObject gem = Instantiate(expGemPrefab, spawnPos, Quaternion.identity);
+                var gemScript = gem.GetComponent<ExperienceGem>();
+                if (gemScript != null)
+                {
+                    gemScript.expAmount = expDropAmount;
+                    gemScript.DropGroupId = uniqueDropId;
+                }
+                
+                var netObj = gem.GetComponent<NetworkObject>();
+                if (netObj != null) netObj.Spawn();
+            }
+        }
+    }
+
+    private void DropItems()
+    {
+        if (repairItemPrefab == null) return;
+        if (Random.value > repairItemDropChance) return;
+
+        bool isNetworkActive = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
+        Transform spawnPoint = expDropPoint != null ? expDropPoint : transform;
+        Vector3 spawnPos = spawnPoint.position + Vector3.up * 0.2f;
+
+        if (isStandaloneMode || !isNetworkActive)
+        {
+            Instantiate(repairItemPrefab, spawnPos, Quaternion.identity);
+        }
+        else if (IsServer)
+        {
+            GameObject itemObj = Instantiate(repairItemPrefab, spawnPos, Quaternion.identity);
+            var netObj = itemObj.GetComponent<NetworkObject>();
+            if (netObj != null) netObj.Spawn();
+        }
     }
 
     private void DespawnEnemy()
