@@ -3,7 +3,9 @@
   <Project Path="Assembly-CSharp.csproj" />
   <Project Path="RAMEditor.csproj" />
   <Project Path="Assembly-CSharp-firstpass.csproj" />
+  <Project Path="ALP8310_ControllerGlobal.Editor.csproj" />
   <Project Path="PaintingEditor.csproj" />
   <Project Path="Painting.csproj" />
+  <Project Path="ALP8310_ControllerGlobal.csproj" />
   <Project Path="RAM.csproj" />
 </Solution>
