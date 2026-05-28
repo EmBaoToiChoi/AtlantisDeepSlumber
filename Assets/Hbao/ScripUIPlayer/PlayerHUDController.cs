@@ -180,10 +180,11 @@ public class PlayerHUDController : MonoBehaviour
         UpdateMicUI();
         SelectWeapon(1); // Mặc định chọn vũ khí 1 khi vào game
 
-        // Test nhanh giao diện (Nếu danh sách profiles đã được setup trong Inspector)
+        // Tải nhân vật đã chọn ở lobby
+        int selectedChar = PlayerPrefs.GetInt("SelectedCharacterId", testProfileIndex);
         if (hudProfiles != null && hudProfiles.Count > 0)
         {
-            SetupPlayerProfile(testProfileIndex);
+            SetupPlayerProfile(selectedChar);
         }
     }
 

@@ -53,40 +53,40 @@
                 <ui:VisualElement class="char-cards-container">
                     <!-- Character Card 0 -->
                     <ui:VisualElement name="char-card-0" class="char-card select-active">
-                        <ui:VisualElement name="char-img-0" class="char-card-portrait atlas-img" />
+                        <ui:VisualElement name="char-img-0" class="char-card-portrait leo-img" />
                         <ui:VisualElement class="char-card-text-container">
-                            <ui:Label text="ATLAS" class="char-card-name" />
-                            <ui:Label text="VANGUARD" class="char-card-role" />
+                            <ui:Label text="LEO" class="char-card-name" />
+                            <ui:Label text="SHADOW ASSASSIN" class="char-card-role" />
                         </ui:VisualElement>
                         <ui:Label name="char-status-0" text="SELECTED BY YOU" class="char-card-status active-status" />
                     </ui:VisualElement>
 
                     <!-- Character Card 1 -->
                     <ui:VisualElement name="char-card-1" class="char-card">
-                        <ui:VisualElement name="char-img-1" class="char-card-portrait nyx-img" />
+                        <ui:VisualElement name="char-img-1" class="char-card-portrait maya-img" />
                         <ui:VisualElement class="char-card-text-container">
-                            <ui:Label text="NYX" class="char-card-name" />
-                            <ui:Label text="INFILTRATOR" class="char-card-role" />
+                            <ui:Label text="MAYA" class="char-card-name" />
+                            <ui:Label text="FIRE ELEMENTALIST" class="char-card-role" />
                         </ui:VisualElement>
                         <ui:Label name="char-status-1" text="AVAILABLE" class="char-card-status" />
                     </ui:VisualElement>
 
                     <!-- Character Card 2 -->
                     <ui:VisualElement name="char-card-2" class="char-card">
-                        <ui:VisualElement name="char-img-2" class="char-card-portrait aurelia-img" />
+                        <ui:VisualElement name="char-img-2" class="char-card-portrait elena-img" />
                         <ui:VisualElement class="char-card-text-container">
-                            <ui:Label text="AURELIA" class="char-card-name" />
-                            <ui:Label text="TECH BIOLOGIST" class="char-card-role" />
+                            <ui:Label text="ELENA" class="char-card-name" />
+                            <ui:Label text="ELVEN ARCHER" class="char-card-role" />
                         </ui:VisualElement>
                         <ui:Label name="char-status-2" text="AVAILABLE" class="char-card-status" />
                     </ui:VisualElement>
 
                     <!-- Character Card 3 -->
                     <ui:VisualElement name="char-card-3" class="char-card">
-                        <ui:VisualElement name="char-img-3" class="char-card-portrait titan-img" />
+                        <ui:VisualElement name="char-img-3" class="char-card-portrait arthur-img" />
                         <ui:VisualElement class="char-card-text-container">
-                            <ui:Label text="TITAN" class="char-card-name" />
-                            <ui:Label text="HEAVY GUARDIAN" class="char-card-role" />
+                            <ui:Label text="ARTHUR" class="char-card-name" />
+                            <ui:Label text="ROYAL TANKER" class="char-card-role" />
                         </ui:VisualElement>
                         <ui:Label name="char-status-3" text="AVAILABLE" class="char-card-status" />
                     </ui:VisualElement>
@@ -138,13 +138,13 @@
                     </ui:VisualElement>
                 </ui:Button>
                 <ui:VisualElement class="details-header">
-                    <ui:VisualElement name="details-portrait" class="details-large-portrait atlas-img" />
+                    <ui:VisualElement name="details-portrait" class="details-large-portrait leo-img" />
                     <ui:VisualElement style="justify-content: center;">
-                        <ui:Label name="details-name" text="ATLAS" class="details-char-name" />
-                        <ui:Label name="details-role" text="VANGUARD EXPLORER" class="details-char-role" />
+                        <ui:Label name="details-name" text="LEO" class="details-char-name" />
+                        <ui:Label name="details-role" text="SHADOW ASSASSIN" class="details-char-role" />
                     </ui:VisualElement>
                 </ui:VisualElement>
-                <ui:Label name="details-desc" text="A fearless pioneer in trench exploration, Atlas uses customized pressurized gear to survive the deepest oceanic abysses." class="details-char-desc" />
+                <ui:Label name="details-desc" text="A master of shadows and stealth, Leo can eliminate high-value targets before they even know he is there." class="details-char-desc" />
                 
                 <ui:Label text="SPECIALIST SKILLS" class="details-section-title" />
                 <ui:VisualElement name="skills-container" class="details-skills-container">

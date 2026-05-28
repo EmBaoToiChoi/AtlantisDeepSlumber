@@ -132,6 +132,9 @@ public class SimplePlayerTest : NetworkBehaviour
         if (targetCamera == null)
             targetCamera = FindObjectOfType<Camera>();
 
+        // Tải nhân vật đã lưu từ PlayerPrefs nếu có
+        characterClassIndex = PlayerPrefs.GetInt("SelectedCharacterId", characterClassIndex);
+
         // Khởi tạo HUD với profile nhân vật
         PlayerHUDController hud = FindObjectOfType<PlayerHUDController>();
         if (hud != null)
