@@ -466,13 +466,23 @@ public class Enemy3_Buaa : NetworkBehaviour
             transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(lookDir), Time.deltaTime * 15f);
         }
 
+        float distanceToPlayer = Vector3.Distance(transform.position, targetPlayer.position);
+
+        if (distanceToPlayer <= attackRange)
+        {
+            if (agent.isActiveAndEnabled) agent.isStopped = true;
+            if (attackCooldownTimer <= 0)
+            {
+                ChangeState(EnemyState.Attack);
+            }
+            return;
+        }
+
         if (agent.isActiveAndEnabled)
         {
             agent.isStopped = false;
             UpdateAgentSpeed();
         }
-
-        float distanceToPlayer = Vector3.Distance(transform.position, targetPlayer.position);
 
         // Kỹ thuật bo sườn đỉnh cao (Circle Flanking):
         // Khi tiếp cận gần (<= 7m), AI chuyển động xiên trái/phải để né tránh đạn bắn trực diện của Player
@@ -517,17 +527,6 @@ public class Enemy3_Buaa : NetworkBehaviour
         {
             // Ở cự ly xa -> Đuổi trực diện
             if (agent.isActiveAndEnabled) agent.SetDestination(targetPlayer.position);
-        }
-
-        // Vào tầm đánh búa cận chiến và hết thời gian hồi chiêu
-        // ĐOẠN CODE ĐÚNG SAU KHI SỬA
-        if (distanceToPlayer <= attackRange)
-        {
-            if (attackCooldownTimer <= 0)
-            {
-                ChangeState(EnemyState.Attack);
-            }
-            // Bỏ qua bước chuyển sang Idle. Quái sẽ giữ state Run và chạy bám đuôi Player!
         }
     }
 

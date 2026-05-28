@@ -309,11 +309,7 @@ public class Enemy1_DapBua : NetworkBehaviour
             framesSinceActive++;
             if (clientLocalState != CurrentStateValue)
             {
-                // FIX LỖI TRƯỢT BĂNG: Kiểm tra thẳng điều kiện thay vì tạo biến trùng tên
-                if (isStandaloneMode || IsServer)
-                {
-                    SyncAnimationState(CurrentStateValue);
-                }
+                SyncAnimationState(CurrentStateValue);
                 clientLocalState = CurrentStateValue; // Cập nhật ngay lập tức
             }
         }
@@ -549,9 +545,19 @@ public class Enemy1_DapBua : NetworkBehaviour
             return;
         }
 
-        if (AgentReady) { agent.isStopped = false; agent.speed = IsEnragedValue ? 7.5f : 5f; }
-
         float distanceToPlayer = Vector3.Distance(transform.position, targetPlayer.position);
+
+        if (distanceToPlayer <= attackRange)
+        {
+            if (AgentReady) agent.isStopped = true;
+            if (attackCooldownTimer <= 0)
+            {
+                ChangeState(EnemyState.Attack);
+            }
+            return;
+        }
+
+        if (AgentReady) { agent.isStopped = false; agent.speed = IsEnragedValue ? 7.5f : 5f; }
 
         if (distanceToPlayer <= 8f)
         {
@@ -585,16 +591,6 @@ public class Enemy1_DapBua : NetworkBehaviour
         else
         {
             if (AgentReady) agent.SetDestination(targetPlayer.position);
-        }
-
-        // ĐOẠN CODE ĐÚNG SAU KHI SỬA
-        if (distanceToPlayer <= attackRange)
-        {
-            if (attackCooldownTimer <= 0)
-            {
-                ChangeState(EnemyState.Attack);
-            }
-            // Bỏ qua bước chuyển sang Idle. Quái sẽ giữ state Run và chạy bám đuôi Player!
         }
     }
 

@@ -213,12 +213,7 @@ public class Enemy4_Bongtoi : NetworkBehaviour
         {
             if (clientLocalState != currentState.Value)
             {
-                // FIX LỖI TRƯỢT BĂNG
-                bool isAIAuthoritative = IsServer;
-                if (isAIAuthoritative)
-                {
-                    SyncAnimationState(currentState.Value);
-                }
+                SyncAnimationState(currentState.Value);
                 clientLocalState = currentState.Value;
             }
         }
@@ -456,14 +451,24 @@ public class Enemy4_Bongtoi : NetworkBehaviour
             transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(lookDir), Time.deltaTime * 15f);
         }
 
+        float distance = Vector3.Distance(transform.position, targetPlayer.position);
+
+        if (distance <= attackRange)
+        {
+            if (agent.isActiveAndEnabled) agent.isStopped = true;
+            if (attackCooldownTimer <= 0)
+            {
+                ChangeState(EnemyState.Attack);
+            }
+            return;
+        }
+
         // 2. Trường hợp Đuổi theo Player (Chase mode)
         if (agent.isActiveAndEnabled)
         {
             agent.isStopped = false;
             UpdateAgentSpeed();
         }
-
-        float distance = Vector3.Distance(transform.position, targetPlayer.position);
 
         // Kỹ thuật chiến thuật cao (Flanking AI):
         // Khi tiến sát Player (cự ly <= 6m), AI sẽ chạy chếch xiên bo sườn thay vì lao thẳng
@@ -508,16 +513,6 @@ public class Enemy4_Bongtoi : NetworkBehaviour
         {
             // Cự ly xa -> Chạy đuổi trực diện
             if (agent.isActiveAndEnabled) agent.SetDestination(targetPlayer.position);
-        }
-
-        // ĐOẠN CODE ĐÚNG SAU KHI SỬA
-        if (distance <= attackRange)
-        {
-            if (attackCooldownTimer <= 0)
-            {
-                ChangeState(EnemyState.Attack);
-            }
-            // Bỏ qua bước chuyển sang Idle. Quái sẽ giữ state Run và chạy bám đuôi Player!
         }
     }
 
