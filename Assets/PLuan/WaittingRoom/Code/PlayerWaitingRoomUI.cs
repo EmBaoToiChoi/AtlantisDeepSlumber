@@ -109,10 +109,10 @@ public class PlayerWaitingRoomUI : NetworkBehaviour
     {
         switch (id)
         {
-            case 0: return "ATLAS";
-            case 1: return "NYX";
-            case 2: return "AURELIA";
-            case 3: return "TITAN";
+            case 0: return "LEO";
+            case 1: return "MAYA";
+            case 2: return "ELENA";
+            case 3: return "ARTHUR";
             default: return "SELECTING...";
         }
     }

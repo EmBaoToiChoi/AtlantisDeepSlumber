@@ -307,24 +307,64 @@
 }
 
 /* PORTRAIT GRAPHICS */
-.atlas-img {
-    background-image: url("project://database/Assets/PLuan/WaittingRoom/Textures/atlas.png");
+.leo-img {
+    background-image: url("project://database/Assets/Hbao/Image/AvaST.png");
 }
 
-.nyx-img {
-    background-image: url("project://database/Assets/PLuan/WaittingRoom/Textures/nyx.png");
+.maya-img {
+    background-image: url("project://database/Assets/Hbao/Image/AvaHT.png");
 }
 
-.aurelia-img {
-    background-image: url("project://database/Assets/PLuan/WaittingRoom/Textures/aurelia.png");
+.elena-img {
+    background-image: url("project://database/Assets/Hbao/Image/AvaCung.png");
 }
 
-.titan-img {
-    background-image: url("project://database/Assets/PLuan/WaittingRoom/Textures/titan.png");
+.arthur-img {
+    background-image: url("project://database/Assets/Hbao/Image/AvaTank.png");
 }
 
-.skill-icon-img {
-    background-image: url("project://database/Assets/PLuan/WaittingRoom/Textures/skill_icon.png");
+/* LEO SKILLS */
+.leo-skill-0 {
+    background-image: url("project://database/Assets/Hbao/Image/Skill%201,.png");
+}
+.leo-skill-1 {
+    background-image: url("project://database/Assets/Hbao/Image/Skill%202.png");
+}
+.leo-skill-2 {
+    background-image: url("project://database/Assets/Hbao/Image/ST-Skill3.png");
+}
+
+/* MAYA SKILLS */
+.maya-skill-0 {
+    background-image: url("project://database/Assets/Hbao/Image/HT_skill1.png");
+}
+.maya-skill-1 {
+    background-image: url("project://database/Assets/Hbao/Image/HT%20skill2.png");
+}
+.maya-skill-2 {
+    background-image: url("project://database/Assets/Hbao/Image/HT-Skill3.png");
+}
+
+/* ELENA SKILLS */
+.elena-skill-0 {
+    background-image: url("project://database/Assets/Hbao/Image/CT-Skill1.png");
+}
+.elena-skill-1 {
+    background-image: url("project://database/Assets/Hbao/Image/CT-skill2.png");
+}
+.elena-skill-2 {
+    background-image: url("project://database/Assets/Hbao/Image/CT-Skill3.png");
+}
+
+/* ARTHUR SKILLS */
+.arthur-skill-0 {
+    background-image: url("project://database/Assets/Hbao/Image/tanker-skill1.png");
+}
+.arthur-skill-1 {
+    background-image: url("project://database/Assets/Hbao/Image/tanker-skill2.png");
+}
+.arthur-skill-2 {
+    background-image: url("project://database/Assets/Hbao/Image/CT-Skill3.png");
 }
 
 /* CHARACTER DETAILS MODAL */

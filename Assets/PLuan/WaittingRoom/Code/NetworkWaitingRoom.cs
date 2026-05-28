@@ -80,54 +80,54 @@ public class NetworkWaitingRoom : NetworkBehaviour
     {
         new LobbyCharacterInfo
         {
-            Name = "ATLAS",
-            Role = "VANGUARD EXPLORER",
-            Description = "A fearless pioneer in trench exploration, Atlas uses customized pressurized gear to survive the deepest oceanic abysses.",
-            PortraitStyleClass = "atlas-img",
+            Name = "LEO",
+            Role = "SHADOW ASSASSIN",
+            Description = "A master of shadows and stealth, Leo can eliminate high-value targets before they even know he is there.",
+            PortraitStyleClass = "leo-img",
             Skills = new LobbySkillInfo[]
             {
-                new LobbySkillInfo { Name = "Trench Dash", Description = "Dashes forward a short distance, granting pressure immunity for 3 seconds.", IconStyleClass = "skill-icon-img" },
-                new LobbySkillInfo { Name = "Sonar Scan", Description = "Emits acoustic pulse that reveals nearby resources and hazards for 8 seconds.", IconStyleClass = "skill-icon-img" },
-                new LobbySkillInfo { Name = "Pressure Stabilizer", Description = "Stabilizes pressure resistance, reducing environmental damage by 30%.", IconStyleClass = "skill-icon-img" }
+                new LobbySkillInfo { Name = "Swift Strike", Description = "Dashes forward rapidly, slicing through all enemies in the path.", IconStyleClass = "leo-skill-0" },
+                new LobbySkillInfo { Name = "Smoke Cloak", Description = "Deploys a smoke screen to become invisible, increasing movement speed.", IconStyleClass = "leo-skill-1" },
+                new LobbySkillInfo { Name = "Shadow Execute", Description = "Performs a lethal execution, dealing massive physical damage to a single target.", IconStyleClass = "leo-skill-2" }
             }
         },
         new LobbyCharacterInfo
         {
-            Name = "NYX",
-            Role = "ABYSSAL INFILTRATOR",
-            Description = "Born in the twilight zones of the ocean, Nyx controls shadows and acoustic frequencies to bypass deep-sea hazards unseen.",
-            PortraitStyleClass = "nyx-img",
+            Name = "MAYA",
+            Role = "FIRE ELEMENTALIST",
+            Description = "A powerful support mage who controls the forces of fire to burn down enemies and protect her allies.",
+            PortraitStyleClass = "maya-img",
             Skills = new LobbySkillInfo[]
             {
-                new LobbySkillInfo { Name = "Phantom Phase", Description = "Disappears into shadows, lowering aggro and boosting speed by 40%.", IconStyleClass = "skill-icon-img" },
-                new LobbySkillInfo { Name = "Sonic Decoy", Description = "Deploys a bioluminescent hologram that attracts all nearby enemies.", IconStyleClass = "skill-icon-img" },
-                new LobbySkillInfo { Name = "Shadow Strike", Description = "Strikes with pressurized plasma, dealing critical damage and stunning target.", IconStyleClass = "skill-icon-img" }
+                new LobbySkillInfo { Name = "Fire Orb", Description = "Shoots a blazing fire orb that deals AoE thermal damage to enemies.", IconStyleClass = "maya-skill-0" },
+                new LobbySkillInfo { Name = "Blaze Shroud", Description = "Surrounds allies with a protective thermal shield, reducing damage taken.", IconStyleClass = "maya-skill-1" },
+                new LobbySkillInfo { Name = "Supernova", Description = "Triggers a massive fiery blast that incinerates nearby targets and heals allies.", IconStyleClass = "maya-skill-2" }
             }
         },
         new LobbyCharacterInfo
         {
-            Name = "AURELIA",
-            Role = "TECH BIOLOGIST",
-            Description = "A brilliant scientist dedicated to understanding bioluminescent flora and fauna, Aurelia provides vital scanning and healing support.",
-            PortraitStyleClass = "aurelia-img",
+            Name = "ELENA",
+            Role = "ELVEN ARCHER",
+            Description = "With unparalleled precision, Elena rains down arrows on her enemies from a safe distance.",
+            PortraitStyleClass = "elena-img",
             Skills = new LobbySkillInfo[]
             {
-                new LobbySkillInfo { Name = "Bio-Pulse", Description = "Releases restorative bioluminescent energy, healing nearby allies.", IconStyleClass = "skill-icon-img" },
-                new LobbySkillInfo { Name = "Bioluminescent Shroud", Description = "Blinds all enemies in area, reducing their accuracy for 4 seconds.", IconStyleClass = "skill-icon-img" },
-                new LobbySkillInfo { Name = "Nano Recovery", Description = "Injects nanites that restore 10 HP/sec and boost stamina recovery.", IconStyleClass = "skill-icon-img" }
+                new LobbySkillInfo { Name = "Arrow Volley", Description = "Fires a rapid succession of piercing arrows in a frontal cone.", IconStyleClass = "elena-skill-0" },
+                new LobbySkillInfo { Name = "Aura Shot", Description = "Enhances the next attack with celestial energy, stunning the target.", IconStyleClass = "elena-skill-1" },
+                new LobbySkillInfo { Name = "Rain of Stars", Description = "Summons a meteor shower of arrows that continuously damages enemies in an area.", IconStyleClass = "elena-skill-2" }
             }
         },
         new LobbyCharacterInfo
         {
-            Name = "TITAN",
-            Role = "HEAVY GUARDIAN",
-            Description = "Equipped with heavy tactical diving armor, Titan is a walking fortress designed to withstand structural attacks and shield the crew.",
-            PortraitStyleClass = "titan-img",
+            Name = "ARTHUR",
+            Role = "ROYAL TANKER",
+            Description = "A legendary shield-bearer who acts as a walking fortress, absorbing damage and protecting his team.",
+            PortraitStyleClass = "arthur-img",
             Skills = new LobbySkillInfo[]
             {
-                new LobbySkillInfo { Name = "Kinetic Barrier", Description = "Deploys energy shield that blocks projectiles and boosts defense by 20%.", IconStyleClass = "skill-icon-img" },
-                new LobbySkillInfo { Name = "Anchor Slam", Description = "Slams thermal anchor, dealing impact damage and slowing enemies.", IconStyleClass = "skill-icon-img" },
-                new LobbySkillInfo { Name = "Threat Magnet", Description = "Forces nearby enemies to attack Titan while gaining 50% damage reduction.", IconStyleClass = "skill-icon-img" }
+                new LobbySkillInfo { Name = "Shield Bash", Description = "Slams the royal shield forward, stunning enemies and dealing impact damage.", IconStyleClass = "arthur-skill-0" },
+                new LobbySkillInfo { Name = "Iron Fortress", Description = "Drastically increases defense and physical resistance for 5 seconds.", IconStyleClass = "arthur-skill-1" },
+                new LobbySkillInfo { Name = "Guardian Call", Description = "Creates a defensive zone that absorbs all incoming projectiles and heals allies.", IconStyleClass = "arthur-skill-2" }
             }
         }
     };
