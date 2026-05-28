@@ -35,6 +35,15 @@ public class Enemy3_Buaa : NetworkBehaviour
     // Kiểu tấn công đồng bộ (0: Attack thường, 1: Combo Skill 2, 2: RunLumpAttack Skill 3)
     public NetworkVariable<int> attackType = new NetworkVariable<int>(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
+    [Header("Experience Drops")]
+    public GameObject expGemPrefab;
+    public float expDropAmount = 25f;
+    public Transform expDropPoint; // Kéo Transform dưới chân quái vào đây
+
+    [Header("Item Drop Settings")]
+    public GameObject repairItemPrefab;
+    [Range(0f, 1f)] public float repairItemDropChance = 0.3f;
+
     [Header("Components")]
     public NavMeshAgent agent;
     public Animator anim;
@@ -484,19 +493,19 @@ public class Enemy3_Buaa : NetworkBehaviour
             UpdateAgentSpeed();
         }
 
-        // Kỹ thuật bo sườn đỉnh cao (Circle Flanking):
-        // Khi tiếp cận gần (<= 7m), AI chuyển động xiên trái/phải để né tránh đạn bắn trực diện của Player
-        if (distanceToPlayer <= 7f)
+        // Chỉ bo sườn khi khoảng cách 4-7m; khi gần hơn lao thẳng tránh circling
+        if (distanceToPlayer <= 7f && distanceToPlayer > 4f)
         {
             tacticalTimer -= Time.deltaTime;
             if (tacticalTimer <= 0)
             {
                 float rand = Random.value;
-                if (rand < 0.4f) tacticalState = 0; // Lao thẳng
-                else if (rand < 0.7f) tacticalState = 1; // Bo sườn trái
+                // Tăng xác suất lao thẳng để tránh circling
+                if (rand < 0.6f) tacticalState = 0; // Lao thẳng nhiều hơn
+                else if (rand < 0.8f) tacticalState = 1; // Bo sườn trái
                 else tacticalState = 2; // Bo sườn phải
 
-                tacticalTimer = Random.Range(1.0f, 2.0f);
+                tacticalTimer = Random.Range(1.5f, 2.5f);
             }
 
             if (tacticalState == 0)
@@ -509,11 +518,11 @@ public class Enemy3_Buaa : NetworkBehaviour
                 Vector3 tangent = new Vector3(-toPlayer.z, 0, toPlayer.x);
                 float sideDir = (tacticalState == 1) ? 1f : -1f;
 
-                // Điểm đích bo sườn chếch xiên góc
-                Vector3 targetOffset = targetPlayer.position - toPlayer * 2.0f + tangent * sideDir * 2.8f;
+                // Thu hẹp offset để không chạy ra xa Player
+                Vector3 targetOffset = targetPlayer.position + tangent * sideDir * 2f;
 
                 NavMeshHit hit;
-                if (NavMesh.SamplePosition(targetOffset, out hit, 3.5f, NavMesh.AllAreas))
+                if (NavMesh.SamplePosition(targetOffset, out hit, 3f, NavMesh.AllAreas))
                 {
                     if (agent.isActiveAndEnabled) agent.SetDestination(hit.position);
                 }
@@ -838,9 +847,81 @@ public class Enemy3_Buaa : NetworkBehaviour
     private void Die()
     {
         if (agent.isActiveAndEnabled) agent.isStopped = true;
+        DropExperience();
+        DropItems();
 
         // Hủy quái sau 2.5 giây chơi hoàn tất hoạt ảnh nằm xuống chết
         Invoke(nameof(DespawnEnemy), 2.5f);
+    }
+
+    private void DropExperience()
+    {
+        if (expGemPrefab == null) return;
+
+        string uniqueDropId = System.Guid.NewGuid().ToString();
+        bool isNetworkActive = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
+        Transform spawnPoint = expDropPoint != null ? expDropPoint : transform;
+        Vector3 basePos = spawnPoint.position;
+
+        // Cấu hình khoảng cách cố định cách nhau 0.6m tạo thành hình vuông quanh tâm chân quái
+        float dist = 0.6f;
+        Vector3[] spawnPositions = new Vector3[]
+        {
+            basePos + new Vector3(dist, 0.1f, dist),
+            basePos + new Vector3(-dist, 0.1f, dist),
+            basePos + new Vector3(dist, 0.1f, -dist),
+            basePos + new Vector3(-dist, 0.1f, -dist)
+        };
+
+        for (int i = 0; i < 4; i++)
+        {
+            Vector3 spawnPos = spawnPositions[i];
+
+            if (!isNetworkActive)
+            {
+                GameObject gem = Instantiate(expGemPrefab, spawnPos, Quaternion.identity);
+                var gemScript = gem.GetComponent<ExperienceGem>();
+                if (gemScript != null)
+                {
+                    gemScript.expAmount = expDropAmount;
+                    gemScript.DropGroupId = uniqueDropId;
+                }
+            }
+            else if (IsServer)
+            {
+                GameObject gem = Instantiate(expGemPrefab, spawnPos, Quaternion.identity);
+                var gemScript = gem.GetComponent<ExperienceGem>();
+                if (gemScript != null)
+                {
+                    gemScript.expAmount = expDropAmount;
+                    gemScript.DropGroupId = uniqueDropId;
+                }
+
+                var netObj = gem.GetComponent<NetworkObject>();
+                if (netObj != null) netObj.Spawn();
+            }
+        }
+    }
+
+    private void DropItems()
+    {
+        if (repairItemPrefab == null) return;
+        if (Random.value > repairItemDropChance) return;
+
+        bool isNetworkActive = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
+        Transform spawnPoint = expDropPoint != null ? expDropPoint : transform;
+        Vector3 spawnPos = spawnPoint.position + Vector3.up * 0.2f;
+
+        if (!isNetworkActive)
+        {
+            Instantiate(repairItemPrefab, spawnPos, Quaternion.identity);
+        }
+        else if (IsServer)
+        {
+            GameObject itemObj = Instantiate(repairItemPrefab, spawnPos, Quaternion.identity);
+            var netObj = itemObj.GetComponent<NetworkObject>();
+            if (netObj != null) netObj.Spawn();
+        }
     }
 
     private void DespawnEnemy()

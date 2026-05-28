@@ -89,6 +89,24 @@ public class PlayerHUDController : MonoBehaviour
     private float warningTimer = 0f;
     private const float WARNING_DURATION = 2f;
 
+    private VisualElement weaponDurabilityFill1;
+    private VisualElement weaponDurabilityFill2;
+    private VisualElement interactionPrompt;
+    private Label interactionPromptText;
+    private VisualElement tooltipElement;
+    private Label tooltipTitle;
+    private Label tooltipDesc;
+    private System.Collections.Generic.List<VisualElement> inventorySlotsUI = new System.Collections.Generic.List<VisualElement>();
+    private string[] currentInventoryData;
+    private int draggedSlotIndex = -1;
+    private bool isCooldownActive = false;
+    private VisualElement dragGhost;
+
+    [Header("Item Sprites Settings")]
+    public Sprite repairHammerSprite;
+    public Sprite ngoc1Sprite;
+    public Sprite ngoc2Sprite;
+
     void OnEnable()
     {
         if (uiDocument == null || uiDocument.rootVisualElement == null) return;
@@ -97,6 +115,11 @@ public class PlayerHUDController : MonoBehaviour
         hpFill = root.Q<VisualElement>("hp-fill");
         mpFill = root.Q<VisualElement>("mp-fill");
         expFill = root.Q<VisualElement>("exp-fill");
+
+        weaponDurabilityFill1 = root.Q<VisualElement>("weapon-durability-fill-1");
+        weaponDurabilityFill2 = root.Q<VisualElement>("weapon-durability-fill-2");
+        interactionPrompt = root.Q<VisualElement>("interaction-prompt");
+        interactionPromptText = root.Q<Label>("interaction-prompt-text");
 
         // Tìm UI Mic Icon trực tiếp
         micIcon = root.Q<VisualElement>("mic-icon");
@@ -186,6 +209,49 @@ public class PlayerHUDController : MonoBehaviour
         {
             SetupPlayerProfile(selectedChar);
         }
+
+        // Tìm và thiết lập danh sách 10 ô Hành Trang (Inventory Slots)
+        inventorySlotsUI = root.Query<VisualElement>(className: "inventory-slot").ToList();
+        for (int i = 0; i < inventorySlotsUI.Count; i++)
+        {
+            int index = i;
+            VisualElement slot = inventorySlotsUI[i];
+            slot.name = $"inventory-slot-{index}";
+            
+            // Vẽ nhãn số thứ tự mờ ở góc ô hành trang
+            slot.Clear();
+            Label indexLabel = new Label((index + 1).ToString());
+            indexLabel.AddToClassList("inventory-slot-index");
+            slot.Add(indexLabel);
+
+            // Đăng ký các sự kiện Drag & Drop và Hover Tooltip
+            slot.RegisterCallback<PointerDownEvent>(evt => OnSlotPointerDown(evt, index));
+            slot.RegisterCallback<PointerUpEvent>(evt => OnSlotPointerUp(evt, index));
+            slot.RegisterCallback<PointerEnterEvent>(evt => OnSlotPointerEnter(evt, index));
+            slot.RegisterCallback<PointerLeaveEvent>(evt => OnSlotPointerLeave(evt, index));
+            slot.RegisterCallback<PointerMoveEvent>(evt => OnSlotPointerMove(evt, index));
+        }
+
+        // Tạo sẵn phần tử hiển thị mô tả (Tooltip)
+        tooltipElement = new VisualElement();
+        tooltipElement.AddToClassList("inventory-tooltip");
+        tooltipTitle = new Label();
+        tooltipTitle.AddToClassList("inventory-tooltip-title");
+        tooltipDesc = new Label();
+        tooltipDesc.AddToClassList("inventory-tooltip-desc");
+        tooltipElement.Add(tooltipTitle);
+        tooltipElement.Add(tooltipDesc);
+        root.Add(tooltipElement);
+
+        // Tạo sẵn phần tử hiển thị kéo thả (Drag Ghost) theo con trỏ chuột
+        dragGhost = new VisualElement();
+        dragGhost.AddToClassList("dragged-item-ghost");
+        dragGhost.style.position = Position.Absolute;
+        dragGhost.style.width = 54f;
+        dragGhost.style.height = 54f;
+        dragGhost.pickingMode = PickingMode.Ignore; // CỰC KỲ QUAN TRỌNG: để không chặn panel.Pick() khi nhả chuột!
+        dragGhost.style.display = DisplayStyle.None;
+        root.Add(dragGhost);
     }
 
     /// <summary>
@@ -632,9 +698,384 @@ public class PlayerHUDController : MonoBehaviour
         }
     }
 
+    public void SetWeaponDurability(int slotIndex, float percent)
+    {
+        float widthPercent = Mathf.Clamp01(percent) * 100f;
+        if (slotIndex == 1 && weaponDurabilityFill1 != null)
+        {
+            weaponDurabilityFill1.style.width = Length.Percent(widthPercent);
+        }
+        else if (slotIndex == 2 && weaponDurabilityFill2 != null)
+        {
+            weaponDurabilityFill2.style.width = Length.Percent(widthPercent);
+        }
+    }
+
+    public void ShowInteractionPrompt(bool show, string text)
+    {
+        if (interactionPrompt != null)
+        {
+            if (show)
+            {
+                interactionPrompt.AddToClassList("show-prompt");
+            }
+            else
+            {
+                interactionPrompt.RemoveFromClassList("show-prompt");
+            }
+        }
+        if (interactionPromptText != null && !string.IsNullOrEmpty(text))
+        {
+            interactionPromptText.text = text;
+        }
+    }
+
     public void SetInventorySlots(string[] slots)
     {
-        // 10 ô hòm đồ hiện tại đã xóa nhãn số La Mã tĩnh theo yêu cầu
+        currentInventoryData = slots;
+        if (inventorySlotsUI == null || inventorySlotsUI.Count == 0) return;
+
+        for (int i = 0; i < inventorySlotsUI.Count && i < slots.Length; i++)
+        {
+            VisualElement slot = inventorySlotsUI[i];
+            
+            // Xóa ảnh item cũ và nhãn stack cũ
+            var oldItem = slot.Q<VisualElement>(className: "inventory-item-icon");
+            if (oldItem != null) oldItem.RemoveFromHierarchy();
+
+            var oldStack = slot.Q<Label>(className: "inventory-item-stack-count");
+            if (oldStack != null) oldStack.RemoveFromHierarchy();
+
+            string slotVal = slots[i];
+            if (!string.IsNullOrEmpty(slotVal))
+            {
+                string itemName = slotVal;
+                int count = 1;
+                if (slotVal.Contains(":"))
+                {
+                    var parts = slotVal.Split(':');
+                    itemName = parts[0];
+                    int.TryParse(parts[1], out count);
+                }
+
+                VisualElement itemIcon = new VisualElement();
+                itemIcon.AddToClassList("inventory-item-icon");
+                itemIcon.style.width = Length.Percent(80);
+                itemIcon.style.height = Length.Percent(80);
+
+                if (itemName == "RepairHammer")
+                {
+                    if (repairHammerSprite != null)
+                    {
+                        itemIcon.style.backgroundImage = new StyleBackground(repairHammerSprite);
+                    }
+                }
+                else if (itemName == "Ngoc1")
+                {
+                    if (ngoc1Sprite != null)
+                    {
+                        itemIcon.style.backgroundImage = new StyleBackground(ngoc1Sprite);
+                    }
+                }
+                else if (itemName == "Ngoc2")
+                {
+                    if (ngoc2Sprite != null)
+                    {
+                        itemIcon.style.backgroundImage = new StyleBackground(ngoc2Sprite);
+                    }
+                }
+
+                slot.Add(itemIcon);
+
+                // Nếu số lượng cộng dồn lớn hơn 1, thêm nhãn x[Count] ở góc dưới bên phải
+                if (count > 1)
+                {
+                    Label stackLabel = new Label("x" + count);
+                    stackLabel.AddToClassList("inventory-item-stack-count");
+                    slot.Add(stackLabel);
+                }
+            }
+        }
+    }
+
+    // =========================================================================
+    //  Hành trang: Xử lý Kéo & Thả (Drag and Drop) với Drag Ghost di chuyển theo chuột
+    // =========================================================================
+    private void OnSlotPointerDown(PointerDownEvent evt, int index)
+    {
+        // 1. Kiểm tra nếu là Click chuột phải (evt.button == 1) -> Sử dụng vật phẩm
+        if (evt.button == 1)
+        {
+            UseItem(index);
+            return;
+        }
+
+        // 2. Click chuột trái (evt.button == 0) -> Bắt đầu Kéo thả sắp xếp hành trang
+        if (evt.button == 0 && currentInventoryData != null && index < currentInventoryData.Length)
+        {
+            string slotVal = currentInventoryData[index];
+            if (!string.IsNullOrEmpty(slotVal))
+            {
+                string itemName = slotVal;
+                if (slotVal.Contains(":"))
+                {
+                    itemName = slotVal.Split(':')[0];
+                }
+
+                draggedSlotIndex = index;
+                VisualElement slot = inventorySlotsUI[index];
+                slot.AddToClassList("slot-dragging-source");
+                slot.CapturePointer(evt.pointerId);
+
+                // Thiết lập ảnh nền cho dragGhost từ item đang kéo
+                if (itemName == "RepairHammer" && dragGhost != null)
+                {
+                    if (repairHammerSprite != null)
+                    {
+                        dragGhost.style.backgroundImage = new StyleBackground(repairHammerSprite);
+                    }
+                }
+                else if (itemName == "Ngoc1" && dragGhost != null)
+                {
+                    if (ngoc1Sprite != null)
+                    {
+                        dragGhost.style.backgroundImage = new StyleBackground(ngoc1Sprite);
+                    }
+                }
+                else if (itemName == "Ngoc2" && dragGhost != null)
+                {
+                    if (ngoc2Sprite != null)
+                    {
+                        dragGhost.style.backgroundImage = new StyleBackground(ngoc2Sprite);
+                    }
+                }
+                else if (dragGhost != null)
+                {
+                    dragGhost.style.backgroundImage = StyleKeyword.Null;
+                }
+
+                // Căn giữa dragGhost dưới con trỏ chuột và hiển thị nó
+                if (dragGhost != null)
+                {
+                    dragGhost.style.left = evt.position.x - 27f;
+                    dragGhost.style.top = evt.position.y - 27f;
+                    dragGhost.style.display = DisplayStyle.Flex;
+                }
+
+                // Ẩn tạm thời tooltip để tránh vướng màn hình khi kéo
+                if (tooltipElement != null)
+                {
+                    tooltipElement.style.opacity = 0f;
+                }
+            }
+        }
+    }
+
+    private void OnSlotPointerUp(PointerUpEvent evt, int index)
+    {
+        if (draggedSlotIndex == index)
+        {
+            VisualElement slot = inventorySlotsUI[index];
+            slot.ReleasePointer(evt.pointerId);
+            slot.RemoveFromClassList("slot-dragging-source");
+
+            // Ẩn dragGhost đi ngay lập tức khi thả
+            if (dragGhost != null)
+            {
+                dragGhost.style.display = DisplayStyle.None;
+            }
+
+            // Tìm ô đích được thả chuột tại tọa độ thả
+            VisualElement targetElement = uiDocument.rootVisualElement.panel.Pick(evt.position);
+            if (targetElement != null)
+            {
+                VisualElement actualSlot = targetElement;
+                while (actualSlot != null && !actualSlot.name.StartsWith("inventory-slot-"))
+                {
+                    actualSlot = actualSlot.parent;
+                }
+
+                if (actualSlot != null)
+                {
+                    int targetIndex = int.Parse(actualSlot.name.Replace("inventory-slot-", ""));
+                    if (targetIndex != draggedSlotIndex)
+                    {
+                        // Thực hiện tráo đổi (Swap) vị trí vật phẩm
+                        var player = FindObjectOfType<SimplePlayerTest>();
+                        if (player != null)
+                        {
+                            string temp = player.inventorySlots[draggedSlotIndex];
+                            player.inventorySlots[draggedSlotIndex] = player.inventorySlots[targetIndex];
+                            player.inventorySlots[targetIndex] = temp;
+
+                            // Vẽ lại và đồng bộ cơ sở dữ liệu
+                            SetInventorySlots(player.inventorySlots);
+                            if (!player.isStandaloneMode) player.SavePlayerStateToDatabase();
+                        }
+                    }
+                }
+            }
+            draggedSlotIndex = -1;
+        }
+    }
+
+    private void OnSlotPointerMove(PointerMoveEvent evt, int index)
+    {
+        // 1. Di chuyển dragGhost theo chuột nếu đang thực hiện kéo thả
+        if (draggedSlotIndex != -1 && dragGhost != null)
+        {
+            dragGhost.style.left = evt.position.x - 27f;
+            dragGhost.style.top = evt.position.y - 27f;
+        }
+        // 2. Ngược lại, nếu đang hover bình thường thì di chuyển Tooltip
+        else if (tooltipElement != null && tooltipElement.style.opacity.value > 0f)
+        {
+            tooltipElement.style.left = evt.position.x + 15f;
+            tooltipElement.style.top = evt.position.y + 15f;
+        }
+    }
+
+    // =========================================================================
+    //  Hành trang: Xử lý Hover Hiển thị chú thích (Tooltip)
+    // =========================================================================
+    private void OnSlotPointerEnter(PointerEnterEvent evt, int index)
+    {
+        // Chỉ hiển thị tooltip khi KHÔNG đang thực hiện kéo thả vật phẩm
+        if (draggedSlotIndex == -1 && currentInventoryData != null && index < currentInventoryData.Length)
+        {
+            string slotVal = currentInventoryData[index];
+            string itemName = slotVal;
+            if (slotVal.Contains(":"))
+            {
+                itemName = slotVal.Split(':')[0];
+            }
+
+            if (itemName == "RepairHammer" && tooltipElement != null)
+            {
+                tooltipTitle.text = "BÚA RÈN MA THUẬT";
+                tooltipDesc.text = "Click chuột phải để rèn lại 100% độ bền vũ khí đang trang bị.";
+                tooltipElement.style.opacity = 1f;
+                tooltipElement.style.left = evt.position.x + 15f;
+                tooltipElement.style.top = evt.position.y + 15f;
+            }
+            else if (itemName == "Ngoc1" && tooltipElement != null)
+            {
+                tooltipTitle.text = "NGỌC TÍM BÍ ẨN";
+                tooltipDesc.text = "Viên ngọc lấp lánh đang cất giấu một bí mật gì đó... Hiện tại chưa thể sử dụng.";
+                tooltipElement.style.opacity = 1f;
+                tooltipElement.style.left = evt.position.x + 15f;
+                tooltipElement.style.top = evt.position.y + 15f;
+            }
+            else if (itemName == "Ngoc2" && tooltipElement != null)
+            {
+                tooltipTitle.text = "NGỌC ĐỎ BÍ ẨN";
+                tooltipDesc.text = "Viên ngọc rực lửa đang cất giấu một sức mạnh bí mật... Hiện tại chưa thể sử dụng.";
+                tooltipElement.style.opacity = 1f;
+                tooltipElement.style.left = evt.position.x + 15f;
+                tooltipElement.style.top = evt.position.y + 15f;
+            }
+        }
+    }
+
+    private void OnSlotPointerLeave(PointerLeaveEvent evt, int index)
+    {
+        if (tooltipElement != null)
+        {
+            tooltipElement.style.opacity = 0f;
+        }
+    }
+
+    // =========================================================================
+    //  Hành trang: Click Chuột phải sử dụng và chạy Cooldown sửa vũ khí
+    // =========================================================================
+    private void UseItem(int index)
+    {
+        if (isCooldownActive || currentInventoryData == null || index >= currentInventoryData.Length) return;
+
+        string slotVal = currentInventoryData[index];
+        string itemName = slotVal;
+        if (slotVal.Contains(":"))
+        {
+            itemName = slotVal.Split(':')[0];
+        }
+
+        if (itemName == "RepairHammer")
+        {
+            VisualElement slot = inventorySlotsUI[index];
+            if (slot != null)
+            {
+                // Tạo sẵn Overlay Cooldown
+                VisualElement cdOverlay = new VisualElement();
+                cdOverlay.AddToClassList("slot-cooldown-overlay");
+                Label cdText = new Label("1.5s");
+                cdText.AddToClassList("slot-cooldown-text");
+                cdOverlay.Add(cdText);
+                slot.Add(cdOverlay);
+
+                // Ẩn tạm thời tooltip để nhìn rõ cooldown
+                if (tooltipElement != null) tooltipElement.style.opacity = 0f;
+
+                StartCoroutine(AnimateCooldown(slot, cdOverlay, cdText, index));
+            }
+        }
+    }
+
+    private System.Collections.IEnumerator AnimateCooldown(VisualElement slot, VisualElement cdOverlay, Label cdText, int slotIndex)
+    {
+        isCooldownActive = true;
+        float duration = 1.5f;
+        float timer = duration;
+        
+        while (timer > 0f)
+        {
+            timer -= Time.deltaTime;
+            cdText.text = $"{timer:F1}s";
+            yield return null;
+        }
+
+        cdOverlay.RemoveFromHierarchy();
+        isCooldownActive = false;
+
+        // Tiến hành sửa chữa độ bền 100%
+        var player = FindObjectOfType<SimplePlayerTest>();
+        if (player != null)
+        {
+            int activeWeapon = player.activeWeaponIndex.Value;
+            if (player.isStandaloneMode) activeWeapon = currentSelectedWeapon;
+
+            if (activeWeapon == 1)
+            {
+                player.Weapon1Durability = player.weapon1MaxDurability;
+            }
+            else
+            {
+                player.Weapon2Durability = player.weapon2MaxDurability;
+            }
+
+            // Tiêu hao vật phẩm (giảm số lượng đi 1 hoặc xóa hoàn toàn nếu là cái cuối)
+            string slotVal = player.inventorySlots[slotIndex];
+            string baseName = slotVal;
+            int count = 1;
+            if (slotVal.Contains(":"))
+            {
+                var parts = slotVal.Split(':');
+                baseName = parts[0];
+                int.TryParse(parts[1], out count);
+            }
+
+            if (count > 1)
+            {
+                player.inventorySlots[slotIndex] = baseName + ":" + (count - 1);
+            }
+            else
+            {
+                player.inventorySlots[slotIndex] = "";
+            }
+
+            SetInventorySlots(player.inventorySlots);
+
+            if (!player.isStandaloneMode) player.SavePlayerStateToDatabase();
+        }
     }
 
     public void UpdateUpgradeUI(int points, int hpLv, int mpLv, int cdLv, int dmgLv)
@@ -672,6 +1113,37 @@ public class PlayerHUDController : MonoBehaviour
         cooldownTimeQ = 10f * (1f - cdLv * 0.02f);
         cooldownTimeR = 15f * (1f - cdLv * 0.02f);
         cooldownTimeE = 12f * (1f - cdLv * 0.02f);
+    }
+
+    /// <summary>
+    /// Cập nhật cấp độ hiện tại và thanh kinh nghiệm (EXP) của người chơi lên giao diện HUD/Hành trang
+    /// </summary>
+    public void UpdateExperienceUI(int level, float currentExp, float maxExp)
+    {
+        if (uiDocument == null || uiDocument.rootVisualElement == null) return;
+        var root = uiDocument.rootVisualElement;
+
+        // 1. Cập nhật nhãn Level trên HUD chính
+        var hudLevel = root.Q<Label>("hud-level-label");
+        if (hudLevel == null) hudLevel = root.Q<Label>(null, "level-label");
+        if (hudLevel != null)
+        {
+            hudLevel.text = $"Lv. {level}";
+        }
+
+        // 2. Cập nhật nhãn Level trong thẻ thông tin hành trang
+        var levelBadge = root.Q<Label>("character-level-badge");
+        if (levelBadge != null)
+        {
+            levelBadge.text = $"LV. {level}";
+        }
+
+        // 3. Cập nhật thanh đầy Kinh nghiệm (Exp Fill)
+        if (expFill != null)
+        {
+            float percentage = maxExp > 0 ? (currentExp / maxExp) * 100f : 0f;
+            expFill.style.width = Length.Percent(Mathf.Clamp(percentage, 0f, 100f));
+        }
     }
 
     private void UpgradeStat(int statType)

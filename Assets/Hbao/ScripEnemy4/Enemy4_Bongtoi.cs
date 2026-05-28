@@ -35,6 +35,15 @@ public class Enemy4_Bongtoi : NetworkBehaviour
     // Đồng bộ kiểu tấn công (0: Attack 1, 1: Attack Combo)
     public NetworkVariable<int> attackType = new NetworkVariable<int>(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
+    [Header("Experience Drops")]
+    public GameObject expGemPrefab;
+    public float expDropAmount = 25f;
+    public Transform expDropPoint; // Kéo Transform dưới chân quái vào đây
+
+    [Header("Item Drop Settings")]
+    public GameObject repairItemPrefab;
+    [Range(0f, 1f)] public float repairItemDropChance = 0.3f;
+
     [Header("Components")]
     public NavMeshAgent agent;
     public Animator anim;
@@ -471,18 +480,19 @@ public class Enemy4_Bongtoi : NetworkBehaviour
         }
 
         // Kỹ thuật chiến thuật cao (Flanking AI):
-        // Khi tiến sát Player (cự ly <= 6m), AI sẽ chạy chếch xiên bo sườn thay vì lao thẳng
-        if (distance <= 6f)
+        // Chỉ bo sườn khi 3.5-6m; khi gần hơn lao thẳng tránh circling
+        if (distance <= 6f && distance > 3.5f)
         {
             tacticalTimer -= Time.deltaTime;
             if (tacticalTimer <= 0)
             {
                 float rand = Random.value;
-                if (rand < 0.35f) tacticalState = 0;      // Đuổi trực diện
-                else if (rand < 0.68f) tacticalState = 1; // Bo sườn trái
+                // Tăng xác suất lao thẳng
+                if (rand < 0.6f) tacticalState = 0;      // Đuổi trực diện
+                else if (rand < 0.8f) tacticalState = 1; // Bo sườn trái
                 else tacticalState = 2;                  // Bo sườn phải
 
-                tacticalTimer = Random.Range(0.8f, 1.8f);
+                tacticalTimer = Random.Range(1.5f, 2.5f);
             }
 
             if (tacticalState == 0)
@@ -495,8 +505,8 @@ public class Enemy4_Bongtoi : NetworkBehaviour
                 Vector3 tangent = new Vector3(-toPlayer.z, 0, toPlayer.x);
                 float sideDir = (tacticalState == 1) ? 1f : -1f;
 
-                // Điểm bo sườn chếch xiên một góc đẹp mắt
-                Vector3 targetOffset = targetPlayer.position - toPlayer * 1.5f + tangent * sideDir * 2.5f;
+                // Thu hẹp offset ngang để không chạy xa Player
+                Vector3 targetOffset = targetPlayer.position + tangent * sideDir * 2f;
 
                 NavMeshHit hit;
                 if (NavMesh.SamplePosition(targetOffset, out hit, 3f, NavMesh.AllAreas))
@@ -758,10 +768,82 @@ public class Enemy4_Bongtoi : NetworkBehaviour
     private void Die()
     {
         if (agent.isActiveAndEnabled) agent.isStopped = true;
+        DropExperience();
+        DropItems();
         // Tắt va chạm hoặc thực hiện các hiệu ứng chết khác ở đây nếu cần
 
         // Hủy đối tượng qua mạng sau 2 giây chơi hoàn tất hoạt ảnh chết
         Invoke(nameof(DespawnEnemy), 2.0f);
+    }
+
+    private void DropExperience()
+    {
+        if (expGemPrefab == null) return;
+
+        string uniqueDropId = System.Guid.NewGuid().ToString();
+        bool isNetworkActive = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
+        Transform spawnPoint = expDropPoint != null ? expDropPoint : transform;
+        Vector3 basePos = spawnPoint.position;
+
+        // Cấu hình khoảng cách cố định cách nhau 0.6m tạo thành hình vuông quanh tâm chân quái
+        float dist = 0.6f;
+        Vector3[] spawnPositions = new Vector3[]
+        {
+            basePos + new Vector3(dist, 0.1f, dist),
+            basePos + new Vector3(-dist, 0.1f, dist),
+            basePos + new Vector3(dist, 0.1f, -dist),
+            basePos + new Vector3(-dist, 0.1f, -dist)
+        };
+
+        for (int i = 0; i < 4; i++)
+        {
+            Vector3 spawnPos = spawnPositions[i];
+
+            if (!isNetworkActive)
+            {
+                GameObject gem = Instantiate(expGemPrefab, spawnPos, Quaternion.identity);
+                var gemScript = gem.GetComponent<ExperienceGem>();
+                if (gemScript != null)
+                {
+                    gemScript.expAmount = expDropAmount;
+                    gemScript.DropGroupId = uniqueDropId;
+                }
+            }
+            else if (IsServer)
+            {
+                GameObject gem = Instantiate(expGemPrefab, spawnPos, Quaternion.identity);
+                var gemScript = gem.GetComponent<ExperienceGem>();
+                if (gemScript != null)
+                {
+                    gemScript.expAmount = expDropAmount;
+                    gemScript.DropGroupId = uniqueDropId;
+                }
+
+                var netObj = gem.GetComponent<NetworkObject>();
+                if (netObj != null) netObj.Spawn();
+            }
+        }
+    }
+
+    private void DropItems()
+    {
+        if (repairItemPrefab == null) return;
+        if (Random.value > repairItemDropChance) return;
+
+        bool isNetworkActive = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
+        Transform spawnPoint = expDropPoint != null ? expDropPoint : transform;
+        Vector3 spawnPos = spawnPoint.position + Vector3.up * 0.2f;
+
+        if (!isNetworkActive)
+        {
+            Instantiate(repairItemPrefab, spawnPos, Quaternion.identity);
+        }
+        else if (IsServer)
+        {
+            GameObject itemObj = Instantiate(repairItemPrefab, spawnPos, Quaternion.identity);
+            var netObj = itemObj.GetComponent<NetworkObject>();
+            if (netObj != null) netObj.Spawn();
+        }
     }
 
     private void DespawnEnemy()

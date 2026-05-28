@@ -183,14 +183,24 @@ MonoBehaviour:
   agent: {fileID: 5378572118952591907}
   anim: {fileID: 1321257120372262163}
   eyeTransform: {fileID: 4747910851086648699}
-  hammerHitbox: {fileID: 0}
+  hammerHitbox: {fileID: 7388330026054526502, guid: b6f0bcc3b9d52f840a55991f2dbef13f, type: 3}
   hammerHitboxLeft: {fileID: 4726772078132798135}
   hammerHitboxRight: {fileID: 298865915714377986}
+  expGemPrefab: {fileID: 7388330026054526502, guid: b6f0bcc3b9d52f840a55991f2dbef13f, type: 3}
+  expDropAmount: 25
+  expDropPoint: {fileID: 1697686860353705976}
+  repairItemPrefab: {fileID: 2217945438620940750, guid: c0dc53cb41f8a574480ed87a8b9bebba, type: 3}
+  repairItemDropChance: 0.2
   sightRange: 15
   fieldOfView: 90
   attackRange: 2
   walkRadius: 10
   idleTimeMax: 4
+  idleTriggerName: Idle
+  walkTriggerName: Walk
+  runTriggerName: Run
+  hitTriggerName: Hit
+  dieTriggerName: Die
   playerLayer:
     serializedVersion: 2
     m_Bits: 8

@@ -5,7 +5,7 @@
             <ui:VisualElement name="raw-player-image" class="raw-player-image" style="background-image: url(&quot;project://database/Assets/Hbao/Image/AvaST.png?fileID=1013639804&amp;guid=d74474e1ade5e1a438e24f8f7417dae9&amp;type=3#AvaST_0&quot;);" />
         </ui:VisualElement>
         <ui:VisualElement class="stats-wrapper">
-            <ui:Label text="Lv. 15" class="level-label" />
+            <ui:Label name="hud-level-label" text="Lv. 15" class="level-label" />
             <ui:VisualElement class="track-bg hp-track">
                 <ui:VisualElement name="hp-fill" class="fill-core hp-fill" />
             </ui:VisualElement>
@@ -58,6 +58,9 @@
                 </ui:VisualElement>
             </ui:VisualElement>
             <ui:VisualElement name="weapon-img-1" class="weapon-image" style="background-image: url(&quot;project://database/Assets/Hbao/Image/N%E1%BA%A5m%20%C4%91%E1%BA%A5m.png?fileID=2800000&amp;guid=14531db39fa39224290fb66a20930bcc&amp;type=3#Nấm đấm&quot;); width: 168px; height: 75px; top: -10px; right: 20px;" />
+            <ui:VisualElement name="weapon-durability-slot-1" class="weapon-durability-container">
+                <ui:VisualElement name="weapon-durability-fill-1" class="weapon-durability-fill" />
+            </ui:VisualElement>
         </ui:VisualElement>
         <ui:VisualElement name="weapon-slot-2" class="weapon-slot weapon-inactive">
             <ui:VisualElement class="weapon-hotkey-wrapper">
@@ -68,6 +71,9 @@
             <ui:VisualElement name="weapon-img-2" class="weapon-image" style="background-image: url(&quot;project://database/Assets/Hbao/Image/VukhiPLayer1.png?fileID=2800000&amp;guid=e5e54aaec41889f4383d000dfe69d050&amp;type=3#VukhiPLayer1&quot;); height: 97px; width: 207px; top: -15px; right: -17px;" />
             <ui:VisualElement name="weapon-lock-2" class="weapon-lock-overlay">
                 <ui:VisualElement class="weapon-lock-icon" />
+            </ui:VisualElement>
+            <ui:VisualElement name="weapon-durability-slot-2" class="weapon-durability-container">
+                <ui:VisualElement name="weapon-durability-fill-2" class="weapon-durability-fill" />
             </ui:VisualElement>
         </ui:VisualElement>
     </ui:VisualElement>
@@ -196,5 +202,13 @@
                 </ui:VisualElement>
             </ui:VisualElement>
         </ui:VisualElement>
+    </ui:VisualElement>
+    
+    <!-- Giao diện Nhắc Nhở Tương Tác Nhặt Đồ (Ấn F) -->
+    <ui:VisualElement name="interaction-prompt" class="interaction-prompt">
+        <ui:VisualElement class="key-badge-f">
+            <ui:Label text="F" class="key-badge-f-text" />
+        </ui:VisualElement>
+        <ui:Label name="interaction-prompt-text" text="Ấn [F] để nhặt" class="interaction-text" />
     </ui:VisualElement>
 </ui:UXML>

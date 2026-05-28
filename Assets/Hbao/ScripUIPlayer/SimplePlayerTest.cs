@@ -69,6 +69,37 @@ public class SimplePlayerTest : NetworkBehaviour
     private int localMpLevel = 0;
     private int localCooldownLevel = 0;
     private int localDamageLevel = 0;
+    private int localLevel = 0;
+    private float localExp = 0f;
+
+    [Header("Player Experience & Level")]
+    public NetworkVariable<int> playerLevel = new NetworkVariable<int>(
+        0,
+        NetworkVariableReadPermission.Everyone,
+        NetworkVariableWritePermission.Server
+    );
+    public NetworkVariable<float> playerExp = new NetworkVariable<float>(
+        0f,
+        NetworkVariableReadPermission.Everyone,
+        NetworkVariableWritePermission.Server
+    );
+
+    [Header("Weapon Durability")]
+    public float weapon1MaxDurability = 100f;
+    public float weapon2MaxDurability = 100f;
+
+    public NetworkVariable<float> weapon1Durability = new NetworkVariable<float>(
+        100f,
+        NetworkVariableReadPermission.Everyone,
+        NetworkVariableWritePermission.Server
+    );
+    public NetworkVariable<float> weapon2Durability = new NetworkVariable<float>(
+        100f,
+        NetworkVariableReadPermission.Everyone,
+        NetworkVariableWritePermission.Server
+    );
+    private float localWeapon1Durability = 100f;
+    private float localWeapon2Durability = 100f;
 
     [Header("Player Class Settings")]
     [Tooltip("0 = Sát Thủ, 1 = Hỏa Thuật, 2 = Cung Thủ, 3 = Tanker")]
@@ -135,6 +166,10 @@ public class SimplePlayerTest : NetworkBehaviour
         // Tải nhân vật đã lưu từ PlayerPrefs nếu có
         characterClassIndex = PlayerPrefs.GetInt("SelectedCharacterId", characterClassIndex);
 
+        // Nạp cấp độ và kinh nghiệm cho chế độ chơi đơn (mặc định về lại 0 theo yêu cầu)
+        localLevel = PlayerPrefs.GetInt("SelectedPlayerLevel_" + characterClassIndex, 0);
+        localExp = PlayerPrefs.GetFloat("SelectedPlayerExp_" + characterClassIndex, 0f);
+
         // Khởi tạo HUD với profile nhân vật
         PlayerHUDController hud = FindObjectOfType<PlayerHUDController>();
         if (hud != null)
@@ -164,6 +199,14 @@ public class SimplePlayerTest : NetworkBehaviour
         cooldownLevel.OnValueChanged += OnCooldownLevelChanged;
         damageLevel.OnValueChanged += OnDamageLevelChanged;
 
+        // Đăng ký sự kiện đồng bộ kinh nghiệm và cấp độ
+        playerLevel.OnValueChanged += OnLevelOrExpChanged;
+        playerExp.OnValueChanged += OnLevelOrExpChanged;
+
+        // Đăng ký sự kiện đồng bộ độ bền vũ khí
+        weapon1Durability.OnValueChanged += OnDurabilityChanged;
+        weapon2Durability.OnValueChanged += OnDurabilityChanged;
+
         if (IsOwner)
         {
             currentHealth.OnValueChanged += OnHealthChanged;
@@ -183,6 +226,7 @@ public class SimplePlayerTest : NetworkBehaviour
             // Áp dụng và cập nhật UI chỉ số ban đầu cục bộ
             ApplyUpgradedStats();
             UpdateUpgradeHUD();
+            UpdateDurabilityHUD();
         }
     }
 
@@ -198,6 +242,14 @@ public class SimplePlayerTest : NetworkBehaviour
         mpLevel.OnValueChanged -= OnMpLevelChanged;
         cooldownLevel.OnValueChanged -= OnCooldownLevelChanged;
         damageLevel.OnValueChanged -= OnDamageLevelChanged;
+
+        // Hủy đăng ký sự kiện kinh nghiệm
+        playerLevel.OnValueChanged -= OnLevelOrExpChanged;
+        playerExp.OnValueChanged -= OnLevelOrExpChanged;
+
+        // Hủy đăng ký sự kiện độ bền vũ khí
+        weapon1Durability.OnValueChanged -= OnDurabilityChanged;
+        weapon2Durability.OnValueChanged -= OnDurabilityChanged;
 
         if (IsOwner)
             currentHealth.OnValueChanged -= OnHealthChanged;
@@ -354,6 +406,199 @@ public class SimplePlayerTest : NetworkBehaviour
 
             hud.UpdateUpgradeUI(pts, hp, mp, cd, dmg);
             hud.SetHealth(CurrentHealth / maxHealth);
+
+            // Đồng bộ Cấp độ & Kinh nghiệm lên giao diện HUD chính
+            int lv = isStandaloneMode ? localLevel : playerLevel.Value;
+            float xp = isStandaloneMode ? localExp : playerExp.Value;
+            float needed = 100f + lv * 50f;
+            hud.UpdateExperienceUI(lv, xp, needed);
+        }
+    }
+
+    private void OnLevelOrExpChanged(int oldVal, int newVal)
+    {
+        if (IsOwner) UpdateUpgradeHUD();
+    }
+
+    private void OnLevelOrExpChanged(float oldVal, float newVal)
+    {
+        if (IsOwner) UpdateUpgradeHUD();
+    }
+
+    public float Weapon1Durability
+    {
+        get { return isStandaloneMode ? localWeapon1Durability : weapon1Durability.Value; }
+        set {
+            if (isStandaloneMode)
+            {
+                localWeapon1Durability = Mathf.Clamp(value, 0f, weapon1MaxDurability);
+                UpdateDurabilityHUD();
+            }
+            else if (IsServer)
+            {
+                weapon1Durability.Value = Mathf.Clamp(value, 0f, weapon1MaxDurability);
+            }
+        }
+    }
+
+    public float Weapon2Durability
+    {
+        get { return isStandaloneMode ? localWeapon2Durability : weapon2Durability.Value; }
+        set {
+            if (isStandaloneMode)
+            {
+                localWeapon2Durability = Mathf.Clamp(value, 0f, weapon2MaxDurability);
+                UpdateDurabilityHUD();
+            }
+            else if (IsServer)
+            {
+                weapon2Durability.Value = Mathf.Clamp(value, 0f, weapon2MaxDurability);
+            }
+        }
+    }
+
+    private void OnDurabilityChanged(float oldVal, float newVal)
+    {
+        if (IsOwner) UpdateDurabilityHUD();
+    }
+
+    public void UpdateDurabilityHUD()
+    {
+        PlayerHUDController hud = FindObjectOfType<PlayerHUDController>();
+        if (hud != null)
+        {
+            float percent1 = (isStandaloneMode ? localWeapon1Durability : weapon1Durability.Value) / weapon1MaxDurability;
+            float percent2 = (isStandaloneMode ? localWeapon2Durability : weapon2Durability.Value) / weapon2MaxDurability;
+            hud.SetWeaponDurability(1, percent1);
+            hud.SetWeaponDurability(2, percent2);
+        }
+    }
+
+    public bool TryAddItem(string itemName)
+    {
+        // 1. Tìm xem vật phẩm đã tồn tại trong túi đồ để tăng số lượng (Cộng dồn stack)
+        for (int i = 0; i < inventorySlots.Length; i++)
+        {
+            string slotVal = inventorySlots[i];
+            if (!string.IsNullOrEmpty(slotVal))
+            {
+                string name = slotVal;
+                int count = 1;
+                if (slotVal.Contains(":"))
+                {
+                    var parts = slotVal.Split(':');
+                    name = parts[0];
+                    int.TryParse(parts[1], out count);
+                }
+
+                if (name == itemName)
+                {
+                    inventorySlots[i] = name + ":" + (count + 1);
+                    
+                    // Cập nhật lại giao diện hòm đồ
+                    PlayerHUDController hud = FindObjectOfType<PlayerHUDController>();
+                    if (hud != null)
+                    {
+                        hud.SetInventorySlots(inventorySlots);
+                    }
+                    
+                    // Đồng bộ và lưu trữ lên cơ sở dữ liệu nếu chơi online
+                    if (!isStandaloneMode)
+                    {
+                        SavePlayerStateToDatabase();
+                    }
+                    return true;
+                }
+            }
+        }
+
+        // 2. Nếu chưa có stack nào sẵn, đặt vào ô trống đầu tiên
+        for (int i = 0; i < inventorySlots.Length; i++)
+        {
+            if (string.IsNullOrEmpty(inventorySlots[i]))
+            {
+                inventorySlots[i] = itemName + ":1";
+                
+                // Cập nhật lại giao diện hòm đồ
+                PlayerHUDController hud = FindObjectOfType<PlayerHUDController>();
+                if (hud != null)
+                {
+                    hud.SetInventorySlots(inventorySlots);
+                }
+                
+                // Đồng bộ và lưu trữ lên cơ sở dữ liệu nếu chơi online
+                if (!isStandaloneMode)
+                {
+                    SavePlayerStateToDatabase();
+                }
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private System.Collections.Generic.HashSet<string> collectedDropGroups = new System.Collections.Generic.HashSet<string>();
+
+    public bool HasCollectedFromDropGroup(string dropGroupId)
+    {
+        if (string.IsNullOrEmpty(dropGroupId)) return false;
+        return collectedDropGroups.Contains(dropGroupId);
+    }
+
+    public void AddCollectedDropGroup(string dropGroupId)
+    {
+        if (string.IsNullOrEmpty(dropGroupId)) return;
+        collectedDropGroups.Add(dropGroupId);
+    }
+
+    [ClientRpc]
+    public void OnCollectGemClientRpc(string dropGroupId)
+    {
+        if (IsOwner)
+        {
+            AddCollectedDropGroup(dropGroupId);
+        }
+    }
+
+    /// <summary>
+    /// Cộng điểm kinh nghiệm thu thập được và kiểm tra thăng cấp nhân vật
+    /// </summary>
+    public void AddExperience(float amount)
+    {
+        if (isStandaloneMode)
+        {
+            localExp += amount;
+            float needed = 100f + localLevel * 50f;
+            while (localExp >= needed)
+            {
+                localExp -= needed;
+                localLevel++;
+                needed = 100f + localLevel * 50f;
+                // Thăng cấp cộng thêm 1 Điểm Nâng Cấp chỉ số cho người chơi
+                localUpgradePoints++;
+                Debug.Log($"[Standalone] THĂNG CẤP! Cấp độ mới: {localLevel}. Điểm nâng cấp còn: {localUpgradePoints}");
+            }
+            // Lưu cấp độ và kinh nghiệm cục bộ của class này
+            PlayerPrefs.SetInt("SelectedPlayerLevel_" + characterClassIndex, localLevel);
+            PlayerPrefs.SetFloat("SelectedPlayerExp_" + characterClassIndex, localExp);
+            PlayerPrefs.Save();
+            
+            UpdateUpgradeHUD();
+        }
+        else if (IsServer)
+        {
+            playerExp.Value += amount;
+            float needed = 100f + playerLevel.Value * 50f;
+            while (playerExp.Value >= needed)
+            {
+                playerExp.Value -= needed;
+                playerLevel.Value++;
+                needed = 100f + playerLevel.Value * 50f;
+                // Thăng cấp cộng thêm 1 Điểm Nâng Cấp chỉ số cho người chơi
+                upgradePoints.Value++;
+                Debug.Log($"[Server] CLIENT {OwnerClientId} THĂNG CẤP! Cấp độ mới: {playerLevel.Value}. Điểm nâng cấp còn: {upgradePoints.Value}");
+            }
+            SavePlayerStateClientRpc();
         }
     }
 
@@ -657,13 +902,15 @@ public class SimplePlayerTest : NetworkBehaviour
                 SyncPlayerStateServerRpc(
                     state.health, 
                     state.activeWeaponIndex, 
-                    state.isWeapon2Locked, 
-                    state.isSkillsUnlocked,
+                    true, // Khóa vũ khí 2 mặc định khi bắt đầu game
+                    false, // Khóa kỹ năng mặc định khi bắt đầu game
                     state.upgradePoints,
                     state.hpLevel,
                     state.mpLevel,
                     state.cooldownLevel,
-                    state.damageLevel
+                    state.damageLevel,
+                    state.playerLevel,
+                    state.playerExp
                 );
 
                 if (state.inventorySlots != null)
@@ -678,25 +925,28 @@ public class SimplePlayerTest : NetworkBehaviour
                 if (hud != null)
                 {
                     hud.SetInventorySlots(inventorySlots);
-                    hud.SetSkillsUnlocked(state.isSkillsUnlocked, false);
-                    hud.SetWeapon2Locked(state.isWeapon2Locked, false);
+                    hud.SetSkillsUnlocked(false, false); // Khóa kỹ năng mặc định
+                    hud.SetWeapon2Locked(true, false); // Khóa vũ khí 2 mặc định
                     hud.SelectWeapon(state.activeWeaponIndex);
                     // Cập nhật lại UI sau khi các NetworkVariables được đồng bộ
                     hud.UpdateUpgradeUI(state.upgradePoints, state.hpLevel, state.mpLevel, state.cooldownLevel, state.damageLevel);
                     hud.SetHealth(state.health / (100f + state.hpLevel * 20f));
+                    
+                    float needed = 100f + state.playerLevel * 50f;
+                    hud.UpdateExperienceUI(state.playerLevel, state.playerExp, needed);
                 }
             }
             else
             {
                 Debug.LogWarning("[DB] Không có dữ liệu cũ hoặc lỗi kết nối. Đồng bộ dữ liệu ban đầu.");
-                SyncPlayerStateServerRpc(maxHealth, 1, true, false, 5, 0, 0, 0, 0);
+                SyncPlayerStateServerRpc(maxHealth, 1, true, false, 5, 0, 0, 0, 0, 0, 0f);
                 SavePlayerStateToDatabase();
             }
         }
         catch (System.Exception ex)
         {
             Debug.LogError($"[DB] Lỗi khi kết nối API tải dữ liệu MongoDB: {ex.Message}");
-            SyncPlayerStateServerRpc(maxHealth, 1, true, false, 5, 0, 0, 0, 0);
+            SyncPlayerStateServerRpc(maxHealth, 1, true, false, 5, 0, 0, 0, 0, 0, 0f);
         }
     }
 
@@ -710,7 +960,9 @@ public class SimplePlayerTest : NetworkBehaviour
         int hp,
         int mp,
         int cd,
-        int dmg
+        int dmg,
+        int levelVal,
+        float expVal
     )
     {
         isSyncingFromDb = true;
@@ -720,6 +972,8 @@ public class SimplePlayerTest : NetworkBehaviour
         mpLevel.Value = mp;
         cooldownLevel.Value = cd;
         damageLevel.Value = dmg;
+        playerLevel.Value = levelVal;
+        playerExp.Value = expVal;
 
         // Đồng bộ trước maxHealth tác động của chỉ số lên server
         maxHealth = 100f + hp * 20f;
@@ -751,7 +1005,9 @@ public class SimplePlayerTest : NetworkBehaviour
                 hpLevel = hpLevel.Value,
                 mpLevel = mpLevel.Value,
                 cooldownLevel = cooldownLevel.Value,
-                damageLevel = damageLevel.Value
+                damageLevel = damageLevel.Value,
+                playerLevel = playerLevel.Value,
+                playerExp = playerExp.Value
             };
 
             var res = await AuthService.SavePlayerState(stateData);

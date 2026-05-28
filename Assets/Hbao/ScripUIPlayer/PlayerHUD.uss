@@ -960,3 +960,174 @@
     color: rgb(0, 0, 0);
     scale: 0.95 0.95;
 }
+
+/* ========================================================================= */
+/* --- Weapon Durability & Durability Repair Item System Redesign Styles --- */
+/* ========================================================================= */
+
+.weapon-durability-container {
+    position: absolute;
+    bottom: 4px;
+    left: 14px;
+    right: 14px;
+    height: 4px;
+    background-color: rgba(255, 255, 255, 0.15);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+#weapon-durability-slot-1 {
+    display: none;
+}
+
+.weapon-durability-fill {
+    height: 100%;
+    width: 100%;
+    background-color: rgb(255, 255, 255);
+    border-radius: 2px;
+    transition-property: width;
+    transition-duration: 0.25s;
+    transition-timing-function: ease-out-sine;
+}
+
+/* Interaction Prompt (Press F to Collect) */
+.interaction-prompt {
+    position: absolute;
+    top: 50%;
+    left: 0.5%;
+    translate: -10px -50%;
+    flex-direction: row;
+    align-items: center;
+    background-color: rgba(0, 0, 0, 0); /* Xóa bóng đen đổ */
+    border-width: 0px; /* Xóa viền trắng bọc ngoài */
+    padding: 8px 18px;
+    opacity: 0;
+    scale: 0.8 0.8;
+    transition-property: opacity, scale, translate;
+    transition-duration: 0.35s;
+    transition-timing-function: ease-out-back;
+    z-index: 1001;
+    display: none; /* Sẽ đổi thành Flex bằng C# khi ở trong vùng tương tác */
+}
+
+.interaction-prompt.show-prompt {
+    display: flex;
+    opacity: 1;
+    scale: 1 1;
+    translate: 0 -50%;
+}
+
+.key-badge-f {
+    width: 26px;
+    height: 26px;
+    background-color: rgb(255, 255, 255);
+    border-radius: 6px;
+    border-width: 1px;
+    border-color: rgb(200, 200, 200);
+    justify-content: center;
+    align-items: center;
+    margin-right: 10px;
+    box-shadow: 0 3px 0 rgb(180, 180, 180);
+}
+
+.key-badge-f-text {
+    color: rgb(15, 15, 15);
+    -unity-font-style: bold;
+    font-size: 14px;
+    padding: 0;
+    margin: 0;
+}
+
+.interaction-text {
+    color: rgb(255, 255, 255);
+    -unity-font-style: bold;
+    font-size: 15px;
+    letter-spacing: 0.5px;
+    padding: 0;
+    margin: 0;
+}
+
+/* Inventory Tooltip (Hover Description Card) */
+.inventory-tooltip {
+    position: absolute;
+    background-color: rgba(5, 8, 18, 0.98);
+    border-width: 1.5px;
+    border-color: rgba(255, 255, 255, 0.9);
+    border-radius: 12px;
+    padding: 10px 14px;
+    z-index: 1050;
+    opacity: 0;
+    transition-property: opacity;
+    transition-duration: 0.2s;
+    width: 230px;
+    pointer-events: none;
+}
+
+.inventory-tooltip-title {
+    color: rgb(255, 255, 255);
+    font-size: 13px;
+    -unity-font-style: bold;
+    margin-bottom: 4px;
+    letter-spacing: 1px;
+}
+
+.inventory-tooltip-desc {
+    color: rgba(235, 235, 235, 0.8);
+    font-size: 11px;
+    -unity-font-style: italic;
+    white-space: normal;
+}
+
+/* Inventory Slot Cooldown Overlay */
+.slot-cooldown-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.75);
+    border-radius: 11px;
+    justify-content: center;
+    align-items: center;
+    z-index: 25;
+}
+
+.slot-cooldown-text {
+    color: rgb(255, 255, 255);
+    -unity-font-style: bold;
+    font-size: 16px;
+    padding: 0;
+    margin: 0;
+}
+
+/* Drag-and-drop Visual Helpers */
+.dragged-item-ghost {
+    position: absolute;
+    width: 64px;
+    height: 64px;
+    opacity: 0.75;
+    z-index: 9999;
+    pointer-events: none;
+    -unity-background-scale-mode: scale-to-fit;
+}
+
+.slot-dragging-source {
+    opacity: 0.3;
+}
+
+/* Badge số lượng cộng dồn ở góc ô hòm đồ */
+.inventory-item-stack-count {
+    position: absolute;
+    bottom: 2px;
+    right: 4px;
+    color: #ffffff;
+    font-size: 11px;
+    -unity-font-style: bold;
+    background-color: rgba(10, 15, 25, 0.85);
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.25);
+    border-radius: 4px;
+    padding: 1px 4px;
+    z-index: 10;
+}
+

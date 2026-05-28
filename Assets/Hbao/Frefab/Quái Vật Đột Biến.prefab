@@ -240,6 +240,11 @@ MonoBehaviour:
       MinSecondsBetweenUpdates: 0
       MaxSecondsBetweenUpdates: 0
     m_InternalValue: 0
+  expGemPrefab: {fileID: 7388330026054526502, guid: b6f0bcc3b9d52f840a55991f2dbef13f, type: 3}
+  expDropAmount: 25
+  expDropPoint: {fileID: 2382866152611396582}
+  repairItemPrefab: {fileID: 2217945438620940750, guid: c0dc53cb41f8a574480ed87a8b9bebba, type: 3}
+  repairItemDropChance: 0.2
   agent: {fileID: 5818080817487145746}
   anim: {fileID: 3941181446497741679}
   eyeTransform: {fileID: 8610098342983182693}

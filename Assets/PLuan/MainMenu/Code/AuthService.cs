@@ -121,6 +121,8 @@ public class PlayerStateData
     public int mpLevel;
     public int cooldownLevel;
     public int damageLevel;
+    public int playerLevel;
+    public float playerExp;
 }
 
 [System.Serializable]

@@ -353,6 +353,11 @@ MonoBehaviour:
   anim: {fileID: 6684999997589933777}
   eyeTransform: {fileID: 3313117445543815237}
   clawHitbox: {fileID: 2746497045860055187}
+  expGemPrefab: {fileID: 7388330026054526502, guid: b6f0bcc3b9d52f840a55991f2dbef13f, type: 3}
+  expDropAmount: 20
+  expDropPoint: {fileID: 8905336324107336390}
+  repairItemPrefab: {fileID: 2217945438620940750, guid: c0dc53cb41f8a574480ed87a8b9bebba, type: 3}
+  repairItemDropChance: 0.2
   sightRange: 12
   fieldOfView: 110
   attackRange: 1.8

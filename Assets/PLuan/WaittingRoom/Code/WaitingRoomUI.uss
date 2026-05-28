@@ -336,18 +336,20 @@
 
 /* MAYA SKILLS */
 .maya-skill-0 {
-    background-image: url("project://database/Assets/Hbao/Image/HT_skill1.png");
+    background-image: url("project://database/Assets/Hbao/Image/HT Skill 3.png");
 }
 .maya-skill-1 {
     background-image: url("project://database/Assets/Hbao/Image/HT%20skill2.png");
 }
 .maya-skill-2 {
-    background-image: url("project://database/Assets/Hbao/Image/HT-Skill3.png");
+    background-image: url("project://database/Assets/Hbao/Image/HT_skill1.png");
 }
 
 /* ELENA SKILLS */
 .elena-skill-0 {
     background-image: url("project://database/Assets/Hbao/Image/CT-Skill1.png");
+    background-size: 155% 155%;
+    background-position: center;
 }
 .elena-skill-1 {
     background-image: url("project://database/Assets/Hbao/Image/CT-skill2.png");
@@ -364,7 +366,7 @@
     background-image: url("project://database/Assets/Hbao/Image/tanker-skill2.png");
 }
 .arthur-skill-2 {
-    background-image: url("project://database/Assets/Hbao/Image/CT-Skill3.png");
+    background-image: url("project://database/Assets/Hbao/Image/HT-Skill3.png");
 }
 
 /* CHARACTER DETAILS MODAL */

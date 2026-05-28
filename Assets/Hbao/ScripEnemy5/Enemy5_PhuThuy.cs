@@ -33,6 +33,15 @@ public class Enemy5_PhuThuy : NetworkBehaviour
     // Đồng bộ hit để mọi máy khách chơi hoạt ảnh dính đòn khựng lại
     public NetworkVariable<int> hitCounter = new NetworkVariable<int>(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
+    [Header("Experience Drops")]
+    public GameObject expGemPrefab;
+    public float expDropAmount = 25f;
+    public Transform expDropPoint; // Kéo Transform dưới chân quái vào đây
+
+    [Header("Item Drop Settings")]
+    public GameObject repairItemPrefab;
+    [Range(0f, 1f)] public float repairItemDropChance = 0.3f;
+
     [Header("Components")]
     public NavMeshAgent agent;
     public Animator anim;
@@ -732,9 +741,81 @@ public class Enemy5_PhuThuy : NetworkBehaviour
     private void Die()
     {
         if (agent.isActiveAndEnabled) agent.isStopped = true;
+        DropExperience();
+        DropItems();
 
         // Despawn Enemy qua mạng sau 2 giây chơi hoạt ảnh chết
         Invoke(nameof(DespawnEnemy), 2.0f);
+    }
+
+    private void DropExperience()
+    {
+        if (expGemPrefab == null) return;
+
+        string uniqueDropId = System.Guid.NewGuid().ToString();
+        bool isNetworkActive = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
+        Transform spawnPoint = expDropPoint != null ? expDropPoint : transform;
+        Vector3 basePos = spawnPoint.position;
+
+        // Cấu hình khoảng cách cố định cách nhau 0.6m tạo thành hình vuông quanh tâm chân quái
+        float dist = 0.6f;
+        Vector3[] spawnPositions = new Vector3[]
+        {
+            basePos + new Vector3(dist, 0.1f, dist),
+            basePos + new Vector3(-dist, 0.1f, dist),
+            basePos + new Vector3(dist, 0.1f, -dist),
+            basePos + new Vector3(-dist, 0.1f, -dist)
+        };
+
+        for (int i = 0; i < 4; i++)
+        {
+            Vector3 spawnPos = spawnPositions[i];
+
+            if (!isNetworkActive)
+            {
+                GameObject gem = Instantiate(expGemPrefab, spawnPos, Quaternion.identity);
+                var gemScript = gem.GetComponent<ExperienceGem>();
+                if (gemScript != null)
+                {
+                    gemScript.expAmount = expDropAmount;
+                    gemScript.DropGroupId = uniqueDropId;
+                }
+            }
+            else if (IsServer)
+            {
+                GameObject gem = Instantiate(expGemPrefab, spawnPos, Quaternion.identity);
+                var gemScript = gem.GetComponent<ExperienceGem>();
+                if (gemScript != null)
+                {
+                    gemScript.expAmount = expDropAmount;
+                    gemScript.DropGroupId = uniqueDropId;
+                }
+
+                var netObj = gem.GetComponent<NetworkObject>();
+                if (netObj != null) netObj.Spawn();
+            }
+        }
+    }
+
+    private void DropItems()
+    {
+        if (repairItemPrefab == null) return;
+        if (Random.value > repairItemDropChance) return;
+
+        bool isNetworkActive = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
+        Transform spawnPoint = expDropPoint != null ? expDropPoint : transform;
+        Vector3 spawnPos = spawnPoint.position + Vector3.up * 0.2f;
+
+        if (!isNetworkActive)
+        {
+            Instantiate(repairItemPrefab, spawnPos, Quaternion.identity);
+        }
+        else if (IsServer)
+        {
+            GameObject itemObj = Instantiate(repairItemPrefab, spawnPos, Quaternion.identity);
+            var netObj = itemObj.GetComponent<NetworkObject>();
+            if (netObj != null) netObj.Spawn();
+        }
     }
 
     private void DespawnEnemy()
