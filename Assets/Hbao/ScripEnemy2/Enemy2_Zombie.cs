@@ -367,10 +367,21 @@ public class Enemy2_Zombie : NetworkBehaviour
         Vector3 lk = (targetPlayer.position - transform.position); lk.y = 0;
         if (lk != Vector3.zero) transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(lk), Time.deltaTime * 15f);
 
+        float dist = Vector3.Distance(transform.position, targetPlayer.position);
+
+        if (dist <= attackRange)
+        {
+            if (AgentReady) agent.isStopped = true;
+            if (attackCooldownTimer <= 0)
+            {
+                ChangeState(EnemyState.Attack);
+            }
+            return;
+        }
+
         bool isFrantic = CurrentHealthValue <= maxHealth * 0.4f;
         if (AgentReady) { agent.isStopped = false; agent.speed = isFrantic ? 6.5f : 4.5f; }
 
-        float dist = Vector3.Distance(transform.position, targetPlayer.position);
         if (dist <= 6f)
         {
             tacticalTimer -= Time.deltaTime;
@@ -387,16 +398,6 @@ public class Enemy2_Zombie : NetworkBehaviour
             }
         }
         else { if (AgentReady) agent.SetDestination(targetPlayer.position); }
-
-        // ĐOẠN CODE ĐÚNG SAU KHI SỬA
-        if (dist <= attackRange)
-        {
-            if (attackCooldownTimer <= 0)
-            {
-                ChangeState(EnemyState.Attack);
-            }
-            // Bỏ qua bước chuyển sang Idle. Quái sẽ giữ state Run và chạy bám đuôi Player!
-        }
     }
 
     private void HandleSearch()
