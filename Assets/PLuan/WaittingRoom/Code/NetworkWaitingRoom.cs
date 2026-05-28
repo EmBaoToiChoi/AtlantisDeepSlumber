@@ -143,6 +143,14 @@ public class NetworkWaitingRoom : NetworkBehaviour
     private Button _btnToggleCharPanel;
     private Button _btnSwapCharacter;
 
+    // Swap Request Modal & Fields
+    private VisualElement _swapRequestModal;
+    private Label _lblSwapRequestMsg;
+    private Button _btnSwapAccept;
+    private Button _btnSwapDecline;
+    private ulong _pendingSwapSenderClientId = ulong.MaxValue;
+    private bool _isSwapModeActive = false;
+
     private void Awake() 
     { 
         Debug.Log("[EMERGENCY] Awake đã chạy!");
@@ -188,9 +196,39 @@ public class NetworkWaitingRoom : NetworkBehaviour
 
         if (_btnSwapCharacter != null)
         {
-            _btnSwapCharacter.clicked += () => SelectCharacter(-1);
+            _btnSwapCharacter.clicked += ToggleSwapMode;
             _btnSwapCharacter.AddToClassList("hidden-element");
             _btnSwapCharacter.style.display = DisplayStyle.None;
+        }
+
+        // Các thành phần của Swap Request Modal
+        _swapRequestModal = _root.Q<VisualElement>("swap-request-modal");
+        _lblSwapRequestMsg = _root.Q<Label>("lbl-swap-request-msg");
+        _btnSwapAccept = _root.Q<Button>("btn-swap-accept");
+        _btnSwapDecline = _root.Q<Button>("btn-swap-decline");
+
+        if (_btnSwapAccept != null)
+        {
+            _btnSwapAccept.clicked += () => {
+                if (_pendingSwapSenderClientId != ulong.MaxValue)
+                {
+                    RespondToSwapRequestServerRpc(_pendingSwapSenderClientId, true);
+                    _pendingSwapSenderClientId = ulong.MaxValue;
+                }
+                HideSwapRequestModal();
+            };
+        }
+
+        if (_btnSwapDecline != null)
+        {
+            _btnSwapDecline.clicked += () => {
+                if (_pendingSwapSenderClientId != ulong.MaxValue)
+                {
+                    RespondToSwapRequestServerRpc(_pendingSwapSenderClientId, false);
+                    _pendingSwapSenderClientId = ulong.MaxValue;
+                }
+                HideSwapRequestModal();
+            };
         }
 
         // Ẩn mặc định cho đỡ vướng
@@ -235,6 +273,25 @@ public class NetworkWaitingRoom : NetworkBehaviour
         else
         {
             Debug.LogError("[Lobby] _detailsModal bị NULL khi ẩn!");
+        }
+    }
+
+    private void ToggleSwapMode()
+    {
+        _isSwapModeActive = !_isSwapModeActive;
+        if (_btnSwapCharacter != null)
+        {
+            _btnSwapCharacter.text = _isSwapModeActive ? "CANCEL SWAP" : "SWAP EXPLORER";
+        }
+        UpdatePlayerUI();
+    }
+
+    private void HideSwapRequestModal()
+    {
+        if (_swapRequestModal != null)
+        {
+            _swapRequestModal.AddToClassList("hidden-element");
+            _swapRequestModal.style.display = DisplayStyle.None;
         }
     }
 
@@ -340,6 +397,27 @@ public class NetworkWaitingRoom : NetworkBehaviour
 
     private void OnCharacterCardClicked(int charId, ClickEvent evt)
     {
+        if (_isSwapModeActive)
+        {
+            ulong targetClientId = ulong.MaxValue;
+            foreach (var p in NetPlayers)
+            {
+                if (p.CharacterId == charId && p.ClientId != NetworkManager.Singleton.LocalClientId)
+                {
+                    targetClientId = p.ClientId;
+                    break;
+                }
+            }
+
+            if (targetClientId != ulong.MaxValue)
+            {
+                Debug.Log($"[CLIENT] Clicked swap on character {charId} owned by Client {targetClientId}");
+                RequestSwapCharacterServerRpc(targetClientId);
+                ToggleSwapMode(); // Exit swap mode
+            }
+            return;
+        }
+
         // 1. Kiểm tra xem nhân vật này có đang bị người chơi khác khóa không
         bool isLockedByOther = false;
         foreach (var p in NetPlayers)
@@ -746,7 +824,6 @@ public class NetworkWaitingRoom : NetworkBehaviour
         // Cập nhật màu nút Ready cho bản thân
         UpdateReadyButtonState();
     }
-
     private void UpdateCardUI(int charId, List<string> selectors)
     {
         var card = _root.Q<VisualElement>($"char-card-{charId}");
@@ -762,6 +839,7 @@ public class NetworkWaitingRoom : NetworkBehaviour
         {
             statusLbl.text = "AVAILABLE";
             statusLbl.RemoveFromClassList("active-status");
+            statusLbl.RemoveFromClassList("swap-status-active");
         }
 
         if (selectors.Count > 0)
@@ -780,14 +858,30 @@ public class NetworkWaitingRoom : NetworkBehaviour
             }
             else
             {
-                if (card != null)
+                if (_isSwapModeActive)
                 {
-                    card.AddToClassList("card-locked");
-                    card.style.opacity = 0.4f; // Làm mờ thẻ để chỉ rõ bị khóa bởi người khác
+                    if (card != null)
+                    {
+                        card.style.opacity = 1f;
+                        card.AddToClassList("select-active");
+                    }
+                    if (statusLbl != null)
+                    {
+                        statusLbl.text = "SWAP";
+                        statusLbl.AddToClassList("swap-status-active");
+                    }
                 }
-                if (statusLbl != null)
+                else
                 {
-                    statusLbl.text = "LOCKED BY " + string.Join(" + ", selectors);
+                    if (card != null)
+                    {
+                        card.AddToClassList("card-locked");
+                        card.style.opacity = 0.4f; // Làm mờ thẻ để chỉ rõ bị khóa bởi người khác
+                    }
+                    if (statusLbl != null)
+                    {
+                        statusLbl.text = "LOCKED BY " + string.Join(" + ", selectors);
+                    }
                 }
             }
         }
@@ -972,14 +1066,14 @@ public class NetworkWaitingRoom : NetworkBehaviour
 
     private GameObject GetPlayerPrefab(int characterId)
     {
-        if (characterId < 0 || characterId >= 4) return null;
+        if (characterId < 0 || characterId >= 4) return playerNetworkPrefab;
         switch (characterId)
         {
             case 0: return playerNetworkPrefab;
             case 1: return playerNetworkPrefab2 != null ? playerNetworkPrefab2 : playerNetworkPrefab;
             case 2: return playerNetworkPrefab3 != null ? playerNetworkPrefab3 : playerNetworkPrefab;
             case 3: return playerNetworkPrefab4 != null ? playerNetworkPrefab4 : playerNetworkPrefab;
-            default: return null;
+            default: return playerNetworkPrefab;
         }
     }
 
@@ -1226,10 +1320,158 @@ public class NetworkWaitingRoom : NetworkBehaviour
         }
     }
 
+    private string GetCharacterName(int charId)
+    {
+        if (charId >= 0 && charId < _characters.Length)
+        {
+            return _characters[charId].Name;
+        }
+        return "UNKNOWN";
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    private void RequestSwapCharacterServerRpc(ulong targetClientId, ServerRpcParams rpcParams = default)
+    {
+        ulong senderClientId = rpcParams.Receive.SenderClientId;
+        Debug.Log($"[SERVER] RequestSwapCharacterServerRpc called from {senderClientId} targeting {targetClientId}");
+
+        PlayerNetData senderPlayer = default;
+        PlayerNetData targetPlayer = default;
+        bool foundSender = false;
+        bool foundTarget = false;
+
+        foreach (var p in NetPlayers)
+        {
+            if (p.ClientId == senderClientId)
+            {
+                senderPlayer = p;
+                foundSender = true;
+            }
+            else if (p.ClientId == targetClientId)
+            {
+                targetPlayer = p;
+                foundTarget = true;
+            }
+        }
+
+        if (!foundSender || !foundTarget)
+        {
+            Debug.LogWarning($"[SERVER] Swap request invalid: sender found={foundSender}, target found={foundTarget}");
+            return;
+        }
+
+        if (senderPlayer.CharacterId == -1 || targetPlayer.CharacterId == -1)
+        {
+            Debug.LogWarning("[SERVER] Swap request invalid: one of the players has no character selected.");
+            return;
+        }
+
+        ClientRpcParams clientRpcParams = new ClientRpcParams
+        {
+            Send = new ClientRpcSendParams
+            {
+                TargetClientIds = new ulong[] { targetClientId }
+            }
+        };
+
+        ReceiveSwapRequestClientRpc(senderClientId, senderPlayer.Name.ToString(), senderPlayer.CharacterId, targetPlayer.CharacterId, clientRpcParams);
+    }
+
+    [ClientRpc]
+    private void ReceiveSwapRequestClientRpc(ulong senderClientId, string senderName, int senderCharId, int targetCharId, ClientRpcParams clientRpcParams = default)
+    {
+        Debug.Log($"[CLIENT] Received swap request from {senderName} (ClientId={senderClientId}). Swap {senderCharId} for {targetCharId}");
+        
+        _pendingSwapSenderClientId = senderClientId;
+
+        if (_swapRequestModal != null && _lblSwapRequestMsg != null)
+        {
+            string senderCharName = GetCharacterName(senderCharId);
+            string targetCharName = GetCharacterName(targetCharId);
+
+            _lblSwapRequestMsg.text = $"{senderName.ToUpper()} WANTS TO SWAP {senderCharName} WITH YOUR {targetCharName}.";
+
+            _swapRequestModal.RemoveFromClassList("hidden-element");
+            _swapRequestModal.style.display = DisplayStyle.Flex;
+        }
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    private void RespondToSwapRequestServerRpc(ulong senderClientId, bool accepted, ServerRpcParams rpcParams = default)
+    {
+        ulong targetClientId = rpcParams.Receive.SenderClientId;
+        Debug.Log($"[SERVER] Target {targetClientId} responded to swap request from sender {senderClientId}: accepted={accepted}");
+
+        int senderIdx = -1;
+        int targetIdx = -1;
+        for (int i = 0; i < NetPlayers.Count; i++)
+        {
+            if (NetPlayers[i].ClientId == senderClientId) senderIdx = i;
+            if (NetPlayers[i].ClientId == targetClientId) targetIdx = i;
+        }
+
+        if (senderIdx == -1 || targetIdx == -1)
+        {
+            Debug.LogWarning("[SERVER] Swap response invalid: sender or target is no longer in the lobby.");
+            return;
+        }
+
+        if (accepted)
+        {
+            var senderData = NetPlayers[senderIdx];
+            var targetData = NetPlayers[targetIdx];
+
+            int tempCharId = senderData.CharacterId;
+            senderData.CharacterId = targetData.CharacterId;
+            targetData.CharacterId = tempCharId;
+
+            // Force both to NOT READY
+            senderData.IsReady = false;
+            targetData.IsReady = false;
+
+            NetPlayers[senderIdx] = senderData;
+            NetPlayers[targetIdx] = targetData;
+
+            Debug.Log($"[SERVER] Swapped characters: Client {senderClientId} -> {senderData.CharacterId}, Client {targetClientId} -> {targetData.CharacterId}");
+
+            // Respawn both player models
+            RespawnPlayerObject(senderClientId, senderData.CharacterId);
+            RespawnPlayerObject(targetClientId, targetData.CharacterId);
+        }
+        else
+        {
+            ClientRpcParams clientRpcParams = new ClientRpcParams
+            {
+                Send = new ClientRpcSendParams
+                {
+                    TargetClientIds = new ulong[] { senderClientId }
+                }
+            };
+
+            string targetPlayerName = NetPlayers[targetIdx].Name.ToString();
+            ReceiveSwapDeclinedClientRpc(targetPlayerName, clientRpcParams);
+        }
+    }
+
+    [ClientRpc]
+    private void ReceiveSwapDeclinedClientRpc(string targetPlayerName, ClientRpcParams clientRpcParams = default)
+    {
+        Debug.LogWarning($"[CLIENT] Swap request declined by {targetPlayerName}");
+
+        if (_lblWarning != null)
+        {
+            _lblWarning.text = $"{targetPlayerName.ToUpper()} DECLINED YOUR SWAP REQUEST!";
+            _lblWarning.RemoveFromClassList("hidden-element");
+            _lblWarning.style.display = DisplayStyle.Flex;
+
+            CancelInvoke(nameof(HideWarningLabel));
+            Invoke(nameof(HideWarningLabel), 3f);
+        }
+    }
+
     private async void LeaveRoom()
     {
         string roomId = PlayerPrefs.GetString("CurrentRoomID", "");
-        if (!string.IsNullOrEmpty(roomId)) await AuthService.LeaveRoom(roomId);
         
         if (NetworkManager.Singleton != null)
         {
