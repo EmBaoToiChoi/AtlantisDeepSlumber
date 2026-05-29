@@ -108,13 +108,19 @@ public class PlayerMovement : NetworkBehaviour
         }
     }
 
-    void DropCore()
+    public void DropCore()
+    {
+        // Gọi ServerRpc để đảm bảo Server thực hiện việc thả (đúng chuẩn Network)
+        DropCoreServerRpc();
+    }
+    [ServerRpc(RequireOwnership = false)]
+    private void DropCoreServerRpc()
     {
         if (currentHeldCore != null)
         {
             currentHeldCore.RequestDrop(OwnerClientId);
             currentHeldCore = null;
-            SetCarryingCoreServerRpc(false);
+            isCarryingCore.Value = false;
         }
     }
 

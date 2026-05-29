@@ -20,6 +20,7 @@ public class CrystalCore : NetworkBehaviour
     // Trong CrystalCore.cs
     void Update()
     {
+        if (isSnapped.Value) return;
         if (IsServer && holders.Count > 0)
         {
             Vector3 targetPos = Vector3.zero;
