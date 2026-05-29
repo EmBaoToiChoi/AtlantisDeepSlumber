@@ -10,7 +10,7 @@ public class InteractBox : MonoBehaviour
     
     private bool isPlayerInside = false; // Player đang đứng ở trạm
     private bool isUsingStation = false;
-    private bool isCrystalLocked = false; // Đã lắp tinh thể chưa?
+   public NetworkVariable<bool> isCrystalLocked = new NetworkVariable<bool>(false);
     private PlayerMovement localPlayerMovement;
 
     void Start() { gameManager = Object.FindFirstObjectByType<OptimizedNetworkMiniGame>(); }
@@ -19,8 +19,8 @@ public class InteractBox : MonoBehaviour
     {
         if (isPlayerInside && localPlayerMovement != null && localPlayerMovement.IsOwner && Keyboard.current.eKey.wasPressedThisFrame)
         {
-            // 1. Nếu cầm tinh thể và trạm chưa khóa -> Đặt tinh thể
-            if (localPlayerMovement.isCarryingCore.Value && !isCrystalLocked && (stationIndex == 2 || stationIndex == 3))
+            // SỬA DÒNG NÀY: Thêm .Value vào đây
+            if (localPlayerMovement.isCarryingCore.Value && !isCrystalLocked.Value && (stationIndex == 2 || stationIndex == 3))
             {
                 SnapAndLockCrystalServerRpc(stationIndex);
             }
@@ -55,21 +55,24 @@ public class InteractBox : MonoBehaviour
         var core = localPlayerMovement.currentHeldCore;
         if (core != null)
         {
-            // Đánh dấu đã khóa để không cho đặt lại
-            isCrystalLocked = true; 
+            isCrystalLocked.Value = true;
             core.isSnapped.Value = true; 
 
-            // Tắt vật lý để không rơi xuyên đất
             Rigidbody rb = core.GetComponent<Rigidbody>();
             if (rb != null) { rb.linearVelocity = Vector3.zero; rb.isKinematic = true; }
 
-            // Gắn vị trí
+            // Gán vị trí
             core.transform.position = crystalSnapPoint.position;
             core.transform.rotation = crystalSnapPoint.rotation;
             
-            // LƯU Ý: Nếu vẫn lỗi "Invalid parenting", BỎ DÒNG SetParent dưới đây
-            // core.transform.SetParent(crystalSnapPoint); 
-
+            // --- ĐÂY LÀ PHẦN QUAN TRỌNG ---
+            // Gán cái point này vào script SnapFollow của tinh thể
+            var snapFollow = core.GetComponent<CrystalSnapFollow>();
+            if (snapFollow != null)
+            {
+                snapFollow.targetSnapPoint = crystalSnapPoint;
+            }
+            
             localPlayerMovement.DropCore();
             
             if (index == 2) gameManager.station2HasCrystal.Value = true;
