@@ -27,11 +27,18 @@ public class GearRotator : NetworkBehaviour
     public override void OnNetworkSpawn()
     {
         base.OnNetworkSpawn();
+        // BỎ DÒNG NÀY: if (IsServer) currentSpeed.Value = 0f;
+        
+        // Nếu bạn muốn nó MẶC ĐỊNH quay ngay khi game chạy, hãy để:
         if (IsServer)
         {
             float direction = reverseDirection ? -1f : 1f;
-            currentSpeed.Value = rotationSpeed * direction;
+            currentSpeed.Value = rotationSpeed * direction; 
         }
+    }
+    public void SetSpeed(float speed)
+    {
+        if (IsServer) currentSpeed.Value = speed;
     }
 
     void Update()
@@ -48,6 +55,7 @@ public class GearRotator : NetworkBehaviour
 
     public void OpenGear()
     {
+        if (IsServer) currentSpeed.Value = 0f; 
         OpenGearClientRpc();
     }
 
@@ -55,19 +63,13 @@ public class GearRotator : NetworkBehaviour
     private void OpenGearClientRpc()
     {
         transform.DOKill();
+        // Trượt ra xong thì KHÔNG làm gì cả (vì bánh răng đã dừng)
         transform.DOLocalMove(originalPosition + openOffset, moveDuration).SetEase(Ease.InOutCubic);
     }
 
     public void CloseGear()
     {
-        // Server thực hiện việc cập nhật biến tốc độ
-        if (IsServer)
-        {
-            float direction = reverseDirection ? -1f : 1f;
-            currentSpeed.Value = originalSpeed * direction;
-        }
-        
-        // Gọi ClientRpc để tất cả Client cùng chạy hiệu ứng đóng
+        if (IsServer) currentSpeed.Value = 0f;    
         CloseGearClientRpc();
     }
 
@@ -75,8 +77,14 @@ public class GearRotator : NetworkBehaviour
     private void CloseGearClientRpc()
     {
         transform.DOKill();
-        transform.DOLocalMove(originalPosition, moveDuration).SetEase(Ease.InOutCubic);
-        Debug.Log("Client đã nhận lệnh đóng bánh răng và reset vị trí");
+        // Khi trượt về xong, thì mới set lại tốc độ quay (chỉ Server thực hiện)
+        transform.DOLocalMove(originalPosition, moveDuration).SetEase(Ease.InOutCubic)
+                .OnComplete(() => {
+                    if (IsServer) {
+                        float direction = reverseDirection ? -1f : 1f;
+                        currentSpeed.Value = originalSpeed * direction;
+                    }
+                });
     }
 
     // --- XỬ LÝ VA CHẠM ---
