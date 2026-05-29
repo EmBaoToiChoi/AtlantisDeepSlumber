@@ -115,6 +115,33 @@ public class SimplePlayerTest : NetworkBehaviour
     public bool cameraLookAtPlayer = true;
     private Camera targetCamera;
 
+    [Header("Animation Settings")]
+    public Animator anim;
+    private string currentAnimState;
+
+    [Header("Dodge Roll Settings")]
+    public float rollSpeed = 10f;
+    public float rollDuration = 0.4f;
+    public float rollCooldown = 1.2f;
+    private float rollCooldownTimer;
+    private float rollTimer;
+    private Vector3 rollDirection;
+    public NetworkVariable<bool> isRollingNet = new NetworkVariable<bool>(
+        false,
+        NetworkVariableReadPermission.Everyone,
+        NetworkVariableWritePermission.Server
+    );
+    private bool isRollingStandalone = false;
+    private RootMotionBridge rootMotionBridge;
+    private RootMotionBridge GetRootMotionBridge()
+    {
+        if (rootMotionBridge == null && anim != null)
+        {
+            rootMotionBridge = anim.GetComponent<RootMotionBridge>();
+        }
+        return rootMotionBridge;
+    }
+
     // ------------------------------------------------------------------
     //  Biến nội bộ cho chế độ Standalone (không có Netcode)
     // ------------------------------------------------------------------
@@ -134,11 +161,26 @@ public class SimplePlayerTest : NetworkBehaviour
     public float CurrentHealth =>
         isStandaloneMode ? localHealth : currentHealth.Value;
 
-    // ------------------------------------------------------------------
-    //  Khởi tạo Standalone (không qua Netcode)
-    // ------------------------------------------------------------------
+    private void Awake()
+    {
+        if (anim == null)
+        {
+            anim = GetComponent<Animator>();
+            if (anim == null)
+                anim = GetComponentInChildren<Animator>(true);
+        }
+    }
+
     private void Start()
     {
+        // Đảm bảo khởi tạo Animator cho cả các lớp kế thừa
+        if (anim == null)
+        {
+            anim = GetComponent<Animator>();
+            if (anim == null)
+                anim = GetComponentInChildren<Animator>(true);
+        }
+
         // Nếu không có NetworkManager hoặc chưa listen → chạy đơn lẻ
         if (!IsNetworkActive)
         {
@@ -507,6 +549,8 @@ public class SimplePlayerTest : NetworkBehaviour
                     {
                         SavePlayerStateToDatabase();
                     }
+                    
+                    PlayAnimation("Idle_Pick", 0.1f);
                     return true;
                 }
             }
@@ -531,6 +575,8 @@ public class SimplePlayerTest : NetworkBehaviour
                 {
                     SavePlayerStateToDatabase();
                 }
+                
+                PlayAnimation("Idle_Pick", 0.1f);
                 return true;
             }
         }
@@ -664,6 +710,19 @@ public class SimplePlayerTest : NetworkBehaviour
     // ------------------------------------------------------------------
     void Update()
     {
+        // Giảm thời gian cooldown nhào lộn
+        if (rollCooldownTimer > 0)
+        {
+            rollCooldownTimer -= Time.deltaTime;
+        }
+
+        if (CurrentHealth <= 0)
+        {
+            if (anim != null) anim.applyRootMotion = false;
+            PlayAnimation("Death", 0.15f);
+            return;
+        }
+
         // Standalone: xử lý hoàn toàn cục bộ
         if (isStandaloneMode)
         {
@@ -678,6 +737,20 @@ public class SimplePlayerTest : NetworkBehaviour
 
     private void HandleStandaloneUpdate()
     {
+        // Xử lý di chuyển khi đang nhào lộn
+        if (isRollingStandalone)
+        {
+            rollTimer -= Time.deltaTime;
+            if (rollTimer <= 0)
+            {
+                isRollingStandalone = false;
+                if (anim != null) anim.applyRootMotion = false;
+                var bridge = GetRootMotionBridge();
+                if (bridge != null) bridge.ApplyFinalOffset();
+            }
+            return; // Khóa các đầu vào di chuyển khác khi đang nhào lộn
+        }
+
         // Knockback
         if (knockbackVelocity.magnitude > 0.01f)
         {
@@ -685,21 +758,63 @@ public class SimplePlayerTest : NetworkBehaviour
             knockbackVelocity = Vector3.Lerp(knockbackVelocity, Vector3.zero, Time.deltaTime * 8f);
         }
 
+        // Tốc độ di chuyển: Giữ Shift Left là chạy (run), thả ra là đi bộ (Walk)
+        bool isRunning = Input.GetKey(KeyCode.LeftShift);
+        float currentSpeed = isRunning ? moveSpeed * 1.5f : moveSpeed;
+
         // Di chuyển
         float moveX = Input.GetAxis("Horizontal");
         float moveZ = Input.GetAxis("Vertical");
         Vector3 move = new Vector3(moveX, 0, moveZ);
-        transform.Translate(move * moveSpeed * Time.deltaTime, Space.World);
+        transform.Translate(move * currentSpeed * Time.deltaTime, Space.World);
         if (move != Vector3.zero)
+        {
             transform.forward = move;
+            if (!IsPlayingActionAnimation())
+            {
+                string moveAnim = isRunning ? "run" : "Walk";
+                PlayAnimation(moveAnim, 0.1f);
+            }
+        }
+        else
+        {
+            if (!IsPlayingActionAnimation())
+            {
+                PlayAnimation("Idle", 0.1f);
+            }
+        }
 
         // Tấn công đơn lẻ
         if (Input.GetMouseButtonDown(0))
             StandaloneAttack();
+
+        // Nhấn Ctrl (LeftControl) chơi hoạt ảnh LonVong + Nhào lộn né chiêu
+        if (Input.GetKeyDown(KeyCode.LeftControl))
+        {
+            Debug.Log($"[Ctrl Debug] Standalone Ctrl pressed! rollCooldownTimer = {rollCooldownTimer}");
+            if (rollCooldownTimer <= 0)
+            {
+                StartRollStandalone(move);
+            }
+        }
     }
 
     private void HandleOwnerUpdate()
     {
+        // Xử lý di chuyển khi đang nhào lộn
+        if (rollTimer > 0)
+        {
+            rollTimer -= Time.deltaTime;
+            if (rollTimer <= 0)
+            {
+                if (anim != null) anim.applyRootMotion = false;
+                var bridge = GetRootMotionBridge();
+                if (bridge != null) bridge.ApplyFinalOffset();
+                StopRollServerRpc();
+            }
+            return; // Khóa các đầu vào di chuyển khác khi đang nhào lộn
+        }
+
         // Knockback
         if (knockbackVelocity.magnitude > 0.01f)
         {
@@ -707,20 +822,93 @@ public class SimplePlayerTest : NetworkBehaviour
             knockbackVelocity = Vector3.Lerp(knockbackVelocity, Vector3.zero, Time.deltaTime * 8f);
         }
 
+        // Tốc độ di chuyển: Giữ Shift Left là chạy (run), thả ra là đi bộ (Walk)
+        bool isRunning = Input.GetKey(KeyCode.LeftShift);
+        float currentSpeed = isRunning ? moveSpeed * 1.5f : moveSpeed;
+
         // Di chuyển
         float moveX = Input.GetAxis("Horizontal");
         float moveZ = Input.GetAxis("Vertical");
         Vector3 move = new Vector3(moveX, 0, moveZ);
-        transform.Translate(move * moveSpeed * Time.deltaTime, Space.World);
+        transform.Translate(move * currentSpeed * Time.deltaTime, Space.World);
         if (move != Vector3.zero)
+        {
             transform.forward = move;
+            if (!IsPlayingActionAnimation())
+            {
+                string moveAnim = isRunning ? "run" : "Walk";
+                PlayAnimation(moveAnim, 0.1f);
+            }
+        }
+        else
+        {
+            if (!IsPlayingActionAnimation())
+            {
+                PlayAnimation("Idle", 0.1f);
+            }
+        }
 
         // Tấn công qua RPC (chỉ khi đã spawn trên mạng)
         if (Input.GetMouseButtonDown(0))
         {
             if (IsSpawned)
+            {
+                // PlayAnimation("Attack", 0.05f, false); // Bỏ comment và đổi tên hoạt ảnh khi bạn đã có animation Attack trong Animator
                 AttackServerRpc();
+            }
         }
+
+        // Nhấn Ctrl (LeftControl) chơi hoạt ảnh LonVong + Nhào lộn né chiêu đồng bộ mạng
+        if (Input.GetKeyDown(KeyCode.LeftControl))
+        {
+            Debug.Log($"[Ctrl Debug] Owner Ctrl pressed! rollCooldownTimer = {rollCooldownTimer}, IsSpawned = {IsSpawned}, IsOwner = {IsOwner}");
+            if (rollCooldownTimer <= 0 && IsSpawned)
+            {
+                StartRollOwner(move);
+            }
+        }
+    }
+
+    private void StartRollStandalone(Vector3 moveInput)
+    {
+        isRollingStandalone = true;
+        rollTimer = rollDuration;
+        rollCooldownTimer = rollCooldown;
+        
+        // Hướng nhào lộn: nếu có di chuyển thì lăn theo hướng WASD, ngược lại lăn theo hướng đang nhìn
+        if (moveInput != Vector3.zero)
+        {
+            rollDirection = moveInput.normalized;
+            transform.forward = rollDirection;
+        }
+        else
+        {
+            rollDirection = transform.forward;
+        }
+
+        if (anim != null) anim.applyRootMotion = true;
+        PlayAnimation("LonVong", 0.05f);
+    }
+
+    private void StartRollOwner(Vector3 moveInput)
+    {
+        rollTimer = rollDuration;
+        rollCooldownTimer = rollCooldown;
+        
+        // Hướng nhào lộn: nếu có di chuyển thì lăn theo hướng WASD, ngược lại lăn theo hướng đang nhìn
+        if (moveInput != Vector3.zero)
+        {
+            rollDirection = moveInput.normalized;
+            transform.forward = rollDirection;
+        }
+        else
+        {
+            rollDirection = transform.forward;
+        }
+
+        if (anim != null) anim.applyRootMotion = true;
+        PlayAnimation("LonVong", 0.05f, false); // Đặt false để client local thực sự gọi PlayAnimationLocal!
+        StartRollServerRpc(rollDirection);
     }
 
     void LateUpdate()
@@ -759,11 +947,10 @@ public class SimplePlayerTest : NetworkBehaviour
         }
     }
 
-    // ------------------------------------------------------------------
-    //  Tấn công Standalone (không cần Server RPC)
-    // ------------------------------------------------------------------
     private void StandaloneAttack()
     {
+        // PlayAnimation("Attack", 0.05f); // Bỏ comment và đổi tên hoạt ảnh khi bạn đã có animation Attack trong Animator
+
         Vector3 rayStart = transform.position + Vector3.up * 0.5f;
         Debug.DrawRay(rayStart, transform.forward * attackRange, Color.red, 0.5f);
 
@@ -817,21 +1004,41 @@ public class SimplePlayerTest : NetworkBehaviour
         if (enemy5 != null) { enemy5.TakeDamage(damageAmount); return; }
     }
 
-    // ------------------------------------------------------------------
-    //  Nhận sát thương
-    // ------------------------------------------------------------------
-    /// <summary>
-    /// Nhận sát thương. Chỉ Server xử lý khi online; cục bộ xử lý khi standalone.
-    /// </summary>
     public void TakeDamage(float damage)
     {
+        // Né chiêu (miễn nhiễm sát thương khi đang lộn vòng)
+        if (isStandaloneMode)
+        {
+            if (isRollingStandalone)
+            {
+                Debug.Log($"[Standalone] {gameObject.name} đang né chiêu (lộn vòng), miễn nhiễm sát thương!");
+                return;
+            }
+        }
+        else
+        {
+            if (isRollingNet.Value)
+            {
+                Debug.Log($"[Netcode] {gameObject.name} đang né chiêu (lộn vòng), miễn nhiễm sát thương!");
+                return;
+            }
+        }
+
         if (isStandaloneMode)
         {
             localHealth = Mathf.Max(localHealth - damage, 0f);
             UpdateHealthHUD(localHealth);
             Debug.Log($"[Standalone] {gameObject.name} nhận {damage} sát thương. Máu còn: {localHealth}");
             if (localHealth <= 0)
+            {
                 Debug.LogWarning($"[Standalone] {gameObject.name} đã chết!");
+                PlayAnimation("Death", 0.15f);
+            }
+            else
+            {
+                string hitAnim = Random.value < 0.5f ? "GetHit" : "GeiHit2";
+                PlayAnimation(hitAnim, 0.05f);
+            }
             return;
         }
 
@@ -841,7 +1048,15 @@ public class SimplePlayerTest : NetworkBehaviour
         Debug.Log($"[Server] {gameObject.name} nhận {damage} sát thương. Máu còn lại: {currentHealth.Value}");
 
         if (currentHealth.Value <= 0)
+        {
             Debug.LogWarning($"[Server] {gameObject.name} đã chết!");
+            PlayAnimation("Death", 0.15f);
+        }
+        else
+        {
+            string hitAnim = Random.value < 0.5f ? "GetHit" : "GeiHit2";
+            PlayAnimation(hitAnim, 0.05f);
+        }
     }
 
     // ------------------------------------------------------------------
@@ -1033,5 +1248,138 @@ public class SimplePlayerTest : NetworkBehaviour
         {
             SavePlayerStateToDatabase();
         }
+    }
+
+    // ==================================================================
+    //  Animation Management System (Supports Direct Play & Triggers)
+    // ==================================================================
+
+    private bool IsPlayingActionAnimation()
+    {
+        if (anim == null)
+        {
+            anim = GetComponent<Animator>();
+            if (anim == null)
+                anim = GetComponentInChildren<Animator>(true);
+        }
+
+        if (anim == null || !anim.isActiveAndEnabled || anim.runtimeAnimatorController == null) return false;
+        
+        // Khi đang nhào lộn (rolling), coi như đang chạy action animation
+        if (isStandaloneMode ? isRollingStandalone : rollTimer > 0) return true;
+        
+        AnimatorStateInfo stateInfo = anim.GetCurrentAnimatorStateInfo(0);
+        bool isAction = stateInfo.IsName("LonVong") || 
+                        stateInfo.IsName("GetHit") || 
+                        stateInfo.IsName("GeiHit2") || 
+                        stateInfo.IsName("Idle_Pick") || 
+                        stateInfo.IsName("Death");
+                        
+        // Nếu đang chạy các animation hành động này và chưa chạy xong (normalizedTime < 0.95f)
+        return isAction && stateInfo.normalizedTime < 0.95f;
+    }
+
+    public void PlayAnimation(string animName, float fadeTime = 0.1f, bool alreadyPlayedLocally = false)
+    {
+        if (anim == null)
+        {
+            anim = GetComponent<Animator>();
+            if (anim == null)
+                anim = GetComponentInChildren<Animator>(true);
+        }
+
+        if (anim == null || !anim.isActiveAndEnabled || anim.runtimeAnimatorController == null) return;
+        
+        if (!alreadyPlayedLocally)
+        {
+            PlayAnimationLocal(animName, fadeTime);
+        }
+
+        if (!isStandaloneMode)
+        {
+            if (IsServer)
+            {
+                PlayAnimationClientRpc(animName, fadeTime, alreadyPlayedLocally);
+            }
+            else if (IsOwner)
+            {
+                PlayAnimationServerRpc(animName, fadeTime);
+            }
+        }
+    }
+
+    private void PlayAnimationLocal(string animName, float fadeTime)
+    {
+        if (anim == null)
+        {
+            anim = GetComponent<Animator>();
+            if (anim == null)
+                anim = GetComponentInChildren<Animator>(true);
+        }
+
+        if (anim == null)
+        {
+            Debug.LogError($"[Animator Debug] KHÔNG tìm thấy component Animator trên {gameObject.name} hoặc các con của nó!");
+            return;
+        }
+
+        if (!anim.isActiveAndEnabled)
+        {
+            Debug.LogError($"[Animator Debug] Animator trên {anim.gameObject.name} đang bị VÔ HIỆU HÓA (disabled)!");
+            return;
+        }
+
+        if (anim.runtimeAnimatorController == null)
+        {
+            Debug.LogError($"[Animator Debug] Animator trên {anim.gameObject.name} CHƯA ĐƯỢC GÁN Animator Controller!");
+            return;
+        }
+        
+        // Tránh lặp lại các hoạt ảnh di chuyển lặp đi lặp lại hàng frame (Idle, run, Walk)
+        bool isLoopingAnim = animName == "Idle" || animName == "Walk" || animName == "run";
+        if (isLoopingAnim && currentAnimState == animName) return;
+
+        Debug.Log($"[Animator Debug] {gameObject.name} kích hoạt Trigger hoạt ảnh: '{animName}'");
+
+        // Reset các trigger để tránh kẹt trạng thái khi dùng Controller có transition
+        anim.ResetTrigger("Idle");
+        anim.ResetTrigger("Walk");
+        anim.ResetTrigger("run");
+        anim.ResetTrigger("Death");
+        anim.ResetTrigger("GetHit");
+        anim.ResetTrigger("GeiHit2");
+        anim.ResetTrigger("LonVong");
+        anim.ResetTrigger("Idle_Pick");
+
+        // Kích hoạt Trigger để chạy dây nối trong Animator
+        anim.SetTrigger(animName);
+        currentAnimState = animName;
+    }
+
+    [ServerRpc]
+    private void PlayAnimationServerRpc(string animName, float fadeTime)
+    {
+        PlayAnimationClientRpc(animName, fadeTime, true);
+    }
+
+    [ClientRpc]
+    private void PlayAnimationClientRpc(string animName, float fadeTime, bool alreadyPlayedLocally)
+    {
+        if (alreadyPlayedLocally && IsOwner) return; // Chủ sở hữu đã tự chạy hoạt ảnh local rồi
+        PlayAnimationLocal(animName, fadeTime);
+    }
+
+    [ServerRpc]
+    private void StartRollServerRpc(Vector3 direction)
+    {
+        isRollingNet.Value = true;
+        // Server phát RPC hoạt ảnh LonVong cho tất cả client khác (owner đã tự chạy rồi)
+        PlayAnimationClientRpc("LonVong", 0.05f, true);
+    }
+
+    [ServerRpc]
+    private void StopRollServerRpc()
+    {
+        isRollingNet.Value = false;
     }
 }

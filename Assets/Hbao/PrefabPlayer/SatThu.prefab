@@ -13,6 +13,9 @@ GameObject:
   - component: {fileID: 1802787513823585194}
   - component: {fileID: 1378006556131035777}
   - component: {fileID: 5994167936485809542}
+  - component: {fileID: 8557067487966738378}
+  - component: {fileID: 8314366535312399560}
+  - component: {fileID: 2597254794429991370}
   m_Layer: 0
   m_Name: SatThu
   m_TagString: Untagged
@@ -29,7 +32,7 @@ Transform:
   m_GameObject: {fileID: 361434277349640829}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 52.732765, y: 1.247578, z: 54.23879}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -48,7 +51,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  GlobalObjectIdHash: 1082574347
+  GlobalObjectIdHash: 1303791492
   InScenePlacedSourceGlobalObjectIdHash: 0
   DeferredDespawnTick: 0
   Ownership: 1
@@ -75,13 +78,87 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   ShowTopMostFoldoutHeaderGroup: 1
   NetworkAnimatorExpanded: 0
-  AuthorityMode: 0
+  AuthorityMode: 1
   m_Animator: {fileID: 4095076178763394362}
-  TransitionStateInfoList: []
+  TransitionStateInfoList:
+  - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: 2081823275
+    DestinationState: 1349952704
+    TransitionDuration: 0.1
+    TriggerNameHash: 1349952704
+    TransitionIndex: 0
+  - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: 2081823275
+    DestinationState: 765711723
+    TransitionDuration: 0.1
+    TriggerNameHash: 765711723
+    TransitionIndex: 1
+  - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: 1349952704
+    DestinationState: 2081823275
+    TransitionDuration: 0.1
+    TriggerNameHash: 2081823275
+    TransitionIndex: 0
+  - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: 1349952704
+    DestinationState: 765711723
+    TransitionDuration: 0.1
+    TriggerNameHash: 765711723
+    TransitionIndex: 1
+  - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: 765711723
+    DestinationState: 2081823275
+    TransitionDuration: 0.1
+    TriggerNameHash: 2081823275
+    TransitionIndex: 0
+  - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: 765711723
+    DestinationState: 1349952704
+    TransitionDuration: 0.1
+    TriggerNameHash: 1349952704
+    TransitionIndex: 1
   AnimatorParameterEntries:
     ParameterEntries:
     - name: Attack
       NameHash: 1080829965
+      Synchronize: 1
+      ParameterType: 9
+    - name: Idle
+      NameHash: 2081823275
+      Synchronize: 1
+      ParameterType: 9
+    - name: Walk
+      NameHash: 765711723
+      Synchronize: 1
+      ParameterType: 9
+    - name: run
+      NameHash: 1349952704
+      Synchronize: 1
+      ParameterType: 9
+    - name: Death
+      NameHash: 646380074
+      Synchronize: 1
+      ParameterType: 9
+    - name: GetHit
+      NameHash: -1949373134
+      Synchronize: 1
+      ParameterType: 9
+    - name: GeiHit2
+      NameHash: 1257861715
+      Synchronize: 1
+      ParameterType: 9
+    - name: LonVong
+      NameHash: 1143134817
+      Synchronize: 1
+      ParameterType: 9
+    - name: Idle_Pick
+      NameHash: 1984860264
       Synchronize: 1
       ParameterType: 9
   AnimatorParametersExpanded: 0
@@ -109,7 +186,7 @@ MonoBehaviour:
   RotationMaxInterpolationTime: 0.1
   ScaleLerpSmoothing: 1
   ScaleMaxInterpolationTime: 0.1
-  AuthorityMode: 0
+  AuthorityMode: 1
   TickSyncChildren: 0
   UseUnreliableDeltas: 0
   SyncPositionX: 1
@@ -144,7 +221,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   ShowTopMostFoldoutHeaderGroup: 1
-  moveSpeed: 5
+  moveSpeed: 3
   damageAmount: 20
   attackRange: 3
   maxHealth: 100
@@ -231,7 +308,83 @@ MonoBehaviour:
   cameraOffset: {x: 0, y: 12, z: -8}
   cameraSmoothSpeed: 5
   cameraLookAtPlayer: 1
+  anim: {fileID: 4095076178763394362}
+  rollSpeed: 10
+  rollDuration: 0.4
+  rollCooldown: 1.2
+  isRollingNet:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 0
   isStandaloneMode: 0
+--- !u!54 &8557067487966738378
+Rigidbody:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 361434277349640829}
+  serializedVersion: 4
+  m_Mass: 1
+  m_Drag: 0
+  m_AngularDrag: 0.05
+  m_CenterOfMass: {x: 0, y: 0, z: 0}
+  m_InertiaTensor: {x: 1, y: 1, z: 1}
+  m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ImplicitCom: 1
+  m_ImplicitTensor: 1
+  m_UseGravity: 1
+  m_IsKinematic: 0
+  m_Interpolate: 0
+  m_Constraints: 0
+  m_CollisionDetection: 0
+--- !u!114 &8314366535312399560
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 361434277349640829}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f6c0be61502bb534f922ebb746851216, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  ShowTopMostFoldoutHeaderGroup: 1
+  NetworkRigidbodyBaseExpanded: 0
+  UseRigidBodyForMotion: 0
+  AutoUpdateKinematicState: 1
+  AutoSetKinematicOnDespawn: 1
+--- !u!136 &2597254794429991370
+CapsuleCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 361434277349640829}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 2
+  m_Radius: 0.36
+  m_Height: 1.79
+  m_Direction: 1
+  m_Center: {x: 0, y: 0.89, z: 0}
 --- !u!1001 &5183374751779503302
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -246,11 +399,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 2fa3b3808413f82489e4126eeaf183c3, type: 3}
       propertyPath: m_LocalPosition.y
-      value: -1.119
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 2fa3b3808413f82489e4126eeaf183c3, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 0.004
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 2fa3b3808413f82489e4126eeaf183c3, type: 3}
       propertyPath: m_LocalRotation.w
@@ -295,6 +448,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 2fa3b3808413f82489e4126eeaf183c3, type: 3}
       insertIndex: -1
       addedObject: {fileID: 4095076178763394362}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 2fa3b3808413f82489e4126eeaf183c3, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 4116554575090685293}
   m_SourcePrefab: {fileID: 100100000, guid: 2fa3b3808413f82489e4126eeaf183c3, type: 3}
 --- !u!4 &4640311403137653549 stripped
 Transform:
@@ -328,3 +484,15 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &4116554575090685293
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5417375214671921559}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6798429db0d2dcf46b37566a2badb9d4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
