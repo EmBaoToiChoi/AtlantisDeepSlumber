@@ -1,0 +1,23 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
+    <Style src="project://database/Assets/Hbao/NPC/SilasDialogue.uss?fileID=7433441132597879392&amp;guid=6437fa1461d4b4d4085cd4b0bbaf1890&amp;type=3#SilasDialogue" />
+    <ui:VisualElement name="silas-dialogue-wrapper" class="dialogue-wrapper">
+        <ui:VisualElement name="silas-dialogue-box" class="dialogue-box">
+            <ui:VisualElement class="corner-deco corner-tl" />
+            <ui:VisualElement class="corner-deco corner-tr" />
+            <ui:VisualElement class="corner-deco corner-bl" />
+            <ui:VisualElement name="VisualElement" class="corner-deco corner-br" />
+            <ui:VisualElement class="moss-top" style="background-image: none;" />
+            <ui:VisualElement class="moss-bottom" style="background-image: none;" />
+            <ui:VisualElement name="avatar-container" class="dialogue-avatar-container">
+                <ui:VisualElement name="avatar-image" class="dialogue-avatar-image" />
+                <ui:VisualElement class="avatar-fade-right" style="background-image: none;" />
+            </ui:VisualElement>
+            <ui:VisualElement name="dialogue-text-container" class="dialogue-text-container">
+                <ui:VisualElement class="dialogue-text-inner-wrapper">
+                    <ui:Label name="dialogue-text" text="Rakan vừa gửi mấy &apos;con cừu&apos; tới đây sao?..." class="dialogue-text-content" />
+                </ui:VisualElement>
+                <ui:Button name="next-btn" text="CLICK HOẶC ẤN [F] ĐỂ TIẾP TỤC ▶" class="dialogue-next-button" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>
