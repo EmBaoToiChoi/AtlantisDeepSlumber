@@ -26,6 +26,12 @@ public class OptimizedNetworkMiniGame : NetworkBehaviour
 
     [Header("Danh sách Bánh Răng")]
     public List<GearRotator> gearList; // Bạn có thể thêm bao nhiêu bánh răng tùy thích trong Inspector
+    // Khai báo trong class
+    [Header("Danh sách trụ")]
+    public NetworkVariable<bool> station0HasCrystal = new NetworkVariable<bool>(true); // Trạm 0, 1 mặc định có
+    public NetworkVariable<bool> station1HasCrystal = new NetworkVariable<bool>(true);
+    public NetworkVariable<bool> station2HasCrystal = new NetworkVariable<bool>(false);
+    public NetworkVariable<bool> station3HasCrystal = new NetworkVariable<bool>(false);
 
     private NetworkList<float> stationValues;
     private NetworkList<ulong> stationOwners;
@@ -94,8 +100,9 @@ public class OptimizedNetworkMiniGame : NetworkBehaviour
                 localSlider.value = stationValues[currentStationIndex];
             
             // Cập nhật màu nút dựa trên trạng thái Network
-            imgA.color = isANeeded.Value ? activeColor : normalColor;
-            imgD.color = !isANeeded.Value ? activeColor : normalColor;
+            // ĐOẠN CODE MỚI ĐỂ CẢ 2 CÙNG SÁNG
+            imgA.color = activeColor;
+            imgD.color = activeColor;
             
             HandleQTEInput();
         }
@@ -103,61 +110,62 @@ public class OptimizedNetworkMiniGame : NetworkBehaviour
         // 2. Logic cho Server (LUÔN CHẠY)
         if (IsServer)
         {
-            int activeInGreenZone = 0;
-            int totalOccupied = 0;
-
+            // 1. Logic giảm điểm (Tự động tính tốc độ tùy theo tinh thể)
             for (int i = 0; i < stationValues.Count; i++)
             {
-                if (stationValues[i] > 0) stationValues[i] -= drainSpeed * Time.deltaTime;
-                if (stationOwners[i] != ulong.MaxValue)
+                float currentDrain = drainSpeed;
+                
+                // Kiểm tra cặp trong (index 2 và 3): Nếu không có tinh thể thì nhân tốc độ lên 5 lần
+                if ((i == 2 && !station2HasCrystal.Value) || (i == 3 && !station3HasCrystal.Value))
                 {
-                    totalOccupied++;
-                    if (stationValues[i] >= greenZoneMin && stationValues[i] <= greenZoneMax)
-                        activeInGreenZone++;
+                    currentDrain *= 2f; 
                 }
+
+                if (stationValues[i] > 0) 
+                    stationValues[i] -= currentDrain * Time.deltaTime;
             }
 
-            // Thay đổi ở đây: Kiểm tra danh sách bánh răng
-            if (totalOccupied >= 2 && activeInGreenZone == totalOccupied)
+            // 2. Logic kiểm tra điều kiện mở cửa (CẶP A hoặc CẶP B)
+            // Cặp A (0 & 1): Cả 2 phải có người đứng và trong vùng xanh
+            bool pairA_Ready = (stationOwners[0] != ulong.MaxValue && stationValues[0] >= greenZoneMin) &&
+                            (stationOwners[1] != ulong.MaxValue && stationValues[1] >= greenZoneMin);
+
+            // Cặp B (2 & 3): Cả 2 phải có người đứng và trong vùng xanh
+            bool pairB_Ready = (stationOwners[2] != ulong.MaxValue && stationValues[2] >= greenZoneMin) &&
+                            (stationOwners[3] != ulong.MaxValue && stationValues[3] >= greenZoneMin);
+
+            // Bánh răng chạy nếu 1 trong 2 cặp thỏa mãn
+            bool shouldBeOpen = pairA_Ready || pairB_Ready;
+
+            if (shouldBeOpen && !isCurrentlyOpen)
             {
-                if (!isCurrentlyOpen) 
-                { 
-                    isCurrentlyOpen = true; 
-                    foreach (var gear in gearList) // Dùng vòng lặp duyệt qua danh sách
-                    {
-                        if (gear != null) gear.OpenGear();
-                    }
-                }
+                isCurrentlyOpen = true;
+                foreach (var gear in gearList) if (gear != null) gear.OpenGear();
             }
-            else if (isCurrentlyOpen)
+            else if (!shouldBeOpen && isCurrentlyOpen)
             {
                 isCurrentlyOpen = false;
-                foreach (var gear in gearList) // Dùng vòng lặp đóng tất cả
-                {
-                    if (gear != null) gear.CloseGear();
-                }
+                foreach (var gear in gearList) if (gear != null) gear.CloseGear();
             }
         }
+
+        // Trong file OptimizedNetworkMiniGame.cs
 
         void HandleQTEInput()
         {
-            if (Input.GetKeyDown(KeyCode.A)) ProcessInput(true, isANeeded.Value);
-            else if (Input.GetKeyDown(KeyCode.D)) ProcessInput(false, !isANeeded.Value);
+            // Bất kể nhấn A hay D, đều tính là input hợp lệ
+            if (Input.GetKeyDown(KeyCode.A)) ProcessInput(true);
+            else if (Input.GetKeyDown(KeyCode.D)) ProcessInput(false);
         }
 
-        void ProcessInput(bool isA, bool isCorrect)
+        void ProcessInput(bool isA)
         {
-            if (isCorrect)
-            {
-                PlaySuccessTween(isA ? imgA : imgD);
-                UpdateSliderServerRpc(currentStationIndex, pushAmount);
-                RandomizeButtonServerRpc(); // Random lại nút ngay khi nhấn đúng
-            }
-            else
-            {
-                PlayFailTween(isA ? imgA : imgD);
-                UpdateSliderServerRpc(currentStationIndex, -penaltyAmount);
-            }
+            // Luôn luôn cộng điểm, không còn check đúng/sai
+            PlaySuccessTween(isA ? imgA : imgD);
+            UpdateSliderServerRpc(currentStationIndex, pushAmount);
+            
+            // Vẫn giữ lại Randomize nếu bạn muốn nút sáng đổi vị trí liên tục cho sinh động
+            //RandomizeButtonServerRpc(); 
         }
 
         void PlaySuccessTween(Image targetImg)
