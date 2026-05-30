@@ -16,11 +16,16 @@ public class SilasDialogueController : MonoBehaviour
     private Label speakerNameLabel;
     private Label dialogueTextLabel;
     private Label npcNameTag;
+    private VisualElement interactionPrompt;
 
     private List<DialogueLine> currentLines = new List<DialogueLine>();
     private int currentLineIndex = -1;
     private bool isDialogueActive = false;
     private SimplePlayerTest activePlayer;
+    private SilasNPC currentNPC;
+    private bool isUIInitialized = false;
+
+    public bool IsActive => isDialogueActive;
 
     // Typewriter effect
     [Header("Typewriter Settings")]
@@ -56,6 +61,13 @@ public class SilasDialogueController : MonoBehaviour
 
     private void OnEnable()
     {
+        InitializeUI();
+    }
+
+    public void InitializeUI()
+    {
+        if (isUIInitialized) return;
+
         if (uiDocument == null)
             uiDocument = GetComponent<UIDocument>();
 
@@ -69,6 +81,7 @@ public class SilasDialogueController : MonoBehaviour
         dialogueTextLabel = root.Q<Label>("dialogue-text");
         npcNameTag = root.Q<Label>("npc-name-tag");
         nextButton = root.Q<Button>("next-btn");
+        interactionPrompt = root.Q<VisualElement>("silas-interaction-prompt");
 
         // Ẩn hộp đối thoại và wrapper ban đầu
         if (dialogueWrapper != null)
@@ -80,20 +93,29 @@ public class SilasDialogueController : MonoBehaviour
             dialogueBox.RemoveFromClassList("show-dialogue");
             dialogueBox.style.display = DisplayStyle.None;
         }
+        if (interactionPrompt != null)
+        {
+            interactionPrompt.RemoveFromClassList("show-prompt");
+            interactionPrompt.style.display = DisplayStyle.None;
+        }
 
         // Đăng ký sự kiện click chuột vào toàn bộ wrapper (click bất kỳ đâu trên màn hình cũng qua câu)
         if (dialogueWrapper != null)
         {
             dialogueWrapper.RegisterCallback<ClickEvent>(OnDialogueWrapperClicked);
         }
+
+        isUIInitialized = true;
+        Debug.Log("[SilasDialogueController] UI Toolkit Đối thoại đã được khởi tạo thành công!");
     }
 
     private void OnDisable()
     {
-        if (dialogueWrapper != null)
+        if (isUIInitialized && dialogueWrapper != null)
         {
             dialogueWrapper.UnregisterCallback<ClickEvent>(OnDialogueWrapperClicked);
         }
+        isUIInitialized = false;
     }
 
     private void Update()
@@ -107,7 +129,7 @@ public class SilasDialogueController : MonoBehaviour
                 Keyboard.current.spaceKey.wasPressedThisFrame || 
                 Keyboard.current.enterKey.wasPressedThisFrame)
             {
-                NextLine();
+                AdvanceDialogue();
             }
         }
     }
@@ -116,20 +138,36 @@ public class SilasDialogueController : MonoBehaviour
     {
         if (isDialogueActive)
         {
-            NextLine();
+            AdvanceDialogue();
         }
     }
 
     /// <summary>
-    /// Bắt đầu hội thoại
+    /// Bắt đầu hội thoại (Tải từ vị trí lưu trước đó)
     /// </summary>
-    public void StartDialogue(List<DialogueLine> lines, SimplePlayerTest player)
+    public void StartDialogue(List<DialogueLine> lines, SimplePlayerTest player, SilasNPC npc, int startIndex)
     {
+        InitializeUI(); // Đảm bảo khởi tạo trước khi gọi bắt đầu
+
+        // Tự động tắt gợi ý phím G khi bắt đầu nói chuyện
+        ShowPrompt(false);
+
         if (lines == null || lines.Count == 0) return;
 
         activePlayer = player;
         currentLines = lines;
-        currentLineIndex = 0;
+        currentNPC = npc;
+        
+        // Tải vị trí đã lưu, nếu không hợp lệ thì bắt đầu từ 0
+        if (startIndex >= 0 && startIndex < lines.Count)
+        {
+            currentLineIndex = startIndex;
+        }
+        else
+        {
+            currentLineIndex = 0;
+        }
+
         isDialogueActive = true;
 
         if (dialogueWrapper != null)
@@ -140,13 +178,20 @@ public class SilasDialogueController : MonoBehaviour
         if (dialogueBox != null)
         {
             dialogueBox.style.display = DisplayStyle.Flex;
-            // Gọi chuyển cảnh xuất hiện mượt mà sau 1 frame để USS Transition hoạt động
             dialogueBox.schedule.Execute(() => {
                 dialogueBox.AddToClassList("show-dialogue");
             }).StartingIn(10);
         }
 
         DisplayCurrentLine();
+    }
+
+    /// <summary>
+    /// Hỗ trợ tương thích ngược cho StartDialogue
+    /// </summary>
+    public void StartDialogue(List<DialogueLine> lines, SimplePlayerTest player)
+    {
+        StartDialogue(lines, player, null, 0);
     }
 
     /// <summary>
@@ -232,6 +277,58 @@ public class SilasDialogueController : MonoBehaviour
     }
 
     /// <summary>
+    /// Tiến hành chuyển câu thoại. Nếu chơi Standalone thì chạy ngay, nếu chơi Multi thì đồng bộ qua Server RPC.
+    /// </summary>
+    public void AdvanceDialogue()
+    {
+        if (activePlayer == null || activePlayer.isStandaloneMode)
+        {
+            NextLine();
+        }
+        else
+        {
+            if (currentNPC != null)
+            {
+                currentNPC.RequestNextLineServerRpc();
+            }
+            else
+            {
+                NextLine();
+            }
+        }
+    }
+
+    /// <summary>
+    /// Hiển thị hoặc ẩn ô gợi ý tương tác phím G
+    /// </summary>
+    public void ShowPrompt(bool show)
+    {
+        InitializeUI();
+        if (interactionPrompt != null)
+        {
+            if (show)
+            {
+                interactionPrompt.style.display = DisplayStyle.Flex;
+                interactionPrompt.schedule.Execute(() => {
+                    interactionPrompt.AddToClassList("show-prompt");
+                }).StartingIn(10);
+                Debug.Log("[SilasDialogueController] Hiển thị gợi ý phím G trò chuyện.");
+            }
+            else
+            {
+                interactionPrompt.RemoveFromClassList("show-prompt");
+                interactionPrompt.schedule.Execute(() => {
+                    if (!interactionPrompt.ClassListContains("show-prompt"))
+                    {
+                        interactionPrompt.style.display = DisplayStyle.None;
+                    }
+                }).StartingIn(350);
+                Debug.Log("[SilasDialogueController] Ẩn gợi ý tương tác phím G.");
+            }
+        }
+    }
+
+    /// <summary>
     /// Chuyển sang câu tiếp theo. Nếu đang gõ thì skip trước.
     /// </summary>
     public void NextLine()
@@ -243,6 +340,21 @@ public class SilasDialogueController : MonoBehaviour
             return;
         }
         currentLineIndex++;
+        
+        // Lưu tiến trình cuộc đối thoại vào NPC
+        if (currentNPC != null)
+        {
+            if (currentLineIndex < currentLines.Count)
+            {
+                currentNPC.SetSavedDialogueIndex(currentLineIndex);
+            }
+            else
+            {
+                // Reset lại từ đầu khi cuộc hội thoại kết thúc trọn vẹn
+                currentNPC.SetSavedDialogueIndex(0);
+            }
+        }
+
         DisplayCurrentLine();
     }
 

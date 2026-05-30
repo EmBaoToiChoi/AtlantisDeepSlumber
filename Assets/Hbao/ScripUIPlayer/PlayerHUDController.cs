@@ -93,6 +93,7 @@ public class PlayerHUDController : MonoBehaviour
     private VisualElement weaponDurabilityFill2;
     private VisualElement interactionPrompt;
     private Label interactionPromptText;
+    private Label interactionPromptKeyText;
     private VisualElement tooltipElement;
     private Label tooltipTitle;
     private Label tooltipDesc;
@@ -101,6 +102,7 @@ public class PlayerHUDController : MonoBehaviour
     private int draggedSlotIndex = -1;
     private bool isCooldownActive = false;
     private VisualElement dragGhost;
+    private bool isUIInitialized = false;
 
     [Header("Item Sprites Settings")]
     public Sprite repairHammerSprite;
@@ -109,6 +111,15 @@ public class PlayerHUDController : MonoBehaviour
 
     void OnEnable()
     {
+        InitializeUI();
+    }
+
+    public void InitializeUI()
+    {
+        if (isUIInitialized) return;
+        if (uiDocument == null)
+            uiDocument = GetComponent<UIDocument>();
+
         if (uiDocument == null || uiDocument.rootVisualElement == null) return;
         var root = uiDocument.rootVisualElement;
 
@@ -120,6 +131,7 @@ public class PlayerHUDController : MonoBehaviour
         weaponDurabilityFill2 = root.Q<VisualElement>("weapon-durability-fill-2");
         interactionPrompt = root.Q<VisualElement>("interaction-prompt");
         interactionPromptText = root.Q<Label>("interaction-prompt-text");
+        interactionPromptKeyText = root.Q<Label>(className: "key-badge-f-text");
 
         // Tìm UI Mic Icon trực tiếp
         micIcon = root.Q<VisualElement>("mic-icon");
@@ -252,6 +264,9 @@ public class PlayerHUDController : MonoBehaviour
         dragGhost.pickingMode = PickingMode.Ignore; // CỰC KỲ QUAN TRỌNG: để không chặn panel.Pick() khi nhả chuột!
         dragGhost.style.display = DisplayStyle.None;
         root.Add(dragGhost);
+
+        isUIInitialized = true;
+        Debug.Log("[PlayerHUDController] UI Toolkit đã được khởi tạo thành công!");
     }
 
     /// <summary>
@@ -283,6 +298,8 @@ public class PlayerHUDController : MonoBehaviour
 
     void Update()
     {
+        InitializeUI(); // Đảm bảo khởi tạo nếu OnEnable chạy trước khi rootVisualElement sẵn sàng
+
         if (Keyboard.current != null)
         {
             // Khi ấn T sẽ đổi trạng thái (Sử dụng Input System mới)
@@ -394,17 +411,27 @@ public class PlayerHUDController : MonoBehaviour
             // Kích hoạt Skill E (chỉ khi đã mở khóa)
             if (Keyboard.current.eKey.wasPressedThisFrame)
             {
-                if (isSkillsUnlocked)
+                bool isPromptingE = interactionPrompt != null && 
+                                    interactionPrompt.ClassListContains("show-prompt") && 
+                                    interactionPromptText != null && 
+                                    interactionPromptText.text.Contains("[E]");
+                                    
+                bool isDialogueOpen = SilasDialogueController.Instance != null && SilasDialogueController.Instance.IsActive;
+
+                if (!isPromptingE && !isDialogueOpen)
                 {
-                    if (currentCooldownE <= 0f)
+                    if (isSkillsUnlocked)
                     {
-                        currentCooldownE = cooldownTimeE;
-                        Debug.Log("Đã dùng kỹ năng E");
+                        if (currentCooldownE <= 0f)
+                        {
+                            currentCooldownE = cooldownTimeE;
+                            Debug.Log("Đã dùng kỹ năng E");
+                        }
                     }
-                }
-                else
-                {
-                    ShowSkillWarning(lockIconE);
+                    else
+                    {
+                        ShowSkillWarning(lockIconE);
+                    }
                 }
             }
         }
@@ -713,20 +740,41 @@ public class PlayerHUDController : MonoBehaviour
 
     public void ShowInteractionPrompt(bool show, string text)
     {
-        if (interactionPrompt != null)
+        InitializeUI(); // Đảm bảo khởi tạo khi được gọi
+
+        if (interactionPrompt == null)
         {
-            if (show)
-            {
-                interactionPrompt.AddToClassList("show-prompt");
-            }
-            else
-            {
-                interactionPrompt.RemoveFromClassList("show-prompt");
-            }
+            Debug.LogWarning($"[PlayerHUDController] ShowInteractionPrompt({show}, '{text}') được gọi nhưng interactionPrompt là NULL! UIDocument có thể chưa tải xong.");
+            return;
         }
+
+        if (show)
+        {
+            interactionPrompt.AddToClassList("show-prompt");
+            Debug.Log($"[PlayerHUDController] Hiển thị gợi ý: {text}");
+        }
+        else
+        {
+            interactionPrompt.RemoveFromClassList("show-prompt");
+            Debug.Log("[PlayerHUDController] Ẩn gợi ý tương tác.");
+        }
+
         if (interactionPromptText != null && !string.IsNullOrEmpty(text))
         {
             interactionPromptText.text = text;
+
+            // Tự động thay đổi nhãn phím dựa trên nội dung text
+            if (interactionPromptKeyText != null)
+            {
+                if (text.Contains("[E]") || text.Contains("phím E") || text.Contains("phím [E]"))
+                {
+                    interactionPromptKeyText.text = "E";
+                }
+                else
+                {
+                    interactionPromptKeyText.text = "F";
+                }
+            }
         }
     }
 
