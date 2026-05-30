@@ -201,11 +201,19 @@ public class SilasDialogueController : MonoBehaviour
             }
             evt.StopPropagation();
         }
-        // 2. Nếu click vào bên trong hộp thoại (hoặc nút bấm, khung ảnh, text...)
+        // 2. Nếu click vào bên trong hộp thoại
         else if (dialogueBox != null && (clickedElement == dialogueBox || dialogueBox.Contains(clickedElement)))
         {
-            Debug.Log("[SilasDialogueController] Click bên trong hộp thoại. Chuyển dòng thoại.");
-            AdvanceDialogue();
+            // Không xử lý AdvanceDialogue nếu click vào choice button hoặc container chứa choices
+            // (Choice button tự xử lý qua choiceBtn.clicked rồi)
+            bool isClickOnChoices = choicesContainer != null &&
+                (clickedElement == choicesContainer || choicesContainer.Contains(clickedElement));
+
+            if (!isClickOnChoices)
+            {
+                Debug.Log("[SilasDialogueController] Click bên trong hộp thoại. Chuyển dòng thoại.");
+                AdvanceDialogue();
+            }
         }
     }
 
