@@ -15,7 +15,7 @@ GameObject:
   - component: {fileID: 6958055014869372539}
   - component: {fileID: 4862882883059868750}
   m_Layer: 0
-  m_Name: nv3
+  m_Name: nv3 (1)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -123,8 +123,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  GlobalObjectIdHash: 3036155205
-  InScenePlacedSourceGlobalObjectIdHash: 0
+  GlobalObjectIdHash: 1653732815
+  InScenePlacedSourceGlobalObjectIdHash: 3036155205
   DeferredDespawnTick: 0
   Ownership: 1
   AlwaysReplicateAsRoot: 0
