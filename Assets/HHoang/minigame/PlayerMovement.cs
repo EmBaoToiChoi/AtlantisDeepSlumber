@@ -97,15 +97,34 @@ public class PlayerMovement : NetworkBehaviour
         foreach (var hit in hitColliders)
         {
             CrystalCore core = hit.GetComponent<CrystalCore>();
-            // Kiểm tra .Value của NetworkVariable
             if (core != null && !core.isSnapped.Value) 
             {
-                currentHeldCore = core;
-                core.RequestPickup(OwnerClientId);
-                SetCarryingCoreServerRpc(true);
+                // Gửi yêu cầu nhặt, không tự ý gán ở client
+                RequestPickupServerRpc(core.NetworkObject.NetworkObjectId);
                 break;
             }
         }
+    }
+
+    [ServerRpc]
+    private void RequestPickupServerRpc(ulong networkObjectId)
+    {
+        var networkObject = NetworkManager.Singleton.SpawnManager.SpawnedObjects[networkObjectId];
+        var core = networkObject.GetComponent<CrystalCore>();
+        
+        currentHeldCore = core; // Gán trên Server
+        isCarryingCore.Value = true; // Sync sang client
+        core.RequestPickup(OwnerClientId);
+        
+        // Gửi về cho Client đó biết nó đã cầm vật phẩm nào
+        AssignHeldCoreClientRpc(networkObjectId);
+    }
+
+    [ClientRpc]
+    private void AssignHeldCoreClientRpc(ulong networkObjectId)
+    {
+        var networkObject = NetworkManager.Singleton.SpawnManager.SpawnedObjects[networkObjectId];
+        currentHeldCore = networkObject.GetComponent<CrystalCore>();
     }
 
     public void DropCore()
@@ -113,14 +132,33 @@ public class PlayerMovement : NetworkBehaviour
         // Gọi ServerRpc để đảm bảo Server thực hiện việc thả (đúng chuẩn Network)
         DropCoreServerRpc();
     }
+
     [ServerRpc(RequireOwnership = false)]
     private void DropCoreServerRpc()
     {
         if (currentHeldCore != null)
         {
             currentHeldCore.RequestDrop(OwnerClientId);
+            currentHeldCore = null; // Reset trên Server
+            isCarryingCore.Value = false; // Sync sang client
+            
+            ClearHeldCoreClientRpc(); // Ép Client xóa
+        }
+    }
+
+    [ClientRpc]
+    private void ClearHeldCoreClientRpc()
+    {
+        currentHeldCore = null;
+    }
+
+    [ClientRpc]
+    private void ResetClientCoreStateClientRpc()
+    {
+        // Chỉ reset biến local nếu đây là máy của chính người chơi đó
+        if (IsOwner)
+        {
             currentHeldCore = null;
-            isCarryingCore.Value = false;
         }
     }
 

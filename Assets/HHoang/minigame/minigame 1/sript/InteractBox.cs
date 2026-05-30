@@ -2,7 +2,7 @@ using UnityEngine;
 using Unity.Netcode;
 using UnityEngine.InputSystem;
 
-public class InteractBox : MonoBehaviour
+public class InteractBox : NetworkBehaviour
 {
     public int stationIndex = 0; 
     public Transform crystalSnapPoint;
@@ -10,26 +10,56 @@ public class InteractBox : MonoBehaviour
     
     private bool isPlayerInside = false; // Player đang đứng ở trạm
     private bool isUsingStation = false;
-   public NetworkVariable<bool> isCrystalLocked = new NetworkVariable<bool>(false);
+    // SỬA: Phải truyền giá trị mặc định vào constructor
+    public NetworkVariable<bool> isCrystalLocked = new NetworkVariable<bool>(false);
     private PlayerMovement localPlayerMovement;
 
     void Start() { gameManager = Object.FindFirstObjectByType<OptimizedNetworkMiniGame>(); }
 
     void Update()
     {
+        // Kiểm tra xem hệ thống input có sẵn sàng không
+        if (Keyboard.current == null) return;
+
+        // Kiểm tra điều kiện chính
         if (isPlayerInside && localPlayerMovement != null && localPlayerMovement.IsOwner && Keyboard.current.eKey.wasPressedThisFrame)
         {
-            // SỬA DÒNG NÀY: Thêm .Value vào đây
-            if (localPlayerMovement.isCarryingCore.Value && !isCrystalLocked.Value && (stationIndex == 2 || stationIndex == 3))
+            // 1. Logic đặt tinh thể (Crystal)
+            if (localPlayerMovement.isCarryingCore.Value && localPlayerMovement.currentHeldCore != null)
             {
-                SnapAndLockCrystalServerRpc(stationIndex);
+                // Kiểm tra trạm 2 và 3 có bị khóa chưa
+                if (!isCrystalLocked.Value && (stationIndex == 2 || stationIndex == 3))
+                {
+                    SnapAndLockCrystalServerRpc(stationIndex);
+                }
             }
-            // 2. Nếu không đặt tinh thể thì làm hành động Mini-game
+            // 2. Logic tương tác Mini-game
             else
             {
+                if (gameManager == null) 
+                {
+                    Debug.LogError("GameManager chưa được tìm thấy!");
+                    return;
+                }
+
                 if (!isUsingStation) OpenStation();
                 else ExitStation();
             }
+        }
+    }
+
+    // Trong InteractBox.cs
+    public override void OnNetworkSpawn()
+    {
+        base.OnNetworkSpawn();
+        
+        // Tìm kiếm gameManager
+        gameManager = Object.FindFirstObjectByType<OptimizedNetworkMiniGame>();
+        
+        // Kiểm tra an toàn: nếu không tìm thấy thì báo lỗi rõ ràng trong Console
+        if (gameManager == null)
+        {
+            Debug.LogError($"[InteractBox] Không tìm thấy OptimizedNetworkMiniGame trên Scene! Hãy kiểm tra lại.");
         }
     }
 
@@ -49,34 +79,38 @@ public class InteractBox : MonoBehaviour
         localPlayerMovement.SetCanMoveServerRpc(true);
     }
 
+// TRONG InteractBox.cs
     [ServerRpc(RequireOwnership = false)]
-    private void SnapAndLockCrystalServerRpc(int index)
+    private void SnapAndLockCrystalServerRpc(int index, ServerRpcParams rpcParams = default)
     {
-        var core = localPlayerMovement.currentHeldCore;
-        if (core != null)
+        ulong senderClientId = rpcParams.Receive.SenderClientId;
+        
+        if (NetworkManager.Singleton.ConnectedClients.TryGetValue(senderClientId, out var client))
         {
-            isCrystalLocked.Value = true;
-            core.isSnapped.Value = true; 
+            var player = client.PlayerObject.GetComponent<PlayerMovement>();
+            var core = player.currentHeldCore;
 
-            Rigidbody rb = core.GetComponent<Rigidbody>();
-            if (rb != null) { rb.linearVelocity = Vector3.zero; rb.isKinematic = true; }
-
-            // Gán vị trí
-            core.transform.position = crystalSnapPoint.position;
-            core.transform.rotation = crystalSnapPoint.rotation;
-            
-            // --- ĐÂY LÀ PHẦN QUAN TRỌNG ---
-            // Gán cái point này vào script SnapFollow của tinh thể
-            var snapFollow = core.GetComponent<CrystalSnapFollow>();
-            if (snapFollow != null)
+            if (core != null)
             {
-                snapFollow.targetSnapPoint = crystalSnapPoint;
+                isCrystalLocked.Value = true;
+                core.isSnapped.Value = true; 
+
+                // Logic vật lý giữ nguyên
+                Rigidbody rb = core.GetComponent<Rigidbody>();
+                if (rb != null) { rb.linearVelocity = Vector3.zero; rb.isKinematic = true; }
+                core.transform.position = crystalSnapPoint.position;
+                core.transform.rotation = crystalSnapPoint.rotation;
+
+                var snapFollow = core.GetComponent<CrystalSnapFollow>();
+                if (snapFollow != null) snapFollow.targetSnapPoint = crystalSnapPoint;
+                
+                player.DropCore();
+                
+                // --- ĐÂY LÀ CHỖ CẦN SỬA ---
+                // Thay vì gán trực tiếp gameManager.station2HasCrystal.Value = true;
+                // Hãy gọi đúng hàm ServerRpc của gameManager:
+                gameManager.SetStationCrystalStatusServerRpc(index, true); 
             }
-            
-            localPlayerMovement.DropCore();
-            
-            if (index == 2) gameManager.station2HasCrystal.Value = true;
-            else if (index == 3) gameManager.station3HasCrystal.Value = true;
         }
     }
 
