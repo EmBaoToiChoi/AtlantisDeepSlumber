@@ -172,6 +172,16 @@ public class PlayerHUDController : MonoBehaviour
         // Tìm Label cảnh báo, Overlay bản đồ và Hành trang
         worldMapOverlay = root.Q<VisualElement>("world-map-overlay");
         inventoryOverlay = root.Q<VisualElement>("inventory-overlay");
+        if (inventoryOverlay != null)
+        {
+            inventoryOverlay.RegisterCallback<PointerDownEvent>(evt =>
+            {
+                if (evt.target == inventoryOverlay)
+                {
+                    ToggleInventory();
+                }
+            });
+        }
         weaponWarning = root.Q<Label>("weapon-warning");
         weaponLock2 = root.Q<VisualElement>("weapon-lock-2");
         if (weaponLock2 != null) lockIcon2 = weaponLock2.Q<VisualElement>(null, "weapon-lock-icon");

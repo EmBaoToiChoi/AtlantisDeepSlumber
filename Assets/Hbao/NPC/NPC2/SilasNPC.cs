@@ -17,6 +17,7 @@ public class SilasNPC : NetworkBehaviour
 
     private SphereCollider triggerCollider;
     private Rigidbody rb;
+    private Animator animator;
 
     // Quản lý trạng thái tương tác phím G
     private bool isPlayerNearby = false;
@@ -36,6 +37,13 @@ public class SilasNPC : NetworkBehaviour
         if (rb == null) rb = gameObject.AddComponent<Rigidbody>();
         rb.isKinematic = true;
         rb.useGravity = false;
+
+        // Tìm Animator trên bản thân hoặc con của GameObject
+        animator = GetComponent<Animator>();
+        if (animator == null) animator = GetComponentInChildren<Animator>();
+
+        // Tự động thiết lập Collider vật lý (Không phải Trigger) để chặn đi xuyên qua NPC
+        SetupPhysicalCollider();
 
         // Khởi tạo sẵn các câu thoại cốt truyện chính nếu danh sách trống
         if (dialogueLines.Count == 0)
@@ -61,9 +69,40 @@ public class SilasNPC : NetworkBehaviour
             rb.useGravity = false;
         }
 
+        SetupPhysicalCollider();
+
         if (dialogueLines.Count == 0)
         {
             InitializeDefaultDialogue();
+        }
+    }
+
+    /// <summary>
+    /// Tạo một Collider vật lý phụ để chống người chơi đi xuyên qua NPC
+    /// </summary>
+    private void SetupPhysicalCollider()
+    {
+        Collider[] colliders = GetComponents<Collider>();
+        bool hasPhysicalCollider = false;
+
+        foreach (var col in colliders)
+        {
+            if (col != triggerCollider && !col.isTrigger)
+            {
+                hasPhysicalCollider = true;
+                break;
+            }
+        }
+
+        // Nếu chưa có Collider vật lý nào, tạo thêm một CapsuleCollider
+        if (!hasPhysicalCollider)
+        {
+            CapsuleCollider capsule = gameObject.AddComponent<CapsuleCollider>();
+            capsule.isTrigger = false;
+            capsule.center = new Vector3(0f, 1f, 0f);
+            capsule.radius = 0.45f;
+            capsule.height = 1.8f;
+            Debug.Log("[SilasNPC] Tự động thêm CapsuleCollider vật lý (Is Trigger = False) để chặn người chơi đi xuyên.");
         }
     }
 
@@ -126,6 +165,7 @@ public class SilasNPC : NetworkBehaviour
                         {
                             SilasDialogueController.Instance.StartDialogue(dialogueLines, localPlayer, this, savedDialogueIndex);
                         }
+                        SetDialogueAnimation(true);
                     }
                     else
                     {
@@ -204,6 +244,7 @@ public class SilasNPC : NetworkBehaviour
             if (tempPlayer != null && tempPlayer.isStandaloneMode)
             {
                 SilasDialogueController.Instance.EndDialogue();
+                SetDialogueAnimation(false);
             }
             else
             {
@@ -244,6 +285,37 @@ public class SilasNPC : NetworkBehaviour
         return null;
     }
 
+    /// <summary>
+    /// Điều khiển tham số Animation TroTruyen của Animator
+    /// </summary>
+    private void SetDialogueAnimation(bool isTalking)
+    {
+        if (animator == null)
+        {
+            animator = GetComponent<Animator>();
+            if (animator == null) animator = GetComponentInChildren<Animator>();
+        }
+
+        if (animator != null)
+        {
+            foreach (var param in animator.parameters)
+            {
+                if (param.name == "TroTruyen")
+                {
+                    if (param.type == AnimatorControllerParameterType.Bool)
+                    {
+                        animator.SetBool("TroTruyen", isTalking);
+                    }
+                    else if (param.type == AnimatorControllerParameterType.Trigger && isTalking)
+                    {
+                        animator.SetTrigger("TroTruyen");
+                    }
+                    break;
+                }
+            }
+        }
+    }
+
     // ═══════════════════════════════════════════════════════
     // ĐỒNG BỘ MẠNG CO-OP DIALOGUE (SERVER RPC & CLIENT RPC)
     // ═══════════════════════════════════════════════════════
@@ -262,6 +334,7 @@ public class SilasNPC : NetworkBehaviour
         {
             SilasDialogueController.Instance.StartDialogue(dialogueLines, local, this, startIndex);
         }
+        SetDialogueAnimation(true);
     }
 
     [ServerRpc(RequireOwnership = false)]
@@ -307,5 +380,6 @@ public class SilasNPC : NetworkBehaviour
         {
             SilasDialogueController.Instance.EndDialogue();
         }
+        SetDialogueAnimation(false);
     }
 }
