@@ -1,0 +1,217 @@
+.dialogue-wrapper {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    justify-content: center;
+    align-items: center;
+    background-color: rgba(0, 0, 0, 0);
+    pointer-events: none;
+    
+    transition-property: background-color;
+    transition-duration: 0.35s;
+    transition-timing-function: ease-out;
+}
+
+.dialogue-wrapper.show-wrapper {
+    background-color: rgba(0, 0, 0, 0.78);
+    pointer-events: auto;
+}
+
+/* ═══════════════════════════════════════════════════════
+   KHUNG HỘI THOẠI CHÍNH (VIỀN TRẮNG, NỀN ĐEN ĐỔ BÓNG)
+   ═══════════════════════════════════════════════════════ */
+.dialogue-box {
+    width: 950px;
+    height: 240px;
+    background-color: rgba(0, 0, 0, 0.96); /* Đen tuyền huyền bí */
+    border-width: 2.5px;
+    border-color: #ffffff; /* Viền trắng sang trọng */
+    border-radius: 20px;
+    flex-direction: row;
+    padding: 0;
+    align-items: stretch;
+    overflow: hidden;
+    position: relative;
+    
+    /* Đổ bóng đen siêu sâu + viền sáng nhẹ xung quanh */
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.98), 0 0 30px rgba(255, 255, 255, 0.08), inset 0 0 40px rgba(0, 0, 0, 0.85);
+    
+    transition-property: opacity, scale;
+    transition-duration: 0.35s;
+    transition-timing-function: ease-out-back;
+    opacity: 0;
+    scale: 0.88;
+}
+
+.dialogue-box.show-dialogue {
+    opacity: 1;
+    scale: 1;
+}
+
+/* ═══════════════════════════════════════════════════════
+   CHI TIẾT TRANG TRÍ RONG RÊU XANH LÁ (CORNER MOSS)
+   ═══════════════════════════════════════════════════════ */
+.corner-deco {
+    position: absolute;
+    width: 42px;
+    height: 42px;
+    border-width: 3.5px;
+    border-color: rgba(34, 197, 94, 0.75); /* Rong rêu màu xanh lá phát sáng */
+    pointer-events: none;
+    
+    /* Đổ bóng rêu ma thuật phát sáng xanh lá */
+    box-shadow: 0 0 14px rgba(34, 197, 94, 0.5);
+    
+    transition-property: opacity, border-color;
+    transition-duration: 0.8s;
+}
+
+.corner-tl {
+    top: -2.5px;
+    left: -2.5px;
+    border-right-width: 0;
+    border-bottom-width: 0;
+    border-top-left-radius: 18px;
+}
+
+.corner-tr {
+    top: -2.5px;
+    right: -2.5px;
+    border-left-width: 0;
+    border-bottom-width: 0;
+    border-top-right-radius: 18px;
+}
+
+.corner-bl {
+    bottom: -2.5px;
+    left: -2.5px;
+    border-right-width: 0;
+    border-top-width: 0;
+    border-bottom-left-radius: 18px;
+}
+
+.corner-br {
+    bottom: -2.5px;
+    right: -2.5px;
+    border-left-width: 0;
+    border-top-width: 0;
+    border-bottom-right-radius: 18px;
+}
+
+/* Hào quang rong rêu ma thuật chạy ngang viền trên/dưới */
+.moss-top {
+    position: absolute;
+    top: -1.5px;
+    left: 60px;
+    right: 60px;
+    height: 3px;
+    background-image: linear-gradient(to right, rgba(34, 197, 94, 0), rgba(34, 197, 94, 0.85), rgba(74, 222, 128, 1), rgba(34, 197, 94, 0.85), rgba(34, 197, 94, 0));
+    border-radius: 1.5px;
+    pointer-events: none;
+    box-shadow: 0 0 12px rgba(34, 197, 94, 0.75), 0 0 20px rgba(34, 197, 94, 0.35);
+}
+
+.moss-bottom {
+    position: absolute;
+    bottom: -1.5px;
+    left: 60px;
+    right: 60px;
+    height: 3px;
+    background-image: linear-gradient(to right, rgba(34, 197, 94, 0), rgba(34, 197, 94, 0.85), rgba(74, 222, 128, 1), rgba(34, 197, 94, 0.85), rgba(34, 197, 94, 0));
+    border-radius: 1.5px;
+    pointer-events: none;
+    box-shadow: 0 0 12px rgba(34, 197, 94, 0.75), 0 0 20px rgba(34, 197, 94, 0.35);
+}
+
+/* ═══════════════════════════════════════════════════════
+   AVATAR - CHIẾM TRỌN BÊN TRÁI
+   ═══════════════════════════════════════════════════════ */
+.dialogue-avatar-container {
+    width: 240px;
+    height: 100%;
+    position: relative;
+    flex-shrink: 0;
+    overflow: hidden;
+}
+
+.dialogue-avatar-image {
+    width: 100%;
+    height: 100%;
+    background-color: #000000;
+    -unity-background-scale-mode: scale-and-crop;
+}
+
+/* Gradient hòa quyện mềm mại từ avatar sang vùng text */
+.avatar-fade-right {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 60px;
+    height: 100%;
+    background-image: linear-gradient(to right, rgba(0, 0, 0, 0), rgba(0, 0, 0, 1));
+    pointer-events: none;
+}
+
+/* ═══════════════════════════════════════════════════════
+   PHẦN NỘI DUNG CHỮ (CHỈ CHẠY TEXT THOẠI)
+   ═══════════════════════════════════════════════════════ */
+.dialogue-text-container {
+    flex-grow: 1;
+    height: 100%;
+    padding-left: 28px;
+    padding-right: 28px;
+    padding-top: 32px;
+    padding-bottom: 24px;
+    justify-content: space-between;
+}
+
+.dialogue-text-inner-wrapper {
+    flex-grow: 1;
+    justify-content: center; /* Căn giữa text theo chiều dọc vì không còn tên nhãn nữa */
+}
+
+.dialogue-text-content {
+    color: #e8ecf1;
+    font-size: 17px;
+    line-height: 26px;
+    -unity-font-style: normal;
+    white-space: normal;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95);
+}
+
+/* ═══════════════════════════════════════════════════════
+   BUTTON TIẾP TỤC (MÀU VIỀN TRẮNG / CHỮ TRẮNG PHÙ HỢP KHUNG)
+   ═══════════════════════════════════════════════════════ */
+.dialogue-next-button {
+    align-self: flex-end;
+    background-color: rgba(0, 0, 0, 0.85);
+    color: #ffffff;
+    border-width: 1.5px;
+    border-color: rgba(255, 255, 255, 0.7);
+    border-radius: 6px;
+    font-size: 11px;
+    -unity-font-style: bold;
+    padding: 9px 20px;
+    margin-bottom: 0;
+    margin-right: 0;
+    letter-spacing: 1px;
+    
+    transition-property: background-color, color, scale, border-color, box-shadow;
+    transition-duration: 0.15s;
+    transition-timing-function: ease-out;
+}
+
+.dialogue-next-button:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+    border-color: #ffffff;
+    scale: 1.04;
+    box-shadow: 0 0 15px rgba(255, 255, 255, 0.25);
+}
+
+.dialogue-next-button:active {
+    background-color: rgba(255, 255, 255, 0.35);
+    color: #ffffff;
+    scale: 0.96;
+    box-shadow: 0 0 6px rgba(255, 255, 255, 0.15);
+}
