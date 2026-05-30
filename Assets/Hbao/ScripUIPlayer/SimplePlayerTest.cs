@@ -737,6 +737,19 @@ public class SimplePlayerTest : NetworkBehaviour
 
     private void HandleStandaloneUpdate()
     {
+        // Khóa di chuyển, tấn công, nhào lộn khi đang nói chuyện với Rakan hoặc Silas
+        bool isDialogueOpen = (RakanDialogueController.Instance != null && RakanDialogueController.Instance.IsActive) ||
+                              (SilasDialogueController.Instance != null && SilasDialogueController.Instance.IsActive);
+
+        if (isDialogueOpen)
+        {
+            if (!IsPlayingActionAnimation())
+            {
+                PlayAnimation("Idle", 0.1f);
+            }
+            return; // Khóa hoàn toàn di chuyển, né tránh, tấn công
+        }
+
         // Xử lý di chuyển khi đang nhào lộn
         if (isRollingStandalone)
         {
@@ -801,6 +814,19 @@ public class SimplePlayerTest : NetworkBehaviour
 
     private void HandleOwnerUpdate()
     {
+        // Khóa di chuyển, tấn công, nhào lộn khi đang nói chuyện với Rakan hoặc Silas
+        bool isDialogueOpen = (RakanDialogueController.Instance != null && RakanDialogueController.Instance.IsActive) ||
+                              (SilasDialogueController.Instance != null && SilasDialogueController.Instance.IsActive);
+
+        if (isDialogueOpen)
+        {
+            if (!IsPlayingActionAnimation())
+            {
+                PlayAnimation("Idle", 0.1f);
+            }
+            return; // Khóa hoàn toàn di chuyển, né tránh, tấn công
+        }
+
         // Xử lý di chuyển khi đang nhào lộn
         if (rollTimer > 0)
         {

@@ -7,6 +7,7 @@ using System.Collections.Generic;
 public class RakanDialogueController : MonoBehaviour
 {
     public static RakanDialogueController Instance { get; private set; }
+    public static bool HasFinishedStoryOnce = false;
 
     [SerializeField] private UIDocument uiDocument;
     [SerializeField] private Sprite rakanAvatar; // Kéo thả ảnh rakan_avatar.png vào đây trong Inspector
@@ -48,6 +49,7 @@ public class RakanDialogueController : MonoBehaviour
     private bool isPromptShowing = false;
 
     public bool IsActive => isDialogueActive;
+    public bool IsTyping => isTyping;
 
     // Typewriter effect
     [Header("Typewriter Settings")]
@@ -133,6 +135,17 @@ public class RakanDialogueController : MonoBehaviour
             dialogueWrapper.RegisterCallback<ClickEvent>(OnDialogueWrapperClicked);
         }
 
+        // Đăng ký sự kiện click vào nút Tiếp Tục (nextButton) để chuyển dòng thoại
+        if (nextButton != null)
+        {
+            nextButton.clicked += () => {
+                if (isDialogueActive)
+                    AdvanceDialogue();
+            };
+            // Ngăn sự kiện click lan truyền lên dialogueWrapper
+            nextButton.RegisterCallback<ClickEvent>(evt => evt.StopPropagation());
+        }
+
         isUIInitialized = true;
         Debug.Log("[RakanDialogueController] UI Toolkit Đối thoại đã được khởi tạo thành công!");
     }
@@ -173,7 +186,7 @@ public class RakanDialogueController : MonoBehaviour
         if (clickedElement == dialogueWrapper)
         {
             Debug.Log("[RakanDialogueController] Click bên ngoài hộp thoại. Đóng trò chuyện.");
-            if (activePlayer == null || activePlayer.isStandaloneMode)
+            if (activePlayer == null || activePlayer.isStandaloneMode || currentDialogueStep == 999)
             {
                 EndDialogue();
             }
@@ -251,94 +264,30 @@ public class RakanDialogueController : MonoBehaviour
     }
 
     /// <summary>
-    /// Khởi tạo cây đối thoại rẽ nhánh Rakan
+    /// Khởi tạo cây đối thoại rẽ nhánh Rakan với truyền thuyết Atlantis
     /// </summary>
     private void InitializeDialogueTree()
     {
         dialogueTree.Clear();
 
-        // Step 0: Khởi đầu cuộc trò chuyện
+        // Step 0: Truyền thuyết Atlantis của Rakan
         DialogueStepNode step0 = new DialogueStepNode
         {
             stepId = 0,
             speakerName = "Rakan",
-            text = "\"Arthur... và những kẻ ngoại tộc. Ta nghe tiếng bước chân các ngươi từ xa. Các ngươi tới đây tìm kiếm cái chết hay vinh quang?\""
+            text = "\"Atlantis sở hữu những công nghệ vượt bậc, bỏ xa mọi giới hạn của trí tuệ con người. Nơi này từng là một hòn đảo huy hoàng rực sáng rực rỡ, một Utopia thực sự... Nơi người ta ngạo mạn tin rằng mình đã nắm giữ được quyền năng của các vị thần và do Đức Vua lạm dụng năng lượng viên ngọc bên trong \\\"Thương Thần\\\" để thúc đẩy sự phát triển đến độ cực hạn của Atlantis khiến viên ngọc hết năng lượng và không có viên ngọc làm nguồn năng lượng  hòn đảo đã chìm dưới đáy đại dương rất lâu mà không thấy được ánh sáng, và chính sai lầm đó đã khiến người dân biến dị từ từ thành những con quái vật chỉ biết cắn xé. Lão cảnh báo Viên Ngọc chính là mỏ neo giữ hòn đảo khỏi việc chìm lại xuống đáy biển.\"",
+            nextStepId = -1
         };
-        step0.choices.Add(new DialogueChoiceOption { choiceText = "Chúng tôi tìm đường đến Cung điện Hoàng gia!", nextStepId = 10 });
-        step0.choices.Add(new DialogueChoiceOption { choiceText = "Ông là ai?", nextStepId = 20 });
-        step0.choices.Add(new DialogueChoiceOption { choiceText = "Tránh đường cho chúng tôi đi.", nextStepId = 30 });
-        step0.choices.Add(new DialogueChoiceOption { choiceText = "Không quan tâm.", nextStepId = 40 });
         dialogueTree.Add(0, step0);
-
-        // Step 10: Nhánh Cung điện Hoàng gia
-        DialogueStepNode step10 = new DialogueStepNode
+        // Step 999: Thông báo yêu cầu đủ 4 người
+        DialogueStepNode step999 = new DialogueStepNode
         {
-            stepId = 10,
+            stepId = 999,
             speakerName = "Rakan",
-            text = "\"Cung điện Hoàng gia? Lối đi phía trước đã bị khóa chặt rồi. Lão già Silas lẩm cẩm canh gác ngoài kia chắc cũng kể cho các ngươi về những viên ngọc rồi đúng không?\""
-        };
-        step10.choices.Add(new DialogueChoiceOption { choiceText = "Silas đã kể về các Viên ngọc phong ấn.", nextStepId = 11 });
-        dialogueTree.Add(10, step10);
-
-        // Step 11: Nhánh Silas và 2 viên ngọc
-        DialogueStepNode step11 = new DialogueStepNode
-        {
-            stepId = 11,
-            speakerName = "Rakan",
-            text = "\"Đúng vậy. Lão Silas đã mất đi ý chí chiến đấu từ lâu, chỉ biết gục đầu bên đống đổ nát. Nhưng ta thì khác, ta chỉ tôn thờ sức mạnh! Nếu muốn đi xa hơn, các ngươi phải sẵn sàng đối đầu với những hộ vệ hung tợn nhất.\""
-        };
-        step11.choices.Add(new DialogueChoiceOption { choiceText = "Tôi không sợ bất kỳ hộ vệ nào!", nextStepId = 12 });
-        dialogueTree.Add(11, step11);
-
-        // Step 12: Khích lệ chiến binh
-        DialogueStepNode step12 = new DialogueStepNode
-        {
-            stepId = 12,
-            speakerName = "Rakan",
-            text = "\"Ha! Tốt lắm! Khí thế của một chiến binh thực thụ. Lối đi ngay phía trước, hãy tiến lên và chứng minh cho ta thấy sức mạnh của ngươi đi!\"",
+            text = "\"Hãy gọi bạn các ngươi đến đây! Ta chỉ đối thoại khi có đủ 4 chiến binh tụ họp tại đây.\"",
             nextStepId = -1
         };
-        dialogueTree.Add(12, step12);
-
-        // Step 20: Ông là ai?
-        DialogueStepNode step20 = new DialogueStepNode
-        {
-            stepId = 20,
-            speakerName = "Rakan",
-            text = "\"Ta là Rakan, kẻ đã từng quét sạch hàng trăm tên lính gác hoàng gia bằng cặp song đao này. Giờ đây, vương triều sụp đổ, ta chỉ là kẻ canh giữ những tàn tích sót lại mà thôi.\""
-        };
-        step20.choices.Add(new DialogueChoiceOption { choiceText = "Tại sao ông lại dừng tay?", nextStepId = 21 });
-        dialogueTree.Add(20, step20);
-
-        // Step 21: Tại sao dừng tay
-        DialogueStepNode step21 = new DialogueStepNode
-        {
-            stepId = 21,
-            speakerName = "Rakan",
-            text = "\"Vì vương triều này không còn đối thủ xứng tầm nữa. Tất cả đều đã bị bóng tối nuốt chửng. Nhưng nhìn ngươi... ta lại cảm thấy chút hy vọng đấy chiến binh trẻ.\"",
-            nextStepId = -1
-        };
-        dialogueTree.Add(21, step21);
-
-        // Step 30: Tránh đường
-        DialogueStepNode step30 = new DialogueStepNode
-        {
-            stepId = 30,
-            speakerName = "Rakan",
-            text = "\"Gầm gừ như một con thú hoang bị thương vậy. Lối đi luôn mở rộng cho những kẻ đủ bản lĩnh, nhưng đối với kẻ kiêu ngạo như ngươi, tử thần đang đợi sẵn ở góc cua tiếp theo đấy.\"",
-            nextStepId = -1
-        };
-        dialogueTree.Add(30, step30);
-
-        // Step 40: Không quan tâm
-        DialogueStepNode step40 = new DialogueStepNode
-        {
-            stepId = 40,
-            speakerName = "Rakan",
-            text = "\"Sự im lặng lạnh lùng của kẻ chuẩn bị bước vào chiến trường đẫm máu. Ta thích điều đó hơn là những lời sáo rỗng huênh hoang. Đi đi, và giữ lấy cái mạng của ngươi.\"",
-            nextStepId = -1
-        };
-        dialogueTree.Add(40, step40);
+        dialogueTree.Add(999, step999);
     }
 
     /// <summary>
@@ -493,7 +442,8 @@ public class RakanDialogueController : MonoBehaviour
     /// </summary>
     public void AdvanceDialogue()
     {
-        if (activePlayer == null || activePlayer.isStandaloneMode)
+        // Standalone mode, câu chuyện Rakan "Hãy gọi bạn" (999), hoặc câu chuyện đã kể xong → xử lý local
+        if (activePlayer == null || activePlayer.isStandaloneMode || currentDialogueStep == 999 || HasFinishedStoryOnce)
         {
             NextLine();
         }
@@ -554,7 +504,7 @@ public class RakanDialogueController : MonoBehaviour
     /// </summary>
     public void ChooseOption(int nextStepId)
     {
-        if (activePlayer == null || activePlayer.isStandaloneMode)
+        if (activePlayer == null || activePlayer.isStandaloneMode || currentDialogueStep == 999 || HasFinishedStoryOnce)
         {
             SelectChoice(nextStepId);
         }
@@ -653,6 +603,13 @@ public class RakanDialogueController : MonoBehaviour
 
         if (nextStep == -1)
         {
+            if (currentDialogueStep == 0)
+            {
+                HasFinishedStoryOnce = true;
+                PlayerPrefs.SetInt("RakanDialogueFinished", 1);
+                PlayerPrefs.Save();
+                Debug.Log("[RakanDialogueController] Đã hoàn thành câu chuyện Rakan. Sẵn sàng kích hoạt Spawner cửa!");
+            }
             EndDialogue();
         }
         else
@@ -680,6 +637,15 @@ public class RakanDialogueController : MonoBehaviour
         isDialogueActive = false;
         currentDialogueStep = 0;
         activePlayer = null;
+
+        // Ẩn nút Tiếp Tục và các lựa chọn
+        if (nextButton != null)
+            nextButton.style.display = DisplayStyle.None;
+        if (choicesContainer != null)
+        {
+            choicesContainer.Clear();
+            choicesContainer.style.display = DisplayStyle.None;
+        }
 
         if (dialogueWrapper != null)
         {

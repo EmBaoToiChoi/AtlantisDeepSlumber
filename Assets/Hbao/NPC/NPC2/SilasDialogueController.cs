@@ -133,6 +133,17 @@ public class SilasDialogueController : MonoBehaviour
             dialogueWrapper.RegisterCallback<ClickEvent>(OnDialogueWrapperClicked);
         }
 
+        // Đăng ký sự kiện click vào nút Tiếp Tục (nextButton) để chuyển dòng thoại
+        if (nextButton != null)
+        {
+            nextButton.clicked += () => {
+                if (isDialogueActive)
+                    AdvanceDialogue();
+            };
+            // Ngăn sự kiện click lan truyền lên dialogueWrapper
+            nextButton.RegisterCallback<ClickEvent>(evt => evt.StopPropagation());
+        }
+
         isUIInitialized = true;
         Debug.Log("[SilasDialogueController] UI Toolkit Đối thoại đã được khởi tạo thành công!");
     }
@@ -712,6 +723,15 @@ public class SilasDialogueController : MonoBehaviour
         isDialogueActive = false;
         currentDialogueStep = 0;
         activePlayer = null;
+
+        // Ẩn nút Tiếp Tục và các lựa chọn
+        if (nextButton != null)
+            nextButton.style.display = DisplayStyle.None;
+        if (choicesContainer != null)
+        {
+            choicesContainer.Clear();
+            choicesContainer.style.display = DisplayStyle.None;
+        }
 
         if (dialogueWrapper != null)
         {
