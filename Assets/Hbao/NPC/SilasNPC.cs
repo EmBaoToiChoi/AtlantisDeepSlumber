@@ -27,16 +27,15 @@ public class SilasNPC : NetworkBehaviour
     {
         // Tự động thiết lập SphereCollider
         triggerCollider = GetComponent<SphereCollider>();
+        if (triggerCollider == null) triggerCollider = gameObject.AddComponent<SphereCollider>();
         triggerCollider.isTrigger = true;
         triggerCollider.radius = triggerRadius;
 
-        // Tự động thiết lập Rigidbody để đảm bảo Trigger luôn được kích hoạt
+        // Tự động thiết lập Rigidbody để kích hoạt va chạm
         rb = GetComponent<Rigidbody>();
-        if (rb != null)
-        {
-            rb.isKinematic = true;
-            rb.useGravity = false;
-        }
+        if (rb == null) rb = gameObject.AddComponent<Rigidbody>();
+        rb.isKinematic = true;
+        rb.useGravity = false;
 
         // Khởi tạo sẵn các câu thoại cốt truyện chính nếu danh sách trống
         if (dialogueLines.Count == 0)
@@ -98,12 +97,7 @@ public class SilasNPC : NetworkBehaviour
             {
                 isPlayerNearby = false;
                 localPlayer = null;
-                
-                if (SilasDialogueController.Instance != null)
-                {
-                    SilasDialogueController.Instance.ShowPrompt(false);
-                    SilasDialogueController.Instance.EndDialogue();
-                }
+                HideDialogueAndPrompt();
                 return;
             }
 
@@ -111,7 +105,7 @@ public class SilasNPC : NetworkBehaviour
 
             if (!isDialogueActive)
             {
-                // Hiển thị gợi ý phím G độc lập thông qua Dialogue UI (Tránh lỗi mất HUD)
+                // Hiển thị gợi ý phím G độc lập
                 if (SilasDialogueController.Instance != null)
                 {
                     SilasDialogueController.Instance.ShowPrompt(true);
@@ -146,6 +140,12 @@ public class SilasNPC : NetworkBehaviour
                 {
                     SilasDialogueController.Instance.ShowPrompt(false);
                 }
+
+                // Lắng nghe người chơi nhấn phím G lần nữa để đóng trò chuyện
+                if (Keyboard.current != null && Keyboard.current.gKey.wasPressedThisFrame)
+                {
+                    HideDialogueAndPrompt();
+                }
             }
         }
     }
@@ -153,6 +153,9 @@ public class SilasNPC : NetworkBehaviour
     private void OnTriggerEnter(Collider other)
     {
         SimplePlayerTest player = other.GetComponentInParent<SimplePlayerTest>();
+        if (player == null) player = other.GetComponentInChildren<SimplePlayerTest>();
+        if (player == null) player = other.GetComponent<SimplePlayerTest>();
+
         if (player != null)
         {
             bool isLocalPlayer = player.isStandaloneMode || player.IsOwner;
@@ -166,7 +169,7 @@ public class SilasNPC : NetworkBehaviour
                 {
                     SilasDialogueController.Instance.ShowPrompt(true);
                 }
-                Debug.Log($"[SilasNPC] Local Player {player.gameObject.name} lại gần. Hiển thị gợi ý phím G.");
+                Debug.Log($"[SilasNPC Trigger] Local Player {player.gameObject.name} đi VÀO vùng Sphere Trigger. Hiển thị gợi ý phím G.");
             }
         }
     }
@@ -174,21 +177,37 @@ public class SilasNPC : NetworkBehaviour
     private void OnTriggerExit(Collider other)
     {
         SimplePlayerTest player = other.GetComponentInParent<SimplePlayerTest>();
-        if (player != null)
-        {
-            bool isLocalPlayer = player.isStandaloneMode || player.IsOwner;
+        if (player == null) player = other.GetComponentInChildren<SimplePlayerTest>();
+        if (player == null) player = other.GetComponent<SimplePlayerTest>();
 
-            if (isLocalPlayer)
+        // Kiểm tra nếu chính localPlayer hiện tại đi ra ngoài
+        if (player != null && player == localPlayer)
+        {
+            isPlayerNearby = false;
+            localPlayer = null;
+            HideDialogueAndPrompt();
+            Debug.Log($"[SilasNPC Trigger] Local Player đi RA KHỎI vùng Sphere Trigger. Ẩn gợi ý tương tác phím G và đóng hội thoại.");
+        }
+    }
+
+    private void HideDialogueAndPrompt()
+    {
+        if (SilasDialogueController.Instance != null)
+        {
+            SilasDialogueController.Instance.ShowPrompt(false);
+        }
+
+        if (SilasDialogueController.Instance != null)
+        {
+            // Nếu chơi standalone thì đóng cục bộ, chơi mạng thì gửi Rpc để đóng cho tất cả mọi người
+            SimplePlayerTest tempPlayer = FindLocalPlayerInScene();
+            if (tempPlayer != null && tempPlayer.isStandaloneMode)
             {
-                isPlayerNearby = false;
-                localPlayer = null;
-                
-                if (SilasDialogueController.Instance != null)
-                {
-                    SilasDialogueController.Instance.ShowPrompt(false);
-                    SilasDialogueController.Instance.EndDialogue();
-                }
-                Debug.Log($"[SilasNPC] Local Player {player.gameObject.name} đi ra xa. Ẩn gợi ý tương tác phím G.");
+                SilasDialogueController.Instance.EndDialogue();
+            }
+            else
+            {
+                RequestEndDialogueServerRpc();
             }
         }
     }
@@ -257,6 +276,36 @@ public class SilasNPC : NetworkBehaviour
         if (SilasDialogueController.Instance != null)
         {
             SilasDialogueController.Instance.NextLine();
+        }
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    public void RequestSelectChoiceServerRpc(int nextStepId)
+    {
+        SelectChoiceClientRpc(nextStepId);
+    }
+
+    [ClientRpc]
+    private void SelectChoiceClientRpc(int nextStepId)
+    {
+        if (SilasDialogueController.Instance != null)
+        {
+            SilasDialogueController.Instance.SelectChoice(nextStepId);
+        }
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    public void RequestEndDialogueServerRpc()
+    {
+        EndDialogueClientRpc();
+    }
+
+    [ClientRpc]
+    private void EndDialogueClientRpc()
+    {
+        if (SilasDialogueController.Instance != null)
+        {
+            SilasDialogueController.Instance.EndDialogue();
         }
     }
 }

@@ -84,7 +84,7 @@
    ═══════════════════════════════════════════════════════ */
 .dialogue-box {
     width: 950px;
-    height: 240px;
+    height: 320px;
     background-color: rgba(0, 0, 0, 0.96); /* Đen tuyền huyền bí */
     border-width: 2.5px;
     border-color: #ffffff; /* Viền trắng sang trọng */
@@ -224,12 +224,12 @@
     padding-right: 28px;
     padding-top: 32px;
     padding-bottom: 24px;
-    justify-content: space-between;
+    justify-content: flex-start; /* Sắp xếp sát lại gần nhau thay vì đẩy xa */
 }
 
 .dialogue-text-inner-wrapper {
-    flex-grow: 1;
-    justify-content: center; /* Căn giữa text theo chiều dọc vì không còn tên nhãn nữa */
+    flex-grow: 0; /* Không kéo giãn chiều cao nữa để tránh đẩy các nút lựa chọn ra quá xa */
+    margin-bottom: 16px; /* Khoảng cách 16px cực đẹp giữa lời thoại và ô lựa chọn */
 }
 
 .dialogue-text-content {
@@ -276,4 +276,39 @@
     color: #ffffff;
     scale: 0.96;
     box-shadow: 0 0 6px rgba(255, 255, 255, 0.15);
+}
+
+.dialogue-choices-container {
+    flex-direction: column;
+    align-self: stretch;
+    margin-top: 10px;
+    margin-bottom: 2px;
+}
+.dialogue-choice-button {
+    background-color: rgba(0, 0, 0, 0); /* Mặc định trong suốt hoàn toàn */
+    color: #e8ecf1;
+    border-width: 1.5px;
+    border-color: rgba(0, 0, 0, 0); /* Không có viền mặc định */
+    border-radius: 8px;
+    font-size: 14px;
+    -unity-font-style: normal;
+    padding: 8px 16px;
+    margin-bottom: 6px;
+    -unity-text-align: middle-left;
+    transition-property: background-color, border-color, translate, scale, box-shadow;
+    transition-duration: 0.15s;
+    transition-timing-function: ease-out;
+}
+.dialogue-choice-button:hover {
+    background-color: rgba(255, 255, 255, 0.12); /* Hiển thị nền mờ trắng kính tinh tế */
+    border-color: rgba(255, 255, 255, 0.95); /* Viền màu trắng cực kỳ sang trọng */
+    translate: 6px 0;
+    scale: 1.01;
+    color: #ffffff;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.8), 0 0 16px rgba(255, 255, 255, 0.1); /* Đổ bóng đen mờ kết hợp glow trắng nhẹ */
+}
+.dialogue-choice-button:active {
+    background-color: rgba(255, 255, 255, 0.25); /* Glow sáng hơn khi nhấn */
+    border-color: #ffffff;
+    scale: 0.98;
 }
