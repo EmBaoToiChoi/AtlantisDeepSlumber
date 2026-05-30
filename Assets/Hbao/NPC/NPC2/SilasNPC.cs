@@ -108,6 +108,7 @@ public class SilasNPC : NetworkBehaviour
 
     private void InitializeDefaultDialogue()
     {
+        dialogueLines.Clear();
         dialogueLines.Add(new SilasDialogueController.DialogueLine
         {
             speakerName = "Silas",

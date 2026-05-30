@@ -15,6 +15,10 @@ public class RakanNPC : NetworkBehaviour
     [Tooltip("Bán kính vùng tương tác nói chuyện")]
     [SerializeField] private float triggerRadius = 5f;
 
+    [Header("Player Count Requirement Settings")]
+    [Tooltip("Nếu tích chọn, sẽ đếm số lượng người chơi đang đứng trong vùng tương tác. Nếu bỏ tích, sẽ đếm tổng số người chơi kết nối trong phòng.")]
+    [SerializeField] private bool countOnlyNearbyPlayers = false;
+
     private SphereCollider triggerCollider;
     private Rigidbody rb;
     private Animator animator;
@@ -108,22 +112,12 @@ public class RakanNPC : NetworkBehaviour
 
     private void InitializeDefaultDialogue()
     {
+        // Khởi tạo danh sách mặc định để giữ an toàn cho inspector
+        dialogueLines.Clear();
         dialogueLines.Add(new RakanDialogueController.DialogueLine
         {
             speakerName = "Rakan",
-            text = "\"Arthur... và những kẻ ngoại tộc. Ta nghe tiếng bước chân các ngươi từ xa. Các ngươi tới đây tìm kiếm cái chết hay vinh quang?\""
-        });
-
-        dialogueLines.Add(new RakanDialogueController.DialogueLine
-        {
-            speakerName = "Arthur",
-            text = "\"Chúng tôi tìm đường đến Cung điện Hoàng gia!\""
-        });
-
-        dialogueLines.Add(new RakanDialogueController.DialogueLine
-        {
-            speakerName = "Rakan",
-            text = "\"Cung điện Hoàng gia? Lối đi phía trước đã bị khóa chặt rồi. Silas lẩm cẩm canh gác ngoài kia chắc cũng kể cho các ngươi về những viên ngọc rồi đúng không?\""
+            text = "Atlantis khởi nguồn của mọi sự huy hoàng..."
         });
     }
 
@@ -158,18 +152,32 @@ public class RakanNPC : NetworkBehaviour
                         RakanDialogueController.Instance.ShowPrompt(false);
                     }
 
-                    // Nếu chơi offline (Standalone) thì bật cục bộ, ngược lại đồng bộ qua server
-                    if (localPlayer.isStandaloneMode)
+                    // Kiểm tra số lượng người chơi đáp ứng yêu cầu
+                    int currentPlayersCount = GetPlayersCount();
+
+                    if (currentPlayersCount < 4)
                     {
+                        // HIỂN THỊ CẢNH BÁO CỤC BỘ: Nếu chưa đủ 4 người, hiển thị Step 999 ("Hãy gọi bạn các ngươi đến đây") chỉ trên máy người ấn
                         if (RakanDialogueController.Instance != null)
                         {
-                            RakanDialogueController.Instance.StartDialogue(dialogueLines, localPlayer, this, savedDialogueIndex);
+                            RakanDialogueController.Instance.StartDialogue(dialogueLines, localPlayer, this, 999);
                         }
-                        SetDialogueAnimation(true);
                     }
                     else
                     {
-                        RequestStartDialogueServerRpc(savedDialogueIndex);
+                        // ĐỦ 4 NGƯỜI: Tiến hành mở hội thoại truyền thuyết Atlantis chính thức
+                        if (localPlayer.isStandaloneMode)
+                        {
+                            if (RakanDialogueController.Instance != null)
+                            {
+                                RakanDialogueController.Instance.StartDialogue(dialogueLines, localPlayer, this, savedDialogueIndex);
+                            }
+                            SetDialogueAnimation(true);
+                        }
+                        else
+                        {
+                            RequestStartDialogueServerRpc(savedDialogueIndex);
+                        }
                     }
                 }
             }
@@ -184,9 +192,57 @@ public class RakanNPC : NetworkBehaviour
                 // Lắng nghe người chơi nhấn phím G lần nữa để đóng trò chuyện
                 if (Keyboard.current != null && Keyboard.current.gKey.wasPressedThisFrame)
                 {
-                    HideDialogueAndPrompt();
+                    int currentPlayersCount = GetPlayersCount();
+                    // Cho phép đóng bằng G nếu: thiếu người, hoặc câu chuyện đã kể xong
+                    if (currentPlayersCount < 4 || RakanDialogueController.HasFinishedStoryOnce)
+                    {
+                        HideDialogueAndPrompt();
+                    }
+                    else
+                    {
+                        Debug.Log("[RakanNPC] Đang trong cuộc đối thoại cốt truyện 4 người, phím G bị khóa không thể tắt chat!");
+                    }
                 }
             }
+        }
+    }
+
+    /// <summary>
+    /// Đếm số lượng người chơi dựa theo cài đặt kiểm tra (Đứng gần hoặc Kết nối session)
+    /// </summary>
+    private int GetPlayersCount()
+    {
+        // Cho phép bỏ qua kiểm tra khi chơi Offline (Standalone) để lập trình viên dễ test 1 mình
+        if (localPlayer != null && localPlayer.isStandaloneMode)
+        {
+            return 4;
+        }
+
+        if (countOnlyNearbyPlayers)
+        {
+            // Kiểm tra số lượng người chơi đang đứng trong bán kính triggerRadius của NPC
+            int count = 0;
+            SimplePlayerTest[] players = FindObjectsOfType<SimplePlayerTest>();
+            foreach (var p in players)
+            {
+                if (Vector3.Distance(transform.position, p.transform.position) <= triggerRadius)
+                {
+                    count++;
+                }
+            }
+            return count;
+        }
+        else
+        {
+            // Kiểm tra số lượng người chơi đã kết nối qua Netcode Multiplayer
+            if (NetworkManager.Singleton != null && NetworkManager.Singleton.ConnectedClients != null)
+            {
+                return NetworkManager.Singleton.ConnectedClients.Count;
+            }
+
+            // Phương án dự phòng (Fallback) đếm số player GameObjects
+            SimplePlayerTest[] players = FindObjectsOfType<SimplePlayerTest>();
+            return players != null ? players.Length : 1;
         }
     }
 

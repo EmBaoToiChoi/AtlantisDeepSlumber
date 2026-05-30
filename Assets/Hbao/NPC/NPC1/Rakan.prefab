@@ -138,7 +138,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  GlobalObjectIdHash: 1699871477
+  GlobalObjectIdHash: 1532244280
   InScenePlacedSourceGlobalObjectIdHash: 0
   DeferredDespawnTick: 0
   Ownership: 1
@@ -181,3 +181,4 @@ MonoBehaviour:
       v\u1EC1 nh\u1EEFng vi\xEAn ng\u1ECDc r\u1ED3i \u0111\xFAng kh\xF4ng?\""
     customAvatar: {fileID: 0}
   triggerRadius: 3
+  countOnlyNearbyPlayers: 0
