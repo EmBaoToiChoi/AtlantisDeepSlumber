@@ -21,29 +21,44 @@ public class CrystalCore : NetworkBehaviour
     void Update()
     {
         if (isSnapped.Value) return;
-        if (IsServer && holders.Count > 0)
-        {
-            Vector3 targetPos = Vector3.zero;
-            int activeHolders = 0;
 
-            // Tính vị trí trung bình của các điểm giữ (holdPoints)
-            foreach (ulong clientId in holders)
+        if (IsServer)
+        {
+            if (holders.Count > 0)
             {
-                if (NetworkManager.Singleton.ConnectedClients.TryGetValue(clientId, out var client))
+                // Logic cũ: Khiêng vật phẩm
+                Vector3 targetPos = Vector3.zero;
+                int activeHolders = 0;
+
+                foreach (ulong clientId in holders)
                 {
-                    var playerMovement = client.PlayerObject.GetComponent<PlayerMovement>();
-                    if (playerMovement != null && playerMovement.holdPoint != null)
+                    if (NetworkManager.Singleton.ConnectedClients.TryGetValue(clientId, out var client))
                     {
-                        targetPos += playerMovement.holdPoint.position;
-                        activeHolders++;
+                        var playerMovement = client.PlayerObject.GetComponent<PlayerMovement>();
+                        if (playerMovement != null && playerMovement.holdPoint != null)
+                        {
+                            targetPos += playerMovement.holdPoint.position;
+                            activeHolders++;
+                        }
                     }
                 }
-            }
 
-            if (activeHolders > 0)
+                if (activeHolders > 0)
+                {
+                    transform.position = targetPos / activeHolders;
+                    GetComponent<Rigidbody>().isKinematic = true; // Giữ chặt khi đang khiêng
+                }
+            }
+            else
             {
-                // Lõi sẽ nằm ở giữa 2 người, hoặc theo người đầu tiên nếu chỉ có 1 người
-                transform.position = targetPos / activeHolders;
+                // --- THÊM PHẦN NÀY ---
+                // Nếu không còn ai khiêng, cho phép vật phẩm rơi xuống đất
+                Rigidbody rb = GetComponent<Rigidbody>();
+                if (rb != null && rb.isKinematic)
+                {
+                    rb.isKinematic = false; // Bật vật lý để rơi
+                    rb.useGravity = true;
+                }
             }
         }
     }
@@ -60,6 +75,18 @@ public class CrystalCore : NetworkBehaviour
     [ServerRpc(RequireOwnership = false)]
     private void RequestDropServerRpc(ulong playerId)
     {
-        if (holders.Contains(playerId)) holders.Remove(playerId);
+        if (holders.Contains(playerId)) 
+        {
+            holders.Remove(playerId);
+            Debug.Log($"Player {playerId} đã thả Core thành công trên Server");
+            
+            // Ngay khi thả, cho phép rơi ngay lập tức thay vì đợi Update
+            Rigidbody rb = GetComponent<Rigidbody>();
+            if (rb != null)
+            {
+                rb.isKinematic = false;
+                rb.useGravity = true;
+            }
+        }
     }
 }
