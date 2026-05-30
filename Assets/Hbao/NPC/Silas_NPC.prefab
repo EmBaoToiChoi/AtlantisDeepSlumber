@@ -122,10 +122,16 @@ PrefabInstance:
       addedObject: {fileID: 9053493513919783780}
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 0f23067026bf65c4fb196b7802330f3e, type: 3}
       insertIndex: -1
+      addedObject: {fileID: 7417176631203153715}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 0f23067026bf65c4fb196b7802330f3e, type: 3}
+      insertIndex: -1
       addedObject: {fileID: 8917312812487329434}
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 0f23067026bf65c4fb196b7802330f3e, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1900988990361110509}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 0f23067026bf65c4fb196b7802330f3e, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 240463645759654258}
   m_SourcePrefab: {fileID: 100100000, guid: 0f23067026bf65c4fb196b7802330f3e, type: 3}
 --- !u!1 &3227918615114643028 stripped
 GameObject:
@@ -151,8 +157,33 @@ SphereCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Radius: 5
-  m_Center: {x: 0, y: 1.33, z: 0}
+  m_Radius: 2
+  m_Center: {x: 0, y: 1.74, z: 0}
+--- !u!114 &7417176631203153715
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3227918615114643028}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  GlobalObjectIdHash: 4051568158
+  InScenePlacedSourceGlobalObjectIdHash: 0
+  DeferredDespawnTick: 0
+  Ownership: 1
+  AlwaysReplicateAsRoot: 0
+  SynchronizeTransform: 1
+  ActiveSceneSynchronization: 0
+  SceneMigrationSynchronization: 1
+  SpawnWithObservers: 1
+  DontDestroyWithOwner: 0
+  AutoObjectParentSync: 1
+  SyncOwnerTransformWhenParented: 1
+  AllowOwnerToParent: 0
 --- !u!114 &8917312812487329434
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -165,8 +196,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5ee2ee81dc9c96547b5c6018d301f136, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  ShowTopMostFoldoutHeaderGroup: 1
   dialogueLines: []
-  triggerRadius: 5
+  triggerRadius: 2
 --- !u!65 &1900988990361110509
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -188,6 +220,33 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 1.3373014, y: 4.237753, z: 1}
   m_Center: {x: -0.068900526, y: 1.6188765, z: -2.739976e-10}
+--- !u!54 &240463645759654258
+Rigidbody:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3227918615114643028}
+  serializedVersion: 4
+  m_Mass: 1
+  m_Drag: 0
+  m_AngularDrag: 0.05
+  m_CenterOfMass: {x: 0, y: 0, z: 0}
+  m_InertiaTensor: {x: 1, y: 1, z: 1}
+  m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ImplicitCom: 1
+  m_ImplicitTensor: 1
+  m_UseGravity: 0
+  m_IsKinematic: 1
+  m_Interpolate: 0
+  m_Constraints: 0
+  m_CollisionDetection: 0
 --- !u!4 &5850156809102003619 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -1070350730909333850, guid: 0f23067026bf65c4fb196b7802330f3e, type: 3}

@@ -18,12 +18,34 @@ public class SilasDialogueController : MonoBehaviour
     private Label npcNameTag;
     private VisualElement interactionPrompt;
 
+    // Cấu trúc một nút đối thoại trong cây đối thoại rẽ nhánh
+    public class DialogueStepNode
+    {
+        public int stepId;
+        public string speakerName;
+        public string text;
+        public Sprite customAvatar;
+        public List<DialogueChoiceOption> choices = new List<DialogueChoiceOption>();
+        public int nextStepId = -1; // Nếu không có lựa chọn, tự động chuyển đến stepId này khi nhấn Tiếp tục hoặc phím. -1 là kết thúc.
+    }
+
+    public class DialogueChoiceOption
+    {
+        public string choiceText;
+        public int nextStepId;
+    }
+
+    private Dictionary<int, DialogueStepNode> dialogueTree = new Dictionary<int, DialogueStepNode>();
+    private int currentDialogueStep = 0;
+    private VisualElement choicesContainer;
+
     private List<DialogueLine> currentLines = new List<DialogueLine>();
     private int currentLineIndex = -1;
     private bool isDialogueActive = false;
     private SimplePlayerTest activePlayer;
     private SilasNPC currentNPC;
     private bool isUIInitialized = false;
+    private bool isPromptShowing = false;
 
     public bool IsActive => isDialogueActive;
 
@@ -82,6 +104,7 @@ public class SilasDialogueController : MonoBehaviour
         npcNameTag = root.Q<Label>("npc-name-tag");
         nextButton = root.Q<Button>("next-btn");
         interactionPrompt = root.Q<VisualElement>("silas-interaction-prompt");
+        choicesContainer = root.Q<VisualElement>("dialogue-choices-container");
 
         // Ẩn hộp đối thoại và wrapper ban đầu
         if (dialogueWrapper != null)
@@ -97,6 +120,11 @@ public class SilasDialogueController : MonoBehaviour
         {
             interactionPrompt.RemoveFromClassList("show-prompt");
             interactionPrompt.style.display = DisplayStyle.None;
+        }
+        if (choicesContainer != null)
+        {
+            choicesContainer.Clear();
+            choicesContainer.style.display = DisplayStyle.None;
         }
 
         // Đăng ký sự kiện click chuột vào toàn bộ wrapper (click bất kỳ đâu trên màn hình cũng qua câu)
@@ -136,8 +164,36 @@ public class SilasDialogueController : MonoBehaviour
 
     private void OnDialogueWrapperClicked(ClickEvent evt)
     {
-        if (isDialogueActive)
+        if (!isDialogueActive) return;
+
+        VisualElement clickedElement = evt.target as VisualElement;
+        if (clickedElement == null) return;
+
+        // 1. Nếu click vào khoảng trống bên ngoài hộp thoại (chính là wrapper màu đen mờ)
+        if (clickedElement == dialogueWrapper)
         {
+            Debug.Log("[SilasDialogueController] Click bên ngoài hộp thoại. Đóng trò chuyện.");
+            if (activePlayer == null || activePlayer.isStandaloneMode)
+            {
+                EndDialogue();
+            }
+            else
+            {
+                if (currentNPC != null)
+                {
+                    currentNPC.RequestEndDialogueServerRpc();
+                }
+                else
+                {
+                    EndDialogue();
+                }
+            }
+            evt.StopPropagation();
+        }
+        // 2. Nếu click vào bên trong hộp thoại (hoặc nút bấm, khung ảnh, text...)
+        else if (dialogueBox != null && (clickedElement == dialogueBox || dialogueBox.Contains(clickedElement)))
+        {
+            Debug.Log("[SilasDialogueController] Click bên trong hộp thoại. Chuyển dòng thoại.");
             AdvanceDialogue();
         }
     }
@@ -149,23 +205,23 @@ public class SilasDialogueController : MonoBehaviour
     {
         InitializeUI(); // Đảm bảo khởi tạo trước khi gọi bắt đầu
 
+        // Khởi tạo cây đối thoại rẽ nhánh
+        InitializeDialogueTree();
+
         // Tự động tắt gợi ý phím G khi bắt đầu nói chuyện
         ShowPrompt(false);
 
-        if (lines == null || lines.Count == 0) return;
-
         activePlayer = player;
-        currentLines = lines;
         currentNPC = npc;
         
         // Tải vị trí đã lưu, nếu không hợp lệ thì bắt đầu từ 0
-        if (startIndex >= 0 && startIndex < lines.Count)
+        if (dialogueTree.ContainsKey(startIndex))
         {
-            currentLineIndex = startIndex;
+            currentDialogueStep = startIndex;
         }
         else
         {
-            currentLineIndex = 0;
+            currentDialogueStep = 0;
         }
 
         isDialogueActive = true;
@@ -183,7 +239,7 @@ public class SilasDialogueController : MonoBehaviour
             }).StartingIn(10);
         }
 
-        DisplayCurrentLine();
+        DisplayCurrentStep();
     }
 
     /// <summary>
@@ -195,37 +251,160 @@ public class SilasDialogueController : MonoBehaviour
     }
 
     /// <summary>
-    /// Hiển thị câu thoại hiện tại với hiệu ứng Typewriter
+    /// Khởi tạo cây đối thoại rẽ nhánh Silas
     /// </summary>
-    private void DisplayCurrentLine()
+    private void InitializeDialogueTree()
     {
-        if (currentLineIndex < 0 || currentLineIndex >= currentLines.Count)
+        dialogueTree.Clear();
+
+        // Step 0: Khởi đầu cuộc trò chuyện
+        DialogueStepNode step0 = new DialogueStepNode
+        {
+            stepId = 0,
+            speakerName = "Silas",
+            text = "\"Rakan vừa gửi mấy con cừu tới đây sao?\""
+        };
+        step0.choices.Add(new DialogueChoiceOption { choiceText = "Tôi không phải cừu, tôi là chiến binh!", nextStepId = 50 });
+        step0.choices.Add(new DialogueChoiceOption { choiceText = "Ông là ai?", nextStepId = 10 });
+        step0.choices.Add(new DialogueChoiceOption { choiceText = "Ông hãy tránh xa tôi ra?", nextStepId = 20 });
+        step0.choices.Add(new DialogueChoiceOption { choiceText = "Không Thèm Trả lời?", nextStepId = 30 });
+        dialogueTree.Add(0, step0);
+
+        // Step 10: Nhánh hỏi "Ông là ai?"
+        DialogueStepNode step10 = new DialogueStepNode
+        {
+            stepId = 10,
+            speakerName = "Silas",
+            text = "\"Ta là ai à, Hmmm… ta là lão lính gác già cả sắp chết thôi !\""
+        };
+        step10.choices.Add(new DialogueChoiceOption { choiceText = "Tại sao ông lại canh giữ nơi này?", nextStepId = 11 });
+        dialogueTree.Add(10, step10);
+
+        // Step 11: Nhánh hỏi "Tại sao ông lại canh giữ nơi này?"
+        DialogueStepNode step11 = new DialogueStepNode
+        {
+            stepId = 11,
+            speakerName = "Silas",
+            text = "\"Ta đã đứng canh giữ chỗ này hàng thế kỷ. Nếu muốn vào sâu hơn, đừng có nhìn ta như thế. Ta không phải quái vật, ít nhất là chưa phải.\""
+        };
+        step11.choices.Add(new DialogueChoiceOption { choiceText = "Chúng tôi cần vào Cung điện Hoàng gia.", nextStepId = 12 });
+        dialogueTree.Add(11, step11);
+
+        // Step 12: Nhánh hỏi "Chúng tôi cần vào Cung điện Hoàng gia."
+        DialogueStepNode step12 = new DialogueStepNode
+        {
+            stepId = 12,
+            speakerName = "Silas",
+            text = "\"Cung điện? Lũ ngoại lai các ngươi thật ngây thơ. Muốn mở được cánh cửa vào Phòng Ngai Vàng, các người cần 2 Viên ngọc của các khu vực để mở khóa cánh cửa cuối. Chúng là chìa khóa duy nhất để tháo mở cánh cửa của phòng Ngai Vàng.\""
+        };
+        step12.choices.Add(new DialogueChoiceOption { choiceText = "Tôi Cảm Ơn ông đã cảnh báo, nhưng tôi không cần", nextStepId = 13 });
+        step12.choices.Add(new DialogueChoiceOption { choiceText = "Làm sao chúng tôi tìm được 2 Viên ngọc này?", nextStepId = 14 });
+        dialogueTree.Add(12, step12);
+
+        // Step 13: Cảm ơn nhưng không cần
+        DialogueStepNode step13 = new DialogueStepNode
+        {
+            stepId = 13,
+            speakerName = "Silas",
+            text = "\"Chúc các ngươi may mắn.\"",
+            nextStepId = -1
+        };
+        dialogueTree.Add(13, step13);
+
+        // Step 14: Hỏi vị trí 3 viên ngọc
+        DialogueStepNode step14 = new DialogueStepNode
+        {
+            stepId = 14,
+            speakerName = "Silas",
+            text = "\"Chúng bị phong ấn ở Rừng Sương Mù, Vực Thẳm Lửa, và Lăng Mộ Cổ. Tìm kiếm chúng chỉ có con đường chết.\""
+        };
+        step14.choices.Add(new DialogueChoiceOption { choiceText = "Cảm ơn lão già, chúng tôi sẽ đi lấy chúng!", nextStepId = 16 });
+        dialogueTree.Add(14, step14);
+
+        // Step 16: Phản hồi lấy ngọc
+        DialogueStepNode step16 = new DialogueStepNode
+        {
+            stepId = 16,
+            speakerName = "Silas",
+            text = "\"Hahaha! Thật đáng để mong đợi. Để ta xem khi nào xác các ngươi trôi về tới đây.\"",
+            nextStepId = -1
+        };
+        dialogueTree.Add(16, step16);
+
+        // Step 20: Ông hãy tránh xa tôi ra
+        DialogueStepNode step20 = new DialogueStepNode
+        {
+            stepId = 20,
+            speakerName = "Silas",
+            text = "\"Ta thấy ngươi khá là thú vị đấy ! Nhưng cẩn thận cái miệng của ngươi, ở đây bóng tối có tai đấy.\"",
+            nextStepId = -1
+        };
+        dialogueTree.Add(20, step20);
+
+        // Step 30: Không Thèm Trả lời
+        DialogueStepNode step30 = new DialogueStepNode
+        {
+            stepId = 30,
+            speakerName = "Silas",
+            text = "\"Ta thấy ngươi khá là thú vị đấy ! Kẻ im lặng thường sống lâu hơn kẻ ba hoa ở thánh địa đầy rẫy tử khí này.\"",
+            nextStepId = -1
+        };
+        dialogueTree.Add(30, step30);
+
+        // Step 50: Chiến binh Arthur
+        DialogueStepNode step50 = new DialogueStepNode
+        {
+            stepId = 50,
+            speakerName = "Silas",
+            text = "\"Hahaha! Chiến binh? Ở đây, chiến binh hay cừu non thì kết cục cũng đều nằm dưới lưỡi kiếm của hoàng gia mà thôi.\""
+        };
+        step50.choices.Add(new DialogueChoiceOption { choiceText = "Tại sao ông lại canh giữ nơi này?", nextStepId = 11 });
+        step50.choices.Add(new DialogueChoiceOption { choiceText = "Tôi sẽ chứng minh cho ông thấy tôi khác biệt!", nextStepId = 51 });
+        dialogueTree.Add(50, step50);
+
+        // Step 51: Chứng minh khác biệt
+        DialogueStepNode step51 = new DialogueStepNode
+        {
+            stepId = 51,
+            speakerName = "Silas",
+            text = "\"Khí phách đấy! Lối vào Cung điện Hoàng gia ngay phía trước, hãy đi và chứng minh lời ngươi nói xem nào.\"",
+            nextStepId = -1
+        };
+        dialogueTree.Add(51, step51);
+    }
+
+    /// <summary>
+    /// Hiển thị bước thoại hiện tại
+    /// </summary>
+    private void DisplayCurrentStep()
+    {
+        if (!dialogueTree.ContainsKey(currentDialogueStep))
         {
             EndDialogue();
             return;
         }
 
-        DialogueLine line = currentLines[currentLineIndex];
+        DialogueStepNode node = dialogueTree[currentDialogueStep];
 
-        // Cập nhật tên người nói ngay lập tức
+        // Cập nhật tên người nói
         if (speakerNameLabel != null)
-            speakerNameLabel.text = line.speakerName;
+            speakerNameLabel.text = node.speakerName;
 
         if (npcNameTag != null)
-            npcNameTag.text = line.speakerName.ToUpper();
+            npcNameTag.text = node.speakerName.ToUpper();
 
         // Lưu toàn bộ câu để dùng khi skip
-        fullCurrentText = line.text;
+        fullCurrentText = node.text;
 
         // Xử lý Avatar động
-        Sprite finalAvatar = line.customAvatar;
+        Sprite finalAvatar = node.customAvatar;
         if (finalAvatar == null)
         {
-            if (line.speakerName.Contains("Silas"))
+            if (node.speakerName.Contains("Silas"))
             {
                 finalAvatar = silasAvatar;
             }
-            else if (line.speakerName.Contains("Arthur") || line.speakerName.Contains("Khiên"))
+            else if (node.speakerName.Contains("Arthur") || node.speakerName.Contains("Khiên") || node.speakerName.Contains("Người") || node.speakerName.Contains("Player"))
             {
                 PlayerHUDController hud = FindObjectOfType<PlayerHUDController>();
                 if (hud != null && hud.hudProfiles != null && hud.hudProfiles.Count > 3)
@@ -235,10 +414,73 @@ public class SilasDialogueController : MonoBehaviour
         if (avatarImage != null && finalAvatar != null)
             avatarImage.style.backgroundImage = new StyleBackground(finalAvatar);
 
+        // Ẩn tạm thời các nút và lựa chọn khi đang gõ chữ
+        if (nextButton != null)
+            nextButton.style.display = DisplayStyle.None;
+
+        if (choicesContainer != null)
+        {
+            choicesContainer.Clear();
+            choicesContainer.style.display = DisplayStyle.None;
+        }
+
         // Bắt đầu Typewriter
         if (typewriterCoroutine != null)
             StopCoroutine(typewriterCoroutine);
-        typewriterCoroutine = StartCoroutine(TypewriterEffect(line.text));
+        typewriterCoroutine = StartCoroutine(TypewriterEffect(node.text));
+    }
+
+    /// <summary>
+    /// Thiết lập hiển thị giao diện lựa chọn hoặc nút tiếp tục sau khi gõ chữ xong
+    /// </summary>
+    private void ShowNavigationUI()
+    {
+        if (!dialogueTree.ContainsKey(currentDialogueStep)) return;
+
+        DialogueStepNode node = dialogueTree[currentDialogueStep];
+
+        if (node.choices != null && node.choices.Count > 0)
+        {
+            // Ẩn nút "Tiếp tục"
+            if (nextButton != null)
+                nextButton.style.display = DisplayStyle.None;
+
+            // Hiển thị danh sách lựa chọn
+            if (choicesContainer != null)
+            {
+                choicesContainer.Clear();
+                choicesContainer.style.display = DisplayStyle.Flex;
+
+                foreach (var choice in node.choices)
+                {
+                    Button choiceBtn = new Button();
+                    choiceBtn.text = choice.choiceText;
+                    choiceBtn.AddToClassList("dialogue-choice-button");
+                    
+                    // Ngăn chặn sự kiện click lan truyền lên dialogueWrapper
+                    choiceBtn.RegisterCallback<ClickEvent>(evt => evt.StopPropagation());
+
+                    int targetStep = choice.nextStepId;
+                    choiceBtn.clicked += () => {
+                        ChooseOption(targetStep);
+                    };
+
+                    choicesContainer.Add(choiceBtn);
+                }
+            }
+        }
+        else
+        {
+            // Không có lựa chọn, hiển thị nút "Tiếp tục"
+            if (nextButton != null)
+                nextButton.style.display = DisplayStyle.Flex;
+
+            if (choicesContainer != null)
+            {
+                choicesContainer.Clear();
+                choicesContainer.style.display = DisplayStyle.None;
+            }
+        }
     }
 
     /// <summary>
@@ -259,6 +501,7 @@ public class SilasDialogueController : MonoBehaviour
 
         isTyping = false;
         typewriterCoroutine = null;
+        ShowNavigationUI();
     }
 
     /// <summary>
@@ -274,6 +517,7 @@ public class SilasDialogueController : MonoBehaviour
         isTyping = false;
         if (dialogueTextLabel != null)
             dialogueTextLabel.text = fullCurrentText;
+        ShowNavigationUI();
     }
 
     /// <summary>
@@ -308,23 +552,91 @@ public class SilasDialogueController : MonoBehaviour
         {
             if (show)
             {
+                if (isPromptShowing) return; // Đã hiển thị thì bỏ qua, tránh spam lập lịch mỗi frame
+                isPromptShowing = true;
+
                 interactionPrompt.style.display = DisplayStyle.Flex;
                 interactionPrompt.schedule.Execute(() => {
-                    interactionPrompt.AddToClassList("show-prompt");
+                    if (isPromptShowing)
+                    {
+                        interactionPrompt.AddToClassList("show-prompt");
+                    }
                 }).StartingIn(10);
                 Debug.Log("[SilasDialogueController] Hiển thị gợi ý phím G trò chuyện.");
             }
             else
             {
+                if (!isPromptShowing) return; // Đã ẩn thì bỏ qua
+                isPromptShowing = false;
+
                 interactionPrompt.RemoveFromClassList("show-prompt");
                 interactionPrompt.schedule.Execute(() => {
-                    if (!interactionPrompt.ClassListContains("show-prompt"))
+                    if (!isPromptShowing && !interactionPrompt.ClassListContains("show-prompt"))
                     {
                         interactionPrompt.style.display = DisplayStyle.None;
                     }
                 }).StartingIn(350);
                 Debug.Log("[SilasDialogueController] Ẩn gợi ý tương tác phím G.");
             }
+        }
+    }
+
+    /// <summary>
+    /// Chọn phương án và đồng bộ mạng
+    /// </summary>
+    public void ChooseOption(int nextStepId)
+    {
+        if (activePlayer == null || activePlayer.isStandaloneMode)
+        {
+            SelectChoice(nextStepId);
+        }
+        else
+        {
+            if (currentNPC != null)
+            {
+                currentNPC.RequestSelectChoiceServerRpc(nextStepId);
+            }
+            else
+            {
+                SelectChoice(nextStepId);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Xử lý chọn một nhánh và đi tiếp
+    /// </summary>
+    public void SelectChoice(int nextStepId)
+    {
+        if (typewriterCoroutine != null)
+        {
+            StopCoroutine(typewriterCoroutine);
+            typewriterCoroutine = null;
+        }
+        isTyping = false;
+
+        currentDialogueStep = nextStepId;
+
+        // Lưu tiến trình cuộc đối thoại vào NPC
+        if (currentNPC != null)
+        {
+            if (nextStepId != -1)
+            {
+                currentNPC.SetSavedDialogueIndex(nextStepId);
+            }
+            else
+            {
+                currentNPC.SetSavedDialogueIndex(0);
+            }
+        }
+
+        if (nextStepId == -1)
+        {
+            EndDialogue();
+        }
+        else
+        {
+            DisplayCurrentStep();
         }
     }
 
@@ -339,14 +651,30 @@ public class SilasDialogueController : MonoBehaviour
             SkipTypewriter();
             return;
         }
-        currentLineIndex++;
-        
+
+        if (!dialogueTree.ContainsKey(currentDialogueStep))
+        {
+            EndDialogue();
+            return;
+        }
+
+        DialogueStepNode node = dialogueTree[currentDialogueStep];
+
+        // Nếu đang ở nút có lựa chọn mà chưa chọn gì, bắt buộc chọn, không cho bấm qua bằng click/phím thường
+        if (node.choices != null && node.choices.Count > 0)
+        {
+            Debug.Log("[SilasDialogueController] Cần lựa chọn phương án đối thoại, không thể bỏ qua bằng Click/Phím thường.");
+            return;
+        }
+
+        int nextStep = node.nextStepId;
+
         // Lưu tiến trình cuộc đối thoại vào NPC
         if (currentNPC != null)
         {
-            if (currentLineIndex < currentLines.Count)
+            if (nextStep != -1)
             {
-                currentNPC.SetSavedDialogueIndex(currentLineIndex);
+                currentNPC.SetSavedDialogueIndex(nextStep);
             }
             else
             {
@@ -355,7 +683,15 @@ public class SilasDialogueController : MonoBehaviour
             }
         }
 
-        DisplayCurrentLine();
+        if (nextStep == -1)
+        {
+            EndDialogue();
+        }
+        else
+        {
+            currentDialogueStep = nextStep;
+            DisplayCurrentStep();
+        }
     }
 
     /// <summary>
@@ -374,7 +710,7 @@ public class SilasDialogueController : MonoBehaviour
         isTyping = false;
 
         isDialogueActive = false;
-        currentLineIndex = -1;
+        currentDialogueStep = 0;
         activePlayer = null;
 
         if (dialogueWrapper != null)
