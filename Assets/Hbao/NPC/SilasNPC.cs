@@ -1,9 +1,12 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
+using Unity.Netcode;
 using System.Collections.Generic;
 
 [RequireComponent(typeof(SphereCollider))]
 [RequireComponent(typeof(Rigidbody))]
-public class SilasNPC : MonoBehaviour
+[RequireComponent(typeof(NetworkObject))]
+public class SilasNPC : NetworkBehaviour
 {
     [Header("Dialogue Configuration")]
     [SerializeField] private List<SilasDialogueController.DialogueLine> dialogueLines = new List<SilasDialogueController.DialogueLine>();
@@ -14,6 +17,11 @@ public class SilasNPC : MonoBehaviour
 
     private SphereCollider triggerCollider;
     private Rigidbody rb;
+
+    // Quản lý trạng thái tương tác phím G
+    private bool isPlayerNearby = false;
+    private SimplePlayerTest localPlayer;
+    private int savedDialogueIndex = 0;
 
     private void Awake()
     {
@@ -81,23 +89,84 @@ public class SilasNPC : MonoBehaviour
         });
     }
 
+    private void Update()
+    {
+        if (isPlayerNearby && localPlayer != null)
+        {
+            // Nếu người chơi chết, hủy trạng thái tương tác
+            if (localPlayer.CurrentHealth <= 0)
+            {
+                isPlayerNearby = false;
+                localPlayer = null;
+                
+                if (SilasDialogueController.Instance != null)
+                {
+                    SilasDialogueController.Instance.ShowPrompt(false);
+                    SilasDialogueController.Instance.EndDialogue();
+                }
+                return;
+            }
+
+            bool isDialogueActive = SilasDialogueController.Instance != null && SilasDialogueController.Instance.IsActive;
+
+            if (!isDialogueActive)
+            {
+                // Hiển thị gợi ý phím G độc lập thông qua Dialogue UI (Tránh lỗi mất HUD)
+                if (SilasDialogueController.Instance != null)
+                {
+                    SilasDialogueController.Instance.ShowPrompt(true);
+                }
+
+                // Lắng nghe người chơi nhấn phím G để bắt đầu trò chuyện
+                if (Keyboard.current != null && Keyboard.current.gKey.wasPressedThisFrame)
+                {
+                    if (SilasDialogueController.Instance != null)
+                    {
+                        SilasDialogueController.Instance.ShowPrompt(false);
+                    }
+
+                    // Nếu chơi offline (Standalone) thì bật cục bộ, ngược lại đồng bộ qua server
+                    if (localPlayer.isStandaloneMode)
+                    {
+                        if (SilasDialogueController.Instance != null)
+                        {
+                            SilasDialogueController.Instance.StartDialogue(dialogueLines, localPlayer, this, savedDialogueIndex);
+                        }
+                    }
+                    else
+                    {
+                        RequestStartDialogueServerRpc(savedDialogueIndex);
+                    }
+                }
+            }
+            else
+            {
+                // Khi đang trò chuyện, ẩn gợi ý tương tác phím G
+                if (SilasDialogueController.Instance != null)
+                {
+                    SilasDialogueController.Instance.ShowPrompt(false);
+                }
+            }
+        }
+    }
+
     private void OnTriggerEnter(Collider other)
     {
-        // Tìm component SimplePlayerTest trên đối tượng va chạm
         SimplePlayerTest player = other.GetComponentInParent<SimplePlayerTest>();
         if (player != null)
         {
-            // Chỉ hiển thị UI cho người chơi cục bộ (Local Player) của client này
-            // (Hỗ trợ cả chế độ Standalone lẫn Netcode multiplayer)
             bool isLocalPlayer = player.isStandaloneMode || player.IsOwner;
 
             if (isLocalPlayer)
             {
-                Debug.Log($"[SilasNPC] Local Player {player.gameObject.name} lại gần. Bắt đầu đối thoại.");
+                isPlayerNearby = true;
+                localPlayer = player;
+                
                 if (SilasDialogueController.Instance != null)
                 {
-                    SilasDialogueController.Instance.StartDialogue(dialogueLines, player);
+                    SilasDialogueController.Instance.ShowPrompt(true);
                 }
+                Debug.Log($"[SilasNPC] Local Player {player.gameObject.name} lại gần. Hiển thị gợi ý phím G.");
             }
         }
     }
@@ -111,11 +180,15 @@ public class SilasNPC : MonoBehaviour
 
             if (isLocalPlayer)
             {
-                Debug.Log($"[SilasNPC] Local Player {player.gameObject.name} đi ra khỏi vùng. Kết thúc đối thoại.");
+                isPlayerNearby = false;
+                localPlayer = null;
+                
                 if (SilasDialogueController.Instance != null)
                 {
+                    SilasDialogueController.Instance.ShowPrompt(false);
                     SilasDialogueController.Instance.EndDialogue();
                 }
+                Debug.Log($"[SilasNPC] Local Player {player.gameObject.name} đi ra xa. Ẩn gợi ý tương tác phím G.");
             }
         }
     }
@@ -128,6 +201,62 @@ public class SilasNPC : MonoBehaviour
         {
             col.isTrigger = true;
             col.radius = triggerRadius;
+        }
+    }
+
+    /// <summary>
+    /// Lưu chỉ số hội thoại hiện tại
+    /// </summary>
+    public void SetSavedDialogueIndex(int index)
+    {
+        savedDialogueIndex = index;
+    }
+
+    private SimplePlayerTest FindLocalPlayerInScene()
+    {
+        SimplePlayerTest[] players = FindObjectsOfType<SimplePlayerTest>();
+        foreach (var p in players)
+        {
+            if (p.isStandaloneMode || p.IsOwner)
+            {
+                return p;
+            }
+        }
+        return null;
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // ĐỒNG BỘ MẠNG CO-OP DIALOGUE (SERVER RPC & CLIENT RPC)
+    // ═══════════════════════════════════════════════════════
+
+    [ServerRpc(RequireOwnership = false)]
+    public void RequestStartDialogueServerRpc(int startIndex)
+    {
+        StartDialogueClientRpc(startIndex);
+    }
+
+    [ClientRpc]
+    private void StartDialogueClientRpc(int startIndex)
+    {
+        SimplePlayerTest local = FindLocalPlayerInScene();
+        if (SilasDialogueController.Instance != null)
+        {
+            SilasDialogueController.Instance.StartDialogue(dialogueLines, local, this, startIndex);
+        }
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    public void RequestNextLineServerRpc()
+    {
+        NextLineClientRpc();
+    }
+
+    [ClientRpc]
+    private void NextLineClientRpc()
+    {
+        if (SilasDialogueController.Instance != null)
+        {
+            SilasDialogueController.Instance.NextLine();
         }
     }
 }
