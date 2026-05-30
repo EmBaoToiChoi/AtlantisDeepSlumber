@@ -46,9 +46,10 @@ public class RepairItemDrop : NetworkBehaviour
             }
 
             float distance = Vector3.Distance(transform.position, localPlayer.transform.position);
+            bool isClosest = IsClosestItem();
 
-            // 2. Nếu người chơi đi vào vùng tương tác
-            if (distance <= interactRadius)
+            // 2. Nếu người chơi đi vào vùng tương tác và là vật phẩm gần nhất
+            if (distance <= interactRadius && isClosest)
             {
                 if (!isWithinRange)
                 {
@@ -69,7 +70,7 @@ public class RepairItemDrop : NetworkBehaviour
                     CollectItem();
                 }
             }
-            // 4. Nếu người chơi đi ra khỏi vùng tương tác
+            // 4. Nếu người chơi đi ra khỏi vùng tương tác hoặc không còn là gần nhất
             else if (isWithinRange)
             {
                 isWithinRange = false;
@@ -79,6 +80,42 @@ public class RepairItemDrop : NetworkBehaviour
                 }
             }
         }
+    }
+
+    /// <summary>
+    /// Kiểm tra xem vật phẩm này có phải là vật phẩm gần người chơi cục bộ nhất hay không
+    /// </summary>
+    private bool IsClosestItem()
+    {
+        if (localPlayer == null) return false;
+
+        float myDist = Vector3.Distance(transform.position, localPlayer.transform.position);
+
+        // Kiểm tra tất cả CollectibleItemDrop
+        CollectibleItemDrop[] collectibles = FindObjectsOfType<CollectibleItemDrop>();
+        foreach (var item in collectibles)
+        {
+            if (item == null) continue;
+            float dist = Vector3.Distance(item.transform.position, localPlayer.transform.position);
+            if (dist <= item.interactRadius && dist < myDist)
+            {
+                return false;
+            }
+        }
+
+        // Kiểm tra tất cả RepairItemDrop
+        RepairItemDrop[] repairs = FindObjectsOfType<RepairItemDrop>();
+        foreach (var item in repairs)
+        {
+            if (item == this || item == null) continue;
+            float dist = Vector3.Distance(item.transform.position, localPlayer.transform.position);
+            if (dist <= item.interactRadius && dist < myDist)
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private void FindLocalPlayer()
