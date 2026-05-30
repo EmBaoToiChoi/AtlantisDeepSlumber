@@ -255,9 +255,40 @@ MonoBehaviour:
   - 
   - 
   - 
+  playerLevel:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 0
+  playerExp:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 0
+  weapon1MaxDurability: 100
+  weapon2MaxDurability: 100
+  weapon1Durability:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 100
+  weapon2Durability:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 100
   characterClassIndex: 0
   enableCameraFollow: 1
-  cameraOffset: {x: 0, y: 12, z: -8}
+  cameraOffset: {x: 0, y: 6, z: -5.5}
   cameraSmoothSpeed: 5
   cameraLookAtPlayer: 1
+  anim: {fileID: 0}
+  rollSpeed: 10
+  rollDuration: 0.4
+  rollCooldown: 1.2
+  isRollingNet:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 0
   isStandaloneMode: 0
