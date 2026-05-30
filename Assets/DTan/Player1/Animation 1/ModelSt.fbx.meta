@@ -1,34 +1,9 @@
 fileFormatVersion: 2
-guid: 2fa3b3808413f82489e4126eeaf183c3
+guid: 654446410bca3c848b0442fe6dc2254a
 ModelImporter:
   serializedVersion: 22200
   internalIDToNameTable: []
-  externalObjects:
-  - first:
-      type: UnityEngine:Material
-      assembly: UnityEngine.CoreModule
-      name: Armor
-    second: {fileID: 2100000, guid: f97021532072f604ab17cf12313f7f9d, type: 2}
-  - first:
-      type: UnityEngine:Material
-      assembly: UnityEngine.CoreModule
-      name: Body
-    second: {fileID: 2100000, guid: 96878d8f08ba0b1489c02703f667c30c, type: 2}
-  - first:
-      type: UnityEngine:Material
-      assembly: UnityEngine.CoreModule
-      name: Eye
-    second: {fileID: 2100000, guid: 9591f78760f4fbc468300b9a80f9cf83, type: 2}
-  - first:
-      type: UnityEngine:Material
-      assembly: UnityEngine.CoreModule
-      name: Eyelashes
-    second: {fileID: 2100000, guid: 6818c62d42b87624483735e94dc553d9, type: 2}
-  - first:
-      type: UnityEngine:Material
-      assembly: UnityEngine.CoreModule
-      name: Hair
-    second: {fileID: 2100000, guid: 026106d6454c1e34ba78debdae3b12ad, type: 2}
+  externalObjects: {}
   materials:
     materialImportMode: 2
     materialName: 0
