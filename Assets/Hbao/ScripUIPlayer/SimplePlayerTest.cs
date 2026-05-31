@@ -8,6 +8,11 @@ public class SimplePlayerTest : NetworkBehaviour
     public float damageAmount = 20f;
     public float attackRange = 3f;
 
+    [Header("Combo Attack Settings")]
+    public float comboWindow = 1.0f;
+    private int comboStep = 0;
+    private float lastAttackTime = 0f;
+
     [Header("Player Health Settings")]
     public float maxHealth = 100f;
     public NetworkVariable<float> currentHealth = new NetworkVariable<float>(
@@ -115,6 +120,18 @@ public class SimplePlayerTest : NetworkBehaviour
     public bool cameraLookAtPlayer = true;
     private Camera targetCamera;
 
+    [Header("Camera Rotation Settings")]
+    public float cameraSensitivity = 2f;
+    public float minPitch = 10f;
+    public float maxPitch = 80f;
+    public float rotationSmoothSpeed = 15f;
+    private float currentYaw = 0f;
+    private float currentPitch = 45f;
+    private float targetYaw = 0f;
+    private float targetPitch = 45f;
+    private float cameraDistance = 14f;
+    private bool isCursorLocked = true;
+
     [Header("Animation Settings")]
     public Animator anim;
     private string currentAnimState;
@@ -161,6 +178,20 @@ public class SimplePlayerTest : NetworkBehaviour
     public float CurrentHealth =>
         isStandaloneMode ? localHealth : currentHealth.Value;
 
+    /// <summary>
+    /// Trả về index vũ khí đang chọn: đọc từ HUD khi standalone, đọc từ NetworkVariable khi online.
+    /// </summary>
+    public int GetActiveWeaponIndex()
+    {
+        if (isStandaloneMode)
+        {
+            PlayerHUDController hud = FindObjectOfType<PlayerHUDController>();
+            if (hud != null) return hud.currentSelectedWeapon;
+            return 1;
+        }
+        return activeWeaponIndex.Value;
+    }
+
     private void Awake()
     {
         if (anim == null)
@@ -180,6 +211,17 @@ public class SimplePlayerTest : NetworkBehaviour
             if (anim == null)
                 anim = GetComponentInChildren<Animator>(true);
         }
+
+        // Khởi tạo các góc xoay camera từ offset mặc định
+        float horizontalDistance = new Vector3(cameraOffset.x, 0f, cameraOffset.z).magnitude;
+        currentYaw = Mathf.Atan2(cameraOffset.x, -cameraOffset.z) * Mathf.Rad2Deg;
+        currentPitch = Mathf.Atan2(cameraOffset.y, horizontalDistance) * Mathf.Rad2Deg;
+        targetYaw = currentYaw;
+        targetPitch = currentPitch;
+        cameraDistance = cameraOffset.magnitude;
+
+        // Khóa chuột mặc định khi vào game
+        LockCursor(isCursorLocked);
 
         // Nếu không có NetworkManager hoặc chưa listen → chạy đơn lẻ
         if (!IsNetworkActive)
@@ -708,8 +750,33 @@ public class SimplePlayerTest : NetworkBehaviour
     // ------------------------------------------------------------------
     //  Update (hoạt động cả Standalone lẫn Netcode)
     // ------------------------------------------------------------------
+    private void LockCursor(bool locked)
+    {
+        if (locked)
+        {
+            Cursor.lockState = CursorLockMode.Locked;
+            Cursor.visible = false;
+        }
+        else
+        {
+            Cursor.lockState = CursorLockMode.None;
+            Cursor.visible = true;
+        }
+    }
+
     void Update()
     {
+        // Chỉ xử lý phím tắt Alt ẩn hiện chuột nếu là chủ sở hữu hoặc chơi đơn
+        bool hasControl = isStandaloneMode || (IsSpawned && IsOwner);
+        if (hasControl)
+        {
+            if (Input.GetKeyDown(KeyCode.LeftAlt) || Input.GetKeyDown(KeyCode.RightAlt))
+            {
+                isCursorLocked = !isCursorLocked;
+                LockCursor(isCursorLocked);
+            }
+        }
+
         // Giảm thời gian cooldown nhào lộn
         if (rollCooldownTimer > 0)
         {
@@ -775,10 +842,29 @@ public class SimplePlayerTest : NetworkBehaviour
         bool isRunning = Input.GetKey(KeyCode.LeftShift);
         float currentSpeed = isRunning ? moveSpeed * 1.5f : moveSpeed;
 
-        // Di chuyển
+        // Di chuyển (tính theo hướng Camera để tránh bị ngược điều khiển)
         float moveX = Input.GetAxis("Horizontal");
         float moveZ = Input.GetAxis("Vertical");
         Vector3 move = new Vector3(moveX, 0, moveZ);
+
+        if (targetCamera == null)
+        {
+            targetCamera = Camera.main;
+            if (targetCamera == null)
+                targetCamera = FindObjectOfType<Camera>();
+        }
+
+        if (targetCamera != null)
+        {
+            Vector3 camForward = targetCamera.transform.forward;
+            camForward.y = 0f;
+            camForward.Normalize();
+            Vector3 camRight = targetCamera.transform.right;
+            camRight.y = 0f;
+            camRight.Normalize();
+            move = camRight * moveX + camForward * moveZ;
+        }
+
         transform.Translate(move * currentSpeed * Time.deltaTime, Space.World);
         if (move != Vector3.zero)
         {
@@ -799,7 +885,7 @@ public class SimplePlayerTest : NetworkBehaviour
 
         // Tấn công đơn lẻ
         if (Input.GetMouseButtonDown(0))
-            StandaloneAttack();
+            PerformComboAttack(false);
 
         // Nhấn Ctrl (LeftControl) chơi hoạt ảnh LonVong + Nhào lộn né chiêu
         if (Input.GetKeyDown(KeyCode.LeftControl))
@@ -852,10 +938,29 @@ public class SimplePlayerTest : NetworkBehaviour
         bool isRunning = Input.GetKey(KeyCode.LeftShift);
         float currentSpeed = isRunning ? moveSpeed * 1.5f : moveSpeed;
 
-        // Di chuyển
+        // Di chuyển (tính theo hướng Camera để tránh bị ngược điều khiển)
         float moveX = Input.GetAxis("Horizontal");
         float moveZ = Input.GetAxis("Vertical");
         Vector3 move = new Vector3(moveX, 0, moveZ);
+
+        if (targetCamera == null)
+        {
+            targetCamera = Camera.main;
+            if (targetCamera == null)
+                targetCamera = FindObjectOfType<Camera>();
+        }
+
+        if (targetCamera != null)
+        {
+            Vector3 camForward = targetCamera.transform.forward;
+            camForward.y = 0f;
+            camForward.Normalize();
+            Vector3 camRight = targetCamera.transform.right;
+            camRight.y = 0f;
+            camRight.Normalize();
+            move = camRight * moveX + camForward * moveZ;
+        }
+
         transform.Translate(move * currentSpeed * Time.deltaTime, Space.World);
         if (move != Vector3.zero)
         {
@@ -879,8 +984,7 @@ public class SimplePlayerTest : NetworkBehaviour
         {
             if (IsSpawned)
             {
-                // PlayAnimation("Attack", 0.05f, false); // Bỏ comment và đổi tên hoạt ảnh khi bạn đã có animation Attack trong Animator
-                AttackServerRpc();
+                PerformComboAttack(true);
             }
         }
 
@@ -952,37 +1056,88 @@ public class SimplePlayerTest : NetworkBehaviour
 
         if (targetCamera != null)
         {
-            Vector3 targetPosition = transform.position + cameraOffset;
-            targetCamera.transform.position = Vector3.Lerp(
-                targetCamera.transform.position,
-                targetPosition,
-                Time.deltaTime * cameraSmoothSpeed
+            if (isCursorLocked)
+            {
+                float mouseX = Input.GetAxis("Mouse X");
+                float mouseY = Input.GetAxis("Mouse Y");
+                targetYaw -= mouseX * cameraSensitivity;
+                targetPitch += mouseY * cameraSensitivity;
+                targetPitch = Mathf.Clamp(targetPitch, minPitch, maxPitch);
+            }
+
+            // Làm mượt mà các góc xoay (Yaw & Pitch) bằng Lerp để di chuyển chuột vẫn mượt
+            currentYaw = Mathf.Lerp(currentYaw, targetYaw, Time.deltaTime * rotationSmoothSpeed);
+            currentPitch = Mathf.Lerp(currentPitch, targetPitch, Time.deltaTime * rotationSmoothSpeed);
+
+            // Tính toán offset xoay dựa trên góc Yaw và Pitch đã được làm mượt
+            float yawRad = currentYaw * Mathf.Deg2Rad;
+            float pitchRad = currentPitch * Mathf.Deg2Rad;
+
+            Vector3 rotatedOffset = new Vector3(
+                cameraDistance * Mathf.Cos(pitchRad) * Mathf.Sin(yawRad),
+                cameraDistance * Mathf.Sin(pitchRad),
+                -cameraDistance * Mathf.Cos(pitchRad) * Mathf.Cos(yawRad)
             );
+
+            // Gắn cứng camera theo vị trí của nhân vật (Loại bỏ Lerp vị trí để giải quyết triệt để lỗi delay, zoom co giãn, và lệch nhân vật ra rìa)
+            Vector3 targetPosition = transform.position + rotatedOffset;
+            targetCamera.transform.position = targetPosition;
 
             if (cameraLookAtPlayer)
             {
-                Quaternion targetRotation = Quaternion.LookRotation(
+                // Khóa camera luôn nhìn thẳng vào nhân vật (không dùng Slerp rotation) để nhân vật luôn nằm chính giữa màn hình
+                targetCamera.transform.rotation = Quaternion.LookRotation(
                     (transform.position + Vector3.up * 1f) - targetCamera.transform.position
-                );
-                targetCamera.transform.rotation = Quaternion.Slerp(
-                    targetCamera.transform.rotation,
-                    targetRotation,
-                    Time.deltaTime * cameraSmoothSpeed
                 );
             }
         }
     }
 
-    private void StandaloneAttack()
+    private void PerformComboAttack(bool networkMode)
     {
-        // PlayAnimation("Attack", 0.05f); // Bỏ comment và đổi tên hoạt ảnh khi bạn đã có animation Attack trong Animator
+        int weapon = GetActiveWeaponIndex();
 
-        Vector3 rayStart = transform.position + Vector3.up * 0.5f;
-        Debug.DrawRay(rayStart, transform.forward * attackRange, Color.red, 0.5f);
+        float currentTime = Time.time;
+        if (currentTime - lastAttackTime > comboWindow)
+        {
+            comboStep = 0;
+        }
 
-        if (!Physics.Raycast(rayStart, transform.forward, out RaycastHit hit, attackRange)) return;
+        comboStep++;
+        lastAttackTime = currentTime;
 
-        TryDamageEnemy(hit.collider);
+        string animToPlay = "";
+        if (weapon == 1) // Unarmed / Fist combo (2 steps)
+        {
+            if (comboStep > 2) comboStep = 1;
+            animToPlay = comboStep == 1 ? "Punch1" : "Punch2";
+        }
+        else if (weapon == 2) // Sword combo (3 steps)
+        {
+            if (comboStep > 3) comboStep = 1;
+            if (comboStep == 1) animToPlay = "Slash1";
+            else if (comboStep == 2) animToPlay = "Slash2";
+            else if (comboStep == 3) animToPlay = "Slash3";
+        }
+
+        if (!string.IsNullOrEmpty(animToPlay))
+        {
+            PlayAnimation(animToPlay, 0.05f, false);
+        }
+
+        if (networkMode)
+        {
+            AttackServerRpc();
+        }
+        else
+        {
+            Vector3 rayStart = transform.position + Vector3.up * 0.5f;
+            Debug.DrawRay(rayStart, transform.forward * attackRange, Color.red, 0.5f);
+
+            if (!Physics.Raycast(rayStart, transform.forward, out RaycastHit hit, attackRange)) return;
+
+            TryDamageEnemy(hit.collider);
+        }
     }
 
     private void TryDamageEnemy(Collider col)
@@ -1299,7 +1454,12 @@ public class SimplePlayerTest : NetworkBehaviour
                         stateInfo.IsName("GetHit") || 
                         stateInfo.IsName("GeiHit2") || 
                         stateInfo.IsName("Idle_Pick") || 
-                        stateInfo.IsName("Death");
+                        stateInfo.IsName("Death") ||
+                        stateInfo.IsName("Punch1") ||
+                        stateInfo.IsName("Punch2") ||
+                        stateInfo.IsName("Slash1") ||
+                        stateInfo.IsName("Slash2") ||
+                        stateInfo.IsName("Slash3");
                         
         // Nếu đang chạy các animation hành động này và chưa chạy xong (normalizedTime < 0.95f)
         return isAction && stateInfo.normalizedTime < 0.95f;
@@ -1376,6 +1536,11 @@ public class SimplePlayerTest : NetworkBehaviour
         anim.ResetTrigger("GeiHit2");
         anim.ResetTrigger("LonVong");
         anim.ResetTrigger("Idle_Pick");
+        anim.ResetTrigger("Punch1");
+        anim.ResetTrigger("Punch2");
+        anim.ResetTrigger("Slash1");
+        anim.ResetTrigger("Slash2");
+        anim.ResetTrigger("Slash3");
 
         // Kích hoạt Trigger để chạy dây nối trong Animator
         anim.SetTrigger(animName);
