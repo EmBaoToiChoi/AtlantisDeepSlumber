@@ -141,7 +141,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 1081.024, y: 0.26218814, z: 383.377}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalScale: {x: 2.5, y: 2.5, z: 2.5}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 2341383303143280638}
@@ -183,7 +183,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  GlobalObjectIdHash: 2404185414
+  GlobalObjectIdHash: 3194319458
   InScenePlacedSourceGlobalObjectIdHash: 0
   DeferredDespawnTick: 0
   Ownership: 1
@@ -220,42 +220,52 @@ MonoBehaviour:
       MinSecondsBetweenUpdates: 0
       MaxSecondsBetweenUpdates: 0
     m_InternalValue: 0
+  netSpeed:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 0
   hitCounter:
     UpdateTraits:
       MinSecondsBetweenUpdates: 0
       MaxSecondsBetweenUpdates: 0
     m_InternalValue: 0
+  agent: {fileID: 4749231621796168546}
+  anim: {fileID: 4796621718662928732}
+  eyeTransform: {fileID: 5645146950140254180}
+  staffTipTransform: {fileID: 3603535170790197887}
+  waypoints:
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  spellProjectilePrefab: {fileID: 5232337845423497240, guid: ef0d7d76dcf3f1c428721a201b8f90a3, type: 3}
+  spellSpeed: 12
+  spellDamage: 20
   expGemPrefab: {fileID: 7388330026054526502, guid: b6f0bcc3b9d52f840a55991f2dbef13f, type: 3}
   expDropAmount: 25
   expDropPoint: {fileID: 1745995649854752103}
   repairItemPrefab: {fileID: 3330552459412152781}
   repairItemDropChance: 0.2
-  agent: {fileID: 4749231621796168546}
-  anim: {fileID: 4796621718662928732}
-  eyeTransform: {fileID: 5645146950140254180}
-  staffTipTransform: {fileID: 3603535170790197887}
-  modelRenderers: []
-  spellProjectilePrefab: {fileID: 5232337845423497240, guid: ef0d7d76dcf3f1c428721a201b8f90a3, type: 3}
-  spellSpeed: 12
-  spellDamage: 20
   sightRange: 18
   fieldOfView: 110
   maxAttackRange: 13
   minAttackRange: 5.5
-  walkRadius: 9
-  idleTimeMax: 4.5
+  patrolWalkSpeed: 2.5
+  chaseRunSpeed: 3.8
+  patrolWaitMin: 1.5
+  patrolWaitMax: 5
+  patrolMoveChance: 0.65
   playerLayer:
     serializedVersion: 2
     m_Bits: 8
   obstacleLayer:
     serializedVersion: 2
     m_Bits: 0
-  idleTriggerName: quai4IDLE
-  walkTriggerName: quai5walk
-  runTriggerName: quai5Run
-  hitTriggerName: Quai5Anhit
-  dieTriggerName: Quai5Die
-  attackTriggerName: quai5Attack
+  speedParam: Speed
+  hitTrigger: Quai5Anhit
+  dieTrigger: Quai5Die
+  attackTrigger: quai5Attack
+  modelRenderers: []
 --- !u!195 &4749231621796168546
 NavMeshAgent:
   m_ObjectHideFlags: 0

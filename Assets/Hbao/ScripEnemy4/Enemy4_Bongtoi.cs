@@ -2,1093 +2,297 @@ using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.AI;
 
+/// <summary>
+/// Enemy 4 - Bóng Tối
+/// Animator Float "Speed": 0=Idle, 0.5=Walk (patrol), 1=Run (chase)
+/// Attack triggers: qual44attack, qual4combo
+/// </summary>
 public class Enemy4_Bongtoi : NetworkBehaviour
 {
-    public enum EnemyState
-    {
-        Idle,
-        Walk,
-        Run,
-        Search,    // Tìm kiếm Player tại vị trí cuối cùng được phát hiện
-        Stagger,   // Bị khựng / choáng khi nhận sát thương lớn
-        Attack,
-        Dead
-    }
+    public enum EnemyState { Patrol, Chase, Stagger, Attack, Dead }
 
-    [Header("Health Settings")]
-    public float maxHealth = 100f;
-    public NetworkVariable<float> currentHealth = new NetworkVariable<float>(
-        100f,
-        NetworkVariableReadPermission.Everyone,
-        NetworkVariableWritePermission.Server
-    );
+    [Header("Health")]
+    public float maxHealth = 120f;
+    public NetworkVariable<float> currentHealth = new NetworkVariable<float>(120f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+    public NetworkVariable<EnemyState> currentState = new NetworkVariable<EnemyState>(EnemyState.Patrol, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
-    public NetworkVariable<EnemyState> currentState = new NetworkVariable<EnemyState>(
-        EnemyState.Idle,
-        NetworkVariableReadPermission.Everyone,
-        NetworkVariableWritePermission.Server
-    );
-
-    [Header("Advanced AI Multiplayer Sync")]
-    // Đồng bộ trigger hit để mọi client thấy hiệu ứng trúng đòn khựng lại
+    [Header("Network Anim Sync")]
+    public NetworkVariable<float> netSpeed = new NetworkVariable<float>(0f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     public NetworkVariable<int> hitCounter = new NetworkVariable<int>(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
-    // Đồng bộ kiểu tấn công (0: Attack 1, 1: Attack Combo)
     public NetworkVariable<int> attackType = new NetworkVariable<int>(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
-    [Header("Experience Drops")]
-    public GameObject expGemPrefab;
-    public float expDropAmount = 25f;
-    public Transform expDropPoint; // Kéo Transform dưới chân quái vào đây
-
-    [Header("Item Drop Settings")]
-    public GameObject repairItemPrefab;
-    [Range(0f, 1f)] public float repairItemDropChance = 0.3f;
+    private float localHealth;
+    private EnemyState localState = EnemyState.Patrol;
+    private bool isStandaloneMode;
+    private bool IsNetworkActive => NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
+    private EnemyState CurrentStateValue { get => isStandaloneMode ? localState : currentState.Value; set { if (isStandaloneMode) localState = value; else currentState.Value = value; } }
+    private float CurrentHealthValue { get => isStandaloneMode ? localHealth : currentHealth.Value; set { if (isStandaloneMode) localHealth = value; else currentHealth.Value = value; } }
 
     [Header("Components")]
     public NavMeshAgent agent;
     public Animator anim;
-    public Transform eyeTransform;    // Điểm bắn Raycast dò Player (ví dụ: ở đầu/mắt quái)
-    public Renderer[] modelRenderers; // Thay đổi sắc thái để tăng hiệu ứng hình ảnh khi yếu máu hoặc cuồng nộ
+    public Transform eyeTransform;
 
-    [Header("Melee Hitbox Settings")]
-    public GameObject clawHitbox;      // Vùng đánh vuốt/cào (kéo Collider ở tay/vuốt vào đây)
-    public GameObject weaponHitbox;    // Vùng đánh bằng vũ khí phụ trợ
+    [Header("Hitboxes")]
+    public GameObject clawHitbox;
+    public GameObject weaponHitbox;
 
-    // Bộ đệm tránh phân bổ rác (GC Alloc) khi quét va chạm
-    private readonly Collider[] detectionResults = new Collider[8];
-    private readonly Collider[] damageResults = new Collider[8];
+    [Header("Patrol Waypoints (3 điểm hình tam giác)")]
+    public Transform[] waypoints = new Transform[3];
 
-    [Header("AI Vision & Combat Settings")]
-    public float sightRange = 15f;      // Tầm nhìn xa phát hiện Player
-    public float fieldOfView = 100f;    // Góc nhìn (độ)
-    public float attackRange = 2f;      // Tầm đánh cận chiến
-    public float walkRadius = 9f;       // Bán kính đi dạo ngẫu nhiên
-    public float idleTimeMax = 4f;      // Thời gian đứng im nghỉ ngơi tối đa
+    [Header("Drops")]
+    public GameObject expGemPrefab;
+    public float expDropAmount = 30f;
+    public Transform expDropPoint;
+    public GameObject repairItemPrefab;
+    [Range(0f, 1f)] public float repairItemDropChance = 0.35f;
+
+    [Header("AI Settings")]
+    public float sightRange = 13f;
+    public float fieldOfView = 100f;
+    public float attackRange = 2.2f;
+    public float patrolWalkSpeed = 2.5f;
+    public float chaseRunSpeed   = 5.5f;
+    public float patrolWaitMin = 1f;
+    public float patrolWaitMax = 4f;
+    [Range(0f, 1f)] public float patrolMoveChance = 0.7f;
 
     [Header("Layers")]
-    public LayerMask playerLayer;       // Layer của Player
-    public LayerMask obstacleLayer;     // Layer của tường / vật cản địa hình
+    public LayerMask playerLayer;
+    public LayerMask obstacleLayer;
 
-    [Header("Animator Parameter/Trigger Names")]
-    public string idleTriggerName = "qual4IDLE";
-    public string walkTriggerName = "Qual4walk";
-    public string runTriggerName = "qual4RUn";
-    public string hitTriggerName = "Qual4Anhit";   // Trigger cho layer Anhit
-    public string dieTriggerName = "Qual4Dle";     // Trigger cho layer Base (Chết)
-    public string attack1TriggerName = "qual44attack"; // Trigger Attack 1
-    public string attackComboTriggerName = "qual4combo"; // Trigger Attack Combo
+    [Header("Animator Parameter Names")]
+    [Tooltip("Float: 0=Idle, 0.5=Walk, 1=Run — Base Layer")]
+    public string speedParam   = "Speed";        // Float  — Base Layer
+    public string hitTrigger   = "Qual4Anhit";   // Trigger — Anhit Layer
+    public string dieTrigger   = "Qual4Dle";     // Trigger — Base Layer
+    public string atk1Trigger  = "qual44attack"; // Trigger — Attack Layer
+    public string atk2Trigger  = "qual4combo";   // Trigger — Attack Layer
 
-    // Quản lý trạng thái AI (Chỉ tính toán và xử lý trên Server)
     private Transform targetPlayer;
-    private float stateTimer;
-    private bool hasDestination;
-
-    private Vector3 lastKnownPlayerPosition;
-    private float searchTimer;
-    private float searchLookTimer;
-    private float searchLookDirection = 1f;
-
+    private int currentWaypointIndex = -1;
+    private bool waitingAtWaypoint;
+    private float waypointWaitTimer;
     private float detectionTimer;
-    private const float DETECTION_INTERVAL = 0.15f; // Quét 0.15s một lần tiết kiệm tài nguyên CPU
-
+    private const float DETECTION_INTERVAL = 0.15f;
     private float staggerTimer;
     private float attackCooldownTimer;
-    private float tacticalTimer;
-    private int tacticalState = 0; // 0: Đuổi thẳng, 1: Né bo sườn trái, 2: Né bo sườn phải
-
-    private bool isDodging = false;
-    private float dodgeTimer;
-
+    private float attackDuration;
+    private float stateTimer;
+    private bool hasDealtDamage;
     private float lastDamageTime;
     private int recentHitCount;
-
-    private bool hasDealtDamage;
-    private float attackDuration;
-
-    private bool wasEnraged = false;
+    private bool wasEnraged;
     private MaterialPropertyBlock propBlock;
-    private EnemyState clientLocalState = (EnemyState)(-1);
+    public Renderer[] modelRenderers;
+
+    private readonly Collider[] detectionResults = new Collider[8];
+    private readonly Collider[] damageResults    = new Collider[8];
+    private bool AgentReady => agent != null && agent.isActiveAndEnabled && agent.isOnNavMesh;
 
     private void Awake()
     {
-        if (anim == null)
-        {
-            anim = GetComponent<Animator>();
-            if (anim == null)
-            {
-                anim = GetComponentInChildren<Animator>(true);
-            }
-        }
+        propBlock = new MaterialPropertyBlock();
+        if (anim == null) anim = GetComponent<Animator>() ?? GetComponentInChildren<Animator>(true);
+        var na = GetComponent<Unity.Netcode.Components.NetworkAnimator>();
+        if (na != null) { if (anim == null || anim.runtimeAnimatorController == null) na.enabled = false; else na.Animator = anim; }
+    }
 
-        var netAnim = GetComponent<Unity.Netcode.Components.NetworkAnimator>();
-        if (netAnim != null)
-        {
-            if (anim == null)
-            {
-                Debug.LogError($"[{gameObject.name}] KHÔNG TÌM THẤY component Animator trên đối tượng này hoặc con của nó! Đang vô hiệu hóa NetworkAnimator để tránh lỗi crash game NullReferenceException.");
-                netAnim.enabled = false;
-            }
-            else if (anim.runtimeAnimatorController == null)
-            {
-                Debug.LogError($"[{gameObject.name}] PHÁT HIỆN LỖI: Animator tồn tại nhưng CHƯA ĐƯỢC GÁN 'Animator Controller' trong cửa sổ Inspector của Prefab! Vui lòng kéo Animator Controller của quái 4 vào thành phần Animator của nó trong Prefab. Đang vô hiệu hóa NetworkAnimator để tránh crash game NullReferenceException.");
-                netAnim.enabled = false;
-            }
-            else
-            {
-                netAnim.Animator = anim;
-                Debug.Log($"[{gameObject.name}] Đã liên kết tự động thành công Animator '{anim.name}' vào NetworkAnimator.");
-            }
-        }
+    private void Start() { if (!IsNetworkActive) { isStandaloneMode = true; InitStandalone(); } }
+
+    private void InitStandalone()
+    {
+        localHealth = maxHealth; localState = EnemyState.Patrol;
+        SnapToNavMesh(); DisableHitboxes();
+        ApplySpeedAnim(0f); GoToNextWaypoint();
     }
 
     public override void OnNetworkSpawn()
     {
-        // Đăng ký đồng bộ hóa Animation trên Client khi biến mạng thay đổi
-        currentState.OnValueChanged += OnStateChanged;
-
-        // Khởi tạo hoạt ảnh ban đầu khớp với trạng thái hiện tại (đặc biệt cho người chơi vào sau)
-        OnStateChanged(currentState.Value, currentState.Value);
-
-        // Tối ưu hóa đồng bộ chuyển động siêu nhỏ cho mọi Client cùng quan sát
-        var netTransform = GetComponent<Unity.Netcode.Components.NetworkTransform>();
-        if (netTransform != null)
-        {
-            netTransform.PositionThreshold = 0.001f;
-            netTransform.RotAngleThreshold = 0.01f;
-            netTransform.ScaleThreshold = 0.01f;
-        }
-
-        if (IsServer)
-        {
-            currentHealth.Value = maxHealth;
-            ChangeState(EnemyState.Idle);
-
-            // Warp snap quái vào NavMesh khi sinh ra để tránh kẹt
-            if (agent != null && agent.isActiveAndEnabled)
-            {
-                if (!agent.isOnNavMesh)
-                {
-                    NavMeshHit hit;
-                    if (NavMesh.SamplePosition(transform.position, out hit, 10f, NavMesh.AllAreas))
-                    {
-                        agent.Warp(hit.position);
-                        Debug.Log($"[{gameObject.name}] Snapped to NavMesh on spawn at {hit.position}");
-                    }
-                }
-            }
-        }
-        else // ---> THÊM ĐOẠN NÀY VÀO <---
-        {
-            // TẮT NavMeshAgent trên Client để NetworkTransform của Server thoải mái cập nhật vị trí
-            if (agent != null)
-            {
-                agent.enabled = false;
-            }
-        }
-
-        // Đảm bảo các hitbox ban đầu được tắt
-        if (clawHitbox != null) clawHitbox.SetActive(false);
-        if (weaponHitbox != null) weaponHitbox.SetActive(false);
-
-        // Đăng ký hiệu ứng dính đòn (Hit/Anhit) khi hitCounter tăng
-        hitCounter.OnValueChanged += OnHitCounterChanged;
-    }
-
-    public override void OnNetworkDespawn()
-    {
-        currentState.OnValueChanged -= OnStateChanged;
-        hitCounter.OnValueChanged -= OnHitCounterChanged;
-    }
-
-    private void OnHitCounterChanged(int oldVal, int newVal)
-    {
-        if (anim != null)
-        {
-            anim.ResetTrigger(hitTriggerName);
-            anim.SetTrigger(hitTriggerName);
-        }
+        isStandaloneMode = false;
+        var nt = GetComponent<Unity.Netcode.Components.NetworkTransform>();
+        if (nt != null) { nt.PositionThreshold = 0.001f; nt.RotAngleThreshold = 0.01f; nt.ScaleThreshold = 0.01f; }
+        netSpeed.OnValueChanged       += (_, v) => ApplySpeedAnim(v);
+        hitCounter.OnValueChanged     += (_, _) => { if (anim != null) anim.SetTrigger(hitTrigger); };
+        ApplySpeedAnim(netSpeed.Value);
+        if (IsServer) { currentHealth.Value = maxHealth; SnapToNavMesh(); DisableHitboxes(); GoToNextWaypoint(); }
+        else { if (agent != null) agent.enabled = false; }
     }
 
     private void Update()
     {
-        if (!IsSpawned) return; // Ngăn code chạy khi chưa kết nối mạng hoàn chỉnh
-
-        // Hiệu ứng màu sắc cuồng bạo nhấp nháy tím khi yếu máu (chạy trên cả server/client để mượt mà)
         UpdateEnrageVisuals();
-
-        // Đồng bộ hóa an toàn hoạt ảnh di chuyển trên Client
-        // Đồng bộ hóa an toàn hoạt ảnh di chuyển trên Client
-        if (anim != null && anim.isActiveAndEnabled && anim.runtimeAnimatorController != null)
-        {
-            if (clientLocalState != currentState.Value)
-            {
-                SyncAnimationState(currentState.Value);
-                clientLocalState = currentState.Value;
-            }
-        }
-
-        // Chỉ Server mới có quyền tính toán và ra quyết định AI
-        if (!IsServer) return;
-
-        // Tự động snap quái lại vào NavMesh nếu vô tình bị đẩy văng ra ngoài
-        if (agent != null && agent.isActiveAndEnabled && !agent.isOnNavMesh)
-        {
-            NavMeshHit hit;
-            if (NavMesh.SamplePosition(transform.position, out hit, 5f, NavMesh.AllAreas))
-            {
-                agent.Warp(hit.position);
-            }
-        }
-
-        // Giảm thời gian hồi chiêu
+        bool aiAuth = isStandaloneMode || (IsNetworkActive && IsServer);
+        if (!aiAuth) return;
+        if (AgentReady && !agent.isOnNavMesh) SnapToNavMesh();
         if (attackCooldownTimer > 0) attackCooldownTimer -= Time.deltaTime;
-
-        // Xử lý né tránh lướt ngang (Dodge)
-        if (isDodging)
-        {
-            dodgeTimer -= Time.deltaTime;
-            if (dodgeTimer <= 0)
-            {
-                isDodging = false;
-                UpdateAgentSpeed();
-            }
-            return;
-        }
-
-        // Quét tìm Player theo chu kỳ tối ưu CPU
         detectionTimer -= Time.deltaTime;
-        if (detectionTimer <= 0)
+        if (detectionTimer <= 0) { detectionTimer = DETECTION_INTERVAL; DetectPlayer(); }
+        switch (CurrentStateValue)
         {
-            detectionTimer = DETECTION_INTERVAL;
-            DetectPlayer();
-        }
-
-        // Xử lý máy trạng thái
-        switch (currentState.Value)
-        {
-            case EnemyState.Idle:
-                HandleIdle();
-                break;
-            case EnemyState.Walk:
-                HandleWalk();
-                break;
-            case EnemyState.Run:
-                HandleRun();
-                break;
-            case EnemyState.Search:
-                HandleSearch();
-                break;
-            case EnemyState.Stagger:
-                HandleStagger();
-                break;
-            case EnemyState.Attack:
-                HandleAttack();
-                break;
+            case EnemyState.Patrol:  HandlePatrol();  break;
+            case EnemyState.Chase:   HandleChase();   break;
+            case EnemyState.Stagger: HandleStagger(); break;
+            case EnemyState.Attack:  HandleAttack();  break;
         }
     }
 
-    #region AI Server Core Logic
-
-    private void DetectPlayer()
+    private void UpdateEnrageVisuals()
     {
-        if (currentState.Value == EnemyState.Dead || currentState.Value == EnemyState.Stagger) return;
-        if (currentState.Value == EnemyState.Attack) return;
-
-        int numPlayers = Physics.OverlapSphereNonAlloc(transform.position, sightRange, detectionResults, playerLayer);
-
-        bool playerFound = false;
-        Transform closestPlayer = null;
-        float minDistance = float.MaxValue;
-        Vector3 eyePos = eyeTransform != null ? eyeTransform.position : transform.position + Vector3.up * 1.5f;
-
-        for (int i = 0; i < numPlayers; i++)
-        {
-            Collider p = detectionResults[i];
-            if (p == null) continue;
-            Transform potentialTarget = p.transform;
-
-            // 1. TÍNH NĂNG MỚI: Bỏ qua Player nếu họ đã chết
-            SimplePlayerTest playerScript = potentialTarget.GetComponentInParent<SimplePlayerTest>();
-            if (playerScript != null && playerScript.CurrentHealth <= 0) continue;
-
-            Vector3 targetCenterPos = potentialTarget.position + Vector3.up * 1.0f;
-            float distanceToTarget = Vector3.Distance(eyePos, targetCenterPos);
-            Vector3 directionToTarget = (targetCenterPos - eyePos).normalized;
-
-            // 2. FIX LỖI TRƯỢT BĂNG: Nằm trong góc FOV HOẶC đang là mục tiêu hiện tại.
-            // Điều này giúp quái xoay 360 độ vẫn bám theo mục tiêu cũ, không bị mất dấu khi Player lách qua sườn!
-            bool inFOV = Vector3.Angle(transform.forward, directionToTarget) < (fieldOfView / 2f);
-            bool isCurrentTarget = (targetPlayer == potentialTarget);
-
-            if (inFOV || isCurrentTarget)
-            {
-                // Bắn tia kiểm tra vật cản
-                if (!Physics.Raycast(eyePos, directionToTarget, distanceToTarget, obstacleLayer))
-                {
-                    // 3. TÍNH NĂNG MỚI: Luôn ưu tiên khóa mục tiêu vào Player đứng gần nhất
-                    if (distanceToTarget < minDistance)
-                    {
-                        minDistance = distanceToTarget;
-                        closestPlayer = potentialTarget;
-                        playerFound = true;
-                    }
-                }
-            }
-        }
-
-        // 4. Áp dụng mục tiêu gần nhất tìm được
-        if (playerFound && closestPlayer != null)
-        {
-            targetPlayer = closestPlayer;
-            if (currentState.Value != EnemyState.Run)
-            {
-                ChangeState(EnemyState.Run);
-            }
-        }
-        else if (currentState.Value == EnemyState.Run)
-        {
-            if (targetPlayer != null)
-            {
-                lastKnownPlayerPosition = targetPlayer.position;
-                targetPlayer = null;
-                ChangeState(EnemyState.Search);
-            }
-            else
-            {
-                ChangeState(EnemyState.Idle);
-            }
-        }
+        if (modelRenderers == null || modelRenderers.Length == 0 || propBlock == null) return;
+        bool enraged = CurrentHealthValue < maxHealth * 0.5f;
+        if (enraged) { wasEnraged = true; float pp = Mathf.PingPong(Time.time * 3f, 1f); Color c = Color.Lerp(Color.white, new Color(0.5f, 0f, 0.8f), pp); foreach (var r in modelRenderers) { if (r != null) { r.GetPropertyBlock(propBlock); propBlock.SetColor("_Color", c); r.SetPropertyBlock(propBlock); } } }
+        else if (wasEnraged) { wasEnraged = false; foreach (var r in modelRenderers) { if (r != null) { r.GetPropertyBlock(propBlock); propBlock.SetColor("_Color", Color.white); r.SetPropertyBlock(propBlock); } } }
     }
 
-    private void HandleIdle()
+    private void GoToNextWaypoint()
     {
-        if (agent.isActiveAndEnabled) agent.isStopped = true;
-        stateTimer -= Time.deltaTime;
-
-        if (stateTimer <= 0)
-        {
-            // Tự nhiên ngẫu nhiên: 40% đi dạo, 30% chạy dạo tuần tra, 30% đứng nghỉ ngơi
-            float rand = Random.value;
-            if (rand < 0.4f)
-            {
-                ChangeState(EnemyState.Walk);
-            }
-            else if (rand < 0.7f)
-            {
-                ChangeState(EnemyState.Run);
-            }
-            else
-            {
-                stateTimer = Random.Range(1.5f, idleTimeMax);
-            }
-        }
+        if (waypoints == null || waypoints.Length == 0) { SetSpeedNet(0f); return; }
+        if (waypoints.Length > 1) { int n; do { n = Random.Range(0, waypoints.Length); } while (n == currentWaypointIndex); currentWaypointIndex = n; }
+        else currentWaypointIndex = 0;
+        waitingAtWaypoint = false;
+        if (waypoints[currentWaypointIndex] == null) { SetSpeedNet(0f); return; }
+        if (AgentReady) { agent.isStopped = false; agent.speed = patrolWalkSpeed; agent.SetDestination(waypoints[currentWaypointIndex].position); }
+        SetSpeedNet(0.5f);
     }
 
-    private void HandleWalk()
+    private void HandlePatrol()
     {
-        if (agent.isActiveAndEnabled)
-        {
-            agent.isStopped = false;
-            agent.speed = 2.0f; // Đi chậm tuần tra
-        }
-
-        if (!hasDestination)
-        {
-            Vector3 targetPos = GetRandomNavMeshPoint(walkRadius);
-            if (targetPos != Vector3.zero)
-            {
-                if (agent.isActiveAndEnabled) agent.SetDestination(targetPos);
-                hasDestination = true;
-            }
-        }
-
-        if (hasDestination && agent.isActiveAndEnabled && !agent.pathPending && agent.remainingDistance <= agent.stoppingDistance + 0.2f)
-        {
-            hasDestination = false;
-            float rand = Random.value;
-            if (rand < 0.4f) ChangeState(EnemyState.Idle);
-            else if (rand < 0.8f) ChangeState(EnemyState.Walk);
-            else ChangeState(EnemyState.Run);
-        }
+        if (waypoints == null || waypoints.Length == 0) { SetSpeedNet(0f); return; }
+        if (waitingAtWaypoint) { SetSpeedNet(0f); waypointWaitTimer -= Time.deltaTime; if (waypointWaitTimer <= 0) { if (Random.value <= patrolMoveChance) GoToNextWaypoint(); else waypointWaitTimer = Random.Range(patrolWaitMin, patrolWaitMax); } }
+        else { SetSpeedNet(AgentReady && agent.velocity.magnitude > 0.15f ? 0.5f : 0f); if (AgentReady && !agent.pathPending && agent.remainingDistance <= agent.stoppingDistance + 0.3f) { agent.isStopped = true; SetSpeedNet(0f); waitingAtWaypoint = true; waypointWaitTimer = Random.Range(patrolWaitMin, patrolWaitMax); } }
     }
 
-    private void HandleRun()
+    private void HandleChase()
     {
-        // TÍNH NĂNG MỚI: Quay về trạng thái tuần tra thông minh nếu mục tiêu đang đuổi bị chết
-        if (targetPlayer != null)
-        {
-            SimplePlayerTest ps = targetPlayer.GetComponentInParent<SimplePlayerTest>();
-            if (ps != null && ps.CurrentHealth <= 0)
-            {
-                targetPlayer = null;
-                ChangeState(EnemyState.Idle);
-                return;
-            }
-        }
-        // 1. Trường hợp tuần tra tự do (không có mục tiêu Player)
-        if (targetPlayer == null)
-        {
-            if (agent.isActiveAndEnabled)
-            {
-                agent.isStopped = false;
-                agent.speed = 4.0f; // Tốc độ chạy tuần tra
-            }
-
-            if (!hasDestination)
-            {
-                Vector3 targetPos = GetRandomNavMeshPoint(walkRadius * 1.5f);
-                if (targetPos != Vector3.zero)
-                {
-                    if (agent.isActiveAndEnabled) agent.SetDestination(targetPos);
-                    hasDestination = true;
-                }
-            }
-
-            if (hasDestination && agent.isActiveAndEnabled && !agent.pathPending && agent.remainingDistance <= agent.stoppingDistance + 0.2f)
-            {
-                hasDestination = false;
-                ChangeState(Random.value < 0.6f ? EnemyState.Idle : EnemyState.Walk);
-            }
-            return;
-        }
-
-        // Quay mặt cực nhanh khóa chặt Player khi phát hiện và truy đuổi
-        Vector3 lookDir = (targetPlayer.position - transform.position);
-        lookDir.y = 0;
-        if (lookDir != Vector3.zero)
-        {
-            transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(lookDir), Time.deltaTime * 15f);
-        }
-
-        float distance = Vector3.Distance(transform.position, targetPlayer.position);
-
-        if (distance <= attackRange)
-        {
-            if (agent.isActiveAndEnabled) agent.isStopped = true;
-            if (attackCooldownTimer <= 0)
-            {
-                ChangeState(EnemyState.Attack);
-            }
-            return;
-        }
-
-        // 2. Trường hợp Đuổi theo Player (Chase mode)
-        if (agent.isActiveAndEnabled)
-        {
-            agent.isStopped = false;
-            UpdateAgentSpeed();
-        }
-
-        // Kỹ thuật chiến thuật cao (Flanking AI):
-        // Chỉ bo sườn khi 3.5-6m; khi gần hơn lao thẳng tránh circling
-        if (distance <= 6f && distance > 3.5f)
-        {
-            tacticalTimer -= Time.deltaTime;
-            if (tacticalTimer <= 0)
-            {
-                float rand = Random.value;
-                // Tăng xác suất lao thẳng
-                if (rand < 0.6f) tacticalState = 0;      // Đuổi trực diện
-                else if (rand < 0.8f) tacticalState = 1; // Bo sườn trái
-                else tacticalState = 2;                  // Bo sườn phải
-
-                tacticalTimer = Random.Range(1.5f, 2.5f);
-            }
-
-            if (tacticalState == 0)
-            {
-                if (agent.isActiveAndEnabled) agent.SetDestination(targetPlayer.position);
-            }
-            else
-            {
-                Vector3 toPlayer = (targetPlayer.position - transform.position).normalized;
-                Vector3 tangent = new Vector3(-toPlayer.z, 0, toPlayer.x);
-                float sideDir = (tacticalState == 1) ? 1f : -1f;
-
-                // Thu hẹp offset ngang để không chạy xa Player
-                Vector3 targetOffset = targetPlayer.position + tangent * sideDir * 2f;
-
-                NavMeshHit hit;
-                if (NavMesh.SamplePosition(targetOffset, out hit, 3f, NavMesh.AllAreas))
-                {
-                    if (agent.isActiveAndEnabled) agent.SetDestination(hit.position);
-                }
-                else
-                {
-                    if (agent.isActiveAndEnabled) agent.SetDestination(targetPlayer.position);
-                }
-            }
-        }
-        else
-        {
-            // Cự ly xa -> Chạy đuổi trực diện
-            if (agent.isActiveAndEnabled) agent.SetDestination(targetPlayer.position);
-        }
+        if (targetPlayer == null) { ReturnToPatrol(); return; }
+        SimplePlayerTest ps = targetPlayer.GetComponentInParent<SimplePlayerTest>();
+        if (ps != null && ps.CurrentHealth <= 0) { targetPlayer = null; ReturnToPatrol(); return; }
+        Vector3 ld = (targetPlayer.position - transform.position); ld.y = 0;
+        if (ld.sqrMagnitude > 0.01f) transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(ld), Time.deltaTime * 15f);
+        float dist = Vector3.Distance(transform.position, targetPlayer.position);
+        if (dist <= attackRange) { if (AgentReady) agent.isStopped = true; SetSpeedNet(0f); if (attackCooldownTimer <= 0) ChangeState(EnemyState.Attack); return; }
+        bool enraged = CurrentHealthValue < maxHealth * 0.5f;
+        if (AgentReady) { agent.isStopped = false; agent.speed = enraged ? chaseRunSpeed * 1.3f : chaseRunSpeed; agent.SetDestination(targetPlayer.position); }
+        SetSpeedNet(AgentReady && agent.velocity.magnitude > 0.2f ? 1f : 0f);
     }
 
-    private void HandleSearch()
-    {
-        if (agent.isActiveAndEnabled)
-        {
-            agent.isStopped = false;
-            agent.speed = 3.5f;
-            agent.SetDestination(lastKnownPlayerPosition);
-        }
-
-        if (agent.isActiveAndEnabled && !agent.pathPending && agent.remainingDistance <= agent.stoppingDistance + 0.2f)
-        {
-            agent.isStopped = true;
-            searchTimer -= Time.deltaTime;
-
-            // Xoay đầu láo liên tìm kiếm
-            searchLookTimer -= Time.deltaTime;
-            if (searchLookTimer <= 0)
-            {
-                searchLookDirection = -searchLookDirection;
-                searchLookTimer = 0.7f;
-            }
-
-            transform.Rotate(Vector3.up, searchLookDirection * 130f * Time.deltaTime);
-
-            if (searchTimer <= 0)
-            {
-                ChangeState(EnemyState.Idle);
-            }
-        }
-    }
-
-    private void HandleStagger()
-    {
-        if (agent.isActiveAndEnabled) agent.isStopped = true;
-        staggerTimer -= Time.deltaTime;
-
-        if (staggerTimer <= 0)
-        {
-            // (Riêng Enemy 1 có thêm dòng roar thì bạn giữ lại: if (IsEnragedValue && !hasRoared) hasRoared = true;)
-
-            targetPlayer = null;
-            ChangeState(EnemyState.Idle);
-            detectionTimer = 0f;
-        }
-    }
+    private void ReturnToPatrol() { targetPlayer = null; CurrentStateValue = EnemyState.Patrol; waitingAtWaypoint = false; waypointWaitTimer = 0f; GoToNextWaypoint(); }
+    private void HandleStagger() { if (AgentReady) agent.isStopped = true; SetSpeedNet(0f); staggerTimer -= Time.deltaTime; if (staggerTimer <= 0) { if (targetPlayer != null) ChangeState(EnemyState.Chase); else ReturnToPatrol(); } }
 
     private void HandleAttack()
     {
-        if (targetPlayer == null)
-        {
-            ChangeState(EnemyState.Idle);
-            return;
-        }
-
-        if (agent.isActiveAndEnabled) agent.isStopped = true;
-
+        if (targetPlayer == null) { EndAttack(); return; }
+        if (AgentReady) agent.isStopped = true; SetSpeedNet(0f);
         stateTimer -= Time.deltaTime;
         float elapsed = attackDuration - stateTimer;
+        int aType = isStandaloneMode ? 0 : attackType.Value;
+        if (elapsed < attackDuration * 0.35f) { Vector3 ld = (targetPlayer.position - transform.position); ld.y = 0; if (ld.sqrMagnitude > 0.01f) transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(ld), Time.deltaTime * 18f); }
+        if (aType == 1) { if (elapsed >= 0.4f && !hasDealtDamage) { hasDealtDamage = true; DealConeDamage(20f, attackRange + 1f, 90f, 10f); } }
+        else { if (elapsed >= 0.5f && !hasDealtDamage) { hasDealtDamage = true; DealConeDamage(15f, attackRange + 0.5f, 80f, 8f); } }
+        if (stateTimer <= 0) EndAttack();
+    }
 
-        // Khóa hướng xoay ở 30% đầu của hoạt ảnh chuẩn bị đánh để tăng độ chính xác,
-        // Nâng tốc độ slerp lên 18f để snappy khóa mục tiêu
-        if (elapsed < attackDuration * 0.3f)
-        {
-            Vector3 lookDir = (targetPlayer.position - transform.position);
-            lookDir.y = 0;
-            if (lookDir != Vector3.zero)
-            {
-                transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(lookDir), Time.deltaTime * 18f);
-            }
-        }
+    private void EndAttack()
+    {
+        attackCooldownTimer = (CurrentHealthValue < maxHealth * 0.5f) ? 0.3f : 0.6f;
+        DisableHitboxes(); detectionTimer = 0f;
+        if (targetPlayer != null) ChangeState(EnemyState.Chase); else ReturnToPatrol();
+    }
 
-        // Tính toán gây sát thương diện rộng hình nón (khớp hoàn hảo với nhịp hạ tay của animation)
-        // Attack Combo (2 hit vung tay đập liên hoàn) hoặc Attack 1
-        if (attackType.Value == 1) // Combo (Dưới 50% HP)
-        {
-            // Nhịp vung 1: ở 0.5s
-            if (elapsed >= 0.5f && !hasDealtDamage)
-            {
-                hasDealtDamage = true;
-                DealConeDamage(14f, attackRange + 0.4f, 85f, 6f);
-            }
-            // Nhịp vung Slam mạnh 2: ở 1.1s
-            if (elapsed >= 1.1f && hasDealtDamage)
-            {
-                hasDealtDamage = false; // Mượn biến để đánh dấu hit 2
-                DealConeDamage(26f, attackRange + 1.1f, 95f, 13f);
-            }
-        }
-        else // Attack 1 (Thanh máu đầy 100%)
-        {
-            if (elapsed >= 0.45f && !hasDealtDamage)
-            {
-                hasDealtDamage = true;
-                DealConeDamage(16f, attackRange + 0.5f, 80f, 8f);
-            }
-        }
+    private void DetectPlayer()
+    {
+        EnemyState s = CurrentStateValue;
+        if (s == EnemyState.Dead || s == EnemyState.Stagger || s == EnemyState.Attack) return;
+        int num = Physics.OverlapSphereNonAlloc(transform.position, sightRange, detectionResults, playerLayer);
+        if (num == 0) num = FallbackDetect();
+        bool found = false; Transform closest = null; float minD = float.MaxValue;
+        Vector3 ep = eyeTransform != null ? eyeTransform.position : transform.position + Vector3.up * 1.5f;
+        for (int i = 0; i < num; i++) { if (detectionResults[i] == null) continue; Transform pt = detectionResults[i].transform; SimplePlayerTest ps = pt.GetComponentInParent<SimplePlayerTest>(); if (ps != null && ps.CurrentHealth <= 0) continue; Vector3 center = pt.position + Vector3.up; float d = Vector3.Distance(ep, center); Vector3 dir = (center - ep).normalized; bool inFOV = Vector3.Angle(transform.forward, dir) < fieldOfView / 2f; if ((inFOV || pt == targetPlayer) && !Physics.Raycast(ep, dir, d, obstacleLayer)) { if (d < minD) { minD = d; closest = pt; found = true; } } }
+        if (found && closest != null) { targetPlayer = closest; if (s != EnemyState.Chase) ChangeState(EnemyState.Chase); } else if (s == EnemyState.Chase) ReturnToPatrol();
+    }
 
-        if (stateTimer <= 0)
-        {
-            // (Giữ nguyên dòng tính attackCooldownTimer của bạn ở đây. Ví dụ của Enemy 4:)
-            attackCooldownTimer = (currentHealth.Value < maxHealth * 0.5f) ? 0.3f : 0.7f;
+    private int FallbackDetect()
+    {
+        int c = 0;
+        foreach (var p in GameObject.FindGameObjectsWithTag("Player")) { if (c >= detectionResults.Length) break; if (Vector3.Distance(transform.position, p.transform.position) <= sightRange) { var col = p.GetComponent<Collider>(); if (col != null) detectionResults[c++] = col; } }
+        if (c == 0 && IsNetworkActive && NetworkManager.Singleton != null) { foreach (var kvp in NetworkManager.Singleton.ConnectedClients) { if (c >= detectionResults.Length) break; var po = kvp.Value.PlayerObject; if (po == null || Vector3.Distance(transform.position, po.transform.position) > sightRange) continue; var col = po.GetComponent<Collider>(); if (col != null) detectionResults[c++] = col; } }
+        return c;
+    }
 
-            // THÊM 3 DÒNG NÀY ĐỂ FIX KẸT ANIMATION:
-            targetPlayer = null; // Xóa mục tiêu cũ để AI reset
-            ChangeState(EnemyState.Idle); // Đưa về trạm trung chuyển Idle
-            detectionTimer = 0f; // Ép AI quét lại và chuyển sang Run NGAY LẬP TỨC ở frame sau!
+    private void ChangeState(EnemyState newState)
+    {
+        if (CurrentStateValue == EnemyState.Attack && newState != EnemyState.Attack) { DisableHitboxes(); }
+        CurrentStateValue = newState;
+        switch (newState)
+        {
+            case EnemyState.Chase:   waitingAtWaypoint = false; if (AgentReady) { agent.isStopped = false; agent.speed = chaseRunSpeed; } break;
+            case EnemyState.Stagger: if (AgentReady) agent.isStopped = true; SetSpeedNet(0f); if (staggerTimer <= 0) staggerTimer = 0.55f; break;
+            case EnemyState.Attack:
+                if (AgentReady) agent.isStopped = true; SetSpeedNet(0f);
+                hasDealtDamage = false; float hp = CurrentHealthValue / maxHealth;
+                int chosen; float dur; if (hp < 0.5f) { chosen = 1; dur = 1.7f; } else { chosen = 0; dur = 1.0f; }
+                if (!isStandaloneMode) attackType.Value = chosen;
+                attackDuration = dur; stateTimer = dur;
+                if (!isStandaloneMode) PlayAttackClientRpc(chosen); else PlayAttackAnimLocal(chosen);
+                break;
+            case EnemyState.Dead: Die(); break;
         }
     }
 
+    private void ApplySpeedAnim(float speed) { if (anim == null || !anim.isActiveAndEnabled || anim.runtimeAnimatorController == null) return; anim.SetFloat(speedParam, speed); }
+    private void SetSpeedNet(float val) { if (isStandaloneMode) ApplySpeedAnim(val); else if (IsServer && !Mathf.Approximately(netSpeed.Value, val)) netSpeed.Value = val; }
+    private void PlayAttackAnimLocal(int type) { if (anim == null) return; anim.ResetTrigger(atk1Trigger); anim.ResetTrigger(atk2Trigger); if (type == 0) anim.SetTrigger(atk1Trigger); else anim.SetTrigger(atk2Trigger); }
+    [ClientRpc] private void PlayAttackClientRpc(int type) => PlayAttackAnimLocal(type);
+
     private void DealConeDamage(float damage, float range, float angle, float knockback)
     {
-        int numHits = Physics.OverlapSphereNonAlloc(transform.position, range, damageResults, playerLayer);
-
-        Vector3 eyePos = eyeTransform != null ? eyeTransform.position : transform.position + Vector3.up * 1.5f;
-
-        for (int i = 0; i < numHits; i++)
-        {
-            Collider col = damageResults[i];
-            if (col == null) continue;
-            Transform player = col.transform;
-            Vector3 dir = (player.position - transform.position).normalized;
-
-            // Kiểm tra góc nêm hình nón phía trước mặt quái
-            if (Vector3.Angle(transform.forward, dir) <= angle / 2f)
-            {
-                float dist = Vector3.Distance(transform.position, player.position);
-                // Tránh cào xuyên tường cản
-                if (!Physics.Raycast(eyePos, dir, dist, obstacleLayer))
-                {
-                    SimplePlayerTest playerScript = player.GetComponentInParent<SimplePlayerTest>();
-                    if (playerScript != null)
-                    {
-                        playerScript.TakeDamage(damage);
-
-                        // Đẩy lùi Player mượt mà bằng vật lý
-                        Vector3 kbDir = dir;
-                        kbDir.y = 0;
-                        kbDir.Normalize();
-                        playerScript.ApplyKnockback(kbDir * knockback);
-                    }
-                }
-            }
-        }
+        int num = Physics.OverlapSphereNonAlloc(transform.position, range, damageResults, playerLayer);
+        if (num == 0) { int c = 0; foreach (var p in GameObject.FindGameObjectsWithTag("Player")) { if (c >= damageResults.Length) break; if (Vector3.Distance(transform.position, p.transform.position) <= range) { var col = p.GetComponent<Collider>(); if (col != null) damageResults[c++] = col; } } num = c; }
+        Vector3 ep = eyeTransform != null ? eyeTransform.position : transform.position + Vector3.up * 1.5f;
+        for (int i = 0; i < num; i++) { if (damageResults[i] == null) continue; Transform pl = damageResults[i].transform; Vector3 dir = (pl.position - transform.position).normalized; if (Vector3.Angle(transform.forward, dir) <= angle / 2f && !Physics.Raycast(ep, dir, Vector3.Distance(transform.position, pl.position), obstacleLayer)) { var ps = pl.GetComponentInParent<SimplePlayerTest>(); if (ps != null) { ps.TakeDamage(damage); Vector3 kb = dir; kb.y = 0; ps.ApplyKnockback(kb.normalized * knockback); } } }
     }
 
     public void TakeDamage(float damage)
     {
-        if (!IsServer || currentState.Value == EnemyState.Dead) return;
-
-        currentHealth.Value -= damage;
-        hitCounter.Value++; // Tăng biến mạng để đồng bộ trigger Anhit cho tất cả các Client
-
-        if (currentHealth.Value <= 0)
-        {
-            ChangeState(EnemyState.Dead);
-            return;
-        }
-
-        // Tính toán sát thương nhận dồn để khựng choáng
-        float now = Time.time;
-        if (now - lastDamageTime > 3f)
-        {
-            recentHitCount = 0;
-        }
-        recentHitCount++;
-        lastDamageTime = now;
-
-        // Nếu nhận sát thương lớn >= 25 HP hoặc bị đánh liên tiếp 3 hit -> Khựng stagger ăn hit
-        bool shouldStagger = (damage >= 25f || recentHitCount >= 3) && (currentState.Value != EnemyState.Stagger);
-
-        if (shouldStagger)
-        {
-            recentHitCount = 0;
-            staggerTimer = 0.55f;
-            ChangeState(EnemyState.Stagger);
-        }
-        else
-        {
-            // Phản xạ Lướt né tránh (Dodge Reflex) ngẫu nhiên 30% khi bị người chơi tấn công lúc đang di chuyển
-            if (!isDodging && Random.value < 0.3f && (currentState.Value == EnemyState.Run || currentState.Value == EnemyState.Walk))
-            {
-                ExecuteDodge();
-            }
-        }
-    }
-
-    private void ExecuteDodge()
-    {
-        if (targetPlayer == null) return;
-
-        Vector3 toPlayer = (targetPlayer.position - transform.position).normalized;
-        Vector3 perpendicular = new Vector3(-toPlayer.z, 0, toPlayer.x);
-
-        // Ngẫu nhiên chọn né bên trái hay bên phải
-        if (Random.value < 0.5f) perpendicular = -perpendicular;
-
-        Vector3 dodgeTarget = transform.position + perpendicular * 3.0f;
-
-        NavMeshHit hit;
-        if (NavMesh.SamplePosition(dodgeTarget, out hit, 3f, NavMesh.AllAreas))
-        {
-            isDodging = true;
-            dodgeTimer = 0.35f; // Lướt nhanh trong 0.35 giây
-            if (agent.isActiveAndEnabled)
-            {
-                agent.isStopped = false;
-                agent.speed = (currentHealth.Value < maxHealth * 0.5f) ? 15f : 11f; // Chạy lướt siêu tốc độ khi máu yếu
-                agent.SetDestination(hit.position);
-            }
-        }
-    }
-
-    private void UpdateAgentSpeed()
-    {
-        if (!agent.isActiveAndEnabled) return;
-
-        // Chạy nhanh hơn khi dưới 50% HP biểu thị cuồng bạo
-        if (currentHealth.Value < maxHealth * 0.5f)
-        {
-            agent.speed = 6.2f;
-        }
-        else
-        {
-            agent.speed = 4.8f;
-        }
-    }
-
-    private Vector3 GetRandomNavMeshPoint(float radius)
-    {
-        Vector3 randomDirection = Random.insideUnitSphere * radius;
-        randomDirection += transform.position;
-        NavMeshHit hit;
-        if (NavMesh.SamplePosition(randomDirection, out hit, radius, 1))
-        {
-            return hit.position;
-        }
-        return Vector3.zero;
+        if (!isStandaloneMode && (!IsServer || CurrentStateValue == EnemyState.Dead)) return;
+        if (isStandaloneMode && CurrentStateValue == EnemyState.Dead) return;
+        CurrentHealthValue -= damage;
+        if (!isStandaloneMode) hitCounter.Value++; else if (anim != null) anim.SetTrigger(hitTrigger);
+        if (CurrentHealthValue <= 0) { ChangeState(EnemyState.Dead); return; }
+        float now = Time.time; if (now - lastDamageTime > 3f) recentHitCount = 0; recentHitCount++; lastDamageTime = now;
+        if ((damage >= 25f || recentHitCount >= 3) && CurrentStateValue != EnemyState.Stagger) { recentHitCount = 0; staggerTimer = 0.55f; ChangeState(EnemyState.Stagger); }
     }
 
     private void Die()
     {
-        if (agent.isActiveAndEnabled) agent.isStopped = true;
-        DropExperience();
-        DropItems();
-        // Tắt va chạm hoặc thực hiện các hiệu ứng chết khác ở đây nếu cần
-
-        // Hủy đối tượng qua mạng sau 2 giây chơi hoàn tất hoạt ảnh chết
-        Invoke(nameof(DespawnEnemy), 2.0f);
+        if (AgentReady) agent.isStopped = true; SetSpeedNet(0f);
+        if (anim != null) { anim.ResetTrigger(dieTrigger); anim.SetTrigger(dieTrigger); }
+        DisableHitboxes(); DropExperience(); DropItems(); Invoke(nameof(DespawnEnemy), 2.5f);
     }
 
     private void DropExperience()
     {
         if (expGemPrefab == null) return;
-
-        string uniqueDropId = System.Guid.NewGuid().ToString();
-        bool isNetworkActive = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
-        Transform spawnPoint = expDropPoint != null ? expDropPoint : transform;
-        Vector3 basePos = spawnPoint.position;
-
-        // Cấu hình khoảng cách cố định cách nhau 0.6m tạo thành hình vuông quanh tâm chân quái
-        float dist = 0.6f;
-        Vector3[] spawnPositions = new Vector3[]
-        {
-            basePos + new Vector3(dist, 0.1f, dist),
-            basePos + new Vector3(-dist, 0.1f, dist),
-            basePos + new Vector3(dist, 0.1f, -dist),
-            basePos + new Vector3(-dist, 0.1f, -dist)
-        };
-
-        for (int i = 0; i < 4; i++)
-        {
-            Vector3 spawnPos = spawnPositions[i];
-
-            if (!isNetworkActive)
-            {
-                GameObject gem = Instantiate(expGemPrefab, spawnPos, Quaternion.identity);
-                var gemScript = gem.GetComponent<ExperienceGem>();
-                if (gemScript != null)
-                {
-                    gemScript.expAmount = expDropAmount;
-                    gemScript.DropGroupId = uniqueDropId;
-                }
-            }
-            else if (IsServer)
-            {
-                GameObject gem = Instantiate(expGemPrefab, spawnPos, Quaternion.identity);
-                var gemScript = gem.GetComponent<ExperienceGem>();
-                if (gemScript != null)
-                {
-                    gemScript.expAmount = expDropAmount;
-                    gemScript.DropGroupId = uniqueDropId;
-                }
-
-                var netObj = gem.GetComponent<NetworkObject>();
-                if (netObj != null) netObj.Spawn();
-            }
-        }
+        string uid = System.Guid.NewGuid().ToString(); Transform sp = expDropPoint != null ? expDropPoint : transform; float d = 0.6f;
+        Vector3[] pos = { sp.position + new Vector3(d,0.1f,d), sp.position + new Vector3(-d,0.1f,d), sp.position + new Vector3(d,0.1f,-d), sp.position + new Vector3(-d,0.1f,-d) };
+        bool na = IsNetworkActive;
+        foreach (var p in pos) { if (isStandaloneMode || !na) { var g = Instantiate(expGemPrefab, p, Quaternion.identity); var gem = g.GetComponent<ExperienceGem>(); if (gem != null) { gem.expAmount = expDropAmount; gem.DropGroupId = uid; } } else if (IsServer) { var g = Instantiate(expGemPrefab, p, Quaternion.identity); var gem = g.GetComponent<ExperienceGem>(); if (gem != null) { gem.expAmount = expDropAmount; gem.DropGroupId = uid; } var no = g.GetComponent<NetworkObject>(); if (no != null) no.Spawn(); } }
     }
 
     private void DropItems()
     {
-        if (repairItemPrefab == null) return;
-        if (Random.value > repairItemDropChance) return;
-
-        bool isNetworkActive = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
-        Transform spawnPoint = expDropPoint != null ? expDropPoint : transform;
-        Vector3 spawnPos = spawnPoint.position + Vector3.up * 0.2f;
-
-        if (!isNetworkActive)
-        {
-            Instantiate(repairItemPrefab, spawnPos, Quaternion.identity);
-        }
-        else if (IsServer)
-        {
-            GameObject itemObj = Instantiate(repairItemPrefab, spawnPos, Quaternion.identity);
-            var netObj = itemObj.GetComponent<NetworkObject>();
-            if (netObj != null) netObj.Spawn();
-        }
+        if (repairItemPrefab == null || Random.value > repairItemDropChance) return;
+        Transform sp = expDropPoint != null ? expDropPoint : transform; Vector3 pv = sp.position + Vector3.up * 0.2f; bool na = IsNetworkActive;
+        if (isStandaloneMode || !na) Instantiate(repairItemPrefab, pv, Quaternion.identity);
+        else if (IsServer) { var g = Instantiate(repairItemPrefab, pv, Quaternion.identity); var no = g.GetComponent<NetworkObject>(); if (no != null) no.Spawn(); }
     }
 
-    private void DespawnEnemy()
-    {
-        if (IsServer && IsSpawned)
-        {
-            GetComponent<NetworkObject>().Despawn();
-        }
-    }
-
-    private void ChangeState(EnemyState newState)
-    {
-        // Tự động tắt hitbox vũ khí/vuốt khi chuyển từ Attack sang trạng thái khác để tránh kẹt sát thương
-        if (currentState.Value == EnemyState.Attack && newState != EnemyState.Attack)
-        {
-            DisableClawHitbox();
-            DisableWeaponHitbox();
-        }
-
-        currentState.Value = newState;
-
-        if (newState == EnemyState.Idle)
-        {
-            stateTimer = Random.Range(1.5f, idleTimeMax);
-            if (agent.isActiveAndEnabled) agent.isStopped = true;
-        }
-        if (newState == EnemyState.Walk)
-        {
-            hasDestination = false;
-            if (agent.isActiveAndEnabled) agent.isStopped = false;
-        }
-        if (newState == EnemyState.Run)
-        {
-            isDodging = false;
-            hasDestination = false;
-            if (agent.isActiveAndEnabled) agent.isStopped = false;
-        }
-        if (newState == EnemyState.Search)
-        {
-            searchTimer = 3.5f; // Tìm kiếm trong 3.5 giây
-            searchLookTimer = 0f;
-            if (agent.isActiveAndEnabled) agent.isStopped = false;
-        }
-        if (newState == EnemyState.Stagger)
-        {
-            if (agent.isActiveAndEnabled) agent.isStopped = true;
-            if (staggerTimer <= 0) staggerTimer = 0.55f;
-        }
-        if (newState == EnemyState.Attack)
-        {
-            hasDealtDamage = false;
-
-            float hpPercent = currentHealth.Value / maxHealth;
-
-            // QUYẾT ĐỊNH ĐÒN ĐÁNH THEO LƯỢNG MÁU HP:
-            // 1. Khi còn đủ 100% HP -> Chắc chắn sử dụng Attack 1 (qual44attack)
-            // 2. Khi HP dưới 50% -> Chắc chắn sử dụng Attack Combo (qual4combo)
-            // 3. Khi HP ở khoảng giữa (50% <= HP < 100%) -> Ưu tiên Attack 1 hoặc xoay vòng ngẫu nhiên
-            if (hpPercent >= 1.0f)
-            {
-                attackType.Value = 0; // Attack 1
-                attackDuration = 1.0f; // Khớp thời lượng anim qual44attack
-            }
-            else if (hpPercent < 0.5f)
-            {
-                attackType.Value = 1; // Attack Combo
-                attackDuration = 1.7f; // Khớp thời lượng anim qual4combo
-            }
-            else
-            {
-                // Khoảng giữa 50% - 99%: sử dụng đòn vung đơn Attack 1 làm mặc định chiến đấu
-                attackType.Value = 0;
-                attackDuration = 1.0f;
-            }
-
-            stateTimer = attackDuration;
-
-            // Kích hoạt đồng bộ hóa hoạt ảnh tấn công qua ClientRpc đến toàn bộ client
-            PlayAttackAnimationClientRpc(attackType.Value);
-        }
-        if (newState == EnemyState.Dead) Die();
-    }
-
-    #endregion
-
-    #region Client Animation Synchronization
-
-    // Hàm chạy trên toàn bộ máy Client khi currentState đổi để đồng bộ Animator chuyển động
-    private void OnStateChanged(EnemyState previousValue, EnemyState newValue)
-    {
-        clientLocalState = (EnemyState)(-1);
-    }
-
-    private bool SyncAnimationState(EnemyState newState)
-    {
-        if (anim == null || !anim.isActiveAndEnabled || anim.runtimeAnimatorController == null) return false;
-
-        // Reset toàn bộ trigger cũ để tránh xung đột chuyển động
-        anim.ResetTrigger(idleTriggerName);
-        anim.ResetTrigger(walkTriggerName);
-        anim.ResetTrigger(runTriggerName);
-        anim.ResetTrigger(hitTriggerName);
-        anim.ResetTrigger(dieTriggerName);
-
-        switch (newState)
-        {
-            case EnemyState.Idle:
-                anim.SetTrigger(idleTriggerName);
-                break;
-            case EnemyState.Walk:
-                anim.SetTrigger(walkTriggerName);
-                break;
-            case EnemyState.Search: anim.SetTrigger(runTriggerName); break;
-            case EnemyState.Run:
-                anim.SetTrigger(runTriggerName);
-                break;
-            case EnemyState.Stagger:
-                anim.SetTrigger(hitTriggerName); // Chạy hoạt ảnh Qual4Anhit
-                break;
-            case EnemyState.Dead:
-                anim.SetTrigger(dieTriggerName); // Chạy hoạt ảnh Qual4Dle
-                break;
-        }
-        return true;
-    }
-
-    [ClientRpc]
-    private void PlayAttackAnimationClientRpc(int type)
-    {
-        if (anim == null) return;
-
-        anim.ResetTrigger(attack1TriggerName);
-        anim.ResetTrigger(attackComboTriggerName);
-
-        if (type == 0)
-        {
-            anim.SetTrigger(attack1TriggerName); // Kích hoạt qual44attack
-        }
-        else if (type == 1)
-        {
-            anim.SetTrigger(attackComboTriggerName); // Kích hoạt qual4combo
-        }
-    }
-
-    #endregion
-
-    #region Animation Events & Hitbox Control
-
-    // Các hàm này được gọi từ Animation Events tại các keyframe vung tay/vuốt để bật/tắt collider gây sát thương
-    public void EnableClawHitbox()
-    {
-        if (clawHitbox != null)
-        {
-            clawHitbox.SetActive(true);
-        }
-    }
-
-    public void DisableClawHitbox()
-    {
-        if (clawHitbox != null)
-        {
-            clawHitbox.SetActive(false);
-        }
-    }
-
-    public void EnableWeaponHitbox()
-    {
-        if (weaponHitbox != null)
-        {
-            weaponHitbox.SetActive(true);
-        }
-    }
-
-    public void DisableWeaponHitbox()
-    {
-        if (weaponHitbox != null)
-        {
-            weaponHitbox.SetActive(false);
-        }
-    }
-
-    #endregion
-
-    #region Visual Effects (Enrage)
-
-    private void UpdateEnrageVisuals()
-    {
-        if (modelRenderers == null || modelRenderers.Length == 0) return;
-
-        if (propBlock == null) propBlock = new MaterialPropertyBlock();
-
-        bool isEnraged = currentHealth.Value < maxHealth * 0.5f;
-
-        if (isEnraged)
-        {
-            wasEnraged = true;
-            // Nhấp nháy màu tím huyền bí biểu thị bóng tối thức tỉnh cuồng nộ
-            float pingPong = Mathf.PingPong(Time.time * 3f, 1f);
-            Color enrageColor = Color.Lerp(Color.white, new Color(0.5f, 0f, 0.8f), pingPong); // Tím huyền ảo
-
-            foreach (var r in modelRenderers)
-            {
-                if (r != null)
-                {
-                    r.GetPropertyBlock(propBlock);
-                    propBlock.SetColor("_Color", enrageColor);
-                    r.SetPropertyBlock(propBlock);
-                }
-            }
-        }
-        else if (wasEnraged)
-        {
-            wasEnraged = false;
-            foreach (var r in modelRenderers)
-            {
-                if (r != null)
-                {
-                    r.GetPropertyBlock(propBlock);
-                    propBlock.SetColor("_Color", Color.white);
-                    r.SetPropertyBlock(propBlock);
-                }
-            }
-        }
-    }
-
-    #endregion
-
-    // Hiển thị công cụ trực quan hóa tầm nhìn trên Unity Scene Editor hỗ trợ lập trình viên
-    private void OnDrawGizmosSelected()
-    {
-        if (eyeTransform != null)
-        {
-            // Tầm quét Player (Màu Tím huyền bí)
-            Gizmos.color = new Color(0.6f, 0.2f, 0.8f, 0.4f);
-            Gizmos.DrawWireSphere(eyeTransform.position, sightRange);
-
-            // Góc nhìn FOV
-            Vector3 leftRay = Quaternion.AngleAxis(-fieldOfView / 2f, Vector3.up) * transform.forward;
-            Vector3 rightRay = Quaternion.AngleAxis(fieldOfView / 2f, Vector3.up) * transform.forward;
-            Gizmos.DrawRay(eyeTransform.position, leftRay * sightRange);
-            Gizmos.DrawRay(eyeTransform.position, rightRay * sightRange);
-
-            // Tầm đòn đánh cận chiến (Màu Đỏ)
-            Gizmos.color = Color.red;
-            Gizmos.DrawWireSphere(transform.position, attackRange);
-        }
-    }
+    private void DespawnEnemy() { if (isStandaloneMode) { Destroy(gameObject); return; } if (IsServer && IsSpawned) GetComponent<NetworkObject>().Despawn(); }
+    private void SnapToNavMesh() { if (agent == null || !agent.isActiveAndEnabled) return; if (!agent.isOnNavMesh) { NavMeshHit h; if (NavMesh.SamplePosition(transform.position, out h, 10f, NavMesh.AllAreas)) agent.Warp(h.position); } }
+    private void DisableHitboxes() { if (clawHitbox != null) clawHitbox.SetActive(false); if (weaponHitbox != null) weaponHitbox.SetActive(false); }
+    public void EnableClawHitbox()   { if (clawHitbox   != null) clawHitbox.SetActive(true); }
+    public void DisableClawHitbox()  { if (clawHitbox   != null) clawHitbox.SetActive(false); }
+    public void EnableWeaponHitbox() { if (weaponHitbox != null) weaponHitbox.SetActive(true); }
+    public void DisableWeaponHitbox(){ if (weaponHitbox != null) weaponHitbox.SetActive(false); }
 }

@@ -6,6 +6,10 @@ public class EnemyHealthBar : MonoBehaviour
 {
     [Header("References")]
     public Enemy1_DapBua enemy;
+    public Enemy2_Zombie enemy2;
+    public Enemy3_Buaa enemy3;
+    public Enemy4_Bongtoi enemy4;
+    public Enemy5_PhuThuy enemy5;
     public UIDocument uiDocument;
 
     private VisualElement progressBar; 
@@ -53,42 +57,112 @@ public class EnemyHealthBar : MonoBehaviour
             progressBar = root.Q<VisualElement>("progress-bar"); 
             yellowBar = root.Q<VisualElement>("yellow-bar");
             nameLabel = root.Q<Label>("enemy-name");
-            
-            if (nameLabel != null && enemy != null)
-            {
-                nameLabel.text = enemy.gameObject.name;
-            }
         }
 
-        if (enemy == null) enemy = GetComponentInParent<Enemy1_DapBua>();
+        // Tự động tìm kiếm Enemy component ở cha nếu chưa được gán
+        FindEnemyInParent();
+
+        // Gán tên và subscribe sự kiện máu thay đổi
+        InitEnemyHealthAndName();
+    }
+
+    private void FindEnemyInParent()
+    {
+        if (enemy == null && enemy2 == null && enemy3 == null && enemy4 == null && enemy5 == null)
+        {
+            enemy = GetComponentInParent<Enemy1_DapBua>();
+            if (enemy != null) return;
+
+            enemy2 = GetComponentInParent<Enemy2_Zombie>();
+            if (enemy2 != null) return;
+
+            enemy3 = GetComponentInParent<Enemy3_Buaa>();
+            if (enemy3 != null) return;
+
+            enemy4 = GetComponentInParent<Enemy4_Bongtoi>();
+            if (enemy4 != null) return;
+
+            enemy5 = GetComponentInParent<Enemy5_PhuThuy>();
+        }
+    }
+
+    private void InitEnemyHealthAndName()
+    {
+        string enemyName = "Enemy";
+        float curHp = 100f;
 
         if (enemy != null)
         {
-            // Cập nhật máu ban đầu dựa trên maxHealth thực tế của Enemy
-            UpdateHealthUI(0f, enemy.currentHealth.Value);
+            enemyName = enemy.gameObject.name;
+            curHp = enemy.currentHealth.Value;
             enemy.currentHealth.OnValueChanged += UpdateHealthUI;
         }
+        else if (enemy2 != null)
+        {
+            enemyName = enemy2.gameObject.name;
+            curHp = enemy2.currentHealth.Value;
+            enemy2.currentHealth.OnValueChanged += UpdateHealthUI;
+        }
+        else if (enemy3 != null)
+        {
+            enemyName = enemy3.gameObject.name;
+            curHp = enemy3.currentHealth.Value;
+            enemy3.currentHealth.OnValueChanged += UpdateHealthUI;
+        }
+        else if (enemy4 != null)
+        {
+            enemyName = enemy4.gameObject.name;
+            curHp = enemy4.currentHealth.Value;
+            enemy4.currentHealth.OnValueChanged += UpdateHealthUI;
+        }
+        else if (enemy5 != null)
+        {
+            enemyName = enemy5.gameObject.name;
+            curHp = enemy5.currentHealth.Value;
+            enemy5.currentHealth.OnValueChanged += UpdateHealthUI;
+        }
+
+        // Loại bỏ hậu tố (Clone) để tên hiển thị đẹp mắt
+        if (enemyName.Contains("(Clone)"))
+        {
+            enemyName = enemyName.Replace("(Clone)", "").Trim();
+        }
+
+        if (nameLabel != null)
+        {
+            nameLabel.text = enemyName;
+        }
+
+        UpdateHealthUI(0f, curHp);
     }
 
     private void OnDisable()
     {
-        if (enemy != null)
-        {
-            enemy.currentHealth.OnValueChanged -= UpdateHealthUI;
-        }
+        if (enemy != null) enemy.currentHealth.OnValueChanged -= UpdateHealthUI;
+        if (enemy2 != null) enemy2.currentHealth.OnValueChanged -= UpdateHealthUI;
+        if (enemy3 != null) enemy3.currentHealth.OnValueChanged -= UpdateHealthUI;
+        if (enemy4 != null) enemy4.currentHealth.OnValueChanged -= UpdateHealthUI;
+        if (enemy5 != null) enemy5.currentHealth.OnValueChanged -= UpdateHealthUI;
     }
 
-    // Sửa kiểu dữ liệu từ int sang float để hết lỗi CS0123 và CS1503
+    private float GetMaxHealth()
+    {
+        if (enemy != null) return enemy.maxHealth;
+        if (enemy2 != null) return enemy2.maxHealth;
+        if (enemy3 != null) return enemy3.maxHealth;
+        if (enemy4 != null) return enemy4.maxHealth;
+        if (enemy5 != null) return enemy5.maxHealth;
+        return 100f;
+    }
+
     private void UpdateHealthUI(float oldVal, float newVal)
     {
-        if (enemy != null)
-        {
-            float maxHp = enemy.maxHealth > 0 ? enemy.maxHealth : 100f; 
-            float percent = Mathf.Clamp01(newVal / maxHp) * 100f;
-            
-            if (progressBar != null) progressBar.style.width = Length.Percent(percent);
-            if (yellowBar != null) yellowBar.style.width = Length.Percent(percent);
-        }
+        float maxHp = GetMaxHealth();
+        if (maxHp <= 0f) maxHp = 100f;
+        float percent = Mathf.Clamp01(newVal / maxHp) * 100f;
+        
+        if (progressBar != null) progressBar.style.width = Length.Percent(percent);
+        if (yellowBar != null) yellowBar.style.width = Length.Percent(percent);
     }
 
     private void Update()

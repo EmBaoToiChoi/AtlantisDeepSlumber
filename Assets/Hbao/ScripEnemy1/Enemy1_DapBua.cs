@@ -2,654 +2,367 @@ using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.AI;
 
+/// <summary>
+/// Enemy 1 - Đập Búa
+/// Patrol: 3 waypoints | Walk (tuần tra) → Run (đuổi Player) → Idle (đứng)
+/// Animator Float "Speed": 0=Idle, 0.5=Walk, 1=Run
+/// </summary>
 public class Enemy1_DapBua : NetworkBehaviour
 {
-    public enum EnemyState
-    {
-        Idle,
-        Walk,
-        Run,
-        Search,    // Trạng thái săn tìm player tại vị trí cuối cùng
-        Stagger,   // Trạng thái bị khựng / choáng khi nhận sát thương lớn
-        Attack,
-        Dead
-    }
+    public enum EnemyState { Patrol, Chase, Stagger, Attack, Dead }
 
-    [Header("Health Settings")]
+    // ─── Health ────────────────────────────────────────────────
+    [Header("Health")]
     public float maxHealth = 100f;
     public NetworkVariable<float> currentHealth = new NetworkVariable<float>(
-        100f,
-        NetworkVariableReadPermission.Everyone,
-        NetworkVariableWritePermission.Server
-    );
+        100f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
+    // ─── Network State Sync ────────────────────────────────────
     public NetworkVariable<EnemyState> currentState = new NetworkVariable<EnemyState>(
-        EnemyState.Idle,
-        NetworkVariableReadPermission.Everyone,
-        NetworkVariableWritePermission.Server
-    );
-
+        EnemyState.Patrol, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     public NetworkVariable<bool> isEnraged = new NetworkVariable<bool>(
-        false,
-        NetworkVariableReadPermission.Everyone,
-        NetworkVariableWritePermission.Server
-    );
+        false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
-    [Header("Advanced AI Sync")]
-    public NetworkVariable<int> hitCounter = new NetworkVariable<int>(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
-    public NetworkVariable<int> attackType = new NetworkVariable<int>(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+    [Header("Network Anim Sync")]
+    /// <summary>Float: 0=Idle, 0.5=Walk, 1=Run — Base Layer</summary>
+    public NetworkVariable<float> netSpeed = new NetworkVariable<float>(
+        0f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+    public NetworkVariable<int> hitCounter = new NetworkVariable<int>(
+        0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+    public NetworkVariable<int> attackType = new NetworkVariable<int>(
+        0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
-    // ------------------------------------------------------------------
-    //  Biến fallback cho Standalone (không Netcode)
-    // ------------------------------------------------------------------
+    // ─── Standalone Fallback ───────────────────────────────────
     private float localHealth;
-    private EnemyState localState = EnemyState.Idle;
-    private bool localIsEnraged = false;
-    private bool isStandaloneMode = false;
+    private EnemyState localState = EnemyState.Patrol;
+    private bool localIsEnraged;
+    private bool isStandaloneMode;
+    private bool IsNetworkActive => NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
 
-    /// <summary>true nếu NetworkManager đang chạy và lắng nghe.</summary>
-    private bool IsNetworkActive =>
-        NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
-
-    // Trạng thái đọc hợp nhất (standalone hoặc network)
     private EnemyState CurrentStateValue
     {
         get => isStandaloneMode ? localState : currentState.Value;
-        set
-        {
-            if (isStandaloneMode) localState = value;
-            else currentState.Value = value;
-        }
+        set { if (isStandaloneMode) localState = value; else currentState.Value = value; }
     }
-
     private float CurrentHealthValue
     {
         get => isStandaloneMode ? localHealth : currentHealth.Value;
-        set
-        {
-            if (isStandaloneMode) localHealth = value;
-            else currentHealth.Value = value;
-        }
+        set { if (isStandaloneMode) localHealth = value; else currentHealth.Value = value; }
     }
-
     private bool IsEnragedValue
     {
         get => isStandaloneMode ? localIsEnraged : isEnraged.Value;
-        set
-        {
-            if (isStandaloneMode) localIsEnraged = value;
-            else isEnraged.Value = value;
-        }
+        set { if (isStandaloneMode) localIsEnraged = value; else isEnraged.Value = value; }
     }
 
-    private bool isNextAttackLeft = true;
-
+    // ─── Components ────────────────────────────────────────────
     [Header("Components")]
     public NavMeshAgent agent;
     public Animator anim;
     public Transform eyeTransform;
 
-    [Header("Melee Hitbox Settings")]
+    [Header("Melee Hitboxes")]
     public GameObject hammerHitbox;
     public GameObject hammerHitboxLeft;
     public GameObject hammerHitboxRight;
 
-    [Header("Experience Drops")]
+    // ─── Patrol Waypoints ──────────────────────────────────────
+    [Header("Patrol Waypoints (3 điểm hình tam giác)")]
+    public Transform[] waypoints = new Transform[3];
+
+    // ─── Drops ─────────────────────────────────────────────────
+    [Header("Drops")]
     public GameObject expGemPrefab;
     public float expDropAmount = 25f;
-    public Transform expDropPoint; // Kéo Transform dưới chân quái vào đây
-
-    [Header("Item Drop Settings")]
+    public Transform expDropPoint;
     public GameObject repairItemPrefab;
     [Range(0f, 1f)] public float repairItemDropChance = 0.3f;
 
+    // ─── AI Settings ───────────────────────────────────────────
     [Header("AI Settings")]
     public float sightRange = 15f;
     public float fieldOfView = 90f;
     public float attackRange = 2f;
-    public float walkRadius = 10f;
-    public float idleTimeMax = 4f;
+    public float patrolWalkSpeed = 2.5f;  // Tốc di chuyển khi tuần tra (Walk)
+    public float chaseRunSpeed  = 5f;     // Tốc đuổi Player (Run)
+    public float patrolWaitMin = 1f;
+    public float patrolWaitMax = 4f;
+    [Range(0f, 1f)] public float patrolMoveChance = 0.7f;
 
     [Header("Layers")]
-    [Header("Animator Parameter/Trigger Names")]
-    public string idleTriggerName = "Idle";
-    public string walkTriggerName = "Walk";
-    public string runTriggerName = "Run";
-    public string hitTriggerName = "Hit";
-    public string dieTriggerName = "Die";
     public LayerMask playerLayer;
     public LayerMask obstacleLayer;
 
-    [Header("Pro AI Combat Settings")]
-    private Transform targetPlayer;
-    private float stateTimer;
-    private bool hasDestination;
+    // ─── Animator Parameters ───────────────────────────────────
+    [Header("Animator Parameter Names")]
+    [Tooltip("Float: 0=Idle, 0.5=Walk, 1=Run — Base Layer")]
+    public string speedParam      = "Speed";       // Float  — Base Layer
+    public string hitTrigger      = "Hit";         // Trigger — Anhit Layer
+    public string dieTrigger      = "Die";         // Trigger — Base Layer
+    public string atkLeftTrigger  = "AttackLeft";  // Trigger — Attack Layer
+    public string atkRightTrigger = "AttackRight"; // Trigger — Attack Layer
+    public string atkComboTrigger = "AttackCombo"; // Trigger — Attack Layer
 
-    private Vector3 lastKnownPlayerPosition;
-    private float searchTimer;
-    private float searchLookTimer;
-    private float searchLookDirection = 1f;
+    // ─── Runtime ───────────────────────────────────────────────
+    private Transform targetPlayer;
+    private int currentWaypointIndex = -1;
+    private bool waitingAtWaypoint;
+    private float waypointWaitTimer;
 
     private float detectionTimer;
     private const float DETECTION_INTERVAL = 0.15f;
-
     private float staggerTimer;
-    private bool hasRoared = false;
-
     private float attackCooldownTimer;
-    private float tacticalTimer;
-    private int tacticalState = 0;
-
-    private bool isDodging = false;
-    private float dodgeTimer;
-
+    private float attackDuration;
+    private float stateTimer;
+    private bool hasDealtDamage1, hasDealtDamage2;
+    private bool isNextAttackLeft = true;
+    private bool hasRoared;
     private float lastDamageTime;
     private int recentHitCount;
-
-    private bool hasDealtDamage1;
-    private bool hasDealtDamage2;
-    private float attackDuration;
+    private bool isDodging;
+    private float dodgeTimer;
 
     private readonly Collider[] detectionResults = new Collider[8];
-    private readonly Collider[] damageResults = new Collider[8];
+    private readonly Collider[] damageResults    = new Collider[8];
+    private bool AgentReady => agent != null && agent.isActiveAndEnabled && agent.isOnNavMesh;
 
-    private EnemyState clientLocalState = (EnemyState)(-1);
-    private int framesSinceActive = 0;
-
-    // ------------------------------------------------------------------
-    //  Awake
-    // ------------------------------------------------------------------
+    // ══════════════════════════════════════════════════════════
+    //  AWAKE / START / SPAWN
+    // ══════════════════════════════════════════════════════════
     private void Awake()
     {
-        if (anim == null)
+        if (anim == null) anim = GetComponent<Animator>() ?? GetComponentInChildren<Animator>(true);
+        var na = GetComponent<Unity.Netcode.Components.NetworkAnimator>();
+        if (na != null)
         {
-            anim = GetComponent<Animator>();
-            if (anim == null)
-                anim = GetComponentInChildren<Animator>(true);
-        }
-
-        var netAnim = GetComponent<Unity.Netcode.Components.NetworkAnimator>();
-        if (netAnim != null)
-        {
-            if (anim == null)
-            {
-                Debug.LogError($"[{gameObject.name}] Không tìm thấy Animator! Đang vô hiệu hóa NetworkAnimator.");
-                netAnim.enabled = false;
-            }
-            else if (anim.runtimeAnimatorController == null)
-            {
-                Debug.LogError($"[{gameObject.name}] Animator chưa được gán Controller! Đang vô hiệu hóa NetworkAnimator.");
-                netAnim.enabled = false;
-            }
-            else
-            {
-                netAnim.Animator = anim;
-            }
+            if (anim == null || anim.runtimeAnimatorController == null) na.enabled = false;
+            else na.Animator = anim;
         }
     }
 
-    // ------------------------------------------------------------------
-    //  Start - Khởi tạo Standalone khi không có Netcode
-    // ------------------------------------------------------------------
     private void Start()
     {
-        if (!IsNetworkActive)
-        {
-            isStandaloneMode = true;
-            InitStandalone();
-        }
+        if (!IsNetworkActive) { isStandaloneMode = true; InitStandalone(); }
     }
 
     private void InitStandalone()
     {
-        Debug.Log($"[{gameObject.name}] Chạy ở chế độ STANDALONE.");
-        localHealth = maxHealth;
-        localIsEnraged = false;
-        localState = EnemyState.Idle;
-        stateTimer = Random.Range(2f, idleTimeMax);
-
-        // Snap vào NavMesh
-        SnapToNavMesh();
-
-        // Tắt hitbox
-        if (hammerHitbox != null) hammerHitbox.SetActive(false);
-        if (hammerHitboxLeft != null) hammerHitboxLeft.SetActive(false);
-        if (hammerHitboxRight != null) hammerHitboxRight.SetActive(false);
-
-        // Khởi animation
-        SyncAnimationState(EnemyState.Idle);
+        localHealth = maxHealth; localState = EnemyState.Patrol;
+        SnapToNavMesh(); DisableHitboxes();
+        ApplySpeedAnim(0f);
+        GoToNextWaypoint();
     }
 
-    // ------------------------------------------------------------------
-    //  OnNetworkSpawn
-    // ------------------------------------------------------------------
     public override void OnNetworkSpawn()
     {
         isStandaloneMode = false;
 
-        currentState.OnValueChanged += OnStateChanged;
-        OnStateChanged(currentState.Value, currentState.Value);
+        var nt = GetComponent<Unity.Netcode.Components.NetworkTransform>();
+        if (nt != null) { nt.PositionThreshold = 0.001f; nt.RotAngleThreshold = 0.01f; nt.ScaleThreshold = 0.01f; }
 
-        var netTransform = GetComponent<Unity.Netcode.Components.NetworkTransform>();
-        if (netTransform != null)
-        {
-            netTransform.PositionThreshold = 0.001f;
-            netTransform.RotAngleThreshold = 0.01f;
-            netTransform.ScaleThreshold = 0.01f;
-        }
+        // ── Client-side: nhận sync animation từ Server ──
+        // Base Layer: Speed float (Idle/Walk/Run)
+        netSpeed.OnValueChanged   += (_, v) => ApplySpeedAnim(v);
+        // Anhit Layer: trigger synced via hitCounter
+        hitCounter.OnValueChanged += (_, _) => { if (anim != null) anim.SetTrigger(hitTrigger); };
+
+        // Khởi tạo animation theo giá trị hiện tại
+        ApplySpeedAnim(netSpeed.Value);
 
         if (IsServer)
         {
             currentHealth.Value = maxHealth;
             isEnraged.Value = false;
-            ChangeState(EnemyState.Idle);
             SnapToNavMesh();
+            DisableHitboxes();
+            GoToNextWaypoint();
         }
-        else // ---> THÊM ĐOẠN NÀY VÀO <---
+        else
         {
-            // TẮT NavMeshAgent trên Client để NetworkTransform của Server thoải mái cập nhật vị trí
-            if (agent != null)
-            {
-                agent.enabled = false;
-            }
+            // Client KHÔNG điều khiển NavMeshAgent - NetworkTransform từ Server
+            if (agent != null) agent.enabled = false;
         }
-
-        if (hammerHitbox != null) hammerHitbox.SetActive(false);
-        if (hammerHitboxLeft != null) hammerHitboxLeft.SetActive(false);
-        if (hammerHitboxRight != null) hammerHitboxRight.SetActive(false);
-
-        hitCounter.OnValueChanged += (oldVal, newVal) =>
-        {
-            if (anim != null)
-            {
-                if (CurrentStateValue == EnemyState.Stagger && IsEnragedValue && !hasRoared)
-                    return;
-                anim.SetTrigger("Hit");
-            }
-        };
     }
 
     public override void OnNetworkDespawn()
     {
-        currentState.OnValueChanged -= OnStateChanged;
+        netSpeed.OnValueChanged   -= (_, v) => ApplySpeedAnim(v);
+        hitCounter.OnValueChanged -= (_, _) => { if (anim != null) anim.SetTrigger(hitTrigger); };
     }
 
-    // ------------------------------------------------------------------
-    //  Tiện ích NavMesh
-    // ------------------------------------------------------------------
-    private void SnapToNavMesh()
-    {
-        if (agent == null || !agent.isActiveAndEnabled) return;
-        if (!agent.isOnNavMesh)
-        {
-            NavMeshHit hit;
-            if (NavMesh.SamplePosition(transform.position, out hit, 10f, NavMesh.AllAreas))
-            {
-                agent.Warp(hit.position);
-                Debug.Log($"[{gameObject.name}] Đã snap vào NavMesh tại {hit.position}");
-            }
-            else
-            {
-                Debug.LogWarning($"[{gameObject.name}] KHÔNG TÌM THẤY NavMesh trong phạm vi 10m! Kiểm tra NavMesh Bake.");
-            }
-        }
-    }
-
-    private bool AgentReady => agent != null && agent.isActiveAndEnabled && agent.isOnNavMesh;
-
-    // ------------------------------------------------------------------
-    //  Update
-    // ------------------------------------------------------------------
+    // ══════════════════════════════════════════════════════════
+    //  UPDATE (chỉ Server / Standalone chạy AI logic)
+    // ══════════════════════════════════════════════════════════
     private void Update()
     {
-        // Đồng bộ scale khi phẫn nộ (chạy trên tất cả client)
+        // Enrage scale (mọi client)
         if (IsEnragedValue && !hasRoared)
         {
             transform.localScale = Vector3.Lerp(transform.localScale, Vector3.one * 1.15f, Time.deltaTime * 3f);
-            if (transform.localScale.x >= 1.14f)
-                hasRoared = true;
+            if (transform.localScale.x >= 1.14f) hasRoared = true;
         }
 
-        // Đồng bộ animation (client side)
-        // Đồng bộ animation (client side)
-        // Đồng bộ animation (client side)
-        if (anim != null && anim.isActiveAndEnabled && anim.runtimeAnimatorController != null)
-        {
-            framesSinceActive++;
-            if (clientLocalState != CurrentStateValue)
-            {
-                SyncAnimationState(CurrentStateValue);
-                clientLocalState = CurrentStateValue; // Cập nhật ngay lập tức
-            }
-        }
-        else
-        {
-            framesSinceActive = 0;
-        }
+        bool aiAuth = isStandaloneMode || (IsNetworkActive && IsServer);
+        if (!aiAuth) return;
 
-        // Xác định quyền AI: standalone → luôn tính; Netcode → chỉ Server
-        bool isAIAuthoritative = isStandaloneMode || (IsNetworkActive && IsServer);
-        if (!isAIAuthoritative) return;
-
-        // Snap lại NavMesh nếu bị đẩy ra ngoài
-        if (agent != null && agent.isActiveAndEnabled && !agent.isOnNavMesh)
-            SnapToNavMesh();
-
+        if (AgentReady && !agent.isOnNavMesh) SnapToNavMesh();
         if (attackCooldownTimer > 0) attackCooldownTimer -= Time.deltaTime;
+        if (dodgeTimer > 0) { dodgeTimer -= Time.deltaTime; if (dodgeTimer <= 0) isDodging = false; }
 
         detectionTimer -= Time.deltaTime;
-        if (detectionTimer <= 0)
-        {
-            detectionTimer = DETECTION_INTERVAL;
-            DetectPlayer();
-        }
+        if (detectionTimer <= 0) { detectionTimer = DETECTION_INTERVAL; DetectPlayer(); }
 
         switch (CurrentStateValue)
         {
-            case EnemyState.Idle: HandleIdle(); break;
-            case EnemyState.Walk: HandleWalk(); break;
-            case EnemyState.Run: HandleRun(); break;
-            case EnemyState.Search: HandleSearch(); break;
+            case EnemyState.Patrol:  HandlePatrol();  break;
+            case EnemyState.Chase:   HandleChase();   break;
             case EnemyState.Stagger: HandleStagger(); break;
-            case EnemyState.Attack: HandleAttack(); break;
+            case EnemyState.Attack:  HandleAttack();  break;
         }
     }
 
-    // ------------------------------------------------------------------
-    //  AI Logic
-    // ------------------------------------------------------------------
-    private void DetectPlayer()
+    // ══════════════════════════════════════════════════════════
+    //  PATROL  (Walk animation = Speed 0.5)
+    // ══════════════════════════════════════════════════════════
+    private void GoToNextWaypoint()
     {
-        if (CurrentStateValue == EnemyState.Dead || CurrentStateValue == EnemyState.Stagger) return;
-        if (CurrentStateValue == EnemyState.Attack) return;
-
-        int numPlayers = Physics.OverlapSphereNonAlloc(transform.position, sightRange, detectionResults, playerLayer);
-
-        // Fallback: tìm theo Tag "Player"
-        if (numPlayers == 0)
+        if (waypoints == null || waypoints.Length == 0) { SetSpeedNet(0f); return; }
+        if (waypoints.Length > 1)
         {
-            GameObject[] players = GameObject.FindGameObjectsWithTag("Player");
-            int count = 0;
-            foreach (var p in players)
-            {
-                if (count >= detectionResults.Length) break;
-                if (Vector3.Distance(transform.position, p.transform.position) <= sightRange)
-                {
-                    Collider col = p.GetComponent<Collider>();
-                    if (col != null) detectionResults[count++] = col;
-                }
-            }
-            numPlayers = count;
+            int n; do { n = Random.Range(0, waypoints.Length); } while (n == currentWaypointIndex);
+            currentWaypointIndex = n;
         }
+        else currentWaypointIndex = 0;
 
-        // Fallback Netcode: tìm qua ConnectedClients
-        if (numPlayers == 0 && IsNetworkActive && NetworkManager.Singleton != null)
-        {
-            int count = 0;
-            foreach (var kvp in NetworkManager.Singleton.ConnectedClients)
-            {
-                if (count >= detectionResults.Length) break;
-                var playerObj = kvp.Value.PlayerObject;
-                if (playerObj == null) continue;
-                if (Vector3.Distance(transform.position, playerObj.transform.position) > sightRange) continue;
-                var col = playerObj.GetComponent<Collider>();
-                if (col != null) detectionResults[count++] = col;
-            }
-            numPlayers = count;
-        }
+        waitingAtWaypoint = false;
+        if (waypoints[currentWaypointIndex] == null) { SetSpeedNet(0f); return; }
 
-        bool playerFound = false;
-        Transform closestPlayer = null;
-        float minDistance = float.MaxValue;
-        Vector3 eyePos = eyeTransform != null ? eyeTransform.position : transform.position + Vector3.up * 1.5f;
-
-        for (int i = 0; i < numPlayers; i++)
-        {
-            Collider p = detectionResults[i];
-            if (p == null) continue;
-            Transform potentialTarget = p.transform;
-
-            // 1. TÍNH NĂNG MỚI: Bỏ qua Player nếu họ đã chết
-            SimplePlayerTest playerScript = potentialTarget.GetComponentInParent<SimplePlayerTest>();
-            if (playerScript != null && playerScript.CurrentHealth <= 0) continue;
-
-            Vector3 targetCenterPos = potentialTarget.position + Vector3.up * 1.0f;
-            float distanceToTarget = Vector3.Distance(eyePos, targetCenterPos);
-            Vector3 directionToTarget = (targetCenterPos - eyePos).normalized;
-
-            // 2. FIX LỖI TRƯỢT BĂNG: Nằm trong góc FOV HOẶC đang là mục tiêu hiện tại.
-            // Điều này giúp quái xoay 360 độ vẫn bám theo mục tiêu cũ, không bị mất dấu khi Player lách qua sườn!
-            bool inFOV = Vector3.Angle(transform.forward, directionToTarget) < (fieldOfView / 2f);
-            bool isCurrentTarget = (targetPlayer == potentialTarget);
-
-            if (inFOV || isCurrentTarget)
-            {
-                // Bắn tia kiểm tra vật cản
-                if (!Physics.Raycast(eyePos, directionToTarget, distanceToTarget, obstacleLayer))
-                {
-                    // 3. TÍNH NĂNG MỚI: Luôn ưu tiên khóa mục tiêu vào Player đứng gần nhất
-                    if (distanceToTarget < minDistance)
-                    {
-                        minDistance = distanceToTarget;
-                        closestPlayer = potentialTarget;
-                        playerFound = true;
-                    }
-                }
-            }
-        }
-
-        // 4. Áp dụng mục tiêu gần nhất tìm được
-        if (playerFound && closestPlayer != null)
-        {
-            targetPlayer = closestPlayer;
-            if (CurrentStateValue != EnemyState.Run)
-            {
-                ChangeState(EnemyState.Run);
-            }
-        }
-        else if (CurrentStateValue == EnemyState.Run)
-        {
-            if (targetPlayer != null)
-            {
-                lastKnownPlayerPosition = targetPlayer.position;
-                targetPlayer = null;
-                ChangeState(EnemyState.Search);
-            }
-            else
-            {
-                ChangeState(EnemyState.Idle);
-            }
-        }
-    }
-
-    private void HandleIdle()
-    {
-        if (AgentReady) agent.isStopped = true;
-        stateTimer -= Time.deltaTime;
-
-        if (stateTimer <= 0)
-        {
-            float rand = Random.value;
-            if (rand < 0.4f) ChangeState(EnemyState.Walk);
-            else if (rand < 0.7f) ChangeState(EnemyState.Run);
-            else stateTimer = Random.Range(1.5f, idleTimeMax);
-        }
-    }
-
-    private void HandleWalk()
-    {
         if (AgentReady)
         {
             agent.isStopped = false;
-            agent.speed = 2.0f;
+            agent.speed = patrolWalkSpeed;
+            agent.SetDestination(waypoints[currentWaypointIndex].position);
         }
-
-        if (!hasDestination)
-        {
-            Vector3 randomDirection = Random.insideUnitSphere * walkRadius + transform.position;
-            NavMeshHit hit;
-            if (NavMesh.SamplePosition(randomDirection, out hit, walkRadius, 1))
-            {
-                if (AgentReady) agent.SetDestination(hit.position);
-                hasDestination = true;
-            }
-        }
-
-        if (hasDestination && AgentReady && !agent.pathPending && agent.remainingDistance <= agent.stoppingDistance + 0.2f)
-        {
-            hasDestination = false;
-            float rand = Random.value;
-            if (rand < 0.4f) ChangeState(EnemyState.Idle);
-            else if (rand < 0.8f) ChangeState(EnemyState.Walk);
-            else ChangeState(EnemyState.Run);
-        }
+        // Dùng 0.5 để phân biệt Walk với Run (1.0)
+        SetSpeedNet(0.5f);
     }
 
-    private void HandleRun()
+    private void HandlePatrol()
     {
-        // TÍNH NĂNG MỚI: Quay về trạng thái tuần tra thông minh nếu mục tiêu đang đuổi bị chết
-        if (targetPlayer != null)
+        if (waypoints == null || waypoints.Length == 0) { SetSpeedNet(0f); return; }
+
+        if (waitingAtWaypoint)
         {
-            SimplePlayerTest ps = targetPlayer.GetComponentInParent<SimplePlayerTest>();
-            if (ps != null && ps.CurrentHealth <= 0)
+            // Đứng tại waypoint → Idle
+            SetSpeedNet(0f);
+            waypointWaitTimer -= Time.deltaTime;
+            if (waypointWaitTimer <= 0)
             {
-                targetPlayer = null;
-                ChangeState(EnemyState.Idle);
-                return;
-            }
-        }
-        if (targetPlayer == null)
-        {
-            if (AgentReady) { agent.isStopped = false; agent.speed = 4.0f; }
-            if (!hasDestination)
-            {
-                Vector3 randomDirection = Random.insideUnitSphere * walkRadius * 1.5f + transform.position;
-                NavMeshHit hit;
-                if (NavMesh.SamplePosition(randomDirection, out hit, walkRadius * 1.5f, 1))
-                {
-                    if (AgentReady) agent.SetDestination(hit.position);
-                    hasDestination = true;
-                }
-            }
-            if (hasDestination && AgentReady && !agent.pathPending && agent.remainingDistance <= agent.stoppingDistance)
-            {
-                hasDestination = false;
-                ChangeState(Random.value < 0.6f ? EnemyState.Idle : EnemyState.Walk);
-            }
-            return;
-        }
-
-        Vector3 lookDir = (targetPlayer.position - transform.position); lookDir.y = 0;
-        if (lookDir != Vector3.zero)
-            transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(lookDir), Time.deltaTime * 15f);
-
-        if (isDodging)
-        {
-            dodgeTimer -= Time.deltaTime;
-            if (dodgeTimer <= 0)
-            {
-                isDodging = false;
-                if (AgentReady) agent.speed = IsEnragedValue ? 7.5f : 5f;
-            }
-            return;
-        }
-
-        float distanceToPlayer = Vector3.Distance(transform.position, targetPlayer.position);
-
-        if (distanceToPlayer <= attackRange)
-        {
-            if (AgentReady) agent.isStopped = true;
-            if (attackCooldownTimer <= 0)
-            {
-                ChangeState(EnemyState.Attack);
-            }
-            return;
-        }
-
-        if (AgentReady) { agent.isStopped = false; agent.speed = IsEnragedValue ? 7.5f : 5f; }
-
-        // Chỉ bo sườn khi khoảng cách 4.5-8m; gần hơn thì lao thẳng tránh vòng vòng
-        if (distanceToPlayer <= 8f && distanceToPlayer > 4.5f)
-        {
-            tacticalTimer -= Time.deltaTime;
-            if (tacticalTimer <= 0)
-            {
-                float rand = Random.value;
-                // Tăng xác suất lao thẳng để giảm circling
-                if (rand < 0.6f) tacticalState = 0;
-                else if (rand < 0.8f) tacticalState = 1;
-                else tacticalState = 2;
-                tacticalTimer = Random.Range(1.5f, 2.5f);
-            }
-
-            if (tacticalState == 0)
-            {
-                if (AgentReady) agent.SetDestination(targetPlayer.position);
-            }
-            else
-            {
-                Vector3 toPlayer = (targetPlayer.position - transform.position).normalized;
-                Vector3 tangent = new Vector3(-toPlayer.z, 0, toPlayer.x);
-                float sideDir = (tacticalState == 1) ? 1f : -1f;
-                // Giảm offset ngang để không chạy xa Player
-                Vector3 targetOffset = targetPlayer.position + tangent * sideDir * 2f;
-                NavMeshHit hit;
-                if (NavMesh.SamplePosition(targetOffset, out hit, 3f, NavMesh.AllAreas))
-                { if (AgentReady) agent.SetDestination(hit.position); }
-                else
-                { if (AgentReady) agent.SetDestination(targetPlayer.position); }
+                if (Random.value <= patrolMoveChance) GoToNextWaypoint();
+                else waypointWaitTimer = Random.Range(patrolWaitMin, patrolWaitMax);
             }
         }
         else
         {
-            // Khi < 4.5m hoặc xa > 8m → lao thẳng
-            if (AgentReady) agent.SetDestination(targetPlayer.position);
+            // Đang di chuyển đến waypoint
+            // Chỉ set Walk animation khi thực sự có velocity (chống glide)
+            bool moving = AgentReady && agent.velocity.magnitude > 0.15f;
+            SetSpeedNet(moving ? 0.5f : 0f);
+
+            if (AgentReady && !agent.pathPending && agent.remainingDistance <= agent.stoppingDistance + 0.3f)
+            {
+                if (AgentReady) agent.isStopped = true;
+                SetSpeedNet(0f); // → Idle
+                waitingAtWaypoint = true;
+                waypointWaitTimer = Random.Range(patrolWaitMin, patrolWaitMax);
+            }
         }
     }
 
-    private void HandleSearch()
+    // ══════════════════════════════════════════════════════════
+    //  CHASE  (Run animation = Speed 1.0)
+    // ══════════════════════════════════════════════════════════
+    private void HandleChase()
     {
-        if (AgentReady) { agent.isStopped = false; agent.speed = IsEnragedValue ? 5.5f : 4f; agent.SetDestination(lastKnownPlayerPosition); }
+        if (targetPlayer == null) { ReturnToPatrol(); return; }
+        SimplePlayerTest ps = targetPlayer.GetComponentInParent<SimplePlayerTest>();
+        if (ps != null && ps.CurrentHealth <= 0) { targetPlayer = null; ReturnToPatrol(); return; }
 
-        if (AgentReady && agent.remainingDistance <= agent.stoppingDistance + 0.1f)
+        Vector3 ld = (targetPlayer.position - transform.position); ld.y = 0;
+        if (ld.sqrMagnitude > 0.01f)
+            transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(ld), Time.deltaTime * 15f);
+
+        float dist = Vector3.Distance(transform.position, targetPlayer.position);
+
+        if (dist <= attackRange)
         {
-            agent.isStopped = true;
-            searchTimer -= Time.deltaTime;
-            searchLookTimer -= Time.deltaTime;
-            if (searchLookTimer <= 0) { searchLookDirection = -searchLookDirection; searchLookTimer = 0.8f; }
-            transform.Rotate(Vector3.up, searchLookDirection * 120f * Time.deltaTime);
-            if (searchTimer <= 0) ChangeState(EnemyState.Idle);
+            if (AgentReady) agent.isStopped = true;
+            SetSpeedNet(0f); // Dừng lại → Idle trước khi Attack
+            if (attackCooldownTimer <= 0) ChangeState(EnemyState.Attack);
+            return;
         }
+
+        // Đuổi theo → Run
+        float runSpd = IsEnragedValue ? chaseRunSpeed * 1.5f : chaseRunSpeed;
+        if (AgentReady)
+        {
+            agent.isStopped = false;
+            agent.speed = runSpd;
+            agent.SetDestination(targetPlayer.position);
+        }
+        // Velocity check: chống glide
+        bool actuallyMoving = AgentReady && agent.velocity.magnitude > 0.2f;
+        SetSpeedNet(actuallyMoving ? 1f : 0f);
     }
 
+    private void ReturnToPatrol()
+    {
+        targetPlayer = null;
+        CurrentStateValue = EnemyState.Patrol;
+        waitingAtWaypoint = false;
+        waypointWaitTimer = 0f;
+        GoToNextWaypoint();
+    }
+
+    // ══════════════════════════════════════════════════════════
+    //  STAGGER
+    // ══════════════════════════════════════════════════════════
     private void HandleStagger()
     {
+        if (AgentReady) agent.isStopped = true;
+        SetSpeedNet(0f);
+        staggerTimer -= Time.deltaTime;
         if (staggerTimer <= 0)
         {
             if (IsEnragedValue && !hasRoared) hasRoared = true;
-
-            targetPlayer = null;
-            ChangeState(EnemyState.Idle);
-            detectionTimer = 0f;
+            if (targetPlayer != null) ChangeState(EnemyState.Chase);
+            else ReturnToPatrol();
         }
     }
 
+    // ══════════════════════════════════════════════════════════
+    //  ATTACK
+    // ══════════════════════════════════════════════════════════
     private void HandleAttack()
     {
-        if (targetPlayer == null) { ChangeState(EnemyState.Idle); return; }
+        if (targetPlayer == null) { EndAttack(); return; }
         if (AgentReady) agent.isStopped = true;
+        SetSpeedNet(0f); // Không di chuyển khi tấn công
 
         stateTimer -= Time.deltaTime;
         float elapsed = attackDuration - stateTimer;
 
+        // Quay mặt về phía player trong 35% đầu của đòn
         if (elapsed < attackDuration * 0.35f)
         {
-            Vector3 lookDir = (targetPlayer.position - transform.position); lookDir.y = 0;
-            if (lookDir != Vector3.zero)
-                transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(lookDir), Time.deltaTime * 18f);
+            Vector3 ld = (targetPlayer.position - transform.position); ld.y = 0;
+            if (ld.sqrMagnitude > 0.01f)
+                transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(ld), Time.deltaTime * 18f);
         }
 
-        if (attackType.Value == 2)
+        int aType = isStandaloneMode ? 0 : attackType.Value;
+        if (aType == 2)
         {
             if (elapsed >= 0.5f && !hasDealtDamage1) { hasDealtDamage1 = true; DealConeDamage(10f, attackRange + 0.5f, 80f, 6f); }
             if (elapsed >= 1.2f && !hasDealtDamage2) { hasDealtDamage2 = true; DealConeDamage(25f, attackRange + 1.2f, 95f, 15f); }
@@ -659,322 +372,283 @@ public class Enemy1_DapBua : NetworkBehaviour
             if (elapsed >= 0.5f && !hasDealtDamage1) { hasDealtDamage1 = true; DealConeDamage(15f, attackRange + 0.5f, 80f, 8f); }
         }
 
-        if (stateTimer <= 0)
+        if (stateTimer <= 0) EndAttack();
+    }
+
+    private void EndAttack()
+    {
+        attackCooldownTimer = (CurrentHealthValue < maxHealth * 0.5f) ? 0.3f : 0.7f;
+        DisableHitboxes();
+        detectionTimer = 0f;
+        if (targetPlayer != null) ChangeState(EnemyState.Chase);
+        else ReturnToPatrol();
+    }
+
+    // ══════════════════════════════════════════════════════════
+    //  DETECTION
+    // ══════════════════════════════════════════════════════════
+    private void DetectPlayer()
+    {
+        EnemyState s = CurrentStateValue;
+        if (s == EnemyState.Dead || s == EnemyState.Stagger || s == EnemyState.Attack) return;
+
+        int num = Physics.OverlapSphereNonAlloc(transform.position, sightRange, detectionResults, playerLayer);
+        if (num == 0) num = FallbackDetect();
+
+        bool found = false; Transform closest = null; float minD = float.MaxValue;
+        Vector3 ep = eyeTransform != null ? eyeTransform.position : transform.position + Vector3.up * 1.5f;
+
+        for (int i = 0; i < num; i++)
         {
-            attackCooldownTimer = (CurrentHealthValue < maxHealth * 0.5f) ? 0.3f : 0.7f;
-            // Reset state về Idle trước, để frame sau DetectPlayer chạy lại ngay
-            ChangeState(EnemyState.Idle);
-            detectionTimer = 0f;
+            if (detectionResults[i] == null) continue;
+            Transform pt = detectionResults[i].transform;
+            SimplePlayerTest ps = pt.GetComponentInParent<SimplePlayerTest>();
+            if (ps != null && ps.CurrentHealth <= 0) continue;
+            Vector3 center = pt.position + Vector3.up;
+            float d = Vector3.Distance(ep, center);
+            Vector3 dir = (center - ep).normalized;
+            bool inFOV = Vector3.Angle(transform.forward, dir) < fieldOfView / 2f;
+            if ((inFOV || pt == targetPlayer) && !Physics.Raycast(ep, dir, d, obstacleLayer))
+            { if (d < minD) { minD = d; closest = pt; found = true; } }
+        }
+
+        if (found && closest != null)
+        {
+            targetPlayer = closest;
+            if (s != EnemyState.Chase) ChangeState(EnemyState.Chase);
+        }
+        else if (s == EnemyState.Chase)
+        {
+            ReturnToPatrol();
         }
     }
 
+    private int FallbackDetect()
+    {
+        int c = 0;
+        foreach (var p in GameObject.FindGameObjectsWithTag("Player"))
+        {
+            if (c >= detectionResults.Length) break;
+            if (Vector3.Distance(transform.position, p.transform.position) <= sightRange)
+            { var col = p.GetComponent<Collider>(); if (col != null) detectionResults[c++] = col; }
+        }
+        if (c == 0 && IsNetworkActive && NetworkManager.Singleton != null)
+        {
+            foreach (var kvp in NetworkManager.Singleton.ConnectedClients)
+            {
+                if (c >= detectionResults.Length) break;
+                var po = kvp.Value.PlayerObject;
+                if (po == null || Vector3.Distance(transform.position, po.transform.position) > sightRange) continue;
+                var col = po.GetComponent<Collider>(); if (col != null) detectionResults[c++] = col;
+            }
+        }
+        return c;
+    }
+
+    // ══════════════════════════════════════════════════════════
+    //  CHANGE STATE
+    // ══════════════════════════════════════════════════════════
+    private void ChangeState(EnemyState newState)
+    {
+        // Kết thúc attack state — dọn hitbox
+        if (CurrentStateValue == EnemyState.Attack && newState != EnemyState.Attack)
+            DisableHitboxes();
+
+        CurrentStateValue = newState;
+
+        switch (newState)
+        {
+            case EnemyState.Chase:
+                waitingAtWaypoint = false;
+                if (AgentReady) { agent.isStopped = false; agent.speed = IsEnragedValue ? chaseRunSpeed * 1.5f : chaseRunSpeed; }
+                break;
+
+            case EnemyState.Stagger:
+                if (AgentReady) agent.isStopped = true;
+                SetSpeedNet(0f);
+                if (staggerTimer <= 0) staggerTimer = 0.6f;
+                break;
+
+            case EnemyState.Attack:
+                if (AgentReady) agent.isStopped = true;
+                SetSpeedNet(0f);
+                hasDealtDamage1 = false; hasDealtDamage2 = false;
+                // Chọn loại tấn công
+                int chosen;
+                if (IsEnragedValue && Random.value < 0.4f) { chosen = 2; attackDuration = 1.8f; }
+                else { chosen = isNextAttackLeft ? 0 : 1; isNextAttackLeft = !isNextAttackLeft; attackDuration = 1.1f; }
+                if (!isStandaloneMode) attackType.Value = chosen;
+                stateTimer = attackDuration;
+                if (!isStandaloneMode) PlayAttackClientRpc(chosen); else PlayAttackAnim(chosen);
+                break;
+
+            case EnemyState.Dead:
+                Die();
+                break;
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════
+    //  ANIMATION HELPERS
+    // ══════════════════════════════════════════════════════════
+    /// <summary>Áp dụng Speed float lên Animator — Base Layer. 0=Idle, 0.5=Walk, 1=Run</summary>
+    private void ApplySpeedAnim(float speed)
+    {
+        if (anim == null || !anim.isActiveAndEnabled || anim.runtimeAnimatorController == null) return;
+        anim.SetFloat(speedParam, speed);
+    }
+
+    /// <summary>Set speed từ Server (hoặc standalone). Chỉ ghi khi giá trị thay đổi.</summary>
+    private void SetSpeedNet(float val)
+    {
+        if (isStandaloneMode) ApplySpeedAnim(val);
+        else if (IsServer && !Mathf.Approximately(netSpeed.Value, val)) netSpeed.Value = val;
+    }
+
+    private void PlayAttackAnim(int type)
+    {
+        if (anim == null) return;
+        anim.ResetTrigger(atkLeftTrigger);
+        anim.ResetTrigger(atkRightTrigger);
+        anim.ResetTrigger(atkComboTrigger);
+        if (type == 0)      anim.SetTrigger(atkLeftTrigger);
+        else if (type == 1) anim.SetTrigger(atkRightTrigger);
+        else                anim.SetTrigger(atkComboTrigger);
+    }
+
+    [ClientRpc] private void PlayAttackClientRpc(int type) => PlayAttackAnim(type);
+
+    private void PlayRoarAnim() { if (anim == null) return; anim.ResetTrigger(atkComboTrigger); anim.SetTrigger(atkComboTrigger); }
+    [ClientRpc] private void PlayRoarClientRpc() => PlayRoarAnim();
+
+    // ══════════════════════════════════════════════════════════
+    //  DAMAGE
+    // ══════════════════════════════════════════════════════════
     private void DealConeDamage(float damage, float range, float angle, float knockback)
     {
-        int numPlayers = Physics.OverlapSphereNonAlloc(transform.position, range, damageResults, playerLayer);
-        if (numPlayers == 0)
+        int num = Physics.OverlapSphereNonAlloc(transform.position, range, damageResults, playerLayer);
+        if (num == 0)
         {
-            GameObject[] players = GameObject.FindGameObjectsWithTag("Player");
-            int count = 0;
-            foreach (var p in players)
-            {
-                if (count >= damageResults.Length) break;
-                if (Vector3.Distance(transform.position, p.transform.position) <= range)
-                {
-                    Collider col = p.GetComponent<Collider>();
-                    if (col != null) damageResults[count++] = col;
-                }
-            }
-            numPlayers = count;
+            int c = 0;
+            foreach (var p in GameObject.FindGameObjectsWithTag("Player"))
+            { if (c >= damageResults.Length) break; if (Vector3.Distance(transform.position, p.transform.position) <= range) { var col = p.GetComponent<Collider>(); if (col != null) damageResults[c++] = col; } }
+            num = c;
         }
-
-        Vector3 eyePos = eyeTransform != null ? eyeTransform.position : transform.position + Vector3.up * 1.5f;
-        for (int i = 0; i < numPlayers; i++)
+        Vector3 ep = eyeTransform != null ? eyeTransform.position : transform.position + Vector3.up * 1.5f;
+        for (int i = 0; i < num; i++)
         {
-            Collider col = damageResults[i];
-            if (col == null) continue;
-            Transform player = col.transform;
-            Vector3 dirToPlayer = (player.position - transform.position).normalized;
-            if (Vector3.Angle(transform.forward, dirToPlayer) <= angle / 2f)
-            {
-                float dist = Vector3.Distance(transform.position, player.position);
-                if (!Physics.Raycast(eyePos, dirToPlayer, dist, obstacleLayer))
-                {
-                    SimplePlayerTest playerScript = player.GetComponentInParent<SimplePlayerTest>();
-                    if (playerScript != null)
-                    {
-                        playerScript.TakeDamage(damage);
-                        Vector3 kbDir = dirToPlayer; kbDir.y = 0; kbDir.Normalize();
-                        playerScript.ApplyKnockback(kbDir * knockback);
-                    }
-                }
-            }
+            if (damageResults[i] == null) continue;
+            Transform pl = damageResults[i].transform;
+            Vector3 dir = (pl.position - transform.position).normalized;
+            if (Vector3.Angle(transform.forward, dir) <= angle / 2f && !Physics.Raycast(ep, dir, Vector3.Distance(transform.position, pl.position), obstacleLayer))
+            { var ps = pl.GetComponentInParent<SimplePlayerTest>(); if (ps != null) { ps.TakeDamage(damage); Vector3 kb = dir; kb.y = 0; ps.ApplyKnockback(kb.normalized * knockback); } }
         }
     }
 
     public void TakeDamage(float damage)
     {
-        // Standalone: cho phép bất kỳ ai gọi
         if (!isStandaloneMode && (!IsServer || CurrentStateValue == EnemyState.Dead)) return;
         if (isStandaloneMode && CurrentStateValue == EnemyState.Dead) return;
-
         CurrentHealthValue -= damage;
         if (!isStandaloneMode) hitCounter.Value++;
-        else PlayHitAnimation();
-
+        else if (anim != null) anim.SetTrigger(hitTrigger);
         if (CurrentHealthValue <= 0) { ChangeState(EnemyState.Dead); return; }
-
         if (CurrentHealthValue <= maxHealth * 0.5f && !IsEnragedValue)
         {
-            IsEnragedValue = true;
-            staggerTimer = 1.2f;
+            IsEnragedValue = true; staggerTimer = 1.2f;
             ChangeState(EnemyState.Stagger);
-            if (!isStandaloneMode) PlayRoarAnimationClientRpc();
-            else PlayRoarAnimation();
+            if (!isStandaloneMode) PlayRoarClientRpc(); else PlayRoarAnim();
             return;
         }
-
-        float now = Time.time;
-        if (now - lastDamageTime > 3f) recentHitCount = 0;
-        recentHitCount++;
-        lastDamageTime = now;
-
-        bool shouldStagger = (damage >= 25f || recentHitCount >= 3) && (CurrentStateValue != EnemyState.Stagger);
-        if (shouldStagger)
-        {
-            recentHitCount = 0;
-            staggerTimer = 0.6f;
-            ChangeState(EnemyState.Stagger);
-        }
-        else
-        {
-            if (!isDodging && Random.value < 0.3f && (CurrentStateValue == EnemyState.Run || CurrentStateValue == EnemyState.Walk))
-                ExecuteDodge();
-        }
-    }
-
-    private void PlayHitAnimation()
-    {
-        if (anim != null && CurrentStateValue != EnemyState.Stagger)
-            anim.SetTrigger("Hit");
+        float now = Time.time; if (now - lastDamageTime > 3f) recentHitCount = 0; recentHitCount++; lastDamageTime = now;
+        if ((damage >= 25f || recentHitCount >= 3) && CurrentStateValue != EnemyState.Stagger)
+        { recentHitCount = 0; staggerTimer = 0.6f; ChangeState(EnemyState.Stagger); }
+        else if (!isDodging && Random.value < 0.3f && CurrentStateValue == EnemyState.Chase) ExecuteDodge();
     }
 
     private void ExecuteDodge()
     {
-        if (targetPlayer == null) return;
-        Vector3 toPlayer = (targetPlayer.position - transform.position).normalized;
-        Vector3 perpendicular = new Vector3(-toPlayer.z, 0, toPlayer.x);
-        if (Random.value < 0.5f) perpendicular = -perpendicular;
-        Vector3 dodgeTarget = transform.position + perpendicular * 3f;
-        NavMeshHit hit;
-        if (NavMesh.SamplePosition(dodgeTarget, out hit, 3f, NavMesh.AllAreas))
-        {
-            isDodging = true;
-            dodgeTimer = 0.35f;
-            if (AgentReady) { agent.isStopped = false; agent.speed = IsEnragedValue ? 14f : 10f; agent.SetDestination(hit.position); }
-        }
+        if (targetPlayer == null || !AgentReady) return;
+        Vector3 tp = (targetPlayer.position - transform.position).normalized;
+        Vector3 perp = new Vector3(-tp.z, 0, tp.x) * (Random.value < 0.5f ? 1f : -1f);
+        NavMeshHit h;
+        if (NavMesh.SamplePosition(transform.position + perp * 3f, out h, 3f, NavMesh.AllAreas))
+        { isDodging = true; dodgeTimer = 0.35f; agent.isStopped = false; agent.speed = IsEnragedValue ? 14f : 10f; agent.SetDestination(h.position); }
     }
 
+    // ══════════════════════════════════════════════════════════
+    //  DEATH & DROPS
+    // ══════════════════════════════════════════════════════════
     private void Die()
     {
         if (AgentReady) agent.isStopped = true;
-        DropExperience();
-        DropItems();
-        Invoke(nameof(DespawnEnemy), 2f);
+        SetSpeedNet(0f);
+        if (anim != null) { anim.ResetTrigger(dieTrigger); anim.SetTrigger(dieTrigger); }
+        DisableHitboxes();
+        DropExperience(); DropItems();
+        Invoke(nameof(DespawnEnemy), 2.5f);
     }
 
     private void DropExperience()
     {
         if (expGemPrefab == null) return;
-        
-        string uniqueDropId = System.Guid.NewGuid().ToString();
-        Transform spawnPoint = expDropPoint != null ? expDropPoint : transform;
-        Vector3 basePos = spawnPoint.position;
-        
-        // Cấu hình khoảng cách cố định cách nhau 0.6m tạo thành hình vuông quanh tâm chân quái
-        float dist = 0.6f;
-        Vector3[] spawnPositions = new Vector3[]
+        string uid = System.Guid.NewGuid().ToString();
+        Transform sp = expDropPoint != null ? expDropPoint : transform;
+        float d = 0.6f;
+        Vector3[] pos = { sp.position + new Vector3(d,0.1f,d), sp.position + new Vector3(-d,0.1f,d), sp.position + new Vector3(d,0.1f,-d), sp.position + new Vector3(-d,0.1f,-d) };
+        bool na = IsNetworkActive;
+        foreach (var p in pos)
         {
-            basePos + new Vector3(dist, 0.1f, dist),
-            basePos + new Vector3(-dist, 0.1f, dist),
-            basePos + new Vector3(dist, 0.1f, -dist),
-            basePos + new Vector3(-dist, 0.1f, -dist)
-        };
-        
-        for (int i = 0; i < 4; i++)
-        {
-            Vector3 spawnPos = spawnPositions[i];
-            
-            if (isStandaloneMode)
-            {
-                GameObject gem = Instantiate(expGemPrefab, spawnPos, Quaternion.identity);
-                var gemScript = gem.GetComponent<ExperienceGem>();
-                if (gemScript != null)
-                {
-                    gemScript.expAmount = expDropAmount;
-                    gemScript.DropGroupId = uniqueDropId;
-                }
-            }
-            else if (IsServer)
-            {
-                GameObject gem = Instantiate(expGemPrefab, spawnPos, Quaternion.identity);
-                var gemScript = gem.GetComponent<ExperienceGem>();
-                if (gemScript != null)
-                {
-                    gemScript.expAmount = expDropAmount;
-                    gemScript.DropGroupId = uniqueDropId;
-                }
-                
-                var netObj = gem.GetComponent<NetworkObject>();
-                if (netObj != null) netObj.Spawn();
-            }
+            if (isStandaloneMode || !na) { var g = Instantiate(expGemPrefab, p, Quaternion.identity); var gem = g.GetComponent<ExperienceGem>(); if (gem != null) { gem.expAmount = expDropAmount; gem.DropGroupId = uid; } }
+            else if (IsServer) { var g = Instantiate(expGemPrefab, p, Quaternion.identity); var gem = g.GetComponent<ExperienceGem>(); if (gem != null) { gem.expAmount = expDropAmount; gem.DropGroupId = uid; } var no = g.GetComponent<NetworkObject>(); if (no != null) no.Spawn(); }
         }
     }
 
     private void DropItems()
     {
-        if (repairItemPrefab == null) return;
-        if (Random.value > repairItemDropChance) return;
-
-        bool isNetworkActive = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
-        Transform spawnPoint = expDropPoint != null ? expDropPoint : transform;
-        Vector3 spawnPos = spawnPoint.position + Vector3.up * 0.2f;
-
-        if (isStandaloneMode || !isNetworkActive)
-        {
-            Instantiate(repairItemPrefab, spawnPos, Quaternion.identity);
-        }
-        else if (IsServer)
-        {
-            GameObject itemObj = Instantiate(repairItemPrefab, spawnPos, Quaternion.identity);
-            var netObj = itemObj.GetComponent<NetworkObject>();
-            if (netObj != null) netObj.Spawn();
-        }
+        if (repairItemPrefab == null || Random.value > repairItemDropChance) return;
+        Transform sp = expDropPoint != null ? expDropPoint : transform;
+        Vector3 pv = sp.position + Vector3.up * 0.2f; bool na = IsNetworkActive;
+        if (isStandaloneMode || !na) Instantiate(repairItemPrefab, pv, Quaternion.identity);
+        else if (IsServer) { var g = Instantiate(repairItemPrefab, pv, Quaternion.identity); var no = g.GetComponent<NetworkObject>(); if (no != null) no.Spawn(); }
     }
 
     private void DespawnEnemy()
-    {
-        if (isStandaloneMode) { Destroy(gameObject); return; }
-        if (IsServer && IsSpawned) GetComponent<NetworkObject>().Despawn();
-    }
+    { if (isStandaloneMode) { Destroy(gameObject); return; } if (IsServer && IsSpawned) GetComponent<NetworkObject>().Despawn(); }
 
-    private void ChangeState(EnemyState newState)
+    // ══════════════════════════════════════════════════════════
+    //  HITBOXES (Animation Events)
+    // ══════════════════════════════════════════════════════════
+    private void DisableHitboxes()
     {
-        if (CurrentStateValue == EnemyState.Attack && newState != EnemyState.Attack)
-            DisableWeaponHitbox();
-
-        CurrentStateValue = newState;
-
-        if (newState == EnemyState.Idle) { stateTimer = Random.Range(2f, idleTimeMax); if (AgentReady) agent.isStopped = true; }
-        if (newState == EnemyState.Walk) { hasDestination = false; if (AgentReady) agent.isStopped = false; }
-        if (newState == EnemyState.Run) { isDodging = false; if (AgentReady) agent.isStopped = false; }
-        if (newState == EnemyState.Search) { searchTimer = 3.0f; searchLookTimer = 0f; if (AgentReady) agent.isStopped = false; }
-        if (newState == EnemyState.Stagger) { if (AgentReady) agent.isStopped = true; if (staggerTimer <= 0) staggerTimer = 0.6f; }
-        if (newState == EnemyState.Attack)
-        {
-            if (AgentReady) agent.isStopped = true;
-            hasDealtDamage1 = false; hasDealtDamage2 = false;
-            int chosenType;
-            if (IsEnragedValue && Random.value < 0.4f)
-            {
-                chosenType = 2;
-                attackDuration = 1.8f;
-            }
-            else
-            {
-                chosenType = isNextAttackLeft ? 0 : 1;
-                isNextAttackLeft = !isNextAttackLeft;
-                attackDuration = 1.1f;
-            }
-            if (!isStandaloneMode) attackType.Value = chosenType;
-            stateTimer = attackDuration;
-            if (!isStandaloneMode) PlayAttackAnimationClientRpc(chosenType);
-            else PlayAttackAnimation(chosenType);
-        }
-        if (newState == EnemyState.Dead) Die();
+        if (hammerHitbox      != null) hammerHitbox.SetActive(false);
+        if (hammerHitboxLeft  != null) hammerHitboxLeft.SetActive(false);
+        if (hammerHitboxRight != null) hammerHitboxRight.SetActive(false);
     }
-
-    // ------------------------------------------------------------------
-    //  Animation Sync
-    // ------------------------------------------------------------------
-    private void OnStateChanged(EnemyState previousValue, EnemyState newValue)
-    {
-        clientLocalState = (EnemyState)(-1);
-    }
-
-    private bool SyncAnimationState(EnemyState newState)
-    {
-        if (anim == null || !anim.isActiveAndEnabled || anim.runtimeAnimatorController == null) return false;
- 
-        // Reset sạch sẽ cả trigger đánh để tránh kẹt
-        anim.ResetTrigger(idleTriggerName); anim.ResetTrigger(walkTriggerName);
-        anim.ResetTrigger(runTriggerName); anim.ResetTrigger(hitTriggerName);
-        anim.ResetTrigger("AttackLeft"); anim.ResetTrigger("AttackRight"); anim.ResetTrigger("AttackCombo");
- 
-        switch (newState)
-        {
-            case EnemyState.Idle: anim.SetTrigger(idleTriggerName); break;
-            case EnemyState.Walk: anim.SetTrigger(walkTriggerName); break;
-            case EnemyState.Search: anim.SetTrigger(runTriggerName); break;
-            case EnemyState.Run: anim.SetTrigger(runTriggerName); break;
-            case EnemyState.Stagger:
-                if (IsEnragedValue && !hasRoared) { anim.ResetTrigger("AttackCombo"); anim.SetTrigger("AttackCombo"); }
-                else anim.SetTrigger(hitTriggerName);
-                break;
-            case EnemyState.Dead: anim.SetTrigger(dieTriggerName); break;
-        }
-        return true;
-    }
- 
-    private void PlayAttackAnimation(int type)
-    {
-        if (anim == null) return;
-        anim.ResetTrigger("AttackLeft"); anim.ResetTrigger("AttackRight"); anim.ResetTrigger("AttackCombo");
-        if (type == 0) anim.SetTrigger("AttackLeft");
-        else if (type == 1) anim.SetTrigger("AttackRight");
-        else anim.SetTrigger("AttackCombo");
-    }
- 
-    private void PlayRoarAnimation()
-    {
-        if (anim == null) return;
-        anim.ResetTrigger("Hit"); anim.ResetTrigger("AttackCombo");
-        anim.SetTrigger("AttackCombo");
-    }
-
-    [ClientRpc]
-    private void PlayAttackAnimationClientRpc(int type)
-    {
-        PlayAttackAnimation(type);
-    }
-
-    [ClientRpc]
-    private void PlayRoarAnimationClientRpc()
-    {
-        PlayRoarAnimation();
-    }
-
-    // ------------------------------------------------------------------
-    //  Hitbox Control (Animation Events)
-    // ------------------------------------------------------------------
-    public void EnableWeaponHitbox() { if (hammerHitbox != null) hammerHitbox.SetActive(true); EnableLeftWeaponHitbox(); EnableRightWeaponHitbox(); }
-    public void DisableWeaponHitbox() { if (hammerHitbox != null) hammerHitbox.SetActive(false); DisableLeftWeaponHitbox(); DisableRightWeaponHitbox(); }
-    public void EnableLeftWeaponHitbox() { if (hammerHitboxLeft != null) hammerHitboxLeft.SetActive(true); }
-    public void DisableLeftWeaponHitbox() { if (hammerHitboxLeft != null) hammerHitboxLeft.SetActive(false); }
-    public void EnableRightWeaponHitbox() { if (hammerHitboxRight != null) hammerHitboxRight.SetActive(true); }
+    public void EnableWeaponHitbox()   { if (hammerHitbox      != null) hammerHitbox.SetActive(true); }
+    public void DisableWeaponHitbox()  { DisableHitboxes(); }
+    public void EnableLeftWeaponHitbox()   { if (hammerHitboxLeft  != null) hammerHitboxLeft.SetActive(true); }
+    public void DisableLeftWeaponHitbox()  { if (hammerHitboxLeft  != null) hammerHitboxLeft.SetActive(false); }
+    public void EnableRightWeaponHitbox()  { if (hammerHitboxRight != null) hammerHitboxRight.SetActive(true); }
     public void DisableRightWeaponHitbox() { if (hammerHitboxRight != null) hammerHitboxRight.SetActive(false); }
+
+    // ══════════════════════════════════════════════════════════
+    //  UTILITIES
+    // ══════════════════════════════════════════════════════════
+    private void SnapToNavMesh()
+    {
+        if (agent == null || !agent.isActiveAndEnabled) return;
+        if (!agent.isOnNavMesh)
+        { NavMeshHit h; if (NavMesh.SamplePosition(transform.position, out h, 10f, NavMesh.AllAreas)) agent.Warp(h.position); }
+    }
 
     private void OnDrawGizmosSelected()
     {
-        if (eyeTransform != null)
-        {
-            Gizmos.color = Color.yellow;
-            Gizmos.DrawWireSphere(eyeTransform.position, sightRange);
-            Vector3 leftLimit = Quaternion.AngleAxis(-fieldOfView / 2f, Vector3.up) * transform.forward;
-            Vector3 rightLimit = Quaternion.AngleAxis(fieldOfView / 2f, Vector3.up) * transform.forward;
-            Gizmos.DrawRay(eyeTransform.position, leftLimit * sightRange);
-            Gizmos.DrawRay(eyeTransform.position, rightLimit * sightRange);
-            Gizmos.color = Color.red;
-            Gizmos.DrawWireSphere(transform.position, attackRange);
-        }
+        Vector3 eye = eyeTransform != null ? eyeTransform.position : transform.position + Vector3.up * 1.5f;
+        Gizmos.color = Color.yellow; Gizmos.DrawWireSphere(eye, sightRange);
+        Vector3 l = Quaternion.AngleAxis(-fieldOfView / 2f, Vector3.up) * transform.forward;
+        Vector3 r = Quaternion.AngleAxis( fieldOfView / 2f, Vector3.up) * transform.forward;
+        Gizmos.DrawRay(eye, l * sightRange); Gizmos.DrawRay(eye, r * sightRange);
+        Gizmos.color = Color.red; Gizmos.DrawWireSphere(transform.position, attackRange);
     }
 }

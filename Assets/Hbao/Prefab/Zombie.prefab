@@ -260,7 +260,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 1074.1705, y: 0.115, z: 381.9869}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalScale: {x: 2.5, y: 2.5, z: 2.5}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1877653388331471945}
@@ -339,12 +339,12 @@ MonoBehaviour:
       MinSecondsBetweenUpdates: 0
       MaxSecondsBetweenUpdates: 0
     m_InternalValue: 0
-  hitCounter:
+  netSpeed:
     UpdateTraits:
       MinSecondsBetweenUpdates: 0
       MaxSecondsBetweenUpdates: 0
     m_InternalValue: 0
-  attackType:
+  hitCounter:
     UpdateTraits:
       MinSecondsBetweenUpdates: 0
       MaxSecondsBetweenUpdates: 0
@@ -353,6 +353,10 @@ MonoBehaviour:
   anim: {fileID: 6684999997589933777}
   eyeTransform: {fileID: 3313117445543815237}
   clawHitbox: {fileID: 2746497045860055187}
+  waypoints:
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
   expGemPrefab: {fileID: 7388330026054526502, guid: b6f0bcc3b9d52f840a55991f2dbef13f, type: 3}
   expDropAmount: 20
   expDropPoint: {fileID: 8905336324107336390}
@@ -361,14 +365,21 @@ MonoBehaviour:
   sightRange: 12
   fieldOfView: 110
   attackRange: 1.8
-  walkRadius: 8
-  idleTimeMax: 5
+  patrolWalkSpeed: 2
+  chaseRunSpeed: 4.5
+  patrolWaitMin: 1
+  patrolWaitMax: 5
+  patrolMoveChance: 0.65
   playerLayer:
     serializedVersion: 2
     m_Bits: 8
   obstacleLayer:
     serializedVersion: 2
     m_Bits: 0
+  speedParam: Speed
+  hitTrigger: Anhit
+  dieTrigger: Die
+  atkTrigger: Attack
 --- !u!195 &3031514467880730867
 NavMeshAgent:
   m_ObjectHideFlags: 0
