@@ -12,6 +12,7 @@ public class SimplePlayerTest : NetworkBehaviour
     public float comboWindow = 1.0f;
     private int comboStep = 0;
     private float lastAttackTime = 0f;
+    private bool isRootedAttack = false;
 
     [Header("Player Health Settings")]
     public float maxHealth = 100f;
@@ -865,10 +866,17 @@ public class SimplePlayerTest : NetworkBehaviour
             move = camRight * moveX + camForward * moveZ;
         }
 
-        transform.Translate(move * currentSpeed * Time.deltaTime, Space.World);
-        if (move != Vector3.zero)
+        // Tạo bản sao di chuyển vật lý để có thể khóa di chuyển mà không làm mất hướng né đòn (roll direction)
+        Vector3 movementTranslation = move;
+        if (isRootedAttack && IsPlayingActionAnimation())
         {
-            transform.forward = move;
+            movementTranslation = Vector3.zero;
+        }
+
+        transform.Translate(movementTranslation * currentSpeed * Time.deltaTime, Space.World);
+        if (movementTranslation != Vector3.zero)
+        {
+            transform.forward = movementTranslation;
             if (!IsPlayingActionAnimation())
             {
                 string moveAnim = isRunning ? "run" : "Walk";
@@ -961,10 +969,17 @@ public class SimplePlayerTest : NetworkBehaviour
             move = camRight * moveX + camForward * moveZ;
         }
 
-        transform.Translate(move * currentSpeed * Time.deltaTime, Space.World);
-        if (move != Vector3.zero)
+        // Tạo bản sao di chuyển vật lý để có thể khóa di chuyển mà không làm mất hướng né đòn (roll direction)
+        Vector3 movementTranslation = move;
+        if (isRootedAttack && IsPlayingActionAnimation())
         {
-            transform.forward = move;
+            movementTranslation = Vector3.zero;
+        }
+
+        transform.Translate(movementTranslation * currentSpeed * Time.deltaTime, Space.World);
+        if (movementTranslation != Vector3.zero)
+        {
+            transform.forward = movementTranslation;
             if (!IsPlayingActionAnimation())
             {
                 string moveAnim = isRunning ? "run" : "Walk";
@@ -1101,6 +1116,16 @@ public class SimplePlayerTest : NetworkBehaviour
         if (currentTime - lastAttackTime > comboWindow)
         {
             comboStep = 0;
+        }
+
+        // Kiểm tra xem người chơi có đang ấn phím di chuyển không để quyết định khóa chân (rooted)
+        float moveX = Input.GetAxis("Horizontal");
+        float moveZ = Input.GetAxis("Vertical");
+        bool isMovingInput = (Mathf.Abs(moveX) > 0.01f || Mathf.Abs(moveZ) > 0.01f);
+
+        if (comboStep == 0) // Bắt đầu chuỗi combo mới
+        {
+            isRootedAttack = !isMovingInput; // Đứng yên đánh thì khóa chân (rooted), di chuyển đánh thì không khóa chân
         }
 
         comboStep++;
@@ -1435,6 +1460,52 @@ public class SimplePlayerTest : NetworkBehaviour
     //  Animation Management System (Supports Direct Play & Triggers)
     // ==================================================================
 
+
+    private float lastActionTriggerTime = 0f;
+    private string lastTriggeredAnimName = "";
+
+    private bool IsActionAnimationName(string name)
+    {
+        return name == "LonVong" || 
+               name == "GetHit" || 
+               name == "GeiHit2" || 
+               name == "Idle_Pick" || 
+               name == "Death" ||
+               name == "Punch1" ||
+               name == "Punch2" ||
+               name == "Dam1" ||
+               name == "Dam2" ||
+               name == "Slash1" ||
+               name == "Slash2" ||
+               name == "Slash3" ||
+               name == "Chem1" ||
+               name == "Chem2" ||
+               name == "Chem3";
+    }
+
+    private bool IsAttackAnimationName(string name)
+    {
+        return name == "Punch1" || 
+               name == "Punch2" || 
+               name == "Dam1" || 
+               name == "Dam2" || 
+               name == "Slash1" || 
+               name == "Slash2" || 
+               name == "Slash3" ||
+               name == "Chem1" ||
+               name == "Chem2" ||
+               name == "Chem3";
+    }
+
+    private bool IsFullBodyActionAnimation(string name)
+    {
+        return name == "LonVong" || 
+               name == "GetHit" || 
+               name == "GeiHit2" || 
+               name == "Idle_Pick" || 
+               name == "Death";
+    }
+
     private bool IsPlayingActionAnimation()
     {
         if (anim == null)
@@ -1445,24 +1516,82 @@ public class SimplePlayerTest : NetworkBehaviour
         }
 
         if (anim == null || !anim.isActiveAndEnabled || anim.runtimeAnimatorController == null) return false;
+
+        // Nếu vừa kích hoạt trigger hành động full-body trong vòng 0.15 giây, coi như đang chạy action animation
+        if (IsFullBodyActionAnimation(lastTriggeredAnimName) && Time.time - lastActionTriggerTime < 0.15f) return true;
         
+        // Nếu vừa kích hoạt tấn công đứng yên (rooted) trong vòng 0.15 giây, coi nó như hành động full-body
+        if (isRootedAttack && IsAttackAnimationName(lastTriggeredAnimName) && Time.time - lastActionTriggerTime < 0.15f) return true;
+
         // Khi đang nhào lộn (rolling), coi như đang chạy action animation
         if (isStandaloneMode ? isRollingStandalone : rollTimer > 0) return true;
         
         AnimatorStateInfo stateInfo = anim.GetCurrentAnimatorStateInfo(0);
-        bool isAction = stateInfo.IsName("LonVong") || 
-                        stateInfo.IsName("GetHit") || 
-                        stateInfo.IsName("GeiHit2") || 
-                        stateInfo.IsName("Idle_Pick") || 
-                        stateInfo.IsName("Death") ||
-                        stateInfo.IsName("Punch1") ||
-                        stateInfo.IsName("Punch2") ||
-                        stateInfo.IsName("Slash1") ||
-                        stateInfo.IsName("Slash2") ||
-                        stateInfo.IsName("Slash3");
+        
+        // Hoặc kiểm tra trên AttackLayer (Layer index 1) nếu có sử dụng Avatar Mask
+        AnimatorStateInfo attackLayerStateInfo = new AnimatorStateInfo();
+        bool hasAttackLayer = anim.layerCount > 1;
+        if (hasAttackLayer)
+        {
+            attackLayerStateInfo = anim.GetCurrentAnimatorStateInfo(1);
+        }
+
+        bool isFullBodyAction = stateInfo.IsName("LonVong") || 
+                               stateInfo.IsName("GetHit") || 
+                               stateInfo.IsName("GeiHit2") || 
+                               stateInfo.IsName("Idle_Pick") || 
+                               stateInfo.IsName("Death");
+
+        // Nếu là đòn đánh đứng yên (rooted), nó cũng hoạt động như một hành động full body chặn di chuyển
+        if (isRootedAttack)
+        {
+            isFullBodyAction = isFullBodyAction || 
+                               stateInfo.IsName("Punch1") || 
+                               stateInfo.IsName("Punch2") || 
+                               stateInfo.IsName("Dam1") || 
+                               stateInfo.IsName("Dam2") || 
+                               stateInfo.IsName("Slash1") || 
+                               stateInfo.IsName("Slash2") || 
+                               stateInfo.IsName("Slash3") ||
+                               stateInfo.IsName("Chem1") ||
+                               stateInfo.IsName("Chem2") ||
+                               stateInfo.IsName("Chem3");
+
+            if (hasAttackLayer)
+            {
+                isFullBodyAction = isFullBodyAction ||
+                                   attackLayerStateInfo.IsName("Punch1") || 
+                                   attackLayerStateInfo.IsName("Punch2") || 
+                                   attackLayerStateInfo.IsName("Dam1") || 
+                                   attackLayerStateInfo.IsName("Dam2") || 
+                                   attackLayerStateInfo.IsName("Slash1") || 
+                                   attackLayerStateInfo.IsName("Slash2") || 
+                                   attackLayerStateInfo.IsName("Slash3") ||
+                                   attackLayerStateInfo.IsName("Chem1") ||
+                                   attackLayerStateInfo.IsName("Chem2") ||
+                                   attackLayerStateInfo.IsName("Chem3");
+            }
+        }
                         
-        // Nếu đang chạy các animation hành động này và chưa chạy xong (normalizedTime < 0.95f)
-        return isAction && stateInfo.normalizedTime < 0.95f;
+        // Chỉ chặn các hoạt ảnh di chuyển khi đang thực hiện các hành động Toàn Thân (như lộn vòng, chết, trúng đòn, hoặc đấm đứng yên)
+        // Lưu ý: Đối với Layer 1 (AttackLayer), ta check xem nó có đang chơi animation đánh không và có normalizedTime < 0.95f không
+        bool isAttackPlayingOnLayer1 = false;
+        if (hasAttackLayer && isRootedAttack)
+        {
+            isAttackPlayingOnLayer1 = (attackLayerStateInfo.IsName("Punch1") || 
+                                       attackLayerStateInfo.IsName("Punch2") || 
+                                       attackLayerStateInfo.IsName("Dam1") || 
+                                       attackLayerStateInfo.IsName("Dam2") || 
+                                       attackLayerStateInfo.IsName("Slash1") || 
+                                       attackLayerStateInfo.IsName("Slash2") || 
+                                       attackLayerStateInfo.IsName("Slash3") ||
+                                       attackLayerStateInfo.IsName("Chem1") ||
+                                       attackLayerStateInfo.IsName("Chem2") ||
+                                       attackLayerStateInfo.IsName("Chem3")) 
+                                       && attackLayerStateInfo.normalizedTime < 0.95f;
+        }
+
+        return (isFullBodyAction && stateInfo.normalizedTime < 0.95f) || isAttackPlayingOnLayer1;
     }
 
     public void PlayAnimation(string animName, float fadeTime = 0.1f, bool alreadyPlayedLocally = false)
@@ -1527,7 +1656,7 @@ public class SimplePlayerTest : NetworkBehaviour
 
         Debug.Log($"[Animator Debug] {gameObject.name} kích hoạt Trigger hoạt ảnh: '{animName}'");
 
-        // Reset các trigger để tránh kẹt trạng thái khi dùng Controller có transition
+        // Reset các trigger di chuyển cơ bản để tránh kẹt
         anim.ResetTrigger("Idle");
         anim.ResetTrigger("Walk");
         anim.ResetTrigger("run");
@@ -1536,15 +1665,27 @@ public class SimplePlayerTest : NetworkBehaviour
         anim.ResetTrigger("GeiHit2");
         anim.ResetTrigger("LonVong");
         anim.ResetTrigger("Idle_Pick");
-        anim.ResetTrigger("Punch1");
-        anim.ResetTrigger("Punch2");
-        anim.ResetTrigger("Slash1");
-        anim.ResetTrigger("Slash2");
-        anim.ResetTrigger("Slash3");
+
+        // Chỉ dọn dẹp (reset) các trigger combo tấn công khi chuẩn bị kích hoạt một hành động mới
+        // (để tránh việc nhân vật di chuyển làm reset mất trigger đòn đấm trên layer Upper Body)
+        if (IsActionAnimationName(animName))
+        {
+            anim.ResetTrigger("Punch1");
+            anim.ResetTrigger("Punch2");
+            anim.ResetTrigger("Slash1");
+            anim.ResetTrigger("Slash2");
+            anim.ResetTrigger("Slash3");
+        }
 
         // Kích hoạt Trigger để chạy dây nối trong Animator
         anim.SetTrigger(animName);
         currentAnimState = animName;
+        lastTriggeredAnimName = animName;
+
+        if (IsActionAnimationName(animName))
+        {
+            lastActionTriggerTime = Time.time;
+        }
     }
 
     [ServerRpc]

@@ -97,6 +97,97 @@ MonoBehaviour:
     TransitionIndex: 1
   - IsCrossFadeExit: 0
     Layer: 0
+    OriginatingState: 1349952704
+    DestinationState: -39148367
+    TransitionDuration: 0.25
+    TriggerNameHash: -504573385
+    TransitionIndex: 2
+  - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: 1349952704
+    DestinationState: 126249411
+    TransitionDuration: 0.25
+    TriggerNameHash: 1322116684
+    TransitionIndex: 3
+  - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: -1634781063
+    DestinationState: -376960785
+    TransitionDuration: 0.25
+    TriggerNameHash: -1597798560
+    TransitionIndex: 0
+  - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: -1634781063
+    DestinationState: -1240116905
+    TransitionDuration: 0.25
+    TriggerNameHash: 2081823275
+    TransitionIndex: 1
+  - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: -1634781063
+    DestinationState: 1349952704
+    TransitionDuration: 0.25
+    TriggerNameHash: 1349952704
+    TransitionIndex: 2
+  - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: -1634781063
+    DestinationState: 142018653
+    TransitionDuration: 0.25
+    TriggerNameHash: 765711723
+    TransitionIndex: 3
+  - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: 126249411
+    DestinationState: -1634781063
+    TransitionDuration: 0.25
+    TriggerNameHash: -674973706
+    TransitionIndex: 0
+  - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: 126249411
+    DestinationState: -1240116905
+    TransitionDuration: 0.25
+    TriggerNameHash: 2081823275
+    TransitionIndex: 1
+  - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: 126249411
+    DestinationState: 1349952704
+    TransitionDuration: 0.25
+    TriggerNameHash: 1349952704
+    TransitionIndex: 2
+  - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: 126249411
+    DestinationState: 142018653
+    TransitionDuration: 0.25
+    TriggerNameHash: 765711723
+    TransitionIndex: 3
+  - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: -376960785
+    DestinationState: -1240116905
+    TransitionDuration: 0.25
+    TriggerNameHash: 2081823275
+    TransitionIndex: 0
+  - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: -376960785
+    DestinationState: 1349952704
+    TransitionDuration: 0.25
+    TriggerNameHash: 1349952704
+    TransitionIndex: 1
+  - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: -376960785
+    DestinationState: 142018653
+    TransitionDuration: 0.25
+    TriggerNameHash: 765711723
+    TransitionIndex: 2
+  - IsCrossFadeExit: 0
+    Layer: 0
     OriginatingState: -1240116905
     DestinationState: 1349952704
     TransitionDuration: 0
@@ -111,6 +202,69 @@ MonoBehaviour:
     TransitionIndex: 1
   - IsCrossFadeExit: 0
     Layer: 0
+    OriginatingState: -1240116905
+    DestinationState: -39148367
+    TransitionDuration: 0.25
+    TriggerNameHash: -504573385
+    TransitionIndex: 2
+  - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: -1240116905
+    DestinationState: 126249411
+    TransitionDuration: 0.25
+    TriggerNameHash: 1322116684
+    TransitionIndex: 3
+  - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: -39148367
+    DestinationState: 1688466699
+    TransitionDuration: 0.25
+    TriggerNameHash: 2028307341
+    TransitionIndex: 0
+  - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: -39148367
+    DestinationState: -1240116905
+    TransitionDuration: 0
+    TriggerNameHash: 2081823275
+    TransitionIndex: 1
+  - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: -39148367
+    DestinationState: 142018653
+    TransitionDuration: 0.25
+    TriggerNameHash: 765711723
+    TransitionIndex: 2
+  - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: -39148367
+    DestinationState: 1349952704
+    TransitionDuration: 0.25
+    TriggerNameHash: 1349952704
+    TransitionIndex: 3
+  - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: 1688466699
+    DestinationState: -1240116905
+    TransitionDuration: 0
+    TriggerNameHash: 2081823275
+    TransitionIndex: 0
+  - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: 1688466699
+    DestinationState: 1349952704
+    TransitionDuration: 0.25
+    TriggerNameHash: 1349952704
+    TransitionIndex: 1
+  - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: 1688466699
+    DestinationState: 142018653
+    TransitionDuration: 0.25
+    TriggerNameHash: 765711723
+    TransitionIndex: 2
+  - IsCrossFadeExit: 0
+    Layer: 0
     OriginatingState: 142018653
     DestinationState: -1240116905
     TransitionDuration: 0
@@ -123,6 +277,34 @@ MonoBehaviour:
     TransitionDuration: 0
     TriggerNameHash: 1349952704
     TransitionIndex: 1
+  - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: 142018653
+    DestinationState: -39148367
+    TransitionDuration: 0.25
+    TriggerNameHash: -504573385
+    TransitionIndex: 2
+  - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: 142018653
+    DestinationState: 126249411
+    TransitionDuration: 0.25
+    TriggerNameHash: 1322116684
+    TransitionIndex: 3
+  - IsCrossFadeExit: 0
+    Layer: 1
+    OriginatingState: -499022955
+    DestinationState: -39148367
+    TransitionDuration: 0
+    TriggerNameHash: -504573385
+    TransitionIndex: 0
+  - IsCrossFadeExit: 0
+    Layer: 1
+    OriginatingState: -39148367
+    DestinationState: 1688466699
+    TransitionDuration: 0
+    TriggerNameHash: 2028307341
+    TransitionIndex: 0
   AnimatorParameterEntries:
     ParameterEntries:
     - name: Walk
@@ -139,6 +321,26 @@ MonoBehaviour:
       ParameterType: 9
     - name: Idle
       NameHash: 2081823275
+      Synchronize: 1
+      ParameterType: 9
+    - name: Punch1
+      NameHash: -504573385
+      Synchronize: 1
+      ParameterType: 9
+    - name: Punch2
+      NameHash: 2028307341
+      Synchronize: 1
+      ParameterType: 9
+    - name: Slash1
+      NameHash: 1322116684
+      Synchronize: 1
+      ParameterType: 9
+    - name: Slash2
+      NameHash: -674973706
+      Synchronize: 1
+      ParameterType: 9
+    - name: Slash3
+      NameHash: -1597798560
       Synchronize: 1
       ParameterType: 9
   AnimatorParametersExpanded: 0
@@ -204,6 +406,7 @@ MonoBehaviour:
   moveSpeed: 3
   damageAmount: 20
   attackRange: 3
+  comboWindow: 1
   maxHealth: 100
   currentHealth:
     UpdateTraits:
@@ -425,6 +628,10 @@ PrefabInstance:
       propertyPath: m_Controller
       value: 
       objectReference: {fileID: 9100000, guid: f2fd804faccff6248a92f38857a49751, type: 2}
+    - target: {fileID: 5866666021909216657, guid: 98e34bbe220dc5c4891a9625511e6922, type: 3}
+      propertyPath: m_ApplyRootMotion
+      value: 1
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
