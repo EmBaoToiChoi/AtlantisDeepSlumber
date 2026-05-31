@@ -1020,6 +1020,8 @@ public class SimplePlayerTest : NetworkBehaviour
         rollTimer = rollDuration;
         rollCooldownTimer = rollCooldown;
         
+        ClearAttackLayer(); // Trả Layer 1 về Empty để lộn vòng cả thân người
+        
         // Hướng nhào lộn: nếu có di chuyển thì lăn theo hướng WASD, ngược lại lăn theo hướng đang nhìn
         if (moveInput != Vector3.zero)
         {
@@ -1039,6 +1041,8 @@ public class SimplePlayerTest : NetworkBehaviour
     {
         rollTimer = rollDuration;
         rollCooldownTimer = rollCooldown;
+        
+        ClearAttackLayer(); // Trả Layer 1 về Empty để lộn vòng cả thân người
         
         // Hướng nhào lộn: nếu có di chuyển thì lăn theo hướng WASD, ngược lại lăn theo hướng đang nhìn
         if (moveInput != Vector3.zero)
@@ -1686,6 +1690,11 @@ public class SimplePlayerTest : NetworkBehaviour
         {
             lastActionTriggerTime = Time.time;
         }
+
+        if (IsFullBodyActionAnimation(animName))
+        {
+            ClearAttackLayer();
+        }
     }
 
     [ServerRpc]
@@ -1713,5 +1722,15 @@ public class SimplePlayerTest : NetworkBehaviour
     private void StopRollServerRpc()
     {
         isRollingNet.Value = false;
+    }
+
+    private void ClearAttackLayer()
+    {
+        if (anim != null && anim.isActiveAndEnabled && anim.runtimeAnimatorController != null && anim.layerCount > 1)
+        {
+            // Reset Layer 1 (AttackLayer) về trạng thái Empty/New State mặc định
+            anim.Play("New State", 1, 0f);
+            anim.Play("Empty", 1, 0f);
+        }
     }
 }
