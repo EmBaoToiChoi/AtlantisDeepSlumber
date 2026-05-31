@@ -86,7 +86,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 1076.37, y: 0.064, z: 382.318}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalScale: {x: 2.5, y: 2.5, z: 2.5}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1697686860353705976}
@@ -170,6 +170,11 @@ MonoBehaviour:
       MinSecondsBetweenUpdates: 0
       MaxSecondsBetweenUpdates: 0
     m_InternalValue: 0
+  netSpeed:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 0
   hitCounter:
     UpdateTraits:
       MinSecondsBetweenUpdates: 0
@@ -186,6 +191,10 @@ MonoBehaviour:
   hammerHitbox: {fileID: 7388330026054526502, guid: b6f0bcc3b9d52f840a55991f2dbef13f, type: 3}
   hammerHitboxLeft: {fileID: 4726772078132798135}
   hammerHitboxRight: {fileID: 298865915714377986}
+  waypoints:
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
   expGemPrefab: {fileID: 7388330026054526502, guid: b6f0bcc3b9d52f840a55991f2dbef13f, type: 3}
   expDropAmount: 25
   expDropPoint: {fileID: 1697686860353705976}
@@ -194,19 +203,23 @@ MonoBehaviour:
   sightRange: 15
   fieldOfView: 90
   attackRange: 2
-  walkRadius: 10
-  idleTimeMax: 4
-  idleTriggerName: Idle
-  walkTriggerName: Walk
-  runTriggerName: Run
-  hitTriggerName: Hit
-  dieTriggerName: Die
+  patrolWalkSpeed: 2.5
+  chaseRunSpeed: 5
+  patrolWaitMin: 1
+  patrolWaitMax: 4
+  patrolMoveChance: 0.7
   playerLayer:
     serializedVersion: 2
     m_Bits: 8
   obstacleLayer:
     serializedVersion: 2
     m_Bits: 0
+  speedParam: Speed
+  hitTrigger: Hit
+  dieTrigger: Die
+  atkLeftTrigger: AttackLeft
+  atkRightTrigger: AttackRight
+  atkComboTrigger: AttackCombo
 --- !u!114 &6261648165529911941
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -308,6 +321,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   enemy: {fileID: 2179037074846115429}
+  enemy2: {fileID: 0}
+  enemy3: {fileID: 0}
+  enemy4: {fileID: 0}
+  enemy5: {fileID: 0}
   uiDocument: {fileID: 6889952582565404750}
 --- !u!1 &4726772078132798135
 GameObject:

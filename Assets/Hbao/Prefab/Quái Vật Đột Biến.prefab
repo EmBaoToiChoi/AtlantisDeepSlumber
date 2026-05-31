@@ -151,7 +151,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 1078.1885, y: 0.15, z: 383.823}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalScale: {x: 3, y: 3, z: 3}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 7701926341662694857}
@@ -230,6 +230,11 @@ MonoBehaviour:
       MinSecondsBetweenUpdates: 0
       MaxSecondsBetweenUpdates: 0
     m_InternalValue: 0
+  netSpeed:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 0
   hitCounter:
     UpdateTraits:
       MinSecondsBetweenUpdates: 0
@@ -240,35 +245,40 @@ MonoBehaviour:
       MinSecondsBetweenUpdates: 0
       MaxSecondsBetweenUpdates: 0
     m_InternalValue: 0
+  agent: {fileID: 5818080817487145746}
+  anim: {fileID: 3941181446497741679}
+  eyeTransform: {fileID: 8610098342983182693}
+  hammerHitbox: {fileID: 1154132212086708441}
+  waypoints:
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
   expGemPrefab: {fileID: 7388330026054526502, guid: b6f0bcc3b9d52f840a55991f2dbef13f, type: 3}
   expDropAmount: 25
   expDropPoint: {fileID: 2382866152611396582}
   repairItemPrefab: {fileID: 2217945438620940750, guid: c0dc53cb41f8a574480ed87a8b9bebba, type: 3}
   repairItemDropChance: 0.2
-  agent: {fileID: 5818080817487145746}
-  anim: {fileID: 3941181446497741679}
-  eyeTransform: {fileID: 8610098342983182693}
-  modelRenderers: []
-  hammerHitbox: {fileID: 1154132212086708441}
   sightRange: 15
   fieldOfView: 100
   attackRange: 2.2
-  walkRadius: 9
-  idleTimeMax: 4.5
+  patrolWalkSpeed: 2.5
+  chaseRunSpeed: 5
+  patrolWaitMin: 1.5
+  patrolWaitMax: 5
+  patrolMoveChance: 0.7
   playerLayer:
     serializedVersion: 2
     m_Bits: 8
   obstacleLayer:
     serializedVersion: 2
     m_Bits: 0
-  idleTriggerName: Idle
-  walkTriggerName: Walk
-  runTriggerName: Run
-  hitTriggerName: Anhit
-  dieTriggerName: Die
-  attack1TriggerName: Attack
-  attack2TriggerName: Combo
-  attack3TriggerName: RunLumpAttack
+  speedParam: Speed
+  hitTrigger: quai3Anhit
+  dieTrigger: quai3Die
+  atk1Trigger: quai3attack
+  atk2Trigger: quai3combo
+  atk3Trigger: quai3runlumpattack
+  modelRenderers: []
 --- !u!114 &1735193794928468104
 MonoBehaviour:
   m_ObjectHideFlags: 0

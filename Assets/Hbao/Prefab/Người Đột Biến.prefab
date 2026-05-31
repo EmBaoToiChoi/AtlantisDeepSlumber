@@ -207,7 +207,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 1079.562, y: 0.092, z: 383.643}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalScale: {x: 2.5, y: 2.5, z: 2.5}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 4070657527670104559}
@@ -286,6 +286,11 @@ MonoBehaviour:
       MinSecondsBetweenUpdates: 0
       MaxSecondsBetweenUpdates: 0
     m_InternalValue: 0
+  netSpeed:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 0
   hitCounter:
     UpdateTraits:
       MinSecondsBetweenUpdates: 0
@@ -296,35 +301,40 @@ MonoBehaviour:
       MinSecondsBetweenUpdates: 0
       MaxSecondsBetweenUpdates: 0
     m_InternalValue: 0
+  agent: {fileID: 5677635899682825825}
+  anim: {fileID: 4632723107707132322}
+  eyeTransform: {fileID: 6277172163961775128}
+  clawHitbox: {fileID: 0}
+  weaponHitbox: {fileID: 7556796874380310757}
+  waypoints:
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
   expGemPrefab: {fileID: 7388330026054526502, guid: b6f0bcc3b9d52f840a55991f2dbef13f, type: 3}
   expDropAmount: 25
   expDropPoint: {fileID: 3791648751383938616}
   repairItemPrefab: {fileID: 2217945438620940750, guid: c0dc53cb41f8a574480ed87a8b9bebba, type: 3}
   repairItemDropChance: 0.2
-  agent: {fileID: 5677635899682825825}
-  anim: {fileID: 4632723107707132322}
-  eyeTransform: {fileID: 6277172163961775128}
-  modelRenderers: []
-  clawHitbox: {fileID: 0}
-  weaponHitbox: {fileID: 7556796874380310757}
   sightRange: 15
   fieldOfView: 100
   attackRange: 2
-  walkRadius: 9
-  idleTimeMax: 4
+  patrolWalkSpeed: 2.5
+  chaseRunSpeed: 5.5
+  patrolWaitMin: 1
+  patrolWaitMax: 4
+  patrolMoveChance: 0.7
   playerLayer:
     serializedVersion: 2
     m_Bits: 8
   obstacleLayer:
     serializedVersion: 2
     m_Bits: 0
-  idleTriggerName: qual4IDLE
-  walkTriggerName: Qual4walk
-  runTriggerName: qual4RUn
-  hitTriggerName: Qual4Anhit
-  dieTriggerName: Qual4Dle
-  attack1TriggerName: qual44attack
-  attackComboTriggerName: qual4combo
+  speedParam: Speed
+  hitTrigger: Qual4Anhit
+  dieTrigger: Qual4Dle
+  atk1Trigger: qual44attack
+  atk2Trigger: qual4combo
+  modelRenderers: []
 --- !u!114 &2788456930648622136
 MonoBehaviour:
   m_ObjectHideFlags: 0
