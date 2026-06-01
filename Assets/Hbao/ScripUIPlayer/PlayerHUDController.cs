@@ -586,6 +586,7 @@ public class PlayerHUDController : MonoBehaviour
     public void SelectWeapon(int index)
     {
         if (weaponSlot1 == null || weaponSlot2 == null) return;
+        int oldWeapon = currentSelectedWeapon;
 
         if (index == 1)
         {
@@ -613,6 +614,16 @@ public class PlayerHUDController : MonoBehaviour
             weaponSlot1.AddToClassList("weapon-inactive");
             currentSelectedWeapon = 2;
             NotifyHUDChange();
+        }
+
+        // Standalone Mode: gọi trực tiếp phương thức chuyển đổi hoạt ảnh
+        if (currentSelectedWeapon != oldWeapon)
+        {
+            var localPlayer = FindObjectOfType<SimplePlayerTest>();
+            if (localPlayer != null && localPlayer.isStandaloneMode)
+            {
+                localPlayer.PlayWeaponSwitchAnimation(oldWeapon, currentSelectedWeapon);
+            }
         }
     }
 
