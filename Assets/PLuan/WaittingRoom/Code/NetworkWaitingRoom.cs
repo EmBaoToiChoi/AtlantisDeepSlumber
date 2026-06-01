@@ -1316,7 +1316,7 @@ public class NetworkWaitingRoom : NetworkBehaviour
         Debug.Log("--- ĐANG GỌI LOAD SCENE: HBao........................................ ---");
         if (NetworkManager.Singleton != null && NetworkManager.Singleton.SceneManager != null) {
             //NetworkManager.Singleton.SceneManager.LoadScene("HBao", UnityEngine.SceneManagement.LoadSceneMode.Single);
-            NetworkManager.Singleton.SceneManager.LoadScene("HBao", UnityEngine.SceneManagement.LoadSceneMode.Single);
+            NetworkManager.Singleton.SceneManager.LoadScene("Map", UnityEngine.SceneManagement.LoadSceneMode.Single);
         }
     }
 
