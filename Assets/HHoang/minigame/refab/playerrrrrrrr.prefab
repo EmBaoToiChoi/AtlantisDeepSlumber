@@ -229,10 +229,6 @@ MonoBehaviour:
   ShowTopMostFoldoutHeaderGroup: 1
   moveSpeed: 5
   crouchSpeed: 3
-  holdPoint: {fileID: 72402864101092705}
-  interactableLayer:
-    serializedVersion: 2
-    m_Bits: 256
   canMoveNet:
     UpdateTraits:
       MinSecondsBetweenUpdates: 0
@@ -243,13 +239,6 @@ MonoBehaviour:
       MinSecondsBetweenUpdates: 0
       MaxSecondsBetweenUpdates: 0
     m_InternalValue: 0
-  isCarryingCore:
-    UpdateTraits:
-      MinSecondsBetweenUpdates: 0
-      MaxSecondsBetweenUpdates: 0
-    m_InternalValue: 0
-  currentStation: {fileID: 0}
-  currentHeldCore: {fileID: 0}
 --- !u!114 &5133103343833416836
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -262,6 +251,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 44e5db811f7df62409334fc510e55423, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  ShowTopMostFoldoutHeaderGroup: 1
+  holdPoint: {fileID: 72402864101092705}
+  interactableLayer:
+    serializedVersion: 2
+    m_Bits: 256
+  currentStation: {fileID: 0}
+  currentHeldCore: {fileID: 0}
+  isCarryingCore:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 0
 --- !u!1 &3565595224064326486
 GameObject:
   m_ObjectHideFlags: 0
