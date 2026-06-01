@@ -6,67 +6,40 @@ public class PillarStation : NetworkBehaviour
     public int stationIndex;
     public AscensionManager manager;
     public Transform snapPosition;
-
-    // SỬA: Phải dùng NetworkVariable để đồng bộ mạng
     public NetworkVariable<bool> isOccupied = new NetworkVariable<bool>(false);
 
-    // Gọi hàm này từ InteractBox/PlayerMovement khi nhấn E
-    public bool TryInteract(PlayerMovement player)
+    public bool TryInteract(PlayerInteraction player)
     {
-        Debug.Log($"Trụ {stationIndex} báo Occupied: {isOccupied.Value}");
-        Debug.Log($"Player đang cầm: {player.currentHeldCore}"); // XEM NÓ CÓ BỊ NULL KHÔNG
-        if (isOccupied.Value) return false; 
+        // Đảm bảo không bị null và trạm trống
+        if (player == null || isOccupied.Value || player.currentHeldCore == null) return false;
 
-        if (player.currentHeldCore != null)
-        {
-            RequestSnapServerRpc(player.currentHeldCore.NetworkObject.NetworkObjectId, stationIndex);
-            
-            player.currentHeldCore.RequestDrop(player.OwnerClientId);
-            player.currentHeldCore = null;
-            player.SetCarryingCoreServerRpc(false);
-            
-            return true;
-        }
-        return false;
+        RequestSnapServerRpc(player.currentHeldCore.NetworkObject.NetworkObjectId, stationIndex);
+        player.DropCore(); 
+        return true;
     }
 
     [ServerRpc(RequireOwnership = false)]
     void RequestSnapServerRpc(ulong crystalNetId, int index)
     {
-        if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(crystalNetId, out var networkObject))
+        if (NetworkManager.SpawnManager.SpawnedObjects.TryGetValue(crystalNetId, out var netObj))
         {
-            CrystalCore crystal = networkObject.GetComponent<CrystalCore>();
-            if (manager != null && crystal != null)
+            var crystal = netObj.GetComponent<CrystalCore>();
+            if (manager != null)
             {
                 manager.SnapCrystalToPillar(crystal, index);
-                // SỬA: Cập nhật .Value trên Server, nó sẽ tự gửi xuống Client
-                isOccupied.Value = true; 
+                isOccupied.Value = true;
             }
         }
     }
 
-    // Thêm vào PillarStation.cs
     private void OnTriggerEnter(Collider other)
     {
-        if (other.CompareTag("Player")) // Đảm bảo Player có tag là "Player"
-        {
-            var player = other.GetComponent<PlayerMovement>();
-            if (player != null)
-            {
-                player.currentStation = this; // Gán trạm hiện tại cho người chơi
-            }
-        }
+        if (other.TryGetComponent<PlayerInteraction>(out var player)) player.currentStation = this;
     }
 
     private void OnTriggerExit(Collider other)
     {
-        if (other.CompareTag("Player"))
-        {
-            var player = other.GetComponent<PlayerMovement>();
-            if (player != null && player.currentStation == this)
-            {
-                player.currentStation = null; // Rời khỏi vùng thì set về null
-            }
-        }
+        if (other.TryGetComponent<PlayerInteraction>(out var player) && player.currentStation == this)
+            player.currentStation = null;
     }
 }

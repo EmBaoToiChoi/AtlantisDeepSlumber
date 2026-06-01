@@ -10,56 +10,41 @@ public class CrystalCore : NetworkBehaviour
 
     void Awake() => holders = new NetworkList<ulong>();
 
-    // Trả về hệ số tốc độ dựa trên số người khiêng
-    public float GetMoveSpeedMultiplier()
-    {
-        // 2 người khiêng = 100% tốc độ (buff), 1 người khiêng = 60% tốc độ (bị chậm)
-        return holders.Count >= 2 ? 1.0f : 0.6f;
-    }
-
-    // Trong CrystalCore.cs
     void Update()
     {
-        if (isSnapped.Value) return;
+        if (!IsServer || isSnapped.Value) return;
 
-        if (IsServer)
+        Rigidbody rb = GetComponent<Rigidbody>();
+        if (holders.Count > 0)
         {
-            if (holders.Count > 0)
-            {
-                // Logic cũ: Khiêng vật phẩm
-                Vector3 targetPos = Vector3.zero;
-                int activeHolders = 0;
+            Vector3 targetPos = Vector3.zero;
+            int activeHolders = 0;
 
-                foreach (ulong clientId in holders)
+            foreach (ulong clientId in holders)
+            {
+                // Kiểm tra sự tồn tại của client và PlayerObject
+                if (NetworkManager.ConnectedClients.TryGetValue(clientId, out var client) && 
+                    client.PlayerObject != null)
                 {
-                    if (NetworkManager.Singleton.ConnectedClients.TryGetValue(clientId, out var client))
+                    // Lấy script tương tác thay vì di chuyển
+                    if (client.PlayerObject.TryGetComponent<PlayerInteraction>(out var pInt) && pInt.holdPoint != null)
                     {
-                        var playerMovement = client.PlayerObject.GetComponent<PlayerMovement>();
-                        if (playerMovement != null && playerMovement.holdPoint != null)
-                        {
-                            targetPos += playerMovement.holdPoint.position;
-                            activeHolders++;
-                        }
+                        targetPos += pInt.holdPoint.position;
+                        activeHolders++;
                     }
                 }
+            }
 
-                if (activeHolders > 0)
-                {
-                    transform.position = targetPos / activeHolders;
-                    GetComponent<Rigidbody>().isKinematic = true; // Giữ chặt khi đang khiêng
-                }
-            }
-            else
+            if (activeHolders > 0)
             {
-                // --- THÊM PHẦN NÀY ---
-                // Nếu không còn ai khiêng, cho phép vật phẩm rơi xuống đất
-                Rigidbody rb = GetComponent<Rigidbody>();
-                if (rb != null && rb.isKinematic)
-                {
-                    rb.isKinematic = false; // Bật vật lý để rơi
-                    rb.useGravity = true;
-                }
+                transform.position = targetPos / activeHolders;
+                rb.isKinematic = true;
             }
+        }
+        else
+        {
+            rb.isKinematic = false;
+            rb.useGravity = true;
         }
     }
 
@@ -67,26 +52,11 @@ public class CrystalCore : NetworkBehaviour
     public void RequestDrop(ulong playerId) => RequestDropServerRpc(playerId);
 
     [ServerRpc(RequireOwnership = false)]
-    private void RequestPickupServerRpc(ulong playerId)
-    {
-        if (!holders.Contains(playerId)) holders.Add(playerId);
-    }
+    private void RequestPickupServerRpc(ulong playerId) { if (!holders.Contains(playerId)) holders.Add(playerId); }
 
     [ServerRpc(RequireOwnership = false)]
-    private void RequestDropServerRpc(ulong playerId)
-    {
-        if (holders.Contains(playerId)) 
-        {
-            holders.Remove(playerId);
-            Debug.Log($"Player {playerId} đã thả Core thành công trên Server");
-            
-            // Ngay khi thả, cho phép rơi ngay lập tức thay vì đợi Update
-            Rigidbody rb = GetComponent<Rigidbody>();
-            if (rb != null)
-            {
-                rb.isKinematic = false;
-                rb.useGravity = true;
-            }
-        }
+    private void RequestDropServerRpc(ulong playerId) 
+    { 
+        if (holders.Contains(playerId)) holders.Remove(playerId); 
     }
 }
