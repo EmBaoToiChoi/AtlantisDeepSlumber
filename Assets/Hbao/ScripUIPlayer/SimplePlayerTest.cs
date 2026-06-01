@@ -5,14 +5,25 @@ public class SimplePlayerTest : NetworkBehaviour
 {
     [Header("Movement & Attack Settings")]
     public float moveSpeed = 5f;
+    public float runSpeedMultiplier = 1.5f;
     public float damageAmount = 20f;
     public float attackRange = 3f;
 
     [Header("Combo Attack Settings")]
     public float comboWindow = 1.0f;
+    public float comboTransitionThreshold = 0.5f;
+    public float punch1Duration = 0.5f;
+    public float punch2Duration = 0.5f;
+    public float slash1Duration = 0.6f;
+    public float slash2Duration = 0.6f;
+    public float slash3Duration = 0.7f;
     private int comboStep = 0;
     private float lastAttackTime = 0f;
     private bool isRootedAttack = false;
+
+    [Header("Weapon Switch Animations")]
+    public string drawWeaponTrigger = "DrawWeapon";
+    public string sheathWeaponTrigger = "SheathWeapon";
 
     [Header("Player Health Settings")]
     public float maxHealth = 100f;
@@ -119,6 +130,7 @@ public class SimplePlayerTest : NetworkBehaviour
     public Vector3 cameraOffset = new Vector3(0f, 12f, -8f);
     public float cameraSmoothSpeed = 5f;
     public bool cameraLookAtPlayer = true;
+    public float cameraPivotHeight = 1.0f;
     private Camera targetCamera;
 
     [Header("Camera Rotation Settings")]
@@ -347,6 +359,8 @@ public class SimplePlayerTest : NetworkBehaviour
             PlayerHUDController hud = FindObjectOfType<PlayerHUDController>();
             if (hud != null) hud.SelectWeapon(newVal);
         }
+
+        PlayWeaponSwitchAnimation(oldVal, newVal);
     }
 
     private void OnWeapon2LockedChanged(bool oldVal, bool newVal)
@@ -841,7 +855,7 @@ public class SimplePlayerTest : NetworkBehaviour
 
         // Tốc độ di chuyển: Giữ Shift Left là chạy (run), thả ra là đi bộ (Walk)
         bool isRunning = Input.GetKey(KeyCode.LeftShift);
-        float currentSpeed = isRunning ? moveSpeed * 1.5f : moveSpeed;
+        float currentSpeed = isRunning ? moveSpeed * runSpeedMultiplier : moveSpeed;
 
         // Di chuyển (tính theo hướng Camera để tránh bị ngược điều khiển)
         float moveX = Input.GetAxis("Horizontal");
@@ -944,7 +958,7 @@ public class SimplePlayerTest : NetworkBehaviour
 
         // Tốc độ di chuyển: Giữ Shift Left là chạy (run), thả ra là đi bộ (Walk)
         bool isRunning = Input.GetKey(KeyCode.LeftShift);
-        float currentSpeed = isRunning ? moveSpeed * 1.5f : moveSpeed;
+        float currentSpeed = isRunning ? moveSpeed * runSpeedMultiplier : moveSpeed;
 
         // Di chuyển (tính theo hướng Camera để tránh bị ngược điều khiển)
         float moveX = Input.GetAxis("Horizontal");
@@ -1099,27 +1113,66 @@ public class SimplePlayerTest : NetworkBehaviour
             );
 
             // Gắn cứng camera theo vị trí của nhân vật (Loại bỏ Lerp vị trí để giải quyết triệt để lỗi delay, zoom co giãn, và lệch nhân vật ra rìa)
-            Vector3 targetPosition = transform.position + rotatedOffset;
+            Vector3 targetPosition = (transform.position + Vector3.up * cameraPivotHeight) + rotatedOffset;
             targetCamera.transform.position = targetPosition;
 
             if (cameraLookAtPlayer)
             {
                 // Khóa camera luôn nhìn thẳng vào nhân vật (không dùng Slerp rotation) để nhân vật luôn nằm chính giữa màn hình
                 targetCamera.transform.rotation = Quaternion.LookRotation(
-                    (transform.position + Vector3.up * 1f) - targetCamera.transform.position
+                    (transform.position + Vector3.up * cameraPivotHeight) - targetCamera.transform.position
                 );
             }
         }
     }
 
+    private float GetAttackDuration(int weaponIndex, int step)
+    {
+        if (weaponIndex == 1)
+        {
+            return step == 1 ? punch1Duration : punch2Duration;
+        }
+        else if (weaponIndex == 2)
+        {
+            if (step == 1) return slash1Duration;
+            if (step == 2) return slash2Duration;
+            return slash3Duration;
+        }
+        return 0.5f;
+    }
+
     private void PerformComboAttack(bool networkMode)
     {
         int weapon = GetActiveWeaponIndex();
-
         float currentTime = Time.time;
+
+        // Xác định bước combo tiếp theo trước để tính toán thời gian chờ
+        int nextStep = comboStep;
         if (currentTime - lastAttackTime > comboWindow)
         {
-            comboStep = 0;
+            nextStep = 0;
+        }
+        nextStep++;
+
+        // Giới hạn bước combo dựa trên vũ khí
+        if (weapon == 1)
+        {
+            if (nextStep > 2) nextStep = 1;
+        }
+        else if (weapon == 2)
+        {
+            if (nextStep > 3) nextStep = 1;
+        }
+
+        // Kiểm tra xem đòn đánh trước đó đã kết thúc chưa dựa trên thời gian thực tế trôi qua
+        // (Sử dụng thời lượng của đòn đánh hiện tại trước khi chuyển sang đòn tiếp theo)
+        if (comboStep > 0 && currentTime - lastAttackTime <= comboWindow)
+        {
+            float prevDuration = GetAttackDuration(weapon, comboStep);
+            if (currentTime - lastAttackTime < prevDuration * comboTransitionThreshold)
+            {
+                return; // Chặn bấm nhanh/click liên tục khi đòn cũ chưa đánh xong
+            }
         }
 
         // Kiểm tra xem người chơi có đang ấn phím di chuyển không để quyết định khóa chân (rooted)
@@ -1127,23 +1180,21 @@ public class SimplePlayerTest : NetworkBehaviour
         float moveZ = Input.GetAxis("Vertical");
         bool isMovingInput = (Mathf.Abs(moveX) > 0.01f || Mathf.Abs(moveZ) > 0.01f);
 
-        if (comboStep == 0) // Bắt đầu chuỗi combo mới
+        if (comboStep == 0 || currentTime - lastAttackTime > comboWindow)
         {
             isRootedAttack = !isMovingInput; // Đứng yên đánh thì khóa chân (rooted), di chuyển đánh thì không khóa chân
         }
 
-        comboStep++;
+        comboStep = nextStep;
         lastAttackTime = currentTime;
 
         string animToPlay = "";
         if (weapon == 1) // Unarmed / Fist combo (2 steps)
         {
-            if (comboStep > 2) comboStep = 1;
             animToPlay = comboStep == 1 ? "Punch1" : "Punch2";
         }
         else if (weapon == 2) // Sword combo (3 steps)
         {
-            if (comboStep > 3) comboStep = 1;
             if (comboStep == 1) animToPlay = "Slash1";
             else if (comboStep == 2) animToPlay = "Slash2";
             else if (comboStep == 3) animToPlay = "Slash3";
@@ -1484,7 +1535,29 @@ public class SimplePlayerTest : NetworkBehaviour
                name == "Slash3" ||
                name == "Chem1" ||
                name == "Chem2" ||
-               name == "Chem3";
+               name == "Chem3" ||
+               (!string.IsNullOrEmpty(drawWeaponTrigger) && name == drawWeaponTrigger) ||
+               (!string.IsNullOrEmpty(sheathWeaponTrigger) && name == sheathWeaponTrigger);
+    }
+
+    public void PlayWeaponSwitchAnimation(int oldWeapon, int newWeapon)
+    {
+        if (oldWeapon == newWeapon) return;
+
+        if (newWeapon == 2)
+        {
+            if (!string.IsNullOrEmpty(drawWeaponTrigger))
+            {
+                PlayAnimation(drawWeaponTrigger, 0.1f);
+            }
+        }
+        else if (newWeapon == 1)
+        {
+            if (!string.IsNullOrEmpty(sheathWeaponTrigger))
+            {
+                PlayAnimation(sheathWeaponTrigger, 0.1f);
+            }
+        }
     }
 
     private bool IsAttackAnimationName(string name)
@@ -1499,6 +1572,58 @@ public class SimplePlayerTest : NetworkBehaviour
                name == "Chem1" ||
                name == "Chem2" ||
                name == "Chem3";
+    }
+
+    private bool IsPlayingAttackState(out AnimatorStateInfo activeState, out int layer)
+    {
+        activeState = default;
+        layer = -1;
+
+        if (anim == null || !anim.isActiveAndEnabled || anim.runtimeAnimatorController == null)
+            return false;
+
+        // Ưu tiên check Layer 1 (AttackLayer) trước vì đòn đánh có thể đè ở đây qua Avatar Mask
+        if (anim.layerCount > 1)
+        {
+            AnimatorStateInfo attackLayerStateInfo = anim.GetCurrentAnimatorStateInfo(1);
+            if (IsAttackState(attackLayerStateInfo))
+            {
+                activeState = attackLayerStateInfo;
+                layer = 1;
+                return true;
+            }
+        }
+
+        // Check Layer 0 (Base Layer)
+        AnimatorStateInfo baseLayerStateInfo = anim.GetCurrentAnimatorStateInfo(0);
+        if (IsAttackState(baseLayerStateInfo))
+        {
+            activeState = baseLayerStateInfo;
+            layer = 0;
+            return true;
+        }
+
+        return false;
+    }
+
+    private bool IsAttackState(AnimatorStateInfo stateInfo)
+    {
+        return stateInfo.IsName("Punch1") || 
+               stateInfo.IsName("Punch2") || 
+               stateInfo.IsName("Dam1") || 
+               stateInfo.IsName("Dam2") || 
+               stateInfo.IsName("Slash1") || 
+               stateInfo.IsName("Slash2") || 
+               stateInfo.IsName("Slash3") ||
+               stateInfo.IsName("Slash_1") || 
+               stateInfo.IsName("Slash_2") || 
+               stateInfo.IsName("Slash_3") ||
+               stateInfo.IsName("Chem1") ||
+               stateInfo.IsName("Chem2") ||
+               stateInfo.IsName("Chem3") ||
+               stateInfo.IsName("Chem_1") ||
+               stateInfo.IsName("Chem_2") ||
+               stateInfo.IsName("Chem_3");
     }
 
     private bool IsFullBodyActionAnimation(string name)
@@ -1529,73 +1654,22 @@ public class SimplePlayerTest : NetworkBehaviour
 
         // Khi đang nhào lộn (rolling), coi như đang chạy action animation
         if (isStandaloneMode ? isRollingStandalone : rollTimer > 0) return true;
-        
-        AnimatorStateInfo stateInfo = anim.GetCurrentAnimatorStateInfo(0);
-        
-        // Hoặc kiểm tra trên AttackLayer (Layer index 1) nếu có sử dụng Avatar Mask
-        AnimatorStateInfo attackLayerStateInfo = new AnimatorStateInfo();
-        bool hasAttackLayer = anim.layerCount > 1;
-        if (hasAttackLayer)
+
+        // 1. Nếu là đòn đánh đứng yên (rooted), khóa di chuyển hoàn toàn cho tới khi animator thoát khỏi trạng thái đấm/chém
+        if (isRootedAttack && IsPlayingAttackState(out _, out _))
         {
-            attackLayerStateInfo = anim.GetCurrentAnimatorStateInfo(1);
+            return true;
         }
 
+        // 2. Kiểm tra các hành động toàn thân khác (như lộn vòng, trúng đòn, chết, nhặt đồ) trên Layer 0
+        AnimatorStateInfo stateInfo = anim.GetCurrentAnimatorStateInfo(0);
         bool isFullBodyAction = stateInfo.IsName("LonVong") || 
                                stateInfo.IsName("GetHit") || 
                                stateInfo.IsName("GeiHit2") || 
                                stateInfo.IsName("Idle_Pick") || 
                                stateInfo.IsName("Death");
 
-        // Nếu là đòn đánh đứng yên (rooted), nó cũng hoạt động như một hành động full body chặn di chuyển
-        if (isRootedAttack)
-        {
-            isFullBodyAction = isFullBodyAction || 
-                               stateInfo.IsName("Punch1") || 
-                               stateInfo.IsName("Punch2") || 
-                               stateInfo.IsName("Dam1") || 
-                               stateInfo.IsName("Dam2") || 
-                               stateInfo.IsName("Slash1") || 
-                               stateInfo.IsName("Slash2") || 
-                               stateInfo.IsName("Slash3") ||
-                               stateInfo.IsName("Chem1") ||
-                               stateInfo.IsName("Chem2") ||
-                               stateInfo.IsName("Chem3");
-
-            if (hasAttackLayer)
-            {
-                isFullBodyAction = isFullBodyAction ||
-                                   attackLayerStateInfo.IsName("Punch1") || 
-                                   attackLayerStateInfo.IsName("Punch2") || 
-                                   attackLayerStateInfo.IsName("Dam1") || 
-                                   attackLayerStateInfo.IsName("Dam2") || 
-                                   attackLayerStateInfo.IsName("Slash1") || 
-                                   attackLayerStateInfo.IsName("Slash2") || 
-                                   attackLayerStateInfo.IsName("Slash3") ||
-                                   attackLayerStateInfo.IsName("Chem1") ||
-                                   attackLayerStateInfo.IsName("Chem2") ||
-                                   attackLayerStateInfo.IsName("Chem3");
-            }
-        }
-                        
-        // Chỉ chặn các hoạt ảnh di chuyển khi đang thực hiện các hành động Toàn Thân (như lộn vòng, chết, trúng đòn, hoặc đấm đứng yên)
-        // Lưu ý: Đối với Layer 1 (AttackLayer), ta check xem nó có đang chơi animation đánh không và có normalizedTime < 0.95f không
-        bool isAttackPlayingOnLayer1 = false;
-        if (hasAttackLayer && isRootedAttack)
-        {
-            isAttackPlayingOnLayer1 = (attackLayerStateInfo.IsName("Punch1") || 
-                                       attackLayerStateInfo.IsName("Punch2") || 
-                                       attackLayerStateInfo.IsName("Dam1") || 
-                                       attackLayerStateInfo.IsName("Dam2") || 
-                                       attackLayerStateInfo.IsName("Slash1") || 
-                                       attackLayerStateInfo.IsName("Slash2") || 
-                                       attackLayerStateInfo.IsName("Slash3") ||
-                                       attackLayerStateInfo.IsName("Chem1") ||
-                                       attackLayerStateInfo.IsName("Chem2") ||
-                                       attackLayerStateInfo.IsName("Chem3")) 
-                                       && attackLayerStateInfo.normalizedTime < 0.95f;
-        }
-
-        return (isFullBodyAction && stateInfo.normalizedTime < 0.95f) || isAttackPlayingOnLayer1;
+        return isFullBodyAction && stateInfo.normalizedTime < 0.95f;
     }
 
     public void PlayAnimation(string animName, float fadeTime = 0.1f, bool alreadyPlayedLocally = false)
@@ -1679,11 +1753,19 @@ public class SimplePlayerTest : NetworkBehaviour
             anim.ResetTrigger("Slash1");
             anim.ResetTrigger("Slash2");
             anim.ResetTrigger("Slash3");
+            if (!string.IsNullOrEmpty(drawWeaponTrigger)) anim.ResetTrigger(drawWeaponTrigger);
+            if (!string.IsNullOrEmpty(sheathWeaponTrigger)) anim.ResetTrigger(sheathWeaponTrigger);
         }
 
         // Kích hoạt Trigger để chạy dây nối trong Animator
         anim.SetTrigger(animName);
-        currentAnimState = animName;
+
+        // Chỉ cập nhật currentAnimState cho các hoạt ảnh di chuyển hoặc hoạt ảnh hành động toàn thân (không phải đòn đánh di chuyển)
+        bool isMovingAttack = IsAttackAnimationName(animName) && !isRootedAttack;
+        if (!isMovingAttack)
+        {
+            currentAnimState = animName;
+        }
         lastTriggeredAnimName = animName;
 
         if (IsActionAnimationName(animName))
@@ -1726,6 +1808,8 @@ public class SimplePlayerTest : NetworkBehaviour
 
     private void ClearAttackLayer()
     {
+        comboStep = 0;
+        isRootedAttack = false;
         if (anim != null && anim.isActiveAndEnabled && anim.runtimeAnimatorController != null && anim.layerCount > 1)
         {
             // Reset Layer 1 (AttackLayer) về trạng thái Empty/New State mặc định
