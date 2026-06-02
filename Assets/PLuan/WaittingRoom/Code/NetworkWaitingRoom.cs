@@ -418,30 +418,8 @@ public class NetworkWaitingRoom : NetworkBehaviour
             return;
         }
 
-        // 1. Kiểm tra xem nhân vật này có đang bị người chơi khác khóa không
+        // 1. Tạm thời cho phép chọn trùng nhân vật
         bool isLockedByOther = false;
-        foreach (var p in NetPlayers)
-        {
-            if (p.CharacterId == charId && p.ClientId != NetworkManager.Singleton.LocalClientId)
-            {
-                isLockedByOther = true;
-                break;
-            }
-        }
-
-        if (isLockedByOther)
-        {
-            Debug.LogWarning($"[CLIENT] Nhân vật {charId} đã bị người khác chọn và khóa!");
-            if (_lblWarning != null)
-            {
-                _lblWarning.text = "THIS CHARACTER IS ALREADY SELECTED!";
-                _lblWarning.RemoveFromClassList("hidden-element");
-                _lblWarning.style.display = DisplayStyle.Flex;
-                CancelInvoke(nameof(HideWarningLabel));
-                Invoke(nameof(HideWarningLabel), 2f);
-            }
-            return;
-        }
 
         // 2. Nếu không khóa, xử lý Click hoặc Shift + Click
         bool isShift = evt.shiftKey || Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
@@ -666,18 +644,7 @@ public class NetworkWaitingRoom : NetworkBehaviour
 
     private bool HasDuplicateCharacters()
     {
-        if (NetPlayers == null || NetPlayers.Count <= 1) return false;
-        for (int i = 0; i < NetPlayers.Count; i++)
-        {
-            for (int j = i + 1; j < NetPlayers.Count; j++)
-            {
-                if (NetPlayers[i].CharacterId == NetPlayers[j].CharacterId)
-                {
-                    return true;
-                }
-            }
-        }
-        return false;
+        return false; // Tạm thời cho phép chọn trùng nhân vật
     }
 
     private void UpdatePlayerUI()
@@ -873,14 +840,10 @@ public class NetworkWaitingRoom : NetworkBehaviour
                 }
                 else
                 {
-                    if (card != null)
-                    {
-                        card.AddToClassList("card-locked");
-                        card.style.opacity = 0.4f; // Làm mờ thẻ để chỉ rõ bị khóa bởi người khác
-                    }
+                    // Tạm thời cho phép chọn trùng nhân vật, không làm mờ hoặc khóa thẻ
                     if (statusLbl != null)
                     {
-                        statusLbl.text = "LOCKED BY " + string.Join(" + ", selectors);
+                        statusLbl.text = "SELECTED BY " + string.Join(" + ", selectors);
                     }
                 }
             }
@@ -981,18 +944,7 @@ public class NetworkWaitingRoom : NetworkBehaviour
         ulong clientId = rpcParams.Receive.SenderClientId;
         Debug.Log($"[SERVER] Nhận yêu cầu đổi nhân vật thành {characterId} từ Client {clientId}");
         
-        // 1. Kiểm tra xem nhân vật này có đang bị người chơi khác chọn không (trừ khi là hủy chọn -1)
-        if (characterId >= 0 && characterId < 4)
-        {
-            foreach (var player in NetPlayers)
-            {
-                if (player.ClientId != clientId && player.CharacterId == characterId)
-                {
-                    Debug.LogWarning($"[SERVER] Yêu cầu bị bác bỏ: Nhân vật {characterId} đã được chọn bởi Client {player.ClientId}");
-                    return;
-                }
-            }
-        }
+        // 1. Tạm thời cho phép chọn trùng nhân vật (Bỏ qua kiểm tra phía server)
 
         // 2. Thực hiện đổi nhân vật cho client gửi yêu cầu
         for (int i = 0; i < NetPlayers.Count; i++)
