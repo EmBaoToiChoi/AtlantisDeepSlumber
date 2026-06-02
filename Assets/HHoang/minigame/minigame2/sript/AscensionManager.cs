@@ -5,6 +5,9 @@ using System.Collections.Generic;
 
 public class AscensionManager : NetworkBehaviour
 {
+    public LineRenderer[] flowLines; // 4 đường nối từ trụ về tâm
+    public Material flowMaterial;    // Material có Shader chảy (tạo bản sao để chỉnh màu riêng)
+    
     [Header("Cấu hình Trụ")]
     public Transform[] pillarPositions = new Transform[4];
     public int[] pillarStates = new int[4]; 
@@ -16,6 +19,22 @@ public class AscensionManager : NetworkBehaviour
     [Header("Cấu hình Thời gian")]
     [Tooltip("Thời gian (giây) để đặt đủ tinh thể")]
     public float timeLimit = 5f; 
+
+    void Update()
+    {
+        // Cập nhật hiệu ứng chảy cho tất cả các line đang active
+        for (int i = 0; i < flowLines.Length; i++)
+        {
+            if (flowLines[i].enabled)
+            {
+                // Truy cập material instance của LineRenderer
+                Material mat = flowLines[i].material;
+                // Thay đổi offset của texture theo thời gian (tốc độ 0.5f)
+                float offset = Time.time * 0.5f; 
+                mat.SetTextureOffset("_MainTex", new Vector2(offset, 0));
+            }
+        }
+    }
 
     public void SnapCrystalToPillar(CrystalCore crystal, int stationIndex)
     {
@@ -120,6 +139,11 @@ public class AscensionManager : NetworkBehaviour
             }
         }
 
+        foreach (var line in flowLines)
+        {
+            if (line != null) line.enabled = false;
+        }
+
         placedCrystals.Clear();
         for (int i = 0; i < pillarStates.Length; i++) pillarStates[i] = 0;
         
@@ -134,16 +158,17 @@ public class AscensionManager : NetworkBehaviour
         // Chỉ kiểm tra khi đã đặt đủ 4 viên
         if (placedCrystals.Count < 4) return;
 
-        // Đã đủ 4 viên, kiểm tra xem có viên nào sai trụ không
         bool allCorrect = true;
         for (int i = 0; i < pillarPositions.Length; i++)
         {
-            // Kiểm tra xem pillarStates[i] (ID của viên đang ở trụ i) có bằng i không
-            if (pillarStates[i] != i) 
-            {
-                allCorrect = false;
-                break;
-            }
+            // Kiểm tra đúng sai
+            bool isCorrect = (pillarStates[i] == i);
+            
+            // Gửi lệnh đổi màu xuống tất cả client
+            // Màu xanh (Color.green) nếu đúng, màu đỏ (Color.red) nếu sai
+            SetFlowColorClientRpc(i, isCorrect ? Color.green : Color.red);
+
+            if (!isCorrect) allCorrect = false;
         }
 
         if (allCorrect)
@@ -155,13 +180,28 @@ public class AscensionManager : NetworkBehaviour
         else
         {
             Debug.Log("Có viên sai! Chờ tí rồi văng ra...");
-            StartCoroutine(DelayEject()); // Thay vì gọi thẳng EjectAllCrystals()
+            StartCoroutine(DelayEject());
         }
+    }
 
-        IEnumerator DelayEject()
-        {
-            yield return new WaitForSeconds(0.2f); // Đợi 0.2s cho mọi thứ ổn định
-            EjectAllCrystals();
-        }
+    // Hàm ClientRpc để đồng bộ màu sắc cho mọi người chơi
+    [ClientRpc]
+    private void SetFlowColorClientRpc(int stationIndex, Color color)
+    {
+        if (stationIndex < 0 || stationIndex >= flowLines.Length) return;
+
+        // Bật line lên khi bắt đầu chảy
+        flowLines[stationIndex].enabled = true;
+
+        // Tạo instance material mới để không ảnh hưởng các trụ khác
+        Material instanceMat = new Material(flowMaterial);
+        instanceMat.SetColor("_BaseColor", color); 
+        flowLines[stationIndex].material = instanceMat;
+    }
+
+    IEnumerator DelayEject()
+    {
+        yield return new WaitForSeconds(1.0f); // Tăng thời gian chờ lên chút để người chơi kịp thấy màu đỏ
+        EjectAllCrystals();
     }
 }
