@@ -544,7 +544,7 @@ public class PlayerHUDController : MonoBehaviour
             // Tự động lưu trạng thái người chơi vào MongoDB khi đóng hành trang
             if (!isNowVisible)
             {
-                var localPlayer = FindObjectOfType<SimplePlayerTest>();
+                var localPlayer = FindObjectOfType<LeoPlayer>();
                 if (localPlayer != null && localPlayer.IsSpawned && localPlayer.IsOwner)
                 {
                     localPlayer.SavePlayerStateToDatabase();
@@ -619,7 +619,7 @@ public class PlayerHUDController : MonoBehaviour
         // Standalone Mode: gọi trực tiếp phương thức chuyển đổi hoạt ảnh
         if (currentSelectedWeapon != oldWeapon)
         {
-            var localPlayer = FindObjectOfType<SimplePlayerTest>();
+            var localPlayer = FindObjectOfType<LeoPlayer>();
             if (localPlayer != null && localPlayer.isStandaloneMode)
             {
                 localPlayer.PlayWeaponSwitchAnimation(oldWeapon, currentSelectedWeapon);
@@ -699,7 +699,7 @@ public class PlayerHUDController : MonoBehaviour
 
     private void NotifyHUDChange()
     {
-        var localPlayer = FindObjectOfType<SimplePlayerTest>();
+        var localPlayer = FindObjectOfType<LeoPlayer>();
         if (localPlayer != null && localPlayer.IsSpawned && localPlayer.IsOwner)
         {
             localPlayer.UpdateStateFromHUD(currentSelectedWeapon, isWeapon2Locked, isSkillsUnlocked);
@@ -970,7 +970,7 @@ public class PlayerHUDController : MonoBehaviour
                     if (targetIndex != draggedSlotIndex)
                     {
                         // Thực hiện tráo đổi (Swap) vị trí vật phẩm
-                        var player = FindObjectOfType<SimplePlayerTest>();
+                        var player = FindObjectOfType<LeoPlayer>();
                         if (player != null)
                         {
                             string temp = player.inventorySlots[draggedSlotIndex];
@@ -1106,7 +1106,7 @@ public class PlayerHUDController : MonoBehaviour
         isCooldownActive = false;
 
         // Tiến hành sửa chữa độ bền 100%
-        var player = FindObjectOfType<SimplePlayerTest>();
+        var player = FindObjectOfType<LeoPlayer>();
         if (player != null)
         {
             int activeWeapon = player.activeWeaponIndex.Value;
@@ -1217,7 +1217,7 @@ public class PlayerHUDController : MonoBehaviour
 
     private void UpgradeStat(int statType)
     {
-        var localPlayer = FindObjectOfType<SimplePlayerTest>();
+        var localPlayer = FindObjectOfType<LeoPlayer>();
         if (localPlayer != null && localPlayer.IsSpawned && localPlayer.IsOwner)
         {
             localPlayer.UpgradeStatFromHUD(statType);

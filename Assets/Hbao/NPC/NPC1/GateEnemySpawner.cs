@@ -48,9 +48,9 @@ public class GateEnemySpawner : NetworkBehaviour
         if (hasSpawned) return;
 
         // 2. Kiểm tra nếu đối tượng va chạm là người chơi (Player)
-        SimplePlayerTest player = other.GetComponentInParent<SimplePlayerTest>();
-        if (player == null) player = other.GetComponentInChildren<SimplePlayerTest>();
-        if (player == null) player = other.GetComponent<SimplePlayerTest>();
+        LeoPlayer player = other.GetComponentInParent<LeoPlayer>();
+        if (player == null) player = other.GetComponentInChildren<LeoPlayer>();
+        if (player == null) player = other.GetComponent<LeoPlayer>();
 
         if (player != null)
         {

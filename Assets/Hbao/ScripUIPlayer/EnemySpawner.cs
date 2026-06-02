@@ -324,8 +324,8 @@ public class EnemySpawner : NetworkBehaviour
         {
             if (client.PlayerObject != null)
             {
-                // Kiểm tra xem PlayerObject hiện tại có phải là nhân vật chơi chính thức (có SimplePlayerTest) hay không
-                if (client.PlayerObject.GetComponent<SimplePlayerTest>() != null)
+                // Kiểm tra xem PlayerObject hiện tại có phải là nhân vật chơi chính thức (có LeoPlayer) hay không
+                if (client.PlayerObject.GetComponent<LeoPlayer>() != null)
                 {
                     Debug.Log($"[EnemySpawner] Client {clientId} đã có nhân vật gameplay Player chính thức. Bỏ qua không spawn trùng lặp.");
                     return;

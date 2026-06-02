@@ -21,7 +21,7 @@ public class SilasNPC : NetworkBehaviour
 
     // Quản lý trạng thái tương tác phím G
     private bool isPlayerNearby = false;
-    private SimplePlayerTest localPlayer;
+    private LeoPlayer localPlayer;
     private int savedDialogueIndex = 0;
 
     private void Awake()
@@ -193,9 +193,9 @@ public class SilasNPC : NetworkBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
-        SimplePlayerTest player = other.GetComponentInParent<SimplePlayerTest>();
-        if (player == null) player = other.GetComponentInChildren<SimplePlayerTest>();
-        if (player == null) player = other.GetComponent<SimplePlayerTest>();
+        LeoPlayer player = other.GetComponentInParent<LeoPlayer>();
+        if (player == null) player = other.GetComponentInChildren<LeoPlayer>();
+        if (player == null) player = other.GetComponent<LeoPlayer>();
 
         if (player != null)
         {
@@ -217,9 +217,9 @@ public class SilasNPC : NetworkBehaviour
 
     private void OnTriggerExit(Collider other)
     {
-        SimplePlayerTest player = other.GetComponentInParent<SimplePlayerTest>();
-        if (player == null) player = other.GetComponentInChildren<SimplePlayerTest>();
-        if (player == null) player = other.GetComponent<SimplePlayerTest>();
+        LeoPlayer player = other.GetComponentInParent<LeoPlayer>();
+        if (player == null) player = other.GetComponentInChildren<LeoPlayer>();
+        if (player == null) player = other.GetComponent<LeoPlayer>();
 
         // Kiểm tra nếu chính localPlayer hiện tại đi ra ngoài
         if (player != null && player == localPlayer)
@@ -241,7 +241,7 @@ public class SilasNPC : NetworkBehaviour
         if (SilasDialogueController.Instance != null)
         {
             // Nếu chơi standalone thì đóng cục bộ, chơi mạng thì gửi Rpc để đóng cho tất cả mọi người
-            SimplePlayerTest tempPlayer = FindLocalPlayerInScene();
+            LeoPlayer tempPlayer = FindLocalPlayerInScene();
             if (tempPlayer != null && tempPlayer.isStandaloneMode)
             {
                 SilasDialogueController.Instance.EndDialogue();
@@ -273,9 +273,9 @@ public class SilasNPC : NetworkBehaviour
         savedDialogueIndex = index;
     }
 
-    private SimplePlayerTest FindLocalPlayerInScene()
+    private LeoPlayer FindLocalPlayerInScene()
     {
-        SimplePlayerTest[] players = FindObjectsOfType<SimplePlayerTest>();
+        LeoPlayer[] players = FindObjectsOfType<LeoPlayer>();
         foreach (var p in players)
         {
             if (p.isStandaloneMode || p.IsOwner)
@@ -330,7 +330,7 @@ public class SilasNPC : NetworkBehaviour
     [ClientRpc]
     private void StartDialogueClientRpc(int startIndex)
     {
-        SimplePlayerTest local = FindLocalPlayerInScene();
+        LeoPlayer local = FindLocalPlayerInScene();
         if (SilasDialogueController.Instance != null)
         {
             SilasDialogueController.Instance.StartDialogue(dialogueLines, local, this, startIndex);
