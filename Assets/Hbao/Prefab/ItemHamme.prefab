@@ -10,27 +10,27 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: -8679921383154817045, guid: 065f79a343b68b5418f9b144da5f1e63, type: 3}
       propertyPath: m_LocalScale.x
-      value: 0.2
+      value: 0.7
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 065f79a343b68b5418f9b144da5f1e63, type: 3}
       propertyPath: m_LocalScale.y
-      value: 0.2
+      value: 0.7
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 065f79a343b68b5418f9b144da5f1e63, type: 3}
       propertyPath: m_LocalScale.z
-      value: 0.2
+      value: 0.7
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 065f79a343b68b5418f9b144da5f1e63, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 41.6738
+      value: 160.57855
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 065f79a343b68b5418f9b144da5f1e63, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0.224
+      value: 16.21
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 065f79a343b68b5418f9b144da5f1e63, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 59.736984
+      value: 142.86826
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 065f79a343b68b5418f9b144da5f1e63, type: 3}
       propertyPath: m_LocalRotation.w
@@ -99,7 +99,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  GlobalObjectIdHash: 1800011811
+  GlobalObjectIdHash: 385341268
   InScenePlacedSourceGlobalObjectIdHash: 2398605563
   DeferredDespawnTick: 0
   Ownership: 1
@@ -146,4 +146,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   ShowTopMostFoldoutHeaderGroup: 1
+  rotationSpeed: 60
+  bobSpeed: 2
+  bobRange: 0.12
   interactRadius: 2.5
