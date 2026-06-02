@@ -27,35 +27,33 @@ public class GearRotator : NetworkBehaviour
     public override void OnNetworkSpawn()
     {
         base.OnNetworkSpawn();
-        // BỎ DÒNG NÀY: if (IsServer) currentSpeed.Value = 0f;
-        
-        // Nếu bạn muốn nó MẶC ĐỊNH quay ngay khi game chạy, hãy để:
         if (IsServer)
         {
             float direction = reverseDirection ? -1f : 1f;
             currentSpeed.Value = rotationSpeed * direction; 
         }
     }
-    public void SetSpeed(float speed)
-    {
-        if (IsServer) currentSpeed.Value = speed;
-    }
 
     void Update()
     {
+        // 1. Quay bánh răng (Chạy trên cả Server và Client để đồng bộ)
         if (currentSpeed.Value != 0)
         {
             transform.Rotate(rotationAxis.normalized * currentSpeed.Value * Time.deltaTime, Space.Self);
         }
     }
 
-    public bool IsSpining() => currentSpeed.Value != 0f;
+    // 2. SỬA: Hàm Open/Close nên gọi ServerRpc để Server quyết định trạng thái
+    public void OpenGear() { if (IsServer) OpenGearServerRpc(); }
+    public void CloseGear() { if (IsServer) CloseGearServerRpc(); }
 
-    // --- CÁC HÀM GỌI TỪ SERVER ĐỂ ĐỒNG BỘ CLIENT ---
-
-    public void OpenGear()
+    [ServerRpc(RequireOwnership = false)]
+    private void OpenGearServerRpc()
     {
-        if (IsServer) currentSpeed.Value = 0f; 
+        currentSpeed.Value = 0f;
+        // Thực hiện di chuyển vật lý trên Server
+        transform.DOLocalMove(originalPosition + openOffset, moveDuration).SetEase(Ease.InOutCubic);
+        // Đồng bộ tới Client
         OpenGearClientRpc();
     }
 
@@ -63,13 +61,17 @@ public class GearRotator : NetworkBehaviour
     private void OpenGearClientRpc()
     {
         transform.DOKill();
-        // Trượt ra xong thì KHÔNG làm gì cả (vì bánh răng đã dừng)
         transform.DOLocalMove(originalPosition + openOffset, moveDuration).SetEase(Ease.InOutCubic);
     }
 
-    public void CloseGear()
+    [ServerRpc(RequireOwnership = false)]
+    private void CloseGearServerRpc()
     {
-        if (IsServer) currentSpeed.Value = 0f;    
+        transform.DOLocalMove(originalPosition, moveDuration).SetEase(Ease.InOutCubic)
+                .OnComplete(() => {
+                    float direction = reverseDirection ? -1f : 1f;
+                    currentSpeed.Value = originalSpeed * direction;
+                });
         CloseGearClientRpc();
     }
 
@@ -77,25 +79,18 @@ public class GearRotator : NetworkBehaviour
     private void CloseGearClientRpc()
     {
         transform.DOKill();
-        // Khi trượt về xong, thì mới set lại tốc độ quay (chỉ Server thực hiện)
-        transform.DOLocalMove(originalPosition, moveDuration).SetEase(Ease.InOutCubic)
-                .OnComplete(() => {
-                    if (IsServer) {
-                        float direction = reverseDirection ? -1f : 1f;
-                        currentSpeed.Value = originalSpeed * direction;
-                    }
-                });
+        transform.DOLocalMove(originalPosition, moveDuration).SetEase(Ease.InOutCubic);
     }
 
-    // --- XỬ LÝ VA CHẠM ---
     private void OnTriggerEnter(Collider other)
     {
         if (!IsServer) return;
 
-        if (other.CompareTag("Player") && IsSpining())
+        if (other.CompareTag("Player") && currentSpeed.Value != 0f)
         {
+            // Reset player vị trí an toàn (Server quyết định)
             other.transform.position = new Vector3(0f, 1f, 0f);
-            Debug.Log("Người chơi bị bánh răng nghiền nát!");
+            Debug.Log("Server đã xử lý va chạm bánh răng!");
         }
     }
 }

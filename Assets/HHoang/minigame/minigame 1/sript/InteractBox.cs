@@ -12,19 +12,22 @@ public class InteractBox : NetworkBehaviour
     private bool isUsingStation = false;
     public NetworkVariable<bool> isCrystalLocked = new NetworkVariable<bool>(false);
     
-    // THAY ĐỔI: Tham chiếu đến PlayerInteraction thay vì PlayerMovement
     private PlayerInteraction localPlayerInteraction;
 
-    void Start() { gameManager = Object.FindFirstObjectByType<OptimizedNetworkMiniGame>(); }
+    void Start() 
+    { 
+        // Thay vì FindFirstObjectByType (có thể chậm), nếu miniGame là singleton hoặc có ref thì tốt hơn
+        gameManager = Object.FindFirstObjectByType<OptimizedNetworkMiniGame>(); 
+    }
 
     void Update()
     {
+        // 1. Kiểm tra an toàn cho Dedicated Server
         if (Keyboard.current == null) return;
 
-        // Kiểm tra điều kiện chính với PlayerInteraction
         if (isPlayerInside && localPlayerInteraction != null && localPlayerInteraction.IsOwner && Keyboard.current.eKey.wasPressedThisFrame)
         {
-            // 1. Logic đặt tinh thể (Crystal)
+            // Logic đặt tinh thể
             if (localPlayerInteraction.isCarryingCore.Value && localPlayerInteraction.currentHeldCore != null)
             {
                 if (!isCrystalLocked.Value && (stationIndex == 2 || stationIndex == 3))
@@ -32,10 +35,9 @@ public class InteractBox : NetworkBehaviour
                     SnapAndLockCrystalServerRpc(stationIndex);
                 }
             }
-            // 2. Logic tương tác Mini-game
-            else
+            // Logic tương tác Mini-game
+            else if (gameManager != null)
             {
-                if (gameManager == null) return;
                 if (!isUsingStation) OpenStation();
                 else ExitStation();
             }
@@ -45,29 +47,41 @@ public class InteractBox : NetworkBehaviour
     private void OpenStation()
     {
         isUsingStation = true;
-        gameManager.RequestStationAccessServerRpc(stationIndex, localPlayerInteraction.OwnerClientId);
+        // Gửi lệnh lên server
+        RequestStationAccessServerRpc(stationIndex);
         gameManager.ToggleMiniGame(stationIndex, true);
         
-        // Gọi đến thành phần di chuyển để vô hiệu hóa nó
-        var movement = localPlayerInteraction.GetComponent<PlayerMovement>();
-        if (movement != null) movement.SetCanMoveServerRpc(false);
+        // Vô hiệu hóa di chuyển
+        localPlayerInteraction.GetComponent<PlayerMovement>()?.SetCanMove(false);
     }
 
     private void ExitStation()
     {
         isUsingStation = false;
-        gameManager.ReleaseStationServerRpc(stationIndex, localPlayerInteraction.OwnerClientId);
+        RequestStationReleaseServerRpc(stationIndex);
         gameManager.ToggleMiniGame(stationIndex, false);
         
-        var movement = localPlayerInteraction.GetComponent<PlayerMovement>();
-        if (movement != null) movement.SetCanMoveServerRpc(true);
+        localPlayerInteraction.GetComponent<PlayerMovement>()?.SetCanMove(true);
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    private void RequestStationAccessServerRpc(int index, ServerRpcParams rpcParams = default)
+    {
+        // Gọi trực tiếp hàm logic (chỉ chạy trên Server)
+        gameManager.HandleStationAccess(index, rpcParams.Receive.SenderClientId);
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    private void RequestStationReleaseServerRpc(int index, ServerRpcParams rpcParams = default)
+    {
+        // Tương tự, tạo một hàm HandleStationRelease trong MiniGame
+        gameManager.HandleStationRelease(index, rpcParams.Receive.SenderClientId);
     }
 
     [ServerRpc(RequireOwnership = false)]
     private void SnapAndLockCrystalServerRpc(int index, ServerRpcParams rpcParams = default)
     {
-        var senderClientId = rpcParams.Receive.SenderClientId;
-        if (NetworkManager.Singleton.ConnectedClients.TryGetValue(senderClientId, out var client))
+        if (NetworkManager.ConnectedClients.TryGetValue(rpcParams.Receive.SenderClientId, out var client) && client.PlayerObject != null)
         {
             var playerInt = client.PlayerObject.GetComponent<PlayerInteraction>();
             var core = playerInt.currentHeldCore;
@@ -79,8 +93,8 @@ public class InteractBox : NetworkBehaviour
 
                 Rigidbody rb = core.GetComponent<Rigidbody>();
                 if (rb != null) { rb.linearVelocity = Vector3.zero; rb.isKinematic = true; }
-                core.transform.position = crystalSnapPoint.position;
-                core.transform.rotation = crystalSnapPoint.rotation;
+                
+                core.transform.SetPositionAndRotation(crystalSnapPoint.position, crystalSnapPoint.rotation);
                 
                 playerInt.DropCore(); 
                 gameManager.SetStationCrystalStatusServerRpc(index, true);
@@ -90,7 +104,7 @@ public class InteractBox : NetworkBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
-        if (other.CompareTag("Player") && other.GetComponent<NetworkObject>().IsOwner)
+        if (other.CompareTag("Player") && other.TryGetComponent<NetworkObject>(out var netObj) && netObj.IsOwner)
         {
             isPlayerInside = true;
             localPlayerInteraction = other.GetComponent<PlayerInteraction>();
@@ -99,7 +113,8 @@ public class InteractBox : NetworkBehaviour
 
     private void OnTriggerExit(Collider other)
     {
-        if (other.CompareTag("Player") && other.GetComponent<NetworkObject>().IsOwner)
+        // Khi rời trigger, nếu đang dùng máy thì phải thoát
+        if (other.CompareTag("Player") && other.TryGetComponent<NetworkObject>(out var netObj) && netObj.IsOwner)
         {
             if (isUsingStation) ExitStation();
             isPlayerInside = false;

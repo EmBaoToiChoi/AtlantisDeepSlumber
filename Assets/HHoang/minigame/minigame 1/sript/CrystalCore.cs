@@ -12,9 +12,14 @@ public class CrystalCore : NetworkBehaviour
 
     void Update()
     {
+        // Chỉ Server thực hiện tính toán vật lý
         if (!IsServer || isSnapped.Value) return;
 
         Rigidbody rb = GetComponent<Rigidbody>();
+        
+        // Dọn dẹp danh sách holder nếu có client nào đó đã ngắt kết nối
+        CleanupDisconnectedHolders();
+
         if (holders.Count > 0)
         {
             Vector3 targetPos = Vector3.zero;
@@ -22,11 +27,9 @@ public class CrystalCore : NetworkBehaviour
 
             foreach (ulong clientId in holders)
             {
-                // Kiểm tra sự tồn tại của client và PlayerObject
                 if (NetworkManager.ConnectedClients.TryGetValue(clientId, out var client) && 
                     client.PlayerObject != null)
                 {
-                    // Lấy script tương tác thay vì di chuyển
                     if (client.PlayerObject.TryGetComponent<PlayerInteraction>(out var pInt) && pInt.holdPoint != null)
                     {
                         targetPos += pInt.holdPoint.position;
@@ -43,8 +46,24 @@ public class CrystalCore : NetworkBehaviour
         }
         else
         {
-            rb.isKinematic = false;
-            rb.useGravity = true;
+            // Nếu không có ai giữ, trả về trạng thái vật lý bình thường
+            if (rb.isKinematic) 
+            {
+                rb.isKinematic = false;
+                rb.useGravity = true;
+            }
+        }
+    }
+
+    private void CleanupDisconnectedHolders()
+    {
+        // Duyệt ngược để an toàn khi remove item khỏi list
+        for (int i = holders.Count - 1; i >= 0; i--)
+        {
+            if (!NetworkManager.ConnectedClients.ContainsKey(holders[i]))
+            {
+                holders.RemoveAt(i);
+            }
         }
     }
 
@@ -52,7 +71,10 @@ public class CrystalCore : NetworkBehaviour
     public void RequestDrop(ulong playerId) => RequestDropServerRpc(playerId);
 
     [ServerRpc(RequireOwnership = false)]
-    private void RequestPickupServerRpc(ulong playerId) { if (!holders.Contains(playerId)) holders.Add(playerId); }
+    private void RequestPickupServerRpc(ulong playerId) 
+    { 
+        if (!holders.Contains(playerId)) holders.Add(playerId); 
+    }
 
     [ServerRpc(RequireOwnership = false)]
     private void RequestDropServerRpc(ulong playerId) 
