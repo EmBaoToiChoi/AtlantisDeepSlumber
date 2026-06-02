@@ -9,7 +9,7 @@ public class RepairItemDrop : NetworkBehaviour
     public float bobRange = 0.12f;
     public float interactRadius = 2.5f;
 
-    private SimplePlayerTest localPlayer;
+    private LeoPlayer localPlayer;
     private PlayerHUDController hud;
     private bool isWithinRange = false;
     private float startY;
@@ -120,7 +120,7 @@ public class RepairItemDrop : NetworkBehaviour
 
     private void FindLocalPlayer()
     {
-        SimplePlayerTest[] players = FindObjectsOfType<SimplePlayerTest>();
+        LeoPlayer[] players = FindObjectsOfType<LeoPlayer>();
         foreach (var p in players)
         {
             if (p.isStandaloneMode || p.IsOwner)

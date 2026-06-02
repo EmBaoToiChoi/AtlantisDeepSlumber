@@ -16,8 +16,8 @@ public class TempPlayerSpawner : MonoBehaviour
 
     private void Awake()
     {
-        // Kiểm tra xem đã có Player nào thuộc SimplePlayerTest tồn tại trong Scene chưa để tránh trùng lặp
-        SimplePlayerTest existingPlayer = FindObjectOfType<SimplePlayerTest>();
+        // Kiểm tra xem đã có Player nào thuộc LeoPlayer tồn tại trong Scene chưa để tránh trùng lặp
+        LeoPlayer existingPlayer = FindObjectOfType<LeoPlayer>();
         if (existingPlayer != null)
         {
             Debug.Log("[TempPlayerSpawner] Đã phát hiện Player trong Scene. Hủy spawn để tránh trùng lặp.");
@@ -43,7 +43,7 @@ public class TempPlayerSpawner : MonoBehaviour
                 GameObject spawnObj = Instantiate(playerPrefab, spawnPos, spawnRot);
                 
                 // Kích hoạt camera follow cho Player test
-                SimplePlayerTest playerScript = spawnObj.GetComponent<SimplePlayerTest>();
+                LeoPlayer playerScript = spawnObj.GetComponent<LeoPlayer>();
                 if (playerScript != null)
                 {
                     playerScript.enableCameraFollow = true;

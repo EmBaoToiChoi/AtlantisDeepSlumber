@@ -43,7 +43,7 @@ public class RakanDialogueController : MonoBehaviour
     private List<DialogueLine> currentLines = new List<DialogueLine>();
     private int currentLineIndex = -1;
     private bool isDialogueActive = false;
-    private SimplePlayerTest activePlayer;
+    private LeoPlayer activePlayer;
     private RakanNPC currentNPC;
     private bool isUIInitialized = false;
     private bool isPromptShowing = false;
@@ -222,7 +222,7 @@ public class RakanDialogueController : MonoBehaviour
     /// <summary>
     /// Bắt đầu hội thoại (Tải từ vị trí lưu trước đó)
     /// </summary>
-    public void StartDialogue(List<DialogueLine> lines, SimplePlayerTest player, RakanNPC npc, int startIndex)
+    public void StartDialogue(List<DialogueLine> lines, LeoPlayer player, RakanNPC npc, int startIndex)
     {
         InitializeUI(); // Đảm bảo khởi tạo trước khi gọi bắt đầu
 
@@ -266,7 +266,7 @@ public class RakanDialogueController : MonoBehaviour
     /// <summary>
     /// Hỗ trợ tương thích ngược cho StartDialogue
     /// </summary>
-    public void StartDialogue(List<DialogueLine> lines, SimplePlayerTest player)
+    public void StartDialogue(List<DialogueLine> lines, LeoPlayer player)
     {
         StartDialogue(lines, player, null, 0);
     }

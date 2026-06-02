@@ -11,7 +11,7 @@ public class LeoPlayer : NetworkBehaviour
 {
     [Header("Input Keys Configuration")]
     [Tooltip("Key to trigger roll/dodge.")]
-    public KeyCode rollKey = KeyCode.G;
+    public KeyCode rollKey = KeyCode.LeftControl;
 
     [Header("Blend Tree vs Trigger Mode")]
     [Tooltip("If true, movement is animated smoothly using float parameters (InputX, InputZ, Speed, IsArmed) and Blend Trees. If false, it triggers separate animation states directly.")]
@@ -196,6 +196,7 @@ public class LeoPlayer : NetworkBehaviour
 
     private void Awake()
     {
+        rollKey = KeyCode.LeftControl;
         proxyPlayerTest = GetComponent<SimplePlayerTest>();
         
         characterClassIndex = 0; 
@@ -410,6 +411,22 @@ public class LeoPlayer : NetworkBehaviour
             rollCooldownTimer -= Time.deltaTime;
         }
 
+        if (isRollingStandalone || (IsSpawned && isRollingNet.Value))
+        {
+            rollTimer -= Time.deltaTime;
+            if (rollTimer <= 0)
+            {
+                if (isStandaloneMode || IsOwner)
+                {
+                    OnRollEnd();
+                }
+                else
+                {
+                    if (anim != null) anim.applyRootMotion = false;
+                }
+            }
+        }
+
         if (CurrentHealth <= 0)
         {
             if (anim != null) anim.applyRootMotion = false;
@@ -459,6 +476,14 @@ public class LeoPlayer : NetworkBehaviour
                 if (!useBlendTree) PlayAnimationLocal("Idle", 0.1f);
             }
             return; 
+        }
+
+        if (IsPlayingPickAnimation())
+        {
+            smoothedInputX = Mathf.MoveTowards(smoothedInputX, 0f, Time.deltaTime * inputFilterSpeed);
+            smoothedInputZ = Mathf.MoveTowards(smoothedInputZ, 0f, Time.deltaTime * inputFilterSpeed);
+            UpdateAnimatorParams(0f);
+            return;
         }
 
         if (isRollingStandalone)
@@ -598,6 +623,14 @@ public class LeoPlayer : NetworkBehaviour
                 if (!useBlendTree) PlayAnimationLocal("Idle", 0.1f);
             }
             return; 
+        }
+
+        if (IsPlayingPickAnimation())
+        {
+            smoothedInputX = Mathf.MoveTowards(smoothedInputX, 0f, Time.deltaTime * inputFilterSpeed);
+            smoothedInputZ = Mathf.MoveTowards(smoothedInputZ, 0f, Time.deltaTime * inputFilterSpeed);
+            UpdateAnimatorParams(0f);
+            return;
         }
 
         if (isRollingStandalone || (IsSpawned && isRollingNet.Value))
@@ -1733,6 +1766,21 @@ public class LeoPlayer : NetworkBehaviour
                                stateInfo.IsName("Death");
 
         return isFullBodyAction && stateInfo.normalizedTime < 0.95f;
+    }
+
+    private bool IsPlayingPickAnimation()
+    {
+        if (anim == null || !anim.isActiveAndEnabled || anim.runtimeAnimatorController == null) return false;
+
+        if ((lastTriggeredAnimName == pickTrigger || lastTriggeredAnimName == "Idle_Pick" || lastTriggeredAnimName == "Pick") 
+            && Time.time - lastActionTriggerTime < 0.15f)
+        {
+            return true;
+        }
+
+        AnimatorStateInfo stateInfo = anim.GetCurrentAnimatorStateInfo(0);
+        bool isInPickState = stateInfo.IsName(pickTrigger) || stateInfo.IsName("Idle_Pick") || stateInfo.IsName("Pick");
+        return isInPickState && stateInfo.normalizedTime < 0.95f;
     }
 
     private float lastActionTriggerTime = 0f;

@@ -25,7 +25,7 @@ public class RakanNPC : NetworkBehaviour
 
     // Quản lý trạng thái tương tác phím G
     private bool isPlayerNearby = false;
-    private SimplePlayerTest localPlayer;
+    private LeoPlayer localPlayer;
     private int savedDialogueIndex = 0;
 
     private void Awake()
@@ -222,7 +222,7 @@ public class RakanNPC : NetworkBehaviour
         {
             // Kiểm tra số lượng người chơi đang đứng trong bán kính triggerRadius của NPC
             int count = 0;
-            SimplePlayerTest[] players = FindObjectsOfType<SimplePlayerTest>();
+            LeoPlayer[] players = FindObjectsOfType<LeoPlayer>();
             foreach (var p in players)
             {
                 if (Vector3.Distance(transform.position, p.transform.position) <= triggerRadius)
@@ -241,16 +241,16 @@ public class RakanNPC : NetworkBehaviour
             }
 
             // Phương án dự phòng (Fallback) đếm số player GameObjects
-            SimplePlayerTest[] players = FindObjectsOfType<SimplePlayerTest>();
+            LeoPlayer[] players = FindObjectsOfType<LeoPlayer>();
             return players != null ? players.Length : 1;
         }
     }
 
     private void OnTriggerEnter(Collider other)
     {
-        SimplePlayerTest player = other.GetComponentInParent<SimplePlayerTest>();
-        if (player == null) player = other.GetComponentInChildren<SimplePlayerTest>();
-        if (player == null) player = other.GetComponent<SimplePlayerTest>();
+        LeoPlayer player = other.GetComponentInParent<LeoPlayer>();
+        if (player == null) player = other.GetComponentInChildren<LeoPlayer>();
+        if (player == null) player = other.GetComponent<LeoPlayer>();
 
         if (player != null)
         {
@@ -276,9 +276,9 @@ public class RakanNPC : NetworkBehaviour
 
     private void OnTriggerExit(Collider other)
     {
-        SimplePlayerTest player = other.GetComponentInParent<SimplePlayerTest>();
-        if (player == null) player = other.GetComponentInChildren<SimplePlayerTest>();
-        if (player == null) player = other.GetComponent<SimplePlayerTest>();
+        LeoPlayer player = other.GetComponentInParent<LeoPlayer>();
+        if (player == null) player = other.GetComponentInChildren<LeoPlayer>();
+        if (player == null) player = other.GetComponent<LeoPlayer>();
 
         // Kiểm tra nếu chính localPlayer hiện tại đi ra ngoài
         if (player != null && player == localPlayer)
@@ -300,7 +300,7 @@ public class RakanNPC : NetworkBehaviour
         if (RakanDialogueController.Instance != null)
         {
             // Nếu chơi standalone thì đóng cục bộ, chơi mạng thì gửi Rpc để đóng cho tất cả mọi người
-            SimplePlayerTest tempPlayer = FindLocalPlayerInScene();
+            LeoPlayer tempPlayer = FindLocalPlayerInScene();
             if (tempPlayer != null && tempPlayer.isStandaloneMode)
             {
                 RakanDialogueController.Instance.EndDialogue();
@@ -332,9 +332,9 @@ public class RakanNPC : NetworkBehaviour
         savedDialogueIndex = index;
     }
 
-    private SimplePlayerTest FindLocalPlayerInScene()
+    private LeoPlayer FindLocalPlayerInScene()
     {
-        SimplePlayerTest[] players = FindObjectsOfType<SimplePlayerTest>();
+        LeoPlayer[] players = FindObjectsOfType<LeoPlayer>();
         foreach (var p in players)
         {
             if (p.isStandaloneMode || p.IsOwner)
@@ -389,7 +389,7 @@ public class RakanNPC : NetworkBehaviour
     [ClientRpc]
     private void StartDialogueClientRpc(int startIndex)
     {
-        SimplePlayerTest local = FindLocalPlayerInScene();
+        LeoPlayer local = FindLocalPlayerInScene();
         if (RakanDialogueController.Instance != null)
         {
             RakanDialogueController.Instance.StartDialogue(dialogueLines, local, this, startIndex);

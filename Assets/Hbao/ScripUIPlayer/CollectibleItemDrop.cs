@@ -13,7 +13,7 @@ public class CollectibleItemDrop : NetworkBehaviour
     public float bobSpeed = 2f;
     public float bobRange = 0.12f;
 
-    private SimplePlayerTest localPlayer;
+    private LeoPlayer localPlayer;
     private PlayerHUDController hud;
     private bool isWithinRange = false;
     private float startY;
@@ -125,7 +125,7 @@ public class CollectibleItemDrop : NetworkBehaviour
 
     private void FindLocalPlayer()
     {
-        SimplePlayerTest[] players = FindObjectsOfType<SimplePlayerTest>();
+        LeoPlayer[] players = FindObjectsOfType<LeoPlayer>();
         foreach (var p in players)
         {
             if (p.isStandaloneMode || p.IsOwner)
