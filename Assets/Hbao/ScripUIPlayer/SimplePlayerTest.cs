@@ -17,9 +17,9 @@ public class SimplePlayerTest : NetworkBehaviour
     public float slash1Duration = 0.6f;
     public float slash2Duration = 0.6f;
     public float slash3Duration = 0.7f;
-    private int comboStep = 0;
-    private float lastAttackTime = 0f;
-    private bool isRootedAttack = false;
+    protected int comboStep = 0;
+    protected float lastAttackTime = 0f;
+    protected bool isRootedAttack = false;
 
     [Header("Weapon Switch Animations")]
     public string drawWeaponTrigger = "DrawWeapon";
@@ -81,13 +81,13 @@ public class SimplePlayerTest : NetworkBehaviour
     public string[] inventorySlots = new string[10] { "", "", "", "", "", "", "", "", "", "" };
     
     // Biến lưu nâng cấp cho chế độ chơi đơn (Standalone)
-    private int localUpgradePoints = 5;
-    private int localHpLevel = 0;
-    private int localMpLevel = 0;
-    private int localCooldownLevel = 0;
-    private int localDamageLevel = 0;
-    private int localLevel = 0;
-    private float localExp = 0f;
+    protected int localUpgradePoints = 5;
+    protected int localHpLevel = 0;
+    protected int localMpLevel = 0;
+    protected int localCooldownLevel = 0;
+    protected int localDamageLevel = 0;
+    protected int localLevel = 0;
+    protected float localExp = 0f;
 
     [Header("Player Experience & Level")]
     public NetworkVariable<int> playerLevel = new NetworkVariable<int>(
@@ -115,15 +115,15 @@ public class SimplePlayerTest : NetworkBehaviour
         NetworkVariableReadPermission.Everyone,
         NetworkVariableWritePermission.Server
     );
-    private float localWeapon1Durability = 100f;
-    private float localWeapon2Durability = 100f;
+    protected float localWeapon1Durability = 100f;
+    protected float localWeapon2Durability = 100f;
 
     [Header("Player Class Settings")]
     [Tooltip("0 = Sát Thủ, 1 = Hỏa Thuật, 2 = Cung Thủ, 3 = Tanker")]
     public int characterClassIndex = 0;
 
     [Header("Knockback Settings")]
-    private Vector3 knockbackVelocity;
+    protected Vector3 knockbackVelocity;
 
     [Header("Camera Follow Settings")]
     public bool enableCameraFollow = true;
@@ -131,37 +131,37 @@ public class SimplePlayerTest : NetworkBehaviour
     public float cameraSmoothSpeed = 5f;
     public bool cameraLookAtPlayer = true;
     public float cameraPivotHeight = 1.0f;
-    private Camera targetCamera;
+    protected Camera targetCamera;
 
     [Header("Camera Rotation Settings")]
     public float cameraSensitivity = 2f;
     public float minPitch = 10f;
     public float maxPitch = 80f;
     public float rotationSmoothSpeed = 15f;
-    private float currentYaw = 0f;
-    private float currentPitch = 45f;
-    private float targetYaw = 0f;
-    private float targetPitch = 45f;
-    private float cameraDistance = 14f;
-    private bool isCursorLocked = true;
+    protected float currentYaw = 0f;
+    protected float currentPitch = 45f;
+    protected float targetYaw = 0f;
+    protected float targetPitch = 45f;
+    protected float cameraDistance = 14f;
+    protected bool isCursorLocked = true;
 
     [Header("Animation Settings")]
     public Animator anim;
-    private string currentAnimState;
+    protected string currentAnimState;
 
     [Header("Dodge Roll Settings")]
     public float rollSpeed = 10f;
     public float rollDuration = 0.4f;
     public float rollCooldown = 1.2f;
-    private float rollCooldownTimer;
-    private float rollTimer;
-    private Vector3 rollDirection;
+    protected float rollCooldownTimer;
+    protected float rollTimer;
+    protected Vector3 rollDirection;
     public NetworkVariable<bool> isRollingNet = new NetworkVariable<bool>(
         false,
         NetworkVariableReadPermission.Everyone,
         NetworkVariableWritePermission.Server
     );
-    private bool isRollingStandalone = false;
+    protected bool isRollingStandalone = false;
     private RootMotionBridge rootMotionBridge;
     private RootMotionBridge GetRootMotionBridge()
     {
@@ -175,9 +175,9 @@ public class SimplePlayerTest : NetworkBehaviour
     // ------------------------------------------------------------------
     //  Biến nội bộ cho chế độ Standalone (không có Netcode)
     // ------------------------------------------------------------------
-    private float localHealth;
+    protected float localHealth;
     public bool isStandaloneMode = false; // true khi chạy đơn lẻ không qua NetworkManager
-    private bool isSyncingFromDb = false; // true khi đang đồng bộ dữ liệu ban đầu từ DB tránh hồi máu ảo
+    protected bool isSyncingFromDb = false; // true khi đang đồng bộ dữ liệu ban đầu từ DB tránh hồi máu ảo
 
     /// <summary>
     /// Trả về true nếu NetworkManager đang hoạt động và đã kết nối/host.
@@ -779,7 +779,7 @@ public class SimplePlayerTest : NetworkBehaviour
         }
     }
 
-    void Update()
+    protected virtual void Update()
     {
         // Chỉ xử lý phím tắt Alt ẩn hiện chuột nếu là chủ sở hữu hoặc chơi đơn
         bool hasControl = isStandaloneMode || (IsSpawned && IsOwner);
@@ -817,7 +817,7 @@ public class SimplePlayerTest : NetworkBehaviour
         HandleOwnerUpdate();
     }
 
-    private void HandleStandaloneUpdate()
+    protected virtual void HandleStandaloneUpdate()
     {
         // Khóa di chuyển, tấn công, nhào lộn khi đang nói chuyện với Rakan hoặc Silas
         bool isDialogueOpen = (RakanDialogueController.Instance != null && RakanDialogueController.Instance.IsActive) ||
@@ -920,7 +920,7 @@ public class SimplePlayerTest : NetworkBehaviour
         }
     }
 
-    private void HandleOwnerUpdate()
+    protected virtual void HandleOwnerUpdate()
     {
         // Khóa di chuyển, tấn công, nhào lộn khi đang nói chuyện với Rakan hoặc Silas
         bool isDialogueOpen = (RakanDialogueController.Instance != null && RakanDialogueController.Instance.IsActive) ||
@@ -1028,7 +1028,7 @@ public class SimplePlayerTest : NetworkBehaviour
         }
     }
 
-    private void StartRollStandalone(Vector3 moveInput)
+    protected virtual void StartRollStandalone(Vector3 moveInput)
     {
         isRollingStandalone = true;
         rollTimer = rollDuration;
@@ -1051,7 +1051,7 @@ public class SimplePlayerTest : NetworkBehaviour
         PlayAnimation("LonVong", 0.05f);
     }
 
-    private void StartRollOwner(Vector3 moveInput)
+    protected virtual void StartRollOwner(Vector3 moveInput)
     {
         rollTimer = rollDuration;
         rollCooldownTimer = rollCooldown;
@@ -1126,7 +1126,7 @@ public class SimplePlayerTest : NetworkBehaviour
         }
     }
 
-    private float GetAttackDuration(int weaponIndex, int step)
+    protected virtual float GetAttackDuration(int weaponIndex, int step)
     {
         if (weaponIndex == 1)
         {
@@ -1141,7 +1141,7 @@ public class SimplePlayerTest : NetworkBehaviour
         return 0.5f;
     }
 
-    private void PerformComboAttack(bool networkMode)
+    protected virtual void PerformComboAttack(bool networkMode)
     {
         int weapon = GetActiveWeaponIndex();
         float currentTime = Time.time;
@@ -1516,10 +1516,10 @@ public class SimplePlayerTest : NetworkBehaviour
     // ==================================================================
 
 
-    private float lastActionTriggerTime = 0f;
-    private string lastTriggeredAnimName = "";
+    protected float lastActionTriggerTime = 0f;
+    protected string lastTriggeredAnimName = "";
 
-    private bool IsActionAnimationName(string name)
+    protected virtual bool IsActionAnimationName(string name)
     {
         return name == "LonVong" || 
                name == "GetHit" || 
@@ -1560,7 +1560,7 @@ public class SimplePlayerTest : NetworkBehaviour
         }
     }
 
-    private bool IsAttackAnimationName(string name)
+    protected virtual bool IsAttackAnimationName(string name)
     {
         return name == "Punch1" || 
                name == "Punch2" || 
@@ -1574,7 +1574,7 @@ public class SimplePlayerTest : NetworkBehaviour
                name == "Chem3";
     }
 
-    private bool IsPlayingAttackState(out AnimatorStateInfo activeState, out int layer)
+    protected virtual bool IsPlayingAttackState(out AnimatorStateInfo activeState, out int layer)
     {
         activeState = default;
         layer = -1;
@@ -1606,7 +1606,7 @@ public class SimplePlayerTest : NetworkBehaviour
         return false;
     }
 
-    private bool IsAttackState(AnimatorStateInfo stateInfo)
+    protected virtual bool IsAttackState(AnimatorStateInfo stateInfo)
     {
         return stateInfo.IsName("Punch1") || 
                stateInfo.IsName("Punch2") || 
@@ -1626,7 +1626,7 @@ public class SimplePlayerTest : NetworkBehaviour
                stateInfo.IsName("Chem_3");
     }
 
-    private bool IsFullBodyActionAnimation(string name)
+    protected virtual bool IsFullBodyActionAnimation(string name)
     {
         return name == "LonVong" || 
                name == "GetHit" || 
@@ -1635,7 +1635,7 @@ public class SimplePlayerTest : NetworkBehaviour
                name == "Death";
     }
 
-    private bool IsPlayingActionAnimation()
+    protected virtual bool IsPlayingActionAnimation()
     {
         if (anim == null)
         {
@@ -1701,7 +1701,7 @@ public class SimplePlayerTest : NetworkBehaviour
         }
     }
 
-    private void PlayAnimationLocal(string animName, float fadeTime)
+    protected virtual void PlayAnimationLocal(string animName, float fadeTime)
     {
         if (anim == null)
         {
@@ -1806,7 +1806,7 @@ public class SimplePlayerTest : NetworkBehaviour
         isRollingNet.Value = false;
     }
 
-    private void ClearAttackLayer()
+    protected virtual void ClearAttackLayer()
     {
         comboStep = 0;
         isRootedAttack = false;
