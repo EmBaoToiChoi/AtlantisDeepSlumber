@@ -18,7 +18,7 @@ GameObject:
   - component: {fileID: 75400207529345532}
   m_Layer: 0
   m_Name: Player2
-  m_TagString: Untagged
+  m_TagString: Player
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -51,8 +51,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  GlobalObjectIdHash: 939117060
-  InScenePlacedSourceGlobalObjectIdHash: 0
+  GlobalObjectIdHash: 2006089830
+  InScenePlacedSourceGlobalObjectIdHash: 939117060
   DeferredDespawnTick: 0
   Ownership: 1
   AlwaysReplicateAsRoot: 0
@@ -83,52 +83,123 @@ MonoBehaviour:
   TransitionStateInfoList:
   - IsCrossFadeExit: 0
     Layer: 0
-    OriginatingState: -4972662
+    OriginatingState: -39148367
+    DestinationState: 1688466699
+    TransitionDuration: 0.1
+    TriggerNameHash: 1688466699
+    TransitionIndex: 1
+  - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: 1688466699
+    DestinationState: 329565597
+    TransitionDuration: 0.1
+    TriggerNameHash: 329565597
+    TransitionIndex: 0
+  - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: 329565597
+    DestinationState: -39148367
+    TransitionDuration: 0.1
+    TriggerNameHash: -39148367
+    TransitionIndex: 1
+  - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: 2081823275
+    DestinationState: -39148367
+    TransitionDuration: 0.1
+    TriggerNameHash: -39148367
+    TransitionIndex: 0
+  - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: 2081823275
     DestinationState: 1748754976
     TransitionDuration: 0
     TriggerNameHash: 1349952704
     TransitionIndex: 1
   - IsCrossFadeExit: 0
     Layer: 0
-    OriginatingState: -4972662
-    DestinationState: 765711723
+    OriginatingState: 2081823275
+    DestinationState: -577525364
     TransitionDuration: 0
     TriggerNameHash: 765711723
     TransitionIndex: 2
   - IsCrossFadeExit: 0
     Layer: 0
     OriginatingState: 1748754976
-    DestinationState: 765711723
+    DestinationState: 2081823275
+    TransitionDuration: 0
+    TriggerNameHash: 2081823275
+    TransitionIndex: 0
+  - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: 1748754976
+    DestinationState: -577525364
     TransitionDuration: 0
     TriggerNameHash: 765711723
     TransitionIndex: 1
   - IsCrossFadeExit: 0
     Layer: 0
-    OriginatingState: 765711723
+    OriginatingState: -577525364
     DestinationState: 1748754976
     TransitionDuration: 0
     TriggerNameHash: 1349952704
     TransitionIndex: 0
+  - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: -577525364
+    DestinationState: 2081823275
+    TransitionDuration: 0
+    TriggerNameHash: 2081823275
+    TransitionIndex: 1
+  - IsCrossFadeExit: 0
+    Layer: 1
+    OriginatingState: -499022955
+    DestinationState: -39148367
+    TransitionDuration: 0.1
+    TriggerNameHash: -39148367
+    TransitionIndex: 0
+  - IsCrossFadeExit: 0
+    Layer: 1
+    OriginatingState: -39148367
+    DestinationState: 1688466699
+    TransitionDuration: 0.1
+    TriggerNameHash: 1688466699
+    TransitionIndex: 1
+  - IsCrossFadeExit: 0
+    Layer: 1
+    OriginatingState: 1688466699
+    DestinationState: 329565597
+    TransitionDuration: 0.1
+    TriggerNameHash: 329565597
+    TransitionIndex: 0
   AnimatorParameterEntries:
     ParameterEntries:
-    - name: Punch1
-      NameHash: -504573385
-      Synchronize: 1
-      ParameterType: 9
-    - name: Punch2
-      NameHash: 2028307341
-      Synchronize: 1
-      ParameterType: 9
-    - name: Punch3
-      NameHash: 266515227
-      Synchronize: 1
-      ParameterType: 9
     - name: run
       NameHash: 1349952704
       Synchronize: 1
       ParameterType: 9
     - name: Walk
       NameHash: 765711723
+      Synchronize: 1
+      ParameterType: 9
+    - name: Dam1
+      NameHash: -39148367
+      Synchronize: 1
+      ParameterType: 9
+    - name: Dam2
+      NameHash: 1688466699
+      Synchronize: 1
+      ParameterType: 9
+    - name: Dam3
+      NameHash: 329565597
+      Synchronize: 1
+      ParameterType: 9
+    - name: Idle
+      NameHash: 2081823275
+      Synchronize: 1
+      ParameterType: 9
+    - name: LonVong
+      NameHash: 1143134817
       Synchronize: 1
       ParameterType: 9
   AnimatorParametersExpanded: 0
@@ -149,13 +220,11 @@ MonoBehaviour:
   runSpeedMultiplier: 1.5
   damageAmount: 20
   attackRange: 3
-  comboWindow: 1
-  comboTransitionThreshold: 0.5
-  punch1Duration: 0.5
-  punch2Duration: 0.5
-  slash1Duration: 0.6
-  slash2Duration: 0.6
-  slash3Duration: 0.7
+  comboWindow: 1.5
+  comboTransitionThreshold: 0.7
+  punch1Duration: 1.2
+  punch2Duration: 1.2
+  punch3Duration: 1.2
   drawWeaponTrigger: DrawWeapon
   sheathWeaponTrigger: SheathWeapon
   maxHealth: 100
@@ -248,6 +317,12 @@ MonoBehaviour:
   maxPitch: 80
   rotationSmoothSpeed: 15
   anim: {fileID: 327535352679795549}
+  maxSpineTwistAngle: 80
+  netAimAngle:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 0
   rollSpeed: 10
   rollDuration: 0.4
   rollCooldown: 1.2
@@ -328,7 +403,7 @@ Rigidbody:
   m_UseGravity: 1
   m_IsKinematic: 0
   m_Interpolate: 0
-  m_Constraints: 0
+  m_Constraints: 72
   m_CollisionDetection: 0
 --- !u!114 &185223332511423188
 MonoBehaviour:
