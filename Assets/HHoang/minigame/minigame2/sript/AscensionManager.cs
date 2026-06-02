@@ -5,13 +5,17 @@ using System.Collections.Generic;
 
 public class AscensionManager : NetworkBehaviour
 {
+    private Material[] activeMaterials = new Material[4];
     public LineRenderer[] flowLines; // 4 đường nối từ trụ về tâm
-    public Material flowMaterial;    // Material có Shader chảy (tạo bản sao để chỉnh màu riêng)
+    [Header("Cấu hình Material")]
+    public Material flowMaterial;    // Kéo Material màu xanh vào đây
+    public Material redFlowMaterial; // Kéo Material màu đỏ vào đây
     
     [Header("Cấu hình Trụ")]
     public Transform[] pillarPositions = new Transform[4];
     public int[] pillarStates = new int[4]; 
 
+    private float[] flowDirections = new float[4]; // 1 = chảy vào tâm, -1 = chảy ngược ra trụ
     private List<CrystalCore> placedCrystals = new List<CrystalCore>();
     private Coroutine timerCoroutine;
     private bool isTimerRunning = false;
@@ -20,18 +24,22 @@ public class AscensionManager : NetworkBehaviour
     [Tooltip("Thời gian (giây) để đặt đủ tinh thể")]
     public float timeLimit = 5f; 
 
+    void Start()
+    {
+        // Khởi tạo hướng ban đầu là 1 (chảy vào tâm) để tránh lỗi
+        for(int i = 0; i < flowDirections.Length; i++) flowDirections[i] = 1f;
+    }
+
     void Update()
     {
-        // Cập nhật hiệu ứng chảy cho tất cả các line đang active
         for (int i = 0; i < flowLines.Length; i++)
         {
-            if (flowLines[i].enabled)
+            // Kiểm tra cả activeMaterials[i] để tránh NullReferenceException
+            if (flowLines[i].enabled && activeMaterials[i] != null)
             {
-                // Truy cập material instance của LineRenderer
-                Material mat = flowLines[i].material;
-                // Thay đổi offset của texture theo thời gian (tốc độ 0.5f)
-                float offset = Time.time * 0.5f; 
-                mat.SetTextureOffset("_MainTex", new Vector2(offset, 0));
+                float speed = 0.5f * flowDirections[i];
+                float offset = Time.time * speed;
+                activeMaterials[i].SetTextureOffset("_MainTex", new Vector2(offset, 0));
             }
         }
     }
@@ -155,53 +163,103 @@ public class AscensionManager : NetworkBehaviour
 
     void CheckWinCondition()
     {
-        // Chỉ kiểm tra khi đã đặt đủ 4 viên
         if (placedCrystals.Count < 4) return;
 
         bool allCorrect = true;
         for (int i = 0; i < pillarPositions.Length; i++)
         {
-            // Kiểm tra đúng sai
             bool isCorrect = (pillarStates[i] == i);
             
-            // Gửi lệnh đổi màu xuống tất cả client
-            // Màu xanh (Color.green) nếu đúng, màu đỏ (Color.red) nếu sai
-            SetFlowColorClientRpc(i, isCorrect ? Color.green : Color.red);
+            // Gọi RPC với tham số 'true' để nước chảy vào tâm
+            SetFlowColorClientRpc(i, isCorrect ? Color.green : Color.red, true);
 
             if (!isCorrect) allCorrect = false;
         }
 
         if (allCorrect)
         {
-            Debug.Log("Chúc mừng! Đã đặt đúng 4 viên vào đúng 4 trụ!");
+            Debug.Log("Chúc mừng! Đã đặt đúng 4 viên!");
             if (timerCoroutine != null) StopCoroutine(timerCoroutine);
             isTimerRunning = false;
         }
         else
         {
-            Debug.Log("Có viên sai! Chờ tí rồi văng ra...");
+            Debug.Log("Có viên sai! Bắt đầu quy trình đẩy ra...");
             StartCoroutine(DelayEject());
         }
     }
 
     // Hàm ClientRpc để đồng bộ màu sắc cho mọi người chơi
+    // Sửa lại hàm ClientRpc để truyền đủ 3 tham số xuống Coroutine
     [ClientRpc]
-    private void SetFlowColorClientRpc(int stationIndex, Color color)
+    private void SetFlowColorClientRpc(int stationIndex, Color color, bool isFlowingIn)
     {
         if (stationIndex < 0 || stationIndex >= flowLines.Length) return;
-
-        // Bật line lên khi bắt đầu chảy
-        flowLines[stationIndex].enabled = true;
-
-        // Tạo instance material mới để không ảnh hưởng các trụ khác
-        Material instanceMat = new Material(flowMaterial);
-        instanceMat.SetColor("_BaseColor", color); 
-        flowLines[stationIndex].material = instanceMat;
+        StartCoroutine(AnimateFlow(stationIndex, color, isFlowingIn));
     }
 
+    IEnumerator AnimateFlow(int i, Color color, bool isFlowingIn)
+    {
+        flowLines[i].enabled = true;
+        flowDirections[i] = isFlowingIn ? 1f : -1f;
+
+        // Chọn Material dựa trên màu: Màu đỏ thì dùng redFlowMaterial, còn lại dùng flowMaterial
+        bool isRed = (color == Color.red);
+        Material selectedMat = isRed ? redFlowMaterial : flowMaterial;
+        
+        flowLines[i].material = selectedMat;
+        activeMaterials[i] = selectedMat; 
+
+        // Reset vị trí về Trụ trước khi chạy
+        Vector3 startPos = flowLines[i].GetPosition(0);
+        Vector3 endPos = flowLines[i].GetPosition(1);
+        flowLines[i].SetPosition(1, startPos); 
+
+        float duration = 1.0f; 
+        float elapsed = 0f;
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float t = elapsed / duration;
+            flowLines[i].SetPosition(1, Vector3.Lerp(startPos, endPos, t));
+            yield return null;
+        }
+    }
+
+    // Thay thế hàm DelayEject cũ bằng hàm này
     IEnumerator DelayEject()
     {
-        yield return new WaitForSeconds(1.0f); // Tăng thời gian chờ lên chút để người chơi kịp thấy màu đỏ
+        yield return new WaitForSeconds(2.0f); 
+
+        Vector3[] startPositions = new Vector3[flowLines.Length];
+        Vector3[] endPositions = new Vector3[flowLines.Length];
+
+        for(int i = 0; i < flowLines.Length; i++) {
+            startPositions[i] = flowLines[i].GetPosition(0);
+            endPositions[i] = flowLines[i].GetPosition(1);
+        }
+
+        float duration = 1.0f;
+        float elapsed = 0f;
+        
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float t = elapsed / duration;
+            
+            for(int i = 0; i < flowLines.Length; i++) {
+                if(flowLines[i] != null && flowLines[i].enabled) {
+                    flowDirections[i] = -1f; 
+                    flowLines[i].SetPosition(1, Vector3.Lerp(endPositions[i], startPositions[i], t));
+                }
+            }
+            yield return null;
+        }
+
         EjectAllCrystals();
+        foreach (var line in flowLines)
+        {
+            if (line != null) line.enabled = false;
+        }
     }
 }
