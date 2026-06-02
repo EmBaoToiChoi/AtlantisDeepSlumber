@@ -3,6 +3,8 @@ using UnityEngine;
 
 public class SimplePlayerTest : NetworkBehaviour
 {
+    protected LeoPlayer leoPlayer;
+
     [Header("Movement & Attack Settings")]
     public float moveSpeed = 5f;
     public float runSpeedMultiplier = 1.5f;
@@ -163,7 +165,7 @@ public class SimplePlayerTest : NetworkBehaviour
     );
     protected bool isRollingStandalone = false;
     private RootMotionBridge rootMotionBridge;
-    private RootMotionBridge GetRootMotionBridge()
+    protected RootMotionBridge GetRootMotionBridge()
     {
         if (rootMotionBridge == null && anim != null)
         {
@@ -188,14 +190,14 @@ public class SimplePlayerTest : NetworkBehaviour
     /// <summary>
     /// Máu hiện tại: đọc từ NetworkVariable khi online, đọc từ biến local khi standalone.
     /// </summary>
-    public float CurrentHealth =>
-        isStandaloneMode ? localHealth : currentHealth.Value;
+    public float CurrentHealth => leoPlayer != null ? leoPlayer.CurrentHealth : (isStandaloneMode ? localHealth : currentHealth.Value);
 
     /// <summary>
     /// Trả về index vũ khí đang chọn: đọc từ HUD khi standalone, đọc từ NetworkVariable khi online.
     /// </summary>
-    public int GetActiveWeaponIndex()
+    public virtual int GetActiveWeaponIndex()
     {
+        if (leoPlayer != null) return leoPlayer.GetActiveWeaponIndex();
         if (isStandaloneMode)
         {
             PlayerHUDController hud = FindObjectOfType<PlayerHUDController>();
@@ -207,7 +209,12 @@ public class SimplePlayerTest : NetworkBehaviour
 
     private void Awake()
     {
-        if (anim == null)
+        leoPlayer = GetComponent<LeoPlayer>();
+        if (leoPlayer != null)
+        {
+            inventorySlots = leoPlayer.inventorySlots;
+        }
+        else if (anim == null)
         {
             anim = GetComponent<Animator>();
             if (anim == null)
@@ -217,6 +224,13 @@ public class SimplePlayerTest : NetworkBehaviour
 
     private void Start()
     {
+        if (leoPlayer != null)
+        {
+            isStandaloneMode = leoPlayer.isStandaloneMode;
+            enabled = false;
+            return;
+        }
+
         // Đảm bảo khởi tạo Animator cho cả các lớp kế thừa
         if (anim == null)
         {
@@ -283,6 +297,10 @@ public class SimplePlayerTest : NetworkBehaviour
     public override void OnNetworkSpawn()
     {
         isStandaloneMode = false;
+        if (leoPlayer != null)
+        {
+            return;
+        }
 
         // Đăng ký sự kiện đồng bộ Netcode
         activeWeaponIndex.OnValueChanged += OnWeaponIndexChanged;
@@ -329,6 +347,11 @@ public class SimplePlayerTest : NetworkBehaviour
 
     public override void OnNetworkDespawn()
     {
+        if (leoPlayer != null)
+        {
+            return;
+        }
+
         activeWeaponIndex.OnValueChanged -= OnWeaponIndexChanged;
         isWeapon2Locked.OnValueChanged -= OnWeapon2LockedChanged;
         isSkillsUnlocked.OnValueChanged -= OnSkillsUnlockedChanged;
@@ -526,8 +549,13 @@ public class SimplePlayerTest : NetworkBehaviour
 
     public float Weapon1Durability
     {
-        get { return isStandaloneMode ? localWeapon1Durability : weapon1Durability.Value; }
+        get { return leoPlayer != null ? leoPlayer.Weapon1Durability : (isStandaloneMode ? localWeapon1Durability : weapon1Durability.Value); }
         set {
+            if (leoPlayer != null)
+            {
+                leoPlayer.Weapon1Durability = value;
+                return;
+            }
             if (isStandaloneMode)
             {
                 localWeapon1Durability = Mathf.Clamp(value, 0f, weapon1MaxDurability);
@@ -542,8 +570,13 @@ public class SimplePlayerTest : NetworkBehaviour
 
     public float Weapon2Durability
     {
-        get { return isStandaloneMode ? localWeapon2Durability : weapon2Durability.Value; }
+        get { return leoPlayer != null ? leoPlayer.Weapon2Durability : (isStandaloneMode ? localWeapon2Durability : weapon2Durability.Value); }
         set {
+            if (leoPlayer != null)
+            {
+                leoPlayer.Weapon2Durability = value;
+                return;
+            }
             if (isStandaloneMode)
             {
                 localWeapon2Durability = Mathf.Clamp(value, 0f, weapon2MaxDurability);
@@ -575,6 +608,7 @@ public class SimplePlayerTest : NetworkBehaviour
 
     public bool TryAddItem(string itemName)
     {
+        if (leoPlayer != null) return leoPlayer.TryAddItem(itemName);
         // 1. Tìm xem vật phẩm đã tồn tại trong túi đồ để tăng số lượng (Cộng dồn stack)
         for (int i = 0; i < inventorySlots.Length; i++)
         {
@@ -668,6 +702,11 @@ public class SimplePlayerTest : NetworkBehaviour
     /// </summary>
     public void AddExperience(float amount)
     {
+        if (leoPlayer != null)
+        {
+            leoPlayer.AddExperience(amount);
+            return;
+        }
         if (isStandaloneMode)
         {
             localExp += amount;
@@ -710,6 +749,11 @@ public class SimplePlayerTest : NetworkBehaviour
     // ------------------------------------------------------------------
     public void StandaloneUpgradeStat(int statType)
     {
+        if (leoPlayer != null)
+        {
+            leoPlayer.StandaloneUpgradeStat(statType);
+            return;
+        }
         if (localUpgradePoints <= 0)
         {
             Debug.LogWarning("[Standalone] Hết điểm nâng cấp!");
@@ -735,6 +779,11 @@ public class SimplePlayerTest : NetworkBehaviour
     // ------------------------------------------------------------------
     public void UpgradeStatFromHUD(int statType)
     {
+        if (leoPlayer != null)
+        {
+            leoPlayer.UpgradeStatFromHUD(statType);
+            return;
+        }
         if (!IsSpawned || !IsOwner) return;
         UpgradeStatServerRpc(statType);
     }
@@ -1220,7 +1269,7 @@ public class SimplePlayerTest : NetworkBehaviour
         }
     }
 
-    private void TryDamageEnemy(Collider col)
+    protected void TryDamageEnemy(Collider col)
     {
         var e1 = col.GetComponentInParent<Enemy1_DapBua>();
         if (e1 != null) { e1.TakeDamage(damageAmount); return; }
@@ -1242,7 +1291,7 @@ public class SimplePlayerTest : NetworkBehaviour
     //  Server RPC Tấn công (chỉ dùng khi Netcode online)
     // ------------------------------------------------------------------
     [ServerRpc]
-    void AttackServerRpc()
+    protected void AttackServerRpc()
     {
         Vector3 rayStart = transform.position + Vector3.up * 0.5f;
         Debug.DrawRay(rayStart, transform.forward * attackRange, Color.red, 0.5f);
@@ -1267,6 +1316,11 @@ public class SimplePlayerTest : NetworkBehaviour
 
     public void TakeDamage(float damage)
     {
+        if (leoPlayer != null)
+        {
+            leoPlayer.TakeDamage(damage);
+            return;
+        }
         // Né chiêu (miễn nhiễm sát thương khi đang lộn vòng)
         if (isStandaloneMode)
         {
@@ -1328,6 +1382,11 @@ public class SimplePlayerTest : NetworkBehaviour
     /// </summary>
     public void ApplyKnockback(Vector3 force)
     {
+        if (leoPlayer != null)
+        {
+            leoPlayer.ApplyKnockback(force);
+            return;
+        }
         if (isStandaloneMode)
         {
             knockbackVelocity = force;
@@ -1351,6 +1410,11 @@ public class SimplePlayerTest : NetworkBehaviour
 
     public void UpdateStateFromHUD(int weaponIndex, bool weapon2Locked, bool skillsUnlocked)
     {
+        if (leoPlayer != null)
+        {
+            leoPlayer.UpdateStateFromHUD(weaponIndex, weapon2Locked, skillsUnlocked);
+            return;
+        }
         if (!IsSpawned || !IsOwner) return;
         UpdateStateServerRpc(weaponIndex, weapon2Locked, skillsUnlocked);
     }
@@ -1465,6 +1529,11 @@ public class SimplePlayerTest : NetworkBehaviour
 
     public async void SavePlayerStateToDatabase()
     {
+        if (leoPlayer != null)
+        {
+            leoPlayer.SavePlayerStateToDatabase();
+            return;
+        }
         if (!IsSpawned || !IsOwner) return;
 
         Debug.Log("[DB] Đang tự động lưu trạng thái nhân vật lên MongoDB...");
@@ -1542,6 +1611,11 @@ public class SimplePlayerTest : NetworkBehaviour
 
     public void PlayWeaponSwitchAnimation(int oldWeapon, int newWeapon)
     {
+        if (leoPlayer != null)
+        {
+            leoPlayer.PlayWeaponSwitchAnimation(oldWeapon, newWeapon);
+            return;
+        }
         if (oldWeapon == newWeapon) return;
 
         if (newWeapon == 2)
@@ -1801,7 +1875,7 @@ public class SimplePlayerTest : NetworkBehaviour
     }
 
     [ServerRpc]
-    private void StopRollServerRpc()
+    protected void StopRollServerRpc()
     {
         isRollingNet.Value = false;
     }
