@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public class ElenaArcher_Old : SimplePlayerTest
+public class ElenaArcher : ElenaPlayer
 {
     private void Awake()
     {
@@ -13,5 +13,12 @@ public class ElenaArcher_Old : SimplePlayerTest
         cameraOffset = new Vector3(0f, 10f, -6f); // Đưa camera lại gần và thấp hơn một chút
         cameraSensitivity = 3f;  
         cameraPivotHeight = 1.5f; 
+
+        if (anim == null)
+        {
+            anim = GetComponent<Animator>();
+            if (anim == null)
+                anim = GetComponentInChildren<Animator>(true);
+        }
     }
 }
