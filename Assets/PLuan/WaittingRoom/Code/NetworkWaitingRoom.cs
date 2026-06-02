@@ -775,7 +775,7 @@ public class NetworkWaitingRoom : NetworkBehaviour
             // Chỉ hiển thị nút Start cho Chủ phòng (Slot 0) để bấm bắt đầu
             _btnStart.style.display = isRoomHost ? DisplayStyle.Flex : DisplayStyle.None;
             
-            bool canStart = allReady && !duplicatesExist;
+            bool canStart = true; // Cho phép bắt đầu game bất kỳ lúc nào để test
             _btnStart.SetEnabled(canStart);
             
             if (isRoomHost)
