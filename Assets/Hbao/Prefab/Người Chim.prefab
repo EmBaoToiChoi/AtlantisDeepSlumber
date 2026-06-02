@@ -183,7 +183,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  GlobalObjectIdHash: 3194319458
+  GlobalObjectIdHash: 2404185414
   InScenePlacedSourceGlobalObjectIdHash: 0
   DeferredDespawnTick: 0
   Ownership: 1
@@ -302,11 +302,53 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   ShowTopMostFoldoutHeaderGroup: 1
   NetworkAnimatorExpanded: 0
-  AuthorityMode: 0
-  m_Animator: {fileID: 0}
-  TransitionStateInfoList: []
+  AuthorityMode: 1
+  m_Animator: {fileID: 4796621718662928732}
+  TransitionStateInfoList:
+  - IsCrossFadeExit: 0
+    Layer: 1
+    OriginatingState: -499022955
+    DestinationState: 1112093197
+    TransitionDuration: 0.05
+    TriggerNameHash: 1112093197
+    TransitionIndex: 0
+  - IsCrossFadeExit: 0
+    Layer: 2
+    OriginatingState: -499022955
+    DestinationState: -889037009
+    TransitionDuration: 0.05
+    TriggerNameHash: -889037009
+    TransitionIndex: 0
   AnimatorParameterEntries:
-    ParameterEntries: []
+    ParameterEntries:
+    - name: quai5walk
+      NameHash: 575657904
+      Synchronize: 1
+      ParameterType: 9
+    - name: quai5Run
+      NameHash: -1131590775
+      Synchronize: 1
+      ParameterType: 9
+    - name: Quai5Die
+      NameHash: 754283208
+      Synchronize: 1
+      ParameterType: 9
+    - name: Quai5Anhit
+      NameHash: 1112093197
+      Synchronize: 1
+      ParameterType: 9
+    - name: quai5Attack
+      NameHash: -889037009
+      Synchronize: 1
+      ParameterType: 9
+    - name: quai5IDLE
+      NameHash: 1164965188
+      Synchronize: 1
+      ParameterType: 9
+    - name: Speed
+      NameHash: -823668238
+      Synchronize: 1
+      ParameterType: 1
   AnimatorParametersExpanded: 0
 --- !u!114 &1224762273549751842
 MonoBehaviour:
@@ -332,7 +374,7 @@ MonoBehaviour:
   RotationMaxInterpolationTime: 0.1
   ScaleLerpSmoothing: 1
   ScaleMaxInterpolationTime: 0.1
-  AuthorityMode: 0
+  AuthorityMode: 1
   TickSyncChildren: 0
   UseUnreliableDeltas: 0
   SyncPositionX: 1
