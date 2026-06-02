@@ -227,7 +227,8 @@ public class SimplePlayerTest : NetworkBehaviour
         if (leoPlayer != null)
         {
             isStandaloneMode = leoPlayer.isStandaloneMode;
-            enabled = false;
+            // Giữ enabled = true để các hệ thống FindObjectsOfType<SimplePlayerTest>() vẫn tìm thấy Player.
+            // Logic chính sẽ được chặn ở Update và LateUpdate bằng cách return sớm.
             return;
         }
 
@@ -830,6 +831,8 @@ public class SimplePlayerTest : NetworkBehaviour
 
     protected virtual void Update()
     {
+        if (leoPlayer != null) return;
+
         // Chỉ xử lý phím tắt Alt ẩn hiện chuột nếu là chủ sở hữu hoặc chơi đơn
         bool hasControl = isStandaloneMode || (IsSpawned && IsOwner);
         if (hasControl)
@@ -1125,6 +1128,8 @@ public class SimplePlayerTest : NetworkBehaviour
 
     void LateUpdate()
     {
+        if (leoPlayer != null) return;
+
         // Camera follow hoạt động cho cả standalone lẫn Netcode owner
         bool shouldFollow = isStandaloneMode || (IsSpawned && IsOwner);
         if (!shouldFollow || !enableCameraFollow) return;

@@ -1812,7 +1812,15 @@ public class LeoPlayer : NetworkBehaviour
             if (!string.IsNullOrEmpty(sheathWeaponTrigger)) anim.ResetTrigger(sheathWeaponTrigger);
         }
 
-        anim.SetTrigger(translatedName);
+        if (translatedName == pickTrigger || translatedName == "Idle_Pick")
+        {
+            anim.ResetTrigger(translatedName);
+            anim.CrossFadeInFixedTime(translatedName, fadeTime, -1, 0f);
+        }
+        else
+        {
+            anim.SetTrigger(translatedName);
+        }
 
         bool isMovingAttack = IsAttackAnimationName(translatedName) && !isRootedAttack;
         if (!isMovingAttack)
