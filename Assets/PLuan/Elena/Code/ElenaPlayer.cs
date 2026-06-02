@@ -10,13 +10,11 @@ public class ElenaPlayer : NetworkBehaviour
     public float attackRange = 3f;
 
     [Header("Combo Attack Settings")]
-    public float comboWindow = 1.0f;
-    public float comboTransitionThreshold = 0.5f;
-    public float punch1Duration = 0.5f;
-    public float punch2Duration = 0.5f;
-    public float slash1Duration = 0.6f;
-    public float slash2Duration = 0.6f;
-    public float slash3Duration = 0.7f;
+    public float comboWindow = 1.5f;
+    public float comboTransitionThreshold = 0.7f;
+    public float punch1Duration = 1.2f;
+    public float punch2Duration = 1.2f;
+    public float punch3Duration = 1.2f;
     private int comboStep = 0;
     private float lastAttackTime = 0f;
     private bool isRootedAttack = false;
@@ -148,6 +146,29 @@ public class ElenaPlayer : NetworkBehaviour
     [Header("Animation Settings")]
     public Animator anim;
     private string currentAnimState;
+
+    [Header("Spine Aim Settings")]
+    public float maxSpineTwistAngle = 80f;
+    private Transform spineBone;
+    private float localAimAngle = 0f;
+    public NetworkVariable<float> netAimAngle = new NetworkVariable<float>(
+        0f,
+        NetworkVariableReadPermission.Everyone,
+        NetworkVariableWritePermission.Owner
+    );
+
+    private Transform GetSpineBone()
+    {
+        if (spineBone == null && anim != null)
+        {
+            spineBone = anim.GetBoneTransform(HumanBodyBones.Spine);
+            if (spineBone == null)
+            {
+                spineBone = anim.GetBoneTransform(HumanBodyBones.Chest);
+            }
+        }
+        return spineBone;
+    }
 
     [Header("Dodge Roll Settings")]
     public float rollSpeed = 10f;
@@ -798,11 +819,72 @@ public class ElenaPlayer : NetworkBehaviour
             rollCooldownTimer -= Time.deltaTime;
         }
 
+        // Tự động reset combo và dọn dẹp trigger nếu người chơi đã dừng tấn công và hoạt ảnh trở về trạng thái bình thường (Idle/Walk/Run)
+        int activeWeapon = GetActiveWeaponIndex();
+        float currentAttackDuration = GetAttackDuration(activeWeapon, comboStep);
+        if (comboStep > 0 && Time.time - lastAttackTime > currentAttackDuration * comboTransitionThreshold)
+        {
+            if (!IsPlayingAttackState(out _, out _))
+            {
+                ClearAttackLayer();
+                if (anim != null && anim.isActiveAndEnabled && anim.runtimeAnimatorController != null)
+                {
+                    anim.ResetTrigger("Dam1");
+                    anim.ResetTrigger("Dam2");
+                    anim.ResetTrigger("Dam3");
+                }
+            }
+        }
+
         if (CurrentHealth <= 0)
         {
             if (anim != null) anim.applyRootMotion = false;
             PlayAnimation("Death", 0.15f);
             return;
+        }
+
+        // Tính toán và đồng bộ góc xoay cột sống (Spine aim angle)
+        if (hasControl)
+        {
+            bool isCurrentlyAttacking = IsPlayingAttackState(out _, out _) || 
+                                        (IsAttackAnimationName(lastTriggeredAnimName) && Time.time - lastActionTriggerTime < 0.35f);
+            
+            if (isCurrentlyAttacking && !isRootedAttack && targetCamera != null)
+            {
+                Vector3 camForward = targetCamera.transform.forward;
+                camForward.y = 0f;
+                camForward.Normalize();
+                if (camForward != Vector3.zero)
+                {
+                    float angleDiff = Vector3.SignedAngle(transform.forward, camForward, Vector3.up);
+                    angleDiff = Mathf.Clamp(angleDiff, -maxSpineTwistAngle, maxSpineTwistAngle);
+                    
+                    if (isStandaloneMode)
+                    {
+                        localAimAngle = angleDiff;
+                    }
+                    else
+                    {
+                        netAimAngle.Value = angleDiff;
+                    }
+                    Debug.Log($"[SpineAim_Update] transform.forward={transform.forward}, camForward={camForward}, angleDiff={angleDiff}, localAim={localAimAngle}, netAim={netAimAngle.Value}");
+                }
+            }
+            else
+            {
+                if (isCurrentlyAttacking)
+                {
+                    Debug.Log($"[SpineAim_Update_Failed] isRooted={isRootedAttack}, cam={targetCamera != null}");
+                }
+                if (isStandaloneMode)
+                {
+                    localAimAngle = Mathf.Lerp(localAimAngle, 0f, Time.deltaTime * 10f);
+                }
+                else if (netAimAngle.Value != 0f)
+                {
+                    netAimAngle.Value = Mathf.Lerp(netAimAngle.Value, 0f, Time.deltaTime * 10f);
+                }
+            }
         }
 
         // Standalone: xử lý hoàn toàn cục bộ
@@ -882,19 +964,47 @@ public class ElenaPlayer : NetworkBehaviour
 
         // Tạo bản sao di chuyển vật lý để có thể khóa di chuyển mà không làm mất hướng né đòn (roll direction)
         Vector3 movementTranslation = move;
-        if (isRootedAttack && IsPlayingActionAnimation())
+        bool isCurrentlyAttacking = IsPlayingAttackState(out _, out _) || 
+                                    (IsAttackAnimationName(lastTriggeredAnimName) && Time.time - lastActionTriggerTime < 0.35f);
+        if (IsLockingMovementAction())
         {
             movementTranslation = Vector3.zero;
         }
 
         transform.Translate(movementTranslation * currentSpeed * Time.deltaTime, Space.World);
-        if (movementTranslation != Vector3.zero)
+
+        // Xoay nhân vật:
+        // - Khi đang tấn công đứng yên (hoặc rooted): xoay theo camera để đánh đúng hướng ngắm
+        // - Khi đang di chuyển (kể cả di chuyển tấn công): xoay theo hướng di chuyển để chân chạy tự nhiên (hông/vai sẽ xoay bằng Spine ở LateUpdate)
+        if (isCurrentlyAttacking && targetCamera != null && (isRootedAttack || movementTranslation == Vector3.zero))
+        {
+            Vector3 camForward = targetCamera.transform.forward;
+            camForward.y = 0f;
+            camForward.Normalize();
+            if (camForward != Vector3.zero)
+            {
+                transform.forward = camForward;
+            }
+        }
+        else if (movementTranslation != Vector3.zero)
         {
             transform.forward = movementTranslation;
+        }
+
+        if (movementTranslation != Vector3.zero)
+        {
             if (!IsPlayingActionAnimation())
             {
-                string moveAnim = isRunning ? "run" : "Walk";
-                PlayAnimation(moveAnim, 0.1f);
+                // Nếu là đòn tấn công khóa chân (isRootedAttack == true), ta ép buộc phát Idle trên Layer 0 để khóa chân
+                if (isRootedAttack && isCurrentlyAttacking)
+                {
+                    PlayAnimation("Idle", 0.1f);
+                }
+                else
+                {
+                    string moveAnim = isRunning ? "run" : "Walk";
+                    PlayAnimation(moveAnim, 0.1f);
+                }
             }
         }
         else
@@ -985,19 +1095,47 @@ public class ElenaPlayer : NetworkBehaviour
 
         // Tạo bản sao di chuyển vật lý để có thể khóa di chuyển mà không làm mất hướng né đòn (roll direction)
         Vector3 movementTranslation = move;
-        if (isRootedAttack && IsPlayingActionAnimation())
+        bool isCurrentlyAttacking = IsPlayingAttackState(out _, out _) || 
+                                    (IsAttackAnimationName(lastTriggeredAnimName) && Time.time - lastActionTriggerTime < 0.35f);
+        if (IsLockingMovementAction())
         {
             movementTranslation = Vector3.zero;
         }
 
         transform.Translate(movementTranslation * currentSpeed * Time.deltaTime, Space.World);
-        if (movementTranslation != Vector3.zero)
+
+        // Xoay nhân vật:
+        // - Khi đang tấn công đứng yên (hoặc rooted): xoay theo camera để đánh đúng hướng ngắm
+        // - Khi đang di chuyển (kể cả di chuyển tấn công): xoay theo hướng di chuyển để chân chạy tự nhiên (hông/vai sẽ xoay bằng Spine ở LateUpdate)
+        if (isCurrentlyAttacking && targetCamera != null && (isRootedAttack || movementTranslation == Vector3.zero))
+        {
+            Vector3 camForward = targetCamera.transform.forward;
+            camForward.y = 0f;
+            camForward.Normalize();
+            if (camForward != Vector3.zero)
+            {
+                transform.forward = camForward;
+            }
+        }
+        else if (movementTranslation != Vector3.zero)
         {
             transform.forward = movementTranslation;
+        }
+
+        if (movementTranslation != Vector3.zero)
+        {
             if (!IsPlayingActionAnimation())
             {
-                string moveAnim = isRunning ? "run" : "Walk";
-                PlayAnimation(moveAnim, 0.1f);
+                // Nếu là đòn tấn công khóa chân (isRootedAttack == true), ta ép buộc phát Idle trên Layer 0 để khóa chân
+                if (isRootedAttack && isCurrentlyAttacking)
+                {
+                    PlayAnimation("Idle", 0.1f);
+                }
+                else
+                {
+                    string moveAnim = isRunning ? "run" : "Walk";
+                    PlayAnimation(moveAnim, 0.1f);
+                }
             }
         }
         else
@@ -1076,6 +1214,27 @@ public class ElenaPlayer : NetworkBehaviour
 
     void LateUpdate()
     {
+        // Xoay cột sống (Spine) để hướng cánh tay/vũ khí về phía mục tiêu khi vừa chạy vừa đánh
+        if (anim != null)
+        {
+            bool isCurrentlyAttacking = IsPlayingAttackState(out _, out _) || 
+                                        (IsAttackAnimationName(lastTriggeredAnimName) && Time.time - lastActionTriggerTime < 0.35f);
+            
+            if (isCurrentlyAttacking && !isRootedAttack)
+            {
+                Transform spine = GetSpineBone();
+                float targetAngle = isStandaloneMode ? localAimAngle : netAimAngle.Value;
+                Debug.Log($"[SpineAim_Late] isCurrentlyAttacking={isCurrentlyAttacking}, spine={(spine != null ? spine.name : "null")}, targetAngle={targetAngle}, localAim={localAimAngle}, netAim={netAimAngle.Value}, isStandalone={isStandaloneMode}");
+                if (spine != null)
+                {
+                    if (Mathf.Abs(targetAngle) > 0.01f)
+                    {
+                        spine.rotation = spine.rotation * Quaternion.AngleAxis(targetAngle, Vector3.up);
+                    }
+                }
+            }
+        }
+
         // Camera follow hoạt động cho cả standalone lẫn Netcode owner
         bool shouldFollow = isStandaloneMode || (IsSpawned && IsOwner);
         if (!shouldFollow || !enableCameraFollow) return;
@@ -1130,13 +1289,9 @@ public class ElenaPlayer : NetworkBehaviour
     {
         if (weaponIndex == 1)
         {
-            return step == 1 ? punch1Duration : punch2Duration;
-        }
-        else if (weaponIndex == 2)
-        {
-            if (step == 1) return slash1Duration;
-            if (step == 2) return slash2Duration;
-            return slash3Duration;
+            if (step == 1) return punch1Duration;
+            if (step == 2) return punch2Duration;
+            return punch3Duration;
         }
         return 0.5f;
     }
@@ -1154,14 +1309,14 @@ public class ElenaPlayer : NetworkBehaviour
         }
         nextStep++;
 
-        // Giới hạn bước combo dựa trên vũ khí
+        // Giới hạn bước combo dựa trên vũ khí (Đấm có 3 combo, tạm thời xóa slash)
         if (weapon == 1)
         {
-            if (nextStep > 2) nextStep = 1;
-        }
-        else if (weapon == 2)
-        {
             if (nextStep > 3) nextStep = 1;
+        }
+        else
+        {
+            nextStep = 1;
         }
 
         // Kiểm tra xem đòn đánh trước đó đã kết thúc chưa dựa trên thời gian thực tế trôi qua
@@ -1182,39 +1337,46 @@ public class ElenaPlayer : NetworkBehaviour
 
         if (comboStep == 0 || currentTime - lastAttackTime > comboWindow)
         {
-            isRootedAttack = !isMovingInput; // Đứng yên đánh thì khóa chân (rooted), di chuyển đánh thì không khóa chân
+            isRootedAttack = !isMovingInput; // Đứng yên đánh thì khóa di chuyển vật lý (rooted), di chuyển/chạy đánh thì không khóa di chuyển (unrooted)
         }
 
         comboStep = nextStep;
         lastAttackTime = currentTime;
 
         string animToPlay = "";
-        if (weapon == 1) // Unarmed / Fist combo (2 steps)
+        if (weapon == 1) // Unarmed / Fist combo (3 steps)
         {
-            animToPlay = comboStep == 1 ? "Punch1" : "Punch2";
+            if (comboStep == 1) animToPlay = "Dam1";
+            else if (comboStep == 2) animToPlay = "Dam2";
+            else if (comboStep == 3) animToPlay = "Dam3";
         }
-        else if (weapon == 2) // Sword combo (3 steps)
-        {
-            if (comboStep == 1) animToPlay = "Slash1";
-            else if (comboStep == 2) animToPlay = "Slash2";
-            else if (comboStep == 3) animToPlay = "Slash3";
-        }
+
+        Debug.Log($"[Combo Debug] PerformComboAttack: weapon={weapon}, step={comboStep}, animToPlay={animToPlay}, isRooted={isRootedAttack}, isMovingInput={isMovingInput}");
 
         if (!string.IsNullOrEmpty(animToPlay))
         {
             PlayAnimation(animToPlay, 0.05f, false);
         }
 
+        // Xác định hướng ngắm đánh (aim direction) dựa trên camera (nếu có), nếu không có thì dùng hướng transform.forward
+        Vector3 aimDir = transform.forward;
+        if (targetCamera != null)
+        {
+            aimDir = targetCamera.transform.forward;
+            aimDir.y = 0f;
+            aimDir.Normalize();
+        }
+
         if (networkMode)
         {
-            AttackServerRpc();
+            AttackServerRpc(aimDir);
         }
         else
         {
             Vector3 rayStart = transform.position + Vector3.up * 0.5f;
-            Debug.DrawRay(rayStart, transform.forward * attackRange, Color.red, 0.5f);
+            Debug.DrawRay(rayStart, aimDir * attackRange, Color.red, 0.5f);
 
-            if (!Physics.Raycast(rayStart, transform.forward, out RaycastHit hit, attackRange)) return;
+            if (!Physics.Raycast(rayStart, aimDir, out RaycastHit hit, attackRange)) return;
 
             TryDamageEnemy(hit.collider);
         }
@@ -1242,12 +1404,12 @@ public class ElenaPlayer : NetworkBehaviour
     //  Server RPC Tấn công (chỉ dùng khi Netcode online)
     // ------------------------------------------------------------------
     [ServerRpc]
-    void AttackServerRpc()
+    void AttackServerRpc(Vector3 aimDir)
     {
         Vector3 rayStart = transform.position + Vector3.up * 0.5f;
-        Debug.DrawRay(rayStart, transform.forward * attackRange, Color.red, 0.5f);
+        Debug.DrawRay(rayStart, aimDir * attackRange, Color.red, 0.5f);
 
-        if (!Physics.Raycast(rayStart, transform.forward, out RaycastHit hit, attackRange)) return;
+        if (!Physics.Raycast(rayStart, aimDir, out RaycastHit hit, attackRange)) return;
 
         var enemy1 = hit.collider.GetComponentInParent<Enemy1_DapBua>();
         if (enemy1 != null) { enemy1.TakeDamage(damageAmount); return; }
@@ -1526,13 +1688,9 @@ public class ElenaPlayer : NetworkBehaviour
                name == "GeiHit2" || 
                name == "Idle_Pick" || 
                name == "Death" ||
-               name == "Punch1" ||
-               name == "Punch2" ||
                name == "Dam1" ||
                name == "Dam2" ||
-               name == "Slash1" ||
-               name == "Slash2" ||
-               name == "Slash3" ||
+               name == "Dam3" ||
                name == "Chem1" ||
                name == "Chem2" ||
                name == "Chem3" ||
@@ -1562,13 +1720,9 @@ public class ElenaPlayer : NetworkBehaviour
 
     private bool IsAttackAnimationName(string name)
     {
-        return name == "Punch1" || 
-               name == "Punch2" || 
-               name == "Dam1" || 
+        return name == "Dam1" || 
                name == "Dam2" || 
-               name == "Slash1" || 
-               name == "Slash2" || 
-               name == "Slash3" ||
+               name == "Dam3" || 
                name == "Chem1" ||
                name == "Chem2" ||
                name == "Chem3";
@@ -1592,6 +1746,16 @@ public class ElenaPlayer : NetworkBehaviour
                 layer = 1;
                 return true;
             }
+            if (anim.IsInTransition(1))
+            {
+                AnimatorStateInfo nextStateInfo = anim.GetNextAnimatorStateInfo(1);
+                if (IsAttackState(nextStateInfo))
+                {
+                    activeState = nextStateInfo;
+                    layer = 1;
+                    return true;
+                }
+            }
         }
 
         // Check Layer 0 (Base Layer)
@@ -1602,22 +1766,25 @@ public class ElenaPlayer : NetworkBehaviour
             layer = 0;
             return true;
         }
+        if (anim.IsInTransition(0))
+        {
+            AnimatorStateInfo nextStateInfo = anim.GetNextAnimatorStateInfo(0);
+            if (IsAttackState(nextStateInfo))
+            {
+                activeState = nextStateInfo;
+                layer = 0;
+                return true;
+            }
+        }
 
         return false;
     }
 
     private bool IsAttackState(AnimatorStateInfo stateInfo)
     {
-        return stateInfo.IsName("Punch1") || 
-               stateInfo.IsName("Punch2") || 
-               stateInfo.IsName("Dam1") || 
+        return stateInfo.IsName("Dam1") || 
                stateInfo.IsName("Dam2") || 
-               stateInfo.IsName("Slash1") || 
-               stateInfo.IsName("Slash2") || 
-               stateInfo.IsName("Slash3") ||
-               stateInfo.IsName("Slash_1") || 
-               stateInfo.IsName("Slash_2") || 
-               stateInfo.IsName("Slash_3") ||
+               stateInfo.IsName("Dam3") || 
                stateInfo.IsName("Chem1") ||
                stateInfo.IsName("Chem2") ||
                stateInfo.IsName("Chem3") ||
@@ -1635,6 +1802,46 @@ public class ElenaPlayer : NetworkBehaviour
                name == "Death";
     }
 
+    private bool IsLockingMovementAction()
+    {
+        if (anim == null || !anim.isActiveAndEnabled || anim.runtimeAnimatorController == null) return false;
+
+        // Nhào lộn (rolling) luôn khóa di chuyển tự do
+        if (isStandaloneMode ? isRollingStandalone : rollTimer > 0) return true;
+
+        // Nếu đang trong trạng thái tấn công khóa di chuyển (isRootedAttack == true và đang chơi hoặc chuẩn bị chơi đòn đánh)
+        bool isCurrentlyAttacking = IsPlayingAttackState(out _, out _) || 
+                                    (IsAttackAnimationName(lastTriggeredAnimName) && Time.time - lastActionTriggerTime < 0.35f);
+        if (isRootedAttack && isCurrentlyAttacking)
+        {
+            return true;
+        }
+
+        // Các trạng thái toàn thân đặc biệt cần khóa di chuyển (trúng đòn, nhặt đồ, chết, nhào lộn)
+        AnimatorStateInfo stateInfo = anim.GetCurrentAnimatorStateInfo(0);
+        bool isFullBodyAction = stateInfo.IsName("LonVong") || 
+                               stateInfo.IsName("GetHit") || 
+                               stateInfo.IsName("GeiHit2") || 
+                               stateInfo.IsName("Idle_Pick") || 
+                               stateInfo.IsName("Death");
+
+        if (!isFullBodyAction && anim.IsInTransition(0))
+        {
+            AnimatorStateInfo nextStateInfo = anim.GetNextAnimatorStateInfo(0);
+            isFullBodyAction = nextStateInfo.IsName("LonVong") || 
+                               nextStateInfo.IsName("GetHit") || 
+                               nextStateInfo.IsName("GeiHit2") || 
+                               nextStateInfo.IsName("Idle_Pick") || 
+                               nextStateInfo.IsName("Death");
+            if (isFullBodyAction)
+            {
+                stateInfo = nextStateInfo;
+            }
+        }
+
+        return isFullBodyAction && stateInfo.normalizedTime < 0.95f;
+    }
+
     private bool IsPlayingActionAnimation()
     {
         if (anim == null)
@@ -1646,28 +1853,62 @@ public class ElenaPlayer : NetworkBehaviour
 
         if (anim == null || !anim.isActiveAndEnabled || anim.runtimeAnimatorController == null) return false;
 
-        // Nếu vừa kích hoạt trigger hành động full-body trong vòng 0.15 giây, coi như đang chạy action animation
-        if (IsFullBodyActionAnimation(lastTriggeredAnimName) && Time.time - lastActionTriggerTime < 0.15f) return true;
-        
-        // Nếu vừa kích hoạt tấn công đứng yên (rooted) trong vòng 0.15 giây, coi nó như hành động full-body
-        if (isRootedAttack && IsAttackAnimationName(lastTriggeredAnimName) && Time.time - lastActionTriggerTime < 0.15f) return true;
+        // Nếu vừa kích hoạt trigger hành động full-body trong vòng 0.35 giây, coi như đang chạy action animation
+        if (IsFullBodyActionAnimation(lastTriggeredAnimName) && Time.time - lastActionTriggerTime < 0.35f) return true;
 
         // Khi đang nhào lộn (rolling), coi như đang chạy action animation
         if (isStandaloneMode ? isRollingStandalone : rollTimer > 0) return true;
 
-        // 1. Nếu là đòn đánh đứng yên (rooted), khóa di chuyển hoàn toàn cho tới khi animator thoát khỏi trạng thái đấm/chém
-        if (isRootedAttack && IsPlayingAttackState(out _, out _))
+        // Nếu chỉ có 1 layer (Base Layer) HOẶC đòn tấn công đang chạy trên Layer 0 (khi khóa di chuyển - tức là isRootedAttack == true),
+        // ta cần chặn các hoạt ảnh di chuyển (Idle, Walk, run) ghi đè lên trên Layer 0.
+        bool isAttackOnLayer0 = (anim.layerCount == 1) || (anim.layerCount > 1 && isRootedAttack);
+        if (isAttackOnLayer0)
         {
-            return true;
+            // Nếu vừa kích hoạt tấn công trong vòng 0.35 giây, coi nó như hành động để tránh ghi đè trước khi animator kịp chuyển trạng thái
+            if (IsAttackAnimationName(lastTriggeredAnimName) && Time.time - lastActionTriggerTime < 0.35f) return true;
+
+            // 1. Nếu là đòn đánh, ngăn chặn Idle/Walk/run ghi đè lên cho tới khi animator thoát khỏi trạng thái đấm/chém
+            if (IsPlayingAttackState(out _, out int attackLayer) && attackLayer == 0)
+            {
+                return true;
+            }
+
+            // 1.5. Nếu đang trong chuỗi combo tấn công và thời gian trôi qua chưa vượt quá thời lượng đòn đánh hiện tại (+ buffer 0.1s), coi như đang chạy action để tránh ghi đè
+            int activeWeapon = GetActiveWeaponIndex();
+            float currentAttackDuration = GetAttackDuration(activeWeapon, comboStep);
+            if (comboStep > 0 && Time.time - lastAttackTime < currentAttackDuration + 0.1f)
+            {
+                return true;
+            }
         }
 
-        // 2. Kiểm tra các hành động toàn thân khác (nhu lộn vòng, trúng đòn, chết, nhặt đồ) trên Layer 0
+        // 2. Kiểm tra các hành động toàn thân khác (như lộn vòng, trúng đòn, chết, nhặt đồ) trên Layer 0
         AnimatorStateInfo stateInfo = anim.GetCurrentAnimatorStateInfo(0);
         bool isFullBodyAction = stateInfo.IsName("LonVong") || 
                                stateInfo.IsName("GetHit") || 
                                stateInfo.IsName("GeiHit2") || 
                                stateInfo.IsName("Idle_Pick") || 
                                stateInfo.IsName("Death");
+
+        if (!isFullBodyAction && anim.IsInTransition(0))
+        {
+            AnimatorStateInfo nextStateInfo = anim.GetNextAnimatorStateInfo(0);
+            isFullBodyAction = nextStateInfo.IsName("LonVong") || 
+                               nextStateInfo.IsName("GetHit") || 
+                               nextStateInfo.IsName("GeiHit2") || 
+                               nextStateInfo.IsName("Idle_Pick") || 
+                               nextStateInfo.IsName("Death");
+            if (isFullBodyAction)
+            {
+                stateInfo = nextStateInfo;
+            }
+        }
+
+        bool isAttackPlaying = IsPlayingAttackState(out _, out _);
+        if (isAttackPlaying || IsAttackAnimationName(lastTriggeredAnimName))
+        {
+            Debug.Log($"[Combo Debug] IsPlayingActionAnimation=false: lastTriggered={lastTriggeredAnimName}, timeDiff={Time.time - lastActionTriggerTime:F2}, isRooted={isRootedAttack}, isAttackPlaying={isAttackPlaying}");
+        }
 
         return isFullBodyAction && stateInfo.normalizedTime < 0.95f;
     }
@@ -1732,7 +1973,7 @@ public class ElenaPlayer : NetworkBehaviour
         bool isLoopingAnim = animName == "Idle" || animName == "Walk" || animName == "run";
         if (isLoopingAnim && currentAnimState == animName) return;
 
-        Debug.Log($"[Animator Debug] {gameObject.name} kích hoạt Trigger hoạt ảnh: '{animName}'");
+        Debug.Log($"[Animator Debug] {gameObject.name} kích hoạt Trigger hoạt ảnh: '{animName}' (isRooted={isRootedAttack}, comboStep={comboStep})");
 
         // Reset các trigger di chuyển cơ bản để tránh kẹt
         anim.ResetTrigger("Idle");
@@ -1748,17 +1989,41 @@ public class ElenaPlayer : NetworkBehaviour
         // (để tránh việc nhân vật di chuyển làm reset mất trigger đòn đấm trên layer Upper Body)
         if (IsActionAnimationName(animName))
         {
-            anim.ResetTrigger("Punch1");
-            anim.ResetTrigger("Punch2");
-            anim.ResetTrigger("Slash1");
-            anim.ResetTrigger("Slash2");
-            anim.ResetTrigger("Slash3");
+            anim.ResetTrigger("Dam1");
+            anim.ResetTrigger("Dam2");
+            anim.ResetTrigger("Dam3");
             if (!string.IsNullOrEmpty(drawWeaponTrigger)) anim.ResetTrigger(drawWeaponTrigger);
             if (!string.IsNullOrEmpty(sheathWeaponTrigger)) anim.ResetTrigger(sheathWeaponTrigger);
         }
 
         // Kích hoạt Trigger để chạy dây nối trong Animator
-        anim.SetTrigger(animName);
+        // Kích hoạt hoạt ảnh: Sử dụng CrossFade cho các đòn đánh để ép buộc chuyển cảnh ngay lập tức, tránh lỗi dây nối Animator
+        if (IsAttackAnimationName(animName))
+        {
+            if (anim.layerCount > 1)
+            {
+                if (isRootedAttack)
+                {
+                    // Đứng yên đánh (Idle Attack) -> không sử dụng Avatar Mask: chạy trên Layer 0 (Base Layer) và tắt Weight của Layer 1 về 0
+                    anim.SetLayerWeight(1, 0f);
+                    anim.CrossFadeInFixedTime(animName, fadeTime, 0);
+                }
+                else
+                {
+                    // Di chuyển/chạy đánh (Walk/Run Attack) -> sử dụng Avatar Mask: chạy trên Layer 1 với Weight = 1
+                    anim.SetLayerWeight(1, 1f);
+                    anim.CrossFadeInFixedTime(animName, fadeTime, 1);
+                }
+            }
+            else
+            {
+                anim.CrossFadeInFixedTime(animName, fadeTime, 0);
+            }
+        }
+        else
+        {
+            anim.SetTrigger(animName);
+        }
 
         // Chỉ cập nhật currentAnimState cho các hoạt ảnh di chuyển hoặc hoạt ảnh hành động toàn thân (không phải đòn đánh di chuyển)
         bool isMovingAttack = IsAttackAnimationName(animName) && !isRootedAttack;
@@ -1796,6 +2061,10 @@ public class ElenaPlayer : NetworkBehaviour
     private void StartRollServerRpc(Vector3 direction)
     {
         isRollingNet.Value = true;
+        if (direction != Vector3.zero)
+        {
+            transform.forward = direction;
+        }
         // Server phát RPC hoạt ảnh LonVong cho tất cả client khác (owner đã tự chạy rồi)
         PlayAnimationClientRpc("LonVong", 0.05f, true);
     }
@@ -1812,6 +2081,7 @@ public class ElenaPlayer : NetworkBehaviour
         isRootedAttack = false;
         if (anim != null && anim.isActiveAndEnabled && anim.runtimeAnimatorController != null && anim.layerCount > 1)
         {
+            anim.SetLayerWeight(1, 0f); // Reset weight của Layer 1 về 0
             // Reset Layer 1 (AttackLayer) về trạng thái Empty/New State mặc định
             anim.Play("New State", 1, 0f);
             anim.Play("Empty", 1, 0f);
