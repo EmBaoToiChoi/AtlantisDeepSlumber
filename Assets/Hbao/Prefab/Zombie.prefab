@@ -416,11 +416,53 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   ShowTopMostFoldoutHeaderGroup: 1
   NetworkAnimatorExpanded: 0
-  AuthorityMode: 0
-  m_Animator: {fileID: 0}
-  TransitionStateInfoList: []
+  AuthorityMode: 1
+  m_Animator: {fileID: 6684999997589933777}
+  TransitionStateInfoList:
+  - IsCrossFadeExit: 0
+    Layer: 1
+    OriginatingState: -499022955
+    DestinationState: 1598816949
+    TransitionDuration: 0.05
+    TriggerNameHash: -572786297
+    TransitionIndex: 0
+  - IsCrossFadeExit: 0
+    Layer: 2
+    OriginatingState: -499022955
+    DestinationState: -1866145110
+    TransitionDuration: 0.05
+    TriggerNameHash: 1080829965
+    TransitionIndex: 0
   AnimatorParameterEntries:
-    ParameterEntries: []
+    ParameterEntries:
+    - name: Idle
+      NameHash: 2081823275
+      Synchronize: 1
+      ParameterType: 9
+    - name: Walk
+      NameHash: 765711723
+      Synchronize: 1
+      ParameterType: 9
+    - name: Run
+      NameHash: 1748754976
+      Synchronize: 1
+      ParameterType: 9
+    - name: Anhit
+      NameHash: -572786297
+      Synchronize: 1
+      ParameterType: 9
+    - name: Die
+      NameHash: 20298039
+      Synchronize: 1
+      ParameterType: 9
+    - name: Attack
+      NameHash: 1080829965
+      Synchronize: 1
+      ParameterType: 9
+    - name: Speed
+      NameHash: -823668238
+      Synchronize: 1
+      ParameterType: 1
   AnimatorParametersExpanded: 0
 --- !u!114 &7876972916880920291
 MonoBehaviour:
@@ -446,7 +488,7 @@ MonoBehaviour:
   RotationMaxInterpolationTime: 0.1
   ScaleLerpSmoothing: 1
   ScaleMaxInterpolationTime: 0.1
-  AuthorityMode: 0
+  AuthorityMode: 1
   TickSyncChildren: 0
   UseUnreliableDeltas: 0
   SyncPositionX: 1
