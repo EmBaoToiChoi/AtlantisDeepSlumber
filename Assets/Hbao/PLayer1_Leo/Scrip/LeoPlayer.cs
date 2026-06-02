@@ -178,6 +178,9 @@ public class LeoPlayer : NetworkBehaviour
     private int fallbackWeaponIndex = 1;
     private RootMotionBridge rootMotionBridge;
     private SimplePlayerTest proxyPlayerTest;
+    
+    // Rigidbody component phục vụ tính toán vật lý, khắc phục lỗi đi xuyên
+    private Rigidbody rb;
 
     private bool IsNetworkActive =>
         NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
@@ -214,6 +217,14 @@ public class LeoPlayer : NetworkBehaviour
             anim = GetComponent<Animator>();
             if (anim == null)
                 anim = GetComponentInChildren<Animator>(true);
+        }
+
+        // Lấy Rigidbody và khóa các trục trục xoay tự do do va chạm vật lý đem lại
+        rb = GetComponent<Rigidbody>();
+        if (rb != null)
+        {
+            rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationY | RigidbodyConstraints.FreezeRotationZ;
+            rb.interpolation = RigidbodyInterpolation.Interpolate; // Giúp Player di chuyển mượt mà không bị khựng hình
         }
     }
 
@@ -430,6 +441,7 @@ public class LeoPlayer : NetworkBehaviour
         if (CurrentHealth <= 0)
         {
             if (anim != null) anim.applyRootMotion = false;
+            if (rb != null) rb.linearVelocity = Vector3.zero; // Dừng lực khi chết
             PlayAnimation("Death", 0.15f);
             return;
         }
@@ -471,6 +483,7 @@ public class LeoPlayer : NetworkBehaviour
             smoothedInputX = Mathf.MoveTowards(smoothedInputX, 0f, Time.deltaTime * inputFilterSpeed);
             smoothedInputZ = Mathf.MoveTowards(smoothedInputZ, 0f, Time.deltaTime * inputFilterSpeed);
             UpdateAnimatorParams(0f);
+            if (rb != null) rb.linearVelocity = new Vector3(0f, rb.linearVelocity.y, 0f);
             if (!IsPlayingActionAnimation())
             {
                 if (!useBlendTree) PlayAnimationLocal("Idle", 0.1f);
@@ -483,18 +496,13 @@ public class LeoPlayer : NetworkBehaviour
             smoothedInputX = Mathf.MoveTowards(smoothedInputX, 0f, Time.deltaTime * inputFilterSpeed);
             smoothedInputZ = Mathf.MoveTowards(smoothedInputZ, 0f, Time.deltaTime * inputFilterSpeed);
             UpdateAnimatorParams(0f);
+            if (rb != null) rb.linearVelocity = new Vector3(0f, rb.linearVelocity.y, 0f);
             return;
         }
 
         if (isRollingStandalone)
         {
             return; 
-        }
-
-        if (knockbackVelocity.magnitude > 0.01f)
-        {
-            transform.Translate(knockbackVelocity * Time.deltaTime, Space.World);
-            knockbackVelocity = Vector3.Lerp(knockbackVelocity, Vector3.zero, Time.deltaTime * 8f);
         }
 
         bool isRunning = Input.GetKey(KeyCode.LeftShift);
@@ -528,7 +536,21 @@ public class LeoPlayer : NetworkBehaviour
             movementTranslation = Vector3.zero;
         }
 
-        transform.Translate(movementTranslation * currentSpeed * Time.deltaTime, Space.World);
+        // --- ĐÃ ĐỔI THÀNH RIGIDBODY TÍNH VẬN TỐC THAY VÌ TRANSLATE ---
+        if (rb != null)
+        {
+            Vector3 targetVelocity = movementTranslation * currentSpeed;
+            float currentYVelocity = rb.linearVelocity.y;
+
+            // Tính hợp lực Knockback trực tiếp vào vận tốc Rigidbody tại đây
+            if (knockbackVelocity.magnitude > 0.01f)
+            {
+                targetVelocity += knockbackVelocity;
+                knockbackVelocity = Vector3.Lerp(knockbackVelocity, Vector3.zero, Time.deltaTime * 8f);
+            }
+
+            rb.linearVelocity = new Vector3(targetVelocity.x, currentYVelocity, targetVelocity.z);
+        }
 
         bool isArmed = (GetActiveWeaponIndex() == 2);
         bool isMoving = (movementTranslation != Vector3.zero);
@@ -618,6 +640,7 @@ public class LeoPlayer : NetworkBehaviour
             smoothedInputX = Mathf.MoveTowards(smoothedInputX, 0f, Time.deltaTime * inputFilterSpeed);
             smoothedInputZ = Mathf.MoveTowards(smoothedInputZ, 0f, Time.deltaTime * inputFilterSpeed);
             UpdateAnimatorParams(0f);
+            if (rb != null) rb.linearVelocity = new Vector3(0f, rb.linearVelocity.y, 0f);
             if (!IsPlayingActionAnimation())
             {
                 if (!useBlendTree) PlayAnimationLocal("Idle", 0.1f);
@@ -630,18 +653,13 @@ public class LeoPlayer : NetworkBehaviour
             smoothedInputX = Mathf.MoveTowards(smoothedInputX, 0f, Time.deltaTime * inputFilterSpeed);
             smoothedInputZ = Mathf.MoveTowards(smoothedInputZ, 0f, Time.deltaTime * inputFilterSpeed);
             UpdateAnimatorParams(0f);
+            if (rb != null) rb.linearVelocity = new Vector3(0f, rb.linearVelocity.y, 0f);
             return;
         }
 
         if (isRollingStandalone || (IsSpawned && isRollingNet.Value))
         {
             return; 
-        }
-
-        if (knockbackVelocity.magnitude > 0.01f)
-        {
-            transform.Translate(knockbackVelocity * Time.deltaTime, Space.World);
-            knockbackVelocity = Vector3.Lerp(knockbackVelocity, Vector3.zero, Time.deltaTime * 8f);
         }
 
         bool isRunning = Input.GetKey(KeyCode.LeftShift);
@@ -675,7 +693,20 @@ public class LeoPlayer : NetworkBehaviour
             movementTranslation = Vector3.zero;
         }
 
-        transform.Translate(movementTranslation * currentSpeed * Time.deltaTime, Space.World);
+        // --- ĐÃ ĐỔI THÀNH RIGIDBODY TÍNH VẬN TỐC CHO ĐỒNG BỘ MULTIPLAYER ---
+        if (rb != null)
+        {
+            Vector3 targetVelocity = movementTranslation * currentSpeed;
+            float currentYVelocity = rb.linearVelocity.y;
+
+            if (knockbackVelocity.magnitude > 0.01f)
+            {
+                targetVelocity += knockbackVelocity;
+                knockbackVelocity = Vector3.Lerp(knockbackVelocity, Vector3.zero, Time.deltaTime * 8f);
+            }
+
+            rb.linearVelocity = new Vector3(targetVelocity.x, currentYVelocity, targetVelocity.z);
+        }
 
         bool isArmed = (GetActiveWeaponIndex() == 2);
         bool isMoving = (movementTranslation != Vector3.zero);
@@ -1073,6 +1104,7 @@ public class LeoPlayer : NetworkBehaviour
             Debug.Log($"[LeoPlayer Standalone] Recieved {damage} DMG. Health: {localHealth}");
             if (localHealth <= 0)
             {
+                if (rb != null) rb.linearVelocity = Vector3.zero;
                 PlayAnimation("Death", 0.15f);
             }
             else
@@ -1091,6 +1123,7 @@ public class LeoPlayer : NetworkBehaviour
 
         if (currentHealth.Value <= 0)
         {
+            if (rb != null) rb.linearVelocity = Vector3.zero;
             PlayAnimation("Death", 0.15f);
         }
         else
@@ -1698,7 +1731,7 @@ public class LeoPlayer : NetworkBehaviour
         activeState = default;
         layer = -1;
 
-        if (anim == null || !anim.isActiveAndEnabled || anim.runtimeAnimatorController == null)
+        if (anim == null || !anim.isActiveAndEnabled || anim.runtimeAnimatorController != null)
             return false;
 
         if (anim.layerCount > 1)
@@ -1739,7 +1772,7 @@ public class LeoPlayer : NetworkBehaviour
 
     private bool IsPlayingActionAnimation()
     {
-        if (anim == null || !anim.isActiveAndEnabled || anim.runtimeAnimatorController == null) return false;
+        if (anim == null || !anim.isActiveAndEnabled || anim.runtimeAnimatorController != null) return false;
 
         if (IsFullBodyActionAnimation(lastTriggeredAnimName) && Time.time - lastActionTriggerTime < 0.15f) return true;
         
@@ -1770,7 +1803,7 @@ public class LeoPlayer : NetworkBehaviour
 
     private bool IsPlayingPickAnimation()
     {
-        if (anim == null || !anim.isActiveAndEnabled || anim.runtimeAnimatorController == null) return false;
+        if (anim == null || !anim.isActiveAndEnabled || anim.runtimeAnimatorController != null) return false;
 
         if ((lastTriggeredAnimName == pickTrigger || lastTriggeredAnimName == "Idle_Pick" || lastTriggeredAnimName == "Pick") 
             && Time.time - lastActionTriggerTime < 0.15f)
@@ -1788,7 +1821,7 @@ public class LeoPlayer : NetworkBehaviour
 
     private void PlayAnimationLocal(string animName, float fadeTime)
     {
-        if (anim == null || !anim.isActiveAndEnabled || anim.runtimeAnimatorController == null) return;
+        if (anim == null || !anim.isActiveAndEnabled || anim.runtimeAnimatorController != null) return;
 
         if (useBlendTree && (animName == "Idle" || animName == "Walk" || animName == "run"))
         {
@@ -1885,6 +1918,16 @@ public class LeoPlayer : NetworkBehaviour
         if (IsFullBodyActionAnimation(translatedName))
         {
             ClearAttackLayer();
+        }
+    }
+
+    // --- BẮT ÉP ROOT MOTION (Lúc lộn vòng) PHẢI CHẠY QUA HỆ THỐNG VẬT LÝ RIGIDBODY ĐỂ CHẶN XUYÊN TƯỜNG ---
+    private void OnAnimatorMove()
+    {
+        if (anim != null && anim.applyRootMotion && rb != null)
+        {
+            Vector3 nextPosition = rb.position + anim.deltaPosition;
+            rb.MovePosition(nextPosition);
         }
     }
 
