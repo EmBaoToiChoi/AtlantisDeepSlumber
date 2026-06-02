@@ -8,7 +8,7 @@ ModelImporter:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
       name: Cloth GrayColor
-    second: {fileID: 2100000, guid: 4f4335528433aef4ab2941dd1bf80171, type: 2}
+    second: {fileID: 2100000, guid: 1474fabdbd038954597baeb244645862, type: 2}
   materials:
     materialImportMode: 2
     materialName: 0
