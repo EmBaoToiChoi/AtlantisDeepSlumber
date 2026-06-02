@@ -31,7 +31,7 @@ public class EnemySpawner : NetworkBehaviour
     [Tooltip("Where the player will spawn. If empty, uses this Spawner's position.")]
     public Transform playerSpawnPoint;
     [Tooltip("If true, automatically spawns a player object for connected clients if they don't have one.")]
-    public bool autoSpawnPlayer = true;
+    public bool autoSpawnPlayer = false;
 
     [Header("Spawning Settings")]
     [Tooltip("If true, automatically spawns enemies at start when the server/host loaded the scene.")]
