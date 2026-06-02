@@ -234,11 +234,75 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   ShowTopMostFoldoutHeaderGroup: 1
   NetworkAnimatorExpanded: 0
-  AuthorityMode: 0
-  m_Animator: {fileID: 0}
-  TransitionStateInfoList: []
+  AuthorityMode: 1
+  m_Animator: {fileID: 1321257120372262163}
+  TransitionStateInfoList:
+  - IsCrossFadeExit: 0
+    Layer: 1
+    OriginatingState: -499022955
+    DestinationState: -888209963
+    TransitionDuration: 0.05
+    TriggerNameHash: 1654612129
+    TransitionIndex: 0
+  - IsCrossFadeExit: 0
+    Layer: 2
+    OriginatingState: -499022955
+    DestinationState: 1440725727
+    TransitionDuration: 0.05
+    TriggerNameHash: 1504273457
+    TransitionIndex: 0
+  - IsCrossFadeExit: 0
+    Layer: 2
+    OriginatingState: -499022955
+    DestinationState: 417349409
+    TransitionDuration: 0.05
+    TriggerNameHash: -1577721112
+    TransitionIndex: 1
+  - IsCrossFadeExit: 0
+    Layer: 2
+    OriginatingState: -499022955
+    DestinationState: -832389320
+    TransitionDuration: 0.05
+    TriggerNameHash: 1549738351
+    TransitionIndex: 2
   AnimatorParameterEntries:
-    ParameterEntries: []
+    ParameterEntries:
+    - name: Idle
+      NameHash: 2081823275
+      Synchronize: 1
+      ParameterType: 9
+    - name: Walk
+      NameHash: 765711723
+      Synchronize: 1
+      ParameterType: 9
+    - name: Run
+      NameHash: 1748754976
+      Synchronize: 1
+      ParameterType: 9
+    - name: AttackRight
+      NameHash: 1504273457
+      Synchronize: 1
+      ParameterType: 9
+    - name: Hit
+      NameHash: 1654612129
+      Synchronize: 1
+      ParameterType: 9
+    - name: AttackLeft
+      NameHash: -1577721112
+      Synchronize: 1
+      ParameterType: 9
+    - name: AttackCombo
+      NameHash: 1549738351
+      Synchronize: 1
+      ParameterType: 9
+    - name: Die
+      NameHash: 20298039
+      Synchronize: 1
+      ParameterType: 9
+    - name: Speed
+      NameHash: -823668238
+      Synchronize: 1
+      ParameterType: 1
   AnimatorParametersExpanded: 0
 --- !u!114 &4854531765920316459
 MonoBehaviour:
@@ -264,7 +328,7 @@ MonoBehaviour:
   RotationMaxInterpolationTime: 0.1
   ScaleLerpSmoothing: 1
   ScaleMaxInterpolationTime: 0.1
-  AuthorityMode: 0
+  AuthorityMode: 1
   TickSyncChildren: 0
   UseUnreliableDeltas: 0
   SyncPositionX: 1
