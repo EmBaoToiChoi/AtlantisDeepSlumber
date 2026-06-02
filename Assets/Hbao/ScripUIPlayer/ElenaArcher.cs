@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public class ElenaArcher : SimplePlayerTest
+public class ElenaArcher_Old : SimplePlayerTest
 {
     private void Awake()
     {
