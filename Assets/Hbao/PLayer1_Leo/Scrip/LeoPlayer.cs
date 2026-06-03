@@ -1731,7 +1731,7 @@ public class LeoPlayer : NetworkBehaviour
         activeState = default;
         layer = -1;
 
-        if (anim == null || !anim.isActiveAndEnabled || anim.runtimeAnimatorController != null)
+        if (anim == null || !anim.isActiveAndEnabled || anim.runtimeAnimatorController == null)
             return false;
 
         if (anim.layerCount > 1)
@@ -1772,7 +1772,7 @@ public class LeoPlayer : NetworkBehaviour
 
     private bool IsPlayingActionAnimation()
     {
-        if (anim == null || !anim.isActiveAndEnabled || anim.runtimeAnimatorController != null) return false;
+        if (anim == null || !anim.isActiveAndEnabled || anim.runtimeAnimatorController == null) return false;
 
         if (IsFullBodyActionAnimation(lastTriggeredAnimName) && Time.time - lastActionTriggerTime < 0.15f) return true;
         
@@ -1803,7 +1803,7 @@ public class LeoPlayer : NetworkBehaviour
 
     private bool IsPlayingPickAnimation()
     {
-        if (anim == null || !anim.isActiveAndEnabled || anim.runtimeAnimatorController != null) return false;
+        if (anim == null || !anim.isActiveAndEnabled || anim.runtimeAnimatorController == null) return false;
 
         if ((lastTriggeredAnimName == pickTrigger || lastTriggeredAnimName == "Idle_Pick" || lastTriggeredAnimName == "Pick") 
             && Time.time - lastActionTriggerTime < 0.15f)
@@ -1821,7 +1821,7 @@ public class LeoPlayer : NetworkBehaviour
 
     private void PlayAnimationLocal(string animName, float fadeTime)
     {
-        if (anim == null || !anim.isActiveAndEnabled || anim.runtimeAnimatorController != null) return;
+        if (anim == null || !anim.isActiveAndEnabled || anim.runtimeAnimatorController == null) return;
 
         if (useBlendTree && (animName == "Idle" || animName == "Walk" || animName == "run"))
         {
@@ -1893,9 +1893,9 @@ public class LeoPlayer : NetworkBehaviour
             if (!string.IsNullOrEmpty(sheathWeaponTrigger)) anim.ResetTrigger(sheathWeaponTrigger);
         }
 
-        if (translatedName == pickTrigger || translatedName == "Idle_Pick")
+        if (translatedName == pickTrigger || translatedName == "Idle_Pick" || translatedName == "Pick")
         {
-            anim.ResetTrigger(translatedName);
+            anim.SetTrigger(translatedName);
             anim.CrossFadeInFixedTime(translatedName, fadeTime, -1, 0f);
         }
         else
