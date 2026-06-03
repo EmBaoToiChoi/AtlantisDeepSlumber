@@ -19,7 +19,7 @@ public class PlayerInteraction : NetworkBehaviour
 
         // 2. Chỉ kiểm tra Input nếu không phải đang chạy Server Headless
         // Hoặc kiểm tra null Keyboard.current trước khi dùng
-        if (Keyboard.current != null && Keyboard.current.eKey.wasPressedThisFrame)
+        if (Keyboard.current != null && Keyboard.current.gKey.wasPressedThisFrame)
         {
             if (currentHeldCore == null) 
             {
