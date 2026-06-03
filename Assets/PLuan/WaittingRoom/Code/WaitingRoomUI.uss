@@ -26,7 +26,7 @@
 .top-info-panel {
     flex-direction: column;
     justify-content: center;
-    align-items: flex-start;
+    align-items: center;
     background-image: url("project://database/Assets/PLuan/WaittingRoom/Textures/ui_frame_bg.jpg");
     -unity-background-scale-mode: stretch-to-fill;
     background-color: transparent;
@@ -38,8 +38,8 @@
 }
 
 .top-info-row {
-    flex-direction: row;
-    justify-content: space-between;
+    flex-direction: column;
+    justify-content: center;
     align-items: center;
     align-self: stretch;
 }
@@ -95,25 +95,24 @@
 }
 
 .room-id-badge {
-    background-color: rgba(0, 229, 255, 0.12);
-    border-width: 1px;
-    border-color: rgba(0, 229, 255, 0.45);
+    background-color: transparent !important;
+    border-width: 0 !important;
     color: rgb(0, 255, 255);
-    padding: 4px 10px;
-    font-size: 11px;
-    border-radius: 4px;
+    padding: 0 !important;
+    font-size: 13px;
     -unity-font-style: bold;
-    letter-spacing: 1px;
-    text-shadow: 0 0 6px rgba(0, 255, 255, 0.4);
+    letter-spacing: 1.5px;
+    text-shadow: 0 0 8px rgba(0, 255, 255, 0.6);
     transition: all 0.2s ease-out;
     flex-shrink: 0;
-    margin-left: 12px;
+    margin-left: 0 !important;
+    margin-top: 8px;
 }
 
 .room-id-badge:hover {
     scale: 1.05;
-    background-color: rgba(0, 229, 255, 0.2);
-    border-color: rgb(0, 255, 255);
+    background-color: transparent !important;
+    border-color: transparent !important;
 }
 
 /* MIDDLE MAIN CONTAINER */
@@ -172,52 +171,51 @@
 
 .char-cards-container {
     flex-grow: 1;
-    justify-content: flex-start;
+    justify-content: center;
 }
 
 /* CHARACTER CARDS */
 .char-card {
     flex-direction: row;
     align-items: center;
-    background-color: rgba(2, 16, 32, 0.4);
-    border-radius: 6px;
+    background-color: transparent !important;
+    border-width: 0 !important;
+    border-radius: 0 !important;
     padding: 10px 14px;
-    margin-bottom: 10px;
-    border-left-width: 3px;
-    border-left-color: rgba(0, 229, 255, 0.2);
-    border-width: 1px;
-    border-color: rgba(0, 229, 255, 0.08);
+    margin-bottom: 20px;
     transition: all 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
+    box-shadow: none !important;
+}
+
+.char-card:last-child {
+    margin-bottom: 0;
 }
 
 .char-card:hover {
-    background-color: rgba(0, 36, 72, 0.55);
-    border-left-color: rgb(0, 255, 255);
-    border-color: rgba(0, 255, 255, 0.45);
-    scale: 1.03;
+    background-color: transparent !important;
+    border-width: 0 !important;
+    scale: 1.02;
     /* Slide out slightly to highlight selection focus */
-    translate: -4px 0;
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.4);
+    translate: -6px 0;
 }
 
 .select-active {
-    background-color: rgba(0, 229, 255, 0.12);
-    border-left-width: 5px;
-    border-left-color: rgb(0, 255, 255);
-    border-color: rgba(0, 255, 255, 0.5);
-    box-shadow: 0 0 15px rgba(0, 229, 255, 0.25);
+    background-image: linear-gradient(to right, rgba(0, 229, 255, 0.12), rgba(0, 229, 255, 0.01) 90%, transparent) !important;
+    border-width: 0 !important;
+    border-left-width: 0 !important;
+    box-shadow: none !important;
+    translate: -10px 0;
 }
 
 .card-locked {
     opacity: 0.45;
-    border-left-color: rgba(255, 71, 87, 0.4);
-    border-color: rgba(255, 71, 87, 0.2);
+    background-color: transparent !important;
+    border-width: 0 !important;
 }
 
 .card-locked:hover {
-    background-color: rgba(2, 16, 32, 0.4);
-    border-left-color: rgba(255, 71, 87, 0.4);
-    border-color: rgba(255, 71, 87, 0.2);
+    background-color: transparent !important;
+    border-width: 0 !important;
     scale: 1;
     translate: 0 0;
     box-shadow: none;
@@ -227,14 +225,14 @@
     width: 46px;
     height: 46px;
     border-radius: 6px;
-    border-width: 2px;
-    border-color: rgba(0, 229, 255, 0.4);
+    border-width: 0 !important; /* Completely borderless avatar */
     background-size: cover;
-    transition: border-color 0.2s, rotate 0.25s;
+    transition: all 0.2s ease-out;
 }
 
-.char-card:hover .char-card-portrait {
-    border-color: rgb(0, 255, 255);
+.char-card:hover .char-card-portrait,
+.select-active .char-card-portrait {
+    scale: 1.1;
 }
 
 /* Character text container for vertical Name & Role alignment */
@@ -247,23 +245,38 @@
 }
 
 .char-card-name {
-    color: white;
+    color: rgb(180, 220, 240);
     font-size: 14px;
     -unity-font-style: bold;
     letter-spacing: 1.5px;
     margin-bottom: 2px;
-    transition: color 0.2s;
+    transition: all 0.2s ease-out;
 }
 
 .char-card:hover .char-card-name {
-    color: rgb(0, 255, 255);
+    color: rgb(255, 255, 255);
+    text-shadow: 0 0 8px rgba(0, 229, 255, 0.7);
+}
+
+.select-active .char-card-name {
+    color: rgb(0, 255, 255) !important;
+    text-shadow: 0 0 12px rgba(0, 229, 255, 0.95) !important;
 }
 
 .char-card-role {
-    color: rgb(130, 195, 235);
+    color: rgb(110, 160, 190);
     font-size: 9.5px;
     letter-spacing: 0.8px;
     -unity-font-style: bold;
+    transition: all 0.2s ease-out;
+}
+
+.char-card:hover .char-card-role {
+    color: rgb(160, 220, 255);
+}
+
+.select-active .char-card-role {
+    color: rgb(130, 210, 255) !important;
 }
 
 .char-card-status {
@@ -273,19 +286,17 @@
     -unity-font-style: bold;
     color: rgba(255, 255, 255, 0.35);
     letter-spacing: 0.8px;
-    background-color: rgba(0, 0, 0, 0.6);
+    background-color: rgba(0, 0, 0, 0.5);
     padding: 4px 8px;
     border-radius: 4px;
-    border-width: 1px;
-    border-color: rgba(255, 255, 255, 0.06);
+    border-width: 0 !important; /* Completely borderless status badge */
     transition: all 0.2s;
 }
 
 .active-status {
-    color: rgb(0, 255, 128);
-    text-shadow: 0 0 8px rgba(0, 255, 128, 0.8);
-    border-color: rgba(0, 255, 128, 0.4);
-    background-color: rgba(0, 255, 128, 0.12);
+    color: rgb(0, 255, 128) !important;
+    text-shadow: 0 0 8px rgba(0, 255, 128, 0.8) !important;
+    background-color: rgba(0, 255, 128, 0.1) !important;
 }
 
 .char-inspect-tip {
@@ -568,96 +579,85 @@
 /* ACTION BUTTON SYSTEM */
 .action-btn {
     height: 48px;
-    padding: 0 32px;
+    padding: 0 20px !important;
     font-size: 14px;
     -unity-font-style: bold;
     letter-spacing: 2px;
     margin-right: 15px;
-    border-radius: 6px;
-    transition: all 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
-    border-width: 1px;
-    border-left-width: 4px;
+    border-radius: 0 !important;
+    transition: all 0.2s ease-out;
+    border-width: 0 !important;
+    background-color: transparent !important;
     align-items: center;
     justify-content: center;
     text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.8);
 }
 
 .ready-btn {
-    background-color: rgba(0, 229, 255, 0.06);
-    border-color: rgba(0, 229, 255, 0.25);
-    border-left-color: rgb(0, 229, 255);
-    color: rgb(0, 229, 255);
+    color: rgb(0, 229, 255) !important;
 }
 
 .ready-btn:hover {
-    background-color: rgb(0, 229, 255);
-    color: rgb(0, 6, 12);
-    border-color: rgb(0, 229, 255);
-    scale: 1.05;
-    text-shadow: 0 0 10px rgba(0, 229, 255, 0.6);
+    background-color: transparent !important;
+    color: rgb(255, 255, 255) !important;
+    scale: 1.08 1.08;
+    text-shadow: 0 0 12px rgba(0, 229, 255, 0.9) !important;
 }
 
 .ready-active {
-    background-color: rgba(46, 213, 115, 0.12);
-    border-color: rgba(46, 213, 115, 0.35);
-    border-left-color: rgb(46, 213, 115);
-    color: rgb(46, 213, 115);
-    text-shadow: 0 0 8px rgba(46, 213, 115, 0.4);
+    color: rgb(46, 213, 115) !important;
+    text-shadow: 0 0 8px rgba(46, 213, 115, 0.6) !important;
 }
 
 .ready-active:hover {
-    background-color: rgb(46, 213, 115);
-    color: rgb(0, 6, 12);
-    border-color: rgb(46, 213, 115);
-    scale: 1.05;
-    text-shadow: 0 0 12px rgba(46, 213, 115, 0.8);
+    background-color: transparent !important;
+    color: rgb(255, 255, 255) !important;
+    scale: 1.08 1.08;
+    text-shadow: 0 0 15px rgba(46, 213, 115, 0.95) !important;
 }
 
 .leave-btn {
-    background-color: rgba(255, 71, 87, 0.06);
-    border-color: rgba(255, 71, 87, 0.25);
-    border-left-color: rgb(255, 71, 87);
-    color: rgb(255, 120, 120);
+    color: rgb(255, 100, 100) !important;
 }
 
 .leave-btn:hover {
-    background-color: rgb(255, 71, 87);
-    color: white;
-    border-color: rgb(255, 71, 87);
-    scale: 1.05;
-    text-shadow: 0 0 10px rgba(255, 255, 255, 0.8);
+    background-color: transparent !important;
+    color: rgb(255, 180, 180) !important;
+    scale: 1.08 1.08;
+    text-shadow: 0 0 12px rgba(255, 50, 50, 0.9) !important;
 }
 
 /* TOGGLE CHARACTER PANEL BUTTON (NOW A STANDARD FOOTER ACTION) */
 .toggle-char-panel-btn {
-    background-color: rgba(0, 229, 255, 0.06);
-    border-color: rgba(0, 229, 255, 0.25);
-    border-left-color: rgb(0, 229, 255);
-    color: rgb(0, 229, 255);
+    color: rgb(0, 229, 255) !important;
 }
 
 .toggle-char-panel-btn:hover {
-    background-color: rgb(0, 229, 255);
-    color: rgb(0, 6, 12);
-    border-color: rgb(0, 229, 255);
-    scale: 1.05;
-    text-shadow: 0 0 10px rgba(0, 229, 255, 0.6);
+    background-color: transparent !important;
+    color: rgb(255, 255, 255) !important;
+    scale: 1.08 1.08;
+    text-shadow: 0 0 12px rgba(0, 229, 255, 0.9) !important;
 }
 
 .start-btn {
-    background-color: rgba(255, 165, 0, 0.12);
-    border-color: rgba(255, 165, 0, 0.35);
-    border-left-color: rgb(255, 165, 0);
-    color: rgb(255, 165, 0);
-    text-shadow: 0 0 8px rgba(255, 165, 0, 0.4);
+    color: rgb(255, 165, 0) !important;
 }
 
 .start-btn:hover {
-    background-color: rgb(255, 165, 0);
-    color: rgb(10, 5, 0);
-    border-color: rgb(255, 165, 0);
-    scale: 1.05;
-    text-shadow: 0 0 12px rgba(255, 165, 0, 0.8);
+    background-color: transparent !important;
+    color: rgb(255, 210, 150) !important;
+    scale: 1.08 1.08;
+    text-shadow: 0 0 15px rgba(255, 165, 0, 0.95) !important;
+}
+
+#btn-swap-character {
+    color: rgb(255, 165, 0) !important;
+}
+#btn-swap-character:hover {
+    background-color: transparent !important;
+    color: rgb(255, 210, 150) !important;
+    scale: 1.08 1.08;
+    text-shadow: 0 0 15px rgba(255, 165, 0, 0.95) !important;
 }
 
 /* RIGHT SIDE STATUS (UNIFIED HEIGHT FOR SYMMETRY) */

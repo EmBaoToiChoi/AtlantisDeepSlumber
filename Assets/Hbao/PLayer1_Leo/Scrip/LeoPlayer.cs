@@ -43,12 +43,41 @@ public class LeoPlayer : NetworkBehaviour
     public float comboTransitionThreshold = 0.5f;
     public float punch1Duration = 0.5f;
     public float punch2Duration = 0.5f;
+    public float punch3Duration = 0.5f;
     public float slash1Duration = 0.6f;
     public float slash2Duration = 0.6f;
     public float slash3Duration = 0.7f;
     protected int comboStep = 0;
     protected float lastAttackTime = 0f;
     protected bool isRootedAttack = false;
+
+    [Header("Hitbox References")]
+    [Tooltip("Left hand hitbox collider.")]
+    public Collider leftHitbox;
+    [Tooltip("Right hand hitbox collider.")]
+    public Collider rightHitbox;
+    
+    [Tooltip("Left weapon/sword hitbox collider.")]
+    public Collider leftWeaponHitbox;
+    [Tooltip("Right weapon/sword hitbox collider.")]
+    public Collider rightWeaponHitbox;
+
+    private System.Collections.Generic.List<Transform> alreadyHitEnemies = new System.Collections.Generic.List<Transform>();
+
+    [Header("Movement Lock State")]
+    [Tooltip("If true, movement inputs are ignored and Rigidbody XZ velocity is locked to 0.")]
+    public bool isMovementLocked = false;
+
+    private float targetAttackLayerWeight = 0f;
+    private float currentAttackLayerWeight = 0f;
+
+    [Header("Attack Dash Settings")]
+    [Tooltip("Speed of the automatic forward dash during combo attacks.")]
+    public float attackDashSpeed = 4.0f;
+    [Tooltip("Duration of the automatic forward dash during combo attacks.")]
+    public float attackDashDuration = 0.25f;
+    private float attackDashTimer = 0f;
+    private Vector3 attackDashDirection;
 
     [Header("Weapon Switch Animations")]
     public string drawWeaponTrigger = "DrawWeapon";
@@ -162,9 +191,9 @@ public class LeoPlayer : NetworkBehaviour
     public string pickTrigger = "Pick";
     public string punch1Trigger = "DamTrai";
     public string punch2Trigger = "DamPhai";
+    public string punch3Trigger = "DamCombo";
     public string slash1Trigger = "Combo1kiem";
     public string slash2Trigger = "Attackdoucombo";
-    public string slash3Trigger = "Combo1kiem";
 
     // Death and hit
     public string deathUnarmedTrigger = "Death";
@@ -226,6 +255,9 @@ public class LeoPlayer : NetworkBehaviour
             rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationY | RigidbodyConstraints.FreezeRotationZ;
             rb.interpolation = RigidbodyInterpolation.Interpolate; // Giúp Player di chuyển mượt mà không bị khựng hình
         }
+
+        // Tự động tạo và liên kết hitbox kiếm/tay nếu bị null
+        CreateSwordHitboxes();
     }
 
     private void Start()
@@ -237,11 +269,10 @@ public class LeoPlayer : NetworkBehaviour
                 anim = GetComponentInChildren<Animator>(true);
         }
 
-        // Dynamically set the weight of the AttackLayer (layer index 1) to 1.0f so attack animations show!
+        // Khởi tạo weight của AttackLayer ở 0
         if (anim != null && anim.layerCount > 1)
         {
-            anim.SetLayerWeight(1, 1.0f);
-            Debug.Log("[LeoPlayer] Dynamically set Animator Layer 1 (AttackLayer) weight to 1.0f");
+            anim.SetLayerWeight(1, 0f);
         }
 
         float horizontalDistance = new Vector3(cameraOffset.x, 0f, cameraOffset.z).magnitude;
@@ -381,9 +412,9 @@ public class LeoPlayer : NetworkBehaviour
         Debug.Log("[LeoPlayer] Roll ended via Animation Event.");
         isRollingStandalone = false;
         
-        if (anim != null) anim.applyRootMotion = false;
-        var bridge = GetRootMotionBridge();
-        if (bridge != null) bridge.ApplyFinalOffset();
+        if (anim != null) anim.applyRootMotion = false; // Tắt applyRootMotion
+        
+        if (rb != null) rb.linearVelocity = new Vector3(0f, rb.linearVelocity.y, 0f); // Dừng lực lộn
 
         if (!isStandaloneMode && IsOwner)
         {
@@ -407,6 +438,9 @@ public class LeoPlayer : NetworkBehaviour
 
     private void Update()
     {
+        // Cập nhật Layer Weight động cho Attack Layer (Layer 1)
+        UpdateAttackLayerWeight();
+
         bool hasControl = isStandaloneMode || (IsSpawned && IsOwner);
         if (hasControl)
         {
@@ -422,18 +456,20 @@ public class LeoPlayer : NetworkBehaviour
             rollCooldownTimer -= Time.deltaTime;
         }
 
+        if (attackDashTimer > 0)
+        {
+            attackDashTimer -= Time.deltaTime;
+        }
+
         if (isRollingStandalone || (IsSpawned && isRollingNet.Value))
         {
             rollTimer -= Time.deltaTime;
+
             if (rollTimer <= 0)
             {
                 if (isStandaloneMode || IsOwner)
                 {
                     OnRollEnd();
-                }
-                else
-                {
-                    if (anim != null) anim.applyRootMotion = false;
                 }
             }
         }
@@ -502,14 +538,19 @@ public class LeoPlayer : NetworkBehaviour
 
         if (isRollingStandalone)
         {
+            if (rb != null)
+            {
+                float currentYVelocity = rb.linearVelocity.y;
+                rb.linearVelocity = new Vector3(rollDirection.x * rollSpeed, currentYVelocity, rollDirection.z * rollSpeed);
+            }
             return; 
         }
 
         bool isRunning = Input.GetKey(KeyCode.LeftShift);
         float currentSpeed = isRunning ? moveSpeed * runSpeedMultiplier : moveSpeed;
 
-        float moveX = Input.GetAxis("Horizontal");
-        float moveZ = Input.GetAxis("Vertical");
+        float moveX = isMovementLocked ? 0f : Input.GetAxis("Horizontal");
+        float moveZ = isMovementLocked ? 0f : Input.GetAxis("Vertical");
         Vector3 move = new Vector3(moveX, 0, moveZ);
 
         if (targetCamera == null)
@@ -549,7 +590,20 @@ public class LeoPlayer : NetworkBehaviour
                 knockbackVelocity = Vector3.Lerp(knockbackVelocity, Vector3.zero, Time.deltaTime * 8f);
             }
 
-            rb.linearVelocity = new Vector3(targetVelocity.x, currentYVelocity, targetVelocity.z);
+            // Ưu tiên lực Dash đòn đánh
+            if (attackDashTimer > 0)
+            {
+                rb.linearVelocity = new Vector3(attackDashDirection.x * attackDashSpeed, currentYVelocity, attackDashDirection.z * attackDashSpeed);
+            }
+            // Nếu khóa di chuyển, đứng im
+            else if (isMovementLocked && knockbackVelocity.magnitude <= 0.01f)
+            {
+                rb.linearVelocity = new Vector3(0f, currentYVelocity, 0f);
+            }
+            else
+            {
+                rb.linearVelocity = new Vector3(targetVelocity.x, currentYVelocity, targetVelocity.z);
+            }
         }
 
         bool isArmed = (GetActiveWeaponIndex() == 2);
@@ -659,14 +713,19 @@ public class LeoPlayer : NetworkBehaviour
 
         if (isRollingStandalone || (IsSpawned && isRollingNet.Value))
         {
+            if (rb != null)
+            {
+                float currentYVelocity = rb.linearVelocity.y;
+                rb.linearVelocity = new Vector3(rollDirection.x * rollSpeed, currentYVelocity, rollDirection.z * rollSpeed);
+            }
             return; 
         }
 
         bool isRunning = Input.GetKey(KeyCode.LeftShift);
         float currentSpeed = isRunning ? moveSpeed * runSpeedMultiplier : moveSpeed;
 
-        float moveX = Input.GetAxis("Horizontal");
-        float moveZ = Input.GetAxis("Vertical");
+        float moveX = isMovementLocked ? 0f : Input.GetAxis("Horizontal");
+        float moveZ = isMovementLocked ? 0f : Input.GetAxis("Vertical");
         Vector3 move = new Vector3(moveX, 0, moveZ);
 
         if (targetCamera == null)
@@ -705,7 +764,20 @@ public class LeoPlayer : NetworkBehaviour
                 knockbackVelocity = Vector3.Lerp(knockbackVelocity, Vector3.zero, Time.deltaTime * 8f);
             }
 
-            rb.linearVelocity = new Vector3(targetVelocity.x, currentYVelocity, targetVelocity.z);
+            // Ưu tiên lực Dash đòn đánh
+            if (attackDashTimer > 0)
+            {
+                rb.linearVelocity = new Vector3(attackDashDirection.x * attackDashSpeed, currentYVelocity, attackDashDirection.z * attackDashSpeed);
+            }
+            // Nếu khóa di chuyển, đứng im
+            else if (isMovementLocked && knockbackVelocity.magnitude <= 0.01f)
+            {
+                rb.linearVelocity = new Vector3(0f, currentYVelocity, 0f);
+            }
+            else
+            {
+                rb.linearVelocity = new Vector3(targetVelocity.x, currentYVelocity, targetVelocity.z);
+            }
         }
 
         bool isArmed = (GetActiveWeaponIndex() == 2);
@@ -805,7 +877,9 @@ public class LeoPlayer : NetworkBehaviour
     {
         if (weaponIndex == 1)
         {
-            return step == 1 ? punch1Duration : punch2Duration;
+            if (step == 1) return punch1Duration;
+            if (step == 2) return punch2Duration;
+            return punch3Duration;
         }
         else if (weaponIndex == 2)
         {
@@ -821,43 +895,16 @@ public class LeoPlayer : NetworkBehaviour
         int weapon = GetActiveWeaponIndex();
         float currentTime = Time.time;
         
+        // Reset hitbox states and clear target list for the new swing
+        alreadyHitEnemies.Clear();
+        DisableLeftHitbox();
+        DisableRightHitbox();
+        DisableLeftWeaponHitbox();
+        DisableRightWeaponHitbox();
+
         if (weapon == 2)
         {
-            if (currentTime - lastAttackTime < slash1Duration * comboTransitionThreshold)
-            {
-                return;
-            }
-            
-            lastAttackTime = currentTime;
-            
-            float moveX = Input.GetAxis("Horizontal");
-            float moveZ = Input.GetAxis("Vertical");
-            bool isMovingInput = (Mathf.Abs(moveX) > 0.01f || Mathf.Abs(moveZ) > 0.01f);
-            isRootedAttack = !isMovingInput;
-            
-            // Random 50-50 choice between Slash1 (Combo1kiem) and Slash2 (Attackdoucombo) as requested
-            float rand = Random.value;
-            string animToPlay = (rand < 0.5f) ? "Slash1" : "Slash2";
-            Debug.Log($"[LeoPlayer] Combo attack (Armed). Random roll: {rand:F2} -> Playing: {animToPlay}");
-            
-            PlayAnimation(animToPlay, 0.05f, false);
-            
-            if (networkMode)
-            {
-                AttackServerRpc();
-            }
-            else
-            {
-                Vector3 rayStart = transform.position + Vector3.up * 0.5f;
-                if (Physics.Raycast(rayStart, transform.forward, out RaycastHit hit, attackRange))
-                {
-                    TryDamageEnemy(hit.collider);
-                }
-            }
-        }
-        else
-        {
-            // Unarmed combo Sequential punches
+            // Armed sequential 3-step combo
             int nextStep = comboStep;
             if (currentTime - lastAttackTime > comboWindow)
             {
@@ -865,7 +912,54 @@ public class LeoPlayer : NetworkBehaviour
             }
             nextStep++;
 
-            if (nextStep > 2) nextStep = 1;
+            if (nextStep > 3) nextStep = 1;
+
+            if (comboStep > 0 && currentTime - lastAttackTime <= comboWindow)
+            {
+                float prevDuration = GetAttackDuration(2, comboStep);
+                if (currentTime - lastAttackTime < prevDuration * comboTransitionThreshold)
+                {
+                    return;
+                }
+            }
+
+            float moveX = Input.GetAxis("Horizontal");
+            float moveZ = Input.GetAxis("Vertical");
+            bool isMovingInput = (Mathf.Abs(moveX) > 0.01f || Mathf.Abs(moveZ) > 0.01f);
+            
+            if (comboStep == 0 || currentTime - lastAttackTime > comboWindow)
+            {
+                isRootedAttack = !isMovingInput;
+            }
+
+            comboStep = nextStep;
+            lastAttackTime = currentTime;
+
+            string animToPlay = "Slash1";
+            if (comboStep == 2) animToPlay = "Slash2";
+            else if (comboStep == 3) animToPlay = "Slash3";
+            
+            Debug.Log($"[LeoPlayer] Sword attack (Armed). Step: {comboStep} -> Playing: {animToPlay}");
+
+            // Kích hoạt Dash tiến lên bằng code cho cả 3 đòn chém
+            attackDashTimer = attackDashDuration;
+            attackDashDirection = transform.forward;
+            Debug.Log($"[LeoPlayer] Triggered slash {comboStep} forward dash by code.");
+            
+            PlayAnimation(animToPlay, 0.05f, false);
+            // Damage is now processed through animation events enabling left/right hitboxes
+        }
+        else
+        {
+            // Unarmed combo Sequential punches - 3 steps
+            int nextStep = comboStep;
+            if (currentTime - lastAttackTime > comboWindow)
+            {
+                nextStep = 0;
+            }
+            nextStep++;
+
+            if (nextStep > 3) nextStep = 1;
 
             if (comboStep > 0 && currentTime - lastAttackTime <= comboWindow)
             {
@@ -888,23 +982,26 @@ public class LeoPlayer : NetworkBehaviour
             comboStep = nextStep;
             lastAttackTime = currentTime;
 
-            string animToPlay = comboStep == 1 ? "Punch1" : "Punch2";
+            // Khóa di chuyển khi đấm tay không
+            isMovementLocked = true;
+            Debug.Log("[LeoPlayer] Punch attack started: Locking movement.");
+
+            // Kích hoạt Dash tiến lên bằng code khi đấm combo thứ 3 (Punch3 / DamCombo)
+            if (comboStep == 3)
+            {
+                attackDashTimer = attackDashDuration;
+                attackDashDirection = transform.forward;
+                Debug.Log("[LeoPlayer] Triggered punch combo forward dash by code.");
+            }
+
+            string animToPlay = "Punch1";
+            if (comboStep == 2) animToPlay = "Punch2";
+            else if (comboStep == 3) animToPlay = "Punch3";
+
             Debug.Log($"[LeoPlayer] Fist attack (Unarmed). Step: {comboStep} -> Playing: {animToPlay}");
             
             PlayAnimation(animToPlay, 0.05f, false);
-
-            if (networkMode)
-            {
-                AttackServerRpc();
-            }
-            else
-            {
-                Vector3 rayStart = transform.position + Vector3.up * 0.5f;
-                if (Physics.Raycast(rayStart, transform.forward, out RaycastHit hit, attackRange))
-                {
-                    TryDamageEnemy(hit.collider);
-                }
-            }
+            // Damage is now processed through animation events enabling left/right hitboxes
         }
     }
 
@@ -967,7 +1064,7 @@ public class LeoPlayer : NetworkBehaviour
             rollDirection = transform.forward;
         }
 
-        if (anim != null) anim.applyRootMotion = true;
+        if (anim != null) anim.applyRootMotion = false;
         PlayAnimation("LonVong", 0.05f);
     }
 
@@ -988,7 +1085,7 @@ public class LeoPlayer : NetworkBehaviour
             rollDirection = transform.forward;
         }
 
-        if (anim != null) anim.applyRootMotion = true;
+        if (anim != null) anim.applyRootMotion = false;
         PlayAnimation("LonVong", 0.05f, false);
         StartRollServerRpc(rollDirection);
     }
@@ -1647,18 +1744,16 @@ public class LeoPlayer : NetworkBehaviour
                 }
             case "LonVong":
                 return rollTrigger;
-            case "Idle_Pick":
-                return pickTrigger;
             case "Punch1":
                 return punch1Trigger;
             case "Punch2":
                 return punch2Trigger;
+            case "Punch3":
+                return punch3Trigger;
             case "Slash1":
                 return slash1Trigger;
             case "Slash2":
                 return slash2Trigger;
-            case "Slash3":
-                return slash3Trigger;
             case "GetHit":
                 return getHitTrigger;
             case "GeiHit2":
@@ -1680,9 +1775,9 @@ public class LeoPlayer : NetworkBehaviour
                name == deathArmedTrigger ||
                name == punch1Trigger ||
                name == punch2Trigger ||
+               name == punch3Trigger ||
                name == slash1Trigger ||
                name == slash2Trigger ||
-               name == slash3Trigger ||
                name == "LonVong" ||
                name == "GetHit" ||
                name == "GeiHit2" ||
@@ -1690,9 +1785,9 @@ public class LeoPlayer : NetworkBehaviour
                name == "Death" ||
                name == "Punch1" ||
                name == "Punch2" ||
+               name == "Punch3" ||
                name == "Slash1" ||
                name == "Slash2" ||
-               name == "Slash3" ||
                (!string.IsNullOrEmpty(drawWeaponTrigger) && name == drawWeaponTrigger) ||
                (!string.IsNullOrEmpty(sheathWeaponTrigger) && name == sheathWeaponTrigger);
     }
@@ -1701,14 +1796,14 @@ public class LeoPlayer : NetworkBehaviour
     {
         return name == punch1Trigger || 
                name == punch2Trigger || 
+               name == punch3Trigger ||
                name == slash1Trigger || 
                name == slash2Trigger ||
-               name == slash3Trigger ||
                name == "Punch1" ||
                name == "Punch2" ||
+               name == "Punch3" ||
                name == "Slash1" ||
-               name == "Slash2" ||
-               name == "Slash3";
+               name == "Slash2";
     }
 
     private bool IsFullBodyActionAnimation(string name)
@@ -1760,14 +1855,14 @@ public class LeoPlayer : NetworkBehaviour
     {
         return stateInfo.IsName(punch1Trigger) || 
                stateInfo.IsName(punch2Trigger) || 
+               stateInfo.IsName(punch3Trigger) || 
                stateInfo.IsName(slash1Trigger) || 
                stateInfo.IsName(slash2Trigger) ||
-               stateInfo.IsName(slash3Trigger) ||
                stateInfo.IsName("Punch1") ||
                stateInfo.IsName("Punch2") ||
+               stateInfo.IsName("Punch3") ||
                stateInfo.IsName("Slash1") ||
-               stateInfo.IsName("Slash2") ||
-               stateInfo.IsName("Slash3");
+               stateInfo.IsName("Slash2");
     }
 
     private bool IsPlayingActionAnimation()
@@ -1880,15 +1975,15 @@ public class LeoPlayer : NetworkBehaviour
         {
             anim.ResetTrigger(punch1Trigger);
             anim.ResetTrigger(punch2Trigger);
+            anim.ResetTrigger(punch3Trigger);
             anim.ResetTrigger(slash1Trigger);
             anim.ResetTrigger(slash2Trigger);
-            anim.ResetTrigger(slash3Trigger);
             
             anim.ResetTrigger("Punch1");
             anim.ResetTrigger("Punch2");
+            anim.ResetTrigger("Punch3");
             anim.ResetTrigger("Slash1");
             anim.ResetTrigger("Slash2");
-            anim.ResetTrigger("Slash3");
             if (!string.IsNullOrEmpty(drawWeaponTrigger)) anim.ResetTrigger(drawWeaponTrigger);
             if (!string.IsNullOrEmpty(sheathWeaponTrigger)) anim.ResetTrigger(sheathWeaponTrigger);
         }
@@ -1924,10 +2019,18 @@ public class LeoPlayer : NetworkBehaviour
     // --- BẮT ÉP ROOT MOTION (Lúc lộn vòng) PHẢI CHẠY QUA HỆ THỐNG VẬT LÝ RIGIDBODY ĐỂ CHẶN XUYÊN TƯỜNG ---
     private void OnAnimatorMove()
     {
-        if (anim != null && anim.applyRootMotion && rb != null)
+        if (anim != null && rb != null)
         {
-            Vector3 nextPosition = rb.position + anim.deltaPosition;
-            rb.MovePosition(nextPosition);
+            if (anim.applyRootMotion)
+            {
+                Vector3 nextPosition = rb.position + anim.deltaPosition;
+                rb.MovePosition(nextPosition);
+            }
+            else
+            {
+                // Giải phóng chuyển động vật lý mặc định khi không dùng Root Motion
+                anim.ApplyBuiltinRootMotion();
+            }
         }
     }
 
@@ -1952,6 +2055,399 @@ public class LeoPlayer : NetworkBehaviour
         {
             anim.Play("New State", 1, 0f);
             anim.Play("Empty", 1, 0f);
+        }
+    }
+
+    // ------------------------------------------------------------------
+    //  Hitbox Combat System & Animation Event Receivers
+    // ------------------------------------------------------------------
+    public void EnableLeftHitbox()
+    {
+        if (leftHitbox != null)
+        {
+            leftHitbox.enabled = true;
+            Debug.Log("[LeoPlayer] Left hitbox ENABLED.");
+        }
+    }
+
+    public void DisableLeftHitbox()
+    {
+        if (leftHitbox != null)
+        {
+            leftHitbox.enabled = false;
+            Debug.Log("[LeoPlayer] Left hitbox DISABLED.");
+        }
+    }
+
+    public void EnableRightHitbox()
+    {
+        if (rightHitbox != null)
+        {
+            rightHitbox.enabled = true;
+            Debug.Log("[LeoPlayer] Right hitbox ENABLED.");
+        }
+    }
+
+    public void DisableRightHitbox()
+    {
+        if (rightHitbox != null)
+        {
+            rightHitbox.enabled = false;
+            Debug.Log("[LeoPlayer] Right hitbox DISABLED.");
+        }
+    }
+
+    public void EnableBothHitboxes()
+    {
+        EnableLeftHitbox();
+        EnableRightHitbox();
+        Debug.Log("[LeoPlayer] Both hitboxes ENABLED.");
+    }
+
+    public void DisableBothHitboxes()
+    {
+        DisableLeftHitbox();
+        DisableRightHitbox();
+        Debug.Log("[LeoPlayer] Both hitboxes DISABLED.");
+    }
+
+    public void UnlockMovement()
+    {
+        isMovementLocked = false;
+        Debug.Log("[LeoPlayer] Movement UNLOCKED.");
+    }
+
+    public void EnableLeftWeaponHitbox()
+    {
+        if (leftWeaponHitbox != null)
+        {
+            leftWeaponHitbox.enabled = true;
+            Debug.Log("[LeoPlayer] Left weapon hitbox ENABLED.");
+        }
+    }
+
+    public void DisableLeftWeaponHitbox()
+    {
+        if (leftWeaponHitbox != null)
+        {
+            leftWeaponHitbox.enabled = false;
+            Debug.Log("[LeoPlayer] Left weapon hitbox DISABLED.");
+        }
+    }
+
+    public void EnableRightWeaponHitbox()
+    {
+        if (rightWeaponHitbox != null)
+        {
+            rightWeaponHitbox.enabled = true;
+            Debug.Log("[LeoPlayer] Right weapon hitbox ENABLED.");
+        }
+    }
+
+    public void DisableRightWeaponHitbox()
+    {
+        if (rightWeaponHitbox != null)
+        {
+            rightWeaponHitbox.enabled = false;
+            Debug.Log("[LeoPlayer] Right weapon hitbox DISABLED.");
+        }
+    }
+
+    public void EnableBothWeaponHitboxes()
+    {
+        EnableLeftWeaponHitbox();
+        EnableRightWeaponHitbox();
+        Debug.Log("[LeoPlayer] Both weapon hitboxes ENABLED.");
+    }
+
+    public void DisableBothWeaponHitboxes()
+    {
+        DisableLeftWeaponHitbox();
+        DisableRightWeaponHitbox();
+        Debug.Log("[LeoPlayer] Both weapon hitboxes DISABLED.");
+    }
+
+    public void OnSlashEnd()
+    {
+        Debug.Log("[LeoPlayer] Slash ended.");
+    }
+
+    public void OnHitboxCollision(Collider other)
+    {
+        if (IsEnemy(other, out Collider enemyCollider))
+        {
+            Transform enemyRoot = enemyCollider.transform.root;
+            if (!alreadyHitEnemies.Contains(enemyRoot))
+            {
+                alreadyHitEnemies.Add(enemyRoot);
+                Debug.Log($"[LeoPlayer Combat] Hitbox collided with enemy root: {enemyRoot.name}. Dealing damage: {damageAmount}");
+                
+                if (isStandaloneMode)
+                {
+                    TryDamageEnemy(enemyCollider);
+                }
+                else if (IsOwner)
+                {
+                    // Network Mode: Tell server to apply damage
+                    var netObj = enemyCollider.GetComponentInParent<NetworkObject>();
+                    if (netObj != null)
+                    {
+                        DamageEnemyServerRpc(netObj);
+                    }
+                    else
+                    {
+                        TryDamageEnemy(enemyCollider);
+                    }
+                }
+            }
+        }
+    }
+
+    private bool IsEnemy(Collider col, out Collider enemyCollider)
+    {
+        enemyCollider = null;
+        if (col == null) return false;
+
+        if (col.GetComponentInParent<Enemy1_DapBua>() != null ||
+            col.GetComponentInParent<Enemy2_Zombie>() != null ||
+            col.GetComponentInParent<Enemy3_Buaa>() != null ||
+            col.GetComponentInParent<Enemy4_Bongtoi>() != null ||
+            col.GetComponentInParent<Enemy5_PhuThuy>() != null)
+        {
+            enemyCollider = col;
+            return true;
+        }
+        return false;
+    }
+
+    [ServerRpc]
+    private void DamageEnemyServerRpc(NetworkObjectReference enemyRef)
+    {
+        if (enemyRef.TryGet(out NetworkObject netObj))
+        {
+            var col = netObj.GetComponent<Collider>();
+            if (col != null)
+            {
+                TryDamageEnemy(col);
+            }
+            else
+            {
+                var e1 = netObj.GetComponentInChildren<Enemy1_DapBua>();
+                if (e1 != null) { e1.TakeDamage(damageAmount); return; }
+                var e2 = netObj.GetComponentInChildren<Enemy2_Zombie>();
+                if (e2 != null) { e2.TakeDamage(damageAmount); return; }
+                var e3 = netObj.GetComponentInChildren<Enemy3_Buaa>();
+                if (e3 != null) { e3.TakeDamage(damageAmount); return; }
+                var e4 = netObj.GetComponentInChildren<Enemy4_Bongtoi>();
+                if (e4 != null) { e4.TakeDamage(damageAmount); return; }
+                var e5 = netObj.GetComponentInChildren<Enemy5_PhuThuy>();
+                if (e5 != null) { e5.TakeDamage(damageAmount); return; }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Context menu option and runtime helper to automatically locate hands, 
+    /// create hand and sword hitboxes (LeftHitbox, RightHitbox, LeftWeaponHitbox, RightWeaponHitbox),
+    /// attach colliders & PlayerHitbox scripts, and link them to LeoPlayer.
+    /// </summary>
+    [ContextMenu("Create Sword Hitboxes")]
+    public void CreateSwordHitboxes()
+    {
+        Transform leftHand = FindBoneRecursive(transform, "left");
+        Transform rightHand = FindBoneRecursive(transform, "right");
+
+        if (leftHand == null) leftHand = transform;
+        if (rightHand == null) rightHand = transform;
+
+        // --- 1. Tạo Hitbox cho Tay không (Punch) ---
+        // Left Punch Hitbox
+        if (leftHitbox == null)
+        {
+            Transform existingLeft = leftHand.Find("LeftHitbox");
+            GameObject leftObj;
+            if (existingLeft != null)
+            {
+                leftObj = existingLeft.gameObject;
+            }
+            else
+            {
+                leftObj = new GameObject("LeftHitbox");
+                leftObj.transform.SetParent(leftHand);
+                leftObj.transform.localPosition = Vector3.zero;
+                leftObj.transform.localRotation = Quaternion.identity;
+                leftObj.transform.localScale = Vector3.one;
+            }
+
+            BoxCollider col = leftObj.GetComponent<BoxCollider>();
+            if (col == null) col = leftObj.AddComponent<BoxCollider>();
+            col.isTrigger = true;
+            col.size = new Vector3(0.2f, 0.2f, 0.2f); // Nhỏ, nằm ở nắm đấm
+            col.center = Vector3.zero;
+            col.enabled = false;
+
+            PlayerHitbox ph = leftObj.GetComponent<PlayerHitbox>();
+            if (ph == null) ph = leftObj.AddComponent<PlayerHitbox>();
+
+            leftHitbox = col;
+            Debug.Log("[LeoPlayer Editor] Created and linked LeftHitbox under " + leftHand.name);
+        }
+
+        // Right Punch Hitbox
+        if (rightHitbox == null)
+        {
+            Transform existingRight = rightHand.Find("RightHitbox");
+            GameObject rightObj;
+            if (existingRight != null)
+            {
+                rightObj = existingRight.gameObject;
+            }
+            else
+            {
+                rightObj = new GameObject("RightHitbox");
+                rightObj.transform.SetParent(rightHand);
+                rightObj.transform.localPosition = Vector3.zero;
+                rightObj.transform.localRotation = Quaternion.identity;
+                rightObj.transform.localScale = Vector3.one;
+            }
+
+            BoxCollider col = rightObj.GetComponent<BoxCollider>();
+            if (col == null) col = rightObj.AddComponent<BoxCollider>();
+            col.isTrigger = true;
+            col.size = new Vector3(0.2f, 0.2f, 0.2f); // Nhỏ, nằm ở nắm đấm
+            col.center = Vector3.zero;
+            col.enabled = false;
+
+            PlayerHitbox ph = rightObj.GetComponent<PlayerHitbox>();
+            if (ph == null) ph = rightObj.AddComponent<PlayerHitbox>();
+
+            rightHitbox = col;
+            Debug.Log("[LeoPlayer Editor] Created and linked RightHitbox under " + rightHand.name);
+        }
+
+        // --- 2. Tạo Hitbox cho Kiếm (Sword/Weapon) ---
+        Transform leftSwordParent = FindWeaponTransform(leftHand) ?? leftHand;
+        Transform rightSwordParent = FindWeaponTransform(rightHand) ?? rightHand;
+
+        // Left Sword Hitbox
+        if (leftWeaponHitbox == null)
+        {
+            Transform existingLeftW = leftSwordParent.Find("LeftWeaponHitbox");
+            GameObject leftWObj;
+            if (existingLeftW != null)
+            {
+                leftWObj = existingLeftW.gameObject;
+            }
+            else
+            {
+                leftWObj = new GameObject("LeftWeaponHitbox");
+                leftWObj.transform.SetParent(leftSwordParent);
+                leftWObj.transform.localPosition = Vector3.zero;
+                leftWObj.transform.localRotation = Quaternion.identity;
+                leftWObj.transform.localScale = Vector3.one;
+            }
+
+            BoxCollider col = leftWObj.GetComponent<BoxCollider>();
+            if (col == null) col = leftWObj.AddComponent<BoxCollider>();
+            col.isTrigger = true;
+            col.size = new Vector3(0.2f, 0.2f, 1.2f); // To và dài hơn dọc theo thanh kiếm
+            col.center = new Vector3(0f, 0f, 0.6f);
+            col.enabled = false;
+
+            PlayerHitbox ph = leftWObj.GetComponent<PlayerHitbox>();
+            if (ph == null) ph = leftWObj.AddComponent<PlayerHitbox>();
+
+            leftWeaponHitbox = col;
+            Debug.Log("[LeoPlayer Editor] Created and linked LeftWeaponHitbox under " + leftSwordParent.name);
+        }
+
+        // Right Sword Hitbox
+        if (rightWeaponHitbox == null)
+        {
+            Transform existingRightW = rightSwordParent.Find("RightWeaponHitbox");
+            GameObject rightWObj;
+            if (existingRightW != null)
+            {
+                rightWObj = existingRightW.gameObject;
+            }
+            else
+            {
+                rightWObj = new GameObject("RightWeaponHitbox");
+                rightWObj.transform.SetParent(rightSwordParent);
+                rightWObj.transform.localPosition = Vector3.zero;
+                rightWObj.transform.localRotation = Quaternion.identity;
+                rightWObj.transform.localScale = Vector3.one;
+            }
+
+            BoxCollider col = rightWObj.GetComponent<BoxCollider>();
+            if (col == null) col = rightWObj.AddComponent<BoxCollider>();
+            col.isTrigger = true;
+            col.size = new Vector3(0.2f, 0.2f, 1.2f); // To và dài hơn dọc theo thanh kiếm
+            col.center = new Vector3(0f, 0f, 0.6f);
+            col.enabled = false;
+
+            PlayerHitbox ph = rightWObj.GetComponent<PlayerHitbox>();
+            if (ph == null) ph = rightWObj.AddComponent<PlayerHitbox>();
+
+            rightWeaponHitbox = col;
+            Debug.Log("[LeoPlayer Editor] Created and linked RightWeaponHitbox under " + rightSwordParent.name);
+        }
+    }
+
+    private Transform FindWeaponTransform(Transform hand)
+    {
+        for (int i = 0; i < hand.childCount; i++)
+        {
+            Transform child = hand.GetChild(i);
+            string nameLower = child.name.ToLower();
+            if (nameLower.Contains("sword") || nameLower.Contains("blade") || nameLower.Contains("weapon") || 
+                nameLower.Contains("kiem") || nameLower.Contains("dao") || nameLower.Contains("katana") || nameLower.Contains("weapon_r") || nameLower.Contains("weapon_l"))
+            {
+                return child;
+            }
+            Transform subChild = FindWeaponTransform(child);
+            if (subChild != null) return subChild;
+        }
+        return null;
+    }
+
+    private Transform FindBoneRecursive(Transform current, string keyword)
+    {
+        string nameLower = current.name.ToLower();
+        if (nameLower.Contains(keyword) && (nameLower.Contains("hand") || nameLower.Contains("wrist") || nameLower.Contains("palm") || nameLower.Contains("finger")))
+        {
+            if (nameLower.Contains("hand"))
+            {
+                return current;
+            }
+        }
+
+        for (int i = 0; i < current.childCount; i++)
+        {
+            Transform found = FindBoneRecursive(current.GetChild(i), keyword);
+            if (found != null) return found;
+        }
+
+        if (current.name.ToLower().Contains(keyword) && current.name.ToLower().Contains("hand"))
+        {
+            return current;
+        }
+
+        return null;
+    }
+
+    private void UpdateAttackLayerWeight()
+    {
+        if (anim != null && anim.isActiveAndEnabled && anim.runtimeAnimatorController != null && anim.layerCount > 1)
+        {
+            AnimatorStateInfo stateInfo = anim.GetCurrentAnimatorStateInfo(1);
+            // Nếu layer 1 đang chạy hoạt ảnh chém (khác New State và Empty), đặt weight = 1
+            bool isSlashActive = !stateInfo.IsName("New State") && !stateInfo.IsName("Empty");
+            targetAttackLayerWeight = isSlashActive ? 1f : 0f;
+
+            // Lerp mượt mà weight để tránh chuyển đổi giật cục dáng đi
+            currentAttackLayerWeight = Mathf.MoveTowards(currentAttackLayerWeight, targetAttackLayerWeight, Time.deltaTime * 10f);
+            anim.SetLayerWeight(1, currentAttackLayerWeight);
         }
     }
 }
