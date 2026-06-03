@@ -1,13 +1,12 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
     <Style src="project://database/Assets/PLuan/MainMenu/Code/AtlantisMenu.uss?fileID=7433441132597879392&amp;guid=8fa4b76500634d046bac501785335e61&amp;type=3#AtlantisMenu" />
     <ui:VisualElement class="root-screen" style="-unity-font-definition: url(&quot;project://database/Assets/PLuan/MainMenu/Font/Elms_Sans/static/ElmsSans-BoldItalic.ttf?fileID=12800000&amp;guid=516a0c13403c3af48ac760e7a0157fee&amp;type=3#ElmsSans-BoldItalic&quot;);">
-
         <ui:VisualElement name="user-profile-container" class="user-profile-box hidden-element">
             <ui:Label name="lbl-profile-hint" text="LOGGED IN AS:" class="user-profile-label" />
             <ui:Label name="lbl-display-name" text="PLAYER_NAME" class="user-profile-name" />
             <ui:Button name="btn-logout" text="LOGOUT" class="join-mini-btn logout-btn" />
         </ui:VisualElement>
-        <ui:VisualElement name="login-panel" class="menu-container hidden-panel">
+        <ui:VisualElement name="login-panel" class="menu-container hidden-panel" style="background-image: url(&quot;project://database/Assets/PLuan/menuda.png?fileID=2800000&amp;guid=b71e5fe46dbce4849b9385c26298aaa1&amp;type=3#menuda&quot;);">
             <ui:Label name="lbl-login-title" text="USER LOGIN" class="panel-title" />
             <ui:Label name="lbl-login-error" class="error-text hidden-element" />
             <ui:VisualElement class="form-group">
@@ -23,7 +22,7 @@
                 <ui:Button name="btn-goto-register" text="CREATE ACCOUNT" class="menu-btn back-btn" />
             </ui:VisualElement>
         </ui:VisualElement>
-        <ui:VisualElement name="register-panel" class="menu-container large-panel hidden-panel">
+        <ui:VisualElement name="register-panel" class="menu-container large-panel hidden-panel" style="background-image: url(&quot;project://database/Assets/PLuan/menuda.png?fileID=2800000&amp;guid=b71e5fe46dbce4849b9385c26298aaa1&amp;type=3#menuda&quot;);">
             <ui:Label name="lbl-reg-title" text="NEW ACCOUNT" class="panel-title" />
             <ui:Label name="lbl-reg-error" class="error-text hidden-element" />
             <ui:VisualElement class="form-group">
@@ -42,12 +41,12 @@
                 <ui:Label name="lbl-reg-confirm" text="CONFIRM PASSWORD" class="form-label" />
                 <ui:TextField name="input-reg-confirm" password="true" class="form-input" />
             </ui:VisualElement>
-            <ui:VisualElement class="button-group" style="margin-top: 15px;">
+            <ui:VisualElement class="button-group" style="margin-top: 8px;">
                 <ui:Button name="btn-register" text="CREATE ACCOUNT" class="menu-btn" />
                 <ui:Button name="btn-goto-login" text="&lt; BACK TO LOGIN" class="menu-btn back-btn" />
             </ui:VisualElement>
         </ui:VisualElement>
-        <ui:VisualElement name="verify-otp-panel" class="menu-container hidden-panel">
+        <ui:VisualElement name="verify-otp-panel" class="menu-container hidden-panel" style="background-image: url(&quot;project://database/Assets/PLuan/menuda.png?fileID=2800000&amp;guid=b71e5fe46dbce4849b9385c26298aaa1&amp;type=3#menuda&quot;);">
             <ui:Label name="lbl-otp-title" text="VERIFY EMAIL" class="panel-title" />
             <ui:Label name="lbl-otp-msg" text="We&apos;ve sent a code to your email." class="info-text" />
             <ui:Label name="lbl-otp-spam-note" text="* Don&apos;t see it? Check your Spam/Junk folder." class="spam-note" />
@@ -56,21 +55,20 @@
                 <ui:Label name="lbl-otp-code" text="OTP CODE" class="form-label" />
                 <ui:TextField name="input-otp" max-length="6" class="form-input otp-input" />
             </ui:VisualElement>
-            <ui:VisualElement class="button-group" style="margin-top: 15px;">
+            <ui:VisualElement class="button-group" style="margin-top: 6px;">
                 <ui:Button name="btn-verify-otp" text="VERIFY" class="menu-btn" />
                 <ui:Button name="btn-resend-otp" text="RESEND CODE" class="menu-btn back-btn" />
-                <ui:Button name="btn-cancel-otp" text="&lt; CANCEL" class="menu-btn cancel-btn" style="margin-left: 0; margin-top: 10px; border-left-width: 2px;" />
+                <ui:Button name="btn-cancel-otp" text="&lt; CANCEL" class="menu-btn back-btn" style="margin-left: 0; margin-top: 6px;" />
             </ui:VisualElement>
         </ui:VisualElement>
-        <ui:VisualElement name="main-menu-panel" class="menu-container hidden-panel">
+        <ui:VisualElement name="main-menu-panel" class="menu-container hidden-panel" style="background-image: url(&quot;project://database/Assets/PLuan/menuda.png?fileID=2800000&amp;guid=b71e5fe46dbce4849b9385c26298aaa1&amp;type=3#menuda&quot;);">
             <ui:VisualElement class="button-group">
                 <ui:Button name="btn-play" text="PLAY" class="menu-btn" />
                 <ui:Button name="btn-options" text="OPTIONS" class="menu-btn" />
                 <ui:Button name="btn-quit" text="QUIT" class="menu-btn quit-btn" />
             </ui:VisualElement>
-            <ui:Label text="Atlantis: Deep Slumber // Pre-Alpha 0.2" class="version-text" />
         </ui:VisualElement>
-        <ui:VisualElement name="network-menu-panel" class="menu-container hidden-panel">
+        <ui:VisualElement name="network-menu-panel" class="menu-container hidden-panel" style="background-image: url(&quot;project://database/Assets/PLuan/menuda.png?fileID=2800000&amp;guid=b71e5fe46dbce4849b9385c26298aaa1&amp;type=3#menuda&quot;);">
             <ui:Label name="lbl-lobby-title" text="SESSION LOBBY" class="panel-title" />
             <ui:VisualElement class="button-group">
                 <ui:Button name="btn-create-host" text="CREATE (HOST)" class="menu-btn" />
@@ -78,7 +76,7 @@
                 <ui:Button name="btn-lobby-back" text="&lt; BACK" class="menu-btn back-btn" />
             </ui:VisualElement>
         </ui:VisualElement>
-        <ui:VisualElement name="create-room-panel" class="menu-container hidden-panel">
+        <ui:VisualElement name="create-room-panel" class="menu-container hidden-panel" style="background-image: url(&quot;project://database/Assets/PLuan/menuda.png?fileID=2800000&amp;guid=b71e5fe46dbce4849b9385c26298aaa1&amp;type=3#menuda&quot;);">
             <ui:Label name="lbl-host-title" text="HOST SESSION" class="panel-title" />
             <ui:VisualElement class="form-group">
                 <ui:Label name="lbl-room-name" text="HOST / ROOM NAME" class="form-label" />
@@ -95,12 +93,12 @@
                 <ui:Label name="lbl-room-password" text="PASSWORD" class="form-label" />
                 <ui:TextField name="input-room-password" password="true" is-delayed="true" class="form-input" />
             </ui:VisualElement>
-            <ui:VisualElement class="button-group" style="margin-top: 20px;">
+            <ui:VisualElement class="button-group" style="margin-top: 15px;">
                 <ui:Button name="btn-confirm-create" text="START HOSTING" class="menu-btn" />
                 <ui:Button name="btn-create-back" text="&lt; BACK" class="menu-btn back-btn" />
             </ui:VisualElement>
         </ui:VisualElement>
-        <ui:VisualElement name="join-room-panel" class="menu-container large-panel hidden-panel">
+        <ui:VisualElement name="join-room-panel" class="menu-container large-panel hidden-panel" style="background-image: url(&quot;project://database/Assets/PLuan/menuda.png?fileID=2800000&amp;guid=b71e5fe46dbce4849b9385c26298aaa1&amp;type=3#menuda&quot;);">
             <ui:Label name="lbl-browser-title" text="SESSION BROWSER" class="panel-title" />
             <ui:VisualElement class="join-id-bar">
                 <ui:TextField name="input-room-id" max-length="6" class="form-input id-input" />
@@ -113,27 +111,24 @@
                 <ui:Label name="lbl-col-players" text="PLAYERS" class="col-players" />
                 <ui:Label name="lbl-col-action" text="ACTION" class="col-action" />
             </ui:VisualElement>
-            <ui:ScrollView mode="Vertical" name="room-scroll-view" class="room-list">
-                <!-- Dynamically populated -->
-            </ui:ScrollView>
-
-            <ui:VisualElement class="button-group" style="margin-top: 25px; width: 150px;">
+            <ui:ScrollView mode="Vertical" name="room-scroll-view" class="room-list" />
+            <ui:VisualElement style="margin-top: 15px; width: 100%; align-items: center; justify-content: center;">
                 <ui:Button name="btn-join-back" text="&lt; BACK" class="menu-btn back-btn" />
             </ui:VisualElement>
         </ui:VisualElement>
-        <ui:VisualElement name="join-auth-panel" class="menu-container hidden-panel">
+        <ui:VisualElement name="join-auth-panel" class="menu-container hidden-panel" style="background-image: url(&quot;project://database/Assets/PLuan/menuda.png?fileID=2800000&amp;guid=b71e5fe46dbce4849b9385c26298aaa1&amp;type=3#menuda&quot;);">
             <ui:Label name="lbl-auth-title" text="ENTER PASSWORD" class="panel-title" />
             <ui:Label name="auth-room-name" text="SESSION: ..." class="auth-room-label" />
             <ui:VisualElement class="form-group">
                 <ui:Label name="lbl-auth-password" text="ROOM PASSWORD" class="form-label" />
                 <ui:TextField name="input-join-password" password="true" class="form-input" />
             </ui:VisualElement>
-            <ui:VisualElement class="button-group" style="margin-top: 20px;">
+            <ui:VisualElement class="button-group" style="margin-top: 15px;">
                 <ui:Button name="btn-confirm-join-private" text="CONNECT" class="menu-btn" />
                 <ui:Button name="btn-auth-cancel" text="&lt; CANCEL" class="menu-btn back-btn" />
             </ui:VisualElement>
         </ui:VisualElement>
-        <ui:VisualElement name="options-menu-panel" class="menu-container large-panel hidden-panel">
+        <ui:VisualElement name="options-menu-panel" class="menu-container large-panel hidden-panel" style="background-image: url(&quot;project://database/Assets/PLuan/menuda.png?fileID=2800000&amp;guid=b71e5fe46dbce4849b9385c26298aaa1&amp;type=3#menuda&quot;);">
             <ui:Label name="lbl-options-title" text="SYSTEM OPTIONS" class="panel-title" />
             <ui:VisualElement class="options-tabs">
                 <ui:Button name="tab-general-btn" text="GENERAL" class="tab-btn active" />
@@ -141,78 +136,81 @@
                 <ui:Button name="tab-graphics-btn" text="GRAPHICS" class="tab-btn" />
                 <ui:Button name="tab-controls-btn" text="CONTROLS" class="tab-btn" />
             </ui:VisualElement>
-            <ui:VisualElement name="tab-general" class="tab-content">
-                <ui:VisualElement class="form-group">
-                    <ui:Label name="lbl-opt-language" text="LANGUAGE" class="form-label" />
-                    <ui:VisualElement name="opt-language" class="custom-dropdown">
-                        <ui:Label name="opt-language-value" text="English" class="custom-dropdown-value" />
-                        <ui:Label text="▼" class="custom-dropdown-arrow" />
+            <ui:ScrollView mode="Vertical" name="options-scroll-view" class="options-content-scroll" elastic="true" scroll-deceleration-rate="0.13" elasticity="0.1">
+                <ui:VisualElement name="tab-general" class="tab-content">
+                    <ui:VisualElement class="form-group">
+                        <ui:Label name="lbl-opt-language" text="LANGUAGE" class="form-label" />
+                        <ui:VisualElement name="opt-language" class="custom-dropdown">
+                            <ui:Label name="opt-language-value" text="English" class="custom-dropdown-value" />
+                            <ui:Label text="▼" class="custom-dropdown-arrow" />
+                        </ui:VisualElement>
                     </ui:VisualElement>
                 </ui:VisualElement>
-            </ui:VisualElement>
-            <ui:VisualElement name="tab-audio" class="tab-content hidden-element">
-                <ui:VisualElement class="form-group">
-                    <ui:VisualElement class="slider-header">
-                        <ui:Label name="lbl-master-volume" text="MASTER VOLUME" class="form-label" />
-                        <ui:Label name="val-master" text="100%" class="slider-val" />
+                <ui:VisualElement name="tab-audio" class="tab-content hidden-element">
+                    <ui:VisualElement class="form-group">
+                        <ui:VisualElement class="slider-header">
+                            <ui:Label name="lbl-master-volume" text="MASTER VOLUME" class="form-label" />
+                            <ui:Label name="val-master" text="100%" class="slider-val" />
+                        </ui:VisualElement>
+                        <ui:Slider name="slider-master" low-value="0" high-value="100" value="100" class="custom-slider" />
                     </ui:VisualElement>
-                    <ui:Slider name="slider-master" low-value="0" high-value="100" value="100" class="custom-slider" />
-                </ui:VisualElement>
-                <ui:VisualElement class="form-group">
-                    <ui:VisualElement class="slider-header">
-                        <ui:Label name="lbl-music-bgm" text="MUSIC (BGM)" class="form-label" />
-                        <ui:Label name="val-music" text="80%" class="slider-val" />
+                    <ui:VisualElement class="form-group">
+                        <ui:VisualElement class="slider-header">
+                            <ui:Label name="lbl-music-bgm" text="MUSIC (BGM)" class="form-label" />
+                            <ui:Label name="val-music" text="80%" class="slider-val" />
+                        </ui:VisualElement>
+                        <ui:Slider name="slider-music" low-value="0" high-value="100" value="80" class="custom-slider" />
                     </ui:VisualElement>
-                    <ui:Slider name="slider-music" low-value="0" high-value="100" value="80" class="custom-slider" />
-                </ui:VisualElement>
-                <ui:VisualElement class="form-group">
-                    <ui:VisualElement class="slider-header">
-                        <ui:Label name="lbl-effects-sfx" text="EFFECTS (SFX)" class="form-label" />
-                        <ui:Label name="val-sfx" text="90%" class="slider-val" />
-                    </ui:VisualElement>
-                    <ui:Slider name="slider-sfx" low-value="0" high-value="100" value="90" class="custom-slider" />
-                </ui:VisualElement>
-            </ui:VisualElement>
-            <ui:VisualElement name="tab-graphics" class="tab-content hidden-element">
-                <ui:VisualElement class="form-group">
-                    <ui:Label name="lbl-resolution" text="RESOLUTION" class="form-label" />
-                    <ui:VisualElement name="opt-resolution" class="custom-dropdown">
-                        <ui:Label name="opt-resolution-value" text="1920x1080 (FHD)" class="custom-dropdown-value" />
-                        <ui:Label text="▼" class="custom-dropdown-arrow" />
+                    <ui:VisualElement class="form-group">
+                        <ui:VisualElement class="slider-header">
+                            <ui:Label name="lbl-effects-sfx" text="EFFECTS (SFX)" class="form-label" />
+                            <ui:Label name="val-sfx" text="90%" class="slider-val" />
+                        </ui:VisualElement>
+                        <ui:Slider name="slider-sfx" low-value="0" high-value="100" value="90" class="custom-slider" />
                     </ui:VisualElement>
                 </ui:VisualElement>
-                <ui:VisualElement class="form-group">
-                    <ui:Label name="lbl-graphics-quality" text="GRAPHICS QUALITY" class="form-label" />
-                    <ui:VisualElement name="opt-quality" class="custom-dropdown">
-                        <ui:Label name="opt-quality-value" text="High" class="custom-dropdown-value" />
-                        <ui:Label text="▼" class="custom-dropdown-arrow" />
+                <ui:VisualElement name="tab-graphics" class="tab-content hidden-element">
+                    <ui:VisualElement class="form-group">
+                        <ui:Label name="lbl-resolution" text="RESOLUTION" class="form-label" />
+                        <ui:VisualElement name="opt-resolution" class="custom-dropdown">
+                            <ui:Label name="opt-resolution-value" text="1920x1080 (FHD)" class="custom-dropdown-value" />
+                            <ui:Label text="▼" class="custom-dropdown-arrow" />
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                    <ui:VisualElement class="form-group">
+                        <ui:Label name="lbl-graphics-quality" text="GRAPHICS QUALITY" class="form-label" />
+                        <ui:VisualElement name="opt-quality" class="custom-dropdown">
+                            <ui:Label name="opt-quality-value" text="High" class="custom-dropdown-value" />
+                            <ui:Label text="▼" class="custom-dropdown-arrow" />
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                    <ui:VisualElement class="checkbox-group-wrapper">
+                        <ui:Toggle name="opt-fullscreen" label="FULLSCREEN MODE" value="true" class="checkbox-label" />
+                        <ui:Toggle name="opt-vsync" label="ENABLE V-SYNC" value="true" class="checkbox-label" />
                     </ui:VisualElement>
                 </ui:VisualElement>
-                <ui:VisualElement class="checkbox-group-wrapper">
-                    <ui:Toggle name="opt-fullscreen" label="FULLSCREEN MODE" value="true" class="checkbox-label" />
-                    <ui:Toggle name="opt-vsync" label="ENABLE V-SYNC" value="true" class="checkbox-label" />
-                </ui:VisualElement>
-            </ui:VisualElement>
-            <ui:VisualElement name="tab-controls" class="tab-content hidden-element">
-                <ui:VisualElement class="form-group">
-                    <ui:VisualElement class="slider-header">
-                        <ui:Label name="lbl-mouse-sens" text="MOUSE SENSITIVITY" class="form-label" />
-                        <ui:Label name="val-sens" text="50" class="slider-val" />
+                <ui:VisualElement name="tab-controls" class="tab-content hidden-element">
+                    <ui:VisualElement class="form-group">
+                        <ui:VisualElement class="slider-header">
+                            <ui:Label name="lbl-mouse-sens" text="MOUSE SENSITIVITY" class="form-label" />
+                            <ui:Label name="val-sens" text="50" class="slider-val" />
+                        </ui:VisualElement>
+                        <ui:Slider name="slider-sens" low-value="1" high-value="100" value="50" class="custom-slider" />
                     </ui:VisualElement>
-                    <ui:Slider name="slider-sens" low-value="1" high-value="100" value="50" class="custom-slider" />
+                    <ui:VisualElement class="checkbox-group-wrapper" style="margin-top: 20px;">
+                        <ui:Toggle name="opt-invert-y" label="INVERT Y-AXIS" value="false" class="checkbox-label" />
+                    </ui:VisualElement>
                 </ui:VisualElement>
-                <ui:VisualElement class="checkbox-group-wrapper" style="margin-top: 20px;">
-                    <ui:Toggle name="opt-invert-y" label="INVERT Y-AXIS" value="false" class="checkbox-label" />
-                </ui:VisualElement>
-            </ui:VisualElement>
+            </ui:ScrollView>
             <ui:VisualElement class="options-actions">
-                <ui:Button name="btn-save-options" text="APPLY" class="join-mini-btn" style="padding: 10px 25px;" />
+                <ui:Button name="btn-save-options" text="APPLY" class="join-mini-btn" />
                 <ui:Button name="btn-cancel-options" text="CANCEL" class="join-mini-btn cancel-btn" />
             </ui:VisualElement>
         </ui:VisualElement>
+        <ui:Label text="Atlantis: Deep Slumber // Pre-Alpha 0.2" class="version-text" />
     </ui:VisualElement>
     <ui:VisualElement name="confirm-overlay" class="confirm-overlay hidden-element">
-        <ui:VisualElement class="confirm-dialog">
+        <ui:VisualElement class="confirm-dialog" style="background-image: url(&quot;project://database/Assets/PLuan/menuda.png?fileID=2800000&amp;guid=b71e5fe46dbce4849b9385c26298aaa1&amp;type=3#menuda&quot;);">
             <ui:Label name="lbl-confirm-title" text="APPLY SETTINGS?" class="confirm-title" />
             <ui:Label name="lbl-confirm-msg" text="Changes will be applied immediately." class="confirm-subtitle" />
             <ui:VisualElement class="confirm-buttons">

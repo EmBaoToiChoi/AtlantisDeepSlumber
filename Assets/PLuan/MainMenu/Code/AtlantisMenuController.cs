@@ -88,6 +88,18 @@ public class AtlantisMenuController : MonoBehaviour
     private string _qualityValue    = "High";
     private string _languageValueString = "English";
     private bool _isCancelConfirmation = false;
+    private VisualElement _currentActiveTab;
+    
+    // Smooth Scroll State for ScrollViews
+    private class SmoothScrollTracker
+    {
+        public ScrollView ScrollView;
+        public float TargetY;
+        public bool IsActive;
+    }
+    private ScrollView _optionsScrollView;
+    private SmoothScrollTracker _optionsScrollTracker = new SmoothScrollTracker();
+    private SmoothScrollTracker _roomScrollTracker = new SmoothScrollTracker();
 
     void OnEnable()
     {
@@ -223,6 +235,7 @@ public class AtlantisMenuController : MonoBehaviour
         SetupOptionsTabs();
         SetupSliders();
         SetupCustomDropdowns();
+        SetupSmoothScroll();
 
         // Khởi tạo trọn bộ Động cơ Hạt đồng bộ HTML5
         InitSyncedParticleEngine();
@@ -747,20 +760,129 @@ public class AtlantisMenuController : MonoBehaviour
         tabControlsBtn.clicked += () => SwitchTab(tabControlsBtn, tabControls);
     }
 
-    private void SwitchTab(Button activeBtn, VisualElement activeContent)
+    private async void SwitchTab(Button activeBtn, VisualElement activeContent)
     {
+        // Self-heal active tab if null
+        if (_currentActiveTab == null)
+        {
+            var tabGeneral = _root.Q<VisualElement>("tab-general");
+            var tabAudio = _root.Q<VisualElement>("tab-audio");
+            var tabGraphics = _root.Q<VisualElement>("tab-graphics");
+            var tabControls = _root.Q<VisualElement>("tab-controls");
+            
+            if (tabGeneral != null && !tabGeneral.ClassListContains("hidden-element")) _currentActiveTab = tabGeneral;
+            else if (tabAudio != null && !tabAudio.ClassListContains("hidden-element")) _currentActiveTab = tabAudio;
+            else if (tabGraphics != null && !tabGraphics.ClassListContains("hidden-element")) _currentActiveTab = tabGraphics;
+            else if (tabControls != null && !tabControls.ClassListContains("hidden-element")) _currentActiveTab = tabControls;
+            else _currentActiveTab = tabGeneral;
+        }
+
+        if (activeContent == _currentActiveTab) return;
+
+        // Reset scroll position to top when switching tabs
+        if (_optionsScrollView != null)
+        {
+            _optionsScrollView.scrollOffset = Vector2.zero;
+            if (_optionsScrollTracker != null)
+            {
+                _optionsScrollTracker.TargetY = 0f;
+                _optionsScrollTracker.IsActive = false;
+            }
+        }
+
+        // 1. Reset buttons active state
         _root.Q<Button>("tab-general-btn").RemoveFromClassList("active");
         _root.Q<Button>("tab-audio-btn").RemoveFromClassList("active");
         _root.Q<Button>("tab-graphics-btn").RemoveFromClassList("active");
         _root.Q<Button>("tab-controls-btn").RemoveFromClassList("active");
-
-        _root.Q<VisualElement>("tab-general").AddToClassList("hidden-element");
-        _root.Q<VisualElement>("tab-audio").AddToClassList("hidden-element");
-        _root.Q<VisualElement>("tab-graphics").AddToClassList("hidden-element");
-        _root.Q<VisualElement>("tab-controls").AddToClassList("hidden-element");
-
         activeBtn.AddToClassList("active");
+
+        // 2. Fade Out old tab
+        if (_currentActiveTab != null)
+        {
+            _currentActiveTab.AddToClassList("tab-fade-out");
+            await Task.Delay(250); // Wait for the transition to complete (0.25s)
+            _currentActiveTab.AddToClassList("hidden-element");
+            _currentActiveTab.RemoveFromClassList("tab-fade-out");
+        }
+
+        // 3. Fade In new tab
+        _currentActiveTab = activeContent;
         activeContent.RemoveFromClassList("hidden-element");
+        activeContent.AddToClassList("tab-fade-out"); // Starts faded out and shifted
+        
+        await Task.Delay(50); // Wait 50ms to ensure layout engine registers the display change and initial faded-out state
+        
+        activeContent.RemoveFromClassList("tab-fade-out"); // Transitions back to opacity 1, translate 0
+    }
+
+    private void SetupSmoothScroll()
+    {
+        _optionsScrollView = _root.Q<ScrollView>("options-scroll-view");
+        if (_optionsScrollView != null)
+        {
+            _optionsScrollTracker.ScrollView = _optionsScrollView;
+            _optionsScrollView.RegisterCallback<WheelEvent>(evt => OnScrollWheel(evt, _optionsScrollTracker), TrickleDown.TrickleDown);
+        }
+
+        if (_roomScrollView != null)
+        {
+            _roomScrollTracker.ScrollView = _roomScrollView;
+            _roomScrollView.RegisterCallback<WheelEvent>(evt => OnScrollWheel(evt, _roomScrollTracker), TrickleDown.TrickleDown);
+        }
+    }
+
+    private void OnScrollWheel(WheelEvent evt, SmoothScrollTracker tracker)
+    {
+        if (tracker == null || tracker.ScrollView == null) return;
+
+        // Prevent Unity's default snappy scroll
+        evt.StopPropagation();
+
+        float maxScroll = tracker.ScrollView.verticalScroller.highValue;
+        if (maxScroll <= 0f) return;
+
+        // Sync target if we weren't actively smooth scrolling
+        if (!tracker.IsActive)
+        {
+            tracker.TargetY = tracker.ScrollView.scrollOffset.y;
+        }
+
+        // Custom smooth scrolling step size (100f per scroll tick, combined with 8f lerp speed for premium gliding feel)
+        float step = evt.delta.y * 100f;
+        tracker.TargetY = Mathf.Clamp(tracker.TargetY + step, 0f, maxScroll);
+        tracker.IsActive = true;
+    }
+
+    private void Update()
+    {
+        UpdateTrackerScroll(_optionsScrollTracker);
+        UpdateTrackerScroll(_roomScrollTracker);
+    }
+
+    private void UpdateTrackerScroll(SmoothScrollTracker tracker)
+    {
+        if (tracker == null || tracker.ScrollView == null) return;
+
+        if (tracker.IsActive)
+        {
+            float currentY = tracker.ScrollView.scrollOffset.y;
+            // Interpolate smoothly using unscaled delta time to be independent of game speed (8f factor gives a gorgeous glide)
+            float newY = Mathf.Lerp(currentY, tracker.TargetY, Time.unscaledDeltaTime * 8f);
+
+            if (Mathf.Abs(newY - tracker.TargetY) < 0.2f)
+            {
+                newY = tracker.TargetY;
+                tracker.IsActive = false;
+            }
+
+            tracker.ScrollView.scrollOffset = new Vector2(tracker.ScrollView.scrollOffset.x, newY);
+        }
+        else
+        {
+            // Sync target with any manual scrollbar handle drag
+            tracker.TargetY = tracker.ScrollView.scrollOffset.y;
+        }
     }
 
     private void SetupSliders()

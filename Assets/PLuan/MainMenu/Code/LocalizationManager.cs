@@ -22,13 +22,13 @@ public static class LocalizationManager
             ["lbl_display_name"] = "DISPLAY NAME",
             ["lbl_confirm_password"] = "CONFIRM PASSWORD",
             ["btn_register"] = "CREATE ACCOUNT",
-            ["btn_back_to_login"] = "< BACK TO LOGIN",
+            ["btn_back_to_login"] = "BACK TO LOGIN",
 
             // OTP
             ["otp_title"] = "VERIFY EMAIL",
             ["btn_verify"] = "VERIFY",
             ["btn_resend"] = "RESEND CODE",
-            ["btn_cancel"] = "< CANCEL",
+            ["btn_cancel"] = "CANCEL",
             ["otp_msg"] = "We've sent a code to your email.",
             ["otp_spam_note"] = "* Don't see it? Check your Spam/Junk folder.",
             ["lbl_otp_code"] = "OTP CODE",
@@ -50,8 +50,8 @@ public static class LocalizationManager
             ["tab_general"] = "GENERAL",
             ["lbl_language"] = "LANGUAGE",
             ["lbl_master_volume"] = "MASTER VOLUME",
-            ["lbl_music_bgm"] = "MUSIC (BGM)",
-            ["lbl_effects_sfx"] = "EFFECTS (SFX)",
+            ["lbl_music_bgm"] = "MUSIC",
+            ["lbl_effects_sfx"] = "EFFECTS",
             ["lbl_resolution"] = "RESOLUTION",
             ["lbl_graphics_quality"] = "GRAPHICS QUALITY",
             ["lbl_fullscreen"] = "FULLSCREEN MODE",
@@ -59,19 +59,19 @@ public static class LocalizationManager
             ["lbl_mouse_sens"] = "MOUSE SENSITIVITY",
             ["lbl_invert_y"] = "INVERT Y-AXIS",
             
-            ["quality_ultra"] = "Ultra (Cinematic)",
+            ["quality_ultra"] = "Ultra",
             ["quality_high"] = "High",
             ["quality_medium"] = "Medium",
-            ["quality_low"] = "Low (Performance)",
+            ["quality_low"] = "Low",
 
             ["btn_apply"] = "APPLY CHANGES",
             ["btn_cancel_options"] = "CANCEL",
 
             // Network Lobby
             ["lobby_title"] = "SESSION LOBBY",
-            ["btn_create_host"] = "CREATE (HOST)",
-            ["btn_join_client"] = "JOIN (CLIENT)",
-            ["btn_back"] = "< BACK",
+            ["btn_create_host"] = "CREATE ROOM",
+            ["btn_join_client"] = "JOIN ROOM",
+            ["btn_back"] = "BACK",
 
             // Create Room
             ["host_title"] = "HOST SESSION",
@@ -80,7 +80,7 @@ public static class LocalizationManager
             ["lbl_public"] = "Public",
             ["lbl_private"] = "Private",
             ["lbl_room_password"] = "PASSWORD",
-            ["btn_start_host"] = "START HOSTING",
+            ["btn_start_host"] = "START",
 
             // Join Room
             ["browser_title"] = "SESSION BROWSER",
@@ -139,13 +139,13 @@ public static class LocalizationManager
             ["lbl_display_name"] = "TÊN HIỂN THỊ",
             ["lbl_confirm_password"] = "XÁC NHẬN MẬT KHẨU",
             ["btn_register"] = "TẠO TÀI KHOẢN",
-            ["btn_back_to_login"] = "< QUAY LẠI",
+            ["btn_back_to_login"] = "QUAY LẠI",
 
             // OTP
             ["otp_title"] = "XÁC MINH EMAIL",
             ["btn_verify"] = "XÁC MINH",
             ["btn_resend"] = "GỬI LẠI MÃ",
-            ["btn_cancel"] = "< HỦY",
+            ["btn_cancel"] = "HỦY",
             ["otp_msg"] = "Chúng tôi đã gửi mã tới email của bạn.",
             ["otp_spam_note"] = "* Không thấy? Hãy kiểm tra Thư rác nhé.",
             ["lbl_otp_code"] = "MÃ XÁC THỰC",
@@ -176,28 +176,28 @@ public static class LocalizationManager
             ["lbl_mouse_sens"] = "ĐỘ NHẠY CHUỘT",
             ["lbl_invert_y"] = "ĐẢO TRỤC Y",
 
-            ["quality_ultra"] = "Cực cao (Điện ảnh)",
+            ["quality_ultra"] = "Cực cao",
             ["quality_high"] = "Cao",
             ["quality_medium"] = "Trung bình",
-            ["quality_low"] = "Thấp (Hiệu năng)",
+            ["quality_low"] = "Thấp",
 
             ["btn_apply"] = "ÁP DỤNG",
             ["btn_cancel_options"] = "HỦY",
 
             // Network Lobby
             ["lobby_title"] = "SẢNH CHỜ",
-            ["btn_create_host"] = "TẠO PHÒNG (HOST)",
-            ["btn_join_client"] = "VÀO PHÒNG (CLIENT)",
-            ["btn_back"] = "< QUAY LẠI",
+            ["btn_create_host"] = "TẠO PHÒNG",
+            ["btn_join_client"] = "VÀO PHÒNG",
+            ["btn_back"] = "QUAY LẠI",
 
             // Create Room
-            ["host_title"] = "TẠO MÁY CHỦ",
+            ["host_title"] = "TẠO PHÒNG",
             ["lbl_room_name"] = "TÊN PHÒNG / CHỦ PHÒNG",
             ["lbl_privacy"] = "QUYỀN RIÊNG TƯ",
             ["lbl_public"] = "Công khai",
             ["lbl_private"] = "Riêng tư",
             ["lbl_room_password"] = "MẬT KHẨU PHÒNG",
-            ["btn_start_host"] = "BẮT ĐẦU HOST",
+            ["btn_start_host"] = "BẮT ĐẦU",
 
             // Join Room
             ["browser_title"] = "DANH SÁCH PHÒNG",
