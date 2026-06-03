@@ -84,7 +84,7 @@ public class PlayerInteraction : NetworkBehaviour
                 Send = new ClientRpcSendParams { TargetClientIds = new[] { ownerId } } 
             });
             
-            // 3. Reset cục bộ
+            // 3. Reset cục bộ (Chỉ Server được set biến này)
             currentHeldCore = null;
             isCarryingCore.Value = false;
         }
@@ -94,10 +94,11 @@ public class PlayerInteraction : NetworkBehaviour
     { 
         if (IsOwner) DropCoreServerRpc(); 
     }
+    
     private void InternalDrop() 
     {
         currentHeldCore = null;
-        isCarryingCore.Value = false;
+        // Đã xóa dòng isCarryingCore.Value = false; ở đây để tránh lỗi Netcode
     }
 
     [ServerRpc(RequireOwnership = false)]
@@ -108,7 +109,7 @@ public class PlayerInteraction : NetworkBehaviour
             // Gửi lệnh thả tới ngọc
             currentHeldCore.RequestDrop(rpcParams.Receive.SenderClientId);
             
-            // Reset cục bộ trên Server
+            // Reset cục bộ trên Server (Server có quyền set biến này)
             currentHeldCore = null;
             isCarryingCore.Value = false;
             
@@ -137,6 +138,10 @@ public class PlayerInteraction : NetworkBehaviour
     private void ClearHeldCoreClientRpc(ClientRpcParams rpcParams = default) 
     { 
         currentHeldCore = null; 
-        isCarryingCore.Value = false;
+        
+        // ---- QUAN TRỌNG NHẤT LÀ CHỖ NÀY ----
+        // MÌNH ĐÃ XÓA DÒNG isCarryingCore.Value = false; ĐI RỒI!
+        // Vì ClientRpc chạy trên máy người chơi, mà người chơi thì không được tự ý sửa biến NetworkVariable.
+        // Server đã sửa ở hàm DropCoreServerRpc phía trên rồi, nó sẽ tự đồng bộ về Client.
     }
 }
