@@ -1,124 +1,96 @@
 using UnityEngine;
 using Unity.Netcode;
-using System.Collections.Generic;
 
 [RequireComponent(typeof(Rigidbody))]
 public class CrystalCore : NetworkBehaviour
 {
     public int crystalID;
-    public NetworkList<ulong> holders;
     public NetworkVariable<bool> isSnapped = new NetworkVariable<bool>(false);
 
     private Rigidbody rb;
 
     void Awake() 
     { 
-        holders = new NetworkList<ulong>(); 
         rb = GetComponent<Rigidbody>();
     }
 
     void FixedUpdate() 
     {
+        // 1. Chỉ Server mới điều khiển vị trí vật lý. Nếu ngọc đã khóa vào trạm thì ngưng xử lý.
         if (!IsServer || isSnapped.Value) return;
 
-        CleanupDisconnectedHolders();
-
-        if (holders.Count > 0)
+        // 2. Tự động bám tay người chơi (Dựa vào Ownership)
+        // Nếu ngọc thuộc về một người chơi (Không phải Server)
+        if (IsSpawned && OwnerClientId != NetworkManager.ServerClientId)
         {
-            Vector3 targetPos = Vector3.zero;
-            int activeHolders = 0;
-
-            foreach (ulong clientId in holders)
+            if (NetworkManager.Singleton.ConnectedClients.TryGetValue(OwnerClientId, out var client) && client.PlayerObject != null)
             {
-                if (NetworkManager.ConnectedClients.TryGetValue(clientId, out var client) && 
-                    client.PlayerObject != null)
+                if (client.PlayerObject.TryGetComponent<PlayerInteraction>(out var pInt) && pInt.holdPoint != null)
                 {
-                    if (client.PlayerObject.TryGetComponent<PlayerInteraction>(out var pInt) && pInt.holdPoint != null)
-                    {
-                        targetPos += pInt.holdPoint.position;
-                        activeHolders++;
-                    }
+                    // Ép ngọc bám theo tay
+                    rb.MovePosition(pInt.holdPoint.position);
+                    rb.isKinematic = true;
+                    rb.useGravity = false;
+                    return; // Đang có người cầm, không xử lý rơi tự do
                 }
             }
-
-            if (activeHolders > 0)
-            {
-                rb.MovePosition(targetPos / activeHolders);
-                rb.isKinematic = true;
-            }
         }
-        else
-        {
-            if (rb.isKinematic) 
-            {
-                rb.isKinematic = false;
-                rb.useGravity = true;
-            }
-        }
-    }
 
-    private void CleanupDisconnectedHolders()
-    {
-        for (int i = holders.Count - 1; i >= 0; i--)
+        // 3. Logic rơi tự do (Không ai cầm ngọc)
+        if (rb.isKinematic) 
         {
-            if (!NetworkManager.Singleton.ConnectedClients.ContainsKey(holders[i]))
-            {
-                holders.RemoveAt(i);
-            }
-        }
-    }
-
-    // --- CÁC HÀM GỌI TỪ CLIENT ---
-    public void RequestPickup(ulong playerId) 
-    {
-        if (IsServer) RequestPickupServerRpc(playerId); // Gọi trực tiếp nếu là Server
-        else RequestPickupServerRpc(playerId); // Netcode tự xử lý gọi từ Client lên Server
-    }
-    public void RequestDrop(ulong playerId) => RequestDropServerRpc(playerId);
-
-    [ServerRpc(RequireOwnership = false)]
-    private void RequestPickupServerRpc(ulong playerId) 
-    { 
-        if (!holders.Contains(playerId)) 
-        {
-            holders.Add(playerId);
-            // Chuyển quyền để Client cầm ngọc có quyền ghi dữ liệu
-            GetComponent<NetworkObject>().ChangeOwnership(playerId);
-        }
-    }
-
-    // Trong CrystalCore.cs, chỉnh lại hàm RequestDropServerRpc:
-    [ServerRpc(RequireOwnership = false)]
-    private void RequestDropServerRpc(ulong playerId) 
-    { 
-        if (holders.Contains(playerId)) 
-        {
-            holders.Remove(playerId);
-            
-            // Thu hồi quyền về Server để vật lý hoạt động bình thường
-            var netObj = GetComponent<NetworkObject>();
-            netObj.RemoveOwnership();
-            
             rb.isKinematic = false;
             rb.useGravity = true;
         }
     }
 
-    // Trong CrystalCore.cs
+    // Client gửi lệnh nhặt -> Yêu cầu đổi chủ
+    public void RequestPickup(ulong playerId) 
+    {
+        if (IsServer) RequestPickupServerRpc(playerId);
+        else RequestPickupServerRpc(playerId);
+    }
+
+    // Client gửi lệnh thả
+    public void RequestDrop(ulong playerId) => RequestDropServerRpc(playerId);
+
+    [ServerRpc(RequireOwnership = false)]
+    private void RequestPickupServerRpc(ulong playerId) 
+    { 
+        // Giao quyền kiểm soát viên ngọc cho người chơi
+        GetComponent<NetworkObject>().ChangeOwnership(playerId);
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    private void RequestDropServerRpc(ulong playerId) 
+    { 
+        // Thu hồi quyền về lại Server để nó rơi xuống đất
+        var netObj = GetComponent<NetworkObject>();
+        if (netObj.OwnerClientId != NetworkManager.ServerClientId)
+        {
+            netObj.RemoveOwnership();
+        }
+        
+        rb.isKinematic = false;
+        rb.useGravity = true;
+    }
+
     public void LockToStation()
     {
         if (IsServer)
         {
             isSnapped.Value = true;
-            // Tắt vật lý hoàn toàn
+            
+            // Tắt vật lý để nằm im trên bệ
             rb.isKinematic = true; 
             rb.useGravity = false;
-            rb.linearVelocity = Vector3.zero; // Triệt tiêu vận tốc cũ
-            rb.angularVelocity = Vector3.zero; // Triệt tiêu lực xoay cũ
+            rb.linearVelocity = Vector3.zero; 
+            rb.angularVelocity = Vector3.zero; 
             
-            holders.Clear();
-            if (GetComponent<NetworkObject>().IsOwner) 
-                GetComponent<NetworkObject>().RemoveOwnership();
+            // Thu hồi quyền
+            var netObj = GetComponent<NetworkObject>();
+            if (netObj.OwnerClientId != NetworkManager.ServerClientId) 
+                netObj.RemoveOwnership();
         }
     }
 }
