@@ -9,7 +9,6 @@ public class OptimizedNetworkMiniGame : NetworkBehaviour
 {
     [Header("Cấu hình linh hoạt")]
     public float decayRate = 15f; 
-    public int playersNeededToUnlock = 2;
     
     [Header("UI & Controls")]
     public GameObject miniGamePlayZone;
@@ -18,7 +17,7 @@ public class OptimizedNetworkMiniGame : NetworkBehaviour
     public Image imgD;
 
     [Header("Cấu hình Mini-game")]
-    public float pushAmount = 12f; // Tăng nhẹ để bù trừ cho độ trễ
+    public float pushAmount = 12f; 
     public float greenZoneMin = 85f;
 
     public List<GearRotator> gearList;
@@ -69,15 +68,14 @@ public class OptimizedNetworkMiniGame : NetworkBehaviour
     {
         if (!IsServer) return;
 
-        // 1. Tốc độ tụt cơ bản (Luôn tụt, dù có người đứng hay không)
         float normal = decayRate * Time.deltaTime;
-        float fast = decayRate * 2.5f * Time.deltaTime;
+        float fast = decayRate * 2.5f * Time.deltaTime; // Tốc độ tụt gấp 2.5 lần nếu chưa có ngọc
 
-        // 2. Trạm 0 & 1: Luôn tụt
+        // Trạm 0 & 1: Luôn tụt tốc độ bình thường
         s0Value.Value = Mathf.Clamp(s0Value.Value - normal, 0f, 100f);
         s1Value.Value = Mathf.Clamp(s1Value.Value - normal, 0f, 100f);
 
-        // 3. Trạm 2 & 3: Tụt nhanh nếu không có ngọc, tụt chậm nếu có ngọc
+        // Trạm 2 & 3: Tụt nhanh nếu không có ngọc, có ngọc rồi thì tụt bình thường
         float s2Speed = station2HasCrystal.Value ? normal : fast;
         s2Value.Value = Mathf.Clamp(s2Value.Value - s2Speed, 0f, 100f);
 
@@ -87,17 +85,18 @@ public class OptimizedNetworkMiniGame : NetworkBehaviour
 
     private void CheckGateStatus()
     {
-        if (!IsServer) return; // Chỉ server mới có quyền quyết định
+        if (!IsServer) return; 
 
-        int readyCount = 0;
-        
-        // Đếm số trạm thỏa mãn đồng thời 2 điều kiện: Có người đứng VÀ Đang xanh
-        if (s0Owner.Value != ulong.MaxValue && s0Value.Value >= greenZoneMin) readyCount++;
-        if (s1Owner.Value != ulong.MaxValue && s1Value.Value >= greenZoneMin) readyCount++;
-        if (s2Owner.Value != ulong.MaxValue && s2Value.Value >= greenZoneMin) readyCount++;
-        if (s3Owner.Value != ulong.MaxValue && s3Value.Value >= greenZoneMin) readyCount++;
-        
-        bool shouldBeOpen = (readyCount >= playersNeededToUnlock);
+        // 1. Kiểm tra cặp trạm ngoài cửa (Trạm 0 VÀ Trạm 1 phải cùng xanh)
+        bool pair1Ready = (s0Owner.Value != ulong.MaxValue && s0Value.Value >= greenZoneMin) && 
+                          (s1Owner.Value != ulong.MaxValue && s1Value.Value >= greenZoneMin);
+
+        // 2. Kiểm tra cặp trạm sau cửa (Trạm 2 VÀ Trạm 3 phải cùng xanh)
+        bool pair2Ready = (s2Owner.Value != ulong.MaxValue && s2Value.Value >= greenZoneMin) && 
+                          (s3Owner.Value != ulong.MaxValue && s3Value.Value >= greenZoneMin);
+
+        // Cửa sẽ mở nếu 1 trong 2 CẶP đang được giữ
+        bool shouldBeOpen = pair1Ready || pair2Ready;
 
         // Chỉ thực hiện lệnh khi có sự thay đổi trạng thái
         if (shouldBeOpen != isCurrentlyOpen)
@@ -114,8 +113,7 @@ public class OptimizedNetworkMiniGame : NetworkBehaviour
                 }
                 else 
                 {
-                    // Khi người chơi rời trạm hoặc điểm tụt xuống dưới greenZoneMin, 
-                    // lệnh này sẽ được gọi để đóng cổng và đưa trụ về vị trí cũ.
+                    // Trở về vị trí cũ nếu buông tay hoặc tụt khỏi vùng xanh
                     gear.ResetToSpinning(); 
                 }
             }
@@ -125,7 +123,6 @@ public class OptimizedNetworkMiniGame : NetworkBehaviour
     [ServerRpc(RequireOwnership = false)]
     public void UpdateSliderServerRpc(int index, float amount)
     {
-        // Tìm trạm và cộng điểm
         switch(index)
         {
             case 0: s0Value.Value = Mathf.Clamp(s0Value.Value + amount, 0f, 100f); break;
@@ -135,7 +132,6 @@ public class OptimizedNetworkMiniGame : NetworkBehaviour
         }
     }
 
-    // Các hàm giữ nguyên quyền sở hữu
     public void HandleStationAccess(int index, ulong clientId)
     {
         if (!IsServer) return;
@@ -187,10 +183,9 @@ public class OptimizedNetworkMiniGame : NetworkBehaviour
         targetImg.transform.DOScale(1.2f, 0.1f).OnComplete(() => targetImg.transform.DOScale(1f, 0.1f));
     }
 
-// Thêm hàm này vào cuối class OptimizedNetworkMiniGame
     public void SetStationCrystalStatus(int index, bool hasCrystal) 
     {
-        if (IsServer) // Đảm bảo chỉ Server mới thay đổi NetworkVariable
+        if (IsServer) 
         {
             if (index == 2) station2HasCrystal.Value = hasCrystal;
             else if (index == 3) station3HasCrystal.Value = hasCrystal;
