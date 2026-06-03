@@ -40,7 +40,8 @@ public class PlayerInteraction : NetworkBehaviour
         {
             if (hit.TryGetComponent<CrystalCore>(out var core) && !core.isSnapped.Value)
             {
-                RequestPickupServerRpc(core.NetworkObject.NetworkObjectId);
+                // SỬA Ở ĐÂY: Truyền OwnerClientId của người chơi thay vì NetworkObjectId của ngọc
+                core.RequestPickup(NetworkManager.LocalClientId); 
                 break;
             }
         }
