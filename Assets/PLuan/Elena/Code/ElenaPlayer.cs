@@ -1490,7 +1490,7 @@ public class ElenaPlayer : NetworkBehaviour
 
         if (!string.IsNullOrEmpty(animToPlay))
         {
-            PlayAnimation(animToPlay, 0.05f, false);
+            PlayAnimation(animToPlay, 0.05f, false, isRootedAttack);
         }
 
         // Xác định hướng ngắm đánh (aim direction) dựa trên camera (nếu có), nếu không có thì dùng hướng transform.forward
@@ -1874,14 +1874,14 @@ public class ElenaPlayer : NetworkBehaviour
         {
             if (!string.IsNullOrEmpty(drawWeaponTrigger))
             {
-                PlayAnimation(drawWeaponTrigger, 0.1f);
+                PlayAnimationLocal(drawWeaponTrigger, 0.1f, false);
             }
         }
         else if (newWeapon == 1)
         {
             if (!string.IsNullOrEmpty(sheathWeaponTrigger))
             {
-                PlayAnimation(sheathWeaponTrigger, 0.1f);
+                PlayAnimationLocal(sheathWeaponTrigger, 0.1f, false);
             }
         }
     }
@@ -2122,7 +2122,34 @@ public class ElenaPlayer : NetworkBehaviour
         return isFullBodyAction && stateInfo.normalizedTime < 0.95f;
     }
 
-    public void PlayAnimation(string animName, float fadeTime = 0.1f, bool alreadyPlayedLocally = false)
+    private bool HasParameter(string paramName)
+    {
+        if (anim == null) return false;
+        foreach (AnimatorControllerParameter param in anim.parameters)
+        {
+            if (param.name == paramName)
+                return true;
+        }
+        return false;
+    }
+
+    private void SafeResetTrigger(string paramName)
+    {
+        if (anim != null && HasParameter(paramName))
+        {
+            anim.ResetTrigger(paramName);
+        }
+    }
+
+    private void SafeSetTrigger(string paramName)
+    {
+        if (anim != null && HasParameter(paramName))
+        {
+            anim.SetTrigger(paramName);
+        }
+    }
+
+    public void PlayAnimation(string animName, float fadeTime = 0.1f, bool alreadyPlayedLocally = false, bool isRooted = false)
     {
         if (anim == null)
         {
@@ -2135,23 +2162,23 @@ public class ElenaPlayer : NetworkBehaviour
         
         if (!alreadyPlayedLocally)
         {
-            PlayAnimationLocal(animName, fadeTime);
+            PlayAnimationLocal(animName, fadeTime, isRooted);
         }
 
         if (!isStandaloneMode)
         {
             if (IsServer)
             {
-                PlayAnimationClientRpc(animName, fadeTime, alreadyPlayedLocally);
+                PlayAnimationClientRpc(animName, fadeTime, alreadyPlayedLocally, isRooted);
             }
             else if (IsOwner)
             {
-                PlayAnimationServerRpc(animName, fadeTime);
+                PlayAnimationServerRpc(animName, fadeTime, isRooted);
             }
         }
     }
 
-    private void PlayAnimationLocal(string animName, float fadeTime)
+    private void PlayAnimationLocal(string animName, float fadeTime, bool isRooted)
     {
         if (anim == null)
         {
@@ -2182,27 +2209,27 @@ public class ElenaPlayer : NetworkBehaviour
         bool isLoopingAnim = animName == "Idle" || animName == "Walk" || animName == "run";
         if (isLoopingAnim && currentAnimState == animName) return;
 
-        Debug.Log($"[Animator Debug] {gameObject.name} kích hoạt Trigger hoạt ảnh: '{animName}' (isRooted={isRootedAttack}, comboStep={comboStep})");
+        Debug.Log($"[Animator Debug] {gameObject.name} kích hoạt Trigger hoạt ảnh: '{animName}' (isRooted={isRooted}, comboStep={comboStep})");
 
         // Reset các trigger di chuyển cơ bản để tránh kẹt
-        anim.ResetTrigger("Idle");
-        anim.ResetTrigger("Walk");
-        anim.ResetTrigger("run");
-        anim.ResetTrigger("Death");
-        anim.ResetTrigger("GetHit");
-        anim.ResetTrigger("GeiHit2");
-        anim.ResetTrigger("LonVong");
-        anim.ResetTrigger("Idle_Pick");
+        SafeResetTrigger("Idle");
+        SafeResetTrigger("Walk");
+        SafeResetTrigger("run");
+        SafeResetTrigger("Death");
+        SafeResetTrigger("GetHit");
+        SafeResetTrigger("GeiHit2");
+        SafeResetTrigger("LonVong");
+        SafeResetTrigger("Idle_Pick");
 
         // Chỉ dọn dẹp (reset) các trigger combo tấn công khi chuẩn bị kích hoạt một hành động mới
         // (để tránh việc nhân vật di chuyển làm reset mất trigger đòn đấm trên layer Upper Body)
         if (IsActionAnimationName(animName))
         {
-            anim.ResetTrigger("Dam1");
-            anim.ResetTrigger("Dam2");
-            anim.ResetTrigger("Dam3");
-            if (!string.IsNullOrEmpty(drawWeaponTrigger)) anim.ResetTrigger(drawWeaponTrigger);
-            if (!string.IsNullOrEmpty(sheathWeaponTrigger)) anim.ResetTrigger(sheathWeaponTrigger);
+            SafeResetTrigger("Dam1");
+            SafeResetTrigger("Dam2");
+            SafeResetTrigger("Dam3");
+            if (!string.IsNullOrEmpty(drawWeaponTrigger)) SafeResetTrigger(drawWeaponTrigger);
+            if (!string.IsNullOrEmpty(sheathWeaponTrigger)) SafeResetTrigger(sheathWeaponTrigger);
         }
 
         // Kích hoạt Trigger để chạy dây nối trong Animator
@@ -2211,7 +2238,7 @@ public class ElenaPlayer : NetworkBehaviour
         {
             if (anim.layerCount > 1)
             {
-                if (isRootedAttack)
+                if (isRooted)
                 {
                     // Đứng yên đánh (Idle Attack) -> không sử dụng Avatar Mask: chạy trên Layer 0 (Base Layer) và tắt Weight của Layer 1 về 0
                     anim.SetLayerWeight(1, 0f);
@@ -2234,16 +2261,12 @@ public class ElenaPlayer : NetworkBehaviour
             if (anim.layerCount > 1 && (animName == drawWeaponTrigger || animName == sheathWeaponTrigger))
             {
                 anim.SetLayerWeight(1, 1f);
-                anim.CrossFadeInFixedTime(animName, fadeTime, 1);
             }
-            else
-            {
-                anim.SetTrigger(animName);
-            }
+            SafeSetTrigger(animName);
         }
 
         // Chỉ cập nhật currentAnimState cho các hoạt ảnh di chuyển hoặc hoạt ảnh hành động toàn thân (không phải đòn đánh di chuyển)
-        bool isMovingAttack = IsAttackAnimationName(animName) && !isRootedAttack;
+        bool isMovingAttack = IsAttackAnimationName(animName) && !isRooted;
         if (!isMovingAttack)
         {
             currentAnimState = animName;
@@ -2262,16 +2285,16 @@ public class ElenaPlayer : NetworkBehaviour
     }
 
     [ServerRpc]
-    private void PlayAnimationServerRpc(string animName, float fadeTime)
+    private void PlayAnimationServerRpc(string animName, float fadeTime, bool isRooted)
     {
-        PlayAnimationClientRpc(animName, fadeTime, true);
+        PlayAnimationClientRpc(animName, fadeTime, true, isRooted);
     }
 
     [ClientRpc]
-    private void PlayAnimationClientRpc(string animName, float fadeTime, bool alreadyPlayedLocally)
+    private void PlayAnimationClientRpc(string animName, float fadeTime, bool alreadyPlayedLocally, bool isRooted)
     {
         if (alreadyPlayedLocally && IsOwner) return; // Chủ sở hữu đã tự chạy hoạt ảnh local rồi
-        PlayAnimationLocal(animName, fadeTime);
+        PlayAnimationLocal(animName, fadeTime, isRooted);
     }
 
     [ServerRpc]
@@ -2283,7 +2306,7 @@ public class ElenaPlayer : NetworkBehaviour
             transform.forward = direction;
         }
         // Server phát RPC hoạt ảnh LonVong cho tất cả client khác (owner đã tự chạy rồi)
-        PlayAnimationClientRpc("LonVong", 0.05f, true);
+        PlayAnimationClientRpc("LonVong", 0.05f, true, false);
     }
 
     [ServerRpc]
