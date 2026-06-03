@@ -20,7 +20,7 @@ public class InteractBox : NetworkBehaviour
 
         if (isPlayerInside && localPlayerInteraction != null)
         {
-            if (localPlayerInteraction.IsOwner && Keyboard.current != null && Keyboard.current.eKey.wasPressedThisFrame)
+            if (localPlayerInteraction.IsOwner && Keyboard.current != null && Keyboard.current.gKey.wasPressedThisFrame)
             {
                 if (localPlayerInteraction.isCarryingCore.Value && localPlayerInteraction.currentHeldCore != null)
                 {
