@@ -2,9 +2,11 @@ using UnityEngine;
 using Unity.Netcode;
 using DG.Tweening;
 
+public enum GearState { Spinning, Opening, Closing }
+
 public class GearRotator : NetworkBehaviour 
 {
-    [Header("Cấu hình")]
+    [Header("Cấu hình Quay")]
     public float rotationSpeed = 50f;
     public bool reverseDirection = false;
     private float originalSpeed;
@@ -15,8 +17,8 @@ public class GearRotator : NetworkBehaviour
     public Vector3 rotationAxis = Vector3.up;
     private Vector3 originalPosition;
 
-    private NetworkVariable<float> currentSpeed = new NetworkVariable<float>(0f, 
-        NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+    // Biến đồng bộ trạng thái giữa Server và Client
+    public NetworkVariable<GearState> currentState = new NetworkVariable<GearState>(GearState.Spinning);
 
     void Awake()
     {
@@ -24,91 +26,52 @@ public class GearRotator : NetworkBehaviour
         originalSpeed = rotationSpeed;
     }
 
-    // Trong GearRotator.cs
-    public void SetRotation(bool shouldRotate)
-    {
-        if (!IsServer) return;
-        
-        // Nếu nên xoay thì gán tốc độ, không thì cho bằng 0
-        float direction = reverseDirection ? -1f : 1f;
-        currentSpeed.Value = shouldRotate ? (originalSpeed * direction) : 0f;
-    }
-
     public override void OnNetworkSpawn()
     {
-        base.OnNetworkSpawn();
-
-        if (IsServer)
-        {
-            // Gán tốc độ mặc định ngay khi server khởi động object này
-            float direction = reverseDirection ? -1f : 1f;
-            currentSpeed.Value = originalSpeed * direction;
-        }
-        
-        // Client không cần làm gì ở đây, nó sẽ tự nhận giá trị từ NetworkVariable
+        // Lắng nghe thay đổi từ Server để Client tự cập nhật hiệu ứng
+        currentState.OnValueChanged += (oldState, newState) => {
+            if (newState == GearState.Opening) TriggerOpenVisuals();
+            else if (newState == GearState.Closing) TriggerCloseVisuals();
+        };
     }
 
     void Update()
     {
-        // Quay bánh răng: Logic này an toàn cho cả Server và Client
-        if (currentSpeed.Value != 0)
+        // Logic quay chỉ chạy nếu trạng thái là Spinning
+        if (currentState.Value == GearState.Spinning)
         {
-            transform.Rotate(rotationAxis.normalized * currentSpeed.Value * Time.deltaTime, Space.Self);
+            float direction = reverseDirection ? -1f : 1f;
+            transform.Rotate(rotationAxis.normalized * originalSpeed * direction * Time.deltaTime, Space.Self);
         }
     }
 
-    // Các hàm tương tác chỉ được gọi bởi Server hoặc qua ServerRpc
-    public void OpenGear() { if (IsServer) OpenGearServerRpc(); }
-
-    [ServerRpc(RequireOwnership = false)]
-    private void OpenGearServerRpc()
-    {
-        currentSpeed.Value = 0f;
-        OpenGearClientRpc(); // Đồng bộ hiệu ứng cho Client
-    }
-
-    [ClientRpc]
-    private void OpenGearClientRpc()
+    // --- CÁC HÀM XỬ LÝ HIỆU ỨNG (Client tự thực thi khi currentState thay đổi) ---
+    private void TriggerOpenVisuals() 
     {
         transform.DOKill();
         transform.DOLocalMove(originalPosition + openOffset, moveDuration).SetEase(Ease.InOutCubic);
     }
 
-    [ServerRpc(RequireOwnership = false)]
-    private void CloseGearServerRpc()
-    {
-        // Cập nhật giá trị quay về 0 để dừng trước
-        currentSpeed.Value = 0f; 
-        
-        // Gọi ClientRpc để chạy Tween
-        CloseGearClientRpc();
-        
-        // Server tự chờ đúng thời gian moveDuration rồi mới cho quay lại
-        Invoke(nameof(ResumeRotation), moveDuration);
-    }
-
-    private void ResumeRotation()
-    {
-        if (!IsServer) return;
-        float direction = reverseDirection ? -1f : 1f;
-        currentSpeed.Value = originalSpeed * direction;
-    }
-
-    [ClientRpc]
-    private void CloseGearClientRpc()
+    private void TriggerCloseVisuals() 
     {
         transform.DOKill();
         transform.DOLocalMove(originalPosition, moveDuration).SetEase(Ease.InOutCubic);
     }
-    // Thêm hàm này vào GearRotator.cs
-    public void CloseGear() 
+
+    // --- CÁC HÀM ĐIỀU KHIỂN (Chỉ Server được phép gọi) ---
+    public void OpenGear() 
     { 
-        if (IsServer) CloseGearServerRpc(); 
+        if (IsServer) currentState.Value = GearState.Opening; 
     }
 
-    void OnDestroy()
+    public void CloseGear() 
+    { 
+        if (IsServer) currentState.Value = GearState.Closing; 
+    }
+
+    // Hàm dự phòng: nếu muốn Server cho phép quay lại sau khi đóng
+    public void ResetToSpinning()
     {
-        // Hủy bỏ lệnh chờ nếu object bị xóa giữa chừng
-        CancelInvoke(nameof(ResumeRotation));
+        if (IsServer) currentState.Value = GearState.Spinning;
     }
 }

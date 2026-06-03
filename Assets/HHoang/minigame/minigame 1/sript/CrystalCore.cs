@@ -17,7 +17,7 @@ public class CrystalCore : NetworkBehaviour
         rb = GetComponent<Rigidbody>();
     }
 
-    void FixedUpdate() // Dùng FixedUpdate cho các thao tác vật lý/di chuyển
+    void FixedUpdate() 
     {
         if (!IsServer || isSnapped.Value) return;
 
@@ -43,7 +43,6 @@ public class CrystalCore : NetworkBehaviour
 
             if (activeHolders > 0)
             {
-                // Dùng MovePosition thay vì set thẳng transform để tránh lỗi xuyên vật thể
                 rb.MovePosition(targetPos / activeHolders);
                 rb.isKinematic = true;
             }
@@ -62,7 +61,6 @@ public class CrystalCore : NetworkBehaviour
     {
         for (int i = holders.Count - 1; i >= 0; i--)
         {
-            // Kiểm tra an toàn xem client còn tồn tại không
             if (!NetworkManager.Singleton.ConnectedClients.ContainsKey(holders[i]))
             {
                 holders.RemoveAt(i);
@@ -70,30 +68,56 @@ public class CrystalCore : NetworkBehaviour
         }
     }
 
-    public void RequestPickup(ulong playerId) => RequestPickupServerRpc(playerId);
+    // --- CÁC HÀM GỌI TỪ CLIENT ---
+    public void RequestPickup(ulong playerId) 
+    {
+        if (IsServer) RequestPickupServerRpc(playerId); // Gọi trực tiếp nếu là Server
+        else RequestPickupServerRpc(playerId); // Netcode tự xử lý gọi từ Client lên Server
+    }
     public void RequestDrop(ulong playerId) => RequestDropServerRpc(playerId);
 
     [ServerRpc(RequireOwnership = false)]
     private void RequestPickupServerRpc(ulong playerId) 
     { 
-        // 1. Kiểm tra xem người chơi này đã cầm ngọc chưa
         if (!holders.Contains(playerId)) 
         {
             holders.Add(playerId);
-            
-            // 2. CHUYỂN QUYỀN SỞ HỮU cho người chơi mới nhặt
-            // Netcode sẽ cho phép Client này gửi dữ liệu vị trí vật thể lên Server
-            var netObj = GetComponent<NetworkObject>();
-            if (netObj.OwnerClientId != playerId)
-            {
-                netObj.ChangeOwnership(playerId);
-            }
+            // Chuyển quyền để Client cầm ngọc có quyền ghi dữ liệu
+            GetComponent<NetworkObject>().ChangeOwnership(playerId);
         }
     }
 
     [ServerRpc(RequireOwnership = false)]
     private void RequestDropServerRpc(ulong playerId) 
     { 
-        if (holders.Contains(playerId)) holders.Remove(playerId); 
+        if (holders.Contains(playerId)) 
+        {
+            holders.Remove(playerId);
+            
+            // Chỉ trả quyền về Server nếu Server chưa sở hữu
+            var netObj = GetComponent<NetworkObject>();
+            if (netObj.OwnerClientId != NetworkManager.ServerClientId)
+            {
+                netObj.RemoveOwnership();
+            }
+            
+            rb.isKinematic = false;
+            rb.useGravity = true;
+        }
+    }
+
+    public void LockToStation()
+    {
+        if (IsServer)
+        {
+            isSnapped.Value = true;
+            rb.isKinematic = true;
+            rb.useGravity = false;
+            holders.Clear();
+            
+            // Nếu ngọc thuộc quyền sở hữu của ai đó, thu hồi về Server khi gắn vào trạm
+            if (GetComponent<NetworkObject>().IsOwner) 
+                GetComponent<NetworkObject>().RemoveOwnership();
+        }
     }
 }

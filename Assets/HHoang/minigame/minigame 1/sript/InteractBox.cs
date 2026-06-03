@@ -87,18 +87,21 @@ public class InteractBox : NetworkBehaviour
     [ServerRpc(RequireOwnership = false)]
     private void SnapAndLockCrystalServerRpc(int index, ServerRpcParams rpcParams = default)
     {
-        // Kiểm tra lại lần nữa ngay trên Server để tránh race condition
         if (isCrystalLocked.Value) return; 
 
         if (NetworkManager.Singleton.ConnectedClients.TryGetValue(rpcParams.Receive.SenderClientId, out var client) && client.PlayerObject != null)
         {
             var playerInt = client.PlayerObject.GetComponent<PlayerInteraction>();
-            if (playerInt.currentHeldCore != null)
+            if (playerInt != null && playerInt.currentHeldCore != null)
             {
-                isCrystalLocked.Value = true; // Cập nhật này sẽ khóa ngay lập tức cho các request sau
-                playerInt.currentHeldCore.isSnapped.Value = true;
+                var core = playerInt.currentHeldCore;
                 playerInt.DropCore(); 
-                gameManager.SetStationCrystalStatusServerRpc(index, true);
+                core.LockToStation();
+                
+                isCrystalLocked.Value = true;
+                
+                // Ở đây bạn gọi trực tiếp hàm vừa thêm vào OptimizedNetworkMiniGame
+                gameManager.SetStationCrystalStatus(index, true); 
             }
         }
     }

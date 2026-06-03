@@ -40,8 +40,8 @@ public class PlayerInteraction : NetworkBehaviour
         {
             if (hit.TryGetComponent<CrystalCore>(out var core) && !core.isSnapped.Value)
             {
-                // SỬA Ở ĐÂY: Truyền OwnerClientId của người chơi thay vì NetworkObjectId của ngọc
-                core.RequestPickup(NetworkManager.LocalClientId); 
+                // Gửi ID của chính người chơi lên để Server biết ai đang nhặt
+                core.RequestPickup(NetworkManager.Singleton.LocalClientId); 
                 break;
             }
         }
@@ -67,17 +67,32 @@ public class PlayerInteraction : NetworkBehaviour
         }
     }
 
-    public void DropCore() { if (IsOwner) DropCoreServerRpc(); }
+    public void DropCore() 
+    { 
+        if (IsOwner) DropCoreServerRpc(); 
+    }
+    private void InternalDrop() 
+    {
+        currentHeldCore = null;
+        isCarryingCore.Value = false;
+    }
 
     [ServerRpc(RequireOwnership = false)]
-    private void DropCoreServerRpc()
+    private void DropCoreServerRpc(ServerRpcParams rpcParams = default)
     {
         if (currentHeldCore != null)
         {
-            currentHeldCore.RequestDrop(OwnerClientId);
+            // Gửi lệnh thả tới ngọc
+            currentHeldCore.RequestDrop(rpcParams.Receive.SenderClientId);
+            
+            // Reset cục bộ trên Server
             currentHeldCore = null;
             isCarryingCore.Value = false;
-            ClearHeldCoreClientRpc();
+            
+            // Thông báo cho Client xóa UI/Tham chiếu
+            ClearHeldCoreClientRpc(new ClientRpcParams { 
+                Send = new ClientRpcSendParams { TargetClientIds = new[] { rpcParams.Receive.SenderClientId } } 
+            });
         }
     }
 
@@ -89,5 +104,9 @@ public class PlayerInteraction : NetworkBehaviour
     }
 
     [ClientRpc]
-    private void ClearHeldCoreClientRpc() => currentHeldCore = null;
+    private void ClearHeldCoreClientRpc(ClientRpcParams rpcParams = default) 
+    { 
+        currentHeldCore = null; 
+        isCarryingCore.Value = false;
+    }
 }
