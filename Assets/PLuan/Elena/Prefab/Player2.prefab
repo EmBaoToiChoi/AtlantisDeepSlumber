@@ -319,6 +319,11 @@ MonoBehaviour:
   rotationSmoothSpeed: 15
   anim: {fileID: 327535352679795549}
   maxSpineTwistAngle: 80
+  punch1YOffset: 45
+  punch1XOffset: 20
+  punch2YOffset: -30
+  punch3YOffset: 45
+  spineSmoothSpeed: 10
   netAimAngle:
     UpdateTraits:
       MinSecondsBetweenUpdates: 0
