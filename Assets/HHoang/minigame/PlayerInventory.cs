@@ -40,8 +40,8 @@ public class PlayerInteraction : NetworkBehaviour
         {
             if (hit.TryGetComponent<CrystalCore>(out var core) && !core.isSnapped.Value)
             {
-                // Gửi ID của chính người chơi lên để Server biết ai đang nhặt
-                core.RequestPickup(NetworkManager.Singleton.LocalClientId); 
+                // GỬI NETWORKOBJECTID LÊN SERVER THAY VÌ GỌI HÀM CỦA CORE
+                RequestPickupServerRpc(core.NetworkObject.NetworkObjectId); 
                 break;
             }
         }
@@ -50,20 +50,43 @@ public class PlayerInteraction : NetworkBehaviour
     [ServerRpc(RequireOwnership = false)]
     private void RequestPickupServerRpc(ulong networkObjectId, ServerRpcParams rpcParams = default)
     {
-        // Server tự kiểm tra logic mà không cần đụng tới Keyboard
         if (NetworkManager.SpawnManager.SpawnedObjects.TryGetValue(networkObjectId, out var netObj))
         {
             var core = netObj.GetComponent<CrystalCore>();
             if (core != null && !core.isSnapped.Value)
             {
-                currentHeldCore = core;
-                isCarryingCore.Value = true;
-                core.RequestPickup(rpcParams.Receive.SenderClientId);
+                // Server thực hiện chuyển quyền sở hữu
+                core.GetComponent<NetworkObject>().ChangeOwnership(rpcParams.Receive.SenderClientId);
                 
-                AssignHeldCoreClientRpc(networkObjectId, new ClientRpcParams { 
-                    Send = new ClientRpcSendParams { TargetClientIds = new[] { rpcParams.Receive.SenderClientId } } 
-                });
+                // Cập nhật trạng thái người chơi
+                this.currentHeldCore = core; // Lưu ý: cái này chỉ lưu trên Server
+                this.isCarryingCore.Value = true;
+                
+                // Gọi ClientRpc để Client biết nó đang cầm cái gì
+                AssignHeldCoreClientRpc(networkObjectId, rpcParams.Receive.SenderClientId);
             }
+        }
+    }
+
+    // Trong PlayerInteraction.cs
+    public void ForceDropFromStation()
+    {
+        if (!IsServer) return; // Chỉ Server gọi hàm này
+        
+        if (currentHeldCore != null)
+        {
+            // 1. Thu hồi quyền sở hữu từ Client về Server
+            currentHeldCore.GetComponent<NetworkObject>().RemoveOwnership();
+            
+            // 2. Gửi lệnh thông báo Client xóa core
+            ulong ownerId = NetworkManager.Singleton.ConnectedClients.ContainsKey(OwnerClientId) ? OwnerClientId : 0;
+            ClearHeldCoreClientRpc(new ClientRpcParams { 
+                Send = new ClientRpcSendParams { TargetClientIds = new[] { ownerId } } 
+            });
+            
+            // 3. Reset cục bộ
+            currentHeldCore = null;
+            isCarryingCore.Value = false;
         }
     }
 
@@ -96,11 +119,18 @@ public class PlayerInteraction : NetworkBehaviour
         }
     }
 
+    // Sửa lại hàm này
     [ClientRpc]
-    private void AssignHeldCoreClientRpc(ulong networkObjectId, ClientRpcParams rpcParams = default)
+    private void AssignHeldCoreClientRpc(ulong networkObjectId, ulong targetClientId)
     {
-        if (NetworkManager.SpawnManager.SpawnedObjects.TryGetValue(networkObjectId, out var netObj))
-            currentHeldCore = netObj.GetComponent<CrystalCore>();
+        // Kiểm tra xem máy này có phải là máy của người chơi vừa nhặt không
+        if (NetworkManager.Singleton.LocalClientId == targetClientId)
+        {
+            if (NetworkManager.SpawnManager.SpawnedObjects.TryGetValue(networkObjectId, out var netObj))
+            {
+                currentHeldCore = netObj.GetComponent<CrystalCore>();
+            }
+        }
     }
 
     [ClientRpc]

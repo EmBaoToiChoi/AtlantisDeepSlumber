@@ -87,6 +87,7 @@ public class CrystalCore : NetworkBehaviour
         }
     }
 
+    // Trong CrystalCore.cs, chỉnh lại hàm RequestDropServerRpc:
     [ServerRpc(RequireOwnership = false)]
     private void RequestDropServerRpc(ulong playerId) 
     { 
@@ -94,28 +95,28 @@ public class CrystalCore : NetworkBehaviour
         {
             holders.Remove(playerId);
             
-            // Chỉ trả quyền về Server nếu Server chưa sở hữu
+            // Thu hồi quyền về Server để vật lý hoạt động bình thường
             var netObj = GetComponent<NetworkObject>();
-            if (netObj.OwnerClientId != NetworkManager.ServerClientId)
-            {
-                netObj.RemoveOwnership();
-            }
+            netObj.RemoveOwnership();
             
             rb.isKinematic = false;
             rb.useGravity = true;
         }
     }
 
+    // Trong CrystalCore.cs
     public void LockToStation()
     {
         if (IsServer)
         {
             isSnapped.Value = true;
-            rb.isKinematic = true;
+            // Tắt vật lý hoàn toàn
+            rb.isKinematic = true; 
             rb.useGravity = false;
-            holders.Clear();
+            rb.linearVelocity = Vector3.zero; // Triệt tiêu vận tốc cũ
+            rb.angularVelocity = Vector3.zero; // Triệt tiêu lực xoay cũ
             
-            // Nếu ngọc thuộc quyền sở hữu của ai đó, thu hồi về Server khi gắn vào trạm
+            holders.Clear();
             if (GetComponent<NetworkObject>().IsOwner) 
                 GetComponent<NetworkObject>().RemoveOwnership();
         }

@@ -67,23 +67,34 @@ public class OptimizedNetworkMiniGame : NetworkBehaviour
 
     private void UpdateStationDrain()
     {
+        if (!IsServer) return; // BẮT BUỘC CÓ DÒNG NÀY ĐỂ TRÁNH LỖI
+
         float normal = decayRate * Time.deltaTime;
         float fast = decayRate * 2.5f * Time.deltaTime;
 
-        // Chỉ trừ điểm nếu không có người chơi (Owner == ulong.MaxValue)
-        if (s0Owner.Value == ulong.MaxValue) s0Value.Value = Mathf.Max(0, s0Value.Value - normal);
-        if (s1Owner.Value == ulong.MaxValue) s1Value.Value = Mathf.Max(0, s1Value.Value - normal);
+        // Gán trực tiếp vào .Value để NetworkVariable nhận diện thay đổi
+        if (s0Owner.Value == ulong.MaxValue) 
+            s0Value.Value = Mathf.Clamp(s0Value.Value - normal, 0f, 100f);
+            
+        if (s1Owner.Value == ulong.MaxValue) 
+            s1Value.Value = Mathf.Clamp(s1Value.Value - normal, 0f, 100f);
 
         float s2Speed = station2HasCrystal.Value ? normal : fast;
-        if (s2Owner.Value == ulong.MaxValue) s2Value.Value = Mathf.Max(0, s2Value.Value - s2Speed);
+        if (s2Owner.Value == ulong.MaxValue) 
+            s2Value.Value = Mathf.Clamp(s2Value.Value - s2Speed, 0f, 100f);
 
         float s3Speed = station3HasCrystal.Value ? normal : fast;
-        if (s3Owner.Value == ulong.MaxValue) s3Value.Value = Mathf.Max(0, s3Value.Value - s3Speed);
+        if (s3Owner.Value == ulong.MaxValue) 
+            s3Value.Value = Mathf.Clamp(s3Value.Value - s3Speed, 0f, 100f);
     }
 
     private void CheckGateStatus()
     {
+        if (!IsServer) return; // Chỉ server mới có quyền quyết định
+
         int readyCount = 0;
+        
+        // Đếm số trạm thỏa mãn đồng thời 2 điều kiện: Có người đứng VÀ Đang xanh
         if (s0Owner.Value != ulong.MaxValue && s0Value.Value >= greenZoneMin) readyCount++;
         if (s1Owner.Value != ulong.MaxValue && s1Value.Value >= greenZoneMin) readyCount++;
         if (s2Owner.Value != ulong.MaxValue && s2Value.Value >= greenZoneMin) readyCount++;
@@ -91,14 +102,25 @@ public class OptimizedNetworkMiniGame : NetworkBehaviour
         
         bool shouldBeOpen = (readyCount >= playersNeededToUnlock);
 
+        // Chỉ thực hiện lệnh khi có sự thay đổi trạng thái
         if (shouldBeOpen != isCurrentlyOpen)
         {
             isCurrentlyOpen = shouldBeOpen;
+            
             foreach (var gear in gearList)
             {
                 if (gear == null) continue;
-                if (isCurrentlyOpen) gear.OpenGear();
-                else gear.ResetToSpinning(); 
+                
+                if (isCurrentlyOpen) 
+                {
+                    gear.OpenGear();
+                }
+                else 
+                {
+                    // Khi người chơi rời trạm hoặc điểm tụt xuống dưới greenZoneMin, 
+                    // lệnh này sẽ được gọi để đóng cổng và đưa trụ về vị trí cũ.
+                    gear.ResetToSpinning(); 
+                }
             }
         }
     }
