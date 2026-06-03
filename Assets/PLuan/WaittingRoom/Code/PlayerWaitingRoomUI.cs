@@ -59,13 +59,13 @@ public class PlayerWaitingRoomUI : NetworkBehaviour
 
         // Tìm trạng thái Ready và nhân vật đã chọn
         int currentCharId = -1;
-        string status = "<b><size=70%><mark=#ff386033><color=#ff3860>  ● NOT READY  </color></mark></size></b>";
+        string status = "<b><size=70%><color=#ff3860>NOT READY</color></size></b>";
         foreach (var p in _manager.NetPlayers)
         {
             if (p.ClientId == OwnerClientId)
             {
                 currentCharId = p.CharacterId;
-                if (p.IsReady) status = "<b><size=70%><mark=#23d16033><color=#23d160>  ▲ READY  </color></mark></size></b>";
+                if (p.IsReady) status = "<b><size=70%><color=#23d160>READY</color></size></b>";
                 break;
             }
         }

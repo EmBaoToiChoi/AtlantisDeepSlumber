@@ -1,14 +1,9 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
-    <Style src="./WaitingRoomUI.uss" />
-
+    <Style src="project://database/Assets/PLuan/WaittingRoom/Code/WaitingRoomUI.uss?fileID=7433441132597879392&amp;guid=5a146fb1d82ca174dbcb8a9d485228fd&amp;type=3#WaitingRoomUI" />
     <ui:VisualElement name="waiting-room-root" class="waiting-room-overlay">
-        <!-- TOP INFO BAR -->
         <ui:VisualElement class="waiting-top-bar">
-            <!-- Left spacer to push combined panel to the right -->
             <ui:VisualElement class="waiting-viewport-spacer" />
-            
-            <!-- Combined Info Panel -->
-            <ui:VisualElement class="top-info-panel">
+            <ui:VisualElement class="top-info-panel" style="background-image: url(&quot;project://database/Assets/PLuan/menuda.png?fileID=2800000&amp;guid=b71e5fe46dbce4849b9385c26298aaa1&amp;type=3#menuda&quot;);">
                 <ui:VisualElement class="panel-seaweed-top-right">
                     <ui:VisualElement class="seaweed-leaf leaf-1" />
                     <ui:VisualElement class="seaweed-leaf leaf-2" />
@@ -23,36 +18,18 @@
                     <ui:Label name="lbl-room-name" text="SESSION: EXPLORER" class="room-title" />
                     <ui:Label name="lbl-room-id" text="ID: #XXXXXX" class="room-id-badge" />
                 </ui:VisualElement>
-                <ui:VisualElement class="top-bar-decor-row">
-                    <ui:Label text="SECURE CONNECTION" class="top-bar-decor-tag" />
-                    <ui:Label text="●" class="top-bar-decor-dot active-dot" />
-                    <ui:Label text="DEEP SECTOR: ATLANTIS" class="top-bar-decor-tag" />
-                </ui:VisualElement>
             </ui:VisualElement>
         </ui:VisualElement>
-
-        <!-- MIDDLE MAIN AREA -->
         <ui:VisualElement class="waiting-middle-container">
-            <!-- LEFT SIDE (EMPTY FOR 3D CHARACTER DISPLAY) -->
             <ui:VisualElement class="waiting-viewport-spacer" />
-
-            <!-- RIGHT SIDE (CHARACTER SELECTION) -->
-            <ui:VisualElement name="char-select-panel" class="char-select-panel glass-panel glow-border">
+            <ui:VisualElement name="char-select-panel" class="char-select-panel glass-panel glow-border" style="background-image: url(&quot;project://database/Assets/PLuan/menuda.png?fileID=2800000&amp;guid=b71e5fe46dbce4849b9385c26298aaa1&amp;type=3#menuda&quot;);">
                 <ui:VisualElement class="panel-seaweed-top-right">
                     <ui:VisualElement class="seaweed-leaf leaf-1" />
                     <ui:VisualElement class="seaweed-leaf leaf-2" />
                     <ui:VisualElement class="seaweed-leaf leaf-3" />
                 </ui:VisualElement>
-                <ui:VisualElement class="panel-seaweed-bottom-left">
-                    <ui:VisualElement class="seaweed-leaf leaf-1" />
-                    <ui:VisualElement class="seaweed-leaf leaf-2" />
-                    <ui:VisualElement class="seaweed-leaf leaf-3" />
-                </ui:VisualElement>
-                <ui:Label text="CHOOSE YOUR EXPLORER" class="panel-section-title" />
-                <ui:Label text="GRID COORDINATE: EXP-88" class="panel-section-subtitle" />
                 <ui:VisualElement class="char-cards-container">
-                    <!-- Character Card 0 -->
-                    <ui:VisualElement name="char-card-0" class="char-card select-active">
+                    <ui:VisualElement name="char-card-0" class="char-card select-active" style="background-image: none;">
                         <ui:VisualElement name="char-img-0" class="char-card-portrait leo-img" />
                         <ui:VisualElement class="char-card-text-container">
                             <ui:Label text="LEO" class="char-card-name" />
@@ -60,8 +37,6 @@
                         </ui:VisualElement>
                         <ui:Label name="char-status-0" text="SELECTED BY YOU" class="char-card-status active-status" />
                     </ui:VisualElement>
-
-                    <!-- Character Card 1 -->
                     <ui:VisualElement name="char-card-1" class="char-card">
                         <ui:VisualElement name="char-img-1" class="char-card-portrait maya-img" />
                         <ui:VisualElement class="char-card-text-container">
@@ -70,8 +45,6 @@
                         </ui:VisualElement>
                         <ui:Label name="char-status-1" text="AVAILABLE" class="char-card-status" />
                     </ui:VisualElement>
-
-                    <!-- Character Card 2 -->
                     <ui:VisualElement name="char-card-2" class="char-card">
                         <ui:VisualElement name="char-img-2" class="char-card-portrait elena-img" />
                         <ui:VisualElement class="char-card-text-container">
@@ -80,8 +53,6 @@
                         </ui:VisualElement>
                         <ui:Label name="char-status-2" text="AVAILABLE" class="char-card-status" />
                     </ui:VisualElement>
-
-                    <!-- Character Card 3 -->
                     <ui:VisualElement name="char-card-3" class="char-card">
                         <ui:VisualElement name="char-img-3" class="char-card-portrait arthur-img" />
                         <ui:VisualElement class="char-card-text-container">
@@ -94,32 +65,23 @@
                 <ui:Label text="Hold SHIFT + Left Click to Inspect" class="char-inspect-tip" />
             </ui:VisualElement>
         </ui:VisualElement>
-
-        <!-- BOTTOM AREA (FOOTER) -->
         <ui:VisualElement class="waiting-footer">
-            <!-- LEFT ACTIONS -->
             <ui:VisualElement class="left-actions">
                 <ui:Button name="btn-ready" text="READY" class="action-btn ready-btn" />
                 <ui:Button name="btn-leave" text="LEAVE SESSION" class="action-btn leave-btn" />
             </ui:VisualElement>
-
-            <!-- CENTER START (HOST ONLY) -->
             <ui:VisualElement class="start-game-center" style="flex-direction: column; align-items: center;">
                 <ui:Label name="lbl-warning" text="DUPLICATE CHARACTER DETECTED!" class="warning-text hidden-element" />
                 <ui:Button name="btn-start" text="START EXPEDITION" class="action-btn start-btn hidden-element" />
             </ui:VisualElement>
-
-            <!-- RIGHT ACTIONS & PLAYER COUNT -->
             <ui:VisualElement style="flex-direction: row; align-items: center;">
-                <ui:Button name="btn-swap-character" text="SWAP EXPLORER" class="action-btn ready-btn hidden-element" style="margin-right: 15px; background-color: rgba(255, 165, 0, 0.08); border-left-color: rgb(255, 165, 0); color: rgb(255, 165, 0);" />
+                <ui:Button name="btn-swap-character" text="SWAP EXPLORER" class="action-btn ready-btn hidden-element" style="margin-right: 15px;" />
                 <ui:Button name="btn-toggle-char-panel" text="CHOOSE EXPLORER" class="action-btn toggle-char-panel-btn ready-btn" style="margin-right: 15px;" />
                 <ui:VisualElement class="player-count-container">
                     <ui:Label name="lbl-player-count" text="PLAYERS: 1/4" class="status-text" />
                 </ui:VisualElement>
             </ui:VisualElement>
         </ui:VisualElement>
-
-        <!-- CHARACTER DETAILS POPUP (MODAL) -->
         <ui:VisualElement name="char-details-modal" class="details-modal hidden-element">
             <ui:VisualElement class="details-container glow-border">
                 <ui:VisualElement class="panel-seaweed-top-right">
@@ -145,10 +107,8 @@
                     </ui:VisualElement>
                 </ui:VisualElement>
                 <ui:Label name="details-desc" text="A master of shadows and stealth, Leo can eliminate high-value targets before they even know he is there." class="details-char-desc" />
-                
                 <ui:Label text="SPECIALIST SKILLS" class="details-section-title" />
                 <ui:VisualElement name="skills-container" class="details-skills-container">
-                    <!-- Skill 0 -->
                     <ui:VisualElement name="details-skill-box-0" class="details-skill-box">
                         <ui:VisualElement name="details-skill-img-0" class="details-skill-icon skill-icon-img" />
                         <ui:VisualElement style="flex-shrink: 1; margin-left: 15px; flex-grow: 1;">
@@ -156,8 +116,6 @@
                             <ui:Label name="details-skill-desc-0" text="Dashes forward a short distance, granting immunity to physical pressure damage for 3 seconds." class="details-skill-desc" />
                         </ui:VisualElement>
                     </ui:VisualElement>
-
-                    <!-- Skill 1 -->
                     <ui:VisualElement name="details-skill-box-1" class="details-skill-box">
                         <ui:VisualElement name="details-skill-img-1" class="details-skill-icon skill-icon-img" />
                         <ui:VisualElement style="flex-shrink: 1; margin-left: 15px; flex-grow: 1;">
@@ -165,8 +123,6 @@
                             <ui:Label name="details-skill-desc-1" text="Emits a high-frequency acoustic pulse that reveals nearby resources." class="details-skill-desc" />
                         </ui:VisualElement>
                     </ui:VisualElement>
-
-                    <!-- Skill 2 -->
                     <ui:VisualElement name="details-skill-box-2" class="details-skill-box">
                         <ui:VisualElement name="details-skill-img-2" class="details-skill-icon skill-icon-img" />
                         <ui:VisualElement style="flex-shrink: 1; margin-left: 15px; flex-grow: 1;">
@@ -177,8 +133,6 @@
                 </ui:VisualElement>
             </ui:VisualElement>
         </ui:VisualElement>
-
-        <!-- SWAP REQUEST MODAL -->
         <ui:VisualElement name="swap-request-modal" class="details-modal hidden-element">
             <ui:VisualElement class="details-container glow-border" style="width: 420px; padding: 30px; align-items: center; border-left-color: rgb(255, 165, 0);">
                 <ui:VisualElement class="panel-seaweed-top-right">
@@ -193,13 +147,11 @@
                 </ui:VisualElement>
                 <ui:Label text="CHARACTER SWAP REQUEST" class="details-char-role" style="font-size: 16px; letter-spacing: 2px; color: rgb(255, 165, 0); margin-bottom: 15px; -unity-font-style: bold;" />
                 <ui:Label name="lbl-swap-request-msg" text="Player 2 wants to swap Atlas with your Nyx." class="details-char-desc" style="text-align: center; font-size: 14px; margin-bottom: 25px; white-space: normal; -unity-text-wrap: true;" />
-                
                 <ui:VisualElement style="flex-direction: row; justify-content: space-around; width: 100%;">
                     <ui:Button name="btn-swap-accept" text="ACCEPT" class="action-btn ready-btn" style="width: 150px; margin: 0; background-color: rgba(46, 213, 115, 0.15); border-left-color: rgb(46, 213, 115); color: rgb(46, 213, 115);" />
                     <ui:Button name="btn-swap-decline" text="DECLINE" class="action-btn leave-btn" style="width: 150px; margin: 0;" />
                 </ui:VisualElement>
             </ui:VisualElement>
         </ui:VisualElement>
-
     </ui:VisualElement>
 </ui:UXML>
