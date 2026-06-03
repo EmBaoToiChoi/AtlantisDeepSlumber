@@ -62,6 +62,16 @@ public class LeoPlayer : NetworkBehaviour
     [Tooltip("Right weapon/sword hitbox collider.")]
     public Collider rightWeaponHitbox;
 
+    [Header("Weapon Visual References")]
+    [Tooltip("Thanh kiếm trên tay trái")]
+    public GameObject leftHandSword;
+    [Tooltip("Thanh kiếm trên tay phải")]
+    public GameObject rightHandSword;
+    [Tooltip("Thanh kiếm giắt trên vai/lưng trái")]
+    public GameObject leftShoulderSword;
+    [Tooltip("Thanh kiếm giắt trên vai/lưng phải")]
+    public GameObject rightShoulderSword;
+
     private System.Collections.Generic.List<Transform> alreadyHitEnemies = new System.Collections.Generic.List<Transform>();
 
     [Header("Movement Lock State")]
@@ -82,6 +92,12 @@ public class LeoPlayer : NetworkBehaviour
     [Header("Weapon Switch Animations")]
     public string drawWeaponTrigger = "DrawWeapon";
     public string sheathWeaponTrigger = "SheathWeapon";
+    public string drawLeftTrigger = "DrawLeft";
+    public string drawRightTrigger = "DrawRight";
+    public string sheatheLeftTrigger = "SheatheLeft";
+    public string sheatheRightTrigger = "SheatheRight";
+    [HideInInspector]
+    public bool isSwitchingWeapon = false; // Chống spam phím khi đổi vũ khí
 
     [Header("Player Health Settings")]
     public float maxHealth = 85f;
@@ -293,6 +309,9 @@ public class LeoPlayer : NetworkBehaviour
             localHealth = maxHealth;
             InitStandaloneMode();
         }
+
+        // Khởi tạo hiển thị vũ khí ban đầu phù hợp với trạng thái Armed/Unarmed
+        SyncWeaponVisuals(GetActiveWeaponIndex());
     }
 
     private void InitStandaloneMode()
@@ -351,6 +370,9 @@ public class LeoPlayer : NetworkBehaviour
             UpdateUpgradeHUD();
             UpdateDurabilityHUD();
         }
+
+        // Đồng bộ hiển thị vũ khí ban đầu cho tất cả người chơi trên mạng
+        SyncWeaponVisuals(activeWeaponIndex.Value);
     }
 
     public override void OnNetworkDespawn()
@@ -492,6 +514,7 @@ public class LeoPlayer : NetworkBehaviour
         // Standalone weapon switching when no HUD
         if (isStandaloneMode && FindAnyObjectByType<PlayerHUDController>() == null)
         {
+            if (isSwitchingWeapon) return;
             if (Input.GetKeyDown(KeyCode.Alpha1))
             {
                 int oldW = fallbackWeaponIndex;
@@ -1661,20 +1684,177 @@ public class LeoPlayer : NetworkBehaviour
     {
         if (oldWeapon == newWeapon) return;
 
+        isSwitchingWeapon = true; // Khóa chống spam phím khi đổi vũ khí
+
         if (newWeapon == 2)
         {
-            if (!string.IsNullOrEmpty(drawWeaponTrigger))
+            // Bắt đầu rút kiếm: lúc này kiếm vẫn ở trên vai, tay chưa cầm kiếm
+            if (leftShoulderSword != null) leftShoulderSword.SetActive(true);
+            if (rightShoulderSword != null) rightShoulderSword.SetActive(true);
+            if (leftHandSword != null) leftHandSword.SetActive(false);
+            if (rightHandSword != null) rightHandSword.SetActive(false);
+
+            if (!string.IsNullOrEmpty(drawLeftTrigger))
+            {
+                PlayAnimation(drawLeftTrigger, 0.1f);
+            }
+            else if (!string.IsNullOrEmpty(drawWeaponTrigger))
             {
                 PlayAnimation(drawWeaponTrigger, 0.1f);
+            }
+            else
+            {
+                SyncWeaponVisuals(newWeapon);
+                OnWeaponSwitchEnd();
             }
         }
         else if (newWeapon == 1)
         {
-            if (!string.IsNullOrEmpty(sheathWeaponTrigger))
+            // Bắt đầu cất kiếm: lúc này kiếm vẫn ở trên tay, chưa cất lên vai
+            if (leftHandSword != null) leftHandSword.SetActive(true);
+            if (rightHandSword != null) rightHandSword.SetActive(true);
+            if (leftShoulderSword != null) leftShoulderSword.SetActive(false);
+            if (rightShoulderSword != null) rightShoulderSword.SetActive(false);
+
+            if (!string.IsNullOrEmpty(sheatheLeftTrigger))
+            {
+                PlayAnimation(sheatheLeftTrigger, 0.1f);
+            }
+            else if (!string.IsNullOrEmpty(sheathWeaponTrigger))
             {
                 PlayAnimation(sheathWeaponTrigger, 0.1f);
             }
+            else
+            {
+                SyncWeaponVisuals(newWeapon);
+                OnWeaponSwitchEnd();
+            }
         }
+    }
+
+    public void OnDrawLeftEnd()
+    {
+        // Để Animator tự động chuyển sang hoạt ảnh tay phải bằng mũi tên transition (Has Exit Time)
+        Debug.Log("[LeoPlayer] Draw Left finished. Letting Animator transition natively to Draw Right.");
+    }
+
+    public void OnSheatheLeftEnd()
+    {
+        // Để Animator tự động chuyển sang hoạt ảnh tay phải bằng mũi tên transition (Has Exit Time)
+        Debug.Log("[LeoPlayer] Sheathe Left finished. Letting Animator transition natively to Sheathe Right.");
+    }
+
+    public void DrawLeftSword()
+    {
+        if (leftHandSword != null) leftHandSword.SetActive(true);
+        if (leftShoulderSword != null) leftShoulderSword.SetActive(false);
+        Debug.Log("[LeoPlayer] Left sword DRAWN.");
+    }
+
+    public void DrawRightSword()
+    {
+        if (rightHandSword != null) rightHandSword.SetActive(true);
+        if (rightShoulderSword != null) rightShoulderSword.SetActive(false);
+        Debug.Log("[LeoPlayer] Right sword DRAWN.");
+    }
+
+    public void SheatheLeftSword()
+    {
+        if (leftHandSword != null) leftHandSword.SetActive(false);
+        if (leftShoulderSword != null) leftShoulderSword.SetActive(true);
+        Debug.Log("[LeoPlayer] Left sword SHEATHED.");
+    }
+
+    public void SheatheRightSword()
+    {
+        if (rightHandSword != null) rightHandSword.SetActive(false);
+        if (rightShoulderSword != null) rightShoulderSword.SetActive(true);
+        Debug.Log("[LeoPlayer] Right sword SHEATHED.");
+    }
+
+    public void SyncWeaponVisuals(int activeWeapon)
+    {
+        bool isArmed = (activeWeapon == 2);
+        
+        if (leftHandSword != null) leftHandSword.SetActive(isArmed);
+        if (rightHandSword != null) rightHandSword.SetActive(isArmed);
+        
+        if (leftShoulderSword != null) leftShoulderSword.SetActive(!isArmed);
+        if (rightShoulderSword != null) rightShoulderSword.SetActive(!isArmed);
+    }
+
+    public void OnWeaponSwitchEnd()
+    {
+        isSwitchingWeapon = false;
+        Debug.Log("[LeoPlayer] Weapon switch animation finished. Lock released.");
+    }
+
+    [ContextMenu("Auto Find Sword Meshes")]
+    public void AutoFindSwordMeshes()
+    {
+        // 1. Tìm trên tay
+        Transform leftHand = FindBoneRecursive(transform, "left");
+        Transform rightHand = FindBoneRecursive(transform, "right");
+        
+        if (leftHand != null)
+        {
+            Transform leftSword = FindWeaponTransform(leftHand);
+            if (leftSword != null) leftHandSword = leftSword.gameObject;
+        }
+        if (rightHand != null)
+        {
+            Transform rightSword = FindWeaponTransform(rightHand);
+            if (rightSword != null) rightHandSword = rightSword.gameObject;
+        }
+        
+        // 2. Tìm trên vai (Spine, Chest, Shoulder)
+        Transform spine = FindBoneRecursiveLower(transform, "spine");
+        Transform chest = FindBoneRecursiveLower(transform, "chest");
+        Transform upperBody = chest ?? spine ?? transform;
+        
+        Transform leftSh = FindShoulderSwordRecursive(upperBody, "left");
+        Transform rightSh = FindShoulderSwordRecursive(upperBody, "right");
+        
+        if (leftSh != null) leftShoulderSword = leftSh.gameObject;
+        if (rightSh != null) rightShoulderSword = rightSh.gameObject;
+        
+        Debug.Log($"[LeoPlayer Editor] Auto Find Results -> Hand L: {leftHandSword?.name}, Hand R: {rightHandSword?.name}, Shoulder L: {leftShoulderSword?.name}, Shoulder R: {rightShoulderSword?.name}");
+    }
+
+    private Transform FindBoneRecursiveLower(Transform current, string keyword)
+    {
+        string nameLower = current.name.ToLower();
+        if (nameLower.Contains(keyword))
+        {
+            return current;
+        }
+        for (int i = 0; i < current.childCount; i++)
+        {
+            Transform found = FindBoneRecursiveLower(current.GetChild(i), keyword);
+            if (found != null) return found;
+        }
+        return null;
+    }
+
+    private Transform FindShoulderSwordRecursive(Transform current, string side)
+    {
+        string nameLower = current.name.ToLower();
+        if ((nameLower.Contains("sword") || nameLower.Contains("blade") || nameLower.Contains("kiem") || nameLower.Contains("dao") || nameLower.Contains("katana") || nameLower.Contains("weapon")) && 
+            nameLower.Contains(side) && 
+            (nameLower.Contains("shoulder") || nameLower.Contains("back") || nameLower.Contains("sheath") || nameLower.Contains("mount") || nameLower.Contains("holder") || nameLower.Contains("holster")))
+        {
+            return current;
+        }
+        if (nameLower.Contains(side) && (nameLower.Contains("sheath") || nameLower.Contains("mount") || nameLower.Contains("holder") || nameLower.Contains("holster")))
+        {
+            return current;
+        }
+        for (int i = 0; i < current.childCount; i++)
+        {
+            Transform found = FindShoulderSwordRecursive(current.GetChild(i), side);
+            if (found != null) return found;
+        }
+        return null;
     }
 
     public void PlayAnimation(string animName, float fadeTime = 0.1f, bool alreadyPlayedLocally = false)
@@ -1795,7 +1975,11 @@ public class LeoPlayer : NetworkBehaviour
                name == "Slash1" ||
                name == "Slash2" ||
                (!string.IsNullOrEmpty(drawWeaponTrigger) && name == drawWeaponTrigger) ||
-               (!string.IsNullOrEmpty(sheathWeaponTrigger) && name == sheathWeaponTrigger);
+               (!string.IsNullOrEmpty(sheathWeaponTrigger) && name == sheathWeaponTrigger) ||
+               (!string.IsNullOrEmpty(drawLeftTrigger) && name == drawLeftTrigger) ||
+               (!string.IsNullOrEmpty(drawRightTrigger) && name == drawRightTrigger) ||
+               (!string.IsNullOrEmpty(sheatheLeftTrigger) && name == sheatheLeftTrigger) ||
+               (!string.IsNullOrEmpty(sheatheRightTrigger) && name == sheatheRightTrigger);
     }
 
     private bool IsAttackAnimationName(string name)
@@ -1992,12 +2176,17 @@ public class LeoPlayer : NetworkBehaviour
             anim.ResetTrigger("Slash2");
             if (!string.IsNullOrEmpty(drawWeaponTrigger)) anim.ResetTrigger(drawWeaponTrigger);
             if (!string.IsNullOrEmpty(sheathWeaponTrigger)) anim.ResetTrigger(sheathWeaponTrigger);
+            if (!string.IsNullOrEmpty(drawLeftTrigger)) anim.ResetTrigger(drawLeftTrigger);
+            if (!string.IsNullOrEmpty(drawRightTrigger)) anim.ResetTrigger(drawRightTrigger);
+            if (!string.IsNullOrEmpty(sheatheLeftTrigger)) anim.ResetTrigger(sheatheLeftTrigger);
+            if (!string.IsNullOrEmpty(sheatheRightTrigger)) anim.ResetTrigger(sheatheRightTrigger);
         }
 
-        if (translatedName == pickTrigger || translatedName == "Idle_Pick" || translatedName == "Pick")
+        if (IsActionAnimationName(translatedName))
         {
             anim.SetTrigger(translatedName);
-            anim.CrossFadeInFixedTime(translatedName, fadeTime, -1, 0f);
+            // Ép Animator CrossFade mượt mà tuyệt đối giữa các hành động (tránh khựng dáng đi)
+            anim.CrossFadeInFixedTime(translatedName, fadeTime, 0, 0f);
         }
         else
         {
