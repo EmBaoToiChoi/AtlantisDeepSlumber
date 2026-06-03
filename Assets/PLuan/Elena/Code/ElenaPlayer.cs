@@ -15,13 +15,19 @@ public class ElenaPlayer : NetworkBehaviour
     public float punch1Duration = 1.2f;
     public float punch2Duration = 1.2f;
     public float punch3Duration = 1.2f;
+    public float chem1Duration = 1.2f;
+    public float chem2Duration = 1.2f;
+    public float chem3Duration = 1.2f;
     private int comboStep = 0;
     private float lastAttackTime = 0f;
     private bool isRootedAttack = false;
 
     [Header("Weapon Switch Animations")]
-    public string drawWeaponTrigger = "DrawWeapon";
-    public string sheathWeaponTrigger = "SheathWeapon";
+    public string drawWeaponTrigger = "LayCung";
+    public string sheathWeaponTrigger = "CatCung";
+
+    public GameObject weaponOnBackVisual;
+    public GameObject weaponInHandVisual;
 
     [Header("Player Health Settings")]
     public float maxHealth = 100f;
@@ -86,6 +92,7 @@ public class ElenaPlayer : NetworkBehaviour
     private int localDamageLevel = 0;
     private int localLevel = 0;
     private float localExp = 0f;
+    private int localActiveWeaponIndex = 1;
 
     [Header("Player Experience & Level")]
     public NetworkVariable<int> playerLevel = new NetworkVariable<int>(
@@ -233,15 +240,17 @@ public class ElenaPlayer : NetworkBehaviour
     {
         if (isStandaloneMode)
         {
-            PlayerHUDController hud = FindObjectOfType<PlayerHUDController>();
-            if (hud != null) return hud.currentSelectedWeapon;
-            return 1;
+            return localActiveWeaponIndex; // <-- SỬA DÒNG NÀY (Thay vì đọc hud.currentSelectedWeapon)
         }
         return activeWeaponIndex.Value;
     }
 
     private void Awake()
     {
+        // Ép tên Trigger luôn đúng với Animator tiếng Việt của Elena, bỏ qua giá trị cũ bị lưu ở Inspector
+        drawWeaponTrigger = "LayCung";
+        sheathWeaponTrigger = "CatCung";
+
         if (anim == null)
         {
             anim = GetComponent<Animator>();
@@ -280,6 +289,7 @@ public class ElenaPlayer : NetworkBehaviour
         }
         // Nếu có Netcode nhưng chưa spawn (vd: đang chờ) thì không làm gì thêm
         // OnNetworkSpawn() sẽ lo phần còn lại
+        UpdateWeaponVisualsInstant(GetActiveWeaponIndex());
     }
 
     /// <summary>
@@ -359,6 +369,7 @@ public class ElenaPlayer : NetworkBehaviour
             ApplyUpgradedStats();
             UpdateUpgradeHUD();
             UpdateDurabilityHUD();
+            UpdateWeaponVisualsInstant(GetActiveWeaponIndex());
         }
     }
 
@@ -814,6 +825,12 @@ public class ElenaPlayer : NetworkBehaviour
         }
     }
 
+    public void SetCursorLock(bool locked)
+    {
+        isCursorLocked = locked;
+        LockCursor(locked);
+    }
+
     void Update()
     {
         // Chỉ xử lý phím tắt Alt ẩn hiện chuột nếu là chủ sở hữu hoặc chơi đơn
@@ -855,6 +872,20 @@ public class ElenaPlayer : NetworkBehaviour
             if (anim != null) anim.applyRootMotion = false;
             PlayAnimation("Death", 0.15f);
             return;
+        }
+
+        // Tự động tắt weight của Layer 1 và đưa về New State khi kết thúc cất/lấy vũ khí
+        if (anim != null && anim.isActiveAndEnabled && anim.runtimeAnimatorController != null && anim.layerCount > 1)
+        {
+            float weight1 = anim.GetLayerWeight(1);
+            if (weight1 > 0f && comboStep == 0)
+            {
+                bool isSwitching = IsStatePlayingOnLayer1(drawWeaponTrigger) || IsStatePlayingOnLayer1(sheathWeaponTrigger);
+                if (!isSwitching)
+                {
+                    ClearAttackLayer();
+                }
+            }
         }
 
         // Tính toán và đồng bộ góc xoay cột sống (Spine aim angle)
@@ -1023,7 +1054,20 @@ public class ElenaPlayer : NetworkBehaviour
         }
         else
         {
-            if (!IsPlayingActionAnimation())
+            // Nếu đứng yên (hoặc bị khóa di chuyển), ta kiểm tra xem có đang chạy hoạt ảnh toàn thân thực sự ở Layer 0 không.
+            // Nếu không, hoặc nếu đang chạy cất/rút vũ khí ở Layer 1, ta cần ép Layer 0 về Idle để khóa chân.
+            bool isPlayingFullBodyOnLayer0 = false;
+            if (anim != null && anim.isActiveAndEnabled && anim.runtimeAnimatorController != null)
+            {
+                AnimatorStateInfo stateInfo0 = anim.GetCurrentAnimatorStateInfo(0);
+                isPlayingFullBodyOnLayer0 = stateInfo0.IsName("LonVong") || 
+                                             stateInfo0.IsName("GetHit") || 
+                                             stateInfo0.IsName("GeiHit2") || 
+                                             stateInfo0.IsName("Idle_Pick") || 
+                                             stateInfo0.IsName("Death");
+            }
+
+            if (!isPlayingFullBodyOnLayer0)
             {
                 PlayAnimation("Idle", 0.1f);
             }
@@ -1154,7 +1198,20 @@ public class ElenaPlayer : NetworkBehaviour
         }
         else
         {
-            if (!IsPlayingActionAnimation())
+            // Nếu đứng yên (hoặc bị khóa di chuyển), ta kiểm tra xem có đang chạy hoạt ảnh toàn thân thực sự ở Layer 0 không.
+            // Nếu không, hoặc nếu đang chạy cất/rút vũ khí ở Layer 1, ta cần ép Layer 0 về Idle để khóa chân.
+            bool isPlayingFullBodyOnLayer0 = false;
+            if (anim != null && anim.isActiveAndEnabled && anim.runtimeAnimatorController != null)
+            {
+                AnimatorStateInfo stateInfo0 = anim.GetCurrentAnimatorStateInfo(0);
+                isPlayingFullBodyOnLayer0 = stateInfo0.IsName("LonVong") || 
+                                             stateInfo0.IsName("GetHit") || 
+                                             stateInfo0.IsName("GeiHit2") || 
+                                             stateInfo0.IsName("Idle_Pick") || 
+                                             stateInfo0.IsName("Death");
+            }
+
+            if (!isPlayingFullBodyOnLayer0)
             {
                 PlayAnimation("Idle", 0.1f);
             }
@@ -1343,6 +1400,12 @@ public class ElenaPlayer : NetworkBehaviour
             if (step == 2) return punch2Duration;
             return punch3Duration;
         }
+        else if (weaponIndex == 2)
+        {
+            if (step == 1) return chem1Duration;
+            if (step == 2) return chem2Duration;
+            return chem3Duration;
+        }
         return 0.5f;
     }
 
@@ -1359,8 +1422,12 @@ public class ElenaPlayer : NetworkBehaviour
         }
         nextStep++;
 
-        // Giới hạn bước combo dựa trên vũ khí (Đấm có 3 combo, tạm thời xóa slash)
+        // Giới hạn bước combo dựa trên vũ khí (Đấm có 3 combo, Chem có 3 combo)
         if (weapon == 1)
+        {
+            if (nextStep > 3) nextStep = 1;
+        }
+        else if (weapon == 2)
         {
             if (nextStep > 3) nextStep = 1;
         }
@@ -1400,6 +1467,12 @@ public class ElenaPlayer : NetworkBehaviour
             else if (comboStep == 2) animToPlay = "Dam2";
             else if (comboStep == 3) animToPlay = "Dam3";
         }
+        else if (weapon == 2) // Weapon / Chem combo (3 steps)
+        {
+            if (comboStep == 1) animToPlay = "Chem1";
+            else if (comboStep == 2) animToPlay = "Chem2";
+            else if (comboStep == 3) animToPlay = "Chem3";
+        }
 
         Debug.Log($"[Combo Debug] PerformComboAttack: weapon={weapon}, step={comboStep}, animToPlay={animToPlay}, isRooted={isRootedAttack}, isMovingInput={isMovingInput}");
 
@@ -1429,6 +1502,22 @@ public class ElenaPlayer : NetworkBehaviour
             if (!Physics.Raycast(rayStart, aimDir, out RaycastHit hit, attackRange)) return;
 
             TryDamageEnemy(hit.collider);
+        }
+    }
+
+    private void UpdateWeaponVisualsInstant(int weaponIndex)
+    {
+        if (weaponOnBackVisual == null || weaponInHandVisual == null) return;
+
+        if (weaponIndex == 2) // Nếu đang chọn Cung (Vũ khí số 2)
+        {
+            weaponOnBackVisual.SetActive(false);
+            weaponInHandVisual.SetActive(true);
+        }
+        else // Nếu đang đi tay không (Vũ khí số 1)
+        {
+            weaponOnBackVisual.SetActive(true);
+            weaponInHandVisual.SetActive(false);
         }
     }
 
@@ -1563,6 +1652,18 @@ public class ElenaPlayer : NetworkBehaviour
 
     public void UpdateStateFromHUD(int weaponIndex, bool weapon2Locked, bool skillsUnlocked)
     {
+        // Xử lý riêng cho chế độ chơi đơn (Standalone Mode)
+        if (isStandaloneMode)
+        {
+            int oldWeapon = localActiveWeaponIndex;
+            localActiveWeaponIndex = weaponIndex;
+
+            // Gọi hoạt ảnh rút/cất vũ khí ngay lập tức tại máy local
+            PlayWeaponSwitchAnimation(oldWeapon, weaponIndex);
+            return;
+        }
+
+        // Nếu chơi Online Netcode thì mới check điều kiện và bắn RPC lên Server
         if (!IsSpawned || !IsOwner) return;
         UpdateStateServerRpc(weaponIndex, weapon2Locked, skillsUnlocked);
     }
@@ -1843,6 +1944,43 @@ public class ElenaPlayer : NetworkBehaviour
                stateInfo.IsName("Chem_3");
     }
 
+    private bool IsStatePlayingOnAnyLayer(string stateName)
+    {
+        if (anim == null || !anim.isActiveAndEnabled || anim.runtimeAnimatorController == null)
+            return false;
+
+        for (int i = 0; i < anim.layerCount; i++)
+        {
+            AnimatorStateInfo stateInfo = anim.GetCurrentAnimatorStateInfo(i);
+            if (stateInfo.IsName(stateName))
+                return true;
+            if (anim.IsInTransition(i))
+            {
+                AnimatorStateInfo nextStateInfo = anim.GetNextAnimatorStateInfo(i);
+                if (nextStateInfo.IsName(stateName))
+                    return true;
+            }
+        }
+        return false;
+    }
+
+    private bool IsStatePlayingOnLayer1(string stateName)
+    {
+        if (anim == null || !anim.isActiveAndEnabled || anim.runtimeAnimatorController == null || anim.layerCount <= 1)
+            return false;
+
+        AnimatorStateInfo stateInfo = anim.GetCurrentAnimatorStateInfo(1);
+        if (stateInfo.IsName(stateName))
+            return true;
+        if (anim.IsInTransition(1))
+        {
+            AnimatorStateInfo nextStateInfo = anim.GetNextAnimatorStateInfo(1);
+            if (nextStateInfo.IsName(stateName))
+                return true;
+        }
+        return false;
+    }
+
     private bool IsFullBodyActionAnimation(string name)
     {
         return name == "LonVong" || 
@@ -1866,6 +2004,8 @@ public class ElenaPlayer : NetworkBehaviour
         {
             return true;
         }
+
+
 
         // Các trạng thái toàn thân đặc biệt cần khóa di chuyển (trúng đòn, nhặt đồ, chết, nhào lộn)
         AnimatorStateInfo stateInfo = anim.GetCurrentAnimatorStateInfo(0);
@@ -1903,7 +2043,7 @@ public class ElenaPlayer : NetworkBehaviour
 
         if (anim == null || !anim.isActiveAndEnabled || anim.runtimeAnimatorController == null) return false;
 
-        // Nếu vừa kích hoạt trigger hành động full-body trong vòng 0.35 giây, coi như đang chạy action animation
+        // Nếu vừa kích hoạt trigger hành động trong vòng 0.35 giây, coi như đang chạy action animation
         if (IsFullBodyActionAnimation(lastTriggeredAnimName) && Time.time - lastActionTriggerTime < 0.35f) return true;
 
         // Khi đang nhào lộn (rolling), coi như đang chạy action animation
@@ -1931,6 +2071,8 @@ public class ElenaPlayer : NetworkBehaviour
                 return true;
             }
         }
+
+
 
         // 2. Kiểm tra các hành động toàn thân khác (như lộn vòng, trúng đòn, chết, nhặt đồ) trên Layer 0
         AnimatorStateInfo stateInfo = anim.GetCurrentAnimatorStateInfo(0);
@@ -2072,7 +2214,15 @@ public class ElenaPlayer : NetworkBehaviour
         }
         else
         {
-            anim.SetTrigger(animName);
+            if (anim.layerCount > 1 && (animName == drawWeaponTrigger || animName == sheathWeaponTrigger))
+            {
+                anim.SetLayerWeight(1, 1f);
+                anim.CrossFadeInFixedTime(animName, fadeTime, 1);
+            }
+            else
+            {
+                anim.SetTrigger(animName);
+            }
         }
 
         // Chỉ cập nhật currentAnimState cho các hoạt ảnh di chuyển hoặc hoạt ảnh hành động toàn thân (không phải đòn đánh di chuyển)
@@ -2134,7 +2284,27 @@ public class ElenaPlayer : NetworkBehaviour
             anim.SetLayerWeight(1, 0f); // Reset weight của Layer 1 về 0
             // Reset Layer 1 (AttackLayer) về trạng thái Empty/New State mặc định
             anim.Play("New State", 1, 0f);
-            anim.Play("Empty", 1, 0f);
         }
     }
+
+    // ==================================================================
+    //  Animation Events (Được gọi tự động từ Animation Clips)
+    // ==================================================================
+
+    // Gọi tại frame tay chạm vào lưng để rút vũ khí
+    public void OnWeaponDrawGrab()
+    {
+        if (weaponOnBackVisual != null) weaponOnBackVisual.SetActive(false);
+        if (weaponInHandVisual != null) weaponInHandVisual.SetActive(true);
+        Debug.Log("[Animation Event] Đã rút vũ khí lên tay!");
+    }
+
+    // Gọi tại frame tay đặt vũ khí vào sau lưng để cất
+    public void OnWeaponSheathPlace()
+    {
+        if (weaponOnBackVisual != null) weaponOnBackVisual.SetActive(true);
+        if (weaponInHandVisual != null) weaponInHandVisual.SetActive(false);
+        Debug.Log("[Animation Event] Đã cất vũ khí vào lưng!");
+    }
+    
 }
