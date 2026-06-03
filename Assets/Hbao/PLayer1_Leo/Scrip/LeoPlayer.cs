@@ -300,7 +300,7 @@ public class LeoPlayer : NetworkBehaviour
         Debug.Log("[LeoPlayer] Starting in STANDALONE mode. Local inputs active.");
         targetCamera = Camera.main;
         if (targetCamera == null)
-            targetCamera = FindAnyObjectByType<Camera>();
+            targetCamera = FindObjectOfType<Camera>();
 
         characterClassIndex = PlayerPrefs.GetInt("SelectedCharacterId", characterClassIndex);
         localLevel = PlayerPrefs.GetInt("SelectedPlayerLevel_" + characterClassIndex, 0);
@@ -1271,7 +1271,7 @@ public class LeoPlayer : NetworkBehaviour
                 if (name == itemName)
                 {
                     inventorySlots[i] = name + ":" + (count + 1);
-                    PlayerHUDController hud = FindAnyObjectByType<PlayerHUDController>();
+                    PlayerHUDController hud = FindObjectOfType<PlayerHUDController>();
                     if (hud != null) hud.SetInventorySlots(inventorySlots);
                     if (!isStandaloneMode) SavePlayerStateToDatabase();
                     if (playAnimation) PlayAnimation("Idle_Pick", 0.1f);
@@ -1285,7 +1285,7 @@ public class LeoPlayer : NetworkBehaviour
             if (string.IsNullOrEmpty(inventorySlots[i]))
             {
                 inventorySlots[i] = itemName + ":1";
-                PlayerHUDController hud = FindAnyObjectByType<PlayerHUDController>();
+                PlayerHUDController hud = FindObjectOfType<PlayerHUDController>();
                 if (hud != null) hud.SetInventorySlots(inventorySlots);
                 if (!isStandaloneMode) SavePlayerStateToDatabase();
                 if (playAnimation) PlayAnimation("Idle_Pick", 0.1f);
@@ -2158,23 +2158,46 @@ public class LeoPlayer : NetworkBehaviour
         LockCursor(locked);
     }
 
+    private PlayerHUDController hudControllerCache;
+    private float lastTimeUIOpen = 0f;
+
+    private PlayerHUDController GetHUDController()
+    {
+        if (hudControllerCache == null)
+        {
+            hudControllerCache = FindObjectOfType<PlayerHUDController>();
+        }
+        return hudControllerCache;
+    }
+
     /// <summary>
     /// Kiểm tra xem UI (Hành trang, Bản đồ, Đối thoại) có đang mở chặn input hay không.
     /// </summary>
     public bool IsUIBlockingInput()
     {
-        PlayerHUDController hud = FindAnyObjectByType<PlayerHUDController>();
-        if (hud != null && hud.isActiveAndEnabled)
+        bool uiOpen = false;
+
+        // Kiểm tra biến static cực nhanh và chính xác 100% không lo null hay sai lệch frame
+        if (PlayerHUDController.isAnyUIOpen)
         {
-            if (hud.IsInventoryOpen() || hud.IsMapOpen())
-            {
-                return true;
-            }
+            uiOpen = true;
         }
 
         bool isDialogueOpen = (RakanDialogueController.Instance != null && RakanDialogueController.Instance.IsActive) ||
                               (SilasDialogueController.Instance != null && SilasDialogueController.Instance.IsActive);
         if (isDialogueOpen)
+        {
+            uiOpen = true;
+        }
+
+        if (uiOpen)
+        {
+            lastTimeUIOpen = Time.time;
+            return true;
+        }
+
+        // Chặn click chuột thêm 0.15 giây sau khi đóng UI để tránh click đóng UI bị đi xuyên làm nhân vật chém
+        if (Time.time - lastTimeUIOpen < 0.15f)
         {
             return true;
         }
