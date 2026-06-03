@@ -72,7 +72,7 @@ public class CollectibleItemDrop : NetworkBehaviour
                 // 3. Lắng nghe phím F để nhặt
                 if (Input.GetKeyDown(KeyCode.F))
                 {
-                    CollectItem();
+                    StartCollecting();
                 }
             }
             // 4. Nếu người chơi đi ra khỏi vùng tương tác hoặc không còn là gần nhất
@@ -136,20 +136,31 @@ public class CollectibleItemDrop : NetworkBehaviour
         }
     }
 
-    private void CollectItem()
+    private void StartCollecting()
     {
         if (localPlayer == null) return;
 
-        // Thử thêm vật phẩm vào hòm đồ (hỗ trợ tự động cộng dồn stack)
-        bool added = localPlayer.TryAddItem(itemName);
+        // Gán vật phẩm chờ nhặt cho người chơi
+        localPlayer.pendingPickItem = gameObject;
+
+        // Tắt nhắc nhở tương tác ngay lập tức
+        if (hud != null)
+        {
+            hud.ShowInteractionPrompt(false, "");
+        }
+
+        // Phát hoạt ảnh nhặt đồ trên Player
+        localPlayer.PlayAnimation("Pick", 0.1f);
+    }
+
+    public void ConfirmCollect()
+    {
+        if (localPlayer == null) return;
+
+        // Thử thêm vật phẩm vào hòm đồ mà không chạy lại hoạt ảnh
+        bool added = localPlayer.TryAddItem(itemName, false);
         if (added)
         {
-            // Tắt nhắc nhở tương tác ngay lập tức
-            if (hud != null)
-            {
-                hud.ShowInteractionPrompt(false, "");
-            }
-
             // Hủy/Despawn vật lý
             if (localPlayer.isStandaloneMode)
             {

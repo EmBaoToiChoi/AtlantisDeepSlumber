@@ -212,4 +212,16 @@ public class RollAnimationEventHelper : MonoBehaviour
             player.UnlockMovement();
         }
     }
+
+    /// <summary>
+    /// Event receiver được gọi khi nhân vật cúi xuống nhặt đồ.
+    /// </summary>
+    public void OnPickItemEvent()
+    {
+        EnsurePlayerReference();
+        if (player != null)
+        {
+            player.OnPickItemEvent();
+        }
+    }
 }

@@ -540,11 +540,30 @@ public class PlayerHUDController : MonoBehaviour
             inventoryOverlay.ToggleInClassList("show-inventory");
             bool isNowVisible = inventoryOverlay.ClassListContains("show-inventory");
             Debug.Log("Đã " + (isNowVisible ? "mở" : "đóng") + " hành trang");
+
+            // Tự động ẩn/hiện con trỏ chuột phù hợp với trạng thái UI hành trang
+            var localPlayer = FindObjectOfType<LeoPlayer>();
+            if (localPlayer != null)
+            {
+                localPlayer.SetCursorLock(!isNowVisible);
+            }
+            else
+            {
+                if (isNowVisible)
+                {
+                    UnityEngine.Cursor.lockState = CursorLockMode.None;
+                    UnityEngine.Cursor.visible = true;
+                }
+                else
+                {
+                    UnityEngine.Cursor.lockState = CursorLockMode.Locked;
+                    UnityEngine.Cursor.visible = false;
+                }
+            }
             
             // Tự động lưu trạng thái người chơi vào MongoDB khi đóng hành trang
             if (!isNowVisible)
             {
-                var localPlayer = FindObjectOfType<LeoPlayer>();
                 if (localPlayer != null && localPlayer.IsSpawned && localPlayer.IsOwner)
                 {
                     localPlayer.SavePlayerStateToDatabase();
@@ -1286,5 +1305,39 @@ public class PlayerHUDController : MonoBehaviour
         }
 
         Debug.Log($"[PlayerHUDController] Đã thiết lập thành công giao diện cho lớp nhân vật: {profile.className} (Index {profileIndex})");
+    }
+
+    public bool IsInventoryOpen()
+    {
+        return inventoryOverlay != null && inventoryOverlay.ClassListContains("show-inventory");
+    }
+
+    public bool IsMapOpen()
+    {
+        return worldMapOverlay != null && worldMapOverlay.ClassListContains("show-map");
+    }
+
+    private void Start()
+    {
+        // Tự động kiểm tra và cấu hình EventSystem phù hợp với Input System mới
+        var eventSystem = FindAnyObjectByType<UnityEngine.EventSystems.EventSystem>();
+        if (eventSystem == null)
+        {
+            GameObject esObj = new GameObject("EventSystem");
+            eventSystem = esObj.AddComponent<UnityEngine.EventSystems.EventSystem>();
+            esObj.AddComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
+            Debug.Log("[PlayerHUDController] Created EventSystem with InputSystemUIInputModule.");
+        }
+        else
+        {
+            // Thay thế module cũ bằng InputSystemUIInputModule nếu cần
+            var oldModule = eventSystem.GetComponent<UnityEngine.EventSystems.BaseInputModule>();
+            if (oldModule != null && !(oldModule is UnityEngine.InputSystem.UI.InputSystemUIInputModule))
+            {
+                Destroy(oldModule);
+                eventSystem.gameObject.AddComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
+                Debug.Log("[PlayerHUDController] Replaced old BaseInputModule with InputSystemUIInputModule.");
+            }
+        }
     }
 }
