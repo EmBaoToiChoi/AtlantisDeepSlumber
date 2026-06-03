@@ -338,6 +338,7 @@ public class ElenaPlayer : NetworkBehaviour
         // Đăng ký sự kiện đồng bộ độ bền vũ khí
         weapon1Durability.OnValueChanged += OnDurabilityChanged;
         weapon2Durability.OnValueChanged += OnDurabilityChanged;
+        currentHealth.OnValueChanged += OnHealthChangedShared;
 
         if (IsOwner)
         {
@@ -382,6 +383,7 @@ public class ElenaPlayer : NetworkBehaviour
         // Hủy đăng ký sự kiện độ bền vũ khí
         weapon1Durability.OnValueChanged -= OnDurabilityChanged;
         weapon2Durability.OnValueChanged -= OnDurabilityChanged;
+        currentHealth.OnValueChanged -= OnHealthChangedShared;
 
         if (IsOwner)
             currentHealth.OnValueChanged -= OnHealthChanged;
@@ -424,6 +426,16 @@ public class ElenaPlayer : NetworkBehaviour
         if (IsOwner)
         {
             SavePlayerStateToDatabase();
+        }
+    }
+
+    private void OnHealthChangedShared(float oldHealth, float newHealth)
+    {
+        if (newHealth < oldHealth)
+        {
+            var flash = GetComponent<MaterialFlashBehaviour>();
+            if (flash == null) flash = gameObject.AddComponent<MaterialFlashBehaviour>();
+            flash.Flash(Color.red, 0.15f);
         }
     }
 
@@ -1502,6 +1514,11 @@ public class ElenaPlayer : NetworkBehaviour
             localHealth = Mathf.Max(localHealth - damage, 0f);
             UpdateHealthHUD(localHealth);
             Debug.Log($"[ElenaPlayer] {gameObject.name} nhận {damage} sát thương. Máu còn: {localHealth}");
+
+            var flash = GetComponent<MaterialFlashBehaviour>();
+            if (flash == null) flash = gameObject.AddComponent<MaterialFlashBehaviour>();
+            flash.Flash(Color.red, 0.15f);
+
             if (localHealth <= 0)
             {
                 Debug.LogWarning($"[ElenaPlayer] {gameObject.name} đã chết!");

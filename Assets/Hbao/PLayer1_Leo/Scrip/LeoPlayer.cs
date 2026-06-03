@@ -3136,6 +3136,7 @@ public class LeoPlayer : NetworkBehaviour
         weapon1Durability.OnValueChanged += OnDurabilityChanged;
         weapon2Durability.OnValueChanged += OnDurabilityChanged;
         isMovementLockedNet.OnValueChanged += OnMovementLockedNetChanged;
+        currentHealth.OnValueChanged += OnHealthChangedShared;
 
         if (IsOwner)
         {
@@ -3174,6 +3175,7 @@ public class LeoPlayer : NetworkBehaviour
         weapon1Durability.OnValueChanged -= OnDurabilityChanged;
         weapon2Durability.OnValueChanged -= OnDurabilityChanged;
         isMovementLockedNet.OnValueChanged -= OnMovementLockedNetChanged;
+        currentHealth.OnValueChanged -= OnHealthChangedShared;
 
         if (IsOwner)
             currentHealth.OnValueChanged -= OnHealthChanged;
@@ -3382,6 +3384,12 @@ public class LeoPlayer : NetworkBehaviour
             move = camRight * moveX + camForward * moveZ;
         }
 
+        // Khắc phục lỗi di chuyển chéo bị nhanh hơn bình thường (Diagonal Speedup)
+        if (move.magnitude > 1f)
+        {
+            move.Normalize();
+        }
+
         Vector3 movementTranslation = move;
         if (isRootedAttack && IsPlayingActionAnimation())
         {
@@ -3565,6 +3573,12 @@ public class LeoPlayer : NetworkBehaviour
             move = camRight * moveX + camForward * moveZ;
         }
 
+        // Khắc phục lỗi di chuyển chéo bị nhanh hơn bình thường (Diagonal Speedup)
+        if (move.magnitude > 1f)
+        {
+            move.Normalize();
+        }
+
         Vector3 movementTranslation = move;
         if (isRootedAttack && IsPlayingActionAnimation())
         {
@@ -3707,6 +3721,35 @@ public class LeoPlayer : NetworkBehaviour
         return 0.5f;
     }
 
+    private Coroutine autoHitboxCoroutine;
+
+    private System.Collections.IEnumerator AutoEnableHitboxesCoroutine(int weapon, string animToPlay)
+    {
+        // Chờ một chút để hoạt ảnh bắt đầu vung đòn (ví dụ 0.12 giây)
+        yield return new WaitForSeconds(0.12f);
+
+        if (weapon == 2)
+        {
+            EnableBothWeaponHitboxes();
+        }
+        else
+        {
+            EnableBothHitboxes();
+        }
+
+        // Duy trì hitbox bật trong khoảng 0.25 giây (thời gian vung đòn)
+        yield return new WaitForSeconds(0.25f);
+
+        if (weapon == 2)
+        {
+            DisableBothWeaponHitboxes();
+        }
+        else
+        {
+            DisableBothHitboxes();
+        }
+    }
+
     protected void PerformComboAttack(bool networkMode)
     {
         int weapon = GetActiveWeaponIndex();
@@ -3718,14 +3761,20 @@ public class LeoPlayer : NetworkBehaviour
         DisableLeftWeaponHitbox();
         DisableRightWeaponHitbox();
 
+        if (autoHitboxCoroutine != null)
+        {
+            StopCoroutine(autoHitboxCoroutine);
+        }
+
         // Tuyệt đối không khóa di chuyển (Triệt tiêu lỗi vặn xoắn xương do đứng im)
         isRootedAttack = false;
         SetMovementLock(false);
 
+        string animToPlay = "";
         if (weapon == 2)
         {
             // KIẾM (ARMED): RANDOM ĐÒN ĐÁNH 50-50 CHỐNG NHÀM CHÁN
-            string animToPlay = (Random.value < 0.5f) ? "Slash1" : "Slash2";
+            animToPlay = (Random.value < 0.5f) ? "Slash1" : "Slash2";
 
             Debug.Log($"[LeoPlayer] Sword attack (Random 50-50). Playing: {animToPlay}");
 
@@ -3738,7 +3787,7 @@ public class LeoPlayer : NetworkBehaviour
             comboStep++;
             if (comboStep > 3) comboStep = 1;
 
-            string animToPlay = "Punch1";
+            animToPlay = "Punch1";
             if (comboStep == 2) animToPlay = "Punch2";
             else if (comboStep == 3) animToPlay = "Punch3";
 
@@ -3746,6 +3795,8 @@ public class LeoPlayer : NetworkBehaviour
 
             PlayAnimation(animToPlay, 0.05f, false);
         }
+
+        autoHitboxCoroutine = StartCoroutine(AutoEnableHitboxesCoroutine(weapon, animToPlay));
     }
 
     private void TryDamageEnemy(Collider col)
@@ -3946,6 +3997,11 @@ public class LeoPlayer : NetworkBehaviour
             localHealth = Mathf.Max(localHealth - damage, 0f);
             UpdateHealthHUD(localHealth);
             Debug.Log($"[LeoPlayer Standalone] Recieved {damage} DMG. Health: {localHealth}");
+
+            var flash = GetComponent<MaterialFlashBehaviour>();
+            if (flash == null) flash = gameObject.AddComponent<MaterialFlashBehaviour>();
+            flash.Flash(Color.red, 0.15f);
+
             if (localHealth <= 0)
             {
                 if (rb != null) rb.linearVelocity = Vector3.zero;
@@ -4345,6 +4401,16 @@ public class LeoPlayer : NetworkBehaviour
         if (IsOwner)
         {
             SavePlayerStateToDatabase();
+        }
+    }
+
+    private void OnHealthChangedShared(float oldHealth, float newHealth)
+    {
+        if (newHealth < oldHealth)
+        {
+            var flash = GetComponent<MaterialFlashBehaviour>();
+            if (flash == null) flash = gameObject.AddComponent<MaterialFlashBehaviour>();
+            flash.Flash(Color.red, 0.15f);
         }
     }
 
@@ -5193,8 +5259,8 @@ public class LeoPlayer : NetworkBehaviour
             }
             BoxCollider col = leftObj.GetComponent<BoxCollider>() ?? leftObj.AddComponent<BoxCollider>();
             col.isTrigger = true;
-            col.size = new Vector3(0.2f, 0.2f, 0.2f);
-            col.center = Vector3.zero;
+            col.size = new Vector3(0.6f, 0.6f, 0.6f);
+            col.center = new Vector3(0f, 0f, 0.2f);
             col.enabled = false;
             if (leftObj.GetComponent<PlayerHitbox>() == null) leftObj.AddComponent<PlayerHitbox>();
             leftHitbox = col;
@@ -5213,8 +5279,8 @@ public class LeoPlayer : NetworkBehaviour
             }
             BoxCollider col = rightObj.GetComponent<BoxCollider>() ?? rightObj.AddComponent<BoxCollider>();
             col.isTrigger = true;
-            col.size = new Vector3(0.2f, 0.2f, 0.2f);
-            col.center = Vector3.zero;
+            col.size = new Vector3(0.6f, 0.6f, 0.6f);
+            col.center = new Vector3(0f, 0f, 0.2f);
             col.enabled = false;
             if (rightObj.GetComponent<PlayerHitbox>() == null) rightObj.AddComponent<PlayerHitbox>();
             rightHitbox = col;

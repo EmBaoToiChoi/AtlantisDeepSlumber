@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.UIElements;
 using UnityEngine.InputSystem;
+using Unity.Netcode;
 using System.Collections;
 using System.Collections.Generic;
 
@@ -271,9 +272,6 @@ public class RakanDialogueController : MonoBehaviour
         StartDialogue(lines, player, null, 0);
     }
 
-    /// <summary>
-    /// Khởi tạo cây đối thoại rẽ nhánh Rakan với truyền thuyết Atlantis
-    /// </summary>
     private void InitializeDialogueTree()
     {
         dialogueTree.Clear();
@@ -287,12 +285,25 @@ public class RakanDialogueController : MonoBehaviour
             nextStepId = -1
         };
         dialogueTree.Add(0, step0);
-        // Step 999: Thông báo yêu cầu đủ 4 người
+
+        // Đếm tổng số người chơi kết nối trong phòng
+        int totalPlayers = 1;
+        if (NetworkManager.Singleton != null && NetworkManager.Singleton.ConnectedClients != null)
+        {
+            totalPlayers = NetworkManager.Singleton.ConnectedClients.Count;
+        }
+        else
+        {
+            LeoPlayer[] players = FindObjectsOfType<LeoPlayer>();
+            if (players != null && players.Length > 0) totalPlayers = players.Length;
+        }
+
+        // Step 999: Thông báo yêu cầu đủ toàn bộ người chơi đứng gần
         DialogueStepNode step999 = new DialogueStepNode
         {
             stepId = 999,
             speakerName = "Rakan",
-            text = "\"Hãy gọi bạn các ngươi đến đây! Ta chỉ đối thoại khi có đủ 4 chiến binh tụ họp tại đây.\"",
+            text = $"\"Hãy gọi bạn các ngươi đến đây! Ta chỉ đối thoại khi có đủ {totalPlayers} chiến binh tụ họp tại đây.\"",
             nextStepId = -1
         };
         dialogueTree.Add(999, step999);

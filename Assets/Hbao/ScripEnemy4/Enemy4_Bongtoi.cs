@@ -114,9 +114,26 @@ public class Enemy4_Bongtoi : NetworkBehaviour
         if (nt != null) { nt.PositionThreshold = 0.001f; nt.RotAngleThreshold = 0.01f; nt.ScaleThreshold = 0.01f; }
         netSpeed.OnValueChanged       += (_, v) => ApplySpeedAnim(v);
         hitCounter.OnValueChanged     += (_, _) => { if (anim != null) anim.SetTrigger(hitTrigger); };
+        currentHealth.OnValueChanged  += OnHealthNetChanged;
         ApplySpeedAnim(netSpeed.Value);
         if (IsServer) { currentHealth.Value = maxHealth; SnapToNavMesh(); DisableHitboxes(); GoToNextWaypoint(); }
         else { if (agent != null) agent.enabled = false; }
+    }
+
+    public override void OnNetworkDespawn()
+    {
+        netSpeed.OnValueChanged       -= (_, v) => ApplySpeedAnim(v);
+        hitCounter.OnValueChanged     -= (_, _) => { if (anim != null) anim.SetTrigger(hitTrigger); };
+        currentHealth.OnValueChanged  -= OnHealthNetChanged;
+    }
+
+    private void OnHealthNetChanged(float oldVal, float newVal)
+    {
+        float diff = oldVal - newVal;
+        if (diff > 0)
+        {
+            EnemyDamageEffectHelper.PlayDamageEffects(gameObject, diff);
+        }
     }
 
     private void Update()
@@ -170,7 +187,9 @@ public class Enemy4_Bongtoi : NetworkBehaviour
         if (ps != null && ps.CurrentHealth <= 0) { targetPlayer = null; ReturnToPatrol(); return; }
         Vector3 ld = (targetPlayer.position - transform.position); ld.y = 0;
         if (ld.sqrMagnitude > 0.01f) transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(ld), Time.deltaTime * 15f);
-        float dist = Vector3.Distance(transform.position, targetPlayer.position);
+        Vector3 flatEnemy = transform.position; flatEnemy.y = 0;
+        Vector3 flatPlayer = targetPlayer.position; flatPlayer.y = 0;
+        float dist = Vector3.Distance(flatEnemy, flatPlayer);
         if (dist <= attackRange) { if (AgentReady) agent.isStopped = true; SetSpeedNet(0f); if (attackCooldownTimer <= 0) ChangeState(EnemyState.Attack); return; }
         bool enraged = CurrentHealthValue < maxHealth * 0.5f;
         if (AgentReady) { agent.isStopped = false; agent.speed = enraged ? chaseRunSpeed * 1.3f : chaseRunSpeed; agent.SetDestination(targetPlayer.position); }
@@ -258,6 +277,7 @@ public class Enemy4_Bongtoi : NetworkBehaviour
         if (!isStandaloneMode && (!IsServer || CurrentStateValue == EnemyState.Dead)) return;
         if (isStandaloneMode && CurrentStateValue == EnemyState.Dead) return;
         CurrentHealthValue -= damage;
+        if (isStandaloneMode) EnemyDamageEffectHelper.PlayDamageEffects(gameObject, damage);
         if (!isStandaloneMode) hitCounter.Value++; else if (anim != null) anim.SetTrigger(hitTrigger);
         if (CurrentHealthValue <= 0) { ChangeState(EnemyState.Dead); return; }
         float now = Time.time; if (now - lastDamageTime > 3f) recentHitCount = 0; recentHitCount++; lastDamageTime = now;

@@ -265,65 +265,65 @@ MonoBehaviour:
   - IsCrossFadeExit: 0
     Layer: 1
     OriginatingState: -499022955
-    DestinationState: 538895171
-    TransitionDuration: 0.05
-    TriggerNameHash: 538895171
-    TransitionIndex: 0
-  - IsCrossFadeExit: 0
-    Layer: 1
-    OriginatingState: -499022955
     DestinationState: -1487840235
     TransitionDuration: 0.05
     TriggerNameHash: -1487840235
-    TransitionIndex: 1
+    TransitionIndex: 0
   - IsCrossFadeExit: 0
     Layer: 1
     OriginatingState: -499022955
     DestinationState: -890948948
     TransitionDuration: 0.05
     TriggerNameHash: -1068915434
-    TransitionIndex: 2
+    TransitionIndex: 1
   - IsCrossFadeExit: 0
     Layer: 1
     OriginatingState: -499022955
     DestinationState: 48138164
     TransitionDuration: 0.05
     TriggerNameHash: 337460475
-    TransitionIndex: 3
+    TransitionIndex: 2
   - IsCrossFadeExit: 0
     Layer: 1
     OriginatingState: -499022955
     DestinationState: -1676855739
     TransitionDuration: 0.05
     TriggerNameHash: -576533199
-    TransitionIndex: 4
+    TransitionIndex: 3
   - IsCrossFadeExit: 0
     Layer: 1
     OriginatingState: -499022955
     DestinationState: -1722614907
     TransitionDuration: 0.05
     TriggerNameHash: 63768429
-    TransitionIndex: 5
+    TransitionIndex: 4
   - IsCrossFadeExit: 0
     Layer: 1
     OriginatingState: -499022955
     DestinationState: 1918811966
     TransitionDuration: 0.05
     TriggerNameHash: -1960256152
-    TransitionIndex: 6
+    TransitionIndex: 5
   - IsCrossFadeExit: 0
     Layer: 1
     OriginatingState: -499022955
     DestinationState: 1248065335
     TransitionDuration: 0.05
     TriggerNameHash: 1248065335
-    TransitionIndex: 7
+    TransitionIndex: 6
   - IsCrossFadeExit: 0
     Layer: 1
     OriginatingState: -499022955
     DestinationState: -726645050
     TransitionDuration: 0.05
     TriggerNameHash: -726645050
+    TransitionIndex: 7
+  - IsCrossFadeExit: 0
+    Layer: 1
+    OriginatingState: -499022955
+    DestinationState: 1430660160
+    TransitionDuration: 0.05
+    TriggerNameHash: 538895171
     TransitionIndex: 8
   AnimatorParameterEntries:
     ParameterEntries:
@@ -755,6 +755,10 @@ PrefabInstance:
     - target: {fileID: 7746087205335653923, guid: 480e5205a0da80444a55cca6939d2095, type: 3}
       propertyPath: m_Name
       value: Sword (1)
+      objectReference: {fileID: 0}
+    - target: {fileID: 7746087205335653923, guid: 480e5205a0da80444a55cca6939d2095, type: 3}
+      propertyPath: m_TagString
+      value: Untagged
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -1587,6 +1591,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Sword
       objectReference: {fileID: 0}
+    - target: {fileID: 7746087205335653923, guid: 480e5205a0da80444a55cca6939d2095, type: 3}
+      propertyPath: m_TagString
+      value: Untagged
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -1653,6 +1661,10 @@ PrefabInstance:
     - target: {fileID: 7746087205335653923, guid: 480e5205a0da80444a55cca6939d2095, type: 3}
       propertyPath: m_Name
       value: Sword
+      objectReference: {fileID: 0}
+    - target: {fileID: 7746087205335653923, guid: 480e5205a0da80444a55cca6939d2095, type: 3}
+      propertyPath: m_TagString
+      value: Untagged
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []

@@ -152,12 +152,13 @@ public class RakanNPC : NetworkBehaviour
                         RakanDialogueController.Instance.ShowPrompt(false);
                     }
 
-                    // Kiểm tra số lượng người chơi đáp ứng yêu cầu
-                    int currentPlayersCount = GetPlayersCount();
+                    // Kiểm tra số lượng người chơi đáp ứng yêu cầu (tất cả người chơi kết nối phải đứng gần NPC)
+                    int totalPlayersCount = GetTotalConnectedPlayers();
+                    int nearbyPlayersCount = GetNearbyPlayersCount();
 
-                    if (currentPlayersCount < 4)
+                    if (nearbyPlayersCount < totalPlayersCount)
                     {
-                        // HIỂN THỊ CẢNH BÁO CỤC BỘ: Nếu chưa đủ 4 người, hiển thị Step 999 ("Hãy gọi bạn các ngươi đến đây") chỉ trên máy người ấn
+                        // HIỂN THỊ CẢNH BÁO CỤC BỘ: Nếu chưa đủ toàn bộ người chơi đứng gần, hiển thị Step 999
                         if (RakanDialogueController.Instance != null)
                         {
                             RakanDialogueController.Instance.StartDialogue(dialogueLines, localPlayer, this, 999);
@@ -165,7 +166,7 @@ public class RakanNPC : NetworkBehaviour
                     }
                     else
                     {
-                        // ĐỦ 4 NGƯỜI: Tiến hành mở hội thoại truyền thuyết Atlantis chính thức
+                        // ĐỦ NGƯỜI: Tiến hành mở hội thoại truyền thuyết Atlantis chính thức
                         if (localPlayer.isStandaloneMode)
                         {
                             if (RakanDialogueController.Instance != null)
@@ -192,15 +193,16 @@ public class RakanNPC : NetworkBehaviour
                 // Lắng nghe người chơi nhấn phím G lần nữa để đóng trò chuyện
                 if (Keyboard.current != null && Keyboard.current.gKey.wasPressedThisFrame)
                 {
-                    int currentPlayersCount = GetPlayersCount();
+                    int totalPlayersCount = GetTotalConnectedPlayers();
+                    int nearbyPlayersCount = GetNearbyPlayersCount();
                     // Cho phép đóng bằng G nếu: thiếu người, hoặc câu chuyện đã kể xong
-                    if (currentPlayersCount < 4 || RakanDialogueController.HasFinishedStoryOnce)
+                    if (nearbyPlayersCount < totalPlayersCount || RakanDialogueController.HasFinishedStoryOnce)
                     {
                         HideDialogueAndPrompt();
                     }
                     else
                     {
-                        Debug.Log("[RakanNPC] Đang trong cuộc đối thoại cốt truyện 4 người, phím G bị khóa không thể tắt chat!");
+                        Debug.Log("[RakanNPC] Đang trong cuộc đối thoại cốt truyện, phím G bị khóa không thể tắt chat!");
                     }
                 }
             }
@@ -208,42 +210,39 @@ public class RakanNPC : NetworkBehaviour
     }
 
     /// <summary>
-    /// Đếm số lượng người chơi dựa theo cài đặt kiểm tra (Đứng gần hoặc Kết nối session)
+    /// Đếm tổng số lượng người chơi đã kết nối trong phòng qua Netcode
     /// </summary>
-    private int GetPlayersCount()
+    private int GetTotalConnectedPlayers()
     {
-        // Cho phép bỏ qua kiểm tra khi chơi Offline (Standalone) để lập trình viên dễ test 1 mình
         if (localPlayer != null && localPlayer.isStandaloneMode)
         {
-            return 4;
+            return 1;
         }
 
-        if (countOnlyNearbyPlayers)
+        if (NetworkManager.Singleton != null && NetworkManager.Singleton.ConnectedClients != null)
         {
-            // Kiểm tra số lượng người chơi đang đứng trong bán kính triggerRadius của NPC
-            int count = 0;
-            LeoPlayer[] players = FindObjectsOfType<LeoPlayer>();
-            foreach (var p in players)
-            {
-                if (Vector3.Distance(transform.position, p.transform.position) <= triggerRadius)
-                {
-                    count++;
-                }
-            }
-            return count;
+            return NetworkManager.Singleton.ConnectedClients.Count;
         }
-        else
-        {
-            // Kiểm tra số lượng người chơi đã kết nối qua Netcode Multiplayer
-            if (NetworkManager.Singleton != null && NetworkManager.Singleton.ConnectedClients != null)
-            {
-                return NetworkManager.Singleton.ConnectedClients.Count;
-            }
 
-            // Phương án dự phòng (Fallback) đếm số player GameObjects
-            LeoPlayer[] players = FindObjectsOfType<LeoPlayer>();
-            return players != null ? players.Length : 1;
+        LeoPlayer[] players = FindObjectsOfType<LeoPlayer>();
+        return players != null ? players.Length : 1;
+    }
+
+    /// <summary>
+    /// Đếm số lượng người chơi đang đứng trong bán kính trigger của NPC
+    /// </summary>
+    private int GetNearbyPlayersCount()
+    {
+        int count = 0;
+        LeoPlayer[] players = FindObjectsOfType<LeoPlayer>();
+        foreach (var p in players)
+        {
+            if (Vector3.Distance(transform.position, p.transform.position) <= triggerRadius)
+            {
+                count++;
+            }
         }
+        return count;
     }
 
     private void OnTriggerEnter(Collider other)
