@@ -16,17 +16,11 @@ public class InteractBox : NetworkBehaviour
 
     void Update()
     {
-        // BỎ DÒNG NÀY: if (!IsOwner) return; 
-        // Vì InteractBox là trạm, không phải nhân vật, nên không có owner là người chơi.
-
-        // 2. Không xử lý input nếu đang chạy Headless
         if (Application.isBatchMode) return;
 
-        // Chỉ kiểm tra khi có người chơi bên trong và người chơi đó là chính mình (Local Player)
         if (isPlayerInside && localPlayerInteraction != null)
         {
-            // Kiểm tra xem localPlayerInteraction có đúng là người chơi hiện tại trên máy này không
-            if (localPlayerInteraction.IsOwner && Keyboard.current != null && Keyboard.current.eKey.wasPressedThisFrame)
+            if (localPlayerInteraction.IsOwner && Keyboard.current != null && Keyboard.current.gKey.wasPressedThisFrame)
             {
                 if (localPlayerInteraction.isCarryingCore.Value && localPlayerInteraction.currentHeldCore != null)
                 {
@@ -52,7 +46,10 @@ public class InteractBox : NetworkBehaviour
         isUsingStation = true;
         RequestStationAccessServerRpc(stationIndex);
         gameManager.ToggleMiniGame(stationIndex, true);
-        localPlayerInteraction.GetComponent<PlayerMovement>()?.SetCanMove(false);
+        
+        // ĐÃ SỬA: Khóa chân LeoPlayer để bấm A/D không bị trượt ra ngoài
+        var leoPlayer = localPlayerInteraction.GetComponent<LeoPlayer>();
+        if (leoPlayer != null) leoPlayer.SetMovementLock(true);
     }
 
     private void ExitStation()
@@ -61,14 +58,11 @@ public class InteractBox : NetworkBehaviour
         RequestStationReleaseServerRpc(stationIndex);
         gameManager.ToggleMiniGame(stationIndex, false);
         
-        // An toàn tuyệt đối
+        // ĐÃ SỬA: Mở khóa chân cho LeoPlayer
         if (localPlayerInteraction != null)
         {
-            var movement = localPlayerInteraction.GetComponent<PlayerMovement>();
-            if (movement != null) 
-            {
-                movement.SetCanMove(true);
-            }
+            var leoPlayer = localPlayerInteraction.GetComponent<LeoPlayer>();
+            if (leoPlayer != null) leoPlayer.SetMovementLock(false);
         }
     }
 
@@ -96,10 +90,8 @@ public class InteractBox : NetworkBehaviour
             {
                 var core = playerInt.currentHeldCore;
                 
-                // 1. Ép buộc thả trên Server
                 playerInt.ForceDropFromStation(); 
                 
-                // 2. Khóa ngọc vào trạm
                 core.LockToStation();
                 core.transform.position = crystalSnapPoint.position;
                 core.transform.rotation = crystalSnapPoint.rotation;

@@ -172,9 +172,14 @@ public class PlayerHUDController : MonoBehaviour
 
         // Tìm Label cảnh báo, Overlay bản đồ và Hành trang
         worldMapOverlay = root.Q<VisualElement>("world-map-overlay");
+        if (worldMapOverlay != null)
+        {
+            worldMapOverlay.pickingMode = PickingMode.Ignore; // Mặc định ẩn, bỏ qua cản chuột
+        }
         inventoryOverlay = root.Q<VisualElement>("inventory-overlay");
         if (inventoryOverlay != null)
         {
+            inventoryOverlay.pickingMode = PickingMode.Ignore; // Mặc định ẩn, bỏ qua cản chuột
             inventoryOverlay.RegisterCallback<PointerDownEvent>(evt =>
             {
                 if (evt.target == inventoryOverlay)
@@ -258,10 +263,13 @@ public class PlayerHUDController : MonoBehaviour
         // Tạo sẵn phần tử hiển thị mô tả (Tooltip)
         tooltipElement = new VisualElement();
         tooltipElement.AddToClassList("inventory-tooltip");
+        tooltipElement.pickingMode = PickingMode.Ignore; // Tránh cản chuột
         tooltipTitle = new Label();
         tooltipTitle.AddToClassList("inventory-tooltip-title");
+        tooltipTitle.pickingMode = PickingMode.Ignore;
         tooltipDesc = new Label();
         tooltipDesc.AddToClassList("inventory-tooltip-desc");
+        tooltipDesc.pickingMode = PickingMode.Ignore;
         tooltipElement.Add(tooltipTitle);
         tooltipElement.Add(tooltipDesc);
         root.Add(tooltipElement);
@@ -356,6 +364,7 @@ public class PlayerHUDController : MonoBehaviour
                 {
                     worldMapOverlay.ToggleInClassList("show-map");
                     bool isNowVisible = worldMapOverlay.ClassListContains("show-map");
+                    worldMapOverlay.pickingMode = isNowVisible ? PickingMode.Position : PickingMode.Ignore; // Kích hoạt cản/nhận chuột khi hiện
                     isAnyUIOpen = isNowVisible; // Đồng bộ trạng thái UI đang mở
                     
                     // Hiện/ẩn chuột cho Bản đồ
@@ -567,6 +576,7 @@ public class PlayerHUDController : MonoBehaviour
         {
             inventoryOverlay.ToggleInClassList("show-inventory");
             bool isNowVisible = inventoryOverlay.ClassListContains("show-inventory");
+            inventoryOverlay.pickingMode = isNowVisible ? PickingMode.Position : PickingMode.Ignore; // Kích hoạt cản/nhận chuột khi hiện
             Debug.Log("Đã " + (isNowVisible ? "mở" : "đóng") + " hành trang");
 
             // Đồng bộ trạng thái static UI
@@ -651,6 +661,15 @@ public class PlayerHUDController : MonoBehaviour
     public void SelectWeapon(int index)
     {
         if (weaponSlot1 == null || weaponSlot2 == null) return;
+
+        // Chặn chuyển đổi vũ khí nếu nhân vật đang chạy hoạt ảnh rút/cất kiếm
+        var localPlayer = FindObjectOfType<LeoPlayer>();
+        if (localPlayer != null && localPlayer.isSwitchingWeapon)
+        {
+            Debug.Log("[PlayerHUDController] Chặn chuyển vũ khí vì đang chạy hoạt ảnh đổi vũ khí.");
+            return;
+        }
+
         int oldWeapon = currentSelectedWeapon;
 
         if (index == 1)
@@ -684,7 +703,6 @@ public class PlayerHUDController : MonoBehaviour
         // Standalone Mode: gọi trực tiếp phương thức chuyển đổi hoạt ảnh
         if (currentSelectedWeapon != oldWeapon)
         {
-            var localPlayer = FindObjectOfType<LeoPlayer>();
             if (localPlayer != null && localPlayer.isStandaloneMode)
             {
                 localPlayer.PlayWeaponSwitchAnimation(oldWeapon, currentSelectedWeapon);
@@ -1453,19 +1471,15 @@ public class PlayerHUDController : MonoBehaviour
         {
             GameObject esObj = new GameObject("EventSystem");
             eventSystem = esObj.AddComponent<UnityEngine.EventSystems.EventSystem>();
+            
+            // Sử dụng StandaloneInputModule hoặc InputSystemUIInputModule tùy theo cấu hình hệ thống
+            #if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
             esObj.AddComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
-            Debug.Log("[PlayerHUDController] Created EventSystem with InputSystemUIInputModule.");
+            #else
+            esObj.AddComponent<UnityEngine.EventSystems.StandaloneInputModule>();
+            #endif
+            Debug.Log("[PlayerHUDController] Created EventSystem.");
         }
-        else
-        {
-            // Thay thế module cũ bằng InputSystemUIInputModule nếu cần bằng DestroyImmediate để có hiệu lực tức thời
-            var oldModule = eventSystem.GetComponent<UnityEngine.EventSystems.BaseInputModule>();
-            if (oldModule != null && !(oldModule is UnityEngine.InputSystem.UI.InputSystemUIInputModule))
-            {
-                DestroyImmediate(oldModule);
-                eventSystem.gameObject.AddComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
-                Debug.Log("[PlayerHUDController] Replaced old BaseInputModule with InputSystemUIInputModule immediately.");
-            }
-        }
+        // Không tự động thay thế/phá hủy module cũ của EventSystem để tránh làm hỏng các scene khác
     }
 }
