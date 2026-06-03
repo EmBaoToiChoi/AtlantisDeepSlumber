@@ -393,13 +393,14 @@ MonoBehaviour:
   punch3Duration: 0.5
   slash1Duration: 0.6
   slash2Duration: 0.6
+  slash3Duration: 0.7
   leftHitbox: {fileID: 1951728423009820279}
   rightHitbox: {fileID: 5564713475576156401}
   leftWeaponHitbox: {fileID: 4903209859804708166}
   rightWeaponHitbox: {fileID: 7801895182319075737}
   isMovementLocked: 0
-  attackDashSpeed: 10
-  attackDashDuration: 2.2
+  attackDashSpeed: 2
+  attackDashDuration: 3
   drawWeaponTrigger: DrawWeapon
   sheathWeaponTrigger: SheathWeapon
   maxHealth: 100

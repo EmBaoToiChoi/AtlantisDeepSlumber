@@ -143,6 +143,9 @@ public class LeoPlayer : NetworkBehaviour
     public NetworkVariable<float> weapon1Durability = new NetworkVariable<float>(100f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     public NetworkVariable<float> weapon2Durability = new NetworkVariable<float>(100f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     public NetworkVariable<bool> isRollingNet = new NetworkVariable<bool>(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+    public NetworkVariable<bool> isMovementLockedNet = new NetworkVariable<bool>(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+    [HideInInspector]
+    public GameObject pendingPickItem;
 
     [Header("Local State & Inventory")]
     public string[] inventorySlots = new string[10] { "", "", "", "", "", "", "", "", "", "" };
@@ -328,6 +331,7 @@ public class LeoPlayer : NetworkBehaviour
         playerExp.OnValueChanged += OnLevelOrExpChanged;
         weapon1Durability.OnValueChanged += OnDurabilityChanged;
         weapon2Durability.OnValueChanged += OnDurabilityChanged;
+        isMovementLockedNet.OnValueChanged += OnMovementLockedNetChanged;
 
         if (IsOwner)
         {
@@ -363,6 +367,7 @@ public class LeoPlayer : NetworkBehaviour
         playerExp.OnValueChanged -= OnLevelOrExpChanged;
         weapon1Durability.OnValueChanged -= OnDurabilityChanged;
         weapon2Durability.OnValueChanged -= OnDurabilityChanged;
+        isMovementLockedNet.OnValueChanged -= OnMovementLockedNetChanged;
 
         if (IsOwner)
             currentHealth.OnValueChanged -= OnHealthChanged;
@@ -413,6 +418,8 @@ public class LeoPlayer : NetworkBehaviour
         isRollingStandalone = false;
         
         if (anim != null) anim.applyRootMotion = false; // Tắt applyRootMotion
+        var bridge = GetRootMotionBridge();
+        if (bridge != null) bridge.ApplyFinalOffset();
         
         if (rb != null) rb.linearVelocity = new Vector3(0f, rb.linearVelocity.y, 0f); // Dừng lực lộn
 
@@ -668,7 +675,7 @@ public class LeoPlayer : NetworkBehaviour
         // Action Inputs with click attacking vs roll blocking
         if (Input.GetMouseButtonDown(0))
         {
-            if (!isRollingStandalone && !IsPlayingActionAnimation())
+            if (!IsUIBlockingInput() && !isRollingStandalone && !IsPlayingActionAnimation())
             {
                 Debug.Log($"[LeoPlayer] Mouse clicked in Standalone. Weapon: {GetActiveWeaponIndex()}");
                 PerformComboAttack(false);
@@ -677,7 +684,7 @@ public class LeoPlayer : NetworkBehaviour
 
         if (Input.GetKeyDown(rollKey))
         {
-            if (rollCooldownTimer <= 0 && !IsPlayingAttackState(out _, out _))
+            if (!IsUIBlockingInput() && rollCooldownTimer <= 0 && !IsPlayingAttackState(out _, out _))
             {
                 StartRollStandalone(move);
             }
@@ -841,7 +848,7 @@ public class LeoPlayer : NetworkBehaviour
 
         if (Input.GetMouseButtonDown(0))
         {
-            if (IsSpawned)
+            if (!IsUIBlockingInput() && IsSpawned)
             {
                 Debug.Log($"[LeoPlayer] Mouse clicked in Owner mode. Weapon: {GetActiveWeaponIndex()}");
                 PerformComboAttack(true);
@@ -850,7 +857,7 @@ public class LeoPlayer : NetworkBehaviour
 
         if (Input.GetKeyDown(rollKey))
         {
-            if (rollCooldownTimer <= 0 && IsSpawned && !IsPlayingAttackState(out _, out _))
+            if (!IsUIBlockingInput() && rollCooldownTimer <= 0 && IsSpawned && !IsPlayingAttackState(out _, out _))
             {
                 StartRollOwner(move);
             }
@@ -941,10 +948,15 @@ public class LeoPlayer : NetworkBehaviour
             
             Debug.Log($"[LeoPlayer] Sword attack (Armed). Step: {comboStep} -> Playing: {animToPlay}");
 
-            // Kích hoạt Dash tiến lên bằng code cho cả 3 đòn chém
-            attackDashTimer = attackDashDuration;
-            attackDashDirection = transform.forward;
-            Debug.Log($"[LeoPlayer] Triggered slash {comboStep} forward dash by code.");
+            if (anim != null) anim.applyRootMotion = false;
+
+            // Kích hoạt Dash tiến lên bằng C# cho cả 3 đòn chém (Chỉ khi đứng im chém)
+            if (isRootedAttack)
+            {
+                attackDashTimer = attackDashDuration;
+                attackDashDirection = transform.forward;
+                Debug.Log($"[LeoPlayer] Triggered slash {comboStep} forward dash by code.");
+            }
             
             PlayAnimation(animToPlay, 0.05f, false);
             // Damage is now processed through animation events enabling left/right hitboxes
@@ -970,29 +982,17 @@ public class LeoPlayer : NetworkBehaviour
                 }
             }
 
-            float moveX = Input.GetAxis("Horizontal");
-            float moveZ = Input.GetAxis("Vertical");
-            bool isMovingInput = (Mathf.Abs(moveX) > 0.01f || Mathf.Abs(moveZ) > 0.01f);
-            
-            if (comboStep == 0 || currentTime - lastAttackTime > comboWindow)
-            {
-                isRootedAttack = !isMovingInput;
-            }
+            // Đấm thì luôn đứng im hoàn toàn (rooted)
+            isRootedAttack = true;
 
             comboStep = nextStep;
             lastAttackTime = currentTime;
 
-            // Khóa di chuyển khi đấm tay không
-            isMovementLocked = true;
-            Debug.Log("[LeoPlayer] Punch attack started: Locking movement.");
+            // Khóa di chuyển khi đấm tay không ngay lập tức
+            SetMovementLock(true);
+            Debug.Log("[LeoPlayer] Punch attack started: Locking movement immediately.");
 
-            // Kích hoạt Dash tiến lên bằng code khi đấm combo thứ 3 (Punch3 / DamCombo)
-            if (comboStep == 3)
-            {
-                attackDashTimer = attackDashDuration;
-                attackDashDirection = transform.forward;
-                Debug.Log("[LeoPlayer] Triggered punch combo forward dash by code.");
-            }
+            // ĐÃ XÓA lực dash ở đòn đấm combo thứ 3 để đảm bảo đứng im hoàn toàn không di chuyển box
 
             string animToPlay = "Punch1";
             if (comboStep == 2) animToPlay = "Punch2";
@@ -1070,6 +1070,7 @@ public class LeoPlayer : NetworkBehaviour
 
     protected void StartRollOwner(Vector3 moveInput)
     {
+        isRollingStandalone = true; // Kích hoạt di chuyển tức thời trên client chủ sở hữu (Client-side Prediction)
         rollTimer = rollDuration;
         rollCooldownTimer = rollCooldown;
         
@@ -1194,6 +1195,8 @@ public class LeoPlayer : NetworkBehaviour
             return;
         }
 
+        SetMovementLock(false); // Giải phóng khóa di chuyển khi bị trúng đòn
+
         if (isStandaloneMode)
         {
             localHealth = Mathf.Max(localHealth - damage, 0f);
@@ -1249,7 +1252,7 @@ public class LeoPlayer : NetworkBehaviour
             knockbackVelocity = force;
     }
 
-    public bool TryAddItem(string itemName)
+    public bool TryAddItem(string itemName, bool playAnimation = true)
     {
         for (int i = 0; i < inventorySlots.Length; i++)
         {
@@ -1271,7 +1274,7 @@ public class LeoPlayer : NetworkBehaviour
                     PlayerHUDController hud = FindAnyObjectByType<PlayerHUDController>();
                     if (hud != null) hud.SetInventorySlots(inventorySlots);
                     if (!isStandaloneMode) SavePlayerStateToDatabase();
-                    PlayAnimation("Idle_Pick", 0.1f);
+                    if (playAnimation) PlayAnimation("Idle_Pick", 0.1f);
                     return true;
                 }
             }
@@ -1285,7 +1288,7 @@ public class LeoPlayer : NetworkBehaviour
                 PlayerHUDController hud = FindAnyObjectByType<PlayerHUDController>();
                 if (hud != null) hud.SetInventorySlots(inventorySlots);
                 if (!isStandaloneMode) SavePlayerStateToDatabase();
-                PlayAnimation("Idle_Pick", 0.1f);
+                if (playAnimation) PlayAnimation("Idle_Pick", 0.1f);
                 return true;
             }
         }
@@ -1760,6 +1763,9 @@ public class LeoPlayer : NetworkBehaviour
                 return getHit2Trigger;
             case "Death":
                 return isArmed ? deathArmedTrigger : deathUnarmedTrigger;
+            case "Idle_Pick":
+            case "Pick":
+                return pickTrigger;
             default:
                 return animName;
         }
@@ -2051,6 +2057,7 @@ public class LeoPlayer : NetworkBehaviour
     {
         comboStep = 0;
         isRootedAttack = false;
+        SetMovementLock(false); // Giải phóng khóa di chuyển nếu đang đấm nửa chừng
         if (anim != null && anim.isActiveAndEnabled && anim.runtimeAnimatorController != null && anim.layerCount > 1)
         {
             anim.Play("New State", 1, 0f);
@@ -2113,8 +2120,108 @@ public class LeoPlayer : NetworkBehaviour
 
     public void UnlockMovement()
     {
-        isMovementLocked = false;
+        SetMovementLock(false);
         Debug.Log("[LeoPlayer] Movement UNLOCKED.");
+    }
+
+    /// <summary>
+    /// Event receiver được gọi bởi Animation Event tại thời điểm cúi xuống trong hoạt ảnh Pick.
+    /// </summary>
+    public void OnPickItemEvent()
+    {
+        Debug.Log("[LeoPlayer] OnPickItemEvent triggered via Animation Event.");
+        if (pendingPickItem != null)
+        {
+            var collectible = pendingPickItem.GetComponent<CollectibleItemDrop>();
+            if (collectible != null)
+            {
+                collectible.ConfirmCollect();
+            }
+            else
+            {
+                var repair = pendingPickItem.GetComponent<RepairItemDrop>();
+                if (repair != null)
+                {
+                    repair.ConfirmCollect();
+                }
+            }
+            pendingPickItem = null;
+        }
+    }
+
+    /// <summary>
+    /// Thay đổi trạng thái hiển thị/khóa con trỏ chuột.
+    /// </summary>
+    public void SetCursorLock(bool locked)
+    {
+        isCursorLocked = locked;
+        LockCursor(locked);
+    }
+
+    /// <summary>
+    /// Kiểm tra xem UI (Hành trang, Bản đồ, Đối thoại) có đang mở chặn input hay không.
+    /// </summary>
+    public bool IsUIBlockingInput()
+    {
+        PlayerHUDController hud = FindAnyObjectByType<PlayerHUDController>();
+        if (hud != null && hud.isActiveAndEnabled)
+        {
+            if (hud.IsInventoryOpen() || hud.IsMapOpen())
+            {
+                return true;
+            }
+        }
+
+        bool isDialogueOpen = (RakanDialogueController.Instance != null && RakanDialogueController.Instance.IsActive) ||
+                              (SilasDialogueController.Instance != null && SilasDialogueController.Instance.IsActive);
+        if (isDialogueOpen)
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Thiết lập trạng thái khóa di chuyển local, triệt tiêu vận tốc ngay lập tức và đồng bộ lên server.
+    /// </summary>
+    public void SetMovementLock(bool locked)
+    {
+        isMovementLocked = locked;
+        if (locked)
+        {
+            attackDashTimer = 0f; // Hủy bỏ Dash đang hoạt động nếu có
+            if (rb != null)
+            {
+                rb.linearVelocity = new Vector3(0f, rb.linearVelocity.y, 0f);
+            }
+        }
+
+        if (!isStandaloneMode && IsOwner)
+        {
+            SetMovementLockServerRpc(locked);
+        }
+    }
+
+    [ServerRpc]
+    private void SetMovementLockServerRpc(bool locked)
+    {
+        if (IsServer)
+        {
+            isMovementLockedNet.Value = locked;
+        }
+    }
+
+    private void OnMovementLockedNetChanged(bool oldVal, bool newVal)
+    {
+        if (!IsOwner)
+        {
+            isMovementLocked = newVal;
+            if (newVal && rb != null)
+            {
+                rb.linearVelocity = new Vector3(0f, rb.linearVelocity.y, 0f);
+            }
+        }
     }
 
     public void EnableLeftWeaponHitbox()
@@ -2170,6 +2277,13 @@ public class LeoPlayer : NetworkBehaviour
     public void OnSlashEnd()
     {
         Debug.Log("[LeoPlayer] Slash ended.");
+        if (anim != null) anim.applyRootMotion = false;
+        
+        if (isRootedAttack)
+        {
+            var bridge = GetRootMotionBridge();
+            if (bridge != null) bridge.ApplyFinalOffset();
+        }
     }
 
     public void OnHitboxCollision(Collider other)
