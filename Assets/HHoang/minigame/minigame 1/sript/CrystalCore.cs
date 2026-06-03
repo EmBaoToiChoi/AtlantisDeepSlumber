@@ -20,7 +20,6 @@ public class CrystalCore : NetworkBehaviour
         if (!IsServer || isSnapped.Value) return;
 
         // 2. Tự động bám tay người chơi (Dựa vào Ownership)
-        // Nếu ngọc thuộc về một người chơi (Không phải Server)
         if (IsSpawned && OwnerClientId != NetworkManager.ServerClientId)
         {
             if (NetworkManager.Singleton.ConnectedClients.TryGetValue(OwnerClientId, out var client) && client.PlayerObject != null)
@@ -44,33 +43,51 @@ public class CrystalCore : NetworkBehaviour
         }
     }
 
-    // Client gửi lệnh nhặt -> Yêu cầu đổi chủ
+    // Client gửi lệnh nhặt
     public void RequestPickup(ulong playerId) 
     {
-        if (IsServer) RequestPickupServerRpc(playerId);
+        if (IsServer) PerformPickup(playerId); // Nếu là Server gọi thì xử lý luôn
         else RequestPickupServerRpc(playerId);
     }
 
     // Client gửi lệnh thả
-    public void RequestDrop(ulong playerId) => RequestDropServerRpc(playerId);
+    public void RequestDrop(ulong playerId) 
+    {
+        if (IsServer) PerformDrop(); // Nếu là Server gọi thì xử lý luôn
+        else RequestDropServerRpc(playerId);
+    }
 
     [ServerRpc(RequireOwnership = false)]
     private void RequestPickupServerRpc(ulong playerId) 
     { 
-        // Giao quyền kiểm soát viên ngọc cho người chơi
-        GetComponent<NetworkObject>().ChangeOwnership(playerId);
+        PerformPickup(playerId);
     }
 
     [ServerRpc(RequireOwnership = false)]
     private void RequestDropServerRpc(ulong playerId) 
     { 
-        // Thu hồi quyền về lại Server để nó rơi xuống đất
+        PerformDrop();
+    }
+
+    // --- CÁC HÀM THỰC THI TRỰC TIẾP TRÊN SERVER ---
+    public void PerformPickup(ulong playerId)
+    {
+        if (!IsServer) return;
+        GetComponent<NetworkObject>().ChangeOwnership(playerId);
+    }
+
+    public void PerformDrop()
+    {
+        if (!IsServer) return;
+        
+        // Thu hồi quyền sở hữu từ Client về Server
         var netObj = GetComponent<NetworkObject>();
         if (netObj.OwnerClientId != NetworkManager.ServerClientId)
         {
-            netObj.RemoveOwnership();
+            netObj.RemoveOwnership(); 
         }
         
+        // Bật trọng lực để ngọc rơi cái "Bịch" xuống đất
         rb.isKinematic = false;
         rb.useGravity = true;
     }
