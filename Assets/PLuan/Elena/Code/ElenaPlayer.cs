@@ -149,6 +149,20 @@ public class ElenaPlayer : NetworkBehaviour
 
     [Header("Spine Aim Settings")]
     public float maxSpineTwistAngle = 80f;
+    
+    [Header("Punch 1 Fine Tuning")]
+    public float punch1YOffset = 0f; // Xoay Trái/Phải cho Đấm 1
+    public float punch1XOffset = 0f; // Ngửa/Cúi cho Đấm 1 (Fix đấm cao)
+
+    [Header("Punch 2 Fine Tuning")]
+    public float punch2YOffset = 0f; // Xoay Trái/Phải cho Đấm 2 (Fix đấm chéo từ phải qua)
+
+    [Header("Punch 3 Fine Tuning")]
+    public float punch3YOffset = 0f; // Xoay Trái/Phải cho Đấm 3
+    
+    private float smoothedYOffset = 0f;
+    private float smoothedXOffset = 0f;
+    public float spineSmoothSpeed = 15f;
     private Transform spineBone;
     private float localAimAngle = 0f;
     public NetworkVariable<float> netAimAngle = new NetworkVariable<float>(
@@ -1220,20 +1234,56 @@ public class ElenaPlayer : NetworkBehaviour
             bool isCurrentlyAttacking = IsPlayingAttackState(out _, out _) || 
                                         (IsAttackAnimationName(lastTriggeredAnimName) && Time.time - lastActionTriggerTime < 0.35f);
             
+            float baseAimAngle = isStandaloneMode ? localAimAngle : netAimAngle.Value;
+            
+            // 1. Tính toán góc ĐÍCH (Target) dựa trên trạng thái hiện tại
+            float targetYOffset = 0f;
+            float targetXOffset = 0f;
+
             if (isCurrentlyAttacking && !isRootedAttack)
             {
+                if (comboStep == 1)
+                {
+                    targetYOffset = punch1YOffset;
+                    targetXOffset = punch1XOffset;
+                }
+                else if (comboStep == 2)
+                {
+                    targetYOffset = punch2YOffset;
+                }
+                else if (comboStep == 3)
+                {
+                    targetYOffset = punch3YOffset;
+                }
+            }
+
+            // 2. LUÔN LUÔN LERP để các góc dịch chuyển mượt mà, không bao giờ bị khựng đột ngột
+            smoothedYOffset = Mathf.Lerp(smoothedYOffset, targetYOffset, Time.deltaTime * spineSmoothSpeed);
+            smoothedXOffset = Mathf.Lerp(smoothedXOffset, targetXOffset, Time.deltaTime * spineSmoothSpeed);
+
+            // 3. Áp dụng góc xoay đã được làm mượt vào xương Spine
+            // Thêm điều kiện Abs > 0.05f để xương vẫn được mượt mà trả về vị trí cũ sau khi đấm xong (khi isCurrentlyAttacking đã thành false)
+            if ((isCurrentlyAttacking && !isRootedAttack) || Mathf.Abs(smoothedYOffset) > 0.05f || Mathf.Abs(smoothedXOffset) > 0.05f)
+                {
                 Transform spine = GetSpineBone();
-                float targetAngle = isStandaloneMode ? localAimAngle : netAimAngle.Value;
-                Debug.Log($"[SpineAim_Late] isCurrentlyAttacking={isCurrentlyAttacking}, spine={(spine != null ? spine.name : "null")}, targetAngle={targetAngle}, localAim={localAimAngle}, netAim={netAimAngle.Value}, isStandalone={isStandaloneMode}");
                 if (spine != null)
                 {
-                    if (Mathf.Abs(targetAngle) > 0.01f)
+                    // Cộng góc ngắm cơ bản với góc Offset Y đã làm mượt
+                    float finalYAngle = baseAimAngle + smoothedYOffset;
+                    
+                    // Xoay Ngang mượt mà
+                    spine.rotation = Quaternion.AngleAxis(finalYAngle, Vector3.up) * spine.rotation;
+
+                    // Xoay Dọc mượt mà (chỉ áp dụng khi đòn 1 có tinh chỉnh cao thấp)
+                    if (Mathf.Abs(smoothedXOffset) > 0.01f)
                     {
-                        spine.rotation = spine.rotation * Quaternion.AngleAxis(targetAngle, Vector3.up);
+                        spine.rotation = Quaternion.AngleAxis(smoothedXOffset, transform.right) * spine.rotation;
                     }
                 }
             }
         }
+
+        // Giữ nguyên hoàn toàn đoạn code Camera follow phía dưới của bạn...
 
         // Camera follow hoạt động cho cả standalone lẫn Netcode owner
         bool shouldFollow = isStandaloneMode || (IsSpawned && IsOwner);
