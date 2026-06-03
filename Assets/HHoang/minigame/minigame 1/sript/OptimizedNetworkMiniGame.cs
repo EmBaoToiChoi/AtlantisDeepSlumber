@@ -42,7 +42,7 @@ public class OptimizedNetworkMiniGame : NetworkBehaviour
 
     public override void OnNetworkSpawn()
     {
-        // Khi giá trị thay đổi, tự cập nhật UI nếu trạm đó là trạm người chơi đang đứng
+        // Cập nhật Slider của trạm người chơi đang đứng
         s0Value.OnValueChanged += (oldVal, newVal) => { if(currentStationIndex == 0) localSlider.value = newVal; };
         s1Value.OnValueChanged += (oldVal, newVal) => { if(currentStationIndex == 1) localSlider.value = newVal; };
         s2Value.OnValueChanged += (oldVal, newVal) => { if(currentStationIndex == 2) localSlider.value = newVal; };
@@ -51,13 +51,13 @@ public class OptimizedNetworkMiniGame : NetworkBehaviour
 
     void Update()
     {
-        // 1. Logic Client: Chỉ nhận Input
+        // Logic Client
         if (IsClient && isPlaying && !Application.isBatchMode)
         {
             HandleQTEInput();
         }
 
-        // 2. Logic Server: Xử lý logic game
+        // Logic Server: Đảm bảo luôn chạy bất kể điều kiện gì khác
         if (IsServer)
         {
             UpdateStationDrain();
@@ -67,25 +67,22 @@ public class OptimizedNetworkMiniGame : NetworkBehaviour
 
     private void UpdateStationDrain()
     {
-        if (!IsServer) return; // BẮT BUỘC CÓ DÒNG NÀY ĐỂ TRÁNH LỖI
+        if (!IsServer) return;
 
+        // 1. Tốc độ tụt cơ bản (Luôn tụt, dù có người đứng hay không)
         float normal = decayRate * Time.deltaTime;
         float fast = decayRate * 2.5f * Time.deltaTime;
 
-        // Gán trực tiếp vào .Value để NetworkVariable nhận diện thay đổi
-        if (s0Owner.Value == ulong.MaxValue) 
-            s0Value.Value = Mathf.Clamp(s0Value.Value - normal, 0f, 100f);
-            
-        if (s1Owner.Value == ulong.MaxValue) 
-            s1Value.Value = Mathf.Clamp(s1Value.Value - normal, 0f, 100f);
+        // 2. Trạm 0 & 1: Luôn tụt
+        s0Value.Value = Mathf.Clamp(s0Value.Value - normal, 0f, 100f);
+        s1Value.Value = Mathf.Clamp(s1Value.Value - normal, 0f, 100f);
 
+        // 3. Trạm 2 & 3: Tụt nhanh nếu không có ngọc, tụt chậm nếu có ngọc
         float s2Speed = station2HasCrystal.Value ? normal : fast;
-        if (s2Owner.Value == ulong.MaxValue) 
-            s2Value.Value = Mathf.Clamp(s2Value.Value - s2Speed, 0f, 100f);
+        s2Value.Value = Mathf.Clamp(s2Value.Value - s2Speed, 0f, 100f);
 
         float s3Speed = station3HasCrystal.Value ? normal : fast;
-        if (s3Owner.Value == ulong.MaxValue) 
-            s3Value.Value = Mathf.Clamp(s3Value.Value - s3Speed, 0f, 100f);
+        s3Value.Value = Mathf.Clamp(s3Value.Value - s3Speed, 0f, 100f);
     }
 
     private void CheckGateStatus()

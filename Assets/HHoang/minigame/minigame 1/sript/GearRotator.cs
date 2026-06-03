@@ -37,11 +37,23 @@ public class GearRotator : NetworkBehaviour
 
     void Update()
     {
-        // Logic quay chỉ chạy nếu trạng thái là Spinning
         if (currentState.Value == GearState.Spinning)
         {
+            // 1. Quay
             float direction = reverseDirection ? -1f : 1f;
             transform.Rotate(rotationAxis.normalized * originalSpeed * direction * Time.deltaTime, Space.Self);
+            
+            // 2. Ép về vị trí gốc nếu bị lệch 
+            // Thay vì dùng IsTweening, ta chỉ cần kiểm tra khoảng cách nhỏ (SqrMagnitude) 
+            // để tránh việc gán vị trí liên tục gây lỗi logic
+            if (Vector3.Distance(transform.localPosition, originalPosition) > 0.001f)
+            {
+                // Chỉ gán nếu không có Tween nào đang chạy (nếu bạn vẫn muốn dùng Tweening)
+                if (!DOTween.IsTweening(transform)) 
+                {
+                    transform.localPosition = originalPosition;
+                }
+            }
         }
     }
 
@@ -73,7 +85,8 @@ public class GearRotator : NetworkBehaviour
     private void ForceCloseVisualsClientRpc()
     {
         transform.DOKill();
-        transform.DOLocalMove(originalPosition, moveDuration).SetEase(Ease.InOutCubic);
+        // Đổi OutBack sang InOutCubic nếu muốn trượt mượt nhẹ nhàng
+        transform.DOLocalMove(originalPosition, moveDuration).SetEase(Ease.InOutCubic); 
     }
 
     // Hàm dự phòng: nếu muốn Server cho phép quay lại sau khi đóng
@@ -81,8 +94,10 @@ public class GearRotator : NetworkBehaviour
     {
         if (IsServer) 
         {
+            // 1. Chuyển trạng thái về Spinning
             currentState.Value = GearState.Spinning;
-            // Gọi lệnh này để tất cả các Client ép buộc trụ chạy về vị trí cũ
+            
+            // 2. Ép tất cả Client chạy animation về vị trí cũ ngay lập tức
             ForceCloseVisualsClientRpc(); 
         }
     }
