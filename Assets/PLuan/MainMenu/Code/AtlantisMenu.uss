@@ -135,16 +135,16 @@
     transition: all 0.05s;
 }
 
-/* Nút Back - Đổi sang tone Ice Blue dịu mắt */
+/* Nút Back - Đồng bộ sắc đỏ với nút Thoát */
 .back-btn { 
-    color: rgb(100, 150, 180); 
+    color: rgb(220, 120, 120); 
     background-color: transparent; 
     margin-top: 8px; 
 }
 .back-btn:hover { 
-    color: rgb(180, 230, 255); 
+    color: rgb(255, 150, 150); 
     background-color: transparent; 
-    text-shadow: 0 0 10px rgba(180, 230, 255, 0.6); 
+    text-shadow: 0 0 15px rgba(255, 50, 50, 0.8); 
     scale: 1.08 1.08;
 }
 
@@ -231,16 +231,16 @@
 .cancel-btn {
     background-color: transparent !important;
     border-width: 0 !important;
-    color: rgb(100, 150, 180) !important;
+    color: rgb(220, 120, 120) !important;
     margin-left: 80px;
     transition: all 0.2s ease-out;
 }
 .cancel-btn:hover {
     background-color: transparent !important;
     border-width: 0 !important;
-    color: rgb(180, 230, 255) !important;
+    color: rgb(255, 150, 150) !important;
     scale: 1.08 1.08;
-    text-shadow: 0 0 10px rgba(180, 230, 255, 0.6) !important;
+    text-shadow: 0 0 15px rgba(255, 50, 50, 0.8) !important;
 }
 
 /* --- BROWSER TABLE & LIST --- */
@@ -1116,18 +1116,16 @@
     letter-spacing: 3px;
     padding: 8px 16px !important;
     transition: all 0.25s ease-out;
-    flex-shrink: 0 !important; /* Prevent button from compressing */
-    -unity-text-align: middle-center !important; /* Perfect center alignment */
-    white-space: nowrap !important; /* Stop text wrapping */
-    color: rgb(100, 150, 180) !important; /* Base color for Cancel */
-    
-    /* Lock the Cancel button in its original place */
-    margin-left: 50px !important; 
+    flex-shrink: 0 !important;
+    -unity-text-align: middle-center !important;
+    white-space: nowrap !important;
+    color: rgb(220, 120, 120) !important; /* Đỏ như chữ Thoát */
+    margin-left: 50px !important;
 }
 
 #btn-cancel-options:hover {
     background-color: transparent !important;
-    color: rgb(180, 230, 255) !important;
+    color: rgb(255, 150, 150) !important;
     scale: 1.08 1.08;
-    text-shadow: 0 0 15px rgba(180, 230, 255, 0.7);
+    text-shadow: 0 0 15px rgba(255, 50, 50, 0.8);
 }
