@@ -3,7 +3,7 @@ using UnityEngine.UI;
 using Unity.Netcode;
 using DG.Tweening;
 using System.Collections.Generic;
-using UnityEngine.InputSystem; // Dòng này là bắt buộc
+using UnityEngine.InputSystem;
 
 public class OptimizedNetworkMiniGame : NetworkBehaviour
 {
@@ -14,190 +14,180 @@ public class OptimizedNetworkMiniGame : NetworkBehaviour
     public Image imgD;
 
     [Header("Cấu hình Mini-game")]
-    public float drainSpeed = 15f;
     public float pushAmount = 8f;
-    public float penaltyAmount = 6f;
     public float greenZoneMin = 85f;
-    public float greenZoneMax = 100f;
 
-    [Header("Visual Settings")]
-    public Color normalColor = new Color(0.2f, 0.2f, 0.2f, 0.4f);
-    public Color activeColor = Color.white;
-
-    [Header("Danh sách Bánh Răng")]
     public List<GearRotator> gearList;
 
-    [Header("Danh sách trụ")]
-    public NetworkVariable<bool> station0HasCrystal = new NetworkVariable<bool>(true);
-    public NetworkVariable<bool> station1HasCrystal = new NetworkVariable<bool>(true);
-// Trong OptimizedNetworkMiniGame.cs
-// SỬA: Truyền giá trị mặc định cho tất cả NetworkVariable
+    // NetworkVariables (Dữ liệu quan trọng chỉ Server được viết)
+    public NetworkVariable<float> s0Value = new NetworkVariable<float>(0f);
+    public NetworkVariable<float> s1Value = new NetworkVariable<float>(0f);
+    public NetworkVariable<float> s2Value = new NetworkVariable<float>(0f);
+    public NetworkVariable<float> s3Value = new NetworkVariable<float>(0f);
+
+    public NetworkVariable<ulong> s0Owner = new NetworkVariable<ulong>(ulong.MaxValue);
+    public NetworkVariable<ulong> s1Owner = new NetworkVariable<ulong>(ulong.MaxValue);
+    public NetworkVariable<ulong> s2Owner = new NetworkVariable<ulong>(ulong.MaxValue);
+    public NetworkVariable<ulong> s3Owner = new NetworkVariable<ulong>(ulong.MaxValue);
+
     public NetworkVariable<bool> station2HasCrystal = new NetworkVariable<bool>(false);
     public NetworkVariable<bool> station3HasCrystal = new NetworkVariable<bool>(false);
 
-    private NetworkList<float> stationValues = new NetworkList<float>();
-    private NetworkList<ulong> stationOwners = new NetworkList<ulong>();
-    
     private int currentStationIndex = 0;
     private bool isPlaying = false;
     private bool isCurrentlyOpen = false;
 
-    // Thêm vào OptimizedNetworkMiniGame.cs
-    [ServerRpc(RequireOwnership = false)]
-    public void SetStationCrystalStatusServerRpc(int index, bool hasCrystal)
-    {
-        if (!IsServer) return; // Chỉ Server mới được phép ghi
-        
-        if (index == 2) station2HasCrystal.Value = hasCrystal;
-        else if (index == 3) station3HasCrystal.Value = hasCrystal;
-    }
-
     public override void OnNetworkSpawn()
     {
-        base.OnNetworkSpawn();
-
-        if (IsServer)
-        {
-            // 1. Chỉ khởi tạo giá trị ban đầu nếu danh sách chưa có gì.
-            // Đây là cách an toàn nhất để tránh việc mỗi lần spawn đối tượng lại reset về 0.
-            if (stationValues.Count == 0)
-            {
-                for (int i = 0; i < 4; i++) 
-                {
-                    stationValues.Add(0f);
-                    stationOwners.Add(ulong.MaxValue);
-                }
-            }
-            
-            // 2. Không cần gán lại giá trị cho NetworkVariable ở đây 
-            // vì bạn đã có giá trị mặc định ở dòng khai báo (new NetworkVariable<bool>(false)).
-        }
-        
-        // Tắt UI zone khi bắt đầu
-        if (miniGamePlayZone != null) miniGamePlayZone.SetActive(false);
+        // Chỉ Client mới cần tắt UI lúc khởi động
+        if (IsClient && miniGamePlayZone != null) miniGamePlayZone.SetActive(false);
     }
 
     void Update()
     {
-        // 1. Kiểm tra sự sẵn sàng của NetworkList trước khi truy cập (Dành cho Client & Server)
-        bool isListReady = stationValues != null && stationValues.Count > 0;
-
-        if (isPlaying && isListReady)
+        // 1. Logic Client: Hiển thị UI và nhận Input
+        if (IsClient && isPlaying && !Application.isBatchMode)
         {
-            if (localSlider != null && currentStationIndex < stationValues.Count) 
-                localSlider.value = stationValues[currentStationIndex];
-            
-            imgA.color = activeColor;
-            imgD.color = activeColor;
-            
+            if (localSlider != null) localSlider.value = GetStationValue(currentStationIndex);
             HandleQTEInput();
         }
 
-        // 2. Logic phía Server
-        if (IsServer && isListReady)
+        // 2. Logic Server: Xử lý logic game
+        if (IsServer)
         {
-            // Duyệt danh sách và xử lý drain
-            for (int i = 0; i < stationValues.Count; i++)
+            UpdateStationDrain();
+            CheckGateStatus();
+        }
+    }
+
+    private void UpdateStationDrain()
+    {
+        // Dùng hằng số hoặc cấu hình để dễ chỉnh sửa
+        DrainStation(ref s0Value, 15f);
+        DrainStation(ref s1Value, 15f);
+        DrainStation(ref s2Value, station2HasCrystal.Value ? 15f : 30f);
+        DrainStation(ref s3Value, station3HasCrystal.Value ? 15f : 30f);
+    }
+
+    private void DrainStation(ref NetworkVariable<float> stat, float speed)
+    {
+        if (stat.Value > 0) stat.Value -= speed * Time.deltaTime;
+    }
+
+    private void CheckGateStatus()
+    {
+        bool pairA_Ready = (s0Owner.Value != ulong.MaxValue && s0Value.Value >= greenZoneMin) &&
+                           (s1Owner.Value != ulong.MaxValue && s1Value.Value >= greenZoneMin);
+        bool pairB_Ready = (s2Owner.Value != ulong.MaxValue && s2Value.Value >= greenZoneMin) &&
+                           (s3Owner.Value != ulong.MaxValue && s3Value.Value >= greenZoneMin);
+        
+        bool shouldBeOpen = pairA_Ready || pairB_Ready;
+
+        if (shouldBeOpen != isCurrentlyOpen)
+        {
+            isCurrentlyOpen = shouldBeOpen;
+            foreach (var gear in gearList)
             {
-                float currentDrain = drainSpeed;
-                
-                // Kiểm tra chỉ số trạm (Tránh index ngoài phạm vi nếu thay đổi cấu trúc)
-                if ((i == 2 && !station2HasCrystal.Value) || (i == 3 && !station3HasCrystal.Value))
-                    currentDrain *= 2f; 
-
-                if (stationValues[i] > 0) 
-                    stationValues[i] -= currentDrain * Time.deltaTime;
+                if (gear == null) continue;
+                if (isCurrentlyOpen) gear.OpenGear();
+                else gear.CloseGear();
             }
+        }
+    }
 
-            // Logic mở cổng
-            bool pairA_Ready = (stationOwners[0] != ulong.MaxValue && stationValues[0] >= greenZoneMin) &&
-                            (stationOwners[1] != ulong.MaxValue && stationValues[1] >= greenZoneMin);
-            bool pairB_Ready = (stationOwners[2] != ulong.MaxValue && stationValues[2] >= greenZoneMin) &&
-                            (stationOwners[3] != ulong.MaxValue && stationValues[3] >= greenZoneMin);
-            
-            bool shouldBeOpen = pairA_Ready || pairB_Ready;
+    // Các hàm Logic Server
+    public void HandleStationAccess(int index, ulong clientId)
+    {
+        if (IsServer && GetOwner(index) == ulong.MaxValue) SetOwner(index, clientId);
+    }
 
-            // Chỉ trigger khi có thay đổi trạng thái (tránh lặp lại lệnh gọi gear mỗi frame)
-            if (shouldBeOpen != isCurrentlyOpen)
-            {
-                isCurrentlyOpen = shouldBeOpen;
-                foreach (var gear in gearList) 
-                {
-                    if (gear == null) continue;
-                    
-                    if (isCurrentlyOpen)
-                    {
-                        gear.SetSpeed(gear.rotationSpeed * (gear.reverseDirection ? -1f : 1f));
-                        gear.OpenGear();
-                    }
-                    else
-                    {
-                        gear.CloseGear();
-                    }
-                }
-            }
+    public void HandleStationRelease(int index, ulong clientId)
+    {
+        if (IsServer && GetOwner(index) == clientId)
+        {
+            SetOwner(index, ulong.MaxValue);
+            SetStationValue(index, 0f);
         }
     }
 
     [ServerRpc(RequireOwnership = false)]
     public void UpdateSliderServerRpc(int index, float amount)
     {
-        if (index < 0 || index >= stationValues.Count) return;
-        stationValues[index] = Mathf.Clamp(stationValues[index] + amount, 0f, 100f);
+        float newVal = Mathf.Clamp(GetStationValue(index) + amount, 0f, 100f);
+        SetStationValue(index, newVal);
     }
 
     [ServerRpc(RequireOwnership = false)]
-    public void RequestStationAccessServerRpc(int index, ulong clientId)
+    public void SetStationCrystalStatusServerRpc(int index, bool hasCrystal)
     {
-        if (index >= 0 && index < stationOwners.Count && stationOwners[index] == ulong.MaxValue)
-            stationOwners[index] = clientId;
+        if (index == 2) station2HasCrystal.Value = hasCrystal;
+        else if (index == 3) station3HasCrystal.Value = hasCrystal;
     }
 
-    [ServerRpc(RequireOwnership = false)]
-    public void ReleaseStationServerRpc(int index, ulong clientId)
-    {
-        if (index >= 0 && index < stationOwners.Count && stationOwners[index] == clientId)
-        {
-            stationOwners[index] = ulong.MaxValue;
-            stationValues[index] = 0f;
-        }
+    private float GetStationValue(int index) => index switch 
+    { 
+        0 => s0Value.Value, 
+        1 => s1Value.Value, 
+        2 => s2Value.Value, 
+        3 => s3Value.Value, 
+        _ => 0f // Dòng này giúp máy tính biết nếu index ngoài 0-3 thì trả về 0
+    };
+
+    private ulong GetOwner(int index) => index switch 
+    { 
+        0 => s0Owner.Value, 
+        1 => s1Owner.Value, 
+        2 => s2Owner.Value, 
+        3 => s3Owner.Value, 
+        _ => ulong.MaxValue // Dòng này giúp máy tính biết nếu index sai thì trả về giá trị "không ai sở hữu"
+    };
+
+    private void SetStationValue(int index, float val) 
+    { 
+        switch(index) 
+        { 
+            case 0: s0Value.Value = val; break; 
+            case 1: s1Value.Value = val; break; 
+            case 2: s2Value.Value = val; break; 
+            case 3: s3Value.Value = val; break; 
+            default: break; // Thêm dòng này để xử lý index sai
+        } 
     }
 
+    private void SetOwner(int index, ulong id) 
+    { 
+        switch(index) 
+        { 
+            case 0: s0Owner.Value = id; break; 
+            case 1: s1Owner.Value = id; break; 
+            case 2: s2Owner.Value = id; break; 
+            case 3: s3Owner.Value = id; break; 
+            default: break; // Thêm dòng này để xử lý index sai
+        } 
+    }
     public void ToggleMiniGame(int index, bool isOpening)
     {
         currentStationIndex = index;
         isPlaying = isOpening;
-        if (miniGamePlayZone != null) 
-        {
-            miniGamePlayZone.SetActive(isOpening);
-        }
-        else 
-        {
-            Debug.LogWarning("MiniGamePlayZone chưa được gán trong Inspector!");
-        }
+        if (IsClient && miniGamePlayZone != null) miniGamePlayZone.SetActive(isOpening);
     }
 
-    void HandleQTEInput()
+    private void HandleQTEInput()
     {
-        // Chỉ xử lý input nếu người chơi này đang sở hữu mini-game này (hoặc đang tương tác)
-        // Bạn nên truyền thông tin ClientID vào hoặc kiểm tra quyền sở hữu ở đây
-        if (Keyboard.current != null)
-        {
-            if (Keyboard.current.aKey.wasPressedThisFrame) ProcessInput(true);
-            else if (Keyboard.current.dKey.wasPressedThisFrame) ProcessInput(false);
-        }
+        if (Keyboard.current.aKey.wasPressedThisFrame) ProcessInput(true);
+        else if (Keyboard.current.dKey.wasPressedThisFrame) ProcessInput(false);
     }
 
-    void ProcessInput(bool isA)
+    private void ProcessInput(bool isA)
     {
-        PlaySuccessTween(isA ? imgA : imgD);
+        if (IsClient) PlaySuccessTween(isA ? imgA : imgD);
         UpdateSliderServerRpc(currentStationIndex, pushAmount);
     }
 
-    void PlaySuccessTween(Image targetImg)
+    private void PlaySuccessTween(Image targetImg)
     {
+        if (targetImg == null) return;
         targetImg.transform.DOKill();
         targetImg.transform.DOScale(1.2f, 0.1f).OnComplete(() => targetImg.transform.DOScale(1f, 0.1f));
-        targetImg.DOColor(Color.green, 0.1f).OnComplete(() => targetImg.DOColor(activeColor, 0.2f));
     }
 }

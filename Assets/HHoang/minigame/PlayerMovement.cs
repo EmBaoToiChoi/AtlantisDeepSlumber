@@ -6,27 +6,29 @@ using Unity.Netcode;
 public class PlayerMovement : NetworkBehaviour
 {
     private Rigidbody rb;
-
-    [Header("Cấu hình Di Chuyển")]
     public float moveSpeed = 7f;
     public float crouchSpeed = 3f;
 
-    [Header("Trạng thái Mạng")]
     public NetworkVariable<bool> canMoveNet = new NetworkVariable<bool>(true);
     public NetworkVariable<bool> isCrouchingNet = new NetworkVariable<bool>(false);
-    private NetworkVariable<Vector2> networkMoveInput = new NetworkVariable<Vector2>();
+    private NetworkVariable<Vector2> networkMoveInput = new NetworkVariable<Vector2>(
+        writePerm: NetworkVariableWritePermission.Owner
+    );
 
-    void Awake()
-    {
-        rb = GetComponent<Rigidbody>();
-        rb.freezeRotation = true;
+    void Awake() 
+    { 
+        rb = GetComponent<Rigidbody>(); 
+        rb.freezeRotation = true; 
     }
 
     void Update()
     {
+        // CHỈ Client thực hiện phần này
         if (!IsOwner) return;
 
-        // Xử lý di chuyển
+        // Tránh chạy logic Input nếu đang ở chế độ Batch/Headless
+        if (Application.isBatchMode) return;
+
         Vector2 input = Vector2.zero;
         if (canMoveNet.Value && Keyboard.current != null)
         {
@@ -34,28 +36,46 @@ public class PlayerMovement : NetworkBehaviour
             float y = (Keyboard.current.sKey.isPressed ? -1 : 0) + (Keyboard.current.wKey.isPressed ? 1 : 0);
             input = new Vector2(x, y).normalized;
         }
+
         UpdateInputServerRpc(input);
 
-        // Xử lý Crouch
         if (Keyboard.current != null)
         {
             bool isPressingCrouch = Keyboard.current.cKey.isPressed || Keyboard.current.leftShiftKey.isPressed;
-            if (isPressingCrouch != isCrouchingNet.Value) UpdateCrouchStatusServerRpc(isPressingCrouch);
+            if (isPressingCrouch != isCrouchingNet.Value) 
+                UpdateCrouchStatusServerRpc(isPressingCrouch);
+        }
+    }
+
+    public void SetCanMove(bool state)
+    {
+        if (IsServer) 
+        {
+            canMoveNet.Value = state;
+        }
+        else 
+        {
+            // Vì chỉ Server mới có quyền ghi (WritePermission) vào NetworkVariable,
+            // nên nếu gọi từ Client, bạn phải dùng ServerRpc
+            SetCanMoveServerRpc(state);
         }
     }
 
     void FixedUpdate()
     {
+        // Server chạy vật lý cho tất cả, Client không can thiệp vào vận tốc vật lý
+        if (!IsServer) return;
+
         float targetSpeed = isCrouchingNet.Value ? crouchSpeed : moveSpeed;
         rb.linearVelocity = new Vector3(networkMoveInput.Value.x * targetSpeed, rb.linearVelocity.y, networkMoveInput.Value.y * targetSpeed);
     }
-
-    [ServerRpc]
-    private void UpdateInputServerRpc(Vector2 input) => networkMoveInput.Value = input;
-
+    
     [ServerRpc(RequireOwnership = false)]
-    private void UpdateCrouchStatusServerRpc(bool state) => isCrouchingNet.Value = state;
+    private void SetCanMoveServerRpc(bool state)
+    {
+        canMoveNet.Value = state;
+    }
 
-    [ServerRpc(RequireOwnership = false)]
-    public void SetCanMoveServerRpc(bool state) => canMoveNet.Value = state;
+    [ServerRpc] private void UpdateInputServerRpc(Vector2 input) => networkMoveInput.Value = input;
+    [ServerRpc] private void UpdateCrouchStatusServerRpc(bool state) => isCrouchingNet.Value = state;
 }

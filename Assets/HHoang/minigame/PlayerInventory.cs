@@ -12,18 +12,22 @@ public class PlayerInteraction : NetworkBehaviour
 
     public NetworkVariable<bool> isCarryingCore = new NetworkVariable<bool>(false);
 
-    // Trong file PlayerInteraction.cs (vốn tên là PlayerInventory.cs trong upload của bạn)
     void Update()
     {
+        // 1. Chỉ Client sở hữu mới xử lý Input
         if (!IsOwner) return;
 
+        // 2. Chỉ kiểm tra Input nếu không phải đang chạy Server Headless
+        // Hoặc kiểm tra null Keyboard.current trước khi dùng
         if (Keyboard.current != null && Keyboard.current.eKey.wasPressedThisFrame)
         {
-            if (currentHeldCore == null) TryPickupCore();
+            if (currentHeldCore == null) 
+            {
+                TryPickupCore();
+            }
             else
             {
-                // SỬA: Truyền 'this' thay vì GetComponent<PlayerMovement>()
-                if (currentStation != null && currentStation.TryInteract(this)) { /* Tương tác thành công */ }
+                if (currentStation != null && currentStation.TryInteract(this)) { }
                 else { DropCore(); }
             }
         }
@@ -42,26 +46,24 @@ public class PlayerInteraction : NetworkBehaviour
         }
     }
 
-    [ServerRpc]
+    [ServerRpc(RequireOwnership = false)]
     private void RequestPickupServerRpc(ulong networkObjectId, ServerRpcParams rpcParams = default)
     {
+        // Server tự kiểm tra logic mà không cần đụng tới Keyboard
         if (NetworkManager.SpawnManager.SpawnedObjects.TryGetValue(networkObjectId, out var netObj))
         {
             var core = netObj.GetComponent<CrystalCore>();
-            currentHeldCore = core;
-            isCarryingCore.Value = true;
-            core.RequestPickup(OwnerClientId);
-            
-            // Đồng bộ cho riêng Client sở hữu
-            AssignHeldCoreClientRpc(networkObjectId, new ClientRpcParams { Send = new ClientRpcSendParams { TargetClientIds = new[] { rpcParams.Receive.SenderClientId } } });
+            if (core != null && !core.isSnapped.Value)
+            {
+                currentHeldCore = core;
+                isCarryingCore.Value = true;
+                core.RequestPickup(rpcParams.Receive.SenderClientId);
+                
+                AssignHeldCoreClientRpc(networkObjectId, new ClientRpcParams { 
+                    Send = new ClientRpcSendParams { TargetClientIds = new[] { rpcParams.Receive.SenderClientId } } 
+                });
+            }
         }
-    }
-
-    [ClientRpc]
-    private void AssignHeldCoreClientRpc(ulong networkObjectId, ClientRpcParams rpcParams = default)
-    {
-        if (NetworkManager.SpawnManager.SpawnedObjects.TryGetValue(networkObjectId, out var netObj))
-            currentHeldCore = netObj.GetComponent<CrystalCore>();
     }
 
     public void DropCore() { if (IsOwner) DropCoreServerRpc(); }
@@ -79,8 +81,12 @@ public class PlayerInteraction : NetworkBehaviour
     }
 
     [ClientRpc]
-    private void ClearHeldCoreClientRpc() => currentHeldCore = null;
+    private void AssignHeldCoreClientRpc(ulong networkObjectId, ClientRpcParams rpcParams = default)
+    {
+        if (NetworkManager.SpawnManager.SpawnedObjects.TryGetValue(networkObjectId, out var netObj))
+            currentHeldCore = netObj.GetComponent<CrystalCore>();
+    }
 
-    [ServerRpc(RequireOwnership = false)]
-    public void SetCarryingCoreServerRpc(bool state) => isCarryingCore.Value = state;
+    [ClientRpc]
+    private void ClearHeldCoreClientRpc() => currentHeldCore = null;
 }

@@ -4,7 +4,7 @@ using DG.Tweening;
 
 public class GearRotator : NetworkBehaviour 
 {
-    [Header("Cấu hình quay")]
+    [Header("Cấu hình")]
     public float rotationSpeed = 50f;
     public bool reverseDirection = false;
     private float originalSpeed;
@@ -27,75 +27,75 @@ public class GearRotator : NetworkBehaviour
     public override void OnNetworkSpawn()
     {
         base.OnNetworkSpawn();
-        // BỎ DÒNG NÀY: if (IsServer) currentSpeed.Value = 0f;
         
-        // Nếu bạn muốn nó MẶC ĐỊNH quay ngay khi game chạy, hãy để:
-        if (IsServer)
+        // Nếu cổng đang dừng quay (tức là đang mở), đẩy nó về vị trí mở ngay lập tức
+        if (IsClient && currentSpeed.Value == 0)
         {
-            float direction = reverseDirection ? -1f : 1f;
-            currentSpeed.Value = rotationSpeed * direction; 
+            transform.localPosition = originalPosition + openOffset;
         }
-    }
-    public void SetSpeed(float speed)
-    {
-        if (IsServer) currentSpeed.Value = speed;
     }
 
     void Update()
     {
+        // Quay bánh răng: Logic này an toàn cho cả Server và Client
         if (currentSpeed.Value != 0)
         {
             transform.Rotate(rotationAxis.normalized * currentSpeed.Value * Time.deltaTime, Space.Self);
         }
     }
 
-    public bool IsSpining() => currentSpeed.Value != 0f;
+    // Các hàm tương tác chỉ được gọi bởi Server hoặc qua ServerRpc
+    public void OpenGear() { if (IsServer) OpenGearServerRpc(); }
 
-    // --- CÁC HÀM GỌI TỪ SERVER ĐỂ ĐỒNG BỘ CLIENT ---
-
-    public void OpenGear()
+    [ServerRpc(RequireOwnership = false)]
+    private void OpenGearServerRpc()
     {
-        if (IsServer) currentSpeed.Value = 0f; 
-        OpenGearClientRpc();
+        currentSpeed.Value = 0f;
+        OpenGearClientRpc(); // Đồng bộ hiệu ứng cho Client
     }
 
     [ClientRpc]
     private void OpenGearClientRpc()
     {
         transform.DOKill();
-        // Trượt ra xong thì KHÔNG làm gì cả (vì bánh răng đã dừng)
         transform.DOLocalMove(originalPosition + openOffset, moveDuration).SetEase(Ease.InOutCubic);
     }
 
-    public void CloseGear()
+    [ServerRpc(RequireOwnership = false)]
+    private void CloseGearServerRpc()
     {
-        if (IsServer) currentSpeed.Value = 0f;    
+        // Cập nhật giá trị quay về 0 để dừng trước
+        currentSpeed.Value = 0f; 
+        
+        // Gọi ClientRpc để chạy Tween
         CloseGearClientRpc();
+        
+        // Server tự chờ đúng thời gian moveDuration rồi mới cho quay lại
+        Invoke(nameof(ResumeRotation), moveDuration);
+    }
+
+    private void ResumeRotation()
+    {
+        if (!IsServer) return;
+        float direction = reverseDirection ? -1f : 1f;
+        currentSpeed.Value = originalSpeed * direction;
     }
 
     [ClientRpc]
     private void CloseGearClientRpc()
     {
         transform.DOKill();
-        // Khi trượt về xong, thì mới set lại tốc độ quay (chỉ Server thực hiện)
-        transform.DOLocalMove(originalPosition, moveDuration).SetEase(Ease.InOutCubic)
-                .OnComplete(() => {
-                    if (IsServer) {
-                        float direction = reverseDirection ? -1f : 1f;
-                        currentSpeed.Value = originalSpeed * direction;
-                    }
-                });
+        transform.DOLocalMove(originalPosition, moveDuration).SetEase(Ease.InOutCubic);
+    }
+    // Thêm hàm này vào GearRotator.cs
+    public void CloseGear() 
+    { 
+        if (IsServer) CloseGearServerRpc(); 
     }
 
-    // --- XỬ LÝ VA CHẠM ---
-    private void OnTriggerEnter(Collider other)
+    void OnDestroy()
     {
-        if (!IsServer) return;
-
-        if (other.CompareTag("Player") && IsSpining())
-        {
-            other.transform.position = new Vector3(0f, 1f, 0f);
-            Debug.Log("Người chơi bị bánh răng nghiền nát!");
-        }
+        // Hủy bỏ lệnh chờ nếu object bị xóa giữa chừng
+        CancelInvoke(nameof(ResumeRotation));
     }
 }

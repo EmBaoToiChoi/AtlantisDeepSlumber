@@ -2,19 +2,27 @@ using UnityEngine;
 using Unity.Netcode;
 using System.Collections.Generic;
 
+[RequireComponent(typeof(Rigidbody))]
 public class CrystalCore : NetworkBehaviour
 {
     public int crystalID;
     public NetworkList<ulong> holders;
     public NetworkVariable<bool> isSnapped = new NetworkVariable<bool>(false);
 
-    void Awake() => holders = new NetworkList<ulong>();
+    private Rigidbody rb;
 
-    void Update()
+    void Awake() 
+    { 
+        holders = new NetworkList<ulong>(); 
+        rb = GetComponent<Rigidbody>();
+    }
+
+    void FixedUpdate() // Dùng FixedUpdate cho các thao tác vật lý/di chuyển
     {
         if (!IsServer || isSnapped.Value) return;
 
-        Rigidbody rb = GetComponent<Rigidbody>();
+        CleanupDisconnectedHolders();
+
         if (holders.Count > 0)
         {
             Vector3 targetPos = Vector3.zero;
@@ -22,11 +30,9 @@ public class CrystalCore : NetworkBehaviour
 
             foreach (ulong clientId in holders)
             {
-                // Kiểm tra sự tồn tại của client và PlayerObject
                 if (NetworkManager.ConnectedClients.TryGetValue(clientId, out var client) && 
                     client.PlayerObject != null)
                 {
-                    // Lấy script tương tác thay vì di chuyển
                     if (client.PlayerObject.TryGetComponent<PlayerInteraction>(out var pInt) && pInt.holdPoint != null)
                     {
                         targetPos += pInt.holdPoint.position;
@@ -37,14 +43,30 @@ public class CrystalCore : NetworkBehaviour
 
             if (activeHolders > 0)
             {
-                transform.position = targetPos / activeHolders;
+                // Dùng MovePosition thay vì set thẳng transform để tránh lỗi xuyên vật thể
+                rb.MovePosition(targetPos / activeHolders);
                 rb.isKinematic = true;
             }
         }
         else
         {
-            rb.isKinematic = false;
-            rb.useGravity = true;
+            if (rb.isKinematic) 
+            {
+                rb.isKinematic = false;
+                rb.useGravity = true;
+            }
+        }
+    }
+
+    private void CleanupDisconnectedHolders()
+    {
+        for (int i = holders.Count - 1; i >= 0; i--)
+        {
+            // Kiểm tra an toàn xem client còn tồn tại không
+            if (!NetworkManager.Singleton.ConnectedClients.ContainsKey(holders[i]))
+            {
+                holders.RemoveAt(i);
+            }
         }
     }
 
@@ -52,7 +74,10 @@ public class CrystalCore : NetworkBehaviour
     public void RequestDrop(ulong playerId) => RequestDropServerRpc(playerId);
 
     [ServerRpc(RequireOwnership = false)]
-    private void RequestPickupServerRpc(ulong playerId) { if (!holders.Contains(playerId)) holders.Add(playerId); }
+    private void RequestPickupServerRpc(ulong playerId) 
+    { 
+        if (!holders.Contains(playerId)) holders.Add(playerId); 
+    }
 
     [ServerRpc(RequireOwnership = false)]
     private void RequestDropServerRpc(ulong playerId) 

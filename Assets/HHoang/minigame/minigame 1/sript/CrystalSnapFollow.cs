@@ -4,18 +4,25 @@ using Unity.Netcode;
 public class CrystalSnapFollow : NetworkBehaviour
 {
     private CrystalCore core;
-    // Biến này để lưu vị trí cần hút về
     public Transform targetSnapPoint; 
 
     void Awake() => core = GetComponent<CrystalCore>();
 
     void LateUpdate()
     {
-        // Nếu đã được lắp (isSnapped) và có trạm đích, thì hút về
-        if (core != null && core.isSnapped.Value && targetSnapPoint != null)
+        if (core == null) return;
+
+        // Nếu đã khóa (Snapped), vật thể không còn di chuyển tự do
+        if (core.isSnapped.Value && targetSnapPoint != null)
         {
-            transform.position = targetSnapPoint.position;
-            transform.rotation = targetSnapPoint.rotation;
+            // Chỉ cần cập nhật trên Server, NetworkTransform sẽ đồng bộ tới Client
+            if (IsServer)
+            {
+                if (transform.position != targetSnapPoint.position || transform.rotation != targetSnapPoint.rotation)
+                {
+                    transform.SetPositionAndRotation(targetSnapPoint.position, targetSnapPoint.rotation);
+                }
+            }
         }
     }
 }
