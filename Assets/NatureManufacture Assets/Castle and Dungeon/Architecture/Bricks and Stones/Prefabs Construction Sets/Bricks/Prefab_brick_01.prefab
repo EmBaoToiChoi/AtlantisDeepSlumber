@@ -13,6 +13,7 @@ GameObject:
   - component: {fileID: 1693321601227905081}
   - component: {fileID: 1656207726545739421}
   - component: {fileID: 6770905047408206012}
+  - component: {fileID: 3553655963784719193}
   m_Layer: 0
   m_Name: Prefab_brick_01
   m_TagString: Untagged
@@ -107,7 +108,7 @@ MeshCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 5
-  m_Convex: 1
+  m_Convex: 0
   m_CookingOptions: 30
   m_Mesh: {fileID: -2954780442978731206, guid: f8182e2018f8f464cb457b0136f05dee, type: 3}
 --- !u!205 &6770905047408206012
@@ -129,3 +130,26 @@ LODGroup:
     renderers:
     - renderer: {fileID: 1693321601227905081}
   m_Enabled: 1
+--- !u!136 &3553655963784719193
+CapsuleCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 900473043858553324}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 0
+  serializedVersion: 2
+  m_Radius: 0.7343831
+  m_Height: 1.1415482
+  m_Direction: 1
+  m_Center: {x: 0.00000014901161, y: 0.000000029802322, z: -0.000000074505806}
