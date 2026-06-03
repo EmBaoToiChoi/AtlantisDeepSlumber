@@ -6,7 +6,7 @@ AnimationClip:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: Attackdoucombo
+  m_Name: combodua
   serializedVersion: 7
   m_Legacy: 0
   m_Compressed: 0
@@ -113061,21 +113061,21 @@ AnimationClip:
   m_HasGenericRootTransform: 0
   m_HasMotionFloatCurves: 0
   m_Events:
-  - time: 0.7
+  - time: 0.6666667
     functionName: EnableDoubleSlash
     data: 
     objectReferenceParameter: {fileID: 0}
     floatParameter: 0
     intParameter: 0
     messageOptions: 0
-  - time: 2.9333334
+  - time: 2.9666667
     functionName: DisableDoubleSlash
     data: 
     objectReferenceParameter: {fileID: 0}
     floatParameter: 0
     intParameter: 0
     messageOptions: 0
-  - time: 3.6333334
+  - time: 3.6
     functionName: OnSlashEnd
     data: 
     objectReferenceParameter: {fileID: 0}
