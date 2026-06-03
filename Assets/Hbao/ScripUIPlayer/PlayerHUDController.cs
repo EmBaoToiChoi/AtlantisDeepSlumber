@@ -62,6 +62,7 @@ public class PlayerHUDController : MonoBehaviour
     private VisualElement skillImgE; // Tham chiếu tới hình ảnh kỹ năng để ẩn
     private bool isSkillsUnlocked = false; // Trạng thái đã mở khóa kỹ năng hay chưa
     public int currentSelectedWeapon = 1; // Thêm biến lưu vũ khí đang chọn
+    public static bool isAnyUIOpen = false; // Trạng thái static báo hiệu bất kỳ UI nào đang mở
     
     // Mặc định false -> Vào game chưa ấn M sẽ là tắt Mic
     private bool isMicOn = false; 
@@ -355,6 +356,28 @@ public class PlayerHUDController : MonoBehaviour
                 {
                     worldMapOverlay.ToggleInClassList("show-map");
                     bool isNowVisible = worldMapOverlay.ClassListContains("show-map");
+                    isAnyUIOpen = isNowVisible; // Đồng bộ trạng thái UI đang mở
+                    
+                    // Hiện/ẩn chuột cho Bản đồ
+                    var localPlayer = FindObjectOfType<LeoPlayer>();
+                    if (localPlayer != null)
+                    {
+                        localPlayer.SetCursorLock(!isNowVisible);
+                    }
+                    else
+                    {
+                        if (isNowVisible)
+                        {
+                            UnityEngine.Cursor.lockState = CursorLockMode.None;
+                            UnityEngine.Cursor.visible = true;
+                        }
+                        else
+                        {
+                            UnityEngine.Cursor.lockState = CursorLockMode.Locked;
+                            UnityEngine.Cursor.visible = false;
+                        }
+                    }
+                    
                     Debug.Log("Đã " + (isNowVisible ? "mở" : "đóng") + " Bản đồ thế giới với hiệu ứng");
                 }
             }
@@ -540,6 +563,15 @@ public class PlayerHUDController : MonoBehaviour
             inventoryOverlay.ToggleInClassList("show-inventory");
             bool isNowVisible = inventoryOverlay.ClassListContains("show-inventory");
             Debug.Log("Đã " + (isNowVisible ? "mở" : "đóng") + " hành trang");
+
+            // Đồng bộ trạng thái static UI
+            isAnyUIOpen = isNowVisible;
+
+            // Đảm bảo EventSystem được cấu hình đúng khi mở UI
+            if (isNowVisible)
+            {
+                SetupEventSystemForInputSystem();
+            }
 
             // Tự động ẩn/hiện con trỏ chuột phù hợp với trạng thái UI hành trang
             var localPlayer = FindObjectOfType<LeoPlayer>();
@@ -1319,8 +1351,16 @@ public class PlayerHUDController : MonoBehaviour
 
     private void Start()
     {
-        // Tự động kiểm tra và cấu hình EventSystem phù hợp với Input System mới
-        var eventSystem = FindAnyObjectByType<UnityEngine.EventSystems.EventSystem>();
+        SetupEventSystemForInputSystem();
+    }
+
+    /// <summary>
+    /// Kiểm tra và tự động cấu hình/sửa chữa EventSystem để tương thích 100% với Input System mới.
+    /// Giúp UI Toolkit nhận tương tác click chuột ngay lập tức mà không bị liệt.
+    /// </summary>
+    public void SetupEventSystemForInputSystem()
+    {
+        var eventSystem = FindObjectOfType<UnityEngine.EventSystems.EventSystem>();
         if (eventSystem == null)
         {
             GameObject esObj = new GameObject("EventSystem");
@@ -1330,13 +1370,13 @@ public class PlayerHUDController : MonoBehaviour
         }
         else
         {
-            // Thay thế module cũ bằng InputSystemUIInputModule nếu cần
+            // Thay thế module cũ bằng InputSystemUIInputModule nếu cần bằng DestroyImmediate để có hiệu lực tức thời
             var oldModule = eventSystem.GetComponent<UnityEngine.EventSystems.BaseInputModule>();
             if (oldModule != null && !(oldModule is UnityEngine.InputSystem.UI.InputSystemUIInputModule))
             {
-                Destroy(oldModule);
+                DestroyImmediate(oldModule);
                 eventSystem.gameObject.AddComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
-                Debug.Log("[PlayerHUDController] Replaced old BaseInputModule with InputSystemUIInputModule.");
+                Debug.Log("[PlayerHUDController] Replaced old BaseInputModule with InputSystemUIInputModule immediately.");
             }
         }
     }
