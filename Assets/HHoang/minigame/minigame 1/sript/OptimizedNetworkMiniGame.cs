@@ -7,6 +7,12 @@ using UnityEngine.InputSystem;
 
 public class OptimizedNetworkMiniGame : NetworkBehaviour
 {
+
+    [Header("Cấu hình linh hoạt")]
+    [Tooltip("Tốc độ thanh slider tự tụt mỗi giây")]
+    public float decayRate = 15f; 
+    [Tooltip("Số người cần đạt 85% để mở cổng (1 hoặc 2)")]
+    public int playersNeededToUnlock = 2;
     [Header("UI & Controls")]
     public GameObject miniGamePlayZone;
     public Slider localSlider;
@@ -62,11 +68,18 @@ public class OptimizedNetworkMiniGame : NetworkBehaviour
 
     private void UpdateStationDrain()
     {
-        // Dùng hằng số hoặc cấu hình để dễ chỉnh sửa
-        DrainStation(ref s0Value, 15f);
-        DrainStation(ref s1Value, 15f);
-        DrainStation(ref s2Value, station2HasCrystal.Value ? 15f : 30f);
-        DrainStation(ref s3Value, station3HasCrystal.Value ? 15f : 30f);
+        float normalDrain = decayRate;     // Tốc độ bình thường (x1)
+        float fastDrain = decayRate * 2.5f;  // Tốc độ x2
+
+        // Station 0 và 1 luôn tụt với tốc độ bình thường
+        DrainStation(ref s0Value, normalDrain);
+        DrainStation(ref s1Value, normalDrain);
+
+        // Station 2 và 3: 
+        // Nếu có ngọc (true) -> normalDrain
+        // Nếu chưa có ngọc (false) -> fastDrain
+        DrainStation(ref s2Value, station2HasCrystal.Value ? normalDrain : fastDrain);
+        DrainStation(ref s3Value, station3HasCrystal.Value ? normalDrain : fastDrain);
     }
 
     private void DrainStation(ref NetworkVariable<float> stat, float speed)
@@ -76,19 +89,27 @@ public class OptimizedNetworkMiniGame : NetworkBehaviour
 
     private void CheckGateStatus()
     {
-        bool pairA_Ready = (s0Owner.Value != ulong.MaxValue && s0Value.Value >= greenZoneMin) &&
-                           (s1Owner.Value != ulong.MaxValue && s1Value.Value >= greenZoneMin);
-        bool pairB_Ready = (s2Owner.Value != ulong.MaxValue && s2Value.Value >= greenZoneMin) &&
-                           (s3Owner.Value != ulong.MaxValue && s3Value.Value >= greenZoneMin);
+        int readyCount = 0;
         
-        bool shouldBeOpen = pairA_Ready || pairB_Ready;
+        // Đếm xem có bao nhiêu trạm đang đạt ngưỡng greenZoneMin và có người chơi (owner)
+        if (s0Owner.Value != ulong.MaxValue && s0Value.Value >= greenZoneMin) readyCount++;
+        if (s1Owner.Value != ulong.MaxValue && s1Value.Value >= greenZoneMin) readyCount++;
+        if (s2Owner.Value != ulong.MaxValue && s2Value.Value >= greenZoneMin) readyCount++;
+        if (s3Owner.Value != ulong.MaxValue && s3Value.Value >= greenZoneMin) readyCount++;
+        
+        // Kiểm tra xem số trạm đạt chuẩn có >= số lượng yêu cầu không
+        bool shouldBeOpen = (readyCount >= playersNeededToUnlock);
 
         if (shouldBeOpen != isCurrentlyOpen)
         {
             isCurrentlyOpen = shouldBeOpen;
             foreach (var gear in gearList)
             {
-                if (gear == null) continue;
+                if (gear == null) 
+                {
+                    Debug.LogWarning("[MiniGame] Có một Gear trong danh sách bị Null!");
+                    continue;
+                }
                 if (isCurrentlyOpen) gear.OpenGear();
                 else gear.CloseGear();
             }

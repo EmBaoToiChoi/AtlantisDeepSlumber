@@ -24,15 +24,28 @@ public class GearRotator : NetworkBehaviour
         originalSpeed = rotationSpeed;
     }
 
+    // Trong GearRotator.cs
+    public void SetRotation(bool shouldRotate)
+    {
+        if (!IsServer) return;
+        
+        // Nếu nên xoay thì gán tốc độ, không thì cho bằng 0
+        float direction = reverseDirection ? -1f : 1f;
+        currentSpeed.Value = shouldRotate ? (originalSpeed * direction) : 0f;
+    }
+
     public override void OnNetworkSpawn()
     {
         base.OnNetworkSpawn();
-        
-        // Nếu cổng đang dừng quay (tức là đang mở), đẩy nó về vị trí mở ngay lập tức
-        if (IsClient && currentSpeed.Value == 0)
+
+        if (IsServer)
         {
-            transform.localPosition = originalPosition + openOffset;
+            // Gán tốc độ mặc định ngay khi server khởi động object này
+            float direction = reverseDirection ? -1f : 1f;
+            currentSpeed.Value = originalSpeed * direction;
         }
+        
+        // Client không cần làm gì ở đây, nó sẽ tự nhận giá trị từ NetworkVariable
     }
 
     void Update()
