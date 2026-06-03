@@ -1,10 +1,9 @@
 using UnityEngine;
 
 /// <summary>
-/// Helper script to programmatically add the "OnRollEnd" AnimationEvent to read-only roll clips
-/// (like "LonVong" or "Lonmeo") in the Animator Controller at runtime.
-/// Since FBX animations are read-only, this resolves the issue without modifying the source asset files.
-/// Attach this script to the GameObject containing the Animator component (or the Player parent GameObject).
+/// Helper script attached to the GameObject with the Animator component.
+/// Provides public methods for Animation Events that forward callbacks to the LeoPlayer script.
+/// Allows you to manually add and select events in the Unity Editor dropdown.
 /// </summary>
 public class RollAnimationEventHelper : MonoBehaviour
 {
@@ -12,65 +11,10 @@ public class RollAnimationEventHelper : MonoBehaviour
 
     private void Start()
     {
-        // Find LeoPlayer on this GameObject or in parents
-        player = GetComponentInParent<LeoPlayer>();
-        if (player == null)
-        {
-            player = GetComponentInChildren<LeoPlayer>(true);
-        }
-
-        Animator anim = GetComponent<Animator>();
-        if (anim == null)
-        {
-            anim = GetComponentInChildren<Animator>(true);
-        }
-
-        if (anim != null && anim.runtimeAnimatorController != null)
-        {
-            // Iterate over all animation clips inside the Animator Controller
-            foreach (var clip in anim.runtimeAnimatorController.animationClips)
-            {
-                string clipNameLower = clip.name.ToLower();
-                if (clipNameLower == "lonvong" || clipNameLower == "lonmeo" || 
-                    clipNameLower.Contains("lonvong") || clipNameLower.Contains("lonmeo"))
-                {
-                    // Check if the OnRollEnd event is already present
-                    bool eventExists = false;
-                    if (clip.events != null)
-                    {
-                        foreach (var ev in clip.events)
-                        {
-                            if (ev.functionName == "OnRollEnd")
-                            {
-                                eventExists = true;
-                                break;
-                            }
-                        }
-                    }
-
-                    if (!eventExists)
-                    {
-                        AnimationEvent rollEndEvent = new AnimationEvent();
-                        rollEndEvent.time = clip.length * 0.95f; // Fire near the end of the clip (95% duration)
-                        rollEndEvent.functionName = "OnRollEnd";
-                        
-                        clip.AddEvent(rollEndEvent);
-                        Debug.Log($"[RollAnimationEventHelper] Automatically added 'OnRollEnd' event to read-only clip: {clip.name} ({clip.length} seconds)");
-                    }
-                }
-            }
-        }
-        else
-        {
-            Debug.LogWarning("[RollAnimationEventHelper] Animator or RuntimeAnimatorController is missing. Cannot add events.");
-        }
+        EnsurePlayerReference();
     }
 
-    /// <summary>
-    /// Event receiver called by the Animation Event.
-    /// Forwards the roll end callback to the LeoPlayer instance.
-    /// </summary>
-    public void OnRollEnd()
+    private void EnsurePlayerReference()
     {
         if (player == null)
         {
@@ -80,15 +24,192 @@ public class RollAnimationEventHelper : MonoBehaviour
                 player = GetComponentInChildren<LeoPlayer>(true);
             }
         }
+    }
 
+    // ------------------------------------------------------------------
+    //  Public Animation Event Receivers (Selectable in Unity Editor dropdown)
+    // ------------------------------------------------------------------
+    
+    /// <summary>
+    /// Event receiver for end of roll animation.
+    /// </summary>
+    public void OnRollEnd()
+    {
+        EnsurePlayerReference();
         if (player != null)
         {
             player.OnRollEnd();
             Debug.Log("[RollAnimationEventHelper] Forwarded OnRollEnd callback to LeoPlayer.");
         }
-        else
+    }
+
+    /// <summary>
+    /// Event receiver to enable the Left hand/weapon hitbox.
+    /// </summary>
+    public void EnableLeftHitbox()
+    {
+        EnsurePlayerReference();
+        if (player != null)
         {
-            Debug.LogWarning("[RollAnimationEventHelper] Received OnRollEnd event, but LeoPlayer component is not found.");
+            player.EnableLeftHitbox();
+        }
+    }
+
+    /// <summary>
+    /// Event receiver to disable the Left hand/weapon hitbox.
+    /// </summary>
+    public void DisableLeftHitbox()
+    {
+        EnsurePlayerReference();
+        if (player != null)
+        {
+            player.DisableLeftHitbox();
+        }
+    }
+
+    /// <summary>
+    /// Event receiver to enable the Right hand/weapon hitbox.
+    /// </summary>
+    public void EnableRightHitbox()
+    {
+        EnsurePlayerReference();
+        if (player != null)
+        {
+            player.EnableRightHitbox();
+        }
+    }
+
+    /// <summary>
+    /// Event receiver to disable the Right hand/weapon hitbox.
+    /// </summary>
+    public void DisableRightHitbox()
+    {
+        EnsurePlayerReference();
+        if (player != null)
+        {
+            player.DisableRightHitbox();
+        }
+    }
+
+    /// <summary>
+    /// Event receiver to enable BOTH left and right hitboxes (used for Punch 3 combo).
+    /// </summary>
+    public void EnableBothHitboxes()
+    {
+        EnsurePlayerReference();
+        if (player != null)
+        {
+            player.EnableBothHitboxes();
+        }
+    }
+
+    /// <summary>
+    /// Event receiver to disable BOTH left and right hitboxes (used for Punch 3 combo).
+    /// </summary>
+    public void DisableBothHitboxes()
+    {
+        EnsurePlayerReference();
+        if (player != null)
+        {
+            player.DisableBothHitboxes();
+        }
+    }
+
+    // ------------------------------------------------------------------
+    //  Punch-specific alias event functions for intuitive selection
+    // ------------------------------------------------------------------
+
+    public void EnableLeftPunch()
+    {
+        EnableLeftHitbox();
+    }
+
+    public void DisableLeftPunch()
+    {
+        DisableLeftHitbox();
+    }
+
+    public void EnableRightPunch()
+    {
+        EnableRightHitbox();
+    }
+
+    public void DisableRightPunch()
+    {
+        DisableRightHitbox();
+    }
+
+    public void EnableComboPunch()
+    {
+        EnableBothHitboxes();
+    }
+
+    public void DisableComboPunch()
+    {
+        DisableBothHitboxes();
+    }
+
+    // ------------------------------------------------------------------
+    //  Slash-specific alias event functions for intuitive selection
+    // ------------------------------------------------------------------
+
+    public void EnableSingleSlash()
+    {
+        EnsurePlayerReference();
+        if (player != null)
+        {
+            player.EnableRightWeaponHitbox();
+        }
+    }
+
+    public void DisableSingleSlash()
+    {
+        EnsurePlayerReference();
+        if (player != null)
+        {
+            player.DisableRightWeaponHitbox();
+        }
+    }
+
+    public void EnableDoubleSlash()
+    {
+        EnsurePlayerReference();
+        if (player != null)
+        {
+            player.EnableBothWeaponHitboxes();
+        }
+    }
+
+    public void DisableDoubleSlash()
+    {
+        EnsurePlayerReference();
+        if (player != null)
+        {
+            player.DisableBothWeaponHitboxes();
+        }
+    }
+
+    /// <summary>
+    /// Event receiver to end Root Motion after a slash finishes.
+    /// </summary>
+    public void OnSlashEnd()
+    {
+        EnsurePlayerReference();
+        if (player != null)
+        {
+            player.OnSlashEnd();
+        }
+    }
+
+    /// <summary>
+    /// Event receiver to unlock player movement after a punch attack finishes.
+    /// </summary>
+    public void UnlockMovement()
+    {
+        EnsurePlayerReference();
+        if (player != null)
+        {
+            player.UnlockMovement();
         }
     }
 }
