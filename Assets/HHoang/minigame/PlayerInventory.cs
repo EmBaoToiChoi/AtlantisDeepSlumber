@@ -14,10 +14,11 @@ public class PlayerInteraction : NetworkBehaviour
 
     void Update()
     {
-        // 1. Chỉ Client sở hữu mới có quyền gửi lệnh tương tác
+        // 1. Chỉ Client sở hữu mới xử lý Input
         if (!IsOwner) return;
 
-        // 2. Kiểm tra input an toàn
+        // 2. Chỉ kiểm tra Input nếu không phải đang chạy Server Headless
+        // Hoặc kiểm tra null Keyboard.current trước khi dùng
         if (Keyboard.current != null && Keyboard.current.eKey.wasPressedThisFrame)
         {
             if (currentHeldCore == null) 
@@ -26,28 +27,19 @@ public class PlayerInteraction : NetworkBehaviour
             }
             else
             {
-                // Gọi tới trạm hoặc drop
-                if (currentStation != null && currentStation.TryInteract(this)) 
-                { 
-                    // Tương tác thành công xử lý bên trong trạm
-                }
-                else 
-                { 
-                    DropCore(); 
-                }
+                if (currentStation != null && currentStation.TryInteract(this)) { }
+                else { DropCore(); }
             }
         }
     }
 
     private void TryPickupCore()
     {
-        // Thực hiện Physics trên phía Client để dự đoán (Prediction)
         Collider[] hitColliders = Physics.OverlapSphere(transform.position, 2f, interactableLayer);
         foreach (var hit in hitColliders)
         {
             if (hit.TryGetComponent<CrystalCore>(out var core) && !core.isSnapped.Value)
             {
-                // Gửi ID lên server để Server xác nhận
                 RequestPickupServerRpc(core.NetworkObject.NetworkObjectId);
                 break;
             }
@@ -57,6 +49,7 @@ public class PlayerInteraction : NetworkBehaviour
     [ServerRpc(RequireOwnership = false)]
     private void RequestPickupServerRpc(ulong networkObjectId, ServerRpcParams rpcParams = default)
     {
+        // Server tự kiểm tra logic mà không cần đụng tới Keyboard
         if (NetworkManager.SpawnManager.SpawnedObjects.TryGetValue(networkObjectId, out var netObj))
         {
             var core = netObj.GetComponent<CrystalCore>();
@@ -66,7 +59,6 @@ public class PlayerInteraction : NetworkBehaviour
                 isCarryingCore.Value = true;
                 core.RequestPickup(rpcParams.Receive.SenderClientId);
                 
-                // Gửi ClientRpc tới đúng người chơi đã request
                 AssignHeldCoreClientRpc(networkObjectId, new ClientRpcParams { 
                     Send = new ClientRpcSendParams { TargetClientIds = new[] { rpcParams.Receive.SenderClientId } } 
                 });
@@ -74,10 +66,7 @@ public class PlayerInteraction : NetworkBehaviour
         }
     }
 
-    public void DropCore() 
-    { 
-        if (IsOwner) DropCoreServerRpc(); 
-    }
+    public void DropCore() { if (IsOwner) DropCoreServerRpc(); }
 
     [ServerRpc(RequireOwnership = false)]
     private void DropCoreServerRpc()

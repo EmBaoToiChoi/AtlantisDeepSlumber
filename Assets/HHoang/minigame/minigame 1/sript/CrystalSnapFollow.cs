@@ -10,17 +10,18 @@ public class CrystalSnapFollow : NetworkBehaviour
 
     void LateUpdate()
     {
-        // 1. Kiểm tra null core để tránh lỗi
         if (core == null) return;
 
-        // 2. Chỉ chạy logic hút khi core đã được khóa (isSnapped) 
-        // 3. Kiểm tra targetSnapPoint tồn tại để tránh NullReferenceException
+        // Nếu đã khóa (Snapped), vật thể không còn di chuyển tự do
         if (core.isSnapped.Value && targetSnapPoint != null)
         {
-            // Chỉ cập nhật nếu vị trí hiện tại khác với vị trí đích (tối ưu hóa nhỏ)
-            if (transform.position != targetSnapPoint.position || transform.rotation != targetSnapPoint.rotation)
+            // Chỉ cần cập nhật trên Server, NetworkTransform sẽ đồng bộ tới Client
+            if (IsServer)
             {
-                transform.SetPositionAndRotation(targetSnapPoint.position, targetSnapPoint.rotation);
+                if (transform.position != targetSnapPoint.position || transform.rotation != targetSnapPoint.rotation)
+                {
+                    transform.SetPositionAndRotation(targetSnapPoint.position, targetSnapPoint.rotation);
+                }
             }
         }
     }

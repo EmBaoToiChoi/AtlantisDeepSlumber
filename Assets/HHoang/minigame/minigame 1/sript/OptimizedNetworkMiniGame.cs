@@ -14,14 +14,12 @@ public class OptimizedNetworkMiniGame : NetworkBehaviour
     public Image imgD;
 
     [Header("Cấu hình Mini-game")]
-    public float drainSpeed = 15f;
     public float pushAmount = 8f;
     public float greenZoneMin = 85f;
 
-    [Header("Danh sách Bánh Răng")]
     public List<GearRotator> gearList;
 
-    // NetworkVariables
+    // NetworkVariables (Dữ liệu quan trọng chỉ Server được viết)
     public NetworkVariable<float> s0Value = new NetworkVariable<float>(0f);
     public NetworkVariable<float> s1Value = new NetworkVariable<float>(0f);
     public NetworkVariable<float> s2Value = new NetworkVariable<float>(0f);
@@ -41,17 +39,20 @@ public class OptimizedNetworkMiniGame : NetworkBehaviour
 
     public override void OnNetworkSpawn()
     {
-        if (miniGamePlayZone != null) miniGamePlayZone.SetActive(false);
+        // Chỉ Client mới cần tắt UI lúc khởi động
+        if (IsClient && miniGamePlayZone != null) miniGamePlayZone.SetActive(false);
     }
 
     void Update()
     {
-        if (isPlaying && localSlider != null)
+        // 1. Logic Client: Hiển thị UI và nhận Input
+        if (IsClient && isPlaying && !Application.isBatchMode)
         {
-            localSlider.value = GetStationValue(currentStationIndex);
+            if (localSlider != null) localSlider.value = GetStationValue(currentStationIndex);
             HandleQTEInput();
         }
 
+        // 2. Logic Server: Xử lý logic game
         if (IsServer)
         {
             UpdateStationDrain();
@@ -59,26 +60,9 @@ public class OptimizedNetworkMiniGame : NetworkBehaviour
         }
     }
 
-    // --- CÁC HÀM XỬ LÝ LOGIC TRUNG TÂM (Được gọi từ ServerRpc trong InteractBox) ---
-    public void HandleStationAccess(int index, ulong clientId)
-    {
-        if (IsServer && GetOwner(index) == ulong.MaxValue)
-        {
-            SetOwner(index, clientId);
-        }
-    }
-
-    public void HandleStationRelease(int index, ulong clientId)
-    {
-        if (IsServer && GetOwner(index) == clientId)
-        {
-            SetOwner(index, ulong.MaxValue);
-            SetStationValue(index, 0f);
-        }
-    }
-
     private void UpdateStationDrain()
     {
+        // Dùng hằng số hoặc cấu hình để dễ chỉnh sửa
         DrainStation(ref s0Value, 15f);
         DrainStation(ref s1Value, 15f);
         DrainStation(ref s2Value, station2HasCrystal.Value ? 15f : 30f);
@@ -111,6 +95,21 @@ public class OptimizedNetworkMiniGame : NetworkBehaviour
         }
     }
 
+    // Các hàm Logic Server
+    public void HandleStationAccess(int index, ulong clientId)
+    {
+        if (IsServer && GetOwner(index) == ulong.MaxValue) SetOwner(index, clientId);
+    }
+
+    public void HandleStationRelease(int index, ulong clientId)
+    {
+        if (IsServer && GetOwner(index) == clientId)
+        {
+            SetOwner(index, ulong.MaxValue);
+            SetStationValue(index, 0f);
+        }
+    }
+
     [ServerRpc(RequireOwnership = false)]
     public void UpdateSliderServerRpc(int index, float amount)
     {
@@ -118,42 +117,77 @@ public class OptimizedNetworkMiniGame : NetworkBehaviour
         SetStationValue(index, newVal);
     }
 
-    // --- CÁC HÀM HELPER ---
-    private float GetStationValue(int index) => index switch { 0 => s0Value.Value, 1 => s1Value.Value, 2 => s2Value.Value, 3 => s3Value.Value, _ => 0f };
-    private void SetStationValue(int index, float val) { switch(index) { case 0: s0Value.Value = val; break; case 1: s1Value.Value = val; break; case 2: s2Value.Value = val; break; case 3: s3Value.Value = val; break; } }
-    private ulong GetOwner(int index) => index switch { 0 => s0Owner.Value, 1 => s1Owner.Value, 2 => s2Owner.Value, 3 => s3Owner.Value, _ => ulong.MaxValue };
-    private void SetOwner(int index, ulong id) { switch(index) { case 0: s0Owner.Value = id; break; case 1: s1Owner.Value = id; break; case 2: s2Owner.Value = id; break; case 3: s3Owner.Value = id; break; } }
-
-    public void ToggleMiniGame(int index, bool isOpening)
-    {
-        currentStationIndex = index;
-        isPlaying = isOpening;
-        if (miniGamePlayZone != null) miniGamePlayZone.SetActive(isOpening);
-    }
-
-    void HandleQTEInput()
-    {
-        if (Keyboard.current == null) return;
-        if (Keyboard.current.aKey.wasPressedThisFrame) ProcessInput(true);
-        else if (Keyboard.current.dKey.wasPressedThisFrame) ProcessInput(false);
-    }
-
-    void ProcessInput(bool isA)
-    {
-        PlaySuccessTween(isA ? imgA : imgD);
-        UpdateSliderServerRpc(currentStationIndex, pushAmount);
-    }
-
-    void PlaySuccessTween(Image targetImg)
-    {
-        targetImg.transform.DOKill();
-        targetImg.transform.DOScale(1.2f, 0.1f).OnComplete(() => targetImg.transform.DOScale(1f, 0.1f));
-    }
-
     [ServerRpc(RequireOwnership = false)]
     public void SetStationCrystalStatusServerRpc(int index, bool hasCrystal)
     {
         if (index == 2) station2HasCrystal.Value = hasCrystal;
         else if (index == 3) station3HasCrystal.Value = hasCrystal;
+    }
+
+    private float GetStationValue(int index) => index switch 
+    { 
+        0 => s0Value.Value, 
+        1 => s1Value.Value, 
+        2 => s2Value.Value, 
+        3 => s3Value.Value, 
+        _ => 0f // Dòng này giúp máy tính biết nếu index ngoài 0-3 thì trả về 0
+    };
+
+    private ulong GetOwner(int index) => index switch 
+    { 
+        0 => s0Owner.Value, 
+        1 => s1Owner.Value, 
+        2 => s2Owner.Value, 
+        3 => s3Owner.Value, 
+        _ => ulong.MaxValue // Dòng này giúp máy tính biết nếu index sai thì trả về giá trị "không ai sở hữu"
+    };
+
+    private void SetStationValue(int index, float val) 
+    { 
+        switch(index) 
+        { 
+            case 0: s0Value.Value = val; break; 
+            case 1: s1Value.Value = val; break; 
+            case 2: s2Value.Value = val; break; 
+            case 3: s3Value.Value = val; break; 
+            default: break; // Thêm dòng này để xử lý index sai
+        } 
+    }
+
+    private void SetOwner(int index, ulong id) 
+    { 
+        switch(index) 
+        { 
+            case 0: s0Owner.Value = id; break; 
+            case 1: s1Owner.Value = id; break; 
+            case 2: s2Owner.Value = id; break; 
+            case 3: s3Owner.Value = id; break; 
+            default: break; // Thêm dòng này để xử lý index sai
+        } 
+    }
+    public void ToggleMiniGame(int index, bool isOpening)
+    {
+        currentStationIndex = index;
+        isPlaying = isOpening;
+        if (IsClient && miniGamePlayZone != null) miniGamePlayZone.SetActive(isOpening);
+    }
+
+    private void HandleQTEInput()
+    {
+        if (Keyboard.current.aKey.wasPressedThisFrame) ProcessInput(true);
+        else if (Keyboard.current.dKey.wasPressedThisFrame) ProcessInput(false);
+    }
+
+    private void ProcessInput(bool isA)
+    {
+        if (IsClient) PlaySuccessTween(isA ? imgA : imgD);
+        UpdateSliderServerRpc(currentStationIndex, pushAmount);
+    }
+
+    private void PlaySuccessTween(Image targetImg)
+    {
+        if (targetImg == null) return;
+        targetImg.transform.DOKill();
+        targetImg.transform.DOScale(1.2f, 0.1f).OnComplete(() => targetImg.transform.DOScale(1f, 0.1f));
     }
 }

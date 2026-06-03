@@ -2,22 +2,25 @@ using UnityEngine;
 using Unity.Netcode;
 using System.Collections.Generic;
 
+[RequireComponent(typeof(Rigidbody))]
 public class CrystalCore : NetworkBehaviour
 {
     public int crystalID;
     public NetworkList<ulong> holders;
     public NetworkVariable<bool> isSnapped = new NetworkVariable<bool>(false);
 
-    void Awake() => holders = new NetworkList<ulong>();
+    private Rigidbody rb;
 
-    void Update()
+    void Awake() 
+    { 
+        holders = new NetworkList<ulong>(); 
+        rb = GetComponent<Rigidbody>();
+    }
+
+    void FixedUpdate() // Dùng FixedUpdate cho các thao tác vật lý/di chuyển
     {
-        // Chỉ Server thực hiện tính toán vật lý
         if (!IsServer || isSnapped.Value) return;
 
-        Rigidbody rb = GetComponent<Rigidbody>();
-        
-        // Dọn dẹp danh sách holder nếu có client nào đó đã ngắt kết nối
         CleanupDisconnectedHolders();
 
         if (holders.Count > 0)
@@ -40,13 +43,13 @@ public class CrystalCore : NetworkBehaviour
 
             if (activeHolders > 0)
             {
-                transform.position = targetPos / activeHolders;
+                // Dùng MovePosition thay vì set thẳng transform để tránh lỗi xuyên vật thể
+                rb.MovePosition(targetPos / activeHolders);
                 rb.isKinematic = true;
             }
         }
         else
         {
-            // Nếu không có ai giữ, trả về trạng thái vật lý bình thường
             if (rb.isKinematic) 
             {
                 rb.isKinematic = false;
@@ -57,10 +60,10 @@ public class CrystalCore : NetworkBehaviour
 
     private void CleanupDisconnectedHolders()
     {
-        // Duyệt ngược để an toàn khi remove item khỏi list
         for (int i = holders.Count - 1; i >= 0; i--)
         {
-            if (!NetworkManager.ConnectedClients.ContainsKey(holders[i]))
+            // Kiểm tra an toàn xem client còn tồn tại không
+            if (!NetworkManager.Singleton.ConnectedClients.ContainsKey(holders[i]))
             {
                 holders.RemoveAt(i);
             }
