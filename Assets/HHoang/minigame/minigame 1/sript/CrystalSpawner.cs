@@ -3,16 +3,19 @@ using Unity.Netcode;
 
 public class CrystalSpawner : NetworkBehaviour
 {
-    public GameObject crystalPrefab; // Kéo Prefab CrystalCore vào đây
+    public GameObject crystalPrefab;
 
     public override void OnNetworkSpawn()
     {
         if (IsServer)
         {
-            // Spawn ngọc ngay khi Server khởi động
+            // Kiểm tra xem prefab đã có NetworkObject chưa
             GameObject coreInstance = Instantiate(crystalPrefab, transform.position, Quaternion.identity);
-            coreInstance.GetComponent<NetworkObject>().Spawn();
-            Debug.Log("[SERVER] Đã spawn ngọc thành công!");
+            NetworkObject netObj = coreInstance.GetComponent<NetworkObject>();
+            
+            // Spawn vật thể và cho phép Client thấy
+            netObj.Spawn(true); 
+            Debug.Log("[SERVER] Đã spawn ngọc!");
         }
     }
 }

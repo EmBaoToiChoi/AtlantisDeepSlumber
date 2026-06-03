@@ -16,23 +16,28 @@ public class InteractBox : NetworkBehaviour
 
     void Update()
     {
-        // 1. Chỉ thực hiện trên Client sở hữu nhân vật
-        if (!IsOwner) return;
+        // BỎ DÒNG NÀY: if (!IsOwner) return; 
+        // Vì InteractBox là trạm, không phải nhân vật, nên không có owner là người chơi.
 
-        // 2. Không xử lý input nếu đang chạy Headless (trên server)
+        // 2. Không xử lý input nếu đang chạy Headless
         if (Application.isBatchMode) return;
 
-        if (isPlayerInside && localPlayerInteraction != null && Keyboard.current != null && Keyboard.current.eKey.wasPressedThisFrame)
+        // Chỉ kiểm tra khi có người chơi bên trong và người chơi đó là chính mình (Local Player)
+        if (isPlayerInside && localPlayerInteraction != null)
         {
-            if (localPlayerInteraction.isCarryingCore.Value && localPlayerInteraction.currentHeldCore != null)
+            // Kiểm tra xem localPlayerInteraction có đúng là người chơi hiện tại trên máy này không
+            if (localPlayerInteraction.IsOwner && Keyboard.current != null && Keyboard.current.eKey.wasPressedThisFrame)
             {
-                if (!isCrystalLocked.Value && (stationIndex == 2 || stationIndex == 3))
-                    SnapAndLockCrystalServerRpc(stationIndex);
-            }
-            else if (gameManager != null)
-            {
-                if (!isUsingStation) OpenStation();
-                else ExitStation();
+                if (localPlayerInteraction.isCarryingCore.Value && localPlayerInteraction.currentHeldCore != null)
+                {
+                    if (!isCrystalLocked.Value && (stationIndex == 2 || stationIndex == 3))
+                        SnapAndLockCrystalServerRpc(stationIndex);
+                }
+                else if (gameManager != null)
+                {
+                    if (!isUsingStation) OpenStation();
+                    else ExitStation();
+                }
             }
         }
     }

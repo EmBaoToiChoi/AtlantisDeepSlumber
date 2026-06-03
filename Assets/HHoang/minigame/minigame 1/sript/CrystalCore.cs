@@ -76,7 +76,19 @@ public class CrystalCore : NetworkBehaviour
     [ServerRpc(RequireOwnership = false)]
     private void RequestPickupServerRpc(ulong playerId) 
     { 
-        if (!holders.Contains(playerId)) holders.Add(playerId); 
+        // 1. Kiểm tra xem người chơi này đã cầm ngọc chưa
+        if (!holders.Contains(playerId)) 
+        {
+            holders.Add(playerId);
+            
+            // 2. CHUYỂN QUYỀN SỞ HỮU cho người chơi mới nhặt
+            // Netcode sẽ cho phép Client này gửi dữ liệu vị trí vật thể lên Server
+            var netObj = GetComponent<NetworkObject>();
+            if (netObj.OwnerClientId != playerId)
+            {
+                netObj.ChangeOwnership(playerId);
+            }
+        }
     }
 
     [ServerRpc(RequireOwnership = false)]
