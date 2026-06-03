@@ -23,6 +23,10 @@ public class RollAnimationEventHelper : MonoBehaviour
             {
                 player = GetComponentInChildren<LeoPlayer>(true);
             }
+            if (player == null)
+            {
+                Debug.LogError("[RollAnimationEventHelper] LỖI: Không tìm thấy component LeoPlayer ở các Object cha hoặc con!");
+            }
         }
     }
 
@@ -223,5 +227,47 @@ public class RollAnimationEventHelper : MonoBehaviour
         {
             player.OnPickItemEvent();
         }
+    }
+
+    public void DrawLeftSword()
+    {
+        EnsurePlayerReference();
+        if (player != null) player.DrawLeftSword();
+    }
+
+    public void DrawRightSword()
+    {
+        EnsurePlayerReference();
+        if (player != null) player.DrawRightSword();
+    }
+
+    public void SheatheLeftSword()
+    {
+        EnsurePlayerReference();
+        if (player != null) player.SheatheLeftSword();
+    }
+
+    public void SheatheRightSword()
+    {
+        EnsurePlayerReference();
+        if (player != null) player.SheatheRightSword();
+    }
+
+    public void OnWeaponSwitchEnd()
+    {
+        EnsurePlayerReference();
+        if (player != null) player.OnWeaponSwitchEnd();
+    }
+
+    public void OnDrawLeftEnd()
+    {
+        EnsurePlayerReference();
+        if (player != null) player.OnDrawLeftEnd();
+    }
+
+    public void OnSheatheLeftEnd()
+    {
+        EnsurePlayerReference();
+        if (player != null) player.OnSheatheLeftEnd();
     }
 }
