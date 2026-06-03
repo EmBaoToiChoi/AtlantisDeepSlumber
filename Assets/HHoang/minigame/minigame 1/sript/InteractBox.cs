@@ -95,12 +95,16 @@ public class InteractBox : NetworkBehaviour
             if (playerInt != null && playerInt.currentHeldCore != null)
             {
                 var core = playerInt.currentHeldCore;
-                playerInt.DropCore(); 
+                
+                // 1. Ép buộc thả trên Server
+                playerInt.ForceDropFromStation(); 
+                
+                // 2. Khóa ngọc vào trạm
                 core.LockToStation();
+                core.transform.position = crystalSnapPoint.position;
+                core.transform.rotation = crystalSnapPoint.rotation;
                 
                 isCrystalLocked.Value = true;
-                
-                // Ở đây bạn gọi trực tiếp hàm vừa thêm vào OptimizedNetworkMiniGame
                 gameManager.SetStationCrystalStatus(index, true); 
             }
         }

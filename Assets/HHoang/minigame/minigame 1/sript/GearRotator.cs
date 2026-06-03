@@ -69,9 +69,21 @@ public class GearRotator : NetworkBehaviour
         if (IsServer) currentState.Value = GearState.Closing; 
     }
 
+    [ClientRpc]
+    private void ForceCloseVisualsClientRpc()
+    {
+        transform.DOKill();
+        transform.DOLocalMove(originalPosition, moveDuration).SetEase(Ease.InOutCubic);
+    }
+
     // Hàm dự phòng: nếu muốn Server cho phép quay lại sau khi đóng
     public void ResetToSpinning()
     {
-        if (IsServer) currentState.Value = GearState.Spinning;
+        if (IsServer) 
+        {
+            currentState.Value = GearState.Spinning;
+            // Gọi lệnh này để tất cả các Client ép buộc trụ chạy về vị trí cũ
+            ForceCloseVisualsClientRpc(); 
+        }
     }
 }
