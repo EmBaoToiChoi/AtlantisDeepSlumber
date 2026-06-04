@@ -1135,9 +1135,13 @@
 /* --- Teammates HUD Styles (Top-Left Stack) ---                             */
 /* ========================================================================= */
 
+/* ========================================================================= */
+/* --- Teammates HUD Styles (Top-Left Stack near main HUD) ---               */
+/* ========================================================================= */
+
 .teammates-container {
     position: absolute;
-    top: 40px;
+    bottom: 145px;
     left: 30px;
     flex-direction: column;
     align-items: flex-start;
@@ -1147,38 +1151,38 @@
 .teammate-card {
     flex-direction: row;
     align-items: center;
-    background-color: rgba(0, 0, 0, 0.5);
-    border-radius: 12px;
-    padding: 8px 12px;
-    margin-bottom: 8px;
+    background-color: rgba(0, 0, 0, 0.25);
+    border-radius: 32px;
+    padding: 6px 12px;
+    margin-bottom: 12px;
     border-width: 1.5px;
-    border-color: rgba(255, 255, 255, 0.25);
-    width: 290px;
+    border-color: rgba(40, 160, 255, 0.4);
+    width: 240px;
     transition-property: scale, border-color;
     transition-duration: 0.2s;
 }
 
 .teammate-card:hover {
-    border-color: rgba(255, 255, 255, 0.6);
+    border-color: rgba(40, 160, 255, 0.85);
     scale: 1.02 1.02;
 }
 
 .teammate-avatar-container {
-    width: 48px;
-    height: 48px;
-    border-radius: 24px;
-    background-color: rgba(0, 0, 0, 0.6);
+    width: 52px;
+    height: 52px;
+    border-radius: 26px;
+    background-color: rgba(0, 0, 0, 0.4);
     border-width: 1.5px;
-    border-color: rgba(40, 160, 255, 0.95);
+    border-color: rgba(40, 160, 255, 0.9);
     justify-content: center;
     align-items: center;
-    margin-right: 10px;
+    margin-right: 8px;
 }
 
 .teammate-avatar-image {
-    width: 44px;
-    height: 44px;
-    border-radius: 22px;
+    width: 48px;
+    height: 48px;
+    border-radius: 24px;
     -unity-background-scale-mode: scale-and-crop;
 }
 
@@ -1190,19 +1194,20 @@
 
 .teammate-name-level-row {
     flex-direction: row;
-    justify-content: space-between;
+    justify-content: flex-start;
     align-items: center;
     margin-bottom: 3px;
 }
 
 .teammate-name-label {
     color: rgb(255, 255, 255);
-    font-size: 13px;
+    font-size: 12px;
     -unity-font-style: bold;
-    max-width: 170px;
+    max-width: 110px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    margin-right: 6px;
 }
 
 .teammate-level-label {
@@ -1212,31 +1217,31 @@
 }
 
 .teammate-track-bg {
-    background-color: rgba(0, 0, 0, 0.6);
-    margin-bottom: 3px;
+    background-color: rgba(0, 0, 0, 0.45);
+    margin-bottom: 2.5px;
     border-radius: 3px;
     overflow: hidden;
     position: relative;
 }
 
 .teammate-hp-track {
-    width: 200px;
+    width: 150px;
     height: 10px;
 }
 
 .teammate-mp-track {
-    width: 170px;
-    height: 6px;
+    width: 120px;
+    height: 7px;
 }
 
 .teammate-exp-track {
-    width: 140px;
+    width: 90px;
     height: 4px;
     margin-bottom: 0;
 }
 
 .teammate-hp-fill {
-    background-color: rgb(240, 70, 70);
+    background-color: rgb(240, 245, 255);
     height: 100%;
     width: 100%;
 }

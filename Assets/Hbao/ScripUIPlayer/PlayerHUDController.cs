@@ -1298,13 +1298,25 @@ public class PlayerHUDController : MonoBehaviour
     /// </summary>
     public void SetupPlayerProfile(int profileIndex)
     {
-        if (hudProfiles == null || profileIndex < 0 || profileIndex >= hudProfiles.Count)
+        if (hudProfiles == null || hudProfiles.Count == 0)
         {
-            Debug.LogWarning($"[PlayerHUDController] Index profile {profileIndex} không hợp lệ hoặc danh sách Profiles trống!");
+            Debug.LogWarning($"[PlayerHUDController] Danh sách Profiles trống!");
             return;
         }
 
-        var profile = hudProfiles[profileIndex];
+        int targetIndex = profileIndex;
+        // Nếu danh sách chỉ có 1 profile (đã được cấu hình riêng cho HUD này), sử dụng luôn profile đó (index 0)
+        if (hudProfiles.Count == 1)
+        {
+            targetIndex = 0;
+        }
+        else if (profileIndex < 0 || profileIndex >= hudProfiles.Count)
+        {
+            Debug.LogWarning($"[PlayerHUDController] Index profile {profileIndex} vượt quá giới hạn danh sách Profiles (size={hudProfiles.Count})!");
+            return;
+        }
+
+        var profile = hudProfiles[targetIndex];
 
         // 1. Cập nhật Avatar
         if (rawPlayerImage != null && profile.avatarSprite != null)
@@ -1513,12 +1525,45 @@ public class PlayerHUDController : MonoBehaviour
     private void UpdateTeammateCardValues(VisualElement card, IPlayerHUDTarget player)
     {
         var avatarImg = card.Q<VisualElement>("avatar-image");
-        if (avatarImg != null && hudProfiles != null)
+        if (avatarImg != null)
         {
             int classIdx = player.CharacterClassIndex;
-            if (classIdx >= 0 && classIdx < hudProfiles.Count)
+
+            // Fallback xác định classIdx dựa trên class type thực tế của Player để tránh lỗi trống avatar
+            if (player is LeoPlayer || player is LeoAssassin)
             {
-                avatarImg.style.backgroundImage = new StyleBackground(hudProfiles[classIdx].avatarSprite);
+                classIdx = 0;
+            }
+            else if (player is ElenaPlayer || player is ElenaArcher)
+            {
+                classIdx = 2;
+            }
+            else if (player is MayaSupport)
+            {
+                classIdx = 1;
+            }
+            else if (player is ArthurTanker)
+            {
+                classIdx = 3;
+            }
+
+            Sprite avatarSprite = null;
+            
+            // 1. Thử lấy từ HUDManager (hỗ trợ trường hợp các HUD chỉ cấu hình 1 profile riêng)
+            if (PlayerHUDManager.Instance != null)
+            {
+                avatarSprite = PlayerHUDManager.Instance.GetTeammateAvatar(classIdx);
+            }
+
+            // 2. Fallback lấy từ chính HUD hiện tại nếu HUD hiện tại có đầy đủ list profiles
+            if (avatarSprite == null && hudProfiles != null && classIdx >= 0 && classIdx < hudProfiles.Count)
+            {
+                avatarSprite = hudProfiles[classIdx].avatarSprite;
+            }
+
+            if (avatarSprite != null)
+            {
+                avatarImg.style.backgroundImage = new StyleBackground(avatarSprite);
             }
         }
 

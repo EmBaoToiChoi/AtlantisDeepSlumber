@@ -35,6 +35,13 @@ public class PlayerNameplate : MonoBehaviour
     {
         if (playerTarget == null || container == null || nameLabel == null) return;
 
+        // Không hiển thị tên của chính mình trên đầu nhân vật (chỉ hiển thị tên người chơi khác)
+        if (playerTarget.IsOwner)
+        {
+            container.style.display = DisplayStyle.None;
+            return;
+        }
+
         // Cập nhật tên hiển thị
         nameLabel.text = playerTarget.DisplayName;
 

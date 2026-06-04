@@ -73,4 +73,35 @@ public class PlayerHUDManager : MonoBehaviour
         Debug.LogWarning($"[PlayerHUDManager] No HUD GameObject assigned for character class index: {characterId}");
         return null;
     }
+
+    /// <summary>
+    /// Tìm kiếm avatar tương ứng với classIdx từ tất cả các HUD được gán trong manager
+    /// (Hỗ trợ trường hợp người dùng tách nhỏ HUD và mỗi HUD chỉ kéo thả 1 profile của nhân vật đó)
+    /// </summary>
+    public Sprite GetTeammateAvatar(int classIdx)
+    {
+        GameObject[] huds = new GameObject[] { leoHUD, mayaHUD, elenaHUD, arthurHUD };
+        foreach (var hud in huds)
+        {
+            if (hud == null) continue;
+            var controller = hud.GetComponent<PlayerHUDController>();
+            if (controller == null || controller.hudProfiles == null) continue;
+
+            foreach (var profile in controller.hudProfiles)
+            {
+                if (profile.avatarSprite == null) continue;
+                string lowerName = profile.className != null ? profile.className.ToLower() : "";
+
+                if (classIdx == 0 && (lowerName.Contains("leo") || lowerName.Contains("assassin")))
+                    return profile.avatarSprite;
+                if (classIdx == 1 && (lowerName.Contains("maya") || lowerName.Contains("support")))
+                    return profile.avatarSprite;
+                if (classIdx == 2 && (lowerName.Contains("elena") || lowerName.Contains("archer")))
+                    return profile.avatarSprite;
+                if (classIdx == 3 && (lowerName.Contains("arthur") || lowerName.Contains("athurt") || lowerName.Contains("tanker")))
+                    return profile.avatarSprite;
+            }
+        }
+        return null;
+    }
 }
