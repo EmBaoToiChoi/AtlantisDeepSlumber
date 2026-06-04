@@ -78,14 +78,21 @@ public class CrystalCore : NetworkBehaviour
         holderId.Value = ulong.MaxValue; 
         rb.isKinematic = false;
         rb.useGravity = true;
-        
-        // (ĐÃ XÓA DÒNG GÁN CỨNG KÍCH THƯỚC Ở ĐÂY)
     }
 
     public void LockToStation()
     {
         if (IsServer)
         {
+            // --- FIX LỖI RỚT ĐÁ TRÊN VPS ---
+            // Tước quyền sở hữu của Client, giao lại cho Server quản lý vị trí
+            var netObj = GetComponent<NetworkObject>();
+            if (netObj.OwnerClientId != NetworkManager.ServerClientId)
+            {
+                netObj.RemoveOwnership(); 
+            }
+            // -------------------------------
+
             isSnapped.Value = true;
             holderId.Value = ulong.MaxValue; 
             
@@ -93,8 +100,6 @@ public class CrystalCore : NetworkBehaviour
             rb.useGravity = false;
             rb.linearVelocity = Vector3.zero; 
             rb.angularVelocity = Vector3.zero; 
-            
-            // (ĐÃ XÓA DÒNG GÁN CỨNG KÍCH THƯỚC Ở ĐÂY)
         }
     }
 }
