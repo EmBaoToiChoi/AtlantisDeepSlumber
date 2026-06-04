@@ -9,4 +9,8 @@ public class TimelineSignalReceiver : MonoBehaviour
     {
         animator.SetTrigger("IdleTrigger");
     }
+        public void TriggerTalk()
+    {
+        animator.SetTrigger("TalkTrigger");
+    }
 }
