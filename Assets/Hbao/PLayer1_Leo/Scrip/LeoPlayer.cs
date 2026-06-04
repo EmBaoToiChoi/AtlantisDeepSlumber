@@ -2833,13 +2833,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     protected int comboStep = 0;
     protected bool isRootedAttack = false;
-    [Tooltip("Góc bù để nắn thẳng hoạt ảnh nếu đấm/chém bị xéo (Ví dụ điền thử: 90, -90, 45, -45)")]
-    public float attackRotationOffset = 0f;
-    [Header("Sword Rotation Offsets Only")]
-    [Tooltip("Góc bù cho đòn Chém 1 (Combo1kiem)")]
-    public float slash1Offset = 0f;
-    [Tooltip("Góc bù cho đòn Chém 2 (Attackdoucombo)")]
-    public float slash2Offset = 0f;
+    // Offset xoay root cũ đã bị xóa - xem LeoBoneCorrector.cs để hiệu chỉnh xương đúng cách
 
     [Header("Hitbox References")]
     [Tooltip("Left hand hitbox collider.")]
@@ -3142,9 +3136,10 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         SilasDialogueController.LocalPlayerTarget = this;
 
         PlayerHUDController hud = null;
-        if (PlayerHUDManager.Instance != null)
+        PlayerHUDManager hudManager = PlayerHUDManager.Instance != null ? PlayerHUDManager.Instance : FindAnyObjectByType<PlayerHUDManager>();
+        if (hudManager != null)
         {
-            hud = PlayerHUDManager.Instance.ActivateHUD(characterClassIndex);
+            hud = hudManager.ActivateHUD(characterClassIndex);
         }
         else
         {
@@ -3201,9 +3196,10 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             UpdateHealthHUD(currentHealth.Value);
 
             PlayerHUDController hud = null;
-            if (PlayerHUDManager.Instance != null)
+            PlayerHUDManager hudManager = PlayerHUDManager.Instance != null ? PlayerHUDManager.Instance : FindAnyObjectByType<PlayerHUDManager>();
+            if (hudManager != null)
             {
-                hud = PlayerHUDManager.Instance.ActivateHUD(characterClassIndex);
+                hud = hudManager.ActivateHUD(characterClassIndex);
             }
             else
             {
@@ -3515,14 +3511,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
                 if (camForward.sqrMagnitude > 0.001f)
                 {
                     Quaternion targetRot = Quaternion.LookRotation(camForward.normalized);
-                    if (isAttacking)
-                    {
-                        float currentOffset = 0f;
-                        if (lastTriggeredAnimName == slash1Trigger || lastTriggeredAnimName == "Slash1") currentOffset = slash1Offset;
-                        else if (lastTriggeredAnimName == slash2Trigger || lastTriggeredAnimName == "Slash2") currentOffset = slash2Offset;
-
-                        targetRot *= Quaternion.Euler(0f, currentOffset, 0f);
-                    }
+                    // Không còn offset xoay root ở đây - LeoBoneCorrector xử lý bù lệch xương
                     transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, Time.deltaTime * rotationSmoothSpeedArmed);
                 }
             }
@@ -3704,14 +3693,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
                 if (camForward.sqrMagnitude > 0.001f)
                 {
                     Quaternion targetRot = Quaternion.LookRotation(camForward.normalized);
-                    if (isAttacking)
-                    {
-                        float currentOffset = 0f;
-                        if (lastTriggeredAnimName == slash1Trigger || lastTriggeredAnimName == "Slash1") currentOffset = slash1Offset;
-                        else if (lastTriggeredAnimName == slash2Trigger || lastTriggeredAnimName == "Slash2") currentOffset = slash2Offset;
-
-                        targetRot *= Quaternion.Euler(0f, currentOffset, 0f);
-                    }
+                    // Không còn offset xoay root ở đây - LeoBoneCorrector xử lý bù lệch xương
                     transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, Time.deltaTime * rotationSmoothSpeedArmed);
                 }
             }

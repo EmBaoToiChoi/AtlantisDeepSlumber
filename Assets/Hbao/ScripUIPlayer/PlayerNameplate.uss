@@ -10,15 +10,23 @@
     position: absolute;
     bottom: 0;
     color: rgb(255, 255, 255);
-    font-size: 15px;
+    font-size: 14px;
     -unity-font-style: bold;
     -unity-text-align: middle-center;
-    background-color: rgba(0, 0, 0, 0.55);
-    padding: 4px 12px;
-    border-radius: 14px;
+    
+    /* Nền kính tối (dark glassmorphism) giúp tương phản mạnh với chữ trắng */
+    background-color: rgba(10, 10, 12, 0.85);
+    
+    /* Padding bo tròn dạng badge sang trọng */
+    padding: 5px 14px;
+    border-radius: 12px;
     white-space: nowrap;
+    
+    /* Viền mỏng sáng nhẹ tạo hiệu ứng nổi khối */
     border-width: 1px;
-    border-color: rgba(255, 255, 255, 0.2);
-    -unity-text-outline-width: 1px;
-    -unity-text-outline-color: rgba(0, 0, 0, 0.85);
+    border-color: rgba(255, 255, 255, 0.3);
+    
+    /* Tăng độ đậm và nét của viền chữ đen (Text Outline) để chữ cực kỳ dễ nhìn */
+    -unity-text-outline-width: 1.2px;
+    -unity-text-outline-color: rgb(0, 0, 0);
 }

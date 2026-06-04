@@ -343,11 +343,11 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
         RakanDialogueController.LocalPlayerTarget = this;
         SilasDialogueController.LocalPlayerTarget = this;
 
-        // Khởi tạo HUD với profile nhân vật
         PlayerHUDController hud = null;
-        if (PlayerHUDManager.Instance != null)
+        PlayerHUDManager hudManager = PlayerHUDManager.Instance != null ? PlayerHUDManager.Instance : FindObjectOfType<PlayerHUDManager>();
+        if (hudManager != null)
         {
-            hud = PlayerHUDManager.Instance.ActivateHUD(characterClassIndex);
+            hud = hudManager.ActivateHUD(characterClassIndex);
         }
         else
         {
@@ -413,9 +413,10 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
             UpdateHealthHUD(currentHealth.Value);
 
             PlayerHUDController hud = null;
-            if (PlayerHUDManager.Instance != null)
+            PlayerHUDManager hudManager = PlayerHUDManager.Instance != null ? PlayerHUDManager.Instance : FindObjectOfType<PlayerHUDManager>();
+            if (hudManager != null)
             {
-                hud = PlayerHUDManager.Instance.ActivateHUD(characterClassIndex);
+                hud = hudManager.ActivateHUD(characterClassIndex);
             }
             else
             {

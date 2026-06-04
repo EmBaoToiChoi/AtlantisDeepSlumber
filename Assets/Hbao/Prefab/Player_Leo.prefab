@@ -83,6 +83,7 @@ GameObject:
   - component: {fileID: 4992956460810916836}
   - component: {fileID: 7638701699718663926}
   - component: {fileID: 7725615253499321622}
+  - component: {fileID: 1666525023407835061}
   m_Layer: 3
   m_Name: Player_Leo
   m_TagString: Player
@@ -416,9 +417,6 @@ MonoBehaviour:
   runSpeedMultiplier: 1.5
   damageAmount: 20
   attackRange: 3
-  attackRotationOffset: 0
-  slash1Offset: -25
-  slash2Offset: -90
   leftHitbox: {fileID: 1951728423009820279}
   rightHitbox: {fileID: 5564713475576156401}
   leftWeaponHitbox: {fileID: 4903209859804708166}
@@ -667,6 +665,48 @@ MonoBehaviour:
       MinSecondsBetweenUpdates: 0
       MaxSecondsBetweenUpdates: 0
     m_InternalValue: 0
+--- !u!114 &1666525023407835061
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3704789710416520249}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b95b054562b10e442a0cd19cd1131289, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  anim: {fileID: 6582539960615988373}
+  lockBodyOnAttack: 1
+  bodyLockStrength: 0.9
+  spineOffsetEuler: {x: 0, y: 0, z: 0}
+  preferChestBone: 1
+  applyRightArmOffset: 1
+  rightUpperArmOffset: {x: -90, y: -90, z: -90}
+  rightArmStrength: 1
+  applyLeftArmOffset: 1
+  leftUpperArmOffset: {x: -90, y: -90, z: -90}
+  leftArmStrength: 1
+  attackStateNames:
+  - Punch1
+  - Punch2
+  - Dam1
+  - Dam2
+  - Slash1
+  - Slash2
+  - Slash3
+  - Slash_1
+  - Slash_2
+  - Slash_3
+  - Chem1
+  - Chem2
+  - Chem3
+  - Chem_1
+  - Chem_2
+  - Chem_3
+  showDebugGizmos: 1
+  isInAttackState: 0
 --- !u!1 &4414795720280421845
 GameObject:
   m_ObjectHideFlags: 0
