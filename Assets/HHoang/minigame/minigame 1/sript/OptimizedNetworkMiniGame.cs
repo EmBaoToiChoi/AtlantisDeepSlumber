@@ -129,32 +129,41 @@ public class OptimizedNetworkMiniGame : NetworkBehaviour
     {
         if (!IsServer) return; 
 
-        bool s0Ready = (s0Owner.Value != ulong.MaxValue && s0Value.Value >= greenZoneMin);
-        bool s1Ready = (s1Owner.Value != ulong.MaxValue && s1Value.Value >= greenZoneMin);
-        bool s2Ready = (s2Owner.Value != ulong.MaxValue && s2Value.Value >= greenZoneMin);
-        bool s3Ready = (s3Owner.Value != ulong.MaxValue && s3Value.Value >= greenZoneMin);
+        // 1. Kiểm tra trạng thái vạch lực
+        bool s0Ready = s0Value.Value >= greenZoneMin;
+        bool s1Ready = s1Value.Value >= greenZoneMin;
+        bool s2Ready = s2Value.Value >= greenZoneMin;
+        bool s3Ready = s3Value.Value >= greenZoneMin;
 
+        // 2. Tính toán trạng thái mở cổng
         bool shouldBeOpen = false;
 
         if (stationsNeededToOpen == 1)
         {
+            // Nếu chỉ cần 1 trạm, dùng toán tử OR (||)
             shouldBeOpen = s0Ready || s1Ready || s2Ready || s3Ready;
         }
         else 
         {
+            // Nếu cần 2 trạm: cặp 0-1 hoặc 2-3
             bool pair1Ready = s0Ready && s1Ready;
             bool pair2Ready = s2Ready && s3Ready;
             shouldBeOpen = pair1Ready || pair2Ready;
         }
 
+        // 3. Thực thi nếu có thay đổi
         if (shouldBeOpen != isCurrentlyOpen)
         {
             isCurrentlyOpen = shouldBeOpen;
+            Debug.Log($"[SERVER] Cổng đã mở trạng thái: {isCurrentlyOpen}");
+            
             foreach (var gear in gearList)
             {
-                if (gear == null) continue;
-                if (isCurrentlyOpen) gear.OpenGear();
-                else gear.ResetToSpinning(); 
+                if (gear != null)
+                {
+                    if (isCurrentlyOpen) gear.OpenGear();
+                    else gear.ResetToSpinning(); 
+                }
             }
         }
     }
