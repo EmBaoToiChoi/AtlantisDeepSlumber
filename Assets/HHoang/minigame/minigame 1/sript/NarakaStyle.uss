@@ -1,0 +1,93 @@
+.main-container {
+    flex-grow: 1;
+    align-items: center;
+    justify-content: center;
+    background-color: transparent;
+    transition-property: opacity;
+    transition-duration: 0.3s;
+}
+
+.hidden {
+    opacity: 0;
+    display: none;
+}
+
+.qte-board {
+    flex-direction: row;
+    align-items: center;
+    background-color: rgba(45, 45, 45, 0.8);
+    border-radius: 40px;
+    padding: 12px 25px;
+    border-width: 1.5px;
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+.key-box {
+    width: 48px;
+    height: 48px;
+    background-color: rgba(15, 15, 15, 0.6);
+    border-radius: 12px;
+    border-width: 1.5px;
+    border-color: rgba(255, 255, 255, 0.5);
+    align-items: center;
+    justify-content: center;
+    transform-origin: center;
+    transition-property: scale, background-color, border-color;
+    transition-duration: 0.1s, 0.1s, 0.1s;
+}
+
+.key-text {
+    font-size: 22px;
+    color: rgb(240, 240, 240);
+    -unity-font-style: bold;
+}
+
+.key-box.pressed {
+    scale: 1.15 1.15;
+    background-color: rgb(45, 200, 255);
+    border-color: rgb(255, 255, 255);
+}
+
+.key-box.pressed .key-text {
+    color: rgb(0, 0, 0);
+}
+
+.progress-wrapper {
+    width: 320px;
+    height: 14px;
+    background-color: rgba(10, 10, 10, 0.7);
+    border-radius: 7px;
+    margin: 0 20px;
+    position: relative;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.progress-fill {
+    width: 0%;
+    height: 100%;
+    background-color: rgb(45, 200, 255);
+    border-radius: 6px;
+    transition-property: width;
+    transition-duration: 0.1s;
+    transition-timing-function: linear;
+}
+
+.progress-mark {
+    position: absolute;
+    width: 3px;
+    height: 24px;
+    top: -5px;
+    background-color: rgb(255, 255, 255);
+    border-radius: 2px;
+}
+.main-container {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    align-items: center; /* Căn chính giữa theo chiều ngang */
+    justify-content: center; /* Căn chính giữa theo chiều dọc */
+    background-color: transparent;
+    transition-property: opacity;
+    transition-duration: 0.3s;
+}
