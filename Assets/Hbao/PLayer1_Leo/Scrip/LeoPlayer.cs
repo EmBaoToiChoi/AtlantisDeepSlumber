@@ -2798,7 +2798,7 @@ using Unity.Netcode;
 /// with enemy AI, NPC dialog, and UI HUD systems.
 /// Supports smooth 8-directional Blend Tree movement using actual user fbx filenames.
 /// </summary>
-public class LeoPlayer : NetworkBehaviour
+public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 {
     [Header("Input Keys Configuration")]
     [Tooltip("Key to trigger roll/dodge.")]
@@ -2833,13 +2833,7 @@ public class LeoPlayer : NetworkBehaviour
 
     protected int comboStep = 0;
     protected bool isRootedAttack = false;
-    [Tooltip("Góc bù để nắn thẳng hoạt ảnh nếu đấm/chém bị xéo (Ví dụ điền thử: 90, -90, 45, -45)")]
-    public float attackRotationOffset = 0f;
-    [Header("Sword Rotation Offsets Only")]
-    [Tooltip("Góc bù cho đòn Chém 1 (Combo1kiem)")]
-    public float slash1Offset = 0f;
-    [Tooltip("Góc bù cho đòn Chém 2 (Attackdoucombo)")]
-    public float slash2Offset = 0f;
+    // Offset xoay root cũ đã bị xóa - xem LeoBoneCorrector.cs để hiệu chỉnh xương đúng cách
 
     [Header("Hitbox References")]
     [Tooltip("Left hand hitbox collider.")]
@@ -2895,6 +2889,17 @@ public class LeoPlayer : NetworkBehaviour
     [Header("Player Class Settings")]
     [Tooltip("0 = Sát Thủ, 1 = Hỏa Thuật, 2 = Cung Thủ, 3 = Tanker")]
     public int characterClassIndex = 0;
+
+    [Header("Player Name Sync")]
+    public NetworkVariable<Unity.Collections.FixedString64Bytes> playerName = new NetworkVariable<Unity.Collections.FixedString64Bytes>(
+        "Leo", NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server
+    );
+
+    // IPlayerHUDTarget Stats Implementation
+    public string DisplayName => string.IsNullOrEmpty(playerName.Value.ToString()) ? "Leo" : playerName.Value.ToString();
+    public int PlayerLevel => isStandaloneMode ? localLevel : playerLevel.Value;
+    public float PlayerExp => isStandaloneMode ? localExp : playerExp.Value;
+    public float MaxExp => 100f + (isStandaloneMode ? localLevel : playerLevel.Value) * 50f;
 
     [Header("Knockback Settings")]
     protected Vector3 knockbackVelocity;
@@ -3025,6 +3030,16 @@ public class LeoPlayer : NetworkBehaviour
     public float CurrentHealth =>
         isStandaloneMode ? localHealth : currentHealth.Value;
 
+    // IPlayerHUDTarget Implementation
+    bool IPlayerHUDTarget.isStandaloneMode => isStandaloneMode;
+    public bool IsStandaloneMode => isStandaloneMode;
+    public int CharacterClassIndex => characterClassIndex;
+    public bool IsSwitchingWeapon => isSwitchingWeapon;
+    public float Weapon1MaxDurability => weapon1MaxDurability;
+    public float Weapon2MaxDurability => weapon2MaxDurability;
+    public string[] InventorySlots => inventorySlots;
+    public float MaxHealth => maxHealth;
+
     protected RootMotionBridge GetRootMotionBridge()
     {
         if (rootMotionBridge == null && anim != null)
@@ -3107,10 +3122,30 @@ public class LeoPlayer : NetworkBehaviour
             targetCamera = FindObjectOfType<Camera>();
 
         characterClassIndex = PlayerPrefs.GetInt("SelectedCharacterId", characterClassIndex);
+        playerName.Value = PlayerPrefs.GetString("AuthDisplayName", "Leo");
+        if (PlayerHUDManager.ActivePlayers != null && !PlayerHUDManager.ActivePlayers.Contains(this))
+        {
+            PlayerHUDManager.ActivePlayers.Add(this);
+        }
         localLevel = PlayerPrefs.GetInt("SelectedPlayerLevel_" + characterClassIndex, 0);
         localExp = PlayerPrefs.GetFloat("SelectedPlayerExp_" + characterClassIndex, 0f);
 
-        PlayerHUDController hud = FindAnyObjectByType<PlayerHUDController>();
+        // Register local target
+        PlayerHUDController.LocalPlayerTarget = this;
+        RakanDialogueController.LocalPlayerTarget = this;
+        SilasDialogueController.LocalPlayerTarget = this;
+
+        PlayerHUDController hud = null;
+        PlayerHUDManager hudManager = PlayerHUDManager.Instance != null ? PlayerHUDManager.Instance : FindAnyObjectByType<PlayerHUDManager>();
+        if (hudManager != null)
+        {
+            hud = hudManager.ActivateHUD(characterClassIndex);
+        }
+        else
+        {
+            hud = FindAnyObjectByType<PlayerHUDController>();
+        }
+
         if (hud != null)
         {
             hud.SetupPlayerProfile(characterClassIndex);
@@ -3122,6 +3157,11 @@ public class LeoPlayer : NetworkBehaviour
     public override void OnNetworkSpawn()
     {
         isStandaloneMode = false;
+
+        if (PlayerHUDManager.ActivePlayers != null && !PlayerHUDManager.ActivePlayers.Contains(this))
+        {
+            PlayerHUDManager.ActivePlayers.Add(this);
+        }
 
         activeWeaponIndex.OnValueChanged += OnWeaponIndexChanged;
         isWeapon2Locked.OnValueChanged += OnWeapon2LockedChanged;
@@ -3140,10 +3180,32 @@ public class LeoPlayer : NetworkBehaviour
 
         if (IsOwner)
         {
+            // Tải nhân vật đã lưu từ PlayerPrefs
+            characterClassIndex = PlayerPrefs.GetInt("SelectedCharacterId", characterClassIndex);
+
+            // Đồng bộ tên người chơi qua mạng
+            string myName = PlayerPrefs.GetString("AuthDisplayName", "Leo");
+            SetPlayerNameServerRpc(myName);
+
+            // Register local target
+            PlayerHUDController.LocalPlayerTarget = this;
+            RakanDialogueController.LocalPlayerTarget = this;
+            SilasDialogueController.LocalPlayerTarget = this;
+
             currentHealth.OnValueChanged += OnHealthChanged;
             UpdateHealthHUD(currentHealth.Value);
 
-            PlayerHUDController hud = FindAnyObjectByType<PlayerHUDController>();
+            PlayerHUDController hud = null;
+            PlayerHUDManager hudManager = PlayerHUDManager.Instance != null ? PlayerHUDManager.Instance : FindAnyObjectByType<PlayerHUDManager>();
+            if (hudManager != null)
+            {
+                hud = hudManager.ActivateHUD(characterClassIndex);
+            }
+            else
+            {
+                hud = FindAnyObjectByType<PlayerHUDController>();
+            }
+
             if (hud != null)
                 hud.SetupPlayerProfile(characterClassIndex);
 
@@ -3162,6 +3224,11 @@ public class LeoPlayer : NetworkBehaviour
 
     public override void OnNetworkDespawn()
     {
+        if (PlayerHUDManager.ActivePlayers != null)
+        {
+            PlayerHUDManager.ActivePlayers.Remove(this);
+        }
+
         activeWeaponIndex.OnValueChanged -= OnWeaponIndexChanged;
         isWeapon2Locked.OnValueChanged -= OnWeapon2LockedChanged;
         isSkillsUnlocked.OnValueChanged -= OnSkillsUnlockedChanged;
@@ -3444,14 +3511,7 @@ public class LeoPlayer : NetworkBehaviour
                 if (camForward.sqrMagnitude > 0.001f)
                 {
                     Quaternion targetRot = Quaternion.LookRotation(camForward.normalized);
-                    if (isAttacking)
-                    {
-                        float currentOffset = 0f;
-                        if (lastTriggeredAnimName == slash1Trigger || lastTriggeredAnimName == "Slash1") currentOffset = slash1Offset;
-                        else if (lastTriggeredAnimName == slash2Trigger || lastTriggeredAnimName == "Slash2") currentOffset = slash2Offset;
-
-                        targetRot *= Quaternion.Euler(0f, currentOffset, 0f);
-                    }
+                    // Không còn offset xoay root ở đây - LeoBoneCorrector xử lý bù lệch xương
                     transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, Time.deltaTime * rotationSmoothSpeedArmed);
                 }
             }
@@ -3633,14 +3693,7 @@ public class LeoPlayer : NetworkBehaviour
                 if (camForward.sqrMagnitude > 0.001f)
                 {
                     Quaternion targetRot = Quaternion.LookRotation(camForward.normalized);
-                    if (isAttacking)
-                    {
-                        float currentOffset = 0f;
-                        if (lastTriggeredAnimName == slash1Trigger || lastTriggeredAnimName == "Slash1") currentOffset = slash1Offset;
-                        else if (lastTriggeredAnimName == slash2Trigger || lastTriggeredAnimName == "Slash2") currentOffset = slash2Offset;
-
-                        targetRot *= Quaternion.Euler(0f, currentOffset, 0f);
-                    }
+                    // Không còn offset xoay root ở đây - LeoBoneCorrector xử lý bù lệch xương
                     transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, Time.deltaTime * rotationSmoothSpeedArmed);
                 }
             }
@@ -4283,6 +4336,12 @@ public class LeoPlayer : NetworkBehaviour
         {
             Debug.LogError($"[LeoPlayer DB] Error saving MongoDB state: {ex.Message}");
         }
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    public void SetPlayerNameServerRpc(string name, ServerRpcParams rpcParams = default)
+    {
+        playerName.Value = name;
     }
 
     private async void LoadPlayerStateFromDatabase()
@@ -5374,5 +5433,14 @@ public class LeoPlayer : NetworkBehaviour
             currentAttackLayerWeight = Mathf.MoveTowards(currentAttackLayerWeight, targetAttackLayerWeight, Time.deltaTime * 10f);
             anim.SetLayerWeight(1, currentAttackLayerWeight);
         }
+    }
+
+    public override void OnDestroy()
+    {
+        if (PlayerHUDManager.ActivePlayers != null)
+        {
+            PlayerHUDManager.ActivePlayers.Remove(this);
+        }
+        base.OnDestroy();
     }
 }

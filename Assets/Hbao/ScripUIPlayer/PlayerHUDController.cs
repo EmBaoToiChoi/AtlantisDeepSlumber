@@ -20,22 +20,66 @@ public class PlayerHUDController : MonoBehaviour
 
     [Header("Player Profiles (4 Players)")]
     public System.Collections.Generic.List<PlayerHUDProfile> hudProfiles;
-    
+
     [Header("UI Testing")]
     [Tooltip("Chọn index từ 0 đến 3 để test nhanh giao diện lớp nhân vật khi ấn Play")]
     public int testProfileIndex = 0;
 
+    private static IPlayerHUDTarget localPlayerTarget;
+    public static IPlayerHUDTarget LocalPlayerTarget
+    {
+        get => localPlayerTarget;
+        set
+        {
+            localPlayerTarget = value;
+            if (localPlayerTarget != null)
+            {
+                int classIdx = localPlayerTarget.CharacterClassIndex;
+
+                // Xác định class index chuẩn xác dựa trên kiểu lớp C# thực tế để tránh ghi đè PlayerPrefs khi test nhiều client trên cùng PC
+                if (localPlayerTarget is LeoPlayer || localPlayerTarget is LeoAssassin)
+                {
+                    classIdx = 0;
+                }
+                else if (localPlayerTarget is ElenaPlayer || localPlayerTarget is ElenaArcher)
+                {
+                    classIdx = 2;
+                }
+                else if (localPlayerTarget is MayaSupport)
+                {
+                    classIdx = 1;
+                }
+                else if (localPlayerTarget is ArthurTanker)
+                {
+                    classIdx = 3;
+                }
+
+                Debug.Log($"[PlayerHUDController] LocalPlayerTarget set! Tự động kích hoạt HUD cho classIdx: {classIdx}");
+
+                PlayerHUDManager hudManager = PlayerHUDManager.Instance != null ? PlayerHUDManager.Instance : FindAnyObjectByType<PlayerHUDManager>();
+                if (hudManager != null)
+                {
+                    var hud = hudManager.ActivateHUD(classIdx);
+                    if (hud != null)
+                    {
+                        hud.SetupPlayerProfile(classIdx);
+                    }
+                }
+            }
+        }
+    }
+
     private VisualElement hpFill;
     private VisualElement mpFill;
     private VisualElement expFill;
-    
+
     // Tham chiếu trực tiếp tới phần tử chứa icon
     private VisualElement micIcon;
     private VisualElement rawPlayerImage; // Tham chiếu tới Avatar Player để đổi ảnh động
     private VisualElement weaponSlot1;
     private VisualElement weaponSlot2;
     private VisualElement weaponImg1; // Tham chiếu tới ảnh vũ khí 1 để đổi ảnh động
-    
+
     // Kỹ năng
     private VisualElement cooldownQ;
     private VisualElement cooldownR;
@@ -49,7 +93,7 @@ public class PlayerHUDController : MonoBehaviour
     private float currentCooldownQ = 0f;
     private float currentCooldownR = 0f;
     private float currentCooldownE = 0f;
-    
+
     // Khóa kỹ năng
     private VisualElement lockQ;
     private VisualElement lockR;
@@ -63,15 +107,15 @@ public class PlayerHUDController : MonoBehaviour
     private bool isSkillsUnlocked = false; // Trạng thái đã mở khóa kỹ năng hay chưa
     public int currentSelectedWeapon = 1; // Thêm biến lưu vũ khí đang chọn
     public static bool isAnyUIOpen = false; // Trạng thái static báo hiệu bất kỳ UI nào đang mở
-    
+
     // Mặc định false -> Vào game chưa ấn M sẽ là tắt Mic
-    private bool isMicOn = false; 
+    private bool isMicOn = false;
 
     // Cảnh báo vũ khí và Hành trang (Tab)
     private VisualElement worldMapOverlay;
     private VisualElement inventoryOverlay;
     private Label weaponWarning;
-    
+
     // UI nâng cấp chỉ số
     private Label upgradePointsText;
     private Label hpLevelText;
@@ -103,7 +147,10 @@ public class PlayerHUDController : MonoBehaviour
     private int draggedSlotIndex = -1;
     private bool isCooldownActive = false;
     private VisualElement dragGhost;
+    private VisualElement teammatesContainer;
+    private System.Collections.Generic.Dictionary<ulong, VisualElement> teammateCards = new System.Collections.Generic.Dictionary<ulong, VisualElement>();
     private bool isUIInitialized = false;
+    private int lastSelectedProfileIndex = -1;
 
     [Header("Item Sprites Settings")]
     public Sprite repairHammerSprite;
@@ -114,6 +161,39 @@ public class PlayerHUDController : MonoBehaviour
     {
         InitializeUI();
     }
+
+    void OnDisable()
+    {
+        // QUAN TRỌNG: Reset toàn bộ state khi HUD bị tắt (SetActive false).
+        // Khi UI Toolkit rebuild lại visual tree sau lần SetActive(true) tiếp theo,
+        // tất cả các tham chiếu element cũ sẽ là dead reference -> phải re-query lại.
+        isUIInitialized = false;
+
+        // Reset tất cả tham chiếu VisualElement để InitializeUI() re-query lại từ tree mới
+        hpFill = null; mpFill = null; expFill = null;
+        micIcon = null; rawPlayerImage = null;
+        weaponSlot1 = null; weaponSlot2 = null;
+        weaponImg1 = null; weaponImg2 = null;
+        weaponLock2 = null; lockIcon2 = null;
+        cooldownQ = null; cooldownR = null; cooldownE = null;
+        cooldownTextQ = null; cooldownTextR = null; cooldownTextE = null;
+        lockQ = null; lockR = null; lockE = null;
+        lockIconQ = null; lockIconR = null; lockIconE = null;
+        skillImgQ = null; skillImgR = null; skillImgE = null;
+        worldMapOverlay = null; inventoryOverlay = null; weaponWarning = null;
+        weaponDurabilityFill1 = null; weaponDurabilityFill2 = null;
+        interactionPrompt = null; interactionPromptText = null; interactionPromptKeyText = null;
+        upgradePointsText = null; hpLevelText = null; mpLevelText = null;
+        cooldownLevelText = null; damageLevelText = null;
+        btnUpgradeHp = null; btnUpgradeMp = null; btnUpgradeCooldown = null; btnUpgradeDamage = null;
+        tooltipElement = null; tooltipTitle = null; tooltipDesc = null;
+        dragGhost = null; teammatesContainer = null;
+        inventorySlotsUI = new System.Collections.Generic.List<VisualElement>();
+        teammateCards = new System.Collections.Generic.Dictionary<ulong, VisualElement>();
+
+        Debug.Log($"[PlayerHUDController] OnDisable - reset state, sẽ re-init khi Enable lại. ProfileIndex giữ nguyên: {lastSelectedProfileIndex}");
+    }
+
 
     public void InitializeUI()
     {
@@ -137,7 +217,7 @@ public class PlayerHUDController : MonoBehaviour
         // Tìm UI Mic Icon trực tiếp
         micIcon = root.Q<VisualElement>("mic-icon");
         rawPlayerImage = root.Q<VisualElement>("raw-player-image");
-        
+
         weaponSlot1 = root.Q<VisualElement>("weapon-slot-1");
         weaponSlot2 = root.Q<VisualElement>("weapon-slot-2");
         weaponImg1 = root.Q<VisualElement>("weapon-img-1");
@@ -149,15 +229,15 @@ public class PlayerHUDController : MonoBehaviour
         cooldownTextQ = root.Q<Label>("skill-cooldown-text-q");
         cooldownTextR = root.Q<Label>("skill-cooldown-text-r");
         cooldownTextE = root.Q<Label>("skill-cooldown-text-e");
-        
+
         lockQ = root.Q<VisualElement>("skill-lock-q");
         lockR = root.Q<VisualElement>("skill-lock-r");
         lockE = root.Q<VisualElement>("skill-lock-e");
-        
+
         if (lockQ != null) lockIconQ = lockQ.Q<VisualElement>(null, "skill-lock-icon");
         if (lockR != null) lockIconR = lockR.Q<VisualElement>(null, "skill-lock-icon");
         if (lockE != null) lockIconE = lockE.Q<VisualElement>(null, "skill-lock-icon");
-        
+
         skillImgQ = root.Q<VisualElement>("skill-img-q");
         skillImgR = root.Q<VisualElement>("skill-img-r");
         skillImgE = root.Q<VisualElement>("skill-img-e");
@@ -231,11 +311,11 @@ public class PlayerHUDController : MonoBehaviour
         UpdateMicUI();
         SelectWeapon(1); // Mặc định chọn vũ khí 1 khi vào game
 
-        // Tải nhân vật đã chọn ở lobby
-        int selectedChar = PlayerPrefs.GetInt("SelectedCharacterId", testProfileIndex);
-        if (hudProfiles != null && hudProfiles.Count > 0)
+        // Tải nhân vật đã chọn ở lobby nếu chưa được gán động từ LocalPlayerTarget
+        if (lastSelectedProfileIndex == -1)
         {
-            SetupPlayerProfile(selectedChar);
+            int selectedChar = PlayerPrefs.GetInt("SelectedCharacterId", testProfileIndex);
+            lastSelectedProfileIndex = selectedChar;
         }
 
         // Tìm và thiết lập danh sách 10 ô Hành Trang (Inventory Slots)
@@ -245,7 +325,7 @@ public class PlayerHUDController : MonoBehaviour
             int index = i;
             VisualElement slot = inventorySlotsUI[i];
             slot.name = $"inventory-slot-{index}";
-            
+
             // Vẽ nhãn số thứ tự mờ ở góc ô hành trang
             slot.Clear();
             Label indexLabel = new Label((index + 1).ToString());
@@ -286,6 +366,12 @@ public class PlayerHUDController : MonoBehaviour
 
         isUIInitialized = true;
         Debug.Log("[PlayerHUDController] UI Toolkit đã được khởi tạo thành công!");
+
+        if (lastSelectedProfileIndex != -1)
+        {
+            Debug.Log($"[PlayerHUDController] Áp dụng lại profile index {lastSelectedProfileIndex} sau khi khởi tạo UI xong.");
+            SetupPlayerProfile(lastSelectedProfileIndex);
+        }
     }
 
     /// <summary>
@@ -318,6 +404,7 @@ public class PlayerHUDController : MonoBehaviour
     void Update()
     {
         InitializeUI(); // Đảm bảo khởi tạo nếu OnEnable chạy trước khi rootVisualElement sẵn sàng
+        UpdateTeammatesHUD();
 
         if (Keyboard.current != null)
         {
@@ -343,12 +430,12 @@ public class PlayerHUDController : MonoBehaviour
             {
                 isWeapon2Locked = false;
                 Debug.Log("Đã mở khóa Vũ khí 2!");
-                
+
                 if (weaponLock2 != null)
                 {
                     weaponLock2.AddToClassList("unlocked-anim");
                 }
-                
+
                 // Hiện lại vũ khí khi mở khóa
                 if (weaponImg2 != null)
                 {
@@ -366,17 +453,11 @@ public class PlayerHUDController : MonoBehaviour
                     bool isNowVisible = worldMapOverlay.ClassListContains("show-map");
                     worldMapOverlay.pickingMode = isNowVisible ? PickingMode.Position : PickingMode.Ignore; // Kích hoạt cản/nhận chuột khi hiện
                     isAnyUIOpen = isNowVisible; // Đồng bộ trạng thái UI đang mở
-                    
+
                     // Hiện/ẩn chuột cho Bản đồ
-                    var localPlayer = FindObjectOfType<LeoPlayer>();
-                    var elenaPlayer = FindObjectOfType<ElenaPlayer>();
-                    if (localPlayer != null)
+                    if (LocalPlayerTarget != null)
                     {
-                        localPlayer.SetCursorLock(!isNowVisible);
-                    }
-                    else if (elenaPlayer != null)
-                    {
-                        elenaPlayer.SetCursorLock(!isNowVisible);
+                        LocalPlayerTarget.SetCursorLock(!isNowVisible);
                     }
                     else
                     {
@@ -391,7 +472,7 @@ public class PlayerHUDController : MonoBehaviour
                             UnityEngine.Cursor.visible = false;
                         }
                     }
-                    
+
                     Debug.Log("Đã " + (isNowVisible ? "mở" : "đóng") + " Bản đồ thế giới với hiệu ứng");
                 }
             }
@@ -408,7 +489,7 @@ public class PlayerHUDController : MonoBehaviour
             {
                 isSkillsUnlocked = true;
                 Debug.Log("Đã mở khóa Kỹ năng!");
-                
+
                 // Thêm class để kích hoạt hiệu ứng rớt ổ khóa trong USS
                 if (lockQ != null) lockQ.AddToClassList("unlocked-anim");
                 if (lockR != null) lockR.AddToClassList("unlocked-anim");
@@ -458,11 +539,11 @@ public class PlayerHUDController : MonoBehaviour
             // Kích hoạt Skill E (chỉ khi đã mở khóa)
             if (Keyboard.current.eKey.wasPressedThisFrame)
             {
-                bool isPromptingE = interactionPrompt != null && 
-                                    interactionPrompt.ClassListContains("show-prompt") && 
-                                    interactionPromptText != null && 
+                bool isPromptingE = interactionPrompt != null &&
+                                    interactionPrompt.ClassListContains("show-prompt") &&
+                                    interactionPromptText != null &&
                                     interactionPromptText.text.Contains("[E]");
-                                    
+
                 bool isDialogueOpen = SilasDialogueController.Instance != null && SilasDialogueController.Instance.IsActive;
 
                 if (!isPromptingE && !isDialogueOpen)
@@ -589,15 +670,9 @@ public class PlayerHUDController : MonoBehaviour
             }
 
             // Tự động ẩn/hiện con trỏ chuột phù hợp với trạng thái UI hành trang
-            var localPlayer = FindObjectOfType<LeoPlayer>();
-            var elenaPlayer = FindObjectOfType<ElenaPlayer>();
-            if (localPlayer != null)
+            if (LocalPlayerTarget != null)
             {
-                localPlayer.SetCursorLock(!isNowVisible);
-            }
-            else if (elenaPlayer != null)
-            {
-                elenaPlayer.SetCursorLock(!isNowVisible);
+                LocalPlayerTarget.SetCursorLock(!isNowVisible);
             }
             else
             {
@@ -612,17 +687,13 @@ public class PlayerHUDController : MonoBehaviour
                     UnityEngine.Cursor.visible = false;
                 }
             }
-            
+
             // Tự động lưu trạng thái người chơi vào MongoDB khi đóng hành trang
-            if (!isNowVisible)
+            if (!isNowVisible && LocalPlayerTarget != null)
             {
-                if (localPlayer != null && localPlayer.IsSpawned && localPlayer.IsOwner)
+                if (LocalPlayerTarget.IsStandaloneMode || (LocalPlayerTarget.IsSpawned && LocalPlayerTarget.IsOwner))
                 {
-                    localPlayer.SavePlayerStateToDatabase();
-                }
-                else if (elenaPlayer != null && elenaPlayer.IsSpawned && elenaPlayer.IsOwner)
-                {
-                    elenaPlayer.SavePlayerStateToDatabase();
+                    LocalPlayerTarget.SavePlayerStateToDatabase();
                 }
             }
         }
@@ -663,8 +734,7 @@ public class PlayerHUDController : MonoBehaviour
         if (weaponSlot1 == null || weaponSlot2 == null) return;
 
         // Chặn chuyển đổi vũ khí nếu nhân vật đang chạy hoạt ảnh rút/cất kiếm
-        var localPlayer = FindObjectOfType<LeoPlayer>();
-        if (localPlayer != null && localPlayer.isSwitchingWeapon)
+        if (LocalPlayerTarget != null && LocalPlayerTarget.IsSwitchingWeapon)
         {
             Debug.Log("[PlayerHUDController] Chặn chuyển vũ khí vì đang chạy hoạt ảnh đổi vũ khí.");
             return;
@@ -701,17 +771,9 @@ public class PlayerHUDController : MonoBehaviour
         }
 
         // Standalone Mode: gọi trực tiếp phương thức chuyển đổi hoạt ảnh
-        if (currentSelectedWeapon != oldWeapon)
+        if (currentSelectedWeapon != oldWeapon && LocalPlayerTarget != null && LocalPlayerTarget.IsStandaloneMode)
         {
-            if (localPlayer != null && localPlayer.isStandaloneMode)
-            {
-                localPlayer.PlayWeaponSwitchAnimation(oldWeapon, currentSelectedWeapon);
-            }
-            var elenaPlayer = FindObjectOfType<ElenaPlayer>();
-            if (elenaPlayer != null && elenaPlayer.isStandaloneMode)
-            {
-                elenaPlayer.PlayWeaponSwitchAnimation(oldWeapon, currentSelectedWeapon);
-            }
+            LocalPlayerTarget.PlayWeaponSwitchAnimation(oldWeapon, currentSelectedWeapon);
         }
     }
 
@@ -729,21 +791,25 @@ public class PlayerHUDController : MonoBehaviour
         {
             icon.RemoveFromClassList("shake-left");
             icon.RemoveFromClassList("shake-right");
-            
+
             icon.schedule.Execute(() => icon.AddToClassList("shake-left")).StartingIn(0);
-            icon.schedule.Execute(() => {
+            icon.schedule.Execute(() =>
+            {
                 icon.RemoveFromClassList("shake-left");
                 icon.AddToClassList("shake-right");
             }).StartingIn(60);
-            icon.schedule.Execute(() => {
+            icon.schedule.Execute(() =>
+            {
                 icon.RemoveFromClassList("shake-right");
                 icon.AddToClassList("shake-left");
             }).StartingIn(120);
-            icon.schedule.Execute(() => {
+            icon.schedule.Execute(() =>
+            {
                 icon.RemoveFromClassList("shake-left");
                 icon.AddToClassList("shake-right");
             }).StartingIn(180);
-            icon.schedule.Execute(() => {
+            icon.schedule.Execute(() =>
+            {
                 icon.RemoveFromClassList("shake-right");
             }).StartingIn(240);
         }
@@ -764,38 +830,35 @@ public class PlayerHUDController : MonoBehaviour
             // Xóa các class cũ nếu có
             lockIcon2.RemoveFromClassList("shake-left");
             lockIcon2.RemoveFromClassList("shake-right");
-            
+
             // Chuỗi rung nhanh qua lại
             lockIcon2.schedule.Execute(() => lockIcon2.AddToClassList("shake-left")).StartingIn(0);
-            lockIcon2.schedule.Execute(() => {
+            lockIcon2.schedule.Execute(() =>
+            {
                 lockIcon2.RemoveFromClassList("shake-left");
                 lockIcon2.AddToClassList("shake-right");
             }).StartingIn(60);
-            lockIcon2.schedule.Execute(() => {
+            lockIcon2.schedule.Execute(() =>
+            {
                 lockIcon2.RemoveFromClassList("shake-right");
                 lockIcon2.AddToClassList("shake-left");
             }).StartingIn(120);
-            lockIcon2.schedule.Execute(() => {
+            lockIcon2.schedule.Execute(() =>
+            {
                 lockIcon2.RemoveFromClassList("shake-left");
                 lockIcon2.AddToClassList("shake-right");
             }).StartingIn(180);
-            lockIcon2.schedule.Execute(() => {
+            lockIcon2.schedule.Execute(() =>
+            {
                 lockIcon2.RemoveFromClassList("shake-right");
             }).StartingIn(240);
         }
     }
-
     private void NotifyHUDChange()
     {
-        var localPlayer = FindObjectOfType<LeoPlayer>();
-        if (localPlayer != null && localPlayer.IsSpawned && localPlayer.IsOwner)
+        if (LocalPlayerTarget != null && (LocalPlayerTarget.IsStandaloneMode || (LocalPlayerTarget.IsSpawned && LocalPlayerTarget.IsOwner)))
         {
-            localPlayer.UpdateStateFromHUD(currentSelectedWeapon, isWeapon2Locked, isSkillsUnlocked);
-        }
-        var elenaPlayer = FindObjectOfType<ElenaPlayer>();
-        if (elenaPlayer != null)
-        {
-            elenaPlayer.UpdateStateFromHUD(currentSelectedWeapon, isWeapon2Locked, isSkillsUnlocked);
+            LocalPlayerTarget.UpdateStateFromHUD(currentSelectedWeapon, isWeapon2Locked, isSkillsUnlocked);
         }
     }
 
@@ -807,7 +870,7 @@ public class PlayerHUDController : MonoBehaviour
             if (lockQ != null) { if (playAnim) lockQ.AddToClassList("unlocked-anim"); else lockQ.style.display = DisplayStyle.None; }
             if (lockR != null) { if (playAnim) lockR.AddToClassList("unlocked-anim"); else lockR.style.display = DisplayStyle.None; }
             if (lockE != null) { if (playAnim) lockE.AddToClassList("unlocked-anim"); else lockE.style.display = DisplayStyle.None; }
-            
+
             if (skillImgQ != null) skillImgQ.style.visibility = Visibility.Visible;
             if (skillImgR != null) skillImgR.style.visibility = Visibility.Visible;
             if (skillImgE != null) skillImgE.style.visibility = Visibility.Visible;
@@ -817,7 +880,7 @@ public class PlayerHUDController : MonoBehaviour
             if (lockQ != null) { lockQ.RemoveFromClassList("unlocked-anim"); lockQ.style.display = DisplayStyle.Flex; }
             if (lockR != null) { lockR.RemoveFromClassList("unlocked-anim"); lockR.style.display = DisplayStyle.Flex; }
             if (lockE != null) { lockE.RemoveFromClassList("unlocked-anim"); lockE.style.display = DisplayStyle.Flex; }
-            
+
             if (skillImgQ != null) skillImgQ.style.visibility = Visibility.Hidden;
             if (skillImgR != null) skillImgR.style.visibility = Visibility.Hidden;
             if (skillImgE != null) skillImgE.style.visibility = Visibility.Hidden;
@@ -900,7 +963,7 @@ public class PlayerHUDController : MonoBehaviour
         for (int i = 0; i < inventorySlotsUI.Count && i < slots.Length; i++)
         {
             VisualElement slot = inventorySlotsUI[i];
-            
+
             // Xóa ảnh item cũ và nhãn stack cũ
             var oldItem = slot.Q<VisualElement>(className: "inventory-item-icon");
             if (oldItem != null) oldItem.RemoveFromHierarchy();
@@ -1063,27 +1126,15 @@ public class PlayerHUDController : MonoBehaviour
                     if (targetIndex != draggedSlotIndex)
                     {
                         // Thực hiện tráo đổi (Swap) vị trí vật phẩm
-                        var player = FindObjectOfType<LeoPlayer>();
-                        var elenaPlayer = FindObjectOfType<ElenaPlayer>();
-                        if (player != null)
+                        if (LocalPlayerTarget != null)
                         {
-                            string temp = player.inventorySlots[draggedSlotIndex];
-                            player.inventorySlots[draggedSlotIndex] = player.inventorySlots[targetIndex];
-                            player.inventorySlots[targetIndex] = temp;
+                            string temp = LocalPlayerTarget.InventorySlots[draggedSlotIndex];
+                            LocalPlayerTarget.InventorySlots[draggedSlotIndex] = LocalPlayerTarget.InventorySlots[targetIndex];
+                            LocalPlayerTarget.InventorySlots[targetIndex] = temp;
 
                             // Vẽ lại và đồng bộ cơ sở dữ liệu
-                            SetInventorySlots(player.inventorySlots);
-                            if (!player.isStandaloneMode) player.SavePlayerStateToDatabase();
-                        }
-                        else if (elenaPlayer != null)
-                        {
-                            string temp = elenaPlayer.inventorySlots[draggedSlotIndex];
-                            elenaPlayer.inventorySlots[draggedSlotIndex] = elenaPlayer.inventorySlots[targetIndex];
-                            elenaPlayer.inventorySlots[targetIndex] = temp;
-
-                            // Vẽ lại và đồng bộ cơ sở dữ liệu
-                            SetInventorySlots(elenaPlayer.inventorySlots);
-                            if (!elenaPlayer.isStandaloneMode) elenaPlayer.SavePlayerStateToDatabase();
+                            SetInventorySlots(LocalPlayerTarget.InventorySlots);
+                            if (!LocalPlayerTarget.IsStandaloneMode) LocalPlayerTarget.SavePlayerStateToDatabase();
                         }
                     }
                 }
@@ -1198,7 +1249,7 @@ public class PlayerHUDController : MonoBehaviour
         isCooldownActive = true;
         float duration = 1.5f;
         float timer = duration;
-        
+
         while (timer > 0f)
         {
             timer -= Time.deltaTime;
@@ -1210,24 +1261,21 @@ public class PlayerHUDController : MonoBehaviour
         isCooldownActive = false;
 
         // Tiến hành sửa chữa độ bền 100%
-        var player = FindObjectOfType<LeoPlayer>();
-        var elenaPlayer = FindObjectOfType<ElenaPlayer>();
-        if (player != null)
+        if (LocalPlayerTarget != null)
         {
-            int activeWeapon = player.activeWeaponIndex.Value;
-            if (player.isStandaloneMode) activeWeapon = currentSelectedWeapon;
+            int activeWeapon = LocalPlayerTarget.IsStandaloneMode ? currentSelectedWeapon : LocalPlayerTarget.GetActiveWeaponIndex();
 
             if (activeWeapon == 1)
             {
-                player.Weapon1Durability = player.weapon1MaxDurability;
+                LocalPlayerTarget.Weapon1Durability = LocalPlayerTarget.Weapon1MaxDurability;
             }
             else
             {
-                player.Weapon2Durability = player.weapon2MaxDurability;
+                LocalPlayerTarget.Weapon2Durability = LocalPlayerTarget.Weapon2MaxDurability;
             }
 
             // Tiêu hao vật phẩm (giảm số lượng đi 1 hoặc xóa hoàn toàn nếu là cái cuối)
-            string slotVal = player.inventorySlots[slotIndex];
+            string slotVal = LocalPlayerTarget.InventorySlots[slotIndex];
             string baseName = slotVal;
             int count = 1;
             if (slotVal.Contains(":"))
@@ -1239,53 +1287,16 @@ public class PlayerHUDController : MonoBehaviour
 
             if (count > 1)
             {
-                player.inventorySlots[slotIndex] = baseName + ":" + (count - 1);
+                LocalPlayerTarget.InventorySlots[slotIndex] = baseName + ":" + (count - 1);
             }
             else
             {
-                player.inventorySlots[slotIndex] = "";
+                LocalPlayerTarget.InventorySlots[slotIndex] = "";
             }
 
-            SetInventorySlots(player.inventorySlots);
+            SetInventorySlots(LocalPlayerTarget.InventorySlots);
 
-            if (!player.isStandaloneMode) player.SavePlayerStateToDatabase();
-        }
-        else if (elenaPlayer != null)
-        {
-            int activeWeapon = elenaPlayer.isStandaloneMode ? currentSelectedWeapon : elenaPlayer.GetActiveWeaponIndex();
-
-            if (activeWeapon == 1)
-            {
-                elenaPlayer.Weapon1Durability = elenaPlayer.weapon1MaxDurability;
-            }
-            else
-            {
-                elenaPlayer.Weapon2Durability = elenaPlayer.weapon2MaxDurability;
-            }
-
-            // Tiêu hao vật phẩm (giảm số lượng đi 1 hoặc xóa hoàn toàn nếu là cái cuối)
-            string slotVal = elenaPlayer.inventorySlots[slotIndex];
-            string baseName = slotVal;
-            int count = 1;
-            if (slotVal.Contains(":"))
-            {
-                var parts = slotVal.Split(':');
-                baseName = parts[0];
-                int.TryParse(parts[1], out count);
-            }
-
-            if (count > 1)
-            {
-                elenaPlayer.inventorySlots[slotIndex] = baseName + ":" + (count - 1);
-            }
-            else
-            {
-                elenaPlayer.inventorySlots[slotIndex] = "";
-            }
-
-            SetInventorySlots(elenaPlayer.inventorySlots);
-
-            if (!elenaPlayer.isStandaloneMode) elenaPlayer.SavePlayerStateToDatabase();
+            if (!LocalPlayerTarget.IsStandaloneMode) LocalPlayerTarget.SavePlayerStateToDatabase();
         }
     }
 
@@ -1359,29 +1370,15 @@ public class PlayerHUDController : MonoBehaviour
 
     private void UpgradeStat(int statType)
     {
-        var localPlayer = FindObjectOfType<LeoPlayer>();
-        var elenaPlayer = FindObjectOfType<ElenaPlayer>();
-        if (localPlayer != null)
+        if (LocalPlayerTarget != null)
         {
-            if (localPlayer.IsSpawned && localPlayer.IsOwner)
+            if (LocalPlayerTarget.IsStandaloneMode)
             {
-                localPlayer.UpgradeStatFromHUD(statType);
+                LocalPlayerTarget.StandaloneUpgradeStat(statType);
             }
-            else if (localPlayer.isStandaloneMode)
+            else if (LocalPlayerTarget.IsSpawned && LocalPlayerTarget.IsOwner)
             {
-                // Hỗ trợ nâng cấp thử ở chế độ standalone không có Netcode
-                localPlayer.StandaloneUpgradeStat(statType);
-            }
-        }
-        else if (elenaPlayer != null)
-        {
-            if (elenaPlayer.isStandaloneMode)
-            {
-                elenaPlayer.StandaloneUpgradeStat(statType);
-            }
-            else if (elenaPlayer.IsSpawned && elenaPlayer.IsOwner)
-            {
-                elenaPlayer.UpgradeStatFromHUD(statType);
+                LocalPlayerTarget.UpgradeStatFromHUD(statType);
             }
         }
     }
@@ -1391,18 +1388,40 @@ public class PlayerHUDController : MonoBehaviour
     /// </summary>
     public void SetupPlayerProfile(int profileIndex)
     {
-        if (hudProfiles == null || profileIndex < 0 || profileIndex >= hudProfiles.Count)
+        lastSelectedProfileIndex = profileIndex;
+        if (hudProfiles == null || hudProfiles.Count == 0)
         {
-            Debug.LogWarning($"[PlayerHUDController] Index profile {profileIndex} không hợp lệ hoặc danh sách Profiles trống!");
+            Debug.LogWarning($"[PlayerHUDController] Danh sách Profiles trống!");
             return;
         }
 
-        var profile = hudProfiles[profileIndex];
+        int targetIndex = profileIndex;
+        // Nếu danh sách chỉ có 1 profile (đã được cấu hình riêng cho HUD này), sử dụng luôn profile đó (index 0)
+        if (hudProfiles.Count == 1)
+        {
+            targetIndex = 0;
+        }
+        else if (profileIndex < 0 || profileIndex >= hudProfiles.Count)
+        {
+            Debug.LogWarning($"[PlayerHUDController] Index profile {profileIndex} vượt quá giới hạn danh sách Profiles (size={hudProfiles.Count})!");
+            return;
+        }
 
-        // 1. Cập nhật Avatar
+        var profile = hudProfiles[targetIndex];
+
+        // 1. Cập nhật Avatar (Hỗ trợ cả VisualElement lẫn Image component)
         if (rawPlayerImage != null && profile.avatarSprite != null)
         {
-            rawPlayerImage.style.backgroundImage = new StyleBackground(profile.avatarSprite);
+            if (rawPlayerImage is UnityEngine.UIElements.Image uiImage)
+            {
+                // Nếu là thẻ <ui:Image>, thay đổi trực tiếp thuộc tính .image của nó
+                uiImage.image = profile.avatarSprite.texture;
+            }
+            else
+            {
+                // Nếu là thẻ <ui:VisualElement> thông thường
+                rawPlayerImage.style.backgroundImage = new StyleBackground(profile.avatarSprite);
+            }
         }
 
         // 2. Cập nhật ảnh Vũ khí
@@ -1471,15 +1490,218 @@ public class PlayerHUDController : MonoBehaviour
         {
             GameObject esObj = new GameObject("EventSystem");
             eventSystem = esObj.AddComponent<UnityEngine.EventSystems.EventSystem>();
-            
+
             // Sử dụng StandaloneInputModule hoặc InputSystemUIInputModule tùy theo cấu hình hệ thống
-            #if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
+#if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
             esObj.AddComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
-            #else
+#else
             esObj.AddComponent<UnityEngine.EventSystems.StandaloneInputModule>();
-            #endif
+#endif
             Debug.Log("[PlayerHUDController] Created EventSystem.");
         }
         // Không tự động thay thế/phá hủy module cũ của EventSystem để tránh làm hỏng các scene khác
     }
+
+    private void UpdateTeammatesHUD()
+    {
+        if (uiDocument == null || uiDocument.rootVisualElement == null) return;
+
+        if (teammatesContainer == null)
+        {
+            teammatesContainer = uiDocument.rootVisualElement.Q<VisualElement>("teammates-container");
+            if (teammatesContainer == null)
+            {
+                teammatesContainer = new VisualElement();
+                teammatesContainer.name = "teammates-container";
+                teammatesContainer.AddToClassList("teammates-container");
+                uiDocument.rootVisualElement.Add(teammatesContainer);
+            }
+        }
+
+        var activePlayers = PlayerHUDManager.ActivePlayers;
+        System.Collections.Generic.HashSet<ulong> currentKeys = new System.Collections.Generic.HashSet<ulong>();
+
+        foreach (var player in activePlayers)
+        {
+            if (player == null || player.gameObject == null) continue;
+
+            // Bỏ qua bản thân (LocalPlayerTarget)
+            if (player == LocalPlayerTarget) continue;
+
+            ulong key = player.IsSpawned ? player.OwnerClientId : (ulong)player.gameObject.GetInstanceID();
+            currentKeys.Add(key);
+
+            if (!teammateCards.TryGetValue(key, out var card))
+            {
+                card = CreateTeammateCard(player);
+                teammatesContainer.Add(card);
+                teammateCards[key] = card;
+            }
+
+            UpdateTeammateCardValues(card, player);
+        }
+
+        System.Collections.Generic.List<ulong> keysToRemove = new System.Collections.Generic.List<ulong>();
+        foreach (var existingKey in teammateCards.Keys)
+        {
+            if (!currentKeys.Contains(existingKey))
+            {
+                keysToRemove.Add(existingKey);
+            }
+        }
+
+        foreach (var key in keysToRemove)
+        {
+            if (teammateCards.TryGetValue(key, out var card))
+            {
+                card.RemoveFromHierarchy();
+                teammateCards.Remove(key);
+            }
+        }
+    }
+
+    private VisualElement CreateTeammateCard(IPlayerHUDTarget player)
+    {
+        var card = new VisualElement();
+        card.AddToClassList("teammate-card");
+
+        var avatarContainer = new VisualElement();
+        avatarContainer.AddToClassList("teammate-avatar-container");
+        var avatarImg = new VisualElement();
+        avatarImg.name = "avatar-image";
+        avatarImg.AddToClassList("teammate-avatar-image");
+        avatarContainer.Add(avatarImg);
+        card.Add(avatarContainer);
+
+        var statsWrapper = new VisualElement();
+        statsWrapper.AddToClassList("teammate-stats-wrapper");
+
+        var nameLevelRow = new VisualElement();
+        nameLevelRow.AddToClassList("teammate-name-level-row");
+
+        var nameLabel = new Label();
+        nameLabel.name = "name-label";
+        nameLabel.AddToClassList("teammate-name-label");
+
+        var levelLabel = new Label();
+        levelLabel.name = "level-label";
+        levelLabel.AddToClassList("teammate-level-label");
+
+        nameLevelRow.Add(nameLabel);
+        nameLevelRow.Add(levelLabel);
+        statsWrapper.Add(nameLevelRow);
+
+        var hpTrack = new VisualElement();
+        hpTrack.AddToClassList("teammate-track-bg");
+        hpTrack.AddToClassList("teammate-hp-track");
+        var hpFill = new VisualElement();
+        hpFill.name = "hp-fill";
+        hpFill.AddToClassList("teammate-hp-fill");
+        hpTrack.Add(hpFill);
+        statsWrapper.Add(hpTrack);
+
+        var mpTrack = new VisualElement();
+        mpTrack.AddToClassList("teammate-track-bg");
+        mpTrack.AddToClassList("teammate-mp-track");
+        var mpFill = new VisualElement();
+        mpFill.name = "mp-fill";
+        mpFill.AddToClassList("teammate-mp-fill");
+        mpTrack.Add(mpFill);
+        statsWrapper.Add(mpTrack);
+
+        var expTrack = new VisualElement();
+        expTrack.AddToClassList("teammate-track-bg");
+        expTrack.AddToClassList("teammate-exp-track");
+        var expFill = new VisualElement();
+        expFill.name = "exp-fill";
+        expFill.AddToClassList("teammate-exp-fill");
+        expTrack.Add(expFill);
+        statsWrapper.Add(expTrack);
+
+        card.Add(statsWrapper);
+        return card;
+    }
+
+    private void UpdateTeammateCardValues(VisualElement card, IPlayerHUDTarget player)
+    {
+        var avatarImg = card.Q<VisualElement>("avatar-image");
+        if (avatarImg != null)
+        {
+            int classIdx = player.CharacterClassIndex;
+
+            // Fallback xác định classIdx dựa trên class type thực tế của Player để tránh lỗi trống avatar
+            if (player is LeoPlayer || player is LeoAssassin)
+            {
+                classIdx = 0;
+            }
+            else if (player is ElenaPlayer || player is ElenaArcher)
+            {
+                classIdx = 2;
+            }
+            else if (player is MayaSupport)
+            {
+                classIdx = 1;
+            }
+            else if (player is ArthurTanker)
+            {
+                classIdx = 3;
+            }
+
+            Sprite avatarSprite = null;
+
+            // 1. Thử lấy từ HUDManager (hỗ trợ trường hợp các HUD chỉ cấu hình 1 profile riêng)
+            if (PlayerHUDManager.Instance != null)
+            {
+                avatarSprite = PlayerHUDManager.Instance.GetTeammateAvatar(classIdx);
+            }
+
+            // 2. Fallback lấy từ chính HUD hiện tại nếu HUD hiện tại có đầy đủ list profiles
+            if (avatarSprite == null && hudProfiles != null && classIdx >= 0 && classIdx < hudProfiles.Count)
+            {
+                avatarSprite = hudProfiles[classIdx].avatarSprite;
+            }
+
+            if (avatarSprite != null)
+            {
+                avatarImg.style.backgroundImage = new StyleBackground(avatarSprite);
+            }
+        }
+
+        var nameLabel = card.Q<Label>("name-label");
+        if (nameLabel != null)
+        {
+            nameLabel.text = player.DisplayName;
+        }
+
+        var levelLabel = card.Q<Label>("level-label");
+        if (levelLabel != null)
+        {
+            levelLabel.text = $"Lv. {player.PlayerLevel}";
+        }
+
+        var hpFill = card.Q<VisualElement>("hp-fill");
+        if (hpFill != null)
+        {
+            float maxHp = player.MaxHealth;
+            float currentHp = player.CurrentHealth;
+            float hpPct = maxHp > 0 ? (currentHp / maxHp) * 100f : 0f;
+            hpFill.style.width = Length.Percent(Mathf.Clamp(hpPct, 0f, 100f));
+        }
+
+        var mpFill = card.Q<VisualElement>("mp-fill");
+        if (mpFill != null)
+        {
+            mpFill.style.width = Length.Percent(100f);
+        }
+
+        var expFill = card.Q<VisualElement>("exp-fill");
+        if (expFill != null)
+        {
+            float expPct = player.MaxExp > 0 ? (player.PlayerExp / player.MaxExp) * 100f : 0f;
+            expFill.style.width = Length.Percent(Mathf.Clamp(expPct, 0f, 100f));
+        }
+    }
 }
+
+public class MayaHUDController : PlayerHUDController { }
+public class ArthurHUDController : PlayerHUDController { }

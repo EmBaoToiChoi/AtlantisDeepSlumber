@@ -83,6 +83,7 @@ GameObject:
   - component: {fileID: 4992956460810916836}
   - component: {fileID: 7638701699718663926}
   - component: {fileID: 7725615253499321622}
+  - component: {fileID: 1666525023407835061}
   m_Layer: 3
   m_Name: Player_Leo
   m_TagString: Player
@@ -416,9 +417,6 @@ MonoBehaviour:
   runSpeedMultiplier: 1.5
   damageAmount: 20
   attackRange: 3
-  attackRotationOffset: 0
-  slash1Offset: -25
-  slash2Offset: -90
   leftHitbox: {fileID: 1951728423009820279}
   rightHitbox: {fileID: 5564713475576156401}
   leftWeaponHitbox: {fileID: 4903209859804708166}
@@ -439,6 +437,78 @@ MonoBehaviour:
   isSwitchingWeapon: 0
   maxHealth: 100
   characterClassIndex: 0
+  playerName:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue:
+      utf8LengthInBytes: 3
+      bytes:
+        offset0000:
+          byte0000: 76
+          byte0001: 101
+          byte0002: 111
+          byte0003: 0
+          byte0004: 0
+          byte0005: 0
+          byte0006: 0
+          byte0007: 0
+          byte0008: 0
+          byte0009: 0
+          byte0010: 0
+          byte0011: 0
+          byte0012: 0
+          byte0013: 0
+          byte0014: 0
+          byte0015: 0
+        offset0016:
+          byte0000: 0
+          byte0001: 0
+          byte0002: 0
+          byte0003: 0
+          byte0004: 0
+          byte0005: 0
+          byte0006: 0
+          byte0007: 0
+          byte0008: 0
+          byte0009: 0
+          byte0010: 0
+          byte0011: 0
+          byte0012: 0
+          byte0013: 0
+          byte0014: 0
+          byte0015: 0
+        offset0032:
+          byte0000: 0
+          byte0001: 0
+          byte0002: 0
+          byte0003: 0
+          byte0004: 0
+          byte0005: 0
+          byte0006: 0
+          byte0007: 0
+          byte0008: 0
+          byte0009: 0
+          byte0010: 0
+          byte0011: 0
+          byte0012: 0
+          byte0013: 0
+          byte0014: 0
+          byte0015: 0
+        byte0048: 0
+        byte0049: 0
+        byte0050: 0
+        byte0051: 0
+        byte0052: 0
+        byte0053: 0
+        byte0054: 0
+        byte0055: 0
+        byte0056: 0
+        byte0057: 0
+        byte0058: 0
+        byte0059: 0
+        byte0060: 0
+        byte0061: 0
   enableCameraFollow: 1
   cameraOffset: {x: 0, y: 12, z: -8}
   cameraSmoothSpeed: 5
@@ -595,6 +665,80 @@ MonoBehaviour:
       MinSecondsBetweenUpdates: 0
       MaxSecondsBetweenUpdates: 0
     m_InternalValue: 0
+--- !u!114 &1666525023407835061
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3704789710416520249}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b95b054562b10e442a0cd19cd1131289, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  anim: {fileID: 6582539960615988373}
+  testMode: 1
+  testPreviewState: Combo1kiem
+  blendSpeed: 10
+  manualSpine: {fileID: 0}
+  manualChest: {fileID: 0}
+  manualUpperChest: {fileID: 0}
+  manualRightUpperArm: {fileID: 0}
+  manualLeftUpperArm: {fileID: 0}
+  lockBodyOnAttack: 1
+  lockBodyAlways: 1
+  bodyLockStrength: 0
+  spineOffsetEuler: {x: 0, y: 0, z: 0}
+  preferChestBone: 1
+  applyRightArmOffset: 1
+  rightUpperArmOffset: {x: 25, y: 25, z: 25}
+  rightArmStrength: 1
+  applyLeftArmOffset: 1
+  leftUpperArmOffset: {x: 25, y: 25, z: 25}
+  leftArmStrength: 1
+  skillOverrides:
+  - stateName: Combo1kiem
+    overrideBodyLock: 1
+    lockBodyOnAttack: 1
+    bodyLockStrength: 0.2
+    spineOffsetEuler: {x: 0, y: 0, z: 0}
+    applyRightArmOffset: 1
+    rightUpperArmOffset: {x: 0, y: 0, z: 35}
+    rightArmStrength: 1
+    applyLeftArmOffset: 1
+    leftUpperArmOffset: {x: 0, y: 0, z: -10}
+    leftArmStrength: 1
+  - stateName: combodua
+    overrideBodyLock: 1
+    lockBodyOnAttack: 1
+    bodyLockStrength: 0.25
+    spineOffsetEuler: {x: 0, y: 0, z: 0}
+    applyRightArmOffset: 1
+    rightUpperArmOffset: {x: 0, y: 0, z: 20}
+    rightArmStrength: 1
+    applyLeftArmOffset: 1
+    leftUpperArmOffset: {x: 0, y: 0, z: 20}
+    leftArmStrength: 1
+  attackStateNames:
+  - Punch1
+  - Punch2
+  - Dam1
+  - Dam2
+  - Slash1
+  - Slash2
+  - Slash3
+  - Slash_1
+  - Slash_2
+  - Slash_3
+  - Chem1
+  - Chem2
+  - Chem3
+  - Chem_1
+  - Chem_2
+  - Chem_3
+  showDebugGizmos: 1
+  isInAttackState: 1
 --- !u!1 &4414795720280421845
 GameObject:
   m_ObjectHideFlags: 0
@@ -661,6 +805,71 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9af35fd58f6f29d48a0193db93794d54, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!1 &7115567102273767502
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 8833584085150182256}
+  - component: {fileID: 6062332470921195768}
+  - component: {fileID: 820003917358459833}
+  m_Layer: 3
+  m_Name: 'Nameplate '
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &8833584085150182256
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7115567102273767502}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1569828532736557221}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &6062332470921195768
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7115567102273767502}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 19102, guid: 0000000000000000e000000000000000, type: 0}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_PanelSettings: {fileID: 11400000, guid: d7d1cb076d22730418b3f47cdb14736c, type: 2}
+  m_ParentUI: {fileID: 0}
+  sourceAsset: {fileID: 9197481963319205126, guid: 94ac5fa3927906d4e9336a0312b53a02, type: 3}
+  m_SortingOrder: 0
+  m_WorldSpaceSizeMode: 1
+  m_WorldSpaceWidth: 1920
+  m_WorldSpaceHeight: 1080
+--- !u!114 &820003917358459833
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7115567102273767502}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 681f98ebabdd7ec41a39ec2dfb8e1de1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  heightOffset: 3.5
 --- !u!1 &8009708259036070280
 GameObject:
   m_ObjectHideFlags: 0
@@ -1480,6 +1689,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 4325436833983905973, guid: 089f5319e86aa3a409ccfa5692b155f2, type: 3}
       insertIndex: -1
       addedObject: {fileID: 7182488042461038934}
+    - targetCorrespondingSourceObject: {fileID: 2304244481032835489, guid: 089f5319e86aa3a409ccfa5692b155f2, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 8833584085150182256}
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 089f5319e86aa3a409ccfa5692b155f2, type: 3}
       insertIndex: -1
@@ -1505,6 +1717,11 @@ MonoBehaviour:
 --- !u!4 &989047969857255151 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 089f5319e86aa3a409ccfa5692b155f2, type: 3}
+  m_PrefabInstance: {fileID: 735059386473697540}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &1569828532736557221 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 2304244481032835489, guid: 089f5319e86aa3a409ccfa5692b155f2, type: 3}
   m_PrefabInstance: {fileID: 735059386473697540}
   m_PrefabAsset: {fileID: 0}
 --- !u!4 &2661252832074116642 stripped
@@ -1669,7 +1886,10 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 3305706639583299570, guid: 480e5205a0da80444a55cca6939d2095, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 8347731500655779033}
   m_SourcePrefab: {fileID: 100100000, guid: 480e5205a0da80444a55cca6939d2095, type: 3}
 --- !u!4 &3963171196735237559 stripped
 Transform:
@@ -1686,6 +1906,23 @@ BoxCollider:
   m_CorrespondingSourceObject: {fileID: 1387040233352467560, guid: 480e5205a0da80444a55cca6939d2095, type: 3}
   m_PrefabInstance: {fileID: 6283773677611526446}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &8850778819183734492 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 3305706639583299570, guid: 480e5205a0da80444a55cca6939d2095, type: 3}
+  m_PrefabInstance: {fileID: 6283773677611526446}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &8347731500655779033
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8850778819183734492}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9af35fd58f6f29d48a0193db93794d54, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1001 &9185698281501742577
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -1773,7 +2010,10 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 3305706639583299570, guid: 480e5205a0da80444a55cca6939d2095, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2583870234972429549}
   m_SourcePrefab: {fileID: 100100000, guid: 480e5205a0da80444a55cca6939d2095, type: 3}
 --- !u!1 &1442707340140284882 stripped
 GameObject:
@@ -1785,6 +2025,23 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 6932290973238723737, guid: 480e5205a0da80444a55cca6939d2095, type: 3}
   m_PrefabInstance: {fileID: 9185698281501742577}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &5952102052242952707 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 3305706639583299570, guid: 480e5205a0da80444a55cca6939d2095, type: 3}
+  m_PrefabInstance: {fileID: 9185698281501742577}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &2583870234972429549
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5952102052242952707}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9af35fd58f6f29d48a0193db93794d54, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!65 &7801895182319075737 stripped
 BoxCollider:
   m_CorrespondingSourceObject: {fileID: 1387040233352467560, guid: 480e5205a0da80444a55cca6939d2095, type: 3}

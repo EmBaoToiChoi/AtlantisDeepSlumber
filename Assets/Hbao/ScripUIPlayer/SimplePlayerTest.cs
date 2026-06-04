@@ -1,7 +1,7 @@
 using Unity.Netcode;
 using UnityEngine;
 
-public class SimplePlayerTest : NetworkBehaviour
+public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
 {
     protected LeoPlayer leoPlayer;
 
@@ -124,6 +124,17 @@ public class SimplePlayerTest : NetworkBehaviour
     [Tooltip("0 = Sát Thủ, 1 = Hỏa Thuật, 2 = Cung Thủ, 3 = Tanker")]
     public int characterClassIndex = 0;
 
+    [Header("Player Name Sync")]
+    public NetworkVariable<Unity.Collections.FixedString64Bytes> playerName = new NetworkVariable<Unity.Collections.FixedString64Bytes>(
+        "Explorer", NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server
+    );
+
+    // IPlayerHUDTarget Stats Implementation
+    public string DisplayName => string.IsNullOrEmpty(playerName.Value.ToString()) ? "Explorer" : playerName.Value.ToString();
+    public int PlayerLevel => isStandaloneMode ? localLevel : playerLevel.Value;
+    public float PlayerExp => isStandaloneMode ? localExp : playerExp.Value;
+    public float MaxExp => 100f + (isStandaloneMode ? localLevel : playerLevel.Value) * 50f;
+
     [Header("Knockback Settings")]
     protected Vector3 knockbackVelocity;
 
@@ -191,6 +202,22 @@ public class SimplePlayerTest : NetworkBehaviour
     /// Máu hiện tại: đọc từ NetworkVariable khi online, đọc từ biến local khi standalone.
     /// </summary>
     public float CurrentHealth => leoPlayer != null ? leoPlayer.CurrentHealth : (isStandaloneMode ? localHealth : currentHealth.Value);
+
+    // IPlayerHUDTarget Implementation
+    bool IPlayerHUDTarget.isStandaloneMode => isStandaloneMode;
+    public bool IsStandaloneMode => isStandaloneMode;
+    public int CharacterClassIndex => characterClassIndex;
+    public bool IsSwitchingWeapon => false;
+    public float Weapon1MaxDurability => weapon1MaxDurability;
+    public float Weapon2MaxDurability => weapon2MaxDurability;
+    public string[] InventorySlots => inventorySlots;
+    public float MaxHealth => maxHealth;
+
+    public void SetCursorLock(bool locked)
+    {
+        isCursorLocked = locked;
+        LockCursor(locked);
+    }
 
     /// <summary>
     /// Trả về index vũ khí đang chọn: đọc từ HUD khi standalone, đọc từ NetworkVariable khi online.
@@ -277,13 +304,32 @@ public class SimplePlayerTest : NetworkBehaviour
 
         // Tải nhân vật đã lưu từ PlayerPrefs nếu có
         characterClassIndex = PlayerPrefs.GetInt("SelectedCharacterId", characterClassIndex);
+        playerName.Value = PlayerPrefs.GetString("AuthDisplayName", "Explorer");
+        if (PlayerHUDManager.ActivePlayers != null && !PlayerHUDManager.ActivePlayers.Contains(this))
+        {
+            PlayerHUDManager.ActivePlayers.Add(this);
+        }
 
         // Nạp cấp độ và kinh nghiệm cho chế độ chơi đơn (mặc định về lại 0 theo yêu cầu)
         localLevel = PlayerPrefs.GetInt("SelectedPlayerLevel_" + characterClassIndex, 0);
         localExp = PlayerPrefs.GetFloat("SelectedPlayerExp_" + characterClassIndex, 0f);
 
-        // Khởi tạo HUD với profile nhân vật
-        PlayerHUDController hud = FindObjectOfType<PlayerHUDController>();
+        // Register local target
+        PlayerHUDController.LocalPlayerTarget = this;
+        RakanDialogueController.LocalPlayerTarget = this;
+        SilasDialogueController.LocalPlayerTarget = this;
+
+        PlayerHUDController hud = null;
+        PlayerHUDManager hudManager = PlayerHUDManager.Instance != null ? PlayerHUDManager.Instance : FindObjectOfType<PlayerHUDManager>();
+        if (hudManager != null)
+        {
+            hud = hudManager.ActivateHUD(characterClassIndex);
+        }
+        else
+        {
+            hud = FindObjectOfType<PlayerHUDController>();
+        }
+
         if (hud != null)
         {
             hud.SetupPlayerProfile(characterClassIndex);
@@ -301,6 +347,11 @@ public class SimplePlayerTest : NetworkBehaviour
         if (leoPlayer != null)
         {
             return;
+        }
+
+        if (PlayerHUDManager.ActivePlayers != null && !PlayerHUDManager.ActivePlayers.Contains(this))
+        {
+            PlayerHUDManager.ActivePlayers.Add(this);
         }
 
         // Đăng ký sự kiện đồng bộ Netcode
@@ -325,10 +376,32 @@ public class SimplePlayerTest : NetworkBehaviour
 
         if (IsOwner)
         {
+            // Tải nhân vật đã lưu từ PlayerPrefs
+            characterClassIndex = PlayerPrefs.GetInt("SelectedCharacterId", characterClassIndex);
+
+            // Đồng bộ tên người chơi qua mạng
+            string myName = PlayerPrefs.GetString("AuthDisplayName", "Explorer");
+            SetPlayerNameServerRpc(myName);
+
+            // Register local target
+            PlayerHUDController.LocalPlayerTarget = this;
+            RakanDialogueController.LocalPlayerTarget = this;
+            SilasDialogueController.LocalPlayerTarget = this;
+
             currentHealth.OnValueChanged += OnHealthChanged;
             UpdateHealthHUD(currentHealth.Value);
 
-            PlayerHUDController hud = FindObjectOfType<PlayerHUDController>();
+            PlayerHUDController hud = null;
+            PlayerHUDManager hudManager = PlayerHUDManager.Instance != null ? PlayerHUDManager.Instance : FindObjectOfType<PlayerHUDManager>();
+            if (hudManager != null)
+            {
+                hud = hudManager.ActivateHUD(characterClassIndex);
+            }
+            else
+            {
+                hud = FindObjectOfType<PlayerHUDController>();
+            }
+
             if (hud != null)
                 hud.SetupPlayerProfile(characterClassIndex);
 
@@ -351,6 +424,11 @@ public class SimplePlayerTest : NetworkBehaviour
         if (leoPlayer != null)
         {
             return;
+        }
+
+        if (PlayerHUDManager.ActivePlayers != null)
+        {
+            PlayerHUDManager.ActivePlayers.Remove(this);
         }
 
         activeWeaponIndex.OnValueChanged -= OnWeaponIndexChanged;
@@ -1433,6 +1511,12 @@ public class SimplePlayerTest : NetworkBehaviour
         SavePlayerStateClientRpc();
     }
 
+    [ServerRpc(RequireOwnership = false)]
+    public void SetPlayerNameServerRpc(string name, ServerRpcParams rpcParams = default)
+    {
+        playerName.Value = name;
+    }
+
     private async void LoadPlayerStateFromDatabase()
     {
         Debug.Log("[DB] Bắt đầu tải trạng thái người chơi từ MongoDB Atlas...");
@@ -1895,5 +1979,14 @@ public class SimplePlayerTest : NetworkBehaviour
             anim.Play("New State", 1, 0f);
             anim.Play("Empty", 1, 0f);
         }
+    }
+
+    public override void OnDestroy()
+    {
+        if (PlayerHUDManager.ActivePlayers != null)
+        {
+            PlayerHUDManager.ActivePlayers.Remove(this);
+        }
+        base.OnDestroy();
     }
 }

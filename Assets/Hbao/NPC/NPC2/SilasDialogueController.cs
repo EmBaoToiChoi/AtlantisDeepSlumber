@@ -42,7 +42,8 @@ public class SilasDialogueController : MonoBehaviour
     private List<DialogueLine> currentLines = new List<DialogueLine>();
     private int currentLineIndex = -1;
     private bool isDialogueActive = false;
-    private LeoPlayer activePlayer;
+    private IPlayerHUDTarget activePlayer;
+    public static IPlayerHUDTarget LocalPlayerTarget { get; set; }
     private SilasNPC currentNPC;
     private bool isUIInitialized = false;
     private bool isPromptShowing = false;
@@ -220,7 +221,7 @@ public class SilasDialogueController : MonoBehaviour
     /// <summary>
     /// Bắt đầu hội thoại (Tải từ vị trí lưu trước đó)
     /// </summary>
-    public void StartDialogue(List<DialogueLine> lines, LeoPlayer player, SilasNPC npc, int startIndex)
+    public void StartDialogue(List<DialogueLine> lines, IPlayerHUDTarget player, SilasNPC npc, int startIndex)
     {
         InitializeUI(); // Đảm bảo khởi tạo trước khi gọi bắt đầu
 
@@ -264,7 +265,7 @@ public class SilasDialogueController : MonoBehaviour
     /// <summary>
     /// Hỗ trợ tương thích ngược cho StartDialogue
     /// </summary>
-    public void StartDialogue(List<DialogueLine> lines, LeoPlayer player)
+    public void StartDialogue(List<DialogueLine> lines, IPlayerHUDTarget player)
     {
         StartDialogue(lines, player, null, 0);
     }
@@ -425,9 +426,10 @@ public class SilasDialogueController : MonoBehaviour
             }
             else if (node.speakerName.Contains("Arthur") || node.speakerName.Contains("Khiên") || node.speakerName.Contains("Người") || node.speakerName.Contains("Player"))
             {
+                int selectedChar = PlayerPrefs.GetInt("SelectedCharacterId", 0);
                 PlayerHUDController hud = FindObjectOfType<PlayerHUDController>();
-                if (hud != null && hud.hudProfiles != null && hud.hudProfiles.Count > 3)
-                    finalAvatar = hud.hudProfiles[3].avatarSprite;
+                if (hud != null && hud.hudProfiles != null && selectedChar >= 0 && selectedChar < hud.hudProfiles.Count)
+                    finalAvatar = hud.hudProfiles[selectedChar].avatarSprite;
             }
         }
         if (avatarImage != null && finalAvatar != null)

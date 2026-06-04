@@ -203,12 +203,12 @@ MonoBehaviour:
       NameHash: 1143134817
       Synchronize: 1
       ParameterType: 9
-    - name: SheathWeapon
-      NameHash: -370147930
+    - name: CatCung
+      NameHash: -733559344
       Synchronize: 1
       ParameterType: 9
-    - name: DrawWeapon
-      NameHash: 1079863564
+    - name: LayCung
+      NameHash: -627150456
       Synchronize: 1
       ParameterType: 9
   AnimatorParametersExpanded: 0
@@ -320,7 +320,79 @@ MonoBehaviour:
       MinSecondsBetweenUpdates: 0
       MaxSecondsBetweenUpdates: 0
     m_InternalValue: 100
-  characterClassIndex: 0
+  characterClassIndex: 2
+  playerName:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue:
+      utf8LengthInBytes: 5
+      bytes:
+        offset0000:
+          byte0000: 69
+          byte0001: 108
+          byte0002: 101
+          byte0003: 110
+          byte0004: 97
+          byte0005: 0
+          byte0006: 0
+          byte0007: 0
+          byte0008: 0
+          byte0009: 0
+          byte0010: 0
+          byte0011: 0
+          byte0012: 0
+          byte0013: 0
+          byte0014: 0
+          byte0015: 0
+        offset0016:
+          byte0000: 0
+          byte0001: 0
+          byte0002: 0
+          byte0003: 0
+          byte0004: 0
+          byte0005: 0
+          byte0006: 0
+          byte0007: 0
+          byte0008: 0
+          byte0009: 0
+          byte0010: 0
+          byte0011: 0
+          byte0012: 0
+          byte0013: 0
+          byte0014: 0
+          byte0015: 0
+        offset0032:
+          byte0000: 0
+          byte0001: 0
+          byte0002: 0
+          byte0003: 0
+          byte0004: 0
+          byte0005: 0
+          byte0006: 0
+          byte0007: 0
+          byte0008: 0
+          byte0009: 0
+          byte0010: 0
+          byte0011: 0
+          byte0012: 0
+          byte0013: 0
+          byte0014: 0
+          byte0015: 0
+        byte0048: 0
+        byte0049: 0
+        byte0050: 0
+        byte0051: 0
+        byte0052: 0
+        byte0053: 0
+        byte0054: 0
+        byte0055: 0
+        byte0056: 0
+        byte0057: 0
+        byte0058: 0
+        byte0059: 0
+        byte0060: 0
+        byte0061: 0
   enableCameraFollow: 1
   cameraOffset: {x: 0, y: 12, z: -8}
   cameraSmoothSpeed: 5
@@ -488,6 +560,71 @@ MonoBehaviour:
       MinSecondsBetweenUpdates: 0
       MaxSecondsBetweenUpdates: 0
     m_InternalValue: 0
+--- !u!1 &7337949084535923267
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 3856224902260807784}
+  - component: {fileID: 6473538198596790642}
+  - component: {fileID: 7663229243880690014}
+  m_Layer: 3
+  m_Name: 'Nameplate '
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &3856224902260807784
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7337949084535923267}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 8769292790703618225}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &6473538198596790642
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7337949084535923267}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 19102, guid: 0000000000000000e000000000000000, type: 0}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_PanelSettings: {fileID: 11400000, guid: d7d1cb076d22730418b3f47cdb14736c, type: 2}
+  m_ParentUI: {fileID: 0}
+  sourceAsset: {fileID: 9197481963319205126, guid: 94ac5fa3927906d4e9336a0312b53a02, type: 3}
+  m_SortingOrder: 0
+  m_WorldSpaceSizeMode: 1
+  m_WorldSpaceWidth: 1920
+  m_WorldSpaceHeight: 1080
+--- !u!114 &7663229243880690014
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7337949084535923267}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 681f98ebabdd7ec41a39ec2dfb8e1de1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  heightOffset: 3.5
 --- !u!1001 &3913358011793331165
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -644,6 +781,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 2205917650286948166, guid: aa2e3e6cfa356944eac3f8fa7441c613, type: 3}
       insertIndex: -1
       addedObject: {fileID: 8515282798021896146}
+    - targetCorrespondingSourceObject: {fileID: 2874234703519977268, guid: aa2e3e6cfa356944eac3f8fa7441c613, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 3856224902260807784}
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 5704617277878089646, guid: aa2e3e6cfa356944eac3f8fa7441c613, type: 3}
       insertIndex: -1
@@ -684,6 +824,11 @@ Animator:
 --- !u!4 &8147598836496748478 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 3405717001315203131, guid: aa2e3e6cfa356944eac3f8fa7441c613, type: 3}
+  m_PrefabInstance: {fileID: 6796385286677919621}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &8769292790703618225 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 2874234703519977268, guid: aa2e3e6cfa356944eac3f8fa7441c613, type: 3}
   m_PrefabInstance: {fileID: 6796385286677919621}
   m_PrefabAsset: {fileID: 0}
 --- !u!1001 &8189485773065257017

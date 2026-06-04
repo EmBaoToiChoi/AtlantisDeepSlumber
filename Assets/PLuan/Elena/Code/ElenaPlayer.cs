@@ -1,7 +1,7 @@
 using Unity.Netcode;
 using UnityEngine;
 
-public class ElenaPlayer : NetworkBehaviour
+public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
 {
     [Header("Movement & Attack Settings")]
     public float moveSpeed = 5f;
@@ -125,7 +125,18 @@ public class ElenaPlayer : NetworkBehaviour
 
     [Header("Player Class Settings")]
     [Tooltip("0 = Sát Thủ, 1 = Hỏa Thuật, 2 = Cung Thủ, 3 = Tanker")]
-    public int characterClassIndex = 0;
+    public int characterClassIndex = 2;
+
+    [Header("Player Name Sync")]
+    public NetworkVariable<Unity.Collections.FixedString64Bytes> playerName = new NetworkVariable<Unity.Collections.FixedString64Bytes>(
+        "Elena", NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server
+    );
+
+    // IPlayerHUDTarget Stats Implementation
+    public string DisplayName => string.IsNullOrEmpty(playerName.Value.ToString()) ? "Elena" : playerName.Value.ToString();
+    public int PlayerLevel => isStandaloneMode ? localLevel : playerLevel.Value;
+    public float PlayerExp => isStandaloneMode ? localExp : playerExp.Value;
+    public float MaxExp => 100f + (isStandaloneMode ? localLevel : playerLevel.Value) * 50f;
 
     [Header("Knockback Settings")]
     private Vector3 knockbackVelocity;
@@ -233,6 +244,16 @@ public class ElenaPlayer : NetworkBehaviour
     public float CurrentHealth =>
         isStandaloneMode ? localHealth : currentHealth.Value;
 
+    // IPlayerHUDTarget Implementation
+    bool IPlayerHUDTarget.isStandaloneMode => isStandaloneMode;
+    public bool IsStandaloneMode => isStandaloneMode;
+    public int CharacterClassIndex => characterClassIndex;
+    public bool IsSwitchingWeapon => false; // Elena doesn't have draw/sheath lock state
+    public float Weapon1MaxDurability => weapon1MaxDurability;
+    public float Weapon2MaxDurability => weapon2MaxDurability;
+    public string[] InventorySlots => inventorySlots;
+    public float MaxHealth => maxHealth;
+
     /// <summary>
     /// Trả về index vũ khí đang chọn: đọc từ HUD khi standalone, đọc từ NetworkVariable khi online.
     /// </summary>
@@ -307,13 +328,32 @@ public class ElenaPlayer : NetworkBehaviour
 
         // Tải nhân vật đã lưu từ PlayerPrefs nếu có
         characterClassIndex = PlayerPrefs.GetInt("SelectedCharacterId", characterClassIndex);
+        playerName.Value = PlayerPrefs.GetString("AuthDisplayName", "Elena");
+        if (PlayerHUDManager.ActivePlayers != null && !PlayerHUDManager.ActivePlayers.Contains(this))
+        {
+            PlayerHUDManager.ActivePlayers.Add(this);
+        }
 
         // Nạp cấp độ và kinh nghiệm cho chế độ chơi đơn (mặc định về lại 0 theo yêu cầu)
         localLevel = PlayerPrefs.GetInt("SelectedPlayerLevel_" + characterClassIndex, 0);
         localExp = PlayerPrefs.GetFloat("SelectedPlayerExp_" + characterClassIndex, 0f);
 
-        // Khởi tạo HUD với profile nhân vật
-        PlayerHUDController hud = FindObjectOfType<PlayerHUDController>();
+        // Register local target
+        PlayerHUDController.LocalPlayerTarget = this;
+        RakanDialogueController.LocalPlayerTarget = this;
+        SilasDialogueController.LocalPlayerTarget = this;
+
+        PlayerHUDController hud = null;
+        PlayerHUDManager hudManager = PlayerHUDManager.Instance != null ? PlayerHUDManager.Instance : FindObjectOfType<PlayerHUDManager>();
+        if (hudManager != null)
+        {
+            hud = hudManager.ActivateHUD(characterClassIndex);
+        }
+        else
+        {
+            hud = FindObjectOfType<PlayerHUDController>();
+        }
+
         if (hud != null)
         {
             hud.SetupPlayerProfile(characterClassIndex);
@@ -328,6 +368,11 @@ public class ElenaPlayer : NetworkBehaviour
     public override void OnNetworkSpawn()
     {
         isStandaloneMode = false;
+
+        if (PlayerHUDManager.ActivePlayers != null && !PlayerHUDManager.ActivePlayers.Contains(this))
+        {
+            PlayerHUDManager.ActivePlayers.Add(this);
+        }
 
         // Đăng ký sự kiện đồng bộ Netcode
         activeWeaponIndex.OnValueChanged += OnWeaponIndexChanged;
@@ -352,10 +397,32 @@ public class ElenaPlayer : NetworkBehaviour
 
         if (IsOwner)
         {
+            // Tải nhân vật đã lưu từ PlayerPrefs
+            characterClassIndex = PlayerPrefs.GetInt("SelectedCharacterId", characterClassIndex);
+
+            // Đồng bộ tên người chơi qua mạng
+            string myName = PlayerPrefs.GetString("AuthDisplayName", "Elena");
+            SetPlayerNameServerRpc(myName);
+
+            // Register local target
+            PlayerHUDController.LocalPlayerTarget = this;
+            RakanDialogueController.LocalPlayerTarget = this;
+            SilasDialogueController.LocalPlayerTarget = this;
+
             currentHealth.OnValueChanged += OnHealthChanged;
             UpdateHealthHUD(currentHealth.Value);
 
-            PlayerHUDController hud = FindObjectOfType<PlayerHUDController>();
+            PlayerHUDController hud = null;
+            PlayerHUDManager hudManager = PlayerHUDManager.Instance != null ? PlayerHUDManager.Instance : FindObjectOfType<PlayerHUDManager>();
+            if (hudManager != null)
+            {
+                hud = hudManager.ActivateHUD(characterClassIndex);
+            }
+            else
+            {
+                hud = FindObjectOfType<PlayerHUDController>();
+            }
+
             if (hud != null)
                 hud.SetupPlayerProfile(characterClassIndex);
 
@@ -376,6 +443,11 @@ public class ElenaPlayer : NetworkBehaviour
 
     public override void OnNetworkDespawn()
     {
+        if (PlayerHUDManager.ActivePlayers != null)
+        {
+            PlayerHUDManager.ActivePlayers.Remove(this);
+        }
+
         activeWeaponIndex.OnValueChanged -= OnWeaponIndexChanged;
         isWeapon2Locked.OnValueChanged -= OnWeapon2LockedChanged;
         isSkillsUnlocked.OnValueChanged -= OnSkillsUnlockedChanged;
@@ -1793,6 +1865,12 @@ public class ElenaPlayer : NetworkBehaviour
         isSyncingFromDb = false;
     }
 
+    [ServerRpc(RequireOwnership = false)]
+    public void SetPlayerNameServerRpc(string name, ServerRpcParams rpcParams = default)
+    {
+        playerName.Value = name;
+    }
+
     public async void SavePlayerStateToDatabase()
     {
         if (!IsSpawned || !IsOwner) return;
@@ -2346,5 +2424,13 @@ public class ElenaPlayer : NetworkBehaviour
         if (weaponInHandVisual != null) weaponInHandVisual.SetActive(false);
         Debug.Log("[Animation Event] Đã cất vũ khí vào lưng!");
     }
-    
+
+    public override void OnDestroy()
+    {
+        if (PlayerHUDManager.ActivePlayers != null)
+        {
+            PlayerHUDManager.ActivePlayers.Remove(this);
+        }
+        base.OnDestroy();
+    }
 }

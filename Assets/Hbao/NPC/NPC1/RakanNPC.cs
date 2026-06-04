@@ -25,7 +25,7 @@ public class RakanNPC : NetworkBehaviour
 
     // Quản lý trạng thái tương tác phím G
     private bool isPlayerNearby = false;
-    private LeoPlayer localPlayer;
+    private IPlayerHUDTarget localPlayer;
     private int savedDialogueIndex = 0;
 
     private void Awake()
@@ -209,12 +209,33 @@ public class RakanNPC : NetworkBehaviour
         }
     }
 
+    private List<IPlayerHUDTarget> FindAllPlayersInScene()
+    {
+        var list = new List<IPlayerHUDTarget>();
+        foreach (var p in FindObjectsOfType<LeoPlayer>())
+        {
+            if (p != null) list.Add(p);
+        }
+        foreach (var p in FindObjectsOfType<ElenaPlayer>())
+        {
+            if (p != null) list.Add(p);
+        }
+        foreach (var p in FindObjectsOfType<SimplePlayerTest>())
+        {
+            if (p != null && p.GetComponent<LeoPlayer>() == null)
+            {
+                list.Add(p);
+            }
+        }
+        return list;
+    }
+
     /// <summary>
     /// Đếm tổng số lượng người chơi đã kết nối trong phòng qua Netcode
     /// </summary>
     private int GetTotalConnectedPlayers()
     {
-        if (localPlayer != null && localPlayer.isStandaloneMode)
+        if (localPlayer != null && localPlayer.IsStandaloneMode)
         {
             return 1;
         }
@@ -224,8 +245,7 @@ public class RakanNPC : NetworkBehaviour
             return NetworkManager.Singleton.ConnectedClients.Count;
         }
 
-        LeoPlayer[] players = FindObjectsOfType<LeoPlayer>();
-        return players != null ? players.Length : 1;
+        return FindAllPlayersInScene().Count;
     }
 
     /// <summary>
@@ -234,7 +254,7 @@ public class RakanNPC : NetworkBehaviour
     private int GetNearbyPlayersCount()
     {
         int count = 0;
-        LeoPlayer[] players = FindObjectsOfType<LeoPlayer>();
+        var players = FindAllPlayersInScene();
         foreach (var p in players)
         {
             if (Vector3.Distance(transform.position, p.transform.position) <= triggerRadius)
@@ -247,13 +267,13 @@ public class RakanNPC : NetworkBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
-        LeoPlayer player = other.GetComponentInParent<LeoPlayer>();
-        if (player == null) player = other.GetComponentInChildren<LeoPlayer>();
-        if (player == null) player = other.GetComponent<LeoPlayer>();
+        IPlayerHUDTarget player = other.GetComponentInParent<IPlayerHUDTarget>();
+        if (player == null) player = other.GetComponentInChildren<IPlayerHUDTarget>();
+        if (player == null) player = other.GetComponent<IPlayerHUDTarget>();
 
         if (player != null)
         {
-            bool isLocalPlayer = player.isStandaloneMode || player.IsOwner;
+            bool isLocalPlayer = player.IsStandaloneMode || player.IsOwner;
 
             if (isLocalPlayer)
             {
@@ -275,9 +295,9 @@ public class RakanNPC : NetworkBehaviour
 
     private void OnTriggerExit(Collider other)
     {
-        LeoPlayer player = other.GetComponentInParent<LeoPlayer>();
-        if (player == null) player = other.GetComponentInChildren<LeoPlayer>();
-        if (player == null) player = other.GetComponent<LeoPlayer>();
+        IPlayerHUDTarget player = other.GetComponentInParent<IPlayerHUDTarget>();
+        if (player == null) player = other.GetComponentInChildren<IPlayerHUDTarget>();
+        if (player == null) player = other.GetComponent<IPlayerHUDTarget>();
 
         // Kiểm tra nếu chính localPlayer hiện tại đi ra ngoài
         if (player != null && player == localPlayer)
@@ -299,8 +319,8 @@ public class RakanNPC : NetworkBehaviour
         if (RakanDialogueController.Instance != null)
         {
             // Nếu chơi standalone thì đóng cục bộ, chơi mạng thì gửi Rpc để đóng cho tất cả mọi người
-            LeoPlayer tempPlayer = FindLocalPlayerInScene();
-            if (tempPlayer != null && tempPlayer.isStandaloneMode)
+            IPlayerHUDTarget tempPlayer = FindLocalPlayerInScene();
+            if (tempPlayer != null && tempPlayer.IsStandaloneMode)
             {
                 RakanDialogueController.Instance.EndDialogue();
                 SetDialogueAnimation(false);
@@ -331,12 +351,12 @@ public class RakanNPC : NetworkBehaviour
         savedDialogueIndex = index;
     }
 
-    private LeoPlayer FindLocalPlayerInScene()
+    private IPlayerHUDTarget FindLocalPlayerInScene()
     {
-        LeoPlayer[] players = FindObjectsOfType<LeoPlayer>();
+        var players = FindAllPlayersInScene();
         foreach (var p in players)
         {
-            if (p.isStandaloneMode || p.IsOwner)
+            if (p.IsStandaloneMode || p.IsOwner)
             {
                 return p;
             }
@@ -388,7 +408,7 @@ public class RakanNPC : NetworkBehaviour
     [ClientRpc]
     private void StartDialogueClientRpc(int startIndex)
     {
-        LeoPlayer local = FindLocalPlayerInScene();
+        IPlayerHUDTarget local = FindLocalPlayerInScene();
         if (RakanDialogueController.Instance != null)
         {
             RakanDialogueController.Instance.StartDialogue(dialogueLines, local, this, startIndex);

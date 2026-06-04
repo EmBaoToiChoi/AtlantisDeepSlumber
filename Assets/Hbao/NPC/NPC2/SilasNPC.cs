@@ -21,7 +21,7 @@ public class SilasNPC : NetworkBehaviour
 
     // Quản lý trạng thái tương tác phím G
     private bool isPlayerNearby = false;
-    private LeoPlayer localPlayer;
+    private IPlayerHUDTarget localPlayer;
     private int savedDialogueIndex = 0;
 
     private void Awake()
@@ -191,15 +191,36 @@ public class SilasNPC : NetworkBehaviour
         }
     }
 
+    private List<IPlayerHUDTarget> FindAllPlayersInScene()
+    {
+        var list = new List<IPlayerHUDTarget>();
+        foreach (var p in FindObjectsOfType<LeoPlayer>())
+        {
+            if (p != null) list.Add(p);
+        }
+        foreach (var p in FindObjectsOfType<ElenaPlayer>())
+        {
+            if (p != null) list.Add(p);
+        }
+        foreach (var p in FindObjectsOfType<SimplePlayerTest>())
+        {
+            if (p != null && p.GetComponent<LeoPlayer>() == null)
+            {
+                list.Add(p);
+            }
+        }
+        return list;
+    }
+
     private void OnTriggerEnter(Collider other)
     {
-        LeoPlayer player = other.GetComponentInParent<LeoPlayer>();
-        if (player == null) player = other.GetComponentInChildren<LeoPlayer>();
-        if (player == null) player = other.GetComponent<LeoPlayer>();
+        IPlayerHUDTarget player = other.GetComponentInParent<IPlayerHUDTarget>();
+        if (player == null) player = other.GetComponentInChildren<IPlayerHUDTarget>();
+        if (player == null) player = other.GetComponent<IPlayerHUDTarget>();
 
         if (player != null)
         {
-            bool isLocalPlayer = player.isStandaloneMode || player.IsOwner;
+            bool isLocalPlayer = player.IsStandaloneMode || player.IsOwner;
 
             if (isLocalPlayer)
             {
@@ -217,9 +238,9 @@ public class SilasNPC : NetworkBehaviour
 
     private void OnTriggerExit(Collider other)
     {
-        LeoPlayer player = other.GetComponentInParent<LeoPlayer>();
-        if (player == null) player = other.GetComponentInChildren<LeoPlayer>();
-        if (player == null) player = other.GetComponent<LeoPlayer>();
+        IPlayerHUDTarget player = other.GetComponentInParent<IPlayerHUDTarget>();
+        if (player == null) player = other.GetComponentInChildren<IPlayerHUDTarget>();
+        if (player == null) player = other.GetComponent<IPlayerHUDTarget>();
 
         // Kiểm tra nếu chính localPlayer hiện tại đi ra ngoài
         if (player != null && player == localPlayer)
@@ -241,8 +262,8 @@ public class SilasNPC : NetworkBehaviour
         if (SilasDialogueController.Instance != null)
         {
             // Nếu chơi standalone thì đóng cục bộ, chơi mạng thì gửi Rpc để đóng cho tất cả mọi người
-            LeoPlayer tempPlayer = FindLocalPlayerInScene();
-            if (tempPlayer != null && tempPlayer.isStandaloneMode)
+            IPlayerHUDTarget tempPlayer = FindLocalPlayerInScene();
+            if (tempPlayer != null && tempPlayer.IsStandaloneMode)
             {
                 SilasDialogueController.Instance.EndDialogue();
                 SetDialogueAnimation(false);
@@ -273,12 +294,12 @@ public class SilasNPC : NetworkBehaviour
         savedDialogueIndex = index;
     }
 
-    private LeoPlayer FindLocalPlayerInScene()
+    private IPlayerHUDTarget FindLocalPlayerInScene()
     {
-        LeoPlayer[] players = FindObjectsOfType<LeoPlayer>();
+        var players = FindAllPlayersInScene();
         foreach (var p in players)
         {
-            if (p.isStandaloneMode || p.IsOwner)
+            if (p.IsStandaloneMode || p.IsOwner)
             {
                 return p;
             }
@@ -330,7 +351,7 @@ public class SilasNPC : NetworkBehaviour
     [ClientRpc]
     private void StartDialogueClientRpc(int startIndex)
     {
-        LeoPlayer local = FindLocalPlayerInScene();
+        IPlayerHUDTarget local = FindLocalPlayerInScene();
         if (SilasDialogueController.Instance != null)
         {
             SilasDialogueController.Instance.StartDialogue(dialogueLines, local, this, startIndex);
