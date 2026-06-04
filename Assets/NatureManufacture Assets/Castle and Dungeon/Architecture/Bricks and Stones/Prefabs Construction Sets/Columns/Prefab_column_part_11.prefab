@@ -98,6 +98,7 @@ GameObject:
   - component: {fileID: 8220519575441871392}
   - component: {fileID: 2551592273405332569}
   - component: {fileID: 184804279986593855}
+  - component: {fileID: 3693218867614379232}
   m_Layer: 0
   m_Name: stone_element_02g_LOD0
   m_TagString: Untagged
@@ -190,11 +191,34 @@ MeshCollider:
   m_LayerOverridePriority: 0
   m_IsTrigger: 0
   m_ProvidesContacts: 0
-  m_Enabled: 1
+  m_Enabled: 0
   serializedVersion: 5
   m_Convex: 1
   m_CookingOptions: 30
   m_Mesh: {fileID: 4451311131770816821, guid: c660de7c1a6951f4f9ad77b5abe33f00, type: 3}
+--- !u!136 &3693218867614379232
+CapsuleCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5706050892102985274}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 2
+  m_Radius: 0.76
+  m_Height: 0.92104894
+  m_Direction: 0
+  m_Center: {x: 0.06, y: -0.24, z: 0.002919614}
 --- !u!1 &6977478275292913621
 GameObject:
   m_ObjectHideFlags: 0
