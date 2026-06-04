@@ -117,6 +117,7 @@ public class Enemy5_PhuThuy : NetworkBehaviour
         netSpeed.OnValueChanged       += (_, v) => ApplySpeedAnim(v);
         hitCounter.OnValueChanged     += (_, _) => { if (anim != null) anim.SetTrigger(hitTrigger); };
         currentHealth.OnValueChanged  += OnHealthNetChanged;
+        currentState.OnValueChanged   += OnStateChanged;
         ApplySpeedAnim(netSpeed.Value);
         if (IsServer) { currentHealth.Value = maxHealth; SnapToNavMesh(); GoToNextWaypoint(); }
         else { if (agent != null) agent.enabled = false; }
@@ -127,6 +128,34 @@ public class Enemy5_PhuThuy : NetworkBehaviour
         netSpeed.OnValueChanged       -= (_, v) => ApplySpeedAnim(v);
         hitCounter.OnValueChanged     -= (_, _) => { if (anim != null) anim.SetTrigger(hitTrigger); };
         currentHealth.OnValueChanged  -= OnHealthNetChanged;
+        currentState.OnValueChanged   -= OnStateChanged;
+    }
+
+    private void OnStateChanged(EnemyState oldState, EnemyState newState)
+    {
+        if (newState == EnemyState.Dead)
+        {
+            if (!IsServer)
+            {
+                ApplyLocalDeathEffects();
+            }
+        }
+    }
+
+    private void ApplyLocalDeathEffects()
+    {
+        if (anim != null)
+        {
+            anim.ResetTrigger(attackTrigger);
+            anim.ResetTrigger(hitTrigger);
+            anim.ResetTrigger(dieTrigger);
+
+            for (int i = 1; i < anim.layerCount; i++)
+            {
+                anim.SetLayerWeight(i, 0f);
+            }
+            anim.Play("Quai5Die", 0, 0f);
+        }
     }
 
     private void OnHealthNetChanged(float oldVal, float newVal)
@@ -188,7 +217,7 @@ public class Enemy5_PhuThuy : NetworkBehaviour
     private void HandleChase()
     {
         if (targetPlayer == null) { ReturnToPatrol(); return; }
-        SimplePlayerTest ps = targetPlayer.GetComponentInParent<SimplePlayerTest>();
+        IPlayerHUDTarget ps = targetPlayer.GetComponentInParent<IPlayerHUDTarget>();
         if (ps != null && ps.CurrentHealth <= 0) { targetPlayer = null; ReturnToPatrol(); return; }
         Vector3 ld = (targetPlayer.position - transform.position); ld.y = 0;
         if (ld.sqrMagnitude > 0.01f) transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(ld), Time.deltaTime * 15f);
@@ -228,7 +257,6 @@ public class Enemy5_PhuThuy : NetworkBehaviour
         stateTimer -= Time.deltaTime;
         float elapsed = attackDuration - stateTimer;
         if (elapsed < attackDuration * 0.5f) { Vector3 ld = (targetPlayer.position - transform.position); ld.y = 0; if (ld.sqrMagnitude > 0.01f) transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(ld), Time.deltaTime * 18f); }
-        if (stateTimer <= 0.1f && !hasCastSpell) { hasCastSpell = true; LaunchSpellBall(); }
         if (stateTimer <= 0) EndAttack();
     }
 
@@ -247,7 +275,7 @@ public class Enemy5_PhuThuy : NetworkBehaviour
         if (num == 0) num = FallbackDetect();
         bool found = false; Transform closest = null; float minD = float.MaxValue;
         Vector3 ep = eyeTransform != null ? eyeTransform.position : transform.position + Vector3.up * 1.5f;
-        for (int i = 0; i < num; i++) { if (detectionResults[i] == null) continue; Transform pt = detectionResults[i].transform; SimplePlayerTest ps = pt.GetComponentInParent<SimplePlayerTest>(); if (ps != null && ps.CurrentHealth <= 0) continue; Vector3 center = pt.position + Vector3.up; float d = Vector3.Distance(ep, center); Vector3 dir = (center - ep).normalized; bool inFOV = Vector3.Angle(transform.forward, dir) < fieldOfView / 2f; if ((inFOV || pt == targetPlayer) && !Physics.Raycast(ep, dir, d, obstacleLayer)) { if (d < minD) { minD = d; closest = pt; found = true; } } }
+        for (int i = 0; i < num; i++) { if (detectionResults[i] == null) continue; Transform pt = detectionResults[i].transform; IPlayerHUDTarget ps = pt.GetComponentInParent<IPlayerHUDTarget>(); if (ps != null && ps.CurrentHealth <= 0) continue; Vector3 center = pt.position + Vector3.up; float d = Vector3.Distance(ep, center); Vector3 dir = (center - ep).normalized; bool inFOV = Vector3.Angle(transform.forward, dir) < fieldOfView / 2f; if ((inFOV || pt == targetPlayer) && !Physics.Raycast(ep, dir, d, obstacleLayer)) { if (d < minD) { minD = d; closest = pt; found = true; } } }
         if (found && closest != null) { targetPlayer = closest; if (s != EnemyState.Chase) ChangeState(EnemyState.Chase); } else if (s == EnemyState.Chase) ReturnToPatrol();
     }
 
@@ -271,7 +299,8 @@ public class Enemy5_PhuThuy : NetworkBehaviour
             case EnemyState.Attack:
                 if (AgentReady) agent.isStopped = true; SetSpeedNet(0f);
                 hasCastSpell = false; stateTimer = attackDuration;
-                if (!isStandaloneMode) PlayAttackClientRpc(); else PlayAttackAnimLocal();
+                PlayAttackAnimLocal();
+                if (!isStandaloneMode) PlayAttackClientRpc();
                 break;
             case EnemyState.Dead: Die(); break;
         }
@@ -280,7 +309,7 @@ public class Enemy5_PhuThuy : NetworkBehaviour
     private void ApplySpeedAnim(float speed) { if (anim == null || !anim.isActiveAndEnabled || anim.runtimeAnimatorController == null) return; anim.SetFloat(speedParam, speed); }
     private void SetSpeedNet(float val) { if (isStandaloneMode) ApplySpeedAnim(val); else if (IsServer && !Mathf.Approximately(netSpeed.Value, val)) netSpeed.Value = val; }
     private void PlayAttackAnimLocal() { if (anim == null) return; anim.ResetTrigger(attackTrigger); anim.SetTrigger(attackTrigger); }
-    [ClientRpc] private void PlayAttackClientRpc() => PlayAttackAnimLocal();
+    [ClientRpc] private void PlayAttackClientRpc() { if (!IsServer) PlayAttackAnimLocal(); }
 
     // Animation Event (từ keyframe chưởng)
     public void TriggerSpellLaunch()
@@ -299,12 +328,18 @@ public class Enemy5_PhuThuy : NetworkBehaviour
         {
             var proj = Instantiate(spellProjectilePrefab, spawnPt, Quaternion.LookRotation(dir));
             var rb = proj.GetComponent<Rigidbody>(); if (rb != null) rb.linearVelocity = dir * spellSpeed;
+            var spellBall = proj.GetComponent<SpellBall>();
+            if (spellBall != null)
+            {
+                spellBall.damage = spellDamage;
+                spellBall.knockback = 5f;
+            }
             var no = proj.GetComponent<NetworkObject>(); if (no != null && !isStandaloneMode) no.Spawn(true);
         }
         else
         {
             if (Physics.Raycast(spawnPt, dir, out RaycastHit hit, maxAttackRange + 2f))
-            { var ps = hit.collider.GetComponentInParent<SimplePlayerTest>(); if (ps != null) { ps.TakeDamage(spellDamage); ps.ApplyKnockback(dir * 5f); } }
+            { EnemyDamageHelper.DealDamage(hit.collider.transform, spellDamage, dir * 5f); }
         }
     }
 
@@ -333,7 +368,7 @@ public class Enemy5_PhuThuy : NetworkBehaviour
     private void Die()
     {
         if (AgentReady) agent.isStopped = true; SetSpeedNet(0f);
-        if (anim != null) { anim.ResetTrigger(dieTrigger); anim.SetTrigger(dieTrigger); }
+        ApplyLocalDeathEffects();
         DropExperience(); DropItems(); Invoke(nameof(DespawnEnemy), 2.5f);
     }
 

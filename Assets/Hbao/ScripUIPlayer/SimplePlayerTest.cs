@@ -1711,14 +1711,14 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
         {
             if (!string.IsNullOrEmpty(drawWeaponTrigger))
             {
-                PlayAnimation(drawWeaponTrigger, 0.1f);
+                PlayAnimationLocal(drawWeaponTrigger, 0.1f);
             }
         }
         else if (newWeapon == 1)
         {
             if (!string.IsNullOrEmpty(sheathWeaponTrigger))
             {
-                PlayAnimation(sheathWeaponTrigger, 0.1f);
+                PlayAnimationLocal(sheathWeaponTrigger, 0.1f);
             }
         }
     }

@@ -2829,6 +2829,14 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     public float damageAmount = 25f;
     public float attackRange = 2f;
 
+    [Header("Gravity & Physics")]
+    [Tooltip("Hệ số nhân gravity thêm vào. 1 = giữ nguyên, 2 = nặng gấp đôi, 3 = nặng gấp 3...")]
+    public float extraGravityMultiplier = 2.5f;
+    [Tooltip("Tốc độ rơi xuống tối đa (m/s). Đặt cao hơn để rơi nhanh hơn.")]
+    public float maxFallSpeed = 20f;
+    [Tooltip("Chỉ áp extra gravity khi player đang trên không (false = luôn áp).")]
+    public bool onlyExtraGravityWhenAirborne = false;
+
     [Header("Combo Attack Settings")]
 
     protected int comboStep = 0;
@@ -3008,6 +3016,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     public string punch3Trigger = "DamCombo";
     public string slash1Trigger = "Combo1kiem";
     public string slash2Trigger = "Attackdoucombo";
+    public string slash3Trigger = "Slash3"; // Tên trigger Slash3 trong Animator (có thể cấu hình lại)
 
     // Death and hit
     public string deathUnarmedTrigger = "Death";
@@ -3555,10 +3564,10 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         if (Input.GetMouseButtonDown(0))
         {
-            if (!IsUIBlockingInput() && !isRollingStandalone && !IsPlayingActionAnimation())
+            if (!IsUIBlockingInput() && !isRollingStandalone)
             {
                 Debug.Log($"[LeoPlayer] Mouse clicked in Standalone. Weapon: {GetActiveWeaponIndex()}");
-                PerformComboAttack(false);
+                RequestComboAttack(false);
             }
         }
 
@@ -3740,7 +3749,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             if (!IsUIBlockingInput() && IsSpawned)
             {
                 Debug.Log($"[LeoPlayer] Mouse clicked in Owner mode. Weapon: {GetActiveWeaponIndex()}");
-                PerformComboAttack(true);
+                RequestComboAttack(true);
             }
         }
 
@@ -3774,32 +3783,48 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         return 0.5f;
     }
 
-    private Coroutine autoHitboxCoroutine;
+    // ======================================================
+    // HỆ THỐNG COMBO TẤN CÔNG VỚI BUFFER & CHỐNG CLICK THỪA
+    // ======================================================
 
-    private System.Collections.IEnumerator AutoEnableHitboxesCoroutine(int weapon, string animToPlay)
+    // Combo Settings
+    [Header("Combo Attack Settings")]
+    [Tooltip("Thời gian animation tấn công (giây). Dùng để tính combo window.")]
+    public float punchAnimDuration = 0.5f;
+    public float slashAnimDuration = 0.6f;
+    [Tooltip("Phần trăm animation còn lại cho phép chuyển nhịp combo (0.0 - 1.0).")]
+    [Range(0f, 1f)]
+    public float comboChainWindowPct = 0.55f;  // Khi anim đã qua 55%, nhấp tiếp được ghi nhận
+
+    private bool pendingAttackRequest = false;   // Buffer click chuột trong combo window
+    private bool isExecutingAttack = false;       // Đang trong nhịp tấn công
+    private float attackAnimStartTime = 0f;       // Thời điểm bắt đầu animation tấn công
+    private float currentAttackAnimDuration = 0f; // Thời lượng animation tấn công hiện tại
+    private int currentWeaponTypeAttacking = 1;  // Loại vũ khí đang dùng khi tấn công
+    private Coroutine comboChainCoroutine;
+
+    /// <summary>
+    /// Ghi nhận yêu cầu tấn công từ input. Nếu đang đánh thì buffer lại để combo.
+    /// </summary>
+    private void RequestComboAttack(bool networkMode)
     {
-        // Chờ một chút để hoạt ảnh bắt đầu vung đòn (ví dụ 0.12 giây)
-        yield return new WaitForSeconds(0.12f);
-
-        if (weapon == 2)
+        if (isExecutingAttack)
         {
-            EnableBothWeaponHitboxes();
+            // Đang đánh: kiểm tra xem có đang trong combo window không
+            float elapsed = Time.time - attackAnimStartTime;
+            float progress = currentAttackAnimDuration > 0 ? elapsed / currentAttackAnimDuration : 1f;
+            if (progress >= comboChainWindowPct)
+            {
+                // Nằm trong combo window -> buffer click
+                pendingAttackRequest = true;
+                Debug.Log("[LeoPlayer] Combo buffer ghi nhận click - sẽ tiếp tục nhịp tiếp theo.");
+            }
+            // Ngoài window (quá sớm) -> bỏ qua click
         }
         else
         {
-            EnableBothHitboxes();
-        }
-
-        // Duy trì hitbox bật trong khoảng 0.25 giây (thời gian vung đòn)
-        yield return new WaitForSeconds(0.25f);
-
-        if (weapon == 2)
-        {
-            DisableBothWeaponHitboxes();
-        }
-        else
-        {
-            DisableBothHitboxes();
+            // Chưa đang đánh -> bắt đầu tấn công ngay
+            PerformComboAttack(networkMode);
         }
     }
 
@@ -3807,36 +3832,38 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     {
         int weapon = GetActiveWeaponIndex();
 
-        // Reset trạng thái hitbox ban đầu
+        // Xác định duration animation
+        currentAttackAnimDuration = (weapon == 2) ? slashAnimDuration : punchAnimDuration;
+        attackAnimStartTime = Time.time;
+        isExecutingAttack = true;
+        pendingAttackRequest = false;
+
+        // Reset hitbox trước mỗi đòn đánh mới
         alreadyHitEnemies.Clear();
-        DisableLeftHitbox();
-        DisableRightHitbox();
-        DisableLeftWeaponHitbox();
-        DisableRightWeaponHitbox();
+        DisableAllHitboxes();
 
-        if (autoHitboxCoroutine != null)
-        {
-            StopCoroutine(autoHitboxCoroutine);
-        }
-
-        // Tuyệt đối không khóa di chuyển (Triệt tiêu lỗi vặn xoắn xương do đứng im)
+        // Không khóa di chuyển
         isRootedAttack = false;
         SetMovementLock(false);
 
-        string animToPlay = "";
+        string animToPlay;
         if (weapon == 2)
         {
-            // KIẾM (ARMED): RANDOM ĐÒN ĐÁNH 50-50 CHỐNG NHÀM CHÁN
-            animToPlay = (Random.value < 0.5f) ? "Slash1" : "Slash2";
+            // KIẾM (ARMED): Combo 3 bước tuần tự
+            comboStep++;
+            if (comboStep > 3) comboStep = 1;
 
-            Debug.Log($"[LeoPlayer] Sword attack (Random 50-50). Playing: {animToPlay}");
+            animToPlay = "Slash1";
+            if (comboStep == 2) animToPlay = "Slash2";
+            else if (comboStep == 3) animToPlay = "Slash3";
 
+            Debug.Log($"[LeoPlayer] Sword combo step {comboStep} -> Playing: {animToPlay}");
             if (anim != null) anim.applyRootMotion = false;
             PlayAnimation(animToPlay, 0.05f, false);
         }
         else
         {
-            // ĐẤM TAY (UNARMED): TUẦN TỰ XOAY VÒNG 1 -> 2 -> 3 VÔ HẠN THỜI GIAN
+            // ĐẤM TAY (UNARMED): Combo 3 bước tuần tự
             comboStep++;
             if (comboStep > 3) comboStep = 1;
 
@@ -3844,12 +3871,61 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             if (comboStep == 2) animToPlay = "Punch2";
             else if (comboStep == 3) animToPlay = "Punch3";
 
-            Debug.Log($"[LeoPlayer] Fist attack (Sequence). Step: {comboStep} -> Playing: {animToPlay}");
-
+            Debug.Log($"[LeoPlayer] Fist combo step {comboStep} -> Playing: {animToPlay}");
             PlayAnimation(animToPlay, 0.05f, false);
         }
 
-        autoHitboxCoroutine = StartCoroutine(AutoEnableHitboxesCoroutine(weapon, animToPlay));
+        currentWeaponTypeAttacking = weapon;
+
+        // Khởi động coroutine quản lý hitbox và combo chain
+        if (comboChainCoroutine != null) StopCoroutine(comboChainCoroutine);
+        comboChainCoroutine = StartCoroutine(ComboChainCoroutine(weapon, animToPlay, networkMode));
+    }
+
+    private System.Collections.IEnumerator ComboChainCoroutine(int weapon, string animToPlay, bool networkMode)
+    {
+        // ================================================================
+        // HITBOX được điều khiển hoàn toàn bởi ANIMATION EVENT.
+        // Coroutine này CHỈ quản lý combo chain (chờ hết animation
+        // để xử lý buffer click → tiếp tục combo hay reset).
+        // ================================================================
+        float totalDuration = currentAttackAnimDuration;
+
+        // Chờ hết thời lượng animation
+        yield return new WaitForSeconds(totalDuration);
+
+        // Đảm bảo tắt hết hitbox khi animation kết thúc
+        // (phòng trường hợp Animation Event DisableHitbox bị thiếu)
+        DisableAllHitboxes();
+
+        // Kết thúc nhịp tấn công
+        isExecutingAttack = false;
+
+        // Kiểm tra có buffer click để tiếp tục combo không
+        if (pendingAttackRequest)
+        {
+            pendingAttackRequest = false;
+            Debug.Log("[LeoPlayer] Tiếp tục combo từ buffer.");
+            PerformComboAttack(networkMode);
+        }
+        else
+        {
+            // Không có buffer → reset combo step
+            comboStep = 0;
+            Debug.Log("[LeoPlayer] Kết thúc combo - không có input tiếp theo.");
+        }
+    }
+
+    /// <summary>
+    /// Tắt tất cả hitbox ngay lập tức và clear danh sách đã hit.
+    /// Có thể gọi từ Animation Event hoặc code.
+    /// </summary>
+    private void DisableAllHitboxes()
+    {
+        DisableLeftHitbox();
+        DisableRightHitbox();
+        DisableLeftWeaponHitbox();
+        DisableRightWeaponHitbox();
     }
 
     private void TryDamageEnemy(Collider col)
@@ -3900,6 +3976,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         rollCooldownTimer = rollCooldown;
 
         ClearAttackLayer();
+        InterruptCombo(); // Ngắt combo khi lộn vòng
 
         if (moveInput != Vector3.zero)
         {
@@ -3922,6 +3999,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         rollCooldownTimer = rollCooldown;
 
         ClearAttackLayer();
+        InterruptCombo(); // Ngắt combo khi lộn vòng
 
         if (moveInput != Vector3.zero)
         {
@@ -4044,6 +4122,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         }
 
         SetMovementLock(false);
+        InterruptCombo(); // Ng\u1eaft combo khi b\u1ecb tr\u00fang \u0111\u00f2n
 
         if (isStandaloneMode)
         {
@@ -4146,6 +4225,29 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             }
         }
         return false;
+    }
+
+    private System.Collections.Generic.HashSet<string> collectedDropGroups = new System.Collections.Generic.HashSet<string>();
+
+    public bool HasCollectedFromDropGroup(string dropGroupId)
+    {
+        if (string.IsNullOrEmpty(dropGroupId)) return false;
+        return collectedDropGroups.Contains(dropGroupId);
+    }
+
+    public void AddCollectedDropGroup(string dropGroupId)
+    {
+        if (string.IsNullOrEmpty(dropGroupId)) return;
+        collectedDropGroups.Add(dropGroupId);
+    }
+
+    [ClientRpc]
+    public void OnCollectGemClientRpc(string dropGroupId)
+    {
+        if (!IsServer)
+        {
+            AddCollectedDropGroup(dropGroupId);
+        }
     }
 
     public void AddExperience(float amount)
@@ -4539,11 +4641,11 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
             if (!string.IsNullOrEmpty(drawLeftTrigger))
             {
-                PlayAnimation(drawLeftTrigger, 0.1f);
+                PlayAnimationLocal(drawLeftTrigger, 0.1f);
             }
             else if (!string.IsNullOrEmpty(drawWeaponTrigger))
             {
-                PlayAnimation(drawWeaponTrigger, 0.1f);
+                PlayAnimationLocal(drawWeaponTrigger, 0.1f);
             }
             else
             {
@@ -4560,11 +4662,11 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
             if (!string.IsNullOrEmpty(sheatheLeftTrigger))
             {
-                PlayAnimation(sheatheLeftTrigger, 0.1f);
+                PlayAnimationLocal(sheatheLeftTrigger, 0.1f);
             }
             else if (!string.IsNullOrEmpty(sheathWeaponTrigger))
             {
-                PlayAnimation(sheathWeaponTrigger, 0.1f);
+                PlayAnimationLocal(sheathWeaponTrigger, 0.1f);
             }
             else
             {
@@ -4775,6 +4877,8 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
                 return slash1Trigger;
             case "Slash2":
                 return slash2Trigger;
+            case "Slash3":
+                return slash3Trigger;
             case "GetHit":
                 return getHitTrigger;
             case "GeiHit2":
@@ -4802,6 +4906,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
                name == punch3Trigger ||
                name == slash1Trigger ||
                name == slash2Trigger ||
+               name == slash3Trigger ||
                name == "LonVong" ||
                name == "GetHit" ||
                name == "GeiHit2" ||
@@ -4812,6 +4917,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
                name == "Punch3" ||
                name == "Slash1" ||
                name == "Slash2" ||
+               name == "Slash3" ||
                (!string.IsNullOrEmpty(drawWeaponTrigger) && name == drawWeaponTrigger) ||
                (!string.IsNullOrEmpty(sheathWeaponTrigger) && name == sheathWeaponTrigger) ||
                (!string.IsNullOrEmpty(drawLeftTrigger) && name == drawLeftTrigger) ||
@@ -4827,11 +4933,13 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
                name == punch3Trigger ||
                name == slash1Trigger ||
                name == slash2Trigger ||
+               name == slash3Trigger ||
                name == "Punch1" ||
                name == "Punch2" ||
                name == "Punch3" ||
                name == "Slash1" ||
-               name == "Slash2";
+               name == "Slash2" ||
+               name == "Slash3";
     }
 
     private bool IsFullBodyActionAnimation(string name)
@@ -4888,16 +4996,18 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
                stateInfo.IsName(punch3Trigger) ||
                stateInfo.IsName(slash1Trigger) ||
                stateInfo.IsName(slash2Trigger) ||
+               stateInfo.IsName(slash3Trigger) ||
                stateInfo.IsName("Punch1") ||
                stateInfo.IsName("Punch2") ||
                stateInfo.IsName("Punch3") ||
                stateInfo.IsName("Slash1") ||
-               stateInfo.IsName("Slash2");
+               stateInfo.IsName("Slash2") ||
+               stateInfo.IsName("Slash3");
     }
 
     private bool IsPlayingActionAnimation()
     {
-        if (anim == null || !anim.isActiveAndEnabled || anim.runtimeAnimatorController != null) return false;
+        if (anim == null || !anim.isActiveAndEnabled || anim.runtimeAnimatorController == null) return false;
 
         if (IsFullBodyActionAnimation(lastTriggeredAnimName) && Time.time - lastActionTriggerTime < 0.15f) return true;
 
@@ -4928,7 +5038,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     private bool IsPlayingPickAnimation()
     {
-        if (anim == null || !anim.isActiveAndEnabled || anim.runtimeAnimatorController != null) return false;
+        if (anim == null || !anim.isActiveAndEnabled || anim.runtimeAnimatorController == null) return false;
 
         if ((lastTriggeredAnimName == pickTrigger || lastTriggeredAnimName == "Idle_Pick" || lastTriggeredAnimName == "Pick")
             && Time.time - lastActionTriggerTime < 0.15f)
@@ -5008,12 +5118,14 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             anim.ResetTrigger(punch3Trigger);
             anim.ResetTrigger(slash1Trigger);
             anim.ResetTrigger(slash2Trigger);
+            anim.ResetTrigger(slash3Trigger);
 
             anim.ResetTrigger("Punch1");
             anim.ResetTrigger("Punch2");
             anim.ResetTrigger("Punch3");
             anim.ResetTrigger("Slash1");
             anim.ResetTrigger("Slash2");
+            anim.ResetTrigger("Slash3");
             if (!string.IsNullOrEmpty(drawWeaponTrigger)) anim.ResetTrigger(drawWeaponTrigger);
             if (!string.IsNullOrEmpty(sheathWeaponTrigger)) anim.ResetTrigger(sheathWeaponTrigger);
             if (!string.IsNullOrEmpty(drawLeftTrigger)) anim.ResetTrigger(drawLeftTrigger);
@@ -5061,6 +5173,45 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         }
     }
 
+    private void FixedUpdate()
+    {
+        ApplyExtraGravity();
+    }
+
+    /// <summary>
+    /// Áp thêm lực kéo xuống để player luôn nặng và bám đất.
+    /// Chỉ chạy trên Owner (Standalone hoặc NetworkOwner) — physics sẽ được
+    /// đồng bộ qua NetworkTransform/NetworkRigidbody tự động.
+    /// </summary>
+    private void ApplyExtraGravity()
+    {
+        // Chỉ xử lý trên Owner hoặc Standalone
+        bool hasControl = isStandaloneMode || (IsSpawned && IsOwner);
+        if (!hasControl) return;
+
+        if (rb == null) return;
+
+        // Kiểm tra xem có đang trên không không (dựa vào vậnl tốc dương Y)
+        bool isAirborne = rb.linearVelocity.y > 0.01f || rb.linearVelocity.y < -0.01f;
+
+        if (onlyExtraGravityWhenAirborne && !isAirborne) return;
+
+        // Áp thêm lực kéo xuống: F = m * g * (multiplier - 1)
+        // Unity đã tự áp 1x gravity qua Rigidbody, ta chỉ cần thêm phần dư
+        float extraGravity = rb.mass * Physics.gravity.magnitude * (extraGravityMultiplier - 1f);
+        rb.AddForce(Vector3.down * extraGravity, ForceMode.Force);
+
+        // Giới hạn tốc độ rơi tối đa (chống rơi vồ vật)
+        if (rb.linearVelocity.y < -maxFallSpeed)
+        {
+            rb.linearVelocity = new Vector3(
+                rb.linearVelocity.x,
+                -maxFallSpeed,
+                rb.linearVelocity.z
+            );
+        }
+    }
+
     [ServerRpc]
     private void PlayAnimationServerRpc(string animName, float fadeTime)
     {
@@ -5086,37 +5237,28 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         }
     }
 
-    public void EnableLeftHitbox()
+    /// <summary>
+    /// Ng\u1eaft combo ngay l\u1eadp t\u1ee9c: d\u1eebng coroutine, t\u1eaft hitbox, reset tr\u1ea1ng th\u00e1i t\u1ea5n c\u00f4ng.
+    /// G\u1ecdi khi b\u1ecb \u0111\u00e1nh, ch\u1ebft, ho\u1eb7c l\u1ed9n vòng.
+    /// </summary>
+    private void InterruptCombo()
     {
-        if (leftHitbox != null) leftHitbox.enabled = true;
+        if (comboChainCoroutine != null)
+        {
+            StopCoroutine(comboChainCoroutine);
+            comboChainCoroutine = null;
+        }
+        pendingAttackRequest = false;
+        isExecutingAttack = false;
+        comboStep = 0;
+        DisableAllHitboxes();
+        alreadyHitEnemies.Clear();
+        Debug.Log("[LeoPlayer] Combo b\u1ecb ng\u1eaft (b\u1ecb hit/ch\u1ebft/l\u1ed9n v\u00f2ng).");
     }
 
-    public void DisableLeftHitbox()
-    {
-        if (leftHitbox != null) leftHitbox.enabled = false;
-    }
-
-    public void EnableRightHitbox()
-    {
-        if (rightHitbox != null) rightHitbox.enabled = true;
-    }
-
-    public void DisableRightHitbox()
-    {
-        if (rightHitbox != null) rightHitbox.enabled = false;
-    }
-
-    public void EnableBothHitboxes()
-    {
-        EnableLeftHitbox();
-        EnableRightHitbox();
-    }
-
-    public void DisableBothHitboxes()
-    {
-        DisableLeftHitbox();
-        DisableRightHitbox();
-    }
+    // ======================================================
+    // UTILITY METHODS
+    // ======================================================
 
     public void UnlockMovement()
     {
@@ -5195,57 +5337,198 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         }
     }
 
+    // ======================================================
+    // HITBOX SYSTEM - Animation Event Receivers
+    // ======================================================
+    // Quy tắc:
+    //   - Chỉ Owner hoặc Standalone mới được bật hitbox & tính damage.
+    //   - Khi BẬT hitbox → clear alreadyHitEnemies (đòn mới, tính damage lại từ đầu).
+    //   - Khi TẮT hitbox → clear alreadyHitEnemies (chuẩn bị cho đòn tiếp theo).
+    //   - OnHitboxCollision() đảm bảo mỗi enemy chỉ bị damage 1 lần/đòn.
+    //
+    // Cách dùng trong Animation Event:
+    //   Đấm (Punch):
+    //     Frame bắt đầu vung tay trái  → EnableLeftHitbox()
+    //     Frame kết thúc vung tay trái → DisableLeftHitbox()
+    //     Frame bắt đầu vung tay phải → EnableRightHitbox()
+    //     Frame kết thúc vung tay phải → DisableRightHitbox()
+    //
+    //   Chém (Slash):
+    //     Frame bắt đầu vung kiếm  → EnableBothWeaponHitboxes()
+    //     Frame kết thúc vung kiếm → DisableBothWeaponHitboxes()
+    //
+    //   Cuối mỗi animation: OnAttackEnd() hoặc OnPunchEnd() / OnSlashEnd()
+
+    private bool CanActivateHitbox()
+    {
+        return isStandaloneMode || (IsSpawned && IsOwner);
+    }
+
+    // --- Đấm tay: Tay Trái ---
+    public void EnableLeftHitbox()
+    {
+        if (!CanActivateHitbox()) return;
+        alreadyHitEnemies.Clear(); // Đòn mới → reset damage tracker
+        if (leftHitbox != null)
+        {
+            leftHitbox.enabled = true;
+            Debug.Log("[LeoPlayer] ✊ Left hitbox BẬT (Animation Event).");
+        }
+    }
+
+    public void DisableLeftHitbox()
+    {
+        if (leftHitbox != null) leftHitbox.enabled = false;
+        alreadyHitEnemies.Clear(); // Reset để đòn tiếp theo tính damage mới
+    }
+
+    // --- Đấm tay: Tay Phải ---
+    public void EnableRightHitbox()
+    {
+        if (!CanActivateHitbox()) return;
+        alreadyHitEnemies.Clear();
+        if (rightHitbox != null)
+        {
+            rightHitbox.enabled = true;
+            Debug.Log("[LeoPlayer] ✊ Right hitbox BẬT (Animation Event).");
+        }
+    }
+
+    public void DisableRightHitbox()
+    {
+        if (rightHitbox != null) rightHitbox.enabled = false;
+        alreadyHitEnemies.Clear();
+    }
+
+    // --- Đấm tay: Cả hai tay ---
+    public void EnableBothHitboxes()
+    {
+        if (!CanActivateHitbox()) return;
+        alreadyHitEnemies.Clear();
+        if (leftHitbox != null) leftHitbox.enabled = true;
+        if (rightHitbox != null) rightHitbox.enabled = true;
+        Debug.Log("[LeoPlayer] ✊✊ Both hand hitboxes BẬT (Animation Event).");
+    }
+
+    public void DisableBothHitboxes()
+    {
+        if (leftHitbox != null) leftHitbox.enabled = false;
+        if (rightHitbox != null) rightHitbox.enabled = false;
+        alreadyHitEnemies.Clear();
+    }
+
+    // --- Kiếm: Tay Trái ---
     public void EnableLeftWeaponHitbox()
     {
-        if (leftWeaponHitbox != null) leftWeaponHitbox.enabled = true;
+        if (!CanActivateHitbox()) return;
+        alreadyHitEnemies.Clear();
+        if (leftWeaponHitbox != null)
+        {
+            leftWeaponHitbox.enabled = true;
+            Debug.Log("[LeoPlayer] ⚔️ Left weapon hitbox BẬT (Animation Event).");
+        }
     }
 
     public void DisableLeftWeaponHitbox()
     {
         if (leftWeaponHitbox != null) leftWeaponHitbox.enabled = false;
+        alreadyHitEnemies.Clear();
     }
 
+    // --- Kiếm: Tay Phải ---
     public void EnableRightWeaponHitbox()
     {
-        if (rightWeaponHitbox != null) rightWeaponHitbox.enabled = true;
+        if (!CanActivateHitbox()) return;
+        alreadyHitEnemies.Clear();
+        if (rightWeaponHitbox != null)
+        {
+            rightWeaponHitbox.enabled = true;
+            Debug.Log("[LeoPlayer] ⚔️ Right weapon hitbox BẬT (Animation Event).");
+        }
     }
 
     public void DisableRightWeaponHitbox()
     {
         if (rightWeaponHitbox != null) rightWeaponHitbox.enabled = false;
+        alreadyHitEnemies.Clear();
     }
 
+    // --- Kiếm: Cả hai tay (Slash chính) ---
     public void EnableBothWeaponHitboxes()
     {
-        EnableLeftWeaponHitbox();
-        EnableRightWeaponHitbox();
+        if (!CanActivateHitbox()) return;
+        alreadyHitEnemies.Clear();
+        if (leftWeaponHitbox != null) leftWeaponHitbox.enabled = true;
+        if (rightWeaponHitbox != null) rightWeaponHitbox.enabled = true;
+        Debug.Log("[LeoPlayer] ⚔️⚔️ Both weapon hitboxes BẬT (Animation Event).");
     }
 
     public void DisableBothWeaponHitboxes()
     {
-        DisableLeftWeaponHitbox();
-        DisableRightWeaponHitbox();
+        if (leftWeaponHitbox != null) leftWeaponHitbox.enabled = false;
+        if (rightWeaponHitbox != null) rightWeaponHitbox.enabled = false;
+        alreadyHitEnemies.Clear();
     }
 
+    // --- Animation Event: Kết thúc đòn đánh ---
+    /// <summary>
+    /// Gọi từ Animation Event ở FRAME CUỐI của mỗi animation đấm/chém.
+    /// Đảm bảo tắt hitbox và đánh dấu kết thúc nhịp tấn công.
+    /// </summary>
+    public void OnAttackEnd()
+    {
+        DisableAllHitboxes();
+        // Nếu vẫn còn pending attack → xử lý ngay
+        // (không cần wait coroutine)
+        if (pendingAttackRequest && isExecutingAttack)
+        {
+            pendingAttackRequest = false;
+            // Lấy networkMode từ context hiện tại
+            bool nm = !isStandaloneMode && IsSpawned;
+            PerformComboAttack(nm);
+        }
+        Debug.Log("[LeoPlayer] OnAttackEnd - Animation Event.");
+    }
+
+    /// <summary>
+    /// Kết thúc đòn chém kiếm (tương tự OnAttackEnd nhưng chỉ cho Slash).
+    /// </summary>
     public void OnSlashEnd()
     {
+        DisableBothWeaponHitboxes();
         if (anim != null) anim.applyRootMotion = false;
-        if (isRootedAttack)
-        {
-            var bridge = GetRootMotionBridge();
-            if (bridge != null) bridge.ApplyFinalOffset();
-        }
+        Debug.Log("[LeoPlayer] OnSlashEnd - Animation Event.");
     }
 
+    /// <summary>
+    /// Kết thúc đòn đấm (tương tự OnAttackEnd nhưng chỉ cho Punch).
+    /// </summary>
+    public void OnPunchEnd()
+    {
+        DisableBothHitboxes();
+        Debug.Log("[LeoPlayer] OnPunchEnd - Animation Event.");
+    }
+
+    /// <summary>
+    /// Nhận va chạm từ PlayerHitbox khi enemy đi vào hitbox.
+    /// Tính damage 1 lần duy nhất mỗi enemy trong mỗi đòn đánh.
+    /// </summary>
     public void OnHitboxCollision(Collider other)
     {
+        if (!CanActivateHitbox()) return; // Chỉ Owner/Standalone xử lý damage
+
         if (IsEnemy(other, out Collider enemyCollider))
         {
             Transform enemyRoot = enemyCollider.transform.root;
             if (!alreadyHitEnemies.Contains(enemyRoot))
             {
                 alreadyHitEnemies.Add(enemyRoot);
-                if (isStandaloneMode) TryDamageEnemy(enemyCollider);
+                Debug.Log($"[LeoPlayer] 💥 HIT: {enemyRoot.name} | Damage: {damageAmount}");
+
+                if (isStandaloneMode)
+                {
+                    TryDamageEnemy(enemyCollider);
+                }
                 else if (IsOwner)
                 {
                     var netObj = enemyCollider.GetComponentInParent<NetworkObject>();
@@ -5255,6 +5538,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             }
         }
     }
+
 
     private bool IsEnemy(Collider col, out Collider enemyCollider)
     {
