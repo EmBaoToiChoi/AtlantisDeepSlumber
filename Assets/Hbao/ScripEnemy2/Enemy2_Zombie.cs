@@ -108,6 +108,7 @@ public class Enemy2_Zombie : NetworkBehaviour
         netSpeed.OnValueChanged       += (_, v) => ApplySpeedAnim(v);
         hitCounter.OnValueChanged     += (_, _) => { if (anim != null) anim.SetTrigger(hitTrigger); };
         currentHealth.OnValueChanged  += OnHealthNetChanged;
+        currentState.OnValueChanged   += OnStateChanged;
 
         ApplySpeedAnim(netSpeed.Value);
 
@@ -120,6 +121,35 @@ public class Enemy2_Zombie : NetworkBehaviour
         netSpeed.OnValueChanged       -= (_, v) => ApplySpeedAnim(v);
         hitCounter.OnValueChanged     -= (_, _) => { if (anim != null) anim.SetTrigger(hitTrigger); };
         currentHealth.OnValueChanged  -= OnHealthNetChanged;
+        currentState.OnValueChanged   -= OnStateChanged;
+    }
+
+    private void OnStateChanged(EnemyState oldState, EnemyState newState)
+    {
+        if (newState == EnemyState.Dead)
+        {
+            if (!IsServer)
+            {
+                ApplyLocalDeathEffects();
+            }
+        }
+    }
+
+    private void ApplyLocalDeathEffects()
+    {
+        if (clawHitbox != null) clawHitbox.SetActive(false);
+        if (anim != null)
+        {
+            anim.ResetTrigger(atkTrigger);
+            anim.ResetTrigger(hitTrigger);
+            anim.ResetTrigger(dieTrigger);
+
+            for (int i = 1; i < anim.layerCount; i++)
+            {
+                anim.SetLayerWeight(i, 0f);
+            }
+            anim.Play("quai2Die", 0, 0f);
+        }
     }
 
     private void OnHealthNetChanged(float oldVal, float newVal)
@@ -181,17 +211,29 @@ public class Enemy2_Zombie : NetworkBehaviour
     private void HandleChase()
     {
         if (targetPlayer == null) { ReturnToPatrol(); return; }
-        SimplePlayerTest ps = targetPlayer.GetComponentInParent<SimplePlayerTest>();
+        IPlayerHUDTarget ps = targetPlayer.GetComponentInParent<IPlayerHUDTarget>();
         if (ps != null && ps.CurrentHealth <= 0) { targetPlayer = null; ReturnToPatrol(); return; }
         Vector3 ld = (targetPlayer.position - transform.position); ld.y = 0;
         if (ld.sqrMagnitude > 0.01f) transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(ld), Time.deltaTime * 12f);
         Vector3 flatEnemy = transform.position; flatEnemy.y = 0;
         Vector3 flatPlayer = targetPlayer.position; flatPlayer.y = 0;
         float dist = Vector3.Distance(flatEnemy, flatPlayer);
-        if (dist <= attackRange)
-        { if (AgentReady) agent.isStopped = true; SetSpeedNet(0f); if (attackCooldownTimer <= 0) ChangeState(EnemyState.Attack); return; }
+        
+        if (dist <= attackRange && attackCooldownTimer <= 0)
+        {
+            if (AgentReady) agent.isStopped = true;
+            SetSpeedNet(0f);
+            ChangeState(EnemyState.Attack);
+            return;
+        }
+        
         bool frantic = CurrentHealthValue <= maxHealth * 0.4f;
-        if (AgentReady) { agent.isStopped = false; agent.speed = frantic ? chaseRunSpeed * 1.4f : chaseRunSpeed; agent.SetDestination(targetPlayer.position); }
+        if (AgentReady)
+        {
+            agent.isStopped = false;
+            agent.speed = frantic ? chaseRunSpeed * 1.4f : chaseRunSpeed;
+            agent.SetDestination(targetPlayer.position);
+        }
         SetSpeedNet(AgentReady && agent.velocity.magnitude > 0.2f ? 1f : 0f);
     }
 
@@ -211,9 +253,6 @@ public class Enemy2_Zombie : NetworkBehaviour
         stateTimer -= Time.deltaTime;
         float elapsed = attackDuration - stateTimer;
         if (elapsed < attackDuration * 0.4f) { Vector3 ld = (targetPlayer.position - transform.position); ld.y = 0; if (ld.sqrMagnitude > 0.01f) transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(ld), Time.deltaTime * 18f); }
-        bool frantic = CurrentHealthValue <= maxHealth * 0.4f;
-        float hitT = frantic ? 0.24f : 0.4f;
-        if (elapsed >= hitT && !hasDealtDamage) { hasDealtDamage = true; DealConeDamage(frantic ? 15f : 12f, 2.0f, 90f, 4f); }
         if (stateTimer <= 0) EndAttack();
     }
 
@@ -238,7 +277,7 @@ public class Enemy2_Zombie : NetworkBehaviour
         {
             if (detectionResults[i] == null) continue;
             Transform pt = detectionResults[i].transform;
-            SimplePlayerTest ps = pt.GetComponentInParent<SimplePlayerTest>();
+            IPlayerHUDTarget ps = pt.GetComponentInParent<IPlayerHUDTarget>();
             if (ps != null && ps.CurrentHealth <= 0) continue;
             Vector3 center = pt.position + Vector3.up; float d = Vector3.Distance(ep, center);
             Vector3 dir = (center - ep).normalized; bool inFOV = Vector3.Angle(transform.forward, dir) < fieldOfView / 2f;
@@ -268,7 +307,8 @@ public class Enemy2_Zombie : NetworkBehaviour
                 if (AgentReady) agent.isStopped = true; SetSpeedNet(0f);
                 hasDealtDamage = false; bool frantic = CurrentHealthValue <= maxHealth * 0.4f;
                 attackDuration = frantic ? 0.65f : 0.9f; stateTimer = attackDuration;
-                if (!isStandaloneMode) PlayAttackClientRpc(); else PlayAttackAnimLocal();
+                PlayAttackAnimLocal();
+                if (!isStandaloneMode) PlayAttackClientRpc();
                 break;
             case EnemyState.Dead: Die(); break;
         }
@@ -277,19 +317,29 @@ public class Enemy2_Zombie : NetworkBehaviour
     private void ApplySpeedAnim(float speed) { if (anim == null || !anim.isActiveAndEnabled || anim.runtimeAnimatorController == null) return; anim.SetFloat(speedParam, speed); }
     private void SetSpeedNet(float val) { if (isStandaloneMode) ApplySpeedAnim(val); else if (IsServer && !Mathf.Approximately(netSpeed.Value, val)) netSpeed.Value = val; }
     private void PlayAttackAnimLocal() { if (anim == null) return; anim.ResetTrigger(atkTrigger); anim.SetTrigger(atkTrigger); }
-    [ClientRpc] private void PlayAttackClientRpc() => PlayAttackAnimLocal();
+    [ClientRpc] private void PlayAttackClientRpc() { if (!IsServer) PlayAttackAnimLocal(); }
 
     private void DealConeDamage(float damage, float range, float angle, float knockback)
     {
         int num = Physics.OverlapSphereNonAlloc(transform.position, range, damageResults, playerLayer);
         if (num == 0) { int c = 0; foreach (var p in GameObject.FindGameObjectsWithTag("Player")) { if (c >= damageResults.Length) break; if (Vector3.Distance(transform.position, p.transform.position) <= range) { var col = p.GetComponent<Collider>(); if (col != null) damageResults[c++] = col; } } num = c; }
         Vector3 ep = eyeTransform != null ? eyeTransform.position : transform.position + Vector3.up * 1.5f;
+        
+        System.Collections.Generic.HashSet<IPlayerHUDTarget> hitTargets = new System.Collections.Generic.HashSet<IPlayerHUDTarget>();
+        
         for (int i = 0; i < num; i++)
         {
             if (damageResults[i] == null) continue;
-            Transform pl = damageResults[i].transform; Vector3 dir = (pl.position - transform.position).normalized;
+            Transform pl = damageResults[i].transform;
+            
+            IPlayerHUDTarget target = pl.GetComponentInParent<IPlayerHUDTarget>();
+            if (target == null) continue;
+            if (hitTargets.Contains(target)) continue;
+            hitTargets.Add(target);
+            
+            Vector3 dir = (pl.position - transform.position).normalized;
             if (Vector3.Angle(transform.forward, dir) <= angle / 2f && !Physics.Raycast(ep, dir, Vector3.Distance(transform.position, pl.position), obstacleLayer))
-            { var ps = pl.GetComponentInParent<SimplePlayerTest>(); if (ps != null) { ps.TakeDamage(damage); Vector3 kb = dir; kb.y = 0; ps.ApplyKnockback(kb.normalized * knockback); } }
+            { Vector3 kb = dir; kb.y = 0; EnemyDamageHelper.DealDamage(pl, damage, kb.normalized * knockback); }
         }
     }
 
@@ -308,8 +358,7 @@ public class Enemy2_Zombie : NetworkBehaviour
     private void Die()
     {
         if (AgentReady) agent.isStopped = true; SetSpeedNet(0f);
-        if (anim != null) { anim.ResetTrigger(dieTrigger); anim.SetTrigger(dieTrigger); }
-        if (clawHitbox != null) clawHitbox.SetActive(false);
+        ApplyLocalDeathEffects();
         DropExperience(); DropItems(); Invoke(nameof(DespawnEnemy), 2.5f);
     }
 
@@ -332,6 +381,16 @@ public class Enemy2_Zombie : NetworkBehaviour
 
     private void DespawnEnemy() { if (isStandaloneMode) { Destroy(gameObject); return; } if (IsServer && IsSpawned) GetComponent<NetworkObject>().Despawn(); }
     private void SnapToNavMesh() { if (agent == null || !agent.isActiveAndEnabled) return; if (!agent.isOnNavMesh) { NavMeshHit h; if (NavMesh.SamplePosition(transform.position, out h, 10f, NavMesh.AllAreas)) agent.Warp(h.position); } }
-    public void EnableClawHitbox()  { if (clawHitbox != null) clawHitbox.SetActive(true); }
-    public void DisableClawHitbox() { if (clawHitbox != null) clawHitbox.SetActive(false); }
+    public void EnableClawHitbox()
+    {
+        if (clawHitbox != null) clawHitbox.SetActive(true);
+        bool auth = isStandaloneMode || (IsNetworkActive && IsServer);
+        if (auth && !hasDealtDamage)
+        {
+            hasDealtDamage = true;
+            bool frantic = CurrentHealthValue <= maxHealth * 0.4f;
+            DealConeDamage(frantic ? 15f : 12f, 2.0f, 90f, 4f);
+        }
+    }
+    public void DisableClawHitbox() { if (clawHitbox != null) clawHitbox.SetActive(false); hasDealtDamage = false; }
 }

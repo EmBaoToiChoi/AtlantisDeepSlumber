@@ -15,9 +15,9 @@ public class RakanNPC : NetworkBehaviour
     [Tooltip("Bán kính vùng tương tác nói chuyện")]
     [SerializeField] private float triggerRadius = 5f;
 
-    [Header("Player Count Requirement Settings")]
-    [Tooltip("Nếu tích chọn, sẽ đếm số lượng người chơi đang đứng trong vùng tương tác. Nếu bỏ tích, sẽ đếm tổng số người chơi kết nối trong phòng.")]
-    [SerializeField] private bool countOnlyNearbyPlayers = false;
+    [Header("Monster Spawn Box")]
+    [Tooltip("Kéo thả GateEnemySpawner (vùng kích hoạt sinh quái) vào đây. Nếu để trống, script sẽ tự động tìm trong Scene.")]
+    [SerializeField] private GateEnemySpawner gateEnemySpawner;
 
     private SphereCollider triggerCollider;
     private Rigidbody rb;
@@ -53,6 +53,14 @@ public class RakanNPC : NetworkBehaviour
         if (dialogueLines.Count == 0)
         {
             InitializeDefaultDialogue();
+        }
+    }
+
+    private void Start()
+    {
+        if (gateEnemySpawner == null)
+        {
+            gateEnemySpawner = FindObjectOfType<GateEnemySpawner>();
         }
     }
 
@@ -152,33 +160,18 @@ public class RakanNPC : NetworkBehaviour
                         RakanDialogueController.Instance.ShowPrompt(false);
                     }
 
-                    // Kiểm tra số lượng người chơi đáp ứng yêu cầu (tất cả người chơi kết nối phải đứng gần NPC)
-                    int totalPlayersCount = GetTotalConnectedPlayers();
-                    int nearbyPlayersCount = GetNearbyPlayersCount();
-
-                    if (nearbyPlayersCount < totalPlayersCount)
+                    // Bất kỳ ai vào trò chuyện cũng được (giống Silas) - không kiểm tra số lượng người chơi
+                    if (localPlayer.IsStandaloneMode)
                     {
-                        // HIỂN THỊ CẢNH BÁO CỤC BỘ: Nếu chưa đủ toàn bộ người chơi đứng gần, hiển thị Step 999
                         if (RakanDialogueController.Instance != null)
                         {
-                            RakanDialogueController.Instance.StartDialogue(dialogueLines, localPlayer, this, 999);
+                            RakanDialogueController.Instance.StartDialogue(dialogueLines, localPlayer, this, savedDialogueIndex);
                         }
+                        SetDialogueAnimation(true);
                     }
                     else
                     {
-                        // ĐỦ NGƯỜI: Tiến hành mở hội thoại truyền thuyết Atlantis chính thức
-                        if (localPlayer.isStandaloneMode)
-                        {
-                            if (RakanDialogueController.Instance != null)
-                            {
-                                RakanDialogueController.Instance.StartDialogue(dialogueLines, localPlayer, this, savedDialogueIndex);
-                            }
-                            SetDialogueAnimation(true);
-                        }
-                        else
-                        {
-                            RequestStartDialogueServerRpc(savedDialogueIndex);
-                        }
+                        RequestStartDialogueServerRpc(savedDialogueIndex);
                     }
                 }
             }
@@ -190,20 +183,10 @@ public class RakanNPC : NetworkBehaviour
                     RakanDialogueController.Instance.ShowPrompt(false);
                 }
 
-                // Lắng nghe người chơi nhấn phím G lần nữa để đóng trò chuyện
+                // Lắng nghe người chơi nhấn phím G lần nữa để đóng trò chuyện (giống Silas)
                 if (Keyboard.current != null && Keyboard.current.gKey.wasPressedThisFrame)
                 {
-                    int totalPlayersCount = GetTotalConnectedPlayers();
-                    int nearbyPlayersCount = GetNearbyPlayersCount();
-                    // Cho phép đóng bằng G nếu: thiếu người, hoặc câu chuyện đã kể xong
-                    if (nearbyPlayersCount < totalPlayersCount || RakanDialogueController.HasFinishedStoryOnce)
-                    {
-                        HideDialogueAndPrompt();
-                    }
-                    else
-                    {
-                        Debug.Log("[RakanNPC] Đang trong cuộc đối thoại cốt truyện, phím G bị khóa không thể tắt chat!");
-                    }
+                    HideDialogueAndPrompt();
                 }
             }
         }
@@ -324,6 +307,7 @@ public class RakanNPC : NetworkBehaviour
             {
                 RakanDialogueController.Instance.EndDialogue();
                 SetDialogueAnimation(false);
+                CheckAndEnableGateSpawner();
             }
             else
             {
@@ -460,5 +444,18 @@ public class RakanNPC : NetworkBehaviour
             RakanDialogueController.Instance.EndDialogue();
         }
         SetDialogueAnimation(false);
+        CheckAndEnableGateSpawner();
+    }
+
+    public void CheckAndEnableGateSpawner()
+    {
+        bool hasFinished = PlayerPrefs.GetInt("RakanDialogueFinished", 0) == 1 
+                           || RakanDialogueController.HasFinishedStoryOnce;
+
+        if (hasFinished && gateEnemySpawner != null)
+        {
+            gateEnemySpawner.EnableTriggerBox();
+            Debug.Log("[RakanNPC] Cuộc hội thoại hoàn thành. Đã kích hoạt Trigger Box của GateEnemySpawner!");
+        }
     }
 }

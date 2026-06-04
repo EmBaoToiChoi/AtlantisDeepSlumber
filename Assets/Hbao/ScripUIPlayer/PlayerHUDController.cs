@@ -73,6 +73,14 @@ public class PlayerHUDController : MonoBehaviour
     private VisualElement mpFill;
     private VisualElement expFill;
 
+    private VisualElement hpCatchUp;
+    private VisualElement screenDamageFlash;
+    private float targetHpPercent = 1f;
+    private float currentCatchUpPercent = 1f;
+    private float catchUpDelayTimer = 0f;
+    private float damageFlashOpacity = 0f;
+    private bool isFirstHealthSet = true;
+
     // Tham chiếu trực tiếp tới phần tử chứa icon
     private VisualElement micIcon;
     private VisualElement rawPlayerImage; // Tham chiếu tới Avatar Player để đổi ảnh động
@@ -140,6 +148,13 @@ public class PlayerHUDController : MonoBehaviour
     private Label interactionPromptText;
     private Label interactionPromptKeyText;
     private VisualElement tooltipElement;
+    
+    // Hệ thống Hướng Dẫn Phím Nóng Động
+    private VisualElement hotkeysHintPanel;
+    private VisualElement idleHintsGroup;
+    private VisualElement actionHintsGroup;
+    private VisualElement hintWeapon2;
+    private VisualElement hintSkills;
     private Label tooltipTitle;
     private Label tooltipDesc;
     private System.Collections.Generic.List<VisualElement> inventorySlotsUI = new System.Collections.Generic.List<VisualElement>();
@@ -171,6 +186,9 @@ public class PlayerHUDController : MonoBehaviour
 
         // Reset tất cả tham chiếu VisualElement để InitializeUI() re-query lại từ tree mới
         hpFill = null; mpFill = null; expFill = null;
+        hpCatchUp = null;
+        screenDamageFlash = null;
+        isFirstHealthSet = true;
         micIcon = null; rawPlayerImage = null;
         weaponSlot1 = null; weaponSlot2 = null;
         weaponImg1 = null; weaponImg2 = null;
@@ -183,6 +201,8 @@ public class PlayerHUDController : MonoBehaviour
         worldMapOverlay = null; inventoryOverlay = null; weaponWarning = null;
         weaponDurabilityFill1 = null; weaponDurabilityFill2 = null;
         interactionPrompt = null; interactionPromptText = null; interactionPromptKeyText = null;
+        hotkeysHintPanel = null; idleHintsGroup = null; actionHintsGroup = null;
+        hintWeapon2 = null; hintSkills = null;
         upgradePointsText = null; hpLevelText = null; mpLevelText = null;
         cooldownLevelText = null; damageLevelText = null;
         btnUpgradeHp = null; btnUpgradeMp = null; btnUpgradeCooldown = null; btnUpgradeDamage = null;
@@ -208,11 +228,51 @@ public class PlayerHUDController : MonoBehaviour
         mpFill = root.Q<VisualElement>("mp-fill");
         expFill = root.Q<VisualElement>("exp-fill");
 
+        if (hpFill != null && hpCatchUp == null)
+        {
+            hpCatchUp = new VisualElement();
+            hpCatchUp.name = "hp-catchup";
+            hpCatchUp.style.position = Position.Absolute;
+            hpCatchUp.style.left = 0;
+            hpCatchUp.style.top = 0;
+            hpCatchUp.style.bottom = 0;
+            hpCatchUp.style.backgroundColor = new Color(0.85f, 0.15f, 0.15f, 0.75f);
+            hpCatchUp.style.width = Length.Percent(100f);
+            
+            var hpTrack = hpFill.parent;
+            if (hpTrack != null)
+            {
+                hpTrack.Insert(0, hpCatchUp);
+            }
+        }
+
+        if (screenDamageFlash == null)
+        {
+            screenDamageFlash = new VisualElement();
+            screenDamageFlash.name = "screen-damage-flash";
+            screenDamageFlash.style.position = Position.Absolute;
+            screenDamageFlash.style.left = 0;
+            screenDamageFlash.style.top = 0;
+            screenDamageFlash.style.right = 0;
+            screenDamageFlash.style.bottom = 0;
+            screenDamageFlash.style.backgroundColor = new Color(1f, 0f, 0f, 0f);
+            screenDamageFlash.pickingMode = PickingMode.Ignore;
+            
+            root.Add(screenDamageFlash);
+        }
+
         weaponDurabilityFill1 = root.Q<VisualElement>("weapon-durability-fill-1");
         weaponDurabilityFill2 = root.Q<VisualElement>("weapon-durability-fill-2");
         interactionPrompt = root.Q<VisualElement>("interaction-prompt");
         interactionPromptText = root.Q<Label>("interaction-prompt-text");
         interactionPromptKeyText = root.Q<Label>(className: "key-badge-f-text");
+
+        // Tìm các phần tử của bảng phím nóng
+        hotkeysHintPanel = root.Q<VisualElement>("hotkeys-hint-panel");
+        idleHintsGroup = root.Q<VisualElement>("idle-hints-group");
+        actionHintsGroup = root.Q<VisualElement>("action-hints-group");
+        hintWeapon2 = root.Q<VisualElement>("hint-weapon2");
+        hintSkills = root.Q<VisualElement>("hint-skills");
 
         // Tìm UI Mic Icon trực tiếp
         micIcon = root.Q<VisualElement>("mic-icon");
@@ -642,6 +702,31 @@ public class PlayerHUDController : MonoBehaviour
                 weaponWarning.RemoveFromClassList("show-warning");
             }
         }
+
+        // Animate HP catch-up bar and screen damage flash
+        if (catchUpDelayTimer > 0f)
+        {
+            catchUpDelayTimer -= Time.deltaTime;
+        }
+        else if (currentCatchUpPercent > targetHpPercent)
+        {
+            currentCatchUpPercent = Mathf.MoveTowards(currentCatchUpPercent, targetHpPercent, Time.deltaTime * 0.4f);
+            if (hpCatchUp != null)
+            {
+                hpCatchUp.style.width = Length.Percent(currentCatchUpPercent * 100f);
+            }
+        }
+
+        if (damageFlashOpacity > 0f)
+        {
+            damageFlashOpacity = Mathf.MoveTowards(damageFlashOpacity, 0f, Time.deltaTime * 1.0f);
+            if (screenDamageFlash != null)
+            {
+                screenDamageFlash.style.backgroundColor = new Color(0.85f, 0.1f, 0.1f, damageFlashOpacity);
+            }
+        }
+
+        UpdateHotkeysHint();
     }
 
     public void ToggleMic()
@@ -722,10 +807,33 @@ public class PlayerHUDController : MonoBehaviour
     // --- Giữ nguyên các hàm cập nhật HP/MP/EXP của bạn bên dưới ---
     public void SetHealth(float percentage)
     {
+        float clamped = Mathf.Clamp01(percentage);
+        
+        if (isFirstHealthSet)
+        {
+            isFirstHealthSet = false;
+            targetHpPercent = clamped;
+            currentCatchUpPercent = clamped;
+            if (hpCatchUp != null) hpCatchUp.style.width = Length.Percent(clamped * 100f);
+        }
+        else
+        {
+            if (clamped < targetHpPercent)
+            {
+                catchUpDelayTimer = 0.5f;
+                damageFlashOpacity = 0.35f;
+            }
+            else if (clamped > targetHpPercent)
+            {
+                currentCatchUpPercent = clamped;
+                if (hpCatchUp != null) hpCatchUp.style.width = Length.Percent(clamped * 100f);
+            }
+            targetHpPercent = clamped;
+        }
+
         if (hpFill != null)
         {
-            // Cập nhật chiều rộng của hp-fill theo phần trăm máu thực tế (0% đến 100%)
-            hpFill.style.width = Length.Percent(Mathf.Clamp(percentage * 100f, 0f, 100f));
+            hpFill.style.width = Length.Percent(clamped * 100f);
         }
     }
 
@@ -1699,6 +1807,70 @@ public class PlayerHUDController : MonoBehaviour
         {
             float expPct = player.MaxExp > 0 ? (player.PlayerExp / player.MaxExp) * 100f : 0f;
             expFill.style.width = Length.Percent(Mathf.Clamp(expPct, 0f, 100f));
+        }
+    }
+
+    private void UpdateHotkeysHint()
+    {
+        // 1. Kiểm tra an toàn: Chỉ hiển thị trên màn hình của chính người chơi đó (Local Player Client-only)
+        if (LocalPlayerTarget == null || LocalPlayerTarget.gameObject == null)
+        {
+            if (hotkeysHintPanel != null)
+            {
+                hotkeysHintPanel.style.display = DisplayStyle.None;
+            }
+            return;
+        }
+
+        // Hiển thị panel phím nóng
+        if (hotkeysHintPanel != null && hotkeysHintPanel.style.display == DisplayStyle.None)
+        {
+            hotkeysHintPanel.style.display = DisplayStyle.Flex;
+        }
+
+        // 2. Kiểm tra xem người chơi có đang bấm phím di chuyển không
+        bool isMoving = false;
+        if (Keyboard.current != null)
+        {
+            isMoving = Keyboard.current.wKey.isPressed ||
+                       Keyboard.current.aKey.isPressed ||
+                       Keyboard.current.sKey.isPressed ||
+                       Keyboard.current.dKey.isPressed ||
+                       Keyboard.current.upArrowKey.isPressed ||
+                       Keyboard.current.leftArrowKey.isPressed ||
+                       Keyboard.current.downArrowKey.isPressed ||
+                       Keyboard.current.rightArrowKey.isPressed;
+        }
+
+        // Lấy thêm vận tốc vật lý từ Rigidbody để nhận diện di chuyển chính xác hơn
+        var rb = LocalPlayerTarget.gameObject.GetComponent<Rigidbody>();
+        if (rb != null)
+        {
+            isMoving |= new Vector3(rb.linearVelocity.x, 0, rb.linearVelocity.z).sqrMagnitude > 0.05f;
+        }
+
+        // 3. Ẩn/Hiện nhóm phím theo trạng thái di chuyển
+        if (isMoving)
+        {
+            if (idleHintsGroup != null) idleHintsGroup.style.display = DisplayStyle.None;
+            if (actionHintsGroup != null) actionHintsGroup.style.display = DisplayStyle.Flex;
+        }
+        else
+        {
+            if (idleHintsGroup != null) idleHintsGroup.style.display = DisplayStyle.Flex;
+            if (actionHintsGroup != null) actionHintsGroup.style.display = DisplayStyle.None;
+        }
+
+        // 4. Hiển thị phím Vũ khí 2 (nếu đã được mở khóa)
+        if (hintWeapon2 != null)
+        {
+            hintWeapon2.style.display = isWeapon2Locked ? DisplayStyle.None : DisplayStyle.Flex;
+        }
+
+        // 5. Hiển thị các phím kỹ năng Q, E, R (nếu đã được mở khóa)
+        if (hintSkills != null)
+        {
+            hintSkills.style.display = isSkillsUnlocked ? DisplayStyle.Flex : DisplayStyle.None;
         }
     }
 }

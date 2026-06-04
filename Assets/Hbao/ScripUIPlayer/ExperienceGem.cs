@@ -9,6 +9,11 @@ public class ExperienceGem : NetworkBehaviour
     public float moveSpeed = 2f;
     public float acceleration = 8f;
 
+    [Header("Floating Animation Settings")]
+    public float rotationSpeed = 60f;
+    public float bobSpeed = 2f;
+    public float bobRange = 0.12f;
+
     [Header("Sync Group ID")]
     public NetworkVariable<Unity.Collections.FixedString64Bytes> networkDropGroupId = new NetworkVariable<Unity.Collections.FixedString64Bytes>(
         "",
@@ -30,94 +35,169 @@ public class ExperienceGem : NetworkBehaviour
         }
         set
         {
-            localDropGroupId = value;
+            // Sửa lỗi: Tạo hậu tố duy nhất cho mỗi cục EXP để người chơi có thể ăn được tất cả 4 cục
+            string uniqueValue = value;
+            if (!string.IsNullOrEmpty(value) && !value.Contains("_gem_"))
+            {
+                uniqueValue = value + "_gem_" + System.Guid.NewGuid().ToString().Substring(0, 8);
+            }
+            localDropGroupId = uniqueValue;
+
             if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening)
             {
                 if (IsServer || NetworkManager.Singleton.IsServer)
                 {
-                    networkDropGroupId.Value = value;
+                    networkDropGroupId.Value = uniqueValue;
                 }
             }
         }
     }
 
+    [Header("Network Sync Target")]
+    public NetworkVariable<NetworkObjectReference> networkTargetPlayer = new NetworkVariable<NetworkObjectReference>(
+        default,
+        NetworkVariableReadPermission.Everyone,
+        NetworkVariableWritePermission.Server
+    );
+
     private Transform targetPlayer;
     private bool isAttracted = false;
+    private float startY;
+
+    private void Start()
+    {
+        startY = transform.position.y;
+    }
 
     private void Update()
     {
-        // 1. Tìm player gần nhất
-        if (targetPlayer == null)
+        // Hiệu ứng xoay tròn và nhấp nhô nhè nhẹ để vật phẩm rơi trông sinh động hơn
+        transform.Rotate(Vector3.up, rotationSpeed * Time.deltaTime, Space.World);
+        Vector3 currentPos = transform.position;
+        currentPos.y = startY + Mathf.Sin(Time.time * bobSpeed) * bobRange;
+        transform.position = currentPos;
+
+        bool isMultiplayer = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening && IsSpawned;
+
+        if (isMultiplayer)
         {
-            FindClosestPlayer();
+            if (IsServer)
+            {
+                if (!isAttracted)
+                {
+                    FindClosestPlayerInRange();
+                    if (isAttracted && targetPlayer != null)
+                    {
+                        var netObj = targetPlayer.GetComponentInParent<NetworkObject>();
+                        if (netObj == null) netObj = targetPlayer.GetComponentInChildren<NetworkObject>();
+                        if (netObj != null)
+                        {
+                            networkTargetPlayer.Value = netObj;
+                        }
+                    }
+                }
+            }
+            else
+            {
+                // Client: Nhận mục tiêu đồng bộ từ Server
+                if (networkTargetPlayer.Value.TryGet(out NetworkObject netObj))
+                {
+                    targetPlayer = netObj.transform;
+                    isAttracted = true;
+                }
+                else
+                {
+                    targetPlayer = null;
+                    isAttracted = false;
+                }
+            }
+        }
+        else
+        {
+            // Standalone mode
+            if (!isAttracted)
+            {
+                FindClosestPlayerInRange();
+            }
         }
 
-        if (targetPlayer != null)
+        // Thực hiện di chuyển nếu đã bị hút
+        if (isAttracted && targetPlayer != null)
         {
-            SimplePlayerTest ps = targetPlayer.GetComponentInParent<SimplePlayerTest>();
-            // Nếu người chơi đã chết hoặc đã ăn một ngọc từ nhóm này, hủy mục tiêu và tìm người khác
-            if (ps == null || ps.CurrentHealth <= 0 || ps.HasCollectedFromDropGroup(DropGroupId))
+            // Kiểm tra trạng thái của targetPlayer
+            IPlayerHUDTarget ps = targetPlayer.GetComponentInParent<IPlayerHUDTarget>();
+            if (ps == null) ps = targetPlayer.GetComponentInChildren<IPlayerHUDTarget>();
+
+            if (ps == null || ps.CurrentHealth <= 0 || PlayerGemCollectionHelper.HasCollected(targetPlayer, DropGroupId))
             {
                 targetPlayer = null;
                 isAttracted = false;
+                if (isMultiplayer && IsServer)
+                {
+                    networkTargetPlayer.Value = default;
+                }
                 return;
             }
 
             float distance = Vector3.Distance(transform.position, targetPlayer.position);
             
-            // Nếu đã bị hút hoặc player đi vào vùng hút
-            if (isAttracted || distance <= attractionRadius)
-            {
-                isAttracted = true;
-                
-                // Di chuyển nhanh dần đều về phía player (nhắm vào ngang người player tầm y + 1.0f)
-                moveSpeed += acceleration * Time.deltaTime;
-                Vector3 targetPos = targetPlayer.position + Vector3.up * 1f;
-                transform.position = Vector3.MoveTowards(transform.position, targetPos, moveSpeed * Time.deltaTime);
+            // Di chuyển nhanh dần đều về phía player (nhắm vào ngang người player tầm y + 1.0f)
+            moveSpeed += acceleration * Time.deltaTime;
+            Vector3 targetPos = targetPlayer.position + Vector3.up * 1f;
+            transform.position = Vector3.MoveTowards(transform.position, targetPos, moveSpeed * Time.deltaTime);
 
-                // Khi chạm vào player
-                if (distance <= 0.8f)
-                {
-                    CollectGem();
-                }
+            // Khi chạm vào player
+            if (distance <= 0.8f)
+            {
+                CollectGem();
             }
         }
     }
 
-    private void FindClosestPlayer()
+    private void FindClosestPlayerInRange()
     {
-        float minDistance = float.MaxValue;
-        SimplePlayerTest closest = null;
-        
-        SimplePlayerTest[] players = FindObjectsOfType<SimplePlayerTest>();
-        foreach (var p in players)
-        {
-            if (p.CurrentHealth <= 0) continue;
-            
-            // Bỏ qua nếu người chơi này đã thu thập ngọc từ nhóm rơi này
-            if (p.HasCollectedFromDropGroup(DropGroupId)) continue;
+        float minDistance = attractionRadius; // Chỉ tìm trong phạm vi hút
+        Transform closest = null;
 
-            float dist = Vector3.Distance(transform.position, p.transform.position);
-            if (dist < minDistance)
+        // Dùng PlayerHUDManager.ActivePlayers thay vì tag "Player" để đảm bảo tìm thấy mọi loại người chơi
+        var activePlayers = PlayerHUDManager.ActivePlayers;
+        if (activePlayers != null)
+        {
+            foreach (var p in activePlayers)
             {
-                minDistance = dist;
-                closest = p;
+                if (p == null || p.gameObject == null) continue;
+                if (p.CurrentHealth <= 0) continue;
+
+                // Bỏ qua nếu người chơi này đã thu thập ngọc từ nhóm rơi này
+                if (PlayerGemCollectionHelper.HasCollected(p.transform, DropGroupId)) continue;
+
+                float dist = Vector3.Distance(transform.position, p.transform.position);
+                if (dist <= minDistance)
+                {
+                    minDistance = dist;
+                    closest = p.transform;
+                }
             }
         }
 
         if (closest != null)
         {
-            targetPlayer = closest.transform;
+            targetPlayer = closest;
+            isAttracted = true;
         }
     }
 
     private void CollectGem()
     {
-        SimplePlayerTest playerScript = targetPlayer.GetComponentInParent<SimplePlayerTest>();
-        if (playerScript != null)
+        if (targetPlayer == null) return;
+
+        IPlayerHUDTarget hudTarget = targetPlayer.GetComponentInParent<IPlayerHUDTarget>();
+        if (hudTarget == null) hudTarget = targetPlayer.GetComponentInChildren<IPlayerHUDTarget>();
+        
+        if (hudTarget != null)
         {
             // Kiểm tra kỹ lại điều kiện tránh bị đua luồng ăn trùng lặp
-            if (playerScript.HasCollectedFromDropGroup(DropGroupId))
+            if (PlayerGemCollectionHelper.HasCollected(targetPlayer, DropGroupId))
             {
                 targetPlayer = null;
                 isAttracted = false;
@@ -125,18 +205,18 @@ public class ExperienceGem : NetworkBehaviour
             }
 
             // Trong chế độ standalone: xử lý cục bộ và hủy
-            if (playerScript.isStandaloneMode)
+            if (hudTarget.IsStandaloneMode)
             {
-                playerScript.AddCollectedDropGroup(DropGroupId);
-                playerScript.AddExperience(expAmount);
+                PlayerGemCollectionHelper.AddCollected(targetPlayer, DropGroupId);
+                PlayerGemCollectionHelper.AddExperience(targetPlayer, expAmount);
                 Destroy(gameObject);
             }
             // Trong chế độ Netcode: chỉ Server mới xử lý cộng EXP và Despawn
             else if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsServer)
             {
-                playerScript.AddCollectedDropGroup(DropGroupId);
-                playerScript.AddExperience(expAmount);
-                playerScript.OnCollectGemClientRpc(DropGroupId); // Thông báo cho client đã thu thập
+                PlayerGemCollectionHelper.AddCollected(targetPlayer, DropGroupId);
+                PlayerGemCollectionHelper.AddExperience(targetPlayer, expAmount);
+                PlayerGemCollectionHelper.TriggerOnCollectGemClientRpc(targetPlayer, DropGroupId); // Thông báo cho client đã thu thập
                 
                 if (GetComponent<NetworkObject>() != null && GetComponent<NetworkObject>().IsSpawned)
                 {

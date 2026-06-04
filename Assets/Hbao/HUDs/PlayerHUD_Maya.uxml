@@ -214,4 +214,69 @@
     
     <!-- Danh sách người chơi đồng đội (Teammate HUDs) ở góc trên bên trái -->
     <ui:VisualElement name="teammates-container" class="teammates-container" />
+
+    <!-- Bảng Hướng Dẫn Phím Nóng (Hotkeys Help Panel) bên trái -->
+    <ui:VisualElement name="hotkeys-hint-panel" class="hotkeys-hint-panel">
+        <!-- Nhóm 1: Lúc Đứng Im (Idle Hints) -->
+        <ui:VisualElement name="idle-hints-group" class="hints-group">
+            <ui:VisualElement class="hint-row">
+                <ui:VisualElement class="key-badge">
+                    <ui:Label text="WASD" class="key-badge-text" />
+                </ui:VisualElement>
+                <ui:Label text="Di chuyển" class="hint-text" />
+            </ui:VisualElement>
+            <ui:VisualElement class="hint-row">
+                <ui:VisualElement class="key-badge large-key">
+                    <ui:Label text="Shift + WASD" class="key-badge-text" />
+                </ui:VisualElement>
+                <ui:Label text="Chạy nhanh" class="hint-text" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+        
+        <!-- Nhóm 2: Lúc Di Chuyển (Action Hints) -->
+        <ui:VisualElement name="action-hints-group" class="hints-group" style="display: none;">
+            <ui:VisualElement class="hint-row">
+                <ui:VisualElement class="key-badge">
+                    <ui:Label text="Ctrl" class="key-badge-text" />
+                </ui:VisualElement>
+                <ui:Label text="Lộn tránh" class="hint-text" />
+            </ui:VisualElement>
+            <ui:VisualElement class="hint-row">
+                <ui:VisualElement class="key-badge">
+                    <ui:Label text="TAB" class="key-badge-text" />
+                </ui:VisualElement>
+                <ui:Label text="Hành trang" class="hint-text" />
+            </ui:VisualElement>
+            <ui:VisualElement class="hint-row">
+                <ui:VisualElement class="key-badge">
+                    <ui:Label text="M" class="key-badge-text" />
+                </ui:VisualElement>
+                <ui:Label text="Bản đồ" class="hint-text" />
+            </ui:VisualElement>
+            <ui:VisualElement class="hint-row">
+                <ui:VisualElement class="key-badge">
+                    <ui:Label text="1" class="key-badge-text" />
+                </ui:VisualElement>
+                <ui:Label text="Tay không" class="hint-text" />
+            </ui:VisualElement>
+            <ui:VisualElement name="hint-weapon2" class="hint-row" style="display: none;">
+                <ui:VisualElement class="key-badge">
+                    <ui:Label text="2" class="key-badge-text" />
+                </ui:VisualElement>
+                <ui:Label text="Vũ khí" class="hint-text" />
+            </ui:VisualElement>
+            <ui:VisualElement name="hint-skills" class="hint-row" style="display: none;">
+                <ui:VisualElement class="key-badge large-key">
+                    <ui:Label text="Q, E, R" class="key-badge-text" />
+                </ui:VisualElement>
+                <ui:Label text="Kỹ năng" class="hint-text" />
+            </ui:VisualElement>
+            <ui:VisualElement class="hint-row">
+                <ui:VisualElement class="key-badge large-key">
+                    <ui:Label text="Chuột L" class="key-badge-text" />
+                </ui:VisualElement>
+                <ui:Label text="Đấm/Chém" class="hint-text" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+    </ui:VisualElement>
 </ui:UXML>

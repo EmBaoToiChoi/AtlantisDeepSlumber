@@ -112492,7 +112492,7 @@ AnimationClip:
     floatParameter: 0
     intParameter: 0
     messageOptions: 0
-  - time: 3.2666667
+  - time: 2.1333334
     functionName: DisableWeaponHitbox
     data: 
     objectReferenceParameter: {fileID: 0}
