@@ -678,16 +678,48 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   anim: {fileID: 6582539960615988373}
+  testMode: 1
+  testPreviewState: Combo1kiem
+  blendSpeed: 10
+  manualSpine: {fileID: 0}
+  manualChest: {fileID: 0}
+  manualUpperChest: {fileID: 0}
+  manualRightUpperArm: {fileID: 0}
+  manualLeftUpperArm: {fileID: 0}
   lockBodyOnAttack: 1
-  bodyLockStrength: 0.9
+  lockBodyAlways: 1
+  bodyLockStrength: 0
   spineOffsetEuler: {x: 0, y: 0, z: 0}
   preferChestBone: 1
   applyRightArmOffset: 1
-  rightUpperArmOffset: {x: -90, y: -90, z: -90}
+  rightUpperArmOffset: {x: 25, y: 25, z: 25}
   rightArmStrength: 1
   applyLeftArmOffset: 1
-  leftUpperArmOffset: {x: -90, y: -90, z: -90}
+  leftUpperArmOffset: {x: 25, y: 25, z: 25}
   leftArmStrength: 1
+  skillOverrides:
+  - stateName: Combo1kiem
+    overrideBodyLock: 1
+    lockBodyOnAttack: 1
+    bodyLockStrength: 0.2
+    spineOffsetEuler: {x: 0, y: 0, z: 0}
+    applyRightArmOffset: 1
+    rightUpperArmOffset: {x: 0, y: 0, z: 35}
+    rightArmStrength: 1
+    applyLeftArmOffset: 1
+    leftUpperArmOffset: {x: 0, y: 0, z: -10}
+    leftArmStrength: 1
+  - stateName: combodua
+    overrideBodyLock: 1
+    lockBodyOnAttack: 1
+    bodyLockStrength: 0.25
+    spineOffsetEuler: {x: 0, y: 0, z: 0}
+    applyRightArmOffset: 1
+    rightUpperArmOffset: {x: 0, y: 0, z: 20}
+    rightArmStrength: 1
+    applyLeftArmOffset: 1
+    leftUpperArmOffset: {x: 0, y: 0, z: 20}
+    leftArmStrength: 1
   attackStateNames:
   - Punch1
   - Punch2
@@ -706,7 +738,7 @@ MonoBehaviour:
   - Chem_2
   - Chem_3
   showDebugGizmos: 1
-  isInAttackState: 0
+  isInAttackState: 1
 --- !u!1 &4414795720280421845
 GameObject:
   m_ObjectHideFlags: 0
