@@ -320,7 +320,7 @@ MonoBehaviour:
       MinSecondsBetweenUpdates: 0
       MaxSecondsBetweenUpdates: 0
     m_InternalValue: 100
-  characterClassIndex: 1
+  characterClassIndex: 2
   playerName:
     UpdateTraits:
       MinSecondsBetweenUpdates: 0

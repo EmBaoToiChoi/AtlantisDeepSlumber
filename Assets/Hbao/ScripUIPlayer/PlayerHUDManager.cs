@@ -29,6 +29,14 @@ public class PlayerHUDManager : MonoBehaviour
         DeactivateAllHUDs();
     }
 
+    private void Start()
+    {
+        // Tự động đọc nhân vật đã chọn từ Lobby để kích hoạt đúng HUD khi bắt đầu game
+        int selectedChar = PlayerPrefs.GetInt("SelectedCharacterId", 0);
+        Debug.Log($"[PlayerHUDManager] Start: Tự động kích hoạt HUD cho nhân vật index {selectedChar}");
+        ActivateHUD(selectedChar);
+    }
+
     public void DeactivateAllHUDs()
     {
         if (leoHUD != null) leoHUD.SetActive(false);
