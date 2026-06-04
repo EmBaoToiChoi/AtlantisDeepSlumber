@@ -1258,4 +1258,73 @@
     width: 100%;
 }
 
+/* ========================================================================= */
+/* --- Hotkeys Hint System (Bảng hướng dẫn phím nóng bên trái) --- */
+/* ========================================================================= */
+
+.hotkeys-hint-panel {
+    position: absolute;
+    top: 25%;
+    left: 30px;
+    flex-direction: column;
+    align-items: flex-start;
+    z-index: 1000;
+    pointer-events: none;
+}
+
+.hints-group {
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-start;
+}
+
+.hint-row {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 12px;
+    opacity: 0.9;
+    transition-property: opacity, translate;
+    transition-duration: 0.25s;
+    transition-timing-function: ease-out;
+}
+
+.key-badge {
+    min-width: 26px;
+    height: 26px;
+    padding: 0 8px;
+    background-color: rgb(255, 255, 255);
+    border-radius: 6px;
+    border-width: 1px;
+    border-color: rgb(200, 200, 200);
+    justify-content: center;
+    align-items: center;
+    margin-right: 12px;
+    box-shadow: 0 3px 0 rgb(180, 180, 180);
+}
+
+.large-key {
+    min-width: 48px;
+}
+
+.key-badge-text {
+    color: rgb(15, 15, 15);
+    -unity-font-style: bold;
+    font-size: 14px;
+    padding: 0;
+    margin: 0;
+    -unity-text-align: middle-center;
+}
+
+.hint-text {
+    color: rgb(255, 255, 255);
+    -unity-font-style: bold;
+    font-size: 15px;
+    letter-spacing: 0.5px;
+    padding: 0;
+    margin: 0;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85);
+}
+
+
+
 
