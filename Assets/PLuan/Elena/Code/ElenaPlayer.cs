@@ -125,7 +125,18 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     [Header("Player Class Settings")]
     [Tooltip("0 = Sát Thủ, 1 = Hỏa Thuật, 2 = Cung Thủ, 3 = Tanker")]
-    public int characterClassIndex = 0;
+    public int characterClassIndex = 2;
+
+    [Header("Player Name Sync")]
+    public NetworkVariable<Unity.Collections.FixedString64Bytes> playerName = new NetworkVariable<Unity.Collections.FixedString64Bytes>(
+        "Elena", NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server
+    );
+
+    // IPlayerHUDTarget Stats Implementation
+    public string DisplayName => string.IsNullOrEmpty(playerName.Value.ToString()) ? "Elena" : playerName.Value.ToString();
+    public int PlayerLevel => isStandaloneMode ? localLevel : playerLevel.Value;
+    public float PlayerExp => isStandaloneMode ? localExp : playerExp.Value;
+    public float MaxExp => 100f + (isStandaloneMode ? localLevel : playerLevel.Value) * 50f;
 
     [Header("Knockback Settings")]
     private Vector3 knockbackVelocity;
@@ -317,6 +328,11 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         // Tải nhân vật đã lưu từ PlayerPrefs nếu có
         characterClassIndex = PlayerPrefs.GetInt("SelectedCharacterId", characterClassIndex);
+        playerName.Value = PlayerPrefs.GetString("AuthDisplayName", "Elena");
+        if (PlayerHUDManager.ActivePlayers != null && !PlayerHUDManager.ActivePlayers.Contains(this))
+        {
+            PlayerHUDManager.ActivePlayers.Add(this);
+        }
 
         // Nạp cấp độ và kinh nghiệm cho chế độ chơi đơn (mặc định về lại 0 theo yêu cầu)
         localLevel = PlayerPrefs.GetInt("SelectedPlayerLevel_" + characterClassIndex, 0);
@@ -353,6 +369,11 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
     {
         isStandaloneMode = false;
 
+        if (PlayerHUDManager.ActivePlayers != null && !PlayerHUDManager.ActivePlayers.Contains(this))
+        {
+            PlayerHUDManager.ActivePlayers.Add(this);
+        }
+
         // Đăng ký sự kiện đồng bộ Netcode
         activeWeaponIndex.OnValueChanged += OnWeaponIndexChanged;
         isWeapon2Locked.OnValueChanged += OnWeapon2LockedChanged;
@@ -376,6 +397,13 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         if (IsOwner)
         {
+            // Tải nhân vật đã lưu từ PlayerPrefs
+            characterClassIndex = PlayerPrefs.GetInt("SelectedCharacterId", characterClassIndex);
+
+            // Đồng bộ tên người chơi qua mạng
+            string myName = PlayerPrefs.GetString("AuthDisplayName", "Elena");
+            SetPlayerNameServerRpc(myName);
+
             // Register local target
             PlayerHUDController.LocalPlayerTarget = this;
             RakanDialogueController.LocalPlayerTarget = this;
@@ -414,6 +442,11 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     public override void OnNetworkDespawn()
     {
+        if (PlayerHUDManager.ActivePlayers != null)
+        {
+            PlayerHUDManager.ActivePlayers.Remove(this);
+        }
+
         activeWeaponIndex.OnValueChanged -= OnWeaponIndexChanged;
         isWeapon2Locked.OnValueChanged -= OnWeapon2LockedChanged;
         isSkillsUnlocked.OnValueChanged -= OnSkillsUnlockedChanged;
@@ -1831,6 +1864,12 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
         isSyncingFromDb = false;
     }
 
+    [ServerRpc(RequireOwnership = false)]
+    public void SetPlayerNameServerRpc(string name, ServerRpcParams rpcParams = default)
+    {
+        playerName.Value = name;
+    }
+
     public async void SavePlayerStateToDatabase()
     {
         if (!IsSpawned || !IsOwner) return;
@@ -2384,5 +2423,13 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (weaponInHandVisual != null) weaponInHandVisual.SetActive(false);
         Debug.Log("[Animation Event] Đã cất vũ khí vào lưng!");
     }
-    
+
+    public override void OnDestroy()
+    {
+        if (PlayerHUDManager.ActivePlayers != null)
+        {
+            PlayerHUDManager.ActivePlayers.Remove(this);
+        }
+        base.OnDestroy();
+    }
 }

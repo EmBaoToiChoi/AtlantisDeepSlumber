@@ -2896,6 +2896,17 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     [Tooltip("0 = Sát Thủ, 1 = Hỏa Thuật, 2 = Cung Thủ, 3 = Tanker")]
     public int characterClassIndex = 0;
 
+    [Header("Player Name Sync")]
+    public NetworkVariable<Unity.Collections.FixedString64Bytes> playerName = new NetworkVariable<Unity.Collections.FixedString64Bytes>(
+        "Leo", NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server
+    );
+
+    // IPlayerHUDTarget Stats Implementation
+    public string DisplayName => string.IsNullOrEmpty(playerName.Value.ToString()) ? "Leo" : playerName.Value.ToString();
+    public int PlayerLevel => isStandaloneMode ? localLevel : playerLevel.Value;
+    public float PlayerExp => isStandaloneMode ? localExp : playerExp.Value;
+    public float MaxExp => 100f + (isStandaloneMode ? localLevel : playerLevel.Value) * 50f;
+
     [Header("Knockback Settings")]
     protected Vector3 knockbackVelocity;
 
@@ -3117,6 +3128,11 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             targetCamera = FindObjectOfType<Camera>();
 
         characterClassIndex = PlayerPrefs.GetInt("SelectedCharacterId", characterClassIndex);
+        playerName.Value = PlayerPrefs.GetString("AuthDisplayName", "Leo");
+        if (PlayerHUDManager.ActivePlayers != null && !PlayerHUDManager.ActivePlayers.Contains(this))
+        {
+            PlayerHUDManager.ActivePlayers.Add(this);
+        }
         localLevel = PlayerPrefs.GetInt("SelectedPlayerLevel_" + characterClassIndex, 0);
         localExp = PlayerPrefs.GetFloat("SelectedPlayerExp_" + characterClassIndex, 0f);
 
@@ -3147,6 +3163,11 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     {
         isStandaloneMode = false;
 
+        if (PlayerHUDManager.ActivePlayers != null && !PlayerHUDManager.ActivePlayers.Contains(this))
+        {
+            PlayerHUDManager.ActivePlayers.Add(this);
+        }
+
         activeWeaponIndex.OnValueChanged += OnWeaponIndexChanged;
         isWeapon2Locked.OnValueChanged += OnWeapon2LockedChanged;
         isSkillsUnlocked.OnValueChanged += OnSkillsUnlockedChanged;
@@ -3164,6 +3185,13 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         if (IsOwner)
         {
+            // Tải nhân vật đã lưu từ PlayerPrefs
+            characterClassIndex = PlayerPrefs.GetInt("SelectedCharacterId", characterClassIndex);
+
+            // Đồng bộ tên người chơi qua mạng
+            string myName = PlayerPrefs.GetString("AuthDisplayName", "Leo");
+            SetPlayerNameServerRpc(myName);
+
             // Register local target
             PlayerHUDController.LocalPlayerTarget = this;
             RakanDialogueController.LocalPlayerTarget = this;
@@ -3200,6 +3228,11 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     public override void OnNetworkDespawn()
     {
+        if (PlayerHUDManager.ActivePlayers != null)
+        {
+            PlayerHUDManager.ActivePlayers.Remove(this);
+        }
+
         activeWeaponIndex.OnValueChanged -= OnWeaponIndexChanged;
         isWeapon2Locked.OnValueChanged -= OnWeapon2LockedChanged;
         isSkillsUnlocked.OnValueChanged -= OnSkillsUnlockedChanged;
@@ -4323,6 +4356,12 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         }
     }
 
+    [ServerRpc(RequireOwnership = false)]
+    public void SetPlayerNameServerRpc(string name, ServerRpcParams rpcParams = default)
+    {
+        playerName.Value = name;
+    }
+
     private async void LoadPlayerStateFromDatabase()
     {
         Debug.Log("[LeoPlayer DB] Loading player state from MongoDB Atlas...");
@@ -5412,5 +5451,14 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             currentAttackLayerWeight = Mathf.MoveTowards(currentAttackLayerWeight, targetAttackLayerWeight, Time.deltaTime * 10f);
             anim.SetLayerWeight(1, currentAttackLayerWeight);
         }
+    }
+
+    public override void OnDestroy()
+    {
+        if (PlayerHUDManager.ActivePlayers != null)
+        {
+            PlayerHUDManager.ActivePlayers.Remove(this);
+        }
+        base.OnDestroy();
     }
 }

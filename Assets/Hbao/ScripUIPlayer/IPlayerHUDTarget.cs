@@ -7,6 +7,13 @@ public interface IPlayerHUDTarget
     bool IsOwner { get; }
     bool IsSpawned { get; }
     int CharacterClassIndex { get; }
+    ulong OwnerClientId { get; }
+
+    // Info & Stats
+    string DisplayName { get; }
+    int PlayerLevel { get; }
+    float PlayerExp { get; }
+    float MaxExp { get; }
     
     // Weapon & Skills
     bool IsSwitchingWeapon { get; }

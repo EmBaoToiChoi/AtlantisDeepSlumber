@@ -1131,3 +1131,126 @@
     z-index: 10;
 }
 
+/* ========================================================================= */
+/* --- Teammates HUD Styles (Top-Left Stack) ---                             */
+/* ========================================================================= */
+
+.teammates-container {
+    position: absolute;
+    top: 40px;
+    left: 30px;
+    flex-direction: column;
+    align-items: flex-start;
+    z-index: 50;
+}
+
+.teammate-card {
+    flex-direction: row;
+    align-items: center;
+    background-color: rgba(0, 0, 0, 0.5);
+    border-radius: 12px;
+    padding: 8px 12px;
+    margin-bottom: 8px;
+    border-width: 1.5px;
+    border-color: rgba(255, 255, 255, 0.25);
+    width: 290px;
+    transition-property: scale, border-color;
+    transition-duration: 0.2s;
+}
+
+.teammate-card:hover {
+    border-color: rgba(255, 255, 255, 0.6);
+    scale: 1.02 1.02;
+}
+
+.teammate-avatar-container {
+    width: 48px;
+    height: 48px;
+    border-radius: 24px;
+    background-color: rgba(0, 0, 0, 0.6);
+    border-width: 1.5px;
+    border-color: rgba(40, 160, 255, 0.95);
+    justify-content: center;
+    align-items: center;
+    margin-right: 10px;
+}
+
+.teammate-avatar-image {
+    width: 44px;
+    height: 44px;
+    border-radius: 22px;
+    -unity-background-scale-mode: scale-and-crop;
+}
+
+.teammate-stats-wrapper {
+    flex-direction: column;
+    justify-content: center;
+    flex-grow: 1;
+}
+
+.teammate-name-level-row {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 3px;
+}
+
+.teammate-name-label {
+    color: rgb(255, 255, 255);
+    font-size: 13px;
+    -unity-font-style: bold;
+    max-width: 170px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.teammate-level-label {
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 11px;
+    -unity-font-style: bold;
+}
+
+.teammate-track-bg {
+    background-color: rgba(0, 0, 0, 0.6);
+    margin-bottom: 3px;
+    border-radius: 3px;
+    overflow: hidden;
+    position: relative;
+}
+
+.teammate-hp-track {
+    width: 200px;
+    height: 10px;
+}
+
+.teammate-mp-track {
+    width: 170px;
+    height: 6px;
+}
+
+.teammate-exp-track {
+    width: 140px;
+    height: 4px;
+    margin-bottom: 0;
+}
+
+.teammate-hp-fill {
+    background-color: rgb(240, 70, 70);
+    height: 100%;
+    width: 100%;
+}
+
+.teammate-mp-fill {
+    background-color: rgb(40, 160, 255);
+    height: 100%;
+    width: 100%;
+}
+
+.teammate-exp-fill {
+    background-color: rgb(75, 225, 100);
+    height: 100%;
+    width: 100%;
+}
+
+

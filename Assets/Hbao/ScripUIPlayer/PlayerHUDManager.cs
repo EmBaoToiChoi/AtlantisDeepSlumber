@@ -3,6 +3,9 @@ using UnityEngine;
 public class PlayerHUDManager : MonoBehaviour
 {
     public static PlayerHUDManager Instance { get; private set; }
+    
+    // Danh sách lưu trữ tất cả người chơi đang hoạt động để làm HUD đồng đội
+    public static System.Collections.Generic.List<IPlayerHUDTarget> ActivePlayers = new System.Collections.Generic.List<IPlayerHUDTarget>();
 
     [Header("Player HUD GameObjects")]
     [SerializeField] private GameObject leoHUD;

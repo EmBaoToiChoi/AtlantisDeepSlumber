@@ -105,6 +105,8 @@ public class PlayerHUDController : MonoBehaviour
     private int draggedSlotIndex = -1;
     private bool isCooldownActive = false;
     private VisualElement dragGhost;
+    private VisualElement teammatesContainer;
+    private System.Collections.Generic.Dictionary<ulong, VisualElement> teammateCards = new System.Collections.Generic.Dictionary<ulong, VisualElement>();
     private bool isUIInitialized = false;
 
     [Header("Item Sprites Settings")]
@@ -320,6 +322,7 @@ public class PlayerHUDController : MonoBehaviour
     void Update()
     {
         InitializeUI(); // Đảm bảo khởi tạo nếu OnEnable chạy trước khi rootVisualElement sẵn sàng
+        UpdateTeammatesHUD();
 
         if (Keyboard.current != null)
         {
@@ -1386,9 +1389,174 @@ public class PlayerHUDController : MonoBehaviour
         }
         // Không tự động thay thế/phá hủy module cũ của EventSystem để tránh làm hỏng các scene khác
     }
+
+    private void UpdateTeammatesHUD()
+    {
+        if (uiDocument == null || uiDocument.rootVisualElement == null) return;
+
+        if (teammatesContainer == null)
+        {
+            teammatesContainer = uiDocument.rootVisualElement.Q<VisualElement>("teammates-container");
+            if (teammatesContainer == null)
+            {
+                teammatesContainer = new VisualElement();
+                teammatesContainer.name = "teammates-container";
+                teammatesContainer.AddToClassList("teammates-container");
+                uiDocument.rootVisualElement.Add(teammatesContainer);
+            }
+        }
+
+        var activePlayers = PlayerHUDManager.ActivePlayers;
+        System.Collections.Generic.HashSet<ulong> currentKeys = new System.Collections.Generic.HashSet<ulong>();
+
+        foreach (var player in activePlayers)
+        {
+            if (player == null || player.gameObject == null) continue;
+
+            // Bỏ qua bản thân (LocalPlayerTarget)
+            if (player == LocalPlayerTarget) continue;
+
+            ulong key = player.IsSpawned ? player.OwnerClientId : (ulong)player.gameObject.GetInstanceID();
+            currentKeys.Add(key);
+
+            if (!teammateCards.TryGetValue(key, out var card))
+            {
+                card = CreateTeammateCard(player);
+                teammatesContainer.Add(card);
+                teammateCards[key] = card;
+            }
+
+            UpdateTeammateCardValues(card, player);
+        }
+
+        System.Collections.Generic.List<ulong> keysToRemove = new System.Collections.Generic.List<ulong>();
+        foreach (var existingKey in teammateCards.Keys)
+        {
+            if (!currentKeys.Contains(existingKey))
+            {
+                keysToRemove.Add(existingKey);
+            }
+        }
+
+        foreach (var key in keysToRemove)
+        {
+            if (teammateCards.TryGetValue(key, out var card))
+            {
+                card.RemoveFromHierarchy();
+                teammateCards.Remove(key);
+            }
+        }
+    }
+
+    private VisualElement CreateTeammateCard(IPlayerHUDTarget player)
+    {
+        var card = new VisualElement();
+        card.AddToClassList("teammate-card");
+
+        var avatarContainer = new VisualElement();
+        avatarContainer.AddToClassList("teammate-avatar-container");
+        var avatarImg = new VisualElement();
+        avatarImg.name = "avatar-image";
+        avatarImg.AddToClassList("teammate-avatar-image");
+        avatarContainer.Add(avatarImg);
+        card.Add(avatarContainer);
+
+        var statsWrapper = new VisualElement();
+        statsWrapper.AddToClassList("teammate-stats-wrapper");
+
+        var nameLevelRow = new VisualElement();
+        nameLevelRow.AddToClassList("teammate-name-level-row");
+        
+        var nameLabel = new Label();
+        nameLabel.name = "name-label";
+        nameLabel.AddToClassList("teammate-name-label");
+        
+        var levelLabel = new Label();
+        levelLabel.name = "level-label";
+        levelLabel.AddToClassList("teammate-level-label");
+        
+        nameLevelRow.Add(nameLabel);
+        nameLevelRow.Add(levelLabel);
+        statsWrapper.Add(nameLevelRow);
+
+        var hpTrack = new VisualElement();
+        hpTrack.AddToClassList("teammate-track-bg");
+        hpTrack.AddToClassList("teammate-hp-track");
+        var hpFill = new VisualElement();
+        hpFill.name = "hp-fill";
+        hpFill.AddToClassList("teammate-hp-fill");
+        hpTrack.Add(hpFill);
+        statsWrapper.Add(hpTrack);
+
+        var mpTrack = new VisualElement();
+        mpTrack.AddToClassList("teammate-track-bg");
+        mpTrack.AddToClassList("teammate-mp-track");
+        var mpFill = new VisualElement();
+        mpFill.name = "mp-fill";
+        mpFill.AddToClassList("teammate-mp-fill");
+        mpTrack.Add(mpFill);
+        statsWrapper.Add(mpTrack);
+
+        var expTrack = new VisualElement();
+        expTrack.AddToClassList("teammate-track-bg");
+        expTrack.AddToClassList("teammate-exp-track");
+        var expFill = new VisualElement();
+        expFill.name = "exp-fill";
+        expFill.AddToClassList("teammate-exp-fill");
+        expTrack.Add(expFill);
+        statsWrapper.Add(expTrack);
+
+        card.Add(statsWrapper);
+        return card;
+    }
+
+    private void UpdateTeammateCardValues(VisualElement card, IPlayerHUDTarget player)
+    {
+        var avatarImg = card.Q<VisualElement>("avatar-image");
+        if (avatarImg != null && hudProfiles != null)
+        {
+            int classIdx = player.CharacterClassIndex;
+            if (classIdx >= 0 && classIdx < hudProfiles.Count)
+            {
+                avatarImg.style.backgroundImage = new StyleBackground(hudProfiles[classIdx].avatarSprite);
+            }
+        }
+
+        var nameLabel = card.Q<Label>("name-label");
+        if (nameLabel != null)
+        {
+            nameLabel.text = player.DisplayName;
+        }
+
+        var levelLabel = card.Q<Label>("level-label");
+        if (levelLabel != null)
+        {
+            levelLabel.text = $"Lv. {player.PlayerLevel}";
+        }
+
+        var hpFill = card.Q<VisualElement>("hp-fill");
+        if (hpFill != null)
+        {
+            float maxHp = player.MaxHealth;
+            float currentHp = player.CurrentHealth;
+            float hpPct = maxHp > 0 ? (currentHp / maxHp) * 100f : 0f;
+            hpFill.style.width = Length.Percent(Mathf.Clamp(hpPct, 0f, 100f));
+        }
+
+        var mpFill = card.Q<VisualElement>("mp-fill");
+        if (mpFill != null)
+        {
+            mpFill.style.width = Length.Percent(100f);
+        }
+
+        var expFill = card.Q<VisualElement>("exp-fill");
+        if (expFill != null)
+        {
+            float expPct = player.MaxExp > 0 ? (player.PlayerExp / player.MaxExp) * 100f : 0f;
+            expFill.style.width = Length.Percent(Mathf.Clamp(expPct, 0f, 100f));
+        }
+    }
 }
 
-public class LeoHUDController : PlayerHUDController {}
 public class MayaHUDController : PlayerHUDController {}
-public class ElenaHUDController : PlayerHUDController {}
 public class ArthurHUDController : PlayerHUDController {}
