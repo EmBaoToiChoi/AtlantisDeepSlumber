@@ -82,8 +82,8 @@ GameObject:
   - component: {fileID: 8911887810876343234}
   - component: {fileID: 4992956460810916836}
   - component: {fileID: 7638701699718663926}
-  - component: {fileID: 7725615253499321622}
   - component: {fileID: 1666525023407835061}
+  - component: {fileID: 7725615253499321622}
   m_Layer: 3
   m_Name: Player_Leo
   m_TagString: Player
@@ -641,30 +641,6 @@ MonoBehaviour:
   deathArmedTrigger: DeathArmed
   getHitTrigger: GetHit
   getHit2Trigger: GeiHit2
---- !u!114 &7725615253499321622
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3704789710416520249}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 44e5db811f7df62409334fc510e55423, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  ShowTopMostFoldoutHeaderGroup: 1
-  holdPoint: {fileID: 1966110000231655249}
-  interactableLayer:
-    serializedVersion: 2
-    m_Bits: 256
-  currentStation: {fileID: 0}
-  currentHeldCore: {fileID: 0}
-  isCarryingCore:
-    UpdateTraits:
-      MinSecondsBetweenUpdates: 0
-      MaxSecondsBetweenUpdates: 0
-    m_InternalValue: 0
 --- !u!114 &1666525023407835061
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -739,6 +715,31 @@ MonoBehaviour:
   - Chem_3
   showDebugGizmos: 1
   isInAttackState: 1
+--- !u!114 &7725615253499321622
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3704789710416520249}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 44e5db811f7df62409334fc510e55423, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  ShowTopMostFoldoutHeaderGroup: 1
+  holdPoint: {fileID: 1966110000231655249}
+  interactableLayer:
+    serializedVersion: 2
+    m_Bits: 256
+  currentInteractBox: {fileID: 0}
+  currentPillarStation: {fileID: 0}
+  currentHeldCore: {fileID: 0}
+  isCarryingCore:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 0
 --- !u!1 &4414795720280421845
 GameObject:
   m_ObjectHideFlags: 0
@@ -895,7 +896,7 @@ Transform:
   m_GameObject: {fileID: 8009708259036070280}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 3.04, z: 1.95}
+  m_LocalPosition: {x: 1.21, y: 3.04, z: -0.08}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []

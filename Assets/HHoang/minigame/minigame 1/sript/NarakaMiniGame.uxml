@@ -1,0 +1,17 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
+    <Style src="project://database/Assets/HHoang/minigame/minigame%201/sript/NarakaStyle.uss?fileID=7433441132597879392&amp;guid=0c7f969ec89de7840aba861bfb81e2ee&amp;type=3#NarakaStyle" />
+    <ui:VisualElement name="MainContainer" class="main-container" style="align-items: center; justify-content: space-between; height: 696px; top: 39px;">
+        <ui:VisualElement class="qte-board" style="flex-direction: row;">
+            <ui:VisualElement name="KeyA" class="key-box">
+                <ui:Label text="A" class="key-text" />
+            </ui:VisualElement>
+            <ui:VisualElement class="progress-wrapper">
+                <ui:VisualElement name="ProgressFill" class="progress-fill" />
+                <ui:VisualElement class="progress-mark" style="left: 85%;" />
+            </ui:VisualElement>
+            <ui:VisualElement name="KeyD" class="key-box">
+                <ui:Label text="D" class="key-text" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>
