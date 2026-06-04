@@ -1,5 +1,5 @@
 using UnityEngine;
-using UnityEngine.UIElements; // Dùng UI Toolkit thay cho Canvas cũ
+using UnityEngine.UIElements; 
 using Unity.Netcode;
 using System.Collections.Generic;
 using UnityEngine.InputSystem;
@@ -10,7 +10,7 @@ public class OptimizedNetworkMiniGame : NetworkBehaviour
     public float decayRate = 15f; 
     
     [Header("UI Toolkit Setup")]
-    public UIDocument uiDocument; // Kéo UIDocument vào đây
+    public UIDocument uiDocument; 
 
     private VisualElement mainContainer;
     private VisualElement progressFill;
@@ -40,9 +40,11 @@ public class OptimizedNetworkMiniGame : NetworkBehaviour
     private bool isPlaying = false;
     private bool isCurrentlyOpen = false;
 
+    // --- THÊM BIẾN NÀY ĐỂ XỬ LÝ MƯỢT UI TRÊN MÁY CLIENT ---
+    private float localPredictedValue = 0f;
+
     public override void OnNetworkSpawn()
     {
-        // Khởi tạo các thành phần UI Toolkit khi script vừa spawn
         if (uiDocument != null)
         {
             var root = uiDocument.rootVisualElement;
@@ -51,7 +53,6 @@ public class OptimizedNetworkMiniGame : NetworkBehaviour
             keyA = root.Q<VisualElement>("KeyA");
             keyD = root.Q<VisualElement>("KeyD");
 
-            // --- THÊM 2 DÒNG NÀY ĐỂ ÉP TÀNG HÌNH LÚC MỚI BẬT GAME ---
             if (mainContainer != null)
             {
                 mainContainer.AddToClassList("hidden");
@@ -59,11 +60,24 @@ public class OptimizedNetworkMiniGame : NetworkBehaviour
             }
         }
 
-        // Cập nhật Slider (thanh Width của UI Toolkit) khi giá trị trên Server thay đổi
-        s0Value.OnValueChanged += (oldVal, newVal) => { if(currentStationIndex == 0 && progressFill != null) progressFill.style.width = new Length(newVal, LengthUnit.Percent); };
-        s1Value.OnValueChanged += (oldVal, newVal) => { if(currentStationIndex == 1 && progressFill != null) progressFill.style.width = new Length(newVal, LengthUnit.Percent); };
-        s2Value.OnValueChanged += (oldVal, newVal) => { if(currentStationIndex == 2 && progressFill != null) progressFill.style.width = new Length(newVal, LengthUnit.Percent); };
-        s3Value.OnValueChanged += (oldVal, newVal) => { if(currentStationIndex == 3 && progressFill != null) progressFill.style.width = new Length(newVal, LengthUnit.Percent); };
+        // Cập nhật UI (Đã fix lỗi giật lùi màn hình do ping cao)
+        s0Value.OnValueChanged += (oldVal, newVal) => SyncUI(0, newVal);
+        s1Value.OnValueChanged += (oldVal, newVal) => SyncUI(1, newVal);
+        s2Value.OnValueChanged += (oldVal, newVal) => SyncUI(2, newVal);
+        s3Value.OnValueChanged += (oldVal, newVal) => SyncUI(3, newVal);
+    }
+
+    private void SyncUI(int index, float serverValue)
+    {
+        if (currentStationIndex == index && progressFill != null)
+        {
+            // Chỉ ép nhận giá trị từ Server nếu không chơi, hoặc độ lệch Ping quá lớn (>15%)
+            if (!isPlaying || Mathf.Abs(localPredictedValue - serverValue) > 15f)
+            {
+                localPredictedValue = serverValue;
+                progressFill.style.width = new Length(serverValue, LengthUnit.Percent);
+            }
+        }
     }
 
     void Update()
@@ -72,9 +86,23 @@ public class OptimizedNetworkMiniGame : NetworkBehaviour
         if (IsClient && isPlaying && !Application.isBatchMode)
         {
             HandleQTEInput();
+
+            // --- MỚI: Client tự mô phỏng độ tụt máu để UI mượt mà éo cần chờ VPS ---
+            float currentDecay = decayRate * Time.deltaTime;
+            if ((currentStationIndex == 2 && !station2HasCrystal.Value) || 
+                (currentStationIndex == 3 && !station3HasCrystal.Value))
+            {
+                currentDecay = decayRate * 2.5f * Time.deltaTime;
+            }
+
+            if (progressFill != null)
+            {
+                localPredictedValue = Mathf.Clamp(localPredictedValue - currentDecay, 0f, 100f);
+                progressFill.style.width = new Length(localPredictedValue, LengthUnit.Percent);
+            }
         }
 
-        // Logic Server: Đảm bảo luôn chạy bất kể điều kiện gì khác
+        // Logic Server
         if (IsServer)
         {
             UpdateStationDrain();
@@ -87,13 +115,11 @@ public class OptimizedNetworkMiniGame : NetworkBehaviour
         if (!IsServer) return;
 
         float normal = decayRate * Time.deltaTime;
-        float fast = decayRate * 2.5f * Time.deltaTime; // Tốc độ tụt gấp 2.5 lần nếu chưa có ngọc
+        float fast = decayRate * 2.5f * Time.deltaTime;
 
-        // Trạm 0 & 1: Luôn tụt tốc độ bình thường
         s0Value.Value = Mathf.Clamp(s0Value.Value - normal, 0f, 100f);
         s1Value.Value = Mathf.Clamp(s1Value.Value - normal, 0f, 100f);
 
-        // Trạm 2 & 3: Tụt nhanh nếu không có ngọc, có ngọc rồi thì tụt bình thường
         float s2Speed = station2HasCrystal.Value ? normal : fast;
         s2Value.Value = Mathf.Clamp(s2Value.Value - s2Speed, 0f, 100f);
 
@@ -105,18 +131,14 @@ public class OptimizedNetworkMiniGame : NetworkBehaviour
     {
         if (!IsServer) return; 
 
-        // 1. Kiểm tra cặp trạm ngoài cửa (Trạm 0 VÀ Trạm 1 phải cùng xanh)
         bool pair1Ready = (s0Owner.Value != ulong.MaxValue && s0Value.Value >= greenZoneMin) && 
                           (s1Owner.Value != ulong.MaxValue && s1Value.Value >= greenZoneMin);
 
-        // 2. Kiểm tra cặp trạm sau cửa (Trạm 2 VÀ Trạm 3 phải cùng xanh)
         bool pair2Ready = (s2Owner.Value != ulong.MaxValue && s2Value.Value >= greenZoneMin) && 
                           (s3Owner.Value != ulong.MaxValue && s3Value.Value >= greenZoneMin);
 
-        // Cửa sẽ mở nếu 1 trong 2 CẶP đang được giữ
         bool shouldBeOpen = pair1Ready || pair2Ready;
 
-        // Chỉ thực hiện lệnh khi có sự thay đổi trạng thái
         if (shouldBeOpen != isCurrentlyOpen)
         {
             isCurrentlyOpen = shouldBeOpen;
@@ -124,16 +146,8 @@ public class OptimizedNetworkMiniGame : NetworkBehaviour
             foreach (var gear in gearList)
             {
                 if (gear == null) continue;
-                
-                if (isCurrentlyOpen) 
-                {
-                    gear.OpenGear();
-                }
-                else 
-                {
-                    // Trở về vị trí cũ nếu buông tay hoặc tụt khỏi vùng xanh
-                    gear.ResetToSpinning(); 
-                }
+                if (isCurrentlyOpen) gear.OpenGear();
+                else gear.ResetToSpinning(); 
             }
         }
     }
@@ -150,15 +164,16 @@ public class OptimizedNetworkMiniGame : NetworkBehaviour
         }
     }
 
-    public void HandleStationAccess(int index, ulong clientId)
+    // --- ĐÃ FIX: CHUYỂN HÀM XÁC NHẬN OWNER THÀNH SERVER RPC ---
+    [ServerRpc(RequireOwnership = false)]
+    public void HandleStationAccessServerRpc(int index, ulong clientId)
     {
-        if (!IsServer) return;
         SetOwner(index, clientId);
     }
 
-    public void HandleStationRelease(int index, ulong clientId)
+    [ServerRpc(RequireOwnership = false)]
+    public void HandleStationReleaseServerRpc(int index, ulong clientId)
     {
-        if (!IsServer) return;
         if (GetOwner(index) == clientId) SetOwner(index, ulong.MaxValue);
     }
 
@@ -180,21 +195,22 @@ public class OptimizedNetworkMiniGame : NetworkBehaviour
         currentStationIndex = index;
         isPlaying = isOpening;
         
+        // BÁO CHO SERVER BIẾT MÌNH ĐANG LÀ CHỦ CỦA TRẠM NÀY
+        if (isOpening) HandleStationAccessServerRpc(index, NetworkManager.Singleton.LocalClientId);
+        else HandleStationReleaseServerRpc(index, NetworkManager.Singleton.LocalClientId);
+
         if (IsClient && mainContainer != null) 
         {
             if (isOpening) 
             {
-                // Mở UI
                 mainContainer.RemoveFromClassList("hidden");
                 mainContainer.style.display = DisplayStyle.Flex;
                 
-                // Đồng bộ thanh bar ngay lập tức khi vừa bật lên
-                float initialValue = GetStationValue(index);
-                progressFill.style.width = new Length(initialValue, LengthUnit.Percent);
+                localPredictedValue = GetStationValue(index);
+                progressFill.style.width = new Length(localPredictedValue, LengthUnit.Percent);
             }
             else 
             {
-                // Tắt UI (Có hiệu ứng mờ dần trong 0.3s)
                 mainContainer.AddToClassList("hidden");
                 Invoke(nameof(HideUIDelay), 0.3f); 
             }
@@ -218,6 +234,15 @@ public class OptimizedNetworkMiniGame : NetworkBehaviour
     private void ProcessInput(bool isA)
     {
         PlaySuccessVisual(isA ? keyA : keyD);
+        
+        // --- QUAN TRỌNG: CỘNG UI NGAY LẬP TỨC TRÊN MÁY CLIENT ---
+        if (progressFill != null)
+        {
+            localPredictedValue = Mathf.Clamp(localPredictedValue + pushAmount, 0f, 100f);
+            progressFill.style.width = new Length(localPredictedValue, LengthUnit.Percent);
+        }
+
+        // Bắn tín hiệu chốt số về Server
         UpdateSliderServerRpc(currentStationIndex, pushAmount);
     }
 
@@ -225,10 +250,7 @@ public class OptimizedNetworkMiniGame : NetworkBehaviour
     {
         if (targetKey == null) return;
         
-        // Thêm class 'pressed' để trigger hiệu ứng CSS (đổi màu, phóng to)
         targetKey.AddToClassList("pressed");
-        
-        // Xóa class 'pressed' sau 100 milliseconds để nó nảy về kích thước cũ
         targetKey.schedule.Execute(() => {
             targetKey.RemoveFromClassList("pressed");
         }).StartingIn(100); 
