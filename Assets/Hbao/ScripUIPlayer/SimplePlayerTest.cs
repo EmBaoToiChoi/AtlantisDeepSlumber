@@ -1,7 +1,7 @@
 using Unity.Netcode;
 using UnityEngine;
 
-public class SimplePlayerTest : NetworkBehaviour
+public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
 {
     protected LeoPlayer leoPlayer;
 
@@ -192,6 +192,22 @@ public class SimplePlayerTest : NetworkBehaviour
     /// </summary>
     public float CurrentHealth => leoPlayer != null ? leoPlayer.CurrentHealth : (isStandaloneMode ? localHealth : currentHealth.Value);
 
+    // IPlayerHUDTarget Implementation
+    bool IPlayerHUDTarget.isStandaloneMode => isStandaloneMode;
+    public bool IsStandaloneMode => isStandaloneMode;
+    public int CharacterClassIndex => characterClassIndex;
+    public bool IsSwitchingWeapon => false;
+    public float Weapon1MaxDurability => weapon1MaxDurability;
+    public float Weapon2MaxDurability => weapon2MaxDurability;
+    public string[] InventorySlots => inventorySlots;
+    public float MaxHealth => maxHealth;
+
+    public void SetCursorLock(bool locked)
+    {
+        isCursorLocked = locked;
+        LockCursor(locked);
+    }
+
     /// <summary>
     /// Trả về index vũ khí đang chọn: đọc từ HUD khi standalone, đọc từ NetworkVariable khi online.
     /// </summary>
@@ -282,8 +298,22 @@ public class SimplePlayerTest : NetworkBehaviour
         localLevel = PlayerPrefs.GetInt("SelectedPlayerLevel_" + characterClassIndex, 0);
         localExp = PlayerPrefs.GetFloat("SelectedPlayerExp_" + characterClassIndex, 0f);
 
+        // Register local target
+        PlayerHUDController.LocalPlayerTarget = this;
+        RakanDialogueController.LocalPlayerTarget = this;
+        SilasDialogueController.LocalPlayerTarget = this;
+
         // Khởi tạo HUD với profile nhân vật
-        PlayerHUDController hud = FindObjectOfType<PlayerHUDController>();
+        PlayerHUDController hud = null;
+        if (PlayerHUDManager.Instance != null)
+        {
+            hud = PlayerHUDManager.Instance.ActivateHUD(characterClassIndex);
+        }
+        else
+        {
+            hud = FindObjectOfType<PlayerHUDController>();
+        }
+
         if (hud != null)
         {
             hud.SetupPlayerProfile(characterClassIndex);
@@ -325,10 +355,24 @@ public class SimplePlayerTest : NetworkBehaviour
 
         if (IsOwner)
         {
+            // Register local target
+            PlayerHUDController.LocalPlayerTarget = this;
+            RakanDialogueController.LocalPlayerTarget = this;
+            SilasDialogueController.LocalPlayerTarget = this;
+
             currentHealth.OnValueChanged += OnHealthChanged;
             UpdateHealthHUD(currentHealth.Value);
 
-            PlayerHUDController hud = FindObjectOfType<PlayerHUDController>();
+            PlayerHUDController hud = null;
+            if (PlayerHUDManager.Instance != null)
+            {
+                hud = PlayerHUDManager.Instance.ActivateHUD(characterClassIndex);
+            }
+            else
+            {
+                hud = FindObjectOfType<PlayerHUDController>();
+            }
+
             if (hud != null)
                 hud.SetupPlayerProfile(characterClassIndex);
 

@@ -2798,7 +2798,7 @@ using Unity.Netcode;
 /// with enemy AI, NPC dialog, and UI HUD systems.
 /// Supports smooth 8-directional Blend Tree movement using actual user fbx filenames.
 /// </summary>
-public class LeoPlayer : NetworkBehaviour
+public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 {
     [Header("Input Keys Configuration")]
     [Tooltip("Key to trigger roll/dodge.")]
@@ -3025,6 +3025,16 @@ public class LeoPlayer : NetworkBehaviour
     public float CurrentHealth =>
         isStandaloneMode ? localHealth : currentHealth.Value;
 
+    // IPlayerHUDTarget Implementation
+    bool IPlayerHUDTarget.isStandaloneMode => isStandaloneMode;
+    public bool IsStandaloneMode => isStandaloneMode;
+    public int CharacterClassIndex => characterClassIndex;
+    public bool IsSwitchingWeapon => isSwitchingWeapon;
+    public float Weapon1MaxDurability => weapon1MaxDurability;
+    public float Weapon2MaxDurability => weapon2MaxDurability;
+    public string[] InventorySlots => inventorySlots;
+    public float MaxHealth => maxHealth;
+
     protected RootMotionBridge GetRootMotionBridge()
     {
         if (rootMotionBridge == null && anim != null)
@@ -3110,7 +3120,21 @@ public class LeoPlayer : NetworkBehaviour
         localLevel = PlayerPrefs.GetInt("SelectedPlayerLevel_" + characterClassIndex, 0);
         localExp = PlayerPrefs.GetFloat("SelectedPlayerExp_" + characterClassIndex, 0f);
 
-        PlayerHUDController hud = FindAnyObjectByType<PlayerHUDController>();
+        // Register local target
+        PlayerHUDController.LocalPlayerTarget = this;
+        RakanDialogueController.LocalPlayerTarget = this;
+        SilasDialogueController.LocalPlayerTarget = this;
+
+        PlayerHUDController hud = null;
+        if (PlayerHUDManager.Instance != null)
+        {
+            hud = PlayerHUDManager.Instance.ActivateHUD(characterClassIndex);
+        }
+        else
+        {
+            hud = FindAnyObjectByType<PlayerHUDController>();
+        }
+
         if (hud != null)
         {
             hud.SetupPlayerProfile(characterClassIndex);
@@ -3140,10 +3164,24 @@ public class LeoPlayer : NetworkBehaviour
 
         if (IsOwner)
         {
+            // Register local target
+            PlayerHUDController.LocalPlayerTarget = this;
+            RakanDialogueController.LocalPlayerTarget = this;
+            SilasDialogueController.LocalPlayerTarget = this;
+
             currentHealth.OnValueChanged += OnHealthChanged;
             UpdateHealthHUD(currentHealth.Value);
 
-            PlayerHUDController hud = FindAnyObjectByType<PlayerHUDController>();
+            PlayerHUDController hud = null;
+            if (PlayerHUDManager.Instance != null)
+            {
+                hud = PlayerHUDManager.Instance.ActivateHUD(characterClassIndex);
+            }
+            else
+            {
+                hud = FindAnyObjectByType<PlayerHUDController>();
+            }
+
             if (hud != null)
                 hud.SetupPlayerProfile(characterClassIndex);
 
