@@ -21,6 +21,10 @@ public class OptimizedNetworkMiniGame : NetworkBehaviour
     public float pushAmount = 12f; 
     public float greenZoneMin = 85f;
 
+    [Header("Cấu hình số người")]
+    [Tooltip("Số trạm cần đạt để mở cổng (1 hoặc 2)")]
+    public int stationsNeededToOpen = 2; // Mặc định là 2, muốn test 1 người thì ngoài Unity chỉnh thành 1
+
     public List<GearRotator> gearList;
 
     public NetworkVariable<float> s0Value = new NetworkVariable<float>(0f);
@@ -40,7 +44,6 @@ public class OptimizedNetworkMiniGame : NetworkBehaviour
     private bool isPlaying = false;
     private bool isCurrentlyOpen = false;
 
-    // --- THÊM BIẾN NÀY ĐỂ XỬ LÝ MƯỢT UI TRÊN MÁY CLIENT ---
     private float localPredictedValue = 0f;
 
     public override void OnNetworkSpawn()
@@ -60,7 +63,6 @@ public class OptimizedNetworkMiniGame : NetworkBehaviour
             }
         }
 
-        // Cập nhật UI (Đã fix lỗi giật lùi màn hình do ping cao)
         s0Value.OnValueChanged += (oldVal, newVal) => SyncUI(0, newVal);
         s1Value.OnValueChanged += (oldVal, newVal) => SyncUI(1, newVal);
         s2Value.OnValueChanged += (oldVal, newVal) => SyncUI(2, newVal);
@@ -71,7 +73,6 @@ public class OptimizedNetworkMiniGame : NetworkBehaviour
     {
         if (currentStationIndex == index && progressFill != null)
         {
-            // Chỉ ép nhận giá trị từ Server nếu không chơi, hoặc độ lệch Ping quá lớn (>15%)
             if (!isPlaying || Mathf.Abs(localPredictedValue - serverValue) > 15f)
             {
                 localPredictedValue = serverValue;
@@ -82,12 +83,10 @@ public class OptimizedNetworkMiniGame : NetworkBehaviour
 
     void Update()
     {
-        // Logic Client
         if (IsClient && isPlaying && !Application.isBatchMode)
         {
             HandleQTEInput();
 
-            // --- MỚI: Client tự mô phỏng độ tụt máu để UI mượt mà éo cần chờ VPS ---
             float currentDecay = decayRate * Time.deltaTime;
             if ((currentStationIndex == 2 && !station2HasCrystal.Value) || 
                 (currentStationIndex == 3 && !station3HasCrystal.Value))
@@ -102,7 +101,6 @@ public class OptimizedNetworkMiniGame : NetworkBehaviour
             }
         }
 
-        // Logic Server
         if (IsServer)
         {
             UpdateStationDrain();
@@ -131,18 +129,27 @@ public class OptimizedNetworkMiniGame : NetworkBehaviour
     {
         if (!IsServer) return; 
 
-        bool pair1Ready = (s0Owner.Value != ulong.MaxValue && s0Value.Value >= greenZoneMin) && 
-                          (s1Owner.Value != ulong.MaxValue && s1Value.Value >= greenZoneMin);
+        bool s0Ready = (s0Owner.Value != ulong.MaxValue && s0Value.Value >= greenZoneMin);
+        bool s1Ready = (s1Owner.Value != ulong.MaxValue && s1Value.Value >= greenZoneMin);
+        bool s2Ready = (s2Owner.Value != ulong.MaxValue && s2Value.Value >= greenZoneMin);
+        bool s3Ready = (s3Owner.Value != ulong.MaxValue && s3Value.Value >= greenZoneMin);
 
-        bool pair2Ready = (s2Owner.Value != ulong.MaxValue && s2Value.Value >= greenZoneMin) && 
-                          (s3Owner.Value != ulong.MaxValue && s3Value.Value >= greenZoneMin);
+        bool shouldBeOpen = false;
 
-        bool shouldBeOpen = pair1Ready || pair2Ready;
+        if (stationsNeededToOpen == 1)
+        {
+            shouldBeOpen = s0Ready || s1Ready || s2Ready || s3Ready;
+        }
+        else 
+        {
+            bool pair1Ready = s0Ready && s1Ready;
+            bool pair2Ready = s2Ready && s3Ready;
+            shouldBeOpen = pair1Ready || pair2Ready;
+        }
 
         if (shouldBeOpen != isCurrentlyOpen)
         {
             isCurrentlyOpen = shouldBeOpen;
-            
             foreach (var gear in gearList)
             {
                 if (gear == null) continue;
@@ -164,7 +171,6 @@ public class OptimizedNetworkMiniGame : NetworkBehaviour
         }
     }
 
-    // --- ĐÃ FIX: CHUYỂN HÀM XÁC NHẬN OWNER THÀNH SERVER RPC ---
     [ServerRpc(RequireOwnership = false)]
     public void HandleStationAccessServerRpc(int index, ulong clientId)
     {
@@ -195,7 +201,6 @@ public class OptimizedNetworkMiniGame : NetworkBehaviour
         currentStationIndex = index;
         isPlaying = isOpening;
         
-        // BÁO CHO SERVER BIẾT MÌNH ĐANG LÀ CHỦ CỦA TRẠM NÀY
         if (isOpening) HandleStationAccessServerRpc(index, NetworkManager.Singleton.LocalClientId);
         else HandleStationReleaseServerRpc(index, NetworkManager.Singleton.LocalClientId);
 
@@ -234,22 +239,17 @@ public class OptimizedNetworkMiniGame : NetworkBehaviour
     private void ProcessInput(bool isA)
     {
         PlaySuccessVisual(isA ? keyA : keyD);
-        
-        // --- QUAN TRỌNG: CỘNG UI NGAY LẬP TỨC TRÊN MÁY CLIENT ---
         if (progressFill != null)
         {
             localPredictedValue = Mathf.Clamp(localPredictedValue + pushAmount, 0f, 100f);
             progressFill.style.width = new Length(localPredictedValue, LengthUnit.Percent);
         }
-
-        // Bắn tín hiệu chốt số về Server
         UpdateSliderServerRpc(currentStationIndex, pushAmount);
     }
 
     private void PlaySuccessVisual(VisualElement targetKey)
     {
         if (targetKey == null) return;
-        
         targetKey.AddToClassList("pressed");
         targetKey.schedule.Execute(() => {
             targetKey.RemoveFromClassList("pressed");
