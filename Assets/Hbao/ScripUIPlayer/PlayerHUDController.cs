@@ -369,9 +369,14 @@ public class PlayerHUDController : MonoBehaviour
                     
                     // Hiện/ẩn chuột cho Bản đồ
                     var localPlayer = FindObjectOfType<LeoPlayer>();
+                    var elenaPlayer = FindObjectOfType<ElenaPlayer>();
                     if (localPlayer != null)
                     {
                         localPlayer.SetCursorLock(!isNowVisible);
+                    }
+                    else if (elenaPlayer != null)
+                    {
+                        elenaPlayer.SetCursorLock(!isNowVisible);
                     }
                     else
                     {
@@ -585,9 +590,14 @@ public class PlayerHUDController : MonoBehaviour
 
             // Tự động ẩn/hiện con trỏ chuột phù hợp với trạng thái UI hành trang
             var localPlayer = FindObjectOfType<LeoPlayer>();
+            var elenaPlayer = FindObjectOfType<ElenaPlayer>();
             if (localPlayer != null)
             {
                 localPlayer.SetCursorLock(!isNowVisible);
+            }
+            else if (elenaPlayer != null)
+            {
+                elenaPlayer.SetCursorLock(!isNowVisible);
             }
             else
             {
@@ -609,6 +619,10 @@ public class PlayerHUDController : MonoBehaviour
                 if (localPlayer != null && localPlayer.IsSpawned && localPlayer.IsOwner)
                 {
                     localPlayer.SavePlayerStateToDatabase();
+                }
+                else if (elenaPlayer != null && elenaPlayer.IsSpawned && elenaPlayer.IsOwner)
+                {
+                    elenaPlayer.SavePlayerStateToDatabase();
                 }
             }
         }
@@ -693,6 +707,11 @@ public class PlayerHUDController : MonoBehaviour
             {
                 localPlayer.PlayWeaponSwitchAnimation(oldWeapon, currentSelectedWeapon);
             }
+            var elenaPlayer = FindObjectOfType<ElenaPlayer>();
+            if (elenaPlayer != null && elenaPlayer.isStandaloneMode)
+            {
+                elenaPlayer.PlayWeaponSwitchAnimation(oldWeapon, currentSelectedWeapon);
+            }
         }
     }
 
@@ -772,6 +791,11 @@ public class PlayerHUDController : MonoBehaviour
         if (localPlayer != null && localPlayer.IsSpawned && localPlayer.IsOwner)
         {
             localPlayer.UpdateStateFromHUD(currentSelectedWeapon, isWeapon2Locked, isSkillsUnlocked);
+        }
+        var elenaPlayer = FindObjectOfType<ElenaPlayer>();
+        if (elenaPlayer != null)
+        {
+            elenaPlayer.UpdateStateFromHUD(currentSelectedWeapon, isWeapon2Locked, isSkillsUnlocked);
         }
     }
 
@@ -1040,6 +1064,7 @@ public class PlayerHUDController : MonoBehaviour
                     {
                         // Thực hiện tráo đổi (Swap) vị trí vật phẩm
                         var player = FindObjectOfType<LeoPlayer>();
+                        var elenaPlayer = FindObjectOfType<ElenaPlayer>();
                         if (player != null)
                         {
                             string temp = player.inventorySlots[draggedSlotIndex];
@@ -1049,6 +1074,16 @@ public class PlayerHUDController : MonoBehaviour
                             // Vẽ lại và đồng bộ cơ sở dữ liệu
                             SetInventorySlots(player.inventorySlots);
                             if (!player.isStandaloneMode) player.SavePlayerStateToDatabase();
+                        }
+                        else if (elenaPlayer != null)
+                        {
+                            string temp = elenaPlayer.inventorySlots[draggedSlotIndex];
+                            elenaPlayer.inventorySlots[draggedSlotIndex] = elenaPlayer.inventorySlots[targetIndex];
+                            elenaPlayer.inventorySlots[targetIndex] = temp;
+
+                            // Vẽ lại và đồng bộ cơ sở dữ liệu
+                            SetInventorySlots(elenaPlayer.inventorySlots);
+                            if (!elenaPlayer.isStandaloneMode) elenaPlayer.SavePlayerStateToDatabase();
                         }
                     }
                 }
@@ -1176,6 +1211,7 @@ public class PlayerHUDController : MonoBehaviour
 
         // Tiến hành sửa chữa độ bền 100%
         var player = FindObjectOfType<LeoPlayer>();
+        var elenaPlayer = FindObjectOfType<ElenaPlayer>();
         if (player != null)
         {
             int activeWeapon = player.activeWeaponIndex.Value;
@@ -1213,6 +1249,43 @@ public class PlayerHUDController : MonoBehaviour
             SetInventorySlots(player.inventorySlots);
 
             if (!player.isStandaloneMode) player.SavePlayerStateToDatabase();
+        }
+        else if (elenaPlayer != null)
+        {
+            int activeWeapon = elenaPlayer.isStandaloneMode ? currentSelectedWeapon : elenaPlayer.GetActiveWeaponIndex();
+
+            if (activeWeapon == 1)
+            {
+                elenaPlayer.Weapon1Durability = elenaPlayer.weapon1MaxDurability;
+            }
+            else
+            {
+                elenaPlayer.Weapon2Durability = elenaPlayer.weapon2MaxDurability;
+            }
+
+            // Tiêu hao vật phẩm (giảm số lượng đi 1 hoặc xóa hoàn toàn nếu là cái cuối)
+            string slotVal = elenaPlayer.inventorySlots[slotIndex];
+            string baseName = slotVal;
+            int count = 1;
+            if (slotVal.Contains(":"))
+            {
+                var parts = slotVal.Split(':');
+                baseName = parts[0];
+                int.TryParse(parts[1], out count);
+            }
+
+            if (count > 1)
+            {
+                elenaPlayer.inventorySlots[slotIndex] = baseName + ":" + (count - 1);
+            }
+            else
+            {
+                elenaPlayer.inventorySlots[slotIndex] = "";
+            }
+
+            SetInventorySlots(elenaPlayer.inventorySlots);
+
+            if (!elenaPlayer.isStandaloneMode) elenaPlayer.SavePlayerStateToDatabase();
         }
     }
 
@@ -1287,14 +1360,29 @@ public class PlayerHUDController : MonoBehaviour
     private void UpgradeStat(int statType)
     {
         var localPlayer = FindObjectOfType<LeoPlayer>();
-        if (localPlayer != null && localPlayer.IsSpawned && localPlayer.IsOwner)
+        var elenaPlayer = FindObjectOfType<ElenaPlayer>();
+        if (localPlayer != null)
         {
-            localPlayer.UpgradeStatFromHUD(statType);
+            if (localPlayer.IsSpawned && localPlayer.IsOwner)
+            {
+                localPlayer.UpgradeStatFromHUD(statType);
+            }
+            else if (localPlayer.isStandaloneMode)
+            {
+                // Hỗ trợ nâng cấp thử ở chế độ standalone không có Netcode
+                localPlayer.StandaloneUpgradeStat(statType);
+            }
         }
-        else if (localPlayer != null && localPlayer.isStandaloneMode)
+        else if (elenaPlayer != null)
         {
-            // Hỗ trợ nâng cấp thử ở chế độ standalone không có Netcode
-            localPlayer.StandaloneUpgradeStat(statType);
+            if (elenaPlayer.isStandaloneMode)
+            {
+                elenaPlayer.StandaloneUpgradeStat(statType);
+            }
+            else if (elenaPlayer.IsSpawned && elenaPlayer.IsOwner)
+            {
+                elenaPlayer.UpgradeStatFromHUD(statType);
+            }
         }
     }
 

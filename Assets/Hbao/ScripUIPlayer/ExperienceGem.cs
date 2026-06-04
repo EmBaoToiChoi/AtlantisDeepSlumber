@@ -19,18 +19,24 @@ public class ExperienceGem : NetworkBehaviour
 
     public string DropGroupId
     {
-        get { return (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening) ? networkDropGroupId.Value.ToString() : localDropGroupId; }
-        set {
+        get
+        {
+            if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening && IsSpawned)
+            {
+                string val = networkDropGroupId.Value.ToString();
+                if (!string.IsNullOrEmpty(val)) return val;
+            }
+            return localDropGroupId;
+        }
+        set
+        {
+            localDropGroupId = value;
             if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening)
             {
-                if (IsServer)
+                if (IsServer || NetworkManager.Singleton.IsServer)
                 {
                     networkDropGroupId.Value = value;
                 }
-            }
-            else
-            {
-                localDropGroupId = value;
             }
         }
     }

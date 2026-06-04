@@ -166,6 +166,7 @@ public class Enemy1_DapBua : NetworkBehaviour
         netSpeed.OnValueChanged   += (_, v) => ApplySpeedAnim(v);
         // Anhit Layer: trigger synced via hitCounter
         hitCounter.OnValueChanged += (_, _) => { if (anim != null) anim.SetTrigger(hitTrigger); };
+        currentHealth.OnValueChanged += OnHealthNetChanged;
 
         // Khởi tạo animation theo giá trị hiện tại
         ApplySpeedAnim(netSpeed.Value);
@@ -189,6 +190,16 @@ public class Enemy1_DapBua : NetworkBehaviour
     {
         netSpeed.OnValueChanged   -= (_, v) => ApplySpeedAnim(v);
         hitCounter.OnValueChanged -= (_, _) => { if (anim != null) anim.SetTrigger(hitTrigger); };
+        currentHealth.OnValueChanged -= OnHealthNetChanged;
+    }
+
+    private void OnHealthNetChanged(float oldVal, float newVal)
+    {
+        float diff = oldVal - newVal;
+        if (diff > 0)
+        {
+            EnemyDamageEffectHelper.PlayDamageEffects(gameObject, diff);
+        }
     }
 
     // ══════════════════════════════════════════════════════════
@@ -293,7 +304,9 @@ public class Enemy1_DapBua : NetworkBehaviour
         if (ld.sqrMagnitude > 0.01f)
             transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(ld), Time.deltaTime * 15f);
 
-        float dist = Vector3.Distance(transform.position, targetPlayer.position);
+        Vector3 flatEnemy = transform.position; flatEnemy.y = 0;
+        Vector3 flatPlayer = targetPlayer.position; flatPlayer.y = 0;
+        float dist = Vector3.Distance(flatEnemy, flatPlayer);
 
         if (dist <= attackRange)
         {
@@ -550,6 +563,7 @@ public class Enemy1_DapBua : NetworkBehaviour
         if (!isStandaloneMode && (!IsServer || CurrentStateValue == EnemyState.Dead)) return;
         if (isStandaloneMode && CurrentStateValue == EnemyState.Dead) return;
         CurrentHealthValue -= damage;
+        if (isStandaloneMode) EnemyDamageEffectHelper.PlayDamageEffects(gameObject, damage);
         if (!isStandaloneMode) hitCounter.Value++;
         else if (anim != null) anim.SetTrigger(hitTrigger);
         if (CurrentHealthValue <= 0) { ChangeState(EnemyState.Dead); return; }
