@@ -211,4 +211,7 @@
         </ui:VisualElement>
         <ui:Label name="interaction-prompt-text" text="Ấn [F] để nhặt" class="interaction-text" />
     </ui:VisualElement>
+    
+    <!-- Danh sách người chơi đồng đội (Teammate HUDs) ở góc trên bên trái -->
+    <ui:VisualElement name="teammates-container" class="teammates-container" />
 </ui:UXML>

@@ -124,6 +124,17 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
     [Tooltip("0 = Sát Thủ, 1 = Hỏa Thuật, 2 = Cung Thủ, 3 = Tanker")]
     public int characterClassIndex = 0;
 
+    [Header("Player Name Sync")]
+    public NetworkVariable<Unity.Collections.FixedString64Bytes> playerName = new NetworkVariable<Unity.Collections.FixedString64Bytes>(
+        "Explorer", NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server
+    );
+
+    // IPlayerHUDTarget Stats Implementation
+    public string DisplayName => string.IsNullOrEmpty(playerName.Value.ToString()) ? "Explorer" : playerName.Value.ToString();
+    public int PlayerLevel => isStandaloneMode ? localLevel : playerLevel.Value;
+    public float PlayerExp => isStandaloneMode ? localExp : playerExp.Value;
+    public float MaxExp => 100f + (isStandaloneMode ? localLevel : playerLevel.Value) * 50f;
+
     [Header("Knockback Settings")]
     protected Vector3 knockbackVelocity;
 
@@ -293,6 +304,11 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
 
         // Tải nhân vật đã lưu từ PlayerPrefs nếu có
         characterClassIndex = PlayerPrefs.GetInt("SelectedCharacterId", characterClassIndex);
+        playerName.Value = PlayerPrefs.GetString("AuthDisplayName", "Explorer");
+        if (PlayerHUDManager.ActivePlayers != null && !PlayerHUDManager.ActivePlayers.Contains(this))
+        {
+            PlayerHUDManager.ActivePlayers.Add(this);
+        }
 
         // Nạp cấp độ và kinh nghiệm cho chế độ chơi đơn (mặc định về lại 0 theo yêu cầu)
         localLevel = PlayerPrefs.GetInt("SelectedPlayerLevel_" + characterClassIndex, 0);
@@ -333,6 +349,11 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
             return;
         }
 
+        if (PlayerHUDManager.ActivePlayers != null && !PlayerHUDManager.ActivePlayers.Contains(this))
+        {
+            PlayerHUDManager.ActivePlayers.Add(this);
+        }
+
         // Đăng ký sự kiện đồng bộ Netcode
         activeWeaponIndex.OnValueChanged += OnWeaponIndexChanged;
         isWeapon2Locked.OnValueChanged += OnWeapon2LockedChanged;
@@ -355,6 +376,13 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
 
         if (IsOwner)
         {
+            // Tải nhân vật đã lưu từ PlayerPrefs
+            characterClassIndex = PlayerPrefs.GetInt("SelectedCharacterId", characterClassIndex);
+
+            // Đồng bộ tên người chơi qua mạng
+            string myName = PlayerPrefs.GetString("AuthDisplayName", "Explorer");
+            SetPlayerNameServerRpc(myName);
+
             // Register local target
             PlayerHUDController.LocalPlayerTarget = this;
             RakanDialogueController.LocalPlayerTarget = this;
@@ -395,6 +423,11 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
         if (leoPlayer != null)
         {
             return;
+        }
+
+        if (PlayerHUDManager.ActivePlayers != null)
+        {
+            PlayerHUDManager.ActivePlayers.Remove(this);
         }
 
         activeWeaponIndex.OnValueChanged -= OnWeaponIndexChanged;
@@ -1477,6 +1510,12 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
         SavePlayerStateClientRpc();
     }
 
+    [ServerRpc(RequireOwnership = false)]
+    public void SetPlayerNameServerRpc(string name, ServerRpcParams rpcParams = default)
+    {
+        playerName.Value = name;
+    }
+
     private async void LoadPlayerStateFromDatabase()
     {
         Debug.Log("[DB] Bắt đầu tải trạng thái người chơi từ MongoDB Atlas...");
@@ -1939,5 +1978,14 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
             anim.Play("New State", 1, 0f);
             anim.Play("Empty", 1, 0f);
         }
+    }
+
+    public override void OnDestroy()
+    {
+        if (PlayerHUDManager.ActivePlayers != null)
+        {
+            PlayerHUDManager.ActivePlayers.Remove(this);
+        }
+        base.OnDestroy();
     }
 }
