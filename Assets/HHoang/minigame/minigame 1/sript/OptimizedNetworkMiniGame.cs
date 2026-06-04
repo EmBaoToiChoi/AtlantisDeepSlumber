@@ -1,7 +1,6 @@
 using UnityEngine;
-using UnityEngine.UI;
+using UnityEngine.UIElements; // Dùng UI Toolkit thay cho Canvas cũ
 using Unity.Netcode;
-using DG.Tweening;
 using System.Collections.Generic;
 using UnityEngine.InputSystem;
 
@@ -10,11 +9,13 @@ public class OptimizedNetworkMiniGame : NetworkBehaviour
     [Header("Cấu hình linh hoạt")]
     public float decayRate = 15f; 
     
-    [Header("UI & Controls")]
-    public GameObject miniGamePlayZone;
-    public Slider localSlider;
-    public Image imgA;
-    public Image imgD;
+    [Header("UI Toolkit Setup")]
+    public UIDocument uiDocument; // Kéo UIDocument vào đây
+
+    private VisualElement mainContainer;
+    private VisualElement progressFill;
+    private VisualElement keyA;
+    private VisualElement keyD;
 
     [Header("Cấu hình Mini-game")]
     public float pushAmount = 12f; 
@@ -41,11 +42,28 @@ public class OptimizedNetworkMiniGame : NetworkBehaviour
 
     public override void OnNetworkSpawn()
     {
-        // Cập nhật Slider của trạm người chơi đang đứng
-        s0Value.OnValueChanged += (oldVal, newVal) => { if(currentStationIndex == 0) localSlider.value = newVal; };
-        s1Value.OnValueChanged += (oldVal, newVal) => { if(currentStationIndex == 1) localSlider.value = newVal; };
-        s2Value.OnValueChanged += (oldVal, newVal) => { if(currentStationIndex == 2) localSlider.value = newVal; };
-        s3Value.OnValueChanged += (oldVal, newVal) => { if(currentStationIndex == 3) localSlider.value = newVal; };
+        // Khởi tạo các thành phần UI Toolkit khi script vừa spawn
+        if (uiDocument != null)
+        {
+            var root = uiDocument.rootVisualElement;
+            mainContainer = root.Q<VisualElement>("MainContainer");
+            progressFill = root.Q<VisualElement>("ProgressFill");
+            keyA = root.Q<VisualElement>("KeyA");
+            keyD = root.Q<VisualElement>("KeyD");
+
+            // --- THÊM 2 DÒNG NÀY ĐỂ ÉP TÀNG HÌNH LÚC MỚI BẬT GAME ---
+            if (mainContainer != null)
+            {
+                mainContainer.AddToClassList("hidden");
+                mainContainer.style.display = DisplayStyle.None;
+            }
+        }
+
+        // Cập nhật Slider (thanh Width của UI Toolkit) khi giá trị trên Server thay đổi
+        s0Value.OnValueChanged += (oldVal, newVal) => { if(currentStationIndex == 0 && progressFill != null) progressFill.style.width = new Length(newVal, LengthUnit.Percent); };
+        s1Value.OnValueChanged += (oldVal, newVal) => { if(currentStationIndex == 1 && progressFill != null) progressFill.style.width = new Length(newVal, LengthUnit.Percent); };
+        s2Value.OnValueChanged += (oldVal, newVal) => { if(currentStationIndex == 2 && progressFill != null) progressFill.style.width = new Length(newVal, LengthUnit.Percent); };
+        s3Value.OnValueChanged += (oldVal, newVal) => { if(currentStationIndex == 3 && progressFill != null) progressFill.style.width = new Length(newVal, LengthUnit.Percent); };
     }
 
     void Update()
@@ -161,8 +179,35 @@ public class OptimizedNetworkMiniGame : NetworkBehaviour
     {
         currentStationIndex = index;
         isPlaying = isOpening;
-        if (IsClient && miniGamePlayZone != null) miniGamePlayZone.SetActive(isOpening);
+        
+        if (IsClient && mainContainer != null) 
+        {
+            if (isOpening) 
+            {
+                // Mở UI
+                mainContainer.RemoveFromClassList("hidden");
+                mainContainer.style.display = DisplayStyle.Flex;
+                
+                // Đồng bộ thanh bar ngay lập tức khi vừa bật lên
+                float initialValue = GetStationValue(index);
+                progressFill.style.width = new Length(initialValue, LengthUnit.Percent);
+            }
+            else 
+            {
+                // Tắt UI (Có hiệu ứng mờ dần trong 0.3s)
+                mainContainer.AddToClassList("hidden");
+                Invoke(nameof(HideUIDelay), 0.3f); 
+            }
+        }
     }
+
+    private void HideUIDelay()
+    {
+        if (mainContainer != null && mainContainer.ClassListContains("hidden"))
+            mainContainer.style.display = DisplayStyle.None;
+    }
+
+    private float GetStationValue(int index) => index switch { 0 => s0Value.Value, 1 => s1Value.Value, 2 => s2Value.Value, 3 => s3Value.Value, _ => 0f };
 
     private void HandleQTEInput()
     {
@@ -172,15 +217,21 @@ public class OptimizedNetworkMiniGame : NetworkBehaviour
 
     private void ProcessInput(bool isA)
     {
-        PlaySuccessTween(isA ? imgA : imgD);
+        PlaySuccessVisual(isA ? keyA : keyD);
         UpdateSliderServerRpc(currentStationIndex, pushAmount);
     }
 
-    private void PlaySuccessTween(Image targetImg)
+    private void PlaySuccessVisual(VisualElement targetKey)
     {
-        if (targetImg == null) return;
-        targetImg.transform.DOKill();
-        targetImg.transform.DOScale(1.2f, 0.1f).OnComplete(() => targetImg.transform.DOScale(1f, 0.1f));
+        if (targetKey == null) return;
+        
+        // Thêm class 'pressed' để trigger hiệu ứng CSS (đổi màu, phóng to)
+        targetKey.AddToClassList("pressed");
+        
+        // Xóa class 'pressed' sau 100 milliseconds để nó nảy về kích thước cũ
+        targetKey.schedule.Execute(() => {
+            targetKey.RemoveFromClassList("pressed");
+        }).StartingIn(100); 
     }
 
     public void SetStationCrystalStatus(int index, bool hasCrystal) 

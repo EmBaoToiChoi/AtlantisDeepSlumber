@@ -13,6 +13,12 @@ public class InteractBox : NetworkBehaviour
     public NetworkVariable<bool> isCrystalLocked = new NetworkVariable<bool>(false);
     
     private PlayerInteraction localPlayerInteraction;
+    
+    // --- KHAI BÁO 4 BIẾN ĐỂ TÓM 4 SCRIPT ---
+    private MonoBehaviour playerScript1;
+    private MonoBehaviour playerScript2;
+    private MonoBehaviour playerScript3;
+    private MonoBehaviour playerScript4;
 
     void Update()
     {
@@ -20,12 +26,13 @@ public class InteractBox : NetworkBehaviour
 
         if (isPlayerInside && localPlayerInteraction != null)
         {
-            if (localPlayerInteraction.IsOwner && Keyboard.current != null && Keyboard.current.gKey.wasPressedThisFrame)
+            if (localPlayerInteraction.IsOwner && Keyboard.current != null && Keyboard.current.fKey.wasPressedThisFrame)
             {
-                if (localPlayerInteraction.isCarryingCore.Value && localPlayerInteraction.currentHeldCore != null)
+                bool isHoldingCore = localPlayerInteraction.isCarryingCore.Value && localPlayerInteraction.currentHeldCore != null;
+
+                if (isHoldingCore && (stationIndex == 2 || stationIndex == 3) && !isCrystalLocked.Value)
                 {
-                    if (!isCrystalLocked.Value && (stationIndex == 2 || stationIndex == 3))
-                        SnapAndLockCrystalServerRpc(stationIndex);
+                    SnapAndLockCrystalServerRpc(stationIndex);
                 }
                 else if (gameManager != null)
                 {
@@ -38,46 +45,30 @@ public class InteractBox : NetworkBehaviour
 
     private void OpenStation()
     {
-        if (gameManager == null) 
-        {
-            Debug.LogError($"[InteractBox] GameManager chưa được gán tại station {stationIndex}!");
-            return;
-        }
+        if (gameManager == null) return;
         isUsingStation = true;
-        RequestStationAccessServerRpc(stationIndex);
         gameManager.ToggleMiniGame(stationIndex, true);
-        
-        // ĐÃ SỬA: Khóa chân LeoPlayer để bấm A/D không bị trượt ra ngoài
-        var leoPlayer = localPlayerInteraction.GetComponent<LeoPlayer>();
-        if (leoPlayer != null) leoPlayer.SetMovementLock(true);
+
+        // KHOÁ GIÒ TẤT CẢ NHỮNG SCRIPT NÀO TỒN TẠI
+        if (playerScript1 != null) playerScript1.enabled = false;
+        if (playerScript2 != null) playerScript2.enabled = false;
+        if (playerScript3 != null) playerScript3.enabled = false;
+        if (playerScript4 != null) playerScript4.enabled = false;
     }
 
     private void ExitStation()
     {
+        if (gameManager == null) return;
         isUsingStation = false;
-        RequestStationReleaseServerRpc(stationIndex);
         gameManager.ToggleMiniGame(stationIndex, false);
-        
-        // ĐÃ SỬA: Mở khóa chân cho LeoPlayer
-        if (localPlayerInteraction != null)
-        {
-            var leoPlayer = localPlayerInteraction.GetComponent<LeoPlayer>();
-            if (leoPlayer != null) leoPlayer.SetMovementLock(false);
-        }
-    }
 
-    [ServerRpc(RequireOwnership = false)]
-    private void RequestStationAccessServerRpc(int index, ServerRpcParams rpcParams = default)
-    {
-        gameManager.HandleStationAccess(index, rpcParams.Receive.SenderClientId);
+        // MỞ KHOÁ LẠI CHO CHÚNG NÓ HOẠT ĐỘNG
+        if (playerScript1 != null) playerScript1.enabled = true;
+        if (playerScript2 != null) playerScript2.enabled = true;
+        if (playerScript3 != null) playerScript3.enabled = true;
+        if (playerScript4 != null) playerScript4.enabled = true;
     }
-
-    [ServerRpc(RequireOwnership = false)]
-    private void RequestStationReleaseServerRpc(int index, ServerRpcParams rpcParams = default)
-    {
-        gameManager.HandleStationRelease(index, rpcParams.Receive.SenderClientId);
-    }
-
+    
     [ServerRpc(RequireOwnership = false)]
     private void SnapAndLockCrystalServerRpc(int index, ServerRpcParams rpcParams = default)
     {
@@ -89,12 +80,14 @@ public class InteractBox : NetworkBehaviour
             if (playerInt != null && playerInt.currentHeldCore != null)
             {
                 var core = playerInt.currentHeldCore;
-                
                 playerInt.ForceDropFromStation(); 
-                
                 core.LockToStation();
-                core.transform.position = crystalSnapPoint.position;
-                core.transform.rotation = crystalSnapPoint.rotation;
+                
+                var snapFollow = core.GetComponent<CrystalSnapFollow>();
+                if (snapFollow != null)
+                {
+                    snapFollow.targetSnapPoint = crystalSnapPoint;
+                }
                 
                 isCrystalLocked.Value = true;
                 gameManager.SetStationCrystalStatus(index, true); 
@@ -108,6 +101,13 @@ public class InteractBox : NetworkBehaviour
         {
             isPlayerInside = true;
             localPlayerInteraction = pInt;
+            pInt.currentInteractBox = this; 
+
+            // --- ĐIỀN TÊN 4 SCRIPT CỦA MÀY VÀO TRONG DẤU <> ---
+            playerScript1 = other.GetComponent<LeoPlayer>(); 
+            //playerScript2 = other.GetComponent<Ten_Script_So_2>(); 
+            //playerScript3 = other.GetComponent<Ten_Script_So_3>(); 
+            //playerScript4 = other.GetComponent<Ten_Script_So_4>(); 
         }
     }
 
@@ -117,7 +117,15 @@ public class InteractBox : NetworkBehaviour
         {
             if (isUsingStation) ExitStation();
             isPlayerInside = false;
+            
+            if (pInt.currentInteractBox == this) pInt.currentInteractBox = null;
             localPlayerInteraction = null;
+
+            // XÓA DỮ LIỆU ĐỂ GIẢI PHÓNG BỘ NHỚ
+            playerScript1 = null;
+            playerScript2 = null;
+            playerScript3 = null;
+            playerScript4 = null;
         }
     }
 }
