@@ -84,6 +84,12 @@ public class PlayerInteraction : NetworkBehaviour
             core.PerformPickup(rpcParams.Receive.SenderClientId);
             
             isCarryingCore.Value = true;
+            
+            // --- DÒNG SỬA LỖI Ở ĐÂY NÈ ---
+            // Phải bắt Server (VPS) tự ghi nhớ cục ngọc, nếu không lúc Drop nó đéo biết vứt cái gì!
+            currentHeldCore = core; 
+            // ------------------------------
+
             AssignHeldCoreClientRpc(networkObjectId, rpcParams.Receive.SenderClientId);
         }
     }
