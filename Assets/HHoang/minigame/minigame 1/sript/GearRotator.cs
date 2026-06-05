@@ -58,16 +58,23 @@ public class GearRotator : NetworkBehaviour
     }
 
     // --- CÁC HÀM XỬ LÝ HIỆU ỨNG (Client tự thực thi khi currentState thay đổi) ---
+// --- CÁC HÀM XỬ LÝ HIỆU ỨNG (Client tự thực thi khi currentState thay đổi) ---
     private void TriggerOpenVisuals() 
     {
         transform.DOKill();
-        transform.DOLocalMove(originalPosition + openOffset, moveDuration).SetEase(Ease.InOutCubic);
+        // Thêm Delay 1s trước khi mở
+        DOVirtual.DelayedCall(1.0f, () => {
+            transform.DOLocalMove(originalPosition + openOffset, moveDuration).SetEase(Ease.InOutCubic);
+        });
     }
 
     private void TriggerCloseVisuals() 
     {
         transform.DOKill();
-        transform.DOLocalMove(originalPosition, moveDuration).SetEase(Ease.InOutCubic);
+        // Thêm Delay 1s trước khi đóng
+        DOVirtual.DelayedCall(1.0f, () => {
+            transform.DOLocalMove(originalPosition, moveDuration).SetEase(Ease.OutBack, 0.5f);
+        });
     }
 
     // --- CÁC HÀM ĐIỀU KHIỂN (Chỉ Server được phép gọi) ---
