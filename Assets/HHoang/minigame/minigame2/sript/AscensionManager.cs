@@ -6,13 +6,16 @@ using System.Collections.Generic;
 public class AscensionManager : NetworkBehaviour
 {
     [Header("Cấu hình Particle Dòng Chảy")]
-    public ParticleSystem[] flowParticles; // Kéo 4 cái Particle System vào đây
+    public ParticleSystem[] flowParticles; 
     public Material flowMaterial;    
     public Material redFlowMaterial; 
     
     [Header("Cấu hình Trụ")]
     public Transform[] pillarPositions = new Transform[4];
     public int[] pillarStates = new int[4]; 
+
+    [Header("Cấu hình Hiệu ứng Chiến thắng")]
+    public GameObject victoryEffectObject; // Kéo GameObject chứa hiệu ứng vào đây
 
     private List<CrystalCore> placedCrystals = new List<CrystalCore>();
     private Coroutine timerCoroutine;
@@ -23,8 +26,8 @@ public class AscensionManager : NetworkBehaviour
 
     void Start()
     {
-        // Tắt tất cả particle khi bắt đầu
         foreach (var ps in flowParticles) if (ps != null) ps.gameObject.SetActive(false);
+        if (victoryEffectObject != null) victoryEffectObject.SetActive(false);
     }
 
     void Update()
@@ -36,7 +39,6 @@ public class AscensionManager : NetworkBehaviour
     {
         if (!IsServer || stationIndex < 0 || stationIndex >= pillarPositions.Length) return;
 
-        // Khóa ngọc vào trụ
         crystal.LockToStation(); 
 
         var snapFollow = crystal.GetComponent<CrystalSnapFollow>();
@@ -76,10 +78,7 @@ public class AscensionManager : NetworkBehaviour
             timeLeft--;
         }
 
-        if (placedCrystals.Count < 4)
-        {
-            EjectAllCrystals();
-        }
+        if (placedCrystals.Count < 4) EjectAllCrystals();
         isTimerRunning = false;
     }
 
@@ -92,7 +91,6 @@ public class AscensionManager : NetworkBehaviour
             if (crystal != null)
             {
                 UpdateSnappedStateServerRpc(crystal.NetworkObject, false);
-                
                 var col = crystal.GetComponent<Collider>();
                 if (col != null) col.enabled = true;
 
@@ -102,6 +100,7 @@ public class AscensionManager : NetworkBehaviour
                     rb.isKinematic = false;
                     rb.useGravity = true;
                     rb.AddForce(new Vector3(Random.Range(-2f, 2f), 5f, Random.Range(-2f, 2f)), ForceMode.Impulse);
+                    rb.angularVelocity = new Vector3(Random.Range(-10f, 10f), Random.Range(-10f, 10f), Random.Range(-10f, 10f));
                 }
             }
         }
@@ -115,7 +114,6 @@ public class AscensionManager : NetworkBehaviour
             }
         }
 
-        // Tắt tất cả particle khi văng ngọc
         foreach (var ps in flowParticles) if (ps != null) { ps.Stop(); ps.gameObject.SetActive(false); }
 
         placedCrystals.Clear();
@@ -137,36 +135,37 @@ public class AscensionManager : NetworkBehaviour
         {
             bool isCorrect = (pillarStates[i] == i);
             SetFlowColorClientRpc(i, isCorrect ? Color.green : Color.red);
-            
             if (!isCorrect) allCorrect = false;
         }
 
-        if (allCorrect) Debug.Log("Kích hoạt thành công!");
+        if (allCorrect) TriggerVictoryEffectsClientRpc();
         else StartCoroutine(DelayEject());
+    }
+
+    [ClientRpc]
+    private void TriggerVictoryEffectsClientRpc()
+    {
+        if (victoryEffectObject != null) victoryEffectObject.SetActive(true);
     }
 
     [ClientRpc]
     private void SetFlowColorClientRpc(int stationIndex, Color color)
     {
         if (stationIndex < 0 || stationIndex >= flowParticles.Length) return;
-        
         ParticleSystem ps = flowParticles[stationIndex];
         if (ps != null)
         {
             ps.gameObject.SetActive(true);
             var main = ps.main;
             main.startColor = color;
-            
-            var renderer = ps.GetComponent<ParticleSystemRenderer>();
-            renderer.material = (color == Color.red) ? redFlowMaterial : flowMaterial;
-            
+            ps.GetComponent<ParticleSystemRenderer>().material = (color == Color.red) ? redFlowMaterial : flowMaterial;
             if (!ps.isPlaying) ps.Play();
         }
     }
 
     IEnumerator DelayEject()
     {
-        yield return new WaitForSeconds(2.0f); 
+        yield return new WaitForSeconds(8.0f); 
         EjectAllCrystals();
     }
 }
