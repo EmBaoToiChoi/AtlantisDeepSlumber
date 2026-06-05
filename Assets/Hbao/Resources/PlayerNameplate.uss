@@ -19,17 +19,32 @@
     /* Nền tối kính mờ (dark glassmorphism) giúp tương phản mạnh với chữ trắng */
     background-color: rgba(10, 10, 12, 0.65);
     
-    /* Padding bo tròn dạng badge sang trọng */
-    padding: 4px 12px;
-    border-radius: 10px;
+    /* Padding bo tròn dạng badge sang trọng (Explicit properties for compatibility) */
+    padding-top: 4.0px;
+    padding-bottom: 4.0px;
+    padding-left: 12.0px;
+    padding-right: 12.0px;
+    
+    border-top-left-radius: 10.0px;
+    border-top-right-radius: 10.0px;
+    border-bottom-left-radius: 10.0px;
+    border-bottom-right-radius: 10.0px;
+    
     white-space: nowrap;
     
     /* Viền mỏng sáng nhẹ tạo hiệu ứng nổi khối */
-    border-width: 1px;
-    border-color: rgba(255, 255, 255, 0.15);
+    border-left-width: 1.0px;
+    border-right-width: 1.0px;
+    border-top-width: 1.0px;
+    border-bottom-width: 1.0px;
+    
+    border-left-color: rgba(255, 255, 255, 0.15);
+    border-right-color: rgba(255, 255, 255, 0.15);
+    border-top-color: rgba(255, 255, 255, 0.15);
+    border-bottom-color: rgba(255, 255, 255, 0.15);
     
     /* Text outline đen sắc nét để chữ cực dễ đọc trên mọi địa hình sáng/tối */
-    -unity-text-outline-width: 1px;
+    -unity-text-outline-width: 1.0px;
     -unity-text-outline-color: rgb(0, 0, 0);
     
     /* Text shadow mềm giống tên enemy */

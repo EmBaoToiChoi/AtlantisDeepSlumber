@@ -553,7 +553,8 @@ MonoBehaviour:
   interactableLayer:
     serializedVersion: 2
     m_Bits: 256
-  currentStation: {fileID: 0}
+  currentInteractBox: {fileID: 0}
+  currentPillarStation: {fileID: 0}
   currentHeldCore: {fileID: 0}
   isCarryingCore:
     UpdateTraits:
@@ -569,7 +570,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 3856224902260807784}
-  - component: {fileID: 6473538198596790642}
   - component: {fileID: 7663229243880690014}
   m_Layer: 3
   m_Name: 'Nameplate '
@@ -593,25 +593,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 8769292790703618225}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &6473538198596790642
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7337949084535923267}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 19102, guid: 0000000000000000e000000000000000, type: 0}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  m_PanelSettings: {fileID: 11400000, guid: d7d1cb076d22730418b3f47cdb14736c, type: 2}
-  m_ParentUI: {fileID: 0}
-  sourceAsset: {fileID: 9197481963319205126, guid: 94ac5fa3927906d4e9336a0312b53a02, type: 3}
-  m_SortingOrder: 0
-  m_WorldSpaceSizeMode: 1
-  m_WorldSpaceWidth: 1920
-  m_WorldSpaceHeight: 1080
 --- !u!114 &7663229243880690014
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -624,7 +605,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 681f98ebabdd7ec41a39ec2dfb8e1de1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  heightOffset: 3.5
+  heightOffset: 4.5
 --- !u!1001 &3913358011793331165
 PrefabInstance:
   m_ObjectHideFlags: 0

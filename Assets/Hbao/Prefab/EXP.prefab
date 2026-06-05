@@ -20,7 +20,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &436532391191044354
 Transform:
   m_ObjectHideFlags: 0
@@ -131,6 +131,9 @@ MonoBehaviour:
   attractionRadius: 6
   moveSpeed: 2
   acceleration: 8
+  rotationSpeed: 60
+  bobSpeed: 2
+  bobRange: 0.12
   networkDropGroupId:
     UpdateTraits:
       MinSecondsBetweenUpdates: 0
@@ -203,6 +206,10 @@ MonoBehaviour:
         byte0059: 0
         byte0060: 0
         byte0061: 0
+  networkTargetPlayer:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
 --- !u!65 &2207417898952333432
 BoxCollider:
   m_ObjectHideFlags: 0
