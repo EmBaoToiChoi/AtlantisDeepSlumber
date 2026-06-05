@@ -383,14 +383,32 @@ public class RakanNPC : NetworkBehaviour
     // ĐỒNG BỘ MẠNG CO-OP DIALOGUE (SERVER RPC & CLIENT RPC)
     // ═══════════════════════════════════════════════════════
 
+    private ulong currentTalkingClientId;
+    private bool isNPCBusy = false;
+
     [ServerRpc(RequireOwnership = false)]
-    public void RequestStartDialogueServerRpc(int startIndex)
+    public void RequestStartDialogueServerRpc(int startIndex, ServerRpcParams rpcParams = default)
     {
-        StartDialogueClientRpc(startIndex);
+        if (isNPCBusy)
+        {
+            Debug.Log("[RakanNPC] NPC đang bận nói chuyện với người chơi khác!");
+            return;
+        }
+
+        isNPCBusy = true;
+        currentTalkingClientId = rpcParams.Receive.SenderClientId;
+        ClientRpcParams clientRpcParams = new ClientRpcParams
+        {
+            Send = new ClientRpcSendParams
+            {
+                TargetClientIds = new ulong[] { currentTalkingClientId }
+            }
+        };
+        StartDialogueClientRpc(startIndex, clientRpcParams);
     }
 
     [ClientRpc]
-    private void StartDialogueClientRpc(int startIndex)
+    private void StartDialogueClientRpc(int startIndex, ClientRpcParams clientRpcParams = default)
     {
         IPlayerHUDTarget local = FindLocalPlayerInScene();
         if (RakanDialogueController.Instance != null)
@@ -401,13 +419,22 @@ public class RakanNPC : NetworkBehaviour
     }
 
     [ServerRpc(RequireOwnership = false)]
-    public void RequestNextLineServerRpc()
+    public void RequestNextLineServerRpc(ServerRpcParams rpcParams = default)
     {
-        NextLineClientRpc();
+        if (rpcParams.Receive.SenderClientId != currentTalkingClientId) return;
+
+        ClientRpcParams clientRpcParams = new ClientRpcParams
+        {
+            Send = new ClientRpcSendParams
+            {
+                TargetClientIds = new ulong[] { currentTalkingClientId }
+            }
+        };
+        NextLineClientRpc(clientRpcParams);
     }
 
     [ClientRpc]
-    private void NextLineClientRpc()
+    private void NextLineClientRpc(ClientRpcParams clientRpcParams = default)
     {
         if (RakanDialogueController.Instance != null)
         {
@@ -416,13 +443,22 @@ public class RakanNPC : NetworkBehaviour
     }
 
     [ServerRpc(RequireOwnership = false)]
-    public void RequestSelectChoiceServerRpc(int nextStepId)
+    public void RequestSelectChoiceServerRpc(int nextStepId, ServerRpcParams rpcParams = default)
     {
-        SelectChoiceClientRpc(nextStepId);
+        if (rpcParams.Receive.SenderClientId != currentTalkingClientId) return;
+
+        ClientRpcParams clientRpcParams = new ClientRpcParams
+        {
+            Send = new ClientRpcSendParams
+            {
+                TargetClientIds = new ulong[] { currentTalkingClientId }
+            }
+        };
+        SelectChoiceClientRpc(nextStepId, clientRpcParams);
     }
 
     [ClientRpc]
-    private void SelectChoiceClientRpc(int nextStepId)
+    private void SelectChoiceClientRpc(int nextStepId, ClientRpcParams clientRpcParams = default)
     {
         if (RakanDialogueController.Instance != null)
         {
@@ -431,13 +467,23 @@ public class RakanNPC : NetworkBehaviour
     }
 
     [ServerRpc(RequireOwnership = false)]
-    public void RequestEndDialogueServerRpc()
+    public void RequestEndDialogueServerRpc(ServerRpcParams rpcParams = default)
     {
-        EndDialogueClientRpc();
+        if (rpcParams.Receive.SenderClientId != currentTalkingClientId) return;
+
+        isNPCBusy = false;
+        ClientRpcParams clientRpcParams = new ClientRpcParams
+        {
+            Send = new ClientRpcSendParams
+            {
+                TargetClientIds = new ulong[] { currentTalkingClientId }
+            }
+        };
+        EndDialogueClientRpc(clientRpcParams);
     }
 
     [ClientRpc]
-    private void EndDialogueClientRpc()
+    private void EndDialogueClientRpc(ClientRpcParams clientRpcParams = default)
     {
         if (RakanDialogueController.Instance != null)
         {

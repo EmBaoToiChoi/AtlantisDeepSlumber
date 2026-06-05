@@ -643,8 +643,22 @@ public class Enemy1_DapBua : NetworkBehaviour
         bool na = IsNetworkActive;
         foreach (var p in pos)
         {
-            if (isStandaloneMode || !na) { var g = Instantiate(expGemPrefab, p, Quaternion.identity); var gem = g.GetComponent<ExperienceGem>(); if (gem != null) { gem.expAmount = expDropAmount; gem.DropGroupId = uid; } }
-            else if (IsServer) { var g = Instantiate(expGemPrefab, p, Quaternion.identity); var gem = g.GetComponent<ExperienceGem>(); if (gem != null) { gem.expAmount = expDropAmount; gem.DropGroupId = uid; } var no = g.GetComponent<NetworkObject>(); if (no != null) no.Spawn(); }
+            if (isStandaloneMode || !na) 
+            { 
+                var g = Instantiate(expGemPrefab, p, Quaternion.identity); 
+                g.SetActive(true); 
+                var gem = g.GetComponent<ExperienceGem>(); 
+                if (gem != null) { gem.expAmount = expDropAmount; gem.DropGroupId = uid; } 
+            }
+            else if (IsServer) 
+            { 
+                var g = Instantiate(expGemPrefab, p, Quaternion.identity); 
+                g.SetActive(true); 
+                var gem = g.GetComponent<ExperienceGem>(); 
+                if (gem != null) { gem.expAmount = expDropAmount; gem.DropGroupId = uid; } 
+                var no = g.GetComponent<NetworkObject>(); 
+                if (no != null) no.Spawn(); 
+            }
         }
     }
 

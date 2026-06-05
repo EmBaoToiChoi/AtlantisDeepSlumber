@@ -71,11 +71,15 @@ public class ExperienceGem : NetworkBehaviour
 
     private void Update()
     {
-        // Hiệu ứng xoay tròn và nhấp nhô nhè nhẹ để vật phẩm rơi trông sinh động hơn
-        transform.Rotate(Vector3.up, rotationSpeed * Time.deltaTime, Space.World);
-        Vector3 currentPos = transform.position;
-        currentPos.y = startY + Mathf.Sin(Time.time * bobSpeed) * bobRange;
-        transform.position = currentPos;
+        // Hiệu ứng xoay tròn 3D để vật phẩm rơi trông sinh động và lấp lánh hơn
+        transform.Rotate(new Vector3(0.2f, 1.0f, 0.15f).normalized, rotationSpeed * Time.deltaTime, Space.Self);
+
+        if (!isAttracted)
+        {
+            Vector3 currentPos = transform.position;
+            currentPos.y = startY + Mathf.Sin(Time.time * bobSpeed) * bobRange;
+            transform.position = currentPos;
+        }
 
         bool isMultiplayer = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening && IsSpawned;
 

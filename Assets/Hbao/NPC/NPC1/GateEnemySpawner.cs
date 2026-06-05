@@ -89,25 +89,15 @@ public class GateEnemySpawner : NetworkBehaviour
                     {
                         // Chơi Offline: Sinh quái trực tiếp cục bộ
                         ExecuteLocalSpawn();
+                        if (triggerOnlyOnce)
+                        {
+                            Destroy(gameObject, 0.5f);
+                        }
                     }
                     else
                     {
                         // Chơi Mạng: Gửi yêu cầu lên Server để Server sinh quái đồng bộ cho cả phòng
                         RequestSpawnEnemiesServerRpc();
-                    }
-
-                    // Tự hủy trigger nếu chọn chỉ kích hoạt 1 lần
-                    if (triggerOnlyOnce)
-                    {
-                        // Trì hoãn 1 chút để các gói tin RPC kịp gửi đi trước khi hủy object
-                        if (IsServer)
-                        {
-                            GetComponent<NetworkObject>().Despawn(true);
-                        }
-                        else
-                        {
-                            Destroy(gameObject, 0.5f);
-                        }
                     }
                 }
                 else
@@ -125,6 +115,10 @@ public class GateEnemySpawner : NetworkBehaviour
     private void RequestSpawnEnemiesServerRpc()
     {
         ExecuteNetworkSpawn();
+        if (triggerOnlyOnce)
+        {
+            GetComponent<NetworkObject>().Despawn(true);
+        }
     }
 
     /// <summary>

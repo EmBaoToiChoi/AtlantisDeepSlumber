@@ -28,6 +28,7 @@ public interface IPlayerHUDTarget
     float Weapon2MaxDurability { get; }
     string[] InventorySlots { get; }
     void SavePlayerStateToDatabase();
+    void RepairWeaponFromHUD(int weaponSlotIndex);
     
     // Upgrades
     void UpgradeStatFromHUD(int statType);

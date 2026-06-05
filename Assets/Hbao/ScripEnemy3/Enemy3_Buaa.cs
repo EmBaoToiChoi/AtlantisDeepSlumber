@@ -393,7 +393,25 @@ public class Enemy3_Buaa : NetworkBehaviour
         string uid = System.Guid.NewGuid().ToString(); Transform sp = expDropPoint != null ? expDropPoint : transform; float d = 0.6f;
         Vector3[] pos = { sp.position + new Vector3(d,0.1f,d), sp.position + new Vector3(-d,0.1f,d), sp.position + new Vector3(d,0.1f,-d), sp.position + new Vector3(-d,0.1f,-d) };
         bool na = IsNetworkActive;
-        foreach (var p in pos) { if (isStandaloneMode || !na) { var g = Instantiate(expGemPrefab, p, Quaternion.identity); var gem = g.GetComponent<ExperienceGem>(); if (gem != null) { gem.expAmount = expDropAmount; gem.DropGroupId = uid; } } else if (IsServer) { var g = Instantiate(expGemPrefab, p, Quaternion.identity); var gem = g.GetComponent<ExperienceGem>(); if (gem != null) { gem.expAmount = expDropAmount; gem.DropGroupId = uid; } var no = g.GetComponent<NetworkObject>(); if (no != null) no.Spawn(); } }
+        foreach (var p in pos) 
+        { 
+            if (isStandaloneMode || !na) 
+            { 
+                var g = Instantiate(expGemPrefab, p, Quaternion.identity); 
+                g.SetActive(true); 
+                var gem = g.GetComponent<ExperienceGem>(); 
+                if (gem != null) { gem.expAmount = expDropAmount; gem.DropGroupId = uid; } 
+            } 
+            else if (IsServer) 
+            { 
+                var g = Instantiate(expGemPrefab, p, Quaternion.identity); 
+                g.SetActive(true); 
+                var gem = g.GetComponent<ExperienceGem>(); 
+                if (gem != null) { gem.expAmount = expDropAmount; gem.DropGroupId = uid; } 
+                var no = g.GetComponent<NetworkObject>(); 
+                if (no != null) no.Spawn(); 
+            } 
+        }
     }
 
     private void DropItems()
