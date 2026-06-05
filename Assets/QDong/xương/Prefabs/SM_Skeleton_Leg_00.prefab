@@ -66,6 +66,7 @@ GameObject:
   - component: {fileID: 986475117172195610}
   - component: {fileID: 2932128005098307021}
   - component: {fileID: 4299985309185936613}
+  - component: {fileID: 4250358526725307616}
   m_Layer: 0
   m_Name: SM_Skeleton_Leg_00
   m_TagString: Untagged
@@ -140,4 +141,26 @@ MeshFilter:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 3993751695563201330}
+  m_Mesh: {fileID: 4300000, guid: adcefbfd4006d734a81708d9dee1f2a2, type: 3}
+--- !u!64 &4250358526725307616
+MeshCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3993751695563201330}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 5
+  m_Convex: 0
+  m_CookingOptions: 30
   m_Mesh: {fileID: 4300000, guid: adcefbfd4006d734a81708d9dee1f2a2, type: 3}

@@ -28,7 +28,14 @@ public class PlayerHUDController : MonoBehaviour
     private static IPlayerHUDTarget localPlayerTarget;
     public static IPlayerHUDTarget LocalPlayerTarget
     {
-        get => localPlayerTarget;
+        get
+        {
+            if (localPlayerTarget != null && localPlayerTarget is UnityEngine.Object obj && obj == null)
+            {
+                localPlayerTarget = null;
+            }
+            return localPlayerTarget;
+        }
         set
         {
             localPlayerTarget = value;
@@ -1598,7 +1605,7 @@ public class PlayerHUDController : MonoBehaviour
             eventSystem = esObj.AddComponent<UnityEngine.EventSystems.EventSystem>();
 
             // Sử dụng StandaloneInputModule hoặc InputSystemUIInputModule tùy theo cấu hình hệ thống
-#if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
+#if ENABLE_INPUT_SYSTEM
             esObj.AddComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
 #else
             esObj.AddComponent<UnityEngine.EventSystems.StandaloneInputModule>();
@@ -1610,7 +1617,7 @@ public class PlayerHUDController : MonoBehaviour
             // CựC KỲ QUAN TRỌNG: Nếu đã có EventSystem trong scene nhưng đang dùng module cũ (StandaloneInputModule)
             // của hệ thống Input cũ, trong khi game đang chạy New Input System, ta cần nâng cấp nó lên InputSystemUIInputModule.
             // Nếu không, UI Toolkit (VisualElement) sẽ không thể nhận được sự kiện click chuột hay kéo thả từ người chơi!
-#if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
+#if ENABLE_INPUT_SYSTEM
             var legacyModule = eventSystem.GetComponent<UnityEngine.EventSystems.StandaloneInputModule>();
             if (legacyModule != null)
             {

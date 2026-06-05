@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 836433877273730700}
   - component: {fileID: 1882577315748503934}
   - component: {fileID: 8090843519947585387}
+  - component: {fileID: 7304327730105180990}
   m_Layer: 0
   m_Name: SM_Skeleton_Arm_01
   m_TagString: Untagged
@@ -85,6 +86,28 @@ MeshFilter:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 568328316642068730}
+  m_Mesh: {fileID: 4300000, guid: 03235c7ad4c7b5a40b90354d51a02081, type: 3}
+--- !u!64 &7304327730105180990
+MeshCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 568328316642068730}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 5
+  m_Convex: 0
+  m_CookingOptions: 30
   m_Mesh: {fileID: 4300000, guid: 03235c7ad4c7b5a40b90354d51a02081, type: 3}
 --- !u!1 &8035640180933968336
 GameObject:

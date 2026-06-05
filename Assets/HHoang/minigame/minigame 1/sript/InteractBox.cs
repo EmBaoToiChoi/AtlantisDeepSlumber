@@ -105,7 +105,7 @@ public class InteractBox : NetworkBehaviour
 
             // --- ĐIỀN TÊN 4 SCRIPT CỦA MÀY VÀO TRONG DẤU <> ---
             playerScript1 = other.GetComponent<LeoPlayer>(); 
-            //playerScript2 = other.GetComponent<Ten_Script_So_2>(); 
+            playerScript2 = other.GetComponent<ElenaPlayer>(); 
             //playerScript3 = other.GetComponent<Ten_Script_So_3>(); 
             //playerScript4 = other.GetComponent<Ten_Script_So_4>(); 
         }

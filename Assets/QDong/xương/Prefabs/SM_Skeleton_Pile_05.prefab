@@ -66,6 +66,7 @@ GameObject:
   - component: {fileID: 5758906682552967486}
   - component: {fileID: 332439339590932126}
   - component: {fileID: 8876489182847445291}
+  - component: {fileID: 1452490386130027652}
   m_Layer: 0
   m_Name: SM_Skeleton_Pile_05
   m_TagString: Untagged
@@ -141,4 +142,26 @@ MeshFilter:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 4934975556822523739}
+  m_Mesh: {fileID: 4300000, guid: a51a62f8bb624c74daaffbfa53af5c7c, type: 3}
+--- !u!64 &1452490386130027652
+MeshCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4934975556822523739}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 5
+  m_Convex: 0
+  m_CookingOptions: 30
   m_Mesh: {fileID: 4300000, guid: a51a62f8bb624c74daaffbfa53af5c7c, type: 3}

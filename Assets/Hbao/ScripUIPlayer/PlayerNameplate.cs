@@ -75,6 +75,14 @@ public class PlayerNameplate : MonoBehaviour
     {
         if (playerTarget == null || container == null || nameLabel == null) return;
 
+        // Bổ sung kiểm tra an toàn: Nếu là chính mình thì ẩn nameplate và tắt Update đi
+        if (playerTarget.IsOwner)
+        {
+            container.style.display = DisplayStyle.None;
+            enabled = false;
+            return;
+        }
+
         // Cập nhật tên hiển thị
         nameLabel.text = playerTarget.DisplayName;
 
