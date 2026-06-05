@@ -186,6 +186,14 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 7275124073867176286}
     m_Modifications:
+    - target: {fileID: 343360673054245364, guid: 34a19678c8c02b9479c00748433d8a97, type: 3}
+      propertyPath: m_Convex
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 354584022173762729, guid: 34a19678c8c02b9479c00748433d8a97, type: 3}
+      propertyPath: m_Convex
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 1947248821309465401, guid: 34a19678c8c02b9479c00748433d8a97, type: 3}
       propertyPath: m_LocalPosition.x
       value: 31.000912
@@ -226,9 +234,25 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 4040006654644425047, guid: 34a19678c8c02b9479c00748433d8a97, type: 3}
+      propertyPath: m_Convex
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6843152581760490063, guid: 34a19678c8c02b9479c00748433d8a97, type: 3}
+      propertyPath: m_Convex
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7669919533505653075, guid: 34a19678c8c02b9479c00748433d8a97, type: 3}
+      propertyPath: m_Convex
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 8837331921004289718, guid: 34a19678c8c02b9479c00748433d8a97, type: 3}
       propertyPath: m_Name
       value: Prefab_interior_segment_high_02
+      objectReference: {fileID: 0}
+    - target: {fileID: 8988423825808541154, guid: 34a19678c8c02b9479c00748433d8a97, type: 3}
+      propertyPath: m_Convex
+      value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
