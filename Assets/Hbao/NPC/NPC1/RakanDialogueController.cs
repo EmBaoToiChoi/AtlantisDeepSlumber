@@ -624,18 +624,27 @@ public class RakanDialogueController : MonoBehaviour
 
         if (nextStep == -1)
         {
-            if (currentDialogueStep == 0)
+            bool wasStoryStep = (currentDialogueStep == 0);
+            if (wasStoryStep)
             {
                 HasFinishedStoryOnce = true;
                 PlayerPrefs.SetInt("RakanDialogueFinished", 1);
                 PlayerPrefs.Save();
                 Debug.Log("[RakanDialogueController] Đã hoàn thành câu chuyện Rakan. Sẵn sàng kích hoạt Spawner cửa!");
             }
-            if (currentNPC != null)
+
+            if (activePlayer != null && !activePlayer.isStandaloneMode && currentNPC != null)
             {
-                currentNPC.CheckAndEnableGateSpawner();
+                currentNPC.RequestEndDialogueServerRpc(wasStoryStep);
             }
-            EndDialogue();
+            else
+            {
+                if (currentNPC != null)
+                {
+                    currentNPC.CheckAndEnableGateSpawner();
+                }
+                EndDialogue();
+            }
         }
         else
         {

@@ -56,7 +56,7 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     [Header("Upgrade Sync Variables")]
     public NetworkVariable<int> upgradePoints = new NetworkVariable<int>(
-        5,
+        0,
         NetworkVariableReadPermission.Everyone,
         NetworkVariableWritePermission.Server
     );
@@ -85,7 +85,7 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
     public string[] inventorySlots = new string[10] { "", "", "", "", "", "", "", "", "", "" };
     
     // Biến lưu nâng cấp cho chế độ chơi đơn (Standalone)
-    private int localUpgradePoints = 5;
+    private int localUpgradePoints = 0;
     private int localHpLevel = 0;
     private int localMpLevel = 0;
     private int localCooldownLevel = 0;
@@ -370,9 +370,9 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
         isStandaloneMode = false;
 
         var rb = GetComponent<Rigidbody>();
-        if (rb != null && !IsOwner)
+        if (rb != null)
         {
-            rb.isKinematic = true;
+            rb.isKinematic = !IsOwner;
         }
 
         if (!IsOwner)
@@ -1863,14 +1863,14 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
             else
             {
                 Debug.LogWarning("[DB] Không có dữ liệu cũ hoặc lỗi kết nối. Đồng bộ dữ liệu ban đầu.");
-                SyncPlayerStateServerRpc(maxHealth, 1, true, false, 5, 0, 0, 0, 0, 0, 0f);
+                SyncPlayerStateServerRpc(maxHealth, 1, true, false, 0, 0, 0, 0, 0, 0, 0f);
                 SavePlayerStateToDatabase();
             }
         }
         catch (System.Exception ex)
         {
             Debug.LogError($"[DB] Lỗi khi kết nối API tải dữ liệu MongoDB: {ex.Message}");
-            SyncPlayerStateServerRpc(maxHealth, 1, true, false, 5, 0, 0, 0, 0, 0, 0f);
+            SyncPlayerStateServerRpc(maxHealth, 1, true, false, 0, 0, 0, 0, 0, 0, 0f);
         }
     }
 
