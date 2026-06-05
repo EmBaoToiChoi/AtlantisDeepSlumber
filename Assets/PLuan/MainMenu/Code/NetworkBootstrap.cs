@@ -57,11 +57,11 @@ public class NetworkBootstrap : MonoBehaviour
         // SỬ DỤNG NETWORK SCENE MANAGER ĐỂ ĐỒNG BỘ CẢNH CHUẨN
         if (NetworkManager.Singleton.SceneManager != null)
         {
-            NetworkManager.Singleton.SceneManager.LoadScene("Waiting hall", UnityEngine.SceneManagement.LoadSceneMode.Single);
+            NetworkManager.Singleton.SceneManager.LoadScene("Map", UnityEngine.SceneManagement.LoadSceneMode.Single);
         }
         else
         {
-            UnityEngine.SceneManagement.SceneManager.LoadScene("Waiting hall");
+            UnityEngine.SceneManagement.SceneManager.LoadScene("Map");
         }
     }
 
@@ -78,17 +78,17 @@ public class NetworkBootstrap : MonoBehaviour
         
         if (NetworkManager.Singleton != null && NetworkManager.Singleton.ConnectedClientsList.Count == 0)
         {
-            Debug.Log("[SERVER] Không còn người chơi nào! Đang tự động reset VPS về cảnh Sảnh Chờ 'Waiting hall'...");
+            Debug.Log("[SERVER] Không còn người chơi nào! Đang tự động reset VPS về cảnh 'Map'...");
             
             // Xóa sạch dữ liệu chờ và đưa về mặc định
             PendingPlayerNames.Clear();
             ServerRoomName = "Atlantis Lobby";
             ServerRoomId = "000000";
 
-            // Đưa VPS quay về cảnh Waiting Room đón lượt chơi mới
+            // Đưa VPS quay về cảnh Map đón lượt chơi mới
             if (NetworkManager.Singleton.SceneManager != null)
             {
-                NetworkManager.Singleton.SceneManager.LoadScene("Waiting hall", UnityEngine.SceneManagement.LoadSceneMode.Single);
+                NetworkManager.Singleton.SceneManager.LoadScene("Map", UnityEngine.SceneManagement.LoadSceneMode.Single);
             }
         }
     }
