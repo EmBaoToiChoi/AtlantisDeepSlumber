@@ -124,24 +124,31 @@ public class AscensionManager : NetworkBehaviour
 
     void CheckWinCondition()
     {
-        if (placedCrystals.Count < 4) return;
+        if (placedCrystals.Count < 4) return; // Chưa đủ 4 viên thì đợi tiếp
+
+        // Dừng timer khi đã đủ 4 viên để kiểm tra kết quả
+        if (timerCoroutine != null) StopCoroutine(timerCoroutine);
+        isTimerRunning = false;
 
         bool allCorrect = true;
         for (int i = 0; i < pillarPositions.Length; i++)
         {
             bool isCorrect = (pillarStates[i] == i);
+            // Gửi lệnh màu sắc cho toàn bộ Client
             SetFlowColorClientRpc(i, isCorrect ? Color.green : Color.red, true);
+            
             if (!isCorrect) allCorrect = false;
         }
 
         if (allCorrect)
         {
-            if (timerCoroutine != null) StopCoroutine(timerCoroutine);
-            isTimerRunning = false;
+            Debug.Log("Kích hoạt thành công!");
+            // Gọi hàm mở cổng hoặc hiệu ứng chiến thắng tại đây
         }
         else
         {
-            StartCoroutine(DelayEject());
+            Debug.Log("Sai vị trí, văng ngọc!");
+            StartCoroutine(DelayEject()); // Trễ 2s để người chơi kịp thấy màu đỏ
         }
     }
 
