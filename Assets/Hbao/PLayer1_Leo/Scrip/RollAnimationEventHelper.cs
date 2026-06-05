@@ -35,6 +35,19 @@ public class RollAnimationEventHelper : MonoBehaviour
     // ------------------------------------------------------------------
     
     /// <summary>
+    /// Kích hoạt hiệu ứng particle chém kiếm từ Animation Event.
+    /// comboStepIndex: 1 = Slash1, 2 = Slash2, 3 = Slash3
+    /// </summary>
+    public void TriggerSlashParticle(int comboStepIndex)
+    {
+        EnsurePlayerReference();
+        if (player != null)
+        {
+            player.TriggerSlashParticle(comboStepIndex);
+        }
+    }
+
+    /// <summary>
     /// Event receiver for end of roll animation.
     /// </summary>
     public void OnRollEnd()
@@ -269,5 +282,97 @@ public class RollAnimationEventHelper : MonoBehaviour
     {
         EnsurePlayerReference();
         if (player != null) player.OnSheatheLeftEnd();
+    }
+
+    // ------------------------------------------------------------------
+    //  Punch End Events - Gọi ở FRAME CUỐI của animation đấm
+    // ------------------------------------------------------------------
+
+    /// <summary>
+    /// Gọi ở frame CUỐI animation Punch1/Punch2/Punch3.
+    /// Tắt tất cả hitbox tay và signal kết thúc nhịp đấm.
+    /// </summary>
+    public void OnPunchEnd()
+    {
+        EnsurePlayerReference();
+        if (player != null)
+        {
+            player.OnPunchEnd();
+            Debug.Log("[RollAnimationEventHelper] OnPunchEnd forwarded.");
+        }
+    }
+
+    // ------------------------------------------------------------------
+    //  Slash End Events - Gọi ở FRAME CUỐI của animation chém
+    // ------------------------------------------------------------------
+
+    /// <summary>
+    /// Gọi ở frame CUỐI của animation Slash1/Slash2/Slash3.
+    /// Tắt tất cả hitbox kiếm.
+    /// (OnSlashEnd() đã có sẵn bên trên)
+    /// </summary>
+
+    // ------------------------------------------------------------------
+    //  General Attack End - Dùng chung cho cả đấm lẫn chém
+    // ------------------------------------------------------------------
+
+    /// <summary>
+    /// Gọi ở frame CUỐI của bất kỳ animation tấn công nào.
+    /// Tắt TẤT CẢ hitbox (tay + kiếm).
+    /// </summary>
+    public void OnAttackEnd()
+    {
+        EnsurePlayerReference();
+        if (player != null)
+        {
+            player.OnAttackEnd();
+            Debug.Log("[RollAnimationEventHelper] OnAttackEnd forwarded.");
+        }
+    }
+
+    // ------------------------------------------------------------------
+    //  Weapon Hitbox Aliases (cả 2 kiếm cùng lúc)
+    // ------------------------------------------------------------------
+
+    /// <summary>Bật hitbox CẢ 2 kiếm - dùng cho Slash bình thường.</summary>
+    public void EnableBothWeaponHitboxes()
+    {
+        EnsurePlayerReference();
+        if (player != null) player.EnableBothWeaponHitboxes();
+    }
+
+    /// <summary>Tắt hitbox CẢ 2 kiếm.</summary>
+    public void DisableBothWeaponHitboxes()
+    {
+        EnsurePlayerReference();
+        if (player != null) player.DisableBothWeaponHitboxes();
+    }
+
+    /// <summary>Bật hitbox kiếm trái - dùng khi chỉ chém bằng tay trái.</summary>
+    public void EnableLeftWeaponHitbox()
+    {
+        EnsurePlayerReference();
+        if (player != null) player.EnableLeftWeaponHitbox();
+    }
+
+    /// <summary>Tắt hitbox kiếm trái.</summary>
+    public void DisableLeftWeaponHitbox()
+    {
+        EnsurePlayerReference();
+        if (player != null) player.DisableLeftWeaponHitbox();
+    }
+
+    /// <summary>Bật hitbox kiếm phải - dùng khi chỉ chém bằng tay phải.</summary>
+    public void EnableRightWeaponHitbox()
+    {
+        EnsurePlayerReference();
+        if (player != null) player.EnableRightWeaponHitbox();
+    }
+
+    /// <summary>Tắt hitbox kiếm phải.</summary>
+    public void DisableRightWeaponHitbox()
+    {
+        EnsurePlayerReference();
+        if (player != null) player.DisableRightWeaponHitbox();
     }
 }

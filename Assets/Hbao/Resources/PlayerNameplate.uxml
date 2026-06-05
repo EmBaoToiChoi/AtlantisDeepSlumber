@@ -1,0 +1,6 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
+    <Style src="project://database/Assets/Hbao/Resources/PlayerNameplate.uss" />
+    <ui:VisualElement name="nameplate-container" class="nameplate-container">
+        <ui:Label name="player-name-label" class="player-name-label" text="Explorer" />
+    </ui:VisualElement>
+</ui:UXML>

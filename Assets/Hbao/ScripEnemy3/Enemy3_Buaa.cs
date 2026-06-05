@@ -80,6 +80,7 @@ public class Enemy3_Buaa : NetworkBehaviour
     private float attackDuration;
     private float stateTimer;
     private bool hasDealtDamage1, hasDealtDamage2;
+    private int attackSwingCount;
     private float lastDamageTime;
     private int recentHitCount;
     private bool isFrenzied, isEnraged;
@@ -94,6 +95,40 @@ public class Enemy3_Buaa : NetworkBehaviour
         if (anim == null) anim = GetComponent<Animator>() ?? GetComponentInChildren<Animator>(true);
         var na = GetComponent<Unity.Netcode.Components.NetworkAnimator>();
         if (na != null) { if (anim == null || anim.runtimeAnimatorController == null) na.enabled = false; else na.Animator = anim; }
+
+        if (anim != null)
+        {
+            bool hasQuai3Attack = false;
+            bool hasAttack = false;
+            bool hasQuai3Combo = false;
+            bool hasCombo = false;
+            bool hasQuai3RunLump = false;
+            bool hasRunLumpAttack = false;
+            bool hasQuai3Anhit = false;
+            bool hasAnhit = false;
+            bool hasQuai3Die = false;
+            bool hasDie = false;
+
+            foreach (var param in anim.parameters)
+            {
+                if (param.name == "quai3attack") hasQuai3Attack = true;
+                if (param.name == "Attack") hasAttack = true;
+                if (param.name == "quai3combo") hasQuai3Combo = true;
+                if (param.name == "Combo") hasCombo = true;
+                if (param.name == "quai3runlumpattack") hasQuai3RunLump = true;
+                if (param.name == "RunLumpAttack" || param.name == "RunLump") hasRunLumpAttack = true;
+                if (param.name == "quai3Anhit") hasQuai3Anhit = true;
+                if (param.name == "Anhit") hasAnhit = true;
+                if (param.name == "quai3Die") hasQuai3Die = true;
+                if (param.name == "Die") hasDie = true;
+            }
+
+            if (hasAttack && !hasQuai3Attack) atk1Trigger = "Attack";
+            if (hasCombo && !hasQuai3Combo) atk2Trigger = "Combo";
+            if (hasRunLumpAttack && !hasQuai3RunLump) atk3Trigger = "RunLumpAttack";
+            if (hasAnhit && !hasQuai3Anhit) hitTrigger = "Anhit";
+            if (hasDie && !hasQuai3Die) dieTrigger = "Die";
+        }
     }
 
     private void Start() { if (!IsNetworkActive) { isStandaloneMode = true; InitStandalone(); } }
@@ -113,6 +148,7 @@ public class Enemy3_Buaa : NetworkBehaviour
         netSpeed.OnValueChanged       += (_, v) => ApplySpeedAnim(v);
         hitCounter.OnValueChanged     += (_, _) => { if (anim != null) anim.SetTrigger(hitTrigger); };
         currentHealth.OnValueChanged  += OnHealthNetChanged;
+        currentState.OnValueChanged   += OnStateChanged;
         ApplySpeedAnim(netSpeed.Value);
         if (IsServer) { currentHealth.Value = maxHealth; SnapToNavMesh(); if (hammerHitbox != null) hammerHitbox.SetActive(false); GoToNextWaypoint(); }
         else { if (agent != null) agent.enabled = false; }
@@ -123,6 +159,37 @@ public class Enemy3_Buaa : NetworkBehaviour
         netSpeed.OnValueChanged       -= (_, v) => ApplySpeedAnim(v);
         hitCounter.OnValueChanged     -= (_, _) => { if (anim != null) anim.SetTrigger(hitTrigger); };
         currentHealth.OnValueChanged  -= OnHealthNetChanged;
+        currentState.OnValueChanged   -= OnStateChanged;
+    }
+
+    private void OnStateChanged(EnemyState oldState, EnemyState newState)
+    {
+        if (newState == EnemyState.Dead)
+        {
+            if (!IsServer)
+            {
+                ApplyLocalDeathEffects();
+            }
+        }
+    }
+
+    private void ApplyLocalDeathEffects()
+    {
+        if (hammerHitbox != null) hammerHitbox.SetActive(false);
+        if (anim != null)
+        {
+            anim.ResetTrigger(atk1Trigger);
+            anim.ResetTrigger(atk2Trigger);
+            anim.ResetTrigger(atk3Trigger);
+            anim.ResetTrigger(hitTrigger);
+            anim.ResetTrigger(dieTrigger);
+
+            for (int i = 1; i < anim.layerCount; i++)
+            {
+                anim.SetLayerWeight(i, 0f);
+            }
+            anim.Play("quai3 die", 0, 0f);
+        }
     }
 
     private void OnHealthNetChanged(float oldVal, float newVal)
@@ -182,16 +249,29 @@ public class Enemy3_Buaa : NetworkBehaviour
     private void HandleChase()
     {
         if (targetPlayer == null) { ReturnToPatrol(); return; }
-        SimplePlayerTest ps = targetPlayer.GetComponentInParent<SimplePlayerTest>();
+        IPlayerHUDTarget ps = targetPlayer.GetComponentInParent<IPlayerHUDTarget>();
         if (ps != null && ps.CurrentHealth <= 0) { targetPlayer = null; ReturnToPatrol(); return; }
         Vector3 ld = (targetPlayer.position - transform.position); ld.y = 0;
-        if (ld.sqrMagnitude > 0.01f) transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(ld), Time.deltaTime * 15f);
+        if (ld.sqrMagnitude > 0.01f) transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(ld), Time.deltaTime * 12f);
         Vector3 flatEnemy = transform.position; flatEnemy.y = 0;
         Vector3 flatPlayer = targetPlayer.position; flatPlayer.y = 0;
         float dist = Vector3.Distance(flatEnemy, flatPlayer);
-        if (dist <= attackRange) { if (AgentReady) agent.isStopped = true; SetSpeedNet(0f); if (attackCooldownTimer <= 0) ChangeState(EnemyState.Attack); return; }
+        
+        if (dist <= attackRange && attackCooldownTimer <= 0)
+        {
+            if (AgentReady) agent.isStopped = true;
+            SetSpeedNet(0f);
+            ChangeState(EnemyState.Attack);
+            return;
+        }
+        
         float spd = isFrenzied ? chaseRunSpeed * 1.5f : (isEnraged ? chaseRunSpeed * 1.2f : chaseRunSpeed);
-        if (AgentReady) { agent.isStopped = false; agent.speed = spd; agent.SetDestination(targetPlayer.position); }
+        if (AgentReady)
+        {
+            agent.isStopped = false;
+            agent.speed = spd;
+            agent.SetDestination(targetPlayer.position);
+        }
         SetSpeedNet(AgentReady && agent.velocity.magnitude > 0.2f ? 1f : 0f);
     }
 
@@ -205,11 +285,7 @@ public class Enemy3_Buaa : NetworkBehaviour
         if (AgentReady) agent.isStopped = true; SetSpeedNet(0f);
         stateTimer -= Time.deltaTime;
         float elapsed = attackDuration - stateTimer;
-        int aType = isStandaloneMode ? 0 : attackType.Value;
         if (elapsed < attackDuration * 0.35f) { Vector3 ld = (targetPlayer.position - transform.position); ld.y = 0; if (ld.sqrMagnitude > 0.01f) transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(ld), Time.deltaTime * 18f); }
-        if (aType == 2) { if (elapsed >= 0.6f && !hasDealtDamage1) { hasDealtDamage1 = true; DealConeDamage(30f, attackRange + 1.5f, 110f, 18f); } }
-        else if (aType == 1) { if (elapsed >= 0.4f && !hasDealtDamage1) { hasDealtDamage1 = true; DealConeDamage(15f, attackRange + 1f, 90f, 8f); } if (elapsed >= 1.0f && !hasDealtDamage2) { hasDealtDamage2 = true; DealConeDamage(20f, attackRange + 1f, 90f, 10f); } }
-        else { if (elapsed >= 0.5f && !hasDealtDamage1) { hasDealtDamage1 = true; DealConeDamage(18f, attackRange + 0.5f, 80f, 8f); } }
         if (stateTimer <= 0) EndAttack();
     }
 
@@ -228,7 +304,7 @@ public class Enemy3_Buaa : NetworkBehaviour
         if (num == 0) num = FallbackDetect();
         bool found = false; Transform closest = null; float minD = float.MaxValue;
         Vector3 ep = eyeTransform != null ? eyeTransform.position : transform.position + Vector3.up * 1.5f;
-        for (int i = 0; i < num; i++) { if (detectionResults[i] == null) continue; Transform pt = detectionResults[i].transform; SimplePlayerTest ps = pt.GetComponentInParent<SimplePlayerTest>(); if (ps != null && ps.CurrentHealth <= 0) continue; Vector3 center = pt.position + Vector3.up; float d = Vector3.Distance(ep, center); Vector3 dir = (center - ep).normalized; bool inFOV = Vector3.Angle(transform.forward, dir) < fieldOfView / 2f; if ((inFOV || pt == targetPlayer) && !Physics.Raycast(ep, dir, d, obstacleLayer)) { if (d < minD) { minD = d; closest = pt; found = true; } } }
+        for (int i = 0; i < num; i++) { if (detectionResults[i] == null) continue; Transform pt = detectionResults[i].transform; IPlayerHUDTarget ps = pt.GetComponentInParent<IPlayerHUDTarget>(); if (ps != null && ps.CurrentHealth <= 0) continue; Vector3 center = pt.position + Vector3.up; float d = Vector3.Distance(ep, center); Vector3 dir = (center - ep).normalized; bool inFOV = Vector3.Angle(transform.forward, dir) < fieldOfView / 2f; if ((inFOV || pt == targetPlayer) && !Physics.Raycast(ep, dir, d, obstacleLayer)) { if (d < minD) { minD = d; closest = pt; found = true; } } }
         if (found && closest != null) { targetPlayer = closest; if (s != EnemyState.Chase) ChangeState(EnemyState.Chase); } else if (s == EnemyState.Chase) ReturnToPatrol();
     }
 
@@ -251,11 +327,13 @@ public class Enemy3_Buaa : NetworkBehaviour
             case EnemyState.Attack:
                 if (AgentReady) agent.isStopped = true; SetSpeedNet(0f);
                 hasDealtDamage1 = false; hasDealtDamage2 = false;
+                attackSwingCount = 0;
                 float hp = CurrentHealthValue / maxHealth; int chosen; float dur;
                 if (hp <= 0.4f) { chosen = 2; dur = 1.9f; } else if (hp <= 0.7f) { chosen = 1; dur = 1.6f; } else { chosen = 0; dur = 1.0f; }
                 if (!isStandaloneMode) attackType.Value = chosen;
                 attackDuration = dur; stateTimer = dur;
-                if (!isStandaloneMode) PlayAttackClientRpc(chosen); else PlayAttackAnimLocal(chosen);
+                PlayAttackAnimLocal(chosen);
+                if (!isStandaloneMode) PlayAttackClientRpc(chosen);
                 break;
             case EnemyState.Dead: Die(); break;
         }
@@ -264,14 +342,30 @@ public class Enemy3_Buaa : NetworkBehaviour
     private void ApplySpeedAnim(float speed) { if (anim == null || !anim.isActiveAndEnabled || anim.runtimeAnimatorController == null) return; anim.SetFloat(speedParam, speed); }
     private void SetSpeedNet(float val) { if (isStandaloneMode) ApplySpeedAnim(val); else if (IsServer && !Mathf.Approximately(netSpeed.Value, val)) netSpeed.Value = val; }
     private void PlayAttackAnimLocal(int type) { if (anim == null) return; anim.ResetTrigger(atk1Trigger); anim.ResetTrigger(atk2Trigger); anim.ResetTrigger(atk3Trigger); if (type == 0) anim.SetTrigger(atk1Trigger); else if (type == 1) anim.SetTrigger(atk2Trigger); else anim.SetTrigger(atk3Trigger); }
-    [ClientRpc] private void PlayAttackClientRpc(int type) => PlayAttackAnimLocal(type);
+    [ClientRpc] private void PlayAttackClientRpc(int type) { if (!IsServer) PlayAttackAnimLocal(type); }
 
     private void DealConeDamage(float damage, float range, float angle, float knockback)
     {
         int num = Physics.OverlapSphereNonAlloc(transform.position, range, damageResults, playerLayer);
         if (num == 0) { int c = 0; foreach (var p in GameObject.FindGameObjectsWithTag("Player")) { if (c >= damageResults.Length) break; if (Vector3.Distance(transform.position, p.transform.position) <= range) { var col = p.GetComponent<Collider>(); if (col != null) damageResults[c++] = col; } } num = c; }
         Vector3 ep = eyeTransform != null ? eyeTransform.position : transform.position + Vector3.up * 1.5f;
-        for (int i = 0; i < num; i++) { if (damageResults[i] == null) continue; Transform pl = damageResults[i].transform; Vector3 dir = (pl.position - transform.position).normalized; if (Vector3.Angle(transform.forward, dir) <= angle / 2f && !Physics.Raycast(ep, dir, Vector3.Distance(transform.position, pl.position), obstacleLayer)) { var ps = pl.GetComponentInParent<SimplePlayerTest>(); if (ps != null) { ps.TakeDamage(damage); Vector3 kb = dir; kb.y = 0; ps.ApplyKnockback(kb.normalized * knockback); } } }
+        
+        System.Collections.Generic.HashSet<IPlayerHUDTarget> hitTargets = new System.Collections.Generic.HashSet<IPlayerHUDTarget>();
+        
+        for (int i = 0; i < num; i++)
+        {
+            if (damageResults[i] == null) continue;
+            Transform pl = damageResults[i].transform;
+            
+            IPlayerHUDTarget target = pl.GetComponentInParent<IPlayerHUDTarget>();
+            if (target == null) continue;
+            if (hitTargets.Contains(target)) continue;
+            hitTargets.Add(target);
+            
+            Vector3 dir = (pl.position - transform.position).normalized;
+            if (Vector3.Angle(transform.forward, dir) <= angle / 2f && !Physics.Raycast(ep, dir, Vector3.Distance(transform.position, pl.position), obstacleLayer))
+            { Vector3 kb = dir; kb.y = 0; EnemyDamageHelper.DealDamage(pl, damage, kb.normalized * knockback); }
+        }
     }
 
     public void TakeDamage(float damage)
@@ -289,8 +383,7 @@ public class Enemy3_Buaa : NetworkBehaviour
     private void Die()
     {
         if (AgentReady) agent.isStopped = true; SetSpeedNet(0f);
-        if (anim != null) { anim.ResetTrigger(dieTrigger); anim.SetTrigger(dieTrigger); }
-        if (hammerHitbox != null) hammerHitbox.SetActive(false);
+        ApplyLocalDeathEffects();
         DropExperience(); DropItems(); Invoke(nameof(DespawnEnemy), 2.5f);
     }
 
@@ -300,7 +393,25 @@ public class Enemy3_Buaa : NetworkBehaviour
         string uid = System.Guid.NewGuid().ToString(); Transform sp = expDropPoint != null ? expDropPoint : transform; float d = 0.6f;
         Vector3[] pos = { sp.position + new Vector3(d,0.1f,d), sp.position + new Vector3(-d,0.1f,d), sp.position + new Vector3(d,0.1f,-d), sp.position + new Vector3(-d,0.1f,-d) };
         bool na = IsNetworkActive;
-        foreach (var p in pos) { if (isStandaloneMode || !na) { var g = Instantiate(expGemPrefab, p, Quaternion.identity); var gem = g.GetComponent<ExperienceGem>(); if (gem != null) { gem.expAmount = expDropAmount; gem.DropGroupId = uid; } } else if (IsServer) { var g = Instantiate(expGemPrefab, p, Quaternion.identity); var gem = g.GetComponent<ExperienceGem>(); if (gem != null) { gem.expAmount = expDropAmount; gem.DropGroupId = uid; } var no = g.GetComponent<NetworkObject>(); if (no != null) no.Spawn(); } }
+        foreach (var p in pos) 
+        { 
+            if (isStandaloneMode || !na) 
+            { 
+                var g = Instantiate(expGemPrefab, p, Quaternion.identity); 
+                g.SetActive(true); 
+                var gem = g.GetComponent<ExperienceGem>(); 
+                if (gem != null) { gem.expAmount = expDropAmount; gem.DropGroupId = uid; } 
+            } 
+            else if (IsServer) 
+            { 
+                var g = Instantiate(expGemPrefab, p, Quaternion.identity); 
+                g.SetActive(true); 
+                var gem = g.GetComponent<ExperienceGem>(); 
+                if (gem != null) { gem.expAmount = expDropAmount; gem.DropGroupId = uid; } 
+                var no = g.GetComponent<NetworkObject>(); 
+                if (no != null) no.Spawn(); 
+            } 
+        }
     }
 
     private void DropItems()
@@ -313,6 +424,44 @@ public class Enemy3_Buaa : NetworkBehaviour
 
     private void DespawnEnemy() { if (isStandaloneMode) { Destroy(gameObject); return; } if (IsServer && IsSpawned) GetComponent<NetworkObject>().Despawn(); }
     private void SnapToNavMesh() { if (agent == null || !agent.isActiveAndEnabled) return; if (!agent.isOnNavMesh) { NavMeshHit h; if (NavMesh.SamplePosition(transform.position, out h, 10f, NavMesh.AllAreas)) agent.Warp(h.position); } }
-    public void EnableWeaponHitbox()  { if (hammerHitbox != null) hammerHitbox.SetActive(true); }
-    public void DisableWeaponHitbox() { if (hammerHitbox != null) hammerHitbox.SetActive(false); }
+    public void EnableWeaponHitbox()
+    {
+        if (hammerHitbox != null) hammerHitbox.SetActive(true);
+        bool auth = isStandaloneMode || (IsNetworkActive && IsServer);
+        if (auth)
+        {
+            attackSwingCount++;
+            int aType = isStandaloneMode ? 0 : attackType.Value;
+            if (aType == 2)
+            {
+                if (!hasDealtDamage1)
+                {
+                    hasDealtDamage1 = true;
+                    DealConeDamage(30f, attackRange + 1.5f, 110f, 18f);
+                }
+            }
+            else if (aType == 1)
+            {
+                if (attackSwingCount == 1 && !hasDealtDamage1)
+                {
+                    hasDealtDamage1 = true;
+                    DealConeDamage(15f, attackRange + 1f, 90f, 8f);
+                }
+                else if (attackSwingCount >= 2 && !hasDealtDamage2)
+                {
+                    hasDealtDamage2 = true;
+                    DealConeDamage(20f, attackRange + 1f, 90f, 10f);
+                }
+            }
+            else
+            {
+                if (!hasDealtDamage1)
+                {
+                    hasDealtDamage1 = true;
+                    DealConeDamage(18f, attackRange + 0.5f, 80f, 8f);
+                }
+            }
+        }
+    }
+    public void DisableWeaponHitbox() { if (hammerHitbox != null) hammerHitbox.SetActive(false); hasDealtDamage1 = false; hasDealtDamage2 = false; }
 }

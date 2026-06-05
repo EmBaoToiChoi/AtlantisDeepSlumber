@@ -1,6 +1,0 @@
-<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
-    <Style src="project://database/Assets/Hbao/ScripUIPlayer/PlayerNameplate.uss?fileID=7433441132597879392&amp;guid=70193741e3d26714d859986fce3cd4df&amp;type=3#PlayerNameplate" />
-    <ui:VisualElement name="nameplate-container" class="nameplate-container">
-        <ui:Label name="player-name-label" class="player-name-label" text="Explorer" />
-    </ui:VisualElement>
-</ui:UXML>

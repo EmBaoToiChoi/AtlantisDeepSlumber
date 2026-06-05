@@ -631,6 +631,10 @@ public class RakanDialogueController : MonoBehaviour
                 PlayerPrefs.Save();
                 Debug.Log("[RakanDialogueController] Đã hoàn thành câu chuyện Rakan. Sẵn sàng kích hoạt Spawner cửa!");
             }
+            if (currentNPC != null)
+            {
+                currentNPC.CheckAndEnableGateSpawner();
+            }
             EndDialogue();
         }
         else

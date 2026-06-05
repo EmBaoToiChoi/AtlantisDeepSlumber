@@ -4,43 +4,76 @@ using UnityEngine.UIElements;
 public class PlayerNameplate : MonoBehaviour
 {
     [Tooltip("Chiều cao offset so với gốc của player để vẽ tên trên đầu")]
-    [SerializeField] private float heightOffset = 2.2f;
+    [SerializeField] private float heightOffset = 2.4f;
 
-    private UIDocument uiDocument;
     private VisualElement container;
     private Label nameLabel;
     private IPlayerHUDTarget playerTarget;
+    private VisualTreeAsset nameplateAsset;
 
     private void Awake()
     {
-        uiDocument = GetComponent<UIDocument>();
         playerTarget = GetComponentInParent<IPlayerHUDTarget>();
     }
 
     private void Start()
     {
-        if (uiDocument != null && uiDocument.rootVisualElement != null)
+        if (playerTarget == null) playerTarget = GetComponent<IPlayerHUDTarget>();
+
+        // Không tạo nameplate cho chính mình (chỉ hiển thị tên người chơi khác)
+        if (playerTarget != null && playerTarget.IsOwner)
         {
-            container = uiDocument.rootVisualElement.Q<VisualElement>("nameplate-container");
-            nameLabel = uiDocument.rootVisualElement.Q<Label>("player-name-label");
+            enabled = false;
+            return;
         }
 
-        if (playerTarget == null)
+        // Tải UXML từ thư mục Resources
+        nameplateAsset = Resources.Load<VisualTreeAsset>("PlayerNameplate");
+        if (nameplateAsset == null)
         {
-            Debug.LogWarning("[PlayerNameplate] Không tìm thấy script Player triển khai IPlayerHUDTarget ở lớp cha!");
+            Debug.LogError("[PlayerNameplate] Không tìm thấy PlayerNameplate.uxml trong thư mục Resources!");
+            return;
+        }
+
+        // Tải USS từ thư mục Resources
+        StyleSheet nameplateStyle = Resources.Load<StyleSheet>("PlayerNameplate");
+
+        // Tìm UIDocument chính của HUD game
+        var hudController = FindAnyObjectByType<PlayerHUDController>();
+        if (hudController != null)
+        {
+            var hudDoc = hudController.GetComponent<UIDocument>();
+            if (hudDoc != null && hudDoc.rootVisualElement != null)
+            {
+                // Instantiate nameplate từ asset
+                container = nameplateAsset.CloneTree().Q<VisualElement>("nameplate-container");
+                if (container != null)
+                {
+                    // Áp dụng trực tiếp StyleSheet vào container
+                    if (nameplateStyle != null)
+                    {
+                        container.styleSheets.Add(nameplateStyle);
+                    }
+                    else
+                    {
+                        Debug.LogWarning("[PlayerNameplate] Không tìm thấy PlayerNameplate.uss trong thư mục Resources!");
+                    }
+
+                    nameLabel = container.Q<Label>("player-name-label");
+                    
+                    // Thêm vào root visual element của HUD chính
+                    hudDoc.rootVisualElement.Add(container);
+                    
+                    // Mặc định ẩn trước khi cập nhật vị trí
+                    container.style.display = DisplayStyle.None;
+                }
+            }
         }
     }
 
     private void LateUpdate()
     {
         if (playerTarget == null || container == null || nameLabel == null) return;
-
-        // Không hiển thị tên của chính mình trên đầu nhân vật (chỉ hiển thị tên người chơi khác)
-        if (playerTarget.IsOwner)
-        {
-            container.style.display = DisplayStyle.None;
-            return;
-        }
 
         // Cập nhật tên hiển thị
         nameLabel.text = playerTarget.DisplayName;
@@ -54,7 +87,7 @@ public class PlayerNameplate : MonoBehaviour
             // Kiểm tra xem vị trí có nằm trước camera không
             if (screenPos.z > 0)
             {
-                var panel = uiDocument.rootVisualElement.panel;
+                var panel = container.panel;
                 if (panel != null)
                 {
                     // Chuyển đổi tọa độ Screen sang Panel UI Toolkit
@@ -73,6 +106,31 @@ public class PlayerNameplate : MonoBehaviour
         else
         {
             container.style.display = DisplayStyle.None;
+        }
+    }
+
+    private void OnDestroy()
+    {
+        // Dọn dẹp VisualElement khỏi HUD khi nhân vật bị hủy
+        if (container != null && container.parent != null)
+        {
+            container.parent.Remove(container);
+        }
+    }
+
+    private void OnDisable()
+    {
+        if (container != null)
+        {
+            container.style.display = DisplayStyle.None;
+        }
+    }
+    
+    private void OnEnable()
+    {
+        if (container != null)
+        {
+            container.style.display = DisplayStyle.Flex;
         }
     }
 }

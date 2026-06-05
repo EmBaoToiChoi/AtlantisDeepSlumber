@@ -1,30 +1,44 @@
 using UnityEngine;
-using Unity.Netcode; // BẮT BUỘC phải có thư viện này
+using Unity.Netcode;
 
-public class SpellBall : NetworkBehaviour // Đổi từ MonoBehaviour sang NetworkBehaviour
+public class SpellBall : NetworkBehaviour
 {
+    public float damage = 20f;
+    public float knockback = 5f;
+
     private float lifeTimer = 5f;
+
+    private bool IsNetworkActive => NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
 
     private void Update()
     {
-        // Chỉ Server mới có quyền đếm giờ tự hủy quả cầu
-        if (!IsServer) return;
+        if (IsNetworkActive && !IsServer) return;
 
         lifeTimer -= Time.deltaTime;
         if (lifeTimer <= 0)
         {
-            GetComponent<NetworkObject>().Despawn();
+            if (IsNetworkActive && IsServer)
+                GetComponent<NetworkObject>().Despawn();
+            else
+                Destroy(gameObject);
         }
     }
 
     private void OnTriggerEnter(Collider other)
     {
-        // Chỉ Server mới có quyền tính sát thương và xóa vật thể
-        if (!IsServer) return;
+        if (IsNetworkActive && !IsServer) return;
 
-        // Logic gây sát thương nếu trúng Player ở đây...
+        // Deal damage using helper
+        EnemyDamageHelper.DealDamage(other.transform, damage, transform.forward * knockback);
 
-        // Xóa quả cầu khỏi mạng lưới thay vì dùng Destroy
-        GetComponent<NetworkObject>().Despawn();
+        if (IsNetworkActive && IsServer)
+        {
+            if (GetComponent<NetworkObject>() != null && GetComponent<NetworkObject>().IsSpawned)
+                GetComponent<NetworkObject>().Despawn();
+        }
+        else
+        {
+            Destroy(gameObject);
+        }
     }
 }

@@ -417,6 +417,68 @@ MonoBehaviour:
   runSpeedMultiplier: 1.5
   damageAmount: 20
   attackRange: 3
+  extraGravityMultiplier: 2.5
+  maxFallSpeed: 20
+  onlyExtraGravityWhenAirborne: 0
+  swordComboParticles:
+  - label: Slash 1 (comboStep = 1)
+    particles:
+    - particlePrefab: {fileID: 1713045243172065375, guid: f791790f35137b946b82347edb9264f2, type: 3}
+      delay: 0
+      positionOffset: {x: 0, y: 0, z: 0}
+      rotationOffset: {x: 0, y: 0, z: 0}
+      parentToPlayer: 0
+      parentOverride: {fileID: 2255835029971751272}
+    - particlePrefab: {fileID: 1713045243172065375, guid: f791790f35137b946b82347edb9264f2, type: 3}
+      delay: 0
+      positionOffset: {x: 0, y: 0, z: 0}
+      rotationOffset: {x: 0, y: 0, z: 0}
+      parentToPlayer: 0
+      parentOverride: {fileID: 2255835029971751272}
+    - particlePrefab: {fileID: 1713045243172065375, guid: f791790f35137b946b82347edb9264f2, type: 3}
+      delay: 0
+      positionOffset: {x: 0, y: 0, z: 0}
+      rotationOffset: {x: 0, y: 0, z: 0}
+      parentToPlayer: 0
+      parentOverride: {fileID: 2255835029971751272}
+  - label: Slash 2 (comboStep = 2)
+    particles:
+    - particlePrefab: {fileID: 1713045243172065375, guid: f791790f35137b946b82347edb9264f2, type: 3}
+      delay: 0
+      positionOffset: {x: 0, y: 0, z: 0}
+      rotationOffset: {x: 0, y: 0, z: 0}
+      parentToPlayer: 0
+      parentOverride: {fileID: 2255835029971751272}
+    - particlePrefab: {fileID: 1713045243172065375, guid: f791790f35137b946b82347edb9264f2, type: 3}
+      delay: 0
+      positionOffset: {x: 0, y: 0, z: 0}
+      rotationOffset: {x: 0, y: 0, z: 0}
+      parentToPlayer: 0
+      parentOverride: {fileID: 2255835029971751272}
+    - particlePrefab: {fileID: 1713045243172065375, guid: f791790f35137b946b82347edb9264f2, type: 3}
+      delay: 0
+      positionOffset: {x: 0, y: 0, z: 0}
+      rotationOffset: {x: 0, y: 0, z: 0}
+      parentToPlayer: 0
+      parentOverride: {fileID: 2255835029971751272}
+    - particlePrefab: {fileID: 1713045243172065375, guid: f791790f35137b946b82347edb9264f2, type: 3}
+      delay: 0
+      positionOffset: {x: 0, y: 0, z: 0}
+      rotationOffset: {x: 0, y: 0, z: 0}
+      parentToPlayer: 0
+      parentOverride: {fileID: 2255835029971751272}
+    - particlePrefab: {fileID: 1713045243172065375, guid: f791790f35137b946b82347edb9264f2, type: 3}
+      delay: 0
+      positionOffset: {x: 0, y: 0, z: 0}
+      rotationOffset: {x: 0, y: 0, z: 0}
+      parentToPlayer: 0
+      parentOverride: {fileID: 2255835029971751272}
+    - particlePrefab: {fileID: 1713045243172065375, guid: f791790f35137b946b82347edb9264f2, type: 3}
+      delay: 0
+      positionOffset: {x: 0, y: 0, z: 0}
+      rotationOffset: {x: 0, y: 0, z: 0}
+      parentToPlayer: 0
+      parentOverride: {fileID: 2255835029971751272}
   leftHitbox: {fileID: 1951728423009820279}
   rightHitbox: {fileID: 5564713475576156401}
   leftWeaponHitbox: {fileID: 4903209859804708166}
@@ -637,10 +699,14 @@ MonoBehaviour:
   punch3Trigger: Combodam
   slash1Trigger: Combo1kiem
   slash2Trigger: Attackdoucombo
+  slash3Trigger: Slash3
   deathUnarmedTrigger: Death
   deathArmedTrigger: DeathArmed
   getHitTrigger: GetHit
   getHit2Trigger: GeiHit2
+  punchAnimDuration: 0.5
+  slashAnimDuration: 0.6
+  comboChainWindowPct: 0.55
 --- !u!114 &1666525023407835061
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -815,7 +881,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 8833584085150182256}
-  - component: {fileID: 6062332470921195768}
   - component: {fileID: 820003917358459833}
   m_Layer: 3
   m_Name: 'Nameplate '
@@ -833,31 +898,12 @@ Transform:
   m_GameObject: {fileID: 7115567102273767502}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalPosition: {x: -0.302, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 1569828532736557221}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &6062332470921195768
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7115567102273767502}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 19102, guid: 0000000000000000e000000000000000, type: 0}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  m_PanelSettings: {fileID: 11400000, guid: d7d1cb076d22730418b3f47cdb14736c, type: 2}
-  m_ParentUI: {fileID: 0}
-  sourceAsset: {fileID: 9197481963319205126, guid: 94ac5fa3927906d4e9336a0312b53a02, type: 3}
-  m_SortingOrder: 0
-  m_WorldSpaceSizeMode: 1
-  m_WorldSpaceWidth: 1920
-  m_WorldSpaceHeight: 1080
 --- !u!114 &820003917358459833
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -870,7 +916,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 681f98ebabdd7ec41a39ec2dfb8e1de1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  heightOffset: 3.5
+  heightOffset: 4.5
 --- !u!1 &8009708259036070280
 GameObject:
   m_ObjectHideFlags: 0

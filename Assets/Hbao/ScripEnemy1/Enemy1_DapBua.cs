@@ -167,6 +167,7 @@ public class Enemy1_DapBua : NetworkBehaviour
         // Anhit Layer: trigger synced via hitCounter
         hitCounter.OnValueChanged += (_, _) => { if (anim != null) anim.SetTrigger(hitTrigger); };
         currentHealth.OnValueChanged += OnHealthNetChanged;
+        currentState.OnValueChanged  += OnStateChanged;
 
         // Khởi tạo animation theo giá trị hiện tại
         ApplySpeedAnim(netSpeed.Value);
@@ -191,6 +192,37 @@ public class Enemy1_DapBua : NetworkBehaviour
         netSpeed.OnValueChanged   -= (_, v) => ApplySpeedAnim(v);
         hitCounter.OnValueChanged -= (_, _) => { if (anim != null) anim.SetTrigger(hitTrigger); };
         currentHealth.OnValueChanged -= OnHealthNetChanged;
+        currentState.OnValueChanged  -= OnStateChanged;
+    }
+
+    private void OnStateChanged(EnemyState oldState, EnemyState newState)
+    {
+        if (newState == EnemyState.Dead)
+        {
+            if (!IsServer)
+            {
+                ApplyLocalDeathEffects();
+            }
+        }
+    }
+
+    private void ApplyLocalDeathEffects()
+    {
+        DisableHitboxes();
+        if (anim != null)
+        {
+            anim.ResetTrigger(atkLeftTrigger);
+            anim.ResetTrigger(atkRightTrigger);
+            anim.ResetTrigger(atkComboTrigger);
+            anim.ResetTrigger(hitTrigger);
+            anim.ResetTrigger(dieTrigger);
+
+            for (int i = 1; i < anim.layerCount; i++)
+            {
+                anim.SetLayerWeight(i, 0f);
+            }
+            anim.Play("quai1Die", 0, 0f);
+        }
     }
 
     private void OnHealthNetChanged(float oldVal, float newVal)
@@ -297,7 +329,7 @@ public class Enemy1_DapBua : NetworkBehaviour
     private void HandleChase()
     {
         if (targetPlayer == null) { ReturnToPatrol(); return; }
-        SimplePlayerTest ps = targetPlayer.GetComponentInParent<SimplePlayerTest>();
+        IPlayerHUDTarget ps = targetPlayer.GetComponentInParent<IPlayerHUDTarget>();
         if (ps != null && ps.CurrentHealth <= 0) { targetPlayer = null; ReturnToPatrol(); return; }
 
         Vector3 ld = (targetPlayer.position - transform.position); ld.y = 0;
@@ -374,17 +406,6 @@ public class Enemy1_DapBua : NetworkBehaviour
                 transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(ld), Time.deltaTime * 18f);
         }
 
-        int aType = isStandaloneMode ? 0 : attackType.Value;
-        if (aType == 2)
-        {
-            if (elapsed >= 0.5f && !hasDealtDamage1) { hasDealtDamage1 = true; DealConeDamage(10f, attackRange + 0.5f, 80f, 6f); }
-            if (elapsed >= 1.2f && !hasDealtDamage2) { hasDealtDamage2 = true; DealConeDamage(25f, attackRange + 1.2f, 95f, 15f); }
-        }
-        else
-        {
-            if (elapsed >= 0.5f && !hasDealtDamage1) { hasDealtDamage1 = true; DealConeDamage(15f, attackRange + 0.5f, 80f, 8f); }
-        }
-
         if (stateTimer <= 0) EndAttack();
     }
 
@@ -415,7 +436,7 @@ public class Enemy1_DapBua : NetworkBehaviour
         {
             if (detectionResults[i] == null) continue;
             Transform pt = detectionResults[i].transform;
-            SimplePlayerTest ps = pt.GetComponentInParent<SimplePlayerTest>();
+            IPlayerHUDTarget ps = pt.GetComponentInParent<IPlayerHUDTarget>();
             if (ps != null && ps.CurrentHealth <= 0) continue;
             Vector3 center = pt.position + Vector3.up;
             float d = Vector3.Distance(ep, center);
@@ -492,7 +513,8 @@ public class Enemy1_DapBua : NetworkBehaviour
                 else { chosen = isNextAttackLeft ? 0 : 1; isNextAttackLeft = !isNextAttackLeft; attackDuration = 1.1f; }
                 if (!isStandaloneMode) attackType.Value = chosen;
                 stateTimer = attackDuration;
-                if (!isStandaloneMode) PlayAttackClientRpc(chosen); else PlayAttackAnim(chosen);
+                PlayAttackAnim(chosen);
+                if (!isStandaloneMode) PlayAttackClientRpc(chosen);
                 break;
 
             case EnemyState.Dead:
@@ -529,7 +551,7 @@ public class Enemy1_DapBua : NetworkBehaviour
         else                anim.SetTrigger(atkComboTrigger);
     }
 
-    [ClientRpc] private void PlayAttackClientRpc(int type) => PlayAttackAnim(type);
+    [ClientRpc] private void PlayAttackClientRpc(int type) { if (!IsServer) PlayAttackAnim(type); }
 
     private void PlayRoarAnim() { if (anim == null) return; anim.ResetTrigger(atkComboTrigger); anim.SetTrigger(atkComboTrigger); }
     [ClientRpc] private void PlayRoarClientRpc() => PlayRoarAnim();
@@ -548,13 +570,22 @@ public class Enemy1_DapBua : NetworkBehaviour
             num = c;
         }
         Vector3 ep = eyeTransform != null ? eyeTransform.position : transform.position + Vector3.up * 1.5f;
+        
+        System.Collections.Generic.HashSet<IPlayerHUDTarget> hitTargets = new System.Collections.Generic.HashSet<IPlayerHUDTarget>();
+        
         for (int i = 0; i < num; i++)
         {
             if (damageResults[i] == null) continue;
             Transform pl = damageResults[i].transform;
+            
+            IPlayerHUDTarget target = pl.GetComponentInParent<IPlayerHUDTarget>();
+            if (target == null) continue;
+            if (hitTargets.Contains(target)) continue;
+            hitTargets.Add(target);
+            
             Vector3 dir = (pl.position - transform.position).normalized;
             if (Vector3.Angle(transform.forward, dir) <= angle / 2f && !Physics.Raycast(ep, dir, Vector3.Distance(transform.position, pl.position), obstacleLayer))
-            { var ps = pl.GetComponentInParent<SimplePlayerTest>(); if (ps != null) { ps.TakeDamage(damage); Vector3 kb = dir; kb.y = 0; ps.ApplyKnockback(kb.normalized * knockback); } }
+            { Vector3 kb = dir; kb.y = 0; EnemyDamageHelper.DealDamage(pl, damage, kb.normalized * knockback); }
         }
     }
 
@@ -597,8 +628,7 @@ public class Enemy1_DapBua : NetworkBehaviour
     {
         if (AgentReady) agent.isStopped = true;
         SetSpeedNet(0f);
-        if (anim != null) { anim.ResetTrigger(dieTrigger); anim.SetTrigger(dieTrigger); }
-        DisableHitboxes();
+        ApplyLocalDeathEffects();
         DropExperience(); DropItems();
         Invoke(nameof(DespawnEnemy), 2.5f);
     }
@@ -613,8 +643,22 @@ public class Enemy1_DapBua : NetworkBehaviour
         bool na = IsNetworkActive;
         foreach (var p in pos)
         {
-            if (isStandaloneMode || !na) { var g = Instantiate(expGemPrefab, p, Quaternion.identity); var gem = g.GetComponent<ExperienceGem>(); if (gem != null) { gem.expAmount = expDropAmount; gem.DropGroupId = uid; } }
-            else if (IsServer) { var g = Instantiate(expGemPrefab, p, Quaternion.identity); var gem = g.GetComponent<ExperienceGem>(); if (gem != null) { gem.expAmount = expDropAmount; gem.DropGroupId = uid; } var no = g.GetComponent<NetworkObject>(); if (no != null) no.Spawn(); }
+            if (isStandaloneMode || !na) 
+            { 
+                var g = Instantiate(expGemPrefab, p, Quaternion.identity); 
+                g.SetActive(true); 
+                var gem = g.GetComponent<ExperienceGem>(); 
+                if (gem != null) { gem.expAmount = expDropAmount; gem.DropGroupId = uid; } 
+            }
+            else if (IsServer) 
+            { 
+                var g = Instantiate(expGemPrefab, p, Quaternion.identity); 
+                g.SetActive(true); 
+                var gem = g.GetComponent<ExperienceGem>(); 
+                if (gem != null) { gem.expAmount = expDropAmount; gem.DropGroupId = uid; } 
+                var no = g.GetComponent<NetworkObject>(); 
+                if (no != null) no.Spawn(); 
+            }
         }
     }
 
@@ -639,12 +683,62 @@ public class Enemy1_DapBua : NetworkBehaviour
         if (hammerHitboxLeft  != null) hammerHitboxLeft.SetActive(false);
         if (hammerHitboxRight != null) hammerHitboxRight.SetActive(false);
     }
-    public void EnableWeaponHitbox()   { if (hammerHitbox      != null) hammerHitbox.SetActive(true); }
-    public void DisableWeaponHitbox()  { DisableHitboxes(); }
-    public void EnableLeftWeaponHitbox()   { if (hammerHitboxLeft  != null) hammerHitboxLeft.SetActive(true); }
-    public void DisableLeftWeaponHitbox()  { if (hammerHitboxLeft  != null) hammerHitboxLeft.SetActive(false); }
-    public void EnableRightWeaponHitbox()  { if (hammerHitboxRight != null) hammerHitboxRight.SetActive(true); }
-    public void DisableRightWeaponHitbox() { if (hammerHitboxRight != null) hammerHitboxRight.SetActive(false); }
+    public void EnableWeaponHitbox()
+    {
+        if (hammerHitbox != null) hammerHitbox.SetActive(true);
+        bool auth = isStandaloneMode || (IsNetworkActive && IsServer);
+        if (auth && !hasDealtDamage1)
+        {
+            hasDealtDamage1 = true;
+            DealConeDamage(15f, attackRange + 0.5f, 80f, 8f);
+        }
+    }
+    public void DisableWeaponHitbox()  { DisableHitboxes(); hasDealtDamage1 = false; hasDealtDamage2 = false; }
+    public void EnableLeftWeaponHitbox()
+    {
+        if (hammerHitboxLeft != null) hammerHitboxLeft.SetActive(true);
+        bool auth = isStandaloneMode || (IsNetworkActive && IsServer);
+        if (auth && !hasDealtDamage1)
+        {
+            hasDealtDamage1 = true;
+            int aType = isStandaloneMode ? 0 : attackType.Value;
+            if (aType == 2)
+            {
+                DealConeDamage(10f, attackRange + 0.5f, 80f, 6f);
+            }
+            else
+            {
+                DealConeDamage(15f, attackRange + 0.5f, 80f, 8f);
+            }
+        }
+    }
+    public void DisableLeftWeaponHitbox()  { if (hammerHitboxLeft  != null) hammerHitboxLeft.SetActive(false); hasDealtDamage1 = false; }
+    public void EnableRightWeaponHitbox()
+    {
+        if (hammerHitboxRight != null) hammerHitboxRight.SetActive(true);
+        bool auth = isStandaloneMode || (IsNetworkActive && IsServer);
+        if (auth)
+        {
+            int aType = isStandaloneMode ? 0 : attackType.Value;
+            if (aType == 2)
+            {
+                if (!hasDealtDamage2)
+                {
+                    hasDealtDamage2 = true;
+                    DealConeDamage(25f, attackRange + 1.2f, 95f, 15f);
+                }
+            }
+            else
+            {
+                if (!hasDealtDamage1)
+                {
+                    hasDealtDamage1 = true;
+                    DealConeDamage(15f, attackRange + 0.5f, 80f, 8f);
+                }
+            }
+        }
+    }
+    public void DisableRightWeaponHitbox() { if (hammerHitboxRight != null) hammerHitboxRight.SetActive(false); hasDealtDamage2 = false; }
 
     // ══════════════════════════════════════════════════════════
     //  UTILITIES

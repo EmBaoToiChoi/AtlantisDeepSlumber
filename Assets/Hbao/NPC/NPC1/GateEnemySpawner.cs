@@ -35,6 +35,9 @@ public class GateEnemySpawner : NetworkBehaviour
         if (triggerCollider == null) triggerCollider = gameObject.AddComponent<BoxCollider>();
         triggerCollider.isTrigger = true;
 
+        // Tắt BoxCollider ban đầu, chỉ bật lên khi Rakan nói chuyện xong
+        triggerCollider.enabled = false;
+
         // Tự động cấu hình Rigidbody vật lý trên chính hộp check va chạm
         rb = GetComponent<Rigidbody>();
         if (rb == null) rb = gameObject.AddComponent<Rigidbody>();
@@ -42,20 +45,32 @@ public class GateEnemySpawner : NetworkBehaviour
         rb.useGravity = false;  // Tránh việc hộp va chạm rơi tự do do trọng lực
     }
 
+    /// <summary>
+    /// Được gọi từ RakanNPC khi kết thúc cuộc đối thoại cốt truyện thành công
+    /// </summary>
+    public void EnableTriggerBox()
+    {
+        if (triggerCollider != null)
+        {
+            triggerCollider.enabled = true;
+            Debug.Log("[GateEnemySpawner] Box Trigger đã được bật! Sẵn sàng sinh quái khi có bất kỳ Player nào đi vào.");
+        }
+    }
+
     private void OnTriggerEnter(Collider other)
     {
         // 1. Chỉ kích hoạt nếu chưa sinh quái lần nào
         if (hasSpawned) return;
 
-        // 2. Kiểm tra nếu đối tượng va chạm là người chơi (Player)
-        LeoPlayer player = other.GetComponentInParent<LeoPlayer>();
-        if (player == null) player = other.GetComponentInChildren<LeoPlayer>();
-        if (player == null) player = other.GetComponent<LeoPlayer>();
+        // 2. Kiểm tra nếu đối tượng va chạm là bất kỳ người chơi nào (Leo, Elena, Arthur, Maya...)
+        IPlayerHUDTarget player = other.GetComponentInParent<IPlayerHUDTarget>();
+        if (player == null) player = other.GetComponentInChildren<IPlayerHUDTarget>();
+        if (player == null) player = other.GetComponent<IPlayerHUDTarget>();
 
         if (player != null)
         {
             // Chỉ chạy kiểm tra đối thoại trên Client của chính người chơi đi qua cửa (Local Player)
-            bool isLocalPlayer = player.isStandaloneMode || player.IsOwner;
+            bool isLocalPlayer = player.IsStandaloneMode || player.IsOwner;
             if (isLocalPlayer)
             {
                 // Kiểm tra xem đã hoàn thành cuộc đối thoại Atlantis với Rakan chưa
@@ -64,40 +79,30 @@ public class GateEnemySpawner : NetworkBehaviour
 
                 if (hasFinishedDialogue)
                 {
-                    Debug.Log("[GateEnemySpawner] Người chơi đi qua cổng sau khi nghe Rakan kể chuyện! Tiến hành sinh quái.");
+                    Debug.Log($"[GateEnemySpawner] Player '{player.gameObject.name}' chạm vào cổng trigger! Tiến hành sinh quái ngay lập tức.");
                     
                     // Đánh dấu đã kích hoạt
                     hasSpawned = true;
 
                     // Thực thi cơ chế sinh quái
-                    if (player.isStandaloneMode)
+                    if (player.IsStandaloneMode)
                     {
                         // Chơi Offline: Sinh quái trực tiếp cục bộ
                         ExecuteLocalSpawn();
+                        if (triggerOnlyOnce)
+                        {
+                            Destroy(gameObject, 0.5f);
+                        }
                     }
                     else
                     {
                         // Chơi Mạng: Gửi yêu cầu lên Server để Server sinh quái đồng bộ cho cả phòng
                         RequestSpawnEnemiesServerRpc();
                     }
-
-                    // Tự hủy trigger nếu chọn chỉ kích hoạt 1 lần
-                    if (triggerOnlyOnce)
-                    {
-                        // Trì hoãn 1 chút để các gói tin RPC kịp gửi đi trước khi hủy object
-                        if (IsServer)
-                        {
-                            GetComponent<NetworkObject>().Despawn(true);
-                        }
-                        else
-                        {
-                            Destroy(gameObject, 0.5f);
-                        }
-                    }
                 }
                 else
                 {
-                    Debug.Log("[GateEnemySpawner] Người chơi đi qua cổng nhưng chưa hoàn thành cuộc trò chuyện với Rakan. Chưa sinh quái.");
+                    Debug.Log("[GateEnemySpawner] Có người chơi chạm vào cổng nhưng Rakan chưa kể xong chuyện. Không sinh quái.");
                 }
             }
         }
@@ -110,6 +115,10 @@ public class GateEnemySpawner : NetworkBehaviour
     private void RequestSpawnEnemiesServerRpc()
     {
         ExecuteNetworkSpawn();
+        if (triggerOnlyOnce)
+        {
+            GetComponent<NetworkObject>().Despawn(true);
+        }
     }
 
     /// <summary>
