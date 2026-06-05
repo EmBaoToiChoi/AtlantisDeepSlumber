@@ -27,13 +27,82 @@ public class PlayerMapSpawner : NetworkBehaviour
     // Lưu trữ ánh xạ từ ClientId sang chỉ số điểm spawn để tránh trùng lặp
     private Dictionary<ulong, int> clientSpawnIndices = new Dictionary<ulong, int>();
 
+    public enum NetworkDebugStartMode
+    {
+        None,
+        Host,
+        Server,
+        Client
+    }
+
+    [Header("Debug / Quick Test Settings")]
+    [Tooltip("Prefab của NetworkManager. Nếu NetworkManager.Singleton null trong Editor, prefab này sẽ được Instantiate.")]
+    [SerializeField] private GameObject networkManagerPrefab;
+    [Tooltip("Tự động khởi chạy mạng khi chạy thử trực tiếp Scene này trong Editor")]
+    [SerializeField] private bool autoStartNetworkInEditor = true;
+    [Tooltip("Chế độ mạng muốn test (Host = Server + Client, Server = Dedicated Server, Client = Kết nối vào server)")]
+    [SerializeField] private NetworkDebugStartMode debugStartMode = NetworkDebugStartMode.Host;
+    [Tooltip("Địa chỉ IP để kết nối khi test (127.0.0.1 để test cục bộ trên máy, tránh kết nối VPS)")]
+    [SerializeField] private string debugConnectAddress = "127.0.0.1";
+    [Tooltip("Nhân vật muốn test nhanh (0 = Leo, 1 = Maya, 2 = Elena, 3 = Arthur)")]
+    [SerializeField] private int debugCharacterId = 2; // Elena mặc định
+
+    private void Start()
+    {
+#if UNITY_EDITOR
+        if (autoStartNetworkInEditor && NetworkManager.Singleton == null)
+        {
+            if (networkManagerPrefab != null)
+            {
+                Debug.Log("[PlayerMapSpawner] [DEBUG] Không tìm thấy NetworkManager trong scene. Đang khởi tạo từ prefab...");
+                Instantiate(networkManagerPrefab);
+            }
+            else
+            {
+                Debug.LogWarning("[PlayerMapSpawner] [DEBUG] NetworkManager.Singleton bị null và networkManagerPrefab chưa được gán. Hãy kéo prefab NetworkManager từ Project/MainMenu vào ô networkManagerPrefab của PlayerMapSpawner trong scene Map.");
+            }
+        }
+
+        if (autoStartNetworkInEditor && NetworkManager.Singleton != null && !NetworkManager.Singleton.IsListening)
+        {
+            // Ép cấu hình UnityTransport về IP cục bộ chỉ định để tránh tự động kết nối ra VPS ngoài
+            var transport = NetworkManager.Singleton.GetComponent<Unity.Netcode.Transports.UTP.UnityTransport>();
+            if (transport != null)
+            {
+                string targetAddress = string.IsNullOrEmpty(debugConnectAddress) ? "127.0.0.1" : debugConnectAddress;
+                transport.ConnectionData.Address = targetAddress;
+                Debug.Log($"[PlayerMapSpawner] [DEBUG] Đã ép địa chỉ kết nối của UnityTransport về: {targetAddress}");
+            }
+
+            PlayerPrefs.SetInt("SelectedCharacterId", debugCharacterId);
+            PlayerPrefs.Save();
+
+            switch (debugStartMode)
+            {
+                case NetworkDebugStartMode.Host:
+                    Debug.Log($"[PlayerMapSpawner] [DEBUG] Tự động khởi động HOST (Server+Client) và đặt SelectedCharacterId = {debugCharacterId}");
+                    NetworkManager.Singleton.StartHost();
+                    break;
+                case NetworkDebugStartMode.Server:
+                    Debug.Log("[PlayerMapSpawner] [DEBUG] Tự động khởi động DEDICATED SERVER (Không spawn nhân vật tại máy này).");
+                    NetworkManager.Singleton.StartServer();
+                    break;
+                case NetworkDebugStartMode.Client:
+                    Debug.Log($"[PlayerMapSpawner] [DEBUG] Tự động khởi động CLIENT và đặt SelectedCharacterId = {debugCharacterId}");
+                    NetworkManager.Singleton.StartClient();
+                    break;
+            }
+        }
+#endif
+    }
+
     public override void OnNetworkSpawn()
     {
         if (IsClient)
         {
             // Lấy nhân vật đã chọn từ PlayerPrefs (đã được lưu ở waiting room)
             int selectedChar = PlayerPrefs.GetInt("SelectedCharacterId", 0);
-            Debug.Log($"[PlayerMapSpawner] [CLIENT] Đã load cảnh gameplay. Gửi yêu cầu sinh Player cho Client {NetworkManager.Singleton.LocalClientId} (Nhân vật ID: {selectedChar})");
+            Debug.Log($"[PlayerMapSpawner] [CLIENT] OnNetworkSpawn gọi thành công. Gửi ServerRpc yêu cầu sinh Player cho Client (ClientId: {NetworkManager.Singleton.LocalClientId}, Nhân vật ID: {selectedChar})");
             
             // Gửi yêu cầu ServerRpc để server thực hiện spawn
             RequestSpawnPlayerServerRpc(selectedChar);
@@ -55,6 +124,8 @@ public class PlayerMapSpawner : NetworkBehaviour
     {
         if (!IsServer) return;
 
+        Debug.Log($"[PlayerMapSpawner] [SERVER] Bắt đầu sinh nhân vật cho Client {clientId} (ID Nhân vật: {characterId})");
+
         // 1. Xác định Prefab cần spawn
         GameObject selectedPrefab = GetPlayerPrefab(characterId);
         if (selectedPrefab == null)
@@ -68,14 +139,18 @@ public class PlayerMapSpawner : NetworkBehaviour
         {
             if (clientConnection.PlayerObject != null)
             {
-                // Nếu đã có nhân vật gameplay chính thức rồi thì bỏ qua không spawn lại
-                if (clientConnection.PlayerObject.GetComponent<SimplePlayerTest>() != null)
+                // Nếu đã có nhân vật gameplay chính thức rồi thì bỏ qua không spawn lại (trừ khi đang chạy debug/test nhanh trong editor)
+                bool isTesting = false;
+#if UNITY_EDITOR
+                isTesting = autoStartNetworkInEditor;
+#endif
+                if (!isTesting && clientConnection.PlayerObject.GetComponent<SimplePlayerTest>() != null)
                 {
-                    Debug.Log($"[PlayerMapSpawner] [SERVER] Client {clientId} đã có nhân vật gameplay chính thức. Bỏ qua spawn.");
+                    Debug.Log($"[PlayerMapSpawner] [SERVER] Client {clientId} đã có nhân vật gameplay chính thức. Bỏ qua spawn để tránh ghi đè.");
                     return;
                 }
 
-                Debug.Log($"[PlayerMapSpawner] [SERVER] Phát hiện Client {clientId} có PlayerObject cũ (Lobby Avatar). Đang thu hồi...");
+                Debug.Log($"[PlayerMapSpawner] [SERVER] Phát hiện Client {clientId} đã có PlayerObject cũ. Đang tiến hành thu hồi để spawn nhân vật mới...");
                 NetworkObject oldPlayerObj = clientConnection.PlayerObject;
                 if (oldPlayerObj.IsSpawned)
                 {
