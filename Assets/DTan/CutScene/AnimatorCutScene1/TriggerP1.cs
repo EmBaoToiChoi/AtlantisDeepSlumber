@@ -9,4 +9,16 @@ public class P1 : MonoBehaviour
     {
         animator.SetTrigger("Standing");
     }
+    public void TriggerTalk()
+    {
+        animator.SetTrigger("Talk1");
+    }
+    public void TriggerIdle()
+    {
+        animator.SetTrigger("Idle");
+    }
+    public void TriggerWalk()
+    {
+        animator.SetTrigger("Walk");
+    }
 }
