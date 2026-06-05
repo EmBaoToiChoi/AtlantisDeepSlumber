@@ -84,9 +84,14 @@ public class GearRotator : NetworkBehaviour
     [ClientRpc]
     private void ForceCloseVisualsClientRpc()
     {
+        // 1. Dừng ngay mọi lệnh di chuyển cũ để tránh xung đột
         transform.DOKill();
-        // Đổi OutBack sang InOutCubic nếu muốn trượt mượt nhẹ nhàng
-        transform.DOLocalMove(originalPosition, moveDuration).SetEase(Ease.InOutCubic); 
+
+        // 2. Trượt về vị trí gốc với hiệu ứng OutBack
+        // Tham số 0.5f là độ "nẩy" khi về đến nơi.
+        // Cổng đóng sẽ chạy nhanh, chạm vào điểm gốc rồi "cạch" nhẹ một cái mới dừng hẳn.
+        transform.DOLocalMove(originalPosition, moveDuration)
+                 .SetEase(Ease.OutBack, 0.5f); 
     }
 
     // Hàm dự phòng: nếu muốn Server cho phép quay lại sau khi đóng
