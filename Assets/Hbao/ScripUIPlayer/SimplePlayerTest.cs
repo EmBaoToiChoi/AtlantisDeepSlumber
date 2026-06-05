@@ -668,6 +668,39 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
         }
     }
 
+    public void RepairWeaponFromHUD(int weaponSlotIndex)
+    {
+        if (leoPlayer != null)
+        {
+            leoPlayer.RepairWeaponFromHUD(weaponSlotIndex);
+            return;
+        }
+
+        if (isStandaloneMode)
+        {
+            if (weaponSlotIndex == 1) localWeapon1Durability = weapon1MaxDurability;
+            else localWeapon2Durability = weapon2MaxDurability;
+            UpdateDurabilityHUD();
+        }
+        else
+        {
+            RepairWeaponServerRpc(weaponSlotIndex);
+        }
+    }
+
+    [ServerRpc]
+    private void RepairWeaponServerRpc(int weaponSlotIndex)
+    {
+        if (weaponSlotIndex == 1)
+        {
+            weapon1Durability.Value = weapon1MaxDurability;
+        }
+        else
+        {
+            weapon2Durability.Value = weapon2MaxDurability;
+        }
+    }
+
     private void OnDurabilityChanged(float oldVal, float newVal)
     {
         if (IsOwner) UpdateDurabilityHUD();
@@ -1037,13 +1070,18 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
 
         // Tấn công đơn lẻ
         if (Input.GetMouseButtonDown(0))
-            PerformComboAttack(false);
+        {
+            if (!IsUIBlockingInput())
+            {
+                PerformComboAttack(false);
+            }
+        }
 
         // Nhấn Ctrl (LeftControl) chơi hoạt ảnh LonVong + Nhào lộn né chiêu
         if (Input.GetKeyDown(KeyCode.LeftControl))
         {
             Debug.Log($"[Ctrl Debug] Standalone Ctrl pressed! rollCooldownTimer = {rollCooldownTimer}");
-            if (rollCooldownTimer <= 0)
+            if (rollCooldownTimer <= 0 && !IsUIBlockingInput())
             {
                 StartRollStandalone(move);
             }
@@ -1141,7 +1179,7 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
         // Tấn công qua RPC (chỉ khi đã spawn trên mạng)
         if (Input.GetMouseButtonDown(0))
         {
-            if (IsSpawned)
+            if (IsSpawned && !IsUIBlockingInput())
             {
                 PerformComboAttack(true);
             }
@@ -1151,7 +1189,7 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
         if (Input.GetKeyDown(KeyCode.LeftControl))
         {
             Debug.Log($"[Ctrl Debug] Owner Ctrl pressed! rollCooldownTimer = {rollCooldownTimer}, IsSpawned = {IsSpawned}, IsOwner = {IsOwner}");
-            if (rollCooldownTimer <= 0 && IsSpawned)
+            if (rollCooldownTimer <= 0 && IsSpawned && !IsUIBlockingInput())
             {
                 StartRollOwner(move);
             }
@@ -1979,6 +2017,27 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
             anim.Play("New State", 1, 0f);
             anim.Play("Empty", 1, 0f);
         }
+    }
+
+    private float lastTimeUIOpen = 0f;
+
+    public bool IsUIBlockingInput()
+    {
+        bool uiOpen = false;
+        if (PlayerHUDController.isAnyUIOpen) uiOpen = true;
+
+        bool isDialogueOpen = (RakanDialogueController.Instance != null && RakanDialogueController.Instance.IsActive) ||
+                              (SilasDialogueController.Instance != null && SilasDialogueController.Instance.IsActive);
+        if (isDialogueOpen) uiOpen = true;
+
+        if (uiOpen)
+        {
+            lastTimeUIOpen = Time.time;
+            return true;
+        }
+        if (Time.time - lastTimeUIOpen < 0.15f) return true;
+
+        return false;
     }
 
     public override void OnDestroy()

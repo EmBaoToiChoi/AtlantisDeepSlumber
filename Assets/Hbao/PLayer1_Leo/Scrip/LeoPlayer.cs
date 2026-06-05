@@ -4112,6 +4112,33 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         }
     }
 
+    public void RepairWeaponFromHUD(int weaponSlotIndex)
+    {
+        if (isStandaloneMode)
+        {
+            if (weaponSlotIndex == 1) localWeapon1Durability = weapon1MaxDurability;
+            else localWeapon2Durability = weapon2MaxDurability;
+            UpdateDurabilityHUD();
+        }
+        else
+        {
+            RepairWeaponServerRpc(weaponSlotIndex);
+        }
+    }
+
+    [ServerRpc]
+    private void RepairWeaponServerRpc(int weaponSlotIndex)
+    {
+        if (weaponSlotIndex == 1)
+        {
+            SyncNetVarFloat(weapon1Durability, proxyPlayerTest != null ? proxyPlayerTest.weapon1Durability : null, weapon1MaxDurability);
+        }
+        else
+        {
+            SyncNetVarFloat(weapon2Durability, proxyPlayerTest != null ? proxyPlayerTest.weapon2Durability : null, weapon2MaxDurability);
+        }
+    }
+
     public void TakeDamage(float damage)
     {
         bool isRolling = isStandaloneMode ? isRollingStandalone : isRollingNet.Value;

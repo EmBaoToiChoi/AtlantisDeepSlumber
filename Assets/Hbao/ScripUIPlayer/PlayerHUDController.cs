@@ -773,6 +773,12 @@ public class PlayerHUDController : MonoBehaviour
                 }
             }
 
+            // Ẩn tooltip khi đóng hành trang để tránh tình trạng tooltip hiển thị thừa
+            if (!isNowVisible && tooltipElement != null)
+            {
+                tooltipElement.style.opacity = 0f;
+            }
+
             // Tự động lưu trạng thái người chơi vào MongoDB khi đóng hành trang
             if (!isNowVisible && LocalPlayerTarget != null)
             {
@@ -1372,15 +1378,7 @@ public class PlayerHUDController : MonoBehaviour
         if (LocalPlayerTarget != null)
         {
             int activeWeapon = LocalPlayerTarget.IsStandaloneMode ? currentSelectedWeapon : LocalPlayerTarget.GetActiveWeaponIndex();
-
-            if (activeWeapon == 1)
-            {
-                LocalPlayerTarget.Weapon1Durability = LocalPlayerTarget.Weapon1MaxDurability;
-            }
-            else
-            {
-                LocalPlayerTarget.Weapon2Durability = LocalPlayerTarget.Weapon2MaxDurability;
-            }
+            LocalPlayerTarget.RepairWeaponFromHUD(activeWeapon);
 
             // Tiêu hao vật phẩm (giảm số lượng đi 1 hoặc xóa hoàn toàn nếu là cái cuối)
             string slotVal = LocalPlayerTarget.InventorySlots[slotIndex];
@@ -1593,7 +1591,7 @@ public class PlayerHUDController : MonoBehaviour
     /// </summary>
     public void SetupEventSystemForInputSystem()
     {
-        var eventSystem = FindObjectOfType<UnityEngine.EventSystems.EventSystem>();
+        var eventSystem = FindAnyObjectByType<UnityEngine.EventSystems.EventSystem>();
         if (eventSystem == null)
         {
             GameObject esObj = new GameObject("EventSystem");
@@ -1607,7 +1605,27 @@ public class PlayerHUDController : MonoBehaviour
 #endif
             Debug.Log("[PlayerHUDController] Created EventSystem.");
         }
-        // Không tự động thay thế/phá hủy module cũ của EventSystem để tránh làm hỏng các scene khác
+        else
+        {
+            // CựC KỲ QUAN TRỌNG: Nếu đã có EventSystem trong scene nhưng đang dùng module cũ (StandaloneInputModule)
+            // của hệ thống Input cũ, trong khi game đang chạy New Input System, ta cần nâng cấp nó lên InputSystemUIInputModule.
+            // Nếu không, UI Toolkit (VisualElement) sẽ không thể nhận được sự kiện click chuột hay kéo thả từ người chơi!
+#if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
+            var legacyModule = eventSystem.GetComponent<UnityEngine.EventSystems.StandaloneInputModule>();
+            if (legacyModule != null)
+            {
+                Debug.LogWarning("[PlayerHUDController] Phát hiện EventSystem sử dụng StandaloneInputModule cũ dưới chế độ New Input System. Đang tự động nâng cấp lên InputSystemUIInputModule để hỗ trợ tương tác UI.");
+                Destroy(legacyModule);
+                
+                // Tránh add trùng lặp
+                var newModule = eventSystem.GetComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
+                if (newModule == null)
+                {
+                    eventSystem.gameObject.AddComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
+                }
+            }
+#endif
+        }
     }
 
     private void UpdateTeammatesHUD()
