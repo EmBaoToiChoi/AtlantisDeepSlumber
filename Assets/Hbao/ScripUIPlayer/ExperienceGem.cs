@@ -143,14 +143,15 @@ public class ExperienceGem : NetworkBehaviour
                 return;
             }
 
-            float distance = Vector3.Distance(transform.position, targetPlayer.position);
+            // Nhắm vào ngang bụng/ngực player tầm y + 1.3f
+            Vector3 targetPos = targetPlayer.position + Vector3.up * 1.3f;
+            float distance = Vector3.Distance(transform.position, targetPos);
             
-            // Di chuyển nhanh dần đều về phía player (nhắm vào ngang người player tầm y + 1.0f)
+            // Di chuyển nhanh dần đều về phía player
             moveSpeed += acceleration * Time.deltaTime;
-            Vector3 targetPos = targetPlayer.position + Vector3.up * 1f;
             transform.position = Vector3.MoveTowards(transform.position, targetPos, moveSpeed * Time.deltaTime);
 
-            // Khi chạm vào player
+            // Khi chạm vào player (khoảng cách tới targetPos <= 0.8f)
             if (distance <= 0.8f)
             {
                 CollectGem();

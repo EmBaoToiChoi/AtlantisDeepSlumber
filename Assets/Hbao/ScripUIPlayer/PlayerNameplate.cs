@@ -35,6 +35,9 @@ public class PlayerNameplate : MonoBehaviour
             return;
         }
 
+        // Tải USS từ thư mục Resources
+        StyleSheet nameplateStyle = Resources.Load<StyleSheet>("PlayerNameplate");
+
         // Tìm UIDocument chính của HUD game
         var hudController = FindAnyObjectByType<PlayerHUDController>();
         if (hudController != null)
@@ -46,6 +49,16 @@ public class PlayerNameplate : MonoBehaviour
                 container = nameplateAsset.CloneTree().Q<VisualElement>("nameplate-container");
                 if (container != null)
                 {
+                    // Áp dụng trực tiếp StyleSheet vào container
+                    if (nameplateStyle != null)
+                    {
+                        container.styleSheets.Add(nameplateStyle);
+                    }
+                    else
+                    {
+                        Debug.LogWarning("[PlayerNameplate] Không tìm thấy PlayerNameplate.uss trong thư mục Resources!");
+                    }
+
                     nameLabel = container.Q<Label>("player-name-label");
                     
                     // Thêm vào root visual element của HUD chính
