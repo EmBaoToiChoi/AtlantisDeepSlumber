@@ -1155,15 +1155,13 @@
     border-radius: 32px;
     padding: 6px 12px;
     margin-bottom: 12px;
-    border-width: 1.5px;
-    border-color: rgba(40, 160, 255, 0.4);
+    border-width: 0;
     width: 240px;
-    transition-property: scale, border-color;
+    transition-property: scale;
     transition-duration: 0.2s;
 }
 
 .teammate-card:hover {
-    border-color: rgba(40, 160, 255, 0.85);
     scale: 1.02 1.02;
 }
 
