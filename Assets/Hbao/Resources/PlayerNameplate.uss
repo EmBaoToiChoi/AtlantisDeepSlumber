@@ -6,27 +6,32 @@
     justify-content: center;
     overflow: visible;
 }
+
 .player-name-label {
     position: absolute;
     bottom: 0;
     color: rgb(255, 255, 255);
-    font-size: 14px;
+    font-size: 15px;
     -unity-font-style: bold;
     -unity-text-align: middle-center;
+    letter-spacing: 1px;
     
-    /* Nền kính tối (dark glassmorphism) giúp tương phản mạnh với chữ trắng */
-    background-color: rgba(10, 10, 12, 0.85);
+    /* Nền tối kính mờ (dark glassmorphism) giúp tương phản mạnh với chữ trắng */
+    background-color: rgba(10, 10, 12, 0.65);
     
     /* Padding bo tròn dạng badge sang trọng */
-    padding: 5px 14px;
-    border-radius: 12px;
+    padding: 4px 12px;
+    border-radius: 10px;
     white-space: nowrap;
     
     /* Viền mỏng sáng nhẹ tạo hiệu ứng nổi khối */
     border-width: 1px;
-    border-color: rgba(255, 255, 255, 0.3);
+    border-color: rgba(255, 255, 255, 0.15);
     
-    /* Tăng độ đậm và nét của viền chữ đen (Text Outline) để chữ cực kỳ dễ nhìn */
-    -unity-text-outline-width: 1.2px;
+    /* Text outline đen sắc nét để chữ cực dễ đọc trên mọi địa hình sáng/tối */
+    -unity-text-outline-width: 1px;
     -unity-text-outline-color: rgb(0, 0, 0);
+    
+    /* Text shadow mềm giống tên enemy */
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
 }

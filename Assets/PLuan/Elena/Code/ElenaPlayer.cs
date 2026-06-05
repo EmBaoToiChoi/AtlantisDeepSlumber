@@ -369,6 +369,20 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
     {
         isStandaloneMode = false;
 
+        var rb = GetComponent<Rigidbody>();
+        if (rb != null && !IsOwner)
+        {
+            rb.isKinematic = true;
+        }
+
+        if (!IsOwner)
+        {
+            if (GetComponent<PlayerNameplate>() == null)
+            {
+                gameObject.AddComponent<PlayerNameplate>();
+            }
+        }
+
         if (PlayerHUDManager.ActivePlayers != null && !PlayerHUDManager.ActivePlayers.Contains(this))
         {
             PlayerHUDManager.ActivePlayers.Add(this);
