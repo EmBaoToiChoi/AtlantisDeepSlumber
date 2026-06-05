@@ -113062,6 +113062,13 @@ AnimationClip:
   m_HasMotionFloatCurves: 0
   m_Events:
   - time: 0.6666667
+    functionName: TriggerSlashParticle
+    data: 
+    objectReferenceParameter: {fileID: 0}
+    floatParameter: 0
+    intParameter: 201
+    messageOptions: 0
+  - time: 0.6666667
     functionName: EnableLeftWeaponHitbox
     data: 
     objectReferenceParameter: {fileID: 0}
@@ -113082,12 +113089,26 @@ AnimationClip:
     floatParameter: 0
     intParameter: 0
     messageOptions: 0
+  - time: 1.0666667
+    functionName: TriggerSlashParticle
+    data: 
+    objectReferenceParameter: {fileID: 0}
+    floatParameter: 0
+    intParameter: 202
+    messageOptions: 0
   - time: 1.1666666
     functionName: DisableRightWeaponHitbox
     data: 
     objectReferenceParameter: {fileID: 0}
     floatParameter: 0
     intParameter: 0
+    messageOptions: 0
+  - time: 1.7333333
+    functionName: TriggerSlashParticle
+    data: 
+    objectReferenceParameter: {fileID: 0}
+    floatParameter: 0
+    intParameter: 203
     messageOptions: 0
   - time: 1.7333333
     functionName: EnableRightWeaponHitbox
@@ -113110,12 +113131,33 @@ AnimationClip:
     floatParameter: 0
     intParameter: 0
     messageOptions: 0
+  - time: 1.8
+    functionName: TriggerSlashParticle
+    data: 
+    objectReferenceParameter: {fileID: 0}
+    floatParameter: 0
+    intParameter: 204
+    messageOptions: 0
   - time: 1.9666667
     functionName: DisableLeftWeaponHitbox
     data: 
     objectReferenceParameter: {fileID: 0}
     floatParameter: 0
     intParameter: 0
+    messageOptions: 0
+  - time: 2.5333333
+    functionName: TriggerSlashParticle
+    data: 
+    objectReferenceParameter: {fileID: 0}
+    floatParameter: 0
+    intParameter: 2
+    messageOptions: 0
+  - time: 2.5666666
+    functionName: TriggerSlashParticle
+    data: 
+    objectReferenceParameter: {fileID: 0}
+    floatParameter: 0
+    intParameter: 205
     messageOptions: 0
   - time: 2.5666666
     functionName: EnableLeftWeaponHitbox
@@ -113132,14 +113174,14 @@ AnimationClip:
     intParameter: 0
     messageOptions: 0
   - time: 2.6666667
-    functionName: DisableLeftWeaponHitbox
+    functionName: DisableRightWeaponHitbox
     data: 
     objectReferenceParameter: {fileID: 0}
     floatParameter: 0
     intParameter: 0
     messageOptions: 0
   - time: 2.6666667
-    functionName: DisableRightWeaponHitbox
+    functionName: DisableLeftWeaponHitbox
     data: 
     objectReferenceParameter: {fileID: 0}
     floatParameter: 0

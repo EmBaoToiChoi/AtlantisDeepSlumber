@@ -121456,12 +121456,26 @@ AnimationClip:
     floatParameter: 0
     intParameter: 0
     messageOptions: 0
+  - time: 1
+    functionName: TriggerSlashParticle
+    data: 
+    objectReferenceParameter: {fileID: 0}
+    floatParameter: 0
+    intParameter: 101
+    messageOptions: 0
   - time: 1.2
     functionName: DisableRightWeaponHitbox
     data: 
     objectReferenceParameter: {fileID: 0}
     floatParameter: 0
     intParameter: 0
+    messageOptions: 0
+  - time: 1.9
+    functionName: TriggerSlashParticle
+    data: 
+    objectReferenceParameter: {fileID: 0}
+    floatParameter: 0
+    intParameter: 102
     messageOptions: 0
   - time: 1.9
     functionName: EnableRightWeaponHitbox
@@ -121476,6 +121490,13 @@ AnimationClip:
     objectReferenceParameter: {fileID: 0}
     floatParameter: 0
     intParameter: 0
+    messageOptions: 0
+  - time: 2.9333334
+    functionName: TriggerSlashParticle
+    data: 
+    objectReferenceParameter: {fileID: 0}
+    floatParameter: 0
+    intParameter: 103
     messageOptions: 0
   - time: 2.9333334
     functionName: EnableRightWeaponHitbox
