@@ -10,12 +10,12 @@ public class PillarStation : NetworkBehaviour
 
     public void TryInteract(PlayerInteraction player)
     {
-        if (player == null || isOccupied.Value || player.currentHeldCore == null) return;
+        // Bỏ qua điều kiện isOccupied.Value khi kiểm tra để đảm bảo Server quyết định
+        if (player == null || player.currentHeldCore == null) return;
         
-        // Gửi lệnh lên Server khóa ngọc, KHÔNG GỌI player.DropCore() ở đây nữa
+        // Nếu trụ đã occupied, hãy kiểm tra lại trên Server một lần nữa trước khi từ chối
         RequestSnapServerRpc(player.currentHeldCore.NetworkObject.NetworkObjectId, stationIndex);
     }
-
     [ServerRpc(RequireOwnership = false)]
     void RequestSnapServerRpc(ulong crystalNetId, int index, ServerRpcParams rpcParams = default)
     {
