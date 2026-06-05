@@ -4,6 +4,9 @@ using Unity.Netcode;
 [RequireComponent(typeof(Rigidbody))]
 public class CrystalCore : NetworkBehaviour
 {
+    [Header("Cấu hình hiển thị")]
+    [Range(0.1f, 1.0f)]
+    public float holdScaleMultiplier = 0.3f; // Tỉ lệ khi cầm (0.3 = 30%)
     public int crystalID;
     public NetworkVariable<bool> isSnapped = new NetworkVariable<bool>(false);
     public NetworkVariable<ulong> holderId = new NetworkVariable<ulong>(ulong.MaxValue);
@@ -39,7 +42,7 @@ public class CrystalCore : NetworkBehaviour
 
         // 2. Nội suy kích thước
         float flySpeed = 5f; 
-        Vector3 targetScale = (holderId.Value != ulong.MaxValue) ? originalScale * 0.3f : originalScale;
+        Vector3 targetScale = (holderId.Value != ulong.MaxValue) ? originalScale * holdScaleMultiplier : originalScale;
         transform.localScale = Vector3.Lerp(transform.localScale, targetScale, flySpeed * Time.fixedDeltaTime);
 
         if (isSnapped.Value) return;
@@ -68,9 +71,17 @@ public class CrystalCore : NetworkBehaviour
         }
     }
 
+// --- TRONG FILE CrystalCore.cs ---
+
     public void PerformPickup(ulong playerId)
     {
         if (!IsServer) return;
+        
+        // 1. Tắt Collider để tránh va chạm với Player gây giật lag
+        var col = GetComponent<Collider>();
+        if (col != null) col.enabled = false; 
+
+        // 2. Chuyển quyền sở hữu cho người chơi
         GetComponent<NetworkObject>().ChangeOwnership(playerId);
         holderId.Value = playerId; 
     }
@@ -78,9 +89,16 @@ public class CrystalCore : NetworkBehaviour
     public void PerformDrop()
     {
         if (!IsServer) return;
+        
+        // 1. Bật lại Collider để viên ngọc có thể va chạm với mặt đất/tường khi rơi
+        var col = GetComponent<Collider>();
+        if (col != null) col.enabled = true;
+
+        // 2. Trả quyền sở hữu về cho Server
         var netObj = GetComponent<NetworkObject>();
         if (netObj.OwnerClientId != NetworkManager.ServerClientId) netObj.RemoveOwnership();
         
+        // 3. Reset trạng thái vật lý
         holderId.Value = ulong.MaxValue; 
         rb.isKinematic = false;
         rb.useGravity = true;
