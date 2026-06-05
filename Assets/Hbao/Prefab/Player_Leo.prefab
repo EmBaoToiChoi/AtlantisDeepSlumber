@@ -420,6 +420,65 @@ MonoBehaviour:
   extraGravityMultiplier: 2.5
   maxFallSpeed: 20
   onlyExtraGravityWhenAirborne: 0
+  swordComboParticles:
+  - label: Slash 1 (comboStep = 1)
+    particles:
+    - particlePrefab: {fileID: 1713045243172065375, guid: f791790f35137b946b82347edb9264f2, type: 3}
+      delay: 0
+      positionOffset: {x: 0, y: 0, z: 0}
+      rotationOffset: {x: 0, y: 0, z: 0}
+      parentToPlayer: 0
+      parentOverride: {fileID: 2255835029971751272}
+    - particlePrefab: {fileID: 1713045243172065375, guid: f791790f35137b946b82347edb9264f2, type: 3}
+      delay: 0
+      positionOffset: {x: 0, y: 0, z: 0}
+      rotationOffset: {x: 0, y: 0, z: 0}
+      parentToPlayer: 0
+      parentOverride: {fileID: 2255835029971751272}
+    - particlePrefab: {fileID: 1713045243172065375, guid: f791790f35137b946b82347edb9264f2, type: 3}
+      delay: 0
+      positionOffset: {x: 0, y: 0, z: 0}
+      rotationOffset: {x: 0, y: 0, z: 0}
+      parentToPlayer: 0
+      parentOverride: {fileID: 2255835029971751272}
+  - label: Slash 2 (comboStep = 2)
+    particles:
+    - particlePrefab: {fileID: 1713045243172065375, guid: f791790f35137b946b82347edb9264f2, type: 3}
+      delay: 0
+      positionOffset: {x: 0, y: 0, z: 0}
+      rotationOffset: {x: 0, y: 0, z: 0}
+      parentToPlayer: 0
+      parentOverride: {fileID: 2255835029971751272}
+    - particlePrefab: {fileID: 1713045243172065375, guid: f791790f35137b946b82347edb9264f2, type: 3}
+      delay: 0
+      positionOffset: {x: 0, y: 0, z: 0}
+      rotationOffset: {x: 0, y: 0, z: 0}
+      parentToPlayer: 0
+      parentOverride: {fileID: 2255835029971751272}
+    - particlePrefab: {fileID: 1713045243172065375, guid: f791790f35137b946b82347edb9264f2, type: 3}
+      delay: 0
+      positionOffset: {x: 0, y: 0, z: 0}
+      rotationOffset: {x: 0, y: 0, z: 0}
+      parentToPlayer: 0
+      parentOverride: {fileID: 2255835029971751272}
+    - particlePrefab: {fileID: 1713045243172065375, guid: f791790f35137b946b82347edb9264f2, type: 3}
+      delay: 0
+      positionOffset: {x: 0, y: 0, z: 0}
+      rotationOffset: {x: 0, y: 0, z: 0}
+      parentToPlayer: 0
+      parentOverride: {fileID: 2255835029971751272}
+    - particlePrefab: {fileID: 1713045243172065375, guid: f791790f35137b946b82347edb9264f2, type: 3}
+      delay: 0
+      positionOffset: {x: 0, y: 0, z: 0}
+      rotationOffset: {x: 0, y: 0, z: 0}
+      parentToPlayer: 0
+      parentOverride: {fileID: 2255835029971751272}
+    - particlePrefab: {fileID: 1713045243172065375, guid: f791790f35137b946b82347edb9264f2, type: 3}
+      delay: 0
+      positionOffset: {x: 0, y: 0, z: 0}
+      rotationOffset: {x: 0, y: 0, z: 0}
+      parentToPlayer: 0
+      parentOverride: {fileID: 2255835029971751272}
   leftHitbox: {fileID: 1951728423009820279}
   rightHitbox: {fileID: 5564713475576156401}
   leftWeaponHitbox: {fileID: 4903209859804708166}
