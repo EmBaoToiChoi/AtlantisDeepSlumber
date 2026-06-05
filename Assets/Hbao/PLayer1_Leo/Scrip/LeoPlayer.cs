@@ -2792,6 +2792,32 @@
 using UnityEngine;
 using Unity.Netcode;
 
+[System.Serializable]
+public struct SlashParticleConfig
+{
+    [Tooltip("Particle Prefab to instantiate.")]
+    public GameObject particlePrefab;
+    [Tooltip("Delay before spawning/playing the particle (in seconds).")]
+    public float delay;
+    [Tooltip("Position offset relative to the player or parent override.")]
+    public Vector3 positionOffset;
+    [Tooltip("Rotation offset relative to the player or parent override.")]
+    public Vector3 rotationOffset;
+    [Tooltip("If true, the particle will be parented to the player/parentOverride. If false, it spawns at the offset but remains independent in world space.")]
+    public bool parentToPlayer;
+    [Tooltip("Parent of the particle. If null and Parent To Player is true, it defaults to the player transform.")]
+    public Transform parentOverride;
+}
+
+[System.Serializable]
+public struct ComboParticleGroup
+{
+    [Tooltip("Label for this combo step (e.g. Slash 1)")]
+    public string label;
+    [Tooltip("List of particles to spawn for this combo step.")]
+    public SlashParticleConfig[] particles;
+}
+
 /// <summary>
 /// Independent custom player controller for Leo Assassin, inheriting directly from NetworkBehaviour.
 /// Operates seamlessly with the SimplePlayerTest proxy component to maintain complete compatibility
@@ -2841,6 +2867,15 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     protected int comboStep = 0;
     protected bool isRootedAttack = false;
+
+    [Header("Sword Combo Particles Settings")]
+    [Tooltip("Configure particles for each sword combo step. Element 0 = Slash 1, Element 1 = Slash 2, Element 2 = Slash 3.")]
+    public ComboParticleGroup[] swordComboParticles = new ComboParticleGroup[3]
+    {
+        new ComboParticleGroup { label = "Slash 1 (comboStep = 1)", particles = new SlashParticleConfig[0] },
+        new ComboParticleGroup { label = "Slash 2 (comboStep = 2)", particles = new SlashParticleConfig[0] },
+        new ComboParticleGroup { label = "Slash 3 (comboStep = 3)", particles = new SlashParticleConfig[0] }
+    };
     // Offset xoay root cũ đã bị xóa - xem LeoBoneCorrector.cs để hiệu chỉnh xương đúng cách
 
     [Header("Hitbox References")]
@@ -5201,6 +5236,91 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (IsFullBodyActionAnimation(translatedName))
         {
             ClearAttackLayer();
+        }
+    }
+
+    /// <summary>
+    /// Kích hoạt hiệu ứng particle chém kiếm từ Animation Event.
+    /// Hỗ trợ cả 2 chế độ:
+    /// - Nhập số < 100 (ví dụ 1, 2, 3): Chạy đồng thời toàn bộ particle của nhịp combo đó.
+    /// - Nhập số >= 100 (ví dụ 101, 102, 201, 206): Nhịp combo là trăm (1, 2, 3), chỉ số particle là chục/đơn vị (1-based).
+    ///   Ví dụ: 101 = Nhịp chém 1, particle 1; 206 = Nhịp chém 2, particle 6.
+    /// </summary>
+    public void TriggerSlashParticle(int parameter)
+    {
+        if (parameter >= 100)
+        {
+            int comboStep = parameter / 100;
+            int particleIndex = (parameter % 100) - 1;
+
+            int groupIndex = comboStep - 1;
+            if (groupIndex >= 0 && groupIndex < swordComboParticles.Length)
+            {
+                ComboParticleGroup group = swordComboParticles[groupIndex];
+                if (group.particles != null && particleIndex >= 0 && particleIndex < group.particles.Length)
+                {
+                    var config = group.particles[particleIndex];
+                    if (config.particlePrefab != null)
+                    {
+                        StartCoroutine(SpawnParticleCoroutine(config));
+                    }
+                }
+            }
+        }
+        else
+        {
+            int index = parameter - 1;
+            if (index >= 0 && index < swordComboParticles.Length)
+            {
+                PlaySwordComboParticles(index);
+            }
+        }
+    }
+
+    private void PlaySwordComboParticles(int index)
+    {
+        if (SystemInfo.graphicsDeviceType == UnityEngine.Rendering.GraphicsDeviceType.Null) return;
+
+        if (swordComboParticles == null || index < 0 || index >= swordComboParticles.Length) return;
+
+        ComboParticleGroup group = swordComboParticles[index];
+        if (group.particles != null)
+        {
+            foreach (var config in group.particles)
+            {
+                if (config.particlePrefab != null)
+                {
+                    StartCoroutine(SpawnParticleCoroutine(config));
+                }
+            }
+        }
+    }
+
+    private System.Collections.IEnumerator SpawnParticleCoroutine(SlashParticleConfig config)
+    {
+        if (config.delay > 0f)
+        {
+            yield return new WaitForSeconds(config.delay);
+        }
+
+        if (config.particlePrefab == null) yield break;
+
+        // Determine parent
+        Transform parentTransform = config.parentToPlayer ? (config.parentOverride != null ? config.parentOverride : this.transform) : null;
+
+        if (config.parentToPlayer)
+        {
+            GameObject pObj = Instantiate(config.particlePrefab, parentTransform);
+            pObj.transform.localPosition = config.positionOffset;
+            pObj.transform.localRotation = Quaternion.Euler(config.rotationOffset);
+        }
+        else
+        {
+            // If parentOverride is specified but we don't parent, compute relative to it, otherwise relative to this transform
+            Transform referenceTransform = config.parentOverride != null ? config.parentOverride : this.transform;
+            Vector3 worldPos = referenceTransform.TransformPoint(config.positionOffset);
+            Quaternion worldRot = referenceTransform.rotation * Quaternion.Euler(config.rotationOffset);
+            Instantiate(config.particlePrefab, worldPos, worldRot);
         }
     }
 

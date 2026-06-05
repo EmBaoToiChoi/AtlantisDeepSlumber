@@ -35,6 +35,19 @@ public class RollAnimationEventHelper : MonoBehaviour
     // ------------------------------------------------------------------
     
     /// <summary>
+    /// Kích hoạt hiệu ứng particle chém kiếm từ Animation Event.
+    /// comboStepIndex: 1 = Slash1, 2 = Slash2, 3 = Slash3
+    /// </summary>
+    public void TriggerSlashParticle(int comboStepIndex)
+    {
+        EnsurePlayerReference();
+        if (player != null)
+        {
+            player.TriggerSlashParticle(comboStepIndex);
+        }
+    }
+
+    /// <summary>
     /// Event receiver for end of roll animation.
     /// </summary>
     public void OnRollEnd()
