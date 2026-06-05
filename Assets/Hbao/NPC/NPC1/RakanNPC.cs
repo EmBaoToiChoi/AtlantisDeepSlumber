@@ -467,7 +467,7 @@ public class RakanNPC : NetworkBehaviour
     }
 
     [ServerRpc(RequireOwnership = false)]
-    public void RequestEndDialogueServerRpc(ServerRpcParams rpcParams = default)
+    public void RequestEndDialogueServerRpc(bool storyFinished = false, ServerRpcParams rpcParams = default)
     {
         if (rpcParams.Receive.SenderClientId != currentTalkingClientId) return;
 
@@ -480,6 +480,11 @@ public class RakanNPC : NetworkBehaviour
             }
         };
         EndDialogueClientRpc(clientRpcParams);
+
+        if (storyFinished)
+        {
+            EnableGateSpawnerClientRpc();
+        }
     }
 
     [ClientRpc]
@@ -493,10 +498,34 @@ public class RakanNPC : NetworkBehaviour
         CheckAndEnableGateSpawner();
     }
 
+    [ClientRpc]
+    private void EnableGateSpawnerClientRpc()
+    {
+        RakanDialogueController.HasFinishedStoryOnce = true;
+        PlayerPrefs.SetInt("RakanDialogueFinished", 1);
+        PlayerPrefs.Save();
+
+        if (gateEnemySpawner == null)
+        {
+            gateEnemySpawner = FindAnyObjectByType<GateEnemySpawner>();
+        }
+
+        if (gateEnemySpawner != null)
+        {
+            gateEnemySpawner.EnableTriggerBox();
+            Debug.Log("[RakanNPC - ClientRpc] Đã kích hoạt GateEnemySpawner trên Client này!");
+        }
+    }
+
     public void CheckAndEnableGateSpawner()
     {
         bool hasFinished = PlayerPrefs.GetInt("RakanDialogueFinished", 0) == 1 
                            || RakanDialogueController.HasFinishedStoryOnce;
+
+        if (gateEnemySpawner == null)
+        {
+            gateEnemySpawner = FindAnyObjectByType<GateEnemySpawner>();
+        }
 
         if (hasFinished && gateEnemySpawner != null)
         {

@@ -8,8 +8,6 @@
 }
 
 .player-name-label {
-    position: absolute;
-    bottom: 0;
     color: rgb(255, 255, 255);
     font-size: 15px;
     -unity-font-style: bold;
@@ -49,4 +47,22 @@
     
     /* Text shadow mềm giống tên enemy */
     text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+}
+
+.nameplate-wrapper {
+    position: absolute;
+    bottom: 0;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+.nameplate-arrow {
+    color: rgb(255, 255, 255);
+    font-size: 10px;
+    margin-top: -3px; /* Đè nhẹ lên viền của nhãn tên để liền mạch */
+    -unity-text-outline-width: 1.0px;
+    -unity-text-outline-color: rgb(0, 0, 0); /* Viền đen giúp mũi tên rõ nét trên mọi nền */
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+    padding: 0;
+    margin-bottom: 5px; /* Tạo khoảng trống nhẹ dưới mũi tên trước khi chỉ vào đầu nhân vật */
 }
