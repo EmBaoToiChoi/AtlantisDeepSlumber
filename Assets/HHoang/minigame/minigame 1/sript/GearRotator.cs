@@ -58,16 +58,23 @@ public class GearRotator : NetworkBehaviour
     }
 
     // --- CÁC HÀM XỬ LÝ HIỆU ỨNG (Client tự thực thi khi currentState thay đổi) ---
+// --- CÁC HÀM XỬ LÝ HIỆU ỨNG (Client tự thực thi khi currentState thay đổi) ---
     private void TriggerOpenVisuals() 
     {
         transform.DOKill();
-        transform.DOLocalMove(originalPosition + openOffset, moveDuration).SetEase(Ease.InOutCubic);
+        // Thêm Delay 1s trước khi mở
+        DOVirtual.DelayedCall(1.0f, () => {
+            transform.DOLocalMove(originalPosition + openOffset, moveDuration).SetEase(Ease.InOutCubic);
+        });
     }
 
     private void TriggerCloseVisuals() 
     {
         transform.DOKill();
-        transform.DOLocalMove(originalPosition, moveDuration).SetEase(Ease.InOutCubic);
+        // Thêm Delay 1s trước khi đóng
+        DOVirtual.DelayedCall(1.0f, () => {
+            transform.DOLocalMove(originalPosition, moveDuration).SetEase(Ease.OutBack, 0.5f);
+        });
     }
 
     // --- CÁC HÀM ĐIỀU KHIỂN (Chỉ Server được phép gọi) ---
@@ -84,9 +91,14 @@ public class GearRotator : NetworkBehaviour
     [ClientRpc]
     private void ForceCloseVisualsClientRpc()
     {
+        // 1. Dừng ngay mọi lệnh di chuyển cũ để tránh xung đột
         transform.DOKill();
-        // Đổi OutBack sang InOutCubic nếu muốn trượt mượt nhẹ nhàng
-        transform.DOLocalMove(originalPosition, moveDuration).SetEase(Ease.InOutCubic); 
+
+        // 2. Trượt về vị trí gốc với hiệu ứng OutBack
+        // Tham số 0.5f là độ "nẩy" khi về đến nơi.
+        // Cổng đóng sẽ chạy nhanh, chạm vào điểm gốc rồi "cạch" nhẹ một cái mới dừng hẳn.
+        transform.DOLocalMove(originalPosition, moveDuration)
+                 .SetEase(Ease.OutBack, 0.5f); 
     }
 
     // Hàm dự phòng: nếu muốn Server cho phép quay lại sau khi đóng
