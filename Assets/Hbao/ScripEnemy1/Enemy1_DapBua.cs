@@ -54,6 +54,7 @@ public class Enemy1_DapBua : NetworkBehaviour
         get => isStandaloneMode ? localIsEnraged : isEnraged.Value;
         set { if (isStandaloneMode) localIsEnraged = value; else isEnraged.Value = value; }
     }
+    public bool IsDead => isStandaloneMode ? (localState == EnemyState.Dead) : (currentState.Value == EnemyState.Dead);
 
     // ─── Components ────────────────────────────────────────────
     [Header("Components")]
@@ -330,7 +331,7 @@ public class Enemy1_DapBua : NetworkBehaviour
     {
         if (targetPlayer == null) { ReturnToPatrol(); return; }
         IPlayerHUDTarget ps = targetPlayer.GetComponentInParent<IPlayerHUDTarget>();
-        if (ps != null && ps.CurrentHealth <= 0) { targetPlayer = null; ReturnToPatrol(); return; }
+        if (ps != null && (ps.CurrentHealth <= 0 || ps.IsInvisible)) { targetPlayer = null; ReturnToPatrol(); return; }
 
         Vector3 ld = (targetPlayer.position - transform.position); ld.y = 0;
         if (ld.sqrMagnitude > 0.01f)
@@ -437,7 +438,7 @@ public class Enemy1_DapBua : NetworkBehaviour
             if (detectionResults[i] == null) continue;
             Transform pt = detectionResults[i].transform;
             IPlayerHUDTarget ps = pt.GetComponentInParent<IPlayerHUDTarget>();
-            if (ps != null && ps.CurrentHealth <= 0) continue;
+            if (ps != null && (ps.CurrentHealth <= 0 || ps.IsInvisible)) continue;
             Vector3 center = pt.position + Vector3.up;
             float d = Vector3.Distance(ep, center);
             Vector3 dir = (center - ep).normalized;

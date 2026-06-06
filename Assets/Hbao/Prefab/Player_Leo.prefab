@@ -677,6 +677,21 @@ MonoBehaviour:
       MinSecondsBetweenUpdates: 0
       MaxSecondsBetweenUpdates: 0
     m_InternalValue: 0
+  isInvisibleNet:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 0
+  isAttackSpeedBoostedNet:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 0
+  isQSkillActiveNet:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 0
   pendingPickItem: {fileID: 0}
   inventorySlots:
   - 
@@ -689,6 +704,15 @@ MonoBehaviour:
   - 
   - 
   - 
+  invisibleMaterial: {fileID: 0}
+  redSwordMaterial: {fileID: 0}
+  swordEmissiveMap: {fileID: 2800000, guid: cc4a1e70692c8de43bb41adf40016a90, type: 3}
+  redEmissiveColor: {r: 1024, g: 0, b: 0, a: 1}
+  qSkillParticlePrefab: {fileID: 6438811975416736645, guid: 9f9e5972d4aa84545b6da5d63c048d25, type: 3}
+  qSkillDuration: 1.5
+  qSkillSlashCount: 5
+  qSkillDamagePerSlash: 15
+  qSkillSearchRadius: 8
   isStandaloneMode: 0
   weapon1MaxDurability: 100
   weapon2MaxDurability: 100
@@ -744,7 +768,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 3704789710416520249}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: b95b054562b10e442a0cd19cd1131289, type: 3}
   m_Name: 
@@ -773,21 +797,21 @@ MonoBehaviour:
   - stateName: attacktaytrai
     overrideBodyLock: 1
     lockBodyOnAttack: 1
-    bodyLockStrength: 0.8
+    bodyLockStrength: 1
     spineOffsetEuler: {x: 0, y: 0, z: 0}
     applyRightArmOffset: 0
     rightUpperArmOffset: {x: 0, y: 0, z: 30}
     rightArmStrength: 1
     applyLeftArmOffset: 1
-    leftUpperArmOffset: {x: 0, y: 0, z: 30}
+    leftUpperArmOffset: {x: 0, y: 0, z: 40}
     leftArmStrength: 1
   - stateName: attacktayphai
     overrideBodyLock: 1
     lockBodyOnAttack: 1
-    bodyLockStrength: 0.8
+    bodyLockStrength: 1
     spineOffsetEuler: {x: 0, y: 0, z: 0}
     applyRightArmOffset: 1
-    rightUpperArmOffset: {x: 0, y: 0, z: 30}
+    rightUpperArmOffset: {x: 0, y: 0, z: 40}
     rightArmStrength: 1
     applyLeftArmOffset: 0
     leftUpperArmOffset: {x: 0, y: 0, z: 20}
@@ -795,35 +819,35 @@ MonoBehaviour:
   - stateName: Slash1Combo2
     overrideBodyLock: 1
     lockBodyOnAttack: 1
-    bodyLockStrength: 0.8
+    bodyLockStrength: 1
     spineOffsetEuler: {x: 0, y: 0, z: 0}
     applyRightArmOffset: 1
-    rightUpperArmOffset: {x: 0, y: 0, z: 30}
+    rightUpperArmOffset: {x: 0, y: 0, z: 50}
     rightArmStrength: 1
-    applyLeftArmOffset: 0
+    applyLeftArmOffset: 1
     leftUpperArmOffset: {x: 0, y: 0, z: 20}
     leftArmStrength: 1
-  - stateName: Slash2Combo2
+  - stateName: Slash2combo2
     overrideBodyLock: 1
     lockBodyOnAttack: 1
-    bodyLockStrength: 0.8
+    bodyLockStrength: 1
     spineOffsetEuler: {x: 0, y: 0, z: 0}
     applyRightArmOffset: 1
-    rightUpperArmOffset: {x: 0, y: 0, z: 30}
+    rightUpperArmOffset: {x: 0, y: 0, z: 50}
     rightArmStrength: 1
-    applyLeftArmOffset: 0
+    applyLeftArmOffset: 1
     leftUpperArmOffset: {x: 0, y: 0, z: 20}
     leftArmStrength: 1
-  - stateName: Slash3Combo2
+  - stateName: Slash3combo2
     overrideBodyLock: 1
     lockBodyOnAttack: 1
-    bodyLockStrength: 0.8
+    bodyLockStrength: 1
     spineOffsetEuler: {x: 0, y: 0, z: 0}
     applyRightArmOffset: 1
-    rightUpperArmOffset: {x: 0, y: 0, z: 30}
+    rightUpperArmOffset: {x: 0, y: 0, z: 50}
     rightArmStrength: 1
-    applyLeftArmOffset: 0
-    leftUpperArmOffset: {x: 0, y: 0, z: 20}
+    applyLeftArmOffset: 1
+    leftUpperArmOffset: {x: 0, y: 0, z: 30}
     leftArmStrength: 1
   attackStateNames:
   - Punch1

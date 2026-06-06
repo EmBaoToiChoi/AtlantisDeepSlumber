@@ -2998,6 +2998,9 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     public NetworkVariable<float> weapon2Durability = new NetworkVariable<float>(100f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     public NetworkVariable<bool> isRollingNet = new NetworkVariable<bool>(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     public NetworkVariable<bool> isMovementLockedNet = new NetworkVariable<bool>(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+    public NetworkVariable<bool> isInvisibleNet = new NetworkVariable<bool>(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+    public NetworkVariable<bool> isAttackSpeedBoostedNet = new NetworkVariable<bool>(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+    public NetworkVariable<bool> isQSkillActiveNet = new NetworkVariable<bool>(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     [HideInInspector]
     public GameObject pendingPickItem;
 
@@ -3013,6 +3016,34 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     protected float localHealth;
     protected float localWeapon1Durability = 100f;
     protected float localWeapon2Durability = 100f;
+
+    [Header("Invisibility Skill R Settings")]
+    public Material invisibleMaterial;
+    private float invisibilityTimeRemaining = 0f;
+    private System.Collections.Generic.Dictionary<Renderer, Material[]> originalMaterials = new System.Collections.Generic.Dictionary<Renderer, Material[]>();
+
+    [Header("Attack Speed Boost Skill E Settings")]
+    public Material redSwordMaterial;
+    [Tooltip("Gán texture 'sword_Emissive' ở đây để chỉ nhuộm đỏ phần lưỡi/đường vân kiếm mà giữ nguyên chuôi kiếm.")]
+    public Texture2D swordEmissiveMap;
+    [ColorUsage(true, true)]
+    [Tooltip("Màu phát sáng HDR đỏ cho kiếm.")]
+    public Color redEmissiveColor = new Color(3.5f, 0f, 0f, 1f);
+    private float attackSpeedBoostTimeRemaining = 0f;
+    private System.Collections.Generic.Dictionary<Renderer, Material[]> originalSwordMaterials = new System.Collections.Generic.Dictionary<Renderer, Material[]>();
+
+    [Header("Ghost Slash Skill Q Settings")]
+    [Tooltip("Particle prefab riêng cho hiệu ứng Ảo ảnh Chém. Nếu để trống sẽ dùng pool VFX cũ.")]
+    public GameObject qSkillParticlePrefab;
+    public float qSkillDuration = 1.5f;
+    public int qSkillSlashCount = 5;
+    public float qSkillDamagePerSlash = 15f;
+    public float qSkillSearchRadius = 8f;
+    private float qSkillTimeRemaining = 0f;
+    private bool isQSkillActiveLocal = false;
+
+    /// <summary>Sự kiện bắt đầu khi Skill Q bị hủy (server xác nhận không có enemy) — để HUD reset cooldown.</summary>
+    public event System.Action OnQSkillCancelled;
 
     public bool isStandaloneMode = false;
     protected bool isSyncingFromDb = false;
@@ -3084,6 +3115,18 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     public string[] InventorySlots => inventorySlots;
     public float MaxHealth => maxHealth;
 
+    // Invisibility Skill R
+    public bool IsInvisible => isStandaloneMode ? (invisibilityTimeRemaining > 0f) : isInvisibleNet.Value;
+    public float InvisibilityTimeRemaining => invisibilityTimeRemaining;
+
+    // Attack Speed Boost Skill E
+    public bool IsAttackSpeedBoosted => isStandaloneMode ? (attackSpeedBoostTimeRemaining > 0f) : isAttackSpeedBoostedNet.Value;
+    public float AttackSpeedBoostTimeRemaining => attackSpeedBoostTimeRemaining;
+
+    // Ghost Slash Skill Q
+    public bool IsQSkillActive => isStandaloneMode ? isQSkillActiveLocal : isQSkillActiveNet.Value;
+    public float QSkillTimeRemaining => qSkillTimeRemaining;
+
     protected RootMotionBridge GetRootMotionBridge()
     {
         if (rootMotionBridge == null && anim != null)
@@ -3118,6 +3161,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         rb = GetComponent<Rigidbody>();
         if (rb != null)
         {
+            rb.isKinematic = false; // Mặc định tắt Kinematic để di chuyển được ở chế độ Standalone/Offline
             rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationY | RigidbodyConstraints.FreezeRotationZ;
             rb.interpolation = RigidbodyInterpolation.Interpolate;
         }
@@ -3161,6 +3205,11 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     private void InitStandaloneMode()
     {
         Debug.Log("[LeoPlayer] Starting in STANDALONE mode. Local inputs active.");
+        if (rb == null) rb = GetComponent<Rigidbody>();
+        if (rb != null)
+        {
+            rb.isKinematic = false; // Tắt Kinematic để di chuyển trong chế độ chơi đơn lẻ
+        }
         targetCamera = Camera.main;
         if (targetCamera == null)
             targetCamera = FindObjectOfType<Camera>();
@@ -3235,6 +3284,9 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         weapon2Durability.OnValueChanged += OnDurabilityChanged;
         isMovementLockedNet.OnValueChanged += OnMovementLockedNetChanged;
         currentHealth.OnValueChanged += OnHealthChangedShared;
+        isInvisibleNet.OnValueChanged += OnInvisibleNetChanged;
+        isAttackSpeedBoostedNet.OnValueChanged += OnAttackSpeedBoostedChanged;
+        isQSkillActiveNet.OnValueChanged += OnQSkillActiveChanged;
 
         if (IsOwner)
         {
@@ -3278,6 +3330,23 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         }
 
         SyncWeaponVisuals(activeWeaponIndex.Value);
+
+        // Apply initial visual states for network variables
+        if (!isStandaloneMode)
+        {
+            if (isInvisibleNet.Value)
+            {
+                SetInvisibilityVisuals(true);
+            }
+            if (isAttackSpeedBoostedNet.Value)
+            {
+                SetSwordRedVisuals(true);
+            }
+            if (isQSkillActiveNet.Value)
+            {
+                SetLeoRenderersActive(false);
+            }
+        }
     }
 
     public override void OnNetworkDespawn()
@@ -3301,6 +3370,9 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         weapon2Durability.OnValueChanged -= OnDurabilityChanged;
         isMovementLockedNet.OnValueChanged -= OnMovementLockedNetChanged;
         currentHealth.OnValueChanged -= OnHealthChangedShared;
+        isInvisibleNet.OnValueChanged -= OnInvisibleNetChanged;
+        isAttackSpeedBoostedNet.OnValueChanged -= OnAttackSpeedBoostedChanged;
+        isQSkillActiveNet.OnValueChanged -= OnQSkillActiveChanged;
 
         if (IsOwner)
             currentHealth.OnValueChanged -= OnHealthChanged;
@@ -3377,6 +3449,44 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     private void Update()
     {
+        if (invisibilityTimeRemaining > 0f)
+        {
+            invisibilityTimeRemaining -= Time.deltaTime;
+            if (invisibilityTimeRemaining <= 0f)
+            {
+                invisibilityTimeRemaining = 0f;
+                if (isStandaloneMode)
+                {
+                    SetInvisibilityVisuals(false);
+                }
+            }
+        }
+
+        if (attackSpeedBoostTimeRemaining > 0f)
+        {
+            attackSpeedBoostTimeRemaining -= Time.deltaTime;
+            if (attackSpeedBoostTimeRemaining <= 0f)
+            {
+                attackSpeedBoostTimeRemaining = 0f;
+                if (isStandaloneMode)
+                {
+                    SetSwordRedVisuals(false);
+                }
+            }
+        }
+
+        if (anim != null && anim.isActiveAndEnabled && anim.runtimeAnimatorController != null)
+        {
+            if (isExecutingAttack && IsAttackSpeedBoosted)
+            {
+                anim.speed = 1.5f;
+            }
+            else
+            {
+                anim.speed = 1.0f;
+            }
+        }
+
         UpdateAttackLayerWeight();
 
         bool hasControl = isStandaloneMode || (IsSpawned && IsOwner);
@@ -3984,7 +4094,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         // ================================================================
         float totalDuration = currentAttackAnimDuration;
 
-        // Chờ hết thời lượng animation
+        // Chờ hết thời lượng animation thực tế
         yield return new WaitForSeconds(totalDuration);
 
         // Đảm bảo tắt hết hitbox khi animation kết thúc
@@ -3997,15 +4107,16 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (pendingAttackRequest)
         {
             pendingAttackRequest = false;
-            Debug.Log("[LeoPlayer] Tiếp tục combo từ buffer.");
+            Debug.Log("[LeoPlayer] Tiếp tục combo từ buffer sau khi kết thúc đòn cũ.");
             PerformComboAttack(networkMode);
         }
         else
         {
-            // Không có buffer → reset combo step và mở khóa di chuyển
+            // Không có buffer → reset combo step, mở khóa di chuyển, dọn dẹp Attack Layer
             comboStep = 0;
             isRootedAttack = false;
             SetMovementLock(false);
+            ClearAttackLayer();
             Debug.Log("[LeoPlayer] Kết thúc combo - không có input tiếp theo.");
         }
     }
@@ -4235,6 +4346,13 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     public void TakeDamage(float damage)
     {
+        // Miễn nhiễm sát thương hoàn toàn khi đang dùng Skill Q
+        if (IsQSkillActive)
+        {
+            Debug.Log("[LeoPlayer] Q Skill active - immune to damage!");
+            return;
+        }
+
         bool isRolling = isStandaloneMode ? isRollingStandalone : isRollingNet.Value;
         if (isRolling)
         {
@@ -4508,6 +4626,592 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             float percent2 = (isStandaloneMode ? localWeapon2Durability : weapon2Durability.Value) / weapon2MaxDurability;
             hud.SetWeaponDurability(1, percent1);
             hud.SetWeaponDurability(2, percent2);
+        }
+    }
+
+    // ======================================================
+    // LOGIC TÀNG HÌNH (SKILL R)
+    // ======================================================
+    public void TriggerInvisibilitySkill()
+    {
+        if (IsInvisible) return;
+
+        if (isStandaloneMode)
+        {
+            invisibilityTimeRemaining = 5f;
+            SetInvisibilityVisuals(true);
+        }
+        else if (IsOwner)
+        {
+            TriggerInvisibilityServerRpc(true);
+        }
+    }
+
+    [ServerRpc]
+    private void TriggerInvisibilityServerRpc(bool state)
+    {
+        isInvisibleNet.Value = state;
+        TriggerInvisibilityClientRpc(state);
+        if (state)
+        {
+            StartCoroutine(ServerInvisibilityTimerCoroutine(5f));
+        }
+    }
+
+    [ClientRpc]
+    private void TriggerInvisibilityClientRpc(bool state)
+    {
+        SetInvisibilityVisuals(state);
+    }
+
+    private System.Collections.IEnumerator ServerInvisibilityTimerCoroutine(float duration)
+    {
+        yield return new WaitForSeconds(duration);
+        isInvisibleNet.Value = false;
+        TriggerInvisibilityClientRpc(false);
+    }
+
+    private void OnInvisibleNetChanged(bool oldVal, bool newVal)
+    {
+        SetInvisibilityVisuals(newVal);
+        if (newVal)
+        {
+            invisibilityTimeRemaining = 5f;
+        }
+        else
+        {
+            invisibilityTimeRemaining = 0f;
+        }
+    }
+
+    private void SetInvisibilityVisuals(bool invisible)
+    {
+        if (invisible)
+        {
+            if (originalMaterials.Count > 0) return; // Đã tàng hình rồi
+
+            Renderer[] renderers = GetComponentsInChildren<Renderer>(true);
+            foreach (var r in renderers)
+            {
+                if (r is SkinnedMeshRenderer || r is MeshRenderer)
+                {
+                    originalMaterials[r] = r.sharedMaterials;
+
+                    if (invisibleMaterial != null)
+                    {
+                        Material[] newMats = new Material[r.sharedMaterials.Length];
+                        for (int i = 0; i < newMats.Length; i++)
+                        {
+                            newMats[i] = invisibleMaterial;
+                        }
+                        r.materials = newMats;
+                    }
+                    else
+                    {
+                        Shader transparentShader = r.sharedMaterial != null ? r.sharedMaterial.shader : null;
+                        if (transparentShader == null) transparentShader = Shader.Find("Standard");
+                        if (transparentShader == null) transparentShader = Shader.Find("Legacy Shaders/Transparent/Diffuse");
+                        if (transparentShader == null) transparentShader = Shader.Find("Transparent/Diffuse");
+
+                        if (transparentShader != null)
+                        {
+                            Material tempMat = new Material(transparentShader);
+                            if (transparentShader.name == "Standard")
+                            {
+                                tempMat.SetFloat("_Mode", 3f);
+                                tempMat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+                                tempMat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+                                tempMat.SetInt("_ZWrite", 0);
+                                tempMat.DisableKeyword("_ALPHATEST_ON");
+                                tempMat.EnableKeyword("_ALPHABLEND_ON");
+                                tempMat.DisableKeyword("_ALPHAPREMULTIPLY_ON");
+                                tempMat.renderQueue = 3000;
+                            }
+                            tempMat.color = new Color(1f, 1f, 1f, 0.3f);
+
+                            Material[] newMats = new Material[r.sharedMaterials.Length];
+                            for (int i = 0; i < newMats.Length; i++)
+                            {
+                                newMats[i] = tempMat;
+                            }
+                            r.materials = newMats;
+                        }
+                    }
+                }
+            }
+        }
+        else
+        {
+            foreach (var kvp in originalMaterials)
+            {
+                if (kvp.Key != null && kvp.Value != null)
+                {
+                    kvp.Key.materials = kvp.Value;
+                }
+            }
+            originalMaterials.Clear();
+        }
+    }
+
+    // ======================================================
+    // LOGIC TĂNG TỐC ĐỘ CHÉM & NHUỘM ĐỎ KIẾM (SKILL E)
+    // ======================================================
+    public void TriggerAttackSpeedBoostSkill()
+    {
+        if (IsAttackSpeedBoosted) return;
+
+        if (isStandaloneMode)
+        {
+            attackSpeedBoostTimeRemaining = 10f;
+            SetSwordRedVisuals(true);
+        }
+        else if (IsOwner)
+        {
+            TriggerAttackSpeedBoostServerRpc(true);
+        }
+    }
+
+    [ServerRpc]
+    private void TriggerAttackSpeedBoostServerRpc(bool state)
+    {
+        isAttackSpeedBoostedNet.Value = state;
+        TriggerAttackSpeedBoostClientRpc(state);
+        if (state)
+        {
+            StartCoroutine(ServerAttackSpeedBoostTimerCoroutine(10f));
+        }
+    }
+
+    [ClientRpc]
+    private void TriggerAttackSpeedBoostClientRpc(bool state)
+    {
+        SetSwordRedVisuals(state);
+    }
+
+    private System.Collections.IEnumerator ServerAttackSpeedBoostTimerCoroutine(float duration)
+    {
+        yield return new WaitForSeconds(duration);
+        isAttackSpeedBoostedNet.Value = false;
+        TriggerAttackSpeedBoostClientRpc(false);
+    }
+
+    private void OnAttackSpeedBoostedChanged(bool oldVal, bool newVal)
+    {
+        SetSwordRedVisuals(newVal);
+        if (newVal)
+        {
+            attackSpeedBoostTimeRemaining = 10f;
+        }
+        else
+        {
+            attackSpeedBoostTimeRemaining = 0f;
+        }
+    }
+
+    private void SetSwordRedVisuals(bool active)
+    {
+        if (active)
+        {
+            if (originalSwordMaterials.Count > 0) return; // Đã nhuộm đỏ rồi
+
+            GameObject[] swords = { leftHandSword, rightHandSword, leftShoulderSword, rightShoulderSword };
+            foreach (var sword in swords)
+            {
+                if (sword == null) continue;
+                Renderer[] renderers = sword.GetComponentsInChildren<Renderer>(true);
+                foreach (var r in renderers)
+                {
+                    if (r is SkinnedMeshRenderer || r is MeshRenderer)
+                    {
+                        originalSwordMaterials[r] = r.sharedMaterials;
+
+                        if (redSwordMaterial != null)
+                        {
+                            Material[] newMats = new Material[r.sharedMaterials.Length];
+                            for (int i = 0; i < newMats.Length; i++)
+                            {
+                                newMats[i] = redSwordMaterial;
+                            }
+                            r.materials = newMats;
+                        }
+                        else
+                        {
+                            Material[] newMats = new Material[r.sharedMaterials.Length];
+                            for (int i = 0; i < newMats.Length; i++)
+                            {
+                                Material originalMat = r.sharedMaterials[i];
+                                if (originalMat != null)
+                                {
+                                    Material tempMat = new Material(originalMat);
+                                    tempMat.EnableKeyword("_EMISSION");
+                                    if (swordEmissiveMap != null)
+                                    {
+                                        tempMat.SetTexture("_EmissionMap", swordEmissiveMap);
+                                    }
+                                    tempMat.SetColor("_EmissionColor", redEmissiveColor);
+                                    newMats[i] = tempMat;
+                                }
+                                else
+                                {
+                                    newMats[i] = null;
+                                }
+                            }
+                            r.materials = newMats;
+                        }
+                    }
+                }
+            }
+        }
+        else
+        {
+            foreach (var kvp in originalSwordMaterials)
+            {
+                if (kvp.Key != null && kvp.Value != null)
+                {
+                    kvp.Key.materials = kvp.Value;
+                }
+            }
+            originalSwordMaterials.Clear();
+        }
+    }
+
+    // ======================================================
+    // LOGIC ẢO ẢNH CHÉM (SKILL Q)
+    // ======================================================
+
+    /// <summary>
+    /// Ẩn/Hiện toàn bộ renderer của Leo (cơ thể + kiếm) trừ particle systems.
+    /// Được gọi khi bắt đầu/kết thúc Skill Q.
+    /// </summary>
+    private void SetLeoRenderersActive(bool active)
+    {
+        Renderer[] renderers = GetComponentsInChildren<Renderer>(true);
+        foreach (var r in renderers)
+        {
+            // Bỏ qua ParticleSystemRenderer để giữ lại VFX chém
+            if (r is ParticleSystemRenderer) continue;
+            r.enabled = active;
+        }
+    }
+
+    /// <summary>
+    /// Tìm mục tiêu gần nhất trong bán kính qSkillSearchRadius, không kể các Enemy đã chết.
+    /// Trả về Transform của mục tiêu hoặc null nếu không tìm thấy.
+    /// </summary>
+    private Transform FindNearestAliveEnemy()
+    {
+        float minDist = float.MaxValue;
+        Transform nearest = null;
+
+        // Kiểm tra từng loại Enemy
+        Enemy1_DapBua[] e1s = FindObjectsByType<Enemy1_DapBua>(FindObjectsSortMode.None);
+        foreach (var e in e1s)
+        {
+            if (e == null || e.IsDead) continue;
+            float d = Vector3.Distance(transform.position, e.transform.position);
+            if (d <= qSkillSearchRadius && d < minDist) { minDist = d; nearest = e.transform; }
+        }
+        Enemy2_Zombie[] e2s = FindObjectsByType<Enemy2_Zombie>(FindObjectsSortMode.None);
+        foreach (var e in e2s)
+        {
+            if (e == null || e.IsDead) continue;
+            float d = Vector3.Distance(transform.position, e.transform.position);
+            if (d <= qSkillSearchRadius && d < minDist) { minDist = d; nearest = e.transform; }
+        }
+        Enemy3_Buaa[] e3s = FindObjectsByType<Enemy3_Buaa>(FindObjectsSortMode.None);
+        foreach (var e in e3s)
+        {
+            if (e == null || e.IsDead) continue;
+            float d = Vector3.Distance(transform.position, e.transform.position);
+            if (d <= qSkillSearchRadius && d < minDist) { minDist = d; nearest = e.transform; }
+        }
+        Enemy4_Bongtoi[] e4s = FindObjectsByType<Enemy4_Bongtoi>(FindObjectsSortMode.None);
+        foreach (var e in e4s)
+        {
+            if (e == null || e.IsDead) continue;
+            float d = Vector3.Distance(transform.position, e.transform.position);
+            if (d <= qSkillSearchRadius && d < minDist) { minDist = d; nearest = e.transform; }
+        }
+        Enemy5_PhuThuy[] e5s = FindObjectsByType<Enemy5_PhuThuy>(FindObjectsSortMode.None);
+        foreach (var e in e5s)
+        {
+            if (e == null || e.IsDead) continue;
+            float d = Vector3.Distance(transform.position, e.transform.position);
+            if (d <= qSkillSearchRadius && d < minDist) { minDist = d; nearest = e.transform; }
+        }
+        return nearest;
+    }
+
+    /// <summary>
+    /// Gây sát thương lên một Enemy cụ thể dựa trên Transform của nó.
+    /// </summary>
+    private void TryDamageSpecificEnemy(Transform enemyTransform, float damage)
+    {
+        if (enemyTransform == null) return;
+        var e1 = enemyTransform.GetComponentInParent<Enemy1_DapBua>() ?? enemyTransform.GetComponentInChildren<Enemy1_DapBua>();
+        if (e1 != null) { e1.TakeDamage(damage); return; }
+        var e2 = enemyTransform.GetComponentInParent<Enemy2_Zombie>() ?? enemyTransform.GetComponentInChildren<Enemy2_Zombie>();
+        if (e2 != null) { e2.TakeDamage(damage); return; }
+        var e3 = enemyTransform.GetComponentInParent<Enemy3_Buaa>() ?? enemyTransform.GetComponentInChildren<Enemy3_Buaa>();
+        if (e3 != null) { e3.TakeDamage(damage); return; }
+        var e4 = enemyTransform.GetComponentInParent<Enemy4_Bongtoi>() ?? enemyTransform.GetComponentInChildren<Enemy4_Bongtoi>();
+        if (e4 != null) { e4.TakeDamage(damage); return; }
+        var e5 = enemyTransform.GetComponentInParent<Enemy5_PhuThuy>() ?? enemyTransform.GetComponentInChildren<Enemy5_PhuThuy>();
+        if (e5 != null) { e5.TakeDamage(damage); return; }
+    }
+
+    /// <summary>
+    /// Kiểm tra xem một Transform Enemy có còn sống không.
+    /// </summary>
+    private bool IsEnemyDead(Transform enemyTransform)
+    {
+        if (enemyTransform == null) return true;
+        var e1 = enemyTransform.GetComponentInParent<Enemy1_DapBua>() ?? enemyTransform.GetComponentInChildren<Enemy1_DapBua>();
+        if (e1 != null) return e1.IsDead;
+        var e2 = enemyTransform.GetComponentInParent<Enemy2_Zombie>() ?? enemyTransform.GetComponentInChildren<Enemy2_Zombie>();
+        if (e2 != null) return e2.IsDead;
+        var e3 = enemyTransform.GetComponentInParent<Enemy3_Buaa>() ?? enemyTransform.GetComponentInChildren<Enemy3_Buaa>();
+        if (e3 != null) return e3.IsDead;
+        var e4 = enemyTransform.GetComponentInParent<Enemy4_Bongtoi>() ?? enemyTransform.GetComponentInChildren<Enemy4_Bongtoi>();
+        if (e4 != null) return e4.IsDead;
+        var e5 = enemyTransform.GetComponentInParent<Enemy5_PhuThuy>() ?? enemyTransform.GetComponentInChildren<Enemy5_PhuThuy>();
+        if (e5 != null) return e5.IsDead;
+        return true; // Không tìm thấy component = coi như chết
+    }
+
+    /// <summary>
+    /// Kích hoạt Skill Q. Trả về true nếu kích hoạt thành công, false nếu không có mục tiêu.
+    /// </summary>
+    public bool TriggerQSkill()
+    {
+        if (IsQSkillActive) return false;
+
+        if (isStandaloneMode)
+        {
+            Transform target = FindNearestAliveEnemy();
+            if (target == null)
+            {
+                Debug.Log("[LeoPlayer] Q Skill: Không có enemy trong tầm, hủy kỹ năng.");
+                return false;
+            }
+            StartCoroutine(QSkillCoroutineStandalone(target));
+            return true;
+        }
+        else if (IsOwner)
+        {
+            TriggerQSkillServerRpc();
+            return true; // Lạc quan, server sẽ xác nhận lại
+        }
+        return false;
+    }
+
+    [ServerRpc]
+    private void TriggerQSkillServerRpc()
+    {
+        Transform target = FindNearestAliveEnemy();
+        if (target == null)
+        {
+            Debug.Log("[LeoPlayer Server] Q Skill: Không có enemy trong tầm, hủy kỹ năng.");
+            // Báo lại client để không tính hồi chiêu - thông qua ClientRpc đặc biệt
+            QSkillCancelledClientRpc();
+            return;
+        }
+        StartCoroutine(QSkillCoroutineServer(target));
+    }
+
+    [ClientRpc]
+    private void QSkillCancelledClientRpc()
+    {
+        Debug.Log("[LeoPlayer Client] Q Skill bị hủy vì không có enemy.");
+        // Thông báo cho HUD reset cooldown
+        OnQSkillCancelled?.Invoke();
+    }
+
+    /// <summary>
+    /// Coroutine chạy Skill Q trong chế độ Standalone.
+    /// </summary>
+    private System.Collections.IEnumerator QSkillCoroutineStandalone(Transform initialTarget)
+    {
+        isQSkillActiveLocal = true;
+        qSkillTimeRemaining = qSkillDuration;
+        SetLeoRenderersActive(false);
+        isMovementLocked = true;
+
+        if (rb != null) rb.linearVelocity = Vector3.zero;
+
+        Transform currentTarget = initialTarget;
+        float interval = qSkillDuration / Mathf.Max(qSkillSlashCount, 1);
+
+        for (int i = 0; i < qSkillSlashCount; i++)
+        {
+            // Kiểm tra mục tiêu hiện tại
+            if (currentTarget == null || IsEnemyDead(currentTarget))
+            {
+                currentTarget = FindNearestAliveEnemy();
+                if (currentTarget == null)
+                {
+                    Debug.Log("[LeoPlayer] Q Skill: Không còn enemy, kết thúc sớm.");
+                    break;
+                }
+            }
+
+            // Dịch chuyển xung quanh mục tiêu (vị trí ngẫu nhiên bán kính 1.5m)
+            Vector2 offset2D = UnityEngine.Random.insideUnitCircle.normalized * 1.5f;
+            Vector3 slashPos = currentTarget.position + new Vector3(offset2D.x, 0f, offset2D.y);
+            slashPos.y = transform.position.y;
+            transform.position = slashPos;
+
+            // Xoay mặt về phía mục tiêu
+            Vector3 dir = (currentTarget.position - transform.position);
+            dir.y = 0f;
+            if (dir.sqrMagnitude > 0.001f) transform.rotation = Quaternion.LookRotation(dir.normalized);
+
+            // Gây sát thương
+            TryDamageSpecificEnemy(currentTarget, qSkillDamagePerSlash);
+
+            // Phát VFX chém cục bộ
+            SpawnQSlashVfxLocal(currentTarget.position);
+
+            qSkillTimeRemaining -= interval;
+            yield return new WaitForSeconds(interval);
+        }
+
+        // Kết thúc Skill Q
+        isQSkillActiveLocal = false;
+        qSkillTimeRemaining = 0f;
+        isMovementLocked = false;
+        SetLeoRenderersActive(true);
+    }
+
+    /// <summary>
+    /// Coroutine chạy Skill Q trên Server (Multiplayer).
+    /// </summary>
+    private System.Collections.IEnumerator QSkillCoroutineServer(Transform initialTarget)
+    {
+        isQSkillActiveNet.Value = true;
+        SetQSkillStateClientRpc(true);
+        SetMovementLockServerSide(true);
+
+        float interval = qSkillDuration / Mathf.Max(qSkillSlashCount, 1);
+        float remaining = qSkillDuration;
+
+        // Đồng bộ timer về client owner
+        UpdateQTimerClientRpc(remaining);
+
+        Transform currentTarget = initialTarget;
+
+        for (int i = 0; i < qSkillSlashCount; i++)
+        {
+            // Kiểm tra mục tiêu hiện tại
+            if (currentTarget == null || IsEnemyDead(currentTarget))
+            {
+                currentTarget = FindNearestAliveEnemy();
+                if (currentTarget == null)
+                {
+                    Debug.Log("[LeoPlayer Server] Q Skill: Không còn enemy, kết thúc sớm.");
+                    break;
+                }
+            }
+
+            // Dịch chuyển xung quanh mục tiêu
+            Vector2 offset2D = UnityEngine.Random.insideUnitCircle.normalized * 1.5f;
+            Vector3 slashPos = currentTarget.position + new Vector3(offset2D.x, 0f, offset2D.y);
+            slashPos.y = transform.position.y;
+            transform.position = slashPos;
+
+            // Xoay mặt về phía mục tiêu
+            Vector3 dir = (currentTarget.position - transform.position);
+            dir.y = 0f;
+            if (dir.sqrMagnitude > 0.001f) transform.rotation = Quaternion.LookRotation(dir.normalized);
+
+            // Gây sát thương
+            TryDamageSpecificEnemy(currentTarget, qSkillDamagePerSlash);
+
+            // Gọi ClientRpc để phát VFX chém ở tất cả client
+            PlayQSlashVfxClientRpc(currentTarget.position);
+
+            remaining -= interval;
+            UpdateQTimerClientRpc(Mathf.Max(0f, remaining));
+            yield return new WaitForSeconds(interval);
+        }
+
+        // Kết thúc Skill Q
+        isQSkillActiveNet.Value = false;
+        SetQSkillStateClientRpc(false);
+        SetMovementLockServerSide(false);
+        UpdateQTimerClientRpc(0f);
+    }
+
+    private void SetMovementLockServerSide(bool locked)
+    {
+        if (IsServer)
+        {
+            isMovementLockedNet.Value = locked;
+        }
+    }
+
+    [ClientRpc]
+    private void SetQSkillStateClientRpc(bool active)
+    {
+        qSkillTimeRemaining = active ? qSkillDuration : 0f;
+        SetLeoRenderersActive(!active);
+    }
+
+    [ClientRpc]
+    private void UpdateQTimerClientRpc(float remaining)
+    {
+        qSkillTimeRemaining = remaining;
+    }
+
+    [ClientRpc]
+    private void PlayQSlashVfxClientRpc(Vector3 targetPos)
+    {
+        SpawnQSlashVfxLocal(targetPos);
+    }
+
+    /// <summary>
+    /// Phát VFX vết chém ảo ảnh tại vị trí mục tiêu.
+    /// Ưu tiên dùng qSkillParticlePrefab, fallback về pool VFX cũ.
+    /// </summary>
+    private void SpawnQSlashVfxLocal(Vector3 targetPos)
+    {
+        Quaternion rot = Quaternion.Euler(0f, UnityEngine.Random.Range(0f, 360f), 0f);
+        Vector3 spawnPos = targetPos + Vector3.up * 0.5f;
+
+        // Dùng particle riêng nếu đã gán trong Inspector
+        if (qSkillParticlePrefab != null)
+        {
+            GetPooledVFX(qSkillParticlePrefab, spawnPos, rot);
+            return;
+        }
+
+        // Fallback: chọn ngẫu nhiên trong pool VFX cũ
+        GameObject[] vfxOptions = {
+            leftSlashVfxPrefab,
+            rightSlashVfxPrefab,
+            dualSlashVfxPrefab
+        };
+        var validVfx = System.Array.FindAll(vfxOptions, v => v != null);
+        if (validVfx.Length == 0) return;
+
+        GameObject chosenPrefab = validVfx[UnityEngine.Random.Range(0, validVfx.Length)];
+        GetPooledVFX(chosenPrefab, spawnPos, rot);
+    }
+
+    private void OnQSkillActiveChanged(bool oldVal, bool newVal)
+    {
+        // Cập nhật visual khi nhận tín hiệu từ network (không phải owner chạy coroutine)
+        if (!IsOwner)
+        {
+            SetLeoRenderersActive(!newVal);
+        }
+        if (newVal)
+        {
+            qSkillTimeRemaining = qSkillDuration;
+        }
+        else
+        {
+            qSkillTimeRemaining = 0f;
         }
     }
 
@@ -5306,6 +6010,8 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             else if (translatedName == "Slash3combo2") currentAttackAnimDuration = slash3combo2Duration;
             else if (translatedName.Contains("Punch")) currentAttackAnimDuration = punchAnimDuration;
             else currentAttackAnimDuration = slashAnimDuration;
+
+            currentAttackAnimDuration /= (IsAttackSpeedBoosted ? 1.5f : 1.0f);
         }
         else
         {
@@ -5326,6 +6032,24 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
             int targetLayer = IsAttackAnimationName(translatedName) && !isRootedAttack ? 1 : 0;
             anim.CrossFadeInFixedTime(animName, fadeTime, targetLayer, 0f);
+
+            // Force evaluation to query the exact animation clip duration
+            anim.Update(0f);
+            float actualLength = 0f;
+            if (anim.IsInTransition(targetLayer))
+            {
+                actualLength = anim.GetNextAnimatorStateInfo(targetLayer).length;
+            }
+            else
+            {
+                actualLength = anim.GetCurrentAnimatorStateInfo(targetLayer).length;
+            }
+
+            if (isAttack && actualLength > 0.05f)
+            {
+                currentAttackAnimDuration = actualLength / (IsAttackSpeedBoosted ? 1.5f : 1.0f);
+                Debug.Log($"[LeoPlayer] PlayAnimationLocal: '{translatedName}' dynamic duration set to {currentAttackAnimDuration}s (actual clip: {actualLength}s, speed boosted: {IsAttackSpeedBoosted})");
+            }
         }
         else
         {
@@ -5506,6 +6230,34 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         {
             anim.Play("New State", 1, 0f);
             anim.Play("Empty", 1, 0f);
+        }
+
+        // Network sync layer clearing
+        if (!isStandaloneMode && IsSpawned && IsOwner)
+        {
+            ClearAttackLayerServerRpc();
+        }
+    }
+
+    [ServerRpc]
+    private void ClearAttackLayerServerRpc()
+    {
+        ClearAttackLayerClientRpc();
+    }
+
+    [ClientRpc]
+    private void ClearAttackLayerClientRpc()
+    {
+        if (!IsOwner)
+        {
+            comboStep = 0;
+            isExecutingAttack = false;
+            isRootedAttack = false;
+            if (anim != null && anim.isActiveAndEnabled && anim.runtimeAnimatorController != null && anim.layerCount > 1)
+            {
+                anim.Play("New State", 1, 0f);
+                anim.Play("Empty", 1, 0f);
+            }
         }
     }
 
@@ -5961,16 +6713,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     {
         if (IsLeftoverEvent()) return;
         DisableAllHitboxes();
-        // Nếu vẫn còn pending attack → xử lý ngay
-        // (không cần wait coroutine)
-        if (pendingAttackRequest && isExecutingAttack)
-        {
-            pendingAttackRequest = false;
-            // Lấy networkMode từ context hiện tại
-            bool nm = !isStandaloneMode && IsSpawned;
-            PerformComboAttack(nm);
-        }
-        Debug.Log("[LeoPlayer] OnAttackEnd - Animation Event.");
+        Debug.Log("[LeoPlayer] OnAttackEnd - Animation Event (Hitboxes disabled).");
     }
 
     /// <summary>

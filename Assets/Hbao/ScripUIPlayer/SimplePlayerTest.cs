@@ -213,6 +213,36 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
     public string[] InventorySlots => inventorySlots;
     public float MaxHealth => maxHealth;
 
+    // Invisibility Skill R proxy
+    public bool IsInvisible => leoPlayer != null ? leoPlayer.IsInvisible : false;
+    public float InvisibilityTimeRemaining => leoPlayer != null ? leoPlayer.InvisibilityTimeRemaining : 0f;
+    public void TriggerInvisibilitySkill()
+    {
+        if (leoPlayer != null) leoPlayer.TriggerInvisibilitySkill();
+    }
+
+    // Attack Speed Boost Skill E proxy
+    public bool IsAttackSpeedBoosted => leoPlayer != null ? leoPlayer.IsAttackSpeedBoosted : false;
+    public float AttackSpeedBoostTimeRemaining => leoPlayer != null ? leoPlayer.AttackSpeedBoostTimeRemaining : 0f;
+    public void TriggerAttackSpeedBoostSkill()
+    {
+        if (leoPlayer != null) leoPlayer.TriggerAttackSpeedBoostSkill();
+    }
+
+    // Q Skill support proxy
+    public bool IsQSkillActive => leoPlayer != null ? leoPlayer.IsQSkillActive : false;
+    public float QSkillTimeRemaining => leoPlayer != null ? leoPlayer.QSkillTimeRemaining : 0f;
+    public bool TriggerQSkill()
+    {
+        if (leoPlayer != null) return leoPlayer.TriggerQSkill();
+        return false;
+    }
+    public event System.Action OnQSkillCancelled
+    {
+        add    { if (leoPlayer != null) leoPlayer.OnQSkillCancelled += value; }
+        remove { if (leoPlayer != null) leoPlayer.OnQSkillCancelled -= value; }
+    }
+
     public void SetCursorLock(bool locked)
     {
         isCursorLocked = locked;
