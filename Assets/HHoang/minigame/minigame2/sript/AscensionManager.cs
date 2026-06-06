@@ -63,6 +63,7 @@ public class AscensionManager : NetworkBehaviour
     {
         if (!IsServer) return;
 
+        // 1. Văng ngọc ra và giải phóng
         foreach (var crystal in placedCrystals)
         {
             if (crystal != null)
@@ -116,6 +117,7 @@ public class AscensionManager : NetworkBehaviour
                 station.isOccupied.Value = false; 
         }
 
+        // 3. Reset các thiết lập manager
         foreach (var ps in flowParticles) if (ps != null) { ps.Stop(); ps.gameObject.SetActive(false); }
 
         placedCrystals.Clear();
