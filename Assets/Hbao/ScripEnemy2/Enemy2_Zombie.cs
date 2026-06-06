@@ -25,6 +25,7 @@ public class Enemy2_Zombie : NetworkBehaviour
     private bool IsNetworkActive => NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
     private EnemyState CurrentStateValue { get => isStandaloneMode ? localState : currentState.Value; set { if (isStandaloneMode) localState = value; else currentState.Value = value; } }
     private float CurrentHealthValue { get => isStandaloneMode ? localHealth : currentHealth.Value; set { if (isStandaloneMode) localHealth = value; else currentHealth.Value = value; } }
+    public bool IsDead => isStandaloneMode ? (localState == EnemyState.Dead) : (currentState.Value == EnemyState.Dead);
 
     [Header("Components")]
     public NavMeshAgent agent;
@@ -212,7 +213,7 @@ public class Enemy2_Zombie : NetworkBehaviour
     {
         if (targetPlayer == null) { ReturnToPatrol(); return; }
         IPlayerHUDTarget ps = targetPlayer.GetComponentInParent<IPlayerHUDTarget>();
-        if (ps != null && ps.CurrentHealth <= 0) { targetPlayer = null; ReturnToPatrol(); return; }
+        if (ps != null && (ps.CurrentHealth <= 0 || ps.IsInvisible)) { targetPlayer = null; ReturnToPatrol(); return; }
         Vector3 ld = (targetPlayer.position - transform.position); ld.y = 0;
         if (ld.sqrMagnitude > 0.01f) transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(ld), Time.deltaTime * 12f);
         Vector3 flatEnemy = transform.position; flatEnemy.y = 0;
@@ -278,7 +279,7 @@ public class Enemy2_Zombie : NetworkBehaviour
             if (detectionResults[i] == null) continue;
             Transform pt = detectionResults[i].transform;
             IPlayerHUDTarget ps = pt.GetComponentInParent<IPlayerHUDTarget>();
-            if (ps != null && ps.CurrentHealth <= 0) continue;
+            if (ps != null && (ps.CurrentHealth <= 0 || ps.IsInvisible)) continue;
             Vector3 center = pt.position + Vector3.up; float d = Vector3.Distance(ep, center);
             Vector3 dir = (center - ep).normalized; bool inFOV = Vector3.Angle(transform.forward, dir) < fieldOfView / 2f;
             if ((inFOV || pt == targetPlayer) && !Physics.Raycast(ep, dir, d, obstacleLayer)) { if (d < minD) { minD = d; closest = pt; found = true; } }

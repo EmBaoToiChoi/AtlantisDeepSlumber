@@ -255,6 +255,22 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
     public string[] InventorySlots => inventorySlots;
     public float MaxHealth => maxHealth;
 
+    // Invisibility Skill R fallback
+    public bool IsInvisible => false;
+    public float InvisibilityTimeRemaining => 0f;
+    public void TriggerInvisibilitySkill() {}
+
+    // Attack Speed Boost Skill E fallback
+    public bool IsAttackSpeedBoosted => false;
+    public float AttackSpeedBoostTimeRemaining => 0f;
+    public void TriggerAttackSpeedBoostSkill() {}
+
+    // Q Skill fallback
+    public bool IsQSkillActive => false;
+    public float QSkillTimeRemaining => 0f;
+    public bool TriggerQSkill() => false;
+    public event System.Action OnQSkillCancelled { add { } remove { } } // Elena không có Skill Q
+
     /// <summary>
     /// Trả về index vũ khí đang chọn: đọc từ HUD khi standalone, đọc từ NetworkVariable khi online.
     /// </summary>
@@ -274,6 +290,10 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
         sheathWeaponTrigger = "CatCung";
 
         rb = GetComponent<Rigidbody>();
+        if (rb != null)
+        {
+            rb.isKinematic = false; // Mặc định tắt Kinematic để di chuyển được ở chế độ Standalone/Offline
+        }
 
         if (anim == null)
         {
@@ -328,6 +348,12 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
     {
         Debug.Log("[ElenaPlayer] Chạy ở chế độ STANDALONE (không có NetworkManager). " +
                   "Di chuyển và tấn công hoạt động cục bộ.");
+
+        if (rb == null) rb = GetComponent<Rigidbody>();
+        if (rb != null)
+        {
+            rb.isKinematic = false; // Tắt Kinematic để di chuyển trong chế độ chơi đơn lẻ
+        }
 
         // Tìm camera
         targetCamera = Camera.main;
