@@ -1,6 +1,5 @@
 using UnityEngine;
 using Unity.Netcode;
-using System.Collections;
 using System.Collections.Generic;
 
 public class AscensionManager : NetworkBehaviour
@@ -16,8 +15,9 @@ public class AscensionManager : NetworkBehaviour
     public GameObject victoryEffectObject; 
 
     private List<CrystalCore> placedCrystals = new List<CrystalCore>();
-    private Coroutine timerCoroutine;
-    private bool isTimerRunning = false;
+
+    public NetworkVariable<double> startTime = new NetworkVariable<double>(0);
+    public NetworkVariable<bool> isTimerRunning = new NetworkVariable<bool>(false);
     
     [Header("Cấu hình Thời gian")]
     public float timeLimit = 5f; 
@@ -30,6 +30,15 @@ public class AscensionManager : NetworkBehaviour
 
     void Update()
     {
+        if (IsServer && isTimerRunning.Value)
+        {
+            double elapsed = NetworkManager.Singleton.ServerTime.Time - startTime.Value;
+            if (elapsed >= timeLimit)
+            {
+                if (placedCrystals.Count < 4) EjectAllCrystals();
+                isTimerRunning.Value = false;
+            }
+        }
         placedCrystals.RemoveAll(item => item == null);
     }
 
@@ -38,77 +47,101 @@ public class AscensionManager : NetworkBehaviour
         if (!IsServer || stationIndex < 0 || stationIndex >= pillarPositions.Length) return;
 
         crystal.LockToStation(); 
-
         pillarStates[stationIndex] = crystal.crystalID; 
         if (!placedCrystals.Contains(crystal)) placedCrystals.Add(crystal);
 
-        if (!isTimerRunning && placedCrystals.Count == 1)
+        if (!isTimerRunning.Value && placedCrystals.Count == 1)
         {
-            isTimerRunning = true;
-            timerCoroutine = StartCoroutine(TimerCountdown());
+            startTime.Value = NetworkManager.Singleton.ServerTime.Time;
+            isTimerRunning.Value = true;
         }
         
         CheckWinCondition();
-    }
-
-    IEnumerator TimerCountdown()
-    {
-        float timeLeft = timeLimit;
-        while (timeLeft > 0)
-        {
-            yield return new WaitForSeconds(1f);
-            timeLeft--;
-        }
-
-        if (placedCrystals.Count < 4) EjectAllCrystals();
-        isTimerRunning = false;
     }
 
     public void EjectAllCrystals()
     {
         if (!IsServer) return;
 
-        // 1. Văng ngọc ra và giải phóng
         foreach (var crystal in placedCrystals)
         {
             if (crystal != null)
             {
-                // Gọi thẳng hàm PerformDrop để Server tự xử lý NetworkVariable
+                // --- BƯỚC 1: RESET LOGIC TRƯỚC ---
+                crystal.holderId.Value = ulong.MaxValue; // Xóa chủ sở hữu
+                crystal.isSnapped.Value = false;         // Xóa trạng thái khóa vào trụ
+                crystal.isSnapping.Value = false;        // Xóa trạng thái đang bay
+                
+                // --- BƯỚC 2: DỜI VỊ TRÍ AN TOÀN ---
+                crystal.transform.SetParent(null);
+                crystal.transform.position += Vector3.up * 2.0f; // Dời ra ngoài bệ
+
+                // 2. Lấy Collider của ngọc
+                Collider crystalCol = crystal.GetComponent<Collider>();
+                
+                // 3. VÔ HIỆU HÓA VA CHẠM VỚI TRỤ TRONG 1 GIÂY
+                foreach (var pillar in pillarPositions)
+                {
+                    if (pillar != null && pillar.TryGetComponent<Collider>(out var pillarCol))
+                    {
+                        Physics.IgnoreCollision(crystalCol, pillarCol, true);
+                    }
+                }
+
                 crystal.PerformDrop();
 
                 Rigidbody rb = crystal.GetComponent<Rigidbody>();
                 if (rb != null) 
                 {
-                    rb.AddForce(new Vector3(Random.Range(-2f, 2f), 5f, Random.Range(-2f, 2f)), ForceMode.Impulse);
+                    rb.isKinematic = false;
+                    rb.useGravity = true;
+                    rb.linearVelocity = Vector3.zero;
+                    rb.angularVelocity = Vector3.zero;
+                    rb.ResetInertiaTensor();
+                    rb.WakeUp();
+                    
+                    // Lực đẩy nhẹ hướng lên
+                    rb.AddForce(new Vector3(Random.Range(-1f, 1f), 3f, Random.Range(-1f, 1f)), ForceMode.Impulse);
                 }
+
+                // 4. BẬT LẠI VA CHẠM SAU 1 GIÂY
+                StartCoroutine(ReEnableCollision(crystalCol, 1.0f));
             }
         }
 
-        // 2. Reset trạng thái trụ (Đảm bảo trụ mở khóa)
+        // Reset trạng thái trụ
         foreach (var pillar in pillarPositions)
         {
             if (pillar != null && pillar.TryGetComponent<PillarStation>(out var station))
-            {
                 station.isOccupied.Value = false; 
-            }
         }
 
-        // 3. Reset các thiết lập manager
         foreach (var ps in flowParticles) if (ps != null) { ps.Stop(); ps.gameObject.SetActive(false); }
 
         placedCrystals.Clear();
         for (int i = 0; i < pillarStates.Length; i++) pillarStates[i] = 0;
         
-        if (timerCoroutine != null) StopCoroutine(timerCoroutine);
-        isTimerRunning = false;
+        isTimerRunning.Value = false;
+    }
+
+    // Coroutine để bật lại va chạm sau khi ngọc văng ra an toàn
+    System.Collections.IEnumerator ReEnableCollision(Collider crystalCol, float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        if (crystalCol != null)
+        {
+            foreach (var pillar in pillarPositions)
+            {
+                if (pillar != null && pillar.TryGetComponent<Collider>(out var pillarCol))
+                    Physics.IgnoreCollision(crystalCol, pillarCol, false);
+            }
+        }
     }
 
     void CheckWinCondition()
     {
         if (placedCrystals.Count < 4) return;
-
-        if (timerCoroutine != null) StopCoroutine(timerCoroutine);
-        isTimerRunning = false;
+        isTimerRunning.Value = false;
 
         bool allCorrect = true;
         for (int i = 0; i < pillarPositions.Length; i++)
@@ -142,9 +175,9 @@ public class AscensionManager : NetworkBehaviour
         }
     }
 
-    IEnumerator DelayEject()
+    System.Collections.IEnumerator DelayEject()
     {
-        yield return new WaitForSeconds(5.0f); // Giảm xuống 2s để test cho nhanh
+        yield return new WaitForSeconds(6.0f);
         EjectAllCrystals();
     }
 }
