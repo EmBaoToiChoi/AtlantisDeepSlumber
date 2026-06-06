@@ -1168,8 +1168,8 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (rb != null)
         {
             Vector3 vel = rollDirection * rollSpeed;
-            vel.y = rb.velocity.y; // giữ trọng lực
-            rb.velocity = vel;
+            vel.y = rb.linearVelocity.y; // giữ trọng lực
+            rb.linearVelocity = vel;
         }
         else
         {
@@ -1189,7 +1189,7 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
             // Dừng Rigidbody velocity khi lộn xong
             if (rb != null)
             {
-                rb.velocity = new Vector3(0f, rb.velocity.y, 0f);
+                rb.linearVelocity = new Vector3(0f, rb.linearVelocity.y, 0f);
             }
         }
         return; // Khóa hoàn toàn các input di chuyển khác bên dưới
@@ -1300,8 +1300,8 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (rb != null)
         {
             Vector3 vel = rollDirection * rollSpeed;
-            vel.y = rb.velocity.y; // giữ trọng lực
-            rb.velocity = vel;
+            vel.y = rb.linearVelocity.y; // giữ trọng lực
+            rb.linearVelocity = vel;
         }
         else
         {
@@ -1321,7 +1321,7 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
             // Dừng Rigidbody velocity khi lộn xong
             if (rb != null)
             {
-                rb.velocity = new Vector3(0f, rb.velocity.y, 0f);
+                rb.linearVelocity = new Vector3(0f, rb.linearVelocity.y, 0f);
             }
         }
         return; // Khóa hoàn toàn các input di chuyển khác bên dưới
