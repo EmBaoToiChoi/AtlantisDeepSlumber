@@ -5,6 +5,7 @@ public class RootMotionBridge : MonoBehaviour
 {
     private Animator anim;
     private Transform parentTransform;
+    private Rigidbody parentRb;
     private Vector3 initialRootBoneLocalPos;
     private Transform rootBone;
     private bool hasRootBone = false;
@@ -20,19 +21,33 @@ public class RootMotionBridge : MonoBehaviour
             return;
         }
 
-        // Tìm xương gốc (thường là Hips hoặc Pelvis, là con đầu tiên của Model)
-        if (transform.childCount > 0)
+        parentRb = parentTransform.GetComponent<Rigidbody>();
+
+        // Tìm xương gốc (Hips/Pelvis) bằng cách dùng GetBoneTransform của Humanoid
+        if (anim != null)
+        {
+            rootBone = anim.GetBoneTransform(HumanBodyBones.Hips);
+        }
+
+        // Fallback về con đầu tiên nếu không phải Humanoid
+        if (rootBone == null && transform.childCount > 0)
         {
             rootBone = transform.GetChild(0);
-            if (rootBone != null)
-            {
-                initialRootBoneLocalPos = rootBone.localPosition;
-                hasRootBone = true;
-                Debug.Log($"[RootMotionBridge] Đã tìm thấy xương gốc: {rootBone.name}, Vị trí ban đầu: {initialRootBoneLocalPos}");
-            }
+        }
+
+        if (rootBone != null)
+        {
+            initialRootBoneLocalPos = rootBone.localPosition;
+            hasRootBone = true;
+            Debug.Log($"[RootMotionBridge] Đã tìm thấy xương gốc: {rootBone.name}, Vị trí ban đầu: {initialRootBoneLocalPos} (Parent: {parentTransform.name})");
+        }
+        else
+        {
+            Debug.LogWarning($"[RootMotionBridge] Không tìm thấy xương gốc (Hips/Pelvis) cho {gameObject.name}!");
         }
     }
 
+    private int logCounter = 0;
     void OnAnimatorMove()
     {
         if (anim == null || parentTransform == null) return;
@@ -41,11 +56,27 @@ public class RootMotionBridge : MonoBehaviour
         // Khi bình thường (walk/run/idle), applyRootMotion sẽ tắt để di chuyển bằng script không bị ảnh hưởng
         if (anim.applyRootMotion)
         {
-            // Cộng thêm khoảng dịch chuyển từ Root Motion vào vị trí của cha
-            parentTransform.position += anim.deltaPosition;
-            
-            // Cộng thêm góc xoay từ Root Motion vào cha
-            parentTransform.rotation *= anim.deltaRotation;
+            if (anim.deltaPosition.sqrMagnitude > 0.0001f)
+            {
+                if (logCounter++ % 10 == 0)
+                {
+                    Debug.Log($"[RootMotionBridge] applyRootMotion di chuyển cha bằng deltaPosition: {anim.deltaPosition}");
+                }
+            }
+
+            if (parentRb != null)
+            {
+                parentRb.MovePosition(parentRb.position + anim.deltaPosition);
+                parentRb.MoveRotation(parentRb.rotation * anim.deltaRotation);
+            }
+            else
+            {
+                // Cộng thêm khoảng dịch chuyển từ Root Motion vào vị trí của cha
+                parentTransform.position += anim.deltaPosition;
+                
+                // Cộng thêm góc xoay từ Root Motion vào cha
+                parentTransform.rotation *= anim.deltaRotation;
+            }
         }
     }
 
@@ -61,9 +92,19 @@ public class RootMotionBridge : MonoBehaviour
         Vector3 offset = transform.localPosition;
         if (offset.sqrMagnitude > 0.0001f)
         {
-            parentTransform.position += parentTransform.TransformDirection(offset);
+            Vector3 worldOffset = parentTransform.TransformDirection(offset);
+            Vector3 oldPos = parentTransform.position;
+            if (parentRb != null)
+            {
+                parentRb.position += worldOffset;
+                parentTransform.position = parentRb.position;
+            }
+            else
+            {
+                parentTransform.position += worldOffset;
+            }
             transform.localPosition = Vector3.zero;
-            Debug.Log($"[RootMotionBridge] Đã bù tọa độ Model con: {offset}");
+            Debug.Log($"[RootMotionBridge] [Case 1] Đã bù tọa độ Model con: {offset} | Vị trí cha cũ: {oldPos} -> mới: {parentTransform.position}");
             return;
         }
 
@@ -75,12 +116,30 @@ public class RootMotionBridge : MonoBehaviour
             Vector3 horizontalOffset = new Vector3(boneOffset.x - initialRootBoneLocalPos.x, 0f, boneOffset.z - initialRootBoneLocalPos.z);
             if (horizontalOffset.sqrMagnitude > 0.0001f)
             {
-                parentTransform.position += parentTransform.TransformDirection(horizontalOffset);
+                Vector3 worldOffset = parentTransform.TransformDirection(horizontalOffset);
+                Vector3 oldPos = parentTransform.position;
+                if (parentRb != null)
+                {
+                    parentRb.position += worldOffset;
+                    parentTransform.position = parentRb.position;
+                }
+                else
+                {
+                    parentTransform.position += worldOffset;
+                }
                 
                 // Trả xương gốc về tọa độ ngang ban đầu, giữ nguyên Y hiện tại
                 rootBone.localPosition = new Vector3(initialRootBoneLocalPos.x, boneOffset.y, initialRootBoneLocalPos.z);
-                Debug.Log($"[RootMotionBridge] Đã bù tọa độ Xương gốc: {horizontalOffset}");
+                Debug.Log($"[RootMotionBridge] [Case 2] Đã bù tọa độ Xương gốc: {horizontalOffset} | Xương: {rootBone.name} | Vị trí cha cũ: {oldPos} -> mới: {parentTransform.position}");
             }
+            else
+            {
+                Debug.Log($"[RootMotionBridge] [Case 2] Không bù tọa độ vì horizontalOffset nhỏ: {horizontalOffset}");
+            }
+        }
+        else
+        {
+            Debug.LogWarning($"[RootMotionBridge] Không thể bù tọa độ vì hasRootBone={hasRootBone}, rootBone={rootBone?.name}");
         }
     }
 }

@@ -89,7 +89,7 @@ MonoBehaviour:
     DestinationState: 1688466699
     TransitionDuration: 0.1
     TriggerNameHash: 1688466699
-    TransitionIndex: 1
+    TransitionIndex: 0
   - IsCrossFadeExit: 0
     Layer: 0
     OriginatingState: 1688466699
@@ -103,55 +103,13 @@ MonoBehaviour:
     DestinationState: -39148367
     TransitionDuration: 0.1
     TriggerNameHash: -39148367
-    TransitionIndex: 1
+    TransitionIndex: 0
   - IsCrossFadeExit: 0
     Layer: 0
-    OriginatingState: 2081823275
+    OriginatingState: -1796308849
     DestinationState: -39148367
     TransitionDuration: 0.1
     TriggerNameHash: -39148367
-    TransitionIndex: 0
-  - IsCrossFadeExit: 0
-    Layer: 0
-    OriginatingState: 2081823275
-    DestinationState: 1748754976
-    TransitionDuration: 0
-    TriggerNameHash: 1349952704
-    TransitionIndex: 1
-  - IsCrossFadeExit: 0
-    Layer: 0
-    OriginatingState: 2081823275
-    DestinationState: -577525364
-    TransitionDuration: 0
-    TriggerNameHash: 765711723
-    TransitionIndex: 2
-  - IsCrossFadeExit: 0
-    Layer: 0
-    OriginatingState: 1748754976
-    DestinationState: 2081823275
-    TransitionDuration: 0
-    TriggerNameHash: 2081823275
-    TransitionIndex: 0
-  - IsCrossFadeExit: 0
-    Layer: 0
-    OriginatingState: 1748754976
-    DestinationState: -577525364
-    TransitionDuration: 0
-    TriggerNameHash: 765711723
-    TransitionIndex: 1
-  - IsCrossFadeExit: 0
-    Layer: 0
-    OriginatingState: -577525364
-    DestinationState: 1748754976
-    TransitionDuration: 0
-    TriggerNameHash: 1349952704
-    TransitionIndex: 0
-  - IsCrossFadeExit: 0
-    Layer: 0
-    OriginatingState: -577525364
-    DestinationState: 2081823275
-    TransitionDuration: 0
-    TriggerNameHash: 2081823275
     TransitionIndex: 1
   - IsCrossFadeExit: 0
     Layer: 1
@@ -212,6 +170,22 @@ MonoBehaviour:
       NameHash: -627150456
       Synchronize: 1
       ParameterType: 9
+    - name: Blend
+      NameHash: 1784438316
+      Synchronize: 1
+      ParameterType: 1
+    - name: MoveX
+      NameHash: 675470966
+      Synchronize: 1
+      ParameterType: 1
+    - name: MoveZ
+      NameHash: -968048806
+      Synchronize: 1
+      ParameterType: 1
+    - name: HasWeapon
+      NameHash: -1646273455
+      Synchronize: 1
+      ParameterType: 4
   AnimatorParametersExpanded: 0
 --- !u!114 &6987979576670327373
 MonoBehaviour:
@@ -222,7 +196,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 904585252511742871}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: fd682ccb684f40049be459dc7c5a0e2a, type: 3}
+  m_Script: {fileID: 11500000, guid: 2d1b30ad8363ea84ab0d5024a5c876be, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   ShowTopMostFoldoutHeaderGroup: 1
@@ -495,7 +469,7 @@ Rigidbody:
   m_UseGravity: 1
   m_IsKinematic: 0
   m_Interpolate: 0
-  m_Constraints: 72
+  m_Constraints: 80
   m_CollisionDetection: 0
 --- !u!114 &185223332511423188
 MonoBehaviour:
