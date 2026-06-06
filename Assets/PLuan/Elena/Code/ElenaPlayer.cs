@@ -5,7 +5,7 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
 {
     [Header("Movement & Attack Settings")]
     public float moveSpeed = 5f;
-    public float runSpeedMultiplier = 1.5f;
+    public float runSpeedMultiplier = 2.0f;
     public float damageAmount = 20f;
     public float attackRange = 3f;
 
@@ -266,7 +266,7 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
         return activeWeaponIndex.Value;
     }
 
-    private void Awake()
+    protected virtual void Awake()
     {
         // Ép tên Trigger luôn đúng với Animator tiếng Việt của Elena, bỏ qua giá trị cũ bị lưu ở Inspector
         drawWeaponTrigger = "LayCung";
@@ -1225,11 +1225,8 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         transform.Translate(movementTranslation * currentSpeed * Time.deltaTime, Space.World);
 
-        // Xoay nhân vật:
-        // - Khi cầm vũ khí (GetActiveWeaponIndex() == 2) hoặc đang tấn công: xoay theo hướng Camera để ngắm bắn (hỗ trợ đi ngang/lùi)
-        // - Khi đi tay không và không tấn công: xoay theo hướng di chuyển
-        bool shouldFaceCamera = (GetActiveWeaponIndex() == 2) || isCurrentlyAttacking;
-        if (shouldFaceCamera && targetCamera != null)
+        // Xoay nhân vật: Luôn xoay theo hướng Camera để hỗ trợ đi ngang/lùi (strafe) cho cả khi cầm vũ khí và tay không
+        if (targetCamera != null)
         {
             Vector3 camForward = targetCamera.transform.forward;
             camForward.y = 0f;
@@ -1238,10 +1235,6 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
             {
                 transform.forward = camForward;
             }
-        }
-        else if (movementTranslation != Vector3.zero)
-        {
-            transform.forward = movementTranslation;
         }
 
 
@@ -1346,11 +1339,8 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         transform.Translate(movementTranslation * currentSpeed * Time.deltaTime, Space.World);
 
-        // Xoay nhân vật:
-        // - Khi cầm vũ khí (GetActiveWeaponIndex() == 2) hoặc đang tấn công: xoay theo hướng Camera để ngắm bắn (hỗ trợ đi ngang/lùi)
-        // - Khi đi tay không và không tấn công: xoay theo hướng di chuyển
-        bool shouldFaceCamera = (GetActiveWeaponIndex() == 2) || isCurrentlyAttacking;
-        if (shouldFaceCamera && targetCamera != null)
+        // Xoay nhân vật: Luôn xoay theo hướng Camera để hỗ trợ đi ngang/lùi (strafe) cho cả khi cầm vũ khí và tay không
+        if (targetCamera != null)
         {
             Vector3 camForward = targetCamera.transform.forward;
             camForward.y = 0f;
@@ -1359,10 +1349,6 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
             {
                 transform.forward = camForward;
             }
-        }
-        else if (movementTranslation != Vector3.zero)
-        {
-            transform.forward = movementTranslation;
         }
 
 
@@ -1399,11 +1385,21 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (moveInput != Vector3.zero)
         {
             rollDirection = moveInput.normalized;
-            transform.forward = rollDirection;
         }
         else
         {
             rollDirection = transform.forward;
+        }
+
+        var rb = GetComponent<Rigidbody>();
+        if (rb != null)
+        {
+            rb.rotation = Quaternion.LookRotation(rollDirection);
+            transform.rotation = rb.rotation;
+        }
+        else
+        {
+            transform.forward = rollDirection;
         }
 
         if (anim != null) anim.applyRootMotion = true;
@@ -1421,11 +1417,21 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (moveInput != Vector3.zero)
         {
             rollDirection = moveInput.normalized;
-            transform.forward = rollDirection;
         }
         else
         {
             rollDirection = transform.forward;
+        }
+
+        var rb = GetComponent<Rigidbody>();
+        if (rb != null)
+        {
+            rb.rotation = Quaternion.LookRotation(rollDirection);
+            transform.rotation = rb.rotation;
+        }
+        else
+        {
+            transform.forward = rollDirection;
         }
 
         if (anim != null) anim.applyRootMotion = true;
