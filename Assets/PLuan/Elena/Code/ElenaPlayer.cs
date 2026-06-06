@@ -167,6 +167,16 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
     public float aimPivotHeight = 1.3f;
     public float aimCameraSmoothSpeed = 10f;
     public float aimAttackRange = 25f;
+    public float aimMinPitch = -80f; // Góc ngước lên tối đa khi ngắm
+    public float aimMaxPitch = 80f;  // Góc cúi xuống tối đa khi ngắm
+
+    [Header("Arrow Spawning Settings")]
+    public GameObject arrowHandVisual; // Mũi tên trên tay (Visual)
+    public GameObject arrowPrefab;     // Prefab mũi tên bay (Projectile)
+    public Transform arrowSpawnPoint;   // Điểm xuất phát của mũi tên
+    public float arrowSpeed = 30f;      // Tốc độ bay của mũi tên
+    public float bowShootCooldown = 1.0f; // Thời gian chờ giữa mỗi lần bắn (giây)
+    private float bowShootCooldownTimer = 0f; // Bộ đếm thời gian chờ bắn
     private float defaultCameraDistance;
     private float defaultPivotHeight;
     private float currentShoulderOffset = 0f;
@@ -177,6 +187,11 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
         NetworkVariableWritePermission.Server
     );
     public bool IsAiming => isStandaloneMode ? localIsAiming : (IsOwner ? localIsAiming : isAimingNet.Value);
+    public bool IsBusyOrRolling => (isStandaloneMode ? isRollingStandalone : rollTimer > 0) || IsPlayingActionAnimation() || (CurrentHealth <= 0);
+
+    [Header("Camera Inversion Settings")]
+    public bool invertCameraY = false;
+    public bool invertSpinePitch = false;
 
     [Header("Animation Settings")]
     public Animator anim;
@@ -194,14 +209,27 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     [Header("Punch 3 Fine Tuning")]
     public float punch3YOffset = 0f; // Xoay Trái/Phải cho Đấm 3
+
+    [Header("Aim Fine Tuning")]
+    public float aimSpineYOffset = 0f; // Xoay Trái/Phải khi ngắm bắn đứng yên
+    public float aimSpineXOffset = 0f; // Ngửa/Cúi khi ngắm bắn đứng yên
+    public float aimMovingSpineYOffset = 0f; // Xoay Trái/Phải khi ngắm bắn di chuyển
+    public float aimMovingSpineXOffset = 0f; // Ngửa/Cúi khi ngắm bắn di chuyển
     
     private float smoothedYOffset = 0f;
     private float smoothedXOffset = 0f;
     public float spineSmoothSpeed = 15f;
     private Transform spineBone;
     private float localAimAngle = 0f;
+    private Vector3 lastPosition;
     public NetworkVariable<float> netAimAngle = new NetworkVariable<float>(
         0f,
+        NetworkVariableReadPermission.Everyone,
+        NetworkVariableWritePermission.Owner
+    );
+
+    public NetworkVariable<float> netAimPitch = new NetworkVariable<float>(
+        45f,
         NetworkVariableReadPermission.Everyone,
         NetworkVariableWritePermission.Owner
     );
@@ -350,6 +378,7 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
         cameraDistance = cameraOffset.magnitude;
         defaultCameraDistance = cameraDistance;
         defaultPivotHeight = cameraPivotHeight;
+        lastPosition = transform.position;
 
         // Khóa chuột mặc định khi vào game
         LockCursor(isCursorLocked);
@@ -1034,7 +1063,7 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (hasControl)
         {
             int currentWeaponIdx = GetActiveWeaponIndex();
-            bool targetAiming = currentWeaponIdx == 2 && Input.GetMouseButton(1) && !IsUIBlockingInput() && !IsLockingMovementAction();
+            bool targetAiming = currentWeaponIdx == 2 && Input.GetMouseButton(1) && !IsUIBlockingInput() && !IsBusyOrRolling;
             if (localIsAiming != targetAiming)
             {
                 localIsAiming = targetAiming;
@@ -1050,6 +1079,12 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (rollCooldownTimer > 0)
         {
             rollCooldownTimer -= Time.deltaTime;
+        }
+
+        // Giảm thời gian cooldown bắn cung
+        if (bowShootCooldownTimer > 0)
+        {
+            bowShootCooldownTimer -= Time.deltaTime;
         }
 
         // Tự động reset combo và dọn dẹp trigger nếu người chơi đã dừng tấn công và hoạt ảnh trở về trạng thái bình thường (Idle/Walk/Run)
@@ -1080,7 +1115,7 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (anim != null && anim.isActiveAndEnabled && anim.runtimeAnimatorController != null && anim.layerCount > 1)
         {
             float weight1 = anim.GetLayerWeight(1);
-            if (weight1 > 0f && comboStep == 0)
+            if (weight1 > 0f && comboStep == 0 && !IsAiming)
             {
                 bool isSwitching = IsStatePlayingOnLayer1(drawWeaponTrigger) || IsStatePlayingOnLayer1(sheathWeaponTrigger);
                 if (!isSwitching)
@@ -1123,13 +1158,23 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
                 {
                     Debug.Log($"[SpineAim_Update_Failed] isRooted={isRootedAttack}, cam={targetCamera != null}");
                 }
-                if (isStandaloneMode)
+                if (!IsAiming)
                 {
-                    localAimAngle = Mathf.Lerp(localAimAngle, 0f, Time.deltaTime * 10f);
-                }
-                else if (netAimAngle.Value != 0f)
-                {
-                    netAimAngle.Value = Mathf.Lerp(netAimAngle.Value, 0f, Time.deltaTime * 10f);
+                    if (isStandaloneMode)
+                    {
+                        localAimAngle = Mathf.Lerp(localAimAngle, 0f, Time.deltaTime * 10f);
+                    }
+                    else
+                    {
+                        if (netAimAngle.Value != 0f)
+                        {
+                            netAimAngle.Value = Mathf.Lerp(netAimAngle.Value, 0f, Time.deltaTime * 10f);
+                        }
+                        if (netAimPitch.Value != 45f)
+                        {
+                            netAimPitch.Value = Mathf.Lerp(netAimPitch.Value, 45f, Time.deltaTime * 10f);
+                        }
+                    }
                 }
             }
         }
@@ -1331,7 +1376,11 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
             {
                 if (IsAiming)
                 {
-                    PerformBowShoot(false);
+                    if (bowShootCooldownTimer <= 0f)
+                    {
+                        bowShootCooldownTimer = bowShootCooldown;
+                        PerformBowShoot(false);
+                    }
                 }
                 else
                 {
@@ -1465,7 +1514,11 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
             {
                 if (IsAiming)
                 {
-                    PerformBowShoot(true);
+                    if (bowShootCooldownTimer <= 0f)
+                    {
+                        bowShootCooldownTimer = bowShootCooldown;
+                        PerformBowShoot(true);
+                    }
                 }
                 else
                 {
@@ -1563,6 +1616,14 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     void LateUpdate()
     {
+        float speed = 0f;
+        if (Time.deltaTime > 0f)
+        {
+            speed = Vector3.Distance(transform.position, lastPosition) / Time.deltaTime;
+        }
+        lastPosition = transform.position;
+        bool isMoving = speed > 0.2f;
+
         // Xoay cột sống (Spine) để hướng cánh tay/vũ khí về phía mục tiêu khi vừa chạy vừa đánh
         if (anim != null)
         {
@@ -1575,27 +1636,50 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
             float targetYOffset = 0f;
             float targetXOffset = 0f;
 
-            if (IsAiming && targetCamera != null)
+            if (IsAiming)
             {
-                // Twist spine left/right to match camera forward
-                Vector3 camForward = targetCamera.transform.forward;
-                camForward.y = 0f;
-                camForward.Normalize();
-                if (camForward != Vector3.zero)
+                float activeYOffset = isMoving ? aimMovingSpineYOffset : aimSpineYOffset;
+                float activeXOffset = isMoving ? aimMovingSpineXOffset : aimSpineXOffset;
+
+                if (isStandaloneMode)
                 {
-                    float angleDiff = Vector3.SignedAngle(transform.forward, camForward, Vector3.up);
-                    angleDiff = Mathf.Clamp(angleDiff, -maxSpineTwistAngle, maxSpineTwistAngle);
-                    if (isStandaloneMode)
+                    if (targetCamera != null)
                     {
-                        localAimAngle = angleDiff;
+                        // Twist spine left/right to match camera forward
+                        Vector3 camForward = targetCamera.transform.forward;
+                        camForward.y = 0f;
+                        camForward.Normalize();
+                        if (camForward != Vector3.zero)
+                        {
+                            float angleDiff = Vector3.SignedAngle(transform.forward, camForward, Vector3.up);
+                            localAimAngle = Mathf.Clamp(angleDiff, -maxSpineTwistAngle, maxSpineTwistAngle);
+                        }
                     }
-                    else if (IsOwner)
-                    {
-                        netAimAngle.Value = angleDiff;
-                    }
+                    float pitchFactor = invertSpinePitch ? -0.7f : 0.7f;
+                    targetXOffset = (currentPitch - 40f) * pitchFactor + activeXOffset;
+                    targetYOffset = activeYOffset;
                 }
-                // Tilt spine up/down based on camera pitch
-                targetXOffset = -(currentPitch - 40f) * 0.7f;
+                else
+                {
+                    // Network Mode
+                    if (IsOwner && targetCamera != null)
+                    {
+                        // Twist spine left/right to match camera forward
+                        Vector3 camForward = targetCamera.transform.forward;
+                        camForward.y = 0f;
+                        camForward.Normalize();
+                        if (camForward != Vector3.zero)
+                        {
+                            float angleDiff = Vector3.SignedAngle(transform.forward, camForward, Vector3.up);
+                            netAimAngle.Value = Mathf.Clamp(angleDiff, -maxSpineTwistAngle, maxSpineTwistAngle);
+                        }
+                        netAimPitch.Value = currentPitch;
+                    }
+
+                    float pitchFactor = invertSpinePitch ? -0.7f : 0.7f;
+                    targetXOffset = (netAimPitch.Value - 40f) * pitchFactor + activeXOffset;
+                    targetYOffset = activeYOffset;
+                }
             }
             else if (isCurrentlyAttacking && !isRootedAttack)
             {
@@ -1660,8 +1744,17 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
                 float mouseX = Input.GetAxis("Mouse X");
                 float mouseY = Input.GetAxis("Mouse Y");
                 targetYaw -= mouseX * cameraSensitivity;
-                targetPitch += mouseY * cameraSensitivity;
-                targetPitch = Mathf.Clamp(targetPitch, minPitch, maxPitch);
+                if (invertCameraY)
+                {
+                    targetPitch -= mouseY * cameraSensitivity;
+                }
+                else
+                {
+                    targetPitch += mouseY * cameraSensitivity;
+                }
+                float currentMinPitch = IsAiming ? aimMinPitch : minPitch;
+                float currentMaxPitch = IsAiming ? aimMaxPitch : maxPitch;
+                targetPitch = Mathf.Clamp(targetPitch, currentMinPitch, currentMaxPitch);
             }
 
             // Làm mượt mà các góc xoay (Yaw & Pitch) bằng Lerp để di chuyển chuột vẫn mượt
@@ -1833,7 +1926,7 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
         }
     }
 
-    private void TryDamageEnemy(Collider col)
+    public void TryDamageEnemy(Collider col)
     {
         var e1 = col.GetComponentInParent<Enemy1_DapBua>();
         if (e1 != null) { e1.TakeDamage(damageAmount); return; }
@@ -2567,9 +2660,13 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
         }
         else
         {
-            if (anim.layerCount > 1 && (animName == drawWeaponTrigger || animName == sheathWeaponTrigger))
+            if (anim.layerCount > 1 && (animName == drawWeaponTrigger || animName == sheathWeaponTrigger || animName == "Bow_Shoot"))
             {
                 anim.SetLayerWeight(1, 1f);
+            }
+            if (animName == "Bow_Shoot" && arrowHandVisual != null)
+            {
+                arrowHandVisual.SetActive(false);
             }
             SafeSetTrigger(animName);
         }
@@ -2691,6 +2788,22 @@ private void StartRollServerRpc(Vector3 direction)
         if (anim != null && anim.isActiveAndEnabled && anim.runtimeAnimatorController != null)
         {
             anim.SetBool("IsAiming", aiming);
+            if (anim.layerCount > 1)
+            {
+                if (aiming)
+                {
+                    anim.SetLayerWeight(1, 1f);
+                }
+                else if (comboStep == 0)
+                {
+                    anim.SetLayerWeight(1, 0f);
+                    anim.Play("New State", 1, 0f);
+                    if (arrowHandVisual != null)
+                    {
+                        arrowHandVisual.SetActive(false);
+                    }
+                }
+            }
         }
 
         bool isLocal = isStandaloneMode || (IsSpawned && IsOwner);
@@ -2710,9 +2823,23 @@ private void StartRollServerRpc(Vector3 direction)
         isAimingNet.Value = aiming;
     }
 
+    // Animation Event: Được gọi từ hoạt ảnh LayCung hoặc Bow_Draw để kích hoạt mũi tên trên tay
+    public void OnDrawArrow()
+    {
+        if (arrowHandVisual != null)
+        {
+            arrowHandVisual.SetActive(true);
+        }
+    }
+
     private void PerformBowShoot(bool networkMode)
     {
         PlayAnimation("Bow_Shoot", 0.05f);
+
+        if (arrowHandVisual != null)
+        {
+            arrowHandVisual.SetActive(false);
+        }
 
         if (targetCamera != null)
         {
@@ -2726,17 +2853,31 @@ private void StartRollServerRpc(Vector3 direction)
             }
             else
             {
-                Vector3 playerPos = transform.position + Vector3.up * cameraPivotHeight;
                 Vector3 targetPoint = rayOrigin + rayDirection * aimAttackRange;
                 if (Physics.Raycast(rayOrigin, rayDirection, out RaycastHit cameraHit, aimAttackRange))
                 {
                     targetPoint = cameraHit.point;
                 }
-                Vector3 shootDirection = (targetPoint - playerPos).normalized;
+                Vector3 spawnPos = arrowSpawnPoint != null ? arrowSpawnPoint.position : transform.position + Vector3.up * cameraPivotHeight;
+                Vector3 shootDirection = (targetPoint - spawnPos).normalized;
 
-                if (Physics.Raycast(playerPos, shootDirection, out RaycastHit hit, aimAttackRange))
+                if (arrowPrefab != null)
                 {
-                    TryDamageEnemy(hit.collider);
+                    Debug.Log($"[PerformBowShoot] Đang bắn tên ở chế độ Standalone. Vị trí spawn: {spawnPos}, Hướng bắn: {shootDirection}");
+                    GameObject arrowObj = Instantiate(arrowPrefab, spawnPos, Quaternion.LookRotation(shootDirection));
+                    arrowObj.transform.localScale = arrowPrefab.transform.localScale; // Giữ nguyên tỉ lệ scale của prefab
+                    arrowObj.SetActive(true); // Đảm bảo Active nếu prefab gốc bị tắt
+                    
+                    if (arrowObj.TryGetComponent<ArrowProjectile>(out var proj))
+                    {
+                        proj.owner = this;
+                        proj.damage = damageAmount;
+                        proj.speed = arrowSpeed;
+                    }
+                }
+                else
+                {
+                    Debug.LogError("[PerformBowShoot] arrowPrefab chưa được gán trong Inspector của ElenaPlayer!");
                 }
             }
         }
@@ -2745,17 +2886,35 @@ private void StartRollServerRpc(Vector3 direction)
     [ServerRpc]
     private void BowShootServerRpc(Vector3 rayOrigin, Vector3 rayDirection)
     {
-        Vector3 playerPos = transform.position + Vector3.up * cameraPivotHeight;
         Vector3 targetPoint = rayOrigin + rayDirection * aimAttackRange;
         if (Physics.Raycast(rayOrigin, rayDirection, out RaycastHit cameraHit, aimAttackRange))
         {
             targetPoint = cameraHit.point;
         }
-        Vector3 shootDirection = (targetPoint - playerPos).normalized;
+        Vector3 spawnPos = arrowSpawnPoint != null ? arrowSpawnPoint.position : transform.position + Vector3.up * cameraPivotHeight;
+        Vector3 shootDirection = (targetPoint - spawnPos).normalized;
 
-        if (Physics.Raycast(playerPos, shootDirection, out RaycastHit hit, aimAttackRange))
+        if (arrowPrefab != null)
         {
-            TryDamageEnemy(hit.collider);
+            Debug.Log($"[BowShootServerRpc] Server đang spawn tên. Vị trí: {spawnPos}, Hướng bắn: {shootDirection}");
+            GameObject arrowObj = Instantiate(arrowPrefab, spawnPos, Quaternion.LookRotation(shootDirection));
+            arrowObj.transform.localScale = arrowPrefab.transform.localScale; // Giữ nguyên tỉ lệ scale của prefab
+            arrowObj.SetActive(true); // Đảm bảo Active nếu prefab gốc bị tắt
+            
+            if (arrowObj.TryGetComponent<NetworkObject>(out var netObj))
+            {
+                netObj.Spawn(true);
+            }
+            if (arrowObj.TryGetComponent<ArrowProjectile>(out var proj))
+            {
+                proj.owner = this;
+                proj.damage = damageAmount;
+                proj.speed = arrowSpeed;
+            }
+        }
+        else
+        {
+            Debug.LogError("[BowShootServerRpc] arrowPrefab chưa được gán trên Server!");
         }
     }
 
