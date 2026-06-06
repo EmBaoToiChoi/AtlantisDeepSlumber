@@ -1,0 +1,22 @@
+.countdown-root {
+    position: absolute;
+    top: 50px;
+    left: 50%;
+    translate: -50% 0;
+    width: 150px;
+    height: 150px;
+    background-color: rgba(50, 50, 50, 0.5);
+    border-width: 4px;
+    border-color: rgba(0, 0, 0, 0.8);
+    border-radius: 50%;
+    justify-content: center;
+    align-items: center;
+    transition: background-color 0.3s ease;
+}
+
+.countdown-label {
+    font-size: 60px;
+    color: white;
+    -unity-font-style: bold;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+}

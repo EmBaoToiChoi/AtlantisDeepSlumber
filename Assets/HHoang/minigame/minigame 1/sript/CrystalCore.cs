@@ -35,25 +35,31 @@ public class CrystalCore : NetworkBehaviour
     {
         if (!IsServer) return;
 
-        // 1. Chống rớt map (Chỉ reset nếu không ai cầm và không đang bay vào trụ)
-        if (!isSnapped.Value && !isSnapping.Value && holderId.Value == ulong.MaxValue)
-        {
-            if (Vector3.Distance(transform.position, spawnPosition) > 90f || transform.position.y < spawnPosition.y - 10f)
-            {
-                ResetToSpawnPosition();
-                return; 
-            }
-        }
+        // 1. Chống lỗi tọa độ
+        if (float.IsNaN(transform.position.x)) { ResetToSpawnPosition(); return; }
 
         // 2. Nội suy kích thước
         float flySpeed = 5f; 
         Vector3 targetScale = (holderId.Value != ulong.MaxValue) ? originalScale * holdScaleMultiplier : originalScale;
         transform.localScale = Vector3.Lerp(transform.localScale, targetScale, flySpeed * Time.fixedDeltaTime);
 
-        // NẾU ĐANG BAY VÀO TRỤ (isSnapping) HOẶC ĐÃ KHÓA (isSnapped) THÌ BỎ QUA LOGIC BAY VỀ TAY
+        // --- ĐÂY LÀ ĐOẠN SỬA MỚI ---
+        // Nếu viên ngọc KHÔNG có chủ VÀ KHÔNG bị khóa/bay vào trụ
+        if (holderId.Value == ulong.MaxValue && !isSnapped.Value && !isSnapping.Value)
+        {
+            // Ép nó bật vật lý để nó rơi tự do hoặc văng ra theo lực đẩy
+            if (rb.isKinematic) 
+            {
+                rb.isKinematic = false;
+                rb.useGravity = true;
+            }
+            return; // Chỉ trả về, không chạy logic bay vào tay nữa
+        }
+
+        // Nếu nó đang bị khóa hoặc bay vào trụ thì cũng dừng lại, không cần tính toán gì thêm
         if (isSnapped.Value || isSnapping.Value) return;
 
-        // 3. Logic bay vào tay
+        // 3. Logic bay vào tay (Chỉ chạy khi có holderId)
         if (IsSpawned && holderId.Value != ulong.MaxValue)
         {
             if (NetworkManager.Singleton.ConnectedClients.TryGetValue(holderId.Value, out var client) && client.PlayerObject != null)
@@ -68,11 +74,6 @@ public class CrystalCore : NetworkBehaviour
                 }
             }
             holderId.Value = ulong.MaxValue;
-        }
-        else if (rb.isKinematic) 
-        {
-            rb.isKinematic = false;
-            rb.useGravity = true;
         }
     }
 
