@@ -43,8 +43,12 @@ public class InteractBox : NetworkBehaviour
         isUsingStation = true;
         gameManager.ToggleMiniGame(stationIndex, true);
 
-        // Khóa mọi script điều khiển nhân vật
-        if (localPlayerController != null) localPlayerController.enabled = false;
+        // Tắt điều khiển nhân vật
+        if (localPlayerController != null) 
+        {
+            var mover = localPlayerController.GetComponent<MovementController>();
+            if(mover != null) mover.ToggleMovement(false);
+        }
     }
 
     private void ExitStation()
@@ -53,8 +57,12 @@ public class InteractBox : NetworkBehaviour
         isUsingStation = false;
         gameManager.ToggleMiniGame(stationIndex, false);
 
-        // Mở khóa script điều khiển
-        if (localPlayerController != null) localPlayerController.enabled = true;
+        // Bật lại điều khiển
+        if (localPlayerController != null) 
+        {
+            var mover = localPlayerController.GetComponent<MovementController>();
+            if(mover != null) mover.ToggleMovement(true);
+        }
     }
     
     [ServerRpc(RequireOwnership = false)]
