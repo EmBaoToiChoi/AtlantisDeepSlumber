@@ -32,4 +32,13 @@ public class PlayerAnimationBridge : MonoBehaviour
             mainPlayerScript.OnWeaponSheathPlace(); // Bắn tiếp lên cho cha xử lý
         }
     }
+
+    // Forward sự kiện kết thúc nhào lộn
+    public void OnRollEnd()
+    {
+        if (mainPlayerScript != null)
+        {
+            mainPlayerScript.OnRollEnd();
+        }
+    }
 }

@@ -80,6 +80,37 @@ public class RootMotionBridge : MonoBehaviour
         }
     }
 
+    void LateUpdate()
+    {
+        if (hasRootBone && rootBone != null && anim != null)
+        {
+            bool isRolling = false;
+            AnimatorStateInfo stateInfo = anim.GetCurrentAnimatorStateInfo(0);
+            if (stateInfo.IsName("LonVong"))
+            {
+                isRolling = true;
+            }
+            else if (anim.IsInTransition(0))
+            {
+                AnimatorStateInfo nextStateInfo = anim.GetNextAnimatorStateInfo(0);
+                if (nextStateInfo.IsName("LonVong"))
+                {
+                    isRolling = true;
+                }
+            }
+
+            if (isRolling)
+            {
+                // Khóa tọa độ ngang local X và Z của xương gốc (Hips) về vị trí ban đầu
+                // Điều này ép hoạt ảnh lộn vòng chạy tại chỗ so với đối tượng cha (Capsule Collider).
+                // Đối tượng cha di chuyển bằng lực vật lý (linearVelocity) của ElenaPlayer,
+                // giúp va chạm vật lý hoạt động chính xác (không xuyên qua gờ/tường) và không bị giật lùi khi lộn xong.
+                Vector3 currentLocalPos = rootBone.localPosition;
+                rootBone.localPosition = new Vector3(initialRootBoneLocalPos.x, currentLocalPos.y, initialRootBoneLocalPos.z);
+            }
+        }
+    }
+
     /// <summary>
     /// Cộng dồn khoảng dịch chuyển hình ảnh của Model vào đối tượng Cha khi kết thúc lộn vòng,
     /// tránh hiện tượng nhân vật bị giật về vị trí cũ trong trường hợp không dùng Root Motion chuẩn.
