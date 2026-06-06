@@ -425,6 +425,7 @@ MonoBehaviour:
   arrowPrefab: {fileID: 7056528210913423644, guid: a7f9890a322eee44cbb455de48f5f449, type: 3}
   arrowSpawnPoint: {fileID: 3808857661455583198}
   arrowSpeed: 30
+  bowShootCooldown: 1
   isAimingNet:
     UpdateTraits:
       MinSecondsBetweenUpdates: 0
@@ -438,10 +439,10 @@ MonoBehaviour:
   punch1XOffset: 20
   punch2YOffset: -30
   punch3YOffset: 45
-  aimSpineYOffset: 0
+  aimSpineYOffset: 45
   aimSpineXOffset: 30
-  aimMovingSpineYOffset: 0
-  aimMovingSpineXOffset: 0
+  aimMovingSpineYOffset: 20
+  aimMovingSpineXOffset: 10
   spineSmoothSpeed: 10
   netAimAngle:
     UpdateTraits:

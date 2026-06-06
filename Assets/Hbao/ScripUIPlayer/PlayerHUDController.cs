@@ -909,7 +909,10 @@ public class PlayerHUDController : MonoBehaviour
                         bool activated = LocalPlayerTarget.TriggerQSkill();
                         if (activated)
                         {
-                            currentCooldownQ = cooldownTimeQ;
+                            if (LocalPlayerTarget.CharacterClassIndex != 2)
+                            {
+                                currentCooldownQ = cooldownTimeQ;
+                            }
                             Debug.Log("Đã dùng kỹ năng Q");
                         }
                         else
@@ -932,7 +935,10 @@ public class PlayerHUDController : MonoBehaviour
                     if (currentCooldownR <= 0f && LocalPlayerTarget != null && !LocalPlayerTarget.IsInvisible)
                     {
                         LocalPlayerTarget.TriggerInvisibilitySkill();
-                        currentCooldownR = cooldownTimeR;
+                        if (LocalPlayerTarget.CharacterClassIndex != 2)
+                        {
+                            currentCooldownR = cooldownTimeR;
+                        }
                         Debug.Log("Đã dùng kỹ năng R");
                     }
                 }
@@ -959,7 +965,10 @@ public class PlayerHUDController : MonoBehaviour
                         if (currentCooldownE <= 0f && LocalPlayerTarget != null && !LocalPlayerTarget.IsAttackSpeedBoosted)
                         {
                             LocalPlayerTarget.TriggerAttackSpeedBoostSkill();
-                            currentCooldownE = cooldownTimeE;
+                            if (LocalPlayerTarget.CharacterClassIndex != 2)
+                            {
+                                currentCooldownE = cooldownTimeE;
+                            }
                             Debug.Log("Đã dùng kỹ năng E");
                         }
                     }
@@ -1788,6 +1797,21 @@ public class PlayerHUDController : MonoBehaviour
         cooldownTimeQ = 10f * (1f - cdLv * 0.02f);
         cooldownTimeR = 15f * (1f - cdLv * 0.02f);
         cooldownTimeE = 12f * (1f - cdLv * 0.02f);
+    }
+
+    public void TriggerElenaCooldownE()
+    {
+        currentCooldownE = cooldownTimeE;
+    }
+
+    public void TriggerElenaCooldownQ()
+    {
+        currentCooldownQ = cooldownTimeQ;
+    }
+
+    public void TriggerElenaCooldownR()
+    {
+        currentCooldownR = cooldownTimeR;
     }
 
     /// <summary>

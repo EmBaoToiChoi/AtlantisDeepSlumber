@@ -6,13 +6,17 @@ public class ArrowProjectile : NetworkBehaviour
     public float speed = 30f;
     public float lifetime = 4f;
     public float damage = 20f;
+    public bool isPiercing = false; // Cờ kiểm tra xem mũi tên có xuyên thấu quái vật hay không
     
     [HideInInspector]
     public ElenaPlayer owner;
 
+    // Danh sách lưu các quái vật đã trúng đòn để tránh việc một mũi tên xuyên gây sát thương nhiều lần trên cùng một quái
+    private System.Collections.Generic.HashSet<Transform> hitEnemyRoots = new System.Collections.Generic.HashSet<Transform>();
+
     private void Start()
     {
-        Debug.Log($"[ArrowProjectile] Mũi tên được khởi tạo tại: {transform.position}, góc xoay: {transform.rotation.eulerAngles}, tỉ lệ scale: {transform.localScale}, Trạng thái active: {gameObject.activeSelf}");
+        Debug.Log($"[ArrowProjectile] Mũi tên được khởi tạo tại: {transform.position}, góc xoay: {transform.rotation.eulerAngles}, tỉ lệ scale: {transform.localScale}, Trạng thái active: {gameObject.activeSelf}, Trạng thái xuyên thấu: {isPiercing}");
 
         // Phá hủy cục bộ nếu không thuộc Netcode hoặc chạy trên Server để dọn dẹp
         if (NetworkManager.Singleton == null || NetworkManager.Singleton.IsServer)
@@ -54,6 +58,14 @@ public class ArrowProjectile : NetworkBehaviour
 
         if (isEnemy)
         {
+            Transform enemyRoot = other.transform.root;
+            if (hitEnemyRoots.Contains(enemyRoot))
+            {
+                // Bỏ qua nếu quái vật này đã bị mũi tên này bắn trúng rồi
+                return;
+            }
+            hitEnemyRoots.Add(enemyRoot);
+
             Debug.Log($"[ArrowProjectile] Mũi tên va chạm trúng Enemy: {other.name}, Gây sát thương: {damage}");
             
             // Gây sát thương trực tiếp lên quái vật tùy theo loại script của nó
@@ -86,8 +98,11 @@ public class ArrowProjectile : NetworkBehaviour
                 owner.TryDamageEnemy(other);
             }
 
-            // Biến mất ngay lập tức khi trúng quái
-            DespawnOrDestroy();
+            // Nếu không phải mũi tên xuyên thấu (Kỹ năng E) thì mới tự hủy
+            if (!isPiercing)
+            {
+                DespawnOrDestroy();
+            }
         }
         else if (!other.isTrigger)
         {
