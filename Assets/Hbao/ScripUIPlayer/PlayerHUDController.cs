@@ -172,6 +172,9 @@ public class PlayerHUDController : MonoBehaviour
     private Label interactionPromptText;
     private Label interactionPromptKeyText;
     private VisualElement tooltipElement;
+
+    private VisualElement missionAlertBox;
+    private Label missionAlertText;
     
     // Hệ thống Hướng Dẫn Phím Nóng Động
     private VisualElement hotkeysHintPanel;
@@ -237,6 +240,7 @@ public class PlayerHUDController : MonoBehaviour
         worldMapOverlay = null; inventoryOverlay = null; weaponWarning = null;
         weaponDurabilityFill1 = null; weaponDurabilityFill2 = null;
         interactionPrompt = null; interactionPromptText = null; interactionPromptKeyText = null;
+        missionAlertBox = null; missionAlertText = null;
         hotkeysHintPanel = null; idleHintsGroup = null; actionHintsGroup = null;
         hintWeapon2 = null; hintSkills = null;
         upgradePointsText = null; hpLevelText = null; mpLevelText = null;
@@ -767,7 +771,8 @@ public class PlayerHUDController : MonoBehaviour
                 SelectWeapon(2);
             }
 
-            // Mở khóa vũ khí 2 bằng phím K
+            // Mở khóa vũ khí 2 bằng phím K (Đã vô hiệu hóa - mở khóa qua nhặt vật phẩm F)
+            /*
             if (Keyboard.current.kKey.wasPressedThisFrame && isWeapon2Locked)
             {
                 isWeapon2Locked = false;
@@ -785,6 +790,7 @@ public class PlayerHUDController : MonoBehaviour
                 }
                 NotifyHUDChange();
             }
+            */
 
             // Mở/đóng Bản đồ thế giới bằng phím M
             if (Keyboard.current.mKey.wasPressedThisFrame)
@@ -826,7 +832,8 @@ public class PlayerHUDController : MonoBehaviour
             }
 
 
-            // Mở khóa kỹ năng bằng phím L
+            // Mở khóa kỹ năng bằng phím L (Đã vô hiệu hóa - mở khóa qua nhặt vật phẩm F)
+            /*
             if (Keyboard.current.lKey.wasPressedThisFrame && !isSkillsUnlocked)
             {
                 isSkillsUnlocked = true;
@@ -843,6 +850,7 @@ public class PlayerHUDController : MonoBehaviour
                 if (skillImgE != null) skillImgE.style.visibility = Visibility.Visible;
                 NotifyHUDChange();
             }
+            */
 
             // Kích hoạt Skill Q (chỉ khi đã mở khóa)
             if (Keyboard.current.qKey.wasPressedThisFrame)
@@ -2181,6 +2189,75 @@ public class PlayerHUDController : MonoBehaviour
         if (hintSkills != null)
         {
             hintSkills.style.display = isSkillsUnlocked ? DisplayStyle.Flex : DisplayStyle.None;
+        }
+    }
+
+    public void ShowMissionAlert(string message, float duration = -1f)
+    {
+        InitializeUI();
+        var root = uiDocument != null ? uiDocument.rootVisualElement : null;
+        if (root == null) return;
+
+        if (missionAlertBox == null)
+        {
+            missionAlertBox = new VisualElement();
+            missionAlertBox.name = "mission-alert-box";
+            
+            missionAlertBox.style.position = Position.Absolute;
+            missionAlertBox.style.top = 100f;
+            missionAlertBox.style.alignSelf = Align.Center;
+            missionAlertBox.style.flexDirection = FlexDirection.Row;
+            missionAlertBox.style.alignItems = Align.Center;
+            missionAlertBox.style.backgroundColor = new Color(0.05f, 0.05f, 0.08f, 0.85f);
+            
+            missionAlertBox.style.borderTopWidth = 2f;
+            missionAlertBox.style.borderBottomWidth = 2f;
+            missionAlertBox.style.borderLeftWidth = 2f;
+            missionAlertBox.style.borderRightWidth = 2f;
+            missionAlertBox.style.borderTopColor = new Color(0.9f, 0.7f, 0.1f, 1f); // Viền vàng óng ánh
+            missionAlertBox.style.borderBottomColor = new Color(0.9f, 0.7f, 0.1f, 1f);
+            missionAlertBox.style.borderLeftColor = new Color(0.9f, 0.7f, 0.1f, 1f);
+            missionAlertBox.style.borderRightColor = new Color(0.9f, 0.7f, 0.1f, 1f);
+            
+            missionAlertBox.style.borderTopLeftRadius = 8;
+            missionAlertBox.style.borderTopRightRadius = 8;
+            missionAlertBox.style.borderBottomLeftRadius = 8;
+            missionAlertBox.style.borderBottomRightRadius = 8;
+            
+            missionAlertBox.style.paddingLeft = 25;
+            missionAlertBox.style.paddingRight = 25;
+            missionAlertBox.style.paddingTop = 12;
+            missionAlertBox.style.paddingBottom = 12;
+            
+            missionAlertText = new Label();
+            missionAlertText.name = "mission-alert-text";
+            missionAlertText.style.color = new Color(0.95f, 0.95f, 0.98f, 1f);
+            missionAlertText.style.fontSize = 15;
+            missionAlertText.style.unityFontStyleAndWeight = FontStyle.Bold;
+            
+            missionAlertBox.Add(missionAlertText);
+            root.Add(missionAlertBox);
+        }
+
+        missionAlertText.text = message;
+        missionAlertBox.style.display = DisplayStyle.Flex;
+        
+        if (duration > 0f)
+        {
+            missionAlertBox.schedule.Execute(() => {
+                if (missionAlertBox != null)
+                {
+                    missionAlertBox.style.display = DisplayStyle.None;
+                }
+            }).StartingIn((long)(duration * 1000f));
+        }
+    }
+
+    public void HideMissionAlert()
+    {
+        if (missionAlertBox != null)
+        {
+            missionAlertBox.style.display = DisplayStyle.None;
         }
     }
 }

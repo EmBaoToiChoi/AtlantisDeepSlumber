@@ -165,12 +165,13 @@ public class RakanDialogueController : MonoBehaviour
     {
         if (!isDialogueActive) return;
 
-        // Lắng nghe phím F hoặc Space hoặc Enter để qua câu thoại bằng phím
+        // Lắng nghe phím F, Space, Enter hoặc G để qua câu thoại bằng phím
         if (Keyboard.current != null)
         {
             if (Keyboard.current.fKey.wasPressedThisFrame || 
                 Keyboard.current.spaceKey.wasPressedThisFrame || 
-                Keyboard.current.enterKey.wasPressedThisFrame)
+                Keyboard.current.enterKey.wasPressedThisFrame ||
+                Keyboard.current.gKey.wasPressedThisFrame)
             {
                 AdvanceDialogue();
             }
@@ -234,6 +235,13 @@ public class RakanDialogueController : MonoBehaviour
         // Tự động tắt gợi ý phím G khi bắt đầu nói chuyện
         ShowPrompt(false);
 
+        // Tự động ẩn thông báo nhiệm vụ khi bắt đầu hội thoại
+        PlayerHUDController hud = FindAnyObjectByType<PlayerHUDController>();
+        if (hud != null)
+        {
+            hud.HideMissionAlert();
+        }
+
         activePlayer = player;
         currentNPC = npc;
         
@@ -277,15 +285,75 @@ public class RakanDialogueController : MonoBehaviour
     {
         dialogueTree.Clear();
 
-        // Step 0: Truyền thuyết Atlantis của Rakan
+        // Step 0: Truyền thuyết Atlantis của Rakan - Khúc 1
         DialogueStepNode step0 = new DialogueStepNode
         {
             stepId = 0,
             speakerName = "Rakan",
-            text = "\"Atlantis sở hữu những công nghệ vượt bậc, bỏ xa mọi giới hạn của trí tuệ con người. Nơi này từng là một hòn đảo huy hoàng rực sáng rực rỡ, một Utopia thực sự... Nơi người ta ngạo mạn tin rằng mình đã nắm giữ được quyền năng của các vị thần và do Đức Vua lạm dụng năng lượng viên ngọc bên trong \\\"Thương Thần\\\" để thúc đẩy sự phát triển đến độ cực hạn của Atlantis khiến viên ngọc hết năng lượng và không có viên ngọc làm nguồn năng lượng  hòn đảo đã chìm dưới đáy đại dương rất lâu mà không thấy được ánh sáng, và chính sai lầm đó đã khiến người dân biến dị từ từ thành những con quái vật chỉ biết cắn xé. Lão cảnh báo Viên Ngọc chính là mỏ neo giữ hòn đảo khỏi việc chìm lại xuống đáy biển.\"",
-            nextStepId = -1
+            text = "\"Atlantis sở hữu những công nghệ vượt bậc, bỏ xa mọi giới hạn của trí tuệ con người. Nơi này từng là một hòn đảo huy hoàng rực sáng rực rỡ, một Utopia thực sự...\"",
+            nextStepId = 1
         };
         dialogueTree.Add(0, step0);
+
+        // Step 1: Truyền thuyết Atlantis của Rakan - Khúc 2
+        DialogueStepNode step1 = new DialogueStepNode
+        {
+            stepId = 1,
+            speakerName = "Rakan",
+            text = "\"Nơi người ta ngạo mạn tin rằng mình đã nắm giữ được quyền năng của các vị thần. Thế nhưng, do Đức Vua lạm dụng năng lượng viên ngọc bên trong \\\"Thương Thần\\\" để thúc đẩy sự phát triển đến độ cực hạn...\"",
+            nextStepId = 2
+        };
+        dialogueTree.Add(1, step1);
+
+        // Step 2: Truyền thuyết Atlantis của Rakan - Khúc 3
+        DialogueStepNode step2 = new DialogueStepNode
+        {
+            stepId = 2,
+            speakerName = "Rakan",
+            text = "\"... khiến viên ngọc hết năng lượng. Không có nguồn năng lượng ấy, hòn đảo đã chìm dưới đáy đại dương từ rất lâu, chìm sâu vào bóng tối mà không thấy được ánh sáng.\"",
+            nextStepId = 3
+        };
+        dialogueTree.Add(2, step2);
+
+        // Step 3: Truyền thuyết Atlantis của Rakan - Khúc 4
+        DialogueStepNode step3 = new DialogueStepNode
+        {
+            stepId = 3,
+            speakerName = "Rakan",
+            text = "\"Chính sai lầm đó đã khiến người dân biến dị từ từ thành những con quái vật chỉ biết cắn xé. Lão cảnh báo các ngươi: Viên Ngọc chính là mỏ neo giữ hòn đảo khỏi việc chìm lại xuống đáy biển!\"",
+            nextStepId = -1
+        };
+        dialogueTree.Add(3, step3);
+
+        // Step 100: Đối thoại sau khi tiêu diệt quái vật - Khúc 1
+        DialogueStepNode step100 = new DialogueStepNode
+        {
+            stepId = 100,
+            speakerName = "Rakan",
+            text = "\"Các ngươi làm ta nhớ tới ta lúc còn trẻ, ta còn dũng mãnh hơn các ngươi gấp trăm lần! Chính vì nhìn các ngươi làm ta thấy chính mình lúc còn trẻ...\"",
+            nextStepId = 101
+        };
+        dialogueTree.Add(100, step100);
+
+        // Step 101: Đối thoại sau khi tiêu diệt quái vật - Khúc 2
+        DialogueStepNode step101 = new DialogueStepNode
+        {
+            stepId = 101,
+            speakerName = "Rakan",
+            text = "\"... nên ta sẽ trao lại cho các ngươi các món vũ khí do chính đôi tay của ta chế tạo. Ta từng là Thợ rèn và cũng là Cận vệ của nhà Vua.\"",
+            nextStepId = 102
+        };
+        dialogueTree.Add(101, step101);
+
+        // Step 102: Đối thoại sau khi tiêu diệt quái vật - Khúc 3
+        DialogueStepNode step102 = new DialogueStepNode
+        {
+            stepId = 102,
+            speakerName = "Rakan",
+            text = "\"Các ngươi thấy cái rương ở phía kia không? Đó là món quà của ta, hãy đến đó và nhận lấy nó!\"",
+            nextStepId = -1
+        };
+        dialogueTree.Add(102, step102);
 
         // Đếm tổng số người chơi kết nối trong phòng
         int totalPlayers = 1;
@@ -624,7 +692,9 @@ public class RakanDialogueController : MonoBehaviour
 
         if (nextStep == -1)
         {
-            bool wasStoryStep = (currentDialogueStep == 0);
+            bool wasStoryStep = (currentDialogueStep == 3);
+            bool wasDefeatedStep = (currentDialogueStep == 102);
+
             if (wasStoryStep)
             {
                 HasFinishedStoryOnce = true;
@@ -635,13 +705,17 @@ public class RakanDialogueController : MonoBehaviour
 
             if (activePlayer != null && !activePlayer.isStandaloneMode && currentNPC != null)
             {
-                currentNPC.RequestEndDialogueServerRpc(wasStoryStep);
+                currentNPC.RequestEndDialogueServerRpc(wasStoryStep, wasDefeatedStep);
             }
             else
             {
                 if (currentNPC != null)
                 {
                     currentNPC.CheckAndEnableGateSpawner();
+                    if (wasDefeatedStep)
+                    {
+                        currentNPC.EnableGiftChest();
+                    }
                 }
                 EndDialogue();
             }

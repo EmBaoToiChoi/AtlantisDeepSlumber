@@ -19,6 +19,10 @@ public class RakanNPC : NetworkBehaviour
     [Tooltip("Kéo thả GateEnemySpawner (vùng kích hoạt sinh quái) vào đây. Nếu để trống, script sẽ tự động tìm trong Scene.")]
     [SerializeField] private GateEnemySpawner gateEnemySpawner;
 
+    [Header("Gift Chest Settings")]
+    [Tooltip("Kéo thả Rương Quà (Chest GameObject) trong Scene vào đây để kích hoạt sau khi nói chuyện xong.")]
+    [SerializeField] private GameObject giftChest;
+
     private SphereCollider triggerCollider;
     private Rigidbody rb;
     private Animator animator;
@@ -28,8 +32,19 @@ public class RakanNPC : NetworkBehaviour
     private IPlayerHUDTarget localPlayer;
     private int savedDialogueIndex = 0;
 
+    // Trạng thái đồng bộ mạng quái đã bị tiêu diệt
+    public NetworkVariable<bool> allEnemiesDefeatedNet = new NetworkVariable<bool>(
+        false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+    private static bool allEnemiesDefeatedLocal = false;
+
     private void Awake()
     {
+        allEnemiesDefeatedLocal = false;
+        if (giftChest != null)
+        {
+            giftChest.SetActive(false);
+        }
+
         // Tự động thiết lập SphereCollider làm Trigger
         triggerCollider = GetComponent<SphereCollider>();
         if (triggerCollider == null) triggerCollider = gameObject.AddComponent<SphereCollider>();
@@ -161,17 +176,24 @@ public class RakanNPC : NetworkBehaviour
                     }
 
                     // Bất kỳ ai vào trò chuyện cũng được (giống Silas) - không kiểm tra số lượng người chơi
+                    int startIndex = 0;
                     if (localPlayer.IsStandaloneMode)
                     {
+                        if (allEnemiesDefeatedLocal) startIndex = 100;
+                        else startIndex = savedDialogueIndex;
+
                         if (RakanDialogueController.Instance != null)
                         {
-                            RakanDialogueController.Instance.StartDialogue(dialogueLines, localPlayer, this, savedDialogueIndex);
+                            RakanDialogueController.Instance.StartDialogue(dialogueLines, localPlayer, this, startIndex);
                         }
                         SetDialogueAnimation(true);
                     }
                     else
                     {
-                        RequestStartDialogueServerRpc(savedDialogueIndex);
+                        if (allEnemiesDefeatedNet.Value) startIndex = 100;
+                        else startIndex = savedDialogueIndex;
+
+                        RequestStartDialogueServerRpc(startIndex);
                     }
                 }
             }
@@ -183,11 +205,7 @@ public class RakanNPC : NetworkBehaviour
                     RakanDialogueController.Instance.ShowPrompt(false);
                 }
 
-                // Lắng nghe người chơi nhấn phím G lần nữa để đóng trò chuyện (giống Silas)
-                if (Keyboard.current != null && Keyboard.current.gKey.wasPressedThisFrame)
-                {
-                    HideDialogueAndPrompt();
-                }
+                // Tránh việc nhấn G đóng trò chuyện vì phím G đã được RakanDialogueController sử dụng để đọc tiếp dòng thoại.
             }
         }
     }
@@ -379,6 +397,42 @@ public class RakanNPC : NetworkBehaviour
         }
     }
 
+    public void SetEnemiesDefeatedLocal()
+    {
+        allEnemiesDefeatedLocal = true;
+        if (IsServer)
+        {
+            allEnemiesDefeatedNet.Value = true;
+        }
+    }
+
+    public void EnableGiftChest()
+    {
+        if (giftChest != null)
+        {
+            giftChest.SetActive(true);
+            Debug.Log("[RakanNPC] Đã kích hoạt Rương Quà thành công!");
+        }
+        else
+        {
+            // Tự động tìm kiếm rương quà trong scene
+            GameObject chest = GameObject.Find("chest");
+            if (chest == null) chest = GameObject.Find("chest (1)");
+            if (chest == null) chest = GameObject.Find("chest (2)");
+            if (chest == null) chest = GameObject.Find("tressure chest");
+
+            if (chest != null)
+            {
+                chest.SetActive(true);
+                Debug.Log($"[RakanNPC] Tự động tìm thấy và kích hoạt Rương Quà: {chest.name}");
+            }
+            else
+            {
+                Debug.LogWarning("[RakanNPC] Không tìm thấy Rương Quà nào trong Scene để kích hoạt!");
+            }
+        }
+    }
+
     // ═══════════════════════════════════════════════════════
     // ĐỒNG BỘ MẠNG CO-OP DIALOGUE (SERVER RPC & CLIENT RPC)
     // ═══════════════════════════════════════════════════════
@@ -467,7 +521,7 @@ public class RakanNPC : NetworkBehaviour
     }
 
     [ServerRpc(RequireOwnership = false)]
-    public void RequestEndDialogueServerRpc(bool storyFinished = false, ServerRpcParams rpcParams = default)
+    public void RequestEndDialogueServerRpc(bool storyFinished = false, bool defeatedFinished = false, ServerRpcParams rpcParams = default)
     {
         if (rpcParams.Receive.SenderClientId != currentTalkingClientId) return;
 
@@ -485,6 +539,17 @@ public class RakanNPC : NetworkBehaviour
         {
             EnableGateSpawnerClientRpc();
         }
+
+        if (defeatedFinished)
+        {
+            EnableGiftChestClientRpc();
+        }
+    }
+
+    [ClientRpc]
+    private void EnableGiftChestClientRpc()
+    {
+        EnableGiftChest();
     }
 
     [ClientRpc]

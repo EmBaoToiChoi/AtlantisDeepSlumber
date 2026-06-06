@@ -181,4 +181,10 @@ MonoBehaviour:
       v\u1EC1 nh\u1EEFng vi\xEAn ng\u1ECDc r\u1ED3i \u0111\xFAng kh\xF4ng?\""
     customAvatar: {fileID: 0}
   triggerRadius: 3
-  countOnlyNearbyPlayers: 0
+  gateEnemySpawner: {fileID: 0}
+  giftChest: {fileID: 0}
+  allEnemiesDefeatedNet:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 0

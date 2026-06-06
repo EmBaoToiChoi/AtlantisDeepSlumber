@@ -22,6 +22,11 @@ public class EnemyHealthBar : MonoBehaviour
     private PanelSettings uniqueSettings;
     private Material uniqueMaterial;
 
+    private float displayedHealth = -1f;
+    private float yellowHealth = -1f;
+    private float yellowDrainDelay = 0.5f;
+    private float yellowDrainTimer = 0f;
+
     private void OnEnable()
     {
         mainCamera = Camera.main;
@@ -94,32 +99,27 @@ public class EnemyHealthBar : MonoBehaviour
         if (enemy != null)
         {
             enemyName = enemy.gameObject.name;
-            curHp = enemy.currentHealth.Value;
-            enemy.currentHealth.OnValueChanged += UpdateHealthUI;
+            curHp = enemy.ActualCurrentHealth;
         }
         else if (enemy2 != null)
         {
             enemyName = enemy2.gameObject.name;
-            curHp = enemy2.currentHealth.Value;
-            enemy2.currentHealth.OnValueChanged += UpdateHealthUI;
+            curHp = enemy2.ActualCurrentHealth;
         }
         else if (enemy3 != null)
         {
             enemyName = enemy3.gameObject.name;
-            curHp = enemy3.currentHealth.Value;
-            enemy3.currentHealth.OnValueChanged += UpdateHealthUI;
+            curHp = enemy3.ActualCurrentHealth;
         }
         else if (enemy4 != null)
         {
             enemyName = enemy4.gameObject.name;
-            curHp = enemy4.currentHealth.Value;
-            enemy4.currentHealth.OnValueChanged += UpdateHealthUI;
+            curHp = enemy4.ActualCurrentHealth;
         }
         else if (enemy5 != null)
         {
             enemyName = enemy5.gameObject.name;
-            curHp = enemy5.currentHealth.Value;
-            enemy5.currentHealth.OnValueChanged += UpdateHealthUI;
+            curHp = enemy5.ActualCurrentHealth;
         }
 
         // Loại bỏ hậu tố (Clone) để tên hiển thị đẹp mắt
@@ -133,16 +133,20 @@ public class EnemyHealthBar : MonoBehaviour
             nameLabel.text = enemyName;
         }
 
-        UpdateHealthUI(0f, curHp);
+        displayedHealth = curHp;
+        yellowHealth = curHp;
+        
+        float maxHp = GetMaxHealth();
+        if (maxHp <= 0f) maxHp = 100f;
+        float percent = Mathf.Clamp01(curHp / maxHp) * 100f;
+        if (progressBar != null) progressBar.style.width = Length.Percent(percent);
+        if (yellowBar != null) yellowBar.style.width = Length.Percent(percent);
     }
 
     private void OnDisable()
     {
-        if (enemy != null) enemy.currentHealth.OnValueChanged -= UpdateHealthUI;
-        if (enemy2 != null) enemy2.currentHealth.OnValueChanged -= UpdateHealthUI;
-        if (enemy3 != null) enemy3.currentHealth.OnValueChanged -= UpdateHealthUI;
-        if (enemy4 != null) enemy4.currentHealth.OnValueChanged -= UpdateHealthUI;
-        if (enemy5 != null) enemy5.currentHealth.OnValueChanged -= UpdateHealthUI;
+        displayedHealth = -1f;
+        yellowHealth = -1f;
     }
 
     private float GetMaxHealth()
@@ -155,14 +159,63 @@ public class EnemyHealthBar : MonoBehaviour
         return 100f;
     }
 
-    private void UpdateHealthUI(float oldVal, float newVal)
+    private float GetActualHealth()
+    {
+        if (enemy != null) return enemy.ActualCurrentHealth;
+        if (enemy2 != null) return enemy2.ActualCurrentHealth;
+        if (enemy3 != null) return enemy3.ActualCurrentHealth;
+        if (enemy4 != null) return enemy4.ActualCurrentHealth;
+        if (enemy5 != null) return enemy5.ActualCurrentHealth;
+        return 0f;
+    }
+
+    private void UpdateHealthAnimation()
     {
         float maxHp = GetMaxHealth();
         if (maxHp <= 0f) maxHp = 100f;
-        float percent = Mathf.Clamp01(newVal / maxHp) * 100f;
-        
-        if (progressBar != null) progressBar.style.width = Length.Percent(percent);
-        if (yellowBar != null) yellowBar.style.width = Length.Percent(percent);
+
+        float actualHp = GetActualHealth();
+
+        if (displayedHealth < 0f)
+        {
+            displayedHealth = actualHp;
+            yellowHealth = actualHp;
+        }
+
+        displayedHealth = actualHp;
+        float percent = Mathf.Clamp01(displayedHealth / maxHp) * 100f;
+        if (progressBar != null)
+        {
+            progressBar.style.width = Length.Percent(percent);
+        }
+
+        if (actualHp < yellowHealth)
+        {
+            if (yellowDrainTimer <= 0f || actualHp < displayedHealth)
+            {
+                yellowDrainTimer = yellowDrainDelay;
+            }
+        }
+        else if (actualHp > yellowHealth)
+        {
+            yellowHealth = actualHp;
+        }
+
+        if (yellowDrainTimer > 0f)
+        {
+            yellowDrainTimer -= Time.deltaTime;
+        }
+        else
+        {
+            float drainSpeed = maxHp * 0.4f;
+            yellowHealth = Mathf.MoveTowards(yellowHealth, actualHp, drainSpeed * Time.deltaTime);
+        }
+
+        float yellowPercent = Mathf.Clamp01(yellowHealth / maxHp) * 100f;
+        if (yellowBar != null)
+        {
+            yellowBar.style.width = Length.Percent(yellowPercent);
+        }
     }
 
     private void Update()
@@ -185,6 +238,7 @@ public class EnemyHealthBar : MonoBehaviour
                     quadTransform.LookAt(quadTransform.position + mainCamera.transform.rotation * Vector3.forward,
                                          mainCamera.transform.rotation * Vector3.up);
                 }
+                UpdateHealthAnimation();
                 return;
             }
 
@@ -200,6 +254,8 @@ public class EnemyHealthBar : MonoBehaviour
                                  mainCamera.transform.rotation * Vector3.up);
             }
         }
+
+        UpdateHealthAnimation();
     }
 
     private void InitializeUniqueUI()
