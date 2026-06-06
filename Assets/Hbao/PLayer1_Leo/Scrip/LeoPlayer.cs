@@ -4012,7 +4012,6 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     {
         int weapon = GetActiveWeaponIndex();
 
-        // Xác định xem có di chuyển hay đứng yên chém (chỉ trên Owner/Standalone)
         if (isStandaloneMode || IsOwner)
         {
             bool isMovingInput = Mathf.Abs(Input.GetAxisRaw("Horizontal")) > 0.1f || Mathf.Abs(Input.GetAxisRaw("Vertical")) > 0.1f;
@@ -4023,34 +4022,25 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         isExecutingAttack = true;
         pendingAttackRequest = false;
 
-        // Reset hitbox trước mỗi đòn đánh mới
         alreadyHitEnemies.Clear();
         DisableAllHitboxes();
 
-        // Khóa di chuyển nếu đứng im chém (rooted)
-        if (isRootedAttack)
-        {
-            SetMovementLock(true);
-        }
-        else
-        {
-            SetMovementLock(false);
-        }
+        if (isRootedAttack) SetMovementLock(true);
+        else SetMovementLock(false);
 
         string animToPlay;
         if (weapon == 2)
         {
-            // KIẾM (ARMED): Combo 5 bước tuần tự
+            // --- KIẾM (ARMED): ĐÚNG CHUẨN 5 CLICK TUẦN TỰ ---
             comboStep++;
             if (comboStep > 5) comboStep = 1;
 
-            animToPlay = "attacktaytrai";
-            if (comboStep == 2) animToPlay = "attacktayphai";
-            else if (comboStep == 3) animToPlay = "Slash1Combo2";
-            else if (comboStep == 4) animToPlay = "Slash2combo2";
-            else if (comboStep == 5) animToPlay = "Slash3combo2";
+            animToPlay = "attacktaytrai"; // Đòn 1: Tay trái
+            if (comboStep == 2) animToPlay = "attacktayphai"; // Đòn 2: Tay phải
+            else if (comboStep == 3) animToPlay = "Slash1Combo2"; // Đòn 3: Song kiếm
+            else if (comboStep == 4) animToPlay = "Slash2combo2"; // Đòn 4: Song kiếm
+            else if (comboStep == 5) animToPlay = "Slash3combo2"; // Đòn 5: Song kiếm
 
-            // Xác định thời lượng cho từng đòn chém
             if (comboStep == 1) currentAttackAnimDuration = attacktaytraiDuration;
             else if (comboStep == 2) currentAttackAnimDuration = attacktayphaiDuration;
             else if (comboStep == 3) currentAttackAnimDuration = slash1Combo2Duration;
@@ -4058,15 +4048,14 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             else if (comboStep == 5) currentAttackAnimDuration = slash3combo2Duration;
             else currentAttackAnimDuration = slashAnimDuration;
 
-            Debug.Log($"[LeoPlayer] Sword combo step {comboStep} (Rooted={isRootedAttack}) -> Playing: {animToPlay}");
-            if (anim != null) anim.applyRootMotion = isRootedAttack; // Bật root motion nếu đứng yên chém
+            if (anim != null) anim.applyRootMotion = isRootedAttack;
             PlayAnimation(animToPlay, 0.05f, false, isRootedAttack);
         }
         else
         {
-            // ĐẤM TAY (UNARMED): Combo 3 bước tuần tự
+            // --- ĐẤM TAY (UNARMED): ĐÚNG CHUẨN 3 CLICK TUẦN TỰ ---
             comboStep++;
-            if (comboStep > 3) comboStep = 1;
+            if (comboStep > 3) comboStep = 1; // <-- ĐÃ SỬA: Giới hạn chuẩn 3 đòn đấm tuần tự
 
             animToPlay = "Punch1";
             if (comboStep == 2) animToPlay = "Punch2";
@@ -4074,13 +4063,11 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
             currentAttackAnimDuration = punchAnimDuration;
 
-            Debug.Log($"[LeoPlayer] Fist combo step {comboStep} (Rooted={isRootedAttack}) -> Playing: {animToPlay}");
             PlayAnimation(animToPlay, 0.05f, false, isRootedAttack);
         }
 
         currentWeaponTypeAttacking = weapon;
 
-        // Khởi động coroutine quản lý hitbox và combo chain
         if (comboChainCoroutine != null) StopCoroutine(comboChainCoroutine);
         comboChainCoroutine = StartCoroutine(ComboChainCoroutine(weapon, animToPlay, networkMode));
     }
@@ -6016,9 +6003,9 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         else
         {
             // Nếu chuyển sang di chuyển, Idle, chết, lộn, trúng đòn... thì tắt cờ tấn công
-            if (isLoopingAnim || translatedName == "LonVong" || translatedName == rollTrigger || 
-                translatedName == "Death" || translatedName == deathUnarmedTrigger || 
-                translatedName == deathArmedTrigger || translatedName.Contains("Hit") || 
+            if (isLoopingAnim || translatedName == "LonVong" || translatedName == rollTrigger ||
+                translatedName == "Death" || translatedName == deathUnarmedTrigger ||
+                translatedName == deathArmedTrigger || translatedName.Contains("Hit") ||
                 translatedName == getHitTrigger || translatedName == getHit2Trigger)
             {
                 isExecutingAttack = false;
@@ -6160,14 +6147,16 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     private void OnAnimatorMove()
     {
-        // --- ĐÃ SỬA: Loại bỏ hoàn toàn ApplyBuiltinRootMotion() gây méo sẹo nhân vật ---
         if (anim != null && rb != null && anim.applyRootMotion)
         {
+            // Chỉ lấy khoảng cách di chuyển tịnh tiến (deltaPosition) để đẩy nhân vật về trước
             Vector3 nextPosition = rb.position + anim.deltaPosition;
             rb.MovePosition(nextPosition);
+
+            // TUYỆT ĐỐI KHÔNG sử dụng anim.deltaRotation. Góc xoay cơ thể sẽ bị khóa cứng 
+            // theo hướng Camera điều khiển từ C#, triệt tiêu hoàn toàn lỗi xoắn xẹo xương sườn.
         }
     }
-
     private void FixedUpdate()
     {
         ApplyExtraGravity();
@@ -6507,7 +6496,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     }
 
     // --- VFX Spawn Animation Events với Object Pooling ---
-    private System.Collections.Generic.Dictionary<GameObject, System.Collections.Generic.List<GameObject>> vfxPools = 
+    private System.Collections.Generic.Dictionary<GameObject, System.Collections.Generic.List<GameObject>> vfxPools =
         new System.Collections.Generic.Dictionary<GameObject, System.Collections.Generic.List<GameObject>>();
 
     private GameObject GetPooledVFX(GameObject prefab, Vector3 position, Quaternion rotation)
