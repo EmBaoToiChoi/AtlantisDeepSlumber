@@ -215,6 +215,7 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
         NetworkVariableWritePermission.Server
     );
     private bool isRollingStandalone = false;
+    private Rigidbody rb;
     private RootMotionBridge rootMotionBridge;
     private RootMotionBridge GetRootMotionBridge()
     {
@@ -271,6 +272,8 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
         // Ép tên Trigger luôn đúng với Animator tiếng Việt của Elena, bỏ qua giá trị cũ bị lưu ở Inspector
         drawWeaponTrigger = "LayCung";
         sheathWeaponTrigger = "CatCung";
+
+        rb = GetComponent<Rigidbody>();
 
         if (anim == null)
         {
@@ -1146,33 +1149,41 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
     }
 
     private void HandleStandaloneUpdate()
+{
+    bool isDialogueOpen = (RakanDialogueController.Instance != null && RakanDialogueController.Instance.IsActive) ||
+                           (SilasDialogueController.Instance != null && SilasDialogueController.Instance.IsActive);
+
+    if (isDialogueOpen)
     {
-        // Khóa di chuyển, tấn công, nhào lộn khi đang nói chuyện với Rakan hoặc Silas
-        bool isDialogueOpen = (RakanDialogueController.Instance != null && RakanDialogueController.Instance.IsActive) ||
-                               (SilasDialogueController.Instance != null && SilasDialogueController.Instance.IsActive);
+        if (!IsPlayingActionAnimation()) PlayAnimation("Idle", 0.1f);
+        return; 
+    }
 
-        if (isDialogueOpen)
+    // XỬ LÝ DI CHUYỂN KHI ĐANG LỘN (STANDALONE)
+    if (isRollingStandalone)
+    {
+        rollTimer -= Time.deltaTime;
+        
+        // Bật Kinematic tạm thời
+        if (rb != null) rb.isKinematic = true;
+
+        // Di chuyển nhân vật liên tục bằng code theo hướng lộn ban đầu
+        transform.Translate(rollDirection * rollSpeed * Time.deltaTime, Space.World);
+        
+        // Giữ hướng nhìn theo hướng lộn
+        if (rollDirection != Vector3.zero)
         {
-            if (!IsPlayingActionAnimation())
-            {
-                PlayAnimation("Idle", 0.1f);
-            }
-            return; // Khóa hoàn toàn di chuyển, né tránh, tấn công
+            transform.rotation = Quaternion.LookRotation(rollDirection);
         }
 
-        // Xử lý di chuyển khi đang nhào lộn
-        if (isRollingStandalone)
+        if (rollTimer <= 0)
         {
-            rollTimer -= Time.deltaTime;
-            if (rollTimer <= 0)
-            {
-                isRollingStandalone = false;
-                if (anim != null) anim.applyRootMotion = false;
-                var bridge = GetRootMotionBridge();
-                if (bridge != null) bridge.ApplyFinalOffset();
-            }
-            return; // Khóa các đầu vào di chuyển khác khi đang nhào lộn
+            isRollingStandalone = false;
+            // Tắt Kinematic sau khi lộn xong
+            if (rb != null) rb.isKinematic = false;
         }
+        return; // Khóa hoàn toàn các input di chuyển khác bên dưới
+    }
 
         // Knockback
         if (knockbackVelocity.magnitude > 0.01f)
@@ -1260,33 +1271,41 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
     }
 
     private void HandleOwnerUpdate()
+{
+    bool isDialogueOpen = (RakanDialogueController.Instance != null && RakanDialogueController.Instance.IsActive) ||
+                           (SilasDialogueController.Instance != null && SilasDialogueController.Instance.IsActive);
+
+    if (isDialogueOpen)
     {
-        // Khóa di chuyển, tấn công, nhào lộn khi đang nói chuyện với Rakan hoặc Silas
-        bool isDialogueOpen = (RakanDialogueController.Instance != null && RakanDialogueController.Instance.IsActive) ||
-                               (SilasDialogueController.Instance != null && SilasDialogueController.Instance.IsActive);
+        if (!IsPlayingActionAnimation()) PlayAnimation("Idle", 0.1f);
+        return; 
+    }
 
-        if (isDialogueOpen)
+    // XỬ LÝ DI CHUYỂN KHI ĐANG LỘN (NETCODE OWNER)
+    if (rollTimer > 0)
+    {
+        rollTimer -= Time.deltaTime;
+        
+        // Bật Kinematic tạm thời
+        if (rb != null) rb.isKinematic = true;
+
+        // Di chuyển nhân vật liên tục bằng code theo hướng lộn ban đầu
+        transform.Translate(rollDirection * rollSpeed * Time.deltaTime, Space.World);
+        
+        // Giữ hướng nhìn theo hướng lộn
+        if (rollDirection != Vector3.zero)
         {
-            if (!IsPlayingActionAnimation())
-            {
-                PlayAnimation("Idle", 0.1f);
-            }
-            return; // Khóa hoàn toàn di chuyển, né tránh, tấn công
+            transform.rotation = Quaternion.LookRotation(rollDirection);
         }
 
-        // Xử lý di chuyển khi đang nhào lộn
-        if (rollTimer > 0)
+        if (rollTimer <= 0)
         {
-            rollTimer -= Time.deltaTime;
-            if (rollTimer <= 0)
-            {
-                if (anim != null) anim.applyRootMotion = false;
-                var bridge = GetRootMotionBridge();
-                if (bridge != null) bridge.ApplyFinalOffset();
-                StopRollServerRpc();
-            }
-            return; // Khóa các đầu vào di chuyển khác khi đang nhào lộn
+            StopRollServerRpc();
+            // Tắt Kinematic sau khi lộn xong
+            if (rb != null) rb.isKinematic = false;
         }
+        return; // Khóa hoàn toàn các input di chuyển khác bên dưới
+    }
 
         // Knockback
         if (knockbackVelocity.magnitude > 0.01f)
@@ -1374,70 +1393,63 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
     }
 
     private void StartRollStandalone(Vector3 moveInput)
+{
+    isRollingStandalone = true;
+    rollTimer = rollDuration;
+    rollCooldownTimer = rollCooldown;
+    
+    ClearAttackLayer(); // Trả Layer 1 về Empty để lộn vòng cả thân người
+    
+    // Hướng nhào lộn: nếu có di chuyển thì lăn theo hướng WASD theo Camera, ngược lại lăn theo hướng đang nhìn
+    if (moveInput != Vector3.zero)
     {
-        isRollingStandalone = true;
-        rollTimer = rollDuration;
-        rollCooldownTimer = rollCooldown;
-        
-        ClearAttackLayer(); // Trả Layer 1 về Empty để lộn vòng cả thân người
-        
-        // Hướng nhào lộn: nếu có di chuyển thì lăn theo hướng WASD, ngược lại lăn theo hướng đang nhìn
-        if (moveInput != Vector3.zero)
-        {
-            rollDirection = moveInput.normalized;
-        }
-        else
-        {
-            rollDirection = transform.forward;
-        }
-
-        var rb = GetComponent<Rigidbody>();
-        if (rb != null)
-        {
-            rb.rotation = Quaternion.LookRotation(rollDirection);
-            transform.rotation = rb.rotation;
-        }
-        else
-        {
-            transform.forward = rollDirection;
-        }
-
-        if (anim != null) anim.applyRootMotion = true;
-        PlayAnimation("LonVong", 0.05f);
+        rollDirection = moveInput.normalized;
     }
+    else
+    {
+        rollDirection = transform.forward;
+    }
+
+    // Xoay ngay lập tức về hướng lộn
+    if (rollDirection != Vector3.zero)
+    {
+        transform.rotation = Quaternion.LookRotation(rollDirection);
+    }
+
+    if (rb != null) rb.isKinematic = true; // Bật Kinematic
+
+    if (anim != null) anim.applyRootMotion = false; // TẮT ROOT MOTION
+    PlayAnimation("LonVong", 0.05f);
+}
 
     private void StartRollOwner(Vector3 moveInput)
+{
+    rollTimer = rollDuration;
+    rollCooldownTimer = rollCooldown;
+    
+    ClearAttackLayer(); 
+    
+    if (moveInput != Vector3.zero)
     {
-        rollTimer = rollDuration;
-        rollCooldownTimer = rollCooldown;
-        
-        ClearAttackLayer(); // Trả Layer 1 về Empty để lộn vòng cả thân người
-        
-        // Hướng nhào lộn: nếu có di chuyển thì lăn theo hướng WASD, ngược lại lăn theo hướng đang nhìn
-        if (moveInput != Vector3.zero)
-        {
-            rollDirection = moveInput.normalized;
-        }
-        else
-        {
-            rollDirection = transform.forward;
-        }
-
-        var rb = GetComponent<Rigidbody>();
-        if (rb != null)
-        {
-            rb.rotation = Quaternion.LookRotation(rollDirection);
-            transform.rotation = rb.rotation;
-        }
-        else
-        {
-            transform.forward = rollDirection;
-        }
-
-        if (anim != null) anim.applyRootMotion = true;
-        PlayAnimation("LonVong", 0.05f, false); // Đặt false để client local thực sự gọi PlayAnimationLocal!
-        StartRollServerRpc(rollDirection);
+        rollDirection = moveInput.normalized;
     }
+    else
+    {
+        rollDirection = transform.forward;
+    }
+
+    // Xoay ngay lập tức về hướng lộn
+    if (rollDirection != Vector3.zero)
+    {
+        transform.rotation = Quaternion.LookRotation(rollDirection);
+    }
+
+    if (rb != null) rb.isKinematic = true; // Bật Kinematic
+
+    if (anim != null) anim.applyRootMotion = false; // TẮT ROOT MOTION
+    PlayAnimation("LonVong", 0.05f, false); 
+    StartRollServerRpc(rollDirection);
+}
 
     void LateUpdate()
     {
@@ -2448,16 +2460,17 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
     }
 
     [ServerRpc]
-    private void StartRollServerRpc(Vector3 direction)
+private void StartRollServerRpc(Vector3 direction)
+{
+    isRollingNet.Value = true;
+    if (direction != Vector3.zero)
     {
-        isRollingNet.Value = true;
-        if (direction != Vector3.zero)
-        {
-            transform.forward = direction;
-        }
-        // Server phát RPC hoạt ảnh LonVong cho tất cả client khác (owner đã tự chạy rồi)
-        PlayAnimationClientRpc("LonVong", 0.05f, true, false);
+        rollDirection = direction; // Lưu lại biến hướng trên server nếu cần
+        transform.rotation = Quaternion.LookRotation(direction);
     }
+    // Server phát RPC hoạt ảnh LonVong cho tất cả client khác
+    PlayAnimationClientRpc("LonVong", 0.05f, true, false);
+}
 
     [ServerRpc]
     private void StopRollServerRpc()
