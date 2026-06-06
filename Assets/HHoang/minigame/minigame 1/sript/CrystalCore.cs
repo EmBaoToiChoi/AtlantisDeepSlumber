@@ -6,14 +6,17 @@ public class CrystalCore : NetworkBehaviour
 {
     [Header("Cấu hình hiển thị")]
     [Range(0.1f, 1.0f)]
-    public float holdScaleMultiplier = 0.3f; // Tỉ lệ khi cầm (0.3 = 30%)
+    public float holdScaleMultiplier = 0.3f; 
     public int crystalID;
     public NetworkVariable<bool> isSnapped = new NetworkVariable<bool>(false);
     public NetworkVariable<ulong> holderId = new NetworkVariable<ulong>(ulong.MaxValue);
 
-    private Vector3 spawnPosition; // Điểm gốc
+    private Vector3 spawnPosition; 
     private Rigidbody rb;
     private Vector3 originalScale;
+    
+    // Biến tạm để chặn reset khi vừa văng ngọc
+    private float ejectTimer = 0f;
 
     void Awake() 
     { 
@@ -23,20 +26,21 @@ public class CrystalCore : NetworkBehaviour
 
     public override void OnNetworkSpawn()
     {
-        if (IsServer) spawnPosition = transform.position; // Lưu vị trí khi vừa spawn
+        if (IsServer) spawnPosition = transform.position; 
     }
 
     void FixedUpdate() 
     {
         if (!IsServer) return;
 
-        // 1. CHỐT CHẶN: Nếu ngọc bay quá xa HOẶC rớt xuống map -> Reset ngay (ƯU TIÊN SỐ 1)
+        // Giảm timer chặn reset
         if (!isSnapped.Value)
         {
-            if (Vector3.Distance(transform.position, spawnPosition) > 80f || transform.position.y < spawnPosition.y - 10f)
+            // Nếu ngọc bay xa quá 80 đơn vị HOẶC rơi sâu xuống dưới 10 đơn vị so với spawn
+            if (Vector3.Distance(transform.position, spawnPosition) > 90f || transform.position.y < spawnPosition.y - 10f)
             {
                 ResetToSpawnPosition();
-                return; // Thoát hàm, không làm gì thêm
+                return; 
             }
         }
 
@@ -47,7 +51,7 @@ public class CrystalCore : NetworkBehaviour
 
         if (isSnapped.Value) return;
 
-        // 3. Logic bay vào tay (chỉ chạy nếu không bị reset)
+        // 3. Logic bay vào tay
         if (IsSpawned && holderId.Value != ulong.MaxValue)
         {
             if (NetworkManager.Singleton.ConnectedClients.TryGetValue(holderId.Value, out var client) && client.PlayerObject != null)
@@ -61,27 +65,26 @@ public class CrystalCore : NetworkBehaviour
                     return; 
                 }
             }
-            // Nếu không tìm thấy player, tự thả ngọc
             holderId.Value = ulong.MaxValue;
         }
-        else if (rb.isKinematic) // Logic rơi tự do
+        else if (rb.isKinematic) 
         {
             rb.isKinematic = false;
             rb.useGravity = true;
         }
     }
 
-// --- TRONG FILE CrystalCore.cs ---
+    // GỌI HÀM NÀY TỪ ASCENSIONMANAGER KHI VĂNG NGỌC
+    public void NotifyEjection()
+    {
+        if (IsServer) ejectTimer = 2.0f; // Chặn reset trong 2 giây
+    }
 
     public void PerformPickup(ulong playerId)
     {
         if (!IsServer) return;
-        
-        // 1. Tắt Collider để tránh va chạm với Player gây giật lag
         var col = GetComponent<Collider>();
         if (col != null) col.enabled = false; 
-
-        // 2. Chuyển quyền sở hữu cho người chơi
         GetComponent<NetworkObject>().ChangeOwnership(playerId);
         holderId.Value = playerId; 
     }
@@ -89,16 +92,10 @@ public class CrystalCore : NetworkBehaviour
     public void PerformDrop()
     {
         if (!IsServer) return;
-        
-        // 1. Bật lại Collider để viên ngọc có thể va chạm với mặt đất/tường khi rơi
         var col = GetComponent<Collider>();
         if (col != null) col.enabled = true;
-
-        // 2. Trả quyền sở hữu về cho Server
         var netObj = GetComponent<NetworkObject>();
         if (netObj.OwnerClientId != NetworkManager.ServerClientId) netObj.RemoveOwnership();
-        
-        // 3. Reset trạng thái vật lý
         holderId.Value = ulong.MaxValue; 
         rb.isKinematic = false;
         rb.useGravity = true;
@@ -110,7 +107,6 @@ public class CrystalCore : NetworkBehaviour
         {
             var netObj = GetComponent<NetworkObject>();
             if (netObj.OwnerClientId != NetworkManager.ServerClientId) netObj.RemoveOwnership();
-
             isSnapped.Value = true;
             holderId.Value = ulong.MaxValue; 
             rb.isKinematic = true; rb.useGravity = false;
@@ -123,7 +119,6 @@ public class CrystalCore : NetworkBehaviour
         if (!IsServer) return;
         var netObj = GetComponent<NetworkObject>();
         if (netObj.OwnerClientId != NetworkManager.ServerClientId) netObj.RemoveOwnership();
-
         holderId.Value = ulong.MaxValue;
         isSnapped.Value = false;
         transform.position = spawnPosition;
