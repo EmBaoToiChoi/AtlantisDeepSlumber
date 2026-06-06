@@ -1164,11 +1164,18 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
     {
         rollTimer -= Time.deltaTime;
         
-        // Bật Kinematic tạm thời
-        if (rb != null) rb.isKinematic = true;
-
-        // Di chuyển nhân vật liên tục bằng code theo hướng lộn ban đầu
-        transform.Translate(rollDirection * rollSpeed * Time.deltaTime, Space.World);
+        // Di chuyển bằng Rigidbody velocity để mượt mà vật lý và camera follow
+        if (rb != null)
+        {
+            Vector3 vel = rollDirection * rollSpeed;
+            vel.y = rb.velocity.y; // giữ trọng lực
+            rb.velocity = vel;
+        }
+        else
+        {
+            // Fallback nếu không có Rigidbody
+            transform.Translate(rollDirection * rollSpeed * Time.deltaTime, Space.World);
+        }
         
         // Giữ hướng nhìn theo hướng lộn
         if (rollDirection != Vector3.zero)
@@ -1179,8 +1186,11 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (rollTimer <= 0)
         {
             isRollingStandalone = false;
-            // Tắt Kinematic sau khi lộn xong
-            if (rb != null) rb.isKinematic = false;
+            // Dừng Rigidbody velocity khi lộn xong
+            if (rb != null)
+            {
+                rb.velocity = new Vector3(0f, rb.velocity.y, 0f);
+            }
         }
         return; // Khóa hoàn toàn các input di chuyển khác bên dưới
     }
@@ -1286,11 +1296,18 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
     {
         rollTimer -= Time.deltaTime;
         
-        // Bật Kinematic tạm thời
-        if (rb != null) rb.isKinematic = true;
-
-        // Di chuyển nhân vật liên tục bằng code theo hướng lộn ban đầu
-        transform.Translate(rollDirection * rollSpeed * Time.deltaTime, Space.World);
+        // Di chuyển bằng Rigidbody velocity để mượt mà vật lý và camera follow
+        if (rb != null)
+        {
+            Vector3 vel = rollDirection * rollSpeed;
+            vel.y = rb.velocity.y; // giữ trọng lực
+            rb.velocity = vel;
+        }
+        else
+        {
+            // Fallback nếu không có Rigidbody
+            transform.Translate(rollDirection * rollSpeed * Time.deltaTime, Space.World);
+        }
         
         // Giữ hướng nhìn theo hướng lộn
         if (rollDirection != Vector3.zero)
@@ -1301,8 +1318,11 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (rollTimer <= 0)
         {
             StopRollServerRpc();
-            // Tắt Kinematic sau khi lộn xong
-            if (rb != null) rb.isKinematic = false;
+            // Dừng Rigidbody velocity khi lộn xong
+            if (rb != null)
+            {
+                rb.velocity = new Vector3(0f, rb.velocity.y, 0f);
+            }
         }
         return; // Khóa hoàn toàn các input di chuyển khác bên dưới
     }
@@ -1416,8 +1436,6 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
         transform.rotation = Quaternion.LookRotation(rollDirection);
     }
 
-    if (rb != null) rb.isKinematic = true; // Bật Kinematic
-
     if (anim != null) anim.applyRootMotion = false; // TẮT ROOT MOTION
     PlayAnimation("LonVong", 0.05f);
 }
@@ -1443,8 +1461,6 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
     {
         transform.rotation = Quaternion.LookRotation(rollDirection);
     }
-
-    if (rb != null) rb.isKinematic = true; // Bật Kinematic
 
     if (anim != null) anim.applyRootMotion = false; // TẮT ROOT MOTION
     PlayAnimation("LonVong", 0.05f, false); 
