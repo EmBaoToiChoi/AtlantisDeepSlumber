@@ -3619,7 +3619,6 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             move = camRight * moveX + camForward * moveZ;
         }
 
-        // Khắc phục lỗi di chuyển chéo bị nhanh hơn bình thường (Diagonal Speedup)
         if (move.magnitude > 1f)
         {
             move.Normalize();
@@ -3663,7 +3662,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         float targetInputZ = 0f;
         float targetSpeed = 0f;
 
-        // --- SỬA: Ép người chơi xoay thẳng theo Camera khi tấn công ở chế độ mạng ---
+        // Quét trạng thái tấn công chuẩn xác
         bool isAttacking = IsPlayingAttackState(out _, out _);
 
         bool shouldAlignToCamera = (isArmed && rotateToCameraWhenArmed) ||
@@ -3679,8 +3678,26 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
                 if (camForward.sqrMagnitude > 0.001f)
                 {
                     Quaternion targetRot = Quaternion.LookRotation(camForward.normalized);
-                    // Không còn offset xoay root ở đây - LeoBoneCorrector xử lý bù lệch xương
-                    transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, Time.deltaTime * rotationSmoothSpeedArmed);
+
+                    // --- ĐÃ SỬA: Áp góc lệch chuẩn xác cho cả 3 đòn đấm và 5 đòn chém ---
+                    if (isAttacking)
+                    {
+                        float currentOffset = 0f;
+                        if (lastTriggeredAnimName == punch1Trigger || lastTriggeredAnimName == "Punch1") currentOffset = punch1Offset;
+                        else if (lastTriggeredAnimName == punch2Trigger || lastTriggeredAnimName == "Punch2") currentOffset = punch2Offset;
+                        else if (lastTriggeredAnimName == punch3Trigger || lastTriggeredAnimName == "Punch3") currentOffset = punch3Offset;
+                        else if (lastTriggeredAnimName == "attacktaytrai") currentOffset = slash1Offset; // Đã vá lỗi chữ 'i'
+                        else if (lastTriggeredAnimName == "attacktayphai") currentOffset = slash2Offset;
+                        else if (lastTriggeredAnimName == "Slash1Combo2") currentOffset = slash3Offset;
+                        else if (lastTriggeredAnimName == "Slash2combo2") currentOffset = slash4Offset;
+                        else if (lastTriggeredAnimName == "Slash3combo2") currentOffset = slash5Offset;
+
+                        targetRot *= Quaternion.Euler(0f, currentOffset, 0f);
+                    }
+
+                    // Tăng tốc độ quay người lên 150f (Gần như lập tức) khi đang ra đòn để triệt tiêu cảm giác trễ/lag camera
+                    float currentRotSpeed = isAttacking ? 150f : rotationSmoothSpeedArmed;
+                    transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, Time.deltaTime * currentRotSpeed);
                 }
             }
 
@@ -3800,7 +3817,6 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             move = camRight * moveX + camForward * moveZ;
         }
 
-        // Khắc phục lỗi di chuyển chéo bị nhanh hơn bình thường (Diagonal Speedup)
         if (move.magnitude > 1f)
         {
             move.Normalize();
@@ -3844,7 +3860,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         float targetInputZ = 0f;
         float targetSpeed = 0f;
 
-        // --- ĐÃ SỬA: Bổ sung check trạng thái tấn công trên mạng cho Owner ---
+        // --- ĐÃ SỬA: Đồng bộ kiểm tra trạng thái tấn công trên mạng cho chế độ Multiplayer ---
         bool isAttacking = IsPlayingAttackState(out _, out _);
 
         bool shouldAlignToCamera = (isArmed && rotateToCameraWhenArmed) ||
@@ -3860,8 +3876,26 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
                 if (camForward.sqrMagnitude > 0.001f)
                 {
                     Quaternion targetRot = Quaternion.LookRotation(camForward.normalized);
-                    // Không còn offset xoay root ở đây - LeoBoneCorrector xử lý bù lệch xương
-                    transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, Time.deltaTime * rotationSmoothSpeedArmed);
+
+                    // Áp góc lệch Offset chuẩn cho chế độ Multiplayer mạng
+                    if (isAttacking)
+                    {
+                        float currentOffset = 0f;
+                        if (lastTriggeredAnimName == punch1Trigger || lastTriggeredAnimName == "Punch1") currentOffset = punch1Offset;
+                        else if (lastTriggeredAnimName == punch2Trigger || lastTriggeredAnimName == "Punch2") currentOffset = punch2Offset;
+                        else if (lastTriggeredAnimName == punch3Trigger || lastTriggeredAnimName == "Punch3") currentOffset = punch3Offset;
+                        else if (lastTriggeredAnimName == "attacktaytrai") currentOffset = slash1Offset;
+                        else if (lastTriggeredAnimName == "attacktayphai") currentOffset = slash2Offset;
+                        else if (lastTriggeredAnimName == "Slash1Combo2") currentOffset = slash3Offset;
+                        else if (lastTriggeredAnimName == "Slash2combo2") currentOffset = slash4Offset;
+                        else if (lastTriggeredAnimName == "Slash3combo2") currentOffset = slash5Offset;
+
+                        targetRot *= Quaternion.Euler(0f, currentOffset, 0f);
+                    }
+
+                    // Ép tốc độ xoay người lên 150f để loại bỏ hoàn toàn hiện tượng lag camera đuổi theo chuột
+                    float currentRotSpeed = isAttacking ? 150f : rotationSmoothSpeedArmed;
+                    transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, Time.deltaTime * currentRotSpeed);
                 }
             }
 
@@ -3949,6 +3983,23 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     [Tooltip("Thời gian animation tấn công (giây). Dùng để tính combo window.")]
     public float punchAnimDuration = 0.5f;
     public float slashAnimDuration = 0.6f;
+    [Header("Attack Rotation Offsets Configuration")]
+    [Tooltip("Góc bù đấm 1: Tay trái (Punch1)")]
+    public float punch1Offset = 0f;
+    [Tooltip("Góc bù đấm 2: Tay phải (Punch2)")]
+    public float punch2Offset = 0f;
+    [Tooltip("Góc bù đấm 3: Hai tay combo (Punch3)")]
+    public float punch3Offset = 0f;
+    [Tooltip("Góc bù chém 1: Tay trái (attacktaytrai)")]
+    public float slash1Offset = 0f;
+    [Tooltip("Góc bù chém 2: Tay phải (attacktayphai)")]
+    public float slash2Offset = 0f;
+    [Tooltip("Góc bù chém 3: Song kiếm đòn 1 (Slash1Combo2)")]
+    public float slash3Offset = 0f;
+    [Tooltip("Góc bù chém 4: Song kiếm đòn 2 (Slash2combo2)")]
+    public float slash4Offset = 0f;
+    [Tooltip("Góc bù chém 5: Song kiếm đòn 3 (Slash3combo2)")]
+    public float slash5Offset = 0f;
 
     [Header("Sword Combo Durations (New FBX Anim clips)")]
     public float attacktaytraiDuration = 0.5f;

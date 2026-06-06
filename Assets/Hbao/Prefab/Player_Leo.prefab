@@ -265,38 +265,59 @@ MonoBehaviour:
   - IsCrossFadeExit: 0
     Layer: 0
     OriginatingState: -216566996
-    DestinationState: 701670150
-    TransitionDuration: 0.05
-    TriggerNameHash: 701670150
-    TransitionIndex: 1
-  - IsCrossFadeExit: 0
-    Layer: 0
-    OriginatingState: -216566996
     DestinationState: -1427357188
     TransitionDuration: 0.05
     TriggerNameHash: -1427357188
-    TransitionIndex: 2
-  - IsCrossFadeExit: 0
-    Layer: 0
-    OriginatingState: -216566996
-    DestinationState: -1224666377
-    TransitionDuration: 0.05
-    TriggerNameHash: -1224666377
-    TransitionIndex: 3
+    TransitionIndex: 1
   - IsCrossFadeExit: 0
     Layer: 0
     OriginatingState: -216566996
     DestinationState: -1666687401
     TransitionDuration: 0.05
     TriggerNameHash: -1666687401
-    TransitionIndex: 4
+    TransitionIndex: 2
   - IsCrossFadeExit: 0
     Layer: 0
     OriginatingState: -216566996
     DestinationState: 987715043
     TransitionDuration: 0.05
     TriggerNameHash: 987715043
+    TransitionIndex: 3
+  - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: -216566996
+    DestinationState: 1840484693
+    TransitionDuration: 0.05
+    TriggerNameHash: -1224666377
+    TransitionIndex: 4
+  - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: -216566996
+    DestinationState: 2117524638
+    TransitionDuration: 0.05
+    TriggerNameHash: 701670150
     TransitionIndex: 5
+  - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: 1654062508
+    DestinationState: 1910553104
+    TransitionDuration: 0.05
+    TriggerNameHash: -726645050
+    TransitionIndex: 1
+  - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: 1654062508
+    DestinationState: -1071548635
+    TransitionDuration: 0.05
+    TriggerNameHash: 1248065335
+    TransitionIndex: 2
+  - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: 1654062508
+    DestinationState: 988669964
+    TransitionDuration: 0.05
+    TriggerNameHash: -1960256152
+    TransitionIndex: 3
   - IsCrossFadeExit: 0
     Layer: 1
     OriginatingState: -499022955
@@ -328,58 +349,58 @@ MonoBehaviour:
   - IsCrossFadeExit: 0
     Layer: 1
     OriginatingState: -499022955
-    DestinationState: 1918811966
-    TransitionDuration: 0.05
-    TriggerNameHash: -1960256152
-    TransitionIndex: 4
-  - IsCrossFadeExit: 0
-    Layer: 1
-    OriginatingState: -499022955
-    DestinationState: 1248065335
-    TransitionDuration: 0.05
-    TriggerNameHash: 1248065335
-    TransitionIndex: 5
-  - IsCrossFadeExit: 0
-    Layer: 1
-    OriginatingState: -499022955
-    DestinationState: -726645050
-    TransitionDuration: 0.05
-    TriggerNameHash: -726645050
-    TransitionIndex: 6
-  - IsCrossFadeExit: 0
-    Layer: 1
-    OriginatingState: -499022955
-    DestinationState: -1224666377
-    TransitionDuration: 0.05
-    TriggerNameHash: -1224666377
-    TransitionIndex: 7
-  - IsCrossFadeExit: 0
-    Layer: 1
-    OriginatingState: -499022955
-    DestinationState: 701670150
-    TransitionDuration: 0.05
-    TriggerNameHash: 701670150
-    TransitionIndex: 8
-  - IsCrossFadeExit: 0
-    Layer: 1
-    OriginatingState: -499022955
     DestinationState: -1427357188
     TransitionDuration: 0.05
     TriggerNameHash: -1427357188
-    TransitionIndex: 9
+    TransitionIndex: 4
   - IsCrossFadeExit: 0
     Layer: 1
     OriginatingState: -499022955
     DestinationState: 987715043
     TransitionDuration: 0.05
     TriggerNameHash: 987715043
-    TransitionIndex: 10
+    TransitionIndex: 5
   - IsCrossFadeExit: 0
     Layer: 1
     OriginatingState: -499022955
     DestinationState: -1666687401
     TransitionDuration: 0.05
     TriggerNameHash: -1666687401
+    TransitionIndex: 6
+  - IsCrossFadeExit: 0
+    Layer: 1
+    OriginatingState: -499022955
+    DestinationState: 988669964
+    TransitionDuration: 0.05
+    TriggerNameHash: -1960256152
+    TransitionIndex: 7
+  - IsCrossFadeExit: 0
+    Layer: 1
+    OriginatingState: -499022955
+    DestinationState: -1071548635
+    TransitionDuration: 0.05
+    TriggerNameHash: 1248065335
+    TransitionIndex: 8
+  - IsCrossFadeExit: 0
+    Layer: 1
+    OriginatingState: -499022955
+    DestinationState: 1910553104
+    TransitionDuration: 0.05
+    TriggerNameHash: -726645050
+    TransitionIndex: 9
+  - IsCrossFadeExit: 0
+    Layer: 1
+    OriginatingState: -499022955
+    DestinationState: 1840484693
+    TransitionDuration: 0.05
+    TriggerNameHash: -1224666377
+    TransitionIndex: 10
+  - IsCrossFadeExit: 0
+    Layer: 1
+    OriginatingState: -499022955
+    DestinationState: 2117524638
+    TransitionDuration: 0.05
+    TriggerNameHash: 701670150
     TransitionIndex: 11
   AnimatorParameterEntries:
     ParameterEntries:
@@ -747,6 +768,10 @@ MonoBehaviour:
   getHit2Trigger: GeiHit2
   punchAnimDuration: 0.5
   slashAnimDuration: 0.6
+  punch1Offset: 0
+  punch2Offset: 0
+  slash1Offset: 0
+  slash2Offset: 0
   attacktaytraiDuration: 0.5
   attacktayphaiDuration: 0.5
   slash1Combo2Duration: 0.6
