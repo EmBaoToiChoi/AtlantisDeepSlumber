@@ -375,4 +375,35 @@ public class RollAnimationEventHelper : MonoBehaviour
         EnsurePlayerReference();
         if (player != null) player.DisableRightWeaponHitbox();
     }
+
+    // --- VFX Event Forwarders ---
+    public void PlayLeftSlashVFX()
+    {
+        EnsurePlayerReference();
+        if (player != null) player.PlayLeftSlashVFX();
+    }
+
+    public void PlayRightSlashVFX()
+    {
+        EnsurePlayerReference();
+        if (player != null) player.PlayRightSlashVFX();
+    }
+
+    public void PlayDualSlashVFX()
+    {
+        EnsurePlayerReference();
+        if (player != null) player.PlayDualSlashVFX();
+    }
+
+    public void PlayDualSlash1VFX()
+    {
+        EnsurePlayerReference();
+        if (player != null) player.PlayDualSlash1VFX();
+    }
+
+    public void PlayDualSlash2VFX()
+    {
+        EnsurePlayerReference();
+        if (player != null) player.PlayDualSlash2VFX();
+    }
 }

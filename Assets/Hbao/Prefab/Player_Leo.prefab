@@ -264,68 +264,124 @@ MonoBehaviour:
   m_Animator: {fileID: 6582539960615988373}
   TransitionStateInfoList:
   - IsCrossFadeExit: 0
-    Layer: 1
-    OriginatingState: -499022955
-    DestinationState: -1487840235
+    Layer: 0
+    OriginatingState: -216566996
+    DestinationState: 701670150
     TransitionDuration: 0.05
-    TriggerNameHash: -1487840235
-    TransitionIndex: 0
+    TriggerNameHash: 701670150
+    TransitionIndex: 1
+  - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: -216566996
+    DestinationState: -1427357188
+    TransitionDuration: 0.05
+    TriggerNameHash: -1427357188
+    TransitionIndex: 2
+  - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: -216566996
+    DestinationState: -1224666377
+    TransitionDuration: 0.05
+    TriggerNameHash: -1224666377
+    TransitionIndex: 3
+  - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: -216566996
+    DestinationState: -1666687401
+    TransitionDuration: 0.05
+    TriggerNameHash: -1666687401
+    TransitionIndex: 4
+  - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: -216566996
+    DestinationState: 987715043
+    TransitionDuration: 0.05
+    TriggerNameHash: 987715043
+    TransitionIndex: 5
   - IsCrossFadeExit: 0
     Layer: 1
     OriginatingState: -499022955
     DestinationState: -890948948
     TransitionDuration: 0.05
     TriggerNameHash: -1068915434
-    TransitionIndex: 1
+    TransitionIndex: 0
   - IsCrossFadeExit: 0
     Layer: 1
     OriginatingState: -499022955
     DestinationState: 48138164
     TransitionDuration: 0.05
     TriggerNameHash: 337460475
-    TransitionIndex: 2
+    TransitionIndex: 1
   - IsCrossFadeExit: 0
     Layer: 1
     OriginatingState: -499022955
     DestinationState: -1676855739
     TransitionDuration: 0.05
     TriggerNameHash: -576533199
-    TransitionIndex: 3
+    TransitionIndex: 2
   - IsCrossFadeExit: 0
     Layer: 1
     OriginatingState: -499022955
     DestinationState: -1722614907
     TransitionDuration: 0.05
     TriggerNameHash: 63768429
-    TransitionIndex: 4
+    TransitionIndex: 3
   - IsCrossFadeExit: 0
     Layer: 1
     OriginatingState: -499022955
     DestinationState: 1918811966
     TransitionDuration: 0.05
     TriggerNameHash: -1960256152
-    TransitionIndex: 5
+    TransitionIndex: 4
   - IsCrossFadeExit: 0
     Layer: 1
     OriginatingState: -499022955
     DestinationState: 1248065335
     TransitionDuration: 0.05
     TriggerNameHash: 1248065335
-    TransitionIndex: 6
+    TransitionIndex: 5
   - IsCrossFadeExit: 0
     Layer: 1
     OriginatingState: -499022955
     DestinationState: -726645050
     TransitionDuration: 0.05
     TriggerNameHash: -726645050
+    TransitionIndex: 6
+  - IsCrossFadeExit: 0
+    Layer: 1
+    OriginatingState: -499022955
+    DestinationState: -1224666377
+    TransitionDuration: 0.05
+    TriggerNameHash: -1224666377
     TransitionIndex: 7
   - IsCrossFadeExit: 0
     Layer: 1
     OriginatingState: -499022955
-    DestinationState: 1430660160
+    DestinationState: 701670150
     TransitionDuration: 0.05
-    TriggerNameHash: 538895171
+    TriggerNameHash: 701670150
     TransitionIndex: 8
+  - IsCrossFadeExit: 0
+    Layer: 1
+    OriginatingState: -499022955
+    DestinationState: -1427357188
+    TransitionDuration: 0.05
+    TriggerNameHash: -1427357188
+    TransitionIndex: 9
+  - IsCrossFadeExit: 0
+    Layer: 1
+    OriginatingState: -499022955
+    DestinationState: 987715043
+    TransitionDuration: 0.05
+    TriggerNameHash: 987715043
+    TransitionIndex: 10
+  - IsCrossFadeExit: 0
+    Layer: 1
+    OriginatingState: -499022955
+    DestinationState: -1666687401
+    TransitionDuration: 0.05
+    TriggerNameHash: -1666687401
+    TransitionIndex: 11
   AnimatorParameterEntries:
     ParameterEntries:
     - name: InputX
@@ -388,6 +444,26 @@ MonoBehaviour:
       NameHash: -576533199
       Synchronize: 1
       ParameterType: 9
+    - name: attacktaytrai
+      NameHash: -1224666377
+      Synchronize: 1
+      ParameterType: 9
+    - name: attacktayphai
+      NameHash: 701670150
+      Synchronize: 1
+      ParameterType: 9
+    - name: Slash1Combo2
+      NameHash: -1427357188
+      Synchronize: 1
+      ParameterType: 9
+    - name: Slash2combo2
+      NameHash: -1666687401
+      Synchronize: 1
+      ParameterType: 9
+    - name: Slash3combo2
+      NameHash: 987715043
+      Synchronize: 1
+      ParameterType: 9
   AnimatorParametersExpanded: 0
 --- !u!114 &7638701699718663926
 MonoBehaviour:
@@ -420,65 +496,7 @@ MonoBehaviour:
   extraGravityMultiplier: 2.5
   maxFallSpeed: 20
   onlyExtraGravityWhenAirborne: 0
-  swordComboParticles:
-  - label: Slash 1 (comboStep = 1)
-    particles:
-    - particlePrefab: {fileID: 1713045243172065375, guid: f791790f35137b946b82347edb9264f2, type: 3}
-      delay: 0
-      positionOffset: {x: 0, y: 0, z: 0}
-      rotationOffset: {x: 0, y: 0, z: 0}
-      parentToPlayer: 0
-      parentOverride: {fileID: 2255835029971751272}
-    - particlePrefab: {fileID: 1713045243172065375, guid: f791790f35137b946b82347edb9264f2, type: 3}
-      delay: 0
-      positionOffset: {x: 0, y: 0, z: 0}
-      rotationOffset: {x: 0, y: 0, z: 0}
-      parentToPlayer: 0
-      parentOverride: {fileID: 2255835029971751272}
-    - particlePrefab: {fileID: 1713045243172065375, guid: f791790f35137b946b82347edb9264f2, type: 3}
-      delay: 0
-      positionOffset: {x: 0, y: 0, z: 0}
-      rotationOffset: {x: 0, y: 0, z: 0}
-      parentToPlayer: 0
-      parentOverride: {fileID: 2255835029971751272}
-  - label: Slash 2 (comboStep = 2)
-    particles:
-    - particlePrefab: {fileID: 1713045243172065375, guid: f791790f35137b946b82347edb9264f2, type: 3}
-      delay: 0
-      positionOffset: {x: 0, y: 0, z: 0}
-      rotationOffset: {x: 0, y: 0, z: 0}
-      parentToPlayer: 0
-      parentOverride: {fileID: 2255835029971751272}
-    - particlePrefab: {fileID: 1713045243172065375, guid: f791790f35137b946b82347edb9264f2, type: 3}
-      delay: 0
-      positionOffset: {x: 0, y: 0, z: 0}
-      rotationOffset: {x: 0, y: 0, z: 0}
-      parentToPlayer: 0
-      parentOverride: {fileID: 2255835029971751272}
-    - particlePrefab: {fileID: 1713045243172065375, guid: f791790f35137b946b82347edb9264f2, type: 3}
-      delay: 0
-      positionOffset: {x: 0, y: 0, z: 0}
-      rotationOffset: {x: 0, y: 0, z: 0}
-      parentToPlayer: 0
-      parentOverride: {fileID: 2255835029971751272}
-    - particlePrefab: {fileID: 1713045243172065375, guid: f791790f35137b946b82347edb9264f2, type: 3}
-      delay: 0
-      positionOffset: {x: 0, y: 0, z: 0}
-      rotationOffset: {x: 0, y: 0, z: 0}
-      parentToPlayer: 0
-      parentOverride: {fileID: 2255835029971751272}
-    - particlePrefab: {fileID: 1713045243172065375, guid: f791790f35137b946b82347edb9264f2, type: 3}
-      delay: 0
-      positionOffset: {x: 0, y: 0, z: 0}
-      rotationOffset: {x: 0, y: 0, z: 0}
-      parentToPlayer: 0
-      parentOverride: {fileID: 2255835029971751272}
-    - particlePrefab: {fileID: 1713045243172065375, guid: f791790f35137b946b82347edb9264f2, type: 3}
-      delay: 0
-      positionOffset: {x: 0, y: 0, z: 0}
-      rotationOffset: {x: 0, y: 0, z: 0}
-      parentToPlayer: 0
-      parentOverride: {fileID: 2255835029971751272}
+  swordComboParticles: []
   leftHitbox: {fileID: 1951728423009820279}
   rightHitbox: {fileID: 5564713475576156401}
   leftWeaponHitbox: {fileID: 4903209859804708166}
@@ -706,6 +724,18 @@ MonoBehaviour:
   getHit2Trigger: GeiHit2
   punchAnimDuration: 0.5
   slashAnimDuration: 0.6
+  attacktaytraiDuration: 0.5
+  attacktayphaiDuration: 0.5
+  slash1Combo2Duration: 0.6
+  slash2combo2Duration: 0.6
+  slash3combo2Duration: 0.6
+  leftSlashVfxPrefab: {fileID: 7611201976539897820, guid: 39706049c667f7d4bbca965b63cd3bec, type: 3}
+  rightSlashVfxPrefab: {fileID: 7611201976539897820, guid: 39706049c667f7d4bbca965b63cd3bec, type: 3}
+  dualSlashVfxPrefab: {fileID: 1713045243172065375, guid: f791790f35137b946b82347edb9264f2, type: 3}
+  dualSlash1VfxPrefab: {fileID: 1713045243172065375, guid: f791790f35137b946b82347edb9264f2, type: 3}
+  dualSlash2VfxPrefab: {fileID: 1713045243172065375, guid: f791790f35137b946b82347edb9264f2, type: 3}
+  leftSlashSpawnPoint: {fileID: 3465042294128408158}
+  rightSlashSpawnPoint: {fileID: 4757381001935588466}
   comboChainWindowPct: 0.55
 --- !u!114 &1666525023407835061
 MonoBehaviour:
@@ -740,26 +770,59 @@ MonoBehaviour:
   leftUpperArmOffset: {x: 25, y: 25, z: 25}
   leftArmStrength: 1
   skillOverrides:
-  - stateName: Combo1kiem
+  - stateName: attacktaytrai
     overrideBodyLock: 1
     lockBodyOnAttack: 1
-    bodyLockStrength: 0.2
+    bodyLockStrength: 0.8
     spineOffsetEuler: {x: 0, y: 0, z: 0}
-    applyRightArmOffset: 1
-    rightUpperArmOffset: {x: 0, y: 0, z: 35}
+    applyRightArmOffset: 0
+    rightUpperArmOffset: {x: 0, y: 0, z: 30}
     rightArmStrength: 1
     applyLeftArmOffset: 1
-    leftUpperArmOffset: {x: 0, y: 0, z: -10}
+    leftUpperArmOffset: {x: 0, y: 0, z: 30}
     leftArmStrength: 1
-  - stateName: combodua
+  - stateName: attacktayphai
     overrideBodyLock: 1
     lockBodyOnAttack: 1
-    bodyLockStrength: 0.25
+    bodyLockStrength: 0.8
     spineOffsetEuler: {x: 0, y: 0, z: 0}
     applyRightArmOffset: 1
-    rightUpperArmOffset: {x: 0, y: 0, z: 20}
+    rightUpperArmOffset: {x: 0, y: 0, z: 30}
     rightArmStrength: 1
-    applyLeftArmOffset: 1
+    applyLeftArmOffset: 0
+    leftUpperArmOffset: {x: 0, y: 0, z: 20}
+    leftArmStrength: 1
+  - stateName: Slash1Combo2
+    overrideBodyLock: 1
+    lockBodyOnAttack: 1
+    bodyLockStrength: 0.8
+    spineOffsetEuler: {x: 0, y: 0, z: 0}
+    applyRightArmOffset: 1
+    rightUpperArmOffset: {x: 0, y: 0, z: 30}
+    rightArmStrength: 1
+    applyLeftArmOffset: 0
+    leftUpperArmOffset: {x: 0, y: 0, z: 20}
+    leftArmStrength: 1
+  - stateName: Slash2Combo2
+    overrideBodyLock: 1
+    lockBodyOnAttack: 1
+    bodyLockStrength: 0.8
+    spineOffsetEuler: {x: 0, y: 0, z: 0}
+    applyRightArmOffset: 1
+    rightUpperArmOffset: {x: 0, y: 0, z: 30}
+    rightArmStrength: 1
+    applyLeftArmOffset: 0
+    leftUpperArmOffset: {x: 0, y: 0, z: 20}
+    leftArmStrength: 1
+  - stateName: Slash3Combo2
+    overrideBodyLock: 1
+    lockBodyOnAttack: 1
+    bodyLockStrength: 0.8
+    spineOffsetEuler: {x: 0, y: 0, z: 0}
+    applyRightArmOffset: 1
+    rightUpperArmOffset: {x: 0, y: 0, z: 30}
+    rightArmStrength: 1
+    applyLeftArmOffset: 0
     leftUpperArmOffset: {x: 0, y: 0, z: 20}
     leftArmStrength: 1
   attackStateNames:
@@ -806,6 +869,37 @@ MonoBehaviour:
       MinSecondsBetweenUpdates: 0
       MaxSecondsBetweenUpdates: 0
     m_InternalValue: 0
+--- !u!1 &4262746911795802632
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 4757381001935588466}
+  m_Layer: 3
+  m_Name: RightSlashSpawnPoint
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &4757381001935588466
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4262746911795802632}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0.66, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 2255835029971751272}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &4414795720280421845
 GameObject:
   m_ObjectHideFlags: 0
@@ -872,6 +966,37 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9af35fd58f6f29d48a0193db93794d54, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!1 &4652723350904747660
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 3465042294128408158}
+  m_Layer: 3
+  m_Name: LeftSlashSpawnPoint
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &3465042294128408158
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4652723350904747660}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0.674, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 3963171196735237559}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &7115567102273767502
 GameObject:
   m_ObjectHideFlags: 0
@@ -1932,7 +2057,10 @@ PrefabInstance:
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
-    m_AddedGameObjects: []
+    m_AddedGameObjects:
+    - targetCorrespondingSourceObject: {fileID: 6932290973238723737, guid: 480e5205a0da80444a55cca6939d2095, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 3465042294128408158}
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 3305706639583299570, guid: 480e5205a0da80444a55cca6939d2095, type: 3}
       insertIndex: -1
@@ -2056,7 +2184,10 @@ PrefabInstance:
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
-    m_AddedGameObjects: []
+    m_AddedGameObjects:
+    - targetCorrespondingSourceObject: {fileID: 6932290973238723737, guid: 480e5205a0da80444a55cca6939d2095, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 4757381001935588466}
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 3305706639583299570, guid: 480e5205a0da80444a55cca6939d2095, type: 3}
       insertIndex: -1

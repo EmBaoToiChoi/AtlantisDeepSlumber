@@ -103,7 +103,14 @@ public class LeoBoneCorrector : MonoBehaviour
         "combodua",        // Combo đưa
         "Attackdoucombo",  // Attack đôi combo
 
-        // ─── Combo kiếm ───
+        // ─── Combo kiếm mới 5 bước ───
+        "attacktaytrai",
+        "attacktayphai",
+        "Slash1Combo2",
+        "Slash2combo2",
+        "Slash3combo2",
+
+        // ─── Combo kiếm cũ ───
         "Combo1kiem",      // Combo kiếm 1
         "catkiemtayphai",  // Cắt kiếm tay phải
         "catkiemtaytrai",  // Cắt kiếm tay trái
