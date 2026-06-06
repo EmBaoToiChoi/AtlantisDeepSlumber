@@ -4025,7 +4025,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     public Transform rightSlashSpawnPoint;
     [Tooltip("Phần trăm animation còn lại cho phép chuyển nhịp combo (0.0 - 1.0).")]
     [Range(0f, 1f)]
-    public float comboChainWindowPct = 0.55f;  // Khi anim đã qua 55%, nhấp tiếp được ghi nhận
+    public float comboChainWindowPct = 0.45f;  // Khi anim đã qua 45%, nhấp tiếp sẽ kích hoạt đòn tiếp theo ngay lập tức
 
     private bool pendingAttackRequest = false;   // Buffer click chuột trong combo window
     private bool isExecutingAttack = false;       // Đang trong nhịp tấn công
@@ -4035,7 +4035,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     private Coroutine comboChainCoroutine;
 
     /// <summary>
-    /// Ghi nhận yêu cầu tấn công từ input. Nếu đang đánh thì buffer lại để combo.
+    /// Ghi nhận yêu cầu tấn công từ input. Nếu đang đánh thì kích hoạt ngay lập tức đòn tiếp theo khi qua combo window.
     /// </summary>
     private void RequestComboAttack(bool networkMode)
     {
@@ -4046,9 +4046,9 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             float progress = currentAttackAnimDuration > 0 ? elapsed / currentAttackAnimDuration : 1f;
             if (progress >= comboChainWindowPct)
             {
-                // Nằm trong combo window -> buffer click
-                pendingAttackRequest = true;
-                Debug.Log("[LeoPlayer] Combo buffer ghi nhận click - sẽ tiếp tục nhịp tiếp theo.");
+                // Nằm trong combo window -> kích hoạt đòn tiếp theo NGAY LẬP TỨC (hủy các frame thừa của đòn cũ)
+                Debug.Log("[LeoPlayer] Nhấp chuột trong Combo Window -> Chuyển sang đòn tiếp theo ngay lập tức!");
+                PerformComboAttack(networkMode);
             }
             // Ngoài window (quá sớm) -> bỏ qua click
         }
