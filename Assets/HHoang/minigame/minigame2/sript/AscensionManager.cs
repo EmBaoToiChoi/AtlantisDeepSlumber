@@ -7,15 +7,13 @@ public class AscensionManager : NetworkBehaviour
 {
     [Header("Cấu hình Particle Dòng Chảy")]
     public ParticleSystem[] flowParticles; 
-    public Material flowMaterial;    
-    public Material redFlowMaterial; 
     
     [Header("Cấu hình Trụ")]
     public Transform[] pillarPositions = new Transform[4];
     public int[] pillarStates = new int[4]; 
 
     [Header("Cấu hình Hiệu ứng Chiến thắng")]
-    public GameObject victoryEffectObject; // Kéo GameObject chứa hiệu ứng vào đây
+    public GameObject victoryEffectObject; 
 
     private List<CrystalCore> placedCrystals = new List<CrystalCore>();
     private Coroutine timerCoroutine;
@@ -157,8 +155,10 @@ public class AscensionManager : NetworkBehaviour
         {
             ps.gameObject.SetActive(true);
             var main = ps.main;
-            main.startColor = color;
-            ps.GetComponent<ParticleSystemRenderer>().material = (color == Color.red) ? redFlowMaterial : flowMaterial;
+            
+            // Code tự nhuộm màu hạt trực tiếp mà không cần đổi Material
+            main.startColor = color; 
+            
             if (!ps.isPlaying) ps.Play();
         }
     }
