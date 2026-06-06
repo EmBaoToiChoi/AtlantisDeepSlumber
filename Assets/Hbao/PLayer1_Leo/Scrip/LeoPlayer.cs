@@ -3679,7 +3679,19 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
                 if (camForward.sqrMagnitude > 0.001f)
                 {
                     Quaternion targetRot = Quaternion.LookRotation(camForward.normalized);
-                    // Không còn offset xoay root ở đây - LeoBoneCorrector xử lý bù lệch xương
+
+                    // --- BÙ GÓC XOAY CHO TỪNG ĐÒN ĐẤM / CHÉM TRÁI PHẢI ---
+                    if (isAttacking)
+                    {
+                        float currentOffset = 0f;
+                        if (lastTriggeredAnimName == punch1Trigger || lastTriggeredAnimName == "Punch1") currentOffset = punch1Offset;
+                        else if (lastTriggeredAnimName == punch2Trigger || lastTriggeredAnimName == "Punch2") currentOffset = punch2Offset;
+                        else if (lastTriggeredAnimName == "attacktaytrai") currentOffset = slash1Offset;
+                        else if (lastTriggeredAnimName == "attacktayphai") currentOffset = slash2Offset;
+
+                        targetRot *= Quaternion.Euler(0f, currentOffset, 0f);
+                    }
+
                     transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, Time.deltaTime * rotationSmoothSpeedArmed);
                 }
             }
@@ -3689,18 +3701,6 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
                 targetInputX = moveX * (isRunning ? 1.0f : 0.5f);
                 targetInputZ = moveZ * (isRunning ? 1.0f : 0.5f);
                 targetSpeed = new Vector2(targetInputX, targetInputZ).magnitude;
-            }
-        }
-        else
-        {
-            if (isMoving)
-            {
-                Quaternion targetRot = Quaternion.LookRotation(movementTranslation.normalized);
-                transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, Time.deltaTime * rotationSmoothSpeedUnarmed);
-
-                targetInputX = 0f;
-                targetInputZ = isRunning ? 1.0f : 0.5f;
-                targetSpeed = targetInputZ;
             }
         }
 
@@ -3860,7 +3860,19 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
                 if (camForward.sqrMagnitude > 0.001f)
                 {
                     Quaternion targetRot = Quaternion.LookRotation(camForward.normalized);
-                    // Không còn offset xoay root ở đây - LeoBoneCorrector xử lý bù lệch xương
+
+                    // --- BÙ GÓC XOAY CHO TỪNG ĐÒN ĐẤM / CHÉM TRÁI PHẢI (MULTIPLAYER) ---
+                    if (isAttacking)
+                    {
+                        float currentOffset = 0f;
+                        if (lastTriggeredAnimName == punch1Trigger || lastTriggeredAnimName == "Punch1") currentOffset = punch1Offset;
+                        else if (lastTriggeredAnimName == punch2Trigger || lastTriggeredAnimName == "Punch2") currentOffset = punch2Offset;
+                        else if (lastTriggeredAnimName == "attacktaytrai") currentOffset = slash1Offset;
+                        else if (lastTriggeredAnimName == "attacktayphai") currentOffset = slash2Offset;
+
+                        targetRot *= Quaternion.Euler(0f, currentOffset, 0f);
+                    }
+
                     transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, Time.deltaTime * rotationSmoothSpeedArmed);
                 }
             }
@@ -3870,18 +3882,6 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
                 targetInputX = moveX * (isRunning ? 1.0f : 0.5f);
                 targetInputZ = moveZ * (isRunning ? 1.0f : 0.5f);
                 targetSpeed = new Vector2(targetInputX, targetInputZ).magnitude;
-            }
-        }
-        else
-        {
-            if (isMoving)
-            {
-                Quaternion targetRot = Quaternion.LookRotation(movementTranslation.normalized);
-                transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, Time.deltaTime * rotationSmoothSpeedUnarmed);
-
-                targetInputX = 0f;
-                targetInputZ = isRunning ? 1.0f : 0.5f;
-                targetSpeed = targetInputZ;
             }
         }
 
@@ -3949,6 +3949,15 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     [Tooltip("Thời gian animation tấn công (giây). Dùng để tính combo window.")]
     public float punchAnimDuration = 0.5f;
     public float slashAnimDuration = 0.6f;
+    [Header("Attack Rotation Offsets")]
+    [Tooltip("Góc bù cho đòn Đấm Trái (Punch1)")]
+    public float punch1Offset = 0f;
+    [Tooltip("Góc bù cho đòn Đấm Phải (Punch2)")]
+    public float punch2Offset = 0f;
+    [Tooltip("Góc bù cho đòn Kiếm Trái (attacktaytrai)")]
+    public float slash1Offset = 0f;
+    [Tooltip("Góc bù cho đòn Kiếm Phải (attacktayphai)")]
+    public float slash2Offset = 0f;
 
     [Header("Sword Combo Durations (New FBX Anim clips)")]
     public float attacktaytraiDuration = 0.5f;
