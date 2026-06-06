@@ -39,12 +39,6 @@ public class AscensionManager : NetworkBehaviour
 
         crystal.LockToStation(); 
 
-        var snapFollow = crystal.GetComponent<CrystalSnapFollow>();
-        if (snapFollow != null)
-        {
-            snapFollow.targetSnapPoint = pillarPositions[stationIndex].GetComponent<PillarStation>().snapPosition;
-        }
-
         pillarStates[stationIndex] = crystal.crystalID; 
         if (!placedCrystals.Contains(crystal)) placedCrystals.Add(crystal);
 
@@ -55,16 +49,6 @@ public class AscensionManager : NetworkBehaviour
         }
         
         CheckWinCondition();
-    }
-
-    [ServerRpc(RequireOwnership = false)]
-    public void UpdateSnappedStateServerRpc(NetworkObjectReference crystalRef, bool state)
-    {
-        if (crystalRef.TryGet(out NetworkObject netObj))
-        {
-            var crystal = netObj.GetComponent<CrystalCore>();
-            if (crystal != null) crystal.isSnapped.Value = state;
-        }
     }
 
     IEnumerator TimerCountdown()
@@ -80,40 +64,36 @@ public class AscensionManager : NetworkBehaviour
         isTimerRunning = false;
     }
 
-    void EjectAllCrystals()
+    public void EjectAllCrystals()
     {
         if (!IsServer) return;
 
+        // 1. Văng ngọc ra và giải phóng
         foreach (var crystal in placedCrystals)
         {
             if (crystal != null)
             {
-                // Bật lại va chạm bình thường, không cần chặn reset nữa
-                var col = crystal.GetComponent<Collider>();
-                if (col != null) col.enabled = true; 
-
-                UpdateSnappedStateServerRpc(crystal.NetworkObject, false);
+                // Gọi thẳng hàm PerformDrop để Server tự xử lý NetworkVariable
+                crystal.PerformDrop();
 
                 Rigidbody rb = crystal.GetComponent<Rigidbody>();
                 if (rb != null) 
                 {
-                    rb.isKinematic = false;
-                    rb.useGravity = true;
-                    // Văng ra theo lực nhẹ thôi để nó không văng quá xa
                     rb.AddForce(new Vector3(Random.Range(-2f, 2f), 5f, Random.Range(-2f, 2f)), ForceMode.Impulse);
                 }
             }
         }
 
+        // 2. Reset trạng thái trụ (Đảm bảo trụ mở khóa)
         foreach (var pillar in pillarPositions)
         {
-            if (pillar != null)
+            if (pillar != null && pillar.TryGetComponent<PillarStation>(out var station))
             {
-                PillarStation station = pillar.GetComponent<PillarStation>();
-                if (station != null) station.isOccupied.Value = false; 
+                station.isOccupied.Value = false; 
             }
         }
 
+        // 3. Reset các thiết lập manager
         foreach (var ps in flowParticles) if (ps != null) { ps.Stop(); ps.gameObject.SetActive(false); }
 
         placedCrystals.Clear();
@@ -121,13 +101,6 @@ public class AscensionManager : NetworkBehaviour
         
         if (timerCoroutine != null) StopCoroutine(timerCoroutine);
         isTimerRunning = false;
-    }
-
-    // Coroutine hỗ trợ bật lại va chạm
-    IEnumerator ReenableCollider(Collider col)
-    {
-        yield return new WaitForSeconds(0.5f);
-        if (col != null) col.enabled = true;
     }
 
     void CheckWinCondition()
@@ -164,17 +137,14 @@ public class AscensionManager : NetworkBehaviour
         {
             ps.gameObject.SetActive(true);
             var main = ps.main;
-            
-            // Code tự nhuộm màu hạt trực tiếp mà không cần đổi Material
             main.startColor = color; 
-            
             if (!ps.isPlaying) ps.Play();
         }
     }
 
     IEnumerator DelayEject()
     {
-        yield return new WaitForSeconds(8.0f); 
+        yield return new WaitForSeconds(5.0f); // Giảm xuống 2s để test cho nhanh
         EjectAllCrystals();
     }
 }

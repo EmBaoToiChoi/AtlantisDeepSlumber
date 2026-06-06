@@ -8,79 +8,45 @@ public class PillarStation : NetworkBehaviour
     public Transform snapPosition;
     public NetworkVariable<bool> isOccupied = new NetworkVariable<bool>(false);
 
-    public void TryInteract(PlayerInteraction player)
+    public void TryInteract(PlayerInteraction player, ulong heldCoreId)
     {
-        Debug.Log($"[DEBUG] Đang gọi TryInteract tại trạm: {stationIndex}. Đang cầm ngọc: {(player.currentHeldCore != null ? "Có" : "Không")}");
-        
-        if (player == null || player.currentHeldCore == null) 
-        {
-            Debug.LogWarning("[DEBUG] TryInteract bị chặn: Thiếu player hoặc không cầm ngọc!");
-            return;
-        }
-        
-        RequestSnapServerRpc(player.currentHeldCore.NetworkObject.NetworkObjectId, stationIndex);
+        if (player == null || heldCoreId == ulong.MaxValue) return;
+        RequestSnapServerRpc(heldCoreId, stationIndex);
     }
     
     [ServerRpc(RequireOwnership = false)]
     void RequestSnapServerRpc(ulong crystalNetId, int index, ServerRpcParams rpcParams = default)
     {
-        Debug.Log("[DEBUG] [PillarStation] Server đã nhận được yêu cầu đặt ngọc!");
+        if (isOccupied.Value) return;
 
-        // 1. Kiểm tra trạng thái trụ
-        if (isOccupied.Value) 
-        { 
-            Debug.LogWarning($"[DEBUG] [PillarStation] Server từ chối vì trụ {index} đang bị chiếm (isOccupied = true)!"); 
-            return; 
-        }
-
-        // 2. Kiểm tra viên ngọc có tồn tại không
-        if (!NetworkManager.SpawnManager.SpawnedObjects.TryGetValue(crystalNetId, out var netObj))
-        {
-            Debug.LogError($"[DEBUG] [PillarStation] Server không tìm thấy NetworkObject với ID: {crystalNetId}");
-            return;
-        }
+        if (!NetworkManager.SpawnManager.SpawnedObjects.TryGetValue(crystalNetId, out var netObj)) return;
 
         var crystal = netObj.GetComponent<CrystalCore>();
-        if (crystal == null)
-        {
-            Debug.LogError($"[DEBUG] [PillarStation] Đối tượng với ID {crystalNetId} không có script CrystalCore!");
-            return;
-        }
-
-        // 3. Xóa ngọc khỏi tay nhân vật
-        bool foundPlayer = false;
+        
+        // Xác thực: Chỉ người đang sở hữu ngọc mới được đặt
         if (NetworkManager.Singleton.ConnectedClients.TryGetValue(rpcParams.Receive.SenderClientId, out var client))
         {
-            if (client.PlayerObject != null && client.PlayerObject.TryGetComponent<PlayerInteraction>(out var pInt))
+            var pInt = client.PlayerObject.GetComponent<PlayerInteraction>();
+            
+            if (pInt.heldCoreNetworkId.Value == crystalNetId)
             {
-                Debug.Log("[DEBUG] [PillarStation] Đang gọi ForceDropFromStation cho Player...");
+                // THAY VÌ TELEPORT, ta gọi hàm báo viên ngọc bắt đầu bay từ từ vào trụ
+                crystal.StartSnappingToStation(snapPosition);
+                
+                // Giải phóng ngọc khỏi tay người chơi
                 pInt.ForceDropFromStation();
-                foundPlayer = true;
+                
+                if (manager != null)
+                {
+                    manager.SnapCrystalToPillar(crystal, index);
+                    isOccupied.Value = true;
+                }
             }
-        }
-        
-        if (!foundPlayer)
-        {
-            Debug.LogWarning("[DEBUG] [PillarStation] Không tìm thấy PlayerInteraction để tước ngọc!");
-        }
-
-        // 4. Xử lý logic tại Manager
-        if (manager != null)
-        {
-            Debug.Log($"[DEBUG] [PillarStation] Gọi manager.SnapCrystalToPillar cho trụ {index}");
-            manager.SnapCrystalToPillar(crystal, index);
-            isOccupied.Value = true;
-            Debug.Log($"[DEBUG] [PillarStation] Đặt ngọc vào trụ {index} thành công!");
-        }
-        else
-        {
-            Debug.LogError("[DEBUG] [PillarStation] Biến 'manager' đang bị null! Chưa gán vào Inspector?");
         }
     }
 
     private void OnTriggerEnter(Collider other)
     {
-        Debug.Log($"[DEBUG] Đã chạm vào trụ: {gameObject.name}");
         if (other.TryGetComponent<PlayerInteraction>(out var player)) player.currentPillarStation = this;
     }
 
