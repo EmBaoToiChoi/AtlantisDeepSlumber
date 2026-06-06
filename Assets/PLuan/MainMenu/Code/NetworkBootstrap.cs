@@ -88,7 +88,7 @@ public class NetworkBootstrap : MonoBehaviour
             // Đưa VPS quay về cảnh Map đón lượt chơi mới
             if (NetworkManager.Singleton.SceneManager != null)
             {
-                NetworkManager.Singleton.SceneManager.LoadScene("Map2", UnityEngine.SceneManagement.LoadSceneMode.Single);
+                NetworkManager.Singleton.SceneManager.LoadScene("Map", UnityEngine.SceneManagement.LoadSceneMode.Single);
             }
         }
     }
