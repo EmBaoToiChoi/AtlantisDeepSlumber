@@ -17,6 +17,7 @@ GameObject:
   - component: {fileID: 185223332511423188}
   - component: {fileID: 75400207529345532}
   - component: {fileID: 2590119000348669281}
+  - component: {fileID: 8401073795757711803}
   m_Layer: 3
   m_Name: Player2
   m_TagString: Player
@@ -106,10 +107,31 @@ MonoBehaviour:
     TransitionIndex: 0
   - IsCrossFadeExit: 0
     Layer: 0
+    OriginatingState: 1143134817
+    DestinationState: -1796308849
+    TransitionDuration: 0.25
+    TriggerNameHash: -39148367
+    TransitionIndex: 0
+  - IsCrossFadeExit: 0
+    Layer: 0
     OriginatingState: -1796308849
     DestinationState: -39148367
     TransitionDuration: 0.1
     TriggerNameHash: -39148367
+    TransitionIndex: 1
+  - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: -1796308849
+    DestinationState: 1143134817
+    TransitionDuration: 0.25
+    TriggerNameHash: 1143134817
+    TransitionIndex: 2
+  - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: 1248108013
+    DestinationState: 1143134817
+    TransitionDuration: 0.25
+    TriggerNameHash: 1143134817
     TransitionIndex: 1
   - IsCrossFadeExit: 0
     Layer: 1
@@ -530,12 +552,31 @@ MonoBehaviour:
     m_Bits: 256
   currentInteractBox: {fileID: 0}
   currentPillarStation: {fileID: 0}
-  currentHeldCore: {fileID: 0}
+  heldCoreNetworkId:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 18446744073709551615
   isCarryingCore:
     UpdateTraits:
       MinSecondsBetweenUpdates: 0
       MaxSecondsBetweenUpdates: 0
     m_InternalValue: 0
+  currentHeldCore: {fileID: 0}
+--- !u!114 &8401073795757711803
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 904585252511742871}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 54471ddc3d8c72542839c80872939d1c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  scriptNames:
+  - ElenaPlayer
 --- !u!1 &3960096867281995982
 GameObject:
   m_ObjectHideFlags: 0

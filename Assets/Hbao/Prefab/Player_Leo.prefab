@@ -83,6 +83,7 @@ GameObject:
   - component: {fileID: 4992956460810916836}
   - component: {fileID: 7638701699718663926}
   - component: {fileID: 7725615253499321622}
+  - component: {fileID: 8566485037701727064}
   m_Layer: 3
   m_Name: Player_Leo
   m_TagString: Player
@@ -770,8 +771,12 @@ MonoBehaviour:
   slashAnimDuration: 0.6
   punch1Offset: 0
   punch2Offset: 0
+  punch3Offset: 0
   slash1Offset: 0
   slash2Offset: 0
+  slash3Offset: 0
+  slash4Offset: 0
+  slash5Offset: 0
   attacktaytraiDuration: 0.5
   attacktayphaiDuration: 0.5
   slash1Combo2Duration: 0.6
@@ -804,12 +809,31 @@ MonoBehaviour:
     m_Bits: 256
   currentInteractBox: {fileID: 0}
   currentPillarStation: {fileID: 0}
-  currentHeldCore: {fileID: 0}
+  heldCoreNetworkId:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 18446744073709551615
   isCarryingCore:
     UpdateTraits:
       MinSecondsBetweenUpdates: 0
       MaxSecondsBetweenUpdates: 0
     m_InternalValue: 0
+  currentHeldCore: {fileID: 0}
+--- !u!114 &8566485037701727064
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3704789710416520249}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 54471ddc3d8c72542839c80872939d1c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  scriptNames:
+  - LeoPlayer
 --- !u!1 &4262746911795802632
 GameObject:
   m_ObjectHideFlags: 0
