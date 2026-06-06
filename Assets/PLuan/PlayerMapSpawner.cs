@@ -41,9 +41,9 @@ public class PlayerMapSpawner : NetworkBehaviour
     [Tooltip("Tự động khởi chạy mạng khi chạy thử trực tiếp Scene này trong Editor")]
     [SerializeField] private bool autoStartNetworkInEditor = true;
     [Tooltip("Chế độ mạng muốn test (Host = Server + Client, Server = Dedicated Server, Client = Kết nối vào server)")]
-    [SerializeField] private NetworkDebugStartMode debugStartMode = NetworkDebugStartMode.Host;
-    [Tooltip("Địa chỉ IP để kết nối khi test (127.0.0.1 để test cục bộ trên máy, tránh kết nối VPS)")]
-    [SerializeField] private string debugConnectAddress = "127.0.0.1";
+    [SerializeField] private NetworkDebugStartMode debugStartMode = NetworkDebugStartMode.Client;
+    [Tooltip("Địa chỉ IP để kết nối khi test (165.99.14.40 để kết nối thẳng tới VPS)")]
+    [SerializeField] private string debugConnectAddress = "165.99.14.40";
     [Tooltip("Nhân vật muốn test nhanh (0 = Leo, 1 = Maya, 2 = Elena, 3 = Arthur)")]
     [SerializeField] private int debugCharacterId = 2; // Elena mặc định
 
