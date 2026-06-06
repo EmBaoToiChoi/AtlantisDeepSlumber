@@ -222,6 +222,11 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (rootMotionBridge == null && anim != null)
         {
             rootMotionBridge = anim.GetComponent<RootMotionBridge>();
+            if (rootMotionBridge == null)
+            {
+                rootMotionBridge = anim.gameObject.AddComponent<RootMotionBridge>();
+                Debug.Log($"[ElenaPlayer] Dynamically added RootMotionBridge to {anim.gameObject.name} at runtime.");
+            }
         }
         return rootMotionBridge;
     }
@@ -296,6 +301,7 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (anim != null)
         {
             anim.applyRootMotion = false; // Tắt root motion mặc định để tránh ghi đè tốc độ di chuyển của code
+            GetRootMotionBridge();
         }
 
         // Khởi tạo các góc xoay camera từ offset mặc định
@@ -1185,12 +1191,7 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         if (rollTimer <= 0)
         {
-            isRollingStandalone = false;
-            // Dừng Rigidbody velocity khi lộn xong
-            if (rb != null)
-            {
-                rb.linearVelocity = new Vector3(0f, rb.linearVelocity.y, 0f);
-            }
+            OnRollEnd();
         }
         return; // Khóa hoàn toàn các input di chuyển khác bên dưới
     }
@@ -1317,12 +1318,7 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         if (rollTimer <= 0)
         {
-            StopRollServerRpc();
-            // Dừng Rigidbody velocity khi lộn xong
-            if (rb != null)
-            {
-                rb.linearVelocity = new Vector3(0f, rb.linearVelocity.y, 0f);
-            }
+            OnRollEnd();
         }
         return; // Khóa hoàn toàn các input di chuyển khác bên dưới
     }
@@ -1466,6 +1462,27 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
     PlayAnimation("LonVong", 0.05f, false); 
     StartRollServerRpc(rollDirection);
 }
+
+    public void OnRollEnd()
+    {
+        Debug.Log("[ElenaPlayer] OnRollEnd called.");
+        isRollingStandalone = false;
+        rollTimer = 0f;
+
+        if (anim != null) anim.applyRootMotion = false;
+        var bridge = GetRootMotionBridge();
+        if (bridge != null) bridge.ApplyFinalOffset();
+
+        if (rb != null)
+        {
+            rb.linearVelocity = new Vector3(0f, rb.linearVelocity.y, 0f);
+        }
+
+        if (!isStandaloneMode && IsOwner)
+        {
+            StopRollServerRpc();
+        }
+    }
 
     void LateUpdate()
     {
