@@ -72,9 +72,20 @@ public class PlayerHUDController : MonoBehaviour
                         hud.SetupPlayerProfile(classIdx);
                     }
                 }
+
+                // Đăng ký event hủy Skill Q được thực hiện trong OnEnable() thay vì ở đây
+                // (vì đây là static setter, không thể dùng instance method)
             }
         }
     }
+
+    /// <summary>Được gọi khi server xác nhận Skill Q bị hủy (không có enemy). Reset cooldown Q.</summary>
+    private void HandleQSkillCancelled()
+    {
+        currentCooldownQ = 0f;
+        Debug.Log("[PlayerHUDController] Q Skill bị hủy - Reset cooldown Q.");
+    }
+
 
     private VisualElement hpFill;
     private VisualElement mpFill;
@@ -94,6 +105,12 @@ public class PlayerHUDController : MonoBehaviour
     private VisualElement weaponSlot1;
     private VisualElement weaponSlot2;
     private VisualElement weaponImg1; // Tham chiếu tới ảnh vũ khí 1 để đổi ảnh động
+    private VisualElement invisibilityIndicator;
+    private Label invisibilityTimerLabel;
+    private VisualElement speedBoostIndicator;
+    private Label speedBoostTimerLabel;
+    private VisualElement qSkillIndicator;
+    private Label qSkillTimerLabel;
 
     // Kỹ năng
     private VisualElement cooldownQ;
@@ -182,6 +199,12 @@ public class PlayerHUDController : MonoBehaviour
     void OnEnable()
     {
         InitializeUI();
+        // Đăng ký lắng nghe event hủy Skill Q
+        if (LocalPlayerTarget != null)
+        {
+            LocalPlayerTarget.OnQSkillCancelled -= HandleQSkillCancelled; // tránh duplicate
+            LocalPlayerTarget.OnQSkillCancelled += HandleQSkillCancelled;
+        }
     }
 
     void OnDisable()
@@ -190,6 +213,12 @@ public class PlayerHUDController : MonoBehaviour
         // Khi UI Toolkit rebuild lại visual tree sau lần SetActive(true) tiếp theo,
         // tất cả các tham chiếu element cũ sẽ là dead reference -> phải re-query lại.
         isUIInitialized = false;
+
+        // Hủy đăng ký event để tránh memory leak
+        if (localPlayerTarget != null)
+        {
+            localPlayerTarget.OnQSkillCancelled -= HandleQSkillCancelled;
+        }
 
         // Reset tất cả tham chiếu VisualElement để InitializeUI() re-query lại từ tree mới
         hpFill = null; mpFill = null; expFill = null;
@@ -215,6 +244,12 @@ public class PlayerHUDController : MonoBehaviour
         btnUpgradeHp = null; btnUpgradeMp = null; btnUpgradeCooldown = null; btnUpgradeDamage = null;
         tooltipElement = null; tooltipTitle = null; tooltipDesc = null;
         dragGhost = null; teammatesContainer = null;
+        invisibilityIndicator = null;
+        invisibilityTimerLabel = null;
+        speedBoostIndicator = null;
+        speedBoostTimerLabel = null;
+        qSkillIndicator = null;
+        qSkillTimerLabel = null;
         inventorySlotsUI = new System.Collections.Generic.List<VisualElement>();
         teammateCards = new System.Collections.Generic.Dictionary<ulong, VisualElement>();
 
@@ -288,6 +323,185 @@ public class PlayerHUDController : MonoBehaviour
         weaponSlot1 = root.Q<VisualElement>("weapon-slot-1");
         weaponSlot2 = root.Q<VisualElement>("weapon-slot-2");
         weaponImg1 = root.Q<VisualElement>("weapon-img-1");
+
+        // Tích hợp động UI Tàng hình (Skill R)
+        VisualElement weaponsWrapper = root.Q<VisualElement>(className: "hud-weapons-wrapper");
+        if (invisibilityIndicator == null && weaponsWrapper != null)
+        {
+            invisibilityIndicator = new VisualElement();
+            invisibilityIndicator.name = "invisibility-indicator";
+            invisibilityIndicator.AddToClassList("invisibility-indicator");
+            
+            invisibilityIndicator.style.flexDirection = FlexDirection.Row;
+            invisibilityIndicator.style.alignItems = Align.Center;
+            invisibilityIndicator.style.backgroundColor = new Color(0f, 0f, 0f, 0.25f);
+            invisibilityIndicator.style.borderTopWidth = 1f;
+            invisibilityIndicator.style.borderBottomWidth = 1f;
+            invisibilityIndicator.style.borderLeftWidth = 1f;
+            invisibilityIndicator.style.borderRightWidth = 1f;
+
+            invisibilityIndicator.style.borderTopColor = Color.white;
+            invisibilityIndicator.style.borderBottomColor = Color.white;
+            invisibilityIndicator.style.borderLeftColor = Color.white;
+            invisibilityIndicator.style.borderRightColor = Color.white;
+
+            invisibilityIndicator.style.borderTopLeftRadius = 4;
+            invisibilityIndicator.style.borderTopRightRadius = 4;
+            invisibilityIndicator.style.borderBottomLeftRadius = 4;
+            invisibilityIndicator.style.borderBottomRightRadius = 4;
+            invisibilityIndicator.style.paddingLeft = 10;
+            invisibilityIndicator.style.paddingRight = 10;
+            invisibilityIndicator.style.paddingTop = 6;
+            invisibilityIndicator.style.paddingBottom = 6;
+            invisibilityIndicator.style.width = 210;
+            invisibilityIndicator.style.justifyContent = Justify.SpaceBetween;
+            invisibilityIndicator.style.alignSelf = Align.FlexEnd;
+            invisibilityIndicator.style.marginBottom = 5;
+            invisibilityIndicator.style.display = DisplayStyle.None; // Mặc định ẩn
+
+            Label label = new Label("TÀNG HÌNH");
+            label.name = "invisibility-text";
+            label.style.color = Color.white;
+            label.style.fontSize = 12;
+            label.style.unityFontStyleAndWeight = FontStyle.Bold;
+            label.style.marginLeft = 0;
+            label.style.marginRight = 0;
+            label.style.marginTop = 0;
+            label.style.marginBottom = 0;
+
+            invisibilityTimerLabel = new Label("5.0s");
+            invisibilityTimerLabel.name = "invisibility-timer";
+            invisibilityTimerLabel.style.color = Color.white;
+            invisibilityTimerLabel.style.fontSize = 12;
+            invisibilityTimerLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
+            invisibilityTimerLabel.style.marginLeft = 0;
+            invisibilityTimerLabel.style.marginRight = 0;
+            invisibilityTimerLabel.style.marginTop = 0;
+            invisibilityTimerLabel.style.marginBottom = 0;
+
+            invisibilityIndicator.Add(label);
+            invisibilityIndicator.Add(invisibilityTimerLabel);
+
+            weaponsWrapper.Insert(0, invisibilityIndicator);
+        }
+
+        // Tích hợp động UI Tăng tốc chém (Skill E)
+        if (speedBoostIndicator == null && weaponsWrapper != null)
+        {
+            speedBoostIndicator = new VisualElement();
+            speedBoostIndicator.name = "speedboost-indicator";
+            speedBoostIndicator.AddToClassList("speedboost-indicator");
+            
+            speedBoostIndicator.style.flexDirection = FlexDirection.Row;
+            speedBoostIndicator.style.alignItems = Align.Center;
+            speedBoostIndicator.style.backgroundColor = new Color(0f, 0f, 0f, 0.25f);
+            speedBoostIndicator.style.borderTopWidth = 1f;
+            speedBoostIndicator.style.borderBottomWidth = 1f;
+            speedBoostIndicator.style.borderLeftWidth = 1f;
+            speedBoostIndicator.style.borderRightWidth = 1f;
+
+            speedBoostIndicator.style.borderTopColor = Color.white;
+            speedBoostIndicator.style.borderBottomColor = Color.white;
+            speedBoostIndicator.style.borderLeftColor = Color.white;
+            speedBoostIndicator.style.borderRightColor = Color.white;
+
+            speedBoostIndicator.style.borderTopLeftRadius = 4;
+            speedBoostIndicator.style.borderTopRightRadius = 4;
+            speedBoostIndicator.style.borderBottomLeftRadius = 4;
+            speedBoostIndicator.style.borderBottomRightRadius = 4;
+            speedBoostIndicator.style.paddingLeft = 10;
+            speedBoostIndicator.style.paddingRight = 10;
+            speedBoostIndicator.style.paddingTop = 6;
+            speedBoostIndicator.style.paddingBottom = 6;
+            speedBoostIndicator.style.width = 210;
+            speedBoostIndicator.style.justifyContent = Justify.SpaceBetween;
+            speedBoostIndicator.style.alignSelf = Align.FlexEnd;
+            speedBoostIndicator.style.marginBottom = 5;
+            speedBoostIndicator.style.display = DisplayStyle.None; // Mặc định ẩn
+
+            Label label = new Label("TĂNG TỐC CHÉM");
+            label.name = "speedboost-text";
+            label.style.color = Color.white;
+            label.style.fontSize = 12;
+            label.style.unityFontStyleAndWeight = FontStyle.Bold;
+            label.style.marginLeft = 0;
+            label.style.marginRight = 0;
+            label.style.marginTop = 0;
+            label.style.marginBottom = 0;
+
+            speedBoostTimerLabel = new Label("10.0s");
+            speedBoostTimerLabel.name = "speedboost-timer";
+            speedBoostTimerLabel.style.color = Color.white;
+            speedBoostTimerLabel.style.fontSize = 12;
+            speedBoostTimerLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
+            speedBoostTimerLabel.style.marginLeft = 0;
+            speedBoostTimerLabel.style.marginRight = 0;
+            speedBoostTimerLabel.style.marginTop = 0;
+            speedBoostTimerLabel.style.marginBottom = 0;
+
+            speedBoostIndicator.Add(label);
+            speedBoostIndicator.Add(speedBoostTimerLabel);
+
+            weaponsWrapper.Insert(0, speedBoostIndicator);
+        }
+
+        // Tích hợp động UI Ảo ảnh chém (Skill Q)
+        if (qSkillIndicator == null && weaponsWrapper != null)
+        {
+            qSkillIndicator = new VisualElement();
+            qSkillIndicator.name = "qskill-indicator";
+            qSkillIndicator.AddToClassList("qskill-indicator");
+
+            qSkillIndicator.style.flexDirection = FlexDirection.Row;
+            qSkillIndicator.style.alignItems = Align.Center;
+            qSkillIndicator.style.backgroundColor = new Color(0f, 0f, 0f, 0.25f);
+            qSkillIndicator.style.borderTopWidth = 1f;
+            qSkillIndicator.style.borderBottomWidth = 1f;
+            qSkillIndicator.style.borderLeftWidth = 1f;
+            qSkillIndicator.style.borderRightWidth = 1f;
+            qSkillIndicator.style.borderTopColor = Color.white;
+            qSkillIndicator.style.borderBottomColor = Color.white;
+            qSkillIndicator.style.borderLeftColor = Color.white;
+            qSkillIndicator.style.borderRightColor = Color.white;
+            qSkillIndicator.style.borderTopLeftRadius = 4;
+            qSkillIndicator.style.borderTopRightRadius = 4;
+            qSkillIndicator.style.borderBottomLeftRadius = 4;
+            qSkillIndicator.style.borderBottomRightRadius = 4;
+            qSkillIndicator.style.paddingLeft = 10;
+            qSkillIndicator.style.paddingRight = 10;
+            qSkillIndicator.style.paddingTop = 6;
+            qSkillIndicator.style.paddingBottom = 6;
+            qSkillIndicator.style.width = 210;
+            qSkillIndicator.style.justifyContent = Justify.SpaceBetween;
+            qSkillIndicator.style.alignSelf = Align.FlexEnd;
+            qSkillIndicator.style.marginBottom = 5;
+            qSkillIndicator.style.display = DisplayStyle.None; // Mặc định ẩn
+
+            Label labelQ = new Label("ẢO ẢNH CHÉM");
+            labelQ.name = "qskill-text";
+            labelQ.style.color = Color.white;
+            labelQ.style.fontSize = 12;
+            labelQ.style.unityFontStyleAndWeight = FontStyle.Bold;
+            labelQ.style.marginLeft = 0;
+            labelQ.style.marginRight = 0;
+            labelQ.style.marginTop = 0;
+            labelQ.style.marginBottom = 0;
+
+            qSkillTimerLabel = new Label("1.5s");
+            qSkillTimerLabel.name = "qskill-timer";
+            qSkillTimerLabel.style.color = Color.white;
+            qSkillTimerLabel.style.fontSize = 12;
+            qSkillTimerLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
+            qSkillTimerLabel.style.marginLeft = 0;
+            qSkillTimerLabel.style.marginRight = 0;
+            qSkillTimerLabel.style.marginTop = 0;
+            qSkillTimerLabel.style.marginBottom = 0;
+
+            qSkillIndicator.Add(labelQ);
+            qSkillIndicator.Add(qSkillTimerLabel);
+
+            weaponsWrapper.Insert(0, qSkillIndicator);
+        }
 
         // Tìm UI Kỹ năng
         cooldownQ = root.Q<VisualElement>("skill-cooldown-q");
@@ -473,6 +687,67 @@ public class PlayerHUDController : MonoBehaviour
         InitializeUI(); // Đảm bảo khởi tạo nếu OnEnable chạy trước khi rootVisualElement sẵn sàng
         UpdateTeammatesHUD();
 
+        if (LocalPlayerTarget != null)
+        {
+            if (LocalPlayerTarget.IsInvisible)
+            {
+                if (invisibilityIndicator != null)
+                {
+                    invisibilityIndicator.style.display = DisplayStyle.Flex;
+                }
+                if (invisibilityTimerLabel != null)
+                {
+                    invisibilityTimerLabel.text = $"{Mathf.Max(0f, LocalPlayerTarget.InvisibilityTimeRemaining):F1}s";
+                }
+            }
+            else
+            {
+                if (invisibilityIndicator != null)
+                {
+                    invisibilityIndicator.style.display = DisplayStyle.None;
+                }
+            }
+
+            if (LocalPlayerTarget.IsAttackSpeedBoosted)
+            {
+                if (speedBoostIndicator != null)
+                {
+                    speedBoostIndicator.style.display = DisplayStyle.Flex;
+                }
+                if (speedBoostTimerLabel != null)
+                {
+                    speedBoostTimerLabel.text = $"{Mathf.Max(0f, LocalPlayerTarget.AttackSpeedBoostTimeRemaining):F1}s";
+                }
+            }
+            else
+            {
+                if (speedBoostIndicator != null)
+                {
+                    speedBoostIndicator.style.display = DisplayStyle.None;
+                }
+            }
+
+            // Hiển thị/ẩn UI đếm ngược Skill Q
+            if (LocalPlayerTarget.IsQSkillActive)
+            {
+                if (qSkillIndicator != null)
+                {
+                    qSkillIndicator.style.display = DisplayStyle.Flex;
+                }
+                if (qSkillTimerLabel != null)
+                {
+                    qSkillTimerLabel.text = $"{Mathf.Max(0f, LocalPlayerTarget.QSkillTimeRemaining):F1}s";
+                }
+            }
+            else
+            {
+                if (qSkillIndicator != null)
+                {
+                    qSkillIndicator.style.display = DisplayStyle.None;
+                }
+            }
+        }
+
         if (Keyboard.current != null)
         {
             // Khi ấn T sẽ đổi trạng thái (Sử dụng Input System mới)
@@ -574,10 +849,18 @@ public class PlayerHUDController : MonoBehaviour
             {
                 if (isSkillsUnlocked)
                 {
-                    if (currentCooldownQ <= 0f)
+                    if (currentCooldownQ <= 0f && LocalPlayerTarget != null && !LocalPlayerTarget.IsQSkillActive)
                     {
-                        currentCooldownQ = cooldownTimeQ;
-                        Debug.Log("Đã dùng kỹ năng Q");
+                        bool activated = LocalPlayerTarget.TriggerQSkill();
+                        if (activated)
+                        {
+                            currentCooldownQ = cooldownTimeQ;
+                            Debug.Log("Đã dùng kỹ năng Q");
+                        }
+                        else
+                        {
+                            Debug.Log("Q Skill không kích hoạt được (không có enemy).");
+                        }
                     }
                 }
                 else
@@ -591,8 +874,9 @@ public class PlayerHUDController : MonoBehaviour
             {
                 if (isSkillsUnlocked)
                 {
-                    if (currentCooldownR <= 0f)
+                    if (currentCooldownR <= 0f && LocalPlayerTarget != null && !LocalPlayerTarget.IsInvisible)
                     {
+                        LocalPlayerTarget.TriggerInvisibilitySkill();
                         currentCooldownR = cooldownTimeR;
                         Debug.Log("Đã dùng kỹ năng R");
                     }
@@ -617,8 +901,9 @@ public class PlayerHUDController : MonoBehaviour
                 {
                     if (isSkillsUnlocked)
                     {
-                        if (currentCooldownE <= 0f)
+                        if (currentCooldownE <= 0f && LocalPlayerTarget != null && !LocalPlayerTarget.IsAttackSpeedBoosted)
                         {
+                            LocalPlayerTarget.TriggerAttackSpeedBoostSkill();
                             currentCooldownE = cooldownTimeE;
                             Debug.Log("Đã dùng kỹ năng E");
                         }

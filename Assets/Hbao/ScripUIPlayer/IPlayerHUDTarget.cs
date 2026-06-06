@@ -41,6 +41,23 @@ public interface IPlayerHUDTarget
     float CurrentHealth { get; }
     float MaxHealth { get; }
     
+    // Invisibility Skill R
+    bool IsInvisible { get; }
+    float InvisibilityTimeRemaining { get; }
+    void TriggerInvisibilitySkill();
+
+    // Attack Speed Boost Skill E
+    bool IsAttackSpeedBoosted { get; }
+    float AttackSpeedBoostTimeRemaining { get; }
+    void TriggerAttackSpeedBoostSkill();
+
+    // Q Skill support
+    bool IsQSkillActive { get; }
+    float QSkillTimeRemaining { get; }
+    bool TriggerQSkill();
+    /// <summary>Kích hoạt khi server xác nhận không có enemy → HUD cần reset cooldown Q.</summary>
+    event System.Action OnQSkillCancelled;
+    
     // GameObject properties
     Transform transform { get; }
     GameObject gameObject { get; }
