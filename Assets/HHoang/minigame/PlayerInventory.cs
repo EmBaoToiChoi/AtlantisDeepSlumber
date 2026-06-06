@@ -8,12 +8,15 @@ public class PlayerInteraction : NetworkBehaviour
     public Transform holdPoint;
     public LayerMask interactableLayer;
     
-    // TÁCH LÀM 2 BIẾN RIÊNG BIỆT CHO 2 MINI-GAME
     public InteractBox currentInteractBox = null;
     public PillarStation currentPillarStation = null;
-    public CrystalCore currentHeldCore = null;
-
+    
+    // Dùng NetworkVariable để Server luôn biết chính xác ID viên ngọc người chơi đang giữ
+    public NetworkVariable<ulong> heldCoreNetworkId = new NetworkVariable<ulong>(ulong.MaxValue);
     public NetworkVariable<bool> isCarryingCore = new NetworkVariable<bool>(false);
+
+    // Biến local chỉ để Client hiển thị
+    public CrystalCore currentHeldCore = null;
 
     void Update()
     {
@@ -21,26 +24,28 @@ public class PlayerInteraction : NetworkBehaviour
 
         if (Keyboard.current != null && Keyboard.current.fKey.wasPressedThisFrame)
         {
-            if (currentHeldCore == null) 
+            if (!isCarryingCore.Value) 
             {
                 TryPickupCore();
             }
             else
             {
-                // Ưu tiên 1: Đứng ở Pillar -> Nạp ngọc
+                // Ưu tiên 1: Đứng ở trụ -> Nạp ngọc vào trụ
                 if (currentPillarStation != null) 
                 { 
-                    currentPillarStation.TryInteract(this); 
+                    currentPillarStation.TryInteract(this, heldCoreNetworkId.Value); 
                 }
-                // Ưu tiên 2: Đứng ở hộp InteractBox -> Để yên cho trạm tự xử lý
+                // Ưu tiên 2: Đứng ở hộp InteractBox -> Tương tác với Mini-game 1
                 else if (currentInteractBox != null) 
                 { 
-                    // Do nothing
+                    // Gọi hàm tương tác của Mini-game 1 tại đây
+                    // Ví dụ: currentInteractBox.ProcessCrystal(this, heldCoreNetworkId.Value);
+                    Debug.Log("Đang tương tác với Mini-game 1");
                 }
-                // Đứng ngoài đường -> Vứt ngọc
+                // Ưu tiên 3: Không đứng ở đâu cả -> Vứt ngọc
                 else 
                 { 
-                    DropCore(); 
+                    RequestDropServerRpc(); 
                 }
             }
         }
@@ -59,22 +64,6 @@ public class PlayerInteraction : NetworkBehaviour
         }
     }
 
-    public void DropCore()
-    {
-        if (currentHeldCore != null)
-        {
-            RequestDropServerRpc();
-        }
-    }
-
-    // Hàm này cho phép Server tự tước quyền cầm ngọc của Player khi khóa ngọc vào bệ
-    public void ForceDropFromStation()
-    {
-        currentHeldCore = null;
-        isCarryingCore.Value = false;
-        ClearHeldCoreClientRpc();
-    }
-
     [ServerRpc]
     private void RequestPickupServerRpc(ulong networkObjectId, ServerRpcParams rpcParams = default)
     {
@@ -83,48 +72,29 @@ public class PlayerInteraction : NetworkBehaviour
             var core = netObj.GetComponent<CrystalCore>();
             core.PerformPickup(rpcParams.Receive.SenderClientId);
             
+            heldCoreNetworkId.Value = networkObjectId;
             isCarryingCore.Value = true;
-            
-            // --- DÒNG SỬA LỖI Ở ĐÂY NÈ ---
-            // Phải bắt Server (VPS) tự ghi nhớ cục ngọc, nếu không lúc Drop nó đéo biết vứt cái gì!
-            currentHeldCore = core; 
-            // ------------------------------
-
-            AssignHeldCoreClientRpc(networkObjectId, rpcParams.Receive.SenderClientId);
         }
     }
 
     [ServerRpc]
     private void RequestDropServerRpc(ServerRpcParams rpcParams = default)
     {
-        if (currentHeldCore != null)
+        if (heldCoreNetworkId.Value != ulong.MaxValue && 
+            NetworkManager.SpawnManager.SpawnedObjects.TryGetValue(heldCoreNetworkId.Value, out var netObj))
         {
-            currentHeldCore.PerformDrop();
+            var core = netObj.GetComponent<CrystalCore>();
+            core.PerformDrop();
             
-            currentHeldCore = null;
+            heldCoreNetworkId.Value = ulong.MaxValue;
             isCarryingCore.Value = false;
-            
-            ClearHeldCoreClientRpc(new ClientRpcParams { 
-                Send = new ClientRpcSendParams { TargetClientIds = new[] { rpcParams.Receive.SenderClientId } } 
-            });
         }
     }
 
-    [ClientRpc]
-    private void AssignHeldCoreClientRpc(ulong networkObjectId, ulong targetClientId)
+    public void ForceDropFromStation()
     {
-        if (NetworkManager.Singleton.LocalClientId == targetClientId)
-        {
-            if (NetworkManager.SpawnManager.SpawnedObjects.TryGetValue(networkObjectId, out var netObj))
-            {
-                currentHeldCore = netObj.GetComponent<CrystalCore>();
-            }
-        }
-    }
-
-    [ClientRpc]
-    private void ClearHeldCoreClientRpc(ClientRpcParams rpcParams = default) 
-    { 
-        currentHeldCore = null; 
+        if (!IsServer) return;
+        heldCoreNetworkId.Value = ulong.MaxValue;
+        isCarryingCore.Value = false;
     }
 }
