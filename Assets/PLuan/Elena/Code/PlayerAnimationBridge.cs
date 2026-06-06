@@ -41,4 +41,13 @@ public class PlayerAnimationBridge : MonoBehaviour
             mainPlayerScript.OnRollEnd();
         }
     }
+
+    // Forward sự kiện rút tên lên tay (Animation Event)
+    public void OnDrawArrow()
+    {
+        if (mainPlayerScript != null)
+        {
+            mainPlayerScript.OnDrawArrow();
+        }
+    }
 }

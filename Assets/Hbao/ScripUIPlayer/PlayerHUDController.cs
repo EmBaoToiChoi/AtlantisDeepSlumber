@@ -193,6 +193,7 @@ public class PlayerHUDController : MonoBehaviour
     private System.Collections.Generic.Dictionary<ulong, VisualElement> teammateCards = new System.Collections.Generic.Dictionary<ulong, VisualElement>();
     private bool isUIInitialized = false;
     private int lastSelectedProfileIndex = -1;
+    private VisualElement crosshairElement;
 
     [Header("Item Sprites Settings")]
     public Sprite repairHammerSprite;
@@ -250,6 +251,7 @@ public class PlayerHUDController : MonoBehaviour
         dragGhost = null; teammatesContainer = null;
         invisibilityIndicator = null;
         invisibilityTimerLabel = null;
+        crosshairElement = null;
         speedBoostIndicator = null;
         speedBoostTimerLabel = null;
         qSkillIndicator = null;
@@ -648,6 +650,51 @@ public class PlayerHUDController : MonoBehaviour
         dragGhost.pickingMode = PickingMode.Ignore; // CỰC KỲ QUAN TRỌNG: để không chặn panel.Pick() khi nhả chuột!
         dragGhost.style.display = DisplayStyle.None;
         root.Add(dragGhost);
+
+        // Tạo sẵn hồng tâm ngắm bắn
+        if (crosshairElement == null)
+        {
+            crosshairElement = new VisualElement();
+            crosshairElement.name = "aim-crosshair";
+            crosshairElement.style.position = Position.Absolute;
+            crosshairElement.style.left = Length.Percent(50f);
+            crosshairElement.style.top = Length.Percent(50f);
+            crosshairElement.style.translate = new Translate(Length.Percent(-50f), Length.Percent(-50f), 0f);
+            crosshairElement.style.width = 40f;
+            crosshairElement.style.height = 40f;
+            
+            // Viền tròn hồng tâm
+            crosshairElement.style.borderTopWidth = 2f;
+            crosshairElement.style.borderBottomWidth = 2f;
+            crosshairElement.style.borderLeftWidth = 2f;
+            crosshairElement.style.borderRightWidth = 2f;
+            crosshairElement.style.borderTopColor = Color.red;
+            crosshairElement.style.borderBottomColor = Color.red;
+            crosshairElement.style.borderLeftColor = Color.red;
+            crosshairElement.style.borderRightColor = Color.red;
+            crosshairElement.style.borderTopLeftRadius = 20f;
+            crosshairElement.style.borderTopRightRadius = 20f;
+            crosshairElement.style.borderBottomLeftRadius = 20f;
+            crosshairElement.style.borderBottomRightRadius = 20f;
+            
+            // Chấm đỏ chính giữa
+            VisualElement centerDot = new VisualElement();
+            centerDot.style.position = Position.Absolute;
+            centerDot.style.left = Length.Percent(50f);
+            centerDot.style.top = Length.Percent(50f);
+            centerDot.style.translate = new Translate(Length.Percent(-50f), Length.Percent(-50f), 0f);
+            centerDot.style.width = 6f;
+            centerDot.style.height = 6f;
+            centerDot.style.backgroundColor = Color.red;
+            centerDot.style.borderTopLeftRadius = 3f;
+            centerDot.style.borderTopRightRadius = 3f;
+            centerDot.style.borderBottomLeftRadius = 3f;
+            centerDot.style.borderBottomRightRadius = 3f;
+            
+            crosshairElement.Add(centerDot);
+            crosshairElement.style.display = DisplayStyle.None;
+            root.Add(crosshairElement);
+        }
 
         isUIInitialized = true;
         Debug.Log("[PlayerHUDController] UI Toolkit đã được khởi tạo thành công!");
@@ -2258,6 +2305,17 @@ public class PlayerHUDController : MonoBehaviour
         if (missionAlertBox != null)
         {
             missionAlertBox.style.display = DisplayStyle.None;
+        }
+    }
+
+    public void SetCrosshairVisible(bool visible)
+    {
+        InitializeUI();
+        if (crosshairElement != null)
+        {
+            bool isBowClass = LocalPlayerTarget != null && LocalPlayerTarget.CharacterClassIndex == 2;
+            bool isBowActive = LocalPlayerTarget != null && LocalPlayerTarget.GetActiveWeaponIndex() == 2;
+            crosshairElement.style.display = (visible && isBowClass && isBowActive) ? DisplayStyle.Flex : DisplayStyle.None;
         }
     }
 }
