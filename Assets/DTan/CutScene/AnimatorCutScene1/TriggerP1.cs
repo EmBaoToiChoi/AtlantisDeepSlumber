@@ -21,4 +21,8 @@ public class P1 : MonoBehaviour
     {
         animator.SetTrigger("Walk");
     }
+    public void TriggerLookBehide()
+    {
+        animator.SetTrigger("LookBehide");
+    }
 }
