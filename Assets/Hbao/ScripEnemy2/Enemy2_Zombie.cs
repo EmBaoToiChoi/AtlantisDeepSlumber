@@ -26,6 +26,8 @@ public class Enemy2_Zombie : NetworkBehaviour
     private EnemyState CurrentStateValue { get => isStandaloneMode ? localState : currentState.Value; set { if (isStandaloneMode) localState = value; else currentState.Value = value; } }
     private float CurrentHealthValue { get => isStandaloneMode ? localHealth : currentHealth.Value; set { if (isStandaloneMode) localHealth = value; else currentHealth.Value = value; } }
     public bool IsDead => isStandaloneMode ? (localState == EnemyState.Dead) : (currentState.Value == EnemyState.Dead);
+    /// <summary>HP hiện tại đúng trong cả Standalone lẫn Network mode — dùng cho HP bar polling.</summary>
+    public float ActualCurrentHealth => isStandaloneMode ? localHealth : currentHealth.Value;
 
     [Header("Components")]
     public NavMeshAgent agent;

@@ -23,6 +23,10 @@ public class GateEnemySpawner : NetworkBehaviour
     private Rigidbody rb;
     private bool hasSpawned = false;
 
+    private System.Collections.Generic.List<GameObject> spawnedEnemies = new System.Collections.Generic.List<GameObject>();
+    private bool monitoringEnemies = false;
+    private RakanNPC rakanNPC;
+
     private void Awake()
     {
         // Tự động reset trạng thái đối thoại về ban đầu khi bắt đầu Game/Lượt chơi mới
@@ -43,6 +47,11 @@ public class GateEnemySpawner : NetworkBehaviour
         if (rb == null) rb = gameObject.AddComponent<Rigidbody>();
         rb.isKinematic = true;  // Tránh việc hộp va chạm bị đẩy hoặc rơi bởi lực vật lý
         rb.useGravity = false;  // Tránh việc hộp va chạm rơi tự do do trọng lực
+    }
+
+    private void Start()
+    {
+        rakanNPC = FindAnyObjectByType<RakanNPC>();
     }
 
     /// <summary>
@@ -84,15 +93,16 @@ public class GateEnemySpawner : NetworkBehaviour
                     // Đánh dấu đã kích hoạt
                     hasSpawned = true;
 
+                    if (triggerCollider != null)
+                    {
+                        triggerCollider.enabled = false; // Tắt va chạm để tránh kích hoạt lại
+                    }
+
                     // Thực thi cơ chế sinh quái
                     if (player.IsStandaloneMode)
                     {
                         // Chơi Offline: Sinh quái trực tiếp cục bộ
                         ExecuteLocalSpawn();
-                        if (triggerOnlyOnce)
-                        {
-                            Destroy(gameObject, 0.5f);
-                        }
                     }
                     else
                     {
@@ -114,11 +124,11 @@ public class GateEnemySpawner : NetworkBehaviour
     [ServerRpc(RequireOwnership = false)]
     private void RequestSpawnEnemiesServerRpc()
     {
-        ExecuteNetworkSpawn();
-        if (triggerOnlyOnce)
+        if (triggerCollider != null)
         {
-            GetComponent<NetworkObject>().Despawn(true);
+            triggerCollider.enabled = false;
         }
+        ExecuteNetworkSpawn();
     }
 
     /// <summary>
@@ -132,14 +142,17 @@ public class GateEnemySpawner : NetworkBehaviour
             return;
         }
 
+        spawnedEnemies.Clear();
         for (int i = 0; i < spawnCount; i++)
         {
             Vector3 spawnPos = GetSpawnPosition(i);
             Quaternion spawnRot = Quaternion.identity;
             
-            Instantiate(enemyPrefab, spawnPos, spawnRot);
+            GameObject enemyInstance = Instantiate(enemyPrefab, spawnPos, spawnRot);
+            spawnedEnemies.Add(enemyInstance);
             Debug.Log($"[GateEnemySpawner - Offline] Đã sinh quái {enemyPrefab.name} thành công tại vị trí {spawnPos}");
         }
+        monitoringEnemies = true;
     }
 
     /// <summary>
@@ -153,6 +166,7 @@ public class GateEnemySpawner : NetworkBehaviour
             return;
         }
 
+        spawnedEnemies.Clear();
         for (int i = 0; i < spawnCount; i++)
         {
             Vector3 spawnPos = GetSpawnPosition(i);
@@ -163,14 +177,129 @@ public class GateEnemySpawner : NetworkBehaviour
 
             if (netObj != null)
             {
-                // Gọi Spawn của Netcode để đồng bộ con quái này lên tất cả các Client khác
                 netObj.Spawn(true);
+                spawnedEnemies.Add(enemyInstance);
                 Debug.Log($"[GateEnemySpawner - Netcode] Server đã sinh quái & đồng bộ {enemyPrefab.name} tại {spawnPos}");
             }
             else
             {
                 Debug.LogError($"[GateEnemySpawner - Netcode] Prefab Kẻ Địch '{enemyPrefab.name}' KHÔNG có component NetworkObject! Không thể đồng bộ qua mạng co-op.");
             }
+        }
+        monitoringEnemies = true;
+    }
+
+    private void Update()
+    {
+        if (!monitoringEnemies) return;
+
+        bool allDead = true;
+        for (int i = spawnedEnemies.Count - 1; i >= 0; i--)
+        {
+            GameObject enemyGo = spawnedEnemies[i];
+            if (enemyGo == null)
+            {
+                spawnedEnemies.RemoveAt(i);
+                continue;
+            }
+
+            bool isEnemyDead = false;
+            var e1 = enemyGo.GetComponent<Enemy1_DapBua>();
+            if (e1 != null && e1.IsDead) isEnemyDead = true;
+            
+            var e2 = enemyGo.GetComponent<Enemy2_Zombie>();
+            if (e2 != null && e2.IsDead) isEnemyDead = true;
+
+            var e3 = enemyGo.GetComponent<Enemy3_Buaa>();
+            if (e3 != null && e3.IsDead) isEnemyDead = true;
+
+            var e4 = enemyGo.GetComponent<Enemy4_Bongtoi>();
+            if (e4 != null && e4.IsDead) isEnemyDead = true;
+
+            var e5 = enemyGo.GetComponent<Enemy5_PhuThuy>();
+            if (e5 != null && e5.IsDead) isEnemyDead = true;
+
+            if (!isEnemyDead)
+            {
+                allDead = false;
+            }
+            else
+            {
+                spawnedEnemies.RemoveAt(i);
+            }
+        }
+
+        if (allDead && spawnedEnemies.Count == 0)
+        {
+            monitoringEnemies = false;
+            OnAllEnemiesDefeated();
+        }
+    }
+
+    private void OnAllEnemiesDefeated()
+    {
+        Debug.Log("[GateEnemySpawner] Tất cả kẻ địch sinh ra từ Cổng đã bị tiêu diệt hoàn toàn!");
+
+        if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening)
+        {
+            if (IsServer)
+            {
+                // Thông báo tới tất cả client và cập nhật trạng thái Rakan NPC
+                OnAllEnemiesDefeatedClientRpc();
+                
+                // Hủy Spawner trên server sau khi đã phát ClientRpc thành công
+                Invoke(nameof(DespawnSpawner), 0.5f);
+            }
+        }
+        else
+        {
+            // Offline mode: Cập nhật trực tiếp cục bộ
+            if (rakanNPC != null)
+            {
+                rakanNPC.SetEnemiesDefeatedLocal();
+            }
+
+            // Hiển thị thông báo trên HUD cục bộ
+            var hud = FindAnyObjectByType<PlayerHUDController>();
+            if (hud != null)
+            {
+                hud.ShowMissionAlert("Hãy đi gặp lão Rakan. Ông ấy có điều gì đó muốn nói với bạn.");
+            }
+
+            // Tự hủy local spawner
+            if (triggerOnlyOnce)
+            {
+                Destroy(gameObject, 0.5f);
+            }
+        }
+    }
+
+    private void DespawnSpawner()
+    {
+        if (IsSpawned && triggerOnlyOnce)
+        {
+            GetComponent<NetworkObject>().Despawn(true);
+        }
+    }
+
+    [ClientRpc]
+    private void OnAllEnemiesDefeatedClientRpc()
+    {
+        // Standalone hoặc Client: cập nhật NPC Rakan
+        if (rakanNPC == null)
+        {
+            rakanNPC = FindAnyObjectByType<RakanNPC>();
+        }
+        if (rakanNPC != null)
+        {
+            rakanNPC.SetEnemiesDefeatedLocal();
+        }
+
+        // Hiển thị thông báo trên HUD
+        var hud = FindAnyObjectByType<PlayerHUDController>();
+        if (hud != null)
+        {
+            hud.ShowMissionAlert("Hãy đi gặp lão Rakan. Ông ấy có điều gì đó muốn nói với bạn.");
         }
     }
 

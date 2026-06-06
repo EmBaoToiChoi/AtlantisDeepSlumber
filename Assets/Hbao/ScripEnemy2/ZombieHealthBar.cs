@@ -17,8 +17,15 @@ public class ZombieHealthBar : MonoBehaviour
     private PanelSettings uniqueSettings;
     private Material uniqueMaterial;
 
+    private float displayedHealth = -1f;
+    private float yellowHealth = -1f;
+    private float yellowDrainDelay = 0.5f;
+    private float yellowDrainTimer = 0f;
+
     private void OnEnable()
     {
+        if (enemy == null) enemy = GetComponentInParent<Enemy2_Zombie>();
+
         mainCamera = Camera.main;
         if (uiDocument == null) uiDocument = GetComponentInChildren<UIDocument>();
 
@@ -59,33 +66,72 @@ public class ZombieHealthBar : MonoBehaviour
             }
         }
 
-        if (enemy == null) enemy = GetComponentInParent<Enemy2_Zombie>();
-
         if (enemy != null)
         {
-            // Cập nhật lượng HP khởi tạo của Zombie
-            UpdateHealthUI(0f, enemy.currentHealth.Value);
-            enemy.currentHealth.OnValueChanged += UpdateHealthUI;
+            float curHp = enemy.ActualCurrentHealth;
+            displayedHealth = curHp;
+            yellowHealth = curHp;
+
+            float maxHp = enemy.maxHealth > 0 ? enemy.maxHealth : 100f; 
+            float percent = Mathf.Clamp01(curHp / maxHp) * 100f;
+            
+            if (progressBar != null) progressBar.style.width = Length.Percent(percent);
+            if (yellowBar != null) yellowBar.style.width = Length.Percent(percent);
         }
     }
 
     private void OnDisable()
     {
-        if (enemy != null)
-        {
-            enemy.currentHealth.OnValueChanged -= UpdateHealthUI;
-        }
+        displayedHealth = -1f;
+        yellowHealth = -1f;
     }
 
-    private void UpdateHealthUI(float oldVal, float newVal)
+    private void UpdateHealthAnimation()
     {
-        if (enemy != null)
+        if (enemy == null) return;
+
+        float maxHp = enemy.maxHealth > 0f ? enemy.maxHealth : 100f;
+        float actualHp = enemy.ActualCurrentHealth;
+
+        if (displayedHealth < 0f)
         {
-            float maxHp = enemy.maxHealth > 0 ? enemy.maxHealth : 100f; 
-            float percent = Mathf.Clamp01(newVal / maxHp) * 100f;
-            
-            if (progressBar != null) progressBar.style.width = Length.Percent(percent);
-            if (yellowBar != null) yellowBar.style.width = Length.Percent(percent);
+            displayedHealth = actualHp;
+            yellowHealth = actualHp;
+        }
+
+        displayedHealth = actualHp;
+        float percent = Mathf.Clamp01(displayedHealth / maxHp) * 100f;
+        if (progressBar != null)
+        {
+            progressBar.style.width = Length.Percent(percent);
+        }
+
+        if (actualHp < yellowHealth)
+        {
+            if (yellowDrainTimer <= 0f || actualHp < displayedHealth)
+            {
+                yellowDrainTimer = yellowDrainDelay;
+            }
+        }
+        else if (actualHp > yellowHealth)
+        {
+            yellowHealth = actualHp;
+        }
+
+        if (yellowDrainTimer > 0f)
+        {
+            yellowDrainTimer -= Time.deltaTime;
+        }
+        else
+        {
+            float drainSpeed = maxHp * 0.4f;
+            yellowHealth = Mathf.MoveTowards(yellowHealth, actualHp, drainSpeed * Time.deltaTime);
+        }
+
+        float yellowPercent = Mathf.Clamp01(yellowHealth / maxHp) * 100f;
+        if (yellowBar != null)
+        {
+            yellowBar.style.width = Length.Percent(yellowPercent);
         }
     }
 
@@ -108,6 +154,7 @@ public class ZombieHealthBar : MonoBehaviour
                     quadTransform.LookAt(quadTransform.position + mainCamera.transform.rotation * Vector3.forward,
                                          mainCamera.transform.rotation * Vector3.up);
                 }
+                UpdateHealthAnimation();
                 return;
             }
 
@@ -123,6 +170,8 @@ public class ZombieHealthBar : MonoBehaviour
                                  mainCamera.transform.rotation * Vector3.up);
             }
         }
+
+        UpdateHealthAnimation();
     }
 
     private void InitializeUniqueUI()

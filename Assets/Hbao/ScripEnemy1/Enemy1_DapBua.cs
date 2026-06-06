@@ -55,6 +55,8 @@ public class Enemy1_DapBua : NetworkBehaviour
         set { if (isStandaloneMode) localIsEnraged = value; else isEnraged.Value = value; }
     }
     public bool IsDead => isStandaloneMode ? (localState == EnemyState.Dead) : (currentState.Value == EnemyState.Dead);
+    /// <summary>HP hiện tại đúng trong cả Standalone lẫn Network mode — dùng cho HP bar polling.</summary>
+    public float ActualCurrentHealth => isStandaloneMode ? localHealth : currentHealth.Value;
 
     // ─── Components ────────────────────────────────────────────
     [Header("Components")]
