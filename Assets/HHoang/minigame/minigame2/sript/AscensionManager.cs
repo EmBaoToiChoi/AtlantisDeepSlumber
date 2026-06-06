@@ -88,17 +88,19 @@ public class AscensionManager : NetworkBehaviour
         {
             if (crystal != null)
             {
-                UpdateSnappedStateServerRpc(crystal.NetworkObject, false);
+                // Bật lại va chạm bình thường, không cần chặn reset nữa
                 var col = crystal.GetComponent<Collider>();
-                if (col != null) col.enabled = true;
+                if (col != null) col.enabled = true; 
+
+                UpdateSnappedStateServerRpc(crystal.NetworkObject, false);
 
                 Rigidbody rb = crystal.GetComponent<Rigidbody>();
                 if (rb != null) 
                 {
                     rb.isKinematic = false;
                     rb.useGravity = true;
+                    // Văng ra theo lực nhẹ thôi để nó không văng quá xa
                     rb.AddForce(new Vector3(Random.Range(-2f, 2f), 5f, Random.Range(-2f, 2f)), ForceMode.Impulse);
-                    rb.angularVelocity = new Vector3(Random.Range(-10f, 10f), Random.Range(-10f, 10f), Random.Range(-10f, 10f));
                 }
             }
         }
@@ -119,6 +121,13 @@ public class AscensionManager : NetworkBehaviour
         
         if (timerCoroutine != null) StopCoroutine(timerCoroutine);
         isTimerRunning = false;
+    }
+
+    // Coroutine hỗ trợ bật lại va chạm
+    IEnumerator ReenableCollider(Collider col)
+    {
+        yield return new WaitForSeconds(0.5f);
+        if (col != null) col.enabled = true;
     }
 
     void CheckWinCondition()
