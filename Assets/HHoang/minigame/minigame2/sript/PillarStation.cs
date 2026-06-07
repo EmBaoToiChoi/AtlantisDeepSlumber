@@ -6,8 +6,13 @@ public class PillarStation : NetworkBehaviour
     public int stationIndex;
     public AscensionManager manager;
     public Transform snapPosition;
+    public GameObject pillarEffect;
     public NetworkVariable<bool> isOccupied = new NetworkVariable<bool>(false);
 
+    void Start() 
+    {
+        if (pillarEffect != null) pillarEffect.SetActive(false); // Mặc định tắt
+    }
     public void TryInteract(PlayerInteraction player, ulong heldCoreId)
     {
         if (player == null || heldCoreId == ulong.MaxValue) return;
@@ -40,8 +45,19 @@ public class PillarStation : NetworkBehaviour
                 {
                     manager.SnapCrystalToPillar(crystal, index);
                     isOccupied.Value = true;
+
+                    SetEffectStateClientRpc(true);
                 }
             }
+        }
+    }
+
+    [ClientRpc]
+    public void SetEffectStateClientRpc(bool state)
+    {
+        if (pillarEffect != null) 
+        {
+            pillarEffect.SetActive(state);
         }
     }
 
