@@ -111,10 +111,15 @@ public class AscensionManager : NetworkBehaviour
         }
 
         // Reset trạng thái trụ
+        // Reset trạng thái trụ
         foreach (var pillar in pillarPositions)
         {
             if (pillar != null && pillar.TryGetComponent<PillarStation>(out var station))
+            {
+                // Phải có ngoặc nhọn ở đây
                 station.isOccupied.Value = false; 
+                station.SetEffectStateClientRpc(false); 
+            } // Phải có ngoặc nhọn đóng ở đây
         }
 
         // 3. Reset các thiết lập manager
