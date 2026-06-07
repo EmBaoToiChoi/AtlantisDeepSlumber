@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Atlantis: Deep Slumber - Admin Database Control Panel</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- BACKGROUND EFFECTS -->
+    <div class="abyss-gradient"></div>
+    <div class="biolum-particles" id="particles"></div>
+
+    <!-- ADMIN LOGIN GATE -->
+    <div class="gate-overlay" id="gateOverlay">
+        <div class="gate-card">
+            <div class="gate-logo">
+                <svg viewBox="0 0 100 100" class="sub-aquatic-logo">
+                    <circle cx="50" cy="50" r="45" stroke="var(--cyan-glow)" stroke-width="2" fill="none" stroke-dasharray="8 4" />
+                    <path d="M50,15 L75,70 L25,70 Z" fill="none" stroke="var(--cyan)" stroke-width="3" stroke-linejoin="round" />
+                    <path d="M50,25 L65,60 L35,60 Z" fill="none" stroke="var(--cyan-glow)" stroke-width="1.5" />
+                    <circle cx="50" cy="50" r="6" fill="var(--warning)" />
+                </svg>
+                <h2>ATLANTIS</h2>
+                <p class="subtitle">IDENTITY VERIFICATION PROTOCOL</p>
+            </div>
+            
+            <div class="gate-form">
+                <div class="input-group">
+                    <label for="backendUrl">Backend URL</label>
+                    <input type="text" id="backendUrl" value="http://localhost:3000" placeholder="e.g. http://localhost:3000">
+                </div>
+                <div class="input-group">
+                    <label for="adminSecret">Admin Secret Key</label>
+                    <input type="password" id="adminSecret" placeholder="Nhập khóa bí mật admin...">
+                </div>
+                <button id="btnConnect" class="btn-primary glow-effect">
+                    <span>Kích Hoạt Kết Nối</span>
+                </button>
+            </div>
+            <p class="gate-footer">Pre-Alpha Admin Suite v0.2</p>
+        </div>
+    </div>
+
+    <!-- MAIN DASHBOARD -->
+    <div class="dashboard-container" id="dashboard" style="display: none;">
+        <!-- SIDEBAR -->
+        <aside class="sidebar">
+            <div class="brand">
+                <svg viewBox="0 0 100 100" class="brand-logo">
+                    <circle cx="50" cy="50" r="40" stroke="var(--cyan)" stroke-width="3" fill="none" />
+                    <path d="M50,20 C35,45 35,60 50,80 C65,60 65,45 50,20 Z" fill="none" stroke="var(--cyan-glow)" stroke-width="2" />
+                    <line x1="20" y1="50" x2="80" y2="50" stroke="var(--cyan)" stroke-width="1" />
+                </svg>
+                <div>
+                    <h1>ATLANTIS</h1>
+                    <span class="badge">DB MANAGER</span>
+                </div>
+            </div>
+
+            <nav class="nav-menu">
+                <button class="nav-item active" data-tab="tab-overview">
+                    <svg viewBox="0 0 24 24" class="nav-icon"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
+                    <span>Tổng quan</span>
+                </button>
+                <button class="nav-item" data-tab="tab-users">
+                    <svg viewBox="0 0 24 24" class="nav-icon"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+                    <span>Người chơi</span>
+                </button>
+                <button class="nav-item" data-tab="tab-rooms">
+                    <svg viewBox="0 0 24 24" class="nav-icon"><path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H8V4h12v12z"/></svg>
+                    <span>Phòng chơi</span>
+                </button>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="connection-status">
+                    <div class="status-dot online"></div>
+                    <span id="txtConnectionState">Đã kết nối</span>
+                </div>
+                <button id="btnLogout" class="btn-text">Đăng xuất</button>
+            </div>
+        </aside>
+
+        <!-- MAIN CONTENT -->
+        <main class="content-area">
+            <!-- HEADER -->
+            <header class="main-header">
+                <div class="header-title">
+                    <h2 id="currentTabTitle">Hệ thống điều khiển trung tâm</h2>
+                    <p class="text-secondary" id="currentTabDesc">Thống kê trạng thái thời gian thực của cơ sở dữ liệu game.</p>
+                </div>
+                <div class="header-actions">
+                    <button class="btn-secondary" id="btnRefresh">
+                        <svg viewBox="0 0 24 24" class="icon-refresh"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+                        Tải lại dữ liệu
+                    </button>
+                </div>
+            </header>
+
+            <!-- TAB: OVERVIEW -->
+            <div id="tab-overview" class="tab-pane active">
+                <div class="stats-grid">
+                    <div class="stats-card glow-cyan">
+                        <div class="card-header">
+                            <span class="text-secondary text-sm font-semibold">TỔNG NGƯỜI CHƠI</span>
+                            <div class="icon-bg cyan">
+                                <svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 1.34 5 3s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <span class="stats-number" id="statTotalUsers">0</span>
+                        </div>
+                        <div class="card-footer">
+                            <span class="trend positive">
+                                <span id="statVerifiedUsers">0</span> đã kích hoạt OTP
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="stats-card glow-warning">
+                        <div class="card-header">
+                            <span class="text-secondary text-sm font-semibold">PHÒNG ĐANG MỞ</span>
+                            <div class="icon-bg warning">
+                                <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 10h2v7H7zm4-3h2v10h-2zm4 6h2v4h-2z"/></svg>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <span class="stats-number" id="statActiveRooms">0</span>
+                        </div>
+                        <div class="card-footer">
+                            <span class="trend">
+                                Tổng số <span id="statTotalRooms">0</span> phòng đã tạo
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="stats-card glow-magenta">
+                        <div class="card-header">
+                            <span class="text-secondary text-sm font-semibold">HP LEVEL TRUNG BÌNH</span>
+                            <div class="icon-bg magenta">
+                                <svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <span class="stats-number" id="statAvgHp">0.0</span>
+                        </div>
+                        <div class="card-footer">
+                            <span class="trend positive">
+                                Cấp nâng cấp HP trung bình
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="stats-card glow-green">
+                        <div class="card-header">
+                            <span class="text-secondary text-sm font-semibold">SÁT THƯƠNG TRUNG BÌNH</span>
+                            <div class="icon-bg green">
+                                <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H7c0-2.76 2.24-5 5-5s5 2.24 5 5c0 1.04-.42 1.99-1.07 2.75z"/></svg>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <span class="stats-number" id="statAvgDmg">0.0</span>
+                        </div>
+                        <div class="card-footer">
+                            <span class="trend">
+                                Cấp nâng cấp Damage trung bình
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="layout-sections margin-top-lg">
+                    <div class="content-panel">
+                        <h3>Trạng thái Kết nối Hệ thống</h3>
+                        <div class="system-status-list">
+                            <div class="sys-item">
+                                <span>MongoDB Connection</span>
+                                <span class="badge badge-success" id="dbStatus">ONLINE</span>
+                            </div>
+                            <div class="sys-item">
+                                <span>Mail Service (SMTP)</span>
+                                <span class="badge badge-success">READY</span>
+                            </div>
+                            <div class="sys-item">
+                                <span>API Environment</span>
+                                <span class="badge badge-primary" id="apiEnv">DEVELOPMENT</span>
+                            </div>
+                            <div class="sys-item">
+                                <span>Average Upgrade Points Left</span>
+                                <span class="text-highlight font-semibold" id="statAvgPoints">0</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB: USERS -->
+            <div id="tab-users" class="tab-pane">
+                <div class="filter-bar">
+                    <div class="search-box">
+                        <svg viewBox="0 0 24 24" class="icon-search"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+                        <input type="text" id="searchUser" placeholder="Tìm người chơi theo tên hoặc email...">
+                    </div>
+                    <div class="filter-options">
+                        <select id="filterVerified">
+                            <option value="all">Tất cả tài khoản</option>
+                            <option value="verified">Đã kích hoạt OTP</option>
+                            <option value="unverified">Chưa kích hoạt OTP</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <table class="data-table" id="tableUsers">
+                        <thead>
+                            <tr>
+                                <th>Người chơi</th>
+                                <th>Email</th>
+                                <th>Trạng thái OTP</th>
+                                <th>Máu (HP)</th>
+                                <th>Điểm Nâng Cấp</th>
+                                <th>Ngày đăng ký</th>
+                                <th>Hành động</th>
+                            </tr>
+                        </thead>
+                        <tbody id="usersList">
+                            <!-- Nạp danh sách qua Javascript -->
+                            <tr>
+                                <td colspan="7" class="loading-row">Đang tải dữ liệu người dùng từ Atlantis Core...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- TAB: ROOMS -->
+            <div id="tab-rooms" class="tab-pane">
+                <div class="table-container">
+                    <table class="data-table" id="tableRooms">
+                        <thead>
+                            <tr>
+                                <th>ID Phòng</th>
+                                <th>Tên Phòng</th>
+                                <th>Chủ Phòng (Host)</th>
+                                <th>Người chơi</th>
+                                <th>Trạng thái</th>
+                                <th>Chế độ</th>
+                                <th>Ngày tạo</th>
+                                <th>Hành động</th>
+                            </tr>
+                        </thead>
+                        <tbody id="roomsList">
+                            <!-- Nạp danh sách qua Javascript -->
+                            <tr>
+                                <td colspan="8" class="loading-row">Đang tải danh sách phòng chơi...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- MODAL: EDIT PLAYER STATE -->
+    <div class="modal-overlay" id="editModal">
+        <div class="modal-card">
+            <header class="modal-header">
+                <h3>Chỉnh sửa Thông tin & Trạng thái Nhân vật</h3>
+                <button class="btn-close" id="btnCloseModal">×</button>
+            </header>
+            <div class="modal-body">
+                <form id="editForm">
+                    <input type="hidden" id="editUserId">
+                    
+                    <h4 class="section-title">Thông tin cơ bản</h4>
+                    <div class="form-grid-2">
+                        <div class="input-group">
+                            <label for="editDisplayName">Tên Hiển Thị</label>
+                            <input type="text" id="editDisplayName" required>
+                        </div>
+                        <div class="input-group">
+                            <label for="editEmail">Địa chỉ Email</label>
+                            <input type="email" id="editEmail" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-grid-3">
+                        <div class="checkbox-group">
+                            <label class="custom-checkbox">
+                                <input type="checkbox" id="editIsVerified">
+                                <span class="checkmark"></span>
+                                Tài khoản đã Xác thực (isVerified)
+                            </label>
+                        </div>
+                        <div class="checkbox-group">
+                            <label class="custom-checkbox">
+                                <input type="checkbox" id="editIsWeapon2Locked">
+                                <span class="checkmark"></span>
+                                Khóa Vũ Khí 2
+                            </label>
+                        </div>
+                        <div class="checkbox-group">
+                            <label class="custom-checkbox">
+                                <input type="checkbox" id="editIsSkillsUnlocked">
+                                <span class="checkmark"></span>
+                                Mở khóa kỹ năng
+                            </label>
+                        </div>
+                    </div>
+
+                    <h4 class="section-title">Chỉ số Gameplay & Nâng cấp</h4>
+                    <div class="form-grid-4">
+                        <div class="input-group">
+                            <label for="editHealth">Máu (HP Current)</label>
+                            <input type="number" id="editHealth" min="0" max="9999" required>
+                        </div>
+                        <div class="input-group">
+                            <label for="editActiveWeapon">Weapon Index</label>
+                            <input type="number" id="editActiveWeapon" min="1" max="10" required>
+                        </div>
+                        <div class="input-group">
+                            <label for="editUpgradePoints">Điểm nâng cấp</label>
+                            <input type="number" id="editUpgradePoints" min="0" max="999" required>
+                        </div>
+                        <div class="input-group">
+                            <label for="editHpLevel">Cấp độ HP (HP Level)</label>
+                            <input type="number" id="editHpLevel" min="0" max="100" required>
+                        </div>
+                    </div>
+
+                    <div class="form-grid-3">
+                        <div class="input-group">
+                            <label for="editMpLevel">Cấp độ MP</label>
+                            <input type="number" id="editMpLevel" min="0" max="100" required>
+                        </div>
+                        <div class="input-group">
+                            <label for="editCooldownLevel">Cấp độ Hồi chiêu</label>
+                            <input type="number" id="editCooldownLevel" min="0" max="100" required>
+                        </div>
+                        <div class="input-group">
+                            <label for="editDamageLevel">Cấp độ Sát thương</label>
+                            <input type="number" id="editDamageLevel" min="0" max="100" required>
+                        </div>
+                    </div>
+
+                    <h4 class="section-title">Túi đồ nhân vật (Inventory Slots - 10 Ô)</h4>
+                    <div class="inventory-inputs-grid" id="inventoryGrid">
+                        <!-- Tạo 10 ô input bằng JS -->
+                    </div>
+                </form>
+            </div>
+            <footer class="modal-footer">
+                <button type="button" class="btn-secondary" id="btnCancelEdit">Hủy</button>
+                <button type="submit" form="editForm" class="btn-primary glow-cyan">Lưu Thay Đổi</button>
+            </footer>
+        </div>
+    </div>
+
+    <!-- TOAST NOTIFICATION CONTAINER -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="app.js"></script>
+</body>
+</html>

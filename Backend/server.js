@@ -503,6 +503,159 @@ app.post('/api/player/state', authenticateToken, async (req, res) => {
 });
 
 
+// ─── Admin Management Routes ──────────────────────────────────────────────────
+
+// Middleware xác thực Admin bằng mã bí mật cấu hình trong .env
+const authenticateAdmin = (req, res, next) => {
+    const adminSecret = req.headers['x-admin-secret'];
+    const configuredSecret = process.env.ADMIN_SECRET_KEY || 'atlantis_admin_secret_key_change_me';
+    if (adminSecret && adminSecret === configuredSecret) {
+        next();
+    } else {
+        res.status(401).json({ success: false, message: 'Từ chối truy cập. Khóa Admin không chính xác.' });
+    }
+};
+
+// GET /api/admin/stats (Lấy thống kê tổng quan)
+app.get('/api/admin/stats', authenticateAdmin, async (req, res) => {
+    try {
+        const totalUsers = await User.countDocuments();
+        const verifiedUsers = await User.countDocuments({ isVerified: true });
+        const totalRooms = await Room.countDocuments();
+        const activeRooms = await Room.countDocuments({ status: { $in: ['waiting', 'playing'] } });
+
+        // Phân phối cấp độ trung bình của HP và Sát thương
+        const userStats = await User.aggregate([
+            {
+                $group: {
+                    _id: null,
+                    avgHpLevel: { $avg: '$playerState.hpLevel' },
+                    avgDamageLevel: { $avg: '$playerState.damageLevel' },
+                    avgUpgradePoints: { $avg: '$playerState.upgradePoints' }
+                }
+            }
+        ]);
+
+        const stats = {
+            totalUsers,
+            verifiedUsers,
+            unverifiedUsers: totalUsers - verifiedUsers,
+            totalRooms,
+            activeRooms,
+            avgHpLevel: userStats[0] ? Math.round(userStats[0].avgHpLevel * 10) / 10 : 0,
+            avgDamageLevel: userStats[0] ? Math.round(userStats[0].avgDamageLevel * 10) / 10 : 0,
+            avgUpgradePoints: userStats[0] ? Math.round(userStats[0].avgUpgradePoints * 10) / 10 : 0
+        };
+
+        res.json({ success: true, stats });
+    } catch (err) {
+        console.error('[AdminStats]', err);
+        res.status(500).json({ success: false, message: `Lỗi lấy thống kê: ${err.message}` });
+    }
+});
+
+// GET /api/admin/users (Lấy danh sách người dùng)
+app.get('/api/admin/users', authenticateAdmin, async (req, res) => {
+    try {
+        const users = await User.find({}, '-passwordHash').sort({ createdAt: -1 });
+        res.json({ success: true, users });
+    } catch (err) {
+        console.error('[AdminGetUsers]', err);
+        res.status(500).json({ success: false, message: `Lỗi lấy danh sách người chơi: ${err.message}` });
+    }
+});
+
+// POST /api/admin/users/:userId (Cập nhật thông tin và playerState của người dùng)
+app.post('/api/admin/users/:userId', authenticateAdmin, async (req, res) => {
+    try {
+        const { displayName, email, isVerified, playerState } = req.body;
+        const user = await User.findById(req.params.userId);
+        if (!user) return res.status(404).json({ success: false, message: 'Không tìm thấy người chơi.' });
+
+        if (displayName) user.displayName = displayName.trim();
+        if (email) user.email = email.toLowerCase().trim();
+        if (isVerified !== undefined) user.isVerified = !!isVerified;
+
+        if (playerState) {
+            user.playerState = {
+                health: playerState.health !== undefined ? playerState.health : user.playerState.health,
+                activeWeaponIndex: playerState.activeWeaponIndex !== undefined ? playerState.activeWeaponIndex : user.playerState.activeWeaponIndex,
+                isWeapon2Locked: playerState.isWeapon2Locked !== undefined ? playerState.isWeapon2Locked : user.playerState.isWeapon2Locked,
+                isSkillsUnlocked: playerState.isSkillsUnlocked !== undefined ? playerState.isSkillsUnlocked : user.playerState.isSkillsUnlocked,
+                inventorySlots: playerState.inventorySlots || user.playerState.inventorySlots,
+                upgradePoints: playerState.upgradePoints !== undefined ? playerState.upgradePoints : user.playerState.upgradePoints,
+                hpLevel: playerState.hpLevel !== undefined ? playerState.hpLevel : user.playerState.hpLevel,
+                mpLevel: playerState.mpLevel !== undefined ? playerState.mpLevel : user.playerState.mpLevel,
+                cooldownLevel: playerState.cooldownLevel !== undefined ? playerState.cooldownLevel : user.playerState.cooldownLevel,
+                damageLevel: playerState.damageLevel !== undefined ? playerState.damageLevel : user.playerState.damageLevel
+            };
+        }
+
+        await user.save();
+        // Không trả về passwordHash
+        const updatedUser = user.toObject();
+        delete updatedUser.passwordHash;
+
+        res.json({ success: true, message: 'Cập nhật người chơi thành công!', user: updatedUser });
+    } catch (err) {
+        console.error('[AdminUpdateUser]', err);
+        res.status(500).json({ success: false, message: `Lỗi cập nhật người chơi: ${err.message}` });
+    }
+});
+
+// DELETE /api/admin/users/:userId (Xóa người dùng và dọn dẹp các dữ liệu phòng liên quan)
+app.delete('/api/admin/users/:userId', authenticateAdmin, async (req, res) => {
+    try {
+        const user = await User.findById(req.params.userId);
+        if (!user) return res.status(404).json({ success: false, message: 'Không tìm thấy người chơi.' });
+
+        // Xóa các phòng do user này làm host
+        await Room.deleteMany({ host: req.params.userId });
+        
+        // Xóa user khỏi danh sách players trong các phòng khác
+        await Room.updateMany(
+            { "players.user": req.params.userId },
+            { $pull: { players: { user: req.params.userId } } }
+        );
+
+        // Xóa user
+        await User.deleteOne({ _id: req.params.userId });
+
+        res.json({ success: true, message: 'Đã xóa người chơi và dọn dẹp dữ liệu phòng liên quan.' });
+    } catch (err) {
+        console.error('[AdminDeleteUser]', err);
+        res.status(500).json({ success: false, message: `Lỗi khi xóa người chơi: ${err.message}` });
+    }
+});
+
+// GET /api/admin/rooms (Lấy danh sách tất cả các phòng)
+app.get('/api/admin/rooms', authenticateAdmin, async (req, res) => {
+    try {
+        const rooms = await Room.find()
+            .populate('host', 'displayName email')
+            .sort({ createdAt: -1 });
+        res.json({ success: true, rooms });
+    } catch (err) {
+        console.error('[AdminGetRooms]', err);
+        res.status(500).json({ success: false, message: `Lỗi lấy danh sách phòng: ${err.message}` });
+    }
+});
+
+// DELETE /api/admin/rooms/:roomId (Xóa/Đóng phòng chơi)
+app.delete('/api/admin/rooms/:roomId', authenticateAdmin, async (req, res) => {
+    try {
+        const room = await Room.findOne({ roomId: req.params.roomId.toUpperCase() });
+        if (!room) return res.status(404).json({ success: false, message: 'Không tìm thấy phòng chơi.' });
+
+        await Room.deleteOne({ _id: room._id });
+        res.json({ success: true, message: 'Đã xóa phòng chơi thành công.' });
+    } catch (err) {
+        console.error('[AdminDeleteRoom]', err);
+        res.status(500).json({ success: false, message: `Lỗi khi xóa phòng chơi: ${err.message}` });
+    }
+});
+
+
 // ─── Start ────────────────────────────────────────────────────────────────────
 
 app.listen(PORT, () => {
