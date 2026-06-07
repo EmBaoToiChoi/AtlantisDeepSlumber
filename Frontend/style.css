@@ -421,8 +421,9 @@ body {
     border-top: 1px solid var(--border-color);
     padding-top: 20px;
     display: flex;
-    justify-content: space-between;
-    align-items: center;
+    flex-direction: column;
+    gap: 10px;
+    align-items: stretch;
 }
 
 .connection-status {
@@ -972,6 +973,7 @@ body {
 
 .inventory-slot-wrapper {
     position: relative;
+    margin-top: 4px;
 }
 
 .inventory-slot-wrapper span {
@@ -983,6 +985,30 @@ body {
     font-size: 8px;
     color: var(--text-secondary);
     font-family: var(--font-mono);
+    z-index: 1;
+}
+
+.inventory-slot-input {
+    width: 100%;
+    background: rgba(2, 8, 15, 0.85);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 10px 12px;
+    color: var(--text-primary);
+    font-family: var(--font-sans);
+    font-size: 13px;
+    transition: var(--transition);
+    text-align: center;
+}
+
+.inventory-slot-input:focus {
+    outline: none;
+    border-color: var(--cyan);
+    box-shadow: 0 0 10px rgba(0, 232, 255, 0.2);
+}
+
+.inventory-slot-input::placeholder {
+    color: var(--text-muted);
 }
 
 .modal-footer {

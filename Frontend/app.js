@@ -99,12 +99,13 @@ const toastContainer = document.getElementById('toastContainer');
 document.addEventListener('DOMContentLoaded', () => {
     initParticles();
     
-    // Tự động điều chỉnh IP nếu ứng dụng chạy trên cùng cổng của VPS
-    if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-        API_URL = `${window.location.protocol}//${window.location.hostname}:3000`;
+    // Tự động điều chỉnh IP nếu ứng dụng chạy trên cùng VPS, loại trừ trường hợp mở bằng file cục bộ
+    const host = window.location.hostname;
+    if (host && host !== 'localhost' && host !== '127.0.0.1') {
+        API_URL = `${window.location.protocol}//${host}:3000`;
         inputBackendUrl.value = API_URL;
     } else {
-        API_URL = inputBackendUrl.value;
+        API_URL = inputBackendUrl.value || 'http://165.99.14.40:3000';
     }
     loadSavedCredentials();
     setupEventListeners();
@@ -175,11 +176,10 @@ async function loginAdmin(username, password) {
             
             showToast(`Chào mừng trở lại, ${data.displayName}!`, 'success');
             
+            showDashboardUI();
+            fetchStats();
             if (data.isFirstLogin) {
                 firstLoginModal.classList.add('show');
-            } else {
-                showDashboardUI();
-                fetchStats();
             }
         } else {
             showToast(data.message || 'Tài khoản hoặc mật khẩu không chính xác.', 'error');
