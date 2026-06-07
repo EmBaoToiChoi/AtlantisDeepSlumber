@@ -170,12 +170,8 @@ public class WeaponBladesLeo : NetworkBehaviour
             localPlayer.UpdateStateFromHUD(2, false, true);
             localPlayer.SavePlayerStateToDatabase();
 
-            // Play pickup animation
-            var leoPlayer = localPlayer.gameObject.GetComponent<LeoPlayer>();
-            if (leoPlayer != null)
-            {
-                leoPlayer.PlayAnimation("Pick", 0.1f);
-            }
+            // Không chơi animation Pick ở đây vì sẽ ghi đè DrawLeft đang chạy.
+            // Animation rút kiếm (DrawLeft + DrawRight) được chạy tự động qua PlayWeaponSwitchAnimation.
 
             // Despawn/Destroy item
             if (localPlayer.IsStandaloneMode)

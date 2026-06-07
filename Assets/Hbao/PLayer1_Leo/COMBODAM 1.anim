@@ -80623,14 +80623,14 @@ AnimationClip:
     intParameter: 0
     messageOptions: 0
   - time: 2.4666667
-    functionName: DisableRightPunch
+    functionName: OnPunchEnd
     data: 
     objectReferenceParameter: {fileID: 0}
     floatParameter: 0
     intParameter: 0
     messageOptions: 0
-  - time: 2.5
-    functionName: OnPunchEnd
+  - time: 2.4666667
+    functionName: DisableRightPunch
     data: 
     objectReferenceParameter: {fileID: 0}
     floatParameter: 0

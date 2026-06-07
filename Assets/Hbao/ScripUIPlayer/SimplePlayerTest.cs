@@ -374,10 +374,6 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
     public override void OnNetworkSpawn()
     {
         isStandaloneMode = false;
-        if (leoPlayer != null)
-        {
-            return;
-        }
 
         var rb = GetComponent<Rigidbody>();
         if (rb != null)
@@ -396,6 +392,11 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
         if (PlayerHUDManager.ActivePlayers != null && !PlayerHUDManager.ActivePlayers.Contains(this))
         {
             PlayerHUDManager.ActivePlayers.Add(this);
+        }
+
+        if (leoPlayer != null)
+        {
+            return;
         }
 
         // Đăng ký sự kiện đồng bộ Netcode
@@ -465,14 +466,14 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
 
     public override void OnNetworkDespawn()
     {
-        if (leoPlayer != null)
-        {
-            return;
-        }
-
         if (PlayerHUDManager.ActivePlayers != null)
         {
             PlayerHUDManager.ActivePlayers.Remove(this);
+        }
+
+        if (leoPlayer != null)
+        {
+            return;
         }
 
         activeWeaponIndex.OnValueChanged -= OnWeaponIndexChanged;
@@ -1937,7 +1938,7 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
         {
             if (IsServer)
             {
-                PlayAnimationClientRpc(animName, fadeTime, alreadyPlayedLocally);
+                PlayAnimationClientRpc(animName, fadeTime, alreadyPlayedLocally || IsOwner);
             }
             else if (IsOwner)
             {

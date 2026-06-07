@@ -7,6 +7,8 @@ const nodemailer = require('nodemailer');
 const cors = require('cors');
 const User = require('./models/User');
 const Room = require('./models/Room');
+const Admin = require('./models/Admin');
+const AdminLog = require('./models/AdminLog');
 
 
 const app = express();
@@ -24,6 +26,11 @@ mongoose.connect(process.env.MONGO_URI)
         Room.syncIndexes()
             .then(() => console.log('[DB] Room indexes synced successfully'))
             .catch(err => console.error('[DB] Room index sync error:', err));
+        
+        // Tự động nạp dữ liệu (seed) 5 admin mặc định nếu chưa tồn tại
+        seedAdmins()
+            .then(() => console.log('[DB] Admin seeding check complete'))
+            .catch(err => console.error('[DB] Admin seeding error:', err));
     })
     .catch(err => { console.error('[DB] Connection error:', err); process.exit(1); });
 
@@ -37,6 +44,44 @@ const transporter = nodemailer.createTransport({
 });
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
+async function seedAdmins() {
+    try {
+        const adminCount = await Admin.countDocuments();
+        if (adminCount === 0) {
+            console.log('[DB] Seeding default 5 admin accounts...');
+            const defaultAdmins = [
+                { username: 'hoaibao', displayName: 'Nguyễn Mạnh Hoài Bảo', role: 'superadmin' },
+                { username: 'duytan', displayName: 'Nguyễn Duy Tân', role: 'admin' },
+                { username: 'nhatdong', displayName: 'Nhật Đông', role: 'admin' },
+                { username: 'huuhoang', displayName: 'Hồ Hữu Hoàng', role: 'admin' },
+                { username: 'luanvu', displayName: 'Vũ Phạm Luân', role: 'superadmin' }
+            ];
+
+            // Default password: 123456
+            const defaultPasswordHash = await bcrypt.hash('123456', 12);
+
+            for (const adminData of defaultAdmins) {
+                const admin = new Admin({
+                    username: adminData.username,
+                    displayName: adminData.displayName,
+                    passwordHash: defaultPasswordHash,
+                    isFirstLogin: true,
+                    role: adminData.role
+                });
+                await admin.save();
+            }
+            console.log('[DB] Seeding completed. 5 admin accounts initialized.');
+        } else {
+            // Tự động di trú vai trò (migration) cho database đã tồn tại
+            await Admin.updateMany({ username: { $in: ['hoaibao', 'luanvu'] } }, { role: 'superadmin' });
+            await Admin.updateMany({ username: { $in: ['duytan', 'nhatdong', 'huuhoang'] } }, { role: 'admin' });
+            console.log('[DB] Automatic role migration executed.');
+        }
+    } catch (err) {
+        console.error('[DB] Seeding/Migration failed:', err);
+    }
+}
+
 function generateOTP() {
     return Math.floor(100000 + Math.random() * 900000).toString();
 }
@@ -499,6 +544,381 @@ app.post('/api/player/state', authenticateToken, async (req, res) => {
     } catch (err) {
         console.error('[SavePlayerState]', err);
         res.status(500).json({ success: false, message: `Lỗi khi lưu trạng thái nhân vật: ${err.message}` });
+    }
+});
+
+
+// ─── Admin Management Routes ──────────────────────────────────────────────────
+
+// Middleware xác thực Admin bằng JWT Token
+const authenticateAdminToken = (req, res, next) => {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+    if (!token) return res.status(401).json({ success: false, message: 'Thiếu token xác thực quản trị.' });
+
+    jwt.verify(token, process.env.JWT_SECRET, (err, admin) => {
+        if (err) return res.status(403).json({ success: false, message: 'Phiên đăng nhập admin đã hết hạn hoặc không hợp lệ.' });
+        req.admin = admin; // Chứa { adminId, username, displayName }
+        next();
+    });
+};
+
+// Middleware kiểm tra quyền Quản trị viên cấp cao (Super Admin)
+const requireSuperAdmin = async (req, res, next) => {
+    try {
+        const admin = await Admin.findById(req.admin.adminId);
+        if (admin && admin.role === 'superadmin') {
+            next();
+        } else {
+            res.status(403).json({ success: false, message: 'Quyền truy cập bị từ chối. Chỉ dành cho quản trị viên cấp cao.' });
+        }
+    } catch (err) {
+        res.status(500).json({ success: false, message: `Lỗi kiểm tra quyền: ${err.message}` });
+    }
+};
+
+// Helper function để ghi log hoạt động admin
+async function writeAdminLog(adminUsername, adminDisplayName, action, target, details = '') {
+    try {
+        const log = new AdminLog({
+            adminUsername,
+            adminDisplayName,
+            action,
+            target,
+            details
+        });
+        await log.save();
+    } catch (err) {
+        console.error('[AdminLog Write Error]', err);
+    }
+}
+
+// POST /api/admin/login (Đăng nhập quản trị viên)
+app.post('/api/admin/login', async (req, res) => {
+    try {
+        const { username, password } = req.body;
+        if (!username || !password) {
+            return res.status(400).json({ success: false, message: 'Vui lòng nhập tài khoản và mật khẩu.' });
+        }
+
+        const admin = await Admin.findOne({ username: username.toLowerCase().trim() });
+        if (!admin) {
+            return res.status(401).json({ success: false, message: 'Tài khoản hoặc mật khẩu admin không đúng.' });
+        }
+
+        const isMatch = await bcrypt.compare(password, admin.passwordHash);
+        if (!isMatch) {
+            return res.status(401).json({ success: false, message: 'Tài khoản hoặc mật khẩu admin không đúng.' });
+        }
+
+        // Tạo token JWT có thời hạn 7 ngày
+        const token = jwt.sign(
+            { adminId: admin._id, username: admin.username, displayName: admin.displayName, role: admin.role },
+            process.env.JWT_SECRET,
+            { expiresIn: '7d' }
+        );
+
+        res.json({
+            success: true,
+            message: 'Đăng nhập quản trị thành công!',
+            token,
+            displayName: admin.displayName,
+            username: admin.username,
+            role: admin.role,
+            isFirstLogin: admin.isFirstLogin
+        });
+    } catch (err) {
+        console.error('[AdminLogin]', err);
+        res.status(500).json({ success: false, message: `Lỗi máy chủ: ${err.message}` });
+    }
+});
+
+// POST /api/admin/first-login-action (Xử lý thay đổi lần đầu: giữ hoặc đổi mật khẩu)
+app.post('/api/admin/first-login-action', authenticateAdminToken, async (req, res) => {
+    try {
+        const { actionType, newPassword } = req.body;
+        const admin = await Admin.findById(req.admin.adminId);
+        if (!admin) return res.status(404).json({ success: false, message: 'Không tìm thấy quản trị viên.' });
+
+        if (actionType === 'change') {
+            if (!newPassword || newPassword.length < 6) {
+                return res.status(400).json({ success: false, message: 'Mật khẩu mới phải có ít nhất 6 ký tự.' });
+            }
+            admin.passwordHash = await bcrypt.hash(newPassword, 12);
+            await writeAdminLog(admin.username, admin.displayName, 'Đổi mật khẩu', 'Hệ thống', 'Đổi mật khẩu mặc định thành mật khẩu mới trong lần đăng nhập đầu tiên.');
+        } else {
+            await writeAdminLog(admin.username, admin.displayName, 'Giữ mật khẩu', 'Hệ thống', 'Giữ mật khẩu mặc định trong lần đăng nhập đầu tiên.');
+        }
+
+        admin.isFirstLogin = false;
+        await admin.save();
+
+        res.json({ success: true, message: 'Cập nhật trạng thái đăng nhập đầu tiên thành công!' });
+    } catch (err) {
+        console.error('[AdminFirstLoginAction]', err);
+        res.status(500).json({ success: false, message: `Lỗi máy chủ: ${err.message}` });
+    }
+});
+
+// POST /api/admin/change-password (Đổi mật khẩu quản trị viên chủ động)
+app.post('/api/admin/change-password', authenticateAdminToken, async (req, res) => {
+    try {
+        const { oldPassword, newPassword } = req.body;
+        if (!oldPassword || !newPassword) {
+            return res.status(400).json({ success: false, message: 'Vui lòng điền đầy đủ mật khẩu cũ và mới.' });
+        }
+        if (newPassword.length < 6) {
+            return res.status(400).json({ success: false, message: 'Mật khẩu mới phải có ít nhất 6 ký tự.' });
+        }
+
+        const admin = await Admin.findById(req.admin.adminId);
+        if (!admin) return res.status(404).json({ success: false, message: 'Không tìm thấy quản trị viên.' });
+
+        const isMatch = await bcrypt.compare(oldPassword, admin.passwordHash);
+        if (!isMatch) {
+            return res.status(400).json({ success: false, message: 'Mật khẩu cũ không chính xác.' });
+        }
+
+        admin.passwordHash = await bcrypt.hash(newPassword, 12);
+        admin.isFirstLogin = false;
+        await admin.save();
+
+        await writeAdminLog(admin.username, admin.displayName, 'Đổi mật khẩu', 'Hệ thống', 'Đổi mật khẩu quản trị viên thành công.');
+
+        res.json({ success: true, message: 'Đổi mật khẩu thành công!' });
+    } catch (err) {
+        console.error('[AdminChangePassword]', err);
+        res.status(500).json({ success: false, message: `Lỗi máy chủ: ${err.message}` });
+    }
+});
+
+// GET /api/admin/logs (Lấy lịch sử logs hoạt động)
+app.get('/api/admin/logs', authenticateAdminToken, async (req, res) => {
+    try {
+        const logs = await AdminLog.find().sort({ createdAt: -1 }).limit(100);
+        res.json({ success: true, logs });
+    } catch (err) {
+        console.error('[AdminGetLogs]', err);
+        res.status(500).json({ success: false, message: `Lỗi tải nhật ký hoạt động: ${err.message}` });
+    }
+});
+
+// GET /api/admin/accounts (Liệt kê danh sách tất cả các tài khoản admin - Chỉ dành cho Super Admin)
+app.get('/api/admin/accounts', authenticateAdminToken, requireSuperAdmin, async (req, res) => {
+    try {
+        const admins = await Admin.find({}, '-passwordHash').sort({ createdAt: 1 });
+        res.json({ success: true, admins });
+    } catch (err) {
+        console.error('[AdminGetAccounts]', err);
+        res.status(500).json({ success: false, message: `Lỗi tải danh sách admin: ${err.message}` });
+    }
+});
+
+// POST /api/admin/accounts/:adminId/reset-password (Đặt lại mật khẩu của một admin về 123456 - Chỉ dành cho Super Admin)
+app.post('/api/admin/accounts/:adminId/reset-password', authenticateAdminToken, requireSuperAdmin, async (req, res) => {
+    try {
+        const adminToReset = await Admin.findById(req.params.adminId);
+        if (!adminToReset) {
+            return res.status(404).json({ success: false, message: 'Không tìm thấy tài khoản quản trị cần đặt lại.' });
+        }
+
+        if (adminToReset._id.toString() === req.admin.adminId) {
+            return res.status(400).json({ success: false, message: 'Không thể tự đặt lại mật khẩu bằng chức năng này. Vui lòng dùng chức năng Đổi mật khẩu của cá nhân.' });
+        }
+
+        const defaultPasswordHash = await bcrypt.hash('123456', 12);
+        adminToReset.passwordHash = defaultPasswordHash;
+        adminToReset.isFirstLogin = true; // Yêu cầu đổi mật khẩu lại lần đầu
+        await adminToReset.save();
+
+        // Ghi Log Hoạt Động
+        await writeAdminLog(
+            req.admin.username,
+            req.admin.displayName,
+            'Reset mật khẩu',
+            `Quản trị viên: ${adminToReset.displayName} (${adminToReset.username})`,
+            'Đặt lại mật khẩu quản trị viên về mặc định (123456) và yêu cầu đổi mật khẩu ở lần đăng nhập tiếp theo.'
+        );
+
+        res.json({ success: true, message: `Đã đặt lại mật khẩu cho quản trị viên ${adminToReset.displayName} thành công!` });
+    } catch (err) {
+        console.error('[AdminResetPassword]', err);
+        res.status(500).json({ success: false, message: `Lỗi khi đặt lại mật khẩu: ${err.message}` });
+    }
+});
+
+// GET /api/admin/stats (Lấy thống kê tổng quan)
+app.get('/api/admin/stats', authenticateAdminToken, async (req, res) => {
+    try {
+        const totalUsers = await User.countDocuments();
+        const verifiedUsers = await User.countDocuments({ isVerified: true });
+        const totalRooms = await Room.countDocuments();
+        const activeRooms = await Room.countDocuments({ status: { $in: ['waiting', 'playing'] } });
+
+        const userStats = await User.aggregate([
+            {
+                $group: {
+                    _id: null,
+                    avgHpLevel: { $avg: '$playerState.hpLevel' },
+                    avgDamageLevel: { $avg: '$playerState.damageLevel' },
+                    avgUpgradePoints: { $avg: '$playerState.upgradePoints' }
+                }
+            }
+        ]);
+
+        const stats = {
+            totalUsers,
+            verifiedUsers,
+            unverifiedUsers: totalUsers - verifiedUsers,
+            totalRooms,
+            activeRooms,
+            avgHpLevel: userStats[0] ? Math.round(userStats[0].avgHpLevel * 10) / 10 : 0,
+            avgDamageLevel: userStats[0] ? Math.round(userStats[0].avgDamageLevel * 10) / 10 : 0,
+            avgUpgradePoints: userStats[0] ? Math.round(userStats[0].avgUpgradePoints * 10) / 10 : 0
+        };
+
+        res.json({ success: true, stats });
+    } catch (err) {
+        console.error('[AdminStats]', err);
+        res.status(500).json({ success: false, message: `Lỗi lấy thống kê: ${err.message}` });
+    }
+});
+
+// GET /api/admin/users (Lấy danh sách người dùng)
+app.get('/api/admin/users', authenticateAdminToken, async (req, res) => {
+    try {
+        const users = await User.find({}, '-passwordHash').sort({ createdAt: -1 });
+        res.json({ success: true, users });
+    } catch (err) {
+        console.error('[AdminGetUsers]', err);
+        res.status(500).json({ success: false, message: `Lỗi lấy danh sách người chơi: ${err.message}` });
+    }
+});
+
+// POST /api/admin/users/:userId (Cập nhật thông tin và playerState của người dùng)
+app.post('/api/admin/users/:userId', authenticateAdminToken, async (req, res) => {
+    try {
+        const { displayName, email, isVerified, playerState } = req.body;
+        const user = await User.findById(req.params.userId);
+        if (!user) return res.status(404).json({ success: false, message: 'Không tìm thấy người chơi.' });
+
+        const oldName = user.displayName;
+        const oldEmail = user.email;
+
+        if (displayName) user.displayName = displayName.trim();
+        if (email) user.email = email.toLowerCase().trim();
+        if (isVerified !== undefined) user.isVerified = !!isVerified;
+
+        if (playerState) {
+            user.playerState = {
+                health: playerState.health !== undefined ? playerState.health : user.playerState.health,
+                activeWeaponIndex: playerState.activeWeaponIndex !== undefined ? playerState.activeWeaponIndex : user.playerState.activeWeaponIndex,
+                isWeapon2Locked: playerState.isWeapon2Locked !== undefined ? playerState.isWeapon2Locked : user.playerState.isWeapon2Locked,
+                isSkillsUnlocked: playerState.isSkillsUnlocked !== undefined ? playerState.isSkillsUnlocked : user.playerState.isSkillsUnlocked,
+                inventorySlots: playerState.inventorySlots || user.playerState.inventorySlots,
+                upgradePoints: playerState.upgradePoints !== undefined ? playerState.upgradePoints : user.playerState.upgradePoints,
+                hpLevel: playerState.hpLevel !== undefined ? playerState.hpLevel : user.playerState.hpLevel,
+                mpLevel: playerState.mpLevel !== undefined ? playerState.mpLevel : user.playerState.mpLevel,
+                cooldownLevel: playerState.cooldownLevel !== undefined ? playerState.cooldownLevel : user.playerState.cooldownLevel,
+                damageLevel: playerState.damageLevel !== undefined ? playerState.damageLevel : user.playerState.damageLevel
+            };
+        }
+
+        await user.save();
+        const updatedUser = user.toObject();
+        delete updatedUser.passwordHash;
+
+        // Ghi Log Hoạt Động
+        let logDetails = `Thay đổi: `;
+        if (displayName && oldName !== displayName) logDetails += `Tên (${oldName} -> ${displayName}). `;
+        if (email && oldEmail !== email) logDetails += `Email (${oldEmail} -> ${email}). `;
+        if (playerState) logDetails += `Đã cập nhật Trạng thái nhân vật (Máu, Cấp độ, Điểm nâng cấp). `;
+
+        await writeAdminLog(
+            req.admin.username,
+            req.admin.displayName,
+            'Sửa chỉ số',
+            `Người chơi: ${user.displayName} (${user._id})`,
+            logDetails || 'Không có thay đổi thông tin cơ bản.'
+        );
+
+        res.json({ success: true, message: 'Cập nhật người chơi thành công!', user: updatedUser });
+    } catch (err) {
+        console.error('[AdminUpdateUser]', err);
+        res.status(500).json({ success: false, message: `Lỗi cập nhật người chơi: ${err.message}` });
+    }
+});
+
+// DELETE /api/admin/users/:userId (Xóa người dùng và dọn dẹp các dữ liệu phòng liên quan)
+app.delete('/api/admin/users/:userId', authenticateAdminToken, async (req, res) => {
+    try {
+        const user = await User.findById(req.params.userId);
+        if (!user) return res.status(404).json({ success: false, message: 'Không tìm thấy người chơi.' });
+
+        const targetName = user.displayName;
+
+        // Xóa các phòng do user này làm host
+        await Room.deleteMany({ host: req.params.userId });
+        
+        // Xóa user khỏi danh sách players trong các phòng khác
+        await Room.updateMany(
+            { "players.user": req.params.userId },
+            { $pull: { players: { user: req.params.userId } } }
+        );
+
+        // Xóa user
+        await User.deleteOne({ _id: req.params.userId });
+
+        // Ghi Log Hoạt Động
+        await writeAdminLog(
+            req.admin.username,
+            req.admin.displayName,
+            'Xóa tài khoản',
+            `Người chơi: ${targetName} (${req.params.userId})`,
+            'Đã xóa vĩnh viễn tài khoản người chơi khỏi hệ thống và dọn dẹp các phòng chơi liên quan.'
+        );
+
+        res.json({ success: true, message: 'Đã xóa người chơi và dọn dẹp dữ liệu phòng liên quan.' });
+    } catch (err) {
+        console.error('[AdminDeleteUser]', err);
+        res.status(500).json({ success: false, message: `Lỗi khi xóa người chơi: ${err.message}` });
+    }
+});
+
+// GET /api/admin/rooms (Lấy danh sách tất cả các phòng)
+app.get('/api/admin/rooms', authenticateAdminToken, async (req, res) => {
+    try {
+        const rooms = await Room.find()
+            .populate('host', 'displayName email')
+            .sort({ createdAt: -1 });
+        res.json({ success: true, rooms });
+    } catch (err) {
+        console.error('[AdminGetRooms]', err);
+        res.status(500).json({ success: false, message: `Lỗi lấy danh sách phòng: ${err.message}` });
+    }
+});
+
+// DELETE /api/admin/rooms/:roomId (Xóa/Đóng phòng chơi)
+app.delete('/api/admin/rooms/:roomId', authenticateAdminToken, async (req, res) => {
+    try {
+        const room = await Room.findOne({ roomId: req.params.roomId.toUpperCase() });
+        if (!room) return res.status(404).json({ success: false, message: 'Không tìm thấy phòng chơi.' });
+
+        await Room.deleteOne({ _id: room._id });
+
+        // Ghi Log Hoạt Động
+        await writeAdminLog(
+            req.admin.username,
+            req.admin.displayName,
+            'Giải tán phòng',
+            `Phòng chơi: ${room.roomName} (${req.params.roomId.toUpperCase()})`,
+            'Cưỡng chế giải tán phòng chơi đang hoạt động hoặc đang chờ.'
+        );
+
+        res.json({ success: true, message: 'Đã xóa phòng chơi thành công.' });
+    } catch (err) {
+        console.error('[AdminDeleteRoom]', err);
+        res.status(500).json({ success: false, message: `Lỗi khi xóa phòng chơi: ${err.message}` });
     }
 });
 

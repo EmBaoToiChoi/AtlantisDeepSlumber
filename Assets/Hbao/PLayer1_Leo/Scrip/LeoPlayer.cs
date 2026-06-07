@@ -3016,6 +3016,9 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     protected float localHealth;
     protected float localWeapon1Durability = 100f;
     protected float localWeapon2Durability = 100f;
+    protected bool localWeapon2Locked = true;
+    protected bool localSkillsUnlocked = false;
+    protected int localActiveWeaponIndex = 1;
 
     [Header("Invisibility Skill R Settings")]
     public Material invisibleMaterial;
@@ -3245,6 +3248,8 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             ApplyUpgradedStats();
             UpdateUpgradeHUD();
         }
+        LoadPlayerStateFromDatabase();
+        UpdateDurabilityHUD();
     }
 
     public override void OnNetworkSpawn()
@@ -3678,24 +3683,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
                 if (camForward.sqrMagnitude > 0.001f)
                 {
                     Quaternion targetRot = Quaternion.LookRotation(camForward.normalized);
-
-                    // --- ĐÃ SỬA: Áp góc lệch chuẩn xác cho cả 3 đòn đấm và 5 đòn chém ---
-                    if (isAttacking)
-                    {
-                        float currentOffset = 0f;
-                        if (lastTriggeredAnimName == punch1Trigger || lastTriggeredAnimName == "Punch1") currentOffset = punch1Offset;
-                        else if (lastTriggeredAnimName == punch2Trigger || lastTriggeredAnimName == "Punch2") currentOffset = punch2Offset;
-                        else if (lastTriggeredAnimName == punch3Trigger || lastTriggeredAnimName == "Punch3") currentOffset = punch3Offset;
-                        else if (lastTriggeredAnimName == "attacktaytrai") currentOffset = slash1Offset; // Đã vá lỗi chữ 'i'
-                        else if (lastTriggeredAnimName == "attacktayphai") currentOffset = slash2Offset;
-                        else if (lastTriggeredAnimName == "Slash1Combo2") currentOffset = slash3Offset;
-                        else if (lastTriggeredAnimName == "Slash2combo2") currentOffset = slash4Offset;
-                        else if (lastTriggeredAnimName == "Slash3combo2") currentOffset = slash5Offset;
-
-                        targetRot *= Quaternion.Euler(0f, currentOffset, 0f);
-                    }
-
-                    // Tăng tốc độ quay người lên 150f (Gần như lập tức) khi đang ra đòn để triệt tiêu cảm giác trễ/lag camera
+                    // Xoay ngay lập tức khi đang tấn công, mượt mà khi di chuyển bình thường
                     float currentRotSpeed = isAttacking ? 150f : rotationSmoothSpeedArmed;
                     transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, Time.deltaTime * currentRotSpeed);
                 }
@@ -3738,7 +3726,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             }
         }
 
-        if (Input.GetMouseButtonDown(0) || Input.GetMouseButton(0))
+        if (Input.GetMouseButtonDown(0))
         {
             if (!IsUIBlockingInput() && !isRollingStandalone)
             {
@@ -3876,24 +3864,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
                 if (camForward.sqrMagnitude > 0.001f)
                 {
                     Quaternion targetRot = Quaternion.LookRotation(camForward.normalized);
-
-                    // Áp góc lệch Offset chuẩn cho chế độ Multiplayer mạng
-                    if (isAttacking)
-                    {
-                        float currentOffset = 0f;
-                        if (lastTriggeredAnimName == punch1Trigger || lastTriggeredAnimName == "Punch1") currentOffset = punch1Offset;
-                        else if (lastTriggeredAnimName == punch2Trigger || lastTriggeredAnimName == "Punch2") currentOffset = punch2Offset;
-                        else if (lastTriggeredAnimName == punch3Trigger || lastTriggeredAnimName == "Punch3") currentOffset = punch3Offset;
-                        else if (lastTriggeredAnimName == "attacktaytrai") currentOffset = slash1Offset;
-                        else if (lastTriggeredAnimName == "attacktayphai") currentOffset = slash2Offset;
-                        else if (lastTriggeredAnimName == "Slash1Combo2") currentOffset = slash3Offset;
-                        else if (lastTriggeredAnimName == "Slash2combo2") currentOffset = slash4Offset;
-                        else if (lastTriggeredAnimName == "Slash3combo2") currentOffset = slash5Offset;
-
-                        targetRot *= Quaternion.Euler(0f, currentOffset, 0f);
-                    }
-
-                    // Ép tốc độ xoay người lên 150f để loại bỏ hoàn toàn hiện tượng lag camera đuổi theo chuột
+                    // Xoay ngay lập tức khi đang tấn công, mượt mà khi di chuyển bình thường
                     float currentRotSpeed = isAttacking ? 150f : rotationSmoothSpeedArmed;
                     transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, Time.deltaTime * currentRotSpeed);
                 }
@@ -3936,7 +3907,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             }
         }
 
-        if (Input.GetMouseButtonDown(0) || Input.GetMouseButton(0))
+        if (Input.GetMouseButtonDown(0))
         {
             if (!IsUIBlockingInput() && IsSpawned)
             {
@@ -3983,23 +3954,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     [Tooltip("Thời gian animation tấn công (giây). Dùng để tính combo window.")]
     public float punchAnimDuration = 0.5f;
     public float slashAnimDuration = 0.6f;
-    [Header("Attack Rotation Offsets Configuration")]
-    [Tooltip("Góc bù đấm 1: Tay trái (Punch1)")]
-    public float punch1Offset = 0f;
-    [Tooltip("Góc bù đấm 2: Tay phải (Punch2)")]
-    public float punch2Offset = 0f;
-    [Tooltip("Góc bù đấm 3: Hai tay combo (Punch3)")]
-    public float punch3Offset = 0f;
-    [Tooltip("Góc bù chém 1: Tay trái (attacktaytrai)")]
-    public float slash1Offset = 0f;
-    [Tooltip("Góc bù chém 2: Tay phải (attacktayphai)")]
-    public float slash2Offset = 0f;
-    [Tooltip("Góc bù chém 3: Song kiếm đòn 1 (Slash1Combo2)")]
-    public float slash3Offset = 0f;
-    [Tooltip("Góc bù chém 4: Song kiếm đòn 2 (Slash2combo2)")]
-    public float slash4Offset = 0f;
-    [Tooltip("Góc bù chém 5: Song kiếm đòn 3 (Slash3combo2)")]
-    public float slash5Offset = 0f;
+    // Offset xoay xương đã bị xóa hoàn toàn. Góc quay được điều khiển thuần túy bởi camera.
 
     [Header("Sword Combo Durations (New FBX Anim clips)")]
     public float attacktaytraiDuration = 0.5f;
@@ -4063,11 +4018,9 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     {
         int weapon = GetActiveWeaponIndex();
 
-        if (isStandaloneMode || IsOwner)
-        {
-            bool isMovingInput = Mathf.Abs(Input.GetAxisRaw("Horizontal")) > 0.1f || Mathf.Abs(Input.GetAxisRaw("Vertical")) > 0.1f;
-            isRootedAttack = !isMovingInput;
-        }
+        // Di chuyển tự do khi đấm/chém - không bao giờ khóa movement
+        isRootedAttack = false;
+        SetMovementLock(false);
 
         attackAnimStartTime = Time.time;
         isExecutingAttack = true;
@@ -4075,9 +4028,6 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         alreadyHitEnemies.Clear();
         DisableAllHitboxes();
-
-        if (isRootedAttack) SetMovementLock(true);
-        else SetMovementLock(false);
 
         string animToPlay;
         if (weapon == 2)
@@ -5255,6 +5205,24 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     public void UpdateStateFromHUD(int weaponIndex, bool weapon2Locked, bool skillsUnlocked)
     {
+        if (isStandaloneMode)
+        {
+            localActiveWeaponIndex = weaponIndex;
+            localWeapon2Locked = weapon2Locked;
+            localSkillsUnlocked = skillsUnlocked;
+
+            int oldWeapon = GetActiveWeaponIndex();
+            PlayerHUDController hud = FindAnyObjectByType<PlayerHUDController>();
+            if (hud != null)
+            {
+                hud.currentSelectedWeapon = weaponIndex;
+                hud.SetWeapon2Locked(weapon2Locked, true);
+                hud.SetSkillsUnlocked(skillsUnlocked, true);
+            }
+            PlayWeaponSwitchAnimation(oldWeapon, weaponIndex);
+            return;
+        }
+
         if (!IsSpawned || !IsOwner) return;
         UpdateStateServerRpc(weaponIndex, weapon2Locked, skillsUnlocked);
     }
@@ -5270,25 +5238,52 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     public async void SavePlayerStateToDatabase()
     {
-        if (!IsSpawned || !IsOwner) return;
+        if (!isStandaloneMode && (!IsSpawned || !IsOwner)) return;
 
         Debug.Log("[LeoPlayer DB] Saving character state to MongoDB...");
         try
         {
+            bool weapon2LockedVal = isWeapon2Locked.Value;
+            bool skillsUnlockedVal = isSkillsUnlocked.Value;
+            int weaponIndexVal = activeWeaponIndex.Value;
+            int upgradePtsVal = upgradePoints.Value;
+            int hpLvVal = hpLevel.Value;
+            int mpLvVal = mpLevel.Value;
+            int cdLvVal = cooldownLevel.Value;
+            int dmgLvVal = damageLevel.Value;
+            int plLvVal = playerLevel.Value;
+            float plExpVal = playerExp.Value;
+            float hpVal = CurrentHealth;
+
+            if (isStandaloneMode)
+            {
+                upgradePtsVal = localUpgradePoints;
+                hpLvVal = localHpLevel;
+                mpLvVal = localMpLevel;
+                cdLvVal = localCooldownLevel;
+                dmgLvVal = localDamageLevel;
+                plLvVal = localLevel;
+                plExpVal = localExp;
+                hpVal = localHealth;
+                weapon2LockedVal = localWeapon2Locked;
+                skillsUnlockedVal = localSkillsUnlocked;
+                weaponIndexVal = localActiveWeaponIndex;
+            }
+
             var stateData = new PlayerStateData
             {
-                health = CurrentHealth,
-                activeWeaponIndex = activeWeaponIndex.Value,
-                isWeapon2Locked = isWeapon2Locked.Value,
-                isSkillsUnlocked = isSkillsUnlocked.Value,
+                health = hpVal,
+                activeWeaponIndex = weaponIndexVal,
+                isWeapon2Locked = weapon2LockedVal,
+                isSkillsUnlocked = skillsUnlockedVal,
                 inventorySlots = inventorySlots,
-                upgradePoints = upgradePoints.Value,
-                hpLevel = hpLevel.Value,
-                mpLevel = mpLevel.Value,
-                cooldownLevel = cooldownLevel.Value,
-                damageLevel = damageLevel.Value,
-                playerLevel = playerLevel.Value,
-                playerExp = playerExp.Value
+                upgradePoints = upgradePtsVal,
+                hpLevel = hpLvVal,
+                mpLevel = mpLvVal,
+                cooldownLevel = cdLvVal,
+                damageLevel = dmgLvVal,
+                playerLevel = plLvVal,
+                playerExp = plExpVal
             };
 
             var res = await AuthService.SavePlayerState(stateData);
@@ -5320,21 +5315,37 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
                 var state = res.playerState;
                 isSyncingFromDb = true;
 
-                SyncNetVarInt(upgradePoints, proxyPlayerTest != null ? proxyPlayerTest.upgradePoints : null, state.upgradePoints);
-                SyncNetVarInt(hpLevel, proxyPlayerTest != null ? proxyPlayerTest.hpLevel : null, state.hpLevel);
-                SyncNetVarInt(mpLevel, proxyPlayerTest != null ? proxyPlayerTest.mpLevel : null, state.mpLevel);
-                SyncNetVarInt(cooldownLevel, proxyPlayerTest != null ? proxyPlayerTest.cooldownLevel : null, state.cooldownLevel);
-                SyncNetVarInt(damageLevel, proxyPlayerTest != null ? proxyPlayerTest.damageLevel : null, state.damageLevel);
-                SyncNetVarInt(playerLevel, proxyPlayerTest != null ? proxyPlayerTest.playerLevel : null, state.playerLevel);
-                SyncNetVarFloat(playerExp, proxyPlayerTest != null ? proxyPlayerTest.playerExp : null, state.playerExp);
+                if (isStandaloneMode)
+                {
+                    localUpgradePoints = state.upgradePoints;
+                    localHpLevel = state.hpLevel;
+                    localMpLevel = state.mpLevel;
+                    localCooldownLevel = state.cooldownLevel;
+                    localDamageLevel = state.damageLevel;
+                    localLevel = state.playerLevel;
+                    localExp = state.playerExp;
+                    localHealth = state.health;
+                    localWeapon2Locked = state.isWeapon2Locked;
+                    localSkillsUnlocked = state.isSkillsUnlocked;
+                    localActiveWeaponIndex = state.activeWeaponIndex;
+                }
+                else
+                {
+                    SyncNetVarInt(upgradePoints, proxyPlayerTest != null ? proxyPlayerTest.upgradePoints : null, state.upgradePoints);
+                    SyncNetVarInt(hpLevel, proxyPlayerTest != null ? proxyPlayerTest.hpLevel : null, state.hpLevel);
+                    SyncNetVarInt(mpLevel, proxyPlayerTest != null ? proxyPlayerTest.mpLevel : null, state.mpLevel);
+                    SyncNetVarInt(cooldownLevel, proxyPlayerTest != null ? proxyPlayerTest.cooldownLevel : null, state.cooldownLevel);
+                    SyncNetVarInt(damageLevel, proxyPlayerTest != null ? proxyPlayerTest.damageLevel : null, state.damageLevel);
+                    SyncNetVarInt(playerLevel, proxyPlayerTest != null ? proxyPlayerTest.playerLevel : null, state.playerLevel);
+                    SyncNetVarFloat(playerExp, proxyPlayerTest != null ? proxyPlayerTest.playerExp : null, state.playerExp);
+                    SyncNetVarFloat(currentHealth, proxyPlayerTest != null ? proxyPlayerTest.currentHealth : null, state.health);
+                    SyncNetVarInt(activeWeaponIndex, proxyPlayerTest != null ? proxyPlayerTest.activeWeaponIndex : null, state.activeWeaponIndex);
+                    SyncNetVarBool(isWeapon2Locked, proxyPlayerTest != null ? proxyPlayerTest.isWeapon2Locked : null, state.isWeapon2Locked);
+                    SyncNetVarBool(isSkillsUnlocked, proxyPlayerTest != null ? proxyPlayerTest.isSkillsUnlocked : null, state.isSkillsUnlocked);
+                }
 
                 maxHealth = 85f + state.hpLevel * 20f;
                 damageAmount = 25f + state.damageLevel * 5f;
-
-                SyncNetVarFloat(currentHealth, proxyPlayerTest != null ? proxyPlayerTest.currentHealth : null, state.health);
-                SyncNetVarInt(activeWeaponIndex, proxyPlayerTest != null ? proxyPlayerTest.activeWeaponIndex : null, state.activeWeaponIndex);
-                SyncNetVarBool(isWeapon2Locked, proxyPlayerTest != null ? proxyPlayerTest.isWeapon2Locked : null, true);
-                SyncNetVarBool(isSkillsUnlocked, proxyPlayerTest != null ? proxyPlayerTest.isSkillsUnlocked : null, false);
 
                 isSyncingFromDb = false;
 
@@ -5350,8 +5361,8 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
                 if (hud != null)
                 {
                     hud.SetInventorySlots(inventorySlots);
-                    hud.SetSkillsUnlocked(false, false);
-                    hud.SetWeapon2Locked(true, false);
+                    hud.SetSkillsUnlocked(state.isSkillsUnlocked, false);
+                    hud.SetWeapon2Locked(state.isWeapon2Locked, false);
                     hud.SelectWeapon(state.activeWeaponIndex);
                     hud.UpdateUpgradeUI(state.upgradePoints, state.hpLevel, state.mpLevel, state.cooldownLevel, state.damageLevel);
                     hud.SetHealth(state.health / (85f + state.hpLevel * 20f));
@@ -5362,17 +5373,34 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             }
             else
             {
-                SyncNetVarFloat(currentHealth, proxyPlayerTest != null ? proxyPlayerTest.currentHealth : null, maxHealth);
-                SyncNetVarInt(activeWeaponIndex, proxyPlayerTest != null ? proxyPlayerTest.activeWeaponIndex : null, 1);
-                SyncNetVarBool(isWeapon2Locked, proxyPlayerTest != null ? proxyPlayerTest.isWeapon2Locked : null, true);
-                SyncNetVarBool(isSkillsUnlocked, proxyPlayerTest != null ? proxyPlayerTest.isSkillsUnlocked : null, false);
-                SyncNetVarInt(upgradePoints, proxyPlayerTest != null ? proxyPlayerTest.upgradePoints : null, 0);
-                SyncNetVarInt(hpLevel, proxyPlayerTest != null ? proxyPlayerTest.hpLevel : null, 0);
-                SyncNetVarInt(mpLevel, proxyPlayerTest != null ? proxyPlayerTest.mpLevel : null, 0);
-                SyncNetVarInt(cooldownLevel, proxyPlayerTest != null ? proxyPlayerTest.cooldownLevel : null, 0);
-                SyncNetVarInt(damageLevel, proxyPlayerTest != null ? proxyPlayerTest.damageLevel : null, 0);
-                SyncNetVarInt(playerLevel, proxyPlayerTest != null ? proxyPlayerTest.playerLevel : null, 0);
-                SyncNetVarFloat(playerExp, proxyPlayerTest != null ? proxyPlayerTest.playerExp : null, 0f);
+                if (isStandaloneMode)
+                {
+                    localHealth = maxHealth;
+                    localActiveWeaponIndex = 1;
+                    localWeapon2Locked = true;
+                    localSkillsUnlocked = false;
+                    localUpgradePoints = 0;
+                    localHpLevel = 0;
+                    localMpLevel = 0;
+                    localCooldownLevel = 0;
+                    localDamageLevel = 0;
+                    localLevel = 0;
+                    localExp = 0f;
+                }
+                else
+                {
+                    SyncNetVarFloat(currentHealth, proxyPlayerTest != null ? proxyPlayerTest.currentHealth : null, maxHealth);
+                    SyncNetVarInt(activeWeaponIndex, proxyPlayerTest != null ? proxyPlayerTest.activeWeaponIndex : null, 1);
+                    SyncNetVarBool(isWeapon2Locked, proxyPlayerTest != null ? proxyPlayerTest.isWeapon2Locked : null, true);
+                    SyncNetVarBool(isSkillsUnlocked, proxyPlayerTest != null ? proxyPlayerTest.isSkillsUnlocked : null, false);
+                    SyncNetVarInt(upgradePoints, proxyPlayerTest != null ? proxyPlayerTest.upgradePoints : null, 0);
+                    SyncNetVarInt(hpLevel, proxyPlayerTest != null ? proxyPlayerTest.hpLevel : null, 0);
+                    SyncNetVarInt(mpLevel, proxyPlayerTest != null ? proxyPlayerTest.mpLevel : null, 0);
+                    SyncNetVarInt(cooldownLevel, proxyPlayerTest != null ? proxyPlayerTest.cooldownLevel : null, 0);
+                    SyncNetVarInt(damageLevel, proxyPlayerTest != null ? proxyPlayerTest.damageLevel : null, 0);
+                    SyncNetVarInt(playerLevel, proxyPlayerTest != null ? proxyPlayerTest.playerLevel : null, 0);
+                    SyncNetVarFloat(playerExp, proxyPlayerTest != null ? proxyPlayerTest.playerExp : null, 0f);
+                }
                 SavePlayerStateToDatabase();
             }
         }
@@ -5497,56 +5525,138 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         if (newWeapon == 2)
         {
+            // Bước 1: Hiện kiếm trên vai, ẩn kiếm trên tay (chuẩn bị rút)
             if (leftShoulderSword != null) leftShoulderSword.SetActive(true);
             if (rightShoulderSword != null) rightShoulderSword.SetActive(true);
             if (leftHandSword != null) leftHandSword.SetActive(false);
             if (rightHandSword != null) rightHandSword.SetActive(false);
 
-            if (!string.IsNullOrEmpty(drawLeftTrigger))
-            {
-                PlayAnimationLocal(drawLeftTrigger, 0.1f);
-            }
-            else if (!string.IsNullOrEmpty(drawWeaponTrigger))
-            {
-                PlayAnimationLocal(drawWeaponTrigger, 0.1f);
-            }
-            else
-            {
-                SyncWeaponVisuals(newWeapon);
-                OnWeaponSwitchEnd();
-            }
+            // Dùng Coroutine để rút 2 kiếm tuần tự, đảm bảo cả hai đều được rút ra
+            StartCoroutine(DrawBothSwordsSequence());
         }
         else if (newWeapon == 1)
         {
+            // Bước 1: Hiện kiếm trên tay, ẩn kiếm trên vai (chuẩn bị cất)
             if (leftHandSword != null) leftHandSword.SetActive(true);
             if (rightHandSword != null) rightHandSword.SetActive(true);
             if (leftShoulderSword != null) leftShoulderSword.SetActive(false);
             if (rightShoulderSword != null) rightShoulderSword.SetActive(false);
 
-            if (!string.IsNullOrEmpty(sheatheLeftTrigger))
+            // Dùng Coroutine để cất 2 kiếm tuần tự
+            StartCoroutine(SheatheBothSwordsSequence());
+        }
+    }
+
+    private System.Collections.IEnumerator DrawBothSwordsSequence()
+    {
+        // Bước 1: Chơi animation Rút Kiếm Trái
+        if (!string.IsNullOrEmpty(drawLeftTrigger) && anim != null && anim.isActiveAndEnabled)
+        {
+            PlayAnimation(drawLeftTrigger, 0.1f);
+
+            // Đợi cho animation DrawLeft chạy xong
+            float drawLeftDuration = GetAnimationClipLength(drawLeftTrigger);
+            if (drawLeftDuration <= 0f) drawLeftDuration = 0.8f; // fallback
+            yield return new WaitForSeconds(drawLeftDuration * 0.85f);
+
+            // Kiếm trái xuất hiện trên tay
+            DrawLeftSword();
+        }
+        else
+        {
+            DrawLeftSword();
+        }
+
+        // Bước 2: Chơi animation Rút Kiếm Phải
+        if (!string.IsNullOrEmpty(drawRightTrigger) && anim != null && anim.isActiveAndEnabled)
+        {
+            PlayAnimation(drawRightTrigger, 0.1f);
+
+            float drawRightDuration = GetAnimationClipLength(drawRightTrigger);
+            if (drawRightDuration <= 0f) drawRightDuration = 0.8f;
+            yield return new WaitForSeconds(drawRightDuration * 0.85f);
+
+            // Kiếm phải xuất hiện trên tay
+            DrawRightSword();
+        }
+        else
+        {
+            DrawRightSword();
+        }
+
+        // Hàn thành: Đảm bảo cả 2 kiếm đều được hiển thị đúng
+        SyncWeaponVisuals(2);
+        OnWeaponSwitchEnd();
+    }
+
+    private System.Collections.IEnumerator SheatheBothSwordsSequence()
+    {
+        // Bước 1: Cất kiếm trái
+        if (!string.IsNullOrEmpty(sheatheLeftTrigger) && anim != null && anim.isActiveAndEnabled)
+        {
+            PlayAnimation(sheatheLeftTrigger, 0.1f);
+
+            float duration = GetAnimationClipLength(sheatheLeftTrigger);
+            if (duration <= 0f) duration = 0.8f;
+            yield return new WaitForSeconds(duration * 0.85f);
+
+            SheatheLeftSword();
+        }
+        else
+        {
+            SheatheLeftSword();
+        }
+
+        // Bước 2: Cất kiếm phải
+        if (!string.IsNullOrEmpty(sheatheRightTrigger) && anim != null && anim.isActiveAndEnabled)
+        {
+            PlayAnimation(sheatheRightTrigger, 0.1f);
+
+            float duration = GetAnimationClipLength(sheatheRightTrigger);
+            if (duration <= 0f) duration = 0.8f;
+            yield return new WaitForSeconds(duration * 0.85f);
+
+            SheatheRightSword();
+        }
+        else
+        {
+            SheatheRightSword();
+        }
+
+        // Hàn thành
+        SyncWeaponVisuals(1);
+        OnWeaponSwitchEnd();
+    }
+
+    /// <summary>
+    /// Lấy thời lượng (giây) của animation clip theo tên trigger trong Animator.
+    /// Nếu không tìm thấy, trả về 0.
+    /// </summary>
+    private float GetAnimationClipLength(string triggerName)
+    {
+        if (anim == null || anim.runtimeAnimatorController == null) return 0f;
+        foreach (var clip in anim.runtimeAnimatorController.animationClips)
+        {
+            if (clip != null && clip.name == triggerName)
             {
-                PlayAnimationLocal(sheatheLeftTrigger, 0.1f);
-            }
-            else if (!string.IsNullOrEmpty(sheathWeaponTrigger))
-            {
-                PlayAnimationLocal(sheathWeaponTrigger, 0.1f);
-            }
-            else
-            {
-                SyncWeaponVisuals(newWeapon);
-                OnWeaponSwitchEnd();
+                return clip.length;
             }
         }
+        return 0f;
     }
 
     public void OnDrawLeftEnd()
     {
-        Debug.Log("[LeoPlayer] Draw Left finished. Letting Animator transition natively to Draw Right.");
+        // Không phụ thuộc Animator native transition nữa.
+        // Coroutine DrawBothSwordsSequence tự quản lý luồng rút kiếm.
+        Debug.Log("[LeoPlayer] OnDrawLeftEnd (Animation Event) - Coroutine đang xử lý DrawRight.");
     }
 
     public void OnSheatheLeftEnd()
     {
-        Debug.Log("[LeoPlayer] Sheathe Left finished. Letting Animator transition natively to Sheathe Right.");
+        // Không phụ thuộc Animator native transition nữa.
+        // Coroutine SheatheBothSwordsSequence tự quản lý luồng cất kiếm.
+        Debug.Log("[LeoPlayer] OnSheatheLeftEnd (Animation Event) - Coroutine đang xử lý SheatheRight.");
     }
 
     public void DrawLeftSword()
@@ -5674,7 +5784,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         {
             if (IsServer)
             {
-                PlayAnimationClientRpc(animName, fadeTime, alreadyPlayedLocally, isRooted);
+                PlayAnimationClientRpc(animName, fadeTime, alreadyPlayedLocally || IsOwner, isRooted);
             }
             else if (IsOwner)
             {

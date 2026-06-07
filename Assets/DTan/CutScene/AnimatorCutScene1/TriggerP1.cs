@@ -25,4 +25,8 @@ public class P1 : MonoBehaviour
     {
         animator.SetTrigger("LookBehide");
     }
+    public void TriggerGiveGem()
+    {
+        animator.SetTrigger("GiveGem");
+    }
 }
