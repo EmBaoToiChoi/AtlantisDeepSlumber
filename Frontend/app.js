@@ -1,25 +1,36 @@
 // ATLANTIS DATABASE CONTROL PANEL - CORE LOGIC
 
 // Configuration State
-let API_URL = 'http://localhost:3000';
-let ADMIN_SECRET = '';
+let API_URL = 'http://165.99.14.40:3000'; // Mặc định chạy IP VPS
+let ADMIN_TOKEN = '';
+let ADMIN_USER = null; // { username, displayName, role }
 let activeTab = 'tab-overview';
 let cachedUsers = [];
 let cachedRooms = [];
+let cachedLogs = [];
+let cachedAdmins = [];
 
 // DOM Elements
 const gateOverlay = document.getElementById('gateOverlay');
 const dashboard = document.getElementById('dashboard');
 const inputBackendUrl = document.getElementById('backendUrl');
-const inputAdminSecret = document.getElementById('adminSecret');
+const inputAdminUsername = document.getElementById('adminUsername');
+const inputAdminPassword = document.getElementById('adminPassword');
 const btnConnect = document.getElementById('btnConnect');
 const btnLogout = document.getElementById('btnLogout');
 const btnRefresh = document.getElementById('btnRefresh');
 
+// Profile DOM Elements
+const txtAdminDisplayName = document.getElementById('txtAdminDisplayName');
+const txtAdminUsername = document.getElementById('txtAdminUsername');
+const txtAdminAvatar = document.getElementById('txtAdminAvatar');
+
+// Sidebar Tabs
 const navItems = document.querySelectorAll('.nav-item');
 const tabPanes = document.querySelectorAll('.tab-pane');
 const currentTabTitle = document.getElementById('currentTabTitle');
 const currentTabDesc = document.getElementById('currentTabDesc');
+const navAdminAccounts = document.getElementById('navAdminAccounts');
 
 // Stats Elements
 const statTotalUsers = document.getElementById('statTotalUsers');
@@ -38,7 +49,14 @@ const usersList = document.getElementById('usersList');
 // Room Elements
 const roomsList = document.getElementById('roomsList');
 
-// Modal Elements
+// Logs Elements
+const logsList = document.getElementById('logsList');
+const searchLogInput = document.getElementById('searchLog');
+
+// Admin Accounts Elements (Super Admin Only)
+const adminsList = document.getElementById('adminsList');
+
+// Modal Elements - User Edit
 const editModal = document.getElementById('editModal');
 const editForm = document.getElementById('editForm');
 const editUserId = document.getElementById('editUserId');
@@ -58,12 +76,36 @@ const inventoryGrid = document.getElementById('inventoryGrid');
 const btnCloseModal = document.getElementById('btnCloseModal');
 const btnCancelEdit = document.getElementById('btnCancelEdit');
 
+// Modal Elements - First Login
+const firstLoginModal = document.getElementById('firstLoginModal');
+const btnSubmitFirstLogin = document.getElementById('btnSubmitFirstLogin');
+const firstLoginNewPw = document.getElementById('firstLoginNewPw');
+const firstLoginPwGroup = document.getElementById('firstLoginPwGroup');
+
+// Modal Elements - Active Change Password
+const changePwModal = document.getElementById('changePwModal');
+const changePwForm = document.getElementById('changePwForm');
+const btnOpenChangePw = document.getElementById('btnOpenChangePw');
+const btnClosePwModal = document.getElementById('btnClosePwModal');
+const btnCancelChangePw = document.getElementById('btnCancelChangePw');
+const pwOld = document.getElementById('pwOld');
+const pwNew = document.getElementById('pwNew');
+const pwConfirm = document.getElementById('pwConfirm');
+
 // Toast Container
 const toastContainer = document.getElementById('toastContainer');
 
 // ─── INITIALIZATION ──────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
     initParticles();
+    
+    // Tự động điều chỉnh IP nếu ứng dụng chạy trên cùng cổng của VPS
+    if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+        API_URL = `${window.location.protocol}//${window.location.hostname}:3000`;
+        inputBackendUrl.value = API_URL;
+    } else {
+        API_URL = inputBackendUrl.value;
+    }
     loadSavedCredentials();
     setupEventListeners();
 });
@@ -77,7 +119,6 @@ function initParticles() {
         const particle = document.createElement('div');
         particle.classList.add('biolum-particle');
         
-        // Random size, position, and speed
         const size = Math.random() * 5 + 2;
         particle.style.width = `${size}px`;
         particle.style.height = `${size}px`;
@@ -92,95 +133,115 @@ function initParticles() {
 
 // Load credentials from LocalStorage
 function loadSavedCredentials() {
-    const savedUrl = localStorage.getItem('atlantis_api_url');
-    const savedSecret = localStorage.getItem('atlantis_admin_secret');
+    const savedToken = localStorage.getItem('atlantis_admin_token');
+    const savedUsername = localStorage.getItem('atlantis_admin_username');
+    const savedDisplayName = localStorage.getItem('atlantis_admin_displayname');
+    const savedRole = localStorage.getItem('atlantis_admin_role') || 'admin';
     
-    if (savedUrl) inputBackendUrl.value = savedUrl;
-    if (savedSecret) {
-        inputAdminSecret.value = savedSecret;
-        // Tự động kết nối thử
-        connectToBackend(savedUrl, savedSecret, true);
+    if (savedToken && savedUsername && savedDisplayName) {
+        ADMIN_TOKEN = savedToken;
+        ADMIN_USER = { username: savedUsername, displayName: savedDisplayName, role: savedRole };
+        
+        showDashboardUI();
+        fetchStats();
     }
 }
 
-// Connect & Validate credentials
-async function connectToBackend(url, secret, silent = false) {
+// Connect & Login
+async function loginAdmin(username, password) {
     btnConnect.disabled = true;
-    if (!silent) btnConnect.innerHTML = '<span>Đang xác thực...</span>';
+    btnConnect.innerHTML = '<span>Đang xác thực...</span>';
     
     try {
-        const cleanedUrl = url.replace(/\/$/, '');
-        const res = await fetch(`${cleanedUrl}/api/admin/stats`, {
+        const res = await fetch(`${API_URL}/api/admin/login`, {
+            method: 'POST',
             headers: {
-                'x-admin-secret': secret
-            }
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ username, password })
         });
         
+        const data = await res.json();
+        
         if (res.ok) {
-            const data = await res.json();
-            API_URL = cleanedUrl;
-            ADMIN_SECRET = secret;
+            ADMIN_TOKEN = data.token;
+            ADMIN_USER = { username: data.username, displayName: data.displayName, role: data.role };
             
             // Save to LocalStorage
-            localStorage.setItem('atlantis_api_url', cleanedUrl);
-            localStorage.setItem('atlantis_admin_secret', secret);
+            localStorage.setItem('atlantis_admin_token', data.token);
+            localStorage.setItem('atlantis_admin_username', data.username);
+            localStorage.setItem('atlantis_admin_displayname', data.displayName);
+            localStorage.setItem('atlantis_admin_role', data.role);
             
-            // UI Transition
-            gateOverlay.style.opacity = '0';
-            setTimeout(() => {
-                gateOverlay.style.display = 'none';
-                dashboard.style.display = 'grid';
-                // Trigger stats load immediately
-                updateStatsUI(data.stats);
-            }, 300);
+            showToast(`Chào mừng trở lại, ${data.displayName}!`, 'success');
             
-            if (!silent) showToast('Kết nối Database thành công!', 'success');
-            document.getElementById('txtConnectionState').textContent = 'Đã kết nối';
-            document.getElementById('txtConnectionState').parentElement.querySelector('.status-dot').className = 'status-dot online';
+            if (data.isFirstLogin) {
+                firstLoginModal.classList.add('show');
+            } else {
+                showDashboardUI();
+                fetchStats();
+            }
         } else {
-            const errData = await res.json().catch(() => ({}));
-            const msg = errData.message || 'Mã xác thực Admin không hợp lệ.';
-            if (!silent) showToast(msg, 'error');
-            localStorage.removeItem('atlantis_admin_secret');
-            document.getElementById('txtConnectionState').textContent = 'Mất kết nối';
-            document.getElementById('txtConnectionState').parentElement.querySelector('.status-dot').className = 'status-dot offline';
+            showToast(data.message || 'Tài khoản hoặc mật khẩu không chính xác.', 'error');
         }
     } catch (err) {
         console.error(err);
-        if (!silent) showToast('Không thể kết nối đến Backend Server. Hãy chắc chắn Server đã chạy và CORS được kích hoạt.', 'error');
-        document.getElementById('txtConnectionState').textContent = 'Lỗi kết nối';
-        document.getElementById('txtConnectionState').parentElement.querySelector('.status-dot').className = 'status-dot offline';
+        showToast('Không thể kết nối đến Backend Server. Hãy chắc chắn Server đã chạy và mở port 3000.', 'error');
     } finally {
         btnConnect.disabled = false;
-        btnConnect.innerHTML = '<span>Kích Hoạt Kết Nối</span>';
+        btnConnect.innerHTML = '<span>ĐĂNG NHẬP HỆ THỐNG</span>';
     }
+}
+
+function showDashboardUI() {
+    // Populate Admin info box with role
+    txtAdminDisplayName.textContent = ADMIN_USER.displayName;
+    const roleTitle = ADMIN_USER.role === 'superadmin' ? 'Super Admin' : 'Admin';
+    txtAdminUsername.textContent = `@${ADMIN_USER.username} (${roleTitle})`;
+    txtAdminAvatar.textContent = ADMIN_USER.displayName.charAt(0).toUpperCase();
+
+    // Toggle navigation tab for Admin Management based on permissions
+    if (ADMIN_USER.role === 'superadmin') {
+        navAdminAccounts.style.display = 'flex';
+    } else {
+        navAdminAccounts.style.display = 'none';
+    }
+
+    // UI Transition
+    gateOverlay.style.opacity = '0';
+    setTimeout(() => {
+        gateOverlay.style.display = 'none';
+        dashboard.style.display = 'grid';
+    }, 300);
+    
+    document.getElementById('txtConnectionState').textContent = 'Đã kết nối';
+    document.getElementById('txtConnectionState').parentElement.querySelector('.status-dot').className = 'status-dot online';
 }
 
 // ─── EVENTS SETUP ────────────────────────────────────────────────────────────
 function setupEventListeners() {
-    // Gate login button
     btnConnect.addEventListener('click', () => {
-        const url = inputBackendUrl.value.trim();
-        const secret = inputAdminSecret.value.trim();
-        if (!url || !secret) {
-            showToast('Vui lòng nhập đầy đủ thông tin!', 'info');
+        const username = inputAdminUsername.value.trim();
+        const password = inputAdminPassword.value.trim();
+        if (!username || !password) {
+            showToast('Vui lòng nhập đầy đủ tài khoản và mật khẩu!', 'info');
             return;
         }
-        connectToBackend(url, secret);
+        loginAdmin(username, password);
     });
     
-    // Allow enter key inside login form
-    inputAdminSecret.addEventListener('keypress', (e) => {
+    inputAdminPassword.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') btnConnect.click();
     });
 
-    // Logout button
     btnLogout.addEventListener('click', () => {
-        localStorage.removeItem('atlantis_admin_secret');
+        localStorage.removeItem('atlantis_admin_token');
+        localStorage.removeItem('atlantis_admin_username');
+        localStorage.removeItem('atlantis_admin_displayname');
+        localStorage.removeItem('atlantis_admin_role');
         location.reload();
     });
 
-    // Refresh button
     btnRefresh.addEventListener('click', () => {
         const icon = btnRefresh.querySelector('svg');
         icon.classList.add('spin');
@@ -189,7 +250,6 @@ function setupEventListeners() {
         });
     });
 
-    // Sidebar navigation tabs
     navItems.forEach(item => {
         item.addEventListener('click', () => {
             const target = item.getAttribute('data-tab');
@@ -197,26 +257,48 @@ function setupEventListeners() {
         });
     });
 
-    // User filters
     searchUserInput.addEventListener('input', applyUserFilters);
     filterVerifiedSelect.addEventListener('change', applyUserFilters);
+    searchLogInput.addEventListener('input', applyLogFilters);
 
-    // Modal Close operations
     btnCloseModal.addEventListener('click', closeModal);
     btnCancelEdit.addEventListener('click', closeModal);
     editModal.addEventListener('click', (e) => {
         if (e.target === editModal) closeModal();
     });
-
-    // Modal Form Submit
     editForm.addEventListener('submit', handleFormSubmit);
+
+    btnOpenChangePw.addEventListener('click', () => {
+        changePwModal.classList.add('show');
+    });
+    btnClosePwModal.addEventListener('click', closeChangePwModal);
+    btnCancelChangePw.addEventListener('click', closeChangePwModal);
+    changePwModal.addEventListener('click', (e) => {
+        if (e.target === changePwModal) closeChangePwModal();
+    });
+    changePwForm.addEventListener('submit', handleChangePwSubmit);
+
+    const firstLoginRadios = document.querySelectorAll('input[name="firstLoginChoice"]');
+    firstLoginRadios.forEach(radio => {
+        radio.addEventListener('change', () => {
+            if (radio.value === 'change') {
+                firstLoginPwGroup.style.display = 'block';
+                firstLoginNewPw.required = true;
+            } else {
+                firstLoginPwGroup.style.display = 'none';
+                firstLoginNewPw.required = false;
+                firstLoginNewPw.value = '';
+            }
+        });
+    });
+
+    btnSubmitFirstLogin.addEventListener('click', handleFirstLoginAction);
 }
 
 // ─── TAB NAVIGATION LOGIC ──────────────────────────────────────────────────
 function switchTab(tabId) {
     activeTab = tabId;
     
-    // Update Sidebar state
     navItems.forEach(btn => {
         if (btn.getAttribute('data-tab') === tabId) {
             btn.classList.add('active');
@@ -225,7 +307,6 @@ function switchTab(tabId) {
         }
     });
 
-    // Update Panes visibility
     tabPanes.forEach(pane => {
         if (pane.id === tabId) {
             pane.classList.add('active');
@@ -234,7 +315,6 @@ function switchTab(tabId) {
         }
     });
 
-    // Update Header Titles
     if (tabId === 'tab-overview') {
         currentTabTitle.textContent = 'Hệ thống điều khiển trung tâm';
         currentTabDesc.textContent = 'Thống kê trạng thái thời gian thực của cơ sở dữ liệu game.';
@@ -244,9 +324,14 @@ function switchTab(tabId) {
     } else if (tabId === 'tab-rooms') {
         currentTabTitle.textContent = 'Giám sát Phòng chơi (Lobby Monitor)';
         currentTabDesc.textContent = 'Danh sách các phòng chơi đang mở, đang hoạt động hoặc đã kết thúc.';
+    } else if (tabId === 'tab-logs') {
+        currentTabTitle.textContent = 'Nhật ký hoạt động Quản trị';
+        currentTabDesc.textContent = 'Lịch sử thay đổi hệ thống và dữ liệu game của các Admin.';
+    } else if (tabId === 'tab-admin-accounts') {
+        currentTabTitle.textContent = 'Cấu hình Quyền Quản trị viên';
+        currentTabDesc.textContent = 'Quản lý tài khoản quản trị hệ thống và quyền đặt lại mật khẩu.';
     }
 
-    // Load data
     loadTabContent(tabId);
 }
 
@@ -257,7 +342,19 @@ async function loadTabContent(tabId) {
         await fetchUsers();
     } else if (tabId === 'tab-rooms') {
         await fetchRooms();
+    } else if (tabId === 'tab-logs') {
+        await fetchLogs();
+    } else if (tabId === 'tab-admin-accounts') {
+        await fetchAdminAccounts();
     }
+}
+
+// Helper headers
+function getHeaders() {
+    return {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${ADMIN_TOKEN}`
+    };
 }
 
 // ─── API OPERATIONS ──────────────────────────────────────────────────────────
@@ -266,7 +363,7 @@ async function loadTabContent(tabId) {
 async function fetchStats() {
     try {
         const res = await fetch(`${API_URL}/api/admin/stats`, {
-            headers: { 'x-admin-secret': ADMIN_SECRET }
+            headers: getHeaders()
         });
         if (res.ok) {
             const data = await res.json();
@@ -276,7 +373,7 @@ async function fetchStats() {
         }
     } catch (err) {
         console.error(err);
-        showToast('Không thể kết nối đến máy chủ khi tải thống kê.', 'error');
+        showToast('Không thể tải thống kê. Phiên làm việc có thể đã hết hạn.', 'error');
     }
 }
 
@@ -295,7 +392,7 @@ async function fetchUsers() {
     usersList.innerHTML = `<tr><td colspan="7" class="loading-row">Đang truy vấn dữ liệu...</td></tr>`;
     try {
         const res = await fetch(`${API_URL}/api/admin/users`, {
-            headers: { 'x-admin-secret': ADMIN_SECRET }
+            headers: getHeaders()
         });
         if (res.ok) {
             const data = await res.json();
@@ -307,12 +404,10 @@ async function fetchUsers() {
         }
     } catch (err) {
         console.error(err);
-        showToast('Lỗi mạng khi tải danh sách người chơi.', 'error');
         usersList.innerHTML = `<tr><td colspan="7" class="loading-row error-row">Lỗi kết nối máy chủ.</td></tr>`;
     }
 }
 
-// Apply searches & filters to User list
 function applyUserFilters() {
     const query = searchUserInput.value.toLowerCase().trim();
     const filter = filterVerifiedSelect.value;
@@ -380,7 +475,7 @@ async function fetchRooms() {
     roomsList.innerHTML = `<tr><td colspan="8" class="loading-row">Đang tải danh sách phòng...</td></tr>`;
     try {
         const res = await fetch(`${API_URL}/api/admin/rooms`, {
-            headers: { 'x-admin-secret': ADMIN_SECRET }
+            headers: getHeaders()
         });
         if (res.ok) {
             const data = await res.json();
@@ -392,7 +487,6 @@ async function fetchRooms() {
         }
     } catch (err) {
         console.error(err);
-        showToast('Lỗi mạng khi tải danh sách phòng chơi.', 'error');
         roomsList.innerHTML = `<tr><td colspan="8" class="loading-row error-row">Lỗi kết nối máy chủ.</td></tr>`;
     }
 }
@@ -409,7 +503,6 @@ function renderRooms(rooms) {
             hour: '2-digit', minute: '2-digit', second: '2-digit'
         });
 
-        // Room status badge
         let statusBadge = '';
         if (room.status === 'waiting') {
             statusBadge = `<span class="badge badge-success">Đang chờ</span>`;
@@ -419,12 +512,10 @@ function renderRooms(rooms) {
             statusBadge = `<span class="badge badge-primary">${room.status}</span>`;
         }
 
-        // Room private state
         const privateBadge = room.isPrivate 
             ? `<span class="badge badge-danger">Khóa (Mật khẩu)</span>` 
             : `<span class="badge badge-primary">Công khai</span>`;
 
-        // Players badges list
         const playersListHtml = room.players.map(p => {
             const isHost = room.host && room.host._id === p.user;
             return `<span class="player-slot-badge ${isHost ? 'slot-host' : ''}" title="Slot ${p.slot}">
@@ -453,16 +544,174 @@ function renderRooms(rooms) {
     }).join('');
 }
 
-// ─── DELETE USER & ROOM ─────────────────────────────────────────────────────
+// Fetch Admin Logs List
+async function fetchLogs() {
+    logsList.innerHTML = `<tr><td colspan="5" class="loading-row">Đang tải lịch sử hoạt động...</td></tr>`;
+    try {
+        const res = await fetch(`${API_URL}/api/admin/logs`, {
+            headers: getHeaders()
+        });
+        if (res.ok) {
+            const data = await res.json();
+            cachedLogs = data.logs;
+            applyLogFilters();
+        } else {
+            showToast('Lỗi khi tải nhật ký hoạt động.', 'error');
+            logsList.innerHTML = `<tr><td colspan="5" class="loading-row error-row">Không thể tải dữ liệu.</td></tr>`;
+        }
+    } catch (err) {
+        console.error(err);
+        logsList.innerHTML = `<tr><td colspan="5" class="loading-row error-row">Lỗi kết nối máy chủ.</td></tr>`;
+    }
+}
+
+function applyLogFilters() {
+    const query = searchLogInput.value.toLowerCase().trim();
+    
+    const filtered = cachedLogs.filter(log => {
+        return log.adminDisplayName.toLowerCase().includes(query) ||
+               log.adminUsername.toLowerCase().includes(query) ||
+               log.action.toLowerCase().includes(query) ||
+               log.target.toLowerCase().includes(query) ||
+               log.details.toLowerCase().includes(query);
+    });
+
+    renderLogs(filtered);
+}
+
+function renderLogs(logs) {
+    if (logs.length === 0) {
+        logsList.innerHTML = `<tr><td colspan="5" class="loading-row">Không tìm thấy bản ghi hoạt động nào.</td></tr>`;
+        return;
+    }
+
+    logsList.innerHTML = logs.map(log => {
+        const timeStr = new Date(log.createdAt).toLocaleString('vi-VN', {
+            year: 'numeric', month: '2-digit', day: '2-digit',
+            hour: '2-digit', minute: '2-digit', second: '2-digit'
+        });
+
+        let badgeClass = 'badge-action-other';
+        if (log.action === 'Sửa chỉ số') badgeClass = 'badge-action-edit';
+        else if (log.action === 'Xóa tài khoản' || log.action === 'Giải tán phòng') badgeClass = 'badge-action-delete';
+        else if (log.action === 'Đổi mật khẩu') badgeClass = 'badge-action-pwd';
+        else if (log.action === 'Reset mật khẩu') badgeClass = 'badge-action-delete';
+
+        return `
+            <tr>
+                <td class="font-mono text-secondary" style="font-size:12px; white-space:nowrap;">${timeStr}</td>
+                <td>
+                    <div class="font-semibold">${escapeHTML(log.adminDisplayName)}</div>
+                    <div class="text-secondary text-sm font-mono" style="font-size:10px;">@${log.adminUsername}</div>
+                </td>
+                <td>
+                    <span class="badge-action ${badgeClass}">${escapeHTML(log.action)}</span>
+                </td>
+                <td class="font-semibold" style="font-size: 13px;">${escapeHTML(log.target)}</td>
+                <td class="text-secondary" style="font-size: 13px; line-height: 1.4;">${escapeHTML(log.details)}</td>
+            </tr>
+        `;
+    }).join('');
+}
+
+// Fetch Admin Accounts (Super Admin Only)
+async function fetchAdminAccounts() {
+    adminsList.innerHTML = `<tr><td colspan="6" class="loading-row">Đang truy vấn danh sách admin...</td></tr>`;
+    try {
+        const res = await fetch(`${API_URL}/api/admin/accounts`, {
+            headers: getHeaders()
+        });
+        
+        if (res.ok) {
+            const data = await res.json();
+            cachedAdmins = data.admins;
+            renderAdmins(cachedAdmins);
+        } else {
+            showToast('Không có quyền truy cập hoặc lỗi khi lấy danh sách Admin.', 'error');
+            adminsList.innerHTML = `<tr><td colspan="6" class="loading-row error-row">Lỗi tải dữ liệu.</td></tr>`;
+        }
+    } catch (err) {
+        console.error(err);
+        adminsList.innerHTML = `<tr><td colspan="6" class="loading-row error-row">Lỗi kết nối máy chủ.</td></tr>`;
+    }
+}
+
+function renderAdmins(admins) {
+    if (admins.length === 0) {
+        adminsList.innerHTML = `<tr><td colspan="6" class="loading-row">Không tìm thấy tài khoản quản trị.</td></tr>`;
+        return;
+    }
+
+    adminsList.innerHTML = admins.map(adm => {
+        const regDate = new Date(adm.createdAt || Date.now()).toLocaleDateString('vi-VN', {
+            year: 'numeric', month: 'short', day: 'numeric'
+        });
+
+        const roleBadge = adm.role === 'superadmin'
+            ? `<span class="badge badge-role-superadmin">Super Admin</span>`
+            : `<span class="badge badge-role-admin">Admin</span>`;
+
+        const statusBadge = adm.isFirstLogin
+            ? `<span class="badge badge-warning">Mật khẩu mặc định</span>`
+            : `<span class="badge badge-success">Hoạt động tốt</span>`;
+
+        // Don't allow self-reset
+        const isSelf = ADMIN_USER.username === adm.username;
+        const actionBtn = isSelf 
+            ? `<span class="text-secondary text-sm font-mono">Tài khoản hiện tại</span>`
+            : `<button class="btn-danger" onclick="resetAdminPassword('${adm._id}', '${escapeHTML(adm.username)}')">Reset mật khẩu</button>`;
+
+        return `
+            <tr>
+                <td class="font-mono font-semibold text-highlight">@${escapeHTML(adm.username)}</td>
+                <td class="font-semibold">${escapeHTML(adm.displayName)}</td>
+                <td>${roleBadge}</td>
+                <td>${statusBadge}</td>
+                <td class="font-mono text-secondary">${regDate}</td>
+                <td class="actions">
+                    ${actionBtn}
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+// Reset password for an admin (Super Admin Only)
+async function resetAdminPassword(adminId, username) {
+    if (!confirm(`Cảnh báo quản trị!\nBạn có chắc chắn muốn đặt lại mật khẩu của quản trị viên @${username} về mặc định "123456"?\nHọ sẽ được yêu cầu đổi mật khẩu lại ở lần đăng nhập tiếp theo.`)) {
+        return;
+    }
+
+    try {
+        const res = await fetch(`${API_URL}/api/admin/accounts/${adminId}/reset-password`, {
+            method: 'POST',
+            headers: getHeaders()
+        });
+
+        const data = await res.json();
+        
+        if (res.ok) {
+            showToast(data.message, 'success');
+            fetchAdminAccounts(); // refresh list
+        } else {
+            showToast(data.message || 'Lỗi khi reset mật khẩu.', 'error');
+        }
+    } catch (err) {
+        console.error(err);
+        showToast('Lỗi kết nối máy chủ.', 'error');
+    }
+}
+
+// ─── DELETE OPERATIONS ───────────────────────────────────────────────────────
 async function deleteUser(userId, displayName) {
-    if (!confirm(`Cảnh báo nguy hiểm!\nBạn có chắc chắn muốn XÓA VĨNH VIỄN tài khoản người chơi: ${displayName}?\nTất cả dữ liệu game sẽ bị mất.`)) {
+    if (!confirm(`Cảnh báo nguy hiểm!\nBạn có chắc chắn muốn XÓA VĨNH VIỄN tài khoản người chơi: ${displayName}?\nHành động này sẽ được ghi vào nhật ký hệ thống.`)) {
         return;
     }
 
     try {
         const res = await fetch(`${API_URL}/api/admin/users/${userId}`, {
             method: 'DELETE',
-            headers: { 'x-admin-secret': ADMIN_SECRET }
+            headers: getHeaders()
         });
 
         if (res.ok) {
@@ -486,7 +735,7 @@ async function deleteRoom(roomId) {
     try {
         const res = await fetch(`${API_URL}/api/admin/rooms/${roomId}`, {
             method: 'DELETE',
-            headers: { 'x-admin-secret': ADMIN_SECRET }
+            headers: getHeaders()
         });
 
         if (res.ok) {
@@ -502,16 +751,102 @@ async function deleteRoom(roomId) {
     }
 }
 
-// ─── PLAYER STATE EDITOR MODAL ────────────────────────────────────────────────
+// ─── FIRST LOGIN FLOW ────────────────────────────────────────────────────────
+async function handleFirstLoginAction() {
+    const choice = document.querySelector('input[name="firstLoginChoice"]:checked').value;
+    const newPw = firstLoginNewPw.value.trim();
+    
+    if (choice === 'change') {
+        if (!newPw || newPw.length < 6) {
+            showToast('Mật khẩu mới phải có ít nhất 6 ký tự!', 'info');
+            return;
+        }
+    }
 
-// Open Modal and Populate Form
+    btnSubmitFirstLogin.disabled = true;
+    btnSubmitFirstLogin.textContent = 'Đang xử lý...';
+
+    try {
+        const res = await fetch(`${API_URL}/api/admin/first-login-action`, {
+            method: 'POST',
+            headers: getHeaders(),
+            body: JSON.stringify({
+                actionType: choice,
+                newPassword: choice === 'change' ? newPw : null
+            })
+        });
+
+        if (res.ok) {
+            showToast(choice === 'change' ? 'Đổi mật khẩu thành công!' : 'Đã bỏ qua đổi mật khẩu lần đầu.', 'success');
+            firstLoginModal.classList.remove('show');
+            showDashboardUI();
+            fetchStats();
+        } else {
+            const data = await res.json().catch(() => ({}));
+            showToast(data.message || 'Lỗi khi xử lý thao tác lần đầu.', 'error');
+        }
+    } catch (err) {
+        console.error(err);
+        showToast('Lỗi kết nối máy chủ.', 'error');
+    } finally {
+        btnSubmitFirstLogin.disabled = false;
+        btnSubmitFirstLogin.textContent = 'Xác nhận lựa chọn';
+    }
+}
+
+// ─── ACTIVE CHANGE PASSWORD ──────────────────────────────────────────────────
+function closeChangePwModal() {
+    changePwModal.classList.remove('show');
+    changePwForm.reset();
+}
+
+async function handleChangePwSubmit(e) {
+    e.preventDefault();
+    
+    const oldVal = pwOld.value.trim();
+    const newVal = pwNew.value.trim();
+    const confirmVal = pwConfirm.value.trim();
+
+    if (newVal.length < 6) {
+        showToast('Mật khẩu mới phải dài tối thiểu 6 ký tự!', 'info');
+        return;
+    }
+    if (newVal !== confirmVal) {
+        showToast('Mật khẩu mới nhập lại không khớp!', 'info');
+        return;
+    }
+
+    try {
+        const res = await fetch(`${API_URL}/api/admin/change-password`, {
+            method: 'POST',
+            headers: getHeaders(),
+            body: JSON.stringify({
+                oldPassword: oldVal,
+                newPassword: newVal
+            })
+        });
+
+        const data = await res.json();
+        
+        if (res.ok) {
+            showToast('Đổi mật khẩu quản trị viên thành công!', 'success');
+            closeChangePwModal();
+        } else {
+            showToast(data.message || 'Đổi mật khẩu thất bại.', 'error');
+        }
+    } catch (err) {
+        console.error(err);
+        showToast('Lỗi mạng khi cập nhật mật khẩu.', 'error');
+    }
+}
+
+// ─── PLAYER STATE EDITOR MODAL ────────────────────────────────────────────────
 function openEditModal(userId) {
     const user = cachedUsers.find(u => u._id === userId);
     if (!user) return;
 
     const state = user.playerState || {};
     
-    // Fill Form Values
     editUserId.value = user._id;
     editDisplayName.value = user.displayName;
     editEmail.value = user.email;
@@ -528,7 +863,6 @@ function openEditModal(userId) {
     editCooldownLevel.value = state.cooldownLevel || 0;
     editDamageLevel.value = state.damageLevel || 0;
 
-    // Build Inventory Slots (10 items)
     const inventory = state.inventorySlots || ["", "", "", "", "", "", "", "", "", ""];
     inventoryGrid.innerHTML = '';
     
@@ -543,7 +877,6 @@ function openEditModal(userId) {
         inventoryGrid.appendChild(itemSlot);
     }
 
-    // Show Modal
     editModal.classList.add('show');
 }
 
@@ -551,7 +884,6 @@ function closeModal() {
     editModal.classList.remove('show');
 }
 
-// Handle Form Submit (Save modifications)
 async function handleFormSubmit(e) {
     e.preventDefault();
     
@@ -560,7 +892,6 @@ async function handleFormSubmit(e) {
     const email = editEmail.value.trim();
     const isVerified = editIsVerified.checked;
 
-    // Construct inventory array from inputs
     const inventoryInputs = document.querySelectorAll('.inventory-slot-input');
     const inventorySlots = Array(10).fill("");
     inventoryInputs.forEach(input => {
@@ -568,7 +899,6 @@ async function handleFormSubmit(e) {
         inventorySlots[idx] = input.value.trim();
     });
 
-    // Construct request body
     const reqBody = {
         displayName,
         email,
@@ -590,17 +920,14 @@ async function handleFormSubmit(e) {
     try {
         const res = await fetch(`${API_URL}/api/admin/users/${userId}`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'x-admin-secret': ADMIN_SECRET
-            },
+            headers: getHeaders(),
             body: JSON.stringify(reqBody)
         });
 
         if (res.ok) {
             showToast('Đã lưu các thay đổi chỉ số thành công!', 'success');
             closeModal();
-            fetchUsers(); // reload table
+            fetchUsers();
         } else {
             const data = await res.json().catch(() => ({}));
             showToast(data.message || 'Lỗi khi cập nhật chỉ số người chơi.', 'error');
@@ -635,13 +962,11 @@ function showToast(message, type = 'info') {
 
     toastContainer.appendChild(toast);
 
-    // Click to close
     const closeBtn = toast.querySelector('.toast-close');
     closeBtn.addEventListener('click', () => {
         removeToast(toast);
     });
 
-    // Auto close
     setTimeout(() => {
         removeToast(toast);
     }, 4000);
@@ -671,7 +996,8 @@ function escapeHTML(str) {
     );
 }
 
-// Attach functions to window for onclick triggers in string templates
+// Attach functions to window
 window.openEditModal = openEditModal;
 window.deleteUser = deleteUser;
 window.deleteRoom = deleteRoom;
+window.resetAdminPassword = resetAdminPassword;
