@@ -106,21 +106,34 @@ public class CrystalCore : NetworkBehaviour
     public void PerformPickup(ulong playerId)
     {
         if (!IsServer) return;
+        
+        // 1. Tắt va chạm của viên ngọc
         var col = GetComponent<Collider>();
         if (col != null) col.enabled = false; 
+
+        // 2. Thiết lập quyền sở hữu
         GetComponent<NetworkObject>().ChangeOwnership(playerId);
         holderId.Value = playerId; 
+
+        // 3. Tắt vật lý để không bị "đẩy" nhân vật
+        rb.isKinematic = true; 
+        rb.useGravity = false;
     }
 
     public void PerformDrop()
     {
         if (!IsServer) return;
-        isSnapping.Value = false; // Ngắt trạng thái bay nếu đang bay
+        isSnapping.Value = false;
+        
+        // Bật lại Collider
         var col = GetComponent<Collider>();
-        if (col != null) col.enabled = true;
+        if (col != null) col.enabled = true; 
+        
         var netObj = GetComponent<NetworkObject>();
         if (netObj.OwnerClientId != NetworkManager.ServerClientId) netObj.RemoveOwnership();
         holderId.Value = ulong.MaxValue; 
+        
+        // Bật lại vật lý để nó rơi xuống đất
         rb.isKinematic = false;
         rb.useGravity = true;
     }
@@ -131,6 +144,8 @@ public class CrystalCore : NetworkBehaviour
         {
             isSnapping.Value = false;
             isSnapped.Value = true;
+            var col = GetComponent<Collider>();
+            if (col != null) col.enabled = false;
             holderId.Value = ulong.MaxValue; 
             rb.isKinematic = true; 
             rb.useGravity = false;
