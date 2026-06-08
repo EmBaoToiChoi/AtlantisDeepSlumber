@@ -2,8 +2,9 @@ using UnityEngine;
 
 public class LeoAssassin : SimplePlayerTest
 {
-    private void Awake()
+    protected override void Awake()
     {
+        base.Awake();
         characterClassIndex = 0; // Leo Assassin
         maxHealth = 85f;
         moveSpeed = 3.5f;
