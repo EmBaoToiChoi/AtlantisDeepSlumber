@@ -73,11 +73,9 @@ public class OptimizedNetworkMiniGame : NetworkBehaviour
     {
         if (currentStationIndex == index && progressFill != null)
         {
-            if (!isPlaying || Mathf.Abs(localPredictedValue - serverValue) > 2f)
-            {
-                localPredictedValue = serverValue;
-                progressFill.style.width = new Length(serverValue, LengthUnit.Percent);
-            }
+            // Gán trực tiếp giá trị từ Server để Client luôn hiển thị đúng 100% so với Server
+            localPredictedValue = serverValue; 
+            progressFill.style.width = new Length(localPredictedValue, LengthUnit.Percent);
         }
     }
 
@@ -86,8 +84,7 @@ public class OptimizedNetworkMiniGame : NetworkBehaviour
         if (IsClient && isPlaying && !Application.isBatchMode)
         {
             HandleQTEInput();
-
-            float currentDecay = decayRate * Time.deltaTime;
+            /*float currentDecay = decayRate * Time.deltaTime;
             if ((currentStationIndex == 2 && !station2HasCrystal.Value) || 
                 (currentStationIndex == 3 && !station3HasCrystal.Value))
             {
@@ -98,7 +95,7 @@ public class OptimizedNetworkMiniGame : NetworkBehaviour
             {
                 localPredictedValue = Mathf.Clamp(localPredictedValue - currentDecay, 0f, 100f);
                 progressFill.style.width = new Length(localPredictedValue, LengthUnit.Percent);
-            }
+            }*/
         }
 
         if (IsServer)
@@ -115,12 +112,15 @@ public class OptimizedNetworkMiniGame : NetworkBehaviour
         float normal = decayRate * Time.deltaTime;
         float fast = decayRate * 2.5f * Time.deltaTime;
 
+        // Trừ bình thường cho trạm 0, 1
         s0Value.Value = Mathf.Clamp(s0Value.Value - normal, 0f, 100f);
         s1Value.Value = Mathf.Clamp(s1Value.Value - normal, 0f, 100f);
 
+        // TRẠM 2: Nếu có ngọc thì dùng normal, không có thì dùng fast (đúng ý ông)
         float s2Speed = station2HasCrystal.Value ? normal : fast;
         s2Value.Value = Mathf.Clamp(s2Value.Value - s2Speed, 0f, 100f);
 
+        // TRẠM 3: Tương tự
         float s3Speed = station3HasCrystal.Value ? normal : fast;
         s3Value.Value = Mathf.Clamp(s3Value.Value - s3Speed, 0f, 100f);
     }

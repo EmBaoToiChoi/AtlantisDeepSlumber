@@ -36,20 +36,24 @@ public class GearRotator : NetworkBehaviour
 
     void Update()
     {
-        // QUAN TRỌNG: Chỉ quay khi State là Spinning. 
-        // Khi đang Opening hoặc Closing, Update "ngủ", không can thiệp vào vị trí nữa.
+        // CẢNH BÁO: Chỉ thực hiện ép vị trí nếu Bánh răng KHÔNG trong trạng thái đang Opening hoặc Closing
+        // Dùng currentState để ngăn chặn Server ép vị trí khi đang trượt
         if (currentState.Value == GearState.Spinning)
         {
             float direction = reverseDirection ? -1f : 1f;
             transform.Rotate(rotationAxis.normalized * originalSpeed * direction * Time.deltaTime, Space.Self);
             
-            // Chỉ ép vị trí khi không có Tween nào đang chạy và không ở trạng thái mở/đóng
-            if (!DOTween.IsTweening(transform) && Vector3.Distance(transform.localPosition, originalPosition) > 0.001f)
+            // CHỈ ÉP VỊ TRÍ KHI LÀ SERVER VÀ KHÔNG CÓ TWEEN NÀO ĐANG CHẠY
+            if (IsServer && !DOTween.IsTweening(transform))
             {
-                transform.localPosition = originalPosition;
+                if (Vector3.Distance(transform.localPosition, originalPosition) > 0.1f)
+                {
+                    transform.localPosition = originalPosition;
+                }
             }
         }
-        
+
+        // Phần logic khói giữ nguyên (đã ổn)
         if (gearSmokeEffect != null)
         {
             bool isMoving = DOTween.IsTweening(transform);
@@ -82,12 +86,15 @@ public class GearRotator : NetworkBehaviour
     {
         if (IsServer) 
         {
-            // Gửi lệnh cho Client trượt về vị trí cũ trước khi reset trạng thái quay
+            // 1. Tắt quay ngay lập tức trên Server để tránh nhảy vị trí
+            currentState.Value = GearState.Closing; 
+            
+            // 2. Gọi ClientRpc để tất cả máy reset mượt mà
             ResetClientVisualsClientRpc();
             
-            // Đợi 1.6s (dài hơn duration 1.5s của Tween) rồi mới cho quay
+            // 3. Đợi đủ thời gian trượt về rồi mới cho quay lại
             DOVirtual.DelayedCall(1.6f, () => {
-                currentState.Value = GearState.Spinning;
+                if (IsServer) currentState.Value = GearState.Spinning;
             });
         }
     }
@@ -96,7 +103,11 @@ public class GearRotator : NetworkBehaviour
     private void ResetClientVisualsClientRpc()
     {
         transform.DOKill();
-        // Đảm bảo nó trượt về mượt, không giật
-        transform.DOLocalMove(originalPosition, 1.5f).SetEase(Ease.OutCubic);
+        // Thêm .OnComplete để đảm bảo sau khi trượt xong, nó nằm đúng vị trí gốc
+        transform.DOLocalMove(originalPosition, 1.5f)
+                .SetEase(Ease.OutCubic)
+                .OnComplete(() => {
+                    transform.localPosition = originalPosition;
+                });
     }
 }
