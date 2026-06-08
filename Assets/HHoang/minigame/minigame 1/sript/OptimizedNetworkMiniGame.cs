@@ -73,7 +73,7 @@ public class OptimizedNetworkMiniGame : NetworkBehaviour
     {
         if (currentStationIndex == index && progressFill != null)
         {
-            if (!isPlaying || Mathf.Abs(localPredictedValue - serverValue) > 15f)
+            if (!isPlaying || Mathf.Abs(localPredictedValue - serverValue) > 2f)
             {
                 localPredictedValue = serverValue;
                 progressFill.style.width = new Length(serverValue, LengthUnit.Percent);

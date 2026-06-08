@@ -19,6 +19,7 @@ public class GearRotator : NetworkBehaviour
 
     public NetworkVariable<GearState> currentState = new NetworkVariable<GearState>(GearState.Spinning);
 
+    public ParticleSystem gearSmokeEffect;
     void Awake()
     {
         originalPosition = transform.localPosition;
@@ -47,6 +48,13 @@ public class GearRotator : NetworkBehaviour
             {
                 transform.localPosition = originalPosition;
             }
+        }
+        
+        if (gearSmokeEffect != null)
+        {
+            bool isMoving = DOTween.IsTweening(transform);
+            if (isMoving && !gearSmokeEffect.isPlaying) gearSmokeEffect.Play();
+            else if (!isMoving && gearSmokeEffect.isPlaying) gearSmokeEffect.Stop();
         }
     }
 
