@@ -29,4 +29,8 @@ public class P1 : MonoBehaviour
     {
         animator.SetTrigger("GiveGem");
     }
+    public void TriggerFall()
+    {
+        animator.SetTrigger("Fall");
+    }
 }
