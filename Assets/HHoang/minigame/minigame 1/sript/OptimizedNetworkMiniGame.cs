@@ -73,7 +73,7 @@ public class OptimizedNetworkMiniGame : NetworkBehaviour
     {
         if (currentStationIndex == index && progressFill != null)
         {
-            // Gán trực tiếp giá trị từ Server để Client luôn hiển thị đúng 100% so với Server
+            // Cập nhật trực tiếp theo giá trị từ Server
             localPredictedValue = serverValue; 
             progressFill.style.width = new Length(localPredictedValue, LengthUnit.Percent);
         }
@@ -84,18 +84,6 @@ public class OptimizedNetworkMiniGame : NetworkBehaviour
         if (IsClient && isPlaying && !Application.isBatchMode)
         {
             HandleQTEInput();
-            /*float currentDecay = decayRate * Time.deltaTime;
-            if ((currentStationIndex == 2 && !station2HasCrystal.Value) || 
-                (currentStationIndex == 3 && !station3HasCrystal.Value))
-            {
-                currentDecay = decayRate * 2.5f * Time.deltaTime;
-            }
-
-            if (progressFill != null)
-            {
-                localPredictedValue = Mathf.Clamp(localPredictedValue - currentDecay, 0f, 100f);
-                progressFill.style.width = new Length(localPredictedValue, LengthUnit.Percent);
-            }*/
         }
 
         if (IsServer)
@@ -171,12 +159,17 @@ public class OptimizedNetworkMiniGame : NetworkBehaviour
     [ServerRpc(RequireOwnership = false)]
     public void UpdateSliderServerRpc(int index, float amount)
     {
+        // Server tính toán giá trị mới
+        float newValue = GetStationValue(index) + amount;
+        newValue = Mathf.Clamp(newValue, 0f, 100f);
+        
+        // Cập nhật NetworkVariable (Server tự động đẩy giá trị về cho tất cả Client)
         switch(index)
         {
-            case 0: s0Value.Value = Mathf.Clamp(s0Value.Value + amount, 0f, 100f); break;
-            case 1: s1Value.Value = Mathf.Clamp(s1Value.Value + amount, 0f, 100f); break;
-            case 2: s2Value.Value = Mathf.Clamp(s2Value.Value + amount, 0f, 100f); break;
-            case 3: s3Value.Value = Mathf.Clamp(s3Value.Value + amount, 0f, 100f); break;
+            case 0: s0Value.Value = newValue; break;
+            case 1: s1Value.Value = newValue; break;
+            case 2: s2Value.Value = newValue; break;
+            case 3: s3Value.Value = newValue; break;
         }
     }
 
@@ -248,11 +241,9 @@ public class OptimizedNetworkMiniGame : NetworkBehaviour
     private void ProcessInput(bool isA)
     {
         PlaySuccessVisual(isA ? keyA : keyD);
-        if (progressFill != null)
-        {
-            localPredictedValue = Mathf.Clamp(localPredictedValue + pushAmount, 0f, 100f);
-            progressFill.style.width = new Length(localPredictedValue, LengthUnit.Percent);
-        }
+        
+        // GỬI LỆNH LÊN SERVER - KHÔNG TỰ TÍNH TOÁN CỘNG ĐIỂM Ở CLIENT NỮA
+        // Việc này tránh xung đột dữ liệu giữa các máy
         UpdateSliderServerRpc(currentStationIndex, pushAmount);
     }
 
