@@ -2,17 +2,19 @@ using UnityEngine;
 
 /// <summary>
 /// Helper script to be attached to the Left and Right hitbox GameObjects of the player.
-/// Detects collisions with enemies and reports them to the LeoPlayer script in parent.
+/// Detects collisions with enemies and reports them to the LeoPlayer or ArthurPlayer script in parent.
 /// </summary>
 [RequireComponent(typeof(Collider))]
 public class PlayerHitbox : MonoBehaviour
 {
-    private LeoPlayer player;
+    private LeoPlayer leoPlayer;
+    private ArthurPlayer arthurPlayer;
     private Collider hitboxCollider;
 
     private void Start()
     {
-        player = GetComponentInParent<LeoPlayer>();
+        leoPlayer = GetComponentInParent<LeoPlayer>();
+        arthurPlayer = GetComponentInParent<ArthurPlayer>();
         hitboxCollider = GetComponent<Collider>();
         
         // Ensure the collider is configured as a trigger
@@ -25,9 +27,16 @@ public class PlayerHitbox : MonoBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
-        if (player != null && hitboxCollider != null && hitboxCollider.enabled)
+        if (hitboxCollider != null && hitboxCollider.enabled)
         {
-            player.OnHitboxCollision(other);
+            if (leoPlayer != null)
+            {
+                leoPlayer.OnHitboxCollision(other);
+            }
+            else if (arthurPlayer != null)
+            {
+                arthurPlayer.OnHitboxCollision(other);
+            }
         }
     }
 }

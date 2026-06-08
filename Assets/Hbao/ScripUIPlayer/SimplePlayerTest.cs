@@ -409,8 +409,9 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
             PlayerHUDManager.ActivePlayers.Add(this);
         }
 
-        if (leoPlayer != null)
+        if (leoPlayer != null || arthurPlayer != null)
         {
+            // LeoPlayer / ArthurPlayer handle their own network registration internally.
             return;
         }
 
@@ -486,8 +487,9 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
             PlayerHUDManager.ActivePlayers.Remove(this);
         }
 
-        if (leoPlayer != null)
+        if (leoPlayer != null || arthurPlayer != null)
         {
+            // LeoPlayer / ArthurPlayer handle their own network despawn internally.
             return;
         }
 
