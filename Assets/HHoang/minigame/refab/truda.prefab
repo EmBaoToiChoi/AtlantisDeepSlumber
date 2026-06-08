@@ -4978,6 +4978,7 @@ MonoBehaviour:
       MinSecondsBetweenUpdates: 0
       MaxSecondsBetweenUpdates: 0
     m_InternalValue: 0
+  gearSmokeEffect: {fileID: 3436957285714689335}
 --- !u!114 &-4494524693948755544
 MonoBehaviour:
   m_ObjectHideFlags: 0
