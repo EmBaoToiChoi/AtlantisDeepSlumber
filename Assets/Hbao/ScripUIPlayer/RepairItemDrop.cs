@@ -9,7 +9,40 @@ public class RepairItemDrop : NetworkBehaviour
     public float bobRange = 0.12f;
     public float interactRadius = 2.5f;
 
-    private LeoPlayer localPlayer;
+    private MonoBehaviour localPlayer;
+
+    private float GetPlayerHealth()
+    {
+        if (localPlayer is LeoPlayer leo) return leo.CurrentHealth;
+        if (localPlayer is ArthurPlayer arthur) return arthur.CurrentHealth;
+        return 0f;
+    }
+
+    private void SetPendingPickItem(GameObject item)
+    {
+        if (localPlayer is LeoPlayer leo) leo.pendingPickItem = item;
+        else if (localPlayer is ArthurPlayer arthur) arthur.pendingPickItem = item;
+    }
+
+    private void PlayPickAnimation()
+    {
+        if (localPlayer is LeoPlayer leo) leo.PlayAnimation("Pick", 0.1f);
+        else if (localPlayer is ArthurPlayer arthur) arthur.PlayAnimation("Idle_Pick", 0.1f);
+    }
+
+    private bool TryAddItem(string name)
+    {
+        if (localPlayer is LeoPlayer leo) return leo.TryAddItem(name, false);
+        if (localPlayer is ArthurPlayer arthur) return arthur.TryAddItem(name, false);
+        return false;
+    }
+
+    private bool IsPlayerStandalone()
+    {
+        if (localPlayer is LeoPlayer leo) return leo.isStandaloneMode;
+        if (localPlayer is ArthurPlayer arthur) return arthur.isStandaloneMode;
+        return false;
+    }
     private PlayerHUDController hud;
     private bool isWithinRange = false;
     private float startY;
@@ -35,7 +68,7 @@ public class RepairItemDrop : NetworkBehaviour
         if (localPlayer != null)
         {
             // Kiểm tra nếu người chơi đã chết
-            if (localPlayer.CurrentHealth <= 0)
+            if (GetPlayerHealth() <= 0)
             {
                 if (isWithinRange)
                 {
@@ -120,13 +153,23 @@ public class RepairItemDrop : NetworkBehaviour
 
     private void FindLocalPlayer()
     {
-        LeoPlayer[] players = FindObjectsOfType<LeoPlayer>();
-        foreach (var p in players)
+        LeoPlayer[] leoPlayers = FindObjectsOfType<LeoPlayer>();
+        foreach (var p in leoPlayers)
         {
             if (p.isStandaloneMode || p.IsOwner)
             {
                 localPlayer = p;
-                break;
+                return;
+            }
+        }
+
+        ArthurPlayer[] arthurPlayers = FindObjectsOfType<ArthurPlayer>();
+        foreach (var p in arthurPlayers)
+        {
+            if (p.isStandaloneMode || p.IsOwner)
+            {
+                localPlayer = p;
+                return;
             }
         }
     }
@@ -136,7 +179,7 @@ public class RepairItemDrop : NetworkBehaviour
         if (localPlayer == null) return;
 
         // Gán vật phẩm chờ nhặt cho người chơi
-        localPlayer.pendingPickItem = gameObject;
+        SetPendingPickItem(gameObject);
 
         // Tắt nhắc nhở tương tác ngay lập tức
         if (hud != null)
@@ -145,7 +188,7 @@ public class RepairItemDrop : NetworkBehaviour
         }
 
         // Phát hoạt ảnh nhặt đồ trên Player
-        localPlayer.PlayAnimation("Pick", 0.1f);
+        PlayPickAnimation();
     }
 
     public void ConfirmCollect()
@@ -153,11 +196,11 @@ public class RepairItemDrop : NetworkBehaviour
         if (localPlayer == null) return;
 
         // Thử thêm vật phẩm Búa Rèn vào hòm đồ mà không phát lại hoạt ảnh
-        bool added = localPlayer.TryAddItem("RepairHammer", false);
+        bool added = TryAddItem("RepairHammer");
         if (added)
         {
             // Hủy/Despawn object
-            if (localPlayer.isStandaloneMode)
+            if (IsPlayerStandalone())
             {
                 Destroy(gameObject);
             }

@@ -198,6 +198,10 @@ public class SilasNPC : NetworkBehaviour
         {
             if (p != null) list.Add(p);
         }
+        foreach (var p in FindObjectsOfType<ArthurPlayer>())
+        {
+            if (p != null) list.Add(p);
+        }
         foreach (var p in FindObjectsOfType<ElenaPlayer>())
         {
             if (p != null) list.Add(p);
@@ -208,7 +212,7 @@ public class SilasNPC : NetworkBehaviour
         }
         foreach (var p in FindObjectsOfType<SimplePlayerTest>())
         {
-            if (p != null && p.GetComponent<LeoPlayer>() == null)
+            if (p != null && p.GetComponent<LeoPlayer>() == null && p.GetComponent<ArthurPlayer>() == null)
             {
                 list.Add(p);
             }

@@ -22,6 +22,14 @@ public static class EnemyDamageHelper
             return;
         }
 
+        var arthur = playerTransform.GetComponentInParent<ArthurPlayer>();
+        if (arthur != null)
+        {
+            arthur.TakeDamage(damage);
+            arthur.ApplyKnockback(knockbackForce);
+            return;
+        }
+
         var elena = playerTransform.GetComponentInParent<ElenaPlayer>();
         if (elena != null)
         {

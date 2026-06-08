@@ -56,7 +56,7 @@ public class PlayerHUDController : MonoBehaviour
                 {
                     classIdx = 1;
                 }
-                else if (localPlayerTarget is ArthurTanker)
+                else if (localPlayerTarget is ArthurTanker || localPlayerTarget is ArthurPlayer)
                 {
                     classIdx = 3;
                 }
@@ -2154,7 +2154,7 @@ public class PlayerHUDController : MonoBehaviour
             {
                 classIdx = 1;
             }
-            else if (player is ArthurTanker)
+            else if (player is ArthurTanker || player is ArthurPlayer)
             {
                 classIdx = 3;
             }

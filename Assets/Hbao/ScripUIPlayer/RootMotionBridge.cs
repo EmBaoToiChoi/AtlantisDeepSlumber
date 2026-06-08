@@ -7,12 +7,14 @@ public class RootMotionBridge : MonoBehaviour
     private Transform parentTransform;
     private Rigidbody parentRb;
     private Vector3 initialRootBoneLocalPos;
+    private Vector3 initialTransformLocalPos;
     private Transform rootBone;
     private bool hasRootBone = false;
 
     void Start()
     {
         anim = GetComponent<Animator>();
+        initialTransformLocalPos = transform.localPosition;
         // Component này nằm ở Model con, parentTransform sẽ là đối tượng cha chứa SimplePlayerTest và NetworkTransform
         parentTransform = transform.parent;
         if (parentTransform == null)
@@ -82,31 +84,37 @@ public class RootMotionBridge : MonoBehaviour
 
     void LateUpdate()
     {
-        if (hasRootBone && rootBone != null && anim != null)
+        if (anim == null) return;
+
+        bool isRolling = false;
+        AnimatorStateInfo stateInfo = anim.GetCurrentAnimatorStateInfo(0);
+        if (stateInfo.IsName("LonVong") || stateInfo.IsName("Lon Meo 2") || stateInfo.IsName("Lonmeo"))
         {
-            bool isRolling = false;
-            AnimatorStateInfo stateInfo = anim.GetCurrentAnimatorStateInfo(0);
-            if (stateInfo.IsName("LonVong"))
+            isRolling = true;
+        }
+        else if (anim.IsInTransition(0))
+        {
+            AnimatorStateInfo nextStateInfo = anim.GetNextAnimatorStateInfo(0);
+            if (nextStateInfo.IsName("LonVong") || nextStateInfo.IsName("Lon Meo 2") || nextStateInfo.IsName("Lonmeo"))
             {
                 isRolling = true;
             }
-            else if (anim.IsInTransition(0))
-            {
-                AnimatorStateInfo nextStateInfo = anim.GetNextAnimatorStateInfo(0);
-                if (nextStateInfo.IsName("LonVong"))
-                {
-                    isRolling = true;
-                }
-            }
+        }
 
-            if (isRolling)
+        if (isRolling)
+        {
+            if (hasRootBone && rootBone != null)
             {
                 // Khóa tọa độ ngang local X và Z của xương gốc (Hips) về vị trí ban đầu
                 // Điều này ép hoạt ảnh lộn vòng chạy tại chỗ so với đối tượng cha (Capsule Collider).
-                // Đối tượng cha di chuyển bằng lực vật lý (linearVelocity) của ElenaPlayer,
-                // giúp va chạm vật lý hoạt động chính xác (không xuyên qua gờ/tường) và không bị giật lùi khi lộn xong.
                 Vector3 currentLocalPos = rootBone.localPosition;
                 rootBone.localPosition = new Vector3(initialRootBoneLocalPos.x, currentLocalPos.y, initialRootBoneLocalPos.z);
+            }
+            else
+            {
+                // Khóa tọa độ ngang local X và Z của chính transform chứa Animator (dành cho Generic rig hoặc khi không tìm thấy xương hông)
+                Vector3 currentLocalPos = transform.localPosition;
+                transform.localPosition = new Vector3(initialTransformLocalPos.x, currentLocalPos.y, initialTransformLocalPos.z);
             }
         }
     }

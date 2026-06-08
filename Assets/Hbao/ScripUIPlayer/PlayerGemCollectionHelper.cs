@@ -18,6 +18,9 @@ public static class PlayerGemCollectionHelper
         var leo = player.GetComponentInParent<LeoPlayer>();
         if (leo != null) return leo.HasCollectedFromDropGroup(dropGroupId);
 
+        var arthur = player.GetComponentInParent<ArthurPlayer>();
+        if (arthur != null) return arthur.HasCollectedFromDropGroup(dropGroupId);
+
         return false;
     }
 
@@ -36,6 +39,9 @@ public static class PlayerGemCollectionHelper
 
         var leo = player.GetComponentInParent<LeoPlayer>();
         if (leo != null) leo.AddCollectedDropGroup(dropGroupId);
+
+        var arthur = player.GetComponentInParent<ArthurPlayer>();
+        if (arthur != null) arthur.AddCollectedDropGroup(dropGroupId);
     }
 
     public static void AddExperience(Transform player, float amount)
@@ -53,6 +59,9 @@ public static class PlayerGemCollectionHelper
 
         var leo = player.GetComponentInParent<LeoPlayer>();
         if (leo != null) leo.AddExperience(amount);
+
+        var arthur = player.GetComponentInParent<ArthurPlayer>();
+        if (arthur != null) arthur.AddExperience(amount);
     }
 
     public static void TriggerOnCollectGemClientRpc(Transform player, string dropGroupId)
@@ -70,5 +79,8 @@ public static class PlayerGemCollectionHelper
 
         var leo = player.GetComponentInParent<LeoPlayer>();
         if (leo != null) leo.OnCollectGemClientRpc(dropGroupId);
+
+        var arthur = player.GetComponentInParent<ArthurPlayer>();
+        if (arthur != null) arthur.OnCollectGemClientRpc(dropGroupId);
     }
 }

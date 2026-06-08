@@ -132,7 +132,7 @@ Rigidbody:
   m_ImplicitTensor: 1
   m_UseGravity: 1
   m_IsKinematic: 0
-  m_Interpolate: 0
+  m_Interpolate: 1
   m_Constraints: 72
   m_CollisionDetection: 1
 --- !u!136 &6995139911269330768
@@ -265,6 +265,20 @@ MonoBehaviour:
   TransitionStateInfoList:
   - IsCrossFadeExit: 0
     Layer: 0
+    OriginatingState: -1941196736
+    DestinationState: 973054117
+    TransitionDuration: 0.05
+    TriggerNameHash: 973054117
+    TransitionIndex: 2
+  - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: -1941196736
+    DestinationState: -890948948
+    TransitionDuration: 0.05
+    TriggerNameHash: -1068915434
+    TransitionIndex: 3
+  - IsCrossFadeExit: 0
+    Layer: 0
     OriginatingState: -216566996
     DestinationState: -1427357188
     TransitionDuration: 0.05
@@ -319,6 +333,223 @@ MonoBehaviour:
     TransitionDuration: 0.05
     TriggerNameHash: -1960256152
     TransitionIndex: 3
+  - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: 973054117
+    DestinationState: -890948948
+    TransitionDuration: 0.05
+    TriggerNameHash: -1068915434
+    TransitionIndex: 1
+  - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: 973054117
+    DestinationState: -1722614907
+    TransitionDuration: 0.25
+    TriggerNameHash: 63768429
+    TransitionIndex: 2
+  - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: -1427357188
+    DestinationState: -1941196736
+    TransitionDuration: 0.05
+    TriggerNameHash: -1941196736
+    TransitionIndex: 1
+  - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: -1427357188
+    DestinationState: 973054117
+    TransitionDuration: 0.05
+    TriggerNameHash: 973054117
+    TransitionIndex: 2
+  - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: -1666687401
+    DestinationState: -1941196736
+    TransitionDuration: 0.05
+    TriggerNameHash: -1941196736
+    TransitionIndex: 1
+  - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: -1666687401
+    DestinationState: 973054117
+    TransitionDuration: 0.05
+    TriggerNameHash: 973054117
+    TransitionIndex: 2
+  - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: 987715043
+    DestinationState: -1941196736
+    TransitionDuration: 0.05
+    TriggerNameHash: -1941196736
+    TransitionIndex: 1
+  - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: 987715043
+    DestinationState: 973054117
+    TransitionDuration: 0.05
+    TriggerNameHash: 973054117
+    TransitionIndex: 2
+  - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: 1910553104
+    DestinationState: -1071548635
+    TransitionDuration: 0.05
+    TriggerNameHash: 1248065335
+    TransitionIndex: 1
+  - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: 1910553104
+    DestinationState: 988669964
+    TransitionDuration: 0.05
+    TriggerNameHash: -1960256152
+    TransitionIndex: 2
+  - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: 1910553104
+    DestinationState: -1941196736
+    TransitionDuration: 0.05
+    TriggerNameHash: -1941196736
+    TransitionIndex: 3
+  - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: 1910553104
+    DestinationState: 973054117
+    TransitionDuration: 0.05
+    TriggerNameHash: 973054117
+    TransitionIndex: 4
+  - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: 1910553104
+    DestinationState: -890948948
+    TransitionDuration: 0.05
+    TriggerNameHash: -1068915434
+    TransitionIndex: 5
+  - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: 1910553104
+    DestinationState: -1722614907
+    TransitionDuration: 0.05
+    TriggerNameHash: 63768429
+    TransitionIndex: 6
+  - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: -1071548635
+    DestinationState: 988669964
+    TransitionDuration: 0.05
+    TriggerNameHash: -1960256152
+    TransitionIndex: 1
+  - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: -1071548635
+    DestinationState: 1910553104
+    TransitionDuration: 0.05
+    TriggerNameHash: -726645050
+    TransitionIndex: 2
+  - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: -1071548635
+    DestinationState: -1941196736
+    TransitionDuration: 0.05
+    TriggerNameHash: -1941196736
+    TransitionIndex: 3
+  - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: -1071548635
+    DestinationState: 973054117
+    TransitionDuration: 0.05
+    TriggerNameHash: 973054117
+    TransitionIndex: 4
+  - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: -1071548635
+    DestinationState: -890948948
+    TransitionDuration: 0.05
+    TriggerNameHash: -1068915434
+    TransitionIndex: 5
+  - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: -1071548635
+    DestinationState: -1722614907
+    TransitionDuration: 0.05
+    TriggerNameHash: 63768429
+    TransitionIndex: 6
+  - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: 988669964
+    DestinationState: -1071548635
+    TransitionDuration: 0.05
+    TriggerNameHash: 1248065335
+    TransitionIndex: 1
+  - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: 988669964
+    DestinationState: 1910553104
+    TransitionDuration: 0.05
+    TriggerNameHash: -726645050
+    TransitionIndex: 2
+  - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: 988669964
+    DestinationState: -1941196736
+    TransitionDuration: 0.05
+    TriggerNameHash: -1941196736
+    TransitionIndex: 3
+  - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: 988669964
+    DestinationState: 973054117
+    TransitionDuration: 0.05
+    TriggerNameHash: 973054117
+    TransitionIndex: 4
+  - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: 988669964
+    DestinationState: -890948948
+    TransitionDuration: 0.05
+    TriggerNameHash: -1068915434
+    TransitionIndex: 5
+  - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: 988669964
+    DestinationState: -1722614907
+    TransitionDuration: 0.05
+    TriggerNameHash: 63768429
+    TransitionIndex: 6
+  - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: 1840484693
+    DestinationState: -1941196736
+    TransitionDuration: 0.05
+    TriggerNameHash: -1941196736
+    TransitionIndex: 1
+  - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: 1840484693
+    DestinationState: 973054117
+    TransitionDuration: 0.05
+    TriggerNameHash: 973054117
+    TransitionIndex: 2
+  - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: 2117524638
+    DestinationState: -1941196736
+    TransitionDuration: 0.05
+    TriggerNameHash: -1941196736
+    TransitionIndex: 1
+  - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: 2117524638
+    DestinationState: 973054117
+    TransitionDuration: 0.05
+    TriggerNameHash: 973054117
+    TransitionIndex: 2
+  - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: -890948948
+    DestinationState: -1722614907
+    TransitionDuration: 0.05
+    TriggerNameHash: 63768429
+    TransitionIndex: 0
   - IsCrossFadeExit: 0
     Layer: 1
     OriginatingState: -499022955
@@ -403,6 +634,314 @@ MonoBehaviour:
     TransitionDuration: 0.05
     TriggerNameHash: 701670150
     TransitionIndex: 11
+  - IsCrossFadeExit: 0
+    Layer: 1
+    OriginatingState: -1676855739
+    DestinationState: 1910553104
+    TransitionDuration: 0.05
+    TriggerNameHash: -726645050
+    TransitionIndex: 1
+  - IsCrossFadeExit: 0
+    Layer: 1
+    OriginatingState: -1676855739
+    DestinationState: 988669964
+    TransitionDuration: 0.05
+    TriggerNameHash: -1960256152
+    TransitionIndex: 2
+  - IsCrossFadeExit: 0
+    Layer: 1
+    OriginatingState: -1676855739
+    DestinationState: -1071548635
+    TransitionDuration: 0.05
+    TriggerNameHash: 1248065335
+    TransitionIndex: 3
+  - IsCrossFadeExit: 0
+    Layer: 1
+    OriginatingState: 48138164
+    DestinationState: -1676855739
+    TransitionDuration: 0.05
+    TriggerNameHash: -576533199
+    TransitionIndex: 1
+  - IsCrossFadeExit: 0
+    Layer: 1
+    OriginatingState: 48138164
+    DestinationState: -890948948
+    TransitionDuration: 0.05
+    TriggerNameHash: -1068915434
+    TransitionIndex: 2
+  - IsCrossFadeExit: 0
+    Layer: 1
+    OriginatingState: -1722614907
+    DestinationState: 48138164
+    TransitionDuration: 0.05
+    TriggerNameHash: 337460475
+    TransitionIndex: 1
+  - IsCrossFadeExit: 0
+    Layer: 1
+    OriginatingState: -1722614907
+    DestinationState: 1840484693
+    TransitionDuration: 0.05
+    TriggerNameHash: -1224666377
+    TransitionIndex: 2
+  - IsCrossFadeExit: 0
+    Layer: 1
+    OriginatingState: -1722614907
+    DestinationState: 2117524638
+    TransitionDuration: 0.05
+    TriggerNameHash: 701670150
+    TransitionIndex: 3
+  - IsCrossFadeExit: 0
+    Layer: 1
+    OriginatingState: -1722614907
+    DestinationState: -1427357188
+    TransitionDuration: 0.05
+    TriggerNameHash: -1427357188
+    TransitionIndex: 4
+  - IsCrossFadeExit: 0
+    Layer: 1
+    OriginatingState: -1722614907
+    DestinationState: -1666687401
+    TransitionDuration: 0.05
+    TriggerNameHash: -1666687401
+    TransitionIndex: 5
+  - IsCrossFadeExit: 0
+    Layer: 1
+    OriginatingState: -1722614907
+    DestinationState: 987715043
+    TransitionDuration: 0.05
+    TriggerNameHash: 987715043
+    TransitionIndex: 6
+  - IsCrossFadeExit: 0
+    Layer: 1
+    OriginatingState: -890948948
+    DestinationState: -1722614907
+    TransitionDuration: 0.15
+    TriggerNameHash: 63768429
+    TransitionIndex: 1
+  - IsCrossFadeExit: 0
+    Layer: 1
+    OriginatingState: -1427357188
+    DestinationState: 987715043
+    TransitionDuration: 0.05
+    TriggerNameHash: 987715043
+    TransitionIndex: 1
+  - IsCrossFadeExit: 0
+    Layer: 1
+    OriginatingState: -1427357188
+    DestinationState: -1666687401
+    TransitionDuration: 0.05
+    TriggerNameHash: -1666687401
+    TransitionIndex: 2
+  - IsCrossFadeExit: 0
+    Layer: 1
+    OriginatingState: -1427357188
+    DestinationState: 2117524638
+    TransitionDuration: 0.05
+    TriggerNameHash: 701670150
+    TransitionIndex: 3
+  - IsCrossFadeExit: 0
+    Layer: 1
+    OriginatingState: -1427357188
+    DestinationState: 1840484693
+    TransitionDuration: 0.05
+    TriggerNameHash: -1224666377
+    TransitionIndex: 4
+  - IsCrossFadeExit: 0
+    Layer: 1
+    OriginatingState: -1427357188
+    DestinationState: 48138164
+    TransitionDuration: 0.05
+    TriggerNameHash: 337460475
+    TransitionIndex: 5
+  - IsCrossFadeExit: 0
+    Layer: 1
+    OriginatingState: -1666687401
+    DestinationState: 987715043
+    TransitionDuration: 0.05
+    TriggerNameHash: 987715043
+    TransitionIndex: 1
+  - IsCrossFadeExit: 0
+    Layer: 1
+    OriginatingState: -1666687401
+    DestinationState: -1427357188
+    TransitionDuration: 0.05
+    TriggerNameHash: -1427357188
+    TransitionIndex: 2
+  - IsCrossFadeExit: 0
+    Layer: 1
+    OriginatingState: -1666687401
+    DestinationState: 2117524638
+    TransitionDuration: 0.05
+    TriggerNameHash: 701670150
+    TransitionIndex: 3
+  - IsCrossFadeExit: 0
+    Layer: 1
+    OriginatingState: -1666687401
+    DestinationState: 1840484693
+    TransitionDuration: 0.05
+    TriggerNameHash: -1224666377
+    TransitionIndex: 4
+  - IsCrossFadeExit: 0
+    Layer: 1
+    OriginatingState: -1666687401
+    DestinationState: 48138164
+    TransitionDuration: 0.05
+    TriggerNameHash: 337460475
+    TransitionIndex: 5
+  - IsCrossFadeExit: 0
+    Layer: 1
+    OriginatingState: 987715043
+    DestinationState: -1666687401
+    TransitionDuration: 0.05
+    TriggerNameHash: -1666687401
+    TransitionIndex: 1
+  - IsCrossFadeExit: 0
+    Layer: 1
+    OriginatingState: 987715043
+    DestinationState: -1427357188
+    TransitionDuration: 0.05
+    TriggerNameHash: -1427357188
+    TransitionIndex: 2
+  - IsCrossFadeExit: 0
+    Layer: 1
+    OriginatingState: 987715043
+    DestinationState: 2117524638
+    TransitionDuration: 0.05
+    TriggerNameHash: 701670150
+    TransitionIndex: 3
+  - IsCrossFadeExit: 0
+    Layer: 1
+    OriginatingState: 987715043
+    DestinationState: 1840484693
+    TransitionDuration: 0.05
+    TriggerNameHash: 987715043
+    TransitionIndex: 4
+  - IsCrossFadeExit: 0
+    Layer: 1
+    OriginatingState: 987715043
+    DestinationState: 48138164
+    TransitionDuration: 0.05
+    TriggerNameHash: 337460475
+    TransitionIndex: 5
+  - IsCrossFadeExit: 0
+    Layer: 1
+    OriginatingState: 988669964
+    DestinationState: 1910553104
+    TransitionDuration: 0.05
+    TriggerNameHash: -726645050
+    TransitionIndex: 1
+  - IsCrossFadeExit: 0
+    Layer: 1
+    OriginatingState: 988669964
+    DestinationState: -1071548635
+    TransitionDuration: 0.05
+    TriggerNameHash: 1248065335
+    TransitionIndex: 2
+  - IsCrossFadeExit: 0
+    Layer: 1
+    OriginatingState: 988669964
+    DestinationState: -890948948
+    TransitionDuration: 0.05
+    TriggerNameHash: -1068915434
+    TransitionIndex: 3
+  - IsCrossFadeExit: 0
+    Layer: 1
+    OriginatingState: -1071548635
+    DestinationState: 988669964
+    TransitionDuration: 0.05
+    TriggerNameHash: -1960256152
+    TransitionIndex: 1
+  - IsCrossFadeExit: 0
+    Layer: 1
+    OriginatingState: -1071548635
+    DestinationState: -890948948
+    TransitionDuration: 0.05
+    TriggerNameHash: -1068915434
+    TransitionIndex: 2
+  - IsCrossFadeExit: 0
+    Layer: 1
+    OriginatingState: 1910553104
+    DestinationState: -1071548635
+    TransitionDuration: 0.05
+    TriggerNameHash: 1248065335
+    TransitionIndex: 1
+  - IsCrossFadeExit: 0
+    Layer: 1
+    OriginatingState: 1910553104
+    DestinationState: -890948948
+    TransitionDuration: 0.05
+    TriggerNameHash: -1068915434
+    TransitionIndex: 2
+  - IsCrossFadeExit: 0
+    Layer: 1
+    OriginatingState: 1840484693
+    DestinationState: 2117524638
+    TransitionDuration: 0.05
+    TriggerNameHash: 701670150
+    TransitionIndex: 1
+  - IsCrossFadeExit: 0
+    Layer: 1
+    OriginatingState: 1840484693
+    DestinationState: -1427357188
+    TransitionDuration: 0.05
+    TriggerNameHash: -1427357188
+    TransitionIndex: 2
+  - IsCrossFadeExit: 0
+    Layer: 1
+    OriginatingState: 1840484693
+    DestinationState: 987715043
+    TransitionDuration: 0.05
+    TriggerNameHash: 987715043
+    TransitionIndex: 3
+  - IsCrossFadeExit: 0
+    Layer: 1
+    OriginatingState: 1840484693
+    DestinationState: -1666687401
+    TransitionDuration: 0.05
+    TriggerNameHash: -1666687401
+    TransitionIndex: 4
+  - IsCrossFadeExit: 0
+    Layer: 1
+    OriginatingState: 1840484693
+    DestinationState: 48138164
+    TransitionDuration: 0.05
+    TriggerNameHash: 337460475
+    TransitionIndex: 5
+  - IsCrossFadeExit: 0
+    Layer: 1
+    OriginatingState: 2117524638
+    DestinationState: 1840484693
+    TransitionDuration: 0.05
+    TriggerNameHash: -1224666377
+    TransitionIndex: 1
+  - IsCrossFadeExit: 0
+    Layer: 1
+    OriginatingState: 2117524638
+    DestinationState: -1427357188
+    TransitionDuration: 0.05
+    TriggerNameHash: -1427357188
+    TransitionIndex: 2
+  - IsCrossFadeExit: 0
+    Layer: 1
+    OriginatingState: 2117524638
+    DestinationState: 987715043
+    TransitionDuration: 0.05
+    TriggerNameHash: 987715043
+    TransitionIndex: 3
+  - IsCrossFadeExit: 0
+    Layer: 1
+    OriginatingState: 2117524638
+    DestinationState: -1666687401
+    TransitionDuration: 0.05
+    TriggerNameHash: -1666687401
+    TransitionIndex: 4
+  - IsCrossFadeExit: 0
+    Layer: 1
+    OriginatingState: 2117524638
+    DestinationState: 48138164
+    TransitionDuration: 0.05
+    TriggerNameHash: 337460475
+    TransitionIndex: 5
   AnimatorParameterEntries:
     ParameterEntries:
     - name: InputX
@@ -769,14 +1308,6 @@ MonoBehaviour:
   getHit2Trigger: GeiHit2
   punchAnimDuration: 0.5
   slashAnimDuration: 0.6
-  punch1Offset: 0
-  punch2Offset: 0
-  punch3Offset: 0
-  slash1Offset: 0
-  slash2Offset: 0
-  slash3Offset: 0
-  slash4Offset: 0
-  slash5Offset: 0
   attacktaytraiDuration: 0.5
   attacktayphaiDuration: 0.5
   slash1Combo2Duration: 0.6
@@ -1159,15 +1690,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 089f5319e86aa3a409ccfa5692b155f2, type: 3}
       propertyPath: m_LocalScale.x
-      value: 2
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 089f5319e86aa3a409ccfa5692b155f2, type: 3}
       propertyPath: m_LocalScale.y
-      value: 2
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 089f5319e86aa3a409ccfa5692b155f2, type: 3}
       propertyPath: m_LocalScale.z
-      value: 2
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 089f5319e86aa3a409ccfa5692b155f2, type: 3}
       propertyPath: m_LocalPosition.x

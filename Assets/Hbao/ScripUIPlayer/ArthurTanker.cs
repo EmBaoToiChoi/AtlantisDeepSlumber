@@ -2,8 +2,9 @@ using UnityEngine;
 
 public class ArthurTanker : SimplePlayerTest
 {
-    private void Awake()
+    protected override void Awake()
     {
+        base.Awake();
         characterClassIndex = 3; // Arthur Tanker
         maxHealth = 150f;
         moveSpeed = 4f;
