@@ -9,7 +9,7 @@ public class ArrowProjectile : NetworkBehaviour
     public bool isPiercing = false; // Cờ kiểm tra xem mũi tên có xuyên thấu quái vật hay không
     
     [HideInInspector]
-    public ElenaPlayer owner;
+    public NetworkBehaviour owner;
 
     // Danh sách lưu các quái vật đã trúng đòn để tránh việc một mũi tên xuyên gây sát thương nhiều lần trên cùng một quái
     private System.Collections.Generic.HashSet<Transform> hitEnemyRoots = new System.Collections.Generic.HashSet<Transform>();
@@ -40,6 +40,7 @@ public class ArrowProjectile : NetworkBehaviour
         if (other.CompareTag("Player") || 
             other.gameObject.layer == LayerMask.NameToLayer("Player") ||
             other.GetComponentInParent<ElenaPlayer>() != null ||
+            other.GetComponentInParent<MayaPlayer>() != null ||
             other.GetComponentInParent<LeoPlayer>() != null ||
             other.GetComponentInParent<SimplePlayerTest>() != null)
         {
@@ -95,7 +96,14 @@ public class ArrowProjectile : NetworkBehaviour
             // Gọi thêm hàm damage của ElenaPlayer để đồng nhất nếu có gán owner
             if (owner != null)
             {
-                owner.TryDamageEnemy(other);
+                if (owner is ElenaPlayer elenaOwner)
+                {
+                    elenaOwner.TryDamageEnemy(other);
+                }
+                else if (owner is MayaPlayer mayaOwner)
+                {
+                    mayaOwner.TryDamageEnemy(other);
+                }
             }
 
             // Nếu không phải mũi tên xuyên thấu (Kỹ năng E) thì mới tự hủy

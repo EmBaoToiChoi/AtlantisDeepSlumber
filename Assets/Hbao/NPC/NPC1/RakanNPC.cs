@@ -221,6 +221,10 @@ public class RakanNPC : NetworkBehaviour
         {
             if (p != null) list.Add(p);
         }
+        foreach (var p in FindObjectsOfType<MayaPlayer>())
+        {
+            if (p != null) list.Add(p);
+        }
         foreach (var p in FindObjectsOfType<SimplePlayerTest>())
         {
             if (p != null && p.GetComponent<LeoPlayer>() == null)

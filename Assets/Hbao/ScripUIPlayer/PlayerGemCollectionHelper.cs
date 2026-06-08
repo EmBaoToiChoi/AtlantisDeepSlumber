@@ -12,6 +12,9 @@ public static class PlayerGemCollectionHelper
         var elena = player.GetComponentInParent<ElenaPlayer>();
         if (elena != null) return elena.HasCollectedFromDropGroup(dropGroupId);
 
+        var maya = player.GetComponentInParent<MayaPlayer>();
+        if (maya != null) return maya.HasCollectedFromDropGroup(dropGroupId);
+
         var leo = player.GetComponentInParent<LeoPlayer>();
         if (leo != null) return leo.HasCollectedFromDropGroup(dropGroupId);
 
@@ -28,6 +31,9 @@ public static class PlayerGemCollectionHelper
         var elena = player.GetComponentInParent<ElenaPlayer>();
         if (elena != null) elena.AddCollectedDropGroup(dropGroupId);
 
+        var maya = player.GetComponentInParent<MayaPlayer>();
+        if (maya != null) maya.AddCollectedDropGroup(dropGroupId);
+
         var leo = player.GetComponentInParent<LeoPlayer>();
         if (leo != null) leo.AddCollectedDropGroup(dropGroupId);
     }
@@ -42,6 +48,9 @@ public static class PlayerGemCollectionHelper
         var elena = player.GetComponentInParent<ElenaPlayer>();
         if (elena != null) elena.AddExperience(amount);
 
+        var maya = player.GetComponentInParent<MayaPlayer>();
+        if (maya != null) maya.AddExperience(amount);
+
         var leo = player.GetComponentInParent<LeoPlayer>();
         if (leo != null) leo.AddExperience(amount);
     }
@@ -55,6 +64,9 @@ public static class PlayerGemCollectionHelper
 
         var elena = player.GetComponentInParent<ElenaPlayer>();
         if (elena != null) elena.OnCollectGemClientRpc(dropGroupId);
+
+        var maya = player.GetComponentInParent<MayaPlayer>();
+        if (maya != null) maya.OnCollectGemClientRpc(dropGroupId);
 
         var leo = player.GetComponentInParent<LeoPlayer>();
         if (leo != null) leo.OnCollectGemClientRpc(dropGroupId);

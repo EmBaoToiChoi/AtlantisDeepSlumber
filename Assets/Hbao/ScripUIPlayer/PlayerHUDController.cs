@@ -52,7 +52,7 @@ public class PlayerHUDController : MonoBehaviour
                 {
                     classIdx = 2;
                 }
-                else if (localPlayerTarget is MayaSupport)
+                else if (localPlayerTarget is MayaPlayer || localPlayerTarget is MayaSupport)
                 {
                     classIdx = 1;
                 }
@@ -1814,6 +1814,21 @@ public class PlayerHUDController : MonoBehaviour
         currentCooldownR = cooldownTimeR;
     }
 
+    public void TriggerMayaCooldownE()
+    {
+        currentCooldownE = cooldownTimeE;
+    }
+
+    public void TriggerMayaCooldownQ()
+    {
+        currentCooldownQ = cooldownTimeQ;
+    }
+
+    public void TriggerMayaCooldownR()
+    {
+        currentCooldownR = cooldownTimeR;
+    }
+
     /// <summary>
     /// Cập nhật cấp độ hiện tại và thanh kinh nghiệm (EXP) của người chơi lên giao diện HUD/Hành trang
     /// </summary>
@@ -2135,7 +2150,7 @@ public class PlayerHUDController : MonoBehaviour
             {
                 classIdx = 2;
             }
-            else if (player is MayaSupport)
+            else if (player is MayaPlayer || player is MayaSupport)
             {
                 classIdx = 1;
             }
@@ -2344,5 +2359,4 @@ public class PlayerHUDController : MonoBehaviour
     }
 }
 
-public class MayaHUDController : PlayerHUDController { }
 public class ArthurHUDController : PlayerHUDController { }

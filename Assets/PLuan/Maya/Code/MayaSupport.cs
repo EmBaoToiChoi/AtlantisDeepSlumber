@@ -1,9 +1,11 @@
 using UnityEngine;
 
-public class MayaSupport : SimplePlayerTest
+public class MayaSupport : MayaPlayer
 {
-    private void Awake()
+    protected override void Awake()
     {
+        base.Awake();
+
         characterClassIndex = 1; // Maya Support
         maxHealth = 100f;
         moveSpeed = 5f;

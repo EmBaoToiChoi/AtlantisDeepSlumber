@@ -29,5 +29,13 @@ public static class EnemyDamageHelper
             elena.ApplyKnockback(knockbackForce);
             return;
         }
+
+        var maya = playerTransform.GetComponentInParent<MayaPlayer>();
+        if (maya != null)
+        {
+            maya.TakeDamage(damage);
+            maya.ApplyKnockback(knockbackForce);
+            return;
+        }
     }
 }
