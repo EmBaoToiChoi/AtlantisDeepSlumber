@@ -557,7 +557,7 @@ Material:
     - _BaseEmissionMaskTreshold: 4.2
     - _BaseEmissionMaskTreshold_1: 1.1
     - _BaseMetallic: 1
-    - _BaseNormalScale: 4.83
+    - _BaseNormalScale: 0.16
     - _BaseSmoothnessRemapMax: 1
     - _BaseSmoothnessRemapMin: 0
     - _BaseTriplanarThreshold: 5
@@ -919,7 +919,7 @@ Material:
     - _BASE_COLOR: {r: 0.5, g: 0.5, b: 0.5, a: 1}
     - _Base2Color: {r: 1, g: 1, b: 1, a: 0}
     - _Base2TilingOffset: {r: 1, g: 1, b: 0, a: 0}
-    - _BaseColor: {r: 0.48427665, g: 0.48427665, b: 0.48427665, a: 1}
+    - _BaseColor: {r: 0.3962264, g: 0.3962264, b: 0.3962264, a: 1}
     - _BaseColor0: {r: 1, g: 1, b: 1, a: 1}
     - _BaseColor1: {r: 0.8679245, g: 0.8679245, b: 0.8679245, a: 1}
     - _BaseColor2: {r: 1, g: 1, b: 1, a: 1}
