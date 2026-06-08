@@ -36,12 +36,22 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
     public float comboTransitionThreshold = 0.5f;
     public float punch1Duration = 0.5f;
     public float punch2Duration = 0.5f;
+    public float punch3Duration = 0.5f;
     public float slash1Duration = 0.6f;
     public float slash2Duration = 0.6f;
     public float slash3Duration = 0.7f;
     protected int comboStep = 0;
     protected float lastAttackTime = 0f;
     protected bool isRootedAttack = false;
+
+    [Header("Combo Chain Buffer Settings")]
+    [Range(0f, 1f)]
+    public float comboChainWindowPct = 0.45f;
+    protected bool pendingAttackRequest = false;
+    protected bool isExecutingAttack = false;
+    protected float attackAnimStartTime = 0f;
+    protected float currentAttackAnimDuration = 0f;
+    protected Coroutine comboChainCoroutine;
 
     [Header("Weapon Switch Animations")]
     public string drawWeaponTrigger = "DrawWeapon";
@@ -181,6 +191,18 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
     public Animator anim;
     protected string currentAnimState;
 
+    [Header("Hitbox References")]
+    [Tooltip("Left hand hitbox collider.")]
+    public Collider leftHitbox;
+    [Tooltip("Right hand hitbox collider.")]
+    public Collider rightHitbox;
+    [Tooltip("Left weapon/sword hitbox collider.")]
+    public Collider leftWeaponHitbox;
+    [Tooltip("Right weapon/sword hitbox collider.")]
+    public Collider rightWeaponHitbox;
+
+    private System.Collections.Generic.List<Transform> alreadyHitEnemies = new System.Collections.Generic.List<Transform>();
+
     [Header("Dodge Roll Settings")]
     public float rollSpeed = 10f;
     public float rollDuration = 0.4f;
@@ -255,6 +277,9 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     public virtual int GetActiveWeaponIndex()
     {
+        // TEMPORARY: Force unarmed (return 1) for punch testing since weapon slashes are not set up yet
+        return 1;
+        /*
         if (isStandaloneMode)
         {
             PlayerHUDController hud = FindObjectOfType<PlayerHUDController>();
@@ -262,6 +287,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
             return 1;
         }
         return activeWeaponIndex.Value;
+        */
     }
 
     private void Awake()
@@ -292,6 +318,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     private void Start()
     {
+        CreateSwordHitboxes();
         if (anim == null)
         {
             anim = GetComponent<Animator>();
@@ -1102,9 +1129,9 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         if (Input.GetMouseButtonDown(0))
         {
-            if (!IsUIBlockingInput() && !isRollingStandalone && !IsPlayingActionAnimation())
+            if (!IsUIBlockingInput() && CanAttack())
             {
-                PerformComboAttack(false);
+                RequestComboAttack(false);
             }
         }
 
@@ -1255,9 +1282,9 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         if (Input.GetMouseButtonDown(0))
         {
-            if (IsSpawned && !IsUIBlockingInput() && !isRollingStandalone && !IsPlayingActionAnimation())
+            if (IsSpawned && !IsUIBlockingInput() && CanAttack())
             {
-                PerformComboAttack(true);
+                RequestComboAttack(true);
             }
         }
 
@@ -1277,6 +1304,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         rollCooldownTimer = rollCooldown;
         
         ClearAttackLayer(); 
+        InterruptCombo();
         
         if (moveInput != Vector3.zero)
         {
@@ -1299,6 +1327,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         rollCooldownTimer = rollCooldown;
         
         ClearAttackLayer(); 
+        InterruptCombo();
         
         if (moveInput != Vector3.zero)
         {
@@ -1383,7 +1412,9 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
     {
         if (weaponIndex == 1)
         {
-            return step == 1 ? punch1Duration : punch2Duration;
+            if (step == 1) return punch1Duration;
+            if (step == 2) return punch2Duration;
+            return punch3Duration;
         }
         else if (weaponIndex == 2)
         {
@@ -1392,6 +1423,46 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
             return slash3Duration;
         }
         return 0.5f;
+    }
+
+    protected virtual bool CanAttack()
+    {
+        if (CurrentHealth <= 0) return false;
+        
+        // Cannot attack if rolling
+        if (isStandaloneMode ? isRollingStandalone : rollTimer > 0) return false;
+
+        // Cannot attack if hit, picking, or dead
+        if (anim != null && anim.isActiveAndEnabled && anim.runtimeAnimatorController != null)
+        {
+            AnimatorStateInfo stateInfo = anim.GetCurrentAnimatorStateInfo(0);
+            if (stateInfo.IsName("LonVong") || 
+                stateInfo.IsName("GetHit") || 
+                stateInfo.IsName("GeiHit2") || 
+                stateInfo.IsName("Idle_Pick") || 
+                stateInfo.IsName("Death"))
+            {
+                if (stateInfo.normalizedTime < 0.95f)
+                    return false;
+            }
+        }
+        return true;
+    }
+
+    protected virtual void RequestComboAttack(bool networkMode)
+    {
+        if (isExecutingAttack)
+        {
+            // Always buffer the request - NEVER interrupt a running animation directly.
+            // HandleAttackSequenceEnd (OnPunchEnd event) will pick it up when the animation finishes.
+            pendingAttackRequest = true;
+            Debug.Log("[ArthurPlayer] Nhấp chuột -> Lưu vào buffer, chờ OnPunchEnd.");
+        }
+        else
+        {
+            // Not attacking: start combo immediately
+            PerformComboAttack(networkMode);
+        }
     }
 
     protected virtual void PerformComboAttack(bool networkMode)
@@ -1408,20 +1479,11 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         if (weapon == 1)
         {
-            if (nextStep > 2) nextStep = 1;
+            if (nextStep > 3) nextStep = 1;
         }
         else if (weapon == 2)
         {
             if (nextStep > 3) nextStep = 1;
-        }
-
-        if (comboStep > 0 && currentTime - lastAttackTime <= comboWindow)
-        {
-            float prevDuration = GetAttackDuration(weapon, comboStep);
-            if (currentTime - lastAttackTime < prevDuration * comboTransitionThreshold)
-            {
-                return; 
-            }
         }
 
         float moveX = Input.GetAxis("Horizontal");
@@ -1435,11 +1497,22 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         comboStep = nextStep;
         lastAttackTime = currentTime;
+        attackAnimStartTime = currentTime;
+        isExecutingAttack = true;
+        pendingAttackRequest = false;
+
+        currentAttackAnimDuration = GetAttackDuration(weapon, comboStep);
+
+        // Clear hit enemies list for this new swing and disable hitboxes
+        alreadyHitEnemies.Clear();
+        DisableAllHitboxes();
 
         string animToPlay = "";
         if (weapon == 1) 
         {
-            animToPlay = comboStep == 1 ? "Punch1" : "Punch2";
+            if (comboStep == 1) animToPlay = "Punch1";
+            else if (comboStep == 2) animToPlay = "Punch2";
+            else if (comboStep == 3) animToPlay = "Punch3";
         }
         else if (weapon == 2) 
         {
@@ -1457,15 +1530,56 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         {
             AttackServerRpc();
         }
+    }
+
+    private void HandleAttackSequenceEnd(bool isSlash)
+    {
+        if (isSlash)
+        {
+            DisableBothWeaponHitboxes();
+        }
         else
         {
-            Vector3 rayStart = transform.position + Vector3.up * 0.5f;
-            Debug.DrawRay(rayStart, transform.forward * attackRange, Color.red, 0.5f);
-
-            if (!Physics.Raycast(rayStart, transform.forward, out RaycastHit hit, attackRange)) return;
-
-            TryDamageEnemy(hit.collider);
+            DisableBothHitboxes();
         }
+
+        // End active attack window
+        isExecutingAttack = false;
+
+        // Check if there is a buffered click OR if the mouse button is currently held down
+        bool shouldContinue = pendingAttackRequest || (!IsUIBlockingInput() && CanAttack() && Input.GetMouseButton(0));
+
+        if (shouldContinue)
+        {
+            pendingAttackRequest = false;
+            bool networkMode = !isStandaloneMode && IsOwner;
+            Debug.Log("[ArthurPlayer] Tiếp tục combo từ buffer hoặc đè chuột sau khi kết thúc đòn cũ.");
+            PerformComboAttack(networkMode);
+        }
+        else
+        {
+            // No buffered request and mouse not held: reset combo step and clean layer
+            comboStep = 0;
+            isRootedAttack = false;
+            ClearAttackLayer();
+            Debug.Log($"[ArthurPlayer] Kết thúc chuỗi {(isSlash ? "chém" : "đấm")} - không có input tiếp theo.");
+        }
+    }
+
+    private void InterruptCombo()
+    {
+        pendingAttackRequest = false;
+        isExecutingAttack = false;
+        comboStep = 0;
+        DisableAllHitboxes();
+        alreadyHitEnemies.Clear();
+        Debug.Log("[ArthurPlayer] Combo bị ngắt (bị hit/chết/lộn vòng).");
+    }
+
+    /// <summary>Lowercase alias for OnPunchEnd - Unity Animation Events are case-sensitive.</summary>
+    public void Onpunchend()
+    {
+        OnPunchEnd();
     }
 
     protected void TryDamageEnemy(Collider col)
@@ -1489,25 +1603,325 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
     [ServerRpc]
     protected void AttackServerRpc()
     {
-        Vector3 rayStart = transform.position + Vector3.up * 0.5f;
-        Debug.DrawRay(rayStart, transform.forward * attackRange, Color.red, 0.5f);
+        // Server clears its own hit list for the new swing
+        alreadyHitEnemies.Clear();
+    }
 
-        if (!Physics.Raycast(rayStart, transform.forward, out RaycastHit hit, attackRange)) return;
+    // ------------------------------------------------------------------
+    //  Hitbox Combat System & Animation Event Receivers (Arthur)
+    // ------------------------------------------------------------------
+    private bool IsColliderValid(Collider col)
+    {
+        if (col == null) return false;
+        try
+        {
+            var test = col.enabled;
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
 
-        var enemy1 = hit.collider.GetComponentInParent<Enemy1_DapBua>();
-        if (enemy1 != null) { enemy1.TakeDamage(damageAmount); return; }
+    public void EnableLeftHitbox()
+    {
+        if (!CanActivateHitbox()) return;
+        alreadyHitEnemies.Clear();
+        if (IsColliderValid(leftHitbox))
+        {
+            leftHitbox.enabled = true;
+            Debug.Log("[ArthurPlayer] Left hitbox ENABLED.");
+        }
+    }
 
-        var enemy2 = hit.collider.GetComponentInParent<Enemy2_Zombie>();
-        if (enemy2 != null) { enemy2.TakeDamage(damageAmount); return; }
+    public void DisableLeftHitbox()
+    {
+        if (IsColliderValid(leftHitbox))
+        {
+            leftHitbox.enabled = false;
+            Debug.Log("[ArthurPlayer] Left hitbox DISABLED.");
+        }
+        alreadyHitEnemies.Clear();
+    }
 
-        var enemy3 = hit.collider.GetComponentInParent<Enemy3_Buaa>();
-        if (enemy3 != null) { enemy3.TakeDamage(damageAmount); return; }
+    public void EnableRightHitbox()
+    {
+        if (!CanActivateHitbox()) return;
+        alreadyHitEnemies.Clear();
+        if (IsColliderValid(rightHitbox))
+        {
+            rightHitbox.enabled = true;
+            Debug.Log("[ArthurPlayer] Right hitbox ENABLED.");
+        }
+    }
 
-        var enemy4 = hit.collider.GetComponentInParent<Enemy4_Bongtoi>();
-        if (enemy4 != null) { enemy4.TakeDamage(damageAmount); return; }
+    public void DisableRightHitbox()
+    {
+        if (IsColliderValid(rightHitbox))
+        {
+            rightHitbox.enabled = false;
+            Debug.Log("[ArthurPlayer] Right hitbox DISABLED.");
+        }
+        alreadyHitEnemies.Clear();
+    }
 
-        var enemy5 = hit.collider.GetComponentInParent<Enemy5_PhuThuy>();
-        if (enemy5 != null) { enemy5.TakeDamage(damageAmount); return; }
+    public void EnableBothHitboxes()
+    {
+        if (!CanActivateHitbox()) return;
+        alreadyHitEnemies.Clear();
+        if (IsColliderValid(leftHitbox)) leftHitbox.enabled = true;
+        if (IsColliderValid(rightHitbox)) rightHitbox.enabled = true;
+        Debug.Log("[ArthurPlayer] Both hitboxes ENABLED.");
+    }
+
+    public void DisableBothHitboxes()
+    {
+        if (IsColliderValid(leftHitbox)) leftHitbox.enabled = false;
+        if (IsColliderValid(rightHitbox)) rightHitbox.enabled = false;
+        alreadyHitEnemies.Clear();
+        Debug.Log("[ArthurPlayer] Both hitboxes DISABLED.");
+    }
+
+    public void EnableLeftWeaponHitbox()
+    {
+        if (!CanActivateHitbox()) return;
+        alreadyHitEnemies.Clear();
+        if (IsColliderValid(leftWeaponHitbox))
+        {
+            leftWeaponHitbox.enabled = true;
+            Debug.Log("[ArthurPlayer] Left Weapon hitbox ENABLED.");
+        }
+    }
+
+    public void DisableLeftWeaponHitbox()
+    {
+        if (IsColliderValid(leftWeaponHitbox)) leftWeaponHitbox.enabled = false;
+        alreadyHitEnemies.Clear();
+        Debug.Log("[ArthurPlayer] Left Weapon hitbox DISABLED.");
+    }
+
+    public void EnableRightWeaponHitbox()
+    {
+        if (!CanActivateHitbox()) return;
+        alreadyHitEnemies.Clear();
+        if (IsColliderValid(rightWeaponHitbox))
+        {
+            rightWeaponHitbox.enabled = true;
+            Debug.Log("[ArthurPlayer] Right Weapon hitbox ENABLED.");
+        }
+    }
+
+    public void DisableRightWeaponHitbox()
+    {
+        if (IsColliderValid(rightWeaponHitbox)) rightWeaponHitbox.enabled = false;
+        alreadyHitEnemies.Clear();
+        Debug.Log("[ArthurPlayer] Right Weapon hitbox DISABLED.");
+    }
+
+    public void EnableBothWeaponHitboxes()
+    {
+        if (!CanActivateHitbox()) return;
+        alreadyHitEnemies.Clear();
+        if (IsColliderValid(leftWeaponHitbox)) leftWeaponHitbox.enabled = true;
+        if (IsColliderValid(rightWeaponHitbox)) rightWeaponHitbox.enabled = true;
+        Debug.Log("[ArthurPlayer] Both Weapon hitboxes ENABLED.");
+    }
+
+    public void DisableBothWeaponHitboxes()
+    {
+        if (IsColliderValid(leftWeaponHitbox)) leftWeaponHitbox.enabled = false;
+        if (IsColliderValid(rightWeaponHitbox)) rightWeaponHitbox.enabled = false;
+        alreadyHitEnemies.Clear();
+        Debug.Log("[ArthurPlayer] Both Weapon hitboxes DISABLED.");
+    }
+
+    public void DisableAllHitboxes()
+    {
+        DisableBothHitboxes();
+        DisableBothWeaponHitboxes();
+    }
+
+    public void OnPunchEnd()
+    {
+        HandleAttackSequenceEnd(false);
+        Debug.Log("[ArthurPlayer] OnPunchEnd - Animation Event.");
+    }
+
+    public void OnSlashEnd()
+    {
+        HandleAttackSequenceEnd(true);
+        Debug.Log("[ArthurPlayer] OnSlashEnd - Animation Event.");
+    }
+
+    public void OnAttackEnd()
+    {
+        HandleAttackSequenceEnd(false);
+        Debug.Log("[ArthurPlayer] OnAttackEnd - Animation Event.");
+    }
+
+    private bool CanActivateHitbox()
+    {
+        return isStandaloneMode || (IsSpawned && IsOwner);
+    }
+
+    /// <summary>
+    /// Nhận va chạm từ PlayerHitbox khi enemy đi vào hitbox.
+    /// Tính damage 1 lần duy nhất mỗi enemy trong mỗi đòn đánh.
+    /// </summary>
+    public void OnHitboxCollision(Collider other)
+    {
+        if (!CanActivateHitbox()) return; // Chỉ Owner/Standalone xử lý damage
+
+        if (IsEnemy(other, out Collider enemyCollider))
+        {
+            Transform enemyRoot = enemyCollider.transform.root;
+            if (!alreadyHitEnemies.Contains(enemyRoot))
+            {
+                alreadyHitEnemies.Add(enemyRoot);
+                Debug.Log($"[ArthurPlayer] 💥 HIT: {enemyRoot.name} | Damage: {damageAmount}");
+
+                if (isStandaloneMode)
+                {
+                    TryDamageEnemy(enemyCollider);
+                }
+                else if (IsOwner)
+                {
+                    var netObj = enemyCollider.GetComponentInParent<NetworkObject>();
+                    if (netObj != null) DamageEnemyServerRpc(netObj);
+                    else TryDamageEnemy(enemyCollider);
+                }
+            }
+        }
+    }
+
+    private bool IsEnemy(Collider col, out Collider enemyCollider)
+    {
+        enemyCollider = null;
+        if (col == null) return false;
+
+        if (col.GetComponentInParent<Enemy1_DapBua>() != null ||
+            col.GetComponentInParent<Enemy2_Zombie>() != null ||
+            col.GetComponentInParent<Enemy3_Buaa>() != null ||
+            col.GetComponentInParent<Enemy4_Bongtoi>() != null ||
+            col.GetComponentInParent<Enemy5_PhuThuy>() != null)
+        {
+            enemyCollider = col;
+            return true;
+        }
+        return false;
+    }
+
+    [ServerRpc]
+    private void DamageEnemyServerRpc(NetworkObjectReference enemyRef)
+    {
+        if (enemyRef.TryGet(out NetworkObject netObj))
+        {
+            var col = netObj.GetComponent<Collider>();
+            if (col != null) TryDamageEnemy(col);
+            else
+            {
+                var e1 = netObj.GetComponentInChildren<Enemy1_DapBua>();
+                if (e1 != null) { e1.TakeDamage(damageAmount); return; }
+                var e2 = netObj.GetComponentInChildren<Enemy2_Zombie>();
+                if (e2 != null) { e2.TakeDamage(damageAmount); return; }
+                var e3 = netObj.GetComponentInChildren<Enemy3_Buaa>();
+                if (e3 != null) { e3.TakeDamage(damageAmount); return; }
+                var e4 = netObj.GetComponentInChildren<Enemy4_Bongtoi>();
+                if (e4 != null) { e4.TakeDamage(damageAmount); return; }
+                var e5 = netObj.GetComponentInChildren<Enemy5_PhuThuy>();
+                if (e5 != null) { e5.TakeDamage(damageAmount); return; }
+            }
+        }
+    }
+
+    [ContextMenu("Create Sword Hitboxes")]
+    public void CreateSwordHitboxes()
+    {
+        Transform leftHand = FindBoneRecursive(transform, "left");
+        Transform rightHand = FindBoneRecursive(transform, "right");
+
+        if (leftHand == null) leftHand = transform;
+        if (rightHand == null) rightHand = transform;
+
+        // --- Left Hand Hitbox ---
+        {
+            Transform existingLeft = leftHand.Find("LeftHitbox");
+            GameObject leftObj = existingLeft != null ? existingLeft.gameObject : new GameObject("LeftHitbox");
+            if (existingLeft == null)
+            {
+                leftObj.transform.SetParent(leftHand);
+                leftObj.transform.localPosition = Vector3.zero;
+                leftObj.transform.localRotation = Quaternion.identity;
+                leftObj.transform.localScale = Vector3.one;
+            }
+            BoxCollider col = leftObj.GetComponent<BoxCollider>();
+            if (col == null) col = leftObj.AddComponent<BoxCollider>();
+            col.isTrigger = true;
+            col.size = new Vector3(0.6f, 0.6f, 0.6f);
+            col.center = new Vector3(0f, 0f, 0.2f);
+            col.enabled = false;
+            if (leftObj.GetComponent<PlayerHitbox>() == null) leftObj.AddComponent<PlayerHitbox>();
+            leftHitbox = col;
+        }
+
+        // --- Right Hand Hitbox ---
+        {
+            Transform existingRight = rightHand.Find("RightHitbox");
+            GameObject rightObj = existingRight != null ? existingRight.gameObject : new GameObject("RightHitbox");
+            if (existingRight == null)
+            {
+                rightObj.transform.SetParent(rightHand);
+                rightObj.transform.localPosition = Vector3.zero;
+                rightObj.transform.localRotation = Quaternion.identity;
+                rightObj.transform.localScale = Vector3.one;
+            }
+            BoxCollider col = rightObj.GetComponent<BoxCollider>();
+            if (col == null) col = rightObj.AddComponent<BoxCollider>();
+            col.isTrigger = true;
+            col.size = new Vector3(0.6f, 0.6f, 0.6f);
+            col.center = new Vector3(0f, 0f, 0.2f);
+            col.enabled = false;
+            if (rightObj.GetComponent<PlayerHitbox>() == null) rightObj.AddComponent<PlayerHitbox>();
+            rightHitbox = col;
+        }
+
+        // Kiếm chém tạm thời bỏ qua, sẽ làm sau
+        leftWeaponHitbox = null;
+        rightWeaponHitbox = null;
+    }
+
+    private Transform FindWeaponTransform(Transform hand)
+    {
+        for (int i = 0; i < hand.childCount; i++)
+        {
+            Transform child = hand.GetChild(i);
+            string nameLower = child.name.ToLower();
+            if (nameLower.Contains("sword") || nameLower.Contains("blade") || nameLower.Contains("weapon") ||
+                nameLower.Contains("kiem") || nameLower.Contains("dao") || nameLower.Contains("katana") || nameLower.Contains("weapon_r") || nameLower.Contains("weapon_l"))
+            {
+                return child;
+            }
+            Transform subChild = FindWeaponTransform(child);
+            if (subChild != null) return subChild;
+        }
+        return null;
+    }
+
+    private Transform FindBoneRecursive(Transform current, string keyword)
+    {
+        string nameLower = current.name.ToLower();
+        if (nameLower.Contains(keyword) && (nameLower.Contains("hand") || nameLower.Contains("wrist") || nameLower.Contains("palm") || nameLower.Contains("finger")))
+        {
+            if (nameLower.Contains("hand")) return current;
+        }
+        for (int i = 0; i < current.childCount; i++)
+        {
+            Transform found = FindBoneRecursive(current.GetChild(i), keyword);
+            if (found != null) return found;
+        }
+        if (current.name.ToLower().Contains(keyword) && current.name.ToLower().Contains("hand")) return current;
+        return null;
     }
 
     public void TakeDamage(float damage)
@@ -1534,6 +1948,9 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
             localHealth = Mathf.Max(localHealth - damage, 0f);
             UpdateHealthHUD(localHealth);
             Debug.Log($"[Standalone] {gameObject.name} nhận {damage} sát thương. Máu còn: {localHealth}");
+            
+            InterruptCombo();
+            
             if (localHealth <= 0)
             {
                 Debug.LogWarning($"[Standalone] {gameObject.name} đã chết!");
@@ -1551,6 +1968,8 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         currentHealth.Value = Mathf.Max(currentHealth.Value - damage, 0f);
         Debug.Log($"[Server] {gameObject.name} nhận {damage} sát thương. Máu còn lại: {currentHealth.Value}");
+
+        InterruptCombo();
 
         if (currentHealth.Value <= 0)
         {
@@ -1761,6 +2180,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
                name == "Death" ||
                name == "Punch1" ||
                name == "Punch2" ||
+               name == "Punch3" ||
                name == "Slash1" ||
                name == "Slash2" ||
                name == "Slash3" ||
@@ -1792,6 +2212,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
     {
         return name == "Punch1" || 
                name == "Punch2" || 
+               name == "Punch3" || 
                name == "Slash1" || 
                name == "Slash2" || 
                name == "Slash3";
@@ -1831,6 +2252,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
     {
         return stateInfo.IsName("Punch1") || 
                stateInfo.IsName("Punch2") || 
+               stateInfo.IsName("Punch3") || 
                stateInfo.IsName("Slash1") || 
                stateInfo.IsName("Slash2") || 
                stateInfo.IsName("Slash3");
@@ -1937,6 +2359,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         {
             anim.ResetTrigger("Punch1");
             anim.ResetTrigger("Punch2");
+            anim.ResetTrigger("Punch3");
             anim.ResetTrigger("Slash1");
             anim.ResetTrigger("Slash2");
             anim.ResetTrigger("Slash3");
@@ -1945,6 +2368,22 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         }
 
         anim.SetTrigger(animName);
+
+        bool isAttack = IsAttackAnimationName(animName);
+        if (isAttack)
+        {
+            isExecutingAttack = true;
+            attackAnimStartTime = Time.time;
+            int weapon = GetActiveWeaponIndex();
+            currentAttackAnimDuration = GetAttackDuration(weapon, comboStep);
+        }
+        else
+        {
+            if (isLoopingAnim || animName == "LonVong" || animName == "Death" || animName.Contains("Hit") || animName == "Idle_Pick")
+            {
+                isExecutingAttack = false;
+            }
+        }
 
         bool isMovingAttack = IsAttackAnimationName(animName) && !isRootedAttack;
         if (!isMovingAttack)
