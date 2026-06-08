@@ -3,7 +3,7 @@ using UnityEngine;
 public class MovementController : MonoBehaviour
 {
     // Điền tên các script điều khiển của tụi nó vào đây
-    [SerializeField] private string[] scriptNames = { "LeoPlayer", "ElenaPlayer", "PlayerMovement", "InputHandler" };
+    [SerializeField] private string[] scriptNames = { "LeoPlayer", "ElenaPlayer", "MayaPlayer", "PlayerMovement", "InputHandler" };
 
     public void ToggleMovement(bool canMove)
     {
