@@ -23,7 +23,7 @@ public class OptimizedNetworkMiniGame : NetworkBehaviour
 
     [Header("Cấu hình số người")]
     [Tooltip("Số trạm cần đạt để mở cổng (1 hoặc 2)")]
-    public int stationsNeededToOpen = 2; // Mặc định là 2, muốn test 1 người thì ngoài Unity chỉnh thành 1
+    public int stationsNeededToOpen = 2; 
 
     public List<GearRotator> gearList;
 
@@ -40,10 +40,12 @@ public class OptimizedNetworkMiniGame : NetworkBehaviour
     public NetworkVariable<bool> station2HasCrystal = new NetworkVariable<bool>(false);
     public NetworkVariable<bool> station3HasCrystal = new NetworkVariable<bool>(false);
 
+    // Dùng duy nhất biến này để đồng bộ trạng thái mở cổng
+    public NetworkVariable<bool> isCurrentlyOpen = new NetworkVariable<bool>(false);
+
     private int currentStationIndex = 0;
     private bool isPlaying = false;
-    private bool isCurrentlyOpen = false;
-
+    private float syncTimer = 0f;
     private float localPredictedValue = 0f;
 
     public override void OnNetworkSpawn()
@@ -67,14 +69,29 @@ public class OptimizedNetworkMiniGame : NetworkBehaviour
         s1Value.OnValueChanged += (oldVal, newVal) => SyncUI(1, newVal);
         s2Value.OnValueChanged += (oldVal, newVal) => SyncUI(2, newVal);
         s3Value.OnValueChanged += (oldVal, newVal) => SyncUI(3, newVal);
+
+        // Đảm bảo bánh răng cập nhật ngay khi isCurrentlyOpen thay đổi
+        isCurrentlyOpen.OnValueChanged += (oldVal, newVal) => {
+            foreach (var gear in gearList)
+            {
+                if (gear != null)
+                {
+                    if (newVal) gear.OpenGear();
+                    else gear.ResetToSpinning();
+                }
+            }
+        };
     }
 
     private void SyncUI(int index, float serverValue)
     {
         if (currentStationIndex == index && progressFill != null)
         {
-            // Cập nhật trực tiếp theo giá trị từ Server
-            localPredictedValue = serverValue; 
+            if (Mathf.Abs(localPredictedValue - serverValue) > 5f)
+                localPredictedValue = serverValue; 
+            else
+                localPredictedValue = Mathf.Lerp(localPredictedValue, serverValue, 0.5f);
+            
             progressFill.style.width = new Length(localPredictedValue, LengthUnit.Percent);
         }
     }
@@ -90,6 +107,16 @@ public class OptimizedNetworkMiniGame : NetworkBehaviour
         {
             UpdateStationDrain();
             CheckGateStatus();
+
+            syncTimer += Time.deltaTime;
+            if (syncTimer >= 0.5f) 
+            {
+                s0Value.Value = s0Value.Value; 
+                s1Value.Value = s1Value.Value;
+                s2Value.Value = s2Value.Value;
+                s3Value.Value = s3Value.Value;
+                syncTimer = 0f;
+            }
         }
     }
 
@@ -100,15 +127,12 @@ public class OptimizedNetworkMiniGame : NetworkBehaviour
         float normal = decayRate * Time.deltaTime;
         float fast = decayRate * 2.5f * Time.deltaTime;
 
-        // Trừ bình thường cho trạm 0, 1
         s0Value.Value = Mathf.Clamp(s0Value.Value - normal, 0f, 100f);
         s1Value.Value = Mathf.Clamp(s1Value.Value - normal, 0f, 100f);
 
-        // TRẠM 2: Nếu có ngọc thì dùng normal, không có thì dùng fast (đúng ý ông)
         float s2Speed = station2HasCrystal.Value ? normal : fast;
         s2Value.Value = Mathf.Clamp(s2Value.Value - s2Speed, 0f, 100f);
 
-        // TRẠM 3: Tương tự
         float s3Speed = station3HasCrystal.Value ? normal : fast;
         s3Value.Value = Mathf.Clamp(s3Value.Value - s3Speed, 0f, 100f);
     }
@@ -117,53 +141,32 @@ public class OptimizedNetworkMiniGame : NetworkBehaviour
     {
         if (!IsServer) return; 
 
-        // 1. Kiểm tra trạng thái vạch lực
-        bool s0Ready = s0Value.Value >= greenZoneMin;
-        bool s1Ready = s1Value.Value >= greenZoneMin;
-        bool s2Ready = s2Value.Value >= greenZoneMin;
-        bool s3Ready = s3Value.Value >= greenZoneMin;
+        // TÍNH TOÁN NGƯỠNG ĐỘNG
+        // Nếu cổng đang đóng, dùng greenZoneMin (85). 
+        // Nếu cổng đã mở, dùng ngưỡng thấp hơn (75) để tạo khoảng đệm.
+        float threshold = isCurrentlyOpen.Value ? (greenZoneMin - 15f) : greenZoneMin;
 
-        // 2. Tính toán trạng thái mở cổng
-        bool shouldBeOpen = false;
+        // SỬ DỤNG 'threshold' CHO TẤT CẢ CÁC TRẠM
+        bool s0Ready = s0Value.Value >= threshold;
+        bool s1Ready = s1Value.Value >= threshold;
+        bool s2Ready = s2Value.Value >= threshold;
+        bool s3Ready = s3Value.Value >= threshold;
 
-        if (stationsNeededToOpen == 1)
-        {
-            // Nếu chỉ cần 1 trạm, dùng toán tử OR (||)
-            shouldBeOpen = s0Ready || s1Ready || s2Ready || s3Ready;
-        }
-        else 
-        {
-            // Nếu cần 2 trạm: cặp 0-1 hoặc 2-3
-            bool pair1Ready = s0Ready && s1Ready;
-            bool pair2Ready = s2Ready && s3Ready;
-            shouldBeOpen = pair1Ready || pair2Ready;
-        }
+        bool shouldBeOpen = (stationsNeededToOpen == 1) 
+            ? (s0Ready || s1Ready || s2Ready || s3Ready) 
+            : ((s0Ready && s1Ready) || (s2Ready && s3Ready));
 
-        // 3. Thực thi nếu có thay đổi
-        if (shouldBeOpen != isCurrentlyOpen)
+        if (shouldBeOpen != isCurrentlyOpen.Value)
         {
-            isCurrentlyOpen = shouldBeOpen;
-            Debug.Log($"[SERVER] Cổng đã mở trạng thái: {isCurrentlyOpen}");
-            
-            foreach (var gear in gearList)
-            {
-                if (gear != null)
-                {
-                    if (isCurrentlyOpen) gear.OpenGear();
-                    else gear.ResetToSpinning(); 
-                }
-            }
+            isCurrentlyOpen.Value = shouldBeOpen;
+            Debug.Log($"[SERVER] Cổng đã mở trạng thái: {isCurrentlyOpen.Value}");
         }
     }
 
     [ServerRpc(RequireOwnership = false)]
     public void UpdateSliderServerRpc(int index, float amount)
     {
-        // Server tính toán giá trị mới
-        float newValue = GetStationValue(index) + amount;
-        newValue = Mathf.Clamp(newValue, 0f, 100f);
-        
-        // Cập nhật NetworkVariable (Server tự động đẩy giá trị về cho tất cả Client)
+        float newValue = Mathf.Clamp(GetStationValue(index) + amount, 0f, 100f);
         switch(index)
         {
             case 0: s0Value.Value = newValue; break;
@@ -212,7 +215,6 @@ public class OptimizedNetworkMiniGame : NetworkBehaviour
             {
                 mainContainer.RemoveFromClassList("hidden");
                 mainContainer.style.display = DisplayStyle.Flex;
-                
                 localPredictedValue = GetStationValue(index);
                 progressFill.style.width = new Length(localPredictedValue, LengthUnit.Percent);
             }
@@ -241,9 +243,8 @@ public class OptimizedNetworkMiniGame : NetworkBehaviour
     private void ProcessInput(bool isA)
     {
         PlaySuccessVisual(isA ? keyA : keyD);
-        
-        // GỬI LỆNH LÊN SERVER - KHÔNG TỰ TÍNH TOÁN CỘNG ĐIỂM Ở CLIENT NỮA
-        // Việc này tránh xung đột dữ liệu giữa các máy
+        localPredictedValue = Mathf.Clamp(localPredictedValue + pushAmount, 0f, 100f);
+        progressFill.style.width = new Length(localPredictedValue, LengthUnit.Percent);
         UpdateSliderServerRpc(currentStationIndex, pushAmount);
     }
 
