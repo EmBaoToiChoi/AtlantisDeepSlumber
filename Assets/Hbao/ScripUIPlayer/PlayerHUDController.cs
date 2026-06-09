@@ -1955,6 +1955,36 @@ public class PlayerHUDController : MonoBehaviour
             skillImgE.style.backgroundImage = new StyleBackground(profile.skillESprite);
         }
 
+        // 4. Tùy chỉnh UI Skill R indicator theo từng nhân vật
+        if (invisibilityIndicator != null)
+        {
+            var skillRLabel = invisibilityIndicator.Q<Label>("invisibility-text");
+            if (profileIndex == 3) // Arthur Tanker
+            {
+                // Đổi text và màu sang đỏ cho skill "Tăng Cường"
+                if (skillRLabel != null) skillRLabel.text = "TĂNG CƯỜNG";
+                invisibilityIndicator.style.borderTopColor = new Color(0.9f, 0.1f, 0.1f, 1f);
+                invisibilityIndicator.style.borderBottomColor = new Color(0.9f, 0.1f, 0.1f, 1f);
+                invisibilityIndicator.style.borderLeftColor = new Color(0.9f, 0.1f, 0.1f, 1f);
+                invisibilityIndicator.style.borderRightColor = new Color(0.9f, 0.1f, 0.1f, 1f);
+                invisibilityIndicator.style.backgroundColor = new Color(0.25f, 0f, 0f, 0.4f);
+                if (skillRLabel != null) skillRLabel.style.color = new Color(1f, 0.45f, 0.45f, 1f);
+                if (invisibilityTimerLabel != null) invisibilityTimerLabel.style.color = new Color(1f, 0.45f, 0.45f, 1f);
+            }
+            else
+            {
+                // Khôi phục màu mặc định (trắng / tàng hình) cho các class khác
+                if (skillRLabel != null) skillRLabel.text = "TÀNG HÌNH";
+                invisibilityIndicator.style.borderTopColor = Color.white;
+                invisibilityIndicator.style.borderBottomColor = Color.white;
+                invisibilityIndicator.style.borderLeftColor = Color.white;
+                invisibilityIndicator.style.borderRightColor = Color.white;
+                invisibilityIndicator.style.backgroundColor = new Color(0f, 0f, 0f, 0.25f);
+                if (skillRLabel != null) skillRLabel.style.color = Color.white;
+                if (invisibilityTimerLabel != null) invisibilityTimerLabel.style.color = Color.white;
+            }
+        }
+
         Debug.Log($"[PlayerHUDController] Đã thiết lập thành công giao diện cho lớp nhân vật: {profile.className} (Index {profileIndex})");
     }
 

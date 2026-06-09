@@ -1,12 +1,12 @@
 using UnityEngine;
 using Unity.Netcode;
 
-public class WeaponBowElena : NetworkBehaviour
+public class WeaponShieldArthur : NetworkBehaviour
 {
     [Header("Item Settings")]
-    public string itemName = "Cung của Elena";
+    public string itemName = "Khiên & Kiếm của Arthur";
     public float interactRadius = 2.5f;
-    public int targetClassIndex = 2; // Cung Thủ (Elena)
+    public int targetClassIndex = 3; // Tanker (Arthur)
 
     [Header("Floating Animation Settings")]
     public float rotationSpeed = 60f;
@@ -110,7 +110,7 @@ public class WeaponBowElena : NetworkBehaviour
         var bows = FindObjectsOfType<WeaponBowElena>();
         foreach (var item in bows)
         {
-            if (item == this || item == null) continue;
+            if (item == null) continue;
             float dist = Vector3.Distance(item.transform.position, localPlayer.transform.position);
             if (dist <= item.interactRadius && dist < myDist) return false;
         }
@@ -126,7 +126,7 @@ public class WeaponBowElena : NetworkBehaviour
         var arthurs = FindObjectsOfType<WeaponShieldArthur>();
         foreach (var item in arthurs)
         {
-            if (item == null) continue;
+            if (item == this || item == null) continue;
             float dist = Vector3.Distance(item.transform.position, localPlayer.transform.position);
             if (dist <= item.interactRadius && dist < myDist) return false;
         }
@@ -159,11 +159,11 @@ public class WeaponBowElena : NetworkBehaviour
             hud = FindObjectOfType<PlayerHUDController>();
         }
 
-        // Check if player class matches Bow Target (Cung Thủ / index 2)
+        // Check if player class matches Arthur Target (Tanker / index 3)
         if (localPlayer.CharacterClassIndex == targetClassIndex)
         {
             // Success! Unlock weapon 2 and skills, and auto-equip weapon 2
-            Debug.Log($"[WeaponBowElena] Unlocking bow for player {localPlayer.DisplayName}");
+            Debug.Log($"[WeaponShieldArthur] Unlocking shield and sword for player {localPlayer.DisplayName}");
 
             // Clear interaction prompt
             if (hud != null)
@@ -179,10 +179,10 @@ public class WeaponBowElena : NetworkBehaviour
             localPlayer.SavePlayerStateToDatabase();
 
             // Play pickup animation
-            var elenaPlayer = localPlayer.gameObject.GetComponent<ElenaPlayer>();
-            if (elenaPlayer != null)
+            var arthurPlayer = localPlayer.gameObject.GetComponent<ArthurPlayer>();
+            if (arthurPlayer != null)
             {
-                elenaPlayer.PlayAnimation("Idle_Pick", 0.1f);
+                arthurPlayer.PlayAnimation("Idle_Pick", 0.1f);
             }
 
             // Despawn/Destroy item
@@ -198,7 +198,7 @@ public class WeaponBowElena : NetworkBehaviour
         else
         {
             // Fail! Mismatched class
-            Debug.LogWarning($"[WeaponBowElena] Player {localPlayer.DisplayName} (class {localPlayer.CharacterClassIndex}) tried to steal Elena's Bow!");
+            Debug.LogWarning($"[WeaponShieldArthur] Player {localPlayer.DisplayName} (class {localPlayer.CharacterClassIndex}) tried to steal Arthur's Weapon!");
             if (hud != null)
             {
                 hud.ShowMissionAlert("bạn quá tham lam", 3.0f);
