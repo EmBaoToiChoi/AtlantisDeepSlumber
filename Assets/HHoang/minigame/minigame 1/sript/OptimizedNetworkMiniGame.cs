@@ -81,23 +81,37 @@ public class OptimizedNetworkMiniGame : NetworkBehaviour
 
     private void HandleLowFPSClientLogic()
     {
-        //if (GetOwner(currentStationIndex) != NetworkManager.Singleton.LocalClientId) return;
+        // 1. CHỈ DÙNG NEW INPUT SYSTEM (Tránh lỗi làm đứng Script)
+        bool aPressed = false;
+        bool dPressed = false;
 
-        if (Keyboard.current.aKey.wasPressedThisFrame || Keyboard.current.dKey.wasPressedThisFrame)
+        if (Keyboard.current != null)
         {
+            // Cho phép xài Mũi tên Trái/Phải để phòng hờ bị kẹt phím
+            aPressed = Keyboard.current.aKey.wasPressedThisFrame || Keyboard.current.leftArrowKey.wasPressedThisFrame;
+            dPressed = Keyboard.current.dKey.wasPressedThisFrame || Keyboard.current.rightArrowKey.wasPressedThisFrame;
+        }
+
+        // 2. LOGIC TĂNG ĐIỂM BẢO VỆ MÁY YẾU
+        if (aPressed || dPressed)
+        {
+            // Bấm phím thì CHỈ TĂNG, KHÔNG TỤT ĐIỂM trong khung hình này
             localPredictedValue = Mathf.Clamp(localPredictedValue + pushAmount, 0f, 100f);
-            PlaySuccessVisual(Keyboard.current.aKey.wasPressedThisFrame ? keyA : keyD);
+            PlaySuccessVisual(aPressed ? keyA : keyD);
+        }
+        else 
+        {
+            // Chỉ tụt điểm khi người chơi buông tay (KHÔNG BẤM GÌ)
+            float currentDecay = decayRate;
+            if (currentStationIndex == 2 && !station2HasCrystal.Value) currentDecay *= 2.5f;
+            if (currentStationIndex == 3 && !station3HasCrystal.Value) currentDecay *= 2.5f;
+            
+            localPredictedValue = Mathf.Clamp(localPredictedValue - (currentDecay * Time.deltaTime), 0f, 100f);
         }
         
-        float currentDecay = decayRate;
-        if (currentStationIndex == 2 && !station2HasCrystal.Value) currentDecay *= 2.5f;
-        if (currentStationIndex == 3 && !station3HasCrystal.Value) currentDecay *= 2.5f;
-        
-        localPredictedValue = Mathf.Clamp(localPredictedValue - (currentDecay * Time.deltaTime), 0f, 100f);
-        
-        // Gọi hàm update UI mới mượt mà
         UpdateUI(); 
 
+        // 3. LOGIC GỬI LÊN SERVER (Giữ nguyên, rất mượt rồi)
         bool currentZoneStatus = localPredictedValue >= greenZoneMin;
 
         if (currentZoneStatus != lastSentZoneStatus)
