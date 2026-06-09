@@ -40,6 +40,17 @@ public class InteractBox : NetworkBehaviour
     private void OpenStation()
     {
         if (gameManager == null) return;
+
+        // --- ĐOẠN NÀY LÀ CHỐT CHẶN CHỐNG CƯỚP TRẠM ---
+        ulong currentOwner = gameManager.GetOwner(stationIndex);
+        // Nếu trạm đã có người xài (không phải ulong.MaxValue) VÀ người đó không phải là mình
+        if (currentOwner != ulong.MaxValue && currentOwner != NetworkManager.Singleton.LocalClientId)
+        {
+            Debug.Log($"Trạm {stationIndex} đã có người xài, chặn lệnh mở Canvas!");
+            return; // Đuổi về, không chạy code bên dưới nữa
+        }
+        // ---------------------------------------------
+
         isUsingStation = true;
         gameManager.ToggleMiniGame(stationIndex, true);
 
@@ -104,7 +115,6 @@ public class InteractBox : NetworkBehaviour
             pInt.currentInteractBox = this; 
 
             // Tự động tìm script điều khiển (LeoPlayer, ElenaPlayer, v.v...)
-            // Mày chỉ cần đảm bảo script điều khiển cũng là NetworkBehaviour
             localPlayerController = other.GetComponent<NetworkBehaviour>(); 
         }
     }
