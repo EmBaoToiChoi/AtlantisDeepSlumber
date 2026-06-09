@@ -123,6 +123,14 @@ public class WeaponBladesLeo : NetworkBehaviour
             if (dist <= item.interactRadius && dist < myDist) return false;
         }
 
+        var arthurs = FindObjectsOfType<WeaponShieldArthur>();
+        foreach (var item in arthurs)
+        {
+            if (item == null) continue;
+            float dist = Vector3.Distance(item.transform.position, localPlayer.transform.position);
+            if (dist <= item.interactRadius && dist < myDist) return false;
+        }
+
         var collectibles = FindObjectsOfType<CollectibleItemDrop>();
         foreach (var item in collectibles)
         {

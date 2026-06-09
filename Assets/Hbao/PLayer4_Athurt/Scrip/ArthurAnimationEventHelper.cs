@@ -244,4 +244,67 @@ public class ArthurAnimationEventHelper : MonoBehaviour
             player.OnPickItemEvent();
         }
     }
+
+    public void DrawLeftSword()
+    {
+        EnsurePlayerReference();
+        if (player != null)
+        {
+            player.DrawLeftSword();
+        }
+    }
+
+    public void DrawRightSword()
+    {
+        EnsurePlayerReference();
+        if (player != null)
+        {
+            player.DrawRightSword();
+        }
+    }
+
+    public void SheatheLeftSword()
+    {
+        EnsurePlayerReference();
+        if (player != null)
+        {
+            player.SheatheLeftSword();
+        }
+    }
+
+    public void SheatheRightSword()
+    {
+        EnsurePlayerReference();
+        if (player != null)
+        {
+            player.SheatheRightSword();
+        }
+    }
+
+    public void OnDrawLeftEnd()
+    {
+        EnsurePlayerReference();
+        if (player != null)
+        {
+            player.OnDrawLeftEnd();
+        }
+    }
+
+    public void OnSheatheLeftEnd()
+    {
+        EnsurePlayerReference();
+        if (player != null)
+        {
+            player.OnSheatheLeftEnd();
+        }
+    }
+
+    public void OnWeaponSwitchEnd()
+    {
+        EnsurePlayerReference();
+        if (player != null)
+        {
+            player.OnWeaponSwitchEnd();
+        }
+    }
 }
