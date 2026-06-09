@@ -178,6 +178,12 @@ MonoBehaviour:
   rightHandWeapon: {fileID: 6196912473071455552}
   leftShoulderWeapon: {fileID: 6978814873877841153}
   rightShoulderWeapon: {fileID: 3897477341066556430}
+  swordBladeObjects:
+  - {fileID: 8281546920488248962}
+  - {fileID: 4410469949783538344}
+  redWeaponMaterial: {fileID: 0}
+  rSkillDuration: 8
+  rSkillDamageMultiplier: 1.3
   maxHealth: 150
   currentHealth:
     UpdateTraits:
@@ -195,6 +201,16 @@ MonoBehaviour:
       MaxSecondsBetweenUpdates: 0
     m_InternalValue: 1
   isSkillsUnlocked:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 0
+  isBlockingNet:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 0
+  isRSkillActiveNet:
     UpdateTraits:
       MinSecondsBetweenUpdates: 0
       MaxSecondsBetweenUpdates: 0
@@ -598,6 +614,13 @@ MonoBehaviour:
     TransitionIndex: 4
   - IsCrossFadeExit: 0
     Layer: 0
+    OriginatingState: -1331891752
+    DestinationState: -16078543
+    TransitionDuration: 0.05
+    TriggerNameHash: -1068915434
+    TransitionIndex: 5
+  - IsCrossFadeExit: 0
+    Layer: 0
     OriginatingState: 1572205430
     DestinationState: -860415213
     TransitionDuration: 0.9
@@ -605,6 +628,41 @@ MonoBehaviour:
     TransitionIndex: 1
   - IsCrossFadeExit: 0
     Layer: 0
+    OriginatingState: 1572205430
+    DestinationState: -382223678
+    TransitionDuration: 0.05
+    TriggerNameHash: 337460475
+    TransitionIndex: 2
+  - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: 1572205430
+    DestinationState: 133138430
+    TransitionDuration: 0.05
+    TriggerNameHash: -576533199
+    TransitionIndex: 3
+  - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: -860415213
+    DestinationState: -16078543
+    TransitionDuration: 0.05
+    TriggerNameHash: -1068915434
+    TransitionIndex: 2
+  - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: -860415213
+    DestinationState: -382223678
+    TransitionDuration: 0.05
+    TriggerNameHash: 337460475
+    TransitionIndex: 3
+  - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: -860415213
+    DestinationState: 133138430
+    TransitionDuration: 0.05
+    TriggerNameHash: -576533199
+    TransitionIndex: 4
+  - IsCrossFadeExit: 0
+    Layer: 0
     OriginatingState: -1359462219
     DestinationState: -1574799115
     TransitionDuration: 0.05
@@ -631,6 +689,20 @@ MonoBehaviour:
     TransitionDuration: 0.25
     TriggerNameHash: 1984860264
     TransitionIndex: 4
+  - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: -1359462219
+    DestinationState: -16078543
+    TransitionDuration: 0.05
+    TriggerNameHash: -1068915434
+    TransitionIndex: 5
+  - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: -1359462219
+    DestinationState: -1459250024
+    TransitionDuration: 0.05
+    TriggerNameHash: 63768429
+    TransitionIndex: 6
   - IsCrossFadeExit: 0
     Layer: 0
     OriginatingState: -1574799115
@@ -661,6 +733,20 @@ MonoBehaviour:
     TransitionIndex: 4
   - IsCrossFadeExit: 0
     Layer: 0
+    OriginatingState: -1574799115
+    DestinationState: -16078543
+    TransitionDuration: 0.05
+    TriggerNameHash: -1068915434
+    TransitionIndex: 5
+  - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: -1574799115
+    DestinationState: -1459250024
+    TransitionDuration: 0.05
+    TriggerNameHash: 63768429
+    TransitionIndex: 6
+  - IsCrossFadeExit: 0
+    Layer: 0
     OriginatingState: -1446558006
     DestinationState: -1574799115
     TransitionDuration: 0.05
@@ -687,6 +773,48 @@ MonoBehaviour:
     TransitionDuration: 0.25
     TriggerNameHash: 1984860264
     TransitionIndex: 4
+  - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: -1446558006
+    DestinationState: -1459250024
+    TransitionDuration: 0.05
+    TriggerNameHash: -1068915434
+    TransitionIndex: 5
+  - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: 928352403
+    DestinationState: -16078543
+    TransitionDuration: 0.05
+    TriggerNameHash: -1068915434
+    TransitionIndex: 1
+  - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: 928352403
+    DestinationState: -382223678
+    TransitionDuration: 0.05
+    TriggerNameHash: 337460475
+    TransitionIndex: 2
+  - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: 928352403
+    DestinationState: 133138430
+    TransitionDuration: 0.05
+    TriggerNameHash: -576533199
+    TransitionIndex: 3
+  - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: -382223678
+    DestinationState: 133138430
+    TransitionDuration: 0.05
+    TriggerNameHash: -576533199
+    TransitionIndex: 0
+  - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: -16078543
+    DestinationState: -1459250024
+    TransitionDuration: 0.05
+    TriggerNameHash: 63768429
+    TransitionIndex: 0
   - IsCrossFadeExit: 0
     Layer: 1
     OriginatingState: -499022955
@@ -717,6 +845,27 @@ MonoBehaviour:
     TransitionIndex: 3
   - IsCrossFadeExit: 0
     Layer: 1
+    OriginatingState: -499022955
+    DestinationState: 848348862
+    TransitionDuration: 0.05
+    TriggerNameHash: 848348862
+    TransitionIndex: 4
+  - IsCrossFadeExit: 0
+    Layer: 1
+    OriginatingState: -499022955
+    DestinationState: 2048954328
+    TransitionDuration: 0.05
+    TriggerNameHash: 2048954328
+    TransitionIndex: 5
+  - IsCrossFadeExit: 0
+    Layer: 1
+    OriginatingState: -499022955
+    DestinationState: 1271436613
+    TransitionDuration: 0.05
+    TriggerNameHash: 1271436613
+    TransitionIndex: 6
+  - IsCrossFadeExit: 0
+    Layer: 1
     OriginatingState: -382223678
     DestinationState: 133138430
     TransitionDuration: 0.05
@@ -729,6 +878,48 @@ MonoBehaviour:
     TransitionDuration: 0.05
     TriggerNameHash: 63768429
     TransitionIndex: 0
+  - IsCrossFadeExit: 0
+    Layer: 1
+    OriginatingState: 848348862
+    DestinationState: 2048954328
+    TransitionDuration: 0.05
+    TriggerNameHash: 2048954328
+    TransitionIndex: 1
+  - IsCrossFadeExit: 0
+    Layer: 1
+    OriginatingState: 848348862
+    DestinationState: 1271436613
+    TransitionDuration: 0.05
+    TriggerNameHash: 1271436613
+    TransitionIndex: 2
+  - IsCrossFadeExit: 0
+    Layer: 1
+    OriginatingState: 2048954328
+    DestinationState: 1271436613
+    TransitionDuration: 0.05
+    TriggerNameHash: 1271436613
+    TransitionIndex: 1
+  - IsCrossFadeExit: 0
+    Layer: 1
+    OriginatingState: 2048954328
+    DestinationState: 848348862
+    TransitionDuration: 0.05
+    TriggerNameHash: 848348862
+    TransitionIndex: 2
+  - IsCrossFadeExit: 0
+    Layer: 1
+    OriginatingState: 1271436613
+    DestinationState: 2048954328
+    TransitionDuration: 0.05
+    TriggerNameHash: 1271436613
+    TransitionIndex: 1
+  - IsCrossFadeExit: 0
+    Layer: 1
+    OriginatingState: 1271436613
+    DestinationState: 848348862
+    TransitionDuration: 0.05
+    TriggerNameHash: 848348862
+    TransitionIndex: 2
   AnimatorParameterEntries:
     ParameterEntries:
     - name: InputX
@@ -785,6 +976,26 @@ MonoBehaviour:
       ParameterType: 9
     - name: SheatheRight
       NameHash: -576533199
+      Synchronize: 1
+      ParameterType: 9
+    - name: attack1
+      NameHash: 848348862
+      Synchronize: 1
+      ParameterType: 9
+    - name: Attack1combo1
+      NameHash: 2048954328
+      Synchronize: 1
+      ParameterType: 9
+    - name: Attack2combo1
+      NameHash: 1271436613
+      Synchronize: 1
+      ParameterType: 9
+    - name: AnhitCoVuKhi
+      NameHash: 1244499459
+      Synchronize: 1
+      ParameterType: 9
+    - name: DoKhienDinhSatThuong
+      NameHash: 314704010
       Synchronize: 1
       ParameterType: 9
   AnimatorParametersExpanded: 0
@@ -1155,6 +1366,11 @@ PrefabInstance:
       addedObject: {fileID: 1179337013547572833}
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 748f4e457b78a0e4190a5d94e6d99ceb, type: 3}
+--- !u!1 &4410469949783538344 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 7209015964379138745, guid: 748f4e457b78a0e4190a5d94e6d99ceb, type: 3}
+  m_PrefabInstance: {fileID: 6430773985047326737}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &6196912473071455552 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: 748f4e457b78a0e4190a5d94e6d99ceb, type: 3}
@@ -1163,6 +1379,11 @@ GameObject:
 --- !u!4 &6824092131677493242 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 748f4e457b78a0e4190a5d94e6d99ceb, type: 3}
+  m_PrefabInstance: {fileID: 6430773985047326737}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &8281546920488248962 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 3157944548403910291, guid: 748f4e457b78a0e4190a5d94e6d99ceb, type: 3}
   m_PrefabInstance: {fileID: 6430773985047326737}
   m_PrefabAsset: {fileID: 0}
 --- !u!1001 &7477023718910402410
@@ -1195,11 +1416,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: e6bcb5b68977fe5438b3c22db8c2958d, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 0
+      value: -0.062
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: e6bcb5b68977fe5438b3c22db8c2958d, type: 3}
       propertyPath: m_LocalRotation.w
-      value: 0.7071068
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: e6bcb5b68977fe5438b3c22db8c2958d, type: 3}
       propertyPath: m_LocalRotation.x
@@ -1207,7 +1428,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: e6bcb5b68977fe5438b3c22db8c2958d, type: 3}
       propertyPath: m_LocalRotation.y
-      value: 0.7071068
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: e6bcb5b68977fe5438b3c22db8c2958d, type: 3}
       propertyPath: m_LocalRotation.z
@@ -1219,7 +1440,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: e6bcb5b68977fe5438b3c22db8c2958d, type: 3}
       propertyPath: m_LocalEulerAnglesHint.y
-      value: 90
+      value: 180
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: e6bcb5b68977fe5438b3c22db8c2958d, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z

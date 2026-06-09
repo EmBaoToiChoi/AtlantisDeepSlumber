@@ -32,7 +32,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
     public float attackRange = 3f;
 
     [Header("Combo Attack Settings")]
-    public float comboWindow = 1.0f;
+    public float comboWindow = 2.5f; // Tăng lên 2.5s để thoải mái cho việc bấm thủ công không bị reset quá nhanh
     public float comboTransitionThreshold = 0.5f;
     public float punch1Duration = 1.033f;
     public float punch2Duration = 1.033f;
@@ -74,6 +74,24 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
     [Tooltip("Vũ khí/Kiếm giắt sau lưng/vai phải")]
     public GameObject rightShoulderWeapon;
 
+    [Header("Skill R - Nhuộm Đỏ Vũ Khí")]
+    [Tooltip("Kéo thả các GameObject là phần LƯỠi KIẾM / VŨ KHÍ bên phải vào đây để nhuộm đỏ khi dùng Skill R.\nChỉ những object này mới bị ảnh hưởng.")]
+    public GameObject[] swordBladeObjects;
+    [Tooltip("Material màu đỏ để nhuộm vũ khí khi dùng Skill R. Để trống sẽ tự động nhuộm đỏ bằng emission.")]
+    public Material redWeaponMaterial;
+    [Tooltip("Tên Trigger Animation trong Animator khi khai động Skill R. Để trống nếu không có animation.")]
+    public string rSkillAnimTrigger = "SkillR";
+    [Tooltip("Thời gian hiệu lực Skill R (giây)")]
+    public float rSkillDuration = 8f;
+    [Tooltip("Hệ số tăng sát thương khi Skill R (1.3 = +30%)")]
+    public float rSkillDamageMultiplier = 1.3f;
+
+    // Trạng thái nội bộ Skill R
+    protected bool isRSkillActive = false;
+    protected float rSkillTimeRemaining = 0f;
+    private System.Collections.Generic.Dictionary<Renderer, Material[]> originalWeaponMaterials
+        = new System.Collections.Generic.Dictionary<Renderer, Material[]>();
+
     [Header("Player Health Settings")]
     public float maxHealth = 150f;
     public NetworkVariable<float> currentHealth = new NetworkVariable<float>(
@@ -94,6 +112,19 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         NetworkVariableWritePermission.Server
     );
     public NetworkVariable<bool> isSkillsUnlocked = new NetworkVariable<bool>(
+        false,
+        NetworkVariableReadPermission.Everyone,
+        NetworkVariableWritePermission.Server
+    );
+    public NetworkVariable<bool> isBlockingNet = new NetworkVariable<bool>(
+        false,
+        NetworkVariableReadPermission.Everyone,
+        NetworkVariableWritePermission.Server
+    );
+    protected bool isBlocking = false;
+
+    // Skill R: Nhuộm đỏ vũ khí & tăng sát thương
+    public NetworkVariable<bool> isRSkillActiveNet = new NetworkVariable<bool>(
         false,
         NetworkVariableReadPermission.Everyone,
         NetworkVariableWritePermission.Server
@@ -248,7 +279,6 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
     public bool isStandaloneMode = false;
     protected bool isSyncingFromDb = false;
 
-    // Smooth inputs for 2D Blend Tree
     private float smoothedInputX = 0f;
     private float smoothedInputZ = 0f;
     private Rigidbody rb;
@@ -258,7 +288,6 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     public float CurrentHealth => isStandaloneMode ? localHealth : currentHealth.Value;
 
-    // IPlayerHUDTarget Implementation
     bool IPlayerHUDTarget.isStandaloneMode => isStandaloneMode;
     public bool IsStandaloneMode => isStandaloneMode;
     public int CharacterClassIndex => characterClassIndex;
@@ -268,17 +297,34 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
     public string[] InventorySlots => inventorySlots;
     public float MaxHealth => maxHealth;
 
-    // Invisibility Skill R stub implementation (Leo-only skill)
-    public bool IsInvisible => false;
-    public float InvisibilityTimeRemaining => 0f;
-    public void TriggerInvisibilitySkill() { }
+    public bool IsInvisible => isRSkillActive;
+    public float InvisibilityTimeRemaining => rSkillTimeRemaining;
+    public void TriggerInvisibilitySkill()
+    {
+        if (isRSkillActive) return;
 
-    // Attack Speed Boost Skill E stub implementation (Leo-only skill)
+        Debug.Log("[ArthurPlayer] Kích hoạt Skill R: Nhuộm đỏ vũ khí + Tăng sát thương!");
+
+        if (isStandaloneMode)
+        {
+            isRSkillActive = true;
+            rSkillTimeRemaining = rSkillDuration;
+            SetRedWeaponVisuals(true);
+            if (!string.IsNullOrEmpty(rSkillAnimTrigger))
+                PlayAnimation(rSkillAnimTrigger, 0.1f);
+        }
+        else if (IsOwner)
+        {
+            if (!string.IsNullOrEmpty(rSkillAnimTrigger))
+                PlayAnimationLocal(rSkillAnimTrigger, 0.1f);
+            TriggerRSkillServerRpc(true);
+        }
+    }
+
     public bool IsAttackSpeedBoosted => false;
     public float AttackSpeedBoostTimeRemaining => 0f;
     public void TriggerAttackSpeedBoostSkill() { }
 
-    // Q Skill support stub implementation (Leo-only skill)
     public bool IsQSkillActive => false;
     public float QSkillTimeRemaining => 0f;
     public bool TriggerQSkill() => false;
@@ -306,7 +352,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     private void Awake()
     {
-        characterClassIndex = 3; // Arthur Tanker
+        characterClassIndex = 3; 
         maxHealth = 150f;
         moveSpeed = 4f;
         runSpeedMultiplier = 2.0f;
@@ -332,7 +378,6 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     private void Start()
     {
-        // Enforce a high percentage for combo transition so animations play almost fully before transitioning
         if (comboChainWindowPct < 0.9f)
         {
             comboChainWindowPct = 0.9f;
@@ -432,6 +477,8 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         activeWeaponIndex.OnValueChanged += OnWeaponIndexChanged;
         isWeapon2Locked.OnValueChanged += OnWeapon2LockedChanged;
         isSkillsUnlocked.OnValueChanged += OnSkillsUnlockedChanged;
+        isBlockingNet.OnValueChanged += OnBlockingNetChanged;
+        isRSkillActiveNet.OnValueChanged += OnRSkillNetChanged;
 
         upgradePoints.OnValueChanged += OnUpgradePointsChanged;
         hpLevel.OnValueChanged += OnHpLevelChanged;
@@ -497,6 +544,8 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         activeWeaponIndex.OnValueChanged -= OnWeaponIndexChanged;
         isWeapon2Locked.OnValueChanged -= OnWeapon2LockedChanged;
         isSkillsUnlocked.OnValueChanged -= OnSkillsUnlockedChanged;
+        isBlockingNet.OnValueChanged -= OnBlockingNetChanged;
+        isRSkillActiveNet.OnValueChanged -= OnRSkillNetChanged;
 
         upgradePoints.OnValueChanged -= OnUpgradePointsChanged;
         hpLevel.OnValueChanged -= OnHpLevelChanged;
@@ -541,6 +590,25 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
             PlayerHUDController hud = FindObjectOfType<PlayerHUDController>();
             if (hud != null) hud.SetSkillsUnlocked(newVal, true);
         }
+    }
+
+    private void OnBlockingNetChanged(bool oldVal, bool newVal)
+    {
+        if (IsOwner) return;
+        if (newVal)
+        {
+            if (anim != null) anim.Play("AnhitCoVuKhi", 1, 0f);
+        }
+        else
+        {
+            if (anim != null) anim.Play("New State", 1, 0f);
+        }
+    }
+
+    [ServerRpc]
+    private void SetBlockingServerRpc(bool blocking)
+    {
+        isBlockingNet.Value = blocking;
     }
 
     private void OnHealthChanged(float oldHealth, float newHealth)
@@ -860,7 +928,6 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
                 localLevel++;
                 needed = 100f + localLevel * 50f;
                 localUpgradePoints++;
-                Debug.Log($"[Standalone] THĂNG CẤP! Cấp độ mới: {localLevel}. Điểm nâng cấp còn: {localUpgradePoints}");
             }
             PlayerPrefs.SetInt("SelectedPlayerLevel_" + characterClassIndex, localLevel);
             PlayerPrefs.SetFloat("SelectedPlayerExp_" + characterClassIndex, localExp);
@@ -878,7 +945,6 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
                 playerLevel.Value++;
                 needed = 100f + playerLevel.Value * 50f;
                 upgradePoints.Value++;
-                Debug.Log($"[Server] CLIENT {OwnerClientId} THĂNG CẤP! Cấp độ mới: {playerLevel.Value}. Điểm nâng cấp còn: {upgradePoints.Value}");
             }
             SavePlayerStateClientRpc();
         }
@@ -888,7 +954,6 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
     {
         if (localUpgradePoints <= 0)
         {
-            Debug.LogWarning("[Standalone] Hết điểm nâng cấp!");
             return;
         }
 
@@ -916,7 +981,6 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
     {
         if (upgradePoints.Value <= 0)
         {
-            Debug.LogWarning("[Server] Người chơi không còn điểm nâng cấp!");
             return;
         }
 
@@ -979,6 +1043,22 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
             rollCooldownTimer -= Time.deltaTime;
         }
 
+        if (isRSkillActive && (isStandaloneMode || IsOwner))
+        {
+            rSkillTimeRemaining -= Time.deltaTime;
+            if (rSkillTimeRemaining <= 0f)
+            {
+                rSkillTimeRemaining = 0f;
+                isRSkillActive = false;
+                SetRedWeaponVisuals(false);
+
+                if (!isStandaloneMode && IsOwner)
+                {
+                    TriggerRSkillServerRpc(false);
+                }
+            }
+        }
+
         if (CurrentHealth <= 0)
         {
             if (anim != null) anim.applyRootMotion = false;
@@ -1010,11 +1090,6 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
             bool isArmed = (GetActiveWeaponIndex() == 2);
             anim.SetBool(isArmedParam, isArmed);
-
-            if (Mathf.Abs(smoothedInputX) > 0.01f || Mathf.Abs(smoothedInputZ) > 0.01f)
-            {
-                Debug.Log($"[ArthurAnimator] InputX: {smoothedInputX:F2}, InputZ: {smoothedInputZ:F2}, Speed: {smoothedSpeed:F2}, IsArmed: {isArmed}");
-            }
         }
     }
 
@@ -1046,8 +1121,32 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
             return;
         }
 
+        bool canBlock = GetActiveWeaponIndex() == 2 && CurrentHealth > 0 &&
+                        !isRollingStandalone && !IsPlayingFullBodyAction();
+        bool wantsToBlock = Input.GetMouseButton(1) && canBlock;
+        if (wantsToBlock)
+        {
+            if (!isBlocking)
+            {
+                isBlocking = true;
+                PlayAnimation("AnhitCoVuKhi", 0.1f);
+            }
+        }
+        else
+        {
+            if (isBlocking)
+            {
+                isBlocking = false;
+                PlayAnimation("New State", 0.1f);
+            }
+        }
+
         bool isRunning = Input.GetKey(KeyCode.LeftShift);
         float currentSpeed = isRunning ? moveSpeed * runSpeedMultiplier : moveSpeed;
+        if (isBlocking)
+        {
+            currentSpeed *= 0.4f;
+        }
 
         float moveX = Input.GetAxis("Horizontal");
         float moveZ = Input.GetAxis("Vertical");
@@ -1102,7 +1201,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         bool shouldAlignToCamera = (isArmed && rotateToCameraWhenArmed) ||
                                    (!isArmed && rotateToCameraWhenUnarmed) ||
-                                   isAttacking;
+                                   isAttacking || isBlocking;
 
         if (shouldAlignToCamera)
         {
@@ -1137,6 +1236,13 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
             }
         }
 
+        if (isBlocking)
+        {
+            targetInputX *= 0.4f;
+            targetInputZ *= 0.4f;
+            targetSpeed *= 0.4f;
+        }
+
         smoothedInputX = Mathf.MoveTowards(smoothedInputX, targetInputX, Time.deltaTime * inputFilterSpeed);
         smoothedInputZ = Mathf.MoveTowards(smoothedInputZ, targetInputZ, Time.deltaTime * inputFilterSpeed);
         UpdateAnimatorParams(targetSpeed);
@@ -1154,7 +1260,6 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
             }
         }
 
-        // Standalone weapon switching when no HUD
         if (isStandaloneMode && FindObjectOfType<PlayerHUDController>() == null)
         {
             if (!isSwitchingWeapon)
@@ -1174,7 +1279,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
             }
         }
 
-        if (Input.GetMouseButtonDown(0))
+        if (Input.GetMouseButtonDown(0) || (Input.GetMouseButton(0) && !isExecutingAttack && !isBlocking))
         {
             if (!IsUIBlockingInput() && CanAttack())
             {
@@ -1219,8 +1324,34 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
             return;
         }
 
+        bool canBlock = GetActiveWeaponIndex() == 2 && CurrentHealth > 0 &&
+                        (rollTimer <= 0) && !IsPlayingFullBodyAction();
+        bool wantsToBlock = Input.GetMouseButton(1) && canBlock;
+        if (wantsToBlock)
+        {
+            if (!isBlocking)
+            {
+                isBlocking = true;
+                SetBlockingServerRpc(true);
+                PlayAnimation("AnhitCoVuKhi", 0.1f);
+            }
+        }
+        else
+        {
+            if (isBlocking)
+            {
+                isBlocking = false;
+                SetBlockingServerRpc(false);
+                PlayAnimation("New State", 0.1f);
+            }
+        }
+
         bool isRunning = Input.GetKey(KeyCode.LeftShift);
         float currentSpeed = isRunning ? moveSpeed * runSpeedMultiplier : moveSpeed;
+        if (isBlocking)
+        {
+            currentSpeed *= 0.4f;
+        }
 
         float moveX = Input.GetAxis("Horizontal");
         float moveZ = Input.GetAxis("Vertical");
@@ -1275,7 +1406,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         bool shouldAlignToCamera = (isArmed && rotateToCameraWhenArmed) ||
                                    (!isArmed && rotateToCameraWhenUnarmed) ||
-                                   isAttacking;
+                                   isAttacking || isBlocking;
 
         if (shouldAlignToCamera)
         {
@@ -1310,6 +1441,13 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
             }
         }
 
+        if (isBlocking)
+        {
+            targetInputX *= 0.4f;
+            targetInputZ *= 0.4f;
+            targetSpeed *= 0.4f;
+        }
+
         smoothedInputX = Mathf.MoveTowards(smoothedInputX, targetInputX, Time.deltaTime * inputFilterSpeed);
         smoothedInputZ = Mathf.MoveTowards(smoothedInputZ, targetInputZ, Time.deltaTime * inputFilterSpeed);
         UpdateAnimatorParams(targetSpeed);
@@ -1327,7 +1465,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
             }
         }
 
-        if (Input.GetMouseButtonDown(0))
+        if (Input.GetMouseButtonDown(0) || (Input.GetMouseButton(0) && !isExecutingAttack && !isBlocking))
         {
             if (IsSpawned && !IsUIBlockingInput() && CanAttack())
             {
@@ -1465,21 +1603,29 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         }
         else if (weaponIndex == 2)
         {
+            string animName = "";
+            if (step == 1) animName = "attack1";
+            else if (step == 2) animName = "Attack1combo1";
+            else if (step == 3) animName = "Attack2combo1";
+
+            float duration = GetAnimationClipLength(animName);
+            if (duration > 0f) return duration;
+
             if (step == 1) return slash1Duration;
             if (step == 2) return slash2Duration;
             return slash3Duration;
         }
+
         return 0.5f;
     }
 
     protected virtual bool CanAttack()
     {
         if (CurrentHealth <= 0) return false;
+        if (isBlocking) return false;
 
-        // Cannot attack if rolling
         if (isStandaloneMode ? isRollingStandalone : rollTimer > 0) return false;
 
-        // Cannot attack if hit, picking, or dead
         if (anim != null && anim.isActiveAndEnabled && anim.runtimeAnimatorController != null)
         {
             AnimatorStateInfo stateInfo = anim.GetCurrentAnimatorStateInfo(0);
@@ -1496,29 +1642,28 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         return true;
     }
 
-    protected virtual void RequestComboAttack(bool networkMode)
+    protected virtual void RequestComboAttack(bool networkMode, bool isContinuation = false)
     {
         if (isExecutingAttack)
         {
-            // Always buffer the request - NEVER interrupt a running animation directly.
-            // HandleAttackSequenceEnd (OnPunchEnd event) will pick it up when the animation finishes.
             pendingAttackRequest = true;
             Debug.Log("[ArthurPlayer] Nhấp chuột -> Lưu vào buffer, chờ OnPunchEnd.");
         }
         else
         {
-            // Not attacking: start combo immediately
-            PerformComboAttack(networkMode);
+            PerformComboAttack(networkMode, isContinuation);
         }
     }
 
-    protected virtual void PerformComboAttack(bool networkMode)
+    protected virtual void PerformComboAttack(bool networkMode, bool isContinuation = false)
     {
         int weapon = GetActiveWeaponIndex();
         float currentTime = Time.time;
 
         int nextStep = comboStep;
-        if (currentTime - lastAttackTime > comboWindow)
+        
+        // Nếu ĐÃ LÀ hành động nối tiếp từ chuỗi combo trước, không bao giờ được phép reset về 0 bất kể lệch thời gian comboWindow!
+        if (!isContinuation && (currentTime - lastAttackTime > comboWindow))
         {
             nextStep = 0;
         }
@@ -1551,7 +1696,6 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         currentAttackAnimDuration = GetAttackDuration(weapon, comboStep);
         earliestValidEventTime = currentTime + 0.15f;
 
-        // Clear hit enemies list for this new swing and disable hitboxes
         alreadyHitEnemies.Clear();
         DisableAllHitboxes();
 
@@ -1564,9 +1708,9 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         }
         else if (weapon == 2)
         {
-            if (comboStep == 1) animToPlay = "Slash1";
-            else if (comboStep == 2) animToPlay = "Slash2";
-            else if (comboStep == 3) animToPlay = "Slash3";
+            if (comboStep == 1) animToPlay = "attack1";
+            else if (comboStep == 2) animToPlay = "Attack1combo1";
+            else if (comboStep == 3) animToPlay = "Attack2combo1";
         }
 
         if (!string.IsNullOrEmpty(animToPlay))
@@ -1582,7 +1726,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     private void HandleAttackSequenceEnd(bool isSlash)
     {
-        if (isSlash)
+        if (isSlash || GetActiveWeaponIndex() == 2)
         {
             DisableBothWeaponHitboxes();
         }
@@ -1591,22 +1735,19 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
             DisableBothHitboxes();
         }
 
-        // End active attack window
         isExecutingAttack = false;
 
-        // Check if there is a buffered click OR if the mouse button is currently held down
         bool shouldContinue = pendingAttackRequest || (!IsUIBlockingInput() && CanAttack() && Input.GetMouseButton(0));
 
         if (shouldContinue)
         {
             pendingAttackRequest = false;
             bool networkMode = !isStandaloneMode && IsOwner;
-            Debug.Log("[ArthurPlayer] Tiếp tục combo từ buffer hoặc đè chuột sau khi kết thúc đòn cũ.");
-            PerformComboAttack(networkMode);
+            Debug.Log($"[ArthurPlayer] Tiếp tục đòn đánh nối tiếp: comboStep hiện tại là {comboStep}.");
+            PerformComboAttack(networkMode, true); // Đánh dấu true để hàm không bị reset bước combo về 1
         }
         else
         {
-            // No buffered request and mouse not held: reset combo step and clean layer
             comboStep = 0;
             isRootedAttack = false;
             ClearAttackLayer();
@@ -1621,10 +1762,18 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         comboStep = 0;
         DisableAllHitboxes();
         alreadyHitEnemies.Clear();
+        if (isBlocking)
+        {
+            isBlocking = false;
+            if (!isStandaloneMode && IsOwner)
+            {
+                SetBlockingServerRpc(false);
+            }
+            PlayAnimation("New State", 0.1f);
+        }
         Debug.Log("[ArthurPlayer] Combo bị ngắt (bị hit/chết/lộn vòng).");
     }
 
-    /// <summary>Lowercase alias for OnPunchEnd - Unity Animation Events are case-sensitive.</summary>
     public void Onpunchend()
     {
         OnPunchEnd();
@@ -1632,32 +1781,161 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     protected void TryDamageEnemy(Collider col)
     {
+        float actualDamage = isRSkillActive ? damageAmount * rSkillDamageMultiplier : damageAmount;
+
         var e1 = col.GetComponentInParent<Enemy1_DapBua>();
-        if (e1 != null) { e1.TakeDamage(damageAmount); return; }
+        if (e1 != null) { e1.TakeDamage(actualDamage); return; }
 
         var e2 = col.GetComponentInParent<Enemy2_Zombie>();
-        if (e2 != null) { e2.TakeDamage(damageAmount); return; }
+        if (e2 != null) { e2.TakeDamage(actualDamage); return; }
 
         var e3 = col.GetComponentInParent<Enemy3_Buaa>();
-        if (e3 != null) { e3.TakeDamage(damageAmount); return; }
+        if (e3 != null) { e3.TakeDamage(actualDamage); return; }
 
         var e4 = col.GetComponentInParent<Enemy4_Bongtoi>();
-        if (e4 != null) { e4.TakeDamage(damageAmount); return; }
+        if (e4 != null) { e4.TakeDamage(actualDamage); return; }
 
         var e5 = col.GetComponentInParent<Enemy5_PhuThuy>();
-        if (e5 != null) { e5.TakeDamage(damageAmount); return; }
+        if (e5 != null) { e5.TakeDamage(actualDamage); return; }
+    }
+
+    [ServerRpc]
+    private void TriggerRSkillServerRpc(bool state)
+    {
+        isRSkillActiveNet.Value = state;
+        TriggerRSkillClientRpc(state);
+        if (state)
+        {
+            StartCoroutine(ServerRSkillTimerCoroutine(rSkillDuration));
+        }
+    }
+
+    [ClientRpc]
+    private void TriggerRSkillClientRpc(bool state)
+    {
+        if (state)
+        {
+            if (!IsOwner && !string.IsNullOrEmpty(rSkillAnimTrigger))
+            {
+                PlayAnimationLocal(rSkillAnimTrigger, 0.1f);
+            }
+            if (!IsOwner)
+            {
+                SetRedWeaponVisuals(true);
+            }
+        }
+        else
+        {
+            if (!IsOwner)
+            {
+                SetRedWeaponVisuals(false);
+            }
+        }
+    }
+
+    private System.Collections.IEnumerator ServerRSkillTimerCoroutine(float duration)
+    {
+        yield return new WaitForSeconds(duration);
+        if (isRSkillActiveNet.Value)
+        {
+            isRSkillActiveNet.Value = false;
+            TriggerRSkillClientRpc(false);
+        }
+    }
+
+    private void OnRSkillNetChanged(bool oldVal, bool newVal)
+    {
+        if (IsOwner)
+        {
+            if (newVal)
+            {
+                isRSkillActive = true;
+                rSkillTimeRemaining = rSkillDuration;
+                SetRedWeaponVisuals(true);
+            }
+        }
+        else
+        {
+            SetRedWeaponVisuals(newVal);
+        }
+    }
+
+    private void SetRedWeaponVisuals(bool active)
+    {
+        if (active)
+        {
+            if (originalWeaponMaterials.Count > 0) return;
+
+            if (swordBladeObjects == null || swordBladeObjects.Length == 0)
+            {
+                Debug.LogWarning("[ArthurPlayer] Skill R: Mảng Sword Blade Objects trống! Hãy kéo thả phần lưỡi kiếm vào Inspector.");
+                return;
+            }
+
+            foreach (var bladeObj in swordBladeObjects)
+            {
+                if (bladeObj == null) continue;
+
+                Renderer[] renderers = bladeObj.GetComponentsInChildren<Renderer>(true);
+                foreach (var r in renderers)
+                {
+                    if (!(r is SkinnedMeshRenderer) && !(r is MeshRenderer)) continue;
+
+                    originalWeaponMaterials[r] = r.sharedMaterials;
+
+                    if (redWeaponMaterial != null)
+                    {
+                        Material[] newMats = new Material[r.sharedMaterials.Length];
+                        for (int i = 0; i < newMats.Length; i++)
+                            newMats[i] = redWeaponMaterial;
+                        r.materials = newMats;
+                    }
+                    else
+                    {
+                        Material[] newMats = new Material[r.sharedMaterials.Length];
+                        for (int i = 0; i < r.sharedMaterials.Length; i++)
+                        {
+                            Material originalMat = r.sharedMaterials[i];
+                            if (originalMat != null)
+                            {
+                                Material tempMat = new Material(originalMat);
+                                tempMat.EnableKeyword("_EMISSION");
+                                tempMat.SetColor("_EmissionColor", new Color(1.2f, 0.05f, 0.05f, 1f));
+                                if (tempMat.HasProperty("_Color"))
+                                    tempMat.SetColor("_Color", new Color(0.9f, 0.1f, 0.1f, 1f));
+                                if (tempMat.HasProperty("_BaseColor")) 
+                                    tempMat.SetColor("_BaseColor", new Color(0.9f, 0.1f, 0.1f, 1f));
+                                newMats[i] = tempMat;
+                            }
+                            else
+                            {
+                                newMats[i] = null;
+                            }
+                        }
+                        r.materials = newMats;
+                    }
+                }
+            }
+            Debug.Log($"[ArthurPlayer] Skill R ON - Đã nhuộm đỏ {swordBladeObjects.Length} object(s) lưỡi kiếm!");
+        }
+        else
+        {
+            foreach (var kvp in originalWeaponMaterials)
+            {
+                if (kvp.Key != null && kvp.Value != null)
+                    kvp.Key.materials = kvp.Value;
+            }
+            originalWeaponMaterials.Clear();
+            Debug.Log("[ArthurPlayer] Skill R OFF - Lưỡi kiếm đã khôi phục màu gốc.");
+        }
     }
 
     [ServerRpc]
     protected void AttackServerRpc()
     {
-        // Server clears its own hit list for the new swing
         alreadyHitEnemies.Clear();
     }
 
-    // ------------------------------------------------------------------
-    //  Hitbox Combat System & Animation Event Receivers (Arthur)
-    // ------------------------------------------------------------------
     private bool IsColliderValid(Collider col)
     {
         if (col == null) return false;
@@ -1679,7 +1957,6 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (IsColliderValid(leftHitbox))
         {
             leftHitbox.enabled = true;
-            Debug.Log("[ArthurPlayer] Left hitbox ENABLED.");
         }
     }
 
@@ -1688,7 +1965,6 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (IsColliderValid(leftHitbox))
         {
             leftHitbox.enabled = false;
-            Debug.Log("[ArthurPlayer] Left hitbox DISABLED.");
         }
         alreadyHitEnemies.Clear();
     }
@@ -1700,7 +1976,6 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (IsColliderValid(rightHitbox))
         {
             rightHitbox.enabled = true;
-            Debug.Log("[ArthurPlayer] Right hitbox ENABLED.");
         }
     }
 
@@ -1709,7 +1984,6 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (IsColliderValid(rightHitbox))
         {
             rightHitbox.enabled = false;
-            Debug.Log("[ArthurPlayer] Right hitbox DISABLED.");
         }
         alreadyHitEnemies.Clear();
     }
@@ -1720,7 +1994,6 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         alreadyHitEnemies.Clear();
         if (IsColliderValid(leftHitbox)) leftHitbox.enabled = true;
         if (IsColliderValid(rightHitbox)) rightHitbox.enabled = true;
-        Debug.Log("[ArthurPlayer] Both hitboxes ENABLED.");
     }
 
     public void DisableBothHitboxes()
@@ -1728,7 +2001,6 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (IsColliderValid(leftHitbox)) leftHitbox.enabled = false;
         if (IsColliderValid(rightHitbox)) rightHitbox.enabled = false;
         alreadyHitEnemies.Clear();
-        Debug.Log("[ArthurPlayer] Both hitboxes DISABLED.");
     }
 
     public void EnableLeftWeaponHitbox()
@@ -1738,7 +2010,6 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (IsColliderValid(leftWeaponHitbox))
         {
             leftWeaponHitbox.enabled = true;
-            Debug.Log("[ArthurPlayer] Left Weapon hitbox ENABLED.");
         }
     }
 
@@ -1746,7 +2017,6 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
     {
         if (IsColliderValid(leftWeaponHitbox)) leftWeaponHitbox.enabled = false;
         alreadyHitEnemies.Clear();
-        Debug.Log("[ArthurPlayer] Left Weapon hitbox DISABLED.");
     }
 
     public void EnableRightWeaponHitbox()
@@ -1756,7 +2026,6 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (IsColliderValid(rightWeaponHitbox))
         {
             rightWeaponHitbox.enabled = true;
-            Debug.Log("[ArthurPlayer] Right Weapon hitbox ENABLED.");
         }
     }
 
@@ -1764,7 +2033,6 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
     {
         if (IsColliderValid(rightWeaponHitbox)) rightWeaponHitbox.enabled = false;
         alreadyHitEnemies.Clear();
-        Debug.Log("[ArthurPlayer] Right Weapon hitbox DISABLED.");
     }
 
     public void EnableBothWeaponHitboxes()
@@ -1773,7 +2041,6 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         alreadyHitEnemies.Clear();
         if (IsColliderValid(leftWeaponHitbox)) leftWeaponHitbox.enabled = true;
         if (IsColliderValid(rightWeaponHitbox)) rightWeaponHitbox.enabled = true;
-        Debug.Log("[ArthurPlayer] Both Weapon hitboxes ENABLED.");
     }
 
     public void DisableBothWeaponHitboxes()
@@ -1781,7 +2048,6 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (IsColliderValid(leftWeaponHitbox)) leftWeaponHitbox.enabled = false;
         if (IsColliderValid(rightWeaponHitbox)) rightWeaponHitbox.enabled = false;
         alreadyHitEnemies.Clear();
-        Debug.Log("[ArthurPlayer] Both Weapon hitboxes DISABLED.");
     }
 
     public void DisableAllHitboxes()
@@ -1794,33 +2060,27 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
     {
         if (Time.time < earliestValidEventTime)
         {
-            Debug.Log("[ArthurPlayer] OnPunchEnd ignored (stale event).");
             return;
         }
         HandleAttackSequenceEnd(false);
-        Debug.Log("[ArthurPlayer] OnPunchEnd - Animation Event.");
     }
 
     public void OnSlashEnd()
     {
         if (Time.time < earliestValidEventTime)
         {
-            Debug.Log("[ArthurPlayer] OnSlashEnd ignored (stale event).");
             return;
         }
         HandleAttackSequenceEnd(true);
-        Debug.Log("[ArthurPlayer] OnSlashEnd - Animation Event.");
     }
 
     public void OnAttackEnd()
     {
         if (Time.time < earliestValidEventTime)
         {
-            Debug.Log("[ArthurPlayer] OnAttackEnd ignored (stale event).");
             return;
         }
         HandleAttackSequenceEnd(false);
-        Debug.Log("[ArthurPlayer] OnAttackEnd - Animation Event.");
     }
 
     private bool CanActivateHitbox()
@@ -1828,13 +2088,9 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         return isStandaloneMode || (IsSpawned && IsOwner);
     }
 
-    /// <summary>
-    /// Nhận va chạm từ PlayerHitbox khi enemy đi vào hitbox.
-    /// Tính damage 1 lần duy nhất mỗi enemy trong mỗi đòn đánh.
-    /// </summary>
     public void OnHitboxCollision(Collider other)
     {
-        if (!CanActivateHitbox()) return; // Chỉ Owner/Standalone xử lý damage
+        if (!CanActivateHitbox()) return;
 
         if (IsEnemy(other, out Collider enemyCollider))
         {
@@ -1907,7 +2163,6 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (leftHand == null) leftHand = transform;
         if (rightHand == null) rightHand = transform;
 
-        // --- Left Hand Hitbox ---
         {
             Transform existingLeft = leftHand.Find("LeftHitbox");
             GameObject leftObj = existingLeft != null ? existingLeft.gameObject : new GameObject("LeftHitbox");
@@ -1928,7 +2183,6 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
             leftHitbox = col;
         }
 
-        // --- Right Hand Hitbox ---
         {
             Transform existingRight = rightHand.Find("RightHitbox");
             GameObject rightObj = existingRight != null ? existingRight.gameObject : new GameObject("RightHitbox");
@@ -1949,9 +2203,45 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
             rightHitbox = col;
         }
 
-        // Kiếm chém tạm thời bỏ qua, sẽ làm sau
-        leftWeaponHitbox = null;
-        rightWeaponHitbox = null;
+        if (leftHandWeapon != null)
+        {
+            Collider col = leftHandWeapon.GetComponent<Collider>();
+            if (col == null) col = leftHandWeapon.GetComponentInChildren<Collider>();
+            if (col != null)
+            {
+                col.isTrigger = true;
+                col.enabled = false;
+                if (leftHandWeapon.GetComponent<PlayerHitbox>() == null)
+                {
+                    leftHandWeapon.AddComponent<PlayerHitbox>();
+                }
+                leftWeaponHitbox = col;
+            }
+        }
+        else
+        {
+            leftWeaponHitbox = null;
+        }
+
+        if (rightHandWeapon != null)
+        {
+            Collider col = rightHandWeapon.GetComponent<Collider>();
+            if (col == null) col = rightHandWeapon.GetComponentInChildren<Collider>();
+            if (col != null)
+            {
+                col.isTrigger = true;
+                col.enabled = false;
+                if (rightHandWeapon.GetComponent<PlayerHitbox>() == null)
+                {
+                    rightHandWeapon.AddComponent<PlayerHitbox>();
+                }
+                rightWeaponHitbox = col;
+            }
+        }
+        else
+        {
+            rightWeaponHitbox = null;
+        }
     }
 
     private Transform FindWeaponTransform(Transform hand)
@@ -1987,13 +2277,90 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         return null;
     }
 
+    private bool IsPlayingFullBodyAction()
+    {
+        if (anim == null || !anim.isActiveAndEnabled || anim.runtimeAnimatorController != null) return false;
+        AnimatorStateInfo stateInfo = anim.GetCurrentAnimatorStateInfo(0);
+        return stateInfo.IsName("LonVong") ||
+               stateInfo.IsName("GetHit") ||
+               stateInfo.IsName("GeiHit2") ||
+               stateInfo.IsName("Idle_Pick") ||
+               stateInfo.IsName("Death");
+    }
+
+    private Transform FindClosestAttacker()
+    {
+        Transform closest = null;
+        float minDist = float.MaxValue;
+        Vector3 myPos = transform.position;
+
+        var e1s = FindObjectsOfType<Enemy1_DapBua>();
+        foreach (var e in e1s)
+        {
+            if (e == null || e.IsDead) continue;
+            float d = Vector3.Distance(myPos, e.transform.position);
+            if (d < minDist) { minDist = d; closest = e.transform; }
+        }
+
+        var e2s = FindObjectsOfType<Enemy2_Zombie>();
+        foreach (var e in e2s)
+        {
+            if (e == null || e.IsDead) continue;
+            float d = Vector3.Distance(myPos, e.transform.position);
+            if (d < minDist) { minDist = d; closest = e.transform; }
+        }
+
+        var e3s = FindObjectsOfType<Enemy3_Buaa>();
+        foreach (var e in e3s)
+        {
+            if (e == null || e.IsDead) continue;
+            float d = Vector3.Distance(myPos, e.transform.position);
+            if (d < minDist) { minDist = d; closest = e.transform; }
+        }
+
+        var e4s = FindObjectsOfType<Enemy4_Bongtoi>();
+        foreach (var e in e4s)
+        {
+            if (e == null || e.IsDead) continue;
+            float d = Vector3.Distance(myPos, e.transform.position);
+            if (d < minDist) { minDist = d; closest = e.transform; }
+        }
+
+        var e5s = FindObjectsOfType<Enemy5_PhuThuy>();
+        foreach (var e in e5s)
+        {
+            if (e == null || e.IsDead) continue;
+            float d = Vector3.Distance(myPos, e.transform.position);
+            if (d < minDist) { minDist = d; closest = e.transform; }
+        }
+
+        var spellBalls = FindObjectsOfType<SpellBall>();
+        foreach (var sb in spellBalls)
+        {
+            if (sb == null) continue;
+            float d = Vector3.Distance(myPos, sb.transform.position);
+            if (d < minDist) { minDist = d; closest = sb.transform; }
+        }
+
+        return closest;
+    }
+
+    private bool IsAttackerInFront(Transform attacker)
+    {
+        if (attacker == null) return false;
+        Vector3 dirToAttacker = (attacker.position - transform.position);
+        dirToAttacker.y = 0;
+        dirToAttacker.Normalize();
+        float dot = Vector3.Dot(transform.forward, dirToAttacker);
+        return dot >= 0.25f;
+    }
+
     public void TakeDamage(float damage)
     {
         if (isStandaloneMode)
         {
             if (isRollingStandalone)
             {
-                Debug.Log($"[Standalone] {gameObject.name} đang né chiêu (lộn vòng), miễn nhiễm sát thương!");
                 return;
             }
         }
@@ -2001,7 +2368,17 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         {
             if (isRollingNet.Value)
             {
-                Debug.Log($"[Netcode] {gameObject.name} đang né chiêu (lộn vòng), miễn nhiễm sát thương!");
+                return;
+            }
+        }
+
+        bool blocking = isStandaloneMode ? isBlocking : isBlockingNet.Value;
+        if (blocking)
+        {
+            Transform attacker = FindClosestAttacker();
+            if (attacker != null && IsAttackerInFront(attacker))
+            {
+                PlayAnimation("DoKhienDinhSatThuong", 0.05f);
                 return;
             }
         }
@@ -2010,13 +2387,11 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         {
             localHealth = Mathf.Max(localHealth - damage, 0f);
             UpdateHealthHUD(localHealth);
-            Debug.Log($"[Standalone] {gameObject.name} nhận {damage} sát thương. Máu còn: {localHealth}");
 
             InterruptCombo();
 
             if (localHealth <= 0)
             {
-                Debug.LogWarning($"[Standalone] {gameObject.name} đã chết!");
                 PlayAnimation("Death", 0.15f);
             }
             else
@@ -2030,13 +2405,11 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (!IsServer) return;
 
         currentHealth.Value = Mathf.Max(currentHealth.Value - damage, 0f);
-        Debug.Log($"[Server] {gameObject.name} nhận {damage} sát thương. Máu còn lại: {currentHealth.Value}");
 
         InterruptCombo();
 
         if (currentHealth.Value <= 0)
         {
-            Debug.LogWarning($"[Server] {gameObject.name} đã chết!");
             PlayAnimation("Death", 0.15f);
         }
         else
@@ -2048,6 +2421,16 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     public void ApplyKnockback(Vector3 force)
     {
+        bool blocking = isStandaloneMode ? isBlocking : isBlockingNet.Value;
+        if (blocking)
+        {
+            Transform attacker = FindClosestAttacker();
+            if (attacker != null && IsAttackerInFront(attacker))
+            {
+                force *= 0.1f;
+            }
+        }
+
         if (isStandaloneMode)
         {
             knockbackVelocity = force;
@@ -2095,7 +2478,6 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
             if (res != null && res.success && res.playerState != null)
             {
                 var state = res.playerState;
-                Debug.Log($"[DB] Đã tải thành công trạng thái người chơi từ MongoDB! Máu: {state.health}");
 
                 SyncPlayerStateServerRpc(
                     state.health,
@@ -2135,7 +2517,6 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
             }
             else
             {
-                Debug.LogWarning("[DB] Không có dữ liệu cũ hoặc lỗi kết nối. Đồng bộ dữ liệu ban đầu.");
                 SyncPlayerStateServerRpc(maxHealth, 1, true, false, 0, 0, 0, 0, 0, 0, 0f);
                 SavePlayerStateToDatabase();
             }
@@ -2187,7 +2568,6 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
     {
         if (!IsSpawned || !IsOwner) return;
 
-        Debug.Log("[DB] Đang tự động lưu trạng thái nhân vật lên MongoDB...");
         try
         {
             var stateData = new PlayerStateData
@@ -2207,14 +2587,6 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
             };
 
             var res = await AuthService.SavePlayerState(stateData);
-            if (res != null && res.success)
-            {
-                Debug.Log("[DB] Đã lưu trạng thái nhân vật lên MongoDB Atlas thành công!");
-            }
-            else
-            {
-                Debug.LogError($"[DB] Lỗi lưu trữ MongoDB: {res?.message}");
-            }
         }
         catch (System.Exception ex)
         {
@@ -2247,6 +2619,9 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
                name == "Slash1" ||
                name == "Slash2" ||
                name == "Slash3" ||
+               name == "attack1" ||
+               name == "Attack1combo1" ||
+               name == "Attack2combo1" ||
                (!string.IsNullOrEmpty(drawWeaponTrigger) && name == drawWeaponTrigger) ||
                (!string.IsNullOrEmpty(sheathWeaponTrigger) && name == sheathWeaponTrigger) ||
                (!string.IsNullOrEmpty(drawLeftTrigger) && name == drawLeftTrigger) ||
@@ -2259,90 +2634,151 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
     {
         if (oldWeapon == newWeapon) return;
 
-        isSwitchingWeapon = true; // Khóa chống spam phím khi đổi vũ khí
+        isSwitchingWeapon = true; 
 
         if (newWeapon == 2)
         {
-            // Bắt đầu rút vũ khí: lúc này vũ khí vẫn ở trên vai/lưng, tay chưa cầm
             if (leftShoulderWeapon != null) leftShoulderWeapon.SetActive(true);
             if (rightShoulderWeapon != null) rightShoulderWeapon.SetActive(true);
             if (leftHandWeapon != null) leftHandWeapon.SetActive(false);
             if (rightHandWeapon != null) rightHandWeapon.SetActive(false);
 
-            if (!string.IsNullOrEmpty(drawLeftTrigger))
-            {
-                PlayAnimation(drawLeftTrigger, 0.1f);
-            }
-            else if (!string.IsNullOrEmpty(drawWeaponTrigger))
-            {
-                PlayAnimation(drawWeaponTrigger, 0.1f);
-            }
-            else
-            {
-                SyncWeaponVisuals(newWeapon);
-                OnWeaponSwitchEnd();
-            }
+            StartCoroutine(DrawBothWeaponsSequence());
         }
         else if (newWeapon == 1)
         {
-            // Bắt đầu cất vũ khí: lúc này vũ khí vẫn ở trên tay, chưa cất lên vai/lưng
             if (leftHandWeapon != null) leftHandWeapon.SetActive(true);
             if (rightHandWeapon != null) rightHandWeapon.SetActive(true);
             if (leftShoulderWeapon != null) leftShoulderWeapon.SetActive(false);
             if (rightShoulderWeapon != null) rightShoulderWeapon.SetActive(false);
 
-            if (!string.IsNullOrEmpty(sheatheLeftTrigger))
-            {
-                PlayAnimation(sheatheLeftTrigger, 0.1f);
-            }
-            else if (!string.IsNullOrEmpty(sheathWeaponTrigger))
-            {
-                PlayAnimation(sheathWeaponTrigger, 0.1f);
-            }
-            else
-            {
-                SyncWeaponVisuals(newWeapon);
-                OnWeaponSwitchEnd();
-            }
+            StartCoroutine(SheatheBothWeaponsSequence());
         }
     }
 
-    public void OnDrawLeftEnd()
+    private System.Collections.IEnumerator DrawBothWeaponsSequence()
     {
-        Debug.Log("[ArthurPlayer] Draw Left finished. Letting Animator transition natively to Draw Right.");
+        if (!string.IsNullOrEmpty(drawLeftTrigger) && anim != null && anim.isActiveAndEnabled)
+        {
+            PlayAnimation(drawLeftTrigger, 0.1f);
+
+            float drawLeftDuration = GetAnimationClipLength(drawLeftTrigger);
+            if (drawLeftDuration <= 0f) drawLeftDuration = 0.8f; 
+            yield return new WaitForSeconds(drawLeftDuration * 0.85f);
+
+            DrawLeftSword();
+        }
+        else
+        {
+            DrawLeftSword();
+        }
+
+        if (!string.IsNullOrEmpty(drawRightTrigger) && anim != null && anim.isActiveAndEnabled)
+        {
+            PlayAnimation(drawRightTrigger, 0.1f);
+
+            float drawRightDuration = GetAnimationClipLength(drawRightTrigger);
+            if (drawRightDuration <= 0f) drawRightDuration = 0.8f;
+            yield return new WaitForSeconds(drawRightDuration * 0.85f);
+
+            DrawRightSword();
+        }
+        else
+        {
+            DrawRightSword();
+        }
+
+        SyncWeaponVisuals(2);
+        OnWeaponSwitchEnd();
     }
 
-    public void OnSheatheLeftEnd()
+    private System.Collections.IEnumerator SheatheBothWeaponsSequence()
     {
-        Debug.Log("[ArthurPlayer] Sheathe Left finished. Letting Animator transition natively to Sheathe Right.");
+        if (!string.IsNullOrEmpty(sheatheLeftTrigger) && anim != null && anim.isActiveAndEnabled)
+        {
+            PlayAnimation(sheatheLeftTrigger, 0.1f);
+
+            float duration = GetAnimationClipLength(sheatheLeftTrigger);
+            if (duration <= 0f) duration = 0.8f;
+            yield return new WaitForSeconds(duration * 0.85f);
+
+            SheatheLeftSword();
+        }
+        else
+        {
+            SheatheLeftSword();
+        }
+
+        if (!string.IsNullOrEmpty(sheatheRightTrigger) && anim != null && anim.isActiveAndEnabled)
+        {
+            PlayAnimation(sheatheRightTrigger, 0.1f);
+
+            float duration = GetAnimationClipLength(sheatheRightTrigger);
+            if (duration <= 0f) duration = 0.8f;
+            yield return new WaitForSeconds(duration * 0.85f);
+
+            SheatheRightSword();
+        }
+        else
+        {
+            SheatheRightSword();
+        }
+
+        SyncWeaponVisuals(1);
+        OnWeaponSwitchEnd();
     }
+
+    private float GetAnimationClipLength(string name)
+    {
+        if (anim == null || anim.runtimeAnimatorController == null) return 0f;
+        
+        string targetName = name.ToLower();
+        
+        if (targetName == "drawleft") targetName = "laykhien";
+        else if (targetName == "drawright") targetName = "laykiem";
+        else if (targetName == "sheatheleft") targetName = "catkhieng";
+        else if (targetName == "sheatheright") targetName = "catkiem";
+
+        foreach (var clip in anim.runtimeAnimatorController.animationClips)
+        {
+            if (clip != null)
+            {
+                string clipNameLower = clip.name.ToLower();
+                if (clipNameLower == targetName || clipNameLower == name.ToLower() || clipNameLower.Contains(targetName))
+                {
+                    return clip.length;
+                }
+            }
+        }
+        return 0f;
+    }
+
+    public void OnDrawLeftEnd() { }
+
+    public void OnSheatheLeftEnd() { }
 
     public void DrawLeftSword()
     {
         if (leftHandWeapon != null) leftHandWeapon.SetActive(true);
         if (leftShoulderWeapon != null) leftShoulderWeapon.SetActive(false);
-        Debug.Log("[ArthurPlayer] Left weapon DRAWN.");
     }
 
     public void DrawRightSword()
     {
         if (rightHandWeapon != null) rightHandWeapon.SetActive(true);
         if (rightShoulderWeapon != null) rightShoulderWeapon.SetActive(false);
-        Debug.Log("[ArthurPlayer] Right weapon DRAWN.");
     }
 
     public void SheatheLeftSword()
     {
         if (leftHandWeapon != null) leftHandWeapon.SetActive(false);
         if (leftShoulderWeapon != null) leftShoulderWeapon.SetActive(true);
-        Debug.Log("[ArthurPlayer] Left weapon SHEATHED.");
     }
 
     public void SheatheRightSword()
     {
         if (rightHandWeapon != null) rightHandWeapon.SetActive(false);
         if (rightShoulderWeapon != null) rightShoulderWeapon.SetActive(true);
-        Debug.Log("[ArthurPlayer] Right weapon SHEATHED.");
     }
 
     public void SyncWeaponVisuals(int activeWeapon)
@@ -2359,7 +2795,6 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
     public void OnWeaponSwitchEnd()
     {
         isSwitchingWeapon = false;
-        Debug.Log("[ArthurPlayer] Weapon switch animation finished. Lock released.");
     }
 
     protected virtual bool IsAttackAnimationName(string name)
@@ -2369,7 +2804,10 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
                name == "Punch3" ||
                name == "Slash1" ||
                name == "Slash2" ||
-               name == "Slash3";
+               name == "Slash3" ||
+               name == "attack1" ||
+               name == "Attack1combo1" ||
+               name == "Attack2combo1";
     }
 
     protected virtual bool IsPlayingAttackState(out AnimatorStateInfo activeState, out int layer)
@@ -2412,7 +2850,10 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
                stateInfo.IsName("Damcombo2") ||
                stateInfo.IsName("Slash1") ||
                stateInfo.IsName("Slash2") ||
-               stateInfo.IsName("Slash3");
+               stateInfo.IsName("Slash3") ||
+               stateInfo.IsName("attack1") ||
+               stateInfo.IsName("Attack1combo1") ||
+               stateInfo.IsName("Attack2combo1");
     }
 
     protected virtual bool IsFullBodyActionAnimation(string name)
@@ -2494,14 +2935,38 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
                 anim = GetComponentInChildren<Animator>(true);
         }
 
-        if (anim == null) return;
-
-        if (!anim.isActiveAndEnabled || anim.runtimeAnimatorController == null) return;
+        if (anim == null || !anim.isActiveAndEnabled || anim.runtimeAnimatorController == null) return;
 
         bool isLoopingAnim = animName == "Idle" || animName == "Walk" || animName == "run";
         if (isLoopingAnim && currentAnimState == animName) return;
 
-        Debug.Log($"[ArthurPlayer] Kích hoạt Trigger hoạt ảnh: '{animName}'");
+        Debug.Log($"[ArthurPlayer] Kích hoạt Hoạt ảnh: '{animName}'");
+
+        // Đồng bộ hóa việc kích hoạt thông số Trigger lẫn Play cho Layer 1 kiếm (Giải quyết dứt điểm xung đột nút)
+        if (animName == "attack1" || animName == "Attack1combo1" || animName == "Attack2combo1" ||
+            animName == "AnhitCoVuKhi" || animName == "DoKhienDinhSatThuong" || animName == "New State")
+        {
+            if (anim.layerCount > 1)
+            {
+                anim.Play(animName, 1, 0f);
+                anim.SetTrigger(animName); // SỬA ĐỔI: Kích hoạt cả tham số trigger để thỏa mãn điều kiện nối mũi tên trong Animator của bạn
+            }
+
+            bool isAttackState = IsAttackAnimationName(animName);
+            if (isAttackState)
+            {
+                isExecutingAttack = true;
+                attackAnimStartTime = Time.time;
+                int weapon = GetActiveWeaponIndex();
+                currentAttackAnimDuration = GetAttackDuration(weapon, comboStep);
+            }
+            lastTriggeredAnimName = animName;
+            if (IsActionAnimationName(animName))
+            {
+                lastActionTriggerTime = Time.time;
+            }
+            return;
+        }
 
         anim.ResetTrigger("Idle");
         anim.ResetTrigger("Walk");
@@ -2604,8 +3069,6 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         }
     }
 
-    private float lastTimeUIOpen = 0f;
-
     public bool IsUIBlockingInput()
     {
         bool uiOpen = false;
@@ -2617,11 +3080,8 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         if (uiOpen)
         {
-            lastTimeUIOpen = Time.time;
             return true;
         }
-        if (Time.time - lastTimeUIOpen < 0.15f) return true;
-
         return false;
     }
 
@@ -2663,9 +3123,6 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         {
             float elapsed = Time.time - attackAnimStartTime;
 
-            // --- ĐÃ XÓA: Phần tự động kích hoạt đòn sớm (Early combo chain) để đợi hoạt ảnh chạy xong hẳn ---
-
-            // --- SỬA LẠI: Bộ bảo hiểm Fallback (Chỉ reset khi đòn đánh đã quá thời gian thực tế + không còn transition) ---
             if (elapsed > currentAttackAnimDuration + 0.3f)
             {
                 if (!IsPlayingAttackState(out _, out _) && !anim.IsInTransition(0) && !anim.IsInTransition(1))

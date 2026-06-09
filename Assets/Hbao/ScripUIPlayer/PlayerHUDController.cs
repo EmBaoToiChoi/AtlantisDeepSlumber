@@ -879,25 +879,27 @@ public class PlayerHUDController : MonoBehaviour
             }
 
 
-            // Mở khóa kỹ năng bằng phím L (Đã vô hiệu hóa - mở khóa qua nhặt vật phẩm F)
-            /*
-            if (Keyboard.current.lKey.wasPressedThisFrame && !isSkillsUnlocked)
+            // Mở khóa vũ khí 2 và kỹ năng bằng phím L (Tạm thời phục vụ test)
+            if (Keyboard.current.lKey.wasPressedThisFrame)
             {
                 isSkillsUnlocked = true;
-                Debug.Log("Đã mở khóa Kỹ năng!");
+                isWeapon2Locked = false;
+                Debug.Log("Đã tạm thời mở khóa Vũ khí 2 và Kỹ năng!");
 
                 // Thêm class để kích hoạt hiệu ứng rớt ổ khóa trong USS
                 if (lockQ != null) lockQ.AddToClassList("unlocked-anim");
                 if (lockR != null) lockR.AddToClassList("unlocked-anim");
                 if (lockE != null) lockE.AddToClassList("unlocked-anim");
+                if (weaponLock2 != null) weaponLock2.AddToClassList("unlocked-anim");
 
-                // Hiện lại hình ảnh kỹ năng khi mở khóa
+                // Hiện lại hình ảnh kỹ năng & vũ khí khi mở khóa
                 if (skillImgQ != null) skillImgQ.style.visibility = Visibility.Visible;
                 if (skillImgR != null) skillImgR.style.visibility = Visibility.Visible;
                 if (skillImgE != null) skillImgE.style.visibility = Visibility.Visible;
+                if (weaponImg2 != null) weaponImg2.style.visibility = Visibility.Visible;
+
                 NotifyHUDChange();
             }
-            */
 
             // Kích hoạt Skill Q (chỉ khi đã mở khóa)
             if (Keyboard.current.qKey.wasPressedThisFrame)
@@ -1951,6 +1953,36 @@ public class PlayerHUDController : MonoBehaviour
         if (skillImgE != null && profile.skillESprite != null)
         {
             skillImgE.style.backgroundImage = new StyleBackground(profile.skillESprite);
+        }
+
+        // 4. Tùy chỉnh UI Skill R indicator theo từng nhân vật
+        if (invisibilityIndicator != null)
+        {
+            var skillRLabel = invisibilityIndicator.Q<Label>("invisibility-text");
+            if (profileIndex == 3) // Arthur Tanker
+            {
+                // Đổi text và màu sang đỏ cho skill "Tăng Cường"
+                if (skillRLabel != null) skillRLabel.text = "TĂNG CƯỜNG";
+                invisibilityIndicator.style.borderTopColor = new Color(0.9f, 0.1f, 0.1f, 1f);
+                invisibilityIndicator.style.borderBottomColor = new Color(0.9f, 0.1f, 0.1f, 1f);
+                invisibilityIndicator.style.borderLeftColor = new Color(0.9f, 0.1f, 0.1f, 1f);
+                invisibilityIndicator.style.borderRightColor = new Color(0.9f, 0.1f, 0.1f, 1f);
+                invisibilityIndicator.style.backgroundColor = new Color(0.25f, 0f, 0f, 0.4f);
+                if (skillRLabel != null) skillRLabel.style.color = new Color(1f, 0.45f, 0.45f, 1f);
+                if (invisibilityTimerLabel != null) invisibilityTimerLabel.style.color = new Color(1f, 0.45f, 0.45f, 1f);
+            }
+            else
+            {
+                // Khôi phục màu mặc định (trắng / tàng hình) cho các class khác
+                if (skillRLabel != null) skillRLabel.text = "TÀNG HÌNH";
+                invisibilityIndicator.style.borderTopColor = Color.white;
+                invisibilityIndicator.style.borderBottomColor = Color.white;
+                invisibilityIndicator.style.borderLeftColor = Color.white;
+                invisibilityIndicator.style.borderRightColor = Color.white;
+                invisibilityIndicator.style.backgroundColor = new Color(0f, 0f, 0f, 0.25f);
+                if (skillRLabel != null) skillRLabel.style.color = Color.white;
+                if (invisibilityTimerLabel != null) invisibilityTimerLabel.style.color = Color.white;
+            }
         }
 
         Debug.Log($"[PlayerHUDController] Đã thiết lập thành công giao diện cho lớp nhân vật: {profile.className} (Index {profileIndex})");

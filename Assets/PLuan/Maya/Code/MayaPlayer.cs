@@ -23,8 +23,8 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
     private bool isRootedAttack = false;
 
     [Header("Weapon Switch Animations")]
-    public string drawWeaponTrigger = "LayCung";
-    public string sheathWeaponTrigger = "CatCung";
+    public string drawWeaponTrigger = "LayVuKhi";
+    public string sheathWeaponTrigger = "CatVuKhi";
 
     public GameObject weaponOnBackVisual;
     public GameObject weaponInHandVisual;
@@ -175,8 +175,8 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
     public GameObject arrowPrefab;     // Prefab mũi tên bay (Projectile)
     public Transform arrowSpawnPoint;   // Điểm xuất phát của mũi tên
     public float arrowSpeed = 30f;      // Tốc độ bay của mũi tên
-    public float bowShootCooldown = 1.0f; // Thời gian chờ giữa mỗi lần bắn (giây)
-    private float bowShootCooldownTimer = 0f; // Bộ đếm thời gian chờ bắn
+    public float ShootingCooldown = 1.0f; // Thời gian chờ giữa mỗi lần bắn (giây)
+    private float ShootingCooldownTimer = 0f; // Bộ đếm thời gian chờ bắn
 
     [Header("E Skill (Piercing Arrows) Settings")]
     public float eSkillCooldown = 10f; // Cooldown của kỹ năng E (giây)
@@ -610,8 +610,8 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
     protected virtual void Awake()
     {
         // Ép tên Trigger luôn đúng với Animator tiếng Việt của Maya, bỏ qua giá trị cũ bị lưu ở Inspector
-        drawWeaponTrigger = "LayCung";
-        sheathWeaponTrigger = "CatCung";
+        drawWeaponTrigger = "LayVuKhi";
+        sheathWeaponTrigger = "CatVuKhi";
 
         rb = GetComponent<Rigidbody>();
         if (rb != null)
@@ -1356,9 +1356,9 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
         }
 
         // Giảm thời gian cooldown bắn cung
-        if (bowShootCooldownTimer > 0)
+        if (ShootingCooldownTimer > 0)
         {
-            bowShootCooldownTimer -= Time.deltaTime;
+            ShootingCooldownTimer -= Time.deltaTime;
         }
 
         // Giảm thời gian cooldown Kỹ năng E
@@ -1695,10 +1695,10 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
             {
                 if (IsAiming)
                 {
-                    if (bowShootCooldownTimer <= 0f)
+                    if (ShootingCooldownTimer <= 0f)
                     {
-                        bowShootCooldownTimer = IsRSkillActive ? rSkillShootCooldown : bowShootCooldown;
-                        PerformBowShoot(false);
+                        ShootingCooldownTimer = IsRSkillActive ? rSkillShootCooldown : ShootingCooldown;
+                        PerformShooting(false);
                     }
                 }
                 else
@@ -1842,10 +1842,10 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
             {
                 if (IsAiming)
                 {
-                    if (bowShootCooldownTimer <= 0f)
+                    if (ShootingCooldownTimer <= 0f)
                     {
-                        bowShootCooldownTimer = IsRSkillActive ? rSkillShootCooldown : bowShootCooldown;
-                        PerformBowShoot(true);
+                        ShootingCooldownTimer = IsRSkillActive ? rSkillShootCooldown : ShootingCooldown;
+                        PerformShooting(true);
                     }
                 }
                 else
@@ -2589,7 +2589,7 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
                name == "Chem1" ||
                name == "Chem2" ||
                name == "Chem3" ||
-               name == "Bow_Shoot" ||
+               name == "Shooting" ||
                (!string.IsNullOrEmpty(drawWeaponTrigger) && name == drawWeaponTrigger) ||
                (!string.IsNullOrEmpty(sheathWeaponTrigger) && name == sheathWeaponTrigger);
     }
@@ -2948,7 +2948,7 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
         SafeResetTrigger("GeiHit2");
         SafeResetTrigger("LonVong");
         SafeResetTrigger("Idle_Pick");
-        SafeResetTrigger("Bow_Shoot");
+        SafeResetTrigger("Shooting");
 
         // Chỉ dọn dẹp (reset) các trigger combo tấn công khi chuẩn bị kích hoạt một hành động mới
         // (để tránh việc nhân vật di chuyển làm reset mất trigger đòn đấm trên layer Upper Body)
@@ -2957,7 +2957,7 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
             SafeResetTrigger("Dam1");
             SafeResetTrigger("Dam2");
             SafeResetTrigger("Dam3");
-            SafeResetTrigger("Bow_Shoot");
+            SafeResetTrigger("Shooting");
             if (!string.IsNullOrEmpty(drawWeaponTrigger)) SafeResetTrigger(drawWeaponTrigger);
             if (!string.IsNullOrEmpty(sheathWeaponTrigger)) SafeResetTrigger(sheathWeaponTrigger);
         }
@@ -2988,11 +2988,11 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
         }
         else
         {
-            if (anim.layerCount > 1 && (animName == drawWeaponTrigger || animName == sheathWeaponTrigger || animName == "Bow_Shoot"))
+            if (anim.layerCount > 1 && (animName == drawWeaponTrigger || animName == sheathWeaponTrigger || animName == "Shooting"))
             {
                 anim.SetLayerWeight(1, 1f);
             }
-            if (animName == "Bow_Shoot" && arrowHandVisual != null)
+            if (animName == "Shooting" && arrowHandVisual != null)
             {
                 arrowHandVisual.SetActive(false);
             }
@@ -3151,7 +3151,7 @@ private void StartRollServerRpc(Vector3 direction)
         isAimingNet.Value = aiming;
     }
 
-    // Animation Event: Được gọi từ hoạt ảnh LayCung hoặc Bow_Draw để kích hoạt mũi tên trên tay
+    // Animation Event: Được gọi từ hoạt ảnh LayVuKhi hoặc Bow_Draw để kích hoạt mũi tên trên tay
     public void OnDrawArrow()
     {
         if (arrowHandVisual != null)
@@ -3160,11 +3160,11 @@ private void StartRollServerRpc(Vector3 direction)
         }
     }
 
-    private void PerformBowShoot(bool networkMode)
+    private void PerformShooting(bool networkMode)
     {
         // Tạm thời vô hiệu hóa bắn cung cho Maya
         /*
-        PlayAnimation("Bow_Shoot", 0.05f);
+        PlayAnimation("Shooting", 0.05f);
 
         if (arrowHandVisual != null)
         {
@@ -3187,7 +3187,7 @@ private void StartRollServerRpc(Vector3 direction)
 
             if (networkMode)
             {
-                BowShootServerRpc(spawnPos, shootDirection);
+                ShootingServerRpc(spawnPos, shootDirection);
             }
             else
             {
@@ -3209,7 +3209,7 @@ private void StartRollServerRpc(Vector3 direction)
                 }
                 else
                 {
-                    Debug.LogError("[PerformBowShoot] arrowPrefab chưa được gán trong Inspector của MayaPlayer!");
+                    Debug.LogError("[PerformShooting] arrowPrefab chưa được gán trong Inspector của MayaPlayer!");
                 }
             }
         }
@@ -3218,7 +3218,7 @@ private void StartRollServerRpc(Vector3 direction)
 
     private void SpawnArrowLocal(Vector3 spawnPos, Vector3 shootDirection)
     {
-        Debug.Log($"[PerformBowShoot] Đang bắn tên ở chế độ Standalone. Vị trí spawn: {spawnPos}, Hướng bắn: {shootDirection}");
+        Debug.Log($"[PerformShooting] Đang bắn tên ở chế độ Standalone. Vị trí spawn: {spawnPos}, Hướng bắn: {shootDirection}");
         GameObject arrowObj = Instantiate(arrowPrefab, spawnPos, Quaternion.LookRotation(shootDirection));
         arrowObj.transform.localScale = arrowPrefab.transform.localScale;
         arrowObj.SetActive(true);
@@ -3248,7 +3248,7 @@ private void StartRollServerRpc(Vector3 direction)
     }
 
     [ServerRpc]
-    private void BowShootServerRpc(Vector3 spawnPos, Vector3 shootDirection)
+    private void ShootingServerRpc(Vector3 spawnPos, Vector3 shootDirection)
     {
         // Kiểm tra hợp lệ khoảng cách trên Server để tránh lag giật tọa độ
         if (Vector3.Distance(spawnPos, transform.position) > 4f)
@@ -3274,13 +3274,13 @@ private void StartRollServerRpc(Vector3 direction)
         }
         else
         {
-            Debug.LogError("[BowShootServerRpc] arrowPrefab chưa được gán trên Server!");
+            Debug.LogError("[ShootingServerRpc] arrowPrefab chưa được gán trên Server!");
         }
     }
 
     private void SpawnArrowServer(Vector3 spawnPos, Vector3 shootDirection)
     {
-        Debug.Log($"[BowShootServerRpc] Server đang spawn tên. Vị trí: {spawnPos}, Hướng bắn: {shootDirection}");
+        Debug.Log($"[ShootingServerRpc] Server đang spawn tên. Vị trí: {spawnPos}, Hướng bắn: {shootDirection}");
         GameObject arrowObj = Instantiate(arrowPrefab, spawnPos, Quaternion.LookRotation(shootDirection));
         arrowObj.transform.localScale = arrowPrefab.transform.localScale;
         arrowObj.SetActive(true);
