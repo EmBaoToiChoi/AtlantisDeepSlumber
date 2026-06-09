@@ -79,6 +79,8 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
     public GameObject[] swordBladeObjects;
     [Tooltip("Material màu đỏ để nhuộm vũ khí khi dùng Skill R. Để trống sẽ tự động nhuộm đỏ bằng emission.")]
     public Material redWeaponMaterial;
+    [Tooltip("Tên Trigger Animation trong Animator khi khai động Skill R. Để trống nếu không có animation.")]
+    public string rSkillAnimTrigger = "SkillR";
     [Tooltip("Thời gian hiệu lực Skill R (giây)")]
     public float rSkillDuration = 8f;
     [Tooltip("Hệ số tăng sát thương khi Skill R (1.3 = +30%)")]
@@ -314,10 +316,15 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
             isRSkillActive = true;
             rSkillTimeRemaining = rSkillDuration;
             SetRedWeaponVisuals(true);
+            // Phát animation Skill R (standalone)
+            if (!string.IsNullOrEmpty(rSkillAnimTrigger))
+                PlayAnimation(rSkillAnimTrigger, 0.1f);
         }
         else if (IsOwner)
         {
-            // Multiplayer: gửi lên server
+            // Multiplayer: phát animation local ngay lập tức rồi gửi server
+            if (!string.IsNullOrEmpty(rSkillAnimTrigger))
+                PlayAnimationLocal(rSkillAnimTrigger, 0.1f);
             TriggerRSkillServerRpc(true);
         }
     }
@@ -1843,6 +1850,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
     private void TriggerRSkillServerRpc(bool state)
     {
         isRSkillActiveNet.Value = state;
+        // Broadcast animation + visual cho tất cả client
         TriggerRSkillClientRpc(state);
         if (state)
         {
@@ -1853,10 +1861,26 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
     [ClientRpc]
     private void TriggerRSkillClientRpc(bool state)
     {
-        // Chỉ áp dụng visual cho non-owner, owner tự quản lý
-        if (!IsOwner)
+        if (state)
         {
-            SetRedWeaponVisuals(state);
+            // Phát animation Skill R cho tất cả client (kể cả owner đã phát trước rồi nhưng không sao)
+            if (!IsOwner && !string.IsNullOrEmpty(rSkillAnimTrigger))
+            {
+                PlayAnimationLocal(rSkillAnimTrigger, 0.1f);
+            }
+            // Áp dụng visual nhuộm đỏ cho non-owner
+            if (!IsOwner)
+            {
+                SetRedWeaponVisuals(true);
+            }
+        }
+        else
+        {
+            // Tắt visual khi kết thúc skill
+            if (!IsOwner)
+            {
+                SetRedWeaponVisuals(false);
+            }
         }
     }
 
