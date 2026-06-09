@@ -81,7 +81,7 @@ public class OptimizedNetworkMiniGame : NetworkBehaviour
 
     private void HandleLowFPSClientLogic()
     {
-        if (GetOwner(currentStationIndex) != NetworkManager.Singleton.LocalClientId) return;
+        //if (GetOwner(currentStationIndex) != NetworkManager.Singleton.LocalClientId) return;
 
         if (Keyboard.current.aKey.wasPressedThisFrame || Keyboard.current.dKey.wasPressedThisFrame)
         {
