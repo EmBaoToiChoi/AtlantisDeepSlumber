@@ -22,6 +22,7 @@ public class OptimizedNetworkMiniGame : NetworkBehaviour
     
     // --- BIẾN CỦA CLIENT ---
     private float localPredictedValue = 0f;
+    private float displayValue = 0f; // BIẾN MỚI: Dùng để làm mượt thanh trượt
     private bool lastSentZoneStatus = false; 
     private float recoveryTimer = 0f; 
     private const float RECOVERY_WINDOW = 0.5f; 
@@ -55,7 +56,6 @@ public class OptimizedNetworkMiniGame : NetworkBehaviour
             if (mainContainer != null) mainContainer.style.display = DisplayStyle.None;
         }
 
-        // Đăng ký sự kiện để Bánh răng lắng nghe lệnh mở cổng từ Server
         isCurrentlyOpen.OnValueChanged += (oldValue, newValue) => {
             foreach (var gear in gearList)
             {
@@ -67,7 +67,6 @@ public class OptimizedNetworkMiniGame : NetworkBehaviour
             }
         };
 
-        // Nếu người chơi load map vào sau mà cổng đã mở sẵn, thì bánh răng cũng phải mở theo
         if (isCurrentlyOpen.Value)
         {
             foreach (var gear in gearList) if (gear != null) gear.OpenGear();
@@ -95,7 +94,9 @@ public class OptimizedNetworkMiniGame : NetworkBehaviour
         if (currentStationIndex == 3 && !station3HasCrystal.Value) currentDecay *= 2.5f;
         
         localPredictedValue = Mathf.Clamp(localPredictedValue - (currentDecay * Time.deltaTime), 0f, 100f);
-        UpdateUI();
+        
+        // Gọi hàm update UI mới mượt mà
+        UpdateUI(); 
 
         bool currentZoneStatus = localPredictedValue >= greenZoneMin;
 
@@ -124,9 +125,10 @@ public class OptimizedNetworkMiniGame : NetworkBehaviour
     }
 
     [ServerRpc(RequireOwnership = false)]
-    public void UpdateZoneStatusServerRpc(int index, bool isGreen)
+    public void UpdateZoneStatusServerRpc(int index, bool isGreen, ServerRpcParams rpcParams = default)
     {
-        if (GetOwner(index) != NetworkManager.Singleton.LocalClientId) return;
+        ulong senderId = rpcParams.Receive.SenderClientId;
+        if (GetOwner(index) != senderId) return;
 
         if (index == 0) s0IsGreen.Value = isGreen;
         else if (index == 1) s1IsGreen.Value = isGreen;
@@ -158,12 +160,11 @@ public class OptimizedNetworkMiniGame : NetworkBehaviour
     public ulong GetOwner(int i) => i == 0 ? s0Owner.Value : i == 1 ? s1Owner.Value : i == 2 ? s2Owner.Value : s3Owner.Value;
 
     [ServerRpc(RequireOwnership = false)] 
-    public void HandleStationAccessServerRpc(int i, ulong id) 
+    public void HandleStationAccessServerRpc(int i, ulong id, ServerRpcParams rpcParams = default) 
     {
-        // SERVER CHỐT ĐƠN: Chỉ cho phép chiếm trạm nếu trạm ĐANG TRỐNG (ulong.MaxValue)
         if (GetOwner(i) == ulong.MaxValue) 
         {
-            SetOwner(i, id);
+            SetOwner(i, rpcParams.Receive.SenderClientId); 
         }
     }
     
@@ -177,9 +178,10 @@ public class OptimizedNetworkMiniGame : NetworkBehaviour
         if (isOpening) 
         {
             localPredictedValue = 0f;
+            displayValue = 0f; // Ép biến UI mượt về 0 luôn
             lastSentZoneStatus = false;
             recoveryTimer = 0f;
-            UpdateUI();
+            UpdateUI(); // Cập nhật để màn hình thấy nó về 0 lập tức
             
             HandleStationAccessServerRpc(index, NetworkManager.Singleton.LocalClientId);
         }
@@ -192,8 +194,25 @@ public class OptimizedNetworkMiniGame : NetworkBehaviour
         if (IsClient && mainContainer != null) mainContainer.style.display = isOpening ? DisplayStyle.Flex : DisplayStyle.None;
     }
 
-    [ServerRpc(RequireOwnership = false)] public void HandleStationReleaseServerRpc(int i, ulong id) { if(GetOwner(i) == id) SetOwner(i, ulong.MaxValue); }
-    private void UpdateUI() { if(progressFill != null) progressFill.style.width = new Length(localPredictedValue, LengthUnit.Percent); }
+    [ServerRpc(RequireOwnership = false)] 
+    public void HandleStationReleaseServerRpc(int i, ulong id, ServerRpcParams rpcParams = default) 
+    {
+        if(GetOwner(i) == rpcParams.Receive.SenderClientId) 
+        {
+            SetOwner(i, ulong.MaxValue);
+        }
+    }
+    
+    // ĐÂY LÀ CHỖ LÀM MƯỢT UI
+    private void UpdateUI() 
+    { 
+        if(progressFill != null) 
+        {
+            displayValue = Mathf.Lerp(displayValue, localPredictedValue, Time.deltaTime * 15f);
+            progressFill.style.width = new Length(displayValue, LengthUnit.Percent); 
+        }
+    }
+
     private void PlaySuccessVisual(VisualElement k) { if (k == null) return; k.AddToClassList("pressed"); k.schedule.Execute(() => k.RemoveFromClassList("pressed")).StartingIn(100); }
     public void SetStationCrystalStatus(int index, bool hasCrystal) { if (IsServer) { if (index == 2) station2HasCrystal.Value = hasCrystal; else if (index == 3) station3HasCrystal.Value = hasCrystal; } }
 }
