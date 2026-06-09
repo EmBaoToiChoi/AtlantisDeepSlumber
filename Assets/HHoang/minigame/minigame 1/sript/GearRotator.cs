@@ -18,8 +18,11 @@ public class GearRotator : NetworkBehaviour
     private Vector3 originalPosition;
 
     public NetworkVariable<GearState> currentState = new NetworkVariable<GearState>(GearState.Spinning);
-
     public ParticleSystem gearSmokeEffect;
+    
+    // Thêm biến này để nắm đầu cái Timer, cần là huỷ ngay
+    private Tween stateTween; 
+
     void Awake()
     {
         originalPosition = transform.localPosition;
@@ -32,18 +35,17 @@ public class GearRotator : NetworkBehaviour
             if (newState == GearState.Opening) TriggerOpenVisuals();
             else if (newState == GearState.Closing) TriggerCloseVisuals();
         };
+
+        if (currentState.Value == GearState.Opening) TriggerOpenVisuals();
     }
 
     void Update()
     {
-        // CẢNH BÁO: Chỉ thực hiện ép vị trí nếu Bánh răng KHÔNG trong trạng thái đang Opening hoặc Closing
-        // Dùng currentState để ngăn chặn Server ép vị trí khi đang trượt
         if (currentState.Value == GearState.Spinning)
         {
             float direction = reverseDirection ? -1f : 1f;
             transform.Rotate(rotationAxis.normalized * originalSpeed * direction * Time.deltaTime, Space.Self);
             
-            // CHỈ ÉP VỊ TRÍ KHI LÀ SERVER VÀ KHÔNG CÓ TWEEN NÀO ĐANG CHẠY
             if (IsServer && !DOTween.IsTweening(transform))
             {
                 if (Vector3.Distance(transform.localPosition, originalPosition) > 0.1f)
@@ -53,7 +55,6 @@ public class GearRotator : NetworkBehaviour
             }
         }
 
-        // Phần logic khói giữ nguyên (đã ổn)
         if (gearSmokeEffect != null)
         {
             bool isMoving = DOTween.IsTweening(transform);
@@ -65,6 +66,8 @@ public class GearRotator : NetworkBehaviour
     private void TriggerOpenVisuals() 
     {
         transform.DOKill();
+        stateTween?.Kill(); // Nếu đang hẹn giờ đóng mà bị bắt mở -> Huỷ ngay cái timer đóng!
+        
         DOVirtual.DelayedCall(1.0f, () => {
             transform.DOLocalMove(originalPosition + openOffset, moveDuration).SetEase(Ease.InOutCubic);
         });
@@ -73,10 +76,11 @@ public class GearRotator : NetworkBehaviour
     private void TriggerCloseVisuals() 
     {
         transform.DOKill();
-        // Thay vì delayed call 1s làm người chơi thấy "khựng", 
-        // mình cho nó trượt về ngay lập tức nhưng với tốc độ mượt.
-        // Ease.OutCubic làm nó trượt nhanh lúc đầu, chậm dần lúc về đích.
-        transform.DOLocalMove(originalPosition, 1.5f).SetEase(Ease.OutCubic);
+        stateTween?.Kill(); 
+        
+        transform.DOLocalMove(originalPosition, 1.5f).SetEase(Ease.OutCubic).OnComplete(() => {
+            transform.localPosition = originalPosition; // Chạy xong thì gán cứng vị trí cho chắc ăn
+        });
     }
 
     public void OpenGear() { if (IsServer) currentState.Value = GearState.Opening; }
@@ -86,28 +90,18 @@ public class GearRotator : NetworkBehaviour
     {
         if (IsServer) 
         {
-            // 1. Tắt quay ngay lập tức trên Server để tránh nhảy vị trí
             currentState.Value = GearState.Closing; 
             
-            // 2. Gọi ClientRpc để tất cả máy reset mượt mà
-            ResetClientVisualsClientRpc();
-            
-            // 3. Đợi đủ thời gian trượt về rồi mới cho quay lại
-            DOVirtual.DelayedCall(1.6f, () => {
-                if (IsServer) currentState.Value = GearState.Spinning;
+            stateTween?.Kill(); 
+            // Đặt timer 1.6s để quay về Spinning
+            stateTween = DOVirtual.DelayedCall(1.6f, () => {
+                // KIỂM TRA CHÉO: Tới giờ rồi, mày có còn đang Closing không? 
+                // Nếu bị chuyển sang Opening rồi thì bỏ qua không Spinning nữa!
+                if (IsServer && currentState.Value == GearState.Closing) 
+                {
+                    currentState.Value = GearState.Spinning;
+                }
             });
         }
-    }
-
-    [ClientRpc]
-    private void ResetClientVisualsClientRpc()
-    {
-        transform.DOKill();
-        // Thêm .OnComplete để đảm bảo sau khi trượt xong, nó nằm đúng vị trí gốc
-        transform.DOLocalMove(originalPosition, 1.5f)
-                .SetEase(Ease.OutCubic)
-                .OnComplete(() => {
-                    transform.localPosition = originalPosition;
-                });
     }
 }
