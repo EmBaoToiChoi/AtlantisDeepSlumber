@@ -54,22 +54,32 @@ public class EnemyHealthBar : MonoBehaviour
             }
         }
 
+        if (quadTransform == null)
+        {
+            Debug.LogError($"[EnemyHealthBar] Không tìm thấy đối tượng 'Quad' ở {gameObject.name} hoặc cha của nó. Thanh máu World Space sẽ KHÔNG hiển thị. Hãy copy đối tượng 'Quad' từ Prefab Zombie hoặc Enemy khác sang!");
+        }
+
         // Khởi tạo RenderTexture và Material trong suốt độc lập cho từng Enemy
         InitializeUniqueUI();
 
-        if (uiDocument != null)
-        {
-            var root = uiDocument.rootVisualElement;
-            progressBar = root.Q<VisualElement>("progress-bar"); 
-            yellowBar = root.Q<VisualElement>("yellow-bar");
-            nameLabel = root.Q<Label>("enemy-name");
-        }
+        QueryVisualElements();
 
         // Tự động tìm kiếm Enemy component ở cha nếu chưa được gán
         FindEnemyInParent();
 
         // Gán tên và subscribe sự kiện máu thay đổi
         InitEnemyHealthAndName();
+    }
+
+    private void QueryVisualElements()
+    {
+        if (uiDocument != null && uiDocument.rootVisualElement != null)
+        {
+            var root = uiDocument.rootVisualElement;
+            progressBar = root.Q<VisualElement>("progress-bar"); 
+            yellowBar = root.Q<VisualElement>("yellow-bar");
+            nameLabel = root.Q<Label>("enemy-name");
+        }
     }
 
     private void FindEnemyInParent()
@@ -182,6 +192,16 @@ public class EnemyHealthBar : MonoBehaviour
 
     private void UpdateHealthAnimation()
     {
+        // Thử gán lại các VisualElement nếu lúc OnEnable chưa tải xong (tránh lỗi thứ tự khởi tạo của UIDocument)
+        if (progressBar == null || nameLabel == null || yellowBar == null)
+        {
+            QueryVisualElements();
+            if (progressBar != null || nameLabel != null)
+            {
+                InitEnemyHealthAndName();
+            }
+        }
+
         float maxHp = GetMaxHealth();
         if (maxHp <= 0f) maxHp = 100f;
 

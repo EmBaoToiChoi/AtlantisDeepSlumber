@@ -2059,64 +2059,38 @@ public class PlayerHUDController : MonoBehaviour
         SetupEventSystemForInputSystem();
     }
 
-    /// <summary>
-    /// Kiểm tra và tự động cấu hình/sửa chữa EventSystem để tương thích 100% với Input System mới.
-    /// Giúp UI Toolkit nhận tương tác click chuột ngay lập tức mà không bị liệt.
-    /// </summary>
     public void SetupEventSystemForInputSystem()
     {
-        // 1. Tìm tất cả EventSystem trong Scene
+        // 1. Tìm tất cả EventSystem trong Scene và dọn dẹp sạch sẽ để tránh xung đột
         var allEventSystems = FindObjectsByType<UnityEngine.EventSystems.EventSystem>(FindObjectsSortMode.None);
-        UnityEngine.EventSystems.EventSystem eventSystem = null;
-
         if (allEventSystems != null && allEventSystems.Length > 0)
         {
-            // Giữ lại cái đầu tiên, hủy tất cả cái còn lại để tránh xung đột EventSystem trong chế độ chơi mạng
-            eventSystem = allEventSystems[0];
-            for (int i = 1; i < allEventSystems.Length; i++)
+            foreach (var es in allEventSystems)
             {
-                if (allEventSystems[i] != null)
+                if (es != null)
                 {
-                    Debug.LogWarning($"[PlayerHUDController] Phát hiện EventSystem dư thừa '{allEventSystems[i].gameObject.name}'. Đang tự động xóa bỏ để tránh xung đột trên Network.");
-                    DestroyImmediate(allEventSystems[i].gameObject);
+                    Debug.LogWarning($"[PlayerHUDController] Dọn dẹp EventSystem cũ '{es.gameObject.name}' để chuẩn bị tạo mới sạch sẽ.");
+                    DestroyImmediate(es.gameObject);
                 }
             }
         }
 
-        if (eventSystem == null)
-        {
-            GameObject esObj = new GameObject("EventSystem");
-            eventSystem = esObj.AddComponent<UnityEngine.EventSystems.EventSystem>();
+        // 2. Khởi tạo một EventSystem mới sạch sẽ và kích hoạt đầy đủ
+        GameObject esObj = new GameObject("EventSystem");
+        var eventSystem = esObj.AddComponent<UnityEngine.EventSystems.EventSystem>();
+        esObj.SetActive(true);
+        eventSystem.enabled = true;
 
-            // Sử dụng StandaloneInputModule hoặc InputSystemUIInputModule tùy theo cấu hình hệ thống
+        // Cấu hình Input Module phù hợp dựa trên Input System được kích hoạt
 #if ENABLE_INPUT_SYSTEM
-            esObj.AddComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
+        var inputModule = esObj.AddComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
+        inputModule.enabled = true;
+        Debug.Log("[PlayerHUDController] Đã khởi tạo mới EventSystem với InputSystemUIInputModule hoạt động tốt.");
 #else
-            esObj.AddComponent<UnityEngine.EventSystems.StandaloneInputModule>();
+        var inputModule = esObj.AddComponent<UnityEngine.EventSystems.StandaloneInputModule>();
+        inputModule.enabled = true;
+        Debug.Log("[PlayerHUDController] Đã khởi tạo mới EventSystem với StandaloneInputModule hoạt động tốt.");
 #endif
-            Debug.Log("[PlayerHUDController] Created EventSystem.");
-        }
-        else
-        {
-            // CựC KỲ QUAN TRỌNG: Nếu đã có EventSystem trong scene nhưng đang dùng module cũ (StandaloneInputModule)
-            // của hệ thống Input cũ, trong khi game đang chạy New Input System, ta cần nâng cấp nó lên InputSystemUIInputModule.
-            // Nếu không, UI Toolkit (VisualElement) sẽ không thể nhận được sự kiện click chuột hay kéo thả từ người chơi!
-#if ENABLE_INPUT_SYSTEM
-            var legacyModule = eventSystem.GetComponent<UnityEngine.EventSystems.StandaloneInputModule>();
-            if (legacyModule != null)
-            {
-                Debug.LogWarning("[PlayerHUDController] Phát hiện EventSystem sử dụng StandaloneInputModule cũ dưới chế độ New Input System. Đang tự động nâng cấp lên InputSystemUIInputModule để hỗ trợ tương tác UI.");
-                DestroyImmediate(legacyModule);
-                
-                // Tránh add trùng lặp
-                var newModule = eventSystem.GetComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
-                if (newModule == null)
-                {
-                    eventSystem.gameObject.AddComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
-                }
-            }
-#endif
-        }
     }
 
     private void UpdateTeammatesHUD()
