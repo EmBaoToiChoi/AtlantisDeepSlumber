@@ -4,7 +4,7 @@ using System.Collections;
 using System.Collections.Generic;
 
 [RequireComponent(typeof(Rigidbody))]
-public class PuzzleCrystalCore : NetworkBehaviour
+public class PuzzleCrystalCore : NetworkBehaviour // <--- SỬA LẠI THÀNH NETWORKBEHAVIOUR
 {
     [Header("Cấu hình Hiển thị & Vật lý")]
     [Range(0.1f, 1.0f)]
@@ -21,10 +21,12 @@ public class PuzzleCrystalCore : NetworkBehaviour
     private Vector3 originalScale;
 
     [Header("Cấu hình Cơ chế Giải đố")]
-    // Lưu lịch sử chạm để xử lý luật "Một Lần Chạm"
     public List<ulong> historyHolders = new List<ulong>();
-    private float burnTimer = 0f;
-    private bool isBurning = false;
+    
+    public float burnTimeLimit = 11f; 
+
+    [SerializeField] private float burnTimer = 0f;
+    [SerializeField] private bool isBurning = false;
 
     void Awake() 
     { 
@@ -43,11 +45,11 @@ public class PuzzleCrystalCore : NetworkBehaviour
 
         if (float.IsNaN(transform.position.x)) { ResetToSpawnPosition(); return; }
 
-        // --- QUY TẮC "THỜI GIAN ĐỐT CHÁY" (11 giây nổ) ---
+        // --- CƠ CHẾ ĐẾM NGƯỢC TỪ 11 VỀ 0 ---
         if (isBurning)
         {
-            burnTimer += Time.fixedDeltaTime;
-            if (burnTimer >= 11f) 
+            burnTimer -= Time.fixedDeltaTime; 
+            if (burnTimer <= 0f) 
             {
                 ExplodeCore();
                 return;
@@ -87,14 +89,12 @@ public class PuzzleCrystalCore : NetworkBehaviour
         }
     }
 
-    // --- KIỂM TRA QUY TẮC "MỘT LẦN CHẠM" ---
     public bool CanPickup(ulong playerId)
     {
         if (!IsServer) return false;
         return !historyHolders.Contains(playerId);
     }
 
-    // --- HIỆU ỨNG ĐẨY LÙI KHI BỊ TỪ CHỐI ---
     public void RepelPlayer(ulong playerId)
     {
         if (!IsServer) return;
@@ -123,10 +123,10 @@ public class PuzzleCrystalCore : NetworkBehaviour
     {
         if (!IsServer) return;
         
-        // Ghi danh vào lịch sử chạm & kích hoạt bom nổ chậm
         if (!historyHolders.Contains(playerId)) historyHolders.Add(playerId);
+        
         isBurning = true;
-        burnTimer = 0f;
+        burnTimer = burnTimeLimit; 
 
         var col = GetComponent<Collider>();
         if (col != null) col.enabled = false; 
@@ -138,12 +138,11 @@ public class PuzzleCrystalCore : NetworkBehaviour
         rb.useGravity = false;
     }
 
-    // --- CƠ CHẾ SINH TỒN: NÉM (PHÍM E) ---
     public void PerformThrow(Vector3 throwDirection)
     {
         if (!IsServer) return;
         
-        isBurning = false; // Rời tay là dừng đếm nổ
+        isBurning = false; 
         burnTimer = 0f;
 
         var col = GetComponent<Collider>();
@@ -156,7 +155,6 @@ public class PuzzleCrystalCore : NetworkBehaviour
         rb.isKinematic = false;
         rb.useGravity = true;
 
-        // Áp dụng lực ném
         rb.linearVelocity = Vector3.zero;
         rb.angularVelocity = Vector3.zero;
         rb.AddForce(throwDirection.normalized * throwForce, ForceMode.Impulse);
@@ -184,10 +182,8 @@ public class PuzzleCrystalCore : NetworkBehaviour
         CheckBottomOutRule();
     }
 
-    // --- QUY TẮC "CHẠM ĐÁY" ---
     private void CheckBottomOutRule()
     {
-        // 4 người đã chạm + đang rơi tự do ngoài trung tâm -> Nổ
         if (historyHolders.Count >= 4 && !isSnapped.Value && !isSnapping.Value)
         {
             ExplodeCore();
@@ -203,7 +199,6 @@ public class PuzzleCrystalCore : NetworkBehaviour
         isBurning = false;
         burnTimer = 0f;
 
-        // Ép thả nếu có người đang cố ôm
         if (holderId.Value != ulong.MaxValue && NetworkManager.Singleton.ConnectedClients.TryGetValue(holderId.Value, out var client))
         {
             if (client.PlayerObject != null && client.PlayerObject.TryGetComponent<PlayerInteraction>(out var pInt))
@@ -212,7 +207,6 @@ public class PuzzleCrystalCore : NetworkBehaviour
             }
         }
 
-        // Reset toàn bộ câu đố
         historyHolders.Clear();
         ResetToSpawnPosition();
     }
@@ -223,7 +217,6 @@ public class PuzzleCrystalCore : NetworkBehaviour
         if (explosionEffectPrefab != null) Instantiate(explosionEffectPrefab, transform.position, Quaternion.identity);
     }
 
-    // --- CÁC HÀM CẮM TRỤ CƠ BẢN ---
     public void StartSnappingToStation(Transform target)
     {
         if (IsServer)
@@ -253,7 +246,7 @@ public class PuzzleCrystalCore : NetworkBehaviour
     {
         if (IsServer)
         {
-            isBurning = false; // Cắm vào bệ an toàn -> Tắt nổ
+            isBurning = false; 
             burnTimer = 0f;
             isSnapping.Value = false;
             isSnapped.Value = true;
@@ -275,7 +268,16 @@ public class PuzzleCrystalCore : NetworkBehaviour
         isSnapping.Value = false;
         holderId.Value = ulong.MaxValue;
         isSnapped.Value = false;
+        
+        // Đưa về vị trí gốc
         transform.position = spawnPosition;
+
+        // --- ĐÂY, BẬT LẠI COLLIDER CHỐNG RỚT XUYÊN MAP ---
+        var col = GetComponent<Collider>();
+        if (col != null) col.enabled = true; 
+        // ------------------------------------------------
+
+        // Reset vật lý
         rb.linearVelocity = Vector3.zero; 
         rb.angularVelocity = Vector3.zero;
         rb.isKinematic = false; 
