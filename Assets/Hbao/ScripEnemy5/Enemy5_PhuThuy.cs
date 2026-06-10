@@ -336,14 +336,14 @@ public class Enemy5_PhuThuy : NetworkBehaviour
             if (spellBall != null)
             {
                 spellBall.damage = spellDamage;
-                spellBall.knockback = 5f;
+                spellBall.knockback = 1.5f;
             }
             var no = proj.GetComponent<NetworkObject>(); if (no != null && !isStandaloneMode) no.Spawn(true);
         }
         else
         {
             if (Physics.Raycast(spawnPt, dir, out RaycastHit hit, maxAttackRange + 2f))
-            { EnemyDamageHelper.DealDamage(hit.collider.transform, spellDamage, dir * 5f); }
+            { EnemyDamageHelper.DealDamage(hit.collider.transform, spellDamage, dir * 1.5f); }
         }
     }
 

@@ -455,7 +455,7 @@ public class Enemy3_Buaa : NetworkBehaviour
                 if (!hasDealtDamage1)
                 {
                     hasDealtDamage1 = true;
-                    DealConeDamage(30f, attackRange + 1.5f, 110f, 18f);
+                    DealConeDamage(30f, attackRange + 1.5f, 110f, 4.0f);
                 }
             }
             else if (aType == 1)
@@ -463,12 +463,12 @@ public class Enemy3_Buaa : NetworkBehaviour
                 if (attackSwingCount == 1 && !hasDealtDamage1)
                 {
                     hasDealtDamage1 = true;
-                    DealConeDamage(15f, attackRange + 1f, 90f, 8f);
+                    DealConeDamage(15f, attackRange + 1f, 90f, 2.0f);
                 }
                 else if (attackSwingCount >= 2 && !hasDealtDamage2)
                 {
                     hasDealtDamage2 = true;
-                    DealConeDamage(20f, attackRange + 1f, 90f, 10f);
+                    DealConeDamage(20f, attackRange + 1f, 90f, 2.5f);
                 }
             }
             else
@@ -476,7 +476,7 @@ public class Enemy3_Buaa : NetworkBehaviour
                 if (!hasDealtDamage1)
                 {
                     hasDealtDamage1 = true;
-                    DealConeDamage(18f, attackRange + 0.5f, 80f, 8f);
+                    DealConeDamage(18f, attackRange + 0.5f, 80f, 2.0f);
                 }
             }
         }

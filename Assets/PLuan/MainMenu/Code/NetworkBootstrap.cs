@@ -152,7 +152,7 @@ public class NetworkBootstrap : MonoBehaviour
                     if (ActivePlayerNames.Contains(playerName))
                     {
                         Debug.Log($"[SERVER] Player '{playerName}' rejoin vào phòng đang chạy game. Cho phép vào thẳng scene.");
-                        // Tự động đồng bộ sang Map/Map2 thông qua NetworkSceneManager
+                        // Tự động đồng bộ sang Waiting hall/Waiting hall2 thông qua NetworkSceneManager
                     }
                     else
                     {
