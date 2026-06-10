@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 740fc8996210b5046a2183e03d009e50
+VisualEffectImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 274300
+  packageName: Stylized AOE VFX with Indicators
+  packageVersion: 1.1.1
+  assetPath: Assets/StylizedAOEVFXwithIndicators/VFX/DecalVFX/DecalGeyser.vfx
+  uploadId: 659150

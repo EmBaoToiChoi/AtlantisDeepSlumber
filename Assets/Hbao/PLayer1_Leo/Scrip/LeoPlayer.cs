@@ -4392,6 +4392,24 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         }
     }
 
+    public void Heal(float amount)
+    {
+        if (CurrentHealth <= 0) return;
+
+        if (isStandaloneMode)
+        {
+            localHealth = Mathf.Min(localHealth + amount, maxHealth);
+            UpdateHealthHUD(localHealth);
+            Debug.Log($"[LeoPlayer Standalone] Hồi {amount} máu. Máu hiện tại: {localHealth}");
+        }
+        else if (IsServer)
+        {
+            float finalHp = Mathf.Min(currentHealth.Value + amount, maxHealth);
+            SyncNetVarFloat(currentHealth, proxyPlayerTest != null ? proxyPlayerTest.currentHealth : null, finalHp);
+            Debug.Log($"[LeoPlayer Server] Hồi {amount} máu cho {gameObject.name}. Máu hiện tại: {currentHealth.Value}");
+        }
+    }
+
     public void ApplyKnockback(Vector3 force)
     {
         if (isStandaloneMode)

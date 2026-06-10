@@ -170,38 +170,48 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
     public float aimMinPitch = -80f; // Góc ngước lên tối đa khi ngắm
     public float aimMaxPitch = 80f;  // Góc cúi xuống tối đa khi ngắm
 
-    [Header("Arrow Spawning Settings")]
-    public GameObject arrowHandVisual; // Mũi tên trên tay (Visual)
-    public GameObject arrowPrefab;     // Prefab mũi tên bay (Projectile)
-    public Transform arrowSpawnPoint;   // Điểm xuất phát của mũi tên
-    public float arrowSpeed = 30f;      // Tốc độ bay của mũi tên
+    [Header("Normal Attack Spawning Settings")]
+    public GameObject normalAttackPrefab;     // Prefab đòn đánh thường (Projectile)
+    public Transform normalAttackSpawnPoint;   // Điểm xuất phát đòn đánh thường
+    public float normalAttackSpeed = 30f;      // Tốc độ bay đòn đánh thường
     public float ShootingCooldown = 1.0f; // Thời gian chờ giữa mỗi lần bắn (giây)
     private float ShootingCooldownTimer = 0f; // Bộ đếm thời gian chờ bắn
+    private bool isShootPending = false;       // Đánh dấu chuẩn bị bắn từ animation event
+    private bool isPendingShootNetworkMode = false; // Đánh dấu chế độ bắn mạng hay local
 
-    [Header("E Skill (Piercing Arrows) Settings")]
+    [Header("E Skill Healing Zone Settings")]
     public float eSkillCooldown = 10f; // Cooldown của kỹ năng E (giây)
-    public int eSkillMaxPiercingArrows = 3; // Số lượng mũi tên xuyên thấu tối đa khi kích hoạt kỹ năng E
-    private int eSkillRemainingArrows = 0; // Số mũi tên xuyên thấu còn lại (Standalone)
-    public NetworkVariable<int> eSkillRemainingArrowsNet = new NetworkVariable<int>(
+    public float eSkillHealRadius = 5f;
+    public float eSkillHealDuration = 5f;
+    public float eSkillHealAmount = 10f;
+    public GameObject eSkillVfxPrefab;
+
+    private float eSkillCooldownTimer = 0f; // Bộ đếm cooldown E
+    private float eSkillActiveTimer = 0f;   // Bộ đếm thời lượng kích hoạt E
+    private bool isETargeting = false;      // Đang trong trạng thái nhắm E
+    private GameObject eTargetingIndicator; // Vùng sáng chọn vị trí E
+
+    // Giữ các biến cũ để tránh lỗi biên dịch ở các chỗ khác
+    private int eSkillRemainingNormalAttacks = 0;
+    public int eSkillMaxPiercingNormalAttacks = 3;
+    public NetworkVariable<int> eSkillRemainingNormalAttacksNet = new NetworkVariable<int>(
         0,
         NetworkVariableReadPermission.Everyone,
         NetworkVariableWritePermission.Server
     );
-    public int ESkillRemainingArrows => isStandaloneMode ? eSkillRemainingArrows : eSkillRemainingArrowsNet.Value;
-
-    private float eSkillCooldownTimer = 0f; // Bộ đếm cooldown E
-    private bool localIsESkillActive = false; // Trạng thái kỹ năng E ở local
+    public int ESkillRemainingNormalAttacks => 0;
+    private bool localIsESkillActive = false;
     public NetworkVariable<bool> isESkillActiveNet = new NetworkVariable<bool>(
         false,
         NetworkVariableReadPermission.Everyone,
         NetworkVariableWritePermission.Server
     );
-    public bool IsESkillActive => isStandaloneMode ? localIsESkillActive : isESkillActiveNet.Value;
+    public bool IsESkillActive => eSkillActiveTimer > 0f;
 
-    [Header("Q Skill (Triple Arrows) Settings")]
+    [Header("Q Skill (Triple Attacks) Settings")]
     public float qSkillCooldown = 15f; // Cooldown của kỹ năng Q (giây)
     public float qSkillDuration = 10f; // Thời lượng tác dụng kỹ năng Q (giây)
-    public float qSkillSpreadAngle = 10f; // Góc lệch của 2 mũi tên bên cạnh
+    public float qSkillSpreadAngle = 10f; // Góc lệch của các tia bên cạnh
     private float qSkillCooldownTimer = 0f; // Bộ đếm cooldown Q
     private float qSkillDurationTimer = 0f; // Bộ đếm thời lượng Q
     private bool localIsQSkillActive = false; // Trạng thái kỹ năng Q ở local
@@ -363,9 +373,9 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
         TriggerRSkill();
     }
 
-    // Attack Speed Boost Skill E (Maya's Piercing Arrows)
+    // Attack Speed Boost Skill E (Maya's Piercing Normal Attacks)
     public bool IsAttackSpeedBoosted => IsESkillActive;
-    public float AttackSpeedBoostTimeRemaining => ESkillRemainingArrows;
+    public float AttackSpeedBoostTimeRemaining => ESkillRemainingNormalAttacks;
     public void TriggerAttackSpeedBoostSkill()
     {
         TriggerESkill();
@@ -373,47 +383,162 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     public void TriggerESkill()
     {
-        // Tạm thời vô hiệu hóa skill E cho Maya
-        /*
-        if (eSkillCooldownTimer > 0f || IsESkillActive) return;
-        
-        if (isStandaloneMode)
-        {
-            localIsESkillActive = true;
-            eSkillRemainingArrows = eSkillMaxPiercingArrows;
-        }
-        else if (IsOwner)
-        {
-            SetESkillActiveServerRpc(true);
-        }
-        */
+        if (eSkillCooldownTimer > 0f) return;
+        isETargeting = true;
     }
 
-    private void EndESkill()
+    private void UpdateETargetingIndicator()
     {
-        if (isStandaloneMode)
+        if (isETargeting)
         {
-            localIsESkillActive = false;
-            eSkillRemainingArrows = 0;
+            if (eTargetingIndicator == null)
+            {
+                eTargetingIndicator = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+                var indicatorCol = eTargetingIndicator.GetComponent<Collider>();
+                if (indicatorCol != null)
+                {
+                    Destroy(indicatorCol);
+                }
+                
+                var renderer = eTargetingIndicator.GetComponent<Renderer>();
+                if (renderer != null)
+                {
+                    Shader transparentShader = Shader.Find("Sprites/Default");
+                    if (transparentShader != null)
+                    {
+                        Material mat = new Material(transparentShader);
+                        mat.color = new Color(0.2f, 1f, 0.3f, 0.3f);
+                        renderer.material = mat;
+                    }
+                }
+            }
+
+            eTargetingIndicator.transform.localScale = new Vector3(eSkillHealRadius * 2f, 0.02f, eSkillHealRadius * 2f);
+
+            if (targetCamera != null)
+            {
+                Ray ray = targetCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
+                int layerMask = ~LayerMask.GetMask("Player", "Ignore Raycast");
+                if (Physics.Raycast(ray, out RaycastHit hit, 25f, layerMask))
+                {
+                    eTargetingIndicator.transform.position = hit.point + new Vector3(0f, 0.05f, 0f);
+                    eTargetingIndicator.SetActive(true);
+                }
+                else
+                {
+                    Vector3 defaultPoint = transform.position + transform.forward * 12f;
+                    defaultPoint.y = transform.position.y;
+                    eTargetingIndicator.transform.position = defaultPoint + new Vector3(0f, 0.05f, 0f);
+                    eTargetingIndicator.SetActive(true);
+                }
+            }
         }
-        else if (IsOwner)
+        else
         {
-            SetESkillActiveServerRpc(false);
+            if (eTargetingIndicator != null)
+            {
+                Destroy(eTargetingIndicator);
+                eTargetingIndicator = null;
+            }
+        }
+    }
+
+    private void CastEHealingZone(bool networkMode)
+    {
+        if (eTargetingIndicator == null) return;
+
+        Vector3 targetPos = eTargetingIndicator.transform.position;
+
+        // Play the casting/shooting animation without triggering a normal projectile attack
+        PlayAnimation("Shooting", 0.05f);
+
+        if (networkMode)
+        {
+            SpawnEHealingZoneServerRpc(targetPos);
+        }
+        else
+        {
+            SpawnEHealingZoneLocal(targetPos);
+        }
+
+        StartESkillCooldown();
+        eSkillActiveTimer = eSkillHealDuration;
+
+        isETargeting = false;
+        UpdateETargetingIndicator();
+    }
+
+    private void SpawnEHealingZoneLocal(Vector3 position)
+    {
+        GameObject zoneObj = new GameObject("MayaHealingZone_Local");
+        zoneObj.transform.position = position;
+        var zone = zoneObj.AddComponent<MayaHealingZone>();
+        zone.radius = eSkillHealRadius;
+        zone.duration = eSkillHealDuration;
+        zone.healAmount = eSkillHealAmount;
+
+        if (eSkillVfxPrefab != null)
+        {
+            GameObject vfxObj = Instantiate(eSkillVfxPrefab, position, Quaternion.identity);
+            vfxObj.transform.SetParent(zoneObj.transform);
+            Destroy(vfxObj, eSkillHealDuration);
         }
     }
 
     [ServerRpc]
-    private void SetESkillActiveServerRpc(bool active)
+    private void SpawnEHealingZoneServerRpc(Vector3 position)
     {
-        isESkillActiveNet.Value = active;
-        if (active)
+        GameObject zoneObj = new GameObject("MayaHealingZone_ServerAuthoritative");
+        zoneObj.transform.position = position;
+        var zone = zoneObj.AddComponent<MayaHealingZone>();
+        zone.radius = eSkillHealRadius;
+        zone.duration = eSkillHealDuration;
+        zone.healAmount = eSkillHealAmount;
+
+        SpawnHealingZoneVisualClientRpc(position);
+    }
+
+    [ClientRpc]
+    private void SpawnHealingZoneVisualClientRpc(Vector3 position)
+    {
+        GameObject visualObj = new GameObject("MayaHealingZone_VisualClient");
+        visualObj.transform.position = position;
+
+        if (eSkillVfxPrefab != null)
         {
-            eSkillRemainingArrowsNet.Value = eSkillMaxPiercingArrows;
+            GameObject vfx = Instantiate(eSkillVfxPrefab, position, Quaternion.identity);
+            vfx.transform.SetParent(visualObj.transform);
         }
         else
         {
-            eSkillRemainingArrowsNet.Value = 0;
+            GameObject cylinder = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            var col = cylinder.GetComponent<Collider>();
+            if (col != null) Destroy(col);
+
+            cylinder.transform.SetParent(visualObj.transform);
+            cylinder.transform.localPosition = new Vector3(0f, 0.05f, 0f);
+            cylinder.transform.localScale = new Vector3(eSkillHealRadius * 2f, 0.01f, eSkillHealRadius * 2f);
+            cylinder.transform.localRotation = Quaternion.identity;
+
+            var renderer = cylinder.GetComponent<Renderer>();
+            if (renderer != null)
+            {
+                Shader transparentShader = Shader.Find("Sprites/Default");
+                if (transparentShader != null)
+                {
+                    Material mat = new Material(transparentShader);
+                    mat.color = new Color(0.2f, 0.8f, 0.3f, 0.25f);
+                    renderer.material = mat;
+                }
+            }
         }
+
+        Destroy(visualObj, eSkillHealDuration);
+    }
+
+    private void EndESkill()
+    {
+        eSkillActiveTimer = 0f;
     }
 
     public void StartESkillCooldown()
@@ -1337,7 +1462,17 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (hasControl)
         {
             int currentWeaponIdx = GetActiveWeaponIndex();
-            bool targetAiming = currentWeaponIdx == 2 && Input.GetMouseButton(1) && !IsUIBlockingInput() && !IsBusyOrRolling;
+            
+            // Vào chế độ ngắm E khi giữ phím E và skill E không ở trạng thái cooldown
+            bool targetETargeting = eSkillCooldownTimer <= 0f && Input.GetKey(KeyCode.E) && !IsUIBlockingInput() && !IsBusyOrRolling;
+            if (isETargeting != targetETargeting)
+            {
+                isETargeting = targetETargeting;
+            }
+
+            UpdateETargetingIndicator();
+
+            bool targetAiming = (currentWeaponIdx == 2 && Input.GetMouseButton(1) && !IsUIBlockingInput() && !IsBusyOrRolling) || isETargeting;
             if (localIsAiming != targetAiming)
             {
                 localIsAiming = targetAiming;
@@ -1365,6 +1500,16 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (eSkillCooldownTimer > 0)
         {
             eSkillCooldownTimer -= Time.deltaTime;
+        }
+
+        // Giảm thời gian tác dụng Kỹ năng E
+        if (eSkillActiveTimer > 0)
+        {
+            eSkillActiveTimer -= Time.deltaTime;
+            if (eSkillActiveTimer <= 0)
+            {
+                eSkillActiveTimer = 0f;
+            }
         }
 
         // Giảm thời gian cooldown và thời lượng Kỹ năng Q
@@ -1693,7 +1838,11 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
         {
             if (!IsUIBlockingInput())
             {
-                if (IsAiming)
+                if (isETargeting)
+                {
+                    CastEHealingZone(false);
+                }
+                else if (IsAiming)
                 {
                     if (ShootingCooldownTimer <= 0f)
                     {
@@ -1840,7 +1989,11 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
         {
             if (IsSpawned && !IsUIBlockingInput())
             {
-                if (IsAiming)
+                if (isETargeting)
+                {
+                    CastEHealingZone(true);
+                }
+                else if (IsAiming)
                 {
                     if (ShootingCooldownTimer <= 0f)
                     {
@@ -2356,6 +2509,23 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
         {
             string hitAnim = Random.value < 0.5f ? "GetHit" : "GeiHit2";
             PlayAnimation(hitAnim, 0.05f);
+        }
+    }
+
+    public void Heal(float amount)
+    {
+        if (CurrentHealth <= 0) return;
+
+        if (isStandaloneMode)
+        {
+            localHealth = Mathf.Min(localHealth + amount, maxHealth);
+            UpdateHealthHUD(localHealth);
+            Debug.Log($"[MayaPlayer Standalone] Hồi {amount} máu. Máu hiện tại: {localHealth}");
+        }
+        else if (IsServer)
+        {
+            currentHealth.Value = Mathf.Min(currentHealth.Value + amount, maxHealth);
+            Debug.Log($"[MayaPlayer Server] Hồi {amount} máu cho {gameObject.name}. Máu hiện tại: {currentHealth.Value}");
         }
     }
 
@@ -2992,10 +3162,6 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
             {
                 anim.SetLayerWeight(1, 1f);
             }
-            if (animName == "Shooting" && arrowHandVisual != null)
-            {
-                arrowHandVisual.SetActive(false);
-            }
             SafeSetTrigger(animName);
         }
 
@@ -3126,10 +3292,9 @@ private void StartRollServerRpc(Vector3 direction)
                 {
                     anim.SetLayerWeight(1, 0f);
                     anim.Play("New State", 1, 0f);
-                    if (arrowHandVisual != null)
-                    {
-                        arrowHandVisual.SetActive(false);
-                    }
+                    // Reset shooting trigger and pending shoot flag to avoid stuck animation states/double arrows on next aim
+                    SafeResetTrigger("Shooting");
+                    isShootPending = false;
                 }
             }
         }
@@ -3151,26 +3316,31 @@ private void StartRollServerRpc(Vector3 direction)
         isAimingNet.Value = aiming;
     }
 
-    // Animation Event: Được gọi từ hoạt ảnh LayVuKhi hoặc Bow_Draw để kích hoạt mũi tên trên tay
-    public void OnDrawArrow()
+    // Animation Event: Được gọi từ hoạt ảnh LayVuKhi hoặc Bow_Draw (bỏ qua vì không dùng hand visual)
+    public void OnDrawNormalAttack()
     {
-        if (arrowHandVisual != null)
+        // Để trống vì Maya không dùng visual đòn đánh thường trên tay
+    }
+
+    // Animation Event: Được gọi từ hoạt ảnh bắn/tấn công (Shooting) tại frame phóng đạn để bắn
+    public void OnShootNormalAttack()
+    {
+        if (isShootPending)
         {
-            arrowHandVisual.SetActive(true);
+            isShootPending = false;
+            FireNormalAttackProjectile();
         }
     }
 
     private void PerformShooting(bool networkMode)
     {
-        // Tạm thời vô hiệu hóa bắn cung cho Maya
-        /*
+        isShootPending = true;
+        isPendingShootNetworkMode = networkMode;
         PlayAnimation("Shooting", 0.05f);
+    }
 
-        if (arrowHandVisual != null)
-        {
-            arrowHandVisual.SetActive(false);
-        }
-
+    private void FireNormalAttackProjectile()
+    {
         if (targetCamera != null)
         {
             Ray ray = targetCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
@@ -3182,59 +3352,83 @@ private void StartRollServerRpc(Vector3 direction)
             {
                 targetPoint = cameraHit.point;
             }
-            Vector3 spawnPos = arrowSpawnPoint != null ? arrowSpawnPoint.position : transform.position + Vector3.up * cameraPivotHeight;
+            Vector3 spawnPos = normalAttackSpawnPoint != null ? normalAttackSpawnPoint.position : transform.position + Vector3.up * cameraPivotHeight;
             Vector3 shootDirection = (targetPoint - spawnPos).normalized;
 
-            if (networkMode)
+            if (isPendingShootNetworkMode)
             {
-                ShootingServerRpc(spawnPos, shootDirection);
+                if (normalAttackPrefab != null)
+                {
+                    ShootingServerRpc(spawnPos, shootDirection);
+                }
+                else
+                {
+                    Debug.LogWarning("[FireNormalAttackProjectile] normalAttackPrefab chưa được gán trên Server! Không thể sinh đạn mạng.");
+                }
             }
             else
             {
-                if (arrowPrefab != null)
+                if (normalAttackPrefab != null)
                 {
                     if (IsQSkillActive)
                     {
                         Vector3 dirLeft = Quaternion.Euler(0f, -qSkillSpreadAngle, 0f) * shootDirection;
                         Vector3 dirRight = Quaternion.Euler(0f, qSkillSpreadAngle, 0f) * shootDirection;
 
-                        SpawnArrowLocal(spawnPos, shootDirection);
-                        SpawnArrowLocal(spawnPos, dirLeft);
-                        SpawnArrowLocal(spawnPos, dirRight);
+                        SpawnNormalAttackLocal(spawnPos, shootDirection);
+                        SpawnNormalAttackLocal(spawnPos, dirLeft);
+                        SpawnNormalAttackLocal(spawnPos, dirRight);
                     }
                     else
                     {
-                        SpawnArrowLocal(spawnPos, shootDirection);
+                        SpawnNormalAttackLocal(spawnPos, shootDirection);
                     }
                 }
                 else
                 {
-                    Debug.LogError("[PerformShooting] arrowPrefab chưa được gán trong Inspector của MayaPlayer!");
+                    // Fallback Standalone: tự động sinh Sphere khi chưa có prefab
+                    Debug.LogWarning("[FireNormalAttackProjectile] normalAttackPrefab chưa được gán! Đã tự động tạo một primitive Sphere tạm thời.");
+                    GameObject sphereObj = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+                    sphereObj.transform.position = spawnPos;
+                    sphereObj.transform.rotation = Quaternion.LookRotation(shootDirection);
+                    sphereObj.transform.localScale = new Vector3(0.4f, 0.4f, 0.4f);
+                    
+                    var proj = sphereObj.AddComponent<MayaProjectile>();
+                    proj.owner = this;
+                    proj.damage = damageAmount;
+                    proj.speed = normalAttackSpeed;
+                    
+                    var sRb = sphereObj.GetComponent<Rigidbody>();
+                    if (sRb == null) sRb = sphereObj.AddComponent<Rigidbody>();
+                    sRb.useGravity = false;
+                    sRb.isKinematic = true;
+
+                    var sCol = sphereObj.GetComponent<Collider>();
+                    if (sCol != null) sCol.isTrigger = true;
                 }
             }
         }
-        */
     }
 
-    private void SpawnArrowLocal(Vector3 spawnPos, Vector3 shootDirection)
+    private void SpawnNormalAttackLocal(Vector3 spawnPos, Vector3 shootDirection)
     {
-        Debug.Log($"[PerformShooting] Đang bắn tên ở chế độ Standalone. Vị trí spawn: {spawnPos}, Hướng bắn: {shootDirection}");
-        GameObject arrowObj = Instantiate(arrowPrefab, spawnPos, Quaternion.LookRotation(shootDirection));
-        arrowObj.transform.localScale = arrowPrefab.transform.localScale;
-        arrowObj.SetActive(true);
+        Debug.Log($"[PerformShooting] Đang bắn đòn đánh thường ở chế độ Standalone. Vị trí spawn: {spawnPos}, Hướng bắn: {shootDirection}");
+        GameObject normalAttackObj = Instantiate(normalAttackPrefab, spawnPos, Quaternion.LookRotation(shootDirection));
+        normalAttackObj.transform.localScale = normalAttackPrefab.transform.localScale;
+        normalAttackObj.SetActive(true);
         
-        if (arrowObj.TryGetComponent<ArrowProjectile>(out var proj))
+        if (normalAttackObj.TryGetComponent<MayaProjectile>(out var proj))
         {
             proj.owner = this;
             proj.damage = damageAmount;
-            proj.speed = arrowSpeed;
+            proj.speed = normalAttackSpeed;
             
             // Xử lý đạn xuyên thấu E-skill
-            if (localIsESkillActive && eSkillRemainingArrows > 0)
+            if (localIsESkillActive && eSkillRemainingNormalAttacks > 0)
             {
                 proj.isPiercing = true;
-                eSkillRemainingArrows--;
-                if (eSkillRemainingArrows <= 0)
+                eSkillRemainingNormalAttacks--;
+                if (eSkillRemainingNormalAttacks <= 0)
                 {
                     localIsESkillActive = false;
                     StartESkillCooldown();
@@ -3253,54 +3447,54 @@ private void StartRollServerRpc(Vector3 direction)
         // Kiểm tra hợp lệ khoảng cách trên Server để tránh lag giật tọa độ
         if (Vector3.Distance(spawnPos, transform.position) > 4f)
         {
-            spawnPos = arrowSpawnPoint != null ? arrowSpawnPoint.position : transform.position + Vector3.up * cameraPivotHeight;
+            spawnPos = normalAttackSpawnPoint != null ? normalAttackSpawnPoint.position : transform.position + Vector3.up * cameraPivotHeight;
         }
 
-        if (arrowPrefab != null)
+        if (normalAttackPrefab != null)
         {
             if (isQSkillActiveNet.Value)
             {
                 Vector3 dirLeft = Quaternion.Euler(0f, -qSkillSpreadAngle, 0f) * shootDirection;
                 Vector3 dirRight = Quaternion.Euler(0f, qSkillSpreadAngle, 0f) * shootDirection;
 
-                SpawnArrowServer(spawnPos, shootDirection);
-                SpawnArrowServer(spawnPos, dirLeft);
-                SpawnArrowServer(spawnPos, dirRight);
+                SpawnNormalAttackServer(spawnPos, shootDirection);
+                SpawnNormalAttackServer(spawnPos, dirLeft);
+                SpawnNormalAttackServer(spawnPos, dirRight);
             }
             else
             {
-                SpawnArrowServer(spawnPos, shootDirection);
+                SpawnNormalAttackServer(spawnPos, shootDirection);
             }
         }
         else
         {
-            Debug.LogError("[ShootingServerRpc] arrowPrefab chưa được gán trên Server!");
+            Debug.LogError("[ShootingServerRpc] normalAttackPrefab chưa được gán trên Server!");
         }
     }
 
-    private void SpawnArrowServer(Vector3 spawnPos, Vector3 shootDirection)
+    private void SpawnNormalAttackServer(Vector3 spawnPos, Vector3 shootDirection)
     {
-        Debug.Log($"[ShootingServerRpc] Server đang spawn tên. Vị trí: {spawnPos}, Hướng bắn: {shootDirection}");
-        GameObject arrowObj = Instantiate(arrowPrefab, spawnPos, Quaternion.LookRotation(shootDirection));
-        arrowObj.transform.localScale = arrowPrefab.transform.localScale;
-        arrowObj.SetActive(true);
+        Debug.Log($"[ShootingServerRpc] Server đang spawn đòn đánh thường. Vị trí: {spawnPos}, Hướng bắn: {shootDirection}");
+        GameObject normalAttackObj = Instantiate(normalAttackPrefab, spawnPos, Quaternion.LookRotation(shootDirection));
+        normalAttackObj.transform.localScale = normalAttackPrefab.transform.localScale;
+        normalAttackObj.SetActive(true);
         
-        if (arrowObj.TryGetComponent<NetworkObject>(out var netObj))
+        if (normalAttackObj.TryGetComponent<NetworkObject>(out var netObj))
         {
             netObj.Spawn(true);
         }
-        if (arrowObj.TryGetComponent<ArrowProjectile>(out var proj))
+        if (normalAttackObj.TryGetComponent<MayaProjectile>(out var proj))
         {
             proj.owner = this;
             proj.damage = damageAmount;
-            proj.speed = arrowSpeed;
+            proj.speed = normalAttackSpeed;
             
             // Xử lý đạn xuyên thấu E-skill trên Server
-            if (isESkillActiveNet.Value && eSkillRemainingArrowsNet.Value > 0)
+            if (isESkillActiveNet.Value && eSkillRemainingNormalAttacksNet.Value > 0)
             {
                 proj.isPiercing = true;
-                eSkillRemainingArrowsNet.Value--;
-                if (eSkillRemainingArrowsNet.Value <= 0)
+                eSkillRemainingNormalAttacksNet.Value--;
+                if (eSkillRemainingNormalAttacksNet.Value <= 0)
                 {
                     isESkillActiveNet.Value = false;
                     eSkillCooldownTimer = eSkillCooldown;
@@ -3316,6 +3510,10 @@ private void StartRollServerRpc(Vector3 direction)
 
     public override void OnDestroy()
     {
+        if (eTargetingIndicator != null)
+        {
+            Destroy(eTargetingIndicator);
+        }
         if (PlayerHUDManager.ActivePlayers != null)
         {
             PlayerHUDManager.ActivePlayers.Remove(this);
