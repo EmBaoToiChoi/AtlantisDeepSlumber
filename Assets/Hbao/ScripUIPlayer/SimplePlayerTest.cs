@@ -219,6 +219,7 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
     public float InvisibilityTimeRemaining => leoPlayer != null ? leoPlayer.InvisibilityTimeRemaining : (arthurPlayer != null ? arthurPlayer.InvisibilityTimeRemaining : 0f);
     public void TriggerInvisibilitySkill()
     {
+        if (PlayerLevel < 5) return;
         if (leoPlayer != null) leoPlayer.TriggerInvisibilitySkill();
         else if (arthurPlayer != null) arthurPlayer.TriggerInvisibilitySkill();
     }
@@ -228,6 +229,7 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
     public float AttackSpeedBoostTimeRemaining => leoPlayer != null ? leoPlayer.AttackSpeedBoostTimeRemaining : (arthurPlayer != null ? arthurPlayer.AttackSpeedBoostTimeRemaining : 0f);
     public void TriggerAttackSpeedBoostSkill()
     {
+        if (PlayerLevel < 10) return;
         if (leoPlayer != null) leoPlayer.TriggerAttackSpeedBoostSkill();
         else if (arthurPlayer != null) arthurPlayer.TriggerAttackSpeedBoostSkill();
     }
@@ -237,6 +239,7 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
     public float QSkillTimeRemaining => leoPlayer != null ? leoPlayer.QSkillTimeRemaining : 0f;
     public bool TriggerQSkill()
     {
+        if (PlayerLevel < 15) return false;
         if (leoPlayer != null) return leoPlayer.TriggerQSkill();
         return false;
     }
