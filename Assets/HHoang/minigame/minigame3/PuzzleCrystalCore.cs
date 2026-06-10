@@ -115,8 +115,25 @@ public class PuzzleCrystalCore : NetworkBehaviour // <--- SỬA LẠI THÀNH NET
         if (localPlayer != null && localPlayer.TryGetComponent<Rigidbody>(out var playerRb))
         {
             playerRb.isKinematic = false;
-            playerRb.AddForce(direction * 18f, ForceMode.Impulse);
+            
+            // 1. Tăng lực nảy và HẤT BỔNG nhân vật lên trên để né ma sát sàn
+            direction.y = 0.2f; // Trọng tâm hất lên cao (thay vì 0.2 như cũ)
+            playerRb.AddForce(direction.normalized * 60f, ForceMode.Impulse); // Tăng lực lên 60!
+
+            // 2. Làm choáng nhân vật (Tắt script di chuyển tạm thời để lực bay phát huy tác dụng)
+            if (localPlayer.TryGetComponent<MovementController>(out var mover))
+            {
+                StartCoroutine(StunPlayerRoutine(mover, 0.5f)); // Khóa chân 0.5 giây
+            }
         }
+    }
+
+    // Coroutine làm choáng nhân vật
+    private IEnumerator StunPlayerRoutine(MovementController mover, float stunDuration)
+    {
+        mover.ToggleMovement(false); // Ngắt điều khiển
+        yield return new WaitForSeconds(stunDuration); // Chờ nhân vật văng ra xa
+        mover.ToggleMovement(true); // Bật lại điều khiển bình thường
     }
 
     public void PerformPickup(ulong playerId)
