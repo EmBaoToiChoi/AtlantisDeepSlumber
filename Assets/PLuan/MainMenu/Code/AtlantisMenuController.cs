@@ -539,8 +539,11 @@ public class AtlantisMenuController : MonoBehaviour
             if (_netBootstrap != null)
             {
                 Debug.Log("[Room] Đang kết nối về VPS...");
+                if (SceneLoader.Instance != null)
+                {
+                    SceneLoader.Instance.ShowLoading("PREPARING LOBBY...");
+                }
                 _netBootstrap.StartServerAsHost();
-                // _ = SceneLoader.Instance.LoadSceneAsync("Waiting hall", "PREPARING LOBBY...");
             }
 
 
@@ -583,8 +586,11 @@ public class AtlantisMenuController : MonoBehaviour
 
             if (_netBootstrap != null)
             {
+                if (SceneLoader.Instance != null)
+                {
+                    SceneLoader.Instance.ShowLoading("CONNECTING TO SESSION...");
+                }
                 _netBootstrap.StartClientAsPlayer();
-                // _ = SceneLoader.Instance.LoadSceneAsync("Waiting hall", "CONNECTING TO SESSION...");
             }
         }
 
@@ -670,8 +676,11 @@ public class AtlantisMenuController : MonoBehaviour
 
             if (_netBootstrap != null)
             {
+                if (SceneLoader.Instance != null)
+                {
+                    SceneLoader.Instance.ShowLoading("JOINING EXPEDITION...");
+                }
                 _netBootstrap.StartClientAsPlayer();
-                // _ = SceneLoader.Instance.LoadSceneAsync("Waiting hall", "JOINING EXPEDITION...");
             }
         }
         else
@@ -699,8 +708,11 @@ public class AtlantisMenuController : MonoBehaviour
 
             if (_netBootstrap != null)
             {
+                if (SceneLoader.Instance != null)
+                {
+                    SceneLoader.Instance.ShowLoading("ACCESS GRANTED...");
+                }
                 _netBootstrap.StartClientAsPlayer();
-                // _ = SceneLoader.Instance.LoadSceneAsync("Waiting hall", "ACCESS GRANTED...");
             }
         }
         else

@@ -1315,12 +1315,16 @@ public class NetworkWaitingRoom : NetworkBehaviour
     }
 
     private void StartGame() { 
-        Debug.Log("[CLIENT] Chủ phòng click START EXPEDITION! Đang gửi lệnh ServerRpc khởi động...");
-        StartGameServerRpc();
+        Debug.Log($"[CLIENT] Chủ phòng click START EXPEDITION! Đang gửi lệnh ServerRpc với cảnh cần load: {gameplaySceneName}");
+        if (SceneLoader.Instance != null)
+        {
+            SceneLoader.Instance.ShowLoading("PREPARING EXPEDITION...");
+        }
+        StartGameServerRpc(gameplaySceneName);
     }
 
     [ServerRpc(RequireOwnership = false)]
-    private void StartGameServerRpc(ServerRpcParams rpcParams = default)
+    private void StartGameServerRpc(string sceneName, ServerRpcParams rpcParams = default)
     {
         if (!IsServer) return;
 
@@ -1370,10 +1374,10 @@ public class NetworkWaitingRoom : NetworkBehaviour
             NetworkBootstrap.ActivePlayerNames.Add(p.Name.ToString());
         }
 
-        Debug.Log($"[SERVER] Tất cả điều kiện thỏa mãn! Đang tải cảnh {gameplaySceneName}...");
+        Debug.Log($"[SERVER] Tất cả điều kiện thỏa mãn! Đang tải cảnh {sceneName}...");
         if (NetworkManager.Singleton != null && NetworkManager.Singleton.SceneManager != null)
         {
-            NetworkManager.Singleton.SceneManager.LoadScene(gameplaySceneName, UnityEngine.SceneManagement.LoadSceneMode.Single);
+            NetworkManager.Singleton.SceneManager.LoadScene(sceneName, UnityEngine.SceneManagement.LoadSceneMode.Single);
         }
     }
 
