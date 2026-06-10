@@ -614,6 +614,20 @@ public class Enemy1_DapBua : NetworkBehaviour
         else if (!isDodging && Random.value < 0.3f && CurrentStateValue == EnemyState.Chase) ExecuteDodge();
     }
 
+    /// <summary>
+    /// Áp dụng hiệu ứng choáng từ Skill Q của Arthur. Chỉ chạy trên Server hoặc Standalone.
+    /// </summary>
+    public void ApplyStun(float duration)
+    {
+        bool auth = isStandaloneMode || (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening && IsServer);
+        if (!auth) return;
+        if (CurrentStateValue == EnemyState.Dead) return;
+
+        staggerTimer = duration;
+        ChangeState(EnemyState.Stagger);
+        Debug.Log($"[Enemy1_DapBua] Bị choáng (Skill Q Arthur) trong {duration}s");
+    }
+
     private void ExecuteDodge()
     {
         if (targetPlayer == null || !AgentReady) return;

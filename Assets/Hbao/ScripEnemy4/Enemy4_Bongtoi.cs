@@ -344,6 +344,20 @@ public class Enemy4_Bongtoi : NetworkBehaviour
         if ((damage >= 25f || recentHitCount >= 3) && CurrentStateValue != EnemyState.Stagger) { recentHitCount = 0; staggerTimer = 0.55f; ChangeState(EnemyState.Stagger); }
     }
 
+    /// <summary>
+    /// Áp dụng hiệu ứng choáng từ Skill Q của Arthur. Chỉ chạy trên Server hoặc Standalone.
+    /// </summary>
+    public void ApplyStun(float duration)
+    {
+        bool auth = isStandaloneMode || (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening && IsServer);
+        if (!auth) return;
+        if (CurrentStateValue == EnemyState.Dead) return;
+
+        staggerTimer = duration;
+        ChangeState(EnemyState.Stagger);
+        Debug.Log($"[Enemy4_Bongtoi] Bị choáng (Skill Q Arthur) trong {duration}s");
+    }
+
     private void Die()
     {
         if (AgentReady) agent.isStopped = true; SetSpeedNet(0f);

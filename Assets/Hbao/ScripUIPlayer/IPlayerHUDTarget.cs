@@ -40,6 +40,7 @@ public interface IPlayerHUDTarget
     // Health & Stats
     float CurrentHealth { get; }
     float MaxHealth { get; }
+    void Heal(float amount);
     
     // Invisibility Skill R
     bool IsInvisible { get; }

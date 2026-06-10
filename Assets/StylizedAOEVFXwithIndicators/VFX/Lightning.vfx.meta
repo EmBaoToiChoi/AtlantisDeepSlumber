@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: b274d6ae70be8c644b4bffda750c0195
+VisualEffectImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 274300
+  packageName: Stylized AOE VFX with Indicators
+  packageVersion: 1.1.1
+  assetPath: Assets/StylizedAOEVFXwithIndicators/VFX/Lightning.vfx
+  uploadId: 659150

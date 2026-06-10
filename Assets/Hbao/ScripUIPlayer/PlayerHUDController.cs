@@ -219,9 +219,9 @@ public class PlayerHUDController : MonoBehaviour
         isUIInitialized = false;
 
         // Hủy đăng ký event để tránh memory leak
-        if (localPlayerTarget != null)
+        if (LocalPlayerTarget != null)
         {
-            localPlayerTarget.OnQSkillCancelled -= HandleQSkillCancelled;
+            LocalPlayerTarget.OnQSkillCancelled -= HandleQSkillCancelled;
         }
 
         // Reset tất cả tham chiếu VisualElement để InitializeUI() re-query lại từ tree mới
@@ -1985,6 +1985,62 @@ public class PlayerHUDController : MonoBehaviour
             }
         }
 
+        // 5. Tùy chỉnh UI Skill E indicator theo từng nhân vật (Bất tử cho Arthur)
+        if (speedBoostIndicator != null)
+        {
+            var skillELabel = speedBoostIndicator.Q<Label>("speedboost-text");
+            if (profileIndex == 3) // Arthur Tanker
+            {
+                if (skillELabel != null) skillELabel.text = "BẤT TỬ";
+                speedBoostIndicator.style.borderTopColor = new Color(1f, 0.84f, 0f, 1f); // Màu Vàng Hoàng Kim
+                speedBoostIndicator.style.borderBottomColor = new Color(1f, 0.84f, 0f, 1f);
+                speedBoostIndicator.style.borderLeftColor = new Color(1f, 0.84f, 0f, 1f);
+                speedBoostIndicator.style.borderRightColor = new Color(1f, 0.84f, 0f, 1f);
+                speedBoostIndicator.style.backgroundColor = new Color(0.25f, 0.2f, 0f, 0.4f);
+                if (skillELabel != null) skillELabel.style.color = new Color(1f, 0.9f, 0.5f, 1f);
+                if (speedBoostTimerLabel != null) speedBoostTimerLabel.style.color = new Color(1f, 0.9f, 0.5f, 1f);
+            }
+            else
+            {
+                if (skillELabel != null) skillELabel.text = "TĂNG TỐC CHÉM";
+                speedBoostIndicator.style.borderTopColor = Color.white;
+                speedBoostIndicator.style.borderBottomColor = Color.white;
+                speedBoostIndicator.style.borderLeftColor = Color.white;
+                speedBoostIndicator.style.borderRightColor = Color.white;
+                speedBoostIndicator.style.backgroundColor = new Color(0f, 0f, 0f, 0.25f);
+                if (skillELabel != null) skillELabel.style.color = Color.white;
+                if (speedBoostTimerLabel != null) speedBoostTimerLabel.style.color = Color.white;
+            }
+        }
+
+        // 6. Tùy chỉnh UI Skill Q indicator theo từng nhân vật (Dặm Khiên cho Arthur)
+        if (qSkillIndicator != null)
+        {
+            var skillQLabel = qSkillIndicator.Q<Label>("qskill-text");
+            if (profileIndex == 3) // Arthur Tanker
+            {
+                if (skillQLabel != null) skillQLabel.text = "DẶM KHIÊN";
+                qSkillIndicator.style.borderTopColor = new Color(0.85f, 0.5f, 0.2f, 1f); // Màu Cam Đất / Bronze
+                qSkillIndicator.style.borderBottomColor = new Color(0.85f, 0.5f, 0.2f, 1f);
+                qSkillIndicator.style.borderLeftColor = new Color(0.85f, 0.5f, 0.2f, 1f);
+                qSkillIndicator.style.borderRightColor = new Color(0.85f, 0.5f, 0.2f, 1f);
+                qSkillIndicator.style.backgroundColor = new Color(0.2f, 0.12f, 0.05f, 0.4f);
+                if (skillQLabel != null) skillQLabel.style.color = new Color(1f, 0.8f, 0.6f, 1f);
+                if (qSkillTimerLabel != null) qSkillTimerLabel.style.color = new Color(1f, 0.8f, 0.6f, 1f);
+            }
+            else
+            {
+                if (skillQLabel != null) skillQLabel.text = "ẢO ẢNH CHÉM";
+                qSkillIndicator.style.borderTopColor = Color.white;
+                qSkillIndicator.style.borderBottomColor = Color.white;
+                qSkillIndicator.style.borderLeftColor = Color.white;
+                qSkillIndicator.style.borderRightColor = Color.white;
+                qSkillIndicator.style.backgroundColor = new Color(0f, 0f, 0f, 0.25f);
+                if (skillQLabel != null) skillQLabel.style.color = Color.white;
+                if (qSkillTimerLabel != null) qSkillTimerLabel.style.color = Color.white;
+            }
+        }
+
         Debug.Log($"[PlayerHUDController] Đã thiết lập thành công giao diện cho lớp nhân vật: {profile.className} (Index {profileIndex})");
     }
 
@@ -2384,11 +2440,9 @@ public class PlayerHUDController : MonoBehaviour
         InitializeUI();
         if (crosshairElement != null)
         {
-            bool isBowClass = LocalPlayerTarget != null && LocalPlayerTarget.CharacterClassIndex == 2;
-            bool isBowActive = LocalPlayerTarget != null && LocalPlayerTarget.GetActiveWeaponIndex() == 2;
-            crosshairElement.style.display = (visible && isBowClass && isBowActive) ? DisplayStyle.Flex : DisplayStyle.None;
+            bool isRangedClass = LocalPlayerTarget != null && (LocalPlayerTarget.CharacterClassIndex == 2 || LocalPlayerTarget.CharacterClassIndex == 1);
+            bool isRangedActive = LocalPlayerTarget != null && LocalPlayerTarget.GetActiveWeaponIndex() == 2;
+            crosshairElement.style.display = (visible && isRangedClass && isRangedActive) ? DisplayStyle.Flex : DisplayStyle.None;
         }
     }
 }
-
-public class ArthurHUDController : PlayerHUDController { }

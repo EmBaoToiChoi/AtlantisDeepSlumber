@@ -43,11 +43,20 @@ public class MayaAnimationBridge : MonoBehaviour
     }
 
     // Forward sự kiện rút tên lên tay (Animation Event)
-    public void OnDrawArrow()
+    public void OnDrawNormalAttack()
     {
         if (mainPlayerScript != null)
         {
-            mainPlayerScript.OnDrawArrow();
+            mainPlayerScript.OnDrawNormalAttack();
+        }
+    }
+
+    // Forward sự kiện phóng đòn đánh thường (Animation Event)
+    public void OnShootNormalAttack()
+    {
+        if (mainPlayerScript != null)
+        {
+            mainPlayerScript.OnShootNormalAttack();
         }
     }
 }

@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 012a39d402a562b4682fbe2028cc1274
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 274300
+  packageName: Stylized AOE VFX with Indicators
+  packageVersion: 1.1.1
+  assetPath: Assets/StylizedAOEVFXwithIndicators/Prefabs/DecalPrefabs/GeyserDecalPrefab.prefab
+  uploadId: 659150

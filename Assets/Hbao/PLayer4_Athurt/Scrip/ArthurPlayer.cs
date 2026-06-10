@@ -32,7 +32,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
     public float attackRange = 3f;
 
     [Header("Combo Attack Settings")]
-    public float comboWindow = 2.5f; // Tăng lên 2.5s để thoải mái cho việc bấm thủ công không bị reset quá nhanh
+    public float comboWindow = 2.5f; 
     public float comboTransitionThreshold = 0.5f;
     public float punch1Duration = 1.033f;
     public float punch2Duration = 1.033f;
@@ -86,11 +86,37 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
     [Tooltip("Hệ số tăng sát thương khi Skill R (1.3 = +30%)")]
     public float rSkillDamageMultiplier = 1.3f;
 
-    // Trạng thái nội bộ Skill R
-    protected bool isRSkillActive = false;
+    [HideInInspector]
+    public bool isRSkillActive = false;
     protected float rSkillTimeRemaining = 0f;
     private System.Collections.Generic.Dictionary<Renderer, Material[]> originalWeaponMaterials
         = new System.Collections.Generic.Dictionary<Renderer, Material[]>();
+
+    [Header("Skill E - Bất Tử")]
+    [Tooltip("Tên Trigger Animation trong Animator khi kích hoạt Skill E.")]
+    public string eSkillAnimTrigger = "SkillE";
+    [Tooltip("Thời gian hiệu lực Skill E bất tử (giây)")]
+    public float eSkillDuration = 5f;
+    [HideInInspector]
+    public bool isESkillActive = false;
+    [HideInInspector]
+    public bool isESkillPlayingAnim = false;
+    protected float eSkillTimeRemaining = 0f;
+
+    [Header("Skill Q - Dặm Khiên / Vòng Choáng")]
+    [Tooltip("Tên Trigger Animation trong Animator khi kích hoạt Skill Q (dặm khiên xuống đất).")]
+    public string qSkillAnimTrigger = "SkillQ";
+    [Tooltip("Thời gian quái bị choáng (giây)")]
+    public float qSkillStunDuration = 5f;
+    [Tooltip("Bán kính vòng tròn choáng (đơn vị Unity)")]
+    public float qSkillRadius = 6f;
+    [Tooltip("Thời gian hồi chiêu Q trên server (giây) - dùng để reset trạng thái sau khi stun xong")]
+    public float qSkillDuration = 1.5f;
+    [HideInInspector]
+    public bool isQSkillActive = false;
+    [HideInInspector]
+    public bool isQSkillPlayingAnim = false;
+    protected float qSkillTimeRemaining = 0f;
 
     [Header("Player Health Settings")]
     public float maxHealth = 150f;
@@ -123,8 +149,19 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
     );
     protected bool isBlocking = false;
 
-    // Skill R: Nhuộm đỏ vũ khí & tăng sát thương
     public NetworkVariable<bool> isRSkillActiveNet = new NetworkVariable<bool>(
+        false,
+        NetworkVariableReadPermission.Everyone,
+        NetworkVariableWritePermission.Server
+    );
+
+    public NetworkVariable<bool> isESkillActiveNet = new NetworkVariable<bool>(
+        false,
+        NetworkVariableReadPermission.Everyone,
+        NetworkVariableWritePermission.Server
+    );
+
+    public NetworkVariable<bool> isQSkillActiveNet = new NetworkVariable<bool>(
         false,
         NetworkVariableReadPermission.Everyone,
         NetworkVariableWritePermission.Server
@@ -199,7 +236,6 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
     protected float localWeapon2Durability = 100f;
 
     [Header("Player Class Settings")]
-    [Tooltip("0 = Sát Thủ, 1 = Hỏa Thuật, 2 = Cung Thủ, 3 = Tanker")]
     public int characterClassIndex = 3;
 
     [Header("Player Name Sync")]
@@ -207,7 +243,6 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         "Arthur", NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server
     );
 
-    // IPlayerHUDTarget Stats Implementation
     public string DisplayName => string.IsNullOrEmpty(playerName.Value.ToString()) ? "Arthur" : playerName.Value.ToString();
     public int PlayerLevel => isStandaloneMode ? localLevel : playerLevel.Value;
     public float PlayerExp => isStandaloneMode ? localExp : playerExp.Value;
@@ -241,13 +276,9 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
     protected string currentAnimState;
 
     [Header("Hitbox References")]
-    [Tooltip("Left hand hitbox collider.")]
     public Collider leftHitbox;
-    [Tooltip("Right hand hitbox collider.")]
     public Collider rightHitbox;
-    [Tooltip("Left weapon/sword hitbox collider.")]
     public Collider leftWeaponHitbox;
-    [Tooltip("Right weapon/sword hitbox collider.")]
     public Collider rightWeaponHitbox;
 
     private System.Collections.Generic.List<Transform> alreadyHitEnemies = new System.Collections.Generic.List<Transform>();
@@ -299,17 +330,16 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     public bool IsInvisible => isRSkillActive;
     public float InvisibilityTimeRemaining => rSkillTimeRemaining;
+
+    // Chỉ kích hoạt hoạt ảnh gồng chiêu R ban đầu
     public void TriggerInvisibilitySkill()
     {
         if (isRSkillActive) return;
 
-        Debug.Log("[ArthurPlayer] Kích hoạt Skill R: Nhuộm đỏ vũ khí + Tăng sát thương!");
+        Debug.Log("[ArthurPlayer] Khởi động gồng Skill R: Phát hoạt ảnh gồng chiêu...");
 
         if (isStandaloneMode)
         {
-            isRSkillActive = true;
-            rSkillTimeRemaining = rSkillDuration;
-            SetRedWeaponVisuals(true);
             if (!string.IsNullOrEmpty(rSkillAnimTrigger))
                 PlayAnimation(rSkillAnimTrigger, 0.1f);
         }
@@ -321,13 +351,149 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         }
     }
 
-    public bool IsAttackSpeedBoosted => false;
-    public float AttackSpeedBoostTimeRemaining => 0f;
-    public void TriggerAttackSpeedBoostSkill() { }
+    // EVENT ĐÓN NHẬN TỪ ANIMATION EVENT KHUNG HÌNH CUỐI (Giải quyết lỗi báo đỏ CS1061)
+    public void OnRSkillWeaponGlow()
+    {
+        // 1. Nhuộm đỏ lưỡi kiếm trên màn hình cục bộ lập tức
+        SetRedWeaponVisuals(true);
 
-    public bool IsQSkillActive => false;
-    public float QSkillTimeRemaining => 0f;
-    public bool TriggerQSkill() => false;
+        // 2. Chỉ tính thời gian hiệu lực và buff chỉ số trên máy sở hữu vật lý nhân vật
+        if (isStandaloneMode || IsOwner)
+        {
+            isRSkillActive = true;
+            rSkillTimeRemaining = rSkillDuration;
+
+            // 3. Nếu ở chế độ mạng, gửi RPC báo Server đồng bộ thời gian đếm ngược chính thức
+            if (!isStandaloneMode)
+            {
+                StartRSkillBuffServerRpc();
+            }
+        }
+        Debug.Log($"[{gameObject.name}] OnRSkillWeaponGlow: Hoạt ảnh kết thúc -> Lưỡi kiếm đã nhuộm đỏ rực!");
+    }
+
+    public bool IsAttackSpeedBoosted => isESkillActive;
+    public float AttackSpeedBoostTimeRemaining => eSkillTimeRemaining;
+
+    // ── Skill Q: Dặm Khiên (override stub từ IPlayerHUDTarget) ──
+    new public bool IsQSkillActive => isQSkillActive;
+    new public float QSkillTimeRemaining => qSkillTimeRemaining;
+
+    /// <summary>Kích hoạt Skill Q - phát hoạt ảnh dặm khiên. Trả về true nếu đã khởi động thành công.</summary>
+    new public bool TriggerQSkill()
+    {
+        if (isQSkillActive || isQSkillPlayingAnim) return false;
+
+        Debug.Log($"[{gameObject.name}] TriggerQSkill (Skill Q) - Bắt đầu dặm khiên...");
+
+        if (isStandaloneMode)
+        {
+            if (!string.IsNullOrEmpty(qSkillAnimTrigger))
+                PlayAnimation(qSkillAnimTrigger, 0.1f);
+            isQSkillPlayingAnim = true;
+        }
+        else if (IsOwner)
+        {
+            if (!string.IsNullOrEmpty(qSkillAnimTrigger))
+                PlayAnimationLocal(qSkillAnimTrigger, 0.1f);
+            isQSkillPlayingAnim = true;
+            TriggerQSkillServerRpc();
+        }
+        return true;
+    }
+
+    // EVENT ĐÓN NHẬN TỪ ANIMATION EVENT KHUNG HÌNH DẶM KHIÊN (cuối animation SkillQ)
+    public void OnSkillQShieldSlam()
+    {
+        Debug.Log($"[{gameObject.name}] OnSkillQShieldSlam: Hoạt ảnh dặm khiên kết thúc -> Kích hoạt vòng choáng!");
+        isQSkillPlayingAnim = false;
+
+        // Chỉ chạy logic stun trên Owner hoặc Standalone
+        if (isStandaloneMode || IsOwner)
+        {
+            isQSkillActive = true;
+            qSkillTimeRemaining = qSkillDuration;
+
+            // Stun tất cả enemy trong bán kính
+            ApplyQSkillStunToNearbyEnemies();
+
+            if (!isStandaloneMode)
+            {
+                StartQSkillBuffServerRpc();
+            }
+        }
+    }
+
+    /// <summary>Dùng OverlapSphere để tìm và choáng tất cả enemy trong bán kính qSkillRadius.</summary>
+    private void ApplyQSkillStunToNearbyEnemies()
+    {
+        bool auth = isStandaloneMode || (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening && IsServer);
+        if (!auth) return;
+
+        Collider[] hits = Physics.OverlapSphere(transform.position, qSkillRadius);
+        Debug.Log($"[{gameObject.name}] Skill Q: Quét bán kính {qSkillRadius}m -> {hits.Length} collider(s)");
+
+        foreach (var col in hits)
+        {
+            if (col == null) continue;
+
+            var e1 = col.GetComponentInParent<Enemy1_DapBua>();
+            if (e1 != null && !e1.IsDead) { e1.ApplyStun(qSkillStunDuration); continue; }
+
+            var e2 = col.GetComponentInParent<Enemy2_Zombie>();
+            if (e2 != null && !e2.IsDead) { e2.ApplyStun(qSkillStunDuration); continue; }
+
+            var e3 = col.GetComponentInParent<Enemy3_Buaa>();
+            if (e3 != null && !e3.IsDead) { e3.ApplyStun(qSkillStunDuration); continue; }
+
+            var e4 = col.GetComponentInParent<Enemy4_Bongtoi>();
+            if (e4 != null && !e4.IsDead) { e4.ApplyStun(qSkillStunDuration); continue; }
+
+            var e5 = col.GetComponentInParent<Enemy5_PhuThuy>();
+            if (e5 != null && !e5.IsDead) { e5.ApplyStun(qSkillStunDuration); continue; }
+        }
+    }
+
+    public void TriggerAttackSpeedBoostSkill()
+    {
+        if (IsAttackSpeedBoosted || isESkillPlayingAnim) return;
+
+        Debug.Log($"[{gameObject.name}] TriggerAttackSpeedBoostSkill (Skill E) - Bắt đầu gồng...");
+
+        if (isStandaloneMode)
+        {
+            if (!string.IsNullOrEmpty(eSkillAnimTrigger))
+                PlayAnimation(eSkillAnimTrigger, 0.1f);
+            isESkillPlayingAnim = true;
+        }
+        else if (IsOwner)
+        {
+            if (!string.IsNullOrEmpty(eSkillAnimTrigger))
+                PlayAnimationLocal(eSkillAnimTrigger, 0.1f);
+            isESkillPlayingAnim = true;
+            TriggerESkillServerRpc(true);
+        }
+    }
+
+    // EVENT ĐÓN NHẬN TỪ ANIMATION EVENT KHUNG HÌNH CUỐI CỦA SKILL E
+    public void OnSkillEAnimEnd()
+    {
+        Debug.Log($"[{gameObject.name}] OnSkillEAnimEnd: Hoạt ảnh kết thúc -> Bắt đầu bất tử 5s!");
+        isESkillPlayingAnim = false;
+
+        if (isStandaloneMode || IsOwner)
+        {
+            isESkillActive = true;
+            eSkillTimeRemaining = eSkillDuration;
+
+            if (!isStandaloneMode)
+            {
+                StartESkillBuffServerRpc();
+            }
+        }
+    }
+
+    // Stub đã được override bởi các property/method cụ thể ở trên
     public event System.Action OnQSkillCancelled;
 
     [HideInInspector]
@@ -352,7 +518,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     private void Awake()
     {
-        characterClassIndex = 3; 
+        characterClassIndex = 3;
         maxHealth = 150f;
         moveSpeed = 4f;
         runSpeedMultiplier = 2.0f;
@@ -479,6 +645,8 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         isSkillsUnlocked.OnValueChanged += OnSkillsUnlockedChanged;
         isBlockingNet.OnValueChanged += OnBlockingNetChanged;
         isRSkillActiveNet.OnValueChanged += OnRSkillNetChanged;
+        isESkillActiveNet.OnValueChanged += OnESkillNetChanged;
+        isQSkillActiveNet.OnValueChanged += OnQSkillNetChanged;
 
         upgradePoints.OnValueChanged += OnUpgradePointsChanged;
         hpLevel.OnValueChanged += OnHpLevelChanged;
@@ -546,6 +714,8 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         isSkillsUnlocked.OnValueChanged -= OnSkillsUnlockedChanged;
         isBlockingNet.OnValueChanged -= OnBlockingNetChanged;
         isRSkillActiveNet.OnValueChanged -= OnRSkillNetChanged;
+        isESkillActiveNet.OnValueChanged -= OnESkillNetChanged;
+        isQSkillActiveNet.OnValueChanged -= OnQSkillNetChanged;
 
         upgradePoints.OnValueChanged -= OnUpgradePointsChanged;
         hpLevel.OnValueChanged -= OnHpLevelChanged;
@@ -597,11 +767,11 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (IsOwner) return;
         if (newVal)
         {
-            if (anim != null) anim.Play("AnhitCoVuKhi", 1, 0f);
+            if (anim != null) anim.CrossFadeInFixedTime("AnhitCoVuKhi", 0.1f, 1, 0f);
         }
         else
         {
-            if (anim != null) anim.Play("New State", 1, 0f);
+            if (anim != null) anim.CrossFadeInFixedTime("New State", 0.1f, 1, 0f);
         }
     }
 
@@ -1055,6 +1225,36 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
                 if (!isStandaloneMode && IsOwner)
                 {
                     TriggerRSkillServerRpc(false);
+                }
+            }
+        }
+
+        if (isESkillActive && (isStandaloneMode || IsOwner))
+        {
+            eSkillTimeRemaining -= Time.deltaTime;
+            if (eSkillTimeRemaining <= 0f)
+            {
+                eSkillTimeRemaining = 0f;
+                isESkillActive = false;
+
+                if (!isStandaloneMode && IsOwner)
+                {
+                    TriggerESkillServerRpc(false);
+                }
+            }
+        }
+
+        if (isQSkillActive && (isStandaloneMode || IsOwner))
+        {
+            qSkillTimeRemaining -= Time.deltaTime;
+            if (qSkillTimeRemaining <= 0f)
+            {
+                qSkillTimeRemaining = 0f;
+                isQSkillActive = false;
+
+                if (!isStandaloneMode && IsOwner)
+                {
+                    EndQSkillServerRpc();
                 }
             }
         }
@@ -1647,7 +1847,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (isExecutingAttack)
         {
             pendingAttackRequest = true;
-            Debug.Log("[ArthurPlayer] Nhấp chuột -> Lưu vào buffer, chờ OnPunchEnd.");
+            Debug.Log("[ArthurPlayer] Nhấp chuột -> Lưu vào buffer, chờ OnPunchEnd / OnSlashEnd.");
         }
         else
         {
@@ -1661,22 +1861,14 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         float currentTime = Time.time;
 
         int nextStep = comboStep;
-        
-        // Nếu ĐÃ LÀ hành động nối tiếp từ chuỗi combo trước, không bao giờ được phép reset về 0 bất kể lệch thời gian comboWindow!
+
         if (!isContinuation && (currentTime - lastAttackTime > comboWindow))
         {
             nextStep = 0;
         }
         nextStep++;
 
-        if (weapon == 1)
-        {
-            if (nextStep > 3) nextStep = 1;
-        }
-        else if (weapon == 2)
-        {
-            if (nextStep > 3) nextStep = 1;
-        }
+        if (nextStep > 3) nextStep = 1;
 
         float moveX = Input.GetAxis("Horizontal");
         float moveZ = Input.GetAxis("Vertical");
@@ -1744,7 +1936,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
             pendingAttackRequest = false;
             bool networkMode = !isStandaloneMode && IsOwner;
             Debug.Log($"[ArthurPlayer] Tiếp tục đòn đánh nối tiếp: comboStep hiện tại là {comboStep}.");
-            PerformComboAttack(networkMode, true); // Đánh dấu true để hàm không bị reset bước combo về 1
+            PerformComboAttack(networkMode, true); 
         }
         else
         {
@@ -1802,12 +1994,24 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
     [ServerRpc]
     private void TriggerRSkillServerRpc(bool state)
     {
-        isRSkillActiveNet.Value = state;
-        TriggerRSkillClientRpc(state);
-        if (state)
+        if (!state)
         {
-            StartCoroutine(ServerRSkillTimerCoroutine(rSkillDuration));
+            isRSkillActiveNet.Value = false;
+            TriggerRSkillClientRpc(false);
         }
+        else
+        {
+            // Chỉ đồng bộ hoạt ảnh gồng chiêu R ban đầu cho các Proxy khác
+            TriggerRSkillClientRpc(true);
+        }
+    }
+
+    // Server RPC mới: Chạy đếm ngược trên Server khi hoạt ảnh gồng kết thúc
+    [ServerRpc]
+    private void StartRSkillBuffServerRpc()
+    {
+        isRSkillActiveNet.Value = true;
+        StartCoroutine(ServerRSkillTimerCoroutine(rSkillDuration));
     }
 
     [ClientRpc]
@@ -1818,10 +2022,6 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
             if (!IsOwner && !string.IsNullOrEmpty(rSkillAnimTrigger))
             {
                 PlayAnimationLocal(rSkillAnimTrigger, 0.1f);
-            }
-            if (!IsOwner)
-            {
-                SetRedWeaponVisuals(true);
             }
         }
         else
@@ -1845,20 +2045,130 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     private void OnRSkillNetChanged(bool oldVal, bool newVal)
     {
-        if (IsOwner)
-        {
-            if (newVal)
-            {
-                isRSkillActive = true;
-                rSkillTimeRemaining = rSkillDuration;
-                SetRedWeaponVisuals(true);
-            }
-        }
-        else
+        if (!IsOwner)
         {
             SetRedWeaponVisuals(newVal);
         }
     }
+
+    [ServerRpc]
+    private void TriggerESkillServerRpc(bool state)
+    {
+        if (state)
+        {
+            // Chỉ đồng bộ hoạt ảnh gồng chiêu E ban đầu cho các Proxy khác
+            TriggerESkillClientRpc(true);
+        }
+        else
+        {
+            isESkillActiveNet.Value = false;
+            TriggerESkillClientRpc(false);
+        }
+    }
+
+    [ServerRpc]
+    private void StartESkillBuffServerRpc()
+    {
+        isESkillActiveNet.Value = true;
+        StartCoroutine(ServerESkillTimerCoroutine(eSkillDuration));
+    }
+
+    [ClientRpc]
+    private void TriggerESkillClientRpc(bool state)
+    {
+        if (state)
+        {
+            if (!IsOwner && !string.IsNullOrEmpty(eSkillAnimTrigger))
+            {
+                PlayAnimationLocal(eSkillAnimTrigger, 0.1f);
+            }
+        }
+    }
+
+    private System.Collections.IEnumerator ServerESkillTimerCoroutine(float duration)
+    {
+        yield return new WaitForSeconds(duration);
+        if (isESkillActiveNet.Value)
+        {
+            isESkillActiveNet.Value = false;
+            TriggerESkillServerRpc(false);
+        }
+    }
+
+    private void OnESkillNetChanged(bool oldVal, bool newVal)
+    {
+        isESkillActive = newVal;
+        if (newVal)
+        {
+            eSkillTimeRemaining = eSkillDuration;
+        }
+        else
+        {
+            eSkillTimeRemaining = 0f;
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    //  SKILL Q - DẶM KHIÊN: RPCs và Callbacks
+    // ══════════════════════════════════════════════════════════════
+
+    /// <summary>Server RPC: Broadcast hoạt ảnh SkillQ đến tất cả client (bao gồm cả proxy)</summary>
+    [ServerRpc]
+    private void TriggerQSkillServerRpc()
+    {
+        // Đồng bộ hoạt ảnh dặm khiên cho tất cả client không phải owner
+        TriggerQSkillClientRpc();
+    }
+
+    [ClientRpc]
+    private void TriggerQSkillClientRpc()
+    {
+        if (!IsOwner && !string.IsNullOrEmpty(qSkillAnimTrigger))
+        {
+            PlayAnimationLocal(qSkillAnimTrigger, 0.1f);
+        }
+    }
+
+    /// <summary>Server RPC: Kích hoạt stun toàn map từ Server (authoritative)</summary>
+    [ServerRpc]
+    private void StartQSkillBuffServerRpc()
+    {
+        // Server thực thi stun (authoritative)
+        ApplyQSkillStunToNearbyEnemies();
+        isQSkillActiveNet.Value = true;
+        StartCoroutine(ServerQSkillTimerCoroutine(qSkillDuration));
+    }
+
+    /// <summary>Server RPC: Reset trạng thái Q skill khi hết thời gian</summary>
+    [ServerRpc]
+    private void EndQSkillServerRpc()
+    {
+        isQSkillActiveNet.Value = false;
+    }
+
+    private System.Collections.IEnumerator ServerQSkillTimerCoroutine(float duration)
+    {
+        yield return new WaitForSeconds(duration);
+        if (isQSkillActiveNet.Value)
+        {
+            isQSkillActiveNet.Value = false;
+        }
+    }
+
+    private void OnQSkillNetChanged(bool oldVal, bool newVal)
+    {
+        isQSkillActive = newVal;
+        if (newVal)
+        {
+            qSkillTimeRemaining = qSkillDuration;
+        }
+        else
+        {
+            qSkillTimeRemaining = 0f;
+        }
+    }
+
+
 
     private void SetRedWeaponVisuals(bool active)
     {
@@ -1903,7 +2213,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
                                 tempMat.SetColor("_EmissionColor", new Color(1.2f, 0.05f, 0.05f, 1f));
                                 if (tempMat.HasProperty("_Color"))
                                     tempMat.SetColor("_Color", new Color(0.9f, 0.1f, 0.1f, 1f));
-                                if (tempMat.HasProperty("_BaseColor")) 
+                                if (tempMat.HasProperty("_BaseColor"))
                                     tempMat.SetColor("_BaseColor", new Color(0.9f, 0.1f, 0.1f, 1f));
                                 newMats[i] = tempMat;
                             }
@@ -2058,6 +2368,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     public void OnPunchEnd()
     {
+        if (!isStandaloneMode && !IsOwner) return; 
         if (Time.time < earliestValidEventTime)
         {
             return;
@@ -2067,6 +2378,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     public void OnSlashEnd()
     {
+        if (!isStandaloneMode && !IsOwner) return; 
         if (Time.time < earliestValidEventTime)
         {
             return;
@@ -2076,6 +2388,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     public void OnAttackEnd()
     {
+        if (!isStandaloneMode && !IsOwner) return; 
         if (Time.time < earliestValidEventTime)
         {
             return;
@@ -2154,7 +2467,6 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         }
     }
 
-    [ContextMenu("Create Sword Hitboxes")]
     public void CreateSwordHitboxes()
     {
         Transform leftHand = FindBoneRecursive(transform, "left");
@@ -2279,7 +2591,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     private bool IsPlayingFullBodyAction()
     {
-        if (anim == null || !anim.isActiveAndEnabled || anim.runtimeAnimatorController != null) return false;
+        if (anim == null || !anim.isActiveAndEnabled || anim.runtimeAnimatorController == null) return false;
         AnimatorStateInfo stateInfo = anim.GetCurrentAnimatorStateInfo(0);
         return stateInfo.IsName("LonVong") ||
                stateInfo.IsName("GetHit") ||
@@ -2357,6 +2669,14 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     public void TakeDamage(float damage)
     {
+        // Kiểm tra trạng thái bất tử (Skill E)
+        bool invincible = isStandaloneMode ? isESkillActive : isESkillActiveNet.Value;
+        if (invincible)
+        {
+            Debug.Log($"[{gameObject.name}] Arthur đang bất tử (Skill E) -> Bỏ qua sát thương: {damage}");
+            return;
+        }
+
         if (isStandaloneMode)
         {
             if (isRollingStandalone)
@@ -2416,6 +2736,23 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         {
             string hitAnim = Random.value < 0.5f ? "GetHit" : "GeiHit2";
             PlayAnimation(hitAnim, 0.05f);
+        }
+    }
+
+    public void Heal(float amount)
+    {
+        if (CurrentHealth <= 0) return;
+
+        if (isStandaloneMode)
+        {
+            localHealth = Mathf.Min(localHealth + amount, maxHealth);
+            UpdateHealthHUD(localHealth);
+            Debug.Log($"[ArthurPlayer Standalone] Hồi {amount} máu. Máu hiện tại: {localHealth}");
+        }
+        else if (IsServer)
+        {
+            currentHealth.Value = Mathf.Min(currentHealth.Value + amount, maxHealth);
+            Debug.Log($"[ArthurPlayer Server] Hồi {amount} máu cho {gameObject.name}. Máu hiện tại: {currentHealth.Value}");
         }
     }
 
@@ -2634,7 +2971,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
     {
         if (oldWeapon == newWeapon) return;
 
-        isSwitchingWeapon = true; 
+        isSwitchingWeapon = true;
 
         if (newWeapon == 2)
         {
@@ -2663,7 +3000,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
             PlayAnimation(drawLeftTrigger, 0.1f);
 
             float drawLeftDuration = GetAnimationClipLength(drawLeftTrigger);
-            if (drawLeftDuration <= 0f) drawLeftDuration = 0.8f; 
+            if (drawLeftDuration <= 0f) drawLeftDuration = 0.8f;
             yield return new WaitForSeconds(drawLeftDuration * 0.85f);
 
             DrawLeftSword();
@@ -2731,9 +3068,9 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
     private float GetAnimationClipLength(string name)
     {
         if (anim == null || anim.runtimeAnimatorController == null) return 0f;
-        
+
         string targetName = name.ToLower();
-        
+
         if (targetName == "drawleft") targetName = "laykhien";
         else if (targetName == "drawright") targetName = "laykiem";
         else if (targetName == "sheatheleft") targetName = "catkhieng";
@@ -2942,14 +3279,13 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         Debug.Log($"[ArthurPlayer] Kích hoạt Hoạt ảnh: '{animName}'");
 
-        // Đồng bộ hóa việc kích hoạt thông số Trigger lẫn Play cho Layer 1 kiếm (Giải quyết dứt điểm xung đột nút)
         if (animName == "attack1" || animName == "Attack1combo1" || animName == "Attack2combo1" ||
             animName == "AnhitCoVuKhi" || animName == "DoKhienDinhSatThuong" || animName == "New State")
         {
             if (anim.layerCount > 1)
             {
-                anim.Play(animName, 1, 0f);
-                anim.SetTrigger(animName); // SỬA ĐỔI: Kích hoạt cả tham số trigger để thỏa mãn điều kiện nối mũi tên trong Animator của bạn
+                // KHẮC PHỤC LỖI GIẬT VÀ KẸT KIẾM: Loại bỏ hoàn toàn anim.SetTrigger(animName). Chỉ giữ độc nhất lệnh CrossFade.
+                anim.CrossFadeInFixedTime(animName, fadeTime, 1, 0f);
             }
 
             bool isAttackState = IsAttackAnimationName(animName);
@@ -3041,7 +3377,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
     [ClientRpc]
     private void PlayAnimationClientRpc(string animName, float fadeTime, bool alreadyPlayedLocally)
     {
-        if (alreadyPlayedLocally && IsOwner) return;
+        if (alreadyPlayedLocally && IsOwner) return; 
         PlayAnimationLocal(animName, fadeTime);
     }
 
@@ -3064,8 +3400,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         isRootedAttack = false;
         if (anim != null && anim.isActiveAndEnabled && anim.runtimeAnimatorController != null && anim.layerCount > 1)
         {
-            anim.Play("New State", 1, 0f);
-            anim.Play("Empty", 1, 0f);
+            anim.CrossFadeInFixedTime("New State", 0.1f, 1, 0f);
         }
     }
 

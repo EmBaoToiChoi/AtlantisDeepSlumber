@@ -215,19 +215,21 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
     public float MaxHealth => maxHealth;
 
     // Invisibility Skill R proxy
-    public bool IsInvisible => leoPlayer != null ? leoPlayer.IsInvisible : false;
-    public float InvisibilityTimeRemaining => leoPlayer != null ? leoPlayer.InvisibilityTimeRemaining : 0f;
+    public bool IsInvisible => leoPlayer != null ? leoPlayer.IsInvisible : (arthurPlayer != null ? arthurPlayer.IsInvisible : false);
+    public float InvisibilityTimeRemaining => leoPlayer != null ? leoPlayer.InvisibilityTimeRemaining : (arthurPlayer != null ? arthurPlayer.InvisibilityTimeRemaining : 0f);
     public void TriggerInvisibilitySkill()
     {
         if (leoPlayer != null) leoPlayer.TriggerInvisibilitySkill();
+        else if (arthurPlayer != null) arthurPlayer.TriggerInvisibilitySkill();
     }
 
     // Attack Speed Boost Skill E proxy
-    public bool IsAttackSpeedBoosted => leoPlayer != null ? leoPlayer.IsAttackSpeedBoosted : false;
-    public float AttackSpeedBoostTimeRemaining => leoPlayer != null ? leoPlayer.AttackSpeedBoostTimeRemaining : 0f;
+    public bool IsAttackSpeedBoosted => leoPlayer != null ? leoPlayer.IsAttackSpeedBoosted : (arthurPlayer != null ? arthurPlayer.IsAttackSpeedBoosted : false);
+    public float AttackSpeedBoostTimeRemaining => leoPlayer != null ? leoPlayer.AttackSpeedBoostTimeRemaining : (arthurPlayer != null ? arthurPlayer.AttackSpeedBoostTimeRemaining : 0f);
     public void TriggerAttackSpeedBoostSkill()
     {
         if (leoPlayer != null) leoPlayer.TriggerAttackSpeedBoostSkill();
+        else if (arthurPlayer != null) arthurPlayer.TriggerAttackSpeedBoostSkill();
     }
 
     // Q Skill support proxy
@@ -2164,6 +2166,40 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
         if (Time.time - lastTimeUIOpen < 0.15f) return true;
 
         return false;
+    }
+
+    public void Heal(float amount)
+    {
+        if (leoPlayer != null)
+        {
+            leoPlayer.Heal(amount);
+            return;
+        }
+        if (arthurPlayer != null)
+        {
+            arthurPlayer.Heal(amount);
+            return;
+        }
+
+        if (isStandaloneMode)
+        {
+            localHealth = Mathf.Min(localHealth + amount, maxHealth);
+            UpdateHealthHUD(localHealth);
+        }
+        else if (IsServer)
+        {
+            currentHealth.Value = Mathf.Min(currentHealth.Value + amount, maxHealth);
+        }
+        else
+        {
+            HealServerRpc(amount);
+        }
+    }
+
+    [ServerRpc]
+    private void HealServerRpc(float amount)
+    {
+        currentHealth.Value = Mathf.Min(currentHealth.Value + amount, maxHealth);
     }
 
     public override void OnDestroy()

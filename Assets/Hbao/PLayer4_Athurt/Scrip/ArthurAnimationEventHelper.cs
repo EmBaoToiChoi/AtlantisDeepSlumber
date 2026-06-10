@@ -30,13 +30,61 @@ public class ArthurAnimationEventHelper : MonoBehaviour
         }
     }
 
+    // ==================================================================
+    //  Skill R Event Receiver (MỚI TÍNH HỢP)
+    // ==================================================================
+
+    /// <summary>
+    /// Được gọi từ Animation Event tại thời điểm hoạt ảnh gồng chiêu R hoàn tất.
+    /// </summary>
+    public void OnRSkillWeaponGlow()
+    {
+        EnsurePlayerReference();
+        if (player != null)
+        {
+            player.OnRSkillWeaponGlow();
+            Debug.Log("[ArthurAnimationEventHelper] Đã chuyển tiếp sự kiện OnRSkillWeaponGlow tới ArthurPlayer.");
+        }
+    }
+
+    // ==================================================================
+    //  Skill E Event Receiver (BẤT TỬ)
+    // ==================================================================
+
+    /// <summary>
+    /// Được gọi từ Animation Event tại thời điểm hoạt ảnh gồng chiêu E hoàn tất.
+    /// </summary>
+    public void OnSkillEAnimEnd()
+    {
+        EnsurePlayerReference();
+        if (player != null)
+        {
+            player.OnSkillEAnimEnd();
+            Debug.Log("[ArthurAnimationEventHelper] Đã chuyển tiếp sự kiện OnSkillEAnimEnd tới ArthurPlayer.");
+        }
+    }
+
+    // ==================================================================
+    //  Skill Q Event Receiver (DẶM KHIÊN)
+    // ==================================================================
+
+    /// <summary>
+    /// Được gọi từ Animation Event tại thời điểm hoạt ảnh dặm khiên (Skill Q) chạm đất.
+    /// </summary>
+    public void OnSkillQShieldSlam()
+    {
+        EnsurePlayerReference();
+        if (player != null)
+        {
+            player.OnSkillQShieldSlam();
+            Debug.Log("[ArthurAnimationEventHelper] Đã chuyển tiếp sự kiện OnSkillQShieldSlam tới ArthurPlayer.");
+        }
+    }
+
     // ------------------------------------------------------------------
     //  Public Animation Event Receivers (Selectable in Unity Editor dropdown)
     // ------------------------------------------------------------------
 
-    /// <summary>
-    /// Event receiver for end of roll animation.
-    /// </summary>
     public void OnRollEnd()
     {
         EnsurePlayerReference();
@@ -47,9 +95,6 @@ public class ArthurAnimationEventHelper : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Event receiver to enable the Left hand hitbox.
-    /// </summary>
     public void EnableLeftHitbox()
     {
         EnsurePlayerReference();
@@ -59,9 +104,6 @@ public class ArthurAnimationEventHelper : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Event receiver to disable the Left hand hitbox.
-    /// </summary>
     public void DisableLeftHitbox()
     {
         EnsurePlayerReference();
@@ -71,9 +113,6 @@ public class ArthurAnimationEventHelper : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Event receiver to enable the Right hand hitbox.
-    /// </summary>
     public void EnableRightHitbox()
     {
         EnsurePlayerReference();
@@ -83,9 +122,6 @@ public class ArthurAnimationEventHelper : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Event receiver to disable the Right hand hitbox.
-    /// </summary>
     public void DisableRightHitbox()
     {
         EnsurePlayerReference();
@@ -95,9 +131,6 @@ public class ArthurAnimationEventHelper : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Event receiver to enable BOTH left and right hitboxes.
-    /// </summary>
     public void EnableBothHitboxes()
     {
         EnsurePlayerReference();
@@ -107,9 +140,6 @@ public class ArthurAnimationEventHelper : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Event receiver to disable BOTH left and right hitboxes.
-    /// </summary>
     public void DisableBothHitboxes()
     {
         EnsurePlayerReference();
@@ -202,9 +232,6 @@ public class ArthurAnimationEventHelper : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Frame event at the end of a punch sequence.
-    /// </summary>
     public void OnPunchEnd()
     {
         EnsurePlayerReference();
@@ -220,9 +247,6 @@ public class ArthurAnimationEventHelper : MonoBehaviour
         OnPunchEnd();
     }
 
-    /// <summary>
-    /// Frame event at the end of any combat attack.
-    /// </summary>
     public void OnAttackEnd()
     {
         EnsurePlayerReference();
@@ -233,9 +257,6 @@ public class ArthurAnimationEventHelper : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Event receiver for item picking.
-    /// </summary>
     public void OnPickItemEvent()
     {
         EnsurePlayerReference();
