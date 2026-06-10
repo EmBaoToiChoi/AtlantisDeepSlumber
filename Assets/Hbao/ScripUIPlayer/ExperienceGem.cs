@@ -15,7 +15,7 @@ public class ExperienceGem : NetworkBehaviour
     public float bobRange = 0.12f;
 
     [Header("Sync Group ID")]
-    public NetworkVariable<Unity.Collections.FixedString64Bytes> networkDropGroupId = new NetworkVariable<Unity.Collections.FixedString64Bytes>(
+    public NetworkVariable<Unity.Collections.FixedString128Bytes> networkDropGroupId = new NetworkVariable<Unity.Collections.FixedString128Bytes>(
         "",
         NetworkVariableReadPermission.Everyone,
         NetworkVariableWritePermission.Server
