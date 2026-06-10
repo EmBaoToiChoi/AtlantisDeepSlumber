@@ -1,5 +1,36 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
+--- !u!1 &2195400984766458075
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 4984851061044680876}
+  m_Layer: 0
+  m_Name: GameObject
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &4984851061044680876
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2195400984766458075}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 1.81, y: 3.49, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 3749147436962530450}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &2847216766215577810
 GameObject:
   m_ObjectHideFlags: 0
@@ -45,9 +76,10 @@ GameObject:
   - component: {fileID: 3414359024227921569}
   - component: {fileID: 4326764572055470229}
   - component: {fileID: 9091558540041009424}
-  - component: {fileID: 6030968885489853684}
   - component: {fileID: 6063190230189243470}
   - component: {fileID: 4851484069774976014}
+  - component: {fileID: 6030968885489853684}
+  - component: {fileID: 1906447174524442392}
   m_Layer: 0
   m_Name: Maya
   m_TagString: Untagged
@@ -69,6 +101,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 598300851086675419}
+  - {fileID: 4984851061044680876}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &1412244039241682032
@@ -456,20 +489,6 @@ MonoBehaviour:
   UseRigidBodyForMotion: 0
   AutoUpdateKinematicState: 1
   AutoSetKinematicOnDespawn: 1
---- !u!114 &6030968885489853684
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8313881801843240701}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 54471ddc3d8c72542839c80872939d1c, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  scriptNames:
-  - MayaPlayer
 --- !u!114 &6063190230189243470
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -638,6 +657,50 @@ CapsuleCollider:
   m_Height: 3.82
   m_Direction: 1
   m_Center: {x: 0, y: 1.96, z: 0.06}
+--- !u!114 &6030968885489853684
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8313881801843240701}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 54471ddc3d8c72542839c80872939d1c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  scriptNames:
+  - MayaPlayer
+--- !u!114 &1906447174524442392
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8313881801843240701}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 44e5db811f7df62409334fc510e55423, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  ShowTopMostFoldoutHeaderGroup: 1
+  holdPoint: {fileID: 4984851061044680876}
+  interactableLayer:
+    serializedVersion: 2
+    m_Bits: 256
+  currentInteractBox: {fileID: 0}
+  currentPillarStation: {fileID: 0}
+  heldCoreNetworkId:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 18446744073709551615
+  isCarryingCore:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 0
+  currentHeldCore: {fileID: 0}
 --- !u!1001 &1136928048187746864
 PrefabInstance:
   m_ObjectHideFlags: 0
