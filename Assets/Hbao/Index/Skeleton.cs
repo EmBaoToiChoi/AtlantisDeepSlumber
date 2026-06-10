@@ -81,9 +81,10 @@ public class Skeleton : NetworkBehaviour
     private float detectionTimer;
     private const float DETECTION_INTERVAL = 0.2f;
     private bool isHitboxActive = false;
+    private bool wasHitboxEnabledThisAttack = false;
 
-    private readonly Collider[] detectionResults = new Collider[8];
-    private readonly Collider[] damageResults = new Collider[8];
+    private readonly Collider[] detectionResults = new Collider[64];
+    private readonly Collider[] damageResults = new Collider[32];
     private System.Collections.Generic.List<Transform> hitTargetsThisAttack = new System.Collections.Generic.List<Transform>();
 
     private bool AgentReady => agent != null && agent.isActiveAndEnabled && agent.isOnNavMesh;
@@ -106,6 +107,11 @@ public class Skeleton : NetworkBehaviour
         {
             agent.obstacleAvoidanceType = (UnityEngine.AI.ObstacleAvoidanceType)0;
         }
+
+        if (anim != null)
+        {
+            anim.applyRootMotion = false;
+        }
     }
 
     private void Start()
@@ -123,7 +129,7 @@ public class Skeleton : NetworkBehaviour
         currentState = State.Spawn;
         stateTimer = spawnDuration;
         if (anim != null) anim.SetTrigger(spawnTrigger);
-        SnapToNavMesh();
+        if (agent != null) agent.enabled = false;
         if (weaponHitbox != null) weaponHitbox.SetActive(false);
     }
 
@@ -150,7 +156,7 @@ public class Skeleton : NetworkBehaviour
             currentState = State.Spawn;
             stateTimer = spawnDuration;
             PlaySpawnClientRpc();
-            SnapToNavMesh();
+            if (agent != null) agent.enabled = false;
             if (weaponHitbox != null) weaponHitbox.SetActive(false);
         }
         else
@@ -214,12 +220,17 @@ public class Skeleton : NetworkBehaviour
 
         if (currentState == State.Spawn)
         {
-            if (AgentReady) agent.isStopped = true;
+            if (agent != null && agent.enabled) agent.enabled = false;
             SetSpeedNet(0f);
             stateTimer -= Time.deltaTime;
             if (stateTimer <= 0f)
             {
                 currentState = State.Follow;
+                if (agent != null)
+                {
+                    agent.enabled = true;
+                    SnapToNavMesh();
+                }
             }
             return;
         }
@@ -326,6 +337,7 @@ public class Skeleton : NetworkBehaviour
     private void TriggerAttack()
     {
         attackCooldownTimer = attackCooldown;
+        wasHitboxEnabledThisAttack = false;
         
         // Quay mặt về hướng quái
         Vector3 dir = (targetEnemy.position - transform.position);
@@ -343,11 +355,45 @@ public class Skeleton : NetworkBehaviour
         {
             PlayAttackClientRpc();
         }
+
+        // Bắt đầu fallback kích hoạt hitbox phòng trường hợp thiếu EventAnimation
+        CancelInvoke(nameof(FallbackHitboxActivation));
+        CancelInvoke(nameof(DisableWeaponHitbox));
+        Invoke(nameof(FallbackHitboxActivation), 0.35f); // 0.35s sau khi chém bắt đầu
+    }
+
+    private void FallbackHitboxActivation()
+    {
+        if (!wasHitboxEnabledThisAttack && currentState != State.Dead && currentState != State.Stagger)
+        {
+            EnableWeaponHitbox();
+            Invoke(nameof(DisableWeaponHitbox), 0.25f);
+        }
+    }
+
+    private Transform GetEnemyRoot(Collider col)
+    {
+        var e1 = col.GetComponentInParent<Enemy1_DapBua>();
+        if (e1 != null) return e1.transform;
+
+        var e2 = col.GetComponentInParent<Enemy2_Zombie>();
+        if (e2 != null) return e2.transform;
+
+        var e3 = col.GetComponentInParent<Enemy3_Buaa>();
+        if (e3 != null) return e3.transform;
+
+        var e4 = col.GetComponentInParent<Enemy4_Bongtoi>();
+        if (e4 != null) return e4.transform;
+
+        var e5 = col.GetComponentInParent<Enemy5_PhuThuy>();
+        if (e5 != null) return e5.transform;
+
+        return null;
     }
 
     private void DetectEnemy()
     {
-        int num = Physics.OverlapSphereNonAlloc(transform.position, sightRange, detectionResults, enemyLayer);
+        int num = Physics.OverlapSphereNonAlloc(transform.position, sightRange, detectionResults, ~0);
         float minD = float.MaxValue;
         Transform closest = null;
 
@@ -359,11 +405,14 @@ public class Skeleton : NetworkBehaviour
             if (!IsEnemyComponent(col)) continue;
             if (IsEnemyDead(col.transform)) continue;
 
-            float d = Vector3.Distance(transform.position, col.transform.position);
+            Transform enemyRoot = GetEnemyRoot(col);
+            if (enemyRoot == null) enemyRoot = col.transform;
+
+            float d = Vector3.Distance(transform.position, enemyRoot.position);
             if (d < minD)
             {
                 minD = d;
-                closest = col.transform;
+                closest = enemyRoot;
             }
         }
 
@@ -469,6 +518,7 @@ public class Skeleton : NetworkBehaviour
     // ══════════════════════════════════════════════════════════
     public void EnableWeaponHitbox()
     {
+        wasHitboxEnabledThisAttack = true;
         isHitboxActive = true;
         hitTargetsThisAttack.Clear();
         if (weaponHitbox != null) weaponHitbox.SetActive(true);
@@ -483,19 +533,20 @@ public class Skeleton : NetworkBehaviour
     private void CheckHitboxOverlap()
     {
         Vector3 checkPos = attackCheckPoint != null ? attackCheckPoint.position : transform.position + transform.forward * attackRange + Vector3.up * 1f;
-        int num = Physics.OverlapSphereNonAlloc(checkPos, attackRadius, damageResults, enemyLayer);
+        int num = Physics.OverlapSphereNonAlloc(checkPos, attackRadius, damageResults, ~0);
 
         for (int i = 0; i < num; i++)
         {
             Collider col = damageResults[i];
             if (col == null) continue;
 
-            Transform targetRoot = col.transform;
-            if (hitTargetsThisAttack.Contains(targetRoot)) continue;
+            Transform enemyRoot = GetEnemyRoot(col);
+            if (enemyRoot == null) continue;
+            if (hitTargetsThisAttack.Contains(enemyRoot)) continue;
 
             if (DealDamageToEnemy(col))
             {
-                hitTargetsThisAttack.Add(targetRoot);
+                hitTargetsThisAttack.Add(enemyRoot);
             }
         }
     }

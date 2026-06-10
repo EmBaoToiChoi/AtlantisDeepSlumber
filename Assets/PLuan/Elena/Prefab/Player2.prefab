@@ -107,13 +107,6 @@ MonoBehaviour:
     TransitionIndex: 0
   - IsCrossFadeExit: 0
     Layer: 0
-    OriginatingState: 1143134817
-    DestinationState: -1796308849
-    TransitionDuration: 0.25
-    TriggerNameHash: -39148367
-    TransitionIndex: 0
-  - IsCrossFadeExit: 0
-    Layer: 0
     OriginatingState: -1796308849
     DestinationState: -39148367
     TransitionDuration: 0.1
@@ -426,6 +419,34 @@ MonoBehaviour:
   arrowSpawnPoint: {fileID: 3808857661455583198}
   arrowSpeed: 30
   bowShootCooldown: 1
+  eSkillCooldown: 10
+  eSkillMaxPiercingArrows: 3
+  eSkillRemainingArrowsNet:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 0
+  isESkillActiveNet:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 0
+  qSkillCooldown: 15
+  qSkillDuration: 10
+  qSkillSpreadAngle: 10
+  isQSkillActiveNet:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 0
+  rSkillCooldown: 20
+  rSkillDuration: 5
+  rSkillShootCooldown: 0.3
+  isRSkillActiveNet:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 0
   isAimingNet:
     UpdateTraits:
       MinSecondsBetweenUpdates: 0
@@ -708,7 +729,7 @@ Transform:
   m_GameObject: {fileID: 7337949084535923267}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalPosition: {x: -0, y: 0.0032, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []

@@ -169,7 +169,8 @@ public class PlayerMapSpawner : NetworkBehaviour
         Quaternion spawnRot = spawnPoint != null ? spawnPoint.rotation : transform.rotation;
 
         // Thêm một chút offset ngẫu nhiên nhỏ để tránh các người chơi đè lên nhau chính xác tuyệt đối
-        spawnPos += new Vector3(Random.Range(-0.2f, 0.2f), 0f, Random.Range(-0.2f, 0.2f));
+        // Tăng thêm 0.5f trên trục Y để tránh việc người chơi bị spawn lún dưới đất dẫn đến rơi xuyên map
+        spawnPos += new Vector3(Random.Range(-0.2f, 0.2f), 0.5f, Random.Range(-0.2f, 0.2f));
 
         // 4. Khởi tạo và Spawn trên Network
         GameObject playerObj = Instantiate(selectedPrefab, spawnPos, spawnRot);

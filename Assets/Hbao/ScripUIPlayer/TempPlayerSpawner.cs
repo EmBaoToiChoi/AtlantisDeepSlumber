@@ -25,6 +25,7 @@ public class TempPlayerSpawner : MonoBehaviour
         }
 
         Vector3 spawnPos = spawnPoint != null ? spawnPoint.position : transform.position;
+        spawnPos.y += 0.5f; // Tăng thêm 0.5f trên trục Y để tránh rơi xuyên map
         Quaternion spawnRot = spawnPoint != null ? spawnPoint.rotation : transform.rotation;
 
         if (startAsHost && NetworkManager.Singleton != null)
