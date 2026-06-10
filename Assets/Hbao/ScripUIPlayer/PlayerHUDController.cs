@@ -901,12 +901,17 @@ public class PlayerHUDController : MonoBehaviour
                 NotifyHUDChange();
             }
 
-            // Kích hoạt Skill Q (chỉ khi đã mở khóa)
+            // Kích hoạt Skill Q (chỉ khi đã mở khóa và đạt Level 15)
             if (Keyboard.current.qKey.wasPressedThisFrame)
             {
                 if (isSkillsUnlocked)
                 {
-                    if (currentCooldownQ <= 0f && LocalPlayerTarget != null && !LocalPlayerTarget.IsQSkillActive)
+                    if (LocalPlayerTarget != null && LocalPlayerTarget.PlayerLevel < 15)
+                    {
+                        ShowSkillWarning(lockIconQ);
+                        ShowMissionAlert("Cần đạt Level 15 để mở khóa kỹ năng Q!", 2.5f);
+                    }
+                    else if (currentCooldownQ <= 0f && LocalPlayerTarget != null && !LocalPlayerTarget.IsQSkillActive)
                     {
                         bool activated = LocalPlayerTarget.TriggerQSkill();
                         if (activated)
@@ -929,12 +934,17 @@ public class PlayerHUDController : MonoBehaviour
                 }
             }
 
-            // Kích hoạt Skill R (chỉ khi đã mở khóa)
+            // Kích hoạt Skill R (chỉ khi đã mở khóa và đạt Level 5)
             if (Keyboard.current.rKey.wasPressedThisFrame)
             {
                 if (isSkillsUnlocked)
                 {
-                    if (currentCooldownR <= 0f && LocalPlayerTarget != null && !LocalPlayerTarget.IsInvisible)
+                    if (LocalPlayerTarget != null && LocalPlayerTarget.PlayerLevel < 5)
+                    {
+                        ShowSkillWarning(lockIconR);
+                        ShowMissionAlert("Cần đạt Level 5 để mở khóa kỹ năng R!", 2.5f);
+                    }
+                    else if (currentCooldownR <= 0f && LocalPlayerTarget != null && !LocalPlayerTarget.IsInvisible)
                     {
                         LocalPlayerTarget.TriggerInvisibilitySkill();
                         if (LocalPlayerTarget.CharacterClassIndex != 2 && LocalPlayerTarget.CharacterClassIndex != 1)
@@ -950,7 +960,7 @@ public class PlayerHUDController : MonoBehaviour
                 }
             }
 
-            // Kích hoạt Skill E (chỉ khi đã mở khóa)
+            // Kích hoạt Skill E (chỉ khi đã mở khóa và đạt Level 10)
             if (Keyboard.current.eKey.wasPressedThisFrame)
             {
                 bool isPromptingE = interactionPrompt != null &&
@@ -964,7 +974,12 @@ public class PlayerHUDController : MonoBehaviour
                 {
                     if (isSkillsUnlocked)
                     {
-                        if (currentCooldownE <= 0f && LocalPlayerTarget != null && !LocalPlayerTarget.IsAttackSpeedBoosted)
+                        if (LocalPlayerTarget != null && LocalPlayerTarget.PlayerLevel < 10)
+                        {
+                            ShowSkillWarning(lockIconE);
+                            ShowMissionAlert("Cần đạt Level 10 để mở khóa kỹ năng E!", 2.5f);
+                        }
+                        else if (currentCooldownE <= 0f && LocalPlayerTarget != null && !LocalPlayerTarget.IsAttackSpeedBoosted)
                         {
                             LocalPlayerTarget.TriggerAttackSpeedBoostSkill();
                             if (LocalPlayerTarget.CharacterClassIndex != 2 && LocalPlayerTarget.CharacterClassIndex != 1)
@@ -1085,6 +1100,24 @@ public class PlayerHUDController : MonoBehaviour
         }
 
         UpdateHotkeysHint();
+
+        // Cập nhật trạng thái hiển thị ổ khóa kỹ năng theo cấp độ người chơi
+        if (LocalPlayerTarget != null)
+        {
+            int pLevel = LocalPlayerTarget.PlayerLevel;
+            if (isSkillsUnlocked)
+            {
+                if (lockR != null) lockR.style.display = pLevel < 5 ? DisplayStyle.Flex : DisplayStyle.None;
+                if (lockE != null) lockE.style.display = pLevel < 10 ? DisplayStyle.Flex : DisplayStyle.None;
+                if (lockQ != null) lockQ.style.display = pLevel < 15 ? DisplayStyle.Flex : DisplayStyle.None;
+            }
+            else
+            {
+                if (lockR != null) lockR.style.display = DisplayStyle.Flex;
+                if (lockE != null) lockE.style.display = DisplayStyle.Flex;
+                if (lockQ != null) lockQ.style.display = DisplayStyle.Flex;
+            }
+        }
     }
 
     public void ToggleMic()
