@@ -3,7 +3,37 @@ guid: cdcedbf645bc9de4c8db934c4b920a04
 ModelImporter:
   serializedVersion: 22200
   internalIDToNameTable: []
-  externalObjects: {}
+  externalObjects:
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: BlueCrystal
+    second: {fileID: 2100000, guid: 8deae7a674d678a4abcee31e5a1a7889, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: GreenCrystal
+    second: {fileID: 2100000, guid: c40d09a3aae02304b810ad95b14d6f32, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: OrangeCrystal
+    second: {fileID: 2100000, guid: 684a22e378a449d4a950b6bb526ad7d9, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: PurpleCrystal
+    second: {fileID: 2100000, guid: 30a23d28e9f8d5c45ac4acf9695a8a6e, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: RedCrystal
+    second: {fileID: 2100000, guid: aabeaf88e71ae984a9bf2fa7152caf17, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: YellowCrystal
+    second: {fileID: 2100000, guid: 7f7b6d917e5e43f45a5e40e7aaa93329, type: 2}
   materials:
     materialImportMode: 2
     materialName: 0
