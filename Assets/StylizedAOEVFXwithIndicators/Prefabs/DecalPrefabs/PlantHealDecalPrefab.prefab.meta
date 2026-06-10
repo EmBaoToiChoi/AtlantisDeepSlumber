@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 59f87adf2f772c4469010e8dfb9bddc1
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 274300
+  packageName: Stylized AOE VFX with Indicators
+  packageVersion: 1.1.1
+  assetPath: Assets/StylizedAOEVFXwithIndicators/Prefabs/DecalPrefabs/PlantHealDecalPrefab.prefab
+  uploadId: 659150

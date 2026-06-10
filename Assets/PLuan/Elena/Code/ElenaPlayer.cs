@@ -2349,6 +2349,23 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
         }
     }
 
+    public void Heal(float amount)
+    {
+        if (CurrentHealth <= 0) return;
+
+        if (isStandaloneMode)
+        {
+            localHealth = Mathf.Min(localHealth + amount, maxHealth);
+            UpdateHealthHUD(localHealth);
+            Debug.Log($"[ElenaPlayer Standalone] Hồi {amount} máu. Máu hiện tại: {localHealth}");
+        }
+        else if (IsServer)
+        {
+            currentHealth.Value = Mathf.Min(currentHealth.Value + amount, maxHealth);
+            Debug.Log($"[ElenaPlayer Server] Hồi {amount} máu cho {gameObject.name}. Máu hiện tại: {currentHealth.Value}");
+        }
+    }
+
     // ------------------------------------------------------------------
     //  Knockback
     // ------------------------------------------------------------------

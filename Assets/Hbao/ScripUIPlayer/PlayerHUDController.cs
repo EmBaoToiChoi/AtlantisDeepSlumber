@@ -219,9 +219,9 @@ public class PlayerHUDController : MonoBehaviour
         isUIInitialized = false;
 
         // Hủy đăng ký event để tránh memory leak
-        if (localPlayerTarget != null)
+        if (LocalPlayerTarget != null)
         {
-            localPlayerTarget.OnQSkillCancelled -= HandleQSkillCancelled;
+            LocalPlayerTarget.OnQSkillCancelled -= HandleQSkillCancelled;
         }
 
         // Reset tất cả tham chiếu VisualElement để InitializeUI() re-query lại từ tree mới
@@ -2440,9 +2440,9 @@ public class PlayerHUDController : MonoBehaviour
         InitializeUI();
         if (crosshairElement != null)
         {
-            bool isBowClass = LocalPlayerTarget != null && LocalPlayerTarget.CharacterClassIndex == 2;
-            bool isBowActive = LocalPlayerTarget != null && LocalPlayerTarget.GetActiveWeaponIndex() == 2;
-            crosshairElement.style.display = (visible && isBowClass && isBowActive) ? DisplayStyle.Flex : DisplayStyle.None;
+            bool isRangedClass = LocalPlayerTarget != null && (LocalPlayerTarget.CharacterClassIndex == 2 || LocalPlayerTarget.CharacterClassIndex == 1);
+            bool isRangedActive = LocalPlayerTarget != null && LocalPlayerTarget.GetActiveWeaponIndex() == 2;
+            crosshairElement.style.display = (visible && isRangedClass && isRangedActive) ? DisplayStyle.Flex : DisplayStyle.None;
         }
     }
 }

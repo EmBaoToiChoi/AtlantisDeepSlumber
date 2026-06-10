@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 5b990214d0acf0c47b7fd649acbb98d9
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 274300
+  packageName: Stylized AOE VFX with Indicators
+  packageVersion: 1.1.1
+  assetPath: Assets/StylizedAOEVFXwithIndicators/Scripts/PlayVFX.cs
+  uploadId: 659150

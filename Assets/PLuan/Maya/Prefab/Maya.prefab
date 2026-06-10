@@ -1,5 +1,36 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
+--- !u!1 &2847216766215577810
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 6320282578570835534}
+  m_Layer: 0
+  m_Name: SpawnBullet
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &6320282578570835534
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2847216766215577810}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0.64456505, y: -0.2552017, z: -0.70545405, w: 0.14745383}
+  m_LocalPosition: {x: 0.2432373, y: -0.15799244, z: 0.994435}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 7010692988833986221}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &8313881801843240701
 GameObject:
   m_ObjectHideFlags: 0
@@ -256,20 +287,23 @@ MonoBehaviour:
   maxPitch: 80
   rotationSmoothSpeed: 15
   aimCameraDistance: 4
-  aimShoulderOffset: 6
+  aimShoulderOffset: 3
   aimPivotHeight: 4
   aimCameraSmoothSpeed: 10
   aimAttackRange: 25
   aimMinPitch: -80
   aimMaxPitch: 80
-  arrowHandVisual: {fileID: 0}
-  arrowPrefab: {fileID: 0}
-  arrowSpawnPoint: {fileID: 0}
-  arrowSpeed: 30
+  normalAttackPrefab: {fileID: 906073527957232500, guid: 2da01b6b8170450428f2dac9f729d3c0, type: 3}
+  normalAttackSpawnPoint: {fileID: 6320282578570835534}
+  normalAttackSpeed: 30
   ShootingCooldown: 1
   eSkillCooldown: 10
-  eSkillMaxPiercingArrows: 3
-  eSkillRemainingArrowsNet:
+  eSkillHealRadius: 5
+  eSkillHealDuration: 5
+  eSkillHealAmount: 10
+  eSkillVfxPrefab: {fileID: 7193163566217465855, guid: aff4be9b49fb9e24abf3be6c0820b719, type: 3}
+  eSkillMaxPiercingNormalAttacks: 3
+  eSkillRemainingNormalAttacksNet:
     UpdateTraits:
       MinSecondsBetweenUpdates: 0
       MaxSecondsBetweenUpdates: 0
@@ -527,7 +561,7 @@ MonoBehaviour:
     Layer: 1
     OriginatingState: 153482222
     DestinationState: 623532540
-    TransitionDuration: 0.1
+    TransitionDuration: 0.25
     TriggerNameHash: 1877016939
     TransitionIndex: 1
   AnimatorParameterEntries:
@@ -712,6 +746,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 7966254385995832477, guid: 2a0b858e93c11d541a78b40a609b6fd3, type: 3}
       insertIndex: -1
       addedObject: {fileID: 3366921061784858712}
+    - targetCorrespondingSourceObject: {fileID: 7966254385995832477, guid: 2a0b858e93c11d541a78b40a609b6fd3, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 6320282578570835534}
     - targetCorrespondingSourceObject: {fileID: 7790177421927552515, guid: 2a0b858e93c11d541a78b40a609b6fd3, type: 3}
       insertIndex: -1
       addedObject: {fileID: 5456517960310483812}

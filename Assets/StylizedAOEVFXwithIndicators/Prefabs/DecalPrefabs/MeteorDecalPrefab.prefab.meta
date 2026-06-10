@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 6aeee1ac8b24a1e45baedae4f3b12b52
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 274300
+  packageName: Stylized AOE VFX with Indicators
+  packageVersion: 1.1.1
+  assetPath: Assets/StylizedAOEVFXwithIndicators/Prefabs/DecalPrefabs/MeteorDecalPrefab.prefab
+  uploadId: 659150

@@ -2168,6 +2168,40 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
         return false;
     }
 
+    public void Heal(float amount)
+    {
+        if (leoPlayer != null)
+        {
+            leoPlayer.Heal(amount);
+            return;
+        }
+        if (arthurPlayer != null)
+        {
+            arthurPlayer.Heal(amount);
+            return;
+        }
+
+        if (isStandaloneMode)
+        {
+            localHealth = Mathf.Min(localHealth + amount, maxHealth);
+            UpdateHealthHUD(localHealth);
+        }
+        else if (IsServer)
+        {
+            currentHealth.Value = Mathf.Min(currentHealth.Value + amount, maxHealth);
+        }
+        else
+        {
+            HealServerRpc(amount);
+        }
+    }
+
+    [ServerRpc]
+    private void HealServerRpc(float amount)
+    {
+        currentHealth.Value = Mathf.Min(currentHealth.Value + amount, maxHealth);
+    }
+
     public override void OnDestroy()
     {
         if (PlayerHUDManager.ActivePlayers != null)

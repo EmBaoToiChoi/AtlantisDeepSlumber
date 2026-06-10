@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: a81ea82b97eed534083484077cef13cc
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 274300
+  packageName: Stylized AOE VFX with Indicators
+  packageVersion: 1.1.1
+  assetPath: Assets/StylizedAOEVFXwithIndicators/Prefabs/GeyserPrefab.prefab
+  uploadId: 659150
