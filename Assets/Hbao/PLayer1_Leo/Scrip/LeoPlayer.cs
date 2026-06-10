@@ -4681,6 +4681,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     // ======================================================
     public void TriggerInvisibilitySkill()
     {
+        if (PlayerLevel < 5) return;
         if (IsInvisible) return;
 
         if (isStandaloneMode)
@@ -4805,6 +4806,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     // ======================================================
     public void TriggerAttackSpeedBoostSkill()
     {
+        if (PlayerLevel < 10) return;
         if (IsAttackSpeedBoosted) return;
 
         if (isStandaloneMode)
@@ -5031,6 +5033,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     /// </summary>
     public bool TriggerQSkill()
     {
+        if (PlayerLevel < 15) return false;
         if (IsQSkillActive) return false;
 
         if (isStandaloneMode)

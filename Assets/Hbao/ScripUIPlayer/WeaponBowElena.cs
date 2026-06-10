@@ -32,12 +32,12 @@ public class WeaponBowElena : NetworkBehaviour
         transform.position = currentPos;
 
         // 1. Find local player
-        if (localPlayer == null || localPlayer.gameObject == null)
+        if (localPlayer == null || (localPlayer is UnityEngine.Object obj && obj == null))
         {
             FindLocalPlayer();
         }
 
-        if (localPlayer != null && localPlayer.gameObject != null)
+        if (localPlayer != null && localPlayer is UnityEngine.Object playerObj && playerObj != null)
         {
             // If local player is dead, clear interaction prompt
             if (localPlayer.CurrentHealth <= 0)

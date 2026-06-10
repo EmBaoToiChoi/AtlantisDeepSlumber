@@ -382,6 +382,7 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
     public float InvisibilityTimeRemaining => rSkillDurationTimer;
     public void TriggerInvisibilitySkill()
     {
+        if (PlayerLevel < 5) return;
         TriggerRSkill();
     }
 
@@ -390,11 +391,13 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
     public float AttackSpeedBoostTimeRemaining => ESkillRemainingNormalAttacks;
     public void TriggerAttackSpeedBoostSkill()
     {
+        if (PlayerLevel < 10) return;
         TriggerESkill();
     }
 
     public void TriggerESkill()
     {
+        if (PlayerLevel < 10) return;
         if (GetActiveWeaponIndex() != 2) return;
         if (eSkillCooldownTimer > 0f) return;
         isETargeting = true;
@@ -614,6 +617,7 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
     
     public bool TriggerQSkill()
     {
+        if (PlayerLevel < 15) return false;
         if (GetActiveWeaponIndex() != 2)
         {
             Debug.Log("[MayaPlayer] Không thể sử dụng kỹ năng Q khi không cầm vũ khí!");
@@ -764,6 +768,7 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
     // R Skill
     public void TriggerRSkill()
     {
+        if (PlayerLevel < 5) return;
         if (GetActiveWeaponIndex() != 2)
         {
             Debug.Log("[MayaPlayer] Không thể sử dụng kỹ năng R khi không cầm vũ khí!");
