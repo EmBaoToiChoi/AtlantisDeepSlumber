@@ -82,6 +82,8 @@ GameObject:
   - component: {fileID: 3135136227906270387}
   - component: {fileID: 2509612600738379559}
   - component: {fileID: 2021247893448015710}
+  - component: {fileID: 2610228392220693824}
+  - component: {fileID: 1278614070153325450}
   m_Layer: 3
   m_Name: Athurt
   m_TagString: Player
@@ -103,6 +105,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 8362412039005898007}
+  - {fileID: 1313696106850936557}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &5285038367350215462
@@ -186,6 +189,16 @@ MonoBehaviour:
   rSkillDuration: 8
   rSkillDamageMultiplier: 1.3
   isRSkillActive: 0
+  eSkillAnimTrigger: SkillE
+  eSkillDuration: 5
+  isESkillActive: 0
+  isESkillPlayingAnim: 0
+  qSkillAnimTrigger: SkillQ
+  qSkillStunDuration: 5
+  qSkillRadius: 6
+  qSkillDuration: 1.5
+  isQSkillActive: 0
+  isQSkillPlayingAnim: 0
   maxHealth: 150
   currentHealth:
     UpdateTraits:
@@ -213,6 +226,16 @@ MonoBehaviour:
       MaxSecondsBetweenUpdates: 0
     m_InternalValue: 0
   isRSkillActiveNet:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 0
+  isESkillActiveNet:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 0
+  isQSkillActiveNet:
     UpdateTraits:
       MinSecondsBetweenUpdates: 0
       MaxSecondsBetweenUpdates: 0
@@ -602,6 +625,13 @@ MonoBehaviour:
     TransitionIndex: 2
   - IsCrossFadeExit: 0
     Layer: 0
+    OriginatingState: -1331891752
+    DestinationState: -1919643741
+    TransitionDuration: 0.05
+    TriggerNameHash: 489129695
+    TransitionIndex: 3
+  - IsCrossFadeExit: 0
+    Layer: 0
     OriginatingState: 1572205430
     DestinationState: -860415213
     TransitionDuration: 0.9
@@ -628,6 +658,20 @@ MonoBehaviour:
     TransitionDuration: 0.25
     TriggerNameHash: -1628175592
     TransitionIndex: 4
+  - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: 1572205430
+    DestinationState: -1919643741
+    TransitionDuration: 0.05
+    TriggerNameHash: 489129695
+    TransitionIndex: 5
+  - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: 1572205430
+    DestinationState: -229569483
+    TransitionDuration: 0.05
+    TriggerNameHash: 134042274
+    TransitionIndex: 6
   - IsCrossFadeExit: 0
     Layer: 0
     OriginatingState: -860415213
@@ -983,6 +1027,14 @@ MonoBehaviour:
       NameHash: -1628175592
       Synchronize: 1
       ParameterType: 9
+    - name: SkillE
+      NameHash: 489129695
+      Synchronize: 1
+      ParameterType: 9
+    - name: SkillQ
+      NameHash: 134042274
+      Synchronize: 1
+      ParameterType: 9
   AnimatorParametersExpanded: 0
 --- !u!114 &3135136227906270387
 MonoBehaviour:
@@ -1080,6 +1132,50 @@ Rigidbody:
   m_Interpolate: 1
   m_Constraints: 72
   m_CollisionDetection: 0
+--- !u!114 &2610228392220693824
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6392718148198085431}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 44e5db811f7df62409334fc510e55423, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  ShowTopMostFoldoutHeaderGroup: 1
+  holdPoint: {fileID: 1313696106850936557}
+  interactableLayer:
+    serializedVersion: 2
+    m_Bits: 256
+  currentInteractBox: {fileID: 0}
+  currentPillarStation: {fileID: 0}
+  heldCoreNetworkId:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 18446744073709551615
+  isCarryingCore:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 0
+  currentHeldCore: {fileID: 0}
+--- !u!114 &1278614070153325450
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6392718148198085431}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 54471ddc3d8c72542839c80872939d1c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  scriptNames:
+  - ArthurPlayer
 --- !u!1 &6656804584175171832
 GameObject:
   m_ObjectHideFlags: 0
@@ -1146,6 +1242,37 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9af35fd58f6f29d48a0193db93794d54, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!1 &7250121012748143907
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1313696106850936557}
+  m_Layer: 3
+  m_Name: GameObject
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1313696106850936557
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7250121012748143907}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 3.82, y: 2.87, z: 0.52}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 5339982993864073567}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &7630245529408488446
 GameObject:
   m_ObjectHideFlags: 0
