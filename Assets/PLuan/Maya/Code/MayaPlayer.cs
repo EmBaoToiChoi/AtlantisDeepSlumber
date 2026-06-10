@@ -1793,7 +1793,7 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
             UpdateETargetingIndicator();
             UpdateRTargetingIndicators();
 
-            bool targetAiming = (currentWeaponIdx == 2 && Input.GetMouseButton(1) && !IsUIBlockingInput() && !IsBusyOrRolling) || isETargeting || isRTargeting;
+            bool targetAiming = (currentWeaponIdx == 2 && Input.GetMouseButton(1) && !IsUIBlockingInput() && !IsBusyOrRolling) || isETargeting || isRTargeting || isShootPending || isRShootPending;
             if (localIsAiming != targetAiming)
             {
                 localIsAiming = targetAiming;
@@ -3642,6 +3642,7 @@ private void StartRollServerRpc(Vector3 direction)
                     // Reset shooting trigger and pending shoot flag to avoid stuck animation states/double arrows on next aim
                     SafeResetTrigger("Shooting");
                     isShootPending = false;
+                    isRShootPending = false;
                 }
             }
         }
