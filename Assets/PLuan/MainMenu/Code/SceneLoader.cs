@@ -30,6 +30,9 @@ public class SceneLoader : MonoBehaviour
     {
         if (_loadingUIDoc == null) return;
         
+        // Đảm bảo loading screen luôn đè lên các UI khác
+        _loadingUIDoc.sortingOrder = 9999;
+        
         var rootVE = _loadingUIDoc.rootVisualElement;
         _root = rootVE.Q<VisualElement>("loading-root");
         _progressFill = rootVE.Q<VisualElement>("progress-fill");
