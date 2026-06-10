@@ -2065,7 +2065,24 @@ public class PlayerHUDController : MonoBehaviour
     /// </summary>
     public void SetupEventSystemForInputSystem()
     {
-        var eventSystem = FindAnyObjectByType<UnityEngine.EventSystems.EventSystem>();
+        // 1. Tìm tất cả EventSystem trong Scene
+        var allEventSystems = FindObjectsByType<UnityEngine.EventSystems.EventSystem>(FindObjectsSortMode.None);
+        UnityEngine.EventSystems.EventSystem eventSystem = null;
+
+        if (allEventSystems != null && allEventSystems.Length > 0)
+        {
+            // Giữ lại cái đầu tiên, hủy tất cả cái còn lại để tránh xung đột EventSystem trong chế độ chơi mạng
+            eventSystem = allEventSystems[0];
+            for (int i = 1; i < allEventSystems.Length; i++)
+            {
+                if (allEventSystems[i] != null)
+                {
+                    Debug.LogWarning($"[PlayerHUDController] Phát hiện EventSystem dư thừa '{allEventSystems[i].gameObject.name}'. Đang tự động xóa bỏ để tránh xung đột trên Network.");
+                    DestroyImmediate(allEventSystems[i].gameObject);
+                }
+            }
+        }
+
         if (eventSystem == null)
         {
             GameObject esObj = new GameObject("EventSystem");
@@ -2089,7 +2106,7 @@ public class PlayerHUDController : MonoBehaviour
             if (legacyModule != null)
             {
                 Debug.LogWarning("[PlayerHUDController] Phát hiện EventSystem sử dụng StandaloneInputModule cũ dưới chế độ New Input System. Đang tự động nâng cấp lên InputSystemUIInputModule để hỗ trợ tương tác UI.");
-                Destroy(legacyModule);
+                DestroyImmediate(legacyModule);
                 
                 // Tránh add trùng lặp
                 var newModule = eventSystem.GetComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
