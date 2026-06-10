@@ -57,11 +57,11 @@ public class NetworkBootstrap : MonoBehaviour
         // SỬ DỤNG NETWORK SCENE MANAGER ĐỂ ĐỒNG BỘ CẢNH CHUẨN
         if (NetworkManager.Singleton.SceneManager != null)
         {
-            NetworkManager.Singleton.SceneManager.LoadScene("Map", UnityEngine.SceneManagement.LoadSceneMode.Single);
+            NetworkManager.Singleton.SceneManager.LoadScene("Waiting hall", UnityEngine.SceneManagement.LoadSceneMode.Single);
         }
         else
         {
-            UnityEngine.SceneManagement.SceneManager.LoadScene("Map");
+            UnityEngine.SceneManagement.SceneManager.LoadScene("Waiting hall");
         }
     }
 
