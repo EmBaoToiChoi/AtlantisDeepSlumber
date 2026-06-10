@@ -3449,6 +3449,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     {
         Debug.Log("[LeoPlayer] Roll ended via Animation Event.");
         isRollingStandalone = false;
+        rollTimer = 0f;
 
         if (anim != null) anim.applyRootMotion = false;
         var bridge = GetRootMotionBridge();
@@ -3620,6 +3621,15 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
                 float currentYVelocity = rb.linearVelocity.y;
                 rb.linearVelocity = new Vector3(rollDirection.x * rollSpeed, currentYVelocity, rollDirection.z * rollSpeed);
             }
+            else
+            {
+                transform.Translate(rollDirection * rollSpeed * Time.deltaTime, Space.World);
+            }
+
+            if (rollDirection != Vector3.zero)
+            {
+                transform.rotation = Quaternion.LookRotation(rollDirection);
+            }
             return;
         }
 
@@ -3780,6 +3790,15 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             {
                 float currentYVelocity = rb.linearVelocity.y;
                 rb.linearVelocity = new Vector3(rollDirection.x * rollSpeed, currentYVelocity, rollDirection.z * rollSpeed);
+            }
+            else
+            {
+                transform.Translate(rollDirection * rollSpeed * Time.deltaTime, Space.World);
+            }
+
+            if (rollDirection != Vector3.zero)
+            {
+                transform.rotation = Quaternion.LookRotation(rollDirection);
             }
             return;
         }
@@ -4158,11 +4177,15 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (moveInput != Vector3.zero)
         {
             rollDirection = moveInput.normalized;
-            transform.forward = rollDirection;
         }
         else
         {
             rollDirection = transform.forward;
+        }
+
+        if (rollDirection != Vector3.zero)
+        {
+            transform.rotation = Quaternion.LookRotation(rollDirection);
         }
 
         if (anim != null) anim.applyRootMotion = false;
@@ -4181,11 +4204,15 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (moveInput != Vector3.zero)
         {
             rollDirection = moveInput.normalized;
-            transform.forward = rollDirection;
         }
         else
         {
             rollDirection = transform.forward;
+        }
+
+        if (rollDirection != Vector3.zero)
+        {
+            transform.rotation = Quaternion.LookRotation(rollDirection);
         }
 
         if (anim != null) anim.applyRootMotion = false;
@@ -4197,7 +4224,12 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     private void StartRollServerRpc(Vector3 direction)
     {
         SyncNetVarBool(isRollingNet, proxyPlayerTest != null ? proxyPlayerTest.isRollingNet : null, true);
-        PlayAnimationClientRpc("LonVong", 0.05f, true);
+        if (direction != Vector3.zero)
+        {
+            rollDirection = direction;
+            transform.rotation = Quaternion.LookRotation(direction);
+        }
+        PlayAnimationClientRpc("LonVong", 0.05f, true, false);
     }
 
     [ServerRpc]
