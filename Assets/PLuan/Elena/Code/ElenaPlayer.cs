@@ -360,6 +360,7 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
     public float InvisibilityTimeRemaining => rSkillDurationTimer;
     public void TriggerInvisibilitySkill()
     {
+        if (PlayerLevel < 5) return;
         TriggerRSkill();
     }
 
@@ -368,11 +369,13 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
     public float AttackSpeedBoostTimeRemaining => ESkillRemainingArrows;
     public void TriggerAttackSpeedBoostSkill()
     {
+        if (PlayerLevel < 10) return;
         TriggerESkill();
     }
 
     public void TriggerESkill()
     {
+        if (PlayerLevel < 10) return;
         if (eSkillCooldownTimer > 0f || IsESkillActive) return;
         
         if (isStandaloneMode)
@@ -450,6 +453,7 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
     
     public bool TriggerQSkill()
     {
+        if (PlayerLevel < 15) return false;
         if (qSkillCooldownTimer > 0f || IsQSkillActive) return false;
 
         qSkillDurationTimer = qSkillDuration;

@@ -350,6 +350,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
     // Chỉ kích hoạt hoạt ảnh gồng chiêu R ban đầu
     public void TriggerInvisibilitySkill()
     {
+        if (PlayerLevel < 5) return;
         if (isRSkillActive) return;
 
         Debug.Log("[ArthurPlayer] Khởi động gồng Skill R: Phát hoạt ảnh gồng chiêu...");
@@ -398,6 +399,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
     /// <summary>Kích hoạt Skill Q - phát hoạt ảnh dặm khiên. Trả về true nếu đã khởi động thành công.</summary>
     new public bool TriggerQSkill()
     {
+        if (PlayerLevel < 15) return false;
         if (isQSkillActive || isQSkillPlayingAnim) return false;
 
         Debug.Log($"[{gameObject.name}] TriggerQSkill (Skill Q) - Bắt đầu dặm khiên...");
@@ -472,6 +474,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     public void TriggerAttackSpeedBoostSkill()
     {
+        if (PlayerLevel < 10) return;
         if (IsAttackSpeedBoosted || isESkillPlayingAnim) return;
 
         Debug.Log($"[{gameObject.name}] TriggerAttackSpeedBoostSkill (Skill E) - Bắt đầu gồng...");
