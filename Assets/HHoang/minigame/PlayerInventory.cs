@@ -76,6 +76,11 @@ public class PlayerInteraction : NetworkBehaviour
         if (NetworkManager.SpawnManager.SpawnedObjects.TryGetValue(networkObjectId, out var netObj))
         {
             var core = netObj.GetComponent<CrystalCore>();
+            
+            // ---> THÊM DÒNG NÀY VÀO: Chặn không cho nhặt nếu ngọc đã có người cầm
+            if (core.holderId.Value != ulong.MaxValue) return;
+            // <---
+
             core.PerformPickup(rpcParams.Receive.SenderClientId);
             
             heldCoreNetworkId.Value = networkObjectId;
@@ -115,6 +120,10 @@ public class PlayerInteraction : NetworkBehaviour
         {
             var core = netObj.GetComponent<PuzzleCrystalCore>();
             ulong senderId = rpcParams.Receive.SenderClientId;
+
+            // ---> THÊM DÒNG NÀY VÀO: Chống lỗi bấm đúp phím F làm văng oan uổng
+            if (core.holderId.Value != ulong.MaxValue) return; 
+            // <---
 
             // Check luật 1 lần chạm
             if (core.CanPickup(senderId))
