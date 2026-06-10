@@ -477,6 +477,29 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
         zone.duration = eSkillHealDuration;
         zone.healAmount = eSkillHealAmount;
 
+        // Always spawn the green cylinder visual for demo purposes
+        GameObject cylinder = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+        var col = cylinder.GetComponent<Collider>();
+        if (col != null) Destroy(col);
+
+        cylinder.transform.SetParent(zoneObj.transform);
+        cylinder.transform.localPosition = new Vector3(0f, 0.05f, 0f);
+        cylinder.transform.localScale = new Vector3(eSkillHealRadius * 2f, 0.01f, eSkillHealRadius * 2f);
+        cylinder.transform.localRotation = Quaternion.identity;
+
+        var renderer = cylinder.GetComponent<Renderer>();
+        if (renderer != null)
+        {
+            Shader transparentShader = Shader.Find("Sprites/Default");
+            if (transparentShader != null)
+            {
+                Material mat = new Material(transparentShader);
+                mat.color = new Color(0.2f, 0.8f, 0.3f, 0.25f);
+                renderer.material = mat;
+            }
+        }
+
+        // Optionally spawn custom VFX prefab if assigned
         if (eSkillVfxPrefab != null)
         {
             GameObject vfxObj = Instantiate(eSkillVfxPrefab, position, Quaternion.identity);
@@ -504,33 +527,33 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
         GameObject visualObj = new GameObject("MayaHealingZone_VisualClient");
         visualObj.transform.position = position;
 
+        // Always spawn the green cylinder visual for demo purposes
+        GameObject cylinder = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+        var col = cylinder.GetComponent<Collider>();
+        if (col != null) Destroy(col);
+
+        cylinder.transform.SetParent(visualObj.transform);
+        cylinder.transform.localPosition = new Vector3(0f, 0.05f, 0f);
+        cylinder.transform.localScale = new Vector3(eSkillHealRadius * 2f, 0.01f, eSkillHealRadius * 2f);
+        cylinder.transform.localRotation = Quaternion.identity;
+
+        var renderer = cylinder.GetComponent<Renderer>();
+        if (renderer != null)
+        {
+            Shader transparentShader = Shader.Find("Sprites/Default");
+            if (transparentShader != null)
+            {
+                Material mat = new Material(transparentShader);
+                mat.color = new Color(0.2f, 0.8f, 0.3f, 0.25f);
+                renderer.material = mat;
+            }
+        }
+
+        // Optionally spawn custom VFX prefab if assigned
         if (eSkillVfxPrefab != null)
         {
             GameObject vfx = Instantiate(eSkillVfxPrefab, position, Quaternion.identity);
             vfx.transform.SetParent(visualObj.transform);
-        }
-        else
-        {
-            GameObject cylinder = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            var col = cylinder.GetComponent<Collider>();
-            if (col != null) Destroy(col);
-
-            cylinder.transform.SetParent(visualObj.transform);
-            cylinder.transform.localPosition = new Vector3(0f, 0.05f, 0f);
-            cylinder.transform.localScale = new Vector3(eSkillHealRadius * 2f, 0.01f, eSkillHealRadius * 2f);
-            cylinder.transform.localRotation = Quaternion.identity;
-
-            var renderer = cylinder.GetComponent<Renderer>();
-            if (renderer != null)
-            {
-                Shader transparentShader = Shader.Find("Sprites/Default");
-                if (transparentShader != null)
-                {
-                    Material mat = new Material(transparentShader);
-                    mat.color = new Color(0.2f, 0.8f, 0.3f, 0.25f);
-                    renderer.material = mat;
-                }
-            }
         }
 
         Destroy(visualObj, eSkillHealDuration);
