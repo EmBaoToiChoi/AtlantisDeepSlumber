@@ -8,6 +8,9 @@ public class NetworkWaitingRoom : NetworkBehaviour
 {
     [Header("UI Toolkit")]
     [SerializeField] private UIDocument _uiDocument;
+
+    [Header("Gameplay Scene Configuration")]
+    [SerializeField] private string gameplaySceneName = "Map2";
     
     [Header("Slots & Prefabs")]
     public Transform[] slots = new Transform[4];
@@ -418,14 +421,37 @@ public class NetworkWaitingRoom : NetworkBehaviour
             return;
         }
 
-        // 1. Tạm thời cho phép chọn trùng nhân vật
+        // 1. Kiểm tra xem nhân vật này có bị người khác chọn chưa
         bool isLockedByOther = false;
+        if (NetworkManager.Singleton != null)
+        {
+            foreach (var p in NetPlayers)
+            {
+                if (p.ClientId != NetworkManager.Singleton.LocalClientId && p.CharacterId == charId)
+                {
+                    isLockedByOther = true;
+                    break;
+                }
+            }
+        }
 
-        // 2. Nếu không khóa, xử lý Click hoặc Shift + Click
+        // 2. Xử lý Click hoặc Shift + Click
         bool isShift = evt.shiftKey || Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
         if (isShift)
         {
             ShowCharacterDetails(charId);
+        }
+        else if (isLockedByOther)
+        {
+            // Hiển thị cảnh báo nhân vật đã bị người khác chọn
+            if (_lblWarning != null)
+            {
+                _lblWarning.text = $"{_characters[charId].Name} IS ALREADY TAKEN!";
+                _lblWarning.RemoveFromClassList("hidden-element");
+                _lblWarning.style.display = DisplayStyle.Flex;
+                CancelInvoke(nameof(HideWarningLabel));
+                Invoke(nameof(HideWarningLabel), 2f);
+            }
         }
         else
         {
@@ -644,7 +670,13 @@ public class NetworkWaitingRoom : NetworkBehaviour
 
     private bool HasDuplicateCharacters()
     {
-        return false; // Tạm thời cho phép chọn trùng nhân vật
+        var seen = new HashSet<int>();
+        foreach (var p in NetPlayers)
+        {
+            if (p.CharacterId < 0) continue; // Chưa chọn thì bỏ qua
+            if (!seen.Add(p.CharacterId)) return true;
+        }
+        return false;
     }
 
     private void UpdatePlayerUI()
@@ -733,11 +765,18 @@ public class NetworkWaitingRoom : NetworkBehaviour
             }
         }
 
-        // KIỂM TRA ĐIỀU KIỆN READY: Chỉ cần ít nhất 1 người chơi sẵn sàng (Testing)
-        // Khi lên sản phẩm thực tế, có thể đổi lại thành NetPlayers.Count == 4 && readyCount == 4
+        // Cập nhật số lượng người chơi - sẻ ghi đè lại sau khi tính ready count
+        if (_lblPlayerCount != null) _lblPlayerCount.text = $"PLAYERS: {NetPlayers.Count}/4";
+
+        // KIỂM TRA ĐIỀU KIỆN: Đủ 1 người VÀ tất cả đều ready
         int readyCount = 0;
         foreach (var p in NetPlayers) if (p.IsReady) readyCount++;
-        bool allReady = readyCount >= 1;
+        bool enoughPlayers = NetPlayers.Count >= 1;
+        bool allReady = enoughPlayers && NetPlayers.Count > 0 && (readyCount == NetPlayers.Count);
+
+        // Cập nhật text với thông tin ready
+        if (_lblPlayerCount != null)
+            _lblPlayerCount.text = $"PLAYERS: {NetPlayers.Count}/4  ·  READY: {readyCount}/{(NetPlayers.Count > 0 ? NetPlayers.Count.ToString() : "0")}";
 
         // KIỂM TRA XEM LOCAL CLIENT CÓ PHẢI LÀ CHỦ PHÒNG (SLOT 0) KHÔNG
         bool isRoomHost = false;
@@ -754,38 +793,41 @@ public class NetworkWaitingRoom : NetworkBehaviour
         }
 
         bool duplicatesExist = HasDuplicateCharacters();
+        bool canStart = allReady && !duplicatesExist;
 
-        // Handle duplicate warning label
-        if (_lblWarning != null)
+        // Hiển cảnh báo nếu có trùng nhân vật
+        if (_lblWarning != null && duplicatesExist)
         {
-            if (duplicatesExist)
-            {
-                _lblWarning.RemoveFromClassList("hidden-element");
-                _lblWarning.style.display = DisplayStyle.Flex;
-            }
-            else
-            {
-                _lblWarning.AddToClassList("hidden-element");
-                _lblWarning.style.display = DisplayStyle.None;
-            }
+            _lblWarning.text = "DUPLICATE CHARACTER DETECTED!";
+            _lblWarning.RemoveFromClassList("hidden-element");
+            _lblWarning.style.display = DisplayStyle.Flex;
+        }
+        else if (_lblWarning != null && !duplicatesExist && _lblWarning.text == "DUPLICATE CHARACTER DETECTED!")
+        {
+            _lblWarning.AddToClassList("hidden-element");
+            _lblWarning.style.display = DisplayStyle.None;
         }
 
         if (_btnStart != null)
         {
-            // Chỉ hiển thị nút Start cho Chủ phòng (Slot 0) để bấm bắt đầu
-            _btnStart.style.display = isRoomHost ? DisplayStyle.Flex : DisplayStyle.None;
-            
-            bool canStart = true; // Cho phép bắt đầu game bất kỳ lúc nào để test
-            _btnStart.SetEnabled(canStart);
-            
+            // Chỉ hiển thị nút Start cho Chủ phòng (Slot 0)
             if (isRoomHost)
             {
                 _btnStart.RemoveFromClassList("hidden-element");
+                _btnStart.style.display = DisplayStyle.Flex;
             }
             else
             {
                 _btnStart.AddToClassList("hidden-element");
+                _btnStart.style.display = DisplayStyle.None;
             }
+
+            // Chỉ enable START khi đủ điều kiện
+            _btnStart.SetEnabled(canStart);
+            _btnStart.text = canStart ? "START EXPEDITION" :
+                             !enoughPlayers ? $"WAITING ({NetPlayers.Count}/4 PLAYERS)" :
+                             !allReady ? $"WAITING ({readyCount}/{NetPlayers.Count} READY)" :
+                             "START EXPEDITION";
         }
 
         // Cập nhật màu nút Ready cho bản thân
@@ -840,10 +882,16 @@ public class NetworkWaitingRoom : NetworkBehaviour
                 }
                 else
                 {
-                    // Tạm thời cho phép chọn trùng nhân vật, không làm mờ hoặc khóa thẻ
+                    // Khóa card vì người khác đã chiếm nhân vật này
+                    if (card != null)
+                    {
+                        card.AddToClassList("card-locked");
+                        card.style.opacity = 0.4f;
+                    }
                     if (statusLbl != null)
                     {
-                        statusLbl.text = "SELECTED BY " + string.Join(" + ", selectors);
+                        statusLbl.text = "TAKEN";
+                        statusLbl.RemoveFromClassList("active-status");
                     }
                 }
             }
@@ -944,7 +992,19 @@ public class NetworkWaitingRoom : NetworkBehaviour
         ulong clientId = rpcParams.Receive.SenderClientId;
         Debug.Log($"[SERVER] Nhận yêu cầu đổi nhân vật thành {characterId} từ Client {clientId}");
         
-        // 1. Tạm thời cho phép chọn trùng nhân vật (Bỏ qua kiểm tra phía server)
+        // 1. Kiểm tra xem CharacterId này có bị người khác chiếm không
+        foreach (var p in NetPlayers)
+        {
+            if (p.ClientId != clientId && p.CharacterId == characterId)
+            {
+                Debug.LogWarning($"[SERVER] Nhân vật {characterId} đã bị Client {p.ClientId} chọn! Từ chối yêu cầu của Client {clientId}");
+                NotifyCharacterTakenClientRpc(characterId, new ClientRpcParams
+                {
+                    Send = new ClientRpcSendParams { TargetClientIds = new ulong[] { clientId } }
+                });
+                return;
+            }
+        }
 
         // 2. Thực hiện đổi nhân vật cho client gửi yêu cầu
         for (int i = 0; i < NetPlayers.Count; i++)
@@ -1196,7 +1256,12 @@ public class NetworkWaitingRoom : NetworkBehaviour
         
         if (slotIdx == -1) return;
 
-        // Spawn mô hình tương ứng (hoặc default prefab nếu là -1, mesh sẽ tự ẩn phía client)
+        // Không spawn mô hình khi chưa chọn nhân vật – sẽ spawn khi chọn lần đầu qua RespawnPlayerObject
+        if (charId == -1)
+        {
+            Debug.Log($"[SPAWN] Client {clientId} chưa chọn nhân vật, bỏ qua spawn ban đầu.");
+            return;
+        }
 
         GameObject prefabToSpawn = GetPlayerPrefab(charId);
         if (prefabToSpawn != null)
@@ -1255,20 +1320,60 @@ public class NetworkWaitingRoom : NetworkBehaviour
     }
 
     [ServerRpc(RequireOwnership = false)]
-    private void StartGameServerRpc() {
+    private void StartGameServerRpc(ServerRpcParams rpcParams = default)
+    {
         if (!IsServer) return;
 
-        // Check duplicates on server side too to be absolutely safe
+        ulong senderClientId = rpcParams.Receive.SenderClientId;
+
+        // Chỉ Slot 0 (chủ phòng) mới được khởi động game
+        bool isSenderHost = false;
+        foreach (var p in NetPlayers)
+        {
+            if (p.ClientId == senderClientId && p.Slot == 0) { isSenderHost = true; break; }
+        }
+        if (!isSenderHost)
+        {
+            Debug.LogWarning("[SERVER] Chỉ chủ phòng (Slot 0) mới được bắt đầu game!");
+            return;
+        }
+
+        // Kiểm tra đủ 1 người
+        if (NetPlayers.Count < 1)
+        {
+            Debug.LogWarning($"[SERVER] Chưa đủ người chơi! Hiện tại: {NetPlayers.Count}/1");
+            return;
+        }
+
+        // Kiểm tra tất cả đều ready
+        int readyCount = 0;
+        foreach (var p in NetPlayers) if (p.IsReady) readyCount++;
+        if (readyCount != NetPlayers.Count)
+        {
+            Debug.LogWarning($"[SERVER] Chưa đủ người sẵn sàng! {readyCount}/{NetPlayers.Count} ready");
+            return;
+        }
+
+        // Kiểm tra không trùng nhân vật
         if (HasDuplicateCharacters())
         {
             Debug.LogError("[SERVER] Không thể bắt đầu game vì có trùng nhân vật!");
             return;
         }
 
-        Debug.Log("--- ĐANG GỌI LOAD SCENE: HBao........................................ ---");
-        if (NetworkManager.Singleton != null && NetworkManager.Singleton.SceneManager != null) {
-            //NetworkManager.Singleton.SceneManager.LoadScene("HBao", UnityEngine.SceneManagement.LoadSceneMode.Single);
-            NetworkManager.Singleton.SceneManager.LoadScene("Map", UnityEngine.SceneManagement.LoadSceneMode.Single);
+        // Lưu trạng thái phòng đã start và danh sách người chơi vào NetworkBootstrap để phục vụ rejoin
+        NetworkBootstrap.IsGameStarted = true;
+        NetworkBootstrap.CurrentActiveRoomId = NetRoomId.Value.ToString();
+        NetworkBootstrap.ActivePlayerNames.Clear();
+        foreach (var p in NetPlayers)
+        {
+            NetworkBootstrap.ActivePlayerNames.Add(p.Name.ToString());
+        }
+
+        Debug.Log($"[SERVER] Tất cả điều kiện thỏa mãn! Đang tải cảnh {gameplaySceneName}...");
+        if (NetworkManager.Singleton != null && NetworkManager.Singleton.SceneManager != null)
+        {
+            NetworkManager.Singleton.SceneManager.LoadScene(gameplaySceneName, UnityEngine.SceneManagement.LoadSceneMode.Single);
         }
     }
 
@@ -1421,6 +1526,26 @@ public class NetworkWaitingRoom : NetworkBehaviour
         }
     }
 
+    /// <summary>
+    /// Thông báo về cho client khi server từ chối vì nhân vật đã bị người khác chiếm
+    /// </summary>
+    [ClientRpc]
+    private void NotifyCharacterTakenClientRpc(int characterId, ClientRpcParams clientRpcParams = default)
+    {
+        string charName = (characterId >= 0 && characterId < _characters.Length)
+            ? _characters[characterId].Name : "CHARACTER";
+        Debug.LogWarning($"[CLIENT] Nhân vật {charName} đã bị người khác chọn!");
+
+        if (_lblWarning != null)
+        {
+            _lblWarning.text = $"{charName} IS ALREADY TAKEN!";
+            _lblWarning.RemoveFromClassList("hidden-element");
+            _lblWarning.style.display = DisplayStyle.Flex;
+            CancelInvoke(nameof(HideWarningLabel));
+            Invoke(nameof(HideWarningLabel), 2.5f);
+        }
+    }
+
     private async void LeaveRoom()
     {
         string roomId = PlayerPrefs.GetString("CurrentRoomID", "");
@@ -1444,5 +1569,48 @@ public class NetworkWaitingRoom : NetworkBehaviour
         
         Debug.Log("[Lobby] Đang chuyển sang cảnh MainMenu...");
         UnityEngine.SceneManagement.SceneManager.LoadScene("MainMenu");
+    }
+
+    private void OnDestroy()
+    {
+        // Dọn dẹp khi Stop Play Mode trong Unity Editor hoặc thoát game
+        // Tránh player cũ bị giữ lại trong NetworkManager (DontDestroyOnLoad)
+        try
+        {
+            if (NetworkManager.Singleton == null) return;
+
+            if (IsServer && NetPlayers != null)
+            {
+                Debug.Log("[Lobby] OnDestroy: Dọn dẹp player objects trước khi phá hủy...");
+
+                // Despawn tất cả player objects trước khi dọn
+                if (NetworkManager.Singleton.IsListening)
+                {
+                    foreach (var client in NetworkManager.Singleton.ConnectedClientsList)
+                    {
+                        if (client.PlayerObject != null)
+                        {
+                            try { client.PlayerObject.Despawn(true); }
+                            catch (System.Exception ex)
+                            {
+                                Debug.LogWarning($"[Lobby] OnDestroy despawn warning: {ex.Message}");
+                            }
+                        }
+                    }
+                }
+
+                // Xóa danh sách players
+                try { NetPlayers.Clear(); } catch { }
+            }
+
+            // Huỷ đăng ký callback để tránh memory leak
+            NetworkManager.Singleton.OnClientConnectedCallback -= OnClientConnected;
+            NetworkManager.Singleton.OnClientDisconnectCallback -= OnClientDisconnected;
+        }
+        catch (System.Exception ex)
+        {
+            // Bỏ qua lỗi khi dòng sự kiện xảy ra trong quá trình Unity Editor stop
+            Debug.LogWarning($"[Lobby] OnDestroy warning (bình thường khi dừng Editor): {ex.Message}");
+        }
     }
 }

@@ -39,6 +39,37 @@ public class SceneLoader : MonoBehaviour
         if (_root != null) _root.AddToClassList("hidden-element");
     }
 
+    public void ShowLoading(string statusText)
+    {
+        if (_root == null) InitializeUI();
+        if (_root == null) return;
+        
+        _root.RemoveFromClassList("hidden-element");
+        _root.style.opacity = 1;
+        _lblStatus.text = statusText;
+        _progressFill.style.width = Length.Percent(0);
+    }
+
+    public void SetProgress(float progressPercent)
+    {
+        if (_progressFill != null)
+        {
+            _progressFill.style.width = Length.Percent(progressPercent);
+        }
+    }
+
+    public async void HideLoading()
+    {
+        if (_root == null) return;
+        if (_lblStatus != null) _lblStatus.text = "READY TO DESCEND";
+        if (_progressFill != null) _progressFill.style.width = Length.Percent(100);
+        
+        await Task.Delay(500);
+        _root.style.opacity = 0;
+        await Task.Delay(500);
+        _root.AddToClassList("hidden-element");
+    }
+
     public async Task LoadSceneAsync(string sceneName, string statusText = "INITIALIZING...")
     {
         if (_root == null) InitializeUI();
