@@ -59,4 +59,13 @@ public class MayaAnimationBridge : MonoBehaviour
             mainPlayerScript.OnShootNormalAttack();
         }
     }
+
+    // Forward sự kiện phóng kỹ năng R / VFX R (Animation Event)
+    public void OnShootRSkill()
+    {
+        if (mainPlayerScript != null)
+        {
+            mainPlayerScript.OnShootRSkill();
+        }
+    }
 }

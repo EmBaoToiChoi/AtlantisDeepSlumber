@@ -19,6 +19,8 @@ public class CollectibleItemDrop : NetworkBehaviour
     {
         if (localPlayer is LeoPlayer leo) return leo.CurrentHealth;
         if (localPlayer is ArthurPlayer arthur) return arthur.CurrentHealth;
+        if (localPlayer is ElenaPlayer elena) return elena.CurrentHealth;
+        if (localPlayer is MayaPlayer maya) return maya.CurrentHealth;
         return 0f;
     }
 
@@ -26,18 +28,23 @@ public class CollectibleItemDrop : NetworkBehaviour
     {
         if (localPlayer is LeoPlayer leo) leo.pendingPickItem = item;
         else if (localPlayer is ArthurPlayer arthur) arthur.pendingPickItem = item;
+        // Elena and Maya do not use pendingPickItem
     }
 
     private void PlayPickAnimation()
     {
         if (localPlayer is LeoPlayer leo) leo.PlayAnimation("Pick", 0.1f);
         else if (localPlayer is ArthurPlayer arthur) arthur.PlayAnimation("Idle_Pick", 0.1f);
+        else if (localPlayer is ElenaPlayer elena) elena.PlayAnimation("Idle_Pick", 0.1f);
+        else if (localPlayer is MayaPlayer maya) maya.PlayAnimation("Idle_Pick", 0.1f);
     }
 
     private bool TryAddItem(string name)
     {
         if (localPlayer is LeoPlayer leo) return leo.TryAddItem(name, false);
         if (localPlayer is ArthurPlayer arthur) return arthur.TryAddItem(name, false);
+        if (localPlayer is ElenaPlayer elena) return elena.TryAddItem(name);
+        if (localPlayer is MayaPlayer maya) return maya.TryAddItem(name);
         return false;
     }
 
@@ -45,6 +52,8 @@ public class CollectibleItemDrop : NetworkBehaviour
     {
         if (localPlayer is LeoPlayer leo) return leo.isStandaloneMode;
         if (localPlayer is ArthurPlayer arthur) return arthur.isStandaloneMode;
+        if (localPlayer is ElenaPlayer elena) return elena.isStandaloneMode;
+        if (localPlayer is MayaPlayer maya) return maya.isStandaloneMode;
         return false;
     }
     private PlayerHUDController hud;
@@ -177,14 +186,31 @@ public class CollectibleItemDrop : NetworkBehaviour
                 return;
             }
         }
+
+        ElenaPlayer[] elenaPlayers = FindObjectsOfType<ElenaPlayer>();
+        foreach (var p in elenaPlayers)
+        {
+            if (p.isStandaloneMode || p.IsOwner)
+            {
+                localPlayer = p;
+                return;
+            }
+        }
+
+        MayaPlayer[] mayaPlayers = FindObjectsOfType<MayaPlayer>();
+        foreach (var p in mayaPlayers)
+        {
+            if (p.isStandaloneMode || p.IsOwner)
+            {
+                localPlayer = p;
+                return;
+            }
+        }
     }
 
     private void StartCollecting()
     {
         if (localPlayer == null) return;
-
-        // Gán vật phẩm chờ nhặt cho người chơi
-        SetPendingPickItem(gameObject);
 
         // Tắt nhắc nhở tương tác ngay lập tức
         if (hud != null)
@@ -194,6 +220,9 @@ public class CollectibleItemDrop : NetworkBehaviour
 
         // Phát hoạt ảnh nhặt đồ trên Player
         PlayPickAnimation();
+
+        // Nhặt vật phẩm ngay lập tức để đồng bộ mạng hoạt động tin cậy 100%
+        ConfirmCollect();
     }
 
     public void ConfirmCollect()

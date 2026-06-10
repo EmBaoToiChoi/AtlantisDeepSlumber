@@ -60,6 +60,10 @@ public class ExperienceGem : NetworkBehaviour
         NetworkVariableWritePermission.Server
     );
 
+    [Header("Spawn Settings")]
+    public float attractionDelay = 1.0f; // Trì hoãn 1.0 giây trước khi bắt đầu bị hút để đồng bộ mạng hiển thị
+    private float spawnTimer = 0f;
+
     private Transform targetPlayer;
     private bool isAttracted = false;
     private float startY;
@@ -67,12 +71,18 @@ public class ExperienceGem : NetworkBehaviour
     private void Start()
     {
         startY = transform.position.y;
+        spawnTimer = attractionDelay;
     }
 
     private void Update()
     {
         // Hiệu ứng xoay tròn 3D để vật phẩm rơi trông sinh động và lấp lánh hơn
         transform.Rotate(new Vector3(0.2f, 1.0f, 0.15f).normalized, rotationSpeed * Time.deltaTime, Space.Self);
+
+        if (spawnTimer > 0f)
+        {
+            spawnTimer -= Time.deltaTime;
+        }
 
         if (!isAttracted)
         {
@@ -87,7 +97,7 @@ public class ExperienceGem : NetworkBehaviour
         {
             if (IsServer)
             {
-                if (!isAttracted)
+                if (!isAttracted && spawnTimer <= 0f)
                 {
                     FindClosestPlayerInRange();
                     if (isAttracted && targetPlayer != null)
@@ -119,7 +129,7 @@ public class ExperienceGem : NetworkBehaviour
         else
         {
             // Standalone mode
-            if (!isAttracted)
+            if (!isAttracted && spawnTimer <= 0f)
             {
                 FindClosestPlayerInRange();
             }
