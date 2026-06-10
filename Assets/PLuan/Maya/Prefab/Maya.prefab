@@ -394,6 +394,7 @@ MonoBehaviour:
   qSkillCooldown: 15
   qSkillDuration: 10
   qSkillSpreadAngle: 10
+  qSkillSkeletonPrefab: {fileID: 5277984816960544984, guid: 2ee0035ff29f0194a9810f37fe0da731, type: 3}
   isQSkillActiveNet:
     UpdateTraits:
       MinSecondsBetweenUpdates: 0
@@ -402,6 +403,11 @@ MonoBehaviour:
   rSkillCooldown: 20
   rSkillDuration: 5
   rSkillShootCooldown: 0.3
+  rSkillProjectilePrefab: {fileID: 906073527957232500, guid: 57ee1491047d0a9468577529abae281b, type: 3}
+  rSkillSpawnPoint: {fileID: 6320282578570835534}
+  rSkillHealPercentage: 0.25
+  rSkillProjectileSpeed: 30
+  rSkillProjectileLifetime: 4
   isRSkillActiveNet:
     UpdateTraits:
       MinSecondsBetweenUpdates: 0
