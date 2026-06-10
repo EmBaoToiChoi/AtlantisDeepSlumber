@@ -10,6 +10,11 @@ public class NetworkBootstrap : MonoBehaviour
     public static string ServerRoomName = "Atlantis Lobby";
     public static string ServerRoomId = "000000";
 
+    // Quản lý trạng thái phòng và người chơi
+    public static string CurrentActiveRoomId = "";
+    public static bool IsGameStarted = false;
+    public static System.Collections.Generic.HashSet<string> ActivePlayerNames = new System.Collections.Generic.HashSet<string>();
+
     private void Awake()
     {
         if (Instance == null)
@@ -57,6 +62,8 @@ public class NetworkBootstrap : MonoBehaviour
         // SỬ DỤNG NETWORK SCENE MANAGER ĐỂ ĐỒNG BỘ CẢNH CHUẨN
         if (NetworkManager.Singleton.SceneManager != null)
         {
+            NetworkManager.Singleton.SceneManager.OnSceneEvent -= OnSceneEventReceived;
+            NetworkManager.Singleton.SceneManager.OnSceneEvent += OnSceneEventReceived;
             NetworkManager.Singleton.SceneManager.LoadScene("Waiting hall", UnityEngine.SceneManagement.LoadSceneMode.Single);
         }
         else
@@ -78,14 +85,17 @@ public class NetworkBootstrap : MonoBehaviour
         
         if (NetworkManager.Singleton != null && NetworkManager.Singleton.ConnectedClientsList.Count == 0)
         {
-            Debug.Log("[SERVER] Không còn người chơi nào! Đang tự động reset VPS về cảnh 'Map'...");
+            Debug.Log("[SERVER] Không còn người chơi nào! Đang tự động reset VPS về cảnh 'Waiting hall'...");
             
             // Xóa sạch dữ liệu chờ và đưa về mặc định
             PendingPlayerNames.Clear();
             ServerRoomName = "Atlantis Lobby";
             ServerRoomId = "000000";
+            CurrentActiveRoomId = "";
+            IsGameStarted = false;
+            ActivePlayerNames.Clear();
 
-            // Đưa VPS quay về cảnh Map đón lượt chơi mới
+            // Đưa VPS quay về cảnh Waiting hall đón lượt chơi mới
             if (NetworkManager.Singleton.SceneManager != null)
             {
                 NetworkManager.Singleton.SceneManager.LoadScene("Waiting hall", UnityEngine.SceneManagement.LoadSceneMode.Single);
@@ -99,21 +109,75 @@ public class NetworkBootstrap : MonoBehaviour
         response.CreatePlayerObject = false;
 
         string playerName = "Explorer";
+        string roomId = "000000";
+        string roomName = "Atlantis Lobby";
         if (request.Payload != null && request.Payload.Length > 0)
         {
             try {
                 string json = System.Text.Encoding.UTF8.GetString(request.Payload);
                 var data = JsonUtility.FromJson<ConnectionPayload>(json);
                 playerName = data.playerName;
-                ServerRoomName = data.roomName;
-                ServerRoomId = data.roomId;
-                Debug.Log($"[SERVER] Nhận dữ liệu JSON: {playerName} | {ServerRoomName}");
+                roomName = data.roomName;
+                roomId = data.roomId;
+                Debug.Log($"[SERVER] Nhận dữ liệu JSON kết nối: name={playerName} | roomName={roomName} | roomId={roomId}");
             } catch {
                 Debug.LogError("[SERVER] Lỗi phân giải JSON kết nối!");
             }
         }
         
         PendingPlayerNames[request.ClientNetworkId] = playerName;
+
+        // XỬ LÝ CHUYỂN CẢNH KHI CÓ PHÒNG MỚI HOẶC REJOIN
+        if (NetworkManager.Singleton.IsServer)
+        {
+            // Nếu đây là phòng mới (roomId khác với phòng đang chạy hoặc chưa có phòng nào)
+            if (string.IsNullOrEmpty(CurrentActiveRoomId) || CurrentActiveRoomId == "000000" || roomId != CurrentActiveRoomId)
+            {
+                Debug.Log($"[SERVER] Phát hiện phòng mới được tạo/kết nối. Chuyển từ Room ID '{CurrentActiveRoomId}' sang '{roomId}'. Reset trạng thái game.");
+                CurrentActiveRoomId = roomId;
+                ServerRoomId = roomId;
+                ServerRoomName = roomName;
+                IsGameStarted = false;
+                ActivePlayerNames.Clear();
+
+                // Đưa VPS quay về cảnh Waiting hall
+                StartLoadWaitingHall();
+            }
+            else
+            {
+                // Nếu trùng roomId (cùng phòng)
+                if (IsGameStarted)
+                {
+                    // Nếu game đã bắt đầu
+                    if (ActivePlayerNames.Contains(playerName))
+                    {
+                        Debug.Log($"[SERVER] Player '{playerName}' rejoin vào phòng đang chạy game. Cho phép vào thẳng scene.");
+                        // Tự động đồng bộ sang Map/Map2 thông qua NetworkSceneManager
+                    }
+                    else
+                    {
+                        Debug.LogWarning($"[SERVER] Player '{playerName}' không nằm trong danh sách game đã start của phòng này. Từ chối kết nối.");
+                        response.Approved = false;
+                        response.Reason = "Game already in progress.";
+                    }
+                }
+            }
+        }
+    }
+
+    private void StartLoadWaitingHall()
+    {
+        StartCoroutine(LoadWaitingHallCoroutine());
+    }
+
+    private System.Collections.IEnumerator LoadWaitingHallCoroutine()
+    {
+        yield return null; // Đợi 1 frame
+        if (NetworkManager.Singleton != null && NetworkManager.Singleton.SceneManager != null)
+        {
+            Debug.Log("[SERVER] Đang chuyển cảnh về Waiting hall...");
+            NetworkManager.Singleton.SceneManager.LoadScene("Waiting hall", UnityEngine.SceneManagement.LoadSceneMode.Single);
+        }
     }
 
     [System.Serializable]
@@ -154,11 +218,20 @@ public class NetworkBootstrap : MonoBehaviour
         };
         NetworkManager.Singleton.OnClientDisconnectCallback += (id) => {
             Debug.Log("<color=red>[NETWORK] KẾT NỐI THẤT BẠI HOẶC BỊ NGẮT! Hãy kiểm tra Port 7777 trên VPS.</color>");
+            if (NetworkManager.Singleton.SceneManager != null)
+            {
+                NetworkManager.Singleton.SceneManager.OnSceneEvent -= OnSceneEventReceived;
+            }
         };
 
         NetworkManager.Singleton.StartClient();
         Debug.Log($"[NETWORK] Đang thử kết nối tới 165.99.14.40:7777... (Tên: {data.playerName})");
 
+        if (NetworkManager.Singleton.SceneManager != null)
+        {
+            NetworkManager.Singleton.SceneManager.OnSceneEvent -= OnSceneEventReceived;
+            NetworkManager.Singleton.SceneManager.OnSceneEvent += OnSceneEventReceived;
+        }
     }
 
     public void StartServerAsHost()
@@ -166,6 +239,53 @@ public class NetworkBootstrap : MonoBehaviour
         // TRƯỜNG HỢP DÙNG VPS: Cả người tạo phòng cũng là Client
         // Vì Server thực sự đã chạy sẵn trên VPS rồi.
         StartClientAsPlayer();
+    }
+
+    private void OnSceneEventReceived(SceneEvent sceneEvent)
+    {
+        if (!NetworkManager.Singleton.IsClient) return;
+        if (sceneEvent.ClientId != NetworkManager.Singleton.LocalClientId) return;
+
+        switch (sceneEvent.SceneEventType)
+        {
+            case SceneEventType.Load:
+                if (SceneLoader.Instance != null)
+                {
+                    SceneLoader.Instance.ShowLoading($"LOADING {sceneEvent.SceneName.ToUpper()}...");
+                    if (sceneEvent.AsyncOperation != null)
+                    {
+                        StartCoroutine(TrackSceneLoadProgress(sceneEvent.AsyncOperation));
+                    }
+                }
+                break;
+            case SceneEventType.LoadComplete:
+                if (SceneLoader.Instance != null)
+                {
+                    SceneLoader.Instance.HideLoading();
+                }
+                break;
+        }
+    }
+
+    private System.Collections.IEnumerator TrackSceneLoadProgress(AsyncOperation op)
+    {
+        while (op != null && !op.isDone)
+        {
+            float progress = Mathf.Clamp01(op.progress / 0.9f);
+            if (SceneLoader.Instance != null)
+            {
+                SceneLoader.Instance.SetProgress(progress * 100f);
+            }
+            yield return null;
+        }
+    }
+
+    private void OnDestroy()
+    {
+        if (NetworkManager.Singleton != null && NetworkManager.Singleton.SceneManager != null)
+        {
+            NetworkManager.Singleton.SceneManager.OnSceneEvent -= OnSceneEventReceived;
+        }
     }
 
 
