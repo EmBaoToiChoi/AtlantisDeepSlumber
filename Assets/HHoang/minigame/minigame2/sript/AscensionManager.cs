@@ -145,7 +145,7 @@ public class AscensionManager : NetworkBehaviour
         }
     }
 
-    void CheckWinCondition()
+    /*void CheckWinCondition()
     {
         if (placedCrystals.Count < 4) return;
         isTimerRunning.Value = false;
@@ -160,6 +160,41 @@ public class AscensionManager : NetworkBehaviour
 
         if (allCorrect) TriggerVictoryEffectsClientRpc();
         else StartCoroutine(DelayEject());
+    }*/
+
+    void CheckWinCondition()
+    {
+        if (placedCrystals.Count < 4) return;
+        isTimerRunning.Value = false;
+
+        // BƯỚC 1: Quét trước 1 vòng xem có trụ nào đặt sai không
+        bool allCorrect = true;
+        for (int i = 0; i < pillarPositions.Length; i++)
+        {
+            if (pillarStates[i] != i)
+            {
+                allCorrect = false;
+                break; // Phát hiện 1 cái sai là thoát vòng lặp luôn, không cần check thêm
+            }
+        }
+
+        // BƯỚC 2: Chốt màu cho TẤT CẢ các trụ dựa trên kết quả ở bước 1
+        Color finalColor = allCorrect ? Color.green : Color.red;
+
+        for (int i = 0; i < pillarPositions.Length; i++)
+        {
+            SetFlowColorClientRpc(i, finalColor);
+        }
+
+        // BƯỚC 3: Kích hoạt hiệu ứng
+        if (allCorrect) 
+        {
+            TriggerVictoryEffectsClientRpc();
+        }
+        else 
+        {
+            StartCoroutine(DelayEject());
+        }
     }
 
     [ClientRpc]

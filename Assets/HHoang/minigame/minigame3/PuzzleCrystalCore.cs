@@ -116,14 +116,20 @@ public class PuzzleCrystalCore : NetworkBehaviour // <--- SỬA LẠI THÀNH NET
         {
             playerRb.isKinematic = false;
             
-            // 1. Tăng lực nảy và HẤT BỔNG nhân vật lên trên để né ma sát sàn
-            direction.y = 0.2f; // Trọng tâm hất lên cao (thay vì 0.2 như cũ)
-            playerRb.AddForce(direction.normalized * 60f, ForceMode.Impulse); // Tăng lực lên 60!
+            // 1. Tính toán hướng ngang trước (bỏ qua độ cao hiện tại)
+            Vector3 pushDirection = direction;
+            pushDirection.y = 0; 
+            pushDirection = pushDirection.normalized; // Chuẩn hóa hướng ngang
 
-            // 2. Làm choáng nhân vật (Tắt script di chuyển tạm thời để lực bay phát huy tác dụng)
+            // 2. Ép cứng một lực hất bổng cố định tạo hình vòng cung (Góc tầm 45 độ)
+            pushDirection.y = 0.5f; 
+
+            // 3. Tống lực. Dùng mức 10f hoặc 15f là cực kỳ an toàn!
+            playerRb.AddForce(pushDirection.normalized * 15f, ForceMode.Impulse); 
+
             if (localPlayer.TryGetComponent<MovementController>(out var mover))
             {
-                StartCoroutine(StunPlayerRoutine(mover, 0.5f)); // Khóa chân 0.5 giây
+                StartCoroutine(StunPlayerRoutine(mover, 0.5f)); 
             }
         }
     }
