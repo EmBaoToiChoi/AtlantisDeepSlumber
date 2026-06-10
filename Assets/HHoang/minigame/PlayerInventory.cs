@@ -38,14 +38,13 @@ public class PlayerInteraction : NetworkBehaviour
                 // Ưu tiên 2: Đứng ở hộp InteractBox -> Tương tác với Mini-game 1
                 else if (currentInteractBox != null) 
                 { 
-                    // Gọi hàm tương tác của Mini-game 1 tại đây
-                    // Ví dụ: currentInteractBox.ProcessCrystal(this, heldCoreNetworkId.Value);
                     Debug.Log("Đang tương tác với Mini-game 1");
                 }
-                // Ưu tiên 3: Không đứng ở đâu cả -> Vứt ngọc
+                // Ưu tiên 3: Không đứng ở đâu cả -> NÉM/THẢ NGỌC RA NGOÀI
                 else 
                 { 
-                    RequestDropServerRpc(); 
+                    // [VỊ TRÍ SỬA 1]: Đổi từ RequestDropServerRpc() sang gọi lệnh Ném
+                    RequestThrowServerRpc(transform.forward); 
                 }
             }
         }
@@ -56,7 +55,14 @@ public class PlayerInteraction : NetworkBehaviour
         Collider[] hitColliders = Physics.OverlapSphere(transform.position, 2f, interactableLayer);
         foreach (var hit in hitColliders)
         {
-            if (hit.TryGetComponent<CrystalCore>(out var core) && !core.isSnapped.Value)
+            // [VỊ TRÍ SỬA 2]: Thêm lệnh check ngọc Puzzle của Mini-game 3 trước
+            if (hit.TryGetComponent<PuzzleCrystalCore>(out var puzzleCore) && !puzzleCore.isSnapped.Value)
+            {
+                RequestPickupPuzzleServerRpc(puzzleCore.NetworkObject.NetworkObjectId);
+                break;
+            }
+            // Logic check ngọc thường cũ giữ nguyên
+            else if (hit.TryGetComponent<CrystalCore>(out var core) && !core.isSnapped.Value)
             {
                 RequestPickupServerRpc(core.NetworkObject.NetworkObjectId);
                 break;
@@ -96,5 +102,52 @@ public class PlayerInteraction : NetworkBehaviour
         if (!IsServer) return;
         heldCoreNetworkId.Value = ulong.MaxValue;
         isCarryingCore.Value = false;
+    }
+
+    // =========================================================
+    // [VỊ TRÍ SỬA 3]: THÊM 2 HÀM SERVER RPC MỚI VÀO CUỐI FILE
+    // =========================================================
+
+    [ServerRpc]
+    private void RequestPickupPuzzleServerRpc(ulong networkObjectId, ServerRpcParams rpcParams = default)
+    {
+        if (NetworkManager.SpawnManager.SpawnedObjects.TryGetValue(networkObjectId, out var netObj))
+        {
+            var core = netObj.GetComponent<PuzzleCrystalCore>();
+            ulong senderId = rpcParams.Receive.SenderClientId;
+
+            // Check luật 1 lần chạm
+            if (core.CanPickup(senderId))
+            {
+                core.PerformPickup(senderId);
+                heldCoreNetworkId.Value = networkObjectId;
+                isCarryingCore.Value = true;
+            }
+            else
+            {
+                core.RepelPlayer(senderId); // Bị từ chối -> Đẩy lùi
+            }
+        }
+    }
+
+    [ServerRpc]
+    private void RequestThrowServerRpc(Vector3 throwDirection, ServerRpcParams rpcParams = default)
+    {
+        if (heldCoreNetworkId.Value != ulong.MaxValue && 
+            NetworkManager.SpawnManager.SpawnedObjects.TryGetValue(heldCoreNetworkId.Value, out var netObj))
+        {
+            // Tự động phân loại: Nếu là ngọc Puzzle thì ném văng ra, nếu ngọc thường thì rớt xuống đất
+            if (netObj.TryGetComponent<PuzzleCrystalCore>(out var puzzleCore))
+            {
+                puzzleCore.PerformThrow(throwDirection);
+            }
+            else if (netObj.TryGetComponent<CrystalCore>(out var core))
+            {
+                core.PerformDrop();
+            }
+            
+            heldCoreNetworkId.Value = ulong.MaxValue;
+            isCarryingCore.Value = false;
+        }
     }
 }
