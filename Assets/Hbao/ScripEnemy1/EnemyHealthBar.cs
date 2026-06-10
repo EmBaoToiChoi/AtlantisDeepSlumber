@@ -10,6 +10,7 @@ public class EnemyHealthBar : MonoBehaviour
     public Enemy3_Buaa enemy3;
     public Enemy4_Bongtoi enemy4;
     public Enemy5_PhuThuy enemy5;
+    public Skeleton skeleton;
     public UIDocument uiDocument;
 
     private VisualElement progressBar; 
@@ -73,7 +74,7 @@ public class EnemyHealthBar : MonoBehaviour
 
     private void FindEnemyInParent()
     {
-        if (enemy == null && enemy2 == null && enemy3 == null && enemy4 == null && enemy5 == null)
+        if (enemy == null && enemy2 == null && enemy3 == null && enemy4 == null && enemy5 == null && skeleton == null)
         {
             enemy = GetComponentInParent<Enemy1_DapBua>();
             if (enemy != null) return;
@@ -88,6 +89,9 @@ public class EnemyHealthBar : MonoBehaviour
             if (enemy4 != null) return;
 
             enemy5 = GetComponentInParent<Enemy5_PhuThuy>();
+            if (enemy5 != null) return;
+
+            skeleton = GetComponentInParent<Skeleton>();
         }
     }
 
@@ -120,6 +124,11 @@ public class EnemyHealthBar : MonoBehaviour
         {
             enemyName = enemy5.gameObject.name;
             curHp = enemy5.ActualCurrentHealth;
+        }
+        else if (skeleton != null)
+        {
+            enemyName = skeleton.gameObject.name;
+            curHp = skeleton.ActualCurrentHealth;
         }
 
         // Loại bỏ hậu tố (Clone) để tên hiển thị đẹp mắt
@@ -156,6 +165,7 @@ public class EnemyHealthBar : MonoBehaviour
         if (enemy3 != null) return enemy3.maxHealth;
         if (enemy4 != null) return enemy4.maxHealth;
         if (enemy5 != null) return enemy5.maxHealth;
+        if (skeleton != null) return skeleton.maxHealth;
         return 100f;
     }
 
@@ -166,6 +176,7 @@ public class EnemyHealthBar : MonoBehaviour
         if (enemy3 != null) return enemy3.ActualCurrentHealth;
         if (enemy4 != null) return enemy4.ActualCurrentHealth;
         if (enemy5 != null) return enemy5.ActualCurrentHealth;
+        if (skeleton != null) return skeleton.ActualCurrentHealth;
         return 0f;
     }
 
