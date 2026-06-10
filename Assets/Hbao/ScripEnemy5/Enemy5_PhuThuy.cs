@@ -358,6 +358,20 @@ public class Enemy5_PhuThuy : NetworkBehaviour
         else if (!isBlinking && Random.value < 0.35f && CurrentStateValue == EnemyState.Chase) ExecuteBlinkDodge();
     }
 
+    /// <summary>
+    /// Áp dụng hiệu ứng choáng từ Skill Q của Arthur. Chỉ chạy trên Server hoặc Standalone.
+    /// </summary>
+    public void ApplyStun(float duration)
+    {
+        bool auth = isStandaloneMode || (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening && IsServer);
+        if (!auth) return;
+        if (CurrentStateValue == EnemyState.Dead) return;
+
+        staggerTimer = duration;
+        ChangeState(EnemyState.Stagger);
+        Debug.Log($"[Enemy5_PhuThuy] Bị choáng (Skill Q Arthur) trong {duration}s");
+    }
+
     private void ExecuteBlinkDodge()
     {
         if (targetPlayer == null || !AgentReady) return;
