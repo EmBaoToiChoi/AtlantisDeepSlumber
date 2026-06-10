@@ -2967,6 +2967,23 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     protected float cameraDistance = 14f;
     protected bool isCursorLocked = true;
 
+    [Header("Camera Inversion Settings")]
+    public bool invertCameraY = false;
+
+    [Header("Aiming Settings")]
+    public float aimCameraDistance = 4f;
+    public float aimShoulderOffset = 0.8f;
+    public float aimPivotHeight = 1.3f;
+    public float aimCameraSmoothSpeed = 10f;
+    public float aimMinPitch = -80f;
+    public float aimMaxPitch = 80f;
+
+    private float defaultCameraDistance;
+    private float defaultPivotHeight;
+    private float currentShoulderOffset = 0f;
+    public bool IsAiming => false;
+
+
     [Header("Animation Settings")]
     public Animator anim;
     protected string currentAnimState;
@@ -3197,6 +3214,8 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         targetYaw = currentYaw;
         targetPitch = currentPitch;
         cameraDistance = cameraOffset.magnitude;
+        defaultCameraDistance = cameraDistance;
+        defaultPivotHeight = cameraPivotHeight;
 
         LockCursor(isCursorLocked);
 
@@ -3675,43 +3694,23 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         // Quét trạng thái tấn công chuẩn xác
         bool isAttacking = IsPlayingAttackState(out _, out _);
 
-        bool shouldAlignToCamera = (isArmed && rotateToCameraWhenArmed) ||
-                                   (!isArmed && rotateToCameraWhenUnarmed) ||
-                                   isAttacking;
-
-        if (shouldAlignToCamera)
+        // Xoay nhân vật: Luôn xoay theo hướng Camera để hỗ trợ đi ngang/lùi (strafe) mượt mà giống Elena
+        if (targetCamera != null && !IsPlayingActionAnimation())
         {
-            if (targetCamera != null)
+            Vector3 camForward = targetCamera.transform.forward;
+            camForward.y = 0f;
+            camForward.Normalize();
+            if (camForward != Vector3.zero)
             {
-                Vector3 camForward = targetCamera.transform.forward;
-                camForward.y = 0f;
-                if (camForward.sqrMagnitude > 0.001f)
-                {
-                    Quaternion targetRot = Quaternion.LookRotation(camForward.normalized);
-                    // Xoay ngay lập tức khi đang tấn công, mượt mà khi di chuyển bình thường
-                    float currentRotSpeed = isAttacking ? 150f : rotationSmoothSpeedArmed;
-                    transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, Time.deltaTime * currentRotSpeed);
-                }
-            }
-
-            if (isMoving)
-            {
-                targetInputX = moveX * (isRunning ? 1.0f : 0.5f);
-                targetInputZ = moveZ * (isRunning ? 1.0f : 0.5f);
-                targetSpeed = new Vector2(targetInputX, targetInputZ).magnitude;
+                transform.forward = camForward;
             }
         }
-        else
-        {
-            if (isMoving)
-            {
-                Quaternion targetRot = Quaternion.LookRotation(movementTranslation.normalized);
-                transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, Time.deltaTime * rotationSmoothSpeedUnarmed);
 
-                targetInputX = 0f;
-                targetInputZ = isRunning ? 1.0f : 0.5f;
-                targetSpeed = targetInputZ;
-            }
+        if (isMoving)
+        {
+            targetInputX = moveX * (isRunning ? 1.0f : 0.5f);
+            targetInputZ = moveZ * (isRunning ? 1.0f : 0.5f);
+            targetSpeed = new Vector2(targetInputX, targetInputZ).magnitude;
         }
 
         smoothedInputX = Mathf.MoveTowards(smoothedInputX, targetInputX, Time.deltaTime * inputFilterSpeed);
@@ -3856,43 +3855,23 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         // --- ĐÃ SỬA: Đồng bộ kiểm tra trạng thái tấn công trên mạng cho chế độ Multiplayer ---
         bool isAttacking = IsPlayingAttackState(out _, out _);
 
-        bool shouldAlignToCamera = (isArmed && rotateToCameraWhenArmed) ||
-                                   (!isArmed && rotateToCameraWhenUnarmed) ||
-                                   isAttacking;
-
-        if (shouldAlignToCamera)
+        // Xoay nhân vật: Luôn xoay theo hướng Camera để hỗ trợ đi ngang/lùi (strafe) mượt mà giống Elena
+        if (targetCamera != null && !IsPlayingActionAnimation())
         {
-            if (targetCamera != null)
+            Vector3 camForward = targetCamera.transform.forward;
+            camForward.y = 0f;
+            camForward.Normalize();
+            if (camForward != Vector3.zero)
             {
-                Vector3 camForward = targetCamera.transform.forward;
-                camForward.y = 0f;
-                if (camForward.sqrMagnitude > 0.001f)
-                {
-                    Quaternion targetRot = Quaternion.LookRotation(camForward.normalized);
-                    // Xoay ngay lập tức khi đang tấn công, mượt mà khi di chuyển bình thường
-                    float currentRotSpeed = isAttacking ? 150f : rotationSmoothSpeedArmed;
-                    transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, Time.deltaTime * currentRotSpeed);
-                }
-            }
-
-            if (isMoving)
-            {
-                targetInputX = moveX * (isRunning ? 1.0f : 0.5f);
-                targetInputZ = moveZ * (isRunning ? 1.0f : 0.5f);
-                targetSpeed = new Vector2(targetInputX, targetInputZ).magnitude;
+                transform.forward = camForward;
             }
         }
-        else
-        {
-            if (isMoving)
-            {
-                Quaternion targetRot = Quaternion.LookRotation(movementTranslation.normalized);
-                transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, Time.deltaTime * rotationSmoothSpeedUnarmed);
 
-                targetInputX = 0f;
-                targetInputZ = isRunning ? 1.0f : 0.5f;
-                targetSpeed = targetInputZ;
-            }
+        if (isMoving)
+        {
+            targetInputX = moveX * (isRunning ? 1.0f : 0.5f);
+            targetInputZ = moveZ * (isRunning ? 1.0f : 0.5f);
+            targetSpeed = new Vector2(targetInputX, targetInputZ).magnitude;
         }
 
         smoothedInputX = Mathf.MoveTowards(smoothedInputX, targetInputX, Time.deltaTime * inputFilterSpeed);
@@ -4227,7 +4206,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         SyncNetVarBool(isRollingNet, proxyPlayerTest != null ? proxyPlayerTest.isRollingNet : null, false);
     }
 
-    private void LateUpdate()
+    void LateUpdate()
     {
         bool shouldFollow = isStandaloneMode || (IsSpawned && IsOwner);
         if (!shouldFollow || !enableCameraFollow) return;
@@ -4246,13 +4225,24 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
                 float mouseX = Input.GetAxis("Mouse X");
                 float mouseY = Input.GetAxis("Mouse Y");
                 targetYaw -= mouseX * cameraSensitivity;
-                targetPitch += mouseY * cameraSensitivity;
-                targetPitch = Mathf.Clamp(targetPitch, minPitch, maxPitch);
+                if (invertCameraY)
+                {
+                    targetPitch -= mouseY * cameraSensitivity;
+                }
+                else
+                {
+                    targetPitch += mouseY * cameraSensitivity;
+                }
+                float currentMinPitch = IsAiming ? aimMinPitch : minPitch;
+                float currentMaxPitch = IsAiming ? aimMaxPitch : maxPitch;
+                targetPitch = Mathf.Clamp(targetPitch, currentMinPitch, currentMaxPitch);
             }
 
+            // Làm mượt mà các góc xoay (Yaw & Pitch) bằng Lerp để di chuyển chuột vẫn mượt
             currentYaw = Mathf.Lerp(currentYaw, targetYaw, Time.deltaTime * rotationSmoothSpeed);
             currentPitch = Mathf.Lerp(currentPitch, targetPitch, Time.deltaTime * rotationSmoothSpeed);
 
+            // Tính toán offset xoay dựa trên góc Yaw và Pitch đã được làm mượt
             float yawRad = currentYaw * Mathf.Deg2Rad;
             float pitchRad = currentPitch * Mathf.Deg2Rad;
 
@@ -4262,13 +4252,27 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
                 -cameraDistance * Mathf.Cos(pitchRad) * Mathf.Cos(yawRad)
             );
 
-            Vector3 targetPosition = (transform.position + Vector3.up * cameraPivotHeight) + rotatedOffset;
+            // Smoothly interpolate shoulder offset, camera distance, and pivot height
+            float targetDist = IsAiming ? aimCameraDistance : defaultCameraDistance;
+            float targetPivot = IsAiming ? aimPivotHeight : defaultPivotHeight;
+            float targetOffset = IsAiming ? aimShoulderOffset : 0f;
+
+            cameraDistance = Mathf.Lerp(cameraDistance, targetDist, Time.deltaTime * aimCameraSmoothSpeed);
+            cameraPivotHeight = Mathf.Lerp(cameraPivotHeight, targetPivot, Time.deltaTime * aimCameraSmoothSpeed);
+            currentShoulderOffset = Mathf.Lerp(currentShoulderOffset, targetOffset, Time.deltaTime * aimCameraSmoothSpeed);
+
+            Vector3 camRight = new Vector3(Mathf.Cos(yawRad), 0f, Mathf.Sin(yawRad));
+            Vector3 rightOffsetVec = camRight * currentShoulderOffset;
+
+            // Gắn cứng camera theo vị trí của nhân vật (Loại bỏ Lerp vị trí để giải quyết triệt để lỗi delay, zoom co giãn, và lệch nhân vật ra rìa)
+            Vector3 targetPosition = (transform.position + Vector3.up * cameraPivotHeight) + rotatedOffset + rightOffsetVec;
             targetCamera.transform.position = targetPosition;
 
             if (cameraLookAtPlayer)
             {
+                // Khóa camera luôn nhìn thẳng vào nhân vật (không dùng Slerp rotation) để nhân vật luôn nằm chính giữa màn hình
                 targetCamera.transform.rotation = Quaternion.LookRotation(
-                    (transform.position + Vector3.up * cameraPivotHeight) - targetCamera.transform.position
+                    ((transform.position + Vector3.up * cameraPivotHeight) + rightOffsetVec) - targetCamera.transform.position
                 );
             }
         }

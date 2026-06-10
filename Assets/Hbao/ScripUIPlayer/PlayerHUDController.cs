@@ -911,7 +911,7 @@ public class PlayerHUDController : MonoBehaviour
                         bool activated = LocalPlayerTarget.TriggerQSkill();
                         if (activated)
                         {
-                            if (LocalPlayerTarget.CharacterClassIndex != 2)
+                            if (LocalPlayerTarget.CharacterClassIndex != 2 && LocalPlayerTarget.CharacterClassIndex != 1)
                             {
                                 currentCooldownQ = cooldownTimeQ;
                             }
@@ -937,7 +937,7 @@ public class PlayerHUDController : MonoBehaviour
                     if (currentCooldownR <= 0f && LocalPlayerTarget != null && !LocalPlayerTarget.IsInvisible)
                     {
                         LocalPlayerTarget.TriggerInvisibilitySkill();
-                        if (LocalPlayerTarget.CharacterClassIndex != 2)
+                        if (LocalPlayerTarget.CharacterClassIndex != 2 && LocalPlayerTarget.CharacterClassIndex != 1)
                         {
                             currentCooldownR = cooldownTimeR;
                         }
@@ -967,7 +967,7 @@ public class PlayerHUDController : MonoBehaviour
                         if (currentCooldownE <= 0f && LocalPlayerTarget != null && !LocalPlayerTarget.IsAttackSpeedBoosted)
                         {
                             LocalPlayerTarget.TriggerAttackSpeedBoostSkill();
-                            if (LocalPlayerTarget.CharacterClassIndex != 2)
+                            if (LocalPlayerTarget.CharacterClassIndex != 2 && LocalPlayerTarget.CharacterClassIndex != 1)
                             {
                                 currentCooldownE = cooldownTimeE;
                             }

@@ -1,5 +1,50 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
+--- !u!1 &1655739107878565806
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 4893478726897215531}
+  - component: {fileID: 8426910004396658871}
+  m_Layer: 3
+  m_Name: 'Nameplate '
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &4893478726897215531
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1655739107878565806}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0.428, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 5896504255044282565}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &8426910004396658871
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1655739107878565806}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 681f98ebabdd7ec41a39ec2dfb8e1de1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  heightOffset: 3.7
 --- !u!1 &2195400984766458075
 GameObject:
   m_ObjectHideFlags: 0
@@ -812,6 +857,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 7966254385995832477, guid: 2a0b858e93c11d541a78b40a609b6fd3, type: 3}
       insertIndex: -1
       addedObject: {fileID: 6320282578570835534}
+    - targetCorrespondingSourceObject: {fileID: -2444406315379408139, guid: 2a0b858e93c11d541a78b40a609b6fd3, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 4893478726897215531}
     - targetCorrespondingSourceObject: {fileID: 7790177421927552515, guid: 2a0b858e93c11d541a78b40a609b6fd3, type: 3}
       insertIndex: -1
       addedObject: {fileID: 5456517960310483812}
@@ -840,6 +888,11 @@ MonoBehaviour:
 --- !u!4 &598300851086675419 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 2a0b858e93c11d541a78b40a609b6fd3, type: 3}
+  m_PrefabInstance: {fileID: 1136928048187746864}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &5896504255044282565 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: -2444406315379408139, guid: 2a0b858e93c11d541a78b40a609b6fd3, type: 3}
   m_PrefabInstance: {fileID: 1136928048187746864}
   m_PrefabAsset: {fileID: 0}
 --- !u!95 &6822315309704681377 stripped
