@@ -2847,7 +2847,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     [Tooltip("If true, the character rotates to face the camera direction when Armed, enabling backpedaling and strafing.")]
     public bool rotateToCameraWhenArmed = true;
     [Tooltip("If true, the character rotates to face the camera direction when Unarmed, enabling backpedaling and strafing without weapons.")]
-    public bool rotateToCameraWhenUnarmed = false;
+    public bool rotateToCameraWhenUnarmed = true;
 
     [Header("Player Settings & Stats")]
     public float moveSpeed = 3.5f;
@@ -3153,6 +3153,11 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         cameraOffset = new Vector3(0f, 10f, -6.5f);
         cameraSensitivity = 3f;
         cameraPivotHeight = 3.5f;
+
+        rotationSmoothSpeedArmed = 10f;
+        rotationSmoothSpeedUnarmed = 12f;
+        rotateToCameraWhenUnarmed = true;
+        rotateToCameraWhenArmed = true;
 
         if (anim == null)
         {
