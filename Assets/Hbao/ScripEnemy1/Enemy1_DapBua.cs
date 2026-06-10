@@ -333,7 +333,9 @@ public class Enemy1_DapBua : NetworkBehaviour
     {
         if (targetPlayer == null) { ReturnToPatrol(); return; }
         IPlayerHUDTarget ps = targetPlayer.GetComponentInParent<IPlayerHUDTarget>();
-        if (ps != null && (ps.CurrentHealth <= 0 || ps.IsInvisible)) { targetPlayer = null; ReturnToPatrol(); return; }
+        Skeleton sk = targetPlayer.GetComponentInParent<Skeleton>();
+        bool isTargetDead = (ps != null && (ps.CurrentHealth <= 0 || ps.IsInvisible)) || (sk != null && sk.CurrentHealthValue <= 0);
+        if ((ps == null && sk == null) || isTargetDead) { targetPlayer = null; ReturnToPatrol(); return; }
 
         Vector3 ld = (targetPlayer.position - transform.position); ld.y = 0;
         if (ld.sqrMagnitude > 0.01f)
@@ -440,7 +442,9 @@ public class Enemy1_DapBua : NetworkBehaviour
             if (detectionResults[i] == null) continue;
             Transform pt = detectionResults[i].transform;
             IPlayerHUDTarget ps = pt.GetComponentInParent<IPlayerHUDTarget>();
-            if (ps != null && (ps.CurrentHealth <= 0 || ps.IsInvisible)) continue;
+            Skeleton sk = pt.GetComponentInParent<Skeleton>();
+            bool isTargetDead = (ps != null && (ps.CurrentHealth <= 0 || ps.IsInvisible)) || (sk != null && sk.CurrentHealthValue <= 0);
+            if ((ps == null && sk == null) || isTargetDead) continue;
             Vector3 center = pt.position + Vector3.up;
             float d = Vector3.Distance(ep, center);
             Vector3 dir = (center - ep).normalized;

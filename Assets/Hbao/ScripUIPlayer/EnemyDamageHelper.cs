@@ -6,6 +6,14 @@ public static class EnemyDamageHelper
     {
         if (playerTransform == null) return;
 
+        var skeleton = playerTransform.GetComponentInParent<Skeleton>();
+        if (skeleton != null)
+        {
+            skeleton.TakeDamage(damage);
+            skeleton.ApplyKnockback(knockbackForce);
+            return;
+        }
+
         var simple = playerTransform.GetComponentInParent<SimplePlayerTest>();
         if (simple != null)
         {
