@@ -818,8 +818,7 @@ public class PlayerHUDController : MonoBehaviour
                 SelectWeapon(2);
             }
 
-            // Mở khóa vũ khí 2 bằng phím K (Đã vô hiệu hóa - mở khóa qua nhặt vật phẩm F)
-            /*
+            // Mở khóa vũ khí 2 bằng phím K (Test debug)
             if (Keyboard.current.kKey.wasPressedThisFrame && isWeapon2Locked)
             {
                 isWeapon2Locked = false;
@@ -837,7 +836,6 @@ public class PlayerHUDController : MonoBehaviour
                 }
                 NotifyHUDChange();
             }
-            */
 
             // Mở/đóng Bản đồ thế giới bằng phím M
             if (Keyboard.current.mKey.wasPressedThisFrame)
@@ -901,17 +899,12 @@ public class PlayerHUDController : MonoBehaviour
                 NotifyHUDChange();
             }
 
-            // Kích hoạt Skill Q (chỉ khi đã mở khóa và đạt Level 15)
+            // Kích hoạt Skill Q (chỉ khi đã mở khóa hoặc đạt Level 15)
             if (Keyboard.current.qKey.wasPressedThisFrame)
             {
-                if (isSkillsUnlocked)
+                if (isSkillsUnlocked || (LocalPlayerTarget != null && LocalPlayerTarget.PlayerLevel >= 15))
                 {
-                    if (LocalPlayerTarget != null && LocalPlayerTarget.PlayerLevel < 15)
-                    {
-                        ShowSkillWarning(lockIconQ);
-                        ShowMissionAlert("Cần đạt Level 15 để mở khóa kỹ năng Q!", 2.5f);
-                    }
-                    else if (currentCooldownQ <= 0f && LocalPlayerTarget != null && !LocalPlayerTarget.IsQSkillActive)
+                    if (currentCooldownQ <= 0f && LocalPlayerTarget != null && !LocalPlayerTarget.IsQSkillActive)
                     {
                         bool activated = LocalPlayerTarget.TriggerQSkill();
                         if (activated)
@@ -931,20 +924,19 @@ public class PlayerHUDController : MonoBehaviour
                 else
                 {
                     ShowSkillWarning(lockIconQ);
+                    if (LocalPlayerTarget != null && LocalPlayerTarget.PlayerLevel < 15)
+                    {
+                        ShowMissionAlert("Cần đạt Level 15 để mở khóa kỹ năng Q!", 2.5f);
+                    }
                 }
             }
 
-            // Kích hoạt Skill R (chỉ khi đã mở khóa và đạt Level 5)
+            // Kích hoạt Skill R (chỉ khi đã mở khóa hoặc đạt Level 5)
             if (Keyboard.current.rKey.wasPressedThisFrame)
             {
-                if (isSkillsUnlocked)
+                if (isSkillsUnlocked || (LocalPlayerTarget != null && LocalPlayerTarget.PlayerLevel >= 5))
                 {
-                    if (LocalPlayerTarget != null && LocalPlayerTarget.PlayerLevel < 5)
-                    {
-                        ShowSkillWarning(lockIconR);
-                        ShowMissionAlert("Cần đạt Level 5 để mở khóa kỹ năng R!", 2.5f);
-                    }
-                    else if (currentCooldownR <= 0f && LocalPlayerTarget != null && !LocalPlayerTarget.IsInvisible)
+                    if (currentCooldownR <= 0f && LocalPlayerTarget != null && !LocalPlayerTarget.IsInvisible)
                     {
                         LocalPlayerTarget.TriggerInvisibilitySkill();
                         if (LocalPlayerTarget.CharacterClassIndex != 2 && LocalPlayerTarget.CharacterClassIndex != 1)
@@ -957,10 +949,14 @@ public class PlayerHUDController : MonoBehaviour
                 else
                 {
                     ShowSkillWarning(lockIconR);
+                    if (LocalPlayerTarget != null && LocalPlayerTarget.PlayerLevel < 5)
+                    {
+                        ShowMissionAlert("Cần đạt Level 5 để mở khóa kỹ năng R!", 2.5f);
+                    }
                 }
             }
 
-            // Kích hoạt Skill E (chỉ khi đã mở khóa và đạt Level 10)
+            // Kích hoạt Skill E (chỉ khi đã mở khóa hoặc đạt Level 10)
             if (Keyboard.current.eKey.wasPressedThisFrame)
             {
                 bool isPromptingE = interactionPrompt != null &&
@@ -972,14 +968,9 @@ public class PlayerHUDController : MonoBehaviour
 
                 if (!isPromptingE && !isDialogueOpen)
                 {
-                    if (isSkillsUnlocked)
+                    if (isSkillsUnlocked || (LocalPlayerTarget != null && LocalPlayerTarget.PlayerLevel >= 10))
                     {
-                        if (LocalPlayerTarget != null && LocalPlayerTarget.PlayerLevel < 10)
-                        {
-                            ShowSkillWarning(lockIconE);
-                            ShowMissionAlert("Cần đạt Level 10 để mở khóa kỹ năng E!", 2.5f);
-                        }
-                        else if (currentCooldownE <= 0f && LocalPlayerTarget != null && !LocalPlayerTarget.IsAttackSpeedBoosted)
+                        if (currentCooldownE <= 0f && LocalPlayerTarget != null && !LocalPlayerTarget.IsAttackSpeedBoosted)
                         {
                             LocalPlayerTarget.TriggerAttackSpeedBoostSkill();
                             if (LocalPlayerTarget.CharacterClassIndex != 2 && LocalPlayerTarget.CharacterClassIndex != 1)
@@ -992,6 +983,10 @@ public class PlayerHUDController : MonoBehaviour
                     else
                     {
                         ShowSkillWarning(lockIconE);
+                        if (LocalPlayerTarget != null && LocalPlayerTarget.PlayerLevel < 10)
+                        {
+                            ShowMissionAlert("Cần đạt Level 10 để mở khóa kỹ năng E!", 2.5f);
+                        }
                     }
                 }
             }
@@ -1107,15 +1102,62 @@ public class PlayerHUDController : MonoBehaviour
             int pLevel = LocalPlayerTarget.PlayerLevel;
             if (isSkillsUnlocked)
             {
-                if (lockR != null) lockR.style.display = pLevel < 5 ? DisplayStyle.Flex : DisplayStyle.None;
-                if (lockE != null) lockE.style.display = pLevel < 10 ? DisplayStyle.Flex : DisplayStyle.None;
-                if (lockQ != null) lockQ.style.display = pLevel < 15 ? DisplayStyle.Flex : DisplayStyle.None;
+                if (lockR != null && !lockR.ClassListContains("unlocked-anim")) lockR.AddToClassList("unlocked-anim");
+                if (lockE != null && !lockE.ClassListContains("unlocked-anim")) lockE.AddToClassList("unlocked-anim");
+                if (lockQ != null && !lockQ.ClassListContains("unlocked-anim")) lockQ.AddToClassList("unlocked-anim");
             }
             else
             {
-                if (lockR != null) lockR.style.display = DisplayStyle.Flex;
-                if (lockE != null) lockE.style.display = DisplayStyle.Flex;
-                if (lockQ != null) lockQ.style.display = DisplayStyle.Flex;
+                // Skill R (Lv 5)
+                if (lockR != null)
+                {
+                    if (pLevel < 5)
+                    {
+                        lockR.RemoveFromClassList("unlocked-anim");
+                        lockR.style.display = DisplayStyle.Flex;
+                    }
+                    else
+                    {
+                        if (!lockR.ClassListContains("unlocked-anim"))
+                        {
+                            lockR.AddToClassList("unlocked-anim");
+                        }
+                    }
+                }
+
+                // Skill E (Lv 10)
+                if (lockE != null)
+                {
+                    if (pLevel < 10)
+                    {
+                        lockE.RemoveFromClassList("unlocked-anim");
+                        lockE.style.display = DisplayStyle.Flex;
+                    }
+                    else
+                    {
+                        if (!lockE.ClassListContains("unlocked-anim"))
+                        {
+                            lockE.AddToClassList("unlocked-anim");
+                        }
+                    }
+                }
+
+                // Skill Q (Lv 15)
+                if (lockQ != null)
+                {
+                    if (pLevel < 15)
+                    {
+                        lockQ.RemoveFromClassList("unlocked-anim");
+                        lockQ.style.display = DisplayStyle.Flex;
+                    }
+                    else
+                    {
+                        if (!lockQ.ClassListContains("unlocked-anim"))
+                        {
+                            lockQ.AddToClassList("unlocked-anim");
+                        }
+                    }
+                }
             }
         }
     }
@@ -1410,13 +1452,25 @@ public class PlayerHUDController : MonoBehaviour
     public void SetWeaponDurability(int slotIndex, float percent)
     {
         float widthPercent = Mathf.Clamp01(percent) * 100f;
+        Color fillColor = Color.white;
+        if (percent < 0.2f)
+        {
+            fillColor = new Color(0.9f, 0.1f, 0.1f, 1f); // Màu đỏ
+        }
+        else if (percent < 0.6f)
+        {
+            fillColor = new Color(0.9f, 0.8f, 0.1f, 1f); // Màu vàng
+        }
+
         if (slotIndex == 1 && weaponDurabilityFill1 != null)
         {
             weaponDurabilityFill1.style.width = Length.Percent(widthPercent);
+            weaponDurabilityFill1.style.backgroundColor = fillColor;
         }
         else if (slotIndex == 2 && weaponDurabilityFill2 != null)
         {
             weaponDurabilityFill2.style.width = Length.Percent(widthPercent);
+            weaponDurabilityFill2.style.backgroundColor = fillColor;
         }
     }
 
@@ -2094,36 +2148,69 @@ public class PlayerHUDController : MonoBehaviour
 
     public void SetupEventSystemForInputSystem()
     {
-        // 1. Tìm tất cả EventSystem trong Scene và dọn dẹp sạch sẽ để tránh xung đột
+        // 1. Tìm tất cả EventSystem trong Scene
         var allEventSystems = FindObjectsByType<UnityEngine.EventSystems.EventSystem>(FindObjectsSortMode.None);
+        UnityEngine.EventSystems.EventSystem activeES = null;
+
         if (allEventSystems != null && allEventSystems.Length > 0)
         {
-            foreach (var es in allEventSystems)
+            for (int i = 0; i < allEventSystems.Length; i++)
             {
+                var es = allEventSystems[i];
                 if (es != null)
                 {
-                    Debug.LogWarning($"[PlayerHUDController] Dọn dẹp EventSystem cũ '{es.gameObject.name}' để chuẩn bị tạo mới sạch sẽ.");
-                    DestroyImmediate(es.gameObject);
+                    if (activeES == null)
+                    {
+                        activeES = es;
+                        activeES.gameObject.SetActive(true);
+                        activeES.enabled = true;
+                        
+                        // Đảm bảo InputModule đi kèm cũng được kích hoạt
+                        var baseModule = activeES.GetComponent<UnityEngine.EventSystems.BaseInputModule>();
+                        if (baseModule != null)
+                        {
+                            baseModule.enabled = true;
+                        }
+                        
+#if ENABLE_INPUT_SYSTEM
+                        var inputSystemModule = activeES.GetComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
+                        if (inputSystemModule != null)
+                        {
+                            inputSystemModule.enabled = true;
+                            // Đảm bảo có actions được gán
+                            inputSystemModule.AssignDefaultActions();
+                        }
+#endif
+                        Debug.Log($"[PlayerHUDController] Giữ lại và kích hoạt EventSystem: {activeES.gameObject.name}");
+                    }
+                    else
+                    {
+                        Debug.LogWarning($"[PlayerHUDController] Xóa EventSystem trùng lặp: {es.gameObject.name}");
+                        DestroyImmediate(es.gameObject);
+                    }
                 }
             }
         }
 
-        // 2. Khởi tạo một EventSystem mới sạch sẽ và kích hoạt đầy đủ
-        GameObject esObj = new GameObject("EventSystem");
-        var eventSystem = esObj.AddComponent<UnityEngine.EventSystems.EventSystem>();
-        esObj.SetActive(true);
-        eventSystem.enabled = true;
+        // 2. Nếu không tìm thấy EventSystem nào, tạo mới sạch sẽ
+        if (activeES == null)
+        {
+            GameObject esObj = new GameObject("EventSystem");
+            activeES = esObj.AddComponent<UnityEngine.EventSystems.EventSystem>();
+            esObj.SetActive(true);
+            activeES.enabled = true;
 
-        // Cấu hình Input Module phù hợp dựa trên Input System được kích hoạt
 #if ENABLE_INPUT_SYSTEM
-        var inputModule = esObj.AddComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
-        inputModule.enabled = true;
-        Debug.Log("[PlayerHUDController] Đã khởi tạo mới EventSystem với InputSystemUIInputModule hoạt động tốt.");
+            var inputModule = esObj.AddComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
+            inputModule.enabled = true;
+            inputModule.AssignDefaultActions();
+            Debug.Log("[PlayerHUDController] Đã tạo mới EventSystem với InputSystemUIInputModule và gọi AssignDefaultActions.");
 #else
-        var inputModule = esObj.AddComponent<UnityEngine.EventSystems.StandaloneInputModule>();
-        inputModule.enabled = true;
-        Debug.Log("[PlayerHUDController] Đã khởi tạo mới EventSystem với StandaloneInputModule hoạt động tốt.");
+            var inputModule = esObj.AddComponent<UnityEngine.EventSystems.StandaloneInputModule>();
+            inputModule.enabled = true;
+            Debug.Log("[PlayerHUDController] Đã tạo mới EventSystem với StandaloneInputModule.");
 #endif
+        }
     }
 
     private void UpdateTeammatesHUD()

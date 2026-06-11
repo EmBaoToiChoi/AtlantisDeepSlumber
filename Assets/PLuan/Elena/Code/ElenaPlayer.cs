@@ -358,9 +358,11 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
     // Invisibility Skill R (Elena's Attack Speed Boost)
     public bool IsInvisible => IsRSkillActive;
     public float InvisibilityTimeRemaining => rSkillDurationTimer;
+    private bool IsSkillsUnlocked => isSkillsUnlocked.Value;
+
     public void TriggerInvisibilitySkill()
     {
-        if (PlayerLevel < 5) return;
+        if (PlayerLevel < 5 && !IsSkillsUnlocked) return;
         TriggerRSkill();
     }
 
@@ -369,13 +371,13 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
     public float AttackSpeedBoostTimeRemaining => ESkillRemainingArrows;
     public void TriggerAttackSpeedBoostSkill()
     {
-        if (PlayerLevel < 10) return;
+        if (PlayerLevel < 10 && !IsSkillsUnlocked) return;
         TriggerESkill();
     }
 
     public void TriggerESkill()
     {
-        if (PlayerLevel < 10) return;
+        if (PlayerLevel < 10 && !IsSkillsUnlocked) return;
         if (eSkillCooldownTimer > 0f || IsESkillActive) return;
         
         if (isStandaloneMode)
@@ -453,7 +455,7 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
     
     public bool TriggerQSkill()
     {
-        if (PlayerLevel < 15) return false;
+        if (PlayerLevel < 15 && !IsSkillsUnlocked) return false;
         if (qSkillCooldownTimer > 0f || IsQSkillActive) return false;
 
         qSkillDurationTimer = qSkillDuration;
@@ -648,9 +650,6 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
         defaultPivotHeight = cameraPivotHeight;
         lastPosition = transform.position;
 
-        // Khóa chuột mặc định khi vào game
-        LockCursor(isCursorLocked);
-
         // Nếu không có NetworkManager hoặc chưa listen → chạy đơn lẻ
         if (!IsNetworkActive)
         {
@@ -670,6 +669,7 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
     {
         Debug.Log("[ElenaPlayer] Chạy ở chế độ STANDALONE (không có NetworkManager). " +
                   "Di chuyển và tấn công hoạt động cục bộ.");
+        LockCursor(isCursorLocked);
 
         if (rb == null) rb = GetComponent<Rigidbody>();
         if (rb != null)
@@ -733,7 +733,7 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         if (!IsOwner)
         {
-            if (GetComponent<PlayerNameplate>() == null)
+            if (GetComponentInChildren<PlayerNameplate>(true) == null)
             {
                 gameObject.AddComponent<PlayerNameplate>();
             }
@@ -809,6 +809,7 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
             UpdateUpgradeHUD();
             UpdateDurabilityHUD();
             UpdateWeaponVisualsInstant(GetActiveWeaponIndex());
+            LockCursor(isCursorLocked);
         }
     }
 
@@ -1062,8 +1063,10 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
     {
         if (isStandaloneMode)
         {
-            if (weaponSlotIndex == 1) localWeapon1Durability = weapon1MaxDurability;
-            else localWeapon2Durability = weapon2MaxDurability;
+            if (weaponSlotIndex == 1)
+                localWeapon1Durability = Mathf.Min(localWeapon1Durability + weapon1MaxDurability * 0.5f, weapon1MaxDurability);
+            else
+                localWeapon2Durability = Mathf.Min(localWeapon2Durability + weapon2MaxDurability * 0.5f, weapon2MaxDurability);
             UpdateDurabilityHUD();
         }
         else
@@ -1077,11 +1080,11 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
     {
         if (weaponSlotIndex == 1)
         {
-            weapon1Durability.Value = weapon1MaxDurability;
+            weapon1Durability.Value = Mathf.Min(weapon1Durability.Value + weapon1MaxDurability * 0.5f, weapon1MaxDurability);
         }
         else
         {
-            weapon2Durability.Value = weapon2MaxDurability;
+            weapon2Durability.Value = Mathf.Min(weapon2Durability.Value + weapon2MaxDurability * 0.5f, weapon2MaxDurability);
         }
     }
 
@@ -2139,6 +2142,11 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
     private void PerformComboAttack(bool networkMode)
     {
         int weapon = GetActiveWeaponIndex();
+        if (!networkMode)
+        {
+            if (weapon == 1) Weapon1Durability = Mathf.Max(Weapon1Durability - 2f, 0f);
+            else Weapon2Durability = Mathf.Max(Weapon2Durability - 2f, 0f);
+        }
         float currentTime = Time.time;
 
         // Xác định bước combo tiếp theo trước để tính toán thời gian chờ
@@ -2272,6 +2280,11 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
     [ServerRpc]
     void AttackServerRpc(Vector3 aimDir)
     {
+        // Trừ độ bền vũ khí trên Server (dù trúng hay trượt)
+        int weapon = GetActiveWeaponIndex();
+        if (weapon == 1) weapon1Durability.Value = Mathf.Max(weapon1Durability.Value - 2f, 0f);
+        else weapon2Durability.Value = Mathf.Max(weapon2Durability.Value - 2f, 0f);
+
         Vector3 rayStart = transform.position + Vector3.up * 0.5f;
         Debug.DrawRay(rayStart, aimDir * attackRange, Color.red, 0.5f);
 
@@ -3173,6 +3186,10 @@ private void StartRollServerRpc(Vector3 direction)
 
     private void PerformBowShoot(bool networkMode)
     {
+        if (!networkMode)
+        {
+            Weapon2Durability = Mathf.Max(Weapon2Durability - 2f, 0f);
+        }
         PlayAnimation("Bow_Shoot", 0.05f);
 
         if (arrowHandVisual != null)
@@ -3258,6 +3275,9 @@ private void StartRollServerRpc(Vector3 direction)
     [ServerRpc]
     private void BowShootServerRpc(Vector3 spawnPos, Vector3 shootDirection)
     {
+        // Trừ độ bền vũ khí trên Server (dù trúng hay trượt)
+        weapon2Durability.Value = Mathf.Max(weapon2Durability.Value - 2f, 0f);
+
         // Kiểm tra hợp lệ khoảng cách trên Server để tránh lag giật tọa độ
         if (Vector3.Distance(spawnPos, transform.position) > 4f)
         {

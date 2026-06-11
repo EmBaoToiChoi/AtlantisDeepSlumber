@@ -347,10 +347,12 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
     public bool IsInvisible => isRSkillActive;
     public float InvisibilityTimeRemaining => rSkillTimeRemaining;
 
+    private bool IsSkillsUnlocked => isSkillsUnlocked.Value;
+
     // Chỉ kích hoạt hoạt ảnh gồng chiêu R ban đầu
     public void TriggerInvisibilitySkill()
     {
-        if (PlayerLevel < 5) return;
+        if (PlayerLevel < 5 && !IsSkillsUnlocked) return;
         if (isRSkillActive) return;
 
         Debug.Log("[ArthurPlayer] Khởi động gồng Skill R: Phát hoạt ảnh gồng chiêu...");
@@ -399,7 +401,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
     /// <summary>Kích hoạt Skill Q - phát hoạt ảnh dặm khiên. Trả về true nếu đã khởi động thành công.</summary>
     new public bool TriggerQSkill()
     {
-        if (PlayerLevel < 15) return false;
+        if (PlayerLevel < 15 && !IsSkillsUnlocked) return false;
         if (isQSkillActive || isQSkillPlayingAnim) return false;
 
         Debug.Log($"[{gameObject.name}] TriggerQSkill (Skill Q) - Bắt đầu dặm khiên...");
@@ -474,7 +476,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     public void TriggerAttackSpeedBoostSkill()
     {
-        if (PlayerLevel < 10) return;
+        if (PlayerLevel < 10 && !IsSkillsUnlocked) return;
         if (IsAttackSpeedBoosted || isESkillPlayingAnim) return;
 
         Debug.Log($"[{gameObject.name}] TriggerAttackSpeedBoostSkill (Skill E) - Bắt đầu gồng...");
@@ -585,8 +587,6 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         defaultCameraDistance = cameraDistance;
         defaultPivotHeight = cameraPivotHeight;
 
-        LockCursor(isCursorLocked);
-
         if (!IsNetworkActive)
         {
             isStandaloneMode = true;
@@ -600,6 +600,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
     private void InitStandaloneMode()
     {
         Debug.Log("[ArthurPlayer] Chạy ở chế độ STANDALONE. Di chuyển và tấn công hoạt động cục bộ.");
+        LockCursor(isCursorLocked);
 
         targetCamera = Camera.main;
         if (targetCamera == null)
@@ -650,7 +651,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         if (!IsOwner)
         {
-            if (GetComponent<PlayerNameplate>() == null)
+            if (GetComponentInChildren<PlayerNameplate>(true) == null)
             {
                 gameObject.AddComponent<PlayerNameplate>();
             }
@@ -718,6 +719,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
             ApplyUpgradedStats();
             UpdateUpgradeHUD();
             UpdateDurabilityHUD();
+            LockCursor(isCursorLocked);
         }
 
         SyncWeaponVisuals(activeWeaponIndex.Value);
@@ -972,8 +974,10 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
     {
         if (isStandaloneMode)
         {
-            if (weaponSlotIndex == 1) localWeapon1Durability = weapon1MaxDurability;
-            else localWeapon2Durability = weapon2MaxDurability;
+            if (weaponSlotIndex == 1)
+                localWeapon1Durability = Mathf.Min(localWeapon1Durability + weapon1MaxDurability * 0.5f, weapon1MaxDurability);
+            else
+                localWeapon2Durability = Mathf.Min(localWeapon2Durability + weapon2MaxDurability * 0.5f, weapon2MaxDurability);
             UpdateDurabilityHUD();
         }
         else
@@ -987,11 +991,11 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
     {
         if (weaponSlotIndex == 1)
         {
-            weapon1Durability.Value = weapon1MaxDurability;
+            weapon1Durability.Value = Mathf.Min(weapon1Durability.Value + weapon1MaxDurability * 0.5f, weapon1MaxDurability);
         }
         else
         {
-            weapon2Durability.Value = weapon2MaxDurability;
+            weapon2Durability.Value = Mathf.Min(weapon2Durability.Value + weapon2MaxDurability * 0.5f, weapon2MaxDurability);
         }
     }
 
@@ -1895,6 +1899,11 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
     protected virtual void PerformComboAttack(bool networkMode, bool isContinuation = false)
     {
         int weapon = GetActiveWeaponIndex();
+        if (!networkMode)
+        {
+            if (weapon == 1) Weapon1Durability = Mathf.Max(Weapon1Durability - 2f, 0f);
+            else Weapon2Durability = Mathf.Max(Weapon2Durability - 2f, 0f);
+        }
         float currentTime = Time.time;
 
         int nextStep = comboStep;
@@ -2280,6 +2289,11 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
     [ServerRpc]
     protected void AttackServerRpc()
     {
+        // Trừ độ bền vũ khí trên Server (dù trúng hay trượt)
+        int weapon = GetActiveWeaponIndex();
+        if (weapon == 1) weapon1Durability.Value = Mathf.Max(weapon1Durability.Value - 2f, 0f);
+        else weapon2Durability.Value = Mathf.Max(weapon2Durability.Value - 2f, 0f);
+
         alreadyHitEnemies.Clear();
     }
 
