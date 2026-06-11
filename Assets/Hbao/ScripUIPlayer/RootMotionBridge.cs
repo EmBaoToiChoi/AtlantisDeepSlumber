@@ -117,6 +117,23 @@ public class RootMotionBridge : MonoBehaviour
                 transform.localPosition = new Vector3(initialTransformLocalPos.x, currentLocalPos.y, initialTransformLocalPos.z);
             }
         }
+        else
+        {
+            // Nếu là người chơi proxy (không phải chủ sở hữu/chơi đơn trên máy này), ép model về tâm đối tượng cha
+            if (parentTransform != null)
+            {
+                IPlayerHUDTarget player = parentTransform.GetComponent<IPlayerHUDTarget>();
+                bool isLocalOrOwner = player == null || player.IsStandaloneMode || player.IsOwner;
+                if (!isLocalOrOwner)
+                {
+                    if (hasRootBone && rootBone != null)
+                    {
+                        rootBone.localPosition = new Vector3(initialRootBoneLocalPos.x, rootBone.localPosition.y, initialRootBoneLocalPos.z);
+                    }
+                    transform.localPosition = initialTransformLocalPos;
+                }
+            }
+        }
     }
 
     /// <summary>

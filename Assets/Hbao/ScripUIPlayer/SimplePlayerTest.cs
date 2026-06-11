@@ -214,12 +214,14 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
     public string[] InventorySlots => inventorySlots;
     public float MaxHealth => maxHealth;
 
+    private bool IsSkillsUnlocked => leoPlayer != null ? leoPlayer.isSkillsUnlocked.Value : (arthurPlayer != null ? arthurPlayer.isSkillsUnlocked.Value : isSkillsUnlocked.Value);
+
     // Invisibility Skill R proxy
     public bool IsInvisible => leoPlayer != null ? leoPlayer.IsInvisible : (arthurPlayer != null ? arthurPlayer.IsInvisible : false);
     public float InvisibilityTimeRemaining => leoPlayer != null ? leoPlayer.InvisibilityTimeRemaining : (arthurPlayer != null ? arthurPlayer.InvisibilityTimeRemaining : 0f);
     public void TriggerInvisibilitySkill()
     {
-        if (PlayerLevel < 5) return;
+        if (PlayerLevel < 5 && !IsSkillsUnlocked) return;
         if (leoPlayer != null) leoPlayer.TriggerInvisibilitySkill();
         else if (arthurPlayer != null) arthurPlayer.TriggerInvisibilitySkill();
     }
@@ -229,7 +231,7 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
     public float AttackSpeedBoostTimeRemaining => leoPlayer != null ? leoPlayer.AttackSpeedBoostTimeRemaining : (arthurPlayer != null ? arthurPlayer.AttackSpeedBoostTimeRemaining : 0f);
     public void TriggerAttackSpeedBoostSkill()
     {
-        if (PlayerLevel < 10) return;
+        if (PlayerLevel < 10 && !IsSkillsUnlocked) return;
         if (leoPlayer != null) leoPlayer.TriggerAttackSpeedBoostSkill();
         else if (arthurPlayer != null) arthurPlayer.TriggerAttackSpeedBoostSkill();
     }
@@ -239,7 +241,7 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
     public float QSkillTimeRemaining => leoPlayer != null ? leoPlayer.QSkillTimeRemaining : 0f;
     public bool TriggerQSkill()
     {
-        if (PlayerLevel < 15) return false;
+        if (PlayerLevel < 15 && !IsSkillsUnlocked) return false;
         if (leoPlayer != null) return leoPlayer.TriggerQSkill();
         return false;
     }
@@ -325,9 +327,6 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
         targetPitch = currentPitch;
         cameraDistance = cameraOffset.magnitude;
 
-        // Khóa chuột mặc định khi vào game
-        LockCursor(isCursorLocked);
-
         // Nếu không có NetworkManager hoặc chưa listen → chạy đơn lẻ
         if (!IsNetworkActive)
         {
@@ -346,6 +345,8 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
     {
         Debug.Log("[SimplePlayerTest] Chạy ở chế độ STANDALONE (không có NetworkManager). " +
                   "Di chuyển và tấn công hoạt động cục bộ.");
+
+        LockCursor(isCursorLocked);
 
         // Tìm camera
         targetCamera = Camera.main;
@@ -403,7 +404,7 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
 
         if (!IsOwner)
         {
-            if (GetComponent<PlayerNameplate>() == null)
+            if (GetComponentInChildren<PlayerNameplate>(true) == null)
             {
                 gameObject.AddComponent<PlayerNameplate>();
             }
@@ -482,6 +483,7 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
             ApplyUpgradedStats();
             UpdateUpgradeHUD();
             UpdateDurabilityHUD();
+            LockCursor(isCursorLocked);
         }
     }
 
@@ -768,8 +770,10 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
 
         if (isStandaloneMode)
         {
-            if (weaponSlotIndex == 1) localWeapon1Durability = weapon1MaxDurability;
-            else localWeapon2Durability = weapon2MaxDurability;
+            if (weaponSlotIndex == 1)
+                localWeapon1Durability = Mathf.Min(localWeapon1Durability + weapon1MaxDurability * 0.5f, weapon1MaxDurability);
+            else
+                localWeapon2Durability = Mathf.Min(localWeapon2Durability + weapon2MaxDurability * 0.5f, weapon2MaxDurability);
             UpdateDurabilityHUD();
         }
         else
@@ -783,11 +787,11 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
     {
         if (weaponSlotIndex == 1)
         {
-            weapon1Durability.Value = weapon1MaxDurability;
+            weapon1Durability.Value = Mathf.Min(weapon1Durability.Value + weapon1MaxDurability * 0.5f, weapon1MaxDurability);
         }
         else
         {
-            weapon2Durability.Value = weapon2MaxDurability;
+            weapon2Durability.Value = Mathf.Min(weapon2Durability.Value + weapon2MaxDurability * 0.5f, weapon2MaxDurability);
         }
     }
 
@@ -1487,6 +1491,10 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
         }
         else
         {
+            // Trừ độ bền vũ khí cục bộ (dù trúng hay trượt)
+            if (weapon == 1) Weapon1Durability = Mathf.Max(Weapon1Durability - 2f, 0f);
+            else Weapon2Durability = Mathf.Max(Weapon2Durability - 2f, 0f);
+
             Vector3 rayStart = transform.position + Vector3.up * 0.5f;
             Debug.DrawRay(rayStart, transform.forward * attackRange, Color.red, 0.5f);
 
@@ -1520,6 +1528,11 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
     [ServerRpc]
     protected void AttackServerRpc()
     {
+        // Trừ độ bền vũ khí trên Server (dù trúng hay trượt)
+        int weapon = GetActiveWeaponIndex();
+        if (weapon == 1) weapon1Durability.Value = Mathf.Max(weapon1Durability.Value - 2f, 0f);
+        else weapon2Durability.Value = Mathf.Max(weapon2Durability.Value - 2f, 0f);
+
         Vector3 rayStart = transform.position + Vector3.up * 0.5f;
         Debug.DrawRay(rayStart, transform.forward * attackRange, Color.red, 0.5f);
 

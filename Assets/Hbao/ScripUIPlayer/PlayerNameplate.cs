@@ -3,13 +3,14 @@ using UnityEngine.UIElements;
 
 public class PlayerNameplate : MonoBehaviour
 {
-    [Tooltip("Chiều cao offset so với gốc của player để vẽ tên trên đầu")]
+    [Tooltip("Chiều cao offset so với gốc của player để vẽ tên trên đầu (chỉ dùng khi component nằm ở root)")]
     [SerializeField] private float heightOffset = 2.4f;
 
     private VisualElement container;
     private Label nameLabel;
     private IPlayerHUDTarget playerTarget;
     private VisualTreeAsset nameplateAsset;
+    private bool isInitialized = false;
 
     private void Awake()
     {
@@ -18,14 +19,26 @@ public class PlayerNameplate : MonoBehaviour
 
     private void Start()
     {
+        if (playerTarget == null) playerTarget = GetComponentInParent<IPlayerHUDTarget>();
         if (playerTarget == null) playerTarget = GetComponent<IPlayerHUDTarget>();
 
-        // Không tạo nameplate cho chính mình (chỉ hiển thị tên người chơi khác)
-        if (playerTarget != null && playerTarget.IsOwner)
+        // Nếu là local player (standalone hoặc owner mạng đã được spawn), ẩn nameplate và tắt script
+        if (playerTarget != null && (playerTarget.IsStandaloneMode || (playerTarget.IsSpawned && playerTarget.IsOwner)))
         {
+            if (container != null)
+            {
+                container.style.display = DisplayStyle.None;
+            }
             enabled = false;
             return;
         }
+
+        TryInitialize();
+    }
+
+    private void TryInitialize()
+    {
+        if (isInitialized) return;
 
         // Tải UXML từ thư mục Resources
         nameplateAsset = Resources.Load<VisualTreeAsset>("PlayerNameplate");
@@ -66,6 +79,8 @@ public class PlayerNameplate : MonoBehaviour
                     
                     // Mặc định ẩn trước khi cập nhật vị trí
                     container.style.display = DisplayStyle.None;
+                    isInitialized = true;
+                    Debug.Log($"[PlayerNameplate] Khởi tạo thành công bảng tên cho {playerTarget?.DisplayName}");
                 }
             }
         }
@@ -73,13 +88,35 @@ public class PlayerNameplate : MonoBehaviour
 
     private void LateUpdate()
     {
-        if (playerTarget == null || container == null || nameLabel == null) return;
-
-        // Bổ sung kiểm tra an toàn: Nếu là chính mình thì ẩn nameplate và tắt Update đi
-        if (playerTarget.IsOwner)
+        if (playerTarget == null)
         {
-            container.style.display = DisplayStyle.None;
+            playerTarget = GetComponentInParent<IPlayerHUDTarget>();
+            if (playerTarget == null) playerTarget = GetComponent<IPlayerHUDTarget>();
+        }
+        if (playerTarget == null) return;
+
+        // Chờ đến khi player target được spawn hoàn tất trên mạng (để IsOwner được cập nhật chính xác),
+        // trừ phi ở chế độ Standalone.
+        if (!playerTarget.IsStandaloneMode && !playerTarget.IsSpawned)
+        {
+            return;
+        }
+
+        // Bổ sung kiểm tra an toàn: Nếu là chính mình (local player) thì ẩn và tắt script
+        if (playerTarget.IsStandaloneMode || playerTarget.IsOwner)
+        {
+            if (container != null)
+            {
+                container.style.display = DisplayStyle.None;
+            }
             enabled = false;
+            return;
+        }
+
+        // Nếu chưa khởi tạo (do HUD chưa ready lúc Start), thử khởi tạo lại
+        if (!isInitialized || container == null || nameLabel == null)
+        {
+            TryInitialize();
             return;
         }
 
@@ -89,7 +126,13 @@ public class PlayerNameplate : MonoBehaviour
         // Định vị trên màn hình dựa theo vị trí 3D trên đầu nhân vật
         if (Camera.main != null)
         {
-            Vector3 worldPos = playerTarget.transform.position + Vector3.up * heightOffset;
+            Vector3 worldPos = transform.position;
+            // Nếu component này nằm trực tiếp trên root, dùng root + heightOffset
+            if (playerTarget != null && transform == playerTarget.transform)
+            {
+                worldPos += Vector3.up * heightOffset;
+            }
+
             Vector3 screenPos = Camera.main.WorldToScreenPoint(worldPos);
 
             // Kiểm tra xem vị trí có nằm trước camera không
