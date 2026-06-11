@@ -18,13 +18,28 @@ public class AscensionManager : NetworkBehaviour
 
     public NetworkVariable<double> startTime = new NetworkVariable<double>(0);
     public NetworkVariable<bool> isTimerRunning = new NetworkVariable<bool>(false);
+    public NetworkVariable<int> correctCrystalsCount = new NetworkVariable<int>(-1);
     
     [Header("Cấu hình Thời gian")]
     public float timeLimit = 5f; 
 
+    private float[] defaultLifetimes;
+
     void Start()
     {
-        foreach (var ps in flowParticles) if (ps != null) ps.gameObject.SetActive(false);
+        // Khởi tạo mảng lưu trữ
+        defaultLifetimes = new float[flowParticles.Length];
+
+        for (int i = 0; i < flowParticles.Length; i++)
+        {
+            if (flowParticles[i] != null)
+            {
+                // Lưu lại startLifetime mặc định
+                defaultLifetimes[i] = flowParticles[i].main.startLifetime.constant;
+                flowParticles[i].gameObject.SetActive(false);
+            }
+        }
+
         if (victoryEffectObject != null) victoryEffectObject.SetActive(false);
     }
 
@@ -62,6 +77,8 @@ public class AscensionManager : NetworkBehaviour
     public void EjectAllCrystals()
     {
         if (!IsServer) return;
+
+        correctCrystalsCount.Value = -1; // Reset trạng thái UI về mặc định
 
         // 1. Văng ngọc ra và giải phóng
         foreach (var crystal in placedCrystals)
@@ -167,18 +184,27 @@ public class AscensionManager : NetworkBehaviour
         if (placedCrystals.Count < 4) return;
         isTimerRunning.Value = false;
 
-        // BƯỚC 1: Quét trước 1 vòng xem có trụ nào đặt sai không
         bool allCorrect = true;
+        int correctCount = 0; // Khởi tạo đếm số ngọc đúng
+
+        // BƯỚC 1: Quét TẤT CẢ các trụ để đếm chính xác có bao nhiêu viên đặt đúng
         for (int i = 0; i < pillarPositions.Length; i++)
         {
-            if (pillarStates[i] != i)
+            if (pillarStates[i] == i)
             {
-                allCorrect = false;
-                break; // Phát hiện 1 cái sai là thoát vòng lặp luôn, không cần check thêm
+                correctCount++; // Nếu đúng vị trí thì cộng thêm 1
+            }
+            else
+            {
+                allCorrect = false; // Nếu có 1 cái sai thì đánh dấu là chưa hoàn thành toàn bộ
+                // BỎ lệnh break; ở đây để vòng lặp tiếp tục chạy và đếm hết 4 trụ
             }
         }
 
-        // BƯỚC 2: Chốt màu cho TẤT CẢ các trụ dựa trên kết quả ở bước 1
+        // Cập nhật số lượng đếm được lên biến mạng để UI Client tự động thay đổi (ví dụ: 2/4)
+        correctCrystalsCount.Value = correctCount; 
+
+        // BƯỚC 2: Chốt màu cho TẤT CẢ các trụ
         Color finalColor = allCorrect ? Color.green : Color.red;
 
         for (int i = 0; i < pillarPositions.Length; i++)
@@ -213,13 +239,62 @@ public class AscensionManager : NetworkBehaviour
             ps.gameObject.SetActive(true);
             var main = ps.main;
             main.startColor = color; 
+            
+            // THÊM DÒNG NÀY: Phục hồi lại lifetime ban đầu
+            main.startLifetime = defaultLifetimes[stationIndex]; 
+
             if (!ps.isPlaying) ps.Play();
         }
     }
 
     System.Collections.IEnumerator DelayEject()
     {
-        yield return new WaitForSeconds(6.0f);
+        // 1. Đợi 2 giây để người chơi nhìn thấy màu đỏ báo lỗi
+        yield return new WaitForSeconds(4.0f);
+
+        // 2. Yêu cầu tất cả Client làm hiệu ứng tụt startLifetime
+        ShrinkParticlesClientRpc();
+
+        // 3. Server đợi thêm 2 giây cho animation tụt chạy xong
+        yield return new WaitForSeconds(4.0f);
+
+        // 4. Văng ngọc ra ngoài
         EjectAllCrystals();
+    }
+
+    // ==========================================
+    // CÁC HÀM XỬ LÝ HIỆU ỨNG TỤT START LIFETIME
+    // ==========================================
+
+    [ClientRpc]
+    private void ShrinkParticlesClientRpc()
+    {
+        // Chạy Coroutine giảm dần hiệu ứng trên từng máy Client
+        StartCoroutine(ShrinkParticlesRoutine());
+    }
+
+    System.Collections.IEnumerator ShrinkParticlesRoutine()
+    {
+        float shrinkDuration = 3.0f; // Thời gian tụt dần (2 giây)
+        float elapsed = 0f;
+
+        while (elapsed < shrinkDuration)
+        {
+            elapsed += Time.deltaTime;
+            
+            // Tính tỷ lệ từ 1 tụt dần về 0
+            float t = Mathf.Lerp(1f, 0f, elapsed / shrinkDuration);
+
+            for (int i = 0; i < flowParticles.Length; i++)
+            {
+                if (flowParticles[i] != null && flowParticles[i].gameObject.activeSelf)
+                {
+                    var main = flowParticles[i].main;
+                    // Nhân lifetime ban đầu với tỷ lệ t để giảm dần về 0
+                    main.startLifetime = defaultLifetimes[i] * t;
+                }
+            }
+            yield return null;
+        }
     }
 }
