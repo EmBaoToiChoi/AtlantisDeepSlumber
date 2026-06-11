@@ -1,21 +1,24 @@
 .countdown-root {
     position: absolute;
     top: 50px;
-    left: 50%;
-    translate: -50% 0;
-    width: 150px;
-    height: 150px;
+    
+    /* === ĐÂY LÀ CHÌA KHÓA === */
+    /* Xóa left: 50% và translate: -50% 0 đi */
+    align-self: center; /* Lệnh này ép khung luôn nằm giữa, width đổi bao nhiêu nó tự chia đều 2 bên */
+    
+    width: 80px;  /* Chỉnh lại 80px cho khớp với khởi tạo trong C# mới nhất */
+    height: 80px; /* Chỉnh lại 80px */
     background-color: rgba(50, 50, 50, 0.5);
     border-width: 4px;
     border-color: rgba(0, 0, 0, 0.8);
-    border-radius: 50%;
+    border-radius: 40px; /* Sửa thành 40px để tròn xoe lúc đầu */
     justify-content: center;
     align-items: center;
     transition: background-color 0.3s ease;
 }
 
 .countdown-label {
-    font-size: 60px;
+    font-size: 28px; /* Hạ font size ban đầu xuống cho vừa khung 80x80 */
     color: white;
     -unity-font-style: bold;
     text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
