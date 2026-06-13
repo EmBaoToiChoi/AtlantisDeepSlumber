@@ -32,7 +32,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
     public float attackRange = 3f;
 
     [Header("Combo Attack Settings")]
-    public float comboWindow = 2.5f; 
+    public float comboWindow = 2.5f;
     public float comboTransitionThreshold = 0.5f;
     public float punch1Duration = 1.033f;
     public float punch2Duration = 1.033f;
@@ -1751,14 +1751,17 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         rollTimer = 0f;
 
         if (anim != null) anim.applyRootMotion = false;
-        var bridge = GetRootMotionBridge();
-        if (bridge != null) bridge.ApplyFinalOffset();
-
-        if (rb != null) rb.linearVelocity = new Vector3(0f, rb.linearVelocity.y, 0f);
-
-        if (!isStandaloneMode && IsOwner)
+        if (isStandaloneMode || IsOwner)
         {
-            StopRollServerRpc();
+            var bridge = GetRootMotionBridge();
+            if (bridge != null) bridge.ApplyFinalOffset();
+
+            if (rb != null) rb.linearVelocity = new Vector3(0f, rb.linearVelocity.y, 0f);
+
+            if (!isStandaloneMode && IsOwner)
+            {
+                StopRollServerRpc();
+            }
         }
     }
 
@@ -1982,7 +1985,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
             pendingAttackRequest = false;
             bool networkMode = !isStandaloneMode && IsOwner;
             Debug.Log($"[ArthurPlayer] Tiếp tục đòn đánh nối tiếp: comboStep hiện tại là {comboStep}.");
-            PerformComboAttack(networkMode, true); 
+            PerformComboAttack(networkMode, true);
         }
         else
         {
@@ -2419,7 +2422,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     public void OnPunchEnd()
     {
-        if (!isStandaloneMode && !IsOwner) return; 
+        if (!isStandaloneMode && !IsOwner) return;
         if (Time.time < earliestValidEventTime)
         {
             return;
@@ -2429,7 +2432,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     public void OnSlashEnd()
     {
-        if (!isStandaloneMode && !IsOwner) return; 
+        if (!isStandaloneMode && !IsOwner) return;
         if (Time.time < earliestValidEventTime)
         {
             return;
@@ -2439,7 +2442,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     public void OnAttackEnd()
     {
-        if (!isStandaloneMode && !IsOwner) return; 
+        if (!isStandaloneMode && !IsOwner) return;
         if (Time.time < earliestValidEventTime)
         {
             return;
@@ -3329,6 +3332,10 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (isLoopingAnim && currentAnimState == animName) return;
 
         Debug.Log($"[ArthurPlayer] Kích hoạt Hoạt ảnh: '{animName}'");
+        if (animName == "LonVong")
+        {
+            anim.applyRootMotion = false;
+        }
 
         if (animName == "attack1" || animName == "Attack1combo1" || animName == "Attack2combo1" ||
             animName == "AnhitCoVuKhi" || animName == "DoKhienDinhSatThuong" || animName == "New State")
@@ -3428,7 +3435,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
     [ClientRpc]
     private void PlayAnimationClientRpc(string animName, float fadeTime, bool alreadyPlayedLocally)
     {
-        if (alreadyPlayedLocally && IsOwner) return; 
+        if (alreadyPlayedLocally && IsOwner) return;
         PlayAnimationLocal(animName, fadeTime);
     }
 
