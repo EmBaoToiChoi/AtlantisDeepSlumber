@@ -3452,14 +3452,17 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         rollTimer = 0f;
 
         if (anim != null) anim.applyRootMotion = false;
-        var bridge = GetRootMotionBridge();
-        if (bridge != null) bridge.ApplyFinalOffset();
-
-        if (rb != null) rb.linearVelocity = new Vector3(0f, rb.linearVelocity.y, 0f);
-
-        if (!isStandaloneMode && IsOwner)
+        if (isStandaloneMode || IsOwner)
         {
-            StopRollServerRpc();
+            var bridge = GetRootMotionBridge();
+            if (bridge != null) bridge.ApplyFinalOffset();
+
+            if (rb != null) rb.linearVelocity = new Vector3(0f, rb.linearVelocity.y, 0f); // Dừng lực lộn
+
+            if (!isStandaloneMode)
+            {
+                StopRollServerRpc();
+            }
         }
     }
 
@@ -6153,6 +6156,10 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         }
 
         string translatedName = TranslateAnimName(animName);
+        if (translatedName == rollTrigger || translatedName == "LonVong")
+        {
+            anim.applyRootMotion = false;
+        }
 
         bool isLoopingAnim = translatedName == idleUnarmed || translatedName == walkUnarmed || translatedName == runUnarmed ||
                              translatedName == idleArmed || translatedName == walkForwardArmed || translatedName == walkBackwardArmed ||
