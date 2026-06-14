@@ -1,7 +1,7 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
     <Style src="project://database/Assets/PLuan/MainMenu/Code/AtlantisMenu.uss?fileID=7433441132597879392&amp;guid=8fa4b76500634d046bac501785335e61&amp;type=3#AtlantisMenu" />
     <ui:VisualElement class="root-screen" style="-unity-font-definition: url(&quot;project://database/Assets/PLuan/MainMenu/Font/Elms_Sans/static/ElmsSans-BoldItalic.ttf?fileID=12800000&amp;guid=516a0c13403c3af48ac760e7a0157fee&amp;type=3#ElmsSans-BoldItalic&quot;);">
-        <ui:VisualElement name="user-profile-container" class="user-profile-box hidden-element" style="background-image: none;">
+        <ui:VisualElement name="user-profile-container" class="user-profile-box hidden-element" style="background-image: url(&quot;project://database/Assets/PLuan/TenDn,TenRoom.png?fileID=2800000&amp;guid=092267d7de866b849a9e7eedb67ce2a3&amp;type=3#TenDn,TenRoom&quot;);">
             <ui:Label name="lbl-profile-hint" text="LOGGED IN AS:" class="user-profile-label" />
             <ui:Label name="lbl-display-name" text="PLAYER_NAME" class="user-profile-name" />
             <ui:Button name="btn-logout" text="LOGOUT" class="join-mini-btn logout-btn" />
