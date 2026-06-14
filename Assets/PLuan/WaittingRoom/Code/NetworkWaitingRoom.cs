@@ -182,6 +182,11 @@ public class NetworkWaitingRoom : NetworkBehaviour
         _detailsDesc = _root.Q<Label>("details-desc");
         _btnCloseDetails = _root.Q<Button>("btn-close-details");
 
+        if (_detailsModal != null)
+        {
+            _detailsModal.style.display = DisplayStyle.None;
+        }
+
         if (_btnCloseDetails != null)
         {
             _btnCloseDetails.clicked += HideCharacterDetails;
@@ -209,6 +214,11 @@ public class NetworkWaitingRoom : NetworkBehaviour
         _lblSwapRequestMsg = _root.Q<Label>("lbl-swap-request-msg");
         _btnSwapAccept = _root.Q<Button>("btn-swap-accept");
         _btnSwapDecline = _root.Q<Button>("btn-swap-decline");
+
+        if (_swapRequestModal != null)
+        {
+            _swapRequestModal.style.display = DisplayStyle.None;
+        }
 
         if (_btnSwapAccept != null)
         {
@@ -694,7 +704,7 @@ public class NetworkWaitingRoom : NetworkBehaviour
             }
             if (statusLbl != null)
             {
-                statusLbl.text = "AVAILABLE";
+                statusLbl.text = "FREE";
                 statusLbl.RemoveFromClassList("active-status");
             }
         }
@@ -846,7 +856,7 @@ public class NetworkWaitingRoom : NetworkBehaviour
         }
         if (statusLbl != null)
         {
-            statusLbl.text = "AVAILABLE";
+            statusLbl.text = "FREE";
             statusLbl.RemoveFromClassList("active-status");
             statusLbl.RemoveFromClassList("swap-status-active");
         }
@@ -861,7 +871,7 @@ public class NetworkWaitingRoom : NetworkBehaviour
                 }
                 if (statusLbl != null)
                 {
-                    statusLbl.text = "SELECTED BY YOU";
+                    statusLbl.text = "YOU";
                     statusLbl.AddToClassList("active-status");
                 }
             }
