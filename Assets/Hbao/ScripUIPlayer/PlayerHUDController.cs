@@ -175,6 +175,14 @@ public class PlayerHUDController : MonoBehaviour
 
     private VisualElement missionAlertBox;
     private Label missionAlertText;
+
+    // Quest UI References
+    private VisualElement questPanel;
+    private Label questProgressText;
+    private VisualElement questProgressBar;
+
+    [Header("Quest Settings")]
+    public Sprite woodLogSprite;
     
     // Hệ thống Hướng Dẫn Phím Nóng Động
     private VisualElement hotkeysHintPanel;
@@ -242,6 +250,7 @@ public class PlayerHUDController : MonoBehaviour
         weaponDurabilityFill1 = null; weaponDurabilityFill2 = null;
         interactionPrompt = null; interactionPromptText = null; interactionPromptKeyText = null;
         missionAlertBox = null; missionAlertText = null;
+        questPanel = null; questProgressText = null; questProgressBar = null;
         hotkeysHintPanel = null; idleHintsGroup = null; actionHintsGroup = null;
         hintWeapon2 = null; hintSkills = null;
         upgradePointsText = null; hpLevelText = null; mpLevelText = null;
@@ -314,6 +323,11 @@ public class PlayerHUDController : MonoBehaviour
         interactionPrompt = root.Q<VisualElement>("interaction-prompt");
         interactionPromptText = root.Q<Label>("interaction-prompt-text");
         interactionPromptKeyText = root.Q<Label>(className: "key-badge-f-text");
+
+        // Quest Panel references
+        questPanel = root.Q<VisualElement>("quest-panel");
+        questProgressText = root.Q<Label>("quest-progress-text");
+        questProgressBar = root.Q<VisualElement>("quest-progress-bar");
 
         // Tìm các phần tử của bảng phím nóng
         hotkeysHintPanel = root.Q<VisualElement>("hotkeys-hint-panel");
@@ -1568,6 +1582,14 @@ public class PlayerHUDController : MonoBehaviour
                         itemIcon.style.backgroundImage = new StyleBackground(ngoc2Sprite);
                     }
                 }
+                else if (itemName.Equals("WoodLog", System.StringComparison.OrdinalIgnoreCase) || 
+                         itemName.Equals("ThanhGo", System.StringComparison.OrdinalIgnoreCase))
+                {
+                    if (woodLogSprite != null)
+                    {
+                        itemIcon.style.backgroundImage = new StyleBackground(woodLogSprite);
+                    }
+                }
 
                 slot.Add(itemIcon);
 
@@ -1580,6 +1602,30 @@ public class PlayerHUDController : MonoBehaviour
                 }
             }
         }
+
+        // Count Wood Logs in inventory to update the Quest progress UI automatically
+        int woodCount = 0;
+        if (slots != null)
+        {
+            foreach (var slotVal in slots)
+            {
+                if (string.IsNullOrEmpty(slotVal)) continue;
+                string itemN = slotVal;
+                int count = 1;
+                if (slotVal.Contains(":"))
+                {
+                    var parts = slotVal.Split(':');
+                    itemN = parts[0];
+                    int.TryParse(parts[1], out count);
+                }
+                if (itemN.Equals("WoodLog", System.StringComparison.OrdinalIgnoreCase) || 
+                    itemN.Equals("ThanhGo", System.StringComparison.OrdinalIgnoreCase))
+                {
+                    woodCount += count;
+                }
+            }
+        }
+        UpdateQuestProgress(woodCount, 16);
     }
 
     // =========================================================================
@@ -1753,6 +1799,16 @@ public class PlayerHUDController : MonoBehaviour
             {
                 tooltipTitle.text = "NGỌC ĐỎ BÍ ẨN";
                 tooltipDesc.text = "Viên ngọc rực lửa đang cất giấu một sức mạnh bí mật... Hiện tại chưa thể sử dụng.";
+                tooltipElement.style.opacity = 1f;
+                tooltipElement.style.left = evt.position.x + 15f;
+                tooltipElement.style.top = evt.position.y + 15f;
+            }
+            else if ((itemName.Equals("WoodLog", System.StringComparison.OrdinalIgnoreCase) || 
+                      itemName.Equals("ThanhGo", System.StringComparison.OrdinalIgnoreCase)) && 
+                     tooltipElement != null)
+            {
+                tooltipTitle.text = "THANH GỖ";
+                tooltipDesc.text = "Thanh gỗ chắc chắn dùng để sửa cầu.";
                 tooltipElement.style.opacity = 1f;
                 tooltipElement.style.left = evt.position.x + 15f;
                 tooltipElement.style.top = evt.position.y + 15f;
@@ -2543,6 +2599,37 @@ public class PlayerHUDController : MonoBehaviour
         if (missionAlertBox != null)
         {
             missionAlertBox.style.display = DisplayStyle.None;
+        }
+    }
+
+    public void ShowQuest(bool show)
+    {
+        InitializeUI();
+        if (questPanel != null)
+        {
+            if (show)
+            {
+                questPanel.AddToClassList("show-quest");
+            }
+            else
+            {
+                questPanel.RemoveFromClassList("show-quest");
+            }
+            Debug.Log($"[PlayerHUDController] ShowQuest({show})");
+        }
+    }
+
+    public void UpdateQuestProgress(int current, int target = 16)
+    {
+        InitializeUI();
+        if (questProgressText != null)
+        {
+            questProgressText.text = $"{current} / {target}";
+        }
+        if (questProgressBar != null)
+        {
+            float percent = target > 0 ? ((float)current / target) * 100f : 0f;
+            questProgressBar.style.width = Length.Percent(Mathf.Clamp(percent, 0f, 100f));
         }
     }
 

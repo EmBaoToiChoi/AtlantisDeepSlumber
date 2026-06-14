@@ -279,4 +279,22 @@
             </ui:VisualElement>
         </ui:VisualElement>
     </ui:VisualElement>
+    
+    <!-- Quest Panel -->
+    <ui:VisualElement name="quest-panel" class="quest-panel">
+        <ui:VisualElement class="quest-header">
+            <ui:VisualElement class="quest-icon" />
+            <ui:Label text="NHIỆM VỤ" class="quest-title" />
+        </ui:VisualElement>
+        <ui:VisualElement class="quest-divider" />
+        <ui:VisualElement class="quest-details">
+            <ui:Label name="quest-description" text="Thu thập 16 thanh gỗ" class="quest-desc" />
+            <ui:VisualElement class="quest-progress-row">
+                <ui:Label name="quest-progress-text" text="0 / 16" class="quest-progress-text" />
+                <ui:VisualElement class="quest-progress-bg">
+                    <ui:VisualElement name="quest-progress-bar" class="quest-progress-fill" style="width: 0%;" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+        </ui:VisualElement>
+    </ui:VisualElement>
 </ui:UXML>
