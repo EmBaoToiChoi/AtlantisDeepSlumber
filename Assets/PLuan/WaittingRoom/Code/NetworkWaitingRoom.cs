@@ -1572,7 +1572,14 @@ public class NetworkWaitingRoom : NetworkBehaviour
         yield return null;
         
         Debug.Log("[Lobby] Đang chuyển sang cảnh MainMenu...");
-        UnityEngine.SceneManagement.SceneManager.LoadScene("MainMenu");
+        if (SceneLoader.Instance != null)
+        {
+            _ = SceneLoader.Instance.LoadSceneAsync("MainMenu", "RETURNING TO MAIN MENU...");
+        }
+        else
+        {
+            UnityEngine.SceneManagement.SceneManager.LoadScene("MainMenu");
+        }
     }
 
     private void OnDestroy()

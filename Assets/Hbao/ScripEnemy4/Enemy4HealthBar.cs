@@ -22,11 +22,16 @@ public class Enemy4HealthBar : MonoBehaviour
     private float yellowDrainDelay = 0.5f;
     private float yellowDrainTimer = 0f;
 
+    private Animator cachedAnimator;
+    private bool hasAnimator;
+
     private void OnEnable()
     {
         if (enemy == null) enemy = GetComponentInParent<Enemy4_Bongtoi>();
 
         mainCamera = Camera.main;
+        cachedAnimator = GetComponent<Animator>();
+        hasAnimator = cachedAnimator != null;
         if (uiDocument == null) uiDocument = GetComponentInChildren<UIDocument>();
 
         // Tìm Quad dùng làm Mesh hiển thị
@@ -147,7 +152,7 @@ public class Enemy4HealthBar : MonoBehaviour
             Transform targetRotationTransform = (uiDocument != null) ? uiDocument.transform : transform;
             
             // Nếu targetRotationTransform vẫn là root của Enemy (có script di chuyển/AI và Animator), ta BỎ QUA không quay để tránh lỗi cúi đầu
-            if (targetRotationTransform == transform && GetComponent<Animator>() != null)
+            if (targetRotationTransform == transform && hasAnimator)
             {
                 if (quadTransform != null)
                 {

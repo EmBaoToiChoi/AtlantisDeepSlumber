@@ -1,12 +1,14 @@
 using UnityEngine;
 using Unity.Netcode;
 
-public class WeaponBowElena : NetworkBehaviour
+public class WeaponBowElena : NetworkBehaviour, IInteractableItem
 {
     [Header("Item Settings")]
     public string itemName = "Cung của Elena";
     public float interactRadius = 2.5f;
     public int targetClassIndex = 2; // Cung Thủ (Elena)
+
+    public float InteractRadius => interactRadius;
 
     [Header("Floating Animation Settings")]
     public float rotationSpeed = 60f;
@@ -21,6 +23,20 @@ public class WeaponBowElena : NetworkBehaviour
     private void Start()
     {
         startY = transform.position.y;
+    }
+
+    private void OnEnable()
+    {
+        InteractionRegistry.Register(this);
+    }
+
+    private void OnDisable()
+    {
+        InteractionRegistry.Unregister(this);
+        if (isWithinRange && hud != null)
+        {
+            hud.ShowInteractionPrompt(false, "");
+        }
     }
 
     private void Update()
@@ -51,9 +67,8 @@ public class WeaponBowElena : NetworkBehaviour
             }
 
             float distance = Vector3.Distance(transform.position, localPlayer.transform.position);
-            bool isClosest = IsClosestItem();
 
-            if (distance <= interactRadius && isClosest)
+            if (distance <= interactRadius && IsClosestItem())
             {
                 if (!isWithinRange)
                 {
@@ -87,17 +102,9 @@ public class WeaponBowElena : NetworkBehaviour
 
     private void FindLocalPlayer()
     {
-        var targets = FindObjectsOfType<MonoBehaviour>();
-        foreach (var target in targets)
+        if (PlayerHUDController.LocalPlayerTarget != null)
         {
-            if (target is IPlayerHUDTarget player)
-            {
-                if (player.IsStandaloneMode || player.IsOwner)
-                {
-                    localPlayer = player;
-                    break;
-                }
-            }
+            localPlayer = PlayerHUDController.LocalPlayerTarget;
         }
     }
 
@@ -106,45 +113,15 @@ public class WeaponBowElena : NetworkBehaviour
         if (localPlayer == null) return false;
 
         float myDist = Vector3.Distance(transform.position, localPlayer.transform.position);
+        var activeItems = InteractionRegistry.ActiveItems;
 
-        var bows = FindObjectsOfType<WeaponBowElena>();
-        foreach (var item in bows)
+        for (int i = 0; i < activeItems.Count; i++)
         {
-            if (item == this || item == null) continue;
-            float dist = Vector3.Distance(item.transform.position, localPlayer.transform.position);
-            if (dist <= item.interactRadius && dist < myDist) return false;
-        }
+            var item = activeItems[i];
+            if (ReferenceEquals(item, this) || item == null) continue;
 
-        var blades = FindObjectsOfType<WeaponBladesLeo>();
-        foreach (var item in blades)
-        {
-            if (item == null) continue;
             float dist = Vector3.Distance(item.transform.position, localPlayer.transform.position);
-            if (dist <= item.interactRadius && dist < myDist) return false;
-        }
-
-        var arthurs = FindObjectsOfType<WeaponShieldArthur>();
-        foreach (var item in arthurs)
-        {
-            if (item == null) continue;
-            float dist = Vector3.Distance(item.transform.position, localPlayer.transform.position);
-            if (dist <= item.interactRadius && dist < myDist) return false;
-        }
-
-        var collectibles = FindObjectsOfType<CollectibleItemDrop>();
-        foreach (var item in collectibles)
-        {
-            if (item == null) continue;
-            float dist = Vector3.Distance(item.transform.position, localPlayer.transform.position);
-            if (dist <= item.interactRadius && dist < myDist) return false;
-        }
-
-        var repairs = FindObjectsOfType<RepairItemDrop>();
-        foreach (var item in repairs)
-        {
-            if (item == null) continue;
-            float dist = Vector3.Distance(item.transform.position, localPlayer.transform.position);
-            if (dist <= item.interactRadius && dist < myDist) return false;
+            if (dist <= item.InteractRadius && dist < myDist) return false;
         }
 
         return true;
@@ -220,11 +197,5 @@ public class WeaponBowElena : NetworkBehaviour
         }
     }
 
-    private void OnDestroy()
-    {
-        if (isWithinRange && hud != null)
-        {
-            hud.ShowInteractionPrompt(false, "");
-        }
-    }
+
 }
