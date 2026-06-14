@@ -906,45 +906,60 @@
     position: absolute;
     top: 25px;
     right: 35px;
-    background-image: url("project://database/Assets/PLuan/menuda.png?fileID=2800000&guid=b71e5fe46dbce4849b9385c26298aaa1&type=3#menuda");
+    width: 320px; /* Increased from 300px to scale up frame and expand safe area */
+    height: 230px; /* Increased from 200px to push top/bottom borders away from text */
     -unity-background-scale-mode: stretch-to-fill;
     background-color: transparent !important;
     border-width: 0 !important;
-    border-left-width: 0 !important;
     border-radius: 0 !important;
-    padding: 22px 36px 18px 36px;
+    padding: 32px 25px 28px 25px; /* Larger top/bottom padding to push elements away from ornate gold borders */
     align-items: center;
+    justify-content: center;
     box-shadow: none !important;
 }
 .user-profile-label {
-    color: rgba(0, 230, 255, 0.5);
-    font-size: 11px;
-    letter-spacing: 3px;
-    margin-bottom: 2px;
+    color: rgb(143, 223, 255); /* Hex #8FDFFF icy cyan */
+    font-size: 20px; /* Exact size requested */
+    letter-spacing: 1.5px;
+    margin: 0 0 4px 0; /* Tight margins for centered grouping */
+    padding: 0;
+    -unity-font-style: bold;
+    -unity-text-outline-width: 1px;
+    -unity-text-outline-color: rgb(0, 0, 0);
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.95);
 }
 .user-profile-name {
-    color: rgb(255, 255, 255);
-    font-size: 22px;
-    -unity-font-style: bold;
-    text-shadow: 0 0 12px rgba(0, 230, 255, 0.8);
+    color: rgb(255, 255, 255); /* Pure white */
+    font-size: 34px; /* Exact size requested */
+    -unity-font-style: bold-and-italic; /* Bold and italic requested */
     letter-spacing: 1px;
+    margin: 0 0 6px 0;
+    padding: 0;
+    -unity-text-outline-width: 1.2px;
+    -unity-text-outline-color: rgb(0, 0, 0);
+    text-shadow: 1.5px 1.5px 2px rgba(0, 0, 0, 0.95);
 }
 .logout-btn {
-    margin-top: 10px;
-    padding: 6px 14px !important;
-    font-size: 13px !important;
+    margin: 0;
+    padding: 4px 12px !important;
+    font-size: 18px !important; /* Exact size requested */
     background-color: transparent !important;
     border-width: 0 !important;
-    color: rgb(255, 100, 100) !important;
+    color: rgb(143, 223, 255) !important; /* Hex #8FDFFF icy cyan */
     -unity-font-style: bold;
+    -unity-text-outline-width: 1px !important; /* Sharp outline to stand out on bright background rays */
+    -unity-text-outline-color: rgb(0, 0, 0) !important;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.95);
     transition: all 0.2s ease-out;
 }
 .logout-btn:hover {
     background-color: transparent !important;
     border-width: 0 !important;
-    color: rgb(255, 180, 180) !important;
+    color: rgb(255, 255, 255) !important; /* White on hover */
     scale: 1.08 1.08;
-    text-shadow: 0 0 10px rgba(255, 50, 50, 0.95) !important;
+    -unity-text-outline-width: 1px !important;
+    -unity-text-outline-color: rgb(0, 0, 0) !important;
+    text-shadow: 0 0 10px rgba(0, 255, 255, 0.85) !important; /* Soft cyan glow on hover */
 }
 
 .spam-note {
