@@ -35,7 +35,7 @@
                             <ui:Label text="LEO" class="char-card-name" />
                             <ui:Label text="SHADOW ASSASSIN" class="char-card-role" />
                         </ui:VisualElement>
-                        <ui:Label name="char-status-0" text="SELECTED BY YOU" class="char-card-status active-status" />
+                        <ui:Label name="char-status-0" text="YOU" class="char-card-status active-status" />
                     </ui:VisualElement>
                     <ui:VisualElement name="char-card-1" class="char-card">
                         <ui:VisualElement name="char-img-1" class="char-card-portrait maya-img" />
@@ -43,7 +43,7 @@
                             <ui:Label text="MAYA" class="char-card-name" />
                             <ui:Label text="FIRE ELEMENTALIST" class="char-card-role" />
                         </ui:VisualElement>
-                        <ui:Label name="char-status-1" text="AVAILABLE" class="char-card-status" />
+                        <ui:Label name="char-status-1" text="FREE" class="char-card-status" />
                     </ui:VisualElement>
                     <ui:VisualElement name="char-card-2" class="char-card">
                         <ui:VisualElement name="char-img-2" class="char-card-portrait elena-img" />
@@ -51,7 +51,7 @@
                             <ui:Label text="ELENA" class="char-card-name" />
                             <ui:Label text="ELVEN ARCHER" class="char-card-role" />
                         </ui:VisualElement>
-                        <ui:Label name="char-status-2" text="AVAILABLE" class="char-card-status" />
+                        <ui:Label name="char-status-2" text="FREE" class="char-card-status" />
                     </ui:VisualElement>
                     <ui:VisualElement name="char-card-3" class="char-card">
                         <ui:VisualElement name="char-img-3" class="char-card-portrait arthur-img" />
@@ -59,7 +59,7 @@
                             <ui:Label text="ARTHUR" class="char-card-name" />
                             <ui:Label text="ROYAL TANKER" class="char-card-role" />
                         </ui:VisualElement>
-                        <ui:Label name="char-status-3" text="AVAILABLE" class="char-card-status" />
+                        <ui:Label name="char-status-3" text="FREE" class="char-card-status" />
                     </ui:VisualElement>
                 </ui:VisualElement>
                 <ui:Label text="Hold SHIFT + Left Click to Inspect" class="char-inspect-tip" />
@@ -83,7 +83,7 @@
             </ui:VisualElement>
         </ui:VisualElement>
         <ui:VisualElement name="char-details-modal" class="details-modal hidden-element">
-            <ui:VisualElement class="details-container glow-border">
+            <ui:VisualElement class="details-container glow-border" style="background-image: url(&quot;project://database/Assets/PLuan/IMG%20chi%20ti%E1%BA%BFt%20player.png?fileID=2800000&amp;guid=436691c05007b504a96ccaa6a52a3abc&amp;type=3#IMG chi tiết player&quot;);">
                 <ui:VisualElement class="panel-seaweed-top-right">
                     <ui:VisualElement class="seaweed-leaf leaf-1" />
                     <ui:VisualElement class="seaweed-leaf leaf-2" />
@@ -94,14 +94,9 @@
                     <ui:VisualElement class="seaweed-leaf leaf-2" />
                     <ui:VisualElement class="seaweed-leaf leaf-3" />
                 </ui:VisualElement>
-                <ui:Button name="btn-close-details" class="close-btn-hitbox">
-                    <ui:VisualElement class="close-btn-visual">
-                        <ui:Label text="X" class="close-btn-text" />
-                    </ui:VisualElement>
-                </ui:Button>
                 <ui:VisualElement class="details-header">
                     <ui:VisualElement name="details-portrait" class="details-large-portrait leo-img" />
-                    <ui:VisualElement style="justify-content: center;">
+                    <ui:VisualElement class="details-title-container">
                         <ui:Label name="details-name" text="LEO" class="details-char-name" />
                         <ui:Label name="details-role" text="SHADOW ASSASSIN" class="details-char-role" />
                     </ui:VisualElement>
@@ -111,30 +106,31 @@
                 <ui:VisualElement name="skills-container" class="details-skills-container">
                     <ui:VisualElement name="details-skill-box-0" class="details-skill-box">
                         <ui:VisualElement name="details-skill-img-0" class="details-skill-icon skill-icon-img" />
-                        <ui:VisualElement style="flex-shrink: 1; margin-left: 15px; flex-grow: 1;">
+                        <ui:VisualElement class="details-skill-text-container">
                             <ui:Label name="details-skill-name-0" text="Trench Dash" class="details-skill-title" />
                             <ui:Label name="details-skill-desc-0" text="Dashes forward a short distance, granting immunity to physical pressure damage for 3 seconds." class="details-skill-desc" />
                         </ui:VisualElement>
                     </ui:VisualElement>
                     <ui:VisualElement name="details-skill-box-1" class="details-skill-box">
                         <ui:VisualElement name="details-skill-img-1" class="details-skill-icon skill-icon-img" />
-                        <ui:VisualElement style="flex-shrink: 1; margin-left: 15px; flex-grow: 1;">
+                        <ui:VisualElement class="details-skill-text-container">
                             <ui:Label name="details-skill-name-1" text="Sonar Scan" class="details-skill-title" />
                             <ui:Label name="details-skill-desc-1" text="Emits a high-frequency acoustic pulse that reveals nearby resources." class="details-skill-desc" />
                         </ui:VisualElement>
                     </ui:VisualElement>
                     <ui:VisualElement name="details-skill-box-2" class="details-skill-box">
                         <ui:VisualElement name="details-skill-img-2" class="details-skill-icon skill-icon-img" />
-                        <ui:VisualElement style="flex-shrink: 1; margin-left: 15px; flex-grow: 1;">
+                        <ui:VisualElement class="details-skill-text-container">
                             <ui:Label name="details-skill-name-2" text="Pressure Stabilizer" class="details-skill-title" />
                             <ui:Label name="details-skill-desc-2" text="Overcharges dive suit exoskeleton, reducing environmental damage." class="details-skill-desc" />
                         </ui:VisualElement>
                     </ui:VisualElement>
                 </ui:VisualElement>
+                <ui:Button name="btn-close-details" class="details-close-btn" text="CLOSE" />
             </ui:VisualElement>
         </ui:VisualElement>
         <ui:VisualElement name="swap-request-modal" class="details-modal hidden-element">
-            <ui:VisualElement class="details-container glow-border" style="width: 420px; padding: 30px; align-items: center; border-left-color: rgb(255, 165, 0);">
+            <ui:VisualElement class="swap-modal-container glow-border" style="width: 420px; padding: 30px; align-items: center; border-left-color: rgb(255, 165, 0);">
                 <ui:VisualElement class="panel-seaweed-top-right">
                     <ui:VisualElement class="seaweed-leaf leaf-1" />
                     <ui:VisualElement class="seaweed-leaf leaf-2" />
