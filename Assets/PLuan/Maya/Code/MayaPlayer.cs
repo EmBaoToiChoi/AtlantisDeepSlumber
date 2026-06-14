@@ -399,6 +399,9 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     public void TriggerESkill()
     {
+        var carrier = GetComponent<PlayerLogCarrier>();
+        if (carrier != null && carrier.isCarrying) return;
+
         if (PlayerLevel < 10 && !IsSkillsUnlocked) return;
         if (GetActiveWeaponIndex() != 2) return;
         if (eSkillCooldownTimer > 0f) return;
@@ -619,6 +622,9 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
     
     public bool TriggerQSkill()
     {
+        var carrier = GetComponent<PlayerLogCarrier>();
+        if (carrier != null && carrier.isCarrying) return false;
+
         if (PlayerLevel < 15 && !IsSkillsUnlocked) return false;
         if (GetActiveWeaponIndex() != 2)
         {
@@ -770,6 +776,9 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
     // R Skill
     public void TriggerRSkill()
     {
+        var carrier = GetComponent<PlayerLogCarrier>();
+        if (carrier != null && carrier.isCarrying) return;
+
         if (PlayerLevel < 5 && !IsSkillsUnlocked) return;
         if (GetActiveWeaponIndex() != 2)
         {
@@ -2375,12 +2384,15 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
     }
 
     private void StartRollStandalone(Vector3 moveInput)
-{
-    isRollingStandalone = true;
-    rollTimer = rollDuration;
-    rollCooldownTimer = rollCooldown;
+    {
+        var carrier = GetComponent<PlayerLogCarrier>();
+        if (carrier != null && carrier.isCarrying) return;
+
+        isRollingStandalone = true;
+        rollTimer = rollDuration;
+        rollCooldownTimer = rollCooldown;
     
-    ClearAttackLayer(); // Trả Layer 1 về Empty để lộn vòng cả thân người
+        ClearAttackLayer(); // Trả Layer 1 về Empty để lộn vòng cả thân người
     
     // Hướng nhào lộn: nếu có di chuyển thì lăn theo hướng WASD theo Camera, ngược lại lăn theo hướng đang nhìn
     if (moveInput != Vector3.zero)
@@ -2401,13 +2413,15 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
     if (anim != null) anim.applyRootMotion = false; // TẮT ROOT MOTION
     PlayAnimation("LonVong", 0.05f);
 }
-
     private void StartRollOwner(Vector3 moveInput)
-{
-    rollTimer = rollDuration;
-    rollCooldownTimer = rollCooldown;
-    
-    ClearAttackLayer(); 
+    {
+        var carrier = GetComponent<PlayerLogCarrier>();
+        if (carrier != null && carrier.isCarrying) return;
+
+        rollTimer = rollDuration;
+        rollCooldownTimer = rollCooldown;
+        
+        ClearAttackLayer(); 
     
     if (moveInput != Vector3.zero)
     {
@@ -2652,6 +2666,9 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     private void PerformComboAttack(bool networkMode)
     {
+        var carrier = GetComponent<PlayerLogCarrier>();
+        if (carrier != null && carrier.isCarrying) return;
+
         int weapon = GetActiveWeaponIndex();
         if (!networkMode)
         {
@@ -3414,6 +3431,12 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     public void PlayAnimation(string animName, float fadeTime = 0.1f, bool alreadyPlayedLocally = false, bool isRooted = false)
     {
+        var carrier = GetComponent<PlayerLogCarrier>();
+        if (carrier != null && carrier.isCarrying && animName != "Death")
+        {
+            return;
+        }
+
         if (anim == null)
         {
             anim = GetComponent<Animator>();

@@ -54,7 +54,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  GlobalObjectIdHash: 939117060
+  GlobalObjectIdHash: 1129536195
   InScenePlacedSourceGlobalObjectIdHash: 939117060
   DeferredDespawnTick: 0
   Ownership: 1
@@ -133,6 +133,13 @@ MonoBehaviour:
     TransitionDuration: 0.1
     TriggerNameHash: -39148367
     TransitionIndex: 0
+  - IsCrossFadeExit: 0
+    Layer: 1
+    OriginatingState: -499022955
+    DestinationState: 1791711171
+    TransitionDuration: 0.05
+    TriggerNameHash: 1522598188
+    TransitionIndex: 2
   - IsCrossFadeExit: 0
     Layer: 1
     OriginatingState: -39148367
@@ -214,6 +221,10 @@ MonoBehaviour:
       ParameterType: 4
     - name: Bow_Shoot
       NameHash: -1139344104
+      Synchronize: 1
+      ParameterType: 9
+    - name: "B\u01B0ng"
+      NameHash: 1522598188
       Synchronize: 1
       ParameterType: 9
   AnimatorParametersExpanded: 0

@@ -56,6 +56,65 @@ public class ChoppableTree : NetworkBehaviour
             visualModel = gameObject; // Fallback
         }
         originalLocalPos = visualModel.transform.localPosition;
+        ResolveWoodLogPrefab();
+    }
+
+    private void ResolveWoodLogPrefab()
+    {
+        if (woodLogPrefab == null || woodLogPrefab == gameObject || woodLogPrefab.GetComponent<ChoppableTree>() != null)
+        {
+            Debug.LogWarning($"[ChoppableTree] {name}: woodLogPrefab chưa được cấu hình đúng. Đang tự động tìm kiếm...");
+            
+            if (NetworkManager.Singleton != null && NetworkManager.Singleton.NetworkConfig != null)
+            {
+                foreach (var networkPrefab in NetworkManager.Singleton.NetworkConfig.Prefabs.Prefabs)
+                {
+                    if (networkPrefab.Prefab != null)
+                    {
+                        var col = networkPrefab.Prefab.GetComponent<CollectibleItemDrop>();
+                        if (col != null && (col.itemName.Equals("WoodLog", System.StringComparison.OrdinalIgnoreCase) || 
+                                            col.itemName.Equals("ThanhGo", System.StringComparison.OrdinalIgnoreCase)))
+                        {
+                            woodLogPrefab = networkPrefab.Prefab;
+                            Debug.Log($"[ChoppableTree] {name}: Tự động cấu hình woodLogPrefab thành công qua CollectibleItemDrop: {woodLogPrefab.name}");
+                            return;
+                        }
+                    }
+                }
+
+                foreach (var networkPrefab in NetworkManager.Singleton.NetworkConfig.Prefabs.Prefabs)
+                {
+                    if (networkPrefab.Prefab != null)
+                    {
+                        string pName = networkPrefab.Prefab.name.ToLower();
+                        if (pName.Contains("firewood") || pName.Contains("woodlog") || pName.Contains("thanhgo"))
+                        {
+                            woodLogPrefab = networkPrefab.Prefab;
+                            Debug.Log($"[ChoppableTree] {name}: Tự động cấu hình woodLogPrefab thành công qua tên prefab: {woodLogPrefab.name}");
+                            return;
+                        }
+                    }
+                }
+            }
+
+            GameObject loaded = Resources.Load<GameObject>("firewood_single");
+            if (loaded != null)
+            {
+                woodLogPrefab = loaded;
+                Debug.Log($"[ChoppableTree] {name}: Tự động cấu hình woodLogPrefab thành công từ Resources: {woodLogPrefab.name}");
+                return;
+            }
+
+            loaded = Resources.Load<GameObject>("WoodLog");
+            if (loaded != null)
+            {
+                woodLogPrefab = loaded;
+                Debug.Log($"[ChoppableTree] {name}: Tự động cấu hình woodLogPrefab thành công từ Resources: {woodLogPrefab.name}");
+                return;
+            }
+
+            Debug.LogError($"[ChoppableTree] {name}: Không thể tìm thấy WoodLog prefab hợp lệ!");
+        }
     }
 
     public override void OnNetworkSpawn()
