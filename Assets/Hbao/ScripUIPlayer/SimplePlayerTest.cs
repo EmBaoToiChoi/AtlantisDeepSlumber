@@ -1308,6 +1308,9 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
 
     protected virtual void StartRollStandalone(Vector3 moveInput)
     {
+        var carrier = GetComponent<PlayerLogCarrier>();
+        if (carrier != null && carrier.isCarrying) return;
+
         isRollingStandalone = true;
         rollTimer = rollDuration;
         rollCooldownTimer = rollCooldown;
@@ -1331,6 +1334,9 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
 
     protected virtual void StartRollOwner(Vector3 moveInput)
     {
+        var carrier = GetComponent<PlayerLogCarrier>();
+        if (carrier != null && carrier.isCarrying) return;
+
         rollTimer = rollDuration;
         rollCooldownTimer = rollCooldown;
         
@@ -1423,6 +1429,9 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
 
     protected virtual void PerformComboAttack(bool networkMode)
     {
+        var carrier = GetComponent<PlayerLogCarrier>();
+        if (carrier != null && carrier.isCarrying) return;
+
         int weapon = GetActiveWeaponIndex();
         float currentTime = Time.time;
 
@@ -2019,6 +2028,12 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
 
     public void PlayAnimation(string animName, float fadeTime = 0.1f, bool alreadyPlayedLocally = false)
     {
+        var carrier = GetComponent<PlayerLogCarrier>();
+        if (carrier != null && carrier.isCarrying && animName != "Death")
+        {
+            return;
+        }
+
         if (anim == null)
         {
             anim = GetComponent<Animator>();

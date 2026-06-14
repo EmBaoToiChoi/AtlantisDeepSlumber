@@ -352,6 +352,9 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
     // Chỉ kích hoạt hoạt ảnh gồng chiêu R ban đầu
     public void TriggerInvisibilitySkill()
     {
+        var carrier = GetComponent<PlayerLogCarrier>();
+        if (carrier != null && carrier.isCarrying) return;
+
         if (PlayerLevel < 5 && !IsSkillsUnlocked) return;
         if (isRSkillActive) return;
 
@@ -401,6 +404,9 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
     /// <summary>Kích hoạt Skill Q - phát hoạt ảnh dặm khiên. Trả về true nếu đã khởi động thành công.</summary>
     new public bool TriggerQSkill()
     {
+        var carrier = GetComponent<PlayerLogCarrier>();
+        if (carrier != null && carrier.isCarrying) return false;
+
         if (PlayerLevel < 15 && !IsSkillsUnlocked) return false;
         if (isQSkillActive || isQSkillPlayingAnim) return false;
 
@@ -476,6 +482,9 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     public void TriggerAttackSpeedBoostSkill()
     {
+        var carrier = GetComponent<PlayerLogCarrier>();
+        if (carrier != null && carrier.isCarrying) return;
+
         if (PlayerLevel < 10 && !IsSkillsUnlocked) return;
         if (IsAttackSpeedBoosted || isESkillPlayingAnim) return;
 
@@ -1691,6 +1700,9 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     protected virtual void StartRollStandalone(Vector3 moveInput)
     {
+        var carrier = GetComponent<PlayerLogCarrier>();
+        if (carrier != null && carrier.isCarrying) return;
+
         isRollingStandalone = true;
         rollTimer = rollDuration;
         rollCooldownTimer = rollCooldown;
@@ -1718,6 +1730,9 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     protected virtual void StartRollOwner(Vector3 moveInput)
     {
+        var carrier = GetComponent<PlayerLogCarrier>();
+        if (carrier != null && carrier.isCarrying) return;
+
         isRollingStandalone = true;
         rollTimer = rollDuration;
         rollCooldownTimer = rollCooldown;
@@ -1888,6 +1903,9 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     protected virtual void RequestComboAttack(bool networkMode, bool isContinuation = false)
     {
+        var carrier = GetComponent<PlayerLogCarrier>();
+        if (carrier != null && carrier.isCarrying) return;
+
         if (isExecutingAttack)
         {
             pendingAttackRequest = true;
@@ -3290,6 +3308,12 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     public void PlayAnimation(string animName, float fadeTime = 0.1f, bool alreadyPlayedLocally = false)
     {
+        var carrier = GetComponent<PlayerLogCarrier>();
+        if (carrier != null && carrier.isCarrying && animName != "Death")
+        {
+            return;
+        }
+
         if (anim == null)
         {
             anim = GetComponent<Animator>();

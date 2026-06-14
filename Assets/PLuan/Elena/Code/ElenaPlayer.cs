@@ -377,6 +377,9 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     public void TriggerESkill()
     {
+        var carrier = GetComponent<PlayerLogCarrier>();
+        if (carrier != null && carrier.isCarrying) return;
+
         if (PlayerLevel < 10 && !IsSkillsUnlocked) return;
         if (eSkillCooldownTimer > 0f || IsESkillActive) return;
         
@@ -455,6 +458,9 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
     
     public bool TriggerQSkill()
     {
+        var carrier = GetComponent<PlayerLogCarrier>();
+        if (carrier != null && carrier.isCarrying) return false;
+
         if (PlayerLevel < 15 && !IsSkillsUnlocked) return false;
         if (qSkillCooldownTimer > 0f || IsQSkillActive) return false;
 
@@ -524,6 +530,9 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
     // R Skill
     public void TriggerRSkill()
     {
+        var carrier = GetComponent<PlayerLogCarrier>();
+        if (carrier != null && carrier.isCarrying) return;
+
         if (rSkillCooldownTimer > 0f || IsRSkillActive) return;
 
         rSkillDurationTimer = rSkillDuration;
@@ -1865,6 +1874,9 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     private void StartRollStandalone(Vector3 moveInput)
 {
+    var carrier = GetComponent<PlayerLogCarrier>();
+    if (carrier != null && carrier.isCarrying) return;
+
     isRollingStandalone = true;
     rollTimer = rollDuration;
     rollCooldownTimer = rollCooldown;
@@ -1893,6 +1905,9 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     private void StartRollOwner(Vector3 moveInput)
 {
+    var carrier = GetComponent<PlayerLogCarrier>();
+    if (carrier != null && carrier.isCarrying) return;
+
     rollTimer = rollDuration;
     rollCooldownTimer = rollCooldown;
     
@@ -2141,6 +2156,9 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     private void PerformComboAttack(bool networkMode)
     {
+        var carrier = GetComponent<PlayerLogCarrier>();
+        if (carrier != null && carrier.isCarrying) return;
+
         int weapon = GetActiveWeaponIndex();
         if (!networkMode)
         {
@@ -2903,6 +2921,12 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     public void PlayAnimation(string animName, float fadeTime = 0.1f, bool alreadyPlayedLocally = false, bool isRooted = false)
     {
+        var carrier = GetComponent<PlayerLogCarrier>();
+        if (carrier != null && carrier.isCarrying && animName != "Death")
+        {
+            return;
+        }
+
         if (anim == null)
         {
             anim = GetComponent<Animator>();
@@ -3186,6 +3210,11 @@ private void StartRollServerRpc(Vector3 direction)
 
     private void PerformBowShoot(bool networkMode)
     {
+        var carrier = GetComponent<PlayerLogCarrier>();
+        if (carrier != null && carrier.isCarrying) return;
+
+        if (bowShootCooldownTimer > 0) return;
+        
         if (!networkMode)
         {
             Weapon2Durability = Mathf.Max(Weapon2Durability - 2f, 0f);

@@ -4000,6 +4000,9 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     /// </summary>
     private void RequestComboAttack(bool networkMode)
     {
+        var carrier = GetComponent<PlayerLogCarrier>();
+        if (carrier != null && carrier.isCarrying) return;
+
         if (isExecutingAttack)
         {
             // Đang đánh: kiểm tra xem có đang trong combo window không
@@ -4188,6 +4191,9 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     protected void StartRollStandalone(Vector3 moveInput)
     {
+        var carrier = GetComponent<PlayerLogCarrier>();
+        if (carrier != null && carrier.isCarrying) return;
+
         isRollingStandalone = true;
         rollTimer = rollDuration;
         rollCooldownTimer = rollCooldown;
@@ -4215,6 +4221,9 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     protected void StartRollOwner(Vector3 moveInput)
     {
+        var carrier = GetComponent<PlayerLogCarrier>();
+        if (carrier != null && carrier.isCarrying) return;
+
         isRollingStandalone = true;
         rollTimer = rollDuration;
         rollCooldownTimer = rollCooldown;
@@ -4708,6 +4717,9 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     public void TriggerInvisibilitySkill()
     {
+        var carrier = GetComponent<PlayerLogCarrier>();
+        if (carrier != null && carrier.isCarrying) return;
+
         if (PlayerLevel < 5 && !IsSkillsUnlocked) return;
         if (IsInvisible) return;
 
@@ -4833,6 +4845,9 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     // ======================================================
     public void TriggerAttackSpeedBoostSkill()
     {
+        var carrier = GetComponent<PlayerLogCarrier>();
+        if (carrier != null && carrier.isCarrying) return;
+
         if (PlayerLevel < 10 && !IsSkillsUnlocked) return;
         if (IsAttackSpeedBoosted) return;
 
@@ -5060,6 +5075,9 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     /// </summary>
     public bool TriggerQSkill()
     {
+        var carrier = GetComponent<PlayerLogCarrier>();
+        if (carrier != null && carrier.isCarrying) return false;
+
         if (PlayerLevel < 15 && !IsSkillsUnlocked) return false;
         if (IsQSkillActive) return false;
 
@@ -5861,6 +5879,12 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     public void PlayAnimation(string animName, float fadeTime = 0.1f, bool alreadyPlayedLocally = false, bool isRooted = false)
     {
+        var carrier = GetComponent<PlayerLogCarrier>();
+        if (carrier != null && carrier.isCarrying && animName != "Death")
+        {
+            return;
+        }
+
         if (anim == null) return;
 
         if (!alreadyPlayedLocally)

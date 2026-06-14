@@ -178,6 +178,21 @@ public class CollectibleItemDrop : NetworkBehaviour, IInteractableItem
     {
         if (localPlayer == null) return;
 
+        // Check if player is carrying wood
+        if (itemName.Equals("WoodLog", System.StringComparison.OrdinalIgnoreCase) || 
+            itemName.Equals("ThanhGo", System.StringComparison.OrdinalIgnoreCase))
+        {
+            var carrier = localPlayer.GetComponent<PlayerLogCarrier>();
+            if (carrier != null && carrier.isCarrying)
+            {
+                if (hud != null)
+                {
+                    hud.ShowMissionAlert("Bạn đang bưng một thanh gỗ rồi!", 2.0f);
+                }
+                return;
+            }
+        }
+
         // Tắt nhắc nhở tương tác ngay lập tức
         if (hud != null)
         {
@@ -194,6 +209,31 @@ public class CollectibleItemDrop : NetworkBehaviour, IInteractableItem
     public void ConfirmCollect()
     {
         if (localPlayer == null) return;
+
+        // Nếu là gỗ thì bưng lên tay chứ không cho vào hòm đồ
+        if (itemName.Equals("WoodLog", System.StringComparison.OrdinalIgnoreCase) || 
+            itemName.Equals("ThanhGo", System.StringComparison.OrdinalIgnoreCase))
+        {
+            if (IsPlayerStandalone())
+            {
+                var carrier = localPlayer.GetComponent<PlayerLogCarrier>();
+                if (carrier == null)
+                {
+                    carrier = localPlayer.gameObject.AddComponent<PlayerLogCarrier>();
+                }
+                carrier.CarryLog();
+                Destroy(gameObject);
+            }
+            else
+            {
+                var netPlayer = localPlayer.GetComponent<NetworkObject>();
+                if (netPlayer != null)
+                {
+                    PickUpWoodLogServerRpc(netPlayer.NetworkObjectId);
+                }
+            }
+            return;
+        }
 
         // Thử thêm vật phẩm vào hòm đồ mà không chạy lại hoạt ảnh
         bool added = TryAddItem(itemName);
@@ -212,6 +252,39 @@ public class CollectibleItemDrop : NetworkBehaviour, IInteractableItem
         else
         {
             Debug.LogWarning($"[CollectibleItemDrop] Hành trang đầy, không thể nhặt {itemName}!");
+        }
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    private void PickUpWoodLogServerRpc(ulong playerNetObjectId)
+    {
+        if (!IsServer) return;
+
+        PickUpWoodLogClientRpc(playerNetObjectId);
+
+        var netObj = GetComponent<NetworkObject>();
+        if (netObj != null && netObj.IsSpawned)
+        {
+            netObj.Despawn();
+        }
+        else
+        {
+            Destroy(gameObject);
+        }
+    }
+
+    [ClientRpc]
+    private void PickUpWoodLogClientRpc(ulong playerNetObjectId)
+    {
+        if (NetworkManager.Singleton != null && NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(playerNetObjectId, out var playerNetObj))
+        {
+            var playerObj = playerNetObj.gameObject;
+            var carrier = playerObj.GetComponent<PlayerLogCarrier>();
+            if (carrier == null)
+            {
+                carrier = playerObj.AddComponent<PlayerLogCarrier>();
+            }
+            carrier.CarryLog();
         }
     }
 
