@@ -1,12 +1,14 @@
 using UnityEngine;
 using Unity.Netcode;
 
-public class CollectibleItemDrop : NetworkBehaviour
+public class CollectibleItemDrop : NetworkBehaviour, IInteractableItem
 {
     [Header("Item Settings")]
     [Tooltip("Tên của vật phẩm để phân biệt trong hòm đồ (Ví dụ: Ngoc1, Ngoc2)")]
     public string itemName = "Ngoc1";
     public float interactRadius = 2.5f;
+
+    public float InteractRadius => interactRadius;
 
     [Header("Floating Animation Settings")]
     public float rotationSpeed = 60f;
@@ -65,6 +67,20 @@ public class CollectibleItemDrop : NetworkBehaviour
         startY = transform.position.y;
     }
 
+    private void OnEnable()
+    {
+        InteractionRegistry.Register(this);
+    }
+
+    private void OnDisable()
+    {
+        InteractionRegistry.Unregister(this);
+        if (isWithinRange && hud != null)
+        {
+            hud.ShowInteractionPrompt(false, "");
+        }
+    }
+
     private void Update()
     {
         // Hiệu ứng xoay tròn và nhấp nhô nhè nhẹ để vật phẩm rơi trông sinh động hơn
@@ -92,10 +108,9 @@ public class CollectibleItemDrop : NetworkBehaviour
             }
 
             float distance = Vector3.Distance(transform.position, localPlayer.transform.position);
-            bool isClosest = IsClosestItem();
 
             // 2. Nếu người chơi đi vào vùng tương tác và là vật phẩm gần nhất
-            if (distance <= interactRadius && isClosest)
+            if (distance <= interactRadius && IsClosestItem())
             {
                 if (!isWithinRange)
                 {
@@ -137,29 +152,15 @@ public class CollectibleItemDrop : NetworkBehaviour
         if (localPlayer == null) return false;
 
         float myDist = Vector3.Distance(transform.position, localPlayer.transform.position);
+        var activeItems = InteractionRegistry.ActiveItems;
 
-        // Kiểm tra tất cả CollectibleItemDrop
-        CollectibleItemDrop[] collectibles = FindObjectsOfType<CollectibleItemDrop>();
-        foreach (var item in collectibles)
+        for (int i = 0; i < activeItems.Count; i++)
         {
-            if (item == this || item == null) continue;
-            float dist = Vector3.Distance(item.transform.position, localPlayer.transform.position);
-            if (dist <= item.interactRadius && dist < myDist)
-            {
-                return false;
-            }
-        }
+            var item = activeItems[i];
+            if (ReferenceEquals(item, this) || item == null) continue;
 
-        // Kiểm tra tất cả RepairItemDrop
-        RepairItemDrop[] repairs = FindObjectsOfType<RepairItemDrop>();
-        foreach (var item in repairs)
-        {
-            if (item == null) continue;
             float dist = Vector3.Distance(item.transform.position, localPlayer.transform.position);
-            if (dist <= item.interactRadius && dist < myDist)
-            {
-                return false;
-            }
+            if (dist <= item.InteractRadius && dist < myDist) return false;
         }
 
         return true;
@@ -167,44 +168,9 @@ public class CollectibleItemDrop : NetworkBehaviour
 
     private void FindLocalPlayer()
     {
-        LeoPlayer[] leoPlayers = FindObjectsOfType<LeoPlayer>();
-        foreach (var p in leoPlayers)
+        if (PlayerHUDController.LocalPlayerTarget != null)
         {
-            if (p.isStandaloneMode || p.IsOwner)
-            {
-                localPlayer = p;
-                return;
-            }
-        }
-
-        ArthurPlayer[] arthurPlayers = FindObjectsOfType<ArthurPlayer>();
-        foreach (var p in arthurPlayers)
-        {
-            if (p.isStandaloneMode || p.IsOwner)
-            {
-                localPlayer = p;
-                return;
-            }
-        }
-
-        ElenaPlayer[] elenaPlayers = FindObjectsOfType<ElenaPlayer>();
-        foreach (var p in elenaPlayers)
-        {
-            if (p.isStandaloneMode || p.IsOwner)
-            {
-                localPlayer = p;
-                return;
-            }
-        }
-
-        MayaPlayer[] mayaPlayers = FindObjectsOfType<MayaPlayer>();
-        foreach (var p in mayaPlayers)
-        {
-            if (p.isStandaloneMode || p.IsOwner)
-            {
-                localPlayer = p;
-                return;
-            }
+            localPlayer = PlayerHUDController.LocalPlayerTarget as MonoBehaviour;
         }
     }
 
@@ -263,12 +229,5 @@ public class CollectibleItemDrop : NetworkBehaviour
         }
     }
 
-    private void OnDestroy()
-    {
-        // Đảm bảo dọn dẹp prompt tương tác khi vật phẩm bị hủy
-        if (isWithinRange && hud != null)
-        {
-            hud.ShowInteractionPrompt(false, "");
-        }
-    }
+
 }

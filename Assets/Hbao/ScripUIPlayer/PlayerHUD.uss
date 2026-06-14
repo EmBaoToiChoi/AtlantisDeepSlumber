@@ -1328,12 +1328,12 @@
 /* ========================================================================= */
 .quest-panel {
     position: absolute;
-    top: 260px;
-    right: 35px;
+    top: 40px;
+    left: 35px;
     width: 220px;
     background-color: rgba(6, 12, 24, 0.85);
     border-width: 1.5px;
-    border-color: rgba(255, 180, 20, 0.85);
+    border-color: rgba(255, 255, 255, 0.9);
     border-radius: 12px;
     padding: 14px 16px;
     flex-direction: column;
@@ -1341,7 +1341,7 @@
     /* Animation states */
     opacity: 0;
     scale: 0.8 0.8;
-    translate: 50px 0;
+    translate: -50px 0;
     display: none;
     
     transition-property: opacity, scale, translate, display;
@@ -1367,23 +1367,23 @@
     height: 16px;
     margin-right: 8px;
     background-image: url("project://database/Assets/Hbao/Image/Okhoa.png?fileID=2800000&guid=a6762048aa50f61429b3f9b9877b5028&type=3#Okhoa");
-    -unity-background-image-tint-color: rgb(255, 180, 20);
+    -unity-background-image-tint-color: rgb(255, 50, 50);
     -unity-background-scale-mode: scale-to-fit;
 }
 
 .quest-title {
-    color: rgb(255, 180, 20);
+    color: rgb(255, 50, 50);
     font-size: 13px;
     -unity-font-style: bold;
     letter-spacing: 1.5px;
-    text-shadow: 0 0 8px rgba(255, 180, 20, 0.4);
+    text-shadow: 0 0 8px rgba(255, 50, 50, 0.4);
     padding: 0;
     margin: 0;
 }
 
 .quest-divider {
     height: 1px;
-    background-color: rgba(255, 180, 20, 0.25);
+    background-color: rgba(255, 255, 255, 0.35);
     margin: 6px 0 10px 0;
 }
 
