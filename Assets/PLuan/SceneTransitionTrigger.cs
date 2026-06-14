@@ -25,7 +25,14 @@ public class SceneTransitionTrigger : NetworkBehaviour
             else
             {
                 // Fallback cho chế độ chơi đơn (Offline/Standalone)
-                UnityEngine.SceneManagement.SceneManager.LoadScene(targetSceneName);
+                if (SceneLoader.Instance != null)
+                {
+                    _ = SceneLoader.Instance.LoadSceneAsync(targetSceneName, $"DESCENDING TO {targetSceneName.ToUpper()}...");
+                }
+                else
+                {
+                    UnityEngine.SceneManagement.SceneManager.LoadScene(targetSceneName);
+                }
             }
         }
     }

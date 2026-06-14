@@ -1323,6 +1323,117 @@
     text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85);
 }
 
+/* ========================================================================= */
+/* --- Quest Panel Redesign (Premium Amber/Gold Glassmorphism Theme) ---     */
+/* ========================================================================= */
+.quest-panel {
+    position: absolute;
+    top: 40px;
+    left: 35px;
+    width: 220px;
+    background-color: rgba(6, 12, 24, 0.85);
+    border-width: 1.5px;
+    border-color: rgba(255, 255, 255, 0.9);
+    border-radius: 12px;
+    padding: 14px 16px;
+    flex-direction: column;
+    
+    /* Animation states */
+    opacity: 0;
+    scale: 0.8 0.8;
+    translate: -50px 0;
+    display: none;
+    
+    transition-property: opacity, scale, translate, display;
+    transition-duration: 0.4s;
+    transition-timing-function: ease-out-back;
+}
+
+.quest-panel.show-quest {
+    display: flex;
+    opacity: 1;
+    scale: 1 1;
+    translate: 0 0;
+}
+
+.quest-header {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 6px;
+}
+
+.quest-icon {
+    width: 16px;
+    height: 16px;
+    margin-right: 8px;
+    background-image: url("project://database/Assets/Hbao/Image/Okhoa.png?fileID=2800000&guid=a6762048aa50f61429b3f9b9877b5028&type=3#Okhoa");
+    -unity-background-image-tint-color: rgb(255, 50, 50);
+    -unity-background-scale-mode: scale-to-fit;
+}
+
+.quest-title {
+    color: rgb(255, 50, 50);
+    font-size: 13px;
+    -unity-font-style: bold;
+    letter-spacing: 1.5px;
+    text-shadow: 0 0 8px rgba(255, 50, 50, 0.4);
+    padding: 0;
+    margin: 0;
+}
+
+.quest-divider {
+    height: 1px;
+    background-color: rgba(255, 255, 255, 0.35);
+    margin: 6px 0 10px 0;
+}
+
+.quest-details {
+    flex-direction: column;
+}
+
+.quest-desc {
+    color: rgb(224, 224, 224);
+    font-size: 12px;
+    -unity-font-style: bold;
+    white-space: normal;
+    margin-bottom: 8px;
+    padding: 0;
+}
+
+.quest-progress-row {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 4px;
+}
+
+.quest-progress-text {
+    color: rgb(255, 255, 255);
+    font-size: 11px;
+    -unity-font-style: bold;
+    padding: 0;
+    margin: 0;
+}
+
+.quest-progress-bg {
+    width: 110px;
+    height: 6px;
+    background-color: rgba(0, 0, 0, 0.55);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.quest-progress-fill {
+    height: 100%;
+    background-color: rgb(255, 180, 20);
+    border-radius: 3px;
+    width: 0%;
+    transition-property: width;
+    transition-duration: 0.3s;
+    transition-timing-function: ease-out;
+}
+
+
 
 
 

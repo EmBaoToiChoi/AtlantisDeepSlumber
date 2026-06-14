@@ -1933,14 +1933,14 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
                     {
                         netAimAngle.Value = angleDiff;
                     }
-                    Debug.Log($"[SpineAim_Update] transform.forward={transform.forward}, camForward={camForward}, angleDiff={angleDiff}, localAim={localAimAngle}, netAim={netAimAngle.Value}");
+                    // Debug.Log($"[SpineAim_Update] transform.forward={transform.forward}, camForward={camForward}, angleDiff={angleDiff}, localAim={localAimAngle}, netAim={netAimAngle.Value}");
                 }
             }
             else
             {
                 if (isCurrentlyAttacking)
                 {
-                    Debug.Log($"[SpineAim_Update_Failed] isRooted={isRootedAttack}, cam={targetCamera != null}");
+                    // Debug.Log($"[SpineAim_Update_Failed] isRooted={isRootedAttack}, cam={targetCamera != null}");
                 }
                 if (!IsAiming)
                 {
