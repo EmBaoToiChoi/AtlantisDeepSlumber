@@ -30,11 +30,12 @@
     background-image: url("project://database/Assets/PLuan/WaittingRoom/Textures/ui_frame_bg.jpg");
     -unity-background-scale-mode: stretch-to-fill;
     background-color: transparent;
-    padding: 55px 48px 45px 48px;
+    padding: 27px 80px 44px 80px;
     border-width: 0;
     border-radius: 0;
     box-shadow: 0 8px 25px rgba(0, 0, 0, 0.45);
-    width: 360px; /* Symmetrical vertical alignment with character selection panel */
+    width: 500px; /* Symmetrical vertical alignment with character selection panel */
+    height: 140px;
 }
 
 .top-info-row {
@@ -92,6 +93,7 @@
     flex-shrink: 1;
     overflow: hidden;
     text-overflow: ellipsis;
+    -unity-text-align: middle-center;
 }
 
 .room-id-badge {
@@ -107,6 +109,7 @@
     flex-shrink: 0;
     margin-left: 0 !important;
     margin-top: 8px;
+    -unity-text-align: middle-center;
 }
 
 .room-id-badge:hover {
@@ -177,7 +180,7 @@
 .char-card {
     position: absolute;
     left: 0;
-    right: 0;
+    right: 0px;
     height: 80px; /* Fixed height for clean vertical alignment */
     align-items: center;
     background-color: transparent !important;
@@ -191,16 +194,16 @@
 
 /* Precise vertical coordinates centered exactly on background slot frames */
 #char-card-0 {
-    top: 15.4%;
+    top: 10.4%;
 }
 #char-card-1 {
-    top: 32.3%;
+    top: 29.3%;
 }
 #char-card-2 {
-    top: 49.6%;
+    top: 48.6%;
 }
 #char-card-3 {
-    top: 67.8%;
+    top: 66.8%;
 }
 
 .char-card:hover {
@@ -230,7 +233,8 @@
 
 .char-card-portrait {
     position: absolute;
-    left: 8px; /* Centers the 52px width portrait inside the 78px center circle */
+    left: 90px; /* Centered precisely inside the gold circle frame */
+    top: 19px; /* Centered precisely inside the gold circle frame */
     width: 52px;
     height: 52px;
     border-radius: 26px; /* Perfect round avatar matching the circular background slot frame */
@@ -247,8 +251,10 @@
 /* Character text container for vertical Name & Role alignment */
 .char-card-text-container {
     position: absolute;
-    left: 95px; /* Center aligned within the name plaque bounds (x: 139px to 294px) */
-    width: 140px;
+    left: 130px; /* Perfectly centered within the name plaque bounds */
+    width: 242px; /* Spans the full width of the gold plaque */
+    top: 0;
+    bottom: 0;
     flex-direction: column;
     justify-content: center;
     align-items: center; /* Center text inside the container */
@@ -257,60 +263,56 @@
 }
 
 .char-card-name {
-    color: rgb(180, 220, 240);
-    font-size: 14px;
+    color: #EAF7FF;
+    font-size: 15px;
     -unity-font-style: bold;
+    -unity-text-outline-width: 1px;
+    -unity-text-outline-color: rgba(0, 0, 0, 0.8);
+    text-shadow: 0px 0px 4px rgba(0, 0, 0, 0.8);
     letter-spacing: 1.5px;
+    margin-top: 5px;
     margin-bottom: 2px;
     -unity-text-align: middle-center;
     transition: all 0.2s ease-out;
 }
 
 .char-card:hover .char-card-name {
-    color: rgb(255, 255, 255);
+    color: #FFFFFF;
     text-shadow: 0 0 8px rgba(0, 229, 255, 0.7);
 }
 
 .select-active .char-card-name {
-    color: rgb(0, 255, 255) !important;
-    text-shadow: 0 0 12px rgba(0, 229, 255, 0.95) !important;
+    color: #00FF88 !important; /* Glowing neon green highlight when selected */
+    text-shadow: 0px 0px 10px rgba(0, 255, 136, 0.85) !important;
+    -unity-text-outline-color: rgba(0, 50, 20, 0.9) !important;
 }
 
 .char-card-role {
-    color: rgb(110, 160, 190);
-    font-size: 9.5px;
-    letter-spacing: 0.8px;
+    color: #79C9FF;
+    font-size: 10px;
     -unity-font-style: bold;
+    text-shadow: 0px 0px 3px rgba(0, 0, 0, 1);
+    letter-spacing: 0.8px;
+    margin-top: -5px; /* Reduced vertical gap to make them closer */
     -unity-text-align: middle-center;
     transition: all 0.2s ease-out;
 }
 
 .char-card:hover .char-card-role {
-    color: rgb(160, 220, 255);
+    color: #A3DCFF;
 }
 
 .select-active .char-card-role {
-    color: rgb(130, 210, 255) !important;
+    color: #EAF7FF !important; /* Highlight class name as well */
+    text-shadow: 0px 0px 6px rgba(0, 255, 136, 0.3) !important;
 }
 
 .char-card-status {
-    position: absolute;
-    right: 15px; /* Positioned inside the right edge of the name plaque */
-    font-size: 8px;
-    -unity-font-style: bold;
-    color: rgba(255, 255, 255, 0.35);
-    letter-spacing: 0.8px;
-    background-color: rgba(0, 0, 0, 0.65); /* Dark background for better legibility */
-    padding: 4px 8px;
-    border-radius: 4px;
-    border-width: 0 !important;
-    transition: all 0.2s;
+    display: none !important; /* Discard YOU and FREE text labels entirely */
 }
 
 .active-status {
-    color: rgb(0, 255, 128) !important;
-    text-shadow: 0 0 8px rgba(0, 255, 128, 0.8) !important;
-    background-color: rgba(0, 255, 128, 0.1) !important;
+    display: none !important;
 }
 
 .char-inspect-tip {
@@ -319,6 +321,8 @@
     text-align: center;
     -unity-font-style: italic;
     margin-top: 12px;
+    left: 160px;
+    bottom: 120px;
 }
 
 /* PORTRAIT GRAPHICS */
@@ -397,167 +401,195 @@
     transition: opacity 0.3s ease-out;
 }
 
-.details-container {
-    width: 560px;
-    padding: 65px 55px 55px 55px;
+.swap-modal-container {
     background-image: url("project://database/Assets/PLuan/WaittingRoom/Textures/ui_frame_bg.jpg");
+    -unity-background-scale-mode: stretch-to-fill;
+    background-color: transparent;
+    border-width: 1.5px;
+    border-radius: 8px;
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8);
+}
+
+.details-container {
+    width: 600px;
+    height: 900px;
+    position: relative;
+    background-image: url("project://database/Assets/PLuan/IMG chi tiết player.png");
     -unity-background-scale-mode: stretch-to-fill;
     background-color: transparent;
     border-width: 0;
     border-radius: 0;
-    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8);
-}
-
-/* CLOSE BUTTON EXPANDED HITBOX SYSTEM */
-.close-btn-hitbox {
-    position: absolute;
-    right: -10px;
-    top: -10px;
-    width: 76px;
-    height: 76px;
-    background-color: rgba(0, 0, 0, 0.01);
-    border-width: 0;
-    margin: 0;
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.85);
     padding: 0;
-    align-items: center;
-    justify-content: center;
 }
 
-.close-btn-visual {
-    width: 38px;
-    height: 38px;
-    border-top-left-radius: 100%;
-    border-top-right-radius: 0;
-    border-bottom-right-radius: 100%;
-    border-bottom-left-radius: 50%;
-    border-width: 1px;
-    border-color: rgba(0, 255, 128, 0.35);
-    align-items: center;
-    justify-content: center;
-    transition: background-color 0.2s ease-out, border-color 0.2s ease-out, scale 0.2s;
+.details-container .panel-seaweed-top-right,
+.details-container .panel-seaweed-bottom-left {
+    display: none !important;
 }
 
-.close-btn-text {
-    color: rgb(0, 229, 255);
+/* CLOSE BUTTON TEXT AT BOTTOM */
+.details-close-btn {
+    position: absolute;
+    left: 49%;
+    translate: -50% 0;
+    bottom: 0px;
+    height: 40px;
+    width: 180px;
+    background-color: transparent !important;
+    border-width: 0 !important;
+    color: #FF5A70;
     font-size: 16px;
     -unity-font-style: bold;
-    margin: 0;
-    padding: 0;
-    text-align: center;
-    transition: color 0.2s ease-out;
+    letter-spacing: 3px;
+    text-shadow: 0px 0px 6px rgba(255, 90, 112, 0.55);
+    transition: color 0.2s, scale 0.2s, text-shadow 0.2s;
 }
 
-/* Hover effects applied to visual child elements through the parent hitbox state */
-.close-btn-hitbox:hover .close-btn-visual {
-    background-color: rgb(255, 71, 87);
-    border-color: rgb(255, 71, 87);
-    scale: 1.1;
-}
-
-.close-btn-hitbox:hover .close-btn-text {
-    color: white;
-    text-shadow: 0 0 8px rgba(255, 255, 255, 0.8);
+.details-close-btn:hover {
+    color: #FF2E4C;
+    scale: 1.08;
+    text-shadow: 0px 0px 14px rgba(255, 46, 76, 0.95);
 }
 
 .details-header {
-    flex-direction: row;
-    margin-bottom: 20px;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
 }
 
 .details-large-portrait {
-    width: 96px;
-    height: 96px;
-    border-radius: 12px;
-    border-width: 2.5px;
-    border-color: rgb(0, 229, 255);
+    position: absolute;
+    left: 215px;
+    top: 252px;
+    width: 170px;
+    height: 170px;
+    border-radius: 100px;
+    border-width: 0;
     background-size: cover;
-    margin-right: 25px;
-    box-shadow: 0 0 15px rgba(0, 229, 255, 0.3);
+    box-shadow: none;
+}
+
+.details-title-container {
+    position: absolute;
+    left: 176px;
+    width: 248px;
+    top: 150px;
+    height: 48px;
+    justify-content: center;
+    align-items: center;
 }
 
 .details-char-name {
-    color: white;
-    font-size: 28px;
+    color: #EAF7FF;
+    font-size: 20px;
     -unity-font-style: bold;
-    letter-spacing: 3px;
-    text-shadow: 0 0 15px rgba(255, 255, 255, 0.4);
+    -unity-text-outline-width: 1px;
+    -unity-text-outline-color: rgba(0, 0, 0, 0.85);
+    text-shadow: 0px 0px 4px rgba(0, 0, 0, 0.8);
+    letter-spacing: 2px;
+    margin: 0;
+    padding: 0;
+    -unity-text-align: middle-center;
 }
 
 .details-char-role {
-    color: rgb(0, 229, 255);
-    font-size: 13px;
-    letter-spacing: 2.5px;
+    color: #79C9FF;
+    font-size: 10px;
     -unity-font-style: bold;
-    text-shadow: 0 0 8px rgba(0, 229, 255, 0.4);
+    text-shadow: 0px 0px 3px rgba(0, 0, 0, 1);
+    letter-spacing: 1.2px;
+    margin-top: -2px;
+    padding: 0;
+    -unity-text-align: middle-center;
 }
 
 .details-char-desc {
-    color: rgb(180, 215, 235);
-    font-size: 13.5px;
-    line-height: 22px;
-    margin-bottom: 25px;
-    white-space: normal;
-    -unity-text-wrap: true;
+    display: none;
 }
 
 .details-section-title {
-    color: rgb(0, 229, 255);
-    font-size: 12px;
-    -unity-font-style: bold;
-    letter-spacing: 2px;
-    margin-bottom: 12px;
-    border-bottom-width: 1px;
-    border-bottom-color: rgba(0, 229, 255, 0.15);
-    padding-bottom: 4px;
+    display: none;
 }
 
 .details-skills-container {
-    flex-direction: column;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
 }
 
 .details-skill-box {
-    background-color: rgba(0, 229, 255, 0.05);
-    border-radius: 6px;
-    padding: 12px 18px;
-    margin-bottom: 10px;
-    border-width: 1px;
-    border-color: rgba(0, 229, 255, 0.12);
-    align-items: center;
-    transition: all 0.25s ease-out;
+    position: absolute;
+    left: 160px;
+    width: 344px;
+    height: 65px;
+    background-color: transparent !important;
+    border-width: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
 }
 
 .details-skill-box:hover {
-    background-color: rgba(0, 229, 255, 0.1);
-    border-color: rgba(0, 229, 255, 0.4);
-    scale: 1.02;
-    translate: 4px 0;
+    scale: 1.03;
+}
+
+#details-skill-box-0 {
+    top: 518px;
+}
+
+#details-skill-box-1 {
+    top: 608px;
+}
+
+#details-skill-box-2 {
+    top: 698px;
 }
 
 .details-skill-icon {
-    width: 46px;
-    height: 46px;
-    border-radius: 6px;
-    border-width: 1.5px;
-    border-color: rgb(0, 229, 255);
+    position: absolute;
+    left: 6px;
+    top: -20px;
+    width: 56px;
+    height: 56px;
+    border-radius: 28px;
+    border-width: 0 !important;
     background-size: cover;
+}
+
+.details-skill-text-container {
+    position: absolute;
+    left: 90px;
+    width: 190px;
+    top: -50px;
+    bottom: 0;
+    justify-content: center;
+    margin: 0 !important;
+    padding: 0 !important;
 }
 
 .details-skill-title {
     color: white;
-    font-size: 14.5px;
+    font-size: 12px;
     -unity-font-style: bold;
-    margin-bottom: 2px;
+    margin: 0;
+    padding: 0;
     transition: color 0.2s;
 }
 
 .details-skill-box:hover .details-skill-title {
-    color: rgb(0, 229, 255);
+    color: #79C9FF;
 }
 
 .details-skill-desc {
     color: rgb(145, 185, 205);
-    font-size: 11px;
-    line-height: 15px;
+    font-size: 9px;
+    line-height: 12px;
+    margin-top: 1px;
+    padding: 0;
     white-space: normal;
     -unity-text-wrap: true;
 }
