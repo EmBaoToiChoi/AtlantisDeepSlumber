@@ -12,6 +12,10 @@ public class SceneLoader : MonoBehaviour
     private VisualElement _progressFill;
     private Label _lblStatus;
 
+    private float _currentProgress = 0f;
+    private float _targetProgress = 0f;
+    private bool _isProgressActive = false;
+
     private void Awake()
     {
         if (Instance == null)
@@ -34,12 +38,25 @@ public class SceneLoader : MonoBehaviour
         _loadingUIDoc.sortingOrder = 9999;
         
         var rootVE = _loadingUIDoc.rootVisualElement;
-        _root = rootVE.Q<VisualElement>("loading-root");
-        _progressFill = rootVE.Q<VisualElement>("progress-fill");
-        _lblStatus = rootVE.Q<Label>("lbl-status");
+        if (rootVE != null)
+        {
+            _root = rootVE.Q<VisualElement>("loading-root");
+            _progressFill = rootVE.Q<VisualElement>("progress-fill");
+            _lblStatus = rootVE.Q<Label>("lbl-status");
+        }
         
         // Đảm bảo ẩn lúc đầu
         if (_root != null) _root.AddToClassList("hidden-element");
+    }
+
+    private void Update()
+    {
+        if (_isProgressActive && _progressFill != null)
+        {
+            // Tăng thanh tiến trình mượt mà hướng tới target
+            _currentProgress = Mathf.MoveTowards(_currentProgress, _targetProgress, Time.deltaTime * 150f);
+            _progressFill.style.width = Length.Percent(_currentProgress);
+        }
     }
 
     public void ShowLoading(string statusText)
@@ -50,27 +67,39 @@ public class SceneLoader : MonoBehaviour
         _root.RemoveFromClassList("hidden-element");
         _root.style.opacity = 1;
         _lblStatus.text = statusText;
-        _progressFill.style.width = Length.Percent(0);
+        
+        _currentProgress = 0f;
+        _targetProgress = 0f;
+        _isProgressActive = true;
+        if (_progressFill != null)
+        {
+            _progressFill.style.width = Length.Percent(0);
+        }
     }
 
     public void SetProgress(float progressPercent)
     {
-        if (_progressFill != null)
-        {
-            _progressFill.style.width = Length.Percent(progressPercent);
-        }
+        _targetProgress = progressPercent;
     }
 
     public async void HideLoading()
     {
         if (_root == null) return;
         if (_lblStatus != null) _lblStatus.text = "READY TO DESCEND";
-        if (_progressFill != null) _progressFill.style.width = Length.Percent(100);
+        
+        _targetProgress = 100f;
+        
+        // Chờ thanh tiến trình tăng đến 100% thật sự trên giao diện
+        while (_currentProgress < 100f)
+        {
+            await Task.Yield();
+        }
         
         await Task.Delay(500);
         _root.style.opacity = 0;
         await Task.Delay(500);
         _root.AddToClassList("hidden-element");
+        _isProgressActive = false;
     }
 
     public async Task LoadSceneAsync(string sceneName, string statusText = "INITIALIZING...")
@@ -84,10 +113,7 @@ public class SceneLoader : MonoBehaviour
         }
 
         // Hiện loading screen
-        _root.RemoveFromClassList("hidden-element");
-        _root.style.opacity = 1;
-        _lblStatus.text = statusText;
-        _progressFill.style.width = Length.Percent(0);
+        ShowLoading(statusText);
 
         await Task.Delay(100); // Đợi 1 nhịp để UI kịp vẽ
 
@@ -97,12 +123,18 @@ public class SceneLoader : MonoBehaviour
         while (op.progress < 0.9f)
         {
             float progress = Mathf.Clamp01(op.progress / 0.9f);
-            _progressFill.style.width = Length.Percent(progress * 100);
+            SetProgress(progress * 100f);
             await Task.Yield();
         }
 
-        _progressFill.style.width = Length.Percent(100);
+        SetProgress(100f);
         _lblStatus.text = "READY TO DESCEND";
+        
+        // Chờ thanh progress bar chạy đến 100% thực sự
+        while (_currentProgress < 100f)
+        {
+            await Task.Yield();
+        }
         
         await Task.Delay(500);
         op.allowSceneActivation = true;
@@ -113,5 +145,6 @@ public class SceneLoader : MonoBehaviour
         _root.style.opacity = 0;
         await Task.Delay(500);
         _root.AddToClassList("hidden-element");
+        _isProgressActive = false;
     }
 }
