@@ -128,7 +128,7 @@ public class PlayerLogCarrier : MonoBehaviour
         PlayCarryAnimation(false);
     }
 
-    private void TogglePlayerWeapons(bool active)
+    public void TogglePlayerWeapons(bool active)
     {
         // Arthur
         var arthur = GetComponent<ArthurPlayer>();
