@@ -24,7 +24,10 @@ public class BridgeCollapseTrigger : NetworkBehaviour
 
     private Vector3 originalBridgePos;
     private Quaternion originalBridgeRot;
-    private GameObject ghostBridgeObject;
+    private bool isGhostModeActive = false;
+    // Lưu materials gốc của tất cả renderer để khôi phục sau khi sửa cầu
+    private System.Collections.Generic.List<Renderer> savedRenderers = new System.Collections.Generic.List<Renderer>();
+    private System.Collections.Generic.List<Material[]> savedMaterials = new System.Collections.Generic.List<Material[]>();
 
     [Header("Wood Quest Spawning Configuration")]
     [Tooltip("Prefab gỗ để người chơi thu thập (CollectibleItemDrop với itemName = 'WoodLog' hoặc 'ThanhGo')")]
@@ -218,7 +221,8 @@ public class BridgeCollapseTrigger : NetworkBehaviour
             {
                 int classIndex = localPlayer.CharacterClassIndex;
                 ChoppableTree myTree = ResolveTreeForClass(classIndex);
-                if (myTree != null)
+                bool isTreeCut = myTree != null && ((NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening) ? myTree.isCutDown.Value : !myTree.gameObject.activeInHierarchy);
+                if (myTree != null && !isTreeCut)
                 {
                     indicator = localPlayer.gameObject.AddComponent<TreeGuidanceIndicator>();
                     indicator.targetTree = myTree;
@@ -321,20 +325,17 @@ public class BridgeCollapseTrigger : NetworkBehaviour
             originalBridgeRot = mainBridgeObject.transform.rotation;
         }
 
-        // 1. Ẩn cây cầu nguyên khối chính đi
-        if (mainBridgeObject != null)
-        {
-            mainBridgeObject.SetActive(false);
-        }
-
+        // Ẩn stableBridgeSegments riêng
         SetStableSegmentsActive(false);
         SetBrokenSegmentsActive(true);
 
-        // 2. Tạo bóng cây cầu (ghost bridge) màu trắng ở vị trí ban đầu
-        if (ghostBridgeObject == null)
+        // 1. Chuyển mainBridgeObject sang chế độ Ghost (giữ active, đổi sang màu trắng trong suốt)
+        if (mainBridgeObject != null)
         {
-            CreateGhostBridge();
+            ApplyGhostMode(mainBridgeObject, true);
         }
+
+        // 2. Ghost bridge hiển thị ngay lập tức (mainBridgeObject vẫn active, chỉ đổi material)
 
         // Tìm local player để thêm mũi tên hướng dẫn chỉ về cây gỗ nhiệm vụ tương ứng
         if (localPlayer == null)
@@ -346,7 +347,8 @@ public class BridgeCollapseTrigger : NetworkBehaviour
         {
             int classIndex = localPlayer.CharacterClassIndex;
             ChoppableTree myTree = ResolveTreeForClass(classIndex);
-            if (myTree != null)
+            bool isTreeCut = myTree != null && ((NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening) ? myTree.isCutDown.Value : !myTree.gameObject.activeInHierarchy);
+            if (myTree != null && !isTreeCut)
             {
                 var indicator = localPlayer.gameObject.GetComponent<TreeGuidanceIndicator>();
                 if (indicator == null)
@@ -553,10 +555,10 @@ public class BridgeCollapseTrigger : NetworkBehaviour
             }
         }
 
-        // 2. Hiện lại và khôi phục cây cầu nguyên vẹn
+        // 2. Khôi phục cây cầu gốc (xóa ghost mode, hiện lại và khôi phục materials)
         if (mainBridgeObject != null)
         {
-            mainBridgeObject.SetActive(true);
+            ApplyGhostMode(mainBridgeObject, false);
             mainBridgeObject.transform.position = originalBridgePos;
             mainBridgeObject.transform.rotation = originalBridgeRot;
         }
@@ -564,12 +566,17 @@ public class BridgeCollapseTrigger : NetworkBehaviour
         SetStableSegmentsActive(true);
         SetBrokenSegmentsActive(false);
 
-        // 3. Dọn dẹp bóng cầu (ghost)
-        if (ghostBridgeObject != null)
+        // 3. Khôi phục tất cả materials đã lưu
+        for (int i = 0; i < savedRenderers.Count; i++)
         {
-            Destroy(ghostBridgeObject);
-            ghostBridgeObject = null;
+            if (savedRenderers[i] != null)
+            {
+                savedRenderers[i].materials = savedMaterials[i];
+            }
         }
+        savedRenderers.Clear();
+        savedMaterials.Clear();
+        isGhostModeActive = false;
 
         // 4. Chạy Animator sửa cầu (nếu có)
         if (bridgeAnimator != null && !string.IsNullOrEmpty(repairTriggerName))
@@ -605,85 +612,101 @@ public class BridgeCollapseTrigger : NetworkBehaviour
 
     #region Blueprint & Wood Spawning Effects
 
-    private void CreateGhostBridge()
+    /// <summary>
+    /// Chuyển bridge sang chế độ Ghost (màu trắng trong suốt) hoặc khôi phục lại.
+    /// Lưu materials gốc khi bật ghost, khôi phục khi tắt ghost.
+    /// </summary>
+    private void ApplyGhostMode(GameObject bridgeRoot, bool enableGhost)
     {
-        if (mainBridgeObject == null) return;
-        
-        // 1. Nhân bản cây cầu làm bóng/ghost (giữ nguyên parent để kế thừa scale/transform chuẩn)
-        ghostBridgeObject = Instantiate(mainBridgeObject, mainBridgeObject.transform.parent);
-        ghostBridgeObject.name = "GhostBridge";
-        ghostBridgeObject.transform.position = originalBridgePos;
-        ghostBridgeObject.transform.rotation = originalBridgeRot;
-        ghostBridgeObject.transform.localScale = mainBridgeObject.transform.localScale;
-        ghostBridgeObject.SetActive(true);
-        
-        // 2. Loại bỏ tất cả Collider và Rigidbody để người chơi không bị va chạm
-        foreach (var col in ghostBridgeObject.GetComponentsInChildren<Collider>())
+        if (bridgeRoot == null) return;
+
+        if (enableGhost && !isGhostModeActive)
         {
-            Destroy(col);
-        }
-        foreach (var rbs in ghostBridgeObject.GetComponentsInChildren<Rigidbody>())
-        {
-            Destroy(rbs);
-        }
-        
-        // QUAN TRỌNG: Chỉ xóa các script logic - KHÔNG xóa MeshRenderer/MeshFilter (là component kế thừa Component, không phải MonoBehaviour)
-        // Xóa NetworkObject để tránh xung đột network (không cần đồng bộ ghost)
-        var netObj = ghostBridgeObject.GetComponent<Unity.Netcode.NetworkObject>();
-        if (netObj != null) Destroy(netObj);
-        foreach (var netBeh in ghostBridgeObject.GetComponentsInChildren<Unity.Netcode.NetworkBehaviour>())
-        {
-            if (netBeh != null) Destroy(netBeh);
-        }
-        // Xóa Animator để không chạy hoạt ảnh trùng
-        foreach (var anim in ghostBridgeObject.GetComponentsInChildren<Animator>())
-        {
-            if (anim != null) Destroy(anim);
-        }
-        // Xóa các MonoBehaviour tùy chỉnh - nhưng giữ lại MeshRenderer và MeshFilter (không phải MonoBehaviour)
-        foreach (var mono in ghostBridgeObject.GetComponentsInChildren<MonoBehaviour>())
-        {
-            if (mono != null && !(mono is MeshFilter) && !(mono is MeshRenderer))
+            isGhostModeActive = true;
+            savedRenderers.Clear();
+            savedMaterials.Clear();
+
+            // Đảm bảo bridge vẫn active để render được
+            bridgeRoot.SetActive(true);
+
+            // Thu thập tất cả renderers trong bridge (bao gồm cả các inactive children)
+            var renderers = bridgeRoot.GetComponentsInChildren<Renderer>(true);
+            
+            // Tạo 1 vật liệu ghost trắng dùng chung để đảm bảo hiển thị màu sắc trắng và trong suốt hoạt động hoàn hảo trên Standard/URP
+            Material ghostMat = CreateGhostMaterial(0.35f);
+            
+            foreach (var rend in renderers)
             {
-                Destroy(mono);
-            }
-        }
-        
-        // 3. Đổi chất liệu sang màu trắng bán trong suốt
-        // Lấy tất cả Renderer TRƯỚC khi làm trong suốt (sau khi xóa script không ảnh hưởng Renderer vì nó không phải MonoBehaviour)
-        var renderers = ghostBridgeObject.GetComponentsInChildren<Renderer>(true);
-        foreach (var renderer in renderers)
-        {
-            if (renderer == null) continue;
-            // Tạo bản sao vật liệu riêng cho ghost để không ảnh hưởng vật liệu gốc
-            var mats = renderer.materials;
-            for (int i = 0; i < mats.Length; i++)
-            {
-                if (mats[i] != null)
+                if (rend == null) continue;
+
+                // Lưu materials gốc
+                savedRenderers.Add(rend);
+                savedMaterials.Add(rend.sharedMaterials);
+
+                // Tạo mảng vật liệu ghost mới cho tất cả các submesh
+                Material[] ghostMats = new Material[rend.sharedMaterials.Length];
+                for (int i = 0; i < ghostMats.Length; i++)
                 {
-                    mats[i] = new Material(mats[i]);
-                    MakeMaterialTransparent(mats[i], 0.35f);
+                    ghostMats[i] = ghostMat;
+                }
+                rend.materials = ghostMats;
+
+                // Đảm bảo child này được active để thấy ghost
+                rend.gameObject.SetActive(true);
+            }
+
+            // Không cho va chạm vậtlý bật lại trên ghost - disable colliders
+            foreach (var col in bridgeRoot.GetComponentsInChildren<Collider>(true))
+            {
+                col.enabled = false;
+            }
+
+            Debug.Log($"[BridgeCollapseTrigger] Ghost mode BẬT - Đã đổi {renderers.Length} renderer sang trắng trong suốt.");
+        }
+        else if (!enableGhost && isGhostModeActive)
+        {
+            isGhostModeActive = false;
+
+            // Khôi phục colliders
+            if (bridgeRoot != null)
+            {
+                foreach (var col in bridgeRoot.GetComponentsInChildren<Collider>(true))
+                {
+                    col.enabled = true;
                 }
             }
-            renderer.materials = mats;
+
+            // Khôi phục materials gốc
+            for (int i = 0; i < savedRenderers.Count; i++)
+            {
+                if (savedRenderers[i] != null)
+                {
+                    savedRenderers[i].materials = savedMaterials[i];
+                }
+            }
+            savedRenderers.Clear();
+            savedMaterials.Clear();
+
+            Debug.Log("[BridgeCollapseTrigger] Ghost mode TẮT - Đã khôi phục materials gốc.");
         }
     }
 
-    private void MakeMaterialTransparent(Material mat, float alpha)
+    private Material CreateGhostMaterial(float alpha)
     {
-        if (mat == null) return;
+        bool isURP = UnityEngine.Rendering.GraphicsSettings.currentRenderPipeline != null;
+        Shader s = null;
+        if (isURP)
+        {
+            s = Shader.Find("Universal Render Pipeline/Lit");
+        }
+        if (s == null) s = Shader.Find("Standard");
+        if (s == null) s = Shader.Find("Sprites/Default");
 
-        // Xóa sạch textures để tạo màu trắng đục hoàn toàn thay vì giữ hoa văn cũ
-        if (mat.HasProperty("_BaseMap")) mat.SetTexture("_BaseMap", null);
-        if (mat.HasProperty("_MainTex")) mat.SetTexture("_MainTex", null);
-        if (mat.HasProperty("_BumpMap")) mat.SetTexture("_BumpMap", null);
-        if (mat.HasProperty("_MetallicGlossMap")) mat.SetTexture("_MetallicGlossMap", null);
-        if (mat.HasProperty("_OcclusionMap")) mat.SetTexture("_OcclusionMap", null);
-        if (mat.HasProperty("_EmissionMap")) mat.SetTexture("_EmissionMap", null);
+        Material mat = new Material(s);
 
         if (mat.HasProperty("_Cull"))
         {
-            mat.SetFloat("_Cull", 0f); // Tắt Cull để vẽ cả 2 mặt cho cầu ghost đẹp hơn
+            mat.SetFloat("_Cull", 0f); // Tắt Cull để vẽ cả 2 mặt
         }
 
         if (mat.HasProperty("_Surface"))
@@ -703,6 +726,10 @@ public class BridgeCollapseTrigger : NetworkBehaviour
         }
         else
         {
+            if (mat.HasProperty("_Mode"))
+            {
+                mat.SetFloat("_Mode", 3f); // 3 = Transparent for Built-in Standard shader
+            }
             mat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
             mat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
             mat.SetInt("_ZWrite", 0);
@@ -715,6 +742,7 @@ public class BridgeCollapseTrigger : NetworkBehaviour
             mat.DisableKeyword("_ALPHAPREMULTIPLY_ON");
         }
         mat.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
+        return mat;
     }
 
     private void SpawnWoodLogsServer()
@@ -793,109 +821,66 @@ public class BridgeCollapseTrigger : NetworkBehaviour
         localRepaired = repaired;
         localLogsSubmittedCount = logsProgress;
 
+        PlayerHUDController localHudCtl = FindAnyObjectByType<PlayerHUDController>();
+
         if (repaired)
         {
             if (mainBridgeObject != null)
             {
-                mainBridgeObject.SetActive(true);
+                ApplyGhostMode(mainBridgeObject, false);
                 mainBridgeObject.transform.position = originalBridgePos;
                 mainBridgeObject.transform.rotation = originalBridgeRot;
             }
-
             SetStableSegmentsActive(true);
             SetBrokenSegmentsActive(false);
-
-            if (ghostBridgeObject != null)
-            {
-                Destroy(ghostBridgeObject);
-                ghostBridgeObject = null;
-            }
-
-
-
-            if (localPlayer == null)
-            {
-                FindLocalPlayer();
-            }
+            if (localPlayer == null) FindLocalPlayer();
             if (localPlayer != null)
             {
                 var indicator = localPlayer.gameObject.GetComponent<TreeGuidanceIndicator>();
-                if (indicator != null)
-                {
-                    Destroy(indicator);
-                }
+                if (indicator != null) Destroy(indicator);
             }
-
-            if (hud != null) hud.ShowQuest(false);
+            if (localHudCtl != null) localHudCtl.ShowQuest(false);
         }
         else if (collapsed)
         {
-            if (mainBridgeObject != null)
-            {
-                mainBridgeObject.SetActive(false);
-            }
-
             SetStableSegmentsActive(false);
             SetBrokenSegmentsActive(true);
-
-            // Tạo bóng cây cầu (ghost) màu trắng
-            if (ghostBridgeObject == null)
+            if (mainBridgeObject != null)
             {
-                CreateGhostBridge();
+                ApplyGhostMode(mainBridgeObject, true);
             }
-
-            if (localPlayer == null)
-            {
-                FindLocalPlayer();
-            }
+            if (localPlayer == null) FindLocalPlayer();
             if (localPlayer != null)
             {
                 int classIndex = localPlayer.CharacterClassIndex;
                 ChoppableTree myTree = ResolveTreeForClass(classIndex);
-                if (myTree != null)
+                bool isTreeCut = myTree != null && ((NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening) ? myTree.isCutDown.Value : !myTree.gameObject.activeInHierarchy);
+                if (myTree != null && !isTreeCut)
                 {
                     var indicator = localPlayer.gameObject.GetComponent<TreeGuidanceIndicator>();
                     if (indicator == null)
-                    {
                         indicator = localPlayer.gameObject.AddComponent<TreeGuidanceIndicator>();
-                    }
                     indicator.targetTree = myTree;
                     indicator.reachDistance = 4f;
                 }
             }
-
-            if (hud != null)
+            if (localHudCtl != null)
             {
-                hud.ShowQuest(true);
-                hud.UpdateQuestProgress(logsProgress, requiredLogsToRepair);
+                localHudCtl.ShowQuest(true);
+                localHudCtl.UpdateQuestProgress(logsProgress, requiredLogsToRepair);
             }
         }
         else
         {
             if (mainBridgeObject != null)
-            {
-                mainBridgeObject.SetActive(true);
-            }
+                ApplyGhostMode(mainBridgeObject, false);
             SetStableSegmentsActive(true);
             SetBrokenSegmentsActive(false);
-
-            if (ghostBridgeObject != null)
-            {
-                Destroy(ghostBridgeObject);
-                ghostBridgeObject = null;
-            }
-
-            if (localPlayer == null)
-            {
-                FindLocalPlayer();
-            }
+            if (localPlayer == null) FindLocalPlayer();
             if (localPlayer != null)
             {
                 var indicator = localPlayer.gameObject.GetComponent<TreeGuidanceIndicator>();
-                if (indicator != null)
-                {
-                    Destroy(indicator);
-                }
+                if (indicator != null) Destroy(indicator);
             }
         }
     }
@@ -972,11 +957,13 @@ public class BridgeCollapseTrigger : NetworkBehaviour
 
     private void FindLocalPlayer()
     {
+        bool isNetworkActive = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
+
         // 1. Try static cache first (zero overhead)
         if (PlayerHUDController.LocalPlayerTarget != null)
         {
             var p = PlayerHUDController.LocalPlayerTarget;
-            if (p != null && (p.IsStandaloneMode || p.IsOwner))
+            if (p != null && (!isNetworkActive || p.IsStandaloneMode || p.IsOwner))
             {
                 localPlayer = p;
                 return;
@@ -987,7 +974,7 @@ public class BridgeCollapseTrigger : NetworkBehaviour
         var activePlayers = PlayerHUDManager.ActivePlayers;
         foreach (var p in activePlayers)
         {
-            if (p != null && (p.IsStandaloneMode || p.IsOwner))
+            if (p != null && (!isNetworkActive || p.IsStandaloneMode || p.IsOwner))
             {
                 localPlayer = p;
                 return;
@@ -1004,7 +991,7 @@ public class BridgeCollapseTrigger : NetworkBehaviour
             {
                 if (mono is IPlayerHUDTarget p)
                 {
-                    if (p.IsStandaloneMode || p.IsOwner)
+                    if (!isNetworkActive || p.IsStandaloneMode || p.IsOwner)
                     {
                         localPlayer = p;
                         return;
