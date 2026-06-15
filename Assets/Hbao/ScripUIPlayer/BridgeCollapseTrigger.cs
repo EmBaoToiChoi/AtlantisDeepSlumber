@@ -547,9 +547,12 @@ public class BridgeCollapseTrigger : NetworkBehaviour
     {
         if (mainBridgeObject == null) return;
         
-        // 1. Nhân bản cây cầu làm bóng/ghost
-        ghostBridgeObject = Instantiate(mainBridgeObject, originalBridgePos, originalBridgeRot);
+        // 1. Nhân bản cây cầu làm bóng/ghost (giữ nguyên parent để kế thừa scale/transform chuẩn)
+        ghostBridgeObject = Instantiate(mainBridgeObject, mainBridgeObject.transform.parent);
         ghostBridgeObject.name = "GhostBridge";
+        ghostBridgeObject.transform.position = originalBridgePos;
+        ghostBridgeObject.transform.rotation = originalBridgeRot;
+        ghostBridgeObject.transform.localScale = mainBridgeObject.transform.localScale;
         ghostBridgeObject.SetActive(true);
         
         // 2. Loại bỏ tất cả Collider và Rigidbody để người chơi không bị va chạm
@@ -570,12 +573,36 @@ public class BridgeCollapseTrigger : NetworkBehaviour
             if (comp != null) Destroy(comp);
         }
         
-        // 3. Đổi chất liệu sang màu trắng bán trong suốt (Sprites/Default shader rất mượt)
-        Shader ghostShader = Shader.Find("Sprites/Default");
+        // 3. Đổi chất liệu sang màu trắng bán trong suốt (Tương thích tốt cả URP và Standard)
+        Shader ghostShader = Shader.Find("Universal Render Pipeline/Unlit");
+        if (ghostShader == null) ghostShader = Shader.Find("Universal Render Pipeline/Lit");
+        if (ghostShader == null) ghostShader = Shader.Find("Standard");
+        if (ghostShader == null) ghostShader = Shader.Find("Sprites/Default");
+        
         if (ghostShader != null)
         {
             Material ghostMat = new Material(ghostShader);
-            ghostMat.color = new Color(1f, 1f, 1f, 0.3f); // Màu trắng bán trong suốt
+            ghostMat.color = new Color(1f, 1f, 1f, 0.35f); // Màu trắng bán trong suốt
+            
+            if (ghostShader.name.Contains("Universal Render Pipeline"))
+            {
+                ghostMat.SetFloat("_Surface", 1f); // Transparent
+                ghostMat.SetFloat("_Blend", 0f);   // Alpha
+                ghostMat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+                ghostMat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+                ghostMat.SetInt("_ZWrite", 0);
+                ghostMat.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
+            }
+            else if (ghostShader.name.Contains("Standard"))
+            {
+                ghostMat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+                ghostMat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+                ghostMat.SetInt("_ZWrite", 0);
+                ghostMat.DisableKeyword("_ALPHATEST_ON");
+                ghostMat.EnableKeyword("_ALPHABLEND_ON");
+                ghostMat.DisableKeyword("_ALPHAPREMULTIPLY_ON");
+                ghostMat.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
+            }
             
             foreach (var renderer in ghostBridgeObject.GetComponentsInChildren<Renderer>())
             {

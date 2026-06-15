@@ -74,31 +74,31 @@ public class PlayerLogCarrier : MonoBehaviour
             }
         }
         
+        Transform parentTransform = carryTargetTransform != null ? carryTargetTransform : transform;
+        carriedLogInstance.transform.SetParent(parentTransform, false);
+
+        Vector3 targetWorldScale = logPrefab != null ? logPrefab.transform.localScale : new Vector3(0.18f, 0.45f, 0.18f);
+        Vector3 parentLossyScale = parentTransform.lossyScale;
+        carriedLogInstance.transform.localScale = new Vector3(
+            targetWorldScale.x / (parentLossyScale.x != 0 ? parentLossyScale.x : 1f),
+            targetWorldScale.y / (parentLossyScale.y != 0 ? parentLossyScale.y : 1f),
+            targetWorldScale.z / (parentLossyScale.z != 0 ? parentLossyScale.z : 1f)
+        );
+
         if (carryTargetTransform != null)
         {
-            // Gắn vào transform tuỳ biến kéo thả trong Inspector
-            carriedLogInstance.transform.SetParent(carryTargetTransform, false);
             carriedLogInstance.transform.localPosition = Vector3.zero;
             carriedLogInstance.transform.localRotation = Quaternion.identity;
             
-            // Giữ nguyên tỷ lệ xích prefab
-            carriedLogInstance.transform.localScale = logPrefab != null ? logPrefab.transform.localScale : new Vector3(0.18f, 0.45f, 0.18f);
-            
-            Debug.Log($"[PlayerLogCarrier] CarryLog: Attached log to custom carryTargetTransform '{carryTargetTransform.name}'");
+            Debug.Log($"[PlayerLogCarrier] CarryLog: Attached log to custom carryTargetTransform '{carryTargetTransform.name}' with compensated scale: {carriedLogInstance.transform.localScale}");
         }
         else
         {
-            // Luôn gắn vào root player transform làm mặc định để đảm bảo vị trí, góc xoay và tỉ lệ scale đồng nhất.
-            carriedLogInstance.transform.SetParent(transform, false);
-            
-            // Giữ nguyên tỉ lệ xích gốc của prefab (vì parent root luôn có scale 1,1,1)
-            carriedLogInstance.transform.localScale = logPrefab != null ? logPrefab.transform.localScale : new Vector3(0.18f, 0.45f, 0.18f);
-            
             // Vị trí ngang bụng/ngực và nằm ngang nối từ tay trái qua tay phải
             carriedLogInstance.transform.localPosition = new Vector3(0f, 0.95f, 0.42f);
             carriedLogInstance.transform.localRotation = Quaternion.Euler(0f, 90f, 0f);
 
-            Debug.Log($"[PlayerLogCarrier] CarryLog: Attached cosmetic log to root player transform. localScale={carriedLogInstance.transform.localScale}, localPosition={carriedLogInstance.transform.localPosition}");
+            Debug.Log($"[PlayerLogCarrier] CarryLog: Attached cosmetic log to root player transform. compensated localScale={carriedLogInstance.transform.localScale}");
         }
 
         // Kích hoạt trạng thái Animator bưng gỗ
