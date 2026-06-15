@@ -3379,4 +3379,22 @@ private void StartRollServerRpc(Vector3 direction)
         }
         base.OnDestroy();
     }
+
+    [HideInInspector]
+    public GameObject pendingPickItem;
+
+    public void OnPickItemEvent()
+    {
+        if (pendingPickItem != null)
+        {
+            var collectible = pendingPickItem.GetComponent<CollectibleItemDrop>();
+            if (collectible != null) collectible.ConfirmCollect();
+            else
+            {
+                var repair = pendingPickItem.GetComponent<RepairItemDrop>();
+                if (repair != null) repair.ConfirmCollect();
+            }
+            pendingPickItem = null;
+        }
+    }
 }

@@ -59,10 +59,38 @@ public class BridgeCollapseTrigger : NetworkBehaviour
     );
 
     private bool localCollapseTriggered = false;
+    private bool localRepaired = false;
+    private int localLogsSubmittedCount = 0;
     private IPlayerHUDTarget localPlayer;
     private PlayerHUDController hud;
-    private bool isPlayerInRange = false;
     private float nextPlayerSearchTime = 0f;
+
+    public bool IsBridgeCollapsed()
+    {
+        if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening)
+        {
+            return hasCollapsed.Value;
+        }
+        return localCollapseTriggered;
+    }
+
+    public bool IsBridgeRepaired()
+    {
+        if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening)
+        {
+            return hasBeenRepaired.Value;
+        }
+        return localRepaired;
+    }
+
+    public int GetLogsSubmittedCount()
+    {
+        if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening)
+        {
+            return logsSubmitted.Value;
+        }
+        return localLogsSubmittedCount;
+    }
 
     private void Awake()
     {
@@ -82,6 +110,8 @@ public class BridgeCollapseTrigger : NetworkBehaviour
     {
         hud = FindAnyObjectByType<PlayerHUDController>();
         ResolveWoodLogPrefab();
+        // Đảm bảo WoodLogObjectPool được khởi tạo sớm
+        var pool = WoodLogObjectPool.Instance;
     }
 
     private void ResolveWoodLogPrefab()
@@ -144,6 +174,11 @@ public class BridgeCollapseTrigger : NetworkBehaviour
 
     public override void OnNetworkSpawn()
     {
+        // Đồng bộ local với NetworkVariable ban đầu khi spawn trên mạng
+        localCollapseTriggered = hasCollapsed.Value;
+        localRepaired = hasBeenRepaired.Value;
+        localLogsSubmittedCount = logsSubmitted.Value;
+
         // Đăng ký nhận sự kiện thay đổi trạng thái từ Server
         hasCollapsed.OnValueChanged += OnCollapseStateChanged;
         hasBeenRepaired.OnValueChanged += OnRepairStateChanged;
@@ -168,73 +203,20 @@ public class BridgeCollapseTrigger : NetworkBehaviour
             FindLocalPlayer();
         }
 
-        // 1.5. Đảm bảo gắn chỉ đường cho mọi người chơi hoạt động nếu cầu sập và chưa sửa xong
-        if (hasCollapsed.Value && !hasBeenRepaired.Value)
+        // 1.5. Đảm bảo gắn chỉ đường cho local player nếu cầu sập và chưa sửa xong
+        if (IsBridgeCollapsed() && !IsBridgeRepaired() && localPlayer != null)
         {
-            var activePlayers = PlayerHUDManager.ActivePlayers;
-            foreach (var p in activePlayers)
+            var indicator = localPlayer.gameObject.GetComponent<TreeGuidanceIndicator>();
+            if (indicator == null)
             {
-                if (p != null && targetTrees != null && targetTrees.Length > 0)
+                int classIndex = localPlayer.CharacterClassIndex;
+                ChoppableTree myTree = targetTrees[classIndex % targetTrees.Length];
+                if (myTree != null)
                 {
-                    var indicator = p.gameObject.GetComponent<TreeGuidanceIndicator>();
-                    if (indicator == null)
-                    {
-                        int classIndex = p.CharacterClassIndex;
-                        ChoppableTree myTree = targetTrees[classIndex % targetTrees.Length];
-                        if (myTree != null)
-                        {
-                            indicator = p.gameObject.AddComponent<TreeGuidanceIndicator>();
-                            indicator.targetTree = myTree;
-                            indicator.reachDistance = 4f;
-                            Debug.Log($"[BridgeCollapseTrigger] Gắn chỉ đường cho Player {p.DisplayName} tới cây: {myTree.name}");
-                        }
-                    }
-                }
-            }
-        }
-
-        // 2. Xử lý tương tác sửa cầu khi cầu đã sập và chưa được sửa hoàn tất
-        if (hasCollapsed.Value && !hasBeenRepaired.Value && localPlayer != null)
-        {
-            float distance = Vector3.Distance(transform.position, localPlayer.transform.position);
-
-            if (distance <= repairInteractRadius)
-            {
-                if (!isPlayerInRange)
-                {
-                    isPlayerInRange = true;
-                }
-
-                if (hud != null)
-                {
-                    var carrier = localPlayer.gameObject.GetComponent<PlayerLogCarrier>();
-                    bool isCarrying = carrier != null && carrier.isCarrying;
-
-                    int remaining = requiredLogsToRepair - logsSubmitted.Value;
-                    if (remaining > 0)
-                    {
-                        if (isCarrying)
-                        {
-                            hud.ShowInteractionPrompt(true, $"Ấn [F] để góp gỗ sửa cầu ({logsSubmitted.Value}/{requiredLogsToRepair})");
-                            
-                            if (Input.GetKeyDown(KeyCode.F))
-                            {
-                                RequestSubmitCarriedLog();
-                            }
-                        }
-                        else
-                        {
-                            hud.ShowInteractionPrompt(true, $"Hãy tìm và bưng gỗ đến đây để sửa cầu ({logsSubmitted.Value}/{requiredLogsToRepair})");
-                        }
-                    }
-                }
-            }
-            else if (isPlayerInRange)
-            {
-                isPlayerInRange = false;
-                if (hud != null)
-                {
-                    hud.ShowInteractionPrompt(false, "");
+                    indicator = localPlayer.gameObject.AddComponent<TreeGuidanceIndicator>();
+                    indicator.targetTree = myTree;
+                    indicator.reachDistance = 4f;
+                    Debug.Log($"[BridgeCollapseTrigger] Gắn chỉ đường cho Local Player {localPlayer.DisplayName} tới cây: {myTree.name}");
                 }
             }
         }
@@ -242,29 +224,31 @@ public class BridgeCollapseTrigger : NetworkBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
-        // 1. Bỏ qua nếu cầu đã sập hoặc đã được sửa
-        if (hasCollapsed.Value || localCollapseTriggered) return;
-
-        // 2. Kiểm tra xem có phải là người chơi chạm vào không
-        if (IsPlayer(other.gameObject))
+        // 1. Kiểm tra sập cầu (nếu chưa sập)
+        if (!IsBridgeCollapsed())
         {
-            Debug.Log($"[BridgeCollapseTrigger] Người chơi '{other.gameObject.name}' đi vào vùng kích hoạt. Kích hoạt ẩn cầu!");
-            
-            if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening)
+            if (IsPlayer(other.gameObject))
             {
-                if (IsServer)
+                Debug.Log($"[BridgeCollapseTrigger] Người chơi '{other.gameObject.name}' đi vào vùng kích hoạt. Kích hoạt ẩn cầu!");
+                
+                if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening)
                 {
-                    TriggerBridgeCollapseServer();
+                    if (IsServer)
+                    {
+                        TriggerBridgeCollapseServer();
+                    }
                 }
-            }
-            else
-            {
-                // Fallback chơi đơn (Offline/Standalone)
-                localCollapseTriggered = true;
-                CollapseBridgeLocal();
+                else
+                {
+                    // Fallback chơi đơn (Offline/Standalone)
+                    localCollapseTriggered = true;
+                    CollapseBridgeLocal();
+                }
             }
         }
     }
+
+
 
     #region Collapse Logic
 
@@ -280,6 +264,7 @@ public class BridgeCollapseTrigger : NetworkBehaviour
 
     private void CollapseBridgeLocal()
     {
+        localCollapseTriggered = true;
         // 1. Ẩn cây cầu nguyên khối chính đi
         if (mainBridgeObject != null)
         {
@@ -295,25 +280,26 @@ public class BridgeCollapseTrigger : NetworkBehaviour
             CreateGhostBridge();
         }
 
-        // Thêm chỉ đường cho tất cả các người chơi hoạt động dựa theo class của họ
-        var activePlayers = PlayerHUDManager.ActivePlayers;
-        foreach (var p in activePlayers)
+        // Tìm local player để thêm mũi tên hướng dẫn chỉ về cây gỗ nhiệm vụ tương ứng
+        if (localPlayer == null)
         {
-            if (p != null && targetTrees != null && targetTrees.Length > 0)
+            FindLocalPlayer();
+        }
+
+        if (localPlayer != null && targetTrees != null && targetTrees.Length > 0)
+        {
+            int classIndex = localPlayer.CharacterClassIndex;
+            ChoppableTree myTree = targetTrees[classIndex % targetTrees.Length];
+            if (myTree != null)
             {
-                int classIndex = p.CharacterClassIndex;
-                ChoppableTree myTree = targetTrees[classIndex % targetTrees.Length];
-                if (myTree != null)
+                var indicator = localPlayer.gameObject.GetComponent<TreeGuidanceIndicator>();
+                if (indicator == null)
                 {
-                    var indicator = p.gameObject.GetComponent<TreeGuidanceIndicator>();
-                    if (indicator == null)
-                    {
-                        indicator = p.gameObject.AddComponent<TreeGuidanceIndicator>();
-                    }
-                    indicator.targetTree = myTree;
-                    indicator.reachDistance = 4f;
-                    Debug.Log($"[BridgeCollapseTrigger] Gắn mũi tên chỉ đường cho Player {p.DisplayName} (class {classIndex}) tới cây: {myTree.name}");
+                    indicator = localPlayer.gameObject.AddComponent<TreeGuidanceIndicator>();
                 }
+                indicator.targetTree = myTree;
+                indicator.reachDistance = 4f;
+                Debug.Log($"[BridgeCollapseTrigger] Gắn mũi tên chỉ đường cho Local Player {localPlayer.DisplayName} (class {classIndex}) tới cây: {myTree.name}");
             }
         }
 
@@ -340,6 +326,7 @@ public class BridgeCollapseTrigger : NetworkBehaviour
 
     private void OnCollapseStateChanged(bool oldVal, bool newVal)
     {
+        localCollapseTriggered = newVal;
         if (newVal)
         {
             Debug.Log("[BridgeCollapseTrigger] Server báo trạng thái Cầu Đã Sập.");
@@ -351,7 +338,7 @@ public class BridgeCollapseTrigger : NetworkBehaviour
 
     #region Repair & Log Submission Logic
 
-    private void RequestSubmitCarriedLog()
+    public void RequestSubmitCarriedLog()
     {
         if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening)
         {
@@ -370,20 +357,20 @@ public class BridgeCollapseTrigger : NetworkBehaviour
                 carrier.DropLog();
             }
 
-            int remaining = requiredLogsToRepair - logsSubmitted.Value;
+            int remaining = requiredLogsToRepair - GetLogsSubmittedCount();
             if (remaining > 0)
             {
-                logsSubmitted.Value += 1;
-                if (logsSubmitted.Value >= requiredLogsToRepair)
+                localLogsSubmittedCount += 1;
+                if (localLogsSubmittedCount >= requiredLogsToRepair)
                 {
-                    hasBeenRepaired.Value = true; // Sẽ kích hoạt OnRepairStateChanged
+                    localRepaired = true;
                     RepairBridgeLocal();
                 }
                 else
                 {
                     if (hud != null)
                     {
-                        hud.UpdateQuestProgress(logsSubmitted.Value, requiredLogsToRepair);
+                        hud.UpdateQuestProgress(localLogsSubmittedCount, requiredLogsToRepair);
                     }
                 }
             }
@@ -434,18 +421,18 @@ public class BridgeCollapseTrigger : NetworkBehaviour
         {
             // Chế độ offline/standalone
             ConsumePlayerWood(localPlayer, amount);
-            logsSubmitted.Value += amount;
+            localLogsSubmittedCount += amount;
             
-            if (logsSubmitted.Value >= requiredLogsToRepair)
+            if (localLogsSubmittedCount >= requiredLogsToRepair)
             {
-                hasBeenRepaired.Value = true; // Sẽ kích hoạt OnRepairStateChanged
+                localRepaired = true;
                 RepairBridgeLocal();
             }
             else
             {
                 if (hud != null)
                 {
-                    hud.UpdateQuestProgress(logsSubmitted.Value, requiredLogsToRepair);
+                    hud.UpdateQuestProgress(localLogsSubmittedCount, requiredLogsToRepair);
                 }
             }
         }
@@ -486,6 +473,7 @@ public class BridgeCollapseTrigger : NetworkBehaviour
 
     private void RepairBridgeLocal()
     {
+        localRepaired = true;
         // 1. Tắt nhắc nhở tương tác
         if (hud != null)
         {
@@ -494,17 +482,13 @@ public class BridgeCollapseTrigger : NetworkBehaviour
             hud.ShowMissionAlert("CẦU ĐÃ ĐƯỢC SỬA CHỮA THÀNH CÔNG!", 4.0f);
         }
 
-        // Dọn dẹp mũi tên chỉ đường trên tất cả các người chơi hoạt động
-        var activePlayers = PlayerHUDManager.ActivePlayers;
-        foreach (var p in activePlayers)
+        // Dọn dẹp mũi tên chỉ đường nếu còn
+        if (localPlayer != null)
         {
-            if (p != null)
+            var indicator = localPlayer.gameObject.GetComponent<TreeGuidanceIndicator>();
+            if (indicator != null)
             {
-                var indicator = p.gameObject.GetComponent<TreeGuidanceIndicator>();
-                if (indicator != null)
-                {
-                    Destroy(indicator);
-                }
+                Destroy(indicator);
             }
         }
 
@@ -535,6 +519,7 @@ public class BridgeCollapseTrigger : NetworkBehaviour
 
     private void OnRepairStateChanged(bool oldVal, bool newVal)
     {
+        localRepaired = newVal;
         if (newVal)
         {
             Debug.Log("[BridgeCollapseTrigger] Cầu đã được sửa hoàn tất.");
@@ -544,6 +529,7 @@ public class BridgeCollapseTrigger : NetworkBehaviour
 
     private void OnLogsSubmittedChanged(int oldVal, int newVal)
     {
+        localLogsSubmittedCount = newVal;
         Debug.Log($"[BridgeCollapseTrigger] Tiến trình xây cầu thay đổi: {newVal}/{requiredLogsToRepair}");
         
         // Cập nhật UI
@@ -613,7 +599,7 @@ public class BridgeCollapseTrigger : NetworkBehaviour
         for (int i = 0; i < logsToSpawn; i++)
         {
             Vector3 spawnPos = GetSpawnPosition(i);
-            GameObject wood = Instantiate(woodLogPrefab, spawnPos, Quaternion.identity);
+            GameObject wood = WoodLogObjectPool.Instance.GetOrCreate(woodLogPrefab, spawnPos, Quaternion.identity);
             
             var netObj = wood.GetComponent<NetworkObject>();
             if (netObj != null)
@@ -638,7 +624,7 @@ public class BridgeCollapseTrigger : NetworkBehaviour
         for (int i = 0; i < logsToSpawn; i++)
         {
             Vector3 spawnPos = GetSpawnPosition(i);
-            Instantiate(woodLogPrefab, spawnPos, Quaternion.identity);
+            WoodLogObjectPool.Instance.GetOrCreate(woodLogPrefab, spawnPos, Quaternion.identity);
         }
     }
 
@@ -670,6 +656,10 @@ public class BridgeCollapseTrigger : NetworkBehaviour
 
     private void ApplyBridgeVisualState(bool collapsed, bool repaired, int logsProgress)
     {
+        localCollapseTriggered = collapsed;
+        localRepaired = repaired;
+        localLogsSubmittedCount = logsProgress;
+
         if (repaired)
         {
             if (mainBridgeObject != null)
@@ -690,16 +680,16 @@ public class BridgeCollapseTrigger : NetworkBehaviour
 
 
 
-            var activePlayers = PlayerHUDManager.ActivePlayers;
-            foreach (var p in activePlayers)
+            if (localPlayer == null)
             {
-                if (p != null)
+                FindLocalPlayer();
+            }
+            if (localPlayer != null)
+            {
+                var indicator = localPlayer.gameObject.GetComponent<TreeGuidanceIndicator>();
+                if (indicator != null)
                 {
-                    var indicator = p.gameObject.GetComponent<TreeGuidanceIndicator>();
-                    if (indicator != null)
-                    {
-                        Destroy(indicator);
-                    }
+                    Destroy(indicator);
                 }
             }
 
@@ -721,24 +711,23 @@ public class BridgeCollapseTrigger : NetworkBehaviour
                 CreateGhostBridge();
             }
 
-            // Gắn chỉ đường cho mọi người chơi hoạt động dựa theo class của họ
-            var activePlayers = PlayerHUDManager.ActivePlayers;
-            foreach (var p in activePlayers)
+            if (localPlayer == null)
             {
-                if (p != null && targetTrees != null && targetTrees.Length > 0)
+                FindLocalPlayer();
+            }
+            if (localPlayer != null && targetTrees != null && targetTrees.Length > 0)
+            {
+                int classIndex = localPlayer.CharacterClassIndex;
+                ChoppableTree myTree = targetTrees[classIndex % targetTrees.Length];
+                if (myTree != null)
                 {
-                    int classIndex = p.CharacterClassIndex;
-                    ChoppableTree myTree = targetTrees[classIndex % targetTrees.Length];
-                    if (myTree != null)
+                    var indicator = localPlayer.gameObject.GetComponent<TreeGuidanceIndicator>();
+                    if (indicator == null)
                     {
-                        var indicator = p.gameObject.GetComponent<TreeGuidanceIndicator>();
-                        if (indicator == null)
-                        {
-                            indicator = p.gameObject.AddComponent<TreeGuidanceIndicator>();
-                        }
-                        indicator.targetTree = myTree;
-                        indicator.reachDistance = 4f;
+                        indicator = localPlayer.gameObject.AddComponent<TreeGuidanceIndicator>();
                     }
+                    indicator.targetTree = myTree;
+                    indicator.reachDistance = 4f;
                 }
             }
 
@@ -763,16 +752,16 @@ public class BridgeCollapseTrigger : NetworkBehaviour
                 ghostBridgeObject = null;
             }
 
-            var activePlayers = PlayerHUDManager.ActivePlayers;
-            foreach (var p in activePlayers)
+            if (localPlayer == null)
             {
-                if (p != null)
+                FindLocalPlayer();
+            }
+            if (localPlayer != null)
+            {
+                var indicator = localPlayer.gameObject.GetComponent<TreeGuidanceIndicator>();
+                if (indicator != null)
                 {
-                    var indicator = p.gameObject.GetComponent<TreeGuidanceIndicator>();
-                    if (indicator != null)
-                    {
-                        Destroy(indicator);
-                    }
+                    Destroy(indicator);
                 }
             }
         }
@@ -804,10 +793,7 @@ public class BridgeCollapseTrigger : NetworkBehaviour
     {
         if (go == null) return false;
 
-        if (go.GetComponent<LeoPlayer>() != null || go.GetComponentInParent<LeoPlayer>() != null) return true;
-        if (go.GetComponent<ArthurPlayer>() != null || go.GetComponentInParent<ArthurPlayer>() != null) return true;
-        if (go.GetComponent<ElenaPlayer>() != null || go.GetComponentInParent<ElenaPlayer>() != null) return true;
-        if (go.GetComponent<MayaPlayer>() != null || go.GetComponentInParent<MayaPlayer>() != null) return true;
+        if (go.GetComponent<IPlayerHUDTarget>() != null || go.GetComponentInParent<IPlayerHUDTarget>() != null) return true;
 
         if (go.CompareTag("Player") || (go.transform.parent != null && go.transform.parent.CompareTag("Player"))) return true;
 
@@ -838,22 +824,23 @@ public class BridgeCollapseTrigger : NetworkBehaviour
             }
         }
 
-        // 3. Fallback to FindObjectsOfType, rate-limited to once every 2 seconds
+        // 3. Fallback to finding any IPlayerHUDTarget in the scene, rate-limited to once every 2 seconds
         if (Time.time >= nextPlayerSearchTime)
         {
             nextPlayerSearchTime = Time.time + 2f;
 
-            LeoPlayer[] leos = FindObjectsByType<LeoPlayer>(FindObjectsSortMode.None);
-            foreach (var p in leos) { if (p.isStandaloneMode || p.IsOwner) { localPlayer = p; return; } }
-
-            ArthurPlayer[] arthurs = FindObjectsByType<ArthurPlayer>(FindObjectsSortMode.None);
-            foreach (var p in arthurs) { if (p.isStandaloneMode || p.IsOwner) { localPlayer = p; return; } }
-
-            ElenaPlayer[] elenas = FindObjectsByType<ElenaPlayer>(FindObjectsSortMode.None);
-            foreach (var p in elenas) { if (p.isStandaloneMode || p.IsOwner) { localPlayer = p; return; } }
-
-            MayaPlayer[] mayas = FindObjectsByType<MayaPlayer>(FindObjectsSortMode.None);
-            foreach (var p in mayas) { if (p.isStandaloneMode || p.IsOwner) { localPlayer = p; return; } }
+            var allComponents = FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None);
+            foreach (var mono in allComponents)
+            {
+                if (mono is IPlayerHUDTarget p)
+                {
+                    if (p.IsStandaloneMode || p.IsOwner)
+                    {
+                        localPlayer = p;
+                        return;
+                    }
+                }
+            }
         }
     }
 
