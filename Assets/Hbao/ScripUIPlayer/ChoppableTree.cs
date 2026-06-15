@@ -188,12 +188,18 @@ public class ChoppableTree : NetworkBehaviour
 
         if (isPlayerAttack)
         {
+            Vector3 hitPos = other.transform.position;
+            if (other != null)
+            {
+                try { hitPos = other.bounds.center; } catch {}
+            }
+
             if (player != null)
             {
                 // Cận chiến: Bắt buộc phải rút vũ khí (phím 2 -> WeaponIndex == 2)
                 if (player.GetActiveWeaponIndex() == 2)
                 {
-                    OnTreeHit();
+                    OnTreeHit(hitPos);
                 }
                 else
                 {
@@ -203,22 +209,25 @@ public class ChoppableTree : NetworkBehaviour
             else
             {
                 // Đạn bắn: Luôn hợp lệ
-                OnTreeHit();
+                OnTreeHit(hitPos);
             }
         }
     }
 
-    private void OnTreeHit()
+    private void OnTreeHit(Vector3 hitPos)
     {
+        // Chạy hiệu ứng rung, dăm gỗ và vết chém lập tức cho người chơi vừa chém
+        PlayHitEffectsLocal(hitPos);
+
         if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening)
         {
             if (IsServer)
             {
-                ProcessHitServer();
+                ProcessHitServer(hitPos, NetworkManager.Singleton.LocalClientId);
             }
             else
             {
-                ReportHitServerRpc();
+                ReportHitServerRpc(hitPos);
             }
         }
         else
@@ -228,17 +237,18 @@ public class ChoppableTree : NetworkBehaviour
     }
 
     [ServerRpc(RequireOwnership = false)]
-    private void ReportHitServerRpc(ServerRpcParams rpcParams = default)
+    private void ReportHitServerRpc(Vector3 hitPos, ServerRpcParams rpcParams = default)
     {
-        ProcessHitServer();
+        ulong hitterClientId = rpcParams.Receive.SenderClientId;
+        ProcessHitServer(hitPos, hitterClientId);
     }
 
-    private void ProcessHitServer()
+    private void ProcessHitServer(Vector3 hitPos, ulong hitterClientId)
     {
         if (isCutDown.Value) return;
 
         currentHits++;
-        PlayHitEffectsClientRpc();
+        PlayHitEffectsClientRpc(hitPos, hitterClientId);
 
         if (currentHits >= requiredHits)
         {
@@ -251,12 +261,6 @@ public class ChoppableTree : NetworkBehaviour
     private void ProcessHitOffline()
     {
         currentHits++;
-        
-        if (!isShaking)
-        {
-            StartCoroutine(ShakeCoroutine());
-        }
-        SpawnWoodSplinters();
 
         if (currentHits >= requiredHits)
         {
@@ -270,13 +274,96 @@ public class ChoppableTree : NetworkBehaviour
     }
 
     [ClientRpc]
-    private void PlayHitEffectsClientRpc()
+    private void PlayHitEffectsClientRpc(Vector3 hitPos, ulong hitterClientId)
+    {
+        // Nếu là client đã chém (đã tự tạo hiệu ứng rồi) thì bỏ qua
+        if (NetworkManager.Singleton != null && NetworkManager.Singleton.LocalClientId == hitterClientId)
+        {
+            return;
+        }
+
+        PlayHitEffectsLocal(hitPos);
+    }
+
+    private void PlayHitEffectsLocal(Vector3 hitPos)
     {
         if (!isShaking)
         {
             StartCoroutine(ShakeCoroutine());
         }
         SpawnWoodSplinters();
+        CreateCutMark(hitPos);
+    }
+
+    private void CreateCutMark(Vector3 hitPos)
+    {
+        if (visualModel == null) return;
+
+        // Tính hướng từ tâm cây ra điểm va chạm
+        Vector3 dirToHit = hitPos - transform.position;
+        dirToHit.y = 0f; // Bỏ trục Y để lấy hướng ngang phẳng
+        Vector3 horizontalDir = dirToHit.normalized;
+
+        // Bán kính cây
+        float treeRadius = 0.45f;
+        CapsuleCollider cap = GetComponent<CapsuleCollider>();
+        if (cap == null) cap = GetComponentInChildren<CapsuleCollider>();
+        if (cap != null)
+        {
+            treeRadius = cap.radius * transform.lossyScale.x;
+        }
+
+        // Tính vị trí vết chém nằm trên vỏ thân cây
+        Vector3 cutPosition = transform.position + horizontalDir * treeRadius;
+        cutPosition.y = hitPos.y; // Chiều cao chính xác của điểm va chạm
+
+        // Giới hạn chiều cao vết chém để không bị lệch quá cao hoặc dưới mặt đất
+        float minY = transform.position.y + 0.3f;
+        float maxY = transform.position.y + 2.5f;
+        cutPosition.y = Mathf.Clamp(cutPosition.y, minY, maxY);
+
+        // Góc xoay của vết chém áp sát vỏ cây
+        Quaternion cutRotation = Quaternion.LookRotation(horizontalDir);
+
+        // Tạo mesh vết chém
+        GameObject cutMark = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        cutMark.name = "TreeCutMark";
+        
+        // Hủy collider của vết chém ngay lập tức
+        Destroy(cutMark.GetComponent<Collider>());
+
+        // Gắn vào visualModel làm con để nó tự rung/tự ẩn đi khi cây bị hạ
+        cutMark.transform.SetParent(visualModel.transform, true);
+        
+        cutMark.transform.position = cutPosition;
+        // Hơi nghiêng ngẫu nhiên để tạo hiệu ứng chém chéo tự nhiên
+        cutMark.transform.rotation = cutRotation * Quaternion.Euler(
+            Random.Range(-10f, 10f),
+            Random.Range(-5f, 5f),
+            Random.Range(-20f, 20f)
+        );
+
+        // Kích thước vết chém dẹt và mỏng sâu vào thân cây
+        cutMark.transform.localScale = new Vector3(
+            Random.Range(0.22f, 0.32f),  // Độ rộng vết chém
+            Random.Range(0.04f, 0.08f), // Độ dày vết chém
+            Random.Range(0.08f, 0.14f)  // Chiều sâu vết chém
+        );
+
+        // Tô màu lòng gỗ sáng
+        Renderer rend = cutMark.GetComponent<Renderer>();
+        if (rend != null)
+        {
+            Shader cutShader = Shader.Find("Universal Render Pipeline/Lit");
+            if (cutShader == null) cutShader = Shader.Find("Standard");
+            if (cutShader == null) cutShader = Shader.Find("Sprites/Default");
+            
+            if (cutShader != null)
+            {
+                rend.material = new Material(cutShader);
+            }
+            rend.material.color = new Color(0.88f, 0.76f, 0.55f); // Màu gỗ cắt bên trong
+        }
     }
 
     private void OnCutDownChanged(bool oldVal, bool newVal)
