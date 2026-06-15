@@ -1910,10 +1910,15 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
             float weight1 = anim.GetLayerWeight(1);
             if (weight1 > 0f && comboStep == 0 && !IsAiming)
             {
-                bool isSwitching = IsStatePlayingOnLayer1(drawWeaponTrigger) || IsStatePlayingOnLayer1(sheathWeaponTrigger);
-                if (!isSwitching)
+                var carrier = GetComponent<PlayerLogCarrier>();
+                bool isCarrying = carrier != null && carrier.isCarrying;
+                if (!isCarrying)
                 {
-                    ClearAttackLayer();
+                    bool isSwitching = IsStatePlayingOnLayer1(drawWeaponTrigger) || IsStatePlayingOnLayer1(sheathWeaponTrigger);
+                    if (!isSwitching)
+                    {
+                        ClearAttackLayer();
+                    }
                 }
             }
         }
@@ -3612,9 +3617,14 @@ private void StartRollServerRpc(Vector3 direction)
         isRootedAttack = false;
         if (anim != null && anim.isActiveAndEnabled && anim.runtimeAnimatorController != null && anim.layerCount > 1)
         {
-            anim.SetLayerWeight(1, 0f); // Reset weight của Layer 1 về 0
+            var carrier = GetComponent<PlayerLogCarrier>();
+            bool isCarrying = carrier != null && carrier.isCarrying;
+            anim.SetLayerWeight(1, isCarrying ? 1f : 0f); // Reset weight của Layer 1 về 0, trừ phi đang bưng gỗ
             // Reset Layer 1 (AttackLayer) về trạng thái Empty/New State mặc định
-            anim.Play("New State", 1, 0f);
+            if (!isCarrying)
+            {
+                anim.Play("New State", 1, 0f);
+            }
         }
     }
 
@@ -3680,8 +3690,13 @@ private void StartRollServerRpc(Vector3 direction)
                 }
                 else if (comboStep == 0)
                 {
-                    anim.SetLayerWeight(1, 0f);
-                    anim.Play("New State", 1, 0f);
+                    var carrier = GetComponent<PlayerLogCarrier>();
+                    bool isCarrying = carrier != null && carrier.isCarrying;
+                    if (!isCarrying)
+                    {
+                        anim.SetLayerWeight(1, 0f);
+                        anim.Play("New State", 1, 0f);
+                    }
                     // Reset shooting trigger and pending shoot flag to avoid stuck animation states/double arrows on next aim
                     SafeResetTrigger("Shooting");
                     isShootPending = false;
