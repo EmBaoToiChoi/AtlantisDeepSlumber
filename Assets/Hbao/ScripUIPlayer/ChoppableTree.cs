@@ -148,6 +148,9 @@ public class ChoppableTree : NetworkBehaviour
     {
         if (isCutDown.Value) return;
 
+        if (other == null) return;
+        if (other.GetComponentInParent<PushableStone>() != null) return;
+
         bool isPlayerAttack = false;
         IPlayerHUDTarget player = other.GetComponentInParent<IPlayerHUDTarget>();
         if (player == null)
