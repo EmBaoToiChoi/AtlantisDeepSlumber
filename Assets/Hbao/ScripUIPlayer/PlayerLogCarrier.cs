@@ -10,12 +10,19 @@ public class PlayerLogCarrier : MonoBehaviour
     [Tooltip("Transform điểm gắn gỗ tùy chọn (nếu có, gỗ sẽ tự động gắn vào đây). Nếu bỏ trống sẽ gắn vào root player.")]
     public Transform carryTargetTransform;
 
-    public void CarryLog()
+    public void CarryLog(bool showVisualLog = true)
     {
         isCarrying = true;
         
         // Hide weapons
         TogglePlayerWeapons(false);
+        
+        if (!showVisualLog)
+        {
+            // Kích hoạt trạng thái Animator bưng gỗ
+            PlayCarryAnimation(true);
+            return;
+        }
         
         // Cố gắng load prefab gỗ thật từ Resources
         GameObject logPrefab = Resources.Load<GameObject>("firewood_single");

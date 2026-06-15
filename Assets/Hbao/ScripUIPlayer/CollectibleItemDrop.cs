@@ -202,6 +202,20 @@ public class CollectibleItemDrop : NetworkBehaviour, IInteractableItem
                 }
                 return;
             }
+
+            var target = localPlayer as IPlayerHUDTarget;
+            if (target != null && target.GetActiveWeaponIndex() == 2)
+            {
+                if (hud == null)
+                {
+                    hud = FindAnyObjectByType<PlayerHUDController>();
+                }
+                if (hud != null)
+                {
+                    hud.ShowMissionAlert("Bạn phải cất vũ khí mới bưng được gỗ!", 3.0f);
+                }
+                return;
+            }
         }
 
         // Tắt nhắc nhở tương tác ngay lập tức
@@ -339,12 +353,12 @@ public class CollectibleItemDrop : NetworkBehaviour, IInteractableItem
         if (isLocalOwner)
         {
             // Chỉ màn hình của player này mới thấy gỗ trên tay
-            carrier.CarryLog();
+            carrier.CarryLog(true);
         }
         else
         {
-            // Client khác chỉ đánh dấu isCarrying = true (sync trạng thái mà không tạo visual)
-            carrier.isCarrying = true;
+            // Client khác chơi animation bưng gỗ và ẩn vũ khí (không tạo visual gỗ thừa)
+            carrier.CarryLog(false);
         }
     }
 
