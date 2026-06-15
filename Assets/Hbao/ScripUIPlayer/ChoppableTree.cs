@@ -304,7 +304,7 @@ public class ChoppableTree : NetworkBehaviour
                 spawnPos.y = hit.point.y + 0.3f;
             }
 
-            GameObject log = Instantiate(woodLogPrefab, spawnPos, Quaternion.identity);
+            GameObject log = WoodLogObjectPool.Instance.GetOrCreate(woodLogPrefab, spawnPos, Quaternion.identity);
             var netObj = log.GetComponent<NetworkObject>();
             if (netObj != null)
             {
@@ -328,7 +328,7 @@ public class ChoppableTree : NetworkBehaviour
             spawnPos.y = hit.point.y + 0.3f;
         }
 
-        Instantiate(woodLogPrefab, spawnPos, Quaternion.identity);
+        WoodLogObjectPool.Instance.GetOrCreate(woodLogPrefab, spawnPos, Quaternion.identity);
     }
 
     private void SpawnWoodSplinters()

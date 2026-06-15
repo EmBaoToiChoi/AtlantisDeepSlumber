@@ -7,45 +7,98 @@ public class PlayerLogCarrier : MonoBehaviour
 
     private GameObject carriedLogInstance;
 
+    [Tooltip("Transform điểm gắn gỗ tùy chọn (nếu có, gỗ sẽ tự động gắn vào đây). Nếu bỏ trống sẽ gắn vào root player.")]
+    public Transform carryTargetTransform;
+
     public void CarryLog()
     {
         isCarrying = true;
         
         // Hide weapons
         TogglePlayerWeapons(false);
-
-        // Tìm xương tay phải để gắn gỗ (hoặc tay trái nếu không thấy)
-        Transform handBone = FindHandBone(transform);
         
-        // Tạo visual mô phỏng khúc gỗ hình trụ nằm ngang
-        carriedLogInstance = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-        Destroy(carriedLogInstance.GetComponent<Collider>()); // Loại bỏ Collider tránh ảnh hưởng va chạm của player
-        
-        if (handBone != null)
+        // Cố gắng load prefab gỗ thật từ Resources
+        GameObject logPrefab = Resources.Load<GameObject>("firewood_single");
+        if (logPrefab == null)
         {
-            carriedLogInstance.transform.SetParent(handBone, false);
-            // Điều chỉnh vị trí, góc xoay để khúc gỗ nằm cân giữa 2 tay bưng
-            carriedLogInstance.transform.localPosition = new Vector3(-0.1f, 0.18f, 0f);
-            carriedLogInstance.transform.localRotation = Quaternion.Euler(0f, 90f, 0f);
+            logPrefab = Resources.Load<GameObject>("WoodLog");
+        }
+
+        if (logPrefab != null)
+        {
+            carriedLogInstance = Instantiate(logPrefab);
+            carriedLogInstance.SetActive(true);
+            
+            // Dọn dẹp NetworkObject ngay lập tức để tránh lỗi re-parenting của Netcode
+            var netObj = carriedLogInstance.GetComponent<Unity.Netcode.NetworkObject>();
+            if (netObj != null)
+            {
+                DestroyImmediate(netObj);
+            }
+
+            // Dọn dẹp các thành quan trọng khác không cần thiết trên tệp gỗ thật ngay lập tức
+            var colliders = carriedLogInstance.GetComponentsInChildren<Collider>();
+            foreach (var col in colliders)
+            {
+                if (col != null) DestroyImmediate(col);
+            }
+            
+            var rbs = carriedLogInstance.GetComponentsInChildren<Rigidbody>();
+            foreach (var rb in rbs)
+            {
+                if (rb != null) DestroyImmediate(rb);
+            }
+            
+            var comps = carriedLogInstance.GetComponentsInChildren<MonoBehaviour>();
+            foreach (var comp in comps)
+            {
+                if (comp != null && comp != this) DestroyImmediate(comp);
+            }
         }
         else
         {
-            // Fallback nếu không quét được xương tay (gắn trước ngực làm mốc)
-            carriedLogInstance.transform.SetParent(transform, false);
-            carriedLogInstance.transform.localPosition = new Vector3(0f, 1.15f, 0.45f);
-            carriedLogInstance.transform.localRotation = Quaternion.Euler(0f, 90f, 0f);
+            // Tạo cylinder làm giả gỗ nếu không tìm thấy prefab
+            carriedLogInstance = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            carriedLogInstance.SetActive(true);
+            Destroy(carriedLogInstance.GetComponent<Collider>());
+
+            Shader shader = Shader.Find("Universal Render Pipeline/Lit");
+            if (shader == null) shader = Shader.Find("Standard");
+            if (shader == null) shader = Shader.Find("Sprites/Default");
+            
+            if (shader != null)
+            {
+                Material mat = new Material(shader);
+                mat.color = new Color(0.45f, 0.28f, 0.12f);
+                carriedLogInstance.GetComponent<Renderer>().material = mat;
+            }
         }
         
-        // Kích thước khúc gỗ
-        carriedLogInstance.transform.localScale = new Vector3(0.18f, 0.45f, 0.18f);
-        
-        // Tô màu nâu gỗ
-        Shader shader = Shader.Find("Sprites/Default");
-        if (shader != null)
+        if (carryTargetTransform != null)
         {
-            Material mat = new Material(shader);
-            mat.color = new Color(0.45f, 0.28f, 0.12f);
-            carriedLogInstance.GetComponent<Renderer>().material = mat;
+            // Gắn vào transform tuỳ biến kéo thả trong Inspector
+            carriedLogInstance.transform.SetParent(carryTargetTransform, false);
+            carriedLogInstance.transform.localPosition = Vector3.zero;
+            carriedLogInstance.transform.localRotation = Quaternion.identity;
+            
+            // Giữ nguyên tỷ lệ xích prefab
+            carriedLogInstance.transform.localScale = logPrefab != null ? logPrefab.transform.localScale : new Vector3(0.18f, 0.45f, 0.18f);
+            
+            Debug.Log($"[PlayerLogCarrier] CarryLog: Attached log to custom carryTargetTransform '{carryTargetTransform.name}'");
+        }
+        else
+        {
+            // Luôn gắn vào root player transform làm mặc định để đảm bảo vị trí, góc xoay và tỉ lệ scale đồng nhất.
+            carriedLogInstance.transform.SetParent(transform, false);
+            
+            // Giữ nguyên tỉ lệ xích gốc của prefab (vì parent root luôn có scale 1,1,1)
+            carriedLogInstance.transform.localScale = logPrefab != null ? logPrefab.transform.localScale : new Vector3(0.18f, 0.45f, 0.18f);
+            
+            // Vị trí ngang bụng/ngực và nằm ngang nối từ tay trái qua tay phải
+            carriedLogInstance.transform.localPosition = new Vector3(0f, 0.95f, 0.42f);
+            carriedLogInstance.transform.localRotation = Quaternion.Euler(0f, 90f, 0f);
+
+            Debug.Log($"[PlayerLogCarrier] CarryLog: Attached cosmetic log to root player transform. localScale={carriedLogInstance.transform.localScale}, localPosition={carriedLogInstance.transform.localPosition}");
         }
 
         // Kích hoạt trạng thái Animator bưng gỗ
@@ -139,12 +192,14 @@ public class PlayerLogCarrier : MonoBehaviour
         // - "Bung" (bool)
         // - "IsCarrying" (bool)
         // - "BungTrigger" (trigger)
+        // - "Bưng" (trigger)
         SafeSetBool(anim, "Bung", carrying);
         SafeSetBool(anim, "IsCarrying", carrying);
 
         if (carrying)
         {
             SafeSetTrigger(anim, "BungTrigger");
+            SafeSetTrigger(anim, "Bưng");
         }
     }
 
@@ -176,6 +231,42 @@ public class PlayerLogCarrier : MonoBehaviour
 
     private Transform FindHandBone(Transform current)
     {
+        // 1. Arthur
+        var arthur = GetComponent<ArthurPlayer>();
+        if (arthur != null)
+        {
+            if (arthur.rightHandWeapon != null) return arthur.rightHandWeapon.transform.parent;
+            if (arthur.leftHandWeapon != null) return arthur.leftHandWeapon.transform.parent;
+        }
+
+        // 2. Leo
+        var leo = GetComponent<LeoPlayer>();
+        if (leo != null)
+        {
+            if (leo.rightHandSword != null) return leo.rightHandSword.transform.parent;
+            if (leo.leftHandSword != null) return leo.leftHandSword.transform.parent;
+        }
+
+        // 3. Elena
+        var elena = GetComponent<ElenaPlayer>();
+        if (elena != null)
+        {
+            if (elena.weaponInHandVisual != null) return elena.weaponInHandVisual.transform.parent;
+        }
+
+        // 4. Maya
+        var maya = GetComponent<MayaPlayer>();
+        if (maya != null)
+        {
+            if (maya.weaponInHandVisual != null) return maya.weaponInHandVisual.transform.parent;
+        }
+
+        // Fallback: search hierarchy for hand keywords
+        return FindHandBoneFallback(current);
+    }
+
+    private Transform FindHandBoneFallback(Transform current)
+    {
         string nameLower = current.name.ToLower();
         if (nameLower.Contains("hand") || nameLower.Contains("wrist") || nameLower.Contains("palm"))
         {
@@ -187,10 +278,48 @@ public class PlayerLogCarrier : MonoBehaviour
         
         for (int i = 0; i < current.childCount; i++)
         {
-            Transform found = FindHandBone(current.GetChild(i));
+            Transform found = FindHandBoneFallback(current.GetChild(i));
             if (found != null) return found;
         }
         
+        return null;
+    }
+
+    private Transform FindCarryBone(Transform playerTransform)
+    {
+        // Thử tìm xương ngực/spine trước để khúc gỗ nằm ngang cân giữa 2 tay
+        Transform chest = FindBoneByName(playerTransform, "chest");
+        if (chest == null) chest = FindBoneByName(playerTransform, "spine_02");
+        if (chest == null) chest = FindBoneByName(playerTransform, "spine02");
+        if (chest == null) chest = FindBoneByName(playerTransform, "spine2");
+        if (chest == null) chest = FindBoneByName(playerTransform, "upperchest");
+        
+        if (chest != null) return chest;
+
+        // Nếu không có, thử xương spine1
+        Transform spine = FindBoneByName(playerTransform, "spine");
+        if (spine == null) spine = FindBoneByName(playerTransform, "spine_01");
+        if (spine == null) spine = FindBoneByName(playerTransform, "spine01");
+        
+        if (spine != null) return spine;
+
+        // Fallback về tay phải
+        return FindHandBone(playerTransform);
+    }
+
+    private Transform FindBoneByName(Transform current, string targetName)
+    {
+        if (current.name.ToLower().Contains(targetName.ToLower()))
+        {
+            return current;
+        }
+
+        for (int i = 0; i < current.childCount; i++)
+        {
+            Transform found = FindBoneByName(current.GetChild(i), targetName);
+            if (found != null) return found;
+        }
+
         return null;
     }
 

@@ -30,7 +30,9 @@ public class CollectibleItemDrop : NetworkBehaviour, IInteractableItem
     {
         if (localPlayer is LeoPlayer leo) leo.pendingPickItem = item;
         else if (localPlayer is ArthurPlayer arthur) arthur.pendingPickItem = item;
-        // Elena and Maya do not use pendingPickItem
+        else if (localPlayer is ElenaPlayer elena) elena.pendingPickItem = item;
+        else if (localPlayer is MayaPlayer maya) maya.pendingPickItem = item;
+        else if (localPlayer is SimplePlayerTest spt) spt.pendingPickItem = item;
     }
 
     private void PlayPickAnimation()
@@ -56,6 +58,12 @@ public class CollectibleItemDrop : NetworkBehaviour, IInteractableItem
         if (localPlayer is ArthurPlayer arthur) return arthur.isStandaloneMode;
         if (localPlayer is ElenaPlayer elena) return elena.isStandaloneMode;
         if (localPlayer is MayaPlayer maya) return maya.isStandaloneMode;
+        if (localPlayer is SimplePlayerTest spt) return spt.isStandaloneMode;
+        
+        if (NetworkManager.Singleton == null || !NetworkManager.Singleton.IsListening)
+        {
+            return true;
+        }
         return false;
     }
     private PlayerHUDController hud;
@@ -70,6 +78,8 @@ public class CollectibleItemDrop : NetworkBehaviour, IInteractableItem
     private void OnEnable()
     {
         InteractionRegistry.Register(this);
+        // Reset startY cho các vật phẩm lấy từ ObjectPool
+        startY = transform.position.y;
     }
 
     private void OnDisable()
@@ -79,6 +89,7 @@ public class CollectibleItemDrop : NetworkBehaviour, IInteractableItem
         {
             hud.ShowInteractionPrompt(false, "");
         }
+        isWithinRange = false; // Reset trạng thái range khi trả về pool
     }
 
     private void Update()
@@ -199,11 +210,36 @@ public class CollectibleItemDrop : NetworkBehaviour, IInteractableItem
             hud.ShowInteractionPrompt(false, "");
         }
 
+        // Set pending item for animation event pickup flow
+        SetPendingPickItem(gameObject);
+
         // Phát hoạt ảnh nhặt đồ trên Player
         PlayPickAnimation();
 
-        // Nhặt vật phẩm ngay lập tức để đồng bộ mạng hoạt động tin cậy 100%
-        ConfirmCollect();
+        // Safety fallback coroutine: if animation event doesn't trigger within 1.0 seconds, force collect
+        StartCoroutine(FallbackCollectSequence());
+    }
+
+    private System.Collections.IEnumerator FallbackCollectSequence()
+    {
+        yield return new WaitForSeconds(1.0f);
+        
+        if (localPlayer != null)
+        {
+            GameObject pending = null;
+            if (localPlayer is LeoPlayer leo) pending = leo.pendingPickItem;
+            else if (localPlayer is ArthurPlayer arthur) pending = arthur.pendingPickItem;
+            else if (localPlayer is ElenaPlayer elena) pending = elena.pendingPickItem;
+            else if (localPlayer is MayaPlayer maya) pending = maya.pendingPickItem;
+            else if (localPlayer is SimplePlayerTest spt) pending = spt.pendingPickItem;
+
+            if (pending == gameObject)
+            {
+                Debug.LogWarning("[CollectibleItemDrop] Animation Event 'OnPickItemEvent' did not fire. Running safety fallback pickup.");
+                ConfirmCollect();
+                SetPendingPickItem(null);
+            }
+        }
     }
 
     public void ConfirmCollect()
@@ -222,7 +258,8 @@ public class CollectibleItemDrop : NetworkBehaviour, IInteractableItem
                     carrier = localPlayer.gameObject.AddComponent<PlayerLogCarrier>();
                 }
                 carrier.CarryLog();
-                Destroy(gameObject);
+                // Trả về pool thay vì hủy
+                WoodLogObjectPool.Instance.ReturnToPool(gameObject);
             }
             else
             {
@@ -269,7 +306,15 @@ public class CollectibleItemDrop : NetworkBehaviour, IInteractableItem
         }
         else
         {
-            Destroy(gameObject);
+            if (itemName.Equals("WoodLog", System.StringComparison.OrdinalIgnoreCase) || 
+                itemName.Equals("ThanhGo", System.StringComparison.OrdinalIgnoreCase))
+            {
+                WoodLogObjectPool.Instance.ReturnToPool(gameObject);
+            }
+            else
+            {
+                Destroy(gameObject);
+            }
         }
     }
 
@@ -298,7 +343,15 @@ public class CollectibleItemDrop : NetworkBehaviour, IInteractableItem
         }
         else
         {
-            Destroy(gameObject);
+            if (itemName.Equals("WoodLog", System.StringComparison.OrdinalIgnoreCase) || 
+                itemName.Equals("ThanhGo", System.StringComparison.OrdinalIgnoreCase))
+            {
+                WoodLogObjectPool.Instance.ReturnToPool(gameObject);
+            }
+            else
+            {
+                Destroy(gameObject);
+            }
         }
     }
 

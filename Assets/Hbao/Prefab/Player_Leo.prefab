@@ -84,6 +84,7 @@ GameObject:
   - component: {fileID: 7638701699718663926}
   - component: {fileID: 7725615253499321622}
   - component: {fileID: 8566485037701727064}
+  - component: {fileID: 2791531149985340562}
   m_Layer: 3
   m_Name: Player_Leo
   m_TagString: Player
@@ -170,7 +171,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  GlobalObjectIdHash: 115507098
+  GlobalObjectIdHash: 477345140
   InScenePlacedSourceGlobalObjectIdHash: 477345140
   DeferredDespawnTick: 0
   Ownership: 1
@@ -636,13 +637,6 @@ MonoBehaviour:
     TransitionIndex: 11
   - IsCrossFadeExit: 0
     Layer: 1
-    OriginatingState: -499022955
-    DestinationState: 1791711171
-    TransitionDuration: 0.05
-    TriggerNameHash: 1522598188
-    TransitionIndex: 12
-  - IsCrossFadeExit: 0
-    Layer: 1
     OriginatingState: -1676855739
     DestinationState: 1910553104
     TransitionDuration: 0.05
@@ -1031,10 +1025,10 @@ MonoBehaviour:
       NameHash: 987715043
       Synchronize: 1
       ParameterType: 9
-    - name: "B\u01B0ng"
-      NameHash: 1522598188
+    - name: Bung
+      NameHash: 1791711171
       Synchronize: 1
-      ParameterType: 9
+      ParameterType: 4
   AnimatorParametersExpanded: 0
 --- !u!114 &7638701699718663926
 MonoBehaviour:
@@ -1383,6 +1377,20 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   scriptNames:
   - LeoPlayer
+--- !u!114 &2791531149985340562
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3704789710416520249}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d1f809c9e76eee6409ddd80204619ea3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  isCarrying: 0
+  carryTargetTransform: {fileID: 6730037460965293441}
 --- !u!1 &4262746911795802632
 GameObject:
   m_ObjectHideFlags: 0
@@ -1586,6 +1594,37 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 3350534664684337162}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &8529797764164706278
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 6730037460965293441}
+  m_Layer: 3
+  m_Name: GameObject
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &6730037460965293441
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8529797764164706278}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0.267, y: -0.473, z: -0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 5791040466554311465}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &259277180161953231
 PrefabInstance:
@@ -2357,6 +2396,9 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects:
+    - targetCorrespondingSourceObject: {fileID: -2707054796494011859, guid: 089f5319e86aa3a409ccfa5692b155f2, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 6730037460965293441}
     - targetCorrespondingSourceObject: {fileID: -5846270692196909274, guid: 089f5319e86aa3a409ccfa5692b155f2, type: 3}
       insertIndex: -1
       addedObject: {fileID: 3963171196735237559}
@@ -2418,6 +2460,11 @@ Transform:
 --- !u!4 &3905884749298962865 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 4325436833983905973, guid: 089f5319e86aa3a409ccfa5692b155f2, type: 3}
+  m_PrefabInstance: {fileID: 735059386473697540}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &5791040466554311465 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: -2707054796494011859, guid: 089f5319e86aa3a409ccfa5692b155f2, type: 3}
   m_PrefabInstance: {fileID: 735059386473697540}
   m_PrefabAsset: {fileID: 0}
 --- !u!4 &6149541316733567280 stripped

@@ -1,5 +1,36 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
+--- !u!1 &2307975979522688547
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 7520962168665786257}
+  m_Layer: 3
+  m_Name: GameObject
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &7520962168665786257
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2307975979522688547}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: -0.471, z: 0.562}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1697606171214997303}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &4069461590424456320
 GameObject:
   m_ObjectHideFlags: 0
@@ -129,6 +160,7 @@ GameObject:
   - component: {fileID: 2021247893448015710}
   - component: {fileID: 2610228392220693824}
   - component: {fileID: 1278614070153325450}
+  - component: {fileID: 1454344850779201767}
   m_Layer: 3
   m_Name: Athurt
   m_TagString: Player
@@ -165,7 +197,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  GlobalObjectIdHash: 542778530
+  GlobalObjectIdHash: 2302201610
   InScenePlacedSourceGlobalObjectIdHash: 2302201610
   DeferredDespawnTick: 0
   Ownership: 1
@@ -644,6 +676,7 @@ MonoBehaviour:
       MaxSecondsBetweenUpdates: 0
     m_InternalValue: 0
   isStandaloneMode: 0
+  pendingPickItem: {fileID: 0}
 --- !u!114 &5440765805664962977
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -857,13 +890,6 @@ MonoBehaviour:
     TransitionDuration: 0.05
     TriggerNameHash: 266515227
     TransitionIndex: 10
-  - IsCrossFadeExit: 0
-    Layer: 1
-    OriginatingState: -499022955
-    DestinationState: 1791711171
-    TransitionDuration: 0.05
-    TriggerNameHash: 1522598188
-    TransitionIndex: 11
   - IsCrossFadeExit: 0
     Layer: 1
     OriginatingState: -382223678
@@ -1094,10 +1120,10 @@ MonoBehaviour:
       NameHash: 134042274
       Synchronize: 1
       ParameterType: 9
-    - name: "B\u01B0ng"
-      NameHash: 1522598188
+    - name: Bung
+      NameHash: 1791711171
       Synchronize: 1
-      ParameterType: 9
+      ParameterType: 4
   AnimatorParametersExpanded: 0
 --- !u!114 &3135136227906270387
 MonoBehaviour:
@@ -1239,6 +1265,20 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   scriptNames:
   - ArthurPlayer
+--- !u!114 &1454344850779201767
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6392718148198085431}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d1f809c9e76eee6409ddd80204619ea3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  isCarrying: 0
+  carryTargetTransform: {fileID: 7520962168665786257}
 --- !u!1 &6656804584175171832
 GameObject:
   m_ObjectHideFlags: 0
@@ -2204,6 +2244,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 7208261743932278219, guid: 4536370b10591cd4e8828d82b08e011d, type: 3}
       insertIndex: -1
       addedObject: {fileID: 5967205088246948394}
+    - targetCorrespondingSourceObject: {fileID: 7208261743932278219, guid: 4536370b10591cd4e8828d82b08e011d, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 7520962168665786257}
     - targetCorrespondingSourceObject: {fileID: 2412161367050800168, guid: 4536370b10591cd4e8828d82b08e011d, type: 3}
       insertIndex: -1
       addedObject: {fileID: 3787842175629516752}

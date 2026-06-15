@@ -68,4 +68,12 @@ public class MayaAnimationBridge : MonoBehaviour
             mainPlayerScript.OnShootRSkill();
         }
     }
+
+    public void OnPickItemEvent()
+    {
+        if (mainPlayerScript != null)
+        {
+            mainPlayerScript.OnPickItemEvent();
+        }
+    }
 }

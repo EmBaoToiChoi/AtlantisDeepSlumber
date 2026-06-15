@@ -50,4 +50,12 @@ public class PlayerAnimationBridge : MonoBehaviour
             mainPlayerScript.OnDrawArrow();
         }
     }
+
+    public void OnPickItemEvent()
+    {
+        if (mainPlayerScript != null)
+        {
+            mainPlayerScript.OnPickItemEvent();
+        }
+    }
 }

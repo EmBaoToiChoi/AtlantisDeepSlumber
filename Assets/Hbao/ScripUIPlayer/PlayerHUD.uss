@@ -1363,11 +1363,10 @@
 }
 
 .quest-icon {
-    width: 16px;
-    height: 16px;
+    width: 36px;
+    height: 36px;
     margin-right: 8px;
-    background-image: url("project://database/Assets/Hbao/Image/Okhoa.png?fileID=2800000&guid=a6762048aa50f61429b3f9b9877b5028&type=3#Okhoa");
-    -unity-background-image-tint-color: rgb(255, 50, 50);
+    background-image: url("project://database/Assets/Hbao/Image/Go.png");
     -unity-background-scale-mode: scale-to-fit;
 }
 
