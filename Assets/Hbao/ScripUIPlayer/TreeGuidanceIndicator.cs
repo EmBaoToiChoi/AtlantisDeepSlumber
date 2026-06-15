@@ -45,6 +45,13 @@ public class TreeGuidanceIndicator : MonoBehaviour
 
     private bool IsLocalPlayer()
     {
+        // 1. Kiểm tra trực tiếp qua static target của HUD
+        if (PlayerHUDController.LocalPlayerTarget != null && PlayerHUDController.LocalPlayerTarget.gameObject == gameObject)
+        {
+            return true;
+        }
+
+        // 2. Kiểm tra thông thường qua interface
         var hudTarget = GetComponent<IPlayerHUDTarget>();
         if (hudTarget != null)
         {
@@ -86,14 +93,15 @@ public class TreeGuidanceIndicator : MonoBehaviour
             new Vector3(-0.25f, 0f, -0.2f)  // 5: Left Outer
         };
 
+        // Sử dụng thứ tự quay kim đồng hồ (Clockwise) để tránh bị Cull ẩn đi khi nhìn từ trên xuống
         int[] triangles = new int[]
         {
-            // Cánh trái
-            0, 4, 3,
-            0, 5, 4,
-            // Cánh phải
-            0, 3, 2,
-            0, 2, 1
+            // Cánh trái (Clockwise)
+            0, 3, 4,
+            0, 4, 5,
+            // Cánh phải (Clockwise)
+            0, 2, 3,
+            0, 1, 2
         };
 
         Vector3[] normals = new Vector3[]
@@ -183,6 +191,10 @@ public class TreeGuidanceIndicator : MonoBehaviour
 
             // Cấu hình vật liệu trong suốt với tông màu vàng neon sáng/nổi bật
             Color chevronColor = new Color(1f, 0.9f, 0f, 0.8f);
+            if (arrowMat.HasProperty("_Cull"))
+            {
+                arrowMat.SetFloat("_Cull", 0f); // Cull Mode: Off (Double-sided)
+            }
             if (arrowMat.HasProperty("_Surface"))
             {
                 arrowMat.SetFloat("_Surface", 1f); // Transparent

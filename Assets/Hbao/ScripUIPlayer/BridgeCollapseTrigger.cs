@@ -231,18 +231,24 @@ public class BridgeCollapseTrigger : NetworkBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
-        // 1. Kiểm tra sập cầu (nếu chưa sập)
+        // Kiểm tra sập cầu (nếu chưa sập)
         if (!IsBridgeCollapsed())
         {
             if (IsPlayer(other.gameObject))
             {
-                Debug.Log($"[BridgeCollapseTrigger] Người chơi '{other.gameObject.name}' đi vào vùng kích hoạt. Kích hoạt ẩn cầu!");
+                Debug.Log($"[BridgeCollapseTrigger] Người chơi '{other.gameObject.name}' đi vào vùng kích hoạt.");
                 
                 if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening)
                 {
                     if (IsServer)
                     {
+                        // Server tự kích hoạt trực tiếp
                         TriggerBridgeCollapseServer();
+                    }
+                    else
+                    {
+                        // Client gửi yêu cầu lên server (client không phải host cũng có thể kích hoạt)
+                        RequestCollapseServerRpc();
                     }
                 }
                 else
@@ -253,6 +259,13 @@ public class BridgeCollapseTrigger : NetworkBehaviour
                 }
             }
         }
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    private void RequestCollapseServerRpc()
+    {
+        if (!IsServer || IsBridgeCollapsed()) return;
+        TriggerBridgeCollapseServer();
     }
 
 
@@ -267,6 +280,34 @@ public class BridgeCollapseTrigger : NetworkBehaviour
         
         // Server thực hiện spawn gỗ xung quanh cầu
         SpawnWoodLogsServer();
+        
+        // Thông báo tất cả client hiển thị quest UI
+        ShowCollapseUIClientRpc();
+    }
+
+    [ClientRpc]
+    private void ShowCollapseUIClientRpc()
+    {
+        // Mỗi client tự tìm và hiển thị HUD của mình
+        PlayerHUDController localHud = FindAnyObjectByType<PlayerHUDController>();
+        if (localHud != null)
+        {
+            localHud.ShowQuest(true);
+            localHud.UpdateQuestProgress(0, requiredLogsToRepair);
+            localHud.ShowMissionAlert("CẦU ĐÃ BỊ SẬP! HÃY TÌM 16 THANH GỖ ĐỂ SỬA LẠI CẦU!", 5.0f);
+        }
+    }
+
+    [ClientRpc]
+    private void ShowRepairCompleteUIClientRpc()
+    {
+        PlayerHUDController localHud = FindAnyObjectByType<PlayerHUDController>();
+        if (localHud != null)
+        {
+            localHud.ShowInteractionPrompt(false, "");
+            localHud.ShowQuest(false);
+            localHud.ShowMissionAlert("CẦU ĐÃ ĐƯỢC SỬA CHỮA THÀNH CÔNG!", 5.0f);
+        }
     }
 
     private void CollapseBridgeLocal()
@@ -324,12 +365,14 @@ public class BridgeCollapseTrigger : NetworkBehaviour
             bridgeAnimator.SetTrigger(collapseTriggerName);
         }
 
-        // 4. Hiển thị UI Quest trên Client
-        if (hud != null)
+        // 4. Hiển thị UI Quest trên Client (dùng dynamic lookup để luôn tìm đúng HUD đang active)
+        PlayerHUDController localHudCtl = FindAnyObjectByType<PlayerHUDController>();
+        if (localHudCtl != null)
         {
-            hud.ShowQuest(true);
-            hud.UpdateQuestProgress(logsSubmitted.Value, requiredLogsToRepair);
-            hud.ShowMissionAlert("CẦU ĐÃ BỊ SẬP! HÃY TÌM 16 THANH GỖ ĐỂ SỬA LẠI CẦU!", 4.0f);
+            int currentProgress = (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening) ? logsSubmitted.Value : localLogsSubmittedCount;
+            localHudCtl.ShowQuest(true);
+            localHudCtl.UpdateQuestProgress(currentProgress, requiredLogsToRepair);
+            localHudCtl.ShowMissionAlert("CẦU ĐÃ BỊ SẬP! HÃY TÌM 16 THANH GỖ ĐỂ SỬA LẠI CẦU!", 5.0f);
         }
 
         // 5. Nếu là Standalone thì tự động spawn gỗ cục bộ
@@ -407,6 +450,7 @@ public class BridgeCollapseTrigger : NetworkBehaviour
             {
                 hasBeenRepaired.Value = true;
                 Debug.Log("[BridgeCollapseTrigger] Server: Cầu đã được sửa hoàn toàn!");
+                ShowRepairCompleteUIClientRpc();
             }
         }
     }
@@ -481,6 +525,7 @@ public class BridgeCollapseTrigger : NetworkBehaviour
                 {
                     hasBeenRepaired.Value = true;
                     Debug.Log("[BridgeCollapseTrigger] Server: Cầu đã được sửa hoàn toàn!");
+                    ShowRepairCompleteUIClientRpc();
                 }
             }
         }
@@ -489,12 +534,13 @@ public class BridgeCollapseTrigger : NetworkBehaviour
     private void RepairBridgeLocal()
     {
         localRepaired = true;
-        // 1. Tắt nhắc nhở tương tác
-        if (hud != null)
+        // 1. Tắt nhắc nhở tương tác (dùng dynamic HUD lookup)
+        PlayerHUDController localHudCtl = FindAnyObjectByType<PlayerHUDController>();
+        if (localHudCtl != null)
         {
-            hud.ShowInteractionPrompt(false, "");
-            hud.ShowQuest(false);
-            hud.ShowMissionAlert("CẦU ĐÃ ĐƯỢC SỬA CHỮA THÀNH CÔNG!", 4.0f);
+            localHudCtl.ShowInteractionPrompt(false, "");
+            localHudCtl.ShowQuest(false);
+            localHudCtl.ShowMissionAlert("CẦU ĐÃ ĐƯỢC SỬA CHỮA THÀNH CÔNG!", 5.0f);
         }
 
         // Dọn dẹp mũi tên chỉ đường nếu còn
@@ -547,10 +593,11 @@ public class BridgeCollapseTrigger : NetworkBehaviour
         localLogsSubmittedCount = newVal;
         Debug.Log($"[BridgeCollapseTrigger] Tiến trình xây cầu thay đổi: {newVal}/{requiredLogsToRepair}");
         
-        // Cập nhật UI
-        if (hud != null)
+        // Cập nhật UI - dùng dynamic lookup để luôn tìm đúng HUD đang active trên màn hình của client này
+        PlayerHUDController localHudCtl = FindAnyObjectByType<PlayerHUDController>();
+        if (localHudCtl != null)
         {
-            hud.UpdateQuestProgress(newVal, requiredLogsToRepair);
+            localHudCtl.UpdateQuestProgress(newVal, requiredLogsToRepair);
         }
     }
 
@@ -575,37 +622,69 @@ public class BridgeCollapseTrigger : NetworkBehaviour
         {
             Destroy(col);
         }
-        var rb = ghostBridgeObject.GetComponent<Rigidbody>();
-        if (rb != null) Destroy(rb);
         foreach (var rbs in ghostBridgeObject.GetComponentsInChildren<Rigidbody>())
         {
             Destroy(rbs);
         }
         
-        // Loại bỏ các scripts để tránh chạy logic trùng lặp
-        foreach (var comp in ghostBridgeObject.GetComponentsInChildren<MonoBehaviour>())
+        // QUAN TRỌNG: Chỉ xóa các script logic - KHÔNG xóa MeshRenderer/MeshFilter (là component kế thừa Component, không phải MonoBehaviour)
+        // Xóa NetworkObject để tránh xung đột network (không cần đồng bộ ghost)
+        var netObj = ghostBridgeObject.GetComponent<Unity.Netcode.NetworkObject>();
+        if (netObj != null) Destroy(netObj);
+        foreach (var netBeh in ghostBridgeObject.GetComponentsInChildren<Unity.Netcode.NetworkBehaviour>())
         {
-            if (comp != null) Destroy(comp);
+            if (netBeh != null) Destroy(netBeh);
+        }
+        // Xóa Animator để không chạy hoạt ảnh trùng
+        foreach (var anim in ghostBridgeObject.GetComponentsInChildren<Animator>())
+        {
+            if (anim != null) Destroy(anim);
+        }
+        // Xóa các MonoBehaviour tùy chỉnh - nhưng giữ lại MeshRenderer và MeshFilter (không phải MonoBehaviour)
+        foreach (var mono in ghostBridgeObject.GetComponentsInChildren<MonoBehaviour>())
+        {
+            if (mono != null && !(mono is MeshFilter) && !(mono is MeshRenderer))
+            {
+                Destroy(mono);
+            }
         }
         
-        // 3. Đổi chất liệu sang màu trắng bán trong suốt (Cấu hình trực tiếp trên vật liệu đã nhân bản của cầu để tránh lỗi màu tím)
-        foreach (var renderer in ghostBridgeObject.GetComponentsInChildren<Renderer>())
+        // 3. Đổi chất liệu sang màu trắng bán trong suốt
+        // Lấy tất cả Renderer TRƯỚC khi làm trong suốt (sau khi xóa script không ảnh hưởng Renderer vì nó không phải MonoBehaviour)
+        var renderers = ghostBridgeObject.GetComponentsInChildren<Renderer>(true);
+        foreach (var renderer in renderers)
         {
-            if (renderer != null)
+            if (renderer == null) continue;
+            // Tạo bản sao vật liệu riêng cho ghost để không ảnh hưởng vật liệu gốc
+            var mats = renderer.materials;
+            for (int i = 0; i < mats.Length; i++)
             {
-                // Truy cập .material sẽ tự động tạo một instance copy độc lập của material
-                Material mat = renderer.material;
-                if (mat != null)
+                if (mats[i] != null)
                 {
-                    MakeMaterialTransparent(mat, 0.35f);
+                    mats[i] = new Material(mats[i]);
+                    MakeMaterialTransparent(mats[i], 0.35f);
                 }
             }
+            renderer.materials = mats;
         }
     }
 
     private void MakeMaterialTransparent(Material mat, float alpha)
     {
         if (mat == null) return;
+
+        // Xóa sạch textures để tạo màu trắng đục hoàn toàn thay vì giữ hoa văn cũ
+        if (mat.HasProperty("_BaseMap")) mat.SetTexture("_BaseMap", null);
+        if (mat.HasProperty("_MainTex")) mat.SetTexture("_MainTex", null);
+        if (mat.HasProperty("_BumpMap")) mat.SetTexture("_BumpMap", null);
+        if (mat.HasProperty("_MetallicGlossMap")) mat.SetTexture("_MetallicGlossMap", null);
+        if (mat.HasProperty("_OcclusionMap")) mat.SetTexture("_OcclusionMap", null);
+        if (mat.HasProperty("_EmissionMap")) mat.SetTexture("_EmissionMap", null);
+
+        if (mat.HasProperty("_Cull"))
+        {
+            mat.SetFloat("_Cull", 0f); // Tắt Cull để vẽ cả 2 mặt cho cầu ghost đẹp hơn
+        }
 
         if (mat.HasProperty("_Surface"))
         {
@@ -617,12 +696,7 @@ public class BridgeCollapseTrigger : NetworkBehaviour
             
             if (mat.HasProperty("_BaseColor"))
             {
-                Color c = mat.GetColor("_BaseColor");
-                c.r = Mathf.Lerp(c.r, 1f, 0.5f);
-                c.g = Mathf.Lerp(c.g, 1f, 0.5f);
-                c.b = Mathf.Lerp(c.b, 1f, 0.5f);
-                c.a = alpha;
-                mat.SetColor("_BaseColor", c);
+                mat.SetColor("_BaseColor", new Color(1f, 1f, 1f, alpha));
             }
             mat.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
             mat.DisableKeyword("_SURFACE_TYPE_OPAQUE");
@@ -634,12 +708,7 @@ public class BridgeCollapseTrigger : NetworkBehaviour
             mat.SetInt("_ZWrite", 0);
             if (mat.HasProperty("_Color"))
             {
-                Color c = mat.GetColor("_Color");
-                c.r = Mathf.Lerp(c.r, 1f, 0.5f);
-                c.g = Mathf.Lerp(c.g, 1f, 0.5f);
-                c.b = Mathf.Lerp(c.b, 1f, 0.5f);
-                c.a = alpha;
-                mat.SetColor("_Color", c);
+                mat.SetColor("_Color", new Color(1f, 1f, 1f, alpha));
             }
             mat.DisableKeyword("_ALPHATEST_ON");
             mat.EnableKeyword("_ALPHABLEND_ON");

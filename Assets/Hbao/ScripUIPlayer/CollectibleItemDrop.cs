@@ -128,7 +128,7 @@ public class CollectibleItemDrop : NetworkBehaviour, IInteractableItem
                     isWithinRange = true;
                     if (hud == null)
                     {
-                        hud = FindObjectOfType<PlayerHUDController>();
+                        hud = FindAnyObjectByType<PlayerHUDController>();
                     }
                     if (hud != null)
                     {
@@ -321,15 +321,30 @@ public class CollectibleItemDrop : NetworkBehaviour, IInteractableItem
     [ClientRpc]
     private void PickUpWoodLogClientRpc(ulong playerNetObjectId)
     {
-        if (NetworkManager.Singleton != null && NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(playerNetObjectId, out var playerNetObj))
+        if (NetworkManager.Singleton == null) return;
+        if (!NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(playerNetObjectId, out var playerNetObj)) return;
+
+        var playerObj = playerNetObj.gameObject;
+        
+        // CHỈ gọi CarryLog() trên CLIENT sở hữu player này.
+        // Nếu chạy trên client khác thì chỉ ẩn kiện vật phẩm, không tạo visual gỗ thừa
+        bool isLocalOwner = playerNetObj.IsOwner;
+        
+        var carrier = playerObj.GetComponent<PlayerLogCarrier>();
+        if (carrier == null)
         {
-            var playerObj = playerNetObj.gameObject;
-            var carrier = playerObj.GetComponent<PlayerLogCarrier>();
-            if (carrier == null)
-            {
-                carrier = playerObj.AddComponent<PlayerLogCarrier>();
-            }
+            carrier = playerObj.AddComponent<PlayerLogCarrier>();
+        }
+        
+        if (isLocalOwner)
+        {
+            // Chỉ màn hình của player này mới thấy gỗ trên tay
             carrier.CarryLog();
+        }
+        else
+        {
+            // Client khác chỉ đánh dấu isCarrying = true (sync trạng thái mà không tạo visual)
+            carrier.isCarrying = true;
         }
     }
 

@@ -7,7 +7,6 @@ public class BridgeRepairTrigger : MonoBehaviour
     public BridgeCollapseTrigger bridgeController;
 
     private IPlayerHUDTarget localPlayer;
-    private PlayerHUDController hud;
     private Collider triggerCollider;
     private bool wasInRange = false;
     private float nextPlayerSearchTime = 0f;
@@ -19,7 +18,6 @@ public class BridgeRepairTrigger : MonoBehaviour
 
     private void Start()
     {
-        hud = FindAnyObjectByType<PlayerHUDController>();
         if (bridgeController == null)
         {
             bridgeController = FindAnyObjectByType<BridgeCollapseTrigger>();
@@ -70,7 +68,8 @@ public class BridgeRepairTrigger : MonoBehaviour
                 if (inRange)
                 {
                     wasInRange = true;
-                    if (hud != null)
+                    PlayerHUDController localHud = FindAnyObjectByType<PlayerHUDController>();
+                    if (localHud != null)
                     {
                         var carrier = localPlayer.gameObject.GetComponent<PlayerLogCarrier>();
                         bool isCarrying = carrier != null && carrier.isCarrying;
@@ -83,7 +82,7 @@ public class BridgeRepairTrigger : MonoBehaviour
                         {
                             if (isCarrying)
                             {
-                                hud.ShowInteractionPrompt(true, $"Ấn [G] để góp gỗ sửa cầu ({logsSubmitted}/{requiredLogsToRepair})");
+                                localHud.ShowInteractionPrompt(true, $"Ấn [G] để góp gỗ sửa cầu ({logsSubmitted}/{requiredLogsToRepair})");
 
                                 if (Input.GetKeyDown(KeyCode.G))
                                 {
@@ -92,7 +91,7 @@ public class BridgeRepairTrigger : MonoBehaviour
                             }
                             else
                             {
-                                hud.ShowInteractionPrompt(true, $"Hãy tìm và bưng gỗ đến đây để sửa cầu ({logsSubmitted}/{requiredLogsToRepair})");
+                                localHud.ShowInteractionPrompt(true, $"Hãy tìm và bưng gỗ đến đây để sửa cầu ({logsSubmitted}/{requiredLogsToRepair})");
                             }
                         }
                     }
@@ -102,9 +101,10 @@ public class BridgeRepairTrigger : MonoBehaviour
                     if (wasInRange)
                     {
                         wasInRange = false;
-                        if (hud != null)
+                        PlayerHUDController localHud = FindAnyObjectByType<PlayerHUDController>();
+                        if (localHud != null)
                         {
-                            hud.ShowInteractionPrompt(false, "");
+                            localHud.ShowInteractionPrompt(false, "");
                         }
                     }
                 }
@@ -116,9 +116,10 @@ public class BridgeRepairTrigger : MonoBehaviour
             if (wasInRange)
             {
                 wasInRange = false;
-                if (hud != null)
+                PlayerHUDController localHud = FindAnyObjectByType<PlayerHUDController>();
+                if (localHud != null)
                 {
-                    hud.ShowInteractionPrompt(false, "");
+                    localHud.ShowInteractionPrompt(false, "");
                 }
             }
         }
