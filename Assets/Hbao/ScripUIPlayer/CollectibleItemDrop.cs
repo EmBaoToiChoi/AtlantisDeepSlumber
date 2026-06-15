@@ -340,26 +340,14 @@ public class CollectibleItemDrop : NetworkBehaviour, IInteractableItem
 
         var playerObj = playerNetObj.gameObject;
         
-        // CHỈ gọi CarryLog() trên CLIENT sở hữu player này.
-        // Nếu chạy trên client khác thì chỉ ẩn kiện vật phẩm, không tạo visual gỗ thừa
-        bool isLocalOwner = playerNetObj.IsOwner;
-        
         var carrier = playerObj.GetComponent<PlayerLogCarrier>();
         if (carrier == null)
         {
             carrier = playerObj.AddComponent<PlayerLogCarrier>();
         }
         
-        if (isLocalOwner)
-        {
-            // Chỉ màn hình của player này mới thấy gỗ trên tay
-            carrier.CarryLog(true);
-        }
-        else
-        {
-            // Client khác chơi animation bưng gỗ và ẩn vũ khí (không tạo visual gỗ thừa)
-            carrier.CarryLog(false);
-        }
+        // Spawn visual gỗ trên tay và chơi animation bưng gỗ cho tất cả client thấy
+        carrier.CarryLog(true);
     }
 
     [ServerRpc(RequireOwnership = false)]

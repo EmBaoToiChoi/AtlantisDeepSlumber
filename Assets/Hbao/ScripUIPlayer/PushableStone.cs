@@ -57,6 +57,13 @@ public class PushableStone : NetworkBehaviour
 
     private void Start()
     {
+        var rb = GetComponent<Rigidbody>();
+        if (rb != null)
+        {
+            rb.isKinematic = true;
+            rb.useGravity = false;
+        }
+
         if (IsServer || NetworkManager.Singleton == null || !NetworkManager.Singleton.IsListening)
         {
             netPosition.Value = transform.position;
@@ -74,7 +81,10 @@ public class PushableStone : NetworkBehaviour
             if (newVal) ReleaseAllPushers();
         };
 
-        netPosition.Value = transform.position;
+        if (IsServer)
+        {
+            netPosition.Value = transform.position;
+        }
 
         // Synchronize initial occupancies
         SyncSlotLocal(0, slot0PlayerNetId.Value);
@@ -95,10 +105,13 @@ public class PushableStone : NetworkBehaviour
 
     private void Update()
     {
-        // 1. Position synchronization for client
+        // 1. Position synchronization for client (only if NetworkTransform is not present)
         if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening && !IsServer)
         {
-            transform.position = Vector3.MoveTowards(transform.position, netPosition.Value, pushSpeed * Time.deltaTime * 1.5f);
+            if (GetComponent<Unity.Netcode.Components.NetworkTransform>() == null)
+            {
+                transform.position = Vector3.MoveTowards(transform.position, netPosition.Value, pushSpeed * Time.deltaTime * 1.5f);
+            }
         }
 
         // 2. Keep pushing players snapped and set animation speeds
@@ -196,6 +209,28 @@ public class PushableStone : NetworkBehaviour
 
                 if (Input.GetKeyDown(KeyCode.F))
                 {
+                    // Check if carrying wood
+                    var carrier = localPlayer.GetComponent<PlayerLogCarrier>();
+                    if (carrier != null && carrier.isCarrying)
+                    {
+                        if (hud != null)
+                        {
+                            hud.ShowMissionAlert("Bạn đang bưng gỗ, không thể đẩy đá!", 3.0f);
+                        }
+                        return;
+                    }
+
+                    // Check if weapon is drawn
+                    var target = localPlayer as IPlayerHUDTarget;
+                    if (target != null && target.GetActiveWeaponIndex() == 2)
+                    {
+                        if (hud != null)
+                        {
+                            hud.ShowMissionAlert("Bạn phải cất vũ khí mới đẩy được đá!", 3.0f);
+                        }
+                        return;
+                    }
+
                     RequestEnterPushSlot(closestSlot);
                 }
             }

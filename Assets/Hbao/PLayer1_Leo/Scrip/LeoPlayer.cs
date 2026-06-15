@@ -5880,7 +5880,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     public void PlayAnimation(string animName, float fadeTime = 0.1f, bool alreadyPlayedLocally = false, bool isRooted = false)
     {
         var carrier = GetComponent<PlayerLogCarrier>();
-        if (carrier != null && carrier.isCarrying && animName != "Death")
+        if (carrier != null && carrier.isCarrying && animName != "Death" && animName != "Idle" && animName != "Walk" && animName != "run")
         {
             return;
         }
