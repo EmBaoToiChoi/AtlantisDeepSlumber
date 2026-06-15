@@ -124,38 +124,88 @@ public class TreeGuidanceIndicator : MonoBehaviour
         return mesh;
     }
 
+    private Material FindURPLitMaterial()
+    {
+        var allRends = FindObjectsByType<Renderer>(FindObjectsSortMode.None);
+        foreach (var r in allRends)
+        {
+            if (r != null && r.sharedMaterial != null)
+            {
+                Shader s = r.sharedMaterial.shader;
+                if (s != null)
+                {
+                    string shaderName = s.name.ToLower();
+                    if (shaderName.Contains("universal render pipeline/lit") || 
+                        shaderName.Contains("urp/lit") || 
+                        (shaderName.Contains("lit") && !shaderName.Contains("speedtree") && !shaderName.Contains("nature") && !shaderName.Contains("terrain")))
+                    {
+                        return new Material(r.sharedMaterial);
+                    }
+                }
+            }
+        }
+        
+        // Fallback to any valid material from the player or scene
+        var playerRends = GetComponentsInChildren<Renderer>(true);
+        foreach (var r in playerRends)
+        {
+            if (r != null && r.sharedMaterial != null)
+            {
+                return new Material(r.sharedMaterial);
+            }
+        }
+
+        foreach (var r in allRends)
+        {
+            if (r != null && r.sharedMaterial != null)
+            {
+                return new Material(r.sharedMaterial);
+            }
+        }
+        return null;
+    }
+
     private void InitializeChevronPool()
     {
-        Shader arrowShader = Shader.Find("Universal Render Pipeline/Unlit");
-        if (arrowShader == null) arrowShader = Shader.Find("Universal Render Pipeline/Lit");
-        if (arrowShader == null) arrowShader = Shader.Find("Standard");
-        if (arrowShader == null) arrowShader = Shader.Find("Sprites/Default");
-
+        Material baseMat = FindURPLitMaterial();
         Material arrowMat = null;
-        if (arrowShader != null)
+        if (baseMat != null)
         {
-            arrowMat = new Material(arrowShader);
-            arrowMat.color = new Color(1f, 1f, 1f, 0.75f);
+            arrowMat = baseMat;
             
-            if (arrowShader.name.Contains("Universal Render Pipeline"))
+            // Clear textures to make it a solid color
+            if (arrowMat.HasProperty("_BaseMap")) arrowMat.SetTexture("_BaseMap", null);
+            if (arrowMat.HasProperty("_MainTex")) arrowMat.SetTexture("_MainTex", null);
+            if (arrowMat.HasProperty("_BumpMap")) arrowMat.SetTexture("_BumpMap", null);
+            if (arrowMat.HasProperty("_MetallicGlossMap")) arrowMat.SetTexture("_MetallicGlossMap", null);
+            if (arrowMat.HasProperty("_OcclusionMap")) arrowMat.SetTexture("_OcclusionMap", null);
+            if (arrowMat.HasProperty("_EmissionMap")) arrowMat.SetTexture("_EmissionMap", null);
+
+            // Cấu hình vật liệu trong suốt với tông màu vàng neon sáng/nổi bật
+            Color chevronColor = new Color(1f, 0.9f, 0f, 0.8f);
+            if (arrowMat.HasProperty("_Surface"))
             {
                 arrowMat.SetFloat("_Surface", 1f); // Transparent
                 arrowMat.SetFloat("_Blend", 0f);   // Alpha
                 arrowMat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
                 arrowMat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
                 arrowMat.SetInt("_ZWrite", 0);
-                arrowMat.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
+                
+                arrowMat.SetColor("_BaseColor", chevronColor);
+                arrowMat.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+                arrowMat.DisableKeyword("_SURFACE_TYPE_OPAQUE");
             }
-            else if (arrowShader.name.Contains("Standard"))
+            else
             {
                 arrowMat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
                 arrowMat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
                 arrowMat.SetInt("_ZWrite", 0);
+                arrowMat.SetColor("_Color", chevronColor);
                 arrowMat.DisableKeyword("_ALPHATEST_ON");
                 arrowMat.EnableKeyword("_ALPHABLEND_ON");
                 arrowMat.DisableKeyword("_ALPHAPREMULTIPLY_ON");
-                arrowMat.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
             }
+            arrowMat.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
         }
 
         chevronMesh = CreateChevronMesh();
