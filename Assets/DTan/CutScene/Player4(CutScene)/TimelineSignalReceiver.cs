@@ -13,4 +13,12 @@ public class TimelineSignalReceiver : MonoBehaviour
     {
         animator.SetTrigger("TalkTrigger");
     }
+    public void TriggerDW()
+    {
+        animator.SetTrigger("DW");
+    }
+    public void TriggerFR()
+    {
+        animator.SetTrigger("FR");
+    }
 }
