@@ -128,7 +128,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1759325079743346667, guid: 77751d938e295f9499d22765d17752a5, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 2.59
+      value: 0.38
       objectReference: {fileID: 0}
     - target: {fileID: 2454428203899696563, guid: 77751d938e295f9499d22765d17752a5, type: 3}
       propertyPath: m_LocalScale.x
@@ -220,7 +220,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7923527806615385009, guid: 77751d938e295f9499d22765d17752a5, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 2.59
+      value: 0.38
       objectReference: {fileID: 0}
     - target: {fileID: 8086270509175437634, guid: 77751d938e295f9499d22765d17752a5, type: 3}
       propertyPath: m_StaticEditorFlags
@@ -277,14 +277,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  GlobalObjectIdHash: 741957548
+  GlobalObjectIdHash: 934598991
   InScenePlacedSourceGlobalObjectIdHash: 0
   DeferredDespawnTick: 0
   Ownership: 1
   AlwaysReplicateAsRoot: 0
   SynchronizeTransform: 1
   ActiveSceneSynchronization: 0
-  SceneMigrationSynchronization: 1
+  SceneMigrationSynchronization: 0
   SpawnWithObservers: 1
   DontDestroyWithOwner: 0
   AutoObjectParentSync: 1
@@ -427,14 +427,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  GlobalObjectIdHash: 2823792425
+  GlobalObjectIdHash: 3520458400
   InScenePlacedSourceGlobalObjectIdHash: 0
   DeferredDespawnTick: 0
   Ownership: 1
   AlwaysReplicateAsRoot: 0
   SynchronizeTransform: 1
   ActiveSceneSynchronization: 0
-  SceneMigrationSynchronization: 1
+  SceneMigrationSynchronization: 0
   SpawnWithObservers: 1
   DontDestroyWithOwner: 0
   AutoObjectParentSync: 1
@@ -617,11 +617,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d61129b7d4ce64141aec631487218412, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  ShowTopMostFoldoutHeaderGroup: 1
   targetDoor: {fileID: 3117788124653824550}
   targetDoor2: {fileID: 0}
   buttonVisual: {fileID: 0}
   pressDepth: 0.15
   pressSpeed: 5
+  isPressedNet:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 0
 --- !u!114 &4993035048267556753
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -634,14 +640,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  GlobalObjectIdHash: 4225192957
+  GlobalObjectIdHash: 1360280948
   InScenePlacedSourceGlobalObjectIdHash: 0
   DeferredDespawnTick: 0
   Ownership: 1
   AlwaysReplicateAsRoot: 0
   SynchronizeTransform: 1
   ActiveSceneSynchronization: 0
-  SceneMigrationSynchronization: 1
+  SceneMigrationSynchronization: 0
   SpawnWithObservers: 1
   DontDestroyWithOwner: 0
   AutoObjectParentSync: 1
@@ -774,7 +780,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6625473200837883177, guid: aa838e18e70ac5948a8c8a0a5eb1160d, type: 3}
       propertyPath: GlobalObjectIdHash
-      value: 380030336
+      value: 424180794
+      objectReference: {fileID: 0}
+    - target: {fileID: 6625473200837883177, guid: aa838e18e70ac5948a8c8a0a5eb1160d, type: 3}
+      propertyPath: SceneMigrationSynchronization
+      value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
