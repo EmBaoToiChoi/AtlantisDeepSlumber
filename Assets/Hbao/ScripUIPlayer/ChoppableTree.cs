@@ -499,6 +499,25 @@ public class ChoppableTree : NetworkBehaviour
     {
         int count = Random.Range(4, 7);
         Vector3 spawnOrigin = transform.position + Vector3.up * 1.5f;
+        
+        // Chuẩn bị material gỗ URP cho các mảnh gỗ
+        Material splinterMat = FindURPLitMaterial();
+        if (splinterMat != null)
+        {
+            if (splinterMat.HasProperty("_BaseMap")) splinterMat.SetTexture("_BaseMap", null);
+            if (splinterMat.HasProperty("_MainTex")) splinterMat.SetTexture("_MainTex", null);
+            Color woodDarkColor = new Color(0.42f, 0.26f, 0.1f);
+            if (splinterMat.HasProperty("_BaseColor"))
+                splinterMat.SetColor("_BaseColor", woodDarkColor);
+            else if (splinterMat.HasProperty("_Color"))
+                splinterMat.SetColor("_Color", woodDarkColor);
+            if (splinterMat.HasProperty("_Surface"))
+            {
+                splinterMat.SetFloat("_Surface", 0f);
+                splinterMat.DisableKeyword("_SURFACE_TYPE_TRANSPARENT");
+                splinterMat.EnableKeyword("_SURFACE_TYPE_OPAQUE");
+            }
+        }
 
         for (int i = 0; i < count; i++)
         {
@@ -516,7 +535,15 @@ public class ChoppableTree : NetworkBehaviour
             Renderer rend = splinter.GetComponent<Renderer>();
             if (rend != null)
             {
-                rend.material.color = new Color(0.42f, 0.26f, 0.1f);
+                if (splinterMat != null)
+                {
+                    rend.sharedMaterial = splinterMat;
+                }
+                else
+                {
+                    // Fallback: cố gắng đặt màu trực tiếp
+                    rend.material.color = new Color(0.42f, 0.26f, 0.1f);
+                }
             }
 
             Rigidbody rb = splinter.AddComponent<Rigidbody>();
