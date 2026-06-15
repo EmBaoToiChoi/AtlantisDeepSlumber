@@ -208,6 +208,11 @@ public class PlayerLogCarrier : MonoBehaviour
             SafeSetTrigger(anim, "BungTrigger");
             SafeSetTrigger(anim, "Bưng");
         }
+
+        if (anim.layerCount > 1)
+        {
+            anim.SetLayerWeight(1, carrying ? 1f : 0f);
+        }
     }
 
     private void SafeSetBool(Animator anim, string paramName, bool value)
