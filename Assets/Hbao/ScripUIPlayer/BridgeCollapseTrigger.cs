@@ -210,7 +210,7 @@ public class BridgeCollapseTrigger : NetworkBehaviour
             if (indicator == null)
             {
                 int classIndex = localPlayer.CharacterClassIndex;
-                ChoppableTree myTree = targetTrees[classIndex % targetTrees.Length];
+                ChoppableTree myTree = ResolveTreeForClass(classIndex);
                 if (myTree != null)
                 {
                     indicator = localPlayer.gameObject.AddComponent<TreeGuidanceIndicator>();
@@ -265,6 +265,14 @@ public class BridgeCollapseTrigger : NetworkBehaviour
     private void CollapseBridgeLocal()
     {
         localCollapseTriggered = true;
+
+        // Đảm bảo lưu lại vị trí ban đầu của cầu trước khi bị ẩn đi
+        if (mainBridgeObject != null && originalBridgePos == Vector3.zero)
+        {
+            originalBridgePos = mainBridgeObject.transform.position;
+            originalBridgeRot = mainBridgeObject.transform.rotation;
+        }
+
         // 1. Ẩn cây cầu nguyên khối chính đi
         if (mainBridgeObject != null)
         {
@@ -286,10 +294,10 @@ public class BridgeCollapseTrigger : NetworkBehaviour
             FindLocalPlayer();
         }
 
-        if (localPlayer != null && targetTrees != null && targetTrees.Length > 0)
+        if (localPlayer != null)
         {
             int classIndex = localPlayer.CharacterClassIndex;
-            ChoppableTree myTree = targetTrees[classIndex % targetTrees.Length];
+            ChoppableTree myTree = ResolveTreeForClass(classIndex);
             if (myTree != null)
             {
                 var indicator = localPlayer.gameObject.GetComponent<TreeGuidanceIndicator>();
@@ -742,10 +750,10 @@ public class BridgeCollapseTrigger : NetworkBehaviour
             {
                 FindLocalPlayer();
             }
-            if (localPlayer != null && targetTrees != null && targetTrees.Length > 0)
+            if (localPlayer != null)
             {
                 int classIndex = localPlayer.CharacterClassIndex;
-                ChoppableTree myTree = targetTrees[classIndex % targetTrees.Length];
+                ChoppableTree myTree = ResolveTreeForClass(classIndex);
                 if (myTree != null)
                 {
                     var indicator = localPlayer.gameObject.GetComponent<TreeGuidanceIndicator>();
@@ -825,6 +833,43 @@ public class BridgeCollapseTrigger : NetworkBehaviour
         if (go.CompareTag("Player") || (go.transform.parent != null && go.transform.parent.CompareTag("Player"))) return true;
 
         return false;
+    }
+
+    private ChoppableTree ResolveTreeForClass(int classIndex)
+    {
+        ChoppableTree myTree = null;
+        if (targetTrees != null && targetTrees.Length > 0)
+        {
+            int idx = classIndex % targetTrees.Length;
+            if (idx >= 0 && idx < targetTrees.Length)
+            {
+                myTree = targetTrees[idx];
+            }
+        }
+        
+        // Fallback 1: Lấy cây đầu tiên không null trong mảng targetTrees
+        if (myTree == null && targetTrees != null)
+        {
+            foreach (var tree in targetTrees)
+            {
+                if (tree != null)
+                {
+                    myTree = tree;
+                    break;
+                }
+            }
+        }
+        
+        // Fallback 2: Lấy bất kỳ cây ChoppableTree nào trong cảnh
+        if (myTree == null)
+        {
+            var allTrees = FindObjectsByType<ChoppableTree>(FindObjectsSortMode.None);
+            if (allTrees != null && allTrees.Length > 0)
+            {
+                myTree = allTrees[0];
+            }
+        }
+        return myTree;
     }
 
     private void FindLocalPlayer()
