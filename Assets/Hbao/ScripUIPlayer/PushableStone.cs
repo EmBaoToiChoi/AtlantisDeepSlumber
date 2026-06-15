@@ -54,6 +54,7 @@ public class PushableStone : NetworkBehaviour
     private PlayerHUDController hud;
     private bool wasInRangeOfAnySlot = false;
     private int activeSlotIndex = -1;
+    private bool lastInputW = false;
 
     private void Start()
     {
@@ -194,7 +195,16 @@ public class PushableStone : NetworkBehaviour
 
                 // Listen to W input to push
                 bool pressingW = Input.GetKey(KeyCode.W);
-                SendPushInput(currentSlotIndex, pressingW);
+                if (pressingW != lastInputW)
+                {
+                    lastInputW = pressingW;
+                    SendPushInput(currentSlotIndex, pressingW);
+                }
+
+                if (Time.frameCount % 60 == 0)
+                {
+                    Debug.Log($"[PushableStone Client] localPlayer is pushing slot {currentSlotIndex}, pressing W={pressingW}");
+                }
             }
             else if (closestSlot != -1)
             {
@@ -257,6 +267,7 @@ public class PushableStone : NetworkBehaviour
     {
         int pushersCount = 0;
         bool allPressingW = true;
+        string debugStr = "";
 
         for (int i = 0; i < 4; i++)
         {
@@ -273,6 +284,7 @@ public class PushableStone : NetworkBehaviour
                 {
                     inputW = Input.GetKey(KeyCode.W);
                 }
+                debugStr += $"Slot {i}: W={inputW} | ";
 
                 if (!inputW)
                 {
@@ -282,6 +294,10 @@ public class PushableStone : NetworkBehaviour
         }
 
         bool shouldMove = (pushersCount >= requiredPushers) && allPressingW;
+        if (pushersCount > 0 && Time.frameCount % 30 == 0)
+        {
+            Debug.Log($"[PushableStone Server] pushersCount={pushersCount}/{requiredPushers}, allPressingW={allPressingW}, shouldMove={shouldMove}, details: {debugStr}");
+        }
 
         if (shouldMove)
         {
@@ -405,6 +421,8 @@ public class PushableStone : NetworkBehaviour
             if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(occupantNetId, out var netObj))
             {
                 activePusherObjects[occupantNetId] = netObj.gameObject;
+                // Lock the player to the slot if they weren't locked yet (e.g. late join or spawn lag)
+                LockPlayer(netObj.gameObject, slotIndex);
                 return netObj.gameObject;
             }
             return null;
@@ -419,6 +437,7 @@ public class PushableStone : NetworkBehaviour
     private void RequestEnterPushSlot(int slotIndex)
     {
         if (localPlayer == null) return;
+        lastInputW = false;
 
         if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening)
         {
@@ -438,6 +457,8 @@ public class PushableStone : NetworkBehaviour
 
     private void RequestExitPushSlot(int slotIndex)
     {
+        lastInputW = false;
+
         if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening)
         {
             ExitPushSlotServerRpc(slotIndex);
@@ -501,6 +522,10 @@ public class PushableStone : NetworkBehaviour
         if (slotIndex >= 0 && slotIndex < 4)
         {
             pusherInputs[slotIndex] = isPressingW;
+            if (Time.frameCount % 60 == 0)
+            {
+                Debug.Log($"[PushableStone Server] Slot {slotIndex} input W set to {isPressingW}");
+            }
         }
     }
     #endregion
