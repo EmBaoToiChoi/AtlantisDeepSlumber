@@ -124,6 +124,23 @@ public class PressurePlateTrigger : NetworkBehaviour
                     Debug.Log($"[PressurePlateTrigger] Nút sàn bị đè (Số lượng: {overlappingColliders.Count}). Kích hoạt mở các cánh cửa!");
                     if (targetDoor != null) targetDoor.Open();
                     if (targetDoor2 != null) targetDoor2.Open();
+
+                    // Giải phóng tất cả người chơi đẩy đá khi đá đè lên nút sàn
+                    foreach (var col in overlappingColliders)
+                    {
+                        if (col != null)
+                        {
+                            PushableStone stone = col.GetComponent<PushableStone>();
+                            if (stone == null) stone = col.GetComponentInParent<PushableStone>();
+                            if (stone == null) stone = col.GetComponentInChildren<PushableStone>();
+                            if (stone == null) stone = col.transform.root.GetComponentInChildren<PushableStone>();
+
+                            if (stone != null)
+                            {
+                                stone.ReleaseAllPushers();
+                            }
+                        }
+                    }
                 }
                 else
                 {
