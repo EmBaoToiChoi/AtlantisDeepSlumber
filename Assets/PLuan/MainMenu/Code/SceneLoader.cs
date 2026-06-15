@@ -82,6 +82,14 @@ public class SceneLoader : MonoBehaviour
         _targetProgress = progressPercent;
     }
 
+    public void SetStatusText(string statusText)
+    {
+        if (_lblStatus != null)
+        {
+            _lblStatus.text = statusText;
+        }
+    }
+
     public async void HideLoading()
     {
         if (_root == null) return;

@@ -21,6 +21,14 @@ public class NetworkBootstrap : MonoBehaviour
         {
             Instance = this;
             DontDestroyOnLoad(gameObject); // Giữ NetworkManager xuyên suốt game
+
+            // Tự động thêm HUD hiển thị FPS và Ping vào đối tượng này
+            gameObject.AddComponent<FPSPingDisplay>();
+
+            // Tối ưu hóa tốc độ nạp tài nguyên bất đồng bộ trong nền và đưa lên GPU nhanh hơn
+            QualitySettings.asyncUploadTimeSlice = 4; // Tăng từ mặc định 2ms lên 4ms để nạp nhanh hơn mỗi frame
+            QualitySettings.asyncUploadBufferSize = 64; // Tăng kích thước bộ đệm tải lên GPU từ mặc định lên 64MB
+            Application.backgroundLoadingPriority = ThreadPriority.High; // Tăng quyền ưu tiên cho luồng tải trong nền
         }
         else
         {
@@ -48,6 +56,9 @@ public class NetworkBootstrap : MonoBehaviour
         {
             transport.ConnectionData.Address = "0.0.0.0"; // Lắng nghe mọi kết nối tới
             transport.ConnectionData.Port = 7777;
+            transport.DisconnectTimeoutMS = 300000; // Tăng timeout kết nối cấp thấp lên 300 giây (5 phút) tránh ngắt kết nối do nạp cảnh đơ
+            transport.HeartbeatTimeoutMS = 3000;    // 3 giây gửi 1 lần
+            transport.ConnectTimeoutMS = 15000;     // 15 giây kết nối ban đầu
         }
 
         // ĐĂNG KÝ TRƯỚC KHI BẬT SERVER (RẤT QUAN TRỌNG)
@@ -56,8 +67,8 @@ public class NetworkBootstrap : MonoBehaviour
         // ĐĂNG KÝ THEO DÕI NGẮT KẾT NỐI ĐỂ TỰ ĐỘNG RESET KHI PHÒNG TRỐNG
         NetworkManager.Singleton.OnClientDisconnectCallback += OnServerClientDisconnected;
 
-        // Tăng timeout tải cảnh để tránh ngắt kết nối khi load map chậm
-        NetworkManager.Singleton.NetworkConfig.LoadSceneTimeOut = 120;
+        // Tăng timeout tải cảnh để tránh ngắt kết nối khi load map chậm (tăng từ 120 lên 300)
+        NetworkManager.Singleton.NetworkConfig.LoadSceneTimeOut = 300;
 
         NetworkManager.Singleton.StartServer();
         Debug.Log("[SERVER] Dedicated Server đã bắt đầu lắng nghe tại cổng 7777...");
@@ -85,6 +96,7 @@ public class NetworkBootstrap : MonoBehaviour
     private void OnServerClientDisconnected(ulong clientId)
     {
         if (!NetworkManager.Singleton.IsServer) return;
+        Debug.Log($"[SERVER] Client {clientId} đã ngắt kết nối.");
         // Chờ 1 giây để danh sách ConnectedClientsList được cập nhật chính xác
         StartCoroutine(CheckServerEmptyDelayed());
     }
@@ -216,29 +228,50 @@ public class NetworkBootstrap : MonoBehaviour
         byte[] payload = System.Text.Encoding.UTF8.GetBytes(json);
 
         var transport = NetworkManager.Singleton.GetComponent<UnityTransport>();
+        string targetAddress = "165.99.14.40";
         if (transport != null)
         {
-            transport.ConnectionData.Address = "165.99.14.40"; 
+            // Ưu tiên đọc IP cấu hình từ Inspector/Prefab nếu không phải localhost/127.0.0.1
+            targetAddress = transport.ConnectionData.Address;
+            if (string.IsNullOrEmpty(targetAddress) || targetAddress == "127.0.0.1" || targetAddress == "localhost")
+            {
+                targetAddress = "165.99.14.40"; // Fallback IP VPS chính xác
+            }
+
+            transport.ConnectionData.Address = targetAddress;
             transport.ConnectionData.Port = 7777;
             NetworkManager.Singleton.NetworkConfig.ConnectionData = payload;
+            
+            // Tối ưu hóa các cài đặt timeout kết nối UTP cấp thấp
+            transport.DisconnectTimeoutMS = 300000; // 300 giây (5 phút) chống ngắt kết nối khi đơ nạp cảnh
+            transport.HeartbeatTimeoutMS = 3000;    // 3 giây gửi 1 lần
+            transport.ConnectTimeoutMS = 15000;     // 15 giây kết nối ban đầu
         }
 
         NetworkManager.Singleton.OnClientConnectedCallback += (id) => {
             Debug.Log("<color=green>[NETWORK] KẾT NỐI VPS THÀNH CÔNG!</color>");
         };
         NetworkManager.Singleton.OnClientDisconnectCallback += (id) => {
-            Debug.Log("<color=red>[NETWORK] KẾT NỐI THẤT BẠI HOẶC BỊ NGẮT! Hãy kiểm tra Port 7777 trên VPS.</color>");
+            string reason = NetworkManager.Singleton.DisconnectReason;
+            if (string.IsNullOrEmpty(reason))
+            {
+                Debug.Log("<color=red>[NETWORK] KẾT NỐI THẤT BẠI HOẶC BỊ NGẮT! Hãy kiểm tra Port 7777 trên VPS.</color>");
+            }
+            else
+            {
+                Debug.Log($"<color=red>[NETWORK] KẾT NỐI THẤT BẠI HOẶC BỊ NGẮT! Lý do: {reason}</color>");
+            }
             if (NetworkManager.Singleton.SceneManager != null)
             {
                 NetworkManager.Singleton.SceneManager.OnSceneEvent -= OnSceneEventReceived;
             }
         };
 
-        // Tăng timeout tải cảnh để tránh ngắt kết nối khi load map chậm
-        NetworkManager.Singleton.NetworkConfig.LoadSceneTimeOut = 120;
+        // Tăng timeout tải cảnh để tránh ngắt kết nối khi load map chậm (tăng từ 120 lên 300)
+        NetworkManager.Singleton.NetworkConfig.LoadSceneTimeOut = 300;
 
         NetworkManager.Singleton.StartClient();
-        Debug.Log($"[NETWORK] Đang thử kết nối tới 165.99.14.40:7777... (Tên: {data.playerName})");
+        Debug.Log($"[NETWORK] Đang thử kết nối tới {targetAddress}:7777... (Tên: {data.playerName})");
 
         if (NetworkManager.Singleton.SceneManager != null)
         {
@@ -282,14 +315,36 @@ public class NetworkBootstrap : MonoBehaviour
 
     private System.Collections.IEnumerator TrackSceneLoadProgress(AsyncOperation op)
     {
+        if (SceneLoader.Instance != null)
+        {
+            SceneLoader.Instance.SetStatusText("LOADING GAMEPLAY MAP...");
+        }
+
         while (op != null && !op.isDone)
         {
-            float progress = Mathf.Clamp01(op.progress / 0.9f);
+            // Ánh xạ mượt mà op.progress lên thanh tiến trình từ 0% đến 100%
+            float progressPercent;
+            if (op.progress < 0.9f)
+            {
+                progressPercent = (op.progress / 0.9f) * 90f;
+            }
+            else
+            {
+                // Khi nạp xong phần thô (>= 0.9f) và chuẩn bị kích hoạt cảnh
+                progressPercent = 90f + ((op.progress - 0.9f) / 0.1f) * 10f;
+            }
+
             if (SceneLoader.Instance != null)
             {
-                SceneLoader.Instance.SetProgress(progress * 100f);
+                SceneLoader.Instance.SetProgress(progressPercent);
             }
             yield return null;
+        }
+
+        if (SceneLoader.Instance != null)
+        {
+            SceneLoader.Instance.SetProgress(100f);
+            SceneLoader.Instance.SetStatusText("READY TO DESCEND");
         }
     }
 

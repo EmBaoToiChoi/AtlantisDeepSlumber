@@ -66,7 +66,7 @@ MonoBehaviour:
     RecycleNetworkIds: 1
     NetworkIdRecycleDelay: 120
     RpcHashSize: 0
-    LoadSceneTimeOut: 120
+    LoadSceneTimeOut: 300
     SpawnTimeout: 10
     EnableNetworkLogs: 1
     NetworkTopology: 0
@@ -93,10 +93,10 @@ MonoBehaviour:
   m_UseEncryption: 0
   m_MaxPacketQueueSize: 128
   m_MaxPayloadSize: 6144
-  m_HeartbeatTimeoutMS: 500
-  m_ConnectTimeoutMS: 1000
+  m_HeartbeatTimeoutMS: 3000
+  m_ConnectTimeoutMS: 15000
   m_MaxConnectAttempts: 60
-  m_DisconnectTimeoutMS: 30000
+  m_DisconnectTimeoutMS: 300000
   ConnectionData:
     Address: 165.99.14.40
     Port: 7777
