@@ -2792,7 +2792,8 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
             return true;
         }
 
-
+        // Khóa di chuyển khi đang nhặt đồ
+        bool isPicking = (lastTriggeredAnimName == "Idle_Pick" || lastTriggeredAnimName == "Pick") && (Time.time - lastActionTriggerTime < 1.2f);
 
         // Các trạng thái toàn thân đặc biệt cần khóa di chuyển (trúng đòn, nhặt đồ, chết, nhào lộn)
         AnimatorStateInfo stateInfo = anim.GetCurrentAnimatorStateInfo(0);
@@ -2800,7 +2801,8 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
                                stateInfo.IsName("GetHit") || 
                                stateInfo.IsName("GeiHit2") || 
                                stateInfo.IsName("Idle_Pick") || 
-                               stateInfo.IsName("Death");
+                               stateInfo.IsName("Death") ||
+                               isPicking;
 
         if (!isFullBodyAction && anim.IsInTransition(0))
         {
@@ -2816,7 +2818,7 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
             }
         }
 
-        return isFullBodyAction && stateInfo.normalizedTime < 0.95f;
+        return isFullBodyAction && (isPicking || stateInfo.normalizedTime < 0.95f);
     }
 
     private bool IsPlayingActionAnimation()

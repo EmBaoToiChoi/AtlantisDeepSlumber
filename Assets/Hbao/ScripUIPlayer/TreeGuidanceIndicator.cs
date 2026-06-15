@@ -19,6 +19,7 @@ public class TreeGuidanceIndicator : MonoBehaviour
     private const int MAX_CHEVRONS = 30; // Giới hạn số lượng mũi tên tối đa hiển thị
     private float scrollOffset = 0f;
     private PlayerHUDController hud;
+    private bool hasAlerted = false;
 
     private int layerMask;
     private GameObject containerObject;
@@ -45,6 +46,27 @@ public class TreeGuidanceIndicator : MonoBehaviour
 
     private bool IsLocalPlayer()
     {
+        // 0. Nếu không có NetworkManager (chế độ standalone / Play in Editor trực tiếp)
+        //    thì bất kỳ IPlayerHUDTarget nào trên GameObject này đều là local player
+        bool isNetworkActive = Unity.Netcode.NetworkManager.Singleton != null 
+                            && Unity.Netcode.NetworkManager.Singleton.IsListening;
+        if (!isNetworkActive)
+        {
+            return GetComponent<IPlayerHUDTarget>() != null
+                || GetComponent<LeoPlayer>() != null
+                || GetComponent<ArthurPlayer>() != null
+                || GetComponent<ElenaPlayer>() != null
+                || GetComponent<MayaPlayer>() != null
+                || GetComponent<SimplePlayerTest>() != null;
+        }
+
+        // 1. Kiểm tra trực tiếp qua static target của HUD
+        if (PlayerHUDController.LocalPlayerTarget != null && PlayerHUDController.LocalPlayerTarget.gameObject == gameObject)
+        {
+            return true;
+        }
+
+        // 2. Kiểm tra thông thường qua interface
         var hudTarget = GetComponent<IPlayerHUDTarget>();
         if (hudTarget != null)
         {
@@ -86,14 +108,15 @@ public class TreeGuidanceIndicator : MonoBehaviour
             new Vector3(-0.25f, 0f, -0.2f)  // 5: Left Outer
         };
 
+        // Sử dụng thứ tự quay kim đồng hồ (Clockwise) để tránh bị Cull ẩn đi khi nhìn từ trên xuống
         int[] triangles = new int[]
         {
-            // Cánh trái
-            0, 4, 3,
-            0, 5, 4,
-            // Cánh phải
-            0, 3, 2,
-            0, 2, 1
+            // Cánh trái (Clockwise)
+            0, 3, 4,
+            0, 4, 5,
+            // Cánh phải (Clockwise)
+            0, 2, 3,
+            0, 1, 2
         };
 
         Vector3[] normals = new Vector3[]
@@ -167,45 +190,32 @@ public class TreeGuidanceIndicator : MonoBehaviour
 
     private void InitializeChevronPool()
     {
-        Material baseMat = FindURPLitMaterial();
-        Material arrowMat = null;
-        if (baseMat != null)
-        {
-            arrowMat = baseMat;
-            
-            // Clear textures to make it a solid color
-            if (arrowMat.HasProperty("_BaseMap")) arrowMat.SetTexture("_BaseMap", null);
-            if (arrowMat.HasProperty("_MainTex")) arrowMat.SetTexture("_MainTex", null);
-            if (arrowMat.HasProperty("_BumpMap")) arrowMat.SetTexture("_BumpMap", null);
-            if (arrowMat.HasProperty("_MetallicGlossMap")) arrowMat.SetTexture("_MetallicGlossMap", null);
-            if (arrowMat.HasProperty("_OcclusionMap")) arrowMat.SetTexture("_OcclusionMap", null);
-            if (arrowMat.HasProperty("_EmissionMap")) arrowMat.SetTexture("_EmissionMap", null);
+        Shader shader = Shader.Find("Sprites/Default");
+        if (shader == null) shader = Shader.Find("Unlit/Color");
+        if (shader == null) shader = Shader.Find("Standard");
 
-            // Cấu hình vật liệu trong suốt với tông màu vàng neon sáng/nổi bật
-            Color chevronColor = new Color(1f, 0.9f, 0f, 0.8f);
-            if (arrowMat.HasProperty("_Surface"))
-            {
-                arrowMat.SetFloat("_Surface", 1f); // Transparent
-                arrowMat.SetFloat("_Blend", 0f);   // Alpha
-                arrowMat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
-                arrowMat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
-                arrowMat.SetInt("_ZWrite", 0);
-                
-                arrowMat.SetColor("_BaseColor", chevronColor);
-                arrowMat.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
-                arrowMat.DisableKeyword("_SURFACE_TYPE_OPAQUE");
-            }
-            else
-            {
-                arrowMat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
-                arrowMat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
-                arrowMat.SetInt("_ZWrite", 0);
-                arrowMat.SetColor("_Color", chevronColor);
-                arrowMat.DisableKeyword("_ALPHATEST_ON");
-                arrowMat.EnableKeyword("_ALPHABLEND_ON");
-                arrowMat.DisableKeyword("_ALPHAPREMULTIPLY_ON");
-            }
+        Material arrowMat = new Material(shader);
+        Color chevronColor = new Color(1f, 1f, 1f, 0.9f);
+
+        if (shader.name == "Sprites/Default")
+        {
+            arrowMat.SetColor("_Color", chevronColor);
+        }
+        else if (shader.name == "Standard")
+        {
+            arrowMat.SetFloat("_Mode", 3f); // Transparent
+            arrowMat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+            arrowMat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+            arrowMat.SetInt("_ZWrite", 0);
+            arrowMat.DisableKeyword("_ALPHATEST_ON");
+            arrowMat.EnableKeyword("_ALPHABLEND_ON");
+            arrowMat.DisableKeyword("_ALPHAPREMULTIPLY_ON");
+            arrowMat.SetColor("_Color", chevronColor);
             arrowMat.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
+        }
+        else
+        {
+            arrowMat.color = chevronColor;
         }
 
         chevronMesh = CreateChevronMesh();
@@ -240,7 +250,11 @@ public class TreeGuidanceIndicator : MonoBehaviour
 
     private void Update()
     {
-        if (targetTree == null)
+        bool isNetworkActive = Unity.Netcode.NetworkManager.Singleton != null 
+                            && Unity.Netcode.NetworkManager.Singleton.IsListening;
+        bool isTreeCut = targetTree == null || (isNetworkActive ? targetTree.isCutDown.Value : !targetTree.gameObject.activeInHierarchy);
+
+        if (isTreeCut)
         {
             DestroyChevronsAndSelf();
             return;
@@ -253,8 +267,31 @@ public class TreeGuidanceIndicator : MonoBehaviour
         float distance = Vector3.Distance(start, end);
         if (distance <= reachDistance)
         {
-            OnReachedCheckpoint();
+            // Ẩn tất cả các chevrons khi người chơi đứng gần cây
+            for (int i = 0; i < chevronPool.Count; i++)
+            {
+                if (chevronPool[i] != null)
+                {
+                    chevronPool[i].SetActive(false);
+                }
+            }
+
+            if (!hasAlerted)
+            {
+                hasAlerted = true;
+                Debug.Log($"[TreeGuidanceIndicator] Player đã đến Checkpoint cây gỗ: {targetTree.name}");
+                if (hud != null)
+                {
+                    hud.ShowMissionAlert("ĐÃ ĐẾN VỊ TRÍ CÂY GỖ! HÃY CHÉM VÀO CÂY ĐỂ THU THẬP GỖ!", 4.0f);
+                }
+            }
             return;
+        }
+
+        // Reset trạng thái báo tin nếu người chơi di chuyển ra xa cây để khi quay lại có thể hiện thông báo tiếp
+        if (distance > reachDistance + 1.5f)
+        {
+            hasAlerted = false;
         }
 
         // Tính toán hướng phẳng trên mặt đất
@@ -302,18 +339,6 @@ public class TreeGuidanceIndicator : MonoBehaviour
                 chevronPool[i].SetActive(false);
             }
         }
-    }
-
-    private void OnReachedCheckpoint()
-    {
-        Debug.Log($"[TreeGuidanceIndicator] Player đã đến Checkpoint cây gỗ: {targetTree.name}");
-        
-        if (hud != null)
-        {
-            hud.ShowMissionAlert("ĐÃ ĐẾN VỊ TRÍ CÂY GỖ! HÃY CHÉM VÀO CÂY ĐỂ THU THẬP GỖ!", 4.0f);
-        }
-
-        DestroyChevronsAndSelf();
     }
 
     private void DestroyChevronsAndSelf()

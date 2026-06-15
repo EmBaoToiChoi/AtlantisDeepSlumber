@@ -128,7 +128,7 @@ public class CollectibleItemDrop : NetworkBehaviour, IInteractableItem
                     isWithinRange = true;
                     if (hud == null)
                     {
-                        hud = FindObjectOfType<PlayerHUDController>();
+                        hud = FindAnyObjectByType<PlayerHUDController>();
                     }
                     if (hud != null)
                     {
@@ -199,6 +199,20 @@ public class CollectibleItemDrop : NetworkBehaviour, IInteractableItem
                 if (hud != null)
                 {
                     hud.ShowMissionAlert("Bạn đang bưng một thanh gỗ rồi!", 2.0f);
+                }
+                return;
+            }
+
+            var target = localPlayer as IPlayerHUDTarget;
+            if (target != null && target.GetActiveWeaponIndex() == 2)
+            {
+                if (hud == null)
+                {
+                    hud = FindAnyObjectByType<PlayerHUDController>();
+                }
+                if (hud != null)
+                {
+                    hud.ShowMissionAlert("Bạn phải cất vũ khí mới bưng được gỗ!", 3.0f);
                 }
                 return;
             }
@@ -321,15 +335,30 @@ public class CollectibleItemDrop : NetworkBehaviour, IInteractableItem
     [ClientRpc]
     private void PickUpWoodLogClientRpc(ulong playerNetObjectId)
     {
-        if (NetworkManager.Singleton != null && NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(playerNetObjectId, out var playerNetObj))
+        if (NetworkManager.Singleton == null) return;
+        if (!NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(playerNetObjectId, out var playerNetObj)) return;
+
+        var playerObj = playerNetObj.gameObject;
+        
+        // CHỈ gọi CarryLog() trên CLIENT sở hữu player này.
+        // Nếu chạy trên client khác thì chỉ ẩn kiện vật phẩm, không tạo visual gỗ thừa
+        bool isLocalOwner = playerNetObj.IsOwner;
+        
+        var carrier = playerObj.GetComponent<PlayerLogCarrier>();
+        if (carrier == null)
         {
-            var playerObj = playerNetObj.gameObject;
-            var carrier = playerObj.GetComponent<PlayerLogCarrier>();
-            if (carrier == null)
-            {
-                carrier = playerObj.AddComponent<PlayerLogCarrier>();
-            }
-            carrier.CarryLog();
+            carrier = playerObj.AddComponent<PlayerLogCarrier>();
+        }
+        
+        if (isLocalOwner)
+        {
+            // Chỉ màn hình của player này mới thấy gỗ trên tay
+            carrier.CarryLog(true);
+        }
+        else
+        {
+            // Client khác chơi animation bưng gỗ và ẩn vũ khí (không tạo visual gỗ thừa)
+            carrier.CarryLog(false);
         }
     }
 
