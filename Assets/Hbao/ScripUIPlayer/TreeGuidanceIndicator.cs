@@ -126,13 +126,36 @@ public class TreeGuidanceIndicator : MonoBehaviour
 
     private void InitializeChevronPool()
     {
-        Shader arrowShader = Shader.Find("Sprites/Default");
+        Shader arrowShader = Shader.Find("Universal Render Pipeline/Unlit");
+        if (arrowShader == null) arrowShader = Shader.Find("Universal Render Pipeline/Lit");
+        if (arrowShader == null) arrowShader = Shader.Find("Standard");
+        if (arrowShader == null) arrowShader = Shader.Find("Sprites/Default");
+
         Material arrowMat = null;
         if (arrowShader != null)
         {
             arrowMat = new Material(arrowShader);
-            // Gán màu trắng trong suốt ngọc (màu trắng gốc của game)
             arrowMat.color = new Color(1f, 1f, 1f, 0.75f);
+            
+            if (arrowShader.name.Contains("Universal Render Pipeline"))
+            {
+                arrowMat.SetFloat("_Surface", 1f); // Transparent
+                arrowMat.SetFloat("_Blend", 0f);   // Alpha
+                arrowMat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+                arrowMat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+                arrowMat.SetInt("_ZWrite", 0);
+                arrowMat.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
+            }
+            else if (arrowShader.name.Contains("Standard"))
+            {
+                arrowMat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+                arrowMat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+                arrowMat.SetInt("_ZWrite", 0);
+                arrowMat.DisableKeyword("_ALPHATEST_ON");
+                arrowMat.EnableKeyword("_ALPHABLEND_ON");
+                arrowMat.DisableKeyword("_ALPHAPREMULTIPLY_ON");
+                arrowMat.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
+            }
         }
 
         chevronMesh = CreateChevronMesh();
