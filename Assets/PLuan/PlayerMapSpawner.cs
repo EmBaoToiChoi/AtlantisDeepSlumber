@@ -144,7 +144,16 @@ public class PlayerMapSpawner : NetworkBehaviour
 #if UNITY_EDITOR
                 isTesting = autoStartNetworkInEditor;
 #endif
-                if (!isTesting && clientConnection.PlayerObject.GetComponent<SimplePlayerTest>() != null)
+                bool hasGameplayCharacter = false;
+                if (clientConnection.PlayerObject.GetComponent<LeoPlayer>() != null ||
+                    clientConnection.PlayerObject.GetComponent<MayaPlayer>() != null ||
+                    clientConnection.PlayerObject.GetComponent<ElenaPlayer>() != null ||
+                    clientConnection.PlayerObject.GetComponent<ArthurPlayer>() != null)
+                {
+                    hasGameplayCharacter = true;
+                }
+
+                if (!isTesting && hasGameplayCharacter)
                 {
                     Debug.Log($"[PlayerMapSpawner] [SERVER] Client {clientId} đã có nhân vật gameplay chính thức. Bỏ qua spawn để tránh ghi đè.");
                     return;
@@ -165,8 +174,20 @@ public class PlayerMapSpawner : NetworkBehaviour
 
         // 3. Xác định vị trí spawn
         Transform spawnPoint = GetSpawnPointForClient(clientId);
-        Vector3 spawnPos = spawnPoint != null ? spawnPoint.position : transform.position;
-        Quaternion spawnRot = spawnPoint != null ? spawnPoint.rotation : transform.rotation;
+        Vector3 spawnPos;
+        Quaternion spawnRot;
+        if (spawnPoint != null)
+        {
+            spawnPos = spawnPoint.position;
+            spawnRot = spawnPoint.rotation;
+            Debug.Log($"[PlayerMapSpawner] [SERVER] Client {clientId} sử dụng SpawnPoint: {spawnPoint.name} tại vị trí: {spawnPos}");
+        }
+        else
+        {
+            spawnPos = transform.position;
+            spawnRot = transform.rotation;
+            Debug.LogWarning($"[PlayerMapSpawner] [SERVER] Client {clientId} KHÔNG tìm thấy SpawnPoint hợp lệ! Fallback về vị trí Spawner: {spawnPos}");
+        }
 
         // Thêm một chút offset ngẫu nhiên nhỏ để tránh các người chơi đè lên nhau chính xác tuyệt đối
         // Tăng thêm 0.5f trên trục Y để tránh việc người chơi bị spawn lún dưới đất dẫn đến rơi xuyên map
@@ -216,9 +237,10 @@ public class PlayerMapSpawner : NetworkBehaviour
             }
         }
 
-        // Tự động tìm kiếm nếu chưa được gán
+        // Tự động tìm kiếm nếu chưa được gán hoặc bị rỗng/chứa phần tử null
         if (!hasSpawnPoints)
         {
+            Debug.Log("[PlayerMapSpawner] [SERVER] spawnPoints bị rỗng hoặc rỗng một phần. Tiến hành tìm kiếm động...");
             FindSpawnPointsDynamically();
         }
 
@@ -262,11 +284,13 @@ public class PlayerMapSpawner : NetworkBehaviour
             return;
         }
 
-        // 2. Thử tìm kiếm theo Tên
+        // 2. Thử tìm kiếm theo Tên (bao gồm định dạng ngoặc đơn SpawnPoint (1))
         List<Transform> foundByName = new List<Transform>();
         for (int i = 1; i <= 10; i++)
         {
-            GameObject go = GameObject.Find($"SpawnPoint{i}") ?? 
+            GameObject go = GameObject.Find($"SpawnPoint ({i})") ?? 
+                            GameObject.Find($"SpawnPoint({i})") ?? 
+                            GameObject.Find($"SpawnPoint {i}") ?? 
                             GameObject.Find($"SpawnPoint_{i}") ?? 
                             GameObject.Find($"Spawn Point {i}") ??
                             GameObject.Find($"Spawn_{i}") ??
@@ -277,10 +301,23 @@ public class PlayerMapSpawner : NetworkBehaviour
             }
         }
 
+        // 3. Nếu vẫn không tìm thấy, quét tất cả Transform trong Scene có chứa từ khóa "SpawnPoint" (trừ chính đối tượng Spawner này)
+        if (foundByName.Count == 0)
+        {
+            var allTransforms = FindObjectsByType<Transform>(FindObjectsSortMode.None);
+            foreach (var t in allTransforms)
+            {
+                if (t != transform && t.name.Contains("SpawnPoint") && t.name != "SpawnPoints")
+                {
+                    foundByName.Add(t);
+                }
+            }
+        }
+
         if (foundByName.Count > 0)
         {
             spawnPoints = foundByName.ToArray();
-            Debug.Log($"[PlayerMapSpawner] Tự động tìm thấy {spawnPoints.Length} điểm spawn theo mẫu Tên.");
+            Debug.Log($"[PlayerMapSpawner] Tự động tìm thấy {spawnPoints.Length} điểm spawn bằng cách quét động tên đối tượng.");
         }
         else
         {
