@@ -5,6 +5,8 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
 {
     protected LeoPlayer leoPlayer;
     protected ArthurPlayer arthurPlayer;
+    protected ElenaPlayer elenaPlayer;
+    protected MayaPlayer mayaPlayer;
 
     [Header("Movement & Attack Settings")]
     public float moveSpeed = 5f;
@@ -202,7 +204,7 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
     /// <summary>
     /// Máu hiện tại: đọc từ NetworkVariable khi online, đọc từ biến local khi standalone.
     /// </summary>
-    public float CurrentHealth => leoPlayer != null ? leoPlayer.CurrentHealth : (arthurPlayer != null ? arthurPlayer.CurrentHealth : (isStandaloneMode ? localHealth : currentHealth.Value));
+    public float CurrentHealth => leoPlayer != null ? leoPlayer.CurrentHealth : (arthurPlayer != null ? arthurPlayer.CurrentHealth : (elenaPlayer != null ? elenaPlayer.CurrentHealth : (mayaPlayer != null ? mayaPlayer.CurrentHealth : (isStandaloneMode ? localHealth : currentHealth.Value))));
 
     // IPlayerHUDTarget Implementation
     bool IPlayerHUDTarget.isStandaloneMode => isStandaloneMode;
@@ -214,35 +216,42 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
     public string[] InventorySlots => inventorySlots;
     public float MaxHealth => maxHealth;
 
-    private bool IsSkillsUnlocked => leoPlayer != null ? leoPlayer.isSkillsUnlocked.Value : (arthurPlayer != null ? arthurPlayer.isSkillsUnlocked.Value : isSkillsUnlocked.Value);
+    private bool IsSkillsUnlocked => leoPlayer != null ? leoPlayer.isSkillsUnlocked.Value : (arthurPlayer != null ? arthurPlayer.isSkillsUnlocked.Value : (elenaPlayer != null ? elenaPlayer.isSkillsUnlocked.Value : (mayaPlayer != null ? mayaPlayer.isSkillsUnlocked.Value : isSkillsUnlocked.Value)));
 
     // Invisibility Skill R proxy
-    public bool IsInvisible => leoPlayer != null ? leoPlayer.IsInvisible : (arthurPlayer != null ? arthurPlayer.IsInvisible : false);
-    public float InvisibilityTimeRemaining => leoPlayer != null ? leoPlayer.InvisibilityTimeRemaining : (arthurPlayer != null ? arthurPlayer.InvisibilityTimeRemaining : 0f);
+    public bool IsInvisible => leoPlayer != null ? leoPlayer.IsInvisible : (arthurPlayer != null ? arthurPlayer.IsInvisible : (elenaPlayer != null ? elenaPlayer.IsInvisible : (mayaPlayer != null ? mayaPlayer.IsInvisible : false)));
+    public float InvisibilityTimeRemaining => leoPlayer != null ? leoPlayer.InvisibilityTimeRemaining : (arthurPlayer != null ? arthurPlayer.InvisibilityTimeRemaining : (elenaPlayer != null ? elenaPlayer.InvisibilityTimeRemaining : (mayaPlayer != null ? mayaPlayer.InvisibilityTimeRemaining : 0f)));
     public void TriggerInvisibilitySkill()
     {
         if (PlayerLevel < 5 && !IsSkillsUnlocked) return;
         if (leoPlayer != null) leoPlayer.TriggerInvisibilitySkill();
         else if (arthurPlayer != null) arthurPlayer.TriggerInvisibilitySkill();
+        else if (elenaPlayer != null) elenaPlayer.TriggerInvisibilitySkill();
+        else if (mayaPlayer != null) mayaPlayer.TriggerInvisibilitySkill();
     }
 
     // Attack Speed Boost Skill E proxy
-    public bool IsAttackSpeedBoosted => leoPlayer != null ? leoPlayer.IsAttackSpeedBoosted : (arthurPlayer != null ? arthurPlayer.IsAttackSpeedBoosted : false);
-    public float AttackSpeedBoostTimeRemaining => leoPlayer != null ? leoPlayer.AttackSpeedBoostTimeRemaining : (arthurPlayer != null ? arthurPlayer.AttackSpeedBoostTimeRemaining : 0f);
+    public bool IsAttackSpeedBoosted => leoPlayer != null ? leoPlayer.IsAttackSpeedBoosted : (arthurPlayer != null ? arthurPlayer.IsAttackSpeedBoosted : (elenaPlayer != null ? elenaPlayer.IsAttackSpeedBoosted : (mayaPlayer != null ? mayaPlayer.IsAttackSpeedBoosted : false)));
+    public float AttackSpeedBoostTimeRemaining => leoPlayer != null ? leoPlayer.AttackSpeedBoostTimeRemaining : (arthurPlayer != null ? arthurPlayer.AttackSpeedBoostTimeRemaining : (elenaPlayer != null ? elenaPlayer.AttackSpeedBoostTimeRemaining : (mayaPlayer != null ? mayaPlayer.AttackSpeedBoostTimeRemaining : 0f)));
     public void TriggerAttackSpeedBoostSkill()
     {
         if (PlayerLevel < 10 && !IsSkillsUnlocked) return;
         if (leoPlayer != null) leoPlayer.TriggerAttackSpeedBoostSkill();
         else if (arthurPlayer != null) arthurPlayer.TriggerAttackSpeedBoostSkill();
+        else if (elenaPlayer != null) elenaPlayer.TriggerAttackSpeedBoostSkill();
+        else if (mayaPlayer != null) mayaPlayer.TriggerAttackSpeedBoostSkill();
     }
 
     // Q Skill support proxy
-    public bool IsQSkillActive => leoPlayer != null ? leoPlayer.IsQSkillActive : false;
-    public float QSkillTimeRemaining => leoPlayer != null ? leoPlayer.QSkillTimeRemaining : 0f;
+    public bool IsQSkillActive => leoPlayer != null ? leoPlayer.IsQSkillActive : (arthurPlayer != null ? arthurPlayer.IsQSkillActive : (elenaPlayer != null ? elenaPlayer.IsQSkillActive : (mayaPlayer != null ? mayaPlayer.IsQSkillActive : false)));
+    public float QSkillTimeRemaining => leoPlayer != null ? leoPlayer.QSkillTimeRemaining : (arthurPlayer != null ? arthurPlayer.QSkillTimeRemaining : (elenaPlayer != null ? elenaPlayer.QSkillTimeRemaining : (mayaPlayer != null ? mayaPlayer.QSkillTimeRemaining : 0f)));
     public bool TriggerQSkill()
     {
         if (PlayerLevel < 15 && !IsSkillsUnlocked) return false;
         if (leoPlayer != null) return leoPlayer.TriggerQSkill();
+        if (arthurPlayer != null) return arthurPlayer.TriggerQSkill();
+        if (elenaPlayer != null) return elenaPlayer.TriggerQSkill();
+        if (mayaPlayer != null) return mayaPlayer.TriggerQSkill();
         return false;
     }
     public event System.Action OnQSkillCancelled
@@ -251,11 +260,15 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
         { 
             if (leoPlayer != null) leoPlayer.OnQSkillCancelled += value; 
             if (arthurPlayer != null) arthurPlayer.OnQSkillCancelled += value;
+            if (elenaPlayer != null) elenaPlayer.OnQSkillCancelled += value;
+            if (mayaPlayer != null) mayaPlayer.OnQSkillCancelled += value;
         }
         remove 
         { 
             if (leoPlayer != null) leoPlayer.OnQSkillCancelled -= value; 
             if (arthurPlayer != null) arthurPlayer.OnQSkillCancelled -= value;
+            if (elenaPlayer != null) elenaPlayer.OnQSkillCancelled -= value;
+            if (mayaPlayer != null) mayaPlayer.OnQSkillCancelled -= value;
         }
     }
 
@@ -272,6 +285,8 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
     {
         if (leoPlayer != null) return leoPlayer.GetActiveWeaponIndex();
         if (arthurPlayer != null) return arthurPlayer.GetActiveWeaponIndex();
+        if (elenaPlayer != null) return elenaPlayer.GetActiveWeaponIndex();
+        if (mayaPlayer != null) return mayaPlayer.GetActiveWeaponIndex();
         if (isStandaloneMode)
         {
             PlayerHUDController hud = FindObjectOfType<PlayerHUDController>();
@@ -285,6 +300,8 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
     {
         leoPlayer = GetComponent<LeoPlayer>();
         arthurPlayer = GetComponent<ArthurPlayer>();
+        elenaPlayer = GetComponent<ElenaPlayer>();
+        mayaPlayer = GetComponent<MayaPlayer>();
         if (leoPlayer != null)
         {
             inventorySlots = leoPlayer.inventorySlots;
@@ -292,6 +309,14 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
         else if (arthurPlayer != null)
         {
             inventorySlots = arthurPlayer.inventorySlots;
+        }
+        else if (elenaPlayer != null)
+        {
+            inventorySlots = elenaPlayer.inventorySlots;
+        }
+        else if (mayaPlayer != null)
+        {
+            inventorySlots = mayaPlayer.inventorySlots;
         }
         else if (anim == null)
         {
@@ -303,9 +328,11 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
 
     private void Start()
     {
-        if (leoPlayer != null || arthurPlayer != null)
+        if (leoPlayer != null || arthurPlayer != null || elenaPlayer != null || mayaPlayer != null)
         {
-            isStandaloneMode = (leoPlayer != null) ? leoPlayer.isStandaloneMode : arthurPlayer.isStandaloneMode;
+            isStandaloneMode = (leoPlayer != null) ? leoPlayer.isStandaloneMode : 
+                               ((arthurPlayer != null) ? arthurPlayer.isStandaloneMode :
+                               ((elenaPlayer != null) ? elenaPlayer.isStandaloneMode : mayaPlayer.isStandaloneMode));
             // Giữ enabled = true để các hệ thống FindObjectsOfType<SimplePlayerTest>() vẫn tìm thấy Player.
             // Logic chính sẽ được chặn ở Update và LateUpdate bằng cách return sớm.
             return;
@@ -700,6 +727,8 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
         get { 
             if (leoPlayer != null) return leoPlayer.Weapon1Durability;
             if (arthurPlayer != null) return arthurPlayer.Weapon1Durability;
+            if (elenaPlayer != null) return elenaPlayer.Weapon1Durability;
+            if (mayaPlayer != null) return mayaPlayer.Weapon1Durability;
             return isStandaloneMode ? localWeapon1Durability : weapon1Durability.Value;
         }
         set {
@@ -711,6 +740,16 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
             if (arthurPlayer != null)
             {
                 arthurPlayer.Weapon1Durability = value;
+                return;
+            }
+            if (elenaPlayer != null)
+            {
+                elenaPlayer.Weapon1Durability = value;
+                return;
+            }
+            if (mayaPlayer != null)
+            {
+                mayaPlayer.Weapon1Durability = value;
                 return;
             }
             if (isStandaloneMode)
@@ -730,6 +769,8 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
         get { 
             if (leoPlayer != null) return leoPlayer.Weapon2Durability;
             if (arthurPlayer != null) return arthurPlayer.Weapon2Durability;
+            if (elenaPlayer != null) return elenaPlayer.Weapon2Durability;
+            if (mayaPlayer != null) return mayaPlayer.Weapon2Durability;
             return isStandaloneMode ? localWeapon2Durability : weapon2Durability.Value;
         }
         set {
@@ -741,6 +782,16 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
             if (arthurPlayer != null)
             {
                 arthurPlayer.Weapon2Durability = value;
+                return;
+            }
+            if (elenaPlayer != null)
+            {
+                elenaPlayer.Weapon2Durability = value;
+                return;
+            }
+            if (mayaPlayer != null)
+            {
+                mayaPlayer.Weapon2Durability = value;
                 return;
             }
             if (isStandaloneMode)
@@ -765,6 +816,16 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
         if (arthurPlayer != null)
         {
             arthurPlayer.RepairWeaponFromHUD(weaponSlotIndex);
+            return;
+        }
+        if (elenaPlayer != null)
+        {
+            elenaPlayer.RepairWeaponFromHUD(weaponSlotIndex);
+            return;
+        }
+        if (mayaPlayer != null)
+        {
+            mayaPlayer.RepairWeaponFromHUD(weaponSlotIndex);
             return;
         }
 
@@ -816,6 +877,8 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
     {
         if (leoPlayer != null) return leoPlayer.TryAddItem(itemName);
         if (arthurPlayer != null) return arthurPlayer.TryAddItem(itemName);
+        if (elenaPlayer != null) return elenaPlayer.TryAddItem(itemName);
+        if (mayaPlayer != null) return mayaPlayer.TryAddItem(itemName);
         // 1. Tìm xem vật phẩm đã tồn tại trong túi đồ để tăng số lượng (Cộng dồn stack)
         for (int i = 0; i < inventorySlots.Length; i++)
         {
@@ -919,6 +982,16 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
             arthurPlayer.AddExperience(amount);
             return;
         }
+        if (elenaPlayer != null)
+        {
+            elenaPlayer.AddExperience(amount);
+            return;
+        }
+        if (mayaPlayer != null)
+        {
+            mayaPlayer.AddExperience(amount);
+            return;
+        }
         if (isStandaloneMode)
         {
             localExp += amount;
@@ -971,6 +1044,16 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
             arthurPlayer.StandaloneUpgradeStat(statType);
             return;
         }
+        if (elenaPlayer != null)
+        {
+            elenaPlayer.StandaloneUpgradeStat(statType);
+            return;
+        }
+        if (mayaPlayer != null)
+        {
+            mayaPlayer.StandaloneUpgradeStat(statType);
+            return;
+        }
         if (localUpgradePoints <= 0)
         {
             Debug.LogWarning("[Standalone] Hết điểm nâng cấp!");
@@ -1004,6 +1087,16 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
         if (arthurPlayer != null)
         {
             arthurPlayer.UpgradeStatFromHUD(statType);
+            return;
+        }
+        if (elenaPlayer != null)
+        {
+            elenaPlayer.UpgradeStatFromHUD(statType);
+            return;
+        }
+        if (mayaPlayer != null)
+        {
+            mayaPlayer.UpgradeStatFromHUD(statType);
             return;
         }
         if (!IsSpawned || !IsOwner) return;
@@ -1052,7 +1145,7 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
 
     protected virtual void Update()
     {
-        if (leoPlayer != null || arthurPlayer != null) return;
+        if (leoPlayer != null || arthurPlayer != null || elenaPlayer != null || mayaPlayer != null) return;
 
         // Chỉ xử lý phím tắt Alt ẩn hiện chuột nếu là chủ sở hữu hoặc chơi đơn
         bool hasControl = isStandaloneMode || (IsSpawned && IsOwner);
@@ -1360,7 +1453,7 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
 
     void LateUpdate()
     {
-        if (leoPlayer != null || arthurPlayer != null) return;
+        if (leoPlayer != null || arthurPlayer != null || elenaPlayer != null || mayaPlayer != null) return;
 
         // Camera follow hoạt động cho cả standalone lẫn Netcode owner
         bool shouldFollow = isStandaloneMode || (IsSpawned && IsOwner);
@@ -1575,6 +1668,16 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
             arthurPlayer.TakeDamage(damage);
             return;
         }
+        if (elenaPlayer != null)
+        {
+            elenaPlayer.TakeDamage(damage);
+            return;
+        }
+        if (mayaPlayer != null)
+        {
+            mayaPlayer.TakeDamage(damage);
+            return;
+        }
         // Né chiêu (miễn nhiễm sát thương khi đang lộn vòng)
         if (isStandaloneMode)
         {
@@ -1646,6 +1749,16 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
             arthurPlayer.ApplyKnockback(force);
             return;
         }
+        if (elenaPlayer != null)
+        {
+            elenaPlayer.ApplyKnockback(force);
+            return;
+        }
+        if (mayaPlayer != null)
+        {
+            mayaPlayer.ApplyKnockback(force);
+            return;
+        }
         if (isStandaloneMode)
         {
             knockbackVelocity = force;
@@ -1677,6 +1790,16 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
         if (arthurPlayer != null)
         {
             arthurPlayer.UpdateStateFromHUD(weaponIndex, weapon2Locked, skillsUnlocked);
+            return;
+        }
+        if (elenaPlayer != null)
+        {
+            elenaPlayer.UpdateStateFromHUD(weaponIndex, weapon2Locked, skillsUnlocked);
+            return;
+        }
+        if (mayaPlayer != null)
+        {
+            mayaPlayer.UpdateStateFromHUD(weaponIndex, weapon2Locked, skillsUnlocked);
             return;
         }
         if (!IsSpawned || !IsOwner) return;
@@ -1809,6 +1932,16 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
             arthurPlayer.SavePlayerStateToDatabase();
             return;
         }
+        if (elenaPlayer != null)
+        {
+            elenaPlayer.SavePlayerStateToDatabase();
+            return;
+        }
+        if (mayaPlayer != null)
+        {
+            mayaPlayer.SavePlayerStateToDatabase();
+            return;
+        }
         if (!IsSpawned || !IsOwner) return;
 
         Debug.Log("[DB] Đang tự động lưu trạng thái nhân vật lên MongoDB...");
@@ -1894,6 +2027,16 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
         if (arthurPlayer != null)
         {
             arthurPlayer.PlayWeaponSwitchAnimation(oldWeapon, newWeapon);
+            return;
+        }
+        if (elenaPlayer != null)
+        {
+            elenaPlayer.PlayWeaponSwitchAnimation(oldWeapon, newWeapon);
+            return;
+        }
+        if (mayaPlayer != null)
+        {
+            mayaPlayer.PlayWeaponSwitchAnimation(oldWeapon, newWeapon);
             return;
         }
         if (oldWeapon == newWeapon) return;
@@ -2209,6 +2352,16 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
         if (arthurPlayer != null)
         {
             arthurPlayer.Heal(amount);
+            return;
+        }
+        if (elenaPlayer != null)
+        {
+            elenaPlayer.Heal(amount);
+            return;
+        }
+        if (mayaPlayer != null)
+        {
+            mayaPlayer.Heal(amount);
             return;
         }
 
