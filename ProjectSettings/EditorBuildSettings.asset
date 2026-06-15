@@ -8,7 +8,7 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/MainMenu.unity
     guid: 73196b437262d3243b113fc149e552f4
-  - enabled: 1
+  - enabled: 0
     path: Assets/Scenes/Waiting hall.unity
     guid: fa61aed9cceda6e4daebb6137cd5194e
   - enabled: 0
@@ -32,6 +32,9 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/MapSTART.unity
     guid: f271a376ab2aae04b97debeaa4bbabaa
+  - enabled: 1
+    path: Assets/Scenes/Lobby.unity
+    guid: 1a61f552d67d4324abce04818f76743a
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 289c1b55c9541489481df5cc06664110, type: 3}
   m_UseUCBPForAssetBundles: 0
