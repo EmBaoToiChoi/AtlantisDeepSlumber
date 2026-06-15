@@ -56,6 +56,9 @@ public class NetworkBootstrap : MonoBehaviour
         // ĐĂNG KÝ THEO DÕI NGẮT KẾT NỐI ĐỂ TỰ ĐỘNG RESET KHI PHÒNG TRỐNG
         NetworkManager.Singleton.OnClientDisconnectCallback += OnServerClientDisconnected;
 
+        // Tăng timeout tải cảnh để tránh ngắt kết nối khi load map chậm
+        NetworkManager.Singleton.NetworkConfig.LoadSceneTimeOut = 120;
+
         NetworkManager.Singleton.StartServer();
         Debug.Log("[SERVER] Dedicated Server đã bắt đầu lắng nghe tại cổng 7777...");
 
@@ -230,6 +233,9 @@ public class NetworkBootstrap : MonoBehaviour
                 NetworkManager.Singleton.SceneManager.OnSceneEvent -= OnSceneEventReceived;
             }
         };
+
+        // Tăng timeout tải cảnh để tránh ngắt kết nối khi load map chậm
+        NetworkManager.Singleton.NetworkConfig.LoadSceneTimeOut = 120;
 
         NetworkManager.Singleton.StartClient();
         Debug.Log($"[NETWORK] Đang thử kết nối tới 165.99.14.40:7777... (Tên: {data.playerName})");

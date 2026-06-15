@@ -652,11 +652,14 @@ public class NetworkWaitingRoom : NetworkBehaviour
         // 3. Cập nhật trực tiếp vào biến mạng trên nhân vật (Để đồng bộ tag tên)
         if (NetworkManager.Singleton.ConnectedClients.TryGetValue(clientId, out var client))
         {
-            var playerUI = client.PlayerObject.GetComponent<PlayerWaitingRoomUI>();
-            if (playerUI != null)
+            if (client.PlayerObject != null)
             {
-                playerUI.NetName.Value = playerName;
-                Debug.Log($"[SERVER] Đã cập nhật NetName trực tiếp cho nhân vật của Client {clientId}");
+                var playerUI = client.PlayerObject.GetComponent<PlayerWaitingRoomUI>();
+                if (playerUI != null)
+                {
+                    playerUI.NetName.Value = playerName;
+                    Debug.Log($"[SERVER] Đã cập nhật NetName trực tiếp cho nhân vật của Client {clientId}");
+                }
             }
         }
     }
@@ -1106,6 +1109,17 @@ public class NetworkWaitingRoom : NetworkBehaviour
         Debug.Log($"[SERVER] Đang đổi mô hình 3D cho Client {clientId} sang nhân vật {characterId}");
 
         string preservedName = "Guest_" + clientId;
+        if (NetPlayers != null)
+        {
+            foreach (var p in NetPlayers)
+            {
+                if (p.ClientId == clientId)
+                {
+                    preservedName = p.Name.ToString();
+                    break;
+                }
+            }
+        }
         
         // 1. Lưu lại tên hiển thị từ đối tượng cũ nếu có
         if (NetworkManager.Singleton.ConnectedClients.TryGetValue(clientId, out var clientConnection))
@@ -1326,10 +1340,6 @@ public class NetworkWaitingRoom : NetworkBehaviour
 
     private void StartGame() { 
         Debug.Log($"[CLIENT] Chủ phòng click START EXPEDITION! Đang gửi lệnh ServerRpc với cảnh cần load: {gameplaySceneName}");
-        if (SceneLoader.Instance != null)
-        {
-            SceneLoader.Instance.ShowLoading("PREPARING EXPEDITION...");
-        }
         StartGameServerRpc(gameplaySceneName);
     }
 
@@ -1384,10 +1394,27 @@ public class NetworkWaitingRoom : NetworkBehaviour
             NetworkBootstrap.ActivePlayerNames.Add(p.Name.ToString());
         }
 
+        // Báo cho tất cả clients bật UI Loading cùng lúc
+        NotifyStartGameClientRpc();
+
         Debug.Log($"[SERVER] Tất cả điều kiện thỏa mãn! Đang tải cảnh {sceneName}...");
         if (NetworkManager.Singleton != null && NetworkManager.Singleton.SceneManager != null)
         {
             NetworkManager.Singleton.SceneManager.LoadScene(sceneName, UnityEngine.SceneManagement.LoadSceneMode.Single);
+        }
+    }
+
+    [ClientRpc]
+    private void NotifyStartGameClientRpc()
+    {
+        if (_uiDocument != null)
+        {
+            _uiDocument.enabled = false;
+        }
+
+        if (SceneLoader.Instance != null)
+        {
+            SceneLoader.Instance.ShowLoading("PREPARING EXPEDITION...");
         }
     }
 
@@ -1564,6 +1591,11 @@ public class NetworkWaitingRoom : NetworkBehaviour
     {
         string roomId = PlayerPrefs.GetString("CurrentRoomID", "");
         
+        if (_uiDocument != null)
+        {
+            _uiDocument.enabled = false;
+        }
+
         if (NetworkManager.Singleton != null)
         {
             Debug.Log("[Lobby] Đang tắt kết nối NetworkManager...");
