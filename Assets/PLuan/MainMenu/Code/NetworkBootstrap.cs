@@ -64,17 +64,17 @@ public class NetworkBootstrap : MonoBehaviour
         {
             NetworkManager.Singleton.SceneManager.OnSceneEvent -= OnSceneEventReceived;
             NetworkManager.Singleton.SceneManager.OnSceneEvent += OnSceneEventReceived;
-            NetworkManager.Singleton.SceneManager.LoadScene("Waiting hall", UnityEngine.SceneManagement.LoadSceneMode.Single);
+            NetworkManager.Singleton.SceneManager.LoadScene("Lobby", UnityEngine.SceneManagement.LoadSceneMode.Single);
         }
         else
         {
             if (SceneLoader.Instance != null)
             {
-                _ = SceneLoader.Instance.LoadSceneAsync("Waiting hall", "LOADING WAITING HALL...");
+                _ = SceneLoader.Instance.LoadSceneAsync("Lobby", "LOADING Lobby...");
             }
             else
             {
-                UnityEngine.SceneManagement.SceneManager.LoadScene("Waiting hall");
+                UnityEngine.SceneManagement.SceneManager.LoadScene("Lobby");
             }
         }
     }
@@ -92,7 +92,7 @@ public class NetworkBootstrap : MonoBehaviour
         
         if (NetworkManager.Singleton != null && NetworkManager.Singleton.ConnectedClientsList.Count == 0)
         {
-            Debug.Log("[SERVER] Không còn người chơi nào! Đang tự động reset VPS về cảnh 'Waiting hall'...");
+            Debug.Log("[SERVER] Không còn người chơi nào! Đang tự động reset VPS về cảnh 'Lobby'...");
             
             // Xóa sạch dữ liệu chờ và đưa về mặc định
             PendingPlayerNames.Clear();
@@ -102,10 +102,10 @@ public class NetworkBootstrap : MonoBehaviour
             IsGameStarted = false;
             ActivePlayerNames.Clear();
 
-            // Đưa VPS quay về cảnh Waiting hall đón lượt chơi mới
+            // Đưa VPS quay về cảnh Lobby đón lượt chơi mới
             if (NetworkManager.Singleton.SceneManager != null)
             {
-                NetworkManager.Singleton.SceneManager.LoadScene("Waiting hall", UnityEngine.SceneManagement.LoadSceneMode.Single);
+                NetworkManager.Singleton.SceneManager.LoadScene("Lobby", UnityEngine.SceneManagement.LoadSceneMode.Single);
             }
         }
     }
@@ -147,7 +147,7 @@ public class NetworkBootstrap : MonoBehaviour
                 IsGameStarted = false;
                 ActivePlayerNames.Clear();
 
-                // Đưa VPS quay về cảnh Waiting hall
+                // Đưa VPS quay về cảnh Lobby
                 StartLoadWaitingHall();
             }
             else
@@ -159,7 +159,7 @@ public class NetworkBootstrap : MonoBehaviour
                     if (ActivePlayerNames.Contains(playerName))
                     {
                         Debug.Log($"[SERVER] Player '{playerName}' rejoin vào phòng đang chạy game. Cho phép vào thẳng scene.");
-                        // Tự động đồng bộ sang Waiting hall/Waiting hall2 thông qua NetworkSceneManager
+                        // Tự động đồng bộ sang Lobby/Lobby2 thông qua NetworkSceneManager
                     }
                     else
                     {
@@ -182,8 +182,8 @@ public class NetworkBootstrap : MonoBehaviour
         yield return null; // Đợi 1 frame
         if (NetworkManager.Singleton != null && NetworkManager.Singleton.SceneManager != null)
         {
-            Debug.Log("[SERVER] Đang chuyển cảnh về Waiting hall...");
-            NetworkManager.Singleton.SceneManager.LoadScene("Waiting hall", UnityEngine.SceneManagement.LoadSceneMode.Single);
+            Debug.Log("[SERVER] Đang chuyển cảnh về Lobby...");
+            NetworkManager.Singleton.SceneManager.LoadScene("Lobby", UnityEngine.SceneManagement.LoadSceneMode.Single);
         }
     }
 
