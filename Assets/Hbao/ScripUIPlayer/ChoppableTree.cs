@@ -295,6 +295,47 @@ public class ChoppableTree : NetworkBehaviour
         CreateCutMark(hitPos);
     }
 
+    private Material FindURPLitMaterial()
+    {
+        var allRends = FindObjectsByType<Renderer>(FindObjectsSortMode.None);
+        foreach (var r in allRends)
+        {
+            if (r != null && r.sharedMaterial != null)
+            {
+                Shader s = r.sharedMaterial.shader;
+                if (s != null)
+                {
+                    string shaderName = s.name.ToLower();
+                    if (shaderName.Contains("universal render pipeline/lit") || 
+                        shaderName.Contains("urp/lit") || 
+                        (shaderName.Contains("lit") && !shaderName.Contains("speedtree") && !shaderName.Contains("nature") && !shaderName.Contains("terrain")))
+                    {
+                        return new Material(r.sharedMaterial);
+                    }
+                }
+            }
+        }
+        
+        // Fallback to tree's own renderer
+        var treeRends = GetComponentsInChildren<Renderer>(true);
+        foreach (var r in treeRends)
+        {
+            if (r != null && r.sharedMaterial != null)
+            {
+                return new Material(r.sharedMaterial);
+            }
+        }
+
+        foreach (var r in allRends)
+        {
+            if (r != null && r.sharedMaterial != null)
+            {
+                return new Material(r.sharedMaterial);
+            }
+        }
+        return null;
+    }
+
     private void CreateCutMark(Vector3 hitPos)
     {
         if (visualModel == null) return;
@@ -350,19 +391,55 @@ public class ChoppableTree : NetworkBehaviour
             Random.Range(0.08f, 0.14f)  // Chiều sâu vết chém
         );
 
-        // Tô màu lòng gỗ sáng
+        // Tô màu lòng gỗ sáng (Dùng vật liệu URP Lit tìm được để tránh lỗi màu tím)
         Renderer rend = cutMark.GetComponent<Renderer>();
         if (rend != null)
         {
-            Shader cutShader = Shader.Find("Universal Render Pipeline/Lit");
-            if (cutShader == null) cutShader = Shader.Find("Standard");
-            if (cutShader == null) cutShader = Shader.Find("Sprites/Default");
-            
-            if (cutShader != null)
+            Material cutMat = FindURPLitMaterial();
+            if (cutMat != null)
             {
-                rend.material = new Material(cutShader);
+                // Clear textures to make it a solid wood color
+                if (cutMat.HasProperty("_BaseMap")) cutMat.SetTexture("_BaseMap", null);
+                if (cutMat.HasProperty("_MainTex")) cutMat.SetTexture("_MainTex", null);
+                if (cutMat.HasProperty("_BumpMap")) cutMat.SetTexture("_BumpMap", null);
+                if (cutMat.HasProperty("_MetallicGlossMap")) cutMat.SetTexture("_MetallicGlossMap", null);
+                if (cutMat.HasProperty("_OcclusionMap")) cutMat.SetTexture("_OcclusionMap", null);
+                if (cutMat.HasProperty("_EmissionMap")) cutMat.SetTexture("_EmissionMap", null);
+
+                Color woodColor = new Color(0.88f, 0.76f, 0.55f); // Màu lòng gỗ kem nhạt sáng
+                if (cutMat.HasProperty("_BaseColor"))
+                {
+                    cutMat.SetColor("_BaseColor", woodColor);
+                }
+                else if (cutMat.HasProperty("_Color"))
+                {
+                    cutMat.SetColor("_Color", woodColor);
+                }
+                
+                // Đảm bảo không bị trong suốt
+                if (cutMat.HasProperty("_Surface"))
+                {
+                    cutMat.SetFloat("_Surface", 0f); // Opaque
+                    cutMat.DisableKeyword("_SURFACE_TYPE_TRANSPARENT");
+                    cutMat.EnableKeyword("_SURFACE_TYPE_OPAQUE");
+                }
+                cutMat.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Geometry;
+
+                rend.sharedMaterial = cutMat;
             }
-            rend.material.color = new Color(0.88f, 0.76f, 0.55f); // Màu gỗ cắt bên trong
+            else
+            {
+                // Fallback cuối cùng nếu không tìm thấy material nào
+                Color woodColor = new Color(0.88f, 0.76f, 0.55f);
+                if (rend.material.HasProperty("_BaseColor"))
+                {
+                    rend.material.SetColor("_BaseColor", woodColor);
+                }
+                else
+                {
+                    rend.material.color = woodColor;
+                }
+            }
         }
     }
 
