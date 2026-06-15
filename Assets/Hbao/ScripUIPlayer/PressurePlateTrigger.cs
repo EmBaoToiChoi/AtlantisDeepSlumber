@@ -33,8 +33,26 @@ public class PressurePlateTrigger : NetworkBehaviour
 
     public bool IsPressed => (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening) ? isPressedNet.Value : localIsPressed;
 
+    private string GetGameObjectPath(GameObject obj)
+    {
+        string path = obj.name;
+        Transform parent = obj.transform.parent;
+        while (parent != null)
+        {
+            path = parent.name + "/" + path;
+            parent = parent.parent;
+        }
+        return path;
+    }
+
     private void Start()
     {
+        // Temporary diagnostic log to find NetworkObject hashes
+        foreach (var no in FindObjectsOfType<NetworkObject>(true))
+        {
+            Debug.Log($"[DIAGNOSTIC] GameObject: {no.name}, Hash: {no.GlobalObjectIdHash}, Path: {GetGameObjectPath(no.gameObject)}");
+        }
+
         string door1Name = targetDoor != null ? targetDoor.gameObject.name : "CHƯA GÁN";
         string door2Name = targetDoor2 != null ? targetDoor2.gameObject.name : "KHÔNG DÙNG";
         Debug.Log($"[PressurePlateTrigger] Khởi động trên GameObject '{gameObject.name}'. Target Door 1: {door1Name}, Target Door 2: {door2Name}");
