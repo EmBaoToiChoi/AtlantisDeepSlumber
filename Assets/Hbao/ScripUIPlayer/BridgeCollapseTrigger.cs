@@ -94,6 +94,13 @@ public class BridgeCollapseTrigger : NetworkBehaviour
 
     private void Awake()
     {
+        // Fallback nếu mainBridgeObject bị bỏ trống trong Inspector
+        if (mainBridgeObject == null && stableBridgeSegments != null && stableBridgeSegments.Length > 0)
+        {
+            mainBridgeObject = stableBridgeSegments[0];
+            Debug.Log("[BridgeCollapseTrigger] Tự động gán mainBridgeObject bằng stableBridgeSegments[0] làm fallback!");
+        }
+
         // Lưu lại vị trí, góc xoay ban đầu của cây cầu nguyên khối
         if (mainBridgeObject != null)
         {
@@ -210,7 +217,7 @@ public class BridgeCollapseTrigger : NetworkBehaviour
             if (indicator == null)
             {
                 int classIndex = localPlayer.CharacterClassIndex;
-                ChoppableTree myTree = targetTrees[classIndex % targetTrees.Length];
+                ChoppableTree myTree = ResolveTreeForClass(classIndex);
                 if (myTree != null)
                 {
                     indicator = localPlayer.gameObject.AddComponent<TreeGuidanceIndicator>();
@@ -265,6 +272,14 @@ public class BridgeCollapseTrigger : NetworkBehaviour
     private void CollapseBridgeLocal()
     {
         localCollapseTriggered = true;
+
+        // Đảm bảo lưu lại vị trí ban đầu của cầu trước khi bị ẩn đi
+        if (mainBridgeObject != null && originalBridgePos == Vector3.zero)
+        {
+            originalBridgePos = mainBridgeObject.transform.position;
+            originalBridgeRot = mainBridgeObject.transform.rotation;
+        }
+
         // 1. Ẩn cây cầu nguyên khối chính đi
         if (mainBridgeObject != null)
         {
@@ -286,10 +301,10 @@ public class BridgeCollapseTrigger : NetworkBehaviour
             FindLocalPlayer();
         }
 
-        if (localPlayer != null && targetTrees != null && targetTrees.Length > 0)
+        if (localPlayer != null)
         {
             int classIndex = localPlayer.CharacterClassIndex;
-            ChoppableTree myTree = targetTrees[classIndex % targetTrees.Length];
+            ChoppableTree myTree = ResolveTreeForClass(classIndex);
             if (myTree != null)
             {
                 var indicator = localPlayer.gameObject.GetComponent<TreeGuidanceIndicator>();
@@ -573,42 +588,64 @@ public class BridgeCollapseTrigger : NetworkBehaviour
             if (comp != null) Destroy(comp);
         }
         
-        // 3. Đổi chất liệu sang màu trắng bán trong suốt (Tương thích tốt cả URP và Standard)
-        Shader ghostShader = Shader.Find("Universal Render Pipeline/Unlit");
-        if (ghostShader == null) ghostShader = Shader.Find("Universal Render Pipeline/Lit");
-        if (ghostShader == null) ghostShader = Shader.Find("Standard");
-        if (ghostShader == null) ghostShader = Shader.Find("Sprites/Default");
-        
-        if (ghostShader != null)
+        // 3. Đổi chất liệu sang màu trắng bán trong suốt (Cấu hình trực tiếp trên vật liệu đã nhân bản của cầu để tránh lỗi màu tím)
+        foreach (var renderer in ghostBridgeObject.GetComponentsInChildren<Renderer>())
         {
-            Material ghostMat = new Material(ghostShader);
-            ghostMat.color = new Color(1f, 1f, 1f, 0.35f); // Màu trắng bán trong suốt
-            
-            if (ghostShader.name.Contains("Universal Render Pipeline"))
+            if (renderer != null)
             {
-                ghostMat.SetFloat("_Surface", 1f); // Transparent
-                ghostMat.SetFloat("_Blend", 0f);   // Alpha
-                ghostMat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
-                ghostMat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
-                ghostMat.SetInt("_ZWrite", 0);
-                ghostMat.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
-            }
-            else if (ghostShader.name.Contains("Standard"))
-            {
-                ghostMat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
-                ghostMat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
-                ghostMat.SetInt("_ZWrite", 0);
-                ghostMat.DisableKeyword("_ALPHATEST_ON");
-                ghostMat.EnableKeyword("_ALPHABLEND_ON");
-                ghostMat.DisableKeyword("_ALPHAPREMULTIPLY_ON");
-                ghostMat.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
-            }
-            
-            foreach (var renderer in ghostBridgeObject.GetComponentsInChildren<Renderer>())
-            {
-                renderer.material = ghostMat;
+                // Truy cập .material sẽ tự động tạo một instance copy độc lập của material
+                Material mat = renderer.material;
+                if (mat != null)
+                {
+                    MakeMaterialTransparent(mat, 0.35f);
+                }
             }
         }
+    }
+
+    private void MakeMaterialTransparent(Material mat, float alpha)
+    {
+        if (mat == null) return;
+
+        if (mat.HasProperty("_Surface"))
+        {
+            mat.SetFloat("_Surface", 1f); // Transparent
+            mat.SetFloat("_Blend", 0f);   // Alpha
+            mat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+            mat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+            mat.SetInt("_ZWrite", 0);
+            
+            if (mat.HasProperty("_BaseColor"))
+            {
+                Color c = mat.GetColor("_BaseColor");
+                c.r = Mathf.Lerp(c.r, 1f, 0.5f);
+                c.g = Mathf.Lerp(c.g, 1f, 0.5f);
+                c.b = Mathf.Lerp(c.b, 1f, 0.5f);
+                c.a = alpha;
+                mat.SetColor("_BaseColor", c);
+            }
+            mat.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+            mat.DisableKeyword("_SURFACE_TYPE_OPAQUE");
+        }
+        else
+        {
+            mat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+            mat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+            mat.SetInt("_ZWrite", 0);
+            if (mat.HasProperty("_Color"))
+            {
+                Color c = mat.GetColor("_Color");
+                c.r = Mathf.Lerp(c.r, 1f, 0.5f);
+                c.g = Mathf.Lerp(c.g, 1f, 0.5f);
+                c.b = Mathf.Lerp(c.b, 1f, 0.5f);
+                c.a = alpha;
+                mat.SetColor("_Color", c);
+            }
+            mat.DisableKeyword("_ALPHATEST_ON");
+            mat.EnableKeyword("_ALPHABLEND_ON");
+            mat.DisableKeyword("_ALPHAPREMULTIPLY_ON");
+        }
+        mat.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
     }
 
     private void SpawnWoodLogsServer()
@@ -742,10 +779,10 @@ public class BridgeCollapseTrigger : NetworkBehaviour
             {
                 FindLocalPlayer();
             }
-            if (localPlayer != null && targetTrees != null && targetTrees.Length > 0)
+            if (localPlayer != null)
             {
                 int classIndex = localPlayer.CharacterClassIndex;
-                ChoppableTree myTree = targetTrees[classIndex % targetTrees.Length];
+                ChoppableTree myTree = ResolveTreeForClass(classIndex);
                 if (myTree != null)
                 {
                     var indicator = localPlayer.gameObject.GetComponent<TreeGuidanceIndicator>();
@@ -825,6 +862,43 @@ public class BridgeCollapseTrigger : NetworkBehaviour
         if (go.CompareTag("Player") || (go.transform.parent != null && go.transform.parent.CompareTag("Player"))) return true;
 
         return false;
+    }
+
+    private ChoppableTree ResolveTreeForClass(int classIndex)
+    {
+        ChoppableTree myTree = null;
+        if (targetTrees != null && targetTrees.Length > 0)
+        {
+            int idx = classIndex % targetTrees.Length;
+            if (idx >= 0 && idx < targetTrees.Length)
+            {
+                myTree = targetTrees[idx];
+            }
+        }
+        
+        // Fallback 1: Lấy cây đầu tiên không null trong mảng targetTrees
+        if (myTree == null && targetTrees != null)
+        {
+            foreach (var tree in targetTrees)
+            {
+                if (tree != null)
+                {
+                    myTree = tree;
+                    break;
+                }
+            }
+        }
+        
+        // Fallback 2: Lấy bất kỳ cây ChoppableTree nào trong cảnh
+        if (myTree == null)
+        {
+            var allTrees = FindObjectsByType<ChoppableTree>(FindObjectsSortMode.None);
+            if (allTrees != null && allTrees.Length > 0)
+            {
+                myTree = allTrees[0];
+            }
+        }
+        return myTree;
     }
 
     private void FindLocalPlayer()
