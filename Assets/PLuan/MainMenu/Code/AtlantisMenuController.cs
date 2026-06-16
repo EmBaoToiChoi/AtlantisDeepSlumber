@@ -81,12 +81,22 @@ public class AtlantisMenuController : MonoBehaviour
     private float _appliedSens = 50f;
     private bool _appliedInvertY = false;
     private LocalizationManager.Language _appliedLanguage = LocalizationManager.Language.English;
+    private string _appliedMicDevice = "Default";
+    private string _appliedMicMode = "Push To Talk";
+    private float _appliedMicInputVol = 100f;
+    private float _appliedVoicePlaybackVol = 100f;
+    private string _appliedOutputDevice = "System Default";
+    private string _appliedPttKey = "V";
 
     // Custom Dropdown State
     private VisualElement _activeDropdownPopup;
     private string _resolutionValue = "1920x1080 (FHD)";
     private string _qualityValue    = "High";
     private string _languageValueString = "English";
+    private string _micDeviceValue = "Default";
+    private string _micModeValue = "Push To Talk";
+    private string _outputDeviceValue = "System Default";
+    private string _pttKeyValue = "V";
     private bool _isCancelConfirmation = false;
     private VisualElement _currentActiveTab;
     
@@ -278,6 +288,28 @@ public class AtlantisMenuController : MonoBehaviour
         LocalizationManager.Get("quality_low") 
     };
     private static readonly string[] LanguageChoices   = { "English", "Vietnamese" };
+    private string[] MicDeviceChoices => GetMicrophoneDevices();
+    private string[] MicModeChoices => new string[] { 
+        LocalizationManager.Get("mic_mode_ptt"), 
+        LocalizationManager.Get("mic_mode_auto") 
+    };
+    private static readonly string[] OutputDeviceChoices = { "System Default", "Headphones (High Definition Audio)", "Speakers (High Definition Audio)" };
+    private static readonly string[] PttKeyChoices = { "V", "G", "T", "Y", "LeftShift", "LeftAlt", "Space" };
+
+    private string[] GetMicrophoneDevices()
+    {
+        var devices = Microphone.devices;
+        var list = new List<string>();
+        list.Add("Default");
+        if (devices != null && devices.Length > 0)
+        {
+            foreach (var dev in devices)
+            {
+                list.Add(dev);
+            }
+        }
+        return list.ToArray();
+    }
 
     private void SetupCustomDropdowns()
     {
@@ -292,6 +324,10 @@ public class AtlantisMenuController : MonoBehaviour
         var resEl = _root.Q<VisualElement>("opt-resolution");
         var qualEl = _root.Q<VisualElement>("opt-quality");
         var langEl = _root.Q<VisualElement>("opt-language");
+        var micDevEl = _root.Q<VisualElement>("opt-mic-device");
+        var micModeEl = _root.Q<VisualElement>("opt-mic-mode");
+        var outputDevEl = _root.Q<VisualElement>("opt-output-device");
+        var pttKeyEl = _root.Q<VisualElement>("opt-ptt-key");
 
         if (resEl != null)
             resEl.RegisterCallback<PointerUpEvent>(evt =>
@@ -320,6 +356,42 @@ public class AtlantisMenuController : MonoBehaviour
                     LocalizationManager.SetPreviewLanguage(previewLang);
                     RefreshLocalization();
                 });
+            });
+        }
+
+        if (micDevEl != null)
+        {
+            micDevEl.RegisterCallback<PointerUpEvent>(evt =>
+            {
+                evt.StopPropagation();
+                ToggleDropdown(micDevEl, MicDeviceChoices, ref _micDeviceValue, "opt-mic-device-value");
+            });
+        }
+
+        if (micModeEl != null)
+        {
+            micModeEl.RegisterCallback<PointerUpEvent>(evt =>
+            {
+                evt.StopPropagation();
+                ToggleDropdown(micModeEl, MicModeChoices, ref _micModeValue, "opt-mic-mode-value");
+            });
+        }
+
+        if (outputDevEl != null)
+        {
+            outputDevEl.RegisterCallback<PointerUpEvent>(evt =>
+            {
+                evt.StopPropagation();
+                ToggleDropdown(outputDevEl, OutputDeviceChoices, ref _outputDeviceValue, "opt-output-device-value");
+            });
+        }
+
+        if (pttKeyEl != null)
+        {
+            pttKeyEl.RegisterCallback<PointerUpEvent>(evt =>
+            {
+                evt.StopPropagation();
+                ToggleDropdown(pttKeyEl, PttKeyChoices, ref _pttKeyValue, "opt-ptt-key-value");
             });
         }
     }
@@ -355,6 +427,10 @@ public class AtlantisMenuController : MonoBehaviour
                 if (capturedLabelName == "opt-resolution-value") _resolutionValue = choiceCapture;
                 else if (capturedLabelName == "opt-quality-value") _qualityValue = choiceCapture;
                 else if (capturedLabelName == "opt-language-value") _languageValueString = choiceCapture;
+                else if (capturedLabelName == "opt-mic-device-value") _micDeviceValue = choiceCapture;
+                else if (capturedLabelName == "opt-mic-mode-value") _micModeValue = choiceCapture;
+                else if (capturedLabelName == "opt-output-device-value") _outputDeviceValue = choiceCapture;
+                else if (capturedLabelName == "opt-ptt-key-value") _pttKeyValue = choiceCapture;
 
                 onValueChange?.Invoke(choiceCapture);
                 CloseDropdownPopup();
@@ -903,6 +979,8 @@ public class AtlantisMenuController : MonoBehaviour
         BindSlider("slider-music", "val-music", true);
         BindSlider("slider-sfx", "val-sfx", true);
         BindSlider("slider-sens", "val-sens", false);
+        BindSlider("slider-mic-input", "val-mic-input", true);
+        BindSlider("slider-voice-playback", "val-voice-playback", true);
     }
 
     private void BindSlider(string sliderName, string labelName, bool isPercent)
@@ -933,6 +1011,47 @@ public class AtlantisMenuController : MonoBehaviour
         _appliedQuality = _qualityValue;
         _appliedFullscreen = _root.Q<Toggle>("opt-fullscreen")?.value ?? true;
         _appliedVsync = _root.Q<Toggle>("opt-vsync")?.value ?? true;
+
+        if (MicManager.Instance != null)
+        {
+            MicManager.Instance.LoadSettings();
+            _appliedMicDevice = MicManager.Instance.selectedDevice;
+            if (string.IsNullOrEmpty(_appliedMicDevice)) _appliedMicDevice = "Default";
+            _appliedMicMode = MicManager.Instance.transmissionMode == 0 ? LocalizationManager.Get("mic_mode_ptt") : LocalizationManager.Get("mic_mode_auto");
+            _appliedMicInputVol = MicManager.Instance.micInputVolume;
+            _appliedVoicePlaybackVol = MicManager.Instance.voicePlaybackVolume;
+        }
+        else
+        {
+            _appliedMicDevice = PlayerPrefs.GetString("MicDevice", "Default");
+            int modeVal = PlayerPrefs.GetInt("MicMode", 0);
+            _appliedMicMode = modeVal == 0 ? LocalizationManager.Get("mic_mode_ptt") : LocalizationManager.Get("mic_mode_auto");
+            _appliedMicInputVol = PlayerPrefs.GetFloat("MicInputVolume", 100f);
+            _appliedVoicePlaybackVol = PlayerPrefs.GetFloat("MicPlaybackVolume", 100f);
+        }
+
+        _appliedOutputDevice = PlayerPrefs.GetString("OutputDevice", "System Default");
+        _appliedPttKey = PlayerPrefs.GetString("MicPTTKeyString", "V");
+
+        _micDeviceValue = _appliedMicDevice;
+        _micModeValue = _appliedMicMode;
+        _outputDeviceValue = _appliedOutputDevice;
+        _pttKeyValue = _appliedPttKey;
+
+        var micDevLbl = _root.Q<Label>("opt-mic-device-value");
+        if (micDevLbl != null) micDevLbl.text = _micDeviceValue;
+
+        var micModeLbl = _root.Q<Label>("opt-mic-mode-value");
+        if (micModeLbl != null) micModeLbl.text = _micModeValue;
+
+        var outDevLbl = _root.Q<Label>("opt-output-device-value");
+        if (outDevLbl != null) outDevLbl.text = _outputDeviceValue;
+
+        var pttKeyLbl = _root.Q<Label>("opt-ptt-key-value");
+        if (pttKeyLbl != null) pttKeyLbl.text = _pttKeyValue;
+
+        SetSliderValue("slider-mic-input", "val-mic-input", _appliedMicInputVol, true);
+        SetSliderValue("slider-voice-playback", "val-voice-playback", _appliedVoicePlaybackVol, true);
     }
 
     private bool HasUnsavedChanges()
@@ -940,11 +1059,17 @@ public class AtlantisMenuController : MonoBehaviour
         if (_languageValueString != _appliedLanguage.ToString()) return true;
         if (_resolutionValue != _appliedResolution) return true;
         if (_qualityValue != _appliedQuality) return true;
+        if (_micDeviceValue != _appliedMicDevice) return true;
+        if (_micModeValue != _appliedMicMode) return true;
+        if (_outputDeviceValue != _appliedOutputDevice) return true;
+        if (_pttKeyValue != _appliedPttKey) return true;
         
         if ((_root.Q<Slider>("slider-master")?.value ?? 100f) != _appliedMasterVol) return true;
         if ((_root.Q<Slider>("slider-music")?.value ?? 80f) != _appliedMusicVol) return true;
         if ((_root.Q<Slider>("slider-sfx")?.value ?? 90f) != _appliedSfxVol) return true;
         if ((_root.Q<Slider>("slider-sens")?.value ?? 50f) != _appliedSens) return true;
+        if ((_root.Q<Slider>("slider-mic-input")?.value ?? 100f) != _appliedMicInputVol) return true;
+        if ((_root.Q<Slider>("slider-voice-playback")?.value ?? 100f) != _appliedVoicePlaybackVol) return true;
         
         if ((_root.Q<Toggle>("opt-fullscreen")?.value ?? true) != _appliedFullscreen) return true;
         if ((_root.Q<Toggle>("opt-vsync")?.value ?? true) != _appliedVsync) return true;
@@ -1100,10 +1225,29 @@ public class AtlantisMenuController : MonoBehaviour
         var langLbl = _root.Q<Label>("opt-language-value");
         if (langLbl != null) langLbl.text = _languageValueString;
 
+        _micDeviceValue = _appliedMicDevice;
+        _micModeValue = _appliedMicMode;
+        _outputDeviceValue = _appliedOutputDevice;
+        _pttKeyValue = _appliedPttKey;
+
+        var micDevLbl = _root.Q<Label>("opt-mic-device-value");
+        if (micDevLbl != null) micDevLbl.text = _micDeviceValue;
+
+        var micModeLbl = _root.Q<Label>("opt-mic-mode-value");
+        if (micModeLbl != null) micModeLbl.text = _micModeValue;
+
+        var outDevLbl = _root.Q<Label>("opt-output-device-value");
+        if (outDevLbl != null) outDevLbl.text = _outputDeviceValue;
+
+        var pttKeyLbl = _root.Q<Label>("opt-ptt-key-value");
+        if (pttKeyLbl != null) pttKeyLbl.text = _pttKeyValue;
+
         SetSliderValue("slider-master", "val-master", _appliedMasterVol, true);
         SetSliderValue("slider-music", "val-music", _appliedMusicVol, true);
         SetSliderValue("slider-sfx", "val-sfx", _appliedSfxVol, true);
         SetSliderValue("slider-sens", "val-sens", _appliedSens, false);
+        SetSliderValue("slider-mic-input", "val-mic-input", _appliedMicInputVol, true);
+        SetSliderValue("slider-voice-playback", "val-voice-playback", _appliedVoicePlaybackVol, true);
 
         var fsToggle = _root.Q<Toggle>("opt-fullscreen");
         if (fsToggle != null) fsToggle.value = _appliedFullscreen;
@@ -1138,8 +1282,37 @@ public class AtlantisMenuController : MonoBehaviour
         _appliedSens = _root.Q<Slider>("slider-sens")?.value ?? 50f;
         _appliedInvertY = _root.Q<Toggle>("opt-invert-y")?.value ?? false;
 
+        _appliedMicDevice = _micDeviceValue;
+        _appliedMicMode = _micModeValue;
+        _appliedOutputDevice = _outputDeviceValue;
+        _appliedPttKey = _pttKeyValue;
+        _appliedMicInputVol = _root.Q<Slider>("slider-mic-input")?.value ?? 100f;
+        _appliedVoicePlaybackVol = _root.Q<Slider>("slider-voice-playback")?.value ?? 100f;
+
         _appliedLanguage = _languageValueString == "Vietnamese" ? LocalizationManager.Language.Vietnamese : LocalizationManager.Language.English;
         LocalizationManager.SetLanguage(_appliedLanguage);
+
+        // Save Mic Settings to PlayerPrefs
+        PlayerPrefs.SetString("MicDevice", _appliedMicDevice == "Default" ? "" : _appliedMicDevice);
+        int modeIdx = (_appliedMicMode == LocalizationManager.Get("mic_mode_auto")) ? 1 : 0;
+        PlayerPrefs.SetInt("MicMode", modeIdx);
+        PlayerPrefs.SetFloat("MicInputVolume", _appliedMicInputVol);
+        PlayerPrefs.SetFloat("MicPlaybackVolume", _appliedVoicePlaybackVol);
+        PlayerPrefs.SetString("OutputDevice", _appliedOutputDevice);
+        PlayerPrefs.SetString("MicPTTKeyString", _appliedPttKey);
+        
+        // Parse key
+        if (System.Enum.TryParse(_appliedPttKey, out KeyCode key))
+        {
+            PlayerPrefs.SetInt("MicPTTKey", (int)key);
+        }
+        PlayerPrefs.Save();
+
+        if (MicManager.Instance != null)
+        {
+            MicManager.Instance.LoadSettings();
+            MicManager.Instance.RestartRecording();
+        }
 
         // --- RESOLUTION ---
         // Parse "WxH (label)" → e.g. "1920x1080 (FHD)" → 1920, 1080
@@ -1462,6 +1635,12 @@ public class AtlantisMenuController : MonoBehaviour
         SetText("lbl-effects-sfx", "lbl_effects_sfx");
         SetText("lbl-resolution", "lbl_resolution");
         SetText("lbl-graphics-quality", "lbl_graphics_quality");
+        SetText("lbl-opt-mic-device", "lbl_opt_mic_device");
+        SetText("lbl-opt-mic-mode", "lbl_opt_mic_mode");
+        SetText("lbl-mic-input-vol", "lbl_mic_input_vol");
+        SetText("lbl-voice-playback-vol", "lbl_voice_playback_vol");
+        SetText("lbl-opt-output-device", "lbl_opt_output_device");
+        SetText("lbl-ptt-key", "lbl_ptt_key");
         
         // Cập nhật giá trị hiển thị hiện tại của dropdown Quality
         var lblQuality = _root.Q<Label>("opt-quality-value");
@@ -1470,6 +1649,15 @@ public class AtlantisMenuController : MonoBehaviour
             // Tìm index của chất lượng hiện tại trong danh sách cũ và cập nhật text mới
             // Ở đây đơn giản là lấy theo giá trị _qualityValue nếu nó khớp key hoặc reset về High
             lblQuality.text = LocalizationManager.Get("quality_" + _qualityValue.ToLower().Split(' ')[0]);
+        }
+
+        // Cập nhật giá trị hiển thị hiện tại của dropdown Mic Mode
+        var lblMicMode = _root.Q<Label>("opt-mic-mode-value");
+        if (lblMicMode != null)
+        {
+            lblMicMode.text = (_micModeValue == "Auto (Voice Active)" || _micModeValue == "Tự động phát hiện" || _micModeValue == "Auto")
+                ? LocalizationManager.Get("mic_mode_auto")
+                : LocalizationManager.Get("mic_mode_ptt");
         }
 
         var toggleFullscreen = _root.Q<Toggle>("opt-fullscreen");

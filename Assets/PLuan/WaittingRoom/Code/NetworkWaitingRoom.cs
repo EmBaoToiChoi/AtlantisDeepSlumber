@@ -154,6 +154,12 @@ public class NetworkWaitingRoom : NetworkBehaviour
     private ulong _pendingSwapSenderClientId = ulong.MaxValue;
     private bool _isSwapModeActive = false;
 
+    // Players Voice Chat Modal & Fields
+    private VisualElement _playersVoiceModal;
+    private ScrollView _playersVoiceList;
+    private Button _btnPlayersVoice;
+    private Button _btnClosePlayersVoice;
+
     private void Awake() 
     { 
         Debug.Log("[EMERGENCY] Awake đã chạy!");
@@ -244,6 +250,27 @@ public class NetworkWaitingRoom : NetworkBehaviour
             };
         }
 
+        // Players Voice Chat Modal setup
+        _playersVoiceModal = _root.Q<VisualElement>("players-voice-modal");
+        _playersVoiceList = _root.Q<ScrollView>("players-voice-list");
+        _btnPlayersVoice = _root.Q<Button>("btn-players-voice");
+        _btnClosePlayersVoice = _root.Q<Button>("btn-close-players-voice");
+
+        if (_playersVoiceModal != null)
+        {
+            _playersVoiceModal.style.display = DisplayStyle.None;
+        }
+
+        if (_btnPlayersVoice != null)
+        {
+            _btnPlayersVoice.clicked += ShowPlayersVoiceModal;
+        }
+
+        if (_btnClosePlayersVoice != null)
+        {
+            _btnClosePlayersVoice.clicked += HidePlayersVoiceModal;
+        }
+
         // Ẩn mặc định cho đỡ vướng
         if (_charSelectPanel != null)
         {
@@ -286,6 +313,109 @@ public class NetworkWaitingRoom : NetworkBehaviour
         else
         {
             Debug.LogError("[Lobby] _detailsModal bị NULL khi ẩn!");
+        }
+    }
+
+    private void ShowPlayersVoiceModal()
+    {
+        if (_playersVoiceModal != null)
+        {
+            _playersVoiceModal.RemoveFromClassList("hidden-element");
+            _playersVoiceModal.style.display = DisplayStyle.Flex;
+            PopulatePlayersVoiceList();
+            Debug.Log("[Lobby] Đã hiển thị bảng chỉnh âm lượng người chơi.");
+        }
+    }
+
+    private void HidePlayersVoiceModal()
+    {
+        if (_playersVoiceModal != null)
+        {
+            _playersVoiceModal.AddToClassList("hidden-element");
+            _playersVoiceModal.style.display = DisplayStyle.None;
+            Debug.Log("[Lobby] Đã ẩn bảng chỉnh âm lượng người chơi.");
+        }
+    }
+
+    private void PopulatePlayersVoiceList()
+    {
+        if (_playersVoiceList == null) return;
+        _playersVoiceList.Clear();
+
+        if (NetworkManager.Singleton == null) return;
+
+        ulong localClientId = NetworkManager.Singleton.LocalClientId;
+        bool hasOtherPlayers = false;
+
+        foreach (var p in NetPlayers)
+        {
+            if (p.ClientId == localClientId) continue; // Skip self
+
+            hasOtherPlayers = true;
+            ulong targetClientId = p.ClientId;
+            string playerName = p.Name.ToString();
+            string charName = GetCharacterName(p.CharacterId);
+
+            // Container
+            var row = new VisualElement();
+            row.style.flexDirection = FlexDirection.Row;
+            row.style.alignItems = Align.Center;
+            row.style.justifyContent = Justify.SpaceBetween;
+            row.style.marginBottom = 10;
+            row.style.paddingBottom = 5;
+            row.style.borderBottomWidth = 1;
+            row.style.borderBottomColor = new StyleColor(new Color(0.2f, 0.4f, 0.6f, 0.3f));
+
+            // Label
+            var nameLbl = new Label($"<b>{playerName}</b> ({charName})");
+            nameLbl.style.color = new StyleColor(new Color(0f, 0.9f, 1f, 1f)); // Cyan
+            nameLbl.style.fontSize = 13;
+            nameLbl.style.flexGrow = 1f;
+            nameLbl.style.width = 150;
+            row.Add(nameLbl);
+
+            // Slider
+            var volSlider = new Slider(0f, 100f);
+            volSlider.style.flexGrow = 1f;
+
+            // Get current multiplier
+            float currentVol = 100f;
+            if (PlayerVoicePlayback.PlayerVolumeMultipliers.TryGetValue(targetClientId, out float mult))
+            {
+                currentVol = mult * 100f;
+            }
+            else if (MicManager.Instance != null)
+            {
+                currentVol = MicManager.Instance.voicePlaybackVolume;
+            }
+            volSlider.value = currentVol;
+
+            // Numeric Label
+            var valLbl = new Label($"{Mathf.RoundToInt(currentVol)}%");
+            valLbl.style.width = 40;
+            valLbl.style.unityTextAlign = TextAnchor.MiddleRight;
+            valLbl.style.color = new StyleColor(Color.white);
+
+            volSlider.RegisterValueChangedCallback(evt =>
+            {
+                float newVolPercent = evt.newValue;
+                valLbl.text = $"{Mathf.RoundToInt(newVolPercent)}%";
+                PlayerVoicePlayback.PlayerVolumeMultipliers[targetClientId] = newVolPercent / 100f;
+            });
+
+            row.Add(volSlider);
+            row.Add(valLbl);
+
+            _playersVoiceList.Add(row);
+        }
+
+        if (!hasOtherPlayers)
+        {
+            var noPlayersLbl = new Label("NO OTHER PLAYERS IN ROOM");
+            noPlayersLbl.style.unityTextAlign = TextAnchor.MiddleCenter;
+            noPlayersLbl.style.color = new StyleColor(new Color(0.5f, 0.5f, 0.5f, 0.8f));
+            noPlayersLbl.style.marginTop = 15;
+            _playersVoiceList.Add(noPlayersLbl);
         }
     }
 
@@ -845,6 +975,12 @@ public class NetworkWaitingRoom : NetworkBehaviour
 
         // Cập nhật màu nút Ready cho bản thân
         UpdateReadyButtonState();
+
+        // Refresh player voice list if open
+        if (_playersVoiceModal != null && _playersVoiceModal.style.display == DisplayStyle.Flex)
+        {
+            PopulatePlayersVoiceList();
+        }
     }
     private void UpdateCardUI(int charId, List<string> selectors)
     {

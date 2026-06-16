@@ -51,6 +51,16 @@ public class PlayerWaitingRoomUI : NetworkBehaviour
             col.height = 2f;
             Debug.Log($"[PlayerUI] Đã tự động thêm CapsuleCollider cho nhân vật ClientId={OwnerClientId} để phục vụ Raycast.");
         }
+
+        // Tự động thêm PlayerVoicePlayback nếu chưa có để hỗ trợ Voice Chat / Mic Game
+        var playback = GetComponent<PlayerVoicePlayback>();
+        if (playback == null)
+        {
+            playback = gameObject.AddComponent<PlayerVoicePlayback>();
+        }
+        playback.ownerClientId = OwnerClientId;
+        playback.isLocalPlayer = (NetworkManager.Singleton != null && OwnerClientId == NetworkManager.Singleton.LocalClientId);
+        Debug.Log($"[PlayerUI] Đã tự động cấu hình PlayerVoicePlayback cho ClientId={OwnerClientId}, isLocal={playback.isLocalPlayer}.");
     }
 
     private void Update()
