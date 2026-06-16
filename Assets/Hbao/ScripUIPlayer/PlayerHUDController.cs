@@ -1183,8 +1183,11 @@ public class PlayerHUDController : MonoBehaviour
     {
         if (MicManager.Instance != null)
         {
-            MicManager.Instance.IsMuted = !MicManager.Instance.IsMuted;
-            isMicOn = !MicManager.Instance.IsMuted;
+            if (MicManager.Instance.transmissionMode == 1) // Chỉ toggle trong chế độ Auto
+            {
+                MicManager.Instance.IsMuted = !MicManager.Instance.IsMuted;
+                isMicOn = !MicManager.Instance.IsMuted;
+            }
         }
         else
         {

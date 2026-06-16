@@ -99,6 +99,8 @@ public class AtlantisMenuController : MonoBehaviour
     private string _pttKeyValue = "V";
     private bool _isCancelConfirmation = false;
     private VisualElement _currentActiveTab;
+    private bool _isRebindingPTT = false;
+    private float _rebindCooldown = 0f;
     
     // Smooth Scroll State for ScrollViews
     private class SmoothScrollTracker
@@ -391,7 +393,13 @@ public class AtlantisMenuController : MonoBehaviour
             pttKeyEl.RegisterCallback<PointerUpEvent>(evt =>
             {
                 evt.StopPropagation();
-                ToggleDropdown(pttKeyEl, PttKeyChoices, ref _pttKeyValue, "opt-ptt-key-value");
+                _isRebindingPTT = true;
+                _rebindCooldown = 0.2f; // cooldown to prevent immediately catching Mouse0
+                var pttKeyLbl = _root.Q<Label>("opt-ptt-key-value");
+                if (pttKeyLbl != null)
+                {
+                    pttKeyLbl.text = "...";
+                }
             });
         }
     }
@@ -946,6 +954,31 @@ public class AtlantisMenuController : MonoBehaviour
     {
         UpdateTrackerScroll(_optionsScrollTracker);
         UpdateTrackerScroll(_roomScrollTracker);
+
+        if (_isRebindingPTT)
+        {
+            _rebindCooldown -= Time.unscaledDeltaTime;
+            if (_rebindCooldown <= 0f)
+            {
+                if (Input.anyKeyDown)
+                {
+                    foreach (KeyCode kcode in System.Enum.GetValues(typeof(KeyCode)))
+                    {
+                        if (Input.GetKeyDown(kcode))
+                        {
+                            string keyName = kcode.ToString();
+                            _pttKeyValue = keyName;
+                            var pttKeyLbl = _root.Q<Label>("opt-ptt-key-value");
+                            if (pttKeyLbl != null) pttKeyLbl.text = keyName;
+
+                            _isRebindingPTT = false;
+                            Debug.Log($"[Rebind] PTT Key rebound to: {keyName}");
+                            break;
+                        }
+                    }
+                }
+            }
+        }
     }
 
     private void UpdateTrackerScroll(SmoothScrollTracker tracker)

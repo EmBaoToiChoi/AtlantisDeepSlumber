@@ -13,6 +13,11 @@ public class PlayerWaitingRoomUI : NetworkBehaviour
     private NetworkWaitingRoom _manager;
     private int _lastCharId = -1;
     private PlayerVoicePlayback _playback;
+    private SpriteRenderer _micSpriteRenderer;
+
+    [Header("Microphone Sprites")]
+    [SerializeField] private Sprite _micOnSprite;
+    [SerializeField] private Sprite _micOffSprite;
 
     public NetworkVariable<Unity.Collections.FixedString64Bytes> NetName = new NetworkVariable<Unity.Collections.FixedString64Bytes>(
         "Guest", NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
@@ -65,6 +70,22 @@ public class PlayerWaitingRoomUI : NetworkBehaviour
         _playback.ownerClientId = OwnerClientId;
         _playback.isLocalPlayer = (NetworkManager.Singleton != null && OwnerClientId == NetworkManager.Singleton.LocalClientId);
         Debug.Log($"[PlayerUI] Đã tự động cấu hình PlayerVoicePlayback cho ClientId={OwnerClientId}, isLocal={_playback.isLocalPlayer}.");
+
+        // Tạo floating 3D mic icon nếu chưa có
+        Transform micIconTransform = _nameTag != null ? _nameTag.transform.Find("MicIcon") : null;
+        if (micIconTransform == null && _nameTag != null)
+        {
+            GameObject micObj = new GameObject("MicIcon");
+            micObj.transform.SetParent(_nameTag.transform);
+            micObj.transform.localPosition = new Vector3(0f, 0.65f, 0f);
+            micObj.transform.localRotation = Quaternion.identity;
+            micObj.transform.localScale = new Vector3(0.5f, 0.5f, 1f);
+            _micSpriteRenderer = micObj.AddComponent<SpriteRenderer>();
+        }
+        else if (micIconTransform != null)
+        {
+            _micSpriteRenderer = micIconTransform.GetComponent<SpriteRenderer>();
+        }
     }
 
     private void Update()
@@ -107,23 +128,33 @@ public class PlayerWaitingRoomUI : NetworkBehaviour
         bool isMicOn = NetIsMicOn.Value;
         bool isSpeakingNow = _playback != null && _playback.IsSpeaking;
 
-        string micStatus = "";
-        if (isSpeakingNow)
+        // Cập nhật Sprite của mic trên billboard 3D
+        if (_micSpriteRenderer != null)
         {
-            micStatus = " <color=#00ff00><b>🔊 [SPEAKING]</b></color>";
-        }
-        else if (isMicOn)
-        {
-            micStatus = " <color=#23d160>🎤 [MIC ON]</color>";
-        }
-        else
-        {
-            micStatus = " <color=#ff3860>🔇 [MUTED]</color>";
+            if (isSpeakingNow)
+            {
+                _micSpriteRenderer.sprite = _micOnSprite;
+                _micSpriteRenderer.color = new Color(0f, 1f, 0f, 1f); // Màu xanh lá khi nói
+                float pulse = 0.5f + Mathf.PingPong(Time.time * 4f, 0.15f);
+                _micSpriteRenderer.transform.localScale = new Vector3(pulse, pulse, 1f);
+            }
+            else if (isMicOn)
+            {
+                _micSpriteRenderer.sprite = _micOnSprite;
+                _micSpriteRenderer.color = new Color(1f, 1f, 1f, 0.8f); // Màu bình thường khi mở mic
+                _micSpriteRenderer.transform.localScale = new Vector3(0.45f, 0.45f, 1f);
+            }
+            else
+            {
+                _micSpriteRenderer.sprite = _micOffSprite;
+                _micSpriteRenderer.color = new Color(1f, 1f, 1f, 0.4f); // Làm mờ khi tắt mic
+                _micSpriteRenderer.transform.localScale = new Vector3(0.45f, 0.45f, 1f);
+            }
         }
 
         // Tên hiển thị màu Cyan Neon bắt mắt kết hợp với tên nhân vật trong ngoặc đơn và khung trạng thái
         string charSub = currentCharId >= 0 && currentCharId < 4 ? GetCharacterName(currentCharId) : "SELECTING...";
-        _nameTag.text = $"<color=#00e5ff><b>{NetName.Value}</b></color>{micStatus} <size=80%><color=#80c8ff>({charSub})</color></size>\n\n{status}";
+        _nameTag.text = $"<color=#00e5ff><b>{NetName.Value}</b></color> <size=80%><color=#80c8ff>({charSub})</color></size>\n\n{status}";
 
         // Cách xoay Billboard chuẩn nhất: Xoay cùng hướng với Camera
         if (Camera.main != null)
@@ -173,4 +204,18 @@ public class PlayerWaitingRoomUI : NetworkBehaviour
             }
         }
     }
+
+#if UNITY_EDITOR
+    private void OnValidate()
+    {
+        if (_micOnSprite == null)
+        {
+            _micOnSprite = UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Hbao/Image/Mic 1.png");
+        }
+        if (_micOffSprite == null)
+        {
+            _micOffSprite = UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Hbao/Image/Mic - Copy.png");
+        }
+    }
+#endif
 }

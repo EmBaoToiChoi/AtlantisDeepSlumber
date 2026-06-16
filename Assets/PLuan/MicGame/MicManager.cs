@@ -11,7 +11,25 @@ public class MicManager : MonoBehaviour
 
     [Header("Settings")]
     public bool IsLocalTransmitting { get; private set; } = false;
-    public bool IsMuted { get; set; } = true;
+    private bool _isMutedAuto = true;
+    public bool IsMuted
+    {
+        get
+        {
+            if (transmissionMode == 0) // Push To Talk
+            {
+                return !Input.GetKey(pttKey);
+            }
+            return _isMutedAuto;
+        }
+        set
+        {
+            if (transmissionMode == 1)
+            {
+                _isMutedAuto = value;
+            }
+        }
+    }
     public string selectedDevice = "";
     public int transmissionMode = 0; // 0 = Push To Talk, 1 = Auto (Voice Active)
     public float micInputVolume = 100f; // 0 - 100
@@ -140,21 +158,14 @@ public class MicManager : MonoBehaviour
 
     private void Update()
     {
-        // Check for mic mute toggle key (T)
-        bool tPressed = false;
-        if (Keyboard.current != null && Keyboard.current.tKey.wasPressedThisFrame)
+        // In Auto mode, pttKey toggles mute status
+        if (transmissionMode == 1)
         {
-            tPressed = true;
-        }
-        else if (Input.GetKeyDown(KeyCode.T))
-        {
-            tPressed = true;
-        }
-
-        if (tPressed)
-        {
-            IsMuted = !IsMuted;
-            Debug.Log($"[MicManager] Mic Muted toggled to: {IsMuted}");
+            if (Input.GetKeyDown(pttKey))
+            {
+                _isMutedAuto = !_isMutedAuto;
+                Debug.Log($"[MicManager] Auto Mode: Mic Muted toggled to: {_isMutedAuto} via {pttKey}");
+            }
         }
 
         string deviceToUse = string.IsNullOrEmpty(selectedDevice) ? "" : selectedDevice;
