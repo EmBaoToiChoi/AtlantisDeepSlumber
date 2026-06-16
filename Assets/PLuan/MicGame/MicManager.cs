@@ -3,12 +3,15 @@ using System.Collections.Generic;
 using UnityEngine;
 using Unity.Netcode;
 using Unity.Collections;
+using UnityEngine.InputSystem;
 
 public class MicManager : MonoBehaviour
 {
     public static MicManager Instance { get; private set; }
 
     [Header("Settings")]
+    public bool IsLocalTransmitting { get; private set; } = false;
+    public bool IsMuted { get; set; } = true;
     public string selectedDevice = "";
     public int transmissionMode = 0; // 0 = Push To Talk, 1 = Auto (Voice Active)
     public float micInputVolume = 100f; // 0 - 100
@@ -137,9 +140,29 @@ public class MicManager : MonoBehaviour
 
     private void Update()
     {
+        // Check for mic mute toggle key (T)
+        bool tPressed = false;
+        if (Keyboard.current != null && Keyboard.current.tKey.wasPressedThisFrame)
+        {
+            tPressed = true;
+        }
+        else if (Input.GetKeyDown(KeyCode.T))
+        {
+            tPressed = true;
+        }
+
+        if (tPressed)
+        {
+            IsMuted = !IsMuted;
+            Debug.Log($"[MicManager] Mic Muted toggled to: {IsMuted}");
+        }
+
         string deviceToUse = string.IsNullOrEmpty(selectedDevice) ? "" : selectedDevice;
         if (_recordingClip == null || !Microphone.IsRecording(deviceToUse))
+        {
+            IsLocalTransmitting = false;
             return;
+        }
 
         int currentPosition = Microphone.GetPosition(deviceToUse);
         int sampleCount = 0;
@@ -159,6 +182,7 @@ public class MicManager : MonoBehaviour
         {
             _lastSamplePosition = currentPosition;
             _accumulatedSamples.Clear();
+            IsLocalTransmitting = false;
             return;
         }
 
@@ -196,22 +220,27 @@ public class MicManager : MonoBehaviour
 
         bool isTransmitting = false;
 
-        // Check if transmission is active
-        if (transmissionMode == 0) // Push To Talk
+        // Check if transmission is active if not muted
+        if (!IsMuted)
         {
-            isTransmitting = Input.GetKey(pttKey);
-        }
-        else // Auto (Voice Activation)
-        {
-            // Calculate RMS
-            float sum = 0;
-            for (int i = 0; i < chunk.Length; i++)
+            if (transmissionMode == 0) // Push To Talk
             {
-                sum += chunk[i] * chunk[i];
+                isTransmitting = Input.GetKey(pttKey);
             }
-            float rms = Mathf.Sqrt(sum / chunk.Length);
-            isTransmitting = rms > autoThreshold;
+            else // Auto (Voice Activation)
+            {
+                // Calculate RMS
+                float sum = 0;
+                for (int i = 0; i < chunk.Length; i++)
+                {
+                    sum += chunk[i] * chunk[i];
+                }
+                float rms = Mathf.Sqrt(sum / chunk.Length);
+                isTransmitting = rms > autoThreshold;
+            }
         }
+
+        IsLocalTransmitting = isTransmitting;
 
         if (isTransmitting && NetworkManager.Singleton != null && NetworkManager.Singleton.IsClient && NetworkManager.Singleton.IsListening)
         {

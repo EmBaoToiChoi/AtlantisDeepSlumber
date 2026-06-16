@@ -12,9 +12,13 @@ public class PlayerWaitingRoomUI : NetworkBehaviour
 
     private NetworkWaitingRoom _manager;
     private int _lastCharId = -1;
+    private PlayerVoicePlayback _playback;
 
     public NetworkVariable<Unity.Collections.FixedString64Bytes> NetName = new NetworkVariable<Unity.Collections.FixedString64Bytes>(
         "Guest", NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+
+    public NetworkVariable<bool> NetIsMicOn = new NetworkVariable<bool>(
+        false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
 
     private void Start()
     {
@@ -53,14 +57,14 @@ public class PlayerWaitingRoomUI : NetworkBehaviour
         }
 
         // Tự động thêm PlayerVoicePlayback nếu chưa có để hỗ trợ Voice Chat / Mic Game
-        var playback = GetComponent<PlayerVoicePlayback>();
-        if (playback == null)
+        _playback = GetComponent<PlayerVoicePlayback>();
+        if (_playback == null)
         {
-            playback = gameObject.AddComponent<PlayerVoicePlayback>();
+            _playback = gameObject.AddComponent<PlayerVoicePlayback>();
         }
-        playback.ownerClientId = OwnerClientId;
-        playback.isLocalPlayer = (NetworkManager.Singleton != null && OwnerClientId == NetworkManager.Singleton.LocalClientId);
-        Debug.Log($"[PlayerUI] Đã tự động cấu hình PlayerVoicePlayback cho ClientId={OwnerClientId}, isLocal={playback.isLocalPlayer}.");
+        _playback.ownerClientId = OwnerClientId;
+        _playback.isLocalPlayer = (NetworkManager.Singleton != null && OwnerClientId == NetworkManager.Singleton.LocalClientId);
+        Debug.Log($"[PlayerUI] Đã tự động cấu hình PlayerVoicePlayback cho ClientId={OwnerClientId}, isLocal={_playback.isLocalPlayer}.");
     }
 
     private void Update()
@@ -90,9 +94,36 @@ public class PlayerWaitingRoomUI : NetworkBehaviour
         // Tự động ẩn/hiện Mesh Renderers tùy theo trạng thái đã chọn hay chưa (ẩn khi = -1)
         SetMeshVisibility(currentCharId != -1);
 
+        // Cập nhật NetworkVariable mic cho chính mình
+        if (IsOwner)
+        {
+            bool micOn = MicManager.Instance != null && !MicManager.Instance.IsMuted;
+            if (NetIsMicOn.Value != micOn)
+            {
+                NetIsMicOn.Value = micOn;
+            }
+        }
+
+        bool isMicOn = NetIsMicOn.Value;
+        bool isSpeakingNow = _playback != null && _playback.IsSpeaking;
+
+        string micStatus = "";
+        if (isSpeakingNow)
+        {
+            micStatus = " <color=#00ff00><b>🔊 [SPEAKING]</b></color>";
+        }
+        else if (isMicOn)
+        {
+            micStatus = " <color=#23d160>🎤 [MIC ON]</color>";
+        }
+        else
+        {
+            micStatus = " <color=#ff3860>🔇 [MUTED]</color>";
+        }
+
         // Tên hiển thị màu Cyan Neon bắt mắt kết hợp với tên nhân vật trong ngoặc đơn và khung trạng thái
         string charSub = currentCharId >= 0 && currentCharId < 4 ? GetCharacterName(currentCharId) : "SELECTING...";
-        _nameTag.text = $"<color=#00e5ff><b>{NetName.Value}</b></color> <size=80%><color=#80c8ff>({charSub})</color></size>\n\n{status}";
+        _nameTag.text = $"<color=#00e5ff><b>{NetName.Value}</b></color>{micStatus} <size=80%><color=#80c8ff>({charSub})</color></size>\n\n{status}";
 
         // Cách xoay Billboard chuẩn nhất: Xoay cùng hướng với Camera
         if (Camera.main != null)
