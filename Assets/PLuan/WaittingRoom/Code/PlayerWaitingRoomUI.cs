@@ -12,9 +12,18 @@ public class PlayerWaitingRoomUI : NetworkBehaviour
 
     private NetworkWaitingRoom _manager;
     private int _lastCharId = -1;
+    private PlayerVoicePlayback _playback;
+    private SpriteRenderer _micSpriteRenderer;
+
+    [Header("Microphone Sprites")]
+    [SerializeField] private Sprite _micOnSprite;
+    [SerializeField] private Sprite _micOffSprite;
 
     public NetworkVariable<Unity.Collections.FixedString64Bytes> NetName = new NetworkVariable<Unity.Collections.FixedString64Bytes>(
         "Guest", NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+
+    public NetworkVariable<bool> NetIsMicOn = new NetworkVariable<bool>(
+        false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
 
     private void Start()
     {
@@ -51,6 +60,32 @@ public class PlayerWaitingRoomUI : NetworkBehaviour
             col.height = 2f;
             Debug.Log($"[PlayerUI] Đã tự động thêm CapsuleCollider cho nhân vật ClientId={OwnerClientId} để phục vụ Raycast.");
         }
+
+        // Tự động thêm PlayerVoicePlayback nếu chưa có để hỗ trợ Voice Chat / Mic Game
+        _playback = GetComponent<PlayerVoicePlayback>();
+        if (_playback == null)
+        {
+            _playback = gameObject.AddComponent<PlayerVoicePlayback>();
+        }
+        _playback.ownerClientId = OwnerClientId;
+        _playback.isLocalPlayer = (NetworkManager.Singleton != null && OwnerClientId == NetworkManager.Singleton.LocalClientId);
+        Debug.Log($"[PlayerUI] Đã tự động cấu hình PlayerVoicePlayback cho ClientId={OwnerClientId}, isLocal={_playback.isLocalPlayer}.");
+
+        // Tạo floating 3D mic icon nếu chưa có
+        Transform micIconTransform = _nameTag != null ? _nameTag.transform.Find("MicIcon") : null;
+        if (micIconTransform == null && _nameTag != null)
+        {
+            GameObject micObj = new GameObject("MicIcon");
+            micObj.transform.SetParent(_nameTag.transform);
+            micObj.transform.localPosition = new Vector3(0.5f, 0f, 0f);
+            micObj.transform.localRotation = Quaternion.identity;
+            micObj.transform.localScale = new Vector3(0.07f, 0.07f, 1f);
+            _micSpriteRenderer = micObj.AddComponent<SpriteRenderer>();
+        }
+        else if (micIconTransform != null)
+        {
+            _micSpriteRenderer = micIconTransform.GetComponent<SpriteRenderer>();
+        }
     }
 
     private void Update()
@@ -79,6 +114,70 @@ public class PlayerWaitingRoomUI : NetworkBehaviour
 
         // Tự động ẩn/hiện Mesh Renderers tùy theo trạng thái đã chọn hay chưa (ẩn khi = -1)
         SetMeshVisibility(currentCharId != -1);
+
+        // Cập nhật NetworkVariable mic cho chính mình
+        if (IsOwner)
+        {
+            bool micOn = MicManager.Instance != null && !MicManager.Instance.IsMuted;
+            if (NetIsMicOn.Value != micOn)
+            {
+                NetIsMicOn.Value = micOn;
+            }
+        }
+
+        bool isMicOn = NetIsMicOn.Value;
+        bool isSpeakingNow = _playback != null && _playback.IsSpeaking;
+
+        // Cập nhật Sprite của mic trên billboard 3D
+        if (_micSpriteRenderer != null)
+        {
+            if (_nameTag != null)
+            {
+                _nameTag.ForceMeshUpdate();
+                var textInfo = _nameTag.textInfo;
+                float firstLineHalfWidth = 0.5f;
+                float lineY = 0f;
+                if (textInfo != null && textInfo.lineCount > 0)
+                {
+                    firstLineHalfWidth = textInfo.lineInfo[0].length * 0.5f;
+                    lineY = (textInfo.lineInfo[0].ascender + textInfo.lineInfo[0].descender) * 0.5f;
+                }
+                // Đặt vị trí lệch bên phải của dòng tên đầu tiên (tăng khoảng cách margin-left lên 0.22f)
+                _micSpriteRenderer.transform.localPosition = new Vector3(firstLineHalfWidth + 0.22f, lineY, 0f);
+            }
+
+            // Tính toán localScale động để đảm bảo icon mic có cùng kích thước thế giới (world scale) trên mọi nhân vật
+            float baseScale = (currentCharId == 0) ? 0.045f : 0.07f; // Cho riêng LEO (ID 0) icon nhỏ hơn một tí
+            float targetWorldScale = baseScale;
+            if (isSpeakingNow)
+            {
+                targetWorldScale = baseScale + Mathf.PingPong(Time.time * 0.5f, baseScale * 0.2f);
+            }
+
+            float parentScaleX = _nameTag != null ? _nameTag.transform.lossyScale.x : 1f;
+            float parentScaleY = _nameTag != null ? _nameTag.transform.lossyScale.y : 1f;
+            float localScaleX = parentScaleX > 0 ? (targetWorldScale / parentScaleX) : targetWorldScale;
+            float localScaleY = parentScaleY > 0 ? (targetWorldScale / parentScaleY) : targetWorldScale;
+
+            if (isSpeakingNow)
+            {
+                _micSpriteRenderer.sprite = _micOnSprite;
+                _micSpriteRenderer.color = new Color(0f, 1f, 0f, 1f); // Màu xanh lá khi nói
+                _micSpriteRenderer.transform.localScale = new Vector3(localScaleX, localScaleY, 1f);
+            }
+            else if (isMicOn)
+            {
+                _micSpriteRenderer.sprite = _micOnSprite;
+                _micSpriteRenderer.color = new Color(1f, 1f, 1f, 0.8f); // Màu bình thường khi mở mic
+                _micSpriteRenderer.transform.localScale = new Vector3(localScaleX, localScaleY, 1f);
+            }
+            else
+            {
+                _micSpriteRenderer.sprite = _micOffSprite;
+                _micSpriteRenderer.color = new Color(1f, 1f, 1f, 0.4f); // Làm mờ khi tắt mic
+                _micSpriteRenderer.transform.localScale = new Vector3(localScaleX, localScaleY, 1f);
+            }
+        }
 
         // Tên hiển thị màu Cyan Neon bắt mắt kết hợp với tên nhân vật trong ngoặc đơn và khung trạng thái
         string charSub = currentCharId >= 0 && currentCharId < 4 ? GetCharacterName(currentCharId) : "SELECTING...";
@@ -132,4 +231,18 @@ public class PlayerWaitingRoomUI : NetworkBehaviour
             }
         }
     }
+
+#if UNITY_EDITOR
+    private void OnValidate()
+    {
+        if (_micOnSprite == null)
+        {
+            _micOnSprite = UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Hbao/Image/Mic 1.png");
+        }
+        if (_micOffSprite == null)
+        {
+            _micOffSprite = UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Hbao/Image/Mic - Copy.png");
+        }
+    }
+#endif
 }

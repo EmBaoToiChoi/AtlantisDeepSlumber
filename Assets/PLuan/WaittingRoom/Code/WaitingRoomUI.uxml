@@ -76,6 +76,7 @@
             </ui:VisualElement>
             <ui:VisualElement style="flex-direction: row; align-items: center;">
                 <ui:Button name="btn-swap-character" text="SWAP EXPLORER" class="action-btn ready-btn hidden-element" style="margin-right: 15px;" />
+                <ui:Button name="btn-players-voice" text="PLAYERS VOICE" class="action-btn toggle-char-panel-btn ready-btn" style="margin-right: 15px;" />
                 <ui:Button name="btn-toggle-char-panel" text="CHOOSE EXPLORER" class="action-btn toggle-char-panel-btn ready-btn" style="margin-right: 15px;" />
                 <ui:VisualElement class="player-count-container">
                     <ui:Label name="lbl-player-count" text="PLAYERS: 1/4" class="status-text" />
@@ -147,6 +148,13 @@
                     <ui:Button name="btn-swap-accept" text="ACCEPT" class="action-btn ready-btn" style="width: 150px; margin: 0; background-color: rgba(46, 213, 115, 0.15); border-left-color: rgb(46, 213, 115); color: rgb(46, 213, 115);" />
                     <ui:Button name="btn-swap-decline" text="DECLINE" class="action-btn leave-btn" style="width: 150px; margin: 0;" />
                 </ui:VisualElement>
+            </ui:VisualElement>
+        </ui:VisualElement>
+        <ui:VisualElement name="players-voice-modal" class="details-modal hidden-element">
+            <ui:VisualElement class="swap-modal-container glow-border" style="width: 400px; padding: 25px; align-items: center; background-color: rgba(10, 25, 47, 0.95);">
+                <ui:Label text="PLAYERS VOICE CHAT" name="lbl-players-voice-title" class="details-char-role" style="font-size: 16px; letter-spacing: 2px; color: #00e5ff; margin-bottom: 15px; -unity-font-style: bold;" />
+                <ui:ScrollView name="players-voice-list" style="width: 100%; max-height: 250px; margin-bottom: 20px;" />
+                <ui:Button name="btn-close-players-voice" text="CLOSE" class="action-btn leave-btn" style="width: 150px; margin: 0;" />
             </ui:VisualElement>
         </ui:VisualElement>
     </ui:VisualElement>

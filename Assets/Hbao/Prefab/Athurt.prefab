@@ -464,6 +464,30 @@ MonoBehaviour:
   aimCameraSmoothSpeed: 10
   aimMinPitch: -80
   aimMaxPitch: 80
+  maxSpineTwistAngle: 80
+  punch1YOffset: 50
+  punch1XOffset: 20
+  punch2YOffset: -60
+  punch2XOffset: 20
+  punch3YOffset: 45
+  punch3XOffset: 10
+  slash1YOffset: 0
+  slash1XOffset: 0
+  slash2YOffset: 0
+  slash2XOffset: 0
+  slash3YOffset: 0
+  slash3XOffset: 0
+  spineSmoothSpeed: 15
+  netAimAngle:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 0
+  netAimPitch:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 45
   anim: {fileID: 2516788322460262253}
   leftHitbox: {fileID: 1237202054799999889}
   rightHitbox: {fileID: 5743454690255644811}
@@ -1122,6 +1146,10 @@ MonoBehaviour:
       ParameterType: 9
     - name: Bung
       NameHash: 1791711171
+      Synchronize: 1
+      ParameterType: 4
+    - name: IsPushing
+      NameHash: -510442038
       Synchronize: 1
       ParameterType: 4
   AnimatorParametersExpanded: 0
