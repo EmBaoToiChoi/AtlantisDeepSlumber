@@ -13,6 +13,19 @@ public class PlayerVoicePlayback : MonoBehaviour
     
     public ulong ownerClientId;
     public bool isLocalPlayer = false;
+    public float lastTimeReceivedVoice;
+
+    public bool IsSpeaking
+    {
+        get
+        {
+            if (isLocalPlayer)
+            {
+                return MicManager.Instance != null && MicManager.Instance.IsLocalTransmitting;
+            }
+            return Time.time - lastTimeReceivedVoice < 0.4f;
+        }
+    }
 
     private void Awake()
     {
@@ -44,6 +57,8 @@ public class PlayerVoicePlayback : MonoBehaviour
     public void QueueSamples(float[] samples)
     {
         if (isLocalPlayer) return;
+
+        lastTimeReceivedVoice = Time.time;
 
         lock (_playbackQueue)
         {

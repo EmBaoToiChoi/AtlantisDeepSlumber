@@ -142,6 +142,7 @@ public class PlayerHUDController : MonoBehaviour
 
     // Mặc định false -> Vào game chưa ấn M sẽ là tắt Mic
     private bool isMicOn = false;
+    private int _lastMicUIState = -1; // -1: uninitialized, 0: muted, 1: unmuted silent, 2: unmuted transmitting
 
     // Cảnh báo vũ khí và Hành trang (Tab)
     private VisualElement worldMapOverlay;
@@ -225,6 +226,7 @@ public class PlayerHUDController : MonoBehaviour
         // Khi UI Toolkit rebuild lại visual tree sau lần SetActive(true) tiếp theo,
         // tất cả các tham chiếu element cũ sẽ là dead reference -> phải re-query lại.
         isUIInitialized = false;
+        _lastMicUIState = -1;
 
         // Hủy đăng ký event để tránh memory leak
         if (LocalPlayerTarget != null)
@@ -338,6 +340,13 @@ public class PlayerHUDController : MonoBehaviour
 
         // Tìm UI Mic Icon trực tiếp
         micIcon = root.Q<VisualElement>("mic-icon");
+        if (micIcon != null)
+        {
+            micIcon.RegisterCallback<PointerDownEvent>(evt =>
+            {
+                ToggleMic();
+            });
+        }
         rawPlayerImage = root.Q<VisualElement>("raw-player-image");
 
         weaponSlot1 = root.Q<VisualElement>("weapon-slot-1");
@@ -815,13 +824,6 @@ public class PlayerHUDController : MonoBehaviour
 
         if (Keyboard.current != null)
         {
-            // Khi ấn T sẽ đổi trạng thái (Sử dụng Input System mới)
-            if (Keyboard.current.tKey.wasPressedThisFrame)
-            {
-                Debug.Log("Đã ấn T để chuyển đổi trạng thái Mic");
-                ToggleMic();
-            }
-
             // Chuyển vũ khí 1 và 2
             if (Keyboard.current.digit1Key.wasPressedThisFrame)
             {
@@ -1108,6 +1110,7 @@ public class PlayerHUDController : MonoBehaviour
             }
         }
 
+        UpdateMicUI();
         UpdateHotkeysHint();
 
         // Cập nhật trạng thái hiển thị ổ khóa kỹ năng theo cấp độ người chơi
@@ -1178,7 +1181,15 @@ public class PlayerHUDController : MonoBehaviour
 
     public void ToggleMic()
     {
-        isMicOn = !isMicOn;
+        if (MicManager.Instance != null)
+        {
+            MicManager.Instance.IsMuted = !MicManager.Instance.IsMuted;
+            isMicOn = !MicManager.Instance.IsMuted;
+        }
+        else
+        {
+            isMicOn = !isMicOn;
+        }
         Debug.Log("Trạng thái Mic hiện tại: " + (isMicOn ? "Mở" : "Tắt"));
         UpdateMicUI();
     }
@@ -1245,15 +1256,33 @@ public class PlayerHUDController : MonoBehaviour
             return;
         }
 
-        if (isMicOn)
-        {
-            micIcon.RemoveFromClassList("mic-off");
-            micIcon.AddToClassList("mic-on");
-        }
-        else
+        bool isMuted = MicManager.Instance != null ? MicManager.Instance.IsMuted : !isMicOn;
+        bool isTransmitting = MicManager.Instance != null && MicManager.Instance.IsLocalTransmitting;
+
+        int targetState = isMuted ? 0 : (isTransmitting ? 2 : 1);
+        if (targetState == _lastMicUIState) return;
+        _lastMicUIState = targetState;
+
+        if (targetState == 0)
         {
             micIcon.RemoveFromClassList("mic-on");
             micIcon.AddToClassList("mic-off");
+            micIcon.style.opacity = 0.4f;
+            micIcon.style.scale = new StyleScale(new Scale(new Vector3(1f, 1f, 1f)));
+        }
+        else if (targetState == 2)
+        {
+            micIcon.RemoveFromClassList("mic-off");
+            micIcon.AddToClassList("mic-on");
+            micIcon.style.opacity = 1f;
+            micIcon.style.scale = new StyleScale(new Scale(new Vector3(1.25f, 1.25f, 1f)));
+        }
+        else
+        {
+            micIcon.RemoveFromClassList("mic-off");
+            micIcon.AddToClassList("mic-on");
+            micIcon.style.opacity = 0.8f;
+            micIcon.style.scale = new StyleScale(new Scale(new Vector3(1f, 1f, 1f)));
         }
     }
 
