@@ -21,8 +21,9 @@ Material:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: M_slashB_Alp
-  m_Shader: {fileID: -6465566751694194690, guid: c3b6dd7519323cc4bb41c71f8be5bfa0,
-    type: 3}
+  m_Shader: {fileID: -6465566751694194690, guid: c3b6dd7519323cc4bb41c71f8be5bfa0, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
   m_ValidKeywords:
   - _ALPHA_USEDISSOLVE
   - _BLENDBETWEENMASK_MULTIPLY
@@ -40,6 +41,8 @@ Material:
   disabledShaderPasses:
   - SHADOWCASTER
   - DepthOnly
+  - MOTIONVECTORS
+  m_LockedProperties: 
   m_SavedProperties:
     serializedVersion: 3
     m_TexEnvs:
@@ -136,6 +139,7 @@ Material:
     - _ALPHA: 1
     - _AlphaClip: 0
     - _AlphaClipVal: 0
+    - _AlphaToMask: 0
     - _BLENDBETWEENMASK: 0
     - _BUILTIN_AlphaClip: 1
     - _BUILTIN_Blend: 2
@@ -162,6 +166,7 @@ Material:
     - _Dissolve_Falloff: 0.1
     - _Dissolve_Tex_Oneminus: 0
     - _DstBlend: 10
+    - _DstBlendAlpha: 0
     - _EdgeWidth: 0
     - _Emission: 1
     - _EnvironmentReflections: 1
@@ -189,6 +194,7 @@ Material:
     - _SoftParticlePow: 1
     - _SpecularHighlights: 1
     - _SrcBlend: 5
+    - _SrcBlendAlpha: 1
     - _StylizeAmount: 0.413
     - _StylizedValue: 0.12
     - _SubmaskRot: 0
@@ -222,6 +228,7 @@ Material:
     - _SubmaskOffset: {r: 0, g: 0, b: 0, a: 0}
     - _SubmaskScroll: {r: 0.66, g: 0, b: 0, a: 0}
   m_BuildTextureStacks: []
+  m_AllowLocking: 1
 --- !u!114 &1740787049716454303
 MonoBehaviour:
   m_ObjectHideFlags: 11
@@ -234,4 +241,4 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d0353a89b1f911e48b9e16bdc9f2e058, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  version: 5
+  version: 10
