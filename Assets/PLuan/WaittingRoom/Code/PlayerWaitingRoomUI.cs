@@ -77,9 +77,9 @@ public class PlayerWaitingRoomUI : NetworkBehaviour
         {
             GameObject micObj = new GameObject("MicIcon");
             micObj.transform.SetParent(_nameTag.transform);
-            micObj.transform.localPosition = new Vector3(0f, 0.65f, 0f);
+            micObj.transform.localPosition = new Vector3(0.5f, 0f, 0f);
             micObj.transform.localRotation = Quaternion.identity;
-            micObj.transform.localScale = new Vector3(0.5f, 0.5f, 1f);
+            micObj.transform.localScale = new Vector3(0.07f, 0.07f, 1f);
             _micSpriteRenderer = micObj.AddComponent<SpriteRenderer>();
         }
         else if (micIconTransform != null)
@@ -131,24 +131,51 @@ public class PlayerWaitingRoomUI : NetworkBehaviour
         // Cập nhật Sprite của mic trên billboard 3D
         if (_micSpriteRenderer != null)
         {
+            if (_nameTag != null)
+            {
+                _nameTag.ForceMeshUpdate();
+                var textInfo = _nameTag.textInfo;
+                float firstLineHalfWidth = 0.5f;
+                float lineY = 0f;
+                if (textInfo != null && textInfo.lineCount > 0)
+                {
+                    firstLineHalfWidth = textInfo.lineInfo[0].length * 0.5f;
+                    lineY = (textInfo.lineInfo[0].ascender + textInfo.lineInfo[0].descender) * 0.5f;
+                }
+                // Đặt vị trí lệch bên phải của dòng tên đầu tiên (tăng khoảng cách margin-left lên 0.22f)
+                _micSpriteRenderer.transform.localPosition = new Vector3(firstLineHalfWidth + 0.22f, lineY, 0f);
+            }
+
+            // Tính toán localScale động để đảm bảo icon mic có cùng kích thước thế giới (world scale) trên mọi nhân vật
+            float baseScale = (currentCharId == 0) ? 0.045f : 0.07f; // Cho riêng LEO (ID 0) icon nhỏ hơn một tí
+            float targetWorldScale = baseScale;
+            if (isSpeakingNow)
+            {
+                targetWorldScale = baseScale + Mathf.PingPong(Time.time * 0.5f, baseScale * 0.2f);
+            }
+
+            float parentScaleX = _nameTag != null ? _nameTag.transform.lossyScale.x : 1f;
+            float parentScaleY = _nameTag != null ? _nameTag.transform.lossyScale.y : 1f;
+            float localScaleX = parentScaleX > 0 ? (targetWorldScale / parentScaleX) : targetWorldScale;
+            float localScaleY = parentScaleY > 0 ? (targetWorldScale / parentScaleY) : targetWorldScale;
+
             if (isSpeakingNow)
             {
                 _micSpriteRenderer.sprite = _micOnSprite;
                 _micSpriteRenderer.color = new Color(0f, 1f, 0f, 1f); // Màu xanh lá khi nói
-                float pulse = 0.5f + Mathf.PingPong(Time.time * 4f, 0.15f);
-                _micSpriteRenderer.transform.localScale = new Vector3(pulse, pulse, 1f);
+                _micSpriteRenderer.transform.localScale = new Vector3(localScaleX, localScaleY, 1f);
             }
             else if (isMicOn)
             {
                 _micSpriteRenderer.sprite = _micOnSprite;
                 _micSpriteRenderer.color = new Color(1f, 1f, 1f, 0.8f); // Màu bình thường khi mở mic
-                _micSpriteRenderer.transform.localScale = new Vector3(0.45f, 0.45f, 1f);
+                _micSpriteRenderer.transform.localScale = new Vector3(localScaleX, localScaleY, 1f);
             }
             else
             {
                 _micSpriteRenderer.sprite = _micOffSprite;
                 _micSpriteRenderer.color = new Color(1f, 1f, 1f, 0.4f); // Làm mờ khi tắt mic
-                _micSpriteRenderer.transform.localScale = new Vector3(0.45f, 0.45f, 1f);
+                _micSpriteRenderer.transform.localScale = new Vector3(localScaleX, localScaleY, 1f);
             }
         }
 
