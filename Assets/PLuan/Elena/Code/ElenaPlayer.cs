@@ -1438,7 +1438,7 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
                 if (!isCarrying)
                 {
                     bool isSwitching = IsStatePlayingOnLayer1(drawWeaponTrigger) || IsStatePlayingOnLayer1(sheathWeaponTrigger);
-                    if (!isSwitching)
+                    if (!isSwitching && !IsPlayingAttackState(out _, out _))
                     {
                         ClearAttackLayer();
                     }
@@ -1706,11 +1706,7 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
             {
                 if (IsAiming)
                 {
-                    if (bowShootCooldownTimer <= 0f)
-                    {
-                        bowShootCooldownTimer = IsRSkillActive ? rSkillShootCooldown : bowShootCooldown;
-                        PerformBowShoot(false);
-                    }
+                    PerformBowShoot(false);
                 }
                 else
                 {
@@ -1853,11 +1849,7 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
             {
                 if (IsAiming)
                 {
-                    if (bowShootCooldownTimer <= 0f)
-                    {
-                        bowShootCooldownTimer = IsRSkillActive ? rSkillShootCooldown : bowShootCooldown;
-                        PerformBowShoot(true);
-                    }
+                    PerformBowShoot(true);
                 }
                 else
                 {
@@ -3231,6 +3223,8 @@ private void StartRollServerRpc(Vector3 direction)
         if (carrier != null && carrier.isCarrying) return;
 
         if (bowShootCooldownTimer > 0) return;
+
+        bowShootCooldownTimer = IsRSkillActive ? rSkillShootCooldown : bowShootCooldown;
         
         if (!networkMode)
         {

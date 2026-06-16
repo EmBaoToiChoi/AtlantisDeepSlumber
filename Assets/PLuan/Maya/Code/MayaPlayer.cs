@@ -1915,7 +1915,7 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
                 if (!isCarrying)
                 {
                     bool isSwitching = IsStatePlayingOnLayer1(drawWeaponTrigger) || IsStatePlayingOnLayer1(sheathWeaponTrigger);
-                    if (!isSwitching)
+                    if (!isSwitching && !IsPlayingAttackState(out _, out _))
                     {
                         ClearAttackLayer();
                     }

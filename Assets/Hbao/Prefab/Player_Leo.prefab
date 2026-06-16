@@ -1029,6 +1029,10 @@ MonoBehaviour:
       NameHash: 1791711171
       Synchronize: 1
       ParameterType: 4
+    - name: IsPushing
+      NameHash: -510442038
+      Synchronize: 1
+      ParameterType: 4
   AnimatorParametersExpanded: 0
 --- !u!114 &7638701699718663926
 MonoBehaviour:
@@ -1170,6 +1174,30 @@ MonoBehaviour:
   aimCameraSmoothSpeed: 10
   aimMinPitch: -80
   aimMaxPitch: 80
+  maxSpineTwistAngle: 80
+  punch1YOffset: 20
+  punch1XOffset: 20
+  punch2YOffset: -40
+  punch2XOffset: 0
+  punch3YOffset: 0
+  punch3XOffset: 20
+  slash1YOffset: 80
+  slash1XOffset: 0
+  slash2YOffset: -60
+  slash2XOffset: 0
+  slash3YOffset: -60
+  slash3XOffset: 0
+  spineSmoothSpeed: 15
+  netAimAngle:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 0
+  netAimPitch:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 45
   anim: {fileID: 6582539960615988373}
   rollSpeed: 8
   rollDuration: 1
