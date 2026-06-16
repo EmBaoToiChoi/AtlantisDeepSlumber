@@ -381,6 +381,10 @@ public class MicManager : MonoBehaviour
                 var playback = netObj.GetComponent<PlayerVoicePlayback>();
                 if (playback != null)
                 {
+                    // Đảm bảo client ID và isLocalPlayer luôn được gán đúng
+                    playback.ownerClientId = voiceSenderId;
+                    playback.isLocalPlayer = (NetworkManager.Singleton != null && voiceSenderId == NetworkManager.Singleton.LocalClientId);
+                    
                     playback.QueueSamples(samples);
                 }
                 break;
@@ -405,9 +409,15 @@ public class MicManager : MonoBehaviour
                         if (playback == null)
                         {
                             playback = netObj.gameObject.AddComponent<PlayerVoicePlayback>();
+                            Debug.Log($"[MicManager] Auto-attached PlayerVoicePlayback to ClientId={netObj.OwnerClientId}, isLocal={netObj.IsOwner}");
+                        }
+
+                        // Đảm bảo ownerClientId và isLocalPlayer luôn được cập nhật chính xác (ngay cả khi script đã được gán sẵn từ trước trong Editor)
+                        if (playback.ownerClientId != netObj.OwnerClientId || playback.isLocalPlayer != netObj.IsOwner)
+                        {
                             playback.ownerClientId = netObj.OwnerClientId;
                             playback.isLocalPlayer = netObj.IsOwner;
-                            Debug.Log($"[MicManager] Auto-attached PlayerVoicePlayback to ClientId={netObj.OwnerClientId}, isLocal={netObj.IsOwner}");
+                            Debug.Log($"[MicManager] Configured PlayerVoicePlayback for ClientId={netObj.OwnerClientId}, isLocal={netObj.IsOwner}");
                         }
                     }
                 }
