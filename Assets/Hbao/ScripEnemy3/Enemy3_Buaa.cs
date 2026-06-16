@@ -12,7 +12,7 @@ public class Enemy3_Buaa : NetworkBehaviour
     public enum EnemyState { Patrol, Chase, Stagger, Attack, Dead }
 
     [Header("Health")]
-    public float maxHealth = 150f;
+    public float maxHealth = 500f;
     public NetworkVariable<float> currentHealth = new NetworkVariable<float>(150f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     public NetworkVariable<EnemyState> currentState = new NetworkVariable<EnemyState>(EnemyState.Patrol, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 

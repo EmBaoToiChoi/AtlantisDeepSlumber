@@ -13,7 +13,7 @@ public class Enemy1_DapBua : NetworkBehaviour
 
     // ─── Health ────────────────────────────────────────────────
     [Header("Health")]
-    public float maxHealth = 100f;
+    public float maxHealth = 300f;
     public NetworkVariable<float> currentHealth = new NetworkVariable<float>(
         100f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
