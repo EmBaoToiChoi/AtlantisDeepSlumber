@@ -287,6 +287,65 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
     private float currentShoulderOffset = 0f;
     public bool IsAiming => false;
 
+    [Header("Spine Aim Settings")]
+    public float maxSpineTwistAngle = 80f;
+    
+    [Header("Punch 1 Fine Tuning")]
+    public float punch1YOffset = 0f;
+    public float punch1XOffset = 0f;
+
+    [Header("Punch 2 Fine Tuning")]
+    public float punch2YOffset = 0f;
+    public float punch2XOffset = 0f;
+
+    [Header("Punch 3 Fine Tuning")]
+    public float punch3YOffset = 0f;
+    public float punch3XOffset = 0f;
+
+    [Header("Slash 1 Fine Tuning")]
+    public float slash1YOffset = 0f;
+    public float slash1XOffset = 0f;
+
+    [Header("Slash 2 Fine Tuning")]
+    public float slash2YOffset = 0f;
+    public float slash2XOffset = 0f;
+
+    [Header("Slash 3 Fine Tuning")]
+    public float slash3YOffset = 0f;
+    public float slash3XOffset = 0f;
+
+    private float smoothedYOffset = 0f;
+    private float smoothedXOffset = 0f;
+    public float spineSmoothSpeed = 15f;
+    private Transform spineBone;
+    private float localAimAngle = 0f;
+    private Vector3 lastPositionForSpine;
+
+    public NetworkVariable<float> netAimAngle = new NetworkVariable<float>(
+        0f,
+        NetworkVariableReadPermission.Everyone,
+        NetworkVariableWritePermission.Owner
+    );
+
+    public NetworkVariable<float> netAimPitch = new NetworkVariable<float>(
+        45f,
+        NetworkVariableReadPermission.Everyone,
+        NetworkVariableWritePermission.Owner
+    );
+
+    private Transform GetSpineBone()
+    {
+        if (spineBone == null && anim != null)
+        {
+            spineBone = anim.GetBoneTransform(HumanBodyBones.Spine);
+            if (spineBone == null)
+            {
+                spineBone = anim.GetBoneTransform(HumanBodyBones.Chest);
+            }
+        }
+        return spineBone;
+    }
+
     [Header("Animation Settings")]
     public Animator anim;
     protected string currentAnimState;
@@ -595,6 +654,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         cameraDistance = cameraOffset.magnitude;
         defaultCameraDistance = cameraDistance;
         defaultPivotHeight = cameraPivotHeight;
+        lastPositionForSpine = transform.position;
 
         if (!IsNetworkActive)
         {
@@ -1228,6 +1288,49 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
                 isCursorLocked = !isCursorLocked;
                 LockCursor(isCursorLocked);
             }
+
+            // Tính toán và đồng bộ góc xoay cột sống (Spine aim angle)
+            bool isCurrentlyAttacking = IsPlayingAttackState(out _, out _) || 
+                                        (IsAttackAnimationName(lastTriggeredAnimName) && Time.time - lastActionTriggerTime < 0.35f);
+            
+            if (isCurrentlyAttacking && !isRootedAttack && targetCamera != null)
+            {
+                Vector3 camForward = targetCamera.transform.forward;
+                camForward.y = 0f;
+                camForward.Normalize();
+                if (camForward != Vector3.zero)
+                {
+                    float angleDiff = Vector3.SignedAngle(transform.forward, camForward, Vector3.up);
+                    angleDiff = Mathf.Clamp(angleDiff, -maxSpineTwistAngle, maxSpineTwistAngle);
+                    
+                    if (isStandaloneMode)
+                    {
+                        localAimAngle = angleDiff;
+                    }
+                    else
+                    {
+                        netAimAngle.Value = angleDiff;
+                    }
+                }
+            }
+            else
+            {
+                if (isStandaloneMode)
+                {
+                    localAimAngle = Mathf.Lerp(localAimAngle, 0f, Time.deltaTime * 10f);
+                }
+                else
+                {
+                    if (netAimAngle.Value != 0f)
+                    {
+                        netAimAngle.Value = Mathf.Lerp(netAimAngle.Value, 0f, Time.deltaTime * 10f);
+                    }
+                    if (netAimPitch.Value != 45f)
+                    {
+                        netAimPitch.Value = Mathf.Lerp(netAimPitch.Value, 45f, Time.deltaTime * 10f);
+                    }
+                }
+            }
         }
 
         if (isRollingStandalone || (IsSpawned && isRollingNet.Value))
@@ -1443,7 +1546,9 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         bool isAttacking = IsPlayingAttackState(out _, out _);
 
         // Xoay nhân vật: Luôn xoay theo hướng Camera để hỗ trợ đi ngang/lùi (strafe) mượt mà giống Elena
-        if (targetCamera != null && !IsPlayingActionAnimation())
+        // Cho phép xoay cả khi đang tấn công để nhân vật luôn hướng theo camera (chỉ thấy lưng, tránh vặn xương)
+        bool isAttackingState = isAttacking || isExecutingAttack;
+        if (targetCamera != null && (!IsPlayingActionAnimation() || isAttackingState))
         {
             Vector3 camForward = targetCamera.transform.forward;
             camForward.y = 0f;
@@ -1639,7 +1744,9 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         bool isAttacking = IsPlayingAttackState(out _, out _);
 
         // Xoay nhân vật: Luôn xoay theo hướng Camera để hỗ trợ đi ngang/lùi (strafe) mượt mà giống Elena
-        if (targetCamera != null && !IsPlayingActionAnimation())
+        // Cho phép xoay cả khi đang tấn công để nhân vật luôn hướng theo camera (chỉ thấy lưng, tránh vặn xương)
+        bool isAttackingState = isAttacking || isExecutingAttack;
+        if (targetCamera != null && (!IsPlayingActionAnimation() || isAttackingState))
         {
             Vector3 camForward = targetCamera.transform.forward;
             camForward.y = 0f;
@@ -1782,6 +1889,78 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     void LateUpdate()
     {
+        // Spine bone twist and combo offset
+        if (anim != null)
+        {
+            bool isCurrentlyAttacking = IsPlayingAttackState(out _, out _) || 
+                                         (IsAttackAnimationName(lastTriggeredAnimName) && Time.time - lastActionTriggerTime < 0.35f);
+            
+            float baseAimAngle = isStandaloneMode ? localAimAngle : netAimAngle.Value;
+            
+            float targetYOffset = 0f;
+            float targetXOffset = 0f;
+
+            if (isCurrentlyAttacking && !isRootedAttack)
+            {
+                int weapon = GetActiveWeaponIndex();
+                if (weapon == 1) // Unarmed / Punch
+                {
+                    if (comboStep == 1)
+                    {
+                        targetYOffset = punch1YOffset;
+                        targetXOffset = punch1XOffset;
+                    }
+                    else if (comboStep == 2)
+                    {
+                        targetYOffset = punch2YOffset;
+                        targetXOffset = punch2XOffset;
+                    }
+                    else if (comboStep == 3)
+                    {
+                        targetYOffset = punch3YOffset;
+                        targetXOffset = punch3XOffset;
+                    }
+                }
+                else if (weapon == 2) // Weapon / Slash
+                {
+                    if (comboStep == 1)
+                    {
+                        targetYOffset = slash1YOffset;
+                        targetXOffset = slash1XOffset;
+                    }
+                    else if (comboStep == 2)
+                    {
+                        targetYOffset = slash2YOffset;
+                        targetXOffset = slash2XOffset;
+                    }
+                    else if (comboStep == 3)
+                    {
+                        targetYOffset = slash3YOffset;
+                        targetXOffset = slash3XOffset;
+                    }
+                }
+            }
+
+            smoothedYOffset = Mathf.Lerp(smoothedYOffset, targetYOffset, Time.deltaTime * spineSmoothSpeed);
+            smoothedXOffset = Mathf.Lerp(smoothedXOffset, targetXOffset, Time.deltaTime * spineSmoothSpeed);
+
+            if ((isCurrentlyAttacking && !isRootedAttack) || Mathf.Abs(smoothedYOffset) > 0.05f || Mathf.Abs(smoothedXOffset) > 0.05f)
+            {
+                Transform spine = GetSpineBone();
+                if (spine != null)
+                {
+                    float finalYAngle = baseAimAngle + smoothedYOffset;
+                    
+                    spine.rotation = Quaternion.AngleAxis(finalYAngle, Vector3.up) * spine.rotation;
+
+                    if (Mathf.Abs(smoothedXOffset) > 0.01f)
+                    {
+                        spine.rotation = Quaternion.AngleAxis(smoothedXOffset, transform.right) * spine.rotation;
+                    }
+                }
+            }
+        }
+
         bool shouldFollow = isStandaloneMode || (IsSpawned && IsOwner);
         if (!shouldFollow || !enableCameraFollow) return;
 
