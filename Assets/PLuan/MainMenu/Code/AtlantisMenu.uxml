@@ -168,6 +168,41 @@
                         </ui:VisualElement>
                         <ui:Slider name="slider-sfx" low-value="0" high-value="100" value="90" class="custom-slider" />
                     </ui:VisualElement>
+                    <ui:VisualElement class="form-group">
+                        <ui:Label name="lbl-opt-mic-device" text="MICROPHONE DEVICE" class="form-label" />
+                        <ui:VisualElement name="opt-mic-device" class="custom-dropdown">
+                            <ui:Label name="opt-mic-device-value" text="Default" class="custom-dropdown-value" />
+                            <ui:Label text="▼" class="custom-dropdown-arrow" />
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                    <ui:VisualElement class="form-group">
+                        <ui:Label name="lbl-opt-output-device" text="OUTPUT DEVICE" class="form-label" />
+                        <ui:VisualElement name="opt-output-device" class="custom-dropdown">
+                            <ui:Label name="opt-output-device-value" text="System Default" class="custom-dropdown-value" />
+                            <ui:Label text="▼" class="custom-dropdown-arrow" />
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                    <ui:VisualElement class="form-group">
+                        <ui:Label name="lbl-opt-mic-mode" text="TRANSMISSION MODE" class="form-label" />
+                        <ui:VisualElement name="opt-mic-mode" class="custom-dropdown">
+                            <ui:Label name="opt-mic-mode-value" text="Push To Talk" class="custom-dropdown-value" />
+                            <ui:Label text="▼" class="custom-dropdown-arrow" />
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                    <ui:VisualElement class="form-group">
+                        <ui:VisualElement class="slider-header">
+                            <ui:Label name="lbl-mic-input-vol" text="MIC INPUT VOLUME" class="form-label" />
+                            <ui:Label name="val-mic-input" text="100%" class="slider-val" />
+                        </ui:VisualElement>
+                        <ui:Slider name="slider-mic-input" low-value="0" high-value="100" value="100" class="custom-slider" />
+                    </ui:VisualElement>
+                    <ui:VisualElement class="form-group">
+                        <ui:VisualElement class="slider-header">
+                            <ui:Label name="lbl-voice-playback-vol" text="PLAYER VOICE VOLUME" class="form-label" />
+                            <ui:Label name="val-voice-playback" text="100%" class="slider-val" />
+                        </ui:VisualElement>
+                        <ui:Slider name="slider-voice-playback" low-value="0" high-value="100" value="100" class="custom-slider" />
+                    </ui:VisualElement>
                 </ui:VisualElement>
                 <ui:VisualElement name="tab-graphics" class="tab-content hidden-element">
                     <ui:VisualElement class="form-group">
@@ -199,6 +234,13 @@
                     </ui:VisualElement>
                     <ui:VisualElement class="checkbox-group-wrapper" style="margin-top: 20px;">
                         <ui:Toggle name="opt-invert-y" label="INVERT Y-AXIS" value="false" class="checkbox-label" />
+                    </ui:VisualElement>
+                    <ui:VisualElement class="form-group" style="margin-top: 15px;">
+                        <ui:Label name="lbl-ptt-key" text="PUSH TO TALK KEY" class="form-label" />
+                        <ui:VisualElement name="opt-ptt-key" class="custom-dropdown">
+                            <ui:Label name="opt-ptt-key-value" text="V" class="custom-dropdown-value" />
+                            <ui:Label text="▼" class="custom-dropdown-arrow" />
+                        </ui:VisualElement>
                     </ui:VisualElement>
                 </ui:VisualElement>
             </ui:ScrollView>
