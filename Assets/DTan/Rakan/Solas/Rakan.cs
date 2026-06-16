@@ -31,5 +31,9 @@ public class Rakan : MonoBehaviour
     {
         animator.SetTrigger("ID");
     }
+    public void SetTriggerThank()
+    {
+        animator.SetTrigger("Thank");
+    }
 
 }
