@@ -265,7 +265,7 @@ public class MicManager : MonoBehaviour
             "VoiceChatMsg",
             NetworkManager.ServerClientId,
             writer,
-            NetworkDelivery.Unreliable
+            NetworkDelivery.ReliableFragmentedSequenced
         );
         writer.Dispose();
     }
@@ -354,7 +354,7 @@ public class MicManager : MonoBehaviour
                 "VoiceChatMsg",
                 targetClientId,
                 writer,
-                NetworkDelivery.Unreliable
+                NetworkDelivery.ReliableFragmentedSequenced
             );
         }
         writer.Dispose();
