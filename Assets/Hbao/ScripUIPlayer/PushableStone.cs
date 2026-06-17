@@ -85,6 +85,10 @@ public class PushableStone : NetworkBehaviour
         if (IsServer)
         {
             netPosition.Value = transform.position;
+            slot0PlayerNetId.Value = 0;
+            slot1PlayerNetId.Value = 0;
+            slot2PlayerNetId.Value = 0;
+            slot3PlayerNetId.Value = 0;
             if (NetworkManager.Singleton != null)
             {
                 NetworkManager.Singleton.OnClientDisconnectCallback += OnClientDisconnect;

@@ -172,17 +172,17 @@ MonoBehaviour:
     UpdateTraits:
       MinSecondsBetweenUpdates: 0
       MaxSecondsBetweenUpdates: 0
-    m_InternalValue: 1
+    m_InternalValue: 0
   slot2PlayerNetId:
     UpdateTraits:
       MinSecondsBetweenUpdates: 0
       MaxSecondsBetweenUpdates: 0
-    m_InternalValue: 2
+    m_InternalValue: 0
   slot3PlayerNetId:
     UpdateTraits:
       MinSecondsBetweenUpdates: 0
       MaxSecondsBetweenUpdates: 0
-    m_InternalValue: 3
+    m_InternalValue: 0
 --- !u!54 &150017616563145978
 Rigidbody:
   m_ObjectHideFlags: 0
