@@ -10,7 +10,7 @@ public class BoxRoiDaTrigger : NetworkBehaviour
     [Tooltip("Object Đá Chặn Cửa Chưa Rơi (sẽ bị tắt đi)")]
     public GameObject daChanCuaChuaRoi;
 
-    private bool IsNetworkActive => NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
+    private bool IsNetworkActive => NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening && IsSpawned;
 
     private void OnTriggerEnter(Collider other)
     {
