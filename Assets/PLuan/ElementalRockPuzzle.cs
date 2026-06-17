@@ -65,7 +65,7 @@ public class ElementalRockPuzzle : NetworkBehaviour
     private GameObject[] iconObjects;
     private SpriteRenderer[] iconRenderers;
 
-    private bool IsNetworkActive => NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
+    private bool IsNetworkActive => NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening && IsSpawned;
 
     private void Start()
     {
