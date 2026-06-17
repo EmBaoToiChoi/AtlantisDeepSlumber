@@ -63,9 +63,13 @@ public class CrystalCore : NetworkBehaviour
                 rb.linearVelocity = Vector3.zero;
                 rb.angularVelocity = Vector3.zero;
             }
+
+            AttachToCarrier(newVal);
         }
         else
         {
+            DetachFromCarrier();
+
             // Bật lại NetworkTransform và Collider khi được thả ra
             if (netTransform != null) netTransform.enabled = true;
             if (col != null) 
@@ -80,6 +84,55 @@ public class CrystalCore : NetworkBehaviour
         }
     }
 
+    private void AttachToCarrier(ulong playerId)
+    {
+        GameObject player = null;
+        if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening)
+        {
+            if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(playerId, out var playerNetObj))
+            {
+                player = playerNetObj.gameObject;
+            }
+        }
+        else
+        {
+            // Offline test mode: tìm player gần nhất đang cầm ngọc
+            var players = FindObjectsByType<PlayerInteraction>(FindObjectsSortMode.None);
+            foreach (var p in players)
+            {
+                if (p.isCarryingCore.Value)
+                {
+                    player = p.gameObject;
+                    break;
+                }
+            }
+        }
+
+        if (player != null)
+        {
+            var pInt = player.GetComponent<PlayerInteraction>();
+            Transform targetParent = (pInt != null && pInt.holdPoint != null) ? pInt.holdPoint : player.transform;
+            
+            transform.SetParent(targetParent, false);
+
+            if (targetParent != player.transform)
+            {
+                transform.localPosition = Vector3.zero;
+                transform.localRotation = Quaternion.identity;
+            }
+            else
+            {
+                transform.localPosition = new Vector3(0f, 0.95f, 0.42f);
+                transform.localRotation = Quaternion.Euler(0f, 90f, 0f);
+            }
+        }
+    }
+
+    private void DetachFromCarrier()
+    {
+        transform.SetParent(null, true);
+    }
+
     void FixedUpdate() 
     {
         bool isStandalone = NetworkManager.Singleton == null || !NetworkManager.Singleton.IsListening;
@@ -88,10 +141,24 @@ public class CrystalCore : NetworkBehaviour
         // 1. Chống lỗi tọa độ
         if (float.IsNaN(transform.position.x)) { ResetToSpawnPosition(); return; }
 
-        // 2. Nội suy kích thước
+        // 2. Nội suy kích thước và bù trừ tỷ lệ co giãn của cha
         float flySpeed = 5f; 
         Vector3 targetScale = (holderId.Value != ulong.MaxValue) ? originalScale * holdScaleMultiplier : originalScale;
-        transform.localScale = Vector3.Lerp(transform.localScale, targetScale, flySpeed * Time.fixedDeltaTime);
+        
+        if (holderId.Value != ulong.MaxValue && transform.parent != null)
+        {
+            Vector3 parentLossyScale = transform.parent.lossyScale;
+            Vector3 targetCompensated = new Vector3(
+                targetScale.x / (parentLossyScale.x != 0 ? parentLossyScale.x : 1f),
+                targetScale.y / (parentLossyScale.y != 0 ? parentLossyScale.y : 1f),
+                targetScale.z / (parentLossyScale.z != 0 ? parentLossyScale.z : 1f)
+            );
+            transform.localScale = Vector3.Lerp(transform.localScale, targetCompensated, flySpeed * Time.fixedDeltaTime);
+        }
+        else
+        {
+            transform.localScale = Vector3.Lerp(transform.localScale, targetScale, flySpeed * Time.fixedDeltaTime);
+        }
 
         // --- ĐÂY LÀ ĐOẠN SỬA MỚI ---
         // Nếu viên ngọc KHÔNG có chủ VÀ KHÔNG bị khóa/bay vào trụ
@@ -103,94 +170,19 @@ public class CrystalCore : NetworkBehaviour
                 rb.isKinematic = false;
                 rb.useGravity = true;
             }
-            return; // Chỉ trả về, không chạy logic bay vào tay nữa
+            return; 
         }
 
         // Nếu nó đang bị khóa hoặc bay vào trụ thì cũng dừng lại, không cần tính toán gì thêm
         if (isSnapped.Value || isSnapping.Value) return;
-
-        // 3. Logic bay vào tay trên Server/Standalone (Chỉ chạy khi có holderId)
-        if (holderId.Value != ulong.MaxValue)
-        {
-            GameObject player = null;
-            if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening)
-            {
-                if (NetworkManager.Singleton.ConnectedClients.TryGetValue(holderId.Value, out var client) && client.PlayerObject != null)
-                {
-                    player = client.PlayerObject.gameObject;
-                }
-            }
-            
-            if (player != null)
-            {
-                rb.isKinematic = true;
-                rb.useGravity = false;
-                
-                // Di chuyển rigidbody trên Server tới vị trí ngang tay/bụng của player (như thanh gỗ)
-                Vector3 targetPos = player.transform.TransformPoint(new Vector3(0f, 0.95f, 0.42f));
-                Quaternion targetRot = player.transform.rotation;
-                
-                rb.MovePosition(Vector3.Lerp(transform.position, targetPos, flySpeed * Time.fixedDeltaTime));
-                rb.MoveRotation(Quaternion.Lerp(transform.rotation, targetRot, flySpeed * Time.fixedDeltaTime));
-                return; 
-            }
-            
-            if (!isStandalone)
-            {
-                holderId.Value = ulong.MaxValue;
-            }
-        }
     }
 
     void LateUpdate()
     {
-        // Cập nhật tọa độ tức thì trên tất cả Client/Standalone để triệt tiêu độ trễ (Zero lag local positioning)
-        if (holderId.Value != ulong.MaxValue)
+        // Tự phục hồi parent nếu có chủ nhưng bị mất liên kết parent
+        if (holderId.Value != ulong.MaxValue && transform.parent == null)
         {
-            GameObject player = null;
-            if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening)
-            {
-                if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(holderId.Value, out var playerNetObj))
-                {
-                    player = playerNetObj.gameObject;
-                }
-            }
-            else
-            {
-                // Offline test mode: tìm player gần nhất đang cầm ngọc
-                var players = FindObjectsByType<PlayerInteraction>(FindObjectsSortMode.None);
-                foreach (var p in players)
-                {
-                    if (p.isCarryingCore.Value)
-                    {
-                        player = p.gameObject;
-                        break;
-                    }
-                }
-            }
-
-            if (player != null)
-            {
-                // Tắt NetworkTransform và Collider thủ công ở offline mode
-                var netTransform = GetComponent<Unity.Netcode.Components.NetworkTransform>();
-                var col = GetComponent<Collider>();
-                if (netTransform != null && netTransform.enabled) netTransform.enabled = false;
-                if (col != null && col.enabled) col.enabled = false;
-                if (rb != null)
-                {
-                    rb.isKinematic = true;
-                    rb.useGravity = false;
-                }
-
-                // Khớp chính xác với vị trí bưng thanh gỗ (offset từ root player)
-                transform.position = player.transform.TransformPoint(new Vector3(0f, 0.95f, 0.42f));
-                transform.rotation = player.transform.rotation;
-                
-                // Nội suy scale mượt mà trên client
-                float lerpSpeed = 10f;
-                Vector3 targetScale = originalScale * holdScaleMultiplier;
-                transform.localScale = Vector3.Lerp(transform.localScale, targetScale, lerpSpeed * Time.deltaTime);
-            }
+            AttachToCarrier(holderId.Value);
         }
     }
 
@@ -273,6 +265,7 @@ public class CrystalCore : NetworkBehaviour
         bool isStandalone = NetworkManager.Singleton == null || !NetworkManager.Singleton.IsListening;
         if (IsServer || isStandalone)
         {
+            DetachFromCarrier();
             isSnapping.Value = false;
             isSnapped.Value = true;
             var col = GetComponent<Collider>();
@@ -289,6 +282,7 @@ public class CrystalCore : NetworkBehaviour
     {
         bool isStandalone = NetworkManager.Singleton == null || !NetworkManager.Singleton.IsListening;
         if (!IsServer && !isStandalone) return;
+        DetachFromCarrier();
         isSnapping.Value = false;
         holderId.Value = ulong.MaxValue;
         isSnapped.Value = false;
