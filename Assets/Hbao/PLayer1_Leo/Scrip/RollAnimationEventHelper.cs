@@ -63,160 +63,34 @@ public class RollAnimationEventHelper : MonoBehaviour
     /// <summary>
     /// Event receiver to enable the Left hand/weapon hitbox.
     /// </summary>
-    public void EnableLeftHitbox()
-    {
-        EnsurePlayerReference();
-        if (player != null)
-        {
-            player.EnableLeftHitbox();
-        }
-    }
-
-    /// <summary>
-    /// Event receiver to disable the Left hand/weapon hitbox.
-    /// </summary>
-    public void DisableLeftHitbox()
-    {
-        EnsurePlayerReference();
-        if (player != null)
-        {
-            player.DisableLeftHitbox();
-        }
-    }
-
-    /// <summary>
-    /// Event receiver to enable the Right hand/weapon hitbox.
-    /// </summary>
-    public void EnableRightHitbox()
-    {
-        EnsurePlayerReference();
-        if (player != null)
-        {
-            player.EnableRightHitbox();
-        }
-    }
-
-    /// <summary>
-    /// Event receiver to disable the Right hand/weapon hitbox.
-    /// </summary>
-    public void DisableRightHitbox()
-    {
-        EnsurePlayerReference();
-        if (player != null)
-        {
-            player.DisableRightHitbox();
-        }
-    }
-
-    /// <summary>
-    /// Event receiver to enable BOTH left and right hitboxes (used for Punch 3 combo).
-    /// </summary>
-    public void EnableBothHitboxes()
-    {
-        EnsurePlayerReference();
-        if (player != null)
-        {
-            player.EnableBothHitboxes();
-        }
-    }
-
-    /// <summary>
-    /// Event receiver to disable BOTH left and right hitboxes (used for Punch 3 combo).
-    /// </summary>
-    public void DisableBothHitboxes()
-    {
-        EnsurePlayerReference();
-        if (player != null)
-        {
-            player.DisableBothHitboxes();
-        }
-    }
+    public void EnableLeftHitbox() {}
+    public void DisableLeftHitbox() {}
+    public void EnableRightHitbox() {}
+    public void DisableRightHitbox() {}
+    public void EnableBothHitboxes() {}
+    public void DisableBothHitboxes() {}
 
     // ------------------------------------------------------------------
     //  Punch-specific alias event functions for intuitive selection
     // ------------------------------------------------------------------
 
-    public void EnableLeftPunch()
-    {
-        EnableLeftHitbox();
-    }
-
-    public void DisableLeftPunch()
-    {
-        DisableLeftHitbox();
-    }
-
-    public void EnableRightPunch()
-    {
-        EnableRightHitbox();
-    }
-
-    public void DisableRightPunch()
-    {
-        DisableRightHitbox();
-    }
-
-    public void EnableComboPunch()
-    {
-        EnableBothHitboxes();
-    }
-
-    public void DisableComboPunch()
-    {
-        DisableBothHitboxes();
-    }
+    public void EnableLeftPunch() {}
+    public void DisableLeftPunch() {}
+    public void EnableRightPunch() {}
+    public void DisableRightPunch() {}
+    public void EnableComboPunch() {}
+    public void DisableComboPunch() {}
 
     // ------------------------------------------------------------------
     //  Slash-specific alias event functions for intuitive selection
     // ------------------------------------------------------------------
 
-    public void EnableSingleSlash()
-    {
-        EnsurePlayerReference();
-        if (player != null)
-        {
-            player.EnableRightWeaponHitbox();
-        }
-    }
+    public void EnableSingleSlash() {}
+    public void DisableSingleSlash() {}
+    public void EnableDoubleSlash() {}
+    public void DisableDoubleSlash() {}
 
-    public void DisableSingleSlash()
-    {
-        EnsurePlayerReference();
-        if (player != null)
-        {
-            player.DisableRightWeaponHitbox();
-        }
-    }
-
-    public void EnableDoubleSlash()
-    {
-        EnsurePlayerReference();
-        if (player != null)
-        {
-            player.EnableBothWeaponHitboxes();
-        }
-    }
-
-    public void DisableDoubleSlash()
-    {
-        EnsurePlayerReference();
-        if (player != null)
-        {
-            player.DisableBothWeaponHitboxes();
-        }
-    }
-
-    /// <summary>
-    /// Event receiver to end Root Motion after a slash finishes.
-    /// </summary>
-    public void OnSlashEnd()
-    {
-        EnsurePlayerReference();
-        if (player != null)
-        {
-            player.OnSlashEnd();
-        }
-    }
+    public void OnSlashEnd() {}
 
     /// <summary>
     /// Event receiver to unlock player movement after a punch attack finishes.
@@ -292,15 +166,7 @@ public class RollAnimationEventHelper : MonoBehaviour
     /// Gọi ở frame CUỐI animation Punch1/Punch2/Punch3.
     /// Tắt tất cả hitbox tay và signal kết thúc nhịp đấm.
     /// </summary>
-    public void OnPunchEnd()
-    {
-        EnsurePlayerReference();
-        if (player != null)
-        {
-            player.OnPunchEnd();
-            Debug.Log("[RollAnimationEventHelper] OnPunchEnd forwarded.");
-        }
-    }
+    public void OnPunchEnd() {}
 
     // ------------------------------------------------------------------
     //  Slash End Events - Gọi ở FRAME CUỐI của animation chém
@@ -320,61 +186,19 @@ public class RollAnimationEventHelper : MonoBehaviour
     /// Gọi ở frame CUỐI của bất kỳ animation tấn công nào.
     /// Tắt TẤT CẢ hitbox (tay + kiếm).
     /// </summary>
-    public void OnAttackEnd()
-    {
-        EnsurePlayerReference();
-        if (player != null)
-        {
-            player.OnAttackEnd();
-            Debug.Log("[RollAnimationEventHelper] OnAttackEnd forwarded.");
-        }
-    }
+    public void OnAttackEnd() {}
 
     // ------------------------------------------------------------------
     //  Weapon Hitbox Aliases (cả 2 kiếm cùng lúc)
     // ------------------------------------------------------------------
 
     /// <summary>Bật hitbox CẢ 2 kiếm - dùng cho Slash bình thường.</summary>
-    public void EnableBothWeaponHitboxes()
-    {
-        EnsurePlayerReference();
-        if (player != null) player.EnableBothWeaponHitboxes();
-    }
-
-    /// <summary>Tắt hitbox CẢ 2 kiếm.</summary>
-    public void DisableBothWeaponHitboxes()
-    {
-        EnsurePlayerReference();
-        if (player != null) player.DisableBothWeaponHitboxes();
-    }
-
-    /// <summary>Bật hitbox kiếm trái - dùng khi chỉ chém bằng tay trái.</summary>
-    public void EnableLeftWeaponHitbox()
-    {
-        EnsurePlayerReference();
-        if (player != null) player.EnableLeftWeaponHitbox();
-    }
-
-    /// <summary>Tắt hitbox kiếm trái.</summary>
-    public void DisableLeftWeaponHitbox()
-    {
-        EnsurePlayerReference();
-        if (player != null) player.DisableLeftWeaponHitbox();
-    }
-
-    /// <summary>Bật hitbox kiếm phải - dùng khi chỉ chém bằng tay phải.</summary>
-    public void EnableRightWeaponHitbox()
-    {
-        EnsurePlayerReference();
-        if (player != null) player.EnableRightWeaponHitbox();
-    }
-
-    /// <summary>Tắt hitbox kiếm phải.</summary>
-    public void DisableRightWeaponHitbox()
-    {
-        EnsurePlayerReference();
-        if (player != null) player.DisableRightWeaponHitbox();
-    }
+    public void EnableBothWeaponHitboxes() {}
+    public void DisableBothWeaponHitboxes() {}
+    public void EnableLeftWeaponHitbox() {}
+    public void DisableLeftWeaponHitbox() {}
+    public void EnableRightWeaponHitbox() {}
+    public void DisableRightWeaponHitbox() {}
 
     // --- VFX Event Forwarders ---
     public void PlayLeftSlashVFX()

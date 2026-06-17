@@ -37732,23 +37732,12 @@ AnimationClip:
   m_HasMotionFloatCurves: 0
   m_Events:
   - time: 0.46666667
-    functionName: EnableLeftWeaponHitbox
-    data: 
-    objectReferenceParameter: {fileID: 0}
-    floatParameter: 0
-    intParameter: 0
-    messageOptions: 0
-  - time: 0.46666667
     functionName: PlayLeftSlashVFX
     data: 
     objectReferenceParameter: {fileID: 0}
     floatParameter: 0
     intParameter: 0
     messageOptions: 0
-  - time: 0.6
-    functionName: DisableLeftWeaponHitbox
-    data: 
-    objectReferenceParameter: {fileID: 0}
-    floatParameter: 0
-    intParameter: 0
-    messageOptions: 0
+  m_EulerEditorCurves: []
+  m_HasGenericRootTransform: 0
+  m_HasMotionFloatCurves: 0

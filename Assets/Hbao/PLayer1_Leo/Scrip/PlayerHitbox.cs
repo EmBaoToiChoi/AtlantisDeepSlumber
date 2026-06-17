@@ -27,16 +27,6 @@ public class PlayerHitbox : MonoBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
-        if (hitboxCollider != null && hitboxCollider.enabled)
-        {
-            if (leoPlayer != null)
-            {
-                leoPlayer.OnHitboxCollision(other);
-            }
-            else if (arthurPlayer != null)
-            {
-                arthurPlayer.OnHitboxCollision(other);
-            }
-        }
+        // Đã chuyển sang sử dụng tia Raycast/OverlapSphere quét trực tiếp từ code, vô hiệu hóa hoàn toàn va chạm trigger vật lý.
     }
 }
