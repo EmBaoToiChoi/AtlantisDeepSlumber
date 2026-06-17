@@ -203,6 +203,20 @@ public class CollectibleItemDrop : NetworkBehaviour, IInteractableItem
                 return;
             }
 
+            var interaction = localPlayer.GetComponent<PlayerInteraction>();
+            if (interaction != null && interaction.isCarryingCore.Value)
+            {
+                if (hud == null)
+                {
+                    hud = FindAnyObjectByType<PlayerHUDController>();
+                }
+                if (hud != null)
+                {
+                    hud.ShowMissionAlert("Bạn đang cầm ngọc rồi!", 3.0f);
+                }
+                return;
+            }
+
             var target = localPlayer as IPlayerHUDTarget;
             if (target != null && target.GetActiveWeaponIndex() == 2)
             {
@@ -310,6 +324,12 @@ public class CollectibleItemDrop : NetworkBehaviour, IInteractableItem
     private void PickUpWoodLogServerRpc(ulong playerNetObjectId)
     {
         if (!IsServer) return;
+
+        if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(playerNetObjectId, out var playerNetObj))
+        {
+            var pInt = playerNetObj.GetComponent<PlayerInteraction>();
+            if (pInt != null && pInt.isCarryingCore.Value) return;
+        }
 
         PickUpWoodLogClientRpc(playerNetObjectId);
 
