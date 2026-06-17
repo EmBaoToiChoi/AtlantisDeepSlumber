@@ -30,6 +30,9 @@ public class InteractBox : NetworkBehaviour
 
         if (localPlayerInteraction.IsOwner && Keyboard.current != null && Keyboard.current.fKey.wasPressedThisFrame)
         {
+            // Nếu người chơi đang bưng ngọc, phím F dùng để Đặt ngọc chứ không mở trạm tương tác
+            if (localPlayerInteraction.isCarryingCore.Value) return;
+
             if (gameManager != null)
             {
                 if (!isUsingStation) OpenStation();

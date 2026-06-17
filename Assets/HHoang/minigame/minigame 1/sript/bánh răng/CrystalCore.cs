@@ -50,9 +50,14 @@ public class CrystalCore : NetworkBehaviour
         {
             // Tắt NetworkTransform và Collider khi đang được nhặt để tránh tranh chấp tọa độ/vật lý
             if (netTransform != null) netTransform.enabled = false;
-            if (col != null) col.enabled = false;
+            if (col != null) 
+            {
+                col.enabled = false;
+                col.isTrigger = true; // Chuyển thành Trigger phòng hờ va chạm
+            }
             if (rb != null)
             {
+                rb.detectCollisions = false; // Tắt hoàn toàn va chạm vật lý
                 rb.isKinematic = true;
                 rb.useGravity = false;
                 rb.linearVelocity = Vector3.zero;
@@ -63,7 +68,15 @@ public class CrystalCore : NetworkBehaviour
         {
             // Bật lại NetworkTransform và Collider khi được thả ra
             if (netTransform != null) netTransform.enabled = true;
-            if (col != null) col.enabled = !isSnapped.Value;
+            if (col != null) 
+            {
+                col.enabled = !isSnapped.Value;
+                col.isTrigger = false;
+            }
+            if (rb != null)
+            {
+                rb.detectCollisions = true; // Bật lại va chạm vật lý
+            }
         }
     }
 
