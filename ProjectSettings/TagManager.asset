@@ -7,6 +7,10 @@ TagManager:
   - HitBoxEne
   - HitWeapon
   - Enemy
+  - Lua
+  - Nuoc
+  - Bang
+  - Set
   layers:
   - Default
   - TransparentFX

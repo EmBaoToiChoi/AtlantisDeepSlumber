@@ -245,6 +245,17 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
         NetworkVariableWritePermission.Server
     );
     public bool IsRSkillActive => isStandaloneMode ? localIsRSkillActive : isRSkillActiveNet.Value;
+
+    [Header("Skill R - Bắn Cục Nước")]
+    [Tooltip("Prefab đạn nước của chiêu R")]
+    public GameObject rSkillWaterPrefab;
+    [Tooltip("Điểm xuất phát bắn đạn nước của chiêu R")]
+    public Transform rSkillWaterSpawnPoint;
+    [Tooltip("Tốc độ bay của đạn nước")]
+    public float rSkillWaterSpeed = 20f;
+    [Tooltip("Sát thương của đạn nước")]
+    public float rSkillWaterDamage = 40f;
+
     private bool isRTargeting = false; // Đang trong trạng thái nhắm R
     private System.Collections.Generic.Dictionary<IPlayerHUDTarget, TextMesh> activeRIndicators = new System.Collections.Generic.Dictionary<IPlayerHUDTarget, TextMesh>();
 
@@ -773,21 +784,20 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
         qSkillCooldownTimer = qSkillCooldown;
     }
 
-    // R Skill
     public void TriggerRSkill()
     {
         var carrier = GetComponent<PlayerLogCarrier>();
         if (carrier != null && carrier.isCarrying) return;
 
         if (PlayerLevel < 5 && !IsSkillsUnlocked) return;
-        if (GetActiveWeaponIndex() != 2)
-        {
-            Debug.Log("[MayaPlayer] Không thể sử dụng kỹ năng R khi không cầm vũ khí!");
-            return;
-        }
-        if (rSkillCooldownTimer > 0f || isRTargeting) return;
-        isRTargeting = true;
-        UpdateRTargetingIndicators();
+        if (rSkillCooldownTimer > 0f) return;
+
+        // Play the casting/shooting animation
+        PlayAnimation("Shooting", 0.05f);
+
+        // Queue the projectile spawn for when the animation event fires
+        isRShootPending = true;
+        isPendingRShootNetworkMode = !isStandaloneMode;
     }
 
     private void CastRSkill(bool networkMode)
@@ -3755,40 +3765,69 @@ private void StartRollServerRpc(Vector3 direction)
 
     private void FireRHealProjectile()
     {
-        Vector3 spawnPos = rSkillSpawnPoint != null ? rSkillSpawnPoint.position : (normalAttackSpawnPoint != null ? normalAttackSpawnPoint.position : transform.position + Vector3.up * cameraPivotHeight);
-        
-        Vector3 targetCenter = Vector3.zero;
-        if (isPendingRShootNetworkMode)
-        {
-            if (pendingRTargetNetObjRef.TryGet(out NetworkObject targetNetObj))
-            {
-                targetCenter = targetNetObj.transform.position + Vector3.up * 1f;
-            }
-        }
-        else if (pendingRTargetObj != null)
-        {
-            targetCenter = pendingRTargetObj.transform.position + Vector3.up * 1f;
-        }
-
+        Vector3 spawnPos = rSkillWaterSpawnPoint != null ? rSkillWaterSpawnPoint.position : (normalAttackSpawnPoint != null ? normalAttackSpawnPoint.position : transform.position + transform.forward * 1.5f + Vector3.up * 1f);
         Vector3 shootDir = transform.forward;
-        if (targetCenter != Vector3.zero)
-        {
-            shootDir = (targetCenter - spawnPos).normalized;
-        }
 
         if (isPendingRShootNetworkMode)
         {
-            if (pendingRTargetNetObjRef.TryGet(out NetworkObject targetNetObj))
-            {
-                SpawnRProjectileServerRpc(spawnPos, shootDir, targetNetObj);
-            }
+            SpawnWaterProjectileServerRpc(spawnPos, shootDir);
         }
         else
         {
-            if (pendingRTargetObj != null)
-            {
-                SpawnRProjectileLocal(spawnPos, shootDir, pendingRTargetObj);
-            }
+            SpawnWaterProjectileLocal(spawnPos, shootDir);
+        }
+        
+        StartRSkillCooldown();
+    }
+
+    private void SpawnWaterProjectileLocal(Vector3 spawnPos, Vector3 shootDirection)
+    {
+        if (rSkillWaterPrefab == null)
+        {
+            Debug.LogError("[MayaPlayer] rSkillWaterPrefab chưa được gán trong Inspector!");
+            return;
+        }
+
+        GameObject waterObj = Instantiate(rSkillWaterPrefab, spawnPos, Quaternion.LookRotation(shootDirection));
+        waterObj.transform.localScale = rSkillWaterPrefab.transform.localScale;
+        waterObj.SetActive(true);
+
+        if (waterObj.TryGetComponent<MayaWaterProjectile>(out var proj))
+        {
+            proj.owner = this;
+            proj.damage = rSkillWaterDamage;
+            proj.speed = rSkillWaterSpeed;
+        }
+    }
+
+    [ServerRpc]
+    private void SpawnWaterProjectileServerRpc(Vector3 spawnPos, Vector3 shootDirection)
+    {
+        if (rSkillWaterPrefab == null)
+        {
+            Debug.LogError("[MayaPlayer] rSkillWaterPrefab chưa được gán trên Server!");
+            return;
+        }
+
+        if (Vector3.Distance(spawnPos, transform.position) > 4f)
+        {
+            spawnPos = rSkillWaterSpawnPoint != null ? rSkillWaterSpawnPoint.position : (normalAttackSpawnPoint != null ? normalAttackSpawnPoint.position : transform.position + transform.forward * 1.5f + Vector3.up * 1f);
+        }
+
+        GameObject waterObj = Instantiate(rSkillWaterPrefab, spawnPos, Quaternion.LookRotation(shootDirection));
+        waterObj.transform.localScale = rSkillWaterPrefab.transform.localScale;
+        waterObj.SetActive(true);
+
+        if (waterObj.TryGetComponent<NetworkObject>(out var netObj))
+        {
+            netObj.Spawn(true);
+        }
+
+        if (waterObj.TryGetComponent<MayaWaterProjectile>(out var proj))
+        {
+            proj.owner = this;
+            proj.damage = rSkillWaterDamage;
+            proj.speed = rSkillWaterSpeed;
         }
     }
 

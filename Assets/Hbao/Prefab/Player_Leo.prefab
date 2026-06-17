@@ -66,6 +66,37 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9af35fd58f6f29d48a0193db93794d54, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!1 &3104762744919239775
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 8247470417507385211}
+  m_Layer: 3
+  m_Name: SpawnSet
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &8247470417507385211
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3104762744919239775}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0.467, y: -1.048, z: -0.007}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1944311070861735750}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &3704789710416520249
 GameObject:
   m_ObjectHideFlags: 0
@@ -795,6 +826,10 @@ MonoBehaviour:
   - 
   - 
   invisibleMaterial: {fileID: 0}
+  rSkillLightningPrefab: {fileID: 4458033304065875226, guid: 9719a1c9f1df702439598c4e7bb832ed, type: 3}
+  rSkillLightningSpawnPoint: {fileID: 8247470417507385211}
+  rSkillLightningSpeed: 20
+  rSkillLightningDamage: 40
   redSwordMaterial: {fileID: 0}
   swordEmissiveMap: {fileID: 2800000, guid: cc4a1e70692c8de43bb41adf40016a90, type: 3}
   redEmissiveColor: {r: 1024, g: 0, b: 0, a: 1}
@@ -1927,6 +1962,9 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects:
+    - targetCorrespondingSourceObject: {fileID: -8013909246233647550, guid: 089f5319e86aa3a409ccfa5692b155f2, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 8247470417507385211}
     - targetCorrespondingSourceObject: {fileID: -2707054796494011859, guid: 089f5319e86aa3a409ccfa5692b155f2, type: 3}
       insertIndex: -1
       addedObject: {fileID: 6730037460965293441}
@@ -1996,6 +2034,11 @@ Transform:
 --- !u!4 &1569828532736557221 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 2304244481032835489, guid: 089f5319e86aa3a409ccfa5692b155f2, type: 3}
+  m_PrefabInstance: {fileID: 735059386473697540}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &1944311070861735750 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: -8013909246233647550, guid: 089f5319e86aa3a409ccfa5692b155f2, type: 3}
   m_PrefabInstance: {fileID: 735059386473697540}
   m_PrefabAsset: {fileID: 0}
 --- !u!4 &2661252832074116642 stripped
