@@ -30,7 +30,7 @@ public class RootMotionBridge : MonoBehaviour
         return null;
     }
 
-    void Start()
+    private void Awake()
     {
         anim = GetComponent<Animator>();
         initialTransformLocalPos = transform.localPosition;
