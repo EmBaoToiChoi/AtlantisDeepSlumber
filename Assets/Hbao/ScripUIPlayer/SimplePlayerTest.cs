@@ -358,6 +358,10 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
         if (!IsNetworkActive)
         {
             isStandaloneMode = true;
+            if (leoPlayer != null) leoPlayer.isStandaloneMode = true;
+            if (arthurPlayer != null) arthurPlayer.isStandaloneMode = true;
+            if (elenaPlayer != null) elenaPlayer.isStandaloneMode = true;
+            if (mayaPlayer != null) mayaPlayer.isStandaloneMode = true;
             localHealth = maxHealth;
             InitStandaloneMode();
         }
@@ -422,6 +426,10 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
     public override void OnNetworkSpawn()
     {
         isStandaloneMode = false;
+        if (leoPlayer != null) leoPlayer.isStandaloneMode = false;
+        if (arthurPlayer != null) arthurPlayer.isStandaloneMode = false;
+        if (elenaPlayer != null) elenaPlayer.isStandaloneMode = false;
+        if (mayaPlayer != null) mayaPlayer.isStandaloneMode = false;
 
         var rb = GetComponent<Rigidbody>();
         if (rb != null)

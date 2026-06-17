@@ -121450,25 +121450,11 @@ AnimationClip:
   m_HasMotionFloatCurves: 0
   m_Events:
   - time: 1
-    functionName: EnableRightWeaponHitbox
-    data: 
-    objectReferenceParameter: {fileID: 0}
-    floatParameter: 0
-    intParameter: 0
-    messageOptions: 0
-  - time: 1
     functionName: TriggerSlashParticle
     data: 
     objectReferenceParameter: {fileID: 0}
     floatParameter: 0
     intParameter: 101
-    messageOptions: 0
-  - time: 1.2
-    functionName: DisableRightWeaponHitbox
-    data: 
-    objectReferenceParameter: {fileID: 0}
-    floatParameter: 0
-    intParameter: 0
     messageOptions: 0
   - time: 1.9
     functionName: TriggerSlashParticle
@@ -121477,20 +121463,6 @@ AnimationClip:
     floatParameter: 0
     intParameter: 102
     messageOptions: 0
-  - time: 1.9
-    functionName: EnableRightWeaponHitbox
-    data: 
-    objectReferenceParameter: {fileID: 0}
-    floatParameter: 0
-    intParameter: 0
-    messageOptions: 0
-  - time: 2.0666666
-    functionName: DisableRightWeaponHitbox
-    data: 
-    objectReferenceParameter: {fileID: 0}
-    floatParameter: 0
-    intParameter: 0
-    messageOptions: 0
   - time: 2.9333334
     functionName: TriggerSlashParticle
     data: 
@@ -121498,24 +121470,6 @@ AnimationClip:
     floatParameter: 0
     intParameter: 103
     messageOptions: 0
-  - time: 2.9333334
-    functionName: EnableRightWeaponHitbox
-    data: 
-    objectReferenceParameter: {fileID: 0}
-    floatParameter: 0
-    intParameter: 0
-    messageOptions: 0
-  - time: 3.1666667
-    functionName: DisableRightWeaponHitbox
-    data: 
-    objectReferenceParameter: {fileID: 0}
-    floatParameter: 0
-    intParameter: 0
-    messageOptions: 0
-  - time: 4.5
-    functionName: OnSlashEnd
-    data: 
-    objectReferenceParameter: {fileID: 0}
-    floatParameter: 0
-    intParameter: 0
-    messageOptions: 0
+  m_EulerEditorCurves: []
+  m_HasGenericRootTransform: 0
+  m_HasMotionFloatCurves: 0

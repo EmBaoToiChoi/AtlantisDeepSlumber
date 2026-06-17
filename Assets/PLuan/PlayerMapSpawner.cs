@@ -45,7 +45,7 @@ public class PlayerMapSpawner : NetworkBehaviour
     [Tooltip("Địa chỉ IP để kết nối khi test (165.99.14.40 để kết nối thẳng tới VPS)")]
     [SerializeField] private string debugConnectAddress = "165.99.14.40";
     [Tooltip("Nhân vật muốn test nhanh (0 = Leo, 1 = Maya, 2 = Elena, 3 = Arthur)")]
-    [SerializeField] private int debugCharacterId = 2; // Elena mặc định
+    [SerializeField] private int debugCharacterId = 3; // Arthur mặc định cho test cận chiến
 
     private void Start()
     {

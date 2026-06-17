@@ -95,167 +95,37 @@ public class ArthurAnimationEventHelper : MonoBehaviour
         }
     }
 
-    public void EnableLeftHitbox()
-    {
-        EnsurePlayerReference();
-        if (player != null)
-        {
-            player.EnableLeftHitbox();
-        }
-    }
-
-    public void DisableLeftHitbox()
-    {
-        EnsurePlayerReference();
-        if (player != null)
-        {
-            player.DisableLeftHitbox();
-        }
-    }
-
-    public void EnableRightHitbox()
-    {
-        EnsurePlayerReference();
-        if (player != null)
-        {
-            player.EnableRightHitbox();
-        }
-    }
-
-    public void DisableRightHitbox()
-    {
-        EnsurePlayerReference();
-        if (player != null)
-        {
-            player.DisableRightHitbox();
-        }
-    }
-
-    public void EnableBothHitboxes()
-    {
-        EnsurePlayerReference();
-        if (player != null)
-        {
-            player.EnableBothHitboxes();
-        }
-    }
-
-    public void DisableBothHitboxes()
-    {
-        EnsurePlayerReference();
-        if (player != null)
-        {
-            player.DisableBothHitboxes();
-        }
-    }
+    public void EnableLeftHitbox() {}
+    public void DisableLeftHitbox() {}
+    public void EnableRightHitbox() {}
+    public void DisableRightHitbox() {}
+    public void EnableBothHitboxes() {}
+    public void DisableBothHitboxes() {}
 
     // ------------------------------------------------------------------
     //  Punch-specific alias event functions for intuitive selection
     // ------------------------------------------------------------------
 
-    public void EnableLeftPunch()
-    {
-        EnableLeftHitbox();
-    }
-
-    public void DisableLeftPunch()
-    {
-        DisableLeftHitbox();
-    }
-
-    public void EnableRightPunch()
-    {
-        EnableRightHitbox();
-    }
-
-    public void DisableRightPunch()
-    {
-        DisableRightHitbox();
-    }
-
-    public void EnableComboPunch()
-    {
-        EnableBothHitboxes();
-    }
-
-    public void DisableComboPunch()
-    {
-        DisableBothHitboxes();
-    }
+    public void EnableLeftPunch() {}
+    public void DisableLeftPunch() {}
+    public void EnableRightPunch() {}
+    public void DisableRightPunch() {}
+    public void EnableComboPunch() {}
+    public void DisableComboPunch() {}
 
     // ------------------------------------------------------------------
     //  Slash-specific alias event functions for intuitive selection
     // ------------------------------------------------------------------
 
-    public void EnableSingleSlash()
-    {
-        EnsurePlayerReference();
-        if (player != null)
-        {
-            player.EnableRightWeaponHitbox();
-        }
-    }
+    public void EnableSingleSlash() {}
+    public void DisableSingleSlash() {}
+    public void EnableDoubleSlash() {}
+    public void DisableDoubleSlash() {}
 
-    public void DisableSingleSlash()
-    {
-        EnsurePlayerReference();
-        if (player != null)
-        {
-            player.DisableRightWeaponHitbox();
-        }
-    }
-
-    public void EnableDoubleSlash()
-    {
-        EnsurePlayerReference();
-        if (player != null)
-        {
-            player.EnableBothWeaponHitboxes();
-        }
-    }
-
-    public void DisableDoubleSlash()
-    {
-        EnsurePlayerReference();
-        if (player != null)
-        {
-            player.DisableBothWeaponHitboxes();
-        }
-    }
-
-    public void OnSlashEnd()
-    {
-        EnsurePlayerReference();
-        if (player != null)
-        {
-            player.OnSlashEnd();
-        }
-    }
-
-    public void OnPunchEnd()
-    {
-        EnsurePlayerReference();
-        if (player != null)
-        {
-            player.OnPunchEnd();
-            Debug.Log("[ArthurAnimationEventHelper] OnPunchEnd forwarded.");
-        }
-    }
-
-    public void Onpunchend()
-    {
-        OnPunchEnd();
-    }
-
-    public void OnAttackEnd()
-    {
-        EnsurePlayerReference();
-        if (player != null)
-        {
-            player.OnAttackEnd();
-            Debug.Log("[ArthurAnimationEventHelper] OnAttackEnd forwarded.");
-        }
-    }
+    public void OnSlashEnd() {}
+    public void OnPunchEnd() {}
+    public void Onpunchend() {}
+    public void OnAttackEnd() {}
 
     public void OnPickItemEvent()
     {

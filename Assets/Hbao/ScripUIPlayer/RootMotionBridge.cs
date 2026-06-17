@@ -11,6 +11,25 @@ public class RootMotionBridge : MonoBehaviour
     private Transform rootBone;
     private bool hasRootBone = false;
 
+    private Transform FindHipsBone(Transform current)
+    {
+        if (current == null) return null;
+
+        string nameLower = current.name.ToLower();
+        if (nameLower.Contains("hips") || nameLower.Contains("pelvis"))
+        {
+            return current;
+        }
+
+        for (int i = 0; i < current.childCount; i++)
+        {
+            Transform found = FindHipsBone(current.GetChild(i));
+            if (found != null) return found;
+        }
+
+        return null;
+    }
+
     void Start()
     {
         anim = GetComponent<Animator>();
@@ -31,7 +50,13 @@ public class RootMotionBridge : MonoBehaviour
             rootBone = anim.GetBoneTransform(HumanBodyBones.Hips);
         }
 
-        // Fallback về con đầu tiên nếu không phải Humanoid
+        // Fallback đệ quy tìm xương hips/pelvis
+        if (rootBone == null)
+        {
+            rootBone = FindHipsBone(transform);
+        }
+
+        // Fallback về con đầu tiên nếu không phải Humanoid và không tìm thấy xương hips/pelvis
         if (rootBone == null && transform.childCount > 0)
         {
             rootBone = transform.GetChild(0);
@@ -88,14 +113,14 @@ public class RootMotionBridge : MonoBehaviour
 
         bool isRolling = false;
         AnimatorStateInfo stateInfo = anim.GetCurrentAnimatorStateInfo(0);
-        if (stateInfo.IsName("LonVong") || stateInfo.IsName("Lon Meo 2") || stateInfo.IsName("Lonmeo"))
+        if (stateInfo.IsName("LonVong") || stateInfo.IsName("Lon Meo 2") || stateInfo.IsName("Lonmeo") || stateInfo.IsName("LonMeo2") || stateInfo.IsName("LonMeo"))
         {
             isRolling = true;
         }
         else if (anim.IsInTransition(0))
         {
             AnimatorStateInfo nextStateInfo = anim.GetNextAnimatorStateInfo(0);
-            if (nextStateInfo.IsName("LonVong") || nextStateInfo.IsName("Lon Meo 2") || nextStateInfo.IsName("Lonmeo"))
+            if (nextStateInfo.IsName("LonVong") || nextStateInfo.IsName("Lon Meo 2") || nextStateInfo.IsName("Lonmeo") || nextStateInfo.IsName("LonMeo2") || nextStateInfo.IsName("LonMeo"))
             {
                 isRolling = true;
             }

@@ -377,6 +377,11 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (rootMotionBridge == null && anim != null)
         {
             rootMotionBridge = anim.GetComponent<RootMotionBridge>();
+            if (rootMotionBridge == null)
+            {
+                rootMotionBridge = anim.gameObject.AddComponent<RootMotionBridge>();
+                Debug.Log($"[ArthurPlayer] Dynamically added RootMotionBridge to {anim.gameObject.name} at runtime.");
+            }
         }
         return rootMotionBridge;
     }
@@ -644,6 +649,10 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
             anim = GetComponent<Animator>();
             if (anim == null)
                 anim = GetComponentInChildren<Animator>(true);
+        }
+        if (anim != null)
+        {
+            GetRootMotionBridge();
         }
 
         float horizontalDistance = new Vector3(cameraOffset.x, 0f, cameraOffset.z).magnitude;
@@ -1333,17 +1342,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
             }
         }
 
-        if (isRollingStandalone || (IsSpawned && isRollingNet.Value))
-        {
-            rollTimer -= Time.deltaTime;
-            if (rollTimer <= 0)
-            {
-                if (isStandaloneMode || IsOwner)
-                {
-                    OnRollEnd();
-                }
-            }
-        }
+
 
         if (rollCooldownTimer > 0)
         {
@@ -1450,6 +1449,8 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         if (isRollingStandalone)
         {
+            rollTimer -= Time.deltaTime;
+
             if (rb != null)
             {
                 float currentYVelocity = rb.linearVelocity.y;
@@ -1463,6 +1464,11 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
             if (rollDirection != Vector3.zero)
             {
                 transform.rotation = Quaternion.LookRotation(rollDirection);
+            }
+
+            if (rollTimer <= 0)
+            {
+                OnRollEnd();
             }
             return;
         }
@@ -1644,8 +1650,10 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
             return;
         }
 
-        if (isRollingStandalone || (IsSpawned && isRollingNet.Value))
+        if (rollTimer > 0)
         {
+            rollTimer -= Time.deltaTime;
+
             if (rb != null)
             {
                 float currentYVelocity = rb.linearVelocity.y;
@@ -1659,6 +1667,11 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
             if (rollDirection != Vector3.zero)
             {
                 transform.rotation = Quaternion.LookRotation(rollDirection);
+            }
+
+            if (rollTimer <= 0)
+            {
+                OnRollEnd();
             }
             return;
         }
@@ -1840,7 +1853,6 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         var carrier = GetComponent<PlayerLogCarrier>();
         if (carrier != null && carrier.isCarrying) return;
 
-        isRollingStandalone = true;
         rollTimer = rollDuration;
         rollCooldownTimer = rollCooldown;
 
@@ -1863,7 +1875,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         if (anim != null) anim.applyRootMotion = false;
         PlayAnimation("LonVong", 0.05f, false);
-        StartRollServerRpc(rollDirection);
+        StartRollServerRpc(rollDirection, transform.position);
     }
 
     public void OnRollEnd()
@@ -1882,7 +1894,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
             if (!isStandaloneMode && IsOwner)
             {
-                StopRollServerRpc();
+                StopRollServerRpc(transform.position, transform.rotation);
             }
         }
     }
@@ -2035,6 +2047,14 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
     {
         if (weaponIndex == 1)
         {
+            string animName = "";
+            if (step == 1) animName = "Punch1";
+            else if (step == 2) animName = "Punch2";
+            else if (step == 3) animName = "Punch3";
+
+            float duration = GetAnimationClipLength(animName);
+            if (duration > 0f) return duration;
+
             if (step == 1) return punch1Duration;
             if (step == 2) return punch2Duration;
             return punch3Duration;
@@ -2093,6 +2113,77 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         else
         {
             PerformComboAttack(networkMode, isContinuation);
+        }
+    }    private void PerformRaycastAttack()
+    {
+        if (!isStandaloneMode && !IsOwner) return;
+
+        Vector3 origin = transform.position + Vector3.up * 1f;
+        float range = attackRange;
+        Collider[] hits = Physics.OverlapSphere(origin, range);
+        
+        foreach (var col in hits)
+        {
+            if (IsEnemy(col, out Collider enemyCollider))
+            {
+                Transform enemyRoot = enemyCollider.transform.root;
+                if (!alreadyHitEnemies.Contains(enemyRoot))
+                {
+                    Vector3 toEnemy = (enemyCollider.bounds.center - origin);
+                    toEnemy.y = 0; // Ignore height difference
+                    
+                    float angle = Vector3.Angle(transform.forward, toEnemy.normalized);
+                    if (angle <= 75f)
+                    {
+                        alreadyHitEnemies.Add(enemyRoot);
+                        Debug.Log($"[ArthurPlayer Raycast] HIT: {enemyRoot.name} | Damage: {damageAmount}");
+                        
+                        if (isStandaloneMode)
+                        {
+                            TryDamageEnemy(enemyCollider);
+                        }
+                        else if (IsOwner)
+                        {
+                            var netObj = enemyCollider.GetComponentInParent<NetworkObject>();
+                            if (netObj != null)
+                            {
+                                DamageEnemyServerRpc(netObj);
+                            }
+                            else
+                            {
+                                TryDamageEnemy(enemyCollider);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private System.Collections.IEnumerator ComboChainCoroutine(int weapon, bool networkMode)
+    {
+        float totalDuration = currentAttackAnimDuration;
+
+        // Chờ hết thời lượng animation thực tế
+        yield return new WaitForSeconds(totalDuration);
+
+        // Kết thúc nhịp tấn công
+        isExecutingAttack = false;
+
+        // Kiểm tra có buffer click để tiếp tục combo không
+        if (pendingAttackRequest)
+        {
+            pendingAttackRequest = false;
+            Debug.Log("[ArthurPlayer] Tiếp tục combo từ buffer sau khi kết thúc đòn cũ.");
+            PerformComboAttack(networkMode, true);
+        }
+        else
+        {
+            // Không có buffer → reset combo step, mở khóa di chuyển, dọn dẹp Attack Layer
+            comboStep = 0;
+            isRootedAttack = false;
+            ClearAttackLayer();
+            Debug.Log("[ArthurPlayer] Kết thúc combo - không có input tiếp theo.");
         }
     }
 
@@ -2160,41 +2251,31 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         {
             AttackServerRpc();
         }
+
+        // Thực hiện quét Raycast (OverlapSphere) phát hiện mục tiêu tức thì
+        PerformRaycastAttack();
+
+        // Chạy Coroutine tự động kết thúc/nối combo thay vì phụ thuộc Animation Event
+        if (comboChainCoroutine != null) StopCoroutine(comboChainCoroutine);
+        comboChainCoroutine = StartCoroutine(ComboChainCoroutine(weapon, networkMode));
     }
 
     private void HandleAttackSequenceEnd(bool isSlash)
     {
-        if (isSlash || GetActiveWeaponIndex() == 2)
-        {
-            DisableBothWeaponHitboxes();
-        }
-        else
-        {
-            DisableBothHitboxes();
-        }
-
+        // Hàm này không còn được gọi từ animation event nữa vì đã dùng ComboChainCoroutine, nhưng giữ lại để tránh lỗi compile nếu có chỗ khác dùng.
         isExecutingAttack = false;
-
-        bool shouldContinue = pendingAttackRequest || (!IsUIBlockingInput() && CanAttack() && Input.GetMouseButton(0));
-
-        if (shouldContinue)
-        {
-            pendingAttackRequest = false;
-            bool networkMode = !isStandaloneMode && IsOwner;
-            Debug.Log($"[ArthurPlayer] Tiếp tục đòn đánh nối tiếp: comboStep hiện tại là {comboStep}.");
-            PerformComboAttack(networkMode, true);
-        }
-        else
-        {
-            comboStep = 0;
-            isRootedAttack = false;
-            ClearAttackLayer();
-            Debug.Log($"[ArthurPlayer] Kết thúc chuỗi {(isSlash ? "chém" : "đấm")} - không có input tiếp theo.");
-        }
+        comboStep = 0;
+        isRootedAttack = false;
+        ClearAttackLayer();
     }
 
     private void InterruptCombo()
     {
+        if (comboChainCoroutine != null)
+        {
+            StopCoroutine(comboChainCoroutine);
+            comboChainCoroutine = null;
+        }
         pendingAttackRequest = false;
         isExecutingAttack = false;
         comboStep = 0;
@@ -2214,7 +2295,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     public void Onpunchend()
     {
-        OnPunchEnd();
+        // Hàm rỗng để không ảnh hưởng
     }
 
     protected void TryDamageEnemy(Collider col)
@@ -2511,141 +2592,23 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         }
     }
 
-    public void EnableLeftHitbox()
-    {
-        if (!CanActivateHitbox()) return;
-        alreadyHitEnemies.Clear();
-        if (IsColliderValid(leftHitbox))
-        {
-            leftHitbox.enabled = true;
-        }
-    }
+    public void EnableLeftHitbox() {}
+    public void DisableLeftHitbox() {}
+    public void EnableRightHitbox() {}
+    public void DisableRightHitbox() {}
+    public void EnableBothHitboxes() {}
+    public void DisableBothHitboxes() {}
+    public void EnableLeftWeaponHitbox() {}
+    public void DisableLeftWeaponHitbox() {}
+    public void EnableRightWeaponHitbox() {}
+    public void DisableRightWeaponHitbox() {}
+    public void EnableBothWeaponHitboxes() {}
+    public void DisableBothWeaponHitboxes() {}
+    public void DisableAllHitboxes() {}
 
-    public void DisableLeftHitbox()
-    {
-        if (IsColliderValid(leftHitbox))
-        {
-            leftHitbox.enabled = false;
-        }
-        alreadyHitEnemies.Clear();
-    }
-
-    public void EnableRightHitbox()
-    {
-        if (!CanActivateHitbox()) return;
-        alreadyHitEnemies.Clear();
-        if (IsColliderValid(rightHitbox))
-        {
-            rightHitbox.enabled = true;
-        }
-    }
-
-    public void DisableRightHitbox()
-    {
-        if (IsColliderValid(rightHitbox))
-        {
-            rightHitbox.enabled = false;
-        }
-        alreadyHitEnemies.Clear();
-    }
-
-    public void EnableBothHitboxes()
-    {
-        if (!CanActivateHitbox()) return;
-        alreadyHitEnemies.Clear();
-        if (IsColliderValid(leftHitbox)) leftHitbox.enabled = true;
-        if (IsColliderValid(rightHitbox)) rightHitbox.enabled = true;
-    }
-
-    public void DisableBothHitboxes()
-    {
-        if (IsColliderValid(leftHitbox)) leftHitbox.enabled = false;
-        if (IsColliderValid(rightHitbox)) rightHitbox.enabled = false;
-        alreadyHitEnemies.Clear();
-    }
-
-    public void EnableLeftWeaponHitbox()
-    {
-        if (!CanActivateHitbox()) return;
-        alreadyHitEnemies.Clear();
-        if (IsColliderValid(leftWeaponHitbox))
-        {
-            leftWeaponHitbox.enabled = true;
-        }
-    }
-
-    public void DisableLeftWeaponHitbox()
-    {
-        if (IsColliderValid(leftWeaponHitbox)) leftWeaponHitbox.enabled = false;
-        alreadyHitEnemies.Clear();
-    }
-
-    public void EnableRightWeaponHitbox()
-    {
-        if (!CanActivateHitbox()) return;
-        alreadyHitEnemies.Clear();
-        if (IsColliderValid(rightWeaponHitbox))
-        {
-            rightWeaponHitbox.enabled = true;
-        }
-    }
-
-    public void DisableRightWeaponHitbox()
-    {
-        if (IsColliderValid(rightWeaponHitbox)) rightWeaponHitbox.enabled = false;
-        alreadyHitEnemies.Clear();
-    }
-
-    public void EnableBothWeaponHitboxes()
-    {
-        if (!CanActivateHitbox()) return;
-        alreadyHitEnemies.Clear();
-        if (IsColliderValid(leftWeaponHitbox)) leftWeaponHitbox.enabled = true;
-        if (IsColliderValid(rightWeaponHitbox)) rightWeaponHitbox.enabled = true;
-    }
-
-    public void DisableBothWeaponHitboxes()
-    {
-        if (IsColliderValid(leftWeaponHitbox)) leftWeaponHitbox.enabled = false;
-        if (IsColliderValid(rightWeaponHitbox)) rightWeaponHitbox.enabled = false;
-        alreadyHitEnemies.Clear();
-    }
-
-    public void DisableAllHitboxes()
-    {
-        DisableBothHitboxes();
-        DisableBothWeaponHitboxes();
-    }
-
-    public void OnPunchEnd()
-    {
-        if (!isStandaloneMode && !IsOwner) return;
-        if (Time.time < earliestValidEventTime)
-        {
-            return;
-        }
-        HandleAttackSequenceEnd(false);
-    }
-
-    public void OnSlashEnd()
-    {
-        if (!isStandaloneMode && !IsOwner) return;
-        if (Time.time < earliestValidEventTime)
-        {
-            return;
-        }
-        HandleAttackSequenceEnd(true);
-    }
-
-    public void OnAttackEnd()
-    {
-        if (!isStandaloneMode && !IsOwner) return;
-        if (Time.time < earliestValidEventTime)
-        {
-            return;
-        }
-        HandleAttackSequenceEnd(false);
-    }
+    public void OnPunchEnd() {}
+    public void OnSlashEnd() {}
+    public void OnAttackEnd() {}
 
     private bool CanActivateHitbox()
     {
@@ -3643,9 +3606,16 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
     }
 
     [ServerRpc]
-    private void StartRollServerRpc(Vector3 direction)
+    private void StartRollServerRpc(Vector3 direction, Vector3 position)
     {
         isRollingNet.Value = true;
+        transform.position = position;
+        if (rb != null)
+        {
+            rb.position = position;
+            rb.linearVelocity = Vector3.zero;
+        }
+
         if (direction != Vector3.zero)
         {
             rollDirection = direction;
@@ -3655,9 +3625,16 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
     }
 
     [ServerRpc]
-    protected void StopRollServerRpc()
+    protected void StopRollServerRpc(Vector3 position, Quaternion rotation)
     {
         isRollingNet.Value = false;
+        transform.position = position;
+        transform.rotation = rotation;
+        if (rb != null)
+        {
+            rb.position = position;
+            rb.linearVelocity = Vector3.zero;
+        }
     }
 
     protected virtual void ClearAttackLayer()

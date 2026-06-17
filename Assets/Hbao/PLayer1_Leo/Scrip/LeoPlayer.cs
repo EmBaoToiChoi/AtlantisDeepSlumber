@@ -3211,6 +3211,11 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (rootMotionBridge == null && anim != null)
         {
             rootMotionBridge = anim.GetComponent<RootMotionBridge>();
+            if (rootMotionBridge == null)
+            {
+                rootMotionBridge = anim.gameObject.AddComponent<RootMotionBridge>();
+                Debug.Log($"[LeoPlayer] Dynamically added RootMotionBridge to {anim.gameObject.name} at runtime.");
+            }
         }
         return rootMotionBridge;
     }
@@ -3261,10 +3266,13 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             if (anim == null)
                 anim = GetComponentInChildren<Animator>(true);
         }
-
-        if (anim != null && anim.layerCount > 1)
+        if (anim != null)
         {
-            anim.SetLayerWeight(1, 0f);
+            GetRootMotionBridge();
+            if (anim.layerCount > 1)
+            {
+                anim.SetLayerWeight(1, 0f);
+            }
         }
 
         float horizontalDistance = new Vector3(cameraOffset.x, 0f, cameraOffset.z).magnitude;
@@ -3521,7 +3529,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
             if (!isStandaloneMode)
             {
-                StopRollServerRpc();
+                StopRollServerRpc(transform.position, transform.rotation);
             }
         }
     }
@@ -4190,6 +4198,9 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         currentWeaponTypeAttacking = weapon;
 
+        // Thực hiện quét Raycast (OverlapSphere) phát hiện mục tiêu tức thì
+        PerformRaycastAttack();
+
         if (comboChainCoroutine != null) StopCoroutine(comboChainCoroutine);
         comboChainCoroutine = StartCoroutine(ComboChainCoroutine(weapon, animToPlay, networkMode));
     }
@@ -4236,10 +4247,53 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     /// </summary>
     private void DisableAllHitboxes()
     {
-        DisableLeftHitbox();
-        DisableRightHitbox();
-        DisableLeftWeaponHitbox();
-        DisableRightWeaponHitbox();
+        // Hàm rỗng để không ảnh hưởng
+    }
+
+    private void PerformRaycastAttack()
+    {
+        if (!isStandaloneMode && !IsOwner) return;
+
+        Vector3 origin = transform.position + Vector3.up * 1f;
+        float range = attackRange;
+        Collider[] hits = Physics.OverlapSphere(origin, range);
+        
+        foreach (var col in hits)
+        {
+            if (IsEnemy(col, out Collider enemyCollider))
+            {
+                Transform enemyRoot = enemyCollider.transform.root;
+                if (!alreadyHitEnemies.Contains(enemyRoot))
+                {
+                    Vector3 toEnemy = (enemyCollider.bounds.center - origin);
+                    toEnemy.y = 0; // Ignore height difference
+                    
+                    float angle = Vector3.Angle(transform.forward, toEnemy.normalized);
+                    if (angle <= 75f)
+                    {
+                        alreadyHitEnemies.Add(enemyRoot);
+                        Debug.Log($"[LeoPlayer Raycast] HIT: {enemyRoot.name} | Damage: {damageAmount}");
+                        
+                        if (isStandaloneMode)
+                        {
+                            TryDamageEnemy(enemyCollider);
+                        }
+                        else if (IsOwner)
+                        {
+                            var netObj = enemyCollider.GetComponentInParent<NetworkObject>();
+                            if (netObj != null)
+                            {
+                                DamageEnemyServerRpc(netObj);
+                            }
+                            else
+                            {
+                                TryDamageEnemy(enemyCollider);
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 
     private void TryDamageEnemy(Collider col)
@@ -4276,24 +4330,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             SyncNetVarFloat(weapon2Durability, proxyPlayerTest != null ? proxyPlayerTest.weapon2Durability : null, newVal);
         }
 
-        Vector3 rayStart = transform.position + Vector3.up * 0.5f;
-        if (Physics.Raycast(rayStart, transform.forward, out RaycastHit hit, attackRange))
-        {
-            var e1 = hit.collider.GetComponentInParent<Enemy1_DapBua>();
-            if (e1 != null) { e1.TakeDamage(damageAmount); return; }
-
-            var e2 = hit.collider.GetComponentInParent<Enemy2_Zombie>();
-            if (e2 != null) { e2.TakeDamage(damageAmount); return; }
-
-            var e3 = hit.collider.GetComponentInParent<Enemy3_Buaa>();
-            if (e3 != null) { e3.TakeDamage(damageAmount); return; }
-
-            var e4 = hit.collider.GetComponentInParent<Enemy4_Bongtoi>();
-            if (e4 != null) { e4.TakeDamage(damageAmount); return; }
-
-            var e5 = hit.collider.GetComponentInParent<Enemy5_PhuThuy>();
-            if (e5 != null) { e5.TakeDamage(damageAmount); return; }
-        }
+        alreadyHitEnemies.Clear();
     }
 
     protected void StartRollStandalone(Vector3 moveInput)
@@ -4354,13 +4391,20 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         if (anim != null) anim.applyRootMotion = false;
         PlayAnimation("LonVong", 0.05f, false);
-        StartRollServerRpc(rollDirection);
+        StartRollServerRpc(rollDirection, transform.position);
     }
 
     [ServerRpc]
-    private void StartRollServerRpc(Vector3 direction)
+    private void StartRollServerRpc(Vector3 direction, Vector3 position)
     {
         SyncNetVarBool(isRollingNet, proxyPlayerTest != null ? proxyPlayerTest.isRollingNet : null, true);
+        transform.position = position;
+        if (rb != null)
+        {
+            rb.position = position;
+            rb.linearVelocity = Vector3.zero;
+        }
+
         if (direction != Vector3.zero)
         {
             rollDirection = direction;
@@ -4370,9 +4414,16 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     }
 
     [ServerRpc]
-    protected void StopRollServerRpc()
+    protected void StopRollServerRpc(Vector3 position, Quaternion rotation)
     {
         SyncNetVarBool(isRollingNet, proxyPlayerTest != null ? proxyPlayerTest.isRollingNet : null, false);
+        transform.position = position;
+        transform.rotation = rotation;
+        if (rb != null)
+        {
+            rb.position = position;
+            rb.linearVelocity = Vector3.zero;
+        }
     }
 
     void LateUpdate()
@@ -6835,122 +6886,28 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     }
 
     // --- Đấm tay: Tay Trái ---
-    public void EnableLeftHitbox()
-    {
-        if (IsLeftoverEvent()) return;
-        if (!CanActivateHitbox()) return;
-        alreadyHitEnemies.Clear(); // Đòn mới → reset damage tracker
-        if (leftHitbox != null)
-        {
-            leftHitbox.enabled = true;
-            Debug.Log("[LeoPlayer] ✊ Left hitbox BẬT (Animation Event).");
-        }
-    }
-
-    public void DisableLeftHitbox()
-    {
-        if (IsLeftoverEvent()) return;
-        if (leftHitbox != null) leftHitbox.enabled = false;
-        alreadyHitEnemies.Clear(); // Reset để đòn tiếp theo tính damage mới
-    }
+    public void EnableLeftHitbox() {}
+    public void DisableLeftHitbox() {}
 
     // --- Đấm tay: Tay Phải ---
-    public void EnableRightHitbox()
-    {
-        if (IsLeftoverEvent()) return;
-        if (!CanActivateHitbox()) return;
-        alreadyHitEnemies.Clear();
-        if (rightHitbox != null)
-        {
-            rightHitbox.enabled = true;
-            Debug.Log("[LeoPlayer] ✊ Right hitbox BẬT (Animation Event).");
-        }
-    }
-
-    public void DisableRightHitbox()
-    {
-        if (IsLeftoverEvent()) return;
-        if (rightHitbox != null) rightHitbox.enabled = false;
-        alreadyHitEnemies.Clear();
-    }
+    public void EnableRightHitbox() {}
+    public void DisableRightHitbox() {}
 
     // --- Đấm tay: Cả hai tay ---
-    public void EnableBothHitboxes()
-    {
-        if (IsLeftoverEvent()) return;
-        if (!CanActivateHitbox()) return;
-        alreadyHitEnemies.Clear();
-        if (leftHitbox != null) leftHitbox.enabled = true;
-        if (rightHitbox != null) rightHitbox.enabled = true;
-        Debug.Log("[LeoPlayer] ✊✊ Both hand hitboxes BẬT (Animation Event).");
-    }
-
-    public void DisableBothHitboxes()
-    {
-        if (IsLeftoverEvent()) return;
-        if (leftHitbox != null) leftHitbox.enabled = false;
-        if (rightHitbox != null) rightHitbox.enabled = false;
-        alreadyHitEnemies.Clear();
-    }
+    public void EnableBothHitboxes() {}
+    public void DisableBothHitboxes() {}
 
     // --- Kiếm: Tay Trái ---
-    public void EnableLeftWeaponHitbox()
-    {
-        if (IsLeftoverEvent()) return;
-        if (!CanActivateHitbox()) return;
-        alreadyHitEnemies.Clear();
-        if (leftWeaponHitbox != null)
-        {
-            leftWeaponHitbox.enabled = true;
-            Debug.Log("[LeoPlayer] ⚔️ Left weapon hitbox BẬT (Animation Event).");
-        }
-    }
-
-    public void DisableLeftWeaponHitbox()
-    {
-        if (IsLeftoverEvent()) return;
-        if (leftWeaponHitbox != null) leftWeaponHitbox.enabled = false;
-        alreadyHitEnemies.Clear();
-    }
+    public void EnableLeftWeaponHitbox() {}
+    public void DisableLeftWeaponHitbox() {}
 
     // --- Kiếm: Tay Phải ---
-    public void EnableRightWeaponHitbox()
-    {
-        if (IsLeftoverEvent()) return;
-        if (!CanActivateHitbox()) return;
-        alreadyHitEnemies.Clear();
-        if (rightWeaponHitbox != null)
-        {
-            rightWeaponHitbox.enabled = true;
-            Debug.Log("[LeoPlayer] ⚔️ Right weapon hitbox BẬT (Animation Event).");
-        }
-    }
-
-    public void DisableRightWeaponHitbox()
-    {
-        if (IsLeftoverEvent()) return;
-        if (rightWeaponHitbox != null) rightWeaponHitbox.enabled = false;
-        alreadyHitEnemies.Clear();
-    }
+    public void EnableRightWeaponHitbox() {}
+    public void DisableRightWeaponHitbox() {}
 
     // --- Kiếm: Cả hai tay (Slash chính) ---
-    public void EnableBothWeaponHitboxes()
-    {
-        if (IsLeftoverEvent()) return;
-        if (!CanActivateHitbox()) return;
-        alreadyHitEnemies.Clear();
-        if (leftWeaponHitbox != null) leftWeaponHitbox.enabled = true;
-        if (rightWeaponHitbox != null) rightWeaponHitbox.enabled = true;
-        Debug.Log("[LeoPlayer] ⚔️⚔️ Both weapon hitboxes BẬT (Animation Event).");
-    }
-
-    public void DisableBothWeaponHitboxes()
-    {
-        if (IsLeftoverEvent()) return;
-        if (leftWeaponHitbox != null) leftWeaponHitbox.enabled = false;
-        if (rightWeaponHitbox != null) rightWeaponHitbox.enabled = false;
-        alreadyHitEnemies.Clear();
-    }
+    public void EnableBothWeaponHitboxes() {}
+    public void DisableBothWeaponHitboxes() {}
 
     // --- VFX Spawn Animation Events với Object Pooling ---
     private System.Collections.Generic.Dictionary<GameObject, System.Collections.Generic.List<GameObject>> vfxPools =
@@ -7155,33 +7112,9 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     /// Gọi từ Animation Event ở FRAME CUỐI của mỗi animation đấm/chém.
     /// Đảm bảo tắt hitbox và đánh dấu kết thúc nhịp tấn công.
     /// </summary>
-    public void OnAttackEnd()
-    {
-        if (IsLeftoverEvent()) return;
-        DisableAllHitboxes();
-        Debug.Log("[LeoPlayer] OnAttackEnd - Animation Event (Hitboxes disabled).");
-    }
-
-    /// <summary>
-    /// Kết thúc đòn chém kiếm (tương tự OnAttackEnd nhưng chỉ cho Slash).
-    /// </summary>
-    public void OnSlashEnd()
-    {
-        if (IsLeftoverEvent()) return;
-        DisableBothWeaponHitboxes();
-        if (anim != null) anim.applyRootMotion = false;
-        Debug.Log("[LeoPlayer] OnSlashEnd - Animation Event.");
-    }
-
-    /// <summary>
-    /// Kết thúc đòn đấm (tương tự OnAttackEnd nhưng chỉ cho Punch).
-    /// </summary>
-    public void OnPunchEnd()
-    {
-        if (IsLeftoverEvent()) return;
-        DisableBothHitboxes();
-        Debug.Log("[LeoPlayer] OnPunchEnd - Animation Event.");
-    }
+    public void OnAttackEnd() {}
+    public void OnSlashEnd() {}
+    public void OnPunchEnd() {}
 
     /// <summary>
     /// Nhận va chạm từ PlayerHitbox khi enemy đi vào hitbox.
