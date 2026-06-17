@@ -1,6 +1,7 @@
 using UnityEngine;
+using Unity.Netcode;
 
-public class ElementalRockPuzzle : MonoBehaviour
+public class ElementalRockPuzzle : NetworkBehaviour
 {
     [Header("Puzzle Settings")]
     [Tooltip("Thời gian tối đa để kích hoạt đủ 4 nguyên tố kể từ nguyên tố đầu tiên (giây)")]
@@ -16,31 +17,159 @@ public class ElementalRockPuzzle : MonoBehaviour
     [Tooltip("Tag của đạn nguyên tố Sét")]
     public string lightningTag = "Set";
 
-    [Header("Status (Read Only)")]
+    [Header("Icon Settings")]
+    [Tooltip("Icon cho nguyên tố Lửa")]
+    public Sprite fireIcon;
+    [Tooltip("Icon cho nguyên tố Nước")]
+    public Sprite waterIcon;
+    [Tooltip("Icon cho nguyên tố Băng")]
+    public Sprite iceIcon;
+    [Tooltip("Icon cho nguyên tố Sét")]
+    public Sprite lightningIcon;
+
+    [Header("UI Transform Settings")]
+    [Tooltip("Transform chỉ định vị trí hiện chữ/icon. Nếu để trống, sẽ tự động tính toán đỉnh của vật thể.")]
+    public Transform uiPivot;
+    [Tooltip("Chiều cao bù thêm (offset) khi tự động tính toán vị trí hiển thị phía trên viên đá")]
+    public float offsetHeight = 2.5f;
+    [Tooltip("Khoảng cách nằm ngang giữa các Icon")]
+    public float iconSpacing = 0.6f;
+    [Tooltip("Tỉ lệ thu phóng (Scale) của Icon")]
+    public float iconScale = 0.5f;
+    [Tooltip("Có tự động quay Icon về hướng Camera không")]
+    public bool faceCamera = true;
+    [Tooltip("Góc xoay bù thêm (offset) cho hàng chữ/icon (độ Euler)")]
+    public Vector3 uiRotationOffset = Vector3.zero;
+
+    [Header("Status (Read Only - Local State)")]
     [SerializeField] private int currentStep = 0;
     [SerializeField] private float timeRemaining = 0f;
     [SerializeField] private bool isTimerRunning = false;
 
+    // --- CÁC BIẾN ĐỒNG BỘ MẠNG (NETCODE) ---
+    private NetworkVariable<int> netCurrentStep = new NetworkVariable<int>(
+        0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server
+    );
+    private NetworkVariable<float> netTimeRemaining = new NetworkVariable<float>(
+        0f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server
+    );
+    private NetworkVariable<bool> netIsTimerRunning = new NetworkVariable<bool>(
+        false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server
+    );
+
     private string[] orderedTags;
     private GameObject lastHitObject; // Tránh việc một viên đạn va chạm liên tục nhiều lần trong các frame kế tiếp
 
+    // Cache các đối tượng sinh ra để quản lý UI
+    private GameObject uiRootObj;
+    private GameObject[] iconObjects;
+    private SpriteRenderer[] iconRenderers;
+    private TextMesh timerTextMesh; // Hiện số giây đếm ngược dưới hàng Icon
+    private TextMesh fallbackTextMesh; // TextMesh dự phòng nếu người chơi chưa gán Sprite Icon
+
+    private bool IsNetworkActive => NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
+
     private void Start()
     {
-        // Khởi tạo thứ tự các tag nguyên tố cần bắn vào đá: Lửa -> Nước -> Băng -> Sét
         orderedTags = new string[] { fireTag, waterTag, iceTag, lightningTag };
+
+        // Tạo root object cho UI độc lập với transform của đá (tránh bị Scale âm / Xoay của đá làm ngược chữ)
+        uiRootObj = new GameObject("RockPuzzle_UIRoot");
+        UpdateUIPosition();
+
+        // Kiểm tra xem đã gán đầy đủ Icon hay chưa
+        bool hasAllIcons = fireIcon != null && waterIcon != null && iceIcon != null && lightningIcon != null;
+
+        if (hasAllIcons)
+        {
+            CreateIconElements();
+        }
+        else
+        {
+            Debug.LogWarning("[ElementalRockPuzzle] Thiếu sprite nguyên tố trong Inspector. Tự động chuyển sang chế độ text dự phòng (Fallback).");
+            CreateFallbackTextMesh();
+        }
+
         ResetPuzzle();
+    }
+
+    public override void OnNetworkSpawn()
+    {
+        base.OnNetworkSpawn();
+
+        if (IsNetworkActive)
+        {
+            // Đăng ký sự kiện đồng bộ khi biến mạng thay đổi
+            netCurrentStep.OnValueChanged += OnPuzzleStateChanged;
+            netIsTimerRunning.OnValueChanged += OnTimerStateChanged;
+
+            // Lấy trạng thái ban đầu của mạng
+            currentStep = netCurrentStep.Value;
+            isTimerRunning = netIsTimerRunning.Value;
+            if (isTimerRunning)
+            {
+                timeRemaining = netTimeRemaining.Value;
+            }
+
+            UpdateVisualStates();
+        }
+    }
+
+    public override void OnNetworkDespawn()
+    {
+        base.OnNetworkDespawn();
+        if (IsNetworkActive)
+        {
+            netCurrentStep.OnValueChanged -= OnPuzzleStateChanged;
+            netIsTimerRunning.OnValueChanged -= OnTimerStateChanged;
+        }
     }
 
     private void Update()
     {
+        // Cập nhật vị trí UI bám theo viên đá mỗi frame
+        UpdateUIPosition();
+
+        // Client đếm ngược cục bộ để mượt mà UI
         if (isTimerRunning)
         {
             timeRemaining -= Time.deltaTime;
             if (timeRemaining <= 0f)
             {
-                Debug.Log($"[ElementalRockPuzzle] Hết thời gian {timeLimit}s! Đã reset câu đố phá đá.");
-                ResetPuzzle();
+                timeRemaining = 0f;
+                // Chỉ Server (hoặc ở chế độ Offline) mới có quyền ra lệnh reset khi hết giờ
+                if (!IsNetworkActive || IsServer)
+                {
+                    ResetPuzzle();
+                }
             }
+            UpdateVisualStates();
+        }
+
+        // Cập nhật khoảng cách ngang và kích thước của các Icon tương ứng lúc Play (Editor)
+        #if UNITY_EDITOR
+        UpdateEditorRealtimeUI();
+        #endif
+
+        // Tạo hiệu ứng nhấp nháy/phóng to thu nhỏ cho Icon hiện tại cần bắn
+        if (iconObjects != null && iconObjects.Length == 4)
+        {
+            AnimateCurrentIcon();
+        }
+
+        // Tự động xoay hàng Icon hoặc Text về hướng Camera chính (Billboarding)
+        if (faceCamera)
+        {
+            BillboardUI();
+        }
+    }
+
+    private void OnDestroy()
+    {
+        // Vì uiRootObj không còn là con của viên đá, chúng ta cần chủ động xóa nó khi viên đá bị hủy
+        if (uiRootObj != null)
+        {
+            Destroy(uiRootObj);
         }
     }
 
@@ -67,53 +196,371 @@ public class ElementalRockPuzzle : MonoBehaviour
         if (hitTag == fireTag || hitTag == waterTag || hitTag == iceTag || hitTag == lightningTag)
         {
             lastHitObject = hitObj;
-            string expectedTag = orderedTags[currentStep];
 
-            if (hitTag == expectedTag)
+            if (IsNetworkActive)
             {
-                // Đúng nguyên tố tiếp theo trong chuỗi
-                if (currentStep == 0)
+                // Nếu đang chơi mạng, gửi RPC để Server kiểm tra và đồng bộ
+                SubmitElementHitServerRpc(hitTag);
+            }
+            else
+            {
+                // Nếu chơi offline, tự xử lý cục bộ
+                ProcessElementHit(hitTag);
+            }
+        }
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    private void SubmitElementHitServerRpc(string hitTag)
+    {
+        ProcessElementHit(hitTag);
+    }
+
+    private void ProcessElementHit(string hitTag)
+    {
+        int activeStep = IsNetworkActive ? netCurrentStep.Value : currentStep;
+        string expectedTag = orderedTags[activeStep];
+
+        if (hitTag == expectedTag)
+        {
+            // Đúng nguyên tố tiếp theo
+            if (activeStep == 0)
+            {
+                // Bắt đầu đếm ngược
+                if (IsNetworkActive)
                 {
-                    // Bắt đầu đếm ngược từ nguyên tố đầu tiên (Lửa)
-                    isTimerRunning = true;
-                    timeRemaining = timeLimit;
-                    Debug.Log($"[ElementalRockPuzzle] Đã bắn trúng nguyên tố đầu tiên ({hitTag}). Bắt đầu đếm ngược {timeLimit}s!");
+                    netIsTimerRunning.Value = true;
+                    netTimeRemaining.Value = timeLimit;
                 }
                 else
                 {
-                    Debug.Log($"[ElementalRockPuzzle] Bắn trúng đúng nguyên tố ({hitTag}) ở bước {currentStep + 1}/{orderedTags.Length}!");
+                    isTimerRunning = true;
+                    timeRemaining = timeLimit;
                 }
+            }
 
-                currentStep++;
-
-                // Nếu đã bắn trúng đủ 4 nguyên tố theo đúng thứ tự
-                if (currentStep >= orderedTags.Length)
+            if (IsNetworkActive)
+            {
+                netCurrentStep.Value++;
+                if (netCurrentStep.Value >= orderedTags.Length)
                 {
                     ShatterRock();
                 }
             }
             else
             {
-                // Sai thứ tự nguyên tố -> Reset câu đố
-                Debug.Log($"[ElementalRockPuzzle] Sai thứ tự! Yêu cầu tag '{expectedTag}' nhưng trúng tag '{hitTag}'. Reset câu đố!");
-                ResetPuzzle();
+                currentStep++;
+                UpdateVisualStates();
+                if (currentStep >= orderedTags.Length)
+                {
+                    ShatterRock();
+                }
+            }
+        }
+        else
+        {
+            // Sai nguyên tố -> Reset câu đố
+            ResetPuzzle();
+        }
+    }
+
+    private void UpdateUIPosition()
+    {
+        if (uiRootObj == null) return;
+        uiRootObj.transform.position = transform.TransformPoint(CalculateUIPosition());
+    }
+
+    private Vector3 CalculateUIPosition()
+    {
+        if (uiPivot != null)
+        {
+            return transform.InverseTransformPoint(uiPivot.position);
+        }
+
+        // Tự động tìm đỉnh của mesh hoặc collider
+        float calculatedHeight = offsetHeight;
+        Renderer ren = GetComponent<Renderer>();
+        Collider col = GetComponent<Collider>();
+
+        if (ren != null)
+        {
+            calculatedHeight = (ren.bounds.max.y - transform.position.y) + 0.5f;
+        }
+        else if (col != null)
+        {
+            calculatedHeight = (col.bounds.max.y - transform.position.y) + 0.5f;
+        }
+
+        return new Vector3(0f, calculatedHeight, 0f);
+    }
+
+
+    private void CreateIconElements()
+    {
+        iconObjects = new GameObject[4];
+        iconRenderers = new SpriteRenderer[4];
+        Sprite[] sprites = new Sprite[] { fireIcon, waterIcon, iceIcon, lightningIcon };
+
+        for (int i = 0; i < 4; i++)
+        {
+            GameObject iconObj = new GameObject($"Icon_{i}");
+            iconObj.transform.SetParent(uiRootObj.transform);
+            
+            // Xếp hàng ngang đối xứng qua gốc tọa độ của UI root
+            float xPos = (i - 1.5f) * iconSpacing;
+            iconObj.transform.localPosition = new Vector3(xPos, 0f, 0f);
+            iconObj.transform.localScale = Vector3.one * iconScale;
+
+            SpriteRenderer sr = iconObj.AddComponent<SpriteRenderer>();
+            sr.sprite = sprites[i];
+            
+            iconObjects[i] = iconObj;
+            iconRenderers[i] = sr;
+        }
+
+        // Tạo Text đếm ngược nhỏ nằm phía dưới hàng icon
+        GameObject timerObj = new GameObject("RockPuzzle_TimerText");
+        timerObj.transform.SetParent(uiRootObj.transform);
+        timerObj.transform.localPosition = new Vector3(0f, -0.6f, 0f);
+
+        timerTextMesh = timerObj.AddComponent<TextMesh>();
+        timerTextMesh.fontSize = 24;
+        timerTextMesh.characterSize = 0.08f;
+        timerTextMesh.alignment = TextAlignment.Center;
+        timerTextMesh.anchor = TextAnchor.MiddleCenter;
+        timerTextMesh.fontStyle = FontStyle.Bold;
+        timerTextMesh.color = Color.white;
+        timerTextMesh.richText = true;
+    }
+
+    private void CreateFallbackTextMesh()
+    {
+        GameObject textObj = new GameObject("RockPuzzle_FallbackText");
+        textObj.transform.SetParent(uiRootObj.transform);
+        textObj.transform.localPosition = Vector3.zero;
+
+        fallbackTextMesh = textObj.AddComponent<TextMesh>();
+        fallbackTextMesh.fontSize = 32;
+        fallbackTextMesh.characterSize = 0.08f;
+        fallbackTextMesh.alignment = TextAlignment.Center;
+        fallbackTextMesh.anchor = TextAnchor.MiddleCenter;
+        fallbackTextMesh.fontStyle = FontStyle.Bold;
+        fallbackTextMesh.color = Color.white;
+        fallbackTextMesh.richText = true;
+    }
+
+    private void UpdateVisualStates()
+    {
+        // 1. Cập nhật giao diện nếu đang dùng Icon
+        if (iconRenderers != null && iconRenderers.Length == 4)
+        {
+            for (int i = 0; i < 4; i++)
+            {
+                if (iconRenderers[i] == null) continue;
+
+                if (i < currentStep)
+                {
+                    // Các bước đã hoàn thành: Sáng rõ (Full màu)
+                    iconRenderers[i].color = Color.white;
+                    if (iconObjects[i] != null && (i != currentStep || !isTimerRunning))
+                    {
+                        iconObjects[i].transform.localScale = Vector3.one * iconScale;
+                    }
+                }
+                else if (i == currentStep)
+                {
+                    // Bước hiện tại cần bắn: Sáng rõ
+                    iconRenderers[i].color = Color.white;
+                }
+                else
+                {
+                    // Các bước chưa tới lượt: Làm mờ/Tối đi
+                    iconRenderers[i].color = new Color(0.3f, 0.3f, 0.3f, 0.3f);
+                    if (iconObjects[i] != null)
+                    {
+                        iconObjects[i].transform.localScale = Vector3.one * iconScale;
+                    }
+                }
+            }
+
+            // Cập nhật text thời gian đếm ngược dưới icon
+            if (timerTextMesh != null)
+            {
+                if (isTimerRunning)
+                {
+                    timerTextMesh.text = $"<color=#FF9F0A>{timeRemaining:F1}s</color>";
+                }
+                else
+                {
+                    timerTextMesh.text = "<color=#CCCCCC>Bắn Lửa để bắt đầu</color>";
+                }
+            }
+        }
+
+        // 2. Cập nhật giao diện dự phòng nếu đang dùng Text
+        if (fallbackTextMesh != null)
+        {
+            string fireStr = currentStep == 0 ? "<b><color=#FF453A>[ Hỏa ]</color></b>" : "<color=#FF9F0A>Hỏa</color>";
+            string waterStr = currentStep == 1 ? "<b><color=#0A84FF>[ Thủy ]</color></b>" : "<color=#64D2FF>Thủy</color>";
+            string iceStr = currentStep == 2 ? "<b><color=#5AC8F5>[ Băng ]</color></b>" : "<color=#A3D5FF>Băng</color>";
+            string lightningStr = currentStep == 3 ? "<b><color=#FFD60A>[ Lôi ]</color></b>" : "<color=#BF5AF2>Lôi</color>";
+
+            string chainStr = $"{fireStr} → {waterStr} → {iceStr} → {lightningStr}";
+
+            if (isTimerRunning)
+            {
+                fallbackTextMesh.text = $"{chainStr}\n<color=#FF9F0A>Thời gian còn lại: {timeRemaining:F1}s</color>";
+            }
+            else
+            {
+                fallbackTextMesh.text = $"{chainStr}\n<color=#CCCCCC>Bắn nguyên tố HỎA để bắt đầu</color>";
             }
         }
     }
 
+    private void AnimateCurrentIcon()
+    {
+        if (currentStep >= 0 && currentStep < 4)
+        {
+            GameObject currentIconObj = iconObjects[currentStep];
+            if (currentIconObj != null)
+            {
+                // Hiệu ứng nhịp tim (pulsing) nhẹ để thu hút sự chú ý
+                float pulse = 1f + Mathf.PingPong(Time.time * 2.5f, 0.2f);
+                currentIconObj.transform.localScale = Vector3.one * iconScale * pulse;
+            }
+        }
+    }
+
+    private void BillboardUI()
+    {
+        Camera cam = Camera.main;
+        
+        if (uiRootObj != null)
+        {
+            if (faceCamera && cam != null)
+            {
+                // Xoay về phía Camera + 180 độ + góc xoay bù thêm (offset)
+                uiRootObj.transform.rotation = cam.transform.rotation * Quaternion.Euler(0f, 180f, 0f) * Quaternion.Euler(uiRotationOffset);
+            }
+            else
+            {
+                // Nếu không xoay theo camera, lấy xoay của đá làm gốc + góc xoay bù thêm
+                uiRootObj.transform.rotation = transform.rotation * Quaternion.Euler(uiRotationOffset);
+            }
+        }
+    }
+
+    private void UpdateEditorRealtimeUI()
+    {
+        if (uiRootObj != null)
+        {
+            // Cập nhật khoảng cách ngang và kích thước của các Icon tương ứng
+            if (iconObjects != null && iconObjects.Length == 4)
+            {
+                for (int i = 0; i < 4; i++)
+                {
+                    if (iconObjects[i] != null)
+                    {
+                        float xPos = (i - 1.5f) * iconSpacing;
+                        iconObjects[i].transform.localPosition = new Vector3(xPos, 0f, 0f);
+
+                        // Chỉ áp dụng tỉ lệ mặc định khi icon không bị hiệu ứng phóng to (pulse) lúc đếm ngược
+                        if (i != currentStep || !isTimerRunning)
+                        {
+                            iconObjects[i].transform.localScale = Vector3.one * iconScale;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // --- CÁC HÀM PHẢN HỒI KHI BIẾN MẠNG THAY ĐỔI ---
+    private void OnPuzzleStateChanged(int oldVal, int newVal)
+    {
+        currentStep = newVal;
+        lastHitObject = null; // Reset đạn khi chuyển bước
+        UpdateVisualStates();
+    }
+
+    private void OnTimerStateChanged(bool oldVal, bool newVal)
+    {
+        isTimerRunning = newVal;
+        if (newVal)
+        {
+            timeRemaining = netTimeRemaining.Value;
+        }
+        else
+        {
+            timeRemaining = 0f;
+        }
+        UpdateVisualStates();
+    }
+
     private void ResetPuzzle()
     {
-        currentStep = 0;
-        timeRemaining = 0f;
-        isTimerRunning = false;
-        lastHitObject = null;
+        if (IsNetworkActive && IsServer)
+        {
+            netCurrentStep.Value = 0;
+            netTimeRemaining.Value = 0f;
+            netIsTimerRunning.Value = false;
+        }
+        else if (!IsNetworkActive)
+        {
+            currentStep = 0;
+            timeRemaining = 0f;
+            isTimerRunning = false;
+            lastHitObject = null;
+            UpdateVisualStates();
+        }
     }
 
     private void ShatterRock()
     {
         Debug.Log("[ElementalRockPuzzle] Kích hoạt thành công cả 4 nguyên tố theo đúng thứ tự! Đá đã bị phá vỡ.");
         
-        // Hủy viên đá
-        Destroy(gameObject);
+        if (IsNetworkActive)
+        {
+            if (IsServer)
+            {
+                // Nếu có NetworkObject và đang chạy server, gọi Despawn để hủy đồng bộ cho mọi người
+                if (TryGetComponent<NetworkObject>(out var netObj) && netObj.IsSpawned)
+                {
+                    netObj.Despawn(true);
+                }
+                else
+                {
+                    Destroy(gameObject);
+                }
+            }
+        }
+        else
+        {
+            // Offline/Standalone
+            Destroy(gameObject);
+        }
+    }
+
+    // --- VẼ GIZMOS PHỤC VỤ CĂN CHỈNH Ở CHẾ ĐỘ EDIT MODE ---
+    private void OnDrawGizmosSelected()
+    {
+        Gizmos.color = Color.cyan;
+        Vector3 localUIPos = CalculateUIPosition();
+        Vector3 worldUIPos = transform.TransformPoint(localUIPos);
+
+        // Vẽ đường nối từ tâm viên đá lên vị trí UI
+        Gizmos.DrawLine(transform.position, worldUIPos);
+        Gizmos.DrawWireSphere(worldUIPos, 0.2f);
+
+        // Vẽ các vòng tròn tượng trưng cho vị trí của 4 Icon nguyên tố
+        for (int i = 0; i < 4; i++)
+        {
+            float xOffset = (i - 1.5f) * iconSpacing;
+            Vector3 localIconOffset = new Vector3(xOffset, 0f, 0f);
+            Vector3 worldIconPos = worldUIPos + transform.TransformDirection(localIconOffset);
+            
+            Gizmos.DrawWireSphere(worldIconPos, 0.15f * (iconScale / 0.5f));
+        }
     }
 }

@@ -1,6 +1,7 @@
 using UnityEngine;
+using Unity.Netcode;
 
-public class BoxRoiDaTrigger : MonoBehaviour
+public class BoxRoiDaTrigger : NetworkBehaviour
 {
     [Header("GameObjects to Toggle")]
     [Tooltip("Object Đá Chặn Cửa Đã Rơi (sẽ được kích hoạt)")]
@@ -9,36 +10,61 @@ public class BoxRoiDaTrigger : MonoBehaviour
     [Tooltip("Object Đá Chặn Cửa Chưa Rơi (sẽ bị tắt đi)")]
     public GameObject daChanCuaChuaRoi;
 
+    private bool IsNetworkActive => NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
+
     private void OnTriggerEnter(Collider other)
     {
         // Kiểm tra xem đối tượng va chạm có phải là người chơi hay không
         if (IsPlayer(other.gameObject))
         {
-            Debug.Log($"[BoxRoiDaTrigger] Người chơi '{other.gameObject.name}' chạm vào trigger. Đang kích hoạt đá rơi...");
-
-            // Kích hoạt đá đã rơi
-            if (daChanCuaDaRoi != null)
+            if (IsNetworkActive)
             {
-                daChanCuaDaRoi.SetActive(true);
+                // Chỉ Server mới nhận va chạm và phát lệnh đồng bộ cho tất cả Client
+                if (IsServer)
+                {
+                    TriggerRockFallClientRpc();
+                }
             }
             else
             {
-                Debug.LogWarning("[BoxRoiDaTrigger] Chưa gán object 'daChanCuaDaRoi' trong Inspector!", this);
+                // Fallback chạy cục bộ khi chơi Offline/Standalone
+                ExecuteRockFall();
             }
-
-            // Tắt đá chưa rơi
-            if (daChanCuaChuaRoi != null)
-            {
-                daChanCuaChuaRoi.SetActive(false);
-            }
-            else
-            {
-                Debug.LogWarning("[BoxRoiDaTrigger] Chưa gán object 'daChanCuaChuaRoi' trong Inspector!", this);
-            }
-
-            // Ẩn chính BoxRoiDa (GameObject chứa script này)
-            gameObject.SetActive(false);
         }
+    }
+
+    [ClientRpc]
+    private void TriggerRockFallClientRpc()
+    {
+        ExecuteRockFall();
+    }
+
+    private void ExecuteRockFall()
+    {
+        Debug.Log($"[BoxRoiDaTrigger] Kích hoạt chuyển đổi trạng thái đá rơi.");
+
+        // Kích hoạt đá đã rơi
+        if (daChanCuaDaRoi != null)
+        {
+            daChanCuaDaRoi.SetActive(true);
+        }
+        else
+        {
+            Debug.LogWarning("[BoxRoiDaTrigger] Chưa gán object 'daChanCuaDaRoi'!", this);
+        }
+
+        // Tắt đá chưa rơi
+        if (daChanCuaChuaRoi != null)
+        {
+            daChanCuaChuaRoi.SetActive(false);
+        }
+        else
+        {
+            Debug.LogWarning("[BoxRoiDaTrigger] Chưa gán object 'daChanCuaChuaRoi'!", this);
+        }
+
+        // Ẩn chính BoxRoiDa (GameObject chứa script trigger này) để tránh kích hoạt lại
+        gameObject.SetActive(false);
     }
 
     /// <summary>
