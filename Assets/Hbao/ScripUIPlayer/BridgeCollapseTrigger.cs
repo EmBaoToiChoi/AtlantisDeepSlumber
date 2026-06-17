@@ -405,6 +405,11 @@ public class BridgeCollapseTrigger : NetworkBehaviour
             var netPlayer = localPlayer.gameObject.GetComponent<NetworkObject>();
             if (netPlayer != null)
             {
+                var carrier = localPlayer.gameObject.GetComponent<PlayerLogCarrier>();
+                if (carrier != null)
+                {
+                    carrier.DropLog();
+                }
                 SubmitCarriedLogServerRpc(netPlayer.NetworkObjectId);
             }
         }

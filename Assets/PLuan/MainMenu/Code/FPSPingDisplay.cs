@@ -10,6 +10,25 @@ public class FPSPingDisplay : MonoBehaviour
     private ulong _ping = 0;
     private float _pingUpdateTimer = 0f;
 
+    private Texture2D _backgroundTexture;
+    private GUIStyle _style;
+
+    private void Start()
+    {
+        // Tạo hình nền tối màu mờ để chữ hiển thị tương phản tốt trên mọi map
+        _backgroundTexture = new Texture2D(1, 1);
+        _backgroundTexture.SetPixel(0, 0, new Color(0f, 0f, 0f, 0.6f));
+        _backgroundTexture.Apply();
+    }
+
+    private void OnDestroy()
+    {
+        if (_backgroundTexture != null)
+        {
+            Destroy(_backgroundTexture);
+        }
+    }
+
     private void Awake()
     {
         if (_instance == null)
@@ -60,20 +79,18 @@ public class FPSPingDisplay : MonoBehaviour
 
     private void OnGUI()
     {
-        // Khung hiển thị ở góc trên bên trái
-        GUIStyle style = new GUIStyle();
-        Rect rect = new Rect(10, 10, 250, 75);
-        
-        style.alignment = TextAnchor.UpperLeft;
-        style.fontSize = 14;
-        style.normal.textColor = Color.green;
+        if (_style == null)
+        {
+            _style = new GUIStyle();
+            _style.alignment = TextAnchor.UpperLeft;
+            _style.fontSize = 14;
+            _style.normal.textColor = Color.green;
+            _style.normal.background = _backgroundTexture;
+            _style.padding = new RectOffset(8, 8, 8, 8);
+        }
 
-        // Tạo hình nền tối màu mờ để chữ hiển thị tương phản tốt trên mọi map
-        Texture2D texture = new Texture2D(1, 1);
-        texture.SetPixel(0, 0, new Color(0f, 0f, 0f, 0.6f));
-        texture.Apply();
-        style.normal.background = texture;
-        style.padding = new RectOffset(8, 8, 8, 8);
+        // Khung hiển thị ở góc trên bên trái
+        Rect rect = new Rect(10, 10, 250, 75);
 
         string networkRole = "OFFLINE";
         if (NetworkManager.Singleton != null)
@@ -89,6 +106,6 @@ public class FPSPingDisplay : MonoBehaviour
         string pingText = (networkRole == "CLIENT") ? $"{_ping} ms" : "N/A (Host/Server)";
         string text = $"FPS: {Mathf.RoundToInt(_fps)}\nPING: {pingText}\nROLE: {networkRole}";
 
-        GUI.Box(rect, text, style);
+        GUI.Box(rect, text, _style);
     }
 }

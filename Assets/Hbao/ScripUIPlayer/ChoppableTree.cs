@@ -224,6 +224,21 @@ public class ChoppableTree : NetworkBehaviour
         }
     }
 
+    public void HitTree(Vector3 hitPos, int weaponIndex)
+    {
+        if (isCutDown.Value) return;
+
+        // Cận chiến: Bắt buộc phải rút vũ khí (WeaponIndex == 2)
+        if (weaponIndex == 2)
+        {
+            OnTreeHit(hitPos);
+        }
+        else
+        {
+            Debug.Log($"[ChoppableTree] Player chém bằng tay không (WeaponIndex={weaponIndex}), cần trang bị vũ khí để chặt cây.");
+        }
+    }
+
     private void OnTreeHit(Vector3 hitPos)
     {
         // Chạy hiệu ứng rung, dăm gỗ và vết chém lập tức cho người chơi vừa chém

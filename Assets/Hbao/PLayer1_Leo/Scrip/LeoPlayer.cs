@@ -3653,18 +3653,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             attackDashTimer -= Time.deltaTime;
         }
 
-        if (isRollingStandalone || (IsSpawned && isRollingNet.Value))
-        {
-            rollTimer -= Time.deltaTime;
 
-            if (rollTimer <= 0)
-            {
-                if (isStandaloneMode || IsOwner)
-                {
-                    OnRollEnd();
-                }
-            }
-        }
 
         if (CurrentHealth <= 0)
         {
@@ -3730,6 +3719,8 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         if (isRollingStandalone)
         {
+            rollTimer -= Time.deltaTime;
+
             if (rb != null)
             {
                 float currentYVelocity = rb.linearVelocity.y;
@@ -3743,6 +3734,11 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             if (rollDirection != Vector3.zero)
             {
                 transform.rotation = Quaternion.LookRotation(rollDirection);
+            }
+
+            if (rollTimer <= 0)
+            {
+                OnRollEnd();
             }
             return;
         }
@@ -3900,8 +3896,10 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             return;
         }
 
-        if (isRollingStandalone || (IsSpawned && isRollingNet.Value))
+        if (rollTimer > 0)
         {
+            rollTimer -= Time.deltaTime;
+
             if (rb != null)
             {
                 float currentYVelocity = rb.linearVelocity.y;
@@ -3915,6 +3913,11 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             if (rollDirection != Vector3.zero)
             {
                 transform.rotation = Quaternion.LookRotation(rollDirection);
+            }
+
+            if (rollTimer <= 0)
+            {
+                OnRollEnd();
             }
             return;
         }
@@ -4293,6 +4296,40 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
                     }
                 }
             }
+            else
+            {
+                // Kiểm tra xem có phải cây gỗ (ChoppableTree) hay không
+                ChoppableTree tree = col.GetComponentInParent<ChoppableTree>();
+                if (tree == null)
+                {
+                    var forwarder = col.GetComponent<TreeColliderForwarder>();
+                    if (forwarder != null)
+                    {
+                        tree = forwarder.mainTree;
+                    }
+                }
+
+                if (tree != null)
+                {
+                    Transform treeRoot = tree.transform;
+                    if (!alreadyHitEnemies.Contains(treeRoot))
+                    {
+                        Vector3 toTree = (col.bounds.center - origin);
+                        toTree.y = 0; // Ignore height difference
+                        
+                        float angle = Vector3.Angle(transform.forward, toTree.normalized);
+                        if (angle <= 75f)
+                        {
+                            alreadyHitEnemies.Add(treeRoot);
+                            Vector3 hitPos = col.ClosestPoint(origin);
+                            int weaponIndex = GetActiveWeaponIndex();
+                            
+                            Debug.Log($"[LeoPlayer Raycast] HIT Tree: {tree.name} | WeaponIndex: {weaponIndex}");
+                            tree.HitTree(hitPos, weaponIndex);
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -4368,7 +4405,6 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         var carrier = GetComponent<PlayerLogCarrier>();
         if (carrier != null && carrier.isCarrying) return;
 
-        isRollingStandalone = true;
         rollTimer = rollDuration;
         rollCooldownTimer = rollCooldown;
 
@@ -4483,21 +4519,22 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             smoothedYOffset = Mathf.Lerp(smoothedYOffset, targetYOffset, Time.deltaTime * spineSmoothSpeed);
             smoothedXOffset = Mathf.Lerp(smoothedXOffset, targetXOffset, Time.deltaTime * spineSmoothSpeed);
 
-            if ((isCurrentlyAttacking && !isRootedAttack) || Mathf.Abs(smoothedYOffset) > 0.05f || Mathf.Abs(smoothedXOffset) > 0.05f)
-            {
-                Transform spine = GetSpineBone();
-                if (spine != null)
-                {
-                    float finalYAngle = baseAimAngle + smoothedYOffset;
-                    
-                    spine.rotation = Quaternion.AngleAxis(finalYAngle, Vector3.up) * spine.rotation;
-
-                    if (Mathf.Abs(smoothedXOffset) > 0.01f)
-                    {
-                        spine.rotation = Quaternion.AngleAxis(smoothedXOffset, transform.right) * spine.rotation;
-                    }
-                }
-            }
+            // Vô hiệu hóa xoay xương thủ công tránh lỗi bẻ xương mạng
+            // if ((isCurrentlyAttacking && !isRootedAttack) || Mathf.Abs(smoothedYOffset) > 0.05f || Mathf.Abs(smoothedXOffset) > 0.05f)
+            // {
+            //     Transform spine = GetSpineBone();
+            //     if (spine != null)
+            //     {
+            //         float finalYAngle = baseAimAngle + smoothedYOffset;
+            //         
+            //         spine.rotation = Quaternion.AngleAxis(finalYAngle, Vector3.up) * spine.rotation;
+            // 
+            //         if (Mathf.Abs(smoothedXOffset) > 0.01f)
+            //         {
+            //             spine.rotation = Quaternion.AngleAxis(smoothedXOffset, transform.right) * spine.rotation;
+            //         }
+            //     }
+            // }
         }
 
         bool shouldFollow = isStandaloneMode || (IsSpawned && IsOwner);
@@ -7323,6 +7360,64 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
             currentAttackLayerWeight = Mathf.MoveTowards(currentAttackLayerWeight, targetAttackLayerWeight, Time.deltaTime * 10f);
             anim.SetLayerWeight(1, currentAttackLayerWeight);
+        }
+    }
+
+    public void RequestDropWoodLog()
+    {
+        Vector3 spawnPos = transform.position + transform.forward * 1.5f + Vector3.up * 0.5f;
+        if (Physics.Raycast(spawnPos, Vector3.down, out RaycastHit hit, 5f))
+        {
+            spawnPos.y = hit.point.y + 0.3f;
+        }
+
+        if (isStandaloneMode)
+        {
+            GameObject logPrefab = Resources.Load<GameObject>("firewood_single");
+            if (logPrefab == null) logPrefab = Resources.Load<GameObject>("WoodLog");
+            if (logPrefab != null)
+            {
+                WoodLogObjectPool.Instance.GetOrCreate(logPrefab, spawnPos, Quaternion.identity);
+            }
+            var carrier = GetComponent<PlayerLogCarrier>();
+            if (carrier != null) carrier.DropLog();
+        }
+        else if (IsOwner)
+        {
+            var carrier = GetComponent<PlayerLogCarrier>();
+            if (carrier != null) carrier.DropLog();
+            DropWoodLogServerRpc(spawnPos);
+        }
+    }
+
+    [ServerRpc]
+    private void DropWoodLogServerRpc(Vector3 position)
+    {
+        if (!IsServer) return;
+
+        GameObject logPrefab = Resources.Load<GameObject>("firewood_single");
+        if (logPrefab == null) logPrefab = Resources.Load<GameObject>("WoodLog");
+
+        if (logPrefab != null)
+        {
+            GameObject wood = WoodLogObjectPool.Instance.GetOrCreate(logPrefab, position, Quaternion.identity);
+            var netObj = wood.GetComponent<NetworkObject>();
+            if (netObj != null)
+            {
+                netObj.Spawn();
+            }
+        }
+
+        DropWoodLogClientRpc();
+    }
+
+    [ClientRpc]
+    private void DropWoodLogClientRpc()
+    {
+        var carrier = GetComponent<PlayerLogCarrier>();
+        if (carrier != null)
+        {
+            carrier.DropLog();
         }
     }
 
