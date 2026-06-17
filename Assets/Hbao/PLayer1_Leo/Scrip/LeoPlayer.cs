@@ -6566,7 +6566,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             StartCoroutine(ResetTriggerNextFrame(translatedName));
 
             int targetLayer = IsAttackAnimationName(translatedName) && !isRootedAttack ? 1 : 0;
-            anim.CrossFadeInFixedTime(animName, fadeTime, targetLayer, 0f);
+            anim.CrossFadeInFixedTime(translatedName, fadeTime, targetLayer, 0f);
 
             // Force evaluation to query the exact animation clip duration
             anim.Update(0f);
