@@ -335,6 +335,62 @@ public class PlayerLogCarrier : MonoBehaviour
         return null;
     }
 
+    private void Update()
+    {
+        // Tự động sửa lỗi kẹt trạng thái bưng gỗ (Self-healing)
+        if (isCarrying && carriedLogInstance == null)
+        {
+            Debug.LogWarning($"[PlayerLogCarrier] Phát hiện kẹt trạng thái bưng gỗ (isCarrying=true nhưng visual log null). Tự động khôi phục!");
+            DropLog();
+            return;
+        }
+
+        if (!isCarrying) return;
+
+        IPlayerHUDTarget player = GetComponent<IPlayerHUDTarget>();
+        if (player == null) return;
+
+        bool isLocal = player.IsStandaloneMode || player.IsOwner;
+        if (!isLocal) return;
+
+        if (Input.GetKeyDown(KeyCode.G))
+        {
+            if (!IsNearBridgeRepairTrigger())
+            {
+                player.RequestDropWoodLog();
+            }
+        }
+    }
+
+    private bool IsNearBridgeRepairTrigger()
+    {
+        Collider[] cols = Physics.OverlapSphere(transform.position, 5f);
+        foreach (var col in cols)
+        {
+            var repairTrigger = col.GetComponent<BridgeRepairTrigger>();
+            if (repairTrigger != null)
+            {
+                var bridge = repairTrigger.bridgeController;
+                if (bridge == null)
+                {
+                    bridge = FindAnyObjectByType<BridgeCollapseTrigger>();
+                }
+                
+                if (bridge != null && bridge.IsBridgeCollapsed() && !bridge.IsBridgeRepaired())
+                {
+                    float repairRadius = bridge.repairInteractRadius;
+                    Vector3 closestPoint = col.bounds.ClosestPoint(transform.position);
+                    float dist = Vector3.Distance(transform.position, closestPoint);
+                    if (dist <= repairRadius || col.bounds.Contains(transform.position))
+                    {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
     private void OnDestroy()
     {
         if (carriedLogInstance != null)

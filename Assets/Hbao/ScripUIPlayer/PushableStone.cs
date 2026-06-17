@@ -14,7 +14,7 @@ public class PushableStone : NetworkBehaviour
     [Tooltip("Số lượng player cần thiết cùng đẩy để đá di chuyển (1 để test, 4 cho game chính)")]
     public int requiredPushers = 1;
     [Tooltip("Khoảng cách tối đa để tương tác hiển thị gợi ý")]
-    public float interactRadius = 2.0f;
+    public float interactRadius = 2.5f;
 
     [Header("Network Synchronization")]
     public NetworkVariable<Vector3> netPosition = new NetworkVariable<Vector3>(
@@ -85,6 +85,10 @@ public class PushableStone : NetworkBehaviour
         if (IsServer)
         {
             netPosition.Value = transform.position;
+            if (NetworkManager.Singleton != null)
+            {
+                NetworkManager.Singleton.OnClientDisconnectCallback += OnClientDisconnect;
+            }
         }
 
         // Synchronize initial occupancies
@@ -101,7 +105,26 @@ public class PushableStone : NetworkBehaviour
         slot2PlayerNetId.OnValueChanged -= (oldVal, newVal) => OnSlotChanged(2, oldVal, newVal);
         slot3PlayerNetId.OnValueChanged -= (oldVal, newVal) => OnSlotChanged(3, oldVal, newVal);
 
+        if (IsServer && NetworkManager.Singleton != null)
+        {
+            NetworkManager.Singleton.OnClientDisconnectCallback -= OnClientDisconnect;
+        }
+
         UnlockAllPlayersLocal();
+    }
+
+    private void OnClientDisconnect(ulong clientId)
+    {
+        if (!IsServer) return;
+
+        for (int i = 0; i < 4; i++)
+        {
+            if (GetSlotOccupantNetId(i) == clientId)
+            {
+                Debug.Log($"[PushableStone Server] Client {clientId} disconnected. Releasing slot {i}.");
+                SetSlotOccupant(i, 0);
+            }
+        }
     }
 
     private void Update()
@@ -226,17 +249,6 @@ public class PushableStone : NetworkBehaviour
                         if (hud != null)
                         {
                             hud.ShowMissionAlert("Bạn đang bưng gỗ, không thể đẩy đá!", 3.0f);
-                        }
-                        return;
-                    }
-
-                    // Check if weapon is drawn
-                    var target = localPlayer as IPlayerHUDTarget;
-                    if (target != null && target.GetActiveWeaponIndex() == 2)
-                    {
-                        if (hud != null)
-                        {
-                            hud.ShowMissionAlert("Bạn phải cất vũ khí mới đẩy được đá!", 3.0f);
                         }
                         return;
                     }

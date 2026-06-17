@@ -3382,6 +3382,64 @@ private void StartRollServerRpc(Vector3 direction)
         }
     }
 
+    public void RequestDropWoodLog()
+    {
+        Vector3 spawnPos = transform.position + transform.forward * 1.5f + Vector3.up * 0.5f;
+        if (Physics.Raycast(spawnPos, Vector3.down, out RaycastHit hit, 5f))
+        {
+            spawnPos.y = hit.point.y + 0.3f;
+        }
+
+        if (isStandaloneMode)
+        {
+            GameObject logPrefab = Resources.Load<GameObject>("firewood_single");
+            if (logPrefab == null) logPrefab = Resources.Load<GameObject>("WoodLog");
+            if (logPrefab != null)
+            {
+                WoodLogObjectPool.Instance.GetOrCreate(logPrefab, spawnPos, Quaternion.identity);
+            }
+            var carrier = GetComponent<PlayerLogCarrier>();
+            if (carrier != null) carrier.DropLog();
+        }
+        else if (IsOwner)
+        {
+            var carrier = GetComponent<PlayerLogCarrier>();
+            if (carrier != null) carrier.DropLog();
+            DropWoodLogServerRpc(spawnPos);
+        }
+    }
+
+    [ServerRpc]
+    private void DropWoodLogServerRpc(Vector3 position)
+    {
+        if (!IsServer) return;
+
+        GameObject logPrefab = Resources.Load<GameObject>("firewood_single");
+        if (logPrefab == null) logPrefab = Resources.Load<GameObject>("WoodLog");
+
+        if (logPrefab != null)
+        {
+            GameObject wood = WoodLogObjectPool.Instance.GetOrCreate(logPrefab, position, Quaternion.identity);
+            var netObj = wood.GetComponent<NetworkObject>();
+            if (netObj != null)
+            {
+                netObj.Spawn();
+            }
+        }
+
+        DropWoodLogClientRpc();
+    }
+
+    [ClientRpc]
+    private void DropWoodLogClientRpc()
+    {
+        var carrier = GetComponent<PlayerLogCarrier>();
+        if (carrier != null)
+        {
+            carrier.DropLog();
+        }
+    }
+
     public override void OnDestroy()
     {
         if (PlayerHUDManager.ActivePlayers != null)

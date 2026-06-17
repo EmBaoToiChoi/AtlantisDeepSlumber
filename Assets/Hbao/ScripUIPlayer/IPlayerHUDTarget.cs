@@ -62,4 +62,6 @@ public interface IPlayerHUDTarget
     // GameObject properties
     Transform transform { get; }
     GameObject gameObject { get; }
+
+    void RequestDropWoodLog();
 }

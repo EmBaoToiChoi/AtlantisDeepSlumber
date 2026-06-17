@@ -132,7 +132,7 @@ Transform:
   m_GameObject: {fileID: 5286910216465157266}
   serializedVersion: 2
   m_LocalRotation: {x: 0.5, y: -0.5, z: 0.5, w: -0.5}
-  m_LocalPosition: {x: -0.000000011175871, y: -0.09100006, z: 0.30799997}
+  m_LocalPosition: {x: 0, y: -0.181, z: 0.325}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -725,6 +725,10 @@ MonoBehaviour:
       NameHash: 1984860264
       Synchronize: 1
       ParameterType: 9
+    - name: IsPushing
+      NameHash: -510442038
+      Synchronize: 1
+      ParameterType: 4
   AnimatorParametersExpanded: 0
 --- !u!136 &4851484069774976014
 CapsuleCollider:
