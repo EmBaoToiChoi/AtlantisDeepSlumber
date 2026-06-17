@@ -759,6 +759,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         weapon1Durability.OnValueChanged += OnDurabilityChanged;
         weapon2Durability.OnValueChanged += OnDurabilityChanged;
+        isRollingNet.OnValueChanged += OnRollingNetChanged;
 
         if (IsOwner)
         {
@@ -803,6 +804,18 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         SyncWeaponVisuals(activeWeaponIndex.Value);
     }
 
+    private void OnRollingNetChanged(bool oldVal, bool newVal)
+    {
+        if (newVal)
+        {
+            if (!IsOwner)
+            {
+                rollDirection = transform.forward;
+                PlayAnimationLocal("LonVong", 0.05f);
+            }
+        }
+    }
+
     public override void OnNetworkDespawn()
     {
         if (PlayerHUDManager.ActivePlayers != null)
@@ -829,6 +842,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         weapon1Durability.OnValueChanged -= OnDurabilityChanged;
         weapon2Durability.OnValueChanged -= OnDurabilityChanged;
+        isRollingNet.OnValueChanged -= OnRollingNetChanged;
 
         if (IsOwner)
             currentHealth.OnValueChanged -= OnHealthChanged;
@@ -1289,6 +1303,36 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         UpdateAttackLayerWeight();
         UpdateComboChain();
 
+        // Đồng bộ di chuyển lướt (Roll) qua network cho cả Client Owner, Server, và các Client khác
+        bool isRolling = isStandaloneMode ? isRollingStandalone : (IsSpawned && isRollingNet.Value);
+        if (isRolling)
+        {
+            if (rb != null)
+            {
+                float currentYVelocity = rb.linearVelocity.y;
+                rb.linearVelocity = new Vector3(rollDirection.x * rollSpeed, currentYVelocity, rollDirection.z * rollSpeed);
+            }
+            else
+            {
+                transform.Translate(rollDirection * rollSpeed * Time.deltaTime, Space.World);
+            }
+
+            if (rollDirection != Vector3.zero)
+            {
+                transform.rotation = Quaternion.LookRotation(rollDirection);
+            }
+
+            if (isStandaloneMode || IsOwner)
+            {
+                rollTimer -= Time.deltaTime;
+                if (rollTimer <= 0)
+                {
+                    OnRollEnd();
+                }
+            }
+            return;
+        }
+
         bool hasControl = isStandaloneMode || (IsSpawned && IsOwner);
         if (hasControl)
         {
@@ -1447,31 +1491,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
             return;
         }
 
-        if (isRollingStandalone)
-        {
-            rollTimer -= Time.deltaTime;
 
-            if (rb != null)
-            {
-                float currentYVelocity = rb.linearVelocity.y;
-                rb.linearVelocity = new Vector3(rollDirection.x * rollSpeed, currentYVelocity, rollDirection.z * rollSpeed);
-            }
-            else
-            {
-                transform.Translate(rollDirection * rollSpeed * Time.deltaTime, Space.World);
-            }
-
-            if (rollDirection != Vector3.zero)
-            {
-                transform.rotation = Quaternion.LookRotation(rollDirection);
-            }
-
-            if (rollTimer <= 0)
-            {
-                OnRollEnd();
-            }
-            return;
-        }
 
         bool canBlock = GetActiveWeaponIndex() == 2 && CurrentHealth > 0 &&
                         !isRollingStandalone && !IsPlayingFullBodyAction();
@@ -1650,31 +1670,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
             return;
         }
 
-        if (rollTimer > 0)
-        {
-            rollTimer -= Time.deltaTime;
 
-            if (rb != null)
-            {
-                float currentYVelocity = rb.linearVelocity.y;
-                rb.linearVelocity = new Vector3(rollDirection.x * rollSpeed, currentYVelocity, rollDirection.z * rollSpeed);
-            }
-            else
-            {
-                transform.Translate(rollDirection * rollSpeed * Time.deltaTime, Space.World);
-            }
-
-            if (rollDirection != Vector3.zero)
-            {
-                transform.rotation = Quaternion.LookRotation(rollDirection);
-            }
-
-            if (rollTimer <= 0)
-            {
-                OnRollEnd();
-            }
-            return;
-        }
 
         bool canBlock = GetActiveWeaponIndex() == 2 && CurrentHealth > 0 &&
                         (rollTimer <= 0) && !IsPlayingFullBodyAction();
