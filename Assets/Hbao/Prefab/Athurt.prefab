@@ -161,6 +161,7 @@ GameObject:
   - component: {fileID: 2610228392220693824}
   - component: {fileID: 1278614070153325450}
   - component: {fileID: 1454344850779201767}
+  - component: {fileID: 7886502881541582763}
   m_Layer: 3
   m_Name: Athurt
   m_TagString: Player
@@ -825,6 +826,20 @@ MonoBehaviour:
     TransitionIndex: 6
   - IsCrossFadeExit: 0
     Layer: 1
+    OriginatingState: -499022955
+    DestinationState: 2048954328
+    TransitionDuration: 0.05
+    TriggerNameHash: 2048954328
+    TransitionIndex: 9
+  - IsCrossFadeExit: 0
+    Layer: 1
+    OriginatingState: -499022955
+    DestinationState: 1271436613
+    TransitionDuration: 0.05
+    TriggerNameHash: 1271436613
+    TransitionIndex: 10
+  - IsCrossFadeExit: 0
+    Layer: 1
     OriginatingState: -382223678
     DestinationState: 133138430
     TransitionDuration: 0.05
@@ -836,27 +851,6 @@ MonoBehaviour:
     DestinationState: -1459250024
     TransitionDuration: 0.05
     TriggerNameHash: 63768429
-    TransitionIndex: 0
-  - IsCrossFadeExit: 0
-    Layer: 1
-    OriginatingState: 848348862
-    DestinationState: 2048954328
-    TransitionDuration: 0.05
-    TriggerNameHash: 2048954328
-    TransitionIndex: 1
-  - IsCrossFadeExit: 0
-    Layer: 1
-    OriginatingState: 848348862
-    DestinationState: 1271436613
-    TransitionDuration: 0.05
-    TriggerNameHash: 1271436613
-    TransitionIndex: 2
-  - IsCrossFadeExit: 0
-    Layer: 1
-    OriginatingState: 2048954328
-    DestinationState: 1271436613
-    TransitionDuration: 0.05
-    TriggerNameHash: 1271436613
     TransitionIndex: 0
   - IsCrossFadeExit: 0
     Layer: 1
@@ -1132,6 +1126,19 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   isCarrying: 0
   carryTargetTransform: {fileID: 7520962168665786257}
+--- !u!114 &7886502881541582763
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6392718148198085431}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 552b3cf7e6035394fbcd06e3916e0bb0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  ShowTopMostFoldoutHeaderGroup: 1
 --- !u!1 &6656804584175171832
 GameObject:
   m_ObjectHideFlags: 0
