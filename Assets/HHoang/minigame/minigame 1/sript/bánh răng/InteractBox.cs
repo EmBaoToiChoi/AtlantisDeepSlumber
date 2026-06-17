@@ -16,20 +16,21 @@ public class InteractBox : NetworkBehaviour
     // Dùng NetworkBehaviour để tóm gọn mọi script nhân vật (Leo, Elena, v.v...)
     private NetworkBehaviour localPlayerController;
 
+    public void TrySnapCrystal()
+    {
+        if ((stationIndex == 2 || stationIndex == 3) && !isCrystalLocked.Value)
+        {
+            SnapAndLockCrystalServerRpc(stationIndex);
+        }
+    }
+
     void Update()
     {
         if (Application.isBatchMode || localPlayerInteraction == null) return;
 
         if (localPlayerInteraction.IsOwner && Keyboard.current != null && Keyboard.current.fKey.wasPressedThisFrame)
         {
-            // Kiểm tra ngọc bằng NetworkVariable thay vì biến cục bộ
-            bool isHoldingCore = localPlayerInteraction.isCarryingCore.Value && localPlayerInteraction.heldCoreNetworkId.Value != ulong.MaxValue;
-
-            if (isHoldingCore && (stationIndex == 2 || stationIndex == 3) && !isCrystalLocked.Value)
-            {
-                SnapAndLockCrystalServerRpc(stationIndex);
-            }
-            else if (gameManager != null)
+            if (gameManager != null)
             {
                 if (!isUsingStation) OpenStation();
                 else ExitStation();

@@ -37,11 +37,48 @@ public class PuzzleCrystalCore : NetworkBehaviour // <--- SỬA LẠI THÀNH NET
     public override void OnNetworkSpawn()
     {
         if (IsServer) spawnPosition = transform.position; 
+        holderId.OnValueChanged += OnHolderIdChanged;
+        if (holderId.Value != ulong.MaxValue)
+        {
+            OnHolderIdChanged(ulong.MaxValue, holderId.Value);
+        }
+    }
+
+    public override void OnNetworkDespawn()
+    {
+        holderId.OnValueChanged -= OnHolderIdChanged;
+    }
+
+    private void OnHolderIdChanged(ulong oldVal, ulong newVal)
+    {
+        var netTransform = GetComponent<Unity.Netcode.Components.NetworkTransform>();
+        var col = GetComponent<Collider>();
+        
+        if (newVal != ulong.MaxValue)
+        {
+            // Tắt NetworkTransform và Collider khi đang được nhặt để tránh tranh chấp tọa độ/vật lý
+            if (netTransform != null) netTransform.enabled = false;
+            if (col != null) col.enabled = false;
+            if (rb != null)
+            {
+                rb.isKinematic = true;
+                rb.useGravity = false;
+                rb.linearVelocity = Vector3.zero;
+                rb.angularVelocity = Vector3.zero;
+            }
+        }
+        else
+        {
+            // Bật lại NetworkTransform và Collider khi được thả ra
+            if (netTransform != null) netTransform.enabled = true;
+            if (col != null) col.enabled = !isSnapped.Value;
+        }
     }
 
     void FixedUpdate() 
     {
-        if (!IsServer) return;
+        bool isStandalone = NetworkManager.Singleton == null || !NetworkManager.Singleton.IsListening;
+        if (!IsServer && !isStandalone) return;
 
         if (float.IsNaN(transform.position.x)) { ResetToSpawnPosition(); return; }
 
@@ -72,20 +109,88 @@ public class PuzzleCrystalCore : NetworkBehaviour // <--- SỬA LẠI THÀNH NET
 
         if (isSnapped.Value || isSnapping.Value) return;
 
-        if (IsSpawned && holderId.Value != ulong.MaxValue)
+        // 3. Logic bay vào tay trên Server/Standalone (Chỉ chạy khi có holderId)
+        if (holderId.Value != ulong.MaxValue)
         {
-            if (NetworkManager.Singleton.ConnectedClients.TryGetValue(holderId.Value, out var client) && client.PlayerObject != null)
+            GameObject player = null;
+            if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening)
             {
-                if (client.PlayerObject.TryGetComponent<PlayerInteraction>(out var pInt) && pInt.holdPoint != null)
+                if (NetworkManager.Singleton.ConnectedClients.TryGetValue(holderId.Value, out var client) && client.PlayerObject != null)
+                {
+                    player = client.PlayerObject.gameObject;
+                }
+            }
+            
+            if (player != null)
+            {
+                rb.isKinematic = true;
+                rb.useGravity = false;
+                
+                // Di chuyển rigidbody trên Server tới vị trí ngang tay/bụng của player (như thanh gỗ)
+                Vector3 targetPos = player.transform.TransformPoint(new Vector3(0f, 0.95f, 0.42f));
+                Quaternion targetRot = player.transform.rotation;
+                
+                rb.MovePosition(Vector3.Lerp(transform.position, targetPos, flySpeed * Time.fixedDeltaTime));
+                rb.MoveRotation(Quaternion.Lerp(transform.rotation, targetRot, flySpeed * Time.fixedDeltaTime));
+                return; 
+            }
+            
+            if (!isStandalone)
+            {
+                holderId.Value = ulong.MaxValue;
+            }
+        }
+    }
+
+    void LateUpdate()
+    {
+        // Cập nhật tọa độ tức thì trên tất cả Client/Standalone để triệt tiêu độ trễ (Zero lag local positioning)
+        if (holderId.Value != ulong.MaxValue)
+        {
+            GameObject player = null;
+            if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening)
+            {
+                if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(holderId.Value, out var playerNetObj))
+                {
+                    player = playerNetObj.gameObject;
+                }
+            }
+            else
+            {
+                // Offline test mode: tìm player gần nhất đang cầm ngọc
+                var players = FindObjectsByType<PlayerInteraction>(FindObjectsSortMode.None);
+                foreach (var p in players)
+                {
+                    if (p.isCarryingCore.Value)
+                    {
+                        player = p.gameObject;
+                        break;
+                    }
+                }
+            }
+
+            if (player != null)
+            {
+                // Tắt NetworkTransform và Collider thủ công ở offline mode
+                var netTransform = GetComponent<Unity.Netcode.Components.NetworkTransform>();
+                var col = GetComponent<Collider>();
+                if (netTransform != null && netTransform.enabled) netTransform.enabled = false;
+                if (col != null && col.enabled) col.enabled = false;
+                if (rb != null)
                 {
                     rb.isKinematic = true;
                     rb.useGravity = false;
-                    rb.MovePosition(Vector3.Lerp(transform.position, pInt.holdPoint.position, flySpeed * Time.fixedDeltaTime));
-                    rb.MoveRotation(Quaternion.Lerp(transform.rotation, pInt.holdPoint.rotation, flySpeed * Time.fixedDeltaTime));
-                    return; 
                 }
+
+                // Khớp chính xác với vị trí bưng thanh gỗ (offset từ root player)
+                transform.position = player.transform.TransformPoint(new Vector3(0f, 0.95f, 0.42f));
+                transform.rotation = player.transform.rotation;
+                
+                // Nội suy scale mượt mà trên client
+                float lerpSpeed = 10f;
+                Vector3 targetScale = originalScale * holdScaleMultiplier;
+                transform.localScale = Vector3.Lerp(transform.localScale, targetScale, lerpSpeed * Time.deltaTime);
             }
-            holderId.Value = ulong.MaxValue;
         }
     }
 
@@ -144,7 +249,8 @@ public class PuzzleCrystalCore : NetworkBehaviour // <--- SỬA LẠI THÀNH NET
 
     public void PerformPickup(ulong playerId)
     {
-        if (!IsServer) return;
+        bool isStandalone = NetworkManager.Singleton == null || !NetworkManager.Singleton.IsListening;
+        if (!IsServer && !isStandalone) return;
         
         if (!historyHolders.Contains(playerId)) historyHolders.Add(playerId);
         
@@ -154,7 +260,11 @@ public class PuzzleCrystalCore : NetworkBehaviour // <--- SỬA LẠI THÀNH NET
         var col = GetComponent<Collider>();
         if (col != null) col.enabled = false; 
 
-        GetComponent<NetworkObject>().ChangeOwnership(playerId);
+        var netObj = GetComponent<NetworkObject>();
+        if (netObj != null && netObj.IsSpawned)
+        {
+            netObj.ChangeOwnership(playerId);
+        }
         holderId.Value = playerId; 
 
         rb.isKinematic = true; 
@@ -163,7 +273,8 @@ public class PuzzleCrystalCore : NetworkBehaviour // <--- SỬA LẠI THÀNH NET
 
     public void PerformThrow(Vector3 throwDirection)
     {
-        if (!IsServer) return;
+        bool isStandalone = NetworkManager.Singleton == null || !NetworkManager.Singleton.IsListening;
+        if (!IsServer && !isStandalone) return;
         
         isBurning = false; 
         burnTimer = 0f;
@@ -172,7 +283,10 @@ public class PuzzleCrystalCore : NetworkBehaviour // <--- SỬA LẠI THÀNH NET
         if (col != null) col.enabled = true; 
 
         var netObj = GetComponent<NetworkObject>();
-        if (netObj.OwnerClientId != NetworkManager.ServerClientId) netObj.RemoveOwnership();
+        if (netObj != null && netObj.IsSpawned)
+        {
+            if (netObj.OwnerClientId != NetworkManager.ServerClientId) netObj.RemoveOwnership();
+        }
         holderId.Value = ulong.MaxValue; 
 
         rb.isKinematic = false;
@@ -187,7 +301,8 @@ public class PuzzleCrystalCore : NetworkBehaviour // <--- SỬA LẠI THÀNH NET
 
     public void PerformDrop()
     {
-        if (!IsServer) return;
+        bool isStandalone = NetworkManager.Singleton == null || !NetworkManager.Singleton.IsListening;
+        if (!IsServer && !isStandalone) return;
         isSnapping.Value = false;
         isBurning = false;
         burnTimer = 0f;
@@ -196,11 +311,17 @@ public class PuzzleCrystalCore : NetworkBehaviour // <--- SỬA LẠI THÀNH NET
         if (col != null) col.enabled = true; 
         
         var netObj = GetComponent<NetworkObject>();
-        if (netObj.OwnerClientId != NetworkManager.ServerClientId) netObj.RemoveOwnership();
+        if (netObj != null && netObj.IsSpawned)
+        {
+            if (netObj.OwnerClientId != NetworkManager.ServerClientId) netObj.RemoveOwnership();
+        }
         holderId.Value = ulong.MaxValue; 
         
         rb.isKinematic = false;
         rb.useGravity = true;
+
+        var netTransform = GetComponent<Unity.Netcode.Components.NetworkTransform>();
+        if (netTransform != null) netTransform.enabled = true;
 
         CheckBottomOutRule();
     }
@@ -215,18 +336,43 @@ public class PuzzleCrystalCore : NetworkBehaviour // <--- SỬA LẠI THÀNH NET
 
     private void ExplodeCore()
     {
-        if (!IsServer) return;
+        bool isStandalone = NetworkManager.Singleton == null || !NetworkManager.Singleton.IsListening;
+        if (!IsServer && !isStandalone) return;
 
-        ExplodeVisualClientRpc();
+        if (!isStandalone)
+        {
+            ExplodeVisualClientRpc();
+        }
+        else
+        {
+            if (explosionEffectPrefab != null) Instantiate(explosionEffectPrefab, transform.position, Quaternion.identity);
+        }
 
         isBurning = false;
         burnTimer = 0f;
 
-        if (holderId.Value != ulong.MaxValue && NetworkManager.Singleton.ConnectedClients.TryGetValue(holderId.Value, out var client))
+        if (holderId.Value != ulong.MaxValue)
         {
-            if (client.PlayerObject != null && client.PlayerObject.TryGetComponent<PlayerInteraction>(out var pInt))
+            if (!isStandalone)
             {
-                pInt.ForceDropFromStation();
+                if (NetworkManager.Singleton.ConnectedClients.TryGetValue(holderId.Value, out var client) && client.PlayerObject != null)
+                {
+                    if (client.PlayerObject.TryGetComponent<PlayerInteraction>(out var pInt))
+                    {
+                        pInt.ForceDropFromStation();
+                    }
+                }
+            }
+            else
+            {
+                var players = FindObjectsByType<PlayerInteraction>(FindObjectsSortMode.None);
+                foreach (var p in players)
+                {
+                    if (p.isCarryingCore.Value)
+                    {
+                        p.ForceDropFromStation();
+                    }
+                }
             }
         }
 
@@ -242,7 +388,8 @@ public class PuzzleCrystalCore : NetworkBehaviour // <--- SỬA LẠI THÀNH NET
 
     public void StartSnappingToStation(Transform target)
     {
-        if (IsServer)
+        bool isStandalone = NetworkManager.Singleton == null || !NetworkManager.Singleton.IsListening;
+        if (IsServer || isStandalone)
         {
             isSnapping.Value = true;
             StartCoroutine(SnapLerpRoutine(target.position, target.rotation));
@@ -267,7 +414,8 @@ public class PuzzleCrystalCore : NetworkBehaviour // <--- SỬA LẠI THÀNH NET
 
     public void LockToStation()
     {
-        if (IsServer)
+        bool isStandalone = NetworkManager.Singleton == null || !NetworkManager.Singleton.IsListening;
+        if (IsServer || isStandalone)
         {
             isBurning = false; 
             burnTimer = 0f;
@@ -285,7 +433,8 @@ public class PuzzleCrystalCore : NetworkBehaviour // <--- SỬA LẠI THÀNH NET
 
     public void ResetToSpawnPosition()
     {
-        if (!IsServer) return;
+        bool isStandalone = NetworkManager.Singleton == null || !NetworkManager.Singleton.IsListening;
+        if (!IsServer && !isStandalone) return;
         isBurning = false;
         burnTimer = 0f;
         isSnapping.Value = false;

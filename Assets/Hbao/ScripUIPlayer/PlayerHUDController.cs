@@ -1552,6 +1552,10 @@ public class PlayerHUDController : MonoBehaviour
                 {
                     interactionPromptKeyText.text = "E";
                 }
+                else if (text.Contains("[G]") || text.Contains("phím G") || text.Contains("phím [G]"))
+                {
+                    interactionPromptKeyText.text = "G";
+                }
                 else
                 {
                     interactionPromptKeyText.text = "F";
