@@ -58,9 +58,14 @@ public class PuzzleCrystalCore : NetworkBehaviour // <--- SỬA LẠI THÀNH NET
         {
             // Tắt NetworkTransform và Collider khi đang được nhặt để tránh tranh chấp tọa độ/vật lý
             if (netTransform != null) netTransform.enabled = false;
-            if (col != null) col.enabled = false;
+            if (col != null) 
+            {
+                col.enabled = false;
+                col.isTrigger = true; // Chuyển thành Trigger phòng hờ va chạm
+            }
             if (rb != null)
             {
+                rb.detectCollisions = false; // Tắt hoàn toàn va chạm vật lý
                 rb.isKinematic = true;
                 rb.useGravity = false;
                 rb.linearVelocity = Vector3.zero;
@@ -71,7 +76,15 @@ public class PuzzleCrystalCore : NetworkBehaviour // <--- SỬA LẠI THÀNH NET
         {
             // Bật lại NetworkTransform và Collider khi được thả ra
             if (netTransform != null) netTransform.enabled = true;
-            if (col != null) col.enabled = !isSnapped.Value;
+            if (col != null) 
+            {
+                col.enabled = !isSnapped.Value;
+                col.isTrigger = false;
+            }
+            if (rb != null)
+            {
+                rb.detectCollisions = true; // Bật lại va chạm vật lý
+            }
         }
     }
 
@@ -258,7 +271,11 @@ public class PuzzleCrystalCore : NetworkBehaviour // <--- SỬA LẠI THÀNH NET
         burnTimer = burnTimeLimit; 
 
         var col = GetComponent<Collider>();
-        if (col != null) col.enabled = false; 
+        if (col != null) 
+        {
+            col.enabled = false;
+            col.isTrigger = true;
+        }
 
         var netObj = GetComponent<NetworkObject>();
         if (netObj != null && netObj.IsSpawned)
@@ -267,6 +284,7 @@ public class PuzzleCrystalCore : NetworkBehaviour // <--- SỬA LẠI THÀNH NET
         }
         holderId.Value = playerId; 
 
+        rb.detectCollisions = false;
         rb.isKinematic = true; 
         rb.useGravity = false;
     }
@@ -280,7 +298,11 @@ public class PuzzleCrystalCore : NetworkBehaviour // <--- SỬA LẠI THÀNH NET
         burnTimer = 0f;
 
         var col = GetComponent<Collider>();
-        if (col != null) col.enabled = true; 
+        if (col != null) 
+        {
+            col.enabled = true;
+            col.isTrigger = false;
+        }
 
         var netObj = GetComponent<NetworkObject>();
         if (netObj != null && netObj.IsSpawned)
@@ -289,6 +311,7 @@ public class PuzzleCrystalCore : NetworkBehaviour // <--- SỬA LẠI THÀNH NET
         }
         holderId.Value = ulong.MaxValue; 
 
+        rb.detectCollisions = true;
         rb.isKinematic = false;
         rb.useGravity = true;
 
@@ -308,7 +331,11 @@ public class PuzzleCrystalCore : NetworkBehaviour // <--- SỬA LẠI THÀNH NET
         burnTimer = 0f;
         
         var col = GetComponent<Collider>();
-        if (col != null) col.enabled = true; 
+        if (col != null) 
+        {
+            col.enabled = true;
+            col.isTrigger = false;
+        }
         
         var netObj = GetComponent<NetworkObject>();
         if (netObj != null && netObj.IsSpawned)
@@ -317,6 +344,7 @@ public class PuzzleCrystalCore : NetworkBehaviour // <--- SỬA LẠI THÀNH NET
         }
         holderId.Value = ulong.MaxValue; 
         
+        rb.detectCollisions = true;
         rb.isKinematic = false;
         rb.useGravity = true;
 
@@ -422,8 +450,13 @@ public class PuzzleCrystalCore : NetworkBehaviour // <--- SỬA LẠI THÀNH NET
             isSnapping.Value = false;
             isSnapped.Value = true;
             var col = GetComponent<Collider>();
-            if (col != null) col.enabled = false;
+            if (col != null) 
+            {
+                col.enabled = false;
+                col.isTrigger = true;
+            }
             holderId.Value = ulong.MaxValue; 
+            rb.detectCollisions = false;
             rb.isKinematic = true; 
             rb.useGravity = false;
             rb.linearVelocity = Vector3.zero; 
@@ -446,10 +479,15 @@ public class PuzzleCrystalCore : NetworkBehaviour // <--- SỬA LẠI THÀNH NET
 
         // --- ĐÂY, BẬT LẠI COLLIDER CHỐNG RỚT XUYÊN MAP ---
         var col = GetComponent<Collider>();
-        if (col != null) col.enabled = true; 
+        if (col != null) 
+        {
+            col.enabled = true; 
+            col.isTrigger = false;
+        }
         // ------------------------------------------------
 
         // Reset vật lý
+        rb.detectCollisions = true;
         rb.linearVelocity = Vector3.zero; 
         rb.angularVelocity = Vector3.zero;
         rb.isKinematic = false; 

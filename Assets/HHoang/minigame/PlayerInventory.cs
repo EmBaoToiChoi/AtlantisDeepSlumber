@@ -179,7 +179,7 @@ public class PlayerInteraction : NetworkBehaviour
             {
                 if (currentPillarStation != null || (currentInteractBox != null && (currentInteractBox.stationIndex == 2 || currentInteractBox.stationIndex == 3) && !currentInteractBox.isCrystalLocked.Value))
                 {
-                    hud.ShowInteractionPrompt(true, "Ấn [G] để đặt Ngọc");
+                    hud.ShowInteractionPrompt(true, "Ấn [F] để đặt Ngọc");
                 }
                 else
                 {
@@ -228,7 +228,7 @@ public class PlayerInteraction : NetworkBehaviour
 
         if (Keyboard.current != null)
         {
-            // F Key to pick up
+            // F Key: Nhặt ngọc khi rảnh tay, hoặc Đặt ngọc lên trụ khi đang bưng ngọc
             if (Keyboard.current.fKey.wasPressedThisFrame)
             {
                 if (!isCarryingCore.Value) 
@@ -257,13 +257,9 @@ public class PlayerInteraction : NetworkBehaviour
 
                     TryPickupCore();
                 }
-            }
-
-            // G Key to drop or place on stations
-            if (Keyboard.current.gKey.wasPressedThisFrame)
-            {
-                if (isCarryingCore.Value)
+                else
                 {
+                    // Nếu đang bưng ngọc và nhấn F gần trụ/tượng -> Thực hiện đặt/lắp ngọc
                     if (currentPillarStation != null)
                     {
                         if (NetworkManager.Singleton == null || !NetworkManager.Singleton.IsListening)
@@ -286,16 +282,21 @@ public class PlayerInteraction : NetworkBehaviour
                             currentInteractBox.TrySnapCrystal();
                         }
                     }
+                }
+            }
+
+            // G Key: Thả ngọc xuống đất khi đang bưng
+            if (Keyboard.current.gKey.wasPressedThisFrame)
+            {
+                if (isCarryingCore.Value)
+                {
+                    if (NetworkManager.Singleton == null || !NetworkManager.Singleton.IsListening)
+                    {
+                        PerformThrowOffline(transform.forward);
+                    }
                     else
                     {
-                        if (NetworkManager.Singleton == null || !NetworkManager.Singleton.IsListening)
-                        {
-                            PerformThrowOffline(transform.forward);
-                        }
-                        else
-                        {
-                            RequestThrowServerRpc(transform.forward);
-                        }
+                        RequestThrowServerRpc(transform.forward);
                     }
                 }
             }
