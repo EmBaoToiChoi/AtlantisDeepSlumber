@@ -3449,14 +3449,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     private void OnRollingNetChanged(bool oldVal, bool newVal)
     {
-        if (newVal)
-        {
-            if (!IsOwner)
-            {
-                rollDirection = transform.forward;
-                PlayAnimationLocal("LonVong", 0.05f);
-            }
-        }
+        // Bắt đầu lướt đã được thực hiện đồng bộ qua StartRollClientRpc để đảm bảo chính xác hướng lướt
     }
 
     public override void OnNetworkDespawn()
@@ -3608,7 +3601,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         bool isRolling = isStandaloneMode ? isRollingStandalone : (IsSpawned && isRollingNet.Value);
         if (isRolling)
         {
-            if (rb != null)
+            if (rb != null && !rb.isKinematic)
             {
                 float currentYVelocity = rb.linearVelocity.y;
                 rb.linearVelocity = new Vector3(rollDirection.x * rollSpeed, currentYVelocity, rollDirection.z * rollSpeed);
@@ -4442,7 +4435,21 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             rollDirection = direction;
             transform.rotation = Quaternion.LookRotation(direction);
         }
-        PlayAnimationClientRpc("LonVong", 0.05f, true, false);
+        StartRollClientRpc(direction);
+    }
+
+    [ClientRpc]
+    private void StartRollClientRpc(Vector3 direction)
+    {
+        if (!IsOwner)
+        {
+            rollDirection = direction;
+            if (direction != Vector3.zero)
+            {
+                transform.rotation = Quaternion.LookRotation(direction);
+            }
+            PlayAnimationLocal("LonVong", 0.05f);
+        }
     }
 
     [ServerRpc]
