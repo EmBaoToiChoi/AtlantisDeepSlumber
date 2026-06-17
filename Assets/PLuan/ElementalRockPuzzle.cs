@@ -28,7 +28,7 @@ public class ElementalRockPuzzle : NetworkBehaviour
     public Sprite lightningIcon;
 
     [Header("UI Transform Settings")]
-    [Tooltip("Transform chỉ định vị trí hiện chữ/icon. Nếu để trống, sẽ tự động tính toán đỉnh của vật thể.")]
+    [Tooltip("Transform chỉ định vị trí hiện icon. Nếu để trống, sẽ tự động tính toán đỉnh của vật thể.")]
     public Transform uiPivot;
     [Tooltip("Chiều cao bù thêm (offset) khi tự động tính toán vị trí hiển thị phía trên viên đá")]
     public float offsetHeight = 2.5f;
@@ -38,7 +38,7 @@ public class ElementalRockPuzzle : NetworkBehaviour
     public float iconScale = 0.5f;
     [Tooltip("Có tự động quay Icon về hướng Camera không")]
     public bool faceCamera = true;
-    [Tooltip("Góc xoay bù thêm (offset) cho hàng chữ/icon (độ Euler)")]
+    [Tooltip("Góc xoay bù thêm (offset) cho hàng icon (độ Euler)")]
     public Vector3 uiRotationOffset = Vector3.zero;
 
     [Header("Status (Read Only - Local State)")]
@@ -64,8 +64,6 @@ public class ElementalRockPuzzle : NetworkBehaviour
     private GameObject uiRootObj;
     private GameObject[] iconObjects;
     private SpriteRenderer[] iconRenderers;
-    private TextMesh timerTextMesh; // Hiện số giây đếm ngược dưới hàng Icon
-    private TextMesh fallbackTextMesh; // TextMesh dự phòng nếu người chơi chưa gán Sprite Icon
 
     private bool IsNetworkActive => NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
 
@@ -77,17 +75,15 @@ public class ElementalRockPuzzle : NetworkBehaviour
         uiRootObj = new GameObject("RockPuzzle_UIRoot");
         UpdateUIPosition();
 
-        // Kiểm tra xem đã gán đầy đủ Icon hay chưa
+        // Khởi tạo các SpriteRenderer hiển thị Icon
         bool hasAllIcons = fireIcon != null && waterIcon != null && iceIcon != null && lightningIcon != null;
-
         if (hasAllIcons)
         {
             CreateIconElements();
         }
         else
         {
-            Debug.LogWarning("[ElementalRockPuzzle] Thiếu sprite nguyên tố trong Inspector. Tự động chuyển sang chế độ text dự phòng (Fallback).");
-            CreateFallbackTextMesh();
+            Debug.LogWarning("[ElementalRockPuzzle] Vui lòng gán đầy đủ 4 Sprite Icon nguyên tố trong Inspector để hiển thị.");
         }
 
         ResetPuzzle();
@@ -157,7 +153,7 @@ public class ElementalRockPuzzle : NetworkBehaviour
             AnimateCurrentIcon();
         }
 
-        // Tự động xoay hàng Icon hoặc Text về hướng Camera chính (Billboarding)
+        // Tự động xoay hàng Icon về hướng Camera chính (Billboarding)
         if (faceCamera)
         {
             BillboardUI();
@@ -294,7 +290,6 @@ public class ElementalRockPuzzle : NetworkBehaviour
         return new Vector3(0f, calculatedHeight, 0f);
     }
 
-
     private void CreateIconElements()
     {
         iconObjects = new GameObject[4];
@@ -317,41 +312,11 @@ public class ElementalRockPuzzle : NetworkBehaviour
             iconObjects[i] = iconObj;
             iconRenderers[i] = sr;
         }
-
-        // Tạo Text đếm ngược nhỏ nằm phía dưới hàng icon
-        GameObject timerObj = new GameObject("RockPuzzle_TimerText");
-        timerObj.transform.SetParent(uiRootObj.transform);
-        timerObj.transform.localPosition = new Vector3(0f, -0.6f, 0f);
-
-        timerTextMesh = timerObj.AddComponent<TextMesh>();
-        timerTextMesh.fontSize = 24;
-        timerTextMesh.characterSize = 0.08f;
-        timerTextMesh.alignment = TextAlignment.Center;
-        timerTextMesh.anchor = TextAnchor.MiddleCenter;
-        timerTextMesh.fontStyle = FontStyle.Bold;
-        timerTextMesh.color = Color.white;
-        timerTextMesh.richText = true;
-    }
-
-    private void CreateFallbackTextMesh()
-    {
-        GameObject textObj = new GameObject("RockPuzzle_FallbackText");
-        textObj.transform.SetParent(uiRootObj.transform);
-        textObj.transform.localPosition = Vector3.zero;
-
-        fallbackTextMesh = textObj.AddComponent<TextMesh>();
-        fallbackTextMesh.fontSize = 32;
-        fallbackTextMesh.characterSize = 0.08f;
-        fallbackTextMesh.alignment = TextAlignment.Center;
-        fallbackTextMesh.anchor = TextAnchor.MiddleCenter;
-        fallbackTextMesh.fontStyle = FontStyle.Bold;
-        fallbackTextMesh.color = Color.white;
-        fallbackTextMesh.richText = true;
     }
 
     private void UpdateVisualStates()
     {
-        // 1. Cập nhật giao diện nếu đang dùng Icon
+        // Cập nhật giao diện hình ảnh của 4 Icon
         if (iconRenderers != null && iconRenderers.Length == 4)
         {
             for (int i = 0; i < 4; i++)
@@ -381,39 +346,6 @@ public class ElementalRockPuzzle : NetworkBehaviour
                         iconObjects[i].transform.localScale = Vector3.one * iconScale;
                     }
                 }
-            }
-
-            // Cập nhật text thời gian đếm ngược dưới icon
-            if (timerTextMesh != null)
-            {
-                if (isTimerRunning)
-                {
-                    timerTextMesh.text = $"<color=#FF9F0A>{timeRemaining:F1}s</color>";
-                }
-                else
-                {
-                    timerTextMesh.text = "<color=#CCCCCC>Bắn Lửa để bắt đầu</color>";
-                }
-            }
-        }
-
-        // 2. Cập nhật giao diện dự phòng nếu đang dùng Text
-        if (fallbackTextMesh != null)
-        {
-            string fireStr = currentStep == 0 ? "<b><color=#FF453A>[ Hỏa ]</color></b>" : "<color=#FF9F0A>Hỏa</color>";
-            string waterStr = currentStep == 1 ? "<b><color=#0A84FF>[ Thủy ]</color></b>" : "<color=#64D2FF>Thủy</color>";
-            string iceStr = currentStep == 2 ? "<b><color=#5AC8F5>[ Băng ]</color></b>" : "<color=#A3D5FF>Băng</color>";
-            string lightningStr = currentStep == 3 ? "<b><color=#FFD60A>[ Lôi ]</color></b>" : "<color=#BF5AF2>Lôi</color>";
-
-            string chainStr = $"{fireStr} → {waterStr} → {iceStr} → {lightningStr}";
-
-            if (isTimerRunning)
-            {
-                fallbackTextMesh.text = $"{chainStr}\n<color=#FF9F0A>Thời gian còn lại: {timeRemaining:F1}s</color>";
-            }
-            else
-            {
-                fallbackTextMesh.text = $"{chainStr}\n<color=#CCCCCC>Bắn nguyên tố HỎA để bắt đầu</color>";
             }
         }
     }

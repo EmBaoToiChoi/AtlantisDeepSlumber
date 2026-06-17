@@ -3101,6 +3101,16 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     private float invisibilityTimeRemaining = 0f;
     private System.Collections.Generic.Dictionary<Renderer, Material[]> originalMaterials = new System.Collections.Generic.Dictionary<Renderer, Material[]>();
 
+    [Header("Skill R - Bắn Cục Sét")]
+    [Tooltip("Prefab đạn sét của chiêu R")]
+    public GameObject rSkillLightningPrefab;
+    [Tooltip("Điểm xuất phát bắn đạn sét của chiêu R")]
+    public Transform rSkillLightningSpawnPoint;
+    [Tooltip("Tốc độ bay của đạn sét")]
+    public float rSkillLightningSpeed = 20f;
+    [Tooltip("Sát thương của đạn sét")]
+    public float rSkillLightningDamage = 40f;
+
     [Header("Attack Speed Boost Skill E Settings")]
     public Material redSwordMaterial;
     [Tooltip("Gán texture 'sword_Emissive' ở đây để chỉ nhuộm đỏ phần lưỡi/đường vân kiếm mà giữ nguyên chuôi kiếm.")]
@@ -4991,16 +5001,74 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (carrier != null && carrier.isCarrying) return;
 
         if (PlayerLevel < 5 && !IsSkillsUnlocked) return;
-        if (IsInvisible) return;
+
+        // Bắn đạn sét chớp nhoáng, chạy một animation tấn công bất kỳ
+        string attackAnim = Random.value < 0.5f ? "Attack1combo1" : "Attack2combo1";
+        PlayAnimation(attackAnim, 0.05f);
 
         if (isStandaloneMode)
         {
-            invisibilityTimeRemaining = 5f;
-            SetInvisibilityVisuals(true);
+            SpawnLightningProjectileLocal();
         }
         else if (IsOwner)
         {
-            TriggerInvisibilityServerRpc(true);
+            Vector3 spawnPos = rSkillLightningSpawnPoint != null ? rSkillLightningSpawnPoint.position : transform.position + transform.forward * 1.5f + Vector3.up * 1.0f;
+            Vector3 shootDirection = transform.forward;
+            SpawnLightningProjectileServerRpc(spawnPos, shootDirection);
+        }
+    }
+
+    private void SpawnLightningProjectileLocal()
+    {
+        if (rSkillLightningPrefab == null)
+        {
+            Debug.LogError("[LeoPlayer] rSkillLightningPrefab chưa được gán trong Inspector!");
+            return;
+        }
+
+        Vector3 spawnPos = rSkillLightningSpawnPoint != null ? rSkillLightningSpawnPoint.position : transform.position + transform.forward * 1.5f + Vector3.up * 1.0f;
+        Vector3 shootDirection = transform.forward;
+
+        GameObject lightningObj = Instantiate(rSkillLightningPrefab, spawnPos, Quaternion.LookRotation(shootDirection));
+        lightningObj.transform.localScale = rSkillLightningPrefab.transform.localScale;
+        lightningObj.SetActive(true);
+
+        if (lightningObj.TryGetComponent<LeoLightningProjectile>(out var proj))
+        {
+            proj.owner = this;
+            proj.damage = rSkillLightningDamage;
+            proj.speed = rSkillLightningSpeed;
+        }
+    }
+
+    [ServerRpc]
+    private void SpawnLightningProjectileServerRpc(Vector3 spawnPos, Vector3 shootDirection)
+    {
+        if (rSkillLightningPrefab == null)
+        {
+            Debug.LogError("[LeoPlayer] rSkillLightningPrefab chưa được gán trên Server!");
+            return;
+        }
+
+        if (Vector3.Distance(spawnPos, transform.position) > 4f)
+        {
+            spawnPos = rSkillLightningSpawnPoint != null ? rSkillLightningSpawnPoint.position : transform.position + transform.forward * 1.5f + Vector3.up * 1.0f;
+        }
+
+        GameObject lightningObj = Instantiate(rSkillLightningPrefab, spawnPos, Quaternion.LookRotation(shootDirection));
+        lightningObj.transform.localScale = rSkillLightningPrefab.transform.localScale;
+        lightningObj.SetActive(true);
+
+        if (lightningObj.TryGetComponent<NetworkObject>(out var netObj))
+        {
+            netObj.Spawn(true);
+        }
+
+        if (lightningObj.TryGetComponent<LeoLightningProjectile>(out var proj))
+        {
+            proj.owner = this;
+            proj.damage = rSkillLightningDamage;
+            proj.speed = rSkillLightningSpeed;
         }
     }
 

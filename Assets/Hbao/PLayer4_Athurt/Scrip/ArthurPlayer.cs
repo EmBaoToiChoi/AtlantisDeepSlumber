@@ -86,6 +86,16 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
     [Tooltip("Hệ số tăng sát thương khi Skill R (1.3 = +30%)")]
     public float rSkillDamageMultiplier = 1.3f;
 
+    [Header("Skill R - Bắn Cục Lửa")]
+    [Tooltip("Prefab đạn lửa của chiêu R")]
+    public GameObject rSkillFirePrefab;
+    [Tooltip("Điểm xuất phát bắn đạn lửa của chiêu R")]
+    public Transform rSkillFireSpawnPoint;
+    [Tooltip("Tốc độ bay của đạn lửa")]
+    public float rSkillFireSpeed = 20f;
+    [Tooltip("Sát thương của đạn lửa")]
+    public float rSkillFireDamage = 40f;
+
     [HideInInspector]
     public bool isRSkillActive = false;
     protected float rSkillTimeRemaining = 0f;
@@ -440,22 +450,73 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
     // EVENT ĐÓN NHẬN TỪ ANIMATION EVENT KHUNG HÌNH CUỐI (Giải quyết lỗi báo đỏ CS1061)
     public void OnRSkillWeaponGlow()
     {
-        // 1. Nhuộm đỏ lưỡi kiếm trên màn hình cục bộ lập tức
-        SetRedWeaponVisuals(true);
+        Debug.Log($"[{gameObject.name}] OnRSkillWeaponGlow: Hoạt ảnh kết thúc -> Bắn cục lửa!");
 
-        // 2. Chỉ tính thời gian hiệu lực và buff chỉ số trên máy sở hữu vật lý nhân vật
-        if (isStandaloneMode || IsOwner)
+        if (isStandaloneMode)
         {
-            isRSkillActive = true;
-            rSkillTimeRemaining = rSkillDuration;
-
-            // 3. Nếu ở chế độ mạng, gửi RPC báo Server đồng bộ thời gian đếm ngược chính thức
-            if (!isStandaloneMode)
-            {
-                StartRSkillBuffServerRpc();
-            }
+            SpawnFireProjectileLocal();
         }
-        Debug.Log($"[{gameObject.name}] OnRSkillWeaponGlow: Hoạt ảnh kết thúc -> Lưỡi kiếm đã nhuộm đỏ rực!");
+        else if (IsOwner)
+        {
+            Vector3 spawnPos = rSkillFireSpawnPoint != null ? rSkillFireSpawnPoint.position : transform.position + transform.forward * 1.5f + Vector3.up * 1f;
+            Vector3 shootDirection = transform.forward;
+            SpawnFireProjectileServerRpc(spawnPos, shootDirection);
+        }
+    }
+
+    private void SpawnFireProjectileLocal()
+    {
+        if (rSkillFirePrefab == null)
+        {
+            Debug.LogError("[ArthurPlayer] rSkillFirePrefab chưa được gán trong Inspector!");
+            return;
+        }
+
+        Vector3 spawnPos = rSkillFireSpawnPoint != null ? rSkillFireSpawnPoint.position : transform.position + transform.forward * 1.5f + Vector3.up * 1f;
+        Vector3 shootDirection = transform.forward;
+
+        GameObject fireObj = Instantiate(rSkillFirePrefab, spawnPos, Quaternion.LookRotation(shootDirection));
+        fireObj.transform.localScale = rSkillFirePrefab.transform.localScale;
+        fireObj.SetActive(true);
+
+        if (fireObj.TryGetComponent<ArthurFireProjectile>(out var proj))
+        {
+            proj.owner = this;
+            proj.damage = rSkillFireDamage;
+            proj.speed = rSkillFireSpeed;
+        }
+    }
+
+    [ServerRpc]
+    private void SpawnFireProjectileServerRpc(Vector3 spawnPos, Vector3 shootDirection)
+    {
+        if (rSkillFirePrefab == null)
+        {
+            Debug.LogError("[ArthurPlayer] rSkillFirePrefab chưa được gán trên Server!");
+            return;
+        }
+
+        // Kiểm tra hợp lệ khoảng cách trên Server để tránh lag giật tọa độ
+        if (Vector3.Distance(spawnPos, transform.position) > 4f)
+        {
+            spawnPos = rSkillFireSpawnPoint != null ? rSkillFireSpawnPoint.position : transform.position + transform.forward * 1.5f + Vector3.up * 1f;
+        }
+
+        GameObject fireObj = Instantiate(rSkillFirePrefab, spawnPos, Quaternion.LookRotation(shootDirection));
+        fireObj.transform.localScale = rSkillFirePrefab.transform.localScale;
+        fireObj.SetActive(true);
+
+        if (fireObj.TryGetComponent<NetworkObject>(out var netObj))
+        {
+            netObj.Spawn(true);
+        }
+
+        if (fireObj.TryGetComponent<ArthurFireProjectile>(out var proj))
+        {
+            proj.owner = this;
+            proj.damage = rSkillFireDamage;
+            proj.speed = rSkillFireSpeed;
+        }
     }
 
     public bool IsAttackSpeedBoosted => isESkillActive;

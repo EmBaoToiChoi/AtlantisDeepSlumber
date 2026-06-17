@@ -460,6 +460,10 @@ MonoBehaviour:
       MinSecondsBetweenUpdates: 0
       MaxSecondsBetweenUpdates: 0
     m_InternalValue: 0
+  rSkillIcePrefab: {fileID: 2601405793799926313, guid: 0de6eb30ac6b4a6458673ceebbb7fd30, type: 3}
+  rSkillIceSpawnPoint: {fileID: 8950266880227468165}
+  rSkillIceSpeed: 20
+  rSkillIceDamage: 40
   isAimingNet:
     UpdateTraits:
       MinSecondsBetweenUpdates: 0
@@ -713,6 +717,37 @@ Transform:
   m_Children: []
   m_Father: {fileID: 4378516375714181458}
   m_LocalEulerAnglesHint: {x: 5.501, y: -0.633, z: 83.43}
+--- !u!1 &1902796575120300051
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 8950266880227468165}
+  m_Layer: 3
+  m_Name: SpawnBang
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &8950266880227468165
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1902796575120300051}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -0, y: -0.00156, z: 0.00414}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 8147598836496748478}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &2853842108438221816
 GameObject:
   m_ObjectHideFlags: 0
@@ -1324,6 +1359,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 3405717001315203131, guid: aa2e3e6cfa356944eac3f8fa7441c613, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1130024218619803878}
+    - targetCorrespondingSourceObject: {fileID: 3405717001315203131, guid: aa2e3e6cfa356944eac3f8fa7441c613, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 8950266880227468165}
     - targetCorrespondingSourceObject: {fileID: 2205917650286948166, guid: aa2e3e6cfa356944eac3f8fa7441c613, type: 3}
       insertIndex: -1
       addedObject: {fileID: 8515282798021896146}

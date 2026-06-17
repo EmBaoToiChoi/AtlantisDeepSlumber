@@ -226,6 +226,16 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
     );
     public bool IsRSkillActive => isStandaloneMode ? localIsRSkillActive : isRSkillActiveNet.Value;
 
+    [Header("Skill R - Bắn Cục Băng")]
+    [Tooltip("Prefab đạn băng của chiêu R")]
+    public GameObject rSkillIcePrefab;
+    [Tooltip("Điểm xuất phát bắn đạn băng của chiêu R")]
+    public Transform rSkillIceSpawnPoint;
+    [Tooltip("Tốc độ bay của đạn băng")]
+    public float rSkillIceSpeed = 20f;
+    [Tooltip("Sát thương của đạn băng")]
+    public float rSkillIceDamage = 40f;
+
     private float defaultCameraDistance;
     private float defaultPivotHeight;
     private float currentShoulderOffset = 0f;
@@ -535,15 +545,73 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         if (rSkillCooldownTimer > 0f || IsRSkillActive) return;
 
-        rSkillDurationTimer = rSkillDuration;
+        PlayAnimation("Bow_Shoot", 0.05f);
 
         if (isStandaloneMode)
         {
-            localIsRSkillActive = true;
+            SpawnIceProjectileLocal();
         }
         else if (IsOwner)
         {
-            SetRSkillActiveServerRpc(true);
+            Vector3 spawnPos = rSkillIceSpawnPoint != null ? rSkillIceSpawnPoint.position : transform.position + transform.forward * 1.5f + Vector3.up * 1f;
+            Vector3 shootDirection = transform.forward;
+            SpawnIceProjectileServerRpc(spawnPos, shootDirection);
+        }
+        
+        StartRSkillCooldown();
+    }
+
+    private void SpawnIceProjectileLocal()
+    {
+        if (rSkillIcePrefab == null)
+        {
+            Debug.LogError("[ElenaPlayer] rSkillIcePrefab chưa được gán trong Inspector!");
+            return;
+        }
+
+        Vector3 spawnPos = rSkillIceSpawnPoint != null ? rSkillIceSpawnPoint.position : transform.position + transform.forward * 1.5f + Vector3.up * 1f;
+        Vector3 shootDirection = transform.forward;
+
+        GameObject iceObj = Instantiate(rSkillIcePrefab, spawnPos, Quaternion.LookRotation(shootDirection));
+        iceObj.transform.localScale = rSkillIcePrefab.transform.localScale;
+        iceObj.SetActive(true);
+
+        if (iceObj.TryGetComponent<ElenaIceProjectile>(out var proj))
+        {
+            proj.owner = this;
+            proj.damage = rSkillIceDamage;
+            proj.speed = rSkillIceSpeed;
+        }
+    }
+
+    [ServerRpc]
+    private void SpawnIceProjectileServerRpc(Vector3 spawnPos, Vector3 shootDirection)
+    {
+        if (rSkillIcePrefab == null)
+        {
+            Debug.LogError("[ElenaPlayer] rSkillIcePrefab chưa được gán trên Server!");
+            return;
+        }
+
+        if (Vector3.Distance(spawnPos, transform.position) > 4f)
+        {
+            spawnPos = rSkillIceSpawnPoint != null ? rSkillIceSpawnPoint.position : transform.position + transform.forward * 1.5f + Vector3.up * 1f;
+        }
+
+        GameObject iceObj = Instantiate(rSkillIcePrefab, spawnPos, Quaternion.LookRotation(shootDirection));
+        iceObj.transform.localScale = rSkillIcePrefab.transform.localScale;
+        iceObj.SetActive(true);
+
+        if (iceObj.TryGetComponent<NetworkObject>(out var netObj))
+        {
+            netObj.Spawn(true);
+        }
+
+        if (iceObj.TryGetComponent<ElenaIceProjectile>(out var proj))
+        {
+            proj.owner = this;
+            proj.damage = rSkillIceDamage;
+            proj.speed = rSkillIceSpeed;
         }
     }
 
