@@ -230,4 +230,10 @@ public class RollAnimationEventHelper : MonoBehaviour
         EnsurePlayerReference();
         if (player != null) player.PlayDualSlash2VFX();
     }
+
+    public void OnShootRSkill()
+    {
+        EnsurePlayerReference();
+        if (player != null) player.OnShootRSkill();
+    }
 }

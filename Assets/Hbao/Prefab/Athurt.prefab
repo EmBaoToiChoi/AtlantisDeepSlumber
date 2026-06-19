@@ -266,7 +266,7 @@ MonoBehaviour:
   rSkillAnimTrigger: SkillR
   rSkillDuration: 8
   rSkillDamageMultiplier: 1.3
-  rSkillFirePrefab: {fileID: 6765003833535951331, guid: d15151633e8a2c54f9433d15c7229bb6, type: 3}
+  rSkillFirePrefab: {fileID: 2883180979609552342, guid: 9722d6dadb2ad9f4b962ecdfbfe04c37, type: 3}
   rSkillFireSpawnPoint: {fileID: 8091084124323850428}
   rSkillFireSpeed: 20
   rSkillFireDamage: 40
@@ -1101,7 +1101,6 @@ MonoBehaviour:
       MinSecondsBetweenUpdates: 0
       MaxSecondsBetweenUpdates: 0
     m_InternalValue: 0
-  currentHeldCore: {fileID: 0}
 --- !u!114 &1278614070153325450
 MonoBehaviour:
   m_ObjectHideFlags: 0
