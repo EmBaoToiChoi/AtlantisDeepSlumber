@@ -2,83 +2,132 @@ using UnityEngine;
 
 public class PlayerLogCarrier : MonoBehaviour
 {
-    [Tooltip("Trạng thái người chơi có đang bưng gỗ hay không")]
+    [Tooltip("Trạng thái người chơi có đang bưng đồ hay không")]
     public bool isCarrying = false;
 
     private GameObject carriedLogInstance;
+    private GameObject carriedCrystalInstance; // Lưu Visual của Tinh Thể[cite: 4]
 
-    [Tooltip("Transform điểm gắn gỗ tùy chọn (nếu có, gỗ sẽ tự động gắn vào đây). Nếu bỏ trống sẽ gắn vào root player.")]
+    [Tooltip("Transform điểm gắn đồ tùy chọn. Nếu bỏ trống sẽ gắn vào root player.")]
     public Transform carryTargetTransform;
 
+    // --- CƠ CHẾ ÔM NGỌC/TINH THỂ (MỚI THÊM) ---[cite: 4]
+    public void CarryCrystal(int crystalID, bool showVisualCrystal = true)
+    {
+        isCarrying = true;
+        TogglePlayerWeapons(false); // Ẩn vũ khí[cite: 4]
+        PlayCarryAnimation(true);   // Kích hoạt animation bưng[cite: 4]
+
+        if (!showVisualCrystal) return;
+
+        // Tìm kiếm Prefab tinh thể tương ứng trong thư mục Resources[cite: 4]
+        GameObject crystalPrefab = Resources.Load<GameObject>($"Crystal_Prefab_{crystalID}");
+        if (crystalPrefab == null)
+        {
+            crystalPrefab = Resources.Load<GameObject>("Crystal_Default");
+        }
+        if (crystalPrefab == null)
+        {
+            crystalPrefab = Resources.Load<GameObject>("crystal");
+        }
+        if (crystalPrefab == null)
+        {
+            crystalPrefab = Resources.Load<GameObject>("BlueCrystal");
+        }
+        if (crystalPrefab == null)
+        {
+            crystalPrefab = Resources.Load<GameObject>("GreenCrystal");
+        }
+        if (crystalPrefab == null)
+        {
+            crystalPrefab = Resources.Load<GameObject>("OrangeCrystal");
+        }
+        if (crystalPrefab == null)
+        {
+            crystalPrefab = Resources.Load<GameObject>("RedCrystal");
+        }
+
+        if (crystalPrefab != null)
+        {
+            carriedCrystalInstance = Instantiate(crystalPrefab);
+            carriedCrystalInstance.SetActive(true);
+            
+            var netObj = carriedCrystalInstance.GetComponent<Unity.Netcode.NetworkObject>();
+            if (netObj != null) DestroyImmediate(netObj);
+
+            foreach (var col in carriedCrystalInstance.GetComponentsInChildren<Collider>()) DestroyImmediate(col);
+            foreach (var rb in carriedCrystalInstance.GetComponentsInChildren<Rigidbody>()) DestroyImmediate(rb);
+        }
+        else
+        {
+            // Tạo tạm một khối cầu nếu chưa setup Prefab trong Resources[cite: 4]
+            carriedCrystalInstance = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            carriedCrystalInstance.SetActive(true);
+            Destroy(carriedCrystalInstance.GetComponent<Collider>());
+
+            Material mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+            mat.color = Color.cyan;
+            carriedCrystalInstance.GetComponent<Renderer>().material = mat;
+        }
+
+        Transform parentTransform = carryTargetTransform != null ? carryTargetTransform : transform;
+        carriedCrystalInstance.transform.SetParent(parentTransform, false);
+
+        if (carryTargetTransform != null)
+        {
+            carriedCrystalInstance.transform.localPosition = Vector3.zero;
+            carriedCrystalInstance.transform.localRotation = Quaternion.identity;
+        }
+        else
+        {
+            carriedCrystalInstance.transform.localPosition = new Vector3(0f, 1.0f, 0.4f); // Ngang ngực
+            carriedCrystalInstance.transform.localRotation = Quaternion.identity;
+        }
+    }
+
+    public void DropCrystal()
+    {
+        isCarrying = false;
+        if (carriedCrystalInstance != null)
+        {
+            Destroy(carriedCrystalInstance);
+            carriedCrystalInstance = null;
+        }
+        TogglePlayerWeapons(true); // Trả lại vũ khí[cite: 4]
+        PlayCarryAnimation(false);  // Tắt animation bưng[cite: 4]
+    }
+
+    // --- CƠ CHẾ BƯNG GỖ NGUYÊN BẢN ---[cite: 4]
     public void CarryLog(bool showVisualLog = true)
     {
         isCarrying = true;
-        
-        // Hide weapons
         TogglePlayerWeapons(false);
+        PlayCarryAnimation(true);
+        if (!showVisualLog) return;
         
-        if (!showVisualLog)
-        {
-            // Kích hoạt trạng thái Animator bưng gỗ
-            PlayCarryAnimation(true);
-            return;
-        }
-        
-        // Cố gắng load prefab gỗ thật từ Resources
         GameObject logPrefab = Resources.Load<GameObject>("firewood_single");
-        if (logPrefab == null)
-        {
-            logPrefab = Resources.Load<GameObject>("WoodLog");
-        }
+        if (logPrefab == null) logPrefab = Resources.Load<GameObject>("WoodLog");
 
         if (logPrefab != null)
         {
             carriedLogInstance = Instantiate(logPrefab);
             carriedLogInstance.SetActive(true);
             
-            // Dọn dẹp NetworkObject ngay lập tức để tránh lỗi re-parenting của Netcode
             var netObj = carriedLogInstance.GetComponent<Unity.Netcode.NetworkObject>();
-            if (netObj != null)
-            {
-                DestroyImmediate(netObj);
-            }
+            if (netObj != null) DestroyImmediate(netObj);
 
-            // Dọn dẹp các thành quan trọng khác không cần thiết trên tệp gỗ thật ngay lập tức
-            var colliders = carriedLogInstance.GetComponentsInChildren<Collider>();
-            foreach (var col in colliders)
-            {
-                if (col != null) DestroyImmediate(col);
-            }
-            
-            var rbs = carriedLogInstance.GetComponentsInChildren<Rigidbody>();
-            foreach (var rb in rbs)
-            {
-                if (rb != null) DestroyImmediate(rb);
-            }
-            
-            var comps = carriedLogInstance.GetComponentsInChildren<MonoBehaviour>();
-            foreach (var comp in comps)
-            {
-                if (comp != null && comp != this) DestroyImmediate(comp);
-            }
+            foreach (var col in carriedLogInstance.GetComponentsInChildren<Collider>()) DestroyImmediate(col);
+            foreach (var rb in carriedLogInstance.GetComponentsInChildren<Rigidbody>()) DestroyImmediate(rb);
         }
         else
         {
-            // Tạo cylinder làm giả gỗ nếu không tìm thấy prefab
             carriedLogInstance = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
             carriedLogInstance.SetActive(true);
             Destroy(carriedLogInstance.GetComponent<Collider>());
 
-            Shader shader = Shader.Find("Universal Render Pipeline/Lit");
-            if (shader == null) shader = Shader.Find("Standard");
-            if (shader == null) shader = Shader.Find("Sprites/Default");
-            
-            if (shader != null)
-            {
-                Material mat = new Material(shader);
-                mat.color = new Color(0.45f, 0.28f, 0.12f);
-                carriedLogInstance.GetComponent<Renderer>().material = mat;
-            }
+            Material mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+            mat.color = new Color(0.45f, 0.28f, 0.12f);
+            carriedLogInstance.GetComponent<Renderer>().material = mat;
         }
         
         Transform parentTransform = carryTargetTransform != null ? carryTargetTransform : transform;
@@ -96,20 +145,12 @@ public class PlayerLogCarrier : MonoBehaviour
         {
             carriedLogInstance.transform.localPosition = Vector3.zero;
             carriedLogInstance.transform.localRotation = Quaternion.identity;
-            
-            Debug.Log($"[PlayerLogCarrier] CarryLog: Attached log to custom carryTargetTransform '{carryTargetTransform.name}' with compensated scale: {carriedLogInstance.transform.localScale}");
         }
         else
         {
-            // Vị trí ngang bụng/ngực và nằm ngang nối từ tay trái qua tay phải
             carriedLogInstance.transform.localPosition = new Vector3(0f, 0.95f, 0.42f);
             carriedLogInstance.transform.localRotation = Quaternion.Euler(0f, 90f, 0f);
-
-            Debug.Log($"[PlayerLogCarrier] CarryLog: Attached cosmetic log to root player transform. compensated localScale={carriedLogInstance.transform.localScale}");
         }
-
-        // Kích hoạt trạng thái Animator bưng gỗ
-        PlayCarryAnimation(true);
     }
 
     public void DropLog()
@@ -120,17 +161,12 @@ public class PlayerLogCarrier : MonoBehaviour
             Destroy(carriedLogInstance);
             carriedLogInstance = null;
         }
-        
-        // Restore weapons
         TogglePlayerWeapons(true);
-
-        // Reset trạng thái Animator về bình thường
         PlayCarryAnimation(false);
     }
 
     public void TogglePlayerWeapons(bool active)
     {
-        // Arthur
         var arthur = GetComponent<ArthurPlayer>();
         if (arthur != null)
         {
@@ -139,12 +175,8 @@ public class PlayerLogCarrier : MonoBehaviour
                 if (arthur.leftHandWeapon != null) arthur.leftHandWeapon.SetActive(false);
                 if (arthur.rightHandWeapon != null) arthur.rightHandWeapon.SetActive(false);
             }
-            else
-            {
-                arthur.SyncWeaponVisuals(arthur.GetActiveWeaponIndex());
-            }
+            else arthur.SyncWeaponVisuals(arthur.GetActiveWeaponIndex());
         }
-        // Leo
         var leo = GetComponent<LeoPlayer>();
         if (leo != null)
         {
@@ -153,12 +185,8 @@ public class PlayerLogCarrier : MonoBehaviour
                 if (leo.leftHandSword != null) leo.leftHandSword.SetActive(false);
                 if (leo.rightHandSword != null) leo.rightHandSword.SetActive(false);
             }
-            else
-            {
-                leo.SyncWeaponVisuals(leo.GetActiveWeaponIndex());
-            }
+            else leo.SyncWeaponVisuals(leo.GetActiveWeaponIndex());
         }
-        // Elena
         var elena = GetComponent<ElenaPlayer>();
         if (elena != null)
         {
@@ -173,7 +201,6 @@ public class PlayerLogCarrier : MonoBehaviour
                 if (elena.weaponOnBackVisual != null) elena.weaponOnBackVisual.SetActive(activeIdx == 1);
             }
         }
-        // Maya
         var maya = GetComponent<MayaPlayer>();
         if (maya != null)
         {
@@ -195,11 +222,6 @@ public class PlayerLogCarrier : MonoBehaviour
         Animator anim = GetComponentInChildren<Animator>();
         if (anim == null) return;
 
-        // Set các biến Animator để người dùng dễ dàng cấu hình Blend Tree / States cho dáng Bưng gỗ:
-        // - "Bung" (bool)
-        // - "IsCarrying" (bool)
-        // - "BungTrigger" (trigger)
-        // - "Bưng" (trigger)
         SafeSetBool(anim, "Bung", carrying);
         SafeSetBool(anim, "IsCarrying", carrying);
 
@@ -220,11 +242,7 @@ public class PlayerLogCarrier : MonoBehaviour
         if (anim == null) return;
         foreach (var param in anim.parameters)
         {
-            if (param.name == paramName)
-            {
-                anim.SetBool(paramName, value);
-                return;
-            }
+            if (param.name == paramName) { anim.SetBool(paramName, value); return; }
         }
     }
 
@@ -233,115 +251,17 @@ public class PlayerLogCarrier : MonoBehaviour
         if (anim == null) return;
         foreach (var param in anim.parameters)
         {
-            if (param.name == paramName)
-            {
-                anim.SetTrigger(paramName);
-                return;
-            }
+            if (param.name == paramName) { anim.SetTrigger(paramName); return; }
         }
-    }
-
-    private Transform FindHandBone(Transform current)
-    {
-        // 1. Arthur
-        var arthur = GetComponent<ArthurPlayer>();
-        if (arthur != null)
-        {
-            if (arthur.rightHandWeapon != null) return arthur.rightHandWeapon.transform.parent;
-            if (arthur.leftHandWeapon != null) return arthur.leftHandWeapon.transform.parent;
-        }
-
-        // 2. Leo
-        var leo = GetComponent<LeoPlayer>();
-        if (leo != null)
-        {
-            if (leo.rightHandSword != null) return leo.rightHandSword.transform.parent;
-            if (leo.leftHandSword != null) return leo.leftHandSword.transform.parent;
-        }
-
-        // 3. Elena
-        var elena = GetComponent<ElenaPlayer>();
-        if (elena != null)
-        {
-            if (elena.weaponInHandVisual != null) return elena.weaponInHandVisual.transform.parent;
-        }
-
-        // 4. Maya
-        var maya = GetComponent<MayaPlayer>();
-        if (maya != null)
-        {
-            if (maya.weaponInHandVisual != null) return maya.weaponInHandVisual.transform.parent;
-        }
-
-        // Fallback: search hierarchy for hand keywords
-        return FindHandBoneFallback(current);
-    }
-
-    private Transform FindHandBoneFallback(Transform current)
-    {
-        string nameLower = current.name.ToLower();
-        if (nameLower.Contains("hand") || nameLower.Contains("wrist") || nameLower.Contains("palm"))
-        {
-            if (nameLower.Contains("right") || nameLower.Contains("_r") || nameLower.Contains("hand.r"))
-            {
-                return current;
-            }
-        }
-        
-        for (int i = 0; i < current.childCount; i++)
-        {
-            Transform found = FindHandBoneFallback(current.GetChild(i));
-            if (found != null) return found;
-        }
-        
-        return null;
-    }
-
-    private Transform FindCarryBone(Transform playerTransform)
-    {
-        // Thử tìm xương ngực/spine trước để khúc gỗ nằm ngang cân giữa 2 tay
-        Transform chest = FindBoneByName(playerTransform, "chest");
-        if (chest == null) chest = FindBoneByName(playerTransform, "spine_02");
-        if (chest == null) chest = FindBoneByName(playerTransform, "spine02");
-        if (chest == null) chest = FindBoneByName(playerTransform, "spine2");
-        if (chest == null) chest = FindBoneByName(playerTransform, "upperchest");
-        
-        if (chest != null) return chest;
-
-        // Nếu không có, thử xương spine1
-        Transform spine = FindBoneByName(playerTransform, "spine");
-        if (spine == null) spine = FindBoneByName(playerTransform, "spine_01");
-        if (spine == null) spine = FindBoneByName(playerTransform, "spine01");
-        
-        if (spine != null) return spine;
-
-        // Fallback về tay phải
-        return FindHandBone(playerTransform);
-    }
-
-    private Transform FindBoneByName(Transform current, string targetName)
-    {
-        if (current.name.ToLower().Contains(targetName.ToLower()))
-        {
-            return current;
-        }
-
-        for (int i = 0; i < current.childCount; i++)
-        {
-            Transform found = FindBoneByName(current.GetChild(i), targetName);
-            if (found != null) return found;
-        }
-
-        return null;
     }
 
     private void Update()
     {
-        // Tự động sửa lỗi kẹt trạng thái bưng gỗ (Self-healing)
-        if (isCarrying && carriedLogInstance == null)
+        if (isCarrying && carriedLogInstance == null && carriedCrystalInstance == null)
         {
-            Debug.LogWarning($"[PlayerLogCarrier] Phát hiện kẹt trạng thái bưng gỗ (isCarrying=true nhưng visual log null). Tự động khôi phục!");
-            DropLog();
+            isCarrying = false;
+            TogglePlayerWeapons(true);
+            PlayCarryAnimation(false);
             return;
         }
 
@@ -350,12 +270,11 @@ public class PlayerLogCarrier : MonoBehaviour
         IPlayerHUDTarget player = GetComponent<IPlayerHUDTarget>();
         if (player == null) return;
 
-        bool isLocal = player.IsStandaloneMode || player.IsOwner;
-        if (!isLocal) return;
+        if (!(player.IsStandaloneMode || player.IsOwner)) return;
 
         if (Input.GetKeyDown(KeyCode.G))
         {
-            if (!IsNearBridgeRepairTrigger())
+            if (carriedLogInstance != null && !IsNearBridgeRepairTrigger())
             {
                 player.RequestDropWoodLog();
             }
@@ -371,20 +290,10 @@ public class PlayerLogCarrier : MonoBehaviour
             if (repairTrigger != null)
             {
                 var bridge = repairTrigger.bridgeController;
-                if (bridge == null)
-                {
-                    bridge = FindAnyObjectByType<BridgeCollapseTrigger>();
-                }
-                
+                if (bridge == null) bridge = FindAnyObjectByType<BridgeCollapseTrigger>();
                 if (bridge != null && bridge.IsBridgeCollapsed() && !bridge.IsBridgeRepaired())
                 {
-                    float repairRadius = bridge.repairInteractRadius;
-                    Vector3 closestPoint = col.bounds.ClosestPoint(transform.position);
-                    float dist = Vector3.Distance(transform.position, closestPoint);
-                    if (dist <= repairRadius || col.bounds.Contains(transform.position))
-                    {
-                        return true;
-                    }
+                    if (Vector3.Distance(transform.position, col.bounds.ClosestPoint(transform.position)) <= bridge.repairInteractRadius) return true;
                 }
             }
         }
@@ -393,9 +302,7 @@ public class PlayerLogCarrier : MonoBehaviour
 
     private void OnDestroy()
     {
-        if (carriedLogInstance != null)
-        {
-            Destroy(carriedLogInstance);
-        }
+        if (carriedLogInstance != null) Destroy(carriedLogInstance);
+        if (carriedCrystalInstance != null) Destroy(carriedCrystalInstance); // Giải phóng bộ nhớ Visual Tinh thể[cite: 4]
     }
 }
