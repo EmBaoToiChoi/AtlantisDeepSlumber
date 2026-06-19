@@ -3230,6 +3230,14 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         return rootMotionBridge;
     }
 
+    private void ResetKinematicState()
+    {
+        if (rb != null)
+        {
+            rb.isKinematic = isStandaloneMode ? false : !IsOwner;
+        }
+    }
+
     private void Awake()
     {
         rollKey = KeyCode.LeftControl;
@@ -3459,7 +3467,25 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     private void OnRollingNetChanged(bool oldVal, bool newVal)
     {
-        // Bắt đầu lướt đã được thực hiện đồng bộ qua StartRollClientRpc để đảm bảo chính xác hướng lướt
+        if (!newVal)
+        {
+            ResetKinematicState();
+            var bridge = GetRootMotionBridge();
+            if (bridge != null)
+            {
+                bridge.EndRoll();
+                bridge.enabled = true;
+            }
+        }
+        else
+        {
+            var bridge = GetRootMotionBridge();
+            if (bridge != null)
+            {
+                bridge.BeginRoll();
+                bridge.enabled = false;
+            }
+        }
     }
 
     public override void OnNetworkDespawn()
@@ -3532,17 +3558,25 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     public void OnRollEnd()
     {
-        Debug.Log("[LeoPlayer] Roll ended via Animation Event.");
+        Debug.Log("[LeoPlayer] Roll ended.");
         isRollingStandalone = false;
         rollTimer = 0f;
 
         if (anim != null) anim.applyRootMotion = false;
+
+        // Bật lại RootMotionBridge sau khi lộn xong
+        var bridge = GetRootMotionBridge();
+        if (bridge != null)
+        {
+            bridge.EndRoll();
+            bridge.enabled = true;
+        }
+
+        ResetKinematicState();
+
         if (isStandaloneMode || IsOwner)
         {
-            var bridge = GetRootMotionBridge();
-            if (bridge != null) bridge.ApplyFinalOffset();
-
-            if (rb != null) rb.linearVelocity = new Vector3(0f, rb.linearVelocity.y, 0f); // Dừng lực lộn
+            if (rb != null) rb.linearVelocity = new Vector3(0f, rb.linearVelocity.y, 0f);
 
             if (!isStandaloneMode)
             {
@@ -3550,6 +3584,8 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             }
         }
     }
+
+
 
     private void LockCursor(bool locked)
     {
@@ -3607,7 +3643,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         UpdateAttackLayerWeight();
 
-        // Đồng bộ di chuyển lướt (Roll) qua network cho cả Client Owner, Server, và các Client khác
+        // Đồng bộ di chuyển lướng (Roll) qua network cho cả Client Owner, Server, và các Client khác — giống Arthur
         bool isRolling = isStandaloneMode ? isRollingStandalone : (IsSpawned && isRollingNet.Value);
         if (isRolling)
         {
@@ -3837,8 +3873,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         // Quét trạng thái tấn công chuẩn xác
         bool isAttacking = IsPlayingAttackState(out _, out _);
 
-        // Xoay nhân vật: Luôn xoay theo hướng Camera để hỗ trợ đi ngang/lùi (strafe) mượt mà giống Elena
-        // Cho phép xoay cả khi đang tấn công để nhân vật luôn hướng theo camera (chỉ thấy lưng, tránh vặn xương)
+        // Xoay nhân vật: Luôn xoay theo hướng Camera — giống Arthur
         bool isAttackingState = isAttacking || isExecutingAttack;
         if (targetCamera != null && (!IsPlayingActionAnimation() || isAttackingState))
         {
@@ -3992,8 +4027,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         // --- ĐÃ SỬA: Đồng bộ kiểm tra trạng thái tấn công trên mạng cho chế độ Multiplayer ---
         bool isAttacking = IsPlayingAttackState(out _, out _);
 
-        // Xoay nhân vật: Luôn xoay theo hướng Camera để hỗ trợ đi ngang/lùi (strafe) mượt mà giống Elena
-        // Cho phép xoay cả khi đang tấn công để nhân vật luôn hướng theo camera (chỉ thấy lưng, tránh vặn xương)
+        // Xoay nhân vật: Luôn xoay theo hướng Camera — giống Arthur
         bool isAttackingState = isAttacking || isExecutingAttack;
         if (targetCamera != null && (!IsPlayingActionAnimation() || isAttackingState))
         {
@@ -4379,7 +4413,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         rollCooldownTimer = rollCooldown;
 
         ClearAttackLayer();
-        InterruptCombo(); // Ngắt combo khi lộn vòng
+        InterruptCombo();
 
         if (moveInput != Vector3.zero)
         {
@@ -4394,6 +4428,16 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         {
             transform.rotation = Quaternion.LookRotation(rollDirection);
         }
+
+        // Tắt RootMotionBridge trong suốt thời gian lộn để tránh lệch trái / giật Hips
+        var bridge = GetRootMotionBridge();
+        if (bridge != null)
+        {
+            bridge.BeginRoll();
+            bridge.enabled = false;
+        }
+
+        // Không đặt rb.isKinematic = true để di chuyển bằng velocity vật lý thuần túy
 
         if (anim != null) anim.applyRootMotion = false;
         PlayAnimation("LonVong", 0.05f);
@@ -4408,7 +4452,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         rollCooldownTimer = rollCooldown;
 
         ClearAttackLayer();
-        InterruptCombo(); // Ngắt combo khi lộn vòng
+        InterruptCombo();
 
         if (moveInput != Vector3.zero)
         {
@@ -4424,6 +4468,16 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             transform.rotation = Quaternion.LookRotation(rollDirection);
         }
 
+        // Tắt RootMotionBridge trong suốt thời gian lộn để tránh lệch trái / giật Hips
+        var bridge = GetRootMotionBridge();
+        if (bridge != null)
+        {
+            bridge.BeginRoll();
+            bridge.enabled = false;
+        }
+
+        // Không đặt rb.isKinematic = true để di chuyển bằng velocity vật lý thuần túy
+
         if (anim != null) anim.applyRootMotion = false;
         PlayAnimation("LonVong", 0.05f, false);
         StartRollServerRpc(rollDirection, transform.position);
@@ -4432,10 +4486,12 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     [ServerRpc]
     private void StartRollServerRpc(Vector3 direction, Vector3 position)
     {
+        // Giống Arthur: Server cập nhật isRollingNet và vị trí khởi đầu lộn
         SyncNetVarBool(isRollingNet, proxyPlayerTest != null ? proxyPlayerTest.isRollingNet : null, true);
         transform.position = position;
         if (rb != null)
         {
+            rb.isKinematic = true;
             rb.position = position;
             rb.linearVelocity = Vector3.zero;
         }
@@ -4458,6 +4514,10 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             {
                 transform.rotation = Quaternion.LookRotation(direction);
             }
+            if (rb != null)
+            {
+                rb.isKinematic = true;
+            }
             PlayAnimationLocal("LonVong", 0.05f);
         }
     }
@@ -4473,6 +4533,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             rb.position = position;
             rb.linearVelocity = Vector3.zero;
         }
+        ResetKinematicState();
     }
 
     void LateUpdate()
