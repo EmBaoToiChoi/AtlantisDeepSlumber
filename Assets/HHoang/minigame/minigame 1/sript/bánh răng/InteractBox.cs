@@ -13,14 +13,16 @@ public class InteractBox : NetworkBehaviour
     public NetworkVariable<bool> isCrystalLocked = new NetworkVariable<bool>(false);
     
     private PlayerInteraction localPlayerInteraction;
-    // Dùng NetworkBehaviour để tóm gọn mọi script nhân vật (Leo, Elena, v.v...)
     private NetworkBehaviour localPlayerController;
 
     public void TrySnapCrystal()
     {
         if ((stationIndex == 2 || stationIndex == 3) && !isCrystalLocked.Value)
         {
-            SnapAndLockCrystalServerRpc(stationIndex);
+            if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening)
+            {
+                SnapAndLockCrystalServerRpc(stationIndex);
+            }
         }
     }
 
@@ -30,7 +32,6 @@ public class InteractBox : NetworkBehaviour
 
         if (localPlayerInteraction.IsOwner && Keyboard.current != null && Keyboard.current.fKey.wasPressedThisFrame)
         {
-            // Nếu người chơi đang bưng ngọc, phím F dùng để Đặt ngọc chứ không mở trạm tương tác
             if (localPlayerInteraction.isCarryingCore.Value) return;
 
             if (gameManager != null)
@@ -45,20 +46,16 @@ public class InteractBox : NetworkBehaviour
     {
         if (gameManager == null) return;
 
-        // --- ĐOẠN NÀY LÀ CHỐT CHẶN CHỐNG CƯỚP TRẠM ---
         ulong currentOwner = gameManager.GetOwner(stationIndex);
-        // Nếu trạm đã có người xài (không phải ulong.MaxValue) VÀ người đó không phải là mình
         if (currentOwner != ulong.MaxValue && currentOwner != NetworkManager.Singleton.LocalClientId)
         {
             Debug.Log($"Trạm {stationIndex} đã có người xài, chặn lệnh mở Canvas!");
-            return; // Đuổi về, không chạy code bên dưới nữa
+            return; 
         }
-        // ---------------------------------------------
 
         isUsingStation = true;
         gameManager.ToggleMiniGame(stationIndex, true);
 
-        // Tắt điều khiển nhân vật
         if (localPlayerController != null) 
         {
             var mover = localPlayerController.GetComponent<MovementController>();
@@ -72,7 +69,6 @@ public class InteractBox : NetworkBehaviour
         isUsingStation = false;
         gameManager.ToggleMiniGame(stationIndex, false);
 
-        // Bật lại điều khiển
         if (localPlayerController != null) 
         {
             var mover = localPlayerController.GetComponent<MovementController>();
@@ -89,7 +85,6 @@ public class InteractBox : NetworkBehaviour
         {
             var playerInt = client.PlayerObject.GetComponent<PlayerInteraction>();
             
-            // Lấy ID ngọc từ NetworkVariable của Player
             ulong netId = playerInt.heldCoreNetworkId.Value;
             if (netId != ulong.MaxValue && NetworkManager.SpawnManager.SpawnedObjects.TryGetValue(netId, out var netObj))
             {
@@ -117,8 +112,6 @@ public class InteractBox : NetworkBehaviour
             isPlayerInside = true;
             localPlayerInteraction = pInt;
             pInt.currentInteractBox = this; 
-
-            // Tự động tìm script điều khiển (LeoPlayer, ElenaPlayer, v.v...)
             localPlayerController = other.GetComponent<NetworkBehaviour>(); 
         }
     }
