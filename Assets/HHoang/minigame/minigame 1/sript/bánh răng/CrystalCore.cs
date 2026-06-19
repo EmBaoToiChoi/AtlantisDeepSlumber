@@ -84,19 +84,24 @@ public class CrystalCore : NetworkBehaviour
         }
     }
 
-    private void AttachToCarrier(ulong playerId)
+    private void AttachToCarrier(ulong clientId)
     {
         GameObject player = null;
+        
+        // 1. Tìm nhân vật đang nhặt ngọc
         if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening)
         {
-            if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(playerId, out var playerNetObj))
+            foreach (var netObj in NetworkManager.Singleton.SpawnManager.SpawnedObjects.Values)
             {
-                player = playerNetObj.gameObject;
+                if (netObj.IsPlayerObject && netObj.OwnerClientId == clientId)
+                {
+                    player = netObj.gameObject;
+                    break;
+                }
             }
         }
         else
         {
-            // Offline test mode: tìm player gần nhất đang cầm ngọc
             var players = FindObjectsByType<PlayerInteraction>(FindObjectsSortMode.None);
             foreach (var p in players)
             {
@@ -108,26 +113,32 @@ public class CrystalCore : NetworkBehaviour
             }
         }
 
+        // 2. Gắn viên ngọc vào tay nhân vật
         if (player != null)
         {
-            var pInt = player.GetComponent<PlayerInteraction>();
+            // QUAN TRỌNG: Quét tìm script PlayerInteraction ở cả Object cha lẫn Object con
+            var pInt = player.GetComponentInChildren<PlayerInteraction>();
+            if (pInt == null) pInt = player.GetComponentInParent<PlayerInteraction>();
+
+            // Lấy cái Box "Hold Point" mà bạn đã gắn
             Transform targetParent = (pInt != null && pInt.holdPoint != null) ? pInt.holdPoint : player.transform;
             
             transform.SetParent(targetParent, false);
 
             if (targetParent != player.transform)
             {
+                // Nếu đã tìm thấy Box Hold Point -> Ép tọa độ viên ngọc về đúng tâm (0,0,0) của cái Box
                 transform.localPosition = Vector3.zero;
                 transform.localRotation = Quaternion.identity;
             }
             else
             {
+                // Nếu quên gắn Box trong Unity thì nó mới nằm lơ lửng ở ngực
                 transform.localPosition = new Vector3(0f, 0.95f, 0.42f);
                 transform.localRotation = Quaternion.Euler(0f, 90f, 0f);
             }
         }
     }
-
     private void DetachFromCarrier()
     {
         transform.SetParent(null, true);
