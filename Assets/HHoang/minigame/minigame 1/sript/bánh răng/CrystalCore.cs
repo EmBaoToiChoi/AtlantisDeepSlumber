@@ -9,15 +9,18 @@ public class CrystalCore : NetworkBehaviour
     public NetworkVariable<bool> isSnapping = new NetworkVariable<bool>(false);
     public NetworkVariable<bool> isSnapped = new NetworkVariable<bool>(false);
 
-    private Collider crystalCollider;
+    // THAY ĐỔI: Dùng mảng để lấy TẤT CẢ Collider (tránh lỗi ngọc có 2-3 cái collider)
+    private Collider[] allColliders;
     private Rigidbody rb;
     
-    // Lưu vị trí tay cầm (tránh dùng SetParent gây lỗi Netcode)
+    // Lưu vị trí tay cầm
     private Transform currentHoldPoint;
 
     private void Awake()
     {
-        crystalCollider = GetComponent<Collider>();
+        // Lấy tất cả collider gắn trên viên ngọc
+        allColliders = GetComponentsInChildren<Collider>();
+        
         rb = GetComponent<Rigidbody>();
     }
 
@@ -31,10 +34,22 @@ public class CrystalCore : NetworkBehaviour
         }
     }
 
+    // Hàm hỗ trợ bật/tắt toàn bộ Collider
+    private void SetCollidersState(bool state)
+    {
+        if (allColliders == null) return;
+        foreach (var col in allColliders)
+        {
+            col.enabled = state;
+        }
+    }
+
     // --- HÀM THỰC HIỆN NHẶT ---
     public void PerformPickup(ulong clientId)
     {
-        if (crystalCollider != null) crystalCollider.enabled = false;
+        // TẮT TOÀN BỘ COLLIDER ĐỂ KHÔNG VA CHẠM VỚI NGƯỜI
+        SetCollidersState(false);
+        
         if (rb != null)
         {
             rb.isKinematic = true;
@@ -59,11 +74,18 @@ public class CrystalCore : NetworkBehaviour
     {
         currentHoldPoint = null; 
 
-        if (crystalCollider != null) crystalCollider.enabled = true;
+        // THÊM DÒNG NÀY: Đẩy viên ngọc ra trước mặt 0.5 mét và nâng lên một chút 
+        // để khi bật Collider nó không bị kẹt vào bụng hoặc cẳng chân của nhân vật (gây lỗi xuyên sàn)
+        transform.position += Vector3.up * 0.5f + transform.forward * 0.6f;
+
+        // BẬT LẠI TOÀN BỘ COLLIDER ĐỂ KHÔNG RỚT XUYÊN MAP
+        SetCollidersState(true);
+
         if (rb != null)
         {
             rb.isKinematic = false;
             rb.useGravity = true;
+            // Đẩy nhẹ ra trước cho tự nhiên
             rb.AddForce(transform.forward * 2f, ForceMode.Impulse);
         }
 
@@ -77,7 +99,6 @@ public class CrystalCore : NetworkBehaviour
     public void LockToStation()
     {
         if (IsServer) isSnapped.Value = true;
-
         currentHoldPoint = null; 
 
         if (rb != null)
@@ -85,7 +106,8 @@ public class CrystalCore : NetworkBehaviour
             rb.isKinematic = true;
             rb.useGravity = false;
         }
-        if (crystalCollider != null) crystalCollider.enabled = false;
+        
+        SetCollidersState(false); // Khóa vào trạm thì tắt va chạm cho đỡ kẹt đường
 
         var netTransform = GetComponent<Unity.Netcode.Components.NetworkTransform>();
         if (netTransform != null) netTransform.enabled = true;
@@ -105,18 +127,14 @@ public class CrystalCore : NetworkBehaviour
     }
 
     // ==========================================
-    // CÁC HÀM MẠNG (ĐÃ FIX LỖI TÌM PLAYER)
+    // CÁC HÀM MẠNG ĐỒNG BỘ CHO CLIENT
     // ==========================================
     private GameObject FindPlayerByClientId(ulong clientId)
     {
-        // Sử dụng GetPlayerNetworkObject cực kỳ an toàn cho cả Server và Client
         if (NetworkManager.Singleton != null && NetworkManager.Singleton.SpawnManager != null)
         {
             var playerObj = NetworkManager.Singleton.SpawnManager.GetPlayerNetworkObject(clientId);
-            if (playerObj != null) 
-            {
-                return playerObj.gameObject;
-            }
+            if (playerObj != null) return playerObj.gameObject;
         }
         return null;
     }
@@ -125,7 +143,8 @@ public class CrystalCore : NetworkBehaviour
     private void NotifyPickupClientRpc(ulong clientId)
     {
         if (IsServer) return; 
-        if (crystalCollider != null) crystalCollider.enabled = false;
+        
+        SetCollidersState(false);
         if (rb != null) rb.isKinematic = true;
 
         var netTransform = GetComponent<Unity.Netcode.Components.NetworkTransform>();
@@ -145,7 +164,7 @@ public class CrystalCore : NetworkBehaviour
         if (IsServer) return;
         currentHoldPoint = null;
         
-        if (crystalCollider != null) crystalCollider.enabled = true;
+        SetCollidersState(true);
         if (rb != null) rb.isKinematic = false;
 
         var netTransform = GetComponent<Unity.Netcode.Components.NetworkTransform>();
@@ -159,7 +178,7 @@ public class CrystalCore : NetworkBehaviour
         currentHoldPoint = null;
         
         if (rb != null) rb.isKinematic = true;
-        if (crystalCollider != null) crystalCollider.enabled = false;
+        SetCollidersState(false);
 
         var netTransform = GetComponent<Unity.Netcode.Components.NetworkTransform>();
         if (netTransform != null) netTransform.enabled = true;
