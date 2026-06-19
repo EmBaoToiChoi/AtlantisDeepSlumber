@@ -2677,7 +2677,15 @@ public class PlayerHUDController : MonoBehaviour
         {
             bool isRangedClass = LocalPlayerTarget != null && (LocalPlayerTarget.CharacterClassIndex == 2 || LocalPlayerTarget.CharacterClassIndex == 1);
             bool isRangedActive = LocalPlayerTarget != null && LocalPlayerTarget.GetActiveWeaponIndex() == 2;
-            crosshairElement.style.display = (visible && isRangedClass && isRangedActive) ? DisplayStyle.Flex : DisplayStyle.None;
+            bool isAiming = false;
+            if (LocalPlayerTarget != null)
+            {
+                if (LocalPlayerTarget is ArthurPlayer arthur) isAiming = arthur.IsAiming;
+                else if (LocalPlayerTarget is LeoPlayer leo) isAiming = leo.IsAiming;
+                else if (LocalPlayerTarget is ElenaPlayer elena) isAiming = elena.IsAiming;
+                else if (LocalPlayerTarget is MayaPlayer maya) isAiming = maya.IsAiming;
+            }
+            crosshairElement.style.display = (visible && (isAiming || (isRangedClass && isRangedActive))) ? DisplayStyle.Flex : DisplayStyle.None;
         }
     }
 }

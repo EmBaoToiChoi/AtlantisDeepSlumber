@@ -164,6 +164,12 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         NetworkVariableWritePermission.Server
     );
 
+    public NetworkVariable<bool> isAimingNet = new NetworkVariable<bool>(
+        false,
+        NetworkVariableReadPermission.Everyone,
+        NetworkVariableWritePermission.Server
+    );
+
     [Header("Upgrade Sync Variables")]
     public NetworkVariable<int> upgradePoints = new NetworkVariable<int>(
         0,
@@ -282,7 +288,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
     private float defaultCameraDistance;
     private float defaultPivotHeight;
     private float currentShoulderOffset = 0f;
-    public bool IsAiming => false;
+    public bool IsAiming => isStandaloneMode ? (localIsAimingR || isRShootPending) : (IsOwner ? (localIsAimingR || isRShootPending) : isAimingNet.Value);
 
     [Header("Spine Aim Settings")]
     public float maxSpineTwistAngle = 80f;
@@ -427,10 +433,10 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (localIsAimingR == aiming) return;
         localIsAimingR = aiming;
         
-        PlayerHUDController hud = FindObjectOfType<PlayerHUDController>();
-        if (hud != null)
+        OnAimStateChanged(localIsAimingR);
+        if (!isStandaloneMode && IsOwner)
         {
-            hud.SetCrosshairVisible(aiming);
+            SetAimingServerRpc(localIsAimingR);
         }
 
         if (aiming)
@@ -524,6 +530,61 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         }
     }
 
+    private void OnAimingNetChanged(bool oldVal, bool newVal)
+    {
+        if (!IsOwner)
+        {
+            OnAimStateChanged(newVal);
+        }
+    }
+
+    private void OnAimStateChanged(bool aiming)
+    {
+        bool isPlayingShoot = anim != null && anim.layerCount > 1 && anim.GetCurrentAnimatorStateInfo(1).IsName(rSkillAnimTrigger);
+        bool keepWeight = aiming || isRShootPending || isPlayingShoot;
+        if (anim != null && anim.isActiveAndEnabled && anim.runtimeAnimatorController != null)
+        {
+            anim.SetBool("IsAiming", keepWeight);
+            if (anim.layerCount > 1)
+            {
+                if (keepWeight)
+                {
+                    anim.SetLayerWeight(1, 1f);
+                }
+                else if (comboStep == 0)
+                {
+                    var carrier = GetComponent<PlayerLogCarrier>();
+                    bool isCarrying = carrier != null && carrier.isCarrying;
+                    if (!isCarrying)
+                    {
+                        anim.SetLayerWeight(1, 0f);
+                        anim.Play("New State", 1, 0f);
+                    }
+                    if (!string.IsNullOrEmpty(rSkillAnimTrigger))
+                    {
+                        anim.ResetTrigger(rSkillAnimTrigger);
+                    }
+                }
+            }
+        }
+
+        bool isLocal = isStandaloneMode || (IsSpawned && IsOwner);
+        if (isLocal)
+        {
+            PlayerHUDController hud = FindObjectOfType<PlayerHUDController>();
+            if (hud != null)
+            {
+                hud.SetCrosshairVisible(aiming);
+            }
+        }
+    }
+
+    [ServerRpc]
+    private void SetAimingServerRpc(bool aiming)
+    {
+        isAimingNet.Value = aiming;
+    }
+
     public void OnShootRSkill()
     {
         OnRSkillWeaponGlow();
@@ -544,7 +605,8 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         {
             Ray ray = targetCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
             Vector3 targetPoint = ray.origin + ray.direction * 50f;
-            if (Physics.Raycast(ray.origin, ray.direction, out RaycastHit cameraHit, 50f))
+            int layerMask = ~LayerMask.GetMask("Player", "Ignore Raycast");
+            if (Physics.Raycast(ray.origin, ray.direction, out RaycastHit cameraHit, 50f, layerMask))
             {
                 targetPoint = cameraHit.point;
             }
@@ -902,6 +964,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         isESkillActiveNet.OnValueChanged += OnESkillNetChanged;
         isQSkillActiveNet.OnValueChanged += OnQSkillNetChanged;
+        isAimingNet.OnValueChanged += OnAimingNetChanged;
 
         upgradePoints.OnValueChanged += OnUpgradePointsChanged;
         hpLevel.OnValueChanged += OnHpLevelChanged;
@@ -978,6 +1041,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         isESkillActiveNet.OnValueChanged -= OnESkillNetChanged;
         isQSkillActiveNet.OnValueChanged -= OnQSkillNetChanged;
+        isAimingNet.OnValueChanged -= OnAimingNetChanged;
 
         upgradePoints.OnValueChanged -= OnUpgradePointsChanged;
         hpLevel.OnValueChanged -= OnHpLevelChanged;
@@ -1772,7 +1836,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         if (Input.GetMouseButtonDown(0) || (Input.GetMouseButton(0) && !isExecutingAttack && !isBlocking))
         {
-            if (localIsAimingR) return;
+            if (localIsAimingR || isRShootPending) return;
             if (!IsUIBlockingInput() && CanAttack())
             {
                 RequestComboAttack(false);
@@ -1935,7 +1999,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         if (Input.GetMouseButtonDown(0) || (Input.GetMouseButton(0) && !isExecutingAttack && !isBlocking))
         {
-            if (localIsAimingR) return;
+            if (localIsAimingR || isRShootPending) return;
             if (IsSpawned && !IsUIBlockingInput() && CanAttack())
             {
                 RequestComboAttack(true);
@@ -3448,7 +3512,8 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
                stateInfo.IsName("Slash3") ||
                stateInfo.IsName("attack1") ||
                stateInfo.IsName("Attack1combo1") ||
-               stateInfo.IsName("Attack2combo1");
+               stateInfo.IsName("Attack2combo1") ||
+               (!string.IsNullOrEmpty(rSkillAnimTrigger) && stateInfo.IsName(rSkillAnimTrigger));
     }
 
     protected virtual bool IsFullBodyActionAnimation(string name)
