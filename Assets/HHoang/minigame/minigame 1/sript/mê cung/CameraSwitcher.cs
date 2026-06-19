@@ -46,24 +46,30 @@ public class CameraSwitcher : NetworkBehaviour
         isTransitioning = true;
         isTopDownActive = !isTopDownActive;
 
+        // Kiểm tra an toàn cho MainCamera
         if (mainCamera == null) mainCamera = Camera.main;
+        
+        // KIỂM TRA QUAN TRỌNG: Nếu topDownCamera bị null thì thoát ngay
+        if (topDownCamera == null)
+        {
+            Debug.LogError("Lỗi: Top Down Camera bị trống! Kiểm tra lại Inspector.");
+            isTransitioning = false;
+            yield break; // Thoát coroutine, không chạy tiếp dòng 51 nữa
+        }
 
         Vector3 startPos = mainCamera.transform.position;
         Quaternion startRot = mainCamera.transform.rotation;
 
         if (isTopDownActive)
         {
-            // --- MỞ TOP DOWN ---
             savedPos = startPos;
             savedRot = startRot;
             
-            // 1. TẮT TẤT CẢ SCRIPT (Bao gồm script di chuyển nhân vật)
             foreach (var s in scriptsToToggle) if (s != null) s.enabled = false;
             
-            // 2. Lưu lại hướng xoay hiện tại của nhân vật để không bị lỗi trục
             playerStartRot = transform.rotation;
             
-            // 3. Bay camera (Đã tắt xoay nhân vật nên nó sẽ đứng yên)
+            // Ở đây dòng 51 của bạn sẽ an toàn vì đã check null ở trên
             yield return StartCoroutine(MoveCamera(startPos, startRot, topDownCamera.transform.position, topDownCamera.transform.rotation));
 
             mainCamera.enabled = false;
@@ -71,17 +77,12 @@ public class CameraSwitcher : NetworkBehaviour
         }
         else
         {
-            // --- QUAY LẠI ---
             mainCamera.enabled = true;
             topDownCamera.enabled = false;
 
-            // 1. Bay camera về vị trí cũ
             yield return StartCoroutine(MoveCamera(topDownCamera.transform.position, topDownCamera.transform.rotation, savedPos, savedRot));
 
-            // 2. Chốt lại góc xoay của nhân vật trước khi bật script điều khiển
             transform.rotation = playerStartRot;
-
-            // 3. BẬT LẠI TẤT CẢ SCRIPT
             foreach (var s in scriptsToToggle) if (s != null) s.enabled = true;
         }
 
