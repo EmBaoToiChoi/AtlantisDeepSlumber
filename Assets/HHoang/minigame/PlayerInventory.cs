@@ -36,10 +36,7 @@ public class PlayerInteraction : NetworkBehaviour
         if (holdPoint == null)
         {
             holdPoint = FindCarryBone(transform);
-            if (holdPoint == null)
-            {
-                holdPoint = transform;
-            }
+            if (holdPoint == null) holdPoint = transform;
         }
     }
 
@@ -63,17 +60,13 @@ public class PlayerInteraction : NetworkBehaviour
 
     private Transform FindBoneByName(Transform current, string targetName)
     {
-        if (current.name.ToLower().Contains(targetName.ToLower()))
-        {
-            return current;
-        }
+        if (current.name.ToLower().Contains(targetName.ToLower())) return current;
 
         for (int i = 0; i < current.childCount; i++)
         {
             Transform found = FindBoneByName(current.GetChild(i), targetName);
             if (found != null) return found;
         }
-
         return null;
     }
 
@@ -101,19 +94,26 @@ public class PlayerInteraction : NetworkBehaviour
 
     private void OnCarryingCoreChanged(bool oldVal, bool newVal)
     {
-        var carrier = GetComponent<PlayerLogCarrier>();
-        if (carrier == null)
+        // 1. Tìm Animator (Tự động nhận diện cho cả 4 nhân vật Arthur, Leo, Elena, Maya)
+        Animator anim = GetComponentInChildren<Animator>();
+        
+        // 2. Đồng bộ biến IsCarrying sang Animator để chuyển trạng thái Blend Tree/Animation sang bê đồ
+        if (anim != null)
         {
-            carrier = gameObject.AddComponent<PlayerLogCarrier>();
+            anim.SetBool("IsCarrying", newVal);
         }
 
+        // (ĐÃ XÓA 4 DÒNG TÌM NHÂN VẬT GÂY LỖI Ở ĐÂY)
+
+        // 3. Quản lý việc bật tắt logic hiển thị model bên PlayerLogCarrier
+        var carrier = GetComponent<PlayerLogCarrier>();
         if (carrier != null)
         {
-            if (newVal)
+            if (newVal) 
             {
-                carrier.CarryLog(false);
+                carrier.CarryLog(false); 
             }
-            else
+            else 
             {
                 carrier.DropLog();
             }
@@ -129,24 +129,9 @@ public class PlayerInteraction : NetworkBehaviour
 
     private bool IsLocalPlayer()
     {
-        // 1. Nếu đang chạy mạng (Netcode active) thì kiểm tra quyền sở hữu Owner
-        if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening)
-        {
-            return IsOwner;
-        }
-        
-        // 2. Nếu chạy offline (Standalone), kiểm tra xem gameobject này có phải là local player target hay không
-        if (PlayerHUDController.LocalPlayerTarget != null && PlayerHUDController.LocalPlayerTarget.gameObject == gameObject)
-        {
-            return true;
-        }
-        
-        // Cố gắng so khớp tag nếu chưa thiết lập LocalPlayerTarget
-        if (PlayerHUDController.LocalPlayerTarget == null)
-        {
-            return CompareTag("Player");
-        }
-        
+        if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening) return IsOwner;
+        if (PlayerHUDController.LocalPlayerTarget != null && PlayerHUDController.LocalPlayerTarget.gameObject == gameObject) return true;
+        if (PlayerHUDController.LocalPlayerTarget == null) return CompareTag("Player");
         return false;
     }
 
@@ -156,22 +141,83 @@ public class PlayerInteraction : NetworkBehaviour
 
         var hud = GetHUD();
 
-        // Auto drop crystal core on death
+        // Tự động thả ngọc khi chết
         if (isCarryingCore.Value && GetPlayerHealth() <= 0)
         {
             if (NetworkManager.Singleton == null || !NetworkManager.Singleton.IsListening)
-            {
                 PerformThrowOffline(transform.forward);
-            }
             else
-            {
                 RequestThrowServerRpc(transform.forward);
-            }
+            
             if (hud != null) hud.ShowInteractionPrompt(false, "");
             return;
         }
 
-        // Manage UI interaction prompts
+        // Gọi hàm quản lý UI (Hàm này đã được thêm đầy đủ ở bên dưới)
+        ManageInteractionUI(hud);
+
+        if (Keyboard.current != null)
+        {
+            // ====== PHÍM F: NHẶT ĐỒ / ĐẶT NGỌC ======
+            if (Keyboard.current.fKey.wasPressedThisFrame)
+            {
+                var carrier = GetComponent<PlayerLogCarrier>();
+                bool isCarryingLog = (carrier != null && carrier.isCarrying);
+
+                if (!isCarryingCore.Value && !isCarryingLog) 
+                {
+                    var target = GetComponent<IPlayerHUDTarget>();
+                    if (target != null && target.GetActiveWeaponIndex() == 2)
+                    {
+                        if (hud != null) hud.ShowMissionAlert("Bạn phải cất vũ khí mới nhặt được đồ!", 3.0f);
+                        return;
+                    }
+                    TryPickupInteractable();
+                }
+                else if (isCarryingCore.Value)
+                {
+                    if (currentPillarStation != null)
+                    {
+                        if (NetworkManager.Singleton == null || !NetworkManager.Singleton.IsListening)
+                            PerformSnapPillarOffline(currentPillarStation);
+                        else
+                            currentPillarStation.TryInteract(this, heldCoreNetworkId.Value);
+                    }
+                    else if (currentInteractBox != null && (currentInteractBox.stationIndex == 2 || currentInteractBox.stationIndex == 3) && !currentInteractBox.isCrystalLocked.Value)
+                    {
+                        if (NetworkManager.Singleton == null || !NetworkManager.Singleton.IsListening)
+                            PerformSnapInteractBoxOffline(currentInteractBox);
+                        else
+                            currentInteractBox.TrySnapCrystal();
+                    }
+                }
+            }
+
+            // ====== PHÍM G: THẢ ĐỒ XUỐNG ĐẤT ======
+            if (Keyboard.current.gKey.wasPressedThisFrame)
+            {
+                if (isCarryingCore.Value)
+                {
+                    if (NetworkManager.Singleton == null || !NetworkManager.Singleton.IsListening)
+                        PerformThrowOffline(transform.forward);
+                    else
+                        RequestThrowServerRpc(transform.forward);
+                }
+                else 
+                {
+                    var carrier = GetComponent<PlayerLogCarrier>();
+                    if (carrier != null && carrier.isCarrying)
+                    {
+                        SendMessage("RequestDropWoodLog", SendMessageOptions.DontRequireReceiver);
+                    }
+                }
+            }
+        }
+    }
+
+    // ĐÂY LÀ HÀM UI BỊ THIẾU MÀ MÌNH ĐÃ BỔ SUNG LẠI
+    private void ManageInteractionUI(PlayerHUDController hud)
+    {
         if (isCarryingCore.Value)
         {
             showedPickupPrompt = false;
@@ -225,112 +271,41 @@ public class PlayerInteraction : NetworkBehaviour
                 }
             }
         }
-
-        if (Keyboard.current != null)
-        {
-            // F Key: Nhặt ngọc khi rảnh tay, hoặc Đặt ngọc lên trụ khi đang bưng ngọc
-            if (Keyboard.current.fKey.wasPressedThisFrame)
-            {
-                if (!isCarryingCore.Value) 
-                {
-                    // Check empty-handed (weapon index == 2 means armed)
-                    var target = GetComponent<IPlayerHUDTarget>();
-                    if (target != null && target.GetActiveWeaponIndex() == 2)
-                    {
-                        if (hud != null)
-                        {
-                            hud.ShowMissionAlert("Bạn phải cất vũ khí mới nhặt được ngọc!", 3.0f);
-                        }
-                        return;
-                    }
-
-                    // Check if player is carrying a wood log
-                    var carrier = GetComponent<PlayerLogCarrier>();
-                    if (carrier != null && carrier.isCarrying)
-                    {
-                        if (hud != null)
-                        {
-                            hud.ShowMissionAlert("Bạn đang bưng một thanh gỗ rồi!", 3.0f);
-                        }
-                        return;
-                    }
-
-                    TryPickupCore();
-                }
-                else
-                {
-                    // Nếu đang bưng ngọc và nhấn F gần trụ/tượng -> Thực hiện đặt/lắp ngọc
-                    if (currentPillarStation != null)
-                    {
-                        if (NetworkManager.Singleton == null || !NetworkManager.Singleton.IsListening)
-                        {
-                            PerformSnapPillarOffline(currentPillarStation);
-                        }
-                        else
-                        {
-                            currentPillarStation.TryInteract(this, heldCoreNetworkId.Value);
-                        }
-                    }
-                    else if (currentInteractBox != null && (currentInteractBox.stationIndex == 2 || currentInteractBox.stationIndex == 3) && !currentInteractBox.isCrystalLocked.Value)
-                    {
-                        if (NetworkManager.Singleton == null || !NetworkManager.Singleton.IsListening)
-                        {
-                            PerformSnapInteractBoxOffline(currentInteractBox);
-                        }
-                        else
-                        {
-                            currentInteractBox.TrySnapCrystal();
-                        }
-                    }
-                }
-            }
-
-            // G Key: Thả ngọc xuống đất khi đang bưng
-            if (Keyboard.current.gKey.wasPressedThisFrame)
-            {
-                if (isCarryingCore.Value)
-                {
-                    if (NetworkManager.Singleton == null || !NetworkManager.Singleton.IsListening)
-                    {
-                        PerformThrowOffline(transform.forward);
-                    }
-                    else
-                    {
-                        RequestThrowServerRpc(transform.forward);
-                    }
-                }
-            }
-        }
     }
 
-    private void TryPickupCore()
+    private void TryPickupInteractable()
     {
         Collider[] hitColliders = Physics.OverlapSphere(transform.position, 2f, interactableLayer);
+        bool foundCore = false;
+
         foreach (var hit in hitColliders)
         {
             if (hit.TryGetComponent<PuzzleCrystalCore>(out var puzzleCore) && !puzzleCore.isSnapped.Value)
             {
                 if (NetworkManager.Singleton == null || !NetworkManager.Singleton.IsListening)
-                {
                     PerformPickupPuzzleOffline(puzzleCore);
-                }
                 else
-                {
                     RequestPickupPuzzleServerRpc(puzzleCore.NetworkObject.NetworkObjectId);
-                }
+                foundCore = true;
                 break;
             }
             else if (hit.TryGetComponent<CrystalCore>(out var core) && !core.isSnapped.Value)
             {
                 if (NetworkManager.Singleton == null || !NetworkManager.Singleton.IsListening)
-                {
                     PerformPickupOffline(core);
-                }
                 else
-                {
                     RequestPickupServerRpc(core.NetworkObject.NetworkObjectId);
-                }
+                foundCore = true;
                 break;
+            }
+        }
+
+        if (!foundCore)
+        {
+            var carrier = GetComponent<PlayerLogCarrier>();
+            if (carrier != null && !carrier.isCarrying)
+            {
+                carrier.SendMessage("TryPickupLog", SendMessageOptions.DontRequireReceiver); 
             }
         }
     }
@@ -357,7 +332,6 @@ public class PlayerInteraction : NetworkBehaviour
             }
 
             core.PerformPickup(senderId);
-            
             heldCoreNetworkId.Value = networkObjectId;
             isCarryingCore.Value = true;
         }
@@ -394,7 +368,6 @@ public class PlayerInteraction : NetworkBehaviour
 
             if (core.holderId.Value != ulong.MaxValue) return; 
 
-            // Check weapon and carry states on the server
             if (NetworkManager.ConnectedClients.TryGetValue(senderId, out var client) && client.PlayerObject != null)
             {
                 var target = client.PlayerObject.GetComponent<IPlayerHUDTarget>();
@@ -443,8 +416,6 @@ public class PlayerInteraction : NetworkBehaviour
     private void SetCarryingCoreState(bool carrying)
     {
         isCarryingCore.Value = carrying;
-        
-        // Kích hoạt thủ công callback hiệu ứng cục bộ trong offline test mode
         if (NetworkManager.Singleton == null || !NetworkManager.Singleton.IsListening)
         {
             OnCarryingCoreChanged(false, carrying);
@@ -453,9 +424,8 @@ public class PlayerInteraction : NetworkBehaviour
 
     private void PerformPickupOffline(CrystalCore core)
     {
-        core.holderId.Value = 9999; // ID giả lập
+        core.holderId.Value = 9999;
         core.PerformPickup(9999);
-        
         heldCoreNetworkId.Value = core.gameObject.GetInstanceID() > 0 ? (ulong)core.gameObject.GetInstanceID() : 99999;
         currentHeldCore = core;
         SetCarryingCoreState(true);
@@ -465,7 +435,6 @@ public class PlayerInteraction : NetworkBehaviour
     {
         puzzleCore.holderId.Value = 9999;
         puzzleCore.PerformPickup(9999);
-        
         heldCoreNetworkId.Value = puzzleCore.gameObject.GetInstanceID() > 0 ? (ulong)puzzleCore.gameObject.GetInstanceID() : 99999;
         currentHeldCore = null; 
         SetCarryingCoreState(true);
