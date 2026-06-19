@@ -189,6 +189,7 @@ GameObject:
   - component: {fileID: 1906447174524442392}
   - component: {fileID: 2816867946737987412}
   - component: {fileID: 3164122408111499636}
+  - component: {fileID: 6668643982724626896}
   m_Layer: 3
   m_Name: Maya
   m_TagString: Player
@@ -832,7 +833,6 @@ MonoBehaviour:
       MinSecondsBetweenUpdates: 0
       MaxSecondsBetweenUpdates: 0
     m_InternalValue: 0
-  currentHeldCore: {fileID: 0}
 --- !u!114 &2816867946737987412
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -860,6 +860,25 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   ShowTopMostFoldoutHeaderGroup: 1
+--- !u!114 &6668643982724626896
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8313881801843240701}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 33c753e341bca834fbf6653f4558753e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  ShowTopMostFoldoutHeaderGroup: 1
+  typeInInspector: 2
+  characterType:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 2
 --- !u!1001 &1136928048187746864
 PrefabInstance:
   m_ObjectHideFlags: 0
