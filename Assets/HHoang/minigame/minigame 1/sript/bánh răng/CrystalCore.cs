@@ -178,10 +178,36 @@ public class CrystalCore : NetworkBehaviour
 
     private GameObject FindPlayerByClientId(ulong clientId)
     {
+        // 1. Try server spawn manager
         if (NetworkManager.Singleton != null && NetworkManager.Singleton.SpawnManager != null)
         {
             var playerObj = NetworkManager.Singleton.SpawnManager.GetPlayerNetworkObject(clientId);
             if (playerObj != null) return playerObj.gameObject;
+        }
+
+        // 2. Client-side fallback: check PlayerInteraction scripts
+        var players = FindObjectsByType<PlayerInteraction>(FindObjectsSortMode.None);
+        foreach (var player in players)
+        {
+            var netObj = player.GetComponent<NetworkObject>();
+            if (netObj != null && netObj.OwnerClientId == clientId)
+            {
+                return player.gameObject;
+            }
+        }
+
+        // 3. Fallback: check all components implementing IPlayerHUDTarget
+        var hudTargets = FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None);
+        foreach (var target in hudTargets)
+        {
+            if (target is IPlayerHUDTarget)
+            {
+                var netObj = target.GetComponent<NetworkObject>();
+                if (netObj != null && netObj.OwnerClientId == clientId)
+                {
+                    return target.gameObject;
+                }
+            }
         }
         return null;
     }
@@ -219,9 +245,15 @@ public class CrystalCore : NetworkBehaviour
         {
             var carrier = player.GetComponent<PlayerLogCarrier>();
             if (carrier != null) carrier.DropCrystal();
+
+            // Teleport original crystal to player position instantly on clients
+            transform.position = player.transform.position;
+            transform.rotation = player.transform.rotation;
         }
         
         localCarrierPlayer = null;
+
+        transform.position += Vector3.up * 0.5f + transform.forward * 0.6f;
 
         SetCollidersState(true);
         SetRenderersState(true);
@@ -243,6 +275,13 @@ public class CrystalCore : NetworkBehaviour
         {
             var carrier = player.GetComponent<PlayerLogCarrier>();
             if (carrier != null) carrier.DropCrystal();
+
+            var pInt = player.GetComponent<PlayerInteraction>();
+            if (pInt != null && pInt.currentInteractBox != null && pInt.currentInteractBox.crystalSnapPoint != null)
+            {
+                transform.position = pInt.currentInteractBox.crystalSnapPoint.position;
+                transform.rotation = pInt.currentInteractBox.crystalSnapPoint.rotation;
+            }
         }
 
         localCarrierPlayer = null;
