@@ -1,0 +1,32 @@
+# Blender 4.2.20 LTS MTL File: 'None'
+# www.blender.org
+
+newmtl wanwan_high_d1
+Ks 0.501900 0.501900 0.501900
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2
+Pr 0.858579
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/ADMIN/Downloads/wanwan-agile-tiger/source/Wanwan - Agile Tiger/Wanwan Agile Tiger/wanwan_high_d1.png
+
+newmtl wanwan_high_d2
+Ks 0.501900 0.501900 0.501900
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2
+Pr 0.858579
+Pm 0.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd C:/Users/ADMIN/Downloads/wanwan-agile-tiger/source/Wanwan - Agile Tiger/Wanwan Agile Tiger/wanwan_high_d2.png
