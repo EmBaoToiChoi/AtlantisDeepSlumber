@@ -2981,7 +2981,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     private float defaultCameraDistance;
     private float defaultPivotHeight;
     private float currentShoulderOffset = 0f;
-    public bool IsAiming => false;
+    public bool IsAiming => isStandaloneMode ? (localIsAimingR || isRShootPending) : (IsOwner ? (localIsAimingR || isRShootPending) : isAimingNet.Value);
 
     [Header("Spine Aim Settings")]
     public float maxSpineTwistAngle = 80f;
@@ -3077,6 +3077,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     public NetworkVariable<bool> isAttackSpeedBoostedNet = new NetworkVariable<bool>(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     public NetworkVariable<bool> isQSkillActiveNet = new NetworkVariable<bool>(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+    public NetworkVariable<bool> isAimingNet = new NetworkVariable<bool>(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     [HideInInspector]
     public GameObject pendingPickItem;
 
@@ -3404,6 +3405,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         isAttackSpeedBoostedNet.OnValueChanged += OnAttackSpeedBoostedChanged;
         isQSkillActiveNet.OnValueChanged += OnQSkillActiveChanged;
         isRollingNet.OnValueChanged += OnRollingNetChanged;
+        isAimingNet.OnValueChanged += OnAimingNetChanged;
 
         if (IsOwner)
         {
@@ -3512,6 +3514,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         isAttackSpeedBoostedNet.OnValueChanged -= OnAttackSpeedBoostedChanged;
         isQSkillActiveNet.OnValueChanged -= OnQSkillActiveChanged;
         isRollingNet.OnValueChanged -= OnRollingNetChanged;
+        isAimingNet.OnValueChanged -= OnAimingNetChanged;
 
         if (IsOwner)
             currentHealth.OnValueChanged -= OnHealthChanged;
@@ -3901,7 +3904,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         if (Input.GetMouseButtonDown(0))
         {
-            if (localIsAimingR) return;
+            if (localIsAimingR || isRShootPending) return;
             if (!IsUIBlockingInput() && !isRollingStandalone)
             {
                 RequestComboAttack(false);
@@ -4056,7 +4059,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         if (Input.GetMouseButtonDown(0))
         {
-            if (localIsAimingR) return;
+            if (localIsAimingR || isRShootPending) return;
             if (!IsUIBlockingInput() && IsSpawned)
             {
                 RequestComboAttack(true);
@@ -5063,10 +5066,10 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (localIsAimingR == aiming) return;
         localIsAimingR = aiming;
         
-        PlayerHUDController hud = FindObjectOfType<PlayerHUDController>();
-        if (hud != null)
+        OnAimStateChanged(localIsAimingR);
+        if (!isStandaloneMode && IsOwner)
         {
-            hud.SetCrosshairVisible(aiming);
+            SetAimingServerRpc(localIsAimingR);
         }
 
         if (aiming)
@@ -5158,6 +5161,57 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         }
     }
 
+    private void OnAimingNetChanged(bool oldVal, bool newVal)
+    {
+        if (!IsOwner)
+        {
+            OnAimStateChanged(newVal);
+        }
+    }
+
+    private void OnAimStateChanged(bool aiming)
+    {
+        bool isPlayingShoot = anim != null && anim.layerCount > 1 && (anim.GetCurrentAnimatorStateInfo(1).IsName("Attack1combo1") || anim.GetCurrentAnimatorStateInfo(1).IsName("Attack2combo1"));
+        bool keepWeight = aiming || isRShootPending || isPlayingShoot;
+        if (anim != null && anim.isActiveAndEnabled && anim.runtimeAnimatorController != null)
+        {
+            anim.SetBool("IsAiming", keepWeight);
+            if (anim.layerCount > 1)
+            {
+                if (keepWeight)
+                {
+                    anim.SetLayerWeight(1, 1f);
+                }
+                else if (comboStep == 0)
+                {
+                    var carrier = GetComponent<PlayerLogCarrier>();
+                    bool isCarrying = carrier != null && carrier.isCarrying;
+                    if (!isCarrying)
+                    {
+                        anim.SetLayerWeight(1, 0f);
+                        anim.Play("New State", 1, 0f);
+                    }
+                }
+            }
+        }
+
+        bool isLocal = isStandaloneMode || (IsSpawned && IsOwner);
+        if (isLocal)
+        {
+            PlayerHUDController hud = FindObjectOfType<PlayerHUDController>();
+            if (hud != null)
+            {
+                hud.SetCrosshairVisible(aiming);
+            }
+        }
+    }
+
+    [ServerRpc]
+    private void SetAimingServerRpc(bool aiming)
+    {
+        isAimingNet.Value = aiming;
+    }
+
     public void OnRSkillWeaponGlow()
     {
         OnShootRSkill();
@@ -5177,7 +5231,8 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         {
             Ray ray = targetCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
             Vector3 targetPoint = ray.origin + ray.direction * 50f;
-            if (Physics.Raycast(ray.origin, ray.direction, out RaycastHit cameraHit, 50f))
+            int layerMask = ~LayerMask.GetMask("Player", "Ignore Raycast");
+            if (Physics.Raycast(ray.origin, ray.direction, out RaycastHit cameraHit, 50f, layerMask))
             {
                 targetPoint = cameraHit.point;
             }
