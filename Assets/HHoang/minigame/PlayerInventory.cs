@@ -8,13 +8,10 @@ public class PlayerInteraction : NetworkBehaviour
     public Transform holdPoint;
     public LayerMask interactableLayer;
     
-    // ----------------------------------------------------
-    // CÁC BIẾN LIÊN KẾT VỚI TRẠM TƯƠNG TÁC (InteractBox / PillarStation)
-    // ----------------------------------------------------
+    // Các biến liên kết Trạm
     public InteractBox currentInteractBox = null;
     public PillarStation currentPillarStation = null;
     
-    // Đồng bộ trạng thái bê đồ qua mạng
     public NetworkVariable<ulong> heldCoreNetworkId = new NetworkVariable<ulong>(ulong.MaxValue);
     public NetworkVariable<bool> isCarryingCore = new NetworkVariable<bool>(false);
 
@@ -31,16 +28,32 @@ public class PlayerInteraction : NetworkBehaviour
         base.OnNetworkDespawn();
     }
 
-    // Điều khiển hoạt ảnh giơ tay khi trạng thái bê ngọc thay đổi
+    // --- HÀM TÌM ANIMATOR CHUẨN XÁC NHẤT ---
+    private Animator GetPlayerAnimator()
+    {
+        Animator anim = GetComponent<Animator>();
+        if (anim == null) anim = GetComponentInChildren<Animator>();
+        return anim;
+    }
+
+    // Đồng bộ lại hoạt ảnh khi mạng cập nhật (Tránh bị kẹt)
     private void OnCarryingCoreChanged(bool oldVal, bool newVal)
     {
-        Animator anim = GetComponentInChildren<Animator>();
+        Animator anim = GetPlayerAnimator();
         if (anim != null)
         {
+            // Reset trigger cũ để chống kẹt hoạt ảnh
+            anim.ResetTrigger("isPickingUpLog");
+            anim.ResetTrigger("isDroppingLog");
+
             anim.SetBool("isCarryingLog", newVal);
             if (newVal) anim.SetTrigger("isPickingUpLog");
             else anim.SetTrigger("isDroppingLog");
         }
+
+        // Tạm khóa script bê gỗ để nó không đánh nhau với viên ngọc
+        var logCarrier = GetComponent("PlayerLogCarrier") as MonoBehaviour;
+        if (logCarrier != null) logCarrier.enabled = !newVal; 
     }
 
     void Update()
@@ -49,29 +62,33 @@ public class PlayerInteraction : NetworkBehaviour
 
         if (Keyboard.current != null)
         {
-            // ====== PHÍM F: NHẶT NGỌC HOẶC ĐẶT VÀO TRẠM ======
+            // ====== PHÍM F: NHẶT / ĐẶT NGỌC ======
             if (Keyboard.current.fKey.wasPressedThisFrame)
             {
                 if (!isCarryingCore.Value)
                 {
-                    TryPickupCrystal(); // Nếu tay không -> Nhặt ngọc
+                    TryPickupCrystal(); // Tay không -> Đi tìm nhặt
                 }
                 else
                 {
-                    // Đang bưng ngọc: Kiểm tra xem có đứng gần trạm nào không để đặt vào
                     if (currentInteractBox != null && !currentInteractBox.isCrystalLocked.Value)
-                    {
                         currentInteractBox.TrySnapCrystal();
-                    }
                     else if (currentPillarStation != null)
-                    {
                         currentPillarStation.TryInteract(this, heldCoreNetworkId.Value);
-                    }
                 }
             }
             // ====== PHÍM G: THẢ NGỌC ======
             else if (Keyboard.current.gKey.wasPressedThisFrame && isCarryingCore.Value)
             {
+                // 1. Ép chạy hoạt ảnh THẢ đồ ngay lập tức để siêu mượt
+                Animator anim = GetPlayerAnimator();
+                if (anim != null)
+                {
+                    anim.SetBool("isCarryingLog", false);
+                    anim.SetTrigger("isDroppingLog");
+                }
+
+                // 2. Gửi lệnh lên mạng thả vật lý
                 RequestDropServerRpc();
             }
         }
@@ -84,6 +101,25 @@ public class PlayerInteraction : NetworkBehaviour
         {
             if (hit.TryGetComponent<CrystalCore>(out var core))
             {
+                Animator anim = GetPlayerAnimator();
+                if (anim != null)
+                {
+                    // FIX: Xóa sạch trigger cũ để tránh kẹt lệnh
+                    anim.ResetTrigger("isPickingUpLog");
+                    anim.ResetTrigger("isDroppingLog");
+                    
+                    // Bật dáng bê đồ
+                    anim.SetBool("isCarryingLog", true);
+                    
+                    // KÍCH HOẠT TRIGGER CÚI NHẶT
+                    anim.SetTrigger("isPickingUpLog");
+                    
+                    // THÊM DÒNG NÀY: Ép animator chuyển sang trạng thái nhặt ngay lập tức
+                    // "PickUp" phải là tên chính xác của State trong Animator của bạn
+                    // Nếu bạn không biết tên state, hãy thử bỏ dòng này hoặc kiểm tra tên trong Unity
+                    // anim.Play("PickUp", 0, 0f); 
+                }
+
                 RequestPickupServerRpc(core.NetworkObject.NetworkObjectId);
                 break;
             }
@@ -121,9 +157,6 @@ public class PlayerInteraction : NetworkBehaviour
         }
     }
 
-    // ----------------------------------------------------
-    // HÀM HỖ TRỢ CHO INTERACT BOX GỌI (Ép người chơi bỏ ngọc khỏi tay)
-    // ----------------------------------------------------
     public void ForceDropFromStation()
     {
         if (!IsServer) return;
