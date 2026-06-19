@@ -75,16 +75,8 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
     public GameObject rightShoulderWeapon;
 
     [Header("Skill R - Nhuộm Đỏ Vũ Khí")]
-    [Tooltip("Kéo thả các GameObject là phần LƯỠi KIẾM / VŨ KHÍ bên phải vào đây để nhuộm đỏ khi dùng Skill R.\nChỉ những object này mới bị ảnh hưởng.")]
-    public GameObject[] swordBladeObjects;
-    [Tooltip("Material màu đỏ để nhuộm vũ khí khi dùng Skill R. Để trống sẽ tự động nhuộm đỏ bằng emission.")]
-    public Material redWeaponMaterial;
     [Tooltip("Tên Trigger Animation trong Animator khi khai động Skill R. Để trống nếu không có animation.")]
     public string rSkillAnimTrigger = "SkillR";
-    [Tooltip("Thời gian hiệu lực Skill R (giây)")]
-    public float rSkillDuration = 8f;
-    [Tooltip("Hệ số tăng sát thương khi Skill R (1.3 = +30%)")]
-    public float rSkillDamageMultiplier = 1.3f;
 
     [Header("Skill R - Bắn Cục Lửa")]
     [Tooltip("Prefab đạn lửa của chiêu R")]
@@ -96,11 +88,10 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
     [Tooltip("Sát thương của đạn lửa")]
     public float rSkillFireDamage = 40f;
 
-    [HideInInspector]
-    public bool isRSkillActive = false;
-    protected float rSkillTimeRemaining = 0f;
-    private System.Collections.Generic.Dictionary<Renderer, Material[]> originalWeaponMaterials
-        = new System.Collections.Generic.Dictionary<Renderer, Material[]>();
+    private bool localIsAimingR = false;
+    private GameObject rSkillHandPreviewVisual;
+    private bool isRShootPending = false;
+    private bool isPendingRShootNetworkMode = false;
 
     [Header("Skill E - Bất Tử")]
     [Tooltip("Tên Trigger Animation trong Animator khi kích hoạt Skill E.")]
@@ -159,11 +150,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
     );
     protected bool isBlocking = false;
 
-    public NetworkVariable<bool> isRSkillActiveNet = new NetworkVariable<bool>(
-        false,
-        NetworkVariableReadPermission.Everyone,
-        NetworkVariableWritePermission.Server
-    );
+
 
     public NetworkVariable<bool> isESkillActiveNet = new NetworkVariable<bool>(
         false,
@@ -418,8 +405,8 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
     public string[] InventorySlots => inventorySlots;
     public float MaxHealth => maxHealth;
 
-    public bool IsInvisible => isRSkillActive;
-    public float InvisibilityTimeRemaining => rSkillTimeRemaining;
+    public bool IsInvisible => false;
+    public float InvisibilityTimeRemaining => 0f;
 
     private bool IsSkillsUnlocked => isSkillsUnlocked.Value;
 
@@ -430,50 +417,157 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (carrier != null && carrier.isCarrying) return;
 
         if (PlayerLevel < 5 && !IsSkillsUnlocked) return;
-        if (isRSkillActive) return;
+        if (GetActiveWeaponIndex() != 1) return;
+        
+        SetAimingR(true);
+    }
 
-        Debug.Log("[ArthurPlayer] Khởi động gồng Skill R: Phát hoạt ảnh gồng chiêu...");
+    private void SetAimingR(bool aiming)
+    {
+        if (localIsAimingR == aiming) return;
+        localIsAimingR = aiming;
+        
+        PlayerHUDController hud = FindObjectOfType<PlayerHUDController>();
+        if (hud != null)
+        {
+            hud.SetCrosshairVisible(aiming);
+        }
 
-        if (isStandaloneMode)
+        if (aiming)
         {
-            if (!string.IsNullOrEmpty(rSkillAnimTrigger))
-                PlayAnimation(rSkillAnimTrigger, 0.1f);
+            if (rSkillFirePrefab != null && rSkillFireSpawnPoint != null && rSkillHandPreviewVisual == null)
+            {
+                rSkillHandPreviewVisual = Instantiate(rSkillFirePrefab, rSkillFireSpawnPoint.position, rSkillFireSpawnPoint.rotation, rSkillFireSpawnPoint);
+                rSkillHandPreviewVisual.transform.localPosition = Vector3.zero;
+                rSkillHandPreviewVisual.transform.localRotation = Quaternion.identity;
+                rSkillHandPreviewVisual.transform.localScale = rSkillFirePrefab.transform.localScale;
+                
+                if (rSkillHandPreviewVisual.TryGetComponent<ArthurFireProjectile>(out var proj))
+                {
+                    proj.enabled = false;
+                }
+                if (rSkillHandPreviewVisual.TryGetComponent<Collider>(out var col))
+                {
+                    col.enabled = false;
+                }
+                if (rSkillHandPreviewVisual.TryGetComponent<Rigidbody>(out var rb))
+                {
+                    rb.isKinematic = true;
+                }
+                
+                foreach (Transform child in rSkillHandPreviewVisual.transform)
+                {
+                    if (child.name.ToLower().Contains("hit"))
+                    {
+                        child.gameObject.SetActive(false);
+                    }
+                    else
+                    {
+                        child.gameObject.SetActive(true);
+                    }
+                }
+            }
         }
-        else if (IsOwner)
+        else
         {
-            if (!string.IsNullOrEmpty(rSkillAnimTrigger))
-                PlayAnimationLocal(rSkillAnimTrigger, 0.1f);
-            TriggerRSkillServerRpc(true);
+            if (rSkillHandPreviewVisual != null)
+            {
+                Destroy(rSkillHandPreviewVisual);
+                rSkillHandPreviewVisual = null;
+            }
         }
+    }
+
+    private void HandleRAiming()
+    {
+        bool hasControl = isStandaloneMode || (IsSpawned && IsOwner);
+        if (!hasControl) return;
+
+        if (localIsAimingR)
+        {
+            if (targetCamera != null)
+            {
+                Vector3 camForward = targetCamera.transform.forward;
+                camForward.y = 0f;
+                camForward.Normalize();
+                if (camForward != Vector3.zero)
+                {
+                    transform.forward = camForward;
+                }
+            }
+
+            if (!Input.GetKey(KeyCode.R) && !isRShootPending)
+            {
+                SetAimingR(false);
+            }
+            else if (Input.GetMouseButtonDown(0))
+            {
+                if (!IsUIBlockingInput())
+                {
+                    isRShootPending = true;
+                    isPendingRShootNetworkMode = !isStandaloneMode;
+                    
+                    if (!string.IsNullOrEmpty(rSkillAnimTrigger))
+                    {
+                        PlayAnimation(rSkillAnimTrigger, 0.05f);
+                    }
+                    
+                    SetAimingR(false);
+
+                    PlayerHUDController hud = FindObjectOfType<PlayerHUDController>();
+                    if (hud != null)
+                    {
+                        hud.TriggerCooldownR();
+                    }
+                }
+            }
+        }
+    }
+
+    public void OnShootRSkill()
+    {
+        OnRSkillWeaponGlow();
     }
 
     // EVENT ĐÓN NHẬN TỪ ANIMATION EVENT KHUNG HÌNH CUỐI (Giải quyết lỗi báo đỏ CS1061)
     public void OnRSkillWeaponGlow()
     {
+        if (!isRShootPending) return;
+        isRShootPending = false;
+
         Debug.Log($"[{gameObject.name}] OnRSkillWeaponGlow: Hoạt ảnh kết thúc -> Bắn cục lửa!");
 
-        if (isStandaloneMode)
+        Vector3 spawnPos = rSkillFireSpawnPoint != null ? rSkillFireSpawnPoint.position : transform.position + transform.forward * 1.5f + Vector3.up * 1f;
+        Vector3 shootDirection = transform.forward;
+
+        if (targetCamera != null)
         {
-            SpawnFireProjectileLocal();
+            Ray ray = targetCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
+            Vector3 targetPoint = ray.origin + ray.direction * 50f;
+            if (Physics.Raycast(ray.origin, ray.direction, out RaycastHit cameraHit, 50f))
+            {
+                targetPoint = cameraHit.point;
+            }
+            shootDirection = (targetPoint - spawnPos).normalized;
         }
-        else if (IsOwner)
+
+        if (isPendingRShootNetworkMode)
         {
-            Vector3 spawnPos = rSkillFireSpawnPoint != null ? rSkillFireSpawnPoint.position : transform.position + transform.forward * 1.5f + Vector3.up * 1f;
-            Vector3 shootDirection = transform.forward;
             SpawnFireProjectileServerRpc(spawnPos, shootDirection);
+        }
+        else
+        {
+            SpawnFireProjectileLocal(spawnPos, shootDirection);
         }
     }
 
-    private void SpawnFireProjectileLocal()
+    private void SpawnFireProjectileLocal(Vector3 spawnPos, Vector3 shootDirection)
     {
         if (rSkillFirePrefab == null)
         {
             Debug.LogError("[ArthurPlayer] rSkillFirePrefab chưa được gán trong Inspector!");
             return;
         }
-
-        Vector3 spawnPos = rSkillFireSpawnPoint != null ? rSkillFireSpawnPoint.position : transform.position + transform.forward * 1.5f + Vector3.up * 1f;
-        Vector3 shootDirection = transform.forward;
 
         GameObject fireObj = Instantiate(rSkillFirePrefab, spawnPos, Quaternion.LookRotation(shootDirection));
         fireObj.transform.localScale = rSkillFirePrefab.transform.localScale;
@@ -805,7 +899,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         isWeapon2Locked.OnValueChanged += OnWeapon2LockedChanged;
         isSkillsUnlocked.OnValueChanged += OnSkillsUnlockedChanged;
         isBlockingNet.OnValueChanged += OnBlockingNetChanged;
-        isRSkillActiveNet.OnValueChanged += OnRSkillNetChanged;
+
         isESkillActiveNet.OnValueChanged += OnESkillNetChanged;
         isQSkillActiveNet.OnValueChanged += OnQSkillNetChanged;
 
@@ -881,7 +975,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         isWeapon2Locked.OnValueChanged -= OnWeapon2LockedChanged;
         isSkillsUnlocked.OnValueChanged -= OnSkillsUnlockedChanged;
         isBlockingNet.OnValueChanged -= OnBlockingNetChanged;
-        isRSkillActiveNet.OnValueChanged -= OnRSkillNetChanged;
+
         isESkillActiveNet.OnValueChanged -= OnESkillNetChanged;
         isQSkillActiveNet.OnValueChanged -= OnQSkillNetChanged;
 
@@ -1356,6 +1450,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
     {
         UpdateAttackLayerWeight();
         UpdateComboChain();
+        HandleRAiming();
 
         // Đồng bộ di chuyển lướt (Roll) qua network cho cả Client Owner, Server, và các Client khác
         bool isRolling = isStandaloneMode ? isRollingStandalone : (IsSpawned && isRollingNet.Value);
@@ -1447,21 +1542,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
             rollCooldownTimer -= Time.deltaTime;
         }
 
-        if (isRSkillActive && (isStandaloneMode || IsOwner))
-        {
-            rSkillTimeRemaining -= Time.deltaTime;
-            if (rSkillTimeRemaining <= 0f)
-            {
-                rSkillTimeRemaining = 0f;
-                isRSkillActive = false;
-                SetRedWeaponVisuals(false);
 
-                if (!isStandaloneMode && IsOwner)
-                {
-                    TriggerRSkillServerRpc(false);
-                }
-            }
-        }
 
         if (isESkillActive && (isStandaloneMode || IsOwner))
         {
@@ -1691,6 +1772,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         if (Input.GetMouseButtonDown(0) || (Input.GetMouseButton(0) && !isExecutingAttack && !isBlocking))
         {
+            if (localIsAimingR) return;
             if (!IsUIBlockingInput() && CanAttack())
             {
                 RequestComboAttack(false);
@@ -1853,6 +1935,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         if (Input.GetMouseButtonDown(0) || (Input.GetMouseButton(0) && !isExecutingAttack && !isBlocking))
         {
+            if (localIsAimingR) return;
             if (IsSpawned && !IsUIBlockingInput() && CanAttack())
             {
                 RequestComboAttack(true);
@@ -2387,7 +2470,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     protected void TryDamageEnemy(Collider col)
     {
-        float actualDamage = isRSkillActive ? damageAmount * rSkillDamageMultiplier : damageAmount;
+        float actualDamage = damageAmount;
 
         var e1 = col.GetComponentInParent<Enemy1_DapBua>();
         if (e1 != null) { e1.TakeDamage(actualDamage); return; }
@@ -2405,65 +2488,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (e5 != null) { e5.TakeDamage(actualDamage); return; }
     }
 
-    [ServerRpc]
-    private void TriggerRSkillServerRpc(bool state)
-    {
-        if (!state)
-        {
-            isRSkillActiveNet.Value = false;
-            TriggerRSkillClientRpc(false);
-        }
-        else
-        {
-            // Chỉ đồng bộ hoạt ảnh gồng chiêu R ban đầu cho các Proxy khác
-            TriggerRSkillClientRpc(true);
-        }
-    }
 
-    // Server RPC mới: Chạy đếm ngược trên Server khi hoạt ảnh gồng kết thúc
-    [ServerRpc]
-    private void StartRSkillBuffServerRpc()
-    {
-        isRSkillActiveNet.Value = true;
-        StartCoroutine(ServerRSkillTimerCoroutine(rSkillDuration));
-    }
-
-    [ClientRpc]
-    private void TriggerRSkillClientRpc(bool state)
-    {
-        if (state)
-        {
-            if (!IsOwner && !string.IsNullOrEmpty(rSkillAnimTrigger))
-            {
-                PlayAnimationLocal(rSkillAnimTrigger, 0.1f);
-            }
-        }
-        else
-        {
-            if (!IsOwner)
-            {
-                SetRedWeaponVisuals(false);
-            }
-        }
-    }
-
-    private System.Collections.IEnumerator ServerRSkillTimerCoroutine(float duration)
-    {
-        yield return new WaitForSeconds(duration);
-        if (isRSkillActiveNet.Value)
-        {
-            isRSkillActiveNet.Value = false;
-            TriggerRSkillClientRpc(false);
-        }
-    }
-
-    private void OnRSkillNetChanged(bool oldVal, bool newVal)
-    {
-        if (!IsOwner)
-        {
-            SetRedWeaponVisuals(newVal);
-        }
-    }
 
     [ServerRpc]
     private void TriggerESkillServerRpc(bool state)
@@ -2584,75 +2609,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
 
 
-    private void SetRedWeaponVisuals(bool active)
-    {
-        if (active)
-        {
-            if (originalWeaponMaterials.Count > 0) return;
 
-            if (swordBladeObjects == null || swordBladeObjects.Length == 0)
-            {
-                Debug.LogWarning("[ArthurPlayer] Skill R: Mảng Sword Blade Objects trống! Hãy kéo thả phần lưỡi kiếm vào Inspector.");
-                return;
-            }
-
-            foreach (var bladeObj in swordBladeObjects)
-            {
-                if (bladeObj == null) continue;
-
-                Renderer[] renderers = bladeObj.GetComponentsInChildren<Renderer>(true);
-                foreach (var r in renderers)
-                {
-                    if (!(r is SkinnedMeshRenderer) && !(r is MeshRenderer)) continue;
-
-                    originalWeaponMaterials[r] = r.sharedMaterials;
-
-                    if (redWeaponMaterial != null)
-                    {
-                        Material[] newMats = new Material[r.sharedMaterials.Length];
-                        for (int i = 0; i < newMats.Length; i++)
-                            newMats[i] = redWeaponMaterial;
-                        r.materials = newMats;
-                    }
-                    else
-                    {
-                        Material[] newMats = new Material[r.sharedMaterials.Length];
-                        for (int i = 0; i < r.sharedMaterials.Length; i++)
-                        {
-                            Material originalMat = r.sharedMaterials[i];
-                            if (originalMat != null)
-                            {
-                                Material tempMat = new Material(originalMat);
-                                tempMat.EnableKeyword("_EMISSION");
-                                tempMat.SetColor("_EmissionColor", new Color(1.2f, 0.05f, 0.05f, 1f));
-                                if (tempMat.HasProperty("_Color"))
-                                    tempMat.SetColor("_Color", new Color(0.9f, 0.1f, 0.1f, 1f));
-                                if (tempMat.HasProperty("_BaseColor"))
-                                    tempMat.SetColor("_BaseColor", new Color(0.9f, 0.1f, 0.1f, 1f));
-                                newMats[i] = tempMat;
-                            }
-                            else
-                            {
-                                newMats[i] = null;
-                            }
-                        }
-                        r.materials = newMats;
-                    }
-                }
-            }
-            Debug.Log($"[ArthurPlayer] Skill R ON - Đã nhuộm đỏ {swordBladeObjects.Length} object(s) lưỡi kiếm!");
-        }
-        else
-        {
-            foreach (var kvp in originalWeaponMaterials)
-            {
-                if (kvp.Key != null && kvp.Value != null)
-                    kvp.Key.materials = kvp.Value;
-            }
-            originalWeaponMaterials.Clear();
-            Debug.Log("[ArthurPlayer] Skill R OFF - Lưỡi kiếm đã khôi phục màu gốc.");
-        }
-    }
 
     [ServerRpc]
     protected void AttackServerRpc()

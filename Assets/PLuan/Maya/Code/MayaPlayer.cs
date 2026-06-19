@@ -227,24 +227,7 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
     );
     public bool IsQSkillActive => isStandaloneMode ? localIsQSkillActive : isQSkillActiveNet.Value;
 
-    [Header("R Skill (Target Heal Over Time) Settings")]
-    public float rSkillCooldown = 30f; // Cooldown của kỹ năng R (giây)
-    public float rSkillDuration = 5f;  // Thời lượng tác dụng kỹ năng R (giây)
-    public float rSkillShootCooldown = 0.3f; // Tốc độ bắn khi bật R (giây chờ giữa các phát bắn)
-    public GameObject rSkillProjectilePrefab; // Prefab bắn chiêu R
-    public Transform rSkillSpawnPoint; // Điểm xuất phát chiêu R
-    public float rSkillHealPercentage = 0.25f; // Phần trăm hồi máu (25% máu tối đa của Maya)
-    public float rSkillProjectileSpeed = 30f; // Tốc độ bay của đạn R
-    public float rSkillProjectileLifetime = 4f; // Thời gian tồn tại tối đa của đạn R
-    private float rSkillCooldownTimer = 0f; // Bộ đếm cooldown R
-    private float rSkillDurationTimer = 0f; // Bộ đếm thời lượng R
-    private bool localIsRSkillActive = false; // Trạng thái kỹ năng R ở local
-    public NetworkVariable<bool> isRSkillActiveNet = new NetworkVariable<bool>(
-        false,
-        NetworkVariableReadPermission.Everyone,
-        NetworkVariableWritePermission.Server
-    );
-    public bool IsRSkillActive => isStandaloneMode ? localIsRSkillActive : isRSkillActiveNet.Value;
+
 
     [Header("Skill R - Bắn Cục Nước")]
     [Tooltip("Prefab đạn nước của chiêu R")]
@@ -256,8 +239,8 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
     [Tooltip("Sát thương của đạn nước")]
     public float rSkillWaterDamage = 40f;
 
-    private bool isRTargeting = false; // Đang trong trạng thái nhắm R
-    private System.Collections.Generic.Dictionary<IPlayerHUDTarget, TextMesh> activeRIndicators = new System.Collections.Generic.Dictionary<IPlayerHUDTarget, TextMesh>();
+    private bool localIsAimingR = false;
+    private GameObject rSkillHandPreviewVisual;
 
     private float defaultCameraDistance;
     private float defaultPivotHeight;
@@ -268,7 +251,7 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
         NetworkVariableReadPermission.Everyone,
         NetworkVariableWritePermission.Server
     );
-    public bool IsAiming => isStandaloneMode ? localIsAiming : (IsOwner ? localIsAiming : isAimingNet.Value);
+    public bool IsAiming => isStandaloneMode ? (localIsAiming || localIsAimingR) : (IsOwner ? (localIsAiming || localIsAimingR) : isAimingNet.Value);
     public bool IsBusyOrRolling => (isStandaloneMode ? isRollingStandalone : rollTimer > 0) || IsPlayingActionAnimation() || (CurrentHealth <= 0);
 
     [Header("Camera Inversion Settings")]
@@ -388,9 +371,9 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
     public float MaxHealth => maxHealth;
 
 
-    // Invisibility Skill R (Maya's Attack Speed Boost)
-    public bool IsInvisible => IsRSkillActive;
-    public float InvisibilityTimeRemaining => rSkillDurationTimer;
+    // Invisibility Skill R (stub - legacy removed)
+    public bool IsInvisible => false;
+    public float InvisibilityTimeRemaining => 0f;
     private bool IsSkillsUnlocked => isSkillsUnlocked.Value;
 
     public void TriggerInvisibilitySkill()
@@ -790,14 +773,107 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (carrier != null && carrier.isCarrying) return;
 
         if (PlayerLevel < 5 && !IsSkillsUnlocked) return;
-        if (rSkillCooldownTimer > 0f) return;
 
-        // Play the casting/shooting animation
-        PlayAnimation("Shooting", 0.05f);
+        if (GetActiveWeaponIndex() != 1) return;
 
-        // Queue the projectile spawn for when the animation event fires
-        isRShootPending = true;
-        isPendingRShootNetworkMode = !isStandaloneMode;
+        SetAimingR(true);
+    }
+
+    private void SetAimingR(bool aiming)
+    {
+        if (localIsAimingR == aiming) return;
+        localIsAimingR = aiming;
+        
+        OnAimStateChanged(localIsAiming || localIsAimingR);
+        if (!isStandaloneMode && IsOwner)
+        {
+            SetAimingServerRpc(localIsAiming || localIsAimingR);
+        }
+
+        if (aiming)
+        {
+            if (rSkillWaterPrefab != null && rSkillWaterSpawnPoint != null && rSkillHandPreviewVisual == null)
+            {
+                rSkillHandPreviewVisual = Instantiate(rSkillWaterPrefab, rSkillWaterSpawnPoint.position, rSkillWaterSpawnPoint.rotation, rSkillWaterSpawnPoint);
+                rSkillHandPreviewVisual.transform.localPosition = Vector3.zero;
+                rSkillHandPreviewVisual.transform.localRotation = Quaternion.identity;
+                rSkillHandPreviewVisual.transform.localScale = rSkillWaterPrefab.transform.localScale;
+                
+                if (rSkillHandPreviewVisual.TryGetComponent<MayaWaterProjectile>(out var proj))
+                {
+                    proj.enabled = false;
+                }
+                if (rSkillHandPreviewVisual.TryGetComponent<Collider>(out var col))
+                {
+                    col.enabled = false;
+                }
+                if (rSkillHandPreviewVisual.TryGetComponent<Rigidbody>(out var rb))
+                {
+                    rb.isKinematic = true;
+                }
+                
+                foreach (Transform child in rSkillHandPreviewVisual.transform)
+                {
+                    if (child.name.ToLower().Contains("hit"))
+                    {
+                        child.gameObject.SetActive(false);
+                    }
+                    else
+                    {
+                        child.gameObject.SetActive(true);
+                    }
+                }
+            }
+        }
+        else
+        {
+            if (rSkillHandPreviewVisual != null)
+            {
+                Destroy(rSkillHandPreviewVisual);
+                rSkillHandPreviewVisual = null;
+            }
+        }
+    }
+
+    private void HandleRAiming()
+    {
+        bool hasControl = isStandaloneMode || (IsSpawned && IsOwner);
+        if (!hasControl) return;
+
+        if (localIsAimingR)
+        {
+            if (targetCamera != null)
+            {
+                Vector3 camForward = targetCamera.transform.forward;
+                camForward.y = 0f;
+                camForward.Normalize();
+                if (camForward != Vector3.zero)
+                {
+                    transform.forward = camForward;
+                }
+            }
+
+            if (!Input.GetKey(KeyCode.R) && !isRShootPending)
+            {
+                SetAimingR(false);
+            }
+            else if (Input.GetMouseButtonDown(0))
+            {
+                if (!IsUIBlockingInput())
+                {
+                    isRShootPending = true;
+                    isPendingRShootNetworkMode = !isStandaloneMode;
+                    PlayAnimation("Shooting", 0.05f);
+                    SetAimingR(false);
+
+                    PlayerHUDController hud = FindObjectOfType<PlayerHUDController>();
+                    if (hud != null)
+                    {
+                        hud.TriggerCooldownR();
+                    }
+                }
+            }
+        }
     }
 
     private void CastRSkill(bool networkMode)
@@ -1801,6 +1877,7 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
         // Cập nhật trạng thái ngắm bắn (Aiming)
         if (hasControl)
         {
+            HandleRAiming();
             int currentWeaponIdx = GetActiveWeaponIndex();
 
             // Vào chế độ ngắm E khi giữ phím E, có cầm vũ khí (cung) và skill E không ở trạng thái cooldown
@@ -1810,17 +1887,9 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
                 isETargeting = targetETargeting;
             }
 
-            // Vào chế độ ngắm R khi giữ phím R, có cầm vũ khí (cung) và skill R không ở trạng thái cooldown
-            bool targetRTargeting = currentWeaponIdx == 2 && rSkillCooldownTimer <= 0f && Input.GetKey(KeyCode.R) && !IsUIBlockingInput() && !IsBusyOrRolling;
-            if (isRTargeting != targetRTargeting)
-            {
-                isRTargeting = targetRTargeting;
-            }
 
-            UpdateETargetingIndicator();
-            UpdateRTargetingIndicators();
 
-            bool targetAiming = (currentWeaponIdx == 2 && Input.GetMouseButton(1) && !IsUIBlockingInput() && !IsBusyOrRolling) || isETargeting || isRTargeting || isShootPending || isRShootPending;
+            bool targetAiming = (currentWeaponIdx == 2 && Input.GetMouseButton(1) && !IsUIBlockingInput() && !IsBusyOrRolling) || isETargeting || isShootPending || isRShootPending;
             if (localIsAiming != targetAiming)
             {
                 localIsAiming = targetAiming;
@@ -1875,20 +1944,7 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
             }
         }
 
-        // Giảm thời gian cooldown và thời lượng Kỹ năng R
-        if (rSkillCooldownTimer > 0)
-        {
-            rSkillCooldownTimer -= Time.deltaTime;
-        }
-        if (rSkillDurationTimer > 0)
-        {
-            rSkillDurationTimer -= Time.deltaTime;
-            if (rSkillDurationTimer <= 0)
-            {
-                rSkillDurationTimer = 0f;
-                EndRSkill();
-            }
-        }
+
 
         // Tự động reset combo và dọn dẹp trigger nếu người chơi đã dừng tấn công và hoạt ảnh trở về trạng thái bình thường (Idle/Walk/Run)
         int activeWeapon = GetActiveWeaponIndex();
@@ -2200,19 +2256,29 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
         {
             if (!IsUIBlockingInput())
             {
-                if (isETargeting)
+                if (localIsAimingR)
+                {
+                    isRShootPending = true;
+                    isPendingRShootNetworkMode = false;
+                    PlayAnimation("Shooting", 0.05f);
+                    SetAimingR(false);
+
+                    PlayerHUDController hud = FindObjectOfType<PlayerHUDController>();
+                    if (hud != null)
+                    {
+                        hud.TriggerCooldownR();
+                    }
+                }
+                else if (isETargeting)
                 {
                     CastEHealingZone(false);
                 }
-                else if (isRTargeting)
-                {
-                    CastRSkill(false);
-                }
+
                 else if (IsAiming)
                 {
                     if (ShootingCooldownTimer <= 0f)
                     {
-                        ShootingCooldownTimer = IsRSkillActive ? rSkillShootCooldown : ShootingCooldown;
+                        ShootingCooldownTimer = ShootingCooldown;
                         PerformShooting(false);
                     }
                 }
@@ -2364,19 +2430,29 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
         {
             if (IsSpawned && !IsUIBlockingInput())
             {
-                if (isETargeting)
+                if (localIsAimingR)
+                {
+                    isRShootPending = true;
+                    isPendingRShootNetworkMode = !isStandaloneMode;
+                    PlayAnimation("Shooting", 0.05f);
+                    SetAimingR(false);
+
+                    PlayerHUDController hud = FindObjectOfType<PlayerHUDController>();
+                    if (hud != null)
+                    {
+                        hud.TriggerCooldownR();
+                    }
+                }
+                else if (isETargeting)
                 {
                     CastEHealingZone(true);
                 }
-                else if (isRTargeting)
-                {
-                    CastRSkill(true);
-                }
+
                 else if (IsAiming)
                 {
                     if (ShootingCooldownTimer <= 0f)
                     {
-                        ShootingCooldownTimer = IsRSkillActive ? rSkillShootCooldown : ShootingCooldown;
+                        ShootingCooldownTimer = ShootingCooldown;
                         PerformShooting(true);
                     }
                 }

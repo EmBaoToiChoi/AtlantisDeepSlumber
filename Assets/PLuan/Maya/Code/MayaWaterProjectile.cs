@@ -6,17 +6,44 @@ public class MayaWaterProjectile : NetworkBehaviour
     public float speed = 20f;
     public float lifetime = 5f;
     public float damage = 40f;
+    public float lifetimeAfterHit = 2f; // Thời gian chờ hủy đạn sau khi nổ để chờ hiệu ứng chạy xong
     
+    [Header("Visual Effects References")]
+    public GameObject castGFX;
+    public GameObject hitGFX;
+    public GameObject flyingGFX;
+
     [HideInInspector]
     public MayaPlayer owner;
 
     private System.Collections.Generic.HashSet<Transform> hitEnemyRoots = new System.Collections.Generic.HashSet<Transform>();
+    private bool isHit = false;
 
     private void Start()
     {
         gameObject.tag = "Nuoc"; // Force tag "Nuoc" for elemental rock puzzles
         
-        Debug.Log($"[MayaWaterProjectile] Đạn nước được khởi tạo tại: {transform.position}, góc xoay: {transform.rotation.eulerAngles}, Tag: {gameObject.tag}");
+        // Tự động tìm kiếm các bộ phận GFX nếu chưa gán trong Inspector
+        if (castGFX == null) castGFX = FindChildWithNamePart("cast");
+        if (hitGFX == null) hitGFX = FindChildWithNamePart("hit");
+        if (flyingGFX == null)
+        {
+            foreach (Transform child in transform)
+            {
+                if (child.gameObject != castGFX && child.gameObject != hitGFX)
+                {
+                    flyingGFX = child.gameObject;
+                    break;
+                }
+            }
+        }
+
+        // Khởi tạo trạng thái ban đầu của các GFX
+        if (castGFX != null) castGFX.SetActive(true);
+        if (flyingGFX != null) flyingGFX.SetActive(true);
+        if (hitGFX != null) hitGFX.SetActive(false);
+
+        Debug.Log($"[MayaWaterProjectile] Đạn nước được khởi tạo tại: {transform.position}, Tag: {gameObject.tag}");
 
         if (NetworkManager.Singleton == null || NetworkManager.Singleton.IsServer)
         {
@@ -26,15 +53,20 @@ public class MayaWaterProjectile : NetworkBehaviour
 
     private void Update()
     {
-        transform.Translate(Vector3.forward * speed * Time.deltaTime);
+        if (!isHit)
+        {
+            transform.Translate(Vector3.forward * speed * Time.deltaTime);
+        }
     }
 
     private void OnTriggerEnter(Collider other)
     {
+        // Chỉ xử lý va chạm trên Server hoặc chế độ Standalone
         bool isServerOrStandalone = NetworkManager.Singleton == null || NetworkManager.Singleton.IsServer;
         if (!isServerOrStandalone) return;
+        if (isHit) return;
 
-        // Bỏ qua va chạm với Player
+        // Bỏ qua va chạm với bất kỳ đối tượng Player nào
         if (other.CompareTag("Player") || 
             other.gameObject.layer == LayerMask.NameToLayer("Player") ||
             other.GetComponentInParent<ArthurPlayer>() != null ||
@@ -90,12 +122,12 @@ public class MayaWaterProjectile : NetworkBehaviour
                 }
             }
 
-            DespawnOrDestroy();
+            HandleHitImpact();
         }
         else if (!other.isTrigger)
         {
-            Debug.Log($"[MayaWaterProjectile] Đạn nước va chạm trúng chướng ngại vật: {other.name}, tự hủy.");
-            DespawnOrDestroy();
+            Debug.Log($"[MayaWaterProjectile] Đạn nước va chạm trúng chướng ngại vật: {other.name}, nổ.");
+            HandleHitImpact();
         }
     }
 
@@ -107,15 +139,94 @@ public class MayaWaterProjectile : NetworkBehaviour
         }
     }
 
+    private void HandleHitImpact()
+    {
+        // Chạy visual nổ cục bộ
+        ApplyHitVisuals();
+
+        // Đồng bộ visual nổ sang các Client khác qua mạng
+        if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening && IsServer)
+        {
+            TriggerHitVisualsClientRpc();
+        }
+
+        // Thiết lập thời gian hủy đạn tự động
+        if (NetworkManager.Singleton == null || NetworkManager.Singleton.IsServer)
+        {
+            CancelInvoke(nameof(DespawnOrDestroy));
+            Invoke(nameof(DespawnOrDestroy), lifetimeAfterHit);
+        }
+    }
+
+    [ClientRpc]
+    private void TriggerHitVisualsClientRpc()
+    {
+        if (!IsServer)
+        {
+            ApplyHitVisuals();
+        }
+    }
+
+    private void ApplyHitVisuals()
+    {
+        isHit = true;
+        speed = 0f;
+
+        // Tắt bộ phận cast và thân đạn bay
+        if (castGFX != null) castGFX.SetActive(false);
+        if (flyingGFX != null) flyingGFX.SetActive(false);
+
+        // Bật visual nổ
+        if (hitGFX != null) hitGFX.SetActive(true);
+
+        // Vô hiệu hóa Collider để không kích hoạt va chạm thêm nữa
+        if (TryGetComponent<Collider>(out var col)) col.enabled = false;
+        
+        // Ngắt vận tốc vật lý nếu có
+        if (TryGetComponent<Rigidbody>(out var rb))
+        {
+            rb.linearVelocity = Vector3.zero;
+            rb.isKinematic = true;
+        }
+    }
+
+    /// <summary>
+    /// Được gọi từ Animation Event tại keyframe cuối của hoạt ảnh Hit/Nổ.
+    /// </summary>
+    public void OnHitAnimationEnd()
+    {
+        Debug.Log($"[{gameObject.name}] Nhận sự kiện kết thúc Animation Event -> Despawn đạn.");
+        DespawnOrDestroy();
+    }
+
     private void DespawnOrDestroy()
     {
         if (NetworkObject != null && NetworkObject.IsSpawned)
         {
-            NetworkObject.Despawn(true);
+            if (IsServer)
+            {
+                NetworkObject.Despawn(true);
+            }
+            else
+            {
+                gameObject.SetActive(false);
+            }
         }
         else
         {
             Destroy(gameObject);
         }
+    }
+
+    private GameObject FindChildWithNamePart(string part)
+    {
+        foreach (Transform child in transform)
+        {
+            if (child.name.ToLower().Contains(part.ToLower()))
+            {
+                return child.gameObject;
+            }
+        }
+        return null;
     }
 }

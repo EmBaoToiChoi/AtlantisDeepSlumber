@@ -3074,7 +3074,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     public NetworkVariable<float> weapon2Durability = new NetworkVariable<float>(100f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     public NetworkVariable<bool> isRollingNet = new NetworkVariable<bool>(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     public NetworkVariable<bool> isMovementLockedNet = new NetworkVariable<bool>(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
-    public NetworkVariable<bool> isInvisibleNet = new NetworkVariable<bool>(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+
     public NetworkVariable<bool> isAttackSpeedBoostedNet = new NetworkVariable<bool>(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     public NetworkVariable<bool> isQSkillActiveNet = new NetworkVariable<bool>(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     [HideInInspector]
@@ -3096,10 +3096,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     protected bool localSkillsUnlocked = false;
     protected int localActiveWeaponIndex = 1;
 
-    [Header("Invisibility Skill R Settings")]
-    public Material invisibleMaterial;
-    private float invisibilityTimeRemaining = 0f;
-    private System.Collections.Generic.Dictionary<Renderer, Material[]> originalMaterials = new System.Collections.Generic.Dictionary<Renderer, Material[]>();
+
 
     [Header("Skill R - Bắn Cục Sét")]
     [Tooltip("Prefab đạn sét của chiêu R")]
@@ -3110,6 +3107,11 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     public float rSkillLightningSpeed = 20f;
     [Tooltip("Sát thương của đạn sét")]
     public float rSkillLightningDamage = 40f;
+
+    private bool localIsAimingR = false;
+    private GameObject rSkillHandPreviewVisual;
+    private bool isRShootPending = false;
+    private bool isPendingRShootNetworkMode = false;
 
     [Header("Attack Speed Boost Skill E Settings")]
     public Material redSwordMaterial;
@@ -3204,9 +3206,9 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     public string[] InventorySlots => inventorySlots;
     public float MaxHealth => maxHealth;
 
-    // Invisibility Skill R
-    public bool IsInvisible => isStandaloneMode ? (invisibilityTimeRemaining > 0f) : isInvisibleNet.Value;
-    public float InvisibilityTimeRemaining => invisibilityTimeRemaining;
+    // Invisibility Skill R (stub - legacy removed)
+    public bool IsInvisible => false;
+    public float InvisibilityTimeRemaining => 0f;
 
     // Attack Speed Boost Skill E
     public bool IsAttackSpeedBoosted => isStandaloneMode ? (attackSpeedBoostTimeRemaining > 0f) : isAttackSpeedBoostedNet.Value;
@@ -3390,7 +3392,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         weapon2Durability.OnValueChanged += OnDurabilityChanged;
         isMovementLockedNet.OnValueChanged += OnMovementLockedNetChanged;
         currentHealth.OnValueChanged += OnHealthChangedShared;
-        isInvisibleNet.OnValueChanged += OnInvisibleNetChanged;
+
         isAttackSpeedBoostedNet.OnValueChanged += OnAttackSpeedBoostedChanged;
         isQSkillActiveNet.OnValueChanged += OnQSkillActiveChanged;
         isRollingNet.OnValueChanged += OnRollingNetChanged;
@@ -3439,13 +3441,10 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         SyncWeaponVisuals(activeWeaponIndex.Value);
 
+
         // Apply initial visual states for network variables
         if (!isStandaloneMode)
         {
-            if (isInvisibleNet.Value)
-            {
-                SetInvisibilityVisuals(true);
-            }
             if (isAttackSpeedBoostedNet.Value)
             {
                 SetSwordRedVisuals(true);
@@ -3483,7 +3482,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         weapon2Durability.OnValueChanged -= OnDurabilityChanged;
         isMovementLockedNet.OnValueChanged -= OnMovementLockedNetChanged;
         currentHealth.OnValueChanged -= OnHealthChangedShared;
-        isInvisibleNet.OnValueChanged -= OnInvisibleNetChanged;
+
         isAttackSpeedBoostedNet.OnValueChanged -= OnAttackSpeedBoostedChanged;
         isQSkillActiveNet.OnValueChanged -= OnQSkillActiveChanged;
         isRollingNet.OnValueChanged -= OnRollingNetChanged;
@@ -3567,18 +3566,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     private void Update()
     {
-        if (invisibilityTimeRemaining > 0f)
-        {
-            invisibilityTimeRemaining -= Time.deltaTime;
-            if (invisibilityTimeRemaining <= 0f)
-            {
-                invisibilityTimeRemaining = 0f;
-                if (isStandaloneMode)
-                {
-                    SetInvisibilityVisuals(false);
-                }
-            }
-        }
+
 
         if (attackSpeedBoostTimeRemaining > 0f)
         {
@@ -3640,6 +3628,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         bool hasControl = isStandaloneMode || (IsSpawned && IsOwner);
         if (hasControl)
         {
+            HandleRAiming();
             if (Input.GetKeyDown(KeyCode.LeftAlt) || Input.GetKeyDown(KeyCode.RightAlt))
             {
                 isCursorLocked = !isCursorLocked;
@@ -3877,6 +3866,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         if (Input.GetMouseButtonDown(0))
         {
+            if (localIsAimingR) return;
             if (!IsUIBlockingInput() && !isRollingStandalone)
             {
                 RequestComboAttack(false);
@@ -4032,6 +4022,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         if (Input.GetMouseButtonDown(0))
         {
+            if (localIsAimingR) return;
             if (!IsUIBlockingInput() && IsSpawned)
             {
                 RequestComboAttack(true);
@@ -5001,33 +4992,154 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (carrier != null && carrier.isCarrying) return;
 
         if (PlayerLevel < 5 && !IsSkillsUnlocked) return;
+        if (GetActiveWeaponIndex() != 1) return;
 
-        // Bắn đạn sét chớp nhoáng, chạy một animation tấn công bất kỳ
-        string attackAnim = Random.value < 0.5f ? "Attack1combo1" : "Attack2combo1";
-        PlayAnimation(attackAnim, 0.05f);
+        SetAimingR(true);
+    }
 
-        if (isStandaloneMode)
+    private void SetAimingR(bool aiming)
+    {
+        if (localIsAimingR == aiming) return;
+        localIsAimingR = aiming;
+        
+        PlayerHUDController hud = FindObjectOfType<PlayerHUDController>();
+        if (hud != null)
         {
-            SpawnLightningProjectileLocal();
+            hud.SetCrosshairVisible(aiming);
         }
-        else if (IsOwner)
+
+        if (aiming)
         {
-            Vector3 spawnPos = rSkillLightningSpawnPoint != null ? rSkillLightningSpawnPoint.position : transform.position + transform.forward * 1.5f + Vector3.up * 1.0f;
-            Vector3 shootDirection = transform.forward;
-            SpawnLightningProjectileServerRpc(spawnPos, shootDirection);
+            if (rSkillLightningPrefab != null && rSkillLightningSpawnPoint != null && rSkillHandPreviewVisual == null)
+            {
+                rSkillHandPreviewVisual = Instantiate(rSkillLightningPrefab, rSkillLightningSpawnPoint.position, rSkillLightningSpawnPoint.rotation, rSkillLightningSpawnPoint);
+                rSkillHandPreviewVisual.transform.localPosition = Vector3.zero;
+                rSkillHandPreviewVisual.transform.localRotation = Quaternion.identity;
+                rSkillHandPreviewVisual.transform.localScale = rSkillLightningPrefab.transform.localScale;
+                
+                if (rSkillHandPreviewVisual.TryGetComponent<LeoLightningProjectile>(out var proj))
+                {
+                    proj.enabled = false;
+                }
+                if (rSkillHandPreviewVisual.TryGetComponent<Collider>(out var col))
+                {
+                    col.enabled = false;
+                }
+                if (rSkillHandPreviewVisual.TryGetComponent<Rigidbody>(out var rb))
+                {
+                    rb.isKinematic = true;
+                }
+                
+                foreach (Transform child in rSkillHandPreviewVisual.transform)
+                {
+                    if (child.name.ToLower().Contains("hit"))
+                    {
+                        child.gameObject.SetActive(false);
+                    }
+                    else
+                    {
+                        child.gameObject.SetActive(true);
+                    }
+                }
+            }
+        }
+        else
+        {
+            if (rSkillHandPreviewVisual != null)
+            {
+                Destroy(rSkillHandPreviewVisual);
+                rSkillHandPreviewVisual = null;
+            }
         }
     }
 
-    private void SpawnLightningProjectileLocal()
+    private void HandleRAiming()
+    {
+        bool hasControl = isStandaloneMode || (IsSpawned && IsOwner);
+        if (!hasControl) return;
+
+        if (localIsAimingR)
+        {
+            if (targetCamera != null)
+            {
+                Vector3 camForward = targetCamera.transform.forward;
+                camForward.y = 0f;
+                camForward.Normalize();
+                if (camForward != Vector3.zero)
+                {
+                    transform.forward = camForward;
+                }
+            }
+
+            if (!Input.GetKey(KeyCode.R) && !isRShootPending)
+            {
+                SetAimingR(false);
+            }
+            else if (Input.GetMouseButtonDown(0))
+            {
+                if (!IsUIBlockingInput())
+                {
+                    isRShootPending = true;
+                    isPendingRShootNetworkMode = !isStandaloneMode;
+                    
+                    string attackAnim = Random.value < 0.5f ? "Attack1combo1" : "Attack2combo1";
+                    PlayAnimation(attackAnim, 0.05f);
+                    
+                    SetAimingR(false);
+
+                    PlayerHUDController hud = FindObjectOfType<PlayerHUDController>();
+                    if (hud != null)
+                    {
+                        hud.TriggerCooldownR();
+                    }
+                }
+            }
+        }
+    }
+
+    public void OnRSkillWeaponGlow()
+    {
+        OnShootRSkill();
+    }
+
+    public void OnShootRSkill()
+    {
+        if (!isRShootPending) return;
+        isRShootPending = false;
+
+        Debug.Log($"[{gameObject.name}] OnShootRSkill: Hoạt ảnh bắn sét -> Bắn!");
+
+        Vector3 spawnPos = rSkillLightningSpawnPoint != null ? rSkillLightningSpawnPoint.position : transform.position + transform.forward * 1.5f + Vector3.up * 1.0f;
+        Vector3 shootDirection = transform.forward;
+
+        if (targetCamera != null)
+        {
+            Ray ray = targetCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
+            Vector3 targetPoint = ray.origin + ray.direction * 50f;
+            if (Physics.Raycast(ray.origin, ray.direction, out RaycastHit cameraHit, 50f))
+            {
+                targetPoint = cameraHit.point;
+            }
+            shootDirection = (targetPoint - spawnPos).normalized;
+        }
+
+        if (isPendingRShootNetworkMode)
+        {
+            SpawnLightningProjectileServerRpc(spawnPos, shootDirection);
+        }
+        else
+        {
+            SpawnLightningProjectileLocal(spawnPos, shootDirection);
+        }
+    }
+
+    private void SpawnLightningProjectileLocal(Vector3 spawnPos, Vector3 shootDirection)
     {
         if (rSkillLightningPrefab == null)
         {
             Debug.LogError("[LeoPlayer] rSkillLightningPrefab chưa được gán trong Inspector!");
             return;
         }
-
-        Vector3 spawnPos = rSkillLightningSpawnPoint != null ? rSkillLightningSpawnPoint.position : transform.position + transform.forward * 1.5f + Vector3.up * 1.0f;
-        Vector3 shootDirection = transform.forward;
 
         GameObject lightningObj = Instantiate(rSkillLightningPrefab, spawnPos, Quaternion.LookRotation(shootDirection));
         lightningObj.transform.localScale = rSkillLightningPrefab.transform.localScale;
@@ -5072,111 +5184,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         }
     }
 
-    [ServerRpc]
-    private void TriggerInvisibilityServerRpc(bool state)
-    {
-        isInvisibleNet.Value = state;
-        TriggerInvisibilityClientRpc(state);
-        if (state)
-        {
-            StartCoroutine(ServerInvisibilityTimerCoroutine(5f));
-        }
-    }
 
-    [ClientRpc]
-    private void TriggerInvisibilityClientRpc(bool state)
-    {
-        SetInvisibilityVisuals(state);
-    }
-
-    private System.Collections.IEnumerator ServerInvisibilityTimerCoroutine(float duration)
-    {
-        yield return new WaitForSeconds(duration);
-        isInvisibleNet.Value = false;
-        TriggerInvisibilityClientRpc(false);
-    }
-
-    private void OnInvisibleNetChanged(bool oldVal, bool newVal)
-    {
-        SetInvisibilityVisuals(newVal);
-        if (newVal)
-        {
-            invisibilityTimeRemaining = 5f;
-        }
-        else
-        {
-            invisibilityTimeRemaining = 0f;
-        }
-    }
-
-    private void SetInvisibilityVisuals(bool invisible)
-    {
-        if (invisible)
-        {
-            if (originalMaterials.Count > 0) return; // Đã tàng hình rồi
-
-            Renderer[] renderers = GetComponentsInChildren<Renderer>(true);
-            foreach (var r in renderers)
-            {
-                if (r is SkinnedMeshRenderer || r is MeshRenderer)
-                {
-                    originalMaterials[r] = r.sharedMaterials;
-
-                    if (invisibleMaterial != null)
-                    {
-                        Material[] newMats = new Material[r.sharedMaterials.Length];
-                        for (int i = 0; i < newMats.Length; i++)
-                        {
-                            newMats[i] = invisibleMaterial;
-                        }
-                        r.materials = newMats;
-                    }
-                    else
-                    {
-                        Shader transparentShader = r.sharedMaterial != null ? r.sharedMaterial.shader : null;
-                        if (transparentShader == null) transparentShader = Shader.Find("Standard");
-                        if (transparentShader == null) transparentShader = Shader.Find("Legacy Shaders/Transparent/Diffuse");
-                        if (transparentShader == null) transparentShader = Shader.Find("Transparent/Diffuse");
-
-                        if (transparentShader != null)
-                        {
-                            Material tempMat = new Material(transparentShader);
-                            if (transparentShader.name == "Standard")
-                            {
-                                tempMat.SetFloat("_Mode", 3f);
-                                tempMat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
-                                tempMat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
-                                tempMat.SetInt("_ZWrite", 0);
-                                tempMat.DisableKeyword("_ALPHATEST_ON");
-                                tempMat.EnableKeyword("_ALPHABLEND_ON");
-                                tempMat.DisableKeyword("_ALPHAPREMULTIPLY_ON");
-                                tempMat.renderQueue = 3000;
-                            }
-                            tempMat.color = new Color(1f, 1f, 1f, 0.3f);
-
-                            Material[] newMats = new Material[r.sharedMaterials.Length];
-                            for (int i = 0; i < newMats.Length; i++)
-                            {
-                                newMats[i] = tempMat;
-                            }
-                            r.materials = newMats;
-                        }
-                    }
-                }
-            }
-        }
-        else
-        {
-            foreach (var kvp in originalMaterials)
-            {
-                if (kvp.Key != null && kvp.Value != null)
-                {
-                    kvp.Key.materials = kvp.Value;
-                }
-            }
-            originalMaterials.Clear();
-        }
-    }
 
     // ======================================================
     // LOGIC TĂNG TỐC ĐỘ CHÉM & NHUỘM ĐỎ KIẾM (SKILL E)

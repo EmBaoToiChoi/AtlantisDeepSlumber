@@ -51,6 +51,14 @@ public class PlayerAnimationBridge : MonoBehaviour
         }
     }
 
+    public void OnShootRSkill()
+    {
+        if (mainPlayerScript != null)
+        {
+            mainPlayerScript.OnShootRSkill();
+        }
+    }
+
     public void OnPickItemEvent()
     {
         if (mainPlayerScript != null)

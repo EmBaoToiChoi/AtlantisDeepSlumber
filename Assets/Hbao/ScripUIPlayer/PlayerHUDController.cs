@@ -955,10 +955,6 @@ public class PlayerHUDController : MonoBehaviour
                     if (currentCooldownR <= 0f && LocalPlayerTarget != null && !LocalPlayerTarget.IsInvisible)
                     {
                         LocalPlayerTarget.TriggerInvisibilitySkill();
-                        if (LocalPlayerTarget.CharacterClassIndex != 2 && LocalPlayerTarget.CharacterClassIndex != 1)
-                        {
-                            currentCooldownR = cooldownTimeR;
-                        }
                         Debug.Log("Đã dùng kỹ năng R");
                     }
                 }
@@ -1991,6 +1987,11 @@ public class PlayerHUDController : MonoBehaviour
     }
 
     public void TriggerElenaCooldownR()
+    {
+        currentCooldownR = cooldownTimeR;
+    }
+
+    public void TriggerCooldownR()
     {
         currentCooldownR = cooldownTimeR;
     }
