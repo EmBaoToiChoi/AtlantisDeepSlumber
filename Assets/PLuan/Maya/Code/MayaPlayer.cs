@@ -180,8 +180,6 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
     private bool isPendingShootNetworkMode = false; // Đánh dấu chế độ bắn mạng hay local
     private bool isRShootPending = false;       // Đánh dấu chuẩn bị bắn R từ animation event
     private bool isPendingRShootNetworkMode = false; // Đánh dấu chế độ bắn R mạng hay local
-    private GameObject pendingRTargetObj;      // Lưu tạm mục tiêu R cục bộ
-    private NetworkObjectReference pendingRTargetNetObjRef; // Lưu tạm mục tiêu R qua mạng
 
     [Header("E Skill Healing Zone Settings")]
     public float eSkillCooldown = 10f; // Cooldown của kỹ năng E (giây)
@@ -876,258 +874,6 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
         }
     }
 
-    private void CastRSkill(bool networkMode)
-    {
-        if (targetCamera == null) return;
-
-        // Find the locked target (hovered player with low health)
-        Ray ray = targetCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
-        IPlayerHUDTarget targetPlayer = null;
-        if (Physics.Raycast(ray, out RaycastHit hit, 50f))
-        {
-            targetPlayer = hit.collider.GetComponentInParent<IPlayerHUDTarget>();
-        }
-
-        // Only allow casting if we have a valid, alive, and injured target
-        if (targetPlayer == null || targetPlayer.gameObject == gameObject || targetPlayer.CurrentHealth <= 0 || targetPlayer.CurrentHealth >= targetPlayer.MaxHealth)
-        {
-            Debug.LogWarning("[MayaPlayer] Không thể niệm R: Phải khóa mục tiêu đồng đội yếu máu!");
-            return;
-        }
-
-        // Play the casting/shooting animation
-        PlayAnimation("Shooting", 0.05f);
-
-        // Queue the projectile spawn for when the animation event fires
-        isRShootPending = true;
-        isPendingRShootNetworkMode = networkMode;
-
-        if (networkMode)
-        {
-            if (targetPlayer.gameObject.TryGetComponent<NetworkObject>(out var targetNetObj))
-            {
-                pendingRTargetNetObjRef = targetNetObj;
-            }
-        }
-        else
-        {
-            pendingRTargetObj = targetPlayer.gameObject;
-        }
-
-        StartRSkillCooldown();
-
-        isRTargeting = false;
-        UpdateRTargetingIndicators();
-    }
-
-    private void SpawnRProjectileLocal(Vector3 spawnPos, Vector3 shootDirection, GameObject targetObj)
-    {
-        if (rSkillProjectilePrefab == null)
-        {
-            Debug.LogWarning("[MayaPlayer] rSkillProjectilePrefab chưa được gán!");
-            return;
-        }
-
-        GameObject projObj = Instantiate(rSkillProjectilePrefab, spawnPos, Quaternion.LookRotation(shootDirection));
-        projObj.SetActive(true);
-
-        if (projObj.TryGetComponent<MayaHealProjectile>(out var proj))
-        {
-            proj.owner = this;
-            proj.mayaMaxHealth = maxHealth;
-            proj.healPercentage = rSkillHealPercentage;
-            proj.localTargetTransform = targetObj.transform;
-            proj.speed = rSkillProjectileSpeed;
-            proj.lifetime = rSkillProjectileLifetime;
-        }
-    }
-
-    [ServerRpc]
-    private void SpawnRProjectileServerRpc(Vector3 spawnPos, Vector3 shootDirection, NetworkObjectReference targetNetObjRef)
-    {
-        if (rSkillProjectilePrefab == null)
-        {
-            Debug.LogWarning("[MayaPlayer Server] rSkillProjectilePrefab chưa được gán trên Server!");
-            return;
-        }
-
-        GameObject projObj = Instantiate(rSkillProjectilePrefab, spawnPos, Quaternion.LookRotation(shootDirection));
-        projObj.SetActive(true);
-
-        if (projObj.TryGetComponent<NetworkObject>(out var netObj))
-        {
-            netObj.Spawn();
-        }
-
-        if (projObj.TryGetComponent<MayaHealProjectile>(out var proj))
-        {
-            proj.owner = this;
-            proj.mayaMaxHealth = maxHealth;
-            proj.healPercentage = rSkillHealPercentage;
-            proj.targetNetObjRef.Value = targetNetObjRef;
-            proj.speed = rSkillProjectileSpeed;
-            proj.lifetime = rSkillProjectileLifetime;
-        }
-    }
-
-    private void UpdateRTargetingIndicators()
-    {
-        if (isRTargeting)
-        {
-            if (targetCamera == null) return;
-
-            // Find all other players with low health
-            var allMonos = FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None);
-            var currentTargets = new System.Collections.Generic.HashSet<IPlayerHUDTarget>();
-            foreach (var mono in allMonos)
-            {
-                if (mono is IPlayerHUDTarget target && mono.gameObject != gameObject && target.CurrentHealth > 0 && target.CurrentHealth < target.MaxHealth)
-                {
-                    currentTargets.Add(target);
-                }
-            }
-
-            // Remove any indicators for targets that are no longer valid
-            var toRemove = new System.Collections.Generic.List<IPlayerHUDTarget>();
-            foreach (var kv in activeRIndicators)
-            {
-                if (!currentTargets.Contains(kv.Key) || kv.Key.gameObject == null)
-                {
-                    if (kv.Value != null)
-                    {
-                        Destroy(kv.Value.gameObject);
-                    }
-                    toRemove.Add(kv.Key);
-                }
-            }
-            foreach (var key in toRemove)
-            {
-                activeRIndicators.Remove(key);
-            }
-
-            // Spawn indicators for new valid targets
-            foreach (var target in currentTargets)
-            {
-                if (!activeRIndicators.ContainsKey(target))
-                {
-                    GameObject indicatorObj = new GameObject("R_Heal_Indicator");
-                    var textMesh = indicatorObj.AddComponent<TextMesh>();
-                    textMesh.text = "+";
-                    textMesh.fontSize = 32;
-                    textMesh.characterSize = 0.15f;
-                    textMesh.color = Color.white;
-                    textMesh.alignment = TextAlignment.Center;
-                    textMesh.anchor = TextAnchor.MiddleCenter;
-                    textMesh.fontStyle = FontStyle.Bold;
-
-                    activeRIndicators.Add(target, textMesh);
-                }
-            }
-
-            // Update positions, billboarding, and hover highlights
-            Ray ray = targetCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
-            IPlayerHUDTarget hoveredTarget = null;
-            if (Physics.Raycast(ray, out RaycastHit hit, 50f))
-            {
-                hoveredTarget = hit.collider.GetComponentInParent<IPlayerHUDTarget>();
-            }
-
-            foreach (var kv in activeRIndicators)
-            {
-                var target = kv.Key;
-                var textMesh = kv.Value;
-
-                if (textMesh != null && target.gameObject != null)
-                {
-                    textMesh.transform.position = target.gameObject.transform.position + Vector3.up * 2.2f;
-                    textMesh.transform.rotation = Quaternion.LookRotation(textMesh.transform.position - targetCamera.transform.position);
-
-                    bool isHovered = (hoveredTarget == target);
-                    textMesh.color = isHovered ? Color.green : Color.white;
-                }
-            }
-        }
-        else
-        {
-            if (activeRIndicators != null)
-            {
-                foreach (var kv in activeRIndicators)
-                {
-                    if (kv.Value != null)
-                    {
-                        Destroy(kv.Value.gameObject);
-                    }
-                }
-                activeRIndicators.Clear();
-            }
-        }
-    }
-
-    private void OnDisable()
-    {
-        if (activeRIndicators != null)
-        {
-            foreach (var kv in activeRIndicators)
-            {
-                if (kv.Value != null)
-                {
-                    Destroy(kv.Value.gameObject);
-                }
-            }
-            activeRIndicators.Clear();
-        }
-    }
-
-    private void EndRSkill()
-    {
-        if (isStandaloneMode)
-        {
-            localIsRSkillActive = false;
-        }
-        else if (IsOwner)
-        {
-            SetRSkillActiveServerRpc(false);
-        }
-        StartRSkillCooldown();
-    }
-
-    [ServerRpc]
-    private void SetRSkillActiveServerRpc(bool active)
-    {
-        isRSkillActiveNet.Value = active;
-    }
-
-    public void StartRSkillCooldown()
-    {
-        rSkillCooldownTimer = rSkillCooldown;
-        if (isStandaloneMode)
-        {
-            PlayerHUDController hud = FindObjectOfType<PlayerHUDController>();
-            if (hud != null)
-            {
-                hud.TriggerMayaCooldownR();
-            }
-        }
-        else
-        {
-            StartRSkillCooldownClientRpc();
-        }
-    }
-
-    [ClientRpc]
-    private void StartRSkillCooldownClientRpc()
-    {
-        if (IsOwner)
-        {
-            PlayerHUDController hud = FindObjectOfType<PlayerHUDController>();
-            if (hud != null)
-            {
-                hud.TriggerMayaCooldownR();
-            }
-        }
-        rSkillCooldownTimer = rSkillCooldown;
-    }
-
     public event System.Action OnQSkillCancelled;
 
 
@@ -1165,10 +911,6 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     private void Start()
     {
-        if (rSkillSpawnPoint == null)
-        {
-            rSkillSpawnPoint = normalAttackSpawnPoint;
-        }
         // Đảm bảo khởi tạo Animator cho cả các lớp kế thừa
         if (anim == null)
         {
@@ -1887,7 +1629,7 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
                 isETargeting = targetETargeting;
             }
 
-
+            UpdateETargetingIndicator();
 
             bool targetAiming = (currentWeaponIdx == 2 && Input.GetMouseButton(1) && !IsUIBlockingInput() && !IsBusyOrRolling) || isETargeting || isShootPending || isRShootPending;
             if (localIsAiming != targetAiming)
@@ -3852,8 +3594,6 @@ private void StartRollServerRpc(Vector3 direction)
         {
             SpawnWaterProjectileLocal(spawnPos, shootDir);
         }
-        
-        StartRSkillCooldown();
     }
 
     private void SpawnWaterProjectileLocal(Vector3 spawnPos, Vector3 shootDirection)
