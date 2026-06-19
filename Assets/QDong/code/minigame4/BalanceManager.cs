@@ -22,20 +22,23 @@ public class BalanceManager : NetworkBehaviour
     void FixedUpdate()
     {
         // 1. Chỉ Server thực hiện tính toán trọng lượng và góc nghiêng mục tiêu
-        if (IsServer)
-        {
-            float NW = GetWeight(nw);
-            float NE = GetWeight(ne);
-            float SW = GetWeight(sw);
-            float SE = GetWeight(se);
+    if (IsServer)
+    {
+        float NW = GetWeight(nw);
+        float NE = GetWeight(ne);
+        float SW = GetWeight(sw);
+        float SE = GetWeight(se);
 
-            // Tính độ lệch trái phải và trước sau
-            float tiltX = (NE + SE) - (NW + SW);
-            float tiltZ = (SW + SE) - (NW + NE);
+        // Tính độ lệch trái phải và trước sau
+        float tiltX = (NE + SE) - (NW + SW);
+        float tiltZ = (SW + SE) - (NW + NE);
 
-            // Cập nhật giá trị vào biến mạng
-            targetRotation.Value = Quaternion.Euler(tiltZ * 3f, 0, -tiltX * 3f);
-        }
+        // XÓA DÒNG CŨ NÀY:
+        // targetRotation.Value = Quaternion.Euler(tiltZ * 3f, 0, -tiltX * 3f);
+
+        // THAY BẰNG DÒNG DƯỚI ĐÂY (Đã đảo ngược dấu để bên nặng chìm xuống):
+        targetRotation.Value = Quaternion.Euler(-tiltZ * 3f, 0, tiltX * 3f);
+    }
 
         // 2. Cả Server và Client đều dùng MoveRotation để xoay mâm mượt mà, giữ chặt chân nhân vật bằng ma sát
         if (diskRigidbody != null)
