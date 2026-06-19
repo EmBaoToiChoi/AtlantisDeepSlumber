@@ -212,19 +212,7 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
     );
     public bool IsQSkillActive => isStandaloneMode ? localIsQSkillActive : isQSkillActiveNet.Value;
 
-    [Header("R Skill (Attack Speed Boost) Settings")]
-    public float rSkillCooldown = 20f; // Cooldown của kỹ năng R (giây)
-    public float rSkillDuration = 5f;  // Thời lượng tác dụng kỹ năng R (giây)
-    public float rSkillShootCooldown = 0.3f; // Tốc độ bắn khi bật R (giây chờ giữa các phát bắn)
-    private float rSkillCooldownTimer = 0f; // Bộ đếm cooldown R
-    private float rSkillDurationTimer = 0f; // Bộ đếm thời lượng R
-    private bool localIsRSkillActive = false; // Trạng thái kỹ năng R ở local
-    public NetworkVariable<bool> isRSkillActiveNet = new NetworkVariable<bool>(
-        false,
-        NetworkVariableReadPermission.Everyone,
-        NetworkVariableWritePermission.Server
-    );
-    public bool IsRSkillActive => isStandaloneMode ? localIsRSkillActive : isRSkillActiveNet.Value;
+
 
     [Header("Skill R - Bắn Cục Băng")]
     [Tooltip("Prefab đạn băng của chiêu R")]
@@ -236,6 +224,11 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
     [Tooltip("Sát thương của đạn băng")]
     public float rSkillIceDamage = 40f;
 
+    private bool localIsAimingR = false;
+    private GameObject rSkillHandPreviewVisual;
+    private bool isRShootPending = false;
+    private bool isPendingRShootNetworkMode = false;
+
     private float defaultCameraDistance;
     private float defaultPivotHeight;
     private float currentShoulderOffset = 0f;
@@ -245,7 +238,7 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
         NetworkVariableReadPermission.Everyone,
         NetworkVariableWritePermission.Server
     );
-    public bool IsAiming => isStandaloneMode ? localIsAiming : (IsOwner ? localIsAiming : isAimingNet.Value);
+    public bool IsAiming => isStandaloneMode ? (localIsAiming || localIsAimingR) : (IsOwner ? (localIsAiming || localIsAimingR) : isAimingNet.Value);
     public bool IsBusyOrRolling => (isStandaloneMode ? isRollingStandalone : rollTimer > 0) || IsPlayingActionAnimation() || (CurrentHealth <= 0);
 
     [Header("Camera Inversion Settings")]
@@ -365,9 +358,9 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
     public float MaxHealth => maxHealth;
 
 
-    // Invisibility Skill R (Elena's Attack Speed Boost)
-    public bool IsInvisible => IsRSkillActive;
-    public float InvisibilityTimeRemaining => rSkillDurationTimer;
+    // Invisibility Skill R (stub - legacy removed)
+    public bool IsInvisible => false;
+    public float InvisibilityTimeRemaining => 0f;
     private bool IsSkillsUnlocked => isSkillsUnlocked.Value;
 
     public void TriggerInvisibilitySkill()
@@ -543,34 +536,106 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
         var carrier = GetComponent<PlayerLogCarrier>();
         if (carrier != null && carrier.isCarrying) return;
 
-        if (rSkillCooldownTimer > 0f || IsRSkillActive) return;
 
-        PlayAnimation("Bow_Shoot", 0.05f);
+        if (GetActiveWeaponIndex() != 1) return;
 
-        if (isStandaloneMode)
-        {
-            SpawnIceProjectileLocal();
-        }
-        else if (IsOwner)
-        {
-            Vector3 spawnPos = rSkillIceSpawnPoint != null ? rSkillIceSpawnPoint.position : transform.position + transform.forward * 1.5f + Vector3.up * 1f;
-            Vector3 shootDirection = transform.forward;
-            SpawnIceProjectileServerRpc(spawnPos, shootDirection);
-        }
-        
-        StartRSkillCooldown();
+        SetAimingR(true);
     }
 
-    private void SpawnIceProjectileLocal()
+    private void SetAimingR(bool aiming)
+    {
+        if (localIsAimingR == aiming) return;
+        localIsAimingR = aiming;
+        
+        OnAimStateChanged(localIsAiming || localIsAimingR);
+        if (!isStandaloneMode && IsOwner)
+        {
+            SetAimingServerRpc(localIsAiming || localIsAimingR);
+        }
+
+        if (aiming)
+        {
+            if (rSkillIcePrefab != null && rSkillIceSpawnPoint != null && rSkillHandPreviewVisual == null)
+            {
+                rSkillHandPreviewVisual = Instantiate(rSkillIcePrefab, rSkillIceSpawnPoint.position, rSkillIceSpawnPoint.rotation, rSkillIceSpawnPoint);
+                rSkillHandPreviewVisual.transform.localPosition = Vector3.zero;
+                rSkillHandPreviewVisual.transform.localRotation = Quaternion.identity;
+                rSkillHandPreviewVisual.transform.localScale = rSkillIcePrefab.transform.localScale;
+                
+                if (rSkillHandPreviewVisual.TryGetComponent<ElenaIceProjectile>(out var proj))
+                {
+                    proj.enabled = false;
+                }
+                if (rSkillHandPreviewVisual.TryGetComponent<Collider>(out var col))
+                {
+                    col.enabled = false;
+                }
+                if (rSkillHandPreviewVisual.TryGetComponent<Rigidbody>(out var rb))
+                {
+                    rb.isKinematic = true;
+                }
+                
+                foreach (Transform child in rSkillHandPreviewVisual.transform)
+                {
+                    if (child.name.ToLower().Contains("hit"))
+                    {
+                        child.gameObject.SetActive(false);
+                    }
+                    else
+                    {
+                        child.gameObject.SetActive(true);
+                    }
+                }
+            }
+        }
+        else
+        {
+            if (rSkillHandPreviewVisual != null)
+            {
+                Destroy(rSkillHandPreviewVisual);
+                rSkillHandPreviewVisual = null;
+            }
+        }
+    }
+
+    public void OnShootRSkill()
+    {
+        if (!isRShootPending) return;
+        isRShootPending = false;
+
+        Debug.Log($"[{gameObject.name}] OnShootRSkill: Bắn đạn băng!");
+
+        Vector3 spawnPos = rSkillIceSpawnPoint != null ? rSkillIceSpawnPoint.position : transform.position + transform.forward * 1.5f + Vector3.up * 1f;
+        Vector3 shootDirection = transform.forward;
+
+        if (targetCamera != null)
+        {
+            Ray ray = targetCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
+            Vector3 targetPoint = ray.origin + ray.direction * 50f;
+            if (Physics.Raycast(ray.origin, ray.direction, out RaycastHit cameraHit, 50f))
+            {
+                targetPoint = cameraHit.point;
+            }
+            shootDirection = (targetPoint - spawnPos).normalized;
+        }
+
+        if (isPendingRShootNetworkMode)
+        {
+            SpawnIceProjectileServerRpc(spawnPos, shootDirection);
+        }
+        else
+        {
+            SpawnIceProjectileLocal(spawnPos, shootDirection);
+        }
+    }
+
+    private void SpawnIceProjectileLocal(Vector3 spawnPos, Vector3 shootDirection)
     {
         if (rSkillIcePrefab == null)
         {
             Debug.LogError("[ElenaPlayer] rSkillIcePrefab chưa được gán trong Inspector!");
             return;
         }
-
-        Vector3 spawnPos = rSkillIceSpawnPoint != null ? rSkillIceSpawnPoint.position : transform.position + transform.forward * 1.5f + Vector3.up * 1f;
-        Vector3 shootDirection = transform.forward;
 
         GameObject iceObj = Instantiate(rSkillIcePrefab, spawnPos, Quaternion.LookRotation(shootDirection));
         iceObj.transform.localScale = rSkillIcePrefab.transform.localScale;
@@ -615,55 +680,7 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
         }
     }
 
-    private void EndRSkill()
-    {
-        if (isStandaloneMode)
-        {
-            localIsRSkillActive = false;
-        }
-        else if (IsOwner)
-        {
-            SetRSkillActiveServerRpc(false);
-        }
-        StartRSkillCooldown();
-    }
 
-    [ServerRpc]
-    private void SetRSkillActiveServerRpc(bool active)
-    {
-        isRSkillActiveNet.Value = active;
-    }
-
-    public void StartRSkillCooldown()
-    {
-        rSkillCooldownTimer = rSkillCooldown;
-        if (isStandaloneMode)
-        {
-            PlayerHUDController hud = FindObjectOfType<PlayerHUDController>();
-            if (hud != null)
-            {
-                hud.TriggerElenaCooldownR();
-            }
-        }
-        else
-        {
-            StartRSkillCooldownClientRpc();
-        }
-    }
-
-    [ClientRpc]
-    private void StartRSkillCooldownClientRpc()
-    {
-        if (IsOwner)
-        {
-            PlayerHUDController hud = FindObjectOfType<PlayerHUDController>();
-            if (hud != null)
-            {
-                hud.TriggerElenaCooldownR();
-            }
-        }
-        rSkillCooldownTimer = rSkillCooldown;
-    }
 
     public event System.Action OnQSkillCancelled;
 
@@ -1456,20 +1473,7 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
             }
         }
 
-        // Giảm thời gian cooldown và thời lượng Kỹ năng R
-        if (rSkillCooldownTimer > 0)
-        {
-            rSkillCooldownTimer -= Time.deltaTime;
-        }
-        if (rSkillDurationTimer > 0)
-        {
-            rSkillDurationTimer -= Time.deltaTime;
-            if (rSkillDurationTimer <= 0)
-            {
-                rSkillDurationTimer = 0f;
-                EndRSkill();
-            }
-        }
+
 
         // Tự động reset combo và dọn dẹp trigger nếu người chơi đã dừng tấn công và hoạt ảnh trở về trạng thái bình thường (Idle/Walk/Run)
         int activeWeapon = GetActiveWeaponIndex();
@@ -1772,7 +1776,20 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
         {
             if (!IsUIBlockingInput())
             {
-                if (IsAiming)
+                if (localIsAimingR)
+                {
+                    isRShootPending = true;
+                    isPendingRShootNetworkMode = !isStandaloneMode;
+                    PlayAnimation("Bow_Shoot", 0.05f);
+                    SetAimingR(false);
+
+                    PlayerHUDController hud = FindObjectOfType<PlayerHUDController>();
+                    if (hud != null)
+                    {
+                        hud.TriggerCooldownR();
+                    }
+                }
+                else if (IsAiming)
                 {
                     PerformBowShoot(false);
                 }
@@ -1915,7 +1932,20 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
         {
             if (IsSpawned && !IsUIBlockingInput())
             {
-                if (IsAiming)
+                if (localIsAimingR)
+                {
+                    isRShootPending = true;
+                    isPendingRShootNetworkMode = !isStandaloneMode;
+                    PlayAnimation("Bow_Shoot", 0.05f);
+                    SetAimingR(false);
+
+                    PlayerHUDController hud = FindObjectOfType<PlayerHUDController>();
+                    if (hud != null)
+                    {
+                        hud.TriggerCooldownR();
+                    }
+                }
+                else if (IsAiming)
                 {
                     PerformBowShoot(true);
                 }
@@ -3292,7 +3322,7 @@ private void StartRollServerRpc(Vector3 direction)
 
         if (bowShootCooldownTimer > 0) return;
 
-        bowShootCooldownTimer = IsRSkillActive ? rSkillShootCooldown : bowShootCooldown;
+        bowShootCooldownTimer = bowShootCooldown;
         
         if (!networkMode)
         {
