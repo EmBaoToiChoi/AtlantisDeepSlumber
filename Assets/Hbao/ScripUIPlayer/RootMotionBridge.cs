@@ -11,6 +11,10 @@ public class RootMotionBridge : MonoBehaviour
     private Transform rootBone;
     private bool hasRootBone = false;
 
+    // Roll locking: lock Hips tại vị trí lúc BẮT ĐẦU roll (không phải Awake)
+    private bool isRollLocked = false;
+    private Vector3 rollLockHipsPos;  // Local XZ của Hips lúc bắt đầu roll
+
     private Transform FindHipsBone(Transform current)
     {
         if (current == null) return null;
@@ -126,20 +130,21 @@ public class RootMotionBridge : MonoBehaviour
             }
         }
 
-        if (isRolling)
+        if (isRolling || isRollLocked)
         {
             if (hasRootBone && rootBone != null)
             {
-                // Khóa tọa độ ngang local X và Z của xương gốc (Hips) về vị trí ban đầu
-                // Điều này ép hoạt ảnh lộn vòng chạy tại chỗ so với đối tượng cha (Capsule Collider).
+                // Lock Hips XZ về vị trí lúc BẮt ĐẦU roll — giữ model khớp capsule
+                Vector3 lockPos = isRollLocked ? rollLockHipsPos : initialRootBoneLocalPos;
                 Vector3 currentLocalPos = rootBone.localPosition;
-                rootBone.localPosition = new Vector3(initialRootBoneLocalPos.x, currentLocalPos.y, initialRootBoneLocalPos.z);
+                rootBone.localPosition = new Vector3(lockPos.x, currentLocalPos.y, lockPos.z);
             }
             else
             {
-                // Khóa tọa độ ngang local X và Z của chính transform chứa Animator (dành cho Generic rig hoặc khi không tìm thấy xương hông)
+                // Fallback: lock transform XZ
+                Vector3 lockPos = isRollLocked ? rollLockHipsPos : initialTransformLocalPos;
                 Vector3 currentLocalPos = transform.localPosition;
-                transform.localPosition = new Vector3(initialTransformLocalPos.x, currentLocalPos.y, initialTransformLocalPos.z);
+                transform.localPosition = new Vector3(lockPos.x, currentLocalPos.y, lockPos.z);
             }
         }
         else
@@ -159,6 +164,33 @@ public class RootMotionBridge : MonoBehaviour
                 }
             }
         }
+    }
+
+    /// <summary>
+    /// Gọi TRƯỚC khi bắt đầu roll animation.
+    /// Capture vị trí Hips hiện tại làm điểm lock — tránh lộn qua trái do lock sai tâm.
+    /// </summary>
+    public void BeginRoll()
+    {
+        if (hasRootBone && rootBone != null)
+        {
+            rollLockHipsPos = rootBone.localPosition;
+        }
+        else
+        {
+            rollLockHipsPos = transform.localPosition;
+        }
+        isRollLocked = true;
+        enabled = true; // Đảm bảo bridge đang chạy để lock Hips
+    }
+
+    /// <summary>
+    /// Gọi khi kết thúc roll animation.
+    /// Tắt lock Hips để trả về hành vi bình thường.
+    /// </summary>
+    public void EndRoll()
+    {
+        isRollLocked = false;
     }
 
     /// <summary>
