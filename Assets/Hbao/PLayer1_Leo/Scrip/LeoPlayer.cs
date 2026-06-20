@@ -3682,13 +3682,11 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
                 LockCursor(isCursorLocked);
             }
 
-            // Tính toán và đồng bộ góc xoay cột sống (Spine aim angle)
-            bool isCurrentlyAttacking = IsPlayingAttackState(out _, out _) || 
-                                        (IsAttackAnimationName(lastTriggeredAnimName) && Time.time - lastActionTriggerTime < 0.35f);
+            // Tính toán và đồng bộ góc xoay cột sống (Spine aim angle) - CHỈ dành cho trạng thái ngắm bắn (Aiming)
+            // Khi chém/đấm thường, không xoay Spine theo camera để tránh vặn xoắn mesh ở đòn chém sâu
+            bool isAimingActive = IsAiming;
             
-            bool isAimingOrAttacking = IsAiming || isCurrentlyAttacking;
-            
-            if (isAimingOrAttacking && !isRootedAttack && targetCamera != null)
+            if (isAimingActive && !isRootedAttack && targetCamera != null)
             {
                 Vector3 camForward = targetCamera.transform.forward;
                 camForward.y = 0f;
@@ -3708,7 +3706,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
                     }
                 }
 
-                if (IsAiming && !isStandaloneMode)
+                if (!isStandaloneMode)
                 {
                     netAimPitch.Value = currentPitch;
                 }
@@ -4552,11 +4550,8 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         // Spine bone twist and combo offset
         if (anim != null)
         {
-            bool isCurrentlyAttacking = IsPlayingAttackState(out _, out _) || 
-                                         (IsAttackAnimationName(lastTriggeredAnimName) && Time.time - lastActionTriggerTime < 0.35f);
-            
-            float baseAimAngle = isStandaloneMode ? localAimAngle : netAimAngle.Value;
-            
+            // Chỉ thực hiện xoay cột sống Spine khi đang ngắm bắn (IsAiming)
+            // Khi chém/đấm thường, cột sống hoàn toàn chạy theo hoạt ảnh tự nhiên để tránh vặn xoắn mesh ở đòn chém sâu
             float targetYOffset = 0f;
             float targetXOffset = 0f;
 
@@ -4567,57 +4562,18 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
                 float pitchFactor = invertSpinePitch ? -0.7f : 0.7f;
                 targetXOffset = (pitchVal - 45f) * pitchFactor + rSkillXOffset;
             }
-            else if (isCurrentlyAttacking && !isRootedAttack)
-            {
-                int weapon = GetActiveWeaponIndex();
-                if (weapon == 1) // Unarmed / Punch
-                {
-                    if (comboStep == 1)
-                    {
-                        targetYOffset = punch1YOffset;
-                        targetXOffset = punch1XOffset;
-                    }
-                    else if (comboStep == 2)
-                    {
-                        targetYOffset = punch2YOffset;
-                        targetXOffset = punch2XOffset;
-                    }
-                    else if (comboStep == 3)
-                    {
-                        targetYOffset = punch3YOffset;
-                        targetXOffset = punch3XOffset;
-                    }
-                }
-                else if (weapon == 2) // Weapon / Slash
-                {
-                    if (comboStep == 1)
-                    {
-                        targetYOffset = slash1YOffset;
-                        targetXOffset = slash1XOffset;
-                    }
-                    else if (comboStep == 2)
-                    {
-                        targetYOffset = slash2YOffset;
-                        targetXOffset = slash2XOffset;
-                    }
-                    else if (comboStep == 3)
-                    {
-                        targetYOffset = slash3YOffset;
-                        targetXOffset = slash3XOffset;
-                    }
-                }
-            }
 
             smoothedYOffset = Mathf.Lerp(smoothedYOffset, targetYOffset, Time.deltaTime * spineSmoothSpeed);
             smoothedXOffset = Mathf.Lerp(smoothedXOffset, targetXOffset, Time.deltaTime * spineSmoothSpeed);
 
-            // Xoay xương cột sống cho cả Aiming và Combo đánh thường
-            if (IsAiming || (isCurrentlyAttacking && !isRootedAttack) || Mathf.Abs(smoothedYOffset) > 0.05f || Mathf.Abs(smoothedXOffset) > 0.05f)
+            // Xoay xương cột sống cho Aiming
+            if (IsAiming || Mathf.Abs(smoothedYOffset) > 0.05f || Mathf.Abs(smoothedXOffset) > 0.05f)
             {
                 Transform spine = GetSpineBone();
                 if (spine != null)
                 {
-                    float finalYAngle = baseAimAngle + smoothedYOffset;
+                    float baseAimAngle = isStandaloneMode ? localAimAngle : netAimAngle.Value;
+                    float finalYAngle = (IsAiming ? baseAimAngle : 0f) + smoothedYOffset;
                     
                     spine.rotation = Quaternion.AngleAxis(finalYAngle, Vector3.up) * spine.rotation;
             

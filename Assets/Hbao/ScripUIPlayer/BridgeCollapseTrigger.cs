@@ -936,20 +936,38 @@ public class BridgeCollapseTrigger : NetworkBehaviour
         // 2. Hiệu ứng hạt bụi khói
         if (clickDustParticles != null)
         {
-            clickDustParticles.transform.position = worldPos;
-            clickDustParticles.Emit(15);
+            PlayParticleAtPosition(clickDustParticles, worldPos);
         }
         else if (buildProgressParticles != null)
         {
-            Vector3 originalPartPos = buildProgressParticles.transform.position;
-            buildProgressParticles.transform.position = worldPos;
-            buildProgressParticles.Emit(15);
-            buildProgressParticles.transform.position = originalPartPos;
+            PlayParticleAtPosition(buildProgressParticles, worldPos);
         }
 
         // 3. Hiển thị và chạy hoạt ảnh cho Búa/Cưa
         GameObject toolPrefab = (effectType == 0) ? hammerPrefab : sawPrefab;
         StartCoroutine(AnimateToolVisual(worldPos, toolPrefab, effectType));
+    }
+
+    private void PlayParticleAtPosition(ParticleSystem particlePrefabOrInstance, Vector3 position)
+    {
+        if (particlePrefabOrInstance == null) return;
+
+        // Kiểm tra xem là prefab hay scene instance
+        if (particlePrefabOrInstance.gameObject.scene.name == null)
+        {
+            // Là prefab! Instantiate trong scene rồi phát hiệu ứng và tự động hủy
+            ParticleSystem instantiated = Instantiate(particlePrefabOrInstance, position, Quaternion.identity);
+            instantiated.Play();
+            Destroy(instantiated.gameObject, 3f);
+        }
+        else
+        {
+            // Là scene instance! Di chuyển tới vị trí gõ và Emit hạt
+            Vector3 originalPos = particlePrefabOrInstance.transform.position;
+            particlePrefabOrInstance.transform.position = position;
+            particlePrefabOrInstance.Emit(15);
+            particlePrefabOrInstance.transform.position = originalPos;
+        }
     }
 
     private System.Collections.IEnumerator AnimateToolVisual(Vector3 worldPos, GameObject prefab, int effectType)
