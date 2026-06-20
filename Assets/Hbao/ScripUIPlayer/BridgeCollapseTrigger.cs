@@ -79,6 +79,16 @@ public class BridgeCollapseTrigger : NetworkBehaviour
     public float buildProgressPerClick = 1.5f;
     public ParticleSystem buildProgressParticles;
 
+    [Header("Coop Build Visual & Audio Effects")]
+    [Tooltip("Prefab búa để hiển thị hiệu ứng gõ khi xây cầu (Nếu trống sẽ dùng búa hình hộp tạm thời)")]
+    public GameObject hammerPrefab;
+    [Tooltip("Prefab cưa để hiển thị hiệu ứng cưa (Nếu trống sẽ dùng cưa hình hộp tạm thời)")]
+    public GameObject sawPrefab;
+    [Tooltip("Hiệu ứng bụi khói khi gõ/xây cầu (Nếu trống sẽ lấy từ buildProgressParticles)")]
+    public ParticleSystem clickDustParticles;
+    [Tooltip("Danh sách âm thanh búa gõ / cưa gỗ để phát ngẫu nhiên khi click")]
+    public AudioClip[] buildAudioClips;
+
     [HideInInspector]
     public bool localReadyToBuild = false;
     [HideInInspector]
@@ -845,6 +855,17 @@ public class BridgeCollapseTrigger : NetworkBehaviour
         if (!IsServer || !isReadyToBuild.Value) return;
 
         buildProgress.Value = Mathf.Min(buildProgress.Value + buildProgressPerClick, 100f);
+
+        // Phát ngẫu nhiên vị trí và công cụ (búa/cưa) trên toàn hệ thống mạng
+        Vector3 randomLocalPos = new Vector3(
+            Random.Range(-2.5f, 2.5f),
+            0.5f,
+            Random.Range(-0.6f, 0.6f)
+        );
+        int effectType = Random.Range(0, 2); // 0 = búa, 1 = cưa
+
+        PlayBuildEffectClientRpc(randomLocalPos, effectType);
+
         if (buildProgress.Value >= 100f)
         {
             hasBeenRepaired.Value = true;
@@ -859,6 +880,16 @@ public class BridgeCollapseTrigger : NetworkBehaviour
         if (!localReadyToBuild) return;
 
         localBuildProgress = Mathf.Min(localBuildProgress + buildProgressPerClick, 100f);
+
+        // Chơi hiệu ứng cục bộ trực tiếp (cho chế độ chơi đơn)
+        Vector3 randomLocalPos = new Vector3(
+            Random.Range(-2.5f, 2.5f),
+            0.5f,
+            Random.Range(-0.6f, 0.6f)
+        );
+        int effectType = Random.Range(0, 2); // 0 = búa, 1 = cưa
+        PlayBuildEffectLocal(randomLocalPos, effectType);
+
         if (localBuildProgress >= 100f)
         {
             localRepaired = true;
@@ -866,6 +897,183 @@ public class BridgeCollapseTrigger : NetworkBehaviour
             Debug.Log("[BridgeCollapseTrigger] Standalone: Cầu đã được xây dựng xong!");
             RepairBridgeLocal();
         }
+    }
+
+    [ClientRpc]
+    private void PlayBuildEffectClientRpc(Vector3 localPos, int effectType)
+    {
+        // Chạy hiệu ứng đồng bộ trên tất cả client
+        PlayBuildEffectLocal(localPos, effectType);
+    }
+
+    private void PlayBuildEffectLocal(Vector3 localPos, int effectType)
+    {
+        Vector3 worldPos = transform.position;
+        if (mainBridgeObject != null)
+        {
+            worldPos = mainBridgeObject.transform.TransformPoint(localPos);
+        }
+
+        // 1. Âm thanh ngẫu nhiên
+        AudioSource audioSource = GetComponent<AudioSource>();
+        if (audioSource == null)
+        {
+            audioSource = gameObject.AddComponent<AudioSource>();
+            audioSource.spatialBlend = 1.0f; // 3D sound
+            audioSource.minDistance = 2f;
+            audioSource.maxDistance = 20f;
+        }
+
+        if (buildAudioClips != null && buildAudioClips.Length > 0)
+        {
+            AudioClip clip = buildAudioClips[Random.Range(0, buildAudioClips.Length)];
+            if (clip != null)
+            {
+                audioSource.PlayOneShot(clip);
+            }
+        }
+
+        // 2. Hiệu ứng hạt bụi khói
+        if (clickDustParticles != null)
+        {
+            clickDustParticles.transform.position = worldPos;
+            clickDustParticles.Emit(15);
+        }
+        else if (buildProgressParticles != null)
+        {
+            Vector3 originalPartPos = buildProgressParticles.transform.position;
+            buildProgressParticles.transform.position = worldPos;
+            buildProgressParticles.Emit(15);
+            buildProgressParticles.transform.position = originalPartPos;
+        }
+
+        // 3. Hiển thị và chạy hoạt ảnh cho Búa/Cưa
+        GameObject toolPrefab = (effectType == 0) ? hammerPrefab : sawPrefab;
+        StartCoroutine(AnimateToolVisual(worldPos, toolPrefab, effectType));
+    }
+
+    private System.Collections.IEnumerator AnimateToolVisual(Vector3 worldPos, GameObject prefab, int effectType)
+    {
+        GameObject toolInstance = null;
+        if (prefab != null)
+        {
+            toolInstance = Instantiate(prefab, worldPos + Vector3.up * 0.5f, Quaternion.identity);
+        }
+        else
+        {
+            // Tạo mô hình tạm thời nếu không gán prefab trong Inspector
+            toolInstance = new GameObject(effectType == 0 ? "FallbackHammer" : "FallbackSaw");
+            toolInstance.transform.position = worldPos + Vector3.up * 0.5f;
+
+            if (effectType == 0)
+            {
+                // Thân búa (hình hộp chữ nhật)
+                GameObject head = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                Destroy(head.GetComponent<Collider>());
+                head.transform.SetParent(toolInstance.transform, false);
+                head.transform.localPosition = new Vector3(0f, 0.35f, 0f);
+                head.transform.localScale = new Vector3(0.12f, 0.08f, 0.08f);
+                
+                Renderer headRend = head.GetComponent<Renderer>();
+                if (headRend != null)
+                {
+                    Material mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+                    if (mat == null || mat.shader == null) mat = new Material(Shader.Find("Standard"));
+                    mat.color = new Color(0.3f, 0.3f, 0.35f);
+                    headRend.material = mat;
+                }
+
+                // Cán búa (hình trụ)
+                GameObject handle = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+                Destroy(handle.GetComponent<Collider>());
+                handle.transform.SetParent(toolInstance.transform, false);
+                handle.transform.localPosition = new Vector3(0f, 0.15f, 0f);
+                handle.transform.localScale = new Vector3(0.04f, 0.2f, 0.04f);
+
+                Renderer handleRend = handle.GetComponent<Renderer>();
+                if (handleRend != null)
+                {
+                    Material mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+                    if (mat == null || mat.shader == null) mat = new Material(Shader.Find("Standard"));
+                    mat.color = new Color(0.45f, 0.28f, 0.12f);
+                    handleRend.material = mat;
+                }
+            }
+            else
+            {
+                // Lưỡi cưa (hình tấm phẳng)
+                GameObject blade = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                Destroy(blade.GetComponent<Collider>());
+                blade.transform.SetParent(toolInstance.transform, false);
+                blade.transform.localPosition = new Vector3(0f, 0f, 0f);
+                blade.transform.localScale = new Vector3(0.35f, 0.08f, 0.01f);
+
+                Renderer bladeRend = blade.GetComponent<Renderer>();
+                if (bladeRend != null)
+                {
+                    Material mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+                    if (mat == null || mat.shader == null) mat = new Material(Shader.Find("Standard"));
+                    mat.color = new Color(0.7f, 0.7f, 0.75f);
+                    bladeRend.material = mat;
+                }
+
+                // Tay cầm cưa
+                GameObject handle = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                Destroy(handle.GetComponent<Collider>());
+                handle.transform.SetParent(toolInstance.transform, false);
+                handle.transform.localPosition = new Vector3(-0.18f, 0f, 0f);
+                handle.transform.localScale = new Vector3(0.05f, 0.12f, 0.04f);
+
+                Renderer handleRend = handle.GetComponent<Renderer>();
+                if (handleRend != null)
+                {
+                    Material mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+                    if (mat == null || mat.shader == null) mat = new Material(Shader.Find("Standard"));
+                    mat.color = new Color(0.8f, 0.4f, 0.1f);
+                    handleRend.material = mat;
+                }
+            }
+        }
+
+        toolInstance.transform.localScale = Vector3.one * 1.5f;
+
+        float duration = 0.4f;
+        float elapsed = 0f;
+
+        if (effectType == 0)
+        {
+            // Hiệu ứng gõ búa (quay góc từ -40 đến 50 độ rồi hồi lại)
+            Quaternion startRot = Quaternion.Euler(0f, 0f, -40f);
+            Quaternion endRot = Quaternion.Euler(0f, 0f, 50f);
+
+            while (elapsed < duration)
+            {
+                elapsed += Time.deltaTime;
+                float t = elapsed / duration;
+                float curve = Mathf.Sin(t * Mathf.PI);
+                toolInstance.transform.position = worldPos + Vector3.up * Mathf.Lerp(0.6f, 0.1f, curve);
+                toolInstance.transform.rotation = Quaternion.Lerp(startRot, endRot, curve);
+                yield return null;
+            }
+        }
+        else
+        {
+            // Hiệu ứng cưa cầu (trượt qua lại)
+            Vector3 startOffset = new Vector3(-0.2f, 0.1f, 0f);
+            Vector3 endOffset = new Vector3(0.2f, 0.1f, 0f);
+
+            while (elapsed < duration)
+            {
+                elapsed += Time.deltaTime;
+                float t = elapsed / duration;
+                float sawFactor = Mathf.PingPong(t * 4f, 1f);
+                toolInstance.transform.position = worldPos + Vector3.Lerp(startOffset, endOffset, sawFactor);
+                toolInstance.transform.rotation = Quaternion.Euler(15f, 0f, 0f);
+                yield return null;
+            }
+        }
+
+        Destroy(toolInstance);
     }
 
 

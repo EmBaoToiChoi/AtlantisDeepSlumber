@@ -127,7 +127,7 @@ public class CollectibleItemDrop : NetworkBehaviour, IInteractableItem
                 var tmpText = uiGo.AddComponent<TMPro.TextMeshPro>();
                 tmpText.alignment = TMPro.TextAlignmentOptions.Center;
                 tmpText.fontSize = 4f;
-                tmpText.color = Color.yellow;
+                tmpText.color = Color.white;
                 
                 uiGo.AddComponent<BillboardUI>();
 
