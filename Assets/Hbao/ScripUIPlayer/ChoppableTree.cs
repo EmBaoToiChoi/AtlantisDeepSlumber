@@ -278,8 +278,7 @@ public class ChoppableTree : NetworkBehaviour
         if (currentHits >= requiredHits)
         {
             isCutDown.Value = true;
-            int logsCount = Random.Range(1, 5); // Random 1-4
-            SpawnWoodLogs(logsCount);
+            SpawnWoodLogs(1);
         }
     }
 
@@ -290,11 +289,7 @@ public class ChoppableTree : NetworkBehaviour
         if (currentHits >= requiredHits)
         {
             gameObject.SetActive(false);
-            int logsCount = Random.Range(1, 5);
-            for (int i = 0; i < logsCount; i++)
-            {
-                SpawnCollectibleLogLocal();
-            }
+            SpawnCollectibleLogLocal();
         }
     }
 
@@ -482,6 +477,14 @@ public class ChoppableTree : NetworkBehaviour
             }
 
             GameObject log = WoodLogObjectPool.Instance.GetOrCreate(woodLogPrefab, spawnPos, Quaternion.identity);
+            
+            // Randomize wood amount between 5 and 10
+            var cid = log.GetComponent<CollectibleItemDrop>();
+            if (cid != null)
+            {
+                cid.woodAmount.Value = Random.Range(5, 11);
+            }
+
             var netObj = log.GetComponent<NetworkObject>();
             if (netObj != null)
             {
@@ -505,7 +508,14 @@ public class ChoppableTree : NetworkBehaviour
             spawnPos.y = hit.point.y + 0.3f;
         }
 
-        WoodLogObjectPool.Instance.GetOrCreate(woodLogPrefab, spawnPos, Quaternion.identity);
+        GameObject log = WoodLogObjectPool.Instance.GetOrCreate(woodLogPrefab, spawnPos, Quaternion.identity);
+        
+        // Randomize wood amount between 5 and 10 for local play
+        var cid = log.GetComponent<CollectibleItemDrop>();
+        if (cid != null)
+        {
+            cid.localWoodAmount = Random.Range(5, 11);
+        }
     }
 
     private void SpawnWoodSplinters()
@@ -581,18 +591,54 @@ public class ChoppableTree : NetworkBehaviour
         float duration = 0.25f;
         float magnitude = 0.12f;
 
+        bool shakeChildren = (visualModel == gameObject) || (visualModel.GetComponent<NetworkObject>() != null);
+        
+        Transform[] shakeTargets;
+        Vector3[] originalPoses;
+
+        if (shakeChildren)
+        {
+            int childCount = visualModel.transform.childCount;
+            shakeTargets = new Transform[childCount];
+            originalPoses = new Vector3[childCount];
+            for (int i = 0; i < childCount; i++)
+            {
+                shakeTargets[i] = visualModel.transform.GetChild(i);
+                originalPoses[i] = shakeTargets[i].localPosition;
+            }
+        }
+        else
+        {
+            shakeTargets = new Transform[] { visualModel.transform };
+            originalPoses = new Vector3[] { originalLocalPos };
+        }
+
         while (elapsed < duration)
         {
             float x = Random.Range(-1f, 1f) * magnitude;
             float z = Random.Range(-1f, 1f) * magnitude;
+            Vector3 offset = new Vector3(x, 0f, z);
 
-            visualModel.transform.localPosition = new Vector3(originalLocalPos.x + x, originalLocalPos.y, originalLocalPos.z + z);
+            for (int i = 0; i < shakeTargets.Length; i++)
+            {
+                if (shakeTargets[i] != null)
+                {
+                    shakeTargets[i].localPosition = originalPoses[i] + offset;
+                }
+            }
 
             elapsed += Time.deltaTime;
             yield return null;
         }
 
-        visualModel.transform.localPosition = originalLocalPos;
+        for (int i = 0; i < shakeTargets.Length; i++)
+        {
+            if (shakeTargets[i] != null)
+            {
+                shakeTargets[i].localPosition = originalPoses[i];
+            }
+        }
+
         isShaking = false;
     }
 }

@@ -181,6 +181,15 @@ public class PlayerHUDController : MonoBehaviour
     private VisualElement questPanel;
     private Label questProgressText;
     private VisualElement questProgressBar;
+    private Label questDescriptionText;
+
+    // Coop Building UI system
+    public static bool isCoopBuildingUIOpen = false;
+    private VisualElement coopBuildContainer;
+    private VisualElement coopBuildProgressBarFill;
+    private Label coopBuildProgressLabel;
+    private Button coopBuildClickButton;
+    private BridgeCollapseTrigger activeBridgeTrigger;
 
     [Header("Quest Settings")]
     public Sprite woodLogSprite;
@@ -253,6 +262,17 @@ public class PlayerHUDController : MonoBehaviour
         interactionPrompt = null; interactionPromptText = null; interactionPromptKeyText = null;
         missionAlertBox = null; missionAlertText = null;
         questPanel = null; questProgressText = null; questProgressBar = null;
+        questDescriptionText = null;
+        if (coopBuildContainer != null && coopBuildContainer.parent != null)
+        {
+            coopBuildContainer.parent.Remove(coopBuildContainer);
+        }
+        coopBuildContainer = null;
+        coopBuildProgressBarFill = null;
+        coopBuildProgressLabel = null;
+        coopBuildClickButton = null;
+        activeBridgeTrigger = null;
+        isCoopBuildingUIOpen = false;
         hotkeysHintPanel = null; idleHintsGroup = null; actionHintsGroup = null;
         hintWeapon2 = null; hintSkills = null;
         upgradePointsText = null; hpLevelText = null; mpLevelText = null;
@@ -330,6 +350,7 @@ public class PlayerHUDController : MonoBehaviour
         questPanel = root.Q<VisualElement>("quest-panel");
         questProgressText = root.Q<Label>("quest-progress-text");
         questProgressBar = root.Q<VisualElement>("quest-progress-bar");
+        questDescriptionText = root.Q<Label>("quest-description");
 
         // Tìm các phần tử của bảng phím nóng
         hotkeysHintPanel = root.Q<VisualElement>("hotkeys-hint-panel");
@@ -1171,6 +1192,36 @@ public class PlayerHUDController : MonoBehaviour
                         }
                     }
                 }
+            }
+        }
+
+        // Update Coop Build UI state
+        if (isCoopBuildingUIOpen)
+        {
+            if (activeBridgeTrigger != null)
+            {
+                bool isNetwork = Unity.Netcode.NetworkManager.Singleton != null && Unity.Netcode.NetworkManager.Singleton.IsListening;
+                bool isRepaired = isNetwork ? activeBridgeTrigger.hasBeenRepaired.Value : activeBridgeTrigger.IsBridgeRepaired();
+                if (isRepaired)
+                {
+                    CloseCoopBuildUI();
+                }
+                else
+                {
+                    float currentProgress = isNetwork ? activeBridgeTrigger.buildProgress.Value : activeBridgeTrigger.localBuildProgress;
+                    if (coopBuildProgressBarFill != null)
+                    {
+                        coopBuildProgressBarFill.style.width = Length.Percent(Mathf.Clamp(currentProgress, 0f, 100f));
+                    }
+                    if (coopBuildProgressLabel != null)
+                    {
+                        coopBuildProgressLabel.text = $"Tiến độ: {(int)currentProgress}%";
+                    }
+                }
+            }
+            else
+            {
+                CloseCoopBuildUI();
             }
         }
     }
@@ -2686,6 +2737,240 @@ public class PlayerHUDController : MonoBehaviour
                 else if (LocalPlayerTarget is MayaPlayer maya) isAiming = maya.IsAiming;
             }
             crosshairElement.style.display = (visible && (isAiming || (isRangedClass && isRangedActive))) ? DisplayStyle.Flex : DisplayStyle.None;
+        }
+    }
+
+    public void UpdateQuestDescription(string description)
+    {
+        InitializeUI();
+        if (questDescriptionText != null)
+        {
+            questDescriptionText.text = description;
+        }
+    }
+
+    public void ToggleCoopBuildUI(BridgeCollapseTrigger bridge)
+    {
+        if (isCoopBuildingUIOpen)
+        {
+            CloseCoopBuildUI();
+        }
+        else
+        {
+            OpenCoopBuildUI(bridge);
+        }
+    }
+
+    public void OpenCoopBuildUI(BridgeCollapseTrigger bridge)
+    {
+        InitializeUI();
+        var root = uiDocument != null ? uiDocument.rootVisualElement : null;
+        if (root == null) return;
+
+        activeBridgeTrigger = bridge;
+
+        if (coopBuildContainer == null)
+        {
+            // 1. Create main container
+            coopBuildContainer = new VisualElement();
+            coopBuildContainer.name = "coop-build-container";
+            
+            // Apply Glassmorphism layout & styling
+            coopBuildContainer.style.position = Position.Absolute;
+            coopBuildContainer.style.left = Length.Percent(50f);
+            coopBuildContainer.style.top = Length.Percent(50f);
+            coopBuildContainer.style.translate = new Translate(Length.Percent(-50f), Length.Percent(-50f), 0f);
+            coopBuildContainer.style.width = 460;
+            coopBuildContainer.style.height = 300;
+            coopBuildContainer.style.backgroundColor = new Color(0.07f, 0.07f, 0.1f, 0.9f); // Translucent deep grey-blue
+            coopBuildContainer.style.borderTopWidth = 1.5f;
+            coopBuildContainer.style.borderBottomWidth = 1.5f;
+            coopBuildContainer.style.borderLeftWidth = 1.5f;
+            coopBuildContainer.style.borderRightWidth = 1.5f;
+            coopBuildContainer.style.borderTopColor = new Color(1f, 1f, 1f, 0.15f); // Soft glassmorphic border
+            coopBuildContainer.style.borderBottomColor = new Color(1f, 1f, 1f, 0.15f);
+            coopBuildContainer.style.borderLeftColor = new Color(1f, 1f, 1f, 0.15f);
+            coopBuildContainer.style.borderRightColor = new Color(1f, 1f, 1f, 0.15f);
+            coopBuildContainer.style.borderTopLeftRadius = 16;
+            coopBuildContainer.style.borderTopRightRadius = 16;
+            coopBuildContainer.style.borderBottomLeftRadius = 16;
+            coopBuildContainer.style.borderBottomRightRadius = 16;
+            coopBuildContainer.style.paddingLeft = 24;
+            coopBuildContainer.style.paddingRight = 24;
+            coopBuildContainer.style.paddingTop = 20;
+            coopBuildContainer.style.paddingBottom = 20;
+            coopBuildContainer.style.flexDirection = FlexDirection.Column;
+            coopBuildContainer.style.justifyContent = Justify.SpaceBetween;
+            coopBuildContainer.style.alignItems = Align.Center;
+
+            // 2. Title Element
+            Label titleLabel = new Label("HỢP LỰC XÂY CẦU");
+            titleLabel.style.color = new Color(0.95f, 0.6f, 0.1f, 1f); // Vibrant orange gold
+            titleLabel.style.fontSize = 22;
+            titleLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
+            titleLabel.style.letterSpacing = 1.5f;
+            coopBuildContainer.Add(titleLabel);
+
+            // 3. Description/Instruction
+            Label descLabel = new Label("Hãy click liên tục vào nút bên dưới để tăng tiến độ!\nCần nhiều người cùng click để vượt qua tốc độ giảm dần.");
+            descLabel.style.color = new Color(0.7f, 0.7f, 0.75f, 1f);
+            descLabel.style.fontSize = 12;
+            descLabel.style.unityTextAlign = TextAnchor.MiddleCenter;
+            descLabel.style.marginBottom = 10;
+            coopBuildContainer.Add(descLabel);
+
+            // 4. Progress bar container
+            VisualElement progressBarBg = new VisualElement();
+            progressBarBg.style.width = Length.Percent(100f);
+            progressBarBg.style.height = 32;
+            progressBarBg.style.backgroundColor = new Color(0.12f, 0.12f, 0.15f, 1f);
+            progressBarBg.style.borderTopWidth = 1f;
+            progressBarBg.style.borderBottomWidth = 1f;
+            progressBarBg.style.borderLeftWidth = 1f;
+            progressBarBg.style.borderRightWidth = 1f;
+            progressBarBg.style.borderTopColor = new Color(1f, 1f, 1f, 0.08f);
+            progressBarBg.style.borderBottomColor = new Color(1f, 1f, 1f, 0.08f);
+            progressBarBg.style.borderLeftColor = new Color(1f, 1f, 1f, 0.08f);
+            progressBarBg.style.borderRightColor = new Color(1f, 1f, 1f, 0.08f);
+            progressBarBg.style.borderTopLeftRadius = 16;
+            progressBarBg.style.borderTopRightRadius = 16;
+            progressBarBg.style.borderBottomLeftRadius = 16;
+            progressBarBg.style.borderBottomRightRadius = 16;
+            progressBarBg.style.overflow = Overflow.Hidden;
+            progressBarBg.style.justifyContent = Justify.Center;
+
+            // Fill
+            coopBuildProgressBarFill = new VisualElement();
+            coopBuildProgressBarFill.style.position = Position.Absolute;
+            coopBuildProgressBarFill.style.left = 0;
+            coopBuildProgressBarFill.style.top = 0;
+            coopBuildProgressBarFill.style.bottom = 0;
+            coopBuildProgressBarFill.style.width = Length.Percent(0f);
+            coopBuildProgressBarFill.style.backgroundColor = new Color(0.95f, 0.55f, 0.05f, 0.95f); // Glowing orange gradient
+            coopBuildProgressBarFill.style.borderTopLeftRadius = 16;
+            coopBuildProgressBarFill.style.borderTopRightRadius = 16;
+            coopBuildProgressBarFill.style.borderBottomLeftRadius = 16;
+            coopBuildProgressBarFill.style.borderBottomRightRadius = 16;
+            progressBarBg.Add(coopBuildProgressBarFill);
+
+            // Progress text inside
+            coopBuildProgressLabel = new Label("Tiến độ: 0%");
+            coopBuildProgressLabel.style.color = Color.white;
+            coopBuildProgressLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
+            coopBuildProgressLabel.style.alignSelf = Align.Center;
+            coopBuildProgressLabel.style.fontSize = 13;
+            progressBarBg.Add(coopBuildProgressLabel);
+
+            coopBuildContainer.Add(progressBarBg);
+
+            // 5. Large Clicker Button
+            coopBuildClickButton = new Button();
+            coopBuildClickButton.text = "CLICK ĐỂ XÂY CẦU!";
+            coopBuildClickButton.style.width = 340;
+            coopBuildClickButton.style.height = 54;
+            coopBuildClickButton.style.backgroundColor = new Color(0.9f, 0.35f, 0.0f, 1f); // Rich brand orange
+            coopBuildClickButton.style.color = Color.white;
+            coopBuildClickButton.style.fontSize = 18;
+            coopBuildClickButton.style.unityFontStyleAndWeight = FontStyle.Bold;
+            coopBuildClickButton.style.borderTopLeftRadius = 27;
+            coopBuildClickButton.style.borderTopRightRadius = 27;
+            coopBuildClickButton.style.borderBottomLeftRadius = 27;
+            coopBuildClickButton.style.borderBottomRightRadius = 27;
+            coopBuildClickButton.style.borderTopWidth = 0f;
+            coopBuildClickButton.style.borderBottomWidth = 0f;
+            coopBuildClickButton.style.borderLeftWidth = 0f;
+            coopBuildClickButton.style.borderRightWidth = 0f;
+            coopBuildClickButton.style.transitionProperty = new System.Collections.Generic.List<StylePropertyName> { new StylePropertyName("scale"), new StylePropertyName("background-color") };
+            coopBuildClickButton.style.transitionDuration = new System.Collections.Generic.List<TimeValue> { new TimeValue(0.1f) };
+
+            // Hover and Active pointer events for micro-animations
+            coopBuildClickButton.RegisterCallback<PointerEnterEvent>(evt =>
+            {
+                coopBuildClickButton.style.backgroundColor = new Color(1.0f, 0.45f, 0.1f, 1f);
+                coopBuildClickButton.style.scale = new Scale(new Vector3(1.04f, 1.04f, 1f));
+            });
+            coopBuildClickButton.RegisterCallback<PointerLeaveEvent>(evt =>
+            {
+                coopBuildClickButton.style.backgroundColor = new Color(0.9f, 0.35f, 0.0f, 1f);
+                coopBuildClickButton.style.scale = new Scale(new Vector3(1.0f, 1.0f, 1f));
+            });
+            coopBuildClickButton.RegisterCallback<PointerDownEvent>(evt =>
+            {
+                coopBuildClickButton.style.scale = new Scale(new Vector3(0.96f, 0.96f, 1f));
+            });
+            coopBuildClickButton.RegisterCallback<PointerUpEvent>(evt =>
+            {
+                coopBuildClickButton.style.scale = new Scale(new Vector3(1.04f, 1.04f, 1f));
+            });
+
+            coopBuildClickButton.clicked += OnBuildButtonClicked;
+            coopBuildContainer.Add(coopBuildClickButton);
+
+            // 6. Close hint text
+            Label closeLabel = new Label("Ấn phím [F] để thoát");
+            closeLabel.style.color = new Color(0.5f, 0.5f, 0.55f, 1f);
+            closeLabel.style.fontSize = 11;
+            coopBuildContainer.Add(closeLabel);
+
+            root.Add(coopBuildContainer);
+        }
+
+        coopBuildContainer.style.display = DisplayStyle.Flex;
+        isCoopBuildingUIOpen = true;
+        isAnyUIOpen = true;
+
+        if (LocalPlayerTarget != null)
+        {
+            LocalPlayerTarget.SetCursorLock(false);
+        }
+        else
+        {
+            UnityEngine.Cursor.lockState = CursorLockMode.None;
+            UnityEngine.Cursor.visible = true;
+        }
+
+        // Initialize progress view immediately
+        float prog = (Unity.Netcode.NetworkManager.Singleton != null && Unity.Netcode.NetworkManager.Singleton.IsListening) ? activeBridgeTrigger.buildProgress.Value : activeBridgeTrigger.localBuildProgress;
+        if (coopBuildProgressBarFill != null)
+            coopBuildProgressBarFill.style.width = Length.Percent(prog);
+        if (coopBuildProgressLabel != null)
+            coopBuildProgressLabel.text = $"Tiến độ: {(int)prog}%";
+    }
+
+    public void CloseCoopBuildUI()
+    {
+        if (coopBuildContainer != null)
+        {
+            coopBuildContainer.style.display = DisplayStyle.None;
+        }
+
+        isCoopBuildingUIOpen = false;
+        isAnyUIOpen = false;
+        activeBridgeTrigger = null;
+
+        if (LocalPlayerTarget != null)
+        {
+            LocalPlayerTarget.SetCursorLock(true);
+        }
+        else
+        {
+            UnityEngine.Cursor.lockState = CursorLockMode.Locked;
+            UnityEngine.Cursor.visible = false;
+        }
+    }
+
+    private void OnBuildButtonClicked()
+    {
+        if (activeBridgeTrigger == null) return;
+
+        bool isNetwork = Unity.Netcode.NetworkManager.Singleton != null && Unity.Netcode.NetworkManager.Singleton.IsListening;
+        if (isNetwork)
+        {
+            activeBridgeTrigger.ClickBuildServerRpc();
+        }
+        else
+        {
+            activeBridgeTrigger.ClickBuildLocal();
         }
     }
 }
