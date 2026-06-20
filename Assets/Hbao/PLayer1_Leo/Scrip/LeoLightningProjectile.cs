@@ -23,9 +23,34 @@ public class LeoLightningProjectile : NetworkBehaviour
     {
         gameObject.tag = "Set"; // Force tag "Set" for elemental rock puzzles
         
+        // Đảm bảo có Collider để va chạm hoạt động
+        Collider col = GetComponent<Collider>();
+        if (col == null)
+        {
+            SphereCollider sphere = gameObject.AddComponent<SphereCollider>();
+            sphere.isTrigger = true;
+            sphere.radius = 0.5f;
+            Debug.LogWarning($"[LeoLightningProjectile] Không tìm thấy Collider. Đã tự động thêm SphereCollider mặc định.");
+        }
+
+        // Đảm bảo có Rigidbody để nhận biết va chạm với các vật thể tĩnh (static obstacles)
+        Rigidbody rb = GetComponent<Rigidbody>();
+        if (rb == null)
+        {
+            rb = gameObject.AddComponent<Rigidbody>();
+            rb.useGravity = false;
+            rb.isKinematic = true;
+            rb.constraints = RigidbodyConstraints.FreezeAll;
+            Debug.Log("[LeoLightningProjectile] Đã tự động thêm Rigidbody ở chế độ Kinematic để bắt va chạm tĩnh.");
+        }
+
         // Tự động tìm kiếm các bộ phận GFX nếu chưa gán trong Inspector
         if (castGFX == null) castGFX = FindChildWithNamePart("cast");
-        if (hitGFX == null) hitGFX = FindChildWithNamePart("hit");
+        if (hitGFX == null)
+        {
+            hitGFX = FindChildWithNamePart("hit");
+            if (hitGFX == null) hitGFX = FindChildWithNamePart("iht"); // Fallback cho trường hợp đặt tên sai chính tả "iht"
+        }
         if (flyingGFX == null)
         {
             foreach (Transform child in transform)

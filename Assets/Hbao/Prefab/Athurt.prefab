@@ -294,6 +294,9 @@ MonoBehaviour:
   leftShoulderWeapon: {fileID: 6978814873877841153}
   rightShoulderWeapon: {fileID: 3897477341066556430}
   rSkillAnimTrigger: SkillR
+  rSkillYOffset: 60
+  rSkillXOffset: 20
+  invertSpinePitch: 0
   rSkillFirePrefab: {fileID: 2883180979609552342, guid: 9722d6dadb2ad9f4b962ecdfbfe04c37, type: 3}
   rSkillFireSpawnPoint: {fileID: 8091084124323850428}
   rSkillFireSpeed: 20
@@ -490,9 +493,9 @@ MonoBehaviour:
   maxPitch: 80
   rotationSmoothSpeed: 15
   invertCameraY: 0
-  aimCameraDistance: 4
-  aimShoulderOffset: 0.8
-  aimPivotHeight: 1.3
+  aimCameraDistance: 3
+  aimShoulderOffset: 1
+  aimPivotHeight: 4
   aimCameraSmoothSpeed: 10
   aimMinPitch: -80
   aimMaxPitch: 80
@@ -526,7 +529,7 @@ MonoBehaviour:
   leftWeaponHitbox: {fileID: 2009270594192434184}
   rightWeaponHitbox: {fileID: 5439298617177621512}
   rollSpeed: 10
-  rollDuration: 0.4
+  rollDuration: 1
   rollCooldown: 1.2
   isRollingNet:
     UpdateTraits:
@@ -774,24 +777,17 @@ MonoBehaviour:
   - IsCrossFadeExit: 0
     Layer: 0
     OriginatingState: 1572205430
-    DestinationState: 988407161
-    TransitionDuration: 0.25
-    TriggerNameHash: -1628175592
-    TransitionIndex: 3
-  - IsCrossFadeExit: 0
-    Layer: 0
-    OriginatingState: 1572205430
     DestinationState: -1919643741
     TransitionDuration: 0.05
     TriggerNameHash: 489129695
-    TransitionIndex: 4
+    TransitionIndex: 3
   - IsCrossFadeExit: 0
     Layer: 0
     OriginatingState: 1572205430
     DestinationState: -229569483
     TransitionDuration: 0.05
     TriggerNameHash: 134042274
-    TransitionIndex: 5
+    TransitionIndex: 4
   - IsCrossFadeExit: 0
     Layer: 0
     OriginatingState: -382223678
@@ -844,31 +840,24 @@ MonoBehaviour:
   - IsCrossFadeExit: 0
     Layer: 1
     OriginatingState: -499022955
-    DestinationState: 988407161
-    TransitionDuration: 0.05
-    TriggerNameHash: -1628175592
-    TransitionIndex: 5
-  - IsCrossFadeExit: 0
-    Layer: 1
-    OriginatingState: -499022955
     DestinationState: -1446558006
     TransitionDuration: 0.05
     TriggerNameHash: -504573385
-    TransitionIndex: 6
+    TransitionIndex: 5
   - IsCrossFadeExit: 0
     Layer: 1
     OriginatingState: -499022955
     DestinationState: 2048954328
     TransitionDuration: 0.05
     TriggerNameHash: 2048954328
-    TransitionIndex: 9
+    TransitionIndex: 8
   - IsCrossFadeExit: 0
     Layer: 1
     OriginatingState: -499022955
     DestinationState: 1271436613
     TransitionDuration: 0.05
     TriggerNameHash: 1271436613
-    TransitionIndex: 10
+    TransitionIndex: 9
   - IsCrossFadeExit: 0
     Layer: 1
     OriginatingState: -382223678
@@ -1404,13 +1393,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 8529338500142923401}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.5151542, y: 0.5472899, z: -0.49295226, w: -0.4382785}
+  m_LocalRotation: {x: 0.03088226, y: -0.031406812, z: 0.7123442, w: 0.7004467}
   m_LocalPosition: {x: -0.017, y: 0.261, z: 0.181}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 5980305278999146196}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 5.049, y: 0, z: 90.965}
 --- !u!1001 &4240129342919330143
 PrefabInstance:
   m_ObjectHideFlags: 0

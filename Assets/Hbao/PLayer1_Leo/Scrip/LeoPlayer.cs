@@ -3102,6 +3102,14 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     [Header("Skill R - Bắn Cục Sét")]
     [Tooltip("Prefab đạn sét của chiêu R")]
     public GameObject rSkillLightningPrefab;
+
+    [Header("Skill R Fine Tuning")]
+    [Tooltip("Y Offset chỉnh xoay cột sống ngang cho chiêu R")]
+    public float rSkillYOffset = 0f;
+    [Tooltip("X Offset chỉnh xoay cột sống dọc cho chiêu R")]
+    public float rSkillXOffset = 0f;
+    [Tooltip("Đảo ngược chiều cúi đầu/ngẩng đầu của xương cột sống")]
+    public bool invertSpinePitch = false;
     [Tooltip("Điểm xuất phát bắn đạn sét của chiêu R")]
     public Transform rSkillLightningSpawnPoint;
     [Tooltip("Tốc độ bay của đạn sét")]
@@ -3678,7 +3686,9 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             bool isCurrentlyAttacking = IsPlayingAttackState(out _, out _) || 
                                         (IsAttackAnimationName(lastTriggeredAnimName) && Time.time - lastActionTriggerTime < 0.35f);
             
-            if (isCurrentlyAttacking && !isRootedAttack && targetCamera != null)
+            bool isAimingOrAttacking = IsAiming || isCurrentlyAttacking;
+            
+            if (isAimingOrAttacking && !isRootedAttack && targetCamera != null)
             {
                 Vector3 camForward = targetCamera.transform.forward;
                 camForward.y = 0f;
@@ -3696,6 +3706,11 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
                     {
                         netAimAngle.Value = angleDiff;
                     }
+                }
+
+                if (IsAiming && !isStandaloneMode)
+                {
+                    netAimPitch.Value = currentPitch;
                 }
             }
             else
@@ -4545,7 +4560,14 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             float targetYOffset = 0f;
             float targetXOffset = 0f;
 
-            if (isCurrentlyAttacking && !isRootedAttack)
+            if (IsAiming)
+            {
+                targetYOffset = rSkillYOffset;
+                float pitchVal = isStandaloneMode ? currentPitch : netAimPitch.Value;
+                float pitchFactor = invertSpinePitch ? -0.7f : 0.7f;
+                targetXOffset = (pitchVal - 45f) * pitchFactor + rSkillXOffset;
+            }
+            else if (isCurrentlyAttacking && !isRootedAttack)
             {
                 int weapon = GetActiveWeaponIndex();
                 if (weapon == 1) // Unarmed / Punch
@@ -4589,22 +4611,22 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             smoothedYOffset = Mathf.Lerp(smoothedYOffset, targetYOffset, Time.deltaTime * spineSmoothSpeed);
             smoothedXOffset = Mathf.Lerp(smoothedXOffset, targetXOffset, Time.deltaTime * spineSmoothSpeed);
 
-            // Vô hiệu hóa xoay xương thủ công tránh lỗi bẻ xương mạng
-            // if ((isCurrentlyAttacking && !isRootedAttack) || Mathf.Abs(smoothedYOffset) > 0.05f || Mathf.Abs(smoothedXOffset) > 0.05f)
-            // {
-            //     Transform spine = GetSpineBone();
-            //     if (spine != null)
-            //     {
-            //         float finalYAngle = baseAimAngle + smoothedYOffset;
-            //         
-            //         spine.rotation = Quaternion.AngleAxis(finalYAngle, Vector3.up) * spine.rotation;
-            // 
-            //         if (Mathf.Abs(smoothedXOffset) > 0.01f)
-            //         {
-            //             spine.rotation = Quaternion.AngleAxis(smoothedXOffset, transform.right) * spine.rotation;
-            //         }
-            //     }
-            // }
+            // Xoay xương cột sống cho cả Aiming và Combo đánh thường
+            if (IsAiming || (isCurrentlyAttacking && !isRootedAttack) || Mathf.Abs(smoothedYOffset) > 0.05f || Mathf.Abs(smoothedXOffset) > 0.05f)
+            {
+                Transform spine = GetSpineBone();
+                if (spine != null)
+                {
+                    float finalYAngle = baseAimAngle + smoothedYOffset;
+                    
+                    spine.rotation = Quaternion.AngleAxis(finalYAngle, Vector3.up) * spine.rotation;
+            
+                    if (Mathf.Abs(smoothedXOffset) > 0.01f)
+                    {
+                        spine.rotation = Quaternion.AngleAxis(smoothedXOffset, transform.right) * spine.rotation;
+                    }
+                }
+            }
         }
 
         bool shouldFollow = isStandaloneMode || (IsSpawned && IsOwner);
@@ -5177,7 +5199,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         bool keepWeight = aiming || isRShootPending || isPlayingShoot;
         if (anim != null && anim.isActiveAndEnabled && anim.runtimeAnimatorController != null)
         {
-            anim.SetBool("IsAiming", keepWeight);
+            anim.SetBool("IsAiming", aiming || isRShootPending);
             if (anim.layerCount > 1)
             {
                 if (keepWeight)
@@ -5223,6 +5245,12 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     {
         if (!isRShootPending) return;
         isRShootPending = false;
+
+        OnAimStateChanged(localIsAimingR);
+
+        // Chỉ Owner hoặc Standalone mới bắn đạn
+        bool hasControl = isStandaloneMode || (IsSpawned && IsOwner);
+        if (!hasControl) return;
 
         Debug.Log($"[{gameObject.name}] OnShootRSkill: Hoạt ảnh bắn sét -> Bắn!");
 
@@ -6644,6 +6672,14 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         }
 
         string translatedName = TranslateAnimName(animName);
+
+        if (translatedName == "Attack1combo1" || translatedName == "Attack2combo1" || animName == "Attack1combo1" || animName == "Attack2combo1")
+        {
+            isRShootPending = true;
+            isPendingRShootNetworkMode = !isStandaloneMode;
+            OnAimStateChanged(localIsAimingR);
+        }
+
         if (translatedName == rollTrigger || translatedName == "LonVong")
         {
             anim.applyRootMotion = false;
