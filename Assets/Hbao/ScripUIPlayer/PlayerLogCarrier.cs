@@ -4,6 +4,8 @@ public class PlayerLogCarrier : MonoBehaviour
 {
     [Tooltip("Trạng thái người chơi có đang bưng đồ hay không")]
     public bool isCarrying = false;
+    [Tooltip("Số lượng gỗ đang bưng")]
+    public int carriedLogCount = 1;
 
     private GameObject carriedLogInstance;
     private GameObject carriedCrystalInstance; // Lưu Visual của Tinh Thể[cite: 4]
@@ -98,9 +100,10 @@ public class PlayerLogCarrier : MonoBehaviour
     }
 
     // --- CƠ CHẾ BƯNG GỖ NGUYÊN BẢN ---[cite: 4]
-    public void CarryLog(bool showVisualLog = true)
+    public void CarryLog(int amount = 1, bool showVisualLog = true)
     {
         isCarrying = true;
+        carriedLogCount = amount;
         TogglePlayerWeapons(false);
         PlayCarryAnimation(true);
         if (!showVisualLog) return;
