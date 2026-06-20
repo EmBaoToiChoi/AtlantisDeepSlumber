@@ -1,5 +1,6 @@
 using UnityEngine;
 using Unity.Netcode;
+using TMPro;
 
 public class Puzzle4Manager : NetworkBehaviour
 {
@@ -17,6 +18,9 @@ public class Puzzle4Manager : NetworkBehaviour
     public NetworkVariable<float>
         failTimer =
         new NetworkVariable<float>(3f);
+    public TMP_Text countdownText;
+
+    private bool hasFailed = false;
 
     void Update()
     {
@@ -33,23 +37,28 @@ public class Puzzle4Manager : NetworkBehaviour
 
     void CheckFail()
     {
-        if(balanceManager.CurrentAngle > 2)
+        if(balanceManager.CurrentAngle > 15)
         {
             failTimer.Value -= Time.deltaTime;
 
-            if(failTimer.Value <= 0)
+            countdownText.text =
+                Mathf.CeilToInt(
+                    failTimer.Value
+                ).ToString();
+
+            if(failTimer.Value <= 0 && !hasFailed)
             {
+                hasFailed = true;
+
                 Debug.Log("FAIL");
+
+                balanceManager.FlipDisk();
             }
         }
         else
         {
             failTimer.Value = 3f;
         }
-        // Debug.Log(
-        //     "CurrentAngle = " +
-        //     balanceManager.CurrentAngle
-        // );
     }
 
     void CheckComplete()

@@ -1,5 +1,6 @@
 using UnityEngine;
 using Unity.Netcode;
+using System.Collections;
 
 public class BalanceManager : NetworkBehaviour
 {
@@ -19,6 +20,42 @@ public class BalanceManager : NetworkBehaviour
         NetworkVariableReadPermission.Everyone,
         NetworkVariableWritePermission.Server
     );
+    private bool isFlipping = false;
+
+    public void FlipDisk()
+    {
+        if(isFlipping) return;
+
+        StartCoroutine(FlipCoroutine());
+    }
+
+    IEnumerator FlipCoroutine()
+    {
+        isFlipping = true;
+
+        Quaternion startRot = diskRigidbody.rotation;
+        Quaternion targetRot =
+            startRot * Quaternion.Euler(180f, 0f, 0f);
+
+        float timer = 0f;
+        float duration = 1f;
+
+        while(timer < duration)
+        {
+            timer += Time.deltaTime;
+
+            Quaternion rot =
+                Quaternion.Slerp(
+                    startRot,
+                    targetRot,
+                    timer / duration
+                );
+
+            diskRigidbody.MoveRotation(rot);
+
+            yield return null;
+        }
+    }
 
     // Sử dụng FixedUpdate thay vì Update để đồng bộ hoàn hảo với chu kỳ vật lý của nhân vật
     void FixedUpdate()
@@ -44,7 +81,15 @@ public class BalanceManager : NetworkBehaviour
         // targetRotation.Value = Quaternion.Euler(tiltZ * 3f, 0, -tiltX * 3f);
 
         // THAY BẰNG DÒNG DƯỚI ĐÂY (Đã đảo ngược dấu để bên nặng chìm xuống):
-        targetRotation.Value = Quaternion.Euler(-tiltZ * 3f, 0, tiltX * 3f);
+        targetRotation.Value =
+    Quaternion.Euler(
+        -tiltZ * 3f,
+        0,
+        tiltX * 3f
+    );
+            Debug.Log(
+            $"NW:{NW} NE:{NE} SW:{SW} SE:{SE}"
+        );
     }
 
         // 2. Cả Server và Client đều dùng MoveRotation để xoay mâm mượt mà, giữ chặt chân nhân vật bằng ma sát
@@ -87,4 +132,14 @@ public class BalanceManager : NetworkBehaviour
         }
         return total;
     }
+    // public void FlipDisk()
+    // {
+    //     diskRigidbody.MoveRotation(
+    //         Quaternion.Euler(
+    //             180,
+    //             0,
+    //             0
+    //         )
+    //     );
+    // }
 }
