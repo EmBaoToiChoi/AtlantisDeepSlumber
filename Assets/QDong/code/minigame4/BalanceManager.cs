@@ -9,7 +9,9 @@ public class BalanceManager : NetworkBehaviour
     public ZoneTrigger se;
 
     // Thay đổi từ Transform thành Rigidbody để xử lý vật lý chính xác
-    public Rigidbody diskRigidbody; 
+    public Rigidbody diskRigidbody;
+
+    public float CurrentAngle { get; private set; }
 
     // Biến mạng lưu trữ góc xoay đồng bộ từ Server xuống các Client
     private NetworkVariable<Quaternion> targetRotation = new NetworkVariable<Quaternion>(
@@ -33,6 +35,11 @@ public class BalanceManager : NetworkBehaviour
         float tiltX = (NE + SE) - (NW + SW);
         float tiltZ = (SW + SE) - (NW + NE);
 
+        CurrentAngle =
+            new Vector2(
+                tiltX,
+                tiltZ
+            ).magnitude;
         // XÓA DÒNG CŨ NÀY:
         // targetRotation.Value = Quaternion.Euler(tiltZ * 3f, 0, -tiltX * 3f);
 
