@@ -57,6 +57,14 @@ public class PlayerLogCarrier : MonoBehaviour
             var netObj = carriedCrystalInstance.GetComponent<Unity.Netcode.NetworkObject>();
             if (netObj != null) DestroyImmediate(netObj);
 
+            // Destroy CollectibleItemDrop component on the cosmetic clone
+            var cid = carriedCrystalInstance.GetComponent<CollectibleItemDrop>();
+            if (cid != null) DestroyImmediate(cid);
+            foreach (var c in carriedCrystalInstance.GetComponentsInChildren<CollectibleItemDrop>())
+            {
+                DestroyImmediate(c);
+            }
+
             foreach (var col in carriedCrystalInstance.GetComponentsInChildren<Collider>()) DestroyImmediate(col);
             foreach (var rb in carriedCrystalInstance.GetComponentsInChildren<Rigidbody>()) DestroyImmediate(rb);
         }
@@ -118,6 +126,21 @@ public class PlayerLogCarrier : MonoBehaviour
             
             var netObj = carriedLogInstance.GetComponent<Unity.Netcode.NetworkObject>();
             if (netObj != null) DestroyImmediate(netObj);
+
+            // Destroy CollectibleItemDrop component on the cosmetic clone so its Update() loop doesn't override the carry position
+            var cid = carriedLogInstance.GetComponent<CollectibleItemDrop>();
+            if (cid != null) DestroyImmediate(cid);
+            foreach (var c in carriedLogInstance.GetComponentsInChildren<CollectibleItemDrop>())
+            {
+                DestroyImmediate(c);
+            }
+
+            // Destroy any WoodCountUI canvas or text elements on the cosmetic clone
+            Transform countUI = carriedLogInstance.transform.Find("WoodCountUI");
+            if (countUI != null)
+            {
+                DestroyImmediate(countUI.gameObject);
+            }
 
             foreach (var col in carriedLogInstance.GetComponentsInChildren<Collider>()) DestroyImmediate(col);
             foreach (var rb in carriedLogInstance.GetComponentsInChildren<Rigidbody>()) DestroyImmediate(rb);

@@ -2442,15 +2442,15 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
         if (logPrefab != null)
         {
             GameObject wood = WoodLogObjectPool.Instance.GetOrCreate(logPrefab, position, Quaternion.identity);
-            var cid = wood.GetComponent<CollectibleItemDrop>();
-            if (cid != null)
-            {
-                cid.woodAmount.Value = amount;
-            }
             var netObj = wood.GetComponent<NetworkObject>();
             if (netObj != null)
             {
                 netObj.Spawn();
+            }
+            var cid = wood.GetComponent<CollectibleItemDrop>();
+            if (cid != null)
+            {
+                cid.woodAmount.Value = amount;
             }
         }
 

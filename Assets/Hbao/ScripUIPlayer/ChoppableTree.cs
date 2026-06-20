@@ -478,17 +478,17 @@ public class ChoppableTree : NetworkBehaviour
 
             GameObject log = WoodLogObjectPool.Instance.GetOrCreate(woodLogPrefab, spawnPos, Quaternion.identity);
             
-            // Randomize wood amount between 5 and 10
-            var cid = log.GetComponent<CollectibleItemDrop>();
-            if (cid != null)
-            {
-                cid.woodAmount.Value = Random.Range(5, 11);
-            }
-
             var netObj = log.GetComponent<NetworkObject>();
             if (netObj != null)
             {
                 netObj.Spawn();
+            }
+
+            // Randomize wood amount between 5 and 10 and set it after spawn to ensure NetworkVariable updates propagate correctly to all clients
+            var cid = log.GetComponent<CollectibleItemDrop>();
+            if (cid != null)
+            {
+                cid.woodAmount.Value = Random.Range(5, 11);
             }
         }
     }
