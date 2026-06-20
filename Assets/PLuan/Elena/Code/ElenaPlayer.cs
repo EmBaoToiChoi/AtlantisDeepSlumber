@@ -161,7 +161,7 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
     private float cameraDistance = 14f;
     private bool isCursorLocked = true;
 
-    [Header("Aiming Settings")]
+    [Header("Aiming Settings (Bow)")]
     public float aimCameraDistance = 4f;
     public float aimShoulderOffset = 0.8f;
     public float aimPivotHeight = 1.3f;
@@ -169,6 +169,13 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
     public float aimAttackRange = 25f;
     public float aimMinPitch = -80f; // Góc ngước lên tối đa khi ngắm
     public float aimMaxPitch = 80f;  // Góc cúi xuống tối đa khi ngắm
+
+    [Header("R Skill Aiming Settings (Ice)")]
+    public float rSkillAimCameraDistance = 4f;
+    public float rSkillAimShoulderOffset = 0.8f;
+    public float rSkillAimPivotHeight = 1.3f;
+    public float rSkillAimMinPitch = -80f;
+    public float rSkillAimMaxPitch = 80f;
 
     [Header("Arrow Spawning Settings")]
     public GameObject arrowHandVisual; // Mũi tên trên tay (Visual)
@@ -238,7 +245,13 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
         NetworkVariableReadPermission.Everyone,
         NetworkVariableWritePermission.Server
     );
-    public bool IsAiming => isStandaloneMode ? (localIsAiming || localIsAimingR) : (IsOwner ? (localIsAiming || localIsAimingR) : isAimingNet.Value);
+    public NetworkVariable<bool> isAimingRNet = new NetworkVariable<bool>(
+        false,
+        NetworkVariableReadPermission.Everyone,
+        NetworkVariableWritePermission.Server
+    );
+    public bool IsAiming => isStandaloneMode ? (localIsAiming || localIsAimingR) : (IsOwner ? (localIsAiming || localIsAimingR) : (isAimingNet.Value || isAimingRNet.Value));
+    public bool IsAimingR => isStandaloneMode ? localIsAimingR : (IsOwner ? localIsAimingR : isAimingRNet.Value);
     public bool IsBusyOrRolling => (isStandaloneMode ? isRollingStandalone : rollTimer > 0) || IsPlayingActionAnimation() || (CurrentHealth <= 0);
 
     [Header("Camera Inversion Settings")]
@@ -262,11 +275,17 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
     [Header("Punch 3 Fine Tuning")]
     public float punch3YOffset = 0f; // Xoay Trái/Phải cho Đấm 3
 
-    [Header("Aim Fine Tuning")]
+    [Header("Aim Fine Tuning (Bow)")]
     public float aimSpineYOffset = 0f; // Xoay Trái/Phải khi ngắm bắn đứng yên
     public float aimSpineXOffset = 0f; // Ngửa/Cúi khi ngắm bắn đứng yên
     public float aimMovingSpineYOffset = 0f; // Xoay Trái/Phải khi ngắm bắn di chuyển
     public float aimMovingSpineXOffset = 0f; // Ngửa/Cúi khi ngắm bắn di chuyển
+
+    [Header("R Skill Aim Fine Tuning (Ice)")]
+    public float rSkillSpineYOffset = 0f; // Xoay Trái/Phải khi ngắm R đứng yên
+    public float rSkillSpineXOffset = 0f; // Ngửa/Cúi khi ngắm R đứng yên
+    public float rSkillMovingSpineYOffset = 0f; // Xoay Trái/Phải khi ngắm R di chuyển
+    public float rSkillMovingSpineXOffset = 0f; // Ngửa/Cúi khi ngắm R di chuyển
     
     private float smoothedYOffset = 0f;
     private float smoothedXOffset = 0f;
@@ -534,12 +553,57 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
     public void TriggerRSkill()
     {
         var carrier = GetComponent<PlayerLogCarrier>();
-        if (carrier != null && carrier.isCarrying) return;
+        if (carrier != null && carrier.isCarrying)
+        {
+            Debug.LogWarning("[ElenaPlayer] Cannot trigger R Skill while carrying a log!");
+            return;
+        }
 
+        int activeWeaponIdx = GetActiveWeaponIndex();
+        if (activeWeaponIdx != 1)
+        {
+            Debug.LogWarning($"[ElenaPlayer] Cannot trigger R Skill because active weapon is {activeWeaponIdx} (must be 1/unarmed!). Please switch to unarmed first.");
+            return;
+        }
 
-        if (GetActiveWeaponIndex() != 1) return;
-
+        Debug.Log("[ElenaPlayer] Triggering R Skill: Setting localIsAimingR to true.");
         SetAimingR(true);
+    }
+
+    private void HandleRAiming()
+    {
+        bool hasControl = isStandaloneMode || (IsSpawned && IsOwner);
+        if (!hasControl) return;
+
+        if (localIsAimingR)
+        {
+            if (targetCamera != null)
+            {
+                Vector3 camForward = targetCamera.transform.forward;
+                camForward.y = 0f;
+                camForward.Normalize();
+                if (camForward != Vector3.zero)
+                {
+                    transform.forward = camForward;
+                }
+            }
+
+            bool rKeyPressed = false;
+            if (UnityEngine.InputSystem.Keyboard.current != null)
+            {
+                rKeyPressed = UnityEngine.InputSystem.Keyboard.current.rKey.isPressed;
+            }
+            else
+            {
+                rKeyPressed = Input.GetKey(KeyCode.R);
+            }
+
+            if (!rKeyPressed && !isRShootPending)
+            {
+                Debug.Log("[ElenaPlayer] R key released, setting localIsAimingR to false.");
+                SetAimingR(false);
+            }
+        }
     }
 
     private void SetAimingR(bool aiming)
@@ -547,10 +611,10 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (localIsAimingR == aiming) return;
         localIsAimingR = aiming;
         
-        OnAimStateChanged(localIsAiming || localIsAimingR);
+        OnAimRStateChanged(localIsAimingR);
         if (!isStandaloneMode && IsOwner)
         {
-            SetAimingServerRpc(localIsAiming || localIsAimingR);
+            SetAimingRServerRpc(localIsAimingR);
         }
 
         if (aiming)
@@ -600,8 +664,16 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     public void OnShootRSkill()
     {
+        bool isLocal = isStandaloneMode || (IsSpawned && IsOwner);
+        if (isLocal && !isRShootPending)
+        {
+            Debug.LogWarning($"[{gameObject.name}] OnShootRSkill called on Owner, but isRShootPending is false!");
+        }
+
         if (!isRShootPending) return;
         isRShootPending = false;
+
+        OnAimRStateChanged(localIsAimingR);
 
         Debug.Log($"[{gameObject.name}] OnShootRSkill: Bắn đạn băng!");
 
@@ -612,9 +684,13 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
         {
             Ray ray = targetCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
             Vector3 targetPoint = ray.origin + ray.direction * 50f;
-            if (Physics.Raycast(ray.origin, ray.direction, out RaycastHit cameraHit, 50f))
+            int layerMask = ~LayerMask.GetMask("Player", "Ignore Raycast");
+            if (Physics.Raycast(ray.origin, ray.direction, out RaycastHit cameraHit, 50f, layerMask))
             {
-                targetPoint = cameraHit.point;
+                if (cameraHit.collider.transform.root != transform.root && Vector3.Distance(cameraHit.point, transform.position) >= 3.0f)
+                {
+                    targetPoint = cameraHit.point;
+                }
             }
             shootDirection = (targetPoint - spawnPos).normalized;
         }
@@ -859,6 +935,7 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
         weapon2Durability.OnValueChanged += OnDurabilityChanged;
         currentHealth.OnValueChanged += OnHealthChangedShared;
         isAimingNet.OnValueChanged += OnAimingNetChanged;
+        isAimingRNet.OnValueChanged += OnAimingRNetChanged;
 
         if (IsOwner)
         {
@@ -934,6 +1011,7 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
         weapon2Durability.OnValueChanged -= OnDurabilityChanged;
         currentHealth.OnValueChanged -= OnHealthChangedShared;
         isAimingNet.OnValueChanged -= OnAimingNetChanged;
+        isAimingRNet.OnValueChanged -= OnAimingRNetChanged;
 
         if (IsOwner)
             currentHealth.OnValueChanged -= OnHealthChanged;
@@ -1413,6 +1491,9 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     void Update()
     {
+        // Cập nhật trạng thái ngắm R
+        HandleRAiming();
+
         // Chỉ xử lý phím tắt Alt ẩn hiện chuột nếu là chủ sở hữu hoặc chơi đơn
         bool hasControl = isStandaloneMode || (IsSpawned && IsOwner);
         if (hasControl)
@@ -1503,14 +1584,15 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (anim != null && anim.isActiveAndEnabled && anim.runtimeAnimatorController != null && anim.layerCount > 1)
         {
             float weight1 = anim.GetLayerWeight(1);
-            if (weight1 > 0f && comboStep == 0 && !IsAiming)
+            if (weight1 > 0f && comboStep == 0 && !IsAiming && !isRShootPending)
             {
                 var carrier = GetComponent<PlayerLogCarrier>();
                 bool isCarrying = carrier != null && carrier.isCarrying;
                 if (!isCarrying)
                 {
                     bool isSwitching = IsStatePlayingOnLayer1(drawWeaponTrigger) || IsStatePlayingOnLayer1(sheathWeaponTrigger);
-                    if (!isSwitching && !IsPlayingAttackState(out _, out _))
+                    bool isRThrowPlaying = IsStatePlayingOnLayer1("NemRFM");
+                    if (!isSwitching && !IsPlayingAttackState(out _, out _) && !isRThrowPlaying)
                     {
                         ClearAttackLayer();
                     }
@@ -2075,8 +2157,19 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
 
             if (IsAiming)
             {
-                float activeYOffset = isMoving ? aimMovingSpineYOffset : aimSpineYOffset;
-                float activeXOffset = isMoving ? aimMovingSpineXOffset : aimSpineXOffset;
+                float activeYOffset = 0f;
+                float activeXOffset = 0f;
+
+                if (IsAimingR)
+                {
+                    activeYOffset = isMoving ? rSkillMovingSpineYOffset : rSkillSpineYOffset;
+                    activeXOffset = isMoving ? rSkillMovingSpineXOffset : rSkillSpineXOffset;
+                }
+                else
+                {
+                    activeYOffset = isMoving ? aimMovingSpineYOffset : aimSpineYOffset;
+                    activeXOffset = isMoving ? aimMovingSpineXOffset : aimSpineXOffset;
+                }
 
                 if (isStandaloneMode)
                 {
@@ -2189,8 +2282,8 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
                 {
                     targetPitch += mouseY * cameraSensitivity;
                 }
-                float currentMinPitch = IsAiming ? aimMinPitch : minPitch;
-                float currentMaxPitch = IsAiming ? aimMaxPitch : maxPitch;
+                float currentMinPitch = IsAiming ? (IsAimingR ? rSkillAimMinPitch : aimMinPitch) : minPitch;
+                float currentMaxPitch = IsAiming ? (IsAimingR ? rSkillAimMaxPitch : aimMaxPitch) : maxPitch;
                 targetPitch = Mathf.Clamp(targetPitch, currentMinPitch, currentMaxPitch);
             }
 
@@ -2209,9 +2302,9 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
             );
 
             // Smoothly interpolate shoulder offset, camera distance, and pivot height
-            float targetDist = IsAiming ? aimCameraDistance : defaultCameraDistance;
-            float targetPivot = IsAiming ? aimPivotHeight : defaultPivotHeight;
-            float targetOffset = IsAiming ? aimShoulderOffset : 0f;
+            float targetDist = IsAiming ? (IsAimingR ? rSkillAimCameraDistance : aimCameraDistance) : defaultCameraDistance;
+            float targetPivot = IsAiming ? (IsAimingR ? rSkillAimPivotHeight : aimPivotHeight) : defaultPivotHeight;
+            float targetOffset = IsAiming ? (IsAimingR ? rSkillAimShoulderOffset : aimShoulderOffset) : 0f;
 
             cameraDistance = Mathf.Lerp(cameraDistance, targetDist, Time.deltaTime * aimCameraSmoothSpeed);
             cameraPivotHeight = Mathf.Lerp(cameraPivotHeight, targetPivot, Time.deltaTime * aimCameraSmoothSpeed);
@@ -3080,6 +3173,13 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
             return;
         }
         
+        if (animName == "Bow_Shoot" && IsAimingR)
+        {
+            isRShootPending = true;
+            isPendingRShootNetworkMode = !isStandaloneMode;
+            OnAimRStateChanged(localIsAimingR);
+        }
+
         // Tránh lặp lại các hoạt ảnh di chuyển lặp đi lặp lại hàng frame (Idle, run, Walk)
         bool isLoopingAnim = animName == "Idle" || animName == "Walk" || animName == "run";
         if (isLoopingAnim && currentAnimState == animName) return;
@@ -3263,6 +3363,14 @@ private void StartRollServerRpc(Vector3 direction)
         }
     }
 
+    private void OnAimingRNetChanged(bool oldVal, bool newVal)
+    {
+        if (!IsOwner)
+        {
+            OnAimRStateChanged(newVal);
+        }
+    }
+
     private void OnAimStateChanged(bool aiming)
     {
         if (anim != null && anim.isActiveAndEnabled && anim.runtimeAnimatorController != null)
@@ -3274,7 +3382,7 @@ private void StartRollServerRpc(Vector3 direction)
                 {
                     anim.SetLayerWeight(1, 1f);
                 }
-                else if (comboStep == 0)
+                else if (comboStep == 0 && !localIsAimingR)
                 {
                     var carrier = GetComponent<PlayerLogCarrier>();
                     bool isCarrying = carrier != null && carrier.isCarrying;
@@ -3297,7 +3405,45 @@ private void StartRollServerRpc(Vector3 direction)
             PlayerHUDController hud = FindObjectOfType<PlayerHUDController>();
             if (hud != null)
             {
-                hud.SetCrosshairVisible(aiming);
+                hud.SetCrosshairVisible(aiming || localIsAimingR);
+            }
+        }
+    }
+
+    private void OnAimRStateChanged(bool aiming)
+    {
+        bool isPlayingShoot = anim != null && anim.layerCount > 1 && (anim.GetCurrentAnimatorStateInfo(1).IsName("NemRFM") || anim.GetCurrentAnimatorStateInfo(1).IsName("Bow_Shoot"));
+        bool keepWeight = aiming || isRShootPending || isPlayingShoot;
+
+        if (anim != null && anim.isActiveAndEnabled && anim.runtimeAnimatorController != null)
+        {
+            anim.SetBool("IsAimingR", aiming || isRShootPending);
+            if (anim.layerCount > 1)
+            {
+                if (keepWeight)
+                {
+                    anim.SetLayerWeight(1, 1f);
+                }
+                else if (comboStep == 0 && !localIsAiming)
+                {
+                    var carrier = GetComponent<PlayerLogCarrier>();
+                    bool isCarrying = carrier != null && carrier.isCarrying;
+                    if (!isCarrying)
+                    {
+                        anim.SetLayerWeight(1, 0f);
+                        anim.Play("New State", 1, 0f);
+                    }
+                }
+            }
+        }
+
+        bool isLocal = isStandaloneMode || (IsSpawned && IsOwner);
+        if (isLocal)
+        {
+            PlayerHUDController hud = FindObjectOfType<PlayerHUDController>();
+            if (hud != null)
+            {
+                hud.SetCrosshairVisible(localIsAiming || aiming);
             }
         }
     }
@@ -3306,6 +3452,12 @@ private void StartRollServerRpc(Vector3 direction)
     private void SetAimingServerRpc(bool aiming)
     {
         isAimingNet.Value = aiming;
+    }
+
+    [ServerRpc]
+    private void SetAimingRServerRpc(bool aiming)
+    {
+        isAimingRNet.Value = aiming;
     }
 
     // Animation Event: Được gọi từ hoạt ảnh LayCung hoặc Bow_Draw để kích hoạt mũi tên trên tay

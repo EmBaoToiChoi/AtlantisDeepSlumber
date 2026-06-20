@@ -221,6 +221,13 @@ MonoBehaviour:
     TransitionDuration: 0.25
     TriggerNameHash: -1139344104
     TransitionIndex: 1
+  - IsCrossFadeExit: 0
+    Layer: 1
+    OriginatingState: -371298824
+    DestinationState: -579325396
+    TransitionDuration: 0.25
+    TriggerNameHash: -1139344104
+    TransitionIndex: 1
   AnimatorParameterEntries:
     ParameterEntries:
     - name: run
@@ -293,6 +300,10 @@ MonoBehaviour:
       ParameterType: 9
     - name: IsPushing
       NameHash: -510442038
+      Synchronize: 1
+      ParameterType: 4
+    - name: IsAimingR
+      NameHash: -1317259463
       Synchronize: 1
       ParameterType: 4
   AnimatorParametersExpanded: 0
@@ -493,6 +504,11 @@ MonoBehaviour:
   aimAttackRange: 25
   aimMinPitch: -80
   aimMaxPitch: 80
+  rSkillAimCameraDistance: 3
+  rSkillAimShoulderOffset: 1
+  rSkillAimPivotHeight: 4
+  rSkillAimMinPitch: -80
+  rSkillAimMaxPitch: 80
   arrowHandVisual: {fileID: 9180063984867483030}
   arrowPrefab: {fileID: 7056528210913423644, guid: a7f9890a322eee44cbb455de48f5f449, type: 3}
   arrowSpawnPoint: {fileID: 3808857661455583198}
@@ -518,11 +534,16 @@ MonoBehaviour:
       MinSecondsBetweenUpdates: 0
       MaxSecondsBetweenUpdates: 0
     m_InternalValue: 0
-  rSkillIcePrefab: {fileID: 2601405793799926313, guid: 0de6eb30ac6b4a6458673ceebbb7fd30, type: 3}
+  rSkillIcePrefab: {fileID: 2268428576765071778, guid: e839e2ad5d7bf8147894cddb7903c7b3, type: 3}
   rSkillIceSpawnPoint: {fileID: 8950266880227468165}
   rSkillIceSpeed: 20
   rSkillIceDamage: 40
   isAimingNet:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 0
+  isAimingRNet:
     UpdateTraits:
       MinSecondsBetweenUpdates: 0
       MaxSecondsBetweenUpdates: 0
@@ -539,6 +560,10 @@ MonoBehaviour:
   aimSpineXOffset: 30
   aimMovingSpineYOffset: 20
   aimMovingSpineXOffset: 10
+  rSkillSpineYOffset: 60
+  rSkillSpineXOffset: 0
+  rSkillMovingSpineYOffset: 0
+  rSkillMovingSpineXOffset: 0
   spineSmoothSpeed: 10
   netAimAngle:
     UpdateTraits:
@@ -836,11 +861,11 @@ Transform:
   m_GameObject: {fileID: 1902796575120300051}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -0, y: -0.00156, z: 0.00414}
+  m_LocalPosition: {x: 0.00031, y: 0.00078, z: 0.00271}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 8147598836496748478}
+  m_Father: {fileID: 4378516375714181458}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &2853842108438221816
 GameObject:
@@ -1453,9 +1478,6 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 3405717001315203131, guid: aa2e3e6cfa356944eac3f8fa7441c613, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1130024218619803878}
-    - targetCorrespondingSourceObject: {fileID: 3405717001315203131, guid: aa2e3e6cfa356944eac3f8fa7441c613, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 8950266880227468165}
     - targetCorrespondingSourceObject: {fileID: 2205917650286948166, guid: aa2e3e6cfa356944eac3f8fa7441c613, type: 3}
       insertIndex: -1
       addedObject: {fileID: 8515282798021896146}
@@ -1468,6 +1490,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 7102740776996325079, guid: aa2e3e6cfa356944eac3f8fa7441c613, type: 3}
       insertIndex: -1
       addedObject: {fileID: 3808857661455583198}
+    - targetCorrespondingSourceObject: {fileID: 7102740776996325079, guid: aa2e3e6cfa356944eac3f8fa7441c613, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 8950266880227468165}
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 5704617277878089646, guid: aa2e3e6cfa356944eac3f8fa7441c613, type: 3}
       insertIndex: -1
