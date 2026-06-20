@@ -428,16 +428,28 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
     public void TriggerInvisibilitySkill()
     {
         var carrier = GetComponent<PlayerLogCarrier>();
-        if (carrier != null && carrier.isCarrying) return;
+        if (carrier != null && carrier.isCarrying)
+        {
+            Debug.LogWarning("[ArthurPlayer] Cannot trigger R Skill while carrying a log!");
+            return;
+        }
 
         if (PlayerLevel < 5 && !IsSkillsUnlocked) return;
-        if (GetActiveWeaponIndex() != 1) return;
+
+        int activeWeaponIdx = GetActiveWeaponIndex();
+        if (activeWeaponIdx != 1)
+        {
+            Debug.LogWarning($"[ArthurPlayer] Cannot trigger R Skill because active weapon is {activeWeaponIdx} (must be 1/unarmed!). Please switch to unarmed first.");
+            return;
+        }
         
+        Debug.Log("[ArthurPlayer] Triggering R Skill: Setting localIsAimingR to true.");
         SetAimingR(true);
     }
 
     private void SetAimingR(bool aiming)
     {
+        Debug.Log($"[ArthurPlayer] SetAimingR({aiming}) called. Current: {localIsAimingR}");
         if (localIsAimingR == aiming) return;
         localIsAimingR = aiming;
         
@@ -510,8 +522,19 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
                 }
             }
 
-            if (!Input.GetKey(KeyCode.R) && !isRShootPending)
+            bool rKeyPressed = false;
+            if (UnityEngine.InputSystem.Keyboard.current != null)
             {
+                rKeyPressed = UnityEngine.InputSystem.Keyboard.current.rKey.isPressed;
+            }
+            else
+            {
+                rKeyPressed = Input.GetKey(KeyCode.R);
+            }
+
+            if (!rKeyPressed && !isRShootPending)
+            {
+                Debug.Log("[ArthurPlayer] R key released, setting localIsAimingR to false.");
                 SetAimingR(false);
             }
             else if (Input.GetMouseButtonDown(0))
@@ -622,7 +645,10 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
             int layerMask = ~LayerMask.GetMask("Player", "Ignore Raycast");
             if (Physics.Raycast(ray.origin, ray.direction, out RaycastHit cameraHit, 50f, layerMask))
             {
-                targetPoint = cameraHit.point;
+                if (cameraHit.collider.transform.root != transform.root && Vector3.Distance(cameraHit.point, transform.position) >= 3.0f)
+                {
+                    targetPoint = cameraHit.point;
+                }
             }
             shootDirection = (targetPoint - spawnPos).normalized;
         }
