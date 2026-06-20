@@ -3,7 +3,122 @@ guid: 1972d9ffc310c974d97db04e2325f8a7
 ModelImporter:
   serializedVersion: 22200
   internalIDToNameTable: []
-  externalObjects: {}
+  externalObjects:
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Doors
+    second: {fileID: 2100000, guid: 93de8d126f9bf1943801c01498d79488, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Floor
+    second: {fileID: 2100000, guid: f5ede53c7b672264eb11524afd4aac0e, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Floor2
+    second: {fileID: 2100000, guid: 23586afcd6a786642a7ead3b048d91c9, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Material.001
+    second: {fileID: 2100000, guid: 3291ca7abc4421e4faa359275ad2d41b, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: _beam.002
+    second: {fileID: 2100000, guid: 219cbb5389d39b6408d584dab6d2d396, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: bar_counter
+    second: {fileID: 2100000, guid: 41ae4aa9bd5086049b48b43d105846a4, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: beer&foam
+    second: {fileID: 2100000, guid: 26b0c0baa06f94c40b5d2602d261dfe6, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: beer_barrel3
+    second: {fileID: 2100000, guid: 1ed88f85a96a229468a10c4057732e75, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: beer_barrel4
+    second: {fileID: 2100000, guid: b6626399ad6e517428bf6992e069ee93, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: beer_barrel5
+    second: {fileID: 2100000, guid: 4db63ff4e82bc7545924dc9350bdc30d, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: bottle
+    second: {fileID: 2100000, guid: ffd70c4abc071b1489e4d9b21a4db7ed, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: ceiling
+    second: {fileID: 2100000, guid: 6b6d8548a657c594d93b8dafdad9ba55, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: chairs.001
+    second: {fileID: 2100000, guid: d6e4d82342475fa409079c29032ce454, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: chandelier
+    second: {fileID: 2100000, guid: 7b34376f4550d2646b2cb8216a23dbd4, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: cup_
+    second: {fileID: 2100000, guid: 7fe3648c8046e964cba8c01ae613c171, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: curb
+    second: {fileID: 2100000, guid: 8034bfd79bf974247858d3743d199f6c, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: dishes
+    second: {fileID: 2100000, guid: f3e42f46f83c82440b558ee08b94750e, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: partition
+    second: {fileID: 2100000, guid: 6ba4aa179e6972a4cba2e2ba1b3bf69f, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: pillar
+    second: {fileID: 2100000, guid: b3e9732a461f62d4b8eb9f4d83f8cd9d, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: stairs_and_railings
+    second: {fileID: 2100000, guid: 20e0af07dcb55354b87f5862809a84bd, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: storage.001
+    second: {fileID: 2100000, guid: d8412c1596ad3d3458a2c83b1dd1c383, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: tables.001
+    second: {fileID: 2100000, guid: 96c1873aeb4a61242843a31a5a824e28, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: walls
+    second: {fileID: 2100000, guid: 74b416a1b7c6bee46837536bf74f766b, type: 2}
   materials:
     materialImportMode: 2
     materialName: 0
