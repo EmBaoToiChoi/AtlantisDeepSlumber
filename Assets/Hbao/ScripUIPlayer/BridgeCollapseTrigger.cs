@@ -61,6 +61,33 @@ public class BridgeCollapseTrigger : NetworkBehaviour
         NetworkVariableWritePermission.Server
     );
 
+    public NetworkVariable<bool> isReadyToBuild = new NetworkVariable<bool>(
+        false,
+        NetworkVariableReadPermission.Everyone,
+        NetworkVariableWritePermission.Server
+    );
+
+    public NetworkVariable<float> buildProgress = new NetworkVariable<float>(
+        0f,
+        NetworkVariableReadPermission.Everyone,
+        NetworkVariableWritePermission.Server
+    );
+
+    [Header("Coop Build Config")]
+    public float coopBuildDecayRate = 8f;
+    public float soloBuildDecayRate = 0.5f;
+    public float buildProgressPerClick = 1.5f;
+    public ParticleSystem buildProgressParticles;
+
+    [HideInInspector]
+    public bool localReadyToBuild = false;
+    [HideInInspector]
+    public float localBuildProgress = 0f;
+
+    private Material ghostMaterialInstance;
+    private float lastProgress = 0f;
+    private float particleStopTimer = 0f;
+
     private bool localCollapseTriggered = false;
     private bool localRepaired = false;
     private int localLogsSubmittedCount = 0;
@@ -193,6 +220,7 @@ public class BridgeCollapseTrigger : NetworkBehaviour
         hasCollapsed.OnValueChanged += OnCollapseStateChanged;
         hasBeenRepaired.OnValueChanged += OnRepairStateChanged;
         logsSubmitted.OnValueChanged += OnLogsSubmittedChanged;
+        isReadyToBuild.OnValueChanged += OnReadyToBuildChanged;
 
         // Cập nhật trạng thái hiển thị cho người vào trễ
         ApplyBridgeVisualState(hasCollapsed.Value, hasBeenRepaired.Value, logsSubmitted.Value);
@@ -203,6 +231,19 @@ public class BridgeCollapseTrigger : NetworkBehaviour
         hasCollapsed.OnValueChanged -= OnCollapseStateChanged;
         hasBeenRepaired.OnValueChanged -= OnRepairStateChanged;
         logsSubmitted.OnValueChanged -= OnLogsSubmittedChanged;
+        isReadyToBuild.OnValueChanged -= OnReadyToBuildChanged;
+    }
+
+    private void OnReadyToBuildChanged(bool oldVal, bool newVal)
+    {
+        if (newVal)
+        {
+            PlayerHUDController localHud = FindAnyObjectByType<PlayerHUDController>();
+            if (localHud != null)
+            {
+                localHud.ShowMissionAlert("GỖ ĐÃ ĐỦ! HÃY LẠI GẦN CẦU VÀ ẤN F ĐỂ CÙNG XÂY DỰNG!", 6.0f);
+            }
+        }
     }
 
     private void Update()
@@ -229,6 +270,57 @@ public class BridgeCollapseTrigger : NetworkBehaviour
                     indicator.reachDistance = 4f;
                     Debug.Log($"[BridgeCollapseTrigger] Gắn chỉ đường cho Local Player {localPlayer.DisplayName} tới cây: {myTree.name}");
                 }
+            }
+        }
+
+        // 2. Coop Building Progress and Decay logic
+        bool isNetwork = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
+        bool ready = isNetwork ? isReadyToBuild.Value : localReadyToBuild;
+        float currentProgress = isNetwork ? buildProgress.Value : localBuildProgress;
+
+        if (ready)
+        {
+            if (isNetwork && IsServer)
+            {
+                if (buildProgress.Value > 0f && buildProgress.Value < 100f)
+                {
+                    buildProgress.Value = Mathf.Clamp(buildProgress.Value - coopBuildDecayRate * Time.deltaTime, 0f, 100f);
+                }
+            }
+            else if (!isNetwork)
+            {
+                if (localBuildProgress > 0f && localBuildProgress < 100f)
+                {
+                    localBuildProgress = Mathf.Clamp(localBuildProgress - soloBuildDecayRate * Time.deltaTime, 0f, 100f);
+                }
+            }
+
+            // Update ghost alpha dynamically as progress increases
+            UpdateGhostAlpha(currentProgress);
+
+            // Emit particles when progress increases
+            if (currentProgress > lastProgress)
+            {
+                SetParticlesActive(true);
+                particleStopTimer = 0.5f; // keep playing for 0.5s after clicks stop
+            }
+            lastProgress = currentProgress;
+
+            if (particleStopTimer > 0f)
+            {
+                particleStopTimer -= Time.deltaTime;
+                if (particleStopTimer <= 0f)
+                {
+                    SetParticlesActive(false);
+                }
+            }
+
+            // Periodically sync UI alert / quest to say "Bạn cần tương tác để xây cầu"
+            PlayerHUDController localHudCtl = FindAnyObjectByType<PlayerHUDController>();
+            if (localHudCtl != null)
+            {
+                localHudCtl.UpdateQuestDescription("Bạn cần tương tác để xây cầu!");
+                localHudCtl.UpdateQuestProgress((int)currentProgress, 100);
             }
         }
     }
@@ -406,17 +498,19 @@ public class BridgeCollapseTrigger : NetworkBehaviour
             if (netPlayer != null)
             {
                 var carrier = localPlayer.gameObject.GetComponent<PlayerLogCarrier>();
+                int amount = carrier != null ? carrier.carriedLogCount : 1;
                 if (carrier != null)
                 {
                     carrier.DropLog();
                 }
-                SubmitCarriedLogServerRpc(netPlayer.NetworkObjectId);
+                SubmitCarriedLogServerRpc(netPlayer.NetworkObjectId, amount);
             }
         }
         else
         {
             // Chế độ offline/standalone
             var carrier = localPlayer.gameObject.GetComponent<PlayerLogCarrier>();
+            int amount = carrier != null ? carrier.carriedLogCount : 1;
             if (carrier != null)
             {
                 carrier.DropLog();
@@ -425,11 +519,18 @@ public class BridgeCollapseTrigger : NetworkBehaviour
             int remaining = requiredLogsToRepair - GetLogsSubmittedCount();
             if (remaining > 0)
             {
-                localLogsSubmittedCount += 1;
+                int actualSubmit = Mathf.Min(amount, remaining);
+                localLogsSubmittedCount += actualSubmit;
                 if (localLogsSubmittedCount >= requiredLogsToRepair)
                 {
-                    localRepaired = true;
-                    RepairBridgeLocal();
+                    localReadyToBuild = true;
+                    PlayerHUDController localHud = FindAnyObjectByType<PlayerHUDController>();
+                    if (localHud != null)
+                    {
+                        localHud.ShowMissionAlert("GỖ ĐÃ ĐỦ! HÃY LẠI GẦN CẦU VÀ ẤN F ĐỂ CÙNG XÂY DỰNG!", 6.0f);
+                        localHud.UpdateQuestDescription("Bạn cần tương tác để xây cầu!");
+                        localHud.UpdateQuestProgress(0, 100);
+                    }
                 }
                 else
                 {
@@ -443,7 +544,7 @@ public class BridgeCollapseTrigger : NetworkBehaviour
     }
 
     [ServerRpc(RequireOwnership = false)]
-    private void SubmitCarriedLogServerRpc(ulong playerNetObjectId)
+    private void SubmitCarriedLogServerRpc(ulong playerNetObjectId, int amount)
     {
         if (!IsServer) return;
 
@@ -452,12 +553,12 @@ public class BridgeCollapseTrigger : NetworkBehaviour
         int remaining = requiredLogsToRepair - logsSubmitted.Value;
         if (remaining > 0)
         {
-            logsSubmitted.Value += 1;
+            int actualSubmit = Mathf.Min(amount, remaining);
+            logsSubmitted.Value += actualSubmit;
             if (logsSubmitted.Value >= requiredLogsToRepair)
             {
-                hasBeenRepaired.Value = true;
-                Debug.Log("[BridgeCollapseTrigger] Server: Cầu đã được sửa hoàn toàn!");
-                ShowRepairCompleteUIClientRpc();
+                isReadyToBuild.Value = true;
+                Debug.Log("[BridgeCollapseTrigger] Server: Cầu đã đủ gỗ, chuyển sang ReadyToBuild!");
             }
         }
     }
@@ -491,8 +592,14 @@ public class BridgeCollapseTrigger : NetworkBehaviour
             
             if (localLogsSubmittedCount >= requiredLogsToRepair)
             {
-                localRepaired = true;
-                RepairBridgeLocal();
+                localReadyToBuild = true;
+                PlayerHUDController localHud = FindAnyObjectByType<PlayerHUDController>();
+                if (localHud != null)
+                {
+                    localHud.ShowMissionAlert("GỖ ĐÃ ĐỦ! HÃY LẠI GẦN CẦU VÀ ẤN F ĐỂ CÙNG XÂY DỰNG!", 6.0f);
+                    localHud.UpdateQuestDescription("Bạn cần tương tác để xây cầu!");
+                    localHud.UpdateQuestProgress(0, 100);
+                }
             }
             else
             {
@@ -530,9 +637,8 @@ public class BridgeCollapseTrigger : NetworkBehaviour
                 
                 if (logsSubmitted.Value >= requiredLogsToRepair)
                 {
-                    hasBeenRepaired.Value = true;
-                    Debug.Log("[BridgeCollapseTrigger] Server: Cầu đã được sửa hoàn toàn!");
-                    ShowRepairCompleteUIClientRpc();
+                    isReadyToBuild.Value = true;
+                    Debug.Log("[BridgeCollapseTrigger] Server: Cầu đã đủ gỗ, chuyển sang ReadyToBuild!");
                 }
             }
         }
@@ -638,7 +744,8 @@ public class BridgeCollapseTrigger : NetworkBehaviour
             var renderers = bridgeRoot.GetComponentsInChildren<Renderer>(true);
             
             // Tạo 1 vật liệu ghost trắng dùng chung để đảm bảo hiển thị màu sắc trắng và trong suốt hoạt động hoàn hảo trên Standard/URP
-            Material ghostMat = CreateGhostMaterial(0.35f);
+            ghostMaterialInstance = CreateGhostMaterial(0.35f);
+            Material ghostMat = ghostMaterialInstance;
             
             foreach (var rend in renderers)
             {
@@ -671,6 +778,7 @@ public class BridgeCollapseTrigger : NetworkBehaviour
         else if (!enableGhost && isGhostModeActive)
         {
             isGhostModeActive = false;
+            ghostMaterialInstance = null;
 
             // Khôi phục colliders
             if (bridgeRoot != null)
@@ -695,6 +803,71 @@ public class BridgeCollapseTrigger : NetworkBehaviour
             Debug.Log("[BridgeCollapseTrigger] Ghost mode TẮT - Đã khôi phục materials gốc.");
         }
     }
+
+    private void UpdateGhostAlpha(float progress)
+    {
+        if (ghostMaterialInstance != null)
+        {
+            float alpha = 0.35f + (progress / 100f) * 0.55f;
+            Color col = new Color(1f, 1f, 1f, alpha);
+            if (ghostMaterialInstance.HasProperty("_BaseColor"))
+            {
+                ghostMaterialInstance.SetColor("_BaseColor", col);
+            }
+            else if (ghostMaterialInstance.HasProperty("_Color"))
+            {
+                ghostMaterialInstance.SetColor("_Color", col);
+            }
+        }
+    }
+
+    private void SetParticlesActive(bool active)
+    {
+        if (buildProgressParticles == null)
+        {
+            buildProgressParticles = GetComponentInChildren<ParticleSystem>();
+        }
+
+        if (buildProgressParticles != null)
+        {
+            var emission = buildProgressParticles.emission;
+            emission.enabled = active;
+            if (active && !buildProgressParticles.isPlaying)
+            {
+                buildProgressParticles.Play();
+            }
+        }
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    public void ClickBuildServerRpc()
+    {
+        if (!IsServer || !isReadyToBuild.Value) return;
+
+        buildProgress.Value = Mathf.Min(buildProgress.Value + buildProgressPerClick, 100f);
+        if (buildProgress.Value >= 100f)
+        {
+            hasBeenRepaired.Value = true;
+            isReadyToBuild.Value = false;
+            Debug.Log("[BridgeCollapseTrigger] Server: Cầu đã được xây dựng xong!");
+            ShowRepairCompleteUIClientRpc();
+        }
+    }
+
+    public void ClickBuildLocal()
+    {
+        if (!localReadyToBuild) return;
+
+        localBuildProgress = Mathf.Min(localBuildProgress + buildProgressPerClick, 100f);
+        if (localBuildProgress >= 100f)
+        {
+            localRepaired = true;
+            localReadyToBuild = false;
+            Debug.Log("[BridgeCollapseTrigger] Standalone: Cầu đã được xây dựng xong!");
+            RepairBridgeLocal();
+        }
+    }
+
 
     private Material CreateGhostMaterial(float alpha)
     {

@@ -8,6 +8,26 @@ public class CollectibleItemDrop : NetworkBehaviour, IInteractableItem
     public float interactRadius = 2.5f;
     public float InteractRadius => interactRadius;
 
+    [Header("Wood Log Amount")]
+    public NetworkVariable<int> woodAmount = new NetworkVariable<int>(
+        1,
+        NetworkVariableReadPermission.Everyone,
+        NetworkVariableWritePermission.Server
+    );
+
+    private int _localWoodAmount = 1;
+    public int localWoodAmount
+    {
+        get => _localWoodAmount;
+        set
+        {
+            _localWoodAmount = value;
+            UpdateAmountUI();
+        }
+    }
+
+    private TMPro.TMP_Text uiText;
+
     [Header("Floating Animation Settings")]
     public float rotationSpeed = 60f;
     public float bobSpeed = 2f;
@@ -63,8 +83,77 @@ public class CollectibleItemDrop : NetworkBehaviour, IInteractableItem
         return NetworkManager.Singleton == null || !NetworkManager.Singleton.IsListening;
     }
 
-    private void Start() => startY = transform.position.y;
-    private void OnEnable() { InteractionRegistry.Register(this); startY = transform.position.y; }
+    public override void OnNetworkSpawn()
+    {
+        base.OnNetworkSpawn();
+        woodAmount.OnValueChanged += OnWoodAmountChanged;
+        UpdateAmountUI();
+    }
+
+    public override void OnNetworkDespawn()
+    {
+        base.OnNetworkDespawn();
+        woodAmount.OnValueChanged -= OnWoodAmountChanged;
+    }
+
+    private void OnWoodAmountChanged(int oldVal, int newVal)
+    {
+        UpdateAmountUI();
+    }
+
+    private void UpdateAmountUI()
+    {
+        if (!itemName.Equals("WoodLog", System.StringComparison.OrdinalIgnoreCase) && 
+            !itemName.Equals("ThanhGo", System.StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        int amount = IsPlayerStandalone() ? localWoodAmount : woodAmount.Value;
+
+        if (uiText == null)
+        {
+            Transform existingTextObj = transform.Find("WoodCountUI");
+            if (existingTextObj != null)
+            {
+                uiText = existingTextObj.GetComponent<TMPro.TMP_Text>();
+            }
+            else
+            {
+                GameObject uiGo = new GameObject("WoodCountUI");
+                uiGo.transform.SetParent(transform, false);
+                uiGo.transform.localPosition = new Vector3(0f, 1.0f, 0f);
+
+                var tmpText = uiGo.AddComponent<TMPro.TextMeshPro>();
+                tmpText.alignment = TMPro.TextAlignmentOptions.Center;
+                tmpText.fontSize = 4f;
+                tmpText.color = Color.yellow;
+                
+                uiGo.AddComponent<BillboardUI>();
+
+                uiText = tmpText;
+            }
+        }
+
+        if (uiText != null)
+        {
+            uiText.text = amount.ToString();
+        }
+    }
+
+    private void Start()
+    {
+        startY = transform.position.y;
+        UpdateAmountUI();
+    }
+
+    private void OnEnable() 
+    { 
+        InteractionRegistry.Register(this); 
+        startY = transform.position.y; 
+        UpdateAmountUI();
+    }
+
     private void OnDisable() { InteractionRegistry.Unregister(this); if (isWithinRange && hud != null) hud.ShowInteractionPrompt(false, ""); isWithinRange = false; }
 
     private void Update()
@@ -178,17 +267,18 @@ public class CollectibleItemDrop : NetworkBehaviour, IInteractableItem
 
         if (itemName.Equals("WoodLog", System.StringComparison.OrdinalIgnoreCase) || itemName.Equals("ThanhGo", System.StringComparison.OrdinalIgnoreCase))
         {
+            int amount = IsPlayerStandalone() ? localWoodAmount : woodAmount.Value;
             if (IsPlayerStandalone())
             {
                 var carrier = localPlayer.GetComponent<PlayerLogCarrier>();
                 if (carrier == null) carrier = localPlayer.gameObject.AddComponent<PlayerLogCarrier>();
-                carrier.CarryLog();
+                carrier.CarryLog(amount);
                 WoodLogObjectPool.Instance.ReturnToPool(gameObject);
             }
             else
             {
                 var netPlayer = localPlayer.GetComponent<NetworkObject>();
-                if (netPlayer != null) PickUpWoodLogServerRpc(netPlayer.NetworkObjectId);
+                if (netPlayer != null) PickUpWoodLogServerRpc(netPlayer.NetworkObjectId, amount);
             }
             return;
         }
@@ -202,7 +292,7 @@ public class CollectibleItemDrop : NetworkBehaviour, IInteractableItem
     }
 
     [ServerRpc(RequireOwnership = false)]
-    private void PickUpWoodLogServerRpc(ulong playerNetObjectId)
+    private void PickUpWoodLogServerRpc(ulong playerNetObjectId, int amount)
     {
         if (!IsServer) return;
         if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(playerNetObjectId, out var playerNetObj))
@@ -210,14 +300,14 @@ public class CollectibleItemDrop : NetworkBehaviour, IInteractableItem
             var pInt = playerNetObj.GetComponent<PlayerInteraction>();
             if (pInt != null && pInt.isCarryingCore.Value) return;
         }
-        PickUpWoodLogClientRpc(playerNetObjectId);
+        PickUpWoodLogClientRpc(playerNetObjectId, amount);
         var netObj = GetComponent<NetworkObject>();
         if (netObj != null && netObj.IsSpawned) netObj.Despawn();
         else WoodLogObjectPool.Instance.ReturnToPool(gameObject);
     }
 
     [ClientRpc]
-    private void PickUpWoodLogClientRpc(ulong playerNetObjectId)
+    private void PickUpWoodLogClientRpc(ulong playerNetObjectId, int amount)
     {
         if (NetworkManager.Singleton == null) return;
         if (!NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(playerNetObjectId, out var playerNetObj)) return;
@@ -225,7 +315,7 @@ public class CollectibleItemDrop : NetworkBehaviour, IInteractableItem
         var playerObj = playerNetObj.gameObject;
         var carrier = playerObj.GetComponent<PlayerLogCarrier>();
         if (carrier == null) carrier = playerObj.AddComponent<PlayerLogCarrier>();
-        carrier.CarryLog(true);
+        carrier.CarryLog(amount, true);
     }
 
     [ServerRpc(RequireOwnership = false)]
@@ -234,5 +324,36 @@ public class CollectibleItemDrop : NetworkBehaviour, IInteractableItem
         var netObj = GetComponent<NetworkObject>();
         if (netObj != null && netObj.IsSpawned) netObj.Despawn();
         else Destroy(gameObject);
+    }
+}
+
+public class BillboardUI : MonoBehaviour
+{
+    private Transform mainCameraTransform;
+
+    private void Start()
+    {
+        if (Camera.main != null)
+        {
+            mainCameraTransform = Camera.main.transform;
+        }
+    }
+
+    private void LateUpdate()
+    {
+        if (mainCameraTransform == null)
+        {
+            if (Camera.main != null)
+            {
+                mainCameraTransform = Camera.main.transform;
+            }
+            else
+            {
+                return;
+            }
+        }
+
+        transform.LookAt(transform.position + mainCameraTransform.rotation * Vector3.forward,
+            mainCameraTransform.rotation * Vector3.up);
     }
 }

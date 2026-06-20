@@ -65,33 +65,48 @@ public class BridgeRepairTrigger : MonoBehaviour
                     inRange = distance <= bridgeController.repairInteractRadius;
                 }
 
+                bool isReady = (Unity.Netcode.NetworkManager.Singleton != null && Unity.Netcode.NetworkManager.Singleton.IsListening) ? bridgeController.isReadyToBuild.Value : bridgeController.localReadyToBuild;
+
                 if (inRange)
                 {
                     wasInRange = true;
                     PlayerHUDController localHud = FindAnyObjectByType<PlayerHUDController>();
                     if (localHud != null)
                     {
-                        var carrier = localPlayer.gameObject.GetComponent<PlayerLogCarrier>();
-                        bool isCarrying = carrier != null && carrier.isCarrying;
-
-                        int logsSubmitted = bridgeController.GetLogsSubmittedCount();
-                        int requiredLogsToRepair = bridgeController.requiredLogsToRepair;
-                        int remaining = requiredLogsToRepair - logsSubmitted;
-
-                        if (remaining > 0)
+                        if (isReady)
                         {
-                            if (isCarrying)
-                            {
-                                localHud.ShowInteractionPrompt(true, $"Ấn [G] để góp gỗ sửa cầu ({logsSubmitted}/{requiredLogsToRepair})");
+                            float buildProgressVal = (Unity.Netcode.NetworkManager.Singleton != null && Unity.Netcode.NetworkManager.Singleton.IsListening) ? bridgeController.buildProgress.Value : bridgeController.localBuildProgress;
+                            localHud.ShowInteractionPrompt(true, $"Ấn [F] để xây cầu (Tiến độ: {(int)buildProgressVal}%)");
 
-                                if (Input.GetKeyDown(KeyCode.G))
-                                {
-                                    bridgeController.RequestSubmitCarriedLog();
-                                }
-                            }
-                            else
+                            if (Input.GetKeyDown(KeyCode.F))
                             {
-                                localHud.ShowInteractionPrompt(true, $"Hãy tìm và bưng gỗ đến đây để sửa cầu ({logsSubmitted}/{requiredLogsToRepair})");
+                                localHud.ToggleCoopBuildUI(bridgeController);
+                            }
+                        }
+                        else
+                        {
+                            var carrier = localPlayer.gameObject.GetComponent<PlayerLogCarrier>();
+                            bool isCarrying = carrier != null && carrier.isCarrying;
+
+                            int logsSubmitted = bridgeController.GetLogsSubmittedCount();
+                            int requiredLogsToRepair = bridgeController.requiredLogsToRepair;
+                            int remaining = requiredLogsToRepair - logsSubmitted;
+
+                            if (remaining > 0)
+                            {
+                                if (isCarrying)
+                                {
+                                    localHud.ShowInteractionPrompt(true, $"Ấn [G] để góp gỗ sửa cầu ({logsSubmitted}/{requiredLogsToRepair})");
+
+                                    if (Input.GetKeyDown(KeyCode.G))
+                                    {
+                                        bridgeController.RequestSubmitCarriedLog();
+                                    }
+                                }
+                                else
+                                {
+                                    localHud.ShowInteractionPrompt(true, $"Hãy tìm và bưng gỗ đến đây để sửa cầu ({logsSubmitted}/{requiredLogsToRepair})");
+                                }
                             }
                         }
                     }
@@ -105,6 +120,7 @@ public class BridgeRepairTrigger : MonoBehaviour
                         if (localHud != null)
                         {
                             localHud.ShowInteractionPrompt(false, "");
+                            localHud.CloseCoopBuildUI();
                         }
                     }
                 }
@@ -120,6 +136,7 @@ public class BridgeRepairTrigger : MonoBehaviour
                 if (localHud != null)
                 {
                     localHud.ShowInteractionPrompt(false, "");
+                    localHud.CloseCoopBuildUI();
                 }
             }
         }

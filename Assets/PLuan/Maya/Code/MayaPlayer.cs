@@ -1871,7 +1871,8 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
     private void HandleStandaloneUpdate()
 {
     bool isDialogueOpen = (RakanDialogueController.Instance != null && RakanDialogueController.Instance.IsActive) ||
-                           (SilasDialogueController.Instance != null && SilasDialogueController.Instance.IsActive);
+                           (SilasDialogueController.Instance != null && SilasDialogueController.Instance.IsActive) ||
+                           PlayerHUDController.isCoopBuildingUIOpen;
 
     if (isDialogueOpen)
     {
@@ -2045,7 +2046,8 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
     private void HandleOwnerUpdate()
 {
     bool isDialogueOpen = (RakanDialogueController.Instance != null && RakanDialogueController.Instance.IsActive) ||
-                           (SilasDialogueController.Instance != null && SilasDialogueController.Instance.IsActive);
+                           (SilasDialogueController.Instance != null && SilasDialogueController.Instance.IsActive) ||
+                           PlayerHUDController.isCoopBuildingUIOpen;
 
     if (isDialogueOpen)
     {
@@ -3844,21 +3846,29 @@ private void StartRollServerRpc(Vector3 direction)
             if (logPrefab == null) logPrefab = Resources.Load<GameObject>("WoodLog");
             if (logPrefab != null)
             {
-                WoodLogObjectPool.Instance.GetOrCreate(logPrefab, spawnPos, Quaternion.identity);
+                var carrier = GetComponent<PlayerLogCarrier>();
+                int amount = carrier != null ? carrier.carriedLogCount : 1;
+                GameObject wood = WoodLogObjectPool.Instance.GetOrCreate(logPrefab, spawnPos, Quaternion.identity);
+                var cid = wood.GetComponent<CollectibleItemDrop>();
+                if (cid != null)
+                {
+                    cid.localWoodAmount = amount;
+                }
             }
-            var carrier = GetComponent<PlayerLogCarrier>();
-            if (carrier != null) carrier.DropLog();
+            var carrierObj = GetComponent<PlayerLogCarrier>();
+            if (carrierObj != null) carrierObj.DropLog();
         }
         else if (IsOwner)
         {
             var carrier = GetComponent<PlayerLogCarrier>();
+            int amount = carrier != null ? carrier.carriedLogCount : 1;
             if (carrier != null) carrier.DropLog();
-            DropWoodLogServerRpc(spawnPos);
+            DropWoodLogServerRpc(spawnPos, amount);
         }
     }
 
     [ServerRpc]
-    private void DropWoodLogServerRpc(Vector3 position)
+    private void DropWoodLogServerRpc(Vector3 position, int amount)
     {
         if (!IsServer) return;
 
@@ -3868,6 +3878,11 @@ private void StartRollServerRpc(Vector3 direction)
         if (logPrefab != null)
         {
             GameObject wood = WoodLogObjectPool.Instance.GetOrCreate(logPrefab, position, Quaternion.identity);
+            var cid = wood.GetComponent<CollectibleItemDrop>();
+            if (cid != null)
+            {
+                cid.woodAmount.Value = amount;
+            }
             var netObj = wood.GetComponent<NetworkObject>();
             if (netObj != null)
             {

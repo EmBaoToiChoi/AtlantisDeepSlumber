@@ -4,84 +4,69 @@ using System.Collections;
 
 public class CameraSwitcher : NetworkBehaviour
 {
-    [Header("Camera Switching")]
-    public Camera topDownCamera; 
-    public CanvasGroup fadePanel; // Gán Panel đen/trắng (nếu có) vào đây
-    
-    [Header("Scripts cần tắt/bật (Cực quan trọng)")]
-    // HÃY KÉO SCRIPT ĐIỀU KHIỂN NHÂN VẬT (Movement, Controller) VÀO ĐÂY
-    public MonoBehaviour[] scriptsToToggle; 
-
     [Header("Cấu hình")]
-    public float transitionDuration = 2.0f; 
+    public Transform topDownTarget; 
+    public float transitionDuration = 2.0f;
+    
+    [Header("Scripts cần tắt/bật")]
+    public MonoBehaviour[] scriptsToToggle;
 
     private Camera mainCamera;
     private bool isTopDownActive = false;
     private bool isTransitioning = false;
+    
+    // [THÊM MỚI] Biến kiểm soát vùng
+    private bool isInsideZone = false;
 
-    private Vector3 savedPos;
-    private Quaternion savedRot;
-
-    // Biến để lưu trạng thái xoay của nhân vật trước khi bay
-    private Quaternion playerStartRot;
+    private Vector3 originalPos;
+    private Quaternion originalRot;
 
     void Start()
     {
         mainCamera = Camera.main;
-        if (topDownCamera != null) topDownCamera.enabled = false;
-        if (fadePanel != null) fadePanel.alpha = 0; 
     }
 
     void Update()
     {
         if (!IsOwner) return;
-        if (Input.GetKeyDown(KeyCode.B) && !isTransitioning)
+
+        // [SỬA] Thêm điều kiện (isInsideZone || isTopDownActive)
+        // Nghĩa là: Phải trong vùng mới được bật, HOẶC nếu đang ở TopDown rồi thì phải cho nhấn B để quay về
+        if (Input.GetKeyDown(KeyCode.B) && !isTransitioning && (isInsideZone || isTopDownActive))
         {
-            StartCoroutine(ToggleModeRoutine());
+            StartCoroutine(ToggleCameraView());
         }
     }
 
-    IEnumerator ToggleModeRoutine()
+    // [THÊM MỚI] Kiểm tra vùng
+    private void OnTriggerEnter(Collider other)
+    {
+        if (other.CompareTag("CameraZone")) isInsideZone = true;
+    }
+
+    private void OnTriggerExit(Collider other)
+    {
+        if (other.CompareTag("CameraZone")) isInsideZone = false;
+    }
+
+    IEnumerator ToggleCameraView()
     {
         isTransitioning = true;
         isTopDownActive = !isTopDownActive;
 
-        if (mainCamera == null) mainCamera = Camera.main;
-
-        Vector3 startPos = mainCamera.transform.position;
-        Quaternion startRot = mainCamera.transform.rotation;
-
         if (isTopDownActive)
         {
-            // --- MỞ TOP DOWN ---
-            savedPos = startPos;
-            savedRot = startRot;
-            
-            // 1. TẮT TẤT CẢ SCRIPT (Bao gồm script di chuyển nhân vật)
+            originalPos = mainCamera.transform.position;
+            originalRot = mainCamera.transform.rotation;
             foreach (var s in scriptsToToggle) if (s != null) s.enabled = false;
-            
-            // 2. Lưu lại hướng xoay hiện tại của nhân vật để không bị lỗi trục
-            playerStartRot = transform.rotation;
-            
-            // 3. Bay camera (Đã tắt xoay nhân vật nên nó sẽ đứng yên)
-            yield return StartCoroutine(MoveCamera(startPos, startRot, topDownCamera.transform.position, topDownCamera.transform.rotation));
 
-            mainCamera.enabled = false;
-            topDownCamera.enabled = true;
+            yield return StartCoroutine(MoveCamera(mainCamera.transform.position, mainCamera.transform.rotation, 
+                                               topDownTarget.position, topDownTarget.rotation));
         }
         else
         {
-            // --- QUAY LẠI ---
-            mainCamera.enabled = true;
-            topDownCamera.enabled = false;
-
-            // 1. Bay camera về vị trí cũ
-            yield return StartCoroutine(MoveCamera(topDownCamera.transform.position, topDownCamera.transform.rotation, savedPos, savedRot));
-
-            // 2. Chốt lại góc xoay của nhân vật trước khi bật script điều khiển
-            transform.rotation = playerStartRot;
-
-            // 3. BẬT LẠI TẤT CẢ SCRIPT
+            yield return StartCoroutine(MoveCamera(mainCamera.transform.position, mainCamera.transform.rotation, 
+                                               originalPos, originalRot));
             foreach (var s in scriptsToToggle) if (s != null) s.enabled = true;
         }
 
