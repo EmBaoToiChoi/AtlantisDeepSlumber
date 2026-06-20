@@ -11,6 +11,7 @@ TagManager:
   - Nuoc
   - Bang
   - Set
+  - CameraZone
   layers:
   - Default
   - TransparentFX
