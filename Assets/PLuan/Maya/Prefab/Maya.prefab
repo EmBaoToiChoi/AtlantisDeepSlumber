@@ -25,11 +25,11 @@ Transform:
   m_GameObject: {fileID: 578959014230797879}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0.493}
+  m_LocalPosition: {x: -0.008, y: 0.073, z: -0.105}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 7642504874377614896}
+  m_Father: {fileID: 7195462608062397491}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1655739107878565806
 GameObject:
@@ -76,37 +76,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   heightOffset: 3.7
---- !u!1 &2074895073552652267
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1646183465227761422}
-  m_Layer: 3
-  m_Name: cam
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &1646183465227761422
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2074895073552652267}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0.7071068, y: 0, z: 0, w: 0.7071068}
-  m_LocalPosition: {x: 0, y: 60, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 3749147436962530450}
-  m_LocalEulerAnglesHint: {x: 90, y: 0, z: 0}
 --- !u!1 &2195400984766458075
 GameObject:
   m_ObjectHideFlags: 0
@@ -244,7 +213,6 @@ Transform:
   m_Children:
   - {fileID: 598300851086675419}
   - {fileID: 4984851061044680876}
-  - {fileID: 1646183465227761422}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &1412244039241682032
@@ -498,11 +466,16 @@ MonoBehaviour:
       MinSecondsBetweenUpdates: 0
       MaxSecondsBetweenUpdates: 0
     m_InternalValue: 0
-  rSkillWaterPrefab: {fileID: 4002873559249257638, guid: 8def776a29526ed4a9535086d2e84751, type: 3}
+  rSkillWaterPrefab: {fileID: 6031572398223394011, guid: 4d523e708c797ae46ae273a10c167743, type: 3}
   rSkillWaterSpawnPoint: {fileID: 184442477358226099}
   rSkillWaterSpeed: 20
   rSkillWaterDamage: 40
   isAimingNet:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 0
+  isAimingRNet:
     UpdateTraits:
       MinSecondsBetweenUpdates: 0
       MaxSecondsBetweenUpdates: 0
@@ -913,7 +886,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   ShowTopMostFoldoutHeaderGroup: 1
-  topDownTarget: {fileID: 1646183465227761422}
+  topDownTarget: {fileID: 0}
   transitionDuration: 2
   scriptsToToggle:
   - {fileID: 3353641695131551053}
@@ -2938,9 +2911,6 @@ PrefabInstance:
     - {fileID: -4908483260131328389, guid: 2a0b858e93c11d541a78b40a609b6fd3, type: 3}
     - {fileID: 8859590687610582196, guid: 2a0b858e93c11d541a78b40a609b6fd3, type: 3}
     m_AddedGameObjects:
-    - targetCorrespondingSourceObject: {fileID: -1889102022304547840, guid: 2a0b858e93c11d541a78b40a609b6fd3, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 184442477358226099}
     - targetCorrespondingSourceObject: {fileID: 7966254385995832477, guid: 2a0b858e93c11d541a78b40a609b6fd3, type: 3}
       insertIndex: -1
       addedObject: {fileID: 3366921061784858712}
@@ -2956,6 +2926,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 7790177421927552515, guid: 2a0b858e93c11d541a78b40a609b6fd3, type: 3}
       insertIndex: -1
       addedObject: {fileID: 5456517960310483812}
+    - targetCorrespondingSourceObject: {fileID: 7790177421927552515, guid: 2a0b858e93c11d541a78b40a609b6fd3, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 184442477358226099}
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 2a0b858e93c11d541a78b40a609b6fd3, type: 3}
       insertIndex: -1
@@ -3001,11 +2974,6 @@ Transform:
 --- !u!4 &7195462608062397491 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 7790177421927552515, guid: 2a0b858e93c11d541a78b40a609b6fd3, type: 3}
-  m_PrefabInstance: {fileID: 1136928048187746864}
-  m_PrefabAsset: {fileID: 0}
---- !u!4 &7642504874377614896 stripped
-Transform:
-  m_CorrespondingSourceObject: {fileID: -1889102022304547840, guid: 2a0b858e93c11d541a78b40a609b6fd3, type: 3}
   m_PrefabInstance: {fileID: 1136928048187746864}
   m_PrefabAsset: {fileID: 0}
 --- !u!4 &8040766170924008228 stripped

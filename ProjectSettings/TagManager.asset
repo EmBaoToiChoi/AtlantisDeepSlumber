@@ -12,6 +12,7 @@ TagManager:
   - Bang
   - Set
   - CameraZone
+  - TopDownCam
   layers:
   - Default
   - TransparentFX
