@@ -90,12 +90,12 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 3104762744919239775}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0.467, y: -1.048, z: -0.007}
+  m_LocalRotation: {x: -0.6174712, y: 0.3164085, z: -0.6413342, w: 0.32757536}
+  m_LocalPosition: {x: 0.258, y: -0.124, z: 0.099}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 1944311070861735750}
+  m_Father: {fileID: 6149541316733567280}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &3704789710416520249
 GameObject:
@@ -468,6 +468,13 @@ MonoBehaviour:
     TransitionDuration: 0.05
     TriggerNameHash: 1248065335
     TransitionIndex: 1
+  - IsCrossFadeExit: 0
+    Layer: 1
+    OriginatingState: 628122853
+    DestinationState: -302625652
+    TransitionDuration: 0.1
+    TriggerNameHash: 2011042039
+    TransitionIndex: 1
   AnimatorParameterEntries:
     ParameterEntries:
     - name: InputX
@@ -558,6 +565,14 @@ MonoBehaviour:
       NameHash: -510442038
       Synchronize: 1
       ParameterType: 4
+    - name: IsAiming
+      NameHash: 2025090383
+      Synchronize: 1
+      ParameterType: 4
+    - name: SamSet
+      NameHash: 2011042039
+      Synchronize: 1
+      ParameterType: 9
   AnimatorParametersExpanded: 0
 --- !u!114 &7638701699718663926
 MonoBehaviour:
@@ -693,9 +708,9 @@ MonoBehaviour:
   maxPitch: 80
   rotationSmoothSpeed: 15
   invertCameraY: 0
-  aimCameraDistance: 4
-  aimShoulderOffset: 0.8
-  aimPivotHeight: 1.3
+  aimCameraDistance: 3
+  aimShoulderOffset: 1
+  aimPivotHeight: 4
   aimCameraSmoothSpeed: 10
   aimMinPitch: -80
   aimMaxPitch: 80
@@ -829,10 +844,15 @@ MonoBehaviour:
   - 
   - 
   - 
-  rSkillLightningPrefab: {fileID: 4458033304065875226, guid: 9719a1c9f1df702439598c4e7bb832ed, type: 3}
+  rSkillLightningPrefab: {fileID: 5627696518775099638, guid: 543d521d2176ace4aba4667ddca92d97, type: 3}
+  rSkillHandPreviewPrefab: {fileID: 0}
+  rSkillYOffset: 60
+  rSkillXOffset: 0
+  invertSpinePitch: 0
   rSkillLightningSpawnPoint: {fileID: 8247470417507385211}
   rSkillLightningSpeed: 20
   rSkillLightningDamage: 40
+  rSkillAoeRadius: 3
   redSwordMaterial: {fileID: 0}
   swordEmissiveMap: {fileID: 2800000, guid: cc4a1e70692c8de43bb41adf40016a90, type: 3}
   redEmissiveColor: {r: 1024, g: 0, b: 0, a: 1}
@@ -2045,9 +2065,6 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects:
-    - targetCorrespondingSourceObject: {fileID: -8013909246233647550, guid: 089f5319e86aa3a409ccfa5692b155f2, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 8247470417507385211}
     - targetCorrespondingSourceObject: {fileID: -2707054796494011859, guid: 089f5319e86aa3a409ccfa5692b155f2, type: 3}
       insertIndex: -1
       addedObject: {fileID: 6730037460965293441}
@@ -2063,6 +2080,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: -2349476437193732044, guid: 089f5319e86aa3a409ccfa5692b155f2, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1324747224094552410}
+    - targetCorrespondingSourceObject: {fileID: -2349476437193732044, guid: 089f5319e86aa3a409ccfa5692b155f2, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 8247470417507385211}
     - targetCorrespondingSourceObject: {fileID: 4325436833983905973, guid: 089f5319e86aa3a409ccfa5692b155f2, type: 3}
       insertIndex: -1
       addedObject: {fileID: 8670219365386420766}
@@ -2117,11 +2137,6 @@ Transform:
 --- !u!4 &1569828532736557221 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 2304244481032835489, guid: 089f5319e86aa3a409ccfa5692b155f2, type: 3}
-  m_PrefabInstance: {fileID: 735059386473697540}
-  m_PrefabAsset: {fileID: 0}
---- !u!4 &1944311070861735750 stripped
-Transform:
-  m_CorrespondingSourceObject: {fileID: -8013909246233647550, guid: 089f5319e86aa3a409ccfa5692b155f2, type: 3}
   m_PrefabInstance: {fileID: 735059386473697540}
   m_PrefabAsset: {fileID: 0}
 --- !u!4 &2661252832074116642 stripped

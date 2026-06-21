@@ -536,7 +536,7 @@ MonoBehaviour:
     m_InternalValue: 0
   rSkillIcePrefab: {fileID: 2268428576765071778, guid: e839e2ad5d7bf8147894cddb7903c7b3, type: 3}
   rSkillIceSpawnPoint: {fileID: 8950266880227468165}
-  rSkillIceSpeed: 20
+  rSkillIceSpeed: 10
   rSkillIceDamage: 40
   isAimingNet:
     UpdateTraits:

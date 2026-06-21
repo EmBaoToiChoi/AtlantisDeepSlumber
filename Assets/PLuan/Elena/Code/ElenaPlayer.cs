@@ -235,6 +235,7 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
     private GameObject rSkillHandPreviewVisual;
     private bool isRShootPending = false;
     private bool isPendingRShootNetworkMode = false;
+    private Vector3 pendingRShootDirection = Vector3.forward;
 
     private float defaultCameraDistance;
     private float defaultPivotHeight;
@@ -250,7 +251,7 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
         NetworkVariableReadPermission.Everyone,
         NetworkVariableWritePermission.Server
     );
-    public bool IsAiming => isStandaloneMode ? (localIsAiming || localIsAimingR) : (IsOwner ? (localIsAiming || localIsAimingR) : (isAimingNet.Value || isAimingRNet.Value));
+    public bool IsAiming => isStandaloneMode ? (localIsAiming || localIsAimingR || isRShootPending) : (IsOwner ? (localIsAiming || localIsAimingR || isRShootPending) : (isAimingNet.Value || isAimingRNet.Value));
     public bool IsAimingR => isStandaloneMode ? localIsAimingR : (IsOwner ? localIsAimingR : isAimingRNet.Value);
     public bool IsBusyOrRolling => (isStandaloneMode ? isRollingStandalone : rollTimer > 0) || IsPlayingActionAnimation() || (CurrentHealth <= 0);
 
@@ -624,7 +625,13 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
                 rSkillHandPreviewVisual = Instantiate(rSkillIcePrefab, rSkillIceSpawnPoint.position, rSkillIceSpawnPoint.rotation, rSkillIceSpawnPoint);
                 rSkillHandPreviewVisual.transform.localPosition = Vector3.zero;
                 rSkillHandPreviewVisual.transform.localRotation = Quaternion.identity;
-                rSkillHandPreviewVisual.transform.localScale = rSkillIcePrefab.transform.localScale;
+                
+                Vector3 parentLossyScale = rSkillIceSpawnPoint.lossyScale;
+                rSkillHandPreviewVisual.transform.localScale = new Vector3(
+                    rSkillIcePrefab.transform.localScale.x / (parentLossyScale.x != 0 ? parentLossyScale.x : 1f),
+                    rSkillIcePrefab.transform.localScale.y / (parentLossyScale.y != 0 ? parentLossyScale.y : 1f),
+                    rSkillIcePrefab.transform.localScale.z / (parentLossyScale.z != 0 ? parentLossyScale.z : 1f)
+                );
                 
                 if (rSkillHandPreviewVisual.TryGetComponent<ElenaIceProjectile>(out var proj))
                 {
@@ -678,22 +685,7 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
         Debug.Log($"[{gameObject.name}] OnShootRSkill: Bắn đạn băng!");
 
         Vector3 spawnPos = rSkillIceSpawnPoint != null ? rSkillIceSpawnPoint.position : transform.position + transform.forward * 1.5f + Vector3.up * 1f;
-        Vector3 shootDirection = transform.forward;
-
-        if (targetCamera != null)
-        {
-            Ray ray = targetCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
-            Vector3 targetPoint = ray.origin + ray.direction * 50f;
-            int layerMask = ~LayerMask.GetMask("Player", "Ignore Raycast");
-            if (Physics.Raycast(ray.origin, ray.direction, out RaycastHit cameraHit, 50f, layerMask))
-            {
-                if (cameraHit.collider.transform.root != transform.root && Vector3.Distance(cameraHit.point, transform.position) >= 3.0f)
-                {
-                    targetPoint = cameraHit.point;
-                }
-            }
-            shootDirection = (targetPoint - spawnPos).normalized;
-        }
+        Vector3 shootDirection = pendingRShootDirection;
 
         if (isPendingRShootNetworkMode)
         {
@@ -1863,6 +1855,7 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
                 {
                     isRShootPending = true;
                     isPendingRShootNetworkMode = !isStandaloneMode;
+                    pendingRShootDirection = targetCamera != null ? targetCamera.transform.forward : transform.forward;
                     PlayAnimation("Bow_Shoot", 0.05f);
                     SetAimingR(false);
 
@@ -2020,6 +2013,7 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
                 {
                     isRShootPending = true;
                     isPendingRShootNetworkMode = !isStandaloneMode;
+                    pendingRShootDirection = targetCamera != null ? targetCamera.transform.forward : transform.forward;
                     PlayAnimation("Bow_Shoot", 0.05f);
                     SetAimingR(false);
 
@@ -3177,6 +3171,7 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
         {
             isRShootPending = true;
             isPendingRShootNetworkMode = !isStandaloneMode;
+            pendingRShootDirection = targetCamera != null ? targetCamera.transform.forward : transform.forward;
             OnAimRStateChanged(localIsAimingR);
         }
 

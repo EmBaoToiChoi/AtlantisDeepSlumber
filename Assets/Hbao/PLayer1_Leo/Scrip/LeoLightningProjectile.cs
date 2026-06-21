@@ -3,15 +3,11 @@ using UnityEngine;
 
 public class LeoLightningProjectile : NetworkBehaviour
 {
-    public float speed = 20f;
-    public float lifetime = 5f;
-    public float damage = 40f;
-    public float lifetimeAfterHit = 2f; // Thời gian chờ hủy đạn sau khi nổ để chờ hiệu ứng chạy xong
+    [Tooltip("Thời gian tồn tại của hiệu ứng sấm sét trước khi tự hủy")]
+    public float lifetime = 3f;
     
-    [Header("Visual Effects References")]
-    public GameObject castGFX;
-    public GameObject hitGFX;
-    public GameObject flyingGFX;
+    [Tooltip("Sát thương gây ra bởi tia sét")]
+    public float damage = 40f;
 
     [HideInInspector]
     public LeoPlayer owner;
@@ -21,7 +17,7 @@ public class LeoLightningProjectile : NetworkBehaviour
 
     private void Start()
     {
-        gameObject.tag = "Set"; // Force tag "Set" for elemental rock puzzles
+        gameObject.tag = "Set"; // Bắt buộc tag "Set" để giải đố đá nguyên tố hệ Lôi trong game
         
         // Đảm bảo có Collider để va chạm hoạt động
         Collider col = GetComponent<Collider>();
@@ -29,11 +25,11 @@ public class LeoLightningProjectile : NetworkBehaviour
         {
             SphereCollider sphere = gameObject.AddComponent<SphereCollider>();
             sphere.isTrigger = true;
-            sphere.radius = 0.5f;
+            sphere.radius = 1.5f; // Kích thước vùng va chạm sét đánh
             Debug.LogWarning($"[LeoLightningProjectile] Không tìm thấy Collider. Đã tự động thêm SphereCollider mặc định.");
         }
 
-        // Đảm bảo có Rigidbody để nhận biết va chạm với các vật thể tĩnh (static obstacles)
+        // Đảm bảo có Rigidbody để nhận biết va chạm tĩnh
         Rigidbody rb = GetComponent<Rigidbody>();
         if (rb == null)
         {
@@ -41,34 +37,9 @@ public class LeoLightningProjectile : NetworkBehaviour
             rb.useGravity = false;
             rb.isKinematic = true;
             rb.constraints = RigidbodyConstraints.FreezeAll;
-            Debug.Log("[LeoLightningProjectile] Đã tự động thêm Rigidbody ở chế độ Kinematic để bắt va chạm tĩnh.");
         }
 
-        // Tự động tìm kiếm các bộ phận GFX nếu chưa gán trong Inspector
-        if (castGFX == null) castGFX = FindChildWithNamePart("cast");
-        if (hitGFX == null)
-        {
-            hitGFX = FindChildWithNamePart("hit");
-            if (hitGFX == null) hitGFX = FindChildWithNamePart("iht"); // Fallback cho trường hợp đặt tên sai chính tả "iht"
-        }
-        if (flyingGFX == null)
-        {
-            foreach (Transform child in transform)
-            {
-                if (child.gameObject != castGFX && child.gameObject != hitGFX)
-                {
-                    flyingGFX = child.gameObject;
-                    break;
-                }
-            }
-        }
-
-        // Khởi tạo trạng thái ban đầu của các GFX
-        if (castGFX != null) castGFX.SetActive(true);
-        if (flyingGFX != null) flyingGFX.SetActive(true);
-        if (hitGFX != null) hitGFX.SetActive(false);
-
-        Debug.Log($"[LeoLightningProjectile] Đạn sét được khởi tạo tại: {transform.position}, Tag: {gameObject.tag}");
+        Debug.Log($"[LeoLightningProjectile] AOE Sét khởi tạo tại: {transform.position}, Tag: {gameObject.tag}");
 
         if (NetworkManager.Singleton == null || NetworkManager.Singleton.IsServer)
         {
@@ -76,17 +47,9 @@ public class LeoLightningProjectile : NetworkBehaviour
         }
     }
 
-    private void Update()
-    {
-        if (!isHit)
-        {
-            transform.Translate(Vector3.forward * speed * Time.deltaTime);
-        }
-    }
-
     private void OnTriggerEnter(Collider other)
     {
-        // Chỉ xử lý va chạm trên Server hoặc chế độ Standalone
+        // Chỉ xử lý va chạm trên Server hoặc chế độ Standalone/Offline
         bool isServerOrStandalone = NetworkManager.Singleton == null || NetworkManager.Singleton.IsServer;
         if (!isServerOrStandalone) return;
         if (isHit) return;
@@ -122,7 +85,7 @@ public class LeoLightningProjectile : NetworkBehaviour
             }
             hitEnemyRoots.Add(enemyRoot);
 
-            Debug.Log($"[LeoLightningProjectile] Đạn sét va chạm trúng Enemy: {other.name}, Gây sát thương: {damage}");
+            Debug.Log($"[LeoLightningProjectile] Sét đánh trúng Enemy: {other.name}, Gây sát thương: {damage}");
             
             var e1 = other.GetComponentInParent<Enemy1_DapBua>();
             if (e1 != null) { e1.TakeDamage(damage); }
@@ -146,112 +109,6 @@ public class LeoLightningProjectile : NetworkBehaviour
                     }
                 }
             }
-
-            HandleHitImpact();
         }
-        else if (!other.isTrigger)
-        {
-            Debug.Log($"[LeoLightningProjectile] Đạn sét va chạm trúng chướng ngại vật: {other.name}, nổ.");
-            HandleHitImpact();
-        }
-    }
-
-    private void OnCollisionEnter(Collision collision)
-    {
-        if (collision.collider != null)
-        {
-            OnTriggerEnter(collision.collider);
-        }
-    }
-
-    private void HandleHitImpact()
-    {
-        // Chạy visual nổ cục bộ
-        ApplyHitVisuals();
-
-        // Đồng bộ visual nổ sang các Client khác qua mạng
-        if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening && IsServer)
-        {
-            TriggerHitVisualsClientRpc();
-        }
-
-        // Thiết lập thời gian hủy đạn tự động
-        if (NetworkManager.Singleton == null || NetworkManager.Singleton.IsServer)
-        {
-            CancelInvoke(nameof(DespawnOrDestroy));
-            Invoke(nameof(DespawnOrDestroy), lifetimeAfterHit);
-        }
-    }
-
-    [ClientRpc]
-    private void TriggerHitVisualsClientRpc()
-    {
-        if (!IsServer)
-        {
-            ApplyHitVisuals();
-        }
-    }
-
-    private void ApplyHitVisuals()
-    {
-        isHit = true;
-        speed = 0f;
-
-        // Tắt bộ phận cast và thân đạn bay
-        if (castGFX != null) castGFX.SetActive(false);
-        if (flyingGFX != null) flyingGFX.SetActive(false);
-
-        // Bật visual nổ
-        if (hitGFX != null) hitGFX.SetActive(true);
-
-        // Vô hiệu hóa Collider để không kích hoạt va chạm thêm nữa
-        if (TryGetComponent<Collider>(out var col)) col.enabled = false;
-        
-        // Ngắt vận tốc vật lý nếu có
-        if (TryGetComponent<Rigidbody>(out var rb))
-        {
-            rb.linearVelocity = Vector3.zero;
-            rb.isKinematic = true;
-        }
-    }
-
-    /// <summary>
-    /// Được gọi từ Animation Event tại keyframe cuối của hoạt ảnh Hit/Nổ.
-    /// </summary>
-    public void OnHitAnimationEnd()
-    {
-        Debug.Log($"[{gameObject.name}] Nhận sự kiện kết thúc Animation Event -> Despawn đạn.");
-        DespawnOrDestroy();
-    }
-
-    private void DespawnOrDestroy()
-    {
-        if (NetworkObject != null && NetworkObject.IsSpawned)
-        {
-            if (IsServer)
-            {
-                NetworkObject.Despawn(true);
-            }
-            else
-            {
-                gameObject.SetActive(false);
-            }
-        }
-        else
-        {
-            Destroy(gameObject);
-        }
-    }
-
-    private GameObject FindChildWithNamePart(string part)
-    {
-        foreach (Transform child in transform)
-        {
-            if (child.name.ToLower().Contains(part.ToLower()))
-            {
-                return child.gameObject;
-            }
-        }
-        return null;
     }
 }

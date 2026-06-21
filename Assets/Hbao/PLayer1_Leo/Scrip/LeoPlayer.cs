@@ -3103,6 +3103,9 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     [Tooltip("Prefab đạn sét của chiêu R")]
     public GameObject rSkillLightningPrefab;
 
+    [Tooltip("Prefab hiển thị trên tay khi đang giữ phím R để ngắm")]
+    public GameObject rSkillHandPreviewPrefab;
+
     [Header("Skill R Fine Tuning")]
     [Tooltip("Y Offset chỉnh xoay cột sống ngang cho chiêu R")]
     public float rSkillYOffset = 0f;
@@ -3121,6 +3124,13 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     private GameObject rSkillHandPreviewVisual;
     private bool isRShootPending = false;
     private bool isPendingRShootNetworkMode = false;
+
+    [Tooltip("Bán kính vòng tròn định vị chiêu R")]
+    public float rSkillAoeRadius = 3f;
+
+    private LineRenderer aoeIndicatorLine;
+    private Vector3 aoeTargetPosition;
+    private Vector3 pendingRShootPosition;
 
     [Header("Attack Speed Boost Skill E Settings")]
     public Material redSwordMaterial;
@@ -5052,6 +5062,95 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         SetAimingR(true);
     }
 
+    private void CreateAoeIndicator()
+    {
+        if (aoeIndicatorLine != null) return;
+
+        GameObject indicatorObj = new GameObject("LeoR_AoeIndicator");
+        aoeIndicatorLine = indicatorObj.AddComponent<LineRenderer>();
+        aoeIndicatorLine.useWorldSpace = true;
+        aoeIndicatorLine.loop = true;
+        aoeIndicatorLine.startWidth = 0.15f;
+        aoeIndicatorLine.endWidth = 0.15f;
+
+        Shader defaultShader = Shader.Find("Sprites/Default");
+        if (defaultShader == null) defaultShader = Shader.Find("Unlit/Color");
+        if (defaultShader == null) defaultShader = Shader.Find("Standard");
+
+        Material mat = new Material(defaultShader);
+        mat.color = Color.green;
+        aoeIndicatorLine.material = mat;
+        aoeIndicatorLine.startColor = Color.green;
+        aoeIndicatorLine.endColor = Color.green;
+
+        aoeIndicatorLine.positionCount = 36;
+    }
+
+    private void UpdateAoeIndicatorPosition()
+    {
+        if (aoeIndicatorLine == null) return;
+        if (targetCamera == null) return;
+
+        Ray ray = targetCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
+        int layerMask = ~LayerMask.GetMask("Player", "Ignore Raycast");
+        Vector3 targetPoint = transform.position + transform.forward * 10f;
+        targetPoint.y = transform.position.y;
+
+        if (Physics.Raycast(ray.origin, ray.direction, out RaycastHit cameraHit, 50f, layerMask))
+        {
+            targetPoint = cameraHit.point;
+        }
+        else
+        {
+            if (ray.direction.y < -0.01f)
+            {
+                float playerFeetY = transform.position.y;
+                float t = (playerFeetY - ray.origin.y) / ray.direction.y;
+                if (t > 0f && t < 50f)
+                {
+                    targetPoint = ray.origin + ray.direction * t;
+                }
+            }
+        }
+
+        aoeTargetPosition = targetPoint;
+
+        int segments = aoeIndicatorLine.positionCount;
+        for (int i = 0; i < segments; i++)
+        {
+            float angle = i * (2f * Mathf.PI / segments);
+            float x = Mathf.Cos(angle) * rSkillAoeRadius;
+            float z = Mathf.Sin(angle) * rSkillAoeRadius;
+            Vector3 pointPos = targetPoint + new Vector3(x, 0f, z);
+
+            Vector3 rayStart = pointPos + Vector3.up * 5f;
+            if (Physics.Raycast(rayStart, Vector3.down, out RaycastHit groundHit, 10f, layerMask))
+            {
+                pointPos.y = groundHit.point.y + 0.05f;
+            }
+            else
+            {
+                pointPos.y = targetPoint.y + 0.05f;
+            }
+
+            aoeIndicatorLine.SetPosition(i, pointPos);
+        }
+
+        aoeIndicatorLine.enabled = true;
+    }
+
+    private void HideAoeIndicator()
+    {
+        if (aoeIndicatorLine != null)
+        {
+            if (aoeIndicatorLine.gameObject != null)
+            {
+                Destroy(aoeIndicatorLine.gameObject);
+            }
+            aoeIndicatorLine = null;
+        }
+    }
+
     private void SetAimingR(bool aiming)
     {
         Debug.Log($"[LeoPlayer] SetAimingR({aiming}) called. Current: {localIsAimingR}");
@@ -5066,46 +5165,11 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         if (aiming)
         {
-            if (rSkillLightningPrefab != null && rSkillLightningSpawnPoint != null && rSkillHandPreviewVisual == null)
-            {
-                rSkillHandPreviewVisual = Instantiate(rSkillLightningPrefab, rSkillLightningSpawnPoint.position, rSkillLightningSpawnPoint.rotation, rSkillLightningSpawnPoint);
-                rSkillHandPreviewVisual.transform.localPosition = Vector3.zero;
-                rSkillHandPreviewVisual.transform.localRotation = Quaternion.identity;
-                rSkillHandPreviewVisual.transform.localScale = rSkillLightningPrefab.transform.localScale;
-                
-                if (rSkillHandPreviewVisual.TryGetComponent<LeoLightningProjectile>(out var proj))
-                {
-                    proj.enabled = false;
-                }
-                if (rSkillHandPreviewVisual.TryGetComponent<Collider>(out var col))
-                {
-                    col.enabled = false;
-                }
-                if (rSkillHandPreviewVisual.TryGetComponent<Rigidbody>(out var rb))
-                {
-                    rb.isKinematic = true;
-                }
-                
-                foreach (Transform child in rSkillHandPreviewVisual.transform)
-                {
-                    if (child.name.ToLower().Contains("hit"))
-                    {
-                        child.gameObject.SetActive(false);
-                    }
-                    else
-                    {
-                        child.gameObject.SetActive(true);
-                    }
-                }
-            }
+            CreateAoeIndicator();
         }
         else
         {
-            if (rSkillHandPreviewVisual != null)
-            {
-                Destroy(rSkillHandPreviewVisual);
-                rSkillHandPreviewVisual = null;
-            }
+            HideAoeIndicator();
         }
     }
 
@@ -5116,6 +5180,8 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         if (localIsAimingR)
         {
+            UpdateAoeIndicatorPosition();
+
             if (targetCamera != null)
             {
                 Vector3 camForward = targetCamera.transform.forward;
@@ -5149,7 +5215,9 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
                     isRShootPending = true;
                     isPendingRShootNetworkMode = !isStandaloneMode;
                     
-                    string attackAnim = Random.value < 0.5f ? "Attack1combo1" : "Attack2combo1";
+                    pendingRShootPosition = aoeTargetPosition;
+                    
+                    string attackAnim = "SamSet";
                     PlayAnimation(attackAnim, 0.05f);
                     
                     SetAimingR(false);
@@ -5174,7 +5242,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     private void OnAimStateChanged(bool aiming)
     {
-        bool isPlayingShoot = anim != null && anim.layerCount > 1 && (anim.GetCurrentAnimatorStateInfo(1).IsName("Attack1combo1") || anim.GetCurrentAnimatorStateInfo(1).IsName("Attack2combo1"));
+        bool isPlayingShoot = anim != null && anim.layerCount > 1 && (anim.GetCurrentAnimatorStateInfo(1).IsName("Attack1combo1") || anim.GetCurrentAnimatorStateInfo(1).IsName("Attack2combo1") || anim.GetCurrentAnimatorStateInfo(1).IsName("SamSet"));
         bool keepWeight = aiming || isRShootPending || isPlayingShoot;
         if (anim != null && anim.isActiveAndEnabled && anim.runtimeAnimatorController != null)
         {
@@ -5198,13 +5266,46 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             }
         }
 
+        if (aiming)
+        {
+            GameObject previewPrefab = rSkillHandPreviewPrefab != null ? rSkillHandPreviewPrefab : rSkillLightningPrefab;
+            if (previewPrefab != null && rSkillLightningSpawnPoint != null && rSkillHandPreviewVisual == null)
+            {
+                rSkillHandPreviewVisual = Instantiate(previewPrefab, rSkillLightningSpawnPoint.position, rSkillLightningSpawnPoint.rotation, rSkillLightningSpawnPoint);
+                rSkillHandPreviewVisual.transform.localPosition = Vector3.zero;
+                rSkillHandPreviewVisual.transform.localRotation = Quaternion.identity;
+                rSkillHandPreviewVisual.transform.localScale = previewPrefab.transform.localScale;
+                
+                if (rSkillHandPreviewVisual.TryGetComponent<LeoLightningProjectile>(out var proj))
+                {
+                    proj.enabled = false;
+                }
+                if (rSkillHandPreviewVisual.TryGetComponent<Collider>(out var col))
+                {
+                    col.enabled = false;
+                }
+                if (rSkillHandPreviewVisual.TryGetComponent<Rigidbody>(out var rb))
+                {
+                    rb.isKinematic = true;
+                }
+            }
+        }
+        else
+        {
+            if (rSkillHandPreviewVisual != null)
+            {
+                Destroy(rSkillHandPreviewVisual);
+                rSkillHandPreviewVisual = null;
+            }
+        }
+
         bool isLocal = isStandaloneMode || (IsSpawned && IsOwner);
         if (isLocal)
         {
             PlayerHUDController hud = FindObjectOfType<PlayerHUDController>();
             if (hud != null)
             {
-                hud.SetCrosshairVisible(aiming);
+                hud.SetCrosshairVisible(false);
             }
         }
     }
@@ -5231,25 +5332,10 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         bool hasControl = isStandaloneMode || (IsSpawned && IsOwner);
         if (!hasControl) return;
 
-        Debug.Log($"[{gameObject.name}] OnShootRSkill: Hoạt ảnh bắn sét -> Bắn!");
+        Debug.Log($"[{gameObject.name}] OnShootRSkill: Hoạt ảnh bắn sét -> Spawn tại mục tiêu dưới đất!");
 
-        Vector3 spawnPos = rSkillLightningSpawnPoint != null ? rSkillLightningSpawnPoint.position : transform.position + transform.forward * 1.5f + Vector3.up * 1.0f;
+        Vector3 spawnPos = pendingRShootPosition + Vector3.up * 0.1f;
         Vector3 shootDirection = transform.forward;
-
-        if (targetCamera != null)
-        {
-            Ray ray = targetCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
-            Vector3 targetPoint = ray.origin + ray.direction * 50f;
-            int layerMask = ~LayerMask.GetMask("Player", "Ignore Raycast");
-            if (Physics.Raycast(ray.origin, ray.direction, out RaycastHit cameraHit, 50f, layerMask))
-            {
-                if (cameraHit.collider.transform.root != transform.root && Vector3.Distance(cameraHit.point, transform.position) >= 3.0f)
-                {
-                    targetPoint = cameraHit.point;
-                }
-            }
-            shootDirection = (targetPoint - spawnPos).normalized;
-        }
 
         if (isPendingRShootNetworkMode)
         {
@@ -5277,7 +5363,6 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         {
             proj.owner = this;
             proj.damage = rSkillLightningDamage;
-            proj.speed = rSkillLightningSpeed;
         }
     }
 
@@ -5290,7 +5375,8 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             return;
         }
 
-        if (Vector3.Distance(spawnPos, transform.position) > 4f)
+        float horizontalDist = Vector3.Distance(new Vector3(spawnPos.x, 0f, spawnPos.z), new Vector3(transform.position.x, 0f, transform.position.z));
+        if (horizontalDist > 55f)
         {
             spawnPos = rSkillLightningSpawnPoint != null ? rSkillLightningSpawnPoint.position : transform.position + transform.forward * 1.5f + Vector3.up * 1.0f;
         }
@@ -5308,7 +5394,6 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         {
             proj.owner = this;
             proj.damage = rSkillLightningDamage;
-            proj.speed = rSkillLightningSpeed;
         }
     }
 
@@ -6655,7 +6740,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         string translatedName = TranslateAnimName(animName);
 
-        if (translatedName == "Attack1combo1" || translatedName == "Attack2combo1" || animName == "Attack1combo1" || animName == "Attack2combo1")
+        if (translatedName == "Attack1combo1" || translatedName == "Attack2combo1" || animName == "Attack1combo1" || animName == "Attack2combo1" || translatedName == "SamSet" || animName == "SamSet")
         {
             isRShootPending = true;
             isPendingRShootNetworkMode = !isStandaloneMode;
@@ -7651,6 +7736,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     public override void OnDestroy()
     {
+        HideAoeIndicator();
         if (PlayerHUDManager.ActivePlayers != null)
         {
             PlayerHUDManager.ActivePlayers.Remove(this);
