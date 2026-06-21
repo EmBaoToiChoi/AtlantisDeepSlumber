@@ -16,6 +16,12 @@ public class PressurePlateTrigger : NetworkBehaviour
     public float pressDepth = 0.15f;
     public float pressSpeed = 5f;
 
+    [Header("Stone Sinking (Optional)")]
+    [Tooltip("Khoảng cách cục đá đẩy lún xuống khi khớp vào nút sàn")]
+    public float stoneSinkDepth = 0.2f;
+    [Tooltip("Tốc độ lún của cục đá đẩy")]
+    public float stoneSinkSpeed = 5f;
+
     private Vector3 unpressedPos;
     private Vector3 pressedPos;
 
@@ -90,6 +96,28 @@ public class PressurePlateTrigger : NetworkBehaviour
             }
         }
 
+        if (buttonVisual == null)
+        {
+            // Tự động tìm child đại diện cho visual nếu chưa gán
+            foreach (Transform child in transform)
+            {
+                string nameLower = child.name.ToLower();
+                if (nameLower.Contains("visual") || nameLower.Contains("button") || nameLower.Contains("stone") || nameLower.Contains("model") || nameLower.Contains("plate"))
+                {
+                    buttonVisual = child;
+                    break;
+                }
+            }
+            if (buttonVisual == null && transform.childCount > 0)
+            {
+                buttonVisual = transform.GetChild(0);
+            }
+            if (buttonVisual != null)
+            {
+                Debug.Log($"[PressurePlateTrigger] Tự động chọn '{buttonVisual.name}' làm buttonVisual.");
+            }
+        }
+
         if (buttonVisual != null)
         {
             unpressedPos = buttonVisual.localPosition;
@@ -152,11 +180,45 @@ public class PressurePlateTrigger : NetworkBehaviour
         }
 
         // Cả Server và Client đều tự động Lerp chuyển động hình ảnh nút bấm dựa trên biến đồng bộ
+        bool pressedState = (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening) ? isPressedNet.Value : localIsPressed;
         if (buttonVisual != null)
         {
-            bool pressedState = (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening) ? isPressedNet.Value : localIsPressed;
             Vector3 targetLocalPos = pressedState ? pressedPos : unpressedPos;
             buttonVisual.localPosition = Vector3.Lerp(buttonVisual.localPosition, targetLocalPos, Time.deltaTime * pressSpeed);
+        }
+
+        // Tự động lún cục đá đẩy xuống khi đè lên nút sàn
+        if (pressedState)
+        {
+            // Chỉ thực hiện di chuyển vật lý đá trên Server hoặc offline để tránh xung đột mạng
+            if (NetworkManager.Singleton == null || !NetworkManager.Singleton.IsListening || IsServer)
+            {
+                foreach (var col in overlappingColliders)
+                {
+                    if (col != null)
+                    {
+                        PushableStone stone = col.GetComponent<PushableStone>();
+                        if (stone == null) stone = col.GetComponentInParent<PushableStone>();
+                        if (stone == null) stone = col.GetComponentInChildren<PushableStone>();
+                        if (stone == null) stone = col.transform.root.GetComponentInChildren<PushableStone>();
+
+                        if (stone != null)
+                        {
+                            // Căn giữa cục đá theo X, Z của nút sàn và lún xuống theo Y
+                            float targetY = transform.position.y - stoneSinkDepth;
+                            Vector3 targetStonePos = new Vector3(transform.position.x, targetY, transform.position.z);
+                            
+                            stone.transform.position = Vector3.Lerp(stone.transform.position, targetStonePos, Time.deltaTime * stoneSinkSpeed);
+                            
+                            // Cập nhật vị trí mạng để đồng bộ sang Client
+                            if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening)
+                            {
+                                stone.netPosition.Value = stone.transform.position;
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 
