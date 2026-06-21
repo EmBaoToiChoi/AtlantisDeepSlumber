@@ -31,21 +31,21 @@ public class PillarStation : NetworkBehaviour
         // Xác thực: Chỉ người đang sở hữu ngọc mới được đặt
         if (NetworkManager.Singleton.ConnectedClients.TryGetValue(rpcParams.Receive.SenderClientId, out var client))
         {
+            // TỐI ƯU 1: Tránh lỗi NullReferenceException nếu player đột ngột disconnect
+            if (client.PlayerObject == null) return; 
+
             var pInt = client.PlayerObject.GetComponent<PlayerInteraction>();
             
-            if (pInt.heldCoreNetworkId.Value == crystalNetId)
+            // Nên check thêm pInt != null cho chắc cú
+            if (pInt != null && pInt.heldCoreNetworkId.Value == crystalNetId)
             {
-                // THAY VÌ TELEPORT, ta gọi hàm báo viên ngọc bắt đầu bay từ từ vào trụ
                 crystal.StartSnappingToStation(snapPosition);
-                
-                // Giải phóng ngọc khỏi tay người chơi
                 pInt.ForceDropFromStation();
                 
                 if (manager != null)
                 {
                     manager.SnapCrystalToPillar(crystal, index);
                     isOccupied.Value = true;
-
                     SetEffectStateClientRpc(true);
                 }
             }
