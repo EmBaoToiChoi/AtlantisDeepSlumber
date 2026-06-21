@@ -18,10 +18,13 @@ public class ElenaIceProjectile : NetworkBehaviour
 
     private System.Collections.Generic.HashSet<Transform> hitEnemyRoots = new System.Collections.Generic.HashSet<Transform>();
     private bool isHit = false;
+    private Vector3 spawnPosition;
 
     private void Start()
     {
         gameObject.tag = "Bang"; // Force tag "Bang" for elemental rock puzzles
+        spawnPosition = transform.position;
+        transform.localScale = new Vector3(2f, 2f, 2f);
         
         // Đảm bảo có Collider để va chạm hoạt động
         Collider col = GetComponent<Collider>();
@@ -31,6 +34,10 @@ public class ElenaIceProjectile : NetworkBehaviour
             sphere.isTrigger = true;
             sphere.radius = 0.5f;
             Debug.LogWarning($"[ElenaIceProjectile] Không tìm thấy Collider. Đã tự động thêm SphereCollider mặc định.");
+        }
+        else
+        {
+            col.isTrigger = true;
         }
 
         // Đảm bảo có Rigidbody để nhận biết va chạm với các vật thể tĩnh (static obstacles)
@@ -91,7 +98,13 @@ public class ElenaIceProjectile : NetworkBehaviour
         if (!isServerOrStandalone) return;
         if (isHit) return;
 
-        // Bỏ qua va chạm với bất kỳ đối tượng Player nào
+        // Bỏ qua va chạm với chủ sở hữu (Elena Player)
+        if (owner != null && other.transform.root == owner.transform.root)
+        {
+            return;
+        }
+
+        // Bỏ qua va chạm với bất kỳ đối tượng Player nào khác
         if (other.CompareTag("Player") || 
             other.gameObject.layer == LayerMask.NameToLayer("Player") ||
             other.GetComponentInParent<ArthurPlayer>() != null ||
@@ -112,6 +125,12 @@ public class ElenaIceProjectile : NetworkBehaviour
                        other.GetComponentInParent<Enemy3_Buaa>() != null ||
                        other.GetComponentInParent<Enemy4_Bongtoi>() != null ||
                        other.GetComponentInParent<Enemy5_PhuThuy>() != null;
+
+        // Bypass non-enemy collisions if they are too close to the spawn point to prevent self/ground detonation
+        if (!isEnemy && Vector3.Distance(transform.position, spawnPosition) < 1.5f)
+        {
+            return;
+        }
 
         if (isEnemy)
         {
