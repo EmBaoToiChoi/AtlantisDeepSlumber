@@ -458,50 +458,6 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         {
             SetAimingServerRpc(localIsAimingR);
         }
-
-        if (aiming)
-        {
-            if (rSkillFirePrefab != null && rSkillFireSpawnPoint != null && rSkillHandPreviewVisual == null)
-            {
-                rSkillHandPreviewVisual = Instantiate(rSkillFirePrefab, rSkillFireSpawnPoint.position, rSkillFireSpawnPoint.rotation, rSkillFireSpawnPoint);
-                rSkillHandPreviewVisual.transform.localPosition = Vector3.zero;
-                rSkillHandPreviewVisual.transform.localRotation = Quaternion.identity;
-                rSkillHandPreviewVisual.transform.localScale = rSkillFirePrefab.transform.localScale;
-                
-                if (rSkillHandPreviewVisual.TryGetComponent<ArthurFireProjectile>(out var proj))
-                {
-                    proj.enabled = false;
-                }
-                if (rSkillHandPreviewVisual.TryGetComponent<Collider>(out var col))
-                {
-                    col.enabled = false;
-                }
-                if (rSkillHandPreviewVisual.TryGetComponent<Rigidbody>(out var rb))
-                {
-                    rb.isKinematic = true;
-                }
-                
-                foreach (Transform child in rSkillHandPreviewVisual.transform)
-                {
-                    if (child.name.ToLower().Contains("hit"))
-                    {
-                        child.gameObject.SetActive(false);
-                    }
-                    else
-                    {
-                        child.gameObject.SetActive(true);
-                    }
-                }
-            }
-        }
-        else
-        {
-            if (rSkillHandPreviewVisual != null)
-            {
-                Destroy(rSkillHandPreviewVisual);
-                rSkillHandPreviewVisual = null;
-            }
-        }
     }
 
     private void HandleRAiming()
@@ -606,6 +562,50 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
             if (hud != null)
             {
                 hud.SetCrosshairVisible(aiming);
+            }
+        }
+
+        if (aiming)
+        {
+            if (rSkillFirePrefab != null && rSkillFireSpawnPoint != null && rSkillHandPreviewVisual == null)
+            {
+                rSkillHandPreviewVisual = Instantiate(rSkillFirePrefab, rSkillFireSpawnPoint.position, rSkillFireSpawnPoint.rotation, rSkillFireSpawnPoint);
+                rSkillHandPreviewVisual.transform.localPosition = Vector3.zero;
+                rSkillHandPreviewVisual.transform.localRotation = Quaternion.identity;
+                rSkillHandPreviewVisual.transform.localScale = rSkillFirePrefab.transform.localScale;
+                
+                if (rSkillHandPreviewVisual.TryGetComponent<ArthurFireProjectile>(out var proj))
+                {
+                    proj.enabled = false;
+                }
+                if (rSkillHandPreviewVisual.TryGetComponent<Collider>(out var col))
+                {
+                    col.enabled = false;
+                }
+                if (rSkillHandPreviewVisual.TryGetComponent<Rigidbody>(out var rb))
+                {
+                    rb.isKinematic = true;
+                }
+                
+                foreach (Transform child in rSkillHandPreviewVisual.transform)
+                {
+                    if (child.name.ToLower().Contains("hit"))
+                    {
+                        child.gameObject.SetActive(false);
+                    }
+                    else
+                    {
+                        child.gameObject.SetActive(true);
+                    }
+                }
+            }
+        }
+        else
+        {
+            if (rSkillHandPreviewVisual != null)
+            {
+                Destroy(rSkillHandPreviewVisual);
+                rSkillHandPreviewVisual = null;
             }
         }
     }

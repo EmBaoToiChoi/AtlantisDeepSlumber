@@ -617,56 +617,6 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
         {
             SetAimingRServerRpc(localIsAimingR);
         }
-
-        if (aiming)
-        {
-            if (rSkillIcePrefab != null && rSkillIceSpawnPoint != null && rSkillHandPreviewVisual == null)
-            {
-                rSkillHandPreviewVisual = Instantiate(rSkillIcePrefab, rSkillIceSpawnPoint.position, rSkillIceSpawnPoint.rotation, rSkillIceSpawnPoint);
-                rSkillHandPreviewVisual.transform.localPosition = Vector3.zero;
-                rSkillHandPreviewVisual.transform.localRotation = Quaternion.identity;
-                
-                Vector3 parentLossyScale = rSkillIceSpawnPoint.lossyScale;
-                rSkillHandPreviewVisual.transform.localScale = new Vector3(
-                    rSkillIcePrefab.transform.localScale.x / (parentLossyScale.x != 0 ? parentLossyScale.x : 1f),
-                    rSkillIcePrefab.transform.localScale.y / (parentLossyScale.y != 0 ? parentLossyScale.y : 1f),
-                    rSkillIcePrefab.transform.localScale.z / (parentLossyScale.z != 0 ? parentLossyScale.z : 1f)
-                );
-                
-                if (rSkillHandPreviewVisual.TryGetComponent<ElenaIceProjectile>(out var proj))
-                {
-                    proj.enabled = false;
-                }
-                if (rSkillHandPreviewVisual.TryGetComponent<Collider>(out var col))
-                {
-                    col.enabled = false;
-                }
-                if (rSkillHandPreviewVisual.TryGetComponent<Rigidbody>(out var rb))
-                {
-                    rb.isKinematic = true;
-                }
-                
-                foreach (Transform child in rSkillHandPreviewVisual.transform)
-                {
-                    if (child.name.ToLower().Contains("hit"))
-                    {
-                        child.gameObject.SetActive(false);
-                    }
-                    else
-                    {
-                        child.gameObject.SetActive(true);
-                    }
-                }
-            }
-        }
-        else
-        {
-            if (rSkillHandPreviewVisual != null)
-            {
-                Destroy(rSkillHandPreviewVisual);
-                rSkillHandPreviewVisual = null;
-            }
-        }
     }
 
     public void OnShootRSkill()
@@ -681,6 +631,8 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
         isRShootPending = false;
 
         OnAimRStateChanged(localIsAimingR);
+
+        if (!isLocal) return;
 
         Debug.Log($"[{gameObject.name}] OnShootRSkill: Bắn đạn băng!");
 
@@ -3439,6 +3391,56 @@ private void StartRollServerRpc(Vector3 direction)
             if (hud != null)
             {
                 hud.SetCrosshairVisible(localIsAiming || aiming);
+            }
+        }
+
+        if (aiming)
+        {
+            if (rSkillIcePrefab != null && rSkillIceSpawnPoint != null && rSkillHandPreviewVisual == null)
+            {
+                rSkillHandPreviewVisual = Instantiate(rSkillIcePrefab, rSkillIceSpawnPoint.position, rSkillIceSpawnPoint.rotation, rSkillIceSpawnPoint);
+                rSkillHandPreviewVisual.transform.localPosition = Vector3.zero;
+                rSkillHandPreviewVisual.transform.localRotation = Quaternion.identity;
+                
+                Vector3 parentLossyScale = rSkillIceSpawnPoint.lossyScale;
+                rSkillHandPreviewVisual.transform.localScale = new Vector3(
+                    rSkillIcePrefab.transform.localScale.x / (parentLossyScale.x != 0 ? parentLossyScale.x : 1f),
+                    rSkillIcePrefab.transform.localScale.y / (parentLossyScale.y != 0 ? parentLossyScale.y : 1f),
+                    rSkillIcePrefab.transform.localScale.z / (parentLossyScale.z != 0 ? parentLossyScale.z : 1f)
+                );
+                
+                if (rSkillHandPreviewVisual.TryGetComponent<ElenaIceProjectile>(out var proj))
+                {
+                    proj.enabled = false;
+                }
+                if (rSkillHandPreviewVisual.TryGetComponent<Collider>(out var col))
+                {
+                    col.enabled = false;
+                }
+                if (rSkillHandPreviewVisual.TryGetComponent<Rigidbody>(out var rb))
+                {
+                    rb.isKinematic = true;
+                }
+                
+                foreach (Transform child in rSkillHandPreviewVisual.transform)
+                {
+                    if (child.name.ToLower().Contains("hit"))
+                    {
+                        child.gameObject.SetActive(false);
+                    }
+                    else
+                    {
+                        child.gameObject.SetActive(true);
+                    }
+                }
+            }
+        }
+        else
+        {
+            if (rSkillHandPreviewVisual != null)
+            {
+                Destroy(rSkillHandPreviewVisual);
+                rSkillHandPreviewVisual = null;
             }
         }
     }
