@@ -470,8 +470,8 @@ MonoBehaviour:
     TransitionIndex: 1
   - IsCrossFadeExit: 0
     Layer: 1
-    OriginatingState: 628122853
-    DestinationState: -302625652
+    OriginatingState: -329928193
+    DestinationState: 1843331437
     TransitionDuration: 0.1
     TriggerNameHash: 2011042039
     TransitionIndex: 1
@@ -845,7 +845,7 @@ MonoBehaviour:
   - 
   - 
   rSkillLightningPrefab: {fileID: 5627696518775099638, guid: 543d521d2176ace4aba4667ddca92d97, type: 3}
-  rSkillHandPreviewPrefab: {fileID: 0}
+  rSkillHandPreviewPrefab: {fileID: 8762792087327552853, guid: b5d803718e8b86b4b84a7d4d4b29c423, type: 3}
   rSkillYOffset: 60
   rSkillXOffset: 0
   invertSpinePitch: 0

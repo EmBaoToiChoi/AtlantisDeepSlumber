@@ -249,7 +249,13 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
         NetworkVariableReadPermission.Everyone,
         NetworkVariableWritePermission.Server
     );
-    public bool IsAiming => isStandaloneMode ? (localIsAiming || localIsAimingR) : (IsOwner ? (localIsAiming || localIsAimingR) : isAimingNet.Value);
+    public NetworkVariable<bool> isAimingRNet = new NetworkVariable<bool>(
+        false,
+        NetworkVariableReadPermission.Everyone,
+        NetworkVariableWritePermission.Server
+    );
+    public bool IsAiming => isStandaloneMode ? (localIsAiming || localIsAimingR || isRShootPending) : (IsOwner ? (localIsAiming || localIsAimingR || isRShootPending) : (isAimingNet.Value || isAimingRNet.Value));
+    public bool IsAimingR => isStandaloneMode ? localIsAimingR : (IsOwner ? localIsAimingR : isAimingRNet.Value);
     public bool IsBusyOrRolling => (isStandaloneMode ? isRollingStandalone : rollTimer > 0) || IsPlayingActionAnimation() || (CurrentHealth <= 0);
 
     [Header("Camera Inversion Settings")]
@@ -782,54 +788,10 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (localIsAimingR == aiming) return;
         localIsAimingR = aiming;
         
-        OnAimStateChanged(localIsAiming || localIsAimingR);
+        OnAimRStateChanged(localIsAimingR);
         if (!isStandaloneMode && IsOwner)
         {
-            SetAimingServerRpc(localIsAiming || localIsAimingR);
-        }
-
-        if (aiming)
-        {
-            if (rSkillWaterPrefab != null && rSkillWaterSpawnPoint != null && rSkillHandPreviewVisual == null)
-            {
-                rSkillHandPreviewVisual = Instantiate(rSkillWaterPrefab, rSkillWaterSpawnPoint.position, rSkillWaterSpawnPoint.rotation, rSkillWaterSpawnPoint);
-                rSkillHandPreviewVisual.transform.localPosition = Vector3.zero;
-                rSkillHandPreviewVisual.transform.localRotation = Quaternion.identity;
-                rSkillHandPreviewVisual.transform.localScale = rSkillWaterPrefab.transform.localScale;
-                
-                if (rSkillHandPreviewVisual.TryGetComponent<MayaWaterProjectile>(out var proj))
-                {
-                    proj.enabled = false;
-                }
-                if (rSkillHandPreviewVisual.TryGetComponent<Collider>(out var col))
-                {
-                    col.enabled = false;
-                }
-                if (rSkillHandPreviewVisual.TryGetComponent<Rigidbody>(out var rb))
-                {
-                    rb.isKinematic = true;
-                }
-                
-                foreach (Transform child in rSkillHandPreviewVisual.transform)
-                {
-                    if (child.name.ToLower().Contains("hit"))
-                    {
-                        child.gameObject.SetActive(false);
-                    }
-                    else
-                    {
-                        child.gameObject.SetActive(true);
-                    }
-                }
-            }
-        }
-        else
-        {
-            if (rSkillHandPreviewVisual != null)
-            {
-                Destroy(rSkillHandPreviewVisual);
-                rSkillHandPreviewVisual = null;
-            }
+            SetAimingRServerRpc(localIsAimingR);
         }
     }
 
@@ -854,22 +816,6 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
             if (!Input.GetKey(KeyCode.R) && !isRShootPending)
             {
                 SetAimingR(false);
-            }
-            else if (Input.GetMouseButtonDown(0))
-            {
-                if (!IsUIBlockingInput())
-                {
-                    isRShootPending = true;
-                    isPendingRShootNetworkMode = !isStandaloneMode;
-                    PlayAnimation("Shooting", 0.05f);
-                    SetAimingR(false);
-
-                    PlayerHUDController hud = FindObjectOfType<PlayerHUDController>();
-                    if (hud != null)
-                    {
-                        hud.TriggerCooldownR();
-                    }
-                }
             }
         }
     }
@@ -1051,6 +997,7 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
         weapon2Durability.OnValueChanged += OnDurabilityChanged;
         currentHealth.OnValueChanged += OnHealthChangedShared;
         isAimingNet.OnValueChanged += OnAimingNetChanged;
+        isAimingRNet.OnValueChanged += OnAimingRNetChanged;
 
         if (IsOwner)
         {
@@ -1126,6 +1073,7 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
         weapon2Durability.OnValueChanged -= OnDurabilityChanged;
         currentHealth.OnValueChanged -= OnHealthChangedShared;
         isAimingNet.OnValueChanged -= OnAimingNetChanged;
+        isAimingRNet.OnValueChanged -= OnAimingRNetChanged;
 
         if (IsOwner)
             currentHealth.OnValueChanged -= OnHealthChanged;
@@ -1631,7 +1579,7 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
 
             UpdateETargetingIndicator();
 
-            bool targetAiming = (currentWeaponIdx == 2 && Input.GetMouseButton(1) && !IsUIBlockingInput() && !IsBusyOrRolling) || isETargeting || isShootPending || isRShootPending;
+            bool targetAiming = (currentWeaponIdx == 2 && Input.GetMouseButton(1) && !IsUIBlockingInput() && !IsBusyOrRolling) || isETargeting || isShootPending;
             if (localIsAiming != targetAiming)
             {
                 localIsAiming = targetAiming;
@@ -3518,7 +3466,7 @@ private void StartRollServerRpc(Vector3 direction)
                 {
                     anim.SetLayerWeight(1, 1f);
                 }
-                else if (comboStep == 0)
+                else if (comboStep == 0 && !localIsAimingR)
                 {
                     var carrier = GetComponent<PlayerLogCarrier>();
                     bool isCarrying = carrier != null && carrier.isCarrying;
@@ -3541,7 +3489,7 @@ private void StartRollServerRpc(Vector3 direction)
             PlayerHUDController hud = FindObjectOfType<PlayerHUDController>();
             if (hud != null)
             {
-                hud.SetCrosshairVisible(aiming);
+                hud.SetCrosshairVisible(aiming || localIsAimingR);
             }
         }
     }
@@ -3550,6 +3498,107 @@ private void StartRollServerRpc(Vector3 direction)
     private void SetAimingServerRpc(bool aiming)
     {
         isAimingNet.Value = aiming;
+    }
+
+    private void OnAimingRNetChanged(bool oldVal, bool newVal)
+    {
+        if (!IsOwner)
+        {
+            OnAimRStateChanged(newVal);
+        }
+    }
+
+    private void OnAimRStateChanged(bool aiming)
+    {
+        bool isPlayingShoot = anim != null && anim.layerCount > 1 && (anim.GetCurrentAnimatorStateInfo(1).IsName("NemRFM") || anim.GetCurrentAnimatorStateInfo(1).IsName("Bow_Shoot"));
+        bool keepWeight = aiming || isRShootPending || isPlayingShoot;
+
+        if (anim != null && anim.isActiveAndEnabled && anim.runtimeAnimatorController != null)
+        {
+            anim.SetBool("IsAimingR", aiming || isRShootPending);
+            if (anim.layerCount > 1)
+            {
+                if (keepWeight)
+                {
+                    anim.SetLayerWeight(1, 1f);
+                }
+                else if (comboStep == 0 && !localIsAiming)
+                {
+                    var carrier = GetComponent<PlayerLogCarrier>();
+                    bool isCarrying = carrier != null && carrier.isCarrying;
+                    if (!isCarrying)
+                    {
+                        anim.SetLayerWeight(1, 0f);
+                        anim.Play("New State", 1, 0f);
+                    }
+                }
+            }
+        }
+
+        bool isLocal = isStandaloneMode || (IsSpawned && IsOwner);
+        if (isLocal)
+        {
+            PlayerHUDController hud = FindObjectOfType<PlayerHUDController>();
+            if (hud != null)
+            {
+                hud.SetCrosshairVisible(localIsAiming || aiming);
+            }
+        }
+
+        if (aiming)
+        {
+            if (rSkillWaterPrefab != null && rSkillWaterSpawnPoint != null && rSkillHandPreviewVisual == null)
+            {
+                rSkillHandPreviewVisual = Instantiate(rSkillWaterPrefab, rSkillWaterSpawnPoint.position, rSkillWaterSpawnPoint.rotation, rSkillWaterSpawnPoint);
+                rSkillHandPreviewVisual.transform.localPosition = Vector3.zero;
+                rSkillHandPreviewVisual.transform.localRotation = Quaternion.identity;
+                Vector3 parentLossyScale = rSkillWaterSpawnPoint.lossyScale;
+                rSkillHandPreviewVisual.transform.localScale = new Vector3(
+                    rSkillWaterPrefab.transform.localScale.x / (parentLossyScale.x != 0 ? parentLossyScale.x : 1f),
+                    rSkillWaterPrefab.transform.localScale.y / (parentLossyScale.y != 0 ? parentLossyScale.y : 1f),
+                    rSkillWaterPrefab.transform.localScale.z / (parentLossyScale.z != 0 ? parentLossyScale.z : 1f)
+                );
+                
+                if (rSkillHandPreviewVisual.TryGetComponent<MayaWaterProjectile>(out var proj))
+                {
+                    proj.enabled = false;
+                }
+                if (rSkillHandPreviewVisual.TryGetComponent<Collider>(out var col))
+                {
+                    col.enabled = false;
+                }
+                if (rSkillHandPreviewVisual.TryGetComponent<Rigidbody>(out var rb))
+                {
+                    rb.isKinematic = true;
+                }
+                
+                foreach (Transform child in rSkillHandPreviewVisual.transform)
+                {
+                    if (child.name.ToLower().Contains("hit"))
+                    {
+                        child.gameObject.SetActive(false);
+                    }
+                    else
+                    {
+                        child.gameObject.SetActive(true);
+                    }
+                }
+            }
+        }
+        else
+        {
+            if (rSkillHandPreviewVisual != null)
+            {
+                Destroy(rSkillHandPreviewVisual);
+                rSkillHandPreviewVisual = null;
+            }
+        }
+    }
+
+    [ServerRpc]
+    private void SetAimingRServerRpc(bool aiming)
+    {
+        isAimingRNet.Value = aiming;
     }
 
     // Animation Event: Được gọi từ hoạt ảnh LayVuKhi hoặc Bow_Draw (bỏ qua vì không dùng hand visual)
@@ -3565,22 +3614,33 @@ private void StartRollServerRpc(Vector3 direction)
         {
             isShootPending = false;
             FireNormalAttackProjectile();
+            OnAimStateChanged(localIsAiming);
         }
         else if (isRShootPending)
         {
             isRShootPending = false;
             FireRHealProjectile();
+            OnAimRStateChanged(localIsAimingR);
         }
     }
 
     // Animation Event: Được gọi từ hoạt ảnh thi triển chiêu R riêng biệt tại frame phóng đạn/VFX R
     public void OnShootRSkill()
     {
-        if (isRShootPending)
+        bool isLocal = isStandaloneMode || (IsSpawned && IsOwner);
+        if (isLocal && !isRShootPending)
         {
-            isRShootPending = false;
-            FireRHealProjectile();
+            Debug.LogWarning($"[{gameObject.name}] OnShootRSkill called on Owner, but isRShootPending is false!");
         }
+
+        if (!isRShootPending) return;
+        isRShootPending = false;
+
+        OnAimRStateChanged(localIsAimingR);
+
+        if (!isLocal) return;
+
+        FireRHealProjectile();
     }
 
     private void FireRHealProjectile()
