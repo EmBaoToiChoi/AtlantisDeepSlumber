@@ -23,43 +23,63 @@ public class BalanceManager : NetworkBehaviour
     private bool isFlipping = false;
 
     public void FlipDisk()
-    {
-        if(isFlipping) return;
+{
+    Debug.Log("FlipDisk Called");
 
-        StartCoroutine(FlipCoroutine());
-    }
+    if (isFlipping)
+        return;
+
+    StartCoroutine(FlipCoroutine());
+}
 
     IEnumerator FlipCoroutine()
     {
+        Debug.Log("FlipCoroutine Started");
         isFlipping = true;
 
-        Quaternion startRot = diskRigidbody.rotation;
-        Quaternion targetRot =
-            startRot * Quaternion.Euler(180f, 0f, 0f);
+        Quaternion startRotation =
+            diskRigidbody.rotation;
 
+        Quaternion targetRotation =
+            startRotation *
+            Quaternion.Euler(
+                180f,
+                0f,
+                0f
+            );
+
+        float duration = 1.2f;
         float timer = 0f;
-        float duration = 1f;
 
-        while(timer < duration)
+        while (timer < duration)
         {
             timer += Time.deltaTime;
 
-            Quaternion rot =
+            Quaternion newRotation =
                 Quaternion.Slerp(
-                    startRot,
-                    targetRot,
+                    startRotation,
+                    targetRotation,
                     timer / duration
                 );
 
-            diskRigidbody.MoveRotation(rot);
+            diskRigidbody.MoveRotation(
+                newRotation
+            );
 
             yield return null;
         }
+
+        diskRigidbody.MoveRotation(
+            targetRotation
+        );
     }
 
     // Sử dụng FixedUpdate thay vì Update để đồng bộ hoàn hảo với chu kỳ vật lý của nhân vật
     void FixedUpdate()
     {
+        if (isFlipping)
+            return;
+            
         // 1. Chỉ Server thực hiện tính toán trọng lượng và góc nghiêng mục tiêu
     if (IsServer)
     {
@@ -73,10 +93,10 @@ public class BalanceManager : NetworkBehaviour
         float tiltZ = (SW + SE) - (NW + NE);
 
         CurrentAngle =
-            new Vector2(
-                tiltX,
-                tiltZ
-            ).magnitude;
+        Mathf.Max(
+        Mathf.Abs(tiltX * 3f),
+        Mathf.Abs(tiltZ * 3f)
+    );
         // XÓA DÒNG CŨ NÀY:
         // targetRotation.Value = Quaternion.Euler(tiltZ * 3f, 0, -tiltX * 3f);
 
@@ -87,9 +107,9 @@ public class BalanceManager : NetworkBehaviour
         0,
         tiltX * 3f
     );
-            Debug.Log(
-            $"NW:{NW} NE:{NE} SW:{SW} SE:{SE}"
-        );
+            // Debug.Log(
+            // $"NW:{NW} NE:{NE} SW:{SW} SE:{SE}"
+        // );
     }
 
         // 2. Cả Server và Client đều dùng MoveRotation để xoay mâm mượt mà, giữ chặt chân nhân vật bằng ma sát
@@ -103,6 +123,8 @@ public class BalanceManager : NetworkBehaviour
             
             diskRigidbody.MoveRotation(nextRotation);
         }
+
+        isFlipping = false;
     }
 
     float GetWeight(ZoneTrigger zone)
@@ -132,14 +154,5 @@ public class BalanceManager : NetworkBehaviour
         }
         return total;
     }
-    // public void FlipDisk()
-    // {
-    //     diskRigidbody.MoveRotation(
-    //         Quaternion.Euler(
-    //             180,
-    //             0,
-    //             0
-    //         )
-    //     );
-    // }
+   
 }

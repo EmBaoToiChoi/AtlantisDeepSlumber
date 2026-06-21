@@ -164,6 +164,7 @@ GameObject:
   - component: {fileID: 7886502881541582763}
   - component: {fileID: 7142802293383720828}
   - component: {fileID: 1642968978861485088}
+  - component: {fileID: 8525285586413739062}
   m_Layer: 3
   m_Name: Athurt
   m_TagString: Player
@@ -1174,6 +1175,18 @@ MonoBehaviour:
   transitionDuration: 2
   scriptsToToggle:
   - {fileID: 2932087641522973551}
+--- !u!114 &8525285586413739062
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6392718148198085431}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bf53f9d4a088533408c5517b561475bf, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &6656804584175171832
 GameObject:
   m_ObjectHideFlags: 0
