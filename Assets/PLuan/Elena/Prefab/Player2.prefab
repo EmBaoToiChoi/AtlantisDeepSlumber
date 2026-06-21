@@ -530,7 +530,7 @@ MonoBehaviour:
   aimMovingSpineXOffset: 10
   rSkillSpineYOffset: 60
   rSkillSpineXOffset: 0
-  rSkillMovingSpineYOffset: 0
+  rSkillMovingSpineYOffset: 60
   rSkillMovingSpineXOffset: 0
   spineSmoothSpeed: 10
   netAimAngle:
