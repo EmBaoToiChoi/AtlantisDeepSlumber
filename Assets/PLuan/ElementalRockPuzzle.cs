@@ -193,6 +193,36 @@ public class ElementalRockPuzzle : NetworkBehaviour
         {
             lastHitObject = hitObj;
 
+            // VÔ HIỆU HÓA va chạm của đạn ngay lập tức để tránh bay xuyên qua trúng dòng nước hoặc vật khác phía sau
+            Collider projectileCollider = hitObj.GetComponent<Collider>();
+            if (projectileCollider != null)
+            {
+                projectileCollider.enabled = false;
+            }
+            
+            // Dừng vận tốc vật lý nếu có
+            Rigidbody projectileRigidbody = hitObj.GetComponent<Rigidbody>();
+            if (projectileRigidbody != null)
+            {
+                projectileRigidbody.linearVelocity = Vector3.zero;
+                projectileRigidbody.angularVelocity = Vector3.zero;
+                projectileRigidbody.isKinematic = true;
+            }
+
+            // Gọi các logic nổ/ẩn của đạn (chỉ trên Server hoặc chế độ Offline để tránh lỗi đồng bộ)
+            bool isServerOrOffline = !IsNetworkActive || IsServer;
+            if (isServerOrOffline)
+            {
+                if (hitObj.GetComponent<ElenaIceProjectile>() != null || hitObj.GetComponent<MayaWaterProjectile>() != null)
+                {
+                    hitObj.SendMessage("HandleHitImpact", SendMessageOptions.DontRequireReceiver);
+                }
+                else
+                {
+                    hitObj.SendMessage("DespawnOrDestroy", SendMessageOptions.DontRequireReceiver);
+                }
+            }
+
             if (IsNetworkActive)
             {
                 // Nếu đang chơi mạng, gửi RPC để Server kiểm tra và đồng bộ
@@ -214,6 +244,14 @@ public class ElementalRockPuzzle : NetworkBehaviour
 
     private void ProcessElementHit(string hitTag)
     {
+        // TẠM THỜI: Chỉ cần bắn trúng bằng nguyên tố Băng (Bang) là phá đá ngay lập tức để tiện test
+        if (hitTag == iceTag)
+        {
+            Debug.Log("[ElementalRockPuzzle] Phá đá tạm thời bằng nguyên tố Băng thành công!");
+            ShatterRock();
+            return;
+        }
+
         int activeStep = IsNetworkActive ? netCurrentStep.Value : currentStep;
         string expectedTag = orderedTags[activeStep];
 
