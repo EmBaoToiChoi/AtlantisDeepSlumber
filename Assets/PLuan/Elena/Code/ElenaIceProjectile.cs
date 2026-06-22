@@ -213,6 +213,7 @@ public class ElenaIceProjectile : NetworkBehaviour
 
     private void ApplyHitVisuals()
     {
+        if (isHit) return;
         isHit = true;
         speed = 0f;
 

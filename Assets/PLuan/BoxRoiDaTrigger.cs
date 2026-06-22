@@ -12,6 +12,8 @@ public class BoxRoiDaTrigger : NetworkBehaviour
 
     private bool IsNetworkActive => NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening && IsSpawned;
 
+    private bool hasFallen = false;
+
     private void OnTriggerEnter(Collider other)
     {
         // Kiểm tra xem đối tượng va chạm có phải là người chơi hay không
@@ -22,7 +24,8 @@ public class BoxRoiDaTrigger : NetworkBehaviour
                 // Chỉ Server mới nhận va chạm và phát lệnh đồng bộ cho tất cả Client
                 if (IsServer)
                 {
-                    TriggerRockFallClientRpc();
+                    ExecuteRockFall(); // Server chạy trước để cập nhật logic trạng thái
+                    TriggerRockFallClientRpc(); // Đồng bộ sang các client khác
                 }
             }
             else
@@ -41,6 +44,9 @@ public class BoxRoiDaTrigger : NetworkBehaviour
 
     private void ExecuteRockFall()
     {
+        if (hasFallen) return;
+        hasFallen = true;
+
         Debug.Log($"[BoxRoiDaTrigger] Kích hoạt chuyển đổi trạng thái đá rơi.");
 
         // Kích hoạt đá đã rơi

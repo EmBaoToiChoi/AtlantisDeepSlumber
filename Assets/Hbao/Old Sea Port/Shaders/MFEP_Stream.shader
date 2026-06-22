@@ -12,6 +12,8 @@ Shader "MFEP_Stream"
 		_Metallic("Metallic", Range( 0 , 1)) = 0
 		_Base_Smoothness("Base_Smoothness", Range( 0 , 1)) = 0
 		_Speed("Speed", Range( 0 , 1)) = 0
+		_SpeedX("Speed X", Float) = 1
+		_SpeedY("Speed Y", Float) = 1
 		[HideInInspector] _texcoord( "", 2D ) = "white" {}
 		[HideInInspector] __dirty( "", Int ) = 1
 	}
@@ -32,6 +34,8 @@ Shader "MFEP_Stream"
 
 		uniform sampler2D _Ripples;
 		uniform float _Speed;
+		uniform float _SpeedX;
+		uniform float _SpeedY;
 		uniform sampler2D _Ripples2;
 		uniform float4 _Ripples2_ST;
 		uniform float4 _Color;
@@ -43,7 +47,7 @@ Shader "MFEP_Stream"
 		void vertexDataFunc( inout appdata_full v, out Input o )
 		{
 			UNITY_INITIALIZE_OUTPUT( Input, o );
-			float2 temp_cast_0 = (_Speed).xx;
+			float2 temp_cast_0 = _Speed * float2(_SpeedX, _SpeedY);
 			float2 panner21 = ( v.texcoord.xy + _Time.x * temp_cast_0);
 			float3 ase_vertexNormal = v.normal.xyz;
 			v.vertex.xyz += ( tex2Dlod( _Ripples_Displacement, float4( panner21, 0, 0.0) ) * float4( ( ase_vertexNormal * _Displacement ) , 0.0 ) ).rgb;
@@ -51,7 +55,7 @@ Shader "MFEP_Stream"
 
 		void surf( Input i , inout SurfaceOutputStandard o )
 		{
-			float2 temp_cast_0 = (_Speed).xx;
+			float2 temp_cast_0 = _Speed * float2(_SpeedX, _SpeedY);
 			float2 panner21 = ( i.uv_texcoord + _Time.x * temp_cast_0);
 			float2 uv_Ripples2 = i.uv_texcoord * _Ripples2_ST.xy + _Ripples2_ST.zw;
 			float3 temp_output_23_0 = ( UnpackNormal( tex2D( _Ripples, panner21 ) ) + UnpackNormal( tex2D( _Ripples2, uv_Ripples2 ) ) );
