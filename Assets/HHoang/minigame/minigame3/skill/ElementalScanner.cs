@@ -35,7 +35,7 @@ public class ElementalScanner : NetworkBehaviour
     {
         if (!IsOwner || !hasElementalSight) return;
 
-        if (Input.GetKeyDown(KeyCode.E) && !isScanning)
+        if (Input.GetKeyDown(KeyCode.Z) && !isScanning)
         {
             StartScan();
         }

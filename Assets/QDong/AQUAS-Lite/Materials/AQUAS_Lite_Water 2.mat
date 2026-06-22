@@ -67,7 +67,7 @@ Material:
     - _WaveSpeed: 0.1
     - __dirty: 1
     m_Colors:
-    - _DeepWaterColor: {r: 0.053459086, g: 0.27102527, b: 0.3207547, a: 0.5019608}
+    - _DeepWaterColor: {r: 0, g: 0.8088236, b: 1, a: 0.5019608}
     - _FoamColor: {r: 1, g: 1, b: 1, a: 1}
     - _MainColor: {r: 0.34458673, g: 0.71104777, b: 0.8238993, a: 1}
     - _SpecularColor: {r: 0.9245283, g: 0.8626935, b: 0.64833266, a: 1}

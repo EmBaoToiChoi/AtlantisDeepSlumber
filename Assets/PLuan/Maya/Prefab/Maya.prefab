@@ -191,6 +191,7 @@ GameObject:
   - component: {fileID: 3164122408111499636}
   - component: {fileID: 6668643982724626896}
   - component: {fileID: 7772623611095050335}
+  - component: {fileID: 7612354973917050050}
   m_Layer: 3
   m_Name: Maya
   m_TagString: Player
@@ -697,6 +698,13 @@ MonoBehaviour:
     TransitionDuration: 0.25
     TriggerNameHash: 1877016939
     TransitionIndex: 1
+  - IsCrossFadeExit: 0
+    Layer: 1
+    OriginatingState: 1793436137
+    DestinationState: 1952829745
+    TransitionDuration: 0.1
+    TriggerNameHash: 1877016939
+    TransitionIndex: 1
   AnimatorParameterEntries:
     ParameterEntries:
     - name: Blend
@@ -757,6 +765,10 @@ MonoBehaviour:
       ParameterType: 9
     - name: IsPushing
       NameHash: -510442038
+      Synchronize: 1
+      ParameterType: 4
+    - name: IsAimingR
+      NameHash: -1317259463
       Synchronize: 1
       ParameterType: 4
   AnimatorParametersExpanded: 0
@@ -890,6 +902,24 @@ MonoBehaviour:
   transitionDuration: 2
   scriptsToToggle:
   - {fileID: 3353641695131551053}
+--- !u!114 &7612354973917050050
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8313881801843240701}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c772a800adafd2c4699dd793d712d76a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  ShowTopMostFoldoutHeaderGroup: 1
+  hasElementalSight: 1
+  scanSpeed: 30
+  maxScanRadius: 70
+  highlightDuration: 3
+  scanWavePrefab: {fileID: 7188585948263974077, guid: 79d45982395e08343b85250ca8109e40, type: 3}
 --- !u!1001 &1136928048187746864
 PrefabInstance:
   m_ObjectHideFlags: 0
