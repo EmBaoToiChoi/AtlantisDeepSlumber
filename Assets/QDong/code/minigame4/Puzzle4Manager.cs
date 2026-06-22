@@ -22,6 +22,10 @@ public class Puzzle4Manager : NetworkBehaviour
 
     private bool hasFailed = false;
 
+    public GameObject completeUI;
+
+    private bool hasCompleted = false;
+
     void Update()
     {
         if (!IsServer)
@@ -65,16 +69,29 @@ public class Puzzle4Manager : NetworkBehaviour
 
     void CheckComplete()
     {
-        if (
+        if(
+            !hasCompleted &&
             A.IsCompleted() &&
             B.IsCompleted() &&
             C.IsCompleted() &&
             D.IsCompleted()
         )
         {
-            Debug.Log("Puzzle 4 Complete");
+            hasCompleted = true;
 
             puzzleCompleted.Value = true;
+
+            StartCoroutine(
+                balanceManager.ReturnToCenterAndLock()
+            );
+
+            StartCoroutine(
+                CompleteSequence()
+            );
+
+            Debug.Log(
+                "Puzzle 4 Complete"
+            );
         }
     }
 
@@ -85,6 +102,10 @@ public class Puzzle4Manager : NetworkBehaviour
         yield return new WaitForSeconds(0.4f);
 
         LaunchAllPlayers();
+
+        yield return new WaitForSeconds(3f);
+
+        ResetPuzzle();
     }
 
     void LaunchAllPlayers()
@@ -127,5 +148,27 @@ public class Puzzle4Manager : NetworkBehaviour
                 knockback.Launch(force);
             }
         }
+    }
+    void ResetPuzzle()
+    {
+        A.charge.Value = 0;
+        B.charge.Value = 0;
+        C.charge.Value = 0;
+        D.charge.Value = 0;
+
+        failTimer.Value = 3f;
+
+        hasFailed = false;
+
+        balanceManager.ResetDisk();
+    }
+
+    IEnumerator CompleteSequence()
+    {
+        completeUI.SetActive(true);
+
+        yield return new WaitForSeconds(3f);
+
+        completeUI.SetActive(false);
     }
 }

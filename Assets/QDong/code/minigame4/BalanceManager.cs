@@ -22,15 +22,17 @@ public class BalanceManager : NetworkBehaviour
     );
     private bool isFlipping = false;
 
+    private bool puzzleLocked = false;
+
     public void FlipDisk()
-{
-    Debug.Log("FlipDisk Called");
+    {
+        Debug.Log("FlipDisk Called");
 
-    if (isFlipping)
-        return;
+        if (isFlipping)
+            return;
 
-    StartCoroutine(FlipCoroutine());
-}
+        StartCoroutine(FlipCoroutine());
+    }
 
     IEnumerator FlipCoroutine()
     {
@@ -77,11 +79,15 @@ public class BalanceManager : NetworkBehaviour
     // Sử dụng FixedUpdate thay vì Update để đồng bộ hoàn hảo với chu kỳ vật lý của nhân vật
     void FixedUpdate()
     {
+
+        if (puzzleLocked)
+            return;
+
         if (isFlipping)
             return;
-            
+
         // 1. Chỉ Server thực hiện tính toán trọng lượng và góc nghiêng mục tiêu
-    if (IsServer)
+        if (IsServer)
     {
         float NW = GetWeight(nw);
         float NE = GetWeight(ne);
@@ -102,29 +108,29 @@ public class BalanceManager : NetworkBehaviour
 
         // THAY BẰNG DÒNG DƯỚI ĐÂY (Đã đảo ngược dấu để bên nặng chìm xuống):
         targetRotation.Value =
-    Quaternion.Euler(
-        -tiltZ * 3f,
-        0,
-        tiltX * 3f
-    );
-            // Debug.Log(
-            // $"NW:{NW} NE:{NE} SW:{SW} SE:{SE}"
-        // );
-    }
-
-        // 2. Cả Server và Client đều dùng MoveRotation để xoay mâm mượt mà, giữ chặt chân nhân vật bằng ma sát
-        if (diskRigidbody != null)
-        {
-            Quaternion nextRotation = Quaternion.Lerp(
-                diskRigidbody.rotation,
-                targetRotation.Value,
-                Time.fixedDeltaTime * 2f // Dùng fixedDeltaTime trong FixedUpdate
-            );
-            
-            diskRigidbody.MoveRotation(nextRotation);
+        Quaternion.Euler(
+            -tiltZ * 3f,
+            0,
+            tiltX * 3f
+        );
+                // Debug.Log(
+                // $"NW:{NW} NE:{NE} SW:{SW} SE:{SE}"
+            // );
         }
 
-        isFlipping = false;
+            // 2. Cả Server và Client đều dùng MoveRotation để xoay mâm mượt mà, giữ chặt chân nhân vật bằng ma sát
+            if (diskRigidbody != null)
+            {
+                Quaternion nextRotation = Quaternion.Lerp(
+                    diskRigidbody.rotation,
+                    targetRotation.Value,
+                    Time.fixedDeltaTime * 2f // Dùng fixedDeltaTime trong FixedUpdate
+                );
+                
+                diskRigidbody.MoveRotation(nextRotation);
+            }
+
+            isFlipping = false;
     }
 
     float GetWeight(ZoneTrigger zone)
@@ -154,5 +160,56 @@ public class BalanceManager : NetworkBehaviour
         }
         return total;
     }
-   
+
+    public void ResetDisk()
+    {
+        isFlipping = false;
+
+        diskRigidbody.rotation =
+            Quaternion.identity;
+
+        diskRigidbody.linearVelocity =
+            Vector3.zero;
+
+        diskRigidbody.angularVelocity =
+            Vector3.zero;
+    }
+
+    public void LockDisk()
+    {
+        puzzleLocked = true;
+    }
+
+    public IEnumerator ReturnToCenterAndLock()
+    {
+        Quaternion startRot =
+            diskRigidbody.rotation;
+
+        float timer = 0f;
+        float duration = 1f;
+
+        while(timer < duration)
+        {
+            timer += Time.deltaTime;
+
+            Quaternion rot =
+                Quaternion.Slerp(
+                    startRot,
+                    Quaternion.identity,
+                    timer / duration
+                );
+
+            diskRigidbody.MoveRotation(rot);
+
+            yield return null;
+        }
+
+        diskRigidbody.MoveRotation(
+            Quaternion.identity
+        );
+
+        CurrentAngle = 0;
+
+        puzzleLocked = true;
+    }
 }
