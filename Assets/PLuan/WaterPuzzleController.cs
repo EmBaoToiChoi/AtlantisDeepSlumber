@@ -31,6 +31,26 @@ public class WaterPuzzleController : NetworkBehaviour
     [Tooltip("Cầu băng (hiện khi bị đóng băng)")]
     public GameObject iceBridgeObject;
 
+    [Header("Water Speed Settings")]
+    [Tooltip("Tốc độ chảy của dòng nước chảy xiết")]
+    public float flowingWaterSpeed = 5.0f;
+
+    [Tooltip("Tốc độ chảy của vũng nước tĩnh")]
+    public float puddleWaterSpeed = 0.0f;
+
+    [Tooltip("Hướng chảy trục X (U) của dòng nước")]
+    public float flowingWaterDirectionX = 1.0f;
+
+    [Tooltip("Hướng chảy trục Y (V) của dòng nước")]
+    public float flowingWaterDirectionY = 0.0f;
+
+    [Header("Flow Animation Settings")]
+    [Tooltip("Thời gian dòng nước trào ra chạy đến đích (giây)")]
+    public float flowDuration = 2.0f;
+
+    [Tooltip("Khoảng cách di chuyển vật lý của dòng nước (mét)")]
+    public float flowTravelDistance = 15.0f;
+
     [Header("Hazard Settings")]
     [Tooltip("Điểm hồi sinh an toàn khi rơi xuống dòng nước chảy xiết")]
     public Transform safeRespawnPoint;
@@ -66,11 +86,19 @@ public class WaterPuzzleController : NetworkBehaviour
     private float overflowStateStartTime = 0f;
     private List<GameObject> activeRocksList = new List<GameObject>();
     private int initialRockCount = 0;
+    private bool isRocksInitialized = false;
+    private Vector3 originalFlowingWaterLocalPos;
+    private Coroutine flowCoroutine;
 
     private bool IsNetworkActive => NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening && IsSpawned;
 
     private void Awake()
     {
+        if (flowingWaterObject != null)
+        {
+            originalFlowingWaterLocalPos = flowingWaterObject.transform.localPosition;
+        }
+
         audioSource = GetComponent<AudioSource>();
         if (audioSource == null && freezeSound != null)
         {
@@ -96,7 +124,7 @@ public class WaterPuzzleController : NetworkBehaviour
             detector.Initialize(this);
         }
 
-        // Lọc danh sách đá chặn khi bắt đầu (chấp nhận cả các đá đang ẩn/inactive trong Scene)
+        // Lọc danh sách đá chặn khi bắt đầu
         activeRocksList.Clear();
         if (blockingRocks != null)
         {
@@ -108,18 +136,70 @@ public class WaterPuzzleController : NetworkBehaviour
                 }
             }
         }
-        initialRockCount = activeRocksList.Count;
-        Debug.Log($"[WaterPuzzleController] Khởi tạo thành công: Tìm thấy {initialRockCount} viên đá chặn được gán.");
-        if (initialRockCount == 0)
-        {
-            Debug.LogError("[WaterPuzzleController] CẢNH BÁO: Không có viên đá nào được gán trong 'blockingRocks'! Vui lòng kéo đá chặn vào Inspector.");
-        }
+
+        // Tự động tìm thêm đá chặn từ scene nếu gán thiếu
+        EnsureRocksInitialized();
+        Debug.Log($"[WaterPuzzleController] Khởi tạo thành công: Theo dõi {activeRocksList.Count} viên đá chặn.");
 
         // Nếu chạy Offline, khởi tạo trạng thái ban đầu cục bộ là Pending
         if (!IsNetworkActive)
         {
             InitializeState(WaterPuzzleState.Pending);
         }
+    }
+
+    private void EnsureRocksInitialized()
+    {
+        if (isRocksInitialized)
+        {
+            // Chỉ loại bỏ các đá đã bị hủy/null trong quá trình chơi
+            activeRocksList.RemoveAll(item => item == null);
+            return;
+        }
+
+        // Loại bỏ các đá bị null ban đầu
+        activeRocksList.RemoveAll(item => item == null);
+
+        // Nếu danh sách trống, quét tìm lại từ Container hoặc Scene làm phương án dự phòng
+        if (activeRocksList.Count == 0)
+        {
+            // Tìm từ container DaChanCuaDaRoi trước (chứa các thực thể đá thực tế)
+            GameObject container = GameObject.Find("DaChanCuaDaRoi");
+            if (container != null)
+            {
+                var puzzles = container.GetComponentsInChildren<ElementalRockPuzzle>(true);
+                foreach (var puzzle in puzzles)
+                {
+                    if (puzzle != null && !activeRocksList.Contains(puzzle.gameObject))
+                    {
+                        activeRocksList.Add(puzzle.gameObject);
+                        Debug.Log($"[WaterPuzzleController] Khởi tạo đá chặn từ container DaChanCuaDaRoi: '{puzzle.gameObject.name}'");
+                    }
+                }
+            }
+
+            // Nếu vẫn chưa tìm đủ 2 đá, quét toàn bộ Scene làm phương án dự phòng
+            if (activeRocksList.Count < 2)
+            {
+#if UNITY_2023_1_OR_NEWER
+                var scenePuzzles = FindObjectsByType<ElementalRockPuzzle>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+#else
+                var scenePuzzles = FindObjectsOfType<ElementalRockPuzzle>(true);
+#endif
+                foreach (var puzzle in scenePuzzles)
+                {
+                    if (puzzle != null && !activeRocksList.Contains(puzzle.gameObject))
+                    {
+                        activeRocksList.Add(puzzle.gameObject);
+                        Debug.Log($"[WaterPuzzleController] Khởi tạo đá chặn từ Scene: '{puzzle.gameObject.name}'");
+                    }
+                }
+            }
+        }
+        
+        initialRockCount = activeRocksList.Count;
+        isRocksInitialized = true;
+        Debug.Log($"[WaterPuzzleController] Khởi tạo danh sách đá chặn hoàn tất. Số đá ban đầu: {initialRockCount}");
     }
 
     public override void OnNetworkSpawn()
@@ -176,6 +256,7 @@ public class WaterPuzzleController : NetworkBehaviour
 
     private bool CheckAnyRockActivated()
     {
+        EnsureRocksInitialized();
         if (activeRocksList == null || activeRocksList.Count == 0) return false;
 
         foreach (var rock in activeRocksList)
@@ -208,6 +289,7 @@ public class WaterPuzzleController : NetworkBehaviour
 
     private bool CheckAllRocksDestroyed()
     {
+        EnsureRocksInitialized();
         // Nếu lúc bắt đầu không tìm thấy viên đá nào hợp lệ được gán trong Scene, không kích hoạt trào nước
         if (initialRockCount == 0) return false;
 
@@ -243,6 +325,7 @@ public class WaterPuzzleController : NetworkBehaviour
     /// </summary>
     public void ChangePuzzleState(WaterPuzzleState newState)
     {
+        Debug.Log($"[WaterPuzzleController] Yêu cầu chuyển đổi trạng thái câu đố sang: {newState}. IsNetworkActive: {IsNetworkActive}, IsServer: {IsServer}");
         if (IsNetworkActive)
         {
             if (IsServer)
@@ -299,6 +382,7 @@ public class WaterPuzzleController : NetworkBehaviour
 
     private void OnPuzzleStateChanged(WaterPuzzleState oldVal, WaterPuzzleState newVal)
     {
+        Debug.Log($"[WaterPuzzleController] ĐỒNG BỘ MẠNG: Trạng thái câu đố thay đổi từ {oldVal} sang {newVal}");
         localState = newVal;
         ApplyVisualStates(newVal, true);
     }
@@ -313,30 +397,75 @@ public class WaterPuzzleController : NetworkBehaviour
             freezeCoroutine = null;
         }
 
+        if (flowCoroutine != null)
+        {
+            StopCoroutine(flowCoroutine);
+            flowCoroutine = null;
+        }
+
         switch (state)
         {
             case WaterPuzzleState.Pending:
                 if (puddleObject != null) puddleObject.SetActive(false);
-                if (flowingWaterObject != null) flowingWaterObject.SetActive(false);
+                if (flowingWaterObject != null)
+                {
+                    flowingWaterObject.SetActive(false);
+                    flowingWaterObject.transform.localPosition = originalFlowingWaterLocalPos;
+                }
                 if (iceBridgeObject != null) iceBridgeObject.SetActive(false);
                 break;
 
             case WaterPuzzleState.Blocked:
-                if (puddleObject != null) puddleObject.SetActive(true);
-                if (flowingWaterObject != null) flowingWaterObject.SetActive(false);
+                if (puddleObject != null)
+                {
+                    puddleObject.SetActive(true);
+                    var puddleRenderer = puddleObject.GetComponent<Renderer>();
+                    if (puddleRenderer != null && puddleRenderer.material != null)
+                    {
+                        puddleRenderer.material.SetFloat("_Speed", puddleWaterSpeed);
+                    }
+                }
+                if (flowingWaterObject != null)
+                {
+                    flowingWaterObject.SetActive(false);
+                    flowingWaterObject.transform.localPosition = originalFlowingWaterLocalPos;
+                }
                 if (iceBridgeObject != null) iceBridgeObject.SetActive(false);
                 break;
 
             case WaterPuzzleState.Overflowing:
                 if (puddleObject != null) puddleObject.SetActive(false);
-                if (flowingWaterObject != null) flowingWaterObject.SetActive(true);
+                if (flowingWaterObject != null)
+                {
+                    flowingWaterObject.SetActive(true);
+                    var flowRenderer = flowingWaterObject.GetComponent<Renderer>();
+                    if (flowRenderer != null && flowRenderer.material != null)
+                    {
+                        flowRenderer.material.SetFloat("_Speed", flowingWaterSpeed);
+                        flowRenderer.material.SetFloat("_SpeedX", flowingWaterDirectionX);
+                        flowRenderer.material.SetFloat("_SpeedY", flowingWaterDirectionY);
+                    }
+
+                    if (animate)
+                    {
+                        flowCoroutine = StartCoroutine(AnimateWaterFlowing());
+                    }
+                    else
+                    {
+                        flowingWaterObject.transform.localPosition = CalculateEndLocalPos();
+                    }
+                }
                 if (iceBridgeObject != null) iceBridgeObject.SetActive(false);
                 overflowStateStartTime = Time.time;
                 break;
 
             case WaterPuzzleState.Frozen:
                 if (puddleObject != null) puddleObject.SetActive(false);
-                if (flowingWaterObject != null) flowingWaterObject.SetActive(false);
+                if (flowingWaterObject != null)
+                {
+                    flowingWaterObject.SetActive(false);
+                    flowingWaterObject.transform.localPosition = originalFlowingWaterLocalPos;
+                }
                 
                 if (iceBridgeObject != null)
                 {
@@ -545,5 +674,47 @@ public class WaterPuzzleController : NetworkBehaviour
 
         var maya = playerRoot.GetComponent<MayaPlayer>();
         if (maya != null) { maya.TakeDamage(waterDamage); return; }
+    }
+
+    private Vector3 CalculateEndLocalPos()
+    {
+        if (flowingWaterObject == null) return originalFlowingWaterLocalPos;
+
+        Vector3 startWorldPos = flowingWaterObject.transform.parent.TransformPoint(originalFlowingWaterLocalPos);
+        
+        // Lấy hướng forward của dòng nước và triệt tiêu thành phần Y để nước trượt ngang phẳng (không đi chúc xuống)
+        Vector3 moveDir = flowingWaterObject.transform.forward;
+        moveDir.y = 0f;
+        if (moveDir.sqrMagnitude > 0.001f)
+        {
+            moveDir.Normalize();
+        }
+        else
+        {
+            moveDir = Vector3.forward;
+        }
+
+        Vector3 endWorldPos = startWorldPos + moveDir * flowTravelDistance;
+        return flowingWaterObject.transform.parent.InverseTransformPoint(endWorldPos);
+    }
+
+    private IEnumerator AnimateWaterFlowing()
+    {
+        if (flowingWaterObject == null) yield break;
+
+        Vector3 startLocalPos = originalFlowingWaterLocalPos;
+        Vector3 endLocalPos = CalculateEndLocalPos();
+
+        flowingWaterObject.transform.localPosition = startLocalPos;
+
+        float elapsed = 0f;
+        while (elapsed < flowDuration)
+        {
+            elapsed += Time.deltaTime;
+            float pct = Mathf.Clamp01(elapsed / flowDuration);
+            flowingWaterObject.transform.localPosition = Vector3.Lerp(startLocalPos, endLocalPos, pct);
+            yield return null;
+        }
+        flowingWaterObject.transform.localPosition = endLocalPos;
     }
 }

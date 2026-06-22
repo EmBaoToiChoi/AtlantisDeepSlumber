@@ -68,8 +68,12 @@ public class ElementalRockPuzzle : NetworkBehaviour
     [Header("Start Hidden Settings")]
     [Tooltip("Nếu tích chọn, đá sẽ tự ẩn Renderer và Collider khi bắt đầu (nhưng GameObject vẫn Active để tránh lỗi Netcode).")]
     public bool startHidden = false;
+
+    private NetworkVariable<bool> netIsShown = new NetworkVariable<bool>(
+        false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server
+    );
     private bool isShown = false;
-    public bool IsShown => !startHidden || isShown;
+    public bool IsShown => !startHidden || (IsNetworkActive ? netIsShown.Value : isShown);
 
     private bool IsNetworkActive => NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening && IsSpawned;
 
@@ -120,14 +124,30 @@ public class ElementalRockPuzzle : NetworkBehaviour
 
     public void ShowRock()
     {
-        if (isShown)
+        bool currentShown = IsNetworkActive ? netIsShown.Value : isShown;
+        if (currentShown)
         {
             Debug.Log($"[ElementalRockPuzzle] '{gameObject.name}' đã được hiển thị rồi, bỏ qua ShowRock().");
             return;
         }
 
-        isShown = true;
-        
+        if (IsNetworkActive)
+        {
+            if (IsServer)
+            {
+                netIsShown.Value = true;
+            }
+        }
+        else
+        {
+            isShown = true;
+        }
+
+        ApplyShowRockVisuals();
+    }
+
+    private void ApplyShowRockVisuals()
+    {
         // Bật active chính nó (phòng trường hợp bị tắt)
         gameObject.SetActive(true);
 
@@ -156,7 +176,7 @@ public class ElementalRockPuzzle : NetworkBehaviour
         if (uiRootObj != null) uiRootObj.SetActive(true);
         
         ResetPuzzle();
-        Debug.Log($"[ElementalRockPuzzle] '{gameObject.name}' đã được hiển thị (ShowRock)! Số con: {transform.childCount}");
+        Debug.Log($"[ElementalRockPuzzle] '{gameObject.name}' đã áp dụng hiển thị (ApplyShowRockVisuals)! Số con: {transform.childCount}");
     }
 
     /// <summary>
@@ -183,6 +203,7 @@ public class ElementalRockPuzzle : NetworkBehaviour
             // Đăng ký sự kiện đồng bộ khi biến mạng thay đổi
             netCurrentStep.OnValueChanged += OnPuzzleStateChanged;
             netIsTimerRunning.OnValueChanged += OnTimerStateChanged;
+            netIsShown.OnValueChanged += OnIsShownChanged;
 
             // Lấy trạng thái ban đầu của mạng
             currentStep = netCurrentStep.Value;
@@ -192,7 +213,15 @@ public class ElementalRockPuzzle : NetworkBehaviour
                 timeRemaining = netTimeRemaining.Value;
             }
 
-            UpdateVisualStates();
+            // Đồng bộ hiển thị ban đầu nếu Server đã kích hoạt hiển thị đá
+            if (netIsShown.Value)
+            {
+                ApplyShowRockVisuals();
+            }
+            else
+            {
+                UpdateVisualStates();
+            }
         }
     }
 
@@ -203,6 +232,7 @@ public class ElementalRockPuzzle : NetworkBehaviour
         {
             netCurrentStep.OnValueChanged -= OnPuzzleStateChanged;
             netIsTimerRunning.OnValueChanged -= OnTimerStateChanged;
+            netIsShown.OnValueChanged -= OnIsShownChanged;
         }
     }
 
@@ -294,24 +324,29 @@ public class ElementalRockPuzzle : NetworkBehaviour
                 projectileRigidbody.isKinematic = true;
             }
 
-            // Gọi các logic nổ/ẩn của đạn (chỉ trên Server hoặc chế độ Offline để tránh lỗi đồng bộ)
-            bool isServerOrOffline = !IsNetworkActive || IsServer;
-            if (isServerOrOffline)
+            // Gọi các logic nổ/ẩn của đạn ngay lập tức trên cả Client/Server để đạn dừng di chuyển cục bộ
+            if (hitObj.GetComponent<ElenaIceProjectile>() != null || 
+                hitObj.GetComponent<MayaWaterProjectile>() != null ||
+                hitObj.GetComponent<ArthurFireProjectile>() != null)
             {
-                if (hitObj.GetComponent<ElenaIceProjectile>() != null || hitObj.GetComponent<MayaWaterProjectile>() != null)
-                {
-                    hitObj.SendMessage("HandleHitImpact", SendMessageOptions.DontRequireReceiver);
-                }
-                else
-                {
-                    hitObj.SendMessage("DespawnOrDestroy", SendMessageOptions.DontRequireReceiver);
-                }
+                hitObj.SendMessage("HandleHitImpact", SendMessageOptions.DontRequireReceiver);
+            }
+            else
+            {
+                hitObj.SendMessage("DespawnOrDestroy", SendMessageOptions.DontRequireReceiver);
             }
 
             if (IsNetworkActive)
             {
-                // Nếu đang chơi mạng, gửi RPC để Server kiểm tra và đồng bộ
-                SubmitElementHitServerRpc(hitTag);
+                // Nếu đang chơi mạng, gửi RPC kèm tham chiếu đạn để Server kiểm tra và đồng bộ
+                if (hitObj.TryGetComponent<NetworkObject>(out var netObj))
+                {
+                    SubmitElementHitServerRpc(hitTag, netObj);
+                }
+                else
+                {
+                    SubmitElementHitServerRpc(hitTag, new NetworkObjectReference());
+                }
             }
             else
             {
@@ -322,8 +357,30 @@ public class ElementalRockPuzzle : NetworkBehaviour
     }
 
     [ServerRpc(RequireOwnership = false)]
-    private void SubmitElementHitServerRpc(string hitTag)
+    private void SubmitElementHitServerRpc(string hitTag, NetworkObjectReference projectileRef)
     {
+        // Phá hủy/Dừng đạn phía server nếu nhận được tham chiếu hợp lệ
+        if (projectileRef.TryGet(out NetworkObject netObj))
+        {
+            if (netObj != null && netObj.IsSpawned)
+            {
+                GameObject hitObj = netObj.gameObject;
+                Collider projectileCollider = hitObj.GetComponent<Collider>();
+                if (projectileCollider != null) projectileCollider.enabled = false;
+
+                if (hitObj.GetComponent<ElenaIceProjectile>() != null || 
+                    hitObj.GetComponent<MayaWaterProjectile>() != null ||
+                    hitObj.GetComponent<ArthurFireProjectile>() != null)
+                {
+                    hitObj.SendMessage("HandleHitImpact", SendMessageOptions.DontRequireReceiver);
+                }
+                else
+                {
+                    hitObj.SendMessage("DespawnOrDestroy", SendMessageOptions.DontRequireReceiver);
+                }
+            }
+        }
+
         ProcessElementHit(hitTag);
     }
 
@@ -551,6 +608,14 @@ public class ElementalRockPuzzle : NetworkBehaviour
             timeRemaining = 0f;
         }
         UpdateVisualStates();
+    }
+
+    private void OnIsShownChanged(bool oldVal, bool newVal)
+    {
+        if (newVal)
+        {
+            ApplyShowRockVisuals();
+        }
     }
 
     private void ResetPuzzle()
