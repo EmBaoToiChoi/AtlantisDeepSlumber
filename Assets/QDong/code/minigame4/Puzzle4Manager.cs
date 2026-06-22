@@ -1,6 +1,7 @@
 using UnityEngine;
 using Unity.Netcode;
 using TMPro;
+using System.Collections;
 
 public class Puzzle4Manager : NetworkBehaviour
 {
@@ -11,71 +12,163 @@ public class Puzzle4Manager : NetworkBehaviour
 
     public BalanceManager balanceManager;
 
-    public NetworkVariable<bool>
-        puzzleCompleted =
+    public NetworkVariable<bool> puzzleCompleted =
         new NetworkVariable<bool>();
 
-    public NetworkVariable<float>
-        failTimer =
+    public NetworkVariable<float> failTimer =
         new NetworkVariable<float>(3f);
+
     public TMP_Text countdownText;
 
     private bool hasFailed = false;
 
+    public GameObject completeUI;
+
+    private bool hasCompleted = false;
+
     void Update()
     {
-        if(!IsServer)
+        if (!IsServer)
             return;
 
         CheckFail();
         CheckComplete();
-        // Debug.Log(
-        //     "PuzzleManager Running - Server = "
-        //     + IsServer
-        // );
     }
 
     void CheckFail()
     {
-        if(balanceManager.CurrentAngle > 15)
+        if (balanceManager.CurrentAngle > 15)
         {
             failTimer.Value -= Time.deltaTime;
 
-            countdownText.text =
-                Mathf.CeilToInt(
-                    failTimer.Value
-                ).ToString();
+            if (countdownText != null)
+            {
+                countdownText.text =
+                    Mathf.CeilToInt(
+                        failTimer.Value
+                    ).ToString();
+            }
 
-            if(failTimer.Value <= 0 && !hasFailed)
+            if (failTimer.Value <= 0 && !hasFailed)
             {
                 hasFailed = true;
 
-                Debug.Log("FAIL");
-
-                balanceManager.FlipDisk();
+                StartCoroutine(FailSequence());
             }
         }
         else
         {
             failTimer.Value = 3f;
+
+            if (countdownText != null)
+            {
+                countdownText.text = "";
+            }
         }
     }
 
     void CheckComplete()
     {
-        // Debug.Log("A = " + A.charge.Value);
-        // Debug.Log("B = " + B.charge.Value);
-        // Debug.Log("C = " + C.charge.Value);
-        // Debug.Log("D = " + D.charge.Value);
         if(
+            !hasCompleted &&
             A.IsCompleted() &&
             B.IsCompleted() &&
             C.IsCompleted() &&
             D.IsCompleted()
         )
         {
-            Debug.Log("Puzzle 4 Complete");
+            hasCompleted = true;
+
             puzzleCompleted.Value = true;
+
+            StartCoroutine(
+                balanceManager.ReturnToCenterAndLock()
+            );
+
+            StartCoroutine(
+                CompleteSequence()
+            );
+
+            Debug.Log(
+                "Puzzle 4 Complete"
+            );
         }
+    }
+
+    IEnumerator FailSequence()
+    {
+        balanceManager.FlipDisk();
+
+        yield return new WaitForSeconds(0.4f);
+
+        LaunchAllPlayers();
+
+        yield return new WaitForSeconds(3f);
+
+        ResetPuzzle();
+    }
+
+    void LaunchAllPlayers()
+    {
+        CharacterInfo[] players =
+            FindObjectsByType<CharacterInfo>(
+                FindObjectsSortMode.None
+            );
+
+        foreach (var player in players)
+        {
+            PlayerKnockback knockback =
+                player.GetComponent<PlayerKnockback>();
+
+            if (knockback != null)
+            {
+                // Vector3 force =
+                //     Vector3.up * 15f +
+                //     player.transform.forward * 8f;
+
+                Vector3 center =
+                    balanceManager.diskRigidbody.transform.position;
+
+                Vector3 direction =
+                    player.transform.position - center;
+
+                direction.y = 0f;
+
+                direction.Normalize();
+
+                Vector3 force =
+                    direction * 150f +
+                    Vector3.up * 15f;
+
+                Debug.Log("Player Pos = " + player.transform.position);
+                Debug.Log("Disk Pos = " + balanceManager.diskRigidbody.transform.position);
+                Debug.Log("Direction = " + direction);
+                Debug.Log("Force = " + force);
+
+                knockback.Launch(force);
+            }
+        }
+    }
+    void ResetPuzzle()
+    {
+        A.charge.Value = 0;
+        B.charge.Value = 0;
+        C.charge.Value = 0;
+        D.charge.Value = 0;
+
+        failTimer.Value = 3f;
+
+        hasFailed = false;
+
+        balanceManager.ResetDisk();
+    }
+
+    IEnumerator CompleteSequence()
+    {
+        completeUI.SetActive(true);
+
+        yield return new WaitForSeconds(3f);
+
+        completeUI.SetActive(false);
     }
 }

@@ -1,8 +1,9 @@
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using Unity.Netcode;
 
-public class BalanceMeterUI : MonoBehaviour
+public class BalanceMeterUI : NetworkBehaviour
 {
     public BalanceManager balanceManager;
 
