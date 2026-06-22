@@ -23,8 +23,12 @@ public class Puzzle4Manager : NetworkBehaviour
     private bool hasFailed = false;
 
     public GameObject completeUI;
+    public GameObject castleGate;
+    public GameObject trapTrigger;
 
     private bool hasCompleted = false;
+
+    public ParticleSystem centerExplosion;
 
     void Update()
     {
@@ -138,7 +142,7 @@ public class Puzzle4Manager : NetworkBehaviour
 
                 Vector3 force =
                     direction * 150f +
-                    Vector3.up * 15f;
+                    Vector3.up * 35f;
 
                 Debug.Log("Player Pos = " + player.transform.position);
                 Debug.Log("Disk Pos = " + balanceManager.diskRigidbody.transform.position);
@@ -165,10 +169,27 @@ public class Puzzle4Manager : NetworkBehaviour
 
     IEnumerator CompleteSequence()
     {
+        // đợi tia điện hội tụ
+
+        yield return new WaitForSeconds(1f);
+
+        if(centerExplosion != null)
+        {
+            centerExplosion.Play();
+        }
+
+        yield return new WaitForSeconds(0.5f);
+
         completeUI.SetActive(true);
 
         yield return new WaitForSeconds(3f);
 
+        LaunchAllPlayers();
+
         completeUI.SetActive(false);
+
+        castleGate.SetActive(false);
+
+        trapTrigger.SetActive(false);
     }
 }
