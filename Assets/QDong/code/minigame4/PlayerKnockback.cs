@@ -1,6 +1,7 @@
 using UnityEngine;
+using Unity.Netcode;
 
-public class PlayerKnockback : MonoBehaviour
+public class PlayerKnockback : NetworkBehaviour
 {
     private Rigidbody rb;
 
