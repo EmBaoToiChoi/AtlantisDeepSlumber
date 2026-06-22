@@ -47,6 +47,25 @@ public class BoxRoiDaTrigger : NetworkBehaviour
         if (daChanCuaDaRoi != null)
         {
             daChanCuaDaRoi.SetActive(true);
+            
+            // Kích hoạt tất cả GameObject con đệ quy (vì con có thể đang inactive)
+            ActivateAllChildrenRecursive(daChanCuaDaRoi.transform);
+
+            // Hỗ trợ trường hợp đá được kích hoạt sẵn trong hierarchy (để tránh lỗi Netcode) nhưng dùng StartHidden
+            // Tìm TẤT CẢ các script ElementalRockPuzzle trên con (có thể có nhiều viên đá con)
+            var puzzles = daChanCuaDaRoi.GetComponentsInChildren<ElementalRockPuzzle>(true);
+            if (puzzles != null && puzzles.Length > 0)
+            {
+                foreach (var puzzle in puzzles)
+                {
+                    puzzle.ShowRock();
+                }
+                Debug.Log($"[BoxRoiDaTrigger] Đã gọi ShowRock() cho {puzzles.Length} viên đá con.");
+            }
+            else
+            {
+                Debug.LogWarning("[BoxRoiDaTrigger] Không tìm thấy ElementalRockPuzzle trên con của 'daChanCuaDaRoi'!");
+            }
         }
         else
         {
@@ -65,6 +84,20 @@ public class BoxRoiDaTrigger : NetworkBehaviour
 
         // Ẩn chính BoxRoiDa (GameObject chứa script trigger này) để tránh kích hoạt lại
         gameObject.SetActive(false);
+    }
+
+    /// <summary>
+    /// Kích hoạt đệ quy tất cả GameObject con (từ trên xuống dưới).
+    /// Đảm bảo các prefab con đang inactive cũng được bật lên.
+    /// </summary>
+    private void ActivateAllChildrenRecursive(Transform parent)
+    {
+        for (int i = 0; i < parent.childCount; i++)
+        {
+            Transform child = parent.GetChild(i);
+            child.gameObject.SetActive(true);
+            ActivateAllChildrenRecursive(child);
+        }
     }
 
     /// <summary>

@@ -180,11 +180,27 @@ public class WaterPuzzleController : NetworkBehaviour
 
         foreach (var rock in activeRocksList)
         {
-            // Nếu có ít nhất 1 viên đá chặn xuất hiện (active) trong Scene, xem như đá đã rơi
-            if (rock != null && rock.activeInHierarchy)
+            if (rock != null)
             {
-                Debug.Log($"[WaterPuzzleController] Phát hiện đá chặn '{rock.name}' đã kích hoạt (rơi xuống scene)!");
-                return true;
+                var puzzle = rock.GetComponentInChildren<ElementalRockPuzzle>(true);
+                if (puzzle != null)
+                {
+                    // Nếu đá chặn có kịch bản ElementalRockPuzzle, kiểm tra trạng thái IsShown của nó
+                    if (puzzle.IsShown)
+                    {
+                        Debug.Log($"[WaterPuzzleController] Phát hiện đá chặn '{rock.name}' đã kích hoạt hiển thị (rơi xuống scene)!");
+                        return true;
+                    }
+                }
+                else
+                {
+                    // Fallback nếu đá không có script ElementalRockPuzzle
+                    if (rock.activeInHierarchy)
+                    {
+                        Debug.Log($"[WaterPuzzleController] Phát hiện đá chặn '{rock.name}' đã kích hoạt active (rơi xuống scene)!");
+                        return true;
+                    }
+                }
             }
         }
         return false;
@@ -197,13 +213,28 @@ public class WaterPuzzleController : NetworkBehaviour
 
         foreach (var rock in activeRocksList)
         {
-            // Nếu có ít nhất 1 viên đá đã được đăng ký còn tồn tại và đang active trong Scene, chưa giải xong
-            if (rock != null && rock.activeInHierarchy)
+            if (rock != null)
             {
-                return false;
+                var puzzle = rock.GetComponentInChildren<ElementalRockPuzzle>(true);
+                if (puzzle != null)
+                {
+                    // Nếu có ít nhất 1 viên đá có script và đang hiển thị, chưa giải xong
+                    if (puzzle.IsShown)
+                    {
+                        return false;
+                    }
+                }
+                else
+                {
+                    // Fallback
+                    if (rock.activeInHierarchy)
+                    {
+                        return false;
+                    }
+                }
             }
         }
-        Debug.Log("[WaterPuzzleController] Phát hiện tất cả đá chặn gán ban đầu đã bị vỡ/deactive!");
+        Debug.Log("[WaterPuzzleController] Phát hiện tất cả đá chặn gán ban đầu đã bị vỡ/ẩn hoàn toàn!");
         return true;
     }
 
