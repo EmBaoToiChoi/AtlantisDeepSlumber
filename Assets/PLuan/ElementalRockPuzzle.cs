@@ -65,6 +65,12 @@ public class ElementalRockPuzzle : NetworkBehaviour
     private GameObject[] iconObjects;
     private SpriteRenderer[] iconRenderers;
 
+    [Header("Start Hidden Settings")]
+    [Tooltip("Nếu tích chọn, đá sẽ tự ẩn Renderer và Collider khi bắt đầu (nhưng GameObject vẫn Active để tránh lỗi Netcode).")]
+    public bool startHidden = false;
+    private bool isShown = false;
+    public bool IsShown => !startHidden || isShown;
+
     private bool IsNetworkActive => NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening && IsSpawned;
 
     private void Start()
@@ -86,7 +92,86 @@ public class ElementalRockPuzzle : NetworkBehaviour
             Debug.LogWarning("[ElementalRockPuzzle] Vui lòng gán đầy đủ 4 Sprite Icon nguyên tố trong Inspector để hiển thị.");
         }
 
+        if (startHidden)
+        {
+            isShown = false;
+
+            // Tắt đệ quy tất cả GameObject con (ẩn hoàn toàn mesh, collider, v.v.)
+            // GameObject cha (chính nó) vẫn active để tránh lỗi Netcode xóa đối tượng inactive
+            SetChildrenActiveRecursive(transform, false);
+
+            // Tắt Renderer và Collider trên chính GameObject này (nếu có)
+            var ren = GetComponent<Renderer>();
+            if (ren != null) ren.enabled = false;
+            var col = GetComponent<Collider>();
+            if (col != null) col.enabled = false;
+
+            // Ẩn UI Icon
+            if (uiRootObj != null) uiRootObj.SetActive(false);
+
+            Debug.Log($"[ElementalRockPuzzle] '{gameObject.name}' đã ẩn khi khởi tạo (startHidden = true). Số con: {transform.childCount}");
+        }
+        else
+        {
+            isShown = true;
+            ResetPuzzle();
+        }
+    }
+
+    public void ShowRock()
+    {
+        if (isShown)
+        {
+            Debug.Log($"[ElementalRockPuzzle] '{gameObject.name}' đã được hiển thị rồi, bỏ qua ShowRock().");
+            return;
+        }
+
+        isShown = true;
+        
+        // Bật active chính nó (phòng trường hợp bị tắt)
+        gameObject.SetActive(true);
+
+        // Kích hoạt đệ quy tất cả GameObject con (từ trên xuống để cha active trước con)
+        SetChildrenActiveRecursive(transform, true);
+
+        // Bật Renderer và Collider trên chính nó
+        var ren = GetComponent<Renderer>();
+        if (ren != null) ren.enabled = true;
+        var col = GetComponent<Collider>();
+        if (col != null) col.enabled = true;
+
+        // Bật tất cả Renderer con (kể cả vừa mới được kích hoạt lại)
+        foreach (var r in GetComponentsInChildren<Renderer>(true))
+        {
+            r.enabled = true;
+        }
+
+        // Bật tất cả Collider con
+        foreach (var c in GetComponentsInChildren<Collider>(true))
+        {
+            c.enabled = true;
+        }
+
+        // Hiện UI Icon
+        if (uiRootObj != null) uiRootObj.SetActive(true);
+        
         ResetPuzzle();
+        Debug.Log($"[ElementalRockPuzzle] '{gameObject.name}' đã được hiển thị (ShowRock)! Số con: {transform.childCount}");
+    }
+
+    /// <summary>
+    /// Kích hoạt hoặc tắt đệ quy tất cả GameObject con (từ trên xuống dưới).
+    /// Hàm này hoạt động đúng cả khi GameObject con đang inactive.
+    /// </summary>
+    private void SetChildrenActiveRecursive(Transform parent, bool active)
+    {
+        for (int i = 0; i < parent.childCount; i++)
+        {
+            Transform child = parent.GetChild(i);
+            child.gameObject.SetActive(active);
+            // Tiếp tục đệ quy vào con của con
+            SetChildrenActiveRecursive(child, active);
+        }
     }
 
     public override void OnNetworkSpawn()
