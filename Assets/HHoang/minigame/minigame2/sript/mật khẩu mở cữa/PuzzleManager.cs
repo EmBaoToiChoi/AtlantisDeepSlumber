@@ -1,8 +1,8 @@
 using System.Collections;
 using UnityEngine;
-using Unity.Netcode; // BẮT BUỘC PHẢI CÓ
+using Unity.Netcode; 
 
-public class PuzzleManager : NetworkBehaviour // Đổi thành NetworkBehaviour
+public class PuzzleManager : NetworkBehaviour 
 {
     [Header("Puzzle Setup")]
     [SerializeField] private PillarInteract[] pillars = new PillarInteract[4]; 
@@ -15,15 +15,12 @@ public class PuzzleManager : NetworkBehaviour // Đổi thành NetworkBehaviour
     [Header("Visual Effects")]
     [SerializeField] private ParticleSystem dustEffect; 
 
-    // Biến mạng lưu trạng thái xem giải xong chưa (Chỉ Server được sửa)
     private NetworkVariable<bool> isPuzzleSolved = new NetworkVariable<bool>(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
     public override void OnNetworkSpawn()
     {
-        // Lắng nghe khi nào Server báo Đã giải xong thì Clients tự chạy hiệu ứng trượt cửa
         isPuzzleSolved.OnValueChanged += OnPuzzleSolvedChanged;
         
-        // Nếu có ông nào kết nối muộn mà cửa đã mở rồi, lập tức dịch cửa lên luôn
         if (isPuzzleSolved.Value && door != null)
         {
             door.transform.position = door.transform.position + Vector3.up * openHeight;
@@ -35,24 +32,37 @@ public class PuzzleManager : NetworkBehaviour // Đổi thành NetworkBehaviour
         isPuzzleSolved.OnValueChanged -= OnPuzzleSolvedChanged;
     }
 
-    // Hàm này chỉ thực thi trên Server (đã được bảo vệ từ PillarInteract)
     public void CheckPuzzle()
     {
         if (!IsServer) return; 
         if (isPuzzleSolved.Value) return; 
 
-        bool allCorrect = true;
+        Debug.Log("<color=yellow>================ SERVER QUÉT ĐÁP ÁN ===============</color>");
+        
+        if (pillars == null || pillars.Length == 0) return;
 
-        foreach (PillarInteract pillar in pillars)
+        bool secretariesCorrect = true;
+
+        for (int i = 0; i < pillars.Length; i++)
         {
-            if (pillar != null && !pillar.IsCorrectDirection())
+            if (pillars[i] == null)
             {
-                allCorrect = false;
-                break; 
+                secretariesCorrect = false;
+                break;
+            }
+
+            int current = pillars[i].GetCurrentDirectionValue();
+            int target = pillars[i].GetCorrectDirectionValue();
+            Debug.Log($"[Trạng Thái] {pillars[i].gameObject.name} -> Hiện tại: {current} | Đáp án: {target}");
+
+            if (!pillars[i].IsCorrectDirection())
+            {
+                secretariesCorrect = false; 
+                break; // Ngắt kiểm tra ngay khi phát hiện có 1 trụ chưa đúng hướng
             }
         }
 
-        if (allCorrect)
+        if (secretariesCorrect)
         {
             OpenDoor();
         }
@@ -60,16 +70,14 @@ public class PuzzleManager : NetworkBehaviour // Đổi thành NetworkBehaviour
 
     private void OpenDoor()
     {
-        // Server đổi giá trị -> kích hoạt OnPuzzleSolvedChanged trên toàn mạng
         isPuzzleSolved.Value = true;
-        Debug.Log("[Server] Tất cả các trụ đã đúng hướng! Kích hoạt mở cửa.");
+        Debug.Log("<color=green>[SERVER] ĐÃ KHỚP TOÀN BỘ ĐÁP ÁN! ĐANG MỞ CỬA...</color>");
     }
 
     private void OnPuzzleSolvedChanged(bool previousValue, bool newValue)
     {
         if (newValue == true && door != null)
         {
-            // Cả Server và tất cả Client cùng chạy Coroutine trượt cửa mượt mà tại máy của họ
             StartCoroutine(SlideDoorOpen());
         }
     }
