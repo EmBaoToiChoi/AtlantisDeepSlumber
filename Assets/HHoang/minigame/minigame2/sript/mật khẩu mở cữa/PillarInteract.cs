@@ -10,6 +10,7 @@ public class PillarInteract : NetworkBehaviour
     public NetworkVariable<int> currentDirection = new NetworkVariable<int>(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
     [Header("Rotation Settings")]
+    [Tooltip("Thời gian (giây) để trụ xoay xong 1 mặt. Càng to xoay càng chậm.")]
     [SerializeField] private float rotationDuration = 1f; 
 
     [Header("Visual Effects")]
@@ -60,6 +61,7 @@ public class PillarInteract : NetworkBehaviour
 
     void Update()
     {
+        // Kiểm tra điều kiện: Phải đứng gần, bấm F, và trụ phải ĐANG ĐỨNG IM mới được xoay tiếp
         if (isPlayerNearby && Input.GetKeyDown(KeyCode.F) && !isRotating)
         {
             RequestRotatePillarServerRpc();
@@ -71,44 +73,63 @@ public class PillarInteract : NetworkBehaviour
     {
         if (isRotating) return; 
         
-        // Server thay đổi giá trị mạng
+        // Server thay đổi giá trị mạng (0 -> 1 -> 2 -> 3 -> 0)
         currentDirection.Value = (currentDirection.Value + 1) % 4;
     }
 
     private void OnDirectionChanged(int previousValue, int newValue)
     {
-        // Chạy hiệu ứng xoay mượt ở local máy của mỗi người chơi
-        float targetYRotation = initialYRotation + (newValue * 90f);
-        Quaternion targetRot = Quaternion.Euler(initialXRotation, targetYRotation, initialZRotation);
+        float targetYAngle = initialYRotation + (newValue * 90f);
 
-        StartCoroutine(AnimateRotation(targetRot));
+        // MẸO TOÁN HỌC: Fix lỗi trụ lật ngược khi xoay từ số 3 (270 độ) quay vòng về số 0.
+        // Ta ép nó quay tiến lên 360 độ thay vì giật ngược lại về 0 độ.
+        if (previousValue == 3 && newValue == 0)
+        {
+            targetYAngle = initialYRotation + 360f;
+        }
 
-        // CHỈ SERVER: Thực hiện quét đáp án ngay khi biến mạng vừa cập nhật xong xuôi
+        Quaternion targetRot = Quaternion.Euler(initialXRotation, targetYAngle, initialZRotation);
+        
+        // Kích hoạt hiệu ứng xoay từ từ
+        StartCoroutine(AnimateRotation(targetRot, newValue));
+
+        // CHỈ SERVER: Quét đáp án ngay khi mạng xác nhận xong số mới
         if (IsServer && puzzleManager != null)
         {
             puzzleManager.CheckPuzzle();
         }
     }
 
-    private IEnumerator AnimateRotation(Quaternion targetRot)
+    private IEnumerator AnimateRotation(Quaternion targetRot, int finalDirectionValue)
     {
-        isRotating = true;
+        isRotating = true; // Khóa tương tác, không cho bấm F khi đang xoay dở
         if (dustEffect != null) dustEffect.Play();
 
         Quaternion startRot = transform.rotation;
         float elapsedTime = 0f;
+        
+        // Chống lỗi ông lỡ nhập rotationDuration bằng 0 gây "lật luôn"
+        float actualDuration = Mathf.Max(0.1f, rotationDuration);
 
-        while (elapsedTime < rotationDuration)
+        while (elapsedTime < actualDuration)
         {
             elapsedTime += Time.deltaTime;
-            float progress = elapsedTime / rotationDuration;
-            transform.rotation = Quaternion.Lerp(startRot, targetRot, progress);
-            yield return null;
+            
+            // Tính tỷ lệ % thời gian trôi qua (0 đến 1)
+            float progress = elapsedTime / actualDuration;
+            
+            // Ép mượt bằng SmoothStep (Khởi động chậm -> Xoay nhanh -> Dừng chậm lại)
+            float smoothProgress = Mathf.SmoothStep(0f, 1f, progress);
+            
+            transform.rotation = Quaternion.Lerp(startRot, targetRot, smoothProgress);
+            yield return null; // Đợi tới khung hình tiếp theo
         }
 
-        transform.rotation = targetRot;
+        // Chốt sổ: Ép chuẩn xác góc quay mạng khi kết thúc Coroutine để chống sai số
+        SetRotationFromDirection(finalDirectionValue);
+
         if (dustEffect != null) dustEffect.Stop();
-        isRotating = false;
+        isRotating = false; // Mở khóa tương tác
     }
 
     private void SetRotationFromDirection(int direction)
