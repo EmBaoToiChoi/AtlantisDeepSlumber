@@ -248,10 +248,9 @@ public class BridgeCollapseTrigger : NetworkBehaviour
     {
         if (newVal)
         {
-            PlayerHUDController localHud = FindAnyObjectByType<PlayerHUDController>();
-            if (localHud != null)
+            if (IntroDialogueController.Instance != null)
             {
-                localHud.ShowMissionAlert("GỖ ĐÃ ĐỦ! HÃY LẠI GẦN CẦU VÀ ẤN F ĐỂ CÙNG XÂY DỰNG!", 6.0f);
+                IntroDialogueController.Instance.StartReadyToBuildDialogue();
             }
         }
     }
@@ -325,11 +324,11 @@ public class BridgeCollapseTrigger : NetworkBehaviour
                 }
             }
 
-            // Periodically sync UI alert / quest to say "Bạn cần tương tác để xây cầu"
+            // Periodically sync UI alert / quest to say "4 người các ngươi hãy lại đây ấn F và click liên tục để xây cầu"
             PlayerHUDController localHudCtl = FindAnyObjectByType<PlayerHUDController>();
             if (localHudCtl != null)
             {
-                localHudCtl.UpdateQuestDescription("Bạn cần tương tác để xây cầu!");
+                localHudCtl.UpdateQuestDescription("4 người các ngươi hãy lại đây ấn F và click liên tục để xây cầu");
                 localHudCtl.UpdateQuestProgress((int)currentProgress, 100);
             }
         }
@@ -484,6 +483,12 @@ public class BridgeCollapseTrigger : NetworkBehaviour
         {
             SpawnWoodLogsLocal();
         }
+
+        // 6. Hiển thị đối thoại giải thích sự kiện sập cầu
+        if (IntroDialogueController.Instance != null)
+        {
+            IntroDialogueController.Instance.StartBridgeCollapseDialogue();
+        }
     }
 
     private void OnCollapseStateChanged(bool oldVal, bool newVal)
@@ -534,11 +539,14 @@ public class BridgeCollapseTrigger : NetworkBehaviour
                 if (localLogsSubmittedCount >= requiredLogsToRepair)
                 {
                     localReadyToBuild = true;
+                    if (IntroDialogueController.Instance != null)
+                    {
+                        IntroDialogueController.Instance.StartReadyToBuildDialogue();
+                    }
                     PlayerHUDController localHud = FindAnyObjectByType<PlayerHUDController>();
                     if (localHud != null)
                     {
-                        localHud.ShowMissionAlert("GỖ ĐÃ ĐỦ! HÃY LẠI GẦN CẦU VÀ ẤN F ĐỂ CÙNG XÂY DỰNG!", 6.0f);
-                        localHud.UpdateQuestDescription("Bạn cần tương tác để xây cầu!");
+                        localHud.UpdateQuestDescription("4 người các ngươi hãy lại đây ấn F và click liên tục để xây cầu");
                         localHud.UpdateQuestProgress(0, 100);
                     }
                 }
@@ -603,11 +611,14 @@ public class BridgeCollapseTrigger : NetworkBehaviour
             if (localLogsSubmittedCount >= requiredLogsToRepair)
             {
                 localReadyToBuild = true;
+                if (IntroDialogueController.Instance != null)
+                {
+                    IntroDialogueController.Instance.StartReadyToBuildDialogue();
+                }
                 PlayerHUDController localHud = FindAnyObjectByType<PlayerHUDController>();
                 if (localHud != null)
                 {
-                    localHud.ShowMissionAlert("GỖ ĐÃ ĐỦ! HÃY LẠI GẦN CẦU VÀ ẤN F ĐỂ CÙNG XÂY DỰNG!", 6.0f);
-                    localHud.UpdateQuestDescription("Bạn cần tương tác để xây cầu!");
+                    localHud.UpdateQuestDescription("4 người các ngươi hãy lại đây ấn F và click liên tục để xây cầu");
                     localHud.UpdateQuestProgress(0, 100);
                 }
             }
