@@ -5146,7 +5146,7 @@ MonoBehaviour:
       MaxSecondsBetweenUpdates: 0
     m_InternalValue: 0
   rotationDuration: 1
-  dustEffect: {fileID: 0}
+  dustEffect: {fileID: 6346811290851877006}
   puzzleManager: {fileID: 0}
 --- !u!65 &5148946742937438568
 BoxCollider:
