@@ -1,13 +1,12 @@
 using System.Collections;
 using UnityEngine;
-using Unity.Netcode; // BẮT BUỘC PHẢI CÓ
+using Unity.Netcode; 
 
-public class PillarInteract : NetworkBehaviour // Đổi thành NetworkBehaviour
+public class PillarInteract : NetworkBehaviour 
 {
     [Header("Puzzle Settings")]
     [SerializeField] private int correctDirection = 0; 
     
-    // Đồng bộ hướng của trụ từ Server về tất cả Client
     public NetworkVariable<int> currentDirection = new NetworkVariable<int>(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
     [Header("Rotation Settings")]
@@ -26,13 +25,21 @@ public class PillarInteract : NetworkBehaviour // Đổi thành NetworkBehaviour
     private float initialZRotation;
     private float initialYRotation;
 
-    // ĐỔI TỪ Start() SANG Awake() ĐỂ CHẠY TRƯỚC NETCODE
     void Awake()
     {
         // Ghi nhớ góc ban đầu local từ Inspector ngay khi Game khởi tạo
         initialXRotation = transform.rotation.eulerAngles.x;
         initialZRotation = transform.rotation.eulerAngles.z;
         initialYRotation = transform.rotation.eulerAngles.y;
+
+        if (puzzleManager == null)
+        {
+            puzzleManager = Object.FindFirstObjectByType<PuzzleManager>();
+            if (puzzleManager != null)
+            {
+                Debug.Log($"<color=cyan>[{gameObject.name}] Đã tự kết nối thành công với PuzzleManager trên Scene!</color>");
+            }
+        }
     }
 
     void Start()
@@ -40,14 +47,9 @@ public class PillarInteract : NetworkBehaviour // Đổi thành NetworkBehaviour
         if (dustEffect != null) dustEffect.Stop();
     }
 
-    // Hàm này chạy khi Object được khởi tạo trên mạng
     public override void OnNetworkSpawn()
     {
-        // Lắng nghe sự kiện thay đổi hướng để tất cả các máy cùng xoay mượt
         currentDirection.OnValueChanged += OnDirectionChanged;
-        
-        // Cập nhật góc quay hiện tại cho những ông vào phòng muộn (Late Joiner)
-        // Nhờ Awake() chạy trước nên lúc này initialXRotation đã có dữ liệu -90 chuẩn chỉnh
         SetRotationFromDirection(currentDirection.Value);
     }
 
@@ -58,31 +60,34 @@ public class PillarInteract : NetworkBehaviour // Đổi thành NetworkBehaviour
 
     void Update()
     {
-        // Chỉ Client đang đứng gần mới được quyền bấm F
         if (isPlayerNearby && Input.GetKeyDown(KeyCode.F) && !isRotating)
         {
-            // Gửi yêu cầu lên Server đòi xoay trụ
             RequestRotatePillarServerRpc();
         }
     }
 
-    // ServerRpc cho phép Client ra lệnh cho Server thực thi logic công bằng
     [ServerRpc(RequireOwnership = false)]
     private void RequestRotatePillarServerRpc(ServerRpcParams rpcParams = default)
     {
-        if (isRotating) return; // Bảo vệ server nếu có đứa cố tình spam packet
-
-        // Server thay đổi giá trị mạng, tự động đồng bộ về toàn bộ các máy khác
+        if (isRotating) return; 
+        
+        // Server thay đổi giá trị mạng
         currentDirection.Value = (currentDirection.Value + 1) % 4;
     }
 
-    // Hàm này tự động chạy trên TOÀN BỘ các máy (Server + Clients) khi currentDirection thay đổi
     private void OnDirectionChanged(int previousValue, int newValue)
     {
+        // Chạy hiệu ứng xoay mượt ở local máy của mỗi người chơi
         float targetYRotation = initialYRotation + (newValue * 90f);
         Quaternion targetRot = Quaternion.Euler(initialXRotation, targetYRotation, initialZRotation);
 
         StartCoroutine(AnimateRotation(targetRot));
+
+        // CHỈ SERVER: Thực hiện quét đáp án ngay khi biến mạng vừa cập nhật xong xuôi
+        if (IsServer && puzzleManager != null)
+        {
+            puzzleManager.CheckPuzzle();
+        }
     }
 
     private IEnumerator AnimateRotation(Quaternion targetRot)
@@ -104,12 +109,6 @@ public class PillarInteract : NetworkBehaviour // Đổi thành NetworkBehaviour
         transform.rotation = targetRot;
         if (dustEffect != null) dustEffect.Stop();
         isRotating = false;
-
-        // CHỈ SERVER mới có quyền kiểm tra xem câu đố đã giải xong chưa
-        if (IsServer && puzzleManager != null)
-        {
-            puzzleManager.CheckPuzzle();
-        }
     }
 
     private void SetRotationFromDirection(int direction)
@@ -123,7 +122,9 @@ public class PillarInteract : NetworkBehaviour // Đổi thành NetworkBehaviour
         return currentDirection.Value == correctDirection;
     }
 
-    // --- Vùng nhận diện người chơi mạng ---
+    public int GetCurrentDirectionValue() { return currentDirection.Value; }
+    public int GetCorrectDirectionValue() { return correctDirection; }
+
     private void OnTriggerEnter(Collider other)
     {
         if (other.CompareTag("Player"))
