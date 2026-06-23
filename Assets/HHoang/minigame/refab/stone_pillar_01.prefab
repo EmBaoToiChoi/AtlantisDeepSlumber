@@ -5021,6 +5021,7 @@ GameObject:
   - component: {fileID: -2060273480223941614}
   - component: {fileID: 9168114895841686124}
   - component: {fileID: 5148946742937438568}
+  - component: {fileID: 208267992950098415}
   m_Layer: 0
   m_Name: stone_pillar_01
   m_TagString: Untagged
@@ -5169,6 +5170,28 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 0.8891982, y: 0.9927261, z: 1.0831252}
   m_Center: {x: -0.00010347366, y: 0.041107878, z: 0.5415626}
+--- !u!64 &208267992950098415
+MeshCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4635064354016855649}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 5
+  m_Convex: 1
+  m_CookingOptions: 30
+  m_Mesh: {fileID: -2160281398415866746, guid: 2fbc10e50965bdd459b1669e68b48cd6, type: 3}
 --- !u!1 &8078124605611061213
 GameObject:
   m_ObjectHideFlags: 0

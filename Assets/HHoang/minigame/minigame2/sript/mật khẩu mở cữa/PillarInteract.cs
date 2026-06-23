@@ -26,13 +26,17 @@ public class PillarInteract : NetworkBehaviour // Đổi thành NetworkBehaviour
     private float initialZRotation;
     private float initialYRotation;
 
-    void Start()
+    // ĐỔI TỪ Start() SANG Awake() ĐỂ CHẠY TRƯỚC NETCODE
+    void Awake()
     {
-        // Ghi nhớ góc ban đầu local
+        // Ghi nhớ góc ban đầu local từ Inspector ngay khi Game khởi tạo
         initialXRotation = transform.rotation.eulerAngles.x;
         initialZRotation = transform.rotation.eulerAngles.z;
         initialYRotation = transform.rotation.eulerAngles.y;
+    }
 
+    void Start()
+    {
         if (dustEffect != null) dustEffect.Stop();
     }
 
@@ -43,6 +47,7 @@ public class PillarInteract : NetworkBehaviour // Đổi thành NetworkBehaviour
         currentDirection.OnValueChanged += OnDirectionChanged;
         
         // Cập nhật góc quay hiện tại cho những ông vào phòng muộn (Late Joiner)
+        // Nhờ Awake() chạy trước nên lúc này initialXRotation đã có dữ liệu -90 chuẩn chỉnh
         SetRotationFromDirection(currentDirection.Value);
     }
 
@@ -62,7 +67,6 @@ public class PillarInteract : NetworkBehaviour // Đổi thành NetworkBehaviour
     }
 
     // ServerRpc cho phép Client ra lệnh cho Server thực thi logic công bằng
-    // RequireOwnership = false giúp bất kỳ Client nào cũng bấm được vào trụ chung của Map
     [ServerRpc(RequireOwnership = false)]
     private void RequestRotatePillarServerRpc(ServerRpcParams rpcParams = default)
     {
@@ -124,7 +128,6 @@ public class PillarInteract : NetworkBehaviour // Đổi thành NetworkBehaviour
     {
         if (other.CompareTag("Player"))
         {
-            // Kiểm tra xem GameObject va chạm có phải là CHÍNH MÌNH (Local Player) không
             NetworkObject netObj = other.GetComponent<NetworkObject>();
             if (netObj != null && netObj.IsLocalPlayer)
             {
