@@ -1,5 +1,5 @@
-using Unity.Netcode;
 using UnityEngine;
+using Unity.Netcode;
 
 public class EnergyColumn : NetworkBehaviour
 {
@@ -10,22 +10,55 @@ public class EnergyColumn : NetworkBehaviour
             NetworkVariableWritePermission.Server
         );
 
-    public float maxCharge = 100;
+    public float maxCharge = 100f;
 
-    public Transform centerPoint;
+    public GameObject chargingEffect;
+    public GameObject completedEffect;
 
-    public LineRenderer beam;
-
-    public ParticleSystem completeEffect;
-
-    private bool effectPlayed = false;
-
-    private Renderer[] renderers;
-    public Transform beamStart;
+    private bool completed = false;
 
     public bool IsCompleted()
     {
         return charge.Value >= maxCharge;
+    }
+
+    void Start()
+    {
+        if(chargingEffect != null)
+            chargingEffect.SetActive(false);
+
+        if(completedEffect != null)
+            completedEffect.SetActive(false);
+    }
+
+    void Update()
+    {
+        if(charge.Value > 0)
+        {
+            if(chargingEffect != null)
+                chargingEffect.SetActive(true);
+        }
+        else
+        {
+            if(chargingEffect != null)
+                chargingEffect.SetActive(false);
+        }
+
+        if(
+            charge.Value >= maxCharge &&
+            !completed
+        )
+        {
+            completed = true;
+
+            if(completedEffect != null)
+                completedEffect.SetActive(true);
+
+            Debug.Log(
+                gameObject.name +
+                " Completed"
+            );
+        }
     }
 
     [ServerRpc(RequireOwnership = false)]
@@ -37,99 +70,5 @@ public class EnergyColumn : NetworkBehaviour
                 0,
                 maxCharge
             );
-
-        Debug.Log(
-            gameObject.name +
-            " Charge = " +
-            charge.Value
-        );
-    }
-
-    void Start()
-    {
-        renderers =
-            GetComponentsInChildren<Renderer>();
-
-        Debug.Log(
-            "Found Renderers: " +
-            renderers.Length
-        );
-
-        if(beam != null)
-            beam.enabled = false;
-    }
-
-    void Update()
-    {
-        float percent =
-            charge.Value / maxCharge;
-
-        // Đổi màu cột theo năng lượng
-        foreach(Renderer r in renderers)
-        {
-            if(r == null)
-                continue;
-
-            r.material.color =
-                Color.Lerp(
-                    Color.white,
-                    Color.cyan,
-                    percent
-                );
-        }
-
-        // Beam
-        if(
-            beam != null &&
-            centerPoint != null
-        )
-        {
-            beam.SetPosition(
-                0,
-                transform.position
-            );
-
-            beam.SetPosition(
-                1,
-                centerPoint.position
-            );
-
-            beam.enabled =
-                charge.Value > 0;
-
-            float width =
-                Mathf.Lerp(
-                    0.05f,
-                    0.25f,
-                    percent
-                );
-
-            beam.startWidth = width;
-            beam.endWidth = width;
-        }
-
-        beam.SetPosition(
-            0,
-            beamStart.position
-        );
-
-        // Effect khi đầy
-        if(
-            charge.Value >= maxCharge &&
-            !effectPlayed
-        )
-        {
-            effectPlayed = true;
-
-            Debug.Log(
-                gameObject.name +
-                " COMPLETED!"
-            );
-
-            if(completeEffect != null)
-            {
-                completeEffect.Play();
-            }
-        }
     }
 }

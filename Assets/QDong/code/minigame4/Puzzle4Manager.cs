@@ -28,7 +28,27 @@ public class Puzzle4Manager : NetworkBehaviour
 
     private bool hasCompleted = false;
 
-    public ParticleSystem centerExplosion;
+    // Sau này đổi sang VFX Graph
+    public GameObject beamA;
+    public GameObject beamB;
+    public GameObject beamC;
+    public GameObject beamD;
+
+    public GameObject centerExplosion;
+
+    // Trap Floor là khi hoàn thành sẽ mở ra
+    public Puzzle4TrapTrigger trapFloor;
+
+    void Start()
+    {
+        if(beamA != null) beamA.SetActive(false);
+        if(beamB != null) beamB.SetActive(false);
+        if(beamC != null) beamC.SetActive(false);
+        if(beamD != null) beamD.SetActive(false);
+
+        if(centerExplosion != null)
+            centerExplosion.SetActive(false);
+    }
 
     void Update()
     {
@@ -73,7 +93,7 @@ public class Puzzle4Manager : NetworkBehaviour
 
     void CheckComplete()
     {
-        if(
+        if (
             !hasCompleted &&
             A.IsCompleted() &&
             B.IsCompleted() &&
@@ -105,14 +125,14 @@ public class Puzzle4Manager : NetworkBehaviour
 
         yield return new WaitForSeconds(0.4f);
 
-        LaunchAllPlayers();
+        LaunchPlayersOutward();
 
         yield return new WaitForSeconds(3f);
 
         ResetPuzzle();
     }
 
-    void LaunchAllPlayers()
+    void LaunchPlayersOutward()
     {
         CharacterInfo[] players =
             FindObjectsByType<CharacterInfo>(
@@ -124,35 +144,49 @@ public class Puzzle4Manager : NetworkBehaviour
             PlayerKnockback knockback =
                 player.GetComponent<PlayerKnockback>();
 
-            if (knockback != null)
-            {
-                // Vector3 force =
-                //     Vector3.up * 15f +
-                //     player.transform.forward * 8f;
+            if (knockback == null)
+                continue;
 
-                Vector3 center =
-                    balanceManager.diskRigidbody.transform.position;
+            Vector3 center =
+                balanceManager.diskRigidbody.transform.position;
 
-                Vector3 direction =
-                    player.transform.position - center;
+            Vector3 direction =
+                player.transform.position - center;
 
-                direction.y = 0f;
+            direction.y = 0f;
 
-                direction.Normalize();
+            direction.Normalize();
 
-                Vector3 force =
-                    direction * 150f +
-                    Vector3.up * 35f;
+            Vector3 force =
+                direction * 150f +
+                Vector3.up * 45f;
 
-                Debug.Log("Player Pos = " + player.transform.position);
-                Debug.Log("Disk Pos = " + balanceManager.diskRigidbody.transform.position);
-                Debug.Log("Direction = " + direction);
-                Debug.Log("Force = " + force);
-
-                knockback.Launch(force);
-            }
+            knockback.Launch(force);
         }
     }
+
+    void LaunchPlayersUp()
+    {
+        CharacterInfo[] players =
+            FindObjectsByType<CharacterInfo>(
+                FindObjectsSortMode.None
+            );
+
+        foreach (var player in players)
+        {
+            PlayerKnockback knockback =
+                player.GetComponent<PlayerKnockback>();
+
+            if (knockback == null)
+                continue;
+
+            Vector3 force =
+                Vector3.up * 50f;
+
+            knockback.Launch(force);
+        }
+    }
+
     void ResetPuzzle()
     {
         A.charge.Value = 0;
@@ -169,27 +203,64 @@ public class Puzzle4Manager : NetworkBehaviour
 
     IEnumerator CompleteSequence()
     {
-        // đợi tia điện hội tụ
+        yield return new WaitForSeconds(1f);
+
+        if(beamA != null) beamA.SetActive(true);
+        if(beamB != null) beamB.SetActive(true);
+        if(beamC != null) beamC.SetActive(true);
+        if(beamD != null) beamD.SetActive(true);
+
+        yield return new WaitForSeconds(2f);
+
+        if(centerExplosion != null)
+            centerExplosion.SetActive(true);
 
         yield return new WaitForSeconds(1f);
 
-        if(centerExplosion != null)
+        yield return new WaitForSeconds(5f);
+
+        LaunchPlayersUp();
+
+        // Chờ người chơi bay lên khỏi mặt đất một chút
+        yield return new WaitForSeconds(1f);
+
+        // Đóng mặt đường (hộp) lại để người chơi không bị rớt xuống
+        if(trapFloor != null)
         {
-            centerExplosion.Play();
+            trapFloor.CloseFloorClientRpc();
         }
 
-        yield return new WaitForSeconds(0.5f);
+        yield return new WaitForSeconds(1f);
 
-        completeUI.SetActive(true);
+        if(castleGate != null)
+            castleGate.SetActive(false);
 
-        yield return new WaitForSeconds(3f);
+        // Tắt vùng box trigger để không bị kích hoạt lại
+        if(trapTrigger != null)
+        {
+            // Kiểm tra xem trapTrigger có cùng object với trapFloor không
+            // Nếu cùng object, việc SetActive(false) sẽ làm ẩn luôn cả mặt đất (floorPart)
+            if (trapFloor != null && trapTrigger == trapFloor.gameObject)
+            {
+                Collider col = trapTrigger.GetComponent<Collider>();
+                if (col != null) col.enabled = false;
+                
+                ZoneTrigger zone = trapTrigger.GetComponent<ZoneTrigger>();
+                if (zone != null) zone.enabled = false;
+            }
+            else
+            {
+                trapTrigger.SetActive(false);
+            }
+        }
 
-        LaunchAllPlayers();
+        if(beamA != null) beamA.SetActive(false);
+        if(beamB != null) beamB.SetActive(false);
+        if(beamC != null) beamC.SetActive(false);
+        if(beamD != null) beamD.SetActive(false);
 
-        completeUI.SetActive(false);
-
-        castleGate.SetActive(false);
-
-        trapTrigger.SetActive(false);
+        if(centerExplosion != null)
+            centerExplosion.SetActive(false);
     }
+
 }

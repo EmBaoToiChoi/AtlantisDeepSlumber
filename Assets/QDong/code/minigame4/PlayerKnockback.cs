@@ -12,11 +12,15 @@ public class PlayerKnockback : NetworkBehaviour
 
     public void Launch(Vector3 force)
     {
-        if (rb == null) return;
+        if (rb == null)
+            return;
 
         rb.linearVelocity = Vector3.zero;
         rb.angularVelocity = Vector3.zero;
 
-        rb.AddForce(force, ForceMode.Impulse);
+        rb.AddForce(
+            force,
+            ForceMode.Impulse
+        );
     }
 }
