@@ -20,5 +20,13 @@ public class RakanCutscene : MonoBehaviour
     {
         animator.SetTrigger("Talk");
     }
+    public void TriggerLook()
+    {
+        animator.SetTrigger("Look");
+    }
+    public void TriggerThank()
+    {
+        animator.SetTrigger("Thank");
+    }
 
 }
