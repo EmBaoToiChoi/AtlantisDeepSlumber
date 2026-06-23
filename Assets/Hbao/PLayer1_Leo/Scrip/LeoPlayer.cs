@@ -3792,6 +3792,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     {
         bool isDialogueOpen = (RakanDialogueController.Instance != null && RakanDialogueController.Instance.IsActive) ||
                               (SilasDialogueController.Instance != null && SilasDialogueController.Instance.IsActive) ||
+                              (IntroDialogueController.Instance != null && IntroDialogueController.Instance.IsActive) ||
                               PlayerHUDController.isCoopBuildingUIOpen;
 
         if (isDialogueOpen)
@@ -3948,6 +3949,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     {
         bool isDialogueOpen = (RakanDialogueController.Instance != null && RakanDialogueController.Instance.IsActive) ||
                               (SilasDialogueController.Instance != null && SilasDialogueController.Instance.IsActive) ||
+                              (IntroDialogueController.Instance != null && IntroDialogueController.Instance.IsActive) ||
                               PlayerHUDController.isCoopBuildingUIOpen;
 
         if (isDialogueOpen)
@@ -7150,7 +7152,8 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (PlayerHUDController.isAnyUIOpen) uiOpen = true;
 
         bool isDialogueOpen = (RakanDialogueController.Instance != null && RakanDialogueController.Instance.IsActive) ||
-                              (SilasDialogueController.Instance != null && SilasDialogueController.Instance.IsActive);
+                              (SilasDialogueController.Instance != null && SilasDialogueController.Instance.IsActive) ||
+                              (IntroDialogueController.Instance != null && IntroDialogueController.Instance.IsActive);
         if (isDialogueOpen) uiOpen = true;
 
         if (uiOpen)

@@ -1,0 +1,13 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
+    <Style src="project://database/Assets/Hbao/NPC/IntroDialogue/IntroDialogue.uss" />
+    <ui:VisualElement name="intro-dialogue-wrapper" class="intro-dialogue-wrapper">
+        <ui:VisualElement name="intro-dialogue-box" class="intro-dialogue-box">
+            <ui:Button name="intro-skip-btn" text="SKIP ❯❯" class="intro-skip-btn" />
+            <ui:VisualElement class="intro-text-container">
+                <ui:Label name="intro-speaker-name" text="Dẫn Truyện" class="intro-speaker-name" />
+                <ui:Label name="intro-dialogue-text" text="Đang tải lời thoại..." class="intro-dialogue-text" />
+                <ui:Button name="intro-next-btn" text="TIẾP TỤC ▶" class="intro-next-btn" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>
