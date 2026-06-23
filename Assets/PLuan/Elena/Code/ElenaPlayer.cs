@@ -1650,7 +1650,8 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         // Kiểm tra xem có đang mở hội thoại hoặc bị khóa di chuyển do hành động khác không
         bool isDialogueOpen = (RakanDialogueController.Instance != null && RakanDialogueController.Instance.IsActive) ||
-                               (SilasDialogueController.Instance != null && SilasDialogueController.Instance.IsActive);
+                               (SilasDialogueController.Instance != null && SilasDialogueController.Instance.IsActive) ||
+                               (IntroDialogueController.Instance != null && IntroDialogueController.Instance.IsActive);
         
         bool isCurrentlyAttacking = IsPlayingAttackState(out _, out _) || 
                                     (IsAttackAnimationName(lastTriggeredAnimName) && Time.time - lastActionTriggerTime < 0.35f);
@@ -1685,6 +1686,7 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
 {
     bool isDialogueOpen = (RakanDialogueController.Instance != null && RakanDialogueController.Instance.IsActive) ||
                            (SilasDialogueController.Instance != null && SilasDialogueController.Instance.IsActive) ||
+                           (IntroDialogueController.Instance != null && IntroDialogueController.Instance.IsActive) ||
                            PlayerHUDController.isCoopBuildingUIOpen;
 
     if (isDialogueOpen)
@@ -1843,6 +1845,7 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
 {
     bool isDialogueOpen = (RakanDialogueController.Instance != null && RakanDialogueController.Instance.IsActive) ||
                            (SilasDialogueController.Instance != null && SilasDialogueController.Instance.IsActive) ||
+                           (IntroDialogueController.Instance != null && IntroDialogueController.Instance.IsActive) ||
                            PlayerHUDController.isCoopBuildingUIOpen;
 
     if (isDialogueOpen)
@@ -3289,7 +3292,8 @@ private void StartRollServerRpc(Vector3 direction)
         if (PlayerHUDController.isAnyUIOpen) uiOpen = true;
 
         bool isDialogueOpen = (RakanDialogueController.Instance != null && RakanDialogueController.Instance.IsActive) ||
-                              (SilasDialogueController.Instance != null && SilasDialogueController.Instance.IsActive);
+                              (SilasDialogueController.Instance != null && SilasDialogueController.Instance.IsActive) ||
+                              (IntroDialogueController.Instance != null && IntroDialogueController.Instance.IsActive);
         if (isDialogueOpen) uiOpen = true;
 
         if (uiOpen)
