@@ -400,15 +400,13 @@ public class Enemy5_PhuThuy : NetworkBehaviour
         { 
             if (isStandaloneMode || !na) 
             { 
-                var g = Instantiate(expGemPrefab, p, Quaternion.identity); 
-                g.SetActive(true); 
+                var g = ExperienceGemObjectPool.Instance.GetOrCreate(expGemPrefab, p, Quaternion.identity); 
                 var gem = g.GetComponent<ExperienceGem>(); 
                 if (gem != null) { gem.expAmount = expDropAmount; gem.DropGroupId = uid; } 
             } 
             else if (IsServer) 
             { 
-                var g = Instantiate(expGemPrefab, p, Quaternion.identity); 
-                g.SetActive(true); 
+                var g = ExperienceGemObjectPool.Instance.GetOrCreate(expGemPrefab, p, Quaternion.identity); 
                 var gem = g.GetComponent<ExperienceGem>(); 
                 if (gem != null) { gem.expAmount = expDropAmount; gem.DropGroupId = uid; } 
                 var no = g.GetComponent<NetworkObject>(); 

@@ -98,24 +98,9 @@ public class PressurePlateTrigger : NetworkBehaviour
 
         if (buttonVisual == null)
         {
-            // Tự động tìm child đại diện cho visual nếu chưa gán
-            foreach (Transform child in transform)
-            {
-                string nameLower = child.name.ToLower();
-                if (nameLower.Contains("visual") || nameLower.Contains("button") || nameLower.Contains("stone") || nameLower.Contains("model") || nameLower.Contains("plate"))
-                {
-                    buttonVisual = child;
-                    break;
-                }
-            }
-            if (buttonVisual == null && transform.childCount > 0)
-            {
-                buttonVisual = transform.GetChild(0);
-            }
-            if (buttonVisual != null)
-            {
-                Debug.Log($"[PressurePlateTrigger] Tự động chọn '{buttonVisual.name}' làm buttonVisual.");
-            }
+            // Mặc định sử dụng chính transform của đối tượng để di chuyển cả cụm (tránh lỗi chỉ dịch chuyển 1 LOD mesh con)
+            buttonVisual = transform;
+            Debug.Log($"[PressurePlateTrigger] Button Visual trống. Tự động sử dụng chính transform '{gameObject.name}' làm buttonVisual.");
         }
 
         if (buttonVisual != null)
@@ -149,9 +134,19 @@ public class PressurePlateTrigger : NetworkBehaviour
 
                 if (shouldBePressed)
                 {
-                    Debug.Log($"[PressurePlateTrigger] Nút sàn bị đè (Số lượng: {overlappingColliders.Count}). Kích hoạt mở các cánh cửa!");
-                    if (targetDoor != null) targetDoor.Open();
-                    if (targetDoor2 != null) targetDoor2.Open();
+                    Debug.Log($"[PressurePlateTrigger] Nút sàn bị đè (Số lượng: {overlappingColliders.Count}).");
+                    
+                    // Chỉ kích hoạt mở cửa trực tiếp nếu nút này không tham gia câu đố nào
+                    if (!IsPartOfActivePuzzle())
+                    {
+                        Debug.Log("[PressurePlateTrigger] Kích hoạt mở các cánh cửa trực tiếp!");
+                        if (targetDoor != null) targetDoor.Open();
+                        if (targetDoor2 != null) targetDoor2.Open();
+                    }
+                    else
+                    {
+                        Debug.Log("[PressurePlateTrigger] Nút này thuộc về một Câu đố (Puzzle). Bỏ qua mở cửa trực tiếp.");
+                    }
 
                     // Giải phóng tất cả người chơi đẩy đá khi đá đè lên nút sàn
                     foreach (var col in overlappingColliders)
@@ -172,9 +167,15 @@ public class PressurePlateTrigger : NetworkBehaviour
                 }
                 else
                 {
-                    Debug.Log("[PressurePlateTrigger] Không còn vật thể đè. Đóng các cánh cửa!");
-                    if (targetDoor != null) targetDoor.Close();
-                    if (targetDoor2 != null) targetDoor2.Close();
+                    Debug.Log("[PressurePlateTrigger] Không còn vật thể đè.");
+                    
+                    // Chỉ kích hoạt đóng cửa trực tiếp nếu nút này không tham gia câu đố nào
+                    if (!IsPartOfActivePuzzle())
+                    {
+                        Debug.Log("[PressurePlateTrigger] Kích hoạt đóng các cánh cửa trực tiếp!");
+                        if (targetDoor != null) targetDoor.Close();
+                        if (targetDoor2 != null) targetDoor2.Close();
+                    }
                 }
             }
         }
@@ -183,8 +184,16 @@ public class PressurePlateTrigger : NetworkBehaviour
         bool pressedState = (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening) ? isPressedNet.Value : localIsPressed;
         if (buttonVisual != null)
         {
-            Vector3 targetLocalPos = pressedState ? pressedPos : unpressedPos;
-            buttonVisual.localPosition = Vector3.Lerp(buttonVisual.localPosition, targetLocalPos, Time.deltaTime * pressSpeed);
+            // Nếu buttonVisual là chính root transform và đang chạy online trên Client,
+            // để NetworkTransform tự động đồng bộ vị trí từ Server nhằm tránh xung đột giật lag.
+            bool isRootWithNetworkTransform = (buttonVisual == transform) && 
+                                              (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening && GetComponent<Unity.Netcode.Components.NetworkTransform>() != null);
+            
+            if (!isRootWithNetworkTransform || IsServer)
+            {
+                Vector3 targetLocalPos = pressedState ? pressedPos : unpressedPos;
+                buttonVisual.localPosition = Vector3.Lerp(buttonVisual.localPosition, targetLocalPos, Time.deltaTime * pressSpeed);
+            }
         }
 
         // Tự động lún cục đá đẩy xuống khi đè lên nút sàn
@@ -320,6 +329,28 @@ public class PressurePlateTrigger : NetworkBehaviour
         if (nameLower.Contains("player") || go.CompareTag("Player") || nameLower.Contains("leo") || nameLower.Contains("elena") || nameLower.Contains("maya") || nameLower.Contains("arthur"))
         {
             return true;
+        }
+        return false;
+    }
+
+    private bool IsPartOfActivePuzzle()
+    {
+        PressurePlatePuzzleManager[] managers = FindObjectsOfType<PressurePlatePuzzleManager>();
+        foreach (var manager in managers)
+        {
+            if (manager != null && manager.enabled)
+            {
+                if (manager.requiredPlates != null)
+                {
+                    foreach (var plate in manager.requiredPlates)
+                    {
+                        if (plate == this)
+                        {
+                            return true;
+                        }
+                    }
+                }
+            }
         }
         return false;
     }
