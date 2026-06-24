@@ -2,7 +2,13 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.Video;
+using UnityEngine.UIElements;
 using Unity.Netcode;
+
+// Giải quyết tranh chấp namespace giữa UI cũ (UGUI) và UI Toolkit mới (UIElements)
+using Image = UnityEngine.UI.Image;
+using Button = UnityEngine.UI.Button;
+using Cursor = UnityEngine.Cursor;
 
 [RequireComponent(typeof(NetworkObject))]
 public class LocalCutsceneVideoPlayer : NetworkBehaviour
