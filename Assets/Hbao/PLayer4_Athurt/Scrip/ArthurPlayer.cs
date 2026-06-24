@@ -1570,7 +1570,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     protected virtual void Update()
     {
-        UpdateAttackLayerWeight();
+        // UpdateAttackLayerWeight(); // Disabled to allow direct weight control in PlayAnimationLocal
         UpdateComboChain();
         HandleRAiming();
 
@@ -2573,7 +2573,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         if (!string.IsNullOrEmpty(animToPlay))
         {
-            PlayAnimation(animToPlay, 0.05f, false);
+            PlayAnimation(animToPlay, 0.05f, false, isRootedAttack);
         }
 
         if (networkMode)
@@ -3652,7 +3652,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         return isFullBodyAction && stateInfo.normalizedTime < 0.95f;
     }
 
-    public void PlayAnimation(string animName, float fadeTime = 0.1f, bool alreadyPlayedLocally = false)
+    public void PlayAnimation(string animName, float fadeTime = 0.1f, bool alreadyPlayedLocally = false, bool isRooted = false)
     {
         var carrier = GetComponent<PlayerLogCarrier>();
         if (carrier != null && carrier.isCarrying && animName != "Death" && animName != "Idle" && animName != "Walk" && animName != "run")
@@ -3671,24 +3671,26 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         if (!alreadyPlayedLocally)
         {
-            PlayAnimationLocal(animName, fadeTime);
+            this.isRootedAttack = isRooted;
+            PlayAnimationLocal(animName, fadeTime, isRooted);
         }
 
         if (!isStandaloneMode)
         {
             if (IsServer)
             {
-                PlayAnimationClientRpc(animName, fadeTime, alreadyPlayedLocally || IsOwner);
+                PlayAnimationClientRpc(animName, fadeTime, alreadyPlayedLocally || IsOwner, isRooted);
             }
             else if (IsOwner)
             {
-                PlayAnimationServerRpc(animName, fadeTime);
+                PlayAnimationServerRpc(animName, fadeTime, isRooted);
             }
         }
     }
 
-    protected virtual void PlayAnimationLocal(string animName, float fadeTime)
+    protected virtual void PlayAnimationLocal(string animName, float fadeTime, bool isRooted = false)
     {
+        this.isRootedAttack = isRooted;
         if (anim == null)
         {
             anim = GetComponent<Animator>();
@@ -3708,35 +3710,38 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         bool isLoopingAnim = animName == "Idle" || animName == "Walk" || animName == "run";
         if (isLoopingAnim && currentAnimState == animName) return;
 
-        Debug.Log($"[ArthurPlayer] Kích hoạt Hoạt ảnh: '{animName}'");
+        Debug.Log($"[ArthurPlayer] Kích hoạt Hoạt ảnh: '{animName}' (isRooted={isRooted})");
         if (animName == "LonVong")
         {
             anim.applyRootMotion = false;
         }
 
-        if (animName == "attack1" || animName == "Attack1combo1" || animName == "Attack2combo1" ||
-            animName == "AnhitCoVuKhi" || animName == "DoKhienDinhSatThuong" || animName == "New State")
+        bool isAttackState = IsAttackAnimationName(animName);
+
+        if (isAttackState || animName == "AnhitCoVuKhi" || animName == "DoKhienDinhSatThuong" || animName == "New State")
         {
             if (anim.layerCount > 1)
             {
-                // KHẮC PHỤC LỖI GIẬT VÀ KẸT KIẾM: Loại bỏ hoàn toàn anim.SetTrigger(animName). Chỉ giữ độc nhất lệnh CrossFade.
-                anim.CrossFadeInFixedTime(animName, fadeTime, 1, 0f);
+                int targetLayer = isRooted ? 0 : 1;
+                anim.SetLayerWeight(1, targetLayer == 1 ? 1f : 0f);
+                
+                // Trực tiếp CrossFade cho các đòn kiếm/đỡ đòn/Anhit
+                if (animName == "attack1" || animName == "Attack1combo1" || animName == "Attack2combo1" ||
+                    animName == "AnhitCoVuKhi" || animName == "DoKhienDinhSatThuong" || animName == "New State")
+                {
+                    anim.CrossFadeInFixedTime(animName, fadeTime, targetLayer, 0f);
+                    isExecutingAttack = true;
+                    attackAnimStartTime = Time.time;
+                    int weapon = GetActiveWeaponIndex();
+                    currentAttackAnimDuration = GetAttackDuration(weapon, comboStep);
+                    lastTriggeredAnimName = animName;
+                    if (IsActionAnimationName(animName))
+                    {
+                        lastActionTriggerTime = Time.time;
+                    }
+                    return;
+                }
             }
-
-            bool isAttackState = IsAttackAnimationName(animName);
-            if (isAttackState)
-            {
-                isExecutingAttack = true;
-                attackAnimStartTime = Time.time;
-                int weapon = GetActiveWeaponIndex();
-                currentAttackAnimDuration = GetAttackDuration(weapon, comboStep);
-            }
-            lastTriggeredAnimName = animName;
-            if (IsActionAnimationName(animName))
-            {
-                lastActionTriggerTime = Time.time;
-            }
-            return;
         }
 
         anim.ResetTrigger("Idle");
@@ -3804,16 +3809,17 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
     }
 
     [ServerRpc]
-    private void PlayAnimationServerRpc(string animName, float fadeTime)
+    private void PlayAnimationServerRpc(string animName, float fadeTime, bool isRooted)
     {
-        PlayAnimationClientRpc(animName, fadeTime, true);
+        PlayAnimationClientRpc(animName, fadeTime, true, isRooted);
     }
 
     [ClientRpc]
-    private void PlayAnimationClientRpc(string animName, float fadeTime, bool alreadyPlayedLocally)
+    private void PlayAnimationClientRpc(string animName, float fadeTime, bool alreadyPlayedLocally, bool isRooted = false)
     {
         if (alreadyPlayedLocally && IsOwner) return;
-        PlayAnimationLocal(animName, fadeTime);
+        this.isRootedAttack = isRooted;
+        PlayAnimationLocal(animName, fadeTime, isRooted);
     }
 
     [ServerRpc]
