@@ -19,10 +19,13 @@ public class MayaWaterProjectile : NetworkBehaviour
     private System.Collections.Generic.HashSet<Transform> hitEnemyRoots = new System.Collections.Generic.HashSet<Transform>();
     private bool isHit = false;
 
-    private void Start()
+    private void Awake()
     {
         gameObject.tag = "Nuoc"; // Force tag "Nuoc" for elemental rock puzzles
-        
+    }
+
+    private void Start()
+    {
         // Tự động tìm kiếm các bộ phận GFX nếu chưa gán trong Inspector
         if (castGFX == null) castGFX = FindChildWithNamePart("cast");
         if (hitGFX == null) hitGFX = FindChildWithNamePart("hit");
