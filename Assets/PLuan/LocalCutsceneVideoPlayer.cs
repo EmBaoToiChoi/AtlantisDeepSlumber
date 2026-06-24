@@ -37,6 +37,7 @@ public class LocalCutsceneVideoPlayer : NetworkBehaviour
     private bool playerDisabled = false;
     private GameObject detectedPlayer = null;
     private bool isCutsceneEnded = false;
+    private PlayerHUDController cachedHud = null;
     
     // Quản lý đếm thời gian
     private float serverWaitTimer = 0f;
@@ -52,7 +53,7 @@ public class LocalCutsceneVideoPlayer : NetworkBehaviour
         
         // Khởi tạo màn hình chờ và ẩn HUD game ngay lập tức
         CreateWaitingOverlay();
-        HideHUD();
+        SetHUDVisible(false);
     }
 
     public override void OnNetworkSpawn()
@@ -141,7 +142,7 @@ public class LocalCutsceneVideoPlayer : NetworkBehaviour
             DisableLocalPlayer();
 
             // Đảm bảo HUD luôn ẩn trong suốt quá trình chờ và phát video
-            HideHUD();
+            SetHUDVisible(false);
 
             // CHỈ CHỦ PHÒNG (ROOM HOST) MỚI ĐƯỢC BẤM ESC ĐỂ SKIP
             if (IsLocalRoomHost() && isCutscenePlaying && Input.GetKeyDown(KeyCode.Escape))
@@ -423,29 +424,24 @@ public class LocalCutsceneVideoPlayer : NetworkBehaviour
         }
     }
 
-    private void HideHUD()
+    private void SetHUDVisible(bool visible)
     {
 #if UNITY_2023_1_OR_NEWER
-        PlayerHUDController hud = FindAnyObjectByType<PlayerHUDController>();
+        PlayerHUDController[] huds = FindObjectsByType<PlayerHUDController>(FindObjectsSortMode.None);
 #else
-        PlayerHUDController hud = FindObjectOfType<PlayerHUDController>();
+        PlayerHUDController[] huds = FindObjectsOfType<PlayerHUDController>();
 #endif
-        if (hud != null && hud.gameObject.activeSelf)
+        foreach (var hud in huds)
         {
-            hud.gameObject.SetActive(false);
-        }
-    }
-
-    private void ShowHUD()
-    {
-#if UNITY_2023_1_OR_NEWER
-        PlayerHUDController hud = FindAnyObjectByType<PlayerHUDController>();
-#else
-        PlayerHUDController hud = FindObjectOfType<PlayerHUDController>();
-#endif
-        if (hud != null && !hud.gameObject.activeSelf)
-        {
-            hud.gameObject.SetActive(true);
+            var uiDoc = hud.GetComponent<UIDocument>();
+            if (uiDoc != null)
+            {
+                if (uiDoc.enabled != visible)
+                {
+                    uiDoc.enabled = visible;
+                    Debug.Log($"[LocalCutsceneVideoPlayer] Đã {(visible ? "hiển thị" : "tạm ẩn")} UIDocument của: {hud.name}");
+                }
+            }
         }
     }
 
@@ -476,26 +472,24 @@ public class LocalCutsceneVideoPlayer : NetworkBehaviour
         Time.timeScale = 1f;
         Debug.Log("[LocalCutsceneVideoPlayer] Trò chơi đã được kích hoạt lại (Time.timeScale = 1).");
 
-        // Kích hoạt lại script điều khiển của người chơi
+        // Kích hoạt lại script điều khiển của người chơi cho tất cả đối tượng hợp lệ
         if (detectedPlayer != null)
         {
             SetPlayerScriptsEnabled(detectedPlayer, true);
         }
-        else
+
+        GameObject[] players = GameObject.FindGameObjectsWithTag("Player");
+        foreach (GameObject p in players)
         {
-            GameObject[] players = GameObject.FindGameObjectsWithTag("Player");
-            foreach (GameObject p in players)
+            var netObj = p.GetComponent<NetworkObject>();
+            if (netObj == null || netObj.IsOwner)
             {
-                var netObj = p.GetComponent<NetworkObject>();
-                if (netObj == null || netObj.IsOwner)
-                {
-                    SetPlayerScriptsEnabled(p, true);
-                }
+                SetPlayerScriptsEnabled(p, true);
             }
         }
 
         // Khôi phục hiển thị HUD
-        ShowHUD();
+        SetHUDVisible(true);
 
         // Khóa con trỏ chuột lại cho gameplay
         Cursor.lockState = CursorLockMode.Locked;
@@ -543,7 +537,7 @@ public class LocalCutsceneVideoPlayer : NetworkBehaviour
                 }
             }
 
-            ShowHUD();
+            SetHUDVisible(true);
 
             Cursor.lockState = CursorLockMode.Locked;
             Cursor.visible = false;
