@@ -715,6 +715,12 @@ public class BridgeCollapseTrigger : NetworkBehaviour
         {
             bridgeAnimator.SetTrigger(repairTriggerName);
         }
+
+        // 5. NPC di chuyển và đối thoại sau khi cầu được sửa
+        if (IntroDialogueController.Instance != null)
+        {
+            IntroDialogueController.Instance.TriggerMoveAndDialogueAfterBridge();
+        }
     }
 
     private void OnRepairStateChanged(bool oldVal, bool newVal)

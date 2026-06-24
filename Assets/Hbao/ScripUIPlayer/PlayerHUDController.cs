@@ -748,6 +748,12 @@ public class PlayerHUDController : MonoBehaviour
             Debug.Log($"[PlayerHUDController] Áp dụng lại profile index {lastSelectedProfileIndex} sau khi khởi tạo UI xong.");
             SetupPlayerProfile(lastSelectedProfileIndex);
         }
+
+        // Đăng ký nhận UI hội thoại NPC đang diễn ra (giải quyết đua luồng mạng multiplayer)
+        if (IntroDialogueController.Instance != null && IntroDialogueController.Instance.IsActive)
+        {
+            IntroDialogueController.Instance.RegisterNewHUD(this);
+        }
     }
 
     /// <summary>
