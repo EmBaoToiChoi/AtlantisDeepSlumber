@@ -69,6 +69,69 @@ public class PushableStone : NetworkBehaviour
         {
             netPosition.Value = transform.position;
         }
+
+        // Đảm bảo reset trạng thái khi khởi chạy (đặc biệt khi duplicate)
+        localFinished = false;
+        localMoving = false;
+        for (int i = 0; i < localPushers.Length; i++)
+        {
+            localPushers[i] = null;
+        }
+
+        // Tự động kiểm tra và sửa đổi các slot bị lỗi hoặc trỏ ra ngoài khi duplicate
+        bool needsReassign = false;
+        for (int i = 0; i < pushSlots.Length; i++)
+        {
+            if (pushSlots[i] == null || !pushSlots[i].IsChildOf(transform))
+            {
+                needsReassign = true;
+                break;
+            }
+        }
+
+        if (needsReassign)
+        {
+            Debug.Log($"[PushableStone] Phát hiện pushSlots bị null hoặc trỏ sai đối tượng trên '{gameObject.name}'. Đang tự động tìm lại các slot con...");
+            List<Transform> foundSlots = new List<Transform>();
+            FindSlotsInChildren(transform, foundSlots);
+
+            if (foundSlots.Count == 0)
+            {
+                foreach (Transform child in transform)
+                {
+                    foundSlots.Add(child);
+                }
+            }
+
+            for (int i = 0; i < pushSlots.Length; i++)
+            {
+                if (i < foundSlots.Count)
+                {
+                    pushSlots[i] = foundSlots[i];
+                    Debug.Log($"[PushableStone] Đã gán tự động slot {i}: {pushSlots[i].name} trên '{gameObject.name}'");
+                }
+                else
+                {
+                    pushSlots[i] = null;
+                }
+            }
+        }
+    }
+
+    private void FindSlotsInChildren(Transform current, List<Transform> results)
+    {
+        foreach (Transform child in current)
+        {
+            string nameLower = child.name.ToLower();
+            if (nameLower.Contains("slot") || nameLower.Contains("push"))
+            {
+                results.Add(child);
+            }
+            else
+            {
+                FindSlotsInChildren(child, results);
+            }
+        }
     }
 
     public override void OnNetworkSpawn()
@@ -85,6 +148,8 @@ public class PushableStone : NetworkBehaviour
         if (IsServer)
         {
             netPosition.Value = transform.position;
+            isFinishedNet.Value = false;
+            isMovingNet.Value = false;
             slot0PlayerNetId.Value = 0;
             slot1PlayerNetId.Value = 0;
             slot2PlayerNetId.Value = 0;
@@ -233,7 +298,7 @@ public class PushableStone : NetworkBehaviour
                     Debug.Log($"[PushableStone Client] localPlayer is pushing slot {currentSlotIndex}, pressing W={pressingW}");
                 }
             }
-            else if (closestSlot != -1)
+            else if (closestSlot != -1 && !IsPlayerPushingAnyStone(localPlayer.gameObject))
             {
                 // Local player is close to an available slot - show prompt to grab
                 if (hud == null) hud = FindAnyObjectByType<PlayerHUDController>();
@@ -415,6 +480,22 @@ public class PushableStone : NetworkBehaviour
                 if (localPushers[i] == player)
                 {
                     slotIndex = i;
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private bool IsPlayerPushingAnyStone(GameObject player)
+    {
+        PushableStone[] allStones = FindObjectsOfType<PushableStone>();
+        foreach (var stone in allStones)
+        {
+            if (stone != null && stone != this)
+            {
+                if (stone.IsPlayerPushing(player, out _))
+                {
                     return true;
                 }
             }

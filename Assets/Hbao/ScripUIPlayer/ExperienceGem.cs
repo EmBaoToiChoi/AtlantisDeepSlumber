@@ -60,6 +60,13 @@ public class ExperienceGem : NetworkBehaviour
         NetworkVariableWritePermission.Server
     );
 
+    [Header("Network Start Y")]
+    public NetworkVariable<float> networkStartY = new NetworkVariable<float>(
+        0f,
+        NetworkVariableReadPermission.Everyone,
+        NetworkVariableWritePermission.Server
+    );
+
     [Header("Spawn Settings")]
     public float attractionDelay = 1.0f; // Trì hoãn 1.0 giây trước khi bắt đầu bị hút để đồng bộ mạng hiển thị
     private float spawnTimer = 0f;
@@ -68,10 +75,50 @@ public class ExperienceGem : NetworkBehaviour
     private bool isAttracted = false;
     private float startY;
 
-    private void Start()
+    private float StartY
     {
-        startY = transform.position.y;
+        get
+        {
+            if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening && IsSpawned)
+            {
+                return networkStartY.Value;
+            }
+            return startY;
+        }
+    }
+
+    public override void OnNetworkSpawn()
+    {
+        base.OnNetworkSpawn();
+        if (IsServer)
+        {
+            networkStartY.Value = transform.position.y;
+        }
+    }
+
+    private void OnEnable()
+    {
+        ResetState();
+    }
+
+    public void ResetState()
+    {
+        targetPlayer = null;
+        isAttracted = false;
         spawnTimer = attractionDelay;
+        moveSpeed = 2f;
+
+        if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening && IsSpawned)
+        {
+            if (IsServer)
+            {
+                networkStartY.Value = transform.position.y;
+            }
+        }
+        else
+        {
+            startY = transform.position.y;
+        }
     }
 
     private void Update()
@@ -87,7 +134,7 @@ public class ExperienceGem : NetworkBehaviour
         if (!isAttracted)
         {
             Vector3 currentPos = transform.position;
-            currentPos.y = startY + Mathf.Sin(Time.time * bobSpeed) * bobRange;
+            currentPos.y = StartY + Mathf.Sin(Time.time * bobSpeed) * bobRange;
             transform.position = currentPos;
         }
 
@@ -224,7 +271,14 @@ public class ExperienceGem : NetworkBehaviour
             {
                 PlayerGemCollectionHelper.AddCollected(targetPlayer, DropGroupId);
                 PlayerGemCollectionHelper.AddExperience(targetPlayer, expAmount);
-                Destroy(gameObject);
+                if (ExperienceGemObjectPool.Instance != null)
+                {
+                    ExperienceGemObjectPool.Instance.ReturnToPool(gameObject);
+                }
+                else
+                {
+                    Destroy(gameObject);
+                }
             }
             // Trong chế độ Netcode: chỉ Server mới xử lý cộng EXP và Despawn
             else if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsServer)
@@ -239,7 +293,14 @@ public class ExperienceGem : NetworkBehaviour
                 }
                 else
                 {
-                    Destroy(gameObject);
+                    if (ExperienceGemObjectPool.Instance != null)
+                    {
+                        ExperienceGemObjectPool.Instance.ReturnToPool(gameObject);
+                    }
+                    else
+                    {
+                        Destroy(gameObject);
+                    }
                 }
             }
         }

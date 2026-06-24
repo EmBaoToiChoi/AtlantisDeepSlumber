@@ -168,11 +168,11 @@ public class CheckpointZone : MonoBehaviour
     {
         if (!other.CompareTag("Player")) return;
 
-        // Tìm component SimplePlayerTest trên người chơi chạm vào
-        SimplePlayerTest player = other.GetComponentInParent<SimplePlayerTest>();
+        // Tìm component IPlayerHUDTarget trên người chơi chạm vào để hỗ trợ cả 4 class nhân vật
+        IPlayerHUDTarget player = other.GetComponentInParent<IPlayerHUDTarget>();
         if (player == null)
         {
-            player = other.GetComponent<SimplePlayerTest>();
+            player = other.GetComponent<IPlayerHUDTarget>();
         }
 
         if (player != null && PlayerCheckpointManager.Instance != null)
