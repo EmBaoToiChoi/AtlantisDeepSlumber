@@ -3668,7 +3668,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             }
         }
 
-        UpdateAttackLayerWeight();
+        // UpdateAttackLayerWeight(); // Disabled to allow direct weight control in PlayAnimationLocal
 
         // Đồng bộ di chuyển lướng (Roll) qua network cho cả Client Owner, Server, và các Client khác — giống Arthur
         bool isRolling = isStandaloneMode ? isRollingStandalone : (IsSpawned && isRollingNet.Value);
@@ -6902,6 +6902,10 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             StartCoroutine(ResetTriggerNextFrame(translatedName));
 
             int targetLayer = IsAttackAnimationName(translatedName) && !isRootedAttack ? 1 : 0;
+            if (anim.layerCount > 1)
+            {
+                anim.SetLayerWeight(1, targetLayer == 1 ? 1f : 0f);
+            }
             anim.CrossFadeInFixedTime(translatedName, fadeTime, targetLayer, 0f);
 
             // Force evaluation to query the exact animation clip duration

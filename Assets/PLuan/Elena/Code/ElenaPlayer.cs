@@ -3126,6 +3126,7 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     private void PlayAnimationLocal(string animName, float fadeTime, bool isRooted)
     {
+        this.isRootedAttack = isRooted;
         if (anim == null)
         {
             anim = GetComponent<Animator>();
