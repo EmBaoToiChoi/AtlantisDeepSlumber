@@ -3029,6 +3029,24 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         NetworkVariableWritePermission.Owner
     );
 
+    [Header("Network Movement Sync")]
+    public NetworkVariable<float> netMoveX = new NetworkVariable<float>(
+        0f,
+        NetworkVariableReadPermission.Everyone,
+        NetworkVariableWritePermission.Owner
+    );
+    public NetworkVariable<float> netMoveZ = new NetworkVariable<float>(
+        0f,
+        NetworkVariableReadPermission.Everyone,
+        NetworkVariableWritePermission.Owner
+    );
+    public NetworkVariable<float> netSpeed = new NetworkVariable<float>(
+        0f,
+        NetworkVariableReadPermission.Everyone,
+        NetworkVariableWritePermission.Owner
+    );
+
+
     private Transform GetSpineBone()
     {
         if (spineBone == null && anim != null)
@@ -3784,7 +3802,19 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             return;
         }
 
-        if (!IsOwner) return;
+        if (!IsOwner)
+        {
+            if (anim != null && anim.isActiveAndEnabled && anim.runtimeAnimatorController != null)
+            {
+                anim.SetFloat(inputXParam, netMoveX.Value);
+                anim.SetFloat(inputZParam, netMoveZ.Value);
+                anim.SetFloat(speedParam, netSpeed.Value);
+
+                bool isArmed = (GetActiveWeaponIndex() == 2);
+                anim.SetBool(isArmedParam, isArmed);
+            }
+            return;
+        }
         HandleOwnerUpdate();
     }
 
@@ -4115,6 +4145,13 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
             bool isArmed = (GetActiveWeaponIndex() == 2);
             anim.SetBool(isArmedParam, isArmed);
+
+            if (!isStandaloneMode && IsOwner)
+            {
+                netMoveX.Value = smoothedInputX;
+                netMoveZ.Value = smoothedInputZ;
+                netSpeed.Value = smoothedSpeed;
+            }
         }
     }
 
