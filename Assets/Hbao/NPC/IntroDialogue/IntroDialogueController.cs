@@ -41,6 +41,9 @@ public class IntroDialogueController : MonoBehaviour
     [Header("Dialogue Content (Bridge Collapse)")]
     [SerializeField] private List<DialogueLine> bridgeCollapseLines = new List<DialogueLine>();
 
+    [Header("Dialogue Content (After Bridge Repaired)")]
+    [SerializeField] private List<DialogueLine> afterBridgeRepairedLines = new List<DialogueLine>();
+
     [Header("NPC Animation & Movement")]
     [Tooltip("Kéo thả Animator của NPC vào đây")]
     [SerializeField] private Animator npcAnimator;
@@ -53,6 +56,9 @@ public class IntroDialogueController : MonoBehaviour
 
     [Tooltip("Vị trí chỉ định mà NPC sẽ đi tới sau khi nói xong")]
     [SerializeField] private Transform npcMoveTarget;
+
+    [Tooltip("Vị trí chỉ định mà NPC sẽ đi tới sau khi sửa xong cầu")]
+    [SerializeField] private Transform npcMoveTargetAfterBridge;
 
     [Tooltip("Tên tham số Animator khi di chuyển (ví dụ: DiChuyen - kiểu Bool hoặc Float)")]
     [SerializeField] private string moveAnimParam = "DiChuyen";
@@ -124,6 +130,15 @@ public class IntroDialogueController : MonoBehaviour
             {
                 speakerName = defaultNpcName,
                 text = "Cầu đã sập, các ngươi hãy đi tìm gỗ để sửa chữa chúng."
+            });
+        }
+
+        if (afterBridgeRepairedLines.Count == 0)
+        {
+            afterBridgeRepairedLines.Add(new DialogueLine
+            {
+                speakerName = defaultNpcName,
+                text = "các ngươi có thấy hình vẽ trên tường không ? bây giờ chúng ta cần tìm những cục đá có hình như thế để đạp lên và mở cửa"
             });
         }
 
@@ -238,6 +253,72 @@ public class IntroDialogueController : MonoBehaviour
             text = "4 người các ngươi hãy lại đây ấn F và click liên tục để xây cầu"
         });
         StartDialogue(readyLines);
+    }
+
+    /// <summary>
+    /// Đăng ký thêm một HUD mới xuất hiện trong khi hội thoại đang chạy.
+    /// Giải quyết triệt để lỗi đua luồng/khởi tạo trễ trong môi trường Multiplayer Netcode.
+    /// </summary>
+    public void RegisterNewHUD(PlayerHUDController hud)
+    {
+        if (hud == null || !isDialogueActive) return;
+
+        var uiDoc = hud.GetComponent<UIDocument>();
+        if (uiDoc != null && uiDoc.rootVisualElement != null)
+        {
+            // Kiểm tra xem HUD này đã được tạo UI đối thoại chưa (tránh trùng lặp)
+            foreach (var instance in instantiatedDialogues)
+            {
+                if (instance.wrapperElement != null && uiDoc.rootVisualElement.Contains(instance.wrapperElement))
+                {
+                    return; // Đã tồn tại, bỏ qua
+                }
+            }
+
+            // Nếu trước đó đang dùng fallback (chạy trên localUiDoc của chính controller), hãy gỡ nó ra để tránh trùng lặp
+            var localUiDoc = GetComponent<UIDocument>();
+            if (localUiDoc != null && localUiDoc != uiDoc && localUiDoc.rootVisualElement != null)
+            {
+                for (int i = instantiatedDialogues.Count - 1; i >= 0; i--)
+                {
+                    var inst = instantiatedDialogues[i];
+                    if (inst.wrapperElement != null && localUiDoc.rootVisualElement.Contains(inst.wrapperElement))
+                    {
+                        localUiDoc.rootVisualElement.Remove(inst.wrapperElement);
+                        instantiatedDialogues.RemoveAt(i);
+                    }
+                }
+            }
+
+            // Tạo UI đối thoại cho HUD mới này
+            CreateAndRegisterUIInstance(uiDoc.rootVisualElement);
+
+            // Cập nhật nội dung hiện tại cho HUD mới
+            if (activeLines != null && currentLineIndex >= 0 && currentLineIndex < activeLines.Count)
+            {
+                DialogueLine line = activeLines[currentLineIndex];
+                
+                // Tìm instance vừa mới được thêm ở cuối list
+                var newInstance = instantiatedDialogues[instantiatedDialogues.Count - 1];
+                if (newInstance.speakerLabel != null) newInstance.speakerLabel.text = line.speakerName;
+                if (newInstance.textLabel != null) newInstance.textLabel.text = isTyping ? "" : currentLineText;
+                if (newInstance.nextButton != null)
+                {
+                    if (currentLineIndex == activeLines.Count - 1)
+                    {
+                        newInstance.nextButton.text = "KẾT THÚC";
+                    }
+                    else
+                    {
+                        newInstance.nextButton.text = "TIẾP TỤC ▶";
+                    }
+                }
+                
+                // Thêm class css để hiển thị
+                if (newInstance.wrapperElement != null) newInstance.wrapperElement.AddToClassList("show-wrapper");
+                if (newInstance.boxElement != null) newInstance.boxElement.AddToClassList("show-dialogue");
+            }
+        }
     }
 
     /// <summary>
@@ -665,6 +746,67 @@ public class IntroDialogueController : MonoBehaviour
     // ═══════════════════════════════════════════════════════
     //  CÁC PHƯƠNG THỨC TRUYỀN DỮ LIỆU ĐỒNG BỘ CHO CÁC BẢN SAO UI
     // ═══════════════════════════════════════════════════════
+
+    /// <summary>
+    /// Kích hoạt NPC di chuyển tới vị trí thứ 2 và sau đó bắt đầu hội thoại sau khi sửa cầu xong
+    /// </summary>
+    public void TriggerMoveAndDialogueAfterBridge()
+    {
+        if (npcMoveTargetAfterBridge != null)
+        {
+            if (npcMoveCoroutine != null)
+            {
+                StopCoroutine(npcMoveCoroutine);
+            }
+            npcMoveCoroutine = StartCoroutine(MoveNpcToTargetAfterBridgeRoutine());
+        }
+        else
+        {
+            // Nếu không có target chỉ định, chạy hội thoại ngay lập tức
+            StartDialogue(afterBridgeRepairedLines);
+        }
+    }
+
+    private IEnumerator MoveNpcToTargetAfterBridgeRoutine()
+    {
+        if (npcTransform == null || npcMoveTargetAfterBridge == null) yield break;
+
+        yield return null; // chờ 1 frame
+
+        Debug.Log($"[IntroDialogueController] NPC di chuyển sau khi sửa cầu tới target: {npcMoveTargetAfterBridge.name}");
+
+        SetNpcMoving(true);
+
+        Transform targetTrans = npcTransform;
+        Vector3 destination = npcMoveTargetAfterBridge.position;
+        destination.y = targetTrans.position.y; // Giữ nguyên Y
+
+        float distance = Vector3.Distance(targetTrans.position, destination);
+        
+        while (distance > stoppingDistance)
+        {
+            targetTrans.position = Vector3.MoveTowards(targetTrans.position, destination, moveSpeed * Time.deltaTime);
+
+            Vector3 direction = (destination - targetTrans.position).normalized;
+            if (direction != Vector3.zero)
+            {
+                Quaternion targetRot = Quaternion.LookRotation(direction);
+                targetTrans.rotation = Quaternion.Slerp(targetTrans.rotation, targetRot, turnSpeed * Time.deltaTime);
+            }
+
+            distance = Vector3.Distance(targetTrans.position, destination);
+            yield return null;
+        }
+
+        targetTrans.position = destination;
+        SetNpcMoving(false);
+
+        Debug.Log($"[IntroDialogueController] NPC đã tới vị trí sau khi sửa cầu. Khởi chạy hội thoại.");
+        npcMoveCoroutine = null;
+
+        // Bắt đầu hội thoại
+        StartDialogue(afterBridgeRepairedLines);
+    }
 
     private void SetDialogueText(string text)
     {
