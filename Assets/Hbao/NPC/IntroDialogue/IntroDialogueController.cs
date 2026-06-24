@@ -3,9 +3,10 @@ using UnityEngine.UIElements;
 using UnityEngine.InputSystem;
 using System.Collections;
 using System.Collections.Generic;
+using Unity.Netcode;
 
 [RequireComponent(typeof(UIDocument))]
-public class IntroDialogueController : MonoBehaviour
+public class IntroDialogueController : NetworkBehaviour
 {
     public static IntroDialogueController Instance { get; private set; }
 
@@ -44,6 +45,9 @@ public class IntroDialogueController : MonoBehaviour
     [Header("Dialogue Content (After Bridge Repaired)")]
     [SerializeField] private List<DialogueLine> afterBridgeRepairedLines = new List<DialogueLine>();
 
+    [Header("Dialogue Content (Maze Entrance)")]
+    [SerializeField] private List<DialogueLine> mazeEntranceLines = new List<DialogueLine>();
+
     [Header("NPC Animation & Movement")]
     [Tooltip("Kéo thả Animator của NPC vào đây")]
     [SerializeField] private Animator npcAnimator;
@@ -59,6 +63,16 @@ public class IntroDialogueController : MonoBehaviour
 
     [Tooltip("Vị trí chỉ định mà NPC sẽ đi tới sau khi sửa xong cầu")]
     [SerializeField] private Transform npcMoveTargetAfterBridge;
+
+    [Header("Maze Follow Configuration")]
+    [Tooltip("Vị trí điểm dừng ở mê cung (Transform target)")]
+    [SerializeField] private Transform npcMazeTarget;
+
+    [Tooltip("Khoảng cách kích hoạt hội thoại tại điểm dừng mê cung")]
+    [SerializeField] private float mazeTargetTriggerDistance = 2.5f;
+
+    [Tooltip("Khoảng cách tối thiểu duy trì với người chơi khi follow")]
+    [SerializeField] private float followKeepDistance = 2.0f;
 
     [Tooltip("Tên tham số Animator khi di chuyển (ví dụ: DiChuyen - kiểu Bool hoặc Float)")]
     [SerializeField] private string moveAnimParam = "DiChuyen";
@@ -78,6 +92,12 @@ public class IntroDialogueController : MonoBehaviour
     private string currentLineText = "";
     private Coroutine typewriterCoroutine;
     private Coroutine npcMoveCoroutine;
+    private bool isFollowingPlayer = false;
+    private Transform playerToFollow = null;
+
+    private Vector3 lastPosition;
+    private bool IsNetworkActive => NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
+    private bool IsServerOrOffline => !IsNetworkActive || IsServer;
 
     // Danh sách dòng thoại hiện đang hoạt động
     private List<DialogueLine> activeLines;
@@ -99,6 +119,18 @@ public class IntroDialogueController : MonoBehaviour
 
     private void Awake()
     {
+        // Tự động gắn các component mạng cần thiết nếu bị thiếu
+        if (GetComponent<NetworkObject>() == null)
+        {
+            gameObject.AddComponent<NetworkObject>();
+            Debug.Log($"[IntroDialogueController] Tự động thêm NetworkObject cho {gameObject.name}");
+        }
+        if (GetComponent<Unity.Netcode.Components.NetworkTransform>() == null)
+        {
+            gameObject.AddComponent<Unity.Netcode.Components.NetworkTransform>();
+            Debug.Log($"[IntroDialogueController] Tự động thêm NetworkTransform cho {gameObject.name}");
+        }
+
         if (Instance == null)
         {
             Instance = this;
@@ -142,6 +174,15 @@ public class IntroDialogueController : MonoBehaviour
             });
         }
 
+        if (mazeEntranceLines.Count == 0)
+        {
+            mazeEntranceLines.Add(new DialogueLine
+            {
+                speakerName = defaultNpcName,
+                text = "các ngươi hãy cố gắng để vượt qua các mê cung này nhé , cuối mê cung có thứ gì đó đang rình rập các ngươi"
+            });
+        }
+
         // Auto-find components nếu thiếu
         if (npcAnimator == null)
         {
@@ -156,33 +197,58 @@ public class IntroDialogueController : MonoBehaviour
 
     private IEnumerator Start()
     {
+        lastPosition = transform.position;
+
         // Chờ 0.2 giây để đảm bảo PlayerHUDManager và các Player Prefab được spawn/init hoàn chỉnh
         yield return new WaitForSeconds(0.2f);
 
-        if (triggerOnStart)
+        // Nếu chơi offline, tự động chạy đối thoại khởi đầu
+        if (!IsNetworkActive && triggerOnStart)
         {
-            StartDialogue();
+            TriggerDialogue(0);
+        }
+    }
+
+    public override void OnNetworkSpawn()
+    {
+        base.OnNetworkSpawn();
+        lastPosition = transform.position;
+
+        // Nếu chơi online, Server sẽ chịu trách nhiệm phát sự kiện đối thoại
+        if (IsServer && triggerOnStart)
+        {
+            TriggerDialogue(0);
         }
     }
 
     private void Update()
     {
-        if (!isDialogueActive) return;
-
-        // Cho phép dùng bàn phím để qua thoại hoặc bỏ qua nhanh
-        if (Keyboard.current != null)
+        if (isDialogueActive)
         {
-            if (Keyboard.current.spaceKey.wasPressedThisFrame || 
-                Keyboard.current.enterKey.wasPressedThisFrame || 
-                Keyboard.current.fKey.wasPressedThisFrame)
+            // Cho phép dùng bàn phím để qua thoại hoặc bỏ qua nhanh
+            if (Keyboard.current != null)
             {
-                AdvanceDialogue();
-            }
+                if (Keyboard.current.spaceKey.wasPressedThisFrame || 
+                    Keyboard.current.enterKey.wasPressedThisFrame || 
+                    Keyboard.current.fKey.wasPressedThisFrame)
+                {
+                    AdvanceDialogue();
+                }
 
-            if (Keyboard.current.escapeKey.wasPressedThisFrame)
-            {
-                SkipAllDialogue();
+                if (Keyboard.current.escapeKey.wasPressedThisFrame)
+                {
+                    SkipAllDialogue();
+                }
             }
+        }
+
+        // Đồng bộ animation DiChuyen cho các Client dựa trên sự thay đổi vị trí thực tế của Transform
+        if (IsNetworkActive && !IsServer)
+        {
+            float distMoved = Vector3.Distance(transform.position, lastPosition);
+            bool isMoving = distMoved > (moveSpeed * Time.deltaTime * 0.1f);
+            SetNpcMoving(isMoving);
+            lastPosition = transform.position;
         }
     }
 
@@ -238,7 +304,10 @@ public class IntroDialogueController : MonoBehaviour
     /// </summary>
     public void StartBridgeCollapseDialogue()
     {
-        StartDialogue(bridgeCollapseLines);
+        if (IsServerOrOffline)
+        {
+            TriggerDialogue(1);
+        }
     }
 
     /// <summary>
@@ -246,13 +315,10 @@ public class IntroDialogueController : MonoBehaviour
     /// </summary>
     public void StartReadyToBuildDialogue()
     {
-        List<DialogueLine> readyLines = new List<DialogueLine>();
-        readyLines.Add(new DialogueLine
+        if (IsServerOrOffline)
         {
-            speakerName = defaultNpcName,
-            text = "4 người các ngươi hãy lại đây ấn F và click liên tục để xây cầu"
-        });
-        StartDialogue(readyLines);
+            TriggerDialogue(2);
+        }
     }
 
     /// <summary>
@@ -631,13 +697,24 @@ public class IntroDialogueController : MonoBehaviour
 
         // Bắt đầu di chuyển NPC tới vị trí chỉ định (nếu có và nếu đây là hội thoại khởi đầu ban đầu)
         // Chúng ta chỉ di chuyển NPC khi nó hoàn thành cuộc hội thoại giới thiệu ban đầu (chứ sập cầu thì không cần đi nữa)
-        if (activeLines == dialogueLines && npcMoveTarget != null)
+        if (IsServerOrOffline)
         {
-            if (npcMoveCoroutine != null)
+            if (activeLines == dialogueLines && npcMoveTarget != null)
             {
-                StopCoroutine(npcMoveCoroutine);
+                if (npcMoveCoroutine != null)
+                {
+                    StopCoroutine(npcMoveCoroutine);
+                }
+                npcMoveCoroutine = StartCoroutine(MoveNpcToTargetRoutine());
             }
-            npcMoveCoroutine = StartCoroutine(MoveNpcToTargetRoutine());
+            else if (activeLines == mazeEntranceLines)
+            {
+                if (npcMoveCoroutine != null)
+                {
+                    StopCoroutine(npcMoveCoroutine);
+                }
+                npcMoveCoroutine = StartCoroutine(PermanentFollowPlayerRoutine());
+            }
         }
     }
 
@@ -752,6 +829,8 @@ public class IntroDialogueController : MonoBehaviour
     /// </summary>
     public void TriggerMoveAndDialogueAfterBridge()
     {
+        if (!IsServerOrOffline) return;
+
         if (npcMoveTargetAfterBridge != null)
         {
             if (npcMoveCoroutine != null)
@@ -763,7 +842,7 @@ public class IntroDialogueController : MonoBehaviour
         else
         {
             // Nếu không có target chỉ định, chạy hội thoại ngay lập tức
-            StartDialogue(afterBridgeRepairedLines);
+            TriggerDialogue(3);
         }
     }
 
@@ -805,7 +884,7 @@ public class IntroDialogueController : MonoBehaviour
         npcMoveCoroutine = null;
 
         // Bắt đầu hội thoại
-        StartDialogue(afterBridgeRepairedLines);
+        TriggerDialogue(3);
     }
 
     private void SetDialogueText(string text)
@@ -870,5 +949,268 @@ public class IntroDialogueController : MonoBehaviour
                 else instance.boxElement.RemoveFromClassList(className);
             }
         }
+    }
+
+    // ═══════════════════════════════════════════════════════
+    //  HỖ TRỢ NPC DI CHUYỂN FOLLOW NGƯỜI CHƠI & DỪNG TẠI MÊ CUNG
+    // ═══════════════════════════════════════════════════════
+
+    /// <summary>
+    /// Bắt đầu follow một người chơi bất kỳ cho đến khi tới điểm dừng mê cung.
+    /// </summary>
+    public void StartNpcFollowingPlayer()
+    {
+        if (!IsServerOrOffline) return;
+        if (isFollowingPlayer) return;
+
+        if (npcMoveCoroutine != null)
+        {
+            StopCoroutine(npcMoveCoroutine);
+        }
+        npcMoveCoroutine = StartCoroutine(FollowPlayerToMazeTargetRoutine());
+    }
+
+    private IEnumerator FollowPlayerToMazeTargetRoutine()
+    {
+        if (npcTransform == null || npcMazeTarget == null)
+        {
+            Debug.LogWarning("[IntroDialogueController] NPC hoặc npcMazeTarget chưa được cấu hình để follow!");
+            yield break;
+        }
+
+        isFollowingPlayer = true;
+        SetNpcMoving(true);
+
+        Debug.Log("[IntroDialogueController] NPC bắt đầu follow người chơi...");
+
+        while (isFollowingPlayer)
+        {
+            // 1. Kiểm tra xem NPC đã tới gần điểm dừng mê cung chưa
+            float distToMazeTarget = Vector3.Distance(npcTransform.position, npcMazeTarget.position);
+            if (distToMazeTarget <= mazeTargetTriggerDistance)
+            {
+                Debug.Log("[IntroDialogueController] NPC đã tới điểm dừng mê cung!");
+                break; // Thoát khỏi vòng lặp follow để dừng lại và nói chuyện
+            }
+
+            // 2. Tìm hoặc cập nhật player để follow
+            if (playerToFollow == null || !playerToFollow.gameObject.activeInHierarchy)
+            {
+                playerToFollow = FindPlayerToFollow();
+            }
+
+            if (playerToFollow != null)
+            {
+                Vector3 targetPos = playerToFollow.position;
+                targetPos.y = npcTransform.position.y; // Giữ nguyên độ cao Y
+
+                float distToPlayer = Vector3.Distance(npcTransform.position, targetPos);
+
+                if (distToPlayer > followKeepDistance)
+                {
+                    SetNpcMoving(true);
+                    npcTransform.position = Vector3.MoveTowards(npcTransform.position, targetPos, moveSpeed * Time.deltaTime);
+
+                    // Quay mặt về hướng di chuyển
+                    Vector3 direction = (targetPos - npcTransform.position).normalized;
+                    if (direction != Vector3.zero)
+                    {
+                        Quaternion targetRot = Quaternion.LookRotation(direction);
+                        npcTransform.rotation = Quaternion.Slerp(npcTransform.rotation, targetRot, turnSpeed * Time.deltaTime);
+                    }
+                }
+                else
+                {
+                    // Nếu đã đứng gần player, dừng đi bộ nhưng quay mặt về phía player
+                    SetNpcMoving(false);
+                    Vector3 direction = (targetPos - npcTransform.position).normalized;
+                    if (direction != Vector3.zero)
+                    {
+                        Quaternion targetRot = Quaternion.LookRotation(direction);
+                        npcTransform.rotation = Quaternion.Slerp(npcTransform.rotation, targetRot, turnSpeed * Time.deltaTime);
+                    }
+                }
+            }
+            else
+            {
+                // Nếu không tìm thấy người chơi nào, đứng yên
+                SetNpcMoving(false);
+            }
+
+            yield return null;
+        }
+
+        // --- GIAI ĐOẠN ĐẾN ĐÍCH MÊ CUNG ---
+        // Di chuyển NPC tịnh tiến chính xác đến vị trí npcMazeTarget
+        Debug.Log("[IntroDialogueController] NPC di chuyển chính xác tới điểm dừng mê cung...");
+        SetNpcMoving(true);
+        Vector3 dest = npcMazeTarget.position;
+        dest.y = npcTransform.position.y;
+
+        float distance = Vector3.Distance(npcTransform.position, dest);
+        while (distance > stoppingDistance)
+        {
+            npcTransform.position = Vector3.MoveTowards(npcTransform.position, dest, moveSpeed * Time.deltaTime);
+
+            Vector3 direction = (dest - npcTransform.position).normalized;
+            if (direction != Vector3.zero)
+            {
+                Quaternion targetRot = Quaternion.LookRotation(direction);
+                npcTransform.rotation = Quaternion.Slerp(npcTransform.rotation, targetRot, turnSpeed * Time.deltaTime);
+            }
+
+            distance = Vector3.Distance(npcTransform.position, dest);
+            yield return null;
+        }
+
+        npcTransform.position = dest;
+        SetNpcMoving(false);
+        isFollowingPlayer = false;
+        npcMoveCoroutine = null;
+
+        Debug.Log("[IntroDialogueController] NPC đã đứng tại điểm dừng mê cung. Bắt đầu hội thoại.");
+
+        // Quay mặt về phía người chơi gần nhất để nói chuyện
+        Transform nearbyPlayer = FindPlayerToFollow();
+        if (nearbyPlayer != null)
+        {
+            Vector3 lookDir = (nearbyPlayer.position - npcTransform.position).normalized;
+            lookDir.y = 0;
+            if (lookDir != Vector3.zero)
+            {
+                npcTransform.rotation = Quaternion.LookRotation(lookDir);
+            }
+        }
+
+        // Bắt đầu hội thoại mê cung
+        TriggerDialogue(4);
+    }
+
+    private Transform FindPlayerToFollow()
+    {
+        GameObject[] players = GameObject.FindGameObjectsWithTag("Player");
+        Transform closestPlayer = null;
+        float closestDistance = float.MaxValue;
+
+        foreach (var player in players)
+        {
+            if (player == null || !player.activeInHierarchy) continue;
+
+            float dist = Vector3.Distance(npcTransform.position, player.transform.position);
+            if (dist < closestDistance)
+            {
+                closestDistance = dist;
+                closestPlayer = player.transform;
+            }
+        }
+        return closestPlayer;
+    }
+
+    private IEnumerator PermanentFollowPlayerRoutine()
+    {
+        isFollowingPlayer = true;
+        SetNpcMoving(true);
+
+        Debug.Log("[IntroDialogueController] NPC bắt đầu follow người chơi vĩnh viễn...");
+
+        while (isFollowingPlayer)
+        {
+            // Tìm hoặc cập nhật player để follow
+            if (playerToFollow == null || !playerToFollow.gameObject.activeInHierarchy)
+            {
+                playerToFollow = FindPlayerToFollow();
+            }
+
+            if (playerToFollow != null)
+            {
+                Vector3 targetPos = playerToFollow.position;
+                targetPos.y = npcTransform.position.y; // Giữ nguyên độ cao Y
+
+                float distToPlayer = Vector3.Distance(npcTransform.position, targetPos);
+
+                if (distToPlayer > followKeepDistance)
+                {
+                    SetNpcMoving(true);
+                    npcTransform.position = Vector3.MoveTowards(npcTransform.position, targetPos, moveSpeed * Time.deltaTime);
+
+                    // Quay mặt về hướng di chuyển
+                    Vector3 direction = (targetPos - npcTransform.position).normalized;
+                    if (direction != Vector3.zero)
+                    {
+                        Quaternion targetRot = Quaternion.LookRotation(direction);
+                        npcTransform.rotation = Quaternion.Slerp(npcTransform.rotation, targetRot, turnSpeed * Time.deltaTime);
+                    }
+                }
+                else
+                {
+                    // Nếu đã đứng gần player, dừng đi bộ nhưng quay mặt về phía player
+                    SetNpcMoving(false);
+                    Vector3 direction = (targetPos - npcTransform.position).normalized;
+                    if (direction != Vector3.zero)
+                    {
+                        Quaternion targetRot = Quaternion.LookRotation(direction);
+                        npcTransform.rotation = Quaternion.Slerp(npcTransform.rotation, targetRot, turnSpeed * Time.deltaTime);
+                    }
+                }
+            }
+            else
+            {
+                SetNpcMoving(false);
+            }
+
+            yield return null;
+        }
+
+        SetNpcMoving(false);
+    }
+
+    // ═══════════════════════════════════════════════════════
+    //  ĐỒNG BỘ HÓA ĐỐI THOẠI QUA MẠNG (NETCODE CLIENT RPC)
+    // ═══════════════════════════════════════════════════════
+
+    private void TriggerDialogue(int dialogueType)
+    {
+        if (IsNetworkActive && IsServer)
+        {
+            StartDialogueClientRpc(dialogueType);
+        }
+        else if (!IsNetworkActive)
+        {
+            ExecuteDialogueLocal(dialogueType);
+        }
+    }
+
+    private void ExecuteDialogueLocal(int dialogueType)
+    {
+        switch (dialogueType)
+        {
+            case 0:
+                StartDialogue(dialogueLines);
+                break;
+            case 1:
+                StartDialogue(bridgeCollapseLines);
+                break;
+            case 2:
+                List<DialogueLine> readyLines = new List<DialogueLine>();
+                readyLines.Add(new DialogueLine
+                {
+                    speakerName = defaultNpcName,
+                    text = "4 người các ngươi hãy lại đây ấn F và click liên tục để xây cầu"
+                });
+                StartDialogue(readyLines);
+                break;
+            case 3:
+                StartDialogue(afterBridgeRepairedLines);
+                break;
+            case 4:
+                StartDialogue(mazeEntranceLines);
+                break;
+        }
+    }
+
+    [ClientRpc]
+    private void StartDialogueClientRpc(int dialogueType)
+    {
+        ExecuteDialogueLocal(dialogueType);
     }
 }
