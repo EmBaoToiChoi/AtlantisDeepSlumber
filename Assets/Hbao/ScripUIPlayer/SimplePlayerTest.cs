@@ -133,10 +133,33 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
     );
 
     // IPlayerHUDTarget Stats Implementation
-    public string DisplayName => string.IsNullOrEmpty(playerName.Value.ToString()) ? "Explorer" : playerName.Value.ToString();
-    public int PlayerLevel => isStandaloneMode ? localLevel : playerLevel.Value;
-    public float PlayerExp => isStandaloneMode ? localExp : playerExp.Value;
-    public float MaxExp => 100f + (isStandaloneMode ? localLevel : playerLevel.Value) * 50f;
+    public string DisplayName => 
+        leoPlayer != null ? leoPlayer.DisplayName :
+        (arthurPlayer != null ? arthurPlayer.DisplayName :
+        (elenaPlayer != null ? elenaPlayer.DisplayName :
+        (mayaPlayer != null ? mayaPlayer.DisplayName :
+        (string.IsNullOrEmpty(playerName.Value.ToString()) ? "Explorer" : playerName.Value.ToString()))));
+
+    public int PlayerLevel => 
+        leoPlayer != null ? leoPlayer.PlayerLevel :
+        (arthurPlayer != null ? arthurPlayer.PlayerLevel :
+        (elenaPlayer != null ? elenaPlayer.PlayerLevel :
+        (mayaPlayer != null ? mayaPlayer.PlayerLevel :
+        (isStandaloneMode ? localLevel : playerLevel.Value))));
+
+    public float PlayerExp => 
+        leoPlayer != null ? leoPlayer.PlayerExp :
+        (arthurPlayer != null ? arthurPlayer.PlayerExp :
+        (elenaPlayer != null ? elenaPlayer.PlayerExp :
+        (mayaPlayer != null ? mayaPlayer.PlayerExp :
+        (isStandaloneMode ? localExp : playerExp.Value))));
+
+    public float MaxExp => 
+        leoPlayer != null ? leoPlayer.MaxExp :
+        (arthurPlayer != null ? arthurPlayer.MaxExp :
+        (elenaPlayer != null ? elenaPlayer.MaxExp :
+        (mayaPlayer != null ? mayaPlayer.MaxExp :
+        (100f + (isStandaloneMode ? localLevel : playerLevel.Value) * 50f))));
 
     [Header("Knockback Settings")]
     protected Vector3 knockbackVelocity;
@@ -214,7 +237,11 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
     public float Weapon1MaxDurability => weapon1MaxDurability;
     public float Weapon2MaxDurability => weapon2MaxDurability;
     public string[] InventorySlots => inventorySlots;
-    public float MaxHealth => maxHealth;
+    public float MaxHealth => 
+        leoPlayer != null ? leoPlayer.maxHealth :
+        (arthurPlayer != null ? arthurPlayer.maxHealth :
+        (elenaPlayer != null ? elenaPlayer.maxHealth :
+        (mayaPlayer != null ? mayaPlayer.maxHealth : maxHealth)));
 
     private bool IsSkillsUnlocked => leoPlayer != null ? leoPlayer.isSkillsUnlocked.Value : (arthurPlayer != null ? arthurPlayer.isSkillsUnlocked.Value : (elenaPlayer != null ? elenaPlayer.isSkillsUnlocked.Value : (mayaPlayer != null ? mayaPlayer.isSkillsUnlocked.Value : isSkillsUnlocked.Value)));
 
@@ -431,6 +458,12 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
         if (elenaPlayer != null) elenaPlayer.isStandaloneMode = false;
         if (mayaPlayer != null) mayaPlayer.isStandaloneMode = false;
 
+        if (leoPlayer != null || arthurPlayer != null || elenaPlayer != null || mayaPlayer != null)
+        {
+            // The specific character class handles network registration and active players list.
+            return;
+        }
+
         var rb = GetComponent<Rigidbody>();
         if (rb != null)
         {
@@ -448,12 +481,6 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
         if (PlayerHUDManager.ActivePlayers != null && !PlayerHUDManager.ActivePlayers.Contains(this))
         {
             PlayerHUDManager.ActivePlayers.Add(this);
-        }
-
-        if (leoPlayer != null || arthurPlayer != null)
-        {
-            // LeoPlayer / ArthurPlayer handle their own network registration internally.
-            return;
         }
 
         // Đăng ký sự kiện đồng bộ Netcode
