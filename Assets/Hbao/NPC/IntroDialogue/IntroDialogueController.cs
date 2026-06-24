@@ -95,6 +95,9 @@ public class IntroDialogueController : NetworkBehaviour
     private bool isFollowingPlayer = false;
     private Transform playerToFollow = null;
 
+    private bool hasStartedOpeningMove = false;
+    private bool hasStartedMazeFollow = false;
+
     private Vector3 lastPosition;
     private bool IsNetworkActive => NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
     private bool IsServerOrOffline => !IsNetworkActive || IsServer;
@@ -261,6 +264,15 @@ public class IntroDialogueController : NetworkBehaviour
         
         // Chọn danh sách thoại hoạt động
         activeLines = (customLines != null && customLines.Count > 0) ? customLines : dialogueLines;
+
+        if (activeLines == dialogueLines)
+        {
+            hasStartedOpeningMove = false;
+        }
+        else if (activeLines == mazeEntranceLines)
+        {
+            hasStartedMazeFollow = false;
+        }
 
         isDialogueActive = true;
         currentLineIndex = 0;
@@ -695,26 +707,14 @@ public class IntroDialogueController : NetworkBehaviour
 
         Debug.Log("[IntroDialogueController] Kết thúc cuộc đối thoại giới thiệu. Khôi phục điều khiển cho Player.");
 
-        // Bắt đầu di chuyển NPC tới vị trí chỉ định (nếu có và nếu đây là hội thoại khởi đầu ban đầu)
-        // Chúng ta chỉ di chuyển NPC khi nó hoàn thành cuộc hội thoại giới thiệu ban đầu (chứ sập cầu thì không cần đi nữa)
-        if (IsServerOrOffline)
+        // Thông báo cho Server để di chuyển NPC ngay khi người đầu tiên kết thúc hội thoại
+        if (activeLines == dialogueLines)
         {
-            if (activeLines == dialogueLines && npcMoveTarget != null)
-            {
-                if (npcMoveCoroutine != null)
-                {
-                    StopCoroutine(npcMoveCoroutine);
-                }
-                npcMoveCoroutine = StartCoroutine(MoveNpcToTargetRoutine());
-            }
-            else if (activeLines == mazeEntranceLines)
-            {
-                if (npcMoveCoroutine != null)
-                {
-                    StopCoroutine(npcMoveCoroutine);
-                }
-                npcMoveCoroutine = StartCoroutine(PermanentFollowPlayerRoutine());
-            }
+            NotifyStartNpcMovement(0);
+        }
+        else if (activeLines == mazeEntranceLines)
+        {
+            NotifyStartNpcMovement(4);
         }
     }
 
@@ -958,119 +958,59 @@ public class IntroDialogueController : NetworkBehaviour
     /// <summary>
     /// Bắt đầu follow một người chơi bất kỳ cho đến khi tới điểm dừng mê cung.
     /// </summary>
+    /// <summary>
+    /// Kích hoạt NPC di chuyển tới vị trí điểm dừng ở mê cung.
+    /// </summary>
     public void StartNpcFollowingPlayer()
     {
         if (!IsServerOrOffline) return;
-        if (isFollowingPlayer) return;
 
         if (npcMoveCoroutine != null)
         {
             StopCoroutine(npcMoveCoroutine);
         }
-        npcMoveCoroutine = StartCoroutine(FollowPlayerToMazeTargetRoutine());
+        npcMoveCoroutine = StartCoroutine(MoveNpcToMazeTargetRoutine());
     }
 
-    private IEnumerator FollowPlayerToMazeTargetRoutine()
+    private IEnumerator MoveNpcToMazeTargetRoutine()
     {
         if (npcTransform == null || npcMazeTarget == null)
         {
-            Debug.LogWarning("[IntroDialogueController] NPC hoặc npcMazeTarget chưa được cấu hình để follow!");
+            Debug.LogWarning("[IntroDialogueController] NPC hoặc npcMazeTarget chưa được cấu hình để di chuyển tới mê cung!");
             yield break;
         }
 
-        isFollowingPlayer = true;
+        Debug.Log($"[IntroDialogueController] NPC di chuyển tới điểm dừng mê cung: {npcMazeTarget.name}");
         SetNpcMoving(true);
 
-        Debug.Log("[IntroDialogueController] NPC bắt đầu follow người chơi...");
+        Transform targetTrans = npcTransform;
+        Vector3 destination = npcMazeTarget.position;
+        destination.y = targetTrans.position.y; // Giữ nguyên Y
 
-        while (isFollowingPlayer)
-        {
-            // 1. Kiểm tra xem NPC đã tới gần điểm dừng mê cung chưa
-            float distToMazeTarget = Vector3.Distance(npcTransform.position, npcMazeTarget.position);
-            if (distToMazeTarget <= mazeTargetTriggerDistance)
-            {
-                Debug.Log("[IntroDialogueController] NPC đã tới điểm dừng mê cung!");
-                break; // Thoát khỏi vòng lặp follow để dừng lại và nói chuyện
-            }
-
-            // 2. Tìm hoặc cập nhật player để follow
-            if (playerToFollow == null || !playerToFollow.gameObject.activeInHierarchy)
-            {
-                playerToFollow = FindPlayerToFollow();
-            }
-
-            if (playerToFollow != null)
-            {
-                Vector3 targetPos = playerToFollow.position;
-                targetPos.y = npcTransform.position.y; // Giữ nguyên độ cao Y
-
-                float distToPlayer = Vector3.Distance(npcTransform.position, targetPos);
-
-                if (distToPlayer > followKeepDistance)
-                {
-                    SetNpcMoving(true);
-                    npcTransform.position = Vector3.MoveTowards(npcTransform.position, targetPos, moveSpeed * Time.deltaTime);
-
-                    // Quay mặt về hướng di chuyển
-                    Vector3 direction = (targetPos - npcTransform.position).normalized;
-                    if (direction != Vector3.zero)
-                    {
-                        Quaternion targetRot = Quaternion.LookRotation(direction);
-                        npcTransform.rotation = Quaternion.Slerp(npcTransform.rotation, targetRot, turnSpeed * Time.deltaTime);
-                    }
-                }
-                else
-                {
-                    // Nếu đã đứng gần player, dừng đi bộ nhưng quay mặt về phía player
-                    SetNpcMoving(false);
-                    Vector3 direction = (targetPos - npcTransform.position).normalized;
-                    if (direction != Vector3.zero)
-                    {
-                        Quaternion targetRot = Quaternion.LookRotation(direction);
-                        npcTransform.rotation = Quaternion.Slerp(npcTransform.rotation, targetRot, turnSpeed * Time.deltaTime);
-                    }
-                }
-            }
-            else
-            {
-                // Nếu không tìm thấy người chơi nào, đứng yên
-                SetNpcMoving(false);
-            }
-
-            yield return null;
-        }
-
-        // --- GIAI ĐOẠN ĐẾN ĐÍCH MÊ CUNG ---
-        // Di chuyển NPC tịnh tiến chính xác đến vị trí npcMazeTarget
-        Debug.Log("[IntroDialogueController] NPC di chuyển chính xác tới điểm dừng mê cung...");
-        SetNpcMoving(true);
-        Vector3 dest = npcMazeTarget.position;
-        dest.y = npcTransform.position.y;
-
-        float distance = Vector3.Distance(npcTransform.position, dest);
+        float distance = Vector3.Distance(targetTrans.position, destination);
+        
         while (distance > stoppingDistance)
         {
-            npcTransform.position = Vector3.MoveTowards(npcTransform.position, dest, moveSpeed * Time.deltaTime);
+            targetTrans.position = Vector3.MoveTowards(targetTrans.position, destination, moveSpeed * Time.deltaTime);
 
-            Vector3 direction = (dest - npcTransform.position).normalized;
+            Vector3 direction = (destination - targetTrans.position).normalized;
             if (direction != Vector3.zero)
             {
                 Quaternion targetRot = Quaternion.LookRotation(direction);
-                npcTransform.rotation = Quaternion.Slerp(npcTransform.rotation, targetRot, turnSpeed * Time.deltaTime);
+                targetTrans.rotation = Quaternion.Slerp(targetTrans.rotation, targetRot, turnSpeed * Time.deltaTime);
             }
 
-            distance = Vector3.Distance(npcTransform.position, dest);
+            distance = Vector3.Distance(targetTrans.position, destination);
             yield return null;
         }
 
-        npcTransform.position = dest;
+        targetTrans.position = destination;
         SetNpcMoving(false);
-        isFollowingPlayer = false;
         npcMoveCoroutine = null;
 
         Debug.Log("[IntroDialogueController] NPC đã đứng tại điểm dừng mê cung. Bắt đầu hội thoại.");
 
-        // Quay mặt về phía người chơi gần nhất để nói chuyện
+        // Quay mặt về hướng người chơi gần nhất để nói chuyện
         Transform nearbyPlayer = FindPlayerToFollow();
         if (nearbyPlayer != null)
         {
@@ -1212,5 +1152,57 @@ public class IntroDialogueController : NetworkBehaviour
     private void StartDialogueClientRpc(int dialogueType)
     {
         ExecuteDialogueLocal(dialogueType);
+    }
+
+    // ═══════════════════════════════════════════════════════
+    //  ĐỒNG BỘ HÓA KÍCH HOẠT DI CHUYỂN NPC KHI CÓ NGƯỜI ĐỌC XONG
+    // ═══════════════════════════════════════════════════════
+
+    private void NotifyStartNpcMovement(int type)
+    {
+        if (IsNetworkActive)
+        {
+            NotifyStartNpcMovementServerRpc(type);
+        }
+        else
+        {
+            StartNpcMovementLocal(type);
+        }
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    private void NotifyStartNpcMovementServerRpc(int type)
+    {
+        StartNpcMovementLocal(type);
+    }
+
+    private void StartNpcMovementLocal(int type)
+    {
+        if (!IsServerOrOffline) return;
+
+        if (type == 0) // Opening dialogue finished by anyone
+        {
+            if (!hasStartedOpeningMove && npcMoveTarget != null)
+            {
+                hasStartedOpeningMove = true;
+                if (npcMoveCoroutine != null)
+                {
+                    StopCoroutine(npcMoveCoroutine);
+                }
+                npcMoveCoroutine = StartCoroutine(MoveNpcToTargetRoutine());
+            }
+        }
+        else if (type == 4) // Maze entrance dialogue finished by anyone
+        {
+            if (!hasStartedMazeFollow)
+            {
+                hasStartedMazeFollow = true;
+                if (npcMoveCoroutine != null)
+                {
+                    StopCoroutine(npcMoveCoroutine);
+                }
+                npcMoveCoroutine = StartCoroutine(PermanentFollowPlayerRoutine());
+            }
+        }
     }
 }
