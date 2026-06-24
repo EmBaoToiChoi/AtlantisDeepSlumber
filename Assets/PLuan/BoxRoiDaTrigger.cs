@@ -9,6 +9,9 @@ public class BoxRoiDaTrigger : NetworkBehaviour
 
     [Tooltip("Object Đá Chặn Cửa Chưa Rơi (sẽ bị tắt đi)")]
     public GameObject daChanCuaChuaRoi;
+    [Tooltip("Object Đá Chặn Cửa")]
+    public GameObject DaChanCua1;
+    public GameObject DaChanCua2;
 
     private bool IsNetworkActive => NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening && IsSpawned;
 
@@ -53,6 +56,8 @@ public class BoxRoiDaTrigger : NetworkBehaviour
         if (daChanCuaDaRoi != null)
         {
             daChanCuaDaRoi.SetActive(true);
+            DaChanCua1.SetActive(true);
+            DaChanCua2.SetActive(true);
             
             // Kích hoạt tất cả GameObject con đệ quy (vì con có thể đang inactive)
             ActivateAllChildrenRecursive(daChanCuaDaRoi.transform);
