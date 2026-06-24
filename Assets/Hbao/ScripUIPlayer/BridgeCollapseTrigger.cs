@@ -1,8 +1,16 @@
 using UnityEngine;
 using Unity.Netcode;
+using UnityEngine.AI;
 
 public class BridgeCollapseTrigger : NetworkBehaviour
 {
+    [Header("NavMesh Bridge Configuration")]
+    [Tooltip("Kéo thả NavMeshObstacle chặn cầu vào đây (sẽ BẬT khi sập, TẮT khi sửa xong)")]
+    public NavMeshObstacle bridgeObstacle;
+
+    [Tooltip("Kéo thả OffMeshLink nối 2 bờ vào đây (sẽ TẮT khi sập, BẬT khi sửa xong)")]
+    public OffMeshLink bridgeOffMeshLink;
+
     [Header("Bridge Components Configuration")]
     [Tooltip("Các mảng cầu nguyên vẹn ban đầu (Sẽ bị tắt khi sập, bật lại khi sửa)")]
     public GameObject[] stableBridgeSegments;
@@ -151,6 +159,20 @@ public class BridgeCollapseTrigger : NetworkBehaviour
         // Đảm bảo visual ban đầu khớp với trạng thái chưa sập
         SetStableSegmentsActive(true);
         SetBrokenSegmentsActive(false);
+
+        // Tự động tìm kiếm nếu chưa được kéo thả trong Inspector
+        if (bridgeObstacle == null)
+        {
+            bridgeObstacle = GetComponentInChildren<NavMeshObstacle>();
+        }
+        if (bridgeOffMeshLink == null)
+        {
+            bridgeOffMeshLink = GetComponentInChildren<OffMeshLink>();
+        }
+
+        // Đảm bảo trạng thái lúc bắt đầu (cầu chưa sập)
+        if (bridgeObstacle != null) bridgeObstacle.enabled = false;
+        if (bridgeOffMeshLink != null) bridgeOffMeshLink.activated = true;
     }
 
     private void Start()
@@ -419,6 +441,15 @@ public class BridgeCollapseTrigger : NetworkBehaviour
     {
         localCollapseTriggered = true;
 
+        if (bridgeObstacle != null)
+        {
+            bridgeObstacle.enabled = true;
+        }
+        if (bridgeOffMeshLink != null)
+        {
+            bridgeOffMeshLink.activated = false;
+        }
+
         // Đảm bảo lưu lại vị trí ban đầu của cầu trước khi bị ẩn đi
         if (mainBridgeObject != null && originalBridgePos == Vector3.zero)
         {
@@ -668,6 +699,16 @@ public class BridgeCollapseTrigger : NetworkBehaviour
     private void RepairBridgeLocal()
     {
         localRepaired = true;
+
+        if (bridgeObstacle != null)
+        {
+            bridgeObstacle.enabled = false;
+        }
+        if (bridgeOffMeshLink != null)
+        {
+            bridgeOffMeshLink.activated = true;
+        }
+
         // 1. Tắt nhắc nhở tương tác (dùng dynamic HUD lookup)
         PlayerHUDController localHudCtl = FindAnyObjectByType<PlayerHUDController>();
         if (localHudCtl != null)

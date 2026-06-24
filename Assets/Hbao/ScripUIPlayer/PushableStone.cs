@@ -653,6 +653,15 @@ public class PushableStone : NetworkBehaviour
             rb.isKinematic = true;
         }
 
+        // Tắt CharacterController nếu có để tránh xung đột di chuyển khi khóa cứng vị trí
+        var cc = player.GetComponent<CharacterController>();
+        if (cc == null) cc = player.GetComponentInChildren<CharacterController>();
+        if (cc == null) cc = player.GetComponentInParent<CharacterController>();
+        if (cc != null)
+        {
+            cc.enabled = false;
+        }
+
         // Snap to pusher slot
         if (slotIndex >= 0 && slotIndex < pushSlots.Length && pushSlots[slotIndex] != null)
         {
@@ -696,6 +705,15 @@ public class PushableStone : NetworkBehaviour
         if (rb != null)
         {
             rb.isKinematic = false;
+        }
+
+        // Bật lại CharacterController nếu có
+        var cc = player.GetComponent<CharacterController>();
+        if (cc == null) cc = player.GetComponentInChildren<CharacterController>();
+        if (cc == null) cc = player.GetComponentInParent<CharacterController>();
+        if (cc != null)
+        {
+            cc.enabled = true;
         }
 
         // Stop Pushing Animations
@@ -789,11 +807,48 @@ public class PushableStone : NetworkBehaviour
     private MonoBehaviour GetPlayerLocomotionScript(GameObject playerObj)
     {
         if (playerObj == null) return null;
+        
+        // Duyệt tìm tất cả các script Monobehaviour trên người chơi để tắt các locomotion script tương ứng (kể cả LeoAssassin, ArthurTanker, v.v.)
+        MonoBehaviour[] scripts = playerObj.GetComponents<MonoBehaviour>();
+        foreach (var script in scripts)
+        {
+            if (script == null) continue;
+            string typeName = script.GetType().Name;
+            
+            if (typeName.Contains("Player") || typeName.Contains("Locomotion") || typeName.Contains("Movement") || 
+                typeName.Contains("Controller") || typeName.Contains("Test") || typeName.Contains("Assassin") || 
+                typeName.Contains("Tanker") || typeName.Contains("Archer") || typeName.Contains("Support"))
+            {
+                // Bỏ qua các class hệ thống của Unity hoặc Netcode
+                if (script is NetworkBehaviour || script.GetType().Namespace == "Unity.Netcode" || script.GetType().Namespace == "UnityEngine")
+                {
+                    continue;
+                }
+                return script;
+            }
+        }
+        
+        // Hàng phòng thủ dự phòng (Fallback)
         MonoBehaviour comp = playerObj.GetComponent<LeoPlayer>();
+        if (comp == null) comp = playerObj.GetComponentInChildren<LeoPlayer>();
+        if (comp == null) comp = playerObj.GetComponentInParent<LeoPlayer>();
+
         if (comp == null) comp = playerObj.GetComponent<ArthurPlayer>();
+        if (comp == null) comp = playerObj.GetComponentInChildren<ArthurPlayer>();
+        if (comp == null) comp = playerObj.GetComponentInParent<ArthurPlayer>();
+
         if (comp == null) comp = playerObj.GetComponent<ElenaPlayer>();
+        if (comp == null) comp = playerObj.GetComponentInChildren<ElenaPlayer>();
+        if (comp == null) comp = playerObj.GetComponentInParent<ElenaPlayer>();
+
         if (comp == null) comp = playerObj.GetComponent<MayaPlayer>();
+        if (comp == null) comp = playerObj.GetComponentInChildren<MayaPlayer>();
+        if (comp == null) comp = playerObj.GetComponentInParent<MayaPlayer>();
+
         if (comp == null) comp = playerObj.GetComponent<SimplePlayerTest>();
+        if (comp == null) comp = playerObj.GetComponentInChildren<SimplePlayerTest>();
+        if (comp == null) comp = playerObj.GetComponentInParent<SimplePlayerTest>();
+
         return comp;
     }
     #endregion
