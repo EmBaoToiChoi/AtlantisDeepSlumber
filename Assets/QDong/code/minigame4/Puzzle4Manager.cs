@@ -15,6 +15,11 @@ public class Puzzle4Manager : NetworkBehaviour
     public NetworkVariable<bool> puzzleCompleted =
         new NetworkVariable<bool>();
 
+    public NetworkVariable<bool> isMinigameStarted =
+        new NetworkVariable<bool>(false);
+
+    public GameObject[] minigameUIs;
+
     public NetworkVariable<float> failTimer =
         new NetworkVariable<float>(3f);
 
@@ -50,13 +55,63 @@ public class Puzzle4Manager : NetworkBehaviour
             centerExplosion.SetActive(false);
     }
 
+    public override void OnNetworkSpawn()
+    {
+        base.OnNetworkSpawn();
+
+        if (IsClient)
+        {
+            UpdateUIState(isMinigameStarted.Value);
+            isMinigameStarted.OnValueChanged += (oldVal, newVal) => {
+                UpdateUIState(newVal);
+            };
+        }
+    }
+
+    void UpdateUIState(bool show)
+    {
+        if (minigameUIs != null && minigameUIs.Length > 0)
+        {
+            foreach (GameObject ui in minigameUIs)
+            {
+                if (ui != null)
+                    ui.SetActive(show);
+            }
+        }
+        else
+        {
+            BalanceMeterUIToolkit tkUI = FindAnyObjectByType<BalanceMeterUIToolkit>(FindObjectsInactive.Include);
+            if (tkUI != null) tkUI.gameObject.SetActive(show);
+
+            BalanceMeterUI imgUI = FindAnyObjectByType<BalanceMeterUI>(FindObjectsInactive.Include);
+            if (imgUI != null) imgUI.gameObject.SetActive(show);
+
+            Puzzle4UI p4UI = FindAnyObjectByType<Puzzle4UI>(FindObjectsInactive.Include);
+            if (p4UI != null) p4UI.gameObject.SetActive(show);
+        }
+    }
+
+    private bool isStartingUI = false;
+
     void Update()
     {
         if (!IsServer)
             return;
 
+        if (trapFloor != null && trapFloor.activated && !isMinigameStarted.Value && !isStartingUI)
+        {
+            isStartingUI = true;
+            StartCoroutine(DelayedStartMinigameUI());
+        }
+
         CheckFail();
         CheckComplete();
+    }
+
+    IEnumerator DelayedStartMinigameUI()
+    {
+        yield return new WaitForSeconds(2.5f);
+        isMinigameStarted.Value = true;
     }
 
     void CheckFail()
@@ -151,15 +206,14 @@ public class Puzzle4Manager : NetworkBehaviour
                 balanceManager.diskRigidbody.transform.position;
 
             Vector3 direction =
-                player.transform.position - center;
+                (player.transform.position - center).normalized;
 
             direction.y = 0f;
 
             direction.Normalize();
 
             Vector3 force =
-                direction * 150f +
-                Vector3.up * 45f;
+                Vector3.up * 3f;
 
             knockback.Launch(force);
         }
@@ -181,7 +235,7 @@ public class Puzzle4Manager : NetworkBehaviour
                 continue;
 
             Vector3 force =
-                Vector3.up * 50f;
+                Vector3.up * 15f;
 
             knockback.Launch(force);
         }
@@ -217,12 +271,12 @@ public class Puzzle4Manager : NetworkBehaviour
 
         yield return new WaitForSeconds(1f);
 
-        yield return new WaitForSeconds(5f);
+        yield return new WaitForSeconds(7f);
 
         LaunchPlayersUp();
 
         // Chờ người chơi bay lên khỏi mặt đất một chút
-        yield return new WaitForSeconds(1f);
+        yield return new WaitForSeconds(0.001f);
 
         // Đóng mặt đường (hộp) lại để người chơi không bị rớt xuống
         if(trapFloor != null)
