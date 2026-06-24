@@ -69,7 +69,24 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 0f23067026bf65c4fb196b7802330f3e, type: 3}
       insertIndex: -1
       addedObject: {fileID: 240463645759654258}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 0f23067026bf65c4fb196b7802330f3e, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2106042421080869604}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 0f23067026bf65c4fb196b7802330f3e, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 6589246028004672922}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 0f23067026bf65c4fb196b7802330f3e, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2916778017409249062}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 0f23067026bf65c4fb196b7802330f3e, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 7412087195167648988}
   m_SourcePrefab: {fileID: 100100000, guid: 0f23067026bf65c4fb196b7802330f3e, type: 3}
+--- !u!4 &2846290685344558318 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 0f23067026bf65c4fb196b7802330f3e, type: 3}
+  m_PrefabInstance: {fileID: 2308859180964530949}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &3227918615114643028 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: 0f23067026bf65c4fb196b7802330f3e, type: 3}
@@ -148,3 +165,126 @@ Rigidbody:
   m_Interpolate: 0
   m_Constraints: 0
   m_CollisionDetection: 0
+--- !u!114 &2106042421080869604
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3227918615114643028}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 19102, guid: 0000000000000000e000000000000000, type: 0}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_PanelSettings: {fileID: 11400000, guid: b33ce944b9322e84d83dc23a9ea8af6b, type: 2}
+  m_ParentUI: {fileID: 0}
+  sourceAsset: {fileID: 9197481963319205126, guid: abfb9668158228642a5e1625b1fc6487, type: 3}
+  m_SortingOrder: 0
+  m_WorldSpaceSizeMode: 1
+  m_WorldSpaceWidth: 1920
+  m_WorldSpaceHeight: 1080
+--- !u!114 &6589246028004672922
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3227918615114643028}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cdc038f37b3bc974f893b358cb1ea15e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  dialogueUxml: {fileID: 9197481963319205126, guid: abfb9668158228642a5e1625b1fc6487, type: 3}
+  dialogueUss: {fileID: 7433441132597879392, guid: e2760d57c83e9b14cbcf64f2b817bff8, type: 3}
+  defaultNpcName: "\xD4ng L\xE3o Rakan"
+  typewriterSpeed: 0.04
+  triggerOnStart: 1
+  dialogueLines: []
+  bridgeCollapseLines: []
+  afterBridgeRepairedLines: []
+  mazeEntranceLines: []
+  npcAnimator: {fileID: 8169567763737278100}
+  npcTransform: {fileID: 2846290685344558318}
+  talkAnimParam: TroTruyen
+  npcMoveTarget: {fileID: 0}
+  npcMoveTargetAfterBridge: {fileID: 0}
+  npcMazeTarget: {fileID: 0}
+  mazeTargetTriggerDistance: 2.5
+  followKeepDistance: 2
+  moveAnimParam: DiChuyen
+  moveSpeed: 3
+  turnSpeed: 10
+  stoppingDistance: 0.15
+--- !u!114 &2916778017409249062
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3227918615114643028}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e96cb6065543e43c4a752faaa1468eb1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  ShowTopMostFoldoutHeaderGroup: 1
+  NetworkTransformExpanded: 0
+  AutoOwnerAuthorityTickOffset: 1
+  PositionInterpolationType: 0
+  RotationInterpolationType: 0
+  ScaleInterpolationType: 0
+  PositionLerpSmoothing: 1
+  PositionMaxInterpolationTime: 0.1
+  RotationLerpSmoothing: 1
+  RotationMaxInterpolationTime: 0.1
+  ScaleLerpSmoothing: 1
+  ScaleMaxInterpolationTime: 0.1
+  AuthorityMode: 1
+  TickSyncChildren: 0
+  UseUnreliableDeltas: 0
+  SyncPositionX: 1
+  SyncPositionY: 1
+  SyncPositionZ: 1
+  SyncRotAngleX: 1
+  SyncRotAngleY: 1
+  SyncRotAngleZ: 1
+  SyncScaleX: 1
+  SyncScaleY: 1
+  SyncScaleZ: 1
+  PositionThreshold: 0.001
+  RotAngleThreshold: 0.01
+  ScaleThreshold: 0.01
+  UseQuaternionSynchronization: 0
+  UseQuaternionCompression: 0
+  UseHalfFloatPrecision: 0
+  InLocalSpace: 0
+  SwitchTransformSpaceWhenParented: 0
+  Interpolate: 1
+  SlerpPosition: 0
+--- !u!114 &7412087195167648988
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3227918615114643028}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e8d0727d5ae3244e3b569694d3912374, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  ShowTopMostFoldoutHeaderGroup: 1
+  NetworkAnimatorExpanded: 0
+  AuthorityMode: 1
+  m_Animator: {fileID: 0}
+  TransitionStateInfoList: []
+  AnimatorParameterEntries:
+    ParameterEntries: []
+  AnimatorParametersExpanded: 0
+--- !u!95 &8169567763737278100 stripped
+Animator:
+  m_CorrespondingSourceObject: {fileID: 5866666021909216657, guid: 0f23067026bf65c4fb196b7802330f3e, type: 3}
+  m_PrefabInstance: {fileID: 2308859180964530949}
+  m_PrefabAsset: {fileID: 0}
