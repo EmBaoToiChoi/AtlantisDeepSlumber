@@ -52,6 +52,14 @@ public class LeoLightningProjectile : NetworkBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
+        // Kiểm tra xem có chạm vào đá nguyên tố không
+        ElementalRockPuzzle rock = other.GetComponentInParent<ElementalRockPuzzle>();
+        if (rock != null)
+        {
+            rock.NotifyElementHit(gameObject);
+            return;
+        }
+
         // Chỉ xử lý va chạm trên Server hoặc chế độ Standalone/Offline
         bool isServerOrStandalone = NetworkManager.Singleton == null || NetworkManager.Singleton.IsServer;
         if (!isServerOrStandalone) return;

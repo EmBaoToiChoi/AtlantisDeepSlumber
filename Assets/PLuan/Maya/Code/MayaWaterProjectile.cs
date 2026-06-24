@@ -18,6 +18,7 @@ public class MayaWaterProjectile : NetworkBehaviour
 
     private System.Collections.Generic.HashSet<Transform> hitEnemyRoots = new System.Collections.Generic.HashSet<Transform>();
     private bool isHit = false;
+    private Vector3 spawnPosition;
 
     private void Awake()
     {
@@ -26,6 +27,7 @@ public class MayaWaterProjectile : NetworkBehaviour
 
     private void Start()
     {
+        spawnPosition = transform.position;
         // Tự động tìm kiếm các bộ phận GFX nếu chưa gán trong Inspector
         if (castGFX == null) castGFX = FindChildWithNamePart("cast");
         if (hitGFX == null) hitGFX = FindChildWithNamePart("hit");
@@ -64,6 +66,24 @@ public class MayaWaterProjectile : NetworkBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
+        // Kiểm tra xem có chạm vào đá nguyên tố không (xử lý trên cả Client và Server để bảo đảm tin cậy)
+        ElementalRockPuzzle rock = other.GetComponentInParent<ElementalRockPuzzle>();
+        if (rock != null)
+        {
+            rock.NotifyElementHit(gameObject);
+            
+            // Chạy visual nổ cục bộ và tắt đạn
+            if (NetworkManager.Singleton == null || NetworkManager.Singleton.IsServer)
+            {
+                HandleHitImpact();
+            }
+            else
+            {
+                ApplyHitVisuals();
+            }
+            return;
+        }
+
         // Chỉ xử lý va chạm trên Server hoặc chế độ Standalone
         bool isServerOrStandalone = NetworkManager.Singleton == null || NetworkManager.Singleton.IsServer;
         if (!isServerOrStandalone) return;
@@ -90,6 +110,12 @@ public class MayaWaterProjectile : NetworkBehaviour
                        other.GetComponentInParent<Enemy3_Buaa>() != null ||
                        other.GetComponentInParent<Enemy4_Bongtoi>() != null ||
                        other.GetComponentInParent<Enemy5_PhuThuy>() != null;
+
+        // Bypass non-enemy collisions if they are too close to the spawn point to prevent self/ground detonation
+        if (!isEnemy && Vector3.Distance(transform.position, spawnPosition) < 1.5f)
+        {
+            return;
+        }
 
         if (isEnemy)
         {
