@@ -15,8 +15,8 @@ public class ExperienceGem : NetworkBehaviour
     public float bobRange = 0.12f;
 
     [Header("Sync Group ID")]
-    public NetworkVariable<NetworkString> networkDropGroupId = new NetworkVariable<NetworkString>(
-        new NetworkString(),
+    public NetworkVariable<Unity.Collections.FixedString64Bytes> networkDropGroupId = new NetworkVariable<Unity.Collections.FixedString64Bytes>(
+        default,
         NetworkVariableReadPermission.Everyone,
         NetworkVariableWritePermission.Server
     );
@@ -28,8 +28,8 @@ public class ExperienceGem : NetworkBehaviour
         {
             if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening && IsSpawned)
             {
-                string val = networkDropGroupId.Value;
-                if (!string.IsNullOrEmpty(val)) return val;
+                var val = networkDropGroupId.Value;
+                if (!string.IsNullOrEmpty(val.ToString())) return val.ToString();
             }
             return localDropGroupId;
         }
@@ -47,7 +47,7 @@ public class ExperienceGem : NetworkBehaviour
             {
                 if (IsServer || NetworkManager.Singleton.IsServer)
                 {
-                    networkDropGroupId.Value = (NetworkString)uniqueValue;
+                    networkDropGroupId.Value = uniqueValue;
                 }
             }
         }
@@ -307,21 +307,4 @@ public class ExperienceGem : NetworkBehaviour
     }
 }
 
-public struct NetworkString : INetworkSerializable, System.IEquatable<NetworkString>
-{
-    private string m_Value;
 
-    public void NetworkSerialize<T>(BufferSerializer<T> serializer) where T : IReaderWriter
-    {
-        serializer.SerializeValue(ref m_Value);
-    }
-
-    public override string ToString() => m_Value ?? string.Empty;
-
-    public static implicit operator string(NetworkString s) => s.ToString();
-    public static implicit operator NetworkString(string s) => new NetworkString { m_Value = s };
-
-    public bool Equals(NetworkString other) => m_Value == other.m_Value;
-    public override bool Equals(object obj) => obj is NetworkString other && Equals(other);
-    public override int GetHashCode() => m_Value != null ? m_Value.GetHashCode() : 0;
-}
