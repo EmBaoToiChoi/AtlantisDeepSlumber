@@ -3157,8 +3157,11 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     [ColorUsage(true, true)]
     [Tooltip("Màu phát sáng HDR đỏ cho kiếm.")]
     public Color redEmissiveColor = new Color(3.5f, 0f, 0f, 1f);
+    [Tooltip("Gán Material màu trắng/bán trong suốt để đổi màu cho Leo khi kích hoạt chiêu E.")]
+    public Material speedBoostBodyMaterial;
     private float attackSpeedBoostTimeRemaining = 0f;
     private System.Collections.Generic.Dictionary<Renderer, Material[]> originalSwordMaterials = new System.Collections.Generic.Dictionary<Renderer, Material[]>();
+    private System.Collections.Generic.Dictionary<Renderer, Material[]> originalBodyMaterials = new System.Collections.Generic.Dictionary<Renderer, Material[]>();
 
     [Header("Ghost Slash Skill Q Settings")]
     [Tooltip("Particle prefab riêng cho hiệu ứng Ảo ảnh Chém. Nếu để trống sẽ dùng pool VFX cũ.")]
@@ -3851,6 +3854,10 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         bool isRunning = Input.GetKey(KeyCode.LeftShift);
         float currentSpeed = isRunning ? moveSpeed * runSpeedMultiplier : moveSpeed;
+        if (IsAttackSpeedBoosted)
+        {
+            currentSpeed *= 2f;
+        }
 
         float moveX = isMovementLocked ? 0f : Input.GetAxis("Horizontal");
         float moveZ = isMovementLocked ? 0f : Input.GetAxis("Vertical");
@@ -4008,6 +4015,10 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         bool isRunning = Input.GetKey(KeyCode.LeftShift);
         float currentSpeed = isRunning ? moveSpeed * runSpeedMultiplier : moveSpeed;
+        if (IsAttackSpeedBoosted)
+        {
+            currentSpeed *= 2f;
+        }
 
         float moveX = isMovementLocked ? 0f : Input.GetAxis("Horizontal");
         float moveZ = isMovementLocked ? 0f : Input.GetAxis("Vertical");
@@ -5452,7 +5463,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (isStandaloneMode)
         {
             attackSpeedBoostTimeRemaining = 10f;
-            SetSwordRedVisuals(true);
+            SetBodyWhiteVisuals(true);
         }
         else if (IsOwner)
         {
@@ -5474,7 +5485,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     [ClientRpc]
     private void TriggerAttackSpeedBoostClientRpc(bool state)
     {
-        SetSwordRedVisuals(state);
+        SetBodyWhiteVisuals(state);
     }
 
     private System.Collections.IEnumerator ServerAttackSpeedBoostTimerCoroutine(float duration)
@@ -5486,7 +5497,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     private void OnAttackSpeedBoostedChanged(bool oldVal, bool newVal)
     {
-        SetSwordRedVisuals(newVal);
+        SetBodyWhiteVisuals(newVal);
         if (newVal)
         {
             attackSpeedBoostTimeRemaining = 10f;
@@ -5561,6 +5572,73 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
                 }
             }
             originalSwordMaterials.Clear();
+        }
+    }
+
+    private void SetBodyWhiteVisuals(bool active)
+    {
+        if (active)
+        {
+            if (originalBodyMaterials.Count > 0) return; // Đã đổi rồi
+
+            Renderer[] renderers = GetComponentsInChildren<Renderer>(true);
+            foreach (var r in renderers)
+            {
+                if (r == null) continue;
+                if (r is LineRenderer || r is ParticleSystemRenderer) continue;
+                if (r is SkinnedMeshRenderer || r is MeshRenderer)
+                {
+                    originalBodyMaterials[r] = r.sharedMaterials;
+
+                    if (speedBoostBodyMaterial != null)
+                    {
+                        Material[] newMats = new Material[r.sharedMaterials.Length];
+                        for (int i = 0; i < newMats.Length; i++)
+                        {
+                            newMats[i] = speedBoostBodyMaterial;
+                        }
+                        r.materials = newMats;
+                    }
+                    else
+                    {
+                        Material[] newMats = new Material[r.sharedMaterials.Length];
+                        for (int i = 0; i < newMats.Length; i++)
+                        {
+                            Material originalMat = r.sharedMaterials[i];
+                            if (originalMat != null)
+                            {
+                                Material tempMat = new Material(originalMat);
+                                if (tempMat.HasProperty("_Color"))
+                                {
+                                    tempMat.color = Color.white;
+                                }
+                                if (tempMat.HasProperty("_EmissionColor"))
+                                {
+                                    tempMat.EnableKeyword("_EMISSION");
+                                    tempMat.SetColor("_EmissionColor", new Color(1f, 1f, 1f, 1f));
+                                }
+                                newMats[i] = tempMat;
+                            }
+                            else
+                            {
+                                newMats[i] = null;
+                            }
+                        }
+                        r.materials = newMats;
+                    }
+                }
+            }
+        }
+        else
+        {
+            foreach (var kvp in originalBodyMaterials)
+            {
+                if (kvp.Key != null && kvp.Value != null)
+                {
+                    kvp.Key.materials = kvp.Value;
+                }
+            }
+            originalBodyMaterials.Clear();
         }
     }
 
