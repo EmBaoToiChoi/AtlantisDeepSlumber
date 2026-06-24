@@ -178,14 +178,14 @@ public class CrystalCore : NetworkBehaviour
 
     private GameObject FindPlayerByClientId(ulong clientId)
     {
-        // 1. Try server spawn manager
-        if (NetworkManager.Singleton != null && NetworkManager.Singleton.SpawnManager != null)
+        // 1. Try server spawn manager (CHỈ CHO PHÉP SERVER CHẠY ĐOẠN NÀY)
+        if (IsServer && NetworkManager.Singleton != null && NetworkManager.Singleton.SpawnManager != null)
         {
             var playerObj = NetworkManager.Singleton.SpawnManager.GetPlayerNetworkObject(clientId);
             if (playerObj != null) return playerObj.gameObject;
         }
 
-        // 2. Client-side fallback: check PlayerInteraction scripts
+        // 2. Client-side fallback: check PlayerInteraction scripts (CLIENT SẼ CHẠY XUỐNG ĐÂY)
         var players = FindObjectsByType<PlayerInteraction>(FindObjectsSortMode.None);
         foreach (var player in players)
         {
