@@ -33,7 +33,7 @@ public class Puzzle4TrapTrigger : NetworkBehaviour
 
     private System.Collections.IEnumerator DelayedClose()
     {
-        yield return new WaitForSeconds(3f);
+        yield return new WaitForSeconds(1f);
         CloseFloorClientRpc();
     }
 
