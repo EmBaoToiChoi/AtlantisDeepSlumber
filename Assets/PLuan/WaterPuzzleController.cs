@@ -410,25 +410,24 @@ public class WaterPuzzleController : NetworkBehaviour
                 if (flowingWaterObject != null)
                 {
                     flowingWaterObject.SetActive(false);
-                    flowingWaterObject.transform.localPosition = originalFlowingWaterLocalPos;
+                    flowingWaterObject.transform.localPosition = CalculateEndLocalPos();
                 }
                 if (iceBridgeObject != null) iceBridgeObject.SetActive(false);
                 break;
 
             case WaterPuzzleState.Blocked:
-                if (puddleObject != null)
-                {
-                    puddleObject.SetActive(true);
-                    var puddleRenderer = puddleObject.GetComponent<Renderer>();
-                    if (puddleRenderer != null && puddleRenderer.material != null)
-                    {
-                        puddleRenderer.material.SetFloat("_Speed", puddleWaterSpeed);
-                    }
-                }
+                if (puddleObject != null) puddleObject.SetActive(false);
                 if (flowingWaterObject != null)
                 {
-                    flowingWaterObject.SetActive(false);
-                    flowingWaterObject.transform.localPosition = originalFlowingWaterLocalPos;
+                    flowingWaterObject.SetActive(true);
+                    flowingWaterObject.transform.localPosition = CalculateEndLocalPos();
+                    var flowRenderer = flowingWaterObject.GetComponent<Renderer>();
+                    if (flowRenderer != null && flowRenderer.material != null)
+                    {
+                        flowRenderer.material.SetFloat("_Speed", flowingWaterSpeed);
+                        flowRenderer.material.SetFloat("_SpeedX", flowingWaterDirectionX);
+                        flowRenderer.material.SetFloat("_SpeedY", flowingWaterDirectionY);
+                    }
                 }
                 if (iceBridgeObject != null) iceBridgeObject.SetActive(false);
                 break;
@@ -438,21 +437,13 @@ public class WaterPuzzleController : NetworkBehaviour
                 if (flowingWaterObject != null)
                 {
                     flowingWaterObject.SetActive(true);
+                    flowingWaterObject.transform.localPosition = CalculateEndLocalPos();
                     var flowRenderer = flowingWaterObject.GetComponent<Renderer>();
                     if (flowRenderer != null && flowRenderer.material != null)
                     {
                         flowRenderer.material.SetFloat("_Speed", flowingWaterSpeed);
                         flowRenderer.material.SetFloat("_SpeedX", flowingWaterDirectionX);
                         flowRenderer.material.SetFloat("_SpeedY", flowingWaterDirectionY);
-                    }
-
-                    if (animate)
-                    {
-                        flowCoroutine = StartCoroutine(AnimateWaterFlowing());
-                    }
-                    else
-                    {
-                        flowingWaterObject.transform.localPosition = CalculateEndLocalPos();
                     }
                 }
                 if (iceBridgeObject != null) iceBridgeObject.SetActive(false);
@@ -464,7 +455,7 @@ public class WaterPuzzleController : NetworkBehaviour
                 if (flowingWaterObject != null)
                 {
                     flowingWaterObject.SetActive(false);
-                    flowingWaterObject.transform.localPosition = originalFlowingWaterLocalPos;
+                    flowingWaterObject.transform.localPosition = CalculateEndLocalPos();
                 }
                 
                 if (iceBridgeObject != null)
@@ -566,7 +557,7 @@ public class WaterPuzzleController : NetworkBehaviour
     public void HandleHazardTriggerEnter(Collider other)
     {
         WaterPuzzleState activeState = IsNetworkActive ? currentState.Value : localState;
-        if (activeState != WaterPuzzleState.Overflowing) return;
+        if (activeState != WaterPuzzleState.Overflowing && activeState != WaterPuzzleState.Blocked) return;
 
         GameObject collidedObj = other.gameObject;
 

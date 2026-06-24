@@ -59,6 +59,7 @@ public class ElementalRockPuzzle : NetworkBehaviour
 
     private string[] orderedTags;
     private GameObject lastHitObject; // Tránh việc một viên đạn va chạm liên tục nhiều lần trong các frame kế tiếp
+    private ulong lastProcessedProjectileId = 0; // Tránh va chạm trùng lặp giữa Client RPC và Server Local Trigger
 
     // Cache các đối tượng sinh ra để quản lý UI
     private GameObject uiRootObj;
@@ -306,6 +307,17 @@ public class ElementalRockPuzzle : NetworkBehaviour
         // Kiểm tra xem đối tượng va chạm có tag thuộc một trong các nguyên tố không
         if (hitTag == fireTag || hitTag == waterTag || hitTag == iceTag || hitTag == lightningTag)
         {
+            NetworkObject netObj = null;
+            // Kiểm tra ID để tránh double hit giữa Client RPC và Server local collision
+            if (hitObj.TryGetComponent<NetworkObject>(out netObj))
+            {
+                if (netObj.NetworkObjectId == lastProcessedProjectileId)
+                {
+                    return;
+                }
+                lastProcessedProjectileId = netObj.NetworkObjectId;
+            }
+
             lastHitObject = hitObj;
 
             // VÔ HIỆU HÓA va chạm của đạn ngay lập tức để tránh bay xuyên qua trúng dòng nước hoặc vật khác phía sau
@@ -339,7 +351,7 @@ public class ElementalRockPuzzle : NetworkBehaviour
             if (IsNetworkActive)
             {
                 // Nếu đang chơi mạng, gửi RPC kèm tham chiếu đạn để Server kiểm tra và đồng bộ
-                if (hitObj.TryGetComponent<NetworkObject>(out var netObj))
+                if (netObj != null)
                 {
                     SubmitElementHitServerRpc(hitTag, netObj);
                 }
@@ -362,8 +374,15 @@ public class ElementalRockPuzzle : NetworkBehaviour
         // Phá hủy/Dừng đạn phía server nếu nhận được tham chiếu hợp lệ
         if (projectileRef.TryGet(out NetworkObject netObj))
         {
-            if (netObj != null && netObj.IsSpawned)
+            if (netObj != null)
             {
+                // Tránh xử lý trùng lặp nếu Server đã tự phát hiện va chạm cục bộ trước đó
+                if (netObj.NetworkObjectId == lastProcessedProjectileId)
+                {
+                    return;
+                }
+                lastProcessedProjectileId = netObj.NetworkObjectId;
+
                 GameObject hitObj = netObj.gameObject;
                 Collider projectileCollider = hitObj.GetComponent<Collider>();
                 if (projectileCollider != null) projectileCollider.enabled = false;
@@ -378,22 +397,22 @@ public class ElementalRockPuzzle : NetworkBehaviour
                 {
                     hitObj.SendMessage("DespawnOrDestroy", SendMessageOptions.DontRequireReceiver);
                 }
+
+                // Gọi xử lý khi đạn hợp lệ và chưa xử lý
+                ProcessElementHit(hitTag);
             }
         }
-
-        ProcessElementHit(hitTag);
+        else
+        {
+            // Nếu không thể lấy được đối tượng (đạn đã bị Server tự hủy trước đó), 
+            // có nghĩa là Server đã tự động xử lý va chạm cục bộ thành công từ trước.
+            // Do đó chúng ta BỎ QUA không gọi ProcessElementHit lần nữa.
+            Debug.Log("[ElementalRockPuzzle] Projectile không tồn tại hoặc đã bị hủy trên Server. Bỏ qua RPC trùng lặp.");
+        }
     }
 
     private void ProcessElementHit(string hitTag)
     {
-        // TẠM THỜI: Chỉ cần bắn trúng bằng nguyên tố Băng (Bang) là phá đá ngay lập tức để tiện test
-        if (hitTag == iceTag)
-        {
-            Debug.Log("[ElementalRockPuzzle] Phá đá tạm thời bằng nguyên tố Băng thành công!");
-            ShatterRock();
-            return;
-        }
-
         int activeStep = IsNetworkActive ? netCurrentStep.Value : currentStep;
         string expectedTag = orderedTags[activeStep];
 

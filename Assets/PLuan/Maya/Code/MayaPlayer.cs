@@ -303,6 +303,19 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
         NetworkVariableWritePermission.Owner
     );
 
+    [Header("Network Movement Sync")]
+    public NetworkVariable<float> netMoveX = new NetworkVariable<float>(
+        0f,
+        NetworkVariableReadPermission.Everyone,
+        NetworkVariableWritePermission.Owner
+    );
+    public NetworkVariable<float> netMoveZ = new NetworkVariable<float>(
+        0f,
+        NetworkVariableReadPermission.Everyone,
+        NetworkVariableWritePermission.Owner
+    );
+
+
     private Transform GetSpineBone()
     {
         if (spineBone == null && anim != null)
@@ -1747,10 +1760,20 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
             }
         }
 
-        // Cập nhật tham số hoạt ảnh di chuyển cho local client (chủ sở hữu hoặc chơi đơn)
+        // Cập nhật tham số hoạt ảnh di chuyển cho local client (chủ sở hữu hoặc chơi đơn) hoặc đồng bộ từ mạng
         if (hasControl)
         {
             UpdateAnimatorParameters();
+        }
+        else
+        {
+            if (anim != null && anim.isActiveAndEnabled && anim.runtimeAnimatorController != null)
+            {
+                anim.SetFloat("MoveX", netMoveX.Value);
+                anim.SetFloat("MoveZ", netMoveZ.Value);
+                bool hasWeapon = GetActiveWeaponIndex() == 2;
+                anim.SetBool("HasWeapon", hasWeapon);
+            }
         }
     }
 
@@ -1815,6 +1838,12 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         anim.SetFloat("MoveX", animMoveX);
         anim.SetFloat("MoveZ", animMoveZ);
+
+        if (!isStandaloneMode && IsOwner)
+        {
+            netMoveX.Value = animMoveX;
+            netMoveZ.Value = animMoveZ;
+        }
     }
 
     private void HandleStandaloneUpdate()

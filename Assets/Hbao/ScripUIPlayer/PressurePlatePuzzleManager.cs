@@ -49,7 +49,13 @@ public class PressurePlatePuzzleManager : NetworkBehaviour
     private void OnSolvedChanged(bool oldVal, bool newVal)
     {
         Debug.Log($"[PressurePlatePuzzleManager Client] Trạng thái giải câu đố thay đổi: {newVal}");
-        // Có thể thêm hiệu ứng âm thanh/hạt (SFX/VFX) ở đây nếu muốn
+        if (newVal)
+        {
+            if (IntroDialogueController.Instance != null)
+            {
+                IntroDialogueController.Instance.StartNpcFollowingPlayer();
+            }
+        }
     }
 
     private void Update()
@@ -86,6 +92,13 @@ public class PressurePlatePuzzleManager : NetworkBehaviour
                 else
                 {
                     localIsSolved = allPressed;
+                    if (allPressed)
+                    {
+                        if (IntroDialogueController.Instance != null)
+                        {
+                            IntroDialogueController.Instance.StartNpcFollowingPlayer();
+                        }
+                    }
                 }
 
                 Debug.Log($"[PressurePlatePuzzleManager] Trạng thái câu đố thay đổi -> Giải xong: {allPressed}. Đang cập nhật trạng thái cửa...");
