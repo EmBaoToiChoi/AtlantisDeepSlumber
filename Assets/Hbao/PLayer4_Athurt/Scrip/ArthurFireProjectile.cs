@@ -19,10 +19,13 @@ public class ArthurFireProjectile : NetworkBehaviour
     private System.Collections.Generic.HashSet<Transform> hitEnemyRoots = new System.Collections.Generic.HashSet<Transform>();
     private bool isHit = false;
 
-    private void Start()
+    private void Awake()
     {
         gameObject.tag = "Lua"; // Force tag "Lua" for elemental rock puzzles
-        
+    }
+
+    private void Start()
+    {
         // Đảm bảo có Collider để va chạm hoạt động
         Collider col = GetComponent<Collider>();
         if (col == null)
