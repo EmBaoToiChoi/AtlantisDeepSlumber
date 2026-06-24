@@ -97,6 +97,24 @@ public class ElenaIceProjectile : NetworkBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
+        // Kiểm tra xem có chạm vào đá nguyên tố không (xử lý trên cả Client và Server để bảo đảm tin cậy)
+        ElementalRockPuzzle rock = other.GetComponentInParent<ElementalRockPuzzle>();
+        if (rock != null)
+        {
+            rock.NotifyElementHit(gameObject);
+            
+            // Chạy visual nổ cục bộ và tắt đạn
+            if (NetworkManager.Singleton == null || NetworkManager.Singleton.IsServer)
+            {
+                HandleHitImpact();
+            }
+            else
+            {
+                ApplyHitVisuals();
+            }
+            return;
+        }
+
         // Chỉ xử lý va chạm trên Server hoặc chế độ Standalone
         bool isServerOrStandalone = NetworkManager.Singleton == null || NetworkManager.Singleton.IsServer;
         if (!isServerOrStandalone) return;
