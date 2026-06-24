@@ -263,9 +263,9 @@ public class PlayerHUDController : MonoBehaviour
         missionAlertBox = null; missionAlertText = null;
         questPanel = null; questProgressText = null; questProgressBar = null;
         questDescriptionText = null;
-        if (coopBuildContainer != null && coopBuildContainer.parent != null)
+        if (coopBuildContainer != null)
         {
-            coopBuildContainer.parent.Remove(coopBuildContainer);
+            coopBuildContainer.RemoveFromHierarchy();
         }
         coopBuildContainer = null;
         coopBuildProgressBarFill = null;
@@ -2387,7 +2387,7 @@ public class PlayerHUDController : MonoBehaviour
             if (player == null || player.gameObject == null) continue;
 
             // Bỏ qua bản thân (LocalPlayerTarget)
-            if (player == LocalPlayerTarget) continue;
+            if (LocalPlayerTarget != null && (player == LocalPlayerTarget || player.gameObject == LocalPlayerTarget.gameObject)) continue;
 
             ulong key = player.IsSpawned ? player.OwnerClientId : (ulong)player.gameObject.GetInstanceID();
             currentKeys.Add(key);

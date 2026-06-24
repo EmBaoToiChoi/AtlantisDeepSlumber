@@ -196,6 +196,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cdc038f37b3bc974f893b358cb1ea15e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  ShowTopMostFoldoutHeaderGroup: 1
   dialogueUxml: {fileID: 9197481963319205126, guid: abfb9668158228642a5e1625b1fc6487, type: 3}
   dialogueUss: {fileID: 7433441132597879392, guid: e2760d57c83e9b14cbcf64f2b817bff8, type: 3}
   defaultNpcName: "\xD4ng L\xE3o Rakan"

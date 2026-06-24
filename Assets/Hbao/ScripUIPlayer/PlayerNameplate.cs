@@ -163,9 +163,9 @@ public class PlayerNameplate : MonoBehaviour
     private void OnDestroy()
     {
         // Dọn dẹp VisualElement khỏi HUD khi nhân vật bị hủy
-        if (container != null && container.parent != null)
+        if (container != null)
         {
-            container.parent.Remove(container);
+            container.RemoveFromHierarchy();
         }
     }
 
