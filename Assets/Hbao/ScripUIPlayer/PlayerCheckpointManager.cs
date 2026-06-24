@@ -6,7 +6,7 @@ using System.Reflection;
 
 /// <summary>
 /// Quản lý trung tâm cho hệ thống Checkpoint và Hồi sinh của người chơi.
-/// Hỗ trợ đồng bộ hóa hoàn toàn qua NetworkVariable/NetworkList cho chơi mạng (Netcode) và chơi đơn (Standalone).
+/// Hỗ trợ tất cả các lớp nhân vật (Leo, Arthur, Elena, Maya) thông qua interface IPlayerHUDTarget.
 /// </summary>
 public class PlayerCheckpointManager : NetworkBehaviour
 {
@@ -134,7 +134,7 @@ public class PlayerCheckpointManager : NetworkBehaviour
     /// <summary>
     /// Đăng ký checkpoint mới khi người chơi đi vào vùng kích hoạt.
     /// </summary>
-    public void RegisterCheckpoint(SimplePlayerTest player, CheckpointZone checkpoint)
+    public void RegisterCheckpoint(IPlayerHUDTarget player, CheckpointZone checkpoint)
     {
         if (player == null || checkpoint == null) return;
 
@@ -183,7 +183,7 @@ public class PlayerCheckpointManager : NetworkBehaviour
     private void HandleStandaloneUpdate()
     {
         // Quét và tìm local player
-        SimplePlayerTest localPlayer = FindLocalStandalonePlayer();
+        IPlayerHUDTarget localPlayer = FindLocalStandalonePlayer();
         if (localPlayer == null) return;
 
         // Lưu vị trí xuất phát ban đầu nếu chưa lưu
@@ -201,10 +201,10 @@ public class PlayerCheckpointManager : NetworkBehaviour
         }
     }
 
-    private IEnumerator RespawnPlayerStandaloneCoroutine(SimplePlayerTest player)
+    private IEnumerator RespawnPlayerStandaloneCoroutine(IPlayerHUDTarget player)
     {
         localPlayerRespawning = true;
-        Debug.LogWarning($"[Standalone Respawn] Người chơi đã chết! Bắt đầu đếm ngược hồi sinh sau {respawnDelay} giây...");
+        Debug.LogWarning($"[Standalone Respawn] Người chơi '{player.DisplayName}' đã chết! Bắt đầu hồi sinh sau {respawnDelay} giây...");
 
         yield return new WaitForSeconds(respawnDelay);
 
@@ -232,7 +232,7 @@ public class PlayerCheckpointManager : NetworkBehaviour
         HealAndResetPlayer(player);
 
         localPlayerRespawning = false;
-        Debug.Log($"[Standalone Respawn] Hồi sinh hoàn tất tại vị trí: {spawnPos}");
+        Debug.Log($"[Standalone Respawn] Hồi sinh hoàn tất cho '{player.DisplayName}' tại: {spawnPos}");
     }
 
     #endregion
@@ -241,8 +241,8 @@ public class PlayerCheckpointManager : NetworkBehaviour
 
     private void HandleNetworkUpdate()
     {
-        // Quét toàn bộ người chơi trong scene
-        SimplePlayerTest[] players = FindObjectsOfType<SimplePlayerTest>();
+        // Quét toàn bộ người chơi hợp lệ (Leo, Arthur, Elena, Maya, SimplePlayerTest) có trong màn chơi
+        List<IPlayerHUDTarget> players = FindAllActivePlayers();
         foreach (var player in players)
         {
             if (player == null || player.isStandaloneMode) continue;
@@ -254,11 +254,10 @@ public class PlayerCheckpointManager : NetworkBehaviour
             if (!playerInitialPositions.ContainsKey(clientId))
             {
                 playerInitialPositions[clientId] = player.transform.position;
-                Debug.Log($"[Server Respawn] Đã lưu vị trí ban đầu cho Client ID {clientId}: {player.transform.position}");
+                Debug.Log($"[Server Respawn] Đã lưu vị trí ban đầu cho Client ID {clientId} ({playerName}): {player.transform.position}");
             }
 
             // 2. KHÔI PHỤC CHECKPOINT KHI KẾT NỐI LẠI (Reconnection hoặc Late joining)
-            // Nếu Client mới kết nối chưa có trong dict cache của Server nhưng tên đã có trong NetworkList đồng bộ:
             if (!playerCheckpointIndices.ContainsKey(clientId))
             {
                 foreach (var data in networkPlayerCheckpoints)
@@ -281,9 +280,10 @@ public class PlayerCheckpointManager : NetworkBehaviour
         }
     }
 
-    private IEnumerator RespawnPlayerNetworkCoroutine(SimplePlayerTest player, ulong clientId)
+    private IEnumerator RespawnPlayerNetworkCoroutine(IPlayerHUDTarget player, ulong clientId)
     {
-        Debug.LogWarning($"[Server Respawn] Client ID {clientId} đã chết! Bắt đầu hồi sinh sau {respawnDelay} giây...");
+        string playerName = player.DisplayName;
+        Debug.LogWarning($"[Server Respawn] Người chơi '{playerName}' (Client ID: {clientId}) đã chết! Bắt đầu hồi sinh sau {respawnDelay} giây...");
 
         yield return new WaitForSeconds(respawnDelay);
 
@@ -316,13 +316,13 @@ public class PlayerCheckpointManager : NetworkBehaviour
         ResetRigidbodyVelocity(player.gameObject);
 
         // Gửi ClientRpc dịch chuyển và reset vật lý trên tất cả các Client khác
-        TeleportPlayerClientRpc(player.NetworkObjectId, spawnPos);
+        TeleportPlayerClientRpc(player.gameObject.GetComponent<NetworkObject>().NetworkObjectId, spawnPos);
 
         // Hồi máu đầy và reset trạng thái hoạt ảnh trên Server
         HealAndResetPlayer(player);
 
         respawningPlayers.Remove(clientId);
-        Debug.Log($"[Server Respawn] Đã hồi sinh Client ID {clientId} thành công tại: {spawnPos}");
+        Debug.Log($"[Server Respawn] Đã hồi sinh '{playerName}' (Client ID: {clientId}) thành công tại: {spawnPos}");
     }
 
     /// <summary>
@@ -358,7 +358,7 @@ public class PlayerCheckpointManager : NetworkBehaviour
             return true;
         }
 
-        SimplePlayerTest localPlayer = FindLocalStandalonePlayer();
+        IPlayerHUDTarget localPlayer = FindLocalStandalonePlayer();
         if (localPlayer != null && localPlayer.isStandaloneMode)
         {
             return true;
@@ -367,9 +367,52 @@ public class PlayerCheckpointManager : NetworkBehaviour
         return false;
     }
 
-    private SimplePlayerTest FindLocalStandalonePlayer()
+    /// <summary>
+    /// Quét toàn bộ MonoBehaviour trong scene có thực thi interface IPlayerHUDTarget để chọn ra các người chơi phù hợp nhất.
+    /// </summary>
+    private List<IPlayerHUDTarget> FindAllActivePlayers()
     {
-        SimplePlayerTest[] players = FindObjectsOfType<SimplePlayerTest>();
+        List<IPlayerHUDTarget> activePlayers = new List<IPlayerHUDTarget>();
+        HashSet<GameObject> uniqueGameObjects = new HashSet<GameObject>();
+
+        MonoBehaviour[] monos = FindObjectsOfType<MonoBehaviour>();
+        foreach (var mono in monos)
+        {
+            if (mono == null) continue;
+            if (mono is IPlayerHUDTarget)
+            {
+                uniqueGameObjects.Add(mono.gameObject);
+            }
+        }
+
+        foreach (var go in uniqueGameObjects)
+        {
+            IPlayerHUDTarget targetComponent = null;
+
+            // Thứ tự ưu tiên lớp nhân vật chi tiết trước
+            targetComponent = go.GetComponent<LeoPlayer>();
+            if (targetComponent == null) targetComponent = go.GetComponent<ArthurPlayer>();
+            if (targetComponent == null) targetComponent = go.GetComponent<ElenaPlayer>();
+            if (targetComponent == null) targetComponent = go.GetComponent<MayaPlayer>();
+
+            // Sử dụng SimplePlayerTest nếu không có lớp nhân vật chi tiết nào
+            if (targetComponent == null) targetComponent = go.GetComponent<SimplePlayerTest>();
+
+            // Dự phòng cuối cùng
+            if (targetComponent == null) targetComponent = go.GetComponent<IPlayerHUDTarget>();
+
+            if (targetComponent != null && !activePlayers.Contains(targetComponent))
+            {
+                activePlayers.Add(targetComponent);
+            }
+        }
+
+        return activePlayers;
+    }
+
+    private IPlayerHUDTarget FindLocalStandalonePlayer()
+    {
+        List<IPlayerHUDTarget> players = FindAllActivePlayers();
         foreach (var p in players)
         {
             if (p != null && p.isStandaloneMode)
@@ -382,7 +425,7 @@ public class PlayerCheckpointManager : NetworkBehaviour
 
     private string GetLocalPlayerName()
     {
-        SimplePlayerTest[] players = FindObjectsOfType<SimplePlayerTest>();
+        List<IPlayerHUDTarget> players = FindAllActivePlayers();
         foreach (var p in players)
         {
             if (p != null && p.IsOwner)
@@ -409,11 +452,12 @@ public class PlayerCheckpointManager : NetworkBehaviour
     /// (SimplePlayerTest, LeoPlayer, ArthurPlayer, ElenaPlayer, MayaPlayer)
     /// và phục hồi trạng thái hoạt ảnh.
     /// </summary>
-    private void HealAndResetPlayer(SimplePlayerTest player)
+    private void HealAndResetPlayer(IPlayerHUDTarget player)
     {
         if (player == null) return;
+        GameObject playerGo = player.gameObject;
 
-        MonoBehaviour[] scripts = player.GetComponents<MonoBehaviour>();
+        MonoBehaviour[] scripts = playerGo.GetComponents<MonoBehaviour>();
         foreach (var script in scripts)
         {
             if (script == null) continue;
@@ -495,7 +539,7 @@ public class PlayerCheckpointManager : NetworkBehaviour
             }
         }
 
-        Animator anim = player.GetComponentInChildren<Animator>();
+        Animator anim = playerGo.GetComponentInChildren<Animator>();
         if (anim != null)
         {
             anim.Play("Idle", 0, 0f);
