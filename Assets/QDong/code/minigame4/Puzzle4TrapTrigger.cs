@@ -6,7 +6,7 @@ public class Puzzle4TrapTrigger : NetworkBehaviour
     public GameObject floorPartA;
     public GameObject floorPartB;
 
-    private bool activated = false;
+    public bool activated = false;
 
     private bool isClosing = false;
 
