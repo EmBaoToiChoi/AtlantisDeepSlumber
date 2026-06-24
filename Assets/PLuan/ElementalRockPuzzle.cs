@@ -386,14 +386,6 @@ public class ElementalRockPuzzle : NetworkBehaviour
 
     private void ProcessElementHit(string hitTag)
     {
-        // TẠM THỜI: Chỉ cần bắn trúng bằng nguyên tố Băng (Bang) là phá đá ngay lập tức để tiện test
-        if (hitTag == iceTag)
-        {
-            Debug.Log("[ElementalRockPuzzle] Phá đá tạm thời bằng nguyên tố Băng thành công!");
-            ShatterRock();
-            return;
-        }
-
         int activeStep = IsNetworkActive ? netCurrentStep.Value : currentStep;
         string expectedTag = orderedTags[activeStep];
 
