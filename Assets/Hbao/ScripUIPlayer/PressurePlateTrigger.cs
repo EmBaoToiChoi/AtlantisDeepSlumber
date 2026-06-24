@@ -41,6 +41,13 @@ public class PressurePlateTrigger : NetworkBehaviour
 
     private void Start()
     {
+        if (gameObject.isStatic)
+        {
+            Debug.LogError($"[PressurePlateTrigger] CẢNH BÁO CỰC KỲ NGHIÊM TRỌNG: Vật thể '{gameObject.name}' đang bị đánh dấu là STATIC trong Inspector! " +
+                           $"Điều này khiến nút sàn không thể di chuyển lún xuống khi bị đè. " +
+                           $"Hãy BỎ TÍCH CHỌN ô 'Static' ở góc trên bên phải của vật thể này và tất cả các đối tượng con của nó trong Unity Inspector.");
+        }
+
         string door1Name = targetDoor != null ? targetDoor.gameObject.name : "CHƯA GÁN";
         string door2Name = targetDoor2 != null ? targetDoor2.gameObject.name : "KHÔNG DÙNG";
         Debug.Log($"[PressurePlateTrigger] Khởi động trên GameObject '{gameObject.name}'. Target Door 1: {door1Name}, Target Door 2: {door2Name}");

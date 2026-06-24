@@ -58,6 +58,14 @@ public class PushableStone : NetworkBehaviour
 
     private void Start()
     {
+        // Kiểm tra xem vật thể có bị đánh dấu là Static trong Inspector không
+        if (gameObject.isStatic)
+        {
+            Debug.LogError($"[PushableStone] LỖI CỰC KỲ NGHIÊM TRỌNG: Vật thể '{gameObject.name}' đang bị đánh dấu là STATIC trong Inspector! " +
+                           $"Điều này kích hoạt Static Batching khiến hình ảnh của đá bị khóa cứng tại chỗ trong khi Collider vật lý di chuyển đi nơi khác, làm người chơi đi xuyên qua đá. " +
+                           $"Hãy BỎ TÍCH CHỌN ô 'Static' ở góc trên bên phải của vật thể này và tất cả các đối tượng con của nó trong Unity Inspector.");
+        }
+
         var rb = GetComponent<Rigidbody>();
         if (rb != null)
         {
