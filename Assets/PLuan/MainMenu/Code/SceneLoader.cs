@@ -53,8 +53,8 @@ public class SceneLoader : MonoBehaviour
     {
         if (_isProgressActive && _progressFill != null)
         {
-            // Tăng thanh tiến trình mượt mà hướng tới target
-            _currentProgress = Mathf.MoveTowards(_currentProgress, _targetProgress, Time.deltaTime * 150f);
+            // Tăng thanh tiến trình mượt mà hướng tới target (dùng unscaledDeltaTime đề phòng game bị pause)
+            _currentProgress = Mathf.MoveTowards(_currentProgress, _targetProgress, Time.unscaledDeltaTime * 150f);
             _progressFill.style.width = Length.Percent(_currentProgress);
         }
     }
