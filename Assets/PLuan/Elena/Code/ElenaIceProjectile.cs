@@ -20,9 +20,13 @@ public class ElenaIceProjectile : NetworkBehaviour
     private bool isHit = false;
     private Vector3 spawnPosition;
 
-    private void Start()
+    private void Awake()
     {
         gameObject.tag = "Bang"; // Force tag "Bang" for elemental rock puzzles
+    }
+
+    private void Start()
+    {
         spawnPosition = transform.position;
         transform.localScale = new Vector3(2f, 2f, 2f);
         

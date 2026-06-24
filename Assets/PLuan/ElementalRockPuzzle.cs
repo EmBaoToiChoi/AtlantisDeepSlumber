@@ -302,12 +302,29 @@ public class ElementalRockPuzzle : NetworkBehaviour
 
         // Tìm NetworkObject trên đối tượng va chạm hoặc cha của nó để lấy đúng Tag và ID gốc của đạn
         NetworkObject netObj = hitObj.GetComponentInParent<NetworkObject>();
-        GameObject rootObj = netObj != null ? netObj.gameObject : hitObj;
+        GameObject rootObj = null;
+        if (netObj != null)
+        {
+            rootObj = netObj.gameObject;
+        }
+        else
+        {
+            // Nếu không có NetworkObject, tìm component projectile trên chính nó hoặc cha để lấy root chính xác
+            Component projComp = (Component)hitObj.GetComponentInParent<ArthurFireProjectile>() ??
+                                 (Component)hitObj.GetComponentInParent<MayaWaterProjectile>() ??
+                                 (Component)hitObj.GetComponentInParent<ElenaIceProjectile>() ??
+                                 (Component)hitObj.GetComponentInParent<LeoLightningProjectile>();
+            rootObj = projComp != null ? projComp.gameObject : hitObj;
+        }
 
         // Tránh nhận liên tiếp nhiều sự kiện va chạm từ cùng một viên đạn
         if (rootObj == lastHitObject) return;
 
         string hitTag = rootObj.tag;
+        int activeStep = IsNetworkActive ? netCurrentStep.Value : currentStep;
+        string expectedTag = (orderedTags != null && activeStep >= 0 && activeStep < orderedTags.Length) ? orderedTags[activeStep] : "UNKNOWN";
+
+        Debug.Log($"[ElementalRockPuzzle] VA CHẠM: Đối tượng va chạm='{hitObj.name}', Root='{rootObj.name}', Tag='{hitTag}', Cần nguyên tố='{expectedTag}' (Bước: {activeStep})");
 
         // Kiểm tra xem đối tượng va chạm có tag thuộc một trong các nguyên tố không
         if (hitTag == fireTag || hitTag == waterTag || hitTag == iceTag || hitTag == lightningTag)
@@ -317,6 +334,7 @@ public class ElementalRockPuzzle : NetworkBehaviour
             {
                 if (netObj.NetworkObjectId == lastProcessedProjectileId)
                 {
+                    Debug.Log($"[ElementalRockPuzzle] Bỏ qua đạn ID {netObj.NetworkObjectId} vì đã được xử lý trước đó.");
                     return;
                 }
                 lastProcessedProjectileId = netObj.NetworkObjectId;
@@ -437,6 +455,7 @@ public class ElementalRockPuzzle : NetworkBehaviour
 
         if (hitTag == expectedTag)
         {
+            Debug.Log($"[ElementalRockPuzzle] ĐÚNG nguyên tố! Nhận được: '{hitTag}' == Mong đợi: '{expectedTag}'. Tiến lên bước {activeStep + 1}");
             // Đúng nguyên tố tiếp theo
             if (activeStep == 0)
             {
@@ -473,6 +492,7 @@ public class ElementalRockPuzzle : NetworkBehaviour
         }
         else
         {
+            Debug.LogWarning($"[ElementalRockPuzzle] SAI nguyên tố! Nhận được: '{hitTag}', Mong đợi: '{expectedTag}'. Reset câu đố!");
             // Sai nguyên tố -> Reset câu đố
             ResetPuzzle();
         }
@@ -672,8 +692,8 @@ public class ElementalRockPuzzle : NetworkBehaviour
             currentStep = 0;
             timeRemaining = 0f;
             isTimerRunning = false;
-            lastHitObject = null;
         }
+        lastHitObject = null; // Luôn luôn reset lastHitObject khi reset câu đố
         UpdateVisualStates();
     }
 

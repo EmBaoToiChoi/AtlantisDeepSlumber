@@ -15,10 +15,13 @@ public class LeoLightningProjectile : NetworkBehaviour
     private System.Collections.Generic.HashSet<Transform> hitEnemyRoots = new System.Collections.Generic.HashSet<Transform>();
     private bool isHit = false;
 
-    private void Start()
+    private void Awake()
     {
         gameObject.tag = "Set"; // Bắt buộc tag "Set" để giải đố đá nguyên tố hệ Lôi trong game
-        
+    }
+
+    private void Start()
+    {
         // Đảm bảo có Collider để va chạm hoạt động
         Collider col = GetComponent<Collider>();
         if (col == null)
