@@ -121,6 +121,7 @@ public class ElementalRockPuzzle : NetworkBehaviour
             isShown = true;
             ResetPuzzle();
         }
+        UpdateVisualStates();
     }
 
     public void ShowRock()
@@ -299,17 +300,20 @@ public class ElementalRockPuzzle : NetworkBehaviour
     {
         if (hitObj == null) return;
 
-        // Tránh nhận liên tiếp nhiều sự kiện va chạm từ cùng một viên đạn
-        if (hitObj == lastHitObject) return;
+        // Tìm NetworkObject trên đối tượng va chạm hoặc cha của nó để lấy đúng Tag và ID gốc của đạn
+        NetworkObject netObj = hitObj.GetComponentInParent<NetworkObject>();
+        GameObject rootObj = netObj != null ? netObj.gameObject : hitObj;
 
-        string hitTag = hitObj.tag;
+        // Tránh nhận liên tiếp nhiều sự kiện va chạm từ cùng một viên đạn
+        if (rootObj == lastHitObject) return;
+
+        string hitTag = rootObj.tag;
 
         // Kiểm tra xem đối tượng va chạm có tag thuộc một trong các nguyên tố không
         if (hitTag == fireTag || hitTag == waterTag || hitTag == iceTag || hitTag == lightningTag)
         {
-            NetworkObject netObj = null;
-            // Kiểm tra ID để tránh double hit giữa Client RPC và Server local collision
-            if (hitObj.TryGetComponent<NetworkObject>(out netObj))
+            // Kiểm tra ID mạng để tránh double hit giữa Client RPC và Server local collision
+            if (netObj != null)
             {
                 if (netObj.NetworkObjectId == lastProcessedProjectileId)
                 {
@@ -318,17 +322,21 @@ public class ElementalRockPuzzle : NetworkBehaviour
                 lastProcessedProjectileId = netObj.NetworkObjectId;
             }
 
-            lastHitObject = hitObj;
+            lastHitObject = rootObj;
 
-            // VÔ HIỆU HÓA va chạm của đạn ngay lập tức để tránh bay xuyên qua trúng dòng nước hoặc vật khác phía sau
-            Collider projectileCollider = hitObj.GetComponent<Collider>();
-            if (projectileCollider != null)
+            // VÔ HIỆU HÓA va chạm của đạn ngay lập tức trên cả các bộ phận con của nó
+            Collider[] colliders = rootObj.GetComponentsInChildren<Collider>();
+            foreach (var col in colliders)
             {
-                projectileCollider.enabled = false;
+                col.enabled = false;
             }
             
-            // Dừng vận tốc vật lý nếu có
-            Rigidbody projectileRigidbody = hitObj.GetComponent<Rigidbody>();
+            // Dừng vận tốc vật lý
+            Rigidbody projectileRigidbody = rootObj.GetComponent<Rigidbody>();
+            if (projectileRigidbody == null)
+            {
+                projectileRigidbody = rootObj.GetComponentInChildren<Rigidbody>();
+            }
             if (projectileRigidbody != null)
             {
                 projectileRigidbody.linearVelocity = Vector3.zero;
@@ -337,15 +345,15 @@ public class ElementalRockPuzzle : NetworkBehaviour
             }
 
             // Gọi các logic nổ/ẩn của đạn ngay lập tức trên cả Client/Server để đạn dừng di chuyển cục bộ
-            if (hitObj.GetComponent<ElenaIceProjectile>() != null || 
-                hitObj.GetComponent<MayaWaterProjectile>() != null ||
-                hitObj.GetComponent<ArthurFireProjectile>() != null)
+            if (rootObj.GetComponent<ElenaIceProjectile>() != null || 
+                rootObj.GetComponent<MayaWaterProjectile>() != null ||
+                rootObj.GetComponent<ArthurFireProjectile>() != null)
             {
-                hitObj.SendMessage("HandleHitImpact", SendMessageOptions.DontRequireReceiver);
+                rootObj.SendMessage("HandleHitImpact", SendMessageOptions.DontRequireReceiver);
             }
             else
             {
-                hitObj.SendMessage("DespawnOrDestroy", SendMessageOptions.DontRequireReceiver);
+                rootObj.SendMessage("DespawnOrDestroy", SendMessageOptions.DontRequireReceiver);
             }
 
             if (IsNetworkActive)
@@ -384,8 +392,19 @@ public class ElementalRockPuzzle : NetworkBehaviour
                 lastProcessedProjectileId = netObj.NetworkObjectId;
 
                 GameObject hitObj = netObj.gameObject;
-                Collider projectileCollider = hitObj.GetComponent<Collider>();
-                if (projectileCollider != null) projectileCollider.enabled = false;
+                Collider[] colliders = hitObj.GetComponentsInChildren<Collider>();
+                foreach (var col in colliders)
+                {
+                    col.enabled = false;
+                }
+
+                Rigidbody projectileRigidbody = hitObj.GetComponent<Rigidbody>();
+                if (projectileRigidbody != null)
+                {
+                    projectileRigidbody.linearVelocity = Vector3.zero;
+                    projectileRigidbody.angularVelocity = Vector3.zero;
+                    projectileRigidbody.isKinematic = true;
+                }
 
                 if (hitObj.GetComponent<ElenaIceProjectile>() != null || 
                     hitObj.GetComponent<MayaWaterProjectile>() != null ||
@@ -515,6 +534,9 @@ public class ElementalRockPuzzle : NetworkBehaviour
 
     private void UpdateVisualStates()
     {
+        int activeStep = IsNetworkActive ? netCurrentStep.Value : currentStep;
+        currentStep = activeStep;
+
         // Cập nhật giao diện hình ảnh của 4 Icon
         if (iconRenderers != null && iconRenderers.Length == 4)
         {
@@ -522,16 +544,16 @@ public class ElementalRockPuzzle : NetworkBehaviour
             {
                 if (iconRenderers[i] == null) continue;
 
-                if (i < currentStep)
+                if (i < activeStep)
                 {
                     // Các bước đã hoàn thành: Sáng rõ (Full màu)
                     iconRenderers[i].color = Color.white;
-                    if (iconObjects[i] != null && (i != currentStep || !isTimerRunning))
+                    if (iconObjects[i] != null && (i != activeStep || !isTimerRunning))
                     {
                         iconObjects[i].transform.localScale = Vector3.one * iconScale;
                     }
                 }
-                else if (i == currentStep)
+                else if (i == activeStep)
                 {
                     // Bước hiện tại cần bắn: Sáng rõ
                     iconRenderers[i].color = Color.white;
@@ -651,8 +673,8 @@ public class ElementalRockPuzzle : NetworkBehaviour
             timeRemaining = 0f;
             isTimerRunning = false;
             lastHitObject = null;
-            UpdateVisualStates();
         }
+        UpdateVisualStates();
     }
 
     private void ShatterRock()
