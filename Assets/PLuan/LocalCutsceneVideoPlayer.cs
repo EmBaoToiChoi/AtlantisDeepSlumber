@@ -36,7 +36,13 @@ public class LocalCutsceneVideoPlayer : NetworkBehaviour
     private bool isCutscenePlaying = false;
     private bool playerDisabled = false;
     private GameObject detectedPlayer = null;
+    private bool isCutsceneEnded = false;
+    
+    // Quản lý đếm thời gian
     private float serverWaitTimer = 0f;
+    private float videoDuration = 0f;
+    private float videoTimer = 0f;
+    
     private readonly HashSet<ulong> serverReadyClients = new HashSet<ulong>();
 
     private void Awake()
@@ -78,6 +84,17 @@ public class LocalCutsceneVideoPlayer : NetworkBehaviour
         {
             serverWaitTimer = 0f;
             serverReadyClients.Clear();
+            
+            // Tính toán thời gian video trên Server (Độc lập với card màn hình VPS)
+            if (videoClip != null)
+            {
+                videoDuration = (float)videoClip.length;
+            }
+            else
+            {
+                videoDuration = 10f; // Hồi phòng khi không có clip
+            }
+            videoTimer = 0f;
         }
     }
 
@@ -90,22 +107,34 @@ public class LocalCutsceneVideoPlayer : NetworkBehaviour
 
     private void Update()
     {
-        // Chỉ Server quản lý đếm ngược thời gian chờ (Timeout)
-        if (IsServer && !cutsceneStarted.Value)
+        // --- LOGIC DÀNH RIÊNG CHO SERVER ---
+        if (IsServer)
         {
-            // Sử dụng unscaledDeltaTime vì Time.timeScale đang là 0
-            serverWaitTimer += Time.unscaledDeltaTime;
-            int target = GetTargetPlayersCount();
-
-            // Nếu đủ người hoặc quá thời gian chờ tối đa
-            if (readyClientsCount.Value >= target || serverWaitTimer >= maxWaitTimeout)
+            // 1. Quản lý đếm ngược thời gian chờ lúc load map
+            if (!cutsceneStarted.Value)
             {
-                Debug.Log($"[LocalCutsceneVideoPlayer] Đủ điều kiện bắt đầu. Sẵn sàng: {readyClientsCount.Value}/{target}. Timeout: {serverWaitTimer >= maxWaitTimeout}");
-                cutsceneStarted.Value = true;
+                serverWaitTimer += Time.unscaledDeltaTime;
+                int target = GetTargetPlayersCount();
+
+                if (readyClientsCount.Value >= target || serverWaitTimer >= maxWaitTimeout)
+                {
+                    Debug.Log($"[LocalCutsceneVideoPlayer] Đủ điều kiện bắt đầu. Sẵn sàng: {readyClientsCount.Value}/{target}. Timeout: {serverWaitTimer >= maxWaitTimeout}");
+                    cutsceneStarted.Value = true;
+                }
+            }
+            // 2. Quản lý tự động đếm giây hết video (Tránh lỗi VPS headless không chạy được VideoPlayer.loopPointReached)
+            else if (!cutsceneFinished.Value)
+            {
+                videoTimer += Time.unscaledDeltaTime;
+                if (videoTimer >= videoDuration)
+                {
+                    Debug.Log("[LocalCutsceneVideoPlayer] [SERVER] Hết thời lượng video. Đang tự động kết thúc cutscene...");
+                    cutsceneFinished.Value = true;
+                }
             }
         }
 
-        // Trong suốt thời gian chờ và phát cutscene (cho đến khi kết thúc)
+        // --- LOGIC DÀNH CHO CẢ CLIENT & SERVER ---
         if (!cutsceneFinished.Value)
         {
             // Liên tục tìm và khóa di chuyển của người chơi cục bộ khi họ vừa spawn
@@ -114,8 +143,8 @@ public class LocalCutsceneVideoPlayer : NetworkBehaviour
             // Đảm bảo HUD luôn ẩn trong suốt quá trình chờ và phát video
             HideHUD();
 
-            // CHỈ CHỦ PHÒNG (HOST/SERVER) MỚI CÓ QUYỀN NHẤN ESC ĐỂ SKIP
-            if (IsServer && isCutscenePlaying && Input.GetKeyDown(KeyCode.Escape))
+            // CHỈ CHỦ PHÒNG (ROOM HOST) MỚI ĐƯỢC BẤM ESC ĐỂ SKIP
+            if (IsLocalRoomHost() && isCutscenePlaying && Input.GetKeyDown(KeyCode.Escape))
             {
                 Debug.Log("[LocalCutsceneVideoPlayer] Chủ phòng nhấn ESC để bỏ qua cutscene.");
                 SkipCutscene();
@@ -140,7 +169,7 @@ public class LocalCutsceneVideoPlayer : NetworkBehaviour
 
     private void OnCutsceneFinishedChanged(bool prev, bool finished)
     {
-        if (finished && isCutscenePlaying)
+        if (finished)
         {
             EndCutscene();
         }
@@ -156,6 +185,15 @@ public class LocalCutsceneVideoPlayer : NetworkBehaviour
             readyClientsCount.Value = serverReadyClients.Count;
             Debug.Log($"[LocalCutsceneVideoPlayer] Client {clientId} đã báo sẵn sàng. Tiến trình: {readyClientsCount.Value}/{GetTargetPlayersCount()}");
         }
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    private void RequestSkipCutsceneServerRpc()
+    {
+        if (!IsServer) return;
+        
+        Debug.Log("[LocalCutsceneVideoPlayer] [SERVER] Nhận yêu cầu Skip từ chủ phòng. Đang kết thúc cutscene cho toàn bộ người chơi...");
+        cutsceneFinished.Value = true;
     }
 
     // --- LOGIC PLAY VIDEO & HÌNH ẢNH ---
@@ -231,14 +269,8 @@ public class LocalCutsceneVideoPlayer : NetworkBehaviour
         videoPlayer.timeUpdateMode = VideoTimeUpdateMode.DSPTime;
         videoPlayer.audioOutputMode = VideoAudioOutputMode.Direct;
 
-        // Server (chủ phòng) đăng ký nhận sự kiện video chạy hết
-        if (IsServer)
-        {
-            videoPlayer.loopPointReached += OnVideoFinishedOnServer;
-        }
-
-        // CHỈ CHỦ PHÒNG (HOST/SERVER) MỚI HIỂN THỊ NÚT SKIP
-        if (IsServer)
+        // CHỈ CHỦ PHÒNG (ROOM HOST) MỚI HIỂN THỊ NÚT SKIP
+        if (IsLocalRoomHost())
         {
             CreateSkipButton(cutsceneCanvas.transform);
         }
@@ -247,7 +279,7 @@ public class LocalCutsceneVideoPlayer : NetworkBehaviour
         Debug.Log("[LocalCutsceneVideoPlayer] Video cutscene đã bắt đầu phát.");
 
         // Hiện con trỏ chuột cho chủ phòng bấm Skip nếu cần
-        if (IsServer)
+        if (IsLocalRoomHost())
         {
             Cursor.lockState = CursorLockMode.None;
             Cursor.visible = true;
@@ -306,6 +338,18 @@ public class LocalCutsceneVideoPlayer : NetworkBehaviour
 
         // Chế độ Offline/Editor Quick Test
         return 1;
+    }
+
+    private bool IsLocalRoomHost()
+    {
+        // 1. Chạy thử trong Unity Editor (Host mode gốc)
+        if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsServer && !Application.isBatchMode)
+        {
+            return true;
+        }
+
+        // 2. Chạy qua Dedicated Server trên VPS (đọc cấu hình từ PlayerPrefs)
+        return PlayerPrefs.GetInt("IsRoomHost", 0) == 1;
     }
 
     // --- ĐIỀU KHIỂN INPUT NGƯỜI CHƠI ---
@@ -407,33 +451,24 @@ public class LocalCutsceneVideoPlayer : NetworkBehaviour
 
     // --- KẾT THÚC CUTSCENE ---
 
-    private void OnVideoFinishedOnServer(VideoPlayer source)
-    {
-        if (!IsServer) return;
-        Debug.Log("[LocalCutsceneVideoPlayer] [SERVER] Video chạy hết. Đang kết thúc cutscene cho toàn bộ người chơi...");
-        cutsceneFinished.Value = true;
-    }
-
     public void SkipCutscene()
     {
-        // Chỉ chủ phòng mới có thể kích hoạt Skip
-        if (!IsServer) return;
+        if (!IsLocalRoomHost()) return;
         
-        Debug.Log("[LocalCutsceneVideoPlayer] [SERVER] Chủ phòng yêu cầu bỏ qua cutscene.");
-        cutsceneFinished.Value = true;
+        Debug.Log("[LocalCutsceneVideoPlayer] Yêu cầu bỏ qua cutscene gửi lên Server...");
+        RequestSkipCutsceneServerRpc();
     }
 
     private void EndCutscene()
     {
+        if (isCutsceneEnded) return;
+        isCutsceneEnded = true;
+
         isCutscenePlaying = false;
 
         // Dừng video phát
         if (videoPlayer != null)
         {
-            if (IsServer)
-            {
-                videoPlayer.loopPointReached -= OnVideoFinishedOnServer;
-            }
             videoPlayer.Stop();
         }
 
@@ -478,7 +513,7 @@ public class LocalCutsceneVideoPlayer : NetworkBehaviour
             Destroy(videoRenderTexture);
         }
 
-        // Nếu là Server, gọi Rpc hoặc thực hiện giải phóng Network Object này
+        // Nếu là Server, giải phóng Network Object này
         if (IsServer)
         {
             GetComponent<NetworkObject>().Despawn(true);
