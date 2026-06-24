@@ -376,14 +376,22 @@ public class ElementalRockPuzzle : NetworkBehaviour
 
             if (IsNetworkActive)
             {
-                // Nếu đang chơi mạng, gửi RPC kèm tham chiếu đạn để Server kiểm tra và đồng bộ
-                if (netObj != null)
+                if (IsServer)
                 {
-                    SubmitElementHitServerRpc(hitTag, netObj);
+                    // Nếu là Server/Host, tự xử lý trực tiếp luôn
+                    ProcessElementHit(hitTag);
                 }
                 else
                 {
-                    SubmitElementHitServerRpc(hitTag, new NetworkObjectReference());
+                    // Nếu là Client, gửi RPC lên Server để xử lý
+                    if (netObj != null)
+                    {
+                        SubmitElementHitServerRpc(hitTag, netObj);
+                    }
+                    else
+                    {
+                        SubmitElementHitServerRpc(hitTag, new NetworkObjectReference());
+                    }
                 }
             }
             else
