@@ -604,6 +604,10 @@ public class ElementalRockPuzzle : NetworkBehaviour
     private void ProcessElementHit(string hitTag)
     {
         int activeStep = IsNetworkActive ? netCurrentStep.Value : currentStep;
+        
+        // Tránh lỗi vượt quá chỉ mục của mảng
+        if (activeStep < 0 || activeStep >= orderedTags.Length) return;
+
         string expectedTag = orderedTags[activeStep];
 
         if (hitTag == expectedTag)
@@ -645,6 +649,23 @@ public class ElementalRockPuzzle : NetworkBehaviour
         }
         else
         {
+            // Kiểm tra xem nguyên tố này có phải của bước ĐÃ HOÀN THÀNH trước đó không
+            bool isAlreadyCompleted = false;
+            for (int i = 0; i < activeStep; i++)
+            {
+                if (hitTag == orderedTags[i])
+                {
+                    isAlreadyCompleted = true;
+                    break;
+                }
+            }
+
+            if (isAlreadyCompleted)
+            {
+                Debug.Log($"[ElementalRockPuzzle] Nhận nguyên tố đã hoàn thành trước đó: '{hitTag}' (Bước hiện tại: {activeStep}). Bỏ qua để tránh reset do double-hit/lag.");
+                return;
+            }
+
             Debug.LogWarning($"[ElementalRockPuzzle] SAI nguyên tố! Nhận được: '{hitTag}', Mong đợi: '{expectedTag}'. Reset câu đố!");
             // Sai nguyên tố -> Reset câu đố
             ResetPuzzle();
