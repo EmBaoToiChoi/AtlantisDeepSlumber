@@ -37,6 +37,10 @@ public class ArthurFireProjectile : NetworkBehaviour
             sphere.radius = 0.5f;
             Debug.LogWarning($"[ArthurFireProjectile] Không tìm thấy Collider. Đã tự động thêm SphereCollider mặc định.");
         }
+        else
+        {
+            col.isTrigger = true;
+        }
 
         // Đảm bảo có Rigidbody để nhận biết va chạm với các vật thể tĩnh (static obstacles)
         Rigidbody rb = GetComponent<Rigidbody>();
@@ -91,6 +95,8 @@ public class ArthurFireProjectile : NetworkBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
+        Debug.Log($"[ArthurFireProjectile Debug] OnTriggerEnter: hit='{other.gameObject.name}' | tag='{other.gameObject.tag}' | layer={LayerMask.LayerToName(other.gameObject.layer)}");
+
         // Kiểm tra xem có chạm vào đá nguyên tố không (xử lý trên cả Client và Server để bảo đảm tin cậy)
         ElementalRockPuzzle rock = other.GetComponentInParent<ElementalRockPuzzle>();
         if (rock != null)
@@ -189,6 +195,7 @@ public class ArthurFireProjectile : NetworkBehaviour
     {
         if (collision.collider != null)
         {
+            Debug.Log($"[ArthurFireProjectile Debug] OnCollisionEnter: hit='{collision.gameObject.name}' | tag='{collision.gameObject.tag}' | layer={LayerMask.LayerToName(collision.gameObject.layer)}");
             OnTriggerEnter(collision.collider);
         }
     }

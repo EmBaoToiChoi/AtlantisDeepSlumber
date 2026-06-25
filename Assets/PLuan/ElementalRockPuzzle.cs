@@ -82,6 +82,66 @@ public class ElementalRockPuzzle : NetworkBehaviour
     {
         orderedTags = new string[] { fireTag, waterTag, iceTag, lightningTag };
 
+        // ĐẢM BẢO đá không có Rigidbody để đóng vai trò là Static Collider/Trigger.
+        // Trong Unity, Kinematic Rigidbody (của đạn) KHÔNG va chạm/trigger với Kinematic Rigidbody khác (của đá).
+        // Chúng chỉ va chạm với Static Collider hoặc Dynamic Rigidbody.
+        Rigidbody rb = GetComponent<Rigidbody>();
+        if (rb != null)
+        {
+            Destroy(rb);
+            Debug.Log($"[ElementalRockPuzzle] Đã xóa Rigidbody trên '{gameObject.name}' để chuyển thành Static Collider (tránh lỗi Kinematic vs Kinematic).");
+        }
+
+        // ĐẢM BẢO có cả SphereCollider TRIGGER và BoxCollider TRIGGER trực tiếp trên chính đối tượng này (parent) để nhận va chạm.
+        // Đồng thời thiết lập kích thước phù hợp dựa trên mesh bounds.
+        float detectionRadius = 1.2f;
+        Vector3 boxCenter = Vector3.zero;
+        Vector3 boxSize = new Vector3(2f, 2f, 2f);
+
+        Renderer childRenderer = GetComponentInChildren<Renderer>();
+        if (childRenderer != null)
+        {
+            Vector3 boundsSize = childRenderer.bounds.size;
+            float maxDimension = Mathf.Max(boundsSize.x, Mathf.Max(boundsSize.y, boundsSize.z));
+            float avgScale = (transform.lossyScale.x + transform.lossyScale.y + transform.lossyScale.z) / 3f;
+            detectionRadius = (maxDimension / 2f) / Mathf.Max(avgScale, 0.01f) + 0.4f;
+
+            boxCenter = transform.InverseTransformPoint(childRenderer.bounds.center);
+            Vector3 localSize = transform.InverseTransformDirection(boundsSize);
+            boxSize = new Vector3(Mathf.Abs(localSize.x), Mathf.Abs(localSize.y), Mathf.Abs(localSize.z)) + Vector3.one * 0.8f;
+        }
+
+        // 1. Cấu hình SphereCollider Trigger
+        SphereCollider sphereCol = GetComponent<SphereCollider>();
+        if (sphereCol == null)
+        {
+            sphereCol = gameObject.AddComponent<SphereCollider>();
+            sphereCol.isTrigger = true;
+            sphereCol.radius = detectionRadius;
+            Debug.Log($"[ElementalRockPuzzle] '{gameObject.name}' đã tự thêm SphereCollider Trigger (radius={detectionRadius:F2}) trên parent.");
+        }
+        else
+        {
+            sphereCol.isTrigger = true;
+            Debug.Log($"[ElementalRockPuzzle] '{gameObject.name}' đã cấu hình SphereCollider sẵn có làm Trigger (radius={sphereCol.radius:F2}).");
+        }
+
+        // 2. Cấu hình BoxCollider Trigger (theo yêu cầu của user)
+        BoxCollider boxCol = GetComponent<BoxCollider>();
+        if (boxCol == null)
+        {
+            boxCol = gameObject.AddComponent<BoxCollider>();
+            boxCol.isTrigger = true;
+            boxCol.center = boxCenter;
+            boxCol.size = boxSize;
+            Debug.Log($"[ElementalRockPuzzle] '{gameObject.name}' đã tự thêm BoxCollider Trigger (center={boxCenter}, size={boxSize}) trên parent.");
+        }
+        else
+        {
+            boxCol.isTrigger = true;
+            Debug.Log($"[ElementalRockPuzzle] '{gameObject.name}' đã cấu hình BoxCollider sẵn có làm Trigger (center={boxCol.center}, size={boxCol.size}).");
+        }
+
         // Tạo root object cho UI độc lập với transform của đá (tránh bị Scale âm / Xoay của đá làm ngược chữ)
         uiRootObj = new GameObject("RockPuzzle_UIRoot");
         UpdateUIPosition();
@@ -105,11 +165,13 @@ public class ElementalRockPuzzle : NetworkBehaviour
             // GameObject cha (chính nó) vẫn active để tránh lỗi Netcode xóa đối tượng inactive
             SetChildrenActiveRecursive(transform, false);
 
-            // Tắt Renderer và Collider trên chính GameObject này (nếu có)
+            // Tắt Renderer và tất cả Colliders trên chính GameObject này (nếu có)
             var ren = GetComponent<Renderer>();
             if (ren != null) ren.enabled = false;
-            var col = GetComponent<Collider>();
-            if (col != null) col.enabled = false;
+            foreach (var col in GetComponents<Collider>())
+            {
+                col.enabled = false;
+            }
 
             // Ẩn UI Icon
             if (uiRootObj != null) uiRootObj.SetActive(false);
@@ -156,11 +218,13 @@ public class ElementalRockPuzzle : NetworkBehaviour
         // Kích hoạt đệ quy tất cả GameObject con (từ trên xuống để cha active trước con)
         SetChildrenActiveRecursive(transform, true);
 
-        // Bật Renderer và Collider trên chính nó
+        // Bật Renderer và tất cả Colliders trên chính nó
         var ren = GetComponent<Renderer>();
         if (ren != null) ren.enabled = true;
-        var col = GetComponent<Collider>();
-        if (col != null) col.enabled = true;
+        foreach (var col in GetComponents<Collider>())
+        {
+            col.enabled = true;
+        }
 
         // Bật tất cả Renderer con (kể cả vừa mới được kích hoạt lại)
         foreach (var r in GetComponentsInChildren<Renderer>(true))
@@ -178,7 +242,12 @@ public class ElementalRockPuzzle : NetworkBehaviour
         if (uiRootObj != null) uiRootObj.SetActive(true);
         
         ResetPuzzle();
-        Debug.Log($"[ElementalRockPuzzle] '{gameObject.name}' đã áp dụng hiển thị (ApplyShowRockVisuals)! Số con: {transform.childCount}");
+
+        // Log chi tiết trạng thái collider sau khi hiển thị đá
+        Collider selfCol = GetComponent<Collider>();
+        Debug.Log($"[ElementalRockPuzzle] '{gameObject.name}' ApplyShowRockVisuals hoàn tất! " +
+                  $"Colliders trên self: {GetComponents<Collider>().Length} | " +
+                  $"Tổng collider con: {GetComponentsInChildren<Collider>(true).Length} | Số con: {transform.childCount}");
     }
 
     /// <summary>
@@ -238,6 +307,77 @@ public class ElementalRockPuzzle : NetworkBehaviour
         }
     }
 
+    private void FixedUpdate()
+    {
+        // Chỉ quét khi đá đang hiển thị
+        if (!IsShown) return;
+
+        // Tính tâm và bán kính quét dựa trên kích thước của đá
+        Vector3 scanCenter = transform.position;
+        float scanRadius = 2.0f; // Bán kính quét mặc định
+
+        BoxCollider boxCol = GetComponent<BoxCollider>();
+        SphereCollider sphereCol = GetComponent<SphereCollider>();
+
+        if (boxCol != null)
+        {
+            scanCenter = transform.TransformPoint(boxCol.center);
+            scanRadius = Mathf.Max(boxCol.size.x, Mathf.Max(boxCol.size.y, boxCol.size.z)) * 0.7f;
+        }
+        else if (sphereCol != null)
+        {
+            scanCenter = transform.TransformPoint(sphereCol.center);
+            scanRadius = sphereCol.radius;
+        }
+
+        // Áp dụng scale của Transform cho bán kính quét
+        float maxScale = Mathf.Max(transform.lossyScale.x, Mathf.Max(transform.lossyScale.y, transform.lossyScale.z));
+        scanRadius *= maxScale;
+        
+        // Thêm khoảng đệm quét để bắt đạn trước khi bay xuyên qua hoặc nếu đạn di chuyển nhanh
+        scanRadius += 0.8f; 
+
+        // Quét tất cả các collider trong vùng (bao gồm cả Trigger)
+        Collider[] hits = Physics.OverlapSphere(scanCenter, scanRadius, ~0, QueryTriggerInteraction.Collide);
+        for (int i = 0; i < hits.Length; i++)
+        {
+            Collider hitCol = hits[i];
+            if (hitCol == null || hitCol.gameObject == gameObject) continue;
+
+            // Tìm root hoặc đối tượng đạn có tag phù hợp
+            GameObject hitObj = hitCol.gameObject;
+            string hitTag = hitObj.tag;
+
+            // Debug log every object found by the sweep
+            if (hitObj.name.Contains("Fireball") || hitObj.name.Contains("Lua") || hitObj.tag == "Lua")
+            {
+                Debug.Log($"[ElementalRockPuzzle Debug] Sweep found: '{hitObj.name}' | tag='{hitTag}' | layer={LayerMask.LayerToName(hitObj.layer)} | distance={Vector3.Distance(scanCenter, hitCol.transform.position):F2}m (scanRadius={scanRadius:F2}m)");
+            }
+
+            // Kiểm tra xem tag trực tiếp có phải nguyên tố mong muốn
+            bool isElement = hitTag == fireTag || hitTag == waterTag || hitTag == iceTag || hitTag == lightningTag;
+            
+            // Nếu không, kiểm tra cha
+            if (!isElement && hitObj.transform.parent != null)
+            {
+                hitObj = hitObj.transform.parent.gameObject;
+                hitTag = hitObj.tag;
+                isElement = hitTag == fireTag || hitTag == waterTag || hitTag == iceTag || hitTag == lightningTag;
+            }
+
+            // Nếu đúng là đạn nguyên tố
+            if (isElement)
+            {
+                float dist = Vector3.Distance(scanCenter, hitCol.transform.position);
+                if (dist <= scanRadius)
+                {
+                    Debug.Log($"[ElementalRockPuzzle] Quét FixedUpdate phát hiện đạn: '{hitObj.name}' (tag='{hitTag}') ở khoảng cách {dist:F2}m (Bán kính quét: {scanRadius:F2}m)");
+                    HandleElementHit(hitCol.gameObject);
+                }
+            }
+        }
+    }
+
     private void Update()
     {
         // Cập nhật vị trí UI bám theo viên đá mỗi frame
@@ -288,11 +428,13 @@ public class ElementalRockPuzzle : NetworkBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
+        Debug.Log($"[ElementalRockPuzzle] OnTriggerEnter: '{other.gameObject.name}' (tag='{other.gameObject.tag}', layer={LayerMask.LayerToName(other.gameObject.layer)})");
         HandleElementHit(other.gameObject);
     }
 
     private void OnCollisionEnter(Collision collision)
     {
+        Debug.Log($"[ElementalRockPuzzle] OnCollisionEnter: '{collision.gameObject.name}' (tag='{collision.gameObject.tag}', layer={LayerMask.LayerToName(collision.gameObject.layer)})");
         HandleElementHit(collision.gameObject);
     }
 
@@ -369,6 +511,11 @@ public class ElementalRockPuzzle : NetworkBehaviour
             {
                 rootObj.SendMessage("HandleHitImpact", SendMessageOptions.DontRequireReceiver);
             }
+            else if (rootObj.GetComponent<LeoLightningProjectile>() != null)
+            {
+                // AOE Sét tự quản lý lifetime của mình, không cần despawn ngay
+                Debug.Log($"[ElementalRockPuzzle] Sét AOE chạm đá, không cần despawn.");
+            }
             else
             {
                 rootObj.SendMessage("DespawnOrDestroy", SendMessageOptions.DontRequireReceiver);
@@ -443,7 +590,7 @@ public class ElementalRockPuzzle : NetworkBehaviour
                 {
                     hitObj.SendMessage("HandleHitImpact", SendMessageOptions.DontRequireReceiver);
                 }
-                else
+                else if (hitObj.GetComponent<LeoLightningProjectile>() == null)
                 {
                     hitObj.SendMessage("DespawnOrDestroy", SendMessageOptions.DontRequireReceiver);
                 }
@@ -457,6 +604,10 @@ public class ElementalRockPuzzle : NetworkBehaviour
     private void ProcessElementHit(string hitTag)
     {
         int activeStep = IsNetworkActive ? netCurrentStep.Value : currentStep;
+        
+        // Tránh lỗi vượt quá chỉ mục của mảng
+        if (activeStep < 0 || activeStep >= orderedTags.Length) return;
+
         string expectedTag = orderedTags[activeStep];
 
         if (hitTag == expectedTag)
@@ -498,6 +649,23 @@ public class ElementalRockPuzzle : NetworkBehaviour
         }
         else
         {
+            // Kiểm tra xem nguyên tố này có phải của bước ĐÃ HOÀN THÀNH trước đó không
+            bool isAlreadyCompleted = false;
+            for (int i = 0; i < activeStep; i++)
+            {
+                if (hitTag == orderedTags[i])
+                {
+                    isAlreadyCompleted = true;
+                    break;
+                }
+            }
+
+            if (isAlreadyCompleted)
+            {
+                Debug.Log($"[ElementalRockPuzzle] Nhận nguyên tố đã hoàn thành trước đó: '{hitTag}' (Bước hiện tại: {activeStep}). Bỏ qua để tránh reset do double-hit/lag.");
+                return;
+            }
+
             Debug.LogWarning($"[ElementalRockPuzzle] SAI nguyên tố! Nhận được: '{hitTag}', Mong đợi: '{expectedTag}'. Reset câu đố!");
             // Sai nguyên tố -> Reset câu đố
             ResetPuzzle();
@@ -658,8 +826,8 @@ public class ElementalRockPuzzle : NetworkBehaviour
     // --- CÁC HÀM PHẢN HỒI KHI BIẾN MẠNG THAY ĐỔI ---
     private void OnPuzzleStateChanged(int oldVal, int newVal)
     {
+        Debug.Log($"[ElementalRockPuzzle Debug] OnPuzzleStateChanged: old={oldVal} => new={newVal}");
         currentStep = newVal;
-        lastHitObject = null; // Reset đạn khi chuyển bước
         UpdateVisualStates();
     }
 
