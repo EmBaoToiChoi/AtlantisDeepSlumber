@@ -104,7 +104,8 @@ public class CollectibleItemDrop : NetworkBehaviour, IInteractableItem
     private void UpdateAmountUI()
     {
         if (!itemName.Equals("WoodLog", System.StringComparison.OrdinalIgnoreCase) && 
-            !itemName.Equals("ThanhGo", System.StringComparison.OrdinalIgnoreCase))
+            !itemName.Equals("ThanhGo", System.StringComparison.OrdinalIgnoreCase) &&
+            !gameObject.name.ToLower().Contains("wood_stack"))
         {
             return;
         }
@@ -217,7 +218,9 @@ public class CollectibleItemDrop : NetworkBehaviour, IInteractableItem
     {
         if (localPlayer == null) return;
 
-        if (itemName.Equals("WoodLog", System.StringComparison.OrdinalIgnoreCase) || itemName.Equals("ThanhGo", System.StringComparison.OrdinalIgnoreCase))
+        if (itemName.Equals("WoodLog", System.StringComparison.OrdinalIgnoreCase) || 
+            itemName.Equals("ThanhGo", System.StringComparison.OrdinalIgnoreCase) ||
+            gameObject.name.ToLower().Contains("wood_stack"))
         {
             var carrier = localPlayer.GetComponent<PlayerLogCarrier>();
             if (carrier != null && carrier.isCarrying)
@@ -265,20 +268,23 @@ public class CollectibleItemDrop : NetworkBehaviour, IInteractableItem
     {
         if (localPlayer == null) return;
 
-        if (itemName.Equals("WoodLog", System.StringComparison.OrdinalIgnoreCase) || itemName.Equals("ThanhGo", System.StringComparison.OrdinalIgnoreCase))
+        if (itemName.Equals("WoodLog", System.StringComparison.OrdinalIgnoreCase) || 
+            itemName.Equals("ThanhGo", System.StringComparison.OrdinalIgnoreCase) ||
+            gameObject.name.ToLower().Contains("wood_stack"))
         {
             int amount = IsPlayerStandalone() ? localWoodAmount : woodAmount.Value;
+            string cleanName = gameObject.name.Replace("_Pooled", "").Replace("_Extra", "").Replace("(Clone)", "").Trim();
             if (IsPlayerStandalone())
             {
                 var carrier = localPlayer.GetComponent<PlayerLogCarrier>();
                 if (carrier == null) carrier = localPlayer.gameObject.AddComponent<PlayerLogCarrier>();
-                carrier.CarryLog(amount);
+                carrier.CarryLog(amount, true, cleanName);
                 WoodLogObjectPool.Instance.ReturnToPool(gameObject);
             }
             else
             {
                 var netPlayer = localPlayer.GetComponent<NetworkObject>();
-                if (netPlayer != null) PickUpWoodLogServerRpc(netPlayer.NetworkObjectId, amount);
+                if (netPlayer != null) PickUpWoodLogServerRpc(netPlayer.NetworkObjectId, amount, cleanName);
             }
             return;
         }
@@ -292,7 +298,7 @@ public class CollectibleItemDrop : NetworkBehaviour, IInteractableItem
     }
 
     [ServerRpc(RequireOwnership = false)]
-    private void PickUpWoodLogServerRpc(ulong playerNetObjectId, int amount)
+    private void PickUpWoodLogServerRpc(ulong playerNetObjectId, int amount, string prefabName)
     {
         if (!IsServer) return;
         if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(playerNetObjectId, out var playerNetObj))
@@ -300,14 +306,14 @@ public class CollectibleItemDrop : NetworkBehaviour, IInteractableItem
             var pInt = playerNetObj.GetComponent<PlayerInteraction>();
             if (pInt != null && pInt.isCarryingCore.Value) return;
         }
-        PickUpWoodLogClientRpc(playerNetObjectId, amount);
+        PickUpWoodLogClientRpc(playerNetObjectId, amount, prefabName);
         var netObj = GetComponent<NetworkObject>();
         if (netObj != null && netObj.IsSpawned) netObj.Despawn();
         else WoodLogObjectPool.Instance.ReturnToPool(gameObject);
     }
 
     [ClientRpc]
-    private void PickUpWoodLogClientRpc(ulong playerNetObjectId, int amount)
+    private void PickUpWoodLogClientRpc(ulong playerNetObjectId, int amount, string prefabName)
     {
         if (NetworkManager.Singleton == null) return;
         if (!NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(playerNetObjectId, out var playerNetObj)) return;
@@ -315,7 +321,7 @@ public class CollectibleItemDrop : NetworkBehaviour, IInteractableItem
         var playerObj = playerNetObj.gameObject;
         var carrier = playerObj.GetComponent<PlayerLogCarrier>();
         if (carrier == null) carrier = playerObj.AddComponent<PlayerLogCarrier>();
-        carrier.CarryLog(amount, true);
+        carrier.CarryLog(amount, true, prefabName);
     }
 
     [ServerRpc(RequireOwnership = false)]
