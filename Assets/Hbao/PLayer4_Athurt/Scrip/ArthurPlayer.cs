@@ -3956,15 +3956,8 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         if (isStandaloneMode)
         {
-            GameObject logPrefab = null;
-            if (WoodLogObjectPool.Instance != null && WoodLogObjectPool.Instance.WoodPrefab != null)
-            {
-                logPrefab = WoodLogObjectPool.Instance.WoodPrefab;
-            }
-            if (logPrefab == null) logPrefab = Resources.Load<GameObject>("wood_stack");
-            if (logPrefab == null) logPrefab = Resources.Load<GameObject>("firewood_single");
+            GameObject logPrefab = Resources.Load<GameObject>("firewood_single");
             if (logPrefab == null) logPrefab = Resources.Load<GameObject>("WoodLog");
-
             if (logPrefab != null)
             {
                 var carrier = GetComponent<PlayerLogCarrier>();
@@ -3993,13 +3986,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
     {
         if (!IsServer) return;
 
-        GameObject logPrefab = null;
-        if (WoodLogObjectPool.Instance != null && WoodLogObjectPool.Instance.WoodPrefab != null)
-        {
-            logPrefab = WoodLogObjectPool.Instance.WoodPrefab;
-        }
-        if (logPrefab == null) logPrefab = Resources.Load<GameObject>("wood_stack");
-        if (logPrefab == null) logPrefab = Resources.Load<GameObject>("firewood_single");
+        GameObject logPrefab = Resources.Load<GameObject>("firewood_single");
         if (logPrefab == null) logPrefab = Resources.Load<GameObject>("WoodLog");
 
         if (logPrefab != null)

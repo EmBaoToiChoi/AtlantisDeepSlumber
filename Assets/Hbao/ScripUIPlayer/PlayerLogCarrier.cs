@@ -51,35 +51,24 @@ public class PlayerLogCarrier : MonoBehaviour
 
         if (crystalPrefab != null)
         {
-            try
-            {
-                carriedCrystalInstance = Instantiate(crystalPrefab);
-                carriedCrystalInstance.SetActive(true);
-                
-                var netObj = carriedCrystalInstance.GetComponent<Unity.Netcode.NetworkObject>();
-                if (netObj != null) DestroyImmediate(netObj);
+            carriedCrystalInstance = Instantiate(crystalPrefab);
+            carriedCrystalInstance.SetActive(true);
+            
+            var netObj = carriedCrystalInstance.GetComponent<Unity.Netcode.NetworkObject>();
+            if (netObj != null) DestroyImmediate(netObj);
 
-                // Hủy toàn bộ NetworkBehaviour (bao gồm cả NetworkTransform, CollectibleItemDrop, v.v.)
-                var netBehaviours = new System.Collections.Generic.List<Unity.Netcode.NetworkBehaviour>(
-                    carriedCrystalInstance.GetComponentsInChildren<Unity.Netcode.NetworkBehaviour>(true)
-                );
-                for (int i = netBehaviours.Count - 1; i >= 0; i--)
-                {
-                    if (netBehaviours[i] != null) DestroyImmediate(netBehaviours[i]);
-                }
-
-                foreach (var col in carriedCrystalInstance.GetComponentsInChildren<Collider>()) DestroyImmediate(col);
-                foreach (var rb in carriedCrystalInstance.GetComponentsInChildren<Rigidbody>()) DestroyImmediate(rb);
-            }
-            catch (System.Exception ex)
+            // Destroy CollectibleItemDrop component on the cosmetic clone
+            var cid = carriedCrystalInstance.GetComponent<CollectibleItemDrop>();
+            if (cid != null) DestroyImmediate(cid);
+            foreach (var c in carriedCrystalInstance.GetComponentsInChildren<CollectibleItemDrop>())
             {
-                Debug.LogWarning($"[PlayerLogCarrier] Lỗi khi tạo cosmetic crystal từ prefab {crystalPrefab.name}: {ex.Message}. Đang fallback về mô hình Sphere.");
-                if (carriedCrystalInstance != null) Destroy(carriedCrystalInstance);
-                carriedCrystalInstance = null;
+                DestroyImmediate(c);
             }
+
+            foreach (var col in carriedCrystalInstance.GetComponentsInChildren<Collider>()) DestroyImmediate(col);
+            foreach (var rb in carriedCrystalInstance.GetComponentsInChildren<Rigidbody>()) DestroyImmediate(rb);
         }
-
-        if (carriedCrystalInstance == null)
+        else
         {
             // Tạo tạm một khối cầu nếu chưa setup Prefab trong Resources[cite: 4]
             carriedCrystalInstance = GameObject.CreatePrimitive(PrimitiveType.Sphere);
@@ -87,7 +76,6 @@ public class PlayerLogCarrier : MonoBehaviour
             Destroy(carriedCrystalInstance.GetComponent<Collider>());
 
             Material mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-            if (mat == null || mat.shader == null) mat = new Material(Shader.Find("Standard"));
             mat.color = Color.cyan;
             carriedCrystalInstance.GetComponent<Renderer>().material = mat;
         }
@@ -120,7 +108,7 @@ public class PlayerLogCarrier : MonoBehaviour
     }
 
     // --- CƠ CHẾ BƯNG GỖ NGUYÊN BẢN ---[cite: 4]
-    public void CarryLog(int amount = 1, bool showVisualLog = true, string prefabName = "")
+    public void CarryLog(int amount = 1, bool showVisualLog = true)
     {
         isCarrying = true;
         carriedLogCount = amount;
@@ -128,100 +116,42 @@ public class PlayerLogCarrier : MonoBehaviour
         PlayCarryAnimation(true);
         if (!showVisualLog) return;
         
-        GameObject logPrefab = null;
-        if (!string.IsNullOrEmpty(prefabName))
-        {
-            logPrefab = Resources.Load<GameObject>(prefabName);
-            if (logPrefab == null && Unity.Netcode.NetworkManager.Singleton != null && 
-                Unity.Netcode.NetworkManager.Singleton.NetworkConfig != null &&
-                Unity.Netcode.NetworkManager.Singleton.NetworkConfig.Prefabs != null &&
-                Unity.Netcode.NetworkManager.Singleton.NetworkConfig.Prefabs.Prefabs != null)
-            {
-                foreach (var netPrefab in Unity.Netcode.NetworkManager.Singleton.NetworkConfig.Prefabs.Prefabs)
-                {
-                    if (netPrefab.Prefab != null && netPrefab.Prefab.name.Equals(prefabName, System.StringComparison.OrdinalIgnoreCase))
-                    {
-                        logPrefab = netPrefab.Prefab;
-                        break;
-                    }
-                }
-            }
-        }
-
-        if (logPrefab == null && WoodLogObjectPool.Instance != null && WoodLogObjectPool.Instance.WoodPrefab != null)
-        {
-            logPrefab = WoodLogObjectPool.Instance.WoodPrefab;
-        }
-
-        if (logPrefab == null) logPrefab = Resources.Load<GameObject>("wood_stack");
-        if (logPrefab == null) logPrefab = Resources.Load<GameObject>("firewood_single");
+        GameObject logPrefab = Resources.Load<GameObject>("firewood_single");
         if (logPrefab == null) logPrefab = Resources.Load<GameObject>("WoodLog");
-
-        // Nếu vẫn null, tìm bất kỳ prefab nào trong danh sách Netcode chứa từ khóa tương ứng
-        if (logPrefab == null && Unity.Netcode.NetworkManager.Singleton != null && 
-            Unity.Netcode.NetworkManager.Singleton.NetworkConfig != null &&
-            Unity.Netcode.NetworkManager.Singleton.NetworkConfig.Prefabs != null &&
-            Unity.Netcode.NetworkManager.Singleton.NetworkConfig.Prefabs.Prefabs != null)
-        {
-            foreach (var netPrefab in Unity.Netcode.NetworkManager.Singleton.NetworkConfig.Prefabs.Prefabs)
-            {
-                if (netPrefab.Prefab != null)
-                {
-                    string pName = netPrefab.Prefab.name.ToLower();
-                    if (pName.Contains("wood_stack") || pName.Contains("firewood") || pName.Contains("woodlog"))
-                    {
-                        logPrefab = netPrefab.Prefab;
-                        break;
-                    }
-                }
-            }
-        }
 
         if (logPrefab != null)
         {
-            try
+            carriedLogInstance = Instantiate(logPrefab);
+            carriedLogInstance.SetActive(true);
+            
+            var netObj = carriedLogInstance.GetComponent<Unity.Netcode.NetworkObject>();
+            if (netObj != null) DestroyImmediate(netObj);
+
+            // Destroy CollectibleItemDrop component on the cosmetic clone so its Update() loop doesn't override the carry position
+            var cid = carriedLogInstance.GetComponent<CollectibleItemDrop>();
+            if (cid != null) DestroyImmediate(cid);
+            foreach (var c in carriedLogInstance.GetComponentsInChildren<CollectibleItemDrop>())
             {
-                carriedLogInstance = Instantiate(logPrefab);
-                carriedLogInstance.SetActive(true);
-                
-                var netObj = carriedLogInstance.GetComponent<Unity.Netcode.NetworkObject>();
-                if (netObj != null) DestroyImmediate(netObj);
-
-                // Hủy toàn bộ NetworkBehaviour (bao gồm cả NetworkTransform, CollectibleItemDrop, v.v.)
-                var netBehaviours = new System.Collections.Generic.List<Unity.Netcode.NetworkBehaviour>(
-                    carriedLogInstance.GetComponentsInChildren<Unity.Netcode.NetworkBehaviour>(true)
-                );
-                for (int i = netBehaviours.Count - 1; i >= 0; i--)
-                {
-                    if (netBehaviours[i] != null) DestroyImmediate(netBehaviours[i]);
-                }
-
-                // Destroy any WoodCountUI canvas or text elements on the cosmetic clone
-                Transform countUI = carriedLogInstance.transform.Find("WoodCountUI");
-                if (countUI != null)
-                {
-                    DestroyImmediate(countUI.gameObject);
-                }
-
-                foreach (var col in carriedLogInstance.GetComponentsInChildren<Collider>()) DestroyImmediate(col);
-                foreach (var rb in carriedLogInstance.GetComponentsInChildren<Rigidbody>()) DestroyImmediate(rb);
+                DestroyImmediate(c);
             }
-            catch (System.Exception ex)
+
+            // Destroy any WoodCountUI canvas or text elements on the cosmetic clone
+            Transform countUI = carriedLogInstance.transform.Find("WoodCountUI");
+            if (countUI != null)
             {
-                Debug.LogWarning($"[PlayerLogCarrier] Lỗi khi tạo cosmetic log từ prefab {logPrefab.name}: {ex.Message}. Đang fallback về mô hình Cylinder.");
-                if (carriedLogInstance != null) Destroy(carriedLogInstance);
-                carriedLogInstance = null;
+                DestroyImmediate(countUI.gameObject);
             }
+
+            foreach (var col in carriedLogInstance.GetComponentsInChildren<Collider>()) DestroyImmediate(col);
+            foreach (var rb in carriedLogInstance.GetComponentsInChildren<Rigidbody>()) DestroyImmediate(rb);
         }
-
-        if (carriedLogInstance == null)
+        else
         {
             carriedLogInstance = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
             carriedLogInstance.SetActive(true);
             Destroy(carriedLogInstance.GetComponent<Collider>());
 
             Material mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-            if (mat == null || mat.shader == null) mat = new Material(Shader.Find("Standard"));
             mat.color = new Color(0.45f, 0.28f, 0.12f);
             carriedLogInstance.GetComponent<Renderer>().material = mat;
         }
