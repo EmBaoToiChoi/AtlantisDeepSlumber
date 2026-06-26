@@ -374,7 +374,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  GlobalObjectIdHash: 1709077626
+  GlobalObjectIdHash: 1933497388
   InScenePlacedSourceGlobalObjectIdHash: 0
   DeferredDespawnTick: 0
   Ownership: 1
@@ -402,7 +402,7 @@ MonoBehaviour:
   ShowTopMostFoldoutHeaderGroup: 1
   visualModel: {fileID: 5467546501562613012}
   requiredHits: 20
-  woodLogPrefab: {fileID: 3833700774364033567, guid: 7d1b213b7fbc2f049b5093a36390d239, type: 3}
+  woodLogPrefab: {fileID: 6599571129962894683, guid: 3b63b182d4cfd4646900e498771acd78, type: 3}
   isCutDown:
     UpdateTraits:
       MinSecondsBetweenUpdates: 0
