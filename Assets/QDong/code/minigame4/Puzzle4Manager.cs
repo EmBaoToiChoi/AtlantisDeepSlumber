@@ -20,13 +20,6 @@ public class Puzzle4Manager : NetworkBehaviour
 
     public GameObject[] minigameUIs;
 
-    public NetworkVariable<float> failTimer =
-        new NetworkVariable<float>(3f);
-
-    public TMP_Text countdownText;
-
-    private bool hasFailed = false;
-
     public GameObject completeUI;
     public GameObject castleGate;
     public GameObject trapTrigger;
@@ -104,8 +97,48 @@ public class Puzzle4Manager : NetworkBehaviour
             StartCoroutine(DelayedStartMinigameUI());
         }
 
-        CheckFail();
         CheckComplete();
+    }
+
+    void FixedUpdate()
+    {
+        if (balanceManager != null && balanceManager.diskRigidbody != null)
+        {
+            if (balanceManager.CurrentAngle > 10f)
+            {
+                Vector3 normal = balanceManager.diskRigidbody.transform.up;
+                Vector3 downhill = Vector3.ProjectOnPlane(Vector3.down, normal).normalized;
+                
+                float slideForceMagn = (balanceManager.CurrentAngle - 10f) * 60f; 
+                
+                // Giới hạn lực đẩy tối đa để tránh lỗi vật lý (PhysX nảy văng) khi ép mạnh vào thành đĩa
+                if (slideForceMagn > 300f) slideForceMagn = 300f;
+
+                Vector3 slideForce = downhill * slideForceMagn;
+                
+                // Quan trọng: Bổ sung lực ép dính xuống mặt đĩa tỉ lệ thuận với lực trượt.
+                // Khi trượt mạnh đụng vào viền đĩa (rim), nếu không có lực ép xuống, nhân vật sẽ bị bật tung lên!
+                Vector3 stickyForce = -normal * (slideForceMagn * 0.8f);
+
+                CharacterInfo[] players = FindObjectsByType<CharacterInfo>(FindObjectsSortMode.None);
+                foreach (var player in players)
+                {
+                    if (player.IsOwner) 
+                    {
+                        Collider col = player.GetComponent<Collider>();
+                        if (col != null && balanceManager.IsPlayerOnBoard(col))
+                        {
+                            Rigidbody rb = player.GetComponent<Rigidbody>();
+                            if (rb != null)
+                            {
+                                // Áp dụng cả lực trượt và lực dính
+                                rb.AddForce(slideForce + stickyForce, ForceMode.Force);
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 
     IEnumerator DelayedStartMinigameUI()
@@ -114,37 +147,7 @@ public class Puzzle4Manager : NetworkBehaviour
         isMinigameStarted.Value = true;
     }
 
-    void CheckFail()
-    {
-        if (balanceManager.CurrentAngle > 15)
-        {
-            failTimer.Value -= Time.deltaTime;
 
-            if (countdownText != null)
-            {
-                countdownText.text =
-                    Mathf.CeilToInt(
-                        failTimer.Value
-                    ).ToString();
-            }
-
-            if (failTimer.Value <= 0 && !hasFailed)
-            {
-                hasFailed = true;
-
-                StartCoroutine(FailSequence());
-            }
-        }
-        else
-        {
-            failTimer.Value = 3f;
-
-            if (countdownText != null)
-            {
-                countdownText.text = "";
-            }
-        }
-    }
 
     void CheckComplete()
     {
@@ -174,50 +177,7 @@ public class Puzzle4Manager : NetworkBehaviour
         }
     }
 
-    IEnumerator FailSequence()
-    {
-        balanceManager.FlipDisk();
 
-        yield return new WaitForSeconds(0.4f);
-
-        LaunchPlayersOutward();
-
-        yield return new WaitForSeconds(3f);
-
-        ResetPuzzle();
-    }
-
-    void LaunchPlayersOutward()
-    {
-        CharacterInfo[] players =
-            FindObjectsByType<CharacterInfo>(
-                FindObjectsSortMode.None
-            );
-
-        foreach (var player in players)
-        {
-            PlayerKnockback knockback =
-                player.GetComponent<PlayerKnockback>();
-
-            if (knockback == null)
-                continue;
-
-            Vector3 center =
-                balanceManager.diskRigidbody.transform.position;
-
-            Vector3 direction =
-                (player.transform.position - center).normalized;
-
-            direction.y = 0f;
-
-            direction.Normalize();
-
-            Vector3 force =
-                Vector3.up * 3f;
-
-            knockback.Launch(force);
-        }
-    }
 
     void LaunchPlayersUp()
     {
@@ -241,19 +201,7 @@ public class Puzzle4Manager : NetworkBehaviour
         }
     }
 
-    void ResetPuzzle()
-    {
-        A.charge.Value = 0;
-        B.charge.Value = 0;
-        C.charge.Value = 0;
-        D.charge.Value = 0;
 
-        failTimer.Value = 3f;
-
-        hasFailed = false;
-
-        balanceManager.ResetDisk();
-    }
 
     IEnumerator CompleteSequence()
     {
