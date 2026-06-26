@@ -1,38 +1,22 @@
 using UnityEngine;
 
 /// <summary>
-/// Đại diện cho một vùng Checkpoint vòng tròn phát sáng.
-/// Khi người chơi chạm vào, checkpoint này sẽ được lưu cho riêng người chơi đó.
+/// Đại diện cho một vùng Checkpoint vô hình.
+/// Chỉ cần người chơi đi chạm vào vùng collider trigger này, checkpoint sẽ được lưu cho riêng người chơi đó.
 /// </summary>
-[RequireComponent(typeof(LineRenderer))]
 public class CheckpointZone : MonoBehaviour
 {
     [Header("Checkpoint Config")]
     [Tooltip("Chỉ số định danh của Checkpoint này (dùng để lưu trong danh sách)")]
     public int checkpointIndex = 0;
 
-    [Tooltip("Bán kính vùng lưu Checkpoint và bán kính vòng tròn phát sáng")]
+    [Tooltip("Bán kính vùng lưu Checkpoint")]
     public float radius = 2.5f;
 
     [Tooltip("Điểm hồi sinh khi chết. Nếu để trống, sẽ dùng chính vị trí của CheckpointZone")]
     public Transform spawnPointOverride;
 
-    [Header("Visual Colors")]
-    [ColorUsage(true, true)]
-    public Color activeColor = new Color(0f, 1f, 1f, 1f); // Neon Cyan phát sáng
-
-    [ColorUsage(true, true)]
-    public Color inactiveColor = new Color(0.2f, 0.4f, 0.4f, 0.25f); // Neon Cyan mờ nhạt
-
-    [Header("Animation Settings")]
-    public float rotationSpeed = 20f;
-    public float pulseSpeed = 2f;
-    public float pulseMinAlpha = 0.4f;
-    public float pulseMaxAlpha = 1f;
-
-    private LineRenderer lineRenderer;
     private SphereCollider triggerCollider;
-    private float currentRotationAngle = 0f;
     private bool isInitialized = false;
 
     private void Awake()
@@ -50,28 +34,6 @@ public class CheckpointZone : MonoBehaviour
     {
         if (isInitialized) return;
 
-        // Thiết lập LineRenderer
-        lineRenderer = GetComponent<LineRenderer>();
-        lineRenderer.useWorldSpace = false; // Vẽ theo không gian cục bộ để dễ di chuyển/quay
-        lineRenderer.loop = true;
-        lineRenderer.positionCount = 51; // 50 điểm vẽ + 1 điểm đóng vòng tròn
-        lineRenderer.startWidth = 0.12f;
-        lineRenderer.endWidth = 0.12f;
-        lineRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-        lineRenderer.receiveShadows = false;
-
-        // Cố gắng tìm hoặc tạo vật liệu sáng/neon cho LineRenderer tránh màu hồng lỗi mặc định
-        if (lineRenderer.sharedMaterial == null || lineRenderer.sharedMaterial.name.Contains("Default-Line"))
-        {
-            Shader glowingShader = Shader.Find("Sprites/Default");
-            if (glowingShader == null) glowingShader = Shader.Find("UI/Default");
-            if (glowingShader == null) glowingShader = Shader.Find("Legacy Shaders/Particles/Additive");
-            if (glowingShader != null)
-            {
-                lineRenderer.material = new Material(glowingShader);
-            }
-        }
-
         // Tự động thêm trigger collider nếu chưa có
         triggerCollider = GetComponent<SphereCollider>();
         if (triggerCollider == null)
@@ -83,59 +45,6 @@ public class CheckpointZone : MonoBehaviour
         triggerCollider.center = Vector3.zero;
 
         isInitialized = true;
-    }
-
-    private void Update()
-    {
-        UpdateVisuals();
-    }
-
-    /// <summary>
-    /// Vẽ vòng tròn phát sáng và tạo hiệu ứng nhấp nháy, xoay vòng tròn.
-    /// </summary>
-    private void UpdateVisuals()
-    {
-        if (lineRenderer == null) return;
-
-        // Xác định xem checkpoint này có đang active đối với người chơi local hay không
-        bool isActiveForLocal = false;
-        if (PlayerCheckpointManager.Instance != null)
-        {
-            isActiveForLocal = PlayerCheckpointManager.Instance.IsCheckpointActiveForLocalPlayer(checkpointIndex);
-        }
-
-        // Tính toán màu sắc hiện tại có nhấp nháy (pulsate) alpha
-        Color baseColor = isActiveForLocal ? activeColor : inactiveColor;
-        float pulse = Mathf.PingPong(Time.time * pulseSpeed, 1f);
-        float alpha = Mathf.Lerp(pulseMinAlpha, pulseMaxAlpha, pulse);
-        
-        // Nếu không active, giảm độ sáng đáng kể
-        if (!isActiveForLocal)
-        {
-            alpha *= 0.5f;
-        }
-
-        Color finalColor = baseColor;
-        finalColor.a = alpha;
-
-        lineRenderer.startColor = finalColor;
-        lineRenderer.endColor = finalColor;
-
-        // Xoay vòng tròn vẽ
-        currentRotationAngle += rotationSpeed * Time.deltaTime;
-        if (currentRotationAngle >= 360f) currentRotationAngle -= 360f;
-
-        // Cập nhật vị trí các điểm vẽ vòng tròn trên XZ plane
-        for (int i = 0; i <= 50; i++)
-        {
-            float angle = (i * 360f / 50f) + currentRotationAngle;
-            float rad = angle * Mathf.Deg2Rad;
-            float x = Mathf.Sin(rad) * radius;
-            float z = Mathf.Cos(rad) * radius;
-            
-            // Vẽ trên mặt phẳng XZ, nâng cao nhẹ 0.05f so với vị trí gốc để tránh Z-fighting với mặt đất
-            lineRenderer.SetPosition(i, new Vector3(x, 0.05f, z));
-        }
     }
 
     /// <summary>
@@ -183,9 +92,11 @@ public class CheckpointZone : MonoBehaviour
 
     private void OnDrawGizmos()
     {
-        // Vẽ vòng tròn phát sáng trong editor để lập trình viên dễ đặt vị trí
-        Gizmos.color = Color.cyan;
+        // Vẽ vòng tròn phát sáng trong Editor để lập trình viên dễ đặt vị trí (vô hình khi chơi game)
+        Gizmos.color = new Color(0f, 1f, 1f, 0.4f);
         Gizmos.DrawWireSphere(transform.position, radius);
+        Gizmos.color = new Color(0f, 1f, 1f, 0.1f);
+        Gizmos.DrawSphere(transform.position, radius);
         
         if (spawnPointOverride != null)
         {
