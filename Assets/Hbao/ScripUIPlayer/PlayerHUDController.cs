@@ -1206,11 +1206,6 @@ public class PlayerHUDController : MonoBehaviour
         {
             if (activeBridgeTrigger != null)
             {
-                if (Input.GetKeyDown(KeyCode.Space))
-                {
-                    OnBuildButtonClicked();
-                }
-
                 bool isNetwork = Unity.Netcode.NetworkManager.Singleton != null && Unity.Netcode.NetworkManager.Singleton.IsListening;
                 bool isRepaired = isNetwork ? activeBridgeTrigger.hasBeenRepaired.Value : activeBridgeTrigger.IsBridgeRepaired();
                 if (isRepaired)
@@ -1677,8 +1672,7 @@ public class PlayerHUDController : MonoBehaviour
                     }
                 }
                 else if (itemName.Equals("WoodLog", System.StringComparison.OrdinalIgnoreCase) || 
-                         itemName.Equals("ThanhGo", System.StringComparison.OrdinalIgnoreCase) ||
-                         itemName.Equals("wood_stack", System.StringComparison.OrdinalIgnoreCase))
+                         itemName.Equals("ThanhGo", System.StringComparison.OrdinalIgnoreCase))
                 {
                     if (woodLogSprite != null)
                     {
@@ -1714,8 +1708,7 @@ public class PlayerHUDController : MonoBehaviour
                     int.TryParse(parts[1], out count);
                 }
                 if (itemN.Equals("WoodLog", System.StringComparison.OrdinalIgnoreCase) || 
-                    itemN.Equals("ThanhGo", System.StringComparison.OrdinalIgnoreCase) ||
-                    itemN.Equals("wood_stack", System.StringComparison.OrdinalIgnoreCase))
+                    itemN.Equals("ThanhGo", System.StringComparison.OrdinalIgnoreCase))
                 {
                     woodCount += count;
                 }
@@ -1900,8 +1893,7 @@ public class PlayerHUDController : MonoBehaviour
                 tooltipElement.style.top = evt.position.y + 15f;
             }
             else if ((itemName.Equals("WoodLog", System.StringComparison.OrdinalIgnoreCase) || 
-                      itemName.Equals("ThanhGo", System.StringComparison.OrdinalIgnoreCase) ||
-                      itemName.Equals("wood_stack", System.StringComparison.OrdinalIgnoreCase)) && 
+                      itemName.Equals("ThanhGo", System.StringComparison.OrdinalIgnoreCase)) && 
                      tooltipElement != null)
             {
                 tooltipTitle.text = "THANH GỖ";
@@ -2792,10 +2784,10 @@ public class PlayerHUDController : MonoBehaviour
             // Apply Glassmorphism layout & styling
             coopBuildContainer.style.position = Position.Absolute;
             coopBuildContainer.style.left = Length.Percent(50f);
-            coopBuildContainer.style.top = 20;
-            coopBuildContainer.style.translate = new Translate(Length.Percent(-50f), Length.Percent(0f), 0f);
+            coopBuildContainer.style.top = Length.Percent(50f);
+            coopBuildContainer.style.translate = new Translate(Length.Percent(-50f), Length.Percent(-50f), 0f);
             coopBuildContainer.style.width = 460;
-            coopBuildContainer.style.height = 140;
+            coopBuildContainer.style.height = 300;
             coopBuildContainer.style.backgroundColor = new Color(0.07f, 0.07f, 0.1f, 0.9f); // Translucent deep grey-blue
             coopBuildContainer.style.borderTopWidth = 1.5f;
             coopBuildContainer.style.borderBottomWidth = 1.5f;
@@ -2811,21 +2803,29 @@ public class PlayerHUDController : MonoBehaviour
             coopBuildContainer.style.borderBottomRightRadius = 16;
             coopBuildContainer.style.paddingLeft = 24;
             coopBuildContainer.style.paddingRight = 24;
-            coopBuildContainer.style.paddingTop = 16;
-            coopBuildContainer.style.paddingBottom = 16;
+            coopBuildContainer.style.paddingTop = 20;
+            coopBuildContainer.style.paddingBottom = 20;
             coopBuildContainer.style.flexDirection = FlexDirection.Column;
-            coopBuildContainer.style.justifyContent = Justify.SpaceEvenly;
+            coopBuildContainer.style.justifyContent = Justify.SpaceBetween;
             coopBuildContainer.style.alignItems = Align.Center;
 
-            // 2. Description/Instruction Text
-            Label descLabel = new Label("Hãy gọi thêm bạn của bạn vào ấn space");
-            descLabel.style.color = new Color(0.95f, 0.95f, 0.95f, 1f);
-            descLabel.style.fontSize = 16;
-            descLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
+            // 2. Title Element
+            Label titleLabel = new Label("HỢP LỰC XÂY CẦU");
+            titleLabel.style.color = new Color(0.95f, 0.6f, 0.1f, 1f); // Vibrant orange gold
+            titleLabel.style.fontSize = 22;
+            titleLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
+            titleLabel.style.letterSpacing = 1.5f;
+            coopBuildContainer.Add(titleLabel);
+
+            // 3. Description/Instruction
+            Label descLabel = new Label("Hãy click liên tục vào nút bên dưới để tăng tiến độ!\nCần nhiều người cùng click để vượt qua tốc độ giảm dần.");
+            descLabel.style.color = new Color(0.7f, 0.7f, 0.75f, 1f);
+            descLabel.style.fontSize = 12;
             descLabel.style.unityTextAlign = TextAnchor.MiddleCenter;
+            descLabel.style.marginBottom = 10;
             coopBuildContainer.Add(descLabel);
 
-            // 3. Progress bar container
+            // 4. Progress bar container
             VisualElement progressBarBg = new VisualElement();
             progressBarBg.style.width = Length.Percent(100f);
             progressBarBg.style.height = 32;
@@ -2869,9 +2869,54 @@ public class PlayerHUDController : MonoBehaviour
 
             coopBuildContainer.Add(progressBarBg);
 
-            // Instantiate coopBuildClickButton but do not add it for compilation and action compatibility
+            // 5. Large Clicker Button
             coopBuildClickButton = new Button();
+            coopBuildClickButton.text = "CLICK ĐỂ XÂY CẦU!";
+            coopBuildClickButton.style.width = 340;
+            coopBuildClickButton.style.height = 54;
+            coopBuildClickButton.style.backgroundColor = new Color(0.9f, 0.35f, 0.0f, 1f); // Rich brand orange
+            coopBuildClickButton.style.color = Color.white;
+            coopBuildClickButton.style.fontSize = 18;
+            coopBuildClickButton.style.unityFontStyleAndWeight = FontStyle.Bold;
+            coopBuildClickButton.style.borderTopLeftRadius = 27;
+            coopBuildClickButton.style.borderTopRightRadius = 27;
+            coopBuildClickButton.style.borderBottomLeftRadius = 27;
+            coopBuildClickButton.style.borderBottomRightRadius = 27;
+            coopBuildClickButton.style.borderTopWidth = 0f;
+            coopBuildClickButton.style.borderBottomWidth = 0f;
+            coopBuildClickButton.style.borderLeftWidth = 0f;
+            coopBuildClickButton.style.borderRightWidth = 0f;
+            coopBuildClickButton.style.transitionProperty = new System.Collections.Generic.List<StylePropertyName> { new StylePropertyName("scale"), new StylePropertyName("background-color") };
+            coopBuildClickButton.style.transitionDuration = new System.Collections.Generic.List<TimeValue> { new TimeValue(0.1f) };
+
+            // Hover and Active pointer events for micro-animations
+            coopBuildClickButton.RegisterCallback<PointerEnterEvent>(evt =>
+            {
+                coopBuildClickButton.style.backgroundColor = new Color(1.0f, 0.45f, 0.1f, 1f);
+                coopBuildClickButton.style.scale = new Scale(new Vector3(1.04f, 1.04f, 1f));
+            });
+            coopBuildClickButton.RegisterCallback<PointerLeaveEvent>(evt =>
+            {
+                coopBuildClickButton.style.backgroundColor = new Color(0.9f, 0.35f, 0.0f, 1f);
+                coopBuildClickButton.style.scale = new Scale(new Vector3(1.0f, 1.0f, 1f));
+            });
+            coopBuildClickButton.RegisterCallback<PointerDownEvent>(evt =>
+            {
+                coopBuildClickButton.style.scale = new Scale(new Vector3(0.96f, 0.96f, 1f));
+            });
+            coopBuildClickButton.RegisterCallback<PointerUpEvent>(evt =>
+            {
+                coopBuildClickButton.style.scale = new Scale(new Vector3(1.04f, 1.04f, 1f));
+            });
+
             coopBuildClickButton.clicked += OnBuildButtonClicked;
+            coopBuildContainer.Add(coopBuildClickButton);
+
+            // 6. Close hint text
+            Label closeLabel = new Label("Ấn phím [F] để thoát");
+            closeLabel.style.color = new Color(0.5f, 0.5f, 0.55f, 1f);
+            closeLabel.style.fontSize = 11;
+            coopBuildContainer.Add(closeLabel);
 
             root.Add(coopBuildContainer);
         }
@@ -2880,50 +2925,14 @@ public class PlayerHUDController : MonoBehaviour
         isCoopBuildingUIOpen = true;
         isAnyUIOpen = true;
 
-        // Disable local player controller and reset movement state
-        var playerBehavior = LocalPlayerTarget as MonoBehaviour;
-        if (playerBehavior != null)
+        if (LocalPlayerTarget != null)
         {
-            var rb = playerBehavior.GetComponent<Rigidbody>();
-            if (rb != null)
-            {
-                rb.linearVelocity = new Vector3(0f, rb.linearVelocity.y, 0f);
-            }
-
-            var animComponent = playerBehavior.GetComponent<Animator>();
-            if (animComponent == null) animComponent = playerBehavior.GetComponentInChildren<Animator>();
-            if (animComponent != null && animComponent.isActiveAndEnabled && animComponent.runtimeAnimatorController != null)
-            {
-                animComponent.SetFloat("Speed", 0f);
-                animComponent.SetFloat("InputX", 0f);
-                animComponent.SetFloat("InputZ", 0f);
-            }
-
-            // Sync zero movement over network before disabling the controller script
-            if (playerBehavior is LeoPlayer leo)
-            {
-                if (leo.netMoveX != null) leo.netMoveX.Value = 0f;
-                if (leo.netMoveZ != null) leo.netMoveZ.Value = 0f;
-                if (leo.netSpeed != null) leo.netSpeed.Value = 0f;
-            }
-            else if (playerBehavior is ArthurPlayer arthur)
-            {
-                if (arthur.netMoveX != null) arthur.netMoveX.Value = 0f;
-                if (arthur.netMoveZ != null) arthur.netMoveZ.Value = 0f;
-                if (arthur.netSpeed != null) arthur.netSpeed.Value = 0f;
-            }
-            else if (playerBehavior is ElenaPlayer elena)
-            {
-                if (elena.netMoveX != null) elena.netMoveX.Value = 0f;
-                if (elena.netMoveZ != null) elena.netMoveZ.Value = 0f;
-            }
-            else if (playerBehavior is MayaPlayer maya)
-            {
-                if (maya.netMoveX != null) maya.netMoveX.Value = 0f;
-                if (maya.netMoveZ != null) maya.netMoveZ.Value = 0f;
-            }
-
-            playerBehavior.enabled = false;
+            LocalPlayerTarget.SetCursorLock(false);
+        }
+        else
+        {
+            UnityEngine.Cursor.lockState = CursorLockMode.None;
+            UnityEngine.Cursor.visible = true;
         }
 
         // Initialize progress view immediately
@@ -2945,11 +2954,14 @@ public class PlayerHUDController : MonoBehaviour
         isAnyUIOpen = false;
         activeBridgeTrigger = null;
 
-        // Re-enable local player controller
-        var playerBehavior = LocalPlayerTarget as MonoBehaviour;
-        if (playerBehavior != null)
+        if (LocalPlayerTarget != null)
         {
-            playerBehavior.enabled = true;
+            LocalPlayerTarget.SetCursorLock(true);
+        }
+        else
+        {
+            UnityEngine.Cursor.lockState = CursorLockMode.Locked;
+            UnityEngine.Cursor.visible = false;
         }
     }
 
