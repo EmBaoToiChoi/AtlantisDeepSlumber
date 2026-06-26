@@ -9,6 +9,7 @@ public class WoodLogObjectPool : MonoBehaviour
     public int initialPoolSize = 20;
 
     private GameObject woodPrefab;
+    public GameObject WoodPrefab => woodPrefab;
     private Queue<GameObject> poolQueue = new Queue<GameObject>();
     private HashSet<GameObject> activeObjects = new HashSet<GameObject>();
     
@@ -49,23 +50,29 @@ public class WoodLogObjectPool : MonoBehaviour
 
     private void ResolvePrefab()
     {
-        // Thử tìm prefab "firewood_single" hoặc "WoodLog" từ Resources
-        woodPrefab = Resources.Load<GameObject>("firewood_single");
+        // Thử tìm prefab "wood_stack", "firewood_single" hoặc "WoodLog" từ Resources
+        woodPrefab = Resources.Load<GameObject>("wood_stack");
+        if (woodPrefab == null)
+        {
+            woodPrefab = Resources.Load<GameObject>("firewood_single");
+        }
         if (woodPrefab == null)
         {
             woodPrefab = Resources.Load<GameObject>("WoodLog");
         }
 
         // Nếu chưa tìm thấy, duyệt danh sách NetworkPrefabs của NetworkManager
-        if (woodPrefab == null && NetworkManager.Singleton != null && NetworkManager.Singleton.NetworkConfig != null)
+        if (woodPrefab == null && NetworkManager.Singleton != null && NetworkManager.Singleton.NetworkConfig != null && NetworkManager.Singleton.NetworkConfig.Prefabs != null && NetworkManager.Singleton.NetworkConfig.Prefabs.Prefabs != null)
         {
             foreach (var networkPrefab in NetworkManager.Singleton.NetworkConfig.Prefabs.Prefabs)
             {
                 if (networkPrefab.Prefab != null)
                 {
                     var col = networkPrefab.Prefab.GetComponent<CollectibleItemDrop>();
-                    if (col != null && (col.itemName.Equals("WoodLog", System.StringComparison.OrdinalIgnoreCase) || 
-                                        col.itemName.Equals("ThanhGo", System.StringComparison.OrdinalIgnoreCase)))
+                    if (col != null && (col.itemName.Equals("wood_stack", System.StringComparison.OrdinalIgnoreCase) ||
+                                        col.itemName.Equals("WoodLog", System.StringComparison.OrdinalIgnoreCase) || 
+                                        col.itemName.Equals("ThanhGo", System.StringComparison.OrdinalIgnoreCase) ||
+                                        networkPrefab.Prefab.name.ToLower().Contains("wood_stack")))
                     {
                         woodPrefab = networkPrefab.Prefab;
                         break;
@@ -116,8 +123,48 @@ public class WoodLogObjectPool : MonoBehaviour
     /// </summary>
     public GameObject GetOrCreate(GameObject requestedPrefab, Vector3 position, Quaternion rotation)
     {
-        // Đảm bảo prefab khớp
-        if (woodPrefab == null && requestedPrefab != null)
+        // Nếu thay đổi prefab yêu cầu, tái tạo lại toàn bộ pool với prefab mới
+        if (requestedPrefab != null && woodPrefab != null && requestedPrefab != woodPrefab)
+        {
+            Debug.Log($"[WoodLogObjectPool] Phát hiện thay đổi prefab yêu cầu: {woodPrefab.name} -> {requestedPrefab.name}. Đang cấu hình lại pool...");
+
+            // 1. Hủy bỏ Handler cũ trên Netcode
+            if (isHandlerRegistered && NetworkManager.Singleton != null)
+            {
+                var oldNetObj = woodPrefab.GetComponent<NetworkObject>();
+                if (oldNetObj != null)
+                {
+                    NetworkManager.Singleton.PrefabHandler.RemoveHandler(oldNetObj);
+                }
+                isHandlerRegistered = false;
+            }
+
+            // 2. Hủy các đối tượng cũ trong poolQueue
+            while (poolQueue.Count > 0)
+            {
+                GameObject oldObj = poolQueue.Dequeue();
+                if (oldObj != null)
+                {
+                    Destroy(oldObj);
+                }
+            }
+
+            // Cũng hủy các đối tượng đang active cũ
+            foreach (var actObj in activeObjects)
+            {
+                if (actObj != null)
+                {
+                    Destroy(actObj);
+                }
+            }
+            activeObjects.Clear();
+
+            // 3. Thiết lập prefab mới và khởi tạo lại pool
+            woodPrefab = requestedPrefab;
+            InitializePool();
+            RegisterNetworkHandler();
+        }
+        else if (woodPrefab == null && requestedPrefab != null)
         {
             woodPrefab = requestedPrefab;
             InitializePool();
