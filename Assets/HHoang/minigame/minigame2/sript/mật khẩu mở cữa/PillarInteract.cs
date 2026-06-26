@@ -10,8 +10,8 @@ public class PillarInteract : NetworkBehaviour
     public NetworkVariable<int> currentDirection = new NetworkVariable<int>(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
     [Header("Rotation Settings")]
-    [Tooltip("Thời gian (giây) để trụ xoay xong 1 mặt. Càng to xoay càng chậm.")]
-    [SerializeField] private float rotationDuration = 1f; 
+    [Tooltip("Thời gian (giây) để trụ xoay xong 1 mặt 90 độ. Nhập 1 = 1s, 10 = 10s.")]
+    public float rotationDuration = 3f; 
 
     [Header("Visual Effects")]
     [SerializeField] private ParticleSystem dustEffect; 
@@ -20,7 +20,10 @@ public class PillarInteract : NetworkBehaviour
     [SerializeField] private PuzzleManager puzzleManager; 
 
     private bool isPlayerNearby = false;
-    private bool isRotating = false; 
+    
+    // KHÓA THAO TÁC TOÀN CỤC BẰNG THỜI GIAN CHUNG (STATIC)
+    private static float clientNextAllowedTime = 0f; 
+    private static float serverNextAllowedTime = 0f; 
     
     private float initialXRotation;
     private float initialZRotation;
@@ -61,9 +64,13 @@ public class PillarInteract : NetworkBehaviour
 
     void Update()
     {
-        // Kiểm tra điều kiện: Phải đứng gần, bấm F, và trụ phải ĐANG ĐỨNG IM mới được xoay tiếp
-        if (isPlayerNearby && Input.GetKeyDown(KeyCode.F) && !isRotating)
+        // BƯỚC 1: KHÓA TRÊN MÁY NGƯỜI CHƠI (CLIENT)
+        // Nếu thời gian hiện tại chưa vượt qua mốc cho phép thì phớt lờ nút F
+        if (isPlayerNearby && Input.GetKeyDown(KeyCode.F) && Time.time >= clientNextAllowedTime)
         {
+            // Khóa nút F toàn bộ các trụ khác trên máy này trong [rotationDuration] giây
+            clientNextAllowedTime = Time.time + rotationDuration;
+            
             RequestRotatePillarServerRpc();
         }
     }
@@ -71,7 +78,12 @@ public class PillarInteract : NetworkBehaviour
     [ServerRpc(RequireOwnership = false)]
     private void RequestRotatePillarServerRpc(ServerRpcParams rpcParams = default)
     {
-        if (isRotating) return; 
+        // BƯỚC 2: KHÓA TRÊN MÁY CHỦ (SERVER)
+        // Phòng hờ 4 người ở 4 máy bấm cùng 1 lúc, máy chủ chỉ nhận 1 lệnh duy nhất
+        if (Time.time < serverNextAllowedTime) return; 
+        
+        // Máy chủ bắt đầu khóa nhận lệnh từ các trụ khác
+        serverNextAllowedTime = Time.time + rotationDuration;
         
         // Server thay đổi giá trị mạng (0 -> 1 -> 2 -> 3 -> 0)
         currentDirection.Value = (currentDirection.Value + 1) % 4;
@@ -92,23 +104,15 @@ public class PillarInteract : NetworkBehaviour
         
         // Kích hoạt hiệu ứng xoay từ từ
         StartCoroutine(AnimateRotation(targetRot, newValue));
-
-        // CHỈ SERVER: Quét đáp án ngay khi mạng xác nhận xong số mới
-        if (IsServer && puzzleManager != null)
-        {
-            puzzleManager.CheckPuzzle();
-        }
     }
 
     private IEnumerator AnimateRotation(Quaternion targetRot, int finalDirectionValue)
     {
-        isRotating = true; // Khóa tương tác, không cho bấm F khi đang xoay dở
         if (dustEffect != null) dustEffect.Play();
 
         Quaternion startRot = transform.rotation;
         float elapsedTime = 0f;
         
-        // Chống lỗi ông lỡ nhập rotationDuration bằng 0 gây "lật luôn"
         float actualDuration = Mathf.Max(0.1f, rotationDuration);
 
         while (elapsedTime < actualDuration)
@@ -129,7 +133,14 @@ public class PillarInteract : NetworkBehaviour
         SetRotationFromDirection(finalDirectionValue);
 
         if (dustEffect != null) dustEffect.Stop();
-        isRotating = false; // Mở khóa tương tác
+
+        // ==========================================
+        // CHỈ SERVER: Quét đáp án ngay khi ĐÃ XOAY XONG
+        // ==========================================
+        if (IsServer && puzzleManager != null)
+        {
+            puzzleManager.CheckPuzzle();
+        }
     }
 
     private void SetRotationFromDirection(int direction)
