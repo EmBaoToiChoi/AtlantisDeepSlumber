@@ -952,16 +952,17 @@ public class BridgeCollapseTrigger : NetworkBehaviour
         // Nếu đang trong chế độ Z-scale growth và đã tạo solidInstance
         if (solidBridgeInstance != null)
         {
-            float localLength = GetBridgeLocalLength();
+            float minZ, maxZ;
+            GetBridgeLocalBounds(out minZ, out maxZ);
+            float localLength = maxZ - minZ;
             float progressFactor = progress / 100f;
             
             // Tính toán vị trí của rìa đang xây dựng (leading edge)
-            // Đầu cầu ở -localLength/2, cuối cầu ở +localLength/2
-            // Điểm đang xây ở: -localLength/2 + localLength * progressFactor
+            // Rìa đang xây ở vị trí: minZ + localLength * progressFactor
             Vector3 leadingEdgeLocal = new Vector3(
                 Random.Range(-1.2f, 1.2f), // Ngẫu nhiên theo chiều rộng cầu
                 0.2f,                      // Hơi cao hơn mặt cầu
-                localLength * (-0.5f + progressFactor)
+                minZ + localLength * progressFactor
             );
             
             worldPos = solidBridgeInstance.transform.TransformPoint(leadingEdgeLocal);
@@ -1567,19 +1568,24 @@ public class BridgeCollapseTrigger : NetworkBehaviour
         clippingMaterials.Clear();
     }
 
-    private float GetBridgeLocalLength()
+    private void GetBridgeLocalBounds(out float minZ, out float maxZ)
     {
-        if (mainBridgeObject == null) return 10f;
+        minZ = -5f;
+        maxZ = 5f;
+        if (mainBridgeObject == null) return;
 
         MeshFilter[] mfs = mainBridgeObject.GetComponentsInChildren<MeshFilter>(true);
         foreach (var mf in mfs)
         {
             if (mf != null && mf.sharedMesh != null)
             {
-                return mf.sharedMesh.bounds.size.z * mf.transform.localScale.z;
+                float centerZ = mf.sharedMesh.bounds.center.z * mf.transform.localScale.z;
+                float extentsZ = mf.sharedMesh.bounds.extents.z * mf.transform.localScale.z;
+                minZ = centerZ - extentsZ;
+                maxZ = centerZ + extentsZ;
+                return;
             }
         }
-        return 10f;
     }
 
     private void UpdateProgressiveBridgeScale(float progress)
@@ -1699,9 +1705,10 @@ public class BridgeCollapseTrigger : NetworkBehaviour
             }
         }
 
-        // 1. Cập nhật Clip Threshold trên các vật liệu để hiển thị dần dần không kéo dãn (local Z đi từ -length/2 đến +length/2)
-        float localLength = GetBridgeLocalLength();
-        float clipThreshold = localLength * (-0.5f + progressFactor);
+        // 1. Cập nhật Clip Threshold trên các vật liệu để hiển thị dần dần không kéo dãn (local Z đi từ minZ đến maxZ)
+        float minZ, maxZ;
+        GetBridgeLocalBounds(out minZ, out maxZ);
+        float clipThreshold = Mathf.Lerp(minZ, maxZ, progressFactor);
         foreach (var mat in clippingMaterials)
         {
             if (mat != null)
