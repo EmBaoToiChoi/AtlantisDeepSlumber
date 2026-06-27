@@ -2984,13 +2984,20 @@ public class PlayerHUDController : MonoBehaviour
             else
             {
                 // Reset to default
-                int idx = lastSelectedProfileIndex;
-                if (idx >= 0 && idx < hudProfiles.Count)
+                if (hudProfiles != null && hudProfiles.Count > 0)
                 {
-                    var profile = hudProfiles[idx];
-                    if (profile.weapon1Sprite != null)
+                    int idx = lastSelectedProfileIndex;
+                    if (hudProfiles.Count == 1)
                     {
-                        weaponImg1.style.backgroundImage = new StyleBackground(profile.weapon1Sprite);
+                        idx = 0;
+                    }
+                    if (idx >= 0 && idx < hudProfiles.Count)
+                    {
+                        var profile = hudProfiles[idx];
+                        if (profile.weapon1Sprite != null)
+                        {
+                            weaponImg1.style.backgroundImage = new StyleBackground(profile.weapon1Sprite);
+                        }
                     }
                 }
             }

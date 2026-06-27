@@ -7170,8 +7170,13 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             if (collectible != null) collectible.ConfirmCollect();
             else
             {
-                var repair = pendingPickItem.GetComponent<RepairItemDrop>();
-                if (repair != null) repair.ConfirmCollect();
+                var axe = pendingPickItem.GetComponent<AxeItem>();
+                if (axe != null) axe.ConfirmPickup(gameObject);
+                else
+                {
+                    var repair = pendingPickItem.GetComponent<RepairItemDrop>();
+                    if (repair != null) repair.ConfirmCollect();
+                }
             }
             pendingPickItem = null;
         }
@@ -7705,20 +7710,37 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     public void RequestDropWoodLog()
     {
-        Vector3 spawnPos = transform.position + transform.forward * 1.5f + Vector3.up * 0.5f;
-        if (Physics.Raycast(spawnPos, Vector3.down, out RaycastHit hit, 5f))
+        var carrier = GetComponent<PlayerLogCarrier>();
+        string carriedPrefab = carrier != null ? carrier.carriedLogPrefabName : "";
+        int amount = carrier != null ? carrier.carriedLogCount : 1;
+
+        float groundY = transform.position.y;
+        Vector3 spawnPos = transform.position + transform.forward * 1.5f + Vector3.up * 1.2f;
+        Vector3 rayStart = new Vector3(spawnPos.x, transform.position.y + 3f, spawnPos.z);
+        int layerMask = ~LayerMask.GetMask("Player", "Ignore Raycast");
+        if (Physics.Raycast(rayStart, Vector3.down, out RaycastHit hit, 6f, layerMask))
         {
-            spawnPos.y = hit.point.y + 0.3f;
+            if (hit.collider.gameObject != gameObject && !hit.collider.name.ToLower().Contains("player"))
+            {
+                groundY = hit.point.y;
+            }
         }
+        spawnPos.y = groundY + 0.6f;
 
         if (isStandaloneMode)
         {
-            GameObject logPrefab = Resources.Load<GameObject>("firewood_single");
+            GameObject logPrefab = null;
+            if (!string.IsNullOrEmpty(carriedPrefab)) logPrefab = Resources.Load<GameObject>(carriedPrefab);
+            if (logPrefab == null && WoodLogObjectPool.Instance != null && WoodLogObjectPool.Instance.WoodPrefab != null)
+            {
+                logPrefab = WoodLogObjectPool.Instance.WoodPrefab;
+            }
+            if (logPrefab == null) logPrefab = Resources.Load<GameObject>("wood_stack");
+            if (logPrefab == null) logPrefab = Resources.Load<GameObject>("firewood_single");
             if (logPrefab == null) logPrefab = Resources.Load<GameObject>("WoodLog");
+
             if (logPrefab != null)
             {
-                var carrier = GetComponent<PlayerLogCarrier>();
-                int amount = carrier != null ? carrier.carriedLogCount : 1;
                 GameObject wood = WoodLogObjectPool.Instance.GetOrCreate(logPrefab, spawnPos, Quaternion.identity);
                 var cid = wood.GetComponent<CollectibleItemDrop>();
                 if (cid != null)
@@ -7726,24 +7748,28 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
                     cid.localWoodAmount = amount;
                 }
             }
-            var carrierObj = GetComponent<PlayerLogCarrier>();
-            if (carrierObj != null) carrierObj.DropLog();
+            if (carrier != null) carrier.DropLog();
         }
         else if (IsOwner)
         {
-            var carrier = GetComponent<PlayerLogCarrier>();
-            int amount = carrier != null ? carrier.carriedLogCount : 1;
             if (carrier != null) carrier.DropLog();
-            DropWoodLogServerRpc(spawnPos, amount);
+            DropWoodLogServerRpc(spawnPos, amount, carriedPrefab);
         }
     }
 
     [ServerRpc]
-    private void DropWoodLogServerRpc(Vector3 position, int amount)
+    private void DropWoodLogServerRpc(Vector3 position, int amount, string prefabName)
     {
         if (!IsServer) return;
 
-        GameObject logPrefab = Resources.Load<GameObject>("firewood_single");
+        GameObject logPrefab = null;
+        if (!string.IsNullOrEmpty(prefabName)) logPrefab = Resources.Load<GameObject>(prefabName);
+        if (logPrefab == null && WoodLogObjectPool.Instance != null && WoodLogObjectPool.Instance.WoodPrefab != null)
+        {
+            logPrefab = WoodLogObjectPool.Instance.WoodPrefab;
+        }
+        if (logPrefab == null) logPrefab = Resources.Load<GameObject>("wood_stack");
+        if (logPrefab == null) logPrefab = Resources.Load<GameObject>("firewood_single");
         if (logPrefab == null) logPrefab = Resources.Load<GameObject>("WoodLog");
 
         if (logPrefab != null)

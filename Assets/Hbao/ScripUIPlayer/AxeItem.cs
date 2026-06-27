@@ -1,5 +1,6 @@
 using UnityEngine;
 using Unity.Netcode;
+using System.Collections;
 
 public class AxeItem : NetworkBehaviour
 {
@@ -81,15 +82,8 @@ public class AxeItem : NetworkBehaviour
                         var hud = FindAnyObjectByType<PlayerHUDController>();
                         if (hud != null) hud.ShowInteractionPrompt(false, "");
 
-                        if (isNetwork)
-                        {
-                            ulong localNetId = playerObj.GetComponent<NetworkObject>().NetworkObjectId;
-                            RequestPickupServerRpc(localNetId);
-                        }
-                        else
-                        {
-                            PickupLocal(playerObj.gameObject);
-                        }
+                        SetPendingPickItem(playerObj.gameObject, gameObject);
+                        PlayPickupAnimation(playerObj.gameObject);
                     }
                 }
                 else
@@ -165,8 +159,14 @@ public class AxeItem : NetworkBehaviour
         // Đặt lại vị trí rơi
         if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(lastCarrierId, out NetworkObject playerNetObj))
         {
-            transform.position = playerNetObj.transform.position + playerNetObj.transform.forward * 1.2f + Vector3.up * 0.5f;
+            transform.position = playerNetObj.transform.position + playerNetObj.transform.forward * 1.2f + Vector3.up * 1.3f;
             transform.rotation = Quaternion.identity;
+        }
+
+        if (rb != null)
+        {
+            rb.linearVelocity = Vector3.zero;
+            rb.angularVelocity = Vector3.zero;
         }
     }
 
@@ -258,8 +258,14 @@ public class AxeItem : NetworkBehaviour
         {
             // Rìu được thả xuống đất
             transform.SetParent(null);
+            transform.localScale = originalWorldScale;
             
-            if (rb != null) rb.isKinematic = false;
+            if (rb != null)
+            {
+                rb.isKinematic = false;
+                rb.linearVelocity = Vector3.zero;
+                rb.angularVelocity = Vector3.zero;
+            }
             foreach (var col in colliders) if (col != null) col.enabled = true;
 
             isCarryingLocally = false;
@@ -271,13 +277,21 @@ public class AxeItem : NetworkBehaviour
     private void PickupLocal(GameObject player)
     {
         Debug.Log($"[AxeItem] PickupLocal bat dau, player: {player.name}");
-        // Phá hủy component NetworkObject cục bộ để tránh lỗi cảnh báo của Netcode khi SetParent offline
+        // Phá hủy component NetworkObject cục bộ bằng Destroy thay vì DestroyImmediate để tránh lỗi trong Animation Event callback
         var netObj = GetComponent<NetworkObject>();
         if (netObj != null)
         {
-            Debug.Log("[AxeItem] Huy NetworkObject offline bang DestroyImmediate");
-            DestroyImmediate(netObj);
+            Debug.Log("[AxeItem] Huy NetworkObject offline bang Destroy");
+            Destroy(netObj);
         }
+
+        StartCoroutine(DeferredPickupLocal(player));
+    }
+
+    private IEnumerator DeferredPickupLocal(GameObject player)
+    {
+        // Chờ đến cuối khung hình/khung hình tiếp theo để NetworkObject thực sự được dọn dẹp khỏi GameObject
+        yield return null;
 
         localPlayerCarrier = player;
         isCarryingLocally = true;
@@ -339,10 +353,16 @@ public class AxeItem : NetworkBehaviour
             }
 
             transform.SetParent(null);
-            transform.position = localPlayerCarrier.transform.position + localPlayerCarrier.transform.forward * 1.2f + Vector3.up * 0.5f;
+            transform.position = localPlayerCarrier.transform.position + localPlayerCarrier.transform.forward * 1.2f + Vector3.up * 1.3f;
             transform.rotation = Quaternion.identity;
+            transform.localScale = originalWorldScale;
 
-            if (rb != null) rb.isKinematic = false;
+            if (rb != null)
+            {
+                rb.isKinematic = false;
+                rb.linearVelocity = Vector3.zero;
+                rb.angularVelocity = Vector3.zero;
+            }
             foreach (var col in colliders) if (col != null) col.enabled = true;
 
             localPlayerCarrier = null;
@@ -399,5 +419,69 @@ public class AxeItem : NetworkBehaviour
         {
             transform.localScale = relativeLocalScale;
         }
+    }
+
+    private void PlayPickupAnimation(GameObject player)
+    {
+        if (player == null) return;
+
+        var leo = player.GetComponent<LeoPlayer>();
+        if (leo != null)
+        {
+            leo.PlayAnimation("Pick", 0.1f);
+            return;
+        }
+
+        var arthur = player.GetComponent<ArthurPlayer>();
+        if (arthur != null)
+        {
+            arthur.PlayAnimation("Idle_Pick", 0.1f);
+            return;
+        }
+
+        var elena = player.GetComponent<ElenaPlayer>();
+        if (elena != null)
+        {
+            elena.PlayAnimation("Idle_Pick", 0.1f);
+            return;
+        }
+
+        var maya = player.GetComponent<MayaPlayer>();
+        if (maya != null)
+        {
+            maya.PlayAnimation("Idle_Pick", 0.1f);
+            return;
+        }
+    }
+
+    public void ConfirmPickup(GameObject player)
+    {
+        if (player == null) return;
+
+        bool isNetwork = Unity.Netcode.NetworkManager.Singleton != null && Unity.Netcode.NetworkManager.Singleton.IsListening;
+        if (isNetwork)
+        {
+            ulong localNetId = player.GetComponent<NetworkObject>().NetworkObjectId;
+            RequestPickupServerRpc(localNetId);
+        }
+        else
+        {
+            PickupLocal(player);
+        }
+    }
+
+    private void SetPendingPickItem(GameObject player, GameObject item)
+    {
+        var leo = player.GetComponent<LeoPlayer>();
+        if (leo != null) { leo.pendingPickItem = item; return; }
+
+        var arthur = player.GetComponent<ArthurPlayer>();
+        if (arthur != null) { arthur.pendingPickItem = item; return; }
+
+        var elena = player.GetComponent<ElenaPlayer>();
+        if (elena != null) { elena.pendingPickItem = item; return; }
+
+        var maya = player.GetComponent<MayaPlayer>();
+        if (maya != null) { maya.pendingPickItem = item; return; }
     }
 }

@@ -734,6 +734,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   isCarrying: 0
   carriedLogCount: 1
+  carriedLogPrefabName: 
   carryTargetTransform: {fileID: 3742891140500320045}
 --- !u!114 &7119030225722222579
 MonoBehaviour:
@@ -884,7 +885,7 @@ Transform:
   m_GameObject: {fileID: 2853842108438221816}
   serializedVersion: 2
   m_LocalRotation: {x: 0.5, y: -0.5, z: 0.5, w: -0.5}
-  m_LocalPosition: {x: 0, y: 0.00099, z: 0.00329}
+  m_LocalPosition: {x: -0, y: 0.00208, z: 0.00368}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -959,8 +960,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 7926716080157890574}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.000000014901159, y: -0.5066086, z: 0.0000000372529, w: 0.8621762}
-  m_LocalPosition: {x: -1.09139364e-10, y: 0.0008500005, z: 0.00035000144}
+  m_LocalRotation: {x: 0.33149102, y: -0.53705555, z: -0.6200175, w: -0.46611524}
+  m_LocalPosition: {x: -0.00472, y: 0.00107, z: 0.00208}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
