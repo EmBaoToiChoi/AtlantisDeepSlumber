@@ -829,11 +829,8 @@ public class BridgeCollapseTrigger : NetworkBehaviour
             // Xóa danh sách lưu cũ
             savedRenderers.Clear();
             savedMaterials.Clear();
-            ghostClippingMaterials.Clear();
 
-            Shader clippingShader = Shader.Find("Custom/BridgeClipping");
-
-            // Lưu và thay thế material của toàn bộ Renderer con
+            // Lưu material của toàn bộ Renderer con và tắt renderer để ẩn hoàn toàn cầu ghost
             Renderer[] renderers = bridgeRoot.GetComponentsInChildren<Renderer>(true);
             foreach (var r in renderers)
             {
@@ -841,43 +838,8 @@ public class BridgeCollapseTrigger : NetworkBehaviour
                 {
                     savedRenderers.Add(r);
                     savedMaterials.Add(r.sharedMaterials);
-
-                    Material[] ghostMats = new Material[r.sharedMaterials.Length];
-                    for (int i = 0; i < ghostMats.Length; i++)
-                    {
-                        if (clippingShader != null)
-                        {
-                            Material clipMat = new Material(clippingShader);
-                            clipMat.color = new Color(1f, 1f, 1f, 0.4f);
-                            clipMat.SetFloat("_InvertClip", 1f); // Chỉ hiển thị phần chưa xây của ghost cầu
-                            
-                            clipMat.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
-                            clipMat.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
-                            clipMat.SetFloat("_ZWrite", 0.0f);
-                            
-                            ghostMats[i] = clipMat;
-                            ghostClippingMaterials.Add(clipMat);
-                        }
-                        else
-                        {
-                            if (ghostMaterialInstance == null)
-                            {
-                                ghostMaterialInstance = CreateGhostMaterial(0.4f);
-                            }
-                            ghostMats[i] = ghostMaterialInstance;
-                        }
-                    }
-                    r.materials = ghostMats;
+                    r.enabled = false; // Tắt renderer để ẩn cầu ghost
                 }
-            }
-
-            // Bật root active để hiển thị
-            mainBridgeObject.SetActive(true);
-
-            // Bật toàn bộ Renderers con
-            foreach (var r in mainBridgeObject.GetComponentsInChildren<Renderer>(true))
-            {
-                r.enabled = true;
             }
 
             // Đảm bảo bật tất cả các GameObjects chứa Renderer con (ví dụ các mảnh cầu)
