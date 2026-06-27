@@ -49,6 +49,33 @@ public class AxeItem : NetworkBehaviour
         carryingPlayerId.OnValueChanged -= OnCarrierChanged;
     }
 
+    private IEnumerator WaitAndAlignToCarrier(ulong carrierId, Transform targetParent)
+    {
+        float timeout = 3.0f;
+        float elapsed = 0f;
+        while (transform.parent != targetParent && elapsed < timeout)
+        {
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
+
+        if (transform.parent == targetParent)
+        {
+            transform.localPosition = Vector3.zero;
+            transform.localRotation = Quaternion.identity;
+            
+            if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(carrierId, out NetworkObject playerNetObj))
+            {
+                AdjustScaleToParent(targetParent, playerNetObj.gameObject);
+            }
+            Debug.Log($"[AxeItem] Netcode - Client async parent matched. Da set localPosition = zero. local: {transform.localPosition}");
+        }
+        else
+        {
+            Debug.LogWarning($"[AxeItem] Netcode - Timeout waiting for parent synchronization to {targetParent?.name}!");
+        }
+    }
+
     private void Update()
     {
         // Chỉ chạy cho local player điều khiển giao diện & tương tác nhặt/thả
@@ -68,7 +95,7 @@ public class AxeItem : NetworkBehaviour
                     if (!wasInRange)
                     {
                         wasInRange = true;
-                        var hud = FindAnyObjectByType<PlayerHUDController>();
+                        var hud = PlayerHUDController.Instance;
                         if (hud != null)
                         {
                             hud.ShowInteractionPrompt(true, "Ấn [F] để nhặt Rìu");
@@ -79,7 +106,7 @@ public class AxeItem : NetworkBehaviour
                     {
                         // Ẩn prompt tương tác sau khi nhặt
                         wasInRange = false;
-                        var hud = FindAnyObjectByType<PlayerHUDController>();
+                        var hud = PlayerHUDController.Instance;
                         if (hud != null) hud.ShowInteractionPrompt(false, "");
 
                         SetPendingPickItem(playerObj.gameObject, gameObject);
@@ -91,7 +118,7 @@ public class AxeItem : NetworkBehaviour
                     if (wasInRange)
                     {
                         wasInRange = false;
-                        var hud = FindAnyObjectByType<PlayerHUDController>();
+                        var hud = PlayerHUDController.Instance;
                         if (hud != null) hud.ShowInteractionPrompt(false, "");
                     }
 
@@ -230,11 +257,15 @@ public class AxeItem : NetworkBehaviour
                     if (!isNetwork || IsServer)
                     {
                         transform.SetParent(parentTarget, false);
+                        transform.localPosition = Vector3.zero;
+                        transform.localRotation = Quaternion.identity;
+                        AdjustScaleToParent(parentTarget, playerNetObj.gameObject);
+                        Debug.Log($"[AxeItem] Netcode - Immediate parent match. Da set localPosition = zero. local: {transform.localPosition}, world: {transform.position}");
                     }
-                    transform.localPosition = Vector3.zero;
-                    transform.localRotation = Quaternion.identity;
-                    AdjustScaleToParent(parentTarget, playerNetObj.gameObject);
-                    Debug.Log($"[AxeItem] Netcode - Da set localPosition = zero. local: {transform.localPosition}, world: {transform.position}");
+                    else
+                    {
+                        StartCoroutine(WaitAndAlignToCarrier(carrierId, parentTarget));
+                    }
                 }
                 else
                 {
