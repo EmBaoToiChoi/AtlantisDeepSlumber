@@ -42,6 +42,7 @@ public class BridgeCollapseTrigger : NetworkBehaviour
     private System.Collections.Generic.List<Vector3> originalBoxSizes = new System.Collections.Generic.List<Vector3>();
     private System.Collections.Generic.List<Vector3> originalBoxCenters = new System.Collections.Generic.List<Vector3>();
     private System.Collections.Generic.List<Material> clippingMaterials = new System.Collections.Generic.List<Material>();
+    private System.Collections.Generic.List<Material> ghostClippingMaterials = new System.Collections.Generic.List<Material>();
 
     [Header("Wood Quest Spawning Configuration")]
     [Tooltip("Prefab gỗ để người chơi thu thập (CollectibleItemDrop với itemName = 'WoodLog' hoặc 'ThanhGo')")]
@@ -828,11 +829,9 @@ public class BridgeCollapseTrigger : NetworkBehaviour
             // Xóa danh sách lưu cũ
             savedRenderers.Clear();
             savedMaterials.Clear();
+            ghostClippingMaterials.Clear();
 
-            if (ghostMaterialInstance == null)
-            {
-                ghostMaterialInstance = CreateGhostMaterial(0.4f);
-            }
+            Shader clippingShader = Shader.Find("Custom/BridgeClipping");
 
             // Lưu và thay thế material của toàn bộ Renderer con
             Renderer[] renderers = bridgeRoot.GetComponentsInChildren<Renderer>(true);
@@ -846,7 +845,27 @@ public class BridgeCollapseTrigger : NetworkBehaviour
                     Material[] ghostMats = new Material[r.sharedMaterials.Length];
                     for (int i = 0; i < ghostMats.Length; i++)
                     {
-                        ghostMats[i] = ghostMaterialInstance;
+                        if (clippingShader != null)
+                        {
+                            Material clipMat = new Material(clippingShader);
+                            clipMat.color = new Color(1f, 1f, 1f, 0.4f);
+                            clipMat.SetFloat("_InvertClip", 1f); // Chỉ hiển thị phần chưa xây của ghost cầu
+                            
+                            clipMat.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
+                            clipMat.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+                            clipMat.SetFloat("_ZWrite", 0.0f);
+                            
+                            ghostMats[i] = clipMat;
+                            ghostClippingMaterials.Add(clipMat);
+                        }
+                        else
+                        {
+                            if (ghostMaterialInstance == null)
+                            {
+                                ghostMaterialInstance = CreateGhostMaterial(0.4f);
+                            }
+                            ghostMats[i] = ghostMaterialInstance;
+                        }
                     }
                     r.materials = ghostMats;
                 }
@@ -1576,6 +1595,7 @@ public class BridgeCollapseTrigger : NetworkBehaviour
         originalBoxSizes.Clear();
         originalBoxCenters.Clear();
         clippingMaterials.Clear();
+        ghostClippingMaterials.Clear();
     }
 
     private void GetBridgeLocalBounds(out float minVal, out float maxVal, out int axis)
@@ -1752,7 +1772,18 @@ public class BridgeCollapseTrigger : NetworkBehaviour
 
         Debug.Log($"[BridgeCollapseTrigger] Scale progress={progress}%, axis={axis}, minVal={minVal}, maxVal={maxVal}, threshold={clipThreshold}");
 
+        // Cập nhật cho solid bridge (phần đã xây, không invert)
         foreach (var mat in clippingMaterials)
+        {
+            if (mat != null)
+            {
+                mat.SetVector("_ClipAxis", clipAxisVec);
+                mat.SetFloat("_ClipThreshold", clipThreshold);
+            }
+        }
+
+        // Cập nhật cho ghost bridge (phần chưa xây, có invert)
+        foreach (var mat in ghostClippingMaterials)
         {
             if (mat != null)
             {
