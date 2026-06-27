@@ -312,6 +312,11 @@ public class ElementalRockPuzzle : NetworkBehaviour
 
         if (IsNetworkActive)
         {
+            if (IsServer)
+            {
+                netIsShown.Value = !startHidden;
+            }
+
             // Đăng ký sự kiện đồng bộ khi biến mạng thay đổi
             netCurrentStep.OnValueChanged += OnPuzzleStateChanged;
             netIsTimerRunning.OnValueChanged += OnTimerStateChanged;
