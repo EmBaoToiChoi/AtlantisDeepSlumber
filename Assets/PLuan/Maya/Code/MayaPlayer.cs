@@ -414,7 +414,7 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (carrier != null && carrier.isCarrying) return;
 
         if (PlayerLevel < 10 && !IsSkillsUnlocked) return;
-        if (GetActiveWeaponIndex() != 2) return;
+        if (GetActiveWeaponIndex() == 1) return;
         if (eSkillCooldownTimer > 0f) return;
         isETargeting = true;
     }
@@ -637,9 +637,9 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (carrier != null && carrier.isCarrying) return false;
 
         if (PlayerLevel < 15 && !IsSkillsUnlocked) return false;
-        if (GetActiveWeaponIndex() != 2)
+        if (GetActiveWeaponIndex() == 1)
         {
-            Debug.Log("[MayaPlayer] Không thể sử dụng kỹ năng Q khi không cầm vũ khí!");
+            Debug.Log("[MayaPlayer] Không thể sử dụng kỹ năng Q khi đang cầm rìu!");
             return false;
         }
         if (qSkillCooldownTimer > 0f || IsQSkillActive) return false;
@@ -791,7 +791,7 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         if (PlayerLevel < 5 && !IsSkillsUnlocked) return;
 
-        if (GetActiveWeaponIndex() != 1) return;
+        if (GetActiveWeaponIndex() != 0) return;
 
         SetAimingR(true);
     }
