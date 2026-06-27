@@ -5,7 +5,8 @@ Shader "Custom/BridgeClipping"
         _Albedo("Albedo (RGB)", 2D) = "white" {}
         _Normal("Normal Map", 2D) = "bump" {}
         _Specular("Specular Map (RGB)", 2D) = "white" {}
-        _ClipThreshold("Clip Threshold (Local Z)", Float) = 0.0
+        _ClipThreshold("Clip Threshold (Local)", Float) = 0.0
+        _ClipAxis("Clip Axis", Vector) = (0,0,1,0)
         _Color("Color tint", Color) = (1,1,1,1)
     }
 
@@ -56,6 +57,7 @@ Shader "Custom/BridgeClipping"
             CBUFFER_START(UnityPerMaterial)
                 float4 _Albedo_ST;
                 float _ClipThreshold;
+                float4 _ClipAxis;
                 float4 _Color;
             CBUFFER_END
 
@@ -76,8 +78,9 @@ Shader "Custom/BridgeClipping"
 
             half4 frag(Varyings input) : SV_Target
             {
-                // Clip based on local position Z
-                if (input.positionOS.z > _ClipThreshold)
+                // Clip based on the projection onto the clip axis in object space
+                float posVal = dot(input.positionOS.xyz, _ClipAxis.xyz);
+                if (posVal > _ClipThreshold)
                 {
                     discard;
                 }

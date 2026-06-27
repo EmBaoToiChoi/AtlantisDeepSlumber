@@ -952,18 +952,28 @@ public class BridgeCollapseTrigger : NetworkBehaviour
         // Nếu đang trong chế độ Z-scale growth và đã tạo solidInstance
         if (solidBridgeInstance != null)
         {
-            float minZ, maxZ;
-            GetBridgeLocalBounds(out minZ, out maxZ);
-            float localLength = maxZ - minZ;
+            float minVal, maxVal;
+            int axis;
+            GetBridgeLocalBounds(out minVal, out maxVal, out axis);
+            float localLength = maxVal - minVal;
             float progressFactor = progress / 100f;
+
+            // Rìa đang xây ở vị trí tương ứng trên trục dọc
+            float localPosOnAxis = minVal + localLength * progressFactor;
             
-            // Tính toán vị trí của rìa đang xây dựng (leading edge)
-            // Rìa đang xây ở vị trí: minZ + localLength * progressFactor
-            Vector3 leadingEdgeLocal = new Vector3(
-                Random.Range(-1.2f, 1.2f), // Ngẫu nhiên theo chiều rộng cầu
-                0.2f,                      // Hơi cao hơn mặt cầu
-                minZ + localLength * progressFactor
-            );
+            Vector3 leadingEdgeLocal = Vector3.zero;
+            if (axis == 0) // X
+            {
+                leadingEdgeLocal = new Vector3(localPosOnAxis, 0.2f, Random.Range(-1.2f, 1.2f));
+            }
+            else if (axis == 1) // Y
+            {
+                leadingEdgeLocal = new Vector3(Random.Range(-1.2f, 1.2f), localPosOnAxis, Random.Range(-1.2f, 1.2f));
+            }
+            else // Z
+            {
+                leadingEdgeLocal = new Vector3(Random.Range(-1.2f, 1.2f), 0.2f, localPosOnAxis);
+            }
             
             worldPos = solidBridgeInstance.transform.TransformPoint(leadingEdgeLocal);
             return worldPos;
@@ -1568,10 +1578,12 @@ public class BridgeCollapseTrigger : NetworkBehaviour
         clippingMaterials.Clear();
     }
 
-    private void GetBridgeLocalBounds(out float minZ, out float maxZ)
+    private void GetBridgeLocalBounds(out float minVal, out float maxVal, out int axis)
     {
-        minZ = -5f;
-        maxZ = 5f;
+        minVal = -5f;
+        maxVal = 5f;
+        axis = 2; // Z
+
         if (mainBridgeObject == null) return;
 
         MeshFilter[] mfs = mainBridgeObject.GetComponentsInChildren<MeshFilter>(true);
@@ -1579,10 +1591,32 @@ public class BridgeCollapseTrigger : NetworkBehaviour
         {
             if (mf != null && mf.sharedMesh != null)
             {
-                float centerZ = mf.sharedMesh.bounds.center.z * mf.transform.localScale.z;
-                float extentsZ = mf.sharedMesh.bounds.extents.z * mf.transform.localScale.z;
-                minZ = centerZ - extentsZ;
-                maxZ = centerZ + extentsZ;
+                var bounds = mf.sharedMesh.bounds;
+                float sizeX = bounds.size.x;
+                float sizeY = bounds.size.y;
+                float sizeZ = bounds.size.z;
+
+                // Tự động tìm trục có kích thước lớn nhất làm trục dọc xây cầu
+                if (sizeX > sizeY && sizeX > sizeZ)
+                {
+                    axis = 0; // X
+                    minVal = bounds.center.x - bounds.extents.x;
+                    maxVal = bounds.center.x + bounds.extents.x;
+                }
+                else if (sizeY > sizeX && sizeY > sizeZ)
+                {
+                    axis = 1; // Y
+                    minVal = bounds.center.y - bounds.extents.y;
+                    maxVal = bounds.center.y + bounds.extents.y;
+                }
+                else
+                {
+                    axis = 2; // Z
+                    minVal = bounds.center.z - bounds.extents.z;
+                    maxVal = bounds.center.z + bounds.extents.z;
+                }
+
+                Debug.Log($"[BridgeCollapseTrigger] Mesh bounds size: X={sizeX}, Y={sizeY}, Z={sizeZ}. Chosen axis={axis}, minVal={minVal}, maxVal={maxVal}");
                 return;
             }
         }
@@ -1705,14 +1739,24 @@ public class BridgeCollapseTrigger : NetworkBehaviour
             }
         }
 
-        // 1. Cập nhật Clip Threshold trên các vật liệu để hiển thị dần dần không kéo dãn (local Z đi từ minZ đến maxZ)
-        float minZ, maxZ;
-        GetBridgeLocalBounds(out minZ, out maxZ);
-        float clipThreshold = Mathf.Lerp(minZ, maxZ, progressFactor);
+        // 1. Cập nhật Clip Threshold trên các vật liệu để hiển thị dần dần không kéo dãn
+        float minVal, maxVal;
+        int axis;
+        GetBridgeLocalBounds(out minVal, out maxVal, out axis);
+        float clipThreshold = Mathf.Lerp(minVal, maxVal, progressFactor);
+
+        Vector4 clipAxisVec = Vector4.zero;
+        if (axis == 0) clipAxisVec = new Vector4(1f, 0f, 0f, 0f);
+        else if (axis == 1) clipAxisVec = new Vector4(0f, 1f, 0f, 0f);
+        else clipAxisVec = new Vector4(0f, 0f, 1f, 0f);
+
+        Debug.Log($"[BridgeCollapseTrigger] Scale progress={progress}%, axis={axis}, minVal={minVal}, maxVal={maxVal}, threshold={clipThreshold}");
+
         foreach (var mat in clippingMaterials)
         {
             if (mat != null)
             {
+                mat.SetVector("_ClipAxis", clipAxisVec);
                 mat.SetFloat("_ClipThreshold", clipThreshold);
             }
         }
@@ -1723,11 +1767,25 @@ public class BridgeCollapseTrigger : NetworkBehaviour
             if (cloneBoxColliders[i] != null && i < originalBoxSizes.Count && i < originalBoxCenters.Count)
             {
                 Vector3 newSize = originalBoxSizes[i];
-                newSize.z = originalBoxSizes[i].z * progressFactor;
-                cloneBoxColliders[i].size = newSize;
-
                 Vector3 newCenter = originalBoxCenters[i];
-                newCenter.z = originalBoxCenters[i].z - (originalBoxSizes[i].z * 0.5f) * (1f - progressFactor);
+
+                if (axis == 0) // X
+                {
+                    newSize.x = originalBoxSizes[i].x * progressFactor;
+                    newCenter.x = originalBoxCenters[i].x - (originalBoxSizes[i].x * 0.5f) * (1f - progressFactor);
+                }
+                else if (axis == 1) // Y
+                {
+                    newSize.y = originalBoxSizes[i].y * progressFactor;
+                    newCenter.y = originalBoxCenters[i].y - (originalBoxSizes[i].y * 0.5f) * (1f - progressFactor);
+                }
+                else // Z
+                {
+                    newSize.z = originalBoxSizes[i].z * progressFactor;
+                    newCenter.z = originalBoxCenters[i].z - (originalBoxSizes[i].z * 0.5f) * (1f - progressFactor);
+                }
+
+                cloneBoxColliders[i].size = newSize;
                 cloneBoxColliders[i].center = newCenter;
             }
         }
