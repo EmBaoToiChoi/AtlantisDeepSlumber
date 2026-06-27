@@ -941,6 +941,29 @@ public class BridgeCollapseTrigger : NetworkBehaviour
     private Vector3 GetRandomBuildPosition()
     {
         Vector3 worldPos = transform.position;
+        
+        bool isNetwork = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
+        float progress = isNetwork ? buildProgress.Value : localBuildProgress;
+
+        // Nếu đang trong chế độ Z-scale growth và đã tạo solidInstance
+        if (solidBridgeInstance != null)
+        {
+            float localLength = GetBridgeLocalLength();
+            float progressFactor = progress / 100f;
+            
+            // Tính toán vị trí của rìa đang xây dựng (leading edge)
+            // Đầu cầu ở -localLength/2, cuối cầu ở +localLength/2
+            // Điểm đang xây ở: -localLength/2 + localLength * progressFactor
+            Vector3 leadingEdgeLocal = new Vector3(
+                Random.Range(-1.2f, 1.2f), // Ngẫu nhiên theo chiều rộng cầu
+                0.2f,                      // Hơi cao hơn mặt cầu
+                localLength * (-0.5f + progressFactor)
+            );
+            
+            worldPos = solidBridgeInstance.transform.TransformPoint(leadingEdgeLocal);
+            return worldPos;
+        }
+
         if (mainBridgeObject != null)
         {
             Renderer[] renderers = mainBridgeObject.GetComponentsInChildren<Renderer>(true);
@@ -1536,6 +1559,21 @@ public class BridgeCollapseTrigger : NetworkBehaviour
         }
     }
 
+    private float GetBridgeLocalLength()
+    {
+        if (mainBridgeObject == null) return 10f;
+
+        MeshFilter[] mfs = mainBridgeObject.GetComponentsInChildren<MeshFilter>(true);
+        foreach (var mf in mfs)
+        {
+            if (mf != null && mf.sharedMesh != null)
+            {
+                return mf.sharedMesh.bounds.size.z * mf.transform.localScale.z;
+            }
+        }
+        return 10f;
+    }
+
     private void UpdateProgressiveBridgeScale(float progress)
     {
         if (mainBridgeObject == null) return;
@@ -1602,6 +1640,15 @@ public class BridgeCollapseTrigger : NetworkBehaviour
         newScale.z = originalLocalScale.z * progressFactor;
 
         solidBridgeInstance.transform.localScale = newScale;
+
+        // Cập nhật Position trong World Space để giữ cố định đầu cầu ở bờ gần (bù trừ do pivot ở giữa)
+        float localLength = GetBridgeLocalLength();
+        Vector3 bridgeForward = originalBridgeRot * Vector3.forward;
+        float worldLength = localLength * originalLocalScale.z;
+
+        Vector3 worldOffset = bridgeForward * (worldLength * 0.5f) * (1f - progressFactor);
+        solidBridgeInstance.transform.position = originalBridgePos - worldOffset;
+        solidBridgeInstance.transform.rotation = originalBridgeRot;
 
         // Bật/tắt hiển thị solidInstance
         bool showSolid = progress > 0.5f;
