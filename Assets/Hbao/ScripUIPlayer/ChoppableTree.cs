@@ -201,27 +201,15 @@ public class ChoppableTree : NetworkBehaviour
 
             if (player != null)
             {
-                // Cận chiến: Bắt buộc phải rút vũ khí (phím 2 -> WeaponIndex == 2)
-                string colNameLower = other.name.ToLower();
-                bool isMeleeWeapon = colNameLower.Contains("weapon") || 
-                                     colNameLower.Contains("blade") || 
-                                     colNameLower.Contains("sword") || 
-                                     colNameLower.Contains("kiem") || 
-                                     colNameLower.Contains("dao") || 
-                                     colNameLower.Contains("katana");
-                if (isMeleeWeapon || player.GetActiveWeaponIndex() == 2)
+                // Chỉ cho phép chặt cây khi đang sử dụng RÌU (WeaponIndex == 1)
+                if (player.GetActiveWeaponIndex() == 1 && player.IsHoldingAxe())
                 {
                     OnTreeHit(hitPos);
                 }
                 else
                 {
-                    Debug.Log($"[ChoppableTree] Player '{player.DisplayName}' chém bằng tay không, cần trang bị vũ khí để chặt cây.");
+                    Debug.Log($"[ChoppableTree] Player '{player.DisplayName}' chém bằng vũ khí khác (WeaponIndex={player.GetActiveWeaponIndex()}), cần trang bị Rìu (WeaponIndex=1) để chặt cây.");
                 }
-            }
-            else
-            {
-                // Đạn bắn: Luôn hợp lệ
-                OnTreeHit(hitPos);
             }
         }
     }
@@ -230,14 +218,14 @@ public class ChoppableTree : NetworkBehaviour
     {
         if (isCutDown.Value) return;
 
-        // Cận chiến: Bắt buộc phải rút vũ khí (WeaponIndex == 2)
-        if (weaponIndex == 2)
+        // Chỉ cho phép chặt cây khi đang sử dụng RÌU (WeaponIndex == 1)
+        if (weaponIndex == 1)
         {
             OnTreeHit(hitPos);
         }
         else
         {
-            Debug.Log($"[ChoppableTree] Player chém bằng tay không (WeaponIndex={weaponIndex}), cần trang bị vũ khí để chặt cây.");
+            Debug.Log($"[ChoppableTree] Player chém bằng vũ khí khác (WeaponIndex={weaponIndex}), cần trang bị Rìu (WeaponIndex=1) để chặt cây.");
         }
     }
 

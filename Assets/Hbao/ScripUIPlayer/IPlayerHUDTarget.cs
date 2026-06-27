@@ -18,6 +18,7 @@ public interface IPlayerHUDTarget
     // Weapon & Skills
     bool IsSwitchingWeapon { get; }
     int GetActiveWeaponIndex();
+    bool IsHoldingAxe();
     void PlayWeaponSwitchAnimation(int oldWeapon, int newWeapon);
     void UpdateStateFromHUD(int weaponIndex, bool weapon2Locked, bool skillsUnlocked);
     
