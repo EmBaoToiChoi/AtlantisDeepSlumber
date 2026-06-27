@@ -1,5 +1,36 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
+--- !u!1 &2941212333947707088
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 201013113991387148}
+  m_Layer: 3
+  m_Name: GameObject
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &201013113991387148
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2941212333947707088}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0.16458845, y: -0.1645882, z: -0.6876851, w: 0.687685}
+  m_LocalPosition: {x: 0.25, y: -0.046, z: 0.023}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 6149541316733567280}
+  m_LocalEulerAnglesHint: {x: -26.92, y: 0, z: -90}
 --- !u!1 &2988075749251319021
 GameObject:
   m_ObjectHideFlags: 0
@@ -121,6 +152,7 @@ GameObject:
   - component: {fileID: 1387045130881282299}
   - component: {fileID: 5123188817383556969}
   - component: {fileID: 2766694219639036963}
+  - component: {fileID: 4359720027828633858}
   m_Layer: 3
   m_Name: Player_Leo
   m_TagString: Player
@@ -738,6 +770,21 @@ MonoBehaviour:
       MinSecondsBetweenUpdates: 0
       MaxSecondsBetweenUpdates: 0
     m_InternalValue: 45
+  netMoveX:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 0
+  netMoveZ:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 0
+  netSpeed:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 0
   anim: {fileID: 6582539960615988373}
   rollSpeed: 8
   rollDuration: 1
@@ -1047,6 +1094,19 @@ MonoBehaviour:
   maxScanRadius: 50
   highlightDuration: 4
   scanWavePrefab: {fileID: 7188585948263974077, guid: 79d45982395e08343b85250ca8109e40, type: 3}
+--- !u!114 &4359720027828633858
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3704789710416520249}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c9bad9e008688f84fa4a12ada4d18563, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  axeHoldingPoint: {fileID: 201013113991387148}
 --- !u!1 &4262746911795802632
 GameObject:
   m_ObjectHideFlags: 0
@@ -2070,6 +2130,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: -2349476437193732044, guid: 089f5319e86aa3a409ccfa5692b155f2, type: 3}
       insertIndex: -1
       addedObject: {fileID: 8247470417507385211}
+    - targetCorrespondingSourceObject: {fileID: -2349476437193732044, guid: 089f5319e86aa3a409ccfa5692b155f2, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 201013113991387148}
     - targetCorrespondingSourceObject: {fileID: 4325436833983905973, guid: 089f5319e86aa3a409ccfa5692b155f2, type: 3}
       insertIndex: -1
       addedObject: {fileID: 8670219365386420766}

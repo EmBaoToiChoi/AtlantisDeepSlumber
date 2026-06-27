@@ -25,6 +25,9 @@ public class PlayerHUDController : MonoBehaviour
     [Tooltip("Chọn index từ 0 đến 3 để test nhanh giao diện lớp nhân vật khi ấn Play")]
     public int testProfileIndex = 0;
 
+    public static PlayerHUDController Instance { get; private set; }
+    public static bool isCarryingAxe = false;
+
     private static IPlayerHUDTarget localPlayerTarget;
     public static IPlayerHUDTarget LocalPlayerTarget
     {
@@ -220,6 +223,7 @@ public class PlayerHUDController : MonoBehaviour
 
     void OnEnable()
     {
+        Instance = this;
         InitializeUI();
         // Đăng ký lắng nghe event hủy Skill Q
         if (LocalPlayerTarget != null)
@@ -231,6 +235,7 @@ public class PlayerHUDController : MonoBehaviour
 
     void OnDisable()
     {
+        if (Instance == this) Instance = null;
         // QUAN TRỌNG: Reset toàn bộ state khi HUD bị tắt (SetActive false).
         // Khi UI Toolkit rebuild lại visual tree sau lần SetActive(true) tiếp theo,
         // tất cả các tham chiếu element cũ sẽ là dead reference -> phải re-query lại.
@@ -1405,8 +1410,8 @@ public class PlayerHUDController : MonoBehaviour
         }
         else if (index == 2)
         {
-            // Kiểm tra nếu vũ khí 2 đang bị khóa
-            if (isWeapon2Locked)
+            // Kiểm tra nếu vũ khí 2 đang bị khóa hoặc đang cầm rìu
+            if (isWeapon2Locked || isCarryingAxe)
             {
                 ShowWeaponWarning();
                 return; // Không cho phép chọn
@@ -2965,6 +2970,30 @@ public class PlayerHUDController : MonoBehaviour
         else
         {
             activeBridgeTrigger.ClickBuildLocal();
+        }
+    }
+
+    public void SetWeapon1IconOverride(Sprite customSprite)
+    {
+        if (weaponImg1 != null)
+        {
+            if (customSprite != null)
+            {
+                weaponImg1.style.backgroundImage = new StyleBackground(customSprite);
+            }
+            else
+            {
+                // Reset to default
+                int idx = lastSelectedProfileIndex;
+                if (idx >= 0 && idx < hudProfiles.Count)
+                {
+                    var profile = hudProfiles[idx];
+                    if (profile.weapon1Sprite != null)
+                    {
+                        weaponImg1.style.backgroundImage = new StyleBackground(profile.weapon1Sprite);
+                    }
+                }
+            }
         }
     }
 }
