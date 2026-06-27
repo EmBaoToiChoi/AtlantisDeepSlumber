@@ -38,6 +38,10 @@ public class BridgeCollapseTrigger : NetworkBehaviour
     private GameObject[] resolvedSegments;
     private GameObject solidBridgeInstance;
     private Vector3 originalLocalScale;
+    private System.Collections.Generic.List<BoxCollider> cloneBoxColliders = new System.Collections.Generic.List<BoxCollider>();
+    private System.Collections.Generic.List<Vector3> originalBoxSizes = new System.Collections.Generic.List<Vector3>();
+    private System.Collections.Generic.List<Vector3> originalBoxCenters = new System.Collections.Generic.List<Vector3>();
+    private System.Collections.Generic.List<Material> clippingMaterials = new System.Collections.Generic.List<Material>();
 
     [Header("Wood Quest Spawning Configuration")]
     [Tooltip("Prefab gỗ để người chơi thu thập (CollectibleItemDrop với itemName = 'WoodLog' hoặc 'ThanhGo')")]
@@ -1557,6 +1561,10 @@ public class BridgeCollapseTrigger : NetworkBehaviour
             Destroy(solidBridgeInstance);
             solidBridgeInstance = null;
         }
+        cloneBoxColliders.Clear();
+        originalBoxSizes.Clear();
+        originalBoxCenters.Clear();
+        clippingMaterials.Clear();
     }
 
     private float GetBridgeLocalLength()
@@ -1578,31 +1586,36 @@ public class BridgeCollapseTrigger : NetworkBehaviour
     {
         if (mainBridgeObject == null) return;
 
+        float progressFactor = progress / 100f;
+
         if (solidBridgeInstance == null)
         {
-            // Clone cầu trước khi nó bị đổi màu thành ghost
+            // Clone cầu để tạo bản solid xây dựng dần dần
             solidBridgeInstance = Instantiate(mainBridgeObject, mainBridgeObject.transform.parent);
             solidBridgeInstance.name = mainBridgeObject.name + "_SolidInstance";
 
             originalLocalScale = mainBridgeObject.transform.localScale;
 
-            // Đồng bộ lại vật liệu gốc cho bản clone từ danh sách savedMaterials
-            Renderer[] origRenders = mainBridgeObject.GetComponentsInChildren<Renderer>(true);
-            Renderer[] cloneRenders = solidBridgeInstance.GetComponentsInChildren<Renderer>(true);
+            // Đặt vị trí, góc xoay và scale bản clone cố định 100% giống hệt cầu gốc (không kéo dãn)
+            solidBridgeInstance.transform.position = originalBridgePos;
+            solidBridgeInstance.transform.rotation = originalBridgeRot;
+            solidBridgeInstance.transform.localScale = originalLocalScale;
 
-            for (int k = 0; k < cloneRenders.Length; k++)
+            // Tìm và lưu BoxCollider của bản clone để scale vật lý theo tiến độ
+            cloneBoxColliders.Clear();
+            originalBoxSizes.Clear();
+            originalBoxCenters.Clear();
+            foreach (var box in solidBridgeInstance.GetComponentsInChildren<BoxCollider>(true))
             {
-                if (k < origRenders.Length && cloneRenders[k] != null && origRenders[k] != null)
+                if (box != null)
                 {
-                    int savedIdx = savedRenderers.IndexOf(origRenders[k]);
-                    if (savedIdx >= 0 && savedIdx < savedMaterials.Count)
-                    {
-                        cloneRenders[k].materials = savedMaterials[savedIdx];
-                    }
+                    cloneBoxColliders.Add(box);
+                    originalBoxSizes.Add(box.size);
+                    originalBoxCenters.Add(box.center);
                 }
             }
 
-            // Tắt LODGroup để tránh culling/ẩn khi scale nhỏ
+            // Tắt LODGroup để tránh bị ẩn/cull khi xây dựng
             LODGroup lod = solidBridgeInstance.GetComponent<LODGroup>();
             if (lod != null)
             {
@@ -1623,32 +1636,94 @@ public class BridgeCollapseTrigger : NetworkBehaviour
                 }
             }
 
-            // Đảm bảo bật tất cả MeshRenderers và Colliders trên bản clone
-            foreach (var r in cloneRenders)
+            // Đăng ký vật liệu clipping tuỳ chỉnh cho toàn bộ MeshRenderer con của bản clone
+            Renderer[] origRenders = mainBridgeObject.GetComponentsInChildren<Renderer>(true);
+            Renderer[] cloneRenders = solidBridgeInstance.GetComponentsInChildren<Renderer>(true);
+            clippingMaterials.Clear();
+
+            Shader clippingShader = Shader.Find("Custom/BridgeClipping");
+            if (clippingShader == null)
             {
-                if (r != null) r.enabled = true;
+                Debug.LogError("[BridgeCollapseTrigger] Không tìm thấy custom shader 'Custom/BridgeClipping'!");
             }
+
+            for (int k = 0; k < cloneRenders.Length; k++)
+            {
+                if (k < origRenders.Length && cloneRenders[k] != null && origRenders[k] != null)
+                {
+                    // Lấy vật liệu gốc từ danh sách đã lưu
+                    int savedIdx = savedRenderers.IndexOf(origRenders[k]);
+                    Material origMat = null;
+                    if (savedIdx >= 0 && savedIdx < savedMaterials.Count && savedMaterials[savedIdx].Length > 0)
+                    {
+                        origMat = savedMaterials[savedIdx][0];
+                    }
+                    if (origMat == null)
+                    {
+                        origMat = origRenders[k].sharedMaterial;
+                    }
+
+                    if (origMat != null && clippingShader != null)
+                    {
+                        // Tạo vật liệu clipping mới
+                        Material clipMat = new Material(clippingShader);
+                        
+                        // Copy texture từ vật liệu gốc
+                        if (origMat.HasProperty("_Albedo")) clipMat.SetTexture("_Albedo", origMat.GetTexture("_Albedo"));
+                        else if (origMat.HasProperty("_BaseMap")) clipMat.SetTexture("_Albedo", origMat.GetTexture("_BaseMap"));
+                        else if (origMat.HasProperty("_MainTex")) clipMat.SetTexture("_Albedo", origMat.GetTexture("_MainTex"));
+
+                        if (origMat.HasProperty("_Normal")) clipMat.SetTexture("_Normal", origMat.GetTexture("_Normal"));
+                        else if (origMat.HasProperty("_BumpMap")) clipMat.SetTexture("_Normal", origMat.GetTexture("_BumpMap"));
+
+                        if (origMat.HasProperty("_Specular")) clipMat.SetTexture("_Specular", origMat.GetTexture("_Specular"));
+
+                        cloneRenders[k].material = clipMat;
+                        clippingMaterials.Add(clipMat);
+                    }
+                    else
+                    {
+                        // Fallback khôi phục vật liệu cũ nếu không dùng được shader
+                        if (savedIdx >= 0 && savedIdx < savedMaterials.Count)
+                        {
+                            cloneRenders[k].materials = savedMaterials[savedIdx];
+                        }
+                    }
+                    cloneRenders[k].enabled = true;
+                }
+            }
+
             foreach (var col in solidBridgeInstance.GetComponentsInChildren<Collider>(true))
             {
                 if (col != null) col.enabled = true;
             }
         }
 
-        // Cập nhật scale local Z của bản clone dựa trên % tiến độ (0% đến 100%)
-        float progressFactor = progress / 100f;
-        Vector3 newScale = originalLocalScale;
-        newScale.z = originalLocalScale.z * progressFactor;
-
-        solidBridgeInstance.transform.localScale = newScale;
-
-        // Cập nhật Position trong World Space để giữ cố định đầu cầu ở bờ gần (bù trừ do pivot ở giữa)
+        // 1. Cập nhật Clip Threshold trên các vật liệu để hiển thị dần dần không kéo dãn (local Z đi từ -length/2 đến +length/2)
         float localLength = GetBridgeLocalLength();
-        Vector3 bridgeForward = originalBridgeRot * Vector3.forward;
-        float worldLength = localLength * originalLocalScale.z;
+        float clipThreshold = localLength * (-0.5f + progressFactor);
+        foreach (var mat in clippingMaterials)
+        {
+            if (mat != null)
+            {
+                mat.SetFloat("_ClipThreshold", clipThreshold);
+            }
+        }
 
-        Vector3 worldOffset = bridgeForward * (worldLength * 0.5f) * (1f - progressFactor);
-        solidBridgeInstance.transform.position = originalBridgePos - worldOffset;
-        solidBridgeInstance.transform.rotation = originalBridgeRot;
+        // 2. Cập nhật kích thước các BoxCollider để khớp chính xác với phần gỗ đã hiển thị
+        for (int i = 0; i < cloneBoxColliders.Count; i++)
+        {
+            if (cloneBoxColliders[i] != null && i < originalBoxSizes.Count && i < originalBoxCenters.Count)
+            {
+                Vector3 newSize = originalBoxSizes[i];
+                newSize.z = originalBoxSizes[i].z * progressFactor;
+                cloneBoxColliders[i].size = newSize;
+
+                Vector3 newCenter = originalBoxCenters[i];
+                newCenter.z = originalBoxCenters[i].z - (originalBoxSizes[i].z * 0.5f) * (1f - progressFactor);
+                cloneBoxColliders[i].center = newCenter;
+            }
+        }
 
         // Bật/tắt hiển thị solidInstance
         bool showSolid = progress > 0.5f;
