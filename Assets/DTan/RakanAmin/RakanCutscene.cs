@@ -28,5 +28,9 @@ public class RakanCutscene : MonoBehaviour
     {
         animator.SetTrigger("Thank");
     }
+    public void TriggerNhinQua()
+    {
+        animator.SetTrigger("NhinQua");
+    }
 
 }
