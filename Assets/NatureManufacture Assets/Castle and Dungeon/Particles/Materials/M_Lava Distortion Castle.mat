@@ -51,6 +51,8 @@ Material:
   m_PrefabAsset: {fileID: 0}
   m_Name: M_Lava Distortion Castle
   m_Shader: {fileID: 4800000, guid: 305a9c249d081a54a8aa36a778da851d, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
   m_InvalidKeywords:
   - _BUILTIN_SURFACE_TYPE_TRANSPARENT
@@ -60,6 +62,7 @@ Material:
   m_CustomRenderQueue: -1
   stringTagMap: {}
   disabledShaderPasses: []
+  m_LockedProperties: 
   m_SavedProperties:
     serializedVersion: 3
     m_TexEnvs:
@@ -113,7 +116,8 @@ Material:
     - __dirty: 1
     m_Colors:
     - Color_a3063e2cb473472aaed8dd09bb0a1785: {r: 1, g: 1, b: 1, a: 1}
-    - Particle_Color_RGB_Alpha_A: {r: 1, g: 1, b: 1, a: 0.6509804}
+    - Particle_Color_RGB_Alpha_A: {r: 0.9409437, g: 0.9559748, b: 0.9434742, a: 0.6509804}
     - _NormalTilingOffset: {r: 1, g: 1, b: 0, a: 0}
     - _ParticleMaskTilingOffset: {r: 1, g: 1, b: 0, a: 0}
   m_BuildTextureStacks: []
+  m_AllowLocking: 1
