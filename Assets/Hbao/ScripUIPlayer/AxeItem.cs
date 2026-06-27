@@ -49,18 +49,32 @@ public class AxeItem : NetworkBehaviour
         carryingPlayerId.OnValueChanged -= OnCarrierChanged;
     }
 
-    private void OnTransformParentChanged()
+    private void LateUpdate()
     {
-        if (transform.parent != null)
-        {
-            transform.localPosition = Vector3.zero;
-            transform.localRotation = Quaternion.identity;
+        bool isNetwork = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
+        GameObject carrierObj = null;
 
-            // Tìm Player từ cha của hand
-            var carrier = transform.GetComponentInParent<PlayerLogCarrier>();
-            if (carrier != null)
+        if (isNetwork)
+        {
+            ulong carrierId = carryingPlayerId.Value;
+            if (carrierId != 0 && NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(carrierId, out NetworkObject playerNetObj))
             {
-                AdjustScaleToParent(transform.parent, carrier.gameObject);
+                carrierObj = playerNetObj.gameObject;
+            }
+        }
+        else
+        {
+            carrierObj = localPlayerCarrier;
+        }
+
+        if (carrierObj != null)
+        {
+            Transform hand = GetAxeHoldingPoint(carrierObj);
+            if (hand != null)
+            {
+                transform.position = hand.position;
+                transform.rotation = hand.rotation;
+                AdjustScaleToPlayerRoot(carrierObj);
             }
         }
     }
@@ -75,39 +89,14 @@ public class AxeItem : NetworkBehaviour
         return FindRightHand(player.transform);
     }
 
-    private void AdjustScaleToParent(Transform parentTarget, GameObject player)
+    private void AdjustScaleToPlayerRoot(GameObject player)
     {
-        Transform hand = FindRightHand(player.transform);
-        Vector3 parentLossyScale = (hand != null) ? hand.lossyScale : player.transform.lossyScale;
-
-        Vector3 relativeLocalScale = new Vector3(
-            originalWorldScale.x / (parentLossyScale.x != 0f ? parentLossyScale.x : 1f),
-            originalWorldScale.y / (parentLossyScale.y != 0f ? parentLossyScale.y : 1f),
-            originalWorldScale.z / (parentLossyScale.z != 0f ? parentLossyScale.z : 1f)
+        Vector3 playerScale = player.transform.lossyScale;
+        transform.localScale = new Vector3(
+            originalWorldScale.x / (playerScale.x != 0f ? playerScale.x : 1f),
+            originalWorldScale.y / (playerScale.y != 0f ? playerScale.y : 1f),
+            originalWorldScale.z / (playerScale.z != 0f ? playerScale.z : 1f)
         );
-
-        if (parentTarget != hand)
-        {
-            Transform anchorParent = parentTarget.parent;
-            if (anchorParent != null)
-            {
-                Vector3 anchorParentLossyScale = anchorParent.lossyScale;
-                transform.localScale = new Vector3(
-                    originalWorldScale.x / (anchorParentLossyScale.x != 0f ? anchorParentLossyScale.x : 1f),
-                    originalWorldScale.y / (anchorParentLossyScale.y != 0f ? anchorParentLossyScale.y : 1f),
-                    originalWorldScale.z / (anchorParentLossyScale.z != 0f ? anchorParentLossyScale.z : 1f)
-                );
-                transform.localScale = Vector3.Scale(transform.localScale, parentTarget.localScale);
-            }
-            else
-            {
-                transform.localScale = relativeLocalScale;
-            }
-        }
-        else
-        {
-            transform.localScale = relativeLocalScale;
-        }
     }
 
     private void Update()
@@ -180,14 +169,10 @@ public class AxeItem : NetworkBehaviour
 
         carryingPlayerId.Value = playerNetId;
         
-        // Thực hiện parenting của Netcode tới xương tay của player
+        // Thực hiện parenting của Netcode tới player root (NetworkObject)
         if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(playerNetId, out NetworkObject playerNetObj))
         {
-            Transform parentTarget = GetAxeHoldingPoint(playerNetObj.gameObject);
-            if (parentTarget != null)
-            {
-                NetworkObject.TrySetParent(parentTarget, false);
-            }
+            NetworkObject.TrySetParent(playerNetObj, false);
         }
     }
 
@@ -252,19 +237,18 @@ public class AxeItem : NetworkBehaviour
             {
                 lastNetworkCarrier = playerNetObj.gameObject;
 
-                // Tắt vật lý của rìu cục bộ
+                // Tắt vật lý & NetworkTransform của rìu cục bộ để tránh tranh chấp tọa độ
                 if (rb != null) rb.isKinematic = true;
                 foreach (var col in colliders) if (col != null) col.enabled = false;
 
-                // Tìm xương bàn tay hoặc điểm neo transform và gắn rìu vào
-                Transform parentTarget = GetAxeHoldingPoint(playerNetObj.gameObject);
-                if (parentTarget != null)
+                var nt = GetComponent<Unity.Netcode.Components.NetworkTransform>();
+                if (nt != null) nt.enabled = false;
+
+                // Parent cục bộ tới player root
+                bool isNetwork = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
+                if (!isNetwork || IsServer)
                 {
-                    bool isNetwork = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
-                    if (!isNetwork || IsServer)
-                    {
-                        transform.SetParent(parentTarget, false);
-                    }
+                    transform.SetParent(playerNetObj.transform, false);
                 }
 
                 // Ẩn vũ khí hiện tại của nhân vật
@@ -306,6 +290,10 @@ public class AxeItem : NetworkBehaviour
             }
             foreach (var col in colliders) if (col != null) col.enabled = true;
 
+            // Bật lại NetworkTransform khi thả rìu ra
+            var nt = GetComponent<Unity.Netcode.Components.NetworkTransform>();
+            if (nt != null) nt.enabled = true;
+
             isCarryingLocally = false;
             lastNetworkCarrier = null;
         }
@@ -337,12 +325,11 @@ public class AxeItem : NetworkBehaviour
         if (rb != null) rb.isKinematic = true;
         foreach (var col in colliders) if (col != null) col.enabled = false;
 
-        // Tìm xương bàn tay hoặc điểm neo transform và gắn rìu vào
-        Transform parentTarget = GetAxeHoldingPoint(player);
-        if (parentTarget != null)
-        {
-            transform.SetParent(parentTarget, false);
-        }
+        var nt = GetComponent<Unity.Netcode.Components.NetworkTransform>();
+        if (nt != null) nt.enabled = false;
+
+        // Parent cục bộ tới player root
+        transform.SetParent(player.transform, false);
 
         var carrier = player.GetComponent<PlayerLogCarrier>();
         if (carrier != null) carrier.TogglePlayerWeapons(false);
@@ -383,6 +370,9 @@ public class AxeItem : NetworkBehaviour
                 rb.angularVelocity = Vector3.zero;
             }
             foreach (var col in colliders) if (col != null) col.enabled = true;
+
+            var nt = GetComponent<Unity.Netcode.Components.NetworkTransform>();
+            if (nt != null) nt.enabled = true;
 
             localPlayerCarrier = null;
             isCarryingLocally = false;
