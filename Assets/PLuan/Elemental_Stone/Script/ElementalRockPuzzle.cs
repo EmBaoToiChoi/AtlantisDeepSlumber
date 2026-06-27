@@ -1,5 +1,6 @@
 using UnityEngine;
 using Unity.Netcode;
+using System.Collections;
 
 public class ElementalRockPuzzle : NetworkBehaviour
 {
@@ -65,6 +66,25 @@ public class ElementalRockPuzzle : NetworkBehaviour
     private GameObject uiRootObj;
     private GameObject[] iconObjects;
     private SpriteRenderer[] iconRenderers;
+
+    [Header("Element 3D Renderers (Model)")]
+    public Renderer fireRenderer;
+    public Renderer waterRenderer;
+    public Renderer iceRenderer;
+    public Renderer lightningRenderer;
+
+    [Header("Glow Colors (HDR)")]
+    [ColorUsage(true, true)] public Color fireGlowColor = Color.red * 5f;
+    [ColorUsage(true, true)] public Color waterGlowColor = Color.blue * 5f;
+    [ColorUsage(true, true)] public Color iceGlowColor = Color.cyan * 5f;
+    [ColorUsage(true, true)] public Color lightningGlowColor = Color.yellow * 5f;
+
+    [Header("Fade Settings")]
+    public float fadeSpeed = 2f;
+
+    private Renderer[] elementRenderers;
+    private Color[] elementGlowColors;
+    private Coroutine[] fadeCoroutines;
 
     [Header("Start Hidden Settings")]
     [Tooltip("Nếu tích chọn, đá sẽ tự ẩn Renderer và Collider khi bắt đầu (nhưng GameObject vẫn Active để tránh lỗi Netcode).")]
@@ -142,19 +162,34 @@ public class ElementalRockPuzzle : NetworkBehaviour
             Debug.Log($"[ElementalRockPuzzle] '{gameObject.name}' đã cấu hình BoxCollider sẵn có làm Trigger (center={boxCol.center}, size={boxCol.size}).");
         }
 
-        // Tạo root object cho UI độc lập với transform của đá (tránh bị Scale âm / Xoay của đá làm ngược chữ)
-        uiRootObj = new GameObject("RockPuzzle_UIRoot");
-        UpdateUIPosition();
+        // Cấu hình các 3D Renderers nếu được gán
+        elementRenderers = new Renderer[] { fireRenderer, waterRenderer, iceRenderer, lightningRenderer };
+        elementGlowColors = new Color[] { fireGlowColor, waterGlowColor, iceGlowColor, lightningGlowColor };
+        fadeCoroutines = new Coroutine[4];
 
-        // Khởi tạo các SpriteRenderer hiển thị Icon
-        bool hasAllIcons = fireIcon != null && waterIcon != null && iceIcon != null && lightningIcon != null;
-        if (hasAllIcons)
+        bool has3DRenderers = fireRenderer != null || waterRenderer != null || iceRenderer != null || lightningRenderer != null;
+        if (has3DRenderers)
         {
-            CreateIconElements();
+            InitializeRenderersToBlack();
         }
-        else
+
+        // Chỉ tạo UI Icon 2D cũ nếu KHÔNG có Renderers 3D mới
+        if (!has3DRenderers)
         {
-            Debug.LogWarning("[ElementalRockPuzzle] Vui lòng gán đầy đủ 4 Sprite Icon nguyên tố trong Inspector để hiển thị.");
+            // Tạo root object cho UI độc lập với transform của đá (tránh bị Scale âm / Xoay của đá làm ngược chữ)
+            uiRootObj = new GameObject("RockPuzzle_UIRoot");
+            UpdateUIPosition();
+
+            // Khởi tạo các SpriteRenderer hiển thị Icon
+            bool hasAllIcons = fireIcon != null && waterIcon != null && iceIcon != null && lightningIcon != null;
+            if (hasAllIcons)
+            {
+                CreateIconElements();
+            }
+            else
+            {
+                Debug.LogWarning("[ElementalRockPuzzle] Vui lòng gán đầy đủ 4 Sprite Icon nguyên tố trong Inspector để hiển thị.");
+            }
         }
 
         if (startHidden)
@@ -240,6 +275,12 @@ public class ElementalRockPuzzle : NetworkBehaviour
 
         // Hiện UI Icon
         if (uiRootObj != null) uiRootObj.SetActive(true);
+
+        bool has3DRenderers = fireRenderer != null || waterRenderer != null || iceRenderer != null || lightningRenderer != null;
+        if (has3DRenderers)
+        {
+            InitializeRenderersToBlack();
+        }
         
         ResetPuzzle();
 
@@ -380,8 +421,13 @@ public class ElementalRockPuzzle : NetworkBehaviour
 
     private void Update()
     {
+        bool has3DRenderers = fireRenderer != null || waterRenderer != null || iceRenderer != null || lightningRenderer != null;
+
         // Cập nhật vị trí UI bám theo viên đá mỗi frame
-        UpdateUIPosition();
+        if (!has3DRenderers)
+        {
+            UpdateUIPosition();
+        }
 
         // Client đếm ngược cục bộ để mượt mà UI
         if (isTimerRunning)
@@ -401,17 +447,20 @@ public class ElementalRockPuzzle : NetworkBehaviour
 
         // Cập nhật khoảng cách ngang và kích thước của các Icon tương ứng lúc Play (Editor)
         #if UNITY_EDITOR
-        UpdateEditorRealtimeUI();
+        if (!has3DRenderers)
+        {
+            UpdateEditorRealtimeUI();
+        }
         #endif
 
         // Tạo hiệu ứng nhấp nháy/phóng to thu nhỏ cho Icon hiện tại cần bắn
-        if (iconObjects != null && iconObjects.Length == 4)
+        if (!has3DRenderers && iconObjects != null && iconObjects.Length == 4)
         {
             AnimateCurrentIcon();
         }
 
         // Tự động xoay hàng Icon về hướng Camera chính (Billboarding)
-        if (faceCamera)
+        if (!has3DRenderers && faceCamera)
         {
             BillboardUI();
         }
@@ -737,38 +786,98 @@ public class ElementalRockPuzzle : NetworkBehaviour
         int activeStep = IsNetworkActive ? netCurrentStep.Value : currentStep;
         currentStep = activeStep;
 
-        // Cập nhật giao diện hình ảnh của 4 Icon
-        if (iconRenderers != null && iconRenderers.Length == 4)
+        bool has3DRenderers = fireRenderer != null || waterRenderer != null || iceRenderer != null || lightningRenderer != null;
+
+        if (has3DRenderers)
         {
+            if (elementRenderers == null || elementRenderers.Length != 4) return;
             for (int i = 0; i < 4; i++)
             {
-                if (iconRenderers[i] == null) continue;
+                if (elementRenderers[i] == null) continue;
+                bool shouldBeActive = i < activeStep;
+                if (fadeCoroutines[i] != null)
+                {
+                    StopCoroutine(fadeCoroutines[i]);
+                }
+                fadeCoroutines[i] = StartCoroutine(FadeElement(i, shouldBeActive));
+            }
+        }
+        else
+        {
+            // Cập nhật giao diện hình ảnh của 4 Icon
+            if (iconRenderers != null && iconRenderers.Length == 4)
+            {
+                for (int i = 0; i < 4; i++)
+                {
+                    if (iconRenderers[i] == null) continue;
 
-                if (i < activeStep)
-                {
-                    // Các bước đã hoàn thành: Sáng rõ (Full màu)
-                    iconRenderers[i].color = Color.white;
-                    if (iconObjects[i] != null && (i != activeStep || !isTimerRunning))
+                    if (i < activeStep)
                     {
-                        iconObjects[i].transform.localScale = Vector3.one * iconScale;
+                        // Các bước đã hoàn thành: Sáng rõ (Full màu)
+                        iconRenderers[i].color = Color.white;
+                        if (iconObjects[i] != null && (i != activeStep || !isTimerRunning))
+                        {
+                            iconObjects[i].transform.localScale = Vector3.one * iconScale;
+                        }
                     }
-                }
-                else if (i == activeStep)
-                {
-                    // Bước hiện tại cần bắn: Sáng rõ
-                    iconRenderers[i].color = Color.white;
-                }
-                else
-                {
-                    // Các bước chưa tới lượt: Làm mờ/Tối đi
-                    iconRenderers[i].color = new Color(0.3f, 0.3f, 0.3f, 0.3f);
-                    if (iconObjects[i] != null)
+                    else if (i == activeStep)
                     {
-                        iconObjects[i].transform.localScale = Vector3.one * iconScale;
+                        // Bước hiện tại cần bắn: Sáng rõ
+                        iconRenderers[i].color = Color.white;
+                    }
+                    else
+                    {
+                        // Các bước chưa tới lượt: Làm mờ/Tối đi
+                        iconRenderers[i].color = new Color(0.3f, 0.3f, 0.3f, 0.3f);
+                        if (iconObjects[i] != null)
+                        {
+                            iconObjects[i].transform.localScale = Vector3.one * iconScale;
+                        }
                     }
                 }
             }
         }
+    }
+
+    private void InitializeRenderersToBlack()
+    {
+        if (elementRenderers == null) return;
+        for (int i = 0; i < elementRenderers.Length; i++)
+        {
+            if (elementRenderers[i] == null) continue;
+            Material mat = elementRenderers[i].material;
+            if (mat != null)
+            {
+                mat.SetColor("_Color", Color.black);
+                mat.SetColor("_EmissionColor", Color.black);
+                mat.EnableKeyword("_EMISSION");
+            }
+        }
+    }
+
+    private IEnumerator FadeElement(int index, bool fadeIn)
+    {
+        Renderer ren = elementRenderers[index];
+        if (ren == null) yield break;
+
+        Material mat = ren.material;
+        Color startAlbedo = mat.GetColor("_Color");
+        Color startEmission = mat.GetColor("_EmissionColor");
+
+        Color targetAlbedo = fadeIn ? Color.white : Color.black;
+        Color targetEmission = fadeIn ? elementGlowColors[index] : Color.black;
+
+        float t = 0f;
+        while (t < 1f)
+        {
+            t += Time.deltaTime * fadeSpeed;
+            mat.SetColor("_Color", Color.Lerp(startAlbedo, targetAlbedo, t));
+            mat.SetColor("_EmissionColor", Color.Lerp(startEmission, targetEmission, t));
+            yield return null;
+        }
+
+        mat.SetColor("_Color", targetAlbedo);
+        mat.SetColor("_EmissionColor", targetEmission);
     }
 
     private void AnimateCurrentIcon()
