@@ -718,16 +718,19 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
     public event System.Action OnQSkillCancelled;
 
 
-    /// <summary>
-    /// Trả về index vũ khí đang chọn: đọc từ HUD khi standalone, đọc từ NetworkVariable khi online.
-    /// </summary>
+    public bool IsHoldingAxe()
+    {
+        return GetComponentInChildren<AxeItem>(true) != null;
+    }
+
     public int GetActiveWeaponIndex()
     {
-        if (isStandaloneMode)
+        int val = isStandaloneMode ? localActiveWeaponIndex : activeWeaponIndex.Value;
+        if (val == 1 && !IsHoldingAxe())
         {
-            return localActiveWeaponIndex; // <-- SỬA DÒNG NÀY (Thay vì đọc hud.currentSelectedWeapon)
+            return 0;
         }
-        return activeWeaponIndex.Value;
+        return val;
     }
 
     protected virtual void Awake()
@@ -2305,13 +2308,26 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
         }
     }
 
+    private float GetAnimationClipLength(string triggerName)
+    {
+        if (anim == null || anim.runtimeAnimatorController == null) return 0f;
+        foreach (var clip in anim.runtimeAnimatorController.animationClips)
+        {
+            if (clip != null && (clip.name == triggerName || clip.name.ToLower() == triggerName.ToLower() || clip.name.ToLower().Contains(triggerName.ToLower())))
+            {
+                return clip.length;
+            }
+        }
+        return 0f;
+    }
+
     private float GetAttackDuration(int weaponIndex, int step)
     {
         if (weaponIndex == 1)
         {
-            if (step == 1) return punch1Duration;
-            if (step == 2) return punch2Duration;
-            return punch3Duration;
+            float duration = GetAnimationClipLength("ChatRiu");
+            if (duration > 0f) return duration;
+            return 0.8f;
         }
         else if (weaponIndex == 2)
         {
@@ -2319,7 +2335,12 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
             if (step == 2) return chem2Duration;
             return chem3Duration;
         }
-        return 0.5f;
+        else
+        {
+            if (step == 1) return punch1Duration;
+            if (step == 2) return punch2Duration;
+            return punch3Duration;
+        }
     }
 
     private void PerformComboAttack(bool networkMode)
@@ -2346,15 +2367,15 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
         // Giới hạn bước combo dựa trên vũ khí (Đấm có 3 combo, Chem có 3 combo)
         if (weapon == 1)
         {
-            if (nextStep > 3) nextStep = 1;
+            nextStep = 1;
         }
         else if (weapon == 2)
         {
             if (nextStep > 3) nextStep = 1;
         }
-        else
+        else // weapon == 0 (Unarmed)
         {
-            nextStep = 1;
+            if (nextStep > 3) nextStep = 1;
         }
 
         // Kiểm tra xem đòn đánh trước đó đã kết thúc chưa dựa trên thời gian thực tế trôi qua
@@ -2382,17 +2403,21 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
         lastAttackTime = currentTime;
 
         string animToPlay = "";
-        if (weapon == 1) // Unarmed / Fist combo (3 steps)
+        if (weapon == 1) // Axe / ChatRiu
         {
-            if (comboStep == 1) animToPlay = "Dam1";
-            else if (comboStep == 2) animToPlay = "Dam2";
-            else if (comboStep == 3) animToPlay = "Dam3";
+            animToPlay = "ChatRiu";
         }
         else if (weapon == 2) // Weapon / Chem combo (3 steps)
         {
             if (comboStep == 1) animToPlay = "Chem1";
             else if (comboStep == 2) animToPlay = "Chem2";
             else if (comboStep == 3) animToPlay = "Chem3";
+        }
+        else // Unarmed / Fist combo (3 steps)
+        {
+            if (comboStep == 1) animToPlay = "Dam1";
+            else if (comboStep == 2) animToPlay = "Dam2";
+            else if (comboStep == 3) animToPlay = "Dam3";
         }
 
         Debug.Log($"[Combo Debug] PerformComboAttack: weapon={weapon}, step={comboStep}, animToPlay={animToPlay}, isRooted={isRootedAttack}, isMovingInput={isMovingInput}");
@@ -2423,6 +2448,20 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
             if (!Physics.Raycast(rayStart, aimDir, out RaycastHit hit, attackRange)) return;
 
             TryDamageEnemy(hit.collider);
+
+            // Chém cây gỗ (ChoppableTree) cho Elena
+            ChoppableTree tree = hit.collider.GetComponentInParent<ChoppableTree>();
+            if (tree == null)
+            {
+                var forwarder = hit.collider.GetComponent<TreeColliderForwarder>();
+                if (forwarder != null) tree = forwarder.mainTree;
+            }
+            if (tree != null)
+            {
+                Vector3 hitPos = hit.point;
+                int weaponIndex = GetActiveWeaponIndex();
+                tree.HitTree(hitPos, weaponIndex);
+            }
         }
     }
 
@@ -2475,6 +2514,20 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
         Debug.DrawRay(rayStart, aimDir * attackRange, Color.red, 0.5f);
 
         if (!Physics.Raycast(rayStart, aimDir, out RaycastHit hit, attackRange)) return;
+
+        // Chém cây gỗ (ChoppableTree) cho Elena trên Server
+        ChoppableTree tree = hit.collider.GetComponentInParent<ChoppableTree>();
+        if (tree == null)
+        {
+            var forwarder = hit.collider.GetComponent<TreeColliderForwarder>();
+            if (forwarder != null) tree = forwarder.mainTree;
+        }
+        if (tree != null)
+        {
+            Vector3 hitPos = hit.point;
+            int weaponIndex = GetActiveWeaponIndex();
+            tree.HitTree(hitPos, weaponIndex);
+        }
 
         var enemy1 = hit.collider.GetComponentInParent<Enemy1_DapBua>();
         if (enemy1 != null) { enemy1.TakeDamage(damageAmount); return; }
@@ -2799,6 +2852,7 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
                name == "Chem1" ||
                name == "Chem2" ||
                name == "Chem3" ||
+               name == "ChatRiu" ||
                name == "Bow_Shoot" ||
                (!string.IsNullOrEmpty(drawWeaponTrigger) && name == drawWeaponTrigger) ||
                (!string.IsNullOrEmpty(sheathWeaponTrigger) && name == sheathWeaponTrigger);
@@ -2831,7 +2885,8 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
                name == "Dam3" || 
                name == "Chem1" ||
                name == "Chem2" ||
-               name == "Chem3";
+               name == "Chem3" ||
+               name == "ChatRiu";
     }
 
     private bool IsPlayingAttackState(out AnimatorStateInfo activeState, out int layer)
@@ -3075,6 +3130,15 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
         }
     }
 
+    private System.Collections.IEnumerator ResetTriggerNextFrame(string triggerName)
+    {
+        yield return null;
+        if (anim != null && !string.IsNullOrEmpty(triggerName))
+        {
+            SafeResetTrigger(triggerName);
+        }
+    }
+
     private void SafeSetTrigger(string paramName)
     {
         if (anim != null && HasParameter(paramName))
@@ -3187,6 +3251,9 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
         // Kích hoạt hoạt ảnh: Sử dụng CrossFade cho các đòn đánh để ép buộc chuyển cảnh ngay lập tức, tránh lỗi dây nối Animator
         if (IsAttackAnimationName(animName))
         {
+            SafeSetTrigger(animName);
+            StartCoroutine(ResetTriggerNextFrame(animName));
+
             if (anim.layerCount > 1)
             {
                 if (isRooted)
