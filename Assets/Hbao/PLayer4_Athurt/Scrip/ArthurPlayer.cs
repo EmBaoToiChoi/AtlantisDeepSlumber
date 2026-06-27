@@ -2342,7 +2342,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
             string animName = "ChatRiu";
             float duration = GetAnimationClipLength(animName);
             if (duration > 0f) return duration;
-            return 0.8f;
+            return 2.267f;
         }
         else if (weaponIndex == 2)
         {
@@ -3521,6 +3521,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         else if (targetName == "drawright") targetName = "laykiem";
         else if (targetName == "sheatheleft") targetName = "catkhieng";
         else if (targetName == "sheatheright") targetName = "catkiem";
+        else if (targetName == "chatriu") targetName = "chat cayy";
 
         foreach (var clip in anim.runtimeAnimatorController.animationClips)
         {
