@@ -30,33 +30,40 @@ public class ArthurFireProjectile : NetworkBehaviour
         spawnPosition = transform.position;
         // Đảm bảo đạn và tất cả con ở Layer Default (0) để chắc chắn va chạm được với đá
         SetLayerRecursive(gameObject, 0);
-        // Đảm bảo tất cả Collider trên đạn (kể cả các bộ phận con) đều là Trigger để va chạm hoạt động chính xác
-        Collider[] colliders = GetComponentsInChildren<Collider>();
-        if (colliders.Length == 0)
+        // ĐẢM BẢO luôn có một SphereCollider hoạt động trực tiếp trên đối tượng Root (parent)
+        // để bắt va chạm ổn định trên cả Client và Server (tránh việc collider con bị ẩn/tắt bởi VFX script)
+        SphereCollider rootCol = GetComponent<SphereCollider>();
+        if (rootCol == null)
         {
-            SphereCollider sphere = gameObject.AddComponent<SphereCollider>();
-            sphere.isTrigger = true;
-            sphere.radius = 0.5f;
-            Debug.LogWarning($"[ArthurFireProjectile] Không tìm thấy Collider nào. Đã tự động thêm SphereCollider mặc định.");
+            rootCol = gameObject.AddComponent<SphereCollider>();
         }
-        else
+        rootCol.enabled = true;
+        rootCol.isTrigger = true;
+        rootCol.radius = 0.8f;
+
+        // Đồng thời bật tất cả Collider con khác nếu có
+        Collider[] colliders = GetComponentsInChildren<Collider>(true);
+        foreach (var c in colliders)
         {
-            foreach (var c in colliders)
+            if (c == rootCol) continue;
+            c.enabled = true;
+            if (c is MeshCollider meshCol)
             {
-                c.isTrigger = true;
+                meshCol.convex = true;
             }
+            c.isTrigger = true;
         }
 
-        // Đảm bảo có Rigidbody để nhận biết va chạm với các vật thể tĩnh (static obstacles)
+        // Đảm bảo có Rigidbody và cấu hình đúng chế độ Kinematic, không trọng lực
         Rigidbody rb = GetComponent<Rigidbody>();
         if (rb == null)
         {
             rb = gameObject.AddComponent<Rigidbody>();
-            rb.useGravity = false;
-            rb.isKinematic = true;
-            rb.constraints = RigidbodyConstraints.FreezeAll;
             Debug.Log("[ArthurFireProjectile] Đã tự động thêm Rigidbody ở chế độ Kinematic để bắt va chạm tĩnh.");
         }
+        rb.useGravity = false;
+        rb.isKinematic = true;
+        rb.constraints = RigidbodyConstraints.FreezeAll;
 
         // Tự động tìm kiếm các bộ phận GFX nếu chưa gán trong Inspector
         if (castGFX == null) castGFX = FindChildWithNamePart("cast");

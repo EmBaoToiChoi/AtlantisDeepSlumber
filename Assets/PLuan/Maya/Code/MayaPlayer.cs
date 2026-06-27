@@ -3210,12 +3210,6 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
             }
         }
 
-        bool isAttackPlaying = IsPlayingAttackState(out _, out _);
-        if (isAttackPlaying || IsAttackAnimationName(lastTriggeredAnimName))
-        {
-            Debug.Log($"[Combo Debug] IsPlayingActionAnimation=false: lastTriggered={lastTriggeredAnimName}, timeDiff={Time.time - lastActionTriggerTime:F2}, isRooted={isRootedAttack}, isAttackPlaying={isAttackPlaying}");
-        }
-
         return isFullBodyAction && stateInfo.normalizedTime < 0.95f;
     }
 
@@ -3680,7 +3674,7 @@ private void StartRollServerRpc(Vector3 direction)
     private void FireRHealProjectile()
     {
         Vector3 spawnPos = rSkillWaterSpawnPoint != null ? rSkillWaterSpawnPoint.position : (normalAttackSpawnPoint != null ? normalAttackSpawnPoint.position : transform.position + transform.forward * 1.5f + Vector3.up * 1f);
-        Vector3 shootDir = transform.forward;
+        Vector3 shootDir = targetCamera != null ? targetCamera.transform.forward : transform.forward;
 
         if (isPendingRShootNetworkMode)
         {
