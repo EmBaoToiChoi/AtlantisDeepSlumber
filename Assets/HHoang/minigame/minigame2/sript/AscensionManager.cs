@@ -1,37 +1,34 @@
 using UnityEngine;
 using Unity.Netcode;
-using System.Collections.Generic;
 
 public class AscensionManager : NetworkBehaviour
 {
+    [Header("Đáp Án Giải Đố Nguyên Tố")]
+    [Tooltip("Chọn hệ đúng cho 4 trụ tương ứng (0, 1, 2, 3)")]
+    public ElementType[] correctCombination = new ElementType[4];
+
+    [Header("Cấu hình Trụ & Mật Khẩu")]
+    public Transform[] pillarPositions = new Transform[4];
+    [Tooltip("Kéo cái Trụ Mật Khẩu chứa script PasswordPillarReveal vào đây")]
+    public PasswordPillarReveal passwordPillar;
+
     [Header("Cấu hình Particle Dòng Chảy")]
     public ParticleSystem[] flowParticles; 
-    
-    [Header("Cấu hình Trụ")]
-    public Transform[] pillarPositions = new Transform[4];
-    public int[] pillarStates = new int[4]; 
+    private float[] defaultLifetimes;
 
     [Header("Cấu hình Hiệu ứng Chiến thắng")]
     public GameObject victoryEffectObject; 
 
     [Header("Cấu hình Cinematic Đá Rớt")]
-    public GameObject bigStone;             // Cục đá bự
-    public Transform stoneStartPos;         // Vị trí trên cao (bắt đầu rơi)
-    public Transform stoneEndPos;           // Vị trí cố định (rơi xuống chạm đất)
-    public GameObject cinematicCamera;      // Camera góc nhìn rộng trên map
-    public float stoneFallDuration = 1.5f;  // Thời gian rơi (giây)
-    public float cinematicWaitTime = 4.0f;  // Tổng thời gian chiếu Cinematic (giây)
+    public GameObject bigStone;             
+    public Transform stoneStartPos;         
+    public Transform stoneEndPos;           
+    public GameObject cinematicCamera;      
+    public float stoneFallDuration = 1.5f;  
+    public float cinematicWaitTime = 4.0f;  
 
-    private List<CrystalCore> placedCrystals = new List<CrystalCore>();
-
-    public NetworkVariable<double> startTime = new NetworkVariable<double>(0);
-    public NetworkVariable<bool> isTimerRunning = new NetworkVariable<bool>(false);
-    public NetworkVariable<int> correctCrystalsCount = new NetworkVariable<int>(-1);
-    
-    [Header("Cấu hình Thời gian")]
-    public float timeLimit = 5f; 
-
-    private float[] defaultLifetimes;
+    // Khóa trạng thái để không cho bắn tiếp khi đang check hoặc đã thắng
+    private bool isCheckingOrWon = false;
 
     void Start()
     {
@@ -47,132 +44,70 @@ public class AscensionManager : NetworkBehaviour
         }
 
         if (victoryEffectObject != null) victoryEffectObject.SetActive(false);
-        
-        // Mặc định tắt đá và camera cinematic khi mới vào game
         if (bigStone != null) bigStone.SetActive(false);
         if (cinematicCamera != null) cinematicCamera.SetActive(false);
     }
 
-    void Update()
+    public override void OnNetworkSpawn()
     {
-        if (IsServer && isTimerRunning.Value)
-        {
-            double elapsed = NetworkManager.Singleton.ServerTime.Time - startTime.Value;
-            if (elapsed >= timeLimit)
-            {
-                placedCrystals.RemoveAll(item => item == null);
-                if (placedCrystals.Count < 4) EjectAllCrystals();
-                isTimerRunning.Value = false;
-            }
-        }
-    }
-
-    public void SnapCrystalToPillar(CrystalCore crystal, int stationIndex)
-    {
-        if (!IsServer || stationIndex < 0 || stationIndex >= pillarPositions.Length) return;
-
-        crystal.LockToStation(); 
-        pillarStates[stationIndex] = crystal.crystalID; 
-        if (!placedCrystals.Contains(crystal)) placedCrystals.Add(crystal);
-
-        if (!isTimerRunning.Value && placedCrystals.Count == 1)
-        {
-            startTime.Value = NetworkManager.Singleton.ServerTime.Time;
-            isTimerRunning.Value = true;
-        }
+        base.OnNetworkSpawn();
         
-        CheckWinCondition();
-    }
-
-    public void EjectAllCrystals()
-    {
-        if (!IsServer) return;
-
-        correctCrystalsCount.Value = -1; 
-        placedCrystals.RemoveAll(item => item == null);
-
-        int ejectedLayerIndex = LayerMask.NameToLayer("EjectedCrystal");
-
-        foreach (var crystal in placedCrystals)
+        // Chỉ Server mới có quyền theo dõi sự thay đổi nguyên tố của các trụ
+        if (IsServer)
         {
-            crystal.holderId.Value = ulong.MaxValue; 
-            crystal.isSnapped.Value = false;         
-            crystal.isSnapping.Value = false;        
-            
-            crystal.transform.SetParent(null);
-            crystal.transform.position += Vector3.up * 2.0f; 
-
-            int originalLayer = crystal.gameObject.layer;
-            if (ejectedLayerIndex != -1) 
+            foreach (var pillarTransform in pillarPositions)
             {
-                crystal.gameObject.layer = ejectedLayerIndex;
-            }
-
-            crystal.PerformDrop();
-
-            Rigidbody rb = crystal.GetComponent<Rigidbody>();
-            if (rb != null) 
-            {
-                rb.isKinematic = false;
-                rb.useGravity = true;
-                rb.linearVelocity = Vector3.zero;
-                rb.angularVelocity = Vector3.zero;
-                rb.ResetInertiaTensor();
-                rb.WakeUp();
-                
-                rb.AddForce(new Vector3(Random.Range(-1f, 1f), 3f, Random.Range(-1f, 1f)), ForceMode.Impulse);
-            }
-
-            if (ejectedLayerIndex != -1)
-            {
-                StartCoroutine(ResetLayerRoutine(crystal.gameObject, originalLayer, 1.0f));
+                if (pillarTransform != null && pillarTransform.TryGetComponent<ElementalPillar>(out var pillar))
+                {
+                    // Đăng ký: Cứ mỗi khi có trụ đổi màu, gọi hàm kiểm tra
+                    pillar.currentElement.OnValueChanged += (oldVal, newVal) => 
+                    {
+                        if (newVal != ElementType.None) CheckWinCondition();
+                    };
+                }
             }
         }
-
-        foreach (var pillar in pillarPositions)
-        {
-            if (pillar != null && pillar.TryGetComponent<PillarStation>(out var station))
-            {
-                station.isOccupied.Value = false; 
-                station.SetEffectStateClientRpc(false); 
-            }
-        }
-
-        foreach (var ps in flowParticles) if (ps != null) { ps.Stop(); ps.gameObject.SetActive(false); }
-
-        placedCrystals.Clear();
-        for (int i = 0; i < pillarStates.Length; i++) pillarStates[i] = 0;
-        
-        isTimerRunning.Value = false;
     }
 
-    System.Collections.IEnumerator ResetLayerRoutine(GameObject obj, int originalLayer, float delay)
-    {
-        yield return new WaitForSeconds(delay);
-        if (obj != null) obj.layer = originalLayer;
-    }
-
+    // Server check xem đã bắn đủ 4 trụ chưa và đúng hệ không
     void CheckWinCondition()
     {
-        if (placedCrystals.Count < 4) return;
-        isTimerRunning.Value = false;
+        if (isCheckingOrWon) return;
 
+        int filledCount = 0;
         bool allCorrect = true;
-        int correctCount = 0; 
 
         for (int i = 0; i < pillarPositions.Length; i++)
         {
-            if (pillarStates[i] == i) correctCount++; 
-            else allCorrect = false; 
+            var station = pillarPositions[i].GetComponent<ElementalPillar>();
+            if (station != null && station.currentElement.Value != ElementType.None)
+            {
+                filledCount++;
+                // So sánh nguyên tố đang có trên trụ với đáp án
+                if (station.currentElement.Value != correctCombination[i])
+                {
+                    allCorrect = false; 
+                }
+            }
         }
 
-        correctCrystalsCount.Value = correctCount; 
-        Color finalColor = allCorrect ? Color.green : Color.red;
+        // Nếu chưa bắn sáng đủ 4 trụ thì chưa làm gì cả
+        if (filledCount < 4) return;
 
-        for (int i = 0; i < pillarPositions.Length; i++) SetFlowColorClientRpc(i, finalColor);
+        isCheckingOrWon = true; // Khóa lại không cho xử lý đè
 
-        if (allCorrect) TriggerVictoryEffectsClientRpc();
-        else StartCoroutine(DelayEject());
+        if (allCorrect)
+        {
+            // GIẢI ĐÚNG: Đổi dòng chảy thành màu xanh và kích hoạt chiến thắng
+            for (int i = 0; i < pillarPositions.Length; i++) SetFlowColorClientRpc(i, Color.green);
+            TriggerVictoryEffectsClientRpc();
+        }
+        else
+        {
+            // GIẢI SAI: Đổi dòng chảy màu đỏ và reset lại sau vài giây
+            for (int i = 0; i < pillarPositions.Length; i++) SetFlowColorClientRpc(i, Color.red);
+            StartCoroutine(DelayResetPillarsRoutine());
+        }
     }
 
     [ClientRpc]
@@ -180,33 +115,56 @@ public class AscensionManager : NetworkBehaviour
     {
         if (victoryEffectObject != null) victoryEffectObject.SetActive(true);
         
-        // Gọi Coroutine chiếu Cinematic trên TẤT CẢ các Client
+        // Bắt đầu hãm phanh hiển thị mật khẩu
+        if (passwordPillar != null)
+        {
+            passwordPillar.TriggerRevealClientRpc();
+        }
+
         StartCoroutine(PlayVictoryCinematicRoutine());
     }
 
     // ==========================================
-    // LOGIC CINEMATIC ĐÁ RỚT 
+    // LOGIC THẤT BẠI - RESET TRỤ
+    // ==========================================
+    System.Collections.IEnumerator DelayResetPillarsRoutine()
+    {
+        yield return new WaitForSeconds(3.0f); // Ngắm dòng chảy báo lỗi 3 giây
+
+        ShrinkParticlesClientRpc(); // Tắt dòng chảy
+        
+        yield return new WaitForSeconds(1.5f); // Đợi tắt xong
+
+        // Server tắt nguyên tố trên cả 4 trụ (Code mạng sẽ tự báo cho Client tắt đèn)
+        foreach (var pillar in pillarPositions)
+        {
+            if (pillar != null && pillar.TryGetComponent<ElementalPillar>(out var station))
+            {
+                station.currentElement.Value = ElementType.None; 
+            }
+        }
+
+        isCheckingOrWon = false; // Mở khóa cho bắn lại
+    }
+
+    // ==========================================
+    // LOGIC CINEMATIC ĐÁ RỚT & DÒNG CHẢY
     // ==========================================
     System.Collections.IEnumerator PlayVictoryCinematicRoutine()
     {
-        // 1. Bật Camera Cinematic đè lên góc nhìn người chơi
         if (cinematicCamera != null) cinematicCamera.SetActive(true);
 
-        // 2. Chuẩn bị cục đá ở trên trời
         if (bigStone != null && stoneStartPos != null)
         {
             bigStone.SetActive(true);
             bigStone.transform.position = stoneStartPos.position;
         }
 
-        // 3. Diễn hoạt đá rơi từ StartPos tới EndPos
         float elapsed = 0f;
         while (elapsed < stoneFallDuration)
         {
             elapsed += Time.deltaTime;
             float t = elapsed / stoneFallDuration;
-            
-            // Tính gia tốc (t*t) để đá rơi nhanh dần cho chân thực
             float curve = t * t; 
 
             if (bigStone != null && stoneStartPos != null && stoneEndPos != null)
@@ -216,18 +174,13 @@ public class AscensionManager : NetworkBehaviour
             yield return null;
         }
 
-        // 4. Chốt cứng vị trí cục đá khi chạm đất (cố định lại luôn)
         if (bigStone != null && stoneEndPos != null)
         {
             bigStone.transform.position = stoneEndPos.position;
-            
-            // TIP: Nếu có Particle bụi mù hay rung màn hình thì gọi ở đây là hợp lý nhất!
         }
 
-        // 5. Giữ camera thêm 1 khoảng thời gian để người chơi ngắm thành quả
         yield return new WaitForSeconds(Mathf.Max(0, cinematicWaitTime - stoneFallDuration));
 
-        // 6. Tắt Camera Cinematic, hệ thống sẽ tự trả view về Camera của Player
         if (cinematicCamera != null) cinematicCamera.SetActive(false);
     }
 
@@ -246,14 +199,6 @@ public class AscensionManager : NetworkBehaviour
         }
     }
 
-    System.Collections.IEnumerator DelayEject()
-    {
-        yield return new WaitForSeconds(4.0f);
-        ShrinkParticlesClientRpc();
-        yield return new WaitForSeconds(4.0f);
-        EjectAllCrystals();
-    }
-
     [ClientRpc]
     private void ShrinkParticlesClientRpc()
     {
@@ -262,7 +207,7 @@ public class AscensionManager : NetworkBehaviour
 
     System.Collections.IEnumerator ShrinkParticlesRoutine()
     {
-        float shrinkDuration = 3.0f; 
+        float shrinkDuration = 1.5f; 
         float elapsed = 0f;
 
         while (elapsed < shrinkDuration)
@@ -279,6 +224,12 @@ public class AscensionManager : NetworkBehaviour
                 }
             }
             yield return null;
+        }
+
+        // Tắt hẳn hạt
+        for (int i = 0; i < flowParticles.Length; i++)
+        {
+            if (flowParticles[i] != null) flowParticles[i].gameObject.SetActive(false);
         }
     }
 }

@@ -22,33 +22,38 @@ public class PasswordPillarReveal : NetworkBehaviour
     [Tooltip("Số vòng xoay thêm trước khi dừng (để tạo cảm giác trôi từ từ)")]
     public int extraSpins = 2; 
 
-    // Biến kiểm soát trạng thái: true = đang quay vô tận, false = đang hãm phanh để mở
-    private bool isEndlessSpinning = true; 
+    private bool isEndlessSpinning = true;
+    // Lưu góc khởi tạo để giữ nguyên trục X, Z không bị thay đổi
+    private Quaternion[] initialRotations;
+
+    void Start()
+    {
+        // Lưu lại rotation ban đầu của từng đốt để đảm bảo không bị lệch trục
+        initialRotations = new Quaternion[pillarSegments.Length];
+        for (int i = 0; i < pillarSegments.Length; i++)
+        {
+            if (pillarSegments[i] != null)
+                initialRotations[i] = pillarSegments[i].localRotation;
+        }
+    }
 
     void Update()
     {
-        // Nếu đang ở trạng thái quay vô tận thì cứ mỗi khung hình cho nó xoay
         if (isEndlessSpinning)
         {
             for (int i = 0; i < pillarSegments.Length; i++)
             {
                 if (pillarSegments[i] == null) continue;
 
-                // Mẹo: i = 0, 2 (đốt 1 và 3) sẽ xoay chiều dương (1)
-                //      i = 1, 3 (đốt 2 và 4) sẽ xoay chiều âm (-1)
                 float direction = (i % 2 == 0) ? 1f : -1f;
-                
-                // Xoay liên tục theo chiều Y
                 pillarSegments[i].Rotate(0f, direction * spinSpeed * Time.deltaTime, 0f, Space.Self);
             }
         }
     }
 
-    // Hàm này gọi từ AscensionManager khi 4 viên ngọc đặt đúng
     [ClientRpc]
     public void TriggerRevealClientRpc()
     {
-        // Tắt vòng lặp quay vô tận ở Update, chuyển quyền cho Coroutine hãm phanh
         if (isEndlessSpinning)
         {
             isEndlessSpinning = false;
@@ -63,22 +68,17 @@ public class PasswordPillarReveal : NetworkBehaviour
 
         for (int i = 0; i < pillarSegments.Length; i++)
         {
-            // Lấy góc Y hiện tại (luôn nằm trong khoảng 0-360)
+            // Lấy góc Y hiện tại dựa trên localRotation
             float currentY = pillarSegments[i].localEulerAngles.y;
             startAngles[i] = currentY;
 
-            // Xác định chiều quay hiện tại của đốt này
             float direction = (i % 2 == 0) ? 1f : -1f;
 
-            // --- BẮT ĐẦU TOÁN HỌC TÍNH GÓC DỪNG ---
-            // Tìm khoảng cách từ góc hiện tại tới đáp án đúng
             float angleDiff = (correctAngles[i] % 360f) - (currentY % 360f);
 
-            // Ép nó phải đi tiếp theo đúng chiều quay hiện tại, không được quay ngược lại
             if (direction > 0 && angleDiff < 0) angleDiff += 360f;
             if (direction < 0 && angleDiff > 0) angleDiff -= 360f;
 
-            // Góc đích = Góc hiện tại + Khoảng cách bù + (Số vòng xoay thêm * 360)
             targetAngles[i] = currentY + angleDiff + (direction * 360f * extraSpins);
         }
 
@@ -88,28 +88,24 @@ public class PasswordPillarReveal : NetworkBehaviour
         {
             elapsedTime += Time.deltaTime;
             float t = elapsedTime / stopDuration;
-
-            // Hàm Cubic Ease Out: Khởi đầu giữ tốc độ cũ, sau đó phanh chậm dần rất mượt
             float smoothT = 1f - Mathf.Pow(1f - t, 3f); 
 
             for (int i = 0; i < pillarSegments.Length; i++)
             {
-                // Thêm độ trễ nhẹ giữa các đốt để đốt trên dừng trước, đốt dưới dừng sau nhìn cho "cơ học"
                 float offsetT = Mathf.Clamp01(smoothT - (i * 0.05f));
-
                 float currentAngle = Mathf.Lerp(startAngles[i], targetAngles[i], offsetT);
                 
-                Vector3 currentRot = pillarSegments[i].localEulerAngles;
-                pillarSegments[i].localEulerAngles = new Vector3(currentRot.x, currentAngle, currentRot.z);
+                // SỬA LỖI: Dùng Quaternion.Euler để đảm bảo chỉ tác động vào trục Y
+                // Nhân với initialRotations để giữ nguyên trục X và Z ban đầu
+                pillarSegments[i].localRotation = initialRotations[i] * Quaternion.Euler(0, currentAngle, 0);
             }
             yield return null;
         }
 
-        // Chốt sổ: Ép lại chính xác vào số đáp án để loại bỏ sai số nhỏ xíu của float
+        // Chốt sổ: Ép lại chính xác vào số đáp án
         for (int i = 0; i < pillarSegments.Length; i++)
         {
-            Vector3 finalRot = pillarSegments[i].localEulerAngles;
-            pillarSegments[i].localEulerAngles = new Vector3(finalRot.x, correctAngles[i], finalRot.z);
+            pillarSegments[i].localRotation = initialRotations[i] * Quaternion.Euler(0, correctAngles[i], 0);
         }
     }
 }
