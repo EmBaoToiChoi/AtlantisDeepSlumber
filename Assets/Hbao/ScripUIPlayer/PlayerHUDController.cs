@@ -167,6 +167,7 @@ public class PlayerHUDController : MonoBehaviour
     private VisualElement lockIcon2;   // Tham chiếu tới icon ổ khóa để rung
     private VisualElement weaponImg2;  // Tham chiếu tới hình ảnh vũ khí để ẩn
     private bool isWeapon2Locked = true;
+    public bool Weapon2Locked => isWeapon2Locked;
     private float warningTimer = 0f;
     private const float WARNING_DURATION = 2f;
 
@@ -2438,7 +2439,17 @@ public class PlayerHUDController : MonoBehaviour
         {
             if (teammateCards.TryGetValue(key, out var card))
             {
-                card.RemoveFromHierarchy();
+                if (card != null && card.parent != null)
+                {
+                    try
+                    {
+                        card.parent.Remove(card);
+                    }
+                    catch (System.Exception ex)
+                    {
+                        Debug.LogWarning($"[PlayerHUDController] Loi khi remove card khoi hierarchy: {ex.Message}");
+                    }
+                }
                 teammateCards.Remove(key);
             }
         }

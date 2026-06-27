@@ -30,11 +30,11 @@ public class AxeItem : NetworkBehaviour
     {
         rb = GetComponent<Rigidbody>();
         colliders = GetComponents<Collider>();
+        originalWorldScale = transform.localScale;
     }
 
     private void Start()
     {
-        originalWorldScale = transform.localScale;
     }
 
     public override void OnNetworkSpawn()
@@ -191,6 +191,10 @@ public class AxeItem : NetworkBehaviour
                 if (PlayerHUDController.Instance != null)
                 {
                     PlayerHUDController.Instance.SetWeapon1IconOverride(null);
+                    if (!PlayerHUDController.Instance.Weapon2Locked)
+                    {
+                        PlayerHUDController.Instance.SelectWeapon(2);
+                    }
                 }
             }
         }
@@ -222,7 +226,11 @@ public class AxeItem : NetworkBehaviour
                 Debug.Log($"[AxeItem] Netcode - parentTarget: {parentTarget?.name}");
                 if (parentTarget != null)
                 {
-                    transform.SetParent(parentTarget, false);
+                    bool isNetwork = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
+                    if (!isNetwork || IsServer)
+                    {
+                        transform.SetParent(parentTarget, false);
+                    }
                     transform.localPosition = Vector3.zero;
                     transform.localRotation = Quaternion.identity;
                     AdjustScaleToParent(parentTarget, playerNetObj.gameObject);
@@ -257,7 +265,11 @@ public class AxeItem : NetworkBehaviour
         else
         {
             // Rìu được thả xuống đất
-            transform.SetParent(null);
+            bool isNetwork = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
+            if (!isNetwork || IsServer)
+            {
+                transform.SetParent(null);
+            }
             transform.localScale = originalWorldScale;
             
             if (rb != null)

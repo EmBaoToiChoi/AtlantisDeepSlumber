@@ -574,9 +574,9 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
         }
 
         int activeWeaponIdx = GetActiveWeaponIndex();
-        if (activeWeaponIdx != 1)
+        if (activeWeaponIdx != 0)
         {
-            Debug.LogWarning($"[ElenaPlayer] Cannot trigger R Skill because active weapon is {activeWeaponIdx} (must be 1/unarmed!). Please switch to unarmed first.");
+            Debug.LogWarning($"[ElenaPlayer] Cannot trigger R Skill because active weapon is {activeWeaponIdx} (must be unarmed!). Please switch to unarmed first.");
             return;
         }
 
