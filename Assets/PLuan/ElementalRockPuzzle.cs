@@ -619,13 +619,13 @@ public class ElementalRockPuzzle : NetworkBehaviour
                 // Bắt đầu đếm ngược
                 if (IsNetworkActive)
                 {
-                    netIsTimerRunning.Value = true;
                     netTimeRemaining.Value = timeLimit;
+                    netIsTimerRunning.Value = true;
                 }
                 else
                 {
-                    isTimerRunning = true;
                     timeRemaining = timeLimit;
+                    isTimerRunning = true;
                 }
             }
 

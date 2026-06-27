@@ -3053,12 +3053,6 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
             }
         }
 
-        bool isAttackPlaying = IsPlayingAttackState(out _, out _);
-        if (isAttackPlaying || IsAttackAnimationName(lastTriggeredAnimName))
-        {
-            Debug.Log($"[Combo Debug] IsPlayingActionAnimation=false: lastTriggered={lastTriggeredAnimName}, timeDiff={Time.time - lastActionTriggerTime:F2}, isRooted={isRootedAttack}, isAttackPlaying={isAttackPlaying}");
-        }
-
         return isFullBodyAction && stateInfo.normalizedTime < 0.95f;
     }
 

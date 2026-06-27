@@ -654,22 +654,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         Debug.Log($"[{gameObject.name}] OnRSkillWeaponGlow: Hoạt ảnh kết thúc -> Bắn cục lửa!");
 
         Vector3 spawnPos = rSkillFireSpawnPoint != null ? rSkillFireSpawnPoint.position : transform.position + transform.forward * 1.5f + Vector3.up * 1f;
-        Vector3 shootDirection = transform.forward;
-
-        if (targetCamera != null)
-        {
-            Ray ray = targetCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
-            Vector3 targetPoint = ray.origin + ray.direction * 50f;
-            int layerMask = ~LayerMask.GetMask("Player", "Ignore Raycast");
-            if (Physics.Raycast(ray.origin, ray.direction, out RaycastHit cameraHit, 50f, layerMask))
-            {
-                if (cameraHit.collider.transform.root != transform.root && Vector3.Distance(cameraHit.point, transform.position) >= 3.0f)
-                {
-                    targetPoint = cameraHit.point;
-                }
-            }
-            shootDirection = (targetPoint - spawnPos).normalized;
-        }
+        Vector3 shootDirection = targetCamera != null ? targetCamera.transform.forward : transform.forward;
 
         if (isPendingRShootNetworkMode)
         {
