@@ -40,7 +40,7 @@ public class MayaWaterProjectile : NetworkBehaviour
         }
         rootCol.enabled = true;
         rootCol.isTrigger = true;
-        rootCol.radius = 0.8f;
+        rootCol.radius = 0.3f;
 
         // Đồng thời bật tất cả Collider con khác nếu có
         Collider[] colliders = GetComponentsInChildren<Collider>(true);
@@ -104,6 +104,12 @@ public class MayaWaterProjectile : NetworkBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
+        // Bỏ qua va chạm với chủ nhân của viên đạn (Owner Player) và toàn bộ các chi tiết trên đó
+        if (owner != null && (other.transform.root == owner.transform.root || other.transform.IsChildOf(owner.transform)))
+        {
+            return;
+        }
+
         Debug.Log($"[MayaWaterProjectile Debug] OnTriggerEnter: hit='{other.gameObject.name}' | tag='{other.gameObject.tag}' | layer={LayerMask.LayerToName(other.gameObject.layer)}");
         // Kiểm tra xem có chạm vào đá nguyên tố không (xử lý trên cả Client và Server để bảo đảm tin cậy)
         ElementalRockPuzzle rock = other.GetComponentInParent<ElementalRockPuzzle>();
