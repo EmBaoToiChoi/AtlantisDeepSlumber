@@ -10,7 +10,7 @@ public class PlayerInteraction : NetworkBehaviour
     
     // Các biến liên kết Trạm
     public InteractBox currentInteractBox = null;
-    public PillarStation currentPillarStation = null;
+    // ĐÃ XÓA: public PillarStation currentPillarStation = null;
     
     public NetworkVariable<ulong> heldCoreNetworkId = new NetworkVariable<ulong>(ulong.MaxValue);
     public NetworkVariable<bool> isCarryingCore = new NetworkVariable<bool>(false);
@@ -118,7 +118,7 @@ public class PlayerInteraction : NetworkBehaviour
                 }
                 else
                 {
-                    // Đang ôm ngọc trên tay -> Thực hiện đặt vào Trạm Box hoặc Trụ cột
+                    // Đang ôm ngọc trên tay -> Thực hiện đặt vào Trạm Box
                     if (currentInteractBox != null && !currentInteractBox.isCrystalLocked.Value)
                     {
                         if (NetworkManager.Singleton == null || !NetworkManager.Singleton.IsListening)
@@ -131,18 +131,7 @@ public class PlayerInteraction : NetworkBehaviour
                             currentInteractBox.TrySnapCrystal();
                         }
                     }
-                    else if (currentPillarStation != null)
-                    {
-                        if (NetworkManager.Singleton == null || !NetworkManager.Singleton.IsListening)
-                        {
-                            // XỬ LÝ ĐẶT NGỌC VÀO PILLAR OFFLINE KHI TEST SCENE
-                            HandleOfflineSnapToPillar();
-                        }
-                        else
-                        {
-                            currentPillarStation.TryInteract(this, heldCoreNetworkId.Value);
-                        }
-                    }
+                    // ĐÃ XÓA: Khúc code xử lý đặt ngọc vào currentPillarStation ở đây
                 }
             }
             // ====== PHÍM G: THẢ NGỌC XUỐNG ĐẤT ======
@@ -287,21 +276,7 @@ public class PlayerInteraction : NetworkBehaviour
         }
     }
 
-    private void HandleOfflineSnapToPillar()
-    {
-        if (localHeldCrystalOffline != null && currentPillarStation != null)
-        {
-            CrystalCore coreToSnap = localHeldCrystalOffline;
-
-            localHeldCrystalOffline = null;
-            isCarryingCoreOffline = false;
-            HandleCarryingCoreVisuals(false);
-
-            // Gọi logic tương tác hoặc khóa vào cột Pillar tùy thuộc cấu trúc cột của bạn
-            currentPillarStation.TryInteract(this, 0); 
-            coreToSnap.LockToStation();
-        }
-    }
+    // ĐÃ XÓA: Hàm HandleOfflineSnapToPillar() 
 
     [ServerRpc]
     private void RequestPickupServerRpc(ulong networkObjectId)
