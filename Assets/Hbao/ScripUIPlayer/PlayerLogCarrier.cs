@@ -6,6 +6,8 @@ public class PlayerLogCarrier : MonoBehaviour
     public bool isCarrying = false;
     [Tooltip("Số lượng gỗ đang bưng")]
     public int carriedLogCount = 1;
+    [HideInInspector]
+    public string carriedLogPrefabName = "";
 
     private GameObject carriedLogInstance;
     private GameObject carriedCrystalInstance; // Lưu Visual của Tinh Thể[cite: 4]
@@ -124,6 +126,7 @@ public class PlayerLogCarrier : MonoBehaviour
     {
         isCarrying = true;
         carriedLogCount = amount;
+        carriedLogPrefabName = prefabName;
         TogglePlayerWeapons(false);
         PlayCarryAnimation(true);
         if (!showVisualLog) return;
@@ -252,6 +255,7 @@ public class PlayerLogCarrier : MonoBehaviour
     public void DropLog()
     {
         isCarrying = false;
+        carriedLogPrefabName = "";
         if (carriedLogInstance != null)
         {
             Destroy(carriedLogInstance);
