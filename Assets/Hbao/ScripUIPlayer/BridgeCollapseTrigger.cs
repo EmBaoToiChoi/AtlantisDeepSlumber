@@ -33,9 +33,11 @@ public class BridgeCollapseTrigger : NetworkBehaviour
     private Vector3 originalBridgePos;
     private Quaternion originalBridgeRot;
     private bool isGhostModeActive = false;
-    // Lưu materials gốc của tất cả renderer để khôi phục sau khi sửa cầu
     private System.Collections.Generic.List<Renderer> savedRenderers = new System.Collections.Generic.List<Renderer>();
     private System.Collections.Generic.List<Material[]> savedMaterials = new System.Collections.Generic.List<Material[]>();
+    private GameObject[] resolvedSegments;
+    private GameObject solidBridgeInstance;
+    private Vector3 originalLocalScale;
 
     [Header("Wood Quest Spawning Configuration")]
     [Tooltip("Prefab gỗ để người chơi thu thập (CollectibleItemDrop với itemName = 'WoodLog' hoặc 'ThanhGo')")]
@@ -272,6 +274,11 @@ public class BridgeCollapseTrigger : NetworkBehaviour
         isReadyToBuild.OnValueChanged -= OnReadyToBuildChanged;
     }
 
+    private void OnDestroy()
+    {
+        DestroySolidBridgeInstance();
+    }
+
     private void OnReadyToBuildChanged(bool oldVal, bool newVal)
     {
         if (newVal)
@@ -337,7 +344,7 @@ public class BridgeCollapseTrigger : NetworkBehaviour
             UpdateGhostAlpha(currentProgress);
 
             // Hiển thị các mảnh cầu theo phần trăm tiến trình
-            // UpdateProgressiveBridgeSegments(currentProgress);
+            UpdateProgressiveBridgeSegments(currentProgress);
 
             // Emit particles when progress increases
             if (currentProgress > lastProgress)
@@ -450,6 +457,7 @@ public class BridgeCollapseTrigger : NetworkBehaviour
     private void CollapseBridgeLocal()
     {
         localCollapseTriggered = true;
+        DestroySolidBridgeInstance();
 
         if (bridgeObstacle != null)
         {
@@ -757,6 +765,7 @@ public class BridgeCollapseTrigger : NetworkBehaviour
         }
         savedRenderers.Clear();
         savedMaterials.Clear();
+        DestroySolidBridgeInstance();
         isGhostModeActive = false;
 
         // 4. Chạy Animator sửa cầu (nếu có)
@@ -1479,19 +1488,235 @@ public class BridgeCollapseTrigger : NetworkBehaviour
         }
     }
 
-    private void UpdateProgressiveBridgeSegments(float progress)
+    private GameObject[] GetBridgeSegments()
     {
-        if (stableBridgeSegments == null || stableBridgeSegments.Length == 0) return;
+        if (resolvedSegments != null && resolvedSegments.Length > 0)
+        {
+            return resolvedSegments;
+        }
 
-        int N = stableBridgeSegments.Length;
+        // Nếu stableBridgeSegments được cấu hình thủ công trong Inspector và có nhiều hơn 1 phần tử, dùng nó
+        if (stableBridgeSegments != null && stableBridgeSegments.Length > 1)
+        {
+            resolvedSegments = stableBridgeSegments;
+            return resolvedSegments;
+        }
+
+        // Nếu không, ta tự động tìm các con trực tiếp của mainBridgeObject làm các khúc cầu
+        if (mainBridgeObject != null)
+        {
+            System.Collections.Generic.List<GameObject> dynamicSegments = new System.Collections.Generic.List<GameObject>();
+            for (int i = 0; i < mainBridgeObject.transform.childCount; i++)
+            {
+                Transform child = mainBridgeObject.transform.GetChild(i);
+                // Chỉ lấy các con có MeshRenderer hoặc Renderer để tránh lấy các empty gameobjects
+                if (child.GetComponentInChildren<Renderer>(true) != null)
+                {
+                    dynamicSegments.Add(child.gameObject);
+                }
+            }
+
+            if (dynamicSegments.Count > 0)
+            {
+                resolvedSegments = dynamicSegments.ToArray();
+                return resolvedSegments;
+            }
+        }
+
+        resolvedSegments = stableBridgeSegments;
+        return resolvedSegments;
+    }
+
+    private void DestroySolidBridgeInstance()
+    {
+        if (solidBridgeInstance != null)
+        {
+            Destroy(solidBridgeInstance);
+            solidBridgeInstance = null;
+        }
+    }
+
+    private void UpdateProgressiveBridgeScale(float progress)
+    {
+        if (mainBridgeObject == null) return;
+
+        if (solidBridgeInstance == null)
+        {
+            // Clone cầu trước khi nó bị đổi màu thành ghost
+            solidBridgeInstance = Instantiate(mainBridgeObject, mainBridgeObject.transform.parent);
+            solidBridgeInstance.name = mainBridgeObject.name + "_SolidInstance";
+
+            originalLocalScale = mainBridgeObject.transform.localScale;
+
+            // Đồng bộ lại vật liệu gốc cho bản clone từ danh sách savedMaterials
+            Renderer[] origRenders = mainBridgeObject.GetComponentsInChildren<Renderer>(true);
+            Renderer[] cloneRenders = solidBridgeInstance.GetComponentsInChildren<Renderer>(true);
+
+            for (int k = 0; k < cloneRenders.Length; k++)
+            {
+                if (k < origRenders.Length && cloneRenders[k] != null && origRenders[k] != null)
+                {
+                    int savedIdx = savedRenderers.IndexOf(origRenders[k]);
+                    if (savedIdx >= 0 && savedIdx < savedMaterials.Count)
+                    {
+                        cloneRenders[k].materials = savedMaterials[savedIdx];
+                    }
+                }
+            }
+
+            // Tắt LODGroup để tránh culling/ẩn khi scale nhỏ
+            LODGroup lod = solidBridgeInstance.GetComponent<LODGroup>();
+            if (lod != null)
+            {
+                lod.enabled = false;
+            }
+
+            // Bật LOD0, tắt các LOD khác của bản clone
+            for (int i = 0; i < solidBridgeInstance.transform.childCount; i++)
+            {
+                Transform child = solidBridgeInstance.transform.GetChild(i);
+                if (child.name.Contains("LOD0"))
+                {
+                    child.gameObject.SetActive(true);
+                }
+                else if (child.name.Contains("LOD1") || child.name.Contains("LOD2"))
+                {
+                    child.gameObject.SetActive(false);
+                }
+            }
+
+            // Đảm bảo bật tất cả MeshRenderers và Colliders trên bản clone
+            foreach (var r in cloneRenders)
+            {
+                if (r != null) r.enabled = true;
+            }
+            foreach (var col in solidBridgeInstance.GetComponentsInChildren<Collider>(true))
+            {
+                if (col != null) col.enabled = true;
+            }
+        }
+
+        // Cập nhật scale local Z của bản clone dựa trên % tiến độ (0% đến 100%)
+        float progressFactor = progress / 100f;
+        Vector3 newScale = originalLocalScale;
+        newScale.z = originalLocalScale.z * progressFactor;
+
+        solidBridgeInstance.transform.localScale = newScale;
+
+        // Bật/tắt hiển thị solidInstance
+        bool showSolid = progress > 0.5f;
+        solidBridgeInstance.SetActive(showSolid);
+    }
+
+    private void UpdateSegmentBySegmentProgress(float progress)
+    {
+        GameObject[] segments = GetBridgeSegments();
+        if (segments == null || segments.Length == 0) return;
+
+        int N = segments.Length;
         int activeCount = Mathf.Min(Mathf.FloorToInt((progress / 100f) * N), N);
 
         for (int i = 0; i < N; i++)
         {
-            if (stableBridgeSegments[i] != null)
+            GameObject segment = segments[i];
+            if (segment == null) continue;
+
+            segment.SetActive(true);
+
+            Renderer[] renderers = segment.GetComponentsInChildren<Renderer>(true);
+            Collider[] colliders = segment.GetComponentsInChildren<Collider>(true);
+
+            bool isSolid = (i < activeCount);
+
+            if (isSolid)
             {
-                stableBridgeSegments[i].SetActive(i < activeCount);
+                foreach (var r in renderers)
+                {
+                    if (r == null) continue;
+                    int savedIndex = savedRenderers.IndexOf(r);
+                    if (savedIndex >= 0 && savedIndex < savedMaterials.Count)
+                    {
+                        r.materials = savedMaterials[savedIndex];
+                    }
+                    r.enabled = true;
+                }
+                foreach (var col in colliders)
+                {
+                    if (col != null) col.enabled = true;
+                }
             }
+            else
+            {
+                if (ghostMaterialInstance == null)
+                {
+                    ghostMaterialInstance = CreateGhostMaterial(0.4f);
+                }
+
+                foreach (var r in renderers)
+                {
+                    if (r == null) continue;
+                    if (!savedRenderers.Contains(r))
+                    {
+                        savedRenderers.Add(r);
+                        savedMaterials.Add(r.sharedMaterials);
+                    }
+
+                    Material[] ghostMats = new Material[r.sharedMaterials.Length];
+                    for (int j = 0; j < ghostMats.Length; j++)
+                    {
+                        ghostMats[j] = ghostMaterialInstance;
+                    }
+                    r.materials = ghostMats;
+                    r.enabled = true;
+                }
+                foreach (var col in colliders)
+                {
+                    if (col != null) col.enabled = false;
+                }
+            }
+        }
+    }
+
+    private void UpdateProgressiveBridgeSegments(float progress)
+    {
+        // 1. Kiểm tra nếu cầu là nguyên khối (single mesh hoặc LOD levels) thì dùng Z-scale growth
+        bool useZScaleGrowth = false;
+        
+        if (stableBridgeSegments == null || stableBridgeSegments.Length <= 1)
+        {
+            if (mainBridgeObject != null)
+            {
+                if (mainBridgeObject.GetComponent<LODGroup>() != null)
+                {
+                    useZScaleGrowth = true;
+                }
+                else
+                {
+                    bool hasLODChildren = false;
+                    for (int i = 0; i < mainBridgeObject.transform.childCount; i++)
+                    {
+                        if (mainBridgeObject.transform.GetChild(i).name.Contains("LOD"))
+                        {
+                            hasLODChildren = true;
+                            break;
+                        }
+                    }
+                    if (hasLODChildren || mainBridgeObject.transform.childCount <= 1)
+                    {
+                        useZScaleGrowth = true;
+                    }
+                }
+            }
+        }
+
+        if (useZScaleGrowth)
+        {
+            UpdateProgressiveBridgeScale(progress);
+        }
+        else
+        {
+            DestroySolidBridgeInstance();
+            UpdateSegmentBySegmentProgress(progress);
         }
     }
 
