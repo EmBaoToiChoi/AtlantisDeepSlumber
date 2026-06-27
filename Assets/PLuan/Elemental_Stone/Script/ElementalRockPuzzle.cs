@@ -112,54 +112,12 @@ public class ElementalRockPuzzle : NetworkBehaviour
             Debug.Log($"[ElementalRockPuzzle] Đã xóa Rigidbody trên '{gameObject.name}' để chuyển thành Static Collider (tránh lỗi Kinematic vs Kinematic).");
         }
 
-        // ĐẢM BẢO có cả SphereCollider TRIGGER và BoxCollider TRIGGER trực tiếp trên chính đối tượng này (parent) để nhận va chạm.
-        // Đồng thời thiết lập kích thước phù hợp dựa trên mesh bounds.
-        float detectionRadius = 1.2f;
-        Vector3 boxCenter = Vector3.zero;
-        Vector3 boxSize = new Vector3(2f, 2f, 2f);
-
-        Renderer childRenderer = GetComponentInChildren<Renderer>();
-        if (childRenderer != null)
+        // Đảm bảo tất cả Collider sẵn có trên đối tượng cha đều được thiết lập làm Trigger để bắt va chạm
+        Collider[] parentColliders = GetComponents<Collider>();
+        foreach (var col in parentColliders)
         {
-            Vector3 boundsSize = childRenderer.bounds.size;
-            float maxDimension = Mathf.Max(boundsSize.x, Mathf.Max(boundsSize.y, boundsSize.z));
-            float avgScale = (transform.lossyScale.x + transform.lossyScale.y + transform.lossyScale.z) / 3f;
-            detectionRadius = (maxDimension / 2f) / Mathf.Max(avgScale, 0.01f) + 0.4f;
-
-            boxCenter = transform.InverseTransformPoint(childRenderer.bounds.center);
-            Vector3 localSize = transform.InverseTransformDirection(boundsSize);
-            boxSize = new Vector3(Mathf.Abs(localSize.x), Mathf.Abs(localSize.y), Mathf.Abs(localSize.z)) + Vector3.one * 0.8f;
-        }
-
-        // 1. Cấu hình SphereCollider Trigger
-        SphereCollider sphereCol = GetComponent<SphereCollider>();
-        if (sphereCol == null)
-        {
-            sphereCol = gameObject.AddComponent<SphereCollider>();
-            sphereCol.isTrigger = true;
-            sphereCol.radius = detectionRadius;
-            Debug.Log($"[ElementalRockPuzzle] '{gameObject.name}' đã tự thêm SphereCollider Trigger (radius={detectionRadius:F2}) trên parent.");
-        }
-        else
-        {
-            sphereCol.isTrigger = true;
-            Debug.Log($"[ElementalRockPuzzle] '{gameObject.name}' đã cấu hình SphereCollider sẵn có làm Trigger (radius={sphereCol.radius:F2}).");
-        }
-
-        // 2. Cấu hình BoxCollider Trigger (theo yêu cầu của user)
-        BoxCollider boxCol = GetComponent<BoxCollider>();
-        if (boxCol == null)
-        {
-            boxCol = gameObject.AddComponent<BoxCollider>();
-            boxCol.isTrigger = true;
-            boxCol.center = boxCenter;
-            boxCol.size = boxSize;
-            Debug.Log($"[ElementalRockPuzzle] '{gameObject.name}' đã tự thêm BoxCollider Trigger (center={boxCenter}, size={boxSize}) trên parent.");
-        }
-        else
-        {
-            boxCol.isTrigger = true;
-            Debug.Log($"[ElementalRockPuzzle] '{gameObject.name}' đã cấu hình BoxCollider sẵn có làm Trigger (center={boxCol.center}, size={boxCol.size}).");
+            col.isTrigger = true;
+            Debug.Log($"[ElementalRockPuzzle] '{gameObject.name}' đã tự động cấu hình Collider '{col.GetType().Name}' làm Trigger.");
         }
 
         // Cấu hình các 3D Renderers nếu được gán
