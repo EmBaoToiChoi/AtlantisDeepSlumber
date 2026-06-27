@@ -142,7 +142,7 @@ public class AxeItem : NetworkBehaviour
         carryingPlayerId.Value = 0;
 
         // Hủy liên kết parent
-        NetworkObject.RemoveParent();
+        NetworkObject.TryRemoveParent();
 
         // Đặt lại vị trí rơi
         if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(lastCarrierId, out NetworkObject playerNetObj))
