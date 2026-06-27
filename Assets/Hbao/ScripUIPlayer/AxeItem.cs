@@ -321,6 +321,17 @@ public class AxeItem : NetworkBehaviour
 
     private void ApplyTransformOffset(GameObject player)
     {
+        // 1. Ưu tiên lấy offset cấu hình từ component PlayerAxeAnchor gắn trực tiếp trên Player
+        var anchor = player.GetComponent<PlayerAxeAnchor>();
+        if (anchor != null)
+        {
+            transform.localPosition = anchor.positionOffset;
+            transform.localRotation = Quaternion.Euler(anchor.rotationOffset);
+            transform.localScale = anchor.scaleOffset;
+            return;
+        }
+
+        // 2. Fallback tìm trong danh sách classOffsets của cây rìu
         Vector3 pos = localPositionOffset;
         Vector3 rot = localRotationOffset;
         Vector3 scale = localScaleOffset;
