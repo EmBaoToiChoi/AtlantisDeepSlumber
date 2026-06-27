@@ -139,10 +139,12 @@ public class AxeItem : NetworkBehaviour
         if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(playerNetId, out NetworkObject playerNetObj))
         {
             Transform parentTarget = null;
+            bool hasAnchor = false;
             var anchor = playerNetObj.GetComponent<PlayerAxeAnchor>();
             if (anchor != null && anchor.axeHoldingPoint != null)
             {
                 parentTarget = anchor.axeHoldingPoint;
+                hasAnchor = true;
             }
             else
             {
@@ -152,6 +154,18 @@ public class AxeItem : NetworkBehaviour
             if (parentTarget != null)
             {
                 NetworkObject.TrySetParent(parentTarget, false);
+                
+                // Đồng bộ vị trí cục bộ ngay trên Server để truyền xuống Client
+                if (hasAnchor)
+                {
+                    transform.localPosition = Vector3.zero;
+                    transform.localRotation = Quaternion.identity;
+                    transform.localScale = Vector3.one;
+                }
+                else
+                {
+                    ApplyTransformOffset(playerNetObj.gameObject);
+                }
             }
         }
     }
