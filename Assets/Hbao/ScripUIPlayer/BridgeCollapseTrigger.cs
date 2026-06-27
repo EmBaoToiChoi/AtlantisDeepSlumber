@@ -1700,6 +1700,12 @@ public class BridgeCollapseTrigger : NetworkBehaviour
 
                         if (origMat.HasProperty("_Specular")) clipMat.SetTexture("_Specular", origMat.GetTexture("_Specular"));
 
+                        // Copy các tham số màu sắc của Shader Multi-Color
+                        if (origMat.HasProperty("_Primary_Color")) clipMat.SetColor("_Primary_Color", origMat.GetColor("_Primary_Color"));
+                        if (origMat.HasProperty("_Secondary_Color")) clipMat.SetColor("_Secondary_Color", origMat.GetColor("_Secondary_Color"));
+                        if (origMat.HasProperty("_Tertiary_Color")) clipMat.SetColor("_Tertiary_Color", origMat.GetColor("_Tertiary_Color"));
+                        if (origMat.HasProperty("_Color")) clipMat.SetColor("_Color", origMat.GetColor("_Color"));
+
                         cloneRenders[k].material = clipMat;
                         clippingMaterials.Add(clipMat);
                     }
