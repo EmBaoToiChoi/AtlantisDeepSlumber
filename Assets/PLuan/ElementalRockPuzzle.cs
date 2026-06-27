@@ -499,8 +499,11 @@ public class ElementalRockPuzzle : NetworkBehaviour
             }
             if (projectileRigidbody != null)
             {
-                projectileRigidbody.linearVelocity = Vector3.zero;
-                projectileRigidbody.angularVelocity = Vector3.zero;
+                if (!projectileRigidbody.isKinematic)
+                {
+                    projectileRigidbody.linearVelocity = Vector3.zero;
+                    projectileRigidbody.angularVelocity = Vector3.zero;
+                }
                 projectileRigidbody.isKinematic = true;
             }
 
@@ -579,8 +582,11 @@ public class ElementalRockPuzzle : NetworkBehaviour
                 Rigidbody projectileRigidbody = hitObj.GetComponent<Rigidbody>();
                 if (projectileRigidbody != null)
                 {
-                    projectileRigidbody.linearVelocity = Vector3.zero;
-                    projectileRigidbody.angularVelocity = Vector3.zero;
+                    if (!projectileRigidbody.isKinematic)
+                    {
+                        projectileRigidbody.linearVelocity = Vector3.zero;
+                        projectileRigidbody.angularVelocity = Vector3.zero;
+                    }
                     projectileRigidbody.isKinematic = true;
                 }
 
