@@ -3348,18 +3348,18 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
                 {
                     // Đứng yên đánh (Idle Attack) -> không sử dụng Avatar Mask: chạy trên Layer 0 (Base Layer) và tắt Weight của Layer 1 về 0
                     anim.SetLayerWeight(1, 0f);
-                    anim.CrossFadeInFixedTime(animName, fadeTime, 0);
+                    anim.CrossFadeInFixedTime(animName, fadeTime, 0, 0f);
                 }
                 else
                 {
                     // Di chuyển/chạy đánh (Walk/Run Attack) -> sử dụng Avatar Mask: chạy trên Layer 1 với Weight = 1
                     anim.SetLayerWeight(1, 1f);
-                    anim.CrossFadeInFixedTime(animName, fadeTime, 1);
+                    anim.CrossFadeInFixedTime(animName, fadeTime, 1, 0f);
                 }
             }
             else
             {
-                anim.CrossFadeInFixedTime(animName, fadeTime, 0);
+                anim.CrossFadeInFixedTime(animName, fadeTime, 0, 0f);
             }
         }
         else
