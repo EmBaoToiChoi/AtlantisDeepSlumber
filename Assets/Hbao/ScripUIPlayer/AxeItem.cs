@@ -138,10 +138,20 @@ public class AxeItem : NetworkBehaviour
         // Thực hiện parenting của Netcode
         if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(playerNetId, out NetworkObject playerNetObj))
         {
-            Transform hand = FindRightHand(playerNetObj.transform);
-            if (hand != null)
+            Transform parentTarget = null;
+            var anchor = playerNetObj.GetComponent<PlayerAxeAnchor>();
+            if (anchor != null && anchor.axeHoldingPoint != null)
             {
-                NetworkObject.TrySetParent(hand, false);
+                parentTarget = anchor.axeHoldingPoint;
+            }
+            else
+            {
+                parentTarget = FindRightHand(playerNetObj.transform);
+            }
+
+            if (parentTarget != null)
+            {
+                NetworkObject.TrySetParent(parentTarget, false);
             }
         }
     }
@@ -201,12 +211,33 @@ public class AxeItem : NetworkBehaviour
                 if (rb != null) rb.isKinematic = true;
                 foreach (var col in colliders) if (col != null) col.enabled = false;
 
-                // Tìm xương bàn tay phải và gắn rìu vào
-                Transform hand = FindRightHand(playerNetObj.transform);
-                if (hand != null)
+                // Tìm xương bàn tay hoặc điểm neo transform và gắn rìu vào
+                Transform parentTarget = null;
+                bool hasAnchor = false;
+                var anchor = playerNetObj.GetComponent<PlayerAxeAnchor>();
+                if (anchor != null && anchor.axeHoldingPoint != null)
                 {
-                    transform.SetParent(hand, false);
-                    ApplyTransformOffset(playerNetObj.gameObject);
+                    parentTarget = anchor.axeHoldingPoint;
+                    hasAnchor = true;
+                }
+                else
+                {
+                    parentTarget = FindRightHand(playerNetObj.transform);
+                }
+
+                if (parentTarget != null)
+                {
+                    transform.SetParent(parentTarget, false);
+                    if (hasAnchor)
+                    {
+                        transform.localPosition = Vector3.zero;
+                        transform.localRotation = Quaternion.identity;
+                        transform.localScale = Vector3.one;
+                    }
+                    else
+                    {
+                        ApplyTransformOffset(playerNetObj.gameObject);
+                    }
                 }
 
                 // Ẩn vũ khí hiện tại của nhân vật
@@ -259,11 +290,32 @@ public class AxeItem : NetworkBehaviour
         if (rb != null) rb.isKinematic = true;
         foreach (var col in colliders) if (col != null) col.enabled = false;
 
-        Transform hand = FindRightHand(player.transform);
-        if (hand != null)
+        Transform parentTarget = null;
+        bool hasAnchor = false;
+        var anchor = player.GetComponent<PlayerAxeAnchor>();
+        if (anchor != null && anchor.axeHoldingPoint != null)
         {
-            transform.SetParent(hand, false);
-            ApplyTransformOffset(player);
+            parentTarget = anchor.axeHoldingPoint;
+            hasAnchor = true;
+        }
+        else
+        {
+            parentTarget = FindRightHand(player.transform);
+        }
+
+        if (parentTarget != null)
+        {
+            transform.SetParent(parentTarget, false);
+            if (hasAnchor)
+            {
+                transform.localPosition = Vector3.zero;
+                transform.localRotation = Quaternion.identity;
+                transform.localScale = Vector3.one;
+            }
+            else
+            {
+                ApplyTransformOffset(player);
+            }
         }
 
         var carrier = player.GetComponent<PlayerLogCarrier>();
@@ -321,17 +373,7 @@ public class AxeItem : NetworkBehaviour
 
     private void ApplyTransformOffset(GameObject player)
     {
-        // 1. Ưu tiên lấy offset cấu hình từ component PlayerAxeAnchor gắn trực tiếp trên Player
-        var anchor = player.GetComponent<PlayerAxeAnchor>();
-        if (anchor != null)
-        {
-            transform.localPosition = anchor.positionOffset;
-            transform.localRotation = Quaternion.Euler(anchor.rotationOffset);
-            transform.localScale = anchor.scaleOffset;
-            return;
-        }
-
-        // 2. Fallback tìm trong danh sách classOffsets của cây rìu
+        // Fallback tìm trong danh sách classOffsets của cây rìu
         Vector3 pos = localPositionOffset;
         Vector3 rot = localRotationOffset;
         Vector3 scale = localScaleOffset;
