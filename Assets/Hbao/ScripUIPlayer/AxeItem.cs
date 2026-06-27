@@ -3,10 +3,23 @@ using Unity.Netcode;
 
 public class AxeItem : NetworkBehaviour
 {
-    [Header("Right Hand Transform Offsets")]
+    [System.Serializable]
+    public struct ClassTransformOffset
+    {
+        public string className; // Tên gợi nhớ (ví dụ: Leo, Maya, Elena, Arthur)
+        public int classIndex;   // 0 = Leo, 1 = Maya, 2 = Elena, 3 = Arthur
+        public Vector3 positionOffset;
+        public Vector3 rotationOffset;
+        public Vector3 scaleOffset;
+    }
+
+    [Header("Right Hand Transform Offsets (Fallback)")]
     public Vector3 localPositionOffset = Vector3.zero;
     public Vector3 localRotationOffset = Vector3.zero;
     public Vector3 localScaleOffset = Vector3.one;
+
+    [Header("Per-Class Custom Transform Offsets")]
+    public System.Collections.Generic.List<ClassTransformOffset> classOffsets = new System.Collections.Generic.List<ClassTransformOffset>();
 
     [Header("Sprite Icon Settings")]
     public Sprite customAxeIcon; // Nếu trống sẽ tự động tải từ Resources "axe_icon"
@@ -193,9 +206,7 @@ public class AxeItem : NetworkBehaviour
                 if (hand != null)
                 {
                     transform.SetParent(hand, false);
-                    transform.localPosition = localPositionOffset;
-                    transform.localRotation = Quaternion.Euler(localRotationOffset);
-                    transform.localScale = localScaleOffset;
+                    ApplyTransformOffset(playerNetObj.gameObject);
                 }
 
                 // Ẩn vũ khí hiện tại của nhân vật
@@ -252,9 +263,7 @@ public class AxeItem : NetworkBehaviour
         if (hand != null)
         {
             transform.SetParent(hand, false);
-            transform.localPosition = localPositionOffset;
-            transform.localRotation = Quaternion.Euler(localRotationOffset);
-            transform.localScale = localScaleOffset;
+            ApplyTransformOffset(player);
         }
 
         var carrier = player.GetComponent<PlayerLogCarrier>();
@@ -308,5 +317,32 @@ public class AxeItem : NetworkBehaviour
             if (found != null) return found;
         }
         return null;
+    }
+
+    private void ApplyTransformOffset(GameObject player)
+    {
+        Vector3 pos = localPositionOffset;
+        Vector3 rot = localRotationOffset;
+        Vector3 scale = localScaleOffset;
+
+        var hudTarget = player.GetComponent<IPlayerHUDTarget>();
+        if (hudTarget != null)
+        {
+            int classIdx = hudTarget.CharacterClassIndex;
+            foreach (var offset in classOffsets)
+            {
+                if (offset.classIndex == classIdx)
+                {
+                    pos = offset.positionOffset;
+                    rot = offset.rotationOffset;
+                    scale = offset.scaleOffset;
+                    break;
+                }
+            }
+        }
+
+        transform.localPosition = pos;
+        transform.localRotation = Quaternion.Euler(rot);
+        transform.localScale = scale;
     }
 }
