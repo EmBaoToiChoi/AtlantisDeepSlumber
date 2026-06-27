@@ -39,11 +39,17 @@ public class AxeItem : NetworkBehaviour
     private bool isCarryingLocally = false;
     private GameObject localPlayerCarrier = null;
     private GameObject lastNetworkCarrier = null;
+    private Vector3 originalWorldScale = Vector3.one;
 
     private void Awake()
     {
         rb = GetComponent<Rigidbody>();
         colliders = GetComponents<Collider>();
+    }
+
+    private void Start()
+    {
+        originalWorldScale = transform.localScale;
     }
 
     public override void OnNetworkSpawn()
@@ -160,7 +166,7 @@ public class AxeItem : NetworkBehaviour
                 {
                     transform.localPosition = Vector3.zero;
                     transform.localRotation = Quaternion.identity;
-                    transform.localScale = Vector3.one;
+                    AdjustScaleToParent(parentTarget, playerNetObj.gameObject);
                 }
                 else
                 {
@@ -248,7 +254,7 @@ public class AxeItem : NetworkBehaviour
                     {
                         transform.localPosition = Vector3.zero;
                         transform.localRotation = Quaternion.identity;
-                        transform.localScale = Vector3.one;
+                        AdjustScaleToParent(parentTarget, playerNetObj.gameObject);
                         Debug.Log($"[AxeItem] Netcode - Da set localPosition = zero. local: {transform.localPosition}, world: {transform.position}");
                     }
                     else
@@ -336,7 +342,7 @@ public class AxeItem : NetworkBehaviour
             {
                 transform.localPosition = Vector3.zero;
                 transform.localRotation = Quaternion.identity;
-                transform.localScale = Vector3.one;
+                AdjustScaleToParent(parentTarget, player);
                 Debug.Log($"[AxeItem] Da SetParent theo holdingPoint, dat localPosition = zero. vi tri thuc te local: {transform.localPosition}, world: {transform.position}");
             }
             else
@@ -429,5 +435,40 @@ public class AxeItem : NetworkBehaviour
         transform.localPosition = pos;
         transform.localRotation = Quaternion.Euler(rot);
         transform.localScale = scale;
+    }
+
+    private void AdjustScaleToParent(Transform parentTarget, GameObject player)
+    {
+        Transform hand = FindRightHand(player.transform);
+        Vector3 parentLossyScale = (hand != null) ? hand.lossyScale : player.transform.lossyScale;
+
+        Vector3 relativeLocalScale = new Vector3(
+            originalWorldScale.x / (parentLossyScale.x != 0f ? parentLossyScale.x : 1f),
+            originalWorldScale.y / (parentLossyScale.y != 0f ? parentLossyScale.y : 1f),
+            originalWorldScale.z / (parentLossyScale.z != 0f ? parentLossyScale.z : 1f)
+        );
+
+        if (parentTarget != hand)
+        {
+            Transform anchorParent = parentTarget.parent;
+            if (anchorParent != null)
+            {
+                Vector3 anchorParentLossyScale = anchorParent.lossyScale;
+                transform.localScale = new Vector3(
+                    originalWorldScale.x / (anchorParentLossyScale.x != 0f ? anchorParentLossyScale.x : 1f),
+                    originalWorldScale.y / (anchorParentLossyScale.y != 0f ? anchorParentLossyScale.y : 1f),
+                    originalWorldScale.z / (anchorParentLossyScale.z != 0f ? anchorParentLossyScale.z : 1f)
+                );
+                transform.localScale = Vector3.Scale(transform.localScale, parentTarget.localScale);
+            }
+            else
+            {
+                transform.localScale = relativeLocalScale;
+            }
+        }
+        else
+        {
+            transform.localScale = relativeLocalScale;
+        }
     }
 }
