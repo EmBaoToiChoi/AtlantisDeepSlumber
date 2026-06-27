@@ -996,7 +996,17 @@ public class BridgeCollapseTrigger : NetworkBehaviour
         {
             playerCount = NetworkManager.Singleton.ConnectedClients.Count;
         }
-        float increment = 1.0f * Mathf.Max(1, playerCount);
+
+        // Tỷ lệ tăng tiến độ phi tuyến tính theo số lượng người chơi:
+        // - 1 người: cực khó (0.25% mỗi click)
+        // - 2 người: khó (0.5% mỗi click)
+        // - 3 người: trung bình (1.0% mỗi click)
+        // - 4+ người: dễ (2.5% mỗi click)
+        float increment = 1.0f;
+        if (playerCount == 1) increment = 0.25f;
+        else if (playerCount == 2) increment = 0.5f;
+        else if (playerCount == 3) increment = 1.0f;
+        else increment = 2.5f;
 
         buildProgress.Value = Mathf.Min(buildProgress.Value + increment, 100f);
 
