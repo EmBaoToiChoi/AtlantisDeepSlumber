@@ -235,6 +235,13 @@ public class AxeItem : NetworkBehaviour
     // --- LOGIC NHẶT/THẢ DÀNH CHO OFFLINE (STANDALONE) ---
     private void PickupLocal(GameObject player)
     {
+        // Phá hủy component NetworkObject cục bộ để tránh lỗi cảnh báo của Netcode khi SetParent offline
+        var netObj = GetComponent<NetworkObject>();
+        if (netObj != null)
+        {
+            Destroy(netObj);
+        }
+
         localPlayerCarrier = player;
         isCarryingLocally = true;
 
