@@ -323,6 +323,15 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
         return activeWeaponIndex.Value;
     }
 
+    public virtual bool IsHoldingAxe()
+    {
+        if (leoPlayer != null) return leoPlayer.IsHoldingAxe();
+        if (arthurPlayer != null) return arthurPlayer.IsHoldingAxe();
+        if (elenaPlayer != null) return elenaPlayer.IsHoldingAxe();
+        if (mayaPlayer != null) return mayaPlayer.IsHoldingAxe();
+        return false;
+    }
+
     protected virtual void Awake()
     {
         leoPlayer = GetComponent<LeoPlayer>();

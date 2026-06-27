@@ -170,6 +170,7 @@ public class PlayerHUDController : MonoBehaviour
     private float warningTimer = 0f;
     private const float WARNING_DURATION = 2f;
 
+    private VisualElement weaponDurabilitySlot1;
     private VisualElement weaponDurabilityFill1;
     private VisualElement weaponDurabilityFill2;
     private VisualElement interactionPrompt;
@@ -345,6 +346,11 @@ public class PlayerHUDController : MonoBehaviour
             root.Add(screenDamageFlash);
         }
 
+        weaponDurabilitySlot1 = root.Q<VisualElement>("weapon-durability-slot-1");
+        if (weaponDurabilitySlot1 != null)
+        {
+            weaponDurabilitySlot1.style.display = isCarryingAxe ? DisplayStyle.Flex : DisplayStyle.None;
+        }
         weaponDurabilityFill1 = root.Q<VisualElement>("weapon-durability-fill-1");
         weaponDurabilityFill2 = root.Q<VisualElement>("weapon-durability-fill-2");
         interactionPrompt = root.Q<VisualElement>("interaction-prompt");
@@ -1573,6 +1579,10 @@ public class PlayerHUDController : MonoBehaviour
 
         if (slotIndex == 1 && weaponDurabilityFill1 != null)
         {
+            if (weaponDurabilitySlot1 != null)
+            {
+                weaponDurabilitySlot1.style.display = isCarryingAxe ? DisplayStyle.Flex : DisplayStyle.None;
+            }
             weaponDurabilityFill1.style.width = Length.Percent(widthPercent);
             weaponDurabilityFill1.style.backgroundColor = fillColor;
         }
@@ -2975,6 +2985,10 @@ public class PlayerHUDController : MonoBehaviour
 
     public void SetWeapon1IconOverride(Sprite customSprite)
     {
+        if (weaponDurabilitySlot1 != null)
+        {
+            weaponDurabilitySlot1.style.display = (customSprite != null) ? DisplayStyle.Flex : DisplayStyle.None;
+        }
         if (weaponImg1 != null)
         {
             if (customSprite != null)

@@ -3583,15 +3583,29 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         }
     }
 
+    public bool IsHoldingAxe()
+    {
+        return GetComponentInChildren<AxeItem>(true) != null;
+    }
+
     public int GetActiveWeaponIndex()
     {
+        int val;
         if (isStandaloneMode)
         {
             PlayerHUDController hud = FindAnyObjectByType<PlayerHUDController>();
-            if (hud != null) return hud.currentSelectedWeapon;
-            return fallbackWeaponIndex;
+            val = (hud != null) ? hud.currentSelectedWeapon : fallbackWeaponIndex;
         }
-        return activeWeaponIndex.Value;
+        else
+        {
+            val = activeWeaponIndex.Value;
+        }
+
+        if (val == 1 && !IsHoldingAxe())
+        {
+            return 0;
+        }
+        return val;
     }
 
     public void OnRollEnd()
@@ -4157,6 +4171,12 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     private float GetAttackDuration(int weaponIndex, int step)
     {
+        if (weaponIndex == 1)
+        {
+            float duration = GetAnimationClipLength("ChatRiu");
+            if (duration > 0f) return duration;
+            return 0.8f;
+        }
         return 0.5f;
     }
 
@@ -4253,7 +4273,17 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         DisableAllHitboxes();
 
         string animToPlay;
-        if (weapon == 2)
+        if (weapon == 1)
+        {
+            // --- RÌU (1): CHỈ CHƠI HOẠT ẢNH CHẶT RÌU ---
+            animToPlay = "ChatRiu";
+            currentAttackAnimDuration = GetAnimationClipLength("ChatRiu");
+            if (currentAttackAnimDuration <= 0f) currentAttackAnimDuration = 0.8f;
+
+            if (anim != null) anim.applyRootMotion = isRootedAttack;
+            PlayAnimation(animToPlay, 0.05f, false, isRootedAttack);
+        }
+        else if (weapon == 2)
         {
             // --- KIẾM (ARMED): ĐÚNG CHUẨN 5 CLICK TUẦN TỰ ---
             comboStep++;
@@ -6507,7 +6537,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     private string TranslateAnimName(string animName)
     {
         int weapon = GetActiveWeaponIndex();
-        bool isArmed = (weapon == 2);
+        bool isArmed = (weapon == 2 || weapon == 1);
 
         float verticalInput = Input.GetAxis("Vertical");
         float horizontalInput = Input.GetAxis("Horizontal");
@@ -6607,7 +6637,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
                name == "attacktayphai" ||
                name == "Slash1Combo2" ||
                name == "Slash2combo2" ||
-               name == "Slash3combo2" ||
+               name == "Slash3combo2" || name == "ChatRiu" ||
                (!string.IsNullOrEmpty(drawWeaponTrigger) && name == drawWeaponTrigger) ||
                (!string.IsNullOrEmpty(sheathWeaponTrigger) && name == sheathWeaponTrigger) ||
                (!string.IsNullOrEmpty(drawLeftTrigger) && name == drawLeftTrigger) ||
@@ -6634,7 +6664,8 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
                name == "attacktayphai" ||
                name == "Slash1Combo2" ||
                name == "Slash2combo2" ||
-               name == "Slash3combo2";
+               name == "Slash3combo2" ||
+               name == "ChatRiu";
     }
 
     private bool IsFullBodyActionAnimation(string name)
