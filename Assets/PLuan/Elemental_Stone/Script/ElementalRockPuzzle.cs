@@ -174,7 +174,7 @@ public class ElementalRockPuzzle : NetworkBehaviour
         else
         {
             isShown = true;
-            ResetPuzzle();
+            ApplyShowRockVisuals();
         }
         UpdateVisualStates();
     }
