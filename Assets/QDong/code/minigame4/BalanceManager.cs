@@ -165,7 +165,7 @@ public class BalanceManager : NetworkBehaviour
                 case CharacterType.Arthur: return 2.5f;
                 case CharacterType.Leo:    return 1.8f;
                 case CharacterType.Maya:   return 1f;
-                case CharacterType.Elena:  return 0.8f;
+                case CharacterType.Elena:  return 1f;
             }
         }
         return 1f; 
