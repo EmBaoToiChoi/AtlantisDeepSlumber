@@ -3,23 +3,7 @@ using Unity.Netcode;
 
 public class AxeItem : NetworkBehaviour
 {
-    [System.Serializable]
-    public struct ClassTransformOffset
-    {
-        public string className; // Tên gợi nhớ (ví dụ: Leo, Maya, Elena, Arthur)
-        public int classIndex;   // 0 = Leo, 1 = Maya, 2 = Elena, 3 = Arthur
-        public Vector3 positionOffset;
-        public Vector3 rotationOffset;
-        public Vector3 scaleOffset;
-    }
 
-    [Header("Right Hand Transform Offsets (Fallback)")]
-    public Vector3 localPositionOffset = Vector3.zero;
-    public Vector3 localRotationOffset = Vector3.zero;
-    public Vector3 localScaleOffset = Vector3.one;
-
-    [Header("Per-Class Custom Transform Offsets")]
-    public System.Collections.Generic.List<ClassTransformOffset> classOffsets = new System.Collections.Generic.List<ClassTransformOffset>();
 
     [Header("Sprite Icon Settings")]
     public Sprite customAxeIcon; // Nếu trống sẽ tự động tải từ Resources "axe_icon"
@@ -145,12 +129,10 @@ public class AxeItem : NetworkBehaviour
         if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(playerNetId, out NetworkObject playerNetObj))
         {
             Transform parentTarget = null;
-            bool hasAnchor = false;
             var anchor = playerNetObj.GetComponentInChildren<PlayerAxeAnchor>();
             if (anchor != null && anchor.axeHoldingPoint != null)
             {
                 parentTarget = anchor.axeHoldingPoint;
-                hasAnchor = true;
             }
             else
             {
@@ -162,16 +144,9 @@ public class AxeItem : NetworkBehaviour
                 NetworkObject.TrySetParent(parentTarget, false);
                 
                 // Đồng bộ vị trí cục bộ ngay trên Server để truyền xuống Client
-                if (hasAnchor)
-                {
-                    transform.localPosition = Vector3.zero;
-                    transform.localRotation = Quaternion.identity;
-                    AdjustScaleToParent(parentTarget, playerNetObj.gameObject);
-                }
-                else
-                {
-                    ApplyTransformOffset(playerNetObj.gameObject);
-                }
+                transform.localPosition = Vector3.zero;
+                transform.localRotation = Quaternion.identity;
+                AdjustScaleToParent(parentTarget, playerNetObj.gameObject);
             }
         }
     }
@@ -233,13 +208,11 @@ public class AxeItem : NetworkBehaviour
 
                 // Tìm xương bàn tay hoặc điểm neo transform và gắn rìu vào
                 Transform parentTarget = null;
-                bool hasAnchor = false;
                 var anchor = playerNetObj.GetComponentInChildren<PlayerAxeAnchor>();
                 Debug.Log($"[AxeItem] Netcode - Kiem tra anchor tren Player: {anchor != null}, holdingPoint: {anchor?.axeHoldingPoint != null}");
                 if (anchor != null && anchor.axeHoldingPoint != null)
                 {
                     parentTarget = anchor.axeHoldingPoint;
-                    hasAnchor = true;
                 }
                 else
                 {
@@ -250,18 +223,10 @@ public class AxeItem : NetworkBehaviour
                 if (parentTarget != null)
                 {
                     transform.SetParent(parentTarget, false);
-                    if (hasAnchor)
-                    {
-                        transform.localPosition = Vector3.zero;
-                        transform.localRotation = Quaternion.identity;
-                        AdjustScaleToParent(parentTarget, playerNetObj.gameObject);
-                        Debug.Log($"[AxeItem] Netcode - Da set localPosition = zero. local: {transform.localPosition}, world: {transform.position}");
-                    }
-                    else
-                    {
-                        ApplyTransformOffset(playerNetObj.gameObject);
-                        Debug.Log($"[AxeItem] Netcode - Da set fallback offsets. local: {transform.localPosition}, world: {transform.position}");
-                    }
+                    transform.localPosition = Vector3.zero;
+                    transform.localRotation = Quaternion.identity;
+                    AdjustScaleToParent(parentTarget, playerNetObj.gameObject);
+                    Debug.Log($"[AxeItem] Netcode - Da set localPosition = zero. local: {transform.localPosition}, world: {transform.position}");
                 }
                 else
                 {
@@ -321,13 +286,11 @@ public class AxeItem : NetworkBehaviour
         foreach (var col in colliders) if (col != null) col.enabled = false;
 
         Transform parentTarget = null;
-        bool hasAnchor = false;
         var anchor = player.GetComponentInChildren<PlayerAxeAnchor>();
         Debug.Log($"[AxeItem] Kiem tra anchor tren Player: {anchor != null}, holdingPoint: {anchor?.axeHoldingPoint != null}");
         if (anchor != null && anchor.axeHoldingPoint != null)
         {
             parentTarget = anchor.axeHoldingPoint;
-            hasAnchor = true;
         }
         else
         {
@@ -338,18 +301,10 @@ public class AxeItem : NetworkBehaviour
         if (parentTarget != null)
         {
             transform.SetParent(parentTarget, false);
-            if (hasAnchor)
-            {
-                transform.localPosition = Vector3.zero;
-                transform.localRotation = Quaternion.identity;
-                AdjustScaleToParent(parentTarget, player);
-                Debug.Log($"[AxeItem] Da SetParent theo holdingPoint, dat localPosition = zero. vi tri thuc te local: {transform.localPosition}, world: {transform.position}");
-            }
-            else
-            {
-                ApplyTransformOffset(player);
-                Debug.Log($"[AxeItem] Da SetParent theo RightHand va apply fallback offsets. vi tri thuc te local: {transform.localPosition}, world: {transform.position}");
-            }
+            transform.localPosition = Vector3.zero;
+            transform.localRotation = Quaternion.identity;
+            AdjustScaleToParent(parentTarget, player);
+            Debug.Log($"[AxeItem] Da SetParent va dat localPosition = zero. vi tri thuc te local: {transform.localPosition}, world: {transform.position}");
         }
         else
         {
@@ -409,33 +364,7 @@ public class AxeItem : NetworkBehaviour
         return null;
     }
 
-    private void ApplyTransformOffset(GameObject player)
-    {
-        // Fallback tìm trong danh sách classOffsets của cây rìu
-        Vector3 pos = localPositionOffset;
-        Vector3 rot = localRotationOffset;
-        Vector3 scale = localScaleOffset;
 
-        var hudTarget = player.GetComponent<IPlayerHUDTarget>();
-        if (hudTarget != null)
-        {
-            int classIdx = hudTarget.CharacterClassIndex;
-            foreach (var offset in classOffsets)
-            {
-                if (offset.classIndex == classIdx)
-                {
-                    pos = offset.positionOffset;
-                    rot = offset.rotationOffset;
-                    scale = offset.scaleOffset;
-                    break;
-                }
-            }
-        }
-
-        transform.localPosition = pos;
-        transform.localRotation = Quaternion.Euler(rot);
-        transform.localScale = scale;
-    }
 
     private void AdjustScaleToParent(Transform parentTarget, GameObject player)
     {
