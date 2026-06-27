@@ -49,30 +49,64 @@ public class AxeItem : NetworkBehaviour
         carryingPlayerId.OnValueChanged -= OnCarrierChanged;
     }
 
-    private IEnumerator WaitAndAlignToCarrier(ulong carrierId, Transform targetParent)
+    private void OnTransformParentChanged()
     {
-        float timeout = 3.0f;
-        float elapsed = 0f;
-        while (transform.parent != targetParent && elapsed < timeout)
-        {
-            elapsed += Time.deltaTime;
-            yield return null;
-        }
-
-        if (transform.parent == targetParent)
+        if (transform.parent != null)
         {
             transform.localPosition = Vector3.zero;
             transform.localRotation = Quaternion.identity;
-            
-            if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(carrierId, out NetworkObject playerNetObj))
+
+            // Tìm Player từ cha của hand
+            var carrier = transform.GetComponentInParent<PlayerLogCarrier>();
+            if (carrier != null)
             {
-                AdjustScaleToParent(targetParent, playerNetObj.gameObject);
+                AdjustScaleToParent(transform.parent, carrier.gameObject);
             }
-            Debug.Log($"[AxeItem] Netcode - Client async parent matched. Da set localPosition = zero. local: {transform.localPosition}");
+        }
+    }
+
+    private Transform GetAxeHoldingPoint(GameObject player)
+    {
+        var anchor = player.GetComponentInChildren<PlayerAxeAnchor>();
+        if (anchor != null && anchor.axeHoldingPoint != null)
+        {
+            return anchor.axeHoldingPoint;
+        }
+        return FindRightHand(player.transform);
+    }
+
+    private void AdjustScaleToParent(Transform parentTarget, GameObject player)
+    {
+        Transform hand = FindRightHand(player.transform);
+        Vector3 parentLossyScale = (hand != null) ? hand.lossyScale : player.transform.lossyScale;
+
+        Vector3 relativeLocalScale = new Vector3(
+            originalWorldScale.x / (parentLossyScale.x != 0f ? parentLossyScale.x : 1f),
+            originalWorldScale.y / (parentLossyScale.y != 0f ? parentLossyScale.y : 1f),
+            originalWorldScale.z / (parentLossyScale.z != 0f ? parentLossyScale.z : 1f)
+        );
+
+        if (parentTarget != hand)
+        {
+            Transform anchorParent = parentTarget.parent;
+            if (anchorParent != null)
+            {
+                Vector3 anchorParentLossyScale = anchorParent.lossyScale;
+                transform.localScale = new Vector3(
+                    originalWorldScale.x / (anchorParentLossyScale.x != 0f ? anchorParentLossyScale.x : 1f),
+                    originalWorldScale.y / (anchorParentLossyScale.y != 0f ? anchorParentLossyScale.y : 1f),
+                    originalWorldScale.z / (anchorParentLossyScale.z != 0f ? anchorParentLossyScale.z : 1f)
+                );
+                transform.localScale = Vector3.Scale(transform.localScale, parentTarget.localScale);
+            }
+            else
+            {
+                transform.localScale = relativeLocalScale;
+            }
         }
         else
         {
-            Debug.LogWarning($"[AxeItem] Netcode - Timeout waiting for parent synchronization to {targetParent?.name}!");
+            transform.localScale = relativeLocalScale;
         }
     }
 
@@ -146,28 +180,13 @@ public class AxeItem : NetworkBehaviour
 
         carryingPlayerId.Value = playerNetId;
         
-        // Thực hiện parenting của Netcode
+        // Thực hiện parenting của Netcode tới xương tay của player
         if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(playerNetId, out NetworkObject playerNetObj))
         {
-            Transform parentTarget = null;
-            var anchor = playerNetObj.GetComponentInChildren<PlayerAxeAnchor>();
-            if (anchor != null && anchor.axeHoldingPoint != null)
-            {
-                parentTarget = anchor.axeHoldingPoint;
-            }
-            else
-            {
-                parentTarget = FindRightHand(playerNetObj.transform);
-            }
-
+            Transform parentTarget = GetAxeHoldingPoint(playerNetObj.gameObject);
             if (parentTarget != null)
             {
                 NetworkObject.TrySetParent(parentTarget, false);
-                
-                // Đồng bộ vị trí cục bộ ngay trên Server để truyền xuống Client
-                transform.localPosition = Vector3.zero;
-                transform.localRotation = Quaternion.identity;
-                AdjustScaleToParent(parentTarget, playerNetObj.gameObject);
             }
         }
     }
@@ -238,38 +257,14 @@ public class AxeItem : NetworkBehaviour
                 foreach (var col in colliders) if (col != null) col.enabled = false;
 
                 // Tìm xương bàn tay hoặc điểm neo transform và gắn rìu vào
-                Transform parentTarget = null;
-                var anchor = playerNetObj.GetComponentInChildren<PlayerAxeAnchor>();
-                Debug.Log($"[AxeItem] Netcode - Kiem tra anchor tren Player: {anchor != null}, holdingPoint: {anchor?.axeHoldingPoint != null}");
-                if (anchor != null && anchor.axeHoldingPoint != null)
-                {
-                    parentTarget = anchor.axeHoldingPoint;
-                }
-                else
-                {
-                    parentTarget = FindRightHand(playerNetObj.transform);
-                }
-
-                Debug.Log($"[AxeItem] Netcode - parentTarget: {parentTarget?.name}");
+                Transform parentTarget = GetAxeHoldingPoint(playerNetObj.gameObject);
                 if (parentTarget != null)
                 {
                     bool isNetwork = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
                     if (!isNetwork || IsServer)
                     {
                         transform.SetParent(parentTarget, false);
-                        transform.localPosition = Vector3.zero;
-                        transform.localRotation = Quaternion.identity;
-                        AdjustScaleToParent(parentTarget, playerNetObj.gameObject);
-                        Debug.Log($"[AxeItem] Netcode - Immediate parent match. Da set localPosition = zero. local: {transform.localPosition}, world: {transform.position}");
                     }
-                    else
-                    {
-                        StartCoroutine(WaitAndAlignToCarrier(carrierId, parentTarget));
-                    }
-                }
-                else
-                {
-                    Debug.LogError("[AxeItem] Netcode - parentTarget is null!");
                 }
 
                 // Ẩn vũ khí hiện tại của nhân vật
@@ -342,30 +337,11 @@ public class AxeItem : NetworkBehaviour
         if (rb != null) rb.isKinematic = true;
         foreach (var col in colliders) if (col != null) col.enabled = false;
 
-        Transform parentTarget = null;
-        var anchor = player.GetComponentInChildren<PlayerAxeAnchor>();
-        Debug.Log($"[AxeItem] Kiem tra anchor tren Player: {anchor != null}, holdingPoint: {anchor?.axeHoldingPoint != null}");
-        if (anchor != null && anchor.axeHoldingPoint != null)
-        {
-            parentTarget = anchor.axeHoldingPoint;
-        }
-        else
-        {
-            parentTarget = FindRightHand(player.transform);
-        }
-
-        Debug.Log($"[AxeItem] parentTarget tim duoc: {parentTarget?.name}");
+        // Tìm xương bàn tay hoặc điểm neo transform và gắn rìu vào
+        Transform parentTarget = GetAxeHoldingPoint(player);
         if (parentTarget != null)
         {
             transform.SetParent(parentTarget, false);
-            transform.localPosition = Vector3.zero;
-            transform.localRotation = Quaternion.identity;
-            AdjustScaleToParent(parentTarget, player);
-            Debug.Log($"[AxeItem] Da SetParent va dat localPosition = zero. vi tri thuc te local: {transform.localPosition}, world: {transform.position}");
-        }
-        else
-        {
-            Debug.LogError("[AxeItem] Khong tim thay parent target (RightHand / holdingPoint) de gan!");
         }
 
         var carrier = player.GetComponent<PlayerLogCarrier>();
@@ -415,13 +391,34 @@ public class AxeItem : NetworkBehaviour
 
     private Transform FindRightHand(Transform root)
     {
-        if (root.name.ToLower().Contains("righthand") || root.name.ToLower().Contains("right_hand"))
+        // 1. Dùng thuật toán đệ quy tìm xương tay phải (right hand)
+        Transform hand = FindBoneRecursive(root, "right");
+        if (hand != null) return hand;
+        
+        // 2. Dự phòng thêm nếu tên là Hand_R, hand.r, R_Hand
+        hand = FindBoneRecursive(root, "r");
+        if (hand != null) return hand;
+
+        return null;
+    }
+
+    private Transform FindBoneRecursive(Transform current, string keyword)
+    {
+        string nameLower = current.name.ToLower();
+        // Kiểm tra nếu chứa cả hand/wrist/palm và keyword
+        if (nameLower.Contains(keyword) && (nameLower.Contains("hand") || nameLower.Contains("wrist") || nameLower.Contains("palm")))
         {
-            return root;
+            return current;
         }
-        for (int i = 0; i < root.childCount; i++)
+        // Trường hợp đặc biệt: tên chứa ".r" hoặc "_r" hoặc " r" và "hand"
+        if (nameLower.Contains("hand") && (nameLower.Contains(".r") || nameLower.Contains("_r") || nameLower.Contains(" r")))
         {
-            Transform found = FindRightHand(root.GetChild(i));
+            return current;
+        }
+        
+        for (int i = 0; i < current.childCount; i++)
+        {
+            Transform found = FindBoneRecursive(current.GetChild(i), keyword);
             if (found != null) return found;
         }
         return null;
@@ -429,40 +426,7 @@ public class AxeItem : NetworkBehaviour
 
 
 
-    private void AdjustScaleToParent(Transform parentTarget, GameObject player)
-    {
-        Transform hand = FindRightHand(player.transform);
-        Vector3 parentLossyScale = (hand != null) ? hand.lossyScale : player.transform.lossyScale;
 
-        Vector3 relativeLocalScale = new Vector3(
-            originalWorldScale.x / (parentLossyScale.x != 0f ? parentLossyScale.x : 1f),
-            originalWorldScale.y / (parentLossyScale.y != 0f ? parentLossyScale.y : 1f),
-            originalWorldScale.z / (parentLossyScale.z != 0f ? parentLossyScale.z : 1f)
-        );
-
-        if (parentTarget != hand)
-        {
-            Transform anchorParent = parentTarget.parent;
-            if (anchorParent != null)
-            {
-                Vector3 anchorParentLossyScale = anchorParent.lossyScale;
-                transform.localScale = new Vector3(
-                    originalWorldScale.x / (anchorParentLossyScale.x != 0f ? anchorParentLossyScale.x : 1f),
-                    originalWorldScale.y / (anchorParentLossyScale.y != 0f ? anchorParentLossyScale.y : 1f),
-                    originalWorldScale.z / (anchorParentLossyScale.z != 0f ? anchorParentLossyScale.z : 1f)
-                );
-                transform.localScale = Vector3.Scale(transform.localScale, parentTarget.localScale);
-            }
-            else
-            {
-                transform.localScale = relativeLocalScale;
-            }
-        }
-        else
-        {
-            transform.localScale = relativeLocalScale;
-        }
-    }
 
     private void PlayPickupAnimation(GameObject player)
     {
