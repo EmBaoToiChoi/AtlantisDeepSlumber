@@ -33,9 +33,16 @@ public class BridgeCollapseTrigger : NetworkBehaviour
     private Vector3 originalBridgePos;
     private Quaternion originalBridgeRot;
     private bool isGhostModeActive = false;
-    // Lưu materials gốc của tất cả renderer để khôi phục sau khi sửa cầu
     private System.Collections.Generic.List<Renderer> savedRenderers = new System.Collections.Generic.List<Renderer>();
     private System.Collections.Generic.List<Material[]> savedMaterials = new System.Collections.Generic.List<Material[]>();
+    private GameObject[] resolvedSegments;
+    private GameObject solidBridgeInstance;
+    private Vector3 originalLocalScale;
+    private System.Collections.Generic.List<BoxCollider> cloneBoxColliders = new System.Collections.Generic.List<BoxCollider>();
+    private System.Collections.Generic.List<Vector3> originalBoxSizes = new System.Collections.Generic.List<Vector3>();
+    private System.Collections.Generic.List<Vector3> originalBoxCenters = new System.Collections.Generic.List<Vector3>();
+    private System.Collections.Generic.List<Material> clippingMaterials = new System.Collections.Generic.List<Material>();
+    private System.Collections.Generic.List<Material> ghostClippingMaterials = new System.Collections.Generic.List<Material>();
 
     [Header("Wood Quest Spawning Configuration")]
     [Tooltip("Prefab gỗ để người chơi thu thập (CollectibleItemDrop với itemName = 'WoodLog' hoặc 'ThanhGo')")]
@@ -272,6 +279,11 @@ public class BridgeCollapseTrigger : NetworkBehaviour
         isReadyToBuild.OnValueChanged -= OnReadyToBuildChanged;
     }
 
+    private void OnDestroy()
+    {
+        DestroySolidBridgeInstance();
+    }
+
     private void OnReadyToBuildChanged(bool oldVal, bool newVal)
     {
         if (newVal)
@@ -337,7 +349,7 @@ public class BridgeCollapseTrigger : NetworkBehaviour
             UpdateGhostAlpha(currentProgress);
 
             // Hiển thị các mảnh cầu theo phần trăm tiến trình
-            // UpdateProgressiveBridgeSegments(currentProgress);
+            UpdateProgressiveBridgeSegments(currentProgress);
 
             // Emit particles when progress increases
             if (currentProgress > lastProgress)
@@ -450,6 +462,7 @@ public class BridgeCollapseTrigger : NetworkBehaviour
     private void CollapseBridgeLocal()
     {
         localCollapseTriggered = true;
+        DestroySolidBridgeInstance();
 
         if (bridgeObstacle != null)
         {
@@ -757,6 +770,7 @@ public class BridgeCollapseTrigger : NetworkBehaviour
         }
         savedRenderers.Clear();
         savedMaterials.Clear();
+        DestroySolidBridgeInstance();
         isGhostModeActive = false;
 
         // 4. Chạy Animator sửa cầu (nếu có)
@@ -816,12 +830,7 @@ public class BridgeCollapseTrigger : NetworkBehaviour
             savedRenderers.Clear();
             savedMaterials.Clear();
 
-            if (ghostMaterialInstance == null)
-            {
-                ghostMaterialInstance = CreateGhostMaterial(0.4f);
-            }
-
-            // Lưu và thay thế material của toàn bộ Renderer con
+            // Lưu material của toàn bộ Renderer con và tắt renderer để ẩn hoàn toàn cầu ghost
             Renderer[] renderers = bridgeRoot.GetComponentsInChildren<Renderer>(true);
             foreach (var r in renderers)
             {
@@ -829,23 +838,8 @@ public class BridgeCollapseTrigger : NetworkBehaviour
                 {
                     savedRenderers.Add(r);
                     savedMaterials.Add(r.sharedMaterials);
-
-                    Material[] ghostMats = new Material[r.sharedMaterials.Length];
-                    for (int i = 0; i < ghostMats.Length; i++)
-                    {
-                        ghostMats[i] = ghostMaterialInstance;
-                    }
-                    r.materials = ghostMats;
+                    r.enabled = false; // Tắt renderer để ẩn cầu ghost
                 }
-            }
-
-            // Bật root active để hiển thị
-            mainBridgeObject.SetActive(true);
-
-            // Bật toàn bộ Renderers con
-            foreach (var r in mainBridgeObject.GetComponentsInChildren<Renderer>(true))
-            {
-                r.enabled = true;
             }
 
             // Đảm bảo bật tất cả các GameObjects chứa Renderer con (ví dụ các mảnh cầu)
@@ -932,6 +926,40 @@ public class BridgeCollapseTrigger : NetworkBehaviour
     private Vector3 GetRandomBuildPosition()
     {
         Vector3 worldPos = transform.position;
+        
+        bool isNetwork = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
+        float progress = isNetwork ? buildProgress.Value : localBuildProgress;
+
+        // Nếu đang trong chế độ Z-scale growth và đã tạo solidInstance
+        if (solidBridgeInstance != null)
+        {
+            float minVal, maxVal;
+            int axis;
+            GetBridgeLocalBounds(out minVal, out maxVal, out axis);
+            float localLength = maxVal - minVal;
+            float progressFactor = progress / 100f;
+
+            // Rìa đang xây ở vị trí tương ứng trên trục dọc
+            float localPosOnAxis = minVal + localLength * progressFactor;
+            
+            Vector3 leadingEdgeLocal = Vector3.zero;
+            if (axis == 0) // X
+            {
+                leadingEdgeLocal = new Vector3(localPosOnAxis, 0.2f, Random.Range(-1.2f, 1.2f));
+            }
+            else if (axis == 1) // Y
+            {
+                leadingEdgeLocal = new Vector3(Random.Range(-1.2f, 1.2f), localPosOnAxis, Random.Range(-1.2f, 1.2f));
+            }
+            else // Z
+            {
+                leadingEdgeLocal = new Vector3(Random.Range(-1.2f, 1.2f), 0.2f, localPosOnAxis);
+            }
+            
+            worldPos = solidBridgeInstance.transform.TransformPoint(leadingEdgeLocal);
+            return worldPos;
+        }
+
         if (mainBridgeObject != null)
         {
             Renderer[] renderers = mainBridgeObject.GetComponentsInChildren<Renderer>(true);
@@ -968,7 +996,17 @@ public class BridgeCollapseTrigger : NetworkBehaviour
         {
             playerCount = NetworkManager.Singleton.ConnectedClients.Count;
         }
-        float increment = 1.0f * Mathf.Max(1, playerCount);
+
+        // Tỷ lệ tăng tiến độ phi tuyến tính theo số lượng người chơi:
+        // - 1 người: cực khó (0.25% mỗi click)
+        // - 2 người: khó (0.5% mỗi click)
+        // - 3 người: trung bình (1.0% mỗi click)
+        // - 4+ người: dễ (2.5% mỗi click)
+        float increment = 1.0f;
+        if (playerCount == 1) increment = 0.25f;
+        else if (playerCount == 2) increment = 0.5f;
+        else if (playerCount == 3) increment = 1.0f;
+        else increment = 2.5f;
 
         buildProgress.Value = Mathf.Min(buildProgress.Value + increment, 100f);
 
@@ -1479,19 +1517,402 @@ public class BridgeCollapseTrigger : NetworkBehaviour
         }
     }
 
-    private void UpdateProgressiveBridgeSegments(float progress)
+    private GameObject[] GetBridgeSegments()
     {
-        if (stableBridgeSegments == null || stableBridgeSegments.Length == 0) return;
+        if (resolvedSegments != null && resolvedSegments.Length > 0)
+        {
+            return resolvedSegments;
+        }
 
-        int N = stableBridgeSegments.Length;
+        // Nếu stableBridgeSegments được cấu hình thủ công trong Inspector và có nhiều hơn 1 phần tử, dùng nó
+        if (stableBridgeSegments != null && stableBridgeSegments.Length > 1)
+        {
+            resolvedSegments = stableBridgeSegments;
+            return resolvedSegments;
+        }
+
+        // Nếu không, ta tự động tìm các con trực tiếp của mainBridgeObject làm các khúc cầu
+        if (mainBridgeObject != null)
+        {
+            System.Collections.Generic.List<GameObject> dynamicSegments = new System.Collections.Generic.List<GameObject>();
+            for (int i = 0; i < mainBridgeObject.transform.childCount; i++)
+            {
+                Transform child = mainBridgeObject.transform.GetChild(i);
+                // Chỉ lấy các con có MeshRenderer hoặc Renderer để tránh lấy các empty gameobjects
+                if (child.GetComponentInChildren<Renderer>(true) != null)
+                {
+                    dynamicSegments.Add(child.gameObject);
+                }
+            }
+
+            if (dynamicSegments.Count > 0)
+            {
+                resolvedSegments = dynamicSegments.ToArray();
+                return resolvedSegments;
+            }
+        }
+
+        resolvedSegments = stableBridgeSegments;
+        return resolvedSegments;
+    }
+
+    private void DestroySolidBridgeInstance()
+    {
+        if (solidBridgeInstance != null)
+        {
+            Destroy(solidBridgeInstance);
+            solidBridgeInstance = null;
+        }
+        cloneBoxColliders.Clear();
+        originalBoxSizes.Clear();
+        originalBoxCenters.Clear();
+        clippingMaterials.Clear();
+        ghostClippingMaterials.Clear();
+    }
+
+    private void GetBridgeLocalBounds(out float minVal, out float maxVal, out int axis)
+    {
+        minVal = -5f;
+        maxVal = 5f;
+        axis = 2; // Z
+
+        if (mainBridgeObject == null) return;
+
+        MeshFilter[] mfs = mainBridgeObject.GetComponentsInChildren<MeshFilter>(true);
+        foreach (var mf in mfs)
+        {
+            if (mf != null && mf.sharedMesh != null)
+            {
+                var bounds = mf.sharedMesh.bounds;
+                float sizeX = bounds.size.x;
+                float sizeY = bounds.size.y;
+                float sizeZ = bounds.size.z;
+
+                // Tự động tìm trục có kích thước lớn nhất làm trục dọc xây cầu
+                if (sizeX > sizeY && sizeX > sizeZ)
+                {
+                    axis = 0; // X
+                    minVal = bounds.center.x - bounds.extents.x;
+                    maxVal = bounds.center.x + bounds.extents.x;
+                }
+                else if (sizeY > sizeX && sizeY > sizeZ)
+                {
+                    axis = 1; // Y
+                    minVal = bounds.center.y - bounds.extents.y;
+                    maxVal = bounds.center.y + bounds.extents.y;
+                }
+                else
+                {
+                    axis = 2; // Z
+                    minVal = bounds.center.z - bounds.extents.z;
+                    maxVal = bounds.center.z + bounds.extents.z;
+                }
+
+                Debug.Log($"[BridgeCollapseTrigger] Mesh bounds size: X={sizeX}, Y={sizeY}, Z={sizeZ}. Chosen axis={axis}, minVal={minVal}, maxVal={maxVal}");
+                return;
+            }
+        }
+    }
+
+    private void UpdateProgressiveBridgeScale(float progress)
+    {
+        if (mainBridgeObject == null) return;
+
+        float progressFactor = progress / 100f;
+
+        if (solidBridgeInstance == null)
+        {
+            // Clone cầu để tạo bản solid xây dựng dần dần
+            solidBridgeInstance = Instantiate(mainBridgeObject, mainBridgeObject.transform.parent);
+            solidBridgeInstance.name = mainBridgeObject.name + "_SolidInstance";
+
+            originalLocalScale = mainBridgeObject.transform.localScale;
+
+            // Đặt vị trí, góc xoay và scale bản clone cố định 100% giống hệt cầu gốc (không kéo dãn)
+            solidBridgeInstance.transform.position = originalBridgePos;
+            solidBridgeInstance.transform.rotation = originalBridgeRot;
+            solidBridgeInstance.transform.localScale = originalLocalScale;
+
+            // Tìm và lưu BoxCollider của bản clone để scale vật lý theo tiến độ
+            cloneBoxColliders.Clear();
+            originalBoxSizes.Clear();
+            originalBoxCenters.Clear();
+            foreach (var box in solidBridgeInstance.GetComponentsInChildren<BoxCollider>(true))
+            {
+                if (box != null)
+                {
+                    cloneBoxColliders.Add(box);
+                    originalBoxSizes.Add(box.size);
+                    originalBoxCenters.Add(box.center);
+                }
+            }
+
+            // Tắt LODGroup để tránh bị ẩn/cull khi xây dựng
+            LODGroup lod = solidBridgeInstance.GetComponent<LODGroup>();
+            if (lod != null)
+            {
+                lod.enabled = false;
+            }
+
+            // Bật LOD0, tắt các LOD khác của bản clone
+            for (int i = 0; i < solidBridgeInstance.transform.childCount; i++)
+            {
+                Transform child = solidBridgeInstance.transform.GetChild(i);
+                if (child.name.Contains("LOD0"))
+                {
+                    child.gameObject.SetActive(true);
+                }
+                else if (child.name.Contains("LOD1") || child.name.Contains("LOD2"))
+                {
+                    child.gameObject.SetActive(false);
+                }
+            }
+
+            // Đăng ký vật liệu clipping tuỳ chỉnh cho toàn bộ MeshRenderer con của bản clone
+            Renderer[] origRenders = mainBridgeObject.GetComponentsInChildren<Renderer>(true);
+            Renderer[] cloneRenders = solidBridgeInstance.GetComponentsInChildren<Renderer>(true);
+            clippingMaterials.Clear();
+
+            Shader clippingShader = Shader.Find("Custom/BridgeClipping");
+            if (clippingShader == null)
+            {
+                Debug.LogError("[BridgeCollapseTrigger] Không tìm thấy custom shader 'Custom/BridgeClipping'!");
+            }
+
+            for (int k = 0; k < cloneRenders.Length; k++)
+            {
+                if (k < origRenders.Length && cloneRenders[k] != null && origRenders[k] != null)
+                {
+                    // Lấy vật liệu gốc từ danh sách đã lưu
+                    int savedIdx = savedRenderers.IndexOf(origRenders[k]);
+                    Material origMat = null;
+                    if (savedIdx >= 0 && savedIdx < savedMaterials.Count && savedMaterials[savedIdx].Length > 0)
+                    {
+                        origMat = savedMaterials[savedIdx][0];
+                    }
+                    if (origMat == null)
+                    {
+                        origMat = origRenders[k].sharedMaterial;
+                    }
+
+                    if (origMat != null && clippingShader != null)
+                    {
+                        // Tạo vật liệu clipping mới
+                        Material clipMat = new Material(clippingShader);
+                        
+                        // Copy texture từ vật liệu gốc
+                        if (origMat.HasProperty("_Albedo")) clipMat.SetTexture("_Albedo", origMat.GetTexture("_Albedo"));
+                        else if (origMat.HasProperty("_BaseMap")) clipMat.SetTexture("_Albedo", origMat.GetTexture("_BaseMap"));
+                        else if (origMat.HasProperty("_MainTex")) clipMat.SetTexture("_Albedo", origMat.GetTexture("_MainTex"));
+
+                        if (origMat.HasProperty("_Normal")) clipMat.SetTexture("_Normal", origMat.GetTexture("_Normal"));
+                        else if (origMat.HasProperty("_BumpMap")) clipMat.SetTexture("_Normal", origMat.GetTexture("_BumpMap"));
+
+                        if (origMat.HasProperty("_Specular")) clipMat.SetTexture("_Specular", origMat.GetTexture("_Specular"));
+
+                        // Copy các tham số màu sắc của Shader Multi-Color
+                        if (origMat.HasProperty("_Primary_Color")) clipMat.SetColor("_Primary_Color", origMat.GetColor("_Primary_Color"));
+                        if (origMat.HasProperty("_Secondary_Color")) clipMat.SetColor("_Secondary_Color", origMat.GetColor("_Secondary_Color"));
+                        if (origMat.HasProperty("_Tertiary_Color")) clipMat.SetColor("_Tertiary_Color", origMat.GetColor("_Tertiary_Color"));
+                        if (origMat.HasProperty("_Color")) clipMat.SetColor("_Color", origMat.GetColor("_Color"));
+
+                        cloneRenders[k].material = clipMat;
+                        clippingMaterials.Add(clipMat);
+                    }
+                    else
+                    {
+                        // Fallback khôi phục vật liệu cũ nếu không dùng được shader
+                        if (savedIdx >= 0 && savedIdx < savedMaterials.Count)
+                        {
+                            cloneRenders[k].materials = savedMaterials[savedIdx];
+                        }
+                    }
+                    cloneRenders[k].enabled = true;
+                }
+            }
+
+            foreach (var col in solidBridgeInstance.GetComponentsInChildren<Collider>(true))
+            {
+                if (col != null) col.enabled = true;
+            }
+        }
+
+        // 1. Cập nhật Clip Threshold trên các vật liệu để hiển thị dần dần không kéo dãn
+        float minVal, maxVal;
+        int axis;
+        GetBridgeLocalBounds(out minVal, out maxVal, out axis);
+        float clipThreshold = Mathf.Lerp(minVal, maxVal, progressFactor);
+
+        Vector4 clipAxisVec = Vector4.zero;
+        if (axis == 0) clipAxisVec = new Vector4(1f, 0f, 0f, 0f);
+        else if (axis == 1) clipAxisVec = new Vector4(0f, 1f, 0f, 0f);
+        else clipAxisVec = new Vector4(0f, 0f, 1f, 0f);
+
+        Debug.Log($"[BridgeCollapseTrigger] Scale progress={progress}%, axis={axis}, minVal={minVal}, maxVal={maxVal}, threshold={clipThreshold}");
+
+        // Cập nhật cho solid bridge (phần đã xây, không invert)
+        foreach (var mat in clippingMaterials)
+        {
+            if (mat != null)
+            {
+                mat.SetVector("_ClipAxis", clipAxisVec);
+                mat.SetFloat("_ClipThreshold", clipThreshold);
+            }
+        }
+
+        // Cập nhật cho ghost bridge (phần chưa xây, có invert)
+        foreach (var mat in ghostClippingMaterials)
+        {
+            if (mat != null)
+            {
+                mat.SetVector("_ClipAxis", clipAxisVec);
+                mat.SetFloat("_ClipThreshold", clipThreshold);
+            }
+        }
+
+        // 2. Cập nhật kích thước các BoxCollider để khớp chính xác với phần gỗ đã hiển thị
+        for (int i = 0; i < cloneBoxColliders.Count; i++)
+        {
+            if (cloneBoxColliders[i] != null && i < originalBoxSizes.Count && i < originalBoxCenters.Count)
+            {
+                Vector3 newSize = originalBoxSizes[i];
+                Vector3 newCenter = originalBoxCenters[i];
+
+                if (axis == 0) // X
+                {
+                    newSize.x = originalBoxSizes[i].x * progressFactor;
+                    newCenter.x = originalBoxCenters[i].x - (originalBoxSizes[i].x * 0.5f) * (1f - progressFactor);
+                }
+                else if (axis == 1) // Y
+                {
+                    newSize.y = originalBoxSizes[i].y * progressFactor;
+                    newCenter.y = originalBoxCenters[i].y - (originalBoxSizes[i].y * 0.5f) * (1f - progressFactor);
+                }
+                else // Z
+                {
+                    newSize.z = originalBoxSizes[i].z * progressFactor;
+                    newCenter.z = originalBoxCenters[i].z - (originalBoxSizes[i].z * 0.5f) * (1f - progressFactor);
+                }
+
+                cloneBoxColliders[i].size = newSize;
+                cloneBoxColliders[i].center = newCenter;
+            }
+        }
+
+        // Bật/tắt hiển thị solidInstance
+        bool showSolid = progress > 0.5f;
+        solidBridgeInstance.SetActive(showSolid);
+    }
+
+    private void UpdateSegmentBySegmentProgress(float progress)
+    {
+        GameObject[] segments = GetBridgeSegments();
+        if (segments == null || segments.Length == 0) return;
+
+        int N = segments.Length;
         int activeCount = Mathf.Min(Mathf.FloorToInt((progress / 100f) * N), N);
 
         for (int i = 0; i < N; i++)
         {
-            if (stableBridgeSegments[i] != null)
+            GameObject segment = segments[i];
+            if (segment == null) continue;
+
+            segment.SetActive(true);
+
+            Renderer[] renderers = segment.GetComponentsInChildren<Renderer>(true);
+            Collider[] colliders = segment.GetComponentsInChildren<Collider>(true);
+
+            bool isSolid = (i < activeCount);
+
+            if (isSolid)
             {
-                stableBridgeSegments[i].SetActive(i < activeCount);
+                foreach (var r in renderers)
+                {
+                    if (r == null) continue;
+                    int savedIndex = savedRenderers.IndexOf(r);
+                    if (savedIndex >= 0 && savedIndex < savedMaterials.Count)
+                    {
+                        r.materials = savedMaterials[savedIndex];
+                    }
+                    r.enabled = true;
+                }
+                foreach (var col in colliders)
+                {
+                    if (col != null) col.enabled = true;
+                }
             }
+            else
+            {
+                if (ghostMaterialInstance == null)
+                {
+                    ghostMaterialInstance = CreateGhostMaterial(0.4f);
+                }
+
+                foreach (var r in renderers)
+                {
+                    if (r == null) continue;
+                    if (!savedRenderers.Contains(r))
+                    {
+                        savedRenderers.Add(r);
+                        savedMaterials.Add(r.sharedMaterials);
+                    }
+
+                    Material[] ghostMats = new Material[r.sharedMaterials.Length];
+                    for (int j = 0; j < ghostMats.Length; j++)
+                    {
+                        ghostMats[j] = ghostMaterialInstance;
+                    }
+                    r.materials = ghostMats;
+                    r.enabled = true;
+                }
+                foreach (var col in colliders)
+                {
+                    if (col != null) col.enabled = false;
+                }
+            }
+        }
+    }
+
+    private void UpdateProgressiveBridgeSegments(float progress)
+    {
+        // 1. Kiểm tra nếu cầu là nguyên khối (single mesh hoặc LOD levels) thì dùng Z-scale growth
+        bool useZScaleGrowth = false;
+        
+        if (stableBridgeSegments == null || stableBridgeSegments.Length <= 1)
+        {
+            if (mainBridgeObject != null)
+            {
+                if (mainBridgeObject.GetComponent<LODGroup>() != null)
+                {
+                    useZScaleGrowth = true;
+                }
+                else
+                {
+                    bool hasLODChildren = false;
+                    for (int i = 0; i < mainBridgeObject.transform.childCount; i++)
+                    {
+                        if (mainBridgeObject.transform.GetChild(i).name.Contains("LOD"))
+                        {
+                            hasLODChildren = true;
+                            break;
+                        }
+                    }
+                    if (hasLODChildren || mainBridgeObject.transform.childCount <= 1)
+                    {
+                        useZScaleGrowth = true;
+                    }
+                }
+            }
+        }
+
+        if (useZScaleGrowth)
+        {
+            UpdateProgressiveBridgeScale(progress);
+        }
+        else
+        {
+            DestroySolidBridgeInstance();
+            UpdateSegmentBySegmentProgress(progress);
         }
     }
 
