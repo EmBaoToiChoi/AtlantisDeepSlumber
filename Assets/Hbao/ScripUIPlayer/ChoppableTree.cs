@@ -280,7 +280,8 @@ public class ChoppableTree : NetworkBehaviour
         if (currentHits >= requiredHits)
         {
             isCutDown.Value = true;
-            SpawnWoodLogs(1);
+            int count = Random.Range(5, 11);
+            SpawnWoodLogs(count);
         }
     }
 
@@ -291,7 +292,8 @@ public class ChoppableTree : NetworkBehaviour
         if (currentHits >= requiredHits)
         {
             gameObject.SetActive(false);
-            SpawnCollectibleLogLocal();
+            int count = Random.Range(5, 11);
+            SpawnCollectibleLogLocal(count);
         }
     }
 
@@ -467,16 +469,24 @@ public class ChoppableTree : NetworkBehaviour
 
         for (int i = 0; i < count; i++)
         {
+            float groundY = transform.position.y;
             Vector3 spawnPos = transform.position + new Vector3(
-                Random.Range(-1.2f, 1.2f),
-                0.5f,
-                Random.Range(-1.2f, 1.2f)
+                Random.Range(-1.5f, 1.5f),
+                1.2f,
+                Random.Range(-1.5f, 1.5f)
             );
 
-            if (Physics.Raycast(spawnPos, Vector3.down, out RaycastHit hit, 5f))
+            Vector3 rayStart = new Vector3(spawnPos.x, transform.position.y + 3f, spawnPos.z);
+            int layerMask = ~LayerMask.GetMask("Player", "Ignore Raycast");
+            if (Physics.Raycast(rayStart, Vector3.down, out RaycastHit hit, 6f, layerMask))
             {
-                spawnPos.y = hit.point.y + 0.3f;
+                if (hit.collider.gameObject != gameObject && !hit.collider.name.ToLower().Contains("player"))
+                {
+                    groundY = hit.point.y;
+                }
             }
+
+            spawnPos.y = groundY + 1.2f;
 
             GameObject log = WoodLogObjectPool.Instance.GetOrCreate(woodLogPrefab, spawnPos, Quaternion.identity);
             
@@ -486,37 +496,46 @@ public class ChoppableTree : NetworkBehaviour
                 netObj.Spawn();
             }
 
-            // Randomize wood amount between 5 and 10 and set it after spawn to ensure NetworkVariable updates propagate correctly to all clients
             var cid = log.GetComponent<CollectibleItemDrop>();
             if (cid != null)
             {
-                cid.woodAmount.Value = Random.Range(5, 11);
+                cid.woodAmount.Value = 1;
             }
         }
     }
 
-    private void SpawnCollectibleLogLocal()
+    private void SpawnCollectibleLogLocal(int count)
     {
         if (woodLogPrefab == null) return;
 
-        Vector3 spawnPos = transform.position + new Vector3(
-            Random.Range(-1.2f, 1.2f),
-            0.5f,
-            Random.Range(-1.2f, 1.2f)
-        );
-
-        if (Physics.Raycast(spawnPos, Vector3.down, out RaycastHit hit, 5f))
+        for (int i = 0; i < count; i++)
         {
-            spawnPos.y = hit.point.y + 0.3f;
-        }
+            float groundY = transform.position.y;
+            Vector3 spawnPos = transform.position + new Vector3(
+                Random.Range(-1.5f, 1.5f),
+                1.2f,
+                Random.Range(-1.5f, 1.5f)
+            );
 
-        GameObject log = WoodLogObjectPool.Instance.GetOrCreate(woodLogPrefab, spawnPos, Quaternion.identity);
-        
-        // Randomize wood amount between 5 and 10 for local play
-        var cid = log.GetComponent<CollectibleItemDrop>();
-        if (cid != null)
-        {
-            cid.localWoodAmount = Random.Range(5, 11);
+            Vector3 rayStart = new Vector3(spawnPos.x, transform.position.y + 3f, spawnPos.z);
+            int layerMask = ~LayerMask.GetMask("Player", "Ignore Raycast");
+            if (Physics.Raycast(rayStart, Vector3.down, out RaycastHit hit, 6f, layerMask))
+            {
+                if (hit.collider.gameObject != gameObject && !hit.collider.name.ToLower().Contains("player"))
+                {
+                    groundY = hit.point.y;
+                }
+            }
+
+            spawnPos.y = groundY + 1.2f;
+
+            GameObject log = WoodLogObjectPool.Instance.GetOrCreate(woodLogPrefab, spawnPos, Quaternion.identity);
+            
+            var cid = log.GetComponent<CollectibleItemDrop>();
+            if (cid != null)
+            {
+                cid.localWoodAmount = 1;
+            }
         }
     }
 

@@ -7170,8 +7170,13 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             if (collectible != null) collectible.ConfirmCollect();
             else
             {
-                var repair = pendingPickItem.GetComponent<RepairItemDrop>();
-                if (repair != null) repair.ConfirmCollect();
+                var axe = pendingPickItem.GetComponent<AxeItem>();
+                if (axe != null) axe.ConfirmPickup(gameObject);
+                else
+                {
+                    var repair = pendingPickItem.GetComponent<RepairItemDrop>();
+                    if (repair != null) repair.ConfirmCollect();
+                }
             }
             pendingPickItem = null;
         }
