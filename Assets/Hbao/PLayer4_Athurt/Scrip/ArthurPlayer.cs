@@ -455,9 +455,9 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (PlayerLevel < 5 && !IsSkillsUnlocked) return;
 
         int activeWeaponIdx = GetActiveWeaponIndex();
-        if (activeWeaponIdx != 1)
+        if (activeWeaponIdx != 0)
         {
-            Debug.LogWarning($"[ArthurPlayer] Cannot trigger R Skill because active weapon is {activeWeaponIdx} (must be 1/unarmed!). Please switch to unarmed first.");
+            Debug.LogWarning($"[ArthurPlayer] Cannot trigger R Skill because active weapon is {activeWeaponIdx} (must be unarmed!). Please switch to unarmed first.");
             return;
         }
         
@@ -654,22 +654,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         Debug.Log($"[{gameObject.name}] OnRSkillWeaponGlow: Hoạt ảnh kết thúc -> Bắn cục lửa!");
 
         Vector3 spawnPos = rSkillFireSpawnPoint != null ? rSkillFireSpawnPoint.position : transform.position + transform.forward * 1.5f + Vector3.up * 1f;
-        Vector3 shootDirection = transform.forward;
-
-        if (targetCamera != null)
-        {
-            Ray ray = targetCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
-            Vector3 targetPoint = ray.origin + ray.direction * 50f;
-            int layerMask = ~LayerMask.GetMask("Player", "Ignore Raycast");
-            if (Physics.Raycast(ray.origin, ray.direction, out RaycastHit cameraHit, 50f, layerMask))
-            {
-                if (cameraHit.collider.transform.root != transform.root && Vector3.Distance(cameraHit.point, transform.position) >= 3.0f)
-                {
-                    targetPoint = cameraHit.point;
-                }
-            }
-            shootDirection = (targetPoint - spawnPos).normalized;
-        }
+        Vector3 shootDirection = targetCamera != null ? targetCamera.transform.forward : transform.forward;
 
         if (isPendingRShootNetworkMode)
         {
@@ -874,15 +859,29 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         LockCursor(locked);
     }
 
+    public bool IsHoldingAxe()
+    {
+        return GetComponentInChildren<AxeItem>(true) != null;
+    }
+
     public virtual int GetActiveWeaponIndex()
     {
+        int val;
         if (isStandaloneMode)
         {
             PlayerHUDController hud = FindObjectOfType<PlayerHUDController>();
-            if (hud != null) return hud.currentSelectedWeapon;
-            return fallbackWeaponIndex;
+            val = (hud != null) ? hud.currentSelectedWeapon : fallbackWeaponIndex;
         }
-        return activeWeaponIndex.Value;
+        else
+        {
+            val = activeWeaponIndex.Value;
+        }
+
+        if (val == 1 && !IsHoldingAxe())
+        {
+            return 0;
+        }
+        return val;
     }
 
     private void Awake()
@@ -1570,7 +1569,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     protected virtual void Update()
     {
-        // UpdateAttackLayerWeight(); // Disabled to allow direct weight control in PlayAnimationLocal
+        UpdateAttackLayerWeight();
         UpdateComboChain();
         HandleRAiming();
 
@@ -1725,7 +1724,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
                 anim.SetFloat(inputZParam, netMoveZ.Value);
                 anim.SetFloat(speedParam, netSpeed.Value);
 
-                bool isArmed = (GetActiveWeaponIndex() == 2);
+                bool isArmed = (GetActiveWeaponIndex() == 2 || GetActiveWeaponIndex() == 1);
                 anim.SetBool(isArmedParam, isArmed);
             }
             return;
@@ -1744,7 +1743,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
             float smoothedSpeed = Mathf.MoveTowards(currentSpeedVal, targetSpeed, Time.deltaTime * inputFilterSpeed);
             anim.SetFloat(speedParam, smoothedSpeed);
 
-            bool isArmed = (GetActiveWeaponIndex() == 2);
+            bool isArmed = (GetActiveWeaponIndex() == 2 || GetActiveWeaponIndex() == 1);
             anim.SetBool(isArmedParam, isArmed);
 
             if (!isStandaloneMode && IsOwner)
@@ -1847,7 +1846,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
             rb.linearVelocity = new Vector3(targetVelocity.x, currentYVelocity, targetVelocity.z);
         }
 
-        bool isArmed = (GetActiveWeaponIndex() == 2);
+        bool isArmed = (GetActiveWeaponIndex() == 2 || GetActiveWeaponIndex() == 1);
         bool isMoving = (movementTranslation != Vector3.zero);
 
         float targetInputX = 0f;
@@ -2031,7 +2030,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
             rb.linearVelocity = new Vector3(targetVelocity.x, currentYVelocity, targetVelocity.z);
         }
 
-        bool isArmed = (GetActiveWeaponIndex() == 2);
+        bool isArmed = (GetActiveWeaponIndex() == 2 || GetActiveWeaponIndex() == 1);
         bool isMoving = (movementTranslation != Vector3.zero);
 
         float targetInputX = 0f;
@@ -2207,25 +2206,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
             else if (isCurrentlyAttacking && !isRootedAttack)
             {
                 int weapon = GetActiveWeaponIndex();
-                if (weapon == 1) // Unarmed / Punch
-                {
-                    if (comboStep == 1)
-                    {
-                        targetYOffset = punch1YOffset;
-                        targetXOffset = punch1XOffset;
-                    }
-                    else if (comboStep == 2)
-                    {
-                        targetYOffset = punch2YOffset;
-                        targetXOffset = punch2XOffset;
-                    }
-                    else if (comboStep == 3)
-                    {
-                        targetYOffset = punch3YOffset;
-                        targetXOffset = punch3XOffset;
-                    }
-                }
-                else if (weapon == 2) // Weapon / Slash
+                if (weapon == 1 || weapon == 2) // Weapon / Slash (Axe or Sword)
                 {
                     if (comboStep == 1)
                     {
@@ -2241,6 +2222,24 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
                     {
                         targetYOffset = slash3YOffset;
                         targetXOffset = slash3XOffset;
+                    }
+                }
+                else // Unarmed / Punch
+                {
+                    if (comboStep == 1)
+                    {
+                        targetYOffset = punch1YOffset;
+                        targetXOffset = punch1XOffset;
+                    }
+                    else if (comboStep == 2)
+                    {
+                        targetYOffset = punch2YOffset;
+                        targetXOffset = punch2XOffset;
+                    }
+                    else if (comboStep == 3)
+                    {
+                        targetYOffset = punch3YOffset;
+                        targetXOffset = punch3XOffset;
                     }
                 }
             }
@@ -2340,17 +2339,10 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
     {
         if (weaponIndex == 1)
         {
-            string animName = "";
-            if (step == 1) animName = "Punch1";
-            else if (step == 2) animName = "Punch2";
-            else if (step == 3) animName = "Punch3";
-
+            string animName = "ChatRiu";
             float duration = GetAnimationClipLength(animName);
             if (duration > 0f) return duration;
-
-            if (step == 1) return punch1Duration;
-            if (step == 2) return punch2Duration;
-            return punch3Duration;
+            return 2.267f;
         }
         else if (weaponIndex == 2)
         {
@@ -2366,8 +2358,20 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
             if (step == 2) return slash2Duration;
             return slash3Duration;
         }
+        else // weaponIndex == 0 (Unarmed / Punch)
+        {
+            string animName = "";
+            if (step == 1) animName = "Punch1";
+            else if (step == 2) animName = "Punch2";
+            else if (step == 3) animName = "Punch3";
 
-        return 0.5f;
+            float duration = GetAnimationClipLength(animName);
+            if (duration > 0f) return duration;
+
+            if (step == 1) return punch1Duration;
+            if (step == 2) return punch2Duration;
+            return punch3Duration;
+        }
     }
 
     protected virtual bool CanAttack()
@@ -2560,9 +2564,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         string animToPlay = "";
         if (weapon == 1)
         {
-            if (comboStep == 1) animToPlay = "Punch1";
-            else if (comboStep == 2) animToPlay = "Punch2";
-            else if (comboStep == 3) animToPlay = "Punch3";
+            animToPlay = "ChatRiu";
         }
         else if (weapon == 2)
         {
@@ -2570,10 +2572,16 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
             else if (comboStep == 2) animToPlay = "Attack1combo1";
             else if (comboStep == 3) animToPlay = "Attack2combo1";
         }
+        else // weapon == 0 (Unarmed)
+        {
+            if (comboStep == 1) animToPlay = "Punch1";
+            else if (comboStep == 2) animToPlay = "Punch2";
+            else if (comboStep == 3) animToPlay = "Punch3";
+        }
 
         if (!string.IsNullOrEmpty(animToPlay))
         {
-            PlayAnimation(animToPlay, 0.05f, false, isRootedAttack);
+            PlayAnimation(animToPlay, 0.05f, false);
         }
 
         if (networkMode)
@@ -3360,6 +3368,26 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
     protected float lastActionTriggerTime = 0f;
     protected string lastTriggeredAnimName = "";
 
+    protected bool HasParameter(string paramName)
+    {
+        if (anim == null) return false;
+        foreach (AnimatorControllerParameter param in anim.parameters)
+        {
+            if (param.name == paramName)
+                return true;
+        }
+        return false;
+    }
+
+    protected System.Collections.IEnumerator ResetTriggerNextFrame(string triggerName)
+    {
+        yield return null;
+        if (anim != null && !string.IsNullOrEmpty(triggerName) && HasParameter(triggerName))
+        {
+            anim.ResetTrigger(triggerName);
+        }
+    }
+
     protected virtual bool IsActionAnimationName(string name)
     {
         return name == "LonVong" ||
@@ -3376,6 +3404,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
                name == "attack1" ||
                name == "Attack1combo1" ||
                name == "Attack2combo1" ||
+               name == "ChatRiu" ||
                (!string.IsNullOrEmpty(drawWeaponTrigger) && name == drawWeaponTrigger) ||
                (!string.IsNullOrEmpty(sheathWeaponTrigger) && name == sheathWeaponTrigger) ||
                (!string.IsNullOrEmpty(drawLeftTrigger) && name == drawLeftTrigger) ||
@@ -3492,6 +3521,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         else if (targetName == "drawright") targetName = "laykiem";
         else if (targetName == "sheatheleft") targetName = "catkhieng";
         else if (targetName == "sheatheright") targetName = "catkiem";
+        else if (targetName == "chatriu") targetName = "chat cayy";
 
         foreach (var clip in anim.runtimeAnimatorController.animationClips)
         {
@@ -3561,7 +3591,8 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
                name == "Slash3" ||
                name == "attack1" ||
                name == "Attack1combo1" ||
-               name == "Attack2combo1";
+               name == "Attack2combo1" ||
+               name == "ChatRiu";
     }
 
     protected virtual bool IsPlayingAttackState(out AnimatorStateInfo activeState, out int layer)
@@ -3652,7 +3683,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         return isFullBodyAction && stateInfo.normalizedTime < 0.95f;
     }
 
-    public void PlayAnimation(string animName, float fadeTime = 0.1f, bool alreadyPlayedLocally = false, bool isRooted = false)
+    public void PlayAnimation(string animName, float fadeTime = 0.1f, bool alreadyPlayedLocally = false)
     {
         var carrier = GetComponent<PlayerLogCarrier>();
         if (carrier != null && carrier.isCarrying && animName != "Death" && animName != "Idle" && animName != "Walk" && animName != "run")
@@ -3671,26 +3702,24 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         if (!alreadyPlayedLocally)
         {
-            this.isRootedAttack = isRooted;
-            PlayAnimationLocal(animName, fadeTime, isRooted);
+            PlayAnimationLocal(animName, fadeTime);
         }
 
         if (!isStandaloneMode)
         {
             if (IsServer)
             {
-                PlayAnimationClientRpc(animName, fadeTime, alreadyPlayedLocally || IsOwner, isRooted);
+                PlayAnimationClientRpc(animName, fadeTime, alreadyPlayedLocally || IsOwner);
             }
             else if (IsOwner)
             {
-                PlayAnimationServerRpc(animName, fadeTime, isRooted);
+                PlayAnimationServerRpc(animName, fadeTime);
             }
         }
     }
 
-    protected virtual void PlayAnimationLocal(string animName, float fadeTime, bool isRooted = false)
+    protected virtual void PlayAnimationLocal(string animName, float fadeTime)
     {
-        this.isRootedAttack = isRooted;
         if (anim == null)
         {
             anim = GetComponent<Animator>();
@@ -3710,38 +3739,42 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         bool isLoopingAnim = animName == "Idle" || animName == "Walk" || animName == "run";
         if (isLoopingAnim && currentAnimState == animName) return;
 
-        Debug.Log($"[ArthurPlayer] Kích hoạt Hoạt ảnh: '{animName}' (isRooted={isRooted})");
+        Debug.Log($"[ArthurPlayer] Kích hoạt Hoạt ảnh: '{animName}'");
         if (animName == "LonVong")
         {
             anim.applyRootMotion = false;
         }
 
-        bool isAttackState = IsAttackAnimationName(animName);
-
-        if (isAttackState || animName == "AnhitCoVuKhi" || animName == "DoKhienDinhSatThuong" || animName == "New State")
+        if (animName == "attack1" || animName == "Attack1combo1" || animName == "Attack2combo1" ||
+            animName == "AnhitCoVuKhi" || animName == "DoKhienDinhSatThuong" || animName == "New State" ||
+            animName == "ChatRiu")
         {
+            if (HasParameter(animName))
+            {
+                anim.SetTrigger(animName);
+                StartCoroutine(ResetTriggerNextFrame(animName));
+            }
+
             if (anim.layerCount > 1)
             {
-                int targetLayer = isRooted ? 0 : 1;
-                anim.SetLayerWeight(1, targetLayer == 1 ? 1f : 0f);
-                
-                // Trực tiếp CrossFade cho các đòn kiếm/đỡ đòn/Anhit
-                if (animName == "attack1" || animName == "Attack1combo1" || animName == "Attack2combo1" ||
-                    animName == "AnhitCoVuKhi" || animName == "DoKhienDinhSatThuong" || animName == "New State")
-                {
-                    anim.CrossFadeInFixedTime(animName, fadeTime, targetLayer, 0f);
-                    isExecutingAttack = true;
-                    attackAnimStartTime = Time.time;
-                    int weapon = GetActiveWeaponIndex();
-                    currentAttackAnimDuration = GetAttackDuration(weapon, comboStep);
-                    lastTriggeredAnimName = animName;
-                    if (IsActionAnimationName(animName))
-                    {
-                        lastActionTriggerTime = Time.time;
-                    }
-                    return;
-                }
+                // KHẮC PHỤC LỖI GIẬT VÀ KẸT KIẾM: Loại bỏ hoàn toàn anim.SetTrigger(animName). Chỉ giữ độc nhất lệnh CrossFade.
+                anim.CrossFadeInFixedTime(animName, fadeTime, 1, 0f);
             }
+
+            bool isAttackState = IsAttackAnimationName(animName);
+            if (isAttackState)
+            {
+                isExecutingAttack = true;
+                attackAnimStartTime = Time.time;
+                int weapon = GetActiveWeaponIndex();
+                currentAttackAnimDuration = GetAttackDuration(weapon, comboStep);
+            }
+            lastTriggeredAnimName = animName;
+            if (IsActionAnimationName(animName))
+            {
+                lastActionTriggerTime = Time.time;
+            }
+            return;
         }
 
         anim.ResetTrigger("Idle");
@@ -3809,17 +3842,16 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
     }
 
     [ServerRpc]
-    private void PlayAnimationServerRpc(string animName, float fadeTime, bool isRooted)
+    private void PlayAnimationServerRpc(string animName, float fadeTime)
     {
-        PlayAnimationClientRpc(animName, fadeTime, true, isRooted);
+        PlayAnimationClientRpc(animName, fadeTime, true);
     }
 
     [ClientRpc]
-    private void PlayAnimationClientRpc(string animName, float fadeTime, bool alreadyPlayedLocally, bool isRooted = false)
+    private void PlayAnimationClientRpc(string animName, float fadeTime, bool alreadyPlayedLocally)
     {
         if (alreadyPlayedLocally && IsOwner) return;
-        this.isRootedAttack = isRooted;
-        PlayAnimationLocal(animName, fadeTime, isRooted);
+        PlayAnimationLocal(animName, fadeTime);
     }
 
     [ServerRpc]
@@ -3903,8 +3935,13 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
             if (collectible != null) collectible.ConfirmCollect();
             else
             {
-                var repair = pendingPickItem.GetComponent<RepairItemDrop>();
-                if (repair != null) repair.ConfirmCollect();
+                var axe = pendingPickItem.GetComponent<AxeItem>();
+                if (axe != null) axe.ConfirmPickup(gameObject);
+                else
+                {
+                    var repair = pendingPickItem.GetComponent<RepairItemDrop>();
+                    if (repair != null) repair.ConfirmCollect();
+                }
             }
             pendingPickItem = null;
         }
@@ -3948,16 +3985,28 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     public void RequestDropWoodLog()
     {
-        Vector3 spawnPos = transform.position + transform.forward * 1.5f + Vector3.up * 0.5f;
-        if (Physics.Raycast(spawnPos, Vector3.down, out RaycastHit hit, 5f))
+        var carrier = GetComponent<PlayerLogCarrier>();
+        string carriedPrefab = carrier != null ? carrier.carriedLogPrefabName : "";
+        int amount = carrier != null ? carrier.carriedLogCount : 1;
+
+        float groundY = transform.position.y;
+        Vector3 spawnPos = transform.position + transform.forward * 1.5f + Vector3.up * 1.2f;
+        Vector3 rayStart = new Vector3(spawnPos.x, transform.position.y + 3f, spawnPos.z);
+        int layerMask = ~LayerMask.GetMask("Player", "Ignore Raycast");
+        if (Physics.Raycast(rayStart, Vector3.down, out RaycastHit hit, 6f, layerMask))
         {
-            spawnPos.y = hit.point.y + 0.3f;
+            if (hit.collider.gameObject != gameObject && !hit.collider.name.ToLower().Contains("player"))
+            {
+                groundY = hit.point.y;
+            }
         }
+        spawnPos.y = groundY + 0.6f;
 
         if (isStandaloneMode)
         {
             GameObject logPrefab = null;
-            if (WoodLogObjectPool.Instance != null && WoodLogObjectPool.Instance.WoodPrefab != null)
+            if (!string.IsNullOrEmpty(carriedPrefab)) logPrefab = Resources.Load<GameObject>(carriedPrefab);
+            if (logPrefab == null && WoodLogObjectPool.Instance != null && WoodLogObjectPool.Instance.WoodPrefab != null)
             {
                 logPrefab = WoodLogObjectPool.Instance.WoodPrefab;
             }
@@ -3967,8 +4016,6 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
             if (logPrefab != null)
             {
-                var carrier = GetComponent<PlayerLogCarrier>();
-                int amount = carrier != null ? carrier.carriedLogCount : 1;
                 GameObject wood = WoodLogObjectPool.Instance.GetOrCreate(logPrefab, spawnPos, Quaternion.identity);
                 var cid = wood.GetComponent<CollectibleItemDrop>();
                 if (cid != null)
@@ -3976,25 +4023,23 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
                     cid.localWoodAmount = amount;
                 }
             }
-            var carrierObj = GetComponent<PlayerLogCarrier>();
-            if (carrierObj != null) carrierObj.DropLog();
+            if (carrier != null) carrier.DropLog();
         }
         else if (IsOwner)
         {
-            var carrier = GetComponent<PlayerLogCarrier>();
-            int amount = carrier != null ? carrier.carriedLogCount : 1;
             if (carrier != null) carrier.DropLog();
-            DropWoodLogServerRpc(spawnPos, amount);
+            DropWoodLogServerRpc(spawnPos, amount, carriedPrefab);
         }
     }
 
     [ServerRpc]
-    private void DropWoodLogServerRpc(Vector3 position, int amount)
+    private void DropWoodLogServerRpc(Vector3 position, int amount, string prefabName)
     {
         if (!IsServer) return;
 
         GameObject logPrefab = null;
-        if (WoodLogObjectPool.Instance != null && WoodLogObjectPool.Instance.WoodPrefab != null)
+        if (!string.IsNullOrEmpty(prefabName)) logPrefab = Resources.Load<GameObject>(prefabName);
+        if (logPrefab == null && WoodLogObjectPool.Instance != null && WoodLogObjectPool.Instance.WoodPrefab != null)
         {
             logPrefab = WoodLogObjectPool.Instance.WoodPrefab;
         }

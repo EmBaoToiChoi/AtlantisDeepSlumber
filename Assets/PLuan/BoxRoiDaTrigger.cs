@@ -4,14 +4,12 @@ using Unity.Netcode;
 public class BoxRoiDaTrigger : NetworkBehaviour
 {
     [Header("GameObjects to Toggle")]
-    [Tooltip("Object Đá Chặn Cửa Đã Rơi (sẽ được kích hoạt)")]
-    public GameObject daChanCuaDaRoi;
-
+    [Tooltip("Object Đá Chặn Cửa 1")]
+    public GameObject DaChanCua1;
+    [Tooltip("Object Đá Chặn Cửa 2")]
+    public GameObject DaChanCua2;
     [Tooltip("Object Đá Chặn Cửa Chưa Rơi (sẽ bị tắt đi)")]
     public GameObject daChanCuaChuaRoi;
-    [Tooltip("Object Đá Chặn Cửa")]
-    public GameObject DaChanCua1;
-    public GameObject DaChanCua2;
 
     private bool IsNetworkActive => NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening && IsSpawned;
 
@@ -52,45 +50,44 @@ public class BoxRoiDaTrigger : NetworkBehaviour
 
         Debug.Log($"[BoxRoiDaTrigger] Kích hoạt chuyển đổi trạng thái đá rơi.");
 
-        // Kích hoạt đá đã rơi
-        if (daChanCuaDaRoi != null)
+        // Kích hoạt đá 1
+        if (DaChanCua1 != null)
         {
-            daChanCuaDaRoi.SetActive(true);
             DaChanCua1.SetActive(true);
-            DaChanCua2.SetActive(true);
+            ActivateAllChildrenRecursive(DaChanCua1.transform);
             
-            // Kích hoạt tất cả GameObject con đệ quy (vì con có thể đang inactive)
-            ActivateAllChildrenRecursive(daChanCuaDaRoi.transform);
-
-            // Hỗ trợ trường hợp đá được kích hoạt sẵn trong hierarchy (để tránh lỗi Netcode) nhưng dùng StartHidden
-            // Tìm TẤT CẢ các script ElementalRockPuzzle trên con (có thể có nhiều viên đá con)
-            var puzzles = daChanCuaDaRoi.GetComponentsInChildren<ElementalRockPuzzle>(true);
-            if (puzzles != null && puzzles.Length > 0)
+            var puzzles1 = DaChanCua1.GetComponentsInChildren<ElementalRockPuzzle>(true);
+            if (puzzles1 != null && puzzles1.Length > 0)
             {
-                foreach (var puzzle in puzzles)
+                foreach (var puzzle in puzzles1)
                 {
                     puzzle.ShowRock();
                 }
-                Debug.Log($"[BoxRoiDaTrigger] Đã gọi ShowRock() cho {puzzles.Length} viên đá con.");
-            }
-            else
-            {
-                Debug.LogWarning("[BoxRoiDaTrigger] Không tìm thấy ElementalRockPuzzle trên con của 'daChanCuaDaRoi'!");
+                Debug.Log($"[BoxRoiDaTrigger] Đã gọi ShowRock() cho {puzzles1.Length} viên đá con của DaChanCua1.");
             }
         }
-        else
+
+        // Kích hoạt đá 2
+        if (DaChanCua2 != null)
         {
-            Debug.LogWarning("[BoxRoiDaTrigger] Chưa gán object 'daChanCuaDaRoi'!", this);
+            DaChanCua2.SetActive(true);
+            ActivateAllChildrenRecursive(DaChanCua2.transform);
+
+            var puzzles2 = DaChanCua2.GetComponentsInChildren<ElementalRockPuzzle>(true);
+            if (puzzles2 != null && puzzles2.Length > 0)
+            {
+                foreach (var puzzle in puzzles2)
+                {
+                    puzzle.ShowRock();
+                }
+                Debug.Log($"[BoxRoiDaTrigger] Đã gọi ShowRock() cho {puzzles2.Length} viên đá con của DaChanCua2.");
+            }
         }
 
         // Tắt đá chưa rơi
         if (daChanCuaChuaRoi != null)
         {
             daChanCuaChuaRoi.SetActive(false);
-        }
-        else
-        {
-            Debug.LogWarning("[BoxRoiDaTrigger] Chưa gán object 'daChanCuaChuaRoi'!", this);
         }
 
         // Ẩn chính BoxRoiDa (GameObject chứa script trigger này) để tránh kích hoạt lại

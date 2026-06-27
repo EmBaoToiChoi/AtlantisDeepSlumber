@@ -414,7 +414,7 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (carrier != null && carrier.isCarrying) return;
 
         if (PlayerLevel < 10 && !IsSkillsUnlocked) return;
-        if (GetActiveWeaponIndex() != 2) return;
+        if (GetActiveWeaponIndex() == 1) return;
         if (eSkillCooldownTimer > 0f) return;
         isETargeting = true;
     }
@@ -637,9 +637,9 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (carrier != null && carrier.isCarrying) return false;
 
         if (PlayerLevel < 15 && !IsSkillsUnlocked) return false;
-        if (GetActiveWeaponIndex() != 2)
+        if (GetActiveWeaponIndex() == 1)
         {
-            Debug.Log("[MayaPlayer] Không thể sử dụng kỹ năng Q khi không cầm vũ khí!");
+            Debug.Log("[MayaPlayer] Không thể sử dụng kỹ năng Q khi đang cầm rìu!");
             return false;
         }
         if (qSkillCooldownTimer > 0f || IsQSkillActive) return false;
@@ -791,7 +791,7 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         if (PlayerLevel < 5 && !IsSkillsUnlocked) return;
 
-        if (GetActiveWeaponIndex() != 1) return;
+        if (GetActiveWeaponIndex() != 0) return;
 
         SetAimingR(true);
     }
@@ -836,16 +836,19 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
     public event System.Action OnQSkillCancelled;
 
 
-    /// <summary>
-    /// Trả về index vũ khí đang chọn: đọc từ HUD khi standalone, đọc từ NetworkVariable khi online.
-    /// </summary>
+    public bool IsHoldingAxe()
+    {
+        return GetComponentInChildren<AxeItem>(true) != null;
+    }
+
     public int GetActiveWeaponIndex()
     {
-        if (isStandaloneMode)
+        int val = isStandaloneMode ? localActiveWeaponIndex : activeWeaponIndex.Value;
+        if (val == 1 && !IsHoldingAxe())
         {
-            return localActiveWeaponIndex; // <-- SỬA DÒNG NÀY (Thay vì đọc hud.currentSelectedWeapon)
+            return 0;
         }
-        return activeWeaponIndex.Value;
+        return val;
     }
 
     protected virtual void Awake()
@@ -2462,13 +2465,28 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
         }
     }
 
+    private float GetAnimationClipLength(string triggerName)
+    {
+        if (anim == null || anim.runtimeAnimatorController == null) return 0f;
+        string searchName = triggerName;
+        if (triggerName == "ChatRiu") searchName = "Chat Cayy";
+        foreach (var clip in anim.runtimeAnimatorController.animationClips)
+        {
+            if (clip != null && (clip.name == searchName || clip.name.ToLower() == searchName.ToLower() || clip.name.ToLower().Contains(searchName.ToLower())))
+            {
+                return clip.length;
+            }
+        }
+        return 0f;
+    }
+
     private float GetAttackDuration(int weaponIndex, int step)
     {
         if (weaponIndex == 1)
         {
-            if (step == 1) return punch1Duration;
-            if (step == 2) return punch2Duration;
-            return punch3Duration;
+            float duration = GetAnimationClipLength("ChatRiu");
+            if (duration > 0f) return duration;
+            return 2.267f;
         }
         else if (weaponIndex == 2)
         {
@@ -2476,7 +2494,12 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
             if (step == 2) return chem2Duration;
             return chem3Duration;
         }
-        return 0.5f;
+        else
+        {
+            if (step == 1) return punch1Duration;
+            if (step == 2) return punch2Duration;
+            return punch3Duration;
+        }
     }
 
     private void PerformComboAttack(bool networkMode)
@@ -2503,15 +2526,15 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
         // Giới hạn bước combo dựa trên vũ khí (Đấm có 3 combo, Chem có 3 combo)
         if (weapon == 1)
         {
-            if (nextStep > 3) nextStep = 1;
+            nextStep = 1;
         }
         else if (weapon == 2)
         {
             if (nextStep > 3) nextStep = 1;
         }
-        else
+        else // weapon == 0 (Unarmed)
         {
-            nextStep = 1;
+            if (nextStep > 3) nextStep = 1;
         }
 
         // Kiểm tra xem đòn đánh trước đó đã kết thúc chưa dựa trên thời gian thực tế trôi qua
@@ -2539,17 +2562,21 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
         lastAttackTime = currentTime;
 
         string animToPlay = "";
-        if (weapon == 1) // Unarmed / Fist combo (3 steps)
+        if (weapon == 1) // Axe / ChatRiu
         {
-            if (comboStep == 1) animToPlay = "Dam1";
-            else if (comboStep == 2) animToPlay = "Dam2";
-            else if (comboStep == 3) animToPlay = "Dam3";
+            animToPlay = "ChatRiu";
         }
         else if (weapon == 2) // Weapon / Chem combo (3 steps)
         {
             if (comboStep == 1) animToPlay = "Chem1";
             else if (comboStep == 2) animToPlay = "Chem2";
             else if (comboStep == 3) animToPlay = "Chem3";
+        }
+        else // Unarmed / Fist combo (3 steps)
+        {
+            if (comboStep == 1) animToPlay = "Dam1";
+            else if (comboStep == 2) animToPlay = "Dam2";
+            else if (comboStep == 3) animToPlay = "Dam3";
         }
 
         Debug.Log($"[Combo Debug] PerformComboAttack: weapon={weapon}, step={comboStep}, animToPlay={animToPlay}, isRooted={isRootedAttack}, isMovingInput={isMovingInput}");
@@ -2580,6 +2607,20 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
             if (!Physics.Raycast(rayStart, aimDir, out RaycastHit hit, attackRange)) return;
 
             TryDamageEnemy(hit.collider);
+
+            // Chém cây gỗ (ChoppableTree) cho Maya
+            ChoppableTree tree = hit.collider.GetComponentInParent<ChoppableTree>();
+            if (tree == null)
+            {
+                var forwarder = hit.collider.GetComponent<TreeColliderForwarder>();
+                if (forwarder != null) tree = forwarder.mainTree;
+            }
+            if (tree != null)
+            {
+                Vector3 hitPos = hit.point;
+                int weaponIndex = GetActiveWeaponIndex();
+                tree.HitTree(hitPos, weaponIndex);
+            }
         }
     }
 
@@ -2632,6 +2673,20 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
         Debug.DrawRay(rayStart, aimDir * attackRange, Color.red, 0.5f);
 
         if (!Physics.Raycast(rayStart, aimDir, out RaycastHit hit, attackRange)) return;
+
+        // Chém cây gỗ (ChoppableTree) cho Maya trên Server
+        ChoppableTree tree = hit.collider.GetComponentInParent<ChoppableTree>();
+        if (tree == null)
+        {
+            var forwarder = hit.collider.GetComponent<TreeColliderForwarder>();
+            if (forwarder != null) tree = forwarder.mainTree;
+        }
+        if (tree != null)
+        {
+            Vector3 hitPos = hit.point;
+            int weaponIndex = GetActiveWeaponIndex();
+            tree.HitTree(hitPos, weaponIndex);
+        }
 
         var enemy1 = hit.collider.GetComponentInParent<Enemy1_DapBua>();
         if (enemy1 != null) { enemy1.TakeDamage(damageAmount); return; }
@@ -2956,6 +3011,7 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
                name == "Chem1" ||
                name == "Chem2" ||
                name == "Chem3" ||
+               name == "ChatRiu" ||
                name == "Shooting" ||
                (!string.IsNullOrEmpty(drawWeaponTrigger) && name == drawWeaponTrigger) ||
                (!string.IsNullOrEmpty(sheathWeaponTrigger) && name == sheathWeaponTrigger);
@@ -2988,7 +3044,8 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
                name == "Dam3" || 
                name == "Chem1" ||
                name == "Chem2" ||
-               name == "Chem3";
+               name == "Chem3" ||
+               name == "ChatRiu";
     }
 
     private bool IsPlayingAttackState(out AnimatorStateInfo activeState, out int layer)
@@ -3210,12 +3267,6 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
             }
         }
 
-        bool isAttackPlaying = IsPlayingAttackState(out _, out _);
-        if (isAttackPlaying || IsAttackAnimationName(lastTriggeredAnimName))
-        {
-            Debug.Log($"[Combo Debug] IsPlayingActionAnimation=false: lastTriggered={lastTriggeredAnimName}, timeDiff={Time.time - lastActionTriggerTime:F2}, isRooted={isRootedAttack}, isAttackPlaying={isAttackPlaying}");
-        }
-
         return isFullBodyAction && stateInfo.normalizedTime < 0.95f;
     }
 
@@ -3235,6 +3286,15 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (anim != null && HasParameter(paramName))
         {
             anim.ResetTrigger(paramName);
+        }
+    }
+
+    private System.Collections.IEnumerator ResetTriggerNextFrame(string triggerName)
+    {
+        yield return null;
+        if (anim != null && !string.IsNullOrEmpty(triggerName))
+        {
+            SafeResetTrigger(triggerName);
         }
     }
 
@@ -3342,24 +3402,27 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
         // Kích hoạt hoạt ảnh: Sử dụng CrossFade cho các đòn đánh để ép buộc chuyển cảnh ngay lập tức, tránh lỗi dây nối Animator
         if (IsAttackAnimationName(animName))
         {
+            SafeSetTrigger(animName);
+            StartCoroutine(ResetTriggerNextFrame(animName));
+
             if (anim.layerCount > 1)
             {
                 if (isRooted)
                 {
                     // Đứng yên đánh (Idle Attack) -> không sử dụng Avatar Mask: chạy trên Layer 0 (Base Layer) và tắt Weight của Layer 1 về 0
                     anim.SetLayerWeight(1, 0f);
-                    anim.CrossFadeInFixedTime(animName, fadeTime, 0);
+                    anim.CrossFadeInFixedTime(animName, fadeTime, 0, 0f);
                 }
                 else
                 {
                     // Di chuyển/chạy đánh (Walk/Run Attack) -> sử dụng Avatar Mask: chạy trên Layer 1 với Weight = 1
                     anim.SetLayerWeight(1, 1f);
-                    anim.CrossFadeInFixedTime(animName, fadeTime, 1);
+                    anim.CrossFadeInFixedTime(animName, fadeTime, 1, 0f);
                 }
             }
             else
             {
-                anim.CrossFadeInFixedTime(animName, fadeTime, 0);
+                anim.CrossFadeInFixedTime(animName, fadeTime, 0, 0f);
             }
         }
         else
@@ -3680,7 +3743,7 @@ private void StartRollServerRpc(Vector3 direction)
     private void FireRHealProjectile()
     {
         Vector3 spawnPos = rSkillWaterSpawnPoint != null ? rSkillWaterSpawnPoint.position : (normalAttackSpawnPoint != null ? normalAttackSpawnPoint.position : transform.position + transform.forward * 1.5f + Vector3.up * 1f);
-        Vector3 shootDir = transform.forward;
+        Vector3 shootDir = targetCamera != null ? targetCamera.transform.forward : transform.forward;
 
         if (isPendingRShootNetworkMode)
         {
@@ -3928,16 +3991,28 @@ private void StartRollServerRpc(Vector3 direction)
 
     public void RequestDropWoodLog()
     {
-        Vector3 spawnPos = transform.position + transform.forward * 1.5f + Vector3.up * 0.5f;
-        if (Physics.Raycast(spawnPos, Vector3.down, out RaycastHit hit, 5f))
+        var carrier = GetComponent<PlayerLogCarrier>();
+        string carriedPrefab = carrier != null ? carrier.carriedLogPrefabName : "";
+        int amount = carrier != null ? carrier.carriedLogCount : 1;
+
+        float groundY = transform.position.y;
+        Vector3 spawnPos = transform.position + transform.forward * 1.5f + Vector3.up * 1.2f;
+        Vector3 rayStart = new Vector3(spawnPos.x, transform.position.y + 3f, spawnPos.z);
+        int layerMask = ~LayerMask.GetMask("Player", "Ignore Raycast");
+        if (Physics.Raycast(rayStart, Vector3.down, out RaycastHit hit, 6f, layerMask))
         {
-            spawnPos.y = hit.point.y + 0.3f;
+            if (hit.collider.gameObject != gameObject && !hit.collider.name.ToLower().Contains("player"))
+            {
+                groundY = hit.point.y;
+            }
         }
+        spawnPos.y = groundY + 0.6f;
 
         if (isStandaloneMode)
         {
             GameObject logPrefab = null;
-            if (WoodLogObjectPool.Instance != null && WoodLogObjectPool.Instance.WoodPrefab != null)
+            if (!string.IsNullOrEmpty(carriedPrefab)) logPrefab = Resources.Load<GameObject>(carriedPrefab);
+            if (logPrefab == null && WoodLogObjectPool.Instance != null && WoodLogObjectPool.Instance.WoodPrefab != null)
             {
                 logPrefab = WoodLogObjectPool.Instance.WoodPrefab;
             }
@@ -3947,8 +4022,6 @@ private void StartRollServerRpc(Vector3 direction)
 
             if (logPrefab != null)
             {
-                var carrier = GetComponent<PlayerLogCarrier>();
-                int amount = carrier != null ? carrier.carriedLogCount : 1;
                 GameObject wood = WoodLogObjectPool.Instance.GetOrCreate(logPrefab, spawnPos, Quaternion.identity);
                 var cid = wood.GetComponent<CollectibleItemDrop>();
                 if (cid != null)
@@ -3956,25 +4029,23 @@ private void StartRollServerRpc(Vector3 direction)
                     cid.localWoodAmount = amount;
                 }
             }
-            var carrierObj = GetComponent<PlayerLogCarrier>();
-            if (carrierObj != null) carrierObj.DropLog();
+            if (carrier != null) carrier.DropLog();
         }
         else if (IsOwner)
         {
-            var carrier = GetComponent<PlayerLogCarrier>();
-            int amount = carrier != null ? carrier.carriedLogCount : 1;
             if (carrier != null) carrier.DropLog();
-            DropWoodLogServerRpc(spawnPos, amount);
+            DropWoodLogServerRpc(spawnPos, amount, carriedPrefab);
         }
     }
 
     [ServerRpc]
-    private void DropWoodLogServerRpc(Vector3 position, int amount)
+    private void DropWoodLogServerRpc(Vector3 position, int amount, string prefabName)
     {
         if (!IsServer) return;
 
         GameObject logPrefab = null;
-        if (WoodLogObjectPool.Instance != null && WoodLogObjectPool.Instance.WoodPrefab != null)
+        if (!string.IsNullOrEmpty(prefabName)) logPrefab = Resources.Load<GameObject>(prefabName);
+        if (logPrefab == null && WoodLogObjectPool.Instance != null && WoodLogObjectPool.Instance.WoodPrefab != null)
         {
             logPrefab = WoodLogObjectPool.Instance.WoodPrefab;
         }
@@ -4034,8 +4105,13 @@ private void StartRollServerRpc(Vector3 direction)
             if (collectible != null) collectible.ConfirmCollect();
             else
             {
-                var repair = pendingPickItem.GetComponent<RepairItemDrop>();
-                if (repair != null) repair.ConfirmCollect();
+                var axe = pendingPickItem.GetComponent<AxeItem>();
+                if (axe != null) axe.ConfirmPickup(gameObject);
+                else
+                {
+                    var repair = pendingPickItem.GetComponent<RepairItemDrop>();
+                    if (repair != null) repair.ConfirmCollect();
+                }
             }
             pendingPickItem = null;
         }

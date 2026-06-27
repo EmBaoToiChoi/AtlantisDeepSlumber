@@ -3157,11 +3157,8 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     [ColorUsage(true, true)]
     [Tooltip("Màu phát sáng HDR đỏ cho kiếm.")]
     public Color redEmissiveColor = new Color(3.5f, 0f, 0f, 1f);
-    [Tooltip("Gán Material màu trắng/bán trong suốt để đổi màu cho Leo khi kích hoạt chiêu E.")]
-    public Material speedBoostBodyMaterial;
     private float attackSpeedBoostTimeRemaining = 0f;
     private System.Collections.Generic.Dictionary<Renderer, Material[]> originalSwordMaterials = new System.Collections.Generic.Dictionary<Renderer, Material[]>();
-    private System.Collections.Generic.Dictionary<Renderer, Material[]> originalBodyMaterials = new System.Collections.Generic.Dictionary<Renderer, Material[]>();
 
     [Header("Ghost Slash Skill Q Settings")]
     [Tooltip("Particle prefab riêng cho hiệu ứng Ảo ảnh Chém. Nếu để trống sẽ dùng pool VFX cũ.")]
@@ -3586,15 +3583,29 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         }
     }
 
+    public bool IsHoldingAxe()
+    {
+        return GetComponentInChildren<AxeItem>(true) != null;
+    }
+
     public int GetActiveWeaponIndex()
     {
+        int val;
         if (isStandaloneMode)
         {
             PlayerHUDController hud = FindAnyObjectByType<PlayerHUDController>();
-            if (hud != null) return hud.currentSelectedWeapon;
-            return fallbackWeaponIndex;
+            val = (hud != null) ? hud.currentSelectedWeapon : fallbackWeaponIndex;
         }
-        return activeWeaponIndex.Value;
+        else
+        {
+            val = activeWeaponIndex.Value;
+        }
+
+        if (val == 1 && !IsHoldingAxe())
+        {
+            return 0;
+        }
+        return val;
     }
 
     public void OnRollEnd()
@@ -3671,7 +3682,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             }
         }
 
-        // UpdateAttackLayerWeight(); // Disabled to allow direct weight control in PlayAnimationLocal
+        UpdateAttackLayerWeight();
 
         // Đồng bộ di chuyển lướng (Roll) qua network cho cả Client Owner, Server, và các Client khác — giống Arthur
         bool isRolling = isStandaloneMode ? isRollingStandalone : (IsSpawned && isRollingNet.Value);
@@ -3854,10 +3865,6 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         bool isRunning = Input.GetKey(KeyCode.LeftShift);
         float currentSpeed = isRunning ? moveSpeed * runSpeedMultiplier : moveSpeed;
-        if (IsAttackSpeedBoosted)
-        {
-            currentSpeed *= 2f;
-        }
 
         float moveX = isMovementLocked ? 0f : Input.GetAxis("Horizontal");
         float moveZ = isMovementLocked ? 0f : Input.GetAxis("Vertical");
@@ -4015,10 +4022,6 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         bool isRunning = Input.GetKey(KeyCode.LeftShift);
         float currentSpeed = isRunning ? moveSpeed * runSpeedMultiplier : moveSpeed;
-        if (IsAttackSpeedBoosted)
-        {
-            currentSpeed *= 2f;
-        }
 
         float moveX = isMovementLocked ? 0f : Input.GetAxis("Horizontal");
         float moveZ = isMovementLocked ? 0f : Input.GetAxis("Vertical");
@@ -4168,6 +4171,12 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     private float GetAttackDuration(int weaponIndex, int step)
     {
+        if (weaponIndex == 1)
+        {
+            float duration = GetAnimationClipLength("ChatRiu");
+            if (duration > 0f) return duration;
+            return 2.267f;
+        }
         return 0.5f;
     }
 
@@ -4264,7 +4273,17 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         DisableAllHitboxes();
 
         string animToPlay;
-        if (weapon == 2)
+        if (weapon == 1)
+        {
+            // --- RÌU (1): CHỈ CHƠI HOẠT ẢNH CHẶT RÌU ---
+            animToPlay = "ChatRiu";
+            currentAttackAnimDuration = GetAnimationClipLength("ChatRiu");
+            if (currentAttackAnimDuration <= 0f) currentAttackAnimDuration = 0.8f;
+
+            if (anim != null) anim.applyRootMotion = isRootedAttack;
+            PlayAnimation(animToPlay, 0.05f, false, isRootedAttack);
+        }
+        else if (weapon == 2)
         {
             // --- KIẾM (ARMED): ĐÚNG CHUẨN 5 CLICK TUẦN TỰ ---
             comboStep++;
@@ -5102,9 +5121,9 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (PlayerLevel < 5 && !IsSkillsUnlocked) return;
 
         int activeWeaponIdx = GetActiveWeaponIndex();
-        if (activeWeaponIdx != 1)
+        if (activeWeaponIdx != 0)
         {
-            Debug.LogWarning($"[LeoPlayer] Cannot trigger R Skill because active weapon is {activeWeaponIdx} (must be 1/unarmed!). Please switch to unarmed first.");
+            Debug.LogWarning($"[LeoPlayer] Cannot trigger R Skill because active weapon is {activeWeaponIdx} (must be unarmed!). Please switch to unarmed first.");
             return;
         }
 
@@ -5463,7 +5482,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (isStandaloneMode)
         {
             attackSpeedBoostTimeRemaining = 10f;
-            SetBodyWhiteVisuals(true);
+            SetSwordRedVisuals(true);
         }
         else if (IsOwner)
         {
@@ -5485,7 +5504,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     [ClientRpc]
     private void TriggerAttackSpeedBoostClientRpc(bool state)
     {
-        SetBodyWhiteVisuals(state);
+        SetSwordRedVisuals(state);
     }
 
     private System.Collections.IEnumerator ServerAttackSpeedBoostTimerCoroutine(float duration)
@@ -5497,7 +5516,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     private void OnAttackSpeedBoostedChanged(bool oldVal, bool newVal)
     {
-        SetBodyWhiteVisuals(newVal);
+        SetSwordRedVisuals(newVal);
         if (newVal)
         {
             attackSpeedBoostTimeRemaining = 10f;
@@ -5572,73 +5591,6 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
                 }
             }
             originalSwordMaterials.Clear();
-        }
-    }
-
-    private void SetBodyWhiteVisuals(bool active)
-    {
-        if (active)
-        {
-            if (originalBodyMaterials.Count > 0) return; // Đã đổi rồi
-
-            Renderer[] renderers = GetComponentsInChildren<Renderer>(true);
-            foreach (var r in renderers)
-            {
-                if (r == null) continue;
-                if (r is LineRenderer || r is ParticleSystemRenderer) continue;
-                if (r is SkinnedMeshRenderer || r is MeshRenderer)
-                {
-                    originalBodyMaterials[r] = r.sharedMaterials;
-
-                    if (speedBoostBodyMaterial != null)
-                    {
-                        Material[] newMats = new Material[r.sharedMaterials.Length];
-                        for (int i = 0; i < newMats.Length; i++)
-                        {
-                            newMats[i] = speedBoostBodyMaterial;
-                        }
-                        r.materials = newMats;
-                    }
-                    else
-                    {
-                        Material[] newMats = new Material[r.sharedMaterials.Length];
-                        for (int i = 0; i < newMats.Length; i++)
-                        {
-                            Material originalMat = r.sharedMaterials[i];
-                            if (originalMat != null)
-                            {
-                                Material tempMat = new Material(originalMat);
-                                if (tempMat.HasProperty("_Color"))
-                                {
-                                    tempMat.color = Color.white;
-                                }
-                                if (tempMat.HasProperty("_EmissionColor"))
-                                {
-                                    tempMat.EnableKeyword("_EMISSION");
-                                    tempMat.SetColor("_EmissionColor", new Color(1f, 1f, 1f, 1f));
-                                }
-                                newMats[i] = tempMat;
-                            }
-                            else
-                            {
-                                newMats[i] = null;
-                            }
-                        }
-                        r.materials = newMats;
-                    }
-                }
-            }
-        }
-        else
-        {
-            foreach (var kvp in originalBodyMaterials)
-            {
-                if (kvp.Key != null && kvp.Value != null)
-                {
-                    kvp.Key.materials = kvp.Value;
-                }
-            }
-            originalBodyMaterials.Clear();
         }
     }
 
@@ -6418,9 +6370,11 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     private float GetAnimationClipLength(string triggerName)
     {
         if (anim == null || anim.runtimeAnimatorController == null) return 0f;
+        string searchName = triggerName;
+        if (triggerName == "ChatRiu") searchName = "Chat Cayy";
         foreach (var clip in anim.runtimeAnimatorController.animationClips)
         {
-            if (clip != null && clip.name == triggerName)
+            if (clip != null && (clip.name == searchName || clip.name.ToLower() == searchName.ToLower()))
             {
                 return clip.length;
             }
@@ -6585,7 +6539,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     private string TranslateAnimName(string animName)
     {
         int weapon = GetActiveWeaponIndex();
-        bool isArmed = (weapon == 2);
+        bool isArmed = (weapon == 2 || weapon == 1);
 
         float verticalInput = Input.GetAxis("Vertical");
         float horizontalInput = Input.GetAxis("Horizontal");
@@ -6685,7 +6639,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
                name == "attacktayphai" ||
                name == "Slash1Combo2" ||
                name == "Slash2combo2" ||
-               name == "Slash3combo2" ||
+               name == "Slash3combo2" || name == "ChatRiu" ||
                (!string.IsNullOrEmpty(drawWeaponTrigger) && name == drawWeaponTrigger) ||
                (!string.IsNullOrEmpty(sheathWeaponTrigger) && name == sheathWeaponTrigger) ||
                (!string.IsNullOrEmpty(drawLeftTrigger) && name == drawLeftTrigger) ||
@@ -6712,7 +6666,8 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
                name == "attacktayphai" ||
                name == "Slash1Combo2" ||
                name == "Slash2combo2" ||
-               name == "Slash3combo2";
+               name == "Slash3combo2" ||
+               name == "ChatRiu";
     }
 
     private bool IsFullBodyActionAnimation(string name)
@@ -6980,10 +6935,6 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             StartCoroutine(ResetTriggerNextFrame(translatedName));
 
             int targetLayer = IsAttackAnimationName(translatedName) && !isRootedAttack ? 1 : 0;
-            if (anim.layerCount > 1)
-            {
-                anim.SetLayerWeight(1, targetLayer == 1 ? 1f : 0f);
-            }
             anim.CrossFadeInFixedTime(translatedName, fadeTime, targetLayer, 0f);
 
             // Force evaluation to query the exact animation clip duration
@@ -7252,8 +7203,13 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             if (collectible != null) collectible.ConfirmCollect();
             else
             {
-                var repair = pendingPickItem.GetComponent<RepairItemDrop>();
-                if (repair != null) repair.ConfirmCollect();
+                var axe = pendingPickItem.GetComponent<AxeItem>();
+                if (axe != null) axe.ConfirmPickup(gameObject);
+                else
+                {
+                    var repair = pendingPickItem.GetComponent<RepairItemDrop>();
+                    if (repair != null) repair.ConfirmCollect();
+                }
             }
             pendingPickItem = null;
         }
@@ -7787,16 +7743,28 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     public void RequestDropWoodLog()
     {
-        Vector3 spawnPos = transform.position + transform.forward * 1.5f + Vector3.up * 0.5f;
-        if (Physics.Raycast(spawnPos, Vector3.down, out RaycastHit hit, 5f))
+        var carrier = GetComponent<PlayerLogCarrier>();
+        string carriedPrefab = carrier != null ? carrier.carriedLogPrefabName : "";
+        int amount = carrier != null ? carrier.carriedLogCount : 1;
+
+        float groundY = transform.position.y;
+        Vector3 spawnPos = transform.position + transform.forward * 1.5f + Vector3.up * 1.2f;
+        Vector3 rayStart = new Vector3(spawnPos.x, transform.position.y + 3f, spawnPos.z);
+        int layerMask = ~LayerMask.GetMask("Player", "Ignore Raycast");
+        if (Physics.Raycast(rayStart, Vector3.down, out RaycastHit hit, 6f, layerMask))
         {
-            spawnPos.y = hit.point.y + 0.3f;
+            if (hit.collider.gameObject != gameObject && !hit.collider.name.ToLower().Contains("player"))
+            {
+                groundY = hit.point.y;
+            }
         }
+        spawnPos.y = groundY + 0.6f;
 
         if (isStandaloneMode)
         {
             GameObject logPrefab = null;
-            if (WoodLogObjectPool.Instance != null && WoodLogObjectPool.Instance.WoodPrefab != null)
+            if (!string.IsNullOrEmpty(carriedPrefab)) logPrefab = Resources.Load<GameObject>(carriedPrefab);
+            if (logPrefab == null && WoodLogObjectPool.Instance != null && WoodLogObjectPool.Instance.WoodPrefab != null)
             {
                 logPrefab = WoodLogObjectPool.Instance.WoodPrefab;
             }
@@ -7806,8 +7774,6 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
             if (logPrefab != null)
             {
-                var carrier = GetComponent<PlayerLogCarrier>();
-                int amount = carrier != null ? carrier.carriedLogCount : 1;
                 GameObject wood = WoodLogObjectPool.Instance.GetOrCreate(logPrefab, spawnPos, Quaternion.identity);
                 var cid = wood.GetComponent<CollectibleItemDrop>();
                 if (cid != null)
@@ -7815,25 +7781,23 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
                     cid.localWoodAmount = amount;
                 }
             }
-            var carrierObj = GetComponent<PlayerLogCarrier>();
-            if (carrierObj != null) carrierObj.DropLog();
+            if (carrier != null) carrier.DropLog();
         }
         else if (IsOwner)
         {
-            var carrier = GetComponent<PlayerLogCarrier>();
-            int amount = carrier != null ? carrier.carriedLogCount : 1;
             if (carrier != null) carrier.DropLog();
-            DropWoodLogServerRpc(spawnPos, amount);
+            DropWoodLogServerRpc(spawnPos, amount, carriedPrefab);
         }
     }
 
     [ServerRpc]
-    private void DropWoodLogServerRpc(Vector3 position, int amount)
+    private void DropWoodLogServerRpc(Vector3 position, int amount, string prefabName)
     {
         if (!IsServer) return;
 
         GameObject logPrefab = null;
-        if (WoodLogObjectPool.Instance != null && WoodLogObjectPool.Instance.WoodPrefab != null)
+        if (!string.IsNullOrEmpty(prefabName)) logPrefab = Resources.Load<GameObject>(prefabName);
+        if (logPrefab == null && WoodLogObjectPool.Instance != null && WoodLogObjectPool.Instance.WoodPrefab != null)
         {
             logPrefab = WoodLogObjectPool.Instance.WoodPrefab;
         }

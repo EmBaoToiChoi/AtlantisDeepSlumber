@@ -25,6 +25,9 @@ public class PlayerHUDController : MonoBehaviour
     [Tooltip("Chọn index từ 0 đến 3 để test nhanh giao diện lớp nhân vật khi ấn Play")]
     public int testProfileIndex = 0;
 
+    public static PlayerHUDController Instance { get; private set; }
+    public static bool isCarryingAxe = false;
+
     private static IPlayerHUDTarget localPlayerTarget;
     public static IPlayerHUDTarget LocalPlayerTarget
     {
@@ -164,9 +167,11 @@ public class PlayerHUDController : MonoBehaviour
     private VisualElement lockIcon2;   // Tham chiếu tới icon ổ khóa để rung
     private VisualElement weaponImg2;  // Tham chiếu tới hình ảnh vũ khí để ẩn
     private bool isWeapon2Locked = true;
+    public bool Weapon2Locked => isWeapon2Locked;
     private float warningTimer = 0f;
     private const float WARNING_DURATION = 2f;
 
+    private VisualElement weaponDurabilitySlot1;
     private VisualElement weaponDurabilityFill1;
     private VisualElement weaponDurabilityFill2;
     private VisualElement interactionPrompt;
@@ -220,6 +225,7 @@ public class PlayerHUDController : MonoBehaviour
 
     void OnEnable()
     {
+        Instance = this;
         InitializeUI();
         // Đăng ký lắng nghe event hủy Skill Q
         if (LocalPlayerTarget != null)
@@ -231,6 +237,7 @@ public class PlayerHUDController : MonoBehaviour
 
     void OnDisable()
     {
+        if (Instance == this) Instance = null;
         // QUAN TRỌNG: Reset toàn bộ state khi HUD bị tắt (SetActive false).
         // Khi UI Toolkit rebuild lại visual tree sau lần SetActive(true) tiếp theo,
         // tất cả các tham chiếu element cũ sẽ là dead reference -> phải re-query lại.
@@ -340,6 +347,11 @@ public class PlayerHUDController : MonoBehaviour
             root.Add(screenDamageFlash);
         }
 
+        weaponDurabilitySlot1 = root.Q<VisualElement>("weapon-durability-slot-1");
+        if (weaponDurabilitySlot1 != null)
+        {
+            weaponDurabilitySlot1.style.display = isCarryingAxe ? DisplayStyle.Flex : DisplayStyle.None;
+        }
         weaponDurabilityFill1 = root.Q<VisualElement>("weapon-durability-fill-1");
         weaponDurabilityFill2 = root.Q<VisualElement>("weapon-durability-fill-2");
         interactionPrompt = root.Q<VisualElement>("interaction-prompt");
@@ -1220,14 +1232,7 @@ public class PlayerHUDController : MonoBehaviour
                 else
                 {
                     float currentProgress = isNetwork ? activeBridgeTrigger.buildProgress.Value : activeBridgeTrigger.localBuildProgress;
-                    if (coopBuildProgressBarFill != null)
-                    {
-                        coopBuildProgressBarFill.style.width = Length.Percent(Mathf.Clamp(currentProgress, 0f, 100f));
-                    }
-                    if (coopBuildProgressLabel != null)
-                    {
-                        coopBuildProgressLabel.text = $"Tiến độ: {(int)currentProgress}%";
-                    }
+                    UpdateCoopBuildProgress(currentProgress);
                 }
             }
             else
@@ -1405,8 +1410,8 @@ public class PlayerHUDController : MonoBehaviour
         }
         else if (index == 2)
         {
-            // Kiểm tra nếu vũ khí 2 đang bị khóa
-            if (isWeapon2Locked)
+            // Kiểm tra nếu vũ khí 2 đang bị khóa hoặc đang cầm rìu
+            if (isWeapon2Locked || isCarryingAxe)
             {
                 ShowWeaponWarning();
                 return; // Không cho phép chọn
@@ -1568,6 +1573,10 @@ public class PlayerHUDController : MonoBehaviour
 
         if (slotIndex == 1 && weaponDurabilityFill1 != null)
         {
+            if (weaponDurabilitySlot1 != null)
+            {
+                weaponDurabilitySlot1.style.display = isCarryingAxe ? DisplayStyle.Flex : DisplayStyle.None;
+            }
             weaponDurabilityFill1.style.width = Length.Percent(widthPercent);
             weaponDurabilityFill1.style.backgroundColor = fillColor;
         }
@@ -2423,7 +2432,17 @@ public class PlayerHUDController : MonoBehaviour
         {
             if (teammateCards.TryGetValue(key, out var card))
             {
-                card.RemoveFromHierarchy();
+                if (card != null && card.parent != null)
+                {
+                    try
+                    {
+                        card.parent.Remove(card);
+                    }
+                    catch (System.Exception ex)
+                    {
+                        Debug.LogWarning($"[PlayerHUDController] Loi khi remove card khoi hierarchy: {ex.Message}");
+                    }
+                }
                 teammateCards.Remove(key);
             }
         }
@@ -2789,89 +2808,83 @@ public class PlayerHUDController : MonoBehaviour
             coopBuildContainer = new VisualElement();
             coopBuildContainer.name = "coop-build-container";
             
-            // Apply Glassmorphism layout & styling
+            // Apply Glassmorphism layout & styling (smaller, more centered, focused on space bar)
             coopBuildContainer.style.position = Position.Absolute;
             coopBuildContainer.style.left = Length.Percent(50f);
-            coopBuildContainer.style.top = 20;
+            coopBuildContainer.style.top = 30; // Closer to top center
             coopBuildContainer.style.translate = new Translate(Length.Percent(-50f), Length.Percent(0f), 0f);
-            coopBuildContainer.style.width = 460;
-            coopBuildContainer.style.height = 140;
-            coopBuildContainer.style.backgroundColor = new Color(0.07f, 0.07f, 0.1f, 0.9f); // Translucent deep grey-blue
-            coopBuildContainer.style.borderTopWidth = 1.5f;
-            coopBuildContainer.style.borderBottomWidth = 1.5f;
-            coopBuildContainer.style.borderLeftWidth = 1.5f;
-            coopBuildContainer.style.borderRightWidth = 1.5f;
-            coopBuildContainer.style.borderTopColor = new Color(1f, 1f, 1f, 0.15f); // Soft glassmorphic border
-            coopBuildContainer.style.borderBottomColor = new Color(1f, 1f, 1f, 0.15f);
-            coopBuildContainer.style.borderLeftColor = new Color(1f, 1f, 1f, 0.15f);
-            coopBuildContainer.style.borderRightColor = new Color(1f, 1f, 1f, 0.15f);
-            coopBuildContainer.style.borderTopLeftRadius = 16;
-            coopBuildContainer.style.borderTopRightRadius = 16;
-            coopBuildContainer.style.borderBottomLeftRadius = 16;
-            coopBuildContainer.style.borderBottomRightRadius = 16;
-            coopBuildContainer.style.paddingLeft = 24;
-            coopBuildContainer.style.paddingRight = 24;
-            coopBuildContainer.style.paddingTop = 16;
-            coopBuildContainer.style.paddingBottom = 16;
+            coopBuildContainer.style.width = 380;
+            coopBuildContainer.style.height = 110;
+            coopBuildContainer.style.backgroundColor = new Color(0.06f, 0.06f, 0.08f, 0.75f); // Semi-transparent sleek dark
+            coopBuildContainer.style.borderTopWidth = 1f;
+            coopBuildContainer.style.borderBottomWidth = 1f;
+            coopBuildContainer.style.borderLeftWidth = 1f;
+            coopBuildContainer.style.borderRightWidth = 1f;
+            coopBuildContainer.style.borderTopColor = new Color(1f, 1f, 1f, 0.12f);
+            coopBuildContainer.style.borderBottomColor = new Color(1f, 1f, 1f, 0.12f);
+            coopBuildContainer.style.borderLeftColor = new Color(1f, 1f, 1f, 0.12f);
+            coopBuildContainer.style.borderRightColor = new Color(1f, 1f, 1f, 0.12f);
+            coopBuildContainer.style.borderTopLeftRadius = 20;
+            coopBuildContainer.style.borderTopRightRadius = 20;
+            coopBuildContainer.style.borderBottomLeftRadius = 20;
+            coopBuildContainer.style.borderBottomRightRadius = 20;
+            coopBuildContainer.style.paddingLeft = 20;
+            coopBuildContainer.style.paddingRight = 20;
+            coopBuildContainer.style.paddingTop = 15;
+            coopBuildContainer.style.paddingBottom = 15;
             coopBuildContainer.style.flexDirection = FlexDirection.Column;
-            coopBuildContainer.style.justifyContent = Justify.SpaceEvenly;
+            coopBuildContainer.style.justifyContent = Justify.Center;
             coopBuildContainer.style.alignItems = Align.Center;
 
-            // 2. Description/Instruction Text
-            Label descLabel = new Label("Hãy gọi thêm bạn của bạn vào ấn space");
-            descLabel.style.color = new Color(0.95f, 0.95f, 0.95f, 1f);
-            descLabel.style.fontSize = 16;
-            descLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
-            descLabel.style.unityTextAlign = TextAnchor.MiddleCenter;
-            coopBuildContainer.Add(descLabel);
-
-            // 3. Progress bar container
-            VisualElement progressBarBg = new VisualElement();
-            progressBarBg.style.width = Length.Percent(100f);
-            progressBarBg.style.height = 32;
-            progressBarBg.style.backgroundColor = new Color(0.12f, 0.12f, 0.15f, 1f);
-            progressBarBg.style.borderTopWidth = 1f;
-            progressBarBg.style.borderBottomWidth = 1f;
-            progressBarBg.style.borderLeftWidth = 1f;
-            progressBarBg.style.borderRightWidth = 1f;
-            progressBarBg.style.borderTopColor = new Color(1f, 1f, 1f, 0.08f);
-            progressBarBg.style.borderBottomColor = new Color(1f, 1f, 1f, 0.08f);
-            progressBarBg.style.borderLeftColor = new Color(1f, 1f, 1f, 0.08f);
-            progressBarBg.style.borderRightColor = new Color(1f, 1f, 1f, 0.08f);
-            progressBarBg.style.borderTopLeftRadius = 16;
-            progressBarBg.style.borderTopRightRadius = 16;
-            progressBarBg.style.borderBottomLeftRadius = 16;
-            progressBarBg.style.borderBottomRightRadius = 16;
-            progressBarBg.style.overflow = Overflow.Hidden;
-            progressBarBg.style.justifyContent = Justify.Center;
-
-            // Fill
+            // 2. Create Space Keycap VisualElement (Clickable & Focus of UI)
+            coopBuildClickButton = new Button();
+            coopBuildClickButton.name = "coop-build-space-button";
+            coopBuildClickButton.style.width = 320;
+            coopBuildClickButton.style.height = 54;
+            coopBuildClickButton.style.backgroundColor = new Color(0.14f, 0.14f, 0.18f, 0.95f); // Dark keycap body
+            coopBuildClickButton.style.borderTopWidth = 1.5f;
+            coopBuildClickButton.style.borderBottomWidth = 4.5f; // Keycap 3D border-bottom depth
+            coopBuildClickButton.style.borderLeftWidth = 2f;
+            coopBuildClickButton.style.borderRightWidth = 2f;
+            coopBuildClickButton.style.borderTopColor = new Color(1f, 1f, 1f, 0.25f);
+            coopBuildClickButton.style.borderBottomColor = new Color(0.05f, 0.05f, 0.07f, 1f); // Darker shadow
+            coopBuildClickButton.style.borderLeftColor = new Color(1f, 1f, 1f, 0.15f);
+            coopBuildClickButton.style.borderRightColor = new Color(1f, 1f, 1f, 0.15f);
+            coopBuildClickButton.style.borderTopLeftRadius = 10;
+            coopBuildClickButton.style.borderTopRightRadius = 10;
+            coopBuildClickButton.style.borderBottomLeftRadius = 10;
+            coopBuildClickButton.style.borderBottomRightRadius = 10;
+            coopBuildClickButton.style.flexDirection = FlexDirection.Column;
+            coopBuildClickButton.style.justifyContent = Justify.Center;
+            coopBuildClickButton.style.alignItems = Align.Center;
+            coopBuildClickButton.style.overflow = Overflow.Hidden;
+            coopBuildClickButton.style.paddingLeft = 0;
+            coopBuildClickButton.style.paddingRight = 0;
+            coopBuildClickButton.style.paddingTop = 0;
+            coopBuildClickButton.style.paddingBottom = 0;
+            
+            // Progress Fill inside the Keycap button (Neon Cyan)
             coopBuildProgressBarFill = new VisualElement();
             coopBuildProgressBarFill.style.position = Position.Absolute;
             coopBuildProgressBarFill.style.left = 0;
             coopBuildProgressBarFill.style.top = 0;
             coopBuildProgressBarFill.style.bottom = 0;
             coopBuildProgressBarFill.style.width = Length.Percent(0f);
-            coopBuildProgressBarFill.style.backgroundColor = new Color(0.95f, 0.55f, 0.05f, 0.95f); // Glowing orange gradient
-            coopBuildProgressBarFill.style.borderTopLeftRadius = 16;
-            coopBuildProgressBarFill.style.borderTopRightRadius = 16;
-            coopBuildProgressBarFill.style.borderBottomLeftRadius = 16;
-            coopBuildProgressBarFill.style.borderBottomRightRadius = 16;
-            progressBarBg.Add(coopBuildProgressBarFill);
+            coopBuildProgressBarFill.style.backgroundColor = new Color(0f, 0.72f, 0.95f, 0.35f); // Translucent neon cyan progress fill
+            coopBuildProgressBarFill.style.borderTopLeftRadius = 8;
+            coopBuildProgressBarFill.style.borderBottomLeftRadius = 8;
+            coopBuildClickButton.Add(coopBuildProgressBarFill);
 
-            // Progress text inside
-            coopBuildProgressLabel = new Label("Tiến độ: 0%");
-            coopBuildProgressLabel.style.color = Color.white;
+            // Label text inside Keycap
+            coopBuildProgressLabel = new Label("SPACE");
+            coopBuildProgressLabel.style.color = new Color(0.9f, 0.9f, 0.9f, 1f);
+            coopBuildProgressLabel.style.fontSize = 18;
             coopBuildProgressLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
-            coopBuildProgressLabel.style.alignSelf = Align.Center;
-            coopBuildProgressLabel.style.fontSize = 13;
-            progressBarBg.Add(coopBuildProgressLabel);
+            coopBuildProgressLabel.style.unityTextAlign = TextAnchor.MiddleCenter;
+            coopBuildClickButton.Add(coopBuildProgressLabel);
 
-            coopBuildContainer.Add(progressBarBg);
-
-            // Instantiate coopBuildClickButton but do not add it for compilation and action compatibility
-            coopBuildClickButton = new Button();
             coopBuildClickButton.clicked += OnBuildButtonClicked;
+            coopBuildContainer.Add(coopBuildClickButton);
 
             root.Add(coopBuildContainer);
         }
@@ -2928,10 +2941,7 @@ public class PlayerHUDController : MonoBehaviour
 
         // Initialize progress view immediately
         float prog = (Unity.Netcode.NetworkManager.Singleton != null && Unity.Netcode.NetworkManager.Singleton.IsListening) ? activeBridgeTrigger.buildProgress.Value : activeBridgeTrigger.localBuildProgress;
-        if (coopBuildProgressBarFill != null)
-            coopBuildProgressBarFill.style.width = Length.Percent(prog);
-        if (coopBuildProgressLabel != null)
-            coopBuildProgressLabel.text = $"Tiến độ: {(int)prog}%";
+        UpdateCoopBuildProgress(prog);
     }
 
     public void CloseCoopBuildUI()
@@ -2953,6 +2963,110 @@ public class PlayerHUDController : MonoBehaviour
         }
     }
 
+    public void UpdateCoopBuildProgress(float prog)
+    {
+        if (coopBuildProgressBarFill != null)
+        {
+            coopBuildProgressBarFill.style.width = Length.Percent(prog);
+        }
+        if (coopBuildProgressLabel != null)
+        {
+            coopBuildProgressLabel.text = $"SPACE ({(int)prog}%)";
+        }
+    }
+
+    public void OnBridgeBuildClickReceived()
+    {
+        if (coopBuildClickButton == null) return;
+
+        // 1. Chớp sáng (Flash) nút SPACE
+        // Chuyển màu nền sang màu vàng-cam sáng rực rỡ
+        coopBuildClickButton.style.backgroundColor = new Color(1f, 0.72f, 0f, 0.95f);
+        coopBuildClickButton.style.borderBottomWidth = 1.5f; // Giả lập cảm giác nhấn phím (lún xuống)
+        
+        // Reset về màu xám đen gốc sau 100ms
+        coopBuildClickButton.schedule.Execute(() =>
+        {
+            if (coopBuildClickButton != null)
+            {
+                coopBuildClickButton.style.backgroundColor = new Color(0.14f, 0.14f, 0.18f, 0.95f);
+                coopBuildClickButton.style.borderBottomWidth = 4.5f; // Trả lại độ dày 3D
+            }
+        }).StartingIn(100);
+
+        // 2. Sinh hiệu ứng dăm gỗ/ánh sáng bay lên từ nút SPACE
+        int particleCount = Random.Range(3, 6);
+        for (int i = 0; i < particleCount; i++)
+        {
+            SpawnUIParticle();
+        }
+    }
+
+    private void SpawnUIParticle()
+    {
+        if (coopBuildContainer == null) return;
+
+        VisualElement particle = new VisualElement();
+        particle.style.position = Position.Absolute;
+        
+        // Sinh ngẫu nhiên theo chiều ngang của phím Space
+        float randomX = Random.Range(40f, 340f);
+        particle.style.left = randomX;
+        particle.style.bottom = 40;
+        float size = Random.Range(5f, 10f);
+        particle.style.width = size;
+        particle.style.height = size;
+        particle.style.borderTopLeftRadius = size / 2f;
+        particle.style.borderTopRightRadius = size / 2f;
+        particle.style.borderBottomLeftRadius = size / 2f;
+        particle.style.borderBottomRightRadius = size / 2f;
+
+        // Chọn ngẫu nhiên giữa màu Cam sáng và màu Trắng/Vàng
+        Color[] colors = {
+            new Color(1f, 0.75f, 0f, 0.9f),   // Vàng
+            new Color(0.95f, 0.45f, 0.05f, 0.9f), // Cam sáng
+            new Color(1f, 1f, 1f, 0.95f)     // Trắng
+        };
+        particle.style.backgroundColor = colors[Random.Range(0, colors.Length)];
+        particle.style.borderTopWidth = 0.5f;
+        particle.style.borderBottomWidth = 0.5f;
+        particle.style.borderLeftWidth = 0.5f;
+        particle.style.borderRightWidth = 0.5f;
+        particle.style.borderTopColor = Color.white;
+        particle.style.borderBottomColor = Color.white;
+        particle.style.borderLeftColor = Color.white;
+        particle.style.borderRightColor = Color.white;
+
+        coopBuildContainer.Add(particle);
+
+        // Hoạt ảnh bay lên và mờ dần (Float Up & Fade Out)
+        float currentY = 40f;
+        float speed = Random.Range(80f, 150f);
+        float opacity = 1f;
+        float driftDirection = Random.Range(-20f, 20f);
+
+        particle.schedule.Execute(() =>
+        {
+            currentY += speed * 0.02f;
+            opacity -= 0.02f * 2.5f; // Mờ dần hoàn toàn sau ~0.4 giây
+            
+            particle.style.bottom = currentY;
+            particle.style.opacity = Mathf.Clamp01(opacity);
+            
+            // Bay lượn sóng ngang nhẹ nhàng
+            float leftVal = randomX + Mathf.Sin(currentY * 0.06f) * driftDirection;
+            particle.style.left = leftVal;
+
+            if (opacity <= 0f)
+            {
+                if (particle.parent != null)
+                {
+                    particle.parent.Remove(particle);
+                }
+            }
+        }).Every(20); // Chạy định kỳ mỗi 20ms
+    }
+
     private void OnBuildButtonClicked()
     {
         if (activeBridgeTrigger == null) return;
@@ -2965,6 +3079,41 @@ public class PlayerHUDController : MonoBehaviour
         else
         {
             activeBridgeTrigger.ClickBuildLocal();
+        }
+    }
+
+    public void SetWeapon1IconOverride(Sprite customSprite)
+    {
+        if (weaponDurabilitySlot1 != null)
+        {
+            weaponDurabilitySlot1.style.display = (customSprite != null) ? DisplayStyle.Flex : DisplayStyle.None;
+        }
+        if (weaponImg1 != null)
+        {
+            if (customSprite != null)
+            {
+                weaponImg1.style.backgroundImage = new StyleBackground(customSprite);
+            }
+            else
+            {
+                // Reset to default
+                if (hudProfiles != null && hudProfiles.Count > 0)
+                {
+                    int idx = lastSelectedProfileIndex;
+                    if (hudProfiles.Count == 1)
+                    {
+                        idx = 0;
+                    }
+                    if (idx >= 0 && idx < hudProfiles.Count)
+                    {
+                        var profile = hudProfiles[idx];
+                        if (profile.weapon1Sprite != null)
+                        {
+                            weaponImg1.style.backgroundImage = new StyleBackground(profile.weapon1Sprite);
+                        }
+                    }
+                }
+            }
         }
     }
 }

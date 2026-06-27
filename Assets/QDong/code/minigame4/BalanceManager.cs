@@ -21,7 +21,6 @@ public class BalanceManager : NetworkBehaviour
     );
 
     private HashSet<Collider> playersOnBoard = new HashSet<Collider>();
-    private bool isFlipping = false;
     private bool puzzleLocked = false;
 
     public override void OnNetworkSpawn()
@@ -42,18 +41,39 @@ public class BalanceManager : NetworkBehaviour
         {
             Debug.LogError($"[LỖI NGHIÊNG ĐĨA] Chưa kéo thả Rigidbody của chiếc đĩa vào BalanceManager trên {gameObject.name}!");
         }
+
+        // Tự động nới rộng vùng Trigger để tránh lỗi nhân vật trượt ra mép bị rớt khỏi Trigger
+        // Nếu thoát khỏi Trigger quá sớm, đĩa sẽ mất trọng lượng, bật ngược lên và hất văng nhân vật.
+        Collider[] cols = GetComponents<Collider>();
+        foreach (var col in cols)
+        {
+            if (col.isTrigger)
+            {
+                if (col is BoxCollider box)
+                {
+                    box.size = new Vector3(box.size.x * 1.3f, box.size.y + 10f, box.size.z * 1.3f);
+                }
+                else if (col is SphereCollider sphere)
+                {
+                    sphere.radius *= 1.3f;
+                }
+                else if (col is CapsuleCollider cap)
+                {
+                    cap.radius *= 1.3f;
+                    cap.height += 10f;
+                }
+            }
+        }
     }
 
     private void OnTriggerEnter(Collider other)
     {
-        if (!IsServer) return;
-
         if (other.CompareTag("Player"))
         {
             playersOnBoard.Add(other);
-            Debug.Log($"<color=green>[ĐĨA NGHIÊNG]</color> Phát hiện nhân vật {other.name} ĐẠT CHÂN lên đĩa. Số người hiện tại: {playersOnBoard.Count}");
+            if (IsServer) Debug.Log($"<color=green>[ĐĨA NGHIÊNG]</color> Phát hiện nhân vật {other.name} ĐẠT CHÂN lên đĩa. Số người hiện tại: {playersOnBoard.Count}");
         }
-        else
+        else if (IsServer)
         {
             // Log này giúp bạn check xem có phải bạn quên chưa đổi Tag của Player không
             Debug.Log($"[ĐĨA NGHIÊNG] Có vật thể chạm vào nhưng bị bỏ qua vì không phải Tag 'Player': {other.name} (Tag hiện tại: {other.tag})");
@@ -62,51 +82,77 @@ public class BalanceManager : NetworkBehaviour
 
     private void OnTriggerExit(Collider other)
     {
-        if (!IsServer) return;
-
         if (other.CompareTag("Player"))
         {
             playersOnBoard.Remove(other);
-            Debug.Log($"<color=red>[ĐĨA NGHIÊNG]</color> Nhân vật {other.name} RỜI KHỎI đĩa. Số người còn lại: {playersOnBoard.Count}");
+            if (IsServer) Debug.Log($"<color=red>[ĐĨA NGHIÊNG]</color> Nhân vật {other.name} RỜI KHỎI đĩa. Số người còn lại: {playersOnBoard.Count}");
         }
+    }
+
+    public bool IsPlayerOnBoard(Collider playerCollider)
+    {
+        return playersOnBoard.Contains(playerCollider);
     }
 
     void FixedUpdate()
     {
-        if (puzzleLocked || isFlipping || diskRigidbody == null)
+        if (puzzleLocked || diskRigidbody == null)
             return;
 
-        if (IsServer)
+        // Xóa các player null (ví dụ khi disconnect) trên cả Server và Client
+        playersOnBoard.RemoveWhere(p => p == null);
+
+        float tiltX = 0f;
+        float tiltZ = 0f;
+
+        foreach (var player in playersOnBoard)
         {
-            playersOnBoard.RemoveWhere(p => p == null);
+            // Tính vị trí tương đối (Local Position) từ Player tới tâm đĩa
+            Vector3 localPos = diskRigidbody.transform.InverseTransformPoint(player.transform.position);
+            float weight = GetPlayerWeight(player);
 
-            float tiltX = 0f;
-            float tiltZ = 0f;
-
-            foreach (var player in playersOnBoard)
-            {
-                // Tính vị trí tương đối (Local Position) từ Player tới tâm đĩa
-                Vector3 localPos = diskRigidbody.transform.InverseTransformPoint(player.transform.position);
-                float weight = GetPlayerWeight(player);
-
-                tiltX += localPos.z * weight;
-                tiltZ += localPos.x * weight;
-            }
-
-            // Cập nhật góc xoay đích dựa trên vị trí người chơi
-            // Đổi -tiltX thành tiltX (Trục X: đi tới/lui)
-            // Giữ nguyên -tiltZ (Trục Z: đi trái/phải)
-            targetRotation.Value = Quaternion.Euler(tiltX * tiltSensitivity, 0f, -tiltZ * tiltSensitivity);
-            
-            CurrentAngle = Quaternion.Angle(Quaternion.identity, diskRigidbody.rotation);
+            tiltX += localPos.z * weight;
+            tiltZ += localPos.x * weight;
         }
 
-        // Cả Server và Client cùng thực hiện xoay mâm mượt mà theo biến mạng targetRotation
-        diskRigidbody.MoveRotation(Quaternion.Lerp(
+        // Cập nhật góc xoay đích dựa trên vị trí người chơi (tính local trên mọi máy để mượt nhất)
+        Quaternion desiredRotation = Quaternion.Euler(tiltX * tiltSensitivity, 0f, -tiltZ * tiltSensitivity);
+        
+        CurrentAngle = Quaternion.Angle(Quaternion.identity, diskRigidbody.rotation);
+        
+        if (IsServer)
+        {
+            targetRotation.Value = desiredRotation;
+        }
+
+        // Mượt mà hóa vòng xoay (Lerp) kết hợp giới hạn vận tốc góc (RotateTowards)
+        // Tránh việc đĩa bật ngược lên quá nhanh hất văng người chơi khi có người trượt ra ngoài
+        Quaternion lerpRot = Quaternion.Lerp(
             diskRigidbody.rotation,
-            targetRotation.Value,
+            desiredRotation,
             Time.fixedDeltaTime * 5f
-        ));
+        );
+        Quaternion nextRot = Quaternion.RotateTowards(
+            diskRigidbody.rotation,
+            lerpRot,
+            40f * Time.fixedDeltaTime // Xoay tối đa 40 độ / giây
+        );
+        // Dùng transform.rotation thay vì MoveRotation để triệt tiêu hoàn toàn lực hất vật lý (bounce) từ mặt sàn
+        diskRigidbody.transform.rotation = nextRot;
+
+        // Áp dụng lực hút nhẹ để nhân vật bám sát đĩa hơn khi đĩa di chuyển
+        foreach (var player in playersOnBoard)
+        {
+            CharacterInfo info = player.GetComponent<CharacterInfo>();
+            if (info != null && info.IsOwner)
+            {
+                Rigidbody rb = player.GetComponent<Rigidbody>();
+                if (rb != null)
+                {
+                    rb.AddForce(-diskRigidbody.transform.up * 15f, ForceMode.Force);
+                }
+            }
+        }
     }
 
     float GetPlayerWeight(Collider player)
@@ -116,44 +162,17 @@ public class BalanceManager : NetworkBehaviour
         {
             switch (info.characterType.Value)
             {
-                case CharacterType.Arthur: return 2f;
-                case CharacterType.Leo:    return 1f;
-                case CharacterType.Maya:   return 0.8f;
-                case CharacterType.Elena:  return 0.5f;
+                case CharacterType.Arthur: return 2.5f;
+                case CharacterType.Leo:    return 1.8f;
+                case CharacterType.Maya:   return 1f;
+                case CharacterType.Elena:  return 0.8f;
             }
         }
         return 1f; 
     }
 
-    public void FlipDisk()
-    {
-        if (isFlipping) return;
-        StartCoroutine(FlipCoroutine());
-    }
-
-    IEnumerator FlipCoroutine()
-    {
-        isFlipping = true;
-        Quaternion startRotation = diskRigidbody.rotation;
-        Quaternion targetRot = startRotation * Quaternion.Euler(180f, 0f, 0f);
-        float duration = 1.2f;
-        float timer = 0f;
-
-        while (timer < duration)
-        {
-            timer += Time.deltaTime;
-            Quaternion newRotation = Quaternion.Slerp(startRotation, targetRot, timer / duration);
-            diskRigidbody.MoveRotation(newRotation);
-            if (IsServer) targetRotation.Value = newRotation;
-            yield return null;
-        }
-        diskRigidbody.MoveRotation(targetRot);
-        if (IsServer) targetRotation.Value = targetRot;
-    }
-
     public void ResetDisk()
     {
-        isFlipping = false;
         diskRigidbody.rotation = Quaternion.identity;
         diskRigidbody.linearVelocity = Vector3.zero;
         diskRigidbody.angularVelocity = Vector3.zero;
@@ -176,10 +195,12 @@ public class BalanceManager : NetworkBehaviour
             timer += Time.deltaTime;
             Quaternion rot = Quaternion.Slerp(startRot, Quaternion.identity, timer / duration);
             diskRigidbody.MoveRotation(rot);
+            if (IsServer) targetRotation.Value = rot;
             yield return null;
         }
 
         diskRigidbody.MoveRotation(Quaternion.identity);
+        if (IsServer) targetRotation.Value = Quaternion.identity;
         CurrentAngle = 0;
         puzzleLocked = true;
     }

@@ -29,19 +29,24 @@ public class ElenaIceProjectile : NetworkBehaviour
     {
         spawnPosition = transform.position;
         transform.localScale = new Vector3(2f, 2f, 2f);
+        // Đảm bảo đạn và tất cả con ở Layer Default (0) để chắc chắn va chạm được với đá
+        SetLayerRecursive(gameObject, 0);
         
-        // Đảm bảo có Collider để va chạm hoạt động
-        Collider col = GetComponent<Collider>();
-        if (col == null)
+        // Đảm bảo tất cả Collider trên đạn (kể cả các bộ phận con) đều là Trigger để va chạm hoạt động chính xác
+        Collider[] colliders = GetComponentsInChildren<Collider>();
+        if (colliders.Length == 0)
         {
             SphereCollider sphere = gameObject.AddComponent<SphereCollider>();
             sphere.isTrigger = true;
             sphere.radius = 0.5f;
-            Debug.LogWarning($"[ElenaIceProjectile] Không tìm thấy Collider. Đã tự động thêm SphereCollider mặc định.");
+            Debug.LogWarning($"[ElenaIceProjectile] Không tìm thấy Collider nào. Đã tự động thêm SphereCollider mặc định.");
         }
         else
         {
-            col.isTrigger = true;
+            foreach (var c in colliders)
+            {
+                c.isTrigger = true;
+            }
         }
 
         // Đảm bảo có Rigidbody để nhận biết va chạm với các vật thể tĩnh (static obstacles)
@@ -295,5 +300,14 @@ public class ElenaIceProjectile : NetworkBehaviour
             }
         }
         return null;
+    }
+
+    private void SetLayerRecursive(GameObject go, int layer)
+    {
+        go.layer = layer;
+        foreach (Transform child in go.transform)
+        {
+            SetLayerRecursive(child.gameObject, layer);
+        }
     }
 }

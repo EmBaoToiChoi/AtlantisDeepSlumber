@@ -4,6 +4,12 @@ using Unity.Netcode;
 public class LeoInteraction : NetworkBehaviour
 {
     private EnergyColumn currentColumn;
+    private BalanceManager balanceManager;
+
+    void Start()
+    {
+        balanceManager = FindAnyObjectByType<BalanceManager>();
+    }
 
     void Update()
     {
@@ -22,6 +28,11 @@ public class LeoInteraction : NetworkBehaviour
 
         if(Input.GetKey(KeyCode.E))
         {
+            if (balanceManager != null && balanceManager.CurrentAngle > 10f)
+            {
+                return; // Không cho phép sạc khi độ nghiêng > 10
+            }
+
             currentColumn
                 .AddChargeServerRpc(
                     20f * Time.deltaTime
