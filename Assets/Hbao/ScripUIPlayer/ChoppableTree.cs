@@ -273,6 +273,7 @@ public class ChoppableTree : NetworkBehaviour
     private void ProcessHitServer(Vector3 hitPos, ulong hitterClientId)
     {
         if (isCutDown.Value) return;
+        if (currentHits >= requiredHits) return; // Bảo vệ chống nhận RPC trùng trong cùng frame
 
         currentHits++;
         PlayHitEffectsClientRpc(hitPos, hitterClientId);
@@ -280,20 +281,20 @@ public class ChoppableTree : NetworkBehaviour
         if (currentHits >= requiredHits)
         {
             isCutDown.Value = true;
-            int count = Random.Range(5, 11);
-            SpawnWoodLogs(count);
+            SpawnWoodLogs(1);
         }
     }
 
     private void ProcessHitOffline()
     {
+        if (!gameObject.activeSelf || currentHits >= requiredHits) return; // Bảo vệ chống va chạm trùng offline
+
         currentHits++;
 
         if (currentHits >= requiredHits)
         {
             gameObject.SetActive(false);
-            int count = Random.Range(5, 11);
-            SpawnCollectibleLogLocal(count);
+            SpawnCollectibleLogLocal(1);
         }
     }
 
@@ -486,7 +487,7 @@ public class ChoppableTree : NetworkBehaviour
                 }
             }
 
-            spawnPos.y = groundY + 1.2f;
+            spawnPos.y = groundY + 0.6f;
 
             GameObject log = WoodLogObjectPool.Instance.GetOrCreate(woodLogPrefab, spawnPos, Quaternion.identity);
             
@@ -499,7 +500,7 @@ public class ChoppableTree : NetworkBehaviour
             var cid = log.GetComponent<CollectibleItemDrop>();
             if (cid != null)
             {
-                cid.woodAmount.Value = 1;
+                cid.woodAmount.Value = Random.Range(5, 11);
             }
         }
     }
@@ -527,14 +528,14 @@ public class ChoppableTree : NetworkBehaviour
                 }
             }
 
-            spawnPos.y = groundY + 1.2f;
+            spawnPos.y = groundY + 0.6f;
 
             GameObject log = WoodLogObjectPool.Instance.GetOrCreate(woodLogPrefab, spawnPos, Quaternion.identity);
             
             var cid = log.GetComponent<CollectibleItemDrop>();
             if (cid != null)
             {
-                cid.localWoodAmount = 1;
+                cid.localWoodAmount = Random.Range(5, 11);
             }
         }
     }
