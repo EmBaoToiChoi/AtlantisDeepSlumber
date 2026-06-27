@@ -1085,6 +1085,12 @@ public class BridgeCollapseTrigger : NetworkBehaviour
         // 3. Hiển thị và chạy hoạt ảnh cho Búa/Cưa
         GameObject toolPrefab = (effectType == 0) ? hammerPrefab : sawPrefab;
         StartCoroutine(AnimateToolVisual(worldPos, toolPrefab, effectType));
+
+        // 4. Đồng bộ hiệu ứng chớp sáng trên UI của người chơi
+        if (PlayerHUDController.Instance != null && PlayerHUDController.isCoopBuildingUIOpen)
+        {
+            PlayerHUDController.Instance.OnBridgeBuildClickReceived();
+        }
     }
 
     private void PlayParticleAtPosition(ParticleSystem particlePrefabOrInstance, Vector3 position)

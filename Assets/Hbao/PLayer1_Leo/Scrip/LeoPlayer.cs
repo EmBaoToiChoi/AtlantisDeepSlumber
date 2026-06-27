@@ -4175,7 +4175,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         {
             float duration = GetAnimationClipLength("ChatRiu");
             if (duration > 0f) return duration;
-            return 0.8f;
+            return 2.267f;
         }
         return 0.5f;
     }
@@ -6370,9 +6370,11 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     private float GetAnimationClipLength(string triggerName)
     {
         if (anim == null || anim.runtimeAnimatorController == null) return 0f;
+        string searchName = triggerName;
+        if (triggerName == "ChatRiu") searchName = "Chat Cayy";
         foreach (var clip in anim.runtimeAnimatorController.animationClips)
         {
-            if (clip != null && clip.name == triggerName)
+            if (clip != null && (clip.name == searchName || clip.name.ToLower() == searchName.ToLower()))
             {
                 return clip.length;
             }

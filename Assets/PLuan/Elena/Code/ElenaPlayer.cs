@@ -2311,9 +2311,11 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
     private float GetAnimationClipLength(string triggerName)
     {
         if (anim == null || anim.runtimeAnimatorController == null) return 0f;
+        string searchName = triggerName;
+        if (triggerName == "ChatRiu") searchName = "Chat Cayy";
         foreach (var clip in anim.runtimeAnimatorController.animationClips)
         {
-            if (clip != null && (clip.name == triggerName || clip.name.ToLower() == triggerName.ToLower() || clip.name.ToLower().Contains(triggerName.ToLower())))
+            if (clip != null && (clip.name == searchName || clip.name.ToLower() == searchName.ToLower() || clip.name.ToLower().Contains(searchName.ToLower())))
             {
                 return clip.length;
             }
@@ -2327,7 +2329,7 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
         {
             float duration = GetAnimationClipLength("ChatRiu");
             if (duration > 0f) return duration;
-            return 0.8f;
+            return 2.267f;
         }
         else if (weaponIndex == 2)
         {
