@@ -109,7 +109,7 @@ public class Puzzle4Manager : NetworkBehaviour
                 Vector3 normal = balanceManager.diskRigidbody.transform.up;
                 Vector3 downhill = Vector3.ProjectOnPlane(Vector3.down, normal).normalized;
                 
-                float slideForceMagn = (balanceManager.CurrentAngle - 10f) * 60f; 
+                float slideForceMagn = (balanceManager.CurrentAngle - 10f) * 40f; 
                 
                 // Giới hạn lực đẩy tối đa để tránh lỗi vật lý (PhysX nảy văng) khi ép mạnh vào thành đĩa
                 if (slideForceMagn > 300f) slideForceMagn = 300f;
