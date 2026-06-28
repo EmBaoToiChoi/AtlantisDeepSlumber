@@ -260,23 +260,29 @@ public class PlayerInteraction : NetworkBehaviour
         if (core != null && GetPendingPickItem() == core.gameObject)
         {
             SetPendingPickItem(null);
+            ConfirmPickupCrystal(core);
+        }
+    }
 
-            if (NetworkManager.Singleton == null || !NetworkManager.Singleton.IsListening)
+    public void ConfirmPickupCrystal(CrystalCore core)
+    {
+        if (core == null) return;
+
+        if (NetworkManager.Singleton == null || !NetworkManager.Singleton.IsListening)
+        {
+            // Offline
+            string itemName = "Ngoc" + core.crystalID;
+            bool added = AddCrystalToInventory(itemName);
+            if (added)
             {
-                // Offline
-                string itemName = "Ngoc" + core.crystalID;
-                bool added = AddCrystalToInventory(itemName);
-                if (added)
-                {
-                    Destroy(core.gameObject);
-                }
+                Destroy(core.gameObject);
             }
-            else
-            {
-                // Online: Gửi yêu cầu nhặt lên server để xác thực tránh tranh chấp
-                Debug.Log($"[CrystalDebug] Requesting ServerRpc to pick up crystal: {core.NetworkObject.NetworkObjectId}");
-                RequestPickupCrystalServerRpc(core.NetworkObject.NetworkObjectId);
-            }
+        }
+        else
+        {
+            // Online: Gửi yêu cầu nhặt lên server để xác thực tránh tranh chấp
+            Debug.Log($"[CrystalDebug] Requesting ServerRpc to pick up crystal: {core.NetworkObject.NetworkObjectId}");
+            RequestPickupCrystalServerRpc(core.NetworkObject.NetworkObjectId);
         }
     }
 
