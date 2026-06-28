@@ -2803,17 +2803,17 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         }
     }
 
-    public void EnableLeftHitbox() {}
+    public void EnableLeftHitbox() { alreadyHitEnemies.Clear(); PerformRaycastAttack(); }
     public void DisableLeftHitbox() {}
-    public void EnableRightHitbox() {}
+    public void EnableRightHitbox() { alreadyHitEnemies.Clear(); PerformRaycastAttack(); }
     public void DisableRightHitbox() {}
-    public void EnableBothHitboxes() {}
+    public void EnableBothHitboxes() { alreadyHitEnemies.Clear(); PerformRaycastAttack(); }
     public void DisableBothHitboxes() {}
-    public void EnableLeftWeaponHitbox() {}
+    public void EnableLeftWeaponHitbox() { alreadyHitEnemies.Clear(); PerformRaycastAttack(); }
     public void DisableLeftWeaponHitbox() {}
-    public void EnableRightWeaponHitbox() {}
+    public void EnableRightWeaponHitbox() { alreadyHitEnemies.Clear(); PerformRaycastAttack(); }
     public void DisableRightWeaponHitbox() {}
-    public void EnableBothWeaponHitboxes() {}
+    public void EnableBothWeaponHitboxes() { alreadyHitEnemies.Clear(); PerformRaycastAttack(); }
     public void DisableBothWeaponHitboxes() {}
     public void DisableAllHitboxes() {}
 

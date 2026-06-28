@@ -2438,31 +2438,40 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
             aimDir.Normalize();
         }
 
+        Vector3 rayStartClient = transform.position + Vector3.up * 0.5f;
+        bool hasHitClient = Physics.Raycast(rayStartClient, aimDir, out RaycastHit hitClient, attackRange);
+
         if (networkMode)
         {
             AttackServerRpc(aimDir);
+            if (hasHitClient)
+            {
+                var netObj = hitClient.collider.GetComponentInParent<NetworkObject>();
+                if (netObj != null)
+                {
+                    DamageEnemyServerRpc(netObj);
+                }
+            }
         }
         else
         {
-            Vector3 rayStart = transform.position + Vector3.up * 0.5f;
-            Debug.DrawRay(rayStart, aimDir * attackRange, Color.red, 0.5f);
-
-            if (!Physics.Raycast(rayStart, aimDir, out RaycastHit hit, attackRange)) return;
-
-            TryDamageEnemy(hit.collider);
-
-            // Chém cây gỗ (ChoppableTree) cho Elena
-            ChoppableTree tree = hit.collider.GetComponentInParent<ChoppableTree>();
-            if (tree == null)
+            if (hasHitClient)
             {
-                var forwarder = hit.collider.GetComponent<TreeColliderForwarder>();
-                if (forwarder != null) tree = forwarder.mainTree;
-            }
-            if (tree != null)
-            {
-                Vector3 hitPos = hit.point;
-                int weaponIndex = GetActiveWeaponIndex();
-                tree.HitTree(hitPos, weaponIndex);
+                TryDamageEnemy(hitClient.collider);
+
+                // Chém cây gỗ (ChoppableTree) cho Elena
+                ChoppableTree tree = hitClient.collider.GetComponentInParent<ChoppableTree>();
+                if (tree == null)
+                {
+                    var forwarder = hitClient.collider.GetComponent<TreeColliderForwarder>();
+                    if (forwarder != null) tree = forwarder.mainTree;
+                }
+                if (tree != null)
+                {
+                    Vector3 hitPos = hitClient.point;
+                    int weaponIndex = GetActiveWeaponIndex();
+                    tree.HitTree(hitPos, weaponIndex);
+                }
             }
         }
     }
@@ -2473,16 +2482,19 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         if (weaponIndex == 2) // Nếu đang chọn Cung (Vũ khí số 2)
         {
-            weaponOnBackVisual.SetActive(false);
-            weaponInHandVisual.SetActive(true);
+            if (weaponOnBackVisual != null) weaponOnBackVisual.SetActive(false);
+            if (weaponInHandVisual != null) weaponInHandVisual.SetActive(true);
         }
-        else // Nếu đang đi tay không (Vũ khí số 1)
+        else // Nếu đang chọn vũ khí khác (ví dụ: tay không, rìu)
         {
-            weaponOnBackVisual.SetActive(true);
-            weaponInHandVisual.SetActive(false);
+            if (weaponOnBackVisual != null) weaponOnBackVisual.SetActive(true);
+            if (weaponInHandVisual != null) weaponInHandVisual.SetActive(false);
         }
     }
 
+    // ------------------------------------------------------------------
+    //  Try Damage Helper
+    // ------------------------------------------------------------------
     public void TryDamageEnemy(Collider col)
     {
         var e1 = col.GetComponentInParent<Enemy1_DapBua>();
@@ -2530,21 +2542,29 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
             int weaponIndex = GetActiveWeaponIndex();
             tree.HitTree(hitPos, weaponIndex);
         }
+    }
 
-        var enemy1 = hit.collider.GetComponentInParent<Enemy1_DapBua>();
-        if (enemy1 != null) { enemy1.TakeDamage(damageAmount); return; }
-
-        var enemy2 = hit.collider.GetComponentInParent<Enemy2_Zombie>();
-        if (enemy2 != null) { enemy2.TakeDamage(damageAmount); return; }
-
-        var enemy3 = hit.collider.GetComponentInParent<Enemy3_Buaa>();
-        if (enemy3 != null) { enemy3.TakeDamage(damageAmount); return; }
-
-        var enemy4 = hit.collider.GetComponentInParent<Enemy4_Bongtoi>();
-        if (enemy4 != null) { enemy4.TakeDamage(damageAmount); return; }
-
-        var enemy5 = hit.collider.GetComponentInParent<Enemy5_PhuThuy>();
-        if (enemy5 != null) { enemy5.TakeDamage(damageAmount); return; }
+    [ServerRpc]
+    private void DamageEnemyServerRpc(NetworkObjectReference enemyRef)
+    {
+        if (enemyRef.TryGet(out NetworkObject netObj))
+        {
+            var col = netObj.GetComponent<Collider>();
+            if (col != null) TryDamageEnemy(col);
+            else
+            {
+                var e1 = netObj.GetComponentInChildren<Enemy1_DapBua>();
+                if (e1 != null) { e1.TakeDamage(damageAmount); return; }
+                var e2 = netObj.GetComponentInChildren<Enemy2_Zombie>();
+                if (e2 != null) { e2.TakeDamage(damageAmount); return; }
+                var e3 = netObj.GetComponentInChildren<Enemy3_Buaa>();
+                if (e3 != null) { e3.TakeDamage(damageAmount); return; }
+                var e4 = netObj.GetComponentInChildren<Enemy4_Bongtoi>();
+                if (e4 != null) { e4.TakeDamage(damageAmount); return; }
+                var e5 = netObj.GetComponentInChildren<Enemy5_PhuThuy>();
+                if (e5 != null) { e5.TakeDamage(damageAmount); return; }
+            }
+        }
     }
 
     public void TakeDamage(float damage)
