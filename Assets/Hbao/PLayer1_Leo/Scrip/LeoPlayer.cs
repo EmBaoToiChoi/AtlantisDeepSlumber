@@ -7301,27 +7301,27 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     }
 
     // --- Đấm tay: Tay Trái ---
-    public void EnableLeftHitbox() {}
+    public void EnableLeftHitbox() { alreadyHitEnemies.Clear(); PerformRaycastAttack(); }
     public void DisableLeftHitbox() {}
 
     // --- Đấm tay: Tay Phải ---
-    public void EnableRightHitbox() {}
+    public void EnableRightHitbox() { alreadyHitEnemies.Clear(); PerformRaycastAttack(); }
     public void DisableRightHitbox() {}
 
     // --- Đấm tay: Cả hai tay ---
-    public void EnableBothHitboxes() {}
+    public void EnableBothHitboxes() { alreadyHitEnemies.Clear(); PerformRaycastAttack(); }
     public void DisableBothHitboxes() {}
 
     // --- Kiếm: Tay Trái ---
-    public void EnableLeftWeaponHitbox() {}
+    public void EnableLeftWeaponHitbox() { alreadyHitEnemies.Clear(); PerformRaycastAttack(); }
     public void DisableLeftWeaponHitbox() {}
 
     // --- Kiếm: Tay Phải ---
-    public void EnableRightWeaponHitbox() {}
+    public void EnableRightWeaponHitbox() { alreadyHitEnemies.Clear(); PerformRaycastAttack(); }
     public void DisableRightWeaponHitbox() {}
 
     // --- Kiếm: Cả hai tay (Slash chính) ---
-    public void EnableBothWeaponHitboxes() {}
+    public void EnableBothWeaponHitboxes() { alreadyHitEnemies.Clear(); PerformRaycastAttack(); }
     public void DisableBothWeaponHitboxes() {}
 
     // --- VFX Spawn Animation Events với Object Pooling ---

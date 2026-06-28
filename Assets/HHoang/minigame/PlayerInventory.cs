@@ -203,33 +203,80 @@ public class PlayerInteraction : NetworkBehaviour
 
         if (core != null)
         {
+            // Bắt đầu hoạt ảnh nhặt và set pending giống CollectibleItemDrop
+            PlayPickupAnimation();
+            SetPendingPickItem(core.gameObject);
+            StartCoroutine(CollectCrystalSequence(core));
+        }
+        else
+        {
+            Debug.LogWarning("[CrystalDebug] No CrystalCore component found within 3 meters!");
+        }
+    }
+
+    private void PlayPickupAnimation()
+    {
+        var target = GetComponent<IPlayerHUDTarget>();
+        if (target is LeoPlayer leo) leo.PlayAnimation("Pick", 0.1f);
+        else if (target is ArthurPlayer arthur) arthur.PlayAnimation("Idle_Pick", 0.1f);
+        else if (target is ElenaPlayer elena) elena.PlayAnimation("Idle_Pick", 0.1f);
+        else if (target is MayaPlayer maya) maya.PlayAnimation("Idle_Pick", 0.1f);
+        else
+        {
+            Animator anim = GetPlayerAnimator();
+            if (anim != null)
+            {
+                SafeSetTrigger(anim, "BungTrigger");
+                SafeSetTrigger(anim, "Bưng");
+            }
+        }
+    }
+
+    private void SetPendingPickItem(GameObject item)
+    {
+        var target = GetComponent<IPlayerHUDTarget>();
+        if (target is LeoPlayer leo) leo.pendingPickItem = item;
+        else if (target is ArthurPlayer arthur) arthur.pendingPickItem = item;
+        else if (target is ElenaPlayer elena) elena.pendingPickItem = item;
+        else if (target is MayaPlayer maya) maya.pendingPickItem = item;
+        else if (target is SimplePlayerTest spt) spt.pendingPickItem = item;
+    }
+
+    private GameObject GetPendingPickItem()
+    {
+        var target = GetComponent<IPlayerHUDTarget>();
+        if (target is LeoPlayer leo) return leo.pendingPickItem;
+        if (target is ArthurPlayer arthur) return arthur.pendingPickItem;
+        if (target is ElenaPlayer elena) return elena.pendingPickItem;
+        if (target is MayaPlayer maya) return maya.pendingPickItem;
+        if (target is SimplePlayerTest spt) return spt.pendingPickItem;
+        return null;
+    }
+
+    private System.Collections.IEnumerator CollectCrystalSequence(CrystalCore core)
+    {
+        yield return new WaitForSeconds(1.0f);
+
+        if (core != null && GetPendingPickItem() == core.gameObject)
+        {
+            SetPendingPickItem(null);
+
             if (NetworkManager.Singleton == null || !NetworkManager.Singleton.IsListening)
             {
                 // Offline
                 string itemName = "Ngoc" + core.crystalID;
                 bool added = AddCrystalToInventory(itemName);
-
                 if (added)
                 {
-                    Animator anim = GetPlayerAnimator();
-                    if (anim != null)
-                    {
-                        SafeSetTrigger(anim, "BungTrigger");
-                        SafeSetTrigger(anim, "Bưng");
-                    }
                     Destroy(core.gameObject);
                 }
             }
             else
             {
-                // Online: Gửi yêu cầu nhặt lên server để xác thực tránh tranh chấp (race condition)
+                // Online: Gửi yêu cầu nhặt lên server để xác thực tránh tranh chấp
                 Debug.Log($"[CrystalDebug] Requesting ServerRpc to pick up crystal: {core.NetworkObject.NetworkObjectId}");
                 RequestPickupCrystalServerRpc(core.NetworkObject.NetworkObjectId);
             }
-        }
-        else
-        {
-            Debug.LogWarning("[CrystalDebug] No CrystalCore component found within 3 meters!");
         }
     }
 
@@ -461,16 +508,7 @@ public class PlayerInteraction : NetworkBehaviour
     {
         if (NetworkManager.Singleton.LocalClientId == targetClientId)
         {
-            bool added = AddCrystalToInventory(itemName);
-            if (added)
-            {
-                Animator anim = GetPlayerAnimator();
-                if (anim != null)
-                {
-                    SafeSetTrigger(anim, "BungTrigger");
-                    SafeSetTrigger(anim, "Bưng");
-                }
-            }
+            AddCrystalToInventory(itemName);
         }
     }
 }
