@@ -11,6 +11,10 @@ public class PasswordPillarReveal : NetworkBehaviour
     [Tooltip("Góc Y chính xác của từng đốt để hiện mật khẩu (VD: 0, 90, 180, 270)")]
     public float[] correctAngles = new float[4];
 
+    [Header("Cấu hình Phần Thưởng")]
+    [Tooltip("Kéo 4 Object muốn hiện lên khi giải đúng vào đây")]
+    public GameObject[] secretObjects; 
+
     [Header("Cấu hình Xoay Liên Tục")]
     [Tooltip("Tốc độ quay mặc định (độ/giây)")]
     public float spinSpeed = 120f;
@@ -23,7 +27,6 @@ public class PasswordPillarReveal : NetworkBehaviour
     public int extraSpins = 2; 
 
     private bool isEndlessSpinning = true;
-    // Lưu góc khởi tạo để giữ nguyên trục X, Z không bị thay đổi
     private Quaternion[] initialRotations;
 
     void Start()
@@ -34,6 +37,10 @@ public class PasswordPillarReveal : NetworkBehaviour
         {
             if (pillarSegments[i] != null)
                 initialRotations[i] = pillarSegments[i].localRotation;
+
+            // Đảm bảo các object ẩn đi lúc bắt đầu
+            if (i < secretObjects.Length && secretObjects[i] != null)
+                secretObjects[i].SetActive(false);
         }
     }
 
@@ -68,12 +75,10 @@ public class PasswordPillarReveal : NetworkBehaviour
 
         for (int i = 0; i < pillarSegments.Length; i++)
         {
-            // Lấy góc Y hiện tại dựa trên localRotation
             float currentY = pillarSegments[i].localEulerAngles.y;
             startAngles[i] = currentY;
 
             float direction = (i % 2 == 0) ? 1f : -1f;
-
             float angleDiff = (correctAngles[i] % 360f) - (currentY % 360f);
 
             if (direction > 0 && angleDiff < 0) angleDiff += 360f;
@@ -95,8 +100,6 @@ public class PasswordPillarReveal : NetworkBehaviour
                 float offsetT = Mathf.Clamp01(smoothT - (i * 0.05f));
                 float currentAngle = Mathf.Lerp(startAngles[i], targetAngles[i], offsetT);
                 
-                // SỬA LỖI: Dùng Quaternion.Euler để đảm bảo chỉ tác động vào trục Y
-                // Nhân với initialRotations để giữ nguyên trục X và Z ban đầu
                 pillarSegments[i].localRotation = initialRotations[i] * Quaternion.Euler(0, currentAngle, 0);
             }
             yield return null;
@@ -106,6 +109,12 @@ public class PasswordPillarReveal : NetworkBehaviour
         for (int i = 0; i < pillarSegments.Length; i++)
         {
             pillarSegments[i].localRotation = initialRotations[i] * Quaternion.Euler(0, correctAngles[i], 0);
+            
+            // Bật object tương ứng
+            if (i < secretObjects.Length && secretObjects[i] != null)
+            {
+                secretObjects[i].SetActive(true);
+            }
         }
     }
 }
