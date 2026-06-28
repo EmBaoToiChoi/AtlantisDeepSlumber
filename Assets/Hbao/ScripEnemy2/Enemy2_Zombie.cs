@@ -34,7 +34,7 @@ public class Enemy2_Zombie : NetworkBehaviour
     public Animator anim;
     public Transform eyeTransform;
 
-    [Header("Melee Hitbox")]
+    [Header("Melee Hitbox (Bypassed - now using raycast/cone sweeps)")]
     public GameObject clawHitbox;
 
     [Header("Patrol Waypoints (3 điểm hình tam giác)")]
@@ -82,6 +82,14 @@ public class Enemy2_Zombie : NetworkBehaviour
     private float lastDamageTime;
     private int recentHitCount;
 
+    // ─── FSM States ───
+    private IEnemyState currentFSMState;
+    private PatrolState patrolState;
+    private ChaseState chaseState;
+    private AttackState attackState;
+    private StaggerState staggerState;
+    private DeadState deadState;
+
     private readonly Collider[] detectionResults = new Collider[8];
     private readonly Collider[] damageResults    = new Collider[8];
     private bool AgentReady => agent != null && agent.isActiveAndEnabled && agent.isOnNavMesh;
@@ -91,15 +99,24 @@ public class Enemy2_Zombie : NetworkBehaviour
         if (anim == null) anim = GetComponent<Animator>() ?? GetComponentInChildren<Animator>(true);
         var na = GetComponent<Unity.Netcode.Components.NetworkAnimator>();
         if (na != null) { if (anim == null || anim.runtimeAnimatorController == null) na.enabled = false; else na.Animator = anim; }
+
+        // Initialize state instances for FSM
+        patrolState = new PatrolState(this);
+        chaseState = new ChaseState(this);
+        attackState = new AttackState(this);
+        staggerState = new StaggerState(this);
+        deadState = new DeadState(this);
     }
 
     private void Start() { if (!IsNetworkActive) { isStandaloneMode = true; InitStandalone(); } }
 
     private void InitStandalone()
     {
-        localHealth = maxHealth; localState = EnemyState.Patrol;
+        localHealth = maxHealth;
         SnapToNavMesh(); if (clawHitbox != null) clawHitbox.SetActive(false);
-        ApplySpeedAnim(0f); GoToNextWaypoint();
+        ApplySpeedAnim(0f); 
+        ChangeState(EnemyState.Patrol);
+        GoToNextWaypoint();
     }
 
     public override void OnNetworkSpawn()
@@ -115,8 +132,8 @@ public class Enemy2_Zombie : NetworkBehaviour
 
         ApplySpeedAnim(netSpeed.Value);
 
-        if (IsServer) { currentHealth.Value = maxHealth; SnapToNavMesh(); if (clawHitbox != null) clawHitbox.SetActive(false); GoToNextWaypoint(); }
-        else { if (agent != null) agent.enabled = false; }
+        if (IsServer) { currentHealth.Value = maxHealth; SnapToNavMesh(); if (clawHitbox != null) clawHitbox.SetActive(false); ChangeState(EnemyState.Patrol); GoToNextWaypoint(); }
+        else { if (agent != null) agent.enabled = false; OnStateChanged(EnemyState.Patrol, currentState.Value); }
     }
 
     public override void OnNetworkDespawn()
@@ -172,12 +189,9 @@ public class Enemy2_Zombie : NetworkBehaviour
         if (attackCooldownTimer > 0) attackCooldownTimer -= Time.deltaTime;
         detectionTimer -= Time.deltaTime;
         if (detectionTimer <= 0) { detectionTimer = DETECTION_INTERVAL; DetectPlayer(); }
-        switch (CurrentStateValue)
+        if (currentFSMState != null)
         {
-            case EnemyState.Patrol:  HandlePatrol();  break;
-            case EnemyState.Chase:   HandleChase();   break;
-            case EnemyState.Stagger: HandleStagger(); break;
-            case EnemyState.Attack:  HandleAttack();  break;
+            currentFSMState.Update();
         }
     }
 
@@ -304,20 +318,25 @@ public class Enemy2_Zombie : NetworkBehaviour
 
     private void ChangeState(EnemyState newState)
     {
-        if (CurrentStateValue == EnemyState.Attack && newState != EnemyState.Attack) { if (clawHitbox != null) clawHitbox.SetActive(false); }
+        if (currentFSMState != null)
+        {
+            currentFSMState.Exit();
+        }
+
         CurrentStateValue = newState;
+
         switch (newState)
         {
-            case EnemyState.Chase:   waitingAtWaypoint = false; if (AgentReady) { agent.isStopped = false; agent.speed = chaseRunSpeed; } break;
-            case EnemyState.Stagger: if (AgentReady) agent.isStopped = true; SetSpeedNet(0f); if (staggerTimer <= 0) staggerTimer = 0.55f; break;
-            case EnemyState.Attack:
-                if (AgentReady) agent.isStopped = true; SetSpeedNet(0f);
-                hasDealtDamage = false; bool frantic = CurrentHealthValue <= maxHealth * 0.4f;
-                attackDuration = frantic ? 0.65f : 0.9f; stateTimer = attackDuration;
-                PlayAttackAnimLocal();
-                if (!isStandaloneMode) PlayAttackClientRpc();
-                break;
-            case EnemyState.Dead: Die(); break;
+            case EnemyState.Patrol:  currentFSMState = patrolState; break;
+            case EnemyState.Chase:   currentFSMState = chaseState;  break;
+            case EnemyState.Attack:  currentFSMState = attackState; break;
+            case EnemyState.Stagger: currentFSMState = staggerState; break;
+            case EnemyState.Dead:    currentFSMState = deadState;   break;
+        }
+
+        if (currentFSMState != null)
+        {
+            currentFSMState.Enter();
         }
     }
 
@@ -329,7 +348,25 @@ public class Enemy2_Zombie : NetworkBehaviour
     private void DealConeDamage(float damage, float range, float angle, float knockback)
     {
         int num = Physics.OverlapSphereNonAlloc(transform.position, range, damageResults, playerLayer);
-        if (num == 0) { int c = 0; foreach (var p in GameObject.FindGameObjectsWithTag("Player")) { if (c >= damageResults.Length) break; if (Vector3.Distance(transform.position, p.transform.position) <= range) { var col = p.GetComponent<Collider>(); if (col != null) damageResults[c++] = col; } } num = c; }
+        if (num == 0)
+        {
+            int c = 0;
+            var activePlayers = PlayerHUDManager.ActivePlayers;
+            if (activePlayers != null)
+            {
+                foreach (var p in activePlayers)
+                {
+                    if (p == null || p.gameObject == null) continue;
+                    if (c >= damageResults.Length) break;
+                    if (Vector3.Distance(transform.position, p.transform.position) <= range)
+                    {
+                        var col = p.gameObject.GetComponentInChildren<Collider>() ?? p.gameObject.GetComponentInParent<Collider>();
+                        if (col != null) damageResults[c++] = col;
+                    }
+                }
+            }
+            num = c;
+        }
         Vector3 ep = eyeTransform != null ? eyeTransform.position : transform.position + Vector3.up * 1.5f;
         
         System.Collections.Generic.HashSet<IPlayerHUDTarget> hitTargets = new System.Collections.Generic.HashSet<IPlayerHUDTarget>();
@@ -340,13 +377,31 @@ public class Enemy2_Zombie : NetworkBehaviour
             Transform pl = damageResults[i].transform;
             
             IPlayerHUDTarget target = pl.GetComponentInParent<IPlayerHUDTarget>();
+            if (target == null) target = pl.GetComponentInChildren<IPlayerHUDTarget>();
             if (target == null) continue;
             if (hitTargets.Contains(target)) continue;
             hitTargets.Add(target);
             
-            Vector3 dir = (pl.position - transform.position).normalized;
-            if (Vector3.Angle(transform.forward, dir) <= angle / 2f && !Physics.Raycast(ep, dir, Vector3.Distance(transform.position, pl.position), obstacleLayer))
-            { Vector3 kb = dir; kb.y = 0; EnemyDamageHelper.DealDamage(pl, damage, kb.normalized * knockback); }
+            // Hướng từ chân quái vật tới chân player (bỏ qua độ cao Y để tính góc nón chính xác trên mặt phẳng ngang)
+            Vector3 diff = pl.position - transform.position;
+            Vector3 horizDiff = new Vector3(diff.x, 0, diff.z);
+            Vector3 forward = new Vector3(transform.forward.x, 0, transform.forward.z).normalized;
+            
+            float targetAngle = Vector3.Angle(forward, horizDiff.normalized);
+            
+            if (targetAngle <= angle / 2f)
+            {
+                // Kiểm tra tia raycast từ ngực/mắt quái vật tới ngực/mắt player để kiểm tra vật cản
+                Vector3 targetCenter = pl.position + Vector3.up * 1.0f;
+                Vector3 rayDir = (targetCenter - ep).normalized;
+                float rayDist = Vector3.Distance(ep, targetCenter);
+                
+                if (!Physics.Raycast(ep, rayDir, rayDist, obstacleLayer))
+                {
+                    Vector3 kb = horizDiff.normalized;
+                    EnemyDamageHelper.DealDamage(pl, damage, kb * knockback);
+                }
+            }
         }
     }
 
@@ -420,7 +475,6 @@ public class Enemy2_Zombie : NetworkBehaviour
     private void SnapToNavMesh() { if (agent == null || !agent.isActiveAndEnabled) return; if (!agent.isOnNavMesh) { NavMeshHit h; if (NavMesh.SamplePosition(transform.position, out h, 10f, NavMesh.AllAreas)) agent.Warp(h.position); } }
     public void EnableClawHitbox()
     {
-        if (clawHitbox != null) clawHitbox.SetActive(true);
         bool auth = isStandaloneMode || (IsNetworkActive && IsServer);
         if (auth && !hasDealtDamage)
         {
@@ -429,5 +483,79 @@ public class Enemy2_Zombie : NetworkBehaviour
             DealConeDamage(frantic ? 15f : 12f, 2.0f, 90f, 1.0f);
         }
     }
-    public void DisableClawHitbox() { if (clawHitbox != null) clawHitbox.SetActive(false); hasDealtDamage = false; }
+    public void DisableClawHitbox() { hasDealtDamage = false; }
+
+    // ─── Nested FSM States ───
+    private class PatrolState : IEnemyState
+    {
+        private Enemy2_Zombie enemy;
+        public PatrolState(Enemy2_Zombie enemy) { this.enemy = enemy; }
+        public void Enter() {}
+        public void Update() { enemy.HandlePatrol(); }
+        public void Exit() {}
+    }
+
+    private class ChaseState : IEnemyState
+    {
+        private Enemy2_Zombie enemy;
+        public ChaseState(Enemy2_Zombie enemy) { this.enemy = enemy; }
+        public void Enter()
+        {
+            enemy.waitingAtWaypoint = false;
+            if (enemy.AgentReady)
+            {
+                enemy.agent.isStopped = false;
+                enemy.agent.speed = enemy.chaseRunSpeed;
+            }
+        }
+        public void Update() { enemy.HandleChase(); }
+        public void Exit() {}
+    }
+
+    private class AttackState : IEnemyState
+    {
+        private Enemy2_Zombie enemy;
+        public AttackState(Enemy2_Zombie enemy) { this.enemy = enemy; }
+        public void Enter()
+        {
+            if (enemy.AgentReady) enemy.agent.isStopped = true;
+            enemy.SetSpeedNet(0f);
+            enemy.hasDealtDamage = false;
+            bool frantic = enemy.CurrentHealthValue <= enemy.maxHealth * 0.4f;
+            enemy.attackDuration = frantic ? 0.65f : 0.9f;
+            enemy.stateTimer = enemy.attackDuration;
+            enemy.PlayAttackAnimLocal();
+            if (!enemy.isStandaloneMode) enemy.PlayAttackClientRpc();
+        }
+        public void Update() { enemy.HandleAttack(); }
+        public void Exit()
+        {
+        }
+    }
+
+    private class StaggerState : IEnemyState
+    {
+        private Enemy2_Zombie enemy;
+        public StaggerState(Enemy2_Zombie enemy) { this.enemy = enemy; }
+        public void Enter()
+        {
+            if (enemy.AgentReady) enemy.agent.isStopped = true;
+            enemy.SetSpeedNet(0f);
+            if (enemy.staggerTimer <= 0) enemy.staggerTimer = 0.55f;
+        }
+        public void Update() { enemy.HandleStagger(); }
+        public void Exit() {}
+    }
+
+    private class DeadState : IEnemyState
+    {
+        private Enemy2_Zombie enemy;
+        public DeadState(Enemy2_Zombie enemy) { this.enemy = enemy; }
+        public void Enter()
+        {
+            enemy.Die();
+        }
+        public void Update() {}
+        public void Exit() {}
+    }
 }

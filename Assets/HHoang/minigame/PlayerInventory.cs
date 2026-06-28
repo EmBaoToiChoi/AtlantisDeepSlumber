@@ -184,7 +184,7 @@ public class PlayerInteraction : NetworkBehaviour
             }
         }
 
-        // 2. Fallback: Check all colliders within 3f (in case LayerMask is incorrectly set in inspector)
+        // 2. Fallback: Check all colliders within 3f
         if (core == null)
         {
             Collider[] fallbackColliders = Physics.OverlapSphere(transform.position, 3f);
@@ -203,30 +203,54 @@ public class PlayerInteraction : NetworkBehaviour
 
         if (core != null)
         {
-            // 1. Chạy hoạt ảnh bưng bê ngay lập tức cho mượt mà
-            HandleCarryingCoreVisuals(true);
-
-            // 2. Phân tách xử lý Mạng và Offline để tránh crash báo lỗi RPC
             if (NetworkManager.Singleton == null || !NetworkManager.Singleton.IsListening)
             {
-                Debug.LogWarning("[Scene Test] Đang nhặt ngọc Offline.");
-                localHeldCrystalOffline = core;
-                isCarryingCoreOffline = true;
-                
-                core.holderId.Value = 0; // Offline placeholder
-                core.PerformPickup(0); // Gọi trực tiếp hàm xử lý Visual ôm đồ của ngọc
+                // Offline
+                string itemName = "Ngoc" + core.crystalID;
+                bool added = AddCrystalToInventory(itemName);
+
+                if (added)
+                {
+                    Animator anim = GetPlayerAnimator();
+                    if (anim != null)
+                    {
+                        SafeSetTrigger(anim, "BungTrigger");
+                        SafeSetTrigger(anim, "Bưng");
+                    }
+                    Destroy(core.gameObject);
+                }
             }
             else
             {
-                // Gửi lệnh lên máy chủ khi chạy chế độ mạng Online
-                Debug.Log($"[CrystalDebug] Requesting ServerRpc for NetworkObjectId: {core.NetworkObject.NetworkObjectId}");
-                RequestPickupServerRpc(core.NetworkObject.NetworkObjectId);
+                // Online: Gửi yêu cầu nhặt lên server để xác thực tránh tranh chấp (race condition)
+                Debug.Log($"[CrystalDebug] Requesting ServerRpc to pick up crystal: {core.NetworkObject.NetworkObjectId}");
+                RequestPickupCrystalServerRpc(core.NetworkObject.NetworkObjectId);
             }
         }
         else
         {
             Debug.LogWarning("[CrystalDebug] No CrystalCore component found within 3 meters!");
         }
+    }
+
+    private bool AddCrystalToInventory(string itemName)
+    {
+        var leoComp = GetComponent<LeoPlayer>();
+        if (leoComp != null) return leoComp.TryAddItem(itemName, false);
+        
+        var arthurComp = GetComponent<ArthurPlayer>();
+        if (arthurComp != null) return arthurComp.TryAddItem(itemName, false);
+        
+        var elenaComp = GetComponent<ElenaPlayer>();
+        if (elenaComp != null) return elenaComp.TryAddItem(itemName);
+        
+        var mayaComp = GetComponent<MayaPlayer>();
+        if (mayaComp != null) return mayaComp.TryAddItem(itemName);
+        
+        var sptComp = GetComponent<SimplePlayerTest>();
+        if (sptComp != null) return sptComp.TryAddItem(itemName);
+
+        return false;
     }
 
     private void HandleDropAction()
@@ -324,6 +348,129 @@ public class PlayerInteraction : NetworkBehaviour
             localHeldCrystalOffline = null;
             isCarryingCoreOffline = false;
             HandleCarryingCoreVisuals(false);
+        }
+    }
+
+    public void RequestDropItem(string itemName)
+    {
+        if (itemName == "Ngoc1" || itemName == "Ngoc2")
+        {
+            int crystalID = (itemName == "Ngoc1") ? 1 : 2;
+
+            if (NetworkManager.Singleton == null || !NetworkManager.Singleton.IsListening)
+            {
+                SpawnCrystalLocal(crystalID);
+            }
+            else
+            {
+                RequestDropCrystalServerRpc(crystalID);
+            }
+        }
+    }
+
+    private void SpawnCrystalLocal(int crystalID)
+    {
+        GameObject prefab = Resources.Load<GameObject>($"Crystal_Prefab_{crystalID}");
+        if (prefab == null) prefab = Resources.Load<GameObject>("Crystal_Default");
+
+        if (prefab != null)
+        {
+            Vector3 spawnPos = transform.position + Vector3.up * 0.5f + transform.forward * 0.6f;
+            GameObject crystal = Instantiate(prefab, spawnPos, Quaternion.identity);
+            
+            var core = crystal.GetComponent<CrystalCore>();
+            if (core != null)
+            {
+                core.crystalID = crystalID;
+                core.holderId.Value = ulong.MaxValue;
+            }
+
+            var rb = crystal.GetComponent<Rigidbody>();
+            if (rb != null)
+            {
+                rb.isKinematic = false;
+                rb.useGravity = true;
+                rb.AddForce(transform.forward * 2f, ForceMode.Impulse);
+            }
+        }
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    private void RequestDropCrystalServerRpc(int crystalID)
+    {
+        GameObject prefab = Resources.Load<GameObject>($"Crystal_Prefab_{crystalID}");
+        if (prefab == null) prefab = Resources.Load<GameObject>("Crystal_Default");
+
+        if (prefab != null)
+        {
+            Vector3 spawnPos = transform.position + Vector3.up * 0.5f + transform.forward * 0.6f;
+            GameObject crystal = Instantiate(prefab, spawnPos, Quaternion.identity);
+            
+            var core = crystal.GetComponent<CrystalCore>();
+            if (core != null)
+            {
+                core.crystalID = crystalID;
+                core.holderId.Value = ulong.MaxValue;
+            }
+
+            var netObj = crystal.GetComponent<NetworkObject>();
+            if (netObj != null)
+            {
+                netObj.Spawn();
+            }
+
+            var rb = crystal.GetComponent<Rigidbody>();
+            if (rb != null)
+            {
+                rb.isKinematic = false;
+                rb.useGravity = true;
+                rb.AddForce(transform.forward * 2f, ForceMode.Impulse);
+            }
+        }
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    private void RequestPickupCrystalServerRpc(ulong networkObjectId, ServerRpcParams rpcParams = default)
+    {
+        if (!IsServer) return;
+        ulong senderClientId = rpcParams.Receive.SenderClientId;
+
+        if (NetworkManager.SpawnManager.SpawnedObjects.TryGetValue(networkObjectId, out var netObj))
+        {
+            var core = netObj.GetComponent<CrystalCore>();
+            // Kiểm tra bảo vệ: ngọc chưa bị snap và chưa có ai nhặt
+            if (core != null && !core.isSnapped.Value && core.holderId.Value == ulong.MaxValue)
+            {
+                // Đánh dấu đã được nhặt bởi sender
+                core.holderId.Value = senderClientId;
+
+                // Gửi lệnh ClientRpc cho client tương ứng để thêm ngọc vào túi đồ
+                AddCrystalToInventoryClientRpc(senderClientId, "Ngoc" + core.crystalID);
+
+                // Despawn viên ngọc trên mạng
+                if (netObj.IsSpawned)
+                {
+                    netObj.Despawn();
+                }
+            }
+        }
+    }
+
+    [ClientRpc]
+    private void AddCrystalToInventoryClientRpc(ulong targetClientId, string itemName)
+    {
+        if (NetworkManager.Singleton.LocalClientId == targetClientId)
+        {
+            bool added = AddCrystalToInventory(itemName);
+            if (added)
+            {
+                Animator anim = GetPlayerAnimator();
+                if (anim != null)
+                {
+                    SafeSetTrigger(anim, "BungTrigger");
+                    SafeSetTrigger(anim, "Bưng");
+                }
+            }
         }
     }
 }
