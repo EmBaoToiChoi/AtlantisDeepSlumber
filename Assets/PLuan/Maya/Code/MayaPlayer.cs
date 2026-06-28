@@ -4128,6 +4128,15 @@ private void StartRollServerRpc(Vector3 direction)
                 {
                     var repair = pendingPickItem.GetComponent<RepairItemDrop>();
                     if (repair != null) repair.ConfirmCollect();
+                    else
+                    {
+                        var crystal = pendingPickItem.GetComponent<CrystalCore>();
+                        if (crystal != null)
+                        {
+                            var interaction = GetComponent<PlayerInteraction>();
+                            if (interaction != null) interaction.ConfirmPickupCrystal(crystal);
+                        }
+                    }
                 }
             }
             pendingPickItem = null;

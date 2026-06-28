@@ -364,8 +364,12 @@ public class Enemy4_Bongtoi : NetworkBehaviour
             if (hitTargets.Contains(target)) continue;
             hitTargets.Add(target);
             
+            Transform playerBody = target.transform;
+            float actualDist = Vector3.Distance(transform.position, playerBody.position);
+            if (actualDist > range) continue;
+            
             // Hướng từ chân quái vật tới chân player (bỏ qua độ cao Y để tính góc nón chính xác trên mặt phẳng ngang)
-            Vector3 diff = pl.position - transform.position;
+            Vector3 diff = playerBody.position - transform.position;
             Vector3 horizDiff = new Vector3(diff.x, 0, diff.z);
             Vector3 forward = new Vector3(transform.forward.x, 0, transform.forward.z).normalized;
             
@@ -374,14 +378,14 @@ public class Enemy4_Bongtoi : NetworkBehaviour
             if (targetAngle <= angle / 2f)
             {
                 // Kiểm tra tia raycast từ ngực/mắt quái vật tới ngực/mắt player để kiểm tra vật cản
-                Vector3 targetCenter = pl.position + Vector3.up * 1.0f;
+                Vector3 targetCenter = playerBody.position + Vector3.up * 1.0f;
                 Vector3 rayDir = (targetCenter - ep).normalized;
                 float rayDist = Vector3.Distance(ep, targetCenter);
                 
                 if (!Physics.Raycast(ep, rayDir, rayDist, obstacleLayer))
                 {
                     Vector3 kb = horizDiff.normalized;
-                    EnemyDamageHelper.DealDamage(pl, damage, kb * knockback);
+                    EnemyDamageHelper.DealDamage(playerBody, damage, kb * knockback);
                 }
             }
         }
