@@ -92,6 +92,14 @@ public class Enemy5_PhuThuy : NetworkBehaviour
     private bool isBlinking;
     private float blinkTimer;
 
+    // ─── FSM States ───
+    private IEnemyState currentFSMState;
+    private PatrolState patrolState;
+    private ChaseState chaseState;
+    private AttackState attackState;
+    private StaggerState staggerState;
+    private DeadState deadState;
+
     private readonly Collider[] detectionResults = new Collider[8];
     private bool AgentReady => agent != null && agent.isActiveAndEnabled && agent.isOnNavMesh;
 
@@ -101,14 +109,23 @@ public class Enemy5_PhuThuy : NetworkBehaviour
         if (anim == null) anim = GetComponent<Animator>() ?? GetComponentInChildren<Animator>(true);
         var na = GetComponent<Unity.Netcode.Components.NetworkAnimator>();
         if (na != null) { if (anim == null || anim.runtimeAnimatorController == null) na.enabled = false; else na.Animator = anim; }
+
+        // Initialize state instances for FSM
+        patrolState = new PatrolState(this);
+        chaseState = new ChaseState(this);
+        attackState = new AttackState(this);
+        staggerState = new StaggerState(this);
+        deadState = new DeadState(this);
     }
 
     private void Start() { if (!IsNetworkActive) { isStandaloneMode = true; InitStandalone(); } }
 
     private void InitStandalone()
     {
-        localHealth = maxHealth; localState = EnemyState.Patrol;
-        SnapToNavMesh(); ApplySpeedAnim(0f); GoToNextWaypoint();
+        localHealth = maxHealth;
+        SnapToNavMesh(); ApplySpeedAnim(0f); 
+        ChangeState(EnemyState.Patrol);
+        GoToNextWaypoint();
     }
 
     public override void OnNetworkSpawn()
@@ -121,8 +138,8 @@ public class Enemy5_PhuThuy : NetworkBehaviour
         currentHealth.OnValueChanged  += OnHealthNetChanged;
         currentState.OnValueChanged   += OnStateChanged;
         ApplySpeedAnim(netSpeed.Value);
-        if (IsServer) { currentHealth.Value = maxHealth; SnapToNavMesh(); GoToNextWaypoint(); }
-        else { if (agent != null) agent.enabled = false; }
+        if (IsServer) { currentHealth.Value = maxHealth; SnapToNavMesh(); ChangeState(EnemyState.Patrol); GoToNextWaypoint(); }
+        else { if (agent != null) agent.enabled = false; OnStateChanged(EnemyState.Patrol, currentState.Value); }
     }
 
     public override void OnNetworkDespawn()
@@ -179,12 +196,9 @@ public class Enemy5_PhuThuy : NetworkBehaviour
         if (blinkTimer > 0) { blinkTimer -= Time.deltaTime; if (blinkTimer <= 0) isBlinking = false; }
         detectionTimer -= Time.deltaTime;
         if (detectionTimer <= 0) { detectionTimer = DETECTION_INTERVAL; DetectPlayer(); }
-        switch (CurrentStateValue)
+        if (currentFSMState != null)
         {
-            case EnemyState.Patrol:  HandlePatrol();  break;
-            case EnemyState.Chase:   HandleChase();   break;
-            case EnemyState.Stagger: HandleStagger(); break;
-            case EnemyState.Attack:  HandleAttack();  break;
+            currentFSMState.Update();
         }
     }
 
@@ -293,20 +307,25 @@ public class Enemy5_PhuThuy : NetworkBehaviour
 
     private void ChangeState(EnemyState newState)
     {
-        if (CurrentStateValue == EnemyState.Attack && newState != EnemyState.Attack)
-        { /* Attack layer returns to empty state on its own */ }
+        if (currentFSMState != null)
+        {
+            currentFSMState.Exit();
+        }
+
         CurrentStateValue = newState;
+
         switch (newState)
         {
-            case EnemyState.Chase:   waitingAtWaypoint = false; isBlinking = false; if (AgentReady) agent.isStopped = false; break;
-            case EnemyState.Stagger: if (AgentReady) agent.isStopped = true; SetSpeedNet(0f); if (staggerTimer <= 0) staggerTimer = 0.5f; break;
-            case EnemyState.Attack:
-                if (AgentReady) agent.isStopped = true; SetSpeedNet(0f);
-                hasCastSpell = false; stateTimer = attackDuration;
-                PlayAttackAnimLocal();
-                if (!isStandaloneMode) PlayAttackClientRpc();
-                break;
-            case EnemyState.Dead: Die(); break;
+            case EnemyState.Patrol:  currentFSMState = patrolState; break;
+            case EnemyState.Chase:   currentFSMState = chaseState;  break;
+            case EnemyState.Attack:  currentFSMState = attackState; break;
+            case EnemyState.Stagger: currentFSMState = staggerState; break;
+            case EnemyState.Dead:    currentFSMState = deadState;   break;
+        }
+
+        if (currentFSMState != null)
+        {
+            currentFSMState.Enter();
         }
     }
 
@@ -435,5 +454,72 @@ public class Enemy5_PhuThuy : NetworkBehaviour
         Gizmos.DrawRay(eye, l * sightRange); Gizmos.DrawRay(eye, r * sightRange);
         Gizmos.color = new Color(1f, 0.64f, 0f, 0.8f); Gizmos.DrawWireSphere(transform.position, minAttackRange);
         Gizmos.color = Color.cyan; Gizmos.DrawWireSphere(transform.position, maxAttackRange);
+    }
+
+    // ─── Nested FSM States ───
+    private class PatrolState : IEnemyState
+    {
+        private Enemy5_PhuThuy enemy;
+        public PatrolState(Enemy5_PhuThuy enemy) { this.enemy = enemy; }
+        public void Enter() {}
+        public void Update() { enemy.HandlePatrol(); }
+        public void Exit() {}
+    }
+
+    private class ChaseState : IEnemyState
+    {
+        private Enemy5_PhuThuy enemy;
+        public ChaseState(Enemy5_PhuThuy enemy) { this.enemy = enemy; }
+        public void Enter()
+        {
+            enemy.waitingAtWaypoint = false;
+            enemy.isBlinking = false;
+            if (enemy.AgentReady) enemy.agent.isStopped = false;
+        }
+        public void Update() { enemy.HandleChase(); }
+        public void Exit() {}
+    }
+
+    private class AttackState : IEnemyState
+    {
+        private Enemy5_PhuThuy enemy;
+        public AttackState(Enemy5_PhuThuy enemy) { this.enemy = enemy; }
+        public void Enter()
+        {
+            if (enemy.AgentReady) enemy.agent.isStopped = true;
+            enemy.SetSpeedNet(0f);
+            enemy.hasCastSpell = false;
+            enemy.stateTimer = enemy.attackDuration;
+            enemy.PlayAttackAnimLocal();
+            if (!enemy.isStandaloneMode) enemy.PlayAttackClientRpc();
+        }
+        public void Update() { enemy.HandleAttack(); }
+        public void Exit() {}
+    }
+
+    private class StaggerState : IEnemyState
+    {
+        private Enemy5_PhuThuy enemy;
+        public StaggerState(Enemy5_PhuThuy enemy) { this.enemy = enemy; }
+        public void Enter()
+        {
+            if (enemy.AgentReady) enemy.agent.isStopped = true;
+            enemy.SetSpeedNet(0f);
+            if (enemy.staggerTimer <= 0) enemy.staggerTimer = 0.5f;
+        }
+        public void Update() { enemy.HandleStagger(); }
+        public void Exit() {}
+    }
+
+    private class DeadState : IEnemyState
+    {
+        private Enemy5_PhuThuy enemy;
+        public DeadState(Enemy5_PhuThuy enemy) { this.enemy = enemy; }
+        public void Enter()
+        {
+            enemy.Die();
+        }
+        public void Update() {}
+        public void Exit() {}
     }
 }

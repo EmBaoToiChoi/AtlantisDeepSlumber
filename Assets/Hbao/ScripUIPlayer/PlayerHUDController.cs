@@ -1822,34 +1822,71 @@ public class PlayerHUDController : MonoBehaviour
 
             // Tìm ô đích được thả chuột tại tọa độ thả
             VisualElement targetElement = uiDocument.rootVisualElement.panel.Pick(evt.position);
-            if (targetElement != null)
+            VisualElement actualSlot = targetElement;
+            while (actualSlot != null && !actualSlot.name.StartsWith("inventory-slot-"))
             {
-                VisualElement actualSlot = targetElement;
-                while (actualSlot != null && !actualSlot.name.StartsWith("inventory-slot-"))
-                {
-                    actualSlot = actualSlot.parent;
-                }
+                actualSlot = actualSlot.parent;
+            }
 
-                if (actualSlot != null)
+            if (actualSlot != null)
+            {
+                int targetIndex = int.Parse(actualSlot.name.Replace("inventory-slot-", ""));
+                if (targetIndex != draggedSlotIndex)
                 {
-                    int targetIndex = int.Parse(actualSlot.name.Replace("inventory-slot-", ""));
-                    if (targetIndex != draggedSlotIndex)
+                    // Thực hiện tráo đổi (Swap) vị trí vật phẩm
+                    if (LocalPlayerTarget != null)
                     {
-                        // Thực hiện tráo đổi (Swap) vị trí vật phẩm
-                        if (LocalPlayerTarget != null)
-                        {
-                            string temp = LocalPlayerTarget.InventorySlots[draggedSlotIndex];
-                            LocalPlayerTarget.InventorySlots[draggedSlotIndex] = LocalPlayerTarget.InventorySlots[targetIndex];
-                            LocalPlayerTarget.InventorySlots[targetIndex] = temp;
+                        string temp = LocalPlayerTarget.InventorySlots[draggedSlotIndex];
+                        LocalPlayerTarget.InventorySlots[draggedSlotIndex] = LocalPlayerTarget.InventorySlots[targetIndex];
+                        LocalPlayerTarget.InventorySlots[targetIndex] = temp;
 
-                            // Vẽ lại và đồng bộ cơ sở dữ liệu
-                            SetInventorySlots(LocalPlayerTarget.InventorySlots);
-                            if (!LocalPlayerTarget.IsStandaloneMode) LocalPlayerTarget.SavePlayerStateToDatabase();
-                        }
+                        // Vẽ lại và đồng bộ cơ sở dữ liệu
+                        SetInventorySlots(LocalPlayerTarget.InventorySlots);
+                        if (!LocalPlayerTarget.IsStandaloneMode) LocalPlayerTarget.SavePlayerStateToDatabase();
                     }
                 }
             }
+            else
+            {
+                // Thả ngoài hành trang -> Vứt vật phẩm ra đất!
+                DropItemFromInventory(draggedSlotIndex);
+            }
             draggedSlotIndex = -1;
+        }
+    }
+
+    private void DropItemFromInventory(int slotIndex)
+    {
+        if (LocalPlayerTarget == null || slotIndex < 0 || slotIndex >= LocalPlayerTarget.InventorySlots.Length) return;
+
+        string slotVal = LocalPlayerTarget.InventorySlots[slotIndex];
+        if (string.IsNullOrEmpty(slotVal)) return;
+
+        string itemName = slotVal.Split(':')[0];
+        int count = 1;
+        if (slotVal.Contains(":"))
+        {
+            int.TryParse(slotVal.Split(':')[1], out count);
+        }
+
+        // 1. Giảm hoặc xóa vật phẩm khỏi túi đồ
+        if (count > 1)
+        {
+            LocalPlayerTarget.InventorySlots[slotIndex] = itemName + ":" + (count - 1);
+        }
+        else
+        {
+            LocalPlayerTarget.InventorySlots[slotIndex] = "";
+        }
+
+        SetInventorySlots(LocalPlayerTarget.InventorySlots);
+        if (!LocalPlayerTarget.IsStandaloneMode) LocalPlayerTarget.SavePlayerStateToDatabase();
+
+        // 2. Gọi logic rớt vật phẩm từ PlayerInteraction
+        var playerInt = LocalPlayerTarget.gameObject.GetComponent<PlayerInteraction>();
+        if (playerInt != null)
+        {
+            playerInt.RequestDropItem(itemName);
         }
     }
 
@@ -2310,6 +2347,8 @@ public class PlayerHUDController : MonoBehaviour
 
     private void Start()
     {
+        if (ngoc1Sprite == null) ngoc1Sprite = Resources.Load<Sprite>("crystal_purple");
+        if (ngoc2Sprite == null) ngoc2Sprite = Resources.Load<Sprite>("crystal_red");
         SetupEventSystemForInputSystem();
     }
 
