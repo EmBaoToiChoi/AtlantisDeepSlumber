@@ -1812,7 +1812,8 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
         // Kiểm tra xem có đang mở hội thoại hoặc bị khóa di chuyển do hành động khác không
         bool isDialogueOpen = (RakanDialogueController.Instance != null && RakanDialogueController.Instance.IsActive) ||
                                (SilasDialogueController.Instance != null && SilasDialogueController.Instance.IsActive) ||
-                               (IntroDialogueController.Instance != null && IntroDialogueController.Instance.IsActive);
+                               (IntroDialogueController.Instance != null && IntroDialogueController.Instance.IsActive) ||
+                               SeagullController.ActiveSeagull != null;
         
         bool isCurrentlyAttacking = IsPlayingAttackState(out _, out _) || 
                                     (IsAttackAnimationName(lastTriggeredAnimName) && Time.time - lastActionTriggerTime < 0.35f);
@@ -1854,7 +1855,8 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
     bool isDialogueOpen = (RakanDialogueController.Instance != null && RakanDialogueController.Instance.IsActive) ||
                            (SilasDialogueController.Instance != null && SilasDialogueController.Instance.IsActive) ||
                            (IntroDialogueController.Instance != null && IntroDialogueController.Instance.IsActive) ||
-                           PlayerHUDController.isCoopBuildingUIOpen;
+                           PlayerHUDController.isCoopBuildingUIOpen ||
+                           SeagullController.ActiveSeagull != null;
 
     if (isDialogueOpen)
     {
@@ -2030,7 +2032,8 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
     bool isDialogueOpen = (RakanDialogueController.Instance != null && RakanDialogueController.Instance.IsActive) ||
                            (SilasDialogueController.Instance != null && SilasDialogueController.Instance.IsActive) ||
                            (IntroDialogueController.Instance != null && IntroDialogueController.Instance.IsActive) ||
-                           PlayerHUDController.isCoopBuildingUIOpen;
+                           PlayerHUDController.isCoopBuildingUIOpen ||
+                           SeagullController.ActiveSeagull != null;
 
     if (isDialogueOpen)
     {
@@ -2396,7 +2399,7 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         // Camera follow hoạt động cho cả standalone lẫn Netcode owner
         bool shouldFollow = isStandaloneMode || (IsSpawned && IsOwner);
-        if (!shouldFollow || !enableCameraFollow) return;
+        if (!shouldFollow || !enableCameraFollow || SeagullController.ActiveSeagull != null) return;
 
         if (targetCamera == null)
         {
@@ -3548,7 +3551,8 @@ private void StartRollServerRpc(Vector3 direction)
 
         bool isDialogueOpen = (RakanDialogueController.Instance != null && RakanDialogueController.Instance.IsActive) ||
                               (SilasDialogueController.Instance != null && SilasDialogueController.Instance.IsActive) ||
-                              (IntroDialogueController.Instance != null && IntroDialogueController.Instance.IsActive);
+                              (IntroDialogueController.Instance != null && IntroDialogueController.Instance.IsActive) ||
+                              SeagullController.ActiveSeagull != null;
         if (isDialogueOpen) uiOpen = true;
 
         if (uiOpen)
