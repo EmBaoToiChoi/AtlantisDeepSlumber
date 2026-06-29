@@ -211,13 +211,14 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
     public float qSkillSpreadAngle = 10f; // Góc lệch của 2 mũi tên bên cạnh
     private float qSkillCooldownTimer = 0f; // Bộ đếm cooldown Q
     private float qSkillDurationTimer = 0f; // Bộ đếm thời lượng Q
-    private bool localIsQSkillActive = false; // Trạng thái kỹ năng Q ở local
+    public bool localIsQSkillActive = false; // Trạng thái kỹ năng Q ở local
     public NetworkVariable<bool> isQSkillActiveNet = new NetworkVariable<bool>(
         false,
         NetworkVariableReadPermission.Everyone,
         NetworkVariableWritePermission.Server
     );
-    public bool IsQSkillActive => isStandaloneMode ? localIsQSkillActive : isQSkillActiveNet.Value;
+    public bool IsQSkillActive => (SeagullController.ActiveSeagull != null) || (isStandaloneMode ? localIsQSkillActive : isQSkillActiveNet.Value);
+    private bool wasMySeagullActiveLastFrame = false;
 
 
 
@@ -490,25 +491,60 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     // Q Skill
     bool IPlayerHUDTarget.IsQSkillActive => IsQSkillActive;
-    public float QSkillTimeRemaining => qSkillDurationTimer;
+    public float QSkillTimeRemaining => SeagullController.ActiveSeagull != null ? SeagullController.ActiveSeagull.TimeRemaining : qSkillDurationTimer;
     
+    [Header("Q Skill Seagull Settings")]
+    [Tooltip("Con chim trực quan trên vai Elena")]
+    public GameObject shoulderSeagullVisual;
+    [Tooltip("Prefab con hải âu bay điều khiển")]
+    public GameObject seagullPrefab;
+    [Tooltip("Khớp vai của Elena để tính vị trí bay về")]
+    public Transform seagullShoulderSocket;
+
+    public NetworkVariable<bool> isSeagullOnShoulder = new NetworkVariable<bool>(
+        true,
+        NetworkVariableReadPermission.Everyone,
+        NetworkVariableWritePermission.Server
+    );
+    public bool localIsSeagullOnShoulder = true;
+    public bool IsSeagullOnShoulder => isStandaloneMode ? localIsSeagullOnShoulder : isSeagullOnShoulder.Value;
+
+    [ServerRpc]
+    private void StartSeagullSkillServerRpc(ulong ownerClientId, Vector3 spawnPos, Quaternion spawnRot)
+    {
+        if (seagullPrefab == null) return;
+        isSeagullOnShoulder.Value = false;
+        GameObject seagullObj = Instantiate(seagullPrefab, spawnPos, spawnRot);
+        NetworkObject netObj = seagullObj.GetComponent<NetworkObject>();
+        if (netObj != null)
+        {
+            netObj.SpawnWithOwnership(ownerClientId);
+        }
+    }
+
     public bool TriggerQSkill()
     {
         var carrier = GetComponent<PlayerLogCarrier>();
         if (carrier != null && carrier.isCarrying) return false;
 
         if (PlayerLevel < 15 && !IsSkillsUnlocked) return false;
-        if (qSkillCooldownTimer > 0f || IsQSkillActive) return false;
+        if (qSkillCooldownTimer > 0f || IsQSkillActive || SeagullController.ActiveSeagull != null) return false;
 
-        qSkillDurationTimer = qSkillDuration;
+        Vector3 spawnPos = shoulderSeagullVisual != null ? shoulderSeagullVisual.transform.position : transform.position + transform.forward * 1.5f + Vector3.up * 1.5f;
+        Quaternion spawnRot = targetCamera != null ? Quaternion.LookRotation(targetCamera.transform.forward) : transform.rotation;
 
         if (isStandaloneMode)
         {
             localIsQSkillActive = true;
+            localIsSeagullOnShoulder = false;
+            if (seagullPrefab != null)
+            {
+                Instantiate(seagullPrefab, spawnPos, spawnRot);
+            }
         }
         else if (IsOwner)
         {
-            SetQSkillActiveServerRpc(true);
+            StartSeagullSkillServerRpc(OwnerClientId, spawnPos, spawnRot);
         }
         return true;
     }
@@ -1451,6 +1487,11 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     void Update()
     {
+        if (shoulderSeagullVisual != null)
+        {
+            shoulderSeagullVisual.SetActive(IsSeagullOnShoulder);
+        }
+
         // Cập nhật trạng thái ngắm R
         HandleRAiming();
 
@@ -1499,19 +1540,34 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
             eSkillCooldownTimer -= Time.deltaTime;
         }
 
-        // Giảm thời gian cooldown và thời lượng Kỹ năng Q
+        // Kiểm tra xem hải âu của bản thân có vừa biến mất để hồi chiêu Q
+        bool isMySeagullActiveNow = false;
+        if (SeagullController.ActiveSeagull != null)
+        {
+            if (isStandaloneMode || SeagullController.ActiveSeagull.OwnerClientId == OwnerClientId)
+            {
+                isMySeagullActiveNow = true;
+            }
+        }
+        
+        if (wasMySeagullActiveLastFrame && !isMySeagullActiveNow)
+        {
+            StartQSkillCooldown();
+            if (isStandaloneMode)
+            {
+                localIsQSkillActive = false;
+            }
+            else if (IsOwner)
+            {
+                SetQSkillActiveServerRpc(false);
+            }
+        }
+        wasMySeagullActiveLastFrame = isMySeagullActiveNow;
+
+        // Giảm thời gian cooldown Kỹ năng Q
         if (qSkillCooldownTimer > 0)
         {
             qSkillCooldownTimer -= Time.deltaTime;
-        }
-        if (qSkillDurationTimer > 0)
-        {
-            qSkillDurationTimer -= Time.deltaTime;
-            if (qSkillDurationTimer <= 0)
-            {
-                qSkillDurationTimer = 0f;
-                EndQSkill();
-            }
         }
 
 
@@ -1677,7 +1733,8 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
         // Kiểm tra xem có đang mở hội thoại hoặc bị khóa di chuyển do hành động khác không
         bool isDialogueOpen = (RakanDialogueController.Instance != null && RakanDialogueController.Instance.IsActive) ||
                                (SilasDialogueController.Instance != null && SilasDialogueController.Instance.IsActive) ||
-                               (IntroDialogueController.Instance != null && IntroDialogueController.Instance.IsActive);
+                               (IntroDialogueController.Instance != null && IntroDialogueController.Instance.IsActive) ||
+                               SeagullController.ActiveSeagull != null;
         
         bool isCurrentlyAttacking = IsPlayingAttackState(out _, out _) || 
                                     (IsAttackAnimationName(lastTriggeredAnimName) && Time.time - lastActionTriggerTime < 0.35f);
@@ -1719,7 +1776,8 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
     bool isDialogueOpen = (RakanDialogueController.Instance != null && RakanDialogueController.Instance.IsActive) ||
                            (SilasDialogueController.Instance != null && SilasDialogueController.Instance.IsActive) ||
                            (IntroDialogueController.Instance != null && IntroDialogueController.Instance.IsActive) ||
-                           PlayerHUDController.isCoopBuildingUIOpen;
+                           PlayerHUDController.isCoopBuildingUIOpen ||
+                           SeagullController.ActiveSeagull != null;
 
     if (isDialogueOpen)
     {
@@ -1878,7 +1936,8 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
     bool isDialogueOpen = (RakanDialogueController.Instance != null && RakanDialogueController.Instance.IsActive) ||
                            (SilasDialogueController.Instance != null && SilasDialogueController.Instance.IsActive) ||
                            (IntroDialogueController.Instance != null && IntroDialogueController.Instance.IsActive) ||
-                           PlayerHUDController.isCoopBuildingUIOpen;
+                           PlayerHUDController.isCoopBuildingUIOpen ||
+                           SeagullController.ActiveSeagull != null;
 
     if (isDialogueOpen)
     {
@@ -2239,7 +2298,7 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         // Camera follow hoạt động cho cả standalone lẫn Netcode owner
         bool shouldFollow = isStandaloneMode || (IsSpawned && IsOwner);
-        if (!shouldFollow || !enableCameraFollow) return;
+        if (!shouldFollow || !enableCameraFollow || SeagullController.ActiveSeagull != null) return;
 
         if (targetCamera == null)
         {
@@ -3406,7 +3465,8 @@ private void StartRollServerRpc(Vector3 direction)
 
         bool isDialogueOpen = (RakanDialogueController.Instance != null && RakanDialogueController.Instance.IsActive) ||
                               (SilasDialogueController.Instance != null && SilasDialogueController.Instance.IsActive) ||
-                              (IntroDialogueController.Instance != null && IntroDialogueController.Instance.IsActive);
+                              (IntroDialogueController.Instance != null && IntroDialogueController.Instance.IsActive) ||
+                              SeagullController.ActiveSeagull != null;
         if (isDialogueOpen) uiOpen = true;
 
         if (uiOpen)
