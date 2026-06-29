@@ -8,8 +8,6 @@ public class Puzzle4TrapTrigger : NetworkBehaviour
 
     public bool activated = false;
 
-    private bool isClosing = false;
-
     private void OnTriggerEnter(Collider other)
     {
         if(!IsServer)
@@ -22,19 +20,7 @@ public class Puzzle4TrapTrigger : NetworkBehaviour
                 activated = true;
                 OpenFloorClientRpc();
             }
-            else if (!isClosing)
-            {
-                // Khi nhân vật chạm lại, đợi 3 giây rồi mới đóng mặt đất
-                isClosing = true;
-                StartCoroutine(DelayedClose());
-            }
         }
-    }
-
-    private System.Collections.IEnumerator DelayedClose()
-    {
-        yield return new WaitForSeconds(1f);
-        CloseFloorClientRpc();
     }
 
     [ClientRpc]
