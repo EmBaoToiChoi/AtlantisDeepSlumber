@@ -9,9 +9,11 @@ public class OilLampController : MonoBehaviour
 
     public Light fireLight;
 
+    public ParticleSystem smokeParticle;
+
     [Header("Settings")]
-    public float safeAngle = 10f;
-    public float dangerAngle = 15f;
+    public float safeAngle = 5f;
+    public float dangerAngle = 10f;
 
     private ParticleSystem.MainModule main;
 
@@ -138,6 +140,23 @@ public class OilLampController : MonoBehaviour
                     3.5f,
                     t
                 );
+        }
+
+        //----------------------
+        // Smoke
+        //----------------------
+        if (smokeParticle != null)
+        {
+            if (angle > dangerAngle)
+            {
+                if (!smokeParticle.isPlaying)
+                    smokeParticle.Play();
+            }
+            else
+            {
+                if (smokeParticle.isPlaying)
+                    smokeParticle.Stop();
+            }
         }
 
         //----------------------
