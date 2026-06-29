@@ -21,6 +21,74 @@ public class PressurePlatePuzzleManager : NetworkBehaviour
 
     private void Start()
     {
+        // Tự động kiểm tra và sửa lỗi nếu người dùng kéo nhầm Prefab Asset từ cửa sổ Project thay vì đối tượng Scene trong Hierarchy
+        if (requiredPlates != null)
+        {
+            for (int i = 0; i < requiredPlates.Length; i++)
+            {
+                if (requiredPlates[i] != null && !requiredPlates[i].gameObject.scene.IsValid())
+                {
+                    string prefabName = requiredPlates[i].name;
+                    Debug.LogWarning($"[PressurePlatePuzzleManager] Phát hiện requiredPlates[{i}] ('{prefabName}') là Prefab Asset từ Project. Đang tự động tìm đối tượng Scene tương ứng...");
+                    
+                    // Tìm đối tượng có cùng tên đang chạy trong Scene (Hierarchy)
+                    PressurePlateTrigger[] scenePlates = FindObjectsOfType<PressurePlateTrigger>();
+                    PressurePlateTrigger matchingScenePlate = null;
+                    foreach (var sp in scenePlates)
+                    {
+                        if (sp.gameObject.scene.IsValid() && sp.name == prefabName)
+                        {
+                            matchingScenePlate = sp;
+                            break;
+                        }
+                    }
+
+                    if (matchingScenePlate != null)
+                    {
+                        requiredPlates[i] = matchingScenePlate;
+                        Debug.Log($"[PressurePlatePuzzleManager] Đã tự động thay thế bằng đối tượng Scene: '{matchingScenePlate.name}'");
+                    }
+                    else
+                    {
+                        Debug.LogError($"[PressurePlatePuzzleManager] LỖI CỰC KỲ NGHIÊM TRỌNG: Không thể tìm thấy đối tượng '{prefabName}' nào trong Scene (Hierarchy) để gán cho requiredPlates[{i}]!");
+                    }
+                }
+            }
+        }
+
+        if (targetDoors != null)
+        {
+            for (int i = 0; i < targetDoors.Length; i++)
+            {
+                if (targetDoors[i] != null && !targetDoors[i].gameObject.scene.IsValid())
+                {
+                    string prefabName = targetDoors[i].name;
+                    Debug.LogWarning($"[PressurePlatePuzzleManager] Phát hiện targetDoors[{i}] ('{prefabName}') là Prefab Asset từ Project. Đang tự động tìm đối tượng Scene tương ứng...");
+                    
+                    PushableDoor[] sceneDoors = FindObjectsOfType<PushableDoor>();
+                    PushableDoor matchingSceneDoor = null;
+                    foreach (var sd in sceneDoors)
+                    {
+                        if (sd.gameObject.scene.IsValid() && sd.name == prefabName)
+                        {
+                            matchingSceneDoor = sd;
+                            break;
+                        }
+                    }
+
+                    if (matchingSceneDoor != null)
+                    {
+                        targetDoors[i] = matchingSceneDoor;
+                        Debug.Log($"[PressurePlatePuzzleManager] Đã tự động thay thế cửa bằng đối tượng Scene: '{matchingSceneDoor.name}'");
+                    }
+                    else
+                    {
+                        Debug.LogError($"[PressurePlatePuzzleManager] LỖI CỰC KỲ NGHIÊM TRỌNG: Không thể tìm thấy cánh cửa '{prefabName}' nào trong Scene (Hierarchy) để gán cho targetDoors[{i}]!");
+                    }
+                }
+            }
+        }
+
         int requiredCount = requiredPlates != null ? requiredPlates.Length : 0;
         int doorCount = targetDoors != null ? targetDoors.Length : 0;
         Debug.Log($"[PressurePlatePuzzleManager] Khởi tạo puzzle. Số nút sàn yêu cầu: {requiredCount}, Số cửa điều khiển: {doorCount}");
