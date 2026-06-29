@@ -64,7 +64,7 @@ public class Enemy1_DapBua : NetworkBehaviour
     public Animator anim;
     public Transform eyeTransform;
 
-    [Header("Melee Hitboxes")]
+    [Header("Melee Hitboxes (Bypassed - now using raycast/cone sweeps)")]
     public GameObject hammerHitbox;
     public GameObject hammerHitboxLeft;
     public GameObject hammerHitboxRight;
@@ -126,6 +126,14 @@ public class Enemy1_DapBua : NetworkBehaviour
     private bool isDodging;
     private float dodgeTimer;
 
+    // ─── FSM States ───
+    private IEnemyState currentFSMState;
+    private PatrolState patrolState;
+    private ChaseState chaseState;
+    private AttackState attackState;
+    private StaggerState staggerState;
+    private DeadState deadState;
+
     private readonly Collider[] detectionResults = new Collider[8];
     private readonly Collider[] damageResults    = new Collider[8];
     private bool AgentReady => agent != null && agent.isActiveAndEnabled && agent.isOnNavMesh;
@@ -142,6 +150,13 @@ public class Enemy1_DapBua : NetworkBehaviour
             if (anim == null || anim.runtimeAnimatorController == null) na.enabled = false;
             else na.Animator = anim;
         }
+
+        // Initialize state instances for FSM
+        patrolState = new PatrolState(this);
+        chaseState = new ChaseState(this);
+        attackState = new AttackState(this);
+        staggerState = new StaggerState(this);
+        deadState = new DeadState(this);
     }
 
     private void Start()
@@ -151,9 +166,10 @@ public class Enemy1_DapBua : NetworkBehaviour
 
     private void InitStandalone()
     {
-        localHealth = maxHealth; localState = EnemyState.Patrol;
+        localHealth = maxHealth;
         SnapToNavMesh(); DisableHitboxes();
         ApplySpeedAnim(0f);
+        ChangeState(EnemyState.Patrol);
         GoToNextWaypoint();
     }
 
@@ -181,12 +197,15 @@ public class Enemy1_DapBua : NetworkBehaviour
             isEnraged.Value = false;
             SnapToNavMesh();
             DisableHitboxes();
+            ChangeState(EnemyState.Patrol);
             GoToNextWaypoint();
         }
         else
         {
             // Client KHÔNG điều khiển NavMeshAgent - NetworkTransform từ Server
             if (agent != null) agent.enabled = false;
+            // Áp dụng trạng thái ban đầu khi client spawn muộn
+            OnStateChanged(EnemyState.Patrol, currentState.Value);
         }
     }
 
@@ -259,12 +278,9 @@ public class Enemy1_DapBua : NetworkBehaviour
         detectionTimer -= Time.deltaTime;
         if (detectionTimer <= 0) { detectionTimer = DETECTION_INTERVAL; DetectPlayer(); }
 
-        switch (CurrentStateValue)
+        if (currentFSMState != null)
         {
-            case EnemyState.Patrol:  HandlePatrol();  break;
-            case EnemyState.Chase:   HandleChase();   break;
-            case EnemyState.Stagger: HandleStagger(); break;
-            case EnemyState.Attack:  HandleAttack();  break;
+            currentFSMState.Update();
         }
     }
 
@@ -491,42 +507,25 @@ public class Enemy1_DapBua : NetworkBehaviour
     // ══════════════════════════════════════════════════════════
     private void ChangeState(EnemyState newState)
     {
-        // Kết thúc attack state — dọn hitbox
-        if (CurrentStateValue == EnemyState.Attack && newState != EnemyState.Attack)
-            DisableHitboxes();
+        if (currentFSMState != null)
+        {
+            currentFSMState.Exit();
+        }
 
         CurrentStateValue = newState;
 
         switch (newState)
         {
-            case EnemyState.Chase:
-                waitingAtWaypoint = false;
-                if (AgentReady) { agent.isStopped = false; agent.speed = IsEnragedValue ? chaseRunSpeed * 1.5f : chaseRunSpeed; }
-                break;
+            case EnemyState.Patrol:  currentFSMState = patrolState; break;
+            case EnemyState.Chase:   currentFSMState = chaseState;  break;
+            case EnemyState.Attack:  currentFSMState = attackState; break;
+            case EnemyState.Stagger: currentFSMState = staggerState; break;
+            case EnemyState.Dead:    currentFSMState = deadState;   break;
+        }
 
-            case EnemyState.Stagger:
-                if (AgentReady) agent.isStopped = true;
-                SetSpeedNet(0f);
-                if (staggerTimer <= 0) staggerTimer = 0.6f;
-                break;
-
-            case EnemyState.Attack:
-                if (AgentReady) agent.isStopped = true;
-                SetSpeedNet(0f);
-                hasDealtDamage1 = false; hasDealtDamage2 = false;
-                // Chọn loại tấn công
-                int chosen;
-                if (IsEnragedValue && Random.value < 0.4f) { chosen = 2; attackDuration = 1.8f; }
-                else { chosen = isNextAttackLeft ? 0 : 1; isNextAttackLeft = !isNextAttackLeft; attackDuration = 1.1f; }
-                if (!isStandaloneMode) attackType.Value = chosen;
-                stateTimer = attackDuration;
-                PlayAttackAnim(chosen);
-                if (!isStandaloneMode) PlayAttackClientRpc(chosen);
-                break;
-
-            case EnemyState.Dead:
-                Die();
-                break;
+        if (currentFSMState != null)
+        {
+            currentFSMState.Enter();
         }
     }
 
@@ -572,8 +571,20 @@ public class Enemy1_DapBua : NetworkBehaviour
         if (num == 0)
         {
             int c = 0;
-            foreach (var p in GameObject.FindGameObjectsWithTag("Player"))
-            { if (c >= damageResults.Length) break; if (Vector3.Distance(transform.position, p.transform.position) <= range) { var col = p.GetComponent<Collider>(); if (col != null) damageResults[c++] = col; } }
+            var activePlayers = PlayerHUDManager.ActivePlayers;
+            if (activePlayers != null)
+            {
+                foreach (var p in activePlayers)
+                {
+                    if (p == null || p.gameObject == null) continue;
+                    if (c >= damageResults.Length) break;
+                    if (Vector3.Distance(transform.position, p.transform.position) <= range)
+                    {
+                        var col = p.gameObject.GetComponentInChildren<Collider>() ?? p.gameObject.GetComponentInParent<Collider>();
+                        if (col != null) damageResults[c++] = col;
+                    }
+                }
+            }
             num = c;
         }
         Vector3 ep = eyeTransform != null ? eyeTransform.position : transform.position + Vector3.up * 1.5f;
@@ -586,13 +597,35 @@ public class Enemy1_DapBua : NetworkBehaviour
             Transform pl = damageResults[i].transform;
             
             IPlayerHUDTarget target = pl.GetComponentInParent<IPlayerHUDTarget>();
+            if (target == null) target = pl.GetComponentInChildren<IPlayerHUDTarget>();
             if (target == null) continue;
             if (hitTargets.Contains(target)) continue;
             hitTargets.Add(target);
             
-            Vector3 dir = (pl.position - transform.position).normalized;
-            if (Vector3.Angle(transform.forward, dir) <= angle / 2f && !Physics.Raycast(ep, dir, Vector3.Distance(transform.position, pl.position), obstacleLayer))
-            { Vector3 kb = dir; kb.y = 0; EnemyDamageHelper.DealDamage(pl, damage, kb.normalized * knockback); }
+            Transform playerBody = target.transform;
+            float actualDist = Vector3.Distance(transform.position, playerBody.position);
+            if (actualDist > range) continue;
+            
+            // Hướng từ chân quái vật tới chân player (bỏ qua độ cao Y để tính góc nón chính xác trên mặt phẳng ngang)
+            Vector3 diff = playerBody.position - transform.position;
+            Vector3 horizDiff = new Vector3(diff.x, 0, diff.z);
+            Vector3 forward = new Vector3(transform.forward.x, 0, transform.forward.z).normalized;
+            
+            float targetAngle = Vector3.Angle(forward, horizDiff.normalized);
+            
+            if (targetAngle <= angle / 2f)
+            {
+                // Kiểm tra tia raycast từ ngực/mắt quái vật tới ngực/mắt player để kiểm tra vật cản
+                Vector3 targetCenter = playerBody.position + Vector3.up * 1.0f;
+                Vector3 rayDir = (targetCenter - ep).normalized;
+                float rayDist = Vector3.Distance(ep, targetCenter);
+                
+                if (!Physics.Raycast(ep, rayDir, rayDist, obstacleLayer))
+                {
+                    Vector3 kb = horizDiff.normalized;
+                    EnemyDamageHelper.DealDamage(playerBody, damage, kb * knockback);
+                }
+            }
         }
     }
 
@@ -698,13 +731,10 @@ public class Enemy1_DapBua : NetworkBehaviour
     // ══════════════════════════════════════════════════════════
     private void DisableHitboxes()
     {
-        if (hammerHitbox      != null) hammerHitbox.SetActive(false);
-        if (hammerHitboxLeft  != null) hammerHitboxLeft.SetActive(false);
-        if (hammerHitboxRight != null) hammerHitboxRight.SetActive(false);
+        // Hitbox GameObjects removed
     }
     public void EnableWeaponHitbox()
     {
-        if (hammerHitbox != null) hammerHitbox.SetActive(true);
         bool auth = isStandaloneMode || (IsNetworkActive && IsServer);
         if (auth && !hasDealtDamage1)
         {
@@ -715,7 +745,6 @@ public class Enemy1_DapBua : NetworkBehaviour
     public void DisableWeaponHitbox()  { DisableHitboxes(); hasDealtDamage1 = false; hasDealtDamage2 = false; }
     public void EnableLeftWeaponHitbox()
     {
-        if (hammerHitboxLeft != null) hammerHitboxLeft.SetActive(true);
         bool auth = isStandaloneMode || (IsNetworkActive && IsServer);
         if (auth && !hasDealtDamage1)
         {
@@ -731,10 +760,9 @@ public class Enemy1_DapBua : NetworkBehaviour
             }
         }
     }
-    public void DisableLeftWeaponHitbox()  { if (hammerHitboxLeft  != null) hammerHitboxLeft.SetActive(false); hasDealtDamage1 = false; }
+    public void DisableLeftWeaponHitbox()  { hasDealtDamage1 = false; }
     public void EnableRightWeaponHitbox()
     {
-        if (hammerHitboxRight != null) hammerHitboxRight.SetActive(true);
         bool auth = isStandaloneMode || (IsNetworkActive && IsServer);
         if (auth)
         {
@@ -757,7 +785,7 @@ public class Enemy1_DapBua : NetworkBehaviour
             }
         }
     }
-    public void DisableRightWeaponHitbox() { if (hammerHitboxRight != null) hammerHitboxRight.SetActive(false); hasDealtDamage2 = false; }
+    public void DisableRightWeaponHitbox() { hasDealtDamage2 = false; }
 
     // ══════════════════════════════════════════════════════════
     //  UTILITIES
@@ -777,5 +805,94 @@ public class Enemy1_DapBua : NetworkBehaviour
         Vector3 r = Quaternion.AngleAxis( fieldOfView / 2f, Vector3.up) * transform.forward;
         Gizmos.DrawRay(eye, l * sightRange); Gizmos.DrawRay(eye, r * sightRange);
         Gizmos.color = Color.red; Gizmos.DrawWireSphere(transform.position, attackRange);
+    }
+
+    // ─── Nested FSM States ───
+    private class PatrolState : IEnemyState
+    {
+        private Enemy1_DapBua enemy;
+        public PatrolState(Enemy1_DapBua enemy) { this.enemy = enemy; }
+        public void Enter() {}
+        public void Update() { enemy.HandlePatrol(); }
+        public void Exit() {}
+    }
+
+    private class ChaseState : IEnemyState
+    {
+        private Enemy1_DapBua enemy;
+        public ChaseState(Enemy1_DapBua enemy) { this.enemy = enemy; }
+        public void Enter()
+        {
+            enemy.waitingAtWaypoint = false;
+            if (enemy.AgentReady)
+            {
+                enemy.agent.isStopped = false;
+                enemy.agent.speed = enemy.IsEnragedValue ? enemy.chaseRunSpeed * 1.5f : enemy.chaseRunSpeed;
+            }
+        }
+        public void Update() { enemy.HandleChase(); }
+        public void Exit() {}
+    }
+
+    private class AttackState : IEnemyState
+    {
+        private Enemy1_DapBua enemy;
+        public AttackState(Enemy1_DapBua enemy) { this.enemy = enemy; }
+        public void Enter()
+        {
+            if (enemy.AgentReady) enemy.agent.isStopped = true;
+            enemy.SetSpeedNet(0f);
+            enemy.hasDealtDamage1 = false;
+            enemy.hasDealtDamage2 = false;
+
+            // Chọn loại tấn công
+            int chosen;
+            if (enemy.IsEnragedValue && UnityEngine.Random.value < 0.4f)
+            {
+                chosen = 2;
+                enemy.attackDuration = 1.8f;
+            }
+            else
+            {
+                chosen = enemy.isNextAttackLeft ? 0 : 1;
+                enemy.isNextAttackLeft = !enemy.isNextAttackLeft;
+                enemy.attackDuration = 1.1f;
+            }
+            if (!enemy.isStandaloneMode) enemy.attackType.Value = chosen;
+            enemy.stateTimer = enemy.attackDuration;
+            enemy.PlayAttackAnim(chosen);
+            if (!enemy.isStandaloneMode) enemy.PlayAttackClientRpc(chosen);
+        }
+        public void Update() { enemy.HandleAttack(); }
+        public void Exit()
+        {
+            enemy.DisableHitboxes();
+        }
+    }
+
+    private class StaggerState : IEnemyState
+    {
+        private Enemy1_DapBua enemy;
+        public StaggerState(Enemy1_DapBua enemy) { this.enemy = enemy; }
+        public void Enter()
+        {
+            if (enemy.AgentReady) enemy.agent.isStopped = true;
+            enemy.SetSpeedNet(0f);
+            if (enemy.staggerTimer <= 0) enemy.staggerTimer = 0.6f;
+        }
+        public void Update() { enemy.HandleStagger(); }
+        public void Exit() {}
+    }
+
+    private class DeadState : IEnemyState
+    {
+        private Enemy1_DapBua enemy;
+        public DeadState(Enemy1_DapBua enemy) { this.enemy = enemy; }
+        public void Enter()
+        {
+            enemy.Die();
+        }
+        public void Update() {}
+        public void Exit() {}
     }
 }

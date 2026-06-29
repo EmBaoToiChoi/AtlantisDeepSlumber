@@ -2803,17 +2803,17 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         }
     }
 
-    public void EnableLeftHitbox() {}
+    public void EnableLeftHitbox() { alreadyHitEnemies.Clear(); PerformRaycastAttack(); }
     public void DisableLeftHitbox() {}
-    public void EnableRightHitbox() {}
+    public void EnableRightHitbox() { alreadyHitEnemies.Clear(); PerformRaycastAttack(); }
     public void DisableRightHitbox() {}
-    public void EnableBothHitboxes() {}
+    public void EnableBothHitboxes() { alreadyHitEnemies.Clear(); PerformRaycastAttack(); }
     public void DisableBothHitboxes() {}
-    public void EnableLeftWeaponHitbox() {}
+    public void EnableLeftWeaponHitbox() { alreadyHitEnemies.Clear(); PerformRaycastAttack(); }
     public void DisableLeftWeaponHitbox() {}
-    public void EnableRightWeaponHitbox() {}
+    public void EnableRightWeaponHitbox() { alreadyHitEnemies.Clear(); PerformRaycastAttack(); }
     public void DisableRightWeaponHitbox() {}
-    public void EnableBothWeaponHitboxes() {}
+    public void EnableBothWeaponHitboxes() { alreadyHitEnemies.Clear(); PerformRaycastAttack(); }
     public void DisableBothWeaponHitboxes() {}
     public void DisableAllHitboxes() {}
 
@@ -3941,6 +3941,15 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
                 {
                     var repair = pendingPickItem.GetComponent<RepairItemDrop>();
                     if (repair != null) repair.ConfirmCollect();
+                    else
+                    {
+                        var crystal = pendingPickItem.GetComponent<CrystalCore>();
+                        if (crystal != null)
+                        {
+                            var interaction = GetComponent<PlayerInteraction>();
+                            if (interaction != null) interaction.ConfirmPickupCrystal(crystal);
+                        }
+                    }
                 }
             }
             pendingPickItem = null;
