@@ -46,6 +46,15 @@ public class PressurePlatePuzzleManager : NetworkBehaviour
         isSolvedNet.OnValueChanged -= OnSolvedChanged;
     }
 
+    public bool IsSolved()
+    {
+        if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening)
+        {
+            return isSolvedNet.Value;
+        }
+        return localIsSolved;
+    }
+
     private void OnSolvedChanged(bool oldVal, bool newVal)
     {
         Debug.Log($"[PressurePlatePuzzleManager Client] Trạng thái giải câu đố thay đổi: {newVal}");
