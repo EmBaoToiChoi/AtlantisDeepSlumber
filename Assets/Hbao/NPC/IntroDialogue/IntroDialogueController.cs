@@ -49,6 +49,15 @@ public class IntroDialogueController : NetworkBehaviour
     [Header("Dialogue Content (Maze Entrance)")]
     [SerializeField] private List<DialogueLine> mazeEntranceLines = new List<DialogueLine>();
 
+    [Header("Dialogue Content (Maze Wait Complete)")]
+    [SerializeField] private List<DialogueLine> mazeWaitCompleteLines = new List<DialogueLine>();
+
+    [Header("Dialogue Content (Second Wait Complete)")]
+    [SerializeField] private List<DialogueLine> secondWaitCompleteLines = new List<DialogueLine>();
+
+    [Header("Dialogue Content (Coop Puzzle)")]
+    [SerializeField] private List<DialogueLine> coopPuzzleLines = new List<DialogueLine>();
+
     [Header("NPC Animation & Movement")]
     [Tooltip("Kéo thả Animator của NPC vào đây")]
     [SerializeField] private Animator npcAnimator;
@@ -71,6 +80,27 @@ public class IntroDialogueController : NetworkBehaviour
 
     [Tooltip("Khoảng cách kích hoạt hội thoại tại điểm dừng mê cung")]
     [SerializeField] private float mazeTargetTriggerDistance = 2.5f;
+
+    [Tooltip("Vị trí chỉ định để NPC di chuyển tới và biến mất (mờ dần)")]
+    [SerializeField] private Transform npcFadeTarget;
+
+    [Tooltip("Vị trí điểm chờ tiếp theo trong mê cung sau khi biến mất")]
+    [SerializeField] private Transform npcMazeWaitTarget;
+
+    [Tooltip("Khoảng cách kích hoạt hội thoại khen ngợi khi người chơi lại gần NPC tại điểm chờ")]
+    [SerializeField] private float mazeWaitTriggerDistance = 4.0f;
+
+    [Tooltip("Vị trí chỉ định để NPC di chuyển tới và biến mất lần 2")]
+    [SerializeField] private Transform npcSecondFadeTarget;
+
+    [Tooltip("Vị trí điểm chờ tiếp theo (lần 2) trong mê cung sau khi biến mất")]
+    [SerializeField] private Transform npcSecondWaitTarget;
+
+    [Tooltip("Khoảng cách kích hoạt hội thoại lần 2 khi người chơi lại gần NPC tại điểm chờ 2")]
+    [SerializeField] private float npcSecondWaitTriggerDistance = 4.0f;
+
+    [Tooltip("Vị trí điểm phối hợp (Transform thứ 7)")]
+    [SerializeField] private Transform npcCoopPuzzleTarget;
 
     [Tooltip("Khoảng cách tối thiểu duy trì với người chơi khi follow")]
     [SerializeField] private float followKeepDistance = 2.0f;
@@ -98,6 +128,8 @@ public class IntroDialogueController : NetworkBehaviour
 
     private bool hasStartedOpeningMove = false;
     private bool hasStartedMazeFollow = false;
+    private bool hasStartedSecondFadeMove = false;
+    private bool hasStartedCoopMove = false;
     private int activeDialogueType = 0;
 
     private Vector3 lastPosition;
@@ -107,6 +139,30 @@ public class IntroDialogueController : NetworkBehaviour
     // Danh sách dòng thoại hiện đang hoạt động
     private List<DialogueLine> activeLines;
     private NavMeshAgent navMeshAgent;
+
+    private NetworkVariable<bool> isNpcMovingNet = new NetworkVariable<bool>(
+        false,
+        NetworkVariableReadPermission.Everyone,
+        NetworkVariableWritePermission.Server
+    );
+
+    private NetworkVariable<bool> isNpcTalkingNet = new NetworkVariable<bool>(
+        false,
+        NetworkVariableReadPermission.Everyone,
+        NetworkVariableWritePermission.Server
+    );
+
+    private NetworkVariable<float> npcScaleNet = new NetworkVariable<float>(
+        1.0f,
+        NetworkVariableReadPermission.Everyone,
+        NetworkVariableWritePermission.Server
+    );
+
+    private NetworkVariable<int> activeDialogueTypeNet = new NetworkVariable<int>(
+        -1,
+        NetworkVariableReadPermission.Everyone,
+        NetworkVariableWritePermission.Server
+    );
 
     // Lớp nội bộ lưu trữ tham chiếu VisualElement của từng bản sao UI (cho chế độ split-screen/coop)
     private class DialogueUIInstance
@@ -188,6 +244,38 @@ public class IntroDialogueController : NetworkBehaviour
                 speakerName = defaultNpcName,
                 text = "các ngươi hãy cố gắng để vượt qua các mê cung này nhé , cuối mê cung có thứ gì đó đang rình rập các ngươi"
             });
+            mazeEntranceLines.Add(new DialogueLine
+            {
+                speakerName = defaultNpcName,
+                text = "ta đi trước đây !"
+            });
+        }
+
+        if (mazeWaitCompleteLines.Count == 0)
+        {
+            mazeWaitCompleteLines.Add(new DialogueLine
+            {
+                speakerName = defaultNpcName,
+                text = "khá khen cho các ngươi, hãy tiếp tục đi và đừng bỏ cuộc nhé"
+            });
+        }
+
+        if (secondWaitCompleteLines.Count == 0)
+        {
+            secondWaitCompleteLines.Add(new DialogueLine
+            {
+                speakerName = defaultNpcName,
+                text = "các ngươi đã đi tới đây rồi sao ? hãy cẩn thận, phía trước có mối nguy hiểm rất lớn đấy!"
+            });
+        }
+
+        if (coopPuzzleLines.Count == 0)
+        {
+            coopPuzzleLines.Add(new DialogueLine
+            {
+                speakerName = defaultNpcName,
+                text = "các ngươi phải tìm cách phối hợp với nhau để vượt qua chỗ này"
+            });
         }
 
         // Auto-find components nếu thiếu
@@ -226,10 +314,90 @@ public class IntroDialogueController : NetworkBehaviour
             navMeshAgent.enabled = false;
         }
 
+        // Đăng ký sự kiện đồng bộ trạng thái animation qua mạng
+        isNpcMovingNet.OnValueChanged += OnNpcMovingNetChanged;
+        isNpcTalkingNet.OnValueChanged += OnNpcTalkingNetChanged;
+        npcScaleNet.OnValueChanged += OnNpcScaleNetChanged;
+        activeDialogueTypeNet.OnValueChanged += OnActiveDialogueTypeNetChanged;
+
+        // Khởi tạo trạng thái ban đầu cho Client khi spawn trễ
+        if (!IsServer)
+        {
+            ApplyNpcMovingLocal(isNpcMovingNet.Value);
+            ApplyNpcTalkingLocal(isNpcTalkingNet.Value);
+            if (npcTransform != null)
+            {
+                npcTransform.localScale = Vector3.one * npcScaleNet.Value;
+            }
+            if (activeDialogueTypeNet.Value >= 0)
+            {
+                ExecuteDialogueLocal(activeDialogueTypeNet.Value);
+            }
+        }
+
         // Nếu chơi online, Server sẽ chịu trách nhiệm phát sự kiện đối thoại
         if (IsServer && triggerOnStart)
         {
             TriggerDialogue(0);
+        }
+    }
+
+    public override void OnNetworkDespawn()
+    {
+        base.OnNetworkDespawn();
+        isNpcMovingNet.OnValueChanged -= OnNpcMovingNetChanged;
+        isNpcTalkingNet.OnValueChanged -= OnNpcTalkingNetChanged;
+        npcScaleNet.OnValueChanged -= OnNpcScaleNetChanged;
+        activeDialogueTypeNet.OnValueChanged -= OnActiveDialogueTypeNetChanged;
+    }
+
+    private void OnNpcScaleNetChanged(float oldVal, float newVal)
+    {
+        if (!IsServer && npcTransform != null)
+        {
+            npcTransform.localScale = Vector3.one * newVal;
+        }
+    }
+
+    private void OnActiveDialogueTypeNetChanged(int oldVal, int newVal)
+    {
+        if (!IsServer)
+        {
+            if (newVal >= 0)
+            {
+                ExecuteDialogueLocal(newVal);
+            }
+            else
+            {
+                CloseDialogueUIOnly();
+                PlayerHUDController.isAnyUIOpen = false;
+                
+                // Khôi phục con trỏ chuột cho client
+                var players = FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None);
+                foreach (var p in players)
+                {
+                    if (p is IPlayerHUDTarget hudTarget && (hudTarget.IsOwner || hudTarget.IsStandaloneMode))
+                    {
+                        hudTarget.SetCursorLock(true);
+                    }
+                }
+            }
+        }
+    }
+
+    private void OnNpcMovingNetChanged(bool oldVal, bool newVal)
+    {
+        if (!IsServer)
+        {
+            ApplyNpcMovingLocal(newVal);
+        }
+    }
+
+    private void OnNpcTalkingNetChanged(bool oldVal, bool newVal)
+    {
+        if (!IsServer)
+        {
+            ApplyNpcTalkingLocal(newVal);
         }
     }
 
@@ -252,15 +420,6 @@ public class IntroDialogueController : NetworkBehaviour
                     SkipAllDialogue();
                 }
             }
-        }
-
-        // Đồng bộ animation DiChuyen cho các Client dựa trên sự thay đổi vị trí thực tế của Transform
-        if (IsNetworkActive && !IsServer)
-        {
-            float distMoved = Vector3.Distance(transform.position, lastPosition);
-            bool isMoving = distMoved > (moveSpeed * Time.deltaTime * 0.1f);
-            SetNpcMoving(isMoving);
-            lastPosition = transform.position;
         }
     }
 
@@ -308,6 +467,7 @@ public class IntroDialogueController : NetworkBehaviour
 
         // Kích hoạt animation nói chuyện của NPC
         SetNpcTalking(true);
+        SetNpcMoving(false);
 
         // Chạy câu đầu tiên
         PlayDialogueLine(currentLineIndex);
@@ -672,6 +832,7 @@ public class IntroDialogueController : NetworkBehaviour
 
         // Tắt animation nói chuyện của NPC
         SetNpcTalking(false);
+        SetNpcMoving(false);
 
         // Xóa hoàn toàn các VisualElement đã nhân bản ra khỏi HUD của Player
         foreach (var instance in instantiatedDialogues)
@@ -718,11 +879,57 @@ public class IntroDialogueController : NetworkBehaviour
         {
             NotifyStartNpcMovement(4);
         }
+        else if (activeDialogueType == 6)
+        {
+            NotifyStartNpcMovement(6);
+        }
+        else if (activeDialogueType == 7)
+        {
+            NotifyStartNpcMovement(7);
+        }
+        else if (activeDialogueType == 8)
+        {
+            NotifyStartNpcMovement(8);
+        }
     }
 
     /// <summary>
     /// Di chuyển NPC mượt mà tới vị trí target và bật animation di chuyển tương ứng
     /// </summary>
+    private bool CheckNavMeshPath(Vector3 targetPosition)
+    {
+        if (navMeshAgent == null)
+        {
+            return false;
+        }
+
+        NavMeshPath path = new NavMeshPath();
+        // Dùng NavMesh.CalculatePath tĩnh để không bị ảnh hưởng bởi việc bật/tắt NavMeshAgent
+        if (NavMesh.CalculatePath(npcTransform.position, targetPosition, NavMesh.AllAreas, path))
+        {
+            if (path.status == NavMeshPathStatus.PathComplete)
+            {
+                // Tính chiều dài thực tế của đường đi trên NavMesh
+                float pathLength = 0f;
+                if (path.corners.Length >= 2)
+                {
+                    for (int i = 1; i < path.corners.Length; i++)
+                    {
+                        pathLength += Vector3.Distance(path.corners[i - 1], path.corners[i]);
+                    }
+                }
+                float directDist = Vector3.Distance(npcTransform.position, targetPosition);
+                
+                // Nếu khoảng cách ngắn hoặc đường đi không bị đi vòng quá 2.5 lần đường chim bay
+                if (directDist < 2f || pathLength < directDist * 2.5f)
+                {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     private IEnumerator MoveNpcToTargetRoutine()
     {
         if (npcTransform == null || npcMoveTarget == null) yield break;
@@ -732,36 +939,72 @@ public class IntroDialogueController : NetworkBehaviour
 
         Debug.Log($"[IntroDialogueController] Bắt đầu di chuyển NPC ({npcTransform.name}) tới target ({npcMoveTarget.name}).");
 
-        // Bật animation di chuyển của NPC
+        // Đảm bảo tắt nói chuyện, bật di chuyển
+        SetNpcTalking(false);
         SetNpcMoving(true);
 
         Transform targetTrans = npcTransform;
         Vector3 destination = npcMoveTarget.position;
-        destination.y = targetTrans.position.y;
 
-        bool useNavMesh = (navMeshAgent != null && navMeshAgent.isActiveAndEnabled && navMeshAgent.isOnNavMesh);
+        bool useNavMesh = CheckNavMeshPath(destination);
         if (useNavMesh)
         {
-            navMeshAgent.isStopped = false;
-            navMeshAgent.speed = moveSpeed;
-            navMeshAgent.SetDestination(destination);
+            if (navMeshAgent != null)
+            {
+                navMeshAgent.enabled = true;
+                yield return null; // chờ 1 frame để Agent khởi tạo trên NavMesh
+                navMeshAgent.isStopped = false;
+                navMeshAgent.speed = moveSpeed;
+                navMeshAgent.SetDestination(destination);
+            }
+        }
+        else
+        {
+            if (navMeshAgent != null)
+            {
+                navMeshAgent.enabled = false; // Tắt hẳn Agent để có thể di chuyển bằng Transform tự do
+            }
         }
 
         float distance = Vector3.Distance(targetTrans.position, destination);
         float maxDuration = (distance / moveSpeed) + 3f;
         float elapsed = 0f;
+        float pathCheckTimer = 0f;
         
         while (distance > stoppingDistance && elapsed < maxDuration)
         {
             elapsed += Time.deltaTime;
 
+            pathCheckTimer += Time.deltaTime;
+            if (pathCheckTimer >= 0.25f)
+            {
+                pathCheckTimer = 0f;
+                useNavMesh = CheckNavMeshPath(destination);
+            }
+
             if (useNavMesh)
             {
-                bool isMoving = navMeshAgent.velocity.magnitude > 0.15f;
+                if (navMeshAgent != null && !navMeshAgent.enabled)
+                {
+                    navMeshAgent.enabled = true;
+                    yield return null;
+                }
+                if (navMeshAgent != null && navMeshAgent.isStopped)
+                {
+                    navMeshAgent.isStopped = false;
+                    navMeshAgent.speed = moveSpeed;
+                    navMeshAgent.SetDestination(destination);
+                }
+                bool isMoving = navMeshAgent != null && navMeshAgent.velocity.magnitude > 0.15f;
                 SetNpcMoving(isMoving);
             }
             else
             {
+                if (navMeshAgent != null && navMeshAgent.enabled)
+                {
+                    navMeshAgent.enabled = false;
+                }
+
                 targetTrans.position = Vector3.MoveTowards(targetTrans.position, destination, moveSpeed * Time.deltaTime);
 
                 Vector3 direction = (destination - targetTrans.position).normalized;
@@ -770,20 +1013,28 @@ public class IntroDialogueController : NetworkBehaviour
                     Quaternion targetRot = Quaternion.LookRotation(direction);
                     targetTrans.rotation = Quaternion.Slerp(targetTrans.rotation, targetRot, turnSpeed * Time.deltaTime);
                 }
+                SetNpcMoving(true);
             }
 
-            distance = useNavMesh ? (navMeshAgent.pathPending ? distance : navMeshAgent.remainingDistance) : Vector3.Distance(targetTrans.position, destination);
+            distance = Vector3.Distance(targetTrans.position, destination);
             yield return null;
         }
 
-        if (useNavMesh)
+        // Đưa NPC về vị trí và góc xoay chính xác tuyệt đối của target
+        if (navMeshAgent != null && navMeshAgent.isActiveAndEnabled && navMeshAgent.isOnNavMesh)
         {
+            navMeshAgent.Warp(destination);
             navMeshAgent.isStopped = true;
         }
         else
         {
+            if (navMeshAgent != null)
+            {
+                navMeshAgent.enabled = false;
+            }
             targetTrans.position = destination;
         }
+        targetTrans.rotation = npcMoveTarget.rotation;
 
         SetNpcMoving(false);
         Debug.Log($"[IntroDialogueController] NPC đã tới đích thành công.");
@@ -795,6 +1046,15 @@ public class IntroDialogueController : NetworkBehaviour
     // ═══════════════════════════════════════════════════════
 
     private void SetNpcTalking(bool isTalking)
+    {
+        if (IsNetworkActive && IsServer)
+        {
+            isNpcTalkingNet.Value = isTalking;
+        }
+        ApplyNpcTalkingLocal(isTalking);
+    }
+
+    private void ApplyNpcTalkingLocal(bool isTalking)
     {
         if (npcAnimator == null || string.IsNullOrEmpty(talkAnimParam)) return;
 
@@ -817,6 +1077,15 @@ public class IntroDialogueController : NetworkBehaviour
     }
 
     private void SetNpcMoving(bool isMoving)
+    {
+        if (IsNetworkActive && IsServer)
+        {
+            isNpcMovingNet.Value = isMoving;
+        }
+        ApplyNpcMovingLocal(isMoving);
+    }
+
+    private void ApplyNpcMovingLocal(bool isMoving)
     {
         if (npcAnimator == null || string.IsNullOrEmpty(moveAnimParam)) return;
 
@@ -872,39 +1141,84 @@ public class IntroDialogueController : NetworkBehaviour
     {
         if (npcTransform == null || npcMoveTargetAfterBridge == null) yield break;
 
+        // Đảm bảo cầu đã được sửa xong mới cho đi qua
+        var bridgeTrigger = FindAnyObjectByType<BridgeCollapseTrigger>();
+        if (bridgeTrigger != null && !bridgeTrigger.IsBridgeRepaired())
+        {
+            Debug.LogWarning("[IntroDialogueController] Cầu chưa được sửa xong! Rakan không di chuyển từ 1 sang 2.");
+            npcMoveCoroutine = null;
+            yield break;
+        }
+
         yield return null; // chờ 1 frame
 
         Debug.Log($"[IntroDialogueController] NPC di chuyển sau khi sửa cầu tới target: {npcMoveTargetAfterBridge.name}");
 
+        SetNpcTalking(false);
         SetNpcMoving(true);
 
         Transform targetTrans = npcTransform;
         Vector3 destination = npcMoveTargetAfterBridge.position;
-        destination.y = targetTrans.position.y; // Giữ nguyên Y
 
-        bool useNavMesh = (navMeshAgent != null && navMeshAgent.isActiveAndEnabled && navMeshAgent.isOnNavMesh);
+        bool useNavMesh = CheckNavMeshPath(destination);
         if (useNavMesh)
         {
-            navMeshAgent.isStopped = false;
-            navMeshAgent.speed = moveSpeed;
-            navMeshAgent.SetDestination(destination);
+            if (navMeshAgent != null)
+            {
+                navMeshAgent.enabled = true;
+                yield return null;
+                navMeshAgent.isStopped = false;
+                navMeshAgent.speed = moveSpeed;
+                navMeshAgent.SetDestination(destination);
+            }
+        }
+        else
+        {
+            if (navMeshAgent != null)
+            {
+                navMeshAgent.enabled = false;
+            }
         }
 
         float distance = Vector3.Distance(targetTrans.position, destination);
         float maxDuration = (distance / moveSpeed) + 3f;
         float elapsed = 0f;
+        float pathCheckTimer = 0f;
         
         while (distance > stoppingDistance && elapsed < maxDuration)
         {
             elapsed += Time.deltaTime;
 
+            pathCheckTimer += Time.deltaTime;
+            if (pathCheckTimer >= 0.25f)
+            {
+                pathCheckTimer = 0f;
+                useNavMesh = CheckNavMeshPath(destination);
+            }
+
             if (useNavMesh)
             {
-                bool isMoving = navMeshAgent.velocity.magnitude > 0.15f;
+                if (navMeshAgent != null && !navMeshAgent.enabled)
+                {
+                    navMeshAgent.enabled = true;
+                    yield return null;
+                }
+                if (navMeshAgent != null && navMeshAgent.isStopped)
+                {
+                    navMeshAgent.isStopped = false;
+                    navMeshAgent.speed = moveSpeed;
+                    navMeshAgent.SetDestination(destination);
+                }
+                bool isMoving = navMeshAgent != null && navMeshAgent.velocity.magnitude > 0.15f;
                 SetNpcMoving(isMoving);
             }
             else
             {
+                if (navMeshAgent != null && navMeshAgent.enabled)
+                {
+                    navMeshAgent.enabled = false;
+                }
+
                 targetTrans.position = Vector3.MoveTowards(targetTrans.position, destination, moveSpeed * Time.deltaTime);
 
                 Vector3 direction = (destination - targetTrans.position).normalized;
@@ -913,20 +1227,27 @@ public class IntroDialogueController : NetworkBehaviour
                     Quaternion targetRot = Quaternion.LookRotation(direction);
                     targetTrans.rotation = Quaternion.Slerp(targetTrans.rotation, targetRot, turnSpeed * Time.deltaTime);
                 }
+                SetNpcMoving(true);
             }
 
-            distance = useNavMesh ? (navMeshAgent.pathPending ? distance : navMeshAgent.remainingDistance) : Vector3.Distance(targetTrans.position, destination);
+            distance = Vector3.Distance(targetTrans.position, destination);
             yield return null;
         }
 
-        if (useNavMesh)
+        if (navMeshAgent != null && navMeshAgent.isActiveAndEnabled && navMeshAgent.isOnNavMesh)
         {
+            navMeshAgent.Warp(destination);
             navMeshAgent.isStopped = true;
         }
         else
         {
+            if (navMeshAgent != null)
+            {
+                navMeshAgent.enabled = false;
+            }
             targetTrans.position = destination;
         }
+        targetTrans.rotation = npcMoveTargetAfterBridge.rotation;
 
         SetNpcMoving(false);
 
@@ -1030,36 +1351,90 @@ public class IntroDialogueController : NetworkBehaviour
             yield break;
         }
 
+        // Đảm bảo câu đố nút sàn đã giải xong và cửa đã mở mới cho đi qua
+        var puzzleManager = FindAnyObjectByType<PressurePlatePuzzleManager>();
+        bool isSolved = false;
+        if (puzzleManager != null)
+        {
+            isSolved = puzzleManager.IsSolved();
+        }
+        if (!isSolved)
+        {
+            Debug.LogWarning("[IntroDialogueController] Cửa chưa được mở! Rakan không di chuyển từ 2 sang 3.");
+            npcMoveCoroutine = null;
+            yield break;
+        }
+
+        // Đợi 2 giây để cửa mở ra hoàn toàn trước khi NPC bắt đầu đi qua
+        yield return new WaitForSeconds(2f);
+
         Debug.Log($"[IntroDialogueController] NPC di chuyển tới điểm dừng mê cung: {npcMazeTarget.name}");
+        
+        SetNpcTalking(false);
         SetNpcMoving(true);
 
         Transform targetTrans = npcTransform;
         Vector3 destination = npcMazeTarget.position;
-        destination.y = targetTrans.position.y; // Giữ nguyên Y
 
-        bool useNavMesh = (navMeshAgent != null && navMeshAgent.isActiveAndEnabled && navMeshAgent.isOnNavMesh);
+        bool useNavMesh = CheckNavMeshPath(destination);
         if (useNavMesh)
         {
-            navMeshAgent.isStopped = false;
-            navMeshAgent.speed = moveSpeed;
-            navMeshAgent.SetDestination(destination);
+            if (navMeshAgent != null)
+            {
+                navMeshAgent.enabled = true;
+                yield return null;
+                navMeshAgent.isStopped = false;
+                navMeshAgent.speed = moveSpeed;
+                navMeshAgent.SetDestination(destination);
+            }
+        }
+        else
+        {
+            if (navMeshAgent != null)
+            {
+                navMeshAgent.enabled = false;
+            }
         }
 
         float distance = Vector3.Distance(targetTrans.position, destination);
         float maxDuration = (distance / moveSpeed) + 3f;
         float elapsed = 0f;
+        float pathCheckTimer = 0f;
         
         while (distance > stoppingDistance && elapsed < maxDuration)
         {
             elapsed += Time.deltaTime;
 
+            pathCheckTimer += Time.deltaTime;
+            if (pathCheckTimer >= 0.25f)
+            {
+                pathCheckTimer = 0f;
+                useNavMesh = CheckNavMeshPath(destination);
+            }
+
             if (useNavMesh)
             {
-                bool isMoving = navMeshAgent.velocity.magnitude > 0.15f;
+                if (navMeshAgent != null && !navMeshAgent.enabled)
+                {
+                    navMeshAgent.enabled = true;
+                    yield return null;
+                }
+                if (navMeshAgent != null && navMeshAgent.isStopped)
+                {
+                    navMeshAgent.isStopped = false;
+                    navMeshAgent.speed = moveSpeed;
+                    navMeshAgent.SetDestination(destination);
+                }
+                bool isMoving = navMeshAgent != null && navMeshAgent.velocity.magnitude > 0.15f;
                 SetNpcMoving(isMoving);
             }
             else
             {
+                if (navMeshAgent != null && navMeshAgent.enabled)
+                {
+                    navMeshAgent.enabled = false;
+                }
+
                 targetTrans.position = Vector3.MoveTowards(targetTrans.position, destination, moveSpeed * Time.deltaTime);
 
                 Vector3 direction = (destination - targetTrans.position).normalized;
@@ -1068,20 +1443,27 @@ public class IntroDialogueController : NetworkBehaviour
                     Quaternion targetRot = Quaternion.LookRotation(direction);
                     targetTrans.rotation = Quaternion.Slerp(targetTrans.rotation, targetRot, turnSpeed * Time.deltaTime);
                 }
+                SetNpcMoving(true);
             }
 
-            distance = useNavMesh ? (navMeshAgent.pathPending ? distance : navMeshAgent.remainingDistance) : Vector3.Distance(targetTrans.position, destination);
+            distance = Vector3.Distance(targetTrans.position, destination);
             yield return null;
         }
 
-        if (useNavMesh)
+        if (navMeshAgent != null && navMeshAgent.isActiveAndEnabled && navMeshAgent.isOnNavMesh)
         {
+            navMeshAgent.Warp(destination);
             navMeshAgent.isStopped = true;
         }
         else
         {
+            if (navMeshAgent != null)
+            {
+                navMeshAgent.enabled = false;
+            }
             targetTrans.position = destination;
         }
+        targetTrans.rotation = npcMazeTarget.rotation;
 
         SetNpcMoving(false);
         npcMoveCoroutine = null;
@@ -1127,36 +1509,59 @@ public class IntroDialogueController : NetworkBehaviour
     private IEnumerator PermanentFollowPlayerRoutine()
     {
         isFollowingPlayer = true;
+        SetNpcTalking(false);
         SetNpcMoving(true);
 
         Debug.Log("[IntroDialogueController] NPC bắt đầu follow người chơi vĩnh viễn...");
 
-        bool useNavMesh = (navMeshAgent != null && navMeshAgent.isActiveAndEnabled && navMeshAgent.isOnNavMesh);
-        if (useNavMesh)
-        {
-            navMeshAgent.isStopped = false;
-            navMeshAgent.speed = moveSpeed;
-            navMeshAgent.stoppingDistance = followKeepDistance;
-        }
+        float searchTimer = 0f;
+        float pathCheckTimer = 0f;
+        bool useNavMesh = false;
 
         while (isFollowingPlayer)
         {
-            // Luôn luôn tìm người chơi gần nhất để bám đuôi theo nhóm một cách tự nhiên
-            playerToFollow = FindPlayerToFollow();
+            searchTimer += Time.deltaTime;
+            if (searchTimer >= 0.2f || playerToFollow == null)
+            {
+                searchTimer = 0f;
+                playerToFollow = FindPlayerToFollow();
+            }
 
             if (playerToFollow != null)
             {
                 Vector3 targetPos = playerToFollow.position;
 
+                pathCheckTimer += Time.deltaTime;
+                if (pathCheckTimer >= 0.25f)
+                {
+                    pathCheckTimer = 0f;
+                    useNavMesh = CheckNavMeshPath(targetPos);
+                }
+
                 if (useNavMesh)
                 {
+                    if (navMeshAgent != null && !navMeshAgent.enabled)
+                    {
+                        navMeshAgent.enabled = true;
+                        yield return null;
+                    }
+                    if (navMeshAgent != null && navMeshAgent.isStopped)
+                    {
+                        navMeshAgent.isStopped = false;
+                        navMeshAgent.speed = moveSpeed;
+                        navMeshAgent.stoppingDistance = followKeepDistance;
+                    }
                     navMeshAgent.SetDestination(targetPos);
-                    bool isMoving = navMeshAgent.velocity.magnitude > 0.15f;
+                    bool isMoving = navMeshAgent != null && navMeshAgent.velocity.magnitude > 0.15f;
                     SetNpcMoving(isMoving);
                 }
                 else
                 {
-                    targetPos.y = npcTransform.position.y; // Giữ nguyên độ cao Y
+                    if (navMeshAgent != null && navMeshAgent.enabled)
+                    {
+                        navMeshAgent.enabled = false;
+                    }
+
                     float distToPlayer = Vector3.Distance(npcTransform.position, targetPos);
 
                     if (distToPlayer > followKeepDistance)
@@ -1174,7 +1579,7 @@ public class IntroDialogueController : NetworkBehaviour
                     }
                     else
                     {
-                        // Nếu đã đứng gần player, dừng đi bộ nhưng quay mặt về phía player
+                        // Nếu đã đứng gần player đầy đủ, dừng đi bộ nhưng quay mặt về phía player
                         SetNpcMoving(false);
                         Vector3 direction = (targetPos - npcTransform.position).normalized;
                         if (direction != Vector3.zero)
@@ -1187,9 +1592,9 @@ public class IntroDialogueController : NetworkBehaviour
             }
             else
             {
-                if (useNavMesh)
+                if (navMeshAgent != null && navMeshAgent.enabled)
                 {
-                    navMeshAgent.isStopped = true;
+                    navMeshAgent.enabled = false;
                 }
                 SetNpcMoving(false);
             }
@@ -1197,7 +1602,7 @@ public class IntroDialogueController : NetworkBehaviour
             yield return null;
         }
 
-        if (useNavMesh)
+        if (navMeshAgent != null && navMeshAgent.isActiveAndEnabled)
         {
             navMeshAgent.isStopped = true;
         }
@@ -1212,7 +1617,7 @@ public class IntroDialogueController : NetworkBehaviour
     {
         if (IsNetworkActive && IsServer)
         {
-            StartDialogueClientRpc(dialogueType);
+            activeDialogueTypeNet.Value = dialogueType;
         }
         else if (!IsNetworkActive)
         {
@@ -1257,6 +1662,8 @@ public class IntroDialogueController : NetworkBehaviour
         else if (dialogueType == 4)
         {
             hasStartedMazeFollow = false;
+            hasStartedSecondFadeMove = false;
+            hasStartedCoopMove = false;
         }
 
         switch (dialogueType)
@@ -1281,6 +1688,15 @@ public class IntroDialogueController : NetworkBehaviour
                 break;
             case 4:
                 StartDialogue(mazeEntranceLines);
+                break;
+            case 6:
+                StartDialogue(mazeWaitCompleteLines);
+                break;
+            case 7:
+                StartDialogue(secondWaitCompleteLines);
+                break;
+            case 8:
+                StartDialogue(coopPuzzleLines);
                 break;
         }
     }
@@ -1317,6 +1733,11 @@ public class IntroDialogueController : NetworkBehaviour
     {
         if (!IsServerOrOffline) return;
 
+        if (IsNetworkActive && IsServer)
+        {
+            activeDialogueTypeNet.Value = -1; // Đóng hội thoại trên mọi client
+        }
+
         if (type == 0) // Opening dialogue finished by anyone
         {
             if (!hasStartedOpeningMove && npcMoveTarget != null)
@@ -1338,8 +1759,537 @@ public class IntroDialogueController : NetworkBehaviour
                 {
                     StopCoroutine(npcMoveCoroutine);
                 }
-                npcMoveCoroutine = StartCoroutine(PermanentFollowPlayerRoutine());
+                npcMoveCoroutine = StartCoroutine(MoveNpcToFadeTargetAndTeleportRoutine());
             }
         }
+        else if (type == 6) // Maze wait complete dialogue finished (Dialogue 6 Praise)
+        {
+            if (!hasStartedSecondFadeMove)
+            {
+                hasStartedSecondFadeMove = true;
+                if (npcMoveCoroutine != null)
+                {
+                    StopCoroutine(npcMoveCoroutine);
+                }
+                npcMoveCoroutine = StartCoroutine(MoveNpcToSecondFadeTargetAndTeleportRoutine());
+            }
+        }
+        else if (type == 7) // Second wait complete dialogue finished (Dialogue 7 Warning)
+        {
+            if (!hasStartedCoopMove)
+            {
+                hasStartedCoopMove = true;
+                if (npcMoveCoroutine != null)
+                {
+                    StopCoroutine(npcMoveCoroutine);
+                }
+                npcMoveCoroutine = StartCoroutine(MoveNpcToCoopPuzzleTargetRoutine());
+            }
+        }
+        else if (type == 8) // Coop puzzle dialogue finished (Dialogue 8)
+        {
+            if (npcMoveCoroutine != null)
+            {
+                StopCoroutine(npcMoveCoroutine);
+            }
+            npcMoveCoroutine = StartCoroutine(PermanentFollowPlayerRoutine());
+        }
+    }
+
+    private IEnumerator FadeNpcRoutine(bool fadeOut, float duration)
+    {
+        float elapsed = 0f;
+        float startVal = fadeOut ? 1f : 0f;
+        float endVal = fadeOut ? 0f : 1f;
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float t = elapsed / duration;
+            float currentScale = Mathf.Lerp(startVal, endVal, t);
+
+            if (IsNetworkActive && IsServer)
+            {
+                npcScaleNet.Value = currentScale;
+            }
+            if (npcTransform != null)
+            {
+                npcTransform.localScale = Vector3.one * currentScale;
+            }
+            yield return null;
+        }
+
+        if (IsNetworkActive && IsServer)
+        {
+            npcScaleNet.Value = endVal;
+        }
+        if (npcTransform != null)
+        {
+            npcTransform.localScale = Vector3.one * endVal;
+        }
+    }
+
+    private IEnumerator MoveNpcToFadeTargetAndTeleportRoutine()
+    {
+        if (npcTransform == null || npcFadeTarget == null || npcMazeWaitTarget == null)
+        {
+            Debug.LogWarning("[IntroDialogueController] Thiếu npcFadeTarget hoặc npcMazeWaitTarget!");
+            yield break;
+        }
+
+        Debug.Log($"[IntroDialogueController] NPC di chuyển tới điểm biến mất: {npcFadeTarget.name}");
+        SetNpcMoving(true);
+
+        Transform targetTrans = npcTransform;
+        Vector3 destination = npcFadeTarget.position;
+
+        bool useNavMesh = CheckNavMeshPath(destination);
+        if (useNavMesh)
+        {
+            if (navMeshAgent != null)
+            {
+                navMeshAgent.enabled = true;
+                yield return null;
+                navMeshAgent.isStopped = false;
+                navMeshAgent.speed = moveSpeed;
+                navMeshAgent.SetDestination(destination);
+            }
+        }
+        else
+        {
+            if (navMeshAgent != null)
+            {
+                navMeshAgent.enabled = false;
+            }
+        }
+
+        float distance = Vector3.Distance(targetTrans.position, destination);
+        float maxDuration = (distance / moveSpeed) + 3f;
+        float elapsed = 0f;
+        
+        while (distance > stoppingDistance && elapsed < maxDuration)
+        {
+            elapsed += Time.deltaTime;
+            useNavMesh = CheckNavMeshPath(destination);
+
+            if (useNavMesh)
+            {
+                if (navMeshAgent != null && !navMeshAgent.enabled)
+                {
+                    navMeshAgent.enabled = true;
+                    yield return null;
+                }
+                if (navMeshAgent != null && navMeshAgent.isStopped)
+                {
+                    navMeshAgent.isStopped = false;
+                    navMeshAgent.speed = moveSpeed;
+                    navMeshAgent.SetDestination(destination);
+                }
+                bool isMoving = navMeshAgent != null && navMeshAgent.velocity.magnitude > 0.15f;
+                SetNpcMoving(isMoving);
+            }
+            else
+            {
+                if (navMeshAgent != null && navMeshAgent.enabled)
+                {
+                    navMeshAgent.enabled = false;
+                }
+
+                targetTrans.position = Vector3.MoveTowards(targetTrans.position, destination, moveSpeed * Time.deltaTime);
+
+                Vector3 direction = (destination - targetTrans.position).normalized;
+                if (direction != Vector3.zero)
+                {
+                    Quaternion targetRot = Quaternion.LookRotation(direction);
+                    targetTrans.rotation = Quaternion.Slerp(targetTrans.rotation, targetRot, turnSpeed * Time.deltaTime);
+                }
+                SetNpcMoving(true);
+            }
+
+            distance = Vector3.Distance(targetTrans.position, destination);
+            yield return null;
+        }
+
+        // Đã đến điểm biến mất
+        if (navMeshAgent != null && navMeshAgent.isActiveAndEnabled && navMeshAgent.isOnNavMesh)
+        {
+            navMeshAgent.Warp(destination);
+            navMeshAgent.isStopped = true;
+        }
+        else
+        {
+            if (navMeshAgent != null)
+            {
+                navMeshAgent.enabled = false;
+            }
+            targetTrans.position = destination;
+        }
+        targetTrans.rotation = npcFadeTarget.rotation;
+        SetNpcMoving(false);
+
+        // 1. Biến mất (Fade out)
+        Debug.Log("[IntroDialogueController] NPC đang biến mất...");
+        yield return StartCoroutine(FadeNpcRoutine(true, 1.5f));
+
+        // 2. Dịch chuyển đến điểm chờ trong mê cung
+        Debug.Log($"[IntroDialogueController] NPC dịch chuyển tới: {npcMazeWaitTarget.name}");
+        if (navMeshAgent != null)
+        {
+            navMeshAgent.enabled = false; // Tắt agent trước khi dịch chuyển
+        }
+        targetTrans.position = npcMazeWaitTarget.position;
+        targetTrans.rotation = npcMazeWaitTarget.rotation;
+
+        // 3. Hiện lại (Fade in) tại vị trí mới
+        yield return StartCoroutine(FadeNpcRoutine(false, 1.5f));
+        if (navMeshAgent != null)
+        {
+            // Bật lại agent nếu vị trí mới có NavMesh
+            navMeshAgent.enabled = true;
+            yield return null;
+            if (navMeshAgent.isOnNavMesh)
+            {
+                navMeshAgent.isStopped = true;
+            }
+            else
+            {
+                navMeshAgent.enabled = false;
+            }
+        }
+
+        // 4. Bắt đầu lắng nghe người chơi lại gần
+        npcMoveCoroutine = StartCoroutine(WaitForPlayersAtMazeWaitTargetRoutine());
+    }
+
+    private IEnumerator WaitForPlayersAtMazeWaitTargetRoutine()
+    {
+        Debug.Log("[IntroDialogueController] NPC đang chờ người chơi lại gần điểm chờ mê cung...");
+        bool triggered = false;
+
+        while (!triggered)
+        {
+            // Tìm khoảng cách tới người chơi gần nhất
+            Transform closestPlayer = FindPlayerToFollow();
+            if (closestPlayer != null)
+            {
+                float dist = Vector3.Distance(npcTransform.position, closestPlayer.position);
+                if (dist <= mazeWaitTriggerDistance)
+                {
+                    triggered = true;
+                }
+            }
+            yield return new WaitForSeconds(0.2f); // Kiểm tra mỗi 0.2 giây để tối ưu hiệu năng
+        }
+
+        Debug.Log("[IntroDialogueController] Người chơi đã lại gần Rakan tại điểm chờ mê cung. Kích hoạt thoại chặng tiếp theo.");
+
+        // Xoay mặt về phía người chơi gần nhất để nói chuyện
+        Transform nearbyPlayer = FindPlayerToFollow();
+        if (nearbyPlayer != null)
+        {
+            Vector3 lookDir = (nearbyPlayer.position - npcTransform.position).normalized;
+            lookDir.y = 0;
+            if (lookDir != Vector3.zero)
+            {
+                npcTransform.rotation = Quaternion.LookRotation(lookDir);
+            }
+        }
+
+        // Kích hoạt hội thoại khen ngợi (Dialogue Type 6)
+        TriggerDialogue(6);
+    }
+
+    private IEnumerator MoveNpcToSecondFadeTargetAndTeleportRoutine()
+    {
+        if (npcTransform == null || npcSecondFadeTarget == null || npcSecondWaitTarget == null)
+        {
+            Debug.LogWarning("[IntroDialogueController] Thiếu npcSecondFadeTarget hoặc npcSecondWaitTarget!");
+            yield break;
+        }
+
+        Debug.Log($"[IntroDialogueController] NPC di chuyển tới điểm biến mất lần 2: {npcSecondFadeTarget.name}");
+        SetNpcMoving(true);
+
+        Transform targetTrans = npcTransform;
+        Vector3 destination = npcSecondFadeTarget.position;
+
+        bool useNavMesh = CheckNavMeshPath(destination);
+        if (useNavMesh)
+        {
+            if (navMeshAgent != null)
+            {
+                navMeshAgent.enabled = true;
+                yield return null;
+                navMeshAgent.isStopped = false;
+                navMeshAgent.speed = moveSpeed;
+                navMeshAgent.SetDestination(destination);
+            }
+        }
+        else
+        {
+            if (navMeshAgent != null)
+            {
+                navMeshAgent.enabled = false;
+            }
+        }
+
+        float distance = Vector3.Distance(targetTrans.position, destination);
+        float maxDuration = (distance / moveSpeed) + 3f;
+        float elapsed = 0f;
+        float pathCheckTimer = 0f;
+        
+        while (distance > stoppingDistance && elapsed < maxDuration)
+        {
+            elapsed += Time.deltaTime;
+
+            pathCheckTimer += Time.deltaTime;
+            if (pathCheckTimer >= 0.25f)
+            {
+                pathCheckTimer = 0f;
+                useNavMesh = CheckNavMeshPath(destination);
+            }
+
+            if (useNavMesh)
+            {
+                if (navMeshAgent != null && !navMeshAgent.enabled)
+                {
+                    navMeshAgent.enabled = true;
+                    yield return null;
+                }
+                if (navMeshAgent != null && navMeshAgent.isStopped)
+                {
+                    navMeshAgent.isStopped = false;
+                    navMeshAgent.speed = moveSpeed;
+                    navMeshAgent.SetDestination(destination);
+                }
+                bool isMoving = navMeshAgent != null && navMeshAgent.velocity.magnitude > 0.15f;
+                SetNpcMoving(isMoving);
+            }
+            else
+            {
+                if (navMeshAgent != null && navMeshAgent.enabled)
+                {
+                    navMeshAgent.enabled = false;
+                }
+
+                targetTrans.position = Vector3.MoveTowards(targetTrans.position, destination, moveSpeed * Time.deltaTime);
+
+                Vector3 direction = (destination - targetTrans.position).normalized;
+                if (direction != Vector3.zero)
+                {
+                    Quaternion targetRot = Quaternion.LookRotation(direction);
+                    targetTrans.rotation = Quaternion.Slerp(targetTrans.rotation, targetRot, turnSpeed * Time.deltaTime);
+                }
+                SetNpcMoving(true);
+            }
+
+            distance = Vector3.Distance(targetTrans.position, destination);
+            yield return null;
+        }
+
+        // Đã đến điểm biến mất lần 2
+        if (navMeshAgent != null && navMeshAgent.isActiveAndEnabled && navMeshAgent.isOnNavMesh)
+        {
+            navMeshAgent.Warp(destination);
+            navMeshAgent.isStopped = true;
+        }
+        else
+        {
+            if (navMeshAgent != null)
+            {
+                navMeshAgent.enabled = false;
+            }
+            targetTrans.position = destination;
+        }
+        targetTrans.rotation = npcSecondFadeTarget.rotation;
+        SetNpcMoving(false);
+
+        // 1. Biến mất lần 2
+        Debug.Log("[IntroDialogueController] NPC đang biến mất lần 2...");
+        yield return StartCoroutine(FadeNpcRoutine(true, 1.5f));
+
+        // 2. Dịch chuyển đến điểm chờ thứ 2 trong mê cung
+        Debug.Log($"[IntroDialogueController] NPC dịch chuyển tới (lần 2): {npcSecondWaitTarget.name}");
+        if (navMeshAgent != null)
+        {
+            navMeshAgent.enabled = false;
+        }
+        targetTrans.position = npcSecondWaitTarget.position;
+        targetTrans.rotation = npcSecondWaitTarget.rotation;
+
+        // 3. Hiện lại lần 2
+        yield return StartCoroutine(FadeNpcRoutine(false, 1.5f));
+        if (navMeshAgent != null)
+        {
+            navMeshAgent.enabled = true;
+            yield return null;
+            if (navMeshAgent.isOnNavMesh)
+            {
+                navMeshAgent.isStopped = true;
+            }
+            else
+            {
+                navMeshAgent.enabled = false;
+            }
+        }
+
+        // 4. Lắng nghe người tiếp cận
+        npcMoveCoroutine = StartCoroutine(WaitForPlayersAtSecondWaitTargetRoutine());
+    }
+
+    private IEnumerator WaitForPlayersAtSecondWaitTargetRoutine()
+    {
+        Debug.Log("[IntroDialogueController] NPC đang chờ người chơi lại gần điểm chờ mê cung 2...");
+        bool triggered = false;
+
+        while (!triggered)
+        {
+            Transform closestPlayer = FindPlayerToFollow();
+            if (closestPlayer != null)
+            {
+                float dist = Vector3.Distance(npcTransform.position, closestPlayer.position);
+                if (dist <= npcSecondWaitTriggerDistance)
+                {
+                    triggered = true;
+                }
+            }
+            yield return new WaitForSeconds(0.2f);
+        }
+
+        Debug.Log("[IntroDialogueController] Người chơi lại gần điểm chờ 2. Kích hoạt thoại khen ngợi 2.");
+
+        Transform nearbyPlayer = FindPlayerToFollow();
+        if (nearbyPlayer != null)
+        {
+            Vector3 lookDir = (nearbyPlayer.position - npcTransform.position).normalized;
+            lookDir.y = 0;
+            if (lookDir != Vector3.zero)
+            {
+                npcTransform.rotation = Quaternion.LookRotation(lookDir);
+            }
+        }
+
+        TriggerDialogue(7);
+    }
+
+    private IEnumerator MoveNpcToCoopPuzzleTargetRoutine()
+    {
+        if (npcTransform == null || npcCoopPuzzleTarget == null) yield break;
+
+        Debug.Log($"[IntroDialogueController] NPC di chuyển tới điểm phối hợp (Transform 7): {npcCoopPuzzleTarget.name}");
+        SetNpcTalking(false);
+        SetNpcMoving(true);
+
+        Transform targetTrans = npcTransform;
+        Vector3 destination = npcCoopPuzzleTarget.position;
+
+        bool useNavMesh = CheckNavMeshPath(destination);
+        if (useNavMesh)
+        {
+            if (navMeshAgent != null)
+            {
+                navMeshAgent.enabled = true;
+                yield return null;
+                navMeshAgent.isStopped = false;
+                navMeshAgent.speed = moveSpeed;
+                navMeshAgent.SetDestination(destination);
+            }
+        }
+        else
+        {
+            if (navMeshAgent != null)
+            {
+                navMeshAgent.enabled = false;
+            }
+        }
+
+        float distance = Vector3.Distance(targetTrans.position, destination);
+        float maxDuration = (distance / moveSpeed) + 3f;
+        float elapsed = 0f;
+        float pathCheckTimer = 0f;
+        
+        while (distance > stoppingDistance && elapsed < maxDuration)
+        {
+            elapsed += Time.deltaTime;
+
+            pathCheckTimer += Time.deltaTime;
+            if (pathCheckTimer >= 0.25f)
+            {
+                pathCheckTimer = 0f;
+                useNavMesh = CheckNavMeshPath(destination);
+            }
+
+            if (useNavMesh)
+            {
+                if (navMeshAgent != null && !navMeshAgent.enabled)
+                {
+                    navMeshAgent.enabled = true;
+                    yield return null;
+                }
+                if (navMeshAgent != null && navMeshAgent.isStopped)
+                {
+                    navMeshAgent.isStopped = false;
+                    navMeshAgent.speed = moveSpeed;
+                    navMeshAgent.SetDestination(destination);
+                }
+                bool isMoving = navMeshAgent != null && navMeshAgent.velocity.magnitude > 0.15f;
+                SetNpcMoving(isMoving);
+            }
+            else
+            {
+                if (navMeshAgent != null && navMeshAgent.enabled)
+                {
+                    navMeshAgent.enabled = false;
+                }
+
+                targetTrans.position = Vector3.MoveTowards(targetTrans.position, destination, moveSpeed * Time.deltaTime);
+
+                Vector3 direction = (destination - targetTrans.position).normalized;
+                if (direction != Vector3.zero)
+                {
+                    Quaternion targetRot = Quaternion.LookRotation(direction);
+                    targetTrans.rotation = Quaternion.Slerp(targetTrans.rotation, targetRot, turnSpeed * Time.deltaTime);
+                }
+                SetNpcMoving(true);
+            }
+
+            distance = Vector3.Distance(targetTrans.position, destination);
+            yield return null;
+        }
+
+        if (navMeshAgent != null && navMeshAgent.isActiveAndEnabled && navMeshAgent.isOnNavMesh)
+        {
+            navMeshAgent.Warp(destination);
+            navMeshAgent.isStopped = true;
+        }
+        else
+        {
+            if (navMeshAgent != null)
+            {
+                navMeshAgent.enabled = false;
+            }
+            targetTrans.position = destination;
+        }
+        targetTrans.rotation = npcCoopPuzzleTarget.rotation;
+
+        SetNpcMoving(false);
+        npcMoveCoroutine = null;
+
+        Debug.Log("[IntroDialogueController] NPC đã đứng tại điểm phối hợp (Transform 7). Bắt đầu hội thoại.");
+
+        // Xoay mặt về hướng người chơi gần nhất để nói chuyện
+        Transform nearbyPlayer = FindPlayerToFollow();
+        if (nearbyPlayer != null)
+        {
+            Vector3 lookDir = (nearbyPlayer.position - npcTransform.position).normalized;
+            lookDir.y = 0;
+            if (lookDir != Vector3.zero)
+            {
+                npcTransform.rotation = Quaternion.LookRotation(lookDir);
+            }
+        }
+
+        // Bắt đầu hội thoại phối hợp (Dialogue Type 8)
+        TriggerDialogue(8);
     }
 }

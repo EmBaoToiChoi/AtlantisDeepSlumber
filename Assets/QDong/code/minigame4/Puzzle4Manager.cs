@@ -251,6 +251,12 @@ public class Puzzle4Manager : NetworkBehaviour
         if(castleGate != null)
             castleGate.SetActive(false);
 
+        // Tự động đóng mặt đất lại (bật lại sàn) khi hoàn thành
+        if (trapFloor != null)
+        {
+            trapFloor.CloseFloorClientRpc();
+        }
+
         // Tắt vùng box trigger để không bị kích hoạt lại
         if(trapTrigger != null)
         {

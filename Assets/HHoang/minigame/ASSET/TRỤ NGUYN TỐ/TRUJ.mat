@@ -557,7 +557,7 @@ Material:
     - _BaseEmissionMaskTreshold: 4.2
     - _BaseEmissionMaskTreshold_1: 1.1
     - _BaseMetallic: 1
-    - _BaseNormalScale: 0.16
+    - _BaseNormalScale: 0
     - _BaseSmoothnessRemapMax: 1
     - _BaseSmoothnessRemapMin: 0
     - _BaseTriplanarThreshold: 5
@@ -899,7 +899,7 @@ Material:
     - _UseShadowThreshold: 0
     - _Use_ShapeHeightBInvertedT_Static_MaskF: 0
     - _Use_ShapeHeightBT_Static_MaskF: 1
-    - _VertexColorBBlendStrenght: 10
+    - _VertexColorBBlendStrenght: 29
     - _VertexColorGBlendStrenght: 100
     - _VertexColorMode: 0
     - _Vertex_Color_Height_Blend_Strenght: 0.17
@@ -919,7 +919,7 @@ Material:
     - _BASE_COLOR: {r: 0.5, g: 0.5, b: 0.5, a: 1}
     - _Base2Color: {r: 1, g: 1, b: 1, a: 0}
     - _Base2TilingOffset: {r: 1, g: 1, b: 0, a: 0}
-    - _BaseColor: {r: 0.7433963, g: 0.7433963, b: 0.7433963, a: 1}
+    - _BaseColor: {r: 0.690566, g: 0.690566, b: 0.690566, a: 1}
     - _BaseColor0: {r: 1, g: 1, b: 1, a: 1}
     - _BaseColor1: {r: 0.8679245, g: 0.8679245, b: 0.8679245, a: 1}
     - _BaseColor2: {r: 1, g: 1, b: 1, a: 1}
