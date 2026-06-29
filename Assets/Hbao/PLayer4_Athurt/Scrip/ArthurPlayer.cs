@@ -1760,7 +1760,8 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         bool isDialogueOpen = (RakanDialogueController.Instance != null && RakanDialogueController.Instance.IsActive) ||
                                (SilasDialogueController.Instance != null && SilasDialogueController.Instance.IsActive) ||
                                (IntroDialogueController.Instance != null && IntroDialogueController.Instance.IsActive) ||
-                               PlayerHUDController.isCoopBuildingUIOpen;
+                               PlayerHUDController.isCoopBuildingUIOpen ||
+                               SeagullController.ActiveSeagull != null;
 
         if (isDialogueOpen)
         {
@@ -1942,7 +1943,8 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         bool isDialogueOpen = (RakanDialogueController.Instance != null && RakanDialogueController.Instance.IsActive) ||
                                (SilasDialogueController.Instance != null && SilasDialogueController.Instance.IsActive) ||
                                (IntroDialogueController.Instance != null && IntroDialogueController.Instance.IsActive) ||
-                               PlayerHUDController.isCoopBuildingUIOpen;
+                               PlayerHUDController.isCoopBuildingUIOpen ||
+                               SeagullController.ActiveSeagull != null;
 
         if (isDialogueOpen)
         {
@@ -2266,7 +2268,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         }
 
         bool shouldFollow = isStandaloneMode || (IsSpawned && IsOwner);
-        if (!shouldFollow || !enableCameraFollow) return;
+        if (!shouldFollow || !enableCameraFollow || SeagullController.ActiveSeagull != null) return;
 
         if (targetCamera == null)
         {
@@ -3917,7 +3919,8 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         bool isDialogueOpen = (RakanDialogueController.Instance != null && RakanDialogueController.Instance.IsActive) ||
                               (SilasDialogueController.Instance != null && SilasDialogueController.Instance.IsActive) ||
-                              (IntroDialogueController.Instance != null && IntroDialogueController.Instance.IsActive);
+                              (IntroDialogueController.Instance != null && IntroDialogueController.Instance.IsActive) ||
+                              SeagullController.ActiveSeagull != null;
         if (isDialogueOpen) uiOpen = true;
 
         if (uiOpen)
