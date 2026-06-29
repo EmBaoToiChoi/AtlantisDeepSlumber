@@ -21,7 +21,7 @@ public class BalanceManager : NetworkBehaviour
     );
 
     private HashSet<Collider> playersOnBoard = new HashSet<Collider>();
-    private bool puzzleLocked = false;
+    public bool puzzleLocked = false;
 
     public override void OnNetworkSpawn()
     {
@@ -109,6 +109,11 @@ public class BalanceManager : NetworkBehaviour
         {
             // Tính vị trí tương đối (Local Position) từ Player tới tâm đĩa
             Vector3 localPos = diskRigidbody.transform.InverseTransformPoint(player.transform.position);
+            
+            // Nếu người chơi rớt xuống dưới mặt đĩa thì không tính trọng lượng để tránh đĩa bị nghiêng theo
+            if (localPos.y < -0.5f)
+                continue;
+
             float weight = GetPlayerWeight(player);
 
             tiltX += localPos.z * weight;
@@ -143,6 +148,11 @@ public class BalanceManager : NetworkBehaviour
         // Áp dụng lực hút nhẹ để nhân vật bám sát đĩa hơn khi đĩa di chuyển
         foreach (var player in playersOnBoard)
         {
+            // Bỏ qua lực hút nếu đã rớt khỏi mặt đĩa
+            Vector3 localPos = diskRigidbody.transform.InverseTransformPoint(player.transform.position);
+            if (localPos.y < -0.5f)
+                continue;
+
             CharacterInfo info = player.GetComponent<CharacterInfo>();
             if (info != null && info.IsOwner)
             {
@@ -182,6 +192,11 @@ public class BalanceManager : NetworkBehaviour
     public void LockDisk()
     {
         puzzleLocked = true;
+    }
+
+    public void UnlockDisk()
+    {
+        puzzleLocked = false;
     }
 
     public IEnumerator ReturnToCenterAndLock()

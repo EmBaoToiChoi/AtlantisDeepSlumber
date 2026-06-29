@@ -37,6 +37,18 @@ public class Puzzle4Manager : NetworkBehaviour
     // Trap Floor là khi hoàn thành sẽ mở ra
     public Puzzle4TrapTrigger trapFloor;
 
+    [Header("Camera Toàn Cảnh")]
+    public GameObject sharedCamera;
+
+    [ClientRpc]
+    public void ToggleSharedCameraClientRpc(bool isActive)
+    {
+        if (sharedCamera != null)
+        {
+            sharedCamera.SetActive(isActive);
+        }
+    }
+
     void Start()
     {
         if(beamA != null) beamA.SetActive(false);
@@ -46,6 +58,11 @@ public class Puzzle4Manager : NetworkBehaviour
 
         if(centerExplosion != null)
             centerExplosion.SetActive(false);
+
+        if (balanceManager != null)
+        {
+            balanceManager.LockDisk();
+        }
     }
 
     public override void OnNetworkSpawn()
@@ -57,6 +74,17 @@ public class Puzzle4Manager : NetworkBehaviour
             UpdateUIState(isMinigameStarted.Value);
             isMinigameStarted.OnValueChanged += (oldVal, newVal) => {
                 UpdateUIState(newVal);
+            };
+
+            if (puzzleCompleted.Value && completeUI != null)
+            {
+                completeUI.SetActive(true);
+            }
+            puzzleCompleted.OnValueChanged += (oldVal, newVal) => {
+                if (newVal && completeUI != null)
+                {
+                    completeUI.SetActive(true);
+                }
             };
         }
     }
@@ -91,9 +119,19 @@ public class Puzzle4Manager : NetworkBehaviour
         if (!IsServer)
             return;
 
+        if (trapFloor != null && !trapFloor.activated)
+        {
+            return;
+        }
+
         if (trapFloor != null && trapFloor.activated && !isMinigameStarted.Value && !isStartingUI)
         {
             isStartingUI = true;
+            if (balanceManager != null)
+            {
+                balanceManager.UnlockDisk();
+            }
+            ToggleSharedCameraClientRpc(true);
             StartCoroutine(DelayedStartMinigameUI());
         }
 
@@ -102,6 +140,11 @@ public class Puzzle4Manager : NetworkBehaviour
 
     void FixedUpdate()
     {
+        if (trapFloor != null && !trapFloor.activated)
+        {
+            return;
+        }
+
         if (balanceManager != null && balanceManager.diskRigidbody != null)
         {
             if (balanceManager.CurrentAngle > 10f)
@@ -179,27 +222,7 @@ public class Puzzle4Manager : NetworkBehaviour
 
 
 
-    void LaunchPlayersUp()
-    {
-        CharacterInfo[] players =
-            FindObjectsByType<CharacterInfo>(
-                FindObjectsSortMode.None
-            );
 
-        foreach (var player in players)
-        {
-            PlayerKnockback knockback =
-                player.GetComponent<PlayerKnockback>();
-
-            if (knockback == null)
-                continue;
-
-            Vector3 force =
-                Vector3.up * 15f;
-
-            knockback.Launch(force);
-        }
-    }
 
 
 
@@ -221,16 +244,7 @@ public class Puzzle4Manager : NetworkBehaviour
 
         yield return new WaitForSeconds(7f);
 
-        LaunchPlayersUp();
-
-        // Chờ người chơi bay lên khỏi mặt đất một chút
-        yield return new WaitForSeconds(0.001f);
-
-        // Đóng mặt đường (hộp) lại để người chơi không bị rớt xuống
-        if(trapFloor != null)
-        {
-            trapFloor.CloseFloorClientRpc();
-        }
+        ToggleSharedCameraClientRpc(false);
 
         yield return new WaitForSeconds(1f);
 
