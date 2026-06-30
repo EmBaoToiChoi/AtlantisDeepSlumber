@@ -147,6 +147,35 @@ public class PlayerHUDController : MonoBehaviour
     private bool isMicOn = false;
     private int _lastMicUIState = -1; // -1: uninitialized, 0: muted, 1: unmuted silent, 2: unmuted transmitting
 
+    [Header("Minimap Settings")]
+    public float minimapZoom = 30f;
+    private VisualElement minimapContainer;
+    private VisualElement minimapContent;
+    private Camera minimapCamera;
+    private RenderTexture minimapRenderTexture;
+
+    private struct MinimapIconData
+    {
+        public VisualElement iconContainer;
+        public VisualElement arrowContainer;
+        public VisualElement avatarElement;
+    }
+    private System.Collections.Generic.Dictionary<ulong, MinimapIconData> minimapIcons = new System.Collections.Generic.Dictionary<ulong, MinimapIconData>();
+
+    [Header("World Map Settings")]
+    public float worldMapZoom = 150f;
+    private VisualElement worldMapFrame;
+    private Camera worldMapCamera;
+    private RenderTexture worldMapRenderTexture;
+
+    private struct WorldMapIconData
+    {
+        public VisualElement iconContainer;
+        public VisualElement arrowContainer;
+        public VisualElement avatarElement;
+    }
+    private System.Collections.Generic.Dictionary<ulong, WorldMapIconData> worldMapIcons = new System.Collections.Generic.Dictionary<ulong, WorldMapIconData>();
+
     // Cảnh báo vũ khí và Hành trang (Tab)
     private VisualElement worldMapOverlay;
     private VisualElement inventoryOverlay;
@@ -296,6 +325,35 @@ public class PlayerHUDController : MonoBehaviour
         qSkillTimerLabel = null;
         inventorySlotsUI = new System.Collections.Generic.List<VisualElement>();
         teammateCards = new System.Collections.Generic.Dictionary<ulong, VisualElement>();
+
+        if (minimapCamera != null)
+        {
+            Destroy(minimapCamera.gameObject);
+            minimapCamera = null;
+        }
+        if (minimapRenderTexture != null)
+        {
+            minimapRenderTexture.Release();
+            Destroy(minimapRenderTexture);
+            minimapRenderTexture = null;
+        }
+        minimapContainer = null;
+        minimapContent = null;
+        minimapIcons.Clear();
+
+        if (worldMapCamera != null)
+        {
+            Destroy(worldMapCamera.gameObject);
+            worldMapCamera = null;
+        }
+        if (worldMapRenderTexture != null)
+        {
+            worldMapRenderTexture.Release();
+            Destroy(worldMapRenderTexture);
+            worldMapRenderTexture = null;
+        }
+        worldMapFrame = null;
+        worldMapIcons.Clear();
 
         Debug.Log($"[PlayerHUDController] OnDisable - reset state, sẽ re-init khi Enable lại. ProfileIndex giữ nguyên: {lastSelectedProfileIndex}");
     }
@@ -593,11 +651,16 @@ public class PlayerHUDController : MonoBehaviour
             if (skillImgE != null) skillImgE.style.visibility = Visibility.Hidden;
         }
 
+        // Tìm Minimap
+        minimapContainer = root.Q<VisualElement>("minimap-container");
+        minimapContent = root.Q<VisualElement>("minimap-content");
+
         // Tìm Label cảnh báo, Overlay bản đồ và Hành trang
         worldMapOverlay = root.Q<VisualElement>("world-map-overlay");
         if (worldMapOverlay != null)
         {
             worldMapOverlay.pickingMode = PickingMode.Ignore; // Mặc định ẩn, bỏ qua cản chuột
+            worldMapFrame = worldMapOverlay.Q<VisualElement>(className: "world-map-frame");
         }
         inventoryOverlay = root.Q<VisualElement>("inventory-overlay");
         if (inventoryOverlay != null)
@@ -799,6 +862,8 @@ public class PlayerHUDController : MonoBehaviour
     {
         InitializeUI(); // Đảm bảo khởi tạo nếu OnEnable chạy trước khi rootVisualElement sẵn sàng
         UpdateTeammatesHUD();
+        UpdateMinimap();
+        UpdateWorldMap();
 
         if (LocalPlayerTarget != null)
         {
@@ -2484,6 +2549,450 @@ public class PlayerHUDController : MonoBehaviour
                 }
                 teammateCards.Remove(key);
             }
+        }
+    }
+
+    void OnDestroy()
+    {
+        if (minimapRenderTexture != null)
+        {
+            minimapRenderTexture.Release();
+            Destroy(minimapRenderTexture);
+            minimapRenderTexture = null;
+        }
+        if (minimapCamera != null)
+        {
+            Destroy(minimapCamera.gameObject);
+            minimapCamera = null;
+        }
+
+        if (worldMapRenderTexture != null)
+        {
+            worldMapRenderTexture.Release();
+            Destroy(worldMapRenderTexture);
+            worldMapRenderTexture = null;
+        }
+        if (worldMapCamera != null)
+        {
+            Destroy(worldMapCamera.gameObject);
+            worldMapCamera = null;
+        }
+        worldMapFrame = null;
+        worldMapIcons.Clear();
+    }
+
+    private void UpdateMinimap()
+    {
+        if (uiDocument == null || uiDocument.rootVisualElement == null) return;
+
+        if (minimapContainer == null)
+        {
+            minimapContainer = uiDocument.rootVisualElement.Q<VisualElement>("minimap-container");
+        }
+        if (minimapContent == null)
+        {
+            minimapContent = uiDocument.rootVisualElement.Q<VisualElement>("minimap-content");
+        }
+
+        if (minimapContainer == null || minimapContent == null) return;
+
+        // An minimap neu khong co local player
+        if (LocalPlayerTarget == null || LocalPlayerTarget.transform == null)
+        {
+            minimapContainer.style.display = DisplayStyle.None;
+            return;
+        }
+
+        minimapContainer.style.display = DisplayStyle.Flex;
+
+        Vector3 localPos = LocalPlayerTarget.transform.position;
+
+        // Khoi tao render texture va camera neu chua co
+        if (minimapRenderTexture == null)
+        {
+            minimapRenderTexture = new RenderTexture(256, 256, 16, RenderTextureFormat.ARGB32);
+            minimapRenderTexture.filterMode = FilterMode.Bilinear;
+            minimapRenderTexture.Create();
+        }
+
+        if (minimapCamera == null)
+        {
+            GameObject camGo = new GameObject("MinimapCamera_Generated");
+            minimapCamera = camGo.AddComponent<Camera>();
+            minimapCamera.orthographic = true;
+            minimapCamera.orthographicSize = minimapZoom;
+            minimapCamera.targetTexture = minimapRenderTexture;
+            minimapCamera.clearFlags = CameraClearFlags.SolidColor;
+            minimapCamera.backgroundColor = new Color(0.04f, 0.06f, 0.12f); // Sleek dark blue
+            minimapCamera.cullingMask = ~(1 << LayerMask.NameToLayer("UI")); // Exclude UI
+            
+            // Camera luon huong thang xuong (North Up)
+            minimapCamera.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
+        }
+
+        // Di chuyen camera theo vi tri local player
+        minimapCamera.transform.position = new Vector3(localPos.x, localPos.y + 50f, localPos.z);
+
+        // Gan RenderTexture lam background cho minimap-content
+        minimapContent.style.backgroundImage = Background.FromRenderTexture(minimapRenderTexture);
+
+        // Cap nhat cac icon player di chuyen
+        var activePlayers = PlayerHUDManager.ActivePlayers;
+        System.Collections.Generic.HashSet<ulong> currentKeys = new System.Collections.Generic.HashSet<ulong>();
+
+        foreach (var player in activePlayers)
+        {
+            if (player == null || player.gameObject == null || player.transform == null) continue;
+
+            ulong key = player.IsSpawned ? player.OwnerClientId : (ulong)player.gameObject.GetInstanceID();
+            currentKeys.Add(key);
+
+            bool isOwner = (LocalPlayerTarget != null && (player == LocalPlayerTarget || player.gameObject == LocalPlayerTarget.gameObject));
+
+            if (!minimapIcons.TryGetValue(key, out var iconData))
+            {
+                iconData = CreateMinimapIcon(player, isOwner);
+                minimapContent.Add(iconData.iconContainer);
+                minimapIcons[key] = iconData;
+            }
+
+            // Tinh toan vi tri relative so voi local player
+            Vector3 diff = player.transform.position - localPos;
+            float dx = diff.x;
+            float dz = diff.z;
+            float scale = 96f / minimapZoom; // ban kinh minimap la 96px
+
+            float rx = dx * scale;
+            float ry = dz * scale;
+            float dist = Mathf.Sqrt(rx * rx + ry * ry);
+
+            // Gioi han ban kinh clamp de icon khong bi khuat khoi vong tron (ban kinh max = 84px)
+            float maxRadius = 84f;
+            if (dist > maxRadius)
+            {
+                float clampScale = maxRadius / dist;
+                rx *= clampScale;
+                ry *= clampScale;
+            }
+
+            // UI coordinates: truc Y huong xuong duoi, trong khi Z huong len tren
+            float x_ui = 96f + rx;
+            float y_ui = 96f - ry;
+
+            // Offset de can giua icon (size 24x24 px, offset = 12px)
+            iconData.iconContainer.style.left = x_ui - 12f;
+            iconData.iconContainer.style.top = y_ui - 12f;
+            iconData.iconContainer.style.display = DisplayStyle.Flex;
+
+            // Xoay arrow huong di chuyen cua player
+            float facingAngle = player.transform.eulerAngles.y;
+            iconData.arrowContainer.style.rotate = new StyleRotate(new Rotate(Angle.Degrees(facingAngle)));
+        }
+
+        // Don dep cac player da thoat khoi danh sach active
+        System.Collections.Generic.List<ulong> keysToRemove = new System.Collections.Generic.List<ulong>();
+        foreach (var existingKey in minimapIcons.Keys)
+        {
+            if (!currentKeys.Contains(existingKey))
+            {
+                keysToRemove.Add(existingKey);
+            }
+        }
+
+        foreach (var key in keysToRemove)
+        {
+            if (minimapIcons.TryGetValue(key, out var iconData))
+            {
+                if (iconData.iconContainer != null && iconData.iconContainer.parent != null)
+                {
+                    iconData.iconContainer.parent.Remove(iconData.iconContainer);
+                }
+                minimapIcons.Remove(key);
+            }
+        }
+    }
+
+    private void UpdateWorldMap()
+    {
+        if (uiDocument == null || uiDocument.rootVisualElement == null || worldMapOverlay == null || worldMapFrame == null) return;
+
+        // Check xem map dang mo khong
+        if (!IsMapOpen())
+        {
+            if (worldMapCamera != null)
+            {
+                worldMapCamera.enabled = false;
+            }
+            // Clear cac icon tren world map khi dong
+            if (worldMapIcons.Count > 0)
+            {
+                foreach (var iconData in worldMapIcons.Values)
+                {
+                    if (iconData.iconContainer != null && iconData.iconContainer.parent != null)
+                    {
+                        iconData.iconContainer.parent.Remove(iconData.iconContainer);
+                    }
+                }
+                worldMapIcons.Clear();
+            }
+            return;
+        }
+
+        // Neu khong co local player
+        if (LocalPlayerTarget == null || LocalPlayerTarget.transform == null)
+        {
+            return;
+        }
+
+        Vector3 localPos = LocalPlayerTarget.transform.position;
+
+        // Khoi tao render texture va camera cho World Map
+        if (worldMapRenderTexture == null)
+        {
+            worldMapRenderTexture = new RenderTexture(512, 512, 16, RenderTextureFormat.ARGB32);
+            worldMapRenderTexture.filterMode = FilterMode.Bilinear;
+            worldMapRenderTexture.Create();
+        }
+
+        if (worldMapCamera == null)
+        {
+            GameObject camGo = new GameObject("WorldMapCamera_Generated");
+            worldMapCamera = camGo.AddComponent<Camera>();
+            worldMapCamera.orthographic = true;
+            worldMapCamera.orthographicSize = worldMapZoom;
+            worldMapCamera.targetTexture = worldMapRenderTexture;
+            worldMapCamera.clearFlags = CameraClearFlags.SolidColor;
+            worldMapCamera.backgroundColor = new Color(0.04f, 0.06f, 0.12f);
+            
+            int uiLayer = LayerMask.NameToLayer("UI");
+            if (uiLayer >= 0)
+            {
+                worldMapCamera.cullingMask = ~(1 << uiLayer);
+            }
+            else
+            {
+                worldMapCamera.cullingMask = ~0;
+            }
+            
+            worldMapCamera.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
+        }
+
+        worldMapCamera.enabled = true;
+        // Camera luon follow player nhung voi tam nhin rong hon nhieu
+        worldMapCamera.transform.position = new Vector3(localPos.x, localPos.y + 100f, localPos.z);
+
+        // Gan background image cho worldMapFrame
+        worldMapFrame.style.backgroundImage = Background.FromRenderTexture(worldMapRenderTexture);
+
+        // Tinh toan kich thuoc frame de scale toa do
+        float frameWidth = float.IsNaN(worldMapFrame.layout.width) || worldMapFrame.layout.width <= 0 ? 800f : worldMapFrame.layout.width;
+        float frameHeight = float.IsNaN(worldMapFrame.layout.height) || worldMapFrame.layout.height <= 0 ? 600f : worldMapFrame.layout.height;
+        float centerX = frameWidth / 2f;
+        float centerY = frameHeight / 2f;
+
+        var activePlayers = PlayerHUDManager.ActivePlayers;
+        System.Collections.Generic.HashSet<ulong> currentKeys = new System.Collections.Generic.HashSet<ulong>();
+
+        foreach (var player in activePlayers)
+        {
+            if (player == null || player.gameObject == null || player.transform == null) continue;
+
+            ulong key = player.IsSpawned ? player.OwnerClientId : (ulong)player.gameObject.GetInstanceID();
+            currentKeys.Add(key);
+
+            bool isOwner = (LocalPlayerTarget != null && (player == LocalPlayerTarget || player.gameObject == LocalPlayerTarget.gameObject));
+
+            if (!worldMapIcons.TryGetValue(key, out var iconData))
+            {
+                iconData = CreateWorldMapIcon(player, isOwner);
+                worldMapFrame.Add(iconData.iconContainer);
+                worldMapIcons[key] = iconData;
+            }
+
+            Vector3 diff = player.transform.position - localPos;
+            float dx = diff.x;
+            float dz = diff.z;
+
+            // Map world space sang frame UI space
+            float halfMinDim = Mathf.Min(frameWidth, frameHeight) / 2f;
+            float scale = halfMinDim / worldMapZoom;
+
+            float rx = dx * scale;
+            float ry = dz * scale;
+
+            // Clamp vao trong khung ban do lon
+            float limitX = centerX - 16f; // half size 32px icon
+            float limitY = centerY - 16f;
+            rx = Mathf.Clamp(rx, -limitX, limitX);
+            ry = Mathf.Clamp(ry, -limitY, limitY);
+
+            float x_ui = centerX + rx;
+            float y_ui = centerY - ry;
+
+            iconData.iconContainer.style.left = x_ui - 16f;
+            iconData.iconContainer.style.top = y_ui - 16f;
+            iconData.iconContainer.style.display = DisplayStyle.Flex;
+
+            float facingAngle = player.transform.eulerAngles.y;
+            iconData.arrowContainer.style.rotate = new StyleRotate(new Rotate(Angle.Degrees(facingAngle)));
+        }
+
+        // Don dep cac player thoat game
+        System.Collections.Generic.List<ulong> keysToRemove = new System.Collections.Generic.List<ulong>();
+        foreach (var existingKey in worldMapIcons.Keys)
+        {
+            if (!currentKeys.Contains(existingKey))
+            {
+                keysToRemove.Add(existingKey);
+            }
+        }
+
+        foreach (var key in keysToRemove)
+        {
+            if (worldMapIcons.TryGetValue(key, out var iconData))
+            {
+                if (iconData.iconContainer != null && iconData.iconContainer.parent != null)
+                {
+                    iconData.iconContainer.parent.Remove(iconData.iconContainer);
+                }
+                worldMapIcons.Remove(key);
+            }
+        }
+    }
+
+    private WorldMapIconData CreateWorldMapIcon(IPlayerHUDTarget player, bool isOwner)
+    {
+        WorldMapIconData data = new WorldMapIconData();
+
+        data.iconContainer = new VisualElement();
+        data.iconContainer.AddToClassList("world-map-player-icon");
+
+        Color classColor = GetMinimapClassColor(player.CharacterClassIndex, isOwner);
+        data.iconContainer.style.borderTopColor = classColor;
+        data.iconContainer.style.borderBottomColor = classColor;
+        data.iconContainer.style.borderLeftColor = classColor;
+        data.iconContainer.style.borderRightColor = classColor;
+
+        data.avatarElement = new VisualElement();
+        data.avatarElement.AddToClassList("world-map-player-avatar");
+
+        Sprite avatarSprite = null;
+        if (PlayerHUDManager.Instance != null)
+        {
+            avatarSprite = PlayerHUDManager.Instance.GetTeammateAvatar(player.CharacterClassIndex);
+        }
+
+        if (avatarSprite == null && hudProfiles != null && hudProfiles.Count > 0)
+        {
+            int idx = player.CharacterClassIndex;
+            if (idx >= 0 && idx < hudProfiles.Count)
+            {
+                avatarSprite = hudProfiles[idx].avatarSprite;
+            }
+            else
+            {
+                avatarSprite = hudProfiles[0].avatarSprite;
+            }
+        }
+
+        if (avatarSprite != null)
+        {
+            data.avatarElement.style.backgroundImage = new StyleBackground(avatarSprite);
+        }
+        data.iconContainer.Add(data.avatarElement);
+
+        data.arrowContainer = new VisualElement();
+        data.arrowContainer.style.position = Position.Absolute;
+        data.arrowContainer.style.width = Length.Percent(100f);
+        data.arrowContainer.style.height = Length.Percent(100f);
+        data.arrowContainer.pickingMode = PickingMode.Ignore;
+
+        VisualElement arrow = new VisualElement();
+        arrow.AddToClassList("world-map-player-arrow");
+        arrow.style.backgroundColor = classColor;
+        arrow.style.rotate = new StyleRotate(new Rotate(Angle.Degrees(45f)));
+        data.arrowContainer.Add(arrow);
+
+        data.iconContainer.Add(data.arrowContainer);
+
+        return data;
+    }
+
+    private MinimapIconData CreateMinimapIcon(IPlayerHUDTarget player, bool isOwner)
+    {
+        MinimapIconData data = new MinimapIconData();
+
+        // 1. Container cho icon
+        data.iconContainer = new VisualElement();
+        data.iconContainer.AddToClassList("minimap-player-icon");
+
+        Color classColor = GetMinimapClassColor(player.CharacterClassIndex, isOwner);
+        data.iconContainer.style.borderTopColor = classColor;
+        data.iconContainer.style.borderBottomColor = classColor;
+        data.iconContainer.style.borderLeftColor = classColor;
+        data.iconContainer.style.borderRightColor = classColor;
+
+        // 2. Avatar cua nhan vat
+        data.avatarElement = new VisualElement();
+        data.avatarElement.AddToClassList("minimap-player-avatar");
+
+        Sprite avatarSprite = null;
+        if (PlayerHUDManager.Instance != null)
+        {
+            avatarSprite = PlayerHUDManager.Instance.GetTeammateAvatar(player.CharacterClassIndex);
+        }
+
+        if (avatarSprite == null && hudProfiles != null && hudProfiles.Count > 0)
+        {
+            int idx = player.CharacterClassIndex;
+            if (idx >= 0 && idx < hudProfiles.Count)
+            {
+                avatarSprite = hudProfiles[idx].avatarSprite;
+            }
+            else
+            {
+                avatarSprite = hudProfiles[0].avatarSprite;
+            }
+        }
+
+        if (avatarSprite != null)
+        {
+            data.avatarElement.style.backgroundImage = new StyleBackground(avatarSprite);
+        }
+        data.iconContainer.Add(data.avatarElement);
+
+        // 3. Arrow Container de xoay doc lap (tranh lam nguoc/xoay anh avatar nhan vat)
+        data.arrowContainer = new VisualElement();
+        data.arrowContainer.style.position = Position.Absolute;
+        data.arrowContainer.style.width = Length.Percent(100f);
+        data.arrowContainer.style.height = Length.Percent(100f);
+        data.arrowContainer.pickingMode = PickingMode.Ignore;
+
+        // 4. Mui ten huong di chuyen (la 1 diamond xoay 45 do)
+        VisualElement arrow = new VisualElement();
+        arrow.AddToClassList("minimap-player-arrow");
+        arrow.style.backgroundColor = classColor;
+        arrow.style.rotate = new StyleRotate(new Rotate(Angle.Degrees(45f)));
+        data.arrowContainer.Add(arrow);
+
+        data.iconContainer.Add(data.arrowContainer);
+
+        return data;
+    }
+
+    private Color GetMinimapClassColor(int classIdx, bool isOwner)
+    {
+        if (isOwner)
+        {
+            return new Color(0.1f, 0.8f, 1f); // Vibrant light blue cho local player
+        }
+        switch (classIdx)
+        {
+            case 0: return new Color(0.7f, 0.3f, 1f); // Leo - Assassin (Purple)
+            case 1: return new Color(1f, 0.4f, 0.4f); // Maya - Support (Red/Pink)
+            case 2: return new Color(0.3f, 0.8f, 0.3f); // Elena - Archer (Green)
+            case 3: return new Color(1f, 0.8f, 0.2f); // Arthur - Tanker (Gold/Yellow)
+            default: return Color.white;
         }
     }
 
