@@ -146,20 +146,24 @@ public class BalanceManager : NetworkBehaviour
         diskRigidbody.transform.rotation = nextRot;
 
         // Áp dụng lực hút nhẹ để nhân vật bám sát đĩa hơn khi đĩa di chuyển
-        foreach (var player in playersOnBoard)
+        // Dừng khi đĩa đã bị khóa (hoàn thành puzzle) để tránh văng player lên
+        if (!puzzleLocked)
         {
-            // Bỏ qua lực hút nếu đã rớt khỏi mặt đĩa
-            Vector3 localPos = diskRigidbody.transform.InverseTransformPoint(player.transform.position);
-            if (localPos.y < -0.5f)
-                continue;
-
-            CharacterInfo info = player.GetComponent<CharacterInfo>();
-            if (info != null && info.IsOwner)
+            foreach (var player in playersOnBoard)
             {
-                Rigidbody rb = player.GetComponent<Rigidbody>();
-                if (rb != null)
+                // Bỏ qua lực hút nếu đã rớt khỏi mặt đĩa
+                Vector3 localPos = diskRigidbody.transform.InverseTransformPoint(player.transform.position);
+                if (localPos.y < -0.5f)
+                    continue;
+
+                CharacterInfo info = player.GetComponent<CharacterInfo>();
+                if (info != null && info.IsOwner)
                 {
-                    rb.AddForce(-diskRigidbody.transform.up * 15f, ForceMode.Force);
+                    Rigidbody rb = player.GetComponent<Rigidbody>();
+                    if (rb != null)
+                    {
+                        rb.AddForce(-diskRigidbody.transform.up * 15f, ForceMode.Force);
+                    }
                 }
             }
         }
