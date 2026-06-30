@@ -649,6 +649,7 @@ public class IntroDialogueController : NetworkBehaviour
         template.style.top = 0f;
         template.style.right = 0f;
         template.style.bottom = 0f;
+        template.BringToFront(); // Đảm bảo đè lên trên cùng của HUD cha
         template.pickingMode = PickingMode.Position; // Đảm bảo template thu nhận sự kiện click chuột
 
         // Gán stylesheet nếu có

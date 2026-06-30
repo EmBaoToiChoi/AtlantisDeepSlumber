@@ -1,11 +1,12 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
-    <Style src="project://database/Assets/Hbao/NPC/IntroDialogue/IntroDialogue.uss" />
+    <Style src="project://database/Assets/Hbao/NPC/IntroDialogue/IntroDialogue.uss?fileID=7433441132597879392&amp;guid=e2760d57c83e9b14cbcf64f2b817bff8&amp;type=3#IntroDialogue" />
     <ui:VisualElement name="intro-dialogue-wrapper" class="intro-dialogue-wrapper">
-        <ui:VisualElement name="intro-dialogue-box" class="intro-dialogue-box">
+        <ui:VisualElement name="intro-dialogue-box" class="intro-dialogue-box" style="background-image: url(&quot;project://database/Assets/PLuan/TalkNPC-removebg-preview.png?fileID=2800000&amp;guid=7ec1779a97c65d74aa295f1acd391132&amp;type=3#TalkNPC-removebg-preview&quot;);">
             <ui:Button name="intro-skip-btn" text="SKIP ❯❯" class="intro-skip-btn" />
+            <ui:VisualElement name="intro-avatar" class="intro-avatar" style="background-image: url(&quot;project://database/Assets/PLuan/rakan.png?fileID=-812749470&amp;guid=ef53d89c44d449048805ac66d03d4f41&amp;type=3#rakan_0&quot;);" />
             <ui:VisualElement class="intro-text-container">
                 <ui:Label name="intro-speaker-name" text="Dẫn Truyện" class="intro-speaker-name" />
-                <ui:Label name="intro-dialogue-text" text="Đang tải lời thoại..." class="intro-dialogue-text" />
+                <ui:Label name="intro-dialogue-text" text="Phía xa xa kia là lâu đài cổ kính nơi đức vua đang ngự trị, một nơi đầy rẫy hiểm nguy nhưng cũng chứa đựng nhiều báu vật vô giá mà các nhà thám hiểm luôn khao khát tìm kiếm..." class="intro-dialogue-text" />
                 <ui:Button name="intro-next-btn" text="TIẾP TỤC ▶" class="intro-next-btn" />
             </ui:VisualElement>
         </ui:VisualElement>

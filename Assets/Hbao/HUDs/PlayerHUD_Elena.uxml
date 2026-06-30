@@ -39,7 +39,7 @@
             <ui:VisualElement class="minimap-grid-x" />
             <ui:VisualElement class="minimap-grid-y" />
         </ui:VisualElement>
-        <ui:VisualElement class="minimap-border" />
+        <ui:VisualElement class="minimap-border" style="background-image: url(&quot;project://database/Assets/PLuan/minimap-removebg-preview.png?fileID=2800000&amp;guid=1b30b4463c55935428e4748bf0198ca7&amp;type=3#minimap-removebg-preview&quot;);" />
         <ui:VisualElement class="minimap-inner-ring" />
         <ui:VisualElement class="minimap-deco-dot" style="top: -2px; left: 95px;" />
         <ui:VisualElement class="minimap-deco-dot" style="bottom: -2px; left: 95px;" />
@@ -115,21 +115,15 @@
     <ui:Label name="weapon-warning" text="Kỹ Năng Đang Bị Khóa" parse-escape-sequences="false" class="weapon-warning-label" style="-unity-font-definition: url(&quot;project://database/Assets/UI%20Toolkit/UnityThemes/UnityDefaultRuntimeTheme.tss?fileID=2230732570650464555&amp;guid=8dcf67e479d58bd47908bf0d5e1cc1d0&amp;type=3#NotInter-Regular&quot;);" />
     <ui:VisualElement name="world-map-overlay" class="world-map-overlay">
         <ui:VisualElement class="world-map-frame" />
+        <ui:VisualElement class="world-map-border-overlay" style="background-image: url(&quot;project://database/Assets/PLuan/KhungMap.png?fileID=2800000&amp;guid=42b451aa3dfbef046a1d44882ffa83da&amp;type=3#KhungMap&quot;);" />
     </ui:VisualElement>
-
-    <!-- UI Inventory (Hành Trang) Overlay -->
     <ui:VisualElement name="inventory-overlay" class="inventory-overlay">
         <ui:VisualElement class="inventory-frame">
-            <!-- Header -->
             <ui:VisualElement class="inventory-header">
                 <ui:Label name="inventory-subtitle" text="Ấn phím [TAB] để đóng" class="inventory-subtitle" />
             </ui:VisualElement>
-            
             <ui:VisualElement class="inventory-divider" />
-            
-            <!-- Main Content Grid -->
             <ui:VisualElement class="inventory-content">
-                <!-- Left panel: 10 Grid slots + Stats Upgrades -->
                 <ui:VisualElement class="inventory-left-panel">
                     <ui:VisualElement class="inventory-slots-container">
                         <ui:VisualElement class="inventory-slot" />
@@ -143,8 +137,6 @@
                         <ui:VisualElement class="inventory-slot" />
                         <ui:VisualElement class="inventory-slot" />
                     </ui:VisualElement>
-                    
-                    <!-- Stats Upgrades Section -->
                     <ui:VisualElement class="upgrades-container">
                         <ui:VisualElement class="upgrades-header">
                             <ui:VisualElement class="upgrades-header-left">
@@ -153,30 +145,22 @@
                             </ui:VisualElement>
                             <ui:Label name="upgrade-points-text" text="Điểm cộng: 5" class="upgrades-points" />
                         </ui:VisualElement>
-                        
                         <ui:VisualElement class="upgrade-row-container">
-                            <!-- HP Upgrade -->
                             <ui:VisualElement class="upgrade-row">
                                 <ui:Label name="upgrade-name-hp" text="MÁU" class="upgrade-name" />
                                 <ui:Label name="hp-level-text" text="Lv. 0" class="upgrade-value" />
                                 <ui:Button name="btn-upgrade-hp" text="+" class="upgrade-button" />
                             </ui:VisualElement>
-
-                            <!-- MP Upgrade -->
                             <ui:VisualElement class="upgrade-row">
                                 <ui:Label name="upgrade-name-mp" text="STAMINA" class="upgrade-name" />
                                 <ui:Label name="mp-level-text" text="Lv. 0" class="upgrade-value" />
                                 <ui:Button name="btn-upgrade-mp" text="+" class="upgrade-button" />
                             </ui:VisualElement>
-
-                            <!-- Cooldown Upgrade -->
                             <ui:VisualElement class="upgrade-row">
                                 <ui:Label name="upgrade-name-cooldown" text="HỒI CHIÊU" class="upgrade-name" />
                                 <ui:Label name="cooldown-level-text" text="Lv. 0" class="upgrade-value" />
                                 <ui:Button name="btn-upgrade-cooldown" text="+" class="upgrade-button" />
                             </ui:VisualElement>
-
-                            <!-- Damage Upgrade -->
                             <ui:VisualElement class="upgrade-row">
                                 <ui:Label name="upgrade-name-damage" text="SÁT THƯƠNG" class="upgrade-name" />
                                 <ui:Label name="damage-level-text" text="Lv. 0" class="upgrade-value" />
@@ -185,14 +169,11 @@
                         </ui:VisualElement>
                     </ui:VisualElement>
                 </ui:VisualElement>
-                
-                <!-- Right panel: Character Preview -->
                 <ui:VisualElement class="inventory-preview-container">
                     <ui:VisualElement class="inventory-preview-card">
-                        <ui:Label name="inventory-preview-title" text="" class="inventory-preview-title" />
+                        <ui:Label name="inventory-preview-title" class="inventory-preview-title" />
                         <ui:VisualElement class="character-preview-viewport">
                             <ui:VisualElement class="character-preview-stand" />
-                            <!-- Container cho Model 3D Player xoay chuyển -->
                             <ui:VisualElement name="character-preview-model-container" class="character-preview-model-container" />
                         </ui:VisualElement>
                         <ui:VisualElement class="preview-stats-row">
@@ -203,21 +184,14 @@
             </ui:VisualElement>
         </ui:VisualElement>
     </ui:VisualElement>
-    
-    <!-- Giao diện Nhắc Nhở Tương Tác Nhặt Đồ (Ấn F) -->
     <ui:VisualElement name="interaction-prompt" class="interaction-prompt">
         <ui:VisualElement class="key-badge-f">
             <ui:Label text="F" class="key-badge-f-text" />
         </ui:VisualElement>
         <ui:Label name="interaction-prompt-text" text="Ấn [F] để nhặt" class="interaction-text" />
     </ui:VisualElement>
-    
-    <!-- Danh sách người chơi đồng đội (Teammate HUDs) ở góc trên bên trái -->
     <ui:VisualElement name="teammates-container" class="teammates-container" />
-
-    <!-- Bảng Hướng Dẫn Phím Nóng (Hotkeys Help Panel) bên trái -->
     <ui:VisualElement name="hotkeys-hint-panel" class="hotkeys-hint-panel">
-        <!-- Nhóm 1: Lúc Đứng Im (Idle Hints) -->
         <ui:VisualElement name="idle-hints-group" class="hints-group">
             <ui:VisualElement class="hint-row">
                 <ui:VisualElement class="key-badge">
@@ -232,8 +206,6 @@
                 <ui:Label text="Chạy nhanh" class="hint-text" />
             </ui:VisualElement>
         </ui:VisualElement>
-        
-        <!-- Nhóm 2: Lúc Di Chuyển (Action Hints) -->
         <ui:VisualElement name="action-hints-group" class="hints-group" style="display: none;">
             <ui:VisualElement class="hint-row">
                 <ui:VisualElement class="key-badge">
@@ -279,8 +251,6 @@
             </ui:VisualElement>
         </ui:VisualElement>
     </ui:VisualElement>
-    
-    <!-- Quest Panel -->
     <ui:VisualElement name="quest-panel" class="quest-panel">
         <ui:VisualElement class="quest-header">
             <ui:VisualElement class="quest-icon" />
