@@ -15,6 +15,7 @@ public class BalanceMeterUI : NetworkBehaviour
 
     void Update()
     {
+        /*
         float angle = balanceManager.CurrentAngle;
 
         angleText.text =
@@ -44,5 +45,6 @@ public class BalanceMeterUI : NetworkBehaviour
         {
             fillImage.color = Color.red;
         }
+        */
     }
 }
