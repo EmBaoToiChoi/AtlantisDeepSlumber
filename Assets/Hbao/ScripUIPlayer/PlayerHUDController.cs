@@ -2636,6 +2636,13 @@ public class PlayerHUDController : MonoBehaviour
         // Gan RenderTexture lam background cho minimap-content
         minimapContent.style.backgroundImage = Background.FromRenderTexture(minimapRenderTexture);
 
+        // Tinh toan kich thuoc thuc te cua minimap de scale toa do dong
+        float mapWidth = float.IsNaN(minimapContent.layout.width) || minimapContent.layout.width <= 0 ? 192f : minimapContent.layout.width;
+        float mapHeight = float.IsNaN(minimapContent.layout.height) || minimapContent.layout.height <= 0 ? 192f : minimapContent.layout.height;
+        float centerX = mapWidth / 2f;
+        float centerY = mapHeight / 2f;
+        float radius = Mathf.Min(mapWidth, mapHeight) / 2f;
+
         // Cap nhat cac icon player di chuyen
         var activePlayers = PlayerHUDManager.ActivePlayers;
         System.Collections.Generic.HashSet<ulong> currentKeys = new System.Collections.Generic.HashSet<ulong>();
@@ -2660,14 +2667,14 @@ public class PlayerHUDController : MonoBehaviour
             Vector3 diff = player.transform.position - localPos;
             float dx = diff.x;
             float dz = diff.z;
-            float scale = 96f / minimapZoom; // ban kinh minimap la 96px
+            float scale = radius / minimapZoom;
 
             float rx = dx * scale;
             float ry = dz * scale;
             float dist = Mathf.Sqrt(rx * rx + ry * ry);
 
-            // Gioi han ban kinh clamp de icon khong bi khuat khoi vong tron (ban kinh max = 84px)
-            float maxRadius = 84f;
+            // Gioi han ban kinh clamp de icon khong bi khuat khoi vong tron
+            float maxRadius = radius - 12f; // Offset 12px cho icon size 24x24 px
             if (dist > maxRadius)
             {
                 float clampScale = maxRadius / dist;
@@ -2676,8 +2683,8 @@ public class PlayerHUDController : MonoBehaviour
             }
 
             // UI coordinates: truc Y huong xuong duoi, trong khi Z huong len tren
-            float x_ui = 96f + rx;
-            float y_ui = 96f - ry;
+            float x_ui = centerX + rx;
+            float y_ui = centerY - ry;
 
             // Offset de can giua icon (size 24x24 px, offset = 12px)
             iconData.iconContainer.style.left = x_ui - 12f;

@@ -181,16 +181,15 @@
 
 .minimap-border {
     position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    border-radius: 100px;
-    border-width: 4px;
-    border-color: rgb(192, 192, 192);
+    top: -30px; /* Di chuyển lên trên và sang trái để căn giữa nếu tăng size */
+    left: -35px;
+    width: 270px; /* Tăng kích thước khung ảnh tại đây */
+    height: 270px;
+    border-width: 0;
 }
 
 .minimap-inner-ring {
+    display: none;
     position: absolute;
     top: 8px;
     left: 8px;
@@ -202,6 +201,7 @@
 }
 
 .minimap-deco-dot {
+    display: none;
     position: absolute;
     width: 10px;
     height: 10px;
@@ -210,6 +210,7 @@
 }
 
 .minimap-compass-n {
+    display: none;
     position: absolute;
     top: -36px;
     color: rgb(255, 255, 255);
@@ -565,14 +566,12 @@
 /* --- Minimap Hotkey (M) --- */
 .minimap-hotkey-container {
     position: absolute;
-    bottom: 0;
-    right: 0;
+    bottom: 15px;
+    right: 15px;
     width: 32px;
     height: 32px;
-    background-color: rgba(10, 15, 25, 0.8);
-    border-radius: 8px;
-    border-width: 2px;
-    border-color: rgba(255, 255, 255, 0.95);
+    background-color: transparent;
+    border-width: 0;
     justify-content: center;
     align-items: center;
     z-index: 20;
@@ -611,11 +610,10 @@
 
 .world-map-frame {
     width: 90%;
-    height: 90%;
-    background-color: rgba(5, 10, 15, 0.98);
-    border-radius: 20px;
-    border-width: 3.5px;
-    border-color: rgba(255, 255, 255, 0.95);
+    height: 70%;
+    background-color: transparent;
+    border-radius: 8px;
+    border-width: 0;
     padding: 0;
     align-items: center;
     justify-content: center;
@@ -1685,4 +1683,13 @@
     width: 8px;
     height: 8px;
     background-color: rgb(255, 255, 255);
+}
+
+.world-map-border-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: none;
 }
