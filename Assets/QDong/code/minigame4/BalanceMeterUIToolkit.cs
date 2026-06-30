@@ -35,6 +35,7 @@ public class BalanceMeterUIToolkit : NetworkBehaviour
 
     void Update()
     {
+        /*
         // Tránh chạy tiếp nếu thiếu thành phần hoặc UI chưa sẵn sàng
         if (balanceManager == null || fillElement == null || angleLabel == null)
             return;
@@ -63,5 +64,6 @@ public class BalanceMeterUIToolkit : NetworkBehaviour
         {
             fillElement.style.backgroundColor = new StyleColor(Color.red);
         }
+        */
     }
 }

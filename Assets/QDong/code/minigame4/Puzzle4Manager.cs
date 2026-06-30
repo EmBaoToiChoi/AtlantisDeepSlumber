@@ -40,6 +40,12 @@ public class Puzzle4Manager : NetworkBehaviour
     [Header("Camera Toàn Cảnh")]
     public GameObject sharedCamera;
 
+    [Header("Camera Tracking")]
+    public float cameraFollowAmount = 0.2f;
+    public float cameraFollowSpeed = 3f;
+    private Vector3 initialCameraPos;
+    private Transform localPlayerTransform;
+
     [ClientRpc]
     public void ToggleSharedCameraClientRpc(bool isActive)
     {
@@ -51,6 +57,10 @@ public class Puzzle4Manager : NetworkBehaviour
 
     void Start()
     {
+        if (sharedCamera != null)
+        {
+            initialCameraPos = sharedCamera.transform.position;
+        }
         if(beamA != null) beamA.SetActive(false);
         if(beamB != null) beamB.SetActive(false);
         if(beamC != null) beamC.SetActive(false);
@@ -184,9 +194,35 @@ public class Puzzle4Manager : NetworkBehaviour
         }
     }
 
+    void LateUpdate()
+    {
+        if (sharedCamera != null && sharedCamera.activeSelf)
+        {
+            if (localPlayerTransform == null)
+            {
+                CharacterInfo[] players = FindObjectsByType<CharacterInfo>(FindObjectsSortMode.None);
+                foreach (var player in players)
+                {
+                    if (player.IsOwner)
+                    {
+                        localPlayerTransform = player.transform;
+                        break;
+                    }
+                }
+            }
+
+            if (localPlayerTransform != null && balanceManager != null)
+            {
+                Vector3 playerOffset = localPlayerTransform.position - balanceManager.transform.position;
+                Vector3 targetCamPos = initialCameraPos + new Vector3(playerOffset.x * cameraFollowAmount, playerOffset.y * cameraFollowAmount, playerOffset.z * cameraFollowAmount);
+                sharedCamera.transform.position = Vector3.Lerp(sharedCamera.transform.position, targetCamPos, Time.deltaTime * cameraFollowSpeed);
+            }
+        }
+    }
+
     IEnumerator DelayedStartMinigameUI()
     {
-        yield return new WaitForSeconds(2.5f);
+        yield return null; // Hiển thị liền luôn
         isMinigameStarted.Value = true;
     }
 
