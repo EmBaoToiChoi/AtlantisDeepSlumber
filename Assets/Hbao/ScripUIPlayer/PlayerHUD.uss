@@ -160,6 +160,7 @@
 }
 
 .minimap-grid-x {
+    display: none;
     position: absolute;
     top: 95px;
     left: 0;
@@ -169,6 +170,7 @@
 }
 
 .minimap-grid-y {
+    display: none;
     position: absolute;
     top: 0;
     left: 95px;
@@ -1432,7 +1434,255 @@
     transition-timing-function: ease-out;
 }
 
+/* --- Minimap Player Icons & Indicators --- */
+.minimap-player-icon {
+    position: absolute;
+    width: 24px;
+    height: 24px;
+    border-radius: 12px;
+    border-width: 2px;
+    border-color: rgb(255, 255, 255);
+    background-color: rgb(11, 15, 25);
+    justify-content: center;
+    align-items: center;
+}
 
+.minimap-player-avatar {
+    width: 18px;
+    height: 100%;
+    width: 100%;
+}
 
+/* ========================================================================= */
+/* --- Hotkeys Hint System (Bảng hướng dẫn phím nóng bên trái) --- */
+/* ========================================================================= */
 
+.hotkeys-hint-panel {
+    position: absolute;
+    top: 25%;
+    left: 30px;
+    flex-direction: column;
+    align-items: flex-start;
+    z-index: 1000;
+    pointer-events: none;
+}
 
+.hints-group {
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-start;
+}
+
+.hint-row {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 12px;
+    opacity: 0.9;
+    transition-property: opacity, translate;
+    transition-duration: 0.25s;
+    transition-timing-function: ease-out;
+}
+
+.key-badge {
+    min-width: 26px;
+    height: 26px;
+    padding: 0 8px;
+    background-color: rgb(255, 255, 255);
+    border-radius: 6px;
+    border-width: 1px;
+    border-color: rgb(200, 200, 200);
+    justify-content: center;
+    align-items: center;
+    margin-right: 12px;
+    box-shadow: 0 3px 0 rgb(180, 180, 180);
+}
+
+.large-key {
+    min-width: 48px;
+}
+
+.key-badge-text {
+    color: rgb(15, 15, 15);
+    -unity-font-style: bold;
+    font-size: 14px;
+    padding: 0;
+    margin: 0;
+    -unity-text-align: middle-center;
+}
+
+.hint-text {
+    color: rgb(255, 255, 255);
+    -unity-font-style: bold;
+    font-size: 15px;
+    letter-spacing: 0.5px;
+    padding: 0;
+    margin: 0;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85);
+}
+
+/* ========================================================================= */
+/* --- Quest Panel Redesign (Premium Amber/Gold Glassmorphism Theme) ---     */
+/* ========================================================================= */
+.quest-panel {
+    position: absolute;
+    top: 40px;
+    left: 35px;
+    width: 220px;
+    background-color: rgba(6, 12, 24, 0.85);
+    border-width: 1.5px;
+    border-color: rgba(255, 255, 255, 0.9);
+    border-radius: 12px;
+    padding: 14px 16px;
+    flex-direction: column;
+    
+    /* Animation states */
+    opacity: 0;
+    scale: 0.8 0.8;
+    translate: -50px 0;
+    display: none;
+    
+    transition-property: opacity, scale, translate, display;
+    transition-duration: 0.4s;
+    transition-timing-function: ease-out-back;
+}
+
+.quest-panel.show-quest {
+    display: flex;
+    opacity: 1;
+    scale: 1 1;
+    translate: 0 0;
+}
+
+.quest-header {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 6px;
+}
+
+.quest-icon {
+    width: 36px;
+    height: 36px;
+    margin-right: 8px;
+    background-image: url("project://database/Assets/Hbao/Image/Go.png");
+    -unity-background-scale-mode: scale-to-fit;
+}
+
+.quest-title {
+    color: rgb(255, 50, 50);
+    font-size: 13px;
+    -unity-font-style: bold;
+    letter-spacing: 1.5px;
+    text-shadow: 0 0 8px rgba(255, 50, 50, 0.4);
+    padding: 0;
+    margin: 0;
+}
+
+.quest-divider {
+    height: 1px;
+    background-color: rgba(255, 255, 255, 0.35);
+    margin: 6px 0 10px 0;
+}
+
+.quest-details {
+    flex-direction: column;
+}
+
+.quest-desc {
+    color: rgb(224, 224, 224);
+    font-size: 12px;
+    -unity-font-style: bold;
+    white-space: normal;
+    margin-bottom: 8px;
+    padding: 0;
+}
+
+.quest-progress-row {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 4px;
+}
+
+.quest-progress-text {
+    color: rgb(255, 255, 255);
+    font-size: 11px;
+    -unity-font-style: bold;
+    padding: 0;
+    margin: 0;
+}
+
+.quest-progress-bg {
+    width: 110px;
+    height: 6px;
+    background-color: rgba(0, 0, 0, 0.55);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.quest-progress-fill {
+    height: 100%;
+    background-color: rgb(255, 180, 20);
+    border-radius: 3px;
+    width: 0%;
+    transition-property: width;
+    transition-duration: 0.3s;
+    transition-timing-function: ease-out;
+}
+
+/* --- Minimap Player Icons & Indicators --- */
+.minimap-player-icon {
+    position: absolute;
+    width: 24px;
+    height: 24px;
+    border-radius: 12px;
+    border-width: 2px;
+    border-color: rgb(255, 255, 255);
+    background-color: rgb(11, 15, 25);
+    justify-content: center;
+    align-items: center;
+}
+
+.minimap-player-avatar {
+    width: 18px;
+    height: 18px;
+    border-radius: 9px;
+    background-size: cover;
+}
+
+.minimap-player-arrow {
+    position: absolute;
+    top: -4px;
+    left: 9px;
+    width: 6px;
+    height: 6px;
+    background-color: rgb(255, 255, 255);
+}
+
+/* --- World Map Player Icons & Indicators --- */
+.world-map-player-icon {
+    position: absolute;
+    width: 32px;
+    height: 32px;
+    border-radius: 16px;
+    border-width: 2.5px;
+    border-color: rgb(255, 255, 255);
+    background-color: rgb(11, 15, 25);
+    justify-content: center;
+    align-items: center;
+}
+
+.world-map-player-avatar {
+    width: 24px;
+    height: 24px;
+    border-radius: 12px;
+    background-size: cover;
+}
+
+.world-map-player-arrow {
+    position: absolute;
+    top: -5px;
+    left: 12px;
+    width: 8px;
+    height: 8px;
+    background-color: rgb(255, 255, 255);
+}
