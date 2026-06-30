@@ -8,7 +8,6 @@ public class Puzzle4Manager : NetworkBehaviour
     public EnergyColumn A;
     public EnergyColumn B;
     public EnergyColumn C;
-    public EnergyColumn D;
 
     public BalanceManager balanceManager;
 
@@ -30,7 +29,6 @@ public class Puzzle4Manager : NetworkBehaviour
     public GameObject beamA;
     public GameObject beamB;
     public GameObject beamC;
-    public GameObject beamD;
 
     public GameObject centerExplosion;
 
@@ -53,6 +51,30 @@ public class Puzzle4Manager : NetworkBehaviour
         {
             sharedCamera.SetActive(isActive);
         }
+
+        // Khi tắt camera minigame, đảm bảo Camera.main của player được bật lại
+        if (!isActive)
+        {
+            Camera mainCam = Camera.main;
+            if (mainCam != null && !mainCam.gameObject.activeSelf)
+            {
+                mainCam.gameObject.SetActive(true);
+                Debug.Log("[Puzzle4] Đã bật lại Camera.main: " + mainCam.gameObject.name);
+            }
+            else if (mainCam != null)
+            {
+                Debug.Log("[Puzzle4] Camera.main đang active: " + mainCam.gameObject.name + " | Depth: " + mainCam.depth);
+            }
+            else
+            {
+                Debug.LogWarning("[Puzzle4] Không tìm thấy Camera.main!");
+            }
+
+            if (sharedCamera != null)
+            {
+                Debug.Log("[Puzzle4] sharedCamera đã tắt: " + sharedCamera.name);
+            }
+        }
     }
 
     void Start()
@@ -64,7 +86,6 @@ public class Puzzle4Manager : NetworkBehaviour
         if(beamA != null) beamA.SetActive(false);
         if(beamB != null) beamB.SetActive(false);
         if(beamC != null) beamC.SetActive(false);
-        if(beamD != null) beamD.SetActive(false);
 
         if(centerExplosion != null)
             centerExplosion.SetActive(false);
@@ -86,14 +107,16 @@ public class Puzzle4Manager : NetworkBehaviour
                 UpdateUIState(newVal);
             };
 
-            if (puzzleCompleted.Value && completeUI != null)
+            if (puzzleCompleted.Value)
             {
-                completeUI.SetActive(true);
+                if (completeUI != null) completeUI.SetActive(true);
+                if (sharedCamera != null) sharedCamera.SetActive(false);
             }
             puzzleCompleted.OnValueChanged += (oldVal, newVal) => {
-                if (newVal && completeUI != null)
+                if (newVal)
                 {
-                    completeUI.SetActive(true);
+                    if (completeUI != null) completeUI.SetActive(true);
+                    if (sharedCamera != null) sharedCamera.SetActive(false);
                 }
             };
         }
@@ -150,6 +173,9 @@ public class Puzzle4Manager : NetworkBehaviour
 
     void FixedUpdate()
     {
+        // Khi hoàn thành puzzle, dừng mọi lực tác động lên player
+        if (hasCompleted) return;
+
         if (trapFloor != null && !trapFloor.activated)
         {
             return;
@@ -234,11 +260,14 @@ public class Puzzle4Manager : NetworkBehaviour
             !hasCompleted &&
             A.IsCompleted() &&
             B.IsCompleted() &&
-            C.IsCompleted() &&
-            D.IsCompleted()
+            C.IsCompleted()
         )
         {
             hasCompleted = true;
+
+            // Tắt camera và UI minigame ngay lập tức 
+            ToggleSharedCameraClientRpc(false);
+            isMinigameStarted.Value = false;
 
             puzzleCompleted.Value = true;
 
@@ -269,7 +298,6 @@ public class Puzzle4Manager : NetworkBehaviour
         if(beamA != null) beamA.SetActive(true);
         if(beamB != null) beamB.SetActive(true);
         if(beamC != null) beamC.SetActive(true);
-        if(beamD != null) beamD.SetActive(true);
 
         yield return new WaitForSeconds(2f);
 
@@ -315,7 +343,6 @@ public class Puzzle4Manager : NetworkBehaviour
         if(beamA != null) beamA.SetActive(false);
         if(beamB != null) beamB.SetActive(false);
         if(beamC != null) beamC.SetActive(false);
-        if(beamD != null) beamD.SetActive(false);
 
         if(centerExplosion != null)
             centerExplosion.SetActive(false);
