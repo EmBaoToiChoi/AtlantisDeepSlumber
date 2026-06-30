@@ -732,6 +732,15 @@ public class IntroDialogueController : NetworkBehaviour
             return;
         }
 
+        // Đảm bảo đưa toàn bộ template của đối thoại lên trên cùng của HUD khi đổi câu thoại mới
+        foreach (var instance in instantiatedDialogues)
+        {
+            if (instance.wrapperElement != null && instance.wrapperElement.parent != null)
+            {
+                instance.wrapperElement.parent.BringToFront();
+            }
+        }
+
         DialogueLine line = activeLines[index];
         SetSpeakerName(line.speakerName);
         SetDialogueText("");
@@ -1305,8 +1314,19 @@ public class IntroDialogueController : NetworkBehaviour
         {
             if (instance.wrapperElement != null)
             {
-                if (add) instance.wrapperElement.AddToClassList(className);
-                else instance.wrapperElement.RemoveFromClassList(className);
+                if (add) 
+                {
+                    instance.wrapperElement.AddToClassList(className);
+                    // Đảm bảo đưa toàn bộ template của đối thoại lên trên cùng khi hiển thị
+                    if (instance.wrapperElement.parent != null)
+                    {
+                        instance.wrapperElement.parent.BringToFront();
+                    }
+                }
+                else 
+                {
+                    instance.wrapperElement.RemoveFromClassList(className);
+                }
             }
         }
     }
