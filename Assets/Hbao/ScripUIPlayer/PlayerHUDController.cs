@@ -255,6 +255,17 @@ public class PlayerHUDController : MonoBehaviour
     private int lastSelectedProfileIndex = -1;
     private VisualElement crosshairElement;
 
+    // Fog of War variables
+    private Texture2D fogOfWarTexture;
+    private Color32[] fogOfWarColors;
+    private Material fogOfWarMaterial;
+    private GameObject fogOfWarPlane;
+    private float fowWorldSize = 2500f; // 2.5km x 2.5km
+    private int fowTextureSize = 256;
+    private float fowRevealRadius = 35f; // Bán kính sáng xung quanh player
+    private Vector2 fowWorldCenter = Vector2.zero; // Tâm map thế giới
+    private bool isFowInitialized = false;
+
     [Header("Item Sprites Settings")]
     public Sprite repairHammerSprite;
     public Sprite ngoc1Sprite;
@@ -280,6 +291,24 @@ public class PlayerHUDController : MonoBehaviour
         // tất cả các tham chiếu element cũ sẽ là dead reference -> phải re-query lại.
         isUIInitialized = false;
         _lastMicUIState = -1;
+
+        // Dọn dẹp tài nguyên Fog of War
+        if (fogOfWarPlane != null)
+        {
+            Destroy(fogOfWarPlane);
+            fogOfWarPlane = null;
+        }
+        if (fogOfWarTexture != null)
+        {
+            Destroy(fogOfWarTexture);
+            fogOfWarTexture = null;
+        }
+        if (fogOfWarMaterial != null)
+        {
+            Destroy(fogOfWarMaterial);
+            fogOfWarMaterial = null;
+        }
+        isFowInitialized = false;
 
         // Hủy đăng ký event để tránh memory leak
         if (LocalPlayerTarget != null)
@@ -872,6 +901,7 @@ public class PlayerHUDController : MonoBehaviour
         UpdateTeammatesHUD();
         UpdateMinimap();
         UpdateWorldMap();
+        UpdateFogOfWar();
 
         if (isCoopBuildingUIOpen && activeBridgeTrigger != null)
         {
@@ -3738,6 +3768,137 @@ public class PlayerHUDController : MonoBehaviour
                     }
                 }
             }
+        }
+    }
+
+    private void InitializeFogOfWar()
+    {
+        if (isFowInitialized) return;
+
+        // 1. Tạo texture sương mù màu đen hoàn toàn
+        fogOfWarTexture = new Texture2D(fowTextureSize, fowTextureSize, TextureFormat.RGBA32, false);
+        fogOfWarTexture.wrapMode = TextureWrapMode.Clamp;
+        fogOfWarTexture.filterMode = FilterMode.Bilinear;
+        
+        fogOfWarColors = new Color32[fowTextureSize * fowTextureSize];
+        Color32 blackTransparent = new Color32(10, 15, 25, 255); // Màu đen mờ tối của sương mù
+        for (int i = 0; i < fogOfWarColors.Length; i++)
+        {
+            fogOfWarColors[i] = blackTransparent;
+        }
+        fogOfWarTexture.SetPixels32(fogOfWarColors);
+        fogOfWarTexture.Apply();
+
+        // 2. Tạo GameObject mặt phẳng sương mù
+        fogOfWarPlane = GameObject.CreatePrimitive(PrimitiveType.Quad);
+        fogOfWarPlane.name = "FogOfWar_Plane_Generated";
+        
+        // Hủy Collider của Plane để tránh va chạm vật lý
+        var collider = fogOfWarPlane.GetComponent<Collider>();
+        if (collider != null) Destroy(collider);
+
+        // Xoay quad để nằm ngang song song mặt đất
+        fogOfWarPlane.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
+        fogOfWarPlane.transform.localScale = new Vector3(fowWorldSize, fowWorldSize, 1f);
+
+        // Gán layer FOW (dùng Layer 24)
+        fogOfWarPlane.layer = 24;
+
+        // 3. Tạo vật liệu trong suốt không bị ảnh hưởng bởi ánh sáng
+        Shader unlitTransparentShader = Shader.Find("Unlit/Transparent");
+        if (unlitTransparentShader == null)
+        {
+            unlitTransparentShader = Shader.Find("Legacy Shaders/Transparent/Diffuse");
+        }
+        
+        fogOfWarMaterial = new Material(unlitTransparentShader);
+        fogOfWarMaterial.mainTexture = fogOfWarTexture;
+        fogOfWarPlane.GetComponent<MeshRenderer>().material = fogOfWarMaterial;
+
+        isFowInitialized = true;
+        Debug.Log("[FogOfWar] Khởi tạo Fog of War thành công.");
+    }
+
+    private void UpdateFogOfWar()
+    {
+        if (LocalPlayerTarget == null || LocalPlayerTarget.transform == null) return;
+
+        // Đảm bảo đã khởi tạo
+        if (!isFowInitialized)
+        {
+            InitializeFogOfWar();
+        }
+
+        Vector3 localPos = LocalPlayerTarget.transform.position;
+
+        // 1. Cập nhật vị trí độ cao của Plane FOW (nằm trên đầu người chơi, dưới camera map)
+        if (fogOfWarPlane != null)
+        {
+            // Center ở (0,0) trong X, Z; Y dịch chuyển theo người chơi để tránh bị clip khi leo đồi núi
+            fogOfWarPlane.transform.position = new Vector3(0f, localPos.y + 35f, 0f);
+        }
+
+        // 2. Chuyển đổi tọa độ thế giới của player sang UV của Texture
+        float minX = fowWorldCenter.x - fowWorldSize / 2f;
+        float minZ = fowWorldCenter.y - fowWorldSize / 2f;
+
+        float u = (localPos.x - minX) / fowWorldSize;
+        float v = (localPos.z - minZ) / fowWorldSize;
+
+        int px = Mathf.Clamp((int)(u * fowTextureSize), 0, fowTextureSize - 1);
+        int py = Mathf.Clamp((int)(v * fowTextureSize), 0, fowTextureSize - 1);
+
+        // 3. Xóa sương mù dạng hình tròn xung quanh vị trí của player
+        float pixelRadius = (fowRevealRadius / fowWorldSize) * fowTextureSize;
+        int r = Mathf.CeilToInt(pixelRadius);
+
+        int startX = Mathf.Max(0, px - r);
+        int endX = Mathf.Min(fowTextureSize - 1, px + r);
+        int startY = Mathf.Max(0, py - r);
+        int endY = Mathf.Min(fowTextureSize - 1, py + r);
+
+        bool textureChanged = false;
+        for (int y = startY; y <= endY; y++)
+        {
+            for (int x = startX; x <= endX; x++)
+            {
+                float distSq = (x - px) * (x - px) + (y - py) * (y - py);
+                if (distSq <= pixelRadius * pixelRadius)
+                {
+                    Color32 currentPixel = fogOfWarColors[y * fowTextureSize + x];
+                    if (currentPixel.a > 0)
+                    {
+                        // Giảm độ mờ về 0 (sáng lên)
+                        fogOfWarColors[y * fowTextureSize + x] = new Color32(0, 0, 0, 0);
+                        textureChanged = true;
+                    }
+                }
+            }
+        }
+
+        if (textureChanged)
+        {
+            fogOfWarTexture.SetPixels32(fogOfWarColors);
+            fogOfWarTexture.Apply();
+        }
+
+        // 4. Đảm bảo loại bỏ Layer 24 ra khỏi tất cả các camera ngoại trừ camera Map
+        foreach (var cam in Camera.allCameras)
+        {
+            if (cam != minimapCamera && cam != worldMapCamera && cam.name != "MiniMapCamera" && cam.name != "WorldMapCamera_Generated")
+            {
+                cam.cullingMask &= ~(1 << 24); // Tắt FOW khỏi cam chính
+            }
+        }
+
+        // Đảm bảo camera map hiển thị Layer 24
+        if (minimapCamera != null)
+        {
+            minimapCamera.cullingMask |= (1 << 24);
+        }
+        if (worldMapCamera != null)
+        {
+            worldMapCamera.cullingMask |= (1 << 24);
         }
     }
 }
