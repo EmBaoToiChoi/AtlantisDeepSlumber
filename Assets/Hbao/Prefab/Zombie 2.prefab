@@ -214,7 +214,7 @@ MonoBehaviour:
     m_Bits: 8
   obstacleLayer:
     serializedVersion: 2
-    m_Bits: 0
+    m_Bits: 1
   speedParam: Speed
   hitTrigger: Hit
   dieTrigger: Die
