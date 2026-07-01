@@ -14,13 +14,6 @@ public class ChoppableTree : NetworkBehaviour
     [Tooltip("Prefab thanh gỗ thu thập (gắn CollectibleItemDrop)")]
     public GameObject woodLogPrefab;
 
-    [Header("Visual Effects")]
-    [Tooltip("Prefab hiệu ứng bụi khi chặt cây")]
-    public GameObject chopDustPrefab;
-
-    [Tooltip("Prefab hiệu ứng bụi khi cây đổ gục")]
-    public GameObject fallDustPrefab;
-
     // Trạng thái mạng đồng bộ
     public NetworkVariable<bool> isCutDown = new NetworkVariable<bool>(
         false,
@@ -64,7 +57,6 @@ public class ChoppableTree : NetworkBehaviour
         }
         originalLocalPos = visualModel.transform.localPosition;
         ResolveWoodLogPrefab();
-        ResolveDustPrefabs();
     }
 
     private void ResolveWoodLogPrefab()
@@ -313,15 +305,14 @@ public class ChoppableTree : NetworkBehaviour
             StartCoroutine(ShakeCoroutine());
         }
         SpawnWoodSplinters();
-        CreateCutMark(hitPos);
 
-        // Tạo hiệu ứng khói bụi nhỏ khi chặt cây
-        if (chopDustPrefab != null)
-        {
-            GameObject dust = Instantiate(chopDustPrefab, hitPos, Quaternion.identity);
-            dust.transform.localScale = Vector3.one * 0.5f; // Thu nhỏ lại một chút cho phù hợp vết chém
-            Destroy(dust, 2.5f);
-        }
+        // Nâng vị trí hiển thị lên 0.45m để khớp với lưỡi rìu thực tế thay vì tay cầm (pivot)
+        Vector3 adjustedHitPos = hitPos + Vector3.up * 0.45f;
+
+        CreateCutMark(adjustedHitPos);
+
+        // Tạo hiệu ứng khói bụi nhỏ giống thật khi chặt cây
+        CreateRealisticDustEffect(adjustedHitPos, 0.6f, 15);
     }
 
     private Material FindLitMaterial()
@@ -709,22 +700,15 @@ public class ChoppableTree : NetworkBehaviour
 
         visualModel.transform.localRotation = targetRot;
 
-        // Sinh hiệu ứng khói bụi lớn khi cây đập xuống đất
-        if (fallDustPrefab != null)
-        {
-            // Bụi ở gốc cây
-            GameObject baseDust = Instantiate(fallDustPrefab, transform.position, Quaternion.identity);
-            baseDust.transform.localScale = Vector3.one * 1.5f;
-            Destroy(baseDust, 3.5f);
+        // Sinh hiệu ứng khói bụi lớn giống thật khi cây đập xuống đất
+        // 1. Bụi ở gốc cây
+        CreateRealisticDustEffect(transform.position, 2.2f, 50);
 
-            // Bụi ở ngọn cây
-            if (visualModel != null)
-            {
-                Vector3 treeTopPos = transform.position + (visualModel.transform.rotation * (Vector3.up * 4.0f));
-                GameObject topDust = Instantiate(fallDustPrefab, treeTopPos, Quaternion.identity);
-                topDust.transform.localScale = Vector3.one * 1.2f;
-                Destroy(topDust, 3.5f);
-            }
+        // 2. Bụi ở ngọn cây
+        if (visualModel != null)
+        {
+            Vector3 treeTopPos = transform.position + (visualModel.transform.rotation * (Vector3.up * 4.0f));
+            CreateRealisticDustEffect(treeTopPos, 1.8f, 35);
         }
 
         // Chờ một chút ngắn trước khi ẩn hoàn toàn
@@ -732,24 +716,93 @@ public class ChoppableTree : NetworkBehaviour
         gameObject.SetActive(false);
     }
 
-    private void ResolveDustPrefabs()
+    private void CreateRealisticDustEffect(Vector3 position, float scale, int count)
     {
-        if (chopDustPrefab == null)
+        // 1. Tạo GameObject mới cho Particle System
+        GameObject dustObj = new GameObject("RealisticDustVFX");
+        dustObj.transform.position = position;
+
+        ParticleSystem ps = dustObj.AddComponent<ParticleSystem>();
+        
+        // Cấu hình Main Module
+        var main = ps.main;
+        main.duration = 2.0f;
+        main.loop = false;
+        main.startLifetime = new ParticleSystem.MinMaxCurve(0.8f, 1.5f);
+        main.startSpeed = new ParticleSystem.MinMaxCurve(0.5f * scale, 2.0f * scale);
+        main.startSize = new ParticleSystem.MinMaxCurve(0.3f * scale, 0.7f * scale);
+        
+        // Màu bụi giống thật: màu đất cát xám nâu nhạt pha trộn mềm mại
+        main.startColor = new Color(0.72f, 0.65f, 0.58f, 0.28f); 
+        main.gravityModifier = -0.02f; // Khói bụi có xu hướng bốc nhẹ lên cao
+        main.simulationSpace = ParticleSystemSimulationSpace.World;
+        main.playOnAwake = false;
+
+        // Cấu hình Emission Module
+        var emission = ps.emission;
+        emission.rateOverTime = 0;
+        emission.SetBursts(new ParticleSystem.Burst[] { new ParticleSystem.Burst(0.0f, (short)count) });
+
+        // Cấu hình Shape Module (Hình nón tỏa góc rộng hướng lên)
+        var shape = ps.shape;
+        shape.shapeType = ParticleSystemShapeType.Cone;
+        shape.angle = 45f;
+        shape.radius = 0.2f * scale;
+
+        // Cấu hình Size over Lifetime (Hạt khói nở to dần khi tan vào không khí)
+        var sizeOverLifetime = ps.sizeOverLifetime;
+        sizeOverLifetime.enabled = true;
+        AnimationCurve sizeCurve = new AnimationCurve();
+        sizeCurve.AddKey(0.0f, 0.3f);
+        sizeCurve.AddKey(0.2f, 1.0f);
+        sizeCurve.AddKey(1.0f, 1.6f);
+        sizeOverLifetime.size = new ParticleSystem.MinMaxCurve(1.0f, sizeCurve);
+
+        // Cấu hình Color over Lifetime (Bụi mờ và tan biến dần)
+        var colorOverLifetime = ps.colorOverLifetime;
+        colorOverLifetime.enabled = true;
+        Gradient gradient = new Gradient();
+        gradient.SetKeys(
+            new GradientColorKey[] { 
+                new GradientColorKey(new Color(0.72f, 0.65f, 0.58f), 0.0f), 
+                new GradientColorKey(new Color(0.68f, 0.61f, 0.54f), 0.7f),
+                new GradientColorKey(new Color(0.62f, 0.55f, 0.48f), 1.0f) 
+            },
+            new GradientAlphaKey[] { 
+                new GradientAlphaKey(0.0f, 0.0f), 
+                new GradientAlphaKey(0.28f, 0.15f), 
+                new GradientAlphaKey(0.18f, 0.6f),
+                new GradientAlphaKey(0.0f, 1.0f) 
+            }
+        );
+        colorOverLifetime.color = gradient;
+
+        // Cấu hình Limit Velocity over Lifetime (Không khí cản để bụi chuyển động chậm dần)
+        var limitVelocity = ps.limitVelocityOverLifetime;
+        limitVelocity.enabled = true;
+        limitVelocity.drag = 1.5f;
+        limitVelocity.multiplyDragByParticleSize = true;
+
+        // Cấu hình Renderer
+        ParticleSystemRenderer renderer = dustObj.GetComponent<ParticleSystemRenderer>();
+        if (renderer != null)
         {
-            chopDustPrefab = Resources.Load<GameObject>("msVFX_Stylized Smoke 1");
-            if (chopDustPrefab != null)
+            renderer.renderMode = ParticleSystemRenderMode.Billboard;
+            
+            // Tìm Shader Unlit Particles để tương thích 100% không bị hồng trên built-in pipeline
+            Shader particleShader = Shader.Find("Legacy Shaders/Particles/Alpha Blended Premultiply") ?? 
+                                   Shader.Find("Particles/Standard Unlit") ?? 
+                                   Shader.Find("Sprites/Default");
+            
+            if (particleShader != null)
             {
-                Debug.Log($"[ChoppableTree] {name}: Tự động nạp chopDustPrefab thành công.");
+                Material defaultMat = new Material(particleShader);
+                renderer.sharedMaterial = defaultMat;
             }
         }
-        if (fallDustPrefab == null)
-        {
-            fallDustPrefab = Resources.Load<GameObject>("msVFX_Stylized Smoke 2");
-            if (fallDustPrefab != null)
-            {
-                Debug.Log($"[ChoppableTree] {name}: Tự động nạp fallDustPrefab thành công.");
-            }
-        }
+
+        ps.Play();
+        Destroy(dustObj, 2.5f);
     }
 
     private IEnumerator SpawnLogsAfterDelay(float delay)
