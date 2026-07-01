@@ -17,6 +17,20 @@ public class InstantDeathZone : MonoBehaviour
 
         if (IsAnyPlayer(other.gameObject, out GameObject playerRoot))
         {
+            Puzzle4Manager p4Manager = FindAnyObjectByType<Puzzle4Manager>();
+            if (p4Manager != null)
+            {
+                NetworkObject netObj = playerRoot.GetComponent<NetworkObject>();
+                if (netObj != null)
+                {
+                    ClientRpcParams rpcParams = new ClientRpcParams
+                    {
+                        Send = new ClientRpcSendParams { TargetClientIds = new ulong[] { netObj.OwnerClientId } }
+                    };
+                    p4Manager.ToggleSharedCameraClientRpc(false, rpcParams);
+                }
+            }
+
             DealDamage(playerRoot, instantDamage);
         }
     }
