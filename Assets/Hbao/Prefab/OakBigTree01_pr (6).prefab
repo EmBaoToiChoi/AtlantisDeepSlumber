@@ -400,7 +400,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   ShowTopMostFoldoutHeaderGroup: 1
   visualModel: {fileID: 5467546501562613012}
-  requiredHits: 20
+  requiredHits: 10
   woodLogPrefab: {fileID: 2641059679227332086, guid: 7d1b213b7fbc2f049b5093a36390d239, type: 3}
   isCutDown:
     UpdateTraits:
