@@ -50,6 +50,9 @@ public class SeagullController : NetworkBehaviour
     private float targetYaw = 0f;
     private float currentRoll = 0f;
 
+    private float freeLookYaw = 0f;
+    private float freeLookPitch = 0f;
+
     public bool isStandaloneMode => NetworkManager.Singleton == null || !NetworkManager.Singleton.IsListening;
     
     // Đồng bộ trạng thái bay/đứng yên qua mạng để hiển thị animation chính xác trên mọi client
@@ -119,7 +122,7 @@ public class SeagullController : NetworkBehaviour
         autoFlyDirection = forwardXZ + Vector3.up * 0.25f;
         autoFlyDirection.Normalize();
         
-        transform.rotation = Quaternion.LookRotation(autoFlyDirection);
+        transform.rotation = Quaternion.LookRotation(autoFlyDirection) * Quaternion.Euler(0f, returnRotationYOffset, 0f);
         
         if (anim == null)
         {
@@ -193,7 +196,7 @@ public class SeagullController : NetworkBehaviour
             transform.position += autoFlyDirection * flySpeed * Time.deltaTime;
             if (autoFlyDirection != Vector3.zero)
             {
-                transform.rotation = Quaternion.LookRotation(autoFlyDirection);
+                transform.rotation = Quaternion.LookRotation(autoFlyDirection) * Quaternion.Euler(0f, returnRotationYOffset, 0f);
             }
         }
         else
@@ -235,52 +238,59 @@ public class SeagullController : NetworkBehaviour
 
     private void HandleOwnerControl()
     {
-        // 1. Nhận input xoay từ chuột
+        // 1. Nhận input từ chuột
         float mouseX = Input.GetAxis("Mouse X");
         float mouseY = Input.GetAxis("Mouse Y");
 
-        // Tích lũy góc xoay mục tiêu
-        targetYaw += mouseX * rotationSpeed * Time.deltaTime;
-        targetPitch -= mouseY * pitchSpeed * Time.deltaTime;
-        targetPitch = Mathf.Clamp(targetPitch, -80f, 80f); // Giới hạn ngửa/cúi
+        // Kiểm tra xem có đang giữ phím Ctrl để xoay camera tự do không
+        bool ctrlHeld = Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl);
 
-        // 2. Tính góc nghiêng (Roll) tự động khi rẽ trái/phải
-        float turnInput = mouseX;
-        if (Input.GetAxis("Horizontal") != 0)
+        if (ctrlHeld)
         {
-            turnInput += Input.GetAxis("Horizontal") * 0.5f;
-        }
-        float targetRoll = -turnInput * maxRollAngle;
-        currentRoll = Mathf.Lerp(currentRoll, targetRoll, Time.deltaTime * rollSpeed);
+            // Trong chế độ Free Look: Xoay camera bằng chuột, chim bay thẳng hướng cũ
+            freeLookYaw += mouseX * rotationSpeed * Time.deltaTime;
+            freeLookPitch -= mouseY * pitchSpeed * Time.deltaTime;
+            freeLookPitch = Mathf.Clamp(freeLookPitch, -60f, 60f);
 
-        // Áp dụng góc xoay mượt mà vào Rotation
-        Quaternion finalRotation = Quaternion.Euler(targetPitch, targetYaw, currentRoll);
-        transform.rotation = Quaternion.Slerp(transform.rotation, finalRotation, Time.deltaTime * smoothTurnSpeed);
-
-        // 3. Di chuyển mượt mà (có quán tính) bằng WASD
-        float moveH = Input.GetAxis("Horizontal");
-        float moveV = Input.GetAxis("Vertical");
-        
-        Vector3 targetDir = transform.forward * moveV + transform.right * moveH;
-        Vector3 targetVel = Vector3.zero;
-        
-        bool isMoving = targetDir.magnitude > 0.01f;
-        if (isMoving)
-        {
-            targetVel = targetDir.normalized * flySpeed;
+            // Giảm độ nghiêng cánh về 0
+            currentRoll = Mathf.Lerp(currentRoll, 0f, Time.deltaTime * rollSpeed);
         }
         else
         {
-            // Cho chim bay lướt nhẹ về phía trước thay vì dừng lại ngay lập tức
-            targetVel = transform.forward * (flySpeed * 0.2f);
+            // Smoothly reset free look camera angles
+            if (freeLookYaw != 0f || freeLookPitch != 0f)
+            {
+                freeLookYaw = Mathf.Lerp(freeLookYaw, 0f, Time.deltaTime * 5f);
+                freeLookPitch = Mathf.Lerp(freeLookPitch, 0f, Time.deltaTime * 5f);
+                if (Mathf.Abs(freeLookYaw) < 0.01f) freeLookYaw = 0f;
+                if (Mathf.Abs(freeLookPitch) < 0.01f) freeLookPitch = 0f;
+            }
+
+            // Điều khiển hướng bay bằng chuột và bàn phím (A/D)
+            float yawInput = mouseX + Input.GetAxis("Horizontal") * 0.5f;
+            targetYaw += yawInput * rotationSpeed * Time.deltaTime;
+            targetPitch -= mouseY * pitchSpeed * Time.deltaTime;
+            targetPitch = Mathf.Clamp(targetPitch, -80f, 80f); // Giới hạn ngửa/cúi
+
+            // Tính góc nghiêng (Roll) tự động khi rẽ trái/phải
+            float turnInput = yawInput;
+            float targetRoll = -turnInput * maxRollAngle;
+            currentRoll = Mathf.Lerp(currentRoll, targetRoll, Time.deltaTime * rollSpeed);
         }
+
+        // Áp dụng góc xoay mượt mà vào Rotation của chim
+        Quaternion finalRotation = Quaternion.Euler(targetPitch, targetYaw, currentRoll);
+        transform.rotation = Quaternion.Slerp(transform.rotation, finalRotation, Time.deltaTime * smoothTurnSpeed);
+
+        // 2. Chim tự động bay thẳng về phía trước theo hướng mũi chim
+        Vector3 targetVel = transform.forward * flySpeed;
 
         // Lerp vận tốc hiện tại tới vận tốc mục tiêu (tạo gia tốc quán tính)
         currentVelocity = Vector3.Lerp(currentVelocity, targetVel, Time.deltaTime * acceleration);
         transform.position += currentVelocity * Time.deltaTime;
 
-        // Cập nhật trạng thái bay sang server
-        bool movingState = isMoving || currentVelocity.magnitude > (flySpeed * 0.3f);
+        // Cập nhật trạng thái bay sang server (chim luôn bay)
+        bool movingState = true;
         if (movingState != isMovingNet.Value)
         {
             UpdateMovingStateServerRpc(movingState);
@@ -465,13 +475,32 @@ public class SeagullController : NetworkBehaviour
         }
         else
         {
-            // Cập nhật camera góc nhìn thứ 3 bình thường
-            Vector3 targetPos = transform.TransformPoint(cameraOffset);
-            cam.transform.position = Vector3.Lerp(cam.transform.position, targetPos, Time.deltaTime * cameraSmoothSpeed);
+            // Nếu đang giữ Ctrl xoay camera tự do xung quanh chim
+            bool ctrlHeld = Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl);
+            if (ctrlHeld || freeLookYaw != 0f || freeLookPitch != 0f)
+            {
+                Quaternion baseRot = transform.rotation;
+                Quaternion freeLookRot = Quaternion.Euler(freeLookPitch, freeLookYaw, 0f);
+                Quaternion finalCamRot = baseRot * freeLookRot;
+                
+                // Vị trí camera xoay quanh chim dựa trên offset
+                Vector3 targetPos = transform.position + finalCamRot * cameraOffset;
+                cam.transform.position = targetPos;
+                
+                // Camera luôn hướng nhìn vào chim
+                Vector3 lookTarget = transform.position + transform.up * 0.2f;
+                cam.transform.rotation = Quaternion.LookRotation(lookTarget - cam.transform.position);
+            }
+            else
+            {
+                // Góc nhìn thứ 3 bình thường bám theo sau chim
+                Vector3 targetPos = transform.TransformPoint(cameraOffset);
+                cam.transform.position = Vector3.Lerp(cam.transform.position, targetPos, Time.deltaTime * cameraSmoothSpeed);
 
-            Vector3 lookTarget = transform.position + transform.up * 0.2f;
-            Quaternion targetRot = Quaternion.LookRotation(lookTarget - cam.transform.position);
-            cam.transform.rotation = Quaternion.Slerp(cam.transform.rotation, targetRot, Time.deltaTime * cameraSmoothSpeed);
+                Vector3 lookTarget = transform.position + transform.up * 0.2f;
+                Quaternion targetRot = Quaternion.LookRotation(lookTarget - cam.transform.position);
+                cam.transform.rotation = Quaternion.Slerp(cam.transform.rotation, targetRot, Time.deltaTime * cameraSmoothSpeed);
+            }
         }
     }
 }
