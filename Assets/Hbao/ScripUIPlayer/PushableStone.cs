@@ -16,6 +16,10 @@ public class PushableStone : NetworkBehaviour
     [Tooltip("Khoảng cách tối đa để tương tác hiển thị gợi ý")]
     public float interactRadius = 2.5f;
 
+    [Header("Effects Configuration")]
+    [Tooltip("Hệ thống hạt bụi dưới chân đá khi đẩy")]
+    public ParticleSystem dustParticleEffect;
+
     [Header("Network Synchronization")]
     public NetworkVariable<Vector3> netPosition = new NetworkVariable<Vector3>(
         Vector3.zero,
@@ -76,6 +80,104 @@ public class PushableStone : NetworkBehaviour
         if (IsServer || NetworkManager.Singleton == null || !NetworkManager.Singleton.IsListening)
         {
             netPosition.Value = transform.position;
+        }
+
+        // Tự động tìm ParticleSystem con nếu chưa được gán
+        if (dustParticleEffect == null)
+        {
+            ParticleSystem[] childSystems = GetComponentsInChildren<ParticleSystem>();
+            foreach (var ps in childSystems)
+            {
+                string nameLower = ps.name.ToLower();
+                if (nameLower.Contains("smoke") || nameLower.Contains("dust") || nameLower.Contains("particle"))
+                {
+                    dustParticleEffect = ps;
+                    Debug.Log($"[PushableStone] Tự động gán ParticleSystem con làm hiệu ứng bụi: '{ps.name}' trên '{gameObject.name}'");
+                    break;
+                }
+            }
+
+            if (dustParticleEffect == null && childSystems.Length > 0)
+            {
+                dustParticleEffect = childSystems[0];
+                Debug.Log($"[PushableStone] Tự động gán ParticleSystem con đầu tiên: '{dustParticleEffect.name}' trên '{gameObject.name}'");
+            }
+
+            if (dustParticleEffect == null)
+            {
+                // Fallback: Tự động tạo một hệ thống hạt bụi mịn nhẹ sát đất nếu hoàn toàn không có ParticleSystem nào
+                GameObject fallbackDustGo = new GameObject("FallbackDustEffect");
+                fallbackDustGo.transform.SetParent(transform);
+                fallbackDustGo.transform.localPosition = new Vector3(0f, 0.1f, 0f);
+                fallbackDustGo.transform.localRotation = Quaternion.Euler(-90f, 0f, 0f);
+
+                dustParticleEffect = fallbackDustGo.AddComponent<ParticleSystem>();
+
+                var main = dustParticleEffect.main;
+                main.duration = 1.0f;
+                main.loop = true;
+                main.startLifetime = 1.5f;
+                main.startSpeed = 0.5f;
+                main.startSize = new ParticleSystem.MinMaxCurve(0.6f, 1.2f);
+                main.startRotation = new ParticleSystem.MinMaxCurve(0f, 360f);
+                main.startColor = new Color(0.7f, 0.65f, 0.55f, 0.05f); // Bụi màu đất mịn mỏng mờ
+                main.gravityModifier = -0.05f;
+                main.simulationSpace = ParticleSystemSimulationSpace.World;
+                main.maxParticles = 50;
+
+                var emission = dustParticleEffect.emission;
+                emission.enabled = false;
+                emission.rateOverTime = 15f;
+
+                var shape = dustParticleEffect.shape;
+                shape.shapeType = ParticleSystemShapeType.Box;
+                shape.scale = new Vector3(2.5f, 2.5f, 0.5f);
+
+                var colorOverLifetime = dustParticleEffect.colorOverLifetime;
+                colorOverLifetime.enabled = true;
+                Gradient gradient = new Gradient();
+                gradient.SetKeys(
+                    new GradientColorKey[] { new GradientColorKey(new Color(0.7f, 0.65f, 0.55f), 0.0f), new GradientColorKey(new Color(0.6f, 0.55f, 0.5f), 1.0f) },
+                    new GradientAlphaKey[] { new GradientAlphaKey(0.0f, 0.0f), new GradientAlphaKey(0.05f, 0.2f), new GradientAlphaKey(0.0f, 1.0f) }
+                );
+                colorOverLifetime.color = new ParticleSystem.MinMaxGradient(gradient);
+
+                var sizeOverLifetime = dustParticleEffect.sizeOverLifetime;
+                sizeOverLifetime.enabled = true;
+                AnimationCurve sizeCurve = new AnimationCurve();
+                sizeCurve.AddKey(0.0f, 0.6f);
+                sizeCurve.AddKey(1.0f, 1.4f);
+                sizeOverLifetime.size = new ParticleSystem.MinMaxCurve(1.0f, sizeCurve);
+
+                var renderer = fallbackDustGo.GetComponent<ParticleSystemRenderer>();
+                if (renderer != null)
+                {
+                    Shader defaultShader = Shader.Find("Universal Render Pipeline/Particles/Unlit");
+                    if (defaultShader == null)
+                    {
+                        defaultShader = Shader.Find("Sprites/Default");
+                    }
+                    if (defaultShader != null)
+                    {
+                        Material mat = new Material(defaultShader);
+                        Texture2D builtinTex = Resources.GetBuiltinResource<Texture2D>("Default-Particle.png");
+                        if (builtinTex != null)
+                        {
+                            mat.mainTexture = builtinTex;
+                        }
+                        renderer.material = mat;
+                    }
+                }
+                Debug.Log($"[PushableStone] Đã khởi tạo fallback bụi mịn cho '{gameObject.name}' thành công.");
+            }
+        }
+
+        // Tắt bụi lúc bắt đầu game
+        if (dustParticleEffect != null)
+        {
+            var emission = dustParticleEffect.emission;
+            emission.enabled = false;
+            dustParticleEffect.Stop();
         }
 
         // Đảm bảo reset trạng thái khi khởi chạy (đặc biệt khi duplicate)
@@ -217,6 +319,29 @@ public class PushableStone : NetworkBehaviour
 
         // 2. Keep pushing players snapped and set animation speeds
         bool isMoving = (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening) ? isMovingNet.Value : localMoving;
+
+        // Cập nhật hiệu ứng bụi khi đẩy đá
+        if (dustParticleEffect != null)
+        {
+            var emission = dustParticleEffect.emission;
+            if (isMoving)
+            {
+                if (!emission.enabled)
+                {
+                    emission.enabled = true;
+                    dustParticleEffect.Play();
+                }
+            }
+            else
+            {
+                if (emission.enabled)
+                {
+                    emission.enabled = false;
+                    dustParticleEffect.Stop();
+                }
+            }
+        }
+
         float animSpeed = isMoving ? 1f : 0f;
 
         for (int i = 0; i < pushSlots.Length; i++)
