@@ -93,6 +93,7 @@ public class ExperienceGem : NetworkBehaviour
         if (IsServer)
         {
             networkStartY.Value = transform.position.y;
+            networkTargetPlayer.Value = default;
         }
     }
 
@@ -108,9 +109,13 @@ public class ExperienceGem : NetworkBehaviour
         spawnTimer = attractionDelay;
         moveSpeed = 2f;
 
-        if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening && IsSpawned)
+        if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening)
         {
-            if (IsServer)
+            if (NetworkManager.Singleton.IsServer)
+            {
+                networkTargetPlayer.Value = default;
+            }
+            if (IsSpawned && IsServer)
             {
                 networkStartY.Value = transform.position.y;
             }

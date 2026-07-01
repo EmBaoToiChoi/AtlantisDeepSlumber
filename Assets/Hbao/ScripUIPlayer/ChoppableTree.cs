@@ -14,6 +14,13 @@ public class ChoppableTree : NetworkBehaviour
     [Tooltip("Prefab thanh gỗ thu thập (gắn CollectibleItemDrop)")]
     public GameObject woodLogPrefab;
 
+    [Header("Visual Effects")]
+    [Tooltip("Prefab hiệu ứng bụi khi chặt cây")]
+    public GameObject chopDustPrefab;
+
+    [Tooltip("Prefab hiệu ứng bụi khi cây đổ gục")]
+    public GameObject fallDustPrefab;
+
     // Trạng thái mạng đồng bộ
     public NetworkVariable<bool> isCutDown = new NetworkVariable<bool>(
         false,
@@ -57,6 +64,7 @@ public class ChoppableTree : NetworkBehaviour
         }
         originalLocalPos = visualModel.transform.localPosition;
         ResolveWoodLogPrefab();
+        ResolveDustPrefabs();
     }
 
     private void ResolveWoodLogPrefab()
@@ -269,7 +277,7 @@ public class ChoppableTree : NetworkBehaviour
         if (currentHits >= requiredHits)
         {
             isCutDown.Value = true;
-            SpawnWoodLogs(1);
+            StartCoroutine(SpawnLogsAfterDelay(2f));
         }
     }
 
@@ -281,8 +289,8 @@ public class ChoppableTree : NetworkBehaviour
 
         if (currentHits >= requiredHits)
         {
-            gameObject.SetActive(false);
-            SpawnCollectibleLogLocal(1);
+            StartCoroutine(FallDownCoroutine());
+            StartCoroutine(SpawnCollectibleLogLocalAfterDelay(2f));
         }
     }
 
@@ -306,6 +314,14 @@ public class ChoppableTree : NetworkBehaviour
         }
         SpawnWoodSplinters();
         CreateCutMark(hitPos);
+
+        // Tạo hiệu ứng khói bụi nhỏ khi chặt cây
+        if (chopDustPrefab != null)
+        {
+            GameObject dust = Instantiate(chopDustPrefab, hitPos, Quaternion.identity);
+            dust.transform.localScale = Vector3.one * 0.5f; // Thu nhỏ lại một chút cho phù hợp vết chém
+            Destroy(dust, 2.5f);
+        }
     }
 
     private Material FindLitMaterial()
@@ -385,11 +401,11 @@ public class ChoppableTree : NetworkBehaviour
             Random.Range(-20f, 20f)
         );
 
-        // Kích thước vết chém dẹt và mỏng sâu vào thân cây
+        // Kích thước vết chém dẹt và mỏng sâu vào thân cây (lớn hơn để dễ thấy)
         cutMark.transform.localScale = new Vector3(
-            Random.Range(0.22f, 0.32f),  // Độ rộng vết chém
-            Random.Range(0.04f, 0.08f), // Độ dày vết chém
-            Random.Range(0.08f, 0.14f)  // Chiều sâu vết chém
+            Random.Range(0.35f, 0.5f),  // Độ rộng vết chém
+            Random.Range(0.08f, 0.14f), // Độ dày vết chém
+            Random.Range(0.12f, 0.2f)   // Chiều sâu vết chém
         );
 
         // Tô màu lòng gỗ sáng (Dùng vật liệu URP Lit tìm được để tránh lỗi màu tím)
@@ -407,7 +423,7 @@ public class ChoppableTree : NetworkBehaviour
                 if (cutMat.HasProperty("_OcclusionMap")) cutMat.SetTexture("_OcclusionMap", null);
                 if (cutMat.HasProperty("_EmissionMap")) cutMat.SetTexture("_EmissionMap", null);
 
-                Color woodColor = Color.yellow; // Vết chém màu vàng
+                Color woodColor = new Color(0.88f, 0.72f, 0.48f); // Màu lòng gỗ sáng tự nhiên
                 if (cutMat.HasProperty("_BaseColor"))
                 {
                     cutMat.SetColor("_BaseColor", woodColor);
@@ -431,7 +447,7 @@ public class ChoppableTree : NetworkBehaviour
             else
             {
                 // Fallback cuối cùng nếu không tìm thấy material nào
-                Color woodColor = Color.yellow; // Vết chém màu vàng
+                Color woodColor = new Color(0.88f, 0.72f, 0.48f); // Màu lòng gỗ sáng tự nhiên
                 if (rend.material.HasProperty("_BaseColor"))
                 {
                     rend.material.SetColor("_BaseColor", woodColor);
@@ -448,7 +464,7 @@ public class ChoppableTree : NetworkBehaviour
     {
         if (newVal)
         {
-            gameObject.SetActive(false);
+            StartCoroutine(FallDownCoroutine());
         }
     }
 
@@ -650,6 +666,102 @@ public class ChoppableTree : NetworkBehaviour
         }
 
         isShaking = false;
+    }
+
+    private IEnumerator FallDownCoroutine()
+    {
+        // 1. Tắt toàn bộ colliders để người chơi không bị kẹt hoặc va chạm khi cây đang ngã
+        Collider[] colliders = GetComponentsInChildren<Collider>(true);
+        foreach (var col in colliders)
+        {
+            if (col != null) col.enabled = false;
+        }
+
+        // 2. Chọn hướng ngã ngẫu nhiên xung quanh trục Y (Đồng bộ giữa Server và tất cả Client bằng vị trí cây làm seed)
+        int seed = (int)(transform.position.x * 100f + transform.position.z * 10f);
+        Random.State oldState = Random.state;
+        Random.InitState(seed);
+        float randomAngle = Random.Range(0f, 360f);
+        Random.state = oldState; // Khôi phục lại trạng thái random
+
+        Vector3 fallRotationAxis = Quaternion.Euler(0f, randomAngle, 0f) * Vector3.right;
+
+        float duration = 2.0f;
+        float elapsed = 0f;
+        
+        Quaternion startRot = visualModel.transform.localRotation;
+        
+        // Tạo góc quay đích: xoay nghiêng 90 độ xung quanh trục ngã
+        Quaternion targetRot = Quaternion.AngleAxis(90f, fallRotationAxis) * startRot;
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float t = elapsed / duration;
+            
+            // Hiệu ứng ngã nhanh dần đều (dưới tác dụng trọng lực)
+            float tSmooth = t * t; 
+
+            visualModel.transform.localRotation = Quaternion.Slerp(startRot, targetRot, tSmooth);
+            
+            yield return null;
+        }
+
+        visualModel.transform.localRotation = targetRot;
+
+        // Sinh hiệu ứng khói bụi lớn khi cây đập xuống đất
+        if (fallDustPrefab != null)
+        {
+            // Bụi ở gốc cây
+            GameObject baseDust = Instantiate(fallDustPrefab, transform.position, Quaternion.identity);
+            baseDust.transform.localScale = Vector3.one * 1.5f;
+            Destroy(baseDust, 3.5f);
+
+            // Bụi ở ngọn cây
+            if (visualModel != null)
+            {
+                Vector3 treeTopPos = transform.position + (visualModel.transform.rotation * (Vector3.up * 4.0f));
+                GameObject topDust = Instantiate(fallDustPrefab, treeTopPos, Quaternion.identity);
+                topDust.transform.localScale = Vector3.one * 1.2f;
+                Destroy(topDust, 3.5f);
+            }
+        }
+
+        // Chờ một chút ngắn trước khi ẩn hoàn toàn
+        yield return new WaitForSeconds(0.2f);
+        gameObject.SetActive(false);
+    }
+
+    private void ResolveDustPrefabs()
+    {
+        if (chopDustPrefab == null)
+        {
+            chopDustPrefab = Resources.Load<GameObject>("msVFX_Stylized Smoke 1");
+            if (chopDustPrefab != null)
+            {
+                Debug.Log($"[ChoppableTree] {name}: Tự động nạp chopDustPrefab thành công.");
+            }
+        }
+        if (fallDustPrefab == null)
+        {
+            fallDustPrefab = Resources.Load<GameObject>("msVFX_Stylized Smoke 2");
+            if (fallDustPrefab != null)
+            {
+                Debug.Log($"[ChoppableTree] {name}: Tự động nạp fallDustPrefab thành công.");
+            }
+        }
+    }
+
+    private IEnumerator SpawnLogsAfterDelay(float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        SpawnWoodLogs(1);
+    }
+
+    private IEnumerator SpawnCollectibleLogLocalAfterDelay(float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        SpawnCollectibleLogLocal(1);
     }
 }
 
