@@ -12,8 +12,8 @@ public class SeagullController : NetworkBehaviour
     public float duration = 15f; // Thời gian tồn tại của hải âu (giây)
 
     [Header("Camera Settings")]
-    [Tooltip("Góc nhìn thứ ba (Third Person) của chim. Ví dụ: X=0, Y=1.5, Z=-4")]
-    public Vector3 cameraOffset = new Vector3(0f, 1.5f, -4f);
+    [Tooltip("Góc nhìn thứ ba (Third Person) của chim. Ví dụ: X=0, Y=2.0, Z=-6")]
+    public Vector3 cameraOffset = new Vector3(0f, 2f, -6f);
     public float cameraSmoothSpeed = 10f;
 
     [Tooltip("Bù đắp góc xoay Y khi chim bay về nếu model bị ngược đầu. Thử đặt thành 180 nếu chim bay lùi.")]
@@ -122,7 +122,7 @@ public class SeagullController : NetworkBehaviour
         autoFlyDirection = forwardXZ + Vector3.up * 0.25f;
         autoFlyDirection.Normalize();
         
-        transform.rotation = Quaternion.LookRotation(autoFlyDirection) * Quaternion.Euler(0f, returnRotationYOffset, 0f);
+        transform.rotation = Quaternion.LookRotation(autoFlyDirection);
         
         if (anim == null)
         {
@@ -196,7 +196,7 @@ public class SeagullController : NetworkBehaviour
             transform.position += autoFlyDirection * flySpeed * Time.deltaTime;
             if (autoFlyDirection != Vector3.zero)
             {
-                transform.rotation = Quaternion.LookRotation(autoFlyDirection) * Quaternion.Euler(0f, returnRotationYOffset, 0f);
+                transform.rotation = Quaternion.LookRotation(autoFlyDirection);
             }
         }
         else
