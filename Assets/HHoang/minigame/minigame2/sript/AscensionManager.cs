@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 using Unity.Netcode;
 
@@ -98,6 +99,13 @@ public class AscensionManager : NetworkBehaviour
 
         if (allCorrect)
         {
+            // THAY ĐỔI QUAN TRỌNG: Server cập nhật biến NetworkVariable này trực tiếp.
+            // Biến này đổi sẽ kích hoạt hiệu ứng dừng quay trên toàn bộ hệ thống mạng (gồm cả Dedicated Server).
+            if (passwordPillar != null)
+            {
+                passwordPillar.isSolved.Value = true;
+            }
+
             // GIẢI ĐÚNG: Đổi dòng chảy thành màu xanh và kích hoạt chiến thắng
             for (int i = 0; i < pillarPositions.Length; i++) SetFlowColorClientRpc(i, Color.green);
             TriggerVictoryEffectsClientRpc();
@@ -115,11 +123,7 @@ public class AscensionManager : NetworkBehaviour
     {
         if (victoryEffectObject != null) victoryEffectObject.SetActive(true);
         
-        // Bắt đầu hãm phanh hiển thị mật khẩu
-        if (passwordPillar != null)
-        {
-            passwordPillar.TriggerRevealClientRpc();
-        }
+        // Loại bỏ hàm gọi RPC lỗi của passwordPillar vì trạng thái đã tự đồng bộ qua NetworkVariable ở trên.
 
         StartCoroutine(PlayVictoryCinematicRoutine());
     }
@@ -179,7 +183,11 @@ public class AscensionManager : NetworkBehaviour
             bigStone.transform.position = stoneEndPos.position;
         }
 
+        // Đợi hết thời gian chờ mặc định của Cinematic
         yield return new WaitForSeconds(Mathf.Max(0, cinematicWaitTime - stoneFallDuration));
+
+        // YÊU CẦU MỚI: Đợi thêm đúng 1 giây sau khi mọi thứ ngừng hẳn rồi mới tắt camera
+        yield return new WaitForSeconds(1.0f);
 
         if (cinematicCamera != null) cinematicCamera.SetActive(false);
     }
