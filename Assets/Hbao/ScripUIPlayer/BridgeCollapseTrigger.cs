@@ -88,7 +88,12 @@ public class BridgeCollapseTrigger : NetworkBehaviour
         NetworkVariableWritePermission.Server
     );
 
+    public enum BridgeDisplayMode { Auto, ForceSegmentBySegment, ForceScaleGrowth }
+
     [Header("Coop Build Config")]
+    [Tooltip("Chế độ hiển thị tiến trình cầu:\n- Auto: Tự động phát hiện.\n- ForceSegmentBySegment: Hiện từng khúc/mảnh cầu.\n- ForceScaleGrowth: Kéo dài theo trục.")]
+    public BridgeDisplayMode displayMode = BridgeDisplayMode.Auto;
+
     public float coopBuildDecayRate = 8f;
     public float soloBuildDecayRate = 0.5f;
     public float buildProgressPerClick = 1.5f;
@@ -1679,10 +1684,14 @@ public class BridgeCollapseTrigger : NetworkBehaviour
             Renderer[] cloneRenders = solidBridgeInstance.GetComponentsInChildren<Renderer>(true);
             clippingMaterials.Clear();
 
-            Shader clippingShader = Shader.Find("Custom/BridgeClipping");
+            Shader clippingShader = Resources.Load<Shader>("BridgeClipping");
             if (clippingShader == null)
             {
-                Debug.LogError("[BridgeCollapseTrigger] Không tìm thấy custom shader 'Custom/BridgeClipping'!");
+                clippingShader = Shader.Find("Custom/BridgeClipping");
+            }
+            if (clippingShader == null)
+            {
+                Debug.LogError("[BridgeCollapseTrigger] Không tìm thấy custom shader 'Custom/BridgeClipping' trong Resources lẫn Shader.Find!");
             }
 
             for (int k = 0; k < cloneRenders.Length; k++)
@@ -1747,33 +1756,58 @@ public class BridgeCollapseTrigger : NetworkBehaviour
         float minVal, maxVal;
         int axis;
         GetBridgeLocalBounds(out minVal, out maxVal, out axis);
-        float clipThreshold = Mathf.Lerp(minVal, maxVal, progressFactor);
 
-        Vector4 clipAxisVec = Vector4.zero;
-        if (axis == 0) clipAxisVec = new Vector4(1f, 0f, 0f, 0f);
-        else if (axis == 1) clipAxisVec = new Vector4(0f, 1f, 0f, 0f);
-        else clipAxisVec = new Vector4(0f, 0f, 1f, 0f);
-
-        Debug.Log($"[BridgeCollapseTrigger] Scale progress={progress}%, axis={axis}, minVal={minVal}, maxVal={maxVal}, threshold={clipThreshold}");
-
-        // Cập nhật cho solid bridge (phần đã xây, không invert)
-        foreach (var mat in clippingMaterials)
+        if (clippingMaterials != null && clippingMaterials.Count > 0)
         {
-            if (mat != null)
+            solidBridgeInstance.transform.localScale = originalLocalScale; // Đảm bảo scale gốc khi dùng shader
+
+            float clipThreshold = Mathf.Lerp(minVal, maxVal, progressFactor);
+
+            Vector4 clipAxisVec = Vector4.zero;
+            if (axis == 0) clipAxisVec = new Vector4(1f, 0f, 0f, 0f);
+            else if (axis == 1) clipAxisVec = new Vector4(0f, 1f, 0f, 0f);
+            else clipAxisVec = new Vector4(0f, 0f, 1f, 0f);
+
+            Debug.Log($"[BridgeCollapseTrigger] Scale progress={progress}%, axis={axis}, minVal={minVal}, maxVal={maxVal}, threshold={clipThreshold}");
+
+            // Cập nhật cho solid bridge (phần đã xây, không invert)
+            foreach (var mat in clippingMaterials)
             {
-                mat.SetVector("_ClipAxis", clipAxisVec);
-                mat.SetFloat("_ClipThreshold", clipThreshold);
+                if (mat != null)
+                {
+                    mat.SetVector("_ClipAxis", clipAxisVec);
+                    mat.SetFloat("_ClipThreshold", clipThreshold);
+                }
+            }
+
+            // Cập nhật cho ghost bridge (phần chưa xây, có invert)
+            foreach (var mat in ghostClippingMaterials)
+            {
+                if (mat != null)
+                {
+                    mat.SetVector("_ClipAxis", clipAxisVec);
+                    mat.SetFloat("_ClipThreshold", clipThreshold);
+                }
             }
         }
-
-        // Cập nhật cho ghost bridge (phần chưa xây, có invert)
-        foreach (var mat in ghostClippingMaterials)
+        else
         {
-            if (mat != null)
+            // FALLBACK: Nếu không có shader, thực hiện scale local trên trục tương ứng
+            Vector3 newScale = originalLocalScale;
+            if (axis == 0) // X
             {
-                mat.SetVector("_ClipAxis", clipAxisVec);
-                mat.SetFloat("_ClipThreshold", clipThreshold);
+                newScale.x = originalLocalScale.x * progressFactor;
             }
+            else if (axis == 1) // Y
+            {
+                newScale.y = originalLocalScale.y * progressFactor;
+            }
+            else // Z
+            {
+                newScale.z = originalLocalScale.z * progressFactor;
+            }
+            solidBridgeInstance.transform.localScale = newScale;
+            Debug.Log($"[BridgeCollapseTrigger] Fallback scale active: progress={progress}%, scale={newScale}");
         }
 
         // 2. Cập nhật kích thước các BoxCollider để khớp chính xác với phần gỗ đã hiển thị
@@ -1884,28 +1918,39 @@ public class BridgeCollapseTrigger : NetworkBehaviour
         // 1. Kiểm tra nếu cầu là nguyên khối (single mesh hoặc LOD levels) thì dùng Z-scale growth
         bool useZScaleGrowth = false;
         
-        if (stableBridgeSegments == null || stableBridgeSegments.Length <= 1)
+        if (displayMode == BridgeDisplayMode.ForceScaleGrowth)
         {
-            if (mainBridgeObject != null)
+            useZScaleGrowth = true;
+        }
+        else if (displayMode == BridgeDisplayMode.ForceSegmentBySegment)
+        {
+            useZScaleGrowth = false;
+        }
+        else
+        {
+            if (stableBridgeSegments == null || stableBridgeSegments.Length <= 1)
             {
-                if (mainBridgeObject.GetComponent<LODGroup>() != null)
+                if (mainBridgeObject != null)
                 {
-                    useZScaleGrowth = true;
-                }
-                else
-                {
-                    bool hasLODChildren = false;
-                    for (int i = 0; i < mainBridgeObject.transform.childCount; i++)
-                    {
-                        if (mainBridgeObject.transform.GetChild(i).name.Contains("LOD"))
-                        {
-                            hasLODChildren = true;
-                            break;
-                        }
-                    }
-                    if (hasLODChildren || mainBridgeObject.transform.childCount <= 1)
+                    if (mainBridgeObject.GetComponent<LODGroup>() != null)
                     {
                         useZScaleGrowth = true;
+                    }
+                    else
+                    {
+                        bool hasLODChildren = false;
+                        for (int i = 0; i < mainBridgeObject.transform.childCount; i++)
+                        {
+                            if (mainBridgeObject.transform.GetChild(i).name.Contains("LOD"))
+                            {
+                                hasLODChildren = true;
+                                break;
+                            }
+                        }
+                        if (hasLODChildren || mainBridgeObject.transform.childCount <= 1)
+                        {
+                            useZScaleGrowth = true;
+                        }
                     }
                 }
             }
