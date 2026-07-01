@@ -14,6 +14,13 @@ public class ChoppableTree : NetworkBehaviour
     [Tooltip("Prefab thanh gỗ thu thập (gắn CollectibleItemDrop)")]
     public GameObject woodLogPrefab;
 
+    [Header("Visual Effects")]
+    [Tooltip("Prefab hiệu ứng bụi khi chặt cây")]
+    public GameObject chopDustPrefab;
+
+    [Tooltip("Prefab hiệu ứng bụi khi cây đổ gục")]
+    public GameObject fallDustPrefab;
+
     // Trạng thái mạng đồng bộ
     public NetworkVariable<bool> isCutDown = new NetworkVariable<bool>(
         false,
@@ -57,6 +64,7 @@ public class ChoppableTree : NetworkBehaviour
         }
         originalLocalPos = visualModel.transform.localPosition;
         ResolveWoodLogPrefab();
+        ResolveDustPrefabs();
     }
 
     private void ResolveWoodLogPrefab()
@@ -306,6 +314,14 @@ public class ChoppableTree : NetworkBehaviour
         }
         SpawnWoodSplinters();
         CreateCutMark(hitPos);
+
+        // Tạo hiệu ứng khói bụi nhỏ khi chặt cây
+        if (chopDustPrefab != null)
+        {
+            GameObject dust = Instantiate(chopDustPrefab, hitPos, Quaternion.identity);
+            dust.transform.localScale = Vector3.one * 0.5f; // Thu nhỏ lại một chút cho phù hợp vết chém
+            Destroy(dust, 2.5f);
+        }
     }
 
     private Material FindLitMaterial()
@@ -693,9 +709,47 @@ public class ChoppableTree : NetworkBehaviour
 
         visualModel.transform.localRotation = targetRot;
 
+        // Sinh hiệu ứng khói bụi lớn khi cây đập xuống đất
+        if (fallDustPrefab != null)
+        {
+            // Bụi ở gốc cây
+            GameObject baseDust = Instantiate(fallDustPrefab, transform.position, Quaternion.identity);
+            baseDust.transform.localScale = Vector3.one * 1.5f;
+            Destroy(baseDust, 3.5f);
+
+            // Bụi ở ngọn cây
+            if (visualModel != null)
+            {
+                Vector3 treeTopPos = transform.position + (visualModel.transform.rotation * (Vector3.up * 4.0f));
+                GameObject topDust = Instantiate(fallDustPrefab, treeTopPos, Quaternion.identity);
+                topDust.transform.localScale = Vector3.one * 1.2f;
+                Destroy(topDust, 3.5f);
+            }
+        }
+
         // Chờ một chút ngắn trước khi ẩn hoàn toàn
         yield return new WaitForSeconds(0.2f);
         gameObject.SetActive(false);
+    }
+
+    private void ResolveDustPrefabs()
+    {
+        if (chopDustPrefab == null)
+        {
+            chopDustPrefab = Resources.Load<GameObject>("msVFX_Stylized Smoke 1");
+            if (chopDustPrefab != null)
+            {
+                Debug.Log($"[ChoppableTree] {name}: Tự động nạp chopDustPrefab thành công.");
+            }
+        }
+        if (fallDustPrefab == null)
+        {
+            fallDustPrefab = Resources.Load<GameObject>("msVFX_Stylized Smoke 2");
+            if (fallDustPrefab != null)
+            {
+                Debug.Log($"[ChoppableTree] {name}: Tự động nạp fallDustPrefab thành công.");
+            }
+        }
     }
 
     private IEnumerator SpawnLogsAfterDelay(float delay)
