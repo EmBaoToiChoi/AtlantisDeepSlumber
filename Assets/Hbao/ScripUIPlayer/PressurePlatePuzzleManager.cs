@@ -189,19 +189,17 @@ public class PressurePlatePuzzleManager : NetworkBehaviour
                 // Khi bắt đầu giải xong câu đố (đạp đủ các nút yêu cầu)
                 if (allPressed)
                 {
-                    Debug.Log($"[PressurePlatePuzzleManager] Giải xong câu đố! Mở cửa và bắt đầu đếm ngược {closeDelay} giây để tự đóng...");
+                    Debug.Log($"[PressurePlatePuzzleManager] Đạp đủ nút sàn! Mở cửa.");
                     UpdateDoors(true);
                     doorsAreOpen = true;
-                    timer = closeDelay;
-                    isTimerActive = true;
+                    isTimerActive = false; // Hủy đếm ngược tự đóng nếu đang chạy
                 }
                 else
                 {
-                    // Nếu người chơi rời khỏi nút trước khi hết giờ, cửa sẽ đóng lại ngay lập tức
-                    Debug.Log($"[PressurePlatePuzzleManager] Người chơi rời nút sàn. Đóng cửa lập tức.");
-                    UpdateDoors(false);
-                    doorsAreOpen = false;
-                    isTimerActive = false;
+                    // Khi người chơi rời khỏi nút sàn (hết đè), bắt đầu đếm ngược trước khi đóng cửa
+                    Debug.Log($"[PressurePlatePuzzleManager] Người chơi rời nút sàn. Bắt đầu đếm ngược {closeDelay} giây trước khi tự đóng cửa...");
+                    timer = closeDelay;
+                    isTimerActive = true;
                 }
             }
 
