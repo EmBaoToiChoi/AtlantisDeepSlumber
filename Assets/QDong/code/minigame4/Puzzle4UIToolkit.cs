@@ -88,6 +88,11 @@ public class Puzzle4UIToolkit : MonoBehaviour
     public float glowMaxAlpha = 0.9f;
     public float needleMaxAngle = 45f;  // góc tối đa kim nghiêng (độ)
 
+    [Header("Background Image Alpha")]
+    [Tooltip("Độ đục của image nền phía sau label & percent (0 = trong suốt, 1 = đục hoàn toàn)")]
+    [Range(0f, 1f)]
+    public float bgAlpha = 0.35f;
+
     [Header("Danger Flash")]
     public Color dangerColor = new Color(1f, 0.1f, 0.1f, 0.0f);
     public float dangerFlashSpeed = 3f;
@@ -133,7 +138,11 @@ public class Puzzle4UIToolkit : MonoBehaviour
     void InitColumn(EnergyColumnUI ui, string defaultLabel)
     {
         if (ui == null) return;
-        if (ui.radialFill != null) ui.radialFill.fillAmount = 0f;
+        if (ui.radialFill != null)
+        {
+            ui.radialFill.fillAmount = 0f;
+            ui.radialFill.color = ui.colorEmpty;
+        }
         if (ui.glowImage  != null)
         {
             var c = ui.glowImage.color;
@@ -141,7 +150,19 @@ public class Puzzle4UIToolkit : MonoBehaviour
             ui.glowImage.color = c;
         }
         if (ui.labelText   != null) ui.labelText.text   = defaultLabel;
-        if (ui.percentText != null) ui.percentText.text  = "0%";
+        if (ui.percentText != null)
+        {
+            ui.percentText.text  = "0%";
+            ui.percentText.color = ui.colorEmpty;
+        }
+        // Khởi tạo bgImage với màu rõ ràng ngay từ đầu
+        if (ui.bgImage != null)
+        {
+            Color initBg = ui.colorEmpty;
+            initBg.a = bgAlpha;
+            ui.bgImage.color = initBg;
+            ui.bgImage.enabled = true; // Đảm bảo component không bị disable
+        }
         if (ui.completedCheckmark != null) ui.completedCheckmark.SetActive(false);
         ui.glowPhase = Random.Range(0f, Mathf.PI * 2f); // lệch phase để không đồng bộ
     }
@@ -191,9 +212,12 @@ public class Puzzle4UIToolkit : MonoBehaviour
 
         // ── Background Image nền chung ──
         Color bgColor = targetColor;
-        bgColor.a = 0.2f;
+        bgColor.a = bgAlpha;
         if (ui.bgImage != null)
+        {
+            ui.bgImage.enabled = true;
             ui.bgImage.color = Color.Lerp(ui.bgImage.color, bgColor, Time.deltaTime * lerpSpeed);
+        }
 
         // ── Completed checkmark ──
         bool completed = ui.column.IsCompleted();
