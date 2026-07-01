@@ -129,7 +129,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   ShowTopMostFoldoutHeaderGroup: 1
   expAmount: 25
-  attractionRadius: 6
+  attractionRadius: 3
   moveSpeed: 2
   acceleration: 8
   rotationSpeed: 60
