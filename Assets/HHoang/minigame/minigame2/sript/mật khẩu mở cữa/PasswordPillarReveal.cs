@@ -26,7 +26,9 @@ public class PasswordPillarReveal : NetworkBehaviour
     [Tooltip("Số vòng xoay thêm trước khi dừng (để tạo cảm giác trôi từ từ)")]
     public int extraSpins = 2; 
 
-    private bool isEndlessSpinning = true;
+    // Sử dụng NetworkVariable để đồng bộ trạng thái giải đố chính xác giữa Server và các Client
+    public NetworkVariable<bool> isSolved = new NetworkVariable<bool>(false);
+    private bool hasStartedStopping = false;
     private Quaternion[] initialRotations;
 
     void Start()
@@ -46,7 +48,8 @@ public class PasswordPillarReveal : NetworkBehaviour
 
     void Update()
     {
-        if (isEndlessSpinning)
+        // Nếu Server chưa xác nhận giải xong, cả Server và Client đều cho trụ xoay liên tục
+        if (!isSolved.Value)
         {
             for (int i = 0; i < pillarSegments.Length; i++)
             {
@@ -56,14 +59,10 @@ public class PasswordPillarReveal : NetworkBehaviour
                 pillarSegments[i].Rotate(0f, direction * spinSpeed * Time.deltaTime, 0f, Space.Self);
             }
         }
-    }
-
-    [ClientRpc]
-    public void TriggerRevealClientRpc()
-    {
-        if (isEndlessSpinning)
+        // Khi isSolved được Server đổi thành true, cả Server và Client sẽ cùng nhảy vào hiệu ứng hãm phanh
+        else if (!hasStartedStopping)
         {
-            isEndlessSpinning = false;
+            hasStartedStopping = true;
             StartCoroutine(BrakeAndSnapToPasswordRoutine());
         }
     }
@@ -75,6 +74,7 @@ public class PasswordPillarReveal : NetworkBehaviour
 
         for (int i = 0; i < pillarSegments.Length; i++)
         {
+            if (pillarSegments[i] == null) continue;
             float currentY = pillarSegments[i].localEulerAngles.y;
             startAngles[i] = currentY;
 
@@ -97,6 +97,7 @@ public class PasswordPillarReveal : NetworkBehaviour
 
             for (int i = 0; i < pillarSegments.Length; i++)
             {
+                if (pillarSegments[i] == null) continue;
                 float offsetT = Mathf.Clamp01(smoothT - (i * 0.05f));
                 float currentAngle = Mathf.Lerp(startAngles[i], targetAngles[i], offsetT);
                 
@@ -105,9 +106,10 @@ public class PasswordPillarReveal : NetworkBehaviour
             yield return null;
         }
 
-        // Chốt sổ: Ép lại chính xác vào số đáp án
+        // Chốt sổ: Ép lại chính xác vào số đáp án trên toàn bộ các máy
         for (int i = 0; i < pillarSegments.Length; i++)
         {
+            if (pillarSegments[i] == null) continue;
             pillarSegments[i].localRotation = initialRotations[i] * Quaternion.Euler(0, correctAngles[i], 0);
             
             // Bật object tương ứng

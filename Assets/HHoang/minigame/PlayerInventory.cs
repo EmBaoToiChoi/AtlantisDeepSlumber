@@ -112,6 +112,26 @@ public class PlayerInteraction : NetworkBehaviour
             if (Keyboard.current.fKey.wasPressedThisFrame)
             {
                 Debug.Log($"[CrystalDebug] F key pressed. isCarrying (local) = {isCarrying}");
+
+                // 1. TÌM XEM CÓ CÁI TRỤ (CrystalPuzzleSystem) NÀO XUNG QUANH KHÔNG (Quét trong bán kính 3 mét)
+                Collider[] hits = Physics.OverlapSphere(transform.position, 3f);
+                CrystalPuzzleSystem nearbyPedestal = null;
+                foreach (var hit in hits)
+                {
+                    nearbyPedestal = hit.GetComponent<CrystalPuzzleSystem>();
+                    if (nearbyPedestal == null) nearbyPedestal = hit.GetComponentInParent<CrystalPuzzleSystem>();
+                    if (nearbyPedestal != null) break; // Tìm thấy trụ thì dừng quét
+                }
+
+                // 2. NẾU TÌM THẤY TRỤ -> GỌI CODE ĐẶT NGỌC CỦA TRỤ
+                if (nearbyPedestal != null)
+                {
+                    Debug.Log("Đứng gần Trụ, đang thử đặt ngọc...");
+                    nearbyPedestal.InteractWithPedestal(this.gameObject); // Bắn tín hiệu sang cho trụ xử lý
+                    return; // Đặt xong thì thoát luôn, không chạy code nhặt đồ bên dưới nữa!
+                }
+
+                // --- NẾU KHÔNG ĐỨNG GẦN TRỤ THÌ CHẠY CODE CŨ CỦA MÀY ---
                 if (!isCarrying)
                 {
                     TryPickupCrystal(); // Tay không -> Đi tìm nhặt ngọc dưới đất
@@ -123,7 +143,6 @@ public class PlayerInteraction : NetworkBehaviour
                     {
                         if (NetworkManager.Singleton == null || !NetworkManager.Singleton.IsListening)
                         {
-                            // XỬ LÝ ĐẶT NGỌC OFFLINE KHI TEST SCENE
                             HandleOfflineSnapToBox();
                         }
                         else
@@ -131,7 +150,6 @@ public class PlayerInteraction : NetworkBehaviour
                             currentInteractBox.TrySnapCrystal();
                         }
                     }
-                    // ĐÃ XÓA: Khúc code xử lý đặt ngọc vào currentPillarStation ở đây
                 }
             }
             // ====== PHÍM G: THẢ NGỌC XUỐNG ĐẤT ======
@@ -515,6 +533,78 @@ public class PlayerInteraction : NetworkBehaviour
         if (NetworkManager.Singleton.LocalClientId == targetClientId)
         {
             AddCrystalToInventory(itemName);
+        }
+    }
+    // =========================================================================
+    // THÊM 2 HÀM DƯỚI ĐÂY ĐỂ PHỤC VỤ CHO VIỆC TƯƠNG TÁC ĐẶT NGỌC VÀO TRỤ CỬA
+    // =========================================================================
+
+    // Hàm 1: Kiểm tra xem trong balo có chứa viên "Ngoc" nào không
+    public bool HasCrystalInInventory
+    {
+        get
+        {
+            var target = GetComponent<IPlayerHUDTarget>();
+            if (target != null && target.InventorySlots != null)
+            {
+                // Duyệt qua 10 ô balo
+                foreach (string slot in target.InventorySlots)
+                {
+                    // Nếu ô đó không trống và bắt đầu bằng chữ "Ngoc" (như Ngoc1, Ngoc2...)
+                    if (!string.IsNullOrEmpty(slot) && slot.StartsWith("Ngoc")) 
+                    {
+                        return true; 
+                    }
+                }
+            }
+            return false;
+        }
+    }
+
+    // Hàm 2: Xóa 1 viên Ngọc khỏi balo sau khi đã đặt lên trụ
+    public void RemoveCrystal()
+    {
+        var target = GetComponent<IPlayerHUDTarget>();
+        if (target != null && target.InventorySlots != null)
+        {
+            for (int i = 0; i < target.InventorySlots.Length; i++)
+            {
+                string slot = target.InventorySlots[i];
+                if (!string.IsNullOrEmpty(slot) && slot.StartsWith("Ngoc"))
+                {
+                    // Tách tên và số lượng (VD: "Ngoc1:1" hoặc "Ngoc1:2")
+                    if (slot.Contains(":"))
+                    {
+                        var parts = slot.Split(':');
+                        int count = 1;
+                        int.TryParse(parts[1], out count);
+                        
+                        if (count > 1) 
+                        {
+                            // Trừ đi 1 viên nếu đang bị stack
+                            target.InventorySlots[i] = parts[0] + ":" + (count - 1); 
+                        }
+                        else 
+                        {
+                            target.InventorySlots[i] = ""; // Hết thì làm trống ô
+                        }
+                    }
+                    else
+                    {
+                        target.InventorySlots[i] = ""; // Trực tiếp làm trống ô
+                    }
+
+                    // Cập nhật lại giao diện Balo (HUD) ngay lập tức
+                    PlayerHUDController hud = FindAnyObjectByType<PlayerHUDController>();
+                    if (hud != null)
+                    {
+                        hud.SetInventorySlots(target.InventorySlots);
+                    }
+
+                    // Xóa xong 1 viên thì thoát luôn để không bị xóa nhầm viên thứ 2 (nếu có)
+                    return; 
+                }
+            }
         }
     }
 }
