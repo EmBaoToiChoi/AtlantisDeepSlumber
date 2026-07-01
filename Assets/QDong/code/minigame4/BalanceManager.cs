@@ -71,7 +71,24 @@ public class BalanceManager : NetworkBehaviour
         if (other.CompareTag("Player"))
         {
             playersOnBoard.Add(other);
-            if (IsServer) Debug.Log($"<color=green>[ĐĨA NGHIÊNG]</color> Phát hiện nhân vật {other.name} ĐẠT CHÂN lên đĩa. Số người hiện tại: {playersOnBoard.Count}");
+            if (IsServer) 
+            {
+                Debug.Log($"<color=green>[ĐĨA NGHIÊNG]</color> Phát hiện nhân vật {other.name} ĐẠT CHÂN lên đĩa. Số người hiện tại: {playersOnBoard.Count}");
+                
+                Puzzle4Manager p4Manager = FindAnyObjectByType<Puzzle4Manager>();
+                if (p4Manager != null && p4Manager.isMinigameStarted.Value && !p4Manager.puzzleCompleted.Value)
+                {
+                    NetworkObject netObj = other.GetComponentInParent<NetworkObject>();
+                    if (netObj != null)
+                    {
+                        ClientRpcParams rpcParams = new ClientRpcParams
+                        {
+                            Send = new ClientRpcSendParams { TargetClientIds = new ulong[] { netObj.OwnerClientId } }
+                        };
+                        p4Manager.ToggleSharedCameraClientRpc(true, rpcParams);
+                    }
+                }
+            }
         }
         else if (IsServer)
         {

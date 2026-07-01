@@ -45,7 +45,7 @@ public class Puzzle4Manager : NetworkBehaviour
     private Transform localPlayerTransform;
 
     [ClientRpc]
-    public void ToggleSharedCameraClientRpc(bool isActive)
+    public void ToggleSharedCameraClientRpc(bool isActive, ClientRpcParams rpcParams = default)
     {
         if (sharedCamera != null)
         {
@@ -134,7 +134,7 @@ public class Puzzle4Manager : NetworkBehaviour
         }
         else
         {
-            BalanceMeterUIToolkit tkUI = FindAnyObjectByType<BalanceMeterUIToolkit>(FindObjectsInactive.Include);
+            Puzzle4UIToolkit tkUI = FindAnyObjectByType<Puzzle4UIToolkit>(FindObjectsInactive.Include);
             if (tkUI != null) tkUI.gameObject.SetActive(show);
 
             BalanceMeterUI imgUI = FindAnyObjectByType<BalanceMeterUI>(FindObjectsInactive.Include);
@@ -156,8 +156,14 @@ public class Puzzle4Manager : NetworkBehaviour
         {
             return;
         }
+        CheckComplete();
+    }
 
-        if (trapFloor != null && trapFloor.activated && !isMinigameStarted.Value && !isStartingUI)
+    public void StartMinigameFromTeleport()
+    {
+        if (!IsServer) return;
+        
+        if (!isMinigameStarted.Value && !isStartingUI)
         {
             isStartingUI = true;
             if (balanceManager != null)
@@ -167,8 +173,6 @@ public class Puzzle4Manager : NetworkBehaviour
             ToggleSharedCameraClientRpc(true);
             StartCoroutine(DelayedStartMinigameUI());
         }
-
-        CheckComplete();
     }
 
     void FixedUpdate()
@@ -293,24 +297,22 @@ public class Puzzle4Manager : NetworkBehaviour
 
     IEnumerator CompleteSequence()
     {
-        yield return new WaitForSeconds(1f);
+        yield return new WaitForSeconds(0.5f);
 
         if(beamA != null) beamA.SetActive(true);
         if(beamB != null) beamB.SetActive(true);
         if(beamC != null) beamC.SetActive(true);
 
-        yield return new WaitForSeconds(2f);
+        yield return new WaitForSeconds(0.5f);
 
         if(centerExplosion != null)
             centerExplosion.SetActive(true);
 
         yield return new WaitForSeconds(1f);
 
-        yield return new WaitForSeconds(7f);
-
         ToggleSharedCameraClientRpc(false);
 
-        yield return new WaitForSeconds(1f);
+        yield return new WaitForSeconds(0.5f);
 
         if(castleGate != null)
             castleGate.SetActive(false);
