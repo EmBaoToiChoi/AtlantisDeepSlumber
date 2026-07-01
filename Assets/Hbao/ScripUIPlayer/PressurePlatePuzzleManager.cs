@@ -19,6 +19,14 @@ public class PressurePlatePuzzleManager : NetworkBehaviour
 
     private bool localIsSolved = false; // Dùng khi chơi offline
 
+    [Header("Timer Configuration")]
+    [Tooltip("Thời gian cửa tự động đóng lại sau khi mở (giây)")]
+    public float closeDelay = 5f;
+
+    private float timer = 0f;
+    private bool isTimerActive = false;
+    private bool doorsAreOpen = false;
+
     private void Start()
     {
         // Tự động kiểm tra và sửa lỗi nếu người dùng kéo nhầm Prefab Asset từ cửa sổ Project thay vì đối tượng Scene trong Hierarchy
@@ -178,8 +186,36 @@ public class PressurePlatePuzzleManager : NetworkBehaviour
                     }
                 }
 
-                Debug.Log($"[PressurePlatePuzzleManager] Trạng thái câu đố thay đổi -> Giải xong: {allPressed}. Đang cập nhật trạng thái cửa...");
-                UpdateDoors(allPressed);
+                // Khi bắt đầu giải xong câu đố (đạp đủ các nút yêu cầu)
+                if (allPressed)
+                {
+                    Debug.Log($"[PressurePlatePuzzleManager] Giải xong câu đố! Mở cửa và bắt đầu đếm ngược {closeDelay} giây để tự đóng...");
+                    UpdateDoors(true);
+                    doorsAreOpen = true;
+                    timer = closeDelay;
+                    isTimerActive = true;
+                }
+                else
+                {
+                    // Nếu người chơi rời khỏi nút trước khi hết giờ, cửa sẽ đóng lại ngay lập tức
+                    Debug.Log($"[PressurePlatePuzzleManager] Người chơi rời nút sàn. Đóng cửa lập tức.");
+                    UpdateDoors(false);
+                    doorsAreOpen = false;
+                    isTimerActive = false;
+                }
+            }
+
+            // Xử lý đếm ngược tự động đóng cửa
+            if (isTimerActive && doorsAreOpen)
+            {
+                timer -= Time.deltaTime;
+                if (timer <= 0f)
+                {
+                    Debug.Log($"[PressurePlatePuzzleManager] Hết {closeDelay} giây! Tự động đóng cửa.");
+                    UpdateDoors(false);
+                    doorsAreOpen = false;
+                    isTimerActive = false;
+                }
             }
         }
     }

@@ -228,7 +228,7 @@ public class PlayerHUDController : MonoBehaviour
     // Coop Build Camera States
     private static bool hasTransitionedBuildCameraOnce = false;
     private float buildCameraTransitionTimer = 0f;
-    private float buildCameraTransitionDuration = 1.5f;
+    private float buildCameraTransitionDuration = 2f;
     private Vector3 initialCamPosBeforeBuild;
     private Quaternion initialCamRotBeforeBuild;
     private bool isBuildCameraActive = false;
@@ -3549,7 +3549,7 @@ public class PlayerHUDController : MonoBehaviour
         Vector3 bridgePos = activeBridgeTrigger.transform.position;
 
         // Vị trí camera trên cao nhìn xuống cầu
-        Vector3 targetCamPos = playerPos - playerForward * 6f + Vector3.up * 10f;
+        Vector3 targetCamPos = playerPos - playerForward * 6f + Vector3.up * 30f;
         Vector3 lookTarget = bridgePos;
         lookTarget.y = playerPos.y + 1f; // Nhìn vào phần trên của cầu/người chơi
         Quaternion targetCamRot = Quaternion.LookRotation(lookTarget - targetCamPos);

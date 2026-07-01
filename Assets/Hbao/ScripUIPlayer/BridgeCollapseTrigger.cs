@@ -339,7 +339,19 @@ public class BridgeCollapseTrigger : NetworkBehaviour
             {
                 if (buildProgress.Value > 0f && buildProgress.Value < 100f)
                 {
-                    buildProgress.Value = Mathf.Clamp(buildProgress.Value - coopBuildDecayRate * Time.deltaTime, 0f, 100f);
+                    int playerCount = 1;
+                    if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening)
+                    {
+                        playerCount = NetworkManager.Singleton.ConnectedClients.Count;
+                    }
+
+                    float decayRate = coopBuildDecayRate;
+                    if (playerCount == 1) decayRate = 0.5f; // Rất chậm, dễ thở cho 1 người chơi
+                    else if (playerCount == 2) decayRate = 2.0f;
+                    else if (playerCount == 3) decayRate = 4.0f;
+                    else decayRate = 6.0f;
+
+                    buildProgress.Value = Mathf.Clamp(buildProgress.Value - decayRate * Time.deltaTime, 0f, 100f);
                 }
             }
             else if (!isNetwork)
@@ -1003,14 +1015,14 @@ public class BridgeCollapseTrigger : NetworkBehaviour
         }
 
         // Tỷ lệ tăng tiến độ phi tuyến tính theo số lượng người chơi:
-        // - 1 người: cực khó (0.25% mỗi click)
-        // - 2 người: khó (0.5% mỗi click)
-        // - 3 người: trung bình (1.0% mỗi click)
+        // - 1 người: 1.0% mỗi click (cần 100 click, mất khoảng 10-15s)
+        // - 2 người: 1.5% mỗi click
+        // - 3 người: 2.0% mỗi click
         // - 4+ người: dễ (2.5% mỗi click)
-        float increment = 1.0f;
-        if (playerCount == 1) increment = 0.25f;
-        else if (playerCount == 2) increment = 0.5f;
-        else if (playerCount == 3) increment = 1.0f;
+        float increment = buildProgressPerClick;
+        if (playerCount == 1) increment = 1.0f;
+        else if (playerCount == 2) increment = 1.5f;
+        else if (playerCount == 3) increment = 2.0f;
         else increment = 2.5f;
 
         buildProgress.Value = Mathf.Min(buildProgress.Value + increment, 100f);
