@@ -225,6 +225,14 @@ public class PlayerHUDController : MonoBehaviour
     private Button coopBuildClickButton;
     private BridgeCollapseTrigger activeBridgeTrigger;
 
+    // Coop Build Camera States
+    private static bool hasTransitionedBuildCameraOnce = false;
+    private float buildCameraTransitionTimer = 0f;
+    private float buildCameraTransitionDuration = 1.5f;
+    private Vector3 initialCamPosBeforeBuild;
+    private Quaternion initialCamRotBeforeBuild;
+    private bool isBuildCameraActive = false;
+
     [Header("Quest Settings")]
     public Sprite woodLogSprite;
     
@@ -864,6 +872,11 @@ public class PlayerHUDController : MonoBehaviour
         UpdateTeammatesHUD();
         UpdateMinimap();
         UpdateWorldMap();
+
+        if (isCoopBuildingUIOpen && activeBridgeTrigger != null)
+        {
+            UpdateCoopBuildCamera();
+        }
 
         if (LocalPlayerTarget != null)
         {
@@ -3509,12 +3522,68 @@ public class PlayerHUDController : MonoBehaviour
         isCoopBuildingUIOpen = false;
         isAnyUIOpen = false;
         activeBridgeTrigger = null;
+        isBuildCameraActive = false; // Reset camera state on exit
 
         // Re-enable local player controller
         var playerBehavior = LocalPlayerTarget as MonoBehaviour;
         if (playerBehavior != null)
         {
             playerBehavior.enabled = true;
+        }
+    }
+
+    private void UpdateCoopBuildCamera()
+    {
+        var playerBehavior = LocalPlayerTarget as MonoBehaviour;
+        if (playerBehavior == null) return;
+
+        Camera mainCam = Camera.main;
+        if (mainCam == null) mainCam = FindAnyObjectByType<Camera>();
+        if (mainCam == null) return;
+
+        Vector3 playerPos = playerBehavior.transform.position;
+        Vector3 playerForward = playerBehavior.transform.forward;
+        
+        // Cần đảm bảo có activeBridgeTrigger để lấy vị trí
+        if (activeBridgeTrigger == null) return;
+        Vector3 bridgePos = activeBridgeTrigger.transform.position;
+
+        // Vị trí camera trên cao nhìn xuống cầu
+        Vector3 targetCamPos = playerPos - playerForward * 6f + Vector3.up * 10f;
+        Vector3 lookTarget = bridgePos;
+        lookTarget.y = playerPos.y + 1f; // Nhìn vào phần trên của cầu/người chơi
+        Quaternion targetCamRot = Quaternion.LookRotation(lookTarget - targetCamPos);
+
+        if (!isBuildCameraActive)
+        {
+            isBuildCameraActive = true;
+            initialCamPosBeforeBuild = mainCam.transform.position;
+            initialCamRotBeforeBuild = mainCam.transform.rotation;
+            buildCameraTransitionTimer = 0f;
+        }
+
+        if (hasTransitionedBuildCameraOnce)
+        {
+            // Nếu đã di chuyển lên trước đó rồi, giữ nguyên vị trí trên cao luôn, không di chuyển lại nữa
+            mainCam.transform.position = targetCamPos;
+            mainCam.transform.rotation = targetCamRot;
+        }
+        else
+        {
+            // Di chuyển mượt mà lên vị trí trên cao trong lần đầu tiên
+            buildCameraTransitionTimer += Time.deltaTime;
+            float t = Mathf.Clamp01(buildCameraTransitionTimer / buildCameraTransitionDuration);
+            
+            // Dùng SmoothStep để di chuyển mượt mà hơn
+            float smoothT = t * t * (3f - 2f * t);
+
+            mainCam.transform.position = Vector3.Lerp(initialCamPosBeforeBuild, targetCamPos, smoothT);
+            mainCam.transform.rotation = Quaternion.Slerp(initialCamRotBeforeBuild, targetCamRot, smoothT);
+
+            if (t >= 1f)
+            {
+                hasTransitionedBuildCameraOnce = true;
+            }
         }
     }
 
