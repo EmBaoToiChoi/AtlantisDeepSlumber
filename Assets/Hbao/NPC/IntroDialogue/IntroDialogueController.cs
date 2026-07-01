@@ -649,6 +649,7 @@ public class IntroDialogueController : NetworkBehaviour
         template.style.top = 0f;
         template.style.right = 0f;
         template.style.bottom = 0f;
+        template.BringToFront(); // Đảm bảo đè lên trên cùng của HUD cha
         template.pickingMode = PickingMode.Position; // Đảm bảo template thu nhận sự kiện click chuột
 
         // Gán stylesheet nếu có
@@ -729,6 +730,15 @@ public class IntroDialogueController : NetworkBehaviour
         {
             EndDialogue();
             return;
+        }
+
+        // Đảm bảo đưa toàn bộ template của đối thoại lên trên cùng của HUD khi đổi câu thoại mới
+        foreach (var instance in instantiatedDialogues)
+        {
+            if (instance.wrapperElement != null && instance.wrapperElement.parent != null)
+            {
+                instance.wrapperElement.parent.BringToFront();
+            }
         }
 
         DialogueLine line = activeLines[index];
@@ -1304,8 +1314,19 @@ public class IntroDialogueController : NetworkBehaviour
         {
             if (instance.wrapperElement != null)
             {
-                if (add) instance.wrapperElement.AddToClassList(className);
-                else instance.wrapperElement.RemoveFromClassList(className);
+                if (add) 
+                {
+                    instance.wrapperElement.AddToClassList(className);
+                    // Đảm bảo đưa toàn bộ template của đối thoại lên trên cùng khi hiển thị
+                    if (instance.wrapperElement.parent != null)
+                    {
+                        instance.wrapperElement.parent.BringToFront();
+                    }
+                }
+                else 
+                {
+                    instance.wrapperElement.RemoveFromClassList(className);
+                }
             }
         }
     }

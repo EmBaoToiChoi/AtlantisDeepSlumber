@@ -1,5 +1,5 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
-    <Style src="project://database/Assets/Hbao/NPC/SilasDialogue.uss?fileID=7433441132597879392&amp;guid=6437fa1461d4b4d4085cd4b0bbaf1890&amp;type=3#SilasDialogue" />
+    <Style src="project://database/Assets/Hbao/NPC/NPC2/SilasDialogue.uss?fileID=7433441132597879392&amp;guid=6437fa1461d4b4d4085cd4b0bbaf1890&amp;type=3#SilasDialogue" />
     <ui:VisualElement name="silas-dialogue-wrapper" class="dialogue-wrapper">
         <ui:VisualElement name="silas-interaction-prompt" class="silas-interaction-prompt">
             <ui:VisualElement class="key-badge-g">
@@ -18,7 +18,7 @@
                 <ui:VisualElement name="avatar-image" class="dialogue-avatar-image" />
                 <ui:VisualElement class="avatar-fade-right" style="background-image: none;" />
             </ui:VisualElement>
-            <ui:VisualElement name="dialogue-text-container" class="dialogue-text-container">
+            <ui:VisualElement name="dialogue-text-container" class="dialogue-text-container" style="background-image: url(&quot;project://database/Assets/PLuan/TalkNPC-removebg-preview.png?fileID=2800000&amp;guid=7ec1779a97c65d74aa295f1acd391132&amp;type=3#TalkNPC-removebg-preview&quot;);">
                 <ui:VisualElement class="dialogue-text-inner-wrapper">
                     <ui:Label name="dialogue-text" text="Rakan vừa gửi mấy &apos;con cừu&apos; tới đây sao?..." class="dialogue-text-content" />
                 </ui:VisualElement>
