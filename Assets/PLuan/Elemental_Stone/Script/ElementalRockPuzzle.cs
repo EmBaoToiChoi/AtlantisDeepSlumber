@@ -48,6 +48,7 @@ public class ElementalRockPuzzle : NetworkBehaviour
     [SerializeField] private int currentStep = 0;
     [SerializeField] private float timeRemaining = 0f;
     [SerializeField] private bool isTimerRunning = false;
+    private int lastActiveStep = -1; // Cache tránh gọi trùng lặp Coroutine chuyển màu
 
     // --- CÁC BIẾN ĐỒNG BỘ MẠNG (NETCODE) ---
     private NetworkVariable<int> netCurrentStep = new NetworkVariable<int>(
@@ -419,7 +420,6 @@ public class ElementalRockPuzzle : NetworkBehaviour
                     ResetPuzzle();
                 }
             }
-            UpdateVisualStates();
         }
 
         // Cập nhật khoảng cách ngang và kích thước của các Icon tương ứng lúc Play (Editor)
@@ -775,6 +775,9 @@ public class ElementalRockPuzzle : NetworkBehaviour
         int activeStep = IsNetworkActive ? netCurrentStep.Value : currentStep;
         currentStep = activeStep;
 
+        if (activeStep == lastActiveStep) return;
+        lastActiveStep = activeStep;
+
         bool has3DRenderers = fireRenderer != null || waterRenderer != null || iceRenderer != null || lightningRenderer != null;
 
         // Xác định những nguyên tố nào đã được kích hoạt thành công (dựa theo các bước đã hoàn thành)
@@ -988,6 +991,7 @@ public class ElementalRockPuzzle : NetworkBehaviour
             isTimerRunning = false;
         }
         lastHitObject = null; // Luôn luôn reset lastHitObject khi reset câu đố
+        lastActiveStep = -1; // Reset cache để UpdateVisualStates chạy lại được
         UpdateVisualStates();
     }
 
@@ -1127,6 +1131,9 @@ public class ElementalRockPuzzle : NetworkBehaviour
 
     private void ShatterElementIcons(GameObject previewParent, Bounds bounds)
     {
+        // Chỉ chạy hiệu ứng văng nguyên tố khi chơi thật (tránh lỗi Instantiate/DestroyImmediate trong Edit Mode)
+        if (!Application.isPlaying) return;
+
         // Danh sách các icons cần cho rơi vật lý
         Renderer[] icons = { iceRenderer, lightningRenderer };
         foreach (var icon in icons)
@@ -1327,6 +1334,23 @@ public class ElementalRockPuzzle : NetworkBehaviour
     {
         Debug.Log("[ElementalRockPuzzle] Kích hoạt thành công chuỗi nguyên tố! Đá đã bị phá vỡ.");
         
+        // Ẩn Collider và Renderer của đá ngay lập tức để người chơi đi qua được và tránh double-hit
+        var col = GetComponent<Collider>();
+        if (col != null) col.enabled = false;
+        
+        GameObject meshTarget = FindMeshTarget();
+        if (meshTarget != null)
+        {
+            var ren = meshTarget.GetComponent<Renderer>();
+            if (ren != null) ren.enabled = false;
+        }
+
+        foreach (var r in GetComponentsInChildren<Renderer>(true))
+        {
+            if (r == (meshTarget != null ? meshTarget.GetComponent<Renderer>() : null)) continue;
+            r.enabled = false;
+        }
+
         if (IsNetworkActive)
         {
             if (IsServer)
@@ -1356,7 +1380,7 @@ public class ElementalRockPuzzle : NetworkBehaviour
             {
                 Instantiate(successVFXPrefab, transform.position, transform.rotation);
             }
-            Destroy(gameObject);
+            Destroy(gameObject, 0.1f);
         }
     }
 
