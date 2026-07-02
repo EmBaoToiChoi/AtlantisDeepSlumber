@@ -23,15 +23,36 @@ public class InstantDeathZone : MonoBehaviour
                 NetworkObject netObj = playerRoot.GetComponent<NetworkObject>();
                 if (netObj != null)
                 {
+                    // 1. Hồi sinh tại tâm đĩa
+                    Puzzle4TeleportTrigger teleportTrigger = FindAnyObjectByType<Puzzle4TeleportTrigger>();
+                    if (teleportTrigger != null && teleportTrigger.teleportTarget != null)
+                    {
+                        Vector3 spawnPos = teleportTrigger.teleportTarget.position;
+                        playerRoot.transform.position = spawnPos;
+
+                        Rigidbody rb = playerRoot.GetComponent<Rigidbody>();
+                        if (rb != null)
+                        {
+                            rb.linearVelocity = Vector3.zero;
+                            rb.angularVelocity = Vector3.zero;
+                        }
+
+                        p4Manager.TeleportPlayerToCenterClientRpc(netObj.NetworkObjectId, spawnPos);
+                    }
+
+                    // 2. Bật camera chung của minigame 4
                     ClientRpcParams rpcParams = new ClientRpcParams
                     {
                         Send = new ClientRpcSendParams { TargetClientIds = new ulong[] { netObj.OwnerClientId } }
                     };
-                    p4Manager.ToggleSharedCameraClientRpc(false, rpcParams);
+                    p4Manager.ToggleSharedCameraClientRpc(true, rpcParams);
+                    
+                    // 3. Kích hoạt minigame 4
+                    p4Manager.StartMinigameFromTeleport();
                 }
             }
 
-            DealDamage(playerRoot, instantDamage);
+            // DealDamage(playerRoot, instantDamage); // Bỏ sát thương để chỉ hồi sinh và kích hoạt minigame
         }
     }
 
