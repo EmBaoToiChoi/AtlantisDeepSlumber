@@ -173,10 +173,10 @@ public class BalanceManager : NetworkBehaviour
                 if (localPos.y < -0.5f)
                     continue;
 
-                CharacterInfo info = player.GetComponent<CharacterInfo>();
+                IPlayerHUDTarget info = player.GetComponentInParent<IPlayerHUDTarget>();
                 if (info != null && info.IsOwner)
                 {
-                    Rigidbody rb = player.GetComponent<Rigidbody>();
+                    Rigidbody rb = player.GetComponentInParent<Rigidbody>();
                     if (rb != null)
                     {
                         rb.AddForce(-diskRigidbody.transform.up * 15f, ForceMode.Force);
@@ -188,15 +188,15 @@ public class BalanceManager : NetworkBehaviour
 
     float GetPlayerWeight(Collider player)
     {
-        CharacterInfo info = player.GetComponent<CharacterInfo>();
+        IPlayerHUDTarget info = player.GetComponentInParent<IPlayerHUDTarget>();
         if (info != null)
         {
-            switch (info.characterType.Value)
+            switch (info.CharacterClassIndex)
             {
-                case CharacterType.Arthur: return 2.5f;
-                case CharacterType.Leo:    return 1.8f;
-                case CharacterType.Maya:   return 1f;
-                case CharacterType.Elena:  return 1f;
+                case 3: return 2.5f; // Arthur
+                case 0: return 1.8f; // Leo
+                case 1: return 1f; // Maya/Elena
+                case 2: return 1f; // Elena/Maya
             }
         }
         return 1f; 
