@@ -291,8 +291,33 @@ public class Enemy5_PhuThuy : NetworkBehaviour
 
     private void HandlePatrol()
     {
-        if (waitingAtWaypoint) { SetSpeedNet(0f); waypointWaitTimer -= Time.deltaTime; if (waypointWaitTimer <= 0) { if (Random.value <= patrolMoveChance) GoToNextWaypoint(); else waypointWaitTimer = Random.Range(patrolWaitMin, patrolWaitMax); } }
-        else { SetSpeedNet(AgentReady && agent.velocity.magnitude > 0.15f ? 0.5f : 0f); if (AgentReady && !agent.pathPending && agent.remainingDistance <= agent.stoppingDistance + 0.3f) { agent.isStopped = true; SetSpeedNet(0f); waitingAtWaypoint = true; waypointWaitTimer = Random.Range(patrolWaitMin, patrolWaitMax); } }
+        if (waitingAtWaypoint)
+        {
+            SetSpeedNet(0f);
+            waypointWaitTimer -= Time.deltaTime;
+            if (waypointWaitTimer <= 0) { if (Random.value <= patrolMoveChance) GoToNextWaypoint(); else waypointWaitTimer = Random.Range(patrolWaitMin, patrolWaitMax); }
+        }
+        else
+        {
+            bool moving = AgentReady && agent.velocity.magnitude > 0.15f;
+            SetSpeedNet(moving ? 0.5f : 0f);
+
+            if (AgentReady)
+            {
+                if (!agent.pathPending && (agent.remainingDistance <= agent.stoppingDistance + 0.3f || !agent.hasPath))
+                {
+                    agent.isStopped = true;
+                    SetSpeedNet(0f);
+                    waitingAtWaypoint = true;
+                    waypointWaitTimer = Random.Range(patrolWaitMin, patrolWaitMax);
+                }
+            }
+            else
+            {
+                SnapToNavMesh();
+                if (AgentReady) GoToNextWaypoint();
+            }
+        }
     }
 
     // ── Chase (Kiting) ──

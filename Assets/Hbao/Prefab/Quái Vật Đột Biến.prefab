@@ -220,7 +220,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   ShowTopMostFoldoutHeaderGroup: 1
-  maxHealth: 120
+  maxHealth: 500
   currentHealth:
     UpdateTraits:
       MinSecondsBetweenUpdates: 0
