@@ -82,6 +82,22 @@ public class Puzzle4Manager : NetworkBehaviour
         }
     }
 
+    [ClientRpc]
+    public void TeleportPlayerToCenterClientRpc(ulong objectId, Vector3 pos)
+    {
+        if (!NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(objectId, out NetworkObject netObj))
+            return;
+        
+        netObj.transform.position = pos;
+        Rigidbody rb = netObj.GetComponent<Rigidbody>();
+        if (rb != null)
+        {
+            rb.linearVelocity = Vector3.zero;
+            rb.angularVelocity = Vector3.zero;
+            rb.Sleep();
+        }
+    }
+
     void Start()
     {
         if (sharedCamera != null)
