@@ -4969,7 +4969,7 @@ MeshCollider:
   m_LayerOverridePriority: 0
   m_IsTrigger: 1
   m_ProvidesContacts: 0
-  m_Enabled: 1
+  m_Enabled: 0
   serializedVersion: 5
   m_Convex: 1
   m_CookingOptions: 30
@@ -4989,12 +4989,12 @@ BoxCollider:
     serializedVersion: 2
     m_Bits: 0
   m_LayerOverridePriority: 0
-  m_IsTrigger: 0
+  m_IsTrigger: 1
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 0.006206202, y: 0.0063273855, z: 0.016513921}
-  m_Center: {x: 0.000044897813, y: 0.00033517147, z: 0.0017430485}
+  m_Size: {x: 0.011622863, y: 0.010875819, z: 0.019975929}
+  m_Center: {x: -0.00003145377, y: -0.000014791487, z: 0.00001203378}
 --- !u!114 &1151283090679032271
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5010,6 +5010,7 @@ MonoBehaviour:
   fallSpeed: 15
   rollSpeed: 8
   rotateSpeed: 360
+  reverseRotation: 1
   rollDirection: {x: 0, y: 0, z: -1}
   rotationAxis: {x: 1, y: 0, z: 95}
   groundLayer:

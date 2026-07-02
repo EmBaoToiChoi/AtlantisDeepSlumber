@@ -4813,12 +4813,12 @@ BoxCollider:
     serializedVersion: 2
     m_Bits: 0
   m_LayerOverridePriority: 0
-  m_IsTrigger: 0
+  m_IsTrigger: 1
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 238.19421, y: 238.67648, z: 418.62714}
-  m_Center: {x: 4.9472647, y: 4.9663277, z: -207.24188}
+  m_Size: {x: 366.14255, y: 368.2754, z: 418.62714}
+  m_Center: {x: -4.012, y: 0.9338788, z: -207.24188}
 --- !u!4 &6534062146646627230 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: a20ef9fa2732ba243aefd7d365292986, type: 3}

@@ -7170,8 +7170,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         SetMovementLock(false);
         if (anim != null && anim.isActiveAndEnabled && anim.runtimeAnimatorController != null && anim.layerCount > 1)
         {
-            anim.Play("New State", 1, 0f);
-            anim.Play("Empty", 1, 0f);
+            anim.CrossFadeInFixedTime("New State", 0.1f, 1, 0f);
         }
 
         // Network sync layer clearing
@@ -7197,8 +7196,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             isRootedAttack = false;
             if (anim != null && anim.isActiveAndEnabled && anim.runtimeAnimatorController != null && anim.layerCount > 1)
             {
-                anim.Play("New State", 1, 0f);
-                anim.Play("Empty", 1, 0f);
+                anim.CrossFadeInFixedTime("New State", 0.1f, 1, 0f);
             }
         }
     }
@@ -7780,6 +7778,15 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         {
             AnimatorStateInfo stateInfo = anim.GetCurrentAnimatorStateInfo(1);
             bool isSlashActive = !stateInfo.IsName("New State") && !stateInfo.IsName("Empty");
+
+            // Chỉ duy trì Layer 1 khi đang ngắm bắn (IsAiming), chờ chiêu R (isRShootPending),
+            // hoặc đang thực hiện đòn đánh di chuyển (isExecutingAttack và không phải rooted).
+            bool shouldBeActive = IsAiming || isRShootPending || (isExecutingAttack && !isRootedAttack);
+            if (!shouldBeActive)
+            {
+                isSlashActive = false;
+            }
+
             targetAttackLayerWeight = isSlashActive ? 1f : 0f;
 
             currentAttackLayerWeight = Mathf.MoveTowards(currentAttackLayerWeight, targetAttackLayerWeight, Time.deltaTime * 10f);
