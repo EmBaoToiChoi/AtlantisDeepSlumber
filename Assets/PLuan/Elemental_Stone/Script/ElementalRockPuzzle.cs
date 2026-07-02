@@ -102,6 +102,16 @@ public class ElementalRockPuzzle : NetworkBehaviour
     [Tooltip("VFX Prefab phát ra khi phá đá thành công")]
     public GameObject successVFXPrefab;
 
+    [Header("Audio Settings")]
+    [Tooltip("Âm thanh phát ra khi đá bị vỡ")]
+    public AudioClip shatterSound;
+
+    [Header("Shard Size Settings")]
+    [Tooltip("Tỷ lệ kích thước nhỏ nhất của mảnh vỡ so với đá gốc (Mặc định: 0.05)")]
+    public float minShardSizeScale = 0.05f;
+    [Tooltip("Tỷ lệ kích thước lớn nhất của mảnh vỡ so với đá gốc (Mặc định: 0.15)")]
+    public float maxShardSizeScale = 0.15f;
+
     [Header("Start Hidden Settings")]
     [Tooltip("Nếu tích chọn, đá sẽ tự ẩn Renderer và Collider khi bắt đầu (nhưng GameObject vẫn Active để tránh lỗi Netcode).")]
     public bool startHidden = false;
@@ -1256,10 +1266,10 @@ public class ElementalRockPuzzle : NetworkBehaviour
                 shard.tag = "Untagged"; // Tránh kích hoạt va chạm đệ quy với đá gốc!
                 shard.layer = LayerMask.NameToLayer("Ignore Raycast");
                 
-                // Cấu hình kích thước ngẫu nhiên tỷ lệ thuận với kích thước đá gốc (chunky shards)
-                float sizeX = Random.Range(bounds.size.x * 0.15f, bounds.size.x * 0.35f);
-                float sizeY = Random.Range(bounds.size.y * 0.15f, bounds.size.y * 0.35f);
-                float sizeZ = Random.Range(bounds.size.z * 0.15f, bounds.size.z * 0.35f);
+                // Cấu hình kích thước ngẫu nhiên tỷ lệ thuận với kích thước đá gốc dựa trên cài đặt Inspector
+                float sizeX = Random.Range(bounds.size.x * minShardSizeScale, bounds.size.x * maxShardSizeScale);
+                float sizeY = Random.Range(bounds.size.y * minShardSizeScale, bounds.size.y * maxShardSizeScale);
+                float sizeZ = Random.Range(bounds.size.z * minShardSizeScale, bounds.size.z * maxShardSizeScale);
                 shard.transform.localScale = new Vector3(sizeX, sizeY, sizeZ);
 
                 // Đặt vị trí ngẫu nhiên trong vùng của viên đá gốc
@@ -1324,6 +1334,12 @@ public class ElementalRockPuzzle : NetworkBehaviour
     {
         try
         {
+            // Phát âm thanh vỡ đá nếu được gán (PlayClipAtPoint tự sinh nguồn phát độc lập và tự hủy sau khi phát xong)
+            if (shatterSound != null)
+            {
+                AudioSource.PlayClipAtPoint(shatterSound, transform.position);
+            }
+
             GameObject meshTarget = FindMeshTarget();
             if (meshTarget == null)
             {
