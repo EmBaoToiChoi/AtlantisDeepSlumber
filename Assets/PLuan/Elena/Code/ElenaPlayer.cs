@@ -1782,6 +1782,10 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
     if (isDialogueOpen)
     {
         if (!IsPlayingActionAnimation()) PlayAnimation("Idle", 0.1f);
+        if (rb != null)
+        {
+            rb.linearVelocity = new Vector3(0f, rb.linearVelocity.y, 0f);
+        }
         return; 
     }
 
@@ -1952,6 +1956,10 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
     if (isDialogueOpen)
     {
         if (!IsPlayingActionAnimation()) PlayAnimation("Idle", 0.1f);
+        if (rb != null)
+        {
+            rb.linearVelocity = new Vector3(0f, rb.linearVelocity.y, 0f);
+        }
         return; 
     }
 
