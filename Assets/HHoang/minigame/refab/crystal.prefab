@@ -665,6 +665,7 @@ GameObject:
   - component: {fileID: 2722432501907831162}
   - component: {fileID: -7486407621327259728}
   - component: {fileID: 4504828871173450742}
+  - component: {fileID: 1600348446611401452}
   m_Layer: 8
   m_Name: crystal
   m_TagString: Untagged
@@ -755,6 +756,20 @@ MonoBehaviour:
       MinSecondsBetweenUpdates: 0
       MaxSecondsBetweenUpdates: 0
     m_InternalValue: 0
+--- !u!114 &1600348446611401452
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3351757032029021120}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 80eeec017221b5547a6c589cd87982ff, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  highlightColor: {r: 1, g: 0, b: 1, a: 1}
+  emissionIntensity: 0.6
 --- !u!1 &3412010586805669493
 GameObject:
   m_ObjectHideFlags: 0
