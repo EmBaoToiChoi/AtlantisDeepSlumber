@@ -25,6 +25,11 @@ public class LeoInteraction : NetworkBehaviour
         if(currentColumn == null)
             return;
 
+        // Chỉ cho sạc khi minigame đã bắt đầu
+        Puzzle4Manager p4Manager = FindAnyObjectByType<Puzzle4Manager>();
+        if (p4Manager == null || !p4Manager.isMinigameStarted.Value || p4Manager.puzzleCompleted.Value)
+            return;
+
         if(Input.GetKey(KeyCode.E))
         {
             if (balanceManager != null && balanceManager.CurrentAngle > 10f)
