@@ -140,6 +140,10 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     [Header("Knockback Settings")]
     private Vector3 knockbackVelocity;
+    private Vector3 targetMoveVelocity;
+
+    [Header("Gravity Settings")]
+    public float gravityMultiplier = 2.5f;
 
     [Header("Camera Follow Settings")]
     public bool enableCameraFollow = true;
@@ -861,6 +865,8 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (rb != null)
         {
             rb.isKinematic = false; // Mặc định tắt Kinematic để di chuyển được ở chế độ Standalone/Offline
+            // Khóa xoay trục X và Z để tránh nhân vật bị đổ hoặc xoay tròn nghiêng ngả khi va chạm vật lý
+            rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
         }
 
         if (anim == null)
@@ -923,6 +929,7 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (rb != null)
         {
             rb.isKinematic = false; // Tắt Kinematic để di chuyển trong chế độ chơi đơn lẻ
+            rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
         }
 
         // Tìm camera
@@ -977,6 +984,7 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (rb != null)
         {
             rb.isKinematic = !IsOwner;
+            rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
         }
 
         if (!IsOwner)
@@ -1879,6 +1887,7 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
     if (isDialogueOpen)
     {
         if (!IsPlayingActionAnimation()) PlayAnimation("Idle", 0.1f);
+        targetMoveVelocity = Vector3.zero;
         return; 
     }
 
@@ -1891,8 +1900,7 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (rb != null)
         {
             Vector3 vel = rollDirection * rollSpeed;
-            vel.y = rb.linearVelocity.y; // giữ trọng lực
-            rb.linearVelocity = vel;
+            targetMoveVelocity = vel;
         }
         else
         {
@@ -1963,19 +1971,15 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         Vector3 finalVelocity = movementTranslation * currentSpeed + currentKnockback;
 
-        if (rb != null)
-        {
-            Vector3 vel = finalVelocity;
-            vel.y = rb.linearVelocity.y; // giữ trọng lực
-            rb.linearVelocity = vel;
-        }
-        else
+        targetMoveVelocity = finalVelocity;
+
+        if (rb == null)
         {
             transform.Translate(finalVelocity * Time.deltaTime, Space.World);
         }
 
-        // Xoay nhân vật: Luôn xoay theo hướng Camera để hỗ trợ đi ngang/lùi (strafe) cho cả khi cầm vũ khí và tay không (Chỉ xoay khi không chơi hoạt ảnh hành động như lộn vòng, nhặt đồ, trúng đòn...)
-        if (targetCamera != null && !IsPlayingActionAnimation())
+        // Xoay nhân vật: Luôn xoay theo hướng Camera (Chỉ xoay khi không chơi hoạt ảnh hành động và KHÔNG bị khóa di chuyển)
+        if (targetCamera != null && !IsPlayingActionAnimation() && !IsLockingMovementAction())
         {
             Vector3 camForward = targetCamera.transform.forward;
             camForward.y = 0f;
@@ -2066,6 +2070,7 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
     if (isDialogueOpen)
     {
         if (!IsPlayingActionAnimation()) PlayAnimation("Idle", 0.1f);
+        targetMoveVelocity = Vector3.zero;
         return; 
     }
 
@@ -2078,8 +2083,7 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (rb != null)
         {
             Vector3 vel = rollDirection * rollSpeed;
-            vel.y = rb.linearVelocity.y; // giữ trọng lực
-            rb.linearVelocity = vel;
+            targetMoveVelocity = vel;
         }
         else
         {
@@ -2150,19 +2154,15 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         Vector3 finalVelocity = movementTranslation * currentSpeed + currentKnockback;
 
-        if (rb != null)
-        {
-            Vector3 vel = finalVelocity;
-            vel.y = rb.linearVelocity.y; // giữ trọng lực
-            rb.linearVelocity = vel;
-        }
-        else
+        targetMoveVelocity = finalVelocity;
+
+        if (rb == null)
         {
             transform.Translate(finalVelocity * Time.deltaTime, Space.World);
         }
 
-        // Xoay nhân vật: Luôn xoay theo hướng Camera để hỗ trợ đi ngang/lùi (strafe) cho cả khi cầm vũ khí và tay không (Chỉ xoay khi không chơi hoạt ảnh hành động như lộn vòng, nhặt đồ, trúng đòn...)
-        if (targetCamera != null && !IsPlayingActionAnimation())
+        // Xoay nhân vật: Luôn xoay theo hướng Camera (Chỉ xoay khi không chơi hoạt ảnh hành động và KHÔNG bị khóa di chuyển)
+        if (targetCamera != null && !IsPlayingActionAnimation() && !IsLockingMovementAction())
         {
             Vector3 camForward = targetCamera.transform.forward;
             camForward.y = 0f;
@@ -2312,6 +2312,7 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
         var bridge = GetRootMotionBridge();
         if (bridge != null) bridge.ApplyFinalOffset();
 
+        targetMoveVelocity = Vector3.zero;
         if (rb != null)
         {
             rb.linearVelocity = new Vector3(0f, rb.linearVelocity.y, 0f);
@@ -2320,6 +2321,20 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (!isStandaloneMode && IsOwner)
         {
             StopRollServerRpc();
+        }
+    }
+
+    void FixedUpdate()
+    {
+        if (rb != null && !rb.isKinematic)
+        {
+            Vector3 extraGravityForce = Physics.gravity * (gravityMultiplier - 1f);
+            rb.AddForce(extraGravityForce, ForceMode.Acceleration);
+
+            // Cập nhật vận tốc di chuyển vật lý của nhân vật một cách mượt mà và đồng bộ trong FixedUpdate
+            Vector3 vel = targetMoveVelocity;
+            vel.y = rb.linearVelocity.y; // Giữ nguyên trọng lực vật lý
+            rb.linearVelocity = vel;
         }
     }
 
