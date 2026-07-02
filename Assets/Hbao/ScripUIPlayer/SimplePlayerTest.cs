@@ -712,7 +712,7 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
 
         float oldMaxHealth = maxHealth;
         maxHealth = 100f + hpLv * 20f;
-        damageAmount = 20f + dmgLv * 5f;
+        damageAmount = 20f * (1f + dmgLv * 0.15f);
 
         if (isStandaloneMode)
         {
@@ -1103,6 +1103,15 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
             Debug.LogWarning("[Standalone] Hết điểm nâng cấp!");
             return;
         }
+        int targetLvl = 0;
+        switch (statType)
+        {
+            case 0: targetLvl = localHpLevel; break;
+            case 1: targetLvl = localMpLevel; break;
+            case 2: targetLvl = localCooldownLevel; break;
+            case 3: targetLvl = localDamageLevel; break;
+        }
+        if (targetLvl >= 3) return;
 
         localUpgradePoints--;
         switch (statType)
@@ -1155,6 +1164,15 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
             Debug.LogWarning("[Server] Người chơi không còn điểm nâng cấp!");
             return;
         }
+        int targetLvl = 0;
+        switch (statType)
+        {
+            case 0: targetLvl = hpLevel.Value; break;
+            case 1: targetLvl = mpLevel.Value; break;
+            case 2: targetLvl = cooldownLevel.Value; break;
+            case 3: targetLvl = damageLevel.Value; break;
+        }
+        if (targetLvl >= 3) return;
 
         upgradePoints.Value--;
         switch (statType)
