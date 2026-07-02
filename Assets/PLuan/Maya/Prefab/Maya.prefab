@@ -470,7 +470,7 @@ MonoBehaviour:
   aimAttackRange: 25
   aimMinPitch: -80
   aimMaxPitch: 80
-  normalAttackPrefab: {fileID: 906073527957232500, guid: 2da01b6b8170450428f2dac9f729d3c0, type: 3}
+  normalAttackPrefab: {fileID: 7314526620251459061, guid: d40ad812610f84b4cb9875d6acb8c413, type: 3}
   normalAttackSpawnPoint: {fileID: 6320282578570835534}
   normalAttackSpeed: 30
   ShootingCooldown: 1
@@ -714,6 +714,13 @@ MonoBehaviour:
     TransitionIndex: 0
   - IsCrossFadeExit: 0
     Layer: 1
+    OriginatingState: -499022955
+    DestinationState: -1219495144
+    TransitionDuration: 0.05
+    TriggerNameHash: -1219495144
+    TransitionIndex: 5
+  - IsCrossFadeExit: 0
+    Layer: 1
     OriginatingState: -39148367
     DestinationState: 1688466699
     TransitionDuration: 0.1
@@ -813,6 +820,10 @@ MonoBehaviour:
       NameHash: -1317259463
       Synchronize: 1
       ParameterType: 4
+    - name: ChatRiu
+      NameHash: -1219495144
+      Synchronize: 1
+      ParameterType: 9
   AnimatorParametersExpanded: 0
 --- !u!136 &4851484069774976014
 CapsuleCollider:
@@ -869,7 +880,6 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 256
   currentInteractBox: {fileID: 0}
-  currentPillarStation: {fileID: 0}
   heldCoreNetworkId:
     UpdateTraits:
       MinSecondsBetweenUpdates: 0
