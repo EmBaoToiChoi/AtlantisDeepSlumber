@@ -124,28 +124,48 @@ public class Puzzle4Manager : NetworkBehaviour
 
     void UpdateUIState(bool show)
     {
+        Debug.Log($"[Puzzle4Manager] Gọi UpdateUIState({show})");
+        bool uiFound = false;
+
         if (minigameUIs != null && minigameUIs.Length > 0)
         {
             foreach (GameObject ui in minigameUIs)
             {
                 if (ui != null)
+                {
                     ui.SetActive(show);
+                    uiFound = true;
+                    Debug.Log($"[Puzzle4Manager] Đã {(show ? "BẬT" : "TẮT")} UI từ mảng minigameUIs: {ui.name}");
+                }
             }
         }
-        else
+        
+        // Nếu mảng rỗng HOẶC mảng có phần tử nhưng toàn null (bị mất tham chiếu)
+        if (!uiFound)
         {
+            Debug.Log("[Puzzle4Manager] Không có UI hợp lệ trong mảng minigameUIs, chuyển sang tìm tự động...");
+            
             Puzzle4UIToolkit tkUI = FindAnyObjectByType<Puzzle4UIToolkit>(FindObjectsInactive.Include);
             if (tkUI != null)
             {
                 if (show) tkUI.ShowPanel();
                 else tkUI.HidePanel();
+                Debug.Log("[Puzzle4Manager] Đã tự động tìm và cập nhật Puzzle4UIToolkit.");
             }
 
             BalanceMeterUI imgUI = FindAnyObjectByType<BalanceMeterUI>(FindObjectsInactive.Include);
-            if (imgUI != null) imgUI.gameObject.SetActive(show);
+            if (imgUI != null) 
+            {
+                imgUI.gameObject.SetActive(show);
+                Debug.Log("[Puzzle4Manager] Đã tự động tìm và cập nhật BalanceMeterUI.");
+            }
 
             Puzzle4UI p4UI = FindAnyObjectByType<Puzzle4UI>(FindObjectsInactive.Include);
-            if (p4UI != null) p4UI.gameObject.SetActive(show);
+            if (p4UI != null) 
+            {
+                p4UI.gameObject.SetActive(show);
+                Debug.Log("[Puzzle4Manager] Đã tự động tìm và cập nhật Puzzle4UI.");
+            }
         }
     }
 
