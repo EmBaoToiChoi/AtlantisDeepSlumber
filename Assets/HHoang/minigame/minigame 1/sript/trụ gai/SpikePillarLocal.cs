@@ -17,8 +17,8 @@ public class SpikePillarLocal : MonoBehaviour
     public float checkGroundDistance = 1.0f; // Khoảng cách từ tâm đến mặt đất để dừng rơi và bắt đầu lăn
 
     [Header("Cấu hình giới hạn")]
-    public float maxLifetime = 15f;
-    public float maxRollDistance = 50f;
+    public float maxLifetime = 25f;
+    public float maxRollDistance = 120f;
 
     [Header("Hiệu ứng bụi khói khi lăn")]
     public ParticleSystem rollDustEffect;

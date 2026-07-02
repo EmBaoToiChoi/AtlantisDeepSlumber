@@ -39,11 +39,14 @@ public class ContinuousEnemySpawner : NetworkBehaviour
         public Transform targetPosition;
     }
 
-    [Header("Door Monitor Settings")]
-    [Tooltip("Kéo thả hệ thống Crystal Puzzle System điều khiển cửa vào đây để tự động theo dõi trạng thái đóng của tất cả các cửa.")]
-    public CrystalPuzzleSystem crystalPuzzleSystem;
+    [Header("Crystal Pedestal Settings")]
+    [Tooltip("Kéo thả Trụ đặt ngọc 1 vào đây")]
+    public CrystalPuzzleSystem pedestal1;
 
-    [Tooltip("Danh sách các cửa cần kiểm tra thủ công (nếu không dùng CrystalPuzzleSystem). Quái sẽ ngưng sinh khi TẤT CẢ các cửa đều đã đóng.")]
+    [Tooltip("Kéo thả Trụ đặt ngọc 2 vào đây")]
+    public CrystalPuzzleSystem pedestal2;
+
+    [Tooltip("Danh sách các cửa cần kiểm tra thủ công (nếu không dùng Trụ đặt ngọc). Quái sẽ ngưng sinh khi TẤT CẢ các cửa đều đã đóng.")]
     public List<DoorMonitorConfig> doorsToMonitor = new List<DoorMonitorConfig>();
 
     [Tooltip("Khoảng cách tối thiểu để coi như cửa đã đóng hoàn toàn (m)")]
@@ -63,28 +66,21 @@ public class ContinuousEnemySpawner : NetworkBehaviour
         // Chỉ Server mới thực thi việc tính toán thời gian và sinh quái
         if (!IsServer) return;
 
-        // 1. Kiểm tra qua hệ thống CrystalPuzzleSystem nếu có gán
-        if (crystalPuzzleSystem != null)
+        // 1. Kiểm tra qua hệ thống bệ ngọc (Ngừng spawn khi cả 2 bệ đều đã được đặt ngọc)
+        if (pedestal1 != null && pedestal2 != null)
         {
-            var doors = crystalPuzzleSystem.doorsToControl;
-            var targets = crystalPuzzleSystem.targetPositions;
-            if (doors != null && targets != null && doors.Length > 0)
+            if (pedestal1.IsCrystalPlaced && pedestal2.IsCrystalPlaced)
             {
-                bool allClosed = true;
-                for (int i = 0; i < doors.Length; i++)
-                {
-                    if (doors[i] == null || targets.Length <= i || targets[i] == null) continue;
-                    if (Vector3.Distance(doors[i].position, targets[i].position) > doorCloseThreshold)
-                    {
-                        allClosed = false;
-                        break;
-                    }
-                }
-
-                if (allClosed)
-                {
-                    return;
-                }
+                return;
+            }
+        }
+        else if (pedestal1 != null)
+        {
+            bool selfPlaced = pedestal1.IsCrystalPlaced;
+            bool otherPlaced = pedestal1.otherPedestal != null && pedestal1.otherPedestal.IsCrystalPlaced;
+            if (selfPlaced && otherPlaced)
+            {
+                return;
             }
         }
 
@@ -92,10 +88,13 @@ public class ContinuousEnemySpawner : NetworkBehaviour
         if (doorsToMonitor != null && doorsToMonitor.Count > 0)
         {
             bool allClosed = true;
+            int checkedCount = 0;
+
             foreach (var monitor in doorsToMonitor)
             {
                 if (monitor.door != null && monitor.targetPosition != null)
                 {
+                    checkedCount++;
                     if (Vector3.Distance(monitor.door.position, monitor.targetPosition.position) > doorCloseThreshold)
                     {
                         allClosed = false;
@@ -104,7 +103,7 @@ public class ContinuousEnemySpawner : NetworkBehaviour
                 }
             }
 
-            if (allClosed)
+            if (checkedCount > 0 && allClosed)
             {
                 return;
             }
