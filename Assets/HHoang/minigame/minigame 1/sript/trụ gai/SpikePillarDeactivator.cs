@@ -10,7 +10,7 @@ public class SpikePillarDeactivator : MonoBehaviour
 
     [Header("Cấu hình yêu cầu")]
     [Tooltip("Số lượng người chơi cần chạm vào để biến mất. Để <= 0 để tự động tính theo số người chơi thực tế.")]
-    public int requiredPlayers = 4;
+    public int requiredPlayers = 0; // Mặc định là 0 để tự động tính theo số lượng người chơi thực tế trong phòng
 
     // Lưu danh sách người chơi đang đứng trong vùng chạm (Safe Box)
     private HashSet<GameObject> playersInZone = new HashSet<GameObject>();
@@ -79,19 +79,32 @@ public class SpikePillarDeactivator : MonoBehaviour
         {
             if (IsNetworkActive)
             {
+                // Đếm số client kết nối thực tế trong phòng
                 targetCount = NetworkManager.Singleton.ConnectedClients.Count;
             }
             else
             {
-                targetCount = 1; // Chơi đơn
+                // Offline: Đếm số lượng đối tượng Player có mặt trong Scene
+                targetCount = CountActivePlayersInScene();
             }
         }
 
-        if (playersInZone.Count >= targetCount)
+        if (playersInZone.Count >= targetCount && targetCount > 0)
         {
             Debug.Log($"[SpikePillarDeactivator] Đủ {playersInZone.Count}/{targetCount} người chơi! Tắt cột gai.");
             manager.DeactivateSpawning();
         }
+    }
+
+    private int CountActivePlayersInScene()
+    {
+        int count = 0;
+        if (FindAnyObjectByType<LeoPlayer>() != null) count++;
+        if (FindAnyObjectByType<ArthurPlayer>() != null) count++;
+        if (FindAnyObjectByType<ElenaPlayer>() != null) count++;
+        if (FindAnyObjectByType<MayaPlayer>() != null) count++;
+        if (FindAnyObjectByType<SimplePlayerTest>() != null) count++;
+        return count > 0 ? count : 1;
     }
 
     private bool IsAnyPlayer(GameObject go, out GameObject playerRoot)
