@@ -46,50 +46,34 @@ public class Puzzle4TeleportTrigger : NetworkBehaviour
             NetworkObject netObj = other.GetComponentInParent<NetworkObject>();
             if (netObj != null)
             {
-                ulong clientId = netObj.OwnerClientId;
-                if (!playersTouched.Contains(clientId))
-                {
-                    playersTouched.Add(clientId);
-                    int currentRequired = GetRequiredPlayersCount();
-                    Debug.Log($"[Puzzle4Teleport] Người chơi {clientId} đã đi qua. ({playersTouched.Count}/{currentRequired})");
+                activated = true;
+                Debug.Log($"[Puzzle4Teleport] Người chơi {netObj.OwnerClientId} đã chạm. KÍCH HOẠT NGAY LẬP TỨC!");
 
-                    if (playersTouched.Count >= currentRequired)
+                TriggerTeleportAndTimelineClientRpc();
+                
+                // Kích hoạt bẫy/tắt đường đi
+                if (trapTrigger != null)
+                {
+                    trapTrigger.ActivateTrapFromTeleport();
+                }
+
+                // Giao việc chờ thời gian cho Puzzle4Manager để tránh Coroutine bị tắt giữa chừng khi Trigger bị vô hiệu hóa
+                Puzzle4Manager p4Manager = FindAnyObjectByType<Puzzle4Manager>();
+                if (p4Manager != null)
+                {
+                    float duration = 3f;
+                    if (timelineDirector != null)
                     {
-                        activated = true;
-                        TriggerTeleportAndTimelineClientRpc();
-                        StartCoroutine(ServerStartMinigameCoroutine());
-                        
-                        // Kích hoạt bẫy/tắt đường đi
-                        if (trapTrigger != null)
-                        {
-                            trapTrigger.ActivateTrapFromTeleport();
-                        }
+                        duration = (float)timelineDirector.duration;
+                        if (duration > 30f) duration = 30f;
                     }
+                    p4Manager.ScheduleMinigameStart(duration);
+                }
+                else
+                {
+                    Debug.LogError("[Puzzle4Teleport] LỖI: Không tìm thấy Puzzle4Manager trên Server!");
                 }
             }
-        }
-    }
-
-    private IEnumerator ServerStartMinigameCoroutine()
-    {
-        float duration = 3f;
-        if (timelineDirector != null)
-        {
-            duration = (float)timelineDirector.duration;
-            if (duration > 30f) duration = 30f;
-        }
-        
-        yield return new WaitForSeconds(duration);
-
-        Puzzle4Manager p4Manager = FindAnyObjectByType<Puzzle4Manager>();
-        if (p4Manager != null)
-        {
-            Debug.Log("[Puzzle4Teleport-Server] Đã hết thời gian chờ Timeline, gọi StartMinigameFromTeleport...");
-            p4Manager.StartMinigameFromTeleport();
-        }
-        else
-        {
-            Debug.LogError("[Puzzle4Teleport-Server] LỖI: Không tìm thấy Puzzle4Manager trên Server!");
         }
     }
 

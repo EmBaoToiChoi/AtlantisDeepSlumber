@@ -163,6 +163,18 @@ public class Puzzle4Manager : NetworkBehaviour
         CheckComplete();
     }
 
+    public void ScheduleMinigameStart(float delay)
+    {
+        StartCoroutine(ScheduledStartCoroutine(delay));
+    }
+
+    private IEnumerator ScheduledStartCoroutine(float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        Debug.Log("[Puzzle4Manager] Đã hết thời gian chờ Timeline, bắt đầu kích hoạt Minigame!");
+        StartMinigameFromTeleport();
+    }
+
     public void StartMinigameFromTeleport()
     {
         if (!IsServer) 
