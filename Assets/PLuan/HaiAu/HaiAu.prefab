@@ -34,19 +34,19 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: d68866ce3e14d6e4da8993dd559be22f, type: 3}
       propertyPath: m_LocalRotation.w
-      value: 0.4663125
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: d68866ce3e14d6e4da8993dd559be22f, type: 3}
       propertyPath: m_LocalRotation.x
-      value: -0.53362894
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: d68866ce3e14d6e4da8993dd559be22f, type: 3}
       propertyPath: m_LocalRotation.y
-      value: -0.4934546
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: d68866ce3e14d6e4da8993dd559be22f, type: 3}
       propertyPath: m_LocalRotation.z
-      value: 0.5042771
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: d68866ce3e14d6e4da8993dd559be22f, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
@@ -54,11 +54,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: d68866ce3e14d6e4da8993dd559be22f, type: 3}
       propertyPath: m_LocalEulerAnglesHint.y
-      value: -93.24
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: d68866ce3e14d6e4da8993dd559be22f, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
-      value: 94.48
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: d68866ce3e14d6e4da8993dd559be22f, type: 3}
       propertyPath: m_ConstrainProportionsScale
@@ -232,6 +232,12 @@ MonoBehaviour:
   pitchSpeed: 90
   duration: 15
   cameraOffset: {x: 0, y: 0.2, z: 0.1}
+  cameraSmoothSpeed: 10
+  returnRotationYOffset: 180
   anim: {fileID: 1160923260820828789}
   idleAnimName: Idle
   flyAnimName: Fly
+  acceleration: 5
+  smoothTurnSpeed: 5
+  maxRollAngle: 30
+  rollSpeed: 5
