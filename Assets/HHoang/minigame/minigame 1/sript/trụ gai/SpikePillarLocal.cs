@@ -1,4 +1,5 @@
 using UnityEngine;
+using Unity.Netcode;
 
 public class SpikePillarLocal : MonoBehaviour
 {
@@ -23,10 +24,15 @@ public class SpikePillarLocal : MonoBehaviour
     [Header("Hiệu ứng bụi khói khi lăn")]
     public ParticleSystem rollDustEffect;
 
+    [Header("Cấu hình Gây Sát Thương")]
+    public float contactDamage = 40f;
+    public float damageCooldown = 1.0f;
+
     private PillarState currentState = PillarState.Idle;
     private Vector3 startRollPosition;
     private float spawnTime;
     private SpikePillarPool associatedPool;
+    private System.Collections.Generic.Dictionary<GameObject, float> nextDamageTime = new System.Collections.Generic.Dictionary<GameObject, float>();
 
     public void Initialize(Vector3 spawnPosition, Vector3 direction, SpikePillarPool pool)
     {
@@ -97,6 +103,19 @@ public class SpikePillarLocal : MonoBehaviour
                 rollDustEffect.Stop();
             }
         }
+
+        // Dọn dẹp dictionary nếu các Player GameObject bị hủy/null hoặc không hoạt động
+        if (nextDamageTime.Count > 0)
+        {
+            var keys = new System.Collections.Generic.List<GameObject>(nextDamageTime.Keys);
+            foreach (var key in keys)
+            {
+                if (key == null || !key.activeInHierarchy)
+                {
+                    nextDamageTime.Remove(key);
+                }
+            }
+        }
     }
 
     private void ReturnToPool()
@@ -120,44 +139,48 @@ public class SpikePillarLocal : MonoBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
-        HandlePlayerCollision(other.gameObject);
+        HandlePlayerDamage(other.gameObject);
     }
 
-    private void OnCollisionEnter(Collision collision)
+    private void OnTriggerStay(Collider other)
     {
-        HandlePlayerCollision(collision.gameObject);
+        HandlePlayerDamage(other.gameObject);
     }
 
-    private void HandlePlayerCollision(GameObject collidedObj)
+    private void OnTriggerExit(Collider other)
     {
-        if (IsAnyPlayer(collidedObj, out GameObject playerRoot))
+        RemovePlayerFromDamageList(other.gameObject);
+    }
+
+    private void HandlePlayerDamage(GameObject otherGo)
+    {
+        if (IsAnyPlayer(otherGo, out GameObject playerRoot))
         {
-            DealInstantDeath(playerRoot);
+            if (nextDamageTime.ContainsKey(playerRoot))
+            {
+                if (Time.time >= nextDamageTime[playerRoot])
+                {
+                    DealDamage(playerRoot, contactDamage);
+                    nextDamageTime[playerRoot] = Time.time + damageCooldown;
+                }
+            }
+            else
+            {
+                DealDamage(playerRoot, contactDamage);
+                nextDamageTime[playerRoot] = Time.time + damageCooldown;
+            }
         }
     }
 
-    private static System.Reflection.FieldInfo GetFieldInherited(System.Type type, string name, System.Reflection.BindingFlags flags)
+    private void RemovePlayerFromDamageList(GameObject otherGo)
     {
-        System.Type currentType = type;
-        while (currentType != null)
+        if (IsAnyPlayer(otherGo, out GameObject playerRoot))
         {
-            System.Reflection.FieldInfo field = currentType.GetField(name, flags);
-            if (field != null) return field;
-            currentType = currentType.BaseType;
+            if (nextDamageTime.ContainsKey(playerRoot))
+            {
+                nextDamageTime.Remove(playerRoot);
+            }
         }
-        return null;
-    }
-
-    private static System.Reflection.PropertyInfo GetPropertyInherited(System.Type type, string name, System.Reflection.BindingFlags flags)
-    {
-        System.Type currentType = type;
-        while (currentType != null)
-        {
-            System.Reflection.PropertyInfo prop = currentType.GetProperty(name, flags);
-            if (prop != null) return prop;
-            currentType = currentType.BaseType;
-        }
-        return null;
     }
 
     private static System.Reflection.MethodInfo GetMethodInherited(System.Type type, string name, System.Type[] types)
@@ -172,9 +195,11 @@ public class SpikePillarLocal : MonoBehaviour
         return null;
     }
 
-    private void DealInstantDeath(GameObject playerRoot)
+    private void DealDamage(GameObject playerRoot, float damage)
     {
-        Debug.Log($"[SpikePillar] Chạm vào người chơi {playerRoot.name}! Phá vỡ miễn nhiễm và gây chết ngay lập tức.");
+        if (damage <= 0f) return;
+
+        Debug.Log($"[SpikePillarLocal] Gây {damage} sát thương cho {playerRoot.name}");
 
         MonoBehaviour[] scripts = playerRoot.GetComponents<MonoBehaviour>();
         foreach (var script in scripts)
@@ -186,40 +211,12 @@ public class SpikePillarLocal : MonoBehaviour
             if (script is SimplePlayerTest || script is LeoPlayer || script is ArthurPlayer || 
                 script is ElenaPlayer || script is MayaPlayer || typeName.EndsWith("Player"))
             {
-                // Bẻ gãy toàn bộ trạng thái bất tử/né tránh của người chơi
-                
-                // 1. Tắt Q Skill Active
-                var qActiveField = GetFieldInherited(type, "IsQSkillActive", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-                if (qActiveField != null) qActiveField.SetValue(script, false);
-                
-                var qActiveProp = GetPropertyInherited(type, "IsQSkillActive", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
-                if (qActiveProp != null && qActiveProp.CanWrite) qActiveProp.SetValue(script, false, null);
-
-                // 2. Tắt rolling standalone
-                var rollStandaloneField = GetFieldInherited(type, "isRollingStandalone", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-                if (rollStandaloneField != null) rollStandaloneField.SetValue(script, false);
-
-                // 3. Tắt rolling net
-                var rollNetField = GetFieldInherited(type, "isRollingNet", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-                if (rollNetField != null)
-                {
-                    object netVarObj = rollNetField.GetValue(script);
-                    if (netVarObj != null)
-                    {
-                        var valueProp = GetPropertyInherited(netVarObj.GetType(), "Value", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
-                        if (valueProp != null && valueProp.CanWrite)
-                        {
-                            valueProp.SetValue(netVarObj, false);
-                        }
-                    }
-                }
-
-                // 4. Gây sát thương chết ngay
                 var requestDamageMethod = GetMethodInherited(type, "RequestTakeDamage", new System.Type[] { typeof(float) }) ??
                                            GetMethodInherited(type, "TakeDamage", new System.Type[] { typeof(float) });
                 if (requestDamageMethod != null)
                 {
-                    requestDamageMethod.Invoke(script, new object[] { 99999f });
+                    requestDamageMethod.Invoke(script, new object[] { damage });
+                    return;
                 }
             }
         }
@@ -230,20 +227,58 @@ public class SpikePillarLocal : MonoBehaviour
         playerRoot = null;
         if (go == null) return false;
 
+        // Chỉ xử lý va chạm với CHÍNH người chơi sở hữu máy này (local player)
+        // để tránh một máy khách này tính toán va chạm hộ cho máy khách khác gây lỗi nhân đôi sát thương.
+        
         var elena = go.GetComponentInParent<ElenaPlayer>() ?? go.GetComponentInChildren<ElenaPlayer>();
-        if (elena != null) { playerRoot = elena.gameObject; return true; }
+        if (elena != null) 
+        {
+            if (elena.IsOwner || (NetworkManager.Singleton != null && !NetworkManager.Singleton.IsListening))
+            {
+                playerRoot = elena.gameObject; 
+                return true; 
+            }
+        }
 
         var arthur = go.GetComponentInParent<ArthurPlayer>() ?? go.GetComponentInChildren<ArthurPlayer>();
-        if (arthur != null) { playerRoot = arthur.gameObject; return true; }
+        if (arthur != null) 
+        {
+            if (arthur.IsOwner || (NetworkManager.Singleton != null && !NetworkManager.Singleton.IsListening))
+            {
+                playerRoot = arthur.gameObject; 
+                return true; 
+            }
+        }
 
         var leo = go.GetComponentInParent<LeoPlayer>() ?? go.GetComponentInChildren<LeoPlayer>();
-        if (leo != null) { playerRoot = leo.gameObject; return true; }
+        if (leo != null) 
+        {
+            if (leo.IsOwner || (NetworkManager.Singleton != null && !NetworkManager.Singleton.IsListening))
+            {
+                playerRoot = leo.gameObject; 
+                return true; 
+            }
+        }
 
         var maya = go.GetComponentInParent<MayaPlayer>() ?? go.GetComponentInChildren<MayaPlayer>();
-        if (maya != null) { playerRoot = maya.gameObject; return true; }
+        if (maya != null) 
+        {
+            if (maya.IsOwner || (NetworkManager.Singleton != null && !NetworkManager.Singleton.IsListening))
+            {
+                playerRoot = maya.gameObject; 
+                return true; 
+            }
+        }
 
         var simple = go.GetComponentInParent<SimplePlayerTest>() ?? go.GetComponentInChildren<SimplePlayerTest>();
-        if (simple != null) { playerRoot = simple.gameObject; return true; }
+        if (simple != null) 
+        {
+            if (simple.IsOwner || (NetworkManager.Singleton != null && !NetworkManager.Singleton.IsListening))
+            {
+                playerRoot = simple.gameObject; 
+                return true; 
+            }
+        }
 
         return false;
     }
