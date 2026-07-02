@@ -214,7 +214,7 @@ public class Skeleton : NetworkBehaviour
     {
         if (!IsServerOrStandalone) return;
 
-        if (AgentReady && !agent.isOnNavMesh) SnapToNavMesh();
+        if (agent != null && agent.isActiveAndEnabled && !agent.isOnNavMesh) SnapToNavMesh();
 
         if (attackCooldownTimer > 0) attackCooldownTimer -= Time.deltaTime;
 

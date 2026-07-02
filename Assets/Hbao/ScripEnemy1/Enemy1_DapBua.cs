@@ -271,7 +271,7 @@ public class Enemy1_DapBua : NetworkBehaviour
         bool aiAuth = isStandaloneMode || (IsNetworkActive && IsServer);
         if (!aiAuth) return;
 
-        if (AgentReady && !agent.isOnNavMesh) SnapToNavMesh();
+        if (agent != null && agent.isActiveAndEnabled && !agent.isOnNavMesh) SnapToNavMesh();
         if (attackCooldownTimer > 0) attackCooldownTimer -= Time.deltaTime;
         if (dodgeTimer > 0) { dodgeTimer -= Time.deltaTime; if (dodgeTimer <= 0) isDodging = false; }
 
@@ -287,24 +287,63 @@ public class Enemy1_DapBua : NetworkBehaviour
     // ══════════════════════════════════════════════════════════
     //  PATROL  (Walk animation = Speed 0.5)
     // ══════════════════════════════════════════════════════════
+    private Vector3 GetRandomNavMeshPosition(float range)
+    {
+        for (int i = 0; i < 30; i++)
+        {
+            Vector3 randomDirection = Random.insideUnitSphere * range;
+            randomDirection += transform.position;
+            NavMeshHit navHit;
+            if (NavMesh.SamplePosition(randomDirection, out navHit, range, NavMesh.AllAreas))
+            {
+                if (Vector3.Distance(transform.position, navHit.position) > 2.0f)
+                {
+                    return navHit.position;
+                }
+            }
+        }
+        return transform.position;
+    }
+
     private void GoToNextWaypoint()
     {
-        if (waypoints == null || waypoints.Length == 0) { SetSpeedNet(0f); return; }
-        if (waypoints.Length > 1)
+        bool hasWaypoints = false;
+        if (waypoints != null && waypoints.Length > 0)
         {
-            int n; do { n = Random.Range(0, waypoints.Length); } while (n == currentWaypointIndex);
-            currentWaypointIndex = n;
+            foreach (var wp in waypoints)
+            {
+                if (wp != null) { hasWaypoints = true; break; }
+            }
         }
-        else currentWaypointIndex = 0;
+
+        Vector3 nextPosition;
+        if (hasWaypoints)
+        {
+            int n;
+            int attempts = 0;
+            do { n = Random.Range(0, waypoints.Length); attempts++; } while (waypoints[n] == null && attempts < 10);
+            if (waypoints[n] == null)
+            {
+                nextPosition = GetRandomNavMeshPosition(12f);
+            }
+            else
+            {
+                currentWaypointIndex = n;
+                nextPosition = waypoints[currentWaypointIndex].position;
+            }
+        }
+        else
+        {
+            nextPosition = GetRandomNavMeshPosition(12f);
+        }
 
         waitingAtWaypoint = false;
-        if (waypoints[currentWaypointIndex] == null) { SetSpeedNet(0f); return; }
 
         if (AgentReady)
         {
             agent.isStopped = false;
             agent.speed = patrolWalkSpeed;
-            agent.SetDestination(waypoints[currentWaypointIndex].position);
+            agent.SetDestination(nextPosition);
         }
         // Dùng 0.5 để phân biệt Walk với Run (1.0)
         SetSpeedNet(0.5f);
@@ -312,8 +351,6 @@ public class Enemy1_DapBua : NetworkBehaviour
 
     private void HandlePatrol()
     {
-        if (waypoints == null || waypoints.Length == 0) { SetSpeedNet(0f); return; }
-
         if (waitingAtWaypoint)
         {
             // Đứng tại waypoint → Idle
