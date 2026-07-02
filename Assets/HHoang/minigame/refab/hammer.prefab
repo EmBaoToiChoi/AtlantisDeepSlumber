@@ -13,6 +13,7 @@ GameObject:
   - component: {fileID: 8694431912478452362}
   - component: {fileID: 3757026998652082172}
   - component: {fileID: 4558854496615132669}
+  - component: {fileID: 7623701140335971292}
   m_Layer: 0
   m_Name: hammer
   m_TagString: Untagged
@@ -129,6 +130,20 @@ SphereCollider:
   serializedVersion: 3
   m_Radius: 0.7840643
   m_Center: {x: 0, y: -3.8528428, z: 0}
+--- !u!114 &7623701140335971292
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5614472667803085451}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 80eeec017221b5547a6c589cd87982ff, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  highlightColor: {r: 1, g: 1, b: 1, a: 1}
+  emissionIntensity: 0.6
 --- !u!1 &7835534080243024604
 GameObject:
   m_ObjectHideFlags: 0

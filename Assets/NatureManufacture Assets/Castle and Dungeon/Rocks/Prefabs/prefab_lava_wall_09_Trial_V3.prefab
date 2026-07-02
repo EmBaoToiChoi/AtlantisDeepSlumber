@@ -165,6 +165,7 @@ GameObject:
   - component: {fileID: 33152565286819656}
   - component: {fileID: 23963383962373360}
   - component: {fileID: 64172218794763488}
+  - component: {fileID: 1915321436501336631}
   m_Layer: 0
   m_Name: lava_wall_09_LOD0
   m_TagString: Untagged
@@ -257,11 +258,32 @@ MeshCollider:
   m_LayerOverridePriority: 0
   m_IsTrigger: 0
   m_ProvidesContacts: 0
-  m_Enabled: 1
+  m_Enabled: 0
   serializedVersion: 5
   m_Convex: 0
   m_CookingOptions: 30
   m_Mesh: {fileID: 4300004, guid: b53a0c80004ca7a44861dba9186030b0, type: 3}
+--- !u!65 &1915321436501336631
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1743399858308728}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 5.6974015, y: 1.7079995, z: 2.369525}
+  m_Center: {x: -0.09280062, y: 0.8889674, z: 0.19327545}
 --- !u!1 &1770419503041192
 GameObject:
   m_ObjectHideFlags: 0
