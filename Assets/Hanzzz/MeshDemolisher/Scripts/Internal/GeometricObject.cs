@@ -205,6 +205,8 @@ public static class PointComputation
     private const string dllName = "IndirectPredicates_Mac";
     #elif UNITY_EDITOR_WIN || UNITY_STANDALONE_WIN
     private const string dllName = "IndirectPredicates_Windows";
+    #else
+    private const string dllName = "IndirectPredicates_Windows"; // Fallback to compile on Linux/Android/iOS/Server
     #endif
 
     [System.Runtime.InteropServices.DllImport(dllName)]
