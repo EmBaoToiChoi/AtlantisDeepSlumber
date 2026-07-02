@@ -7,6 +7,13 @@ public class BridgeCollapseTrigger : NetworkBehaviour
     [Header("Cutscene Configuration")]
     [Tooltip("Kéo thả object chứa Video Player vào đây. Nếu để trống, cầu sẽ sập luôn.")]
     public UnityEngine.Video.VideoPlayer collapseVideo; // Đổi sang VideoPlayer
+
+    [Header("Player Movement Scripts")]
+    [Tooltip("Điền tên chính xác của 4 script di chuyển vào đây (VD: Player1Move, ArthurController, v.v.)")]
+    public System.Collections.Generic.List<string> playerMovementScriptNames = new System.Collections.Generic.List<string>();
+
+    [Tooltip("Kéo thả GameObject (ví dụ UI Canvas, quái, cảnh...) muốn TẮT khi chiếu phim, xem xong sẽ BẬT lại.")]
+    public GameObject objectToHideDuringCutscene;
     
     private bool isCutscenePlaying = false;
     [Header("NavMesh Bridge Configuration")]
@@ -466,19 +473,39 @@ public class BridgeCollapseTrigger : NetworkBehaviour
     [ClientRpc]
     private void PlayCutsceneClientRpc()
     {
+        if (objectToHideDuringCutscene != null)
+        {
+            objectToHideDuringCutscene.SetActive(false);
+        }
+
         if (collapseVideo != null)
         {
-            // Tự động tìm Camera chính (của local player) và gán vào VideoPlayer
             if (Camera.main != null)
             {
                 collapseVideo.targetCamera = Camera.main;
             }
-            else
-            {
-                Debug.LogWarning("[BridgeCollapseTrigger] Không tìm thấy Camera.main! Chắc chắn Camera của Player đã được gắn tag 'MainCamera'.");
-            }
-
             collapseVideo.Play();
+        }
+
+        // --- KHÓA DI CHUYỂN DỰA TRÊN LIST TÊN SCRIPT ---
+        if (localPlayer == null) FindLocalPlayer();
+        if (localPlayer != null)
+        {
+            MonoBehaviour playerObj = localPlayer as MonoBehaviour;
+            if (playerObj != null)
+            {
+                // Lấy toàn bộ script đang gắn trên nhân vật
+                MonoBehaviour[] allScripts = playerObj.GetComponents<MonoBehaviour>();
+                foreach (var script in allScripts)
+                {
+                    // Nếu tên script nằm trong danh sách ông đã nhập -> TẮT nó
+                    if (script != null && playerMovementScriptNames.Contains(script.GetType().Name))
+                    {
+                        script.enabled = false;
+                        Debug.Log($"[BridgeCollapseTrigger] Đã TẮT script di chuyển: {script.GetType().Name}");
+                    }
+                }
+            }
         }
     }
 
@@ -538,7 +565,39 @@ public class BridgeCollapseTrigger : NetworkBehaviour
     [ClientRpc]
     private void ShowCollapseUIClientRpc()
     {
-        // Mỗi client tự tìm và hiển thị HUD của mình
+        // --- BẬT LẠI OBJECT KHI XEM PHIM XONG ---
+        if (objectToHideDuringCutscene != null)
+        {
+            objectToHideDuringCutscene.SetActive(true);
+        }
+        // 1. TẮT VIDEO VÀ GỠ NÓ RA KHỎI CAMERA CỦA NGƯỜI CHƠI
+        if (collapseVideo != null)
+        {
+            collapseVideo.Stop(); 
+            collapseVideo.targetCamera = null; 
+        }
+
+        // --- BẬT LẠI DI CHUYỂN DỰA TRÊN LIST TÊN SCRIPT ---
+        if (localPlayer == null) FindLocalPlayer();
+        if (localPlayer != null)
+        {
+            MonoBehaviour playerObj = localPlayer as MonoBehaviour;
+            if (playerObj != null)
+            {
+                MonoBehaviour[] allScripts = playerObj.GetComponents<MonoBehaviour>();
+                foreach (var script in allScripts)
+                {
+                    // Nếu tên script nằm trong danh sách -> BẬT LẠI nó
+                    if (script != null && playerMovementScriptNames.Contains(script.GetType().Name))
+                    {
+                        script.enabled = true;
+                        Debug.Log($"[BridgeCollapseTrigger] Đã BẬT LẠI script di chuyển: {script.GetType().Name}");
+                    }
+                }
+            }
+        }
+
+        // 2. Hiện Quest UI
         PlayerHUDController localHud = FindAnyObjectByType<PlayerHUDController>();
         if (localHud != null)
         {
