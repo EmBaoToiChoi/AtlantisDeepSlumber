@@ -23,6 +23,15 @@ public class GearRotator : NetworkBehaviour
     // Thêm biến này để nắm đầu cái Timer, cần là huỷ ngay
     private Tween stateTween; 
 
+    [Header("Cấu hình Gây Sát Thương")]
+    public bool dealDamageOnContact = true;
+    public float contactDamage = 40f;
+    public float damageCooldown = 1.0f; // Giãn cách giữa các lần bị trừ máu từ bánh răng này
+
+    private System.Collections.Generic.Dictionary<GameObject, float> nextDamageTime = new System.Collections.Generic.Dictionary<GameObject, float>();
+
+    private bool IsNetworkActive => NetworkManager != null && NetworkManager.IsListening;
+
     void Awake()
     {
         originalPosition = transform.localPosition;
@@ -60,6 +69,19 @@ public class GearRotator : NetworkBehaviour
             bool isMoving = DOTween.IsTweening(transform);
             if (isMoving && !gearSmokeEffect.isPlaying) gearSmokeEffect.Play();
             else if (!isMoving && gearSmokeEffect.isPlaying) gearSmokeEffect.Stop();
+        }
+
+        // Dọn dẹp dictionary nếu các Player GameObject bị hủy/null hoặc không hoạt động
+        if (nextDamageTime.Count > 0)
+        {
+            var keys = new System.Collections.Generic.List<GameObject>(nextDamageTime.Keys);
+            foreach (var key in keys)
+            {
+                if (key == null || !key.activeInHierarchy)
+                {
+                    nextDamageTime.Remove(key);
+                }
+            }
         }
     }
 
@@ -103,5 +125,109 @@ public class GearRotator : NetworkBehaviour
                 }
             });
         }
+    }
+
+    private void HandlePlayerDamage(GameObject otherGo)
+    {
+        if (!dealDamageOnContact) return;
+        
+        // Chỉ xử lý gây sát thương trên Server (trong chế độ mạng) hoặc độc lập (chơi đơn)
+        if (IsNetworkActive && !IsServer) return;
+
+        if (IsAnyPlayer(otherGo, out GameObject playerRoot))
+        {
+            float currentTime = Time.time;
+            if (!nextDamageTime.TryGetValue(playerRoot, out float nextTime) || currentTime >= nextTime)
+            {
+                DealDamage(playerRoot, contactDamage);
+                nextDamageTime[playerRoot] = currentTime + damageCooldown;
+            }
+        }
+    }
+
+    private void OnCollisionEnter(Collision collision)
+    {
+        HandlePlayerDamage(collision.gameObject);
+    }
+
+    private void OnCollisionStay(Collision collision)
+    {
+        HandlePlayerDamage(collision.gameObject);
+    }
+
+    private void OnTriggerEnter(Collider other)
+    {
+        HandlePlayerDamage(other.gameObject);
+    }
+
+    private void OnTriggerStay(Collider other)
+    {
+        HandlePlayerDamage(other.gameObject);
+    }
+
+    private void OnCollisionExit(Collision collision)
+    {
+        RemovePlayerFromDamageList(collision.gameObject);
+    }
+
+    private void OnTriggerExit(Collider other)
+    {
+        RemovePlayerFromDamageList(other.gameObject);
+    }
+
+    private void RemovePlayerFromDamageList(GameObject otherGo)
+    {
+        if (IsAnyPlayer(otherGo, out GameObject playerRoot))
+        {
+            if (nextDamageTime.ContainsKey(playerRoot))
+            {
+                nextDamageTime.Remove(playerRoot);
+            }
+        }
+    }
+
+    private void DealDamage(GameObject playerRoot, float damage)
+    {
+        if (damage <= 0f) return;
+
+        Debug.Log($"[GearRotator] Gây {damage} sát thương cho {playerRoot.name}");
+
+        var elena = playerRoot.GetComponent<ElenaPlayer>();
+        if (elena != null) { elena.TakeDamage(damage); return; }
+
+        var arthur = playerRoot.GetComponent<ArthurPlayer>();
+        if (arthur != null) { arthur.TakeDamage(damage); return; }
+
+        var leo = playerRoot.GetComponent<LeoPlayer>();
+        if (leo != null) { leo.TakeDamage(damage); return; }
+
+        var maya = playerRoot.GetComponent<MayaPlayer>();
+        if (maya != null) { maya.TakeDamage(damage); return; }
+
+        var simple = playerRoot.GetComponent<SimplePlayerTest>();
+        if (simple != null) { simple.TakeDamage(damage); return; }
+    }
+
+    private bool IsAnyPlayer(GameObject go, out GameObject playerRoot)
+    {
+        playerRoot = null;
+        if (go == null) return false;
+
+        var elena = go.GetComponentInParent<ElenaPlayer>();
+        if (elena != null) { playerRoot = elena.gameObject; return true; }
+
+        var arthur = go.GetComponentInParent<ArthurPlayer>();
+        if (arthur != null) { playerRoot = arthur.gameObject; return true; }
+
+        var leo = go.GetComponentInParent<LeoPlayer>();
+        if (leo != null) { playerRoot = leo.gameObject; return true; }
+
+        var maya = go.GetComponentInParent<MayaPlayer>();
+        if (maya != null) { playerRoot = maya.gameObject; return true; }
+
+        var simple = go.GetComponentInParent<SimplePlayerTest>();
+        if (simple != null) { playerRoot = simple.gameObject; return true; }
+
+        return false;
     }
 }
