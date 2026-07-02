@@ -947,6 +947,10 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         }
 
         SyncWeaponVisuals(GetActiveWeaponIndex());
+        if (isStandaloneMode || IsOwner)
+        {
+            PlayerDeathEffectManager.Instance.ResetDeathEffect();
+        }
     }
 
     private void InitStandaloneMode()
@@ -1172,6 +1176,14 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (IsOwner)
         {
             SavePlayerStateToDatabase();
+            if (newHealth <= 0f && oldHealth > 0f)
+            {
+                PlayerDeathEffectManager.Instance.PlayDeathEffect();
+            }
+            else if (newHealth > 0f && oldHealth <= 0f)
+            {
+                PlayerDeathEffectManager.Instance.ResetDeathEffect();
+            }
         }
     }
 
@@ -3170,6 +3182,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
             if (localHealth <= 0)
             {
                 PlayAnimation("Death", 0.15f);
+                PlayerDeathEffectManager.Instance.PlayDeathEffect();
             }
             else
             {
@@ -3196,6 +3209,24 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         }
     }
 
+    [ServerRpc(RequireOwnership = false)]
+    public void TakeDamageServerRpc(float damage)
+    {
+        TakeDamage(damage);
+    }
+
+    public void RequestTakeDamage(float damage)
+    {
+        if (isStandaloneMode || IsServer)
+        {
+            TakeDamage(damage);
+        }
+        else
+        {
+            TakeDamageServerRpc(damage);
+        }
+    }
+
     public void Heal(float amount)
     {
         if (CurrentHealth <= 0) return;
@@ -3204,6 +3235,10 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         {
             localHealth = Mathf.Min(localHealth + amount, maxHealth);
             UpdateHealthHUD(localHealth);
+            if (localHealth > 0f)
+            {
+                PlayerDeathEffectManager.Instance.ResetDeathEffect();
+            }
             Debug.Log($"[ArthurPlayer Standalone] Hồi {amount} máu. Máu hiện tại: {localHealth}");
         }
         else if (IsServer)

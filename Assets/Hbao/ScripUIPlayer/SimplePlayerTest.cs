@@ -402,7 +402,10 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
             InitStandaloneMode();
         }
         // Nếu có Netcode nhưng chưa spawn (vd: đang chờ) thì không làm gì thêm
-        // OnNetworkSpawn() sẽ lo phần còn lại
+        if (isStandaloneMode || IsOwner)
+        {
+            PlayerDeathEffectManager.Instance.ResetDeathEffect();
+        }
     }
 
     /// <summary>
@@ -631,6 +634,14 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
         if (IsOwner)
         {
             SavePlayerStateToDatabase();
+            if (newHealth <= 0f && oldHealth > 0f)
+            {
+                PlayerDeathEffectManager.Instance.PlayDeathEffect();
+            }
+            else if (newHealth > 0f && oldHealth <= 0f)
+            {
+                PlayerDeathEffectManager.Instance.ResetDeathEffect();
+            }
         }
     }
 
@@ -1773,6 +1784,7 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
             {
                 Debug.LogWarning($"[Standalone] {gameObject.name} đã chết!");
                 PlayAnimation("Death", 0.15f);
+                PlayerDeathEffectManager.Instance.PlayDeathEffect();
             }
             else
             {
@@ -1796,6 +1808,29 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
         {
             string hitAnim = Random.value < 0.5f ? "GetHit" : "GeiHit2";
             PlayAnimation(hitAnim, 0.05f);
+        }
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    public void TakeDamageServerRpc(float damage)
+    {
+        TakeDamage(damage);
+    }
+
+    public void RequestTakeDamage(float damage)
+    {
+        if (leoPlayer != null) { leoPlayer.RequestTakeDamage(damage); return; }
+        if (arthurPlayer != null) { arthurPlayer.RequestTakeDamage(damage); return; }
+        if (elenaPlayer != null) { elenaPlayer.RequestTakeDamage(damage); return; }
+        if (mayaPlayer != null) { mayaPlayer.RequestTakeDamage(damage); return; }
+
+        if (isStandaloneMode || IsServer)
+        {
+            TakeDamage(damage);
+        }
+        else
+        {
+            TakeDamageServerRpc(damage);
         }
     }
 
@@ -2439,6 +2474,10 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
         {
             localHealth = Mathf.Min(localHealth + amount, maxHealth);
             UpdateHealthHUD(localHealth);
+            if (localHealth > 0f)
+            {
+                PlayerDeathEffectManager.Instance.ResetDeathEffect();
+            }
         }
         else if (IsServer)
         {
