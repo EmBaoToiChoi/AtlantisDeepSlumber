@@ -149,12 +149,16 @@ public class NetworkFlailTrap : NetworkBehaviour
 
     private void HandlePlayerCollision(GameObject collidedObj)
     {
+        // Chỉ xử lý va chạm trên Server (Online) hoặc Local (Offline) để tránh nhân đôi sát thương
+        bool isNetworkActive = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
+        if (isNetworkActive && !IsServer) return;
+
         if (IsAnyPlayer(collidedObj, out GameObject playerRoot))
         {
             float currentTime = Time.time;
             if (!nextDamageTime.TryGetValue(playerRoot, out float nextTime) || currentTime >= nextTime)
             {
-                DealInstantDeath(playerRoot);
+                DealContactDamage(playerRoot);
                 nextDamageTime[playerRoot] = currentTime + damageCooldown;
             }
         }
@@ -196,7 +200,7 @@ public class NetworkFlailTrap : NetworkBehaviour
         return null;
     }
 
-    private void DealInstantDeath(GameObject playerRoot)
+    private void DealContactDamage(GameObject playerRoot)
     {
         Debug.Log($"[NetworkFlailTrap] Chạm vào người chơi {playerRoot.name}! Phá vỡ miễn nhiễm và gây {contactDamage} sát thương.");
 
@@ -238,7 +242,7 @@ public class NetworkFlailTrap : NetworkBehaviour
                     }
                 }
 
-                // 4. Gây sát thương 40
+                // 4. Gây sát thương cấu hình
                 var requestDamageMethod = GetMethodInherited(type, "RequestTakeDamage", new System.Type[] { typeof(float) }) ??
                                            GetMethodInherited(type, "TakeDamage", new System.Type[] { typeof(float) });
                 if (requestDamageMethod != null)

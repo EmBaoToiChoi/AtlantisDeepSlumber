@@ -3676,6 +3676,11 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
                     PlayerHUDController hud = FindAnyObjectByType<PlayerHUDController>();
                     if (hud != null) hud.TriggerCooldownE();
                 }
+                else if (IsServer)
+                {
+                    isAttackSpeedBoostedNet.Value = false;
+                    TriggerAttackSpeedBoostClientRpc(false);
+                }
             }
         }
 
@@ -5567,7 +5572,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         TriggerAttackSpeedBoostClientRpc(state);
         if (state)
         {
-            StartCoroutine(ServerAttackSpeedBoostTimerCoroutine(5f));
+            attackSpeedBoostTimeRemaining = 5f;
         }
     }
 
@@ -5578,12 +5583,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         SetGhostVisuals(state);
     }
 
-    private System.Collections.IEnumerator ServerAttackSpeedBoostTimerCoroutine(float duration)
-    {
-        yield return new WaitForSeconds(duration);
-        isAttackSpeedBoostedNet.Value = false;
-        TriggerAttackSpeedBoostClientRpc(false);
-    }
+
 
     private void OnAttackSpeedBoostedChanged(bool oldVal, bool newVal)
     {
@@ -5680,34 +5680,37 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             Material ghostMat = ghostBodyMaterial;
             if (ghostMat == null)
             {
-                Shader urpLit = Shader.Find("Universal Render Pipeline/Lit");
-                if (urpLit == null) urpLit = Shader.Find("Standard");
-                ghostMat = new Material(urpLit);
+                Shader ghostShader = Shader.Find("Sprites/Default");
+                if (ghostShader == null) ghostShader = Shader.Find("GUI/Text Shader");
+                if (ghostShader == null) ghostShader = Shader.Find("Universal Render Pipeline/Lit");
+                if (ghostShader == null) ghostShader = Shader.Find("Standard");
+                
+                ghostMat = new Material(ghostShader);
                 ghostMat.name = "DynamicWhiteGhostMaterial";
                 
                 // Đặt màu trắng mờ (transparent alpha)
                 ghostMat.color = new Color(1f, 1f, 1f, 0.6f);
                 
                 // Cấu hình Standard Shader để hỗ trợ Transparent
-                ghostMat.SetFloat("_Mode", 3f); // Transparent
-                ghostMat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
-                ghostMat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
-                ghostMat.SetInt("_ZWrite", 0);
+                if (ghostMat.HasProperty("_Mode")) ghostMat.SetFloat("_Mode", 3f); // Transparent
+                if (ghostMat.HasProperty("_SrcBlend")) ghostMat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+                if (ghostMat.HasProperty("_DstBlend")) ghostMat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+                if (ghostMat.HasProperty("_ZWrite")) ghostMat.SetInt("_ZWrite", 0);
                 ghostMat.DisableKeyword("_ALPHATEST_ON");
                 ghostMat.EnableKeyword("_ALPHABLEND_ON");
                 ghostMat.DisableKeyword("_ALPHAPREMULTIPLY_ON");
                 ghostMat.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
                 
                 // Cấu hình URP Lit Shader để hỗ trợ Transparent
-                ghostMat.SetFloat("_Surface", 1f); // Transparent
-                ghostMat.SetFloat("_Blend", 0f);   // Alpha
-                ghostMat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
-                ghostMat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
-                ghostMat.SetInt("_ZWrite", 0);
+                if (ghostMat.HasProperty("_Surface")) ghostMat.SetFloat("_Surface", 1f); // Transparent
+                if (ghostMat.HasProperty("_Blend")) ghostMat.SetFloat("_Blend", 0f);   // Alpha
+                if (ghostMat.HasProperty("_SrcBlend")) ghostMat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+                if (ghostMat.HasProperty("_DstBlend")) ghostMat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+                if (ghostMat.HasProperty("_ZWrite")) ghostMat.SetInt("_ZWrite", 0);
                 
                 // Kích hoạt Emission màu trắng rực rỡ để tạo hiệu ứng "hồn ma phát sáng"
                 ghostMat.EnableKeyword("_EMISSION");
-                ghostMat.SetColor("_EmissionColor", new Color(1.5f, 1.5f, 1.5f, 1.0f));
+                if (ghostMat.HasProperty("_EmissionColor")) ghostMat.SetColor("_EmissionColor", new Color(1.5f, 1.5f, 1.5f, 1.0f));
             }
 
             Renderer[] renderers = GetComponentsInChildren<Renderer>(true);
