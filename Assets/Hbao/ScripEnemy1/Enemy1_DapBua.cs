@@ -143,6 +143,7 @@ public class Enemy1_DapBua : NetworkBehaviour
     // ══════════════════════════════════════════════════════════
     private void Awake()
     {
+        gameObject.tag = "Enemy";
         if (anim == null) anim = GetComponent<Animator>() ?? GetComponentInChildren<Animator>(true);
         var na = GetComponent<Unity.Netcode.Components.NetworkAnimator>();
         if (na != null)
@@ -272,6 +273,23 @@ public class Enemy1_DapBua : NetworkBehaviour
         if (!aiAuth) return;
 
         if (agent != null && agent.isActiveAndEnabled && !agent.isOnNavMesh) SnapToNavMesh();
+
+        // --- BỘ GIẢI QUYẾT VA CHẠM TRÁNH XUYÊN TƯỜNG (WALL COLLISION RESOLVER) ---
+        if (agent != null && agent.isActiveAndEnabled && agent.isOnNavMesh && agent.velocity.sqrMagnitude > 0.01f)
+        {
+            Vector3 rayOrigin = transform.position + Vector3.up * 1.0f;
+            Vector3 moveDir = agent.velocity.normalized;
+            if (Physics.Raycast(rayOrigin, moveDir, out RaycastHit hit, 0.8f))
+            {
+                if (!hit.collider.CompareTag("Player") && !hit.collider.CompareTag("Enemy") && hit.collider.gameObject.layer != LayerMask.NameToLayer("Enemy") && !hit.collider.name.ToLower().Contains("skeleton") && !hit.collider.isTrigger)
+                {
+                    Vector3 pushBack = hit.normal * 0.15f;
+                    agent.Warp(transform.position + pushBack);
+                }
+            }
+        }
+        // ------------------------------------------------------------------------
+
         if (attackCooldownTimer > 0) attackCooldownTimer -= Time.deltaTime;
         if (dodgeTimer > 0) { dodgeTimer -= Time.deltaTime; if (dodgeTimer <= 0) isDodging = false; }
 
@@ -398,11 +416,11 @@ public class Enemy1_DapBua : NetworkBehaviour
         Vector3 flatPlayer = targetPlayer.position; flatPlayer.y = 0;
         float dist = Vector3.Distance(flatEnemy, flatPlayer);
 
-        if (dist <= attackRange)
+        if (dist <= attackRange && attackCooldownTimer <= 0)
         {
             if (AgentReady) agent.isStopped = true;
             SetSpeedNet(0f); // Dừng lại → Idle trước khi Attack
-            if (attackCooldownTimer <= 0) ChangeState(EnemyState.Attack);
+            ChangeState(EnemyState.Attack);
             return;
         }
 

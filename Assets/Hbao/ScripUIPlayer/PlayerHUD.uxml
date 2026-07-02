@@ -39,7 +39,7 @@
             <ui:VisualElement class="minimap-grid-x" />
             <ui:VisualElement class="minimap-grid-y" />
         </ui:VisualElement>
-        <ui:VisualElement class="minimap-border" style="background-image: url(&quot;project://database/Assets/Artsystack - Fantasy RPG GUI/Resources/Sprites/components/rank.png&quot;);" />
+        <ui:VisualElement class="minimap-border" style="background-image: url(&quot;project://database/Assets/PLuan/minimap-removebg-preview.png?fileID=2800000&amp;guid=1b30b4463c55935428e4748bf0198ca7&amp;type=3#minimap-removebg-preview&quot;);" />
         <ui:VisualElement class="minimap-inner-ring" />
         <ui:VisualElement class="minimap-deco-dot" style="top: -2px; left: 95px;" />
         <ui:VisualElement class="minimap-deco-dot" style="bottom: -2px; left: 95px;" />
