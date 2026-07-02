@@ -120,13 +120,6 @@ public class Puzzle4UIToolkit : MonoBehaviour
             c.a = 0f;
             dangerOverlay.color = c;
         }
-
-        // Fade in panel khi được bật lên
-        if (panelGroup != null)
-        {
-            panelGroup.alpha = 0f;
-            StartCoroutine(FadeInPanel());
-        }
     }
 
     /// <summary>
@@ -135,6 +128,23 @@ public class Puzzle4UIToolkit : MonoBehaviour
     public void ShowPanel()
     {
         gameObject.SetActive(true);
+        
+        // Re-init mỗi lần hiện lại (vì Start() chỉ chạy 1 lần đầu)
+        InitColumn(columnA, "A");
+        InitColumn(columnB, "B");
+        InitColumn(columnC, "C");
+
+        // Fade in panel — bắt buộc phải gọi lại vì Coroutine bị dừng khi SetActive(false)
+        if (panelGroup != null)
+        {
+            panelGroup.alpha = 0f;
+            StartCoroutine(FadeInPanel());
+        }
+        else
+        {
+            // Không có CanvasGroup thì hiện thẳng
+            Debug.Log("[Puzzle4UIToolkit] ShowPanel: không có panelGroup, hiện thẳng.");
+        }
     }
 
     /// <summary>

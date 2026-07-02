@@ -10,7 +10,13 @@ public class Puzzle4TeleportTrigger : NetworkBehaviour
     [Tooltip("Kéo Puzzle4TrapTrigger vào đây để tắt đường sau khi teleport")]
     public Puzzle4TrapTrigger trapTrigger;
     
-    [Tooltip("Kéo PlayableDirector (chứa Timeline video) vào đây")]
+    [Tooltip("Kéo Object chứa Video hoặc Cutscene vào đây để bật lên")]
+    public GameObject videoObject;
+
+    [Tooltip("Thời gian phát video (thời gian player bị khóa)")]
+    public float videoDuration = 5f;
+
+    [Tooltip("Kéo PlayableDirector (chứa Timeline video) vào đây (Tùy chọn)")]
     public PlayableDirector timelineDirector;
 
     [Header("Teleport Settings")]
@@ -57,17 +63,12 @@ public class Puzzle4TeleportTrigger : NetworkBehaviour
                     trapTrigger.ActivateTrapFromTeleport();
                 }
 
-                // Giao việc chờ thời gian cho Puzzle4Manager để tránh Coroutine bị tắt giữa chừng khi Trigger bị vô hiệu hóa
+                // Gọi bắt đầu minigame ngay lập tức để bật UI và kích hoạt minigame
                 Puzzle4Manager p4Manager = FindAnyObjectByType<Puzzle4Manager>();
                 if (p4Manager != null)
                 {
-                    float duration = 3f;
-                    if (timelineDirector != null)
-                    {
-                        duration = (float)timelineDirector.duration;
-                        if (duration > 30f) duration = 30f;
-                    }
-                    p4Manager.ScheduleMinigameStart(duration);
+                    Debug.Log("[Puzzle4Teleport] Bắt đầu minigame NGAY LẬP TỨC!");
+                    p4Manager.StartMinigameFromTeleport();
                 }
                 else
                 {
@@ -147,22 +148,29 @@ public class Puzzle4TeleportTrigger : NetworkBehaviour
             }
         }
 
-        // Bật timeline
+        // Tính toán thời gian khóa
+        float duration = videoDuration;
         if (timelineDirector != null)
         {
             timelineDirector.Play();
-            Debug.Log("[Puzzle4Teleport] Đang chạy Timeline video...");
-            
-            float duration = (float)timelineDirector.duration;
+            duration = (float)timelineDirector.duration;
             if (duration > 30f) duration = 30f;
-            
-            // Chờ cho timeline chạy xong (tối đa 30s)
-            yield return new WaitForSeconds(duration);
+            Debug.Log("[Puzzle4Teleport] Đang chạy Timeline video...");
         }
-        else
+        else if (videoObject != null)
         {
-            // Fallback nếu không có timeline
-            yield return new WaitForSeconds(3f); 
+            videoObject.SetActive(true);
+            Debug.Log("[Puzzle4Teleport] Đang bật Video Object...");
+        }
+
+        // Chờ thời gian video chạy xong
+        yield return new WaitForSeconds(duration);
+
+        // Tắt video object
+        if (videoObject != null)
+        {
+            videoObject.SetActive(false);
+            Debug.Log("[Puzzle4Teleport] Đã tắt Video Object...");
         }
 
         // Mở khoá di chuyển
