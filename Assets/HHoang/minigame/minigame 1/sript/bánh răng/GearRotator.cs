@@ -183,6 +183,18 @@ public class GearRotator : NetworkBehaviour
         }
     }
 
+    private static System.Reflection.MethodInfo GetMethodInherited(System.Type type, string name, System.Type[] types)
+    {
+        System.Type currentType = type;
+        while (currentType != null)
+        {
+            System.Reflection.MethodInfo method = currentType.GetMethod(name, types);
+            if (method != null) return method;
+            currentType = currentType.BaseType;
+        }
+        return null;
+    }
+
     private void DealDamage(GameObject playerRoot, float damage)
     {
         if (damage <= 0f) return;
@@ -196,11 +208,11 @@ public class GearRotator : NetworkBehaviour
             System.Type type = script.GetType();
             string typeName = type.Name;
 
-            if (typeName == "SimplePlayerTest" || typeName == "LeoPlayer" || typeName == "ArthurPlayer" || 
-                typeName == "ElenaPlayer" || typeName == "MayaPlayer" || typeName.EndsWith("Player"))
+            if (script is SimplePlayerTest || script is LeoPlayer || script is ArthurPlayer || 
+                script is ElenaPlayer || script is MayaPlayer || typeName.EndsWith("Player"))
             {
-                var requestDamageMethod = type.GetMethod("RequestTakeDamage", new System.Type[] { typeof(float) }) ??
-                                          type.GetMethod("TakeDamage", new System.Type[] { typeof(float) });
+                var requestDamageMethod = GetMethodInherited(type, "RequestTakeDamage", new System.Type[] { typeof(float) }) ??
+                                           GetMethodInherited(type, "TakeDamage", new System.Type[] { typeof(float) });
                 if (requestDamageMethod != null)
                 {
                     requestDamageMethod.Invoke(script, new object[] { damage });

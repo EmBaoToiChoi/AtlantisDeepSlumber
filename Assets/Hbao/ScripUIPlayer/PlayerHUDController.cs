@@ -1169,7 +1169,7 @@ public class PlayerHUDController : MonoBehaviour
                         if (currentCooldownE <= 0f && LocalPlayerTarget != null && !LocalPlayerTarget.IsAttackSpeedBoosted)
                         {
                             LocalPlayerTarget.TriggerAttackSpeedBoostSkill();
-                            if (LocalPlayerTarget.CharacterClassIndex != 2 && LocalPlayerTarget.CharacterClassIndex != 1)
+                            if (LocalPlayerTarget.CharacterClassIndex != 2 && LocalPlayerTarget.CharacterClassIndex != 1 && LocalPlayerTarget.CharacterClassIndex != 0)
                             {
                                 currentCooldownE = cooldownTimeE;
                             }
@@ -2248,6 +2248,11 @@ public class PlayerHUDController : MonoBehaviour
     }
 
     public void TriggerElenaCooldownE()
+    {
+        currentCooldownE = cooldownTimeE;
+    }
+
+    public void TriggerCooldownE()
     {
         currentCooldownE = cooldownTimeE;
     }
