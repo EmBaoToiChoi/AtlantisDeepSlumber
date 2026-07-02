@@ -468,6 +468,9 @@ public class ElementalRockPuzzle : NetworkBehaviour
     {
         if (hitObj == null) return;
 
+        // Tránh đệ quy từ các mảnh vỡ hoặc bản sao icon vừa được sinh ra khi đá bị vỡ
+        if (hitObj.name.Contains("ShatteredIcon") || hitObj.name.Contains("FallbackShard") || hitObj.tag == "Untagged") return;
+
         // Tìm NetworkObject trên đối tượng va chạm hoặc cha của nó để lấy đúng Tag và ID gốc của đạn
         NetworkObject netObj = hitObj.GetComponentInParent<NetworkObject>();
         GameObject rootObj = null;
@@ -1133,6 +1136,8 @@ public class ElementalRockPuzzle : NetworkBehaviour
             // Nhân bản icon nguyên tố để tạo bản sao vật lý bay ra độc lập
             GameObject iconCopy = Instantiate(icon.gameObject);
             iconCopy.name = $"ShatteredIcon_{icon.gameObject.name}";
+            iconCopy.tag = "Untagged"; // Tránh kích hoạt va chạm đệ quy với đá gốc!
+            iconCopy.layer = LayerMask.NameToLayer("Ignore Raycast");
             iconCopy.transform.position = icon.transform.position;
             iconCopy.transform.rotation = icon.transform.rotation;
             iconCopy.transform.localScale = icon.transform.lossyScale;
@@ -1220,6 +1225,8 @@ public class ElementalRockPuzzle : NetworkBehaviour
             {
                 GameObject shard = GameObject.CreatePrimitive(PrimitiveType.Cube);
                 shard.name = $"FallbackShard_{i}";
+                shard.tag = "Untagged"; // Tránh kích hoạt va chạm đệ quy với đá gốc!
+                shard.layer = LayerMask.NameToLayer("Ignore Raycast");
                 
                 // Cấu hình kích thước ngẫu nhiên tỷ lệ thuận với kích thước đá gốc (chunky shards)
                 float sizeX = Random.Range(bounds.size.x * 0.15f, bounds.size.x * 0.35f);
