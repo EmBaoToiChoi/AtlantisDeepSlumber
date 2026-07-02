@@ -318,7 +318,7 @@ public class Enemy5_PhuThuy : NetworkBehaviour
             NavMeshHit h;
             if (NavMesh.SamplePosition(rp, out h, 4.5f, NavMesh.AllAreas)) { if (AgentReady) { agent.isStopped = false; agent.speed = spd + 1.5f; agent.SetDestination(h.position); } }
             else { Vector3 perp = new Vector3(-away.z, 0, away.x); Vector3 alt = transform.position + perp * (Random.value < 0.5f ? 4f : -4f); NavMeshHit h2; if (NavMesh.SamplePosition(alt, out h2, 4f, NavMesh.AllAreas) && AgentReady) agent.SetDestination(h2.position); }
-            SetSpeedNet(AgentReady && agent.velocity.magnitude > 0.2f ? 1f : 0f);
+            SetSpeedNet(AgentReady && !agent.isStopped ? 1f : 0f);
             return;
         }
 
@@ -328,7 +328,7 @@ public class Enemy5_PhuThuy : NetworkBehaviour
 
         // C. QUÁ XA: Tiến lại
         if (AgentReady) { agent.isStopped = false; agent.speed = spd; agent.SetDestination(targetPlayer.position); }
-        SetSpeedNet(AgentReady && agent.velocity.magnitude > 0.2f ? 1f : 0f);
+        SetSpeedNet(AgentReady && !agent.isStopped ? 1f : 0f);
     }
 
     private void ReturnToPatrol() { targetPlayer = null; CurrentStateValue = EnemyState.Patrol; waitingAtWaypoint = false; waypointWaitTimer = 0f; GoToNextWaypoint(); }

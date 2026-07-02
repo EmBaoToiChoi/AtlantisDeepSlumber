@@ -322,7 +322,7 @@ public class Enemy4_Bongtoi : NetworkBehaviour
             agent.speed = enraged ? chaseRunSpeed * 1.3f : chaseRunSpeed;
             agent.SetDestination(targetPlayer.position);
         }
-        SetSpeedNet(AgentReady && agent.velocity.magnitude > 0.2f ? 1f : 0f);
+        SetSpeedNet(AgentReady && !agent.isStopped ? 1f : 0f);
     }
 
     private void ReturnToPatrol() { targetPlayer = null; CurrentStateValue = EnemyState.Patrol; waitingAtWaypoint = false; waypointWaitTimer = 0f; GoToNextWaypoint(); }

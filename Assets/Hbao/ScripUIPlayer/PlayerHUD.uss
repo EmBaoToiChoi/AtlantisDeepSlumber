@@ -3,93 +3,72 @@
     position: absolute;
     bottom: 30px;
     left: 30px;
-    padding: 12px 20px 12px 14px;
-    background-color: rgba(12, 16, 26, 0.85);
-    border-radius: 20px;
+    padding: 10px 16px;
+    background-color: rgba(0, 0, 0, 0.15);
+    border-radius: 40px;
     align-items: center;
-    border-width: 1.5px;
-    border-color: rgba(255, 255, 255, 0.12);
+    border-width: 0;
 }
 
 .player-avatar-container {
-    width: 90px;
-    height: 90px;
-    background-image: url("project://database/Assets/Artsystack - Fantasy RPG GUI/Resources/Sprites/components/hero_frame.png");
-    -unity-background-scale-mode: scale-to-fit;
-    background-color: transparent;
+    width: 80px;
+    height: 80px;
+    border-radius: 40px;
+    background-color: rgba(0, 0, 0, 0.4);
     justify-content: center;
     align-items: center;
-    margin-right: 12px;
-    border-width: 0;
-    position: relative;
+    margin-right: 8px;
+    border-width: 2px;
+    border-color: rgba(40, 160, 255, 0.9);
 }
 
 .raw-player-image {
-    width: 66px;
-    height: 66px;
-    border-radius: 33px;
+    width: 76px;
+    height: 76px;
+    border-radius: 38px;
     -unity-background-scale-mode: scale-and-crop;
-    overflow: hidden;
-    margin-top: -6px;
-    margin-left: 1px;
 }
 
 .stats-wrapper {
     flex-direction: column;
     justify-content: center;
-    margin-top: -2px;
 }
 
 .level-label {
-    color: rgb(255, 240, 200);
-    font-size: 14px;
+    color: rgb(255, 255, 255);
+    font-size: 16px;
     -unity-font-style: bold;
-    margin-bottom: 5px;
+    margin-bottom: 2px;
     padding: 0;
-    letter-spacing: 0.5px;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+    letter-spacing: 1px;
+    -unity-text-outline-width: 1px;
+    -unity-text-outline-color: rgba(0, 0, 0, 0.5);
 }
 
 .track-bg {
-    background-color: transparent;
-    -unity-background-scale-mode: stretch-to-fill;
-    margin-bottom: 5px;
+    background-color: rgba(0, 0, 0, 0.45);
+    margin-bottom: 1px;
     position: relative;
     overflow: hidden;
     border-width: 0;
 }
 
 .hp-track {
-    background-image: url("project://database/Assets/Artsystack - Fantasy RPG GUI/Resources/Sprites/components/frame_powerup.png");
-    -unity-slice-left: 36;
-    -unity-slice-right: 36;
-    -unity-slice-top: 0;
-    -unity-slice-bottom: 0;
     width: 250px;
-    height: 22px;
-    padding: 3px 25px 3px 10px;
+    height: 16px;
+    border-radius: 0;
 }
 
 .mp-track {
-    background-image: url("project://database/Assets/Artsystack - Fantasy RPG GUI/Resources/Sprites/components/rank_bar_bg.png");
-    -unity-slice-left: 16;
-    -unity-slice-right: 16;
-    -unity-slice-top: 6;
-    -unity-slice-bottom: 6;
-    width: 220px;
-    height: 16px;
-    padding: 3px 12px;
+    width: 200px;
+    height: 10px;
+    border-radius: 5px;
 }
 
 .exp-track {
-    background-image: url("project://database/Assets/Artsystack - Fantasy RPG GUI/Resources/Sprites/components/rank_bar_bg.png");
-    -unity-slice-left: 16;
-    -unity-slice-right: 16;
-    -unity-slice-top: 6;
-    -unity-slice-bottom: 6;
-    width: 190px;
-    height: 11px;
-    padding: 2.5px 10px;
+    width: 160px;
+    height: 6px;
+    border-radius: 3px;
     margin-bottom: 0;
 }
 
@@ -113,49 +92,31 @@
     position: absolute;
     top: 0;
     bottom: 0;
-    width: 1.5px;
-    background-color: rgba(0, 0, 0, 0.4);
+    width: 1px;
+    background-color: rgba(0, 0, 0, 0.25);
 }
 
 .hp-fill {
-    background-image: url("project://database/Assets/Artsystack - Fantasy RPG GUI/Resources/Sprites/components/progress_bar_top.png");
-    background-color: transparent;
-    -unity-background-image-tint-color: rgb(235, 60, 60);
-    -unity-slice-left: 8;
-    -unity-slice-right: 8;
-    -unity-slice-top: 4;
-    -unity-slice-bottom: 4;
-    border-radius: 3px;
+    background-color: rgb(240, 245, 255);
+    border-radius: 0;
 }
 
 .mp-fill {
-    background-image: url("project://database/Assets/Artsystack - Fantasy RPG GUI/Resources/Sprites/components/rank_bar_top.png");
-    background-color: transparent;
-    -unity-background-image-tint-color: rgb(40, 150, 250);
-    -unity-slice-left: 16;
-    -unity-slice-right: 16;
-    -unity-slice-top: 6;
-    -unity-slice-bottom: 6;
-    border-radius: 2px;
+    background-color: rgb(40, 160, 255);
+    border-radius: 5px;
 }
 
 .exp-fill {
-    background-image: url("project://database/Assets/Artsystack - Fantasy RPG GUI/Resources/Sprites/components/rank_bar_top.png");
-    background-color: transparent;
-    -unity-background-image-tint-color: rgb(75, 220, 95);
-    -unity-slice-left: 16;
-    -unity-slice-right: 16;
-    -unity-slice-top: 6;
-    -unity-slice-bottom: 6;
-    border-radius: 2px;
+    background-color: rgb(75, 225, 100);
+    border-radius: 3px;
 }
 
 .mic-icon-base {
     position: absolute;
-    right: -2px;
-    bottom: -2px;
-    width: 26px;
-    height: 26px;
+    right: 0;
+    bottom: -12px;
+    width: 28px;
+    height: 28px;
     -unity-background-scale-mode: scale-to-fit;
     transition-property: opacity, scale;
     transition-duration: 0.3s;
@@ -272,19 +233,13 @@
 .weapon-slot {
     width: 210px;
     height: 63px;
-    background-image: url("project://database/Assets/Artsystack - Fantasy RPG GUI/Resources/Sprites/components/ingame_icon_slot_2.png");
-    -unity-background-scale-mode: stretch-to-fill;
-    background-color: transparent;
-    border-width: 0;
-    border-radius: 0;
+    border-radius: 9px;
+    background-color: rgba(15, 25, 40, 0.35);
+    border-width: 1.5px;
+    border-color: rgba(150, 150, 150, 0.8);
     margin-top: 10px;
     position: relative;
     overflow: hidden;
-    padding: 6px;
-    -unity-slice-left: 12;
-    -unity-slice-right: 12;
-    -unity-slice-top: 12;
-    -unity-slice-bottom: 12;
     transition-property: scale, opacity, border-color, box-shadow, background-color;
     transition-duration: 0.3s;
     transition-timing-function: ease-out;
@@ -321,30 +276,6 @@
     -unity-text-outline-width: 0;
     padding: 0;
     margin: 0;
-}
-
-#weapon-slot-1 .weapon-hotkey-container {
-    background-image: url("project://database/Assets/Artsystack - Fantasy RPG GUI/Resources/Sprites/controller icons/keyboard_mouse/1.png");
-    -unity-background-scale-mode: scale-to-fit;
-    background-color: transparent;
-    border-width: 0;
-    border-radius: 0;
-}
-
-#weapon-slot-1 .weapon-hotkey {
-    display: none;
-}
-
-#weapon-slot-2 .weapon-hotkey-container {
-    background-image: url("project://database/Assets/Artsystack - Fantasy RPG GUI/Resources/Sprites/controller icons/keyboard_mouse/2.png");
-    -unity-background-scale-mode: scale-to-fit;
-    background-color: transparent;
-    border-width: 0;
-    border-radius: 0;
-}
-
-#weapon-slot-2 .weapon-hotkey {
-    display: none;
 }
 
 .weapon-ammo-text {
@@ -386,13 +317,14 @@
 .weapon-active {
     scale: 1.15 1.15;
     opacity: 1;
-    -unity-background-image-tint-color: rgb(255, 235, 170);
+    background-color: rgba(20, 35, 55, 0.5);
+    border-color: rgba(170, 170, 170, 0.9);
 }
 
 .weapon-inactive {
     scale: 0.85 0.85;
-    opacity: 0.45;
-    -unity-background-image-tint-color: rgb(180, 180, 180);
+    opacity: 0.35;
+    border-color: rgba(100, 100, 100, 0.3);
 }
 
 .hud-skills-wrapper {
@@ -409,28 +341,24 @@
     width: 70px;
     height: 70px;
     margin: 0 10px;
-    background-image: url("project://database/Assets/Artsystack - Fantasy RPG GUI/Resources/Sprites/components/ingame_icon_slot_2.png");
-    -unity-background-scale-mode: stretch-to-fill;
-    background-color: transparent;
-    border-width: 0;
-    border-radius: 0;
+    background-color: rgba(20, 20, 20, 0.4);
+    border-radius: 12px;
+    border-width: 2px;
+    border-color: rgba(255, 255, 255, 0.85);
     position: relative;
     overflow: hidden;
-    padding: 6px;
 }
 
 .skill-slot-center {
     width: 85px;
     height: 85px;
     margin: 0 12px;
-    background-image: url("project://database/Assets/Artsystack - Fantasy RPG GUI/Resources/Sprites/components/ingame_icon_slot_2.png");
-    -unity-background-scale-mode: stretch-to-fill;
-    background-color: transparent;
-    border-width: 0;
-    border-radius: 0;
+    background-color: rgba(25, 25, 25, 0.5);
+    border-radius: 16px;
+    border-width: 2px;
+    border-color: rgba(255, 255, 255, 0.85);
     position: relative;
     overflow: hidden;
-    padding: 7px;
 }
 
 .skill-image {
@@ -450,26 +378,20 @@
 }
 
 .skill-slot .skill-image {
-    border-radius: 0;
+    border-radius: 10px;
 }
 
 .skill-slot-center .skill-image {
-    border-radius: 0;
+    border-radius: 14px;
 }
 
 .skill-cooldown-overlay {
     position: absolute;
-    bottom: 6px;
-    left: 6px;
-    right: 6px;
+    bottom: 0;
+    left: 0;
+    width: 100%;
     height: 0%;
     background-color: rgba(0, 0, 0, 0.75);
-}
-
-.skill-slot-center .skill-cooldown-overlay {
-    bottom: 7px;
-    left: 7px;
-    right: 7px;
 }
 
 .skill-cooldown-text {
@@ -488,23 +410,16 @@
 
 .skill-lock-overlay {
     position: absolute;
-    top: 6px;
-    left: 6px;
-    right: 6px;
-    bottom: 6px;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
     background-color: rgb(15, 15, 15); /* Che hoàn toàn skill khi chưa mở */
     justify-content: center;
     align-items: center;
     transition-property: background-color;
     transition-duration: 0.6s;
     transition-timing-function: ease-out;
-}
-
-.skill-slot-center .skill-lock-overlay {
-    top: 7px;
-    left: 7px;
-    right: 7px;
-    bottom: 7px;
 }
 
 .skill-lock-overlay.unlocked-anim {
@@ -546,14 +461,14 @@
 /* --- Weapon Lock Styles --- */
 .weapon-lock-overlay {
     position: absolute;
-    top: 6px;
-    left: 6px;
-    right: 6px;
-    bottom: 6px;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
     background-color: rgb(15, 15, 15);
     justify-content: center;
     align-items: center;
-    border-radius: 0;
+    border-radius: 9px;
 }
 
 .weapon-lock-overlay .weapon-lock-icon {
@@ -1052,7 +967,7 @@
 
 .weapon-durability-container {
     position: absolute;
-    bottom: 8px;
+    bottom: 4px;
     left: 14px;
     right: 14px;
     height: 4px;
@@ -1103,35 +1018,24 @@
 }
 
 .key-badge-f {
-    width: 28px;
-    height: 28px;
-    background-image: url("project://database/Assets/Artsystack - Fantasy RPG GUI/Resources/Sprites/controller icons/keyboard_mouse/F.png");
-    -unity-background-scale-mode: scale-to-fit;
-    background-color: transparent;
-    border-width: 0;
-    border-radius: 0;
+    width: 26px;
+    height: 26px;
+    background-color: rgb(255, 255, 255);
+    border-radius: 6px;
+    border-width: 1px;
+    border-color: rgb(200, 200, 200);
     justify-content: center;
     align-items: center;
     margin-right: 10px;
+    box-shadow: 0 3px 0 rgb(180, 180, 180);
 }
 
 .key-badge-f-text {
-    display: none;
-}
-
-.key-icon {
-    width: 26px;
-    height: 26px;
-    -unity-background-scale-mode: scale-to-fit;
-    background-color: transparent;
-    border-width: 0;
-    margin-right: 3px;
-}
-
-.key-badge-container {
-    flex-direction: row;
-    align-items: center;
-    margin-right: 12px;
+    color: rgb(15, 15, 15);
+    -unity-font-style: bold;
+    font-size: 14px;
+    padding: 0;
+    margin: 0;
 }
 
 .interaction-text {
@@ -1247,13 +1151,12 @@
 .teammate-card {
     flex-direction: row;
     align-items: center;
-    background-color: rgba(12, 16, 26, 0.7);
-    border-radius: 16px;
-    border-width: 1px;
-    border-color: rgba(255, 255, 255, 0.08);
-    padding: 8px 12px;
-    margin-bottom: 10px;
-    width: 250px;
+    background-color: rgba(0, 0, 0, 0.25);
+    border-radius: 32px;
+    padding: 6px 12px;
+    margin-bottom: 12px;
+    border-width: 0;
+    width: 240px;
     transition-property: scale;
     transition-duration: 0.2s;
 }
@@ -1263,23 +1166,22 @@
 }
 
 .teammate-avatar-container {
-    width: 58px;
-    height: 58px;
-    background-image: url("project://database/Assets/Artsystack - Fantasy RPG GUI/Resources/Sprites/components/rank.png");
-    -unity-background-scale-mode: scale-to-fit;
-    background-color: transparent;
+    width: 52px;
+    height: 52px;
+    border-radius: 26px;
+    background-color: rgba(0, 0, 0, 0.4);
+    border-width: 1.5px;
+    border-color: rgba(40, 160, 255, 0.9);
     justify-content: center;
     align-items: center;
     margin-right: 8px;
-    border-width: 0;
 }
 
 .teammate-avatar-image {
-    width: 42px;
-    height: 42px;
-    border-radius: 21px;
+    width: 48px;
+    height: 48px;
+    border-radius: 24px;
     -unity-background-scale-mode: scale-and-crop;
-    overflow: hidden;
 }
 
 .teammate-stats-wrapper {
@@ -1313,85 +1215,45 @@
 }
 
 .teammate-track-bg {
-    background-color: transparent;
-    -unity-background-scale-mode: stretch-to-fill;
-    margin-bottom: 3px;
-    position: relative;
+    background-color: rgba(0, 0, 0, 0.45);
+    margin-bottom: 2.5px;
+    border-radius: 3px;
     overflow: hidden;
-    border-width: 0;
+    position: relative;
 }
 
 .teammate-hp-track {
-    background-image: url("project://database/Assets/Artsystack - Fantasy RPG GUI/Resources/Sprites/components/frame_powerup.png");
-    -unity-slice-left: 36;
-    -unity-slice-right: 36;
-    -unity-slice-top: 0;
-    -unity-slice-bottom: 0;
-    width: 155px;
-    height: 16px;
-    padding: 2.5px 16px 2.5px 8px;
+    width: 150px;
+    height: 10px;
 }
 
 .teammate-mp-track {
-    background-image: url("project://database/Assets/Artsystack - Fantasy RPG GUI/Resources/Sprites/components/rank_bar_bg.png");
-    -unity-slice-left: 16;
-    -unity-slice-right: 16;
-    -unity-slice-top: 6;
-    -unity-slice-bottom: 6;
-    width: 135px;
-    height: 13px;
-    padding: 2.5px 10px;
+    width: 120px;
+    height: 7px;
 }
 
 .teammate-exp-track {
-    background-image: url("project://database/Assets/Artsystack - Fantasy RPG GUI/Resources/Sprites/components/rank_bar_bg.png");
-    -unity-slice-left: 16;
-    -unity-slice-right: 16;
-    -unity-slice-top: 6;
-    -unity-slice-bottom: 6;
-    width: 115px;
-    height: 9px;
-    padding: 2px 8px;
+    width: 90px;
+    height: 4px;
     margin-bottom: 0;
 }
 
 .teammate-hp-fill {
-    background-image: url("project://database/Assets/Artsystack - Fantasy RPG GUI/Resources/Sprites/components/progress_bar_top.png");
-    background-color: transparent;
-    -unity-background-image-tint-color: rgb(235, 60, 60);
+    background-color: rgb(240, 245, 255);
     height: 100%;
     width: 100%;
-    -unity-slice-left: 8;
-    -unity-slice-right: 8;
-    -unity-slice-top: 4;
-    -unity-slice-bottom: 4;
-    border-radius: 2px;
 }
 
 .teammate-mp-fill {
-    background-image: url("project://database/Assets/Artsystack - Fantasy RPG GUI/Resources/Sprites/components/rank_bar_top.png");
-    background-color: transparent;
-    -unity-background-image-tint-color: rgb(40, 150, 250);
+    background-color: rgb(40, 160, 255);
     height: 100%;
     width: 100%;
-    -unity-slice-left: 16;
-    -unity-slice-right: 16;
-    -unity-slice-top: 6;
-    -unity-slice-bottom: 6;
-    border-radius: 1.5px;
 }
 
 .teammate-exp-fill {
-    background-image: url("project://database/Assets/Artsystack - Fantasy RPG GUI/Resources/Sprites/components/rank_bar_top.png");
-    background-color: transparent;
-    -unity-background-image-tint-color: rgb(75, 220, 95);
+    background-color: rgb(75, 225, 100);
     height: 100%;
     width: 100%;
-    -unity-slice-left: 16;
-    -unity-slice-right: 16;
-    -unity-slice-top: 6;
-    -unity-slice-bottom: 6;
-    border-radius: 1px;
 }
 
 /* ========================================================================= */
