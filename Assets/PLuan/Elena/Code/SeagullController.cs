@@ -16,8 +16,11 @@ public class SeagullController : NetworkBehaviour
     public Vector3 cameraOffset = new Vector3(0f, 2f, -6f);
     public float cameraSmoothSpeed = 10f;
 
-    [Tooltip("Bù đắp góc xoay Y khi chim bay về nếu model bị ngược đầu. Thử đặt thành 180 nếu chim bay lùi.")]
-    public float returnRotationYOffset = 180f;
+    [Tooltip("Bù đắp góc xoay Y của mô hình visual để đầu chim hướng về phía trước (trục Z). Ví dụ: 90, -90, 180.")]
+    public float modelRotationYOffset = 90f;
+
+    [Tooltip("Bù đắp góc xoay Y khi chim bay về (không còn dùng, nên để 0).")]
+    public float returnRotationYOffset = 0f;
 
     [Header("Animation Settings")]
     public Animator anim;
@@ -96,7 +99,7 @@ public class SeagullController : NetworkBehaviour
             childrenRotated = true;
             foreach (Transform child in transform)
             {
-                child.localRotation = child.localRotation * Quaternion.Euler(0f, 180f, 0f);
+                child.localRotation = Quaternion.Euler(0f, modelRotationYOffset, 0f) * child.localRotation;
             }
         }
 
