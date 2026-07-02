@@ -1,6 +1,8 @@
 using UnityEngine;
 using Unity.Netcode;
 using System.Collections;
+using System.Collections.Generic;
+using Hanzzz.MeshDemolisher;
 
 public class ElementalRockPuzzle : NetworkBehaviour
 {
@@ -86,6 +88,18 @@ public class ElementalRockPuzzle : NetworkBehaviour
     private Color[] elementGlowColors;
     private Coroutine[] fadeCoroutines;
 
+    [Header("Mesh Demolisher Settings")]
+    [Tooltip("Danh sách các điểm dùng để định vị lát cắt vỡ đá (Demolish Points)")]
+    public List<Transform> demolishPoints;
+    [Tooltip("Material dùng làm mặt cắt bên trong của các mảnh đá vỡ")]
+    public Material interiorMaterial;
+    [Tooltip("Nếu tích chọn, sẽ dùng thuật toán cắt MeshDemolisher của Hanzzz (chỉ hoạt động với lưới kín manifold). Nếu không chọn, sẽ dùng cơ chế mảnh vỡ dự phòng siêu mượt và an toàn.")]
+    public bool useMeshDemolisher = false;
+
+    [Header("Success Effects")]
+    [Tooltip("VFX Prefab phát ra khi phá đá thành công")]
+    public GameObject successVFXPrefab;
+
     [Header("Start Hidden Settings")]
     [Tooltip("Nếu tích chọn, đá sẽ tự ẩn Renderer và Collider khi bắt đầu (nhưng GameObject vẫn Active để tránh lỗi Netcode).")]
     public bool startHidden = false;
@@ -100,7 +114,7 @@ public class ElementalRockPuzzle : NetworkBehaviour
 
     private void Start()
     {
-        orderedTags = new string[] { fireTag, waterTag, iceTag, lightningTag };
+        orderedTags = new string[] { iceTag, lightningTag };
 
         // ĐẢM BẢO đá không có Rigidbody để đóng vai trò là Static Collider/Trigger.
         // Trong Unity, Kinematic Rigidbody (của đạn) KHÔNG va chạm/trigger với Kinematic Rigidbody khác (của đá).
@@ -744,6 +758,15 @@ public class ElementalRockPuzzle : NetworkBehaviour
         }
     }
 
+    private int GetElementIndexByTag(string tag)
+    {
+        if (tag == fireTag) return 0;
+        if (tag == waterTag) return 1;
+        if (tag == iceTag) return 2;
+        if (tag == lightningTag) return 3;
+        return -1;
+    }
+
     private void UpdateVisualStates()
     {
         int activeStep = IsNetworkActive ? netCurrentStep.Value : currentStep;
@@ -751,13 +774,27 @@ public class ElementalRockPuzzle : NetworkBehaviour
 
         bool has3DRenderers = fireRenderer != null || waterRenderer != null || iceRenderer != null || lightningRenderer != null;
 
+        // Xác định những nguyên tố nào đã được kích hoạt thành công (dựa theo các bước đã hoàn thành)
+        bool[] activeElements = new bool[4];
+        for (int k = 0; k < activeStep; k++)
+        {
+            if (k >= 0 && k < orderedTags.Length)
+            {
+                int index = GetElementIndexByTag(orderedTags[k]);
+                if (index >= 0 && index < 4)
+                {
+                    activeElements[index] = true;
+                }
+            }
+        }
+
         if (has3DRenderers)
         {
             if (elementRenderers == null || elementRenderers.Length != 4) return;
             for (int i = 0; i < 4; i++)
             {
                 if (elementRenderers[i] == null) continue;
-                bool shouldBeActive = i < activeStep;
+                bool shouldBeActive = activeElements[i];
                 if (fadeCoroutines[i] != null)
                 {
                     StopCoroutine(fadeCoroutines[i]);
@@ -767,30 +804,32 @@ public class ElementalRockPuzzle : NetworkBehaviour
         }
         else
         {
-            // Cập nhật giao diện hình ảnh của 4 Icon
+            // Cập nhật giao diện hình ảnh của 4 Icon 2D cũ
             if (iconRenderers != null && iconRenderers.Length == 4)
             {
+                int currentExpectedIndex = (activeStep >= 0 && activeStep < orderedTags.Length) ? GetElementIndexByTag(orderedTags[activeStep]) : -1;
+
                 for (int i = 0; i < 4; i++)
                 {
                     if (iconRenderers[i] == null) continue;
 
-                    if (i < activeStep)
+                    if (activeElements[i])
                     {
                         // Các bước đã hoàn thành: Sáng rõ (Full màu)
                         iconRenderers[i].color = Color.white;
-                        if (iconObjects[i] != null && (i != activeStep || !isTimerRunning))
+                        if (iconObjects[i] != null && (i != currentExpectedIndex || !isTimerRunning))
                         {
                             iconObjects[i].transform.localScale = Vector3.one * iconScale;
                         }
                     }
-                    else if (i == activeStep)
+                    else if (i == currentExpectedIndex)
                     {
                         // Bước hiện tại cần bắn: Sáng rõ
                         iconRenderers[i].color = Color.white;
                     }
                     else
                     {
-                        // Các bước chưa tới lượt: Làm mờ/Tối đi
+                        // Các bước chưa tới lượt hoặc không yêu cầu: Làm mờ/Tối đi
                         iconRenderers[i].color = new Color(0.3f, 0.3f, 0.3f, 0.3f);
                         if (iconObjects[i] != null)
                         {
@@ -949,28 +988,553 @@ public class ElementalRockPuzzle : NetworkBehaviour
         UpdateVisualStates();
     }
 
+    [ContextMenu("Preview Shatter")]
+    public void PreviewShatter()
+    {
+        if (!Application.isPlaying)
+        {
+            Debug.LogWarning("[ElementalRockPuzzle] Bạn chỉ có thể Preview Shatter khi đang chạy game (Play Mode) để mô phỏng vật lý va chạm!");
+            return;
+        }
+
+        Debug.Log("[ElementalRockPuzzle] Kích hoạt Preview Shatter...");
+        ShatterRock();
+    }
+
+    private GameObject FindMeshTarget()
+    {
+        // Kiểm tra xem chính đối tượng này có MeshFilter và MeshRenderer không
+        if (GetComponent<MeshFilter>() != null && GetComponent<MeshRenderer>() != null)
+        {
+            return gameObject;
+        }
+
+        // Nếu không có, tìm kiếm trong các đối tượng con
+        foreach (var f in GetComponentsInChildren<MeshFilter>(true))
+        {
+            var r = f.GetComponent<MeshRenderer>();
+            if (r != null)
+            {
+                // Tránh tìm nhầm vào các elementRenderer của Lửa, Nước, Băng, Sét
+                if (r == fireRenderer || r == waterRenderer || r == iceRenderer || r == lightningRenderer)
+                    continue;
+                
+                return f.gameObject;
+            }
+        }
+
+        return null;
+    }
+
+    private List<Transform> GetActualDemolishPoints()
+    {
+        List<Transform> actualPoints = new List<Transform>();
+        if (demolishPoints == null) return actualPoints;
+
+        foreach (var pt in demolishPoints)
+        {
+            if (pt == null) continue;
+            
+            // Nếu Transform được kéo thả vào là một Nhóm cha chứa các điểm con
+            if (pt.childCount > 0)
+            {
+                foreach (Transform child in pt)
+                {
+                    actualPoints.Add(child);
+                }
+            }
+            else
+            {
+                actualPoints.Add(pt);
+            }
+        }
+        return actualPoints;
+    }
+
+    private List<Transform> GenerateRandomPointsInBounds(Bounds bounds, ref List<GameObject> tempPointObjs)
+    {
+        List<Transform> points = new List<Transform>();
+        Vector3 center = bounds.center;
+        Vector3 size = bounds.size;
+
+        // Sinh 8 điểm ở 8 góc phần tư của bounds để đảm bảo phân bổ đều trong không gian 3D, tránh thẳng hàng/đồng phẳng
+        for (int i = 0; i < 8; i++)
+        {
+            float dx = ((i & 1) == 0 ? -1f : 1f) * Random.Range(size.x * 0.15f, size.x * 0.35f);
+            float dy = ((i & 2) == 0 ? -1f : 1f) * Random.Range(size.y * 0.15f, size.y * 0.35f);
+            float dz = ((i & 4) == 0 ? -1f : 1f) * Random.Range(size.z * 0.15f, size.z * 0.35f);
+
+            GameObject tempPt = new GameObject($"TempShatterPoint_{i}");
+            tempPt.transform.position = center + new Vector3(dx, dy, dz);
+            tempPointObjs.Add(tempPt);
+            points.Add(tempPt.transform);
+        }
+        return points;
+    }
+
+    [ContextMenu("Preview Shatter (Edit Mode)")]
+    public void PreviewShatterEditMode()
+    {
+        if (Application.isPlaying)
+        {
+            Debug.LogWarning("[ElementalRockPuzzle] Vui lòng sử dụng Preview Shatter (Play Mode) khi đang chạy game!");
+            return;
+        }
+
+        // Dọn sạch bản xem trước cũ nếu có
+        ClearPreviewEditMode();
+
+        List<Transform> actualPoints = GetActualDemolishPoints();
+        List<GameObject> tempPointObjs = new List<GameObject>();
+
+        try
+        {
+            GameObject meshTarget = FindMeshTarget();
+            if (meshTarget == null)
+            {
+                Debug.LogError("[ElementalRockPuzzle] Không tìm thấy MeshFilter và MeshRenderer hợp lệ để thực hiện vỡ đá!");
+                return;
+            }
+
+            Bounds bounds = meshTarget.GetComponent<MeshRenderer>().bounds;
+
+            // Nếu không chọn dùng MeshDemolisher, chạy thẳng cơ chế mảnh vỡ dự phòng (Procedural Fallback) để tránh treo Unity
+            if (!useMeshDemolisher)
+            {
+                SpawnFallbackProceduralShards(meshTarget);
+                return;
+            }
+
+            var demolisher = new MeshDemolisher();
+
+            // Kiểm tra xem đầu vào gán tay có bị trùng lặp hoặc thẳng hàng không, nếu có thì tự động tạo điểm cắt
+            bool useAutoPoints = false;
+            if (actualPoints.Count < 4)
+            {
+                useAutoPoints = true;
+            }
+            else if (!demolisher.VerifyDemolishInput(meshTarget, actualPoints))
+            {
+                Debug.LogWarning("[ElementalRockPuzzle] Điểm cắt tự gán không hợp lệ (bị trùng tọa độ hoặc đồng phẳng). Tự động chuyển sang chế độ sinh điểm ngẫu nhiên quanh lưới đá.");
+                useAutoPoints = true;
+            }
+
+            if (useAutoPoints)
+            {
+                actualPoints = GenerateRandomPointsInBounds(bounds, ref tempPointObjs);
+            }
+
+            Material targetMat = meshTarget.GetComponent<MeshRenderer>().sharedMaterial;
+            Material actualInteriorMaterial = (interiorMaterial != null) ? interiorMaterial : targetMat;
+            
+            // Thực hiện phá vỡ lưới
+            List<GameObject> pieces = demolisher.Demolish(meshTarget, actualPoints, actualInteriorMaterial);
+
+            if (pieces != null)
+            {
+                // Tạo một GameObject cha để chứa các mảnh vỡ xem trước cho dễ quản lý
+                GameObject previewParent = new GameObject("[Preview_Shatter_Pieces]");
+                previewParent.transform.position = meshTarget.transform.position;
+                previewParent.transform.rotation = meshTarget.transform.rotation;
+
+                // Cho các icon nguyên tố bay ra vật lý cùng mảnh vỡ
+                ShatterElementIcons(previewParent, bounds);
+
+                foreach (var piece in pieces)
+                {
+                    piece.transform.SetParent(previewParent.transform);
+                    
+                    // Thêm Collider lồi để mô phỏng vật lý va chạm chân thực (sẽ hoạt động khi play)
+                    MeshCollider col = piece.AddComponent<MeshCollider>();
+                    col.convex = true;
+
+                    // Thêm Rigidbody
+                    Rigidbody rb = piece.AddComponent<Rigidbody>();
+                    rb.mass = 15f;
+                    rb.useGravity = true;
+
+                    // Trong Edit Mode, chúng ta kéo nhẹ mảnh vỡ ra xa tâm một chút để người dùng dễ nhìn thấy vết cắt vỡ
+                    Vector3 forceDir = (piece.transform.position - meshTarget.transform.position).normalized;
+                    piece.transform.position += forceDir * 0.15f; // Đẩy nhẹ ra 15cm
+                }
+
+                // Ẩn tạm thời Renderer chính của đá để người dùng xem mảnh vỡ
+                var ren = meshTarget.GetComponent<Renderer>();
+                if (ren != null) ren.enabled = false;
+                
+                // Ẩn các renderers con khác (element icons...)
+                foreach (var r in GetComponentsInChildren<Renderer>(true))
+                {
+                    if (r.transform.name.Contains("[Preview_Shatter_Pieces]")) continue;
+                    if (r == ren) continue;
+                    r.enabled = false;
+                }
+
+                Debug.Log("[ElementalRockPuzzle] Đã tạo preview mảnh vỡ đá trong Edit Mode! Sử dụng chuột phải chọn 'Clear Preview (Edit Mode)' để hoàn tác.");
+            }
+        }
+        catch (System.Exception ex)
+        {
+            Debug.LogError($"[ElementalRockPuzzle] Lỗi khi thực hiện Preview Shatter trong Edit Mode: {ex.Message}\n{ex.StackTrace}");
+            GameObject meshTarget = FindMeshTarget();
+            if (meshTarget != null)
+            {
+                SpawnFallbackProceduralShards(meshTarget);
+            }
+        }
+        finally
+        {
+            // Dọn dẹp các điểm tạm thời vừa sinh ra
+            foreach (var obj in tempPointObjs)
+            {
+                if (obj != null)
+                {
+                    DestroyImmediate(obj);
+                }
+            }
+        }
+    }
+
+    [ContextMenu("Clear Preview (Edit Mode)")]
+    public void ClearPreviewEditMode()
+    {
+        if (Application.isPlaying) return;
+
+        // Tìm và xóa nhóm mảnh vỡ xem trước cũ
+        GameObject previewParent = GameObject.Find("[Preview_Shatter_Pieces]");
+        if (previewParent != null)
+        {
+            DestroyImmediate(previewParent);
+        }
+
+        // Hiện lại toàn bộ các Renderers con
+        foreach (var r in GetComponentsInChildren<Renderer>(true))
+        {
+            r.enabled = true;
+        }
+
+        Debug.Log("[ElementalRockPuzzle] Đã khôi phục lại viên đá ban đầu trong Edit Mode.");
+    }
+
+    private void ShatterElementIcons(GameObject previewParent, Bounds bounds)
+    {
+        // Danh sách các icons cần cho rơi vật lý
+        Renderer[] icons = { iceRenderer, lightningRenderer };
+        foreach (var icon in icons)
+        {
+            if (icon == null || !icon.gameObject.activeSelf || !icon.enabled) continue;
+
+            // Nhân bản icon nguyên tố để tạo bản sao vật lý bay ra độc lập
+            GameObject iconCopy = Instantiate(icon.gameObject);
+            iconCopy.name = $"ShatteredIcon_{icon.gameObject.name}";
+            iconCopy.transform.position = icon.transform.position;
+            iconCopy.transform.rotation = icon.transform.rotation;
+            iconCopy.transform.localScale = icon.transform.lossyScale;
+
+            // Đảm bảo không chứa script hoặc NetworkObject
+            var netObj = iconCopy.GetComponent<Unity.Netcode.NetworkObject>();
+            if (netObj != null)
+            {
+                if (Application.isPlaying) Destroy(netObj);
+                else DestroyImmediate(netObj);
+            }
+            
+            var scripts = iconCopy.GetComponents<MonoBehaviour>();
+            foreach (var s in scripts)
+            {
+                if (Application.isPlaying) Destroy(s);
+                else DestroyImmediate(s);
+            }
+
+            // Thêm Collider nếu chưa có
+            Collider col = iconCopy.GetComponent<Collider>();
+            if (col == null)
+            {
+                MeshCollider meshCol = iconCopy.AddComponent<MeshCollider>();
+                meshCol.convex = true;
+            }
+
+            // Thêm Rigidbody để bay vật lý tự do
+            Rigidbody rb = iconCopy.GetComponent<Rigidbody>();
+            if (rb == null) rb = iconCopy.AddComponent<Rigidbody>();
+            rb.mass = 5f;
+            rb.useGravity = true;
+
+            // Tạo lực nổ đẩy ra ngoài
+            Vector3 forceDir = (icon.transform.position - bounds.center).normalized;
+            if (forceDir == Vector3.zero) forceDir = Random.onUnitSphere;
+            rb.AddForce(forceDir * Random.Range(5f, 12f), ForceMode.Impulse);
+            rb.AddTorque(Random.onUnitSphere * Random.Range(8f, 20f), ForceMode.Impulse);
+
+            if (Application.isPlaying)
+            {
+                Destroy(iconCopy, Random.Range(3f, 4f));
+            }
+            else
+            {
+                if (previewParent != null)
+                {
+                    iconCopy.transform.SetParent(previewParent.transform);
+                    // Đẩy nhẹ ra trong Edit Mode để thấy rõ
+                    iconCopy.transform.position += forceDir * 0.15f;
+                }
+                else
+                {
+                    DestroyImmediate(iconCopy);
+                }
+            }
+        }
+    }
+
+    private void SpawnFallbackProceduralShards(GameObject meshTarget)
+    {
+        try
+        {
+            Bounds bounds = meshTarget.GetComponent<MeshRenderer>().bounds;
+            Material mainMaterial = meshTarget.GetComponent<MeshRenderer>().sharedMaterial;
+
+            // Tìm hoặc tạo previewParent nếu ở Edit Mode
+            GameObject previewParent = null;
+            if (!Application.isPlaying)
+            {
+                previewParent = GameObject.Find("[Preview_Shatter_Pieces]");
+                if (previewParent == null)
+                {
+                    previewParent = new GameObject("[Preview_Shatter_Pieces]");
+                    previewParent.transform.position = bounds.center;
+                }
+            }
+
+            // Cho các icon nguyên tố bay ra vật lý cùng mảnh vỡ
+            ShatterElementIcons(previewParent, bounds);
+
+            // Sinh 12-16 khối hộp ngẫu nhiên để mô phỏng đá vỡ vụn
+            int shardCount = Random.Range(12, 16);
+            for (int i = 0; i < shardCount; i++)
+            {
+                GameObject shard = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                shard.name = $"FallbackShard_{i}";
+                
+                // Cấu hình kích thước ngẫu nhiên tỷ lệ thuận với kích thước đá gốc (chunky shards)
+                float sizeX = Random.Range(bounds.size.x * 0.15f, bounds.size.x * 0.35f);
+                float sizeY = Random.Range(bounds.size.y * 0.15f, bounds.size.y * 0.35f);
+                float sizeZ = Random.Range(bounds.size.z * 0.15f, bounds.size.z * 0.35f);
+                shard.transform.localScale = new Vector3(sizeX, sizeY, sizeZ);
+
+                // Đặt vị trí ngẫu nhiên trong vùng của viên đá gốc
+                float px = Random.Range(bounds.min.x, bounds.max.x);
+                float py = Random.Range(bounds.min.y, bounds.max.y);
+                float pz = Random.Range(bounds.min.z, bounds.max.z);
+                shard.transform.position = new Vector3(px, py, pz);
+                shard.transform.rotation = Random.rotation;
+
+                // Áp dụng vật liệu gốc của đá
+                if (mainMaterial != null)
+                {
+                    shard.GetComponent<MeshRenderer>().sharedMaterial = mainMaterial;
+                }
+
+                // Thêm vật lý
+                Rigidbody rb = shard.GetComponent<Rigidbody>();
+                if (rb == null) rb = shard.AddComponent<Rigidbody>();
+                rb.mass = 10f;
+                rb.useGravity = true;
+
+                // Tạo lực nổ đẩy các mảnh vỡ ra
+                Vector3 forceDir = (shard.transform.position - bounds.center).normalized;
+                rb.AddForce(forceDir * Random.Range(4f, 10f), ForceMode.Impulse);
+                rb.AddTorque(Random.onUnitSphere * Random.Range(5f, 15f), ForceMode.Impulse);
+
+                // Hủy mảnh đá sau 3-4 giây
+                if (Application.isPlaying)
+                {
+                    Destroy(shard, Random.Range(3f, 4f));
+                }
+                else
+                {
+                    if (previewParent != null)
+                    {
+                        shard.transform.SetParent(previewParent.transform);
+                        shard.transform.position += forceDir * 0.15f;
+                    }
+                    else
+                    {
+                        DestroyImmediate(shard);
+                    }
+                }
+            }
+
+            // Ẩn lưới chính trong Edit Mode để lộ mảnh vỡ
+            if (!Application.isPlaying)
+            {
+                var ren = meshTarget.GetComponent<Renderer>();
+                if (ren != null) ren.enabled = false;
+            }
+
+            Debug.Log("[ElementalRockPuzzle] Đã kích hoạt cơ chế mảnh vỡ dự phòng (Procedural Fallback Shards) thành công!");
+        }
+        catch (System.Exception fallbackEx)
+        {
+            Debug.LogError($"[ElementalRockPuzzle] Lỗi trong quá trình tạo mảnh vỡ dự phòng: {fallbackEx.Message}");
+        }
+    }
+
+    private void TriggerLocalShatter()
+    {
+        List<Transform> actualPoints = GetActualDemolishPoints();
+        List<GameObject> tempPointObjs = new List<GameObject>();
+
+        try
+        {
+            GameObject meshTarget = FindMeshTarget();
+            if (meshTarget == null)
+            {
+                Debug.LogError("[ElementalRockPuzzle] Không tìm thấy MeshFilter và MeshRenderer hợp lệ để thực hiện vỡ đá!");
+                return;
+            }
+
+            Bounds bounds = meshTarget.GetComponent<MeshRenderer>().bounds;
+
+            // Nếu không chọn dùng MeshDemolisher, chạy thẳng cơ chế mảnh vỡ dự phòng (Procedural Fallback) để tránh treo Unity
+            if (!useMeshDemolisher)
+            {
+                SpawnFallbackProceduralShards(meshTarget);
+                return;
+            }
+
+            var demolisher = new MeshDemolisher();
+
+            bool useAutoPoints = false;
+            if (actualPoints.Count < 4)
+            {
+                useAutoPoints = true;
+            }
+            else if (!demolisher.VerifyDemolishInput(meshTarget, actualPoints))
+            {
+                useAutoPoints = true;
+            }
+
+            if (useAutoPoints)
+            {
+                actualPoints = GenerateRandomPointsInBounds(bounds, ref tempPointObjs);
+            }
+
+            Material targetMat = meshTarget.GetComponent<MeshRenderer>().sharedMaterial;
+            Material actualInteriorMaterial = (interiorMaterial != null) ? interiorMaterial : targetMat;
+            
+            // Thực hiện phá vỡ trên đối tượng chứa lưới thực tế
+            List<GameObject> pieces = demolisher.Demolish(meshTarget, actualPoints, actualInteriorMaterial);
+
+            // Cho các icon nguyên tố bay ra vật lý cùng mảnh vỡ
+            ShatterElementIcons(null, bounds);
+
+            if (pieces != null)
+            {
+                foreach (var piece in pieces)
+                {
+                    // Thêm MeshCollider (convex = true) để mô phỏng vật lý va chạm chân thực
+                    MeshCollider col = piece.AddComponent<MeshCollider>();
+                    col.convex = true;
+
+                    // Thêm Rigidbody để chạy trọng lực và lực vật lý đẩy các mảnh đá vỡ ra
+                    Rigidbody rb = piece.AddComponent<Rigidbody>();
+                    rb.mass = 15f;
+                    rb.useGravity = true;
+
+                    // Tính toán lực nổ đẩy mảnh đá vỡ ra xa tâm đá
+                    Vector3 forceDir = (piece.transform.position - meshTarget.transform.position).normalized;
+                    rb.AddForce(forceDir * Random.Range(4f, 10f), ForceMode.Impulse);
+                    rb.AddTorque(Random.onUnitSphere * Random.Range(5f, 15f), ForceMode.Impulse);
+
+                    // Tự động dọn dẹp (hủy) các mảnh vỡ sau 3-4 giây để tối ưu hóa hiệu năng
+                    Destroy(piece, Random.Range(3f, 4f));
+                }
+            }
+        }
+        catch (System.Exception ex)
+        {
+            Debug.LogError($"[ElementalRockPuzzle] Lỗi khi thực hiện Shatter đá bằng MeshDemolisher: {ex.Message}\n{ex.StackTrace}");
+            
+            // Tìm đối tượng đích chứa lưới để truyền vào hàm dự phòng
+            GameObject meshTarget = FindMeshTarget();
+            if (meshTarget != null)
+            {
+                SpawnFallbackProceduralShards(meshTarget);
+            }
+        }
+        finally
+        {
+            foreach (var obj in tempPointObjs)
+            {
+                if (obj != null)
+                {
+                    if (Application.isPlaying)
+                        Destroy(obj);
+                    else
+                        DestroyImmediate(obj);
+                }
+            }
+        }
+    }
+
+    [ClientRpc]
+    private void PlaySuccessVFXClientRpc()
+    {
+        // Chạy hiệu ứng vỡ đá cục bộ trên Client
+        TriggerLocalShatter();
+
+        if (successVFXPrefab != null)
+        {
+            Instantiate(successVFXPrefab, transform.position, transform.rotation);
+        }
+    }
+
     private void ShatterRock()
     {
-        Debug.Log("[ElementalRockPuzzle] Kích hoạt thành công cả 4 nguyên tố theo đúng thứ tự! Đá đã bị phá vỡ.");
+        Debug.Log("[ElementalRockPuzzle] Kích hoạt thành công chuỗi nguyên tố! Đá đã bị phá vỡ.");
         
         if (IsNetworkActive)
         {
             if (IsServer)
             {
-                // Nếu có NetworkObject và đang chạy server, gọi Despawn để hủy đồng bộ cho mọi người
-                if (TryGetComponent<NetworkObject>(out var netObj) && netObj.IsSpawned)
+                // Phát hiệu ứng cho tất cả máy khách
+                PlaySuccessVFXClientRpc();
+
+                // Phát hiệu ứng cục bộ trên Server/Host (nếu không phải Headless server)
+                if (SystemInfo.graphicsDeviceType != UnityEngine.Rendering.GraphicsDeviceType.Null)
                 {
-                    netObj.Despawn(true);
+                    TriggerLocalShatter();
+                    if (successVFXPrefab != null)
+                    {
+                        Instantiate(successVFXPrefab, transform.position, transform.rotation);
+                    }
                 }
-                else
-                {
-                    Destroy(gameObject);
-                }
+
+                // Trì hoãn despawn một chút để đảm bảo gói tin RPC truyền đi thành công trước khi đối tượng bị hủy
+                StartCoroutine(DelayedDespawn());
             }
         }
         else
         {
             // Offline/Standalone
+            TriggerLocalShatter();
+            if (successVFXPrefab != null)
+            {
+                Instantiate(successVFXPrefab, transform.position, transform.rotation);
+            }
+            Destroy(gameObject);
+        }
+    }
+
+    private IEnumerator DelayedDespawn()
+    {
+        yield return new WaitForSeconds(0.1f);
+        if (TryGetComponent<NetworkObject>(out var netObj) && netObj.IsSpawned)
+        {
+            netObj.Despawn(true);
+        }
+        else
+        {
             Destroy(gameObject);
         }
     }
