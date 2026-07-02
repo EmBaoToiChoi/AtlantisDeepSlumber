@@ -3,6 +3,7 @@
     <ui:VisualElement class="hud-main-wrapper" style="-unity-font-definition: url(&quot;project://database/Assets/UI%20Toolkit/UnityThemes/UnityDefaultRuntimeTheme.tss?fileID=2230732570650464555&amp;guid=8dcf67e479d58bd47908bf0d5e1cc1d0&amp;type=3#NotInter-Regular&quot;);">
         <ui:VisualElement class="player-avatar-container">
             <ui:VisualElement name="raw-player-image" class="raw-player-image" style="background-image: url(&quot;project://database/Assets/Hbao/Image/AvaST.png?fileID=1013639804&amp;guid=d74474e1ade5e1a438e24f8f7417dae9&amp;type=3#AvaST_0&quot;);" />
+            <ui:VisualElement name="mic-icon" class="mic-icon-base mic-off" />
         </ui:VisualElement>
         <ui:VisualElement class="stats-wrapper">
             <ui:Label name="hud-level-label" text="Lv. 15" class="level-label" />
@@ -30,7 +31,6 @@
                     <ui:VisualElement class="divider" style="left: 90%;" />
                 </ui:VisualElement>
             </ui:VisualElement>
-            <ui:VisualElement name="mic-icon" class="mic-icon-base mic-off" />
         </ui:VisualElement>
     </ui:VisualElement>
     <ui:VisualElement name="minimap-container" class="minimap-wrapper" style="background-image: none;">
@@ -39,7 +39,7 @@
             <ui:VisualElement class="minimap-grid-x" />
             <ui:VisualElement class="minimap-grid-y" />
         </ui:VisualElement>
-        <ui:VisualElement class="minimap-border" style="background-image: url(&quot;project://database/Assets/PLuan/minimap-removebg-preview.png?fileID=2800000&amp;guid=1b30b4463c55935428e4748bf0198ca7&amp;type=3#minimap-removebg-preview&quot;);" />
+        <ui:VisualElement class="minimap-border" style="background-image: url(&quot;project://database/Assets/Artsystack - Fantasy RPG GUI/Resources/Sprites/components/rank.png&quot;);" />
         <ui:VisualElement class="minimap-inner-ring" />
         <ui:VisualElement class="minimap-deco-dot" style="top: -2px; left: 95px;" />
         <ui:VisualElement class="minimap-deco-dot" style="bottom: -2px; left: 95px;" />
@@ -194,58 +194,68 @@
     <ui:VisualElement name="hotkeys-hint-panel" class="hotkeys-hint-panel">
         <ui:VisualElement name="idle-hints-group" class="hints-group">
             <ui:VisualElement class="hint-row">
-                <ui:VisualElement class="key-badge">
-                    <ui:Label text="WASD" class="key-badge-text" />
+                <ui:VisualElement class="key-badge-container">
+                    <ui:VisualElement class="key-icon" style="background-image: url(&quot;project://database/Assets/Artsystack - Fantasy RPG GUI/Resources/Sprites/controller icons/keyboard_mouse/W.png&quot;);" />
+                    <ui:VisualElement class="key-icon" style="background-image: url(&quot;project://database/Assets/Artsystack - Fantasy RPG GUI/Resources/Sprites/controller icons/keyboard_mouse/A.png&quot;);" />
+                    <ui:VisualElement class="key-icon" style="background-image: url(&quot;project://database/Assets/Artsystack - Fantasy RPG GUI/Resources/Sprites/controller icons/keyboard_mouse/S.png&quot;);" />
+                    <ui:VisualElement class="key-icon" style="background-image: url(&quot;project://database/Assets/Artsystack - Fantasy RPG GUI/Resources/Sprites/controller icons/keyboard_mouse/D.png&quot;);" />
                 </ui:VisualElement>
                 <ui:Label text="Di chuyển" class="hint-text" />
             </ui:VisualElement>
             <ui:VisualElement class="hint-row">
-                <ui:VisualElement class="key-badge large-key">
-                    <ui:Label text="Shift + WASD" class="key-badge-text" />
+                <ui:VisualElement class="key-badge-container">
+                    <ui:VisualElement class="key-icon" style="background-image: url(&quot;project://database/Assets/Artsystack - Fantasy RPG GUI/Resources/Sprites/controller icons/keyboard_mouse/Shift.png&quot;); width: 44px;" />
+                    <ui:Label text="+" style="color: rgba(255, 255, 255, 0.6); -unity-font-style: bold; margin: 0 4px; font-size: 13px;" />
+                    <ui:VisualElement class="key-icon" style="background-image: url(&quot;project://database/Assets/Artsystack - Fantasy RPG GUI/Resources/Sprites/controller icons/keyboard_mouse/W.png&quot;);" />
+                    <ui:VisualElement class="key-icon" style="background-image: url(&quot;project://database/Assets/Artsystack - Fantasy RPG GUI/Resources/Sprites/controller icons/keyboard_mouse/A.png&quot;);" />
+                    <ui:VisualElement class="key-icon" style="background-image: url(&quot;project://database/Assets/Artsystack - Fantasy RPG GUI/Resources/Sprites/controller icons/keyboard_mouse/S.png&quot;);" />
+                    <ui:VisualElement class="key-icon" style="background-image: url(&quot;project://database/Assets/Artsystack - Fantasy RPG GUI/Resources/Sprites/controller icons/keyboard_mouse/D.png&quot;);" />
                 </ui:VisualElement>
                 <ui:Label text="Chạy nhanh" class="hint-text" />
             </ui:VisualElement>
         </ui:VisualElement>
         <ui:VisualElement name="action-hints-group" class="hints-group" style="display: none;">
             <ui:VisualElement class="hint-row">
-                <ui:VisualElement class="key-badge">
-                    <ui:Label text="Ctrl" class="key-badge-text" />
+                <ui:VisualElement class="key-badge-container">
+                    <ui:VisualElement class="key-icon" style="background-image: url(&quot;project://database/Assets/Artsystack - Fantasy RPG GUI/Resources/Sprites/controller icons/keyboard_mouse/Ctrl.png&quot;); width: 36px;" />
                 </ui:VisualElement>
                 <ui:Label text="Lộn tránh" class="hint-text" />
             </ui:VisualElement>
             <ui:VisualElement class="hint-row">
-                <ui:VisualElement class="key-badge">
-                    <ui:Label text="TAB" class="key-badge-text" />
+                <ui:VisualElement class="key-badge-container">
+                    <ui:VisualElement class="key-icon" style="background-image: url(&quot;project://database/Assets/Artsystack - Fantasy RPG GUI/Resources/Sprites/controller icons/keyboard_mouse/Tab.png&quot;); width: 36px;" />
                 </ui:VisualElement>
                 <ui:Label text="Hành trang" class="hint-text" />
             </ui:VisualElement>
             <ui:VisualElement class="hint-row">
-                <ui:VisualElement class="key-badge">
-                    <ui:Label text="M" class="key-badge-text" />
+                <ui:VisualElement class="key-badge-container">
+                    <ui:VisualElement class="key-icon" style="background-image: url(&quot;project://database/Assets/Artsystack - Fantasy RPG GUI/Resources/Sprites/controller icons/keyboard_mouse/M.png&quot;);" />
                 </ui:VisualElement>
                 <ui:Label text="Bản đồ" class="hint-text" />
             </ui:VisualElement>
             <ui:VisualElement class="hint-row">
-                <ui:VisualElement class="key-badge">
-                    <ui:Label text="1" class="key-badge-text" />
+                <ui:VisualElement class="key-badge-container">
+                    <ui:VisualElement class="key-icon" style="background-image: url(&quot;project://database/Assets/Artsystack - Fantasy RPG GUI/Resources/Sprites/controller icons/keyboard_mouse/1.png&quot;);" />
                 </ui:VisualElement>
                 <ui:Label text="Tay không" class="hint-text" />
             </ui:VisualElement>
             <ui:VisualElement name="hint-weapon2" class="hint-row" style="display: none;">
-                <ui:VisualElement class="key-badge">
-                    <ui:Label text="2" class="key-badge-text" />
+                <ui:VisualElement class="key-badge-container">
+                    <ui:VisualElement class="key-icon" style="background-image: url(&quot;project://database/Assets/Artsystack - Fantasy RPG GUI/Resources/Sprites/controller icons/keyboard_mouse/2.png&quot;);" />
                 </ui:VisualElement>
                 <ui:Label text="Vũ khí" class="hint-text" />
             </ui:VisualElement>
             <ui:VisualElement name="hint-skills" class="hint-row" style="display: none;">
-                <ui:VisualElement class="key-badge large-key">
-                    <ui:Label text="Q, E, R" class="key-badge-text" />
+                <ui:VisualElement class="key-badge-container">
+                    <ui:VisualElement class="key-icon" style="background-image: url(&quot;project://database/Assets/Artsystack - Fantasy RPG GUI/Resources/Sprites/controller icons/keyboard_mouse/Q.png&quot;);" />
+                    <ui:VisualElement class="key-icon" style="background-image: url(&quot;project://database/Assets/Artsystack - Fantasy RPG GUI/Resources/Sprites/controller icons/keyboard_mouse/E.png&quot;);" />
+                    <ui:VisualElement class="key-icon" style="background-image: url(&quot;project://database/Assets/Artsystack - Fantasy RPG GUI/Resources/Sprites/controller icons/keyboard_mouse/R.png&quot;);" />
                 </ui:VisualElement>
                 <ui:Label text="Kỹ năng" class="hint-text" />
             </ui:VisualElement>
             <ui:VisualElement class="hint-row">
-                <ui:VisualElement class="key-badge large-key">
-                    <ui:Label text="Chuột L" class="key-badge-text" />
+                <ui:VisualElement class="key-badge-container">
+                    <ui:VisualElement class="key-icon" style="background-image: url(&quot;project://database/Assets/Artsystack - Fantasy RPG GUI/Resources/Sprites/controller icons/keyboard_mouse/left_click.png&quot;);" />
                 </ui:VisualElement>
                 <ui:Label text="Đấm/Chém" class="hint-text" />
             </ui:VisualElement>
