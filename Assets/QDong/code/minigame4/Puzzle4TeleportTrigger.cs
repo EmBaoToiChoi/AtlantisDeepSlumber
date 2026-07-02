@@ -63,12 +63,44 @@ public class Puzzle4TeleportTrigger : NetworkBehaviour
                     trapTrigger.ActivateTrapFromTeleport();
                 }
 
-                // Gọi bắt đầu minigame ngay lập tức để bật UI và kích hoạt minigame
+                // Teleport all players robustly
                 Puzzle4Manager p4Manager = FindAnyObjectByType<Puzzle4Manager>();
                 if (p4Manager != null)
                 {
-                    Debug.Log("[Puzzle4Teleport] Bắt đầu minigame NGAY LẬP TỨC!");
-                    p4Manager.StartMinigameFromTeleport();
+                    int index = 0;
+                    foreach (ulong clientId in NetworkManager.Singleton.ConnectedClientsIds)
+                    {
+                        if (NetworkManager.Singleton.ConnectedClients.TryGetValue(clientId, out var client))
+                        {
+                            NetworkObject playerObj = client.PlayerObject;
+                            if (playerObj != null)
+                            {
+                                Vector3 offset = new Vector3(
+                                    Mathf.Cos(index * Mathf.PI / 2) * 1.5f, 
+                                    0.5f, 
+                                    Mathf.Sin(index * Mathf.PI / 2) * 1.5f
+                                );
+                                Vector3 spawnPos = teleportTarget != null ? teleportTarget.position + offset : playerObj.transform.position;
+                                
+                                playerObj.transform.position = spawnPos;
+                                Rigidbody rb = playerObj.GetComponent<Rigidbody>();
+                                if (rb != null)
+                                {
+                                    rb.linearVelocity = Vector3.zero;
+                                    rb.angularVelocity = Vector3.zero;
+                                }
+                                
+                                p4Manager.TeleportPlayerToCenterClientRpc(playerObj.NetworkObjectId, spawnPos);
+                                index++;
+                            }
+                        }
+                    }
+
+                    // Lên lịch bắt đầu minigame sau khi video kết thúc
+                    float delay = videoDuration;
+                    if (timelineDirector != null) delay = (float)timelineDirector.duration;
+                    Debug.Log($"[Puzzle4Teleport] Lên lịch bắt đầu minigame sau {delay}s!");
+                    p4Manager.ScheduleMinigameStart(delay);
                 }
                 else
                 {
@@ -104,28 +136,9 @@ public class Puzzle4TeleportTrigger : NetworkBehaviour
     [ClientRpc]
     void TriggerTeleportAndTimelineClientRpc()
     {
-        // 1. Teleport local player to the target
-        if (teleportTarget != null)
-        {
-            var allMonos = FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None);
-            foreach (var mono in allMonos)
-            {
-                if (mono is IPlayerHUDTarget player && player.IsOwner)
-                {
-                    player.transform.position = teleportTarget.position;
-                    
-                    Rigidbody rb = player.gameObject.GetComponent<Rigidbody>();
-                    if (rb != null)
-                    {
-                        rb.linearVelocity = Vector3.zero;
-                        rb.angularVelocity = Vector3.zero;
-                    }
-                }
-            }
-            Debug.Log("[Puzzle4Teleport] Đã teleport người chơi tới trung tâm đĩa.");
-        }
-
-        // 2. Lock players and Play Timeline
+        // Teleportation is now handled robustly by the Server via Puzzle4Manager.TeleportPlayerToCenterClientRpc
+        
+        // Lock players and Play Timeline
         StartCoroutine(PlayTimelineAndLockCoroutine());
     }
 
