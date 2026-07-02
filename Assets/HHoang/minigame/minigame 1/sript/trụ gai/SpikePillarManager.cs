@@ -23,6 +23,7 @@ public class SpikePillarManager : NetworkBehaviour
 
     private float nextSpawnTime;
     private bool doorOpened = false;
+    private bool isSpawningActiveOffline = false;
 
     public override void OnNetworkSpawn()
     {
@@ -48,22 +49,36 @@ public class SpikePillarManager : NetworkBehaviour
 
     void Update()
     {
-        // 1. Phía Server giám sát việc mở cửa 3
-        if (IsServer && !doorOpened && door3Pedestal != null)
+        bool isNetworkActive = NetworkManager != null && NetworkManager.IsListening;
+        bool isServerInstance = IsServer;
+
+        // 1. Giám sát việc mở cửa 3 (chạy trên Server hoặc Offline)
+        if (!doorOpened && door3Pedestal != null)
         {
-            // Kiểm tra xem cả bệ này và bệ đối ứng đều đã đặt ngọc chưa
-            if (door3Pedestal.hasCrystal.Value && 
-                door3Pedestal.otherPedestal != null && 
-                door3Pedestal.otherPedestal.hasCrystal.Value)
+            if (!isNetworkActive || isServerInstance)
             {
-                doorOpened = true;
-                isSpawningActive.Value = true; // Kích hoạt spawn trụ
-                nextSpawnTime = Time.time; // Spawn ngay lập tức
+                // Kiểm tra xem cả bệ này và bệ đối ứng đều đã đặt ngọc chưa
+                if (door3Pedestal.IsCrystalPlaced && 
+                    door3Pedestal.otherPedestal != null && 
+                    door3Pedestal.otherPedestal.IsCrystalPlaced)
+                {
+                    doorOpened = true;
+                    if (isNetworkActive)
+                    {
+                        isSpawningActive.Value = true;
+                    }
+                    else
+                    {
+                        isSpawningActiveOffline = true;
+                    }
+                    nextSpawnTime = Time.time; // Spawn ngay lập tức
+                }
             }
         }
 
         // 2. Spawn trụ gai theo chu kỳ (Chạy trên cả Server và Client để tự spawn cục bộ)
-        if (isSpawningActive.Value && pool != null && spawnPoints != null && spawnPoints.Length > 0)
+        bool active = isNetworkActive ? isSpawningActive.Value : isSpawningActiveOffline;
+        if (active && pool != null && spawnPoints != null && spawnPoints.Length > 0)
         {
             if (Time.time >= nextSpawnTime)
             {
@@ -90,12 +105,24 @@ public class SpikePillarManager : NetworkBehaviour
         }
     }
 
-    // Server API để tắt hệ thống spawn (ví dụ khi cả 4 người đã chạm safe box)
+    // API để tắt hệ thống spawn (ví dụ khi cả 4 người đã chạm safe box)
     public void DeactivateSpawning()
     {
-        if (IsServer)
+        bool isNetworkActive = NetworkManager != null && NetworkManager.IsListening;
+        if (isNetworkActive)
         {
-            isSpawningActive.Value = false;
+            if (IsServer)
+            {
+                isSpawningActive.Value = false;
+            }
+        }
+        else
+        {
+            isSpawningActiveOffline = false;
+            if (pool != null)
+            {
+                pool.RecallAll();
+            }
         }
     }
 }

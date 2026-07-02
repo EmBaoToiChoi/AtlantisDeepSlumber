@@ -4773,6 +4773,9 @@ MonoBehaviour:
       MaxSecondsBetweenUpdates: 0
     m_InternalValue: 0
   gearSmokeEffect: {fileID: 3387780438817613021}
+  dealDamageOnContact: 1
+  contactDamage: 40
+  damageCooldown: 1
 --- !u!64 &2721376132423317598
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -4790,7 +4793,7 @@ MeshCollider:
   m_LayerOverridePriority: 0
   m_IsTrigger: 1
   m_ProvidesContacts: 0
-  m_Enabled: 1
+  m_Enabled: 0
   serializedVersion: 5
   m_Convex: 1
   m_CookingOptions: 30
@@ -4814,8 +4817,8 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 164.44592, y: 162.63652, z: 418.62714}
-  m_Center: {x: -5.406765, y: -0.09844585, z: -207.24188}
+  m_Size: {x: 238.19421, y: 238.67648, z: 418.62714}
+  m_Center: {x: 4.9472647, y: 4.9663277, z: -207.24188}
 --- !u!4 &6534062146646627230 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: a20ef9fa2732ba243aefd7d365292986, type: 3}
