@@ -449,6 +449,8 @@ public class BridgeCollapseTrigger : NetworkBehaviour
                 }
             }
 
+            
+
             // 3. Gọi các Client bật VIDEO lên xem
             PlayCutsceneClientRpc();
             
