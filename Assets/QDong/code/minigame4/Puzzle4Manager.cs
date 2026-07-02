@@ -25,6 +25,11 @@ public class Puzzle4Manager : NetworkBehaviour
 
     private bool hasCompleted = false;
 
+    // Cache local player để tránh FindObjectsByType mỗi frame trong FixedUpdate
+    private Rigidbody cachedLocalPlayerRb = null;
+    private Collider cachedLocalPlayerCollider = null;
+    private bool localPlayerCached = false;
+
     // Sau này đổi sang VFX Graph
     public GameObject beamA;
     public GameObject beamB;
@@ -176,10 +181,10 @@ public class Puzzle4Manager : NetworkBehaviour
         if (!IsServer)
             return;
 
-        if (trapFloor != null && !trapFloor.activated)
-        {
+        // Chỉ chạy CheckComplete khi minigame đang thực sự bắt đầu (sau khi tele + timeline xong)
+        if (!isMinigameStarted.Value)
             return;
-        }
+
         CheckComplete();
     }
 
@@ -231,10 +236,8 @@ public class Puzzle4Manager : NetworkBehaviour
         // Khi hoàn thành puzzle, dừng mọi lực tác động lên player
         if (hasCompleted) return;
 
-        if (trapFloor != null && !trapFloor.activated)
-        {
-            return;
-        }
+        // Chỉ áp lực trượt khi minigame đang chạy
+        if (!isMinigameStarted.Value) return;
 
         if (balanceManager != null && balanceManager.diskRigidbody != null)
         {
@@ -254,23 +257,36 @@ public class Puzzle4Manager : NetworkBehaviour
                 // Khi trượt mạnh đụng vào viền đĩa (rim), nếu không có lực ép xuống, nhân vật sẽ bị bật tung lên!
                 Vector3 stickyForce = -normal * (slideForceMagn * 0.8f);
 
-                var allMonos = FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None);
-                foreach (var mono in allMonos)
+                // Cache local player một lần thay vì FindObjectsByType mỗi frame
+                if (!localPlayerCached)
                 {
-                    if (mono is IPlayerHUDTarget player && player.IsOwner) 
+                    CacheLocalPlayer();
+                }
+
+                if (cachedLocalPlayerRb != null && cachedLocalPlayerCollider != null)
+                {
+                    if (balanceManager.IsPlayerOnBoard(cachedLocalPlayerCollider))
                     {
-                        Collider col = player.gameObject.GetComponentInChildren<Collider>();
-                        if (col != null && balanceManager.IsPlayerOnBoard(col))
-                        {
-                            Rigidbody rb = player.gameObject.GetComponent<Rigidbody>();
-                            if (rb != null)
-                            {
-                                // Áp dụng cả lực trượt và lực dính
-                                rb.AddForce(slideForce + stickyForce, ForceMode.Force);
-                            }
-                        }
+                        cachedLocalPlayerRb.AddForce(slideForce + stickyForce, ForceMode.Force);
                     }
                 }
+            }
+        }
+    }
+
+    private void CacheLocalPlayer()
+    {
+        var allMonos = FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None);
+        foreach (var mono in allMonos)
+        {
+            if (mono is IPlayerHUDTarget player && player.IsOwner)
+            {
+                cachedLocalPlayerRb = player.gameObject.GetComponent<Rigidbody>();
+                cachedLocalPlayerCollider = player.gameObject.GetComponentInChildren<Collider>();
+                localPlayerCached = (cachedLocalPlayerRb != null && cachedLocalPlayerCollider != null);
+                if (localPlayerCached)
+                    Debug.Log("[Puzzle4Manager] Đã cache local player: " + player.gameObject.name);
+                break;
             }
         }
     }
@@ -311,6 +327,13 @@ public class Puzzle4Manager : NetworkBehaviour
 
     void CheckComplete()
     {
+        // Guard: nếu bất kỳ cột nào bị null thì bỏ qua, tránh crash
+        if (A == null || B == null || C == null)
+        {
+            Debug.LogWarning("[Puzzle4Manager] Một hoặc nhiều EnergyColumn (A/B/C) chưa được gán trong Inspector!");
+            return;
+        }
+
         if (
             !hasCompleted &&
             A.IsCompleted() &&

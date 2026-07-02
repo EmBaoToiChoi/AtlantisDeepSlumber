@@ -70,9 +70,18 @@ public class Puzzle4TrapTrigger : NetworkBehaviour
             instantDeathZoneObj.SetActive(true);
         }
 
-        // Ẩn luôn cái box đi hoàn toàn để không bao giờ hiện nữa
-        gameObject.SetActive(false);
+        // KHÔNG dùng SetActive(false) trên NetworkObject → mất sync RPC
+        // Thay vào đó chỉ tắt Collider và component trigger để không kích hoạt lại
+        Collider col = GetComponent<Collider>();
+        if (col != null) col.enabled = false;
 
-        Debug.Log("Floor Appeared and Box Hidden");
+        ZoneTrigger zone = GetComponent<ZoneTrigger>();
+        if (zone != null) zone.enabled = false;
+
+        // Ẩn mesh renderer nếu có (để không thấy object nhưng vẫn giữ NetworkObject sống)
+        Renderer rend = GetComponent<Renderer>();
+        if (rend != null) rend.enabled = false;
+
+        Debug.Log("[Puzzle4Trap] Floor appeared, trigger box disabled safely (NetworkObject still alive)");
     }
 }
