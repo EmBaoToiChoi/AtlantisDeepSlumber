@@ -4,6 +4,12 @@ using UnityEngine.AI;
 
 public class BridgeCollapseTrigger : NetworkBehaviour
 {
+    [Header("Cutscene Configuration")]
+    [Tooltip("Kéo thả PlayableDirector (Timeline) vào đây. Nếu để trống, cầu sẽ sập ngay lập tức.")]
+    public UnityEngine.Playables.PlayableDirector collapseCutscene;
+    
+    // Biến này để chặn spam khi nhiều người cùng dẫm vào trigger 1 lúc
+    private bool isCutscenePlaying = false;
     [Header("NavMesh Bridge Configuration")]
     [Tooltip("Kéo thả NavMeshObstacle chặn cầu vào đây (sẽ BẬT khi sập, TẮT khi sửa xong)")]
     public NavMeshObstacle bridgeObstacle;
@@ -393,8 +399,8 @@ public class BridgeCollapseTrigger : NetworkBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
-        // Kiểm tra sập cầu (nếu chưa sập)
-        if (!IsBridgeCollapsed())
+        // Kiểm tra sập cầu (nếu chưa sập) và chưa có cutscene nào đang chạy
+        if (!IsBridgeCollapsed() && !isCutscenePlaying)
         {
             if (IsPlayer(other.gameObject))
             {
@@ -404,30 +410,82 @@ public class BridgeCollapseTrigger : NetworkBehaviour
                 {
                     if (IsServer)
                     {
-                        // Server tự kích hoạt trực tiếp
-                        TriggerBridgeCollapseServer();
+                        // Server tự bắt đầu sự kiện
+                        StartBridgeEventServer();
                     }
                     else
                     {
-                        // Client gửi yêu cầu lên server (client không phải host cũng có thể kích hoạt)
-                        RequestCollapseServerRpc();
+                        // Client yêu cầu Server bắt đầu sự kiện
+                        RequestBridgeEventServerRpc();
                     }
                 }
                 else
                 {
                     // Fallback chơi đơn (Offline/Standalone)
-                    localCollapseTriggered = true;
-                    CollapseBridgeLocal();
+                    StartCoroutine(HandleBridgeEventLocal());
                 }
             }
         }
     }
 
     [ServerRpc(RequireOwnership = false)]
-    private void RequestCollapseServerRpc()
+    private void RequestBridgeEventServerRpc()
     {
-        if (!IsServer || IsBridgeCollapsed()) return;
+        if (!IsServer || IsBridgeCollapsed() || isCutscenePlaying) return;
+        StartBridgeEventServer();
+    }
+
+    // Server xử lý logic kiểm tra cutscene
+    private void StartBridgeEventServer()
+    {
+        if (collapseCutscene != null)
+        {
+            isCutscenePlaying = true;
+            // Gọi tất cả client cùng chạy cutscene
+            PlayCutsceneClientRpc();
+            
+            // Server đếm ngược thời gian bằng đúng độ dài cutscene, xong mới sập cầu
+            StartCoroutine(WaitAndCollapseServer((float)collapseCutscene.duration));
+        }
+        else
+        {
+            // Nếu không gắn cutscene thì sập luôn
+            TriggerBridgeCollapseServer();
+        }
+    }
+
+    [ClientRpc]
+    private void PlayCutsceneClientRpc()
+    {
+        if (collapseCutscene != null)
+        {
+            collapseCutscene.Play();
+        }
+    }
+
+    private System.Collections.IEnumerator WaitAndCollapseServer(float duration)
+    {
+        // Chờ cutscene chạy xong
+        yield return new WaitForSeconds(duration);
+        isCutscenePlaying = false;
+        
+        // Gọi hàm sập cầu cũ của bạn
         TriggerBridgeCollapseServer();
+    }
+
+    // Logic dành cho chế độ chơi đơn (Offline)
+    private System.Collections.IEnumerator HandleBridgeEventLocal()
+    {
+        if (collapseCutscene != null)
+        {
+            isCutscenePlaying = true;
+            collapseCutscene.Play();
+            yield return new WaitForSeconds((float)collapseCutscene.duration);
+            isCutscenePlaying = false;
+        }
+        
+        // Gọi hàm sập cầu offline cũ của bạn
+        CollapseBridgeLocal();
     }
 
 
