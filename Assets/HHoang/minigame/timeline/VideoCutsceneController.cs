@@ -14,18 +14,20 @@ public class VideoCutsceneController : NetworkBehaviour
     public List<string> scriptNamesToDisable = new List<string>();
 
     [Header("Security")]
-    [Tooltip("Nếu tích vào đây, phim sẽ chỉ chạy đúng 1 lần duy nhất")]
     public bool playOnlyOnce = true;
     private bool hasPlayed = false;
 
     [Header("Status")]
     public bool isPlaying = false;
 
-    // Gọi hàm này từ trigger hoặc sự kiện khác
+    // Hàm kích hoạt sự kiện
     public void StartCutscene()
     {
         if (playOnlyOnce && hasPlayed) return;
-        if (IsServer) StartCutsceneServerRpc();
+        
+        // ĐÃ SỬA: Xóa if(IsServer) đi.
+        // Cứ có người gọi là báo thẳng lên Server, Server sẽ tự xử lý cho cả 4 máy!
+        StartCutsceneServerRpc();
     }
 
     [ServerRpc(RequireOwnership = false)]
@@ -35,7 +37,7 @@ public class VideoCutsceneController : NetworkBehaviour
         isPlaying = true;
         hasPlayed = true; 
         
-        // 1. Teleport player (xếp hàng từng người)
+        // 1. Teleport tất cả player đang online
         var players = PlayerHUDManager.ActivePlayers;
         int i = 0;
         foreach (var p in players)
@@ -45,7 +47,6 @@ public class VideoCutsceneController : NetworkBehaviour
                 MonoBehaviour pMono = p as MonoBehaviour;
                 if (pMono != null)
                 {
-                    // Tắt CharacterController nếu có để dịch chuyển không bị kẹt
                     var charCtrl = pMono.GetComponent<CharacterController>();
                     if (charCtrl != null) charCtrl.enabled = false;
                     
@@ -58,6 +59,7 @@ public class VideoCutsceneController : NetworkBehaviour
             }
         }
 
+        // 2. Gửi lệnh bật phim cho tất cả Client
         PlayCutsceneClientRpc();
         StartCoroutine(WaitAndFinish((float)videoPlayer.length));
     }
@@ -69,16 +71,13 @@ public class VideoCutsceneController : NetworkBehaviour
         
         if (videoPlayer != null)
         {
-            // ÉP VIDEO VÀO CAMERA CHÍNH CỦA NGƯỜI CHƠI
-            if (Camera.main != null)
-            {
-                videoPlayer.renderMode = VideoRenderMode.CameraNearPlane;
-                videoPlayer.targetCamera = Camera.main;
-            }
+            videoPlayer.renderMode = VideoRenderMode.CameraNearPlane;
+            videoPlayer.targetCamera = Camera.main;
             videoPlayer.Play();
         }
 
-        TogglePlayerMovement(false);
+        // Tự khóa script di chuyển của chính Client này
+        TogglePlayerMovementClientRpc(false);
     }
 
     private System.Collections.IEnumerator WaitAndFinish(float duration)
@@ -97,30 +96,46 @@ public class VideoCutsceneController : NetworkBehaviour
             videoPlayer.targetCamera = null;
         }
         
-        TogglePlayerMovement(true);
+        // Tự mở khóa script di chuyển của chính Client này
+        TogglePlayerMovementClientRpc(true);
         isPlaying = false;
     }
 
-    private void TogglePlayerMovement(bool enable)
+    [ClientRpc]
+    private void TogglePlayerMovementClientRpc(bool enable)
     {
-        // Tìm player bằng Tag "Player"
-        GameObject playerObj = GameObject.FindGameObjectWithTag("Player");
+        // Tìm nhân vật của chính người chơi đang ngồi ở máy này
+        var localPlayer = NetworkManager.Singleton.LocalClient.PlayerObject;
         
-        if (playerObj != null)
+        if (localPlayer != null)
         {
-            MonoBehaviour[] allScripts = playerObj.GetComponents<MonoBehaviour>();
+            MonoBehaviour[] allScripts = localPlayer.GetComponents<MonoBehaviour>();
             foreach (var script in allScripts)
             {
                 if (script != null && scriptNamesToDisable.Contains(script.GetType().Name))
                 {
                     script.enabled = enable;
-                    Debug.Log($"[VideoCutscene] Đã {(enable ? "BẬT" : "TẮT")} script: {script.GetType().Name}");
+                    Debug.Log($"[VideoCutscene] Client {NetworkManager.Singleton.LocalClientId} đã {(enable ? "BẬT" : "TẮT")} script: {script.GetType().Name}");
                 }
             }
         }
         else
         {
-            Debug.LogError("[VideoCutscene] Không tìm thấy Player có Tag 'Player'!");
+            Debug.LogError("[VideoCutscene] Không tìm thấy Local PlayerObject để khóa di chuyển!");
+        }
+    }
+
+    // --- ĐÃ THÊM: HÀM NÀY GIÚP OBJECT TỰ TRỞ THÀNH BẪY ĐỘC LẬP ---
+    private void OnTriggerEnter(Collider other)
+    {
+        // Bỏ qua nếu object chưa được load trên mạng
+        if (!IsSpawned) return; 
+
+        // Kiểm tra xem đối tượng dẫm vào có mang Tag "Player" không
+        if (other.CompareTag("Player"))
+        {
+            Debug.Log($"[VideoCutscene] Phát hiện Player {other.name} dẫm bẫy! Kích hoạt video...");
+            StartCutscene();
         }
     }
 }
