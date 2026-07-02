@@ -63,6 +63,8 @@ public class SeagullController : NetworkBehaviour
     private float currentFreeLookYaw = 0f;
     private float currentFreeLookPitch = 0f;
     private float freeLookDistanceMultiplier = 1f;
+    private float defaultPitch = 17.35f;
+    private float baseDistance = 8.38f;
     private bool childrenRotated = false;
 
     public bool isStandaloneMode => NetworkManager.Singleton == null || !NetworkManager.Singleton.IsListening;
@@ -132,6 +134,21 @@ public class SeagullController : NetworkBehaviour
         age = 0f;
         isControlled = false;
         localIsReturning = false;
+
+        // Tự động sửa chữa cameraOffset nếu giá trị trong Inspector của prefab bị sai lệch (quá ngắn hoặc bằng 0)
+        if (cameraOffset.magnitude < 1.0f || cameraOffset.z > -1.0f)
+        {
+            cameraOffset = new Vector3(0f, 2.5f, -8f);
+        }
+
+        baseDistance = cameraOffset.magnitude;
+        defaultPitch = Mathf.Atan2(cameraOffset.y, Mathf.Abs(cameraOffset.z)) * Mathf.Rad2Deg;
+
+        // Khởi tạo góc quay tự do ban đầu bằng góc nghiêng mặc định
+        freeLookYaw = 0f;
+        freeLookPitch = defaultPitch;
+        currentFreeLookYaw = 0f;
+        currentFreeLookPitch = defaultPitch;
 
         if (Camera.main != null)
         {
@@ -283,7 +300,7 @@ public class SeagullController : NetworkBehaviour
             // Trong chế độ Free Look: Xoay camera bằng chuột, chim bay thẳng hướng cũ
             freeLookYaw += mouseX * rotationSpeed * Time.deltaTime;
             freeLookPitch -= mouseY * pitchSpeed * Time.deltaTime;
-            freeLookPitch = Mathf.Clamp(freeLookPitch, -60f, 60f);
+            freeLookPitch = Mathf.Clamp(freeLookPitch, -80f, 80f); // Tăng giới hạn lên 80 độ để dễ nhìn từ dưới lên
 
             // Giảm độ nghiêng cánh về 0
             currentRoll = Mathf.Lerp(currentRoll, 0f, Time.deltaTime * rollSpeed);
@@ -291,12 +308,12 @@ public class SeagullController : NetworkBehaviour
         else
         {
             // Smoothly reset free look camera angles
-            if (freeLookYaw != 0f || freeLookPitch != 0f)
+            if (freeLookYaw != 0f || freeLookPitch != defaultPitch)
             {
                 freeLookYaw = Mathf.Lerp(freeLookYaw, 0f, Time.deltaTime * 5f);
-                freeLookPitch = Mathf.Lerp(freeLookPitch, 0f, Time.deltaTime * 5f);
+                freeLookPitch = Mathf.Lerp(freeLookPitch, defaultPitch, Time.deltaTime * 5f);
                 if (Mathf.Abs(freeLookYaw) < 0.01f) freeLookYaw = 0f;
-                if (Mathf.Abs(freeLookPitch) < 0.01f) freeLookPitch = 0f;
+                if (Mathf.Abs(freeLookPitch - defaultPitch) < 0.01f) freeLookPitch = defaultPitch;
             }
 
             // Điều khiển hướng bay bằng chuột và bàn phím (A/D)
@@ -493,6 +510,8 @@ public class SeagullController : NetworkBehaviour
     {
         if (cam == null) return;
 
+        Vector3 lookTarget = transform.position + transform.up * 0.2f;
+
         if (age < 2f && playerCamStartPos != Vector3.zero)
         {
             // Tăng dần khoảng cách camera lên 1.5 lần để zoom rộng tầm nhìn cất cánh
@@ -504,12 +523,15 @@ public class SeagullController : NetworkBehaviour
             // Hướng cơ bản không roll của chim tại thời điểm bắt đầu
             Quaternion baseRot = Quaternion.Euler(0f, transform.rotation.eulerAngles.y, 0f);
             
-            // Vị trí camera góc nhìn thứ 3 của chim (Dùng baseRot không roll để tránh camera bị nghiêng khi cất cánh)
-            Vector3 birdCamPos = transform.position + baseRot * (cameraOffset * freeLookDistanceMultiplier);
+            // Góc xoay tự do mặc định (chế độ bay theo sau)
+            Quaternion freeLookRot = Quaternion.Euler(defaultPitch, 0f, 0f);
+            Quaternion finalCamRot = baseRot * freeLookRot;
+            
+            // Vị trí camera góc nhìn thứ 3 của chim trên mặt cầu hoàn hảo
+            Vector3 birdCamPos = lookTarget + finalCamRot * new Vector3(0f, 0f, -baseDistance) * freeLookDistanceMultiplier;
             cam.transform.position = Vector3.Lerp(playerCamStartPos, birdCamPos, t);
             
             // Hướng nhìn chuyển tiếp mượt mà từ góc nhìn cũ của player sang hướng nhìn tập trung vào con chim
-            Vector3 lookTarget = transform.position + transform.up * 0.2f;
             Quaternion lookAtBirdRot = Quaternion.LookRotation(lookTarget - cam.transform.position);
             cam.transform.rotation = Quaternion.Slerp(playerCamStartRot, lookAtBirdRot, t);
 
@@ -538,7 +560,7 @@ public class SeagullController : NetworkBehaviour
 
             // Nếu đang giữ Ctrl xoay camera tự do xung quanh chim
             bool ctrlHeld = Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl);
-            if (ctrlHeld || freeLookYaw != 0f || freeLookPitch != 0f || Mathf.Abs(currentFreeLookYaw) > 0.01f || Mathf.Abs(currentFreeLookPitch) > 0.01f)
+            if (ctrlHeld || freeLookYaw != 0f || freeLookPitch != 0f || Mathf.Abs(currentFreeLookYaw) > 0.01f || Mathf.Abs(currentFreeLookPitch - defaultPitch) > 0.01f)
             {
                 // Tăng khoảng cách camera (zoom out) trong chế độ Free Look để không bị vướng model con chim
                 freeLookDistanceMultiplier = Mathf.Lerp(freeLookDistanceMultiplier, 2.0f, Time.deltaTime * 5f);
@@ -550,12 +572,11 @@ public class SeagullController : NetworkBehaviour
                 Quaternion freeLookRot = Quaternion.Euler(currentFreeLookPitch, currentFreeLookYaw, 0f);
                 Quaternion finalCamRot = baseRot * freeLookRot;
                 
-                // Vị trí camera xoay quanh chim trên mặt cầu hoàn hảo (khoảng cách luôn cố định bằng cameraOffset * multiplier)
-                Vector3 targetPos = transform.position + finalCamRot * (cameraOffset * freeLookDistanceMultiplier);
+                // Vị trí camera xoay quanh chim trên mặt cầu hoàn hảo (khoảng cách luôn cố định tính từ tâm lookTarget)
+                Vector3 targetPos = lookTarget + finalCamRot * new Vector3(0f, 0f, -baseDistance) * freeLookDistanceMultiplier;
                 cam.transform.position = targetPos;
                 
                 // Camera luôn hướng nhìn vào chim (Slerp mượt mà)
-                Vector3 lookTarget = transform.position + transform.up * 0.2f;
                 Quaternion targetRot = Quaternion.LookRotation(lookTarget - cam.transform.position);
                 cam.transform.rotation = Quaternion.Slerp(cam.transform.rotation, targetRot, Time.deltaTime * cameraSmoothSpeed);
             }
@@ -564,14 +585,18 @@ public class SeagullController : NetworkBehaviour
                 // Trả khoảng cách camera về mặc định khi bay (zoom rộng 1.5 lần)
                 freeLookDistanceMultiplier = Mathf.Lerp(freeLookDistanceMultiplier, 1.5f, Time.deltaTime * 5f);
 
-                currentFreeLookYaw = 0f;
-                currentFreeLookPitch = 0f;
+                freeLookYaw = 0f;
+                freeLookPitch = defaultPitch;
+                currentFreeLookYaw = Mathf.Lerp(currentFreeLookYaw, 0f, Time.deltaTime * cameraSmoothSpeed);
+                currentFreeLookPitch = Mathf.Lerp(currentFreeLookPitch, defaultPitch, Time.deltaTime * cameraSmoothSpeed);
 
                 // Góc nhìn thứ 3 bình thường bám theo sau chim
-                Vector3 targetPos = transform.position + baseRot * (cameraOffset * freeLookDistanceMultiplier);
+                Quaternion freeLookRot = Quaternion.Euler(currentFreeLookPitch, currentFreeLookYaw, 0f);
+                Quaternion finalCamRot = baseRot * freeLookRot;
+
+                Vector3 targetPos = lookTarget + finalCamRot * new Vector3(0f, 0f, -baseDistance) * freeLookDistanceMultiplier;
                 cam.transform.position = Vector3.Lerp(cam.transform.position, targetPos, Time.deltaTime * cameraSmoothSpeed);
 
-                Vector3 lookTarget = transform.position + transform.up * 0.2f;
                 Quaternion targetRot = Quaternion.LookRotation(lookTarget - cam.transform.position);
                 cam.transform.rotation = Quaternion.Slerp(cam.transform.rotation, targetRot, Time.deltaTime * cameraSmoothSpeed);
             }
