@@ -30,6 +30,8 @@
     border-radius: 33px;
     -unity-background-scale-mode: scale-and-crop;
     overflow: hidden;
+    margin-top: -6px;
+    margin-left: 1px;
 }
 
 .stats-wrapper {
@@ -65,7 +67,7 @@
     -unity-slice-bottom: 0;
     width: 250px;
     height: 22px;
-    padding: 3px 6px;
+    padding: 3px 25px 3px 10px;
 }
 
 .mp-track {
@@ -76,7 +78,7 @@
     -unity-slice-bottom: 6;
     width: 220px;
     height: 16px;
-    padding: 3px 5px;
+    padding: 3px 12px;
 }
 
 .exp-track {
@@ -87,7 +89,7 @@
     -unity-slice-bottom: 6;
     width: 190px;
     height: 11px;
-    padding: 2px 4px;
+    padding: 2.5px 10px;
     margin-bottom: 0;
 }
 
@@ -123,6 +125,7 @@
     -unity-slice-right: 8;
     -unity-slice-top: 4;
     -unity-slice-bottom: 4;
+    border-radius: 3px;
 }
 
 .mp-fill {
@@ -133,6 +136,7 @@
     -unity-slice-right: 16;
     -unity-slice-top: 6;
     -unity-slice-bottom: 6;
+    border-radius: 2px;
 }
 
 .exp-fill {
@@ -143,6 +147,7 @@
     -unity-slice-right: 16;
     -unity-slice-top: 6;
     -unity-slice-bottom: 6;
+    border-radius: 2px;
 }
 
 .mic-icon-base {
@@ -215,10 +220,10 @@
 
 .minimap-border {
     position: absolute;
-    top: -8px;
-    left: -8px;
-    width: 216px;
-    height: 216px;
+    top: -30px; /* Di chuyển lên trên và sang trái để căn giữa nếu tăng size */
+    left: -35px;
+    width: 270px; /* Tăng kích thước khung ảnh tại đây */
+    height: 270px;
     border-width: 0;
 }
 
@@ -267,7 +272,7 @@
 .weapon-slot {
     width: 210px;
     height: 63px;
-    background-image: url("project://database/Assets/Artsystack - Fantasy RPG GUI/Resources/Sprites/components/Empty_frame.png");
+    background-image: url("project://database/Assets/Artsystack - Fantasy RPG GUI/Resources/Sprites/components/ingame_icon_slot_2.png");
     -unity-background-scale-mode: stretch-to-fill;
     background-color: transparent;
     border-width: 0;
@@ -276,10 +281,10 @@
     position: relative;
     overflow: hidden;
     padding: 6px;
-    -unity-slice-left: 15;
-    -unity-slice-right: 15;
-    -unity-slice-top: 15;
-    -unity-slice-bottom: 15;
+    -unity-slice-left: 12;
+    -unity-slice-right: 12;
+    -unity-slice-top: 12;
+    -unity-slice-bottom: 12;
     transition-property: scale, opacity, border-color, box-shadow, background-color;
     transition-duration: 0.3s;
     transition-timing-function: ease-out;
@@ -1324,7 +1329,7 @@
     -unity-slice-bottom: 0;
     width: 155px;
     height: 16px;
-    padding: 2px 4px;
+    padding: 2.5px 16px 2.5px 8px;
 }
 
 .teammate-mp-track {
@@ -1335,7 +1340,7 @@
     -unity-slice-bottom: 6;
     width: 135px;
     height: 13px;
-    padding: 2px 4px;
+    padding: 2.5px 10px;
 }
 
 .teammate-exp-track {
@@ -1346,7 +1351,7 @@
     -unity-slice-bottom: 6;
     width: 115px;
     height: 9px;
-    padding: 2px 4px;
+    padding: 2px 8px;
     margin-bottom: 0;
 }
 
@@ -1360,6 +1365,7 @@
     -unity-slice-right: 8;
     -unity-slice-top: 4;
     -unity-slice-bottom: 4;
+    border-radius: 2px;
 }
 
 .teammate-mp-fill {
@@ -1372,6 +1378,7 @@
     -unity-slice-right: 16;
     -unity-slice-top: 6;
     -unity-slice-bottom: 6;
+    border-radius: 1.5px;
 }
 
 .teammate-exp-fill {
@@ -1384,6 +1391,7 @@
     -unity-slice-right: 16;
     -unity-slice-top: 6;
     -unity-slice-bottom: 6;
+    border-radius: 1px;
 }
 
 /* ========================================================================= */
