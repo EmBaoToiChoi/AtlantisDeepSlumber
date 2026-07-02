@@ -22,7 +22,9 @@ public class CrystalPuzzleSystem : NetworkBehaviour
         NetworkVariableWritePermission.Server
     );
 
-    private bool isDoorsMoving = false;
+    private bool hasCrystalLocal = false;
+
+    public bool IsCrystalPlaced => (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening) ? hasCrystal.Value : hasCrystalLocal;
 
     public override void OnNetworkSpawn()
     {
@@ -43,12 +45,23 @@ public class CrystalPuzzleSystem : NetworkBehaviour
     // Khi ấn F
     public void InteractWithPedestal(GameObject player)
     {
-        if (hasCrystal.Value) return;
+        if (IsCrystalPlaced) return;
 
         PlayerInteraction interaction = player.GetComponent<PlayerInteraction>();
         if (interaction != null && interaction.HasCrystalInInventory) 
         {
-            PlaceCrystalServerRpc(player.GetComponent<NetworkObject>().NetworkObjectId);
+            bool isNetworkActive = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
+            if (isNetworkActive)
+            {
+                PlaceCrystalServerRpc(player.GetComponent<NetworkObject>().NetworkObjectId);
+            }
+            else
+            {
+                // Chơi đơn (Offline)
+                interaction.RemoveCrystal();
+                hasCrystalLocal = true;
+                if (crystalVisual != null) crystalVisual.SetActive(true);
+            }
         }
     }
 
@@ -64,46 +77,31 @@ public class CrystalPuzzleSystem : NetworkBehaviour
         }
 
         hasCrystal.Value = true;
-
-        if (hasCrystal.Value && otherPedestal != null && otherPedestal.hasCrystal.Value)
-        {
-            isDoorsMoving = true;
-            otherPedestal.StartMovingDoorsFromOther();
-        }
-    }
-
-    public void StartMovingDoorsFromOther()
-    {
-        if (!IsServer) return;
-        isDoorsMoving = true;
     }
 
     private void Update()
     {
-        if (!IsServer || !isDoorsMoving) return;
+        // Cả 2 bệ ngọc đều phải được đặt ngọc mới mở cửa
+        bool otherPlaced = otherPedestal != null && otherPedestal.IsCrystalPlaced;
+        if (!IsCrystalPlaced || !otherPlaced) return;
 
-        bool allDoorsReachedTarget = true;
+        bool isNetworkActive = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
+        bool isServerInstance = IsServer;
 
         for (int i = 0; i < doorsToControl.Length; i++)
         {
             if (doorsToControl[i] == null || targetPositions.Length <= i || targetPositions[i] == null) continue;
 
+            // Nếu cửa có đồng bộ vị trí tự động qua mạng (NetworkTransform), chỉ có Server mới di chuyển cửa
+            var netObj = doorsToControl[i].GetComponent<NetworkObject>();
+            var hasNetTransform = doorsToControl[i].GetComponent<Unity.Netcode.Components.NetworkTransform>() != null;
+            if (isNetworkActive && netObj != null && hasNetTransform && !isServerInstance)
+            {
+                continue; // Client bỏ qua, để NetworkTransform đồng bộ từ Server xuống
+            }
+
             // Di chuyển cửa từ vị trí hiện tại tới VỊ TRÍ ĐÍCH ĐẾN (targetPositions)
             doorsToControl[i].position = Vector3.MoveTowards(doorsToControl[i].position, targetPositions[i].position, slideSpeed * Time.deltaTime);
-
-            if (Vector3.Distance(doorsToControl[i].position, targetPositions[i].position) > 0.001f)
-            {
-                allDoorsReachedTarget = false;
-            }
-            else
-            {
-                doorsToControl[i].position = targetPositions[i].position; 
-            }
-        }
-
-        if (allDoorsReachedTarget)
-        {
-            isDoorsMoving = false;
         }
     }
 }
