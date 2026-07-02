@@ -77,6 +77,29 @@ public class Puzzle4TeleportTrigger : NetworkBehaviour
         }
     }
 
+    private IEnumerator ServerStartMinigameCoroutine()
+    {
+        float duration = 3f;
+        if (timelineDirector != null)
+        {
+            duration = (float)timelineDirector.duration;
+            if (duration > 30f) duration = 30f;
+        }
+        
+        yield return new WaitForSeconds(duration);
+
+        Puzzle4Manager p4Manager = FindAnyObjectByType<Puzzle4Manager>();
+        if (p4Manager != null)
+        {
+            Debug.Log("[Puzzle4Teleport-Server] Đã hết thời gian chờ Timeline, gọi StartMinigameFromTeleport...");
+            p4Manager.StartMinigameFromTeleport();
+        }
+        else
+        {
+            Debug.LogError("[Puzzle4Teleport-Server] LỖI: Không tìm thấy Puzzle4Manager trên Server!");
+        }
+    }
+
     [ClientRpc]
     void TriggerTeleportAndTimelineClientRpc()
     {
