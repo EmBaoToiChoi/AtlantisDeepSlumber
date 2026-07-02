@@ -328,11 +328,14 @@ public class Skeleton : NetworkBehaviour
         }
 
         float dist = Vector3.Distance(transform.position, targetEnemy.position);
-        if (dist <= attackRange && attackCooldownTimer <= 0f)
+        if (dist <= attackRange)
         {
             if (AgentReady) agent.isStopped = true;
-            SetSpeedNet(0f);
-            TriggerAttack();
+            SetSpeedNet(0f); // Dừng lại tại chỗ
+            if (attackCooldownTimer <= 0f)
+            {
+                TriggerAttack();
+            }
         }
         else
         {
@@ -342,7 +345,7 @@ public class Skeleton : NetworkBehaviour
                 agent.speed = chaseSpeed;
                 agent.SetDestination(targetEnemy.position);
             }
-            SetSpeedNet(AgentReady && agent.velocity.magnitude > 0.2f ? 1f : 0f);
+            SetSpeedNet(AgentReady && !agent.isStopped ? 1f : 0f);
         }
     }
 

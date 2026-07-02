@@ -423,11 +423,14 @@ public class Enemy1_DapBua : NetworkBehaviour
         Vector3 flatPlayer = targetPlayer.position; flatPlayer.y = 0;
         float dist = Vector3.Distance(flatEnemy, flatPlayer);
 
-        if (dist <= attackRange && attackCooldownTimer <= 0)
+        if (dist <= attackRange)
         {
             if (AgentReady) agent.isStopped = true;
-            SetSpeedNet(0f); // Dừng lại → Idle trước khi Attack
-            ChangeState(EnemyState.Attack);
+            SetSpeedNet(0f); // Dừng lại tại chỗ
+            if (attackCooldownTimer <= 0)
+            {
+                ChangeState(EnemyState.Attack);
+            }
             return;
         }
 
