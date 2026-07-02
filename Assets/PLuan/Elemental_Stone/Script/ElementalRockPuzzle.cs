@@ -1167,9 +1167,8 @@ public class ElementalRockPuzzle : NetworkBehaviour
                 targetMR.sharedMaterials = sourceMR.sharedMaterials;
                 hasVisual = true;
 
-                // Thêm MeshCollider lồi cho vật lý 3D
-                MeshCollider meshCol = iconCopy.AddComponent<MeshCollider>();
-                meshCol.convex = true;
+                // Thêm BoxCollider đơn giản (tránh dùng MeshCollider convex trên lưới AI > 2 triệu tam giác làm treo Unity)
+                iconCopy.AddComponent<BoxCollider>();
             }
             else
             {
@@ -1184,9 +1183,8 @@ public class ElementalRockPuzzle : NetworkBehaviour
                     targetMR.sharedMaterials = sourceSMR.sharedMaterials;
                     hasVisual = true;
 
-                    // Thêm MeshCollider lồi cho vật lý 3D
-                    MeshCollider meshCol = iconCopy.AddComponent<MeshCollider>();
-                    meshCol.convex = true;
+                    // Thêm BoxCollider đơn giản
+                    iconCopy.AddComponent<BoxCollider>();
                 }
                 else
                 {
