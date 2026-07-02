@@ -213,9 +213,23 @@ public class BalanceManager : NetworkBehaviour
     public void LockDisk()
     {
         puzzleLocked = true;
+        if (IsServer && IsSpawned) LockDiskClientRpc();
     }
 
     public void UnlockDisk()
+    {
+        puzzleLocked = false;
+        if (IsServer && IsSpawned) UnlockDiskClientRpc();
+    }
+
+    [ClientRpc]
+    private void LockDiskClientRpc()
+    {
+        puzzleLocked = true;
+    }
+
+    [ClientRpc]
+    private void UnlockDiskClientRpc()
     {
         puzzleLocked = false;
     }
@@ -238,6 +252,6 @@ public class BalanceManager : NetworkBehaviour
         diskRigidbody.MoveRotation(Quaternion.identity);
         if (IsServer) targetRotation.Value = Quaternion.identity;
         CurrentAngle = 0;
-        puzzleLocked = true;
+        LockDisk();
     }
 }

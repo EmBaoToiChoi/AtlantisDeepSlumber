@@ -30,6 +30,25 @@ public class ContinuousEnemySpawner : NetworkBehaviour
     [Tooltip("Bán kính ngẫu nhiên xung quanh Spawner để sinh quái")]
     public float spawnRadius = 3f;
 
+    [System.Serializable]
+    public struct DoorMonitorConfig
+    {
+        [Tooltip("Cửa cần kiểm tra (ví dụ: cửa (4) hoặc cửa (5))")]
+        public Transform door;
+        [Tooltip("Điểm đích khi cửa đóng hoàn toàn (ví dụ: vị trí đóng)")]
+        public Transform targetPosition;
+    }
+
+    [Header("Door Monitor Settings")]
+    [Tooltip("Kéo thả hệ thống Crystal Puzzle System điều khiển cửa vào đây để tự động theo dõi trạng thái đóng của tất cả các cửa.")]
+    public CrystalPuzzleSystem crystalPuzzleSystem;
+
+    [Tooltip("Danh sách các cửa cần kiểm tra thủ công (nếu không dùng CrystalPuzzleSystem). Quái sẽ ngưng sinh khi TẤT CẢ các cửa đều đã đóng.")]
+    public List<DoorMonitorConfig> doorsToMonitor = new List<DoorMonitorConfig>();
+
+    [Tooltip("Khoảng cách tối thiểu để coi như cửa đã đóng hoàn toàn (m)")]
+    public float doorCloseThreshold = 0.1f;
+
     private List<GameObject> activeEnemies = new List<GameObject>();
     private float spawnTimer;
 
@@ -43,6 +62,53 @@ public class ContinuousEnemySpawner : NetworkBehaviour
     {
         // Chỉ Server mới thực thi việc tính toán thời gian và sinh quái
         if (!IsServer) return;
+
+        // 1. Kiểm tra qua hệ thống CrystalPuzzleSystem nếu có gán
+        if (crystalPuzzleSystem != null)
+        {
+            var doors = crystalPuzzleSystem.doorsToControl;
+            var targets = crystalPuzzleSystem.targetPositions;
+            if (doors != null && targets != null && doors.Length > 0)
+            {
+                bool allClosed = true;
+                for (int i = 0; i < doors.Length; i++)
+                {
+                    if (doors[i] == null || targets.Length <= i || targets[i] == null) continue;
+                    if (Vector3.Distance(doors[i].position, targets[i].position) > doorCloseThreshold)
+                    {
+                        allClosed = false;
+                        break;
+                    }
+                }
+
+                if (allClosed)
+                {
+                    return;
+                }
+            }
+        }
+
+        // 2. Kiểm tra nếu tất cả các cửa đăng ký thủ công đã đóng thì ngưng sinh quái
+        if (doorsToMonitor != null && doorsToMonitor.Count > 0)
+        {
+            bool allClosed = true;
+            foreach (var monitor in doorsToMonitor)
+            {
+                if (monitor.door != null && monitor.targetPosition != null)
+                {
+                    if (Vector3.Distance(monitor.door.position, monitor.targetPosition.position) > doorCloseThreshold)
+                    {
+                        allClosed = false;
+                        break;
+                    }
+                }
+            }
+
+            if (allClosed)
+            {
+                return;
+            }
+        }
 
         // Đảm bảo có ít nhất 1 prefab hợp lệ để spawn
         if ((enemyPrefabs == null || enemyPrefabs.Count == 0) && fallbackEnemyPrefab == null) return;
