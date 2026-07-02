@@ -207,15 +207,15 @@ public class Puzzle4Manager : NetworkBehaviour
                 // Khi trượt mạnh đụng vào viền đĩa (rim), nếu không có lực ép xuống, nhân vật sẽ bị bật tung lên!
                 Vector3 stickyForce = -normal * (slideForceMagn * 0.8f);
 
-                CharacterInfo[] players = FindObjectsByType<CharacterInfo>(FindObjectsSortMode.None);
-                foreach (var player in players)
+                var allMonos = FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None);
+                foreach (var mono in allMonos)
                 {
-                    if (player.IsOwner) 
+                    if (mono is IPlayerHUDTarget player && player.IsOwner) 
                     {
-                        Collider col = player.GetComponent<Collider>();
+                        Collider col = player.gameObject.GetComponentInChildren<Collider>();
                         if (col != null && balanceManager.IsPlayerOnBoard(col))
                         {
-                            Rigidbody rb = player.GetComponent<Rigidbody>();
+                            Rigidbody rb = player.gameObject.GetComponent<Rigidbody>();
                             if (rb != null)
                             {
                                 // Áp dụng cả lực trượt và lực dính
@@ -234,10 +234,10 @@ public class Puzzle4Manager : NetworkBehaviour
         {
             if (localPlayerTransform == null)
             {
-                CharacterInfo[] players = FindObjectsByType<CharacterInfo>(FindObjectsSortMode.None);
-                foreach (var player in players)
+                var allMonos = FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None);
+                foreach (var mono in allMonos)
                 {
-                    if (player.IsOwner)
+                    if (mono is IPlayerHUDTarget player && player.IsOwner)
                     {
                         localPlayerTransform = player.transform;
                         break;

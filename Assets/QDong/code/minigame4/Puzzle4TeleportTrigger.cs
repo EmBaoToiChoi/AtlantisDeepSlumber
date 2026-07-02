@@ -23,6 +23,16 @@ public class Puzzle4TeleportTrigger : NetworkBehaviour
     private HashSet<ulong> playersTouched = new HashSet<ulong>();
     public bool activated = false;
 
+    private int GetRequiredPlayersCount()
+    {
+        if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening)
+        {
+            // Nếu số người kết nối ít hơn requiredPlayers thì chỉ cần số người hiện tại
+            return Mathf.Min(requiredPlayers, NetworkManager.Singleton.ConnectedClientsIds.Count);
+        }
+        return 1; // Chế độ chơi đơn
+    }
+
     private void OnTriggerEnter(Collider other)
     {
         if(!IsServer)
@@ -40,9 +50,10 @@ public class Puzzle4TeleportTrigger : NetworkBehaviour
                 if (!playersTouched.Contains(clientId))
                 {
                     playersTouched.Add(clientId);
-                    Debug.Log($"[Puzzle4Teleport] Người chơi {clientId} đã đi qua. ({playersTouched.Count}/{requiredPlayers})");
+                    int currentRequired = GetRequiredPlayersCount();
+                    Debug.Log($"[Puzzle4Teleport] Người chơi {clientId} đã đi qua. ({playersTouched.Count}/{currentRequired})");
 
-                    if (playersTouched.Count >= requiredPlayers)
+                    if (playersTouched.Count >= currentRequired)
                     {
                         activated = true;
                         TriggerTeleportAndTimelineClientRpc();
@@ -64,14 +75,14 @@ public class Puzzle4TeleportTrigger : NetworkBehaviour
         // 1. Teleport local player to the target
         if (teleportTarget != null)
         {
-            CharacterInfo[] allPlayers = FindObjectsByType<CharacterInfo>(FindObjectsSortMode.None);
-            foreach (var player in allPlayers)
+            var allMonos = FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None);
+            foreach (var mono in allMonos)
             {
-                if (player.IsOwner)
+                if (mono is IPlayerHUDTarget player && player.IsOwner)
                 {
                     player.transform.position = teleportTarget.position;
                     
-                    Rigidbody rb = player.GetComponent<Rigidbody>();
+                    Rigidbody rb = player.gameObject.GetComponent<Rigidbody>();
                     if (rb != null)
                     {
                         rb.linearVelocity = Vector3.zero;
@@ -90,13 +101,13 @@ public class Puzzle4TeleportTrigger : NetworkBehaviour
     {
         // Khoá di chuyển của local player (bằng cách freeze Rigidbody)
         List<Rigidbody> lockedRbs = new List<Rigidbody>();
-        CharacterInfo[] allPlayers = FindObjectsByType<CharacterInfo>(FindObjectsSortMode.None);
+        var allMonos = FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None);
         
-        foreach (var player in allPlayers)
+        foreach (var mono in allMonos)
         {
-            if (player.IsOwner)
+            if (mono is IPlayerHUDTarget player && player.IsOwner)
             {
-                Rigidbody rb = player.GetComponent<Rigidbody>();
+                Rigidbody rb = player.gameObject.GetComponent<Rigidbody>();
                 if (rb != null)
                 {
                     rb.constraints = RigidbodyConstraints.FreezeAll;

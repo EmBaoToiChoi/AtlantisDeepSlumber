@@ -16,11 +16,10 @@ public class LeoInteraction : NetworkBehaviour
         if(!IsOwner)
             return;
 
-        CharacterInfo info =
-            GetComponent<CharacterInfo>();
+        IPlayerHUDTarget info =
+            GetComponent<IPlayerHUDTarget>();
 
-        if(info.characterType.Value
-            != CharacterType.Leo)
+        if(info == null || info.CharacterClassIndex != 0) // 0 là Leo
             return;
 
         if(currentColumn == null)
