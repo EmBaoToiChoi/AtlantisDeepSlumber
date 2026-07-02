@@ -130,12 +130,6 @@ public class SpikePillarLocal : MonoBehaviour
 
     private void HandlePlayerCollision(GameObject collidedObj)
     {
-        // Chỉ xử lý chết trên Server (trong mạng) hoặc local (chơi đơn)
-        bool isNetworkActive = Unity.Netcode.NetworkManager.Singleton != null && Unity.Netcode.NetworkManager.Singleton.IsListening;
-        bool isServer = Unity.Netcode.NetworkManager.Singleton != null && Unity.Netcode.NetworkManager.Singleton.IsServer;
-
-        if (isNetworkActive && !isServer) return;
-
         if (IsAnyPlayer(collidedObj, out GameObject playerRoot))
         {
             DealInstantDeath(playerRoot);
@@ -185,10 +179,11 @@ public class SpikePillarLocal : MonoBehaviour
                 }
 
                 // 4. Gây sát thương chết ngay
-                var takeDamageMethod = type.GetMethod("TakeDamage", new System.Type[] { typeof(float) });
-                if (takeDamageMethod != null)
+                var requestDamageMethod = type.GetMethod("RequestTakeDamage", new System.Type[] { typeof(float) }) ??
+                                          type.GetMethod("TakeDamage", new System.Type[] { typeof(float) });
+                if (requestDamageMethod != null)
                 {
-                    takeDamageMethod.Invoke(script, new object[] { 99999f });
+                    requestDamageMethod.Invoke(script, new object[] { 99999f });
                 }
             }
         }
@@ -199,19 +194,19 @@ public class SpikePillarLocal : MonoBehaviour
         playerRoot = null;
         if (go == null) return false;
 
-        var elena = go.GetComponentInParent<ElenaPlayer>();
+        var elena = go.GetComponentInParent<ElenaPlayer>() ?? go.GetComponentInChildren<ElenaPlayer>();
         if (elena != null) { playerRoot = elena.gameObject; return true; }
 
-        var arthur = go.GetComponentInParent<ArthurPlayer>();
+        var arthur = go.GetComponentInParent<ArthurPlayer>() ?? go.GetComponentInChildren<ArthurPlayer>();
         if (arthur != null) { playerRoot = arthur.gameObject; return true; }
 
-        var leo = go.GetComponentInParent<LeoPlayer>();
+        var leo = go.GetComponentInParent<LeoPlayer>() ?? go.GetComponentInChildren<LeoPlayer>();
         if (leo != null) { playerRoot = leo.gameObject; return true; }
 
-        var maya = go.GetComponentInParent<MayaPlayer>();
+        var maya = go.GetComponentInParent<MayaPlayer>() ?? go.GetComponentInChildren<MayaPlayer>();
         if (maya != null) { playerRoot = maya.gameObject; return true; }
 
-        var simple = go.GetComponentInParent<SimplePlayerTest>();
+        var simple = go.GetComponentInParent<SimplePlayerTest>() ?? go.GetComponentInChildren<SimplePlayerTest>();
         if (simple != null) { playerRoot = simple.gameObject; return true; }
 
         return false;

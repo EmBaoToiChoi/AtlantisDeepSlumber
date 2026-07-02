@@ -914,6 +914,10 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
         // Nếu có Netcode nhưng chưa spawn (vd: đang chờ) thì không làm gì thêm
         // OnNetworkSpawn() sẽ lo phần còn lại
         UpdateWeaponVisualsInstant(GetActiveWeaponIndex());
+        if (isStandaloneMode || IsOwner)
+        {
+            PlayerDeathEffectManager.Instance.ResetDeathEffect();
+        }
     }
 
     /// <summary>
@@ -1140,6 +1144,14 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (IsOwner)
         {
             SavePlayerStateToDatabase();
+            if (newHealth <= 0f && oldHealth > 0f)
+            {
+                PlayerDeathEffectManager.Instance.PlayDeathEffect();
+            }
+            else if (newHealth > 0f && oldHealth <= 0f)
+            {
+                PlayerDeathEffectManager.Instance.ResetDeathEffect();
+            }
         }
     }
 
@@ -2826,6 +2838,7 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
             {
                 Debug.LogWarning($"[MayaPlayer] {gameObject.name} đã chết!");
                 PlayAnimation("Death", 0.15f);
+                PlayerDeathEffectManager.Instance.PlayDeathEffect();
             }
             else
             {
@@ -2852,6 +2865,24 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
         }
     }
 
+    [ServerRpc(RequireOwnership = false)]
+    public void TakeDamageServerRpc(float damage)
+    {
+        TakeDamage(damage);
+    }
+
+    public void RequestTakeDamage(float damage)
+    {
+        if (isStandaloneMode || IsServer)
+        {
+            TakeDamage(damage);
+        }
+        else
+        {
+            TakeDamageServerRpc(damage);
+        }
+    }
+
     public void Heal(float amount)
     {
         if (CurrentHealth <= 0) return;
@@ -2860,6 +2891,10 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
         {
             localHealth = Mathf.Min(localHealth + amount, maxHealth);
             UpdateHealthHUD(localHealth);
+            if (localHealth > 0f)
+            {
+                PlayerDeathEffectManager.Instance.ResetDeathEffect();
+            }
             Debug.Log($"[MayaPlayer Standalone] Hồi {amount} máu. Máu hiện tại: {localHealth}");
         }
         else if (IsServer)

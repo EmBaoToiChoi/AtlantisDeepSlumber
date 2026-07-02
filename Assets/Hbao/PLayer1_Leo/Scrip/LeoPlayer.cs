@@ -3152,6 +3152,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     [Header("Attack Speed Boost Skill E Settings")]
     public Material redSwordMaterial;
+    public Material ghostBodyMaterial;
     [Tooltip("Gán texture 'sword_Emissive' ở đây để chỉ nhuộm đỏ phần lưỡi/đường vân kiếm mà giữ nguyên chuôi kiếm.")]
     public Texture2D swordEmissiveMap;
     [ColorUsage(true, true)]
@@ -3159,6 +3160,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     public Color redEmissiveColor = new Color(3.5f, 0f, 0f, 1f);
     private float attackSpeedBoostTimeRemaining = 0f;
     private System.Collections.Generic.Dictionary<Renderer, Material[]> originalSwordMaterials = new System.Collections.Generic.Dictionary<Renderer, Material[]>();
+    private System.Collections.Generic.Dictionary<Renderer, Material[]> originalBodyMaterials = new System.Collections.Generic.Dictionary<Renderer, Material[]>();
 
     [Header("Ghost Slash Skill Q Settings")]
     [Tooltip("Particle prefab riêng cho hiệu ứng Ảo ảnh Chém. Nếu để trống sẽ dùng pool VFX cũ.")]
@@ -3350,6 +3352,10 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         }
 
         SyncWeaponVisuals(GetActiveWeaponIndex());
+        if (isStandaloneMode || IsOwner)
+        {
+            PlayerDeathEffectManager.Instance.ResetDeathEffect();
+        }
     }
 
     private void InitStandaloneMode()
@@ -3666,6 +3672,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
                 if (isStandaloneMode)
                 {
                     SetSwordRedVisuals(false);
+                    SetGhostVisuals(false);
                 }
             }
         }
@@ -3866,6 +3873,10 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         bool isRunning = Input.GetKey(KeyCode.LeftShift);
         float currentSpeed = isRunning ? moveSpeed * runSpeedMultiplier : moveSpeed;
+        if (IsAttackSpeedBoosted)
+        {
+            currentSpeed *= 2f;
+        }
 
         float moveX = isMovementLocked ? 0f : Input.GetAxis("Horizontal");
         float moveZ = isMovementLocked ? 0f : Input.GetAxis("Vertical");
@@ -4024,6 +4035,10 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         bool isRunning = Input.GetKey(KeyCode.LeftShift);
         float currentSpeed = isRunning ? moveSpeed * runSpeedMultiplier : moveSpeed;
+        if (IsAttackSpeedBoosted)
+        {
+            currentSpeed *= 2f;
+        }
 
         float moveX = isMovementLocked ? 0f : Input.GetAxis("Horizontal");
         float moveZ = isMovementLocked ? 0f : Input.GetAxis("Vertical");
@@ -4851,6 +4866,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             {
                 if (rb != null) rb.linearVelocity = Vector3.zero;
                 PlayAnimation("Death", 0.15f);
+                PlayerDeathEffectManager.Instance.PlayDeathEffect();
             }
             else
             {
@@ -4878,6 +4894,24 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         }
     }
 
+    [ServerRpc(RequireOwnership = false)]
+    public void TakeDamageServerRpc(float damage)
+    {
+        TakeDamage(damage);
+    }
+
+    public void RequestTakeDamage(float damage)
+    {
+        if (isStandaloneMode || IsServer)
+        {
+            TakeDamage(damage);
+        }
+        else
+        {
+            TakeDamageServerRpc(damage);
+        }
+    }
+
     public void Heal(float amount)
     {
         if (CurrentHealth <= 0) return;
@@ -4886,6 +4920,10 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         {
             localHealth = Mathf.Min(localHealth + amount, maxHealth);
             UpdateHealthHUD(localHealth);
+            if (localHealth > 0f)
+            {
+                PlayerDeathEffectManager.Instance.ResetDeathEffect();
+            }
             Debug.Log($"[LeoPlayer Standalone] Hồi {amount} máu. Máu hiện tại: {localHealth}");
         }
         else if (IsServer)
@@ -5519,6 +5557,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         {
             attackSpeedBoostTimeRemaining = 10f;
             SetSwordRedVisuals(true);
+            SetGhostVisuals(true);
         }
         else if (IsOwner)
         {
@@ -5541,6 +5580,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     private void TriggerAttackSpeedBoostClientRpc(bool state)
     {
         SetSwordRedVisuals(state);
+        SetGhostVisuals(state);
     }
 
     private System.Collections.IEnumerator ServerAttackSpeedBoostTimerCoroutine(float duration)
@@ -5553,6 +5593,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     private void OnAttackSpeedBoostedChanged(bool oldVal, bool newVal)
     {
         SetSwordRedVisuals(newVal);
+        SetGhostVisuals(newVal);
         if (newVal)
         {
             attackSpeedBoostTimeRemaining = 10f;
@@ -5627,6 +5668,81 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
                 }
             }
             originalSwordMaterials.Clear();
+        }
+    }
+
+    private void SetGhostVisuals(bool active)
+    {
+        if (active)
+        {
+            if (originalBodyMaterials.Count > 0) return; // Đã nhuộm ghost rồi
+
+            Material ghostMat = ghostBodyMaterial;
+            if (ghostMat == null)
+            {
+                Shader urpLit = Shader.Find("Universal Render Pipeline/Lit");
+                if (urpLit == null) urpLit = Shader.Find("Standard");
+                ghostMat = new Material(urpLit);
+                ghostMat.name = "DynamicWhiteGhostMaterial";
+                
+                // Đặt màu trắng mờ (transparent alpha)
+                ghostMat.color = new Color(1f, 1f, 1f, 0.6f);
+                
+                // Cấu hình Standard Shader để hỗ trợ Transparent
+                ghostMat.SetFloat("_Mode", 3f); // Transparent
+                ghostMat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+                ghostMat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+                ghostMat.SetInt("_ZWrite", 0);
+                ghostMat.DisableKeyword("_ALPHATEST_ON");
+                ghostMat.EnableKeyword("_ALPHABLEND_ON");
+                ghostMat.DisableKeyword("_ALPHAPREMULTIPLY_ON");
+                ghostMat.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
+                
+                // Cấu hình URP Lit Shader để hỗ trợ Transparent
+                ghostMat.SetFloat("_Surface", 1f); // Transparent
+                ghostMat.SetFloat("_Blend", 0f);   // Alpha
+                ghostMat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+                ghostMat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+                ghostMat.SetInt("_ZWrite", 0);
+                
+                // Kích hoạt Emission màu trắng rực rỡ để tạo hiệu ứng "hồn ma phát sáng"
+                ghostMat.EnableKeyword("_EMISSION");
+                ghostMat.SetColor("_EmissionColor", new Color(1.5f, 1.5f, 1.5f, 1.0f));
+            }
+
+            Renderer[] renderers = GetComponentsInChildren<Renderer>(true);
+            foreach (var r in renderers)
+            {
+                // Bỏ qua particle system, các indicator chỉ hướng hoặc line vẽ AOE
+                if (r is ParticleSystemRenderer || r.gameObject.name.Contains("VFX") || r.gameObject.name.Contains("Indicator") || r.gameObject.name.Contains("Line"))
+                    continue;
+
+                if (r is SkinnedMeshRenderer || r is MeshRenderer)
+                {
+                    if (!originalBodyMaterials.ContainsKey(r))
+                    {
+                        originalBodyMaterials[r] = r.sharedMaterials;
+                    }
+
+                    Material[] newMats = new Material[r.sharedMaterials.Length];
+                    for (int i = 0; i < newMats.Length; i++)
+                    {
+                        newMats[i] = ghostMat;
+                    }
+                    r.materials = newMats;
+                }
+            }
+        }
+        else
+        {
+            foreach (var kvp in originalBodyMaterials)
+            {
+                if (kvp.Key != null && kvp.Value != null)
+                {
+                    kvp.Key.materials = kvp.Value;
+                }
+            }
+            originalBodyMaterials.Clear();
         }
     }
 
@@ -6224,6 +6340,14 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (IsOwner)
         {
             SavePlayerStateToDatabase();
+            if (newHealth <= 0f && oldHealth > 0f)
+            {
+                PlayerDeathEffectManager.Instance.PlayDeathEffect();
+            }
+            else if (newHealth > 0f && oldHealth <= 0f)
+            {
+                PlayerDeathEffectManager.Instance.ResetDeathEffect();
+            }
         }
     }
 
@@ -6407,7 +6531,12 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     {
         if (anim == null || anim.runtimeAnimatorController == null) return 0f;
         string searchName = triggerName;
-        if (triggerName == "ChatRiu") searchName = "Chat Cayy";
+        if (string.Equals(triggerName, "ChatRiu", System.StringComparison.OrdinalIgnoreCase)) searchName = "Chat Cayy";
+        else if (string.Equals(triggerName, "DrawLeft", System.StringComparison.OrdinalIgnoreCase)) searchName = "laykiemtaytrai";
+        else if (string.Equals(triggerName, "DrawRight", System.StringComparison.OrdinalIgnoreCase)) searchName = "Laykiemtayphai";
+        else if (string.Equals(triggerName, "SheatheLeft", System.StringComparison.OrdinalIgnoreCase)) searchName = "catkiemtaytrai";
+        else if (string.Equals(triggerName, "SheatheRight", System.StringComparison.OrdinalIgnoreCase)) searchName = "catkiemtayphai";
+
         foreach (var clip in anim.runtimeAnimatorController.animationClips)
         {
             if (clip != null && (clip.name == searchName || clip.name.ToLower() == searchName.ToLower()))
@@ -6967,11 +7096,17 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         if (IsActionAnimationName(translatedName))
         {
+            string stateName = translatedName;
+            if (string.Equals(translatedName, "DrawLeft", System.StringComparison.OrdinalIgnoreCase)) stateName = "laykiemtaytrai";
+            else if (string.Equals(translatedName, "DrawRight", System.StringComparison.OrdinalIgnoreCase)) stateName = "Laykiemtayphai";
+            else if (string.Equals(translatedName, "SheatheLeft", System.StringComparison.OrdinalIgnoreCase)) stateName = "catkiemtaytrai";
+            else if (string.Equals(translatedName, "SheatheRight", System.StringComparison.OrdinalIgnoreCase)) stateName = "catkiemtayphai";
+
             anim.SetTrigger(translatedName);
             StartCoroutine(ResetTriggerNextFrame(translatedName));
 
             int targetLayer = IsAttackAnimationName(translatedName) && !isRootedAttack ? 1 : 0;
-            anim.CrossFadeInFixedTime(translatedName, fadeTime, targetLayer, 0f);
+            anim.CrossFadeInFixedTime(stateName, fadeTime, targetLayer, 0f);
 
             // Force evaluation to query the exact animation clip duration
             anim.Update(0f);
@@ -7774,6 +7909,12 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     private void UpdateAttackLayerWeight()
     {
+        var carrier = GetComponent<PlayerLogCarrier>();
+        if (carrier != null && carrier.isCarrying)
+        {
+            return;
+        }
+
         if (anim != null && anim.isActiveAndEnabled && anim.runtimeAnimatorController != null && anim.layerCount > 1)
         {
             AnimatorStateInfo stateInfo = anim.GetCurrentAnimatorStateInfo(1);
@@ -7888,6 +8029,30 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     public override void OnDestroy()
     {
+        if (originalBodyMaterials != null)
+        {
+            foreach (var kvp in originalBodyMaterials)
+            {
+                if (kvp.Key != null && kvp.Value != null)
+                {
+                    kvp.Key.materials = kvp.Value;
+                }
+            }
+            originalBodyMaterials.Clear();
+        }
+
+        if (originalSwordMaterials != null)
+        {
+            foreach (var kvp in originalSwordMaterials)
+            {
+                if (kvp.Key != null && kvp.Value != null)
+                {
+                    kvp.Key.materials = kvp.Value;
+                }
+            }
+            originalSwordMaterials.Clear();
+        }
+
         HideAoeIndicator();
         if (PlayerHUDManager.ActivePlayers != null)
         {

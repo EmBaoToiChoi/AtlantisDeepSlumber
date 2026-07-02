@@ -130,9 +130,6 @@ public class GearRotator : NetworkBehaviour
     private void HandlePlayerDamage(GameObject otherGo)
     {
         if (!dealDamageOnContact) return;
-        
-        // Chỉ xử lý gây sát thương trên Server (trong chế độ mạng) hoặc độc lập (chơi đơn)
-        if (IsNetworkActive && !IsServer) return;
 
         if (IsAnyPlayer(otherGo, out GameObject playerRoot))
         {
@@ -192,20 +189,25 @@ public class GearRotator : NetworkBehaviour
 
         Debug.Log($"[GearRotator] Gây {damage} sát thương cho {playerRoot.name}");
 
-        var elena = playerRoot.GetComponent<ElenaPlayer>();
-        if (elena != null) { elena.TakeDamage(damage); return; }
+        MonoBehaviour[] scripts = playerRoot.GetComponents<MonoBehaviour>();
+        foreach (var script in scripts)
+        {
+            if (script == null) continue;
+            System.Type type = script.GetType();
+            string typeName = type.Name;
 
-        var arthur = playerRoot.GetComponent<ArthurPlayer>();
-        if (arthur != null) { arthur.TakeDamage(damage); return; }
-
-        var leo = playerRoot.GetComponent<LeoPlayer>();
-        if (leo != null) { leo.TakeDamage(damage); return; }
-
-        var maya = playerRoot.GetComponent<MayaPlayer>();
-        if (maya != null) { maya.TakeDamage(damage); return; }
-
-        var simple = playerRoot.GetComponent<SimplePlayerTest>();
-        if (simple != null) { simple.TakeDamage(damage); return; }
+            if (typeName == "SimplePlayerTest" || typeName == "LeoPlayer" || typeName == "ArthurPlayer" || 
+                typeName == "ElenaPlayer" || typeName == "MayaPlayer" || typeName.EndsWith("Player"))
+            {
+                var requestDamageMethod = type.GetMethod("RequestTakeDamage", new System.Type[] { typeof(float) }) ??
+                                          type.GetMethod("TakeDamage", new System.Type[] { typeof(float) });
+                if (requestDamageMethod != null)
+                {
+                    requestDamageMethod.Invoke(script, new object[] { damage });
+                    return;
+                }
+            }
+        }
     }
 
     private bool IsAnyPlayer(GameObject go, out GameObject playerRoot)
@@ -213,21 +215,21 @@ public class GearRotator : NetworkBehaviour
         playerRoot = null;
         if (go == null) return false;
 
-        var elena = go.GetComponentInParent<ElenaPlayer>();
+        var elena = go.GetComponentInParent<ElenaPlayer>() ?? go.GetComponentInChildren<ElenaPlayer>();
         if (elena != null) { playerRoot = elena.gameObject; return true; }
 
-        var arthur = go.GetComponentInParent<ArthurPlayer>();
+        var arthur = go.GetComponentInParent<ArthurPlayer>() ?? go.GetComponentInChildren<ArthurPlayer>();
         if (arthur != null) { playerRoot = arthur.gameObject; return true; }
 
-        var leo = go.GetComponentInParent<LeoPlayer>();
+        var leo = go.GetComponentInParent<LeoPlayer>() ?? go.GetComponentInChildren<LeoPlayer>();
         if (leo != null) { playerRoot = leo.gameObject; return true; }
 
-        var maya = go.GetComponentInParent<MayaPlayer>();
+        var maya = go.GetComponentInParent<MayaPlayer>() ?? go.GetComponentInChildren<MayaPlayer>();
         if (maya != null) { playerRoot = maya.gameObject; return true; }
 
-        var simple = go.GetComponentInParent<SimplePlayerTest>();
+        var simple = go.GetComponentInParent<SimplePlayerTest>() ?? go.GetComponentInChildren<SimplePlayerTest>();
         if (simple != null) { playerRoot = simple.gameObject; return true; }
 
         return false;
     }
-}
+}

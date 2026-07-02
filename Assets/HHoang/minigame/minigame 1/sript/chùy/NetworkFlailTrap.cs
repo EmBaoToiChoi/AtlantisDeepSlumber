@@ -22,6 +22,10 @@ public class NetworkFlailTrap : NetworkBehaviour
     [Tooltip("Tốc độ lật qua lật lại")]
     public float swingSpeed = 3f;
 
+    [Header("Sát thương")]
+    public float contactDamage = 40f;
+    public float damageCooldown = 1f;
+
     private NetworkVariable<bool> isTriggered = new NetworkVariable<bool>(false);
     private float timer = 0f;
     
@@ -30,6 +34,8 @@ public class NetworkFlailTrap : NetworkBehaviour
 
     // Cờ đánh dấu xem bẫy đang trong lúc chờ rớt không (để không bị đếm đè nhiều lần)
     private bool isCountingDown = false;
+
+    private System.Collections.Generic.Dictionary<GameObject, float> nextDamageTime = new System.Collections.Generic.Dictionary<GameObject, float>();
 
     void Start()
     {
@@ -53,7 +59,13 @@ public class NetworkFlailTrap : NetworkBehaviour
 
             foreach (var hit in hitColliders)
             {
-                if (hit.CompareTag("Player"))
+                if (hit.CompareTag("Player") || 
+                    (hit.transform.parent != null && hit.transform.parent.CompareTag("Player")) ||
+                    hit.GetComponentInParent<ElenaPlayer>() != null ||
+                    hit.GetComponentInParent<MayaPlayer>() != null ||
+                    hit.GetComponentInParent<LeoPlayer>() != null ||
+                    hit.GetComponentInParent<ArthurPlayer>() != null ||
+                    hit.GetComponentInParent<SimplePlayerTest>() != null)
                 {
                     // Phát hiện Player là chạy hàm đếm ngược thả búa
                     StartCoroutine(DemNguocTruocKhiSap());
@@ -114,23 +126,43 @@ public class NetworkFlailTrap : NetworkBehaviour
         HandlePlayerCollision(collision.gameObject);
     }
 
+    private void OnTriggerExit(Collider other)
+    {
+        RemovePlayerFromDamageList(other.gameObject);
+    }
+
+    private void OnCollisionExit(Collision collision)
+    {
+        RemovePlayerFromDamageList(collision.gameObject);
+    }
+
+    private void RemovePlayerFromDamageList(GameObject otherGo)
+    {
+        if (IsAnyPlayer(otherGo, out GameObject playerRoot))
+        {
+            if (nextDamageTime.ContainsKey(playerRoot))
+            {
+                nextDamageTime.Remove(playerRoot);
+            }
+        }
+    }
+
     private void HandlePlayerCollision(GameObject collidedObj)
     {
-        // Chỉ xử lý chết trên Server (trong mạng) hoặc local (chơi đơn)
-        bool isNetworkActive = NetworkManager != null && NetworkManager.IsListening;
-        bool isServerInstance = IsServer;
-
-        if (isNetworkActive && !isServerInstance) return;
-
         if (IsAnyPlayer(collidedObj, out GameObject playerRoot))
         {
-            DealInstantDeath(playerRoot);
+            float currentTime = Time.time;
+            if (!nextDamageTime.TryGetValue(playerRoot, out float nextTime) || currentTime >= nextTime)
+            {
+                DealInstantDeath(playerRoot);
+                nextDamageTime[playerRoot] = currentTime + damageCooldown;
+            }
         }
     }
 
     private void DealInstantDeath(GameObject playerRoot)
     {
-        Debug.Log($"[NetworkFlailTrap] Chạm vào người chơi {playerRoot.name}! Phá vỡ miễn nhiễm và gây chết ngay lập tức.");
+        Debug.Log($"[NetworkFlailTrap] Chạm vào người chơi {playerRoot.name}! Phá vỡ miễn nhiễm và gây {contactDamage} sát thương.");
 
         MonoBehaviour[] scripts = playerRoot.GetComponents<MonoBehaviour>();
         foreach (var script in scripts)
@@ -170,11 +202,12 @@ public class NetworkFlailTrap : NetworkBehaviour
                     }
                 }
 
-                // 4. Gây sát thương chết ngay
-                var takeDamageMethod = type.GetMethod("TakeDamage", new System.Type[] { typeof(float) });
-                if (takeDamageMethod != null)
+                // 4. Gây sát thương 40
+                var requestDamageMethod = type.GetMethod("RequestTakeDamage", new System.Type[] { typeof(float) }) ??
+                                          type.GetMethod("TakeDamage", new System.Type[] { typeof(float) });
+                if (requestDamageMethod != null)
                 {
-                    takeDamageMethod.Invoke(script, new object[] { 99999f });
+                    requestDamageMethod.Invoke(script, new object[] { contactDamage });
                 }
             }
         }
@@ -185,19 +218,19 @@ public class NetworkFlailTrap : NetworkBehaviour
         playerRoot = null;
         if (go == null) return false;
 
-        var elena = go.GetComponentInParent<ElenaPlayer>();
+        var elena = go.GetComponentInParent<ElenaPlayer>() ?? go.GetComponentInChildren<ElenaPlayer>();
         if (elena != null) { playerRoot = elena.gameObject; return true; }
 
-        var arthur = go.GetComponentInParent<ArthurPlayer>();
+        var arthur = go.GetComponentInParent<ArthurPlayer>() ?? go.GetComponentInChildren<ArthurPlayer>();
         if (arthur != null) { playerRoot = arthur.gameObject; return true; }
 
-        var leo = go.GetComponentInParent<LeoPlayer>();
+        var leo = go.GetComponentInParent<LeoPlayer>() ?? go.GetComponentInChildren<LeoPlayer>();
         if (leo != null) { playerRoot = leo.gameObject; return true; }
 
-        var maya = go.GetComponentInParent<MayaPlayer>();
+        var maya = go.GetComponentInParent<MayaPlayer>() ?? go.GetComponentInChildren<MayaPlayer>();
         if (maya != null) { playerRoot = maya.gameObject; return true; }
 
-        var simple = go.GetComponentInParent<SimplePlayerTest>();
+        var simple = go.GetComponentInParent<SimplePlayerTest>() ?? go.GetComponentInChildren<SimplePlayerTest>();
         if (simple != null) { playerRoot = simple.gameObject; return true; }
 
         return false;
