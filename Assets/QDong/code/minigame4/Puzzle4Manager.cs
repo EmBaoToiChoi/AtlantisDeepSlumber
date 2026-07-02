@@ -165,16 +165,31 @@ public class Puzzle4Manager : NetworkBehaviour
 
     public void StartMinigameFromTeleport()
     {
-        if (!IsServer) return;
+        if (!IsServer) 
+        {
+            Debug.Log("[Puzzle4Manager] StartMinigame bị từ chối vì không phải Server.");
+            return;
+        }
         
+        Debug.Log($"[Puzzle4Manager] Gọi StartMinigame! isMinigameStarted: {isMinigameStarted.Value}, isStartingUI: {isStartingUI}");
+
         if (!isMinigameStarted.Value && !isStartingUI)
         {
             isStartingUI = true;
             if (balanceManager != null)
             {
+                Debug.Log("[Puzzle4Manager] UnlockDisk()");
                 balanceManager.UnlockDisk();
             }
+            else 
+            {
+                Debug.LogWarning("[Puzzle4Manager] LỖI: balanceManager bị null!");
+            }
+            
+            Debug.Log("[Puzzle4Manager] Gọi ToggleSharedCameraClientRpc(true)");
             ToggleSharedCameraClientRpc(true);
+            
+            Debug.Log("[Puzzle4Manager] Chạy Coroutine DelayedStartMinigameUI()");
             StartCoroutine(DelayedStartMinigameUI());
         }
     }
