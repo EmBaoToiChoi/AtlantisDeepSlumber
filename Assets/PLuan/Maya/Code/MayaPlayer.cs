@@ -1895,10 +1895,11 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
         return; // Khóa hoàn toàn các input di chuyển khác bên dưới
     }
 
-        // Knockback
+        // Knockback (Đã chuyển đổi sang tính toán cùng vận tốc di chuyển ở dưới để chạy bằng Rigidbody)
+        Vector3 currentKnockback = Vector3.zero;
         if (knockbackVelocity.magnitude > 0.01f)
         {
-            transform.Translate(knockbackVelocity * Time.deltaTime, Space.World);
+            currentKnockback = knockbackVelocity;
             knockbackVelocity = Vector3.Lerp(knockbackVelocity, Vector3.zero, Time.deltaTime * 8f);
         }
 
@@ -1937,14 +1938,23 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         // Tạo bản sao di chuyển vật lý để có thể khóa di chuyển mà không làm mất hướng né đòn (roll direction)
         Vector3 movementTranslation = move;
-        bool isCurrentlyAttacking = IsPlayingAttackState(out _, out _) || 
-                                    (IsAttackAnimationName(lastTriggeredAnimName) && Time.time - lastActionTriggerTime < 0.35f);
         if (IsLockingMovementAction())
         {
             movementTranslation = Vector3.zero;
         }
 
-        transform.Translate(movementTranslation * currentSpeed * Time.deltaTime, Space.World);
+        Vector3 finalVelocity = movementTranslation * currentSpeed + currentKnockback;
+
+        if (rb != null)
+        {
+            Vector3 vel = finalVelocity;
+            vel.y = rb.linearVelocity.y; // giữ trọng lực
+            rb.linearVelocity = vel;
+        }
+        else
+        {
+            transform.Translate(finalVelocity * Time.deltaTime, Space.World);
+        }
 
         // Xoay nhân vật: Luôn xoay theo hướng Camera để hỗ trợ đi ngang/lùi (strafe) cho cả khi cầm vũ khí và tay không (Chỉ xoay khi không chơi hoạt ảnh hành động như lộn vòng, nhặt đồ, trúng đòn...)
         if (targetCamera != null && !IsPlayingActionAnimation())
@@ -2072,10 +2082,11 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
         return; // Khóa hoàn toàn các input di chuyển khác bên dưới
     }
 
-        // Knockback
+        // Knockback (Đã chuyển đổi sang tính toán cùng vận tốc di chuyển ở dưới để chạy bằng Rigidbody)
+        Vector3 currentKnockback = Vector3.zero;
         if (knockbackVelocity.magnitude > 0.01f)
         {
-            transform.Translate(knockbackVelocity * Time.deltaTime, Space.World);
+            currentKnockback = knockbackVelocity;
             knockbackVelocity = Vector3.Lerp(knockbackVelocity, Vector3.zero, Time.deltaTime * 8f);
         }
 
@@ -2114,14 +2125,23 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         // Tạo bản sao di chuyển vật lý để có thể khóa di chuyển mà không làm mất hướng né đòn (roll direction)
         Vector3 movementTranslation = move;
-        bool isCurrentlyAttacking = IsPlayingAttackState(out _, out _) || 
-                                    (IsAttackAnimationName(lastTriggeredAnimName) && Time.time - lastActionTriggerTime < 0.35f);
         if (IsLockingMovementAction())
         {
             movementTranslation = Vector3.zero;
         }
 
-        transform.Translate(movementTranslation * currentSpeed * Time.deltaTime, Space.World);
+        Vector3 finalVelocity = movementTranslation * currentSpeed + currentKnockback;
+
+        if (rb != null)
+        {
+            Vector3 vel = finalVelocity;
+            vel.y = rb.linearVelocity.y; // giữ trọng lực
+            rb.linearVelocity = vel;
+        }
+        else
+        {
+            transform.Translate(finalVelocity * Time.deltaTime, Space.World);
+        }
 
         // Xoay nhân vật: Luôn xoay theo hướng Camera để hỗ trợ đi ngang/lùi (strafe) cho cả khi cầm vũ khí và tay không (Chỉ xoay khi không chơi hoạt ảnh hành động như lộn vòng, nhặt đồ, trúng đòn...)
         if (targetCamera != null && !IsPlayingActionAnimation())
@@ -2455,14 +2475,29 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
             Vector3 rightOffsetVec = camRight * currentShoulderOffset;
 
             // Gắn cứng camera theo vị trí của nhân vật (Loại bỏ Lerp vị trí để giải quyết triệt để lỗi delay, zoom co giãn, và lệch nhân vật ra rìa)
-            Vector3 targetPosition = (transform.position + Vector3.up * cameraPivotHeight) + rotatedOffset + rightOffsetVec;
+            Vector3 pivotPosition = (transform.position + Vector3.up * cameraPivotHeight) + rightOffsetVec;
+            Vector3 targetPosition = pivotPosition + rotatedOffset;
+
+            // Thực hiện kiểm tra va chạm của camera với tường/vật cản bằng SphereCast
+            float collisionSafetyDistance = 0.4f; // Khoảng cách an toàn để tránh camera sát tường gây lỗi clipping plane
+            int cameraLayerMask = ~LayerMask.GetMask("Player", "Ignore Raycast"); // Bỏ qua người chơi và các vật thể Ignore Raycast
+            Vector3 rayDirection = rotatedOffset.normalized;
+            float maxRayDistance = rotatedOffset.magnitude;
+
+            if (Physics.SphereCast(pivotPosition, 0.2f, rayDirection, out RaycastHit hit, maxRayDistance, cameraLayerMask))
+            {
+                // Thu nhỏ khoảng cách nếu va chạm với tường
+                float clampedDistance = Mathf.Max(0.5f, hit.distance - collisionSafetyDistance);
+                targetPosition = pivotPosition + rayDirection * clampedDistance;
+            }
+
             targetCamera.transform.position = targetPosition;
 
             if (cameraLookAtPlayer)
             {
                 // Khóa camera luôn nhìn thẳng vào nhân vật (không dùng Slerp rotation) để nhân vật luôn nằm chính giữa màn hình
                 targetCamera.transform.rotation = Quaternion.LookRotation(
-                    ((transform.position + Vector3.up * cameraPivotHeight) + rightOffsetVec) - targetCamera.transform.position
+                    pivotPosition - targetCamera.transform.position
                 );
             }
         }
