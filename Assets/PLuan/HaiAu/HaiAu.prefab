@@ -233,7 +233,8 @@ MonoBehaviour:
   duration: 15
   cameraOffset: {x: 0, y: 0.2, z: 0.1}
   cameraSmoothSpeed: 10
-  returnRotationYOffset: 180
+  modelRotationYOffset: 180
+  returnRotationYOffset: 0
   anim: {fileID: 1160923260820828789}
   idleAnimName: Idle
   flyAnimName: Fly
