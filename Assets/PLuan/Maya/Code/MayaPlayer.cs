@@ -3922,19 +3922,7 @@ private void StartRollServerRpc(Vector3 direction)
             {
                 if (normalAttackPrefab != null)
                 {
-                    if (IsQSkillActive)
-                    {
-                        Vector3 dirLeft = Quaternion.Euler(0f, -qSkillSpreadAngle, 0f) * shootDirection;
-                        Vector3 dirRight = Quaternion.Euler(0f, qSkillSpreadAngle, 0f) * shootDirection;
-
-                        SpawnNormalAttackLocal(spawnPos, shootDirection);
-                        SpawnNormalAttackLocal(spawnPos, dirLeft);
-                        SpawnNormalAttackLocal(spawnPos, dirRight);
-                    }
-                    else
-                    {
-                        SpawnNormalAttackLocal(spawnPos, shootDirection);
-                    }
+                    SpawnNormalAttackLocal(spawnPos, shootDirection);
                 }
                 else
                 {
@@ -4007,19 +3995,7 @@ private void StartRollServerRpc(Vector3 direction)
 
         if (normalAttackPrefab != null)
         {
-            if (isQSkillActiveNet.Value)
-            {
-                Vector3 dirLeft = Quaternion.Euler(0f, -qSkillSpreadAngle, 0f) * shootDirection;
-                Vector3 dirRight = Quaternion.Euler(0f, qSkillSpreadAngle, 0f) * shootDirection;
-
-                SpawnNormalAttackServer(spawnPos, shootDirection);
-                SpawnNormalAttackServer(spawnPos, dirLeft);
-                SpawnNormalAttackServer(spawnPos, dirRight);
-            }
-            else
-            {
-                SpawnNormalAttackServer(spawnPos, shootDirection);
-            }
+            SpawnNormalAttackServer(spawnPos, shootDirection);
         }
         else
         {
