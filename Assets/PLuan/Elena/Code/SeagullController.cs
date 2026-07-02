@@ -12,12 +12,15 @@ public class SeagullController : NetworkBehaviour
     public float duration = 15f; // Thời gian tồn tại của hải âu (giây)
 
     [Header("Camera Settings")]
-    [Tooltip("Góc nhìn thứ ba (Third Person) của chim. Ví dụ: X=0, Y=2.0, Z=-6")]
-    public Vector3 cameraOffset = new Vector3(0f, 2f, -6f);
+    [Tooltip("Góc nhìn thứ ba (Third Person) của chim. Ví dụ: X=0, Y=2.5, Z=-8")]
+    public Vector3 cameraOffset = new Vector3(0f, 2.5f, -8f);
     public float cameraSmoothSpeed = 10f;
 
     [Tooltip("Bù đắp góc xoay Y của mô hình visual để đầu chim hướng về phía trước (trục Z). Ví dụ: 90, -90, 180.")]
     public float modelRotationYOffset = 90f;
+
+    [Tooltip("FOV (Góc nhìn camera) khi đang bay chim. Mặc định 80 giúp góc rộng và thoáng hơn.")]
+    public float targetFOV = 80f;
 
     [Tooltip("Bù đắp góc xoay Y khi chim bay về (không còn dùng, nên để 0).")]
     public float returnRotationYOffset = 0f;
@@ -37,6 +40,8 @@ public class SeagullController : NetworkBehaviour
 
     private Vector3 playerCamStartPos;
     private Quaternion playerCamStartRot;
+    private float playerCamStartFOV;
+    private float playerCamStartNearClip = 0.3f;
 
     [Header("Smooth Flight Settings")]
     [Tooltip("Gia tốc tăng tốc/giảm tốc của chim")]
@@ -55,6 +60,8 @@ public class SeagullController : NetworkBehaviour
 
     private float freeLookYaw = 0f;
     private float freeLookPitch = 0f;
+    private float currentFreeLookYaw = 0f;
+    private float currentFreeLookPitch = 0f;
     private bool childrenRotated = false;
 
     public bool isStandaloneMode => NetworkManager.Singleton == null || !NetworkManager.Singleton.IsListening;
@@ -112,6 +119,9 @@ public class SeagullController : NetworkBehaviour
         {
             playerCamStartPos = Camera.main.transform.position;
             playerCamStartRot = Camera.main.transform.rotation;
+            playerCamStartFOV = Camera.main.fieldOfView;
+            playerCamStartNearClip = Camera.main.nearClipPlane;
+            Camera.main.nearClipPlane = 0.05f; // Giảm Near Clip Plane để tránh vướng vào model
         }
         
         // Khóa trọng lực và va chạm để tránh rơi hoặc bị đẩy lệch vị trí
@@ -477,45 +487,91 @@ public class SeagullController : NetworkBehaviour
 
         if (age < 2f && playerCamStartPos != Vector3.zero)
         {
-            float t = age / 2f;
-            // Vị trí camera góc nhìn thứ 3 của chim
-            Vector3 birdCamPos = transform.TransformPoint(cameraOffset);
+            // Sử dụng SmoothStep để chuyển đổi camera mượt mà, tránh robotic
+            float t = Mathf.SmoothStep(0f, 1f, age / 2f);
             
-            // Lerp vị trí từ vị trí ban đầu của Elena sang vị trí sau chim
+            // Hướng cơ bản không roll của chim tại thời điểm bắt đầu
+            Quaternion baseRot = Quaternion.Euler(0f, transform.rotation.eulerAngles.y, 0f);
+            
+            // Vị trí camera góc nhìn thứ 3 của chim (Dùng baseRot không roll để tránh camera bị nghiêng khi cất cánh)
+            Vector3 birdCamPos = transform.position + baseRot * cameraOffset;
             cam.transform.position = Vector3.Lerp(playerCamStartPos, birdCamPos, t);
             
-            // Hướng nhìn luôn tập trung vào con chim
+            // Hướng nhìn chuyển tiếp mượt mà từ góc nhìn cũ của player sang hướng nhìn tập trung vào con chim
             Vector3 lookTarget = transform.position + transform.up * 0.2f;
-            cam.transform.rotation = Quaternion.LookRotation(lookTarget - cam.transform.position);
+            Quaternion lookAtBirdRot = Quaternion.LookRotation(lookTarget - cam.transform.position);
+            cam.transform.rotation = Quaternion.Slerp(playerCamStartRot, lookAtBirdRot, t);
+
+            // Cập nhật FOV rộng dần ra tạo cảm giác tốc độ và không gian rộng
+            cam.fieldOfView = Mathf.Lerp(playerCamStartFOV, targetFOV, t);
+
+            // Thêm hiệu ứng rung camera nhẹ (camera shake) trong 0.5s đầu khi chim tung cánh cất cánh
+            if (age < 0.5f)
+            {
+                float shakeStrength = 0.05f * (1f - (age / 0.5f));
+                Vector3 shakeOffset = new Vector3(
+                    Random.Range(-1f, 1f),
+                    Random.Range(-1f, 1f),
+                    Random.Range(-1f, 1f)
+                ).normalized * shakeStrength;
+                cam.transform.position += shakeOffset;
+            }
         }
         else
         {
+            // Duy trì FOV khi điều khiển chim bay
+            cam.fieldOfView = Mathf.Lerp(cam.fieldOfView, targetFOV, Time.deltaTime * 5f);
+
+            // Sử dụng hướng bay (Yaw/Pitch) không có Roll làm gốc cho camera để giữ đường chân trời thẳng, không bị nghiêng lệch
+            Quaternion baseRot = Quaternion.Euler(targetPitch, targetYaw, 0f);
+
             // Nếu đang giữ Ctrl xoay camera tự do xung quanh chim
             bool ctrlHeld = Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl);
-            if (ctrlHeld || freeLookYaw != 0f || freeLookPitch != 0f)
+            if (ctrlHeld || freeLookYaw != 0f || freeLookPitch != 0f || Mathf.Abs(currentFreeLookYaw) > 0.01f || Mathf.Abs(currentFreeLookPitch) > 0.01f)
             {
-                Quaternion baseRot = transform.rotation;
-                Quaternion freeLookRot = Quaternion.Euler(freeLookPitch, freeLookYaw, 0f);
+                // Nội suy góc quay camera tự do để tránh việc camera cắt xuyên qua model khi xoay chuột nhanh
+                currentFreeLookYaw = Mathf.Lerp(currentFreeLookYaw, freeLookYaw, Time.deltaTime * cameraSmoothSpeed);
+                currentFreeLookPitch = Mathf.Lerp(currentFreeLookPitch, freeLookPitch, Time.deltaTime * cameraSmoothSpeed);
+
+                Quaternion freeLookRot = Quaternion.Euler(currentFreeLookPitch, currentFreeLookYaw, 0f);
                 Quaternion finalCamRot = baseRot * freeLookRot;
                 
-                // Vị trí camera xoay quanh chim dựa trên offset
+                // Vị trí camera xoay quanh chim trên mặt cầu hoàn hảo (khoảng cách luôn cố định bằng cameraOffset)
                 Vector3 targetPos = transform.position + finalCamRot * cameraOffset;
                 cam.transform.position = targetPos;
                 
-                // Camera luôn hướng nhìn vào chim
+                // Camera luôn hướng nhìn vào chim (Slerp mượt mà)
                 Vector3 lookTarget = transform.position + transform.up * 0.2f;
-                cam.transform.rotation = Quaternion.LookRotation(lookTarget - cam.transform.position);
+                Quaternion targetRot = Quaternion.LookRotation(lookTarget - cam.transform.position);
+                cam.transform.rotation = Quaternion.Slerp(cam.transform.rotation, targetRot, Time.deltaTime * cameraSmoothSpeed);
             }
             else
             {
+                currentFreeLookYaw = 0f;
+                currentFreeLookPitch = 0f;
+
                 // Góc nhìn thứ 3 bình thường bám theo sau chim
-                Vector3 targetPos = transform.TransformPoint(cameraOffset);
+                Vector3 targetPos = transform.position + baseRot * cameraOffset;
                 cam.transform.position = Vector3.Lerp(cam.transform.position, targetPos, Time.deltaTime * cameraSmoothSpeed);
 
                 Vector3 lookTarget = transform.position + transform.up * 0.2f;
                 Quaternion targetRot = Quaternion.LookRotation(lookTarget - cam.transform.position);
                 cam.transform.rotation = Quaternion.Slerp(cam.transform.rotation, targetRot, Time.deltaTime * cameraSmoothSpeed);
             }
+        }
+    }
+
+    private void OnDisable()
+    {
+        RestoreCamera();
+    }
+
+    private void RestoreCamera()
+    {
+        if (Camera.main != null)
+        {
+            if (playerCamStartFOV != 0f) Camera.main.fieldOfView = playerCamStartFOV;
+            if (playerCamStartNearClip != 0f) Camera.main.nearClipPlane = playerCamStartNearClip;
         }
     }
 }
