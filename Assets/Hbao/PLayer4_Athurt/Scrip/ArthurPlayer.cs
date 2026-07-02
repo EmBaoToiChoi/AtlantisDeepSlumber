@@ -1591,18 +1591,16 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         UpdateComboChain();
         HandleRAiming();
 
+        bool hasControl = isStandaloneMode || (IsSpawned && IsOwner);
+
         // Đồng bộ di chuyển lướt (Roll) qua network cho cả Client Owner, Server, và các Client khác
         bool isRolling = isStandaloneMode ? isRollingStandalone : (IsSpawned && isRollingNet.Value);
         if (isRolling)
         {
-            if (rb != null && !rb.isKinematic)
+            if (hasControl && rb != null && !rb.isKinematic)
             {
                 float currentYVelocity = rb.linearVelocity.y;
                 rb.linearVelocity = new Vector3(rollDirection.x * rollSpeed, currentYVelocity, rollDirection.z * rollSpeed);
-            }
-            else
-            {
-                transform.Translate(rollDirection * rollSpeed * Time.deltaTime, Space.World);
             }
 
             if (rollDirection != Vector3.zero)
@@ -1621,7 +1619,6 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
             return;
         }
 
-        bool hasControl = isStandaloneMode || (IsSpawned && IsOwner);
         if (hasControl)
         {
             if (Input.GetKeyDown(KeyCode.LeftAlt) || Input.GetKeyDown(KeyCode.RightAlt))
