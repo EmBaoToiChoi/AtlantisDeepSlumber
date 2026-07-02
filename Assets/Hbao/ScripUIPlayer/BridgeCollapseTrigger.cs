@@ -37,7 +37,6 @@ public class BridgeCollapseTrigger : NetworkBehaviour
     private System.Collections.Generic.List<Material[]> savedMaterials = new System.Collections.Generic.List<Material[]>();
     private GameObject[] resolvedSegments;
     private GameObject solidBridgeInstance;
-    private GameObject ghostBridgeInstance;
     private Vector3 originalLocalScale;
     private System.Collections.Generic.List<BoxCollider> cloneBoxColliders = new System.Collections.Generic.List<BoxCollider>();
     private System.Collections.Generic.List<Vector3> originalBoxSizes = new System.Collections.Generic.List<Vector3>();
@@ -115,7 +114,6 @@ public class BridgeCollapseTrigger : NetworkBehaviour
     [HideInInspector]
     public float localBuildProgress = 0f;
 
-    private Material ghostMaterialInstance;
     private float lastProgress = 0f;
     private float particleStopTimer = 0f;
 
@@ -362,9 +360,6 @@ public class BridgeCollapseTrigger : NetworkBehaviour
                     localBuildProgress = Mathf.Clamp(localBuildProgress - soloBuildDecayRate * Time.deltaTime, 0f, 100f);
                 }
             }
-
-            // Update ghost alpha dynamically as progress increases
-            UpdateGhostAlpha(currentProgress);
 
             // Hiển thị các mảnh cầu theo phần trăm tiến trình
             UpdateProgressiveBridgeSegments(currentProgress);
@@ -914,23 +909,6 @@ public class BridgeCollapseTrigger : NetworkBehaviour
         }
     }
 
-    private void UpdateGhostAlpha(float progress)
-    {
-        if (ghostMaterialInstance != null)
-        {
-            float alpha = 0.35f + (progress / 100f) * 0.55f;
-            Color col = new Color(1f, 1f, 1f, alpha);
-            if (ghostMaterialInstance.HasProperty("_BaseColor"))
-            {
-                ghostMaterialInstance.SetColor("_BaseColor", col);
-            }
-            else if (ghostMaterialInstance.HasProperty("_Color"))
-            {
-                ghostMaterialInstance.SetColor("_Color", col);
-            }
-        }
-    }
-
     private void SetParticlesActive(bool active)
     {
         if (buildProgressParticles == null)
@@ -1346,59 +1324,7 @@ public class BridgeCollapseTrigger : NetworkBehaviour
     }
 
 
-    private Material CreateGhostMaterial(float alpha)
-    {
-        bool isURP = UnityEngine.Rendering.GraphicsSettings.currentRenderPipeline != null;
-        Shader s = null;
-        if (isURP)
-        {
-            s = Shader.Find("Universal Render Pipeline/Lit");
-        }
-        if (s == null) s = Shader.Find("Standard");
-        if (s == null) s = Shader.Find("Sprites/Default");
 
-        Material mat = new Material(s);
-
-        if (mat.HasProperty("_Cull"))
-        {
-            mat.SetFloat("_Cull", 0f); // Tắt Cull để vẽ cả 2 mặt
-        }
-
-        if (mat.HasProperty("_Surface"))
-        {
-            mat.SetFloat("_Surface", 1f); // Transparent
-            mat.SetFloat("_Blend", 0f);   // Alpha
-            mat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
-            mat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
-            mat.SetInt("_ZWrite", 0);
-            
-            if (mat.HasProperty("_BaseColor"))
-            {
-                mat.SetColor("_BaseColor", new Color(1f, 1f, 1f, alpha));
-            }
-            mat.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
-            mat.DisableKeyword("_SURFACE_TYPE_OPAQUE");
-        }
-        else
-        {
-            if (mat.HasProperty("_Mode"))
-            {
-                mat.SetFloat("_Mode", 3f); // 3 = Transparent for Built-in Standard shader
-            }
-            mat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
-            mat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
-            mat.SetInt("_ZWrite", 0);
-            if (mat.HasProperty("_Color"))
-            {
-                mat.SetColor("_Color", new Color(1f, 1f, 1f, alpha));
-            }
-            mat.DisableKeyword("_ALPHATEST_ON");
-            mat.EnableKeyword("_ALPHABLEND_ON");
-            mat.DisableKeyword("_ALPHAPREMULTIPLY_ON");
-        }
-        mat.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
-        return mat;
-    }
 
     private void SpawnWoodLogsServer()
     {
@@ -1676,11 +1602,6 @@ public class BridgeCollapseTrigger : NetworkBehaviour
             Destroy(solidBridgeInstance);
             solidBridgeInstance = null;
         }
-        if (ghostBridgeInstance != null)
-        {
-            Destroy(ghostBridgeInstance);
-            ghostBridgeInstance = null;
-        }
         cloneBoxColliders.Clear();
         originalBoxSizes.Clear();
         originalBoxCenters.Clear();
@@ -1786,23 +1707,67 @@ public class BridgeCollapseTrigger : NetworkBehaviour
                 }
             }
 
-            // Khôi phục vật liệu cũ cho bản clone (không dùng shader clipping nữa)
+            // Đăng ký vật liệu clipping tuỳ chỉnh cho toàn bộ MeshRenderer con của bản clone
             Renderer[] origRenders = mainBridgeObject.GetComponentsInChildren<Renderer>(true);
             Renderer[] cloneRenders = solidBridgeInstance.GetComponentsInChildren<Renderer>(true);
             clippingMaterials.Clear();
+
+            Shader clippingShader = Resources.Load<Shader>("BridgeClipping");
+            if (clippingShader == null)
+            {
+                clippingShader = Shader.Find("Custom/BridgeClipping");
+            }
+            if (clippingShader == null)
+            {
+                Debug.LogError("[BridgeCollapseTrigger] Không tìm thấy custom shader 'Custom/BridgeClipping' trong Resources lẫn Shader.Find!");
+            }
 
             for (int k = 0; k < cloneRenders.Length; k++)
             {
                 if (k < origRenders.Length && cloneRenders[k] != null && origRenders[k] != null)
                 {
                     int savedIdx = savedRenderers.IndexOf(origRenders[k]);
-                    if (savedIdx >= 0 && savedIdx < savedMaterials.Count)
+                    Material origMat = null;
+                    if (savedIdx >= 0 && savedIdx < savedMaterials.Count && savedMaterials[savedIdx].Length > 0)
                     {
-                        cloneRenders[k].materials = savedMaterials[savedIdx];
+                        origMat = savedMaterials[savedIdx][0];
+                    }
+                    if (origMat == null)
+                    {
+                        origMat = origRenders[k].sharedMaterial;
+                    }
+
+                    if (origMat != null && clippingShader != null)
+                    {
+                        // Tạo vật liệu clipping mới
+                        Material clipMat = new Material(clippingShader);
+                        
+                        // Copy texture từ vật liệu gốc
+                        if (origMat.HasProperty("_Albedo")) clipMat.SetTexture("_Albedo", origMat.GetTexture("_Albedo"));
+                        else if (origMat.HasProperty("_BaseMap")) clipMat.SetTexture("_Albedo", origMat.GetTexture("_BaseMap"));
+                        else if (origMat.HasProperty("_MainTex")) clipMat.SetTexture("_Albedo", origMat.GetTexture("_MainTex"));
+
+                        if (origMat.HasProperty("_Normal")) clipMat.SetTexture("_Normal", origMat.GetTexture("_Normal"));
+                        else if (origMat.HasProperty("_BumpMap")) clipMat.SetTexture("_Normal", origMat.GetTexture("_BumpMap"));
+
+                        if (origMat.HasProperty("_Specular")) clipMat.SetTexture("_Specular", origMat.GetTexture("_Specular"));
+
+                        // Copy các tham số màu sắc của Shader Multi-Color
+                        if (origMat.HasProperty("_Primary_Color")) clipMat.SetColor("_Primary_Color", origMat.GetColor("_Primary_Color"));
+                        if (origMat.HasProperty("_Secondary_Color")) clipMat.SetColor("_Secondary_Color", origMat.GetColor("_Secondary_Color"));
+                        if (origMat.HasProperty("_Tertiary_Color")) clipMat.SetColor("_Tertiary_Color", origMat.GetColor("_Tertiary_Color"));
+                        if (origMat.HasProperty("_Color")) clipMat.SetColor("_Color", origMat.GetColor("_Color"));
+
+                        cloneRenders[k].material = clipMat;
+                        clippingMaterials.Add(clipMat);
                     }
                     else
                     {
-                        cloneRenders[k].materials = origRenders[k].sharedMaterials;
+                        // Fallback khôi phục vật liệu cũ nếu không dùng được shader
+                        if (savedIdx >= 0 && savedIdx < savedMaterials.Count)
+                        {
+                            cloneRenders[k].materials = savedMaterials[savedIdx];
+                        }
                     }
                     cloneRenders[k].enabled = true;
                 }
@@ -1812,91 +1777,67 @@ public class BridgeCollapseTrigger : NetworkBehaviour
             {
                 if (col != null) col.enabled = true;
             }
-
-            // Khởi tạo ghostBridgeInstance nếu chưa có
-            if (ghostBridgeInstance == null)
-            {
-                ghostBridgeInstance = Instantiate(mainBridgeObject, mainBridgeObject.transform.parent);
-                ghostBridgeInstance.name = mainBridgeObject.name + "_GhostInstance";
-                ghostBridgeInstance.transform.position = originalBridgePos;
-                ghostBridgeInstance.transform.rotation = originalBridgeRot;
-                ghostBridgeInstance.transform.localScale = originalLocalScale;
-
-                LODGroup ghostLod = ghostBridgeInstance.GetComponent<LODGroup>();
-                if (ghostLod != null)
-                {
-                    ghostLod.enabled = false;
-                }
-
-                for (int i = 0; i < ghostBridgeInstance.transform.childCount; i++)
-                {
-                    Transform child = ghostBridgeInstance.transform.GetChild(i);
-                    if (child.name.Contains("LOD0"))
-                    {
-                        child.gameObject.SetActive(true);
-                    }
-                    else if (child.name.Contains("LOD1") || child.name.Contains("LOD2"))
-                    {
-                        child.gameObject.SetActive(false);
-                    }
-                }
-
-                if (ghostMaterialInstance == null)
-                {
-                    ghostMaterialInstance = CreateGhostMaterial(0.4f);
-                }
-
-                foreach (var r in ghostBridgeInstance.GetComponentsInChildren<Renderer>(true))
-                {
-                    if (r != null)
-                    {
-                        Material[] ghostMats = new Material[r.sharedMaterials.Length];
-                        for (int j = 0; j < ghostMats.Length; j++)
-                        {
-                            ghostMats[j] = ghostMaterialInstance;
-                        }
-                        r.materials = ghostMats;
-                        r.enabled = true;
-                    }
-                }
-
-                foreach (var col in ghostBridgeInstance.GetComponentsInChildren<Collider>(true))
-                {
-                    if (col != null) col.enabled = false;
-                }
-            }
         }
 
-        // Cập nhật vị trí và scale của solidBridgeInstance dựa trên tiến trình
+        // Cập nhật vị trí, scale và shader properties của solidBridgeInstance dựa trên tiến trình
         float minVal, maxVal;
         int axis;
         GetBridgeLocalBounds(out minVal, out maxVal, out axis);
 
-        // Scale và dịch chuyển solidBridgeInstance dọc theo trục để tạo hiệu ứng xây dựng dần dần
-        Vector3 newScale = originalLocalScale;
-        Vector3 localOffset = Vector3.zero;
-        float totalLength = maxVal - minVal;
+        if (clippingMaterials != null && clippingMaterials.Count > 0)
+        {
+            // Reset position và scale về 100% khi dùng shader để tránh bị kéo dãn hoặc dịch chuyển
+            solidBridgeInstance.transform.position = originalBridgePos;
+            solidBridgeInstance.transform.rotation = originalBridgeRot;
+            solidBridgeInstance.transform.localScale = originalLocalScale;
 
-        if (axis == 0) // X
-        {
-            newScale.x = originalLocalScale.x * progressFactor;
-            localOffset.x = -(1f - progressFactor) * totalLength * 0.5f;
-        }
-        else if (axis == 1) // Y
-        {
-            newScale.y = originalLocalScale.y * progressFactor;
-            localOffset.y = -(1f - progressFactor) * totalLength * 0.5f;
-        }
-        else // Z
-        {
-            newScale.z = originalLocalScale.z * progressFactor;
-            localOffset.z = -(1f - progressFactor) * totalLength * 0.5f;
-        }
+            float clipThreshold = Mathf.Lerp(minVal, maxVal, progressFactor);
 
-        solidBridgeInstance.transform.localScale = newScale;
-        // Transform localOffset sang world space (bao gồm cả rotation và localScale ban đầu)
-        Vector3 worldOffset = originalBridgeRot * Vector3.Scale(localOffset, originalLocalScale);
-        solidBridgeInstance.transform.position = originalBridgePos + worldOffset;
+            Vector4 clipAxisVec = Vector4.zero;
+            if (axis == 0) clipAxisVec = new Vector4(1f, 0f, 0f, 0f);
+            else if (axis == 1) clipAxisVec = new Vector4(0f, 1f, 0f, 0f);
+            else clipAxisVec = new Vector4(0f, 0f, 1f, 0f);
+
+            Debug.Log($"[BridgeCollapseTrigger] Shader clipping active: progress={progress}%, axis={axis}, minVal={minVal}, maxVal={maxVal}, threshold={clipThreshold}");
+
+            foreach (var mat in clippingMaterials)
+            {
+                if (mat != null)
+                {
+                    mat.SetVector("_ClipAxis", clipAxisVec);
+                    mat.SetFloat("_ClipThreshold", clipThreshold);
+                    mat.SetFloat("_InvertClip", 0f);
+                }
+            }
+        }
+        else
+        {
+            // FALLBACK: Nếu không có shader, thực hiện scale local trên trục tương ứng
+            Vector3 newScale = originalLocalScale;
+            Vector3 localOffset = Vector3.zero;
+            float totalLength = maxVal - minVal;
+
+            if (axis == 0) // X
+            {
+                newScale.x = originalLocalScale.x * progressFactor;
+                localOffset.x = -(1f - progressFactor) * totalLength * 0.5f;
+            }
+            else if (axis == 1) // Y
+            {
+                newScale.y = originalLocalScale.y * progressFactor;
+                localOffset.y = -(1f - progressFactor) * totalLength * 0.5f;
+            }
+            else // Z
+            {
+                newScale.z = originalLocalScale.z * progressFactor;
+                localOffset.z = -(1f - progressFactor) * totalLength * 0.5f;
+            }
+
+            solidBridgeInstance.transform.localScale = newScale;
+            Vector3 worldOffset = originalBridgeRot * Vector3.Scale(localOffset, originalLocalScale);
+            solidBridgeInstance.transform.position = originalBridgePos + worldOffset;
+            Debug.Log($"[BridgeCollapseTrigger] Fallback scale active: progress={progress}%, scale={newScale}");
+        }
 
         // Cập nhật kích thước các BoxCollider để khớp chính xác với phần gỗ đã hiển thị
         for (int i = 0; i < cloneBoxColliders.Count; i++)
@@ -1927,13 +1868,8 @@ public class BridgeCollapseTrigger : NetworkBehaviour
             }
         }
 
-        // Bật/tắt hiển thị solidInstance và ghostInstance
-        bool showSolid = progress > 0.5f;
-        solidBridgeInstance.SetActive(showSolid);
-        if (ghostBridgeInstance != null)
-        {
-            ghostBridgeInstance.SetActive(progress < 99.5f);
-        }
+        // Bật hiển thị solidInstance
+        solidBridgeInstance.SetActive(true);
     }
 
     private void UpdateSegmentBySegmentProgress(float progress)
@@ -1975,11 +1911,6 @@ public class BridgeCollapseTrigger : NetworkBehaviour
             }
             else
             {
-                if (ghostMaterialInstance == null)
-                {
-                    ghostMaterialInstance = CreateGhostMaterial(0.4f);
-                }
-
                 foreach (var r in renderers)
                 {
                     if (r == null) continue;
@@ -1988,14 +1919,7 @@ public class BridgeCollapseTrigger : NetworkBehaviour
                         savedRenderers.Add(r);
                         savedMaterials.Add(r.sharedMaterials);
                     }
-
-                    Material[] ghostMats = new Material[r.sharedMaterials.Length];
-                    for (int j = 0; j < ghostMats.Length; j++)
-                    {
-                        ghostMats[j] = ghostMaterialInstance;
-                    }
-                    r.materials = ghostMats;
-                    r.enabled = true;
+                    r.enabled = false;
                 }
                 foreach (var col in colliders)
                 {
