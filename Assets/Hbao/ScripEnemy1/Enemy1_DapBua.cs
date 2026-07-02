@@ -383,16 +383,23 @@ public class Enemy1_DapBua : NetworkBehaviour
         else
         {
             // Đang di chuyển đến waypoint
-            // Chỉ set Walk animation khi thực sự có velocity (chống glide)
             bool moving = AgentReady && agent.velocity.magnitude > 0.15f;
             SetSpeedNet(moving ? 0.5f : 0f);
 
-            if (AgentReady && !agent.pathPending && agent.remainingDistance <= agent.stoppingDistance + 0.3f)
+            if (AgentReady)
             {
-                if (AgentReady) agent.isStopped = true;
-                SetSpeedNet(0f); // → Idle
-                waitingAtWaypoint = true;
-                waypointWaitTimer = Random.Range(patrolWaitMin, patrolWaitMax);
+                if (!agent.pathPending && (agent.remainingDistance <= agent.stoppingDistance + 0.3f || !agent.hasPath))
+                {
+                    agent.isStopped = true;
+                    SetSpeedNet(0f); // → Idle
+                    waitingAtWaypoint = true;
+                    waypointWaitTimer = Random.Range(patrolWaitMin, patrolWaitMax);
+                }
+            }
+            else
+            {
+                SnapToNavMesh();
+                if (AgentReady) GoToNextWaypoint();
             }
         }
     }
@@ -432,9 +439,7 @@ public class Enemy1_DapBua : NetworkBehaviour
             agent.speed = runSpd;
             agent.SetDestination(targetPlayer.position);
         }
-        // Velocity check: chống glide
-        bool actuallyMoving = AgentReady && agent.velocity.magnitude > 0.2f;
-        SetSpeedNet(actuallyMoving ? 1f : 0f);
+        SetSpeedNet(AgentReady && !agent.isStopped ? 1f : 0f);
     }
 
     private void ReturnToPatrol()

@@ -1247,7 +1247,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         float oldMaxHealth = maxHealth;
         maxHealth = 150f + hpLv * 20f;
-        damageAmount = 15f + dmgLv * 5f;
+        damageAmount = 15f * (1f + dmgLv * 0.15f);
 
         if (isStandaloneMode)
         {
@@ -1512,6 +1512,15 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         {
             return;
         }
+        int targetLvl = 0;
+        switch (statType)
+        {
+            case 0: targetLvl = localHpLevel; break;
+            case 1: targetLvl = localMpLevel; break;
+            case 2: targetLvl = localCooldownLevel; break;
+            case 3: targetLvl = localDamageLevel; break;
+        }
+        if (targetLvl >= 3) return;
 
         localUpgradePoints--;
         switch (statType)
@@ -1539,6 +1548,15 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         {
             return;
         }
+        int targetLvl = 0;
+        switch (statType)
+        {
+            case 0: targetLvl = hpLevel.Value; break;
+            case 1: targetLvl = mpLevel.Value; break;
+            case 2: targetLvl = cooldownLevel.Value; break;
+            case 3: targetLvl = damageLevel.Value; break;
+        }
+        if (targetLvl >= 3) return;
 
         upgradePoints.Value--;
         switch (statType)
@@ -2324,14 +2342,29 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
             Vector3 rightOffsetVec = camRight * currentShoulderOffset;
 
             // Gắn cứng camera theo vị trí của nhân vật (Loại bỏ Lerp vị trí để giải quyết triệt để lỗi delay, zoom co giãn, và lệch nhân vật ra rìa)
-            Vector3 targetPosition = (transform.position + Vector3.up * cameraPivotHeight) + rotatedOffset + rightOffsetVec;
+            Vector3 pivotPosition = (transform.position + Vector3.up * cameraPivotHeight) + rightOffsetVec;
+            Vector3 targetPosition = pivotPosition + rotatedOffset;
+
+            // Thực hiện kiểm tra va chạm của camera với tường/vật cản bằng SphereCast
+            float collisionSafetyDistance = 0.4f; // Khoảng cách an toàn để tránh camera sát tường gây lỗi clipping plane
+            int cameraLayerMask = ~LayerMask.GetMask("Player", "Ignore Raycast"); // Bỏ qua người chơi và các vật thể Ignore Raycast
+            Vector3 rayDirection = rotatedOffset.normalized;
+            float maxRayDistance = rotatedOffset.magnitude;
+
+            if (Physics.SphereCast(pivotPosition, 0.2f, rayDirection, out RaycastHit hit, maxRayDistance, cameraLayerMask))
+            {
+                // Thu nhỏ khoảng cách nếu va chạm với tường
+                float clampedDistance = Mathf.Max(0.5f, hit.distance - collisionSafetyDistance);
+                targetPosition = pivotPosition + rayDirection * clampedDistance;
+            }
+
             targetCamera.transform.position = targetPosition;
 
             if (cameraLookAtPlayer)
             {
                 // Khóa camera luôn nhìn thẳng vào nhân vật (không dùng Slerp rotation) để nhân vật luôn nằm chính giữa màn hình
                 targetCamera.transform.rotation = Quaternion.LookRotation(
-                    ((transform.position + Vector3.up * cameraPivotHeight) + rightOffsetVec) - targetCamera.transform.position
+                    pivotPosition - targetCamera.transform.position
                 );
             }
         }

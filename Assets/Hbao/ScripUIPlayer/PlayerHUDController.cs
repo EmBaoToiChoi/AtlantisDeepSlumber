@@ -227,11 +227,44 @@ public class PlayerHUDController : MonoBehaviour
 
     // Coop Build Camera States
     private static bool hasTransitionedBuildCameraOnce = false;
+    private static BridgeCollapseTrigger lastActiveBridgeTrigger = null;
     private float buildCameraTransitionTimer = 0f;
     private float buildCameraTransitionDuration = 2f;
     private Vector3 initialCamPosBeforeBuild;
     private Quaternion initialCamRotBeforeBuild;
     private bool isBuildCameraActive = false;
+
+    [Header("Coop Build Camera Offset Settings")]
+    [Tooltip("Khoảng cách kéo lùi camera ra phía sau người chơi (Z)")]
+    public float buildCamBackwardOffset = 21f;
+    [Tooltip("Chiều cao camera hướng lên trên (Y)")]
+    public float buildCamUpwardOffset = 37f;
+    [Tooltip("Góc xoay Pitch (X) của camera khi xây cầu")]
+    public float buildCamPitch = 60.222f;
+
+    [Header("Tree Fall Camera Settings")]
+    [Tooltip("Khoảng cách từ camera đến cây khi cây ngã")]
+    public float treeCamDistance = 14f;
+    [Tooltip("Chiều cao camera khi cây ngã")]
+    public float treeCamHeight = 7f;
+    [Tooltip("Chiều cao điểm nhìn tập trung trên thân cây")]
+    public float treeCamLookHeight = 3f;
+    [Tooltip("Thời gian hiển thị camera quay cây ngã (giây)")]
+    public float treeCamDuration = 3.5f;
+
+    // Trạng thái camera quay cây ngã
+    private bool isTreeCameraActive = false;
+    private float treeCameraTransitionTimer = 0f;
+    private Vector3 initialCamPosBeforeTree;
+    private Quaternion initialCamRotBeforeTree;
+    private Vector3 normalCamOffsetFromPlayer;
+    private Transform activeFallingTree;
+
+    // Cấp độ nâng cấp hiện tại (giới hạn tối đa 3)
+    private int currentHpLv = 0;
+    private int currentMpLv = 0;
+    private int currentCdLv = 0;
+    private int currentDmgLv = 0;
 
     [Header("Quest Settings")]
     public Sprite woodLogSprite;
@@ -907,6 +940,10 @@ public class PlayerHUDController : MonoBehaviour
         {
             UpdateCoopBuildCamera();
         }
+        else if (isTreeCameraActive && activeFallingTree != null)
+        {
+            UpdateTreeFallCamera();
+        }
 
         if (LocalPlayerTarget != null)
         {
@@ -1335,6 +1372,7 @@ public class PlayerHUDController : MonoBehaviour
                 bool isRepaired = isNetwork ? activeBridgeTrigger.hasBeenRepaired.Value : activeBridgeTrigger.IsBridgeRepaired();
                 if (isRepaired)
                 {
+                    hasTransitionedBuildCameraOnce = false;
                     CloseCoopBuildUI();
                 }
                 else
@@ -2162,6 +2200,11 @@ public class PlayerHUDController : MonoBehaviour
     {
         LocalizationManager.Initialize();
 
+        currentHpLv = hpLv;
+        currentMpLv = mpLv;
+        currentCdLv = cdLv;
+        currentDmgLv = dmgLv;
+
         if (upgradePointsText != null)
         {
             upgradePointsText.text = string.Format(LocalizationManager.Get("hud_points_format"), points);
@@ -2171,28 +2214,37 @@ public class PlayerHUDController : MonoBehaviour
         if (hpLevelText != null)
         {
             int hpBonus = hpLv * 20;
-            hpLevelText.text = hpLv > 0 ? $"Lv. {hpLv}  (+{hpBonus} HP)" : $"Lv. {hpLv}";
+            string maxLabel = hpLv >= 3 ? " (MAX)" : "";
+            hpLevelText.text = hpLv > 0 ? $"Lv. {hpLv}  (+{hpBonus} HP){maxLabel}" : $"Lv. {hpLv}";
         }
         if (mpLevelText != null)
         {
             int mpBonus = mpLv * 10;
-            mpLevelText.text = mpLv > 0 ? $"Lv. {mpLv}  (+{mpBonus} Stamina)" : $"Lv. {mpLv}";
+            string maxLabel = mpLv >= 3 ? " (MAX)" : "";
+            mpLevelText.text = mpLv > 0 ? $"Lv. {mpLv}  (+{mpBonus} Stamina){maxLabel}" : $"Lv. {mpLv}";
         }
         if (cooldownLevelText != null)
         {
-            int cdBonus = cdLv * 2;
-            cooldownLevelText.text = cdLv > 0 ? $"Lv. {cdLv}  (-{cdBonus}%)" : $"Lv. {cdLv}";
+            int cdBonus = cdLv * 10; // 10% mỗi cấp độ
+            string maxLabel = cdLv >= 3 ? " (MAX)" : "";
+            cooldownLevelText.text = cdLv > 0 ? $"Lv. {cdLv}  (-{cdBonus}%){maxLabel}" : $"Lv. {cdLv}";
         }
         if (damageLevelText != null)
         {
-            int dmgBonus = dmgLv * 5;
-            damageLevelText.text = dmgLv > 0 ? $"Lv. {dmgLv}  (+{dmgBonus} DMG)" : $"Lv. {dmgLv}";
+            int dmgBonus = dmgLv * 15; // 15% mỗi cấp độ
+            string maxLabel = dmgLv >= 3 ? " (MAX)" : "";
+            damageLevelText.text = dmgLv > 0 ? $"Lv. {dmgLv}  (+{dmgBonus}%){maxLabel}" : $"Lv. {dmgLv}";
         }
 
-        // Giảm thời gian hồi chiêu tương ứng (2% mỗi cấp độ)
-        cooldownTimeQ = 10f * (1f - cdLv * 0.02f);
-        cooldownTimeR = 15f * (1f - cdLv * 0.02f);
-        cooldownTimeE = 12f * (1f - cdLv * 0.02f);
+        if (btnUpgradeHp != null) btnUpgradeHp.SetEnabled(points > 0 && hpLv < 3);
+        if (btnUpgradeMp != null) btnUpgradeMp.SetEnabled(points > 0 && mpLv < 3);
+        if (btnUpgradeCooldown != null) btnUpgradeCooldown.SetEnabled(points > 0 && cdLv < 3);
+        if (btnUpgradeDamage != null) btnUpgradeDamage.SetEnabled(points > 0 && dmgLv < 3);
+
+        // Giảm thời gian hồi chiêu tương ứng (10% mỗi cấp độ)
+        cooldownTimeQ = 10f * (1f - cdLv * 0.10f);
+        cooldownTimeR = 15f * (1f - cdLv * 0.10f);
+        cooldownTimeE = 12f * (1f - cdLv * 0.10f);
     }
 
     public void TriggerElenaCooldownE()
@@ -2265,6 +2317,21 @@ public class PlayerHUDController : MonoBehaviour
     {
         if (LocalPlayerTarget != null)
         {
+            int currentLevel = 0;
+            switch (statType)
+            {
+                case 0: currentLevel = currentHpLv; break;
+                case 1: currentLevel = currentMpLv; break;
+                case 2: currentLevel = currentCdLv; break;
+                case 3: currentLevel = currentDmgLv; break;
+            }
+
+            if (currentLevel >= 3)
+            {
+                Debug.LogWarning($"[PlayerHUDController] Stat {statType} đã đạt cấp tối đa (3)!");
+                return;
+            }
+
             if (LocalPlayerTarget.IsStandaloneMode)
             {
                 LocalPlayerTarget.StandaloneUpgradeStat(statType);
@@ -3400,6 +3467,12 @@ public class PlayerHUDController : MonoBehaviour
 
         activeBridgeTrigger = bridge;
 
+        if (lastActiveBridgeTrigger != bridge)
+        {
+            lastActiveBridgeTrigger = bridge;
+            hasTransitionedBuildCameraOnce = false;
+        }
+
         if (coopBuildContainer == null)
         {
             // 1. Create main container
@@ -3578,11 +3651,11 @@ public class PlayerHUDController : MonoBehaviour
         if (activeBridgeTrigger == null) return;
         Vector3 bridgePos = activeBridgeTrigger.transform.position;
 
-        // Vị trí camera trên cao nhìn xuống cầu
-        Vector3 targetCamPos = playerPos - playerForward * 6f + Vector3.up * 30f;
-        Vector3 lookTarget = bridgePos;
-        lookTarget.y = playerPos.y + 1f; // Nhìn vào phần trên của cầu/người chơi
-        Quaternion targetCamRot = Quaternion.LookRotation(lookTarget - targetCamPos);
+        // Vị trí camera trên cao nhìn xuống cầu sử dụng các offset có thể cấu hình
+        Vector3 targetCamPos = playerPos - playerForward * buildCamBackwardOffset + Vector3.up * buildCamUpwardOffset;
+        
+        // Cố định góc xoay Pitch (X) là 60.222 độ, xoay Yaw (Y) theo hướng sau lưng của người chơi
+        Quaternion targetCamRot = Quaternion.Euler(buildCamPitch, playerBehavior.transform.eulerAngles.y, 0f);
 
         if (!isBuildCameraActive)
         {
@@ -3614,6 +3687,93 @@ public class PlayerHUDController : MonoBehaviour
             {
                 hasTransitionedBuildCameraOnce = true;
             }
+        }
+    }
+
+    public void TriggerTreeFallCamera(ChoppableTree tree)
+    {
+        if (tree == null) return;
+        
+        // Tránh ghi đè camera nếu đang quay cây khác hoặc đang xây cầu
+        if (isCoopBuildingUIOpen) return;
+        if (isTreeCameraActive && activeFallingTree != null) return;
+
+        Camera mainCam = Camera.main;
+        if (mainCam == null) mainCam = FindAnyObjectByType<Camera>();
+        if (mainCam == null) return;
+
+        var playerBehavior = LocalPlayerTarget as MonoBehaviour;
+        Vector3 playerPos = (playerBehavior != null) ? playerBehavior.transform.position : tree.transform.position;
+
+        isTreeCameraActive = true;
+        activeFallingTree = tree.transform;
+        treeCameraTransitionTimer = 0f;
+        
+        initialCamPosBeforeTree = mainCam.transform.position;
+        initialCamRotBeforeTree = mainCam.transform.rotation;
+        normalCamOffsetFromPlayer = initialCamPosBeforeTree - playerPos;
+    }
+
+    private void UpdateTreeFallCamera()
+    {
+        if (!isTreeCameraActive || activeFallingTree == null) return;
+
+        Camera mainCam = Camera.main;
+        if (mainCam == null) mainCam = FindAnyObjectByType<Camera>();
+        if (mainCam == null) return;
+
+        var playerBehavior = LocalPlayerTarget as MonoBehaviour;
+        Vector3 playerPos = (playerBehavior != null) ? playerBehavior.transform.position : activeFallingTree.position;
+        Vector3 treePos = activeFallingTree.position;
+
+        // Tính hướng từ cây đến người chơi để đặt camera sau lưng người chơi nhìn về phía cây
+        Vector3 dirFromTreeToPlayer = playerPos - treePos;
+        dirFromTreeToPlayer.y = 0f;
+        if (dirFromTreeToPlayer.sqrMagnitude < 0.1f)
+        {
+            dirFromTreeToPlayer = (playerBehavior != null) ? -playerBehavior.transform.forward : -Vector3.forward;
+        }
+        dirFromTreeToPlayer = dirFromTreeToPlayer.normalized;
+
+        // Target camera position: lùi xa ra khỏi cây và nâng cao lên
+        Vector3 targetCamPos = treePos + dirFromTreeToPlayer * treeCamDistance + Vector3.up * treeCamHeight;
+        Vector3 lookTarget = treePos + Vector3.up * treeCamLookHeight;
+        Quaternion targetCamRot = Quaternion.LookRotation(lookTarget - targetCamPos);
+
+        treeCameraTransitionTimer += Time.deltaTime;
+        float transitionDuration = 0.6f; // 0.6 giây lerp mượt mà
+
+        if (treeCameraTransitionTimer < transitionDuration)
+        {
+            // Giai đoạn 1: Chuyển tiếp mượt mà vào camera cây ngã
+            float t = treeCameraTransitionTimer / transitionDuration;
+            float smoothT = t * t * (3f - 2f * t);
+            mainCam.transform.position = Vector3.Lerp(initialCamPosBeforeTree, targetCamPos, smoothT);
+            mainCam.transform.rotation = Quaternion.Slerp(initialCamRotBeforeTree, targetCamRot, smoothT);
+        }
+        else if (treeCameraTransitionTimer < treeCamDuration - transitionDuration)
+        {
+            // Giai đoạn 2: Giữ camera nhìn cây ngã
+            mainCam.transform.position = targetCamPos;
+            mainCam.transform.rotation = targetCamRot;
+        }
+        else if (treeCameraTransitionTimer < treeCamDuration)
+        {
+            // Giai đoạn 3: Chuyển tiếp mượt mà trả lại camera bình thường của người chơi
+            float t = (treeCameraTransitionTimer - (treeCamDuration - transitionDuration)) / transitionDuration;
+            float smoothT = t * t * (3f - 2f * t);
+            
+            Vector3 normalCamPos = playerPos + normalCamOffsetFromPlayer;
+            Quaternion normalCamRot = initialCamRotBeforeTree;
+
+            mainCam.transform.position = Vector3.Lerp(targetCamPos, normalCamPos, smoothT);
+            mainCam.transform.rotation = Quaternion.Slerp(targetCamRot, normalCamRot, smoothT);
+        }
+        else
+        {
+            // Kết thúc hiệu ứng
+            isTreeCameraActive = false;
+            activeFallingTree = null;
         }
     }
 

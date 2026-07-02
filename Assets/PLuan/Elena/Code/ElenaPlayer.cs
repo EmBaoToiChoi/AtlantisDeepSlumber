@@ -1141,7 +1141,7 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         float oldMaxHealth = maxHealth;
         maxHealth = 100f + hpLv * 20f;
-        damageAmount = 20f + dmgLv * 5f;
+        damageAmount = 20f * (1f + dmgLv * 0.15f);
 
         if (isStandaloneMode)
         {
@@ -1415,6 +1415,15 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
             Debug.LogWarning("[Standalone] Hết điểm nâng cấp!");
             return;
         }
+        int targetLvl = 0;
+        switch (statType)
+        {
+            case 0: targetLvl = localHpLevel; break;
+            case 1: targetLvl = localMpLevel; break;
+            case 2: targetLvl = localCooldownLevel; break;
+            case 3: targetLvl = localDamageLevel; break;
+        }
+        if (targetLvl >= 3) return;
 
         localUpgradePoints--;
         switch (statType)
@@ -1447,6 +1456,15 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
             Debug.LogWarning("[Server] Người chơi không còn điểm nâng cấp!");
             return;
         }
+        int targetLvl = 0;
+        switch (statType)
+        {
+            case 0: targetLvl = hpLevel.Value; break;
+            case 1: targetLvl = mpLevel.Value; break;
+            case 2: targetLvl = cooldownLevel.Value; break;
+            case 3: targetLvl = damageLevel.Value; break;
+        }
+        if (targetLvl >= 3) return;
 
         upgradePoints.Value--;
         switch (statType)
@@ -1782,6 +1800,10 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
     if (isDialogueOpen)
     {
         if (!IsPlayingActionAnimation()) PlayAnimation("Idle", 0.1f);
+        if (rb != null)
+        {
+            rb.linearVelocity = new Vector3(0f, rb.linearVelocity.y, 0f);
+        }
         return; 
     }
 
@@ -1952,6 +1974,10 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
     if (isDialogueOpen)
     {
         if (!IsPlayingActionAnimation()) PlayAnimation("Idle", 0.1f);
+        if (rb != null)
+        {
+            rb.linearVelocity = new Vector3(0f, rb.linearVelocity.y, 0f);
+        }
         return; 
     }
 

@@ -290,8 +290,33 @@ public class Enemy4_Bongtoi : NetworkBehaviour
 
     private void HandlePatrol()
     {
-        if (waitingAtWaypoint) { SetSpeedNet(0f); waypointWaitTimer -= Time.deltaTime; if (waypointWaitTimer <= 0) { if (Random.value <= patrolMoveChance) GoToNextWaypoint(); else waypointWaitTimer = Random.Range(patrolWaitMin, patrolWaitMax); } }
-        else { SetSpeedNet(AgentReady && agent.velocity.magnitude > 0.15f ? 0.5f : 0f); if (AgentReady && !agent.pathPending && agent.remainingDistance <= agent.stoppingDistance + 0.3f) { agent.isStopped = true; SetSpeedNet(0f); waitingAtWaypoint = true; waypointWaitTimer = Random.Range(patrolWaitMin, patrolWaitMax); } }
+        if (waitingAtWaypoint)
+        {
+            SetSpeedNet(0f);
+            waypointWaitTimer -= Time.deltaTime;
+            if (waypointWaitTimer <= 0) { if (Random.value <= patrolMoveChance) GoToNextWaypoint(); else waypointWaitTimer = Random.Range(patrolWaitMin, patrolWaitMax); }
+        }
+        else
+        {
+            bool moving = AgentReady && agent.velocity.magnitude > 0.15f;
+            SetSpeedNet(moving ? 0.5f : 0f);
+
+            if (AgentReady)
+            {
+                if (!agent.pathPending && (agent.remainingDistance <= agent.stoppingDistance + 0.3f || !agent.hasPath))
+                {
+                    agent.isStopped = true;
+                    SetSpeedNet(0f);
+                    waitingAtWaypoint = true;
+                    waypointWaitTimer = Random.Range(patrolWaitMin, patrolWaitMax);
+                }
+            }
+            else
+            {
+                SnapToNavMesh();
+                if (AgentReady) GoToNextWaypoint();
+            }
+        }
     }
 
     private void HandleChase()
@@ -322,7 +347,7 @@ public class Enemy4_Bongtoi : NetworkBehaviour
             agent.speed = enraged ? chaseRunSpeed * 1.3f : chaseRunSpeed;
             agent.SetDestination(targetPlayer.position);
         }
-        SetSpeedNet(AgentReady && agent.velocity.magnitude > 0.2f ? 1f : 0f);
+        SetSpeedNet(AgentReady && !agent.isStopped ? 1f : 0f);
     }
 
     private void ReturnToPatrol() { targetPlayer = null; CurrentStateValue = EnemyState.Patrol; waitingAtWaypoint = false; waypointWaitTimer = 0f; GoToNextWaypoint(); }
