@@ -947,8 +947,48 @@ public class BridgeCollapseTrigger : NetworkBehaviour
         bool isNetwork = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
         float progress = isNetwork ? buildProgress.Value : localBuildProgress;
 
-        // Nếu đang trong chế độ Z-scale growth và đã tạo solidInstance
-        if (solidBridgeInstance != null)
+        // 1. Xác định xem có sử dụng chế độ Z-scale growth hay Segment-By-Segment
+        bool useZScaleGrowth = false;
+        if (displayMode == BridgeDisplayMode.ForceScaleGrowth)
+        {
+            useZScaleGrowth = true;
+        }
+        else if (displayMode == BridgeDisplayMode.ForceSegmentBySegment)
+        {
+            useZScaleGrowth = false;
+        }
+        else
+        {
+            if (stableBridgeSegments == null || stableBridgeSegments.Length <= 1)
+            {
+                if (mainBridgeObject != null)
+                {
+                    if (mainBridgeObject.GetComponent<LODGroup>() != null)
+                    {
+                        useZScaleGrowth = true;
+                    }
+                    else
+                    {
+                        bool hasLODChildren = false;
+                        for (int i = 0; i < mainBridgeObject.transform.childCount; i++)
+                        {
+                            if (mainBridgeObject.transform.GetChild(i).name.Contains("LOD"))
+                            {
+                                hasLODChildren = true;
+                                break;
+                            }
+                        }
+                        if (hasLODChildren || mainBridgeObject.transform.childCount <= 1)
+                        {
+                            useZScaleGrowth = true;
+                        }
+                    }
+                }
+            }
+        }
+
+        // 2. Chế độ Z-scale growth (cầu nguyên khối co giãn)
+        if (useZScaleGrowth && solidBridgeInstance != null)
         {
             float minVal, maxVal;
             int axis;
@@ -977,6 +1017,46 @@ public class BridgeCollapseTrigger : NetworkBehaviour
             return worldPos;
         }
 
+        // 3. Chế độ Segment-By-Segment (phân mảnh lắp ghép)
+        if (!useZScaleGrowth)
+        {
+            GameObject[] segments = GetBridgeSegments();
+            if (segments != null && segments.Length > 0)
+            {
+                int N = segments.Length;
+                // Xác định mảnh cầu đang trong quá trình xây dựng ở ngưỡng progress hiện tại
+                int activeCount = Mathf.Min(Mathf.FloorToInt((progress / 100f) * N), N);
+                int currentBuildIndex = Mathf.Clamp(activeCount, 0, N - 1);
+                
+                GameObject activeSegment = segments[currentBuildIndex];
+                if (activeSegment != null)
+                {
+                    Renderer[] renderers = activeSegment.GetComponentsInChildren<Renderer>(true);
+                    if (renderers.Length > 0)
+                    {
+                        Renderer randomRenderer = renderers[Random.Range(0, renderers.Length)];
+                        if (randomRenderer != null)
+                        {
+                            worldPos = randomRenderer.bounds.center;
+                            float offsetX = Random.Range(-randomRenderer.bounds.extents.x * 0.6f, randomRenderer.bounds.extents.x * 0.6f);
+                            float offsetZ = Random.Range(-randomRenderer.bounds.extents.z * 0.6f, randomRenderer.bounds.extents.z * 0.6f);
+                            float offsetY = randomRenderer.bounds.extents.y + 0.15f;
+                            
+                            worldPos += new Vector3(offsetX, offsetY, offsetZ);
+                            return worldPos;
+                        }
+                    }
+                    else
+                    {
+                        // Fallback về vị trí của mảnh cầu đó
+                        worldPos = activeSegment.transform.position + Vector3.up * 0.2f;
+                        return worldPos;
+                    }
+                }
+            }
+        }
+
+        // 4. Fallback cuối cùng nếu không thuộc các trường hợp trên
         if (mainBridgeObject != null)
         {
             Renderer[] renderers = mainBridgeObject.GetComponentsInChildren<Renderer>(true);
