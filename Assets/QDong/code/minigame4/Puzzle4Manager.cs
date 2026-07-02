@@ -257,12 +257,13 @@ public class Puzzle4Manager : NetworkBehaviour
 
         if (balanceManager != null && balanceManager.diskRigidbody != null)
         {
-            if (balanceManager.CurrentAngle > 10f)
+            if (balanceManager.CurrentAngle > 1f) // Đã bắt đầu trượt ngay khi nghiêng nhẹ
             {
                 Vector3 normal = balanceManager.diskRigidbody.transform.up;
                 Vector3 downhill = Vector3.ProjectOnPlane(Vector3.down, normal).normalized;
                 
-                float slideForceMagn = (balanceManager.CurrentAngle - 10f) * 40f; 
+                // Lực trượt tỉ lệ với độ nghiêng (Nghiêng 5 độ = lực 100, 10 độ = 200, 15 độ = max 300)
+                float slideForceMagn = balanceManager.CurrentAngle * 20f; 
                 
                 // Giới hạn lực đẩy tối đa để tránh lỗi vật lý (PhysX nảy văng) khi ép mạnh vào thành đĩa
                 if (slideForceMagn > 300f) slideForceMagn = 300f;
@@ -279,9 +280,20 @@ public class Puzzle4Manager : NetworkBehaviour
                     CacheLocalPlayer();
                 }
 
-                if (cachedLocalPlayerRb != null && cachedLocalPlayerCollider != null)
+                if (cachedLocalPlayerRb != null)
                 {
-                    if (balanceManager.IsPlayerOnBoard(cachedLocalPlayerCollider))
+                    Collider[] cols = cachedLocalPlayerRb.GetComponentsInChildren<Collider>();
+                    bool isOnBoard = false;
+                    foreach (var c in cols)
+                    {
+                        if (balanceManager.IsPlayerOnBoard(c))
+                        {
+                            isOnBoard = true;
+                            break;
+                        }
+                    }
+
+                    if (isOnBoard)
                     {
                         cachedLocalPlayerRb.AddForce(slideForce + stickyForce, ForceMode.Force);
                     }
@@ -298,8 +310,7 @@ public class Puzzle4Manager : NetworkBehaviour
             if (mono is IPlayerHUDTarget player && player.IsOwner)
             {
                 cachedLocalPlayerRb = player.gameObject.GetComponent<Rigidbody>();
-                cachedLocalPlayerCollider = player.gameObject.GetComponentInChildren<Collider>();
-                localPlayerCached = (cachedLocalPlayerRb != null && cachedLocalPlayerCollider != null);
+                localPlayerCached = (cachedLocalPlayerRb != null);
                 if (localPlayerCached)
                     Debug.Log("[Puzzle4Manager] Đã cache local player: " + player.gameObject.name);
                 break;
