@@ -216,6 +216,22 @@ public class Skeleton : NetworkBehaviour
 
         if (agent != null && agent.isActiveAndEnabled && !agent.isOnNavMesh) SnapToNavMesh();
 
+        // --- BỘ GIẢI QUYẾT VA CHẠM TRÁNH XUYÊN TƯỜNG (WALL COLLISION RESOLVER) ---
+        if (agent != null && agent.isActiveAndEnabled && agent.isOnNavMesh && agent.velocity.sqrMagnitude > 0.01f)
+        {
+            Vector3 rayOrigin = transform.position + Vector3.up * 1.0f;
+            Vector3 moveDir = agent.velocity.normalized;
+            if (Physics.Raycast(rayOrigin, moveDir, out RaycastHit hit, 0.8f))
+            {
+                if (!hit.collider.CompareTag("Player") && !hit.collider.CompareTag("Enemy") && hit.collider.gameObject.layer != LayerMask.NameToLayer("Enemy") && !hit.collider.name.ToLower().Contains("skeleton") && !hit.collider.isTrigger)
+                {
+                    Vector3 pushBack = hit.normal * 0.15f;
+                    agent.Warp(transform.position + pushBack);
+                }
+            }
+        }
+        // ------------------------------------------------------------------------
+
         if (attackCooldownTimer > 0) attackCooldownTimer -= Time.deltaTime;
 
         if (currentState == State.Spawn)
@@ -312,15 +328,11 @@ public class Skeleton : NetworkBehaviour
         }
 
         float dist = Vector3.Distance(transform.position, targetEnemy.position);
-        if (dist <= attackRange)
+        if (dist <= attackRange && attackCooldownTimer <= 0f)
         {
             if (AgentReady) agent.isStopped = true;
             SetSpeedNet(0f);
-
-            if (attackCooldownTimer <= 0f)
-            {
-                TriggerAttack();
-            }
+            TriggerAttack();
         }
         else
         {

@@ -102,6 +102,7 @@ public class Enemy4_Bongtoi : NetworkBehaviour
 
     private void Awake()
     {
+        gameObject.tag = "Enemy";
         propBlock = new MaterialPropertyBlock();
         if (anim == null) anim = GetComponent<Animator>() ?? GetComponentInChildren<Animator>(true);
         var na = GetComponent<Unity.Netcode.Components.NetworkAnimator>();
@@ -192,6 +193,23 @@ public class Enemy4_Bongtoi : NetworkBehaviour
         bool aiAuth = isStandaloneMode || (IsNetworkActive && IsServer);
         if (!aiAuth) return;
         if (agent != null && agent.isActiveAndEnabled && !agent.isOnNavMesh) SnapToNavMesh();
+
+        // --- BỘ GIẢI QUYẾT VA CHẠM TRÁNH XUYÊN TƯỜNG (WALL COLLISION RESOLVER) ---
+        if (agent != null && agent.isActiveAndEnabled && agent.isOnNavMesh && agent.velocity.sqrMagnitude > 0.01f)
+        {
+            Vector3 rayOrigin = transform.position + Vector3.up * 1.0f;
+            Vector3 moveDir = agent.velocity.normalized;
+            if (Physics.Raycast(rayOrigin, moveDir, out RaycastHit hit, 0.8f))
+            {
+                if (!hit.collider.CompareTag("Player") && !hit.collider.CompareTag("Enemy") && hit.collider.gameObject.layer != LayerMask.NameToLayer("Enemy") && !hit.collider.name.ToLower().Contains("skeleton") && !hit.collider.isTrigger)
+                {
+                    Vector3 pushBack = hit.normal * 0.15f;
+                    agent.Warp(transform.position + pushBack);
+                }
+            }
+        }
+        // ------------------------------------------------------------------------
+
         if (attackCooldownTimer > 0) attackCooldownTimer -= Time.deltaTime;
         detectionTimer -= Time.deltaTime;
         if (detectionTimer <= 0) { detectionTimer = DETECTION_INTERVAL; DetectPlayer(); }
