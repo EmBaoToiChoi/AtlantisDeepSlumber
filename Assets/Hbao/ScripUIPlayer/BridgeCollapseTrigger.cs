@@ -425,7 +425,7 @@ public class BridgeCollapseTrigger : NetworkBehaviour
         {
             isCutscenePlaying = true;
 
-            // SERVER: Giấu toàn bộ player khỏi quái vật bằng cách đổi Tag
+            // 1. Giấu toàn bộ player khỏi quái vật bằng cách đổi Tag
             var activePlayers = PlayerHUDManager.ActivePlayers;
             foreach (var p in activePlayers)
             {
@@ -439,15 +439,26 @@ public class BridgeCollapseTrigger : NetworkBehaviour
                 }
             }
 
-            // Gọi các Client bật VIDEO lên xem
+            // 2. TÌM VÀ ĐÓNG BĂNG TOÀN BỘ QUÁI VẬT TRÊN SERVER
+            NavMeshAgent[] allEnemies = FindObjectsByType<NavMeshAgent>(FindObjectsSortMode.None);
+            foreach (var enemy in allEnemies)
+            {
+                if (enemy != null && enemy.isActiveAndEnabled)
+                {
+                    enemy.isStopped = true; // Bắt quái đứng im tại chỗ
+                }
+            }
+
+            
+
+            // 3. Gọi các Client bật VIDEO lên xem
             PlayCutsceneClientRpc();
             
-            // Server bấm giờ bằng độ dài của video, xem xong thì sập cầu
+            // Server bấm giờ bằng độ dài của video (Dùng lại hàm WaitForSeconds bình thường)
             StartCoroutine(WaitAndCollapseServer((float)collapseVideo.length));
         }
         else
         {
-            // Không có video thì sập luôn
             TriggerBridgeCollapseServer();
         }
     }
@@ -457,16 +468,27 @@ public class BridgeCollapseTrigger : NetworkBehaviour
     {
         if (collapseVideo != null)
         {
+            // Tự động tìm Camera chính (của local player) và gán vào VideoPlayer
+            if (Camera.main != null)
+            {
+                collapseVideo.targetCamera = Camera.main;
+            }
+            else
+            {
+                Debug.LogWarning("[BridgeCollapseTrigger] Không tìm thấy Camera.main! Chắc chắn Camera của Player đã được gắn tag 'MainCamera'.");
+            }
+
             collapseVideo.Play();
         }
     }
 
     private System.Collections.IEnumerator WaitAndCollapseServer(float duration)
     {
+        // Trả lại hàm chờ bình thường vì thời gian game vẫn trôi
         yield return new WaitForSeconds(duration);
         isCutscenePlaying = false;
         
-        // SERVER: Phim hết, trả lại Tag "Player" để quái đánh tiếp
+        // 1. Phim hết, trả lại Tag "Player" để quái nhận diện lại mục tiêu
         var activePlayers = PlayerHUDManager.ActivePlayers;
         foreach (var p in activePlayers)
         {
@@ -477,6 +499,16 @@ public class BridgeCollapseTrigger : NetworkBehaviour
                 {
                     playerMono.gameObject.tag = "Player";
                 }
+            }
+        }
+
+        // 2. MỞ KHÓA CHO TOÀN BỘ QUÁI CHẠY TIẾP
+        NavMeshAgent[] allEnemies = FindObjectsByType<NavMeshAgent>(FindObjectsSortMode.None);
+        foreach (var enemy in allEnemies)
+        {
+            if (enemy != null && enemy.isActiveAndEnabled)
+            {
+                enemy.isStopped = false; 
             }
         }
 
