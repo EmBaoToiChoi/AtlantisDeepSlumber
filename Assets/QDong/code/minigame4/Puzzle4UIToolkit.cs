@@ -101,6 +101,12 @@ public class Puzzle4UIToolkit : MonoBehaviour
     // Unity Lifecycle
     // ─────────────────────────────────────────────────────────
 
+    void Awake()
+    {
+        // Ẩn panel ngay khi scene load — chỉ hiện khi minigame bắt đầu
+        gameObject.SetActive(false);
+    }
+
     void Start()
     {
         // Khởi tạo các vòng tròn về 0
@@ -115,12 +121,28 @@ public class Puzzle4UIToolkit : MonoBehaviour
             dangerOverlay.color = c;
         }
 
-        // Fade in panel
+        // Fade in panel khi được bật lên
         if (panelGroup != null)
         {
             panelGroup.alpha = 0f;
             StartCoroutine(FadeInPanel());
         }
+    }
+
+    /// <summary>
+    /// Gọi từ Puzzle4Manager khi minigame bắt đầu để hiện panel.
+    /// </summary>
+    public void ShowPanel()
+    {
+        gameObject.SetActive(true);
+    }
+
+    /// <summary>
+    /// Gọi từ Puzzle4Manager để ẩn panel.
+    /// </summary>
+    public void HidePanel()
+    {
+        gameObject.SetActive(false);
     }
 
     void Update()
