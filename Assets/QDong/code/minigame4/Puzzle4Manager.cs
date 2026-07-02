@@ -135,7 +135,11 @@ public class Puzzle4Manager : NetworkBehaviour
         else
         {
             Puzzle4UIToolkit tkUI = FindAnyObjectByType<Puzzle4UIToolkit>(FindObjectsInactive.Include);
-            if (tkUI != null) tkUI.gameObject.SetActive(show);
+            if (tkUI != null)
+            {
+                if (show) tkUI.ShowPanel();
+                else tkUI.HidePanel();
+            }
 
             BalanceMeterUI imgUI = FindAnyObjectByType<BalanceMeterUI>(FindObjectsInactive.Include);
             if (imgUI != null) imgUI.gameObject.SetActive(show);
