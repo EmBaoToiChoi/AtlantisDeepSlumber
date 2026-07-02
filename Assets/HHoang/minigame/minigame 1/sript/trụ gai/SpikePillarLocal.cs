@@ -8,6 +8,7 @@ public class SpikePillarLocal : MonoBehaviour
     public float fallSpeed = 15f;
     public float rollSpeed = 8f;
     public float rotateSpeed = 360f; // Tốc độ xoay (độ/giây)
+    public bool reverseRotation = true; // Đảo ngược chiều xoay (Đặt true để sửa lỗi xoay ngược mặc định)
     public Vector3 rollDirection = Vector3.forward;
     public Vector3 rotationAxis = Vector3.right; // Trục gai nằm ngang xoay tròn
 
@@ -42,7 +43,8 @@ public class SpikePillarLocal : MonoBehaviour
         if (currentState == PillarState.Idle) return;
 
         // Xoay liên tục quanh trục nằm ngang
-        transform.Rotate(rotationAxis, rotateSpeed * Time.deltaTime, Space.Self);
+        float dir = reverseRotation ? -1f : 1f;
+        transform.Rotate(rotationAxis, rotateSpeed * dir * Time.deltaTime, Space.Self);
 
         if (currentState == PillarState.Falling)
         {
