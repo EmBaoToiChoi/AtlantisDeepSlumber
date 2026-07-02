@@ -49,6 +49,7 @@ public class ElementalRockPuzzle : NetworkBehaviour
     [SerializeField] private float timeRemaining = 0f;
     [SerializeField] private bool isTimerRunning = false;
     private int lastActiveStep = -1; // Cache tránh gọi trùng lặp Coroutine chuyển màu
+    private bool isShattered = false; // Tránh chạy quét va chạm hoặc gửi RPC đệ quy khi đá đang vỡ
 
     // --- CÁC BIẾN ĐỒNG BỘ MẠNG (NETCODE) ---
     private NetworkVariable<int> netCurrentStep = new NetworkVariable<int>(
@@ -328,6 +329,7 @@ public class ElementalRockPuzzle : NetworkBehaviour
 
     private void FixedUpdate()
     {
+        if (isShattered) return;
         // Chỉ quét khi đá đang hiển thị
         if (!IsShown) return;
 
@@ -399,6 +401,7 @@ public class ElementalRockPuzzle : NetworkBehaviour
 
     private void Update()
     {
+        if (isShattered) return;
         bool has3DRenderers = fireRenderer != null || waterRenderer != null || iceRenderer != null || lightningRenderer != null;
 
         // Cập nhật vị trí UI bám theo viên đá mỗi frame
@@ -454,19 +457,21 @@ public class ElementalRockPuzzle : NetworkBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
+        if (isShattered) return;
         Debug.Log($"[ElementalRockPuzzle] OnTriggerEnter: '{other.gameObject.name}' (tag='{other.gameObject.tag}', layer={LayerMask.LayerToName(other.gameObject.layer)})");
         HandleElementHit(other.gameObject);
     }
 
     private void OnCollisionEnter(Collision collision)
     {
+        if (isShattered) return;
         Debug.Log($"[ElementalRockPuzzle] OnCollisionEnter: '{collision.gameObject.name}' (tag='{collision.gameObject.tag}', layer={LayerMask.LayerToName(collision.gameObject.layer)})");
         HandleElementHit(collision.gameObject);
     }
 
     private void HandleElementHit(GameObject hitObj)
     {
-        if (hitObj == null) return;
+        if (isShattered || hitObj == null) return;
 
         // Tránh đệ quy từ các mảnh vỡ hoặc bản sao icon vừa được sinh ra khi đá bị vỡ
         if (hitObj.name.Contains("ShatteredIcon") || hitObj.name.Contains("FallbackShard") || hitObj.tag == "Untagged") return;
@@ -1339,6 +1344,7 @@ public class ElementalRockPuzzle : NetworkBehaviour
     [ClientRpc]
     private void PlaySuccessVFXClientRpc()
     {
+        isShattered = true;
         // Chạy hiệu ứng vỡ đá cục bộ trên Client
         TriggerLocalShatter();
 
@@ -1350,6 +1356,18 @@ public class ElementalRockPuzzle : NetworkBehaviour
 
     private void ShatterRock()
     {
+        if (isShattered) return;
+        isShattered = true;
+
+        if (IsNetworkActive && IsServer)
+        {
+            netIsShown.Value = false; // Đồng bộ mạng trạng thái ẩn đá
+        }
+        else if (!IsNetworkActive)
+        {
+            isShown = false;
+        }
+
         Debug.Log("[ElementalRockPuzzle] Kích hoạt thành công chuỗi nguyên tố! Đá đã bị phá vỡ.");
         
         // Ẩn Collider và Renderer của đá ngay lập tức để người chơi đi qua được và tránh double-hit
