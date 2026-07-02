@@ -1084,9 +1084,6 @@ public class ElementalRockPuzzle : NetworkBehaviour
         // Dọn sạch bản xem trước cũ nếu có
         ClearPreviewEditMode();
 
-        List<Transform> actualPoints = GetActualDemolishPoints();
-        List<GameObject> tempPointObjs = new List<GameObject>();
-
         try
         {
             GameObject meshTarget = FindMeshTarget();
@@ -1096,102 +1093,11 @@ public class ElementalRockPuzzle : NetworkBehaviour
                 return;
             }
 
-            Bounds bounds = meshTarget.GetComponent<MeshRenderer>().bounds;
-
-            // Nếu không chọn dùng MeshDemolisher, chạy thẳng cơ chế mảnh vỡ dự phòng (Procedural Fallback) để tránh treo Unity
-            if (!useMeshDemolisher)
-            {
-                SpawnFallbackProceduralShards(meshTarget);
-                return;
-            }
-
-            var demolisher = new MeshDemolisher();
-
-            // Kiểm tra xem đầu vào gán tay có bị trùng lặp hoặc thẳng hàng không, nếu có thì tự động tạo điểm cắt
-            bool useAutoPoints = false;
-            if (actualPoints.Count < 4)
-            {
-                useAutoPoints = true;
-            }
-            else if (!demolisher.VerifyDemolishInput(meshTarget, actualPoints))
-            {
-                Debug.LogWarning("[ElementalRockPuzzle] Điểm cắt tự gán không hợp lệ (bị trùng tọa độ hoặc đồng phẳng). Tự động chuyển sang chế độ sinh điểm ngẫu nhiên quanh lưới đá.");
-                useAutoPoints = true;
-            }
-
-            if (useAutoPoints)
-            {
-                actualPoints = GenerateRandomPointsInBounds(bounds, ref tempPointObjs);
-            }
-
-            Material targetMat = meshTarget.GetComponent<MeshRenderer>().sharedMaterial;
-            Material actualInteriorMaterial = (interiorMaterial != null) ? interiorMaterial : targetMat;
-            
-            // Thực hiện phá vỡ lưới
-            List<GameObject> pieces = demolisher.Demolish(meshTarget, actualPoints, actualInteriorMaterial);
-
-            if (pieces != null)
-            {
-                // Tạo một GameObject cha để chứa các mảnh vỡ xem trước cho dễ quản lý
-                GameObject previewParent = new GameObject("[Preview_Shatter_Pieces]");
-                previewParent.transform.position = meshTarget.transform.position;
-                previewParent.transform.rotation = meshTarget.transform.rotation;
-
-                // Cho các icon nguyên tố bay ra vật lý cùng mảnh vỡ
-                ShatterElementIcons(previewParent, bounds);
-
-                foreach (var piece in pieces)
-                {
-                    piece.transform.SetParent(previewParent.transform);
-                    
-                    // Thêm Collider lồi để mô phỏng vật lý va chạm chân thực (sẽ hoạt động khi play)
-                    MeshCollider col = piece.AddComponent<MeshCollider>();
-                    col.convex = true;
-
-                    // Thêm Rigidbody
-                    Rigidbody rb = piece.AddComponent<Rigidbody>();
-                    rb.mass = 15f;
-                    rb.useGravity = true;
-
-                    // Trong Edit Mode, chúng ta kéo nhẹ mảnh vỡ ra xa tâm một chút để người dùng dễ nhìn thấy vết cắt vỡ
-                    Vector3 forceDir = (piece.transform.position - meshTarget.transform.position).normalized;
-                    piece.transform.position += forceDir * 0.15f; // Đẩy nhẹ ra 15cm
-                }
-
-                // Ẩn tạm thời Renderer chính của đá để người dùng xem mảnh vỡ
-                var ren = meshTarget.GetComponent<Renderer>();
-                if (ren != null) ren.enabled = false;
-                
-                // Ẩn các renderers con khác (element icons...)
-                foreach (var r in GetComponentsInChildren<Renderer>(true))
-                {
-                    if (r.transform.name.Contains("[Preview_Shatter_Pieces]")) continue;
-                    if (r == ren) continue;
-                    r.enabled = false;
-                }
-
-                Debug.Log("[ElementalRockPuzzle] Đã tạo preview mảnh vỡ đá trong Edit Mode! Sử dụng chuột phải chọn 'Clear Preview (Edit Mode)' để hoàn tác.");
-            }
+            SpawnFallbackProceduralShards(meshTarget);
         }
         catch (System.Exception ex)
         {
             Debug.LogError($"[ElementalRockPuzzle] Lỗi khi thực hiện Preview Shatter trong Edit Mode: {ex.Message}\n{ex.StackTrace}");
-            GameObject meshTarget = FindMeshTarget();
-            if (meshTarget != null)
-            {
-                SpawnFallbackProceduralShards(meshTarget);
-            }
-        }
-        finally
-        {
-            // Dọn dẹp các điểm tạm thời vừa sinh ra
-            foreach (var obj in tempPointObjs)
-            {
-                if (obj != null)
-                {
-                    DestroyImmediate(obj);
-                }
-            }
         }
     }
 
@@ -1381,9 +1287,6 @@ public class ElementalRockPuzzle : NetworkBehaviour
 
     private void TriggerLocalShatter()
     {
-        List<Transform> actualPoints = GetActualDemolishPoints();
-        List<GameObject> tempPointObjs = new List<GameObject>();
-
         try
         {
             GameObject meshTarget = FindMeshTarget();
@@ -1393,87 +1296,11 @@ public class ElementalRockPuzzle : NetworkBehaviour
                 return;
             }
 
-            Bounds bounds = meshTarget.GetComponent<MeshRenderer>().bounds;
-
-            // Nếu không chọn dùng MeshDemolisher, chạy thẳng cơ chế mảnh vỡ dự phòng (Procedural Fallback) để tránh treo Unity
-            if (!useMeshDemolisher)
-            {
-                SpawnFallbackProceduralShards(meshTarget);
-                return;
-            }
-
-            var demolisher = new MeshDemolisher();
-
-            bool useAutoPoints = false;
-            if (actualPoints.Count < 4)
-            {
-                useAutoPoints = true;
-            }
-            else if (!demolisher.VerifyDemolishInput(meshTarget, actualPoints))
-            {
-                useAutoPoints = true;
-            }
-
-            if (useAutoPoints)
-            {
-                actualPoints = GenerateRandomPointsInBounds(bounds, ref tempPointObjs);
-            }
-
-            Material targetMat = meshTarget.GetComponent<MeshRenderer>().sharedMaterial;
-            Material actualInteriorMaterial = (interiorMaterial != null) ? interiorMaterial : targetMat;
-            
-            // Thực hiện phá vỡ trên đối tượng chứa lưới thực tế
-            List<GameObject> pieces = demolisher.Demolish(meshTarget, actualPoints, actualInteriorMaterial);
-
-            // Cho các icon nguyên tố bay ra vật lý cùng mảnh vỡ
-            ShatterElementIcons(null, bounds);
-
-            if (pieces != null)
-            {
-                foreach (var piece in pieces)
-                {
-                    // Thêm MeshCollider (convex = true) để mô phỏng vật lý va chạm chân thực
-                    MeshCollider col = piece.AddComponent<MeshCollider>();
-                    col.convex = true;
-
-                    // Thêm Rigidbody để chạy trọng lực và lực vật lý đẩy các mảnh đá vỡ ra
-                    Rigidbody rb = piece.AddComponent<Rigidbody>();
-                    rb.mass = 15f;
-                    rb.useGravity = true;
-
-                    // Tính toán lực nổ đẩy mảnh đá vỡ ra xa tâm đá
-                    Vector3 forceDir = (piece.transform.position - meshTarget.transform.position).normalized;
-                    rb.AddForce(forceDir * Random.Range(4f, 10f), ForceMode.Impulse);
-                    rb.AddTorque(Random.onUnitSphere * Random.Range(5f, 15f), ForceMode.Impulse);
-
-                    // Tự động dọn dẹp (hủy) các mảnh vỡ sau 3-4 giây để tối ưu hóa hiệu năng
-                    Destroy(piece, Random.Range(3f, 4f));
-                }
-            }
+            SpawnFallbackProceduralShards(meshTarget);
         }
         catch (System.Exception ex)
         {
-            Debug.LogError($"[ElementalRockPuzzle] Lỗi khi thực hiện Shatter đá bằng MeshDemolisher: {ex.Message}\n{ex.StackTrace}");
-            
-            // Tìm đối tượng đích chứa lưới để truyền vào hàm dự phòng
-            GameObject meshTarget = FindMeshTarget();
-            if (meshTarget != null)
-            {
-                SpawnFallbackProceduralShards(meshTarget);
-            }
-        }
-        finally
-        {
-            foreach (var obj in tempPointObjs)
-            {
-                if (obj != null)
-                {
-                    if (Application.isPlaying)
-                        Destroy(obj);
-                    else
-                        DestroyImmediate(obj);
-                }
-            }
+            Debug.LogError($"[ElementalRockPuzzle] Lỗi khi thực hiện Shatter đá: {ex.Message}\n{ex.StackTrace}");
         }
     }
 
