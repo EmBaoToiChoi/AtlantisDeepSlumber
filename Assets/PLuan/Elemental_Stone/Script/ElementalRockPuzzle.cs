@@ -1140,41 +1140,75 @@ public class ElementalRockPuzzle : NetworkBehaviour
         {
             if (icon == null || !icon.gameObject.activeSelf || !icon.enabled) continue;
 
-            // Nhân bản icon nguyên tố để tạo bản sao vật lý bay ra độc lập
-            GameObject iconCopy = Instantiate(icon.gameObject);
-            iconCopy.name = $"ShatteredIcon_{icon.gameObject.name}";
-            iconCopy.tag = "Untagged"; // Tránh kích hoạt va chạm đệ quy với đá gốc!
+            // Tạo một GameObject trống hoàn toàn để tránh clone script, NetworkObject, v.v.
+            GameObject iconCopy = new GameObject($"ShatteredIcon_{icon.gameObject.name}");
+            iconCopy.tag = "Untagged";
             iconCopy.layer = LayerMask.NameToLayer("Ignore Raycast");
             iconCopy.transform.position = icon.transform.position;
             iconCopy.transform.rotation = icon.transform.rotation;
             iconCopy.transform.localScale = icon.transform.lossyScale;
 
-            // Đảm bảo không chứa script hoặc NetworkObject
-            var netObj = iconCopy.GetComponent<Unity.Netcode.NetworkObject>();
-            if (netObj != null)
-            {
-                if (Application.isPlaying) Destroy(netObj);
-                else DestroyImmediate(netObj);
-            }
-            
-            var scripts = iconCopy.GetComponents<MonoBehaviour>();
-            foreach (var s in scripts)
-            {
-                if (Application.isPlaying) Destroy(s);
-                else DestroyImmediate(s);
-            }
+            bool hasVisual = false;
 
-            // Thêm Collider nếu chưa có
-            Collider col = iconCopy.GetComponent<Collider>();
-            if (col == null)
+            // 1. Thử sao chép MeshRenderer & MeshFilter
+            MeshFilter sourceMF = icon.GetComponent<MeshFilter>();
+            MeshRenderer sourceMR = icon.GetComponent<MeshRenderer>();
+            if (sourceMF != null && sourceMR != null)
             {
+                MeshFilter targetMF = iconCopy.AddComponent<MeshFilter>();
+                targetMF.sharedMesh = sourceMF.sharedMesh;
+
+                MeshRenderer targetMR = iconCopy.AddComponent<MeshRenderer>();
+                targetMR.sharedMaterials = sourceMR.sharedMaterials;
+                hasVisual = true;
+
+                // Thêm MeshCollider lồi cho vật lý 3D
                 MeshCollider meshCol = iconCopy.AddComponent<MeshCollider>();
                 meshCol.convex = true;
             }
+            else
+            {
+                // 2. Thử sao chép SkinnedMeshRenderer (nếu mô hình sử dụng xương)
+                SkinnedMeshRenderer sourceSMR = icon.GetComponent<SkinnedMeshRenderer>();
+                if (sourceSMR != null)
+                {
+                    MeshFilter targetMF = iconCopy.AddComponent<MeshFilter>();
+                    targetMF.sharedMesh = sourceSMR.sharedMesh;
+
+                    MeshRenderer targetMR = iconCopy.AddComponent<MeshRenderer>();
+                    targetMR.sharedMaterials = sourceSMR.sharedMaterials;
+                    hasVisual = true;
+
+                    // Thêm MeshCollider lồi cho vật lý 3D
+                    MeshCollider meshCol = iconCopy.AddComponent<MeshCollider>();
+                    meshCol.convex = true;
+                }
+                else
+                {
+                    // 3. Thử sao chép SpriteRenderer (nếu là biểu tượng 2D)
+                    SpriteRenderer sourceSR = icon.GetComponent<SpriteRenderer>();
+                    if (sourceSR != null)
+                    {
+                        SpriteRenderer targetSR = iconCopy.AddComponent<SpriteRenderer>();
+                        targetSR.sprite = sourceSR.sprite;
+                        targetSR.color = sourceSR.color;
+                        hasVisual = true;
+
+                        // Thêm BoxCollider đơn giản cho vật lý
+                        iconCopy.AddComponent<BoxCollider>();
+                    }
+                }
+            }
+
+            if (!hasVisual)
+            {
+                // Nếu đối tượng không chứa thành phần hiển thị nào, hủy đi và bỏ qua
+                Destroy(iconCopy);
+                continue;
+            }
 
             // Thêm Rigidbody để bay vật lý tự do
-            Rigidbody rb = iconCopy.GetComponent<Rigidbody>();
-            if (rb == null) rb = iconCopy.AddComponent<Rigidbody>();
+            Rigidbody rb = iconCopy.AddComponent<Rigidbody>();
             rb.mass = 5f;
             rb.useGravity = true;
 
@@ -1184,23 +1218,7 @@ public class ElementalRockPuzzle : NetworkBehaviour
             rb.AddForce(forceDir * Random.Range(5f, 12f), ForceMode.Impulse);
             rb.AddTorque(Random.onUnitSphere * Random.Range(8f, 20f), ForceMode.Impulse);
 
-            if (Application.isPlaying)
-            {
-                Destroy(iconCopy, Random.Range(3f, 4f));
-            }
-            else
-            {
-                if (previewParent != null)
-                {
-                    iconCopy.transform.SetParent(previewParent.transform);
-                    // Đẩy nhẹ ra trong Edit Mode để thấy rõ
-                    iconCopy.transform.position += forceDir * 0.15f;
-                }
-                else
-                {
-                    DestroyImmediate(iconCopy);
-                }
-            }
+            Destroy(iconCopy, Random.Range(3f, 4f));
         }
     }
 
