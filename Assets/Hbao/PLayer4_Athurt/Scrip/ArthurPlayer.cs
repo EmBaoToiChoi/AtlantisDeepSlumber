@@ -1247,7 +1247,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         float oldMaxHealth = maxHealth;
         maxHealth = 150f + hpLv * 20f;
-        damageAmount = 15f + dmgLv * 5f;
+        damageAmount = 15f * (1f + dmgLv * 0.15f);
 
         if (isStandaloneMode)
         {
@@ -1512,6 +1512,15 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         {
             return;
         }
+        int targetLvl = 0;
+        switch (statType)
+        {
+            case 0: targetLvl = localHpLevel; break;
+            case 1: targetLvl = localMpLevel; break;
+            case 2: targetLvl = localCooldownLevel; break;
+            case 3: targetLvl = localDamageLevel; break;
+        }
+        if (targetLvl >= 3) return;
 
         localUpgradePoints--;
         switch (statType)
@@ -1539,6 +1548,15 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         {
             return;
         }
+        int targetLvl = 0;
+        switch (statType)
+        {
+            case 0: targetLvl = hpLevel.Value; break;
+            case 1: targetLvl = mpLevel.Value; break;
+            case 2: targetLvl = cooldownLevel.Value; break;
+            case 3: targetLvl = damageLevel.Value; break;
+        }
+        if (targetLvl >= 3) return;
 
         upgradePoints.Value--;
         switch (statType)

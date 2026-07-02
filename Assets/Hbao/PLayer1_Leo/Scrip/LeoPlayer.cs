@@ -5009,6 +5009,16 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     public void StandaloneUpgradeStat(int statType)
     {
         if (localUpgradePoints <= 0) return;
+        int targetLvl = 0;
+        switch (statType)
+        {
+            case 0: targetLvl = localHpLevel; break;
+            case 1: targetLvl = localMpLevel; break;
+            case 2: targetLvl = localCooldownLevel; break;
+            case 3: targetLvl = localDamageLevel; break;
+        }
+        if (targetLvl >= 3) return;
+
         localUpgradePoints--;
         switch (statType)
         {
@@ -5031,6 +5041,15 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     private void UpgradeStatServerRpc(int statType)
     {
         if (upgradePoints.Value <= 0) return;
+        int targetLvl = 0;
+        switch (statType)
+        {
+            case 0: targetLvl = hpLevel.Value; break;
+            case 1: targetLvl = mpLevel.Value; break;
+            case 2: targetLvl = cooldownLevel.Value; break;
+            case 3: targetLvl = damageLevel.Value; break;
+        }
+        if (targetLvl >= 3) return;
 
         int pts = upgradePoints.Value - 1;
         SyncNetVarInt(upgradePoints, proxyPlayerTest != null ? proxyPlayerTest.upgradePoints : null, pts);
@@ -5056,7 +5075,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         float oldMaxHealth = maxHealth;
         maxHealth = 85f + hpLv * 20f;
-        damageAmount = 25f + dmgLv * 5f;
+        damageAmount = 25f * (1f + dmgLv * 0.15f);
 
         if (isStandaloneMode)
         {

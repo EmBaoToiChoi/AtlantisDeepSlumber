@@ -661,6 +661,17 @@ public class ChoppableTree : NetworkBehaviour
 
     private IEnumerator FallDownCoroutine()
     {
+        // Kích hoạt camera nhìn cây ngã nếu ở gần người chơi
+        if (PlayerHUDController.Instance != null && PlayerHUDController.LocalPlayerTarget != null)
+        {
+            Vector3 playerPos = PlayerHUDController.LocalPlayerTarget.transform.position;
+            float dist = Vector3.Distance(playerPos, transform.position);
+            if (dist < 18f)
+            {
+                PlayerHUDController.Instance.TriggerTreeFallCamera(this);
+            }
+        }
+
         // 1. Tắt toàn bộ colliders để người chơi không bị kẹt hoặc va chạm khi cây đang ngã
         Collider[] colliders = GetComponentsInChildren<Collider>(true);
         foreach (var col in colliders)
@@ -700,15 +711,15 @@ public class ChoppableTree : NetworkBehaviour
 
         visualModel.transform.localRotation = targetRot;
 
-        // Sinh hiệu ứng khói bụi lớn giống thật khi cây đập xuống đất
-        // 1. Bụi ở gốc cây
-        CreateRealisticDustEffect(transform.position, 2.2f, 50);
+        // Sinh hiệu ứng khói bụi lớn đậm nét khi cây đập xuống đất
+        // 1. Bụi ở gốc cây (tăng scale và số lượng)
+        CreateRealisticDustEffect(transform.position, 2.8f, 75);
 
-        // 2. Bụi ở ngọn cây
+        // 2. Bụi ở ngọn cây (tăng scale và số lượng)
         if (visualModel != null)
         {
             Vector3 treeTopPos = transform.position + (visualModel.transform.rotation * (Vector3.up * 4.0f));
-            CreateRealisticDustEffect(treeTopPos, 1.8f, 35);
+            CreateRealisticDustEffect(treeTopPos, 2.2f, 50);
         }
 
         // Chờ một chút ngắn trước khi ẩn hoàn toàn
@@ -728,13 +739,13 @@ public class ChoppableTree : NetworkBehaviour
         var main = ps.main;
         main.duration = 2.0f;
         main.loop = false;
-        main.startLifetime = new ParticleSystem.MinMaxCurve(0.8f, 1.5f);
-        main.startSpeed = new ParticleSystem.MinMaxCurve(0.5f * scale, 2.0f * scale);
-        main.startSize = new ParticleSystem.MinMaxCurve(0.3f * scale, 0.7f * scale);
+        main.startLifetime = new ParticleSystem.MinMaxCurve(1.0f, 1.8f); // Tăng thời gian sống của bụi
+        main.startSpeed = new ParticleSystem.MinMaxCurve(0.6f * scale, 2.2f * scale);
+        main.startSize = new ParticleSystem.MinMaxCurve(0.5f * scale, 1.2f * scale); // Tăng kích thước hạt bụi rõ nét hơn
         
-        // Màu bụi giống thật: màu đất cát xám nâu nhạt pha trộn mềm mại
-        main.startColor = new Color(0.72f, 0.65f, 0.58f, 0.28f); 
-        main.gravityModifier = -0.02f; // Khói bụi có xu hướng bốc nhẹ lên cao
+        // Màu bụi giống thật: màu đất cát xám nâu nhạt pha trộn đậm hơn (Alpha tăng lên 0.5f để rõ nét)
+        main.startColor = new Color(0.72f, 0.65f, 0.58f, 0.5f); 
+        main.gravityModifier = -0.015f; // Khói bụi bốc nhẹ lên cao
         main.simulationSpace = ParticleSystemSimulationSpace.World;
         main.playOnAwake = false;
 
@@ -747,18 +758,18 @@ public class ChoppableTree : NetworkBehaviour
         var shape = ps.shape;
         shape.shapeType = ParticleSystemShapeType.Cone;
         shape.angle = 45f;
-        shape.radius = 0.2f * scale;
+        shape.radius = 0.25f * scale;
 
         // Cấu hình Size over Lifetime (Hạt khói nở to dần khi tan vào không khí)
         var sizeOverLifetime = ps.sizeOverLifetime;
         sizeOverLifetime.enabled = true;
         AnimationCurve sizeCurve = new AnimationCurve();
         sizeCurve.AddKey(0.0f, 0.3f);
-        sizeCurve.AddKey(0.2f, 1.0f);
-        sizeCurve.AddKey(1.0f, 1.6f);
+        sizeCurve.AddKey(0.2f, 1.1f);
+        sizeCurve.AddKey(1.0f, 1.8f);
         sizeOverLifetime.size = new ParticleSystem.MinMaxCurve(1.0f, sizeCurve);
 
-        // Cấu hình Color over Lifetime (Bụi mờ và tan biến dần)
+        // Cấu hình Color over Lifetime (Bụi mờ và tan biến dần với Alpha đậm nét)
         var colorOverLifetime = ps.colorOverLifetime;
         colorOverLifetime.enabled = true;
         Gradient gradient = new Gradient();
@@ -770,8 +781,8 @@ public class ChoppableTree : NetworkBehaviour
             },
             new GradientAlphaKey[] { 
                 new GradientAlphaKey(0.0f, 0.0f), 
-                new GradientAlphaKey(0.28f, 0.15f), 
-                new GradientAlphaKey(0.18f, 0.6f),
+                new GradientAlphaKey(0.55f, 0.15f), // Tăng alpha từ 0.28 lên 0.55
+                new GradientAlphaKey(0.35f, 0.6f),  // Tăng alpha từ 0.18 lên 0.35
                 new GradientAlphaKey(0.0f, 1.0f) 
             }
         );
@@ -780,7 +791,7 @@ public class ChoppableTree : NetworkBehaviour
         // Cấu hình Limit Velocity over Lifetime (Không khí cản để bụi chuyển động chậm dần)
         var limitVelocity = ps.limitVelocityOverLifetime;
         limitVelocity.enabled = true;
-        limitVelocity.drag = 1.5f;
+        limitVelocity.drag = 1.2f;
         limitVelocity.multiplyDragByParticleSize = true;
 
         // Cấu hình Renderer
