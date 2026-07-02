@@ -20,13 +20,10 @@ public class VideoCutsceneController : NetworkBehaviour
     [Header("Status")]
     public bool isPlaying = false;
 
-    // Hàm kích hoạt sự kiện
+    // Kích hoạt từ Trigger
     public void StartCutscene()
     {
         if (playOnlyOnce && hasPlayed) return;
-        
-        // ĐÃ SỬA: Xóa if(IsServer) đi.
-        // Cứ có người gọi là báo thẳng lên Server, Server sẽ tự xử lý cho cả 4 máy!
         StartCutsceneServerRpc();
     }
 
@@ -37,31 +34,56 @@ public class VideoCutsceneController : NetworkBehaviour
         isPlaying = true;
         hasPlayed = true; 
         
-        // 1. Teleport tất cả player đang online
-        var players = PlayerHUDManager.ActivePlayers;
-        int i = 0;
-        foreach (var p in players)
+        // --- LOGIC TELEPORT MỚI CHUẨN NETCODE ---
+        int spotIndex = 0;
+        // Quét danh sách 4 máy Client đang kết nối
+        foreach (var client in NetworkManager.Singleton.ConnectedClientsList)
         {
-            if (p != null && i < playerSpots.Count)
+            if (client.PlayerObject != null && spotIndex < playerSpots.Count)
             {
-                MonoBehaviour pMono = p as MonoBehaviour;
-                if (pMono != null)
+                // Tạo thông báo GỬI RIÊNG cho từng máy Client
+                ClientRpcParams clientRpcParams = new ClientRpcParams
                 {
-                    var charCtrl = pMono.GetComponent<CharacterController>();
-                    if (charCtrl != null) charCtrl.enabled = false;
-                    
-                    pMono.transform.position = playerSpots[i].position;
-                    pMono.transform.rotation = playerSpots[i].rotation;
-                    
-                    if (charCtrl != null) charCtrl.enabled = true;
-                    i++;
-                }
+                    Send = new ClientRpcSendParams
+                    {
+                        TargetClientIds = new ulong[] { client.ClientId }
+                    }
+                };
+
+                // Ép máy Client đó tự dịch chuyển con nhân vật của chính nó vào đúng Spot
+                TeleportLocalPlayerClientRpc(spotIndex, clientRpcParams);
+                spotIndex++;
             }
         }
 
-        // 2. Gửi lệnh bật phim cho tất cả Client
         PlayCutsceneClientRpc();
         StartCoroutine(WaitAndFinish((float)videoPlayer.length));
+    }
+
+    // Hàm này CHỈ chạy trên đúng cái máy Client được chỉ định
+    [ClientRpc]
+    private void TeleportLocalPlayerClientRpc(int spotIndex, ClientRpcParams clientRpcParams = default)
+    {
+        var localPlayer = NetworkManager.Singleton.LocalClient.PlayerObject;
+        if (localPlayer != null && spotIndex < playerSpots.Count)
+        {
+            // TẮT TẠM THỜI MỌI THỨ CẢN TRỞ DỊCH CHUYỂN
+            var charCtrl = localPlayer.GetComponent<CharacterController>();
+            if (charCtrl != null) charCtrl.enabled = false;
+
+            var navAgent = localPlayer.GetComponent<UnityEngine.AI.NavMeshAgent>();
+            if (navAgent != null) navAgent.enabled = false;
+
+            // Dịch chuyển đến cái bục (Spot) tương ứng
+            localPlayer.transform.position = playerSpots[spotIndex].position;
+            localPlayer.transform.rotation = playerSpots[spotIndex].rotation;
+
+            // BẬT LẠI VẬT LÝ
+            if (charCtrl != null) charCtrl.enabled = true;
+            if (navAgent != null) navAgent.enabled = true;
+            
+            Debug.Log($"[VideoCutscene] Client {NetworkManager.Singleton.LocalClientId} tự dịch chuyển thành công vào vị trí Spot {spotIndex}");
+        }
     }
 
     [ClientRpc]
@@ -76,7 +98,6 @@ public class VideoCutsceneController : NetworkBehaviour
             videoPlayer.Play();
         }
 
-        // Tự khóa script di chuyển của chính Client này
         TogglePlayerMovementClientRpc(false);
     }
 
@@ -96,7 +117,6 @@ public class VideoCutsceneController : NetworkBehaviour
             videoPlayer.targetCamera = null;
         }
         
-        // Tự mở khóa script di chuyển của chính Client này
         TogglePlayerMovementClientRpc(true);
         isPlaying = false;
     }
@@ -104,7 +124,6 @@ public class VideoCutsceneController : NetworkBehaviour
     [ClientRpc]
     private void TogglePlayerMovementClientRpc(bool enable)
     {
-        // Tìm nhân vật của chính người chơi đang ngồi ở máy này
         var localPlayer = NetworkManager.Singleton.LocalClient.PlayerObject;
         
         if (localPlayer != null)
@@ -115,26 +134,17 @@ public class VideoCutsceneController : NetworkBehaviour
                 if (script != null && scriptNamesToDisable.Contains(script.GetType().Name))
                 {
                     script.enabled = enable;
-                    Debug.Log($"[VideoCutscene] Client {NetworkManager.Singleton.LocalClientId} đã {(enable ? "BẬT" : "TẮT")} script: {script.GetType().Name}");
                 }
             }
         }
-        else
-        {
-            Debug.LogError("[VideoCutscene] Không tìm thấy Local PlayerObject để khóa di chuyển!");
-        }
     }
 
-    // --- ĐÃ THÊM: HÀM NÀY GIÚP OBJECT TỰ TRỞ THÀNH BẪY ĐỘC LẬP ---
     private void OnTriggerEnter(Collider other)
     {
-        // Bỏ qua nếu object chưa được load trên mạng
         if (!IsSpawned) return; 
 
-        // Kiểm tra xem đối tượng dẫm vào có mang Tag "Player" không
         if (other.CompareTag("Player"))
         {
-            Debug.Log($"[VideoCutscene] Phát hiện Player {other.name} dẫm bẫy! Kích hoạt video...");
             StartCutscene();
         }
     }
