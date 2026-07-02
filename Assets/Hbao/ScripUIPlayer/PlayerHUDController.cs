@@ -260,9 +260,9 @@ public class PlayerHUDController : MonoBehaviour
     private Color32[] fogOfWarColors;
     private Material fogOfWarMaterial;
     private GameObject fogOfWarPlane;
-    private float fowWorldSize = 2500f; // 2.5km x 2.5km
+    private float fowWorldSize = 1000f; // 2.5km x 2.5km
     private int fowTextureSize = 256;
-    private float fowRevealRadius = 35f; // Bán kính sáng xung quanh player
+    private float fowRevealRadius = 15f; // Bán kính sáng xung quanh player
     private Vector2 fowWorldCenter = Vector2.zero; // Tâm map thế giới
     private bool isFowInitialized = false;
 

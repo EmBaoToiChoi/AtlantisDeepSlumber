@@ -52,6 +52,7 @@ public class SeagullController : NetworkBehaviour
 
     private float freeLookYaw = 0f;
     private float freeLookPitch = 0f;
+    private bool childrenRotated = false;
 
     public bool isStandaloneMode => NetworkManager.Singleton == null || !NetworkManager.Singleton.IsListening;
     
@@ -88,6 +89,17 @@ public class SeagullController : NetworkBehaviour
 
     private void InitializeSeagull()
     {
+        returnRotationYOffset = 0f; // Force offset to 0 because we rotate the children directly to face forward
+
+        if (!childrenRotated)
+        {
+            childrenRotated = true;
+            foreach (Transform child in transform)
+            {
+                child.localRotation = child.localRotation * Quaternion.Euler(0f, 180f, 0f);
+            }
+        }
+
         ActiveSeagull = this;
         age = 0f;
         isControlled = false;
