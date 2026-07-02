@@ -169,7 +169,7 @@ public class Enemy2_Zombie : NetworkBehaviour
             {
                 anim.SetLayerWeight(i, 0f);
             }
-            anim.Play("ZomDie", 0, 0f);
+            anim.Play("quai2Die", 0, 0f);
         }
     }
 
@@ -319,7 +319,7 @@ public class Enemy2_Zombie : NetworkBehaviour
             agent.speed = frantic ? chaseRunSpeed * 1.4f : chaseRunSpeed;
             agent.SetDestination(targetPlayer.position);
         }
-        SetSpeedNet(AgentReady && agent.velocity.magnitude > 0.2f ? 1f : 0f);
+        SetSpeedNet(AgentReady && !agent.isStopped ? 1f : 0f);
     }
 
     private void ReturnToPatrol() { targetPlayer = null; CurrentStateValue = EnemyState.Patrol; waitingAtWaypoint = false; waypointWaitTimer = 0f; GoToNextWaypoint(); }

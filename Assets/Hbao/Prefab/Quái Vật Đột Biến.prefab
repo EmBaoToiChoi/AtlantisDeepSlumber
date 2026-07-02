@@ -225,7 +225,7 @@ MonoBehaviour:
     UpdateTraits:
       MinSecondsBetweenUpdates: 0
       MaxSecondsBetweenUpdates: 0
-    m_InternalValue: 120
+    m_InternalValue: 500
   currentState:
     UpdateTraits:
       MinSecondsBetweenUpdates: 0
@@ -259,7 +259,7 @@ MonoBehaviour:
   expDropPoint: {fileID: 2382866152611396582}
   repairItemPrefab: {fileID: 2217945438620940750, guid: c0dc53cb41f8a574480ed87a8b9bebba, type: 3}
   repairItemDropChance: 0.2
-  sightRange: 15
+  sightRange: 20
   fieldOfView: 100
   attackRange: 2.2
   patrolWalkSpeed: 2.5

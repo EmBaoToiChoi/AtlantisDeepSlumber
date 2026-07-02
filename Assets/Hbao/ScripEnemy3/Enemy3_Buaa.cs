@@ -358,7 +358,7 @@ public class Enemy3_Buaa : NetworkBehaviour
             agent.speed = spd;
             agent.SetDestination(targetPlayer.position);
         }
-        SetSpeedNet(AgentReady && agent.velocity.magnitude > 0.2f ? 1f : 0f);
+        SetSpeedNet(AgentReady && !agent.isStopped ? 1f : 0f);
     }
 
     private void ReturnToPatrol() { targetPlayer = null; CurrentStateValue = EnemyState.Patrol; waitingAtWaypoint = false; waypointWaitTimer = 0f; GoToNextWaypoint(); }

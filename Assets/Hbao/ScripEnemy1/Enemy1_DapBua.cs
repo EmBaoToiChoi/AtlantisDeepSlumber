@@ -432,9 +432,7 @@ public class Enemy1_DapBua : NetworkBehaviour
             agent.speed = runSpd;
             agent.SetDestination(targetPlayer.position);
         }
-        // Velocity check: chống glide
-        bool actuallyMoving = AgentReady && agent.velocity.magnitude > 0.2f;
-        SetSpeedNet(actuallyMoving ? 1f : 0f);
+        SetSpeedNet(AgentReady && !agent.isStopped ? 1f : 0f);
     }
 
     private void ReturnToPatrol()
