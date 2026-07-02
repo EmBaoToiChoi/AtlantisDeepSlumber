@@ -231,7 +231,7 @@ MonoBehaviour:
   rotationSpeed: 120
   pitchSpeed: 90
   duration: 15
-  cameraOffset: {x: 0, y: 2.5, z: -10}
+  cameraOffset: {x: 0, y: 2.5, z: -5}
   cameraSmoothSpeed: 10
   modelRotationYOffset: 180
   targetFOV: 80
