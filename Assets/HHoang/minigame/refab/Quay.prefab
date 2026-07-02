@@ -4718,9 +4718,6 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: a20ef9fa2732ba243aefd7d365292986, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1614535766452562854}
-    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: a20ef9fa2732ba243aefd7d365292986, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 55243973742481551}
   m_SourcePrefab: {fileID: 100100000, guid: a20ef9fa2732ba243aefd7d365292986, type: 3}
 --- !u!1 &5901534429926557988 stripped
 GameObject:
