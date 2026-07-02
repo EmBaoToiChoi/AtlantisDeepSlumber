@@ -452,6 +452,77 @@ public class PlayerCheckpointManager : NetworkBehaviour
     /// (SimplePlayerTest, LeoPlayer, ArthurPlayer, ElenaPlayer, MayaPlayer)
     /// và phục hồi trạng thái hoạt ảnh.
     /// </summary>
+    private FieldInfo GetFieldInherited(System.Type type, string name, BindingFlags flags)
+    {
+        System.Type currentType = type;
+        while (currentType != null)
+        {
+            FieldInfo field = currentType.GetField(name, flags);
+            if (field != null) return field;
+            currentType = currentType.BaseType;
+        }
+        return null;
+    }
+
+    private PropertyInfo GetPropertyInherited(System.Type type, string name, BindingFlags flags)
+    {
+        System.Type currentType = type;
+        while (currentType != null)
+        {
+            PropertyInfo prop = currentType.GetProperty(name, flags);
+            if (prop != null) return prop;
+            currentType = currentType.BaseType;
+        }
+        return null;
+    }
+
+    private MethodInfo GetMethodInherited(System.Type type, string name, BindingFlags flags)
+    {
+        System.Type currentType = type;
+        while (currentType != null)
+        {
+            MethodInfo method = currentType.GetMethod(name, flags);
+            if (method != null) return method;
+            currentType = currentType.BaseType;
+        }
+        return null;
+    }
+
+    private void InvokePlayAnimationInherited(MonoBehaviour script, string animName, float fadeTime)
+    {
+        MethodInfo playAnimMethod = GetMethodInherited(script.GetType(), "PlayAnimation", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+        if (playAnimMethod != null)
+        {
+            var parameters = playAnimMethod.GetParameters();
+            object[] args = new object[parameters.Length];
+            if (parameters.Length > 0 && parameters[0].ParameterType == typeof(string))
+            {
+                args[0] = animName;
+            }
+            if (parameters.Length > 1 && parameters[1].ParameterType == typeof(float))
+            {
+                args[1] = fadeTime;
+            }
+            for (int i = 2; i < parameters.Length; i++)
+            {
+                args[i] = parameters[i].DefaultValue;
+            }
+            try
+            {
+                playAnimMethod.Invoke(script, args);
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogError($"[PlayerCheckpointManager] Error invoking PlayAnimation: {ex}");
+            }
+        }
+    }
+
+    /// <summary>
+    /// Sử dụng Reflection để hồi đầy máu cho tất cả các loại lớp nhân vật 
+    /// (SimplePlayerTest, LeoPlayer, ArthurPlayer, ElenaPlayer, MayaPlayer)
+    /// và phục hồi trạng thái hoạt ảnh.
+    /// </summary>
     private void HealAndResetPlayer(IPlayerHUDTarget player)
     {
         if (player == null) return;
@@ -463,12 +534,12 @@ public class PlayerCheckpointManager : NetworkBehaviour
             if (script == null) continue;
             string typeName = script.GetType().Name;
 
-            if (typeName == "SimplePlayerTest" || typeName == "LeoPlayer" || typeName == "ArthurPlayer" || 
-                typeName == "ElenaPlayer" || typeName == "MayaPlayer" || typeName.EndsWith("Player"))
+            if (script is SimplePlayerTest || script is LeoPlayer || script is ArthurPlayer || 
+                script is ElenaPlayer || script is MayaPlayer || typeName.EndsWith("Player"))
             {
                 // 1. Lấy lượng máu tối đa (maxHealth)
                 float maxHp = 100f;
-                FieldInfo maxHealthField = script.GetType().GetField("maxHealth", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+                FieldInfo maxHealthField = GetFieldInherited(script.GetType(), "maxHealth", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
                 if (maxHealthField != null)
                 {
                     maxHp = (float)maxHealthField.GetValue(script);
@@ -476,14 +547,14 @@ public class PlayerCheckpointManager : NetworkBehaviour
 
                 // 2. Kiểm tra chế độ Standalone
                 bool isStandalone = false;
-                FieldInfo standaloneField = script.GetType().GetField("isStandaloneMode", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+                FieldInfo standaloneField = GetFieldInherited(script.GetType(), "isStandaloneMode", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
                 if (standaloneField != null)
                 {
                     isStandalone = (bool)standaloneField.GetValue(script);
                 }
                 else
                 {
-                    PropertyInfo standaloneProp = script.GetType().GetProperty("IsStandaloneMode", BindingFlags.Public | BindingFlags.Instance);
+                    PropertyInfo standaloneProp = GetPropertyInherited(script.GetType(), "IsStandaloneMode", BindingFlags.Public | BindingFlags.Instance);
                     if (standaloneProp != null)
                     {
                         isStandalone = (bool)standaloneProp.GetValue(script);
@@ -493,13 +564,13 @@ public class PlayerCheckpointManager : NetworkBehaviour
                 // 3. Gán máu về tối đa
                 if (isStandalone)
                 {
-                    FieldInfo localHealthField = script.GetType().GetField("localHealth", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+                    FieldInfo localHealthField = GetFieldInherited(script.GetType(), "localHealth", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
                     if (localHealthField != null)
                     {
                         localHealthField.SetValue(script, maxHp);
                     }
 
-                    MethodInfo updateHudMethod = script.GetType().GetMethod("UpdateHealthHUD", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+                    MethodInfo updateHudMethod = GetMethodInherited(script.GetType(), "UpdateHealthHUD", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
                     if (updateHudMethod != null)
                     {
                         updateHudMethod.Invoke(script, new object[] { maxHp });
@@ -507,7 +578,7 @@ public class PlayerCheckpointManager : NetworkBehaviour
                 }
                 else if (IsServer)
                 {
-                    FieldInfo currentHealthField = script.GetType().GetField("currentHealth", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+                    FieldInfo currentHealthField = GetFieldInherited(script.GetType(), "currentHealth", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
                     if (currentHealthField != null)
                     {
                         object netVarObj = currentHealthField.GetValue(script);
@@ -523,19 +594,7 @@ public class PlayerCheckpointManager : NetworkBehaviour
                 }
 
                 // 4. Reset hoạt ảnh về Idle
-                MethodInfo playAnimMethod = script.GetType().GetMethod("PlayAnimation", new System.Type[] { typeof(string), typeof(float) });
-                if (playAnimMethod != null)
-                {
-                    playAnimMethod.Invoke(script, new object[] { "Idle", 0.15f });
-                }
-                else
-                {
-                    MethodInfo playAnimMethod2 = script.GetType().GetMethod("PlayAnimation", new System.Type[] { typeof(string) });
-                    if (playAnimMethod2 != null)
-                    {
-                        playAnimMethod2.Invoke(script, new object[] { "Idle" });
-                    }
-                }
+                InvokePlayAnimationInherited(script, "Idle", 0.15f);
             }
         }
 

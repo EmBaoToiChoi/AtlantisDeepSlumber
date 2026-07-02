@@ -93,4 +93,113 @@ public class NetworkFlailTrap : NetworkBehaviour
         // Nhân thêm góc xoay ban đầu để búa không bị lệch hướng
         transform.localRotation = gocXoayBanDau * Quaternion.AngleAxis(angle, swingAxis);
     }
+
+    private void OnTriggerEnter(Collider other)
+    {
+        HandlePlayerCollision(other.gameObject);
+    }
+
+    private void OnTriggerStay(Collider other)
+    {
+        HandlePlayerCollision(other.gameObject);
+    }
+
+    private void OnCollisionEnter(Collision collision)
+    {
+        HandlePlayerCollision(collision.gameObject);
+    }
+
+    private void OnCollisionStay(Collision collision)
+    {
+        HandlePlayerCollision(collision.gameObject);
+    }
+
+    private void HandlePlayerCollision(GameObject collidedObj)
+    {
+        // Chỉ xử lý chết trên Server (trong mạng) hoặc local (chơi đơn)
+        bool isNetworkActive = NetworkManager != null && NetworkManager.IsListening;
+        bool isServerInstance = IsServer;
+
+        if (isNetworkActive && !isServerInstance) return;
+
+        if (IsAnyPlayer(collidedObj, out GameObject playerRoot))
+        {
+            DealInstantDeath(playerRoot);
+        }
+    }
+
+    private void DealInstantDeath(GameObject playerRoot)
+    {
+        Debug.Log($"[NetworkFlailTrap] Chạm vào người chơi {playerRoot.name}! Phá vỡ miễn nhiễm và gây chết ngay lập tức.");
+
+        MonoBehaviour[] scripts = playerRoot.GetComponents<MonoBehaviour>();
+        foreach (var script in scripts)
+        {
+            if (script == null) continue;
+            System.Type type = script.GetType();
+            string typeName = type.Name;
+
+            if (typeName == "SimplePlayerTest" || typeName == "LeoPlayer" || typeName == "ArthurPlayer" || 
+                typeName == "ElenaPlayer" || typeName == "MayaPlayer" || typeName.EndsWith("Player"))
+            {
+                // Bẻ gãy toàn bộ trạng thái bất tử/né tránh của người chơi
+                
+                // 1. Tắt Q Skill Active
+                var qActiveField = type.GetField("IsQSkillActive", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                if (qActiveField != null) qActiveField.SetValue(script, false);
+                
+                var qActiveProp = type.GetProperty("IsQSkillActive", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+                if (qActiveProp != null && qActiveProp.CanWrite) qActiveProp.SetValue(script, false, null);
+
+                // 2. Tắt rolling standalone
+                var rollStandaloneField = type.GetField("isRollingStandalone", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                if (rollStandaloneField != null) rollStandaloneField.SetValue(script, false);
+
+                // 3. Tắt rolling net
+                var rollNetField = type.GetField("isRollingNet", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                if (rollNetField != null)
+                {
+                    object netVarObj = rollNetField.GetValue(script);
+                    if (netVarObj != null)
+                    {
+                        var valueProp = netVarObj.GetType().GetProperty("Value");
+                        if (valueProp != null && valueProp.CanWrite)
+                        {
+                            valueProp.SetValue(netVarObj, false);
+                        }
+                    }
+                }
+
+                // 4. Gây sát thương chết ngay
+                var takeDamageMethod = type.GetMethod("TakeDamage", new System.Type[] { typeof(float) });
+                if (takeDamageMethod != null)
+                {
+                    takeDamageMethod.Invoke(script, new object[] { 99999f });
+                }
+            }
+        }
+    }
+
+    private bool IsAnyPlayer(GameObject go, out GameObject playerRoot)
+    {
+        playerRoot = null;
+        if (go == null) return false;
+
+        var elena = go.GetComponentInParent<ElenaPlayer>();
+        if (elena != null) { playerRoot = elena.gameObject; return true; }
+
+        var arthur = go.GetComponentInParent<ArthurPlayer>();
+        if (arthur != null) { playerRoot = arthur.gameObject; return true; }
+
+        var leo = go.GetComponentInParent<LeoPlayer>();
+        if (leo != null) { playerRoot = leo.gameObject; return true; }
+
+        var maya = go.GetComponentInParent<MayaPlayer>();
+        if (maya != null) { playerRoot = maya.gameObject; return true; }
+
+        var simple = go.GetComponentInParent<SimplePlayerTest>();
+        if (simple != null) { playerRoot = simple.gameObject; return true; }
+
+        return false;
+    }
 }
