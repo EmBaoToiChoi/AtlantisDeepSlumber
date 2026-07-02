@@ -14,6 +14,7 @@ GameObject:
   - component: {fileID: 3757026998652082172}
   - component: {fileID: 4558854496615132669}
   - component: {fileID: 7623701140335971292}
+  - component: {fileID: 3393846210070696112}
   m_Layer: 0
   m_Name: hammer
   m_TagString: Untagged
@@ -82,6 +83,8 @@ MonoBehaviour:
   axisZ: 1
   startAngle: -80
   swingSpeed: 3
+  contactDamage: 40
+  damageCooldown: 1
 --- !u!54 &3757026998652082172
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -144,6 +147,27 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   highlightColor: {r: 1, g: 1, b: 1, a: 1}
   emissionIntensity: 0.6
+--- !u!135 &3393846210070696112
+SphereCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5614472667803085451}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Radius: 0.7
+  m_Center: {x: 0, y: -3.87, z: 0}
 --- !u!1 &7835534080243024604
 GameObject:
   m_ObjectHideFlags: 0

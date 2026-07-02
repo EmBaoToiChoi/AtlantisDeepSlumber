@@ -136,6 +136,42 @@ public class SpikePillarLocal : MonoBehaviour
         }
     }
 
+    private static System.Reflection.FieldInfo GetFieldInherited(System.Type type, string name, System.Reflection.BindingFlags flags)
+    {
+        System.Type currentType = type;
+        while (currentType != null)
+        {
+            System.Reflection.FieldInfo field = currentType.GetField(name, flags);
+            if (field != null) return field;
+            currentType = currentType.BaseType;
+        }
+        return null;
+    }
+
+    private static System.Reflection.PropertyInfo GetPropertyInherited(System.Type type, string name, System.Reflection.BindingFlags flags)
+    {
+        System.Type currentType = type;
+        while (currentType != null)
+        {
+            System.Reflection.PropertyInfo prop = currentType.GetProperty(name, flags);
+            if (prop != null) return prop;
+            currentType = currentType.BaseType;
+        }
+        return null;
+    }
+
+    private static System.Reflection.MethodInfo GetMethodInherited(System.Type type, string name, System.Type[] types)
+    {
+        System.Type currentType = type;
+        while (currentType != null)
+        {
+            System.Reflection.MethodInfo method = currentType.GetMethod(name, types);
+            if (method != null) return method;
+            currentType = currentType.BaseType;
+        }
+        return null;
+    }
+
     private void DealInstantDeath(GameObject playerRoot)
     {
         Debug.Log($"[SpikePillar] Chạm vào người chơi {playerRoot.name}! Phá vỡ miễn nhiễm và gây chết ngay lập tức.");
@@ -147,30 +183,30 @@ public class SpikePillarLocal : MonoBehaviour
             System.Type type = script.GetType();
             string typeName = type.Name;
 
-            if (typeName == "SimplePlayerTest" || typeName == "LeoPlayer" || typeName == "ArthurPlayer" || 
-                typeName == "ElenaPlayer" || typeName == "MayaPlayer" || typeName.EndsWith("Player"))
+            if (script is SimplePlayerTest || script is LeoPlayer || script is ArthurPlayer || 
+                script is ElenaPlayer || script is MayaPlayer || typeName.EndsWith("Player"))
             {
                 // Bẻ gãy toàn bộ trạng thái bất tử/né tránh của người chơi
                 
                 // 1. Tắt Q Skill Active
-                var qActiveField = type.GetField("IsQSkillActive", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                var qActiveField = GetFieldInherited(type, "IsQSkillActive", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
                 if (qActiveField != null) qActiveField.SetValue(script, false);
                 
-                var qActiveProp = type.GetProperty("IsQSkillActive", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+                var qActiveProp = GetPropertyInherited(type, "IsQSkillActive", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
                 if (qActiveProp != null && qActiveProp.CanWrite) qActiveProp.SetValue(script, false, null);
 
                 // 2. Tắt rolling standalone
-                var rollStandaloneField = type.GetField("isRollingStandalone", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                var rollStandaloneField = GetFieldInherited(type, "isRollingStandalone", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
                 if (rollStandaloneField != null) rollStandaloneField.SetValue(script, false);
 
                 // 3. Tắt rolling net
-                var rollNetField = type.GetField("isRollingNet", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                var rollNetField = GetFieldInherited(type, "isRollingNet", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
                 if (rollNetField != null)
                 {
                     object netVarObj = rollNetField.GetValue(script);
                     if (netVarObj != null)
                     {
-                        var valueProp = netVarObj.GetType().GetProperty("Value");
+                        var valueProp = GetPropertyInherited(netVarObj.GetType(), "Value", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
                         if (valueProp != null && valueProp.CanWrite)
                         {
                             valueProp.SetValue(netVarObj, false);
@@ -179,8 +215,8 @@ public class SpikePillarLocal : MonoBehaviour
                 }
 
                 // 4. Gây sát thương chết ngay
-                var requestDamageMethod = type.GetMethod("RequestTakeDamage", new System.Type[] { typeof(float) }) ??
-                                          type.GetMethod("TakeDamage", new System.Type[] { typeof(float) });
+                var requestDamageMethod = GetMethodInherited(type, "RequestTakeDamage", new System.Type[] { typeof(float) }) ??
+                                           GetMethodInherited(type, "TakeDamage", new System.Type[] { typeof(float) });
                 if (requestDamageMethod != null)
                 {
                     requestDamageMethod.Invoke(script, new object[] { 99999f });

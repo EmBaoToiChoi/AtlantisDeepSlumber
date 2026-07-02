@@ -3673,20 +3673,15 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
                 {
                     SetSwordRedVisuals(false);
                     SetGhostVisuals(false);
+                    PlayerHUDController hud = FindAnyObjectByType<PlayerHUDController>();
+                    if (hud != null) hud.TriggerCooldownE();
                 }
             }
         }
 
         if (anim != null && anim.isActiveAndEnabled && anim.runtimeAnimatorController != null)
         {
-            if (isExecutingAttack && IsAttackSpeedBoosted)
-            {
-                anim.speed = 1.5f;
-            }
-            else
-            {
-                anim.speed = 1.0f;
-            }
+            anim.speed = 1.0f;
         }
 
         UpdateAttackLayerWeight();
@@ -5555,7 +5550,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         if (isStandaloneMode)
         {
-            attackSpeedBoostTimeRemaining = 10f;
+            attackSpeedBoostTimeRemaining = 5f;
             SetSwordRedVisuals(true);
             SetGhostVisuals(true);
         }
@@ -5572,7 +5567,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         TriggerAttackSpeedBoostClientRpc(state);
         if (state)
         {
-            StartCoroutine(ServerAttackSpeedBoostTimerCoroutine(10f));
+            StartCoroutine(ServerAttackSpeedBoostTimerCoroutine(5f));
         }
     }
 
@@ -5596,11 +5591,16 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         SetGhostVisuals(newVal);
         if (newVal)
         {
-            attackSpeedBoostTimeRemaining = 10f;
+            attackSpeedBoostTimeRemaining = 5f;
         }
         else
         {
             attackSpeedBoostTimeRemaining = 0f;
+            if (IsOwner)
+            {
+                PlayerHUDController hud = FindAnyObjectByType<PlayerHUDController>();
+                if (hud != null) hud.TriggerCooldownE();
+            }
         }
     }
 
@@ -7080,7 +7080,6 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             else if (translatedName.Contains("Punch")) currentAttackAnimDuration = punchAnimDuration;
             else currentAttackAnimDuration = slashAnimDuration;
 
-            currentAttackAnimDuration /= (IsAttackSpeedBoosted ? 1.5f : 1.0f);
         }
         else
         {
@@ -7122,8 +7121,8 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
             if (isAttack && actualLength > 0.05f)
             {
-                currentAttackAnimDuration = actualLength / (IsAttackSpeedBoosted ? 1.5f : 1.0f);
-                Debug.Log($"[LeoPlayer] PlayAnimationLocal: '{translatedName}' dynamic duration set to {currentAttackAnimDuration}s (actual clip: {actualLength}s, speed boosted: {IsAttackSpeedBoosted})");
+                currentAttackAnimDuration = actualLength;
+                Debug.Log($"[LeoPlayer] PlayAnimationLocal: '{translatedName}' dynamic duration set to {currentAttackAnimDuration}s (actual clip: {actualLength}s)");
             }
         }
         else
