@@ -236,7 +236,9 @@ public class BalanceManager : NetworkBehaviour
 
     public IEnumerator ReturnToCenterAndLock()
     {
-        Quaternion startRot = diskRigidbody.rotation;
+        LockDisk(); // Khoá đĩa ngay để FixedUpdate không đè lại lực nghiêng
+        
+        Quaternion startRot = diskRigidbody.transform.rotation;
         float timer = 0f;
         float duration = 1f;
 
@@ -244,14 +246,13 @@ public class BalanceManager : NetworkBehaviour
         {
             timer += Time.deltaTime;
             Quaternion rot = Quaternion.Slerp(startRot, Quaternion.identity, timer / duration);
-            diskRigidbody.MoveRotation(rot);
+            diskRigidbody.transform.rotation = rot;
             if (IsServer) targetRotation.Value = rot;
             yield return null;
         }
 
-        diskRigidbody.MoveRotation(Quaternion.identity);
+        diskRigidbody.transform.rotation = Quaternion.identity;
         if (IsServer) targetRotation.Value = Quaternion.identity;
         CurrentAngle = 0;
-        LockDisk();
     }
 }

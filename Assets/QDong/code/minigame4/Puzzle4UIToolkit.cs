@@ -38,6 +38,9 @@ public class Puzzle4UIToolkit : MonoBehaviour
 
         [Tooltip("Image nền chung phía sau label & percent text")]
         public Image bgImage;
+
+        [Tooltip("Image nền riêng phía sau chữ A / B / C — để trang trí, có thể dùng sprite đẹp")]
+        public Image labelBgImage;
         
         [Tooltip("Icon checkmark ✓, ẩn khi chưa xong, hiện khi hoàn thành")]
         public GameObject completedCheckmark;
@@ -195,6 +198,15 @@ public class Puzzle4UIToolkit : MonoBehaviour
             ui.bgImage.color = initBg;
             ui.bgImage.enabled = true; // Đảm bảo component không bị disable
         }
+        // Khởi tạo labelBgImage — nền phía sau chữ A/B/C
+        if (ui.labelBgImage != null)
+        {
+            Color initLabelBg = ui.colorEmpty;
+            initLabelBg.a = bgAlpha + 0.2f; // Đậm hơn bgImage một chút để nổi bật chữ
+            ui.labelBgImage.color = initLabelBg;
+            ui.labelBgImage.enabled = true;
+            ui.labelBgImage.transform.localScale = Vector3.one;
+        }
         if (ui.completedCheckmark != null) ui.completedCheckmark.SetActive(false);
         ui.glowPhase = Random.Range(0f, Mathf.PI * 2f); // lệch phase để không đồng bộ
     }
@@ -249,6 +261,23 @@ public class Puzzle4UIToolkit : MonoBehaviour
         {
             ui.bgImage.enabled = true;
             ui.bgImage.color = Color.Lerp(ui.bgImage.color, bgColor, Time.deltaTime * lerpSpeed);
+        }
+
+        // ── Label Background Image (nền phía sau chữ A/B/C) ──
+        if (ui.labelBgImage != null)
+        {
+            Color labelBgColor = targetColor;
+            labelBgColor.a = Mathf.Clamp01(bgAlpha + 0.2f);
+            ui.labelBgImage.enabled = true;
+            ui.labelBgImage.color = Color.Lerp(ui.labelBgImage.color, labelBgColor, Time.deltaTime * lerpSpeed);
+
+            // Hiệu ứng scale nhẹ theo glow phase (đập nhịp cùng vòng tròn)
+            float scaleWave = 1f + 0.06f * Mathf.Sin(ui.glowPhase * 1.2f);
+            ui.labelBgImage.transform.localScale = Vector3.Lerp(
+                ui.labelBgImage.transform.localScale,
+                Vector3.one * scaleWave,
+                Time.deltaTime * 4f
+            );
         }
 
         // ── Completed checkmark ──
