@@ -57,22 +57,85 @@ public class Puzzle4Manager : NetworkBehaviour
             sharedCamera.SetActive(isActive);
         }
 
-        // Khi tắt camera minigame, đảm bảo Camera.main của player được bật lại
-        if (!isActive)
+        // Tự động tìm Player và vô hiệu hóa xoay camera thông qua Reflection để không chạm vào code gốc
+        MonoBehaviour localPlayerScript = null;
+        var allMonos = FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None);
+        foreach (var mono in allMonos)
         {
+            if (mono is IPlayerHUDTarget player && player.IsOwner)
+            {
+                localPlayerScript = mono;
+                break;
+            }
+        }
+
+        if (localPlayerScript != null)
+        {
+            System.Type type = localPlayerScript.GetType();
+            
+            // Khóa/Mở khóa xoay camera (chuột)
+            var enableCamField = type.GetField("enableCameraFollow", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+            if (enableCamField != null)
+            {
+                enableCamField.SetValue(localPlayerScript, !isActive);
+            }
+
+            // Gán lại camera mục tiêu để WASD di chuyển chuẩn xác theo góc nhìn
+            var targetCamField = type.GetField("targetCamera", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            if (targetCamField != null)
+            {
+                if (isActive && sharedCamera != null)
+                {
+                    targetCamField.SetValue(localPlayerScript, sharedCamera.GetComponent<Camera>());
+                }
+                else
+                {
+                    // Trả về Camera.main hoặc null để tự tìm
+                    targetCamField.SetValue(localPlayerScript, null);
+                }
+            }
+        }
+
+        if (isActive)
+        {
+            Camera mainCam = Camera.main;
+            if (mainCam != null)
+            {
+                mainCam.gameObject.SetActive(false);
+            }
+        }
+        else
+        {
+            // Khi tắt camera minigame, đảm bảo Camera.main của player được bật lại
             Camera mainCam = Camera.main;
             if (mainCam != null && !mainCam.gameObject.activeSelf)
             {
                 mainCam.gameObject.SetActive(true);
                 Debug.Log("[Puzzle4] Đã bật lại Camera.main: " + mainCam.gameObject.name);
             }
-            else if (mainCam != null)
+            else if (mainCam == null)
             {
-                Debug.Log("[Puzzle4] Camera.main đang active: " + mainCam.gameObject.name + " | Depth: " + mainCam.depth);
+                // Nếu Camera.main trả về null do đã bị tắt, tìm thủ công tất cả Camera
+                Camera[] allCams = FindObjectsByType<Camera>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+                foreach (Camera cam in allCams)
+                {
+                    if (cam.CompareTag("MainCamera") && cam.gameObject != sharedCamera)
+                    {
+                        cam.gameObject.SetActive(true);
+                        Debug.Log("[Puzzle4] Đã tìm và bật lại MainCamera: " + cam.gameObject.name);
+                        
+                        if (localPlayerScript != null)
+                        {
+                            var targetCamField = localPlayerScript.GetType().GetField("targetCamera", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                            if (targetCamField != null) targetCamField.SetValue(localPlayerScript, cam);
+                        }
+                        break;
+                    }
+                }
             }
             else
             {
-                Debug.LogWarning("[Puzzle4] Không tìm thấy Camera.main!");
+                Debug.Log("[Puzzle4] Camera.main đang active: " + mainCam.gameObject.name + " | Depth: " + mainCam.depth);
             }
 
             if (sharedCamera != null)

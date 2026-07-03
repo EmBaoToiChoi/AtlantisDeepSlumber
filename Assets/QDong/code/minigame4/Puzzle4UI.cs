@@ -1,5 +1,6 @@
 using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 using Unity.Netcode;
 
 public class Puzzle4UI : NetworkBehaviour
@@ -13,6 +14,11 @@ public class Puzzle4UI : NetworkBehaviour
     public TMP_Text bText;
     public TMP_Text cText;
     public TMP_Text dText;
+
+    [Header("Background Images")]
+    public Image aBg;   // kéo image nền cột A vào đây
+    public Image bBg;   // kéo image nền cột B vào đây
+    public Image cBg;   // kéo image nền cột C vào đây
 
     // Các biến dùng để làm mượt số hiển thị (Lerp) thay vì nhảy số tức thì
     private float displayValueA = 0f;
@@ -30,9 +36,9 @@ public class Puzzle4UI : NetworkBehaviour
 
     [Header("Color Gradient")]
     // Đổi màu Đỏ (0%) -> Vàng (50%) -> Xanh lá (100%)
-    public Color color0 = new Color(1f, 0.3f, 0.3f);     // Đỏ nhạt cho dễ nhìn
-    public Color color50 = new Color(1f, 0.8f, 0.2f);    // Vàng cam
-    public Color color100 = new Color(0.3f, 1f, 0.4f);   // Xanh lá sáng
+    public Color color0   = new Color(1f, 0.3f, 0.3f);
+    public Color color50  = new Color(1f, 0.8f, 0.2f);
+    public Color color100 = new Color(0.3f, 1f, 0.4f);
 
     void Start()
     {
@@ -59,15 +65,11 @@ public class Puzzle4UI : NetworkBehaviour
         if (Mathf.Abs(displayValue - targetValue) > 0.1f)
         {
             displayValue = Mathf.Lerp(displayValue, targetValue, Time.deltaTime * lerpSpeed);
-            
-            // Pop effect: Phình to lên khi giá trị đang tăng
             textMesh.transform.localScale = Vector3.Lerp(textMesh.transform.localScale, baseScale * popScaleMultiplier, Time.deltaTime * popSpeed);
         }
         else
         {
             displayValue = targetValue;
-            
-            // Trả scale về kích thước bình thường
             textMesh.transform.localScale = Vector3.Lerp(textMesh.transform.localScale, baseScale, Time.deltaTime * popSpeed);
         }
 
@@ -75,18 +77,11 @@ public class Puzzle4UI : NetworkBehaviour
         int intValue = Mathf.RoundToInt(displayValue);
         textMesh.text = $"{prefix} : {intValue}%";
 
-        // 2. ĐỔI MÀU SẮC ĐỘNG THEO % (Đỏ -> Vàng -> Xanh lá)
+        // 2. ĐỔI MÀU TEXT THEO % (Đỏ -> Vàng -> Xanh lá)
         float pct = Mathf.Clamp01(displayValue / maxCharge);
-        
         if (pct < 0.5f)
-        {
-            // Từ 0% -> 50%
             textMesh.color = Color.Lerp(color0, color50, pct * 2f);
-        }
         else
-        {
-            // Từ 50% -> 100%
             textMesh.color = Color.Lerp(color50, color100, (pct - 0.5f) * 2f);
-        }
     }
 }
