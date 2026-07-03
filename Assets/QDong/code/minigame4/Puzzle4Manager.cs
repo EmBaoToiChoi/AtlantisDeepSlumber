@@ -161,10 +161,9 @@ public class Puzzle4Manager : NetworkBehaviour
             }
         }
         
-        // Nếu mảng rỗng HOẶC mảng có phần tử nhưng toàn null (bị mất tham chiếu)
-        if (!uiFound)
-        {
-            Debug.Log("[Puzzle4Manager] Không có UI hợp lệ trong mảng minigameUIs, chuyển sang tìm tự động...");
+        // Không dùng if (!uiFound) nữa, luôn luôn tìm và cập nhật UI bằng code
+        // để đề phòng trường hợp mảng minigameUIs có phần tử nhưng không chứa UI Toolkit.
+        Debug.Log("[Puzzle4Manager] Tìm tự động các UI script...");
             
             Puzzle4UIToolkit tkUI = FindAnyObjectByType<Puzzle4UIToolkit>(FindObjectsInactive.Include);
             if (tkUI != null)
@@ -181,12 +180,11 @@ public class Puzzle4Manager : NetworkBehaviour
                 Debug.Log("[Puzzle4Manager] Đã tự động tìm và cập nhật BalanceMeterUI.");
             }
 
-            Puzzle4UI p4UI = FindAnyObjectByType<Puzzle4UI>(FindObjectsInactive.Include);
-            if (p4UI != null) 
-            {
-                p4UI.gameObject.SetActive(show);
-                Debug.Log("[Puzzle4Manager] Đã tự động tìm và cập nhật Puzzle4UI.");
-            }
+        Puzzle4UI p4UI = FindAnyObjectByType<Puzzle4UI>(FindObjectsInactive.Include);
+        if (p4UI != null) 
+        {
+            p4UI.gameObject.SetActive(show);
+            Debug.Log("[Puzzle4Manager] Đã tự động tìm và cập nhật Puzzle4UI.");
         }
     }
 
@@ -214,6 +212,23 @@ public class Puzzle4Manager : NetworkBehaviour
         yield return new WaitForSeconds(delay);
         Debug.Log("[Puzzle4Manager] Đã hết thời gian chờ Timeline, bắt đầu kích hoạt Minigame!");
         StartMinigameFromTeleport();
+    }
+
+    [ClientRpc]
+    public void ToggleUIClientRpc(bool show)
+    {
+        UpdateUIState(show);
+    }
+
+    IEnumerator DelayedStartMinigameUI()
+    {
+        yield return new WaitForSeconds(4.5f);
+        
+        Debug.Log("[Puzzle4Manager] Bật UI minigame 4 trên các Client thông qua ClientRpc");
+        ToggleUIClientRpc(true);
+        
+        isStartingUI = false;
+        isMinigameStarted.Value = true;
     }
 
     public void StartMinigameFromTeleport()
@@ -344,11 +359,6 @@ public class Puzzle4Manager : NetworkBehaviour
         }
     }
 
-    IEnumerator DelayedStartMinigameUI()
-    {
-        yield return null; // Hiển thị liền luôn
-        isMinigameStarted.Value = true;
-    }
 
 
 
