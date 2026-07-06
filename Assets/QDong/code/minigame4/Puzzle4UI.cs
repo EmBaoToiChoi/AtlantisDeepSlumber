@@ -50,13 +50,13 @@ public class Puzzle4UI : NetworkBehaviour
 
     void Update()
     {
-        if (A != null && aText != null) UpdateUIColumn(A, aText, ref displayValueA, "A");
-        if (B != null && bText != null) UpdateUIColumn(B, bText, ref displayValueB, "B");
-        if (C != null && cText != null) UpdateUIColumn(C, cText, ref displayValueC, "C");
-        if (D != null && dText != null) UpdateUIColumn(D, dText, ref displayValueD, "D");
+        if (A != null && aText != null) UpdateUIColumn(A, aText, aBg, ref displayValueA, "A");
+        if (B != null && bText != null) UpdateUIColumn(B, bText, bBg, ref displayValueB, "B");
+        if (C != null && cText != null) UpdateUIColumn(C, cText, cBg, ref displayValueC, "C");
+        if (D != null && dText != null) UpdateUIColumn(D, dText, null, ref displayValueD, "D");
     }
 
-    private void UpdateUIColumn(EnergyColumn column, TMP_Text textMesh, ref float displayValue, string prefix)
+    private void UpdateUIColumn(EnergyColumn column, TMP_Text textMesh, Image bgImage, ref float displayValue, string prefix)
     {
         float targetValue = column.charge.Value;
         float maxCharge = column.maxCharge > 0 ? column.maxCharge : 100f;
@@ -83,5 +83,11 @@ public class Puzzle4UI : NetworkBehaviour
             textMesh.color = Color.Lerp(color0, color50, pct * 2f);
         else
             textMesh.color = Color.Lerp(color50, color100, (pct - 0.5f) * 2f);
+
+        // 3. ĐẢM BẢO HÌNH NỀN KHÔNG BỊ ĐỔI MÀU (GIỮ ẢNH GỐC)
+        if (bgImage != null)
+        {
+            bgImage.color = Color.white;
+        }
     }
 }
