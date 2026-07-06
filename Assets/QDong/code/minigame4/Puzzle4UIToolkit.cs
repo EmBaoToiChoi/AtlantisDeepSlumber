@@ -190,10 +190,10 @@ public class Puzzle4UIToolkit : MonoBehaviour
             ui.percentText.text  = "0%";
             ui.percentText.color = ui.colorEmpty;
         }
-        // Khởi tạo bgImage với màu rõ ràng ngay từ đầu
+        // Khởi tạo bgImage với màu trắng (giữ nguyên màu ảnh gốc) và áp dụng alpha
         if (ui.bgImage != null)
         {
-            Color initBg = ui.colorEmpty;
+            Color initBg = Color.white;
             initBg.a = bgAlpha;
             ui.bgImage.color = initBg;
             ui.bgImage.enabled = true; // Đảm bảo component không bị disable
@@ -201,7 +201,7 @@ public class Puzzle4UIToolkit : MonoBehaviour
         // Khởi tạo labelBgImage — nền phía sau chữ A/B/C
         if (ui.labelBgImage != null)
         {
-            Color initLabelBg = ui.colorEmpty;
+            Color initLabelBg = Color.white;
             initLabelBg.a = bgAlpha + 0.2f; // Đậm hơn bgImage một chút để nổi bật chữ
             ui.labelBgImage.color = initLabelBg;
             ui.labelBgImage.enabled = true;
@@ -255,21 +255,22 @@ public class Puzzle4UIToolkit : MonoBehaviour
         }
 
         // ── Background Image nền chung ──
-        Color bgColor = targetColor;
-        bgColor.a = bgAlpha;
+        // Giữ nguyên ảnh gốc (Color.white) để không bị đổi thành màu đơn sắc, chỉ thay đổi độ đục (alpha)
         if (ui.bgImage != null)
         {
             ui.bgImage.enabled = true;
-            ui.bgImage.color = Color.Lerp(ui.bgImage.color, bgColor, Time.deltaTime * lerpSpeed);
+            Color currentBg = ui.bgImage.color;
+            Color targetBg = new Color(1f, 1f, 1f, bgAlpha);
+            ui.bgImage.color = Color.Lerp(currentBg, targetBg, Time.deltaTime * lerpSpeed);
         }
 
         // ── Label Background Image (nền phía sau chữ A/B/C) ──
         if (ui.labelBgImage != null)
         {
-            Color labelBgColor = targetColor;
-            labelBgColor.a = Mathf.Clamp01(bgAlpha + 0.2f);
             ui.labelBgImage.enabled = true;
-            ui.labelBgImage.color = Color.Lerp(ui.labelBgImage.color, labelBgColor, Time.deltaTime * lerpSpeed);
+            Color currentLabelBg = ui.labelBgImage.color;
+            Color targetLabelBg = new Color(1f, 1f, 1f, Mathf.Clamp01(bgAlpha + 0.2f));
+            ui.labelBgImage.color = Color.Lerp(currentLabelBg, targetLabelBg, Time.deltaTime * lerpSpeed);
 
             // Hiệu ứng scale nhẹ theo glow phase (đập nhịp cùng vòng tròn)
             float scaleWave = 1f + 0.06f * Mathf.Sin(ui.glowPhase * 1.2f);
