@@ -72,15 +72,15 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: -8679921383154817045, guid: 0f23067026bf65c4fb196b7802330f3e, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -104.592514
+      value: -103.45623
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 0f23067026bf65c4fb196b7802330f3e, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 9.789425
+      value: 9.805387
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 0f23067026bf65c4fb196b7802330f3e, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 11.476526
+      value: 10.1342535
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 0f23067026bf65c4fb196b7802330f3e, type: 3}
       propertyPath: m_LocalRotation.w
@@ -133,9 +133,6 @@ PrefabInstance:
       addedObject: {fileID: 240463645759654258}
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 0f23067026bf65c4fb196b7802330f3e, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 2106042421080869604}
-    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 0f23067026bf65c4fb196b7802330f3e, type: 3}
-      insertIndex: -1
       addedObject: {fileID: 7412087195167648988}
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 0f23067026bf65c4fb196b7802330f3e, type: 3}
       insertIndex: -1
@@ -145,7 +142,7 @@ PrefabInstance:
       addedObject: {fileID: 2050928385180241433}
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 0f23067026bf65c4fb196b7802330f3e, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 2656800874558482323}
+      addedObject: {fileID: 6707308714961644006}
   m_SourcePrefab: {fileID: 100100000, guid: 0f23067026bf65c4fb196b7802330f3e, type: 3}
 --- !u!1 &3227918615114643028 stripped
 GameObject:
@@ -164,7 +161,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  GlobalObjectIdHash: 2106948915
+  GlobalObjectIdHash: 1213612559
   InScenePlacedSourceGlobalObjectIdHash: 870471847
   DeferredDespawnTick: 0
   Ownership: 1
@@ -204,25 +201,6 @@ Rigidbody:
   m_Interpolate: 0
   m_Constraints: 0
   m_CollisionDetection: 0
---- !u!114 &2106042421080869604
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3227918615114643028}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 19102, guid: 0000000000000000e000000000000000, type: 0}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  m_PanelSettings: {fileID: 11400000, guid: 3370b6d680e984947801a4769e5e4d29, type: 2}
-  m_ParentUI: {fileID: 0}
-  sourceAsset: {fileID: 9197481963319205126, guid: 01465d287fa87fd459c2dd381cb4fa53, type: 3}
-  m_SortingOrder: 0
-  m_WorldSpaceSizeMode: 1
-  m_WorldSpaceWidth: 1920
-  m_WorldSpaceHeight: 1080
 --- !u!114 &7412087195167648988
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -341,7 +319,7 @@ MonoBehaviour:
   kickTrigger: Da
   hitTrigger: AnHit
   dieTrigger: Die
---- !u!114 &2656800874558482323
+--- !u!114 &6707308714961644006
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -350,11 +328,43 @@ MonoBehaviour:
   m_GameObject: {fileID: 3227918615114643028}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1505a5d2b3a3cba40aa2a627f49f919f, type: 3}
+  m_Script: {fileID: 11500000, guid: e96cb6065543e43c4a752faaa1468eb1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  boss: {fileID: 2050928385180241433}
-  uiDocument: {fileID: 2106042421080869604}
+  ShowTopMostFoldoutHeaderGroup: 1
+  NetworkTransformExpanded: 0
+  AutoOwnerAuthorityTickOffset: 1
+  PositionInterpolationType: 0
+  RotationInterpolationType: 0
+  ScaleInterpolationType: 0
+  PositionLerpSmoothing: 1
+  PositionMaxInterpolationTime: 0.1
+  RotationLerpSmoothing: 1
+  RotationMaxInterpolationTime: 0.1
+  ScaleLerpSmoothing: 1
+  ScaleMaxInterpolationTime: 0.1
+  AuthorityMode: 1
+  TickSyncChildren: 0
+  UseUnreliableDeltas: 0
+  SyncPositionX: 1
+  SyncPositionY: 1
+  SyncPositionZ: 1
+  SyncRotAngleX: 1
+  SyncRotAngleY: 1
+  SyncRotAngleZ: 1
+  SyncScaleX: 1
+  SyncScaleY: 1
+  SyncScaleZ: 1
+  PositionThreshold: 0.001
+  RotAngleThreshold: 0.01
+  ScaleThreshold: 0.01
+  UseQuaternionSynchronization: 0
+  UseQuaternionCompression: 0
+  UseHalfFloatPrecision: 0
+  InLocalSpace: 0
+  SwitchTransformSpaceWhenParented: 0
+  Interpolate: 1
+  SlerpPosition: 0
 --- !u!4 &5850156809102003619 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -1070350730909333850, guid: 0f23067026bf65c4fb196b7802330f3e, type: 3}
