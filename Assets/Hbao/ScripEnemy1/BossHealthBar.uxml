@@ -1,0 +1,21 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
+    <Style src="project://database/Assets/Hbao/ScripEnemy1/BossHealthBar.uss?fileID=7433441132597879392&amp;guid=9530403e05a8f4c409cf93c048b11111&amp;type=3#BossHealthBar" />
+    <ui:VisualElement name="boss-hud-container" class="boss-hud-container">
+        <!-- Khung avatar Boss ở bên trái -->
+        <ui:VisualElement name="boss-avatar-frame" class="boss-avatar-frame">
+            <ui:VisualElement name="boss-avatar" class="boss-avatar" />
+        </ui:VisualElement>
+        
+        <!-- Cụm tên và thanh máu ở bên phải -->
+        <ui:VisualElement name="boss-hp-wrapper" class="boss-hp-wrapper">
+            <ui:Label name="boss-name" text="BOSS" class="boss-name" />
+            <ui:VisualElement name="boss-health-bar-container" class="boss-health-bar-container">
+                <ui:VisualElement name="boss-hp-background" class="boss-hp-background">
+                    <ui:VisualElement name="boss-hp-yellow-bar" class="boss-hp-yellow-bar" />
+                    <ui:VisualElement name="boss-hp-progress-bar" class="boss-hp-progress-bar" />
+                    <ui:Label name="boss-hp-text" text="1000 / 1000" class="boss-hp-text" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>
