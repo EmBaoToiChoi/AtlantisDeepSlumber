@@ -6,16 +6,21 @@ using UnityEngine.AI;
 
 /// <summary>
 /// Boss AI Script sử dụng kĩ thuật FSM (Finite State Machine).
-/// Có các trạng thái: Idle (DILE / Tự động đi tuần), Chase (Run / Đuổi theo), Attack (attackbth / Chém thường), Kick (Da / Đá văng), Hit (anhit / Choáng), Dead.
+/// Có các trạng thái: Idle (DILE / Tự động đi tuần), Chase (Run / Đuổi theo), Attack (attackbth / Chém thường), Kick (Da / Đá văng), Hit (anhit / Choáng), Enrage (Gồng cuồng nộ), Dead.
 /// Tối ưu hóa chuyển động: 
 ///   - Khi đứng yên (Idle) sẽ tự động đi dạo xung quanh (Walk animation, Speed = 0.5f).
 ///   - Khi cận chiến đang hồi chiêu (Cooldown), Boss sẽ tự động đi vòng quanh di chuyển liên tục (Strafe/Orbit) xung quanh player để tạo thế trận thông minh.
 ///   - Có khả năng né đòn (Dodge) phản xạ nhanh khi bị nhận sát thương.
+/// Cơ chế Phase 2 (Gồng cuồng nộ):
+///   - Khi hết 100% máu lần đầu, Boss chuyển sang trạng thái Enrage (gồng nộ), bất tử trong lúc gồng nộ.
+///   - Máu hồi lại 100% theo lượng máu của Phase 2 (tự động cập nhật thanh máu UI).
+///   - Tăng tốc độ di chuyển, tăng sát thương và toàn bộ tốc độ đánh hoạt ảnh (anim.speed) nhanh hơn.
+///   - Kích hoạt thêm combo chém mới: hoạt ảnh "attack2" (50% tỉ lệ chém combo này trong Phase 2).
 /// Hỗ trợ cả chế độ mạng (Netcode) và offline (Standalone).
 /// </summary>
 public class BossAI : NetworkBehaviour
 {
-    public enum BossState { Idle, Chase, Attack, Kick, Hit, Dead }
+    public enum BossState { Idle, Chase, Attack, Kick, Hit, Enrage, Dead }
 
     // ─── Máu Boss ──────────────────────────────────────────────
     [Header("Health")]
@@ -23,10 +28,28 @@ public class BossAI : NetworkBehaviour
     public NetworkVariable<float> currentHealth = new NetworkVariable<float>(
         1000f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
+    // ─── Thiết lập Phase 2 ─────────────────────────────────────
+    [Header("Phase 2 Settings (Enrage)")]
+    [Tooltip("Lượng máu tối đa của Boss ở Phase 2 (có thể tùy chỉnh)")]
+    public float phase2MaxHealth = 1500f;
+    [Tooltip("Hệ số nhân sát thương ở Phase 2")]
+    public float phase2DamageMultiplier = 1.3f;
+    [Tooltip("Hệ số nhân tốc độ di chuyển ở Phase 2")]
+    public float phase2SpeedMultiplier = 1.25f;
+    [Tooltip("Tốc độ hoạt ảnh Animator của Boss ở Phase 2 (giúp đánh nhanh hơn toàn bộ)")]
+    public float phase2AnimSpeed = 1.4f;
+    [Tooltip("Thời gian gồng nộ cuồng nộ (giây)")]
+    public float enrageDuration = 3f;
+    [Tooltip("Hiệu ứng kỹ xảo (VFX) khi Boss gồng nộ")]
+    public GameObject enrageVFXPrefab;
+    public Transform enrageVFXSpawnPoint;
+
     // ─── Đồng bộ trạng thái FSM qua mạng ───────────────────────
     [Header("Network State Sync")]
     public NetworkVariable<BossState> currentState = new NetworkVariable<BossState>(
         BossState.Idle, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+    public NetworkVariable<bool> isPhase2Network = new NetworkVariable<bool>(
+        false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
     // ─── Đồng bộ hoạt ảnh Animator qua mạng ─────────────────────
     [Header("Network Anim Sync")]
@@ -36,12 +59,18 @@ public class BossAI : NetworkBehaviour
         0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     public NetworkVariable<int> attackCounter = new NetworkVariable<int>(
         0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+    public NetworkVariable<int> attack2Counter = new NetworkVariable<int>(
+        0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     public NetworkVariable<int> kickCounter = new NetworkVariable<int>(
+        0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+    public NetworkVariable<int> enrageCounter = new NetworkVariable<int>(
         0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
     // ─── Biến Fallback dùng khi chạy Offline/Editor ──────────────
     private float localHealth;
     private BossState localState = BossState.Idle;
+    private bool localIsPhase2 = false;
+    private bool hasEnraged = false; // Tránh gồng nộ nhiều lần
     private bool isStandaloneMode;
     private bool IsNetworkActive => NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
 
@@ -57,10 +86,11 @@ public class BossAI : NetworkBehaviour
         set { if (isStandaloneMode) localHealth = value; else currentHealth.Value = value; }
     }
 
+    public bool IsPhase2 => isStandaloneMode ? localIsPhase2 : isPhase2Network.Value;
+    public bool IsDead => CurrentStateValue == BossState.Dead;
+
     /// <summary>HP hiện tại đúng trong cả Standalone lẫn Network mode — dùng cho HP bar polling.</summary>
     public float ActualCurrentHealth => isStandaloneMode ? localHealth : currentHealth.Value;
-
-    public bool IsDead => CurrentStateValue == BossState.Dead;
 
     // ─── Thành phần chính (Components) ─────────────────────────
     [Header("Components")]
@@ -106,6 +136,10 @@ public class BossAI : NetworkBehaviour
     public float attackCooldown = 2.5f;
     private float attackCooldownTimer;
 
+    [Header("Weapon Settings 2 (Attack2 Combo)")]
+    [Tooltip("Thời gian hoạt ảnh chém combo 2")]
+    public float attack2Duration = 1.6f;
+
     // ─── Các Layer va chạm ─────────────────────────────────────
     [Header("Layers")]
     public LayerMask playerLayer;
@@ -114,9 +148,11 @@ public class BossAI : NetworkBehaviour
     // ─── Tên Tham Số trong Animator ──────────────────────────────
     [Header("Animator Parameter Names")]
     public string speedParam = "Speed";       // Float: 0 = DILE, 0.5 = Walk, 1 = Run
-    public string attackTrigger = "AttackBth"; // Trigger: sang attackbth
+    public string attackTrigger = "AttackBth"; // Trigger: sang attackbth (chém combo 1)
+    public string attack2Trigger = "Attack2";  // Trigger: sang attack2 (chém combo 2)
     public string kickTrigger = "Da";          // Trigger: sang Da
     public string hitTrigger = "AnHit";        // Trigger: sang anhit
+    public string enrageTrigger = "Enrage";    // Trigger: sang gồng nộ cuồng nộ
     public string dieTrigger = "Die";          // Trigger: sang Die (nếu có)
 
     // ─── Quản lý các trạng thái FSM ────────────────────────────
@@ -126,6 +162,7 @@ public class BossAI : NetworkBehaviour
     private AttackState attackState;
     private KickState kickState;
     private HitState hitState;
+    private EnrageState enrageState;
     private DeadState deadState;
 
     private Transform targetPlayer;
@@ -179,6 +216,7 @@ public class BossAI : NetworkBehaviour
         attackState = new AttackState(this);
         kickState = new KickState(this);
         hitState = new HitState(this);
+        enrageState = new EnrageState(this);
         deadState = new DeadState(this);
     }
 
@@ -215,8 +253,21 @@ public class BossAI : NetworkBehaviour
         netSpeed.OnValueChanged += (_, v) => ApplySpeedAnim(v);
         hitCounter.OnValueChanged += (_, _) => { if (anim != null) anim.SetTrigger(hitTrigger); };
         attackCounter.OnValueChanged += (_, _) => { if (anim != null) anim.SetTrigger(attackTrigger); };
+        attack2Counter.OnValueChanged += (_, _) => { if (anim != null) anim.SetTrigger(attack2Trigger); };
         kickCounter.OnValueChanged += (_, _) => { if (anim != null) anim.SetTrigger(kickTrigger); };
+        enrageCounter.OnValueChanged += (_, _) => { if (anim != null) anim.SetTrigger(enrageTrigger); };
         currentHealth.OnValueChanged += OnHealthNetChanged;
+
+        // Lắng nghe sự kiện gồng nộ đồng bộ hóa của Client
+        isPhase2Network.OnValueChanged += (oldVal, newVal) =>
+        {
+            if (newVal)
+            {
+                maxHealth = phase2MaxHealth;
+                if (anim != null) anim.speed = phase2AnimSpeed;
+                Debug.Log("[BossAI Client] Đã đồng bộ sang Phase 2 (Cuồng Nộ)!");
+            }
+        };
 
         ApplySpeedAnim(netSpeed.Value);
 
@@ -237,7 +288,9 @@ public class BossAI : NetworkBehaviour
         netSpeed.OnValueChanged -= (_, v) => ApplySpeedAnim(v);
         hitCounter.OnValueChanged -= (_, _) => { if (anim != null) anim.SetTrigger(hitTrigger); };
         attackCounter.OnValueChanged -= (_, _) => { if (anim != null) anim.SetTrigger(attackTrigger); };
+        attack2Counter.OnValueChanged -= (_, _) => { if (anim != null) anim.SetTrigger(attack2Trigger); };
         kickCounter.OnValueChanged -= (_, _) => { if (anim != null) anim.SetTrigger(kickTrigger); };
+        enrageCounter.OnValueChanged -= (_, _) => { if (anim != null) anim.SetTrigger(enrageTrigger); };
         currentHealth.OnValueChanged -= OnHealthNetChanged;
     }
 
@@ -268,7 +321,10 @@ public class BossAI : NetworkBehaviour
             if (dodgeTimer <= 0)
             {
                 isDodging = false;
-                if (AgentReady) agent.speed = chaseRunSpeed;
+                if (AgentReady)
+                {
+                    agent.speed = IsPhase2 ? (chaseRunSpeed * phase2SpeedMultiplier) : chaseRunSpeed;
+                }
             }
         }
 
@@ -431,7 +487,7 @@ public class BossAI : NetworkBehaviour
             if (AgentReady)
             {
                 agent.isStopped = false;
-                agent.speed = chaseRunSpeed;
+                agent.speed = IsPhase2 ? (chaseRunSpeed * phase2SpeedMultiplier) : chaseRunSpeed;
                 agent.SetDestination(targetPlayer.position);
             }
             SetSpeedNet(AgentReady && !agent.isStopped ? 1f : 0f);
@@ -453,14 +509,16 @@ public class BossAI : NetworkBehaviour
         stateTimer -= Time.deltaTime;
 
         // Xoay mặt hướng về player ở nửa đầu của hoạt ảnh vung tay để canh chém chính xác hướng
-        if (targetPlayer != null && stateTimer > attackDuration * 0.5f)
+        if (targetPlayer != null && stateTimer > (IsPhase2 ? attack2Duration : attackDuration) * 0.5f)
         {
             RotateTowards(targetPlayer.position);
         }
 
         if (stateTimer <= 0)
         {
-            attackCooldownTimer = attackCooldown;
+            // Cooldown ở Phase 2 nhanh hơn (giảm thời gian hồi chiêu)
+            attackCooldownTimer = IsPhase2 ? (attackCooldown * 0.65f) : attackCooldown;
+
             if (targetPlayer != null) ChangeState(BossState.Chase);
             else ChangeState(BossState.Idle);
         }
@@ -481,7 +539,8 @@ public class BossAI : NetworkBehaviour
 
         if (stateTimer <= 0)
         {
-            kickCooldownTimer = kickCooldown;
+            kickCooldownTimer = IsPhase2 ? (kickCooldown * 0.65f) : kickCooldown;
+
             if (targetPlayer != null) ChangeState(BossState.Chase);
             else ChangeState(BossState.Idle);
         }
@@ -603,12 +662,13 @@ public class BossAI : NetworkBehaviour
         if (!auth || hasDealtAttackDamage) return;
         hasDealtAttackDamage = true;
 
-        DealSwordDamage();
+        DealSwordDamage1();
     }
 
-    private void DealSwordDamage()
+    private void DealSwordDamage1()
     {
         HashSet<Transform> hitPlayers = new HashSet<Transform>();
+        float finalDamage = IsPhase2 ? (attackDamage * phase2DamageMultiplier) : attackDamage;
 
         // 1. Quét tia Raycast/SphereCast từ gốc kiếm (swordBase) đến đỉnh kiếm (swordTip) để lấy chính xác đường kiếm đi qua
         if (swordBase != null && swordTip != null)
@@ -659,8 +719,78 @@ public class BossAI : NetworkBehaviour
             knockbackDir = knockbackDir.normalized;
             Vector3 knockbackForceVector = knockbackDir * attackKnockbackForce;
 
-            EnemyDamageHelper.DealDamage(p, attackDamage, knockbackForceVector);
-            Debug.Log($"[BossAI] Kiếm chém trúng player: {p.name}, gây {attackDamage} sát thương.");
+            EnemyDamageHelper.DealDamage(p, finalDamage, knockbackForceVector);
+            Debug.Log($"[BossAI] Kiếm chém thường trúng player: {p.name}, gây {finalDamage} sát thương.");
+        }
+    }
+
+    /// <summary>
+    /// Kích hoạt sát thương cho đòn chém Combo 2 (đặt trong Animation Event: OnSwordSwing2).
+    /// </summary>
+    public void OnSwordSwing2()
+    {
+        bool auth = isStandaloneMode || (IsNetworkActive && IsServer);
+        if (!auth || hasDealtAttackDamage) return;
+        hasDealtAttackDamage = true;
+
+        DealSwordDamage2();
+    }
+
+    private void DealSwordDamage2()
+    {
+        HashSet<Transform> hitPlayers = new HashSet<Transform>();
+        float finalDamage = attackDamage * phase2DamageMultiplier * 1.2f; // Đòn chém combo 2 mạnh hơn nữa!
+        float finalKnockback = attackKnockbackForce * 1.5f;
+
+        if (swordBase != null && swordTip != null)
+        {
+            Vector3 start = swordBase.position;
+            Vector3 end = swordTip.position;
+            Vector3 dir = (end - start).normalized;
+            float dist = Vector3.Distance(start, end);
+
+            // Quét tia chém rộng hơn một chút cho combo 2
+            RaycastHit[] hits = Physics.SphereCastAll(start, swordThickness * 1.25f, dir, dist, playerLayer);
+            foreach (var hit in hits)
+            {
+                Transform pTrans = hit.collider.transform;
+                Transform root = GetPlayerRoot(pTrans);
+                if (root != null && !hitPlayers.Contains(root))
+                {
+                    hitPlayers.Add(root);
+                    if (hitPlayers.Count >= 4) break;
+                }
+            }
+        }
+        else
+        {
+            int num = Physics.OverlapSphereNonAlloc(transform.position + transform.forward * (attackRange / 2f), attackRange + 0.6f, hitResults, playerLayer);
+            for (int i = 0; i < num; i++)
+            {
+                if (hitResults[i] == null) continue;
+                Transform root = GetPlayerRoot(hitResults[i].transform);
+                if (root != null && !hitPlayers.Contains(root))
+                {
+                    Vector3 diff = root.position - transform.position;
+                    float angle = Vector3.Angle(transform.forward, new Vector3(diff.x, 0, diff.z).normalized);
+                    if (angle <= 75f)
+                    {
+                        hitPlayers.Add(root);
+                        if (hitPlayers.Count >= 4) break;
+                    }
+                }
+            }
+        }
+
+        foreach (var p in hitPlayers)
+        {
+            Vector3 knockbackDir = (p.position - transform.position);
+            knockbackDir.y = 0.1f; // Chém hất tung nhẹ
+            knockbackDir = knockbackDir.normalized;
+            Vector3 knockbackForceVector = knockbackDir * finalKnockback;
+
+            EnemyDamageHelper.DealDamage(p, finalDamage, knockbackForceVector);
+            Debug.Log($"[BossAI] KIẾM COMBO 2 chém trúng player: {p.name}, gây {finalDamage} sát thương.");
         }
     }
 
@@ -710,13 +840,16 @@ public class BossAI : NetworkBehaviour
         // 2. Nếu có player dính đá thì áp dụng damage và lực văng cực mạnh ("văng ra xa")
         if (targetToKick != null)
         {
-            Vector3 knockbackDir = (targetToKick.position - transform.position);
-            knockbackDir.y = 0.28f; // Đẩy bay hếch lên trời một chút để hiệu ứng văng đẹp mắt hơn
-            knockbackDir = knockbackDir.normalized;
-            Vector3 knockbackForceVector = knockbackDir * kickKnockbackForce;
+            float finalKickDamage = IsPhase2 ? (kickDamage * phase2DamageMultiplier) : kickDamage;
+            float finalKickForce = IsPhase2 ? (kickKnockbackForce * 1.2f) : kickKnockbackForce;
 
-            EnemyDamageHelper.DealDamage(targetToKick, kickDamage, knockbackForceVector);
-            Debug.Log($"[BossAI] ĐÁ VĂNG Player: {targetToKick.name}, lực đẩy = {kickKnockbackForce}, gây {kickDamage} sát thương.");
+            Vector3 knockbackDir = (targetToKick.position - transform.position);
+            knockbackDir.y = 0.3f; // Đẩy bay hếch lên trời một chút để hiệu ứng văng đẹp mắt hơn
+            knockbackDir = knockbackDir.normalized;
+            Vector3 knockbackForceVector = knockbackDir * finalKickForce;
+
+            EnemyDamageHelper.DealDamage(targetToKick, finalKickDamage, knockbackForceVector);
+            Debug.Log($"[BossAI] ĐÁ VĂNG Player: {targetToKick.name}, lực đẩy = {finalKickForce}, gây {finalKickDamage} sát thương.");
         }
     }
 
@@ -740,6 +873,7 @@ public class BossAI : NetworkBehaviour
     {
         if (IsDead) return;
         if (!isStandaloneMode && !IsServer) return;
+        if (CurrentStateValue == BossState.Enrage) return; // Bất tử khi đang gồng nộ
 
         CurrentHealthValue -= damage;
 
@@ -753,8 +887,16 @@ public class BossAI : NetworkBehaviour
             hitCounter.Value++;
         }
 
+        // Xử lý khi hết máu lần đầu (Chuyển sang Phase 2 Gồng Cuồng Nộ)
         if (CurrentHealthValue <= 0)
         {
+            if (!IsPhase2 && !hasEnraged)
+            {
+                hasEnraged = true;
+                ChangeState(BossState.Enrage);
+                return;
+            }
+
             ChangeState(BossState.Dead);
             return;
         }
@@ -812,8 +954,10 @@ public class BossAI : NetworkBehaviour
         if (anim != null)
         {
             anim.ResetTrigger(attackTrigger);
+            anim.ResetTrigger(attack2Trigger);
             anim.ResetTrigger(kickTrigger);
             anim.ResetTrigger(hitTrigger);
+            anim.ResetTrigger(enrageTrigger);
             if (!string.IsNullOrEmpty(dieTrigger)) anim.SetTrigger(dieTrigger);
         }
 
@@ -856,6 +1000,7 @@ public class BossAI : NetworkBehaviour
             case BossState.Attack: currentFSMState = attackState; break;
             case BossState.Kick:   currentFSMState = kickState;   break;
             case BossState.Hit:    currentFSMState = hitState;    break;
+            case BossState.Enrage: currentFSMState = enrageState; break;
             case BossState.Dead:   currentFSMState = deadState;   break;
         }
 
@@ -899,16 +1044,32 @@ public class BossAI : NetworkBehaviour
     {
         private BossAI boss;
         private float fallbackTimer;
+        private bool isUsingAttack2;
+
         public AttackState(BossAI boss) { this.boss = boss; }
         public void Enter()
         {
             boss.hasDealtAttackDamage = false;
-            boss.stateTimer = boss.attackDuration;
-            // Dự phòng (fallback) nếu người chơi quên thiết lập Animation Event, tự động chém ở khoảng 40% thời lượng hoạt ảnh
-            fallbackTimer = boss.attackDuration * 0.4f;
 
-            if (boss.anim != null) boss.anim.SetTrigger(boss.attackTrigger);
-            if (!boss.isStandaloneMode) boss.attackCounter.Value++;
+            // Trong Phase 2, có 50% cơ hội tung chém Combo 2 (attack2)
+            isUsingAttack2 = boss.IsPhase2 && Random.value < 0.5f;
+
+            if (isUsingAttack2)
+            {
+                boss.stateTimer = boss.attack2Duration;
+                fallbackTimer = boss.attack2Duration * 0.4f;
+
+                if (boss.anim != null) boss.anim.SetTrigger(boss.attack2Trigger);
+                if (!boss.isStandaloneMode) boss.attack2Counter.Value++;
+            }
+            else
+            {
+                boss.stateTimer = boss.attackDuration;
+                fallbackTimer = boss.attackDuration * 0.4f;
+
+                if (boss.anim != null) boss.anim.SetTrigger(boss.attackTrigger);
+                if (!boss.isStandaloneMode) boss.attackCounter.Value++;
+            }
         }
         public void Update()
         {
@@ -920,7 +1081,10 @@ public class BossAI : NetworkBehaviour
                 fallbackTimer -= Time.deltaTime;
                 if (fallbackTimer <= 0)
                 {
-                    boss.OnSwordSwing();
+                    if (isUsingAttack2)
+                        boss.OnSwordSwing2();
+                    else
+                        boss.OnSwordSwing();
                 }
             }
         }
@@ -971,6 +1135,75 @@ public class BossAI : NetworkBehaviour
         }
         public void Update() { boss.HandleHit(); }
         public void Exit() {}
+    }
+
+    private class EnrageState : IEnemyState
+    {
+        private BossAI boss;
+        public EnrageState(BossAI boss) { this.boss = boss; }
+        public void Enter()
+        {
+            if (boss.AgentReady) boss.agent.isStopped = true;
+            boss.SetSpeedNet(0f);
+            boss.stateTimer = boss.enrageDuration;
+
+            // Kích hoạt hoạt ảnh gồng cuồng nộ
+            if (boss.anim != null) boss.anim.SetTrigger(boss.enrageTrigger);
+            if (!boss.isStandaloneMode) boss.enrageCounter.Value++;
+
+            // Thay đổi máu tối đa và Hồi đầy 100% máu của Phase 2
+            boss.maxHealth = boss.phase2MaxHealth;
+            boss.CurrentHealthValue = boss.phase2MaxHealth;
+
+            // Bật cờ Phase 2
+            if (!boss.isStandaloneMode)
+            {
+                boss.isPhase2Network.Value = true;
+            }
+            else
+            {
+                boss.localIsPhase2 = true;
+            }
+
+            // Tăng tốc độ chạy của NavMeshAgent
+            if (boss.AgentReady)
+            {
+                boss.agent.speed = boss.chaseRunSpeed * boss.phase2SpeedMultiplier;
+            }
+
+            // Sinh hiệu ứng gồng nộ cuồng nộ (VFX) nếu có thiết lập
+            if (boss.enrageVFXPrefab != null)
+            {
+                Vector3 spawnPos = boss.enrageVFXSpawnPoint != null ? boss.enrageVFXSpawnPoint.position : boss.transform.position;
+                GameObject vfx = Instantiate(boss.enrageVFXPrefab, spawnPos, boss.transform.rotation);
+                if (!boss.isStandaloneMode && boss.IsServer)
+                {
+                    var no = vfx.GetComponent<NetworkObject>();
+                    if (no != null) no.Spawn();
+                }
+            }
+
+            Debug.Log($"[BossAI] BOSS hóa CUỒNG NỘ! Hồi {boss.phase2MaxHealth} HP. Tốc độ di chuyển tăng x{boss.phase2SpeedMultiplier}!");
+        }
+
+        public void Update()
+        {
+            boss.stateTimer -= Time.deltaTime;
+            if (boss.stateTimer <= 0)
+            {
+                if (boss.targetPlayer != null) boss.ChangeState(BossState.Chase);
+                else boss.ChangeState(BossState.Idle);
+            }
+        }
+
+        public void Exit()
+        {
+            // Tăng toàn bộ tốc độ hoạt ảnh của Animator (Đánh nhanh hơn)
+            if (boss.anim != null)
+            {
+                boss.anim.speed = boss.phase2AnimSpeed;
+            }
+        }
     }
 
     private class DeadState : IEnemyState
