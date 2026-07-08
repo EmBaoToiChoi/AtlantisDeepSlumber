@@ -6,11 +6,16 @@ using UnityEngine.InputSystem;
 
 public class OptimizedNetworkMiniGame : NetworkBehaviour
 {
-    [Header("Cấu hình")]
-    public float decayRate = 15f; 
-    public float pushAmount = 12f; 
+    [Header("Cấu hình Trạm Nhập")]
+    public float decayRate = 40f; 
+    public float pushAmount = 7f; 
     public float greenZoneMin = 85f;
-    public int stationsNeededToOpen = 2; 
+    public int stationsNeededToOpen = 1; 
+
+    [Header("Cấu hình Bẫy Bánh Răng (Mới)")]
+    public float waveDelay = 0.5f; 
+    public float openDuration = 1.5f; 
+    public float closeDuration = 1.0f; 
 
     [Header("UI & Gear")]
     public UIDocument uiDocument; 
@@ -20,14 +25,15 @@ public class OptimizedNetworkMiniGame : NetworkBehaviour
     private int currentStationIndex = 0;
     private bool isPlaying = false;
     
-    // --- BIẾN CỦA CLIENT ---
     private float localPredictedValue = 0f;
-    private float displayValue = 0f; // BIẾN MỚI: Dùng để làm mượt thanh trượt
+    private float displayValue = 0f; 
     private bool lastSentZoneStatus = false; 
     private float recoveryTimer = 0f; 
     private const float RECOVERY_WINDOW = 0.5f; 
 
-    // --- BIẾN CỦA SERVER ---
+    private float localTrapTimer = 0f;
+    private bool[] lastGearStates = new bool[4]; 
+
     public NetworkVariable<bool> s0IsGreen = new NetworkVariable<bool>(false);
     public NetworkVariable<bool> s1IsGreen = new NetworkVariable<bool>(false);
     public NetworkVariable<bool> s2IsGreen = new NetworkVariable<bool>(false);
@@ -39,7 +45,8 @@ public class OptimizedNetworkMiniGame : NetworkBehaviour
     public NetworkVariable<ulong> s3Owner = new NetworkVariable<ulong>(ulong.MaxValue);
     public NetworkVariable<bool> station2HasCrystal = new NetworkVariable<bool>(false);
     public NetworkVariable<bool> station3HasCrystal = new NetworkVariable<bool>(false);
-    public NetworkVariable<bool> isCurrentlyOpen = new NetworkVariable<bool>(false);
+    
+    public NetworkVariable<bool> isTrapActivated = new NetworkVariable<bool>(false);
 
     private float stateChangeTimer = 0f;
     private bool pendingState = false;
@@ -56,52 +63,103 @@ public class OptimizedNetworkMiniGame : NetworkBehaviour
             if (mainContainer != null) mainContainer.style.display = DisplayStyle.None;
         }
 
-        isCurrentlyOpen.OnValueChanged += (oldValue, newValue) => {
-            foreach (var gear in gearList)
-            {
-                if (gear != null)
-                {
-                    if (newValue) gear.OpenGear();
-                    else gear.ResetToSpinning();
-                }
-            }
-        };
-
-        if (isCurrentlyOpen.Value)
-        {
-            foreach (var gear in gearList) if (gear != null) gear.OpenGear();
-        }
+        ResetLocalTrapStates();
     }
 
     void Update()
     {
         if (IsClient && isPlaying) HandleLowFPSClientLogic();
         if (IsServer) CheckGateStatus();
+
+        HandleWaveTrapVisuals();
+    }
+
+    private void ResetLocalTrapStates()
+    {
+        for (int i = 0; i < 4; i++) lastGearStates[i] = false;
+    }
+
+    private void HandleWaveTrapVisuals()
+    {
+        if (isTrapActivated.Value)
+        {
+            localTrapTimer += Time.deltaTime;
+
+            for (int p = 0; p < 4; p++) 
+            {
+                float myStartTime = p * waveDelay; 
+                bool shouldBeOpen = false;
+
+                if (localTrapTimer >= myStartTime)
+                {
+                    float timeInCycle = (localTrapTimer - myStartTime) % (openDuration + closeDuration);
+                    shouldBeOpen = timeInCycle < openDuration; 
+                }
+
+                // CHỈ gọi lệnh khi thực sự có biến đổi trạng thái ở ranh giới chu kỳ
+                if (shouldBeOpen != lastGearStates[p])
+                {
+                    lastGearStates[p] = shouldBeOpen;
+                    UpdatePairVisual(p, shouldBeOpen);
+                }
+            }
+        }
+        else 
+        {
+            if (localTrapTimer > 0f)
+            {
+                localTrapTimer = 0f;
+                for (int p = 0; p < 4; p++)
+                {
+                    if (lastGearStates[p]) 
+                    {
+                        lastGearStates[p] = false;
+                        UpdatePairVisual(p, false);
+                    }
+                }
+                ResetLocalTrapStates();
+            }
+        }
+    }
+
+    private void UpdatePairVisual(int pairIndex, bool isOpen)
+    {
+        // Chỉ Server mới được phép thay đổi NetworkVariable trạng thái của Gear
+        if (!IsServer) return; 
+
+        int indexA = pairIndex * 2;
+        int indexB = indexA + 1;
+
+        if (indexA < gearList.Count && gearList[indexA] != null)
+        {
+            if (isOpen) gearList[indexA].OpenGear();
+            else gearList[indexA].ResetToSpinning();
+        }
+        if (indexB < gearList.Count && gearList[indexB] != null)
+        {
+            if (isOpen) gearList[indexB].OpenGear();
+            else gearList[indexB].ResetToSpinning();
+        }
     }
 
     private void HandleLowFPSClientLogic()
     {
-        // 1. CHỈ DÙNG NEW INPUT SYSTEM (Tránh lỗi làm đứng Script)
         bool aPressed = false;
         bool dPressed = false;
 
         if (Keyboard.current != null)
         {
-            // Cho phép xài Mũi tên Trái/Phải để phòng hờ bị kẹt phím
             aPressed = Keyboard.current.aKey.wasPressedThisFrame || Keyboard.current.leftArrowKey.wasPressedThisFrame;
             dPressed = Keyboard.current.dKey.wasPressedThisFrame || Keyboard.current.rightArrowKey.wasPressedThisFrame;
         }
 
-        // 2. LOGIC TĂNG ĐIỂM BẢO VỆ MÁY YẾU
         if (aPressed || dPressed)
         {
-            // Bấm phím thì CHỈ TĂNG, KHÔNG TỤT ĐIỂM trong khung hình này
             localPredictedValue = Mathf.Clamp(localPredictedValue + pushAmount, 0f, 100f);
             PlaySuccessVisual(aPressed ? keyA : keyD);
         }
         else 
         {
-            // Chỉ tụt điểm khi người chơi buông tay (KHÔNG BẤM GÌ)
             float currentDecay = decayRate;
             if (currentStationIndex == 2 && !station2HasCrystal.Value) currentDecay *= 2.5f;
             if (currentStationIndex == 3 && !station3HasCrystal.Value) currentDecay *= 2.5f;
@@ -111,19 +169,12 @@ public class OptimizedNetworkMiniGame : NetworkBehaviour
         
         UpdateUI(); 
 
-        // 3. LOGIC GỬI LÊN SERVER (Giữ nguyên, rất mượt rồi)
         bool currentZoneStatus = localPredictedValue >= greenZoneMin;
 
         if (currentZoneStatus != lastSentZoneStatus)
         {
-            if (lastSentZoneStatus == true && currentZoneStatus == false)
-            {
-                recoveryTimer = RECOVERY_WINDOW; 
-            }
-            if (recoveryTimer > 0 && currentZoneStatus == true)
-            {
-                recoveryTimer = 0; 
-            }
+            if (lastSentZoneStatus == true && currentZoneStatus == false) recoveryTimer = RECOVERY_WINDOW; 
+            if (recoveryTimer > 0 && currentZoneStatus == true) recoveryTimer = 0; 
             else
             {
                 lastSentZoneStatus = currentZoneStatus;
@@ -163,10 +214,13 @@ public class OptimizedNetworkMiniGame : NetworkBehaviour
         }
 
         if (shouldBeOpen != pendingState) { pendingState = shouldBeOpen; stateChangeTimer = 0f; }
-        if (pendingState != isCurrentlyOpen.Value)
+        if (pendingState != isTrapActivated.Value)
         {
             stateChangeTimer += Time.deltaTime;
-            if (stateChangeTimer >= 0.5f) isCurrentlyOpen.Value = pendingState;
+            if (stateChangeTimer >= 0.5f) 
+            {
+                isTrapActivated.Value = pendingState;
+            }
         }
         else stateChangeTimer = 0f;
     }
@@ -176,10 +230,7 @@ public class OptimizedNetworkMiniGame : NetworkBehaviour
     [ServerRpc(RequireOwnership = false)] 
     public void HandleStationAccessServerRpc(int i, ulong id, ServerRpcParams rpcParams = default) 
     {
-        if (GetOwner(i) == ulong.MaxValue) 
-        {
-            SetOwner(i, rpcParams.Receive.SenderClientId); 
-        }
+        if (GetOwner(i) == ulong.MaxValue) SetOwner(i, rpcParams.Receive.SenderClientId); 
     }
     
     private void SetOwner(int i, ulong id) { if (i == 0) s0Owner.Value = id; else if (i == 1) s1Owner.Value = id; else if (i == 2) s2Owner.Value = id; else if (i == 3) s3Owner.Value = id; }
@@ -192,11 +243,10 @@ public class OptimizedNetworkMiniGame : NetworkBehaviour
         if (isOpening) 
         {
             localPredictedValue = 0f;
-            displayValue = 0f; // Ép biến UI mượt về 0 luôn
+            displayValue = 0f; 
             lastSentZoneStatus = false;
             recoveryTimer = 0f;
-            UpdateUI(); // Cập nhật để màn hình thấy nó về 0 lập tức
-            
+            UpdateUI(); 
             HandleStationAccessServerRpc(index, NetworkManager.Singleton.LocalClientId);
         }
         else 
@@ -211,13 +261,9 @@ public class OptimizedNetworkMiniGame : NetworkBehaviour
     [ServerRpc(RequireOwnership = false)] 
     public void HandleStationReleaseServerRpc(int i, ulong id, ServerRpcParams rpcParams = default) 
     {
-        if(GetOwner(i) == rpcParams.Receive.SenderClientId) 
-        {
-            SetOwner(i, ulong.MaxValue);
-        }
+        if(GetOwner(i) == rpcParams.Receive.SenderClientId) SetOwner(i, ulong.MaxValue);
     }
     
-    // ĐÂY LÀ CHỖ LÀM MƯỢT UI
     private void UpdateUI() 
     { 
         if(progressFill != null) 
