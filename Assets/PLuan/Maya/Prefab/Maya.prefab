@@ -224,6 +224,7 @@ GameObject:
   - component: {fileID: 7772623611095050335}
   - component: {fileID: 7612354973917050050}
   - component: {fileID: 8600861756046183746}
+  - component: {fileID: 1361700751585617511}
   m_Layer: 3
   m_Name: Maya
   m_TagString: Player
@@ -454,6 +455,7 @@ MonoBehaviour:
         byte0059: 0
         byte0060: 0
         byte0061: 0
+  gravityMultiplier: 2.5
   enableCameraFollow: 1
   cameraOffset: {x: 0, y: 12, z: -8}
   cameraSmoothSpeed: 5
@@ -986,6 +988,21 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   axeHoldingPoint: {fileID: 2326331786683847184}
+--- !u!114 &1361700751585617511
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8313881801843240701}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 409517c57a108b84da7090ac57c2e455, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  ShowTopMostFoldoutHeaderGroup: 1
+  kickedTriggerName: Kicked
+  kickedStateName: 
 --- !u!1001 &1136928048187746864
 PrefabInstance:
   m_ObjectHideFlags: 0

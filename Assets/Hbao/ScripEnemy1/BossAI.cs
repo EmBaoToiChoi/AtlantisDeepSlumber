@@ -138,6 +138,8 @@ public class BossAI : NetworkBehaviour
     [Tooltip("Lực văng cực mạnh khi bị dính đá")]
     public float kickKnockbackForce = 22f;
     public float kickCooldown = 5f;
+    [Tooltip("Thời gian người chơi bị choáng/khóa điều khiển sau khi dính đá")]
+    public float kickStunDuration = 1.5f;
     private float kickCooldownTimer;
 
     // ─── Cấu hình Kiếm và Canh chính xác frame ──────────────────
@@ -887,8 +889,8 @@ public class BossAI : NetworkBehaviour
             knockbackDir = knockbackDir.normalized;
             Vector3 knockbackForceVector = knockbackDir * finalKickForce;
 
-            EnemyDamageHelper.DealDamage(targetToKick, finalKickDamage, knockbackForceVector);
-            Debug.Log($"[BossAI] ĐÁ VĂNG Player: {targetToKick.name}, lực đẩy = {finalKickForce}, gây {finalKickDamage} sát thương.");
+            EnemyDamageHelper.DealKickDamageWithStun(targetToKick, finalKickDamage, knockbackForceVector, kickStunDuration);
+            Debug.Log($"[BossAI] ĐÁ VĂNG Player: {targetToKick.name}, lực đẩy = {finalKickForce}, gây {finalKickDamage} sát thương, khóa {kickStunDuration}s.");
         }
     }
 

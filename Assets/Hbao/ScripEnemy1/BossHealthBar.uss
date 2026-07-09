@@ -109,3 +109,28 @@
     -unity-text-align: middle-center;
     text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.95);
 }
+
+/* ─── Hiệu ứng Rung Lắc và Nhấp Nháy khi Mất Máu ─── */
+@keyframes shake-anim {
+    0% { margin-left: 0px; margin-top: 0px; }
+    20% { margin-left: -8px; margin-top: -3px; }
+    40% { margin-left: 8px; margin-top: 3px; }
+    60% { margin-left: -5px; margin-top: 1px; }
+    80% { margin-left: 5px; margin-top: -1px; }
+    100% { margin-left: 0px; margin-top: 0px; }
+}
+
+.boss-hud-container.shake {
+    animation-name: shake-anim;
+    animation-duration: 0.22s;
+}
+
+@keyframes flash-anim {
+    0% { background-color: rgb(255, 220, 220); }
+    100% { background-color: rgb(220, 20, 20); }
+}
+
+.boss-hp-progress-bar.flash {
+    animation-name: flash-anim;
+    animation-duration: 0.2s;
+}
