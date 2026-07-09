@@ -953,6 +953,20 @@ public class BossAI : NetworkBehaviour
     }
 
     /// <summary>
+    /// Nhận hiệu ứng choáng từ kỹ năng của người chơi (ví dụ Q của Arthur).
+    /// </summary>
+    public void ApplyStun(float duration)
+    {
+        bool auth = isStandaloneMode || (IsNetworkActive && IsServer);
+        if (!auth) return;
+        if (IsDead) return;
+
+        stateTimer = duration;
+        ChangeState(BossState.Hit);
+        Debug.Log($"[BossAI] Boss bị choáng (Stun) trong {duration} giây.");
+    }
+
+    /// <summary>
     /// Kỹ năng nhảy tránh né (Dodge) cực kỳ nhạy bén giúp Boss nhảy tránh ra bên cạnh/phía sau.
     /// </summary>
     private void ExecuteDodge()

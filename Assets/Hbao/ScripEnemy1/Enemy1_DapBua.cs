@@ -39,6 +39,10 @@ public class Enemy1_DapBua : NetworkBehaviour
     private bool isStandaloneMode;
     private bool IsNetworkActive => NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
 
+    // ─── Boss Proxy Compatibility ──────────────────────────────
+    private BossAI bossComponent;
+    private bool isBossProxy = false;
+
     private EnemyState CurrentStateValue
     {
         get => isStandaloneMode ? localState : currentState.Value;
@@ -143,6 +147,13 @@ public class Enemy1_DapBua : NetworkBehaviour
     // ══════════════════════════════════════════════════════════
     private void Awake()
     {
+        bossComponent = GetComponent<BossAI>();
+        if (bossComponent != null)
+        {
+            isBossProxy = true;
+            return;
+        }
+
         gameObject.tag = "Enemy";
         if (anim == null) anim = GetComponent<Animator>() ?? GetComponentInChildren<Animator>(true);
         var na = GetComponent<Unity.Netcode.Components.NetworkAnimator>();
@@ -162,6 +173,7 @@ public class Enemy1_DapBua : NetworkBehaviour
 
     private void Start()
     {
+        if (isBossProxy) return;
         if (!IsNetworkActive) { isStandaloneMode = true; InitStandalone(); }
     }
 
@@ -176,6 +188,7 @@ public class Enemy1_DapBua : NetworkBehaviour
 
     public override void OnNetworkSpawn()
     {
+        if (isBossProxy) return;
         isStandaloneMode = false;
 
         var nt = GetComponent<Unity.Netcode.Components.NetworkTransform>();
@@ -262,6 +275,7 @@ public class Enemy1_DapBua : NetworkBehaviour
     // ══════════════════════════════════════════════════════════
     private void Update()
     {
+        if (isBossProxy) return;
         // Enrage scale (mọi client)
         if (IsEnragedValue && !hasRoared)
         {
@@ -694,6 +708,12 @@ public class Enemy1_DapBua : NetworkBehaviour
 
     public void TakeDamage(float damage)
     {
+        if (isBossProxy)
+        {
+            if (bossComponent != null) bossComponent.TakeDamage(damage);
+            return;
+        }
+
         if (!isStandaloneMode && (!IsServer || CurrentStateValue == EnemyState.Dead)) return;
         if (isStandaloneMode && CurrentStateValue == EnemyState.Dead) return;
         CurrentHealthValue -= damage;
@@ -719,6 +739,12 @@ public class Enemy1_DapBua : NetworkBehaviour
     /// </summary>
     public void ApplyStun(float duration)
     {
+        if (isBossProxy)
+        {
+            if (bossComponent != null) bossComponent.ApplyStun(duration);
+            return;
+        }
+
         bool auth = isStandaloneMode || (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening && IsServer);
         if (!auth) return;
         if (CurrentStateValue == EnemyState.Dead) return;
