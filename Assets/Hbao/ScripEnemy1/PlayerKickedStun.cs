@@ -19,6 +19,18 @@ public class PlayerKickedStun : NetworkBehaviour
     private Animator anim;
     private bool isStunned = false;
 
+    private Camera targetCamera;
+    private Vector3 lastCameraOffset;
+
+    private void Start()
+    {
+        targetCamera = Camera.main;
+        if (targetCamera == null)
+        {
+            targetCamera = FindFirstObjectByType<Camera>();
+        }
+    }
+
     private void Awake()
     {
         rb = GetComponent<Rigidbody>();
@@ -52,6 +64,16 @@ public class PlayerKickedStun : NetworkBehaviour
     {
         if (isStunned) yield break;
         isStunned = true;
+
+        // Lưu trữ vị trí tương đối của Camera so với Player trước khi khóa điều khiển để camera follow tức thời
+        if (targetCamera == null)
+        {
+            targetCamera = Camera.main ?? FindFirstObjectByType<Camera>();
+        }
+        if (targetCamera != null)
+        {
+            lastCameraOffset = targetCamera.transform.position - transform.position;
+        }
 
         // 1. Tạm thời vô hiệu hóa script điều khiển để khóa phím bấm di chuyển/tấn công
         if (playerScript != null)
@@ -117,5 +139,14 @@ public class PlayerKickedStun : NetworkBehaviour
             return hudTarget.CurrentHealth <= 0;
         }
         return false;
+    }
+
+    private void LateUpdate()
+    {
+        // Khi bị choáng và script điều khiển bị tắt, script này sẽ giữ camera bám sát Player theo thời gian thực (Zero Delay)
+        if (isStunned && targetCamera != null)
+        {
+            targetCamera.transform.position = transform.position + lastCameraOffset;
+        }
     }
 }
