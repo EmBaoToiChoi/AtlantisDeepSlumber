@@ -1,67 +1,65 @@
-using System.Collections;
 using UnityEngine;
 
 public class CustomCameraShake : MonoBehaviour
 {
     private Vector3 originalPosition;
-    private Coroutine shakeCoroutine;
+    private float shakeDurationRemaining = 0f;
+    private float shakeMagnitude = 0f;
+    private bool isContinuous = false;
 
-    // Tạo sẵn biến mặc định để chỉnh trên Inspector nếu cần
     [Header("Default Settings")]
-    public float defaultDuration = 0.5f; 
-    public float defaultMagnitude = 0.2f;
+    public float defaultDuration = 0.5f;
 
     void OnEnable()
     {
+        // Lưu lại vị trí đứng yên ban đầu của Cam3
         originalPosition = transform.localPosition;
     }
 
-    // --- KIỂU 1: RUNG 1 PHÁT RỒI TỰ TẮT (Chỉ nhận 1 tham số là Độ mạnh) ---
-    // Thời gian rung sẽ lấy từ defaultDuration
+    // Kiểu 1: Rung một khoảng thời gian rồi tự tắt (Gọi tại Keyframe đơn lẻ)
     public void ShakeWithMagnitude(float magnitude)
     {
-        if (shakeCoroutine != null) StopCoroutine(shakeCoroutine);
-        shakeCoroutine = StartCoroutine(DoShake(defaultDuration, magnitude));
+        shakeMagnitude = magnitude;
+        shakeDurationRemaining = defaultDuration;
+        isContinuous = false;
     }
 
-    // --- KIỂU 2: RUNG TỪ KEYFRAME A ĐẾN KEYFRAME B ---
-    // Gọi tại Keyframe A (Truyền vào độ mạnh magnitude)
+    // Kiểu 2: Bắt đầu đoạn rung (Gọi tại Keyframe A)
     public void StartContinuousShake(float magnitude)
     {
-        if (shakeCoroutine != null) StopCoroutine(shakeCoroutine);
-        shakeCoroutine = StartCoroutine(DoContinuousShake(magnitude));
+        shakeMagnitude = magnitude;
+        isContinuous = true;
     }
 
-    // Gọi tại Keyframe B (Không cần truyền gì cả)
+    // Kiểu 2: Dừng đoạn rung (Gọi tại Keyframe B)
     public void StopShake()
     {
-        if (shakeCoroutine != null) StopCoroutine(shakeCoroutine);
+        isContinuous = false;
+        shakeDurationRemaining = 0f;
         transform.localPosition = originalPosition;
     }
 
-    // --- CÁC HÀM XỬ LÝ LOGIC NGẦM ---
-    private IEnumerator DoShake(float duration, float magnitude)
+    // LateUpdate chạy sau cùng ở mỗi frame, đồng bộ hoàn hảo với Unity Recorder
+    void LateUpdate()
     {
-        float elapsed = 0f;
-        while (elapsed < duration)
+        if (isContinuous || shakeDurationRemaining > 0)
         {
-            float x = Random.Range(-1f, 1f) * magnitude;
-            float y = Random.Range(-1f, 1f) * magnitude;
-            transform.localPosition = new Vector3(originalPosition.x + x, originalPosition.y + y, originalPosition.z);
-            elapsed += Time.deltaTime;
-            yield return null;
-        }
-        transform.localPosition = originalPosition;
-    }
+            // Tạo độ lệch ngẫu nhiên dựa trên độ mạnh magnitude
+            float x = Random.Range(-1f, 1f) * shakeMagnitude;
+            float y = Random.Range(-1f, 1f) * shakeMagnitude;
 
-    private IEnumerator DoContinuousShake(float magnitude)
-    {
-        while (true)
-        {
-            float x = Random.Range(-1f, 1f) * magnitude;
-            float y = Random.Range(-1f, 1f) * magnitude;
-            transform.localPosition = new Vector3(originalPosition.x + x, originalPosition.y + y, originalPosition.z);
-            yield return null;
+            // Áp vị trí mới cho camera
+            transform.localPosition = originalPosition + new Vector3(x, y, 0);
+
+            if (!isContinuous)
+            {
+                // Dùng unscaledDeltaTime để thời gian trừ lùi chính xác tuyệt đối khi Recorder khóa FPS
+                shakeDurationRemaining -= Time.unscaledDeltaTime;
+                if (shakeDurationRemaining <= 0)
+                {
+                    transform.localPosition = originalPosition;
+                }
+            }
         }
     }
 }
