@@ -99,7 +99,11 @@ public class Enemy2_Zombie : NetworkBehaviour
         gameObject.tag = "Enemy";
         if (anim == null) anim = GetComponent<Animator>() ?? GetComponentInChildren<Animator>(true);
         var na = GetComponent<Unity.Netcode.Components.NetworkAnimator>();
-        if (na != null) { if (anim == null || anim.runtimeAnimatorController == null) na.enabled = false; else na.Animator = anim; }
+        if (na != null)
+        {
+            if (anim != null) na.Animator = anim;
+            if (anim == null || anim.runtimeAnimatorController == null) na.enabled = false;
+        }
 
         // Initialize state instances for FSM
         patrolState = new PatrolState(this);

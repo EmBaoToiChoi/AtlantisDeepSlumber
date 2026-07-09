@@ -206,8 +206,8 @@ public class BossAI : NetworkBehaviour
         var na = GetComponent<Unity.Netcode.Components.NetworkAnimator>();
         if (na != null)
         {
+            if (anim != null) na.Animator = anim;
             if (anim == null || anim.runtimeAnimatorController == null) na.enabled = false;
-            else na.Animator = anim;
         }
 
         // Khởi tạo các State cho FSM
