@@ -281,7 +281,7 @@ public class BossAI : NetworkBehaviour
         attackCounter.OnValueChanged += (_, _) => { if (anim != null) anim.SetTrigger(attackTrigger); };
         attack2Counter.OnValueChanged += (_, _) => { if (anim != null) anim.SetTrigger(attack2Trigger); };
         kickCounter.OnValueChanged += (_, _) => { if (anim != null) anim.SetTrigger(kickTrigger); };
-        enrageCounter.OnValueChanged += (_, _) => { if (anim != null) anim.SetTrigger(enrageTrigger); };
+        enrageCounter.OnValueChanged += OnEnrageCounterChanged;
         currentHealth.OnValueChanged += OnHealthNetChanged;
 
         // Lắng nghe sự kiện gồng nộ đồng bộ hóa của Client
@@ -316,7 +316,7 @@ public class BossAI : NetworkBehaviour
         attackCounter.OnValueChanged -= (_, _) => { if (anim != null) anim.SetTrigger(attackTrigger); };
         attack2Counter.OnValueChanged -= (_, _) => { if (anim != null) anim.SetTrigger(attack2Trigger); };
         kickCounter.OnValueChanged -= (_, _) => { if (anim != null) anim.SetTrigger(kickTrigger); };
-        enrageCounter.OnValueChanged -= (_, _) => { if (anim != null) anim.SetTrigger(enrageTrigger); };
+        enrageCounter.OnValueChanged -= OnEnrageCounterChanged;
         currentHealth.OnValueChanged -= OnHealthNetChanged;
     }
 
@@ -478,48 +478,78 @@ public class BossAI : NetworkBehaviour
         }
 
         // 3. NẾU chiêu đang hồi chiêu (Attack Cooldown) và Boss đang ở gần Player:
-        //    -> Di chuyển vòng quanh mục tiêu (Orbiting) bằng hoạt ảnh WALK (0.5f) thay vì đứng yên hoặc lao đầu vô nghĩa.
+        //    -> Di chuyển vòng quanh mục tiêu (Orbiting) bằng hoạt ảnh WALK (0.5f) hoặc CHẠY ÁP SÁT.
+        //    -> Ở Phase 2 (Cuồng Nộ), Boss KHÔNG bao giờ đi bộ vòng quanh đần đần nữa, mà chạy thẳng áp sát áp lực liên tục!
         if (attackCooldownTimer > 0 && dist <= attackRange + 3f && !isDodging)
         {
-            if (!isOrbiting || orbitTimer <= 0)
+            bool shouldOrbit = !IsPhase2 && (Random.value < 0.3f || isOrbiting); // Chỉ 30% cơ hội đi bộ vòng quanh ở Phase 1
+
+            if (shouldOrbit)
             {
-                // Chọn một góc ngẫu nhiên bên trái hoặc phải xung quanh player
-                orbitDirection = Random.value < 0.5f ? -1f : 1f;
-                orbitTimer = Random.Range(1f, 2.5f);
-
-                // Tính toán điểm di chuyển tiếp tuyến xung quanh player
-                Vector3 toBossDir = (transform.position - targetPlayer.position).normalized;
-                Vector3 tangent = new Vector3(-toBossDir.z, 0, toBossDir.x) * orbitDirection;
-                Vector3 targetOrbitPos = targetPlayer.position + (toBossDir * (attackRange + 1f)) + (tangent * 3f);
-
-                if (NavMesh.SamplePosition(targetOrbitPos, out NavMeshHit navHit, 5f, NavMesh.AllAreas))
+                if (!isOrbiting || orbitTimer <= 0)
                 {
-                    orbitDestination = navHit.position;
-                    isOrbiting = true;
-                    if (AgentReady)
+                    // Chọn một góc ngẫu nhiên bên trái hoặc phải xung quanh player
+                    orbitDirection = Random.value < 0.5f ? -1f : 1f;
+                    orbitTimer = Random.Range(1f, 2.5f);
+
+                    // Tính toán điểm di chuyển tiếp tuyến xung quanh player
+                    Vector3 toBossDir = (transform.position - targetPlayer.position).normalized;
+                    Vector3 tangent = new Vector3(-toBossDir.z, 0, toBossDir.x) * orbitDirection;
+                    Vector3 targetOrbitPos = targetPlayer.position + (toBossDir * (attackRange - 0.5f)) + (tangent * 2f); // Áp sát hơn một chút
+
+                    if (NavMesh.SamplePosition(targetOrbitPos, out NavMeshHit navHit, 5f, NavMesh.AllAreas))
                     {
-                        agent.isStopped = false;
-                        agent.speed = orbitSpeed;
-                        agent.SetDestination(orbitDestination);
+                        orbitDestination = navHit.position;
+                        isOrbiting = true;
+                        if (AgentReady)
+                        {
+                            agent.isStopped = false;
+                            agent.speed = orbitSpeed;
+                            agent.SetDestination(orbitDestination);
+                        }
                     }
                 }
-            }
 
-            orbitTimer -= Time.deltaTime;
+                orbitTimer -= Time.deltaTime;
 
-            if (AgentReady)
-            {
-                // Vừa di chuyển vòng quanh vừa đi bộ (Walk animation, Speed = 0.5f)
-                SetSpeedNet(0.5f);
-
-                if (!agent.pathPending && agent.remainingDistance <= agent.stoppingDistance + 0.5f)
+                if (AgentReady)
                 {
-                    isOrbiting = false; // Chọn điểm di chuyển vòng quanh mới
+                    // Vừa di chuyển vòng quanh vừa đi bộ (Walk animation, Speed = 0.5f)
+                    SetSpeedNet(0.5f);
+
+                    if (!agent.pathPending && agent.remainingDistance <= agent.stoppingDistance + 0.5f)
+                    {
+                        isOrbiting = false; // Chọn điểm di chuyển vòng quanh mới
+                    }
                 }
+                RotateTowards(targetPlayer.position);
             }
-            
-            // Luôn hướng mặt về phía player kể cả khi đang di chuyển vòng quanh
-            RotateTowards(targetPlayer.position);
+            else
+            {
+                // Nếu không đi vòng quanh: Chạy thẳng áp sát đè áp lực lên Player!
+                isOrbiting = false;
+                if (AgentReady)
+                {
+                    agent.isStopped = false;
+                    agent.speed = IsPhase2 ? (chaseRunSpeed * phase2SpeedMultiplier) : chaseRunSpeed;
+                    
+                    // Điểm áp sát sát sườn player
+                    Vector3 targetPos = targetPlayer.position;
+                    agent.SetDestination(targetPos);
+                    
+                    // Nếu đã đứng siêu sát (trong tầm đánh) -> Đứng yên chờ cooldown nhưng vẫn hướng mặt về Player
+                    if (dist <= attackRange - 0.2f)
+                    {
+                        agent.isStopped = true;
+                        SetSpeedNet(0f); // Idle
+                    }
+                    else
+                    {
+                        SetSpeedNet(IsPhase2 ? 1f : 0.5f); // Phase 2 chạy, Phase 1 đi bộ áp sát
+                    }
+                }
+                RotateTowards(targetPlayer.position);
+            }
         }
         else if (!isDodging)
         {
@@ -607,36 +637,62 @@ public class BossAI : NetworkBehaviour
     /// <summary>
     /// Quét nhạy bén phát hiện người chơi gần nhất để đuổi theo hoặc đổi mục tiêu nếu có người chơi khác gây nguy hại hơn.
     /// </summary>
+    private System.Collections.Generic.List<Transform> GetAllActivePlayers()
+    {
+        var list = new System.Collections.Generic.List<Transform>();
+
+        // Tìm trực tiếp các Class Player cụ thể (Cực kỳ tối ưu và bỏ qua sai sót về Tag/Layer trên Editor)
+        var leos = FindObjectsByType<LeoPlayer>(FindObjectsSortMode.None);
+        foreach (var p in leos) if (p != null) list.Add(p.transform);
+
+        var arthurs = FindObjectsByType<ArthurPlayer>(FindObjectsSortMode.None);
+        foreach (var p in arthurs) if (p != null) list.Add(p.transform);
+
+        var elenas = FindObjectsByType<ElenaPlayer>(FindObjectsSortMode.None);
+        foreach (var p in elenas) if (p != null) list.Add(p.transform);
+
+        var mayas = FindObjectsByType<MayaPlayer>(FindObjectsSortMode.None);
+        foreach (var p in mayas) if (p != null) list.Add(p.transform);
+
+        var simples = FindObjectsByType<SimplePlayerTest>(FindObjectsSortMode.None);
+        foreach (var p in simples) if (p != null) list.Add(p.transform);
+
+        return list;
+    }
+
     private void DetectAndSwitchTarget()
     {
         if (IsDead) return;
-
-        int num = Physics.OverlapSphereNonAlloc(transform.position, sightRange, detectionResults, playerLayer);
-        if (num == 0) num = FallbackDetect();
 
         Transform closest = null;
         float minD = float.MaxValue;
         Vector3 eyePos = eyeTransform != null ? eyeTransform.position : transform.position + Vector3.up * 1.5f;
 
-        for (int i = 0; i < num; i++)
+        var activePlayers = GetAllActivePlayers();
+        for (int i = 0; i < activePlayers.Count; i++)
         {
-            if (detectionResults[i] == null) continue;
-            Transform pTrans = detectionResults[i].transform;
+            Transform pTrans = activePlayers[i];
+            if (pTrans == null || pTrans == transform) continue;
 
             if (IsPlayerDeadOrInvisible(pTrans)) continue;
 
             float d = Vector3.Distance(eyePos, pTrans.position);
-            Vector3 dir = (pTrans.position - eyePos).normalized;
             
-            // Tầm quét cực nhạy: 360 độ cự ly gần (3m) hoặc góc quạt FOV rộng ở cự ly xa
-            bool inFOV = Vector3.Angle(transform.forward, dir) < fieldOfView / 2f || d <= 4f;
-
-            if (inFOV && !Physics.Raycast(eyePos, dir, d, obstacleLayer))
+            // Chỉ kiểm tra tầm nhìn khi ở trong khoảng cách sightRange
+            if (d <= sightRange)
             {
-                if (d < minD)
+                Vector3 dir = (pTrans.position - eyePos).normalized;
+                
+                // Tầm quét cực nhạy: 360 độ cự ly gần (4m) hoặc góc quạt FOV rộng ở cự ly xa
+                bool inFOV = Vector3.Angle(transform.forward, dir) < fieldOfView / 2f || d <= 4f;
+
+                if (inFOV && !Physics.Raycast(eyePos, dir, d, obstacleLayer))
                 {
-                    minD = d;
-                    closest = pTrans;
+                    if (d < minD)
+                    {
+                        minD = d;
+                        closest = pTrans;
+                    }
                 }
             }
         }
@@ -651,21 +707,6 @@ public class BossAI : NetworkBehaviour
             targetPlayer = null;
             isOrbiting = false;
         }
-    }
-
-    private int FallbackDetect()
-    {
-        int c = 0;
-        foreach (var p in GameObject.FindGameObjectsWithTag("Player"))
-        {
-            if (c >= detectionResults.Length) break;
-            if (Vector3.Distance(transform.position, p.transform.position) <= sightRange)
-            {
-                var col = p.GetComponent<Collider>();
-                if (col != null) detectionResults[c++] = col;
-            }
-        }
-        return c;
     }
 
     private bool IsPlayerDeadOrInvisible(Transform player)
@@ -942,8 +983,9 @@ public class BossAI : NetworkBehaviour
             return;
         }
 
-        // Phản xạ nhảy né đòn (Dodge) nhanh nhạy khi bị tấn công (40% cơ hội né đòn ra sau/bên cạnh)
-        if (!isDodging && Random.value < 0.4f && CurrentStateValue == BossState.Chase)
+        // Phản xạ nhảy né đòn (Dodge) nhanh nhạy khi bị tấn công (Phase 1 né 25%, Phase 2 điên cuồng chỉ né 10%)
+        float dodgeChance = IsPhase2 ? 0.1f : 0.25f;
+        if (!isDodging && Random.value < dodgeChance && CurrentStateValue == BossState.Chase)
         {
             ExecuteDodge();
         }
@@ -966,6 +1008,30 @@ public class BossAI : NetworkBehaviour
         stateTimer = duration;
         ChangeState(BossState.Hit);
         Debug.Log($"[BossAI] Boss bị choáng (Stun) trong {duration} giây.");
+    }
+
+    public void OnSkillEAnimEnd()
+    {
+        // Dummy animation event receiver to prevent Silas warning
+    }
+
+    public void SpawnEnrageVFXLocally()
+    {
+        if (enrageVFXPrefab != null)
+        {
+            Vector3 spawnPos = enrageVFXSpawnPoint != null ? enrageVFXSpawnPoint.position : transform.position;
+            GameObject vfx = Instantiate(enrageVFXPrefab, spawnPos, transform.rotation);
+            Destroy(vfx, 5f);
+        }
+    }
+
+    private void OnEnrageCounterChanged(int oldVal, int newVal)
+    {
+        if (newVal > 0)
+        {
+            if (anim != null) anim.SetTrigger(enrageTrigger);
+            SpawnEnrageVFXLocally();
+        }
     }
 
     /// <summary>
@@ -1226,16 +1292,10 @@ public class BossAI : NetworkBehaviour
                 boss.agent.speed = boss.chaseRunSpeed * boss.phase2SpeedMultiplier;
             }
 
-            // Sinh hiệu ứng gồng nộ cuồng nộ (VFX) nếu có thiết lập
-            if (boss.enrageVFXPrefab != null)
+            // Sinh hiệu ứng gồng nộ cuồng nộ (VFX) cục bộ nếu có thiết lập
+            if (boss.isStandaloneMode)
             {
-                Vector3 spawnPos = boss.enrageVFXSpawnPoint != null ? boss.enrageVFXSpawnPoint.position : boss.transform.position;
-                GameObject vfx = Instantiate(boss.enrageVFXPrefab, spawnPos, boss.transform.rotation);
-                if (!boss.isStandaloneMode && boss.IsServer)
-                {
-                    var no = vfx.GetComponent<NetworkObject>();
-                    if (no != null) no.Spawn();
-                }
+                boss.SpawnEnrageVFXLocally();
             }
 
             Debug.Log($"[BossAI] BOSS hóa CUỒNG NỘ! Hồi {boss.phase2MaxHealth} HP. Tốc độ di chuyển tăng x{boss.phase2SpeedMultiplier}!");
