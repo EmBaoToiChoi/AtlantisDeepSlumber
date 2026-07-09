@@ -3497,10 +3497,6 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         // Apply initial visual states for network variables
         if (!isStandaloneMode)
         {
-            if (isAttackSpeedBoostedNet.Value)
-            {
-                SetSwordRedVisuals(true);
-            }
             if (isQSkillActiveNet.Value)
             {
                 SetLeoRenderersActive(false);
@@ -3671,7 +3667,6 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
                 attackSpeedBoostTimeRemaining = 0f;
                 if (isStandaloneMode)
                 {
-                    SetSwordRedVisuals(false);
                     SetGhostVisuals(false);
                     PlayerHUDController hud = FindAnyObjectByType<PlayerHUDController>();
                     if (hud != null) hud.TriggerCooldownE();
@@ -5556,7 +5551,6 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (isStandaloneMode)
         {
             attackSpeedBoostTimeRemaining = 5f;
-            SetSwordRedVisuals(true);
             SetGhostVisuals(true);
         }
         else if (IsOwner)
@@ -5579,7 +5573,6 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     [ClientRpc]
     private void TriggerAttackSpeedBoostClientRpc(bool state)
     {
-        SetSwordRedVisuals(state);
         SetGhostVisuals(state);
     }
 
@@ -5587,7 +5580,6 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     private void OnAttackSpeedBoostedChanged(bool oldVal, bool newVal)
     {
-        SetSwordRedVisuals(newVal);
         SetGhostVisuals(newVal);
         if (newVal)
         {
@@ -7509,7 +7501,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     private System.Collections.Generic.Dictionary<GameObject, System.Collections.Generic.List<GameObject>> vfxPools =
         new System.Collections.Generic.Dictionary<GameObject, System.Collections.Generic.List<GameObject>>();
 
-    private GameObject GetPooledVFX(GameObject prefab, Vector3 position, Quaternion rotation)
+    private GameObject GetPooledVFX(GameObject prefab, Transform parent)
     {
         if (prefab == null) return null;
 
@@ -7520,6 +7512,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         System.Collections.Generic.List<GameObject> pool = vfxPools[prefab];
 
+        GameObject obj = null;
         for (int i = 0; i < pool.Count; i++)
         {
             if (pool[i] == null)
@@ -7531,17 +7524,75 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
             if (!pool[i].activeSelf)
             {
-                GameObject obj = pool[i];
-                obj.transform.position = position;
-                obj.transform.rotation = rotation;
-                obj.SetActive(true);
-                return obj;
+                obj = pool[i];
+                break;
             }
         }
 
-        GameObject newObj = Instantiate(prefab, position, rotation);
-        pool.Add(newObj);
-        return newObj;
+        if (obj == null)
+        {
+            obj = Instantiate(prefab);
+            pool.Add(obj);
+        }
+
+        if (parent != null)
+        {
+            obj.transform.SetParent(parent);
+            obj.transform.localPosition = Vector3.zero;
+            obj.transform.localRotation = Quaternion.Euler(-90f, 0f, 0f);
+            obj.transform.localScale = Vector3.one;
+        }
+        else
+        {
+            obj.transform.SetParent(null);
+        }
+
+        obj.SetActive(true);
+        return obj;
+    }
+
+    private GameObject GetPooledVFX(GameObject prefab, Vector3 position, Quaternion rotation)
+    {
+        if (prefab == null) return null;
+
+        if (!vfxPools.ContainsKey(prefab))
+        {
+            vfxPools[prefab] = new System.Collections.Generic.List<GameObject>();
+        }
+
+        System.Collections.Generic.List<GameObject> pool = vfxPools[prefab];
+
+        GameObject obj = null;
+        for (int i = 0; i < pool.Count; i++)
+        {
+            if (pool[i] == null)
+            {
+                pool.RemoveAt(i);
+                i--;
+                continue;
+            }
+
+            if (!pool[i].activeSelf)
+            {
+                obj = pool[i];
+                break;
+            }
+        }
+
+        if (obj == null)
+        {
+            obj = Instantiate(prefab, position, rotation);
+            pool.Add(obj);
+        }
+        else
+        {
+            obj.transform.SetParent(null);
+            obj.transform.position = position;
+            obj.transform.rotation = rotation;
+        }
+
+        obj.SetActive(true);
+        return obj;
     }
 
     private System.Collections.IEnumerator DeactivateAfterDelay(GameObject obj, float delay)
@@ -7558,7 +7609,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (IsLeftoverEvent()) return;
         if (leftSlashVfxPrefab != null && leftSlashSpawnPoint != null)
         {
-            GameObject vfx = GetPooledVFX(leftSlashVfxPrefab, leftSlashSpawnPoint.position, leftSlashSpawnPoint.rotation);
+            GameObject vfx = GetPooledVFX(leftSlashVfxPrefab, leftSlashSpawnPoint);
             if (vfx != null)
             {
                 ParticleSystem[] ps = vfx.GetComponentsInChildren<ParticleSystem>();
@@ -7581,7 +7632,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (IsLeftoverEvent()) return;
         if (rightSlashVfxPrefab != null && rightSlashSpawnPoint != null)
         {
-            GameObject vfx = GetPooledVFX(rightSlashVfxPrefab, rightSlashSpawnPoint.position, rightSlashSpawnPoint.rotation);
+            GameObject vfx = GetPooledVFX(rightSlashVfxPrefab, rightSlashSpawnPoint);
             if (vfx != null)
             {
                 ParticleSystem[] ps = vfx.GetComponentsInChildren<ParticleSystem>();
@@ -7606,7 +7657,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         {
             if (leftSlashSpawnPoint != null)
             {
-                GameObject vfxL = GetPooledVFX(dualSlashVfxPrefab, leftSlashSpawnPoint.position, leftSlashSpawnPoint.rotation);
+                GameObject vfxL = GetPooledVFX(dualSlashVfxPrefab, leftSlashSpawnPoint);
                 if (vfxL != null)
                 {
                     ParticleSystem[] ps = vfxL.GetComponentsInChildren<ParticleSystem>();
@@ -7620,7 +7671,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             }
             if (rightSlashSpawnPoint != null)
             {
-                GameObject vfxR = GetPooledVFX(dualSlashVfxPrefab, rightSlashSpawnPoint.position, rightSlashSpawnPoint.rotation);
+                GameObject vfxR = GetPooledVFX(dualSlashVfxPrefab, rightSlashSpawnPoint);
                 if (vfxR != null)
                 {
                     ParticleSystem[] ps = vfxR.GetComponentsInChildren<ParticleSystem>();
@@ -7648,7 +7699,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         {
             if (leftSlashSpawnPoint != null)
             {
-                GameObject vfx = GetPooledVFX(dualSlash1VfxPrefab, leftSlashSpawnPoint.position, leftSlashSpawnPoint.rotation);
+                GameObject vfx = GetPooledVFX(dualSlash1VfxPrefab, leftSlashSpawnPoint);
                 if (vfx != null)
                 {
                     ParticleSystem[] ps = vfx.GetComponentsInChildren<ParticleSystem>();
@@ -7679,7 +7730,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         {
             if (rightSlashSpawnPoint != null)
             {
-                GameObject vfx = GetPooledVFX(dualSlash2VfxPrefab, rightSlashSpawnPoint.position, rightSlashSpawnPoint.rotation);
+                GameObject vfx = GetPooledVFX(dualSlash2VfxPrefab, rightSlashSpawnPoint);
                 if (vfx != null)
                 {
                     ParticleSystem[] ps = vfx.GetComponentsInChildren<ParticleSystem>();
