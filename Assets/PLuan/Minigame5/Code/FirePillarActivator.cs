@@ -2,6 +2,7 @@ using UnityEngine;
 using Unity.Netcode;
 using System.Collections;
 
+[ExecuteAlways]
 public class FirePillarActivator : NetworkBehaviour
 {
     [Header("Cấu hình hiệu ứng")]
@@ -17,7 +18,21 @@ public class FirePillarActivator : NetworkBehaviour
     [Header("Cấu hình va chạm")]
     [SerializeField] private string fireElementTag = "Lua"; // Tag đạn lửa của Arthur là "Lua"
 
+    [Header("Cấu hình Tia Laser Phản Chiếu")]
+    [SerializeField] private bool enableLaser = true;
+    [SerializeField] private LineRenderer laserLineRenderer;
+    [SerializeField] private Transform laserStartPoint;
+    [SerializeField] private int maxReflections = 5;
+    [SerializeField] private float maxStepDistance = 50f;
+    [SerializeField] private LayerMask mirrorLayerMask;
+    [SerializeField] private LayerMask obstacleLayerMask;
+    [SerializeField] private LayerMask targetLayerMask;
+
+    [Header("Xem trước trong Editor")]
+    [SerializeField] private bool previewLaserInEditor = false; // Tích chọn để vẽ tia laser ngay trong Edit Mode để dễ căn chỉnh gương
+
     private Material glowMaterial;
+    private bool m_IsLaserActive = false;
     
     // Biến mạng đồng bộ trạng thái kích hoạt (Chỉ Server có quyền ghi, Client chỉ đọc)
     private NetworkVariable<bool> m_IsActivated = new NetworkVariable<bool>(
@@ -32,10 +47,14 @@ public class FirePillarActivator : NetworkBehaviour
         // Việc này ghi đè các thiết lập cũ/sai trong Inspector nếu có
         startDissolveValue = 1.0f;
         endDissolveValue = 0.0f;
+        m_IsLaserActive = false;
     }
 
     void Start()
     {
+        // Bỏ qua khởi chạy Netcode/Material nếu đang trong Edit Mode của Editor
+        if (!Application.isPlaying) return;
+
         Debug.Log($"[FirePillarActivator] Khởi chạy Start trên {gameObject.name} (Chế độ ChildOverlay={useChildOverlayMode})");
         
         Renderer targetRenderer = null;
@@ -78,6 +97,14 @@ public class FirePillarActivator : NetworkBehaviour
         {
             Debug.LogError("[FirePillarActivator] Không tìm thấy MeshRenderer!");
         }
+
+        // Tự động cấu hình cơ bản cho LineRenderer để tia sáng nhìn đẹp hơn
+        if (laserLineRenderer != null)
+        {
+            laserLineRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            laserLineRenderer.receiveShadows = false;
+            laserLineRenderer.positionCount = 0;
+        }
     }
 
     public override void OnNetworkSpawn()
@@ -101,6 +128,124 @@ public class FirePillarActivator : NetworkBehaviour
         m_IsActivated.OnValueChanged -= OnActivationStateChanged;
     }
 
+    void Update()
+    {
+        if (Application.isPlaying)
+        {
+            // Vẽ laser thời gian thực khi game đang chạy và cột đá đã được kích hoạt hoàn toàn
+            if (m_IsLaserActive && enableLaser && laserLineRenderer != null && laserStartPoint != null)
+            {
+                DrawLaserReflection();
+            }
+            else
+            {
+                if (laserLineRenderer != null && laserLineRenderer.positionCount > 0)
+                {
+                    laserLineRenderer.positionCount = 0;
+                }
+            }
+        }
+        else
+        {
+            // Chế độ Edit Mode (Khi game KHÔNG chạy)
+            if (previewLaserInEditor && laserLineRenderer != null && laserStartPoint != null)
+            {
+                DrawLaserReflection();
+            }
+            else
+            {
+                if (laserLineRenderer != null && laserLineRenderer.positionCount > 0)
+                {
+                    laserLineRenderer.positionCount = 0;
+                }
+            }
+        }
+    }
+
+    private void DrawLaserReflection()
+    {
+        Vector3 currentOrigin = laserStartPoint.position;
+        Vector3 currentDir = laserStartPoint.forward; // Hoặc laserStartPoint.up tùy thiết kế prefab của bạn
+
+        System.Collections.Generic.List<Vector3> laserPoints = new System.Collections.Generic.List<Vector3>();
+        laserPoints.Add(currentOrigin);
+
+        bool hitFinalTarget = false;
+        GameObject finalTargetObj = null;
+
+        LayerMask combinedMask = mirrorLayerMask | obstacleLayerMask | targetLayerMask;
+
+        for (int i = 0; i < maxReflections; i++)
+        {
+            Ray ray = new Ray(currentOrigin, currentDir);
+            RaycastHit hit;
+
+            if (Physics.Raycast(ray, out hit, maxStepDistance, combinedMask))
+            {
+                laserPoints.Add(hit.point);
+
+                // 1. Kiểm tra trúng đích Target (Trụ năng lượng cuối cùng)
+                if (((1 << hit.collider.gameObject.layer) & targetLayerMask) != 0)
+                {
+                    hitFinalTarget = true;
+                    finalTargetObj = hit.collider.gameObject;
+                    break; // Đã trúng đích -> Dừng vẽ tia tại đây
+                }
+
+                // 2. Kiểm tra va chạm với Gương phản chiếu (Mirror)
+                if (((1 << hit.collider.gameObject.layer) & mirrorLayerMask) != 0)
+                {
+                    // Chỉ phản chiếu khi đập vào MẶT TRƯỚC của gương (Góc giữa hướng tia và pháp tuyến mặt gương nhỏ hơn 90 độ, tức Dot < 0)
+                    if (Vector3.Dot(currentDir, hit.normal) < 0f)
+                    {
+                        currentDir = Vector3.Reflect(currentDir, hit.normal);
+                        currentOrigin = hit.point + currentDir * 0.01f; // Dời điểm gốc tia mới ra ngoài một chút để tránh tự va chạm
+                    }
+                    else
+                    {
+                        // Đập vào mặt sau gương -> Bị chặn lại và dừng vẽ
+                        break;
+                    }
+                }
+                else
+                {
+                    // Đập vào chướng ngại vật thông thường -> Bị chặn lại
+                    break;
+                }
+            }
+            else
+            {
+                // Bắn tự do ra xa nếu không va chạm
+                laserPoints.Add(currentOrigin + currentDir * maxStepDistance);
+                break;
+            }
+        }
+
+        // Cập nhật tọa độ vẽ LineRenderer
+        laserLineRenderer.positionCount = laserPoints.Count;
+        laserLineRenderer.SetPositions(laserPoints.ToArray());
+
+        // Chỉ Server chịu trách nhiệm cập nhật trạng thái trúng câu đố (Chỉ kiểm tra khi game đang chạy thực sự)
+        if (Application.isPlaying && IsServer)
+        {
+            UpdateTargetActivationServer(hitFinalTarget, finalTargetObj);
+        }
+    }
+
+    private void UpdateTargetActivationServer(bool hitFinalTarget, GameObject finalTargetObj)
+    {
+        if (!IsServer) return;
+
+        if (hitFinalTarget && finalTargetObj != null)
+        {
+            FinalEnergyPillar targetPillar = finalTargetObj.GetComponent<FinalEnergyPillar>();
+            if (targetPillar != null)
+            {
+                targetPillar.SetLaserHitThisFrame();
+            }
+        }
+    }
+
     // Lắng nghe thay đổi biến NetworkVariable từ Server
     private void OnActivationStateChanged(bool previousValue, bool newValue)
     {
@@ -114,6 +259,7 @@ public class FirePillarActivator : NetworkBehaviour
     // Hàm áp dụng trạng thái phát sáng ngay lập tức (không chạy coroutine) cho người chơi vào sau
     private void ApplyInstantActivatedState()
     {
+        m_IsLaserActive = true;
         if (glowMaterial != null)
         {
             if (useChildOverlayMode && glowChildObject != null)
@@ -196,7 +342,10 @@ public class FirePillarActivator : NetworkBehaviour
 
             // Đảm bảo dừng ở giá trị cuối cùng
             glowMaterial.SetFloat(dissolvePropertyName, endDissolveValue);
-            Debug.Log("[FirePillarActivator] Hoàn thành chạy hiệu ứng lửa.");
+            
+            // Kích hoạt vẽ laser sau khi hoàn thành 3 giây dâng lửa
+            m_IsLaserActive = true;
+            Debug.Log("[FirePillarActivator] Hoàn thành chạy hiệu ứng lửa. Bắt đầu bắn tia laser.");
         }
     }
 }
