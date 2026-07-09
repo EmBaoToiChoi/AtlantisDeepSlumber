@@ -499,7 +499,7 @@ MonoBehaviour:
     m_InternalValue: 0
   agent: {fileID: 6975396423995706817}
   anim: {fileID: 8169567763737278100}
-  eyeTransform: {fileID: 6392247921389681283}
+  eyeTransform: {fileID: 8819950804527126295}
   patrolWalkSpeed: 2
   chaseRunSpeed: 5.5
   orbitSpeed: 3
@@ -512,6 +512,7 @@ MonoBehaviour:
   kickDamage: 10
   kickKnockbackForce: 18
   kickCooldown: 5
+  kickStunDuration: 1.5
   swordBase: {fileID: 1974040110551630231}
   swordTip: {fileID: 3441479889493322479}
   swordThickness: 0.4
@@ -685,14 +686,14 @@ Transform:
   m_CorrespondingSourceObject: {fileID: -1070350730909333850, guid: 0f23067026bf65c4fb196b7802330f3e, type: 3}
   m_PrefabInstance: {fileID: 2308859180964530949}
   m_PrefabAsset: {fileID: 0}
---- !u!4 &6392247921389681283 stripped
-Transform:
-  m_CorrespondingSourceObject: {fileID: 8700783698680967558, guid: 0f23067026bf65c4fb196b7802330f3e, type: 3}
-  m_PrefabInstance: {fileID: 2308859180964530949}
-  m_PrefabAsset: {fileID: 0}
 --- !u!95 &8169567763737278100 stripped
 Animator:
   m_CorrespondingSourceObject: {fileID: 5866666021909216657, guid: 0f23067026bf65c4fb196b7802330f3e, type: 3}
+  m_PrefabInstance: {fileID: 2308859180964530949}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &8819950804527126295 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 6515712193588681746, guid: 0f23067026bf65c4fb196b7802330f3e, type: 3}
   m_PrefabInstance: {fileID: 2308859180964530949}
   m_PrefabAsset: {fileID: 0}
 --- !u!1001 &6174513220685718709
