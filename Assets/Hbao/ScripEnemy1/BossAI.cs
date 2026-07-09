@@ -641,21 +641,27 @@ public class BossAI : NetworkBehaviour
     {
         var list = new System.Collections.Generic.List<Transform>();
 
-        // Tìm trực tiếp các Class Player cụ thể (Cực kỳ tối ưu và bỏ qua sai sót về Tag/Layer trên Editor)
+        // Tìm trực tiếp các Class Player cụ thể kể cả các lớp con (Cực kỳ tối ưu và bỏ qua sai sót về Tag/Layer trên Editor)
         var leos = FindObjectsByType<LeoPlayer>(FindObjectsSortMode.None);
-        foreach (var p in leos) if (p != null) list.Add(p.transform);
+        foreach (var p in leos) if (p != null && !list.Contains(p.transform)) list.Add(p.transform);
 
         var arthurs = FindObjectsByType<ArthurPlayer>(FindObjectsSortMode.None);
-        foreach (var p in arthurs) if (p != null) list.Add(p.transform);
+        foreach (var p in arthurs) if (p != null && !list.Contains(p.transform)) list.Add(p.transform);
 
         var elenas = FindObjectsByType<ElenaPlayer>(FindObjectsSortMode.None);
-        foreach (var p in elenas) if (p != null) list.Add(p.transform);
+        foreach (var p in elenas) if (p != null && !list.Contains(p.transform)) list.Add(p.transform);
+
+        var elenaArchers = FindObjectsByType<ElenaArcher>(FindObjectsSortMode.None);
+        foreach (var p in elenaArchers) if (p != null && !list.Contains(p.transform)) list.Add(p.transform);
 
         var mayas = FindObjectsByType<MayaPlayer>(FindObjectsSortMode.None);
-        foreach (var p in mayas) if (p != null) list.Add(p.transform);
+        foreach (var p in mayas) if (p != null && !list.Contains(p.transform)) list.Add(p.transform);
+
+        var mayaSupports = FindObjectsByType<MayaSupport>(FindObjectsSortMode.None);
+        foreach (var p in mayaSupports) if (p != null && !list.Contains(p.transform)) list.Add(p.transform);
 
         var simples = FindObjectsByType<SimplePlayerTest>(FindObjectsSortMode.None);
-        foreach (var p in simples) if (p != null) list.Add(p.transform);
+        foreach (var p in simples) if (p != null && !list.Contains(p.transform)) list.Add(p.transform);
 
         return list;
     }
@@ -668,6 +674,9 @@ public class BossAI : NetworkBehaviour
         float minD = float.MaxValue;
         Vector3 eyePos = eyeTransform != null ? eyeTransform.position : transform.position + Vector3.up * 1.5f;
 
+        // Loại trừ Layer "Player" và "Enemy" khỏi bộ lọc vật cản (Raycast) để tránh việc Raycast tự va chạm vào chính thân thể Player/Boss rồi nghĩ là bị che mắt
+        int raycastMask = obstacleLayer.value & ~LayerMask.GetMask("Player", "Enemy");
+
         var activePlayers = GetAllActivePlayers();
         for (int i = 0; i < activePlayers.Count; i++)
         {
@@ -676,17 +685,19 @@ public class BossAI : NetworkBehaviour
 
             if (IsPlayerDeadOrInvisible(pTrans)) continue;
 
-            float d = Vector3.Distance(eyePos, pTrans.position);
+            // Tính khoảng cách từ mắt Boss tới tâm ngực Player (cao hơn 1m so với chân) để tránh việc Raycast bị chạm đất/nền sàn làm mất mục tiêu ở cự ly gần!
+            Vector3 targetCenter = pTrans.position + Vector3.up * 1.0f;
+            float d = Vector3.Distance(eyePos, targetCenter);
             
             // Chỉ kiểm tra tầm nhìn khi ở trong khoảng cách sightRange
             if (d <= sightRange)
             {
-                Vector3 dir = (pTrans.position - eyePos).normalized;
+                Vector3 dir = (targetCenter - eyePos).normalized;
                 
                 // Tầm quét cực nhạy: 360 độ cự ly gần (4m) hoặc góc quạt FOV rộng ở cự ly xa
                 bool inFOV = Vector3.Angle(transform.forward, dir) < fieldOfView / 2f || d <= 4f;
 
-                if (inFOV && !Physics.Raycast(eyePos, dir, d, obstacleLayer))
+                if (inFOV && !Physics.Raycast(eyePos, dir, d, raycastMask))
                 {
                     if (d < minD)
                     {
