@@ -148,8 +148,8 @@ public class Enemy1_DapBua : NetworkBehaviour
         var na = GetComponent<Unity.Netcode.Components.NetworkAnimator>();
         if (na != null)
         {
+            if (anim != null) na.Animator = anim;
             if (anim == null || anim.runtimeAnimatorController == null) na.enabled = false;
-            else na.Animator = anim;
         }
 
         // Initialize state instances for FSM
