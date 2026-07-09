@@ -7540,11 +7540,12 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             obj.transform.SetParent(parent);
             obj.transform.localPosition = Vector3.zero;
             obj.transform.localRotation = Quaternion.Euler(-90f, 0f, 0f);
-            obj.transform.localScale = Vector3.one;
+            obj.transform.localScale = new Vector3(0.5f, 0.5f, 0.5f);
         }
         else
         {
             obj.transform.SetParent(null);
+            obj.transform.localScale = new Vector3(0.5f, 0.5f, 0.5f);
         }
 
         obj.SetActive(true);
@@ -7591,6 +7592,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             obj.transform.rotation = rotation;
         }
 
+        obj.transform.localScale = new Vector3(0.5f, 0.5f, 0.5f);
         obj.SetActive(true);
         return obj;
     }
@@ -7971,17 +7973,13 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (anim != null && anim.isActiveAndEnabled && anim.runtimeAnimatorController != null && anim.layerCount > 1)
         {
             AnimatorStateInfo stateInfo = anim.GetCurrentAnimatorStateInfo(1);
-            bool isSlashActive = !stateInfo.IsName("New State") && !stateInfo.IsName("Empty");
+            
+            bool isDrawOrSheatheActive = stateInfo.IsName("laykiemtaytrai") || stateInfo.IsName("Laykiemtayphai") ||
+                                         stateInfo.IsName("catkiemtaytrai") || stateInfo.IsName("catkiemtayphai");
+            
+            bool shouldBeActive = IsAiming || isRShootPending || (isExecutingAttack && !isRootedAttack) || isSwitchingWeapon || isDrawOrSheatheActive;
 
-            // Chỉ duy trì Layer 1 khi đang ngắm bắn (IsAiming), chờ chiêu R (isRShootPending),
-            // hoặc đang thực hiện đòn đánh di chuyển (isExecutingAttack và không phải rooted).
-            bool shouldBeActive = IsAiming || isRShootPending || (isExecutingAttack && !isRootedAttack);
-            if (!shouldBeActive)
-            {
-                isSlashActive = false;
-            }
-
-            targetAttackLayerWeight = isSlashActive ? 1f : 0f;
+            targetAttackLayerWeight = shouldBeActive ? 1f : 0f;
 
             currentAttackLayerWeight = Mathf.MoveTowards(currentAttackLayerWeight, targetAttackLayerWeight, Time.deltaTime * 10f);
             anim.SetLayerWeight(1, currentAttackLayerWeight);

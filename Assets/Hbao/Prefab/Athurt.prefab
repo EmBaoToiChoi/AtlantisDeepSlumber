@@ -197,6 +197,7 @@ GameObject:
   - component: {fileID: 1642968978861485088}
   - component: {fileID: 8525285586413739062}
   - component: {fileID: 866512303731236257}
+  - component: {fileID: 4597848443751118353}
   m_Layer: 3
   m_Name: Athurt
   m_TagString: Player
@@ -876,6 +877,13 @@ MonoBehaviour:
     TransitionIndex: 9
   - IsCrossFadeExit: 0
     Layer: 1
+    OriginatingState: -499022955
+    DestinationState: -1219495144
+    TransitionDuration: 0.05
+    TriggerNameHash: -1219495144
+    TransitionIndex: 11
+  - IsCrossFadeExit: 0
+    Layer: 1
     OriginatingState: -382223678
     DestinationState: 133138430
     TransitionDuration: 0.05
@@ -1018,6 +1026,10 @@ MonoBehaviour:
       NameHash: 2025090383
       Synchronize: 1
       ParameterType: 4
+    - name: ChatRiu
+      NameHash: -1219495144
+      Synchronize: 1
+      ParameterType: 9
   AnimatorParametersExpanded: 0
 --- !u!114 &3135136227906270387
 MonoBehaviour:
@@ -1133,7 +1145,6 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 256
   currentInteractBox: {fileID: 0}
-  currentPillarStation: {fileID: 0}
   heldCoreNetworkId:
     UpdateTraits:
       MinSecondsBetweenUpdates: 0
@@ -1249,6 +1260,19 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   axeHoldingPoint: {fileID: 1210989824059248959}
+--- !u!114 &4597848443751118353
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6392718148198085431}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 409517c57a108b84da7090ac57c2e455, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  ShowTopMostFoldoutHeaderGroup: 1
 --- !u!1 &6656804584175171832
 GameObject:
   m_ObjectHideFlags: 0

@@ -357,6 +357,13 @@ MonoBehaviour:
     TriggerNameHash: 20298039
     TransitionIndex: 1
   - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: -453240694
+    DestinationState: -1919643741
+    TransitionDuration: 0.01
+    TriggerNameHash: 1460818663
+    TransitionIndex: 2
+  - IsCrossFadeExit: 0
     Layer: 1
     OriginatingState: -499022955
     DestinationState: 794296749
@@ -390,6 +397,10 @@ MonoBehaviour:
       ParameterType: 9
     - name: Die
       NameHash: 20298039
+      Synchronize: 1
+      ParameterType: 9
+    - name: Enrage
+      NameHash: 1460818663
       Synchronize: 1
       ParameterType: 9
   AnimatorParametersExpanded: 0
@@ -439,7 +450,7 @@ MonoBehaviour:
   phase2SpeedMultiplier: 1.25
   phase2AnimSpeed: 1.4
   enrageDuration: 3
-  enrageVFXPrefab: {fileID: 0}
+  enrageVFXPrefab: {fileID: 6530448752386012335, guid: db8a26dbfe6511b4a86e870b66ca27b8, type: 3}
   enrageVFXSpawnPoint: {fileID: 0}
   currentState:
     UpdateTraits:

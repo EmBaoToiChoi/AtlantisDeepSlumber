@@ -25,6 +25,9 @@ public class BossHealthBar : MonoBehaviour
     private float yellowDrainDelay = 0.5f; // Thời gian chờ trước khi thanh vàng tụt xuống
     private float yellowDrainTimer = 0f;
 
+    private float shakeTimer = 0f;
+    private float flashTimer = 0f;
+
     private void OnEnable()
     {
         if (uiDocument == null)
@@ -121,6 +124,25 @@ public class BossHealthBar : MonoBehaviour
             rootContainer.style.display = DisplayStyle.Flex;
         }
 
+        // Cập nhật bộ đếm thời gian hiệu ứng và loại bỏ class sau khi chạy xong
+        if (shakeTimer > 0f)
+        {
+            shakeTimer -= Time.deltaTime;
+            if (shakeTimer <= 0f && rootContainer != null)
+            {
+                rootContainer.RemoveFromClassList("shake");
+            }
+        }
+
+        if (flashTimer > 0f)
+        {
+            flashTimer -= Time.deltaTime;
+            if (flashTimer <= 0f && progressBar != null)
+            {
+                progressBar.RemoveFromClassList("flash");
+            }
+        }
+
         UpdateHealthAnimation();
     }
 
@@ -144,6 +166,24 @@ public class BossHealthBar : MonoBehaviour
         {
             displayedHealth = actualHp;
             yellowHealth = actualHp;
+        }
+
+        // Kích hoạt hiệu ứng rung lắc (shake) và chớp đỏ (flash) khi Boss bị mất máu
+        if (actualHp < displayedHealth && displayedHealth > 0f)
+        {
+            if (rootContainer != null)
+            {
+                rootContainer.RemoveFromClassList("shake");
+                rootContainer.AddToClassList("shake");
+                shakeTimer = 0.22f;
+            }
+
+            if (progressBar != null)
+            {
+                progressBar.RemoveFromClassList("flash");
+                progressBar.AddToClassList("flash");
+                flashTimer = 0.2f;
+            }
         }
 
         displayedHealth = actualHp;
