@@ -1,5 +1,5 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
-    <Style src="project://database/Assets/Hbao/ScripEnemy1/BossHealthBar.uss?fileID=7433441132597879392&amp;guid=9530403e05a8f4c409cf93c048b11111&amp;type=3#BossHealthBar" />
+    <Style src="project://database/Assets/Hbao/ScripEnemy1/BossHealthBar.uss" />
     <ui:VisualElement name="boss-hud-container" class="boss-hud-container">
         <!-- Khung avatar Boss ở bên trái -->
         <ui:VisualElement name="boss-avatar-frame" class="boss-avatar-frame">
