@@ -65,7 +65,10 @@ public class BossHealthBar : MonoBehaviour
             return;
         }
 
-        if (rootContainer != null) rootContainer.style.display = DisplayStyle.Flex;
+        if (rootContainer != null)
+        {
+            rootContainer.style.display = boss.IsBossActive ? DisplayStyle.Flex : DisplayStyle.None;
+        }
 
         // Đặt tên hiển thị cho Boss
         string bossName = boss.gameObject.name;
@@ -102,14 +105,17 @@ public class BossHealthBar : MonoBehaviour
             InitBossHealthAndName();
         }
 
-        // Ẩn thanh máu khi Boss đã chết
-        if (boss.IsDead)
+        // Ẩn thanh máu khi Boss đã chết hoặc chưa kích hoạt
+        if (boss.IsDead || !boss.IsBossActive)
         {
-            if (rootContainer != null) rootContainer.style.display = DisplayStyle.None;
+            if (rootContainer != null && rootContainer.style.display != DisplayStyle.None)
+            {
+                rootContainer.style.display = DisplayStyle.None;
+            }
             return;
         }
 
-        // Hiện thanh máu nếu Boss còn sống
+        // Hiện thanh máu nếu Boss còn sống và đã kích hoạt
         if (rootContainer != null && rootContainer.style.display == DisplayStyle.None)
         {
             rootContainer.style.display = DisplayStyle.Flex;
