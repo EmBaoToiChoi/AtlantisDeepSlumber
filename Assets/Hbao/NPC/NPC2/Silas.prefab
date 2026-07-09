@@ -112,7 +112,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 919132149155446097, guid: 0f23067026bf65c4fb196b7802330f3e, type: 3}
       propertyPath: m_Name
-      value: Rakan
+      value: Silas
       objectReference: {fileID: 0}
     - target: {fileID: 5866666021909216657, guid: 0f23067026bf65c4fb196b7802330f3e, type: 3}
       propertyPath: m_Controller
