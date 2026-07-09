@@ -58,6 +58,12 @@ public class PlayerNameplate : MonoBehaviour
             var hudDoc = hudController.GetComponent<UIDocument>();
             if (hudDoc != null && hudDoc.rootVisualElement != null)
             {
+                // Dọn dẹp container cũ khỏi HUD (nếu có) trước khi tạo mới để tránh rò rỉ bộ nhớ
+                if (container != null)
+                {
+                    container.RemoveFromHierarchy();
+                }
+
                 // Instantiate nameplate từ asset
                 container = nameplateAsset.CloneTree().Q<VisualElement>("nameplate-container");
                 if (container != null)
@@ -113,9 +119,10 @@ public class PlayerNameplate : MonoBehaviour
             return;
         }
 
-        // Nếu chưa khởi tạo (do HUD chưa ready lúc Start), thử khởi tạo lại
-        if (!isInitialized || container == null || nameLabel == null)
+        // Nếu chưa khởi tạo hoặc bị mất kết nối với Panel HUD (khi chuyển/tải lại HUD), thử khởi tạo lại
+        if (!isInitialized || container == null || container.panel == null || nameLabel == null)
         {
+            isInitialized = false;
             TryInitialize();
             return;
         }
@@ -127,10 +134,16 @@ public class PlayerNameplate : MonoBehaviour
         if (Camera.main != null)
         {
             Vector3 worldPos = transform.position;
-            // Nếu component này nằm trực tiếp trên root, dùng root + heightOffset
-            if (playerTarget != null && transform == playerTarget.transform)
+            // Nếu component này nằm trực tiếp trên root, dùng root + heightOffset.
+            // Hoặc nếu nằm ở child transform nhưng có vị trí Y cục bộ quá thấp (< 1.5m), ta bù thêm chiều cao.
+            if (playerTarget != null && (transform == playerTarget.transform || transform.localPosition.y < 1.5f))
             {
-                worldPos += Vector3.up * heightOffset;
+                float offset = heightOffset;
+                if (transform != playerTarget.transform)
+                {
+                    offset = Mathf.Max(0f, heightOffset - transform.localPosition.y);
+                }
+                worldPos += Vector3.up * offset;
             }
 
             Vector3 screenPos = Camera.main.WorldToScreenPoint(worldPos);
