@@ -50,6 +50,8 @@ public class BossAI : NetworkBehaviour
         BossState.Idle, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     public NetworkVariable<bool> isPhase2Network = new NetworkVariable<bool>(
         false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+    public NetworkVariable<bool> isBossActive = new NetworkVariable<bool>(
+        false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
     // ─── Đồng bộ hoạt ảnh Animator qua mạng ─────────────────────
     [Header("Network Anim Sync")]
@@ -70,6 +72,7 @@ public class BossAI : NetworkBehaviour
     private float localHealth;
     private BossState localState = BossState.Idle;
     private bool localIsPhase2 = false;
+    private bool localIsBossActive = false;
     private bool hasEnraged = false; // Tránh gồng nộ nhiều lần
     private bool isStandaloneMode;
     private bool IsNetworkActive => NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
@@ -87,10 +90,24 @@ public class BossAI : NetworkBehaviour
     }
 
     public bool IsPhase2 => isStandaloneMode ? localIsPhase2 : isPhase2Network.Value;
+    public bool IsBossActive => isStandaloneMode ? localIsBossActive : isBossActive.Value;
     public bool IsDead => CurrentStateValue == BossState.Dead;
 
     /// <summary>HP hiện tại đúng trong cả Standalone lẫn Network mode — dùng cho HP bar polling.</summary>
     public float ActualCurrentHealth => isStandaloneMode ? localHealth : currentHealth.Value;
+
+    public void ActivateBoss()
+    {
+        bool auth = isStandaloneMode || (IsNetworkActive && IsServer);
+        if (!auth) return;
+
+        if (isStandaloneMode)
+            localIsBossActive = true;
+        else
+            isBossActive.Value = true;
+
+        Debug.Log("[BossAI] Boss kích hoạt trận chiến!");
+    }
 
     // ─── Thành phần chính (Components) ─────────────────────────
     [Header("Components")]
