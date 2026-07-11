@@ -11,8 +11,10 @@ public class RotatableMirrorPillar : NetworkBehaviour
     [SerializeField] private float rotationStepAngle = 45f; // Góc xoay mỗi lần nhấn F (ví dụ: 45 độ)
     [SerializeField] private float rotateSpeed = 5f; // Tốc độ xoay mượt mà (chuyển động quay)
 
-    [Header("Cấu hình tương tác")]
+    [Header("Cấu hình tương tác xoay tự do")]
     [SerializeField] private string playerTag = "Player"; // Tag dùng để nhận diện người chơi
+    [SerializeField] private float keyboardRotateSpeed = 90f; // Tốc độ xoay bằng phím A/D (độ/giây)
+    [SerializeField] private float mouseRotateSpeed = 5f; // Tốc độ xoay (độ nhạy) khi rê chuột ngang
 
     // Biến mạng đồng bộ góc xoay mục tiêu (Chỉ Server có quyền ghi)
     private NetworkVariable<float> m_TargetRotationY = new NetworkVariable<float>(
@@ -22,7 +24,12 @@ public class RotatableMirrorPillar : NetworkBehaviour
     );
 
     private bool m_PlayerInRange = false;
+    private bool m_IsControlling = false; // Trạng thái người chơi đang nắm giữ/xoay gương này
     private float m_CurrentRotationY = 0f;
+
+    // Public properties để bạn dễ dàng gọi từ Code UI riêng của bạn sau này
+    public bool IsPlayerInRange => m_PlayerInRange;
+    public bool IsControllingMirror => m_IsControlling;
     private float m_OriginalRotationX = 0f;
     private float m_OriginalRotationY = 0f;
     private float m_OriginalRotationZ = 0f;
@@ -99,24 +106,45 @@ public class RotatableMirrorPillar : NetworkBehaviour
 
     void Update()
     {
-        // 1. Xoay mượt mà đến góc xoay mục tiêu trên cả Server và Client
-        m_CurrentRotationY = Mathf.MoveTowardsAngle(m_CurrentRotationY, m_TargetRotationY.Value, rotateSpeed * 100f * Time.deltaTime);
-        rotatePart.localRotation = GetRotationForAxis(m_CurrentRotationY);
-
-        // 2. Nhận lệnh nhấn F từ người chơi tại máy khách tương ứng
+        // 1. Tương tác bật/tắt chế độ điều khiển bằng phím F
         if (m_PlayerInRange && Input.GetKeyDown(KeyCode.F))
         {
-            RotatePillarServerRpc();
+            m_IsControlling = !m_IsControlling;
+            Debug.Log($"[RotatableMirrorPillar] Trạng thái điều khiển: {m_IsControlling}");
+        }
+
+        // 2. Nếu đang trong chế độ điều khiển: người chơi tự xoay cục bộ theo thời gian thực (không có độ trễ)
+        if (m_IsControlling)
+        {
+            float input = 0f;
+            if (Input.GetKey(KeyCode.A) || Input.GetKey(KeyCode.LeftArrow)) input -= 1f;
+            if (Input.GetKey(KeyCode.D) || Input.GetKey(KeyCode.RightArrow)) input += 1f;
+
+            // Đọc thêm di chuyển chuột ngang (Mouse X)
+            input += Input.GetAxis("Mouse X") * mouseRotateSpeed;
+
+            if (Mathf.Abs(input) > 0.01f)
+            {
+                // Cập nhật góc xoay hiện tại cục bộ
+                m_CurrentRotationY = (m_CurrentRotationY + input * keyboardRotateSpeed * Time.deltaTime) % 360f;
+                rotatePart.localRotation = GetRotationForAxis(m_CurrentRotationY);
+
+                // Gửi góc xoay mới lên Server để đồng bộ cho các Client khác
+                UpdateRotationServerRpc(m_CurrentRotationY);
+            }
+        }
+        else
+        {
+            // 3. Nếu KHÔNG trong chế độ điều khiển: xoay mượt mà đồng bộ theo góc mục tiêu từ mạng
+            m_CurrentRotationY = Mathf.MoveTowardsAngle(m_CurrentRotationY, m_TargetRotationY.Value, rotateSpeed * 100f * Time.deltaTime);
+            rotatePart.localRotation = GetRotationForAxis(m_CurrentRotationY);
         }
     }
 
     [ServerRpc(RequireOwnership = false)]
-    private void RotatePillarServerRpc()
+    private void UpdateRotationServerRpc(float angle)
     {
-        // Tính toán góc xoay tiếp theo (xoay vòng 360 độ)
-        float nextRotation = (m_TargetRotationY.Value + rotationStepAngle) % 360f;
-        m_TargetRotationY.Value = nextRotation;
-        Debug.Log($"[RotatableMirrorPillar] Server ghi nhận yêu cầu xoay cột. Góc mới = {nextRotation} độ.");
+        m_TargetRotationY.Value = angle;
     }
 
     // Phát hiện người chơi đi vào phạm vi tương tác (Yêu cầu Trụ có gắn Trigger Collider)
@@ -129,7 +157,7 @@ public class RotatableMirrorPillar : NetworkBehaviour
             if (netObj == null || netObj.IsLocalPlayer)
             {
                 m_PlayerInRange = true;
-                Debug.Log("[RotatableMirrorPillar] Người chơi bước vào vùng xoay gương. Nhấn 'F' để xoay.");
+                Debug.Log("[RotatableMirrorPillar] Người chơi bước vào vùng xoay gương. Nhấn 'F' để tương tác.");
             }
         }
     }
@@ -143,6 +171,7 @@ public class RotatableMirrorPillar : NetworkBehaviour
             if (netObj == null || netObj.IsLocalPlayer)
             {
                 m_PlayerInRange = false;
+                m_IsControlling = false; // Tự động ngắt tương tác nếu đi ra xa
                 Debug.Log("[RotatableMirrorPillar] Người chơi rời khỏi vùng xoay gương.");
             }
         }
