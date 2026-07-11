@@ -16,5 +16,9 @@ public class PlayerRun : MonoBehaviour
     {
         animator.SetTrigger("DungYen");
     }
+    public void TriggerNoiChuyen()
+    {
+        animator.SetTrigger("NoiChuyen");
+    }
 
 }
