@@ -129,14 +129,21 @@ public class RotatableMirrorPillar : NetworkBehaviour
                 m_CurrentRotationY = (m_CurrentRotationY + input * keyboardRotateSpeed * Time.deltaTime) % 360f;
                 rotatePart.localRotation = GetRotationForAxis(m_CurrentRotationY);
 
-                // Gửi góc xoay mới lên Server để đồng bộ cho các Client khác
-                UpdateRotationServerRpc(m_CurrentRotationY);
+                // Gửi góc xoay mới lên Server để đồng bộ cho các Client khác (Chỉ chạy khi đã Spawn mạng)
+                if (IsSpawned)
+                {
+                    UpdateRotationServerRpc(m_CurrentRotationY);
+                }
             }
         }
         else
         {
             // 3. Nếu KHÔNG trong chế độ điều khiển: xoay mượt mà đồng bộ theo góc mục tiêu từ mạng
-            m_CurrentRotationY = Mathf.MoveTowardsAngle(m_CurrentRotationY, m_TargetRotationY.Value, rotateSpeed * 100f * Time.deltaTime);
+            // (Chỉ đồng bộ khi đã Spawn mạng, nếu chạy offline thì giữ nguyên góc hiện tại)
+            if (IsSpawned)
+            {
+                m_CurrentRotationY = Mathf.MoveTowardsAngle(m_CurrentRotationY, m_TargetRotationY.Value, rotateSpeed * 100f * Time.deltaTime);
+            }
             rotatePart.localRotation = GetRotationForAxis(m_CurrentRotationY);
         }
     }
