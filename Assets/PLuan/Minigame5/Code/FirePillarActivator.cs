@@ -180,7 +180,7 @@ public class FirePillarActivator : NetworkBehaviour
             Ray ray = new Ray(currentOrigin, currentDir);
             RaycastHit hit;
 
-            if (Physics.Raycast(ray, out hit, maxStepDistance, combinedMask))
+            if (Physics.Raycast(ray, out hit, maxStepDistance, combinedMask, QueryTriggerInteraction.Ignore))
             {
                 laserPoints.Add(hit.point);
 
