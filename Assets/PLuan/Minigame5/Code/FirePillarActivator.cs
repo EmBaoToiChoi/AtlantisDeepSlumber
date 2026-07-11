@@ -239,6 +239,11 @@ public class FirePillarActivator : NetworkBehaviour
         if (hitFinalTarget && finalTargetObj != null)
         {
             FinalEnergyPillar targetPillar = finalTargetObj.GetComponent<FinalEnergyPillar>();
+            if (targetPillar == null)
+            {
+                targetPillar = finalTargetObj.GetComponentInParent<FinalEnergyPillar>();
+            }
+
             if (targetPillar != null)
             {
                 targetPillar.SetLaserHitThisFrame();
