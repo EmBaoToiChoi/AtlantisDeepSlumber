@@ -5,9 +5,14 @@ public class FinalEnergyPillar : NetworkBehaviour
 {
     [Header("Cấu hình hiển thị")]
     [SerializeField] private Renderer pillarRenderer;
-    [SerializeField] private string activationPropertyName = "_Disolve"; // Thuộc tính shader để kiểm soát phát sáng
+    [SerializeField] private string activationPropertyName = "_Disolve"; // Thuộc tính shader để kiểm soát phát sáng (Dành cho Custom Shader)
     [SerializeField] private float activeDissolveValue = 0.0f; // Giá trị khi được kích hoạt (sáng)
     [SerializeField] private float inactiveDissolveValue = 1.0f; // Giá trị khi tắt (tối)
+
+    [Header("Cấu hình Phát sáng Màu (Standard Shader)")]
+    [SerializeField] private bool useColorEmission = false; // Tích chọn để dùng màu phát sáng của Standard Shader gốc
+    [SerializeField] private string colorPropertyName = "_EmissionColor"; // Tên thuộc tính màu phát sáng trong Standard Shader
+    [ColorUsage(true, true)] [SerializeField] private Color activeColor = Color.cyan; // Màu HDR phát sáng khi kích hoạt
 
     [Header("Hiệu ứng đi kèm (Tùy chọn)")]
     [SerializeField] private GameObject activeEffectObject; // Hạt particle hoặc hiệu ứng phụ khi trụ sáng
@@ -34,7 +39,14 @@ public class FinalEnergyPillar : NetworkBehaviour
         {
             m_Material = pillarRenderer.material;
             // Trạng thái ban đầu: Tắt
-            m_Material.SetFloat(activationPropertyName, inactiveDissolveValue);
+            if (useColorEmission)
+            {
+                m_Material.SetColor(colorPropertyName, Color.black);
+            }
+            else
+            {
+                m_Material.SetFloat(activationPropertyName, inactiveDissolveValue);
+            }
         }
 
         if (activeEffectObject != null)
@@ -67,8 +79,23 @@ public class FinalEnergyPillar : NetworkBehaviour
     {
         if (m_Material != null)
         {
-            // Thiết lập giá trị phát sáng trong shader
-            m_Material.SetFloat(activationPropertyName, active ? activeDissolveValue : inactiveDissolveValue);
+            if (useColorEmission)
+            {
+                if (active)
+                {
+                    m_Material.EnableKeyword("_EMISSION");
+                    m_Material.SetColor(colorPropertyName, activeColor);
+                }
+                else
+                {
+                    m_Material.SetColor(colorPropertyName, Color.black);
+                }
+            }
+            else
+            {
+                // Thiết lập giá trị phát sáng trong shader
+                m_Material.SetFloat(activationPropertyName, active ? activeDissolveValue : inactiveDissolveValue);
+            }
         }
 
         if (activeEffectObject != null)
