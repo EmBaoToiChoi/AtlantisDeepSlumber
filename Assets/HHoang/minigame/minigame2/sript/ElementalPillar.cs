@@ -11,6 +11,7 @@ public enum ElementType
     Nuoc    // Thủy (Nước)
 }
 
+[RequireComponent(typeof(AudioSource))] // Tự động thêm AudioSource vào Object nếu bạn quên
 public class ElementalPillar : NetworkBehaviour
 {
     [Header("Visual & Đổi Màu Trụ")]
@@ -26,6 +27,14 @@ public class ElementalPillar : NetworkBehaviour
     public GameObject setVFX;
     [Tooltip("Kéo hiệu ứng Nước (Hydro VFX) vào đây")]
     public GameObject nuocVFX;
+
+    // [THÊM ÂM THANH] Các biến lưu trữ file âm thanh cho từng hệ
+    [Header("--- ÂM THANH NGUYÊN TỐ (SFX) ---")]
+    public AudioSource pillarAudioSource;
+    public AudioClip luaSFX;
+    public AudioClip bangSFX;
+    public AudioClip setSFX;
+    public AudioClip nuocSFX;
 
     [Header("State (Đồng bộ mạng)")]
     // Biến mạng lưu trạng thái nguyên tố hiện tại của trụ
@@ -44,6 +53,12 @@ public class ElementalPillar : NetworkBehaviour
 
     void Start() 
     {
+        // [THÊM ÂM THANH] Tự động tìm AudioSource nếu bạn chưa kéo vào
+        if (pillarAudioSource == null)
+        {
+            pillarAudioSource = GetComponent<AudioSource>();
+        }
+
         // Mặc định lúc vào game tắt sạch sành sanh mọi hiệu ứng
         DeactivateAllVFX();
         
@@ -87,6 +102,33 @@ public class ElementalPillar : NetworkBehaviour
     private void OnElementChanged(ElementType previousValue, ElementType newValue)
     {
         UpdateVisuals(newValue);
+        
+        // [THÊM ÂM THANH] Chỉ phát âm thanh khi có sự thay đổi thực tế (vừa bị bắn trúng)
+        if (previousValue == ElementType.None && newValue != ElementType.None)
+        {
+            PlayElementalSound(newValue);
+        }
+    }
+
+    // [THÊM ÂM THANH] Hàm xử lý việc chọn và phát đúng âm thanh
+    private void PlayElementalSound(ElementType element)
+    {
+        if (pillarAudioSource == null) return;
+
+        AudioClip clipToPlay = null;
+        switch (element)
+        {
+            case ElementType.Lua: clipToPlay = luaSFX; break;
+            case ElementType.Bang: clipToPlay = bangSFX; break;
+            case ElementType.Set: clipToPlay = setSFX; break;
+            case ElementType.Nuoc: clipToPlay = nuocSFX; break;
+        }
+
+        if (clipToPlay != null)
+        {
+            // Dùng PlayOneShot để âm thanh phát ra trọn vẹn, vang lên như tiếng nổ
+            pillarAudioSource.PlayOneShot(clipToPlay);
+        }
     }
 
     // Cập nhật màu sắc và bật tắt các loại VFX tương ứng

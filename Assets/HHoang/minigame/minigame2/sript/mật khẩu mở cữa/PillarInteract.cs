@@ -2,6 +2,7 @@ using System.Collections;
 using UnityEngine;
 using Unity.Netcode; 
 
+[RequireComponent(typeof(AudioSource))] // Tự động gắn loa vào trụ nếu quên
 public class PillarInteract : NetworkBehaviour 
 {
     [Header("Puzzle Settings")]
@@ -15,6 +16,11 @@ public class PillarInteract : NetworkBehaviour
 
     [Header("Visual Effects")]
     [SerializeField] private ParticleSystem dustEffect; 
+
+    // [THÊM ÂM THANH] Nơi gắn loa và file âm thanh tiếng đá xoay
+    [Header("Audio Settings")]
+    public AudioSource pillarAudio;
+    public AudioClip rotateSound;
 
     [Header("References")]
     [SerializeField] private PuzzleManager puzzleManager; 
@@ -35,6 +41,12 @@ public class PillarInteract : NetworkBehaviour
         initialXRotation = transform.rotation.eulerAngles.x;
         initialZRotation = transform.rotation.eulerAngles.z;
         initialYRotation = transform.rotation.eulerAngles.y;
+
+        // [THÊM ÂM THANH] Tự động tìm cái Loa trên trụ
+        if (pillarAudio == null)
+        {
+            pillarAudio = GetComponent<AudioSource>();
+        }
 
         if (puzzleManager == null)
         {
@@ -110,6 +122,13 @@ public class PillarInteract : NetworkBehaviour
     {
         if (dustEffect != null) dustEffect.Play();
 
+        // [THÊM ÂM THANH] Bắt đầu phát tiếng đá lết
+        if (pillarAudio != null && rotateSound != null)
+        {
+            pillarAudio.clip = rotateSound;
+            pillarAudio.Play();
+        }
+
         Quaternion startRot = transform.rotation;
         float elapsedTime = 0f;
         
@@ -133,6 +152,12 @@ public class PillarInteract : NetworkBehaviour
         SetRotationFromDirection(finalDirectionValue);
 
         if (dustEffect != null) dustEffect.Stop();
+
+        // [THÊM ÂM THANH] Ngắt tiếng đá lết ngay khi trụ xoay xong
+        if (pillarAudio != null && pillarAudio.isPlaying)
+        {
+            pillarAudio.Stop();
+        }
 
         // ==========================================
         // CHỈ SERVER: Quét đáp án ngay khi ĐÃ XOAY XONG

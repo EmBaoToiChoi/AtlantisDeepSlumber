@@ -9,16 +9,19 @@ public class DoorConfig
     public Vector3 slideOffset;     
     public float doorSpeed = 5f;    
 
+    // [THÊM ÂM THANH] Nguồn phát âm thanh trượt cho riêng cánh cửa này
+    public AudioSource slideAudioSource; 
+
     [HideInInspector]
     public Vector3 initialPos;      
 }
 
 public class PressurePlateDoor : NetworkBehaviour
 {
-    // [THÊM MỚI] Danh sách toàn cục lưu tất cả các nút đang có trong game
+    // Danh sách toàn cục lưu tất cả các nút đang có trong game
     public static List<PressurePlateDoor> allPlates = new List<PressurePlateDoor>();
     
-    // [THÊM MỚI] Chống lỗi cửa chạy nhanh gấp đôi khi có 2 nút cùng điều khiển
+    // Chống lỗi cửa chạy nhanh gấp đôi khi có 2 nút cùng điều khiển
     private static int lastFrameCount = -1;
     private static HashSet<Transform> updatedDoorsThisFrame = new HashSet<Transform>();
 
@@ -100,8 +103,26 @@ public class PressurePlateDoor : NetworkBehaviour
                 }
 
                 Vector3 targetDoorPos = shouldOpenDoor ? (door.initialPos + door.slideOffset) : door.initialPos;
+                
+                // [THÊM ÂM THANH] Kiểm tra xem cửa có đang cần di chuyển hay không (khoảng cách > 0.001f)
+                bool isMoving = Vector3.Distance(door.doorTransform.localPosition, targetDoorPos) > 0.001f;
+
+                // Di chuyển cửa
                 door.doorTransform.localPosition = Vector3.MoveTowards(door.doorTransform.localPosition, targetDoorPos, door.doorSpeed * Time.deltaTime);
                 
+                // [THÊM ÂM THANH] Xử lý bật/tắt tiếng trượt đá
+                if (door.slideAudioSource != null)
+                {
+                    if (isMoving && !door.slideAudioSource.isPlaying)
+                    {
+                        door.slideAudioSource.Play(); // Bắt đầu chạy thì phát nhạc
+                    }
+                    else if (!isMoving && door.slideAudioSource.isPlaying)
+                    {
+                        door.slideAudioSource.Stop(); // Tới nơi rồi thì tắt nhạc
+                    }
+                }
+
                 // Đánh dấu là cửa này đã được xử lý xong
                 updatedDoorsThisFrame.Add(door.doorTransform);
             }
