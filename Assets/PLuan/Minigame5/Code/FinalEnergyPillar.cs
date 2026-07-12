@@ -18,6 +18,7 @@ public class FinalEnergyPillar : NetworkBehaviour
 
     [Header("Hiệu ứng đi kèm (Tùy chọn)")]
     [SerializeField] private GameObject activeEffectObject; // Hạt particle hoặc hiệu ứng phụ khi trụ sáng
+    [SerializeField] private float transitionDuration = 1.0f; // Thời gian dâng sáng quét từ dưới lên (giây)
 
     [Header("Sự kiện kích hoạt")]
     public UnityEvent OnActivated; // Kích hoạt khi trụ được sạc đầy
@@ -33,6 +34,7 @@ public class FinalEnergyPillar : NetworkBehaviour
     private bool m_WasHitThisFrame = false;
     private bool m_WasHitInEditor = false; // Nhận diện trúng laser trong Edit Mode
     private Material m_Material;
+    private Coroutine m_TransitionCoroutine;
 
     void Start()
     {
@@ -85,42 +87,101 @@ public class FinalEnergyPillar : NetworkBehaviour
 
     private void ApplyActivatedState(bool active)
     {
-        Material mat = Application.isPlaying ? m_Material : (pillarRenderer != null ? pillarRenderer.sharedMaterial : null);
-        if (mat != null)
+        if (!Application.isPlaying)
         {
-            if (useColorEmission)
+            // Edit Mode: cập nhật trực quan ngay lập tức
+            Material mat = pillarRenderer != null ? pillarRenderer.sharedMaterial : null;
+            if (mat != null)
             {
-                if (active)
+                if (useColorEmission)
                 {
-                    mat.EnableKeyword("_EMISSION");
-                    mat.SetColor(colorPropertyName, activeColor);
+                    if (active)
+                    {
+                        mat.EnableKeyword("_EMISSION");
+                        mat.SetColor(colorPropertyName, activeColor);
+                    }
+                    else
+                    {
+                        mat.SetColor(colorPropertyName, Color.black);
+                    }
                 }
                 else
                 {
-                    mat.SetColor(colorPropertyName, Color.black);
+                    mat.SetFloat(activationPropertyName, active ? activeDissolveValue : inactiveDissolveValue);
                 }
             }
-            else
+            if (activeEffectObject != null)
             {
-                // Thiết lập giá trị phát sáng trong shader
-                mat.SetFloat(activationPropertyName, active ? activeDissolveValue : inactiveDissolveValue);
+                activeEffectObject.SetActive(active);
             }
+
+            // Kích hoạt sự kiện ngay lập tức trong Edit Mode để preview
+            if (active) OnActivated?.Invoke();
+            else OnDeactivated?.Invoke();
+            return;
         }
+
+        // Play Mode: Chạy Coroutine dâng sáng mượt mà từ dưới lên
+        if (m_TransitionCoroutine != null)
+        {
+            StopCoroutine(m_TransitionCoroutine);
+        }
+        m_TransitionCoroutine = StartCoroutine(TransitionGlowCoroutine(active));
 
         if (activeEffectObject != null)
         {
             activeEffectObject.SetActive(active);
         }
 
-        // Kích hoạt các sự kiện tương ứng (phát nhạc, mở cửa, v.v.)
+        // Khi TẮT nguồn (active = false): Kích hoạt đóng cửa ngay lập tức để phản hồi nhanh
+        if (!active)
+        {
+            OnDeactivated?.Invoke();
+        }
+    }
+
+    private System.Collections.IEnumerator TransitionGlowCoroutine(bool active)
+    {
+        float targetValue = active ? activeDissolveValue : inactiveDissolveValue;
+        float startValue = m_Material.GetFloat(activationPropertyName);
+        Color startColor = useColorEmission ? m_Material.GetColor(colorPropertyName) : Color.black;
+        Color targetColor = active ? activeColor : Color.black;
+
+        float elapsed = 0f;
+        while (elapsed < transitionDuration)
+        {
+            elapsed += Time.deltaTime;
+            float t = elapsed / transitionDuration;
+
+            if (useColorEmission)
+            {
+                m_Material.EnableKeyword("_EMISSION");
+                m_Material.SetColor(colorPropertyName, Color.Lerp(startColor, targetColor, t));
+            }
+            else
+            {
+                m_Material.SetFloat(activationPropertyName, Mathf.Lerp(startValue, targetValue, t));
+            }
+            yield return null;
+        }
+
+        if (useColorEmission)
+        {
+            m_Material.SetColor(colorPropertyName, targetColor);
+            if (!active) m_Material.DisableKeyword("_EMISSION");
+        }
+        else
+        {
+            m_Material.SetFloat(activationPropertyName, targetValue);
+        }
+
+        // Khi BẬT nguồn (active = true): Chỉ kích hoạt sự kiện mở cửa sau khi ngọc đã dâng sáng 100%
         if (active)
         {
             OnActivated?.Invoke();
         }
-        else
-        {
-            OnDeactivated?.Invoke();
-        }
+
+        m_TransitionCoroutine = null;
     }
 
     // Hàm gọi từ phía Server khi có tia laser của Emitter chiếu trúng trong frame này
