@@ -20,5 +20,9 @@ public class PlayerRun : MonoBehaviour
     {
         animator.SetTrigger("NoiChuyen");
     }
+    public void TriggerKhoangTay()
+    {
+        animator.SetTrigger("KhoangTay");
+    }
 
 }

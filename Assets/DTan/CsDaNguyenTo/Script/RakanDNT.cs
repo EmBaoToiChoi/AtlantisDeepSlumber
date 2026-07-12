@@ -16,5 +16,9 @@ public class RakanDNT : MonoBehaviour
     {
         animator.SetTrigger("Di");
     }
+    public void SuyNgam()
+    {
+        animator.SetTrigger("SuyNgam");
+    }
 
 }
