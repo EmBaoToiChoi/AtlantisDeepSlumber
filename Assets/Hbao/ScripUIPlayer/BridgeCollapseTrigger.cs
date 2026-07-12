@@ -6,7 +6,11 @@ public class BridgeCollapseTrigger : NetworkBehaviour
 {
     [Header("Cutscene Configuration")]
     [Tooltip("Kéo thả object chứa Video Player vào đây. Nếu để trống, cầu sẽ sập luôn.")]
-    public UnityEngine.Video.VideoPlayer collapseVideo; // Đổi sang VideoPlayer
+    public UnityEngine.Video.VideoPlayer collapseVideo; 
+
+    // [SỬA Ở ĐÂY]: Thêm biến để nhét cái UI Canvas chứa video vào
+    [Tooltip("Kéo thả cái Canvas chứa Raw Image (video) vào đây để code tự bật/tắt")]
+    public GameObject cutsceneUI; 
 
     [Header("Player Movement Scripts")]
     [Tooltip("Điền tên chính xác của 4 script di chuyển vào đây (VD: Player1Move, ArthurController, v.v.)")]
@@ -478,32 +482,59 @@ public class BridgeCollapseTrigger : NetworkBehaviour
             objectToHideDuringCutscene.SetActive(false);
         }
 
+        // Bật UI lên khi bắt đầu chiếu phim
+        if (cutsceneUI != null) 
+        {
+            cutsceneUI.SetActive(true);
+        }
+
         if (collapseVideo != null)
         {
-            if (Camera.main != null)
-            {
-                collapseVideo.targetCamera = Camera.main;
-            }
             collapseVideo.Play();
         }
 
-        // --- KHÓA DI CHUYỂN DỰA TRÊN LIST TÊN SCRIPT ---
+        // --- KHÓA DI CHUYỂN & PHANH GẤP ---
         if (localPlayer == null) FindLocalPlayer();
         if (localPlayer != null)
         {
             MonoBehaviour playerObj = localPlayer as MonoBehaviour;
             if (playerObj != null)
             {
-                // Lấy toàn bộ script đang gắn trên nhân vật
+                // 1. Tắt các script điều khiển
                 MonoBehaviour[] allScripts = playerObj.GetComponents<MonoBehaviour>();
                 foreach (var script in allScripts)
                 {
-                    // Nếu tên script nằm trong danh sách ông đã nhập -> TẮT nó
                     if (script != null && playerMovementScriptNames.Contains(script.GetType().Name))
                     {
                         script.enabled = false;
                         Debug.Log($"[BridgeCollapseTrigger] Đã TẮT script di chuyển: {script.GetType().Name}");
                     }
+                }
+
+                // 2. [THÊM MỚI]: Thắng gấp Rigidbody (Xóa sạch lực quán tính)
+                Rigidbody rb = playerObj.GetComponent<Rigidbody>();
+                if (rb != null)
+                {
+                    // Vì m đang xài Unity 6 nên dùng linearVelocity (nếu nó báo đỏ thì đổi thành velocity nha)
+                    rb.linearVelocity = Vector3.zero; 
+                    rb.angularVelocity = Vector3.zero;
+                }
+
+                // 3. [THÊM MỚI]: Thắng gấp NavMeshAgent (Nếu nhân vật xài NavMesh)
+                UnityEngine.AI.NavMeshAgent agent = playerObj.GetComponent<UnityEngine.AI.NavMeshAgent>();
+                if (agent != null && agent.isActiveAndEnabled)
+                {
+                    agent.velocity = Vector3.zero;
+                    agent.isStopped = true;
+                }
+
+                // 4. [THÊM MỚI]: Ép Animator dừng chạy (Moonwalk)
+                Animator anim = playerObj.GetComponentInChildren<Animator>();
+                if (anim != null)
+                {
+                    // Nếu game m xài parameter "Speed" hoặc "MoveSpeed" để chạy thì ép nó về 0 ở đây
+                    // Ví dụ: anim.SetFloat("Speed", 0f);
+                    anim.speed = 0f; // Tạm thời đóng băng luôn hoạt ảnh cho chắc cốp
                 }
             }
         }
@@ -570,11 +601,18 @@ public class BridgeCollapseTrigger : NetworkBehaviour
         {
             objectToHideDuringCutscene.SetActive(true);
         }
-        // 1. TẮT VIDEO VÀ GỠ NÓ RA KHỎI CAMERA CỦA NGƯỜI CHƠI
+
+        // [SỬA Ở ĐÂY]: Tắt cái Canvas UI đi khi phim sập cầu chiếu xong
+        if (cutsceneUI != null)
+        {
+            cutsceneUI.SetActive(false);
+        }
+
+        // 1. TẮT VIDEO
         if (collapseVideo != null)
         {
             collapseVideo.Stop(); 
-            collapseVideo.targetCamera = null; 
+            // [SỬA Ở ĐÂY]: Xóa dòng targetCamera = null đi
         }
 
         // --- BẬT LẠI DI CHUYỂN DỰA TRÊN LIST TÊN SCRIPT ---
@@ -900,7 +938,7 @@ public class BridgeCollapseTrigger : NetworkBehaviour
         {
             localHudCtl.ShowInteractionPrompt(false, "");
             localHudCtl.ShowQuest(false);
-            localHudCtl.ShowMissionAlert("CẦU ĐÃ ĐƯỢC SỬA CHỮA THÀNH CÔNG!", 5.0f);
+            localHudCtl.ShowMissionAlert("CẦU ĐĐƯỢC SỬA CHỮA THÀNH CÔNG!", 5.0f);
         }
 
         // Dọn dẹp mũi tên chỉ đường nếu còn
@@ -977,6 +1015,7 @@ public class BridgeCollapseTrigger : NetworkBehaviour
 
     #region Blueprint & Wood Spawning Effects
 
+    // ... (Toàn bộ các logic khác bên dưới giữ nguyên không thay đổi)
     /// <summary>
     /// Chuyển bridge sang chế độ Ghost (màu trắng trong suốt) hoặc khôi phục lại.
     /// Lưu materials gốc khi bật ghost, khôi phục khi tắt ghost.
@@ -1224,11 +1263,6 @@ public class BridgeCollapseTrigger : NetworkBehaviour
             playerCount = NetworkManager.Singleton.ConnectedClients.Count;
         }
 
-        // Tỷ lệ tăng tiến độ phi tuyến tính theo số lượng người chơi:
-        // - 1 người: 1.0% mỗi click (cần 100 click, mất khoảng 10-15s)
-        // - 2 người: 1.5% mỗi click
-        // - 3 người: 2.0% mỗi click
-        // - 4+ người: dễ (2.5% mỗi click)
         float increment = buildProgressPerClick;
         if (playerCount == 1) increment = 1.0f;
         else if (playerCount == 2) increment = 1.5f;
@@ -1238,7 +1272,7 @@ public class BridgeCollapseTrigger : NetworkBehaviour
         buildProgress.Value = Mathf.Min(buildProgress.Value + increment, 100f);
 
         Vector3 worldPos = GetRandomBuildPosition();
-        int effectType = Random.Range(0, 2); // 0 = búa, 1 = cưa
+        int effectType = Random.Range(0, 2); 
 
         PlayBuildEffectClientRpc(worldPos, effectType);
 
@@ -1258,7 +1292,7 @@ public class BridgeCollapseTrigger : NetworkBehaviour
         localBuildProgress = Mathf.Min(localBuildProgress + 1.0f, 100f);
 
         Vector3 worldPos = GetRandomBuildPosition();
-        int effectType = Random.Range(0, 2); // 0 = búa, 1 = cưa
+        int effectType = Random.Range(0, 2); 
         PlayBuildEffectLocal(worldPos, effectType);
 
         if (localBuildProgress >= 100f)
@@ -1273,19 +1307,17 @@ public class BridgeCollapseTrigger : NetworkBehaviour
     [ClientRpc]
     private void PlayBuildEffectClientRpc(Vector3 worldPos, int effectType)
     {
-        // Chạy hiệu ứng đồng bộ trên tất cả client
         PlayBuildEffectLocal(worldPos, effectType);
     }
 
     private void PlayBuildEffectLocal(Vector3 worldPos, int effectType)
     {
 
-        // 1. Âm thanh ngẫu nhiên
         AudioSource audioSource = GetComponent<AudioSource>();
         if (audioSource == null)
         {
             audioSource = gameObject.AddComponent<AudioSource>();
-            audioSource.spatialBlend = 1.0f; // 3D sound
+            audioSource.spatialBlend = 1.0f; 
             audioSource.minDistance = 2f;
             audioSource.maxDistance = 20f;
         }
@@ -1299,7 +1331,6 @@ public class BridgeCollapseTrigger : NetworkBehaviour
             }
         }
 
-        // 2. Hiệu ứng hạt bụi khói
         if (clickDustParticles != null)
         {
             PlayParticleAtPosition(clickDustParticles, worldPos);
@@ -1309,11 +1340,9 @@ public class BridgeCollapseTrigger : NetworkBehaviour
             PlayParticleAtPosition(buildProgressParticles, worldPos);
         }
 
-        // 3. Hiển thị và chạy hoạt ảnh cho Búa/Cưa
         GameObject toolPrefab = (effectType == 0) ? hammerPrefab : sawPrefab;
         StartCoroutine(AnimateToolVisual(worldPos, toolPrefab, effectType));
 
-        // 4. Đồng bộ hiệu ứng chớp sáng trên UI của người chơi
         if (PlayerHUDController.Instance != null && PlayerHUDController.isCoopBuildingUIOpen)
         {
             PlayerHUDController.Instance.OnBridgeBuildClickReceived();
@@ -1324,17 +1353,14 @@ public class BridgeCollapseTrigger : NetworkBehaviour
     {
         if (particlePrefabOrInstance == null) return;
 
-        // Kiểm tra xem là prefab hay scene instance
         if (particlePrefabOrInstance.gameObject.scene.name == null)
         {
-            // Là prefab! Instantiate trong scene rồi phát hiệu ứng và tự động hủy
             ParticleSystem instantiated = Instantiate(particlePrefabOrInstance, position, Quaternion.identity);
             instantiated.Play();
             Destroy(instantiated.gameObject, 3f);
         }
         else
         {
-            // Là scene instance! Di chuyển tới vị trí gõ và Emit hạt
             Vector3 originalPos = particlePrefabOrInstance.transform.position;
             particlePrefabOrInstance.transform.position = position;
             particlePrefabOrInstance.Emit(15);
@@ -1351,13 +1377,11 @@ public class BridgeCollapseTrigger : NetworkBehaviour
         }
         else
         {
-            // Tạo mô hình tạm thời nếu không gán prefab trong Inspector
             toolInstance = new GameObject(effectType == 0 ? "FallbackHammer" : "FallbackSaw");
             toolInstance.transform.position = worldPos + Vector3.up * 0.5f;
 
             if (effectType == 0)
             {
-                // Thân búa (hình hộp chữ nhật)
                 GameObject head = GameObject.CreatePrimitive(PrimitiveType.Cube);
                 Destroy(head.GetComponent<Collider>());
                 head.transform.SetParent(toolInstance.transform, false);
@@ -1373,7 +1397,6 @@ public class BridgeCollapseTrigger : NetworkBehaviour
                     headRend.material = mat;
                 }
 
-                // Cán búa (hình trụ)
                 GameObject handle = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
                 Destroy(handle.GetComponent<Collider>());
                 handle.transform.SetParent(toolInstance.transform, false);
@@ -1391,7 +1414,6 @@ public class BridgeCollapseTrigger : NetworkBehaviour
             }
             else
             {
-                // Lưỡi cưa (hình tấm phẳng)
                 GameObject blade = GameObject.CreatePrimitive(PrimitiveType.Cube);
                 Destroy(blade.GetComponent<Collider>());
                 blade.transform.SetParent(toolInstance.transform, false);
@@ -1407,7 +1429,6 @@ public class BridgeCollapseTrigger : NetworkBehaviour
                     bladeRend.material = mat;
                 }
 
-                // Tay cầm cưa
                 GameObject handle = GameObject.CreatePrimitive(PrimitiveType.Cube);
                 Destroy(handle.GetComponent<Collider>());
                 handle.transform.SetParent(toolInstance.transform, false);
@@ -1432,7 +1453,6 @@ public class BridgeCollapseTrigger : NetworkBehaviour
 
         if (effectType == 0)
         {
-            // Hiệu ứng gõ búa (quay góc từ -40 đến 50 độ rồi hồi lại)
             Quaternion startRot = Quaternion.Euler(0f, 0f, -40f);
             Quaternion endRot = Quaternion.Euler(0f, 0f, 50f);
 
@@ -1448,7 +1468,6 @@ public class BridgeCollapseTrigger : NetworkBehaviour
         }
         else
         {
-            // Hiệu ứng cưa cầu (trượt qua lại)
             Vector3 startOffset = new Vector3(-0.2f, 0.1f, 0f);
             Vector3 endOffset = new Vector3(0.2f, 0.1f, 0f);
 
@@ -1465,9 +1484,6 @@ public class BridgeCollapseTrigger : NetworkBehaviour
 
         Destroy(toolInstance);
     }
-
-
-
 
     private void SpawnWoodLogsServer()
     {
@@ -1568,7 +1584,6 @@ public class BridgeCollapseTrigger : NetworkBehaviour
         }
         else
         {
-            // Trong cả 2 trạng thái: chưa sập (start) và đã sập nhưng chưa sửa xong (collapsed)
             bool isNetwork = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
             bool isReady = isNetwork ? isReadyToBuild.Value : localReadyToBuild;
 
@@ -1582,7 +1597,7 @@ public class BridgeCollapseTrigger : NetworkBehaviour
             {
                 if (collapsed && isReady)
                 {
-                    ApplyGhostMode(mainBridgeObject, true); // Hiện ghost cầu
+                    ApplyGhostMode(mainBridgeObject, true); 
                 }
                 else
                 {
@@ -1590,14 +1605,13 @@ public class BridgeCollapseTrigger : NetworkBehaviour
                     {
                         ApplyGhostMode(mainBridgeObject, false);
                     }
-                    mainBridgeObject.SetActive(false); // Ẩn hoàn toàn
+                    mainBridgeObject.SetActive(false); 
                 }
             }
 
             if (collapsed)
             {
 
-                // Chỉ hiển thị UI Quest và hướng dẫn khi đã đụng box kích hoạt nhiệm vụ
                 if (localPlayer == null) FindLocalPlayer();
                 if (localPlayer != null)
                 {
@@ -1621,7 +1635,6 @@ public class BridgeCollapseTrigger : NetworkBehaviour
             }
             else
             {
-                // Chưa kích hoạt nhiệm vụ (chưa sập), dọn dẹp hướng dẫn
                 if (localPlayer == null) FindLocalPlayer();
                 if (localPlayer != null)
                 {
@@ -1669,7 +1682,6 @@ public class BridgeCollapseTrigger : NetworkBehaviour
             var mainRend = mainBridgeObject.GetComponent<Renderer>();
             if (mainRend != null) mainRend.enabled = true;
 
-            // Bật lại toàn bộ colliders của mainBridgeObject và con của nó
             foreach (var col in mainBridgeObject.GetComponentsInChildren<Collider>(true))
             {
                 col.enabled = true;
@@ -1679,8 +1691,6 @@ public class BridgeCollapseTrigger : NetworkBehaviour
         {
             if (collapsed && isReady)
             {
-                // Luôn giữ mainBridgeObject active để các con (các mảnh cầu) có thể hiển thị,
-                // nhưng ẩn MeshRenderer và tắt Colliders của chính nó.
                 mainBridgeObject.SetActive(true);
                 var mainRend = mainBridgeObject.GetComponent<Renderer>();
                 if (mainRend != null) mainRend.enabled = false;
@@ -1693,7 +1703,6 @@ public class BridgeCollapseTrigger : NetworkBehaviour
             }
             else
             {
-                // Chưa sập hoặc chưa sẵn sàng xây (chưa góp đủ gỗ): Ẩn hoàn toàn để không hiển thị cầu
                 mainBridgeObject.SetActive(false);
             }
         }
@@ -1706,21 +1715,18 @@ public class BridgeCollapseTrigger : NetworkBehaviour
             return resolvedSegments;
         }
 
-        // Nếu stableBridgeSegments được cấu hình thủ công trong Inspector và có nhiều hơn 1 phần tử, dùng nó
         if (stableBridgeSegments != null && stableBridgeSegments.Length > 1)
         {
             resolvedSegments = stableBridgeSegments;
             return resolvedSegments;
         }
 
-        // Nếu không, ta tự động tìm các con trực tiếp của mainBridgeObject làm các khúc cầu
         if (mainBridgeObject != null)
         {
             System.Collections.Generic.List<GameObject> dynamicSegments = new System.Collections.Generic.List<GameObject>();
             for (int i = 0; i < mainBridgeObject.transform.childCount; i++)
             {
                 Transform child = mainBridgeObject.transform.GetChild(i);
-                // Chỉ lấy các con có MeshRenderer hoặc Renderer để tránh lấy các empty gameobjects
                 if (child.GetComponentInChildren<Renderer>(true) != null)
                 {
                     dynamicSegments.Add(child.gameObject);
@@ -1756,7 +1762,7 @@ public class BridgeCollapseTrigger : NetworkBehaviour
     {
         minVal = -5f;
         maxVal = 5f;
-        axis = 2; // Z
+        axis = 2; 
 
         if (mainBridgeObject == null) return;
 
@@ -1770,22 +1776,21 @@ public class BridgeCollapseTrigger : NetworkBehaviour
                 float sizeY = bounds.size.y;
                 float sizeZ = bounds.size.z;
 
-                // Tự động tìm trục có kích thước lớn nhất làm trục dọc xây cầu
                 if (sizeX > sizeY && sizeX > sizeZ)
                 {
-                    axis = 0; // X
+                    axis = 0; 
                     minVal = bounds.center.x - bounds.extents.x;
                     maxVal = bounds.center.x + bounds.extents.x;
                 }
                 else if (sizeY > sizeX && sizeY > sizeZ)
                 {
-                    axis = 1; // Y
+                    axis = 1; 
                     minVal = bounds.center.y - bounds.extents.y;
                     maxVal = bounds.center.y + bounds.extents.y;
                 }
                 else
                 {
-                    axis = 2; // Z
+                    axis = 2; 
                     minVal = bounds.center.z - bounds.extents.z;
                     maxVal = bounds.center.z + bounds.extents.z;
                 }
@@ -1804,18 +1809,15 @@ public class BridgeCollapseTrigger : NetworkBehaviour
 
         if (solidBridgeInstance == null)
         {
-            // Clone cầu để tạo bản solid xây dựng dần dần
             solidBridgeInstance = Instantiate(mainBridgeObject, mainBridgeObject.transform.parent);
             solidBridgeInstance.name = mainBridgeObject.name + "_SolidInstance";
 
             originalLocalScale = mainBridgeObject.transform.localScale;
 
-            // Đặt vị trí, góc xoay và scale bản clone cố định 100% giống hệt cầu gốc (không kéo dãn)
             solidBridgeInstance.transform.position = originalBridgePos;
             solidBridgeInstance.transform.rotation = originalBridgeRot;
             solidBridgeInstance.transform.localScale = originalLocalScale;
 
-            // Tìm và lưu BoxCollider của bản clone để scale vật lý theo tiến độ
             cloneBoxColliders.Clear();
             originalBoxSizes.Clear();
             originalBoxCenters.Clear();
@@ -1829,14 +1831,12 @@ public class BridgeCollapseTrigger : NetworkBehaviour
                 }
             }
 
-            // Tắt LODGroup để tránh bị ẩn/cull khi xây dựng
             LODGroup lod = solidBridgeInstance.GetComponent<LODGroup>();
             if (lod != null)
             {
                 lod.enabled = false;
             }
 
-            // Bật LOD0, tắt các LOD khác của bản clone
             for (int i = 0; i < solidBridgeInstance.transform.childCount; i++)
             {
                 Transform child = solidBridgeInstance.transform.GetChild(i);
@@ -1850,7 +1850,6 @@ public class BridgeCollapseTrigger : NetworkBehaviour
                 }
             }
 
-            // Đăng ký vật liệu clipping tuỳ chỉnh cho toàn bộ MeshRenderer con của bản clone
             Renderer[] origRenders = mainBridgeObject.GetComponentsInChildren<Renderer>(true);
             Renderer[] cloneRenders = solidBridgeInstance.GetComponentsInChildren<Renderer>(true);
             clippingMaterials.Clear();
@@ -1882,10 +1881,8 @@ public class BridgeCollapseTrigger : NetworkBehaviour
 
                     if (origMat != null && clippingShader != null)
                     {
-                        // Tạo vật liệu clipping mới
                         Material clipMat = new Material(clippingShader);
                         
-                        // Copy texture từ vật liệu gốc
                         if (origMat.HasProperty("_Albedo")) clipMat.SetTexture("_Albedo", origMat.GetTexture("_Albedo"));
                         else if (origMat.HasProperty("_BaseMap")) clipMat.SetTexture("_Albedo", origMat.GetTexture("_BaseMap"));
                         else if (origMat.HasProperty("_MainTex")) clipMat.SetTexture("_Albedo", origMat.GetTexture("_MainTex"));
@@ -1895,7 +1892,6 @@ public class BridgeCollapseTrigger : NetworkBehaviour
 
                         if (origMat.HasProperty("_Specular")) clipMat.SetTexture("_Specular", origMat.GetTexture("_Specular"));
 
-                        // Copy các tham số màu sắc của Shader Multi-Color
                         if (origMat.HasProperty("_Primary_Color")) clipMat.SetColor("_Primary_Color", origMat.GetColor("_Primary_Color"));
                         if (origMat.HasProperty("_Secondary_Color")) clipMat.SetColor("_Secondary_Color", origMat.GetColor("_Secondary_Color"));
                         if (origMat.HasProperty("_Tertiary_Color")) clipMat.SetColor("_Tertiary_Color", origMat.GetColor("_Tertiary_Color"));
@@ -1906,7 +1902,6 @@ public class BridgeCollapseTrigger : NetworkBehaviour
                     }
                     else
                     {
-                        // Fallback khôi phục vật liệu cũ nếu không dùng được shader
                         if (savedIdx >= 0 && savedIdx < savedMaterials.Count)
                         {
                             cloneRenders[k].materials = savedMaterials[savedIdx];
@@ -1922,14 +1917,12 @@ public class BridgeCollapseTrigger : NetworkBehaviour
             }
         }
 
-        // Cập nhật vị trí, scale và shader properties của solidBridgeInstance dựa trên tiến trình
         float minVal, maxVal;
         int axis;
         GetBridgeLocalBounds(out minVal, out maxVal, out axis);
 
         if (clippingMaterials != null && clippingMaterials.Count > 0)
         {
-            // Reset position và scale về 100% khi dùng shader để tránh bị kéo dãn hoặc dịch chuyển
             solidBridgeInstance.transform.position = originalBridgePos;
             solidBridgeInstance.transform.rotation = originalBridgeRot;
             solidBridgeInstance.transform.localScale = originalLocalScale;
@@ -1955,22 +1948,21 @@ public class BridgeCollapseTrigger : NetworkBehaviour
         }
         else
         {
-            // FALLBACK: Nếu không có shader, thực hiện scale local trên trục tương ứng
             Vector3 newScale = originalLocalScale;
             Vector3 localOffset = Vector3.zero;
             float totalLength = maxVal - minVal;
 
-            if (axis == 0) // X
+            if (axis == 0) 
             {
                 newScale.x = originalLocalScale.x * progressFactor;
                 localOffset.x = -(1f - progressFactor) * totalLength * 0.5f;
             }
-            else if (axis == 1) // Y
+            else if (axis == 1) 
             {
                 newScale.y = originalLocalScale.y * progressFactor;
                 localOffset.y = -(1f - progressFactor) * totalLength * 0.5f;
             }
-            else // Z
+            else 
             {
                 newScale.z = originalLocalScale.z * progressFactor;
                 localOffset.z = -(1f - progressFactor) * totalLength * 0.5f;
@@ -1982,7 +1974,6 @@ public class BridgeCollapseTrigger : NetworkBehaviour
             Debug.Log($"[BridgeCollapseTrigger] Fallback scale active: progress={progress}%, scale={newScale}");
         }
 
-        // Cập nhật kích thước các BoxCollider để khớp chính xác với phần gỗ đã hiển thị
         for (int i = 0; i < cloneBoxColliders.Count; i++)
         {
             if (cloneBoxColliders[i] != null && i < originalBoxSizes.Count && i < originalBoxCenters.Count)
@@ -1990,17 +1981,17 @@ public class BridgeCollapseTrigger : NetworkBehaviour
                 Vector3 newSize = originalBoxSizes[i];
                 Vector3 newCenter = originalBoxCenters[i];
 
-                if (axis == 0) // X
+                if (axis == 0) 
                 {
                     newSize.x = originalBoxSizes[i].x * progressFactor;
                     newCenter.x = originalBoxCenters[i].x - (originalBoxSizes[i].x * 0.5f) * (1f - progressFactor);
                 }
-                else if (axis == 1) // Y
+                else if (axis == 1) 
                 {
                     newSize.y = originalBoxSizes[i].y * progressFactor;
                     newCenter.y = originalBoxCenters[i].y - (originalBoxSizes[i].y * 0.5f) * (1f - progressFactor);
                 }
-                else // Z
+                else 
                 {
                     newSize.z = originalBoxSizes[i].z * progressFactor;
                     newCenter.z = originalBoxCenters[i].z - (originalBoxSizes[i].z * 0.5f) * (1f - progressFactor);
@@ -2011,7 +2002,6 @@ public class BridgeCollapseTrigger : NetworkBehaviour
             }
         }
 
-        // Bật hiển thị solidInstance
         solidBridgeInstance.SetActive(true);
     }
 
@@ -2074,7 +2064,6 @@ public class BridgeCollapseTrigger : NetworkBehaviour
 
     private void UpdateProgressiveBridgeSegments(float progress)
     {
-        // 1. Kiểm tra nếu cầu là nguyên khối (single mesh hoặc LOD levels) thì dùng Z-scale growth
         bool useZScaleGrowth = false;
         
         if (displayMode == BridgeDisplayMode.ForceScaleGrowth)
@@ -2149,7 +2138,6 @@ public class BridgeCollapseTrigger : NetworkBehaviour
             }
         }
         
-        // Fallback 1: Lấy cây đầu tiên không null trong mảng targetTrees
         if (myTree == null && targetTrees != null)
         {
             foreach (var tree in targetTrees)
@@ -2162,7 +2150,6 @@ public class BridgeCollapseTrigger : NetworkBehaviour
             }
         }
         
-        // Fallback 2: Lấy bất kỳ cây ChoppableTree nào trong cảnh
         if (myTree == null)
         {
             var allTrees = FindObjectsByType<ChoppableTree>(FindObjectsSortMode.None);
@@ -2178,7 +2165,6 @@ public class BridgeCollapseTrigger : NetworkBehaviour
     {
         bool isNetworkActive = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
 
-        // 1. Try static cache first (zero overhead)
         if (PlayerHUDController.LocalPlayerTarget != null)
         {
             var p = PlayerHUDController.LocalPlayerTarget;
@@ -2189,7 +2175,6 @@ public class BridgeCollapseTrigger : NetworkBehaviour
             }
         }
 
-        // 2. Try PlayerHUDManager active players cache next
         var activePlayers = PlayerHUDManager.ActivePlayers;
         foreach (var p in activePlayers)
         {
@@ -2200,7 +2185,6 @@ public class BridgeCollapseTrigger : NetworkBehaviour
             }
         }
 
-        // 3. Fallback to finding any IPlayerHUDTarget in the scene, rate-limited to once every 2 seconds
         if (Time.time >= nextPlayerSearchTime)
         {
             nextPlayerSearchTime = Time.time + 2f;
