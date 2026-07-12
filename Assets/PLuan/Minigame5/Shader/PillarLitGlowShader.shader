@@ -14,7 +14,7 @@ Shader "Custom/PillarLitGlowShader"
         _Glossiness("Smoothness", Range(0, 1)) = 0.5
         
         [Header(Glow Effect)]
-        _CharacterMask("Character Mask (R)", 2D) = "black" {}
+        _CharacterMask("Character Mask (R)", 2D) = "white" {}
         [HDR] _GlowColor("Glow Color", Color) = (1, 1, 1, 1)
         _Disolve("Disolve (1=Off, 0=On)", Range(0, 1)) = 1.0
         _DisolveRemapMin("Disolve Remap Min (Bottom)", Float) = -0.45

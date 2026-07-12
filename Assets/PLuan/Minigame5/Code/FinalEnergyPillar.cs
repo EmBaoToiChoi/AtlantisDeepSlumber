@@ -1,6 +1,8 @@
 using UnityEngine;
 using Unity.Netcode;
+using UnityEngine.Events;
 
+[ExecuteAlways]
 public class FinalEnergyPillar : NetworkBehaviour
 {
     [Header("Cấu hình hiển thị")]
@@ -17,6 +19,10 @@ public class FinalEnergyPillar : NetworkBehaviour
     [Header("Hiệu ứng đi kèm (Tùy chọn)")]
     [SerializeField] private GameObject activeEffectObject; // Hạt particle hoặc hiệu ứng phụ khi trụ sáng
 
+    [Header("Sự kiện kích hoạt")]
+    public UnityEvent OnActivated; // Kích hoạt khi trụ được sạc đầy
+    public UnityEvent OnDeactivated; // Kích hoạt khi trụ bị mất nguồn sáng
+
     // Biến mạng đồng bộ trạng thái kích hoạt của Trụ Năng Lượng Cuối Cùng
     private NetworkVariable<bool> m_IsActivated = new NetworkVariable<bool>(
         false,
@@ -25,6 +31,7 @@ public class FinalEnergyPillar : NetworkBehaviour
     );
 
     private bool m_WasHitThisFrame = false;
+    private bool m_WasHitInEditor = false; // Nhận diện trúng laser trong Edit Mode
     private Material m_Material;
 
     void Start()
@@ -37,7 +44,8 @@ public class FinalEnergyPillar : NetworkBehaviour
 
         if (pillarRenderer != null)
         {
-            m_Material = pillarRenderer.material;
+            // Trong Edit Mode dùng sharedMaterial để không gây rò rỉ bộ nhớ
+            m_Material = Application.isPlaying ? pillarRenderer.material : pillarRenderer.sharedMaterial;
             // Trạng thái ban đầu: Tắt
             if (useColorEmission)
             {
@@ -77,30 +85,41 @@ public class FinalEnergyPillar : NetworkBehaviour
 
     private void ApplyActivatedState(bool active)
     {
-        if (m_Material != null)
+        Material mat = Application.isPlaying ? m_Material : (pillarRenderer != null ? pillarRenderer.sharedMaterial : null);
+        if (mat != null)
         {
             if (useColorEmission)
             {
                 if (active)
                 {
-                    m_Material.EnableKeyword("_EMISSION");
-                    m_Material.SetColor(colorPropertyName, activeColor);
+                    mat.EnableKeyword("_EMISSION");
+                    mat.SetColor(colorPropertyName, activeColor);
                 }
                 else
                 {
-                    m_Material.SetColor(colorPropertyName, Color.black);
+                    mat.SetColor(colorPropertyName, Color.black);
                 }
             }
             else
             {
                 // Thiết lập giá trị phát sáng trong shader
-                m_Material.SetFloat(activationPropertyName, active ? activeDissolveValue : inactiveDissolveValue);
+                mat.SetFloat(activationPropertyName, active ? activeDissolveValue : inactiveDissolveValue);
             }
         }
 
         if (activeEffectObject != null)
         {
             activeEffectObject.SetActive(active);
+        }
+
+        // Kích hoạt các sự kiện tương ứng (phát nhạc, mở cửa, v.v.)
+        if (active)
+        {
+            OnActivated?.Invoke();
+        }
+        else
+        {
+            OnDeactivated?.Invoke();
         }
     }
 
@@ -111,19 +130,34 @@ public class FinalEnergyPillar : NetworkBehaviour
         m_WasHitThisFrame = true;
     }
 
+    // Hàm gọi từ Emitter khi chiếu trúng trong Edit Mode để preview
+    public void SetLaserHitInEditor()
+    {
+        m_WasHitInEditor = true;
+    }
+
     void LateUpdate()
     {
-        // Chỉ Server có quyền thay đổi trạng thái mạng của câu đố
-        if (!IsServer) return;
-
-        // Nếu trạng thái kích hoạt hiện tại khác với kết quả kiểm tra tia laser trong frame
-        if (m_IsActivated.Value != m_WasHitThisFrame)
+        if (Application.isPlaying)
         {
-            m_IsActivated.Value = m_WasHitThisFrame;
-            Debug.Log($"[FinalEnergyPillar] Cập nhật trạng thái mạng: Được kích hoạt = {m_WasHitThisFrame}");
-        }
+            // Chỉ Server có quyền thay đổi trạng thái mạng của câu đố
+            if (!IsServer) return;
 
-        // Reset lại biến để kiểm tra va chạm ở frame tiếp theo
-        m_WasHitThisFrame = false;
+            // Nếu trạng thái kích hoạt hiện tại khác với kết quả kiểm tra tia laser trong frame
+            if (m_IsActivated.Value != m_WasHitThisFrame)
+            {
+                m_IsActivated.Value = m_WasHitThisFrame;
+                Debug.Log($"[FinalEnergyPillar] Cập nhật trạng thái mạng: Được kích hoạt = {m_WasHitThisFrame}");
+            }
+
+            // Reset lại biến để kiểm tra va chạm ở frame tiếp theo
+            m_WasHitThisFrame = false;
+        }
+        else
+        {
+            // Chạy trong Edit Mode để vẽ hiệu ứng trực quan không cần Play game
+            ApplyActivatedState(m_WasHitInEditor);
+            m_WasHitInEditor = false;
+        }
     }
 }
