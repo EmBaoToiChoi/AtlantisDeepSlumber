@@ -226,9 +226,28 @@ public class FirePillarActivator : NetworkBehaviour
         laserLineRenderer.SetPositions(laserPoints.ToArray());
 
         // Chỉ Server chịu trách nhiệm cập nhật trạng thái trúng câu đố (Chỉ kiểm tra khi game đang chạy thực sự)
-        if (Application.isPlaying && IsServer)
+        if (Application.isPlaying)
         {
-            UpdateTargetActivationServer(hitFinalTarget, finalTargetObj);
+            if (IsServer)
+            {
+                UpdateTargetActivationServer(hitFinalTarget, finalTargetObj);
+            }
+        }
+        else
+        {
+            // Edit Mode: Kích hoạt preview trực quan nếu tia laser bắn trúng
+            if (hitFinalTarget && finalTargetObj != null)
+            {
+                FinalEnergyPillar targetPillar = finalTargetObj.GetComponent<FinalEnergyPillar>();
+                if (targetPillar == null)
+                {
+                    targetPillar = finalTargetObj.GetComponentInParent<FinalEnergyPillar>();
+                }
+                if (targetPillar != null)
+                {
+                    targetPillar.SetLaserHitInEditor();
+                }
+            }
         }
     }
 
