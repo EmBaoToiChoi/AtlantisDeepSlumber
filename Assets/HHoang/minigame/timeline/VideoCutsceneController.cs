@@ -7,6 +7,7 @@ public class VideoCutsceneController : NetworkBehaviour
 {
     [Header("Video Settings")]
     public VideoPlayer videoPlayer;
+    public GameObject videoUI; // [SỬA Ở ĐÂY]: Kéo cái Canvas chứa Raw Image vào biến này để code bật/tắt nó
     public GameObject objectToHide; // Object tắt khi chạy phim
 
     [Header("Teleport & Control")]
@@ -119,14 +120,15 @@ public class VideoCutsceneController : NetworkBehaviour
     {
         if (objectToHide != null) objectToHide.SetActive(false);
         
+        // [SỬA Ở ĐÂY]: Bật cái Canvas UI lên thay vì chèn vào Camera
+        if (videoUI != null) videoUI.SetActive(true); 
+
         if (videoPlayer != null)
         {
-            // Bỏ dòng ép renderMode đi để không bị giật, chỉ cần set targetCamera
-            videoPlayer.targetCamera = Camera.main;
+            // Đã xóa dòng targetCamera đi vì giờ mình chiếu lên UI rồi
             videoPlayer.Play();
         }
 
-        // Đã sửa tên hàm ở đây
         TogglePlayerMovement(false);
     }
 
@@ -134,18 +136,20 @@ public class VideoCutsceneController : NetworkBehaviour
     private void FinishCutsceneClientRpc()
     {
         if (objectToHide != null) objectToHide.SetActive(true);
+        
+        // [SỬA Ở ĐÂY]: Tắt cái Canvas UI đi khi hết phim
+        if (videoUI != null) videoUI.SetActive(false); 
+
         if (videoPlayer != null)
         {
             videoPlayer.Stop();
-            videoPlayer.targetCamera = null;
+            // Đã xóa dòng targetCamera = null
         }
         
-        // Đã sửa tên hàm ở đây
         TogglePlayerMovement(true);
         isPlaying = false;
     }
 
-    // Đã đổi tên hàm, bỏ đuôi ClientRpc đi để không bị Netcode báo lỗi
     private void TogglePlayerMovement(bool enable)
     {
         var localPlayer = NetworkManager.Singleton.LocalClient.PlayerObject;
