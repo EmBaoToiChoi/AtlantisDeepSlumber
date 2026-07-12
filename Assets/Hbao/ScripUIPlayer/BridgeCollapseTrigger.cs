@@ -593,7 +593,7 @@ public class BridgeCollapseTrigger : NetworkBehaviour
         ShowCollapseUIClientRpc();
     }
 
-    [ClientRpc]
+[ClientRpc]
     private void ShowCollapseUIClientRpc()
     {
         // --- BẬT LẠI OBJECT KHI XEM PHIM XONG ---
@@ -602,7 +602,7 @@ public class BridgeCollapseTrigger : NetworkBehaviour
             objectToHideDuringCutscene.SetActive(true);
         }
 
-        // [SỬA Ở ĐÂY]: Tắt cái Canvas UI đi khi phim sập cầu chiếu xong
+        // Tắt cái Canvas UI đi khi phim sập cầu chiếu xong
         if (cutsceneUI != null)
         {
             cutsceneUI.SetActive(false);
@@ -612,25 +612,38 @@ public class BridgeCollapseTrigger : NetworkBehaviour
         if (collapseVideo != null)
         {
             collapseVideo.Stop(); 
-            // [SỬA Ở ĐÂY]: Xóa dòng targetCamera = null đi
         }
 
-        // --- BẬT LẠI DI CHUYỂN DỰA TRÊN LIST TÊN SCRIPT ---
+        // --- BẬT LẠI DI CHUYỂN & XẢ ĐÔNG NHÂN VẬT ---
         if (localPlayer == null) FindLocalPlayer();
         if (localPlayer != null)
         {
             MonoBehaviour playerObj = localPlayer as MonoBehaviour;
             if (playerObj != null)
             {
+                // Bật lại các script điều khiển
                 MonoBehaviour[] allScripts = playerObj.GetComponents<MonoBehaviour>();
                 foreach (var script in allScripts)
                 {
-                    // Nếu tên script nằm trong danh sách -> BẬT LẠI nó
                     if (script != null && playerMovementScriptNames.Contains(script.GetType().Name))
                     {
                         script.enabled = true;
                         Debug.Log($"[BridgeCollapseTrigger] Đã BẬT LẠI script di chuyển: {script.GetType().Name}");
                     }
+                }
+
+                // [XẢ ĐÔNG 1]: Thả NavMeshAgent cho nó đi lại bình thường
+                UnityEngine.AI.NavMeshAgent agent = playerObj.GetComponent<UnityEngine.AI.NavMeshAgent>();
+                if (agent != null && agent.isActiveAndEnabled)
+                {
+                    agent.isStopped = false;
+                }
+
+                // [XẢ ĐÔNG 2]: Trả lại tốc độ hoạt ảnh bình thường (Cái này làm m bị đơ nè)
+                Animator anim = playerObj.GetComponentInChildren<Animator>();
+                if (anim != null)
+                {
+                    anim.speed = 1f; 
                 }
             }
         }
@@ -644,7 +657,6 @@ public class BridgeCollapseTrigger : NetworkBehaviour
             localHud.ShowMissionAlert("CẦU ĐÃ BỊ SẬP! HÃY TÌM 16 THANH GỖ ĐỂ SỬA LẠI CẦU!", 5.0f);
         }
     }
-
     [ClientRpc]
     private void ShowRepairCompleteUIClientRpc()
     {
