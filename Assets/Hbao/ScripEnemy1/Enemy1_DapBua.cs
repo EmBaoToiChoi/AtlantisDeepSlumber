@@ -567,7 +567,7 @@ public class Enemy1_DapBua : NetworkBehaviour
             float d = Vector3.Distance(ep, center);
             Vector3 dir = (center - ep).normalized;
             bool inFOV = Vector3.Angle(transform.forward, dir) < fieldOfView / 2f;
-            if ((inFOV || pt == targetPlayer) && !Physics.Raycast(ep, dir, d, obstacleLayer))
+            if ((inFOV || pt == targetPlayer) && !Physics.Raycast(ep, dir, d, obstacleLayer, QueryTriggerInteraction.Ignore))
             { if (d < minD) { minD = d; closest = pt; found = true; } }
         }
 
