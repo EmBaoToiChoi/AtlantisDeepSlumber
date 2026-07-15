@@ -413,6 +413,12 @@ public class FinalBossAI : NetworkBehaviour
         }
     }
 
+    public void ApplyStun(float duration)
+    {
+        // Stun logic can be added here if desired, or we can trigger hit stagger
+        TakeDamage(0f);
+    }
+
     private void Update()
     {
 #if UNITY_EDITOR

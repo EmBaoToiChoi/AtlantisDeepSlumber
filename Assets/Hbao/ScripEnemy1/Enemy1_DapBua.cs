@@ -44,6 +44,8 @@ public class Enemy1_DapBua : NetworkBehaviour
     private bool isBossProxy = false;
     private MiniBossAI miniBossComponent;
     private bool isMiniBossProxy = false;
+    private FinalBossAI finalBossComponent;
+    private bool isFinalBossProxy = false;
 
     private EnemyState CurrentStateValue
     {
@@ -66,6 +68,7 @@ public class Enemy1_DapBua : NetworkBehaviour
         {
             if (isBossProxy && bossComponent != null) return bossComponent.IsDead;
             if (isMiniBossProxy && miniBossComponent != null) return miniBossComponent.IsDead;
+            if (isFinalBossProxy && finalBossComponent != null) return finalBossComponent.IsDead;
             return isStandaloneMode ? (localState == EnemyState.Dead) : (currentState.Value == EnemyState.Dead);
         }
     }
@@ -76,6 +79,7 @@ public class Enemy1_DapBua : NetworkBehaviour
         {
             if (isBossProxy && bossComponent != null) return bossComponent.ActualCurrentHealth;
             if (isMiniBossProxy && miniBossComponent != null) return miniBossComponent.ActualCurrentHealth;
+            if (isFinalBossProxy && finalBossComponent != null) return finalBossComponent.ActualCurrentHealth;
             return isStandaloneMode ? localHealth : currentHealth.Value;
         }
     }
@@ -179,6 +183,13 @@ public class Enemy1_DapBua : NetworkBehaviour
             return;
         }
 
+        finalBossComponent = GetComponent<FinalBossAI>();
+        if (finalBossComponent != null)
+        {
+            isFinalBossProxy = true;
+            return;
+        }
+
         gameObject.tag = "Enemy";
         if (anim == null) anim = GetComponent<Animator>() ?? GetComponentInChildren<Animator>(true);
         var na = GetComponent<Unity.Netcode.Components.NetworkAnimator>();
@@ -198,7 +209,7 @@ public class Enemy1_DapBua : NetworkBehaviour
 
     private void Start()
     {
-        if (isBossProxy || isMiniBossProxy) return;
+        if (isBossProxy || isMiniBossProxy || isFinalBossProxy) return;
         if (!IsNetworkActive) { isStandaloneMode = true; InitStandalone(); }
     }
 
@@ -213,7 +224,7 @@ public class Enemy1_DapBua : NetworkBehaviour
 
     public override void OnNetworkSpawn()
     {
-        if (isBossProxy || isMiniBossProxy) return;
+        if (isBossProxy || isMiniBossProxy || isFinalBossProxy) return;
         isStandaloneMode = false;
 
         var nt = GetComponent<Unity.Netcode.Components.NetworkTransform>();
@@ -300,7 +311,7 @@ public class Enemy1_DapBua : NetworkBehaviour
     // ══════════════════════════════════════════════════════════
     private void Update()
     {
-        if (isBossProxy) return;
+        if (isBossProxy || isMiniBossProxy || isFinalBossProxy) return;
         // Enrage scale (mọi client)
         if (IsEnragedValue && !hasRoared)
         {
@@ -743,6 +754,11 @@ public class Enemy1_DapBua : NetworkBehaviour
             if (miniBossComponent != null) miniBossComponent.TakeDamage(damage);
             return;
         }
+        if (isFinalBossProxy)
+        {
+            if (finalBossComponent != null) finalBossComponent.TakeDamage(damage);
+            return;
+        }
 
         if (!isStandaloneMode && (!IsServer || CurrentStateValue == EnemyState.Dead)) return;
         if (isStandaloneMode && CurrentStateValue == EnemyState.Dead) return;
@@ -772,6 +788,11 @@ public class Enemy1_DapBua : NetworkBehaviour
         if (isBossProxy)
         {
             if (bossComponent != null) bossComponent.ApplyStun(duration);
+            return;
+        }
+        if (isFinalBossProxy)
+        {
+            if (finalBossComponent != null) finalBossComponent.ApplyStun(duration);
             return;
         }
 
