@@ -633,7 +633,7 @@ public class MiniBossAI : NetworkBehaviour
                 Vector3 dir = (targetCenter - eyePos).normalized;
                 bool inFOV = IsBossActive || Vector3.Angle(transform.forward, dir) < fieldOfView / 2f || d <= 4f;
 
-                if (inFOV && !Physics.Raycast(eyePos, dir, d, raycastMask))
+                if (inFOV && !Physics.Raycast(eyePos, dir, d, raycastMask, QueryTriggerInteraction.Ignore))
                 {
                     if (d < minD)
                     {
@@ -951,4 +951,11 @@ public class MiniBossAI : NetworkBehaviour
         public void Update() { }
         public void Exit() { }
     }
+
+    // ══════════════════════════════════════════════════════════
+    //  DUMMY ANIMATION EVENT RECEIVERS
+    // ══════════════════════════════════════════════════════════
+    public void OnSkillEAnimEnd() { }
+    public void OnSwordSwing() { }
+    public void OnKickHit() { }
 }
