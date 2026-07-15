@@ -84,15 +84,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 41eca5cdab10b724496731cb73fdedd9, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -92.47446
+      value: 0.4475937
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 41eca5cdab10b724496731cb73fdedd9, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 10.467
+      value: -1.7426081
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 41eca5cdab10b724496731cb73fdedd9, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 17.18
+      value: -0.60090446
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 41eca5cdab10b724496731cb73fdedd9, type: 3}
       propertyPath: m_LocalRotation.w
@@ -100,7 +100,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 41eca5cdab10b724496731cb73fdedd9, type: 3}
       propertyPath: m_LocalRotation.x
-      value: 0
+      value: -0
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 41eca5cdab10b724496731cb73fdedd9, type: 3}
       propertyPath: m_LocalRotation.y
@@ -249,6 +249,8 @@ MonoBehaviour:
   phase2CooldownMultiplier: 0.6
   enrageDuration: 3
   enrageTrigger: Enrage
+  enrageVFXPrefab: {fileID: 2692375763741349971, guid: a047b1cf5e54c6b43a92f67dd966d4b1, type: 3}
+  enrageSFXSound: {fileID: 0}
   currentState:
     UpdateTraits:
       MinSecondsBetweenUpdates: 0
@@ -315,6 +317,16 @@ MonoBehaviour:
   obstacleLayer:
     serializedVersion: 2
     m_Bits: 1
+  deathExplosionVFX: {fileID: 490251359132586323, guid: ff49dc7c04963ca499da8bce1a2cabf2, type: 3}
+  deathExplosionSound: {fileID: 0}
+  explosionRadius: 6
+  explosionDamage: 50
+  explosionKnockback: 20
+  deathExplosionCounter:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 0
   speedParam: Speed
   hitTrigger: Hit
   dieTrigger: Die
@@ -328,16 +340,22 @@ MonoBehaviour:
     leapDurationPercent: 0.5
     forwardSpeed: 10
     peakHeight: 3.5
+    damageStartPercent: 0.48
+    damageEndPercent: 0.72
   - duration: 1.4
     leapStartPercent: 0.1
     leapDurationPercent: 0.45
     forwardSpeed: 12
     peakHeight: 2.5
+    damageStartPercent: 0.28
+    damageEndPercent: 0.62
   - duration: 2
     leapStartPercent: 0.05
     leapDurationPercent: 0.65
     forwardSpeed: 7
     peakHeight: 1.2
+    damageStartPercent: 0.12
+    damageEndPercent: 0.72
 --- !u!195 &1703176840125515835
 NavMeshAgent:
   m_ObjectHideFlags: 0
@@ -356,7 +374,7 @@ NavMeshAgent:
   m_AutoTraverseOffMeshLink: 1
   m_AutoBraking: 1
   m_AutoRepath: 1
-  m_Height: 2
+  m_Height: 1.42
   m_BaseOffset: 0
   m_WalkableMask: 4294967295
   m_ObstacleAvoidanceType: 4
