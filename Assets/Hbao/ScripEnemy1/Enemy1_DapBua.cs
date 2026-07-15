@@ -42,6 +42,8 @@ public class Enemy1_DapBua : NetworkBehaviour
     // ─── Boss Proxy Compatibility ──────────────────────────────
     private BossAI bossComponent;
     private bool isBossProxy = false;
+    private MiniBossAI miniBossComponent;
+    private bool isMiniBossProxy = false;
 
     private EnemyState CurrentStateValue
     {
@@ -58,9 +60,25 @@ public class Enemy1_DapBua : NetworkBehaviour
         get => isStandaloneMode ? localIsEnraged : isEnraged.Value;
         set { if (isStandaloneMode) localIsEnraged = value; else isEnraged.Value = value; }
     }
-    public bool IsDead => isStandaloneMode ? (localState == EnemyState.Dead) : (currentState.Value == EnemyState.Dead);
+    public bool IsDead
+    {
+        get
+        {
+            if (isBossProxy && bossComponent != null) return bossComponent.IsDead;
+            if (isMiniBossProxy && miniBossComponent != null) return miniBossComponent.IsDead;
+            return isStandaloneMode ? (localState == EnemyState.Dead) : (currentState.Value == EnemyState.Dead);
+        }
+    }
     /// <summary>HP hiện tại đúng trong cả Standalone lẫn Network mode — dùng cho HP bar polling.</summary>
-    public float ActualCurrentHealth => isStandaloneMode ? localHealth : currentHealth.Value;
+    public float ActualCurrentHealth
+    {
+        get
+        {
+            if (isBossProxy && bossComponent != null) return bossComponent.ActualCurrentHealth;
+            if (isMiniBossProxy && miniBossComponent != null) return miniBossComponent.ActualCurrentHealth;
+            return isStandaloneMode ? localHealth : currentHealth.Value;
+        }
+    }
 
     // ─── Components ────────────────────────────────────────────
     [Header("Components")]
@@ -154,6 +172,13 @@ public class Enemy1_DapBua : NetworkBehaviour
             return;
         }
 
+        miniBossComponent = GetComponent<MiniBossAI>();
+        if (miniBossComponent != null)
+        {
+            isMiniBossProxy = true;
+            return;
+        }
+
         gameObject.tag = "Enemy";
         if (anim == null) anim = GetComponent<Animator>() ?? GetComponentInChildren<Animator>(true);
         var na = GetComponent<Unity.Netcode.Components.NetworkAnimator>();
@@ -173,7 +198,7 @@ public class Enemy1_DapBua : NetworkBehaviour
 
     private void Start()
     {
-        if (isBossProxy) return;
+        if (isBossProxy || isMiniBossProxy) return;
         if (!IsNetworkActive) { isStandaloneMode = true; InitStandalone(); }
     }
 
@@ -188,7 +213,7 @@ public class Enemy1_DapBua : NetworkBehaviour
 
     public override void OnNetworkSpawn()
     {
-        if (isBossProxy) return;
+        if (isBossProxy || isMiniBossProxy) return;
         isStandaloneMode = false;
 
         var nt = GetComponent<Unity.Netcode.Components.NetworkTransform>();
@@ -711,6 +736,11 @@ public class Enemy1_DapBua : NetworkBehaviour
         if (isBossProxy)
         {
             if (bossComponent != null) bossComponent.TakeDamage(damage);
+            return;
+        }
+        if (isMiniBossProxy)
+        {
+            if (miniBossComponent != null) miniBossComponent.TakeDamage(damage);
             return;
         }
 
