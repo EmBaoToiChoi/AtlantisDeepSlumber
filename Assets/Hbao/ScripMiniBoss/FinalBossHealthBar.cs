@@ -68,7 +68,7 @@ public class FinalBossHealthBar : MonoBehaviour
 
         if (rootContainer != null)
         {
-            rootContainer.style.display = boss.IsBossActive ? DisplayStyle.Flex : DisplayStyle.None;
+            rootContainer.style.display = boss.IsHUDVisible ? DisplayStyle.Flex : DisplayStyle.None;
         }
 
         string bossName = boss.gameObject.name;
@@ -104,8 +104,8 @@ public class FinalBossHealthBar : MonoBehaviour
             InitBossHealthAndName();
         }
 
-        // Hide UI if boss is dead or inactive
-        if (boss.IsDead || !boss.IsBossActive)
+        // Hide UI if boss is dead or HUD is not visible
+        if (boss.IsDead || !boss.IsHUDVisible)
         {
             if (rootContainer != null && rootContainer.style.display != DisplayStyle.None)
             {

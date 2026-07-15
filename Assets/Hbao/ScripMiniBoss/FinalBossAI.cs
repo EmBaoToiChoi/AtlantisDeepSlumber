@@ -38,6 +38,8 @@ public class FinalBossAI : NetworkBehaviour
         FinalBossState.Sitting, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     public NetworkVariable<bool> isBossActive = new NetworkVariable<bool>(
         false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+    public NetworkVariable<bool> isHUDVisible = new NetworkVariable<bool>(
+        false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
     [Header("Network Animation Sync Counters")]
     public NetworkVariable<float> netSpeed = new NetworkVariable<float>(
@@ -65,6 +67,7 @@ public class FinalBossAI : NetworkBehaviour
     private float localHealth;
     private FinalBossState localState = FinalBossState.Sitting;
     private bool localIsBossActive = false;
+    private bool localIsHUDVisible = false;
     private bool isStandaloneMode = false;
     private bool IsNetworkActive => NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
 
@@ -76,7 +79,19 @@ public class FinalBossAI : NetworkBehaviour
 
     public float ActualCurrentHealth => isStandaloneMode ? localHealth : currentHealth.Value;
     public bool IsBossActive => isStandaloneMode ? localIsBossActive : isBossActive.Value;
+    public bool IsHUDVisible => isStandaloneMode ? localIsHUDVisible : isHUDVisible.Value;
     public bool IsDead => CurrentStateValue == FinalBossState.Dead;
+
+    public void SetHUDVisible(bool visible)
+    {
+        bool auth = isStandaloneMode || (IsNetworkActive && IsServer);
+        if (!auth) return;
+
+        if (isStandaloneMode)
+            localIsHUDVisible = visible;
+        else
+            isHUDVisible.Value = visible;
+    }
 
     [Header("Components")]
     public NavMeshAgent agent;
@@ -262,6 +277,7 @@ public class FinalBossAI : NetworkBehaviour
     {
         localHealth = maxHealth;
         localIsBossActive = false;
+        localIsHUDVisible = startActiveWithoutMiniboss;
         fireSpewCooldownTimer = fireSpewInterval;
         hasTriggeredEarthSummon = false;
         SnapToNavMesh();
@@ -300,6 +316,7 @@ public class FinalBossAI : NetworkBehaviour
         if (IsServer)
         {
             currentHealth.Value = maxHealth;
+            isHUDVisible.Value = startActiveWithoutMiniboss;
             fireSpewCooldownTimer = fireSpewInterval;
             hasTriggeredEarthSummon = false;
             SnapToNavMesh();
@@ -721,26 +738,45 @@ public class FinalBossAI : NetworkBehaviour
     {
         var list = new List<Transform>();
 
-        var leos = FindObjectsByType<LeoPlayer>(FindObjectsSortMode.None);
-        foreach (var p in leos) if (p != null && !list.Contains(p.transform)) list.Add(p.transform);
+        // 1. Fast path: Use cached players from PlayerHUDManager (No GC / search overhead!)
+        if (PlayerHUDManager.ActivePlayers != null && PlayerHUDManager.ActivePlayers.Count > 0)
+        {
+            foreach (var p in PlayerHUDManager.ActivePlayers)
+            {
+                var mono = p as MonoBehaviour;
+                if (mono != null && mono.gameObject != null)
+                {
+                    Transform t = mono.transform;
+                    if (!list.Contains(t)) list.Add(t);
+                }
+            }
+        }
 
-        var arthurs = FindObjectsByType<ArthurPlayer>(FindObjectsSortMode.None);
-        foreach (var p in arthurs) if (p != null && !list.Contains(p.transform)) list.Add(p.transform);
+        // 2. Fallback: Tag lookup (much faster than FindObjectsByType)
+        if (list.Count == 0)
+        {
+            GameObject[] players = GameObject.FindGameObjectsWithTag("Player");
+            foreach (var p in players)
+            {
+                if (p != null && !list.Contains(p.transform))
+                {
+                    list.Add(p.transform);
+                }
+            }
+        }
 
-        var elenas = FindObjectsByType<ElenaPlayer>(FindObjectsSortMode.None);
-        foreach (var p in elenas) if (p != null && !list.Contains(p.transform)) list.Add(p.transform);
-
-        var elenaArchers = FindObjectsByType<ElenaArcher>(FindObjectsSortMode.None);
-        foreach (var p in elenaArchers) if (p != null && !list.Contains(p.transform)) list.Add(p.transform);
-
-        var mayas = FindObjectsByType<MayaPlayer>(FindObjectsSortMode.None);
-        foreach (var p in mayas) if (p != null && !list.Contains(p.transform)) list.Add(p.transform);
-
-        var mayaSupports = FindObjectsByType<MayaSupport>(FindObjectsSortMode.None);
-        foreach (var p in mayaSupports) if (p != null && !list.Contains(p.transform)) list.Add(p.transform);
-
-        var simples = FindObjectsByType<SimplePlayerTest>(FindObjectsSortMode.None);
-        foreach (var p in simples) if (p != null && !list.Contains(p.transform)) list.Add(p.transform);
+        // 3. Last resort: Simple test script check
+        if (list.Count == 0)
+        {
+            var simples = FindObjectsByType<SimplePlayerTest>(FindObjectsSortMode.None);
+            foreach (var p in simples)
+            {
+                if (p != null && !list.Contains(p.transform))
+                {
+                    list.Add(p.transform);
+                }
+            }
+        }
 
         return list;
     }
@@ -800,12 +836,17 @@ public class FinalBossAI : NetworkBehaviour
 
     private Transform GetPlayerRoot(Transform t)
     {
-        if (t.GetComponentInParent<LeoPlayer>() != null) return t.GetComponentInParent<LeoPlayer>().transform;
-        if (t.GetComponentInParent<ArthurPlayer>() != null) return t.GetComponentInParent<ArthurPlayer>().transform;
-        if (t.GetComponentInParent<ElenaPlayer>() != null) return t.GetComponentInParent<ElenaPlayer>().transform;
-        if (t.GetComponentInParent<ElenaArcher>() != null) return t.GetComponentInParent<ElenaArcher>().transform;
-        if (t.GetComponentInParent<MayaPlayer>() != null) return t.GetComponentInParent<MayaPlayer>().transform;
-        if (t.GetComponentInParent<MayaSupport>() != null) return t.GetComponentInParent<MayaSupport>().transform;
+        if (t == null) return null;
+        if (t.CompareTag("Player")) return t;
+
+        // Try getting the root Player component directly via interface lookup (optimized)
+        var hudTarget = t.GetComponentInParent<IPlayerHUDTarget>();
+        if (hudTarget != null)
+        {
+            var mono = hudTarget as MonoBehaviour;
+            if (mono != null && mono.gameObject != null) return mono.transform;
+        }
+
         if (t.GetComponentInParent<SimplePlayerTest>() != null) return t.GetComponentInParent<SimplePlayerTest>().transform;
         if (t.GetComponentInParent<Skeleton>() != null) return t.GetComponentInParent<Skeleton>().transform;
         return t;
@@ -909,16 +950,25 @@ public class FinalBossAI : NetworkBehaviour
                 return;
             }
 
-            if (boss.bossMiniboss != null)
+            // 1. If Silas dies completely in Phase 2, show the Final Boss HUD
+            if (boss.bossMiniboss != null && boss.bossMiniboss.IsDead)
             {
-                if (boss.bossMiniboss.IsDead || boss.bossMiniboss.ActualCurrentHealth <= 0)
+                boss.SetHUDVisible(true);
+            }
+
+            // 2. Determine jump down trigger
+            // Case A: No Rakan (miniBoss) is assigned -> jump down as soon as Silas (bossMiniboss) dies.
+            if (boss.miniBoss == null)
+            {
+                if (boss.bossMiniboss == null || boss.bossMiniboss.IsDead)
                 {
                     boss.ChangeState(FinalBossState.JumpDown);
                 }
             }
-            else if (boss.miniBoss != null)
+            // Case B: Both are assigned -> Boss sits when Silas dies (shows HUD), and only jumps down when Rakan dies!
+            else
             {
-                if (boss.miniBoss.IsDead || boss.miniBoss.ActualCurrentHealth <= 0)
+                if (boss.miniBoss.IsDead)
                 {
                     boss.ChangeState(FinalBossState.JumpDown);
                 }
@@ -940,6 +990,7 @@ public class FinalBossAI : NetworkBehaviour
         private Vector3 startPos;
         private Vector3 endPos;
         private float timer;
+        private bool originalRootMotion;
 
         public JumpDownState(FinalBossAI boss) { this.boss = boss; }
 
@@ -968,10 +1019,19 @@ public class FinalBossAI : NetworkBehaviour
             if (!boss.isStandaloneMode)
             {
                 boss.jumpDownCounter.Value++;
+                boss.SetHUDVisible(true);
             }
-            else if (boss.anim != null)
+            else
             {
-                boss.anim.SetTrigger(boss.jumpDownTriggerParam);
+                boss.SetHUDVisible(true);
+                if (boss.anim != null) boss.anim.SetTrigger(boss.jumpDownTriggerParam);
+            }
+
+            // Disable Root Motion during manual parabolic translation to prevent conflict/jerking
+            if (boss.anim != null)
+            {
+                originalRootMotion = boss.anim.applyRootMotion;
+                boss.anim.applyRootMotion = false;
             }
 
             // Disable agent so we can lerp positions manually
@@ -1009,7 +1069,8 @@ public class FinalBossAI : NetworkBehaviour
             if (boss.agent != null)
             {
                 boss.agent.enabled = true;
-                boss.SnapToNavMesh();
+                boss.agent.Warp(endPos);
+                boss.agent.velocity = Vector3.zero;
             }
 
             boss.TriggerLandingSlam();
@@ -1017,7 +1078,13 @@ public class FinalBossAI : NetworkBehaviour
             boss.ChangeState(FinalBossState.Idle);
         }
 
-        public void Exit() { }
+        public void Exit()
+        {
+            if (boss.anim != null)
+            {
+                boss.anim.applyRootMotion = originalRootMotion;
+            }
+        }
     }
 
     private class IdleState : IEnemyState
@@ -1423,11 +1490,21 @@ public class FinalBossAI : NetworkBehaviour
     //  FIRE SPEW TRIGGERS
     // ══════════════════════════════════════════════════════════
 
+    [ClientRpc]
+    private void PlayFireSpewVFXClientRpc()
+    {
+        PlayFireSpewVFX();
+    }
+
     public void TriggerFireSpewActive()
     {
-        if (!isStandaloneMode && IsServer)
+        if (!isStandaloneMode)
         {
-            fireSpewActiveCounter.Value++;
+            if (IsServer)
+            {
+                fireSpewActiveCounter.Value++;
+                PlayFireSpewVFXClientRpc();
+            }
         }
         else if (isStandaloneMode)
         {
@@ -1472,6 +1549,19 @@ public class FinalBossAI : NetworkBehaviour
         {
             GameObject vfx = Instantiate(fireSpewVFX, spawnPos, transform.rotation);
             vfx.transform.SetParent(transform);
+            vfx.transform.localScale = Vector3.one;
+
+            var particles = vfx.GetComponentsInChildren<ParticleSystem>(true);
+            foreach (var ps in particles)
+            {
+                ps.Play();
+            }
+            var vfxGraphs = vfx.GetComponentsInChildren<UnityEngine.VFX.VisualEffect>(true);
+            foreach (var ve in vfxGraphs)
+            {
+                ve.Play();
+            }
+
             Destroy(vfx, fireSpewActiveDuration + 1f);
         }
         if (fireSpewSFX != null)
@@ -1515,11 +1605,12 @@ public class FinalBossAI : NetworkBehaviour
             if (earthBlastPrefab != null)
             {
                 GameObject blast = Instantiate(earthBlastPrefab, pos, Quaternion.identity);
+                blast.transform.localScale *= 3.0f;
                 
                 var locationVfx = blast.GetComponent<PixPlays.ElementalVFX.LocationVfx>();
                 if (locationVfx != null)
                 {
-                    var data = new PixPlays.ElementalVFX.VfxData(pos, pos + Vector3.up, 3.0f, earthBlastRadius);
+                    var data = new PixPlays.ElementalVFX.VfxData(pos, pos + Vector3.up, 3.0f, earthBlastRadius * 3.0f);
                     locationVfx.Play(data);
                 }
                 
