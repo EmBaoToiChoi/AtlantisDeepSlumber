@@ -627,10 +627,11 @@ public class MiniBossAI : NetworkBehaviour
             Vector3 targetCenter = pTrans.position + Vector3.up * 1.0f;
             float d = Vector3.Distance(eyePos, targetCenter);
             
-            if (d <= sightRange)
+            float currentSight = IsBossActive ? 50f : sightRange;
+            if (d <= currentSight)
             {
                 Vector3 dir = (targetCenter - eyePos).normalized;
-                bool inFOV = Vector3.Angle(transform.forward, dir) < fieldOfView / 2f || d <= 4f;
+                bool inFOV = IsBossActive || Vector3.Angle(transform.forward, dir) < fieldOfView / 2f || d <= 4f;
 
                 if (inFOV && !Physics.Raycast(eyePos, dir, d, raycastMask))
                 {
