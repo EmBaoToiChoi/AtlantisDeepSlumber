@@ -31,6 +31,10 @@ public class MiniBossAI : NetworkBehaviour
     public float enrageDuration = 3f;
     public string enrageTrigger = "Enrage";
 
+    [Header("Phase 2 Enrage Transition Settings")]
+    public GameObject enrageVFXPrefab;
+    public AudioClip enrageSFXSound;
+
     [Header("Network State Sync")]
     public NetworkVariable<MiniBossState> currentState = new NetworkVariable<MiniBossState>(
         MiniBossState.Idle, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
@@ -101,6 +105,15 @@ public class MiniBossAI : NetworkBehaviour
     public LayerMask playerLayer;
     public LayerMask obstacleLayer;
 
+    [Header("Phase 2 Death Explosion Settings")]
+    public GameObject deathExplosionVFX;
+    public AudioClip deathExplosionSound;
+    public float explosionRadius = 6f;
+    public float explosionDamage = 50f;
+    public float explosionKnockback = 20f;
+    public NetworkVariable<int> deathExplosionCounter = new NetworkVariable<int>(
+        0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+
     [Header("Animator Param Names")]
     public string speedParam = "Speed";       // Float: 0 = Idle, 0.5 = Walk, 1.0 = Run
     public string hitTrigger = "Hit";         // Trigger: Zombie Reaction Hit / Hit
@@ -115,14 +128,16 @@ public class MiniBossAI : NetworkBehaviour
         public float leapDurationPercent;  // Percentage of duration when leap occurs
         public float forwardSpeed;         // Speed of movement during leap
         public float peakHeight;           // Height of the Y parabola leap
+        public float damageStartPercent;   // Start of continuous damage window (0.0 to 1.0)
+        public float damageEndPercent;     // End of continuous damage window (0.0 to 1.0)
     }
 
     [Header("Attack Configs (0: Nhaychemdat, 1: NhayDanh, 2: XoayChem)")]
     public AttackConfig[] attackConfigs = new AttackConfig[]
     {
-        new AttackConfig { duration = 1.8f, leapStartPercent = 0.15f, leapDurationPercent = 0.5f, forwardSpeed = 10f, peakHeight = 3.5f },  // Nhaychemdat: jump and slam
-        new AttackConfig { duration = 1.4f, leapStartPercent = 0.1f, leapDurationPercent = 0.45f, forwardSpeed = 12f, peakHeight = 2.5f },  // NhayDanh: fast forward leap
-        new AttackConfig { duration = 2.0f, leapStartPercent = 0.05f, leapDurationPercent = 0.65f, forwardSpeed = 7f, peakHeight = 1.2f }   // XoayChem: spin and glide forward
+        new AttackConfig { duration = 1.8f, leapStartPercent = 0.15f, leapDurationPercent = 0.5f, forwardSpeed = 10f, peakHeight = 3.5f, damageStartPercent = 0.48f, damageEndPercent = 0.72f },  // Nhaychemdat: jump and slam
+        new AttackConfig { duration = 1.4f, leapStartPercent = 0.1f, leapDurationPercent = 0.45f, forwardSpeed = 12f, peakHeight = 2.5f, damageStartPercent = 0.28f, damageEndPercent = 0.62f },  // NhayDanh: fast forward leap
+        new AttackConfig { duration = 2.0f, leapStartPercent = 0.05f, leapDurationPercent = 0.65f, forwardSpeed = 7f, peakHeight = 1.2f, damageStartPercent = 0.12f, damageEndPercent = 0.72f }   // XoayChem: spin and glide forward
     };
 
     private IEnemyState currentFSMState;
@@ -215,7 +230,10 @@ public class MiniBossAI : NetworkBehaviour
         };
         hitCounter.OnValueChanged += (_, _) => { if (anim != null) anim.SetTrigger(hitTrigger); };
         dieCounter.OnValueChanged += (_, _) => { if (anim != null) anim.SetTrigger(dieTrigger); };
-        enrageCounter.OnValueChanged += (_, _) => { if (anim != null) anim.SetTrigger(enrageTrigger); };
+        enrageCounter.OnValueChanged += (_, _) => {
+            if (anim != null) anim.SetTrigger(enrageTrigger);
+            PlayEnrageVFX();
+        };
         isPhase2Network.OnValueChanged += (oldVal, newVal) => {
             if (newVal)
             {
@@ -225,6 +243,7 @@ public class MiniBossAI : NetworkBehaviour
             }
         };
         currentHealth.OnValueChanged += OnHealthNetChanged;
+        deathExplosionCounter.OnValueChanged += (_, _) => PlayDeathExplosionEffects();
 
         ApplySpeedAnim(netSpeed.Value);
 
@@ -249,8 +268,12 @@ public class MiniBossAI : NetworkBehaviour
         };
         hitCounter.OnValueChanged -= (_, _) => { if (anim != null) anim.SetTrigger(hitTrigger); };
         dieCounter.OnValueChanged -= (_, _) => { if (anim != null) anim.SetTrigger(dieTrigger); };
-        enrageCounter.OnValueChanged -= (_, _) => { if (anim != null) anim.SetTrigger(enrageTrigger); };
+        enrageCounter.OnValueChanged -= (_, _) => {
+            if (anim != null) anim.SetTrigger(enrageTrigger);
+            PlayEnrageVFX();
+        };
         currentHealth.OnValueChanged -= OnHealthNetChanged;
+        deathExplosionCounter.OnValueChanged -= (_, _) => PlayDeathExplosionEffects();
     }
 
     private void OnHealthNetChanged(float oldVal, float newVal)
@@ -561,6 +584,12 @@ public class MiniBossAI : NetworkBehaviour
             if (c != null && !c.isTrigger) c.enabled = false;
         }
 
+        // Trigger Death Explosion only if Phase 2
+        if (IsPhase2)
+        {
+            TriggerDeathExplosion();
+        }
+
         if (!isStandaloneMode && IsServer)
         {
             dieCounter.Value++;
@@ -574,6 +603,73 @@ public class MiniBossAI : NetworkBehaviour
         
         // Destroy object after 5 seconds
         Destroy(gameObject, 5f);
+    }
+
+    private void TriggerDeathExplosion()
+    {
+        if (!isStandaloneMode && IsServer)
+        {
+            deathExplosionCounter.Value++;
+        }
+        else if (isStandaloneMode)
+        {
+            PlayDeathExplosionEffects();
+        }
+
+        bool auth = isStandaloneMode || (IsNetworkActive && IsServer);
+        if (auth)
+        {
+            Vector3 explodePos = transform.position + Vector3.up * 1.2f;
+            Collider[] hits = Physics.OverlapSphere(explodePos, explosionRadius, playerLayer);
+            HashSet<Transform> damagedRoots = new HashSet<Transform>();
+
+            foreach (var hit in hits)
+            {
+                Transform root = GetPlayerRoot(hit.transform);
+                if (root != null && !damagedRoots.Contains(root))
+                {
+                    damagedRoots.Add(root);
+                    Vector3 knockbackDir = (root.position - transform.position);
+                    knockbackDir.y = 0.5f; // Propel players into the air
+                    knockbackDir = knockbackDir.normalized;
+                    Vector3 force = knockbackDir * explosionKnockback;
+
+                    EnemyDamageHelper.DealDamage(root, explosionDamage, force);
+                    Debug.Log($"[MiniBossAI] Player {root.name} caught in death blast! Took {explosionDamage} damage.");
+                }
+            }
+        }
+    }
+
+    private void PlayDeathExplosionEffects()
+    {
+        Vector3 spawnPos = transform.position + Vector3.up * 1.2f;
+        if (deathExplosionVFX != null)
+        {
+            GameObject vfx = Instantiate(deathExplosionVFX, spawnPos, Quaternion.identity);
+            Destroy(vfx, 4f);
+        }
+        if (deathExplosionSound != null)
+        {
+            AudioSource.PlayClipAtPoint(deathExplosionSound, spawnPos, 1.0f);
+        }
+        Debug.Log("[MiniBossAI] Death Explosion visual/audio effects triggered locally.");
+    }
+
+    public void PlayEnrageVFX()
+    {
+        Vector3 spawnPos = transform.position + Vector3.up * 1f;
+        if (enrageVFXPrefab != null)
+        {
+            GameObject vfx = Instantiate(enrageVFXPrefab, spawnPos, transform.rotation);
+            vfx.transform.SetParent(transform);
+            Destroy(vfx, 5f);
+        }
+        if (enrageSFXSound != null)
+        {
+            AudioSource.PlayClipAtPoint(enrageSFXSound, spawnPos, 1.0f);
+        }
+        Debug.Log("[MiniBossAI] Enrage Transition VFX/SFX played!");
     }
 
     // ══════════════════════════════════════════════════════════
@@ -661,11 +757,11 @@ public class MiniBossAI : NetworkBehaviour
         return (ps != null && (ps.CurrentHealth <= 0 || ps.IsInvisible)) || (sk != null && sk.CurrentHealthValue <= 0);
     }
 
-    private void DealSwordDamage()
+    public void DealSwordDamageContinuously(HashSet<Transform> hitThisAttack)
     {
-        HashSet<Transform> hitPlayers = new HashSet<Transform>();
         Vector3 kbDir = transform.forward;
         Vector3 finalKnockback = kbDir * knockbackForce;
+        float finalDamage = IsPhase2 ? (attackDamage * 1.25f) : attackDamage;
 
         if (swordBase != null && swordTip != null)
         {
@@ -678,10 +774,11 @@ public class MiniBossAI : NetworkBehaviour
             foreach (var hit in hits)
             {
                 Transform root = GetPlayerRoot(hit.collider.transform);
-                if (root != null && !hitPlayers.Contains(root))
+                if (root != null && !hitThisAttack.Contains(root))
                 {
-                    hitPlayers.Add(root);
-                    EnemyDamageHelper.DealDamage(root, attackDamage, finalKnockback);
+                    hitThisAttack.Add(root);
+                    EnemyDamageHelper.DealDamage(root, finalDamage, finalKnockback);
+                    Debug.Log($"[MiniBossAI] Continuous Sword hit on: {root.name}, damage={finalDamage}");
                 }
             }
         }
@@ -693,10 +790,11 @@ public class MiniBossAI : NetworkBehaviour
             foreach (var hit in hits)
             {
                 Transform root = GetPlayerRoot(hit.collider.transform);
-                if (root != null && !hitPlayers.Contains(root))
+                if (root != null && !hitThisAttack.Contains(root))
                 {
-                    hitPlayers.Add(root);
-                    EnemyDamageHelper.DealDamage(root, attackDamage, finalKnockback);
+                    hitThisAttack.Add(root);
+                    EnemyDamageHelper.DealDamage(root, finalDamage, finalKnockback);
+                    Debug.Log($"[MiniBossAI] Continuous Sword fallback hit on: {root.name}, damage={finalDamage}");
                 }
             }
         }
@@ -803,16 +901,15 @@ public class MiniBossAI : NetworkBehaviour
     private class AttackState : IEnemyState
     {
         private MiniBossAI boss;
-        private float damageTimer;
-        private bool damageDealt;
         private AttackConfig config;
+        private HashSet<Transform> hitPlayersThisAttack = new HashSet<Transform>();
 
         public AttackState(MiniBossAI boss) { this.boss = boss; }
 
         public void Enter()
         {
+            hitPlayersThisAttack.Clear();
             boss.hasDealtDamage = false;
-            damageDealt = false;
 
             // Alternate through the 3 attacks sequentially
             if (!boss.isStandaloneMode)
@@ -831,7 +928,6 @@ public class MiniBossAI : NetworkBehaviour
             float speedMult = boss.IsPhase2 ? boss.phase2SpeedMultiplier : 1.0f;
 
             boss.stateTimer = config.duration / animMult;
-            damageTimer = (config.duration * (config.leapStartPercent + config.leapDurationPercent)) / animMult;
 
             // Configure Leap parameters
             boss.isLeaping = true;
@@ -855,15 +951,14 @@ public class MiniBossAI : NetworkBehaviour
         {
             boss.HandleAttack();
 
-            // Handle delayed damage sweep
-            if (!damageDealt)
+            float animMult = boss.IsPhase2 ? boss.phase2AnimSpeed : 1.0f;
+            float totalDuration = config.duration / animMult;
+            float elapsedTime = totalDuration - boss.stateTimer;
+            float elapsedPercent = elapsedTime / totalDuration;
+
+            if (elapsedPercent >= config.damageStartPercent && elapsedPercent <= config.damageEndPercent)
             {
-                damageTimer -= Time.deltaTime;
-                if (damageTimer <= 0)
-                {
-                    damageDealt = true;
-                    boss.DealSwordDamage();
-                }
+                boss.DealSwordDamageContinuously(hitPlayersThisAttack);
             }
         }
 
@@ -915,6 +1010,7 @@ public class MiniBossAI : NetworkBehaviour
             else
             {
                 if (boss.anim != null) boss.anim.SetTrigger(boss.enrageTrigger);
+                boss.PlayEnrageVFX();
                 boss.maxHealth = boss.phase2MaxHealth;
                 boss.localHealth = boss.phase2MaxHealth;
                 boss.localIsPhase2 = true;
