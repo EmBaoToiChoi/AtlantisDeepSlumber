@@ -1,0 +1,136 @@
+/* Main container at the top center of the screen */
+.miniboss-hud-container {
+    position: absolute;
+    top: 40px;
+    left: 50%;
+    translate: -50% 0;
+    width: 750px;
+    height: 110px;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    background-color: rgba(15, 10, 5, 0.85);
+    border-width: 3px;
+    border-color: rgb(215, 145, 35); /* Golden amber border fitting the Mini Boss armor */
+    border-radius: 16px;
+    padding: 10px 20px;
+    box-shadow: 0px 8px 24px rgba(0, 0, 0, 0.85), inset 0px 0px 12px rgba(255, 150, 0, 0.25);
+}
+
+/* Avatar Frame container */
+.miniboss-avatar-frame {
+    width: 80px;
+    height: 80px;
+    border-width: 3px;
+    border-color: rgb(220, 185, 45); /* Metal gold frame */
+    border-radius: 40px; /* Perfect circle */
+    overflow: hidden;
+    background-color: rgb(25, 25, 25);
+    margin-right: 18px;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.6);
+    flex-shrink: 0;
+}
+
+/* Avatar image (using the generated spiky golden bone knight) */
+.miniboss-avatar {
+    width: 100%;
+    height: 100%;
+    -unity-background-scale-mode: scale-and-crop;
+    background-image: url("project://database/Assets/Hbao/Image/miniboss_avatar.png");
+}
+
+/* Name and Health bar layout */
+.miniboss-hp-wrapper {
+    flex-grow: 1;
+    justify-content: center;
+}
+
+/* Mini Boss Name label */
+.miniboss-name {
+    color: rgb(255, 235, 205); /* Light golden yellow */
+    font-size: 22px;
+    -unity-font-style: bold;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.95);
+    margin-bottom: 6px;
+    letter-spacing: 1px;
+}
+
+/* Container bounding the progress bar */
+.miniboss-health-bar-container {
+    width: 100%;
+    height: 32px;
+}
+
+/* Dark background of the health bar */
+.miniboss-hp-background {
+    width: 100%;
+    height: 100%;
+    background-color: rgba(25, 15, 10, 0.9);
+    border-width: 2px;
+    border-color: rgb(160, 95, 25);
+    border-radius: 6px;
+    overflow: hidden;
+    position: relative;
+}
+
+/* Slowly draining yellow lag bar */
+.miniboss-hp-yellow-bar {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background-color: rgb(235, 190, 30); /* Draining yellow color */
+    border-radius: 4px;
+    transition-property: width;
+    transition-duration: 0.65s;
+    transition-timing-function: ease-in-out;
+}
+
+/* Main red health bar */
+.miniboss-hp-progress-bar {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background-color: rgb(215, 30, 20); /* Vibrant Crimson combat red */
+    border-radius: 4px;
+    transition-property: width;
+    transition-duration: 0.12s;
+    transition-timing-function: ease-out;
+    background-image: linear-gradient(to bottom, rgba(255, 255, 255, 0.38), rgba(0, 0, 0, 0.28));
+}
+
+/* Numeric HP overlay text */
+.miniboss-hp-text {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    color: rgb(255, 255, 255);
+    font-size: 13px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.95);
+}
+
+/* Shake and Flash Animation Effects */
+@keyframes miniboss-shake-anim {
+    0% { margin-left: 0px; margin-top: 0px; }
+    20% { margin-left: -8px; margin-top: -3px; }
+    40% { margin-left: 8px; margin-top: 3px; }
+    60% { margin-left: -5px; margin-top: 1px; }
+    80% { margin-left: 5px; margin-top: -1px; }
+    100% { margin-left: 0px; margin-top: 0px; }
+}
+
+.miniboss-hud-container.shake {
+    animation-name: miniboss-shake-anim;
+    animation-duration: 0.22s;
+}
+
+@keyframes miniboss-flash-anim {
+    0% { background-color: rgb(255, 220, 200); }
+    100% { background-color: rgb(215, 30, 20); }
+}
+
+.miniboss-hp-progress-bar.flash {
+    animation-name: miniboss-flash-anim;
+    animation-duration: 0.2s;
+}

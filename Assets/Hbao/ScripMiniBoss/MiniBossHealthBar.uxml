@@ -1,0 +1,21 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
+    <Style src="project://database/Assets/Hbao/ScripMiniBoss/MiniBossHealthBar.uss" />
+    <ui:VisualElement name="miniboss-hud-container" class="miniboss-hud-container">
+        <!-- Avatar Frame on the left -->
+        <ui:VisualElement name="miniboss-avatar-frame" class="miniboss-avatar-frame">
+            <ui:VisualElement name="miniboss-avatar" class="miniboss-avatar" />
+        </ui:VisualElement>
+        
+        <!-- Name and Health bar on the right -->
+        <ui:VisualElement name="miniboss-hp-wrapper" class="miniboss-hp-wrapper">
+            <ui:Label name="miniboss-name" text="MINI BOSS" class="miniboss-name" />
+            <ui:VisualElement name="miniboss-health-bar-container" class="miniboss-health-bar-container">
+                <ui:VisualElement name="miniboss-hp-background" class="miniboss-hp-background">
+                    <ui:VisualElement name="miniboss-hp-yellow-bar" class="miniboss-hp-yellow-bar" />
+                    <ui:VisualElement name="miniboss-hp-progress-bar" class="miniboss-hp-progress-bar" />
+                    <ui:Label name="miniboss-hp-text" text="1200 / 1200" class="miniboss-hp-text" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>
