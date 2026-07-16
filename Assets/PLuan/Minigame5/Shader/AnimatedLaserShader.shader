@@ -2,11 +2,11 @@ Shader "Custom/AnimatedLaserShader"
 {
     Properties
     {
-        [HDR] _GlowColor("Glow Color", Color) = (1, 0.3, 0.1, 1)
-        _ScrollSpeed("Scroll Speed", Float) = 5.0 // Tốc độ chạy của luồng năng lượng
-        _WaveFreq("Wave Frequency", Float) = 15.0 // Tần số gợn sóng điện
-        _WaveAmp("Wave Amplitude", Float) = 0.03 // Biên độ gợn sóng điện (độ rung lắc)
-        _CoreWidth("Core Width", Range(0.01, 0.5)) = 0.08 // Độ rộng của lõi trắng sáng ở giữa
+        [HDR] _GlowColor("Base Fire Color", Color) = (1.0, 0.3, 0.0, 1)
+        _ScrollSpeed("Scroll Speed", Float) = 4.0 // Tốc độ cháy cuộn của lửa
+        _NoiseScale1("Flame Scale 1", Float) = 12.0 // Tỷ lệ gợn lửa thô
+        _NoiseScale2("Flame Scale 2", Float) = 24.0 // Tỷ lệ tia lửa mịn
+        _FlameTurbulence("Flame Turbulence", Range(0.0, 0.2)) = 0.08 // Độ hỗn loạn/vỡ hình của ngọn lửa
     }
     SubShader
     {
@@ -17,7 +17,7 @@ Shader "Custom/AnimatedLaserShader"
             "IgnoreProjector"="True" 
         }
         LOD 100
-        Blend One One // Cộng màu phát sáng (Additive) để tạo hiệu ứng phát sáng mạnh HDR
+        Blend SrcAlpha One // Tạo hiệu ứng phát sáng cộng dồn alpha (Additive/Screen) để lửa hòa trộn thực tế
         Cull Off
         Lighting Off
         ZWrite Off
@@ -45,9 +45,25 @@ Shader "Custom/AnimatedLaserShader"
 
             float4 _GlowColor;
             float _ScrollSpeed;
-            float _WaveFreq;
-            float _WaveAmp;
-            float _CoreWidth;
+            float _NoiseScale1;
+            float _NoiseScale2;
+            float _FlameTurbulence;
+
+            // Hàm tạo mã băm ngẫu nhiên cho nhiễu hạt (Value Noise)
+            float hash(float2 p) 
+            {
+                return frac(sin(dot(p, float2(127.1, 311.7))) * 43758.5453123);
+            }
+
+            // Hàm tạo nhiễu hạt 2D mịn (Bilinear Interpolated Value Noise)
+            float noise(float2 p) 
+            {
+                float2 i = floor(p);
+                float2 f = frac(p);
+                float2 u = f * f * (3.0 - 2.0 * f);
+                return lerp(lerp(hash(i + float2(0.0, 0.0)), hash(i + float2(1.0, 0.0)), u.x),
+                            lerp(hash(i + float2(0.0, 1.0)), hash(i + float2(1.0, 1.0)), u.x), u.y);
+            }
 
             v2f vert (appdata v)
             {
@@ -60,30 +76,74 @@ Shader "Custom/AnimatedLaserShader"
 
             fixed4 frag (v2f i) : SV_Target
             {
-                // Tạo thời gian chạy luồng năng lượng cuộn dọc theo tia laser
                 float time = _Time.y * _ScrollSpeed;
 
-                // Tạo sóng chập chùng mô phỏng tia điện huyết tương (Plasma Arc)
-                float wave1 = sin(i.uv.x * _WaveFreq + time) * _WaveAmp;
-                float wave2 = cos(i.uv.x * (_WaveFreq * 1.6) - time * 0.8) * (_WaveAmp * 0.6);
-                float totalWave = wave1 + wave2;
+                // 1. Tạo 2 lớp nhiễu cuộn ngược chiều/khác tốc độ để mô phỏng lửa cuộn tự nhiên
+                float2 uv1 = float2(i.uv.x * _NoiseScale1 - time, i.uv.y * 3.0);
+                float2 uv2 = float2(i.uv.x * _NoiseScale2 + time * 0.5, i.uv.y * 6.0 - time * 0.2);
+                
+                float n1 = noise(uv1);
+                float n2 = noise(uv2);
+                
+                // Kết hợp nhiễu kép để tạo vân lửa (Flame textures)
+                float combinedNoise = n1 * 0.6 + n2 * 0.4;
 
-                // Tính toán khoảng cách tới tâm tia laser có cộng thêm độ biến dạng của sóng điện
-                float distortedDist = abs(i.uv.y - 0.5 + totalWave) * 2.0;
+                // 2. Định hình biên ngọn lửa (lửa sẽ mảnh ở 2 đầu, phập phồng sinh động dọc thân)
+                float edgeFade = 1.0 - abs(i.uv.y - 0.5) * 2.0;
+                
+                // Sử dụng nhiễu hạt để bóp méo hình dạng biên của tia sáng (Tia lửa bập bùng)
+                float turbulence = (noise(float2(i.uv.x * 10.0 + time, 0.0)) - 0.5) * _FlameTurbulence;
+                float distortedEdge = 1.0 - abs(i.uv.y - 0.5 + turbulence) * 2.0;
 
-                // Lõi trắng sáng ở tâm tia laser (làm tia sáng trông có lực và thật hơn)
-                float core = smoothstep(_CoreWidth, 0.0, distortedDist);
+                // Giá trị năng lượng lửa tích lũy (Càng ở giữa càng mạnh, kết hợp nhiễu)
+                float fireVal = combinedNoise * distortedEdge * 1.6;
 
-                // Viền phát sáng tỏa ra xung quanh nhuộm màu HDR sinh động
-                float glow = pow(saturate(1.0 - distortedDist), 3.0);
+                // 3. Phân phổ màu lửa (Fire Color Ramp)
+                // Cực kỳ yếu -> Trong suốt
+                // Yếu -> Đỏ đậm (Deep Red)
+                // Trung bình -> Cam phát sáng (Vibrant Orange)
+                // Mạnh -> Vàng rực (Bright Yellow)
+                // Rất mạnh (Lõi lửa) -> Trắng sáng (Hot White)
+                
+                fixed4 red = fixed4(0.95, 0.15, 0.0, 1.0);
+                fixed4 orange = fixed4(1.0, 0.55, 0.02, 1.0);
+                fixed4 yellow = fixed4(1.0, 0.92, 0.35, 1.0);
+                fixed4 white = fixed4(1.0, 1.0, 1.0, 1.0);
 
-                // Tổng hợp màu: lõi sáng trắng + viền màu HDR
-                fixed4 col = (_GlowColor * glow) + (fixed4(1, 1, 1, 1) * core);
+                fixed4 finalColor = fixed4(0,0,0,0);
 
-                // Nhân thêm với màu gradient của LineRenderer thiết lập ở Inspector
-                col *= i.color;
+                // Dựng dải màu lửa chuyển đổi mượt mà theo cường độ phát sáng
+                if (fireVal > 0.1)
+                {
+                    float tRed = saturate((fireVal - 0.1) / 0.25);
+                    finalColor = lerp(fixed4(0,0,0,0), red, tRed);
+                }
+                if (fireVal > 0.35)
+                {
+                    float tOrange = saturate((fireVal - 0.35) / 0.25);
+                    finalColor = lerp(finalColor, orange, tOrange);
+                }
+                if (fireVal > 0.6)
+                {
+                    float tYellow = saturate((fireVal - 0.6) / 0.2);
+                    finalColor = lerp(finalColor, yellow, tYellow);
+                }
+                if (fireVal > 0.8)
+                {
+                    float tWhite = saturate((fireVal - 0.8) / 0.2);
+                    finalColor = lerp(finalColor, white, tWhite);
+                }
 
-                return col;
+                // Cường độ phát sáng cộng thêm màu HDR tùy chỉnh
+                finalColor.rgb *= _GlowColor.rgb;
+                
+                // Độ mờ đục giảm dần ra 2 biên tia laser
+                finalColor.a = saturate(fireVal * edgeFade * 1.5);
+
+                // Nhân với màu gradient của LineRenderer ở Inspector
+                finalColor *= i.color;
+
+                return finalColor;
             }
             ENDCG
         }
