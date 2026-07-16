@@ -110,9 +110,30 @@ public class FinalPillarSetupHelper : EditorWindow
             EditorUtility.SetDirty(mat);
         }
 
+        // 8. Tự động nâng cấp Material tia laser thành shader mới siêu đẹp
+        Material laserMat = AssetDatabase.LoadAssetAtPath<Material>("Assets/PLuan/Minigame5/Material/Laser_Material.mat");
+        if (laserMat != null)
+        {
+            Shader animatedShader = Shader.Find("Custom/AnimatedLaserShader");
+            if (animatedShader != null)
+            {
+                Undo.RegisterCompleteObjectUndo(laserMat, "Update Laser Material Shader");
+                laserMat.shader = animatedShader;
+                
+                // Thiết lập các thông số mặc định siêu đẹp cho tia laser plasma
+                if (laserMat.HasProperty("_GlowColor")) laserMat.SetColor("_GlowColor", new Color(1.5f, 0.3f, 0.08f, 1f)); // Màu cam đỏ phát sáng rực rỡ (HDR)
+                if (laserMat.HasProperty("_ScrollSpeed")) laserMat.SetFloat("_ScrollSpeed", 6.0f);
+                if (laserMat.HasProperty("_WaveFreq")) laserMat.SetFloat("_WaveFreq", 18.0f);
+                if (laserMat.HasProperty("_WaveAmp")) laserMat.SetFloat("_WaveAmp", 0.035f);
+                if (laserMat.HasProperty("_CoreWidth")) laserMat.SetFloat("_CoreWidth", 0.07f);
+                
+                EditorUtility.SetDirty(laserMat);
+            }
+        }
+
         EditorUtility.SetDirty(truFinal);
         AssetDatabase.SaveAssets();
 
-        EditorUtility.DisplayDialog("Thành công", "Đã tự động cấu hình xong Trụ Final!\n\n1. Đổi Layer của 'CrystalGem' thành 'Target'\n2. Tự động thêm Box Collider vừa vặn cho 'CrystalGem'\n3. Gán Renderer ngọc vào script\n4. Dọn dẹp collider thừa trên giá đỡ ClawHolder\n5. Cấu hình thông số chiều cao quét sáng cực đẹp cho Material VienNgoc.", "Tuyệt vời");
+        EditorUtility.DisplayDialog("Thành công", "Đã tự động cấu hình xong Trụ Final và Tia Laser!\n\n1. Đổi Layer của 'CrystalGem' thành 'Target'\n2. Tự động thêm Box Collider vừa vặn cho 'CrystalGem'\n3. Gán Renderer ngọc vào script\n4. Cấu hình thông số quét sáng cực đẹp cho Material VienNgoc.\n5. Tự động nâng cấp Material tia laser sang Shader Plasma mới siêu đẹp!", "Tuyệt vời");
     }
 }
