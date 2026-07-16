@@ -20,5 +20,8 @@ public class RakanDNT : MonoBehaviour
     {
         animator.SetTrigger("SuyNgam");
     }
-
+    public void GioHaiTay()
+    {
+        animator.SetTrigger("GioHaiTay");
+    }
 }
