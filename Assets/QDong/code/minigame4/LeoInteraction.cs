@@ -30,7 +30,7 @@ public class LeoInteraction : NetworkBehaviour
         if (p4Manager == null || !p4Manager.isMinigameStarted.Value || p4Manager.puzzleCompleted.Value)
             return;
 
-        if(Input.GetKey(KeyCode.E))
+        if(Input.GetKey(KeyCode.C))
         {
             if (balanceManager != null && balanceManager.CurrentAngle > 10f)
             {
