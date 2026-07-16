@@ -40,15 +40,18 @@ public class InstantDeathZone : MonoBehaviour
                         p4Manager.TeleportPlayerToCenterClientRpc(netObj.NetworkObjectId, spawnPos);
                     }
 
-                    // 2. Bật camera chung của minigame 4
-                    ClientRpcParams rpcParams = new ClientRpcParams
+                    if (!p4Manager.puzzleCompleted.Value)
                     {
-                        Send = new ClientRpcSendParams { TargetClientIds = new ulong[] { netObj.OwnerClientId } }
-                    };
-                    p4Manager.ToggleSharedCameraClientRpc(true, rpcParams);
-                    
-                    // 3. Kích hoạt minigame 4
-                    p4Manager.StartMinigameFromTeleport();
+                        // 2. Bật camera chung của minigame 4
+                        ClientRpcParams rpcParams = new ClientRpcParams
+                        {
+                            Send = new ClientRpcSendParams { TargetClientIds = new ulong[] { netObj.OwnerClientId } }
+                        };
+                        p4Manager.ToggleSharedCameraClientRpc(true, rpcParams);
+                        
+                        // 3. Kích hoạt minigame 4
+                        p4Manager.StartMinigameFromTeleport();
+                    }
                 }
             }
 
