@@ -10,7 +10,7 @@ public class FinalPillarSetupHelper : EditorWindow
         GameObject truFinal = GameObject.Find("TruFinal");
         if (truFinal == null)
         {
-            FinalEnergyPillar pillarComponent = FindObjectOfType<FinalEnergyPillar>();
+            FinalEnergyPillar pillarComponent = FindFirstObjectByType<FinalEnergyPillar>();
             if (pillarComponent != null)
             {
                 truFinal = pillarComponent.gameObject;
@@ -93,16 +93,19 @@ public class FinalPillarSetupHelper : EditorWindow
             }
         }
 
-        // 7. Cấu hình các thông số tối ưu cho Material VienNgoc
+            // 7. Cấu hình các thông số tối ưu cho Material VienNgoc
         if (gemRenderer != null && gemRenderer.sharedMaterial != null)
         {
             Material mat = gemRenderer.sharedMaterial;
             Undo.RegisterCompleteObjectUndo(mat, "Setup Material VienNgoc");
             
             // Thiết lập thông số Remap chiều cao phát sáng tối ưu
-            if (mat.HasProperty("_DisolveRemapMin")) mat.SetFloat("_DisolveRemapMin", -1.0f);
-            if (mat.HasProperty("_DisolveRemapMax")) mat.SetFloat("_DisolveRemapMax", 15.0f);
+            if (mat.HasProperty("_DisolveRemapMin")) mat.SetFloat("_DisolveRemapMin", -10.0f); // Tối ưu chiều cao
+            if (mat.HasProperty("_DisolveRemapMax")) mat.SetFloat("_DisolveRemapMax", 120.0f); // Tối ưu chiều cao
             if (mat.HasProperty("_DisolveSmooth")) mat.SetFloat("_DisolveSmooth", 0.15f);
+            
+            // Đồng bộ màu phát sáng ngọc thành màu lửa HDR ấm áp
+            if (mat.HasProperty("_GlowColor")) mat.SetColor("_GlowColor", new Color(2.0f, 0.45f, 0.05f, 1.0f));
             
             // Xóa ảnh mask cũ để ngọc phát sáng toàn bộ
             if (mat.HasProperty("_CharacterMask")) mat.SetTexture("_CharacterMask", null);
@@ -110,7 +113,28 @@ public class FinalPillarSetupHelper : EditorWindow
             EditorUtility.SetDirty(mat);
         }
 
-        // 8. Tự động nâng cấp Material tia laser thành shader mới siêu đẹp
+        // Tự động đồng bộ biến màu Active Color của script FinalEnergyPillar sang màu lửa HDR
+        SerializedObject soPillar = new SerializedObject(finalPillar);
+        SerializedProperty activeColorProp = soPillar.FindProperty("activeColor");
+        if (activeColorProp != null)
+        {
+            activeColorProp.colorValue = new Color(2.0f, 0.45f, 0.05f, 1.0f);
+            soPillar.ApplyModifiedProperties();
+        }
+
+        // 8. Tự động đồng bộ màu phát sáng của Trụ Đá Ban Đầu (MaterialTruDa)
+        Material stoneMat = AssetDatabase.LoadAssetAtPath<Material>("Assets/PLuan/Minigame5/Material/MaterialTruDa.mat");
+        if (stoneMat != null)
+        {
+            if (stoneMat.HasProperty("_GlowColor"))
+            {
+                Undo.RegisterCompleteObjectUndo(stoneMat, "Setup MaterialTruDa Color");
+                stoneMat.SetColor("_GlowColor", new Color(2.0f, 0.45f, 0.05f, 1.0f));
+                EditorUtility.SetDirty(stoneMat);
+            }
+        }
+
+        // 9. Tự động nâng cấp Material tia laser thành shader ngọn lửa cuộn siêu đẹp
         Material laserMat = AssetDatabase.LoadAssetAtPath<Material>("Assets/PLuan/Minigame5/Material/Laser_Material.mat");
         if (laserMat != null)
         {
@@ -120,12 +144,12 @@ public class FinalPillarSetupHelper : EditorWindow
                 Undo.RegisterCompleteObjectUndo(laserMat, "Update Laser Material Shader");
                 laserMat.shader = animatedShader;
                 
-                // Thiết lập các thông số mặc định siêu đẹp cho tia laser plasma
-                if (laserMat.HasProperty("_GlowColor")) laserMat.SetColor("_GlowColor", new Color(1.5f, 0.3f, 0.08f, 1f)); // Màu cam đỏ phát sáng rực rỡ (HDR)
-                if (laserMat.HasProperty("_ScrollSpeed")) laserMat.SetFloat("_ScrollSpeed", 6.0f);
-                if (laserMat.HasProperty("_WaveFreq")) laserMat.SetFloat("_WaveFreq", 18.0f);
-                if (laserMat.HasProperty("_WaveAmp")) laserMat.SetFloat("_WaveAmp", 0.035f);
-                if (laserMat.HasProperty("_CoreWidth")) laserMat.SetFloat("_CoreWidth", 0.07f);
+                // Thiết lập các thông số mặc định của tia lửa cuộn chảy cực kỳ đẹp mắt
+                if (laserMat.HasProperty("_GlowColor")) laserMat.SetColor("_GlowColor", new Color(2.0f, 0.45f, 0.05f, 1.0f)); // Đồng bộ màu lửa
+                if (laserMat.HasProperty("_ScrollSpeed")) laserMat.SetFloat("_ScrollSpeed", 4.0f);
+                if (laserMat.HasProperty("_NoiseScale1")) laserMat.SetFloat("_NoiseScale1", 12.0f);
+                if (laserMat.HasProperty("_NoiseScale2")) laserMat.SetFloat("_NoiseScale2", 24.0f);
+                if (laserMat.HasProperty("_FlameTurbulence")) laserMat.SetFloat("_FlameTurbulence", 0.08f);
                 
                 EditorUtility.SetDirty(laserMat);
             }

@@ -98,7 +98,7 @@ Material:
     - _BaseColor: {r: 1, g: 1, b: 1, a: 1}
     - _Color: {r: 1, g: 1, b: 1, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
-    - _GlowColor: {r: 7.924528, g: 0.03737994, b: 0.03737994, a: 1}
+    - _GlowColor: {r: 2, g: 0.45, b: 0.05, a: 1}
     - _NoiseScrollSpeed: {r: 0, g: -0.5, b: 0, a: 0}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
