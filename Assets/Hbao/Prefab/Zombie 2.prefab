@@ -202,7 +202,7 @@ MonoBehaviour:
   expDropPoint: {fileID: 1697686860353705976}
   repairItemPrefab: {fileID: 2217945438620940750, guid: c0dc53cb41f8a574480ed87a8b9bebba, type: 3}
   repairItemDropChance: 0.2
-  sightRange: 15
+  sightRange: 40
   fieldOfView: 90
   attackRange: 2
   patrolWalkSpeed: 2.5

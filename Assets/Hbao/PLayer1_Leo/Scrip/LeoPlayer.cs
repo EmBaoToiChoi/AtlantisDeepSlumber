@@ -6949,7 +6949,8 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
                stateInfo.IsName("attacktayphai") ||
                stateInfo.IsName("Slash1Combo2") ||
                stateInfo.IsName("Slash2combo2") ||
-               stateInfo.IsName("Slash3combo2");
+               stateInfo.IsName("Slash3combo2") ||
+               stateInfo.IsName("ChatRiu");
     }
 
     private bool IsPlayingActionAnimation()

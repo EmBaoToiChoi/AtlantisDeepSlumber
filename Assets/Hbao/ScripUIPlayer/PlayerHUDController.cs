@@ -2560,6 +2560,15 @@ public class PlayerHUDController : MonoBehaviour
                         
 #if ENABLE_INPUT_SYSTEM
                         var inputSystemModule = activeES.GetComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
+                        if (inputSystemModule == null)
+                        {
+                            var oldStandalone = activeES.GetComponent<UnityEngine.EventSystems.StandaloneInputModule>();
+                            if (oldStandalone != null)
+                            {
+                                DestroyImmediate(oldStandalone);
+                            }
+                            inputSystemModule = activeES.gameObject.AddComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
+                        }
                         if (inputSystemModule != null)
                         {
                             inputSystemModule.enabled = true;
