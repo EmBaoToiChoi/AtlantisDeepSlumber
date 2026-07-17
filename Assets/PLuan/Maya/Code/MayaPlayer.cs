@@ -24,9 +24,7 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
                 playerAudioSource = gameObject.AddComponent<AudioSource>();
             }
         }
-        playerAudioSource.spatialBlend = 1.0f; // 3D spatialized
-        playerAudioSource.minDistance = 2f;
-        playerAudioSource.maxDistance = 20f;
+        playerAudioSource.spatialBlend = 0.0f; // Set to 2D to ensure sounds are always audible clearly!
         playerAudioSource.playOnAwake = false;
 
         if (footstepClip == null) footstepClip = Resources.Load<AudioClip>("Audio/Footstep");
@@ -36,6 +34,14 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (skillQClip == null) skillQClip = Resources.Load<AudioClip>("Audio/SmokeBomb"); // Invisibility
         if (skillEClip == null) skillEClip = Resources.Load<AudioClip>("Audio/SmokeBomb");
         if (skillRClip == null) skillRClip = Resources.Load<AudioClip>("Audio/IceSkill"); // Water projectile
+
+        // Log warnings if audio files fail to load
+        if (footstepClip == null) Debug.LogWarning($"[Audio Debug] MayaPlayer: Failed to load Resources/Audio/Footstep");
+        if (attackClip == null) Debug.LogWarning($"[Audio Debug] MayaPlayer: Failed to load Resources/Audio/SwordSlash");
+        if (hitClip == null) Debug.LogWarning($"[Audio Debug] MayaPlayer: Failed to load Resources/Audio/HitHurt");
+        if (deathClip == null) Debug.LogWarning($"[Audio Debug] MayaPlayer: Failed to load Resources/Audio/Death");
+        if (skillQClip == null) Debug.LogWarning($"[Audio Debug] MayaPlayer: Failed to load Resources/Audio/SmokeBomb");
+        if (skillRClip == null) Debug.LogWarning($"[Audio Debug] MayaPlayer: Failed to load Resources/Audio/IceSkill");
     }
 
     private void PlayPlayerSFX(AudioClip clip, float volumeScale = 1.0f)

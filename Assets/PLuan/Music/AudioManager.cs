@@ -59,21 +59,24 @@ public class AudioManager : MonoBehaviour
         ApplyMusicVolume();
     }
 
-    public void SetVolumes(float masterPercent, float musicPercent, float sfxPercent)
+    public void SetVolumes(float masterPercent, float musicPercent, float sfxPercent, bool saveToPrefs = true)
     {
         MasterVolume = Mathf.Clamp01(masterPercent / 100f);
         MusicVolume = Mathf.Clamp01(musicPercent / 100f);
         SFXVolume = Mathf.Clamp01(sfxPercent / 100f);
 
-        // Save to PlayerPrefs
-        PlayerPrefs.SetFloat("MasterVolume", masterPercent);
-        PlayerPrefs.SetFloat("MusicVolume", musicPercent);
-        PlayerPrefs.SetFloat("SFXVolume", sfxPercent);
-        PlayerPrefs.Save();
+        if (saveToPrefs)
+        {
+            // Save to PlayerPrefs
+            PlayerPrefs.SetFloat("MasterVolume", masterPercent);
+            PlayerPrefs.SetFloat("MusicVolume", musicPercent);
+            PlayerPrefs.SetFloat("SFXVolume", sfxPercent);
+            PlayerPrefs.Save();
+        }
 
         ApplyMusicVolume();
         
-        Debug.Log($"[AudioManager] Volumes updated - Master: {masterPercent}%, Music: {musicPercent}%, SFX: {sfxPercent}%");
+        Debug.Log($"[AudioManager] Volumes updated - Master: {masterPercent}%, Music: {musicPercent}%, SFX: {sfxPercent}%, Saved={saveToPrefs}");
     }
 
     private void ApplyMusicVolume()

@@ -1008,15 +1008,15 @@ public class AtlantisMenuController : MonoBehaviour
 
     private void SetupSliders()
     {
-        BindSlider("slider-master", "val-master", true);
-        BindSlider("slider-music", "val-music", true);
-        BindSlider("slider-sfx", "val-sfx", true);
+        BindSlider("slider-master", "val-master", true, (val) => UpdateRealtimeVolumes());
+        BindSlider("slider-music", "val-music", true, (val) => UpdateRealtimeVolumes());
+        BindSlider("slider-sfx", "val-sfx", true, (val) => UpdateRealtimeVolumes());
         BindSlider("slider-sens", "val-sens", false);
         BindSlider("slider-mic-input", "val-mic-input", true);
         BindSlider("slider-voice-playback", "val-voice-playback", true);
     }
 
-    private void BindSlider(string sliderName, string labelName, bool isPercent)
+    private void BindSlider(string sliderName, string labelName, bool isPercent, System.Action<float> onValueChanged = null)
     {
         var slider = _root.Q<Slider>(sliderName);
         var label = _root.Q<Label>(labelName);
@@ -1025,7 +1025,21 @@ public class AtlantisMenuController : MonoBehaviour
             slider.RegisterValueChangedCallback(evt =>
             {
                 label.text = Mathf.RoundToInt(evt.newValue) + (isPercent ? "%" : "");
+                onValueChanged?.Invoke(evt.newValue);
             });
+        }
+    }
+
+    private void UpdateRealtimeVolumes()
+    {
+        float tempMaster = _root.Q<Slider>("slider-master")?.value ?? 100f;
+        float tempMusic = _root.Q<Slider>("slider-music")?.value ?? 80f;
+        float tempSfx = _root.Q<Slider>("slider-sfx")?.value ?? 90f;
+
+        if (AudioManager.Instance != null)
+        {
+            // Set volumes temporarily in real-time (without saving to PlayerPrefs during drag)
+            AudioManager.Instance.SetVolumes(tempMaster, tempMusic, tempSfx, false);
         }
     }
 

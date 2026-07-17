@@ -24,9 +24,7 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
                 playerAudioSource = gameObject.AddComponent<AudioSource>();
             }
         }
-        playerAudioSource.spatialBlend = 1.0f; // 3D spatialized
-        playerAudioSource.minDistance = 2f;
-        playerAudioSource.maxDistance = 20f;
+        playerAudioSource.spatialBlend = 0.0f; // Set to 2D to ensure sounds are always audible clearly!
         playerAudioSource.playOnAwake = false;
 
         if (footstepClip == null) footstepClip = Resources.Load<AudioClip>("Audio/Footstep");
@@ -36,6 +34,13 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (skillQClip == null) skillQClip = Resources.Load<AudioClip>("Audio/IceSkill");
         if (skillEClip == null) skillEClip = Resources.Load<AudioClip>("Audio/IceSkill");
         if (skillRClip == null) skillRClip = Resources.Load<AudioClip>("Audio/IceSkill");
+
+        // Log warnings if audio files fail to load
+        if (footstepClip == null) Debug.LogWarning($"[Audio Debug] ElenaPlayer: Failed to load Resources/Audio/Footstep");
+        if (attackClip == null) Debug.LogWarning($"[Audio Debug] ElenaPlayer: Failed to load Resources/Audio/ArrowShoot");
+        if (hitClip == null) Debug.LogWarning($"[Audio Debug] ElenaPlayer: Failed to load Resources/Audio/HitHurt");
+        if (deathClip == null) Debug.LogWarning($"[Audio Debug] ElenaPlayer: Failed to load Resources/Audio/Death");
+        if (skillRClip == null) Debug.LogWarning($"[Audio Debug] ElenaPlayer: Failed to load Resources/Audio/IceSkill");
     }
 
     private void PlayPlayerSFX(AudioClip clip, float volumeScale = 1.0f)
