@@ -8,6 +8,7 @@ public class RootMotionBridge : MonoBehaviour
     private Rigidbody parentRb;
     private Vector3 initialRootBoneLocalPos;
     private Vector3 initialTransformLocalPos;
+    private Quaternion initialTransformLocalRot;
     private Transform rootBone;
     private bool hasRootBone = false;
 
@@ -38,6 +39,7 @@ public class RootMotionBridge : MonoBehaviour
     {
         anim = GetComponent<Animator>();
         initialTransformLocalPos = transform.localPosition;
+        initialTransformLocalRot = transform.localRotation;
         // Component này nằm ở Model con, parentTransform sẽ là đối tượng cha chứa SimplePlayerTest và NetworkTransform
         parentTransform = transform.parent;
         if (parentTransform == null)
@@ -149,19 +151,13 @@ public class RootMotionBridge : MonoBehaviour
         }
         else
         {
-            // Nếu là người chơi proxy (không phải chủ sở hữu/chơi đơn trên máy này), ép model về tâm đối tượng cha
-            if (parentTransform != null)
+            // Reset local position and rotation to prevent root motion drift from hit or other non-roll animations
+            transform.localRotation = initialTransformLocalRot;
+            transform.localPosition = initialTransformLocalPos;
+
+            if (hasRootBone && rootBone != null)
             {
-                IPlayerHUDTarget player = parentTransform.GetComponent<IPlayerHUDTarget>();
-                bool isLocalOrOwner = player == null || player.IsStandaloneMode || player.IsOwner;
-                if (!isLocalOrOwner)
-                {
-                    if (hasRootBone && rootBone != null)
-                    {
-                        rootBone.localPosition = new Vector3(initialRootBoneLocalPos.x, rootBone.localPosition.y, initialRootBoneLocalPos.z);
-                    }
-                    transform.localPosition = initialTransformLocalPos;
-                }
+                rootBone.localPosition = new Vector3(initialRootBoneLocalPos.x, rootBone.localPosition.y, initialRootBoneLocalPos.z);
             }
         }
     }

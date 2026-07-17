@@ -1033,6 +1033,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (rbComp != null)
         {
             rbComp.isKinematic = !IsOwner;
+            rbComp.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationY | RigidbodyConstraints.FreezeRotationZ;
         }
 
         if (!IsOwner)
@@ -2665,9 +2666,6 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         {
             AttackServerRpc();
         }
-
-        // Thực hiện quét Raycast (OverlapSphere) phát hiện mục tiêu tức thì
-        PerformRaycastAttack();
 
         // Chạy Coroutine tự động kết thúc/nối combo thay vì phụ thuộc Animation Event
         if (comboChainCoroutine != null) StopCoroutine(comboChainCoroutine);

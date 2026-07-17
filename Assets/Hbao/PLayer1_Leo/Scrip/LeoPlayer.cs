@@ -3444,6 +3444,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (rb != null)
         {
             rb.isKinematic = !IsOwner;
+            rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationY | RigidbodyConstraints.FreezeRotationZ;
         }
 
         if (!IsOwner)
@@ -4366,9 +4367,6 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         }
 
         currentWeaponTypeAttacking = weapon;
-
-        // Thực hiện quét Raycast (OverlapSphere) phát hiện mục tiêu tức thì
-        PerformRaycastAttack();
 
         if (comboChainCoroutine != null) StopCoroutine(comboChainCoroutine);
         comboChainCoroutine = StartCoroutine(ComboChainCoroutine(weapon, animToPlay, networkMode));
