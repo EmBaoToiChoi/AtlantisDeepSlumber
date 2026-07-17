@@ -33,6 +33,7 @@ public class SpikePillarLocal : MonoBehaviour
     private float spawnTime;
     private SpikePillarPool associatedPool;
     private System.Collections.Generic.Dictionary<GameObject, float> nextDamageTime = new System.Collections.Generic.Dictionary<GameObject, float>();
+    private bool isTouchingGround = false;
 
     public void Initialize(Vector3 spawnPosition, Vector3 direction, SpikePillarPool pool)
     {
@@ -40,6 +41,7 @@ public class SpikePillarLocal : MonoBehaviour
         rollDirection = direction;
         associatedPool = pool;
         currentState = PillarState.Falling;
+        isTouchingGround = false;
         spawnTime = Time.time;
         gameObject.SetActive(true);
     }
@@ -69,6 +71,7 @@ public class SpikePillarLocal : MonoBehaviour
                 // Set vị trí khớp mặt đất (cộng thêm khoảng cách bán kính và dịch lên chút)
                 transform.position = new Vector3(transform.position.x, hit.point.y + checkGroundDistance - 0.05f, transform.position.z);
                 currentState = PillarState.Rolling;
+                isTouchingGround = true;
                 startRollPosition = transform.position;
             }
         }
@@ -76,6 +79,20 @@ public class SpikePillarLocal : MonoBehaviour
         {
             // Lăn về phía trước
             transform.Translate(rollDirection.normalized * rollSpeed * Time.deltaTime, Space.World);
+
+            // Kiểm tra chạm đất để bám địa hình hoặc rơi xuống hố
+            if (Physics.Raycast(transform.position, Vector3.down, out RaycastHit hit, checkGroundDistance + 0.5f, groundLayer))
+            {
+                // Bám sát mặt đất
+                transform.position = new Vector3(transform.position.x, hit.point.y + checkGroundDistance - 0.05f, transform.position.z);
+                isTouchingGround = true;
+            }
+            else
+            {
+                // Không có đất -> Rơi xuống hố (di chuyển tịnh tiến đi xuống)
+                transform.Translate(Vector3.down * fallSpeed * Time.deltaTime, Space.World);
+                isTouchingGround = false;
+            }
 
             // Tự động thu hồi nếu lăn quá xa
             if (Vector3.Distance(startRollPosition, transform.position) >= maxRollDistance)
@@ -93,7 +110,7 @@ public class SpikePillarLocal : MonoBehaviour
         // Cập nhật hiệu ứng bụi khói
         if (rollDustEffect != null)
         {
-            bool shouldPlay = (currentState == PillarState.Rolling);
+            bool shouldPlay = (currentState == PillarState.Rolling && isTouchingGround);
             if (shouldPlay && !rollDustEffect.isPlaying)
             {
                 rollDustEffect.Play();

@@ -133,7 +133,7 @@ MonoBehaviour:
   moveSpeed: 2
   acceleration: 8
   rotationSpeed: 60
-  bobSpeed: 2
+  bobSpeed: 5
   bobRange: 0.12
   networkDropGroupId:
     UpdateTraits:

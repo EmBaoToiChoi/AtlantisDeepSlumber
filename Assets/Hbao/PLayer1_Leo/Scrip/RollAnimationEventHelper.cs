@@ -236,4 +236,17 @@ public class RollAnimationEventHelper : MonoBehaviour
         EnsurePlayerReference();
         if (player != null) player.OnShootRSkill();
     }
+
+    public void OnDeathAnimationEnd()
+    {
+        EnsurePlayerReference();
+        if (player != null) player.OnDeathAnimationEnd();
+    }
+
+    public void OnStandUpFinished()
+    {
+        PlayerKickedStun stun = GetComponentInParent<PlayerKickedStun>();
+        if (stun == null) stun = GetComponentInChildren<PlayerKickedStun>(true);
+        if (stun != null) stun.OnStandUpFinished();
+    }
 }

@@ -66,6 +66,10 @@ public class PlayerCheckpointManager : NetworkBehaviour
     private bool localPlayerRespawning = false;
     private bool hasStoredLocalInitialPos = false;
 
+    private Dictionary<ulong, float> playerDeathTimes = new Dictionary<ulong, float>();
+    private float localPlayerDeathTime = 0f;
+    private bool hasLocalPlayerDied = false;
+
     private void Awake()
     {
         // Khởi tạo NetworkList trong Awake
@@ -195,9 +199,23 @@ public class PlayerCheckpointManager : NetworkBehaviour
         }
 
         // Giám sát máu người chơi
-        if (localPlayer.CurrentHealth <= 0 && !localPlayerRespawning)
+        if (localPlayer.CurrentHealth <= 0)
         {
-            StartCoroutine(RespawnPlayerStandaloneCoroutine(localPlayer));
+            if (!hasLocalPlayerDied)
+            {
+                localPlayerDeathTime = Time.time;
+                hasLocalPlayerDied = true;
+            }
+
+            bool timeOut = (Time.time - localPlayerDeathTime) > 6f;
+            if ((localPlayer.IsDeathAnimationFinished || timeOut) && !localPlayerRespawning)
+            {
+                StartCoroutine(RespawnPlayerStandaloneCoroutine(localPlayer));
+            }
+        }
+        else
+        {
+            hasLocalPlayerDied = false;
         }
     }
 
@@ -272,10 +290,26 @@ public class PlayerCheckpointManager : NetworkBehaviour
             }
 
             // 3. Kiểm tra máu và kích hoạt hồi sinh trên Server
-            if (player.CurrentHealth <= 0 && !respawningPlayers.Contains(clientId))
+            if (player.CurrentHealth <= 0)
             {
-                respawningPlayers.Add(clientId);
-                StartCoroutine(RespawnPlayerNetworkCoroutine(player, clientId));
+                if (!playerDeathTimes.ContainsKey(clientId))
+                {
+                    playerDeathTimes[clientId] = Time.time;
+                }
+
+                bool timeOut = (Time.time - playerDeathTimes[clientId]) > 6f;
+                if ((player.IsDeathAnimationFinished || timeOut) && !respawningPlayers.Contains(clientId))
+                {
+                    respawningPlayers.Add(clientId);
+                    StartCoroutine(RespawnPlayerNetworkCoroutine(player, clientId));
+                }
+            }
+            else
+            {
+                if (playerDeathTimes.ContainsKey(clientId))
+                {
+                    playerDeathTimes.Remove(clientId);
+                }
             }
         }
     }
@@ -526,6 +560,7 @@ public class PlayerCheckpointManager : NetworkBehaviour
     private void HealAndResetPlayer(IPlayerHUDTarget player)
     {
         if (player == null) return;
+        player.ResetDeathState();
         GameObject playerGo = player.gameObject;
 
         MonoBehaviour[] scripts = playerGo.GetComponents<MonoBehaviour>();

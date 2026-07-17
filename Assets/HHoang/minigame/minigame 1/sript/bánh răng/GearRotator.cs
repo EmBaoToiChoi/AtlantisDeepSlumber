@@ -93,4 +93,160 @@ public class GearRotator : NetworkBehaviour
     {
         if (IsServer && currentState.Value != GearState.Closing) currentState.Value = GearState.Closing; 
     }
+
+    private void HandlePlayerDamage(GameObject otherGo)
+    {
+        if (!dealDamageOnContact) return;
+
+        if (IsAnyPlayer(otherGo, out GameObject playerRoot))
+        {
+            float currentTime = Time.time;
+            if (!nextDamageTime.TryGetValue(playerRoot, out float nextTime) || currentTime >= nextTime)
+            {
+                DealDamage(playerRoot, contactDamage);
+                nextDamageTime[playerRoot] = currentTime + damageCooldown;
+            }
+        }
+    }
+
+    private void RemovePlayerFromDamageList(GameObject otherGo)
+    {
+        if (IsAnyPlayer(otherGo, out GameObject playerRoot))
+        {
+            if (nextDamageTime.ContainsKey(playerRoot))
+            {
+                nextDamageTime.Remove(playerRoot);
+            }
+        }
+    }
+
+    private void OnCollisionEnter(Collision collision)
+    {
+        HandlePlayerDamage(collision.gameObject);
+    }
+
+    private void OnCollisionStay(Collision collision)
+    {
+        HandlePlayerDamage(collision.gameObject);
+    }
+
+    private void OnCollisionExit(Collision collision)
+    {
+        RemovePlayerFromDamageList(collision.gameObject);
+    }
+
+    private void OnTriggerEnter(Collider other)
+    {
+        HandlePlayerDamage(other.gameObject);
+    }
+
+    private void OnTriggerStay(Collider other)
+    {
+        HandlePlayerDamage(other.gameObject);
+    }
+
+    private void OnTriggerExit(Collider other)
+    {
+        RemovePlayerFromDamageList(other.gameObject);
+    }
+
+    private static System.Reflection.MethodInfo GetMethodInherited(System.Type type, string name, System.Type[] types)
+    {
+        System.Type currentType = type;
+        while (currentType != null)
+        {
+            System.Reflection.MethodInfo method = currentType.GetMethod(name, types);
+            if (method != null) return method;
+            currentType = currentType.BaseType;
+        }
+        return null;
+    }
+
+    private void DealDamage(GameObject playerRoot, float damage)
+    {
+        if (damage <= 0f) return;
+
+        Debug.Log($"[GearRotator] Gây {damage} sát thương cho {playerRoot.name}");
+
+        MonoBehaviour[] scripts = playerRoot.GetComponents<MonoBehaviour>();
+        foreach (var script in scripts)
+        {
+            if (script == null) continue;
+            System.Type type = script.GetType();
+            string typeName = type.Name;
+
+            if (script is SimplePlayerTest || script is LeoPlayer || script is ArthurPlayer || 
+                script is ElenaPlayer || script is MayaPlayer || typeName.EndsWith("Player"))
+            {
+                var requestDamageMethod = GetMethodInherited(type, "RequestTakeDamage", new System.Type[] { typeof(float) }) ??
+                                           GetMethodInherited(type, "TakeDamage", new System.Type[] { typeof(float) });
+                if (requestDamageMethod != null)
+                {
+                    requestDamageMethod.Invoke(script, new object[] { damage });
+                    return;
+                }
+            }
+        }
+    }
+
+    private bool IsAnyPlayer(GameObject go, out GameObject playerRoot)
+    {
+        playerRoot = null;
+        if (go == null) return false;
+
+        // Chỉ xử lý va chạm với CHÍNH người chơi sở hữu máy này (local player)
+        // để tránh một máy khách này tính toán va chạm hộ cho máy khách khác gây lỗi nhân đôi sát thương.
+        
+        var elena = go.GetComponentInParent<ElenaPlayer>() ?? go.GetComponentInChildren<ElenaPlayer>();
+        if (elena != null) 
+        {
+            if (elena.IsOwner || (NetworkManager.Singleton != null && !NetworkManager.Singleton.IsListening))
+            {
+                playerRoot = elena.gameObject; 
+                return true; 
+            }
+        }
+
+        var arthur = go.GetComponentInParent<ArthurPlayer>() ?? go.GetComponentInChildren<ArthurPlayer>();
+        if (arthur != null) 
+        {
+            if (arthur.IsOwner || (NetworkManager.Singleton != null && !NetworkManager.Singleton.IsListening))
+            {
+                playerRoot = arthur.gameObject; 
+                return true; 
+            }
+        }
+
+        var leo = go.GetComponentInParent<LeoPlayer>() ?? go.GetComponentInChildren<LeoPlayer>();
+        if (leo != null) 
+        {
+            if (leo.IsOwner || (NetworkManager.Singleton != null && !NetworkManager.Singleton.IsListening))
+            {
+                playerRoot = leo.gameObject; 
+                return true; 
+            }
+        }
+
+        var maya = go.GetComponentInParent<MayaPlayer>() ?? go.GetComponentInChildren<MayaPlayer>();
+        if (maya != null) 
+        {
+            if (maya.IsOwner || (NetworkManager.Singleton != null && !NetworkManager.Singleton.IsListening))
+            {
+                playerRoot = maya.gameObject; 
+                return true; 
+            }
+        }
+
+        var simple = go.GetComponentInParent<SimplePlayerTest>() ?? go.GetComponentInChildren<SimplePlayerTest>();
+        if (simple != null) 
+        {
+            if (simple.IsOwner || (NetworkManager.Singleton != null && !NetworkManager.Singleton.IsListening))
+            {
+                playerRoot = simple.gameObject; 
+                return true; 
+            }
+        }
+
+        return false;
+    }
 }
