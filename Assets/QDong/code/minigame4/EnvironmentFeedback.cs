@@ -17,9 +17,29 @@ public class EnvironmentFeedback : NetworkBehaviour
     private NetworkVariable<bool> isWarning = new NetworkVariable<bool>(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
     bool played = false;
+    private bool isCompleted = false;
+
+    /// <summary>Gọi khi minigame hoàn thành để tắt hết hiệu ứng và ngừng Update.</summary>
+    public void StopAll()
+    {
+        isCompleted = true;
+
+        if (IsServer)
+            isWarning.Value = false;
+
+        if (dust != null) { dust.Stop(); dust.Clear(); dust.gameObject.SetActive(false); }
+        if (rockDust != null) { rockDust.Stop(); rockDust.Clear(); rockDust.gameObject.SetActive(false); }
+        if (crack != null) crack.SetActive(false);
+        if (crackSound != null && crackSound.isPlaying) crackSound.Stop();
+        played = false;
+
+        Debug.Log("[EnvironmentFeedback] StopAll: Đã tắt hết hiệu ứng sau khi hoàn thành minigame.");
+    }
 
     void Update()
     {
+        if (isCompleted) return;
+
         if (IsServer)
         {
             if (balanceManager != null)
