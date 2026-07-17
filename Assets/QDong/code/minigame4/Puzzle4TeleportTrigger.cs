@@ -31,13 +31,21 @@ public class Puzzle4TeleportTrigger : NetworkBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
-        if(!IsServer)
+        if (!IsServer)
             return;
 
         if (activated)
             return;
 
-        if(other.CompareTag("Player"))
+        // Chặn kích hoạt lại nếu minigame đã hoàn thành
+        Puzzle4Manager p4Manager = FindAnyObjectByType<Puzzle4Manager>();
+        if (p4Manager != null && p4Manager.puzzleCompleted.Value)
+        {
+            Debug.Log("[Puzzle4Teleport] Minigame đã hoàn thành, không kích hoạt lại.");
+            return;
+        }
+
+        if (other.CompareTag("Player"))
         {
             NetworkObject netObj = other.GetComponentInParent<NetworkObject>();
             if (netObj != null)
@@ -52,7 +60,6 @@ public class Puzzle4TeleportTrigger : NetworkBehaviour
                 }
 
                 // Teleport all players robustly
-                Puzzle4Manager p4Manager = FindAnyObjectByType<Puzzle4Manager>();
                 if (p4Manager != null)
                 {
                     int index = 0;
@@ -96,4 +103,23 @@ public class Puzzle4TeleportTrigger : NetworkBehaviour
         }
     }
 
+    /// <summary>
+    /// Gọi từ Server sau khi minigame hoàn thành để hiện lại box nhưng KHÔNG cho kích hoạt.
+    /// Chỉ bật Renderer (nhìn thấy được), Collider vẫn tắt.
+    /// </summary>
+    [ClientRpc]
+    public void ReappearClientRpc()
+    {
+        gameObject.SetActive(true);
+
+        // Chỉ bật Renderer để thấy được, KHÔNG bật Collider
+        // ⇒ Người chơi không thể kích hoạt lại minigame sau khi hoàn thành
+        Renderer rend = GetComponent<Renderer>();
+        if (rend != null) rend.enabled = true;
+
+        Collider col = GetComponent<Collider>();
+        if (col != null) col.enabled = false;
+
+        Debug.Log("[Puzzle4Teleport] ReappearClientRpc: Box đã hiện lại (chỉ Renderer, Collider vẫn tắt)!");
+    }
 }

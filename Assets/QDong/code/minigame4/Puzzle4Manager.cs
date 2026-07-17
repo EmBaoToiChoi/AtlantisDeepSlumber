@@ -40,6 +40,9 @@ public class Puzzle4Manager : NetworkBehaviour
     // Trap Floor là khi hoàn thành sẽ mở ra
     public Puzzle4TrapTrigger trapFloor;
 
+    [Header("Environment Feedback")]
+    public EnvironmentFeedback environmentFeedback;
+
     [Header("Camera Toàn Cảnh")]
     public GameObject sharedCamera;
 
@@ -504,23 +507,38 @@ public class Puzzle4Manager : NetworkBehaviour
             trapFloor.CloseFloorClientRpc();
         }
 
-        // Tắt vùng box trigger để không bị kích hoạt lại
+        // Bật lại vùng box trigger để nó hiện lại như yêu cầu,
+        // nhưng TẮT Collider để không kích hoạt minigame nữa sau khi hoàn thành.
         if(trapTrigger != null)
         {
-            // Kiểm tra xem trapTrigger có cùng object với trapFloor không
-            // Nếu cùng object, việc SetActive(false) sẽ làm ẩn luôn cả mặt đất (floorPart)
-            if (trapFloor != null && trapTrigger == trapFloor.gameObject)
+            trapTrigger.SetActive(true);
+
+            // Tắt Collider: người chơi KHÔNG thể kích hoạt lại
+            Collider triggerCol = trapTrigger.GetComponent<Collider>();
+            if (triggerCol != null) triggerCol.enabled = false;
+
+            // Đảm bảo Renderer bật (nhìn thấy được)
+            Renderer triggerRend = trapTrigger.GetComponent<Renderer>();
+            if (triggerRend != null) triggerRend.enabled = true;
+
+            // Thông báo tất cả client bật lại mesh (không cần Collider)
+            Puzzle4TeleportTrigger teleportTrigger = trapTrigger.GetComponent<Puzzle4TeleportTrigger>();
+            if (teleportTrigger != null)
             {
-                Collider col = trapTrigger.GetComponent<Collider>();
-                if (col != null) col.enabled = false;
-                
-                ZoneTrigger zone = trapTrigger.GetComponent<ZoneTrigger>();
-                if (zone != null) zone.enabled = false;
+                teleportTrigger.ReappearClientRpc();
             }
-            else
-            {
-                trapTrigger.SetActive(false);
-            }
+        }
+
+        // Tắt EnvironmentFeedback (particle + sound) khi hoàn thành
+        if (environmentFeedback != null)
+        {
+            environmentFeedback.StopAll();
+        }
+        else
+        {
+            // Tự tìm nếu chưa gán
+            EnvironmentFeedback ef = FindAnyObjectByType<EnvironmentFeedback>();
+            if (ef != null) ef.StopAll();
         }
 
         if(beamA != null) beamA.SetActive(false);
