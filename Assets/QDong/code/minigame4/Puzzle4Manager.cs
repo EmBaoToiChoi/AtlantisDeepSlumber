@@ -487,7 +487,19 @@ public class Puzzle4Manager : NetworkBehaviour
         }
         else
         {
-            Debug.LogError("[Puzzle4Manager] trapFloor là NULL! Kéo Puzzle4TrapTrigger vào field 'Trap Floor' trong Inspector.");
+            Debug.LogError("[Puzzle4Manager] trapFloor là NULL! Tự tìm Puzzle4TrapTrigger...");
+            // Fallback: tự tìm trong scene
+            Puzzle4TrapTrigger found = FindAnyObjectByType<Puzzle4TrapTrigger>();
+            if (found != null)
+            {
+                Debug.Log("[Puzzle4Manager] Tìm thấy Puzzle4TrapTrigger fallback: " + found.gameObject.name);
+                trapFloor = found;
+                trapFloor.CloseFloorClientRpc();
+            }
+            else
+            {
+                Debug.LogError("[Puzzle4Manager] KHÔNG TÌM THẤY Puzzle4TrapTrigger trong scene! Sàn sẽ không hiện.");
+            }
         }
 
         PlayCompleteSequenceClientRpc();
@@ -520,6 +532,21 @@ public class Puzzle4Manager : NetworkBehaviour
 
         if(castleGate != null)
             castleGate.SetActive(false);
+
+        // Fallback client-side: nếu server đã gọi CloseFloorClientRpc nhưng sàn vẫn chưa hiện,
+        // thì client tự bật sàn lên (xảy ra khi trapFloor bị null trên server)
+        Debug.Log("[Puzzle4Manager] Client-side: Đang thử bật sàn...");
+        Puzzle4TrapTrigger localTrapFloor = (trapFloor != null) ? trapFloor : FindAnyObjectByType<Puzzle4TrapTrigger>();
+        if (localTrapFloor != null)
+        {
+            if (localTrapFloor.floorPartA != null) localTrapFloor.floorPartA.SetActive(true);
+            if (localTrapFloor.floorPartB != null) localTrapFloor.floorPartB.SetActive(true);
+            Debug.Log("[Puzzle4Manager] Client-side: Đã bật sàn thành công.");
+        }
+        else
+        {
+            Debug.LogError("[Puzzle4Manager] Client-side: KHÔNG TÌM THẤY Puzzle4TrapTrigger để bật sàn!");
+        }
 
         // CloseFloorClientRpc() đã được gọi từ TriggerCompleteSequence() trên server trước khi coroutine này chạy
 
