@@ -76,16 +76,29 @@ public class Puzzle4TeleportTrigger : NetworkBehaviour
                                     Mathf.Sin(index * Mathf.PI / 2) * 1.5f
                                 );
                                 Vector3 spawnPos = teleportTarget != null ? teleportTarget.position + offset : playerObj.transform.position;
-                                
-                                playerObj.transform.position = spawnPos;
+
+                                // Gửi ClientRpc TRƯỚC để client chuẩn bị nhận vị trí mới
+                                p4Manager.TeleportPlayerToCenterClientRpc(playerObj.NetworkObjectId, spawnPos);
+
+                                // Dùng NetworkTransform.Teleport() nếu có để tránh bị override
+                                Unity.Netcode.Components.NetworkTransform netTransform = playerObj.GetComponent<Unity.Netcode.Components.NetworkTransform>();
+                                if (netTransform != null)
+                                {
+                                    netTransform.Teleport(spawnPos, playerObj.transform.rotation, playerObj.transform.localScale);
+                                }
+                                else
+                                {
+                                    playerObj.transform.position = spawnPos;
+                                }
+
                                 Rigidbody rb = playerObj.GetComponent<Rigidbody>();
                                 if (rb != null)
                                 {
                                     rb.linearVelocity = Vector3.zero;
                                     rb.angularVelocity = Vector3.zero;
+                                    rb.Sleep();
                                 }
-                                
-                                p4Manager.TeleportPlayerToCenterClientRpc(playerObj.NetworkObjectId, spawnPos);
+
                                 index++;
                             }
                         }
