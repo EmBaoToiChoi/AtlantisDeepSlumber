@@ -243,6 +243,46 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
         (elenaPlayer != null ? elenaPlayer.maxHealth :
         (mayaPlayer != null ? mayaPlayer.maxHealth : maxHealth)));
 
+    public bool IsDeathAnimationFinished => 
+        leoPlayer != null ? leoPlayer.IsDeathAnimationFinished :
+        (arthurPlayer != null ? arthurPlayer.IsDeathAnimationFinished :
+        (elenaPlayer != null ? elenaPlayer.IsDeathAnimationFinished :
+        (mayaPlayer != null ? mayaPlayer.IsDeathAnimationFinished : isDeathAnimFinished)));
+
+    private bool isDeathAnimFinished = false;
+    public void ResetDeathState()
+    {
+        isDeathAnimFinished = false;
+        if (leoPlayer != null) leoPlayer.ResetDeathState();
+        if (arthurPlayer != null) arthurPlayer.ResetDeathState();
+        if (elenaPlayer != null) elenaPlayer.ResetDeathState();
+        if (mayaPlayer != null) mayaPlayer.ResetDeathState();
+    }
+
+    public void OnDeathAnimationEnd()
+    {
+        if (leoPlayer != null) { leoPlayer.OnDeathAnimationEnd(); return; }
+        if (arthurPlayer != null) { arthurPlayer.OnDeathAnimationEnd(); return; }
+        if (elenaPlayer != null) { elenaPlayer.OnDeathAnimationEnd(); return; }
+        if (mayaPlayer != null) { mayaPlayer.OnDeathAnimationEnd(); return; }
+
+        if (IsOwner || isStandaloneMode)
+        {
+            PlayerDeathEffectManager.Instance.PlayDeathEffect();
+            isDeathAnimFinished = true;
+            if (!isStandaloneMode)
+            {
+                NotifyDeathAnimFinishedServerRpc();
+            }
+        }
+    }
+
+    [ServerRpc]
+    private void NotifyDeathAnimFinishedServerRpc()
+    {
+        isDeathAnimFinished = true;
+    }
+
     private bool IsSkillsUnlocked => leoPlayer != null ? leoPlayer.isSkillsUnlocked.Value : (arthurPlayer != null ? arthurPlayer.isSkillsUnlocked.Value : (elenaPlayer != null ? elenaPlayer.isSkillsUnlocked.Value : (mayaPlayer != null ? mayaPlayer.isSkillsUnlocked.Value : isSkillsUnlocked.Value)));
 
     // Invisibility Skill R proxy
@@ -636,7 +676,7 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
             SavePlayerStateToDatabase();
             if (newHealth <= 0f && oldHealth > 0f)
             {
-                PlayerDeathEffectManager.Instance.PlayDeathEffect();
+                // Defer death effect to OnDeathAnimationEnd
             }
             else if (newHealth > 0f && oldHealth <= 0f)
             {
@@ -1784,7 +1824,6 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
             {
                 Debug.LogWarning($"[Standalone] {gameObject.name} đã chết!");
                 PlayAnimation("Death", 0.15f);
-                PlayerDeathEffectManager.Instance.PlayDeathEffect();
             }
             else
             {

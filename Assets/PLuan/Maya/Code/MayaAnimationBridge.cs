@@ -76,4 +76,16 @@ public class MayaAnimationBridge : MonoBehaviour
             mainPlayerScript.OnPickItemEvent();
         }
     }
+
+    public void OnDeathAnimationEnd()
+    {
+        if (mainPlayerScript != null) mainPlayerScript.OnDeathAnimationEnd();
+    }
+
+    public void OnStandUpFinished()
+    {
+        PlayerKickedStun stun = GetComponentInParent<PlayerKickedStun>();
+        if (stun == null) stun = GetComponentInChildren<PlayerKickedStun>(true);
+        if (stun != null) stun.OnStandUpFinished();
+    }
 }

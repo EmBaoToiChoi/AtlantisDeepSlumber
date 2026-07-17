@@ -18,6 +18,13 @@ public class PlayerKickedStun : NetworkBehaviour
     private Rigidbody rb;
     private Animator anim;
     private bool isStunned = false;
+    private bool isWaitingForStandUp = false;
+
+    public void OnStandUpFinished()
+    {
+        isWaitingForStandUp = false;
+        Debug.Log($"[{gameObject.name}] OnStandUpFinished received.");
+    }
 
     private Camera targetCamera;
     private Vector3 lastCameraOffset;
@@ -84,6 +91,7 @@ public class PlayerKickedStun : NetworkBehaviour
         // 2. Kích hoạt hoạt ảnh bị đá ngã
         if (anim != null && anim.isActiveAndEnabled)
         {
+            isWaitingForStandUp = true;
             if (!string.IsNullOrEmpty(kickedTriggerName))
             {
                 anim.SetTrigger(kickedTriggerName);
@@ -110,14 +118,21 @@ public class PlayerKickedStun : NetworkBehaviour
 
         // 4. Giữ trạng thái khóa trong suốt thời gian bị đá
         float timer = duration;
-        while (timer > 0)
+        float maxSafetyTimer = 5f;
+        while ((timer > 0 || isWaitingForStandUp) && maxSafetyTimer > 0)
         {
-            timer -= Time.deltaTime;
-            
-            // Giảm dần vận tốc trượt vật lý
-            if (rb != null && timer < duration - 0.2f)
+            if (timer > 0)
             {
-                rb.linearVelocity = Vector3.MoveTowards(rb.linearVelocity, Vector3.zero, Time.deltaTime * 8f);
+                timer -= Time.deltaTime;
+                // Giảm dần vận tốc trượt vật lý
+                if (rb != null && timer < duration - 0.2f)
+                {
+                    rb.linearVelocity = Vector3.MoveTowards(rb.linearVelocity, Vector3.zero, Time.deltaTime * 8f);
+                }
+            }
+            if (timer <= 0)
+            {
+                maxSafetyTimer -= Time.deltaTime;
             }
             yield return null;
         }

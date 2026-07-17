@@ -391,6 +391,29 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
     public string[] InventorySlots => inventorySlots;
     public float MaxHealth => maxHealth;
 
+    private bool isDeathAnimFinished = false;
+    public bool IsDeathAnimationFinished => isDeathAnimFinished;
+    public void ResetDeathState() => isDeathAnimFinished = false;
+
+    public void OnDeathAnimationEnd()
+    {
+        if (IsOwner || isStandaloneMode)
+        {
+            PlayerDeathEffectManager.Instance.PlayDeathEffect();
+            isDeathAnimFinished = true;
+            if (!isStandaloneMode)
+            {
+                NotifyDeathAnimFinishedServerRpc();
+            }
+        }
+    }
+
+    [ServerRpc]
+    private void NotifyDeathAnimFinishedServerRpc()
+    {
+        isDeathAnimFinished = true;
+    }
+
 
     // Invisibility Skill R (stub - legacy removed)
     public bool IsInvisible => false;
@@ -1146,7 +1169,7 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
             SavePlayerStateToDatabase();
             if (newHealth <= 0f && oldHealth > 0f)
             {
-                PlayerDeathEffectManager.Instance.PlayDeathEffect();
+                // Defer death effect to OnDeathAnimationEnd
             }
             else if (newHealth > 0f && oldHealth <= 0f)
             {
@@ -2852,7 +2875,6 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
             {
                 Debug.LogWarning($"[MayaPlayer] {gameObject.name} đã chết!");
                 PlayAnimation("Death", 0.15f);
-                PlayerDeathEffectManager.Instance.PlayDeathEffect();
             }
             else
             {
@@ -3456,10 +3478,19 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (anim == null || !anim.isActiveAndEnabled || anim.runtimeAnimatorController == null) return;
 
         // Nếu đang chết, chỉ cho phép nhận các lệnh hồi sinh hoặc đưa về trạng thái rỗng/New State
-        if (currentAnimState == "Death" && 
-            animName != "Idle" && animName != "Walk" && animName != "run" && animName != "New State" && animName != "Empty")
+        if (currentAnimState == "Death")
         {
-            return;
+            if (CurrentHealth <= 0)
+            {
+                if (animName != "Idle" && animName != "Walk" && animName != "run" && animName != "New State" && animName != "Empty")
+                {
+                    return;
+                }
+            }
+            else
+            {
+                currentAnimState = "";
+            }
         }
 
         var carrier = GetComponent<PlayerLogCarrier>();
