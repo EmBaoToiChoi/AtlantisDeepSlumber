@@ -377,6 +377,11 @@ public class PushableStone : NetworkBehaviour
                     // Gán di chuyển chân của layer 0 locomotion
                     anim.SetFloat("MoveX", 0f);
                     anim.SetFloat("MoveZ", isMoving ? 0.5f : 0f);
+
+                    if (anim.layerCount > 1)
+                    {
+                        anim.SetLayerWeight(1, 1f);
+                    }
                 }
             }
         }
@@ -940,6 +945,19 @@ public class PushableStone : NetworkBehaviour
     private MonoBehaviour GetPlayerLocomotionScript(GameObject playerObj)
     {
         if (playerObj == null) return null;
+
+        // Ưu tiên tìm các locomotion script chính thức trước tiên để tránh trả về nhầm helper script như PlayerLogCarrier
+        MonoBehaviour comp = playerObj.GetComponent<LeoPlayer>();
+        if (comp != null) return comp;
+
+        comp = playerObj.GetComponent<ArthurPlayer>();
+        if (comp != null) return comp;
+
+        comp = playerObj.GetComponent<ElenaPlayer>();
+        if (comp != null) return comp;
+
+        comp = playerObj.GetComponent<MayaPlayer>();
+        if (comp != null) return comp;
         
         // Duyệt tìm tất cả các script Monobehaviour trên người chơi để tắt các locomotion script tương ứng (kể cả LeoAssassin, ArthurTanker, v.v.)
         MonoBehaviour[] scripts = playerObj.GetComponents<MonoBehaviour>();
@@ -961,20 +979,6 @@ public class PushableStone : NetworkBehaviour
             }
         }
         
-        // Hàng phòng thủ dự phòng (Fallback)
-        MonoBehaviour comp = playerObj.GetComponent<LeoPlayer>();
-        if (comp == null) comp = playerObj.GetComponentInChildren<LeoPlayer>();
-        if (comp == null) comp = playerObj.GetComponentInParent<LeoPlayer>();
-
-        if (comp == null) comp = playerObj.GetComponent<ArthurPlayer>();
-        if (comp == null) comp = playerObj.GetComponentInChildren<ArthurPlayer>();
-        if (comp == null) comp = playerObj.GetComponentInParent<ArthurPlayer>();
-
-        if (comp == null) comp = playerObj.GetComponent<ElenaPlayer>();
-        if (comp == null) comp = playerObj.GetComponentInChildren<ElenaPlayer>();
-        if (comp == null) comp = playerObj.GetComponentInParent<ElenaPlayer>();
-
-        if (comp == null) comp = playerObj.GetComponent<MayaPlayer>();
         if (comp == null) comp = playerObj.GetComponentInChildren<MayaPlayer>();
         if (comp == null) comp = playerObj.GetComponentInParent<MayaPlayer>();
 

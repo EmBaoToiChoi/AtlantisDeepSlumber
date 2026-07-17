@@ -82,8 +82,8 @@ MonoBehaviour:
   axisY: 0
   axisZ: 1
   startAngle: -80
-  swingSpeed: 3
-  contactDamage: 40
+  swingSpeed: 1
+  contactDamage: 25
   damageCooldown: 1
 --- !u!54 &3757026998652082172
 Rigidbody:

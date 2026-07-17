@@ -1330,12 +1330,12 @@
     position: absolute;
     top: 40px;
     left: 35px;
-    width: 220px;
+    width: 300px;
     background-color: rgba(6, 12, 24, 0.85);
     border-width: 1.5px;
     border-color: rgba(255, 255, 255, 0.9);
     border-radius: 12px;
-    padding: 14px 16px;
+    padding: 16px 20px;
     flex-direction: column;
     
     /* Animation states */
@@ -1359,20 +1359,20 @@
 .quest-header {
     flex-direction: row;
     align-items: center;
-    margin-bottom: 6px;
+    margin-bottom: 8px;
 }
 
 .quest-icon {
-    width: 36px;
-    height: 36px;
-    margin-right: 8px;
+    width: 42px;
+    height: 42px;
+    margin-right: 10px;
     background-image: url("project://database/Assets/Hbao/Image/Go.png");
     -unity-background-scale-mode: scale-to-fit;
 }
 
 .quest-title {
     color: rgb(255, 50, 50);
-    font-size: 13px;
+    font-size: 16px;
     -unity-font-style: bold;
     letter-spacing: 1.5px;
     text-shadow: 0 0 8px rgba(255, 50, 50, 0.4);
@@ -1383,7 +1383,7 @@
 .quest-divider {
     height: 1px;
     background-color: rgba(255, 255, 255, 0.35);
-    margin: 6px 0 10px 0;
+    margin: 8px 0 12px 0;
 }
 
 .quest-details {
@@ -1392,10 +1392,10 @@
 
 .quest-desc {
     color: rgb(224, 224, 224);
-    font-size: 12px;
+    font-size: 15px;
     -unity-font-style: bold;
     white-space: normal;
-    margin-bottom: 8px;
+    margin-bottom: 10px;
     padding: 0;
 }
 
@@ -1403,29 +1403,29 @@
     flex-direction: row;
     justify-content: space-between;
     align-items: center;
-    margin-top: 4px;
+    margin-top: 6px;
 }
 
 .quest-progress-text {
     color: rgb(255, 255, 255);
-    font-size: 11px;
+    font-size: 14px;
     -unity-font-style: bold;
     padding: 0;
     margin: 0;
 }
 
 .quest-progress-bg {
-    width: 110px;
-    height: 6px;
+    width: 170px;
+    height: 10px;
     background-color: rgba(0, 0, 0, 0.55);
-    border-radius: 3px;
+    border-radius: 5px;
     overflow: hidden;
 }
 
 .quest-progress-fill {
     height: 100%;
     background-color: rgb(255, 180, 20);
-    border-radius: 3px;
+    border-radius: 5px;
     width: 0%;
     transition-property: width;
     transition-duration: 0.3s;

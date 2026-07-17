@@ -3489,8 +3489,8 @@ public class PlayerHUDController : MonoBehaviour
             coopBuildContainer.style.left = Length.Percent(50f);
             coopBuildContainer.style.top = 30; // Closer to top center
             coopBuildContainer.style.translate = new Translate(Length.Percent(-50f), Length.Percent(0f), 0f);
-            coopBuildContainer.style.width = 380;
-            coopBuildContainer.style.height = 110;
+            coopBuildContainer.style.width = 480;
+            coopBuildContainer.style.height = 140;
             coopBuildContainer.style.backgroundColor = new Color(0.06f, 0.06f, 0.08f, 0.75f); // Semi-transparent sleek dark
             coopBuildContainer.style.borderTopWidth = 1f;
             coopBuildContainer.style.borderBottomWidth = 1f;
@@ -3515,8 +3515,8 @@ public class PlayerHUDController : MonoBehaviour
             // 2. Create Space Keycap VisualElement (Clickable & Focus of UI)
             coopBuildClickButton = new Button();
             coopBuildClickButton.name = "coop-build-space-button";
-            coopBuildClickButton.style.width = 320;
-            coopBuildClickButton.style.height = 54;
+            coopBuildClickButton.style.width = 420;
+            coopBuildClickButton.style.height = 72;
             coopBuildClickButton.style.backgroundColor = new Color(0.14f, 0.14f, 0.18f, 0.95f); // Dark keycap body
             coopBuildClickButton.style.borderTopWidth = 1.5f;
             coopBuildClickButton.style.borderBottomWidth = 4.5f; // Keycap 3D border-bottom depth
@@ -3554,7 +3554,7 @@ public class PlayerHUDController : MonoBehaviour
             // Label text inside Keycap
             coopBuildProgressLabel = new Label("SPACE");
             coopBuildProgressLabel.style.color = new Color(0.9f, 0.9f, 0.9f, 1f);
-            coopBuildProgressLabel.style.fontSize = 18;
+            coopBuildProgressLabel.style.fontSize = 24;
             coopBuildProgressLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
             coopBuildProgressLabel.style.unityTextAlign = TextAnchor.MiddleCenter;
             coopBuildClickButton.Add(coopBuildProgressLabel);
