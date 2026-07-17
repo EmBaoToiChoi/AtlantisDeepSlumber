@@ -153,8 +153,15 @@ public class Puzzle4Manager : NetworkBehaviour
     {
         if (!NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(objectId, out NetworkObject netObj))
             return;
-        
+
+        // Disable CharacterController tạm thời để set position không bị block
+        CharacterController cc = netObj.GetComponent<CharacterController>();
+        if (cc != null) cc.enabled = false;
+
         netObj.transform.position = pos;
+
+        if (cc != null) cc.enabled = true;
+
         Rigidbody rb = netObj.GetComponent<Rigidbody>();
         if (rb != null)
         {
