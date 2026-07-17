@@ -222,9 +222,8 @@ public class PlayerCheckpointManager : NetworkBehaviour
     private IEnumerator RespawnPlayerStandaloneCoroutine(IPlayerHUDTarget player)
     {
         localPlayerRespawning = true;
-        Debug.LogWarning($"[Standalone Respawn] Người chơi '{player.DisplayName}' đã chết! Bắt đầu hồi sinh sau {respawnDelay} giây...");
-
-        yield return new WaitForSeconds(respawnDelay);
+        Debug.LogWarning($"[Standalone Respawn] Người chơi '{player.DisplayName}' đã chết! Thực hiện hồi sinh ngay...");
+        yield return null;
 
         // Xác định vị trí hồi sinh
         Vector3 spawnPos = localPlayerInitialPosition;
@@ -248,6 +247,12 @@ public class PlayerCheckpointManager : NetworkBehaviour
 
         // Hồi máu đầy và reset trạng thái hoạt ảnh
         HealAndResetPlayer(player);
+
+        // Chờ thêm 1 frame để camera cập nhật vị trí mới theo player trước khi mở mắt
+        yield return null;
+
+        // Mở mắt (ResetDeathEffect)
+        PlayerDeathEffectManager.Instance.ResetDeathEffect();
 
         localPlayerRespawning = false;
         Debug.Log($"[Standalone Respawn] Hồi sinh hoàn tất cho '{player.DisplayName}' tại: {spawnPos}");
@@ -317,9 +322,8 @@ public class PlayerCheckpointManager : NetworkBehaviour
     private IEnumerator RespawnPlayerNetworkCoroutine(IPlayerHUDTarget player, ulong clientId)
     {
         string playerName = player.DisplayName;
-        Debug.LogWarning($"[Server Respawn] Người chơi '{playerName}' (Client ID: {clientId}) đã chết! Bắt đầu hồi sinh sau {respawnDelay} giây...");
-
-        yield return new WaitForSeconds(respawnDelay);
+        Debug.LogWarning($"[Server Respawn] Người chơi '{playerName}' (Client ID: {clientId}) đã chết! Thực hiện hồi sinh ngay...");
+        yield return null;
 
         // Kiểm tra xem đối tượng người chơi còn tồn tại hay không
         if (player == null)
@@ -378,7 +382,19 @@ public class PlayerCheckpointManager : NetworkBehaviour
                 anim.Play("Idle", 0, 0f);
                 anim.ResetTrigger("Death");
             }
+
+            // Nếu đây là người chơi của chúng ta, mở mắt (ResetDeathEffect) sau khi chờ 1 frame để camera cập nhật vị trí
+            if (netObj.IsOwner)
+            {
+                StartCoroutine(OpenEyesAfterFrameCoroutine());
+            }
         }
+    }
+
+    private IEnumerator OpenEyesAfterFrameCoroutine()
+    {
+        yield return null; // Chờ 1 frame để camera cập nhật vị trí mới theo player
+        PlayerDeathEffectManager.Instance.ResetDeathEffect();
     }
 
     #endregion

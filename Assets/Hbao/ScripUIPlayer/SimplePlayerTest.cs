@@ -268,12 +268,19 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
 
         if (IsOwner || isStandaloneMode)
         {
-            PlayerDeathEffectManager.Instance.PlayDeathEffect();
-            isDeathAnimFinished = true;
-            if (!isStandaloneMode)
-            {
-                NotifyDeathAnimFinishedServerRpc();
-            }
+            StartCoroutine(DeathEyelidsSequenceCoroutine());
+        }
+    }
+
+    private System.Collections.IEnumerator DeathEyelidsSequenceCoroutine()
+    {
+        float duration = 1.5f;
+        PlayerDeathEffectManager.Instance.PlayDeathEffect(duration);
+        yield return new WaitForSeconds(duration);
+        isDeathAnimFinished = true;
+        if (!isStandaloneMode)
+        {
+            NotifyDeathAnimFinishedServerRpc();
         }
     }
 
