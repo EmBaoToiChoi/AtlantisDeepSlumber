@@ -80,7 +80,8 @@ public class BoxTrapObject : NetworkBehaviour
         if (newVal)
         {
             // Minigame bắt đầu → ẩn cầu thang
-            HideStairsClientRpc();
+            SetStairsVisible(false);
+            Debug.Log("[BoxTrapObject] Minigame bắt đầu → cầu thang đá đã ẩn.");
         }
     }
 
@@ -89,7 +90,8 @@ public class BoxTrapObject : NetworkBehaviour
         if (newVal)
         {
             // Puzzle hoàn thành → hiện cầu thang
-            ShowStairsClientRpc();
+            SetStairsVisible(true);
+            Debug.Log("[BoxTrapObject] Puzzle hoàn thành → cầu thang đá hiện lại.");
         }
     }
 
@@ -97,19 +99,7 @@ public class BoxTrapObject : NetworkBehaviour
     // ClientRpc
     // ─────────────────────────────────────────────
 
-    [ClientRpc]
-    private void HideStairsClientRpc()
-    {
-        SetStairsVisible(false);
-        Debug.Log("[BoxTrapObject] Minigame bắt đầu → cầu thang đá đã ẩn.");
-    }
 
-    [ClientRpc]
-    private void ShowStairsClientRpc()
-    {
-        SetStairsVisible(true);
-        Debug.Log("[BoxTrapObject] Puzzle hoàn thành → cầu thang đá hiện lại.");
-    }
 
     // ─────────────────────────────────────────────
     // Helper
