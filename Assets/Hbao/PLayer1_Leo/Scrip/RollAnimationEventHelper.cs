@@ -63,34 +63,34 @@ public class RollAnimationEventHelper : MonoBehaviour
     /// <summary>
     /// Event receiver to enable the Left hand/weapon hitbox.
     /// </summary>
-    public void EnableLeftHitbox() {}
-    public void DisableLeftHitbox() {}
-    public void EnableRightHitbox() {}
-    public void DisableRightHitbox() {}
-    public void EnableBothHitboxes() {}
-    public void DisableBothHitboxes() {}
+    public void EnableLeftHitbox() { EnsurePlayerReference(); if (player != null) player.EnableLeftHitbox(); }
+    public void DisableLeftHitbox() { EnsurePlayerReference(); if (player != null) player.DisableLeftHitbox(); }
+    public void EnableRightHitbox() { EnsurePlayerReference(); if (player != null) player.EnableRightHitbox(); }
+    public void DisableRightHitbox() { EnsurePlayerReference(); if (player != null) player.DisableRightHitbox(); }
+    public void EnableBothHitboxes() { EnsurePlayerReference(); if (player != null) player.EnableBothHitboxes(); }
+    public void DisableBothHitboxes() { EnsurePlayerReference(); if (player != null) player.DisableBothHitboxes(); }
 
     // ------------------------------------------------------------------
     //  Punch-specific alias event functions for intuitive selection
     // ------------------------------------------------------------------
 
-    public void EnableLeftPunch() {}
-    public void DisableLeftPunch() {}
-    public void EnableRightPunch() {}
-    public void DisableRightPunch() {}
-    public void EnableComboPunch() {}
-    public void DisableComboPunch() {}
+    public void EnableLeftPunch() { EnsurePlayerReference(); if (player != null) player.EnableLeftHitbox(); }
+    public void DisableLeftPunch() { EnsurePlayerReference(); if (player != null) player.DisableLeftHitbox(); }
+    public void EnableRightPunch() { EnsurePlayerReference(); if (player != null) player.EnableRightHitbox(); }
+    public void DisableRightPunch() { EnsurePlayerReference(); if (player != null) player.DisableRightHitbox(); }
+    public void EnableComboPunch() { EnsurePlayerReference(); if (player != null) player.EnableBothHitboxes(); }
+    public void DisableComboPunch() { EnsurePlayerReference(); if (player != null) player.DisableBothHitboxes(); }
 
     // ------------------------------------------------------------------
     //  Slash-specific alias event functions for intuitive selection
     // ------------------------------------------------------------------
 
-    public void EnableSingleSlash() {}
-    public void DisableSingleSlash() {}
-    public void EnableDoubleSlash() {}
-    public void DisableDoubleSlash() {}
+    public void EnableSingleSlash() { EnsurePlayerReference(); if (player != null) player.EnableLeftWeaponHitbox(); }
+    public void DisableSingleSlash() { EnsurePlayerReference(); if (player != null) player.DisableLeftWeaponHitbox(); }
+    public void EnableDoubleSlash() { EnsurePlayerReference(); if (player != null) player.EnableBothWeaponHitboxes(); }
+    public void DisableDoubleSlash() { EnsurePlayerReference(); if (player != null) player.DisableBothWeaponHitboxes(); }
 
-    public void OnSlashEnd() {}
+    public void OnSlashEnd() { EnsurePlayerReference(); if (player != null) player.DisableBothWeaponHitboxes(); }
 
     /// <summary>
     /// Event receiver to unlock player movement after a punch attack finishes.
@@ -166,7 +166,7 @@ public class RollAnimationEventHelper : MonoBehaviour
     /// Gọi ở frame CUỐI animation Punch1/Punch2/Punch3.
     /// Tắt tất cả hitbox tay và signal kết thúc nhịp đấm.
     /// </summary>
-    public void OnPunchEnd() {}
+    public void OnPunchEnd() { EnsurePlayerReference(); if (player != null) player.DisableBothHitboxes(); }
 
     // ------------------------------------------------------------------
     //  Slash End Events - Gọi ở FRAME CUỐI của animation chém
@@ -186,19 +186,19 @@ public class RollAnimationEventHelper : MonoBehaviour
     /// Gọi ở frame CUỐI của bất kỳ animation tấn công nào.
     /// Tắt TẤT CẢ hitbox (tay + kiếm).
     /// </summary>
-    public void OnAttackEnd() {}
+    public void OnAttackEnd() { EnsurePlayerReference(); if (player != null) { player.DisableBothHitboxes(); player.DisableBothWeaponHitboxes(); } }
 
     // ------------------------------------------------------------------
     //  Weapon Hitbox Aliases (cả 2 kiếm cùng lúc)
     // ------------------------------------------------------------------
 
     /// <summary>Bật hitbox CẢ 2 kiếm - dùng cho Slash bình thường.</summary>
-    public void EnableBothWeaponHitboxes() {}
-    public void DisableBothWeaponHitboxes() {}
-    public void EnableLeftWeaponHitbox() {}
-    public void DisableLeftWeaponHitbox() {}
-    public void EnableRightWeaponHitbox() {}
-    public void DisableRightWeaponHitbox() {}
+    public void EnableBothWeaponHitboxes() { EnsurePlayerReference(); if (player != null) player.EnableBothWeaponHitboxes(); }
+    public void DisableBothWeaponHitboxes() { EnsurePlayerReference(); if (player != null) player.DisableBothWeaponHitboxes(); }
+    public void EnableLeftWeaponHitbox() { EnsurePlayerReference(); if (player != null) player.EnableLeftWeaponHitbox(); }
+    public void DisableLeftWeaponHitbox() { EnsurePlayerReference(); if (player != null) player.DisableLeftWeaponHitbox(); }
+    public void EnableRightWeaponHitbox() { EnsurePlayerReference(); if (player != null) player.EnableRightWeaponHitbox(); }
+    public void DisableRightWeaponHitbox() { EnsurePlayerReference(); if (player != null) player.DisableRightWeaponHitbox(); }
 
     // --- VFX Event Forwarders ---
     public void PlayLeftSlashVFX()
@@ -235,5 +235,18 @@ public class RollAnimationEventHelper : MonoBehaviour
     {
         EnsurePlayerReference();
         if (player != null) player.OnShootRSkill();
+    }
+
+    public void OnDeathAnimationEnd()
+    {
+        EnsurePlayerReference();
+        if (player != null) player.OnDeathAnimationEnd();
+    }
+
+    public void OnStandUpFinished()
+    {
+        PlayerKickedStun stun = GetComponentInParent<PlayerKickedStun>();
+        if (stun == null) stun = GetComponentInChildren<PlayerKickedStun>(true);
+        if (stun != null) stun.OnStandUpFinished();
     }
 }

@@ -3243,6 +3243,36 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     public float Weapon1MaxDurability => weapon1MaxDurability;
     public float Weapon2MaxDurability => weapon2MaxDurability;
     public string[] InventorySlots => inventorySlots;
+
+    private bool isDeathAnimFinished = false;
+    public bool IsDeathAnimationFinished => isDeathAnimFinished;
+    public void ResetDeathState() => isDeathAnimFinished = false;
+
+    public void OnDeathAnimationEnd()
+    {
+        if (IsOwner || isStandaloneMode)
+        {
+            StartCoroutine(DeathEyelidsSequenceCoroutine());
+        }
+    }
+
+    private System.Collections.IEnumerator DeathEyelidsSequenceCoroutine()
+    {
+        float duration = 1.5f;
+        PlayerDeathEffectManager.Instance.PlayDeathEffect(duration);
+        yield return new WaitForSeconds(duration);
+        isDeathAnimFinished = true;
+        if (!isStandaloneMode)
+        {
+            NotifyDeathAnimFinishedServerRpc();
+        }
+    }
+
+    [ServerRpc]
+    private void NotifyDeathAnimFinishedServerRpc()
+    {
+        isDeathAnimFinished = true;
+    }
     public float MaxHealth => maxHealth;
 
     // Invisibility Skill R (stub - legacy removed)
@@ -3414,6 +3444,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (rb != null)
         {
             rb.isKinematic = !IsOwner;
+            rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationY | RigidbodyConstraints.FreezeRotationZ;
         }
 
         if (!IsOwner)
@@ -4337,9 +4368,6 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         currentWeaponTypeAttacking = weapon;
 
-        // Thực hiện quét Raycast (OverlapSphere) phát hiện mục tiêu tức thì
-        PerformRaycastAttack();
-
         if (comboChainCoroutine != null) StopCoroutine(comboChainCoroutine);
         comboChainCoroutine = StartCoroutine(ComboChainCoroutine(weapon, animToPlay, networkMode));
     }
@@ -4864,7 +4892,6 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             {
                 if (rb != null) rb.linearVelocity = Vector3.zero;
                 PlayAnimation("Death", 0.15f);
-                PlayerDeathEffectManager.Instance.PlayDeathEffect();
             }
             else
             {
@@ -6382,7 +6409,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             SavePlayerStateToDatabase();
             if (newHealth <= 0f && oldHealth > 0f)
             {
-                PlayerDeathEffectManager.Instance.PlayDeathEffect();
+                // Defer death effect to OnDeathAnimationEnd
             }
             else if (newHealth > 0f && oldHealth <= 0f)
             {
@@ -6717,10 +6744,19 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (anim == null) return;
 
         // Nếu đang chết, chỉ cho phép nhận các lệnh hồi sinh hoặc đưa về trạng thái rỗng/New State
-        if (currentAnimState == "Death" && 
-            animName != "Idle" && animName != "Walk" && animName != "run" && animName != "New State" && animName != "Empty")
+        if (currentAnimState == "Death")
         {
-            return;
+            if (CurrentHealth <= 0)
+            {
+                if (animName != "Idle" && animName != "Walk" && animName != "run" && animName != "New State" && animName != "Empty")
+                {
+                    return;
+                }
+            }
+            else
+            {
+                currentAnimState = "";
+            }
         }
 
         var carrier = GetComponent<PlayerLogCarrier>();

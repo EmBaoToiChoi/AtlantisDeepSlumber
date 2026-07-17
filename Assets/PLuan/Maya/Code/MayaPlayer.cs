@@ -391,6 +391,36 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
     public string[] InventorySlots => inventorySlots;
     public float MaxHealth => maxHealth;
 
+    private bool isDeathAnimFinished = false;
+    public bool IsDeathAnimationFinished => isDeathAnimFinished;
+    public void ResetDeathState() => isDeathAnimFinished = false;
+
+    public void OnDeathAnimationEnd()
+    {
+        if (IsOwner || isStandaloneMode)
+        {
+            StartCoroutine(DeathEyelidsSequenceCoroutine());
+        }
+    }
+
+    private System.Collections.IEnumerator DeathEyelidsSequenceCoroutine()
+    {
+        float duration = 1.5f;
+        PlayerDeathEffectManager.Instance.PlayDeathEffect(duration);
+        yield return new WaitForSeconds(duration);
+        isDeathAnimFinished = true;
+        if (!isStandaloneMode)
+        {
+            NotifyDeathAnimFinishedServerRpc();
+        }
+    }
+
+    [ServerRpc]
+    private void NotifyDeathAnimFinishedServerRpc()
+    {
+        isDeathAnimFinished = true;
+    }
+
 
     // Invisibility Skill R (stub - legacy removed)
     public bool IsInvisible => false;
@@ -865,8 +895,8 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (rb != null)
         {
             rb.isKinematic = false; // Mặc định tắt Kinematic để di chuyển được ở chế độ Standalone/Offline
-            // Khóa xoay trục X và Z để tránh nhân vật bị đổ hoặc xoay tròn nghiêng ngả khi va chạm vật lý
-            rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
+            // Khóa xoay trục X, Y và Z để tránh nhân vật bị đổ hoặc xoay tròn nghiêng ngả khi va chạm vật lý
+            rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationY | RigidbodyConstraints.FreezeRotationZ;
         }
 
         if (anim == null)
@@ -933,7 +963,7 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (rb != null)
         {
             rb.isKinematic = false; // Tắt Kinematic để di chuyển trong chế độ chơi đơn lẻ
-            rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
+            rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationY | RigidbodyConstraints.FreezeRotationZ;
         }
 
         // Tìm camera
@@ -988,7 +1018,7 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (rb != null)
         {
             rb.isKinematic = !IsOwner;
-            rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
+            rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationY | RigidbodyConstraints.FreezeRotationZ;
         }
 
         if (!IsOwner)
@@ -1146,7 +1176,7 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
             SavePlayerStateToDatabase();
             if (newHealth <= 0f && oldHealth > 0f)
             {
-                PlayerDeathEffectManager.Instance.PlayDeathEffect();
+                // Defer death effect to OnDeathAnimationEnd
             }
             else if (newHealth > 0f && oldHealth <= 0f)
             {
@@ -2683,32 +2713,26 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
             PlayAnimation(animToPlay, 0.05f, false, isRootedAttack);
         }
 
-        // Xác định hướng ngắm đánh (aim direction) dựa trên camera (nếu có), nếu không có thì dùng hướng transform.forward
-        Vector3 aimDir = transform.forward;
-        if (targetCamera != null)
-        {
-            aimDir = targetCamera.transform.forward;
-            aimDir.y = 0f;
-            aimDir.Normalize();
-        }
+        // Raycast melee attack is now handled by animation events.
+    }
 
-        Vector3 rayStartClient = transform.position + Vector3.up * 0.5f;
-        bool hasHitClient = Physics.Raycast(rayStartClient, aimDir, out RaycastHit hitClient, attackRange);
-
-        if (networkMode)
+    public void PerformMeleeRaycastAttack()
+    {
+        if (isStandaloneMode)
         {
-            AttackServerRpc(aimDir);
-            if (hasHitClient)
+            Vector3 aimDir = transform.forward;
+            if (targetCamera != null)
             {
-                var netObj = hitClient.collider.GetComponentInParent<NetworkObject>();
-                if (netObj != null)
-                {
-                    DamageEnemyServerRpc(netObj);
-                }
+                aimDir = targetCamera.transform.forward;
+                aimDir.y = 0f;
+                aimDir.Normalize();
             }
-        }
-        else
-        {
+
+            // Đưa tia quét ra trước 0.5m và cao ngang ngực (1.0m) để tránh va chạm với chính người chơi
+            Vector3 rayStartClient = transform.position + Vector3.up * 1.0f + aimDir * 0.5f;
+            float castRadius = 0.5f; // Bán kính tia quét tròn để dễ trúng mục tiêu cận chiến
+            bool hasHitClient = Physics.SphereCast(rayStartClient, castRadius, aimDir, out RaycastHit hitClient, attackRange);
+
             if (hasHitClient)
             {
                 TryDamageEnemy(hitClient.collider);
@@ -2728,7 +2752,48 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
                 }
             }
         }
+        else
+        {
+            if (IsOwner)
+            {
+                Vector3 aimDir = transform.forward;
+                if (targetCamera != null)
+                {
+                    aimDir = targetCamera.transform.forward;
+                    aimDir.y = 0f;
+                    aimDir.Normalize();
+                }
+
+                // Đưa tia quét ra trước 0.5m và cao ngang ngực (1.0m) để tránh va chạm với chính người chơi
+                Vector3 rayStartClient = transform.position + Vector3.up * 1.0f + aimDir * 0.5f;
+                float castRadius = 0.5f;
+                bool hasHitClient = Physics.SphereCast(rayStartClient, castRadius, aimDir, out RaycastHit hitClient, attackRange);
+
+                AttackServerRpc(aimDir);
+                if (hasHitClient)
+                {
+                    var netObj = hitClient.collider.GetComponentInParent<NetworkObject>();
+                    if (netObj != null)
+                    {
+                        DamageEnemyServerRpc(netObj);
+                    }
+                }
+            }
+        }
     }
+
+    public void EnableLeftHitbox() { PerformMeleeRaycastAttack(); }
+    public void DisableLeftHitbox() {}
+    public void EnableRightHitbox() { PerformMeleeRaycastAttack(); }
+    public void DisableRightHitbox() {}
+    public void EnableBothHitboxes() { PerformMeleeRaycastAttack(); }
+    public void DisableBothHitboxes() {}
+    public void EnableLeftWeaponHitbox() { PerformMeleeRaycastAttack(); }
+    public void DisableLeftWeaponHitbox() {}
+    public void EnableRightWeaponHitbox() { PerformMeleeRaycastAttack(); }
+    public void DisableRightWeaponHitbox() {}
+    public void EnableBothWeaponHitboxes() { PerformMeleeRaycastAttack(); }
+    public void DisableBothWeaponHitboxes() {}
 
     private void UpdateWeaponVisualsInstant(int weaponIndex)
     {
@@ -2852,7 +2917,6 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
             {
                 Debug.LogWarning($"[MayaPlayer] {gameObject.name} đã chết!");
                 PlayAnimation("Death", 0.15f);
-                PlayerDeathEffectManager.Instance.PlayDeathEffect();
             }
             else
             {
@@ -3456,10 +3520,19 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (anim == null || !anim.isActiveAndEnabled || anim.runtimeAnimatorController == null) return;
 
         // Nếu đang chết, chỉ cho phép nhận các lệnh hồi sinh hoặc đưa về trạng thái rỗng/New State
-        if (currentAnimState == "Death" && 
-            animName != "Idle" && animName != "Walk" && animName != "run" && animName != "New State" && animName != "Empty")
+        if (currentAnimState == "Death")
         {
-            return;
+            if (CurrentHealth <= 0)
+            {
+                if (animName != "Idle" && animName != "Walk" && animName != "run" && animName != "New State" && animName != "Empty")
+                {
+                    return;
+                }
+            }
+            else
+            {
+                currentAnimState = "";
+            }
         }
 
         var carrier = GetComponent<PlayerLogCarrier>();

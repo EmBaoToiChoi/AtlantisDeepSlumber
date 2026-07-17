@@ -2,22 +2,12 @@ using UnityEngine;
 using Unity.Netcode;
 using System.Collections;
 using System.Collections.Generic;
-using UnityEngine.Playables;
 
 public class Puzzle4TeleportTrigger : NetworkBehaviour
 {
     [Header("Dependencies")]
     [Tooltip("Kéo Puzzle4TrapTrigger vào đây để tắt đường sau khi teleport")]
     public Puzzle4TrapTrigger trapTrigger;
-    
-    [Tooltip("Kéo Object chứa Video hoặc Cutscene vào đây để bật lên")]
-    public GameObject videoObject;
-
-    [Tooltip("Thời gian phát video (thời gian player bị khóa)")]
-    public float videoDuration = 5f;
-
-    [Tooltip("Kéo PlayableDirector (chứa Timeline video) vào đây (Tùy chọn)")]
-    public PlayableDirector timelineDirector;
 
     [Header("Teleport Settings")]
     [Tooltip("Điểm trung tâm đĩa để dịch chuyển 4 người chơi tới")]
@@ -54,8 +44,6 @@ public class Puzzle4TeleportTrigger : NetworkBehaviour
             {
                 activated = true;
                 Debug.Log($"[Puzzle4Teleport] Người chơi {netObj.OwnerClientId} đã chạm. KÍCH HOẠT NGAY LẬP TỨC!");
-
-                TriggerTeleportAndTimelineClientRpc();
                 
                 // Kích hoạt bẫy/tắt đường đi
                 if (trapTrigger != null)
@@ -96,11 +84,9 @@ public class Puzzle4TeleportTrigger : NetworkBehaviour
                         }
                     }
 
-                    // Lên lịch bắt đầu minigame sau khi video kết thúc
-                    float delay = videoDuration;
-                    if (timelineDirector != null) delay = (float)timelineDirector.duration;
-                    Debug.Log($"[Puzzle4Teleport] Lên lịch bắt đầu minigame sau {delay}s!");
-                    p4Manager.ScheduleMinigameStart(delay);
+                    // Bắt đầu minigame ngay lập tức
+                    Debug.Log("[Puzzle4Teleport] Bắt đầu minigame ngay lập tức!");
+                    p4Manager.StartMinigameFromTeleport();
                 }
                 else
                 {
@@ -110,92 +96,4 @@ public class Puzzle4TeleportTrigger : NetworkBehaviour
         }
     }
 
-    private IEnumerator ServerStartMinigameCoroutine()
-    {
-        float duration = 3f;
-        if (timelineDirector != null)
-        {
-            duration = (float)timelineDirector.duration;
-            if (duration > 30f) duration = 30f;
-        }
-        
-        yield return new WaitForSeconds(duration);
-
-        Puzzle4Manager p4Manager = FindAnyObjectByType<Puzzle4Manager>();
-        if (p4Manager != null)
-        {
-            Debug.Log("[Puzzle4Teleport-Server] Đã hết thời gian chờ Timeline, gọi StartMinigameFromTeleport...");
-            p4Manager.StartMinigameFromTeleport();
-        }
-        else
-        {
-            Debug.LogError("[Puzzle4Teleport-Server] LỖI: Không tìm thấy Puzzle4Manager trên Server!");
-        }
-    }
-
-    [ClientRpc]
-    void TriggerTeleportAndTimelineClientRpc()
-    {
-        // Teleportation is now handled robustly by the Server via Puzzle4Manager.TeleportPlayerToCenterClientRpc
-        
-        // Lock players and Play Timeline
-        StartCoroutine(PlayTimelineAndLockCoroutine());
-    }
-
-    private IEnumerator PlayTimelineAndLockCoroutine()
-    {
-        // Khoá di chuyển của local player (bằng cách freeze Rigidbody)
-        List<Rigidbody> lockedRbs = new List<Rigidbody>();
-        var allMonos = FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None);
-        
-        foreach (var mono in allMonos)
-        {
-            if (mono is IPlayerHUDTarget player && player.IsOwner)
-            {
-                Rigidbody rb = player.gameObject.GetComponent<Rigidbody>();
-                if (rb != null)
-                {
-                    rb.constraints = RigidbodyConstraints.FreezeAll;
-                    lockedRbs.Add(rb);
-                }
-            }
-        }
-
-        // Tính toán thời gian khóa
-        float duration = videoDuration;
-        if (timelineDirector != null)
-        {
-            timelineDirector.Play();
-            duration = (float)timelineDirector.duration;
-            if (duration > 30f) duration = 30f;
-            Debug.Log("[Puzzle4Teleport] Đang chạy Timeline video...");
-        }
-        else if (videoObject != null)
-        {
-            videoObject.SetActive(true);
-            Debug.Log("[Puzzle4Teleport] Đang bật Video Object...");
-        }
-
-        // Chờ thời gian video chạy xong
-        yield return new WaitForSeconds(duration);
-
-        // Tắt video object
-        if (videoObject != null)
-        {
-            videoObject.SetActive(false);
-            Debug.Log("[Puzzle4Teleport] Đã tắt Video Object...");
-        }
-
-        // Mở khoá di chuyển
-        foreach (var rb in lockedRbs)
-        {
-            if (rb != null)
-            {
-                // Trả về trạng thái chỉ freeze rotation (hoặc tuỳ thuộc vào setup gốc của game)
-                rb.constraints = RigidbodyConstraints.FreezeRotation;
-            }
-        }
-        
-        Debug.Log("[Puzzle4Teleport] Đã mở khoá di chuyển cho player trên Client.");
-    }
 }

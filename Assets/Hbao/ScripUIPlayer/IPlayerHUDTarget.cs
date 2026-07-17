@@ -65,4 +65,6 @@ public interface IPlayerHUDTarget
     GameObject gameObject { get; }
 
     void RequestDropWoodLog();
+    bool IsDeathAnimationFinished { get; }
+    void ResetDeathState();
 }

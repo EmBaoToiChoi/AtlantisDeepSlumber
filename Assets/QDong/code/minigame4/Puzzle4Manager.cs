@@ -449,13 +449,9 @@ public class Puzzle4Manager : NetworkBehaviour
 
             puzzleCompleted.Value = true;
 
-            StartCoroutine(
-                balanceManager.ReturnToCenterAndLock()
-            );
+            balanceManager.TriggerReturnToCenterAndLock();
 
-            StartCoroutine(
-                CompleteSequence()
-            );
+            TriggerCompleteSequence();
 
             Debug.Log(
                 "Puzzle 4 Complete"
@@ -469,7 +465,18 @@ public class Puzzle4Manager : NetworkBehaviour
 
 
 
-    IEnumerator CompleteSequence()
+    public void TriggerCompleteSequence()
+    {
+        if (IsServer) PlayCompleteSequenceClientRpc();
+    }
+
+    [ClientRpc]
+    private void PlayCompleteSequenceClientRpc()
+    {
+        StartCoroutine(CompleteSequenceCoroutine());
+    }
+
+    IEnumerator CompleteSequenceCoroutine()
     {
         yield return new WaitForSeconds(0.5f);
 
@@ -484,7 +491,7 @@ public class Puzzle4Manager : NetworkBehaviour
 
         yield return new WaitForSeconds(1f);
 
-        ToggleSharedCameraClientRpc(false);
+        if (IsServer) ToggleSharedCameraClientRpc(false);
 
         yield return new WaitForSeconds(0.5f);
 
@@ -492,7 +499,7 @@ public class Puzzle4Manager : NetworkBehaviour
             castleGate.SetActive(false);
 
         // Tự động đóng mặt đất lại (bật lại sàn) khi hoàn thành
-        if (trapFloor != null)
+        if (IsServer && trapFloor != null)
         {
             trapFloor.CloseFloorClientRpc();
         }

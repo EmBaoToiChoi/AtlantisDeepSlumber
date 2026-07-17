@@ -48,15 +48,15 @@ public class FirePillarActivator : NetworkBehaviour
         startDissolveValue = 1.0f;
         endDissolveValue = 0.0f;
         m_IsLaserActive = false;
+
+        InitializeIfNeeded();
     }
 
-    void Start()
+    private void InitializeIfNeeded()
     {
-        // Bỏ qua khởi chạy Netcode/Material nếu đang trong Edit Mode của Editor
+        if (glowMaterial != null) return;
         if (!Application.isPlaying) return;
 
-        Debug.Log($"[FirePillarActivator] Khởi chạy Start trên {gameObject.name} (Chế độ ChildOverlay={useChildOverlayMode})");
-        
         Renderer targetRenderer = null;
 
         if (useChildOverlayMode)
@@ -68,13 +68,11 @@ public class FirePillarActivator : NetworkBehaviour
                     glowChildObject = transform.GetChild(0).gameObject;
                     Debug.Log($"[FirePillarActivator] Tự động tìm thấy object con: {glowChildObject.name}");
                 }
-                else
-                {
-                    Debug.LogError("[FirePillarActivator] Chưa gán glowChildObject và không tìm thấy object con nào!");
-                    return;
-                }
             }
-            targetRenderer = glowChildObject.GetComponent<Renderer>();
+            if (glowChildObject != null)
+            {
+                targetRenderer = glowChildObject.GetComponent<Renderer>();
+            }
         }
         else
         {
@@ -84,18 +82,37 @@ public class FirePillarActivator : NetworkBehaviour
         if (targetRenderer != null)
         {
             glowMaterial = targetRenderer.material;
-            // Đặt trạng thái tắt ban đầu trên Local để tránh lỗi hiển thị trước khi spawn mạng
-            glowMaterial.SetFloat(dissolvePropertyName, startDissolveValue);
-            
-            if (useChildOverlayMode && glowChildObject != null)
+        }
+    }
+
+    void Start()
+    {
+        // Bỏ qua khởi chạy Netcode/Material nếu đang trong Edit Mode của Editor
+        if (!Application.isPlaying) return;
+
+        Debug.Log($"[FirePillarActivator] Khởi chạy Start trên {gameObject.name} (Chế độ ChildOverlay={useChildOverlayMode})");
+        
+        InitializeIfNeeded();
+
+        if (glowMaterial != null)
+        {
+            // Chỉ đặt trạng thái tắt ban đầu nếu chưa được spawn qua mạng hoặc biến mạng chưa được kích hoạt
+            // Nếu đã kích hoạt qua mạng, OnNetworkSpawn/ApplyInstantActivatedState đã thiết lập đúng
+            if (!IsSpawned || !m_IsActivated.Value)
             {
-                glowChildObject.SetActive(false);
+                // Đặt trạng thái tắt ban đầu trên Local để tránh lỗi hiển thị trước khi spawn mạng
+                glowMaterial.SetFloat(dissolvePropertyName, startDissolveValue);
+                
+                if (useChildOverlayMode && glowChildObject != null)
+                {
+                    glowChildObject.SetActive(false);
+                }
+                Debug.Log($"[FirePillarActivator] Đã gán Material thành công. Dissolve ban đầu = {startDissolveValue}");
             }
-            Debug.Log($"[FirePillarActivator] Đã gán Material thành công. Dissolve ban đầu = {startDissolveValue}");
         }
         else
         {
-            Debug.LogError("[FirePillarActivator] Không tìm thấy MeshRenderer!");
+            Debug.LogError("[FirePillarActivator] Không tìm thấy MeshRenderer hoặc Material!");
         }
 
         // Tự động cấu hình cơ bản cho LineRenderer để tia sáng nhìn đẹp hơn
@@ -109,6 +126,7 @@ public class FirePillarActivator : NetworkBehaviour
 
     public override void OnNetworkSpawn()
     {
+        InitializeIfNeeded();
         Debug.Log($"[FirePillarActivator] OnNetworkSpawn kích hoạt. IsServer = {IsServer}, Giá trị biến mạng = {m_IsActivated.Value}");
         // Đăng ký sự kiện thay đổi trạng thái của cột đá
         m_IsActivated.OnValueChanged += OnActivationStateChanged;
@@ -283,6 +301,7 @@ public class FirePillarActivator : NetworkBehaviour
     // Hàm áp dụng trạng thái phát sáng ngay lập tức (không chạy coroutine) cho người chơi vào sau
     private void ApplyInstantActivatedState()
     {
+        InitializeIfNeeded();
         m_IsLaserActive = true;
         if (glowMaterial != null)
         {
@@ -342,6 +361,7 @@ public class FirePillarActivator : NetworkBehaviour
     // Diễn họa hiệu ứng chạy lửa từ dưới lên trên cho các máy client
     IEnumerator ActivatePillarCoroutine()
     {
+        InitializeIfNeeded();
         if (glowMaterial != null)
         {
             Debug.Log($"[FirePillarActivator] Bắt đầu chạy hiệu ứng lửa chạy từ dưới lên. Thời gian = {activationDuration}s");
