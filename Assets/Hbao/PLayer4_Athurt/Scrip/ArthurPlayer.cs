@@ -3,6 +3,63 @@ using UnityEngine;
 
 public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 {
+    [Header("Audio Settings")]
+    [SerializeField] private AudioSource playerAudioSource;
+    [SerializeField] private AudioClip footstepClip;
+    [SerializeField] private AudioClip attackClip;
+    [SerializeField] private AudioClip hitClip;
+    [SerializeField] private AudioClip deathClip;
+    [SerializeField] private AudioClip skillQClip;
+    [SerializeField] private AudioClip skillEClip;
+    [SerializeField] private AudioClip skillRClip;
+    private float footstepTimer = 0f;
+
+    private void InitializeAudio()
+    {
+        if (playerAudioSource == null)
+        {
+            playerAudioSource = GetComponent<AudioSource>();
+            if (playerAudioSource == null)
+            {
+                playerAudioSource = gameObject.AddComponent<AudioSource>();
+            }
+        }
+        playerAudioSource.spatialBlend = 1.0f; // 3D spatialized
+        playerAudioSource.minDistance = 2f;
+        playerAudioSource.maxDistance = 20f;
+        playerAudioSource.playOnAwake = false;
+
+        if (footstepClip == null) footstepClip = Resources.Load<AudioClip>("Audio/Footstep");
+        if (attackClip == null) attackClip = Resources.Load<AudioClip>("Audio/HeavySwing");
+        if (hitClip == null) hitClip = Resources.Load<AudioClip>("Audio/HitHurt");
+        if (deathClip == null) deathClip = Resources.Load<AudioClip>("Audio/Death");
+        if (skillQClip == null) skillQClip = Resources.Load<AudioClip>("Audio/ElectricZap"); // Arthur lightning/shield
+        if (skillEClip == null) skillEClip = Resources.Load<AudioClip>("Audio/ElectricZap");
+        if (skillRClip == null) skillRClip = Resources.Load<AudioClip>("Audio/BreakStone"); // Shield/stone impact
+    }
+
+    private void PlayPlayerSFX(AudioClip clip, float volumeScale = 1.0f)
+    {
+        if (clip == null) return;
+        if (playerAudioSource == null)
+        {
+            InitializeAudio();
+        }
+        float sfxVol = 0.9f;
+        float masterVol = 1.0f;
+        if (AudioManager.Instance != null)
+        {
+            sfxVol = AudioManager.Instance.SFXVolume;
+            masterVol = AudioManager.Instance.MasterVolume;
+        }
+        else
+        {
+            sfxVol = PlayerPrefs.GetFloat("SFXVolume", 90f) / 100f;
+            masterVol = PlayerPrefs.GetFloat("MasterVolume", 100f) / 100f;
+        }
+        playerAudioSource.PlayOneShot(clip, volumeScale * sfxVol * masterVol);
+    }
+
     [Header("Input Keys Configuration")]
     public KeyCode rollKey = KeyCode.LeftControl;
 
@@ -942,6 +999,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     private void Start()
     {
+        InitializeAudio();
         if (comboChainWindowPct < 0.9f)
         {
             comboChainWindowPct = 0.9f;
@@ -1791,6 +1849,45 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
             return;
         }
         HandleOwnerUpdate();
+
+        // Footstep logic in Update()
+        bool isMoving = false;
+        bool isRunning = false;
+        if (isStandaloneMode || (IsSpawned && IsOwner))
+        {
+            float inputX = Input.GetAxis("Horizontal");
+            float inputZ = Input.GetAxis("Vertical");
+            isMoving = (inputX * inputX + inputZ * inputZ) > 0.01f;
+            isRunning = Input.GetKey(KeyCode.LeftShift);
+        }
+        else if (IsSpawned)
+        {
+            float netX = netMoveX.Value;
+            float netZ = netMoveZ.Value;
+            isMoving = (netX * netX + netZ * netZ) > 0.01f;
+            isRunning = (netX * netX + netZ * netZ) > 1.5f;
+        }
+
+        if (isMoving && currentAnimState != "Death" && (isStandaloneMode ? localHealth : currentHealth.Value) > 0)
+        {
+            bool isDialogue = (RakanDialogueController.Instance != null && RakanDialogueController.Instance.IsActive) ||
+                              (SilasDialogueController.Instance != null && SilasDialogueController.Instance.IsActive) ||
+                              (IntroDialogueController.Instance != null && IntroDialogueController.Instance.IsActive);
+            if (!isDialogue)
+            {
+                float delay = isRunning ? 0.3f : 0.5f;
+                footstepTimer += Time.deltaTime;
+                if (footstepTimer >= delay)
+                {
+                    footstepTimer = 0f;
+                    PlayPlayerSFX(footstepClip, isRunning ? 0.5f : 0.35f);
+                }
+            }
+        }
+        else
+        {
+            footstepTimer = 0f;
+        }
     }
 
     private void UpdateAnimatorParams(float targetSpeed)
@@ -3843,6 +3940,36 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     protected virtual void PlayAnimationLocal(string animName, float fadeTime)
     {
+        // Play action sound effects
+        if (animName == "attack1" || animName == "Attack1combo1" || animName == "Attack2combo1" || animName == "ChatRiu")
+        {
+            PlayPlayerSFX(attackClip, 0.8f);
+        }
+        else if (animName == "Death")
+        {
+            PlayPlayerSFX(deathClip);
+        }
+        else if (animName == "GetHit" || animName == "GeiHit2" || animName == "AnhitCoVuKhi" || animName == "DoKhienDinhSatThuong")
+        {
+            PlayPlayerSFX(hitClip);
+        }
+        else if (animName == "LonVong")
+        {
+            PlayPlayerSFX(Resources.Load<AudioClip>("Audio/SmokeBomb"), 0.5f); // Roll Whoosh
+        }
+        else if (animName == qSkillAnimTrigger)
+        {
+            PlayPlayerSFX(skillQClip); // Electric Zap or Shield Buff
+        }
+        else if (animName == eSkillAnimTrigger)
+        {
+            PlayPlayerSFX(skillEClip);
+        }
+        else if (animName == rSkillAnimTrigger || animName == "NemRM")
+        {
+            PlayPlayerSFX(skillRClip); // Shield throw/slam BreakStone
+        }
+
         if (anim == null)
         {
             anim = GetComponent<Animator>();
