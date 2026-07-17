@@ -95,37 +95,37 @@ public class ArthurAnimationEventHelper : MonoBehaviour
         }
     }
 
-    public void EnableLeftHitbox() {}
-    public void DisableLeftHitbox() {}
-    public void EnableRightHitbox() {}
-    public void DisableRightHitbox() {}
-    public void EnableBothHitboxes() {}
-    public void DisableBothHitboxes() {}
+    public void EnableLeftHitbox() { EnsurePlayerReference(); if (player != null) player.EnableLeftHitbox(); }
+    public void DisableLeftHitbox() { EnsurePlayerReference(); if (player != null) player.DisableLeftHitbox(); }
+    public void EnableRightHitbox() { EnsurePlayerReference(); if (player != null) player.EnableRightHitbox(); }
+    public void DisableRightHitbox() { EnsurePlayerReference(); if (player != null) player.DisableRightHitbox(); }
+    public void EnableBothHitboxes() { EnsurePlayerReference(); if (player != null) player.EnableBothHitboxes(); }
+    public void DisableBothHitboxes() { EnsurePlayerReference(); if (player != null) player.DisableBothHitboxes(); }
 
     // ------------------------------------------------------------------
     //  Punch-specific alias event functions for intuitive selection
     // ------------------------------------------------------------------
 
-    public void EnableLeftPunch() {}
-    public void DisableLeftPunch() {}
-    public void EnableRightPunch() {}
-    public void DisableRightPunch() {}
-    public void EnableComboPunch() {}
-    public void DisableComboPunch() {}
+    public void EnableLeftPunch() { EnsurePlayerReference(); if (player != null) player.EnableLeftHitbox(); }
+    public void DisableLeftPunch() { EnsurePlayerReference(); if (player != null) player.DisableLeftHitbox(); }
+    public void EnableRightPunch() { EnsurePlayerReference(); if (player != null) player.EnableRightHitbox(); }
+    public void DisableRightPunch() { EnsurePlayerReference(); if (player != null) player.DisableRightHitbox(); }
+    public void EnableComboPunch() { EnsurePlayerReference(); if (player != null) player.EnableBothHitboxes(); }
+    public void DisableComboPunch() { EnsurePlayerReference(); if (player != null) player.DisableBothHitboxes(); }
 
     // ------------------------------------------------------------------
     //  Slash-specific alias event functions for intuitive selection
     // ------------------------------------------------------------------
 
-    public void EnableSingleSlash() {}
-    public void DisableSingleSlash() {}
-    public void EnableDoubleSlash() {}
-    public void DisableDoubleSlash() {}
+    public void EnableSingleSlash() { EnsurePlayerReference(); if (player != null) player.EnableLeftWeaponHitbox(); }
+    public void DisableSingleSlash() { EnsurePlayerReference(); if (player != null) player.DisableLeftWeaponHitbox(); }
+    public void EnableDoubleSlash() { EnsurePlayerReference(); if (player != null) player.EnableBothWeaponHitboxes(); }
+    public void DisableDoubleSlash() { EnsurePlayerReference(); if (player != null) player.DisableBothWeaponHitboxes(); }
 
-    public void OnSlashEnd() {}
-    public void OnPunchEnd() {}
-    public void Onpunchend() {}
-    public void OnAttackEnd() {}
+    public void OnSlashEnd() { EnsurePlayerReference(); if (player != null) player.DisableBothWeaponHitboxes(); }
+    public void OnPunchEnd() { EnsurePlayerReference(); if (player != null) player.DisableBothHitboxes(); }
+    public void Onpunchend() { EnsurePlayerReference(); if (player != null) player.DisableBothHitboxes(); }
+    public void OnAttackEnd() { EnsurePlayerReference(); if (player != null) { player.DisableBothHitboxes(); player.DisableBothWeaponHitboxes(); } }
 
     public void OnPickItemEvent()
     {
