@@ -18,14 +18,29 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
     {
         if (playerAudioSource == null)
         {
-            playerAudioSource = GetComponent<AudioSource>();
+            Transform child = transform.Find("PlayerSFXSource");
+            GameObject sfxObj;
+            if (child == null)
+            {
+                sfxObj = new GameObject("PlayerSFXSource");
+                sfxObj.transform.SetParent(transform);
+                sfxObj.transform.localPosition = Vector3.zero;
+            }
+            else
+            {
+                sfxObj = child.gameObject;
+            }
+            
+            playerAudioSource = sfxObj.GetComponent<AudioSource>();
             if (playerAudioSource == null)
             {
-                playerAudioSource = gameObject.AddComponent<AudioSource>();
+                playerAudioSource = sfxObj.AddComponent<AudioSource>();
             }
         }
-        playerAudioSource.spatialBlend = 0.0f; // Set to 2D to ensure sounds are always audible clearly!
+        playerAudioSource.spatialBlend = 0.0f; // 2D Sound for absolute audibility
         playerAudioSource.playOnAwake = false;
+        playerAudioSource.mute = false;
+        playerAudioSource.volume = 1.0f;
 
         if (footstepClip == null) footstepClip = Resources.Load<AudioClip>("Audio/Footstep");
         if (attackClip == null) attackClip = Resources.Load<AudioClip>("Audio/SwordSlash");
@@ -37,7 +52,9 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         // Log warnings if audio files fail to load
         if (footstepClip == null) Debug.LogWarning($"[Audio Debug] MayaPlayer: Failed to load Resources/Audio/Footstep");
+        else Debug.Log($"[Audio Debug] MayaPlayer: Successfully loaded Resources/Audio/Footstep");
         if (attackClip == null) Debug.LogWarning($"[Audio Debug] MayaPlayer: Failed to load Resources/Audio/SwordSlash");
+        else Debug.Log($"[Audio Debug] MayaPlayer: Successfully loaded Resources/Audio/SwordSlash");
         if (hitClip == null) Debug.LogWarning($"[Audio Debug] MayaPlayer: Failed to load Resources/Audio/HitHurt");
         if (deathClip == null) Debug.LogWarning($"[Audio Debug] MayaPlayer: Failed to load Resources/Audio/Death");
         if (skillQClip == null) Debug.LogWarning($"[Audio Debug] MayaPlayer: Failed to load Resources/Audio/SmokeBomb");
@@ -46,7 +63,11 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     private void PlayPlayerSFX(AudioClip clip, float volumeScale = 1.0f)
     {
-        if (clip == null) return;
+        if (clip == null)
+        {
+            Debug.LogWarning($"[Audio Debug] MayaPlayer: Attempted to play a NULL AudioClip!");
+            return;
+        }
         if (playerAudioSource == null)
         {
             InitializeAudio();
@@ -63,7 +84,9 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
             sfxVol = PlayerPrefs.GetFloat("SFXVolume", 90f) / 100f;
             masterVol = PlayerPrefs.GetFloat("MasterVolume", 100f) / 100f;
         }
-        playerAudioSource.PlayOneShot(clip, volumeScale * sfxVol * masterVol);
+        float finalVolume = volumeScale * sfxVol * masterVol;
+        Debug.Log($"[Audio Debug] MayaPlayer: Playing SFX '{clip.name}' at volume {finalVolume} (scale={volumeScale}, sfxVol={sfxVol}, masterVol={masterVol})");
+        playerAudioSource.PlayOneShot(clip, finalVolume);
     }
 
     [Header("Movement & Attack Settings")]
