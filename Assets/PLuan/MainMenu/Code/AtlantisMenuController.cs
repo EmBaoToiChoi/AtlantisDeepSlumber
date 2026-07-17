@@ -1034,9 +1034,9 @@ public class AtlantisMenuController : MonoBehaviour
         _appliedLanguage = LocalizationManager.CurrentLanguage;
         _languageValueString = _appliedLanguage.ToString();
         
-        _appliedMasterVol = _root.Q<Slider>("slider-master")?.value ?? 100f;
-        _appliedMusicVol = _root.Q<Slider>("slider-music")?.value ?? 80f;
-        _appliedSfxVol = _root.Q<Slider>("slider-sfx")?.value ?? 90f;
+        _appliedMasterVol = PlayerPrefs.GetFloat("MasterVolume", 100f);
+        _appliedMusicVol = PlayerPrefs.GetFloat("MusicVolume", 80f);
+        _appliedSfxVol = PlayerPrefs.GetFloat("SFXVolume", 90f);
         _appliedSens = _root.Q<Slider>("slider-sens")?.value ?? 50f;
         _appliedInvertY = _root.Q<Toggle>("opt-invert-y")?.value ?? false;
         
@@ -1083,8 +1083,20 @@ public class AtlantisMenuController : MonoBehaviour
         var pttKeyLbl = _root.Q<Label>("opt-ptt-key-value");
         if (pttKeyLbl != null) pttKeyLbl.text = _pttKeyValue;
 
+        SetSliderValue("slider-master", "val-master", _appliedMasterVol, true);
+        SetSliderValue("slider-music", "val-music", _appliedMusicVol, true);
+        SetSliderValue("slider-sfx", "val-sfx", _appliedSfxVol, true);
         SetSliderValue("slider-mic-input", "val-mic-input", _appliedMicInputVol, true);
         SetSliderValue("slider-voice-playback", "val-voice-playback", _appliedVoicePlaybackVol, true);
+
+        // Auto-spawn or reference AudioManager and play background music
+        if (AudioManager.Instance == null)
+        {
+            GameObject amObj = new GameObject("AudioManager");
+            amObj.AddComponent<AudioManager>();
+        }
+        AudioManager.Instance.SetVolumes(_appliedMasterVol, _appliedMusicVol, _appliedSfxVol);
+        AudioManager.Instance.PlayBGM("Audio/BGM");
     }
 
     private bool HasUnsavedChanges()
@@ -1324,6 +1336,14 @@ public class AtlantisMenuController : MonoBehaviour
 
         _appliedLanguage = _languageValueString == "Vietnamese" ? LocalizationManager.Language.Vietnamese : LocalizationManager.Language.English;
         LocalizationManager.SetLanguage(_appliedLanguage);
+
+        // Apply and save volume settings to AudioManager
+        if (AudioManager.Instance == null)
+        {
+            GameObject amObj = new GameObject("AudioManager");
+            amObj.AddComponent<AudioManager>();
+        }
+        AudioManager.Instance.SetVolumes(_appliedMasterVol, _appliedMusicVol, _appliedSfxVol);
 
         // Save Mic Settings to PlayerPrefs
         PlayerPrefs.SetString("MicDevice", _appliedMicDevice == "Default" ? "" : _appliedMicDevice);
