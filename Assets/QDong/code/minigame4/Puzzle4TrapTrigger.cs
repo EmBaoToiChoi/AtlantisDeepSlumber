@@ -8,16 +8,6 @@ public class Puzzle4TrapTrigger : NetworkBehaviour
     public GameObject floorPartA;
     public GameObject floorPartB;
     
-    [Header("New Mechanics")]
-    [Tooltip("Kéo InstantDeathZone vào đây để tắt khi bắt đầu và bật lại khi hoàn thành")]
-    public GameObject instantDeathZoneObj;
-    
-    [Tooltip("Kéo một Transform làm điểm tâm của đĩa (nơi teleport 4 player tới)")]
-    public Transform teleportTarget;
-    
-    [Tooltip("Số lượng người chơi cần đi qua box để kích hoạt")]
-    public int requiredPlayers = 4;
-    
     private HashSet<ulong> playersTouched = new HashSet<ulong>();
 
     public bool activated = false;
@@ -42,10 +32,7 @@ public class Puzzle4TrapTrigger : NetworkBehaviour
         if(floorPartB != null)
             floorPartB.SetActive(false);
 
-        if(instantDeathZoneObj != null)
-            instantDeathZoneObj.SetActive(false);
-        
-        Debug.Log("[Puzzle4Trap] Floor and InstantDeathZone hidden by Teleport Trigger.");
+        Debug.Log("[Puzzle4Trap] Floor hidden by Teleport Trigger.");
     }
 
     [ClientRpc]
@@ -62,12 +49,6 @@ public class Puzzle4TrapTrigger : NetworkBehaviour
         {
             floorPartB.transform.SetParent(null);
             floorPartB.SetActive(true);
-        }
-
-        if(instantDeathZoneObj != null)
-        {
-            instantDeathZoneObj.transform.SetParent(null);
-            instantDeathZoneObj.SetActive(true);
         }
 
         // Bật lại Collider để người chơi dẫm lên không bị rớt

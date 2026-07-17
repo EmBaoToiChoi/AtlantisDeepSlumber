@@ -470,7 +470,13 @@ public class Puzzle4Manager : NetworkBehaviour
 
     public void TriggerCompleteSequence()
     {
-        if (IsServer) PlayCompleteSequenceClientRpc();
+        if (!IsServer) return;
+
+        // Gọi CloseFloorClientRpc() trực tiếp từ server (KHÔNG được gọi ClientRpc từ bên trong ClientRpc/coroutine)
+        if (trapFloor != null)
+            trapFloor.CloseFloorClientRpc();
+
+        PlayCompleteSequenceClientRpc();
     }
 
     [ClientRpc]
@@ -501,11 +507,7 @@ public class Puzzle4Manager : NetworkBehaviour
         if(castleGate != null)
             castleGate.SetActive(false);
 
-        // Tự động đóng mặt đất lại (bật lại sàn) khi hoàn thành
-        if (IsServer && trapFloor != null)
-        {
-            trapFloor.CloseFloorClientRpc();
-        }
+        // CloseFloorClientRpc() đã được gọi từ TriggerCompleteSequence() trên server trước khi coroutine này chạy
 
         // Bật lại vùng box trigger để nó hiện lại như yêu cầu,
         // nhưng TẮT Collider để không kích hoạt minigame nữa sau khi hoàn thành.
