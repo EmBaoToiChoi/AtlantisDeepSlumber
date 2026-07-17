@@ -1630,25 +1630,39 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (CurrentHealth <= 0)
         {
             if (anim != null) anim.applyRootMotion = false;
-            PlayAnimation("Death", 0.15f);
+            if (rb != null) rb.linearVelocity = Vector3.zero;
+            if (currentAnimState != "Death")
+            {
+                PlayAnimation("Death", 0.15f);
+            }
             return;
         }
 
         // Tự động tắt weight của Layer 1 và đưa về New State khi kết thúc cất/lấy vũ khí
         if (anim != null && anim.isActiveAndEnabled && anim.runtimeAnimatorController != null && anim.layerCount > 1)
         {
-            float weight1 = anim.GetLayerWeight(1);
-            if (weight1 > 0f && comboStep == 0 && !IsAiming && !isRShootPending)
+            bool isPushing = false;
+            try { isPushing = anim.GetBool("IsPushing"); } catch (System.Exception) {}
+
+            if (isPushing)
             {
-                var carrier = GetComponent<PlayerLogCarrier>();
-                bool isCarrying = carrier != null && carrier.isCarrying;
-                if (!isCarrying)
+                if (anim.GetLayerWeight(1) < 0.99f) anim.SetLayerWeight(1, 1f);
+            }
+            else
+            {
+                float weight1 = anim.GetLayerWeight(1);
+                if (weight1 > 0f && comboStep == 0 && !IsAiming && !isRShootPending)
                 {
-                    bool isSwitching = IsStatePlayingOnLayer1(drawWeaponTrigger) || IsStatePlayingOnLayer1(sheathWeaponTrigger);
-                    bool isRThrowPlaying = IsStatePlayingOnLayer1("NemRFM");
-                    if (!isSwitching && !IsPlayingAttackState(out _, out _) && !isRThrowPlaying)
+                    var carrier = GetComponent<PlayerLogCarrier>();
+                    bool isCarrying = carrier != null && carrier.isCarrying;
+                    if (!isCarrying)
                     {
-                        ClearAttackLayer();
+                        bool isSwitching = IsStatePlayingOnLayer1(drawWeaponTrigger) || IsStatePlayingOnLayer1(sheathWeaponTrigger);
+                        bool isRThrowPlaying = IsStatePlayingOnLayer1("NemRFM");
+                        if (!isSwitching && !IsPlayingAttackState(out _, out _) && !isRThrowPlaying)
+                        {
+                            ClearAttackLayer();
+                        }
                     }
                 }
             }
@@ -3333,12 +3347,6 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     public void PlayAnimation(string animName, float fadeTime = 0.1f, bool alreadyPlayedLocally = false, bool isRooted = false)
     {
-        var carrier = GetComponent<PlayerLogCarrier>();
-        if (carrier != null && carrier.isCarrying && animName != "Death" && animName != "Idle" && animName != "Walk" && animName != "run")
-        {
-            return;
-        }
-
         if (anim == null)
         {
             anim = GetComponent<Animator>();
@@ -3347,6 +3355,19 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
         }
 
         if (anim == null || !anim.isActiveAndEnabled || anim.runtimeAnimatorController == null) return;
+
+        // Nếu đang chết, chỉ cho phép nhận các lệnh hồi sinh hoặc đưa về trạng thái rỗng/New State
+        if (currentAnimState == "Death" && 
+            animName != "Idle" && animName != "Walk" && animName != "run" && animName != "New State" && animName != "Empty")
+        {
+            return;
+        }
+
+        var carrier = GetComponent<PlayerLogCarrier>();
+        if (carrier != null && carrier.isCarrying && animName != "Death" && animName != "Idle" && animName != "Walk" && animName != "run")
+        {
+            return;
+        }
         
         if (!alreadyPlayedLocally)
         {
@@ -3524,6 +3545,15 @@ private void StartRollServerRpc(Vector3 direction)
 
     private void ClearAttackLayer()
     {
+        try
+        {
+            if (anim != null && anim.isActiveAndEnabled && anim.GetBool("IsPushing"))
+            {
+                return;
+            }
+        }
+        catch (System.Exception) {}
+
         comboStep = 0;
         isRootedAttack = false;
         if (anim != null && anim.isActiveAndEnabled && anim.runtimeAnimatorController != null && anim.layerCount > 1)

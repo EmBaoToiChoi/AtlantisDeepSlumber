@@ -1733,7 +1733,10 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         {
             if (anim != null) anim.applyRootMotion = false;
             if (rb != null) rb.linearVelocity = Vector3.zero;
-            PlayAnimation("Death", 0.15f);
+            if (currentAnimState != "Death")
+            {
+                PlayAnimation("Death", 0.15f);
+            }
             return;
         }
 
@@ -3752,6 +3755,22 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     public void PlayAnimation(string animName, float fadeTime = 0.1f, bool alreadyPlayedLocally = false)
     {
+        if (anim == null)
+        {
+            anim = GetComponent<Animator>();
+            if (anim == null)
+                anim = GetComponentInChildren<Animator>(true);
+        }
+
+        if (anim == null || !anim.isActiveAndEnabled || anim.runtimeAnimatorController == null) return;
+
+        // Nếu đang chết, chỉ cho phép nhận các lệnh hồi sinh hoặc đưa về trạng thái rỗng/New State
+        if (currentAnimState == "Death" && 
+            animName != "Idle" && animName != "Walk" && animName != "run" && animName != "New State" && animName != "Empty")
+        {
+            return;
+        }
+
         var carrier = GetComponent<PlayerLogCarrier>();
         if (carrier != null && carrier.isCarrying && animName != "Death" && animName != "Idle" && animName != "Walk" && animName != "run")
         {
@@ -3969,6 +3988,15 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     protected virtual void ClearAttackLayer()
     {
+        try
+        {
+            if (anim != null && anim.isActiveAndEnabled && anim.GetBool("IsPushing"))
+            {
+                return;
+            }
+        }
+        catch (System.Exception) {}
+
         comboStep = 0;
         isRootedAttack = false;
         if (anim != null && anim.isActiveAndEnabled && anim.runtimeAnimatorController != null && anim.layerCount > 1)
@@ -4028,6 +4056,16 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
     {
         if (anim != null && anim.isActiveAndEnabled && anim.runtimeAnimatorController != null && anim.layerCount > 1)
         {
+            try
+            {
+                if (anim.GetBool("IsPushing"))
+                {
+                    anim.SetLayerWeight(1, 1f);
+                    return;
+                }
+            }
+            catch (System.Exception) {}
+
             AnimatorStateInfo stateInfo = anim.GetCurrentAnimatorStateInfo(1);
             bool isSlashActive = !stateInfo.IsName("New State") && !stateInfo.IsName("Empty");
             float targetAttackLayerWeight = isSlashActive ? 1f : 0f;

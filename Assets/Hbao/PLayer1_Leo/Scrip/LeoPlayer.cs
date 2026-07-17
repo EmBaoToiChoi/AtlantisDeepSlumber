@@ -3216,7 +3216,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     // Death and hit
     public string deathUnarmedTrigger = "Death";
-    public string deathArmedTrigger = "DeathArmed";
+    public string deathArmedTrigger = "Death";
     public string getHitTrigger = "GetHit";
     public string getHit2Trigger = "GeiHit2";
 
@@ -3791,7 +3791,10 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         {
             if (anim != null) anim.applyRootMotion = false;
             if (rb != null) rb.linearVelocity = Vector3.zero;
-            PlayAnimation("Death", 0.15f);
+            if (currentAnimState != "Death")
+            {
+                PlayAnimation("Death", 0.15f);
+            }
             return;
         }
 
@@ -5939,8 +5942,9 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             // Gây sát thương
             TryDamageSpecificEnemy(currentTarget, qSkillDamagePerSlash);
 
-            // Phát VFX chém cục bộ
-            SpawnQSlashVfxLocal(currentTarget.position);
+            // Phát VFX chém cục bộ ở tâm mục tiêu
+            Vector3 targetCenter = GetTargetCenterPosition(currentTarget);
+            SpawnQSlashVfxLocal(targetCenter);
 
             qSkillTimeRemaining -= interval;
             yield return new WaitForSeconds(interval);
@@ -5997,8 +6001,9 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             // Gây sát thương
             TryDamageSpecificEnemy(currentTarget, qSkillDamagePerSlash);
 
-            // Gọi ClientRpc để phát VFX chém ở tất cả client
-            PlayQSlashVfxClientRpc(currentTarget.position);
+            // Gọi ClientRpc để phát VFX chém ở tất cả client tại tâm mục tiêu
+            Vector3 targetCenter = GetTargetCenterPosition(currentTarget);
+            PlayQSlashVfxClientRpc(targetCenter);
 
             remaining -= interval;
             UpdateQTimerClientRpc(Mathf.Max(0f, remaining));
@@ -6039,6 +6044,43 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         SpawnQSlashVfxLocal(targetPos);
     }
 
+    private Vector3 GetTargetCenterPosition(Transform target)
+    {
+        if (target == null) return Vector3.zero;
+
+        // Thử tìm CapsuleCollider hoặc CharacterController trước
+        var cc = target.GetComponent<CharacterController>();
+        if (cc == null) cc = target.GetComponentInChildren<CharacterController>();
+        if (cc != null)
+        {
+            return target.position + Vector3.up * (cc.height * 0.5f);
+        }
+
+        var capsule = target.GetComponent<CapsuleCollider>();
+        if (capsule == null) capsule = target.GetComponentInChildren<CapsuleCollider>();
+        if (capsule != null)
+        {
+            return target.position + Vector3.up * (capsule.height * 0.5f);
+        }
+
+        var box = target.GetComponent<BoxCollider>();
+        if (box == null) box = target.GetComponentInChildren<BoxCollider>();
+        if (box != null)
+        {
+            return target.position + Vector3.up * (box.size.y * 0.5f);
+        }
+
+        // Nếu không có collider, thử tìm renderer bounds
+        var renderer = target.GetComponentInChildren<Renderer>();
+        if (renderer != null)
+        {
+            return renderer.bounds.center;
+        }
+
+        // Fallback mặc định
+        return target.position + Vector3.up * 1.0f;
+    }
+
     /// <summary>
     /// Phát VFX vết chém ảo ảnh tại vị trí mục tiêu.
     /// Ưu tiên dùng qSkillParticlePrefab, fallback về pool VFX cũ.
@@ -6046,12 +6088,15 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     private void SpawnQSlashVfxLocal(Vector3 targetPos)
     {
         Quaternion rot = Quaternion.Euler(0f, UnityEngine.Random.Range(0f, 360f), 0f);
-        Vector3 spawnPos = targetPos + Vector3.up * 0.5f;
+        Vector3 spawnPos = targetPos; // Đã là tâm mục tiêu được tính từ trước
+
+        // Tăng transform to lên (Scale 1.8f) per user request
+        Vector3 qScale = new Vector3(1.8f, 1.8f, 1.8f);
 
         // Dùng particle riêng nếu đã gán trong Inspector
         if (qSkillParticlePrefab != null)
         {
-            GetPooledVFX(qSkillParticlePrefab, spawnPos, rot);
+            GetPooledVFX(qSkillParticlePrefab, spawnPos, rot, qScale);
             return;
         }
 
@@ -6065,7 +6110,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (validVfx.Length == 0) return;
 
         GameObject chosenPrefab = validVfx[UnityEngine.Random.Range(0, validVfx.Length)];
-        GetPooledVFX(chosenPrefab, spawnPos, rot);
+        GetPooledVFX(chosenPrefab, spawnPos, rot, qScale);
     }
 
     private void OnQSkillActiveChanged(bool oldVal, bool newVal)
@@ -6669,6 +6714,15 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     public void PlayAnimation(string animName, float fadeTime = 0.1f, bool alreadyPlayedLocally = false, bool isRooted = false)
     {
+        if (anim == null) return;
+
+        // Nếu đang chết, chỉ cho phép nhận các lệnh hồi sinh hoặc đưa về trạng thái rỗng/New State
+        if (currentAnimState == "Death" && 
+            animName != "Idle" && animName != "Walk" && animName != "run" && animName != "New State" && animName != "Empty")
+        {
+            return;
+        }
+
         var carrier = GetComponent<PlayerLogCarrier>();
         if (carrier != null && carrier.isCarrying && animName != "Death" && animName != "Idle" && animName != "Walk" && animName != "run")
         {
@@ -6761,7 +6815,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             case "GeiHit2":
                 return getHit2Trigger;
             case "Death":
-                return isArmed ? deathArmedTrigger : deathUnarmedTrigger;
+                return "Death";
             case "Idle_Pick":
             case "Pick":
                 return pickTrigger;
@@ -7294,6 +7348,15 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     private void ClearAttackLayer()
     {
+        try
+        {
+            if (anim != null && anim.isActiveAndEnabled && anim.GetBool("IsPushing"))
+            {
+                return;
+            }
+        }
+        catch (System.Exception) {}
+
         comboStep = 0;
         isRootedAttack = false;
         SetMovementLock(false);
@@ -7503,6 +7566,11 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     private GameObject GetPooledVFX(GameObject prefab, Transform parent)
     {
+        return GetPooledVFX(prefab, parent, new Vector3(0.5f, 0.5f, 0.5f));
+    }
+
+    private GameObject GetPooledVFX(GameObject prefab, Transform parent, Vector3 scale)
+    {
         if (prefab == null) return null;
 
         if (!vfxPools.ContainsKey(prefab))
@@ -7540,12 +7608,12 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             obj.transform.SetParent(parent);
             obj.transform.localPosition = Vector3.zero;
             obj.transform.localRotation = Quaternion.Euler(-90f, 0f, 0f);
-            obj.transform.localScale = new Vector3(0.5f, 0.5f, 0.5f);
+            obj.transform.localScale = scale;
         }
         else
         {
             obj.transform.SetParent(null);
-            obj.transform.localScale = new Vector3(0.5f, 0.5f, 0.5f);
+            obj.transform.localScale = scale;
         }
 
         obj.SetActive(true);
@@ -7553,6 +7621,11 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     }
 
     private GameObject GetPooledVFX(GameObject prefab, Vector3 position, Quaternion rotation)
+    {
+        return GetPooledVFX(prefab, position, rotation, new Vector3(0.5f, 0.5f, 0.5f));
+    }
+
+    private GameObject GetPooledVFX(GameObject prefab, Vector3 position, Quaternion rotation, Vector3 scale)
     {
         if (prefab == null) return null;
 
@@ -7592,7 +7665,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             obj.transform.rotation = rotation;
         }
 
-        obj.transform.localScale = new Vector3(0.5f, 0.5f, 0.5f);
+        obj.transform.localScale = scale;
         obj.SetActive(true);
         return obj;
     }
@@ -7972,6 +8045,16 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         if (anim != null && anim.isActiveAndEnabled && anim.runtimeAnimatorController != null && anim.layerCount > 1)
         {
+            try
+            {
+                if (anim.GetBool("IsPushing"))
+                {
+                    anim.SetLayerWeight(1, 1f);
+                    return;
+                }
+            }
+            catch (System.Exception) {}
+
             AnimatorStateInfo stateInfo = anim.GetCurrentAnimatorStateInfo(1);
             
             bool isDrawOrSheatheActive = stateInfo.IsName("laykiemtaytrai") || stateInfo.IsName("Laykiemtayphai") ||
