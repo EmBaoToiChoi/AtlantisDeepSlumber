@@ -38,17 +38,27 @@ public class Puzzle4TrapTrigger : NetworkBehaviour
     [ClientRpc]
     public void CloseFloorClientRpc()
     {
-        // Tách mặt phẳng ra khỏi box (đề phòng trường hợp mặt phẳng là con của box)
-        if(floorPartA != null)
+        Debug.Log($"[Puzzle4Trap] CloseFloorClientRpc RECEIVED trên client. floorPartA={(floorPartA != null ? floorPartA.name : "NULL")}, floorPartB={(floorPartB != null ? floorPartB.name : "NULL")}");
+
+        // KHÔNG gọi SetParent(null) vì có thể gây conflict với network hierarchy
+        if (floorPartA != null)
         {
-            floorPartA.transform.SetParent(null);
             floorPartA.SetActive(true);
+            Debug.Log($"[Puzzle4Trap] floorPartA '{floorPartA.name}' -> SetActive(true)");
+        }
+        else
+        {
+            Debug.LogError("[Puzzle4Trap] floorPartA là NULL! Kiểm tra Inspector của Puzzle4TrapTrigger.");
         }
 
-        if(floorPartB != null)
+        if (floorPartB != null)
         {
-            floorPartB.transform.SetParent(null);
             floorPartB.SetActive(true);
+            Debug.Log($"[Puzzle4Trap] floorPartB '{floorPartB.name}' -> SetActive(true)");
+        }
+        else
+        {
+            Debug.LogError("[Puzzle4Trap] floorPartB là NULL! Kiểm tra Inspector của Puzzle4TrapTrigger.");
         }
 
         // Bật lại Collider để người chơi dẫm lên không bị rớt
@@ -62,6 +72,6 @@ public class Puzzle4TrapTrigger : NetworkBehaviour
         Renderer rend = GetComponent<Renderer>();
         if (rend != null) rend.enabled = true;
 
-        Debug.Log("[Puzzle4Trap] Floor appeared, trigger box enabled safely (NetworkObject still alive)");
+        Debug.Log("[Puzzle4Trap] CloseFloorClientRpc HOÀN THÀNH.");
     }
 }
