@@ -474,7 +474,14 @@ public class Puzzle4Manager : NetworkBehaviour
 
         // Gọi CloseFloorClientRpc() trực tiếp từ server (KHÔNG được gọi ClientRpc từ bên trong ClientRpc/coroutine)
         if (trapFloor != null)
+        {
+            Debug.Log("[Puzzle4Manager] Gọi CloseFloorClientRpc từ server...");
             trapFloor.CloseFloorClientRpc();
+        }
+        else
+        {
+            Debug.LogError("[Puzzle4Manager] trapFloor là NULL! Kéo Puzzle4TrapTrigger vào field 'Trap Floor' trong Inspector.");
+        }
 
         PlayCompleteSequenceClientRpc();
     }
