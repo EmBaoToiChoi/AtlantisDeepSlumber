@@ -3709,6 +3709,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
                stateInfo.IsName("attack1") ||
                stateInfo.IsName("Attack1combo1") ||
                stateInfo.IsName("Attack2combo1") ||
+               stateInfo.IsName("ChatRiu") ||
                (!string.IsNullOrEmpty(rSkillAnimTrigger) && stateInfo.IsName(rSkillAnimTrigger));
     }
 

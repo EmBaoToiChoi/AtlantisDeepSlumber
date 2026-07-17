@@ -247,7 +247,7 @@ MonoBehaviour:
   expDropPoint: {fileID: 1745995649854752103}
   repairItemPrefab: {fileID: 3330552459412152781}
   repairItemDropChance: 0.2
-  sightRange: 18
+  sightRange: 60
   fieldOfView: 110
   maxAttackRange: 13
   minAttackRange: 5.5

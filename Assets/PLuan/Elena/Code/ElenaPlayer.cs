@@ -3149,7 +3149,8 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
                stateInfo.IsName("Chem3") ||
                stateInfo.IsName("Chem_1") ||
                stateInfo.IsName("Chem_2") ||
-               stateInfo.IsName("Chem_3");
+               stateInfo.IsName("Chem_3") ||
+               stateInfo.IsName("ChatRiu");
     }
 
     private bool IsStatePlayingOnAnyLayer(string stateName)
