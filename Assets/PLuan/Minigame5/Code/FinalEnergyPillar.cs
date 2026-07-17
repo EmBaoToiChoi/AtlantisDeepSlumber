@@ -36,8 +36,15 @@ public class FinalEnergyPillar : NetworkBehaviour
     private Material m_Material;
     private Coroutine m_TransitionCoroutine;
 
-    void Start()
+    private void Awake()
     {
+        InitializeIfNeeded();
+    }
+
+    private void InitializeIfNeeded()
+    {
+        if (m_Material != null) return;
+
         // Tự động tìm Renderer trên chính object này nếu chưa gán
         if (pillarRenderer == null)
         {
@@ -48,25 +55,40 @@ public class FinalEnergyPillar : NetworkBehaviour
         {
             // Trong Edit Mode dùng sharedMaterial để không gây rò rỉ bộ nhớ
             m_Material = Application.isPlaying ? pillarRenderer.material : pillarRenderer.sharedMaterial;
-            // Trạng thái ban đầu: Tắt
-            if (useColorEmission)
-            {
-                m_Material.SetColor(colorPropertyName, Color.black);
-            }
-            else
-            {
-                m_Material.SetFloat(activationPropertyName, inactiveDissolveValue);
-            }
         }
+    }
 
-        if (activeEffectObject != null)
+    void Start()
+    {
+        InitializeIfNeeded();
+
+        // Chỉ đặt trạng thái tắt ban đầu nếu chưa được spawn qua mạng
+        // Nếu đã spawn (đối với in-scene objects), OnNetworkSpawn đã thiết lập đúng giá trị đồng bộ
+        if (!IsSpawned)
         {
-            activeEffectObject.SetActive(false);
+            if (m_Material != null)
+            {
+                // Trạng thái ban đầu: Tắt
+                if (useColorEmission)
+                {
+                    m_Material.SetColor(colorPropertyName, Color.black);
+                }
+                else
+                {
+                    m_Material.SetFloat(activationPropertyName, inactiveDissolveValue);
+                }
+            }
+
+            if (activeEffectObject != null)
+            {
+                activeEffectObject.SetActive(false);
+            }
         }
     }
 
     public override void OnNetworkSpawn()
     {
+        InitializeIfNeeded();
         Debug.Log($"[FinalEnergyPillar] OnNetworkSpawn kích hoạt. IsServer = {IsServer}, Trạng thái = {m_IsActivated.Value}");
         m_IsActivated.OnValueChanged += OnStateChanged;
         
@@ -87,6 +109,8 @@ public class FinalEnergyPillar : NetworkBehaviour
 
     private void ApplyActivatedState(bool active)
     {
+        InitializeIfNeeded();
+
         if (!Application.isPlaying)
         {
             // Edit Mode: cập nhật trực quan ngay lập tức
