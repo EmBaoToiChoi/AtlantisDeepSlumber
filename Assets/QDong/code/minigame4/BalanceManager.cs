@@ -234,7 +234,21 @@ public class BalanceManager : NetworkBehaviour
         puzzleLocked = false;
     }
 
-    public IEnumerator ReturnToCenterAndLock()
+    public void TriggerReturnToCenterAndLock()
+    {
+        if (IsServer)
+        {
+            ReturnToCenterAndLockClientRpc();
+        }
+    }
+
+    [ClientRpc]
+    private void ReturnToCenterAndLockClientRpc()
+    {
+        StartCoroutine(ReturnToCenterAndLockCoroutine());
+    }
+
+    private IEnumerator ReturnToCenterAndLockCoroutine()
     {
         LockDisk(); // Khoá đĩa ngay để FixedUpdate không đè lại lực nghiêng
         
