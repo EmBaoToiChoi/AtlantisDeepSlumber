@@ -2813,6 +2813,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
             AttackServerRpc();
         }
 
+        alreadyHitEnemies.Clear();
         PerformRaycastAttack();
         StartCoroutine(DelayedRaycastAttackCoroutine(0.15f));
 

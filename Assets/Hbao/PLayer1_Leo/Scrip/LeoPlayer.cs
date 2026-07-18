@@ -4515,6 +4515,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         currentWeaponTypeAttacking = weapon;
 
+        alreadyHitEnemies.Clear();
         PerformRaycastAttack();
         StartCoroutine(DelayedRaycastAttackCoroutine(0.15f));
 

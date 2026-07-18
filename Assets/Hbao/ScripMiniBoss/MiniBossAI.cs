@@ -73,7 +73,7 @@ public class MiniBossAI : NetworkBehaviour
         set { if (isStandaloneMode) localState = value; else currentState.Value = value; }
     }
 
-    public float ActualCurrentHealth => isStandaloneMode ? localHealth : currentHealth.Value;
+    public float ActualCurrentHealth => (isStandaloneMode || !IsSpawned) ? localHealth : currentHealth.Value;
     public bool IsBossActive => isStandaloneMode ? localIsBossActive : isBossActive.Value;
     public bool IsDead => CurrentStateValue == MiniBossState.Dead;
 
@@ -185,6 +185,8 @@ public class MiniBossAI : NetworkBehaviour
         }
 
         // Initialize state instances for FSM
+        maxHealth = phase1MaxHealth;
+        localHealth = phase1MaxHealth;
         idleState = new IdleState(this);
         chaseState = new ChaseState(this);
         attackState = new AttackState(this);
@@ -303,16 +305,17 @@ public class MiniBossAI : NetworkBehaviour
     {
         if (IsDead || CurrentStateValue == MiniBossState.Enrage) return;
 
-        localHealth -= damage;
+        localHealth = Mathf.Max(0f, localHealth - damage);
         if (!isStandaloneMode && IsSpawned && IsServer)
         {
-            currentHealth.Value -= damage;
+            currentHealth.Value = Mathf.Max(0f, currentHealth.Value - damage);
+            localHealth = currentHealth.Value;
         }
 
         EnemyDamageEffectHelper.PlayDamageEffects(gameObject, damage);
 
-        float activeHp = isStandaloneMode ? localHealth : (IsSpawned && IsServer ? currentHealth.Value : localHealth);
-        if (activeHp <= 0 || localHealth <= 0)
+        float activeHp = ActualCurrentHealth;
+        if (activeHp <= 0f)
         {
             if (!localIsPhase2 && (!IsSpawned || !isPhase2Network.Value))
             {

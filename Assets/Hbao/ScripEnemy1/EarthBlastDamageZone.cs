@@ -99,7 +99,7 @@ public class EarthBlastDamageZone : MonoBehaviour
             );
         }
 
-        // 5. Duyệt qua tất cả các GameObject con (Particle System, Mesh, v.v...) và gắn Collider + DamageZone trực tiếp
+        // 5. Duyệt qua tất cả các GameObject con (Particle System, Mesh, v.v...) và chỉ gắn BoxCollider + DamageZone (Siêu nhẹ, không lag)
         Transform[] allTransforms = blastInstance.GetComponentsInChildren<Transform>(true);
         foreach (var t in allTransforms)
         {
@@ -115,36 +115,24 @@ public class EarthBlastDamageZone : MonoBehaviour
             {
                 if (childObj.GetComponent<Collider>() == null)
                 {
-                    if (mf != null && mf.sharedMesh != null)
+                    var bc = childObj.AddComponent<BoxCollider>();
+                    bc.isTrigger = true;
+
+                    if (rend != null)
                     {
-                        try
-                        {
-                            var mc = childObj.AddComponent<MeshCollider>();
-                            mc.sharedMesh = mf.sharedMesh;
-                            mc.convex = true;
-                            mc.isTrigger = true;
-                        }
-                        catch
-                        {
-                            var bc = childObj.AddComponent<BoxCollider>();
-                            bc.isTrigger = true;
-                        }
+                        bc.center = childObj.transform.InverseTransformPoint(rend.bounds.center);
+                        Vector3 rSize = rend.bounds.size;
+                        Vector3 cScale = childObj.transform.lossyScale;
+                        bc.size = new Vector3(
+                            rSize.x / Mathf.Max(0.001f, cScale.x),
+                            rSize.y / Mathf.Max(0.001f, cScale.y),
+                            rSize.z / Mathf.Max(0.001f, cScale.z)
+                        );
                     }
-                    else
+                    else if (mf != null && mf.sharedMesh != null)
                     {
-                        var bc = childObj.AddComponent<BoxCollider>();
-                        bc.isTrigger = true;
-                        if (rend != null)
-                        {
-                            bc.center = childObj.transform.InverseTransformPoint(rend.bounds.center);
-                            Vector3 rSize = rend.bounds.size;
-                            Vector3 cScale = childObj.transform.lossyScale;
-                            bc.size = new Vector3(
-                                rSize.x / Mathf.Max(0.001f, cScale.x),
-                                rSize.y / Mathf.Max(0.001f, cScale.y),
-                                rSize.z / Mathf.Max(0.001f, cScale.z)
-                            );
-                        }
+                        bc.center = mf.sharedMesh.bounds.center;
+                        bc.size = mf.sharedMesh.bounds.size;
                     }
                 }
                 else
