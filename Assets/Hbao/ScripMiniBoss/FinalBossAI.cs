@@ -1645,6 +1645,19 @@ public class FinalBossAI : NetworkBehaviour
                 GameObject blast = Instantiate(earthBlastPrefab, pos, Quaternion.identity);
                 blast.transform.localScale *= 3.0f;
                 
+                // Tự động gắn thêm SphereCollider làm trigger vùng gây sát thương va chạm (khớp chính xác với vòng cảnh báo)
+                var col = blast.AddComponent<SphereCollider>();
+                if (col != null)
+                {
+                    col.isTrigger = true;
+                    col.radius = earthBlastRadius / 3.0f;
+                }
+
+                // Tự động gắn thêm component gây sát thương va chạm 20 máu khi chạm vào
+                var dmgZone = blast.AddComponent<EarthBlastDamageZone>();
+                dmgZone.damage = 20f;
+                dmgZone.damageCooldown = 1.0f;
+
                 var locationVfx = blast.GetComponent<PixPlays.ElementalVFX.LocationVfx>();
                 if (locationVfx != null)
                 {

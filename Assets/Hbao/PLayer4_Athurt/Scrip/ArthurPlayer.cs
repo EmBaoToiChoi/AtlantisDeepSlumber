@@ -2650,14 +2650,16 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         // Vẽ tia debug trong Unity Editor
         Debug.DrawRay(rayStart, rayDir * range, Color.red, 1f);
-        Debug.Log($"[ArthurPlayer Debug] Casting Ray from {rayStart} in direction {rayDir} with range {range}");
+        Debug.Log($"[ArthurPlayer Debug] Casting SphereCast from {rayStart} in direction {rayDir} with range {range}");
 
-        if (Physics.Raycast(rayStart, rayDir, out RaycastHit hit, range))
+        RaycastHit[] hits = Physics.SphereCastAll(rayStart, 0.6f, rayDir, range);
+        foreach (var hit in hits)
         {
             Collider col = hit.collider;
+            if (col == null) continue;
             Debug.Log($"[ArthurPlayer Debug] Raycast hit collider: {col.name} on GameObject: {col.gameObject.name} at point {hit.point}");
 
-            if (col.transform.root == transform.root) return; // Bỏ qua chính mình
+            if (col.transform.root == transform.root) continue; // Bỏ qua chính mình
 
             if (IsEnemy(col, out Collider enemyCollider))
             {
@@ -2872,6 +2874,15 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         var e5 = col.GetComponentInParent<Enemy5_PhuThuy>();
         if (e5 != null) { e5.TakeDamage(actualDamage); return; }
+
+        var mb = col.GetComponentInParent<MiniBossAI>();
+        if (mb != null) { mb.TakeDamage(actualDamage); return; }
+
+        var fb = col.GetComponentInParent<FinalBossAI>();
+        if (fb != null) { fb.TakeDamage(actualDamage); return; }
+
+        var b = col.GetComponentInParent<BossAI>();
+        if (b != null) { b.TakeDamage(actualDamage); return; }
     }
 
 
@@ -3080,7 +3091,10 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
             col.GetComponentInParent<Enemy2_Zombie>() != null ||
             col.GetComponentInParent<Enemy3_Buaa>() != null ||
             col.GetComponentInParent<Enemy4_Bongtoi>() != null ||
-            col.GetComponentInParent<Enemy5_PhuThuy>() != null)
+            col.GetComponentInParent<Enemy5_PhuThuy>() != null ||
+            col.GetComponentInParent<MiniBossAI>() != null ||
+            col.GetComponentInParent<FinalBossAI>() != null ||
+            col.GetComponentInParent<BossAI>() != null)
         {
             enemyCollider = col;
             return true;
@@ -3107,6 +3121,12 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
                 if (e4 != null) { e4.TakeDamage(damageAmount); return; }
                 var e5 = netObj.GetComponentInChildren<Enemy5_PhuThuy>();
                 if (e5 != null) { e5.TakeDamage(damageAmount); return; }
+                var mb = netObj.GetComponentInChildren<MiniBossAI>();
+                if (mb != null) { mb.TakeDamage(damageAmount); return; }
+                var fb = netObj.GetComponentInChildren<FinalBossAI>();
+                if (fb != null) { fb.TakeDamage(damageAmount); return; }
+                var b = netObj.GetComponentInChildren<BossAI>();
+                if (b != null) { b.TakeDamage(damageAmount); return; }
             }
         }
     }
