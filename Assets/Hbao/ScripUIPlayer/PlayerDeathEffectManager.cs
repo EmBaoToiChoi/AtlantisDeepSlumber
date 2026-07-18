@@ -109,17 +109,31 @@ public class PlayerDeathEffectManager : MonoBehaviour
 
     public void PlayDeathEffect(float duration = 3.0f)
     {
+        Debug.Log($"[PlayerDeathEffectManager] PlayDeathEffect requested. Duration: {duration}, isPlaying: {isPlaying}");
         if (isPlaying) return;
         StartCoroutine(EyelidsDeathCoroutine(duration));
     }
 
     public void ResetDeathEffect()
     {
+        Debug.Log($"[PlayerDeathEffectManager] ResetDeathEffect called. StopAllCoroutines, setting isPlaying to false. topEyelid={(topEyelid != null)}, bottomEyelid={(bottomEyelid != null)}, centerFade={(centerFade != null)}");
         StopAllCoroutines();
         isPlaying = false;
-        if (topEyelid != null) topEyelid.sizeDelta = new Vector2(0f, 0f);
-        if (bottomEyelid != null) bottomEyelid.sizeDelta = new Vector2(0f, 0f);
-        if (centerFade != null) centerFade.color = new Color(0f, 0f, 0f, 0f);
+        if (topEyelid != null)
+        {
+            topEyelid.sizeDelta = new Vector2(0f, 0f);
+            Debug.Log("[PlayerDeathEffectManager] Reset topEyelid size to 0");
+        }
+        if (bottomEyelid != null)
+        {
+            bottomEyelid.sizeDelta = new Vector2(0f, 0f);
+            Debug.Log("[PlayerDeathEffectManager] Reset bottomEyelid size to 0");
+        }
+        if (centerFade != null)
+        {
+            centerFade.color = new Color(0f, 0f, 0f, 0f);
+            Debug.Log("[PlayerDeathEffectManager] Reset centerFade alpha to 0");
+        }
     }
 
     private IEnumerator EyelidsDeathCoroutine(float duration)
@@ -134,6 +148,7 @@ public class PlayerDeathEffectManager : MonoBehaviour
             if (scaler != null) screenHeight = scaler.referenceResolution.y;
         }
         float targetHeight = screenHeight / 2f + 50f; // Overlap slightly to avoid gaps in center
+        Debug.Log($"[PlayerDeathEffectManager] Coroutine started. Target height: {targetHeight}");
 
         while (elapsed < duration)
         {
@@ -158,5 +173,6 @@ public class PlayerDeathEffectManager : MonoBehaviour
         if (topEyelid != null) topEyelid.sizeDelta = new Vector2(0f, targetHeight);
         if (bottomEyelid != null) bottomEyelid.sizeDelta = new Vector2(0f, targetHeight);
         if (centerFade != null) centerFade.color = new Color(0f, 0f, 0f, 1.0f); // Fully black
+        Debug.Log("[PlayerDeathEffectManager] Coroutine finished. Eyelids fully closed.");
     }
 }

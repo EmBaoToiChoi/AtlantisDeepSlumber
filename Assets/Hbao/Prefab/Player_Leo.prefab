@@ -370,11 +370,25 @@ MonoBehaviour:
     TransitionIndex: 5
   - IsCrossFadeExit: 0
     Layer: 0
+    OriginatingState: -216566996
+    DestinationState: 20298039
+    TransitionDuration: 0.1
+    TriggerNameHash: 646380074
+    TransitionIndex: 6
+  - IsCrossFadeExit: 0
+    Layer: 0
     OriginatingState: 1654062508
     DestinationState: 1910553104
     TransitionDuration: 0.05
     TriggerNameHash: -726645050
     TransitionIndex: 1
+  - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: 1654062508
+    DestinationState: 20298039
+    TransitionDuration: 0.1
+    TriggerNameHash: 646380074
+    TransitionIndex: 2
   - IsCrossFadeExit: 0
     Layer: 0
     OriginatingState: 1910553104
@@ -617,6 +631,14 @@ MonoBehaviour:
       NameHash: -1219495144
       Synchronize: 1
       ParameterType: 9
+    - name: Kicked
+      NameHash: 2134575295
+      Synchronize: 1
+      ParameterType: 9
+    - name: Death
+      NameHash: 646380074
+      Synchronize: 1
+      ParameterType: 9
   AnimatorParametersExpanded: 0
 --- !u!114 &7638701699718663926
 MonoBehaviour:
@@ -631,6 +653,15 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   ShowTopMostFoldoutHeaderGroup: 1
+  playerAudioSource: {fileID: 0}
+  footstepClip: {fileID: 0}
+  footstepClip2: {fileID: 0}
+  attackClip: {fileID: 0}
+  hitClip: {fileID: 0}
+  deathClip: {fileID: 0}
+  skillQClip: {fileID: 0}
+  skillEClip: {fileID: 0}
+  skillRClip: {fileID: 0}
   rollKey: 103
   useBlendTree: 1
   inputXParam: InputX
@@ -1133,6 +1164,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   ShowTopMostFoldoutHeaderGroup: 1
+  kickedTriggerName: Kicked
+  kickedStateName: 
 --- !u!1 &4262746911795802632
 GameObject:
   m_ObjectHideFlags: 0
@@ -1305,7 +1338,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 681f98ebabdd7ec41a39ec2dfb8e1de1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  heightOffset: 3.7
+  heightOffset: 0
 --- !u!1 &8009708259036070280
 GameObject:
   m_ObjectHideFlags: 0

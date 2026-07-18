@@ -56,6 +56,7 @@ public class BossAI : NetworkBehaviour
     public float earthSummonInterval = 5f;
     public float earthBlastScale = 5.0f; // Scale đá to hơn (mặc định FinalBoss là 3.0f)
     private float earthSummonCooldownTimer;
+    private bool isCastingEarthSummon = false;
 
     // ─── Thiết lập Triệu Hồi Quái Con (Minion Summon) ────────────
     [Header("Minion Spawning Settings")]
@@ -430,7 +431,23 @@ public class BossAI : NetworkBehaviour
         // Cập nhật FSM hiện tại
         if (currentFSMState != null)
         {
-            currentFSMState.Update();
+            if (isCastingEarthSummon)
+            {
+                if (AgentReady)
+                {
+                    agent.isStopped = true;
+                    agent.velocity = Vector3.zero;
+                }
+                SetSpeedNet(0f);
+                if (targetPlayer != null)
+                {
+                    RotateTowards(targetPlayer.position);
+                }
+            }
+            else
+            {
+                currentFSMState.Update();
+            }
         }
     }
 
@@ -1191,6 +1208,11 @@ public class BossAI : NetworkBehaviour
             currentFSMState.Exit();
         }
 
+        if (newState == BossState.Hit || newState == BossState.Dead || newState == BossState.Enrage)
+        {
+            isCastingEarthSummon = false;
+        }
+
         CurrentStateValue = newState;
 
         switch (newState)
@@ -1416,6 +1438,8 @@ public class BossAI : NetworkBehaviour
         bool auth = isStandaloneMode || (IsNetworkActive && IsServer);
         if (!auth) return;
 
+        isCastingEarthSummon = true; // Đứng im triệu hồi
+
         if (isStandaloneMode)
         {
             if (anim != null) anim.SetTrigger(earthSummonTrigger);
@@ -1442,6 +1466,12 @@ public class BossAI : NetworkBehaviour
     private IEnumerator EarthBlastRoutine(Vector3[] positions)
     {
         yield return new WaitForSeconds(warningDuration);
+
+        isCastingEarthSummon = false; // Kết thúc đứng im triệu hồi
+        if (AgentReady)
+        {
+            agent.isStopped = false; // Tiếp tục di chuyển
+        }
 
         if (!isStandaloneMode)
         {
