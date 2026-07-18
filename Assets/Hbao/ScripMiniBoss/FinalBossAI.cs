@@ -120,7 +120,7 @@ public class FinalBossAI : NetworkBehaviour
 
     [Header("Enrage / Grow (Gồng & Phóng To) Settings")]
     public float growDuration = 3.0f;
-    public float growScaleMultiplier = 1.4f;
+    public float growScaleMultiplier = 3.0f;
     public string growTriggerParam = "Shockwave";
     public GameObject growVFX;
     public AudioClip growSFX;
@@ -1547,8 +1547,12 @@ public class FinalBossAI : NetworkBehaviour
                 }
                 else
                 {
-                    boss.fireSpewCooldownTimer = boss.fireSpewInterval;
-                    boss.ChangeState(FinalBossState.FireBarrage);
+                    // Đợi thêm 3 giây giãn cách trước khi chuyển sang kỹ năng tiếp theo (stageTimer âm xuống <= -3.0f)
+                    if (stageTimer <= -3.0f)
+                    {
+                        boss.fireSpewCooldownTimer = boss.fireSpewInterval;
+                        boss.ChangeState(FinalBossState.FireBarrage);
+                    }
                 }
             }
         }
@@ -1668,7 +1672,9 @@ public class FinalBossAI : NetworkBehaviour
         {
             timer = 0f;
             startScale = boss.transform.localScale;
-            targetScale = startScale * boss.growScaleMultiplier;
+            // Bảo đảm phóng to khổng lồ (ít nhất là 3.0 lần)
+            float finalMultiplier = Mathf.Max(3.0f, boss.growScaleMultiplier);
+            targetScale = startScale * finalMultiplier;
 
             if (boss.AgentReady)
             {
@@ -1960,7 +1966,8 @@ public class FinalBossAI : NetworkBehaviour
             }
             boss.SetSpeedNet(0f);
 
-            if (spawnTimer <= 0f)
+            // Chỉ spawn kiếm khi chưa hết thời lượng chiêu
+            if (spawnTimer <= 0f && timer < boss.swordRainDuration)
             {
                 spawnTimer = boss.swordSpawnInterval;
 
@@ -1975,7 +1982,8 @@ public class FinalBossAI : NetworkBehaviour
                 }
             }
 
-            if (timer >= boss.swordRainDuration)
+            // Đợi thêm 3 giây giãn cách trước khi chuyển sang kỹ năng tiếp theo
+            if (timer >= boss.swordRainDuration + 3.0f)
             {
                 boss.ChangeState(FinalBossState.FireSpew);
             }
@@ -2028,6 +2036,7 @@ public class FinalBossAI : NetworkBehaviour
 
         orb.transform.position = spawnPos;
         orb.transform.rotation = rotation;
+        orb.transform.localScale = Vector3.one * 2.0f; // Tăng kích thước cầu lửa lên x2
         orb.SetActive(true);
         return orb;
     }
@@ -2202,7 +2211,8 @@ public class FinalBossAI : NetworkBehaviour
                 boss.RotateTowards(boss.targetPlayer.position);
             }
 
-            if (spawnTimer <= 0f)
+            // Chỉ spawn cầu lửa khi chưa hết thời lượng chiêu
+            if (spawnTimer <= 0f && timer < boss.fireBarrageDuration)
             {
                 spawnTimer = boss.fireBarrageInterval;
 
@@ -2217,7 +2227,8 @@ public class FinalBossAI : NetworkBehaviour
                 }
             }
 
-            if (timer >= boss.fireBarrageDuration)
+            // Đợi thêm 3 giây giãn cách trước khi kết thúc chuỗi kỹ năng liên tiếp và quay về đuổi theo người chơi
+            if (timer >= boss.fireBarrageDuration + 3.0f)
             {
                 boss.ActivateBoss();
 
@@ -2270,6 +2281,32 @@ public class FallingSwordProjectile : MonoBehaviour
         {
             isFalling = false;
             OnImpact();
+        }
+    }
+
+    private void OnTriggerEnter(Collider other)
+    {
+        if (!isFalling) return;
+
+        if (other.CompareTag("Player") || other.gameObject.layer == LayerMask.NameToLayer("Player"))
+        {
+            Transform playerRoot = bossOwner != null ? bossOwner.GetPlayerRootPublic(other.transform) : other.transform.root;
+            if (playerRoot != null)
+            {
+                isFalling = false;
+                Vector3 knockbackDir = (playerRoot.position - transform.position).normalized + Vector3.up * 0.5f;
+                EnemyDamageHelper.DealDamage(playerRoot, damage, knockbackDir * 5f);
+
+                if (bossOwner != null)
+                {
+                    bossOwner.PlaySwordImpactEffects(transform.position);
+                    bossOwner.RecycleSword(gameObject);
+                }
+                else
+                {
+                    gameObject.SetActive(false);
+                }
+            }
         }
     }
 
@@ -2335,6 +2372,32 @@ public class FallingFireOrbProjectile : MonoBehaviour
         {
             isFalling = false;
             OnImpact();
+        }
+    }
+
+    private void OnTriggerEnter(Collider other)
+    {
+        if (!isFalling) return;
+
+        if (other.CompareTag("Player") || other.gameObject.layer == LayerMask.NameToLayer("Player"))
+        {
+            Transform playerRoot = bossOwner != null ? bossOwner.GetPlayerRootPublic(other.transform) : other.transform.root;
+            if (playerRoot != null)
+            {
+                isFalling = false;
+                Vector3 knockbackDir = (playerRoot.position - transform.position).normalized + Vector3.up * 0.5f;
+                EnemyDamageHelper.DealDamage(playerRoot, damage, knockbackDir * 5f);
+
+                if (bossOwner != null)
+                {
+                    bossOwner.PlayFireBarrageImpactEffects(transform.position);
+                    bossOwner.RecycleFireBarrage(gameObject);
+                }
+                else
+                {
+                    gameObject.SetActive(false);
+                }
+            }
         }
     }
 
