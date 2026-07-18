@@ -2715,6 +2715,10 @@ MonoBehaviour:
   shockwaveDamageDelay: 0.5
   shockwaveVFX: {fileID: 207745087118991948, guid: e656699b143494148a872961a9feb410, type: 3}
   shockwaveSFX: {fileID: 0}
+  shockwaveWaveSpeed: 14
+  shockwaveWaveMaxRadius: 16
+  shockwaveWaveDamage: 5
+  shockwaveWaveKnockup: 9
   fireSpewInterval: 10
   fireSpewWindupDuration: 1
   fireSpewActiveDuration: 1.5

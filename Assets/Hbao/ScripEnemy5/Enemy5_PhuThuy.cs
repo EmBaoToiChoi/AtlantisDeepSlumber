@@ -473,11 +473,13 @@ public class Enemy5_PhuThuy : NetworkBehaviour
             var proj = Instantiate(spellProjectilePrefab, spawnPt, Quaternion.LookRotation(dir));
             var rb = proj.GetComponent<Rigidbody>(); if (rb != null) rb.linearVelocity = dir * spellSpeed;
             var spellBall = proj.GetComponent<SpellBall>();
-            if (spellBall != null)
+            if (spellBall == null)
             {
-                spellBall.damage = spellDamage;
-                spellBall.knockback = 1.5f;
+                spellBall = proj.AddComponent<SpellBall>();
             }
+            spellBall.damage = spellDamage;
+            spellBall.knockback = 1.5f;
+            
             var no = proj.GetComponent<NetworkObject>(); if (no != null && !isStandaloneMode) no.Spawn(true);
         }
         else
