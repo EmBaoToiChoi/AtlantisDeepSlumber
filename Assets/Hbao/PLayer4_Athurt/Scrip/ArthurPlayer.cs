@@ -2668,6 +2668,10 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
                     alreadyHitEnemies.Add(enemyRoot);
                     Debug.Log($"[ArthurPlayer Raycast] HIT ENEMY: {enemyRoot.name} | Sát thương: {damageAmount}");
                     
+                    // Phát âm thanh chém trúng quái (chỉ với quái)
+                    AudioClip hitSound = Resources.Load<AudioClip>("Audio/ChemHit");
+                    PlayPlayerSFX(hitSound);
+                    
                     var netObj = enemyCollider.transform.root.GetComponent<NetworkObject>() ?? enemyCollider.GetComponentInParent<NetworkObject>() ?? enemyCollider.GetComponentInChildren<NetworkObject>();
 
                     if (!isStandaloneMode && IsSpawned && netObj != null)
