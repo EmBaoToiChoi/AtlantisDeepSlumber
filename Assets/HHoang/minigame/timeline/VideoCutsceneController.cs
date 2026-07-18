@@ -7,10 +7,11 @@ public class VideoCutsceneController : NetworkBehaviour
 {
     [Header("Video Settings")]
     public VideoPlayer videoPlayer;
-    public GameObject videoUI; // [SỬA Ở ĐÂY]: Kéo cái Canvas chứa Raw Image vào biến này để code bật/tắt nó
+    public GameObject videoUI; // Kéo cái Canvas chứa Raw Image vào biến này để code bật/tắt nó
     public GameObject objectToHide; // Object tắt khi chạy phim
 
     [Header("Teleport & Control")]
+    public Transform safeZone; // Kéo 1 điểm an toàn (trên trời/dưới đất) vào đây
     public List<Transform> playerSpots = new List<Transform>();
     public List<string> scriptNamesToDisable = new List<string>();
 
@@ -55,7 +56,6 @@ public class VideoCutsceneController : NetworkBehaviour
         // CHỜ 0.5 GIÂY: Lúc này video đã hiện lên che khuất nhân vật
         yield return new WaitForSeconds(0.5f);
 
-        // Lấy danh sách ClientId của 4 người chơi hiện tại
         int count = Mathf.Min(NetworkManager.Singleton.ConnectedClientsList.Count, playerSpots.Count);
         ulong[] targetClientIds = new ulong[count];
         for (int i = 0; i < count; i++)
@@ -63,15 +63,50 @@ public class VideoCutsceneController : NetworkBehaviour
             targetClientIds[i] = NetworkManager.Singleton.ConnectedClientsList[i].ClientId;
         }
 
-        // GỌI 1 LỆNH DUY NHẤT để Teleport toàn bộ (Cứu máy yếu khỏi bị nghẽn mạng)
-        TeleportAllPlayersClientRpc(targetClientIds);
+        // [LẦN 1] Đưa tất cả lên Khu Vực An Toàn (để xem phim mà không bị quái đánh)
+        TeleportToSafeZoneClientRpc(targetClientIds);
 
         // Chờ nốt thời gian còn lại của Video
         float remainingTime = Mathf.Max(0f, duration - 0.5f);
         yield return new WaitForSeconds(remainingTime);
 
+        // [LẦN 2] Phim xong, đưa tất cả ra vị trí chiến đấu thực sự (playerSpots)
+        TeleportAllPlayersClientRpc(targetClientIds);
+
         // Phát lệnh kết thúc phim
         FinishCutsceneClientRpc();
+    }
+
+    [ClientRpc]
+    private void TeleportToSafeZoneClientRpc(ulong[] mappedClientIds)
+    {
+        var localClientId = NetworkManager.Singleton.LocalClientId;
+        var localPlayer = NetworkManager.Singleton.LocalClient.PlayerObject;
+
+        if (localPlayer != null && safeZone != null)
+        {
+            // Kiểm tra xem người chơi này có nằm trong danh sách được dịch chuyển không
+            bool isTarget = false;
+            foreach (var id in mappedClientIds)
+            {
+                if (id == localClientId) { isTarget = true; break; }
+            }
+
+            if (isTarget)
+            {
+                var charCtrl = localPlayer.GetComponent<CharacterController>();
+                if (charCtrl != null) charCtrl.enabled = false;
+
+                var navAgent = localPlayer.GetComponent<UnityEngine.AI.NavMeshAgent>();
+                if (navAgent != null) navAgent.enabled = false;
+
+                // Dịch chuyển "tạm" lên Safe Zone
+                localPlayer.transform.position = safeZone.position;
+
+                if (charCtrl != null) charCtrl.enabled = true;
+                if (navAgent != null) navAgent.enabled = true;
+            }
+        }
     }
 
     // Lệnh này được phát cho TẤT CẢ client cùng 1 lúc, máy ai người nấy tự xử lý
@@ -120,14 +155,15 @@ public class VideoCutsceneController : NetworkBehaviour
     {
         if (objectToHide != null) objectToHide.SetActive(false);
         
-        // [SỬA Ở ĐÂY]: Bật cái Canvas UI lên thay vì chèn vào Camera
         if (videoUI != null) videoUI.SetActive(true); 
 
         if (videoPlayer != null)
         {
-            // Đã xóa dòng targetCamera đi vì giờ mình chiếu lên UI rồi
             videoPlayer.Play();
         }
+
+        // Tạm dừng toàn bộ âm thanh môi trường/gameplay
+        AudioListener.pause = true;
 
         TogglePlayerMovement(false);
     }
@@ -137,14 +173,15 @@ public class VideoCutsceneController : NetworkBehaviour
     {
         if (objectToHide != null) objectToHide.SetActive(true);
         
-        // [SỬA Ở ĐÂY]: Tắt cái Canvas UI đi khi hết phim
         if (videoUI != null) videoUI.SetActive(false); 
 
         if (videoPlayer != null)
         {
             videoPlayer.Stop();
-            // Đã xóa dòng targetCamera = null
         }
+        
+        // Bật lại âm thanh bình thường cho game
+        AudioListener.pause = false;
         
         TogglePlayerMovement(true);
         isPlaying = false;
