@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Unity.Netcode;
 using UnityEngine;
 
@@ -2866,21 +2867,27 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     public void PerformMeleeRaycastAttack()
     {
+        Vector3 aimDir = transform.forward;
+        if (targetCamera != null)
+        {
+            aimDir = targetCamera.transform.forward;
+            aimDir.y = 0f;
+            aimDir.Normalize();
+        }
+
+        Vector3 rayStartClient = transform.position + Vector3.up * 1.0f;
+        RaycastHit[] hits = Physics.SphereCastAll(rayStartClient, 0.6f, aimDir, attackRange);
+
         if (isStandaloneMode)
         {
-            Vector3 aimDir = transform.forward;
-            if (targetCamera != null)
+            HashSet<Transform> processed = new HashSet<Transform>();
+            foreach (var hitClient in hits)
             {
-                aimDir = targetCamera.transform.forward;
-                aimDir.y = 0f;
-                aimDir.Normalize();
-            }
+                if (hitClient.collider == null || hitClient.collider.transform.root == transform.root) continue;
+                Transform root = hitClient.collider.transform.root;
+                if (processed.Contains(root)) continue;
+                processed.Add(root);
 
-            Vector3 rayStartClient = transform.position + Vector3.up * 1.0f;
-            bool hasHitClient = Physics.Raycast(rayStartClient, aimDir, out RaycastHit hitClient, attackRange);
-
-            if (hasHitClient)
-            {
                 TryDamageEnemy(hitClient.collider);
 
                 // Chém cây gỗ (ChoppableTree) cho Maya
@@ -2902,24 +2909,23 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
         {
             if (IsOwner)
             {
-                Vector3 aimDir = transform.forward;
-                if (targetCamera != null)
-                {
-                    aimDir = targetCamera.transform.forward;
-                    aimDir.y = 0f;
-                    aimDir.Normalize();
-                }
-
-                Vector3 rayStartClient = transform.position + Vector3.up * 1.0f;
-                bool hasHitClient = Physics.Raycast(rayStartClient, aimDir, out RaycastHit hitClient, attackRange);
-
                 AttackServerRpc(aimDir);
-                if (hasHitClient)
+                HashSet<Transform> processed = new HashSet<Transform>();
+                foreach (var hitClient in hits)
                 {
+                    if (hitClient.collider == null || hitClient.collider.transform.root == transform.root) continue;
+                    Transform root = hitClient.collider.transform.root;
+                    if (processed.Contains(root)) continue;
+                    processed.Add(root);
+
                     var netObj = hitClient.collider.GetComponentInParent<NetworkObject>();
                     if (netObj != null)
                     {
                         DamageEnemyServerRpc(netObj);
+                    }
+                    else
+                    {
+                        TryDamageEnemy(hitClient.collider);
                     }
                 }
             }
@@ -2971,6 +2977,15 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         var e5 = col.GetComponentInParent<Enemy5_PhuThuy>();
         if (e5 != null) { e5.TakeDamage(damageAmount); return; }
+
+        var mb = col.GetComponentInParent<MiniBossAI>();
+        if (mb != null) { mb.TakeDamage(damageAmount); return; }
+
+        var fb = col.GetComponentInParent<FinalBossAI>();
+        if (fb != null) { fb.TakeDamage(damageAmount); return; }
+
+        var b = col.GetComponentInParent<BossAI>();
+        if (b != null) { b.TakeDamage(damageAmount); return; }
     }
 
     // ------------------------------------------------------------------
@@ -3023,6 +3038,12 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
                 if (e4 != null) { e4.TakeDamage(damageAmount); return; }
                 var e5 = netObj.GetComponentInChildren<Enemy5_PhuThuy>();
                 if (e5 != null) { e5.TakeDamage(damageAmount); return; }
+                var mb = netObj.GetComponentInChildren<MiniBossAI>();
+                if (mb != null) { mb.TakeDamage(damageAmount); return; }
+                var fb = netObj.GetComponentInChildren<FinalBossAI>();
+                if (fb != null) { fb.TakeDamage(damageAmount); return; }
+                var b = netObj.GetComponentInChildren<BossAI>();
+                if (b != null) { b.TakeDamage(damageAmount); return; }
             }
         }
     }

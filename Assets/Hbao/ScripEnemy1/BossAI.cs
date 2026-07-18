@@ -1539,6 +1539,14 @@ public class BossAI : NetworkBehaviour
                 // Tăng kích thước transform lên to hơn nữa ( earthBlastScale = 5.0f )
                 blast.transform.localScale = Vector3.one * earthBlastScale;
 
+                // Tự động gắn thêm SphereCollider làm trigger vùng gây sát thương va chạm (khớp chính xác với vòng cảnh báo)
+                var col = blast.AddComponent<SphereCollider>();
+                if (col != null)
+                {
+                    col.isTrigger = true;
+                    col.radius = earthBlastRadius / earthBlastScale;
+                }
+
                 // Tự động gắn thêm component gây sát thương va chạm 20 máu khi chạm vào
                 var dmgZone = blast.AddComponent<EarthBlastDamageZone>();
                 dmgZone.damage = 20f;

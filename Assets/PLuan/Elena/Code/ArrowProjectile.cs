@@ -55,7 +55,10 @@ public class ArrowProjectile : NetworkBehaviour
                        other.GetComponentInParent<Enemy2_Zombie>() != null ||
                        other.GetComponentInParent<Enemy3_Buaa>() != null ||
                        other.GetComponentInParent<Enemy4_Bongtoi>() != null ||
-                       other.GetComponentInParent<Enemy5_PhuThuy>() != null;
+                       other.GetComponentInParent<Enemy5_PhuThuy>() != null ||
+                       other.GetComponentInParent<MiniBossAI>() != null ||
+                       other.GetComponentInParent<FinalBossAI>() != null ||
+                       other.GetComponentInParent<BossAI>() != null;
 
         if (isEnemy)
         {
@@ -67,9 +70,9 @@ public class ArrowProjectile : NetworkBehaviour
             }
             hitEnemyRoots.Add(enemyRoot);
 
-            Debug.Log($"[ArrowProjectile] Mũi tên va chạm trúng Enemy: {other.name}, Gây sát thương: {damage}");
+            Debug.Log($"[ArrowProjectile] Mũi tên va chạm trúng Enemy/Boss: {other.name}, Gây sát thương: {damage}");
             
-            // Gây sát thương trực tiếp lên quái vật tùy theo loại script của nó
+            // Gây sát thương trực tiếp lên quái vật/boss tùy theo loại script của nó
             var e1 = other.GetComponentInParent<Enemy1_DapBua>();
             if (e1 != null) { e1.TakeDamage(damage); }
             else
@@ -88,6 +91,21 @@ public class ArrowProjectile : NetworkBehaviour
                         {
                             var e5 = other.GetComponentInParent<Enemy5_PhuThuy>();
                             if (e5 != null) { e5.TakeDamage(damage); }
+                            else
+                            {
+                                var mb = other.GetComponentInParent<MiniBossAI>();
+                                if (mb != null) { mb.TakeDamage(damage); }
+                                else
+                                {
+                                    var fb = other.GetComponentInParent<FinalBossAI>();
+                                    if (fb != null) { fb.TakeDamage(damage); }
+                                    else
+                                    {
+                                        var b = other.GetComponentInParent<BossAI>();
+                                        if (b != null) { b.TakeDamage(damage); }
+                                    }
+                                }
+                            }
                         }
                     }
                 }
