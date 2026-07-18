@@ -516,8 +516,8 @@ public class MiniBossAI : NetworkBehaviour
     {
         stateTimer -= Time.deltaTime;
 
-        // Apply visual and physics movement leap/glide
-        if (isLeaping)
+        // Apply visual and physics movement leap/glide ONLY after the wind-up phase has finished (leapTimer >= 0f)
+        if (isLeaping && leapTimer >= 0f)
         {
             leapTimer += Time.deltaTime;
             float progress = Mathf.Clamp01(leapTimer / currentLeapDuration);
@@ -541,9 +541,14 @@ public class MiniBossAI : NetworkBehaviour
                 if (visualRoot != null) visualRoot.localPosition = Vector3.zero;
             }
         }
+        else if (isLeaping && leapTimer < 0f)
+        {
+            // Just advance the wind-up timer
+            leapTimer += Time.deltaTime;
+        }
 
-        // Rotate face towards target player in first half of attack
-        if (targetPlayer != null && stateTimer > attackConfigs[currentAttackIndex].duration * 0.45f)
+        // Rotate face towards target player ONLY during the wind-up phase (before the actual leap forward starts)
+        if (targetPlayer != null && (!isLeaping || leapTimer < 0f))
         {
             RotateTowards(targetPlayer.position);
         }
@@ -713,6 +718,25 @@ public class MiniBossAI : NetworkBehaviour
         Vector3 eyePos = eyeTransform != null ? eyeTransform.position : transform.position + Vector3.up * 1.5f;
         int raycastMask = obstacleLayer.value & ~LayerMask.GetMask("Player", "Enemy");
 
+        // KHÓA MỤC TIÊU ƯU TIÊN: Nếu đang có mục tiêu và mục tiêu đó vẫn hợp lệ thì tiếp tục dí mục tiêu đó
+        if (targetPlayer != null)
+        {
+            if (!IsPlayerDeadOrInvisible(targetPlayer))
+            {
+                Vector3 targetCenter = targetPlayer.position + Vector3.up * 1.0f;
+                float d = Vector3.Distance(eyePos, targetCenter);
+                float currentSight = IsBossActive ? 50f : sightRange;
+                if (d <= currentSight)
+                {
+                    Vector3 dir = (targetCenter - eyePos).normalized;
+                    if (!Physics.Raycast(eyePos, dir, d, raycastMask, QueryTriggerInteraction.Ignore))
+                    {
+                        return; // Khóa mục tiêu thành công!
+                    }
+                }
+            }
+        }
+
         var activePlayers = GetAllActivePlayers();
         for (int i = 0; i < activePlayers.Count; i++)
         {
@@ -840,6 +864,16 @@ public class MiniBossAI : NetworkBehaviour
         }
     }
 
+    public void FaceTargetImmediately(Vector3 targetPos)
+    {
+        Vector3 dir = (targetPos - transform.position);
+        dir.y = 0;
+        if (dir.sqrMagnitude > 0.01f)
+        {
+            transform.rotation = Quaternion.LookRotation(dir);
+        }
+    }
+
     private void ApplySpeedAnim(float speed)
     {
         if (anim == null || !anim.isActiveAndEnabled || anim.runtimeAnimatorController == null) return;
@@ -923,6 +957,12 @@ public class MiniBossAI : NetworkBehaviour
             }
 
             config = boss.attackConfigs[boss.currentAttackIndex];
+            
+            // Instantly align rotation to face the player at the start of the attack
+            if (boss.targetPlayer != null)
+            {
+                boss.FaceTargetImmediately(boss.targetPlayer.position);
+            }
             
             float animMult = boss.IsPhase2 ? boss.phase2AnimSpeed : 1.0f;
             float speedMult = boss.IsPhase2 ? boss.phase2SpeedMultiplier : 1.0f;

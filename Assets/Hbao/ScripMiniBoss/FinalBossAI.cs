@@ -790,6 +790,25 @@ public class FinalBossAI : NetworkBehaviour
         Vector3 eyePos = eyeTransform != null ? eyeTransform.position : transform.position + Vector3.up * 1.5f;
         int raycastMask = obstacleLayer.value & ~LayerMask.GetMask("Player", "Enemy");
 
+        // KHÓA MỤC TIÊU ƯU TIÊN: Nếu đang có mục tiêu và mục tiêu đó vẫn hợp lệ thì tiếp tục dí mục tiêu đó
+        if (targetPlayer != null)
+        {
+            if (!IsPlayerDeadOrInvisible(targetPlayer))
+            {
+                Vector3 targetCenter = targetPlayer.position + Vector3.up * 1.0f;
+                float d = Vector3.Distance(eyePos, targetCenter);
+                float currentSight = IsBossActive ? 50f : sightRange;
+                if (d <= currentSight)
+                {
+                    Vector3 dir = (targetCenter - eyePos).normalized;
+                    if (!Physics.Raycast(eyePos, dir, d, raycastMask, QueryTriggerInteraction.Ignore))
+                    {
+                        return; // Khóa mục tiêu thành công!
+                    }
+                }
+            }
+        }
+
         var activePlayers = GetAllActivePlayers();
         for (int i = 0; i < activePlayers.Count; i++)
         {

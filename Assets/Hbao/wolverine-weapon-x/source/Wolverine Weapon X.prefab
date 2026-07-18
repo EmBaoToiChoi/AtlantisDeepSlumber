@@ -218,19 +218,19 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: b7835acf007488845ae76dcec8a5e20a, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -88.15776
+      value: 5.73584
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: b7835acf007488845ae76dcec8a5e20a, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 10.122662
+      value: -6.1542892
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: b7835acf007488845ae76dcec8a5e20a, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 24.16
+      value: 105.04425
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: b7835acf007488845ae76dcec8a5e20a, type: 3}
       propertyPath: m_LocalRotation.w
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: b7835acf007488845ae76dcec8a5e20a, type: 3}
       propertyPath: m_LocalRotation.x
@@ -238,7 +238,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: b7835acf007488845ae76dcec8a5e20a, type: 3}
       propertyPath: m_LocalRotation.y
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: b7835acf007488845ae76dcec8a5e20a, type: 3}
       propertyPath: m_LocalRotation.z
@@ -250,7 +250,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: b7835acf007488845ae76dcec8a5e20a, type: 3}
       propertyPath: m_LocalEulerAnglesHint.y
-      value: 0
+      value: 180
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: b7835acf007488845ae76dcec8a5e20a, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
@@ -2494,6 +2494,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: b7835acf007488845ae76dcec8a5e20a, type: 3}
       insertIndex: -1
       addedObject: {fileID: 3021875962106395941}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: b7835acf007488845ae76dcec8a5e20a, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2182706947617206813}
   m_SourcePrefab: {fileID: 100100000, guid: b7835acf007488845ae76dcec8a5e20a, type: 3}
 --- !u!95 &3124430114824042229 stripped
 Animator:
@@ -2570,8 +2573,8 @@ MonoBehaviour:
   ShowTopMostFoldoutHeaderGroup: 1
   bossMiniboss: {fileID: 0}
   miniBoss: {fileID: 0}
-  startActiveWithoutMiniboss: 1
-  maxHealth: 1200
+  startActiveWithoutMiniboss: 0
+  maxHealth: 900
   currentHealth:
     UpdateTraits:
       MinSecondsBetweenUpdates: 0
@@ -2583,6 +2586,11 @@ MonoBehaviour:
       MaxSecondsBetweenUpdates: 0
     m_InternalValue: 0
   isBossActive:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 0
+  isHUDVisible:
     UpdateTraits:
       MinSecondsBetweenUpdates: 0
       MaxSecondsBetweenUpdates: 0
@@ -2652,7 +2660,7 @@ MonoBehaviour:
   walkSpeed: 2.2
   runSpeed: 6
   runDistanceThreshold: 5
-  sightRange: 25
+  sightRange: 76.5
   fieldOfView: 140
   attackRange: 3
   attackCooldown: 2
@@ -2938,6 +2946,85 @@ CapsuleCollider:
   m_Height: 1.8731232
   m_Direction: 1
   m_Center: {x: 0, y: 0.82637376, z: 0}
+--- !u!114 &2182706947617206813
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8572541257309697589}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e9d26389f2cc6cc438a7d3a373fd1426, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  ShowTopMostFoldoutHeaderGroup: 1
+  maxHealth: 300
+  currentHealth:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 100
+  currentState:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 0
+  isEnraged:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 0
+  netSpeed:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 0
+  hitCounter:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 0
+  attackType:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 0
+  agent: {fileID: 0}
+  anim: {fileID: 0}
+  eyeTransform: {fileID: 0}
+  hammerHitbox: {fileID: 0}
+  hammerHitboxLeft: {fileID: 0}
+  hammerHitboxRight: {fileID: 0}
+  waypoints:
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  expGemPrefab: {fileID: 0}
+  expDropAmount: 25
+  expDropPoint: {fileID: 0}
+  repairItemPrefab: {fileID: 0}
+  repairItemDropChance: 0.3
+  sightRange: 15
+  fieldOfView: 90
+  attackRange: 2
+  patrolWalkSpeed: 2.5
+  chaseRunSpeed: 5
+  patrolWaitMin: 1
+  patrolWaitMax: 4
+  patrolMoveChance: 0.7
+  playerLayer:
+    serializedVersion: 2
+    m_Bits: 0
+  obstacleLayer:
+    serializedVersion: 2
+    m_Bits: 0
+  speedParam: Speed
+  hitTrigger: Hit
+  dieTrigger: Die
+  atkLeftTrigger: AttackLeft
+  atkRightTrigger: AttackRight
+  atkComboTrigger: AttackCombo
 --- !u!4 &9171097602343444536 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 392070069175200604, guid: b7835acf007488845ae76dcec8a5e20a, type: 3}

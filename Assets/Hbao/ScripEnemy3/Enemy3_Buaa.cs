@@ -418,10 +418,34 @@ public class Enemy3_Buaa : NetworkBehaviour
     {
         EnemyState s = CurrentStateValue;
         if (s == EnemyState.Dead || s == EnemyState.Stagger || s == EnemyState.Attack) return;
+
+        Vector3 ep = eyeTransform != null ? eyeTransform.position : transform.position + Vector3.up * 1.5f;
+
+        // KHÓA MỤC TIÊU ƯU TIÊN: Nếu đang có mục tiêu và mục tiêu đó vẫn hợp lệ thì tiếp tục dí mục tiêu đó
+        if (targetPlayer != null)
+        {
+            IPlayerHUDTarget ps = targetPlayer.GetComponentInParent<IPlayerHUDTarget>();
+            Skeleton sk = targetPlayer.GetComponentInParent<Skeleton>();
+            bool isTargetDead = (ps != null && (ps.CurrentHealth <= 0 || ps.IsInvisible)) || (sk != null && sk.CurrentHealthValue <= 0);
+            if ((ps != null || sk != null) && !isTargetDead)
+            {
+                Vector3 center = targetPlayer.position + Vector3.up;
+                float d = Vector3.Distance(ep, center);
+                if (d <= sightRange)
+                {
+                    Vector3 dir = (center - ep).normalized;
+                    if (!Physics.Raycast(ep, dir, d, obstacleLayer))
+                    {
+                        if (s != EnemyState.Chase) ChangeState(EnemyState.Chase);
+                        return; // Khóa mục tiêu thành công!
+                    }
+                }
+            }
+        }
+
         int num = Physics.OverlapSphereNonAlloc(transform.position, sightRange, detectionResults, playerLayer);
         if (num == 0) num = FallbackDetect();
         bool found = false; Transform closest = null; float minD = float.MaxValue;
-        Vector3 ep = eyeTransform != null ? eyeTransform.position : transform.position + Vector3.up * 1.5f;
         for (int i = 0; i < num; i++) { if (detectionResults[i] == null) continue; Transform pt = detectionResults[i].transform; IPlayerHUDTarget ps = pt.GetComponentInParent<IPlayerHUDTarget>(); Skeleton sk = pt.GetComponentInParent<Skeleton>(); bool isTargetDead = (ps != null && (ps.CurrentHealth <= 0 || ps.IsInvisible)) || (sk != null && sk.CurrentHealthValue <= 0); if ((ps == null && sk == null) || isTargetDead) continue; Vector3 center = pt.position + Vector3.up; float d = Vector3.Distance(ep, center); Vector3 dir = (center - ep).normalized; bool inFOV = Vector3.Angle(transform.forward, dir) < fieldOfView / 2f; if ((inFOV || pt == targetPlayer) && !Physics.Raycast(ep, dir, d, obstacleLayer)) { if (d < minD) { minD = d; closest = pt; found = true; } } }
         if (found && closest != null) { targetPlayer = closest; if (s != EnemyState.Chase) ChangeState(EnemyState.Chase); } else if (s == EnemyState.Chase) ReturnToPatrol();
     }
