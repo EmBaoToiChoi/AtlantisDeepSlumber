@@ -3463,6 +3463,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         }
         if (anim != null)
         {
+            anim.applyRootMotion = false; // Tắt root motion mặc định để tránh ghi đè tốc độ di chuyển của code và lệch góc xoay
             GetRootMotionBridge();
             if (anim.layerCount > 1)
             {
@@ -4476,7 +4477,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             currentAttackAnimDuration = GetAnimationClipLength("ChatRiu");
             if (currentAttackAnimDuration <= 0f) currentAttackAnimDuration = 0.8f;
 
-            if (anim != null) anim.applyRootMotion = isRootedAttack;
+            if (anim != null) anim.applyRootMotion = false;
             PlayAnimation(animToPlay, 0.05f, false, isRootedAttack);
         }
         else if (weapon == 2)
@@ -4498,7 +4499,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             else if (comboStep == 5) currentAttackAnimDuration = slash3combo2Duration;
             else currentAttackAnimDuration = slashAnimDuration;
 
-            if (anim != null) anim.applyRootMotion = isRootedAttack;
+            if (anim != null) anim.applyRootMotion = false;
             PlayAnimation(animToPlay, 0.05f, false, isRootedAttack);
         }
         else
