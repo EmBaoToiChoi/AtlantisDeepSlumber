@@ -205,11 +205,13 @@ public class PlayerCheckpointManager : NetworkBehaviour
             {
                 localPlayerDeathTime = Time.time;
                 hasLocalPlayerDied = true;
+                Debug.Log($"[Checkpoint Debug] Standalone Local Player DIED. Death time: {localPlayerDeathTime}");
             }
 
             bool timeOut = (Time.time - localPlayerDeathTime) > 6f;
             if ((localPlayer.IsDeathAnimationFinished || timeOut) && !localPlayerRespawning)
             {
+                Debug.Log($"[Checkpoint Debug] Triggering Respawn. IsDeathAnimationFinished={localPlayer.IsDeathAnimationFinished}, timeOut={timeOut}");
                 StartCoroutine(RespawnPlayerStandaloneCoroutine(localPlayer));
             }
         }
@@ -244,15 +246,18 @@ public class PlayerCheckpointManager : NetworkBehaviour
         // Dịch chuyển người chơi và triệt tiêu vận tốc vật lý
         player.transform.position = spawnPos;
         ResetRigidbodyVelocity(player.gameObject);
+        Debug.Log($"[Checkpoint Debug] Teleported player to {spawnPos}");
 
         // Hồi máu đầy và reset trạng thái hoạt ảnh
         HealAndResetPlayer(player);
+        Debug.Log($"[Checkpoint Debug] HealAndResetPlayer completed");
 
         // Chờ thêm 1 frame để camera cập nhật vị trí mới theo player trước khi mở mắt
         yield return null;
 
         // Mở mắt (ResetDeathEffect)
         PlayerDeathEffectManager.Instance.ResetDeathEffect();
+        Debug.Log($"[Checkpoint Debug] ResetDeathEffect called. Eyes opened.");
 
         localPlayerRespawning = false;
         Debug.Log($"[Standalone Respawn] Hồi sinh hoàn tất cho '{player.DisplayName}' tại: {spawnPos}");
@@ -583,69 +588,76 @@ public class PlayerCheckpointManager : NetworkBehaviour
         foreach (var script in scripts)
         {
             if (script == null) continue;
-            string typeName = script.GetType().Name;
-
-            if (script is SimplePlayerTest || script is LeoPlayer || script is ArthurPlayer || 
-                script is ElenaPlayer || script is MayaPlayer || typeName.EndsWith("Player"))
+            try
             {
-                // 1. Lấy lượng máu tối đa (maxHealth)
-                float maxHp = 100f;
-                FieldInfo maxHealthField = GetFieldInherited(script.GetType(), "maxHealth", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-                if (maxHealthField != null)
-                {
-                    maxHp = (float)maxHealthField.GetValue(script);
-                }
+                string typeName = script.GetType().Name;
 
-                // 2. Kiểm tra chế độ Standalone
-                bool isStandalone = false;
-                FieldInfo standaloneField = GetFieldInherited(script.GetType(), "isStandaloneMode", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-                if (standaloneField != null)
+                if (script is SimplePlayerTest || script is LeoPlayer || script is ArthurPlayer || 
+                    script is ElenaPlayer || script is MayaPlayer || typeName.EndsWith("Player"))
                 {
-                    isStandalone = (bool)standaloneField.GetValue(script);
-                }
-                else
-                {
-                    PropertyInfo standaloneProp = GetPropertyInherited(script.GetType(), "IsStandaloneMode", BindingFlags.Public | BindingFlags.Instance);
-                    if (standaloneProp != null)
+                    // 1. Lấy lượng máu tối đa (maxHealth)
+                    float maxHp = 100f;
+                    FieldInfo maxHealthField = GetFieldInherited(script.GetType(), "maxHealth", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+                    if (maxHealthField != null)
                     {
-                        isStandalone = (bool)standaloneProp.GetValue(script);
-                    }
-                }
-
-                // 3. Gán máu về tối đa
-                if (isStandalone)
-                {
-                    FieldInfo localHealthField = GetFieldInherited(script.GetType(), "localHealth", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-                    if (localHealthField != null)
-                    {
-                        localHealthField.SetValue(script, maxHp);
+                        maxHp = (float)maxHealthField.GetValue(script);
                     }
 
-                    MethodInfo updateHudMethod = GetMethodInherited(script.GetType(), "UpdateHealthHUD", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-                    if (updateHudMethod != null)
+                    // 2. Kiểm tra chế độ Standalone
+                    bool isStandalone = false;
+                    FieldInfo standaloneField = GetFieldInherited(script.GetType(), "isStandaloneMode", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+                    if (standaloneField != null)
                     {
-                        updateHudMethod.Invoke(script, new object[] { maxHp });
+                        isStandalone = (bool)standaloneField.GetValue(script);
                     }
-                }
-                else if (IsServer)
-                {
-                    FieldInfo currentHealthField = GetFieldInherited(script.GetType(), "currentHealth", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-                    if (currentHealthField != null)
+                    else
                     {
-                        object netVarObj = currentHealthField.GetValue(script);
-                        if (netVarObj != null)
+                        PropertyInfo standaloneProp = GetPropertyInherited(script.GetType(), "IsStandaloneMode", BindingFlags.Public | BindingFlags.Instance);
+                        if (standaloneProp != null)
                         {
-                            PropertyInfo valueProp = netVarObj.GetType().GetProperty("Value");
-                            if (valueProp != null)
+                            isStandalone = (bool)standaloneProp.GetValue(script);
+                        }
+                    }
+
+                    // 3. Gán máu về tối đa
+                    if (isStandalone)
+                    {
+                        FieldInfo localHealthField = GetFieldInherited(script.GetType(), "localHealth", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+                        if (localHealthField != null)
+                        {
+                            localHealthField.SetValue(script, maxHp);
+                        }
+
+                        MethodInfo updateHudMethod = GetMethodInherited(script.GetType(), "UpdateHealthHUD", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+                        if (updateHudMethod != null)
+                        {
+                            updateHudMethod.Invoke(script, new object[] { maxHp });
+                        }
+                    }
+                    else if (IsServer)
+                    {
+                        FieldInfo currentHealthField = GetFieldInherited(script.GetType(), "currentHealth", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+                        if (currentHealthField != null)
+                        {
+                            object netVarObj = currentHealthField.GetValue(script);
+                            if (netVarObj != null)
                             {
-                                valueProp.SetValue(netVarObj, maxHp);
+                                PropertyInfo valueProp = netVarObj.GetType().GetProperty("Value");
+                                if (valueProp != null)
+                                {
+                                    valueProp.SetValue(netVarObj, maxHp);
+                                }
                             }
                         }
                     }
-                }
 
-                // 4. Reset hoạt ảnh về Idle
-                InvokePlayAnimationInherited(script, "Idle", 0.15f);
+                    // 4. Reset hoạt ảnh về Idle
+                    InvokePlayAnimationInherited(script, "Idle", 0.15f);
+                }
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogError($"[PlayerCheckpointManager] Error resetting script {script.GetType().Name}: {ex}");
             }
         }
 

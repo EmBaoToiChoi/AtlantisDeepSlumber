@@ -25,7 +25,15 @@ public class RollAnimationEventHelper : MonoBehaviour
             }
             if (player == null)
             {
+                player = transform.root.GetComponentInChildren<LeoPlayer>(true);
+            }
+            if (player == null)
+            {
                 Debug.LogError("[RollAnimationEventHelper] LỖI: Không tìm thấy component LeoPlayer ở các Object cha hoặc con!");
+            }
+            else
+            {
+                Debug.Log($"[RollAnimationEventHelper] Đã tìm thấy LeoPlayer thành công: {player.name}");
             }
         }
     }
