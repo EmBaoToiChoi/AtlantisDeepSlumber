@@ -73,7 +73,7 @@ public class MiniBossAI : NetworkBehaviour
         set { if (isStandaloneMode) localState = value; else currentState.Value = value; }
     }
 
-    public float ActualCurrentHealth => (isStandaloneMode || !IsSpawned) ? localHealth : currentHealth.Value;
+    public float ActualCurrentHealth => (isStandaloneMode || !IsSpawned || !IsServer) ? localHealth : currentHealth.Value;
     public bool IsBossActive => isStandaloneMode ? localIsBossActive : isBossActive.Value;
     public bool IsDead => CurrentStateValue == MiniBossState.Dead;
 

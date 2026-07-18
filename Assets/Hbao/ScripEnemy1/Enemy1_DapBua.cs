@@ -73,13 +73,7 @@ public class Enemy1_DapBua : NetworkBehaviour
         }
     }
     /// <summary>HP hiện tại đúng trong cả Standalone lẫn Network mode — dùng cho HP bar polling.</summary>
-    public float ActualCurrentHealth
-    {
-        get
-        {
-            return (isStandaloneMode || !IsSpawned) ? localHealth : currentHealth.Value;
-        }
-    }
+    public float ActualCurrentHealth => (isStandaloneMode || !IsSpawned || !IsServer) ? localHealth : currentHealth.Value;
 
     // ─── Components ────────────────────────────────────────────
     [Header("Components")]
