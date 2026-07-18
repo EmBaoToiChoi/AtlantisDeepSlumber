@@ -1748,6 +1748,15 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
 
         var e5 = col.GetComponentInParent<Enemy5_PhuThuy>();
         if (e5 != null) { e5.TakeDamage(damageAmount); return; }
+
+        var mb = col.GetComponentInParent<MiniBossAI>();
+        if (mb != null) { mb.TakeDamage(damageAmount); return; }
+
+        var fb = col.GetComponentInParent<FinalBossAI>();
+        if (fb != null) { fb.TakeDamage(damageAmount); return; }
+
+        var b = col.GetComponentInParent<BossAI>();
+        if (b != null) { b.TakeDamage(damageAmount); return; }
     }
 
     // ------------------------------------------------------------------
