@@ -91,6 +91,29 @@ public class FinalBossHealthBar : MonoBehaviour
         UpdateHPBars(curHp, maxHp);
     }
 
+    public void HideUI()
+    {
+        if (rootContainer != null)
+        {
+            rootContainer.style.display = DisplayStyle.None;
+        }
+    }
+
+    private void HidePreviousBossHUDs()
+    {
+        var silasHUDs = FindObjectsByType<BossHealthBar>(FindObjectsSortMode.None);
+        foreach (var hud in silasHUDs)
+        {
+            if (hud != null) hud.HideUI();
+        }
+
+        var rakanHUDs = FindObjectsByType<MiniBossHealthBar>(FindObjectsSortMode.None);
+        foreach (var hud in rakanHUDs)
+        {
+            if (hud != null) hud.HideUI();
+        }
+    }
+
     private void Update()
     {
         if (boss == null)
@@ -98,7 +121,7 @@ public class FinalBossHealthBar : MonoBehaviour
             boss = FindFirstObjectByType<FinalBossAI>();
             if (boss == null)
             {
-                if (rootContainer != null) rootContainer.style.display = DisplayStyle.None;
+                HideUI();
                 return;
             }
             InitBossHealthAndName();
@@ -107,10 +130,7 @@ public class FinalBossHealthBar : MonoBehaviour
         // Hide UI if boss is dead or HUD is not visible
         if (boss.IsDead || !boss.IsHUDVisible)
         {
-            if (rootContainer != null && rootContainer.style.display != DisplayStyle.None)
-            {
-                rootContainer.style.display = DisplayStyle.None;
-            }
+            HideUI();
             return;
         }
 
@@ -119,6 +139,9 @@ public class FinalBossHealthBar : MonoBehaviour
         {
             rootContainer.style.display = DisplayStyle.Flex;
         }
+
+        // Force hide previous boss HUDs (Silas & Rakan) to prevent overlapping
+        HidePreviousBossHUDs();
 
         // Update shake timers
         if (shakeTimer > 0f)

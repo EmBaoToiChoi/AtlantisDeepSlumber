@@ -222,11 +222,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: b7835acf007488845ae76dcec8a5e20a, type: 3}
       propertyPath: m_LocalPosition.y
-      value: -6.1542892
+      value: -5.17
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: b7835acf007488845ae76dcec8a5e20a, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 105.04425
+      value: 157.6
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: b7835acf007488845ae76dcec8a5e20a, type: 3}
       propertyPath: m_LocalRotation.w
@@ -2645,6 +2645,21 @@ MonoBehaviour:
       MinSecondsBetweenUpdates: 0
       MaxSecondsBetweenUpdates: 0
     m_InternalValue: 0
+  growCounter:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 0
+  swordRainCounter:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 0
+  fireBarrageCounter:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 0
   agent: {fileID: 1678383650614655758}
   anim: {fileID: 3124430114824042229}
   visualRoot: {fileID: 6460684099497095113}
@@ -2657,10 +2672,36 @@ MonoBehaviour:
   landingSlamKnockback: 18
   landingSlamVFX: {fileID: 0}
   landingSlamSFX: {fileID: 0}
+  growDuration: 3
+  growScaleMultiplier: 1.4
+  growTriggerParam: Shockwave
+  growVFX: {fileID: 0}
+  growSFX: {fileID: 0}
+  swordPrefab: {fileID: 8449004803641222730, guid: 5cdf1ac831646004288735c99ac51e4a, type: 3}
+  warningDecalPrefab: {fileID: 7883966873594125846, guid: 6aeee1ac8b24a1e45baedae4f3b12b52, type: 3}
+  swordImpactVFX: {fileID: 2427901435903505602, guid: 8a915dbbc4b23bf4f931629039cfbf6f, type: 3}
+  swordImpactSFX: {fileID: 0}
+  swordRainDuration: 10
+  swordSpawnInterval: 0.4
+  warningDuration: 1.5
+  swordDropSpeed: 35
+  swordDamage: 5
+  swordImpactRadius: 2
+  swordRainTriggerParam: AttackCombo
+  fireBarragePrefab: {fileID: 2883180979609552342, guid: da5df83ad7870f44bbe3cacedd92be63, type: 3}
+  fireBarrageImpactVFX: {fileID: 0}
+  fireBarrageImpactSFX: {fileID: 0}
+  fireBarrageDuration: 6
+  fireBarrageInterval: 0.5
+  fireBarrageWarningDuration: 0.7
+  fireBarrageDropSpeed: 30
+  fireBarrageDamage: 20
+  fireBarrageImpactRadius: 2.5
+  fireBarrageTriggerParam: AttackCombo
   walkSpeed: 2.2
   runSpeed: 6
   runDistanceThreshold: 5
-  sightRange: 76.5
+  sightRange: 166.32
   fieldOfView: 140
   attackRange: 3
   attackCooldown: 2
@@ -2683,13 +2724,6 @@ MonoBehaviour:
   fireSpewVFX: {fileID: 6531319713837899222, guid: 3ecc26f6d4062be44b0a099e114ff00c, type: 3}
   fireSpewSFX: {fileID: 0}
   fireSpewTriggerParam: FireSpew
-  warningDecalPrefab: {fileID: 7883966873594125846, guid: 6aeee1ac8b24a1e45baedae4f3b12b52, type: 3}
-  earthBlastPrefab: {fileID: 7907260701345176331, guid: d901313d00610f14981ccc932d3d95f7, type: 3}
-  warningDuration: 1.5
-  earthBlastRadius: 3
-  earthBlastDamage: 50
-  earthBlastKnockback: 15
-  earthSummonTriggerParam: EarthSummon
   leftHandBase: {fileID: 7812698304109883653}
   leftHandTip: {fileID: 4203785077346276878}
   rightHandBase: {fileID: 3663721840516115787}
@@ -2834,6 +2868,13 @@ MonoBehaviour:
     TriggerNameHash: -961592120
     TransitionIndex: 5
   - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: -453240694
+    DestinationState: 154612646
+    TransitionDuration: 0.1
+    TriggerNameHash: 1549738351
+    TransitionIndex: 6
+  - IsCrossFadeExit: 0
     Layer: 1
     OriginatingState: -499022955
     DestinationState: 1248065335
@@ -2898,6 +2939,10 @@ MonoBehaviour:
       ParameterType: 9
     - name: EarthSummon
       NameHash: -961592120
+      Synchronize: 1
+      ParameterType: 9
+    - name: AttackCombo
+      NameHash: 1549738351
       Synchronize: 1
       ParameterType: 9
   AnimatorParametersExpanded: 0

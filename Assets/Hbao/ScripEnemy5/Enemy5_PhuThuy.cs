@@ -487,12 +487,23 @@ public class Enemy5_PhuThuy : NetworkBehaviour
 
     public void TakeDamage(float damage)
     {
-        if (!isStandaloneMode && (!IsServer || CurrentStateValue == EnemyState.Dead)) return;
-        if (isStandaloneMode && CurrentStateValue == EnemyState.Dead) return;
-        CurrentHealthValue -= damage;
-        if (isStandaloneMode) EnemyDamageEffectHelper.PlayDamageEffects(gameObject, damage);
-        if (!isStandaloneMode) hitCounter.Value++; else if (anim != null) anim.SetTrigger(hitTrigger);
-        if (CurrentHealthValue <= 0) { ChangeState(EnemyState.Dead); return; }
+        if (CurrentStateValue == EnemyState.Dead) return;
+
+        localHealth -= damage;
+        if (!isStandaloneMode && IsSpawned && IsServer)
+        {
+            currentHealth.Value -= damage;
+            hitCounter.Value++;
+        }
+        else if (anim != null)
+        {
+            anim.SetTrigger(hitTrigger);
+        }
+
+        EnemyDamageEffectHelper.PlayDamageEffects(gameObject, damage);
+
+        float activeHp = isStandaloneMode ? localHealth : (IsSpawned && IsServer ? currentHealth.Value : localHealth);
+        if (activeHp <= 0 || localHealth <= 0) { ChangeState(EnemyState.Dead); return; }
         float now = Time.time; if (now - lastDamageTime > 3f) recentHitCount = 0; recentHitCount++; lastDamageTime = now;
         if ((damage >= 22f || recentHitCount >= 3) && CurrentStateValue != EnemyState.Stagger) { recentHitCount = 0; staggerTimer = 0.5f; ChangeState(EnemyState.Stagger); }
         else if (!isBlinking && Random.value < 0.35f && CurrentStateValue == EnemyState.Chase) ExecuteBlinkDodge();
