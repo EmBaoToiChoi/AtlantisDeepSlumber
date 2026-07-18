@@ -184,8 +184,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  GlobalObjectIdHash: 2404185414
-  InScenePlacedSourceGlobalObjectIdHash: 0
+  GlobalObjectIdHash: 3003380951
+  InScenePlacedSourceGlobalObjectIdHash: 2404185414
   DeferredDespawnTick: 0
   Ownership: 1
   AlwaysReplicateAsRoot: 0
@@ -239,7 +239,7 @@ MonoBehaviour:
   - {fileID: 0}
   - {fileID: 0}
   - {fileID: 0}
-  spellProjectilePrefab: {fileID: 5232337845423497240, guid: ef0d7d76dcf3f1c428721a201b8f90a3, type: 3}
+  spellProjectilePrefab: {fileID: 2883180979609552342, guid: fc1b06f88f3a91444b1ec370e0274ce3, type: 3}
   spellSpeed: 12
   spellDamage: 20
   expGemPrefab: {fileID: 7388330026054526502, guid: b6f0bcc3b9d52f840a55991f2dbef13f, type: 3}
