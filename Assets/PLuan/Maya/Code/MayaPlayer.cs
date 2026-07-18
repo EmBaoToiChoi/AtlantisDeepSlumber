@@ -40,7 +40,10 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
                 playerAudioSource = sfxObj.AddComponent<AudioSource>();
             }
         }
-        playerAudioSource.spatialBlend = 0.0f; // 2D Sound for absolute audibility
+        playerAudioSource.spatialBlend = 1.0f; // 3D Sound for distance attenuation
+        playerAudioSource.minDistance = 2.0f;
+        playerAudioSource.maxDistance = 25.0f;
+        playerAudioSource.rolloffMode = AudioRolloffMode.Linear;
         playerAudioSource.playOnAwake = false;
         playerAudioSource.mute = false;
         playerAudioSource.volume = 1.0f;
@@ -105,6 +108,7 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
     public float runSpeedMultiplier = 2.0f;
     public float damageAmount = 20f;
     public float attackRange = 3f;
+    private List<Transform> alreadyHitEnemies = new List<Transform>();
 
     [Header("Combo Attack Settings")]
     public float comboWindow = 1.5f;
@@ -2862,6 +2866,7 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
             PlayAnimation(animToPlay, 0.05f, false, isRootedAttack);
         }
 
+        alreadyHitEnemies.Clear();
         PerformMeleeRaycastAttack();
         StartCoroutine(DelayedRaycastAttackCoroutine(0.15f));
     }
@@ -2889,16 +2894,15 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
         float range = Mathf.Max(attackRange, 3.0f);
         RaycastHit[] hits = Physics.SphereCastAll(rayStartClient, 1.2f, aimDir, range);
 
-        HashSet<Transform> processed = new HashSet<Transform>();
         foreach (var hitClient in hits)
         {
             if (hitClient.collider == null || hitClient.collider.transform.root == transform.root) continue;
             Transform root = hitClient.collider.transform.root;
-            if (processed.Contains(root)) continue;
-            processed.Add(root);
+            if (alreadyHitEnemies.Contains(root)) continue;
 
             if (IsEnemy(hitClient.collider, out Collider enemyCollider))
             {
+                alreadyHitEnemies.Add(root);
                 var netObj = enemyCollider.transform.root.GetComponent<NetworkObject>() ?? enemyCollider.GetComponentInParent<NetworkObject>() ?? enemyCollider.GetComponentInChildren<NetworkObject>();
 
                 if (!isStandaloneMode && IsSpawned && netObj != null)
@@ -2912,6 +2916,7 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
             }
             else
             {
+                alreadyHitEnemies.Add(root);
                 // Chém cây gỗ (ChoppableTree) cho Maya
                 ChoppableTree tree = hitClient.collider.GetComponentInParent<ChoppableTree>() ?? hitClient.collider.transform.root.GetComponentInChildren<ChoppableTree>();
                 if (tree == null)
@@ -3756,18 +3761,23 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
     private void PlayAnimationLocal(string animName, float fadeTime, bool isRooted)
     {
         // Play action sound effects
+        string animLower = animName.ToLower();
+        bool isSlash = animLower.Contains("attack") || animLower.Contains("slash") || animLower.Contains("chem") || animLower.Contains("chatriu") || animName == "Shooting";
+        bool isPunch = animLower.Contains("punch") || animLower.Contains("dam");
+
         if (animName == "Shooting")
         {
             PlayPlayerSFX(skillRClip); // Water projectile
         }
-        else if (animName.StartsWith("Dam"))
+        else if (isSlash && !isPunch)
+        {
+            AudioClip swingClip = Resources.Load<AudioClip>("Audio/ChemChuaHit");
+            PlayPlayerSFX(swingClip, 0.8f);
+        }
+        else if (isPunch)
         {
             AudioClip punchClip = Resources.Load<AudioClip>("Audio/Punch");
             PlayPlayerSFX(punchClip);
-        }
-        else if (animName == "ChatRiu" || animName.StartsWith("Chem"))
-        {
-            PlayPlayerSFX(attackClip, 0.8f);
         }
         else if (animName == "Death")
         {

@@ -40,7 +40,10 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
                 playerAudioSource = sfxObj.AddComponent<AudioSource>();
             }
         }
-        playerAudioSource.spatialBlend = 0.0f; // 2D Sound for absolute audibility
+        playerAudioSource.spatialBlend = 1.0f; // 3D Sound for distance attenuation
+        playerAudioSource.minDistance = 2.0f;
+        playerAudioSource.maxDistance = 25.0f;
+        playerAudioSource.rolloffMode = AudioRolloffMode.Linear;
         playerAudioSource.playOnAwake = false;
         playerAudioSource.mute = false;
         playerAudioSource.volume = 1.0f;
@@ -107,6 +110,7 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
     public float runSpeedMultiplier = 2.0f;
     public float damageAmount = 20f;
     public float attackRange = 3f;
+    private List<Transform> alreadyHitEnemies = new List<Transform>();
 
     [Header("Combo Attack Settings")]
     public float comboWindow = 1.5f;
@@ -2763,6 +2767,7 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
             PlayAnimation(animToPlay, 0.05f, false, isRootedAttack);
         }
 
+        alreadyHitEnemies.Clear();
         PerformMeleeRaycastAttack();
         StartCoroutine(DelayedRaycastAttackCoroutine(0.15f));
     }
@@ -2790,16 +2795,15 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
         float range = Mathf.Max(attackRange, 3.0f);
         RaycastHit[] hits = Physics.SphereCastAll(rayStartClient, 1.2f, aimDir, range);
 
-        HashSet<Transform> processed = new HashSet<Transform>();
         foreach (var hitClient in hits)
         {
             if (hitClient.collider == null || hitClient.collider.transform.root == transform.root) continue;
             Transform root = hitClient.collider.transform.root;
-            if (processed.Contains(root)) continue;
-            processed.Add(root);
+            if (alreadyHitEnemies.Contains(root)) continue;
 
             if (IsEnemy(hitClient.collider, out Collider enemyCollider))
             {
+                alreadyHitEnemies.Add(root);
                 var netObj = enemyCollider.transform.root.GetComponent<NetworkObject>() ?? enemyCollider.GetComponentInParent<NetworkObject>() ?? enemyCollider.GetComponentInChildren<NetworkObject>();
 
                 if (!isStandaloneMode && IsSpawned && netObj != null)
@@ -2813,6 +2817,7 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
             }
             else
             {
+                alreadyHitEnemies.Add(root);
                 // Chém cây gỗ (ChoppableTree) cho Elena
                 ChoppableTree tree = hitClient.collider.GetComponentInParent<ChoppableTree>() ?? hitClient.collider.transform.root.GetComponentInChildren<ChoppableTree>();
                 if (tree == null)
