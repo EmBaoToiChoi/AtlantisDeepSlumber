@@ -73,7 +73,7 @@ public class MiniBossAI : NetworkBehaviour
         set { if (isStandaloneMode) localState = value; else currentState.Value = value; }
     }
 
-    public float ActualCurrentHealth => (isStandaloneMode || !IsSpawned || !IsServer) ? localHealth : currentHealth.Value;
+    public float ActualCurrentHealth => (isStandaloneMode || !IsSpawned) ? localHealth : currentHealth.Value;
     public bool IsBossActive => isStandaloneMode ? localIsBossActive : isBossActive.Value;
     public bool IsDead => CurrentStateValue == MiniBossState.Dead;
 
@@ -280,6 +280,7 @@ public class MiniBossAI : NetworkBehaviour
 
     private void OnHealthNetChanged(float oldVal, float newVal)
     {
+        localHealth = newVal;
         float diff = oldVal - newVal;
         if (diff > 0)
         {
@@ -313,6 +314,9 @@ public class MiniBossAI : NetworkBehaviour
         }
 
         EnemyDamageEffectHelper.PlayDamageEffects(gameObject, damage);
+
+        bool isAuth = isStandaloneMode || (IsSpawned && IsServer) || !IsSpawned;
+        if (!isAuth) return;
 
         float activeHp = ActualCurrentHealth;
         if (activeHp <= 0f)

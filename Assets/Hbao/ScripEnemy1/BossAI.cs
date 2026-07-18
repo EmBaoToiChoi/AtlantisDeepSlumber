@@ -123,7 +123,7 @@ public class BossAI : NetworkBehaviour
     public bool IsDead => CurrentStateValue == BossState.Dead;
 
     /// <summary>HP hiện tại đúng trong cả Standalone lẫn Network mode — dùng cho HP bar polling.</summary>
-    public float ActualCurrentHealth => (isStandaloneMode || !IsSpawned || !IsServer) ? localHealth : currentHealth.Value;
+    public float ActualCurrentHealth => (isStandaloneMode || !IsSpawned) ? localHealth : currentHealth.Value;
 
     public void ActivateBoss()
     {
@@ -357,6 +357,7 @@ public class BossAI : NetworkBehaviour
 
     private void OnHealthNetChanged(float oldVal, float newVal)
     {
+        localHealth = newVal;
         float diff = oldVal - newVal;
         if (diff > 0)
         {
@@ -1066,6 +1067,9 @@ public class BossAI : NetworkBehaviour
         }
 
         EnemyDamageEffectHelper.PlayDamageEffects(gameObject, damage);
+
+        bool isAuth = isStandaloneMode || (IsSpawned && IsServer) || !IsSpawned;
+        if (!isAuth) return;
 
         float activeHp = ActualCurrentHealth;
 

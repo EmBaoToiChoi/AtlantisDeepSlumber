@@ -73,7 +73,7 @@ public class Enemy1_DapBua : NetworkBehaviour
         }
     }
     /// <summary>HP hiện tại đúng trong cả Standalone lẫn Network mode — dùng cho HP bar polling.</summary>
-    public float ActualCurrentHealth => (isStandaloneMode || !IsSpawned || !IsServer) ? localHealth : currentHealth.Value;
+    public float ActualCurrentHealth => (isStandaloneMode || !IsSpawned) ? localHealth : currentHealth.Value;
 
     // ─── Components ────────────────────────────────────────────
     [Header("Components")]
@@ -291,6 +291,7 @@ public class Enemy1_DapBua : NetworkBehaviour
 
     private void OnHealthNetChanged(float oldVal, float newVal)
     {
+        localHealth = newVal;
         float diff = oldVal - newVal;
         if (diff > 0)
         {
@@ -790,6 +791,9 @@ public class Enemy1_DapBua : NetworkBehaviour
         }
 
         EnemyDamageEffectHelper.PlayDamageEffects(gameObject, damage);
+
+        bool isAuth = isStandaloneMode || (IsSpawned && IsServer) || !IsSpawned;
+        if (!isAuth) return;
 
         float activeHp = ActualCurrentHealth;
         if (activeHp <= 0f) { ChangeState(EnemyState.Dead); return; }
