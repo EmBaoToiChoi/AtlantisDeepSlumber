@@ -77,7 +77,7 @@ public class VideoCutsceneController : NetworkBehaviour
         FinishCutsceneClientRpc();
     }
 
-    [ClientRpc]
+[ClientRpc]
     private void TeleportToSafeZoneClientRpc(ulong[] mappedClientIds)
     {
         var localClientId = NetworkManager.Singleton.LocalClientId;
@@ -85,7 +85,6 @@ public class VideoCutsceneController : NetworkBehaviour
 
         if (localPlayer != null && safeZone != null)
         {
-            // Kiểm tra xem người chơi này có nằm trong danh sách được dịch chuyển không
             bool isTarget = false;
             foreach (var id in mappedClientIds)
             {
@@ -94,22 +93,12 @@ public class VideoCutsceneController : NetworkBehaviour
 
             if (isTarget)
             {
-                var charCtrl = localPlayer.GetComponent<CharacterController>();
-                if (charCtrl != null) charCtrl.enabled = false;
-
-                var navAgent = localPlayer.GetComponent<UnityEngine.AI.NavMeshAgent>();
-                if (navAgent != null) navAgent.enabled = false;
-
-                // Dịch chuyển "tạm" lên Safe Zone
-                localPlayer.transform.position = safeZone.position;
-
-                if (charCtrl != null) charCtrl.enabled = true;
-                if (navAgent != null) navAgent.enabled = true;
+                // Dùng Coroutine để ép dịch chuyển an toàn cho máy yếu
+                StartCoroutine(ForceTeleportRoutine(localPlayer.gameObject, safeZone.position, safeZone.rotation));
             }
         }
     }
 
-    // Lệnh này được phát cho TẤT CẢ client cùng 1 lúc, máy ai người nấy tự xử lý
     [ClientRpc]
     private void TeleportAllPlayersClientRpc(ulong[] mappedClientIds)
     {
@@ -118,7 +107,6 @@ public class VideoCutsceneController : NetworkBehaviour
 
         if (localPlayer != null)
         {
-            // Tìm xem mình được phân vào vị trí Spot số mấy
             int mySpotIndex = -1;
             for (int i = 0; i < mappedClientIds.Length; i++)
             {
@@ -129,25 +117,41 @@ public class VideoCutsceneController : NetworkBehaviour
                 }
             }
 
-            // Nếu tìm thấy vị trí hợp lệ thì tiến hành dịch chuyển
             if (mySpotIndex >= 0 && mySpotIndex < playerSpots.Count)
             {
-                var charCtrl = localPlayer.GetComponent<CharacterController>();
-                if (charCtrl != null) charCtrl.enabled = false;
-
-                var navAgent = localPlayer.GetComponent<UnityEngine.AI.NavMeshAgent>();
-                if (navAgent != null) navAgent.enabled = false;
-
-                // Dịch chuyển đến cái bục (Spot) tương ứng
-                localPlayer.transform.position = playerSpots[mySpotIndex].position;
-                localPlayer.transform.rotation = playerSpots[mySpotIndex].rotation;
-
-                if (charCtrl != null) charCtrl.enabled = true;
-                if (navAgent != null) navAgent.enabled = true;
-                
+                // Dùng Coroutine để ép dịch chuyển an toàn cho máy yếu
+                StartCoroutine(ForceTeleportRoutine(localPlayer.gameObject, playerSpots[mySpotIndex].position, playerSpots[mySpotIndex].rotation));
                 Debug.Log($"[VideoCutscene] Client {localClientId} tự dịch chuyển ngầm vào Spot {mySpotIndex}");
             }
         }
+    }
+
+    // [THÊM HÀM NÀY VÀO]: Hàm chuyên dụng để trị máy yếu không chịu dịch chuyển
+    private System.Collections.IEnumerator ForceTeleportRoutine(GameObject playerObj, Vector3 targetPos, Quaternion targetRot)
+    {
+        var charCtrl = playerObj.GetComponent<CharacterController>();
+        var navAgent = playerObj.GetComponent<UnityEngine.AI.NavMeshAgent>();
+
+        // 1. Tắt điều khiển
+        if (charCtrl != null) charCtrl.enabled = false;
+        if (navAgent != null) navAgent.enabled = false;
+
+        // 2. Chờ 1 khung hình để máy yếu kịp nghỉ
+        yield return new WaitForEndOfFrame(); 
+
+        // 3. Đặt tọa độ mới
+        playerObj.transform.position = targetPos;
+        playerObj.transform.rotation = targetRot;
+        
+        // 4. ÉP BUỘC vật lý Unity cập nhật ngay lập tức (Rất quan trọng)
+        Physics.SyncTransforms(); 
+
+        // 5. Chờ thêm 1 khung hình nữa cho chắc cốp
+        yield return new WaitForEndOfFrame(); 
+
+        // 6. Bật lại điều khiển
+        if (charCtrl != null) charCtrl.enabled = true;
+        if (navAgent != null) navAgent.enabled = true;
     }
 
     [ClientRpc]
