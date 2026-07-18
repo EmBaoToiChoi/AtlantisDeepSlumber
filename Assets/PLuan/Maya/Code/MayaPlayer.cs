@@ -2965,30 +2965,33 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
     {
         if (col == null) return;
         float actualDamage = damageAmount;
+        Debug.Log($"[MayaPlayer] TryDamageEnemy: col='{col.name}', parent='{col.transform.parent?.name}', damage={actualDamage}");
 
-        var e1 = col.GetComponentInParent<Enemy1_DapBua>() ?? col.GetComponentInChildren<Enemy1_DapBua>() ?? col.transform.root.GetComponentInChildren<Enemy1_DapBua>();
-        if (e1 != null) { e1.TakeDamage(actualDamage); return; }
+        var e1 = col.GetComponentInParent<Enemy1_DapBua>() ?? col.GetComponentInChildren<Enemy1_DapBua>();
+        if (e1 != null) { Debug.Log($"[MayaPlayer] Found Enemy1_DapBua on {e1.name}"); e1.TakeDamage(actualDamage); return; }
 
-        var e2 = col.GetComponentInParent<Enemy2_Zombie>() ?? col.GetComponentInChildren<Enemy2_Zombie>() ?? col.transform.root.GetComponentInChildren<Enemy2_Zombie>();
-        if (e2 != null) { e2.TakeDamage(actualDamage); return; }
+        var e2 = col.GetComponentInParent<Enemy2_Zombie>() ?? col.GetComponentInChildren<Enemy2_Zombie>();
+        if (e2 != null) { Debug.Log($"[MayaPlayer] Found Enemy2_Zombie on {e2.name}"); e2.TakeDamage(actualDamage); return; }
 
-        var e3 = col.GetComponentInParent<Enemy3_Buaa>() ?? col.GetComponentInChildren<Enemy3_Buaa>() ?? col.transform.root.GetComponentInChildren<Enemy3_Buaa>();
-        if (e3 != null) { e3.TakeDamage(actualDamage); return; }
+        var e3 = col.GetComponentInParent<Enemy3_Buaa>() ?? col.GetComponentInChildren<Enemy3_Buaa>();
+        if (e3 != null) { Debug.Log($"[MayaPlayer] Found Enemy3_Buaa on {e3.name}"); e3.TakeDamage(actualDamage); return; }
 
-        var e4 = col.GetComponentInParent<Enemy4_Bongtoi>() ?? col.GetComponentInChildren<Enemy4_Bongtoi>() ?? col.transform.root.GetComponentInChildren<Enemy4_Bongtoi>();
-        if (e4 != null) { e4.TakeDamage(actualDamage); return; }
+        var e4 = col.GetComponentInParent<Enemy4_Bongtoi>() ?? col.GetComponentInChildren<Enemy4_Bongtoi>();
+        if (e4 != null) { Debug.Log($"[MayaPlayer] Found Enemy4_Bongtoi on {e4.name}"); e4.TakeDamage(actualDamage); return; }
 
-        var e5 = col.GetComponentInParent<Enemy5_PhuThuy>() ?? col.GetComponentInChildren<Enemy5_PhuThuy>() ?? col.transform.root.GetComponentInChildren<Enemy5_PhuThuy>();
-        if (e5 != null) { e5.TakeDamage(actualDamage); return; }
+        var e5 = col.GetComponentInParent<Enemy5_PhuThuy>() ?? col.GetComponentInChildren<Enemy5_PhuThuy>();
+        if (e5 != null) { Debug.Log($"[MayaPlayer] Found Enemy5_PhuThuy on {e5.name}"); e5.TakeDamage(actualDamage); return; }
 
-        var mb = col.GetComponentInParent<MiniBossAI>() ?? col.GetComponentInChildren<MiniBossAI>() ?? col.transform.root.GetComponentInChildren<MiniBossAI>();
-        if (mb != null) { mb.TakeDamage(actualDamage); return; }
+        var mb = col.GetComponentInParent<MiniBossAI>() ?? col.GetComponentInChildren<MiniBossAI>();
+        if (mb != null) { Debug.Log($"[MayaPlayer] Found MiniBossAI on {mb.name}"); mb.TakeDamage(actualDamage); return; }
 
-        var fb = col.GetComponentInParent<FinalBossAI>() ?? col.GetComponentInChildren<FinalBossAI>() ?? col.transform.root.GetComponentInChildren<FinalBossAI>();
-        if (fb != null) { fb.TakeDamage(actualDamage); return; }
+        var fb = col.GetComponentInParent<FinalBossAI>() ?? col.GetComponentInChildren<FinalBossAI>();
+        if (fb != null) { Debug.Log($"[MayaPlayer] Found FinalBossAI on {fb.name}"); fb.TakeDamage(actualDamage); return; }
 
-        var b = col.GetComponentInParent<BossAI>() ?? col.GetComponentInChildren<BossAI>() ?? col.transform.root.GetComponentInChildren<BossAI>();
-        if (b != null) { b.TakeDamage(actualDamage); return; }
+        var b = col.GetComponentInParent<BossAI>() ?? col.GetComponentInChildren<BossAI>();
+        if (b != null) { Debug.Log($"[MayaPlayer] Found BossAI on {b.name}"); b.TakeDamage(actualDamage); return; }
+
+        Debug.LogWarning($"[MayaPlayer] TryDamageEnemy: No enemy AI script found on collider {col.name} or its hierarchy!");
     }
 
     private bool IsEnemy(Collider col, out Collider enemyCollider)
@@ -3053,30 +3056,42 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
     [ServerRpc]
     private void DamageEnemyServerRpc(NetworkObjectReference enemyRef)
     {
+        Debug.Log($"[MayaPlayer Server] DamageEnemyServerRpc called by client {OwnerClientId}");
         if (enemyRef.TryGet(out NetworkObject netObj))
         {
+            Debug.Log($"[MayaPlayer Server] Successfully retrieved NetworkObject '{netObj.name}', ID: {netObj.NetworkObjectId}");
             var col = netObj.GetComponent<Collider>() ?? netObj.GetComponentInChildren<Collider>();
-            if (col != null) TryDamageEnemy(col);
+            if (col != null)
+            {
+                Debug.Log($"[MayaPlayer Server] Found enemy collider: '{col.name}'. Calling TryDamageEnemy.");
+                TryDamageEnemy(col);
+            }
             else
             {
                 float actualDamage = damageAmount;
+                Debug.Log($"[MayaPlayer Server] No collider found on NetworkObject '{netObj.name}'. Direct component check with damage={actualDamage}");
                 var e1 = netObj.GetComponent<Enemy1_DapBua>() ?? netObj.GetComponentInChildren<Enemy1_DapBua>();
-                if (e1 != null) { e1.TakeDamage(actualDamage); return; }
+                if (e1 != null) { Debug.Log("[MayaPlayer Server] Direct e1 hit"); e1.TakeDamage(actualDamage); return; }
                 var e2 = netObj.GetComponent<Enemy2_Zombie>() ?? netObj.GetComponentInChildren<Enemy2_Zombie>();
-                if (e2 != null) { e2.TakeDamage(actualDamage); return; }
+                if (e2 != null) { Debug.Log("[MayaPlayer Server] Direct e2 hit"); e2.TakeDamage(actualDamage); return; }
                 var e3 = netObj.GetComponent<Enemy3_Buaa>() ?? netObj.GetComponentInChildren<Enemy3_Buaa>();
-                if (e3 != null) { e3.TakeDamage(actualDamage); return; }
+                if (e3 != null) { Debug.Log("[MayaPlayer Server] Direct e3 hit"); e3.TakeDamage(actualDamage); return; }
                 var e4 = netObj.GetComponent<Enemy4_Bongtoi>() ?? netObj.GetComponentInChildren<Enemy4_Bongtoi>();
-                if (e4 != null) { e4.TakeDamage(actualDamage); return; }
+                if (e4 != null) { Debug.Log("[MayaPlayer Server] Direct e4 hit"); e4.TakeDamage(actualDamage); return; }
                 var e5 = netObj.GetComponent<Enemy5_PhuThuy>() ?? netObj.GetComponentInChildren<Enemy5_PhuThuy>();
-                if (e5 != null) { e5.TakeDamage(actualDamage); return; }
+                if (e5 != null) { Debug.Log("[MayaPlayer Server] Direct e5 hit"); e5.TakeDamage(actualDamage); return; }
                 var mb = netObj.GetComponent<MiniBossAI>() ?? netObj.GetComponentInChildren<MiniBossAI>();
-                if (mb != null) { mb.TakeDamage(actualDamage); return; }
+                if (mb != null) { Debug.Log("[MayaPlayer Server] Direct mb hit"); mb.TakeDamage(actualDamage); return; }
                 var fb = netObj.GetComponent<FinalBossAI>() ?? netObj.GetComponentInChildren<FinalBossAI>();
-                if (fb != null) { fb.TakeDamage(actualDamage); return; }
+                if (fb != null) { Debug.Log("[MayaPlayer Server] Direct fb hit"); fb.TakeDamage(actualDamage); return; }
                 var b = netObj.GetComponent<BossAI>() ?? netObj.GetComponentInChildren<BossAI>();
-                if (b != null) { b.TakeDamage(actualDamage); return; }
+                if (b != null) { Debug.Log("[MayaPlayer Server] Direct b hit"); b.TakeDamage(actualDamage); return; }
+                Debug.LogWarning("[MayaPlayer Server] Direct check: No enemy AI components found!");
             }
+        }
+        else
+        {
+            Debug.LogError("[MayaPlayer Server] Failed to retrieve NetworkObject from NetworkObjectReference!");
         }
     }
 
