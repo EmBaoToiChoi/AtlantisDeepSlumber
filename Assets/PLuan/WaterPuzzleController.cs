@@ -80,6 +80,7 @@ public class WaterPuzzleController : NetworkBehaviour
     );
 
     private WaterPuzzleState localState = WaterPuzzleState.Pending;
+    public WaterPuzzleState CurrentState => IsNetworkActive ? currentState.Value : localState;
     private AudioSource audioSource;
     private Coroutine freezeCoroutine;
     private bool isInitialized = false;
