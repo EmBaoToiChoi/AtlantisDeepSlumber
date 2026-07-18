@@ -2669,6 +2669,10 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
                     alreadyHitEnemies.Add(enemyRoot);
                     Debug.Log($"[ArthurPlayer Raycast] HIT ENEMY: {enemyRoot.name} | Sát thương: {damageAmount}");
                     
+                    // Phát âm thanh chém trúng quái (chỉ với quái)
+                    AudioClip hitSound = Resources.Load<AudioClip>("Audio/ChemHit");
+                    PlayPlayerSFX(hitSound);
+                    
                     if (isStandaloneMode)
                     {
                         TryDamageEnemy(enemyCollider);
@@ -4008,9 +4012,15 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
     protected virtual void PlayAnimationLocal(string animName, float fadeTime)
     {
         // Play action sound effects
-        if (animName == "attack1" || animName == "Attack1combo1" || animName == "Attack2combo1" || animName == "ChatRiu")
+        if (animName == "attack1" || animName == "Attack1combo1" || animName == "Attack2combo1" || animName == "ChatRiu" || animName.StartsWith("Chem"))
         {
-            PlayPlayerSFX(attackClip, 0.8f);
+            AudioClip swingClip = Resources.Load<AudioClip>("Audio/ChemChuaHit");
+            PlayPlayerSFX(swingClip, 0.8f);
+        }
+        else if (animName.StartsWith("Dam") || animName.StartsWith("Punch"))
+        {
+            AudioClip punchClip = Resources.Load<AudioClip>("Audio/Punch");
+            PlayPlayerSFX(punchClip);
         }
         else if (animName == "Death")
         {

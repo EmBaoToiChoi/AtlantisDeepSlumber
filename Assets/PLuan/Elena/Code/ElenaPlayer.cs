@@ -49,10 +49,12 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (footstepClip2 == null) footstepClip2 = Resources.Load<AudioClip>("Audio/Footstep2");
         // Tạm thời comment các âm thanh chưa có để tránh loạn âm thanh
         /*
-        if (attackClip == null) attackClip = Resources.Load<AudioClip>("Audio/ArrowShoot");
         if (hitClip == null) hitClip = Resources.Load<AudioClip>("Audio/HitHurt");
         if (deathClip == null) deathClip = Resources.Load<AudioClip>("Audio/Death");
         */
+        
+        // Tải âm thanh tấn công mới thêm (ArrowShot cho Elena)
+        if (attackClip == null) attackClip = Resources.Load<AudioClip>("Audio/ArrowShot");
         
         // Tải âm thanh Skill mới thêm (Skill R nguyên tố)
         if (skillRClip == null) skillRClip = Resources.Load<AudioClip>("Audio/Fireball");
@@ -62,9 +64,9 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
         else Debug.Log($"[Audio Debug] ElenaPlayer: Successfully loaded Resources/Audio/Footstep");
         if (footstepClip2 == null) Debug.LogWarning($"[Audio Debug] ElenaPlayer: Failed to load Resources/Audio/Footstep2");
         else Debug.Log($"[Audio Debug] ElenaPlayer: Successfully loaded Resources/Audio/Footstep2");
+        if (attackClip == null) Debug.LogWarning($"[Audio Debug] ElenaPlayer: Failed to load Resources/Audio/ArrowShot");
+        else Debug.Log($"[Audio Debug] ElenaPlayer: Successfully loaded Resources/Audio/ArrowShot");
         /*
-        if (attackClip == null) Debug.LogWarning($"[Audio Debug] ElenaPlayer: Failed to load Resources/Audio/ArrowShoot");
-        else Debug.Log($"[Audio Debug] ElenaPlayer: Successfully loaded Resources/Audio/ArrowShoot");
         if (hitClip == null) Debug.LogWarning($"[Audio Debug] ElenaPlayer: Failed to load Resources/Audio/HitHurt");
         if (deathClip == null) Debug.LogWarning($"[Audio Debug] ElenaPlayer: Failed to load Resources/Audio/Death");
         */
@@ -3631,9 +3633,17 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
         // Play action sound effects
         if (animName == "Bow_Shoot")
         {
-            PlayPlayerSFX(attackClip);
+            if (!IsAimingR)
+            {
+                PlayPlayerSFX(attackClip);
+            }
         }
-        else if (animName == "ChatRiu" || animName.StartsWith("Chem") || animName.StartsWith("Dam"))
+        else if (animName.StartsWith("Dam"))
+        {
+            AudioClip punchClip = Resources.Load<AudioClip>("Audio/Punch");
+            PlayPlayerSFX(punchClip);
+        }
+        else if (animName == "ChatRiu" || animName.StartsWith("Chem"))
         {
             PlayPlayerSFX(attackClip, 0.8f);
         }
