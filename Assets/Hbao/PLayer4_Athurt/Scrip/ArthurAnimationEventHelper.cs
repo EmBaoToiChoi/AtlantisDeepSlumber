@@ -25,7 +25,15 @@ public class ArthurAnimationEventHelper : MonoBehaviour
             }
             if (player == null)
             {
+                player = transform.root.GetComponentInChildren<ArthurPlayer>(true);
+            }
+            if (player == null)
+            {
                 Debug.LogError("[ArthurAnimationEventHelper] LỖI: Không tìm thấy component ArthurPlayer ở các Object cha hoặc con!");
+            }
+            else
+            {
+                Debug.Log($"[ArthurAnimationEventHelper] Đã tìm thấy ArthurPlayer thành công: {player.name}");
             }
         }
     }

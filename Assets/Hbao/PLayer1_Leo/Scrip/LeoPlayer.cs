@@ -4559,27 +4559,35 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     private void PerformRaycastAttack()
     {
+        Debug.Log($"[LeoPlayer Debug] PerformRaycastAttack called. isStandaloneMode={isStandaloneMode}, IsOwner={IsOwner}");
         if (!isStandaloneMode && !IsOwner) return;
 
         Vector3 origin = transform.position + Vector3.up * 1f;
         float range = attackRange;
         Collider[] hits = Physics.OverlapSphere(origin, range);
+        Debug.Log($"[LeoPlayer Debug] OverlapSphere found {hits.Length} colliders at origin {origin} with range {range}");
         
         foreach (var col in hits)
         {
+            if (col.transform.root == transform.root) continue; // Bỏ qua chính mình
+
             if (IsEnemy(col, out Collider enemyCollider))
             {
                 Transform enemyRoot = enemyCollider.transform.root;
+                Vector3 toEnemy = (enemyCollider.bounds.center - origin);
+                toEnemy.y = 0; // Bỏ qua khác biệt độ cao
+                float distance = toEnemy.magnitude;
+                float angle = Vector3.Angle(transform.forward, toEnemy.normalized);
+                
+                Debug.Log($"[LeoPlayer Debug] Quét trúng Enemy collider: {col.name}. Khoảng cách: {distance}, Góc: {angle}");
+
                 if (!alreadyHitEnemies.Contains(enemyRoot))
                 {
-                    Vector3 toEnemy = (enemyCollider.bounds.center - origin);
-                    toEnemy.y = 0; // Ignore height difference
-                    
-                    float angle = Vector3.Angle(transform.forward, toEnemy.normalized);
-                    if (angle <= 75f)
+                    // Nếu đứng cực gần (<0.4m), bỏ qua kiểm tra góc (chắc chắn trúng). Ngược lại kiểm tra góc 75 độ.
+                    if (distance < 0.4f || angle <= 75f)
                     {
                         alreadyHitEnemies.Add(enemyRoot);
-                        Debug.Log($"[LeoPlayer Raycast] HIT: {enemyRoot.name} | Damage: {damageAmount}");
+                        Debug.Log($"[LeoPlayer Raycast] HIT ENEMY: {enemyRoot.name} | Sát thương: {damageAmount}");
                         
                         if (isStandaloneMode)
                         {
@@ -4597,6 +4605,10 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
                                 TryDamageEnemy(enemyCollider);
                             }
                         }
+                    }
+                    else
+                    {
+                        Debug.Log($"[LeoPlayer Debug] Bỏ qua Enemy {enemyRoot.name}: Ngoài góc ({angle} > 75) và khoảng cách ({distance} >= 0.4)");
                     }
                 }
             }
@@ -4616,20 +4628,28 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
                 if (tree != null)
                 {
                     Transform treeRoot = tree.transform;
+                    Vector3 toTree = (col.bounds.center - origin);
+                    toTree.y = 0; // Bỏ qua khác biệt độ cao
+                    float distance = toTree.magnitude;
+                    float angle = Vector3.Angle(transform.forward, toTree.normalized);
+
+                    Debug.Log($"[LeoPlayer Debug] Quét trúng Tree collider: {col.name}. Khoảng cách: {distance}, Góc: {angle}");
+
                     if (!alreadyHitEnemies.Contains(treeRoot))
                     {
-                        Vector3 toTree = (col.bounds.center - origin);
-                        toTree.y = 0; // Ignore height difference
-                        
-                        float angle = Vector3.Angle(transform.forward, toTree.normalized);
-                        if (angle <= 75f)
+                        // Nếu đứng cực gần (<0.4m), bỏ qua kiểm tra góc (chắc chắn trúng). Ngược lại kiểm tra góc 75 độ.
+                        if (distance < 0.4f || angle <= 75f)
                         {
                             alreadyHitEnemies.Add(treeRoot);
                             Vector3 hitPos = col.ClosestPoint(origin);
                             int weaponIndex = GetActiveWeaponIndex();
                             
-                            Debug.Log($"[LeoPlayer Raycast] HIT Tree: {tree.name} | WeaponIndex: {weaponIndex}");
+                            Debug.Log($"[LeoPlayer Raycast] HIT TREE: {tree.name} | WeaponIndex: {weaponIndex}");
                             tree.HitTree(hitPos, weaponIndex);
+                        }
+                        else
+                        {
+                            Debug.Log($"[LeoPlayer Debug] Bỏ qua Tree {tree.name}: Ngoài góc ({angle} > 75) và khoảng cách ({distance} >= 0.4)");
                         }
                     }
                 }
