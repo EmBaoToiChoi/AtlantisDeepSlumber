@@ -6,6 +6,7 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
     [Header("Audio Settings")]
     [SerializeField] private AudioSource playerAudioSource;
     [SerializeField] private AudioClip footstepClip;
+    [SerializeField] private AudioClip footstepClip2;
     [SerializeField] private AudioClip attackClip;
     [SerializeField] private AudioClip hitClip;
     [SerializeField] private AudioClip deathClip;
@@ -13,6 +14,7 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
     [SerializeField] private AudioClip skillEClip;
     [SerializeField] private AudioClip skillRClip;
     private float footstepTimer = 0f;
+    private bool playSecondFootstep = false;
 
     private void InitializeAudio()
     {
@@ -43,6 +45,7 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
         playerAudioSource.volume = 1.0f;
 
         if (footstepClip == null) footstepClip = Resources.Load<AudioClip>("Audio/Footstep");
+        if (footstepClip2 == null) footstepClip2 = Resources.Load<AudioClip>("Audio/Footstep2");
         if (attackClip == null) attackClip = Resources.Load<AudioClip>("Audio/SwordSlash");
         if (hitClip == null) hitClip = Resources.Load<AudioClip>("Audio/HitHurt");
         if (deathClip == null) deathClip = Resources.Load<AudioClip>("Audio/Death");
@@ -53,6 +56,8 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
         // Log warnings if audio files fail to load
         if (footstepClip == null) Debug.LogWarning($"[Audio Debug] MayaPlayer: Failed to load Resources/Audio/Footstep");
         else Debug.Log($"[Audio Debug] MayaPlayer: Successfully loaded Resources/Audio/Footstep");
+        if (footstepClip2 == null) Debug.LogWarning($"[Audio Debug] MayaPlayer: Failed to load Resources/Audio/Footstep2");
+        else Debug.Log($"[Audio Debug] MayaPlayer: Successfully loaded Resources/Audio/Footstep2");
         if (attackClip == null) Debug.LogWarning($"[Audio Debug] MayaPlayer: Failed to load Resources/Audio/SwordSlash");
         else Debug.Log($"[Audio Debug] MayaPlayer: Successfully loaded Resources/Audio/SwordSlash");
         if (hitClip == null) Debug.LogWarning($"[Audio Debug] MayaPlayer: Failed to load Resources/Audio/HitHurt");
@@ -1979,13 +1984,18 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
                 if (footstepTimer >= delay)
                 {
                     footstepTimer = 0f;
-                    PlayPlayerSFX(footstepClip, isRunning ? 0.5f : 0.35f);
+                    
+                    // Alternating footsteps: Footstep 1 then Footstep 2
+                    AudioClip clipToPlay = (playSecondFootstep && footstepClip2 != null) ? footstepClip2 : footstepClip;
+                    PlayPlayerSFX(clipToPlay, isRunning ? 0.5f : 0.35f);
+                    playSecondFootstep = !playSecondFootstep;
                 }
             }
         }
         else
         {
             footstepTimer = 0f;
+            playSecondFootstep = false; // Reset to start with the first clip next time
         }
     }
 
