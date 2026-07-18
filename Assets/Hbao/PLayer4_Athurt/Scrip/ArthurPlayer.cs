@@ -2634,56 +2634,48 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     private void PerformRaycastAttack()
     {
-        Debug.Log($"[ArthurPlayer Debug] PerformRaycastAttack called. isStandaloneMode={isStandaloneMode}, IsOwner={IsOwner}");
+        Debug.Log($"[ArthurPlayer Debug] PerformRaycastAttack called (Raycast Mode). isStandaloneMode={isStandaloneMode}, IsOwner={IsOwner}");
         if (!isStandaloneMode && !IsOwner) return;
 
-        Vector3 origin = transform.position + Vector3.up * 1f;
+        // Điểm xuất phát của tia quét ở độ cao ngang ngực (1.0m)
+        Vector3 rayStart = transform.position + Vector3.up * 1.0f;
+        Vector3 rayDir = transform.forward;
         float range = attackRange;
-        Collider[] hits = Physics.OverlapSphere(origin, range);
-        Debug.Log($"[ArthurPlayer Debug] OverlapSphere found {hits.Length} colliders at origin {origin} with range {range}");
-        
-        foreach (var col in hits)
+
+        // Vẽ tia debug trong Unity Editor
+        Debug.DrawRay(rayStart, rayDir * range, Color.red, 1f);
+        Debug.Log($"[ArthurPlayer Debug] Casting Ray from {rayStart} in direction {rayDir} with range {range}");
+
+        if (Physics.Raycast(rayStart, rayDir, out RaycastHit hit, range))
         {
-            if (col.transform.root == transform.root) continue; // Bỏ qua chính mình
+            Collider col = hit.collider;
+            Debug.Log($"[ArthurPlayer Debug] Raycast hit collider: {col.name} on GameObject: {col.gameObject.name} at point {hit.point}");
+
+            if (col.transform.root == transform.root) return; // Bỏ qua chính mình
 
             if (IsEnemy(col, out Collider enemyCollider))
             {
                 Transform enemyRoot = enemyCollider.transform.root;
-                Vector3 toEnemy = (enemyCollider.bounds.center - origin);
-                toEnemy.y = 0; // Bỏ qua khác biệt độ cao
-                float distance = toEnemy.magnitude;
-                float angle = Vector3.Angle(transform.forward, toEnemy.normalized);
-                
-                Debug.Log($"[ArthurPlayer Debug] Quét trúng Enemy collider: {col.name}. Khoảng cách: {distance}, Góc: {angle}");
-
                 if (!alreadyHitEnemies.Contains(enemyRoot))
                 {
-                    // Nếu đứng cực gần (<0.4m), bỏ qua kiểm tra góc (chắc chắn trúng). Ngược lại kiểm tra góc 75 độ.
-                    if (distance < 0.4f || angle <= 75f)
+                    alreadyHitEnemies.Add(enemyRoot);
+                    Debug.Log($"[ArthurPlayer Raycast] HIT ENEMY: {enemyRoot.name} | Sát thương: {damageAmount}");
+                    
+                    if (isStandaloneMode)
                     {
-                        alreadyHitEnemies.Add(enemyRoot);
-                        Debug.Log($"[ArthurPlayer Raycast] HIT ENEMY: {enemyRoot.name} | Sát thương: {damageAmount}");
-                        
-                        if (isStandaloneMode)
+                        TryDamageEnemy(enemyCollider);
+                    }
+                    else if (IsOwner)
+                    {
+                        var netObj = enemyCollider.GetComponentInParent<NetworkObject>();
+                        if (netObj != null)
+                        {
+                            DamageEnemyServerRpc(netObj);
+                        }
+                        else
                         {
                             TryDamageEnemy(enemyCollider);
                         }
-                        else if (IsOwner)
-                        {
-                            var netObj = enemyCollider.GetComponentInParent<NetworkObject>();
-                            if (netObj != null)
-                            {
-                                DamageEnemyServerRpc(netObj);
-                            }
-                            else
-                            {
-                                TryDamageEnemy(enemyCollider);
-                            }
-                        }
-                    }
-                    else
-                    {
-                        Debug.Log($"[ArthurPlayer Debug] Bỏ qua Enemy {enemyRoot.name}: Ngoài góc ({angle} > 75) và khoảng cách ({distance} >= 0.4)");
                     }
                 }
             }
@@ -2703,29 +2695,14 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
                 if (tree != null)
                 {
                     Transform treeRoot = tree.transform;
-                    Vector3 toTree = (col.bounds.center - origin);
-                    toTree.y = 0; // Bỏ qua khác biệt độ cao
-                    float distance = toTree.magnitude;
-                    float angle = Vector3.Angle(transform.forward, toTree.normalized);
-
-                    Debug.Log($"[ArthurPlayer Debug] Quét trúng Tree collider: {col.name}. Khoảng cách: {distance}, Góc: {angle}");
-
                     if (!alreadyHitEnemies.Contains(treeRoot))
                     {
-                        // Nếu đứng cực gần (<0.4m), bỏ qua kiểm tra góc (chắc chắn trúng). Ngược lại kiểm tra góc 75 độ.
-                        if (distance < 0.4f || angle <= 75f)
-                        {
-                            alreadyHitEnemies.Add(treeRoot);
-                            Vector3 hitPos = col.ClosestPoint(origin);
-                            int weaponIndex = GetActiveWeaponIndex();
-                            
-                            Debug.Log($"[ArthurPlayer Raycast] HIT TREE: {tree.name} | WeaponIndex: {weaponIndex}");
-                            tree.HitTree(hitPos, weaponIndex);
-                        }
-                        else
-                        {
-                            Debug.Log($"[ArthurPlayer Debug] Bỏ qua Tree {tree.name}: Ngoài góc ({angle} > 75) và khoảng cách ({distance} >= 0.4)");
-                        }
+                        alreadyHitEnemies.Add(treeRoot);
+                        Vector3 hitPos = hit.point;
+                        int weaponIndex = GetActiveWeaponIndex();
+                        
+                        Debug.Log($"[ArthurPlayer Raycast] HIT TREE: {tree.name} | WeaponIndex: {weaponIndex}");
+                        tree.HitTree(hitPos, weaponIndex);
                     }
                 }
             }

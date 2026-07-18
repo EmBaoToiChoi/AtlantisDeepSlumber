@@ -71,34 +71,102 @@ public class RollAnimationEventHelper : MonoBehaviour
     /// <summary>
     /// Event receiver to enable the Left hand/weapon hitbox.
     /// </summary>
-    public void EnableLeftHitbox() { EnsurePlayerReference(); if (player != null) player.EnableLeftHitbox(); }
-    public void DisableLeftHitbox() { EnsurePlayerReference(); if (player != null) player.DisableLeftHitbox(); }
-    public void EnableRightHitbox() { EnsurePlayerReference(); if (player != null) player.EnableRightHitbox(); }
-    public void DisableRightHitbox() { EnsurePlayerReference(); if (player != null) player.DisableRightHitbox(); }
-    public void EnableBothHitboxes() { EnsurePlayerReference(); if (player != null) player.EnableBothHitboxes(); }
-    public void DisableBothHitboxes() { EnsurePlayerReference(); if (player != null) player.DisableBothHitboxes(); }
+    public void EnableLeftHitbox() { 
+        EnsurePlayerReference(); 
+        Debug.Log("[RollAnimationEventHelper] Animation Event: EnableLeftHitbox");
+        if (player != null) player.EnableLeftHitbox(); 
+    }
+    public void DisableLeftHitbox() { 
+        EnsurePlayerReference(); 
+        Debug.Log("[RollAnimationEventHelper] Animation Event: DisableLeftHitbox");
+        if (player != null) player.DisableLeftHitbox(); 
+    }
+    public void EnableRightHitbox() { 
+        EnsurePlayerReference(); 
+        Debug.Log("[RollAnimationEventHelper] Animation Event: EnableRightHitbox");
+        if (player != null) player.EnableRightHitbox(); 
+    }
+    public void DisableRightHitbox() { 
+        EnsurePlayerReference(); 
+        Debug.Log("[RollAnimationEventHelper] Animation Event: DisableRightHitbox");
+        if (player != null) player.DisableRightHitbox(); 
+    }
+    public void EnableBothHitboxes() { 
+        EnsurePlayerReference(); 
+        Debug.Log("[RollAnimationEventHelper] Animation Event: EnableBothHitboxes");
+        if (player != null) player.EnableBothHitboxes(); 
+    }
+    public void DisableBothHitboxes() { 
+        EnsurePlayerReference(); 
+        Debug.Log("[RollAnimationEventHelper] Animation Event: DisableBothHitboxes");
+        if (player != null) player.DisableBothHitboxes(); 
+    }
 
     // ------------------------------------------------------------------
     //  Punch-specific alias event functions for intuitive selection
     // ------------------------------------------------------------------
 
-    public void EnableLeftPunch() { EnsurePlayerReference(); if (player != null) player.EnableLeftHitbox(); }
-    public void DisableLeftPunch() { EnsurePlayerReference(); if (player != null) player.DisableLeftHitbox(); }
-    public void EnableRightPunch() { EnsurePlayerReference(); if (player != null) player.EnableRightHitbox(); }
-    public void DisableRightPunch() { EnsurePlayerReference(); if (player != null) player.DisableRightHitbox(); }
-    public void EnableComboPunch() { EnsurePlayerReference(); if (player != null) player.EnableBothHitboxes(); }
-    public void DisableComboPunch() { EnsurePlayerReference(); if (player != null) player.DisableBothHitboxes(); }
+    public void EnableLeftPunch() { 
+        EnsurePlayerReference(); 
+        Debug.Log("[RollAnimationEventHelper] Animation Event: EnableLeftPunch");
+        if (player != null) player.EnableLeftHitbox(); 
+    }
+    public void DisableLeftPunch() { 
+        EnsurePlayerReference(); 
+        Debug.Log("[RollAnimationEventHelper] Animation Event: DisableLeftPunch");
+        if (player != null) player.DisableLeftHitbox(); 
+    }
+    public void EnableRightPunch() { 
+        EnsurePlayerReference(); 
+        Debug.Log("[RollAnimationEventHelper] Animation Event: EnableRightPunch");
+        if (player != null) player.EnableRightHitbox(); 
+    }
+    public void DisableRightPunch() { 
+        EnsurePlayerReference(); 
+        Debug.Log("[RollAnimationEventHelper] Animation Event: DisableRightPunch");
+        if (player != null) player.DisableRightHitbox(); 
+    }
+    public void EnableComboPunch() { 
+        EnsurePlayerReference(); 
+        Debug.Log("[RollAnimationEventHelper] Animation Event: EnableComboPunch");
+        if (player != null) player.EnableBothHitboxes(); 
+    }
+    public void DisableComboPunch() { 
+        EnsurePlayerReference(); 
+        Debug.Log("[RollAnimationEventHelper] Animation Event: DisableComboPunch");
+        if (player != null) player.DisableBothHitboxes(); 
+    }
 
     // ------------------------------------------------------------------
     //  Slash-specific alias event functions for intuitive selection
     // ------------------------------------------------------------------
 
-    public void EnableSingleSlash() { EnsurePlayerReference(); if (player != null) player.EnableLeftWeaponHitbox(); }
-    public void DisableSingleSlash() { EnsurePlayerReference(); if (player != null) player.DisableLeftWeaponHitbox(); }
-    public void EnableDoubleSlash() { EnsurePlayerReference(); if (player != null) player.EnableBothWeaponHitboxes(); }
-    public void DisableDoubleSlash() { EnsurePlayerReference(); if (player != null) player.DisableBothWeaponHitboxes(); }
+    public void EnableSingleSlash() { 
+        EnsurePlayerReference(); 
+        Debug.Log("[RollAnimationEventHelper] Animation Event: EnableSingleSlash");
+        if (player != null) player.EnableLeftWeaponHitbox(); 
+    }
+    public void DisableSingleSlash() { 
+        EnsurePlayerReference(); 
+        Debug.Log("[RollAnimationEventHelper] Animation Event: DisableSingleSlash");
+        if (player != null) player.DisableLeftWeaponHitbox(); 
+    }
+    public void EnableDoubleSlash() { 
+        EnsurePlayerReference(); 
+        Debug.Log("[RollAnimationEventHelper] Animation Event: EnableDoubleSlash");
+        if (player != null) player.EnableBothWeaponHitboxes(); 
+    }
+    public void DisableDoubleSlash() { 
+        EnsurePlayerReference(); 
+        Debug.Log("[RollAnimationEventHelper] Animation Event: DisableDoubleSlash");
+        if (player != null) player.DisableBothWeaponHitboxes(); 
+    }
 
-    public void OnSlashEnd() { EnsurePlayerReference(); if (player != null) player.DisableBothWeaponHitboxes(); }
+    public void OnSlashEnd() { 
+        EnsurePlayerReference(); 
+        Debug.Log("[RollAnimationEventHelper] Animation Event: OnSlashEnd");
+        if (player != null) player.DisableBothWeaponHitboxes(); 
+    }
 
     /// <summary>
     /// Event receiver to unlock player movement after a punch attack finishes.
