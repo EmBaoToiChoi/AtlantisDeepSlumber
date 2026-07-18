@@ -6,6 +6,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
     [Header("Audio Settings")]
     [SerializeField] private AudioSource playerAudioSource;
     [SerializeField] private AudioClip footstepClip;
+    [SerializeField] private AudioClip footstepClip2;
     [SerializeField] private AudioClip attackClip;
     [SerializeField] private AudioClip hitClip;
     [SerializeField] private AudioClip deathClip;
@@ -13,6 +14,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
     [SerializeField] private AudioClip skillEClip;
     [SerializeField] private AudioClip skillRClip;
     private float footstepTimer = 0f;
+    private bool playSecondFootstep = false;
 
     private void InitializeAudio()
     {
@@ -43,22 +45,30 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         playerAudioSource.volume = 1.0f;
 
         if (footstepClip == null) footstepClip = Resources.Load<AudioClip>("Audio/Footstep");
+        if (footstepClip2 == null) footstepClip2 = Resources.Load<AudioClip>("Audio/Footstep2");
+        // Tạm thời comment các âm thanh chưa có để tránh loạn âm thanh
+        /*
         if (attackClip == null) attackClip = Resources.Load<AudioClip>("Audio/HeavySwing");
         if (hitClip == null) hitClip = Resources.Load<AudioClip>("Audio/HitHurt");
         if (deathClip == null) deathClip = Resources.Load<AudioClip>("Audio/Death");
-        if (skillQClip == null) skillQClip = Resources.Load<AudioClip>("Audio/ElectricZap"); // Arthur lightning/shield
-        if (skillEClip == null) skillEClip = Resources.Load<AudioClip>("Audio/ElectricZap");
-        if (skillRClip == null) skillRClip = Resources.Load<AudioClip>("Audio/BreakStone"); // Shield/stone impact
+        */
+        
+        // Tải âm thanh Skill mới thêm (Skill R nguyên tố)
+        if (skillRClip == null) skillRClip = Resources.Load<AudioClip>("Audio/Fireball");
 
         // Log warnings if audio files fail to load
         if (footstepClip == null) Debug.LogWarning($"[Audio Debug] ArthurPlayer: Failed to load Resources/Audio/Footstep");
         else Debug.Log($"[Audio Debug] ArthurPlayer: Successfully loaded Resources/Audio/Footstep");
+        if (footstepClip2 == null) Debug.LogWarning($"[Audio Debug] ArthurPlayer: Failed to load Resources/Audio/Footstep2");
+        else Debug.Log($"[Audio Debug] ArthurPlayer: Successfully loaded Resources/Audio/Footstep2");
+        /*
         if (attackClip == null) Debug.LogWarning($"[Audio Debug] ArthurPlayer: Failed to load Resources/Audio/HeavySwing");
         else Debug.Log($"[Audio Debug] ArthurPlayer: Successfully loaded Resources/Audio/HeavySwing");
         if (hitClip == null) Debug.LogWarning($"[Audio Debug] ArthurPlayer: Failed to load Resources/Audio/HitHurt");
         if (deathClip == null) Debug.LogWarning($"[Audio Debug] ArthurPlayer: Failed to load Resources/Audio/Death");
-        if (skillQClip == null) Debug.LogWarning($"[Audio Debug] ArthurPlayer: Failed to load Resources/Audio/ElectricZap");
-        if (skillRClip == null) Debug.LogWarning($"[Audio Debug] ArthurPlayer: Failed to load Resources/Audio/BreakStone");
+        */
+        if (skillRClip == null) Debug.LogWarning($"[Audio Debug] ArthurPlayer: Failed to load Resources/Audio/Fireball (Skill R)");
+        else Debug.Log($"[Audio Debug] ArthurPlayer: Successfully loaded Resources/Audio/Fireball (Skill R)");
     }
 
     private void PlayPlayerSFX(AudioClip clip, float volumeScale = 1.0f)
@@ -537,9 +547,15 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     private System.Collections.IEnumerator DeathEyelidsSequenceCoroutine()
     {
+        if (CurrentHealth > 0f) yield break;
         float duration = 1.5f;
         PlayerDeathEffectManager.Instance.PlayDeathEffect(duration);
         yield return new WaitForSeconds(duration);
+        if (CurrentHealth > 0f)
+        {
+            PlayerDeathEffectManager.Instance.ResetDeathEffect();
+            yield break;
+        }
         isDeathAnimFinished = true;
         if (!isStandaloneMode)
         {
@@ -1909,13 +1925,18 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
                 if (footstepTimer >= delay)
                 {
                     footstepTimer = 0f;
-                    PlayPlayerSFX(footstepClip, isRunning ? 0.5f : 0.35f);
+                    
+                    // Alternating footsteps: Footstep 1 then Footstep 2
+                    AudioClip clipToPlay = (playSecondFootstep && footstepClip2 != null) ? footstepClip2 : footstepClip;
+                    PlayPlayerSFX(clipToPlay, isRunning ? 0.5f : 0.35f);
+                    playSecondFootstep = !playSecondFootstep;
                 }
             }
         }
         else
         {
             footstepTimer = 0f;
+            playSecondFootstep = false; // Reset to start with the first clip next time
         }
     }
 
@@ -2619,51 +2640,54 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     private void PerformRaycastAttack()
     {
-        if (!isStandaloneMode && !IsOwner) return;
+        Debug.Log($"[ArthurPlayer Debug] PerformRaycastAttack called (Raycast Mode). isStandaloneMode={isStandaloneMode}, IsOwner={IsOwner}");
+        bool hasControl = isStandaloneMode || !IsSpawned || IsOwner || (NetworkManager.Singleton != null && NetworkManager.Singleton.IsServer);
+        if (!hasControl) return;
 
-        Vector3 origin = transform.position + Vector3.up * 1f;
-        float range = attackRange;
-        Collider[] hits = Physics.OverlapSphere(origin, range);
-        
-        foreach (var col in hits)
+        // Điểm xuất phát của tia quét ở độ cao ngang ngực (0.8m)
+        Vector3 rayStart = transform.position + Vector3.up * 0.8f;
+        Vector3 rayDir = transform.forward;
+        float range = Mathf.Max(attackRange, 3.0f);
+
+        // Vẽ tia debug trong Unity Editor
+        Debug.DrawRay(rayStart, rayDir * range, Color.red, 1f);
+        Debug.Log($"[ArthurPlayer Debug] Casting SphereCast from {rayStart} in direction {rayDir} with range {range}");
+
+        RaycastHit[] hits = Physics.SphereCastAll(rayStart, 1.2f, rayDir, range);
+        foreach (var hit in hits)
         {
+            Collider col = hit.collider;
+            if (col == null) continue;
+            if (col.transform.root == transform.root) continue; // Bỏ qua chính mình
+
             if (IsEnemy(col, out Collider enemyCollider))
             {
                 Transform enemyRoot = enemyCollider.transform.root;
                 if (!alreadyHitEnemies.Contains(enemyRoot))
                 {
-                    Vector3 toEnemy = (enemyCollider.bounds.center - origin);
-                    toEnemy.y = 0; // Ignore height difference
+                    alreadyHitEnemies.Add(enemyRoot);
+                    Debug.Log($"[ArthurPlayer Raycast] HIT ENEMY: {enemyRoot.name} | Sát thương: {damageAmount}");
                     
-                    float angle = Vector3.Angle(transform.forward, toEnemy.normalized);
-                    if (angle <= 75f)
+                    // Phát âm thanh chém trúng quái (chỉ với quái)
+                    AudioClip hitSound = Resources.Load<AudioClip>("Audio/ChemHit");
+                    PlayPlayerSFX(hitSound);
+                    
+                    var netObj = enemyCollider.transform.root.GetComponent<NetworkObject>() ?? enemyCollider.GetComponentInParent<NetworkObject>() ?? enemyCollider.GetComponentInChildren<NetworkObject>();
+
+                    if (!isStandaloneMode && IsSpawned && netObj != null)
                     {
-                        alreadyHitEnemies.Add(enemyRoot);
-                        Debug.Log($"[ArthurPlayer Raycast] HIT: {enemyRoot.name} | Damage: {damageAmount}");
-                        
-                        if (isStandaloneMode)
-                        {
-                            TryDamageEnemy(enemyCollider);
-                        }
-                        else if (IsOwner)
-                        {
-                            var netObj = enemyCollider.GetComponentInParent<NetworkObject>();
-                            if (netObj != null)
-                            {
-                                DamageEnemyServerRpc(netObj);
-                            }
-                            else
-                            {
-                                TryDamageEnemy(enemyCollider);
-                            }
-                        }
+                        DamageEnemyServerRpc(netObj);
+                    }
+                    else
+                    {
+                        TryDamageEnemy(enemyCollider);
                     }
                 }
             }
             else
             {
                 // Kiểm tra xem có phải cây gỗ (ChoppableTree) hay không
-                ChoppableTree tree = col.GetComponentInParent<ChoppableTree>();
+                ChoppableTree tree = col.GetComponentInParent<ChoppableTree>() ?? col.transform.root.GetComponentInChildren<ChoppableTree>();
                 if (tree == null)
                 {
                     var forwarder = col.GetComponent<TreeColliderForwarder>();
@@ -2678,19 +2702,12 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
                     Transform treeRoot = tree.transform;
                     if (!alreadyHitEnemies.Contains(treeRoot))
                     {
-                        Vector3 toTree = (col.bounds.center - origin);
-                        toTree.y = 0; // Ignore height difference
+                        alreadyHitEnemies.Add(treeRoot);
+                        Vector3 hitPos = hit.point;
+                        int weaponIndex = GetActiveWeaponIndex();
                         
-                        float angle = Vector3.Angle(transform.forward, toTree.normalized);
-                        if (angle <= 75f)
-                        {
-                            alreadyHitEnemies.Add(treeRoot);
-                            Vector3 hitPos = col.ClosestPoint(origin);
-                            int weaponIndex = GetActiveWeaponIndex();
-                            
-                            Debug.Log($"[ArthurPlayer Raycast] HIT Tree: {tree.name} | WeaponIndex: {weaponIndex}");
-                            tree.HitTree(hitPos, weaponIndex);
-                        }
+                        Debug.Log($"[ArthurPlayer Raycast] HIT TREE: {tree.name} | WeaponIndex: {weaponIndex}");
+                        tree.HitTree(hitPos, weaponIndex);
                     }
                 }
             }
@@ -2793,9 +2810,18 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
             AttackServerRpc();
         }
 
+        PerformRaycastAttack();
+        StartCoroutine(DelayedRaycastAttackCoroutine(0.15f));
+
         // Chạy Coroutine tự động kết thúc/nối combo thay vì phụ thuộc Animation Event
         if (comboChainCoroutine != null) StopCoroutine(comboChainCoroutine);
         comboChainCoroutine = StartCoroutine(ComboChainCoroutine(weapon, networkMode));
+    }
+
+    private System.Collections.IEnumerator DelayedRaycastAttackCoroutine(float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        PerformRaycastAttack();
     }
 
     private void HandleAttackSequenceEnd(bool isSlash)
@@ -2838,22 +2864,32 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     protected void TryDamageEnemy(Collider col)
     {
+        if (col == null) return;
         float actualDamage = damageAmount;
 
-        var e1 = col.GetComponentInParent<Enemy1_DapBua>();
+        var e1 = col.GetComponentInParent<Enemy1_DapBua>() ?? col.GetComponentInChildren<Enemy1_DapBua>() ?? col.transform.root.GetComponentInChildren<Enemy1_DapBua>();
         if (e1 != null) { e1.TakeDamage(actualDamage); return; }
 
-        var e2 = col.GetComponentInParent<Enemy2_Zombie>();
+        var e2 = col.GetComponentInParent<Enemy2_Zombie>() ?? col.GetComponentInChildren<Enemy2_Zombie>() ?? col.transform.root.GetComponentInChildren<Enemy2_Zombie>();
         if (e2 != null) { e2.TakeDamage(actualDamage); return; }
 
-        var e3 = col.GetComponentInParent<Enemy3_Buaa>();
+        var e3 = col.GetComponentInParent<Enemy3_Buaa>() ?? col.GetComponentInChildren<Enemy3_Buaa>() ?? col.transform.root.GetComponentInChildren<Enemy3_Buaa>();
         if (e3 != null) { e3.TakeDamage(actualDamage); return; }
 
-        var e4 = col.GetComponentInParent<Enemy4_Bongtoi>();
+        var e4 = col.GetComponentInParent<Enemy4_Bongtoi>() ?? col.GetComponentInChildren<Enemy4_Bongtoi>() ?? col.transform.root.GetComponentInChildren<Enemy4_Bongtoi>();
         if (e4 != null) { e4.TakeDamage(actualDamage); return; }
 
-        var e5 = col.GetComponentInParent<Enemy5_PhuThuy>();
+        var e5 = col.GetComponentInParent<Enemy5_PhuThuy>() ?? col.GetComponentInChildren<Enemy5_PhuThuy>() ?? col.transform.root.GetComponentInChildren<Enemy5_PhuThuy>();
         if (e5 != null) { e5.TakeDamage(actualDamage); return; }
+
+        var mb = col.GetComponentInParent<MiniBossAI>() ?? col.GetComponentInChildren<MiniBossAI>() ?? col.transform.root.GetComponentInChildren<MiniBossAI>();
+        if (mb != null) { mb.TakeDamage(actualDamage); return; }
+
+        var fb = col.GetComponentInParent<FinalBossAI>() ?? col.GetComponentInChildren<FinalBossAI>() ?? col.transform.root.GetComponentInChildren<FinalBossAI>();
+        if (fb != null) { fb.TakeDamage(actualDamage); return; }
+
+        var b = col.GetComponentInParent<BossAI>() ?? col.GetComponentInChildren<BossAI>() ?? col.transform.root.GetComponentInChildren<BossAI>();
+        if (b != null) { b.TakeDamage(actualDamage); return; }
     }
 
 
@@ -3057,12 +3093,23 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
     {
         enemyCollider = null;
         if (col == null) return false;
+        if (col.transform.root == transform.root) return false;
+        if (col.CompareTag("Player") || col.gameObject.layer == LayerMask.NameToLayer("Player")) return false;
 
-        if (col.GetComponentInParent<Enemy1_DapBua>() != null ||
-            col.GetComponentInParent<Enemy2_Zombie>() != null ||
-            col.GetComponentInParent<Enemy3_Buaa>() != null ||
-            col.GetComponentInParent<Enemy4_Bongtoi>() != null ||
-            col.GetComponentInParent<Enemy5_PhuThuy>() != null)
+        bool isEnemyHit = col.CompareTag("Enemy") ||
+                          col.gameObject.layer == LayerMask.NameToLayer("Enemy") ||
+                          col.name.ToLower().Contains("enemy") ||
+                          col.name.ToLower().Contains("boss") ||
+                          col.GetComponentInParent<Enemy1_DapBua>() != null || col.transform.root.GetComponentInChildren<Enemy1_DapBua>() != null ||
+                          col.GetComponentInParent<Enemy2_Zombie>() != null || col.transform.root.GetComponentInChildren<Enemy2_Zombie>() != null ||
+                          col.GetComponentInParent<Enemy3_Buaa>() != null || col.transform.root.GetComponentInChildren<Enemy3_Buaa>() != null ||
+                          col.GetComponentInParent<Enemy4_Bongtoi>() != null || col.transform.root.GetComponentInChildren<Enemy4_Bongtoi>() != null ||
+                          col.GetComponentInParent<Enemy5_PhuThuy>() != null || col.transform.root.GetComponentInChildren<Enemy5_PhuThuy>() != null ||
+                          col.GetComponentInParent<MiniBossAI>() != null || col.transform.root.GetComponentInChildren<MiniBossAI>() != null ||
+                          col.GetComponentInParent<FinalBossAI>() != null || col.transform.root.GetComponentInChildren<FinalBossAI>() != null ||
+                          col.GetComponentInParent<BossAI>() != null || col.transform.root.GetComponentInChildren<BossAI>() != null;
+
+        if (isEnemyHit)
         {
             enemyCollider = col;
             return true;
@@ -3075,20 +3122,27 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
     {
         if (enemyRef.TryGet(out NetworkObject netObj))
         {
-            var col = netObj.GetComponent<Collider>();
+            var col = netObj.GetComponent<Collider>() ?? netObj.GetComponentInChildren<Collider>();
             if (col != null) TryDamageEnemy(col);
             else
             {
-                var e1 = netObj.GetComponentInChildren<Enemy1_DapBua>();
-                if (e1 != null) { e1.TakeDamage(damageAmount); return; }
-                var e2 = netObj.GetComponentInChildren<Enemy2_Zombie>();
-                if (e2 != null) { e2.TakeDamage(damageAmount); return; }
-                var e3 = netObj.GetComponentInChildren<Enemy3_Buaa>();
-                if (e3 != null) { e3.TakeDamage(damageAmount); return; }
-                var e4 = netObj.GetComponentInChildren<Enemy4_Bongtoi>();
-                if (e4 != null) { e4.TakeDamage(damageAmount); return; }
-                var e5 = netObj.GetComponentInChildren<Enemy5_PhuThuy>();
-                if (e5 != null) { e5.TakeDamage(damageAmount); return; }
+                float actualDamage = damageAmount;
+                var e1 = netObj.GetComponent<Enemy1_DapBua>() ?? netObj.GetComponentInChildren<Enemy1_DapBua>();
+                if (e1 != null) { e1.TakeDamage(actualDamage); return; }
+                var e2 = netObj.GetComponent<Enemy2_Zombie>() ?? netObj.GetComponentInChildren<Enemy2_Zombie>();
+                if (e2 != null) { e2.TakeDamage(actualDamage); return; }
+                var e3 = netObj.GetComponent<Enemy3_Buaa>() ?? netObj.GetComponentInChildren<Enemy3_Buaa>();
+                if (e3 != null) { e3.TakeDamage(actualDamage); return; }
+                var e4 = netObj.GetComponent<Enemy4_Bongtoi>() ?? netObj.GetComponentInChildren<Enemy4_Bongtoi>();
+                if (e4 != null) { e4.TakeDamage(actualDamage); return; }
+                var e5 = netObj.GetComponent<Enemy5_PhuThuy>() ?? netObj.GetComponentInChildren<Enemy5_PhuThuy>();
+                if (e5 != null) { e5.TakeDamage(actualDamage); return; }
+                var mb = netObj.GetComponent<MiniBossAI>() ?? netObj.GetComponentInChildren<MiniBossAI>();
+                if (mb != null) { mb.TakeDamage(actualDamage); return; }
+                var fb = netObj.GetComponent<FinalBossAI>() ?? netObj.GetComponentInChildren<FinalBossAI>();
+                if (fb != null) { fb.TakeDamage(actualDamage); return; }
+                var b = netObj.GetComponent<BossAI>() ?? netObj.GetComponentInChildren<BossAI>();
+                if (b != null) { b.TakeDamage(actualDamage); return; }
             }
         }
     }
@@ -3970,9 +4024,15 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
     protected virtual void PlayAnimationLocal(string animName, float fadeTime)
     {
         // Play action sound effects
-        if (animName == "attack1" || animName == "Attack1combo1" || animName == "Attack2combo1" || animName == "ChatRiu")
+        if (animName == "attack1" || animName == "Attack1combo1" || animName == "Attack2combo1" || animName == "ChatRiu" || animName.StartsWith("Chem"))
         {
-            PlayPlayerSFX(attackClip, 0.8f);
+            AudioClip swingClip = Resources.Load<AudioClip>("Audio/ChemChuaHit");
+            PlayPlayerSFX(swingClip, 0.8f);
+        }
+        else if (animName.StartsWith("Dam") || animName.StartsWith("Punch"))
+        {
+            AudioClip punchClip = Resources.Load<AudioClip>("Audio/Punch");
+            PlayPlayerSFX(punchClip);
         }
         else if (animName == "Death")
         {

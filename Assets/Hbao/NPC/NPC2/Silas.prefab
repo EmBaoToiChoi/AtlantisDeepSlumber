@@ -76,15 +76,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 0f23067026bf65c4fb196b7802330f3e, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -107.86391
+      value: -72.51134
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 0f23067026bf65c4fb196b7802330f3e, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 9.895355
+      value: -0.8301468
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 0f23067026bf65c4fb196b7802330f3e, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 16.274523
+      value: 12.640923
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 0f23067026bf65c4fb196b7802330f3e, type: 3}
       propertyPath: m_LocalRotation.w
@@ -312,7 +312,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  GlobalObjectIdHash: 1209928473
+  GlobalObjectIdHash: 870471847
   InScenePlacedSourceGlobalObjectIdHash: 870471847
   DeferredDespawnTick: 0
   Ownership: 1
@@ -364,6 +364,13 @@ MonoBehaviour:
     TriggerNameHash: 1460818663
     TransitionIndex: 2
   - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: -453240694
+    DestinationState: 1285849431
+    TransitionDuration: 0.1
+    TriggerNameHash: -961592120
+    TransitionIndex: 3
+  - IsCrossFadeExit: 0
     Layer: 1
     OriginatingState: -499022955
     DestinationState: 794296749
@@ -403,6 +410,10 @@ MonoBehaviour:
       NameHash: 1460818663
       Synchronize: 1
       ParameterType: 9
+    - name: EarthSummon
+      NameHash: -961592120
+      Synchronize: 1
+      ParameterType: 9
   AnimatorParametersExpanded: 0
 --- !u!195 &6975396423995706817
 NavMeshAgent:
@@ -439,19 +450,32 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   ShowTopMostFoldoutHeaderGroup: 1
-  maxHealth: 200
+  maxHealth: 500
   currentHealth:
     UpdateTraits:
       MinSecondsBetweenUpdates: 0
       MaxSecondsBetweenUpdates: 0
-    m_InternalValue: 200
-  phase2MaxHealth: 300
+    m_InternalValue: 500
+  phase2MaxHealth: 600
   phase2DamageMultiplier: 1.3
   phase2SpeedMultiplier: 1.25
   phase2AnimSpeed: 1.4
   enrageDuration: 3
   enrageVFXPrefab: {fileID: 6530448752386012335, guid: db8a26dbfe6511b4a86e870b66ca27b8, type: 3}
   enrageVFXSpawnPoint: {fileID: 0}
+  warningDecalPrefab: {fileID: 863696848358669098, guid: 59f87adf2f772c4469010e8dfb9bddc1, type: 3}
+  earthBlastPrefab: {fileID: 7907260701345176331, guid: d901313d00610f14981ccc932d3d95f7, type: 3}
+  warningDuration: 1.5
+  earthBlastRadius: 3
+  earthBlastDamage: 30
+  earthBlastKnockback: 15
+  earthSummonTrigger: EarthSummon
+  earthSummonInterval: 5
+  earthBlastScale: 5
+  minionPrefab: {fileID: 5764630933208192827, guid: c39f677d839639b4dae69d3b08885fa7, type: 3}
+  minionSpawnRadius: 6
+  minionSummonInterval: 10
+  maxMinionsAlive: 5
   currentState:
     UpdateTraits:
       MinSecondsBetweenUpdates: 0
@@ -497,6 +521,11 @@ MonoBehaviour:
       MinSecondsBetweenUpdates: 0
       MaxSecondsBetweenUpdates: 0
     m_InternalValue: 0
+  earthSummonCounter:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 0
   agent: {fileID: 6975396423995706817}
   anim: {fileID: 8169567763737278100}
   eyeTransform: {fileID: 8819950804527126295}
@@ -504,7 +533,7 @@ MonoBehaviour:
   chaseRunSpeed: 5.5
   orbitSpeed: 3
   dodgeSpeed: 12
-  sightRange: 15
+  sightRange: 51.2
   fieldOfView: 120
   attackRange: 3
   kickDetectRange: 2
@@ -718,43 +747,43 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4925423306168296723, guid: ed308663df44ccf4783af8cf58497d07, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -0.022
+      value: -0.022001915
       objectReference: {fileID: 0}
     - target: {fileID: 4925423306168296723, guid: ed308663df44ccf4783af8cf58497d07, type: 3}
       propertyPath: m_LocalPosition.y
-      value: -0.084
+      value: -0.08400437
       objectReference: {fileID: 0}
     - target: {fileID: 4925423306168296723, guid: ed308663df44ccf4783af8cf58497d07, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 0.018
+      value: 0.01799981
       objectReference: {fileID: 0}
     - target: {fileID: 4925423306168296723, guid: ed308663df44ccf4783af8cf58497d07, type: 3}
       propertyPath: m_LocalRotation.w
-      value: 0.7635578
+      value: -0.6712252
       objectReference: {fileID: 0}
     - target: {fileID: 4925423306168296723, guid: ed308663df44ccf4783af8cf58497d07, type: 3}
       propertyPath: m_LocalRotation.x
-      value: 0.10414443
+      value: 0.31534958
       objectReference: {fileID: 0}
     - target: {fileID: 4925423306168296723, guid: ed308663df44ccf4783af8cf58497d07, type: 3}
       propertyPath: m_LocalRotation.y
-      value: -0.12734842
+      value: -0.38561106
       objectReference: {fileID: 0}
     - target: {fileID: 4925423306168296723, guid: ed308663df44ccf4783af8cf58497d07, type: 3}
       propertyPath: m_LocalRotation.z
-      value: 0.6244324
+      value: -0.54892224
       objectReference: {fileID: 0}
     - target: {fileID: 4925423306168296723, guid: ed308663df44ccf4783af8cf58497d07, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
-      value: 18.547
+      value: -57.853
       objectReference: {fileID: 0}
     - target: {fileID: 4925423306168296723, guid: ed308663df44ccf4783af8cf58497d07, type: 3}
       propertyPath: m_LocalEulerAnglesHint.y
-      value: -3.896
+      value: -341.202
       objectReference: {fileID: 0}
     - target: {fileID: 4925423306168296723, guid: ed308663df44ccf4783af8cf58497d07, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
-      value: 77.916
+      value: 68.099
       objectReference: {fileID: 0}
     - target: {fileID: 5697421634133508009, guid: ed308663df44ccf4783af8cf58497d07, type: 3}
       propertyPath: m_Name

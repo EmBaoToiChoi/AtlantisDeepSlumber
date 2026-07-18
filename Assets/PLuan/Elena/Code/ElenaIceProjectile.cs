@@ -84,6 +84,13 @@ public class ElenaIceProjectile : NetworkBehaviour
         if (flyingGFX != null) flyingGFX.SetActive(true);
         if (hitGFX != null) hitGFX.SetActive(false);
 
+        // Phát âm thanh xuất chiêu nguyên tố Fireball khi khởi tạo đạn băng
+        AudioClip launchClip = Resources.Load<AudioClip>("Audio/Fireball");
+        if (launchClip != null)
+        {
+            AudioSource.PlayClipAtPoint(launchClip, transform.position);
+        }
+
         Debug.Log($"[ElenaIceProjectile] Đạn băng được khởi tạo tại: {transform.position}, Tag: {gameObject.tag}");
 
         if (NetworkManager.Singleton == null || NetworkManager.Singleton.IsServer)
@@ -151,7 +158,10 @@ public class ElenaIceProjectile : NetworkBehaviour
                        other.GetComponentInParent<Enemy2_Zombie>() != null ||
                        other.GetComponentInParent<Enemy3_Buaa>() != null ||
                        other.GetComponentInParent<Enemy4_Bongtoi>() != null ||
-                       other.GetComponentInParent<Enemy5_PhuThuy>() != null;
+                       other.GetComponentInParent<Enemy5_PhuThuy>() != null ||
+                       other.GetComponentInParent<MiniBossAI>() != null ||
+                       other.GetComponentInParent<FinalBossAI>() != null ||
+                       other.GetComponentInParent<BossAI>() != null;
 
         // Bypass non-enemy collisions if they are too close to the spawn point to prevent self/ground detonation
         if (!isEnemy && Vector3.Distance(transform.position, spawnPosition) < 1.5f)
@@ -168,7 +178,7 @@ public class ElenaIceProjectile : NetworkBehaviour
             }
             hitEnemyRoots.Add(enemyRoot);
 
-            Debug.Log($"[ElenaIceProjectile] Đạn băng va chạm trúng Enemy: {other.name}, Gây sát thương: {damage}");
+            Debug.Log($"[ElenaIceProjectile] Đạn băng va chạm trúng Enemy/Boss: {other.name}, Gây sát thương: {damage}");
             
             var e1 = other.GetComponentInParent<Enemy1_DapBua>();
             if (e1 != null) { e1.TakeDamage(damage); }
@@ -188,6 +198,21 @@ public class ElenaIceProjectile : NetworkBehaviour
                         {
                             var e5 = other.GetComponentInParent<Enemy5_PhuThuy>();
                             if (e5 != null) { e5.TakeDamage(damage); }
+                            else
+                            {
+                                var mb = other.GetComponentInParent<MiniBossAI>();
+                                if (mb != null) { mb.TakeDamage(damage); }
+                                else
+                                {
+                                    var fb = other.GetComponentInParent<FinalBossAI>();
+                                    if (fb != null) { fb.TakeDamage(damage); }
+                                    else
+                                    {
+                                        var b = other.GetComponentInParent<BossAI>();
+                                        if (b != null) { b.TakeDamage(damage); }
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -259,6 +284,13 @@ public class ElenaIceProjectile : NetworkBehaviour
         {
             rb.linearVelocity = Vector3.zero;
             rb.isKinematic = true;
+        }
+
+        // Phát âm thanh nổ BreakSkill
+        AudioClip breakSkillClip = Resources.Load<AudioClip>("Audio/BreakSkill");
+        if (breakSkillClip != null)
+        {
+            AudioSource.PlayClipAtPoint(breakSkillClip, transform.position);
         }
     }
 

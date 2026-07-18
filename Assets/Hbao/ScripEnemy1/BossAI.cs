@@ -44,6 +44,33 @@ public class BossAI : NetworkBehaviour
     public GameObject enrageVFXPrefab;
     public Transform enrageVFXSpawnPoint;
 
+    // ─── Thiết lập Triệu Hồi Đá (Earth Summon) ───────────────────
+    [Header("Earth Summon Settings")]
+    public GameObject warningDecalPrefab;
+    public GameObject earthBlastPrefab;
+    public float warningDuration = 1.5f;
+    public float earthBlastRadius = 3.0f;
+    public float earthBlastDamage = 50f;
+    public float earthBlastKnockback = 15f;
+    public string earthSummonTrigger = "EarthSummon";
+    public float earthSummonInterval = 5f;
+    public float earthBlastScale = 5.0f; // Scale đá to hơn (mặc định FinalBoss là 3.0f)
+    private float earthSummonCooldownTimer;
+    private bool isCastingEarthSummon = false;
+
+    // ─── Thiết lập Triệu Hồi Quái Con (Minion Summon) ────────────
+    [Header("Minion Spawning Settings")]
+    [Tooltip("Prefab của quái con để triệu hồi. Bắt buộc có NetworkObject.")]
+    public GameObject minionPrefab;
+    [Tooltip("Bán kính ngẫu nhiên xung quanh Boss AI để sinh quái con")]
+    public float minionSpawnRadius = 6.0f;
+    [Tooltip("Giản cách thời gian triệu hồi quái con (giây)")]
+    public float minionSummonInterval = 10f;
+    [Tooltip("Giới hạn số lượng quái con tối đa được sinh ra còn sống đồng thời")]
+    public int maxMinionsAlive = 10;
+    private float minionSummonTimer;
+    private List<GameObject> activeMinions = new List<GameObject>();
+
     // ─── Đồng bộ trạng thái FSM qua mạng ───────────────────────
     [Header("Network State Sync")]
     public NetworkVariable<BossState> currentState = new NetworkVariable<BossState>(
@@ -66,6 +93,8 @@ public class BossAI : NetworkBehaviour
     public NetworkVariable<int> kickCounter = new NetworkVariable<int>(
         0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     public NetworkVariable<int> enrageCounter = new NetworkVariable<int>(
+        0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+    public NetworkVariable<int> earthSummonCounter = new NetworkVariable<int>(
         0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
     // ─── Biến Fallback dùng khi chạy Offline/Editor ──────────────
@@ -248,6 +277,9 @@ public class BossAI : NetworkBehaviour
             rb.useGravity = false;
         }
 
+        earthSummonCooldownTimer = earthSummonInterval;
+        minionSummonTimer = minionSummonInterval;
+ 
         if (!IsNetworkActive)
         {
             isStandaloneMode = true;
@@ -283,6 +315,7 @@ public class BossAI : NetworkBehaviour
         kickCounter.OnValueChanged += (_, _) => { if (anim != null) anim.SetTrigger(kickTrigger); };
         enrageCounter.OnValueChanged += OnEnrageCounterChanged;
         currentHealth.OnValueChanged += OnHealthNetChanged;
+        earthSummonCounter.OnValueChanged += (_, _) => { if (anim != null) anim.SetTrigger(earthSummonTrigger); };
 
         // Lắng nghe sự kiện gồng nộ đồng bộ hóa của Client
         isPhase2Network.OnValueChanged += (oldVal, newVal) =>
@@ -318,6 +351,7 @@ public class BossAI : NetworkBehaviour
         kickCounter.OnValueChanged -= (_, _) => { if (anim != null) anim.SetTrigger(kickTrigger); };
         enrageCounter.OnValueChanged -= OnEnrageCounterChanged;
         currentHealth.OnValueChanged -= OnHealthNetChanged;
+        earthSummonCounter.OnValueChanged -= (_, _) => { if (anim != null) anim.SetTrigger(earthSummonTrigger); };
     }
 
     private void OnHealthNetChanged(float oldVal, float newVal)
@@ -355,6 +389,23 @@ public class BossAI : NetworkBehaviour
         if (attackCooldownTimer > 0) attackCooldownTimer -= Time.deltaTime;
         if (kickCooldownTimer > 0) kickCooldownTimer -= Time.deltaTime;
 
+        if (IsBossActive && !IsDead && targetPlayer != null)
+        {
+            earthSummonCooldownTimer -= Time.deltaTime;
+            if (earthSummonCooldownTimer <= 0)
+            {
+                earthSummonCooldownTimer = earthSummonInterval;
+                TriggerEarthSummon();
+            }
+ 
+            minionSummonTimer -= Time.deltaTime;
+            if (minionSummonTimer <= 0)
+            {
+                minionSummonTimer = minionSummonInterval;
+                SummonMinions();
+            }
+        }
+
         // Xử lý đếm thời gian né đòn (Dodge)
         if (isDodging)
         {
@@ -380,7 +431,23 @@ public class BossAI : NetworkBehaviour
         // Cập nhật FSM hiện tại
         if (currentFSMState != null)
         {
-            currentFSMState.Update();
+            if (isCastingEarthSummon)
+            {
+                if (AgentReady)
+                {
+                    agent.isStopped = true;
+                    agent.velocity = Vector3.zero;
+                }
+                SetSpeedNet(0f);
+                if (targetPlayer != null)
+                {
+                    RotateTowards(targetPlayer.position);
+                }
+            }
+            else
+            {
+                currentFSMState.Update();
+            }
         }
     }
 
@@ -676,6 +743,24 @@ public class BossAI : NetworkBehaviour
 
         // Loại trừ Layer "Player" và "Enemy" khỏi bộ lọc vật cản (Raycast) để tránh việc Raycast tự va chạm vào chính thân thể Player/Boss rồi nghĩ là bị che mắt
         int raycastMask = obstacleLayer.value & ~LayerMask.GetMask("Player", "Enemy");
+
+        // KHÓA MỤC TIÊU ƯU TIÊN: Nếu đang có mục tiêu và mục tiêu đó vẫn hợp lệ thì tiếp tục dí mục tiêu đó, không đổi người gần hơn
+        if (targetPlayer != null)
+        {
+            if (!IsPlayerDeadOrInvisible(targetPlayer))
+            {
+                Vector3 targetCenter = targetPlayer.position + Vector3.up * 1.0f;
+                float d = Vector3.Distance(eyePos, targetCenter);
+                if (d <= sightRange)
+                {
+                    Vector3 dir = (targetCenter - eyePos).normalized;
+                    if (!Physics.Raycast(eyePos, dir, d, raycastMask))
+                    {
+                        return; // Khóa mục tiêu thành công!
+                    }
+                }
+            }
+        }
 
         var activePlayers = GetAllActivePlayers();
         for (int i = 0; i < activePlayers.Count; i++)
@@ -1123,6 +1208,11 @@ public class BossAI : NetworkBehaviour
             currentFSMState.Exit();
         }
 
+        if (newState == BossState.Hit || newState == BossState.Dead || newState == BossState.Enrage)
+        {
+            isCastingEarthSummon = false;
+        }
+
         CurrentStateValue = newState;
 
         switch (newState)
@@ -1339,6 +1429,268 @@ public class BossAI : NetworkBehaviour
         public void Enter() { boss.Die(); }
         public void Update() {}
         public void Exit() {}
+    }
+
+    // ─── Earth Summon (Triệu Hồi Đá) Logic ───────────────────────
+
+    private void TriggerEarthSummon()
+    {
+        bool auth = isStandaloneMode || (IsNetworkActive && IsServer);
+        if (!auth) return;
+
+        isCastingEarthSummon = true; // Đứng im triệu hồi
+
+        if (isStandaloneMode)
+        {
+            if (anim != null) anim.SetTrigger(earthSummonTrigger);
+        }
+        else
+        {
+            earthSummonCounter.Value++;
+        }
+
+        Vector3[] spawnPositions = CalculateEarthBlastPositions();
+
+        if (!isStandaloneMode)
+        {
+            SpawnWarningIndicatorsClientRpc(spawnPositions);
+        }
+        else
+        {
+            SpawnWarningIndicatorsLocal(spawnPositions);
+        }
+
+        StartCoroutine(EarthBlastRoutine(spawnPositions));
+    }
+
+    private IEnumerator EarthBlastRoutine(Vector3[] positions)
+    {
+        yield return new WaitForSeconds(warningDuration);
+
+        isCastingEarthSummon = false; // Kết thúc đứng im triệu hồi
+        if (AgentReady)
+        {
+            agent.isStopped = false; // Tiếp tục di chuyển
+        }
+
+        if (!isStandaloneMode)
+        {
+            PlayEarthBlastClientRpc(positions);
+        }
+        else
+        {
+            PlayEarthBlastLocal(positions);
+        }
+
+        DealEarthBlastDamage(positions);
+    }
+
+    [ClientRpc]
+    private void SpawnWarningIndicatorsClientRpc(Vector3[] positions)
+    {
+        SpawnWarningIndicatorsLocal(positions);
+    }
+
+    [ClientRpc]
+    private void PlayEarthBlastClientRpc(Vector3[] positions)
+    {
+        PlayEarthBlastLocal(positions);
+    }
+
+    private void SpawnWarningIndicatorsLocal(Vector3[] positions)
+    {
+        foreach (var pos in positions)
+        {
+            // 1. Tạo vòng tròn cảnh báo decal (nếu hoạt động trên máy người chơi)
+            if (warningDecalPrefab != null)
+            {
+                GameObject warning = Instantiate(warningDecalPrefab, pos + Vector3.up * 0.05f, Quaternion.identity);
+                
+                // Gắn script chớp đỏ cảnh báo
+                var flasher = warning.AddComponent<WarningDecalFlash>();
+                if (flasher != null)
+                {
+                    flasher.StartFlashing(warningDuration);
+                }
+
+                Destroy(warning, warningDuration);
+            }
+
+            // 2. Tạo vòng viền đỏ lập trình (Procedural) - Failsafe luôn hiển thị đỏ chớp tắt rực rỡ
+            GameObject proceduralRing = new GameObject("ProceduralWarningRing");
+            proceduralRing.transform.position = pos;
+            var ring = proceduralRing.AddComponent<ProceduralWarningCircle>();
+            if (ring != null)
+            {
+                ring.StartWarning(warningDuration, earthBlastRadius);
+            }
+            Destroy(proceduralRing, warningDuration);
+        }
+    }
+
+    private void PlayEarthBlastLocal(Vector3[] positions)
+    {
+        foreach (var pos in positions)
+        {
+            if (earthBlastPrefab != null)
+            {
+                GameObject blast = Instantiate(earthBlastPrefab, pos, Quaternion.identity);
+                
+                // Tăng kích thước transform lên to hơn nữa ( earthBlastScale = 5.0f )
+                blast.transform.localScale = Vector3.one * earthBlastScale;
+
+                // Tự động thiết lập Collider toàn diện (cả vòng tròn ngoài lẫn tất cả các mảnh đá visual của Prefab)
+                EarthBlastDamageZone.SetupRockColliders(blast, earthBlastRadius, earthBlastScale, 30f);
+
+                // Thử kích hoạt Elemental VFX nếu có
+                var locationVfx = blast.GetComponent<PixPlays.ElementalVFX.LocationVfx>();
+                if (locationVfx != null)
+                {
+                    var data = new PixPlays.ElementalVFX.VfxData(pos, pos + Vector3.up, earthBlastScale, earthBlastRadius * earthBlastScale);
+                    locationVfx.Play(data);
+                }
+
+                Destroy(blast, 4.0f);
+            }
+        }
+    }
+
+    private Vector3[] CalculateEarthBlastPositions()
+    {
+        var activePlayers = GetAllActivePlayers();
+        var spots = new List<Vector3>();
+
+        // Đảm bảo chia đều triệu hồi đá dưới chân TẤT CẢ các Player đang sống
+        foreach (var p in activePlayers)
+        {
+            if (p == null || IsPlayerDeadOrInvisible(p)) continue;
+            
+            // 1. Triệu hồi ĐẦY ĐỦ chính xác 1 đốm đá ngay dưới chân từng Player
+            spots.Add(p.position);
+            
+            // 2. Triệu hồi thêm 2 đốm đá bẫy ngẫu nhiên xung quanh dưới chân người chơi đó (Chia đều cho cả 4 player)
+            for (int k = 0; k < 2; k++)
+            {
+                Vector2 randomOffset = Random.insideUnitCircle * 3.0f; // Bán kính 3m quanh player
+                Vector3 offsetPos = p.position + new Vector3(randomOffset.x, 0f, randomOffset.y);
+                if (NavMesh.SamplePosition(offsetPos, out NavMeshHit hit, 3.5f, NavMesh.AllAreas))
+                {
+                    spots.Add(hit.position);
+                }
+                else
+                {
+                    spots.Add(offsetPos);
+                }
+            }
+        }
+
+        // Nếu không có người chơi nào hoạt động, triệu hồi ngẫu nhiên xung quanh Boss
+        if (spots.Count == 0)
+        {
+            int targetCount = Random.Range(4, 7);
+            for (int i = 0; i < targetCount; i++)
+            {
+                Vector2 randomOffset = Random.insideUnitCircle * 8f;
+                Vector3 offsetPos = transform.position + new Vector3(randomOffset.x, 0, randomOffset.y);
+                if (NavMesh.SamplePosition(offsetPos, out NavMeshHit hit, 5f, NavMesh.AllAreas))
+                {
+                    spots.Add(hit.position);
+                }
+            }
+        }
+
+        return spots.ToArray();
+    }
+
+    public void DealEarthBlastDamage(Vector3[] positions)
+    {
+        bool auth = isStandaloneMode || (IsNetworkActive && IsServer);
+        if (!auth) return;
+
+        foreach (var pos in positions)
+        {
+            Collider[] hits = Physics.OverlapSphere(pos, earthBlastRadius, playerLayer);
+            HashSet<Transform> hitRoots = new HashSet<Transform>();
+
+            foreach (var hit in hits)
+            {
+                Transform root = GetPlayerRoot(hit.transform);
+                if (root != null && !hitRoots.Contains(root))
+                {
+                    hitRoots.Add(root);
+                    Vector3 knockbackDir = (root.position - pos);
+                    knockbackDir.y = 1.0f;
+                    Vector3 force = knockbackDir.normalized * earthBlastKnockback;
+
+                    EnemyDamageHelper.DealDamage(root, earthBlastDamage, force);
+                    Debug.Log($"[BossAI] Earth Blast hit player: {root.name} at {pos}");
+                }
+            }
+        }
+    }
+
+    private void SummonMinions()
+    {
+        bool auth = isStandaloneMode || (IsNetworkActive && IsServer);
+        if (!auth) return;
+
+        if (minionPrefab == null)
+        {
+            Debug.LogWarning("[BossAI] Không có Minion Prefab nào được gán để triệu hồi!");
+            return;
+        }
+
+        // Dọn dẹp quái con đã chết hoặc biến mất
+        for (int i = activeMinions.Count - 1; i >= 0; i--)
+        {
+            if (activeMinions[i] == null) activeMinions.RemoveAt(i);
+        }
+
+        // Giới hạn số lượng quái con đồng thời
+        if (activeMinions.Count >= maxMinionsAlive)
+        {
+            Debug.Log("[BossAI] Đã đạt giới hạn quái con tối đa. Bỏ qua lượt triệu hồi này.");
+            return;
+        }
+
+        // Xác định tâm sinh quái là vị trí hiện tại của Boss AI để triệu hồi ngẫu nhiên xung quanh Boss
+        Vector3 spawnCenter = transform.position;
+
+        int spawnCount = Random.Range(4, 6); // Triệu hồi 4-5 con quái con
+        Debug.Log($"[BossAI] Bắt đầu triệu hồi ngẫu nhiên {spawnCount} quái con xung quanh Boss tại: {spawnCenter}");
+
+        for (int i = 0; i < spawnCount; i++)
+        {
+            Vector2 randomCircle = Random.insideUnitCircle * minionSpawnRadius;
+            Vector3 spawnPos = spawnCenter + new Vector3(randomCircle.x, 0.1f, randomCircle.y);
+
+            // Tìm vị trí hợp lệ trên NavMesh
+            if (NavMesh.SamplePosition(spawnPos, out NavMeshHit hit, minionSpawnRadius, NavMesh.AllAreas))
+            {
+                spawnPos = hit.position;
+            }
+
+            GameObject minion = Instantiate(minionPrefab, spawnPos, Quaternion.identity);
+            
+            if (isStandaloneMode)
+            {
+                activeMinions.Add(minion);
+            }
+            else
+            {
+                var netObj = minion.GetComponent<NetworkObject>();
+                if (netObj != null)
+                {
+                    netObj.Spawn(true);
+                    activeMinions.Add(minion);
+                }
+                else
+                {
+                    Debug.LogError($"[BossAI] Minion Prefab '{minionPrefab.name}' thiếu NetworkObject! Đang tự hủy...");
+                    Destroy(minion);
+                }
+            }
+        }
     }
 
     // ─── Hỗ trợ đồng bộ hóa & Xoay ─────────────────────────────

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Unity.Netcode;
 using UnityEngine;
 
@@ -6,6 +7,7 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
     [Header("Audio Settings")]
     [SerializeField] private AudioSource playerAudioSource;
     [SerializeField] private AudioClip footstepClip;
+    [SerializeField] private AudioClip footstepClip2;
     [SerializeField] private AudioClip attackClip;
     [SerializeField] private AudioClip hitClip;
     [SerializeField] private AudioClip deathClip;
@@ -13,6 +15,7 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
     [SerializeField] private AudioClip skillEClip;
     [SerializeField] private AudioClip skillRClip;
     private float footstepTimer = 0f;
+    private bool playSecondFootstep = false;
 
     private void InitializeAudio()
     {
@@ -43,21 +46,32 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
         playerAudioSource.volume = 1.0f;
 
         if (footstepClip == null) footstepClip = Resources.Load<AudioClip>("Audio/Footstep");
-        if (attackClip == null) attackClip = Resources.Load<AudioClip>("Audio/ArrowShoot");
+        if (footstepClip2 == null) footstepClip2 = Resources.Load<AudioClip>("Audio/Footstep2");
+        // Tạm thời comment các âm thanh chưa có để tránh loạn âm thanh
+        /*
         if (hitClip == null) hitClip = Resources.Load<AudioClip>("Audio/HitHurt");
         if (deathClip == null) deathClip = Resources.Load<AudioClip>("Audio/Death");
-        if (skillQClip == null) skillQClip = Resources.Load<AudioClip>("Audio/IceSkill");
-        if (skillEClip == null) skillEClip = Resources.Load<AudioClip>("Audio/IceSkill");
-        if (skillRClip == null) skillRClip = Resources.Load<AudioClip>("Audio/IceSkill");
+        */
+        
+        // Tải âm thanh tấn công mới thêm (ArrowShot cho Elena)
+        if (attackClip == null) attackClip = Resources.Load<AudioClip>("Audio/ArrowShot");
+        
+        // Tải âm thanh Skill mới thêm (Skill R nguyên tố)
+        if (skillRClip == null) skillRClip = Resources.Load<AudioClip>("Audio/Fireball");
 
         // Log warnings if audio files fail to load
         if (footstepClip == null) Debug.LogWarning($"[Audio Debug] ElenaPlayer: Failed to load Resources/Audio/Footstep");
         else Debug.Log($"[Audio Debug] ElenaPlayer: Successfully loaded Resources/Audio/Footstep");
-        if (attackClip == null) Debug.LogWarning($"[Audio Debug] ElenaPlayer: Failed to load Resources/Audio/ArrowShoot");
-        else Debug.Log($"[Audio Debug] ElenaPlayer: Successfully loaded Resources/Audio/ArrowShoot");
+        if (footstepClip2 == null) Debug.LogWarning($"[Audio Debug] ElenaPlayer: Failed to load Resources/Audio/Footstep2");
+        else Debug.Log($"[Audio Debug] ElenaPlayer: Successfully loaded Resources/Audio/Footstep2");
+        if (attackClip == null) Debug.LogWarning($"[Audio Debug] ElenaPlayer: Failed to load Resources/Audio/ArrowShot");
+        else Debug.Log($"[Audio Debug] ElenaPlayer: Successfully loaded Resources/Audio/ArrowShot");
+        /*
         if (hitClip == null) Debug.LogWarning($"[Audio Debug] ElenaPlayer: Failed to load Resources/Audio/HitHurt");
         if (deathClip == null) Debug.LogWarning($"[Audio Debug] ElenaPlayer: Failed to load Resources/Audio/Death");
-        if (skillRClip == null) Debug.LogWarning($"[Audio Debug] ElenaPlayer: Failed to load Resources/Audio/IceSkill");
+        */
+        if (skillRClip == null) Debug.LogWarning($"[Audio Debug] ElenaPlayer: Failed to load Resources/Audio/Fireball (Skill R)");
+        else Debug.Log($"[Audio Debug] ElenaPlayer: Successfully loaded Resources/Audio/Fireball (Skill R)");
     }
 
     private void PlayPlayerSFX(AudioClip clip, float volumeScale = 1.0f)
@@ -494,9 +508,15 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     private System.Collections.IEnumerator DeathEyelidsSequenceCoroutine()
     {
+        if (CurrentHealth > 0f) yield break;
         float duration = 1.5f;
         PlayerDeathEffectManager.Instance.PlayDeathEffect(duration);
         yield return new WaitForSeconds(duration);
+        if (CurrentHealth > 0f)
+        {
+            PlayerDeathEffectManager.Instance.ResetDeathEffect();
+            yield break;
+        }
         isDeathAnimFinished = true;
         if (!isStandaloneMode)
         {
@@ -819,7 +839,7 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     private void SpawnIceProjectileLocal(Vector3 spawnPos, Vector3 shootDirection)
     {
-        PlayPlayerSFX(skillRClip);
+        // PlayPlayerSFX(skillRClip); // Âm thanh nguyên tố phát tự động trong Start() của ElenaIceProjectile
         if (rSkillIcePrefab == null)
         {
             Debug.LogError("[ElenaPlayer] rSkillIcePrefab chưa được gán trong Inspector!");
@@ -1899,13 +1919,18 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
                 if (footstepTimer >= delay)
                 {
                     footstepTimer = 0f;
-                    PlayPlayerSFX(footstepClip, isRunning ? 0.5f : 0.35f);
+                    
+                    // Alternating footsteps: Footstep 1 then Footstep 2
+                    AudioClip clipToPlay = (playSecondFootstep && footstepClip2 != null) ? footstepClip2 : footstepClip;
+                    PlayPlayerSFX(clipToPlay, isRunning ? 0.5f : 0.35f);
+                    playSecondFootstep = !playSecondFootstep;
                 }
             }
         }
         else
         {
             footstepTimer = 0f;
+            playSecondFootstep = false; // Reset to start with the first clip next time
         }
     }
 
@@ -2738,32 +2763,58 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
             PlayAnimation(animToPlay, 0.05f, false, isRootedAttack);
         }
 
-        // Raycast melee attack is now handled by animation events.
+        PerformMeleeRaycastAttack();
+        StartCoroutine(DelayedRaycastAttackCoroutine(0.15f));
+    }
+
+    private System.Collections.IEnumerator DelayedRaycastAttackCoroutine(float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        PerformMeleeRaycastAttack();
     }
 
     public void PerformMeleeRaycastAttack()
     {
-        if (isStandaloneMode)
+        bool hasControl = isStandaloneMode || !IsSpawned || IsOwner || (NetworkManager.Singleton != null && NetworkManager.Singleton.IsServer);
+        if (!hasControl) return;
+
+        Vector3 aimDir = transform.forward;
+        if (targetCamera != null)
         {
-            Vector3 aimDir = transform.forward;
-            if (targetCamera != null)
+            aimDir = targetCamera.transform.forward;
+            aimDir.y = 0f;
+            aimDir.Normalize();
+        }
+
+        Vector3 rayStartClient = transform.position + Vector3.up * 0.8f;
+        float range = Mathf.Max(attackRange, 3.0f);
+        RaycastHit[] hits = Physics.SphereCastAll(rayStartClient, 1.2f, aimDir, range);
+
+        HashSet<Transform> processed = new HashSet<Transform>();
+        foreach (var hitClient in hits)
+        {
+            if (hitClient.collider == null || hitClient.collider.transform.root == transform.root) continue;
+            Transform root = hitClient.collider.transform.root;
+            if (processed.Contains(root)) continue;
+            processed.Add(root);
+
+            if (IsEnemy(hitClient.collider, out Collider enemyCollider))
             {
-                aimDir = targetCamera.transform.forward;
-                aimDir.y = 0f;
-                aimDir.Normalize();
+                var netObj = enemyCollider.transform.root.GetComponent<NetworkObject>() ?? enemyCollider.GetComponentInParent<NetworkObject>() ?? enemyCollider.GetComponentInChildren<NetworkObject>();
+
+                if (!isStandaloneMode && IsSpawned && netObj != null)
+                {
+                    DamageEnemyServerRpc(netObj);
+                }
+                else
+                {
+                    TryDamageEnemy(enemyCollider);
+                }
             }
-
-            // Đưa tia quét ra trước 0.5m và cao ngang ngực (1.0m) để tránh va chạm với chính người chơi
-            Vector3 rayStartClient = transform.position + Vector3.up * 1.0f + aimDir * 0.5f;
-            float castRadius = 0.5f; // Bán kính tia quét tròn để dễ trúng mục tiêu cận chiến
-            bool hasHitClient = Physics.SphereCast(rayStartClient, castRadius, aimDir, out RaycastHit hitClient, attackRange);
-
-            if (hasHitClient)
+            else
             {
-                TryDamageEnemy(hitClient.collider);
-
                 // Chém cây gỗ (ChoppableTree) cho Elena
-                ChoppableTree tree = hitClient.collider.GetComponentInParent<ChoppableTree>();
+                ChoppableTree tree = hitClient.collider.GetComponentInParent<ChoppableTree>() ?? hitClient.collider.transform.root.GetComponentInChildren<ChoppableTree>();
                 if (tree == null)
                 {
                     var forwarder = hitClient.collider.GetComponent<TreeColliderForwarder>();
@@ -2774,34 +2825,6 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
                     Vector3 hitPos = hitClient.point;
                     int weaponIndex = GetActiveWeaponIndex();
                     tree.HitTree(hitPos, weaponIndex);
-                }
-            }
-        }
-        else
-        {
-            if (IsOwner)
-            {
-                Vector3 aimDir = transform.forward;
-                if (targetCamera != null)
-                {
-                    aimDir = targetCamera.transform.forward;
-                    aimDir.y = 0f;
-                    aimDir.Normalize();
-                }
-
-                // Đưa tia quét ra trước 0.5m và cao ngang ngực (1.0m) để tránh va chạm với chính người chơi
-                Vector3 rayStartClient = transform.position + Vector3.up * 1.0f + aimDir * 0.5f;
-                float castRadius = 0.5f;
-                bool hasHitClient = Physics.SphereCast(rayStartClient, castRadius, aimDir, out RaycastHit hitClient, attackRange);
-
-                AttackServerRpc(aimDir);
-                if (hasHitClient)
-                {
-                    var netObj = hitClient.collider.GetComponentInParent<NetworkObject>();
-                    if (netObj != null)
-                    {
-                        DamageEnemyServerRpc(netObj);
-                    }
                 }
             }
         }
@@ -2841,20 +2864,60 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
     // ------------------------------------------------------------------
     public void TryDamageEnemy(Collider col)
     {
-        var e1 = col.GetComponentInParent<Enemy1_DapBua>();
-        if (e1 != null) { e1.TakeDamage(damageAmount); return; }
+        if (col == null) return;
+        float actualDamage = damageAmount;
 
-        var e2 = col.GetComponentInParent<Enemy2_Zombie>();
-        if (e2 != null) { e2.TakeDamage(damageAmount); return; }
+        var e1 = col.GetComponentInParent<Enemy1_DapBua>() ?? col.GetComponentInChildren<Enemy1_DapBua>() ?? col.transform.root.GetComponentInChildren<Enemy1_DapBua>();
+        if (e1 != null) { e1.TakeDamage(actualDamage); return; }
 
-        var e3 = col.GetComponentInParent<Enemy3_Buaa>();
-        if (e3 != null) { e3.TakeDamage(damageAmount); return; }
+        var e2 = col.GetComponentInParent<Enemy2_Zombie>() ?? col.GetComponentInChildren<Enemy2_Zombie>() ?? col.transform.root.GetComponentInChildren<Enemy2_Zombie>();
+        if (e2 != null) { e2.TakeDamage(actualDamage); return; }
 
-        var e4 = col.GetComponentInParent<Enemy4_Bongtoi>();
-        if (e4 != null) { e4.TakeDamage(damageAmount); return; }
+        var e3 = col.GetComponentInParent<Enemy3_Buaa>() ?? col.GetComponentInChildren<Enemy3_Buaa>() ?? col.transform.root.GetComponentInChildren<Enemy3_Buaa>();
+        if (e3 != null) { e3.TakeDamage(actualDamage); return; }
 
-        var e5 = col.GetComponentInParent<Enemy5_PhuThuy>();
-        if (e5 != null) { e5.TakeDamage(damageAmount); return; }
+        var e4 = col.GetComponentInParent<Enemy4_Bongtoi>() ?? col.GetComponentInChildren<Enemy4_Bongtoi>() ?? col.transform.root.GetComponentInChildren<Enemy4_Bongtoi>();
+        if (e4 != null) { e4.TakeDamage(actualDamage); return; }
+
+        var e5 = col.GetComponentInParent<Enemy5_PhuThuy>() ?? col.GetComponentInChildren<Enemy5_PhuThuy>() ?? col.transform.root.GetComponentInChildren<Enemy5_PhuThuy>();
+        if (e5 != null) { e5.TakeDamage(actualDamage); return; }
+
+        var mb = col.GetComponentInParent<MiniBossAI>() ?? col.GetComponentInChildren<MiniBossAI>() ?? col.transform.root.GetComponentInChildren<MiniBossAI>();
+        if (mb != null) { mb.TakeDamage(actualDamage); return; }
+
+        var fb = col.GetComponentInParent<FinalBossAI>() ?? col.GetComponentInChildren<FinalBossAI>() ?? col.transform.root.GetComponentInChildren<FinalBossAI>();
+        if (fb != null) { fb.TakeDamage(actualDamage); return; }
+
+        var b = col.GetComponentInParent<BossAI>() ?? col.GetComponentInChildren<BossAI>() ?? col.transform.root.GetComponentInChildren<BossAI>();
+        if (b != null) { b.TakeDamage(actualDamage); return; }
+    }
+
+    private bool IsEnemy(Collider col, out Collider enemyCollider)
+    {
+        enemyCollider = null;
+        if (col == null) return false;
+        if (col.transform.root == transform.root) return false;
+        if (col.CompareTag("Player") || col.gameObject.layer == LayerMask.NameToLayer("Player")) return false;
+
+        bool isEnemyHit = col.CompareTag("Enemy") ||
+                          col.gameObject.layer == LayerMask.NameToLayer("Enemy") ||
+                          col.name.ToLower().Contains("enemy") ||
+                          col.name.ToLower().Contains("boss") ||
+                          col.GetComponentInParent<Enemy1_DapBua>() != null || col.transform.root.GetComponentInChildren<Enemy1_DapBua>() != null ||
+                          col.GetComponentInParent<Enemy2_Zombie>() != null || col.transform.root.GetComponentInChildren<Enemy2_Zombie>() != null ||
+                          col.GetComponentInParent<Enemy3_Buaa>() != null || col.transform.root.GetComponentInChildren<Enemy3_Buaa>() != null ||
+                          col.GetComponentInParent<Enemy4_Bongtoi>() != null || col.transform.root.GetComponentInChildren<Enemy4_Bongtoi>() != null ||
+                          col.GetComponentInParent<Enemy5_PhuThuy>() != null || col.transform.root.GetComponentInChildren<Enemy5_PhuThuy>() != null ||
+                          col.GetComponentInParent<MiniBossAI>() != null || col.transform.root.GetComponentInChildren<MiniBossAI>() != null ||
+                          col.GetComponentInParent<FinalBossAI>() != null || col.transform.root.GetComponentInChildren<FinalBossAI>() != null ||
+                          col.GetComponentInParent<BossAI>() != null || col.transform.root.GetComponentInChildren<BossAI>() != null;
+
+        if (isEnemyHit)
+        {
+            enemyCollider = col;
+            return true;
+        }
+        return false;
     }
 
     // ------------------------------------------------------------------
@@ -2893,20 +2956,27 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
     {
         if (enemyRef.TryGet(out NetworkObject netObj))
         {
-            var col = netObj.GetComponent<Collider>();
+            var col = netObj.GetComponent<Collider>() ?? netObj.GetComponentInChildren<Collider>();
             if (col != null) TryDamageEnemy(col);
             else
             {
-                var e1 = netObj.GetComponentInChildren<Enemy1_DapBua>();
-                if (e1 != null) { e1.TakeDamage(damageAmount); return; }
-                var e2 = netObj.GetComponentInChildren<Enemy2_Zombie>();
-                if (e2 != null) { e2.TakeDamage(damageAmount); return; }
-                var e3 = netObj.GetComponentInChildren<Enemy3_Buaa>();
-                if (e3 != null) { e3.TakeDamage(damageAmount); return; }
-                var e4 = netObj.GetComponentInChildren<Enemy4_Bongtoi>();
-                if (e4 != null) { e4.TakeDamage(damageAmount); return; }
-                var e5 = netObj.GetComponentInChildren<Enemy5_PhuThuy>();
-                if (e5 != null) { e5.TakeDamage(damageAmount); return; }
+                float actualDamage = damageAmount;
+                var e1 = netObj.GetComponent<Enemy1_DapBua>() ?? netObj.GetComponentInChildren<Enemy1_DapBua>();
+                if (e1 != null) { e1.TakeDamage(actualDamage); return; }
+                var e2 = netObj.GetComponent<Enemy2_Zombie>() ?? netObj.GetComponentInChildren<Enemy2_Zombie>();
+                if (e2 != null) { e2.TakeDamage(actualDamage); return; }
+                var e3 = netObj.GetComponent<Enemy3_Buaa>() ?? netObj.GetComponentInChildren<Enemy3_Buaa>();
+                if (e3 != null) { e3.TakeDamage(actualDamage); return; }
+                var e4 = netObj.GetComponent<Enemy4_Bongtoi>() ?? netObj.GetComponentInChildren<Enemy4_Bongtoi>();
+                if (e4 != null) { e4.TakeDamage(actualDamage); return; }
+                var e5 = netObj.GetComponent<Enemy5_PhuThuy>() ?? netObj.GetComponentInChildren<Enemy5_PhuThuy>();
+                if (e5 != null) { e5.TakeDamage(actualDamage); return; }
+                var mb = netObj.GetComponent<MiniBossAI>() ?? netObj.GetComponentInChildren<MiniBossAI>();
+                if (mb != null) { mb.TakeDamage(actualDamage); return; }
+                var fb = netObj.GetComponent<FinalBossAI>() ?? netObj.GetComponentInChildren<FinalBossAI>();
+                if (fb != null) { fb.TakeDamage(actualDamage); return; }
+                var b = netObj.GetComponent<BossAI>() ?? netObj.GetComponentInChildren<BossAI>();
+                if (b != null) { b.TakeDamage(actualDamage); return; }
             }
         }
     }
@@ -3592,9 +3662,17 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
         // Play action sound effects
         if (animName == "Bow_Shoot")
         {
-            PlayPlayerSFX(attackClip);
+            if (!IsAimingR)
+            {
+                PlayPlayerSFX(attackClip);
+            }
         }
-        else if (animName == "ChatRiu" || animName.StartsWith("Chem") || animName.StartsWith("Dam"))
+        else if (animName.StartsWith("Dam"))
+        {
+            AudioClip punchClip = Resources.Load<AudioClip>("Audio/Punch");
+            PlayPlayerSFX(punchClip);
+        }
+        else if (animName == "ChatRiu" || animName.StartsWith("Chem"))
         {
             PlayPlayerSFX(attackClip, 0.8f);
         }

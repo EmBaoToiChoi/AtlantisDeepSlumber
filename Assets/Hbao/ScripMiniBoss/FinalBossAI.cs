@@ -790,6 +790,25 @@ public class FinalBossAI : NetworkBehaviour
         Vector3 eyePos = eyeTransform != null ? eyeTransform.position : transform.position + Vector3.up * 1.5f;
         int raycastMask = obstacleLayer.value & ~LayerMask.GetMask("Player", "Enemy");
 
+        // KHÓA MỤC TIÊU ƯU TIÊN: Nếu đang có mục tiêu và mục tiêu đó vẫn hợp lệ thì tiếp tục dí mục tiêu đó
+        if (targetPlayer != null)
+        {
+            if (!IsPlayerDeadOrInvisible(targetPlayer))
+            {
+                Vector3 targetCenter = targetPlayer.position + Vector3.up * 1.0f;
+                float d = Vector3.Distance(eyePos, targetCenter);
+                float currentSight = IsBossActive ? 50f : sightRange;
+                if (d <= currentSight)
+                {
+                    Vector3 dir = (targetCenter - eyePos).normalized;
+                    if (!Physics.Raycast(eyePos, dir, d, raycastMask, QueryTriggerInteraction.Ignore))
+                    {
+                        return; // Khóa mục tiêu thành công!
+                    }
+                }
+            }
+        }
+
         var activePlayers = GetAllActivePlayers();
         for (int i = 0; i < activePlayers.Count; i++)
         {
@@ -1590,11 +1609,30 @@ public class FinalBossAI : NetworkBehaviour
     {
         foreach (var pos in positions)
         {
+            // 1. Tạo vòng tròn cảnh báo decal (nếu hoạt động trên máy người chơi)
             if (warningDecalPrefab != null)
             {
                 GameObject warning = Instantiate(warningDecalPrefab, pos + Vector3.up * 0.05f, Quaternion.identity);
+                
+                // Gắn script chớp đỏ cảnh báo
+                var flasher = warning.AddComponent<WarningDecalFlash>();
+                if (flasher != null)
+                {
+                    flasher.StartFlashing(warningDuration);
+                }
+
                 Destroy(warning, warningDuration);
             }
+
+            // 2. Tạo vòng viền đỏ lập trình (Procedural) - Failsafe luôn hiển thị đỏ chớp tắt rực rỡ
+            GameObject proceduralRing = new GameObject("ProceduralWarningRing");
+            proceduralRing.transform.position = pos;
+            var ring = proceduralRing.AddComponent<ProceduralWarningCircle>();
+            if (ring != null)
+            {
+                ring.StartWarning(warningDuration, earthBlastRadius);
+            }
+            Destroy(proceduralRing, warningDuration);
         }
     }
 
@@ -1607,6 +1645,9 @@ public class FinalBossAI : NetworkBehaviour
                 GameObject blast = Instantiate(earthBlastPrefab, pos, Quaternion.identity);
                 blast.transform.localScale *= 3.0f;
                 
+                // Tự động thiết lập Collider toàn diện (cả vòng tròn ngoài lẫn tất cả các mảnh đá visual của Prefab)
+                EarthBlastDamageZone.SetupRockColliders(blast, earthBlastRadius, 3.0f, 30f);
+
                 var locationVfx = blast.GetComponent<PixPlays.ElementalVFX.LocationVfx>();
                 if (locationVfx != null)
                 {
@@ -1624,16 +1665,20 @@ public class FinalBossAI : NetworkBehaviour
         var activePlayers = GetAllActivePlayers();
         var spots = new List<Vector3>();
 
+        // Đảm bảo chia đều triệu hồi đá dưới chân TẤT CẢ các Player đang sống
         foreach (var p in activePlayers)
         {
             if (p == null || IsPlayerDeadOrInvisible(p)) continue;
+            
+            // 1. Triệu hồi ĐẦY ĐỦ chính xác 1 đốm đá ngay dưới chân từng Player
             spots.Add(p.position);
             
-            if (spots.Count < 6)
+            // 2. Triệu hồi thêm 2 đốm đá bẫy ngẫu nhiên xung quanh dưới chân người chơi đó (Chia đều cho cả 4 player)
+            for (int k = 0; k < 2; k++)
             {
-                Vector2 randomOffset = Random.insideUnitCircle * 3.5f;
-                Vector3 offsetPos = p.position + new Vector3(randomOffset.x, 0, randomOffset.y);
-                if (NavMesh.SamplePosition(offsetPos, out NavMeshHit hit, 4f, NavMesh.AllAreas))
+                Vector2 randomOffset = Random.insideUnitCircle * 3.0f; // Bán kính 3m quanh player
+                Vector3 offsetPos = p.position + new Vector3(randomOffset.x, 0f, randomOffset.y);
+                if (NavMesh.SamplePosition(offsetPos, out NavMeshHit hit, 3.5f, NavMesh.AllAreas))
                 {
                     spots.Add(hit.position);
                 }
@@ -1644,16 +1689,15 @@ public class FinalBossAI : NetworkBehaviour
             }
         }
 
-        int targetCount = Random.Range(4, 7);
-        int attempts = 0;
-        while (spots.Count < targetCount && attempts < 15)
+        // Nếu không có người chơi nào hoạt động, triệu hồi ngẫu nhiên xung quanh Boss
+        if (spots.Count == 0)
         {
-            attempts++;
-            Vector2 randomOffset = Random.insideUnitCircle * 12f;
-            Vector3 offsetPos = transform.position + new Vector3(randomOffset.x, 0, randomOffset.y);
-            if (NavMesh.SamplePosition(offsetPos, out NavMeshHit hit, 6f, NavMesh.AllAreas))
+            int targetCount = Random.Range(4, 7);
+            for (int i = 0; i < targetCount; i++)
             {
-                if (!spots.Contains(hit.position))
+                Vector2 randomOffset = Random.insideUnitCircle * 8f;
+                Vector3 offsetPos = transform.position + new Vector3(randomOffset.x, 0, randomOffset.y);
+                if (NavMesh.SamplePosition(offsetPos, out NavMeshHit hit, 5f, NavMesh.AllAreas))
                 {
                     spots.Add(hit.position);
                 }

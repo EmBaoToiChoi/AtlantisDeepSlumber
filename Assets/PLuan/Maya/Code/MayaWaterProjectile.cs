@@ -154,7 +154,10 @@ public class MayaWaterProjectile : NetworkBehaviour
                        other.GetComponentInParent<Enemy2_Zombie>() != null ||
                        other.GetComponentInParent<Enemy3_Buaa>() != null ||
                        other.GetComponentInParent<Enemy4_Bongtoi>() != null ||
-                       other.GetComponentInParent<Enemy5_PhuThuy>() != null;
+                       other.GetComponentInParent<Enemy5_PhuThuy>() != null ||
+                       other.GetComponentInParent<MiniBossAI>() != null ||
+                       other.GetComponentInParent<FinalBossAI>() != null ||
+                       other.GetComponentInParent<BossAI>() != null;
 
         // Bypass non-enemy collisions if they are too close to the spawn point to prevent self/ground detonation
         if (!isEnemy && Vector3.Distance(transform.position, spawnPosition) < 1.5f)
@@ -171,7 +174,7 @@ public class MayaWaterProjectile : NetworkBehaviour
             }
             hitEnemyRoots.Add(enemyRoot);
 
-            Debug.Log($"[MayaWaterProjectile] Đạn nước va chạm trúng Enemy: {other.name}, Gây sát thương: {damage}");
+            Debug.Log($"[MayaWaterProjectile] Đạn nước va chạm trúng Enemy/Boss: {other.name}, Gây sát thương: {damage}");
             
             var e1 = other.GetComponentInParent<Enemy1_DapBua>();
             if (e1 != null) { e1.TakeDamage(damage); }
@@ -191,6 +194,21 @@ public class MayaWaterProjectile : NetworkBehaviour
                         {
                             var e5 = other.GetComponentInParent<Enemy5_PhuThuy>();
                             if (e5 != null) { e5.TakeDamage(damage); }
+                            else
+                            {
+                                var mb = other.GetComponentInParent<MiniBossAI>();
+                                if (mb != null) { mb.TakeDamage(damage); }
+                                else
+                                {
+                                    var fb = other.GetComponentInParent<FinalBossAI>();
+                                    if (fb != null) { fb.TakeDamage(damage); }
+                                    else
+                                    {
+                                        var b = other.GetComponentInParent<BossAI>();
+                                        if (b != null) { b.TakeDamage(damage); }
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -265,6 +283,13 @@ public class MayaWaterProjectile : NetworkBehaviour
                 rb.linearVelocity = Vector3.zero;
             }
             rb.isKinematic = true;
+        }
+
+        // Phát âm thanh nổ BreakSkill
+        AudioClip breakSkillClip = Resources.Load<AudioClip>("Audio/BreakSkill");
+        if (breakSkillClip != null)
+        {
+            AudioSource.PlayClipAtPoint(breakSkillClip, transform.position);
         }
     }
 

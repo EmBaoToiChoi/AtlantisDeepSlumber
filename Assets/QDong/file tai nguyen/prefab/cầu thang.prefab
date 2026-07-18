@@ -10,7 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 4753467110892314834}
   m_Layer: 0
-  m_Name: "c\xE2\u0300u thang"
+  m_Name: "c\u1EA7u thang"
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -97,6 +97,26 @@ PrefabInstance:
       propertyPath: m_Name
       value: Prefab_Stone_stairs_02b (4)
       objectReference: {fileID: 0}
+    - target: {fileID: 3091198055461481304, guid: 5e03cb9f47d2fe04a8e67a513ab2a905, type: 3}
+      propertyPath: m_Size.x
+      value: 0.8517226
+      objectReference: {fileID: 0}
+    - target: {fileID: 3091198055461481304, guid: 5e03cb9f47d2fe04a8e67a513ab2a905, type: 3}
+      propertyPath: m_Size.y
+      value: 0.6351431
+      objectReference: {fileID: 0}
+    - target: {fileID: 3091198055461481304, guid: 5e03cb9f47d2fe04a8e67a513ab2a905, type: 3}
+      propertyPath: m_Center.x
+      value: 0.08031308
+      objectReference: {fileID: 0}
+    - target: {fileID: 3091198055461481304, guid: 5e03cb9f47d2fe04a8e67a513ab2a905, type: 3}
+      propertyPath: m_Center.y
+      value: -0.24806423
+      objectReference: {fileID: 0}
+    - target: {fileID: 3091198055461481304, guid: 5e03cb9f47d2fe04a8e67a513ab2a905, type: 3}
+      propertyPath: m_Center.z
+      value: -0.000000007005624
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -166,6 +186,26 @@ PrefabInstance:
     - target: {fileID: 3024918870384669659, guid: 5e03cb9f47d2fe04a8e67a513ab2a905, type: 3}
       propertyPath: m_Name
       value: Prefab_Stone_stairs_02b (2)
+      objectReference: {fileID: 0}
+    - target: {fileID: 3091198055461481304, guid: 5e03cb9f47d2fe04a8e67a513ab2a905, type: 3}
+      propertyPath: m_Size.x
+      value: 0.913464
+      objectReference: {fileID: 0}
+    - target: {fileID: 3091198055461481304, guid: 5e03cb9f47d2fe04a8e67a513ab2a905, type: 3}
+      propertyPath: m_Size.y
+      value: 0.62692404
+      objectReference: {fileID: 0}
+    - target: {fileID: 3091198055461481304, guid: 5e03cb9f47d2fe04a8e67a513ab2a905, type: 3}
+      propertyPath: m_Center.x
+      value: 0.04890566
+      objectReference: {fileID: 0}
+    - target: {fileID: 3091198055461481304, guid: 5e03cb9f47d2fe04a8e67a513ab2a905, type: 3}
+      propertyPath: m_Center.y
+      value: -0.22650598
+      objectReference: {fileID: 0}
+    - target: {fileID: 3091198055461481304, guid: 5e03cb9f47d2fe04a8e67a513ab2a905, type: 3}
+      propertyPath: m_Center.z
+      value: -0.0000000054231943
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -237,6 +277,26 @@ PrefabInstance:
       propertyPath: m_Name
       value: Prefab_Stone_stairs_02b
       objectReference: {fileID: 0}
+    - target: {fileID: 3091198055461481304, guid: 5e03cb9f47d2fe04a8e67a513ab2a905, type: 3}
+      propertyPath: m_Size.x
+      value: 0.8839715
+      objectReference: {fileID: 0}
+    - target: {fileID: 3091198055461481304, guid: 5e03cb9f47d2fe04a8e67a513ab2a905, type: 3}
+      propertyPath: m_Size.y
+      value: 0.59252137
+      objectReference: {fileID: 0}
+    - target: {fileID: 3091198055461481304, guid: 5e03cb9f47d2fe04a8e67a513ab2a905, type: 3}
+      propertyPath: m_Center.x
+      value: 0.06439537
+      objectReference: {fileID: 0}
+    - target: {fileID: 3091198055461481304, guid: 5e03cb9f47d2fe04a8e67a513ab2a905, type: 3}
+      propertyPath: m_Center.y
+      value: -0.25636625
+      objectReference: {fileID: 0}
+    - target: {fileID: 3091198055461481304, guid: 5e03cb9f47d2fe04a8e67a513ab2a905, type: 3}
+      propertyPath: m_Center.z
+      value: -0.0000000064985333
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -306,6 +366,22 @@ PrefabInstance:
     - target: {fileID: 3024918870384669659, guid: 5e03cb9f47d2fe04a8e67a513ab2a905, type: 3}
       propertyPath: m_Name
       value: Prefab_Stone_stairs_02b (1)
+      objectReference: {fileID: 0}
+    - target: {fileID: 3091198055461481304, guid: 5e03cb9f47d2fe04a8e67a513ab2a905, type: 3}
+      propertyPath: m_Size.y
+      value: 0.5364177
+      objectReference: {fileID: 0}
+    - target: {fileID: 3091198055461481304, guid: 5e03cb9f47d2fe04a8e67a513ab2a905, type: 3}
+      propertyPath: m_Center.x
+      value: 0.0058891857
+      objectReference: {fileID: 0}
+    - target: {fileID: 3091198055461481304, guid: 5e03cb9f47d2fe04a8e67a513ab2a905, type: 3}
+      propertyPath: m_Center.y
+      value: -0.23660402
+      objectReference: {fileID: 0}
+    - target: {fileID: 3091198055461481304, guid: 5e03cb9f47d2fe04a8e67a513ab2a905, type: 3}
+      propertyPath: m_Center.z
+      value: -0.000000003863593
       objectReference: {fileID: 0}
     - target: {fileID: 5646241267736328804, guid: 5e03cb9f47d2fe04a8e67a513ab2a905, type: 3}
       propertyPath: m_LocalPosition.x
@@ -389,6 +465,26 @@ PrefabInstance:
       propertyPath: m_Name
       value: Prefab_Stone_stairs_02b (5)
       objectReference: {fileID: 0}
+    - target: {fileID: 3091198055461481304, guid: 5e03cb9f47d2fe04a8e67a513ab2a905, type: 3}
+      propertyPath: m_Size.x
+      value: 0.8936309
+      objectReference: {fileID: 0}
+    - target: {fileID: 3091198055461481304, guid: 5e03cb9f47d2fe04a8e67a513ab2a905, type: 3}
+      propertyPath: m_Size.y
+      value: 0.615597
+      objectReference: {fileID: 0}
+    - target: {fileID: 3091198055461481304, guid: 5e03cb9f47d2fe04a8e67a513ab2a905, type: 3}
+      propertyPath: m_Center.x
+      value: 0.05917223
+      objectReference: {fileID: 0}
+    - target: {fileID: 3091198055461481304, guid: 5e03cb9f47d2fe04a8e67a513ab2a905, type: 3}
+      propertyPath: m_Center.y
+      value: -0.2405597
+      objectReference: {fileID: 0}
+    - target: {fileID: 3091198055461481304, guid: 5e03cb9f47d2fe04a8e67a513ab2a905, type: 3}
+      propertyPath: m_Center.z
+      value: -0.0000000060479284
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -458,6 +554,26 @@ PrefabInstance:
     - target: {fileID: 3024918870384669659, guid: 5e03cb9f47d2fe04a8e67a513ab2a905, type: 3}
       propertyPath: m_Name
       value: Prefab_Stone_stairs_02b (3)
+      objectReference: {fileID: 0}
+    - target: {fileID: 3091198055461481304, guid: 5e03cb9f47d2fe04a8e67a513ab2a905, type: 3}
+      propertyPath: m_Size.x
+      value: 0.8665804
+      objectReference: {fileID: 0}
+    - target: {fileID: 3091198055461481304, guid: 5e03cb9f47d2fe04a8e67a513ab2a905, type: 3}
+      propertyPath: m_Size.y
+      value: 0.6486502
+      objectReference: {fileID: 0}
+    - target: {fileID: 3091198055461481304, guid: 5e03cb9f47d2fe04a8e67a513ab2a905, type: 3}
+      propertyPath: m_Center.x
+      value: 0.07255833
+      objectReference: {fileID: 0}
+    - target: {fileID: 3091198055461481304, guid: 5e03cb9f47d2fe04a8e67a513ab2a905, type: 3}
+      propertyPath: m_Center.y
+      value: -0.23497292
+      objectReference: {fileID: 0}
+    - target: {fileID: 3091198055461481304, guid: 5e03cb9f47d2fe04a8e67a513ab2a905, type: 3}
+      propertyPath: m_Center.z
+      value: -0.0000000064957626
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
