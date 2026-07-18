@@ -1612,6 +1612,14 @@ public class FinalBossAI : NetworkBehaviour
             if (warningDecalPrefab != null)
             {
                 GameObject warning = Instantiate(warningDecalPrefab, pos + Vector3.up * 0.05f, Quaternion.identity);
+                
+                // Gắn script chớp đỏ cảnh báo
+                var flasher = warning.AddComponent<WarningDecalFlash>();
+                if (flasher != null)
+                {
+                    flasher.StartFlashing(warningDuration);
+                }
+
                 Destroy(warning, warningDuration);
             }
         }
@@ -1646,13 +1654,17 @@ public class FinalBossAI : NetworkBehaviour
         foreach (var p in activePlayers)
         {
             if (p == null || IsPlayerDeadOrInvisible(p)) continue;
+            
+            // 1. Triệu hồi chính xác dưới chân người chơi
             spots.Add(p.position);
             
-            if (spots.Count < 6)
+            // 2. Triệu hồi ngẫu nhiên xung quanh người chơi đó (2-3 đốm xung quanh mỗi player)
+            int extraSpots = Random.Range(2, 4);
+            for (int k = 0; k < extraSpots; k++)
             {
-                Vector2 randomOffset = Random.insideUnitCircle * 3.5f;
-                Vector3 offsetPos = p.position + new Vector3(randomOffset.x, 0, randomOffset.y);
-                if (NavMesh.SamplePosition(offsetPos, out NavMeshHit hit, 4f, NavMesh.AllAreas))
+                Vector2 randomOffset = Random.insideUnitCircle * 3.0f; // Bán kính 3m
+                Vector3 offsetPos = p.position + new Vector3(randomOffset.x, 0f, randomOffset.y);
+                if (NavMesh.SamplePosition(offsetPos, out NavMeshHit hit, 3.5f, NavMesh.AllAreas))
                 {
                     spots.Add(hit.position);
                 }
@@ -1663,16 +1675,15 @@ public class FinalBossAI : NetworkBehaviour
             }
         }
 
-        int targetCount = Random.Range(4, 7);
-        int attempts = 0;
-        while (spots.Count < targetCount && attempts < 15)
+        // Nếu không có người chơi nào hoạt động, triệu hồi ngẫu nhiên xung quanh Boss
+        if (spots.Count == 0)
         {
-            attempts++;
-            Vector2 randomOffset = Random.insideUnitCircle * 12f;
-            Vector3 offsetPos = transform.position + new Vector3(randomOffset.x, 0, randomOffset.y);
-            if (NavMesh.SamplePosition(offsetPos, out NavMeshHit hit, 6f, NavMesh.AllAreas))
+            int targetCount = Random.Range(4, 7);
+            for (int i = 0; i < targetCount; i++)
             {
-                if (!spots.Contains(hit.position))
+                Vector2 randomOffset = Random.insideUnitCircle * 8f;
+                Vector3 offsetPos = transform.position + new Vector3(randomOffset.x, 0, randomOffset.y);
+                if (NavMesh.SamplePosition(offsetPos, out NavMeshHit hit, 5f, NavMesh.AllAreas))
                 {
                     spots.Add(hit.position);
                 }
