@@ -1471,6 +1471,7 @@ public class BossAI : NetworkBehaviour
     {
         foreach (var pos in positions)
         {
+            // 1. Tạo vòng tròn cảnh báo decal (nếu hoạt động trên máy người chơi)
             if (warningDecalPrefab != null)
             {
                 GameObject warning = Instantiate(warningDecalPrefab, pos + Vector3.up * 0.05f, Quaternion.identity);
@@ -1484,6 +1485,16 @@ public class BossAI : NetworkBehaviour
 
                 Destroy(warning, warningDuration);
             }
+
+            // 2. Tạo vòng viền đỏ lập trình (Procedural) - Failsafe luôn hiển thị đỏ chớp tắt rực rỡ
+            GameObject proceduralRing = new GameObject("ProceduralWarningRing");
+            proceduralRing.transform.position = pos;
+            var ring = proceduralRing.AddComponent<ProceduralWarningCircle>();
+            if (ring != null)
+            {
+                ring.StartWarning(warningDuration, earthBlastRadius);
+            }
+            Destroy(proceduralRing, warningDuration);
         }
     }
 
