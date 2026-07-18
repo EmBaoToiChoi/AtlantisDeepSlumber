@@ -533,7 +533,7 @@ MonoBehaviour:
   chaseRunSpeed: 5.5
   orbitSpeed: 3
   dodgeSpeed: 12
-  sightRange: 51.2
+  sightRange: 158.1
   fieldOfView: 120
   attackRange: 3
   kickDetectRange: 2

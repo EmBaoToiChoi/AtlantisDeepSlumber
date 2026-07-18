@@ -51443,6 +51443,7 @@ GameObject:
   - component: {fileID: 5206301460662742226}
   - component: {fileID: -769247215109174398}
   - component: {fileID: 4722155738030754497}
+  - component: {fileID: 5116803660990873962}
   m_Layer: 0
   m_Name: EarthBlast
   m_TagString: Untagged
@@ -51496,6 +51497,27 @@ MonoBehaviour:
   _LocationEffect: {fileID: -769247215109174398}
   _RadiusFactor: 0.5
   _IgnoreYDirection: 1
+--- !u!65 &5116803660990873962
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7907260701345176331}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 1
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 1, y: 0.97785556, z: 1.9689496}
+  m_Center: {x: 0, y: 0.20350452, z: 1.3335954}
 --- !u!1 &7938214789754483036
 GameObject:
   m_ObjectHideFlags: 0
