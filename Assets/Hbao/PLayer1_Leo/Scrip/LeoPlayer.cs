@@ -2874,10 +2874,10 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (attackClip == null) attackClip = Resources.Load<AudioClip>("Audio/HeavySwing");
         if (hitClip == null) hitClip = Resources.Load<AudioClip>("Audio/HitHurt");
         if (deathClip == null) deathClip = Resources.Load<AudioClip>("Audio/Death");
-        if (skillQClip == null) skillQClip = Resources.Load<AudioClip>("Audio/Fireball"); // Leo fireball
-        if (skillEClip == null) skillEClip = Resources.Load<AudioClip>("Audio/Fireball");
-        if (skillRClip == null) skillRClip = Resources.Load<AudioClip>("Audio/Fireball");
         */
+        
+        // Tải âm thanh Skill mới thêm (Leo dùng ThunderSkill cho Skill R, không có BreakSkill)
+        if (skillRClip == null) skillRClip = Resources.Load<AudioClip>("Audio/ThunderSkill");
 
         // Log warnings if audio files fail to load
         if (footstepClip == null) Debug.LogWarning($"[Audio Debug] LeoPlayer: Failed to load Resources/Audio/Footstep");
@@ -2889,8 +2889,9 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         else Debug.Log($"[Audio Debug] LeoPlayer: Successfully loaded Resources/Audio/HeavySwing");
         if (hitClip == null) Debug.LogWarning($"[Audio Debug] LeoPlayer: Failed to load Resources/Audio/HitHurt");
         if (deathClip == null) Debug.LogWarning($"[Audio Debug] LeoPlayer: Failed to load Resources/Audio/Death");
-        if (skillQClip == null) Debug.LogWarning($"[Audio Debug] LeoPlayer: Failed to load Resources/Audio/Fireball");
         */
+        if (skillRClip == null) Debug.LogWarning($"[Audio Debug] LeoPlayer: Failed to load Resources/Audio/ThunderSkill (Skill R)");
+        else Debug.Log($"[Audio Debug] LeoPlayer: Successfully loaded Resources/Audio/ThunderSkill (Skill R)");
     }
 
     private void PlayPlayerSFX(AudioClip clip, float volumeScale = 1.0f)

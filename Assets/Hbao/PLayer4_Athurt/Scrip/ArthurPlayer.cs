@@ -51,10 +51,10 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (attackClip == null) attackClip = Resources.Load<AudioClip>("Audio/HeavySwing");
         if (hitClip == null) hitClip = Resources.Load<AudioClip>("Audio/HitHurt");
         if (deathClip == null) deathClip = Resources.Load<AudioClip>("Audio/Death");
-        if (skillQClip == null) skillQClip = Resources.Load<AudioClip>("Audio/ElectricZap"); // Arthur lightning/shield
-        if (skillEClip == null) skillEClip = Resources.Load<AudioClip>("Audio/ElectricZap");
-        if (skillRClip == null) skillRClip = Resources.Load<AudioClip>("Audio/BreakStone"); // Shield/stone impact
         */
+        
+        // Tải âm thanh Skill mới thêm (Skill R nguyên tố)
+        if (skillRClip == null) skillRClip = Resources.Load<AudioClip>("Audio/Fireball");
 
         // Log warnings if audio files fail to load
         if (footstepClip == null) Debug.LogWarning($"[Audio Debug] ArthurPlayer: Failed to load Resources/Audio/Footstep");
@@ -66,9 +66,9 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         else Debug.Log($"[Audio Debug] ArthurPlayer: Successfully loaded Resources/Audio/HeavySwing");
         if (hitClip == null) Debug.LogWarning($"[Audio Debug] ArthurPlayer: Failed to load Resources/Audio/HitHurt");
         if (deathClip == null) Debug.LogWarning($"[Audio Debug] ArthurPlayer: Failed to load Resources/Audio/Death");
-        if (skillQClip == null) Debug.LogWarning($"[Audio Debug] ArthurPlayer: Failed to load Resources/Audio/ElectricZap");
-        if (skillRClip == null) Debug.LogWarning($"[Audio Debug] ArthurPlayer: Failed to load Resources/Audio/BreakStone");
         */
+        if (skillRClip == null) Debug.LogWarning($"[Audio Debug] ArthurPlayer: Failed to load Resources/Audio/Fireball (Skill R)");
+        else Debug.Log($"[Audio Debug] ArthurPlayer: Successfully loaded Resources/Audio/Fireball (Skill R)");
     }
 
     private void PlayPlayerSFX(AudioClip clip, float volumeScale = 1.0f)
