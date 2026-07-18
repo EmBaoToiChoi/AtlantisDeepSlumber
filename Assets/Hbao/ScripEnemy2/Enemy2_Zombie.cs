@@ -525,6 +525,7 @@ public class Enemy2_Zombie : NetworkBehaviour
 
     public void TakeDamage(float damage)
     {
+        Debug.Log($"[Enemy2_Zombie] TakeDamage: dmg={damage}, isServer={IsServer}, isClient={IsClient}, isSpawned={IsSpawned}, localHp={localHealth}, currentHpNet={currentHealth.Value}");
         if (CurrentStateValue == EnemyState.Dead) return;
 
         localHealth = Mathf.Max(0f, localHealth - damage);
