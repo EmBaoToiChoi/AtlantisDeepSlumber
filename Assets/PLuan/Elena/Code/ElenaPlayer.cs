@@ -2761,11 +2761,21 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
             PlayAnimation(animToPlay, 0.05f, false, isRootedAttack);
         }
 
-        // Raycast melee attack is now handled by animation events.
+        PerformMeleeRaycastAttack();
+        StartCoroutine(DelayedRaycastAttackCoroutine(0.15f));
+    }
+
+    private System.Collections.IEnumerator DelayedRaycastAttackCoroutine(float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        PerformMeleeRaycastAttack();
     }
 
     public void PerformMeleeRaycastAttack()
     {
+        bool hasControl = isStandaloneMode || !IsSpawned || IsOwner || (NetworkManager.Singleton != null && NetworkManager.Singleton.IsServer);
+        if (!hasControl) return;
+
         Vector3 aimDir = transform.forward;
         if (targetCamera != null)
         {
@@ -2774,23 +2784,35 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
             aimDir.Normalize();
         }
 
-        Vector3 rayStartClient = transform.position + Vector3.up * 1.0f;
-        RaycastHit[] hits = Physics.SphereCastAll(rayStartClient, 0.6f, aimDir, attackRange);
+        Vector3 rayStartClient = transform.position + Vector3.up * 0.8f;
+        float range = Mathf.Max(attackRange, 3.0f);
+        RaycastHit[] hits = Physics.SphereCastAll(rayStartClient, 1.2f, aimDir, range);
 
-        if (isStandaloneMode)
+        HashSet<Transform> processed = new HashSet<Transform>();
+        foreach (var hitClient in hits)
         {
-            HashSet<Transform> processed = new HashSet<Transform>();
-            foreach (var hitClient in hits)
+            if (hitClient.collider == null || hitClient.collider.transform.root == transform.root) continue;
+            Transform root = hitClient.collider.transform.root;
+            if (processed.Contains(root)) continue;
+            processed.Add(root);
+
+            if (IsEnemy(hitClient.collider, out Collider enemyCollider))
             {
-                if (hitClient.collider == null || hitClient.collider.transform.root == transform.root) continue;
-                Transform root = hitClient.collider.transform.root;
-                if (processed.Contains(root)) continue;
-                processed.Add(root);
+                var netObj = enemyCollider.transform.root.GetComponent<NetworkObject>() ?? enemyCollider.GetComponentInParent<NetworkObject>() ?? enemyCollider.GetComponentInChildren<NetworkObject>();
 
-                TryDamageEnemy(hitClient.collider);
-
+                if (!isStandaloneMode && IsSpawned && netObj != null)
+                {
+                    DamageEnemyServerRpc(netObj);
+                }
+                else
+                {
+                    TryDamageEnemy(enemyCollider);
+                }
+            }
+            else
+            {
                 // Chém cây gỗ (ChoppableTree) cho Elena
-                ChoppableTree tree = hitClient.collider.GetComponentInParent<ChoppableTree>();
+                ChoppableTree tree = hitClient.collider.GetComponentInParent<ChoppableTree>() ?? hitClient.collider.transform.root.GetComponentInChildren<ChoppableTree>();
                 if (tree == null)
                 {
                     var forwarder = hitClient.collider.GetComponent<TreeColliderForwarder>();
@@ -2801,31 +2823,6 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
                     Vector3 hitPos = hitClient.point;
                     int weaponIndex = GetActiveWeaponIndex();
                     tree.HitTree(hitPos, weaponIndex);
-                }
-            }
-        }
-        else
-        {
-            if (IsOwner)
-            {
-                AttackServerRpc(aimDir);
-                HashSet<Transform> processed = new HashSet<Transform>();
-                foreach (var hitClient in hits)
-                {
-                    if (hitClient.collider == null || hitClient.collider.transform.root == transform.root) continue;
-                    Transform root = hitClient.collider.transform.root;
-                    if (processed.Contains(root)) continue;
-                    processed.Add(root);
-
-                    var netObj = hitClient.collider.GetComponentInParent<NetworkObject>();
-                    if (netObj != null)
-                    {
-                        DamageEnemyServerRpc(netObj);
-                    }
-                    else
-                    {
-                        TryDamageEnemy(hitClient.collider);
-                    }
                 }
             }
         }
@@ -2865,29 +2862,60 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
     // ------------------------------------------------------------------
     public void TryDamageEnemy(Collider col)
     {
-        var e1 = col.GetComponentInParent<Enemy1_DapBua>();
-        if (e1 != null) { e1.TakeDamage(damageAmount); return; }
+        if (col == null) return;
+        float actualDamage = damageAmount;
 
-        var e2 = col.GetComponentInParent<Enemy2_Zombie>();
-        if (e2 != null) { e2.TakeDamage(damageAmount); return; }
+        var e1 = col.GetComponentInParent<Enemy1_DapBua>() ?? col.GetComponentInChildren<Enemy1_DapBua>() ?? col.transform.root.GetComponentInChildren<Enemy1_DapBua>();
+        if (e1 != null) { e1.TakeDamage(actualDamage); return; }
 
-        var e3 = col.GetComponentInParent<Enemy3_Buaa>();
-        if (e3 != null) { e3.TakeDamage(damageAmount); return; }
+        var e2 = col.GetComponentInParent<Enemy2_Zombie>() ?? col.GetComponentInChildren<Enemy2_Zombie>() ?? col.transform.root.GetComponentInChildren<Enemy2_Zombie>();
+        if (e2 != null) { e2.TakeDamage(actualDamage); return; }
 
-        var e4 = col.GetComponentInParent<Enemy4_Bongtoi>();
-        if (e4 != null) { e4.TakeDamage(damageAmount); return; }
+        var e3 = col.GetComponentInParent<Enemy3_Buaa>() ?? col.GetComponentInChildren<Enemy3_Buaa>() ?? col.transform.root.GetComponentInChildren<Enemy3_Buaa>();
+        if (e3 != null) { e3.TakeDamage(actualDamage); return; }
 
-        var e5 = col.GetComponentInParent<Enemy5_PhuThuy>();
-        if (e5 != null) { e5.TakeDamage(damageAmount); return; }
+        var e4 = col.GetComponentInParent<Enemy4_Bongtoi>() ?? col.GetComponentInChildren<Enemy4_Bongtoi>() ?? col.transform.root.GetComponentInChildren<Enemy4_Bongtoi>();
+        if (e4 != null) { e4.TakeDamage(actualDamage); return; }
 
-        var mb = col.GetComponentInParent<MiniBossAI>();
-        if (mb != null) { mb.TakeDamage(damageAmount); return; }
+        var e5 = col.GetComponentInParent<Enemy5_PhuThuy>() ?? col.GetComponentInChildren<Enemy5_PhuThuy>() ?? col.transform.root.GetComponentInChildren<Enemy5_PhuThuy>();
+        if (e5 != null) { e5.TakeDamage(actualDamage); return; }
 
-        var fb = col.GetComponentInParent<FinalBossAI>();
-        if (fb != null) { fb.TakeDamage(damageAmount); return; }
+        var mb = col.GetComponentInParent<MiniBossAI>() ?? col.GetComponentInChildren<MiniBossAI>() ?? col.transform.root.GetComponentInChildren<MiniBossAI>();
+        if (mb != null) { mb.TakeDamage(actualDamage); return; }
 
-        var b = col.GetComponentInParent<BossAI>();
-        if (b != null) { b.TakeDamage(damageAmount); return; }
+        var fb = col.GetComponentInParent<FinalBossAI>() ?? col.GetComponentInChildren<FinalBossAI>() ?? col.transform.root.GetComponentInChildren<FinalBossAI>();
+        if (fb != null) { fb.TakeDamage(actualDamage); return; }
+
+        var b = col.GetComponentInParent<BossAI>() ?? col.GetComponentInChildren<BossAI>() ?? col.transform.root.GetComponentInChildren<BossAI>();
+        if (b != null) { b.TakeDamage(actualDamage); return; }
+    }
+
+    private bool IsEnemy(Collider col, out Collider enemyCollider)
+    {
+        enemyCollider = null;
+        if (col == null) return false;
+        if (col.transform.root == transform.root) return false;
+        if (col.CompareTag("Player") || col.gameObject.layer == LayerMask.NameToLayer("Player")) return false;
+
+        bool isEnemyHit = col.CompareTag("Enemy") ||
+                          col.gameObject.layer == LayerMask.NameToLayer("Enemy") ||
+                          col.name.ToLower().Contains("enemy") ||
+                          col.name.ToLower().Contains("boss") ||
+                          col.GetComponentInParent<Enemy1_DapBua>() != null || col.transform.root.GetComponentInChildren<Enemy1_DapBua>() != null ||
+                          col.GetComponentInParent<Enemy2_Zombie>() != null || col.transform.root.GetComponentInChildren<Enemy2_Zombie>() != null ||
+                          col.GetComponentInParent<Enemy3_Buaa>() != null || col.transform.root.GetComponentInChildren<Enemy3_Buaa>() != null ||
+                          col.GetComponentInParent<Enemy4_Bongtoi>() != null || col.transform.root.GetComponentInChildren<Enemy4_Bongtoi>() != null ||
+                          col.GetComponentInParent<Enemy5_PhuThuy>() != null || col.transform.root.GetComponentInChildren<Enemy5_PhuThuy>() != null ||
+                          col.GetComponentInParent<MiniBossAI>() != null || col.transform.root.GetComponentInChildren<MiniBossAI>() != null ||
+                          col.GetComponentInParent<FinalBossAI>() != null || col.transform.root.GetComponentInChildren<FinalBossAI>() != null ||
+                          col.GetComponentInParent<BossAI>() != null || col.transform.root.GetComponentInChildren<BossAI>() != null;
+
+        if (isEnemyHit)
+        {
+            enemyCollider = col;
+            return true;
+        }
+        return false;
     }
 
     // ------------------------------------------------------------------
@@ -2926,26 +2954,27 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
     {
         if (enemyRef.TryGet(out NetworkObject netObj))
         {
-            var col = netObj.GetComponent<Collider>();
+            var col = netObj.GetComponent<Collider>() ?? netObj.GetComponentInChildren<Collider>();
             if (col != null) TryDamageEnemy(col);
             else
             {
-                var e1 = netObj.GetComponentInChildren<Enemy1_DapBua>();
-                if (e1 != null) { e1.TakeDamage(damageAmount); return; }
-                var e2 = netObj.GetComponentInChildren<Enemy2_Zombie>();
-                if (e2 != null) { e2.TakeDamage(damageAmount); return; }
-                var e3 = netObj.GetComponentInChildren<Enemy3_Buaa>();
-                if (e3 != null) { e3.TakeDamage(damageAmount); return; }
-                var e4 = netObj.GetComponentInChildren<Enemy4_Bongtoi>();
-                if (e4 != null) { e4.TakeDamage(damageAmount); return; }
-                var e5 = netObj.GetComponentInChildren<Enemy5_PhuThuy>();
-                if (e5 != null) { e5.TakeDamage(damageAmount); return; }
-                var mb = netObj.GetComponentInChildren<MiniBossAI>();
-                if (mb != null) { mb.TakeDamage(damageAmount); return; }
-                var fb = netObj.GetComponentInChildren<FinalBossAI>();
-                if (fb != null) { fb.TakeDamage(damageAmount); return; }
-                var b = netObj.GetComponentInChildren<BossAI>();
-                if (b != null) { b.TakeDamage(damageAmount); return; }
+                float actualDamage = damageAmount;
+                var e1 = netObj.GetComponent<Enemy1_DapBua>() ?? netObj.GetComponentInChildren<Enemy1_DapBua>();
+                if (e1 != null) { e1.TakeDamage(actualDamage); return; }
+                var e2 = netObj.GetComponent<Enemy2_Zombie>() ?? netObj.GetComponentInChildren<Enemy2_Zombie>();
+                if (e2 != null) { e2.TakeDamage(actualDamage); return; }
+                var e3 = netObj.GetComponent<Enemy3_Buaa>() ?? netObj.GetComponentInChildren<Enemy3_Buaa>();
+                if (e3 != null) { e3.TakeDamage(actualDamage); return; }
+                var e4 = netObj.GetComponent<Enemy4_Bongtoi>() ?? netObj.GetComponentInChildren<Enemy4_Bongtoi>();
+                if (e4 != null) { e4.TakeDamage(actualDamage); return; }
+                var e5 = netObj.GetComponent<Enemy5_PhuThuy>() ?? netObj.GetComponentInChildren<Enemy5_PhuThuy>();
+                if (e5 != null) { e5.TakeDamage(actualDamage); return; }
+                var mb = netObj.GetComponent<MiniBossAI>() ?? netObj.GetComponentInChildren<MiniBossAI>();
+                if (mb != null) { mb.TakeDamage(actualDamage); return; }
+                var fb = netObj.GetComponent<FinalBossAI>() ?? netObj.GetComponentInChildren<FinalBossAI>();
+                if (fb != null) { fb.TakeDamage(actualDamage); return; }
+                var b = netObj.GetComponent<BossAI>() ?? netObj.GetComponentInChildren<BossAI>();
+                if (b != null) { b.TakeDamage(actualDamage); return; }
             }
         }
     }

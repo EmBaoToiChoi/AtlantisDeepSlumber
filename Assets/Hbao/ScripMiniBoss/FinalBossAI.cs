@@ -1645,18 +1645,8 @@ public class FinalBossAI : NetworkBehaviour
                 GameObject blast = Instantiate(earthBlastPrefab, pos, Quaternion.identity);
                 blast.transform.localScale *= 3.0f;
                 
-                // Tự động gắn thêm SphereCollider làm trigger vùng gây sát thương va chạm (khớp chính xác với vòng cảnh báo)
-                var col = blast.AddComponent<SphereCollider>();
-                if (col != null)
-                {
-                    col.isTrigger = true;
-                    col.radius = earthBlastRadius / 3.0f;
-                }
-
-                // Tự động gắn thêm component gây sát thương va chạm 20 máu khi chạm vào
-                var dmgZone = blast.AddComponent<EarthBlastDamageZone>();
-                dmgZone.damage = 20f;
-                dmgZone.damageCooldown = 1.0f;
+                // Tự động thiết lập Collider toàn diện (cả vòng tròn ngoài lẫn tất cả các mảnh đá visual của Prefab)
+                EarthBlastDamageZone.SetupRockColliders(blast, earthBlastRadius, 3.0f, 30f);
 
                 var locationVfx = blast.GetComponent<PixPlays.ElementalVFX.LocationVfx>();
                 if (locationVfx != null)
@@ -1675,18 +1665,18 @@ public class FinalBossAI : NetworkBehaviour
         var activePlayers = GetAllActivePlayers();
         var spots = new List<Vector3>();
 
+        // Đảm bảo chia đều triệu hồi đá dưới chân TẤT CẢ các Player đang sống
         foreach (var p in activePlayers)
         {
             if (p == null || IsPlayerDeadOrInvisible(p)) continue;
             
-            // 1. Triệu hồi chính xác dưới chân người chơi
+            // 1. Triệu hồi ĐẦY ĐỦ chính xác 1 đốm đá ngay dưới chân từng Player
             spots.Add(p.position);
             
-            // 2. Triệu hồi ngẫu nhiên xung quanh người chơi đó (2-3 đốm xung quanh mỗi player)
-            int extraSpots = Random.Range(2, 4);
-            for (int k = 0; k < extraSpots; k++)
+            // 2. Triệu hồi thêm 2 đốm đá bẫy ngẫu nhiên xung quanh dưới chân người chơi đó (Chia đều cho cả 4 player)
+            for (int k = 0; k < 2; k++)
             {
-                Vector2 randomOffset = Random.insideUnitCircle * 3.0f; // Bán kính 3m
+                Vector2 randomOffset = Random.insideUnitCircle * 3.0f; // Bán kính 3m quanh player
                 Vector3 offsetPos = p.position + new Vector3(randomOffset.x, 0f, randomOffset.y);
                 if (NavMesh.SamplePosition(offsetPos, out NavMeshHit hit, 3.5f, NavMesh.AllAreas))
                 {
