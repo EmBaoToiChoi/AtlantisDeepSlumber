@@ -837,7 +837,7 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     private void SpawnIceProjectileLocal(Vector3 spawnPos, Vector3 shootDirection)
     {
-        PlayPlayerSFX(skillRClip);
+        // PlayPlayerSFX(skillRClip); // Âm thanh nguyên tố phát tự động trong Start() của ElenaIceProjectile
         if (rSkillIcePrefab == null)
         {
             Debug.LogError("[ElenaPlayer] rSkillIcePrefab chưa được gán trong Inspector!");
