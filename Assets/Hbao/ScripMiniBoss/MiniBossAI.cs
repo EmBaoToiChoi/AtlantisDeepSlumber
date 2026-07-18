@@ -301,41 +301,28 @@ public class MiniBossAI : NetworkBehaviour
 
     public void TakeDamage(float damage)
     {
-        bool auth = isStandaloneMode || (IsNetworkActive && IsServer);
-        if (!auth || IsDead || CurrentStateValue == MiniBossState.Enrage) return;
+        if (IsDead || CurrentStateValue == MiniBossState.Enrage) return;
 
-        if (isStandaloneMode)
-        {
-            localHealth -= damage;
-            EnemyDamageEffectHelper.PlayDamageEffects(gameObject, damage);
-            if (localHealth <= 0)
-            {
-                if (!localIsPhase2)
-                {
-                    ChangeState(MiniBossState.Enrage);
-                }
-                else
-                {
-                    ChangeState(MiniBossState.Dead);
-                }
-                return;
-            }
-        }
-        else
+        localHealth -= damage;
+        if (!isStandaloneMode && IsSpawned && IsServer)
         {
             currentHealth.Value -= damage;
-            if (currentHealth.Value <= 0)
+        }
+
+        EnemyDamageEffectHelper.PlayDamageEffects(gameObject, damage);
+
+        float activeHp = isStandaloneMode ? localHealth : (IsSpawned && IsServer ? currentHealth.Value : localHealth);
+        if (activeHp <= 0 || localHealth <= 0)
+        {
+            if (!localIsPhase2 && (!IsSpawned || !isPhase2Network.Value))
             {
-                if (!isPhase2Network.Value)
-                {
-                    ChangeState(MiniBossState.Enrage);
-                }
-                else
-                {
-                    ChangeState(MiniBossState.Dead);
-                }
-                return;
+                ChangeState(MiniBossState.Enrage);
             }
+            else
+            {
+                ChangeState(MiniBossState.Dead);
+            }
+            return;
         }
 
         // Trigger stagger hit animation if not in attack or already in hit state

@@ -91,6 +91,14 @@ public class MiniBossHealthBar : MonoBehaviour
         UpdateHPBars(curHp, maxHp);
     }
 
+    public void HideUI()
+    {
+        if (rootContainer != null)
+        {
+            rootContainer.style.display = DisplayStyle.None;
+        }
+    }
+
     private void Update()
     {
         if (boss == null)
@@ -98,19 +106,20 @@ public class MiniBossHealthBar : MonoBehaviour
             boss = FindFirstObjectByType<MiniBossAI>();
             if (boss == null)
             {
-                if (rootContainer != null) rootContainer.style.display = DisplayStyle.None;
+                HideUI();
                 return;
             }
             InitBossHealthAndName();
         }
 
-        // Hide UI if boss is dead or inactive
-        if (boss.IsDead || !boss.IsBossActive)
+        // Check if Final Boss HUD is active to prevent UI overlap
+        var finalBoss = FindFirstObjectByType<FinalBossAI>();
+        bool isFinalBossActive = finalBoss != null && finalBoss.IsHUDVisible && !finalBoss.IsDead;
+
+        // Hide UI if boss is dead, inactive, or if Final Boss HUD is active
+        if (boss.IsDead || !boss.IsBossActive || boss.ActualCurrentHealth <= 0 || isFinalBossActive)
         {
-            if (rootContainer != null && rootContainer.style.display != DisplayStyle.None)
-            {
-                rootContainer.style.display = DisplayStyle.None;
-            }
+            HideUI();
             return;
         }
 

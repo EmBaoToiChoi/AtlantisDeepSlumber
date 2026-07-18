@@ -1050,23 +1050,25 @@ public class BossAI : NetworkBehaviour
     public void TakeDamage(float damage)
     {
         if (IsDead) return;
-        if (!isStandaloneMode && !IsServer) return;
         if (CurrentStateValue == BossState.Enrage) return; // Bất tử khi đang gồng nộ
 
-        CurrentHealthValue -= damage;
-
-        if (isStandaloneMode)
+        localHealth -= damage;
+        if (!isStandaloneMode && IsSpawned && IsServer)
         {
-            EnemyDamageEffectHelper.PlayDamageEffects(gameObject, damage);
-            if (anim != null) anim.SetTrigger(hitTrigger);
-        }
-        else
-        {
+            currentHealth.Value -= damage;
             hitCounter.Value++;
         }
+        else if (anim != null)
+        {
+            anim.SetTrigger(hitTrigger);
+        }
+
+        EnemyDamageEffectHelper.PlayDamageEffects(gameObject, damage);
+
+        float activeHp = isStandaloneMode ? localHealth : (IsSpawned && IsServer ? currentHealth.Value : localHealth);
 
         // Xử lý khi hết máu lần đầu (Chuyển sang Phase 2 Gồng Cuồng Nộ)
-        if (CurrentHealthValue <= 0)
+        if (activeHp <= 0 || localHealth <= 0)
         {
             if (!IsPhase2 && !hasEnraged)
             {
