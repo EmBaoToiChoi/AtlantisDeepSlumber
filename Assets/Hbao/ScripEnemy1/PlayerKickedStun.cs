@@ -26,6 +26,21 @@ public class PlayerKickedStun : NetworkBehaviour
         Debug.Log($"[{gameObject.name}] OnStandUpFinished received.");
     }
 
+    /// <summary>
+    /// Reset toàn bộ trạng thái choáng và bật lại script điều khiển (dùng khi hồi sinh).
+    /// </summary>
+    public void ResetStunState()
+    {
+        isStunned = false;
+        isWaitingForStandUp = false;
+        StopAllCoroutines();
+        if (playerScript != null)
+        {
+            playerScript.enabled = true;
+        }
+        Debug.Log($"[{gameObject.name}] PlayerKickedStun: Đã reset trạng thái choáng và bật lại phím điều khiển.");
+    }
+
     private Camera targetCamera;
     private Vector3 lastCameraOffset;
 
