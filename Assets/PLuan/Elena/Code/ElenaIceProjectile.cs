@@ -84,6 +84,13 @@ public class ElenaIceProjectile : NetworkBehaviour
         if (flyingGFX != null) flyingGFX.SetActive(true);
         if (hitGFX != null) hitGFX.SetActive(false);
 
+        // Phát âm thanh xuất chiêu nguyên tố Fireball khi khởi tạo đạn băng
+        AudioClip launchClip = Resources.Load<AudioClip>("Audio/Fireball");
+        if (launchClip != null)
+        {
+            AudioSource.PlayClipAtPoint(launchClip, transform.position);
+        }
+
         Debug.Log($"[ElenaIceProjectile] Đạn băng được khởi tạo tại: {transform.position}, Tag: {gameObject.tag}");
 
         if (NetworkManager.Singleton == null || NetworkManager.Singleton.IsServer)
