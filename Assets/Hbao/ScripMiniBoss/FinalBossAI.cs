@@ -83,7 +83,7 @@ public class FinalBossAI : NetworkBehaviour
         set { if (isStandaloneMode) localState = value; else currentState.Value = value; }
     }
 
-    public float ActualCurrentHealth => (isStandaloneMode || !IsSpawned || !IsServer) ? localHealth : currentHealth.Value;
+    public float ActualCurrentHealth => (isStandaloneMode || !IsSpawned) ? localHealth : currentHealth.Value;
     public bool IsBossActive => isStandaloneMode ? localIsBossActive : isBossActive.Value;
     public bool IsHUDVisible => isStandaloneMode ? localIsHUDVisible : isHUDVisible.Value;
     public bool IsDead => CurrentStateValue == FinalBossState.Dead;
@@ -411,6 +411,7 @@ public class FinalBossAI : NetworkBehaviour
 
     private void OnHealthNetChanged(float oldVal, float newVal)
     {
+        localHealth = newVal;
         float diff = oldVal - newVal;
         if (diff > 0)
         {
@@ -455,6 +456,9 @@ public class FinalBossAI : NetworkBehaviour
         }
 
         EnemyDamageEffectHelper.PlayDamageEffects(gameObject, damage);
+
+        bool isAuth = isStandaloneMode || (IsSpawned && IsServer) || !IsSpawned;
+        if (!isAuth) return;
 
         float activeHp = ActualCurrentHealth;
         if (activeHp <= 0f)
