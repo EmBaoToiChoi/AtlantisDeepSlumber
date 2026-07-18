@@ -94,6 +94,14 @@ public class BossHealthBar : MonoBehaviour
         UpdateHPBars(curHp, maxHp);
     }
 
+    public void HideUI()
+    {
+        if (rootContainer != null)
+        {
+            rootContainer.style.display = DisplayStyle.None;
+        }
+    }
+
     private void Update()
     {
         if (boss == null)
@@ -102,19 +110,20 @@ public class BossHealthBar : MonoBehaviour
             boss = FindFirstObjectByType<BossAI>();
             if (boss == null)
             {
-                if (rootContainer != null) rootContainer.style.display = DisplayStyle.None;
+                HideUI();
                 return;
             }
             InitBossHealthAndName();
         }
 
-        // Ẩn thanh máu khi Boss đã chết hoặc chưa kích hoạt
-        if (boss.IsDead || !boss.IsBossActive)
+        // Kiểm tra nếu Boss cuối đang hiện HUD thì tự động ẩn thanh máu Silas để tránh đè UI
+        var finalBoss = FindFirstObjectByType<FinalBossAI>();
+        bool isFinalBossActive = finalBoss != null && finalBoss.IsHUDVisible && !finalBoss.IsDead;
+
+        // Ẩn thanh máu khi Boss đã chết, chưa kích hoạt, hoặc khi Boss cuối đã xuất hiện
+        if (boss.IsDead || !boss.IsBossActive || boss.ActualCurrentHealth <= 0 || isFinalBossActive)
         {
-            if (rootContainer != null && rootContainer.style.display != DisplayStyle.None)
-            {
-                rootContainer.style.display = DisplayStyle.None;
-            }
+            HideUI();
             return;
         }
 

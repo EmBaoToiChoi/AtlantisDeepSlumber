@@ -18,7 +18,7 @@ using UnityEngine.AI;
 /// </summary>
 public class FinalBossAI : NetworkBehaviour
 {
-    public enum FinalBossState { Sitting, JumpDown, Idle, Chase, Attack, Shockwave, FireSpew, EarthSummon, Hit, Dead }
+    public enum FinalBossState { Sitting, JumpDown, Grow, SwordRain, FireSpew, FireBarrage, Idle, Chase, Attack, Shockwave, Hit, Dead }
 
     [Header("Miniboss Reference")]
     [Tooltip("Reference to the Boss AI (e.g. Silas) that must die before the final boss jumps down.")]
@@ -61,6 +61,12 @@ public class FinalBossAI : NetworkBehaviour
     public NetworkVariable<int> fireSpewCounter = new NetworkVariable<int>(
         0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     public NetworkVariable<int> fireSpewActiveCounter = new NetworkVariable<int>(
+        0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+    public NetworkVariable<int> growCounter = new NetworkVariable<int>(
+        0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+    public NetworkVariable<int> swordRainCounter = new NetworkVariable<int>(
+        0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+    public NetworkVariable<int> fireBarrageCounter = new NetworkVariable<int>(
         0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
     // Standalone fallback variables
@@ -112,6 +118,38 @@ public class FinalBossAI : NetworkBehaviour
     public GameObject landingSlamVFX;
     public AudioClip landingSlamSFX;
 
+    [Header("Enrage / Grow (Gồng & Phóng To) Settings")]
+    public float growDuration = 3.0f;
+    public float growScaleMultiplier = 1.4f;
+    public string growTriggerParam = "Shockwave";
+    public GameObject growVFX;
+    public AudioClip growSFX;
+
+    [Header("Sword Rain (Mưa Kiếm 10s) Settings")]
+    public GameObject swordPrefab;
+    public GameObject warningDecalPrefab;
+    public GameObject swordImpactVFX;
+    public AudioClip swordImpactSFX;
+    public float swordRainDuration = 10.0f;
+    public float swordSpawnInterval = 0.4f;
+    public float warningDuration = 0.7f;
+    public float swordDropSpeed = 35.0f;
+    public float swordDamage = 5.0f;
+    public float swordImpactRadius = 2.0f;
+    public string swordRainTriggerParam = "AttackCombo";
+
+    [Header("Fire Barrage (Chưởng Đốm Lửa) Settings")]
+    public GameObject fireBarragePrefab;
+    public GameObject fireBarrageImpactVFX;
+    public AudioClip fireBarrageImpactSFX;
+    public float fireBarrageDuration = 6.0f;
+    public float fireBarrageInterval = 0.5f;
+    public float fireBarrageWarningDuration = 0.7f;
+    public float fireBarrageDropSpeed = 30.0f;
+    public float fireBarrageDamage = 20.0f;
+    public float fireBarrageImpactRadius = 2.5f;
+    public string fireBarrageTriggerParam = "AttackCombo";
+
     [Header("Movement Speeds")]
     public float walkSpeed = 2.2f;
     public float runSpeed = 6.0f;
@@ -139,6 +177,12 @@ public class FinalBossAI : NetworkBehaviour
     public AudioClip shockwaveSFX;
     private float shockwaveCooldownTimer;
 
+    [Header("Expanding Shockwave Ring (Sóng Xung Kích Hất Tung -5 HP) Settings")]
+    public float shockwaveWaveSpeed = 14.0f;
+    public float shockwaveWaveMaxRadius = 16.0f;
+    public float shockwaveWaveDamage = 5.0f;
+    public float shockwaveWaveKnockup = 9.0f;
+
     [Header("Fire Spew (Phun Lửa) Settings")]
     public float fireSpewInterval = 10f;
     public float fireSpewWindupDuration = 1.0f;
@@ -150,16 +194,6 @@ public class FinalBossAI : NetworkBehaviour
     public AudioClip fireSpewSFX;
     public string fireSpewTriggerParam = "FireSpew";
     private float fireSpewCooldownTimer;
-
-    [Header("Earth Summon (Triệu Hồi Đá) Settings")]
-    public GameObject warningDecalPrefab;
-    public GameObject earthBlastPrefab;
-    public float warningDuration = 1.5f;
-    public float earthBlastRadius = 3.0f;
-    public float earthBlastDamage = 50f;
-    public float earthBlastKnockback = 15f;
-    public string earthSummonTriggerParam = "EarthSummon";
-    private bool hasTriggeredEarthSummon = false;
 
     [Header("Weapon & Hand Detection Settings")]
     public Transform leftHandBase;
@@ -206,7 +240,9 @@ public class FinalBossAI : NetworkBehaviour
     private AttackState stateAttack;
     private ShockwaveState stateShockwave;
     private FireSpewState stateFireSpew;
-    private EarthSummonState stateEarthSummon;
+    private GrowState stateGrow;
+    private SwordRainState stateSwordRain;
+    private FireBarrageState stateFireBarrage;
     private HitState stateHit;
     private DeadState stateDead;
 
@@ -252,7 +288,9 @@ public class FinalBossAI : NetworkBehaviour
         stateAttack = new AttackState(this);
         stateShockwave = new ShockwaveState(this);
         stateFireSpew = new FireSpewState(this);
-        stateEarthSummon = new EarthSummonState(this);
+        stateGrow = new GrowState(this);
+        stateSwordRain = new SwordRainState(this);
+        stateFireBarrage = new FireBarrageState(this);
         stateHit = new HitState(this);
         stateDead = new DeadState(this);
     }
@@ -279,7 +317,6 @@ public class FinalBossAI : NetworkBehaviour
         localIsBossActive = false;
         localIsHUDVisible = startActiveWithoutMiniboss;
         fireSpewCooldownTimer = fireSpewInterval;
-        hasTriggeredEarthSummon = false;
         SnapToNavMesh();
         ApplySpeedAnim(0f);
         ChangeState(FinalBossState.Sitting);
@@ -309,6 +346,16 @@ public class FinalBossAI : NetworkBehaviour
             if (anim != null) anim.SetTrigger(fireSpewTriggerParam);
         };
         fireSpewActiveCounter.OnValueChanged += (_, _) => PlayFireSpewVFX();
+        growCounter.OnValueChanged += (_, _) => {
+            if (anim != null) anim.SetTrigger(growTriggerParam);
+            PlayGrowVFX();
+        };
+        swordRainCounter.OnValueChanged += (_, _) => {
+            if (anim != null) anim.SetTrigger(swordRainTriggerParam);
+        };
+        fireBarrageCounter.OnValueChanged += (_, _) => {
+            if (anim != null) anim.SetTrigger(fireBarrageTriggerParam);
+        };
         currentHealth.OnValueChanged += OnHealthNetChanged;
 
         ApplySpeedAnim(netSpeed.Value);
@@ -318,7 +365,6 @@ public class FinalBossAI : NetworkBehaviour
             currentHealth.Value = maxHealth;
             isHUDVisible.Value = startActiveWithoutMiniboss;
             fireSpewCooldownTimer = fireSpewInterval;
-            hasTriggeredEarthSummon = false;
             SnapToNavMesh();
             ChangeState(FinalBossState.Sitting);
         }
@@ -349,6 +395,16 @@ public class FinalBossAI : NetworkBehaviour
             if (anim != null) anim.SetTrigger(fireSpewTriggerParam);
         };
         fireSpewActiveCounter.OnValueChanged -= (_, _) => PlayFireSpewVFX();
+        growCounter.OnValueChanged -= (_, _) => {
+            if (anim != null) anim.SetTrigger(growTriggerParam);
+            PlayGrowVFX();
+        };
+        swordRainCounter.OnValueChanged -= (_, _) => {
+            if (anim != null) anim.SetTrigger(swordRainTriggerParam);
+        };
+        fireBarrageCounter.OnValueChanged -= (_, _) => {
+            if (anim != null) anim.SetTrigger(fireBarrageTriggerParam);
+        };
         currentHealth.OnValueChanged -= OnHealthNetChanged;
     }
 
@@ -388,43 +444,25 @@ public class FinalBossAI : NetworkBehaviour
 
     public void TakeDamage(float damage)
     {
-        bool auth = isStandaloneMode || (IsNetworkActive && IsServer);
-        if (!auth || IsDead || CurrentStateValue == FinalBossState.Sitting || CurrentStateValue == FinalBossState.JumpDown) return;
+        if (IsDead || CurrentStateValue == FinalBossState.Sitting || CurrentStateValue == FinalBossState.JumpDown || CurrentStateValue == FinalBossState.Grow || CurrentStateValue == FinalBossState.SwordRain || CurrentStateValue == FinalBossState.FireBarrage) return;
 
-        if (isStandaloneMode)
-        {
-            localHealth -= damage;
-            EnemyDamageEffectHelper.PlayDamageEffects(gameObject, damage);
-            if (localHealth <= 0)
-            {
-                ChangeState(FinalBossState.Dead);
-                return;
-            }
-            else if (localHealth <= maxHealth * 0.5f && !hasTriggeredEarthSummon)
-            {
-                hasTriggeredEarthSummon = true;
-                ChangeState(FinalBossState.EarthSummon);
-                return;
-            }
-        }
-        else
+        localHealth -= damage;
+        if (!isStandaloneMode && IsSpawned && IsServer)
         {
             currentHealth.Value -= damage;
-            if (currentHealth.Value <= 0)
-            {
-                ChangeState(FinalBossState.Dead);
-                return;
-            }
-            else if (currentHealth.Value <= maxHealth * 0.5f && !hasTriggeredEarthSummon)
-            {
-                hasTriggeredEarthSummon = true;
-                ChangeState(FinalBossState.EarthSummon);
-                return;
-            }
         }
 
-        // Trigger stagger hit animation if not attacking/roaring/spewing/summoning/dead/already hit
-        if (CurrentStateValue != FinalBossState.Attack && CurrentStateValue != FinalBossState.Shockwave && CurrentStateValue != FinalBossState.FireSpew && CurrentStateValue != FinalBossState.EarthSummon && CurrentStateValue != FinalBossState.Dead && CurrentStateValue != FinalBossState.Hit)
+        EnemyDamageEffectHelper.PlayDamageEffects(gameObject, damage);
+
+        float activeHp = isStandaloneMode ? localHealth : (IsSpawned && IsServer ? currentHealth.Value : localHealth);
+        if (activeHp <= 0 || localHealth <= 0)
+        {
+            ChangeState(FinalBossState.Dead);
+            return;
+        }
+
+        // Trigger stagger hit animation if not attacking/roaring/spewing/growing/raining/barraging/dead/already hit
+        if (CurrentStateValue != FinalBossState.Attack && CurrentStateValue != FinalBossState.Shockwave && CurrentStateValue != FinalBossState.FireSpew && CurrentStateValue != FinalBossState.Grow && CurrentStateValue != FinalBossState.SwordRain && CurrentStateValue != FinalBossState.FireBarrage && CurrentStateValue != FinalBossState.Dead && CurrentStateValue != FinalBossState.Hit)
         {
             ChangeState(FinalBossState.Hit);
         }
@@ -530,8 +568,14 @@ public class FinalBossAI : NetworkBehaviour
             case FinalBossState.FireSpew:
                 currentFSMState = stateFireSpew;
                 break;
-            case FinalBossState.EarthSummon:
-                currentFSMState = stateEarthSummon;
+            case FinalBossState.Grow:
+                currentFSMState = stateGrow;
+                break;
+            case FinalBossState.SwordRain:
+                currentFSMState = stateSwordRain;
+                break;
+            case FinalBossState.FireBarrage:
+                currentFSMState = stateFireBarrage;
                 break;
             case FinalBossState.Dead:
                 currentFSMState = stateDead;
@@ -650,6 +694,11 @@ public class FinalBossAI : NetworkBehaviour
         }
     }
 
+    public Transform GetPlayerRootPublic(Transform t)
+    {
+        return GetPlayerRoot(t);
+    }
+
     private void PlayShockwaveVFX()
     {
         Vector3 spawnPos = transform.position + Vector3.up * 0.1f;
@@ -662,6 +711,12 @@ public class FinalBossAI : NetworkBehaviour
         {
             AudioSource.PlayClipAtPoint(shockwaveSFX, spawnPos, 1.0f);
         }
+
+        // Tạo sóng xung kích mở rộng hất tung người chơi & -5 HP
+        GameObject waveObj = new GameObject("ExpandingShockwaveRing");
+        waveObj.transform.position = transform.position;
+        var waveComp = waveObj.AddComponent<ExpandingShockwaveRing>();
+        waveComp.Initialize(this, shockwaveWaveMaxRadius, shockwaveWaveSpeed, shockwaveWaveDamage, shockwaveWaveKnockup, playerLayer);
     }
 
     // ══════════════════════════════════════════════════════════
@@ -783,7 +838,7 @@ public class FinalBossAI : NetworkBehaviour
 
     private void DetectAndSwitchTarget()
     {
-        if (IsDead || CurrentStateValue == FinalBossState.Sitting || CurrentStateValue == FinalBossState.JumpDown) return;
+        if (IsDead || CurrentStateValue == FinalBossState.Sitting || CurrentStateValue == FinalBossState.JumpDown || CurrentStateValue == FinalBossState.Grow || CurrentStateValue == FinalBossState.SwordRain || CurrentStateValue == FinalBossState.FireBarrage) return;
 
         Transform closest = null;
         float minD = float.MaxValue;
@@ -965,32 +1020,19 @@ public class FinalBossAI : NetworkBehaviour
         {
             if (boss.startActiveWithoutMiniboss)
             {
+                boss.SetHUDVisible(true);
                 boss.ChangeState(FinalBossState.JumpDown);
                 return;
             }
 
-            // 1. If Silas dies completely in Phase 2, show the Final Boss HUD
-            if (boss.bossMiniboss != null && boss.bossMiniboss.IsDead)
+            bool silasDead = boss.bossMiniboss != null && boss.bossMiniboss.IsDead;
+            bool rakanDead = boss.miniBoss != null && boss.miniBoss.IsDead;
+
+            // When Silas dies (or Rakan dies if configured), show HUD and jump down immediately!
+            if (silasDead || rakanDead)
             {
                 boss.SetHUDVisible(true);
-            }
-
-            // 2. Determine jump down trigger
-            // Case A: No Rakan (miniBoss) is assigned -> jump down as soon as Silas (bossMiniboss) dies.
-            if (boss.miniBoss == null)
-            {
-                if (boss.bossMiniboss == null || boss.bossMiniboss.IsDead)
-                {
-                    boss.ChangeState(FinalBossState.JumpDown);
-                }
-            }
-            // Case B: Both are assigned -> Boss sits when Silas dies (shows HUD), and only jumps down when Rakan dies!
-            else
-            {
-                if (boss.miniBoss.IsDead)
-                {
-                    boss.ChangeState(FinalBossState.JumpDown);
-                }
+                boss.ChangeState(FinalBossState.JumpDown);
             }
         }
 
@@ -1093,8 +1135,7 @@ public class FinalBossAI : NetworkBehaviour
             }
 
             boss.TriggerLandingSlam();
-            boss.ActivateBoss();
-            boss.ChangeState(FinalBossState.Idle);
+            boss.ChangeState(FinalBossState.Grow);
         }
 
         public void Exit()
@@ -1484,6 +1525,11 @@ public class FinalBossAI : NetworkBehaviour
         {
             stageTimer -= Time.deltaTime;
 
+            if (boss.targetPlayer != null)
+            {
+                boss.RotateTowards(boss.targetPlayer.position);
+            }
+
             if (stageTimer <= 0)
             {
                 if (!isSpewing)
@@ -1496,8 +1542,7 @@ public class FinalBossAI : NetworkBehaviour
                 else
                 {
                     boss.fireSpewCooldownTimer = boss.fireSpewInterval;
-                    if (boss.targetPlayer != null) boss.ChangeState(FinalBossState.Chase);
-                    else boss.ChangeState(FinalBossState.Idle);
+                    boss.ChangeState(FinalBossState.FireBarrage);
                 }
             }
         }
@@ -1589,94 +1634,493 @@ public class FinalBossAI : NetworkBehaviour
         }
     }
 
-    // ══════════════════════════════════════════════════════════
-    //  EARTH SUMMON TRIGGERS & RPCs
-    // ══════════════════════════════════════════════════════════
-
-    [ClientRpc]
-    private void SpawnWarningIndicatorsClientRpc(Vector3[] positions)
+    private void PlayGrowVFX()
     {
-        SpawnWarningIndicatorsLocal(positions);
-    }
-
-    [ClientRpc]
-    private void PlayEarthBlastClientRpc(Vector3[] positions)
-    {
-        PlayEarthBlastLocal(positions);
-    }
-
-    private void SpawnWarningIndicatorsLocal(Vector3[] positions)
-    {
-        foreach (var pos in positions)
+        Vector3 spawnPos = transform.position + Vector3.up * 1.0f;
+        if (growVFX != null)
         {
-            // 1. Tạo vòng tròn cảnh báo decal (nếu hoạt động trên máy người chơi)
+            GameObject vfx = Instantiate(growVFX, spawnPos, transform.rotation);
+            vfx.transform.SetParent(transform);
+            Destroy(vfx, growDuration + 1f);
+        }
+        if (growSFX != null)
+        {
+            AudioSource.PlayClipAtPoint(growSFX, spawnPos, 1.0f);
+        }
+    }
+
+    private class GrowState : IEnemyState
+    {
+        private FinalBossAI boss;
+        private float timer;
+        private Vector3 startScale;
+        private Vector3 targetScale;
+
+        public GrowState(FinalBossAI boss) { this.boss = boss; }
+
+        public void Enter()
+        {
+            timer = 0f;
+            startScale = boss.transform.localScale;
+            targetScale = startScale * boss.growScaleMultiplier;
+
+            if (boss.AgentReady)
+            {
+                boss.agent.isStopped = true;
+                boss.agent.velocity = Vector3.zero;
+            }
+            boss.SetSpeedNet(0f);
+
+            if (!boss.isStandaloneMode)
+            {
+                boss.growCounter.Value++;
+            }
+            else
+            {
+                if (boss.anim != null) boss.anim.SetTrigger(boss.growTriggerParam);
+                boss.PlayGrowVFX();
+            }
+        }
+
+        public void Update()
+        {
+            timer += Time.deltaTime;
+            float progress = Mathf.Clamp01(timer / boss.growDuration);
+
+            boss.transform.localScale = Vector3.Lerp(startScale, targetScale, progress);
+
+            if (boss.agent != null && boss.agent.isActiveAndEnabled)
+            {
+                boss.agent.isStopped = true;
+                boss.agent.velocity = Vector3.zero;
+            }
+            boss.SetSpeedNet(0f);
+
+            if (timer >= boss.growDuration)
+            {
+                boss.transform.localScale = targetScale;
+                boss.ChangeState(FinalBossState.SwordRain);
+            }
+        }
+
+        public void Exit()
+        {
+            boss.transform.localScale = targetScale;
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════
+    //  SWORD RAIN OBJECT POOLING & LOGIC
+    // ══════════════════════════════════════════════════════════
+
+    private Queue<GameObject> swordPool = new Queue<GameObject>();
+    private Queue<GameObject> warningPool = new Queue<GameObject>();
+
+    public GameObject GetPooledSword(Vector3 spawnPos, Quaternion rotation)
+    {
+        GameObject sword = null;
+        while (swordPool.Count > 0)
+        {
+            var candidate = swordPool.Dequeue();
+            if (candidate != null)
+            {
+                sword = candidate;
+                break;
+            }
+        }
+
+        if (sword == null)
+        {
+            if (swordPrefab != null)
+            {
+                sword = Instantiate(swordPrefab);
+            }
+            else
+            {
+                sword = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                sword.transform.localScale = new Vector3(0.15f, 2.0f, 0.4f);
+            }
+        }
+
+        sword.transform.position = spawnPos;
+        sword.transform.rotation = rotation;
+        sword.SetActive(true);
+        return sword;
+    }
+
+    public void RecycleSword(GameObject sword)
+    {
+        if (sword == null) return;
+        sword.SetActive(false);
+        if (!swordPool.Contains(sword))
+        {
+            swordPool.Enqueue(sword);
+        }
+    }
+
+    public GameObject GetPooledWarning(Vector3 spawnPos)
+    {
+        GameObject warning = null;
+        while (warningPool.Count > 0)
+        {
+            var candidate = warningPool.Dequeue();
+            if (candidate != null)
+            {
+                warning = candidate;
+                break;
+            }
+        }
+
+        if (warning == null)
+        {
             if (warningDecalPrefab != null)
             {
-                GameObject warning = Instantiate(warningDecalPrefab, pos + Vector3.up * 0.05f, Quaternion.identity);
-                
-                // Gắn script chớp đỏ cảnh báo
-                var flasher = warning.AddComponent<WarningDecalFlash>();
-                if (flasher != null)
-                {
-                    flasher.StartFlashing(warningDuration);
-                }
-
-                Destroy(warning, warningDuration);
+                warning = Instantiate(warningDecalPrefab);
             }
-
-            // 2. Tạo vòng viền đỏ lập trình (Procedural) - Failsafe luôn hiển thị đỏ chớp tắt rực rỡ
-            GameObject proceduralRing = new GameObject("ProceduralWarningRing");
-            proceduralRing.transform.position = pos;
-            var ring = proceduralRing.AddComponent<ProceduralWarningCircle>();
-            if (ring != null)
+            else
             {
-                ring.StartWarning(warningDuration, earthBlastRadius);
+                warning = new GameObject("ProceduralWarningRing");
+                warning.AddComponent<ProceduralWarningCircle>();
             }
-            Destroy(proceduralRing, warningDuration);
+        }
+
+        warning.transform.position = spawnPos;
+        warning.SetActive(true);
+        return warning;
+    }
+
+    public void RecycleWarning(GameObject warning)
+    {
+        if (warning == null) return;
+        warning.SetActive(false);
+        if (!warningPool.Contains(warning))
+        {
+            warningPool.Enqueue(warning);
         }
     }
 
-    private void PlayEarthBlastLocal(Vector3[] positions)
+    [ClientRpc]
+    private void TriggerSwordRainDropClientRpc(Vector3[] positions)
+    {
+        ExecuteSwordRainDropLocal(positions);
+    }
+
+    public void ExecuteSwordRainDropLocal(Vector3[] positions)
     {
         foreach (var pos in positions)
         {
-            if (earthBlastPrefab != null)
-            {
-                GameObject blast = Instantiate(earthBlastPrefab, pos, Quaternion.identity);
-                blast.transform.localScale *= 3.0f;
-                
-                // Tự động thiết lập Collider toàn diện (cả vòng tròn ngoài lẫn tất cả các mảnh đá visual của Prefab)
-                EarthBlastDamageZone.SetupRockColliders(blast, earthBlastRadius, 3.0f, 30f);
+            StartCoroutine(RoutineDropSwordAtPosition(pos));
+        }
+    }
 
-                var locationVfx = blast.GetComponent<PixPlays.ElementalVFX.LocationVfx>();
-                if (locationVfx != null)
-                {
-                    var data = new PixPlays.ElementalVFX.VfxData(pos, pos + Vector3.up, 3.0f, earthBlastRadius * 3.0f);
-                    locationVfx.Play(data);
-                }
-                
-                Destroy(blast, 4.0f);
+    private System.Collections.IEnumerator RoutineDropSwordAtPosition(Vector3 groundPos)
+    {
+        GameObject warning = GetPooledWarning(groundPos + Vector3.up * 0.05f);
+
+        var flasher = warning.GetComponent<WarningDecalFlash>();
+        if (flasher != null) flasher.StartFlashing(warningDuration);
+
+        var ring = warning.GetComponent<ProceduralWarningCircle>();
+        if (ring != null) ring.StartWarning(warningDuration, swordImpactRadius);
+
+        yield return new WaitForSeconds(warningDuration);
+
+        RecycleWarning(warning);
+
+        Vector3 skyPos = groundPos + Vector3.up * 18.0f;
+        GameObject sword = GetPooledSword(skyPos, Quaternion.LookRotation(Vector3.down));
+
+        var proj = sword.GetComponent<FallingSwordProjectile>();
+        if (proj == null) proj = sword.AddComponent<FallingSwordProjectile>();
+
+        proj.Initialize(this, groundPos, swordDropSpeed, swordDamage, swordImpactRadius, playerLayer);
+    }
+
+    public void PlaySwordImpactEffects(Vector3 impactPos)
+    {
+        if (swordImpactVFX != null)
+        {
+            GameObject vfx = Instantiate(swordImpactVFX, impactPos, Quaternion.identity);
+            Destroy(vfx, 2.5f);
+        }
+        if (swordImpactSFX != null)
+        {
+            AudioSource.PlayClipAtPoint(swordImpactSFX, impactPos, 1.0f);
+        }
+    }
+
+    public void DealSwordImpactDamage(Vector3 impactPos, float damage, float radius, LayerMask layer)
+    {
+        bool auth = isStandaloneMode || (IsNetworkActive && IsServer);
+        if (!auth) return;
+
+        Collider[] hits = Physics.OverlapSphere(impactPos, radius, layer);
+        HashSet<Transform> hitRoots = new HashSet<Transform>();
+
+        foreach (var hit in hits)
+        {
+            Transform root = GetPlayerRoot(hit.transform);
+            if (root != null && !hitRoots.Contains(root))
+            {
+                hitRoots.Add(root);
+                Vector3 knockbackDir = (root.position - impactPos).normalized + Vector3.up * 0.5f;
+                EnemyDamageHelper.DealDamage(root, damage, knockbackDir * 5f);
+                Debug.Log($"[FinalBossAI] Sword Rain hit player: {root.name} for {damage} HP");
             }
         }
     }
 
-    private Vector3[] CalculateEarthBlastPositions()
+    private Vector3[] CalculateSwordRainTargets()
     {
         var activePlayers = GetAllActivePlayers();
         var spots = new List<Vector3>();
 
-        // Đảm bảo chia đều triệu hồi đá dưới chân TẤT CẢ các Player đang sống
         foreach (var p in activePlayers)
         {
             if (p == null || IsPlayerDeadOrInvisible(p)) continue;
-            
-            // 1. Triệu hồi ĐẦY ĐỦ chính xác 1 đốm đá ngay dưới chân từng Player
+
             spots.Add(p.position);
-            
-            // 2. Triệu hồi thêm 2 đốm đá bẫy ngẫu nhiên xung quanh dưới chân người chơi đó (Chia đều cho cả 4 player)
+
             for (int k = 0; k < 2; k++)
             {
-                Vector2 randomOffset = Random.insideUnitCircle * 3.0f; // Bán kính 3m quanh player
+                Vector2 randomOffset = Random.insideUnitCircle * 2.5f;
+                Vector3 offsetPos = p.position + new Vector3(randomOffset.x, 0f, randomOffset.y);
+                if (NavMesh.SamplePosition(offsetPos, out NavMeshHit hit, 3.0f, NavMesh.AllAreas))
+                {
+                    spots.Add(hit.position);
+                }
+                else
+                {
+                    spots.Add(offsetPos);
+                }
+            }
+        }
+
+        if (spots.Count == 0)
+        {
+            for (int i = 0; i < 4; i++)
+            {
+                Vector2 randomOffset = Random.insideUnitCircle * 6f;
+                Vector3 offsetPos = transform.position + new Vector3(randomOffset.x, 0, randomOffset.y);
+                if (NavMesh.SamplePosition(offsetPos, out NavMeshHit hit, 4f, NavMesh.AllAreas))
+                {
+                    spots.Add(hit.position);
+                }
+            }
+        }
+
+        return spots.ToArray();
+    }
+
+    private class SwordRainState : IEnemyState
+    {
+        private FinalBossAI boss;
+        private float timer;
+        private float spawnTimer;
+
+        public SwordRainState(FinalBossAI boss) { this.boss = boss; }
+
+        public void Enter()
+        {
+            timer = 0f;
+            spawnTimer = 0f;
+
+            if (boss.AgentReady)
+            {
+                boss.agent.isStopped = true;
+                boss.agent.velocity = Vector3.zero;
+            }
+            boss.SetSpeedNet(0f);
+
+            if (!boss.isStandaloneMode)
+            {
+                boss.swordRainCounter.Value++;
+            }
+            else
+            {
+                if (boss.anim != null) boss.anim.SetTrigger(boss.swordRainTriggerParam);
+            }
+        }
+
+        public void Update()
+        {
+            timer += Time.deltaTime;
+            spawnTimer -= Time.deltaTime;
+
+            if (boss.agent != null && boss.agent.isActiveAndEnabled)
+            {
+                boss.agent.isStopped = true;
+                boss.agent.velocity = Vector3.zero;
+            }
+            boss.SetSpeedNet(0f);
+
+            if (spawnTimer <= 0f)
+            {
+                spawnTimer = boss.swordSpawnInterval;
+
+                Vector3[] targets = boss.CalculateSwordRainTargets();
+                if (!boss.isStandaloneMode)
+                {
+                    boss.TriggerSwordRainDropClientRpc(targets);
+                }
+                else
+                {
+                    boss.ExecuteSwordRainDropLocal(targets);
+                }
+            }
+
+            if (timer >= boss.swordRainDuration)
+            {
+                boss.ChangeState(FinalBossState.FireSpew);
+            }
+        }
+
+        public void Exit() { }
+    }
+
+    // ══════════════════════════════════════════════════════════
+    //  FIRE BARRAGE OBJECT POOLING & LOGIC
+    // ══════════════════════════════════════════════════════════
+
+    private Queue<GameObject> fireBarragePool = new Queue<GameObject>();
+
+    public GameObject GetPooledFireBarrage(Vector3 spawnPos, Quaternion rotation)
+    {
+        GameObject orb = null;
+        while (fireBarragePool.Count > 0)
+        {
+            var candidate = fireBarragePool.Dequeue();
+            if (candidate != null)
+            {
+                orb = candidate;
+                break;
+            }
+        }
+
+        if (orb == null)
+        {
+            if (fireBarragePrefab != null)
+            {
+                orb = Instantiate(fireBarragePrefab);
+            }
+            else if (fireSpewVFX != null)
+            {
+                orb = Instantiate(fireSpewVFX);
+            }
+            else
+            {
+                orb = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+                orb.transform.localScale = Vector3.one * 0.8f;
+                var r = orb.GetComponent<Renderer>();
+                if (r != null)
+                {
+                    r.material = new Material(Shader.Find("Sprites/Default") ?? Shader.Find("UI/Default"));
+                    r.material.color = new Color(1f, 0.3f, 0f);
+                }
+            }
+        }
+
+        orb.transform.position = spawnPos;
+        orb.transform.rotation = rotation;
+        orb.SetActive(true);
+        return orb;
+    }
+
+    public void RecycleFireBarrage(GameObject orb)
+    {
+        if (orb == null) return;
+        orb.SetActive(false);
+        if (!fireBarragePool.Contains(orb))
+        {
+            fireBarragePool.Enqueue(orb);
+        }
+    }
+
+    [ClientRpc]
+    private void TriggerFireBarrageDropClientRpc(Vector3[] positions)
+    {
+        ExecuteFireBarrageDropLocal(positions);
+    }
+
+    public void ExecuteFireBarrageDropLocal(Vector3[] positions)
+    {
+        foreach (var pos in positions)
+        {
+            StartCoroutine(RoutineDropFireBarrageAtPosition(pos));
+        }
+    }
+
+    private System.Collections.IEnumerator RoutineDropFireBarrageAtPosition(Vector3 groundPos)
+    {
+        GameObject warning = GetPooledWarning(groundPos + Vector3.up * 0.05f);
+
+        var flasher = warning.GetComponent<WarningDecalFlash>();
+        if (flasher != null) flasher.StartFlashing(fireBarrageWarningDuration);
+
+        var ring = warning.GetComponent<ProceduralWarningCircle>();
+        if (ring != null) ring.StartWarning(fireBarrageWarningDuration, fireBarrageImpactRadius);
+
+        yield return new WaitForSeconds(fireBarrageWarningDuration);
+
+        RecycleWarning(warning);
+
+        Vector3 skyPos = groundPos + Vector3.up * 16.0f;
+        GameObject fireOrb = GetPooledFireBarrage(skyPos, Quaternion.LookRotation(Vector3.down));
+
+        var proj = fireOrb.GetComponent<FallingFireOrbProjectile>();
+        if (proj == null) proj = fireOrb.AddComponent<FallingFireOrbProjectile>();
+
+        proj.Initialize(this, groundPos, fireBarrageDropSpeed, fireBarrageDamage, fireBarrageImpactRadius, playerLayer);
+    }
+
+    public void PlayFireBarrageImpactEffects(Vector3 impactPos)
+    {
+        if (fireBarrageImpactVFX != null)
+        {
+            GameObject vfx = Instantiate(fireBarrageImpactVFX, impactPos, Quaternion.identity);
+            Destroy(vfx, 2.5f);
+        }
+        if (fireBarrageImpactSFX != null)
+        {
+            AudioSource.PlayClipAtPoint(fireBarrageImpactSFX, impactPos, 1.0f);
+        }
+    }
+
+    public void DealFireBarrageImpactDamage(Vector3 impactPos, float damage, float radius, LayerMask layer)
+    {
+        bool auth = isStandaloneMode || (IsNetworkActive && IsServer);
+        if (!auth) return;
+
+        Collider[] hits = Physics.OverlapSphere(impactPos, radius, layer);
+        HashSet<Transform> hitRoots = new HashSet<Transform>();
+
+        foreach (var hit in hits)
+        {
+            Transform root = GetPlayerRoot(hit.transform);
+            if (root != null && !hitRoots.Contains(root))
+            {
+                hitRoots.Add(root);
+                Vector3 knockbackDir = (root.position - impactPos).normalized + Vector3.up * 0.4f;
+                EnemyDamageHelper.DealDamage(root, damage, knockbackDir * 6f);
+                Debug.Log($"[FinalBossAI] Fire Barrage hit player: {root.name} for {damage} HP");
+            }
+        }
+    }
+
+    private Vector3[] CalculateFireBarrageTargets()
+    {
+        var activePlayers = GetAllActivePlayers();
+        var spots = new List<Vector3>();
+
+        foreach (var p in activePlayers)
+        {
+            if (p == null || IsPlayerDeadOrInvisible(p)) continue;
+
+            spots.Add(p.position);
+
+            for (int k = 0; k < 2; k++)
+            {
+                Vector2 randomOffset = Random.insideUnitCircle * 3.0f;
                 Vector3 offsetPos = p.position + new Vector3(randomOffset.x, 0f, randomOffset.y);
                 if (NavMesh.SamplePosition(offsetPos, out NavMeshHit hit, 3.5f, NavMesh.AllAreas))
                 {
@@ -1689,15 +2133,13 @@ public class FinalBossAI : NetworkBehaviour
             }
         }
 
-        // Nếu không có người chơi nào hoạt động, triệu hồi ngẫu nhiên xung quanh Boss
         if (spots.Count == 0)
         {
-            int targetCount = Random.Range(4, 7);
-            for (int i = 0; i < targetCount; i++)
+            for (int i = 0; i < 4; i++)
             {
-                Vector2 randomOffset = Random.insideUnitCircle * 8f;
+                Vector2 randomOffset = Random.insideUnitCircle * 6f;
                 Vector3 offsetPos = transform.position + new Vector3(randomOffset.x, 0, randomOffset.y);
-                if (NavMesh.SamplePosition(offsetPos, out NavMeshHit hit, 5f, NavMesh.AllAreas))
+                if (NavMesh.SamplePosition(offsetPos, out NavMeshHit hit, 4f, NavMesh.AllAreas))
                 {
                     spots.Add(hit.position);
                 }
@@ -1707,46 +2149,18 @@ public class FinalBossAI : NetworkBehaviour
         return spots.ToArray();
     }
 
-    public void DealEarthBlastDamage(Vector3[] positions)
-    {
-        bool auth = isStandaloneMode || (IsNetworkActive && IsServer);
-        if (!auth) return;
-
-        foreach (var pos in positions)
-        {
-            Collider[] hits = Physics.OverlapSphere(pos, earthBlastRadius, playerLayer);
-            HashSet<Transform> hitRoots = new HashSet<Transform>();
-
-            foreach (var hit in hits)
-            {
-                Transform root = GetPlayerRoot(hit.transform);
-                if (root != null && !hitRoots.Contains(root))
-                {
-                    hitRoots.Add(root);
-                    Vector3 knockbackDir = (root.position - pos);
-                    knockbackDir.y = 1.0f;
-                    Vector3 force = knockbackDir.normalized * earthBlastKnockback;
-
-                    EnemyDamageHelper.DealDamage(root, earthBlastDamage, force);
-                    Debug.Log($"[FinalBossAI] Earth Blast hit player: {root.name} at {pos}");
-                }
-            }
-        }
-    }
-
-    private class EarthSummonState : IEnemyState
+    private class FireBarrageState : IEnemyState
     {
         private FinalBossAI boss;
         private float timer;
-        private bool blastsTriggered;
-        private Vector3[] spawnPositions;
+        private float spawnTimer;
 
-        public EarthSummonState(FinalBossAI boss) { this.boss = boss; }
+        public FireBarrageState(FinalBossAI boss) { this.boss = boss; }
 
         public void Enter()
         {
-            timer = boss.warningDuration;
-            blastsTriggered = false;
+            timer = 0f;
+            spawnTimer = 0f;
 
             if (boss.AgentReady)
             {
@@ -1755,41 +2169,51 @@ public class FinalBossAI : NetworkBehaviour
             }
             boss.SetSpeedNet(0f);
 
-            if (boss.anim != null)
-            {
-                boss.anim.SetTrigger(boss.earthSummonTriggerParam);
-            }
-
-            spawnPositions = boss.CalculateEarthBlastPositions();
-
             if (!boss.isStandaloneMode)
             {
-                boss.SpawnWarningIndicatorsClientRpc(spawnPositions);
+                boss.fireBarrageCounter.Value++;
             }
             else
             {
-                boss.SpawnWarningIndicatorsLocal(spawnPositions);
+                if (boss.anim != null) boss.anim.SetTrigger(boss.fireBarrageTriggerParam);
             }
         }
 
         public void Update()
         {
-            timer -= Time.deltaTime;
+            timer += Time.deltaTime;
+            spawnTimer -= Time.deltaTime;
 
-            if (timer <= 0 && !blastsTriggered)
+            if (boss.agent != null && boss.agent.isActiveAndEnabled)
             {
-                blastsTriggered = true;
+                boss.agent.isStopped = true;
+                boss.agent.velocity = Vector3.zero;
+            }
+            boss.SetSpeedNet(0f);
 
+            if (boss.targetPlayer != null)
+            {
+                boss.RotateTowards(boss.targetPlayer.position);
+            }
+
+            if (spawnTimer <= 0f)
+            {
+                spawnTimer = boss.fireBarrageInterval;
+
+                Vector3[] targets = boss.CalculateFireBarrageTargets();
                 if (!boss.isStandaloneMode)
                 {
-                    boss.PlayEarthBlastClientRpc(spawnPositions);
+                    boss.TriggerFireBarrageDropClientRpc(targets);
                 }
                 else
                 {
-                    boss.PlayEarthBlastLocal(spawnPositions);
+                    boss.ExecuteFireBarrageDropLocal(targets);
                 }
+            }
 
-                boss.DealEarthBlastDamage(spawnPositions);
+            if (timer >= boss.fireBarrageDuration)
+            {
+                boss.ActivateBoss();
 
                 if (boss.targetPlayer != null) boss.ChangeState(FinalBossState.Chase);
                 else boss.ChangeState(FinalBossState.Idle);
@@ -1807,5 +2231,204 @@ public class FinalBossAI : NetworkBehaviour
     public void OnSwipeSwing() { }
     public void OnShockwaveImpact() { }
     public void OnFireSpewImpact() { }
-    public void OnEarthSummonImpact() { }
+}
+
+public class FallingSwordProjectile : MonoBehaviour
+{
+    private FinalBossAI bossOwner;
+    private Vector3 targetGroundPos;
+    private float dropSpeed;
+    private float damage;
+    private float impactRadius;
+    private LayerMask playerLayer;
+    private bool isFalling;
+
+    public void Initialize(FinalBossAI owner, Vector3 groundPos, float speed, float dmg, float radius, LayerMask layer)
+    {
+        bossOwner = owner;
+        targetGroundPos = groundPos;
+        dropSpeed = speed;
+        damage = dmg;
+        impactRadius = radius;
+        playerLayer = layer;
+        isFalling = true;
+    }
+
+    private void Update()
+    {
+        if (!isFalling) return;
+
+        transform.position += Vector3.down * dropSpeed * Time.deltaTime;
+
+        if (transform.position.y <= targetGroundPos.y + 0.2f)
+        {
+            isFalling = false;
+            OnImpact();
+        }
+    }
+
+    private void OnImpact()
+    {
+        transform.position = targetGroundPos;
+
+        if (bossOwner != null)
+        {
+            bossOwner.PlaySwordImpactEffects(targetGroundPos);
+            bossOwner.DealSwordImpactDamage(targetGroundPos, damage, impactRadius, playerLayer);
+            bossOwner.RecycleSword(gameObject);
+        }
+        else
+        {
+            gameObject.SetActive(false);
+        }
+    }
+}
+
+public class FallingFireOrbProjectile : MonoBehaviour
+{
+    private FinalBossAI bossOwner;
+    private Vector3 targetGroundPos;
+    private float dropSpeed;
+    private float damage;
+    private float impactRadius;
+    private LayerMask playerLayer;
+    private bool isFalling;
+
+    public void Initialize(FinalBossAI owner, Vector3 groundPos, float speed, float dmg, float radius, LayerMask layer)
+    {
+        bossOwner = owner;
+        targetGroundPos = groundPos;
+        dropSpeed = speed;
+        damage = dmg;
+        impactRadius = radius;
+        playerLayer = layer;
+        isFalling = true;
+
+        // Restart child Particle Systems and Visual Effects upon activation from Object Pool
+        var particles = GetComponentsInChildren<ParticleSystem>(true);
+        foreach (var ps in particles)
+        {
+            ps.Clear();
+            ps.Play();
+        }
+        var vfxGraphs = GetComponentsInChildren<UnityEngine.VFX.VisualEffect>(true);
+        foreach (var ve in vfxGraphs)
+        {
+            ve.Reinit();
+            ve.Play();
+        }
+    }
+
+    private void Update()
+    {
+        if (!isFalling) return;
+
+        transform.position += Vector3.down * dropSpeed * Time.deltaTime;
+
+        if (transform.position.y <= targetGroundPos.y + 0.2f)
+        {
+            isFalling = false;
+            OnImpact();
+        }
+    }
+
+    private void OnImpact()
+    {
+        transform.position = targetGroundPos;
+
+        if (bossOwner != null)
+        {
+            bossOwner.PlayFireBarrageImpactEffects(targetGroundPos);
+            bossOwner.DealFireBarrageImpactDamage(targetGroundPos, damage, impactRadius, playerLayer);
+            bossOwner.RecycleFireBarrage(gameObject);
+        }
+        else
+        {
+            gameObject.SetActive(false);
+        }
+    }
+}
+
+public class ExpandingShockwaveRing : MonoBehaviour
+{
+    private FinalBossAI bossOwner;
+    private float maxRadius;
+    private float expandSpeed;
+    private float damage;
+    private float knockupForce;
+    private LayerMask playerLayer;
+    private float currentRadius;
+    private HashSet<Transform> hitPlayers = new HashSet<Transform>();
+    private LineRenderer line;
+
+    public void Initialize(FinalBossAI owner, float maxRad, float speed, float dmg, float knockup, LayerMask layer)
+    {
+        bossOwner = owner;
+        maxRadius = maxRad;
+        expandSpeed = speed;
+        damage = dmg;
+        knockupForce = knockup;
+        playerLayer = layer;
+        currentRadius = 0.5f;
+
+        // Visual expanding ring
+        line = gameObject.AddComponent<LineRenderer>();
+        line.positionCount = 51;
+        line.useWorldSpace = true;
+        line.startWidth = 0.35f;
+        line.endWidth = 0.35f;
+        line.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        line.receiveShadows = false;
+
+        Shader shader = Shader.Find("Sprites/Default") ?? Shader.Find("UI/Default");
+        line.material = new Material(shader != null ? shader : Shader.Find("Legacy Shaders/Particles/Alpha Blended Premultiply"));
+        line.startColor = new Color(1f, 0.4f, 0f, 1f);
+        line.endColor = new Color(1f, 0.4f, 0f, 1f);
+    }
+
+    private void Update()
+    {
+        currentRadius += expandSpeed * Time.deltaTime;
+
+        // Draw expanding visual ring
+        if (line != null)
+        {
+            Vector3[] points = new Vector3[51];
+            for (int i = 0; i <= 50; i++)
+            {
+                float angle = i * (2f * Mathf.PI / 50f);
+                points[i] = transform.position + new Vector3(Mathf.Cos(angle) * currentRadius, 0.15f, Mathf.Sin(angle) * currentRadius);
+            }
+            line.SetPositions(points);
+
+            float alpha = Mathf.Clamp01(1f - (currentRadius / maxRadius));
+            Color c = new Color(1f, 0.35f, 0f, alpha);
+            line.startColor = c;
+            line.endColor = c;
+        }
+
+        // Detect players touched by the expanding ring
+        Collider[] hits = Physics.OverlapSphere(transform.position, currentRadius, playerLayer);
+        foreach (var hit in hits)
+        {
+            Transform root = bossOwner != null ? bossOwner.GetPlayerRootPublic(hit.transform) : hit.transform.root;
+            if (root != null && !hitPlayers.Contains(root))
+            {
+                hitPlayers.Add(root);
+
+                // Calculate upward knockup + outward push
+                Vector3 outward = (root.position - transform.position);
+                outward.y = 0f;
+                Vector3 force = Vector3.up * knockupForce + outward.normalized * 3.5f;
+
+                EnemyDamageHelper.DealDamage(root, damage, force);
+                Debug.Log($"[ExpandingShockwaveRing] Shockwave wave hit player: {root.name} (-{damage} HP & Knockup)");
+            }
+        }
+
+        if (currentRadius >= maxRadius)
+        {
+            Destroy(gameObject);
+        }
+    }
 }
