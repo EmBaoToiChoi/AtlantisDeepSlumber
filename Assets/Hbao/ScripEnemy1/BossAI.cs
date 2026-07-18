@@ -123,7 +123,7 @@ public class BossAI : NetworkBehaviour
     public bool IsDead => CurrentStateValue == BossState.Dead;
 
     /// <summary>HP hiện tại đúng trong cả Standalone lẫn Network mode — dùng cho HP bar polling.</summary>
-    public float ActualCurrentHealth => isStandaloneMode ? localHealth : currentHealth.Value;
+    public float ActualCurrentHealth => (isStandaloneMode || !IsSpawned) ? localHealth : currentHealth.Value;
 
     public void ActivateBoss()
     {
@@ -259,6 +259,7 @@ public class BossAI : NetworkBehaviour
         }
 
         // Khởi tạo các State cho FSM
+        localHealth = maxHealth;
         idleState = new IdleState(this);
         chaseState = new ChaseState(this);
         attackState = new AttackState(this);
@@ -1052,10 +1053,11 @@ public class BossAI : NetworkBehaviour
         if (IsDead) return;
         if (CurrentStateValue == BossState.Enrage) return; // Bất tử khi đang gồng nộ
 
-        localHealth -= damage;
+        localHealth = Mathf.Max(0f, localHealth - damage);
         if (!isStandaloneMode && IsSpawned && IsServer)
         {
-            currentHealth.Value -= damage;
+            currentHealth.Value = Mathf.Max(0f, currentHealth.Value - damage);
+            localHealth = currentHealth.Value;
             hitCounter.Value++;
         }
         else if (anim != null)
@@ -1065,10 +1067,10 @@ public class BossAI : NetworkBehaviour
 
         EnemyDamageEffectHelper.PlayDamageEffects(gameObject, damage);
 
-        float activeHp = isStandaloneMode ? localHealth : (IsSpawned && IsServer ? currentHealth.Value : localHealth);
+        float activeHp = ActualCurrentHealth;
 
         // Xử lý khi hết máu lần đầu (Chuyển sang Phase 2 Gồng Cuồng Nộ)
-        if (activeHp <= 0 || localHealth <= 0)
+        if (activeHp <= 0f)
         {
             if (!IsPhase2 && !hasEnraged)
             {

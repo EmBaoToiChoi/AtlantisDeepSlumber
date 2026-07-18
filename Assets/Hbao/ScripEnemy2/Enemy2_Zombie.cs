@@ -27,7 +27,7 @@ public class Enemy2_Zombie : NetworkBehaviour
     private float CurrentHealthValue { get => isStandaloneMode ? localHealth : currentHealth.Value; set { if (isStandaloneMode) localHealth = value; else currentHealth.Value = value; } }
     public bool IsDead => isStandaloneMode ? (localState == EnemyState.Dead) : (currentState.Value == EnemyState.Dead);
     /// <summary>HP hiện tại đúng trong cả Standalone lẫn Network mode — dùng cho HP bar polling.</summary>
-    public float ActualCurrentHealth => isStandaloneMode ? localHealth : currentHealth.Value;
+    public float ActualCurrentHealth => (isStandaloneMode || !IsSpawned) ? localHealth : currentHealth.Value;
 
     [Header("Components")]
     public NavMeshAgent agent;
@@ -106,6 +106,7 @@ public class Enemy2_Zombie : NetworkBehaviour
         }
 
         // Initialize state instances for FSM
+        localHealth = maxHealth;
         patrolState = new PatrolState(this);
         chaseState = new ChaseState(this);
         attackState = new AttackState(this);
@@ -525,10 +526,11 @@ public class Enemy2_Zombie : NetworkBehaviour
     {
         if (CurrentStateValue == EnemyState.Dead) return;
 
-        localHealth -= damage;
+        localHealth = Mathf.Max(0f, localHealth - damage);
         if (!isStandaloneMode && IsSpawned && IsServer)
         {
-            currentHealth.Value -= damage;
+            currentHealth.Value = Mathf.Max(0f, currentHealth.Value - damage);
+            localHealth = currentHealth.Value;
             hitCounter.Value++;
         }
         else if (anim != null)
@@ -538,8 +540,8 @@ public class Enemy2_Zombie : NetworkBehaviour
 
         EnemyDamageEffectHelper.PlayDamageEffects(gameObject, damage);
 
-        float activeHp = isStandaloneMode ? localHealth : (IsSpawned && IsServer ? currentHealth.Value : localHealth);
-        if (activeHp <= 0 || localHealth <= 0) { ChangeState(EnemyState.Dead); return; }
+        float activeHp = ActualCurrentHealth;
+        if (activeHp <= 0f) { ChangeState(EnemyState.Dead); return; }
         float now = Time.time; if (now - lastDamageTime > 3f) recentHitCount = 0; recentHitCount++; lastDamageTime = now;
         if ((damage >= 20f || recentHitCount >= 3) && CurrentStateValue != EnemyState.Stagger) { recentHitCount = 0; staggerTimer = 0.55f; ChangeState(EnemyState.Stagger); }
     }

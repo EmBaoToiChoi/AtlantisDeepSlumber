@@ -77,10 +77,7 @@ public class Enemy1_DapBua : NetworkBehaviour
     {
         get
         {
-            if (isBossProxy && bossComponent != null) return bossComponent.ActualCurrentHealth;
-            if (isMiniBossProxy && miniBossComponent != null) return miniBossComponent.ActualCurrentHealth;
-            if (isFinalBossProxy && finalBossComponent != null) return finalBossComponent.ActualCurrentHealth;
-            return isStandaloneMode ? localHealth : currentHealth.Value;
+            return (isStandaloneMode || !IsSpawned) ? localHealth : currentHealth.Value;
         }
     }
 
@@ -200,6 +197,7 @@ public class Enemy1_DapBua : NetworkBehaviour
         }
 
         // Initialize state instances for FSM
+        localHealth = maxHealth;
         patrolState = new PatrolState(this);
         chaseState = new ChaseState(this);
         attackState = new AttackState(this);
@@ -785,10 +783,11 @@ public class Enemy1_DapBua : NetworkBehaviour
 
         if (CurrentStateValue == EnemyState.Dead) return;
 
-        localHealth -= damage;
+        localHealth = Mathf.Max(0f, localHealth - damage);
         if (!isStandaloneMode && IsSpawned && IsServer)
         {
-            currentHealth.Value -= damage;
+            currentHealth.Value = Mathf.Max(0f, currentHealth.Value - damage);
+            localHealth = currentHealth.Value;
             hitCounter.Value++;
         }
         else if (anim != null)
@@ -798,8 +797,8 @@ public class Enemy1_DapBua : NetworkBehaviour
 
         EnemyDamageEffectHelper.PlayDamageEffects(gameObject, damage);
 
-        float activeHp = isStandaloneMode ? localHealth : (IsSpawned && IsServer ? currentHealth.Value : localHealth);
-        if (activeHp <= 0 || localHealth <= 0) { ChangeState(EnemyState.Dead); return; }
+        float activeHp = ActualCurrentHealth;
+        if (activeHp <= 0f) { ChangeState(EnemyState.Dead); return; }
         if (activeHp <= maxHealth * 0.5f && !IsEnragedValue)
         {
             IsEnragedValue = true; staggerTimer = 1.2f;

@@ -83,7 +83,7 @@ public class FinalBossAI : NetworkBehaviour
         set { if (isStandaloneMode) localState = value; else currentState.Value = value; }
     }
 
-    public float ActualCurrentHealth => isStandaloneMode ? localHealth : currentHealth.Value;
+    public float ActualCurrentHealth => (isStandaloneMode || !IsSpawned) ? localHealth : currentHealth.Value;
     public bool IsBossActive => isStandaloneMode ? localIsBossActive : isBossActive.Value;
     public bool IsHUDVisible => isStandaloneMode ? localIsHUDVisible : isHUDVisible.Value;
     public bool IsDead => CurrentStateValue == FinalBossState.Dead;
@@ -292,6 +292,7 @@ public class FinalBossAI : NetworkBehaviour
         stateSwordRain = new SwordRainState(this);
         stateFireBarrage = new FireBarrageState(this);
         stateHit = new HitState(this);
+        localHealth = maxHealth;
         stateDead = new DeadState(this);
     }
 
@@ -446,16 +447,17 @@ public class FinalBossAI : NetworkBehaviour
     {
         if (IsDead || CurrentStateValue == FinalBossState.Sitting || CurrentStateValue == FinalBossState.JumpDown || CurrentStateValue == FinalBossState.Grow || CurrentStateValue == FinalBossState.SwordRain || CurrentStateValue == FinalBossState.FireBarrage) return;
 
-        localHealth -= damage;
+        localHealth = Mathf.Max(0f, localHealth - damage);
         if (!isStandaloneMode && IsSpawned && IsServer)
         {
-            currentHealth.Value -= damage;
+            currentHealth.Value = Mathf.Max(0f, currentHealth.Value - damage);
+            localHealth = currentHealth.Value;
         }
 
         EnemyDamageEffectHelper.PlayDamageEffects(gameObject, damage);
 
-        float activeHp = isStandaloneMode ? localHealth : (IsSpawned && IsServer ? currentHealth.Value : localHealth);
-        if (activeHp <= 0 || localHealth <= 0)
+        float activeHp = ActualCurrentHealth;
+        if (activeHp <= 0f)
         {
             ChangeState(FinalBossState.Dead);
             return;
