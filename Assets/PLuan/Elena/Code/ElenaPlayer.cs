@@ -504,9 +504,15 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     private System.Collections.IEnumerator DeathEyelidsSequenceCoroutine()
     {
+        if (CurrentHealth > 0f) yield break;
         float duration = 1.5f;
         PlayerDeathEffectManager.Instance.PlayDeathEffect(duration);
         yield return new WaitForSeconds(duration);
+        if (CurrentHealth > 0f)
+        {
+            PlayerDeathEffectManager.Instance.ResetDeathEffect();
+            yield break;
+        }
         isDeathAnimFinished = true;
         if (!isStandaloneMode)
         {

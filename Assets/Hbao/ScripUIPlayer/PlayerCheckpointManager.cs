@@ -400,6 +400,26 @@ public class PlayerCheckpointManager : NetworkBehaviour
     {
         yield return null; // Chờ 1 frame để camera cập nhật vị trí mới theo player
         PlayerDeathEffectManager.Instance.ResetDeathEffect();
+
+        // Reset trạng thái chết cục bộ trên client của Owner
+        foreach (var mb in FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None))
+        {
+            if (mb == null) continue;
+            string typeName = mb.GetType().Name;
+            if (mb is LeoPlayer || mb is ArthurPlayer || mb is ElenaPlayer || mb is MayaPlayer || typeName.EndsWith("Player"))
+            {
+                PropertyInfo isOwnerProp = mb.GetType().GetProperty("IsOwner", BindingFlags.Public | BindingFlags.Instance);
+                if (isOwnerProp != null && (bool)isOwnerProp.GetValue(mb))
+                {
+                    MethodInfo resetMethod = mb.GetType().GetMethod("ResetDeathState", BindingFlags.Public | BindingFlags.Instance);
+                    if (resetMethod != null)
+                    {
+                        resetMethod.Invoke(mb, null);
+                        Debug.Log($"[Checkpoint Client] Đã reset trạng thái chết cục bộ cho Owner Player: {mb.name}");
+                    }
+                }
+            }
+        }
     }
 
     #endregion
