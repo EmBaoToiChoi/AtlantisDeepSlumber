@@ -380,6 +380,30 @@ public class PlayerCheckpointManager : NetworkBehaviour
             netObj.transform.position = pos;
             ResetRigidbodyVelocity(netObj.gameObject);
 
+            // Reset trạng thái choáng trên client
+            var stun = netObj.GetComponent<PlayerKickedStun>() ?? netObj.GetComponentInChildren<PlayerKickedStun>();
+            if (stun != null)
+            {
+                stun.ResetStunState();
+            }
+
+            // Đảm bảo bật lại script điều khiển của Player trên client
+            MonoBehaviour[] scripts = netObj.GetComponents<MonoBehaviour>();
+            foreach (var script in scripts)
+            {
+                if (script == null) continue;
+                string typeName = script.GetType().Name;
+                if (script is SimplePlayerTest || script is LeoPlayer || script is ArthurPlayer || 
+                    script is ElenaPlayer || script is MayaPlayer || typeName.EndsWith("Player"))
+                {
+                    if (!script.enabled)
+                    {
+                        script.enabled = true;
+                        Debug.LogWarning($"[Client Teleport] Đã kích hoạt lại script {script.GetType().Name} của người chơi!");
+                    }
+                }
+            }
+
             // Buộc Animator chơi hoạt ảnh Idle cục bộ để đứng thẳng ngay lập tức
             Animator anim = netObj.GetComponentInChildren<Animator>();
             if (anim != null)
@@ -604,6 +628,13 @@ public class PlayerCheckpointManager : NetworkBehaviour
         player.ResetDeathState();
         GameObject playerGo = player.gameObject;
 
+        // Reset trạng thái choáng vật lý nếu có
+        var stun = playerGo.GetComponent<PlayerKickedStun>() ?? playerGo.GetComponentInChildren<PlayerKickedStun>();
+        if (stun != null)
+        {
+            stun.ResetStunState();
+        }
+
         MonoBehaviour[] scripts = playerGo.GetComponents<MonoBehaviour>();
         foreach (var script in scripts)
         {
@@ -615,6 +646,13 @@ public class PlayerCheckpointManager : NetworkBehaviour
                 if (script is SimplePlayerTest || script is LeoPlayer || script is ArthurPlayer || 
                     script is ElenaPlayer || script is MayaPlayer || typeName.EndsWith("Player"))
                 {
+                    // Đảm bảo bật lại script điều khiển của Player nếu bị tắt trước đó
+                    if (!script.enabled)
+                    {
+                        script.enabled = true;
+                        Debug.LogWarning($"[PlayerCheckpointManager] Đã bật lại script {script.GetType().Name} của người chơi!");
+                    }
+
                     // 1. Lấy lượng máu tối đa (maxHealth)
                     float maxHp = 100f;
                     FieldInfo maxHealthField = GetFieldInherited(script.GetType(), "maxHealth", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
