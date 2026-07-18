@@ -121,6 +121,7 @@ public class ElementalRockPuzzle : NetworkBehaviour
     );
     private bool isShown = false;
     public bool IsShown => !startHidden || (IsNetworkActive ? netIsShown.Value : isShown);
+    public int CurrentStep => IsNetworkActive ? netCurrentStep.Value : currentStep;
 
     private bool IsNetworkActive => NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening && IsSpawned;
 

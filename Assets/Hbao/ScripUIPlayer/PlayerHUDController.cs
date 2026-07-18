@@ -216,6 +216,9 @@ public class PlayerHUDController : MonoBehaviour
     private Label questProgressText;
     private VisualElement questProgressBar;
     private Label questDescriptionText;
+    private VisualElement questIcon;
+    private Label questTitleText;
+    public Sprite defaultQuestIcon;
 
     // Coop Building UI system
     public static bool isCoopBuildingUIOpen = false;
@@ -369,6 +372,8 @@ public class PlayerHUDController : MonoBehaviour
         missionAlertBox = null; missionAlertText = null;
         questPanel = null; questProgressText = null; questProgressBar = null;
         questDescriptionText = null;
+        questIcon = null;
+        questTitleText = null;
         if (coopBuildContainer != null)
         {
             coopBuildContainer.RemoveFromHierarchy();
@@ -491,6 +496,8 @@ public class PlayerHUDController : MonoBehaviour
         questProgressText = root.Q<Label>("quest-progress-text");
         questProgressBar = root.Q<VisualElement>("quest-progress-bar");
         questDescriptionText = root.Q<Label>("quest-description");
+        questIcon = root.Q<VisualElement>(className: "quest-icon");
+        questTitleText = root.Q<Label>(className: "quest-title");
 
         // Tìm các phần tử của bảng phím nóng
         hotkeysHintPanel = root.Q<VisualElement>("hotkeys-hint-panel");
@@ -3458,6 +3465,35 @@ public class PlayerHUDController : MonoBehaviour
         if (questDescriptionText != null)
         {
             questDescriptionText.text = description;
+        }
+    }
+
+    public void UpdateQuestTitle(string title)
+    {
+        InitializeUI();
+        if (questTitleText != null)
+        {
+            questTitleText.text = title;
+        }
+    }
+
+    public void UpdateQuestIcon(Sprite iconSprite)
+    {
+        InitializeUI();
+        if (questIcon != null)
+        {
+            if (iconSprite != null)
+            {
+                questIcon.style.backgroundImage = new StyleBackground(iconSprite);
+            }
+            else if (defaultQuestIcon != null)
+            {
+                questIcon.style.backgroundImage = new StyleBackground(defaultQuestIcon);
+            }
+            else
+            {
+                questIcon.style.backgroundImage = StyleKeyword.Null;
+            }
         }
     }
 
