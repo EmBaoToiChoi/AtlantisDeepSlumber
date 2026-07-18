@@ -2870,10 +2870,8 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
                 aimDir.Normalize();
             }
 
-            // Đưa tia quét ra trước 0.5m và cao ngang ngực (1.0m) để tránh va chạm với chính người chơi
-            Vector3 rayStartClient = transform.position + Vector3.up * 1.0f + aimDir * 0.5f;
-            float castRadius = 0.5f; // Bán kính tia quét tròn để dễ trúng mục tiêu cận chiến
-            bool hasHitClient = Physics.SphereCast(rayStartClient, castRadius, aimDir, out RaycastHit hitClient, attackRange);
+            Vector3 rayStartClient = transform.position + Vector3.up * 1.0f;
+            bool hasHitClient = Physics.Raycast(rayStartClient, aimDir, out RaycastHit hitClient, attackRange);
 
             if (hasHitClient)
             {
@@ -2906,10 +2904,8 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
                     aimDir.Normalize();
                 }
 
-                // Đưa tia quét ra trước 0.5m và cao ngang ngực (1.0m) để tránh va chạm với chính người chơi
-                Vector3 rayStartClient = transform.position + Vector3.up * 1.0f + aimDir * 0.5f;
-                float castRadius = 0.5f;
-                bool hasHitClient = Physics.SphereCast(rayStartClient, castRadius, aimDir, out RaycastHit hitClient, attackRange);
+                Vector3 rayStartClient = transform.position + Vector3.up * 1.0f;
+                bool hasHitClient = Physics.Raycast(rayStartClient, aimDir, out RaycastHit hitClient, attackRange);
 
                 AttackServerRpc(aimDir);
                 if (hasHitClient)
