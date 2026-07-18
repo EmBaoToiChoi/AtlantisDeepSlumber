@@ -40,7 +40,10 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
                 playerAudioSource = sfxObj.AddComponent<AudioSource>();
             }
         }
-        playerAudioSource.spatialBlend = 0.0f; // 2D Sound for absolute audibility
+        playerAudioSource.spatialBlend = 1.0f; // 3D Sound for distance attenuation
+        playerAudioSource.minDistance = 2.0f;
+        playerAudioSource.maxDistance = 25.0f;
+        playerAudioSource.rolloffMode = AudioRolloffMode.Linear;
         playerAudioSource.playOnAwake = false;
         playerAudioSource.mute = false;
         playerAudioSource.volume = 1.0f;

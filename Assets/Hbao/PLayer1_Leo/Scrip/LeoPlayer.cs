@@ -2862,7 +2862,10 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
                 playerAudioSource = sfxObj.AddComponent<AudioSource>();
             }
         }
-        playerAudioSource.spatialBlend = 0.0f; // 2D Sound for absolute audibility
+        playerAudioSource.spatialBlend = 1.0f; // 3D Sound for distance attenuation
+        playerAudioSource.minDistance = 2.0f;
+        playerAudioSource.maxDistance = 25.0f;
+        playerAudioSource.rolloffMode = AudioRolloffMode.Linear;
         playerAudioSource.playOnAwake = false;
         playerAudioSource.mute = false;
         playerAudioSource.volume = 1.0f;
@@ -4607,8 +4610,11 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
                     // Phát âm thanh chém trúng quái (chỉ khi cầm vũ khí và trúng quái)
                     if (GetActiveWeaponIndex() != 0)
                     {
-                        AudioClip hitSound = Resources.Load<AudioClip>("Audio/ChemHit");
-                        PlayPlayerSFX(hitSound);
+                        if (isStandaloneMode)
+                        {
+                            AudioClip hitSound = Resources.Load<AudioClip>("Audio/ChemHit");
+                            PlayPlayerSFX(hitSound);
+                        }
                     }
                     
                     var netObj = enemyCollider.transform.root.GetComponent<NetworkObject>() ?? enemyCollider.GetComponentInParent<NetworkObject>() ?? enemyCollider.GetComponentInChildren<NetworkObject>();
@@ -7241,6 +7247,11 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             AudioClip punchClip = Resources.Load<AudioClip>("Audio/Punch");
             PlayPlayerSFX(punchClip);
         }
+        else if (animLower.Contains("draw") || transLower.Contains("draw"))
+        {
+            AudioClip drawClip = Resources.Load<AudioClip>("Audio/RutKiem");
+            PlayPlayerSFX(drawClip);
+        }
         else if (translatedNameForAudio == "SamSet" || animName == "SamSet")
         {
             PlayPlayerSFX(skillRClip); // Fireball / SamSet
@@ -8141,6 +8152,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     [ServerRpc]
     private void DamageEnemyServerRpc(NetworkObjectReference enemyRef)
     {
+        PlaySlashHitSoundClientRpc();
         if (enemyRef.TryGet(out NetworkObject netObj))
         {
             var col = netObj.GetComponent<Collider>() ?? netObj.GetComponentInChildren<Collider>();
@@ -8165,6 +8177,15 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
                 var b = netObj.GetComponent<BossAI>() ?? netObj.GetComponentInChildren<BossAI>();
                 if (b != null) { b.TakeDamage(actualDamage); return; }
             }
+        }
+    [ClientRpc]
+    private void PlaySlashHitSoundClientRpc()
+    {
+        if (isStandaloneMode) return;
+        if (GetActiveWeaponIndex() != 0)
+        {
+            AudioClip hitSound = Resources.Load<AudioClip>("Audio/ChemHit");
+            PlayPlayerSFX(hitSound);
         }
     }
 

@@ -40,7 +40,10 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
                 playerAudioSource = sfxObj.AddComponent<AudioSource>();
             }
         }
-        playerAudioSource.spatialBlend = 0.0f; // 2D Sound for absolute audibility
+        playerAudioSource.spatialBlend = 1.0f; // 3D Sound for distance attenuation
+        playerAudioSource.minDistance = 2.0f;
+        playerAudioSource.maxDistance = 25.0f;
+        playerAudioSource.rolloffMode = AudioRolloffMode.Linear;
         playerAudioSource.playOnAwake = false;
         playerAudioSource.mute = false;
         playerAudioSource.volume = 1.0f;
@@ -3758,18 +3761,23 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
     private void PlayAnimationLocal(string animName, float fadeTime, bool isRooted)
     {
         // Play action sound effects
+        string animLower = animName.ToLower();
+        bool isSlash = animLower.Contains("attack") || animLower.Contains("slash") || animLower.Contains("chem") || animLower.Contains("chatriu") || animName == "Shooting";
+        bool isPunch = animLower.Contains("punch") || animLower.Contains("dam");
+
         if (animName == "Shooting")
         {
             PlayPlayerSFX(skillRClip); // Water projectile
         }
-        else if (animName.StartsWith("Dam"))
+        else if (isSlash && !isPunch)
+        {
+            AudioClip swingClip = Resources.Load<AudioClip>("Audio/ChemChuaHit");
+            PlayPlayerSFX(swingClip, 0.8f);
+        }
+        else if (isPunch)
         {
             AudioClip punchClip = Resources.Load<AudioClip>("Audio/Punch");
             PlayPlayerSFX(punchClip);
-        }
-        else if (animName == "ChatRiu" || animName.StartsWith("Chem"))
-        {
-            PlayPlayerSFX(attackClip, 0.8f);
         }
         else if (animName == "Death")
         {

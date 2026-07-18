@@ -30,12 +30,21 @@ public class MayaProjectile : NetworkBehaviour
         transform.Translate(Vector3.forward * speed * Time.deltaTime);
     }
 
+    private bool isHitPlay = false;
+
+    private void PlayHitSound()
+    {
+        if (isHitPlay) return;
+        isHitPlay = true;
+        AudioClip hitClip = Resources.Load<AudioClip>("Audio/ChemHit");
+        if (hitClip != null)
+        {
+            AudioSource.PlayClipAtPoint(hitClip, transform.position);
+        }
+    }
+
     private void OnTriggerEnter(Collider other)
     {
-        // Chỉ xử lý va chạm trên Server hoặc chế độ Standalone
-        bool isServerOrStandalone = NetworkManager.Singleton == null || NetworkManager.Singleton.IsServer;
-        if (!isServerOrStandalone) return;
-
         // Bỏ qua va chạm với bất kỳ đối tượng Player nào (bao gồm chính Maya, Elena, LeoPlayer, SimplePlayerTest)
         if (other.CompareTag("Player") || 
             other.gameObject.layer == LayerMask.NameToLayer("Player") ||
@@ -62,6 +71,11 @@ public class MayaProjectile : NetworkBehaviour
 
         if (isEnemy)
         {
+            PlayHitSound();
+            
+            // Chỉ xử lý va chạm trên Server hoặc chế độ Standalone
+            bool isServerOrStandalone = NetworkManager.Singleton == null || NetworkManager.Singleton.IsServer;
+            if (!isServerOrStandalone) return;
             Transform enemyRoot = other.transform.root;
             if (hitEnemyRoots.Contains(enemyRoot))
             {
@@ -125,6 +139,9 @@ public class MayaProjectile : NetworkBehaviour
         }
         else if (!other.isTrigger)
         {
+            PlayHitSound();
+            bool isServerOrStandalone = NetworkManager.Singleton == null || NetworkManager.Singleton.IsServer;
+            if (!isServerOrStandalone) return;
             Debug.Log($"[MayaProjectile] Đạn ma thuật va chạm trúng chướng ngại vật: {other.name}, tự hủy.");
             // Va chạm với môi trường (tường, đất, v.v...)
             DespawnOrDestroy();
