@@ -4603,9 +4603,12 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
                     alreadyHitEnemies.Add(enemyRoot);
                     Debug.Log($"[LeoPlayer Raycast] HIT ENEMY: {enemyRoot.name} | Sát thương: {damageAmount}");
                     
-                    // Phát âm thanh chém trúng quái (chỉ với quái)
-                    AudioClip hitSound = Resources.Load<AudioClip>("Audio/ChemHit");
-                    PlayPlayerSFX(hitSound);
+                    // Phát âm thanh chém trúng quái (chỉ khi cầm vũ khí và trúng quái)
+                    if (GetActiveWeaponIndex() != 0)
+                    {
+                        AudioClip hitSound = Resources.Load<AudioClip>("Audio/ChemHit");
+                        PlayPlayerSFX(hitSound);
+                    }
                     
                     var netObj = enemyCollider.transform.root.GetComponent<NetworkObject>() ?? enemyCollider.GetComponentInParent<NetworkObject>() ?? enemyCollider.GetComponentInChildren<NetworkObject>();
 
@@ -7220,15 +7223,19 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     {
         // Play action sound effects
         string translatedNameForAudio = TranslateAnimName(animName);
-        if (translatedNameForAudio == "Attack1combo1" || translatedNameForAudio == "Attack2combo1" || 
-            animName == "Attack1combo1" || animName == "Attack2combo1" || 
-            translatedNameForAudio.StartsWith("Chem") || animName.StartsWith("Chem"))
+        string animLower = animName.ToLower();
+        string transLower = translatedNameForAudio.ToLower();
+        bool isSlash = animLower.Contains("attack") || animLower.Contains("slash") || animLower.Contains("chem") || animLower.Contains("chatriu") ||
+                       transLower.Contains("attack") || transLower.Contains("slash") || transLower.Contains("chem") || transLower.Contains("chatriu");
+        bool isPunch = animLower.Contains("punch") || animLower.Contains("dam") ||
+                       transLower.Contains("punch") || transLower.Contains("dam");
+
+        if (isSlash && !isPunch)
         {
             AudioClip swingClip = Resources.Load<AudioClip>("Audio/ChemChuaHit");
             PlayPlayerSFX(swingClip, 0.8f);
         }
-        else if (translatedNameForAudio.StartsWith("Dam") || animName.StartsWith("Dam") || 
-                 translatedNameForAudio.StartsWith("Punch") || animName.StartsWith("Punch"))
+        else if (isPunch)
         {
             AudioClip punchClip = Resources.Load<AudioClip>("Audio/Punch");
             PlayPlayerSFX(punchClip);

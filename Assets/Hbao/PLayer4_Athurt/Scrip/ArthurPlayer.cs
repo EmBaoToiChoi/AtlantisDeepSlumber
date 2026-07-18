@@ -2668,9 +2668,12 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
                     alreadyHitEnemies.Add(enemyRoot);
                     Debug.Log($"[ArthurPlayer Raycast] HIT ENEMY: {enemyRoot.name} | Sát thương: {damageAmount}");
                     
-                    // Phát âm thanh chém trúng quái (chỉ với quái)
-                    AudioClip hitSound = Resources.Load<AudioClip>("Audio/ChemHit");
-                    PlayPlayerSFX(hitSound);
+                    // Phát âm thanh chém trúng quái (chỉ khi cầm vũ khí và trúng quái)
+                    if (GetActiveWeaponIndex() != 0)
+                    {
+                        AudioClip hitSound = Resources.Load<AudioClip>("Audio/ChemHit");
+                        PlayPlayerSFX(hitSound);
+                    }
                     
                     var netObj = enemyCollider.transform.root.GetComponent<NetworkObject>() ?? enemyCollider.GetComponentInParent<NetworkObject>() ?? enemyCollider.GetComponentInChildren<NetworkObject>();
 
@@ -4024,12 +4027,16 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
     protected virtual void PlayAnimationLocal(string animName, float fadeTime)
     {
         // Play action sound effects
-        if (animName == "attack1" || animName == "Attack1combo1" || animName == "Attack2combo1" || animName == "ChatRiu" || animName.StartsWith("Chem"))
+        string animLower = animName.ToLower();
+        bool isSlash = animLower.Contains("attack") || animLower.Contains("slash") || animLower.Contains("chem") || animLower.Contains("chatriu");
+        bool isPunch = animLower.Contains("punch") || animLower.Contains("dam");
+
+        if (isSlash && !isPunch)
         {
             AudioClip swingClip = Resources.Load<AudioClip>("Audio/ChemChuaHit");
             PlayPlayerSFX(swingClip, 0.8f);
         }
-        else if (animName.StartsWith("Dam") || animName.StartsWith("Punch"))
+        else if (isPunch)
         {
             AudioClip punchClip = Resources.Load<AudioClip>("Audio/Punch");
             PlayPlayerSFX(punchClip);
