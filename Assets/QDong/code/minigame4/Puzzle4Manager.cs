@@ -293,17 +293,6 @@ public class Puzzle4Manager : NetworkBehaviour
         UpdateUIState(show);
     }
 
-    IEnumerator DelayedStartMinigameUI()
-    {
-        yield return new WaitForSeconds(4.5f);
-        
-        Debug.Log("[Puzzle4Manager] Bật UI minigame 4 trên các Client thông qua ClientRpc");
-        ToggleUIClientRpc(true);
-        
-        isStartingUI = false;
-        isMinigameStarted.Value = true;
-    }
-
     public void StartMinigameFromTeleport()
     {
         if (!IsServer) 
@@ -330,8 +319,11 @@ public class Puzzle4Manager : NetworkBehaviour
             Debug.Log("[Puzzle4Manager] Gọi ToggleSharedCameraClientRpc(true)");
             ToggleSharedCameraClientRpc(true);
             
-            Debug.Log("[Puzzle4Manager] Chạy Coroutine DelayedStartMinigameUI()");
-            StartCoroutine(DelayedStartMinigameUI());
+            Debug.Log("[Puzzle4Manager] Bật UI minigame 4 ngay lập tức trên các Client");
+            ToggleUIClientRpc(true);
+            
+            isStartingUI = false;
+            isMinigameStarted.Value = true;
         }
     }
 
