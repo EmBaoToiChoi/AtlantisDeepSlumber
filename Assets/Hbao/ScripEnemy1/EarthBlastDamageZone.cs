@@ -49,8 +49,8 @@ public class EarthBlastDamageZone : MonoBehaviour
     }
 
     /// <summary>
-    /// Hàm tiện ích tự động gắn Rigidbody Kinematic và các Collider phủ kín 100% toàn bộ Prefab đá (Mesh, Particle, Renderers),
-    /// đảm bảo đụng vào bất kỳ góc/mảnh đá nào của Prefab cũng lập tức bị trừ 30 máu.
+    /// Hàm tiện ích tự động gắn Kinematic Rigidbody ở Root và đồng bộ hóa các Collider có sẵn trong Prefab.
+    /// Không tự động sinh Collider mới để đảm bảo kích hoạt 100% theo thiết kế thủ công của Prefab.
     /// </summary>
     public static void SetupRockColliders(GameObject blastInstance, float earthBlastRadius, float earthBlastScale, float damageAmount = 30f)
     {
@@ -62,92 +62,25 @@ public class EarthBlastDamageZone : MonoBehaviour
         rb.isKinematic = true;
         rb.useGravity = false;
 
-        // 2. Gắn SphereCollider Trigger ở Root phủ toàn bộ vòng viền cảnh báo
-        var mainCol = blastInstance.GetComponent<SphereCollider>();
-        if (mainCol == null) mainCol = blastInstance.AddComponent<SphereCollider>();
-        mainCol.isTrigger = true;
-        mainCol.radius = Mathf.Max(0.5f, earthBlastRadius / Mathf.Max(0.1f, earthBlastScale));
-
-        // 3. Gắn EarthBlastDamageZone vào Root (Sát thương 30)
+        // 2. Gắn EarthBlastDamageZone vào Root (Sát thương 30)
         var rootDmg = blastInstance.GetComponent<EarthBlastDamageZone>();
         if (rootDmg == null) rootDmg = blastInstance.AddComponent<EarthBlastDamageZone>();
         rootDmg.damage = damageAmount;
 
-        // 4. Tính toán Bounding Box bao phủ 100% toàn bộ visual renderers của Prefab
-        Renderer[] allRenderers = blastInstance.GetComponentsInChildren<Renderer>(true);
-        if (allRenderers != null && allRenderers.Length > 0)
+        // 3. Tìm tất cả các Collider đã được thiết kế sẵn trong Prefab, bật isTrigger và gắn EarthBlastDamageZone
+        Collider[] existingColliders = blastInstance.GetComponentsInChildren<Collider>(true);
+        foreach (var col in existingColliders)
         {
-            Bounds combinedBounds = allRenderers[0].bounds;
-            for (int i = 1; i < allRenderers.Length; i++)
+            if (col != null)
             {
-                if (allRenderers[i] != null)
-                {
-                    combinedBounds.Encapsulate(allRenderers[i].bounds);
-                }
-            }
+                // Bật isTrigger theo yêu cầu
+                col.isTrigger = true;
 
-            // Gắn thêm BoxCollider ở Root bao trọn không gian hình khối của Prefab
-            var boundsBox = blastInstance.AddComponent<BoxCollider>();
-            boundsBox.isTrigger = true;
-            boundsBox.center = blastInstance.transform.InverseTransformPoint(combinedBounds.center);
-            Vector3 worldSize = combinedBounds.size;
-            Vector3 localScale = blastInstance.transform.lossyScale;
-            boundsBox.size = new Vector3(
-                worldSize.x / Mathf.Max(0.001f, localScale.x),
-                worldSize.y / Mathf.Max(0.001f, localScale.y),
-                worldSize.z / Mathf.Max(0.001f, localScale.z)
-            );
-        }
-
-        // 5. Duyệt qua tất cả các GameObject con (Particle System, Mesh, v.v...) và chỉ gắn BoxCollider + DamageZone (Siêu nhẹ, không lag)
-        Transform[] allTransforms = blastInstance.GetComponentsInChildren<Transform>(true);
-        foreach (var t in allTransforms)
-        {
-            if (t == null) continue;
-            GameObject childObj = t.gameObject;
-
-            // Nếu childObj có MeshFilter, ParticleSystem hoặc Renderer nhưng chưa có Collider
-            MeshFilter mf = childObj.GetComponent<MeshFilter>();
-            Renderer rend = childObj.GetComponent<Renderer>();
-            ParticleSystem ps = childObj.GetComponent<ParticleSystem>();
-
-            if (mf != null || rend != null || ps != null)
-            {
-                if (childObj.GetComponent<Collider>() == null)
-                {
-                    var bc = childObj.AddComponent<BoxCollider>();
-                    bc.isTrigger = true;
-
-                    if (rend != null)
-                    {
-                        bc.center = childObj.transform.InverseTransformPoint(rend.bounds.center);
-                        Vector3 rSize = rend.bounds.size;
-                        Vector3 cScale = childObj.transform.lossyScale;
-                        bc.size = new Vector3(
-                            rSize.x / Mathf.Max(0.001f, cScale.x),
-                            rSize.y / Mathf.Max(0.001f, cScale.y),
-                            rSize.z / Mathf.Max(0.001f, cScale.z)
-                        );
-                    }
-                    else if (mf != null && mf.sharedMesh != null)
-                    {
-                        bc.center = mf.sharedMesh.bounds.center;
-                        bc.size = mf.sharedMesh.bounds.size;
-                    }
-                }
-                else
-                {
-                    var existingCol = childObj.GetComponent<Collider>();
-                    if (existingCol != null) existingCol.isTrigger = true;
-                }
-
-                // Gắn thêm EarthBlastDamageZone cho từng child object
-                var childDmg = childObj.GetComponent<EarthBlastDamageZone>();
-                if (childDmg == null) childDmg = childObj.AddComponent<EarthBlastDamageZone>();
+                // Gắn thêm component gây sát thương cho từng Collider có sẵn
+                var childDmg = col.gameObject.GetComponent<EarthBlastDamageZone>();
+                if (childDmg == null) childDmg = col.gameObject.AddComponent<EarthBlastDamageZone>();
                 childDmg.damage = damageAmount;
             }
         }
     }
 }
-
-
