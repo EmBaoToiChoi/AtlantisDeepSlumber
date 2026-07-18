@@ -62,7 +62,6 @@ public class Puzzle4TeleportTrigger : NetworkBehaviour
                 // Teleport all players robustly
                 if (p4Manager != null)
                 {
-                    int index = 0;
                     foreach (ulong clientId in NetworkManager.Singleton.ConnectedClientsIds)
                     {
                         if (NetworkManager.Singleton.ConnectedClients.TryGetValue(clientId, out var client))
@@ -70,12 +69,11 @@ public class Puzzle4TeleportTrigger : NetworkBehaviour
                             NetworkObject playerObj = client.PlayerObject;
                             if (playerObj != null)
                             {
-                                Vector3 offset = new Vector3(
-                                    Mathf.Cos(index * Mathf.PI / 2) * 1.5f, 
-                                    0.5f, 
-                                    Mathf.Sin(index * Mathf.PI / 2) * 1.5f
-                                );
-                                Vector3 spawnPos = teleportTarget != null ? teleportTarget.position + offset : playerObj.transform.position;
+                                Vector3 spawnPos = teleportTarget != null ? teleportTarget.position : playerObj.transform.position;
+
+                                // Tắt CharacterController trên server trước khi dịch chuyển để đồng bộ chuẩn xác
+                                CharacterController cc = playerObj.GetComponent<CharacterController>();
+                                if (cc != null) cc.enabled = false;
 
                                 // Gửi ClientRpc TRƯỚC để client chuẩn bị nhận vị trí mới
                                 p4Manager.TeleportPlayerToCenterClientRpc(playerObj.NetworkObjectId, spawnPos);
@@ -99,7 +97,8 @@ public class Puzzle4TeleportTrigger : NetworkBehaviour
                                     rb.Sleep();
                                 }
 
-                                index++;
+                                // Bật lại CharacterController
+                                if (cc != null) cc.enabled = true;
                             }
                         }
                     }
