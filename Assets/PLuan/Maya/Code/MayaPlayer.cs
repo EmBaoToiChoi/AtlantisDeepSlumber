@@ -46,24 +46,29 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         if (footstepClip == null) footstepClip = Resources.Load<AudioClip>("Audio/Footstep");
         if (footstepClip2 == null) footstepClip2 = Resources.Load<AudioClip>("Audio/Footstep2");
+        // Tạm thời comment các âm thanh chưa có để tránh loạn âm thanh
+        /*
         if (attackClip == null) attackClip = Resources.Load<AudioClip>("Audio/SwordSlash");
         if (hitClip == null) hitClip = Resources.Load<AudioClip>("Audio/HitHurt");
         if (deathClip == null) deathClip = Resources.Load<AudioClip>("Audio/Death");
         if (skillQClip == null) skillQClip = Resources.Load<AudioClip>("Audio/SmokeBomb"); // Invisibility
         if (skillEClip == null) skillEClip = Resources.Load<AudioClip>("Audio/SmokeBomb");
         if (skillRClip == null) skillRClip = Resources.Load<AudioClip>("Audio/IceSkill"); // Water projectile
+        */
 
         // Log warnings if audio files fail to load
         if (footstepClip == null) Debug.LogWarning($"[Audio Debug] MayaPlayer: Failed to load Resources/Audio/Footstep");
         else Debug.Log($"[Audio Debug] MayaPlayer: Successfully loaded Resources/Audio/Footstep");
         if (footstepClip2 == null) Debug.LogWarning($"[Audio Debug] MayaPlayer: Failed to load Resources/Audio/Footstep2");
         else Debug.Log($"[Audio Debug] MayaPlayer: Successfully loaded Resources/Audio/Footstep2");
+        /*
         if (attackClip == null) Debug.LogWarning($"[Audio Debug] MayaPlayer: Failed to load Resources/Audio/SwordSlash");
         else Debug.Log($"[Audio Debug] MayaPlayer: Successfully loaded Resources/Audio/SwordSlash");
         if (hitClip == null) Debug.LogWarning($"[Audio Debug] MayaPlayer: Failed to load Resources/Audio/HitHurt");
         if (deathClip == null) Debug.LogWarning($"[Audio Debug] MayaPlayer: Failed to load Resources/Audio/Death");
         if (skillQClip == null) Debug.LogWarning($"[Audio Debug] MayaPlayer: Failed to load Resources/Audio/SmokeBomb");
         if (skillRClip == null) Debug.LogWarning($"[Audio Debug] MayaPlayer: Failed to load Resources/Audio/IceSkill");
+        */
     }
 
     private void PlayPlayerSFX(AudioClip clip, float volumeScale = 1.0f)
