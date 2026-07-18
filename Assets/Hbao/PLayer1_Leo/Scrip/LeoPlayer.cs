@@ -4617,15 +4617,13 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
                         }
                     }
                     
+                    TryDamageEnemy(enemyCollider);
+
                     var netObj = enemyCollider.transform.root.GetComponent<NetworkObject>() ?? enemyCollider.GetComponentInParent<NetworkObject>() ?? enemyCollider.GetComponentInChildren<NetworkObject>();
 
-                    if (!isStandaloneMode && IsSpawned && netObj != null)
+                    if (!isStandaloneMode && IsSpawned && netObj != null && !IsServer)
                     {
                         DamageEnemyServerRpc(netObj);
-                    }
-                    else
-                    {
-                        TryDamageEnemy(enemyCollider);
                     }
                 }
             }
