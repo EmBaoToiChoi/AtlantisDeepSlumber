@@ -1062,6 +1062,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         }
         if (anim != null)
         {
+            anim.applyRootMotion = false; // Tắt root motion mặc định để tránh ghi đè tốc độ di chuyển của code và lệch góc xoay
             GetRootMotionBridge();
         }
 
