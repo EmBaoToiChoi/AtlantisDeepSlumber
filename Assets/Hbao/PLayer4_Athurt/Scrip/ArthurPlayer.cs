@@ -3156,6 +3156,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
                 if (b != null) { b.TakeDamage(actualDamage); return; }
             }
         }
+    }
     [ClientRpc]
     private void PlaySlashHitSoundClientRpc()
     {

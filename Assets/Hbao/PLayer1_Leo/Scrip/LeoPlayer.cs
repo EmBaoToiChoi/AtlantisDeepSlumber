@@ -8178,6 +8178,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
                 if (b != null) { b.TakeDamage(actualDamage); return; }
             }
         }
+    }
     [ClientRpc]
     private void PlaySlashHitSoundClientRpc()
     {
