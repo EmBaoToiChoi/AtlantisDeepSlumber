@@ -260,6 +260,13 @@ public class ElenaIceProjectile : NetworkBehaviour
             rb.linearVelocity = Vector3.zero;
             rb.isKinematic = true;
         }
+
+        // Phát âm thanh nổ BreakSkill
+        AudioClip breakSkillClip = Resources.Load<AudioClip>("Audio/BreakSkill");
+        if (breakSkillClip != null)
+        {
+            AudioSource.PlayClipAtPoint(breakSkillClip, transform.position);
+        }
     }
 
     /// <summary>

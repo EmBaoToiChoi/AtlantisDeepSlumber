@@ -51,10 +51,10 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (attackClip == null) attackClip = Resources.Load<AudioClip>("Audio/ArrowShoot");
         if (hitClip == null) hitClip = Resources.Load<AudioClip>("Audio/HitHurt");
         if (deathClip == null) deathClip = Resources.Load<AudioClip>("Audio/Death");
-        if (skillQClip == null) skillQClip = Resources.Load<AudioClip>("Audio/IceSkill");
-        if (skillEClip == null) skillEClip = Resources.Load<AudioClip>("Audio/IceSkill");
-        if (skillRClip == null) skillRClip = Resources.Load<AudioClip>("Audio/IceSkill");
         */
+        
+        // Tải âm thanh Skill mới thêm (Skill R nguyên tố)
+        if (skillRClip == null) skillRClip = Resources.Load<AudioClip>("Audio/Fireball");
 
         // Log warnings if audio files fail to load
         if (footstepClip == null) Debug.LogWarning($"[Audio Debug] ElenaPlayer: Failed to load Resources/Audio/Footstep");
@@ -66,8 +66,9 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
         else Debug.Log($"[Audio Debug] ElenaPlayer: Successfully loaded Resources/Audio/ArrowShoot");
         if (hitClip == null) Debug.LogWarning($"[Audio Debug] ElenaPlayer: Failed to load Resources/Audio/HitHurt");
         if (deathClip == null) Debug.LogWarning($"[Audio Debug] ElenaPlayer: Failed to load Resources/Audio/Death");
-        if (skillRClip == null) Debug.LogWarning($"[Audio Debug] ElenaPlayer: Failed to load Resources/Audio/IceSkill");
         */
+        if (skillRClip == null) Debug.LogWarning($"[Audio Debug] ElenaPlayer: Failed to load Resources/Audio/Fireball (Skill R)");
+        else Debug.Log($"[Audio Debug] ElenaPlayer: Successfully loaded Resources/Audio/Fireball (Skill R)");
     }
 
     private void PlayPlayerSFX(AudioClip clip, float volumeScale = 1.0f)

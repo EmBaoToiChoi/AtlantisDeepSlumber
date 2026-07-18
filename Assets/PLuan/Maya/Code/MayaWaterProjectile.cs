@@ -266,6 +266,13 @@ public class MayaWaterProjectile : NetworkBehaviour
             }
             rb.isKinematic = true;
         }
+
+        // Phát âm thanh nổ BreakSkill
+        AudioClip breakSkillClip = Resources.Load<AudioClip>("Audio/BreakSkill");
+        if (breakSkillClip != null)
+        {
+            AudioSource.PlayClipAtPoint(breakSkillClip, transform.position);
+        }
     }
 
     /// <summary>

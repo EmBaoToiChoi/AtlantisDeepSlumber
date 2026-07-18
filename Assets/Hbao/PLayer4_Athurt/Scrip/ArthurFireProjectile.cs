@@ -265,8 +265,15 @@ public class ArthurFireProjectile : NetworkBehaviour
         // Ngắt vận tốc vật lý nếu có
         if (TryGetComponent<Rigidbody>(out var rb))
         {
-                rb.linearVelocity = Vector3.zero;
+            rb.linearVelocity = Vector3.zero;
             rb.isKinematic = true;
+        }
+
+        // Phát âm thanh nổ BreakSkill
+        AudioClip breakSkillClip = Resources.Load<AudioClip>("Audio/BreakSkill");
+        if (breakSkillClip != null)
+        {
+            AudioSource.PlayClipAtPoint(breakSkillClip, transform.position);
         }
     }
 

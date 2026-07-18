@@ -51,10 +51,10 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (attackClip == null) attackClip = Resources.Load<AudioClip>("Audio/SwordSlash");
         if (hitClip == null) hitClip = Resources.Load<AudioClip>("Audio/HitHurt");
         if (deathClip == null) deathClip = Resources.Load<AudioClip>("Audio/Death");
-        if (skillQClip == null) skillQClip = Resources.Load<AudioClip>("Audio/SmokeBomb"); // Invisibility
-        if (skillEClip == null) skillEClip = Resources.Load<AudioClip>("Audio/SmokeBomb");
-        if (skillRClip == null) skillRClip = Resources.Load<AudioClip>("Audio/IceSkill"); // Water projectile
         */
+        
+        // Tải âm thanh Skill mới thêm (Skill R nguyên tố)
+        if (skillRClip == null) skillRClip = Resources.Load<AudioClip>("Audio/Fireball");
 
         // Log warnings if audio files fail to load
         if (footstepClip == null) Debug.LogWarning($"[Audio Debug] MayaPlayer: Failed to load Resources/Audio/Footstep");
@@ -66,9 +66,9 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
         else Debug.Log($"[Audio Debug] MayaPlayer: Successfully loaded Resources/Audio/SwordSlash");
         if (hitClip == null) Debug.LogWarning($"[Audio Debug] MayaPlayer: Failed to load Resources/Audio/HitHurt");
         if (deathClip == null) Debug.LogWarning($"[Audio Debug] MayaPlayer: Failed to load Resources/Audio/Death");
-        if (skillQClip == null) Debug.LogWarning($"[Audio Debug] MayaPlayer: Failed to load Resources/Audio/SmokeBomb");
-        if (skillRClip == null) Debug.LogWarning($"[Audio Debug] MayaPlayer: Failed to load Resources/Audio/IceSkill");
         */
+        if (skillRClip == null) Debug.LogWarning($"[Audio Debug] MayaPlayer: Failed to load Resources/Audio/Fireball (Skill R)");
+        else Debug.Log($"[Audio Debug] MayaPlayer: Successfully loaded Resources/Audio/Fireball (Skill R)");
     }
 
     private void PlayPlayerSFX(AudioClip clip, float volumeScale = 1.0f)
