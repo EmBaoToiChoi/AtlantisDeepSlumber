@@ -7216,9 +7216,18 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     {
         // Play action sound effects
         string translatedNameForAudio = TranslateAnimName(animName);
-        if (translatedNameForAudio == "Attack1combo1" || translatedNameForAudio == "Attack2combo1" || animName == "Attack1combo1" || animName == "Attack2combo1")
+        if (translatedNameForAudio == "Attack1combo1" || translatedNameForAudio == "Attack2combo1" || 
+            animName == "Attack1combo1" || animName == "Attack2combo1" || 
+            translatedNameForAudio.StartsWith("Chem") || animName.StartsWith("Chem"))
         {
-            PlayPlayerSFX(attackClip, 0.8f);
+            AudioClip swingClip = Resources.Load<AudioClip>("Audio/ChemChuaHit");
+            PlayPlayerSFX(swingClip, 0.8f);
+        }
+        else if (translatedNameForAudio.StartsWith("Dam") || animName.StartsWith("Dam") || 
+                 translatedNameForAudio.StartsWith("Punch") || animName.StartsWith("Punch"))
+        {
+            AudioClip punchClip = Resources.Load<AudioClip>("Audio/Punch");
+            PlayPlayerSFX(punchClip);
         }
         else if (translatedNameForAudio == "SamSet" || animName == "SamSet")
         {

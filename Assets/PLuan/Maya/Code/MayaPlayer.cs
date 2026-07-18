@@ -3760,7 +3760,12 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
         {
             PlayPlayerSFX(skillRClip); // Water projectile
         }
-        else if (animName == "ChatRiu" || animName.StartsWith("Chem") || animName.StartsWith("Dam"))
+        else if (animName.StartsWith("Dam"))
+        {
+            AudioClip punchClip = Resources.Load<AudioClip>("Audio/Punch");
+            PlayPlayerSFX(punchClip);
+        }
+        else if (animName == "ChatRiu" || animName.StartsWith("Chem"))
         {
             PlayPlayerSFX(attackClip, 0.8f);
         }
