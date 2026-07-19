@@ -8,6 +8,7 @@ public class VideoCutsceneController : NetworkBehaviour
     [Header("Video Settings")]
     public VideoPlayer videoPlayer;
     public GameObject videoUI; // Kéo cái Canvas chứa Raw Image vào biến này để code bật/tắt nó
+    public GameObject blackScreenUI; // [ĐÃ THÊM] Kéo 1 cái Panel đen xì che full màn hình vào đây
     public GameObject objectToHide; // Object tắt khi chạy phim
 
     [Header("Teleport & Control")]
@@ -21,6 +22,9 @@ public class VideoCutsceneController : NetworkBehaviour
 
     [Header("Status")]
     public bool isPlaying = false;
+    
+    // [ĐÃ THÊM] Cờ để Dedicated Server chờ Client xem xong báo cáo
+    private bool serverReceivedFinishSignal = false;
 
     // Kích hoạt từ Trigger hoặc UI
     public void StartCutscene()
@@ -43,18 +47,19 @@ public class VideoCutsceneController : NetworkBehaviour
         if (isPlaying || (playOnlyOnce && hasPlayed)) return;
         isPlaying = true;
         hasPlayed = true; 
+        serverReceivedFinishSignal = false; // Reset cờ
         
-        // 1. Ra lệnh cho mọi Client bật Video lên xem trước
-        PlayCutsceneClientRpc();
+        // [SỬA]: Gọi RPC chuẩn bị (Bật màn đen, khóa nhân vật) trước
+        PrepareCutsceneClientRpc();
 
-        // 2. Chạy Coroutine: Đợi video che màn hình rồi mới Teleport
-        StartCoroutine(WaitAndTeleportAndFinish((float)videoPlayer.length));
+        // [SỬA]: Không truyền float duration nữa, Coroutine tự chờ tín hiệu mạng
+        StartCoroutine(WaitAndTeleportAndFinish());
     }
 
-    private System.Collections.IEnumerator WaitAndTeleportAndFinish(float duration)
+    private System.Collections.IEnumerator WaitAndTeleportAndFinish()
     {
-        // CHỜ 0.5 GIÂY: Lúc này video đã hiện lên che khuất nhân vật
-        yield return new WaitForSeconds(0.5f);
+        // [SỬA] Chờ 1 giây để màn hình đen phủ kín và video kịp nạp vào RAM
+        yield return new WaitForSeconds(1f);
 
         int count = Mathf.Min(NetworkManager.Singleton.ConnectedClientsList.Count, playerSpots.Count);
         ulong[] targetClientIds = new ulong[count];
@@ -63,21 +68,94 @@ public class VideoCutsceneController : NetworkBehaviour
             targetClientIds[i] = NetworkManager.Singleton.ConnectedClientsList[i].ClientId;
         }
 
-        // [LẦN 1] Đưa tất cả lên Khu Vực An Toàn (để xem phim mà không bị quái đánh)
+        // [LẦN 1] Đưa tất cả lên Khu Vực An Toàn
         TeleportToSafeZoneClientRpc(targetClientIds);
 
-        // Chờ nốt thời gian còn lại của Video
-        float remainingTime = Mathf.Max(0f, duration - 0.5f);
-        yield return new WaitForSeconds(remainingTime);
+        // Ra lệnh chiếu phim
+        PlayCutsceneClientRpc();
 
-        // [LẦN 2] Phim xong, đưa tất cả ra vị trí chiến đấu thực sự (playerSpots)
+        // [SỬA QUAN TRỌNG] Server dừng lại ở đây, chờ máy Client xem xong bắn tín hiệu lên
+        yield return new WaitUntil(() => serverReceivedFinishSignal);
+
+        // [LẦN 2] Phim xong: Dừng video ngay lập tức (vẫn giữ màn hình đen)
+        StopVideoClientRpc();
+        
+        // Đưa tất cả ra vị trí chiến đấu thực sự (playerSpots)
         TeleportAllPlayersClientRpc(targetClientIds);
 
-        // Phát lệnh kết thúc phim
+        // [SỬA] Chờ 1 giây để che giấu cảnh nhân vật rơi rớt/bay lơ lửng do vật lý
+        yield return new WaitForSeconds(1f);
+
+        // Phát lệnh kết thúc phim (Rút màn hình đen ra)
         FinishCutsceneClientRpc();
     }
 
-[ClientRpc]
+    // --- CÁC HÀM CLIENT RPC MỚI ĐƯỢC CHIA NHỎ ĐỂ ĐỒNG BỘ ---
+
+    [ClientRpc]
+    private void PrepareCutsceneClientRpc()
+    {
+        TogglePlayerMovement(false); // Khóa nhân vật ngay
+        if (blackScreenUI != null) blackScreenUI.SetActive(true); // Kéo rèm đen
+        if (objectToHide != null) objectToHide.SetActive(false);
+        if (videoPlayer != null) videoPlayer.Prepare(); 
+    }
+
+    [ClientRpc]
+    private void PlayCutsceneClientRpc()
+    {
+        if (videoUI != null) videoUI.SetActive(true); 
+
+        if (videoPlayer != null)
+        {
+            videoPlayer.Play();
+            // Gắn event: Khi máy này xem xong thì gọi hàm báo cáo
+            videoPlayer.loopPointReached += OnClientVideoFinished;
+        }
+        // [ĐÃ XÓA AudioListener.pause = true; ở đây để video có tiếng]
+    }
+
+    // [ĐÃ THÊM] Hàm callback khi Client xem xong video
+    private void OnClientVideoFinished(VideoPlayer vp)
+    {
+        if (videoPlayer != null) videoPlayer.loopPointReached -= OnClientVideoFinished; // Gỡ event an toàn
+        ReportFinishToServerRpc();
+    }
+
+    // [ĐÃ THÊM] Client bắn tín hiệu lên báo Server biết mình đã xem xong
+    [ServerRpc(RequireOwnership = false)]
+    private void ReportFinishToServerRpc()
+    {
+        serverReceivedFinishSignal = true; 
+    }
+
+    [ClientRpc]
+    private void StopVideoClientRpc()
+    {
+        if (videoPlayer != null)
+        {
+            videoPlayer.Stop();
+            videoPlayer.loopPointReached -= OnClientVideoFinished; // Gỡ an toàn phòng hờ
+        }
+        if (videoUI != null) videoUI.SetActive(false);
+        // Vẫn giữ BlackScreen bật để che cảnh teleport về
+    }
+
+    [ClientRpc]
+    private void FinishCutsceneClientRpc()
+    {
+        if (objectToHide != null) objectToHide.SetActive(true);
+        if (blackScreenUI != null) blackScreenUI.SetActive(false); // Xong xuôi thì cất rèm đen đi
+        
+        TogglePlayerMovement(true);
+        isPlaying = false;
+    }
+
+    // =========================================================================
+    // CÁC HÀM TELEPORT VÀ VẬT LÝ DƯỚI ĐÂY GIỮ NGUYÊN 100% NHƯ CODE GỐC CỦA ÔNG
+    // =========================================================================
+
+    [ClientRpc]
     private void TeleportToSafeZoneClientRpc(ulong[] mappedClientIds)
     {
         var localClientId = NetworkManager.Singleton.LocalClientId;
@@ -126,7 +204,7 @@ public class VideoCutsceneController : NetworkBehaviour
         }
     }
 
-    // [THÊM HÀM NÀY VÀO]: Hàm chuyên dụng để trị máy yếu không chịu dịch chuyển
+    // Hàm chuyên dụng để trị máy yếu không chịu dịch chuyển
     private System.Collections.IEnumerator ForceTeleportRoutine(GameObject playerObj, Vector3 targetPos, Quaternion targetRot)
     {
         var charCtrl = playerObj.GetComponent<CharacterController>();
@@ -152,43 +230,6 @@ public class VideoCutsceneController : NetworkBehaviour
         // 6. Bật lại điều khiển
         if (charCtrl != null) charCtrl.enabled = true;
         if (navAgent != null) navAgent.enabled = true;
-    }
-
-    [ClientRpc]
-    private void PlayCutsceneClientRpc()
-    {
-        if (objectToHide != null) objectToHide.SetActive(false);
-        
-        if (videoUI != null) videoUI.SetActive(true); 
-
-        if (videoPlayer != null)
-        {
-            videoPlayer.Play();
-        }
-
-        // Tạm dừng toàn bộ âm thanh môi trường/gameplay
-        AudioListener.pause = true;
-
-        TogglePlayerMovement(false);
-    }
-
-    [ClientRpc]
-    private void FinishCutsceneClientRpc()
-    {
-        if (objectToHide != null) objectToHide.SetActive(true);
-        
-        if (videoUI != null) videoUI.SetActive(false); 
-
-        if (videoPlayer != null)
-        {
-            videoPlayer.Stop();
-        }
-        
-        // Bật lại âm thanh bình thường cho game
-        AudioListener.pause = false;
-        
-        TogglePlayerMovement(true);
-        isPlaying = false;
     }
 
     private void TogglePlayerMovement(bool enable)
