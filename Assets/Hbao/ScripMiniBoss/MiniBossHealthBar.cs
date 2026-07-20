@@ -101,20 +101,18 @@ public class MiniBossHealthBar : MonoBehaviour
 
     private void Update()
     {
-        if (boss == null)
+        if (boss == null || !boss.gameObject.activeInHierarchy || !boss.enabled)
         {
-            boss = FindFirstObjectByType<MiniBossAI>();
-            if (boss == null)
-            {
-                HideUI();
-                return;
-            }
-            InitBossHealthAndName();
+            HideUI();
+            return;
         }
 
         // Check if Final Boss HUD is active to prevent UI overlap
         var finalBoss = FindFirstObjectByType<FinalBossAI>();
-        bool isFinalBossActive = finalBoss != null && finalBoss.IsHUDVisible && !finalBoss.IsDead;
+        bool isFinalBossActive = finalBoss != null && 
+            finalBoss.gameObject.activeInHierarchy && 
+            finalBoss.CurrentStateValue != FinalBossAI.FinalBossState.Sitting && 
+            !finalBoss.IsDead;
 
         // Hide UI if boss is dead, inactive, or if Final Boss HUD is active
         if (boss.IsDead || !boss.IsBossActive || boss.ActualCurrentHealth <= 0 || isFinalBossActive)

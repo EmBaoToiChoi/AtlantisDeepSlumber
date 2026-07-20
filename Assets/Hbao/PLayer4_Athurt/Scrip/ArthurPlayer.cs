@@ -241,12 +241,12 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         NetworkVariableWritePermission.Server
     );
     public NetworkVariable<bool> isWeapon2Locked = new NetworkVariable<bool>(
-        true,
+        false,
         NetworkVariableReadPermission.Everyone,
         NetworkVariableWritePermission.Server
     );
     public NetworkVariable<bool> isSkillsUnlocked = new NetworkVariable<bool>(
-        false,
+        true,
         NetworkVariableReadPermission.Everyone,
         NetworkVariableWritePermission.Server
     );
@@ -538,7 +538,11 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     private bool isDeathAnimFinished = false;
     public bool IsDeathAnimationFinished => isDeathAnimFinished;
-    public void ResetDeathState() => isDeathAnimFinished = false;
+    public void ResetDeathState()
+    {
+        isDeathAnimFinished = false;
+        enabled = true;
+    }
 
     public void OnDeathAnimationEnd()
     {
@@ -3384,6 +3388,9 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     public void TakeDamage(float damage)
     {
+        // Nếu đã chết, không nhận thêm sát thương và không ngắt hoạt ảnh chết
+        if (CurrentHealth <= 0) return;
+
         // Kiểm tra trạng thái bất tử (Skill E)
         bool invincible = isStandaloneMode ? isESkillActive : isESkillActiveNet.Value;
         if (invincible)
@@ -3556,8 +3563,8 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
                 SyncPlayerStateServerRpc(
                     state.health,
                     state.activeWeaponIndex,
-                    true,
                     false,
+                    true,
                     state.upgradePoints,
                     state.hpLevel,
                     state.mpLevel,
@@ -3579,8 +3586,8 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
                 if (hud != null)
                 {
                     hud.SetInventorySlots(inventorySlots);
-                    hud.SetSkillsUnlocked(false, false);
-                    hud.SetWeapon2Locked(true, false);
+                    hud.SetSkillsUnlocked(true, false);
+                    hud.SetWeapon2Locked(false, false);
                     hud.SelectWeapon(state.activeWeaponIndex);
                     hud.UpdateUpgradeUI(state.upgradePoints, state.hpLevel, state.mpLevel, state.cooldownLevel, state.damageLevel);
                     hud.SetHealth(state.health / (150f + state.hpLevel * 20f));
@@ -3591,14 +3598,14 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
             }
             else
             {
-                SyncPlayerStateServerRpc(maxHealth, 1, true, false, 0, 0, 0, 0, 0, 0, 0f);
+                SyncPlayerStateServerRpc(maxHealth, 1, false, true, 0, 0, 0, 0, 0, 0, 0f);
                 SavePlayerStateToDatabase();
             }
         }
         catch (System.Exception ex)
         {
             Debug.LogError($"[DB] Lỗi khi kết nối API tải dữ liệu MongoDB: {ex.Message}");
-            SyncPlayerStateServerRpc(maxHealth, 1, true, false, 0, 0, 0, 0, 0, 0, 0f);
+            SyncPlayerStateServerRpc(maxHealth, 1, false, true, 0, 0, 0, 0, 0, 0, 0f);
         }
     }
 

@@ -4,7 +4,7 @@
     flex-grow: 1;
     width: 100%;
     height: 100%;
-    padding: 35px;
+    padding: 24px 35px 20px 35px;
     background-color: transparent;
     justify-content: space-between;
 }
@@ -30,12 +30,14 @@
     background-image: url("project://database/Assets/PLuan/WaittingRoom/Textures/ui_frame_bg.jpg");
     -unity-background-scale-mode: stretch-to-fill;
     background-color: transparent;
-    padding: 27px 80px 44px 80px;
+    padding: 24px 60px 36px 60px;
     border-width: 0;
     border-radius: 0;
     box-shadow: 0 8px 25px rgba(0, 0, 0, 0.45);
-    width: 500px; /* Symmetrical vertical alignment with character selection panel */
-    height: 140px;
+    width: 460px;
+    max-width: 90%;
+    height: 130px;
+    flex-shrink: 1;
 }
 
 .top-info-row {
@@ -122,8 +124,9 @@
 .waiting-middle-container {
     flex-direction: row;
     flex-grow: 1;
-    margin-top: 20px;
-    margin-bottom: 20px;
+    align-items: center;
+    margin-top: 10px;
+    margin-bottom: 10px;
 }
 
 .waiting-viewport-spacer {
@@ -132,16 +135,19 @@
 
 /* CHARACTER SELECTION SIDEBAR */
 .char-select-panel {
-    width: 500px;
-    padding: 60px 48px 50px 48px;
+    width: 460px;
+    height: 700px;
+    max-height: 100%;
+    padding: 50px 35px 30px 35px;
     justify-content: flex-start;
-    background-image: url("project://database/Assets/PLuan/WaittingRoom/Textures/ui_frame_bg.jpg");
+    background-image: url("project://database/Assets/PLuan/chọn player.png");
     -unity-background-scale-mode: stretch-to-fill;
     background-color: transparent;
     border-width: 0;
     border-radius: 0;
     box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
     transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    flex-shrink: 1;
 }
 
 .panel-hidden-state {
@@ -181,7 +187,7 @@
     position: absolute;
     left: 0;
     right: 0px;
-    height: 80px; /* Fixed height for clean vertical alignment */
+    height: 72px; /* Fixed height for clean vertical alignment */
     align-items: center;
     background-color: transparent !important;
     border-width: 0 !important;
@@ -194,16 +200,20 @@
 
 /* Precise vertical coordinates centered exactly on background slot frames */
 #char-card-0 {
-    top: 10.4%;
+    top: 12%;
+    left: 5%;
 }
 #char-card-1 {
-    top: 29.3%;
+    top: 28.5%;
+    left: 5%;
 }
 #char-card-2 {
-    top: 48.6%;
+    top: 45.5%;
+    left: 5%;
 }
 #char-card-3 {
-    top: 66.8%;
+    top: 62.5%;
+    left: 5%;
 }
 
 .char-card:hover {
@@ -233,11 +243,11 @@
 
 .char-card-portrait {
     position: absolute;
-    left: 90px; /* Centered precisely inside the gold circle frame */
-    top: 19px; /* Centered precisely inside the gold circle frame */
-    width: 52px;
-    height: 52px;
-    border-radius: 26px; /* Perfect round avatar matching the circular background slot frame */
+    left: 72px; /* Centered precisely inside the gold circle frame */
+    top: 12px; /* Centered precisely inside the gold circle frame */
+    width: 48px;
+    height: 48px;
+    border-radius: 24px; /* Perfect round avatar matching the circular background slot frame */
     border-width: 0 !important;
     background-size: cover;
     transition: all 0.2s ease-out;
@@ -251,8 +261,8 @@
 /* Character text container for vertical Name & Role alignment */
 .char-card-text-container {
     position: absolute;
-    left: 130px; /* Perfectly centered within the name plaque bounds */
-    width: 242px; /* Spans the full width of the gold plaque */
+    left: 110px; /* Perfectly centered within the name plaque bounds */
+    width: 210px; /* Spans the full width of the gold plaque */
     top: 0;
     bottom: 0;
     flex-direction: column;
@@ -264,13 +274,13 @@
 
 .char-card-name {
     color: #EAF7FF;
-    font-size: 15px;
+    font-size: 14px;
     -unity-font-style: bold;
     -unity-text-outline-width: 1px;
     -unity-text-outline-color: rgba(0, 0, 0, 0.8);
     text-shadow: 0px 0px 4px rgba(0, 0, 0, 0.8);
-    letter-spacing: 1.5px;
-    margin-top: 5px;
+    letter-spacing: 1.2px;
+    margin-top: 4px;
     margin-bottom: 2px;
     -unity-text-align: middle-center;
     transition: all 0.2s ease-out;
@@ -289,11 +299,11 @@
 
 .char-card-role {
     color: #79C9FF;
-    font-size: 10px;
+    font-size: 9.5px;
     -unity-font-style: bold;
     text-shadow: 0px 0px 3px rgba(0, 0, 0, 1);
     letter-spacing: 0.8px;
-    margin-top: -5px; /* Reduced vertical gap to make them closer */
+    margin-top: -3px; /* Reduced vertical gap to make them closer */
     -unity-text-align: middle-center;
     transition: all 0.2s ease-out;
 }
@@ -316,13 +326,16 @@
 }
 
 .char-inspect-tip {
-    color: rgba(0, 229, 255, 0.4);
-    font-size: 9.5px;
-    text-align: center;
+    color: rgba(0, 229, 255, 0.45);
+    font-size: 9px;
     -unity-font-style: italic;
-    margin-top: 12px;
-    left: 160px;
-    bottom: 120px;
+    -unity-text-align: middle-center;
+    position: absolute;
+    bottom: 175px;
+    left: 50;
+    right: 0;
+    margin: 0;
+    padding: 0;
 }
 
 /* PORTRAIT GRAPHICS */
@@ -413,6 +426,8 @@
 .details-container {
     width: 600px;
     height: 900px;
+    max-width: 92%;
+    max-height: 90%;
     position: relative;
     background-image: url("project://database/Assets/PLuan/IMG chi tiết player.png");
     -unity-background-scale-mode: stretch-to-fill;
@@ -421,6 +436,7 @@
     border-radius: 0;
     box-shadow: 0 25px 60px rgba(0, 0, 0, 0.85);
     padding: 0;
+    flex-shrink: 1;
 }
 
 .details-container .panel-seaweed-top-right,
@@ -610,26 +626,29 @@
     flex-direction: row;
     justify-content: space-between;
     align-items: center;
+    width: 100%;
     background-color: transparent;
-    padding: 15px 0;
+    padding: 10px 0;
     border-width: 0;
-    margin-top: 15px;
+    margin-top: 10px;
     box-shadow: none;
+    flex-shrink: 0;
 }
 
 .left-actions {
     flex-direction: row;
     align-items: center;
+    flex-shrink: 0;
 }
 
 /* ACTION BUTTON SYSTEM */
 .action-btn {
-    height: 48px;
-    padding: 0 20px !important;
-    font-size: 14px;
+    height: 44px;
+    padding: 0 14px !important;
+    font-size: 13px;
     -unity-font-style: bold;
-    letter-spacing: 2px;
-    margin-right: 15px;
+    letter-spacing: 1.5px;
+    margin-right: 10px;
     border-radius: 0 !important;
     transition: all 0.2s ease-out;
     border-width: 0 !important;
@@ -708,30 +727,33 @@
 
 /* RIGHT SIDE STATUS (UNIFIED HEIGHT FOR SYMMETRY) */
 .player-count-container {
-    height: 48px;
-    padding: 0 24px;
+    height: 40px;
+    padding: 0 14px;
+    margin-right: 5px;
     background-color: rgba(2, 10, 22, 0.7);
     border-width: 1.5px;
     border-color: rgba(0, 229, 255, 0.25);
     border-radius: 6px;
     align-items: center;
     justify-content: center;
+    flex-shrink: 0;
 }
 
 .status-text {
     color: rgb(0, 229, 255);
-    font-size: 14px;
+    font-size: 12.5px;
     -unity-font-style: bold;
     letter-spacing: 1px;
     text-shadow: 0 0 6px rgba(0, 229, 255, 0.4);
+    white-space: nowrap;
 }
 
 .start-game-center {
-    position: absolute;
-    left: 50%;
-    translate: -50% 0;
-    bottom: 18px;
+    position: relative;
+    flex-grow: 1;
+    justify-content: center;
     align-items: center;
+    margin: 0 10px;
 }
 
 .hidden-element {

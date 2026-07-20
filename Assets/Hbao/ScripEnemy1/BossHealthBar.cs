@@ -104,24 +104,25 @@ public class BossHealthBar : MonoBehaviour
 
     private void Update()
     {
-        if (boss == null)
+        if (boss == null || !boss.gameObject.activeInHierarchy || !boss.enabled)
         {
-            // Thử tìm lại Boss nếu chưa gán
-            boss = FindFirstObjectByType<BossAI>();
-            if (boss == null)
-            {
-                HideUI();
-                return;
-            }
-            InitBossHealthAndName();
+            HideUI();
+            return;
         }
 
-        // Kiểm tra nếu Boss cuối đang hiện HUD thì tự động ẩn thanh máu Silas để tránh đè UI
-        var finalBoss = FindFirstObjectByType<FinalBossAI>();
-        bool isFinalBossActive = finalBoss != null && finalBoss.IsHUDVisible && !finalBoss.IsDead;
+        // Kiểm tra nếu MiniBoss (Rakan) đang hoạt động
+        var miniBoss = FindFirstObjectByType<MiniBossAI>();
+        bool isMiniBossActive = miniBoss != null && miniBoss.gameObject.activeInHierarchy && miniBoss.IsBossActive && !miniBoss.IsDead;
 
-        // Ẩn thanh máu khi Boss đã chết, chưa kích hoạt, hoặc khi Boss cuối đã xuất hiện
-        if (boss.IsDead || !boss.IsBossActive || boss.ActualCurrentHealth <= 0 || isFinalBossActive)
+        // Kiểm tra nếu Boss cuối đang hoạt động (không ở Sitting và chưa chết)
+        var finalBoss = FindFirstObjectByType<FinalBossAI>();
+        bool isFinalBossActive = finalBoss != null && 
+            finalBoss.gameObject.activeInHierarchy && 
+            finalBoss.CurrentStateValue != FinalBossAI.FinalBossState.Sitting && 
+            !finalBoss.IsDead;
+
+        // Ẩn thanh máu Silas nếu Silas đã chết/chưa kích hoạt, hoặc khi MiniBoss/FinalBoss đã vào trận
+        if (boss.IsDead || !boss.IsBossActive || boss.ActualCurrentHealth <= 0 || isMiniBossActive || isFinalBossActive)
         {
             HideUI();
             return;
