@@ -173,6 +173,17 @@ public class SpikePillarLocal : MonoBehaviour
     {
         if (IsAnyPlayer(otherGo, out GameObject playerRoot))
         {
+            // Kiểm tra khoảng cách thực tế để tránh lỗi trôi/kẹt trigger khi dịch chuyển
+            float dist = Vector3.Distance(transform.position, playerRoot.transform.position);
+            if (dist > 10f)
+            {
+                if (nextDamageTime.ContainsKey(playerRoot))
+                {
+                    nextDamageTime.Remove(playerRoot);
+                }
+                return;
+            }
+
             if (nextDamageTime.ContainsKey(playerRoot))
             {
                 if (Time.time >= nextDamageTime[playerRoot])

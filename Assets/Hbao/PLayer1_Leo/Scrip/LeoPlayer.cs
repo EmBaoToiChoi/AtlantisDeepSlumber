@@ -3178,8 +3178,8 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     // ------------------------------------------------------------------
     public NetworkVariable<float> currentHealth = new NetworkVariable<float>(85f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     public NetworkVariable<int> activeWeaponIndex = new NetworkVariable<int>(1, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
-    public NetworkVariable<bool> isWeapon2Locked = new NetworkVariable<bool>(true, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
-    public NetworkVariable<bool> isSkillsUnlocked = new NetworkVariable<bool>(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+    public NetworkVariable<bool> isWeapon2Locked = new NetworkVariable<bool>(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+    public NetworkVariable<bool> isSkillsUnlocked = new NetworkVariable<bool>(true, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     public NetworkVariable<int> upgradePoints = new NetworkVariable<int>(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     public NetworkVariable<int> hpLevel = new NetworkVariable<int>(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     public NetworkVariable<int> mpLevel = new NetworkVariable<int>(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
@@ -3191,13 +3191,13 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     public NetworkVariable<float> weapon2Durability = new NetworkVariable<float>(100f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     public NetworkVariable<bool> isRollingNet = new NetworkVariable<bool>(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     public NetworkVariable<bool> isMovementLockedNet = new NetworkVariable<bool>(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
-
+ 
     public NetworkVariable<bool> isAttackSpeedBoostedNet = new NetworkVariable<bool>(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     public NetworkVariable<bool> isQSkillActiveNet = new NetworkVariable<bool>(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     public NetworkVariable<bool> isAimingNet = new NetworkVariable<bool>(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     [HideInInspector]
     public GameObject pendingPickItem;
-
+ 
     [Header("Local State & Inventory")]
     public string[] inventorySlots = new string[10] { "", "", "", "", "", "", "", "", "", "" };
     protected int localUpgradePoints = 0;
@@ -3210,8 +3210,8 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     protected float localHealth;
     protected float localWeapon1Durability = 100f;
     protected float localWeapon2Durability = 100f;
-    protected bool localWeapon2Locked = true;
-    protected bool localSkillsUnlocked = false;
+    protected bool localWeapon2Locked = false;
+    protected bool localSkillsUnlocked = true;
     protected int localActiveWeaponIndex = 1;
 
 
@@ -3345,7 +3345,11 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     private bool isDeathAnimFinished = false;
     public bool IsDeathAnimationFinished => isDeathAnimFinished;
-    public void ResetDeathState() => isDeathAnimFinished = false;
+    public void ResetDeathState()
+    {
+        isDeathAnimFinished = false;
+        enabled = true;
+    }
 
     public void OnDeathAnimationEnd()
     {
@@ -5029,6 +5033,9 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     public void TakeDamage(float damage)
     {
+        // Nếu đã chết, không nhận thêm sát thương và không ngắt hoạt ảnh chết
+        if (CurrentHealth <= 0) return;
+
         // Miễn nhiễm sát thương hoàn toàn khi đang dùng Skill Q
         if (IsQSkillActive)
         {
@@ -6499,8 +6506,8 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
                 {
                     localHealth = maxHealth;
                     localActiveWeaponIndex = 1;
-                    localWeapon2Locked = true;
-                    localSkillsUnlocked = false;
+                    localWeapon2Locked = false;
+                    localSkillsUnlocked = true;
                     localUpgradePoints = 0;
                     localHpLevel = 0;
                     localMpLevel = 0;
@@ -6513,8 +6520,8 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
                 {
                     SyncNetVarFloat(currentHealth, proxyPlayerTest != null ? proxyPlayerTest.currentHealth : null, maxHealth);
                     SyncNetVarInt(activeWeaponIndex, proxyPlayerTest != null ? proxyPlayerTest.activeWeaponIndex : null, 1);
-                    SyncNetVarBool(isWeapon2Locked, proxyPlayerTest != null ? proxyPlayerTest.isWeapon2Locked : null, true);
-                    SyncNetVarBool(isSkillsUnlocked, proxyPlayerTest != null ? proxyPlayerTest.isSkillsUnlocked : null, false);
+                    SyncNetVarBool(isWeapon2Locked, proxyPlayerTest != null ? proxyPlayerTest.isWeapon2Locked : null, false);
+                    SyncNetVarBool(isSkillsUnlocked, proxyPlayerTest != null ? proxyPlayerTest.isSkillsUnlocked : null, true);
                     SyncNetVarInt(upgradePoints, proxyPlayerTest != null ? proxyPlayerTest.upgradePoints : null, 0);
                     SyncNetVarInt(hpLevel, proxyPlayerTest != null ? proxyPlayerTest.hpLevel : null, 0);
                     SyncNetVarInt(mpLevel, proxyPlayerTest != null ? proxyPlayerTest.mpLevel : null, 0);

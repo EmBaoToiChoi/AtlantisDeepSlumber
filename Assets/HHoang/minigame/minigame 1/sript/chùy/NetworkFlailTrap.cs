@@ -155,6 +155,17 @@ public class NetworkFlailTrap : NetworkBehaviour
 
         if (IsAnyPlayer(collidedObj, out GameObject playerRoot))
         {
+            // Kiểm tra khoảng cách thực tế để tránh lỗi trôi/kẹt trigger khi dịch chuyển
+            float dist = Vector3.Distance(transform.position, playerRoot.transform.position);
+            if (dist > 10f)
+            {
+                if (nextDamageTime.ContainsKey(playerRoot))
+                {
+                    nextDamageTime.Remove(playerRoot);
+                }
+                return;
+            }
+
             float currentTime = Time.time;
             if (!nextDamageTime.TryGetValue(playerRoot, out float nextTime) || currentTime >= nextTime)
             {

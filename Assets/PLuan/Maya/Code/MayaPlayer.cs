@@ -145,12 +145,12 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
         NetworkVariableWritePermission.Server
     );
     public NetworkVariable<bool> isWeapon2Locked = new NetworkVariable<bool>(
-        true,
+        false,
         NetworkVariableReadPermission.Everyone,
         NetworkVariableWritePermission.Server
     );
     public NetworkVariable<bool> isSkillsUnlocked = new NetworkVariable<bool>(
-        false,
+        true,
         NetworkVariableReadPermission.Everyone,
         NetworkVariableWritePermission.Server
     );
@@ -494,7 +494,11 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     private bool isDeathAnimFinished = false;
     public bool IsDeathAnimationFinished => isDeathAnimFinished;
-    public void ResetDeathState() => isDeathAnimFinished = false;
+    public void ResetDeathState()
+    {
+        isDeathAnimFinished = false;
+        enabled = true;
+    }
 
     public void OnDeathAnimationEnd()
     {
@@ -3097,6 +3101,9 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     public void TakeDamage(float damage)
     {
+        // Nếu đã chết, không nhận thêm sát thương và không ngắt hoạt ảnh chết
+        if (CurrentHealth <= 0) return;
+
         // Né chiêu (miễn nhiễm sát thương khi đang lộn vòng)
         if (isStandaloneMode)
         {
@@ -3264,8 +3271,8 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
                 SyncPlayerStateServerRpc(
                     state.health, 
                     state.activeWeaponIndex, 
-                    true, // Khóa vũ khí 2 mặc định khi bắt đầu game
-                    false, // Khóa kỹ năng mặc định khi bắt đầu game
+                    false, // Khóa vũ khí 2 mặc định khi bắt đầu game
+                    true, // Khóa kỹ năng mặc định khi bắt đầu game
                     state.upgradePoints,
                     state.hpLevel,
                     state.mpLevel,
@@ -3287,8 +3294,8 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
                 if (hud != null)
                 {
                     hud.SetInventorySlots(inventorySlots);
-                    hud.SetSkillsUnlocked(false, false); // Khóa kỹ năng mặc định
-                    hud.SetWeapon2Locked(true, false); // Khóa vũ khí 2 mặc định
+                    hud.SetSkillsUnlocked(true, false); // Khóa kỹ năng mặc định
+                    hud.SetWeapon2Locked(false, false); // Khóa vũ khí 2 mặc định
                     hud.SelectWeapon(state.activeWeaponIndex);
                     // Cập nhật lại UI sau khi các NetworkVariables được đồng bộ
                     hud.UpdateUpgradeUI(state.upgradePoints, state.hpLevel, state.mpLevel, state.cooldownLevel, state.damageLevel);
@@ -3301,14 +3308,14 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
             else
             {
                 Debug.LogWarning("[DB] Không có dữ liệu cũ hoặc lỗi kết nối. Đồng bộ dữ liệu ban đầu.");
-                SyncPlayerStateServerRpc(maxHealth, 1, true, false, 0, 0, 0, 0, 0, 0, 0f);
+                SyncPlayerStateServerRpc(maxHealth, 1, false, true, 0, 0, 0, 0, 0, 0, 0f);
                 SavePlayerStateToDatabase();
             }
         }
         catch (System.Exception ex)
         {
             Debug.LogError($"[DB] Lỗi khi kết nối API tải dữ liệu MongoDB: {ex.Message}");
-            SyncPlayerStateServerRpc(maxHealth, 1, true, false, 0, 0, 0, 0, 0, 0, 0f);
+            SyncPlayerStateServerRpc(maxHealth, 1, false, true, 0, 0, 0, 0, 0, 0, 0f);
         }
     }
 
