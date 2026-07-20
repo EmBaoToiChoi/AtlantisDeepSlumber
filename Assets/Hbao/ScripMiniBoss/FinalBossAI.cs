@@ -137,6 +137,7 @@ public class FinalBossAI : NetworkBehaviour
     public float swordDamage = 5.0f;
     public float swordImpactRadius = 2.0f;
     public string swordRainTriggerParam = "AttackCombo";
+    public Vector3 swordSpawnRotationOffset = new Vector3(90f, 0f, 0f); // Xoay bù để kiếm cắm thẳng xuống
 
     [Header("Fire Barrage (Chưởng Đốm Lửa) Settings")]
     public GameObject fireBarragePrefab;
@@ -1626,6 +1627,17 @@ public class FinalBossAI : NetworkBehaviour
             vfx.transform.SetParent(transform);
             vfx.transform.localScale = Vector3.one;
 
+            // Bổ sung Rigidbody Kinematic để bắt va chạm Trigger hoạt động
+            var rb = vfx.GetComponent<Rigidbody>();
+            if (rb == null) rb = vfx.AddComponent<Rigidbody>();
+            rb.isKinematic = true;
+            rb.useGravity = false;
+
+            // Bổ sung script gây sát thương cho tia lửa
+            var damageZone = vfx.GetComponent<FireBeamDamageZone>();
+            if (damageZone == null) damageZone = vfx.AddComponent<FireBeamDamageZone>();
+            damageZone.Initialize(this, fireSpewDamage, fireSpewKnockback);
+
             var particles = vfx.GetComponentsInChildren<ParticleSystem>(true);
             foreach (var ps in particles)
             {
@@ -1847,7 +1859,8 @@ public class FinalBossAI : NetworkBehaviour
         RecycleWarning(warning);
 
         Vector3 skyPos = groundPos + Vector3.up * 18.0f;
-        GameObject sword = GetPooledSword(skyPos, Quaternion.LookRotation(Vector3.down));
+        Quaternion rot = Quaternion.LookRotation(Vector3.down) * Quaternion.Euler(swordSpawnRotationOffset);
+        GameObject sword = GetPooledSword(skyPos, rot);
 
         var proj = sword.GetComponent<FallingSwordProjectile>();
         if (proj == null) proj = sword.AddComponent<FallingSwordProjectile>();
@@ -1936,6 +1949,8 @@ public class FinalBossAI : NetworkBehaviour
         private FinalBossAI boss;
         private float timer;
         private float spawnTimer;
+        private List<Vector3> targetPositions = new List<Vector3>();
+        private int currentSpawnIndex = 0;
 
         public SwordRainState(FinalBossAI boss) { this.boss = boss; }
 
@@ -1943,6 +1958,44 @@ public class FinalBossAI : NetworkBehaviour
         {
             timer = 0f;
             spawnTimer = 0f;
+            currentSpawnIndex = 0;
+            targetPositions.Clear();
+
+            // 1. Chỉ khóa vị trí hiện tại dưới chân toàn bộ người chơi khi bắt đầu chiêu (không đuổi theo)
+            var players = boss.GetAllActivePlayers();
+            foreach (var p in players)
+            {
+                if (p != null && !boss.IsPlayerDeadOrInvisible(p))
+                {
+                    targetPositions.Add(p.position);
+                }
+            }
+
+            // 2. Thêm các điểm ngẫu nhiên xung quanh khu vực để đạt tổng số từ 5 đến 10 thanh kiếm
+            int totalSwords = Random.Range(5, 11);
+            int neededRandom = totalSwords - targetPositions.Count;
+            for (int i = 0; i < neededRandom; i++)
+            {
+                Vector2 randomOffset = Random.insideUnitCircle * 8f;
+                Vector3 offsetPos = boss.transform.position + new Vector3(randomOffset.x, 0, randomOffset.y);
+                if (UnityEngine.AI.NavMesh.SamplePosition(offsetPos, out UnityEngine.AI.NavMeshHit hit, 6f, UnityEngine.AI.NavMesh.AllAreas))
+                {
+                    targetPositions.Add(hit.position);
+                }
+                else
+                {
+                    targetPositions.Add(boss.transform.position + new Vector3(randomOffset.x, 0, randomOffset.y));
+                }
+            }
+
+            // Tráo ngẫu nhiên thứ tự rơi
+            for (int i = 0; i < targetPositions.Count; i++)
+            {
+                int rnd = Random.Range(0, targetPositions.Count);
+                Vector3 temp = targetPositions[i];
+                targetPositions[i] = targetPositions[rnd];
+                targetPositions[rnd] = temp;
+            }
 
             if (boss.AgentReady)
             {
@@ -1973,12 +2026,15 @@ public class FinalBossAI : NetworkBehaviour
             }
             boss.SetSpeedNet(0f);
 
-            // Chỉ spawn kiếm khi chưa hết thời lượng chiêu
-            if (spawnTimer <= 0f && timer < boss.swordRainDuration)
+            // Sinh kiếm tuần tự từ các vị trí cố định đã khóa từ trước
+            if (spawnTimer <= 0f && currentSpawnIndex < targetPositions.Count && timer < boss.swordRainDuration)
             {
                 spawnTimer = boss.swordSpawnInterval;
 
-                Vector3[] targets = boss.CalculateSwordRainTargets();
+                Vector3 targetPos = targetPositions[currentSpawnIndex];
+                currentSpawnIndex++;
+
+                Vector3[] targets = new Vector3[] { targetPos };
                 if (!boss.isStandaloneMode)
                 {
                     boss.TriggerSwordRainDropClientRpc(targets);
