@@ -17,7 +17,7 @@ public static class EnemyDamageHelper
         var simple = playerTransform.GetComponentInParent<SimplePlayerTest>();
         if (simple != null)
         {
-            simple.TakeDamage(damage);
+            simple.RequestTakeDamage(damage);
             simple.ApplyKnockback(knockbackForce);
             return;
         }
@@ -25,7 +25,7 @@ public static class EnemyDamageHelper
         var leo = playerTransform.GetComponentInParent<LeoPlayer>();
         if (leo != null)
         {
-            leo.TakeDamage(damage);
+            leo.RequestTakeDamage(damage);
             leo.ApplyKnockback(knockbackForce);
             return;
         }
@@ -33,7 +33,7 @@ public static class EnemyDamageHelper
         var arthur = playerTransform.GetComponentInParent<ArthurPlayer>();
         if (arthur != null)
         {
-            arthur.TakeDamage(damage);
+            arthur.RequestTakeDamage(damage);
             arthur.ApplyKnockback(knockbackForce);
             return;
         }
@@ -41,7 +41,7 @@ public static class EnemyDamageHelper
         var elena = playerTransform.GetComponentInParent<ElenaPlayer>();
         if (elena != null)
         {
-            elena.TakeDamage(damage);
+            elena.RequestTakeDamage(damage);
             elena.ApplyKnockback(knockbackForce);
             return;
         }
@@ -49,7 +49,7 @@ public static class EnemyDamageHelper
         var maya = playerTransform.GetComponentInParent<MayaPlayer>();
         if (maya != null)
         {
-            maya.TakeDamage(damage);
+            maya.RequestTakeDamage(damage);
             maya.ApplyKnockback(knockbackForce);
             return;
         }

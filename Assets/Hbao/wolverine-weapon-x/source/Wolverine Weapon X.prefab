@@ -2689,7 +2689,8 @@ MonoBehaviour:
   swordImpactRadius: 2
   swordRainTriggerParam: AttackCombo
   fireBarragePrefab: {fileID: 2883180979609552342, guid: da5df83ad7870f44bbe3cacedd92be63, type: 3}
-  fireBarrageImpactVFX: {fileID: 0}
+  fireBarrageWarningDecalPrefab: {fileID: 7883966873594125846, guid: 6aeee1ac8b24a1e45baedae4f3b12b52, type: 3}
+  fireBarrageImpactVFX: {fileID: 2427901435903505602, guid: 8a915dbbc4b23bf4f931629039cfbf6f, type: 3}
   fireBarrageImpactSFX: {fileID: 0}
   fireBarrageDuration: 6
   fireBarrageInterval: 0.5
