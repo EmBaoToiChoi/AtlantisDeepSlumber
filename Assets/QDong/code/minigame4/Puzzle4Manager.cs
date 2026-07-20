@@ -160,6 +160,17 @@ public class Puzzle4Manager : NetworkBehaviour
 
         netObj.transform.position = pos;
 
+        // Bắt buộc gọi Teleport của NetworkTransform trên client làm chủ (Owner)
+        // để tránh bị hệ thống tự kéo giật ngược về vị trí cũ (ClientNetworkTransform)
+        if (netObj.IsOwner)
+        {
+            Unity.Netcode.Components.NetworkTransform netTransform = netObj.GetComponent<Unity.Netcode.Components.NetworkTransform>();
+            if (netTransform != null)
+            {
+                netTransform.Teleport(pos, netObj.transform.rotation, netObj.transform.localScale);
+            }
+        }
+
         if (cc != null) cc.enabled = true;
 
         Rigidbody rb = netObj.GetComponent<Rigidbody>();
@@ -342,17 +353,19 @@ public class Puzzle4Manager : NetworkBehaviour
                 Vector3 normal = balanceManager.diskRigidbody.transform.up;
                 Vector3 downhill = Vector3.ProjectOnPlane(Vector3.down, normal).normalized;
                 
-                // Lực trượt tỉ lệ với độ nghiêng (Nghiêng 5 độ = lực 100, 10 độ = 200, 15 độ = max 300)
-                float slideForceMagn = balanceManager.CurrentAngle * 20f; 
+                // TĂNG ĐỘ NHẠY TRƯỢT: 
+                // Cộng thêm 50 lực cơ bản để vượt qua ma sát mặt sàn ngay từ 1 độ nghiêng đầu tiên
+                // Tăng hệ số nhân từ x20 lên x50 để trượt nhanh hơn khi nghiêng
+                float slideForceMagn = 50f + (balanceManager.CurrentAngle * 50f); 
                 
-                // Giới hạn lực đẩy tối đa để tránh lỗi vật lý (PhysX nảy văng) khi ép mạnh vào thành đĩa
-                if (slideForceMagn > 300f) slideForceMagn = 300f;
+                // Giới hạn lực đẩy tối đa 
+                if (slideForceMagn > 500f) slideForceMagn = 500f;
 
                 Vector3 slideForce = downhill * slideForceMagn;
                 
                 // Quan trọng: Bổ sung lực ép dính xuống mặt đĩa tỉ lệ thuận với lực trượt.
-                // Khi trượt mạnh đụng vào viền đĩa (rim), nếu không có lực ép xuống, nhân vật sẽ bị bật tung lên!
-                Vector3 stickyForce = -normal * (slideForceMagn * 0.8f);
+                // Ép mạnh hơn (x1.0 thay vì 0.8) vì lực trượt ngang đã mạnh hơn, tránh nảy văng.
+                Vector3 stickyForce = -normal * (slideForceMagn * 1.0f);
 
                 // Cache local player một lần thay vì FindObjectsByType mỗi frame
                 if (!localPlayerCached)

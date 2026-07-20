@@ -59,66 +59,71 @@ public class Puzzle4TeleportTrigger : NetworkBehaviour
                     trapTrigger.ActivateTrapFromTeleport();
                 }
 
-                // Teleport all players robustly
+                // Teleport all players robustly by finding them in the scene
                 if (p4Manager != null)
                 {
                     int playerIndex = 0;
-                    foreach (ulong clientId in NetworkManager.Singleton.ConnectedClientsIds)
+                    GameObject[] allPlayers = GameObject.FindGameObjectsWithTag("Player");
+                    HashSet<NetworkObject> teleportedPlayers = new HashSet<NetworkObject>();
+
+                    foreach (GameObject pObj in allPlayers)
                     {
-                        if (NetworkManager.Singleton.ConnectedClients.TryGetValue(clientId, out var client))
+                        NetworkObject playerObj = pObj.GetComponentInParent<NetworkObject>();
+                        // Chỉ teleport nếu có NetworkObject, đã spawn và chưa bị teleport trước đó
+                        if (playerObj != null && playerObj.IsSpawned && !teleportedPlayers.Contains(playerObj))
                         {
-                            NetworkObject playerObj = client.PlayerObject;
-                            if (playerObj != null)
+                            teleportedPlayers.Add(playerObj);
+
+                            Vector3 spawnPos = teleportTarget != null ? teleportTarget.position : playerObj.transform.position;
+
+                            // Thêm offset để không lồng vào nhau, VÀ thêm +1 trục Y để rớt từ trên cao xuống đĩa nhẹ nhàng, tránh lún gầm làm văng ra xa
+                            Vector3 offset = Vector3.zero;
+                            float dist = 1.0f; 
+                            if (playerIndex == 0) offset = new Vector3(dist, 1.5f, dist);
+                            else if (playerIndex == 1) offset = new Vector3(-dist, 1.5f, dist);
+                            else if (playerIndex == 2) offset = new Vector3(dist, 1.5f, -dist);
+                            else if (playerIndex == 3) offset = new Vector3(-dist, 1.5f, -dist);
+                            else offset = new Vector3(0, 1.5f, 0);
+
+                            spawnPos += offset;
+                            playerIndex++;
+
+                            // Tắt CharacterController trên server trước khi dịch chuyển để đồng bộ chuẩn xác
+                            CharacterController cc = playerObj.GetComponent<CharacterController>();
+                            if (cc != null) cc.enabled = false;
+
+                            // Gửi ClientRpc TRƯỚC để client chuẩn bị nhận vị trí mới
+                            p4Manager.TeleportPlayerToCenterClientRpc(playerObj.NetworkObjectId, spawnPos);
+
+                            // Dùng NetworkTransform.Teleport() nếu có để tránh bị override
+                            Unity.Netcode.Components.NetworkTransform netTransform = playerObj.GetComponent<Unity.Netcode.Components.NetworkTransform>();
+                            if (netTransform != null)
                             {
-                                Vector3 spawnPos = teleportTarget != null ? teleportTarget.position : playerObj.transform.position;
-
-                                // Thêm offset nhỏ để 4 người chơi không bị teleport dính chặt vào cùng 1 điểm gây lỗi vật lý văng ra ngoài
-                                Vector3 offset = Vector3.zero;
-                                float dist = 0.25f; // Khoảng cách nhỏ gọn lại (0.75m từ tâm)
-                                if (playerIndex == 0) offset = new Vector3(dist, 0, dist);
-                                else if (playerIndex == 1) offset = new Vector3(-dist, 0, dist);
-                                else if (playerIndex == 2) offset = new Vector3(dist, 0, -dist);
-                                else if (playerIndex == 3) offset = new Vector3(-dist, 0, -dist);
-                                spawnPos += offset;
-                                playerIndex++;
-
-                                // Tắt CharacterController trên server trước khi dịch chuyển để đồng bộ chuẩn xác
-                                CharacterController cc = playerObj.GetComponent<CharacterController>();
-                                if (cc != null) cc.enabled = false;
-
-                                // Gửi ClientRpc TRƯỚC để client chuẩn bị nhận vị trí mới
-                                p4Manager.TeleportPlayerToCenterClientRpc(playerObj.NetworkObjectId, spawnPos);
-
-                                // Dùng NetworkTransform.Teleport() nếu có để tránh bị override
-                                Unity.Netcode.Components.NetworkTransform netTransform = playerObj.GetComponent<Unity.Netcode.Components.NetworkTransform>();
-                                if (netTransform != null)
+                                try 
                                 {
-                                    try 
-                                    {
-                                        // Nếu dùng ClientNetworkTransform, Server gọi Teleport lên client sẽ ném Exception làm crash vòng lặp. Cần try-catch.
-                                        netTransform.Teleport(spawnPos, playerObj.transform.rotation, playerObj.transform.localScale);
-                                    }
-                                    catch (System.Exception e)
-                                    {
-                                        Debug.LogWarning($"[Puzzle4Teleport] Không thể gọi Teleport trực tiếp cho Client {clientId} (client tự quản lý vị trí qua ClientRpc): {e.Message}");
-                                    }
+                                    // Nếu dùng ClientNetworkTransform, Server gọi Teleport lên client sẽ ném Exception làm crash vòng lặp. Cần try-catch.
+                                    netTransform.Teleport(spawnPos, playerObj.transform.rotation, playerObj.transform.localScale);
                                 }
-                                else
+                                catch (System.Exception e)
                                 {
-                                    playerObj.transform.position = spawnPos;
+                                    Debug.LogWarning($"[Puzzle4Teleport] Không thể gọi Teleport trực tiếp cho Client {playerObj.OwnerClientId}: {e.Message}");
                                 }
-
-                                Rigidbody rb = playerObj.GetComponent<Rigidbody>();
-                                if (rb != null)
-                                {
-                                    rb.linearVelocity = Vector3.zero;
-                                    rb.angularVelocity = Vector3.zero;
-                                    rb.Sleep();
-                                }
-
-                                // Bật lại CharacterController
-                                if (cc != null) cc.enabled = true;
                             }
+                            else
+                            {
+                                playerObj.transform.position = spawnPos;
+                            }
+
+                            Rigidbody rb = playerObj.GetComponent<Rigidbody>();
+                            if (rb != null)
+                            {
+                                rb.linearVelocity = Vector3.zero;
+                                rb.angularVelocity = Vector3.zero;
+                                rb.Sleep();
+                            }
+
+                            // Bật lại CharacterController
+                            if (cc != null) cc.enabled = true;
                         }
                     }
 
