@@ -140,6 +140,7 @@ public class FinalBossAI : NetworkBehaviour
 
     [Header("Fire Barrage (Chưởng Đốm Lửa) Settings")]
     public GameObject fireBarragePrefab;
+    public GameObject fireBarrageWarningDecalPrefab; // Cảnh báo dưới sàn cho cầu lửa
     public GameObject fireBarrageImpactVFX;
     public AudioClip fireBarrageImpactSFX;
     public float fireBarrageDuration = 6.0f;
@@ -1754,6 +1755,12 @@ public class FinalBossAI : NetworkBehaviour
             }
         }
 
+        // Đảm bảo luôn có Rigidbody Kinematic ở Root để va chạm Trigger hoạt động chuẩn xác 100%
+        var rb = sword.GetComponent<Rigidbody>();
+        if (rb == null) rb = sword.AddComponent<Rigidbody>();
+        rb.isKinematic = true;
+        rb.useGravity = false;
+
         sword.transform.position = spawnPos;
         sword.transform.rotation = rotation;
         sword.SetActive(true);
@@ -2034,6 +2041,12 @@ public class FinalBossAI : NetworkBehaviour
             }
         }
 
+        // Đảm bảo luôn có Rigidbody Kinematic ở Root để va chạm Trigger hoạt động chuẩn xác 100%
+        var rb = orb.GetComponent<Rigidbody>();
+        if (rb == null) rb = orb.AddComponent<Rigidbody>();
+        rb.isKinematic = true;
+        rb.useGravity = false;
+
         orb.transform.position = spawnPos;
         orb.transform.rotation = rotation;
         orb.transform.localScale = Vector3.one * 2.0f; // Tăng kích thước cầu lửa lên x2
@@ -2067,17 +2080,33 @@ public class FinalBossAI : NetworkBehaviour
 
     private System.Collections.IEnumerator RoutineDropFireBarrageAtPosition(Vector3 groundPos)
     {
-        GameObject warning = GetPooledWarning(groundPos + Vector3.up * 0.05f);
+        GameObject prefabToUse = fireBarrageWarningDecalPrefab != null ? fireBarrageWarningDecalPrefab : warningDecalPrefab;
+        GameObject warning = null;
 
-        var flasher = warning.GetComponent<WarningDecalFlash>();
-        if (flasher != null) flasher.StartFlashing(fireBarrageWarningDuration);
-
-        var ring = warning.GetComponent<ProceduralWarningCircle>();
-        if (ring != null) ring.StartWarning(fireBarrageWarningDuration, fireBarrageImpactRadius);
+        if (prefabToUse != null)
+        {
+            warning = Instantiate(prefabToUse, groundPos + Vector3.up * 0.05f, Quaternion.identity);
+            var flasher = warning.GetComponent<WarningDecalFlash>();
+            if (flasher == null) flasher = warning.AddComponent<WarningDecalFlash>();
+            flasher.StartFlashing(fireBarrageWarningDuration);
+        }
+        else
+        {
+            warning = new GameObject("ProceduralWarningRing");
+            warning.transform.position = groundPos;
+            var ring = warning.AddComponent<ProceduralWarningCircle>();
+            if (ring != null)
+            {
+                ring.StartWarning(fireBarrageWarningDuration, fireBarrageImpactRadius);
+            }
+        }
 
         yield return new WaitForSeconds(fireBarrageWarningDuration);
 
-        RecycleWarning(warning);
+        if (warning != null)
+        {
+            Destroy(warning);
+        }
 
         Vector3 skyPos = groundPos + Vector3.up * 16.0f;
         GameObject fireOrb = GetPooledFireBarrage(skyPos, Quaternion.LookRotation(Vector3.down));
@@ -2288,24 +2317,23 @@ public class FallingSwordProjectile : MonoBehaviour
     {
         if (!isFalling) return;
 
-        if (other.CompareTag("Player") || other.gameObject.layer == LayerMask.NameToLayer("Player"))
+        // Quét tìm Player bằng IPlayerHUDTarget (chính xác tuyệt đối kể cả chạm collider con)
+        var hudTarget = other.GetComponentInParent<IPlayerHUDTarget>() ?? other.GetComponentInChildren<IPlayerHUDTarget>();
+        if (hudTarget != null)
         {
-            Transform playerRoot = bossOwner != null ? bossOwner.GetPlayerRootPublic(other.transform) : other.transform.root;
-            if (playerRoot != null)
-            {
-                isFalling = false;
-                Vector3 knockbackDir = (playerRoot.position - transform.position).normalized + Vector3.up * 0.5f;
-                EnemyDamageHelper.DealDamage(playerRoot, damage, knockbackDir * 5f);
+            Transform playerRoot = hudTarget.transform;
+            isFalling = false;
+            Vector3 knockbackDir = (playerRoot.position - transform.position).normalized + Vector3.up * 0.5f;
+            EnemyDamageHelper.DealDamage(playerRoot, damage, knockbackDir * 5f);
 
-                if (bossOwner != null)
-                {
-                    bossOwner.PlaySwordImpactEffects(transform.position);
-                    bossOwner.RecycleSword(gameObject);
-                }
-                else
-                {
-                    gameObject.SetActive(false);
-                }
+            if (bossOwner != null)
+            {
+                bossOwner.PlaySwordImpactEffects(transform.position);
+                bossOwner.RecycleSword(gameObject);
+            }
+            else
+            {
+                gameObject.SetActive(false);
             }
         }
     }
@@ -2379,24 +2407,23 @@ public class FallingFireOrbProjectile : MonoBehaviour
     {
         if (!isFalling) return;
 
-        if (other.CompareTag("Player") || other.gameObject.layer == LayerMask.NameToLayer("Player"))
+        // Quét tìm Player bằng IPlayerHUDTarget (chính xác tuyệt đối kể cả chạm collider con)
+        var hudTarget = other.GetComponentInParent<IPlayerHUDTarget>() ?? other.GetComponentInChildren<IPlayerHUDTarget>();
+        if (hudTarget != null)
         {
-            Transform playerRoot = bossOwner != null ? bossOwner.GetPlayerRootPublic(other.transform) : other.transform.root;
-            if (playerRoot != null)
-            {
-                isFalling = false;
-                Vector3 knockbackDir = (playerRoot.position - transform.position).normalized + Vector3.up * 0.5f;
-                EnemyDamageHelper.DealDamage(playerRoot, damage, knockbackDir * 5f);
+            Transform playerRoot = hudTarget.transform;
+            isFalling = false;
+            Vector3 knockbackDir = (playerRoot.position - transform.position).normalized + Vector3.up * 0.5f;
+            EnemyDamageHelper.DealDamage(playerRoot, damage, knockbackDir * 5f);
 
-                if (bossOwner != null)
-                {
-                    bossOwner.PlayFireBarrageImpactEffects(transform.position);
-                    bossOwner.RecycleFireBarrage(gameObject);
-                }
-                else
-                {
-                    gameObject.SetActive(false);
-                }
+            if (bossOwner != null)
+            {
+                bossOwner.PlayFireBarrageImpactEffects(transform.position);
+                bossOwner.RecycleFireBarrage(gameObject);
+            }
+            else
+            {
+                gameObject.SetActive(false);
             }
         }
     }

@@ -4071,12 +4071,9 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         if (targetCamera != null)
         {
-            Vector3 camForward = targetCamera.transform.forward;
-            camForward.y = 0f;
-            camForward.Normalize();
-            Vector3 camRight = targetCamera.transform.right;
-            camRight.y = 0f;
-            camRight.Normalize();
+            float yawRad = currentYaw * Mathf.Deg2Rad;
+            Vector3 camForward = new Vector3(-Mathf.Sin(yawRad), 0f, Mathf.Cos(yawRad)).normalized;
+            Vector3 camRight = new Vector3(Mathf.Cos(yawRad), 0f, Mathf.Sin(yawRad)).normalized;
             move = camRight * moveX + camForward * moveZ;
         }
 
@@ -4130,9 +4127,8 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         bool isAttackingState = isAttacking || isExecutingAttack;
         if (targetCamera != null && (!IsPlayingActionAnimation() || isAttackingState))
         {
-            Vector3 camForward = targetCamera.transform.forward;
-            camForward.y = 0f;
-            camForward.Normalize();
+            float yawRad = currentYaw * Mathf.Deg2Rad;
+            Vector3 camForward = new Vector3(-Mathf.Sin(yawRad), 0f, Mathf.Cos(yawRad)).normalized;
             if (camForward != Vector3.zero)
             {
                 transform.forward = camForward;
@@ -4233,12 +4229,9 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         if (targetCamera != null)
         {
-            Vector3 camForward = targetCamera.transform.forward;
-            camForward.y = 0f;
-            camForward.Normalize();
-            Vector3 camRight = targetCamera.transform.right;
-            camRight.y = 0f;
-            camRight.Normalize();
+            float yawRad = currentYaw * Mathf.Deg2Rad;
+            Vector3 camForward = new Vector3(-Mathf.Sin(yawRad), 0f, Mathf.Cos(yawRad)).normalized;
+            Vector3 camRight = new Vector3(Mathf.Cos(yawRad), 0f, Mathf.Sin(yawRad)).normalized;
             move = camRight * moveX + camForward * moveZ;
         }
 
@@ -4292,9 +4285,8 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         bool isAttackingState = isAttacking || isExecutingAttack;
         if (targetCamera != null && (!IsPlayingActionAnimation() || isAttackingState))
         {
-            Vector3 camForward = targetCamera.transform.forward;
-            camForward.y = 0f;
-            camForward.Normalize();
+            float yawRad = currentYaw * Mathf.Deg2Rad;
+            Vector3 camForward = new Vector3(-Mathf.Sin(yawRad), 0f, Mathf.Cos(yawRad)).normalized;
             if (camForward != Vector3.zero)
             {
                 transform.forward = camForward;
