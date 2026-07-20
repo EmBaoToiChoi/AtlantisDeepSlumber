@@ -1846,6 +1846,7 @@ public class FinalBossAI : NetworkBehaviour
 
     private System.Collections.IEnumerator RoutineDropSwordAtPosition(Vector3 groundPos)
     {
+        Debug.Log($"[FinalBossAI] RoutineDropSwordAtPosition bắt đầu tại {groundPos}");
         GameObject warning = GetPooledWarning(groundPos + Vector3.up * 0.05f);
 
         var flasher = warning.GetComponent<WarningDecalFlash>();
@@ -1861,6 +1862,7 @@ public class FinalBossAI : NetworkBehaviour
         Vector3 skyPos = groundPos + Vector3.up * 18.0f;
         Quaternion rot = Quaternion.LookRotation(Vector3.down) * Quaternion.Euler(swordSpawnRotationOffset);
         GameObject sword = GetPooledSword(skyPos, rot);
+        Debug.Log($"[FinalBossAI] Đã triệu hồi thanh kiếm tại {skyPos} với góc xoay {rot.eulerAngles}");
 
         var proj = sword.GetComponent<FallingSwordProjectile>();
         if (proj == null) proj = sword.AddComponent<FallingSwordProjectile>();
@@ -1970,10 +1972,12 @@ public class FinalBossAI : NetworkBehaviour
                     targetPositions.Add(p.position);
                 }
             }
+            Debug.Log($"[SwordRainState] Enter: Tìm thấy {targetPositions.Count} mục tiêu người chơi.");
 
             // 2. Thêm các điểm ngẫu nhiên xung quanh khu vực để đạt tổng số từ 5 đến 10 thanh kiếm
             int totalSwords = Random.Range(5, 11);
-            int neededRandom = totalSwords - targetPositions.Count;
+            int neededRandom = Mathf.Max(0, totalSwords - targetPositions.Count);
+            Debug.Log($"[SwordRainState] Enter: Tổng số kiếm cần rơi = {totalSwords}, cần tạo thêm = {neededRandom} điểm ngẫu nhiên.");
             for (int i = 0; i < neededRandom; i++)
             {
                 Vector2 randomOffset = Random.insideUnitCircle * 8f;
@@ -1987,6 +1991,8 @@ public class FinalBossAI : NetworkBehaviour
                     targetPositions.Add(boss.transform.position + new Vector3(randomOffset.x, 0, randomOffset.y));
                 }
             }
+
+            Debug.Log($"[SwordRainState] Enter: Tổng danh sách điểm rơi kiếm = {targetPositions.Count}");
 
             // Tráo ngẫu nhiên thứ tự rơi
             for (int i = 0; i < targetPositions.Count; i++)
@@ -2032,6 +2038,7 @@ public class FinalBossAI : NetworkBehaviour
                 spawnTimer = boss.swordSpawnInterval;
 
                 Vector3 targetPos = targetPositions[currentSpawnIndex];
+                Debug.Log($"[SwordRainState] Update: Đang bắn ClientRpc/Local để gọi kiếm {currentSpawnIndex + 1}/{targetPositions.Count} tại {targetPos}");
                 currentSpawnIndex++;
 
                 Vector3[] targets = new Vector3[] { targetPos };

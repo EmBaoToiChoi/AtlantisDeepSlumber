@@ -116,15 +116,10 @@ public class FinalBossHealthBar : MonoBehaviour
 
     private void Update()
     {
-        if (boss == null)
+        if (boss == null || !boss.gameObject.activeInHierarchy || !boss.enabled)
         {
-            boss = FindFirstObjectByType<FinalBossAI>();
-            if (boss == null)
-            {
-                HideUI();
-                return;
-            }
-            InitBossHealthAndName();
+            HideUI();
+            return;
         }
 
         // Hide UI if boss is dead or HUD is not visible
