@@ -50,9 +50,18 @@ public class EnergyColumn : NetworkBehaviour
 
             if (r is SpriteRenderer sr)
             {
-                Color c = sr.color;
-                c.a = alpha;
-                sr.color = c;
+                if (sr.sharedMaterial != null && sr.sharedMaterial.HasProperty("_FillAmount"))
+                {
+                    sr.GetPropertyBlock(propBlock);
+                    propBlock.SetFloat("_FillAmount", alpha);
+                    sr.SetPropertyBlock(propBlock);
+                }
+                else
+                {
+                    Color c = sr.color;
+                    c.a = alpha;
+                    sr.color = c;
+                }
                 continue;
             }
 
@@ -66,32 +75,59 @@ public class EnergyColumn : NetworkBehaviour
                 r.GetPropertyBlock(propBlock, i);
                 bool changed = false;
 
-                if (mat.HasProperty("_Color"))
+                // Ưu tiên truyền _FillAmount nếu Material có hỗ trợ hiệu ứng nạp từ dưới lên
+                if (mat.HasProperty("_FillAmount"))
                 {
-                    Color c = mat.GetColor("_Color");
-                    c.a *= alpha;
-                    propBlock.SetColor("_Color", c);
+                    propBlock.SetFloat("_FillAmount", alpha);
+
+                    // Tự động tính toán _MinBound và _MaxBound từ kích thước thực của mô hình 3D (Mesh)
+                    MeshFilter mf = r.GetComponent<MeshFilter>();
+                    if (mf != null && mf.sharedMesh != null)
+                    {
+                        Bounds bounds = mf.sharedMesh.bounds;
+                        int fillAxis = mat.HasProperty("_FillAxis") ? mat.GetInt("_FillAxis") : 1;
+                        
+                        float minB = bounds.min.y;
+                        float maxB = bounds.max.y;
+                        if (fillAxis == 0) { minB = bounds.min.x; maxB = bounds.max.x; }
+                        else if (fillAxis == 2) { minB = bounds.min.z; maxB = bounds.max.z; }
+
+                        propBlock.SetFloat("_MinBound", minB);
+                        propBlock.SetFloat("_MaxBound", maxB);
+                    }
+
                     changed = true;
                 }
-                if (mat.HasProperty("_BaseColor"))
+                else
                 {
-                    Color c = mat.GetColor("_BaseColor");
-                    c.a *= alpha;
-                    propBlock.SetColor("_BaseColor", c);
-                    changed = true;
-                }
-                if (mat.HasProperty("_TintColor"))
-                {
-                    Color c = mat.GetColor("_TintColor");
-                    c.a *= alpha;
-                    propBlock.SetColor("_TintColor", c);
-                    changed = true;
-                }
-                if (mat.HasProperty("_EmissionColor"))
-                {
-                    Color em = mat.GetColor("_EmissionColor");
-                    propBlock.SetColor("_EmissionColor", em * alpha);
-                    changed = true;
+                    // Nếu không có _FillAmount thì làm mờ (Fade Alpha) như cũ
+                    if (mat.HasProperty("_Color"))
+                    {
+                        Color c = mat.GetColor("_Color");
+                        c.a *= alpha;
+                        propBlock.SetColor("_Color", c);
+                        changed = true;
+                    }
+                    if (mat.HasProperty("_BaseColor"))
+                    {
+                        Color c = mat.GetColor("_BaseColor");
+                        c.a *= alpha;
+                        propBlock.SetColor("_BaseColor", c);
+                        changed = true;
+                    }
+                    if (mat.HasProperty("_TintColor"))
+                    {
+                        Color c = mat.GetColor("_TintColor");
+                        c.a *= alpha;
+                        propBlock.SetColor("_TintColor", c);
+                        changed = true;
+                    }
+                    if (mat.HasProperty("_EmissionColor"))
+                    {
+                        Color em = mat.GetColor("_EmissionColor");
+                        propBlock.SetColor("_EmissionColor", em * alpha);
+                        changed = true;
+                    }
                 }
 
                 if (changed)
@@ -104,21 +140,13 @@ public class EnergyColumn : NetworkBehaviour
 
     void Update()
     {
-        if(charge.Value > 0)
+        if (chargingEffect != null)
         {
-            if(chargingEffect != null)
-            {
-                if (!chargingEffect.activeSelf)
-                    chargingEffect.SetActive(true);
-                
-                float progress = maxCharge > 0 ? Mathf.Clamp01(charge.Value / maxCharge) : 0f;
-                UpdateChargingEffectAlpha(progress);
-            }
-        }
-        else
-        {
-            if(chargingEffect != null)
-                chargingEffect.SetActive(false);
+            if (!chargingEffect.activeSelf)
+                chargingEffect.SetActive(true); // Luôn hiện hình tia sét (khi = 0 nó sẽ màu xám)
+            
+            float progress = maxCharge > 0 ? Mathf.Clamp01(charge.Value / maxCharge) : 0f;
+            UpdateChargingEffectAlpha(progress);
         }
 
         if(
@@ -132,33 +160,13 @@ public class EnergyColumn : NetworkBehaviour
                 gameObject.name +
                 " Completed"
             );
-        }
 
-        // Phát hiện xem có đang được sạc không (dựa vào việc charge.Value tăng lên)
-        if (charge.Value > previousCharge)
-        {
-            lastChargeTime = Time.time;
-            previousCharge = charge.Value;
-        }
-
-        // Nếu trong 0.5s vừa qua có thay đổi charge, tức là người chơi đang giữ E
-        // Tăng từ 0.2 lên 0.5 để bù trừ độ trễ mạng (Network Latency)
-        bool isChargingNow = (Time.time - lastChargeTime) < 0.5f && charge.Value < maxCharge;
-
-        // Bật completedEffect khi đang được sạc (như yêu cầu của user)
-        if (completedEffect != null)
-        {
-            if (isChargingNow && !completedEffect.activeSelf)
+            // Bật Particle Effect chạy liên tục khi đã nạp đầy 100%
+            if (completedEffect != null)
             {
                 completedEffect.SetActive(true);
                 ParticleSystem[] pss = completedEffect.GetComponentsInChildren<ParticleSystem>();
                 foreach (var ps in pss) ps.Play(true);
-            }
-            else if (!isChargingNow && completedEffect.activeSelf)
-            {
-                completedEffect.SetActive(false);
-                ParticleSystem[] pss = completedEffect.GetComponentsInChildren<ParticleSystem>();
-                foreach (var ps in pss) ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
             }
         }
     }
