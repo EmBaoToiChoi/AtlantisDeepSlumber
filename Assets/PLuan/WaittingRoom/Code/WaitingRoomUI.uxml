@@ -74,10 +74,10 @@
                 <ui:Label name="lbl-warning" text="DUPLICATE CHARACTER DETECTED!" class="warning-text hidden-element" />
                 <ui:Button name="btn-start" text="START EXPEDITION" class="action-btn start-btn hidden-element" />
             </ui:VisualElement>
-            <ui:VisualElement style="flex-direction: row; align-items: center;">
-                <ui:Button name="btn-swap-character" text="SWAP EXPLORER" class="action-btn ready-btn hidden-element" style="margin-right: 15px;" />
-                <ui:Button name="btn-players-voice" text="PLAYERS VOICE" class="action-btn toggle-char-panel-btn ready-btn" style="margin-right: 15px;" />
-                <ui:Button name="btn-toggle-char-panel" text="CHOOSE EXPLORER" class="action-btn toggle-char-panel-btn ready-btn" style="margin-right: 15px;" />
+            <ui:VisualElement style="flex-direction: row; align-items: center; margin-right: 10px;">
+                <ui:Button name="btn-swap-character" text="SWAP EXPLORER" class="action-btn ready-btn hidden-element" style="margin-right: 8px;" />
+                <ui:Button name="btn-players-voice" text="PLAYERS VOICE" class="action-btn toggle-char-panel-btn ready-btn" style="margin-right: 8px;" />
+                <ui:Button name="btn-toggle-char-panel" text="CHOOSE EXPLORER" class="action-btn toggle-char-panel-btn ready-btn" style="margin-right: 8px;" />
                 <ui:VisualElement class="player-count-container">
                     <ui:Label name="lbl-player-count" text="PLAYERS: 1/4" class="status-text" />
                 </ui:VisualElement>
