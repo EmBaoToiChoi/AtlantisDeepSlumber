@@ -15,16 +15,19 @@
 /* --- MENU & PANELS --- */
 .menu-container {
     margin-left: 4%;
-    width: 520px; /* Slightly wider to compensate for thick borders */
-    height: 550px; /* Taller height to comfortably fit all form contents */
-    padding: 140px 55px 45px 55px; /* Optimised paddings to clear top ornate borders and compensate for hidden title */
-    justify-content: center; /* Center content vertically inside the frame */
+    width: 520px;
+    max-width: 90%;
+    height: 550px;
+    max-height: 85%;
+    padding: 135px 55px 45px 55px;
+    justify-content: center;
     background-image: url("project://database/Assets/PLuan/WaittingRoom/Textures/ui_frame_bg.jpg");
     -unity-background-scale-mode: stretch-to-fill;
     background-color: transparent;
     border-width: 0;
     border-radius: 0;
     text-shadow: 0 0 12px rgba(0, 0, 0, 0.8);
+    flex-shrink: 1;
 
     /* Animation Transition */
     transition-property: opacity, scale;
@@ -34,14 +37,18 @@
 
 .large-panel {
     margin-left: 1.5%;
-    width: 1060px; /* Wider frame to give content more room */
-    height: 680px; /* Taller fixed height for spacious content and clean margins */
-    padding: 145px 120px 80px 120px; /* Generous padding to completely keep all content inside the safe blue stone background and compensate for hidden title */
+    width: 1060px;
+    max-width: 92%;
+    height: 680px;
+    max-height: 86%;
+    padding: 140px 110px 60px 110px;
+    flex-shrink: 1;
 }
 
 #create-room-panel {
-    height: 700px !important; /* Fixed standard height of the menu-container */
-    padding: 135px 55px 45px 55px !important;
+    height: 640px !important;
+    max-height: 85% !important;
+    padding: 130px 55px 45px 55px !important;
 }
 
 #main-menu-panel,
@@ -321,8 +328,10 @@
 }
 
 .room-list {
-    flex-grow: 0;
-    height: 205px;
+    flex-grow: 1;
+    flex-shrink: 1;
+    min-height: 180px;
+    max-height: 320px;
     width: 100%;
     padding-right: 0 !important; /* Clean space, margin handled by child items */
 }
