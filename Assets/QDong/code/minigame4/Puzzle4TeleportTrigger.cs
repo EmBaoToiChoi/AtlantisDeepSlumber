@@ -62,6 +62,7 @@ public class Puzzle4TeleportTrigger : NetworkBehaviour
                 // Teleport all players robustly
                 if (p4Manager != null)
                 {
+                    int playerIndex = 0;
                     foreach (ulong clientId in NetworkManager.Singleton.ConnectedClientsIds)
                     {
                         if (NetworkManager.Singleton.ConnectedClients.TryGetValue(clientId, out var client))
@@ -70,6 +71,16 @@ public class Puzzle4TeleportTrigger : NetworkBehaviour
                             if (playerObj != null)
                             {
                                 Vector3 spawnPos = teleportTarget != null ? teleportTarget.position : playerObj.transform.position;
+
+                                // Thêm offset nhỏ để 4 người chơi không bị teleport dính chặt vào cùng 1 điểm gây lỗi vật lý văng ra ngoài
+                                Vector3 offset = Vector3.zero;
+                                float dist = 0.25f; // Khoảng cách nhỏ gọn lại (0.75m từ tâm)
+                                if (playerIndex == 0) offset = new Vector3(dist, 0, dist);
+                                else if (playerIndex == 1) offset = new Vector3(-dist, 0, dist);
+                                else if (playerIndex == 2) offset = new Vector3(dist, 0, -dist);
+                                else if (playerIndex == 3) offset = new Vector3(-dist, 0, -dist);
+                                spawnPos += offset;
+                                playerIndex++;
 
                                 // Tắt CharacterController trên server trước khi dịch chuyển để đồng bộ chuẩn xác
                                 CharacterController cc = playerObj.GetComponent<CharacterController>();
@@ -82,7 +93,15 @@ public class Puzzle4TeleportTrigger : NetworkBehaviour
                                 Unity.Netcode.Components.NetworkTransform netTransform = playerObj.GetComponent<Unity.Netcode.Components.NetworkTransform>();
                                 if (netTransform != null)
                                 {
-                                    netTransform.Teleport(spawnPos, playerObj.transform.rotation, playerObj.transform.localScale);
+                                    try 
+                                    {
+                                        // Nếu dùng ClientNetworkTransform, Server gọi Teleport lên client sẽ ném Exception làm crash vòng lặp. Cần try-catch.
+                                        netTransform.Teleport(spawnPos, playerObj.transform.rotation, playerObj.transform.localScale);
+                                    }
+                                    catch (System.Exception e)
+                                    {
+                                        Debug.LogWarning($"[Puzzle4Teleport] Không thể gọi Teleport trực tiếp cho Client {clientId} (client tự quản lý vị trí qua ClientRpc): {e.Message}");
+                                    }
                                 }
                                 else
                                 {
