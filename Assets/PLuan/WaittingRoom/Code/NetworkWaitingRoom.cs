@@ -1543,6 +1543,11 @@ public class NetworkWaitingRoom : NetworkBehaviour
     [ClientRpc]
     private void NotifyStartGameClientRpc()
     {
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.StopBGM();
+        }
+
         if (_uiDocument != null)
         {
             _uiDocument.enabled = false;

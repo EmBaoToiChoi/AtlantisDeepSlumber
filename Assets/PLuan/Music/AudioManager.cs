@@ -29,6 +29,40 @@ public class AudioManager : MonoBehaviour
         }
     }
 
+    private void OnEnable()
+    {
+        UnityEngine.SceneManagement.SceneManager.sceneLoaded += OnSceneLoaded;
+    }
+
+    private void OnDisable()
+    {
+        UnityEngine.SceneManagement.SceneManager.sceneLoaded -= OnSceneLoaded;
+    }
+
+    private void OnSceneLoaded(UnityEngine.SceneManagement.Scene scene, UnityEngine.SceneManagement.LoadSceneMode mode)
+    {
+        Debug.Log($"[AudioManager] SceneLoaded: '{scene.name}'");
+        if (IsMenuOrLobbyScene(scene.name))
+        {
+            if (_bgmSource != null && !_bgmSource.isPlaying)
+            {
+                PlayBGM("Audio/BGM");
+            }
+        }
+        else
+        {
+            Debug.Log($"[AudioManager] Entering Gameplay Scene '{scene.name}' - Stopping background music for combat/SFX clarity.");
+            StopBGM();
+        }
+    }
+
+    public bool IsMenuOrLobbyScene(string sceneName)
+    {
+        if (string.IsNullOrEmpty(sceneName)) return false;
+        string lower = sceneName.ToLower().Replace(" ", "").Replace("_", "");
+        return lower.Contains("mainmenu") || lower.Contains("menu") || lower.Contains("lobby") || lower.Contains("waiting");
+    }
+
     private void InitializeAudioManager()
     {
         // Add AudioSource for BGM if not assigned
@@ -92,9 +126,27 @@ public class AudioManager : MonoBehaviour
         return SFXVolume * MasterVolume;
     }
 
+    public void StopBGM()
+    {
+        if (_bgmSource != null)
+        {
+            _bgmSource.Stop();
+            _bgmSource.clip = null;
+            Debug.Log("[AudioManager] Stopped BGM.");
+        }
+    }
+
     public void PlayBGM(AudioClip clip)
     {
         if (clip == null) return;
+
+        string activeScene = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
+        if (!IsMenuOrLobbyScene(activeScene))
+        {
+            Debug.Log($"[AudioManager] In-game scene ('{activeScene}'): BGM playback suppressed for gameplay SFX.");
+            StopBGM();
+            return;
+        }
 
         if (_bgmSource.clip == clip && _bgmSource.isPlaying)
         {
