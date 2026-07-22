@@ -53,6 +53,12 @@ public class SeagullController : NetworkBehaviour
     [Tooltip("Tốc độ nghiêng cánh")]
     public float rollSpeed = 5f;
 
+    [Header("Collision & Wall Sliding Settings")]
+    [Tooltip("Bán kính kiểm tra va chạm của chim (m). Mặc định 0.4m")]
+    public float collisionRadius = 0.4f;
+    [Tooltip("Layer của tường và mặt đất cần cản/trượt")]
+    public LayerMask obstacleMask = ~0;
+
     private Vector3 currentVelocity;
     private float targetPitch = 0f;
     private float targetYaw = 0f;
@@ -243,7 +249,9 @@ public class SeagullController : NetworkBehaviour
         if (age < 2f)
         {
             float launchSpeed = flySpeed * Mathf.Lerp(0.3f, 1.0f, age / 2f);
-            transform.position += autoFlyDirection * launchSpeed * Time.deltaTime;
+            Vector3 rawMove = autoFlyDirection * launchSpeed * Time.deltaTime;
+            Vector3 slideMove = CalculateCollisionSlide(transform.position, rawMove);
+            transform.position += slideMove;
             if (autoFlyDirection != Vector3.zero)
             {
                 transform.rotation = Quaternion.LookRotation(autoFlyDirection) * Quaternion.Euler(0f, returnRotationYOffset, 0f);
@@ -337,7 +345,11 @@ public class SeagullController : NetworkBehaviour
 
         // Lerp vận tốc hiện tại tới vận tốc mục tiêu (tạo gia tốc quán tính)
         currentVelocity = Vector3.Lerp(currentVelocity, targetVel, Time.deltaTime * acceleration);
-        transform.position += currentVelocity * Time.deltaTime;
+        
+        // Tính toán di chuyển kèm cản va chạm va trượt tường (Wall Sliding)
+        Vector3 rawMove = currentVelocity * Time.deltaTime;
+        Vector3 slideMove = CalculateCollisionSlide(transform.position, rawMove);
+        transform.position += slideMove;
 
         // Cập nhật trạng thái bay sang server (chim luôn bay)
         bool movingState = true;
@@ -358,6 +370,84 @@ public class SeagullController : NetworkBehaviour
                 RequestStartReturningServerRpc();
             }
         }
+    }
+
+    /// <summary>
+    /// Kiểm tra va chạm bằng SphereCast, Raycast & Ground Check để trượt mượt mà trên cả Tường và Mặt Đất Terrain
+    /// </summary>
+    private Vector3 CalculateCollisionSlide(Vector3 position, Vector3 moveStep)
+    {
+        float moveDistance = moveStep.magnitude;
+        if (moveDistance < 0.0001f) return Vector3.zero;
+
+        Vector3 moveDirection = moveStep / moveDistance;
+        Vector3 finalMove = moveStep;
+        bool hitSomething = false;
+
+        // 1. Kiểm tra va chạm hướng di chuyển bằng SphereCast
+        if (Physics.SphereCast(position, collisionRadius, moveDirection, out RaycastHit hit, moveDistance + 0.05f, obstacleMask, QueryTriggerInteraction.Ignore))
+        {
+            if (!hit.transform.IsChildOf(transform) && hit.transform != transform)
+            {
+                hitSomething = true;
+                finalMove = ProcessHitSlide(moveDirection, moveDistance, hit);
+            }
+        }
+
+        // 2. Dự phòng bằng Raycast (đặc biệt đối với TerrainCollider khi SphereCast bị xịt do chèn mép)
+        if (!hitSomething && Physics.Raycast(position, moveDirection, out RaycastHit rayHit, moveDistance + collisionRadius + 0.1f, obstacleMask, QueryTriggerInteraction.Ignore))
+        {
+            if (!rayHit.transform.IsChildOf(transform) && rayHit.transform != transform)
+            {
+                hitSomething = true;
+                finalMove = ProcessHitSlide(moveDirection, moveDistance, rayHit);
+            }
+        }
+
+        Vector3 targetPosition = position + finalMove;
+
+        // 3. CHỐNG ĐÂM XUYÊN ĐẤT TERRAIN: Bắn tia từ trên cao xuống để xác định độ cao mặt đất chính xác
+        Vector3 skyOrigin = new Vector3(targetPosition.x, targetPosition.y + 5f, targetPosition.z);
+        if (Physics.Raycast(skyOrigin, Vector3.down, out RaycastHit groundHit, 25f, obstacleMask, QueryTriggerInteraction.Ignore))
+        {
+            if (!groundHit.transform.IsChildOf(transform) && groundHit.transform != transform)
+            {
+                float minSafeY = groundHit.point.y + collisionRadius;
+                if (targetPosition.y < minSafeY)
+                {
+                    targetPosition.y = minSafeY;
+
+                    // Nếu đang đâm hướng xuống đất, nghiêng véc-tơ vận tốc trượt theo độ dốc của Terrain
+                    if (currentVelocity.y < 0f)
+                    {
+                        currentVelocity = Vector3.ProjectOnPlane(currentVelocity, groundHit.normal);
+                        if (currentVelocity.y < 0f) currentVelocity.y = 0f;
+                    }
+                }
+            }
+        }
+
+        return targetPosition - position;
+    }
+
+    private Vector3 ProcessHitSlide(Vector3 moveDirection, float moveDistance, RaycastHit hit)
+    {
+        // Tính hướng trượt song song với bề mặt va chạm (ProjectOnPlane)
+        Vector3 slideDirection = Vector3.ProjectOnPlane(moveDirection, hit.normal).normalized;
+
+        // Triệt tiêu thành phần vận tốc đâm cắm vào bề mặt
+        currentVelocity = Vector3.ProjectOnPlane(currentVelocity, hit.normal);
+
+        float safeDistance = Mathf.Max(0f, hit.distance - 0.02f);
+        Vector3 safeMove = moveDirection * Mathf.Min(moveDistance, safeDistance);
+
+        float remainingDistance = moveDistance - safeDistance;
+        if (remainingDistance > 0f)
+        {
+            Vector3 slideMove = slideDirection * remainingDistance;
+            return safeMove + slideMove;
+        }
+        return safeMove;
     }
 
     [ServerRpc(RequireOwnership = false)]
