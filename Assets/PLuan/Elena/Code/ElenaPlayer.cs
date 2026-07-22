@@ -3786,18 +3786,23 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
 
             if (anim.layerCount > 1)
             {
-                if (isRooted)
+                int stateHash = Animator.StringToHash(animName);
+                bool hasLayer1 = anim.HasState(1, stateHash);
+                bool hasLayer0 = anim.HasState(0, stateHash);
+
+                int targetLayer = 0;
+                if (hasLayer1 && (!isRooted || !hasLayer0))
                 {
-                    // Đứng yên đánh (Idle Attack) -> không sử dụng Avatar Mask: chạy trên Layer 0 (Base Layer) và tắt Weight của Layer 1 về 0
-                    anim.SetLayerWeight(1, 0f);
-                    anim.CrossFadeInFixedTime(animName, fadeTime, 0, 0f);
+                    targetLayer = 1;
+                    anim.SetLayerWeight(1, 1f);
                 }
                 else
                 {
-                    // Di chuyển/chạy đánh (Walk/Run Attack) -> sử dụng Avatar Mask: chạy trên Layer 1 với Weight = 1
-                    anim.SetLayerWeight(1, 1f);
-                    anim.CrossFadeInFixedTime(animName, fadeTime, 1, 0f);
+                    targetLayer = 0;
+                    anim.SetLayerWeight(1, 0f);
                 }
+
+                anim.CrossFadeInFixedTime(animName, fadeTime, targetLayer, 0f);
             }
             else
             {

@@ -4062,8 +4062,9 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             currentSpeed *= 2f;
         }
 
-        float moveX = isMovementLocked ? 0f : Input.GetAxis("Horizontal");
-        float moveZ = isMovementLocked ? 0f : Input.GetAxis("Vertical");
+        bool shouldLockMovement = isMovementLocked || IsQSkillActive;
+        float moveX = shouldLockMovement ? 0f : Input.GetAxis("Horizontal");
+        float moveZ = shouldLockMovement ? 0f : Input.GetAxis("Vertical");
         Vector3 move = new Vector3(moveX, 0, moveZ);
 
         if (targetCamera == null)
@@ -4107,7 +4108,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             {
                 rb.linearVelocity = new Vector3(attackDashDirection.x * attackDashSpeed, currentYVelocity, attackDashDirection.z * attackDashSpeed);
             }
-            else if (isMovementLocked && knockbackVelocity.magnitude <= 0.01f)
+            else if (shouldLockMovement && knockbackVelocity.magnitude <= 0.01f)
             {
                 rb.linearVelocity = new Vector3(0f, currentYVelocity, 0f);
             }
@@ -4220,8 +4221,9 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             currentSpeed *= 2f;
         }
 
-        float moveX = isMovementLocked ? 0f : Input.GetAxis("Horizontal");
-        float moveZ = isMovementLocked ? 0f : Input.GetAxis("Vertical");
+        bool shouldLockMovement = isMovementLocked || IsQSkillActive;
+        float moveX = shouldLockMovement ? 0f : Input.GetAxis("Horizontal");
+        float moveZ = shouldLockMovement ? 0f : Input.GetAxis("Vertical");
         Vector3 move = new Vector3(moveX, 0, moveZ);
 
         if (targetCamera == null)
@@ -4265,7 +4267,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             {
                 rb.linearVelocity = new Vector3(attackDashDirection.x * attackDashSpeed, currentYVelocity, attackDashDirection.z * attackDashSpeed);
             }
-            else if (isMovementLocked && knockbackVelocity.magnitude <= 0.01f)
+            else if (shouldLockMovement && knockbackVelocity.magnitude <= 0.01f)
             {
                 rb.linearVelocity = new Vector3(0f, currentYVelocity, 0f);
             }
@@ -5966,7 +5968,109 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     }
 
     /// <summary>
-    /// Tìm mục tiêu gần nhất trong bán kính qSkillSearchRadius, không kể các Enemy đã chết.
+    /// Kiểm tra xem có Tầm nhìn (Line of Sight) trực tiếp tới mục tiêu hay không (không bị tường/vật cản che chắn).
+    /// </summary>
+    private bool HasLineOfSightToTarget(Vector3 targetPos)
+    {
+        Vector3 origin = transform.position + Vector3.up * 1.0f;
+        Vector3 targetCenter = targetPos + Vector3.up * 1.0f;
+        Vector3 dir = targetCenter - origin;
+        float dist = dir.magnitude;
+
+        if (dist < 0.1f) return true;
+
+        RaycastHit[] hits = Physics.RaycastAll(origin, dir.normalized, dist);
+        foreach (var hit in hits)
+        {
+            if (hit.collider == null || hit.collider.isTrigger) continue;
+            if (hit.collider.transform.root == transform.root) continue;
+
+            if (hit.collider.CompareTag("Enemy") || hit.collider.CompareTag("Player")) continue;
+
+            if (hit.collider.GetComponentInParent<Enemy1_DapBua>() != null ||
+                hit.collider.GetComponentInParent<Enemy2_Zombie>() != null ||
+                hit.collider.GetComponentInParent<Enemy3_Buaa>() != null ||
+                hit.collider.GetComponentInParent<Enemy4_Bongtoi>() != null ||
+                hit.collider.GetComponentInParent<Enemy5_PhuThuy>() != null ||
+                hit.collider.GetComponentInParent<BossAI>() != null ||
+                hit.collider.GetComponentInParent<MiniBossAI>() != null ||
+                hit.collider.GetComponentInParent<FinalBossAI>() != null)
+            {
+                continue;
+            }
+
+            return false; // Vướng tường hoặc chướng ngại vật
+        }
+        return true;
+    }
+
+    /// <summary>
+    /// Tính toán vị trí chém an toàn xung quanh mục tiêu, đảm bảo không bị kẹt hay lọt vào trong tường.
+    /// </summary>
+    private Vector3 CalculateValidSlashPosition(Vector3 currentPos, Transform target)
+    {
+        if (target == null) return currentPos;
+        Vector3 targetPos = target.position;
+
+        Vector3 dirFromTarget = (currentPos - targetPos);
+        dirFromTarget.y = 0f;
+        if (dirFromTarget.sqrMagnitude < 0.001f) dirFromTarget = -target.forward;
+        dirFromTarget.Normalize();
+
+        float desiredDist = 1.3f;
+        float[] angles = new float[] { 0f, 45f, -45f, 90f, -90f, 135f, -135f, 180f };
+
+        foreach (float angle in angles)
+        {
+            Vector3 offsetDir = Quaternion.Euler(0, angle + UnityEngine.Random.Range(-10f, 10f), 0) * dirFromTarget;
+            Vector3 candidatePos = targetPos + offsetDir * desiredDist;
+            candidatePos.y = currentPos.y;
+
+            Vector3 rayStart = targetPos + Vector3.up * 0.5f;
+            Vector3 rayEnd = candidatePos + Vector3.up * 0.5f;
+            Vector3 rayDir = rayEnd - rayStart;
+            float checkDist = rayDir.magnitude;
+
+            bool hitsWall = false;
+            if (checkDist > 0.01f)
+            {
+                RaycastHit[] hits = Physics.RaycastAll(rayStart, rayDir.normalized, checkDist);
+                foreach (var hit in hits)
+                {
+                    if (hit.collider == null || hit.collider.isTrigger) continue;
+                    if (hit.collider.transform.root == target.root || hit.collider.transform.root == transform.root) continue;
+                    if (hit.collider.CompareTag("Enemy") || hit.collider.CompareTag("Player")) continue;
+
+                    if (hit.collider.GetComponentInParent<Enemy1_DapBua>() != null ||
+                        hit.collider.GetComponentInParent<Enemy2_Zombie>() != null ||
+                        hit.collider.GetComponentInParent<Enemy3_Buaa>() != null ||
+                        hit.collider.GetComponentInParent<Enemy4_Bongtoi>() != null ||
+                        hit.collider.GetComponentInParent<Enemy5_PhuThuy>() != null ||
+                        hit.collider.GetComponentInParent<BossAI>() != null ||
+                        hit.collider.GetComponentInParent<MiniBossAI>() != null ||
+                        hit.collider.GetComponentInParent<FinalBossAI>() != null)
+                    {
+                        continue;
+                    }
+
+                    hitsWall = true;
+                    break;
+                }
+            }
+
+            if (!hitsWall)
+            {
+                return candidatePos;
+            }
+        }
+
+        Vector3 fallbackPos = targetPos + dirFromTarget * 0.8f;
+        fallbackPos.y = currentPos.y;
+        return fallbackPos;
+    }
+
+    /// <summary>
+    /// Tìm mục tiêu gần nhất trong bán kính qSkillSearchRadius, không kể các Enemy đã chết và có Tầm nhìn (LOS) trực tiếp.
     /// Trả về Transform của mục tiêu hoặc null nếu không tìm thấy.
     /// </summary>
     private Transform FindNearestAliveEnemy()
@@ -5980,35 +6084,56 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         {
             if (e == null || e.IsDead) continue;
             float d = Vector3.Distance(transform.position, e.transform.position);
-            if (d <= qSkillSearchRadius && d < minDist) { minDist = d; nearest = e.transform; }
+            if (d <= qSkillSearchRadius && d < minDist && HasLineOfSightToTarget(e.transform.position)) { minDist = d; nearest = e.transform; }
         }
         Enemy2_Zombie[] e2s = FindObjectsByType<Enemy2_Zombie>(FindObjectsSortMode.None);
         foreach (var e in e2s)
         {
             if (e == null || e.IsDead) continue;
             float d = Vector3.Distance(transform.position, e.transform.position);
-            if (d <= qSkillSearchRadius && d < minDist) { minDist = d; nearest = e.transform; }
+            if (d <= qSkillSearchRadius && d < minDist && HasLineOfSightToTarget(e.transform.position)) { minDist = d; nearest = e.transform; }
         }
         Enemy3_Buaa[] e3s = FindObjectsByType<Enemy3_Buaa>(FindObjectsSortMode.None);
         foreach (var e in e3s)
         {
             if (e == null || e.IsDead) continue;
             float d = Vector3.Distance(transform.position, e.transform.position);
-            if (d <= qSkillSearchRadius && d < minDist) { minDist = d; nearest = e.transform; }
+            if (d <= qSkillSearchRadius && d < minDist && HasLineOfSightToTarget(e.transform.position)) { minDist = d; nearest = e.transform; }
         }
         Enemy4_Bongtoi[] e4s = FindObjectsByType<Enemy4_Bongtoi>(FindObjectsSortMode.None);
         foreach (var e in e4s)
         {
             if (e == null || e.IsDead) continue;
             float d = Vector3.Distance(transform.position, e.transform.position);
-            if (d <= qSkillSearchRadius && d < minDist) { minDist = d; nearest = e.transform; }
+            if (d <= qSkillSearchRadius && d < minDist && HasLineOfSightToTarget(e.transform.position)) { minDist = d; nearest = e.transform; }
         }
         Enemy5_PhuThuy[] e5s = FindObjectsByType<Enemy5_PhuThuy>(FindObjectsSortMode.None);
         foreach (var e in e5s)
         {
             if (e == null || e.IsDead) continue;
             float d = Vector3.Distance(transform.position, e.transform.position);
-            if (d <= qSkillSearchRadius && d < minDist) { minDist = d; nearest = e.transform; }
+            if (d <= qSkillSearchRadius && d < minDist && HasLineOfSightToTarget(e.transform.position)) { minDist = d; nearest = e.transform; }
+        }
+        BossAI[] bosses = FindObjectsByType<BossAI>(FindObjectsSortMode.None);
+        foreach (var e in bosses)
+        {
+            if (e == null || e.IsDead) continue;
+            float d = Vector3.Distance(transform.position, e.transform.position);
+            if (d <= qSkillSearchRadius && d < minDist && HasLineOfSightToTarget(e.transform.position)) { minDist = d; nearest = e.transform; }
+        }
+        MiniBossAI[] miniBosses = FindObjectsByType<MiniBossAI>(FindObjectsSortMode.None);
+        foreach (var e in miniBosses)
+        {
+            if (e == null || e.IsDead) continue;
+            float d = Vector3.Distance(transform.position, e.transform.position);
+            if (d <= qSkillSearchRadius && d < minDist && HasLineOfSightToTarget(e.transform.position)) { minDist = d; nearest = e.transform; }
+        }
+        FinalBossAI[] finalBosses = FindObjectsByType<FinalBossAI>(FindObjectsSortMode.None);
+        foreach (var e in finalBosses)
+        {
+            if (e == null || e.IsDead) continue;
+            float d = Vector3.Distance(transform.position, e.transform.position);
+            if (d <= qSkillSearchRadius && d < minDist && HasLineOfSightToTarget(e.transform.position)) { minDist = d; nearest = e.transform; }
         }
         return nearest;
     }
@@ -6029,6 +6154,12 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (e4 != null) { e4.TakeDamage(damage); return; }
         var e5 = enemyTransform.GetComponentInParent<Enemy5_PhuThuy>() ?? enemyTransform.GetComponentInChildren<Enemy5_PhuThuy>();
         if (e5 != null) { e5.TakeDamage(damage); return; }
+        var boss = enemyTransform.GetComponentInParent<BossAI>() ?? enemyTransform.GetComponentInChildren<BossAI>();
+        if (boss != null) { boss.TakeDamage(damage); return; }
+        var miniBoss = enemyTransform.GetComponentInParent<MiniBossAI>() ?? enemyTransform.GetComponentInChildren<MiniBossAI>();
+        if (miniBoss != null) { miniBoss.TakeDamage(damage); return; }
+        var finalBoss = enemyTransform.GetComponentInParent<FinalBossAI>() ?? enemyTransform.GetComponentInChildren<FinalBossAI>();
+        if (finalBoss != null) { finalBoss.TakeDamage(damage); return; }
     }
 
     /// <summary>
@@ -6047,6 +6178,12 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (e4 != null) return e4.IsDead;
         var e5 = enemyTransform.GetComponentInParent<Enemy5_PhuThuy>() ?? enemyTransform.GetComponentInChildren<Enemy5_PhuThuy>();
         if (e5 != null) return e5.IsDead;
+        var boss = enemyTransform.GetComponentInParent<BossAI>() ?? enemyTransform.GetComponentInChildren<BossAI>();
+        if (boss != null) return boss.IsDead;
+        var miniBoss = enemyTransform.GetComponentInParent<MiniBossAI>() ?? enemyTransform.GetComponentInChildren<MiniBossAI>();
+        if (miniBoss != null) return miniBoss.IsDead;
+        var finalBoss = enemyTransform.GetComponentInParent<FinalBossAI>() ?? enemyTransform.GetComponentInChildren<FinalBossAI>();
+        if (finalBoss != null) return finalBoss.IsDead;
         return true; // Không tìm thấy component = coi như chết
     }
 
@@ -6066,7 +6203,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             Transform target = FindNearestAliveEnemy();
             if (target == null)
             {
-                Debug.Log("[LeoPlayer] Q Skill: Không có enemy trong tầm, hủy kỹ năng.");
+                Debug.Log("[LeoPlayer] Q Skill: Không có enemy trong tầm hoặc bị che tường, hủy kỹ năng.");
                 return false;
             }
             StartCoroutine(QSkillCoroutineStandalone(target));
@@ -6074,6 +6211,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         }
         else if (IsOwner)
         {
+            isMovementLocked = true;
             TriggerQSkillServerRpc();
             return true; // Lạc quan, server sẽ xác nhận lại
         }
@@ -6086,7 +6224,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         Transform target = FindNearestAliveEnemy();
         if (target == null)
         {
-            Debug.Log("[LeoPlayer Server] Q Skill: Không có enemy trong tầm, hủy kỹ năng.");
+            Debug.Log("[LeoPlayer Server] Q Skill: Không có enemy trong tầm hoặc bị che tường, hủy kỹ năng.");
             // Báo lại client để không tính hồi chiêu - thông qua ClientRpc đặc biệt
             QSkillCancelledClientRpc();
             return;
@@ -6098,6 +6236,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     private void QSkillCancelledClientRpc()
     {
         Debug.Log("[LeoPlayer Client] Q Skill bị hủy vì không có enemy.");
+        isMovementLocked = false;
         // Thông báo cho HUD reset cooldown
         OnQSkillCancelled?.Invoke();
     }
@@ -6130,10 +6269,8 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
                 }
             }
 
-            // Dịch chuyển xung quanh mục tiêu (vị trí ngẫu nhiên bán kính 1.5m)
-            Vector2 offset2D = UnityEngine.Random.insideUnitCircle.normalized * 1.5f;
-            Vector3 slashPos = currentTarget.position + new Vector3(offset2D.x, 0f, offset2D.y);
-            slashPos.y = transform.position.y;
+            // Dịch chuyển xung quanh mục tiêu tại vị trí an toàn không bị cản tường
+            Vector3 slashPos = CalculateValidSlashPosition(transform.position, currentTarget);
             transform.position = slashPos;
 
             // Xoay mặt về phía mục tiêu
@@ -6189,10 +6326,8 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
                 }
             }
 
-            // Dịch chuyển xung quanh mục tiêu
-            Vector2 offset2D = UnityEngine.Random.insideUnitCircle.normalized * 1.5f;
-            Vector3 slashPos = currentTarget.position + new Vector3(offset2D.x, 0f, offset2D.y);
-            slashPos.y = transform.position.y;
+            // Dịch chuyển xung quanh mục tiêu tại vị trí an toàn không bị cản tường
+            Vector3 slashPos = CalculateValidSlashPosition(transform.position, currentTarget);
             transform.position = slashPos;
 
             // Xoay mặt về phía mục tiêu
@@ -7406,7 +7541,24 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             anim.SetTrigger(translatedName);
             StartCoroutine(ResetTriggerNextFrame(translatedName));
 
-            int targetLayer = IsAttackAnimationName(translatedName) && !isRootedAttack ? 1 : 0;
+            int targetLayer = 0;
+            if (anim.layerCount > 1)
+            {
+                int stateHash = Animator.StringToHash(stateName);
+                bool hasLayer1 = anim.HasState(1, stateHash);
+                bool hasLayer0 = anim.HasState(0, stateHash);
+
+                if (hasLayer1 && (!isRootedAttack || !hasLayer0))
+                {
+                    targetLayer = 1;
+                    anim.SetLayerWeight(1, 1f);
+                }
+                else
+                {
+                    targetLayer = 0;
+                    if (hasLayer1) anim.SetLayerWeight(1, 0f);
+                }
+            }
             anim.CrossFadeInFixedTime(stateName, fadeTime, targetLayer, 0f);
 
             // Force evaluation to query the exact animation clip duration
