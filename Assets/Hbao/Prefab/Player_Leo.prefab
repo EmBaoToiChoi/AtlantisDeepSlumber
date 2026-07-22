@@ -685,6 +685,7 @@ MonoBehaviour:
   rightHitbox: {fileID: 5564713475576156401}
   leftWeaponHitbox: {fileID: 4903209859804708166}
   rightWeaponHitbox: {fileID: 7801895182319075737}
+  axeWeaponHitbox: {fileID: 1469475173110615061, guid: 267622bdbb6aba046aec3ec07847adc4, type: 3}
   leftHandSword: {fileID: 4344798916387469069}
   rightHandSword: {fileID: 1442707340140284882}
   leftShoulderSword: {fileID: 7558872499796169708}

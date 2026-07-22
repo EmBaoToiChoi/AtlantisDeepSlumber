@@ -2987,6 +2987,8 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     public Collider leftWeaponHitbox;
     [Tooltip("Right weapon/sword hitbox collider.")]
     public Collider rightWeaponHitbox;
+    [Tooltip("Axe weapon hitbox collider.")]
+    public Collider axeWeaponHitbox;
 
     [Header("Weapon Visual References")]
     [Tooltip("Thanh kiếm trên tay trái")]
@@ -4522,8 +4524,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         currentWeaponTypeAttacking = weapon;
 
         alreadyHitEnemies.Clear();
-        PerformRaycastAttack();
-        StartCoroutine(DelayedRaycastAttackCoroutine(0.15f));
+        DisableAllHitboxes();
 
         if (comboChainCoroutine != null) StopCoroutine(comboChainCoroutine);
         comboChainCoroutine = StartCoroutine(ComboChainCoroutine(weapon, animToPlay, networkMode));
@@ -4531,8 +4532,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     private System.Collections.IEnumerator DelayedRaycastAttackCoroutine(float delay)
     {
-        yield return new WaitForSeconds(delay);
-        PerformRaycastAttack();
+        yield break;
     }
 
     private System.Collections.IEnumerator ComboChainCoroutine(int weapon, string animToPlay, bool networkMode)
@@ -4571,117 +4571,10 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         }
     }
 
-    /// <summary>
-    /// Tắt tất cả hitbox ngay lập tức và clear danh sách đã hit.
-    /// Có thể gọi từ Animation Event hoặc code.
-    /// </summary>
-    private void DisableAllHitboxes()
-    {
-        // Hàm rỗng để không ảnh hưởng
-    }
 
     private void PerformRaycastAttack()
     {
-        Debug.Log($"[LeoPlayer Debug] PerformRaycastAttack called (Raycast Mode). isStandaloneMode={isStandaloneMode}, IsOwner={IsOwner}");
-        bool hasControl = isStandaloneMode || !IsSpawned || IsOwner || (NetworkManager.Singleton != null && NetworkManager.Singleton.IsServer);
-        if (!hasControl) return;
-
-        // Điểm xuất phát của tia quét ở độ cao ngang ngực (0.8m)
-        Vector3 rayStart = transform.position + Vector3.up * 0.8f;
-        Vector3 rayDir = transform.forward;
-        float range = Mathf.Max(attackRange, 3.0f);
-
-        // Vẽ tia debug trong Unity Editor
-        Debug.DrawRay(rayStart, rayDir * range, Color.red, 1f);
-        Debug.Log($"[LeoPlayer Debug] Casting SphereCast from {rayStart} in direction {rayDir} with range {range}");
-
-        RaycastHit[] hits = Physics.SphereCastAll(rayStart, 1.2f, rayDir, range);
-        foreach (var hit in hits)
-        {
-            Collider col = hit.collider;
-            if (col == null) continue;
-            if (col.transform.root == transform.root) continue; // Bỏ qua chính mình
-
-            // Kiểm tra xem đòn chém có bị tường/vật cản che chắn không (Line of Sight)
-            Vector3 targetCenter = col.bounds.center;
-            Vector3 dirToTarget = targetCenter - rayStart;
-            float distToTarget = dirToTarget.magnitude;
-
-            if (distToTarget > 0.1f)
-            {
-                RaycastHit[] losHits = Physics.RaycastAll(rayStart, dirToTarget.normalized, distToTarget);
-                bool blockedByWall = false;
-                foreach (var losHit in losHits)
-                {
-                    if (losHit.collider == null) continue;
-                    if (losHit.collider.transform.root == transform.root) continue;
-                    if (losHit.collider == col || losHit.collider.transform.IsChildOf(col.transform) || col.transform.IsChildOf(losHit.collider.transform)) continue;
-
-                    if (!losHit.collider.isTrigger && !IsEnemy(losHit.collider, out _) && losHit.collider.GetComponentInParent<ChoppableTree>() == null)
-                    {
-                        blockedByWall = true;
-                        break;
-                    }
-                }
-                if (blockedByWall) continue; // Đòn chém bị tường chặn!
-            }
-
-            if (IsEnemy(col, out Collider enemyCollider))
-            {
-                Transform enemyRoot = enemyCollider.transform.root;
-                if (!alreadyHitEnemies.Contains(enemyRoot))
-                {
-                    alreadyHitEnemies.Add(enemyRoot);
-                    Debug.Log($"[LeoPlayer Raycast] HIT ENEMY: {enemyRoot.name} | Sát thương: {damageAmount}");
-                    
-                    // Phát âm thanh chém trúng quái (chỉ khi cầm vũ khí và trúng quái)
-                    if (GetActiveWeaponIndex() != 0)
-                    {
-                        if (isStandaloneMode)
-                        {
-                            AudioClip hitSound = Resources.Load<AudioClip>("Audio/ChemHit");
-                            PlayPlayerSFX(hitSound);
-                        }
-                    }
-                    
-                    TryDamageEnemy(enemyCollider);
-
-                    var netObj = enemyCollider.transform.root.GetComponent<NetworkObject>() ?? enemyCollider.GetComponentInParent<NetworkObject>() ?? enemyCollider.GetComponentInChildren<NetworkObject>();
-
-                    if (!isStandaloneMode && IsSpawned && netObj != null && !IsServer)
-                    {
-                        DamageEnemyServerRpc(netObj);
-                    }
-                }
-            }
-            else
-            {
-                // Kiểm tra xem có phải cây gỗ (ChoppableTree) hay không
-                ChoppableTree tree = col.GetComponentInParent<ChoppableTree>() ?? col.transform.root.GetComponentInChildren<ChoppableTree>();
-                if (tree == null)
-                {
-                    var forwarder = col.GetComponent<TreeColliderForwarder>();
-                    if (forwarder != null)
-                    {
-                        tree = forwarder.mainTree;
-                    }
-                }
-
-                if (tree != null)
-                {
-                    Transform treeRoot = tree.transform;
-                    if (!alreadyHitEnemies.Contains(treeRoot))
-                    {
-                        alreadyHitEnemies.Add(treeRoot);
-                        Vector3 hitPos = hit.point;
-                        int weaponIndex = GetActiveWeaponIndex();
-                        
-                        Debug.Log($"[LeoPlayer Raycast] HIT TREE: {tree.name} | WeaponIndex: {weaponIndex}");
-                        tree.HitTree(hitPos, weaponIndex);
-                    }
-                }
-            }
-        }
+        // Raycast Attack đã bị xóa hoàn toàn. Tấn công cận chiến hiện tại dùng Hitbox Event Animation 100%.
     }
 
     private void TryDamageEnemy(Collider col)
@@ -7998,29 +7891,114 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         return isStandaloneMode || (IsSpawned && IsOwner);
     }
 
-    // --- Đấm tay: Tay Trái ---
-    public void EnableLeftHitbox() { alreadyHitEnemies.Clear(); PerformRaycastAttack(); }
-    public void DisableLeftHitbox() {}
+    // --- Đấm tay / Hitbox tổng hợp ---
+    public void EnableLeftHitbox()
+    {
+        alreadyHitEnemies.Clear();
+        if (leftHitbox != null) leftHitbox.enabled = true;
+    }
+    public void DisableLeftHitbox()
+    {
+        if (leftHitbox != null) leftHitbox.enabled = false;
+    }
 
-    // --- Đấm tay: Tay Phải ---
-    public void EnableRightHitbox() { alreadyHitEnemies.Clear(); PerformRaycastAttack(); }
-    public void DisableRightHitbox() {}
+    public void EnableRightHitbox()
+    {
+        alreadyHitEnemies.Clear();
+        if (rightHitbox != null) rightHitbox.enabled = true;
+        if (axeWeaponHitbox != null) axeWeaponHitbox.enabled = true;
+    }
+    public void DisableRightHitbox()
+    {
+        if (rightHitbox != null) rightHitbox.enabled = false;
+        if (axeWeaponHitbox != null) axeWeaponHitbox.enabled = false;
+    }
 
-    // --- Đấm tay: Cả hai tay ---
-    public void EnableBothHitboxes() { alreadyHitEnemies.Clear(); PerformRaycastAttack(); }
-    public void DisableBothHitboxes() {}
+    public void EnableBothHitboxes()
+    {
+        alreadyHitEnemies.Clear();
+        if (leftHitbox != null) leftHitbox.enabled = true;
+        if (rightHitbox != null) rightHitbox.enabled = true;
+        if (axeWeaponHitbox != null) axeWeaponHitbox.enabled = true;
+    }
+    public void DisableBothHitboxes()
+    {
+        if (leftHitbox != null) leftHitbox.enabled = false;
+        if (rightHitbox != null) rightHitbox.enabled = false;
+        if (axeWeaponHitbox != null) axeWeaponHitbox.enabled = false;
+    }
 
-    // --- Kiếm: Tay Trái ---
-    public void EnableLeftWeaponHitbox() { alreadyHitEnemies.Clear(); PerformRaycastAttack(); }
-    public void DisableLeftWeaponHitbox() {}
+    // --- Kiếm / Vũ khí: Tay Trái ---
+    public void EnableLeftWeaponHitbox()
+    {
+        alreadyHitEnemies.Clear();
+        if (leftWeaponHitbox != null) leftWeaponHitbox.enabled = true;
+    }
+    public void DisableLeftWeaponHitbox()
+    {
+        if (leftWeaponHitbox != null) leftWeaponHitbox.enabled = false;
+    }
 
-    // --- Kiếm: Tay Phải ---
-    public void EnableRightWeaponHitbox() { alreadyHitEnemies.Clear(); PerformRaycastAttack(); }
-    public void DisableRightWeaponHitbox() {}
+    // --- Kiếm / Vũ khí: Tay Phải ---
+    public void EnableRightWeaponHitbox()
+    {
+        alreadyHitEnemies.Clear();
+        if (rightWeaponHitbox != null) rightWeaponHitbox.enabled = true;
+        if (axeWeaponHitbox != null) axeWeaponHitbox.enabled = true;
+    }
+    public void DisableRightWeaponHitbox()
+    {
+        if (rightWeaponHitbox != null) rightWeaponHitbox.enabled = false;
+        if (axeWeaponHitbox != null) axeWeaponHitbox.enabled = false;
+    }
 
-    // --- Kiếm: Cả hai tay (Slash chính) ---
-    public void EnableBothWeaponHitboxes() { alreadyHitEnemies.Clear(); PerformRaycastAttack(); }
-    public void DisableBothWeaponHitboxes() {}
+    // --- Kiếm / Vũ khí: Cả hai tay (Slash chính) ---
+    public void EnableBothWeaponHitbox() { EnableBothWeaponHitboxes(); }
+    public void DisableBothWeaponHitbox() { DisableBothWeaponHitboxes(); }
+    public void EnableBothWeaponHitboxes()
+    {
+        alreadyHitEnemies.Clear();
+        if (leftWeaponHitbox != null) leftWeaponHitbox.enabled = true;
+        if (rightWeaponHitbox != null) rightWeaponHitbox.enabled = true;
+        if (axeWeaponHitbox != null) axeWeaponHitbox.enabled = true;
+    }
+    public void DisableBothWeaponHitboxes()
+    {
+        if (leftWeaponHitbox != null) leftWeaponHitbox.enabled = false;
+        if (rightWeaponHitbox != null) rightWeaponHitbox.enabled = false;
+        if (axeWeaponHitbox != null) axeWeaponHitbox.enabled = false;
+    }
+
+    // --- Rìu (Axe) ---
+    public void EnableAxeWeaponHitbox()
+    {
+        alreadyHitEnemies.Clear();
+        if (axeWeaponHitbox != null) axeWeaponHitbox.enabled = true;
+        if (leftWeaponHitbox != null) leftWeaponHitbox.enabled = true;
+        if (rightWeaponHitbox != null) rightWeaponHitbox.enabled = true;
+    }
+    public void DisableAxeWeaponHitbox()
+    {
+        if (axeWeaponHitbox != null) axeWeaponHitbox.enabled = false;
+        if (leftWeaponHitbox != null) leftWeaponHitbox.enabled = false;
+        if (rightWeaponHitbox != null) rightWeaponHitbox.enabled = false;
+    }
+    public void EnableAxeHitbox() { EnableAxeWeaponHitbox(); }
+    public void DisableAxeHitbox() { DisableAxeWeaponHitbox(); }
+
+    public void DisableAllHitboxes()
+    {
+        if (leftHitbox != null) leftHitbox.enabled = false;
+        if (rightHitbox != null) rightHitbox.enabled = false;
+        if (leftWeaponHitbox != null) leftWeaponHitbox.enabled = false;
+        if (rightWeaponHitbox != null) rightWeaponHitbox.enabled = false;
+        if (axeWeaponHitbox != null) axeWeaponHitbox.enabled = false;
+        alreadyHitEnemies.Clear();
+    }
+
+    public void OnPunchEnd() { DisableAllHitboxes(); }
+    public void OnSlashEnd() { DisableAllHitboxes(); }
+    public void OnAttackEnd() { DisableAllHitboxes(); }
 
     // --- VFX Spawn Animation Events với Object Pooling ---
     private System.Collections.Generic.Dictionary<GameObject, System.Collections.Generic.List<GameObject>> vfxPools =
@@ -8293,14 +8271,6 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     // --- Animation Event: Kết thúc đòn đánh ---
     /// <summary>
-    /// Gọi từ Animation Event ở FRAME CUỐI của mỗi animation đấm/chém.
-    /// Đảm bảo tắt hitbox và đánh dấu kết thúc nhịp tấn công.
-    /// </summary>
-    public void OnAttackEnd() {}
-    public void OnSlashEnd() {}
-    public void OnPunchEnd() {}
-
-    /// <summary>
     /// Nhận va chạm từ PlayerHitbox khi enemy đi vào hitbox.
     /// Tính damage 1 lần duy nhất mỗi enemy trong mỗi đòn đánh.
     /// </summary>
@@ -8325,6 +8295,27 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
                     var netObj = enemyCollider.GetComponentInParent<NetworkObject>();
                     if (netObj != null) DamageEnemyServerRpc(netObj);
                     else TryDamageEnemy(enemyCollider);
+                }
+            }
+        }
+        else
+        {
+            // Kiểm tra xem có phải cây gỗ (ChoppableTree) hay không
+            ChoppableTree tree = other.GetComponentInParent<ChoppableTree>() ?? other.transform.root.GetComponentInChildren<ChoppableTree>();
+            if (tree == null)
+            {
+                var forwarder = other.GetComponent<TreeColliderForwarder>();
+                if (forwarder != null) tree = forwarder.mainTree;
+            }
+            if (tree != null)
+            {
+                Transform treeRoot = tree.transform;
+                if (!alreadyHitEnemies.Contains(treeRoot))
+                {
+                    alreadyHitEnemies.Add(treeRoot);
+                    Vector3 hitPos = other.bounds.center;
+                    int weaponIndex = GetActiveWeaponIndex();
+                    tree.HitTree(hitPos, weaponIndex);
                 }
             }
         }
