@@ -7899,10 +7899,23 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         return isStandaloneMode || (IsSpawned && IsOwner);
     }
 
+    private void EnsureHitboxComponent(Collider col)
+    {
+        if (col != null)
+        {
+            col.isTrigger = true;
+            if (col.GetComponent<PlayerHitbox>() == null)
+            {
+                col.gameObject.AddComponent<PlayerHitbox>();
+            }
+        }
+    }
+
     // --- Đấm tay / Hitbox tổng hợp ---
     public void EnableLeftHitbox()
     {
         alreadyHitEnemies.Clear();
+        EnsureHitboxComponent(leftHitbox);
         if (leftHitbox != null) leftHitbox.enabled = true;
     }
     public void DisableLeftHitbox()
@@ -7913,6 +7926,8 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     public void EnableRightHitbox()
     {
         alreadyHitEnemies.Clear();
+        EnsureHitboxComponent(rightHitbox);
+        EnsureHitboxComponent(axeWeaponHitbox);
         if (rightHitbox != null) rightHitbox.enabled = true;
         if (axeWeaponHitbox != null) axeWeaponHitbox.enabled = true;
     }
@@ -7925,6 +7940,9 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     public void EnableBothHitboxes()
     {
         alreadyHitEnemies.Clear();
+        EnsureHitboxComponent(leftHitbox);
+        EnsureHitboxComponent(rightHitbox);
+        EnsureHitboxComponent(axeWeaponHitbox);
         if (leftHitbox != null) leftHitbox.enabled = true;
         if (rightHitbox != null) rightHitbox.enabled = true;
         if (axeWeaponHitbox != null) axeWeaponHitbox.enabled = true;
@@ -7940,6 +7958,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     public void EnableLeftWeaponHitbox()
     {
         alreadyHitEnemies.Clear();
+        EnsureHitboxComponent(leftWeaponHitbox);
         if (leftWeaponHitbox != null) leftWeaponHitbox.enabled = true;
     }
     public void DisableLeftWeaponHitbox()
@@ -7951,6 +7970,8 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     public void EnableRightWeaponHitbox()
     {
         alreadyHitEnemies.Clear();
+        EnsureHitboxComponent(rightWeaponHitbox);
+        EnsureHitboxComponent(axeWeaponHitbox);
         if (rightWeaponHitbox != null) rightWeaponHitbox.enabled = true;
         if (axeWeaponHitbox != null) axeWeaponHitbox.enabled = true;
     }
@@ -7966,6 +7987,9 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     public void EnableBothWeaponHitboxes()
     {
         alreadyHitEnemies.Clear();
+        EnsureHitboxComponent(leftWeaponHitbox);
+        EnsureHitboxComponent(rightWeaponHitbox);
+        EnsureHitboxComponent(axeWeaponHitbox);
         if (leftWeaponHitbox != null) leftWeaponHitbox.enabled = true;
         if (rightWeaponHitbox != null) rightWeaponHitbox.enabled = true;
         if (axeWeaponHitbox != null) axeWeaponHitbox.enabled = true;
