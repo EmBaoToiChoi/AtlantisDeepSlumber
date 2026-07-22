@@ -4147,8 +4147,23 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
             if (anim.layerCount > 1)
             {
-                // KHẮC PHỤC LỖI GIẬT VÀ KẸT KIẾM: Loại bỏ hoàn toàn anim.SetTrigger(animName). Chỉ giữ độc nhất lệnh CrossFade.
-                anim.CrossFadeInFixedTime(animName, fadeTime, 1, 0f);
+                int stateHash = Animator.StringToHash(animName);
+                bool hasLayer1 = anim.HasState(1, stateHash);
+                bool hasLayer0 = anim.HasState(0, stateHash);
+
+                int targetLayer = 0;
+                if (hasLayer1 && (!isRootedAttack || !hasLayer0))
+                {
+                    targetLayer = 1;
+                    anim.SetLayerWeight(1, 1f);
+                }
+                else
+                {
+                    targetLayer = 0;
+                    if (hasLayer1) anim.SetLayerWeight(1, 0f);
+                }
+
+                anim.CrossFadeInFixedTime(animName, fadeTime, targetLayer, 0f);
             }
 
             bool isAttackState = IsAttackAnimationName(animName);
