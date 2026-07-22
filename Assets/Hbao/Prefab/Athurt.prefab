@@ -260,6 +260,15 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   ShowTopMostFoldoutHeaderGroup: 1
+  playerAudioSource: {fileID: 0}
+  footstepClip: {fileID: 0}
+  footstepClip2: {fileID: 0}
+  attackClip: {fileID: 0}
+  hitClip: {fileID: 0}
+  deathClip: {fileID: 0}
+  skillQClip: {fileID: 0}
+  skillEClip: {fileID: 0}
+  skillRClip: {fileID: 0}
   rollKey: 306
   useBlendTree: 1
   inputXParam: InputX
@@ -545,6 +554,7 @@ MonoBehaviour:
   rightHitbox: {fileID: 5743454690255644811}
   leftWeaponHitbox: {fileID: 2009270594192434184}
   rightWeaponHitbox: {fileID: 5439298617177621512}
+  axeWeaponHitbox: {fileID: 1469475173110615061, guid: 267622bdbb6aba046aec3ec07847adc4, type: 3}
   rollSpeed: 10
   rollDuration: 1
   rollCooldown: 1.2
@@ -779,6 +789,13 @@ MonoBehaviour:
     TransitionIndex: 1
   - IsCrossFadeExit: 0
     Layer: 0
+    OriginatingState: -1331891752
+    DestinationState: 20298039
+    TransitionDuration: 0.1
+    TriggerNameHash: 646380074
+    TransitionIndex: 2
+  - IsCrossFadeExit: 0
+    Layer: 0
     OriginatingState: 1572205430
     DestinationState: -382223678
     TransitionDuration: 0.05
@@ -805,6 +822,13 @@ MonoBehaviour:
     TransitionDuration: 0.05
     TriggerNameHash: 134042274
     TransitionIndex: 4
+  - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: 1572205430
+    DestinationState: 20298039
+    TransitionDuration: 0.1
+    TriggerNameHash: 646380074
+    TransitionIndex: 5
   - IsCrossFadeExit: 0
     Layer: 0
     OriginatingState: -382223678
@@ -1028,6 +1052,10 @@ MonoBehaviour:
       ParameterType: 4
     - name: ChatRiu
       NameHash: -1219495144
+      Synchronize: 1
+      ParameterType: 9
+    - name: Kicked
+      NameHash: 2134575295
       Synchronize: 1
       ParameterType: 9
   AnimatorParametersExpanded: 0
@@ -1273,6 +1301,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   ShowTopMostFoldoutHeaderGroup: 1
+  kickedTriggerName: Kicked
+  kickedStateName: 
 --- !u!1 &6656804584175171832
 GameObject:
   m_ObjectHideFlags: 0

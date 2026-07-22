@@ -483,6 +483,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
     public Collider rightHitbox;
     public Collider leftWeaponHitbox;
     public Collider rightWeaponHitbox;
+    public Collider axeWeaponHitbox;
 
     private System.Collections.Generic.List<Transform> alreadyHitEnemies = new System.Collections.Generic.List<Transform>();
 
@@ -2652,106 +2653,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     private void PerformRaycastAttack()
     {
-        Debug.Log($"[ArthurPlayer Debug] PerformRaycastAttack called (Raycast Mode). isStandaloneMode={isStandaloneMode}, IsOwner={IsOwner}");
-        bool hasControl = isStandaloneMode || !IsSpawned || IsOwner || (NetworkManager.Singleton != null && NetworkManager.Singleton.IsServer);
-        if (!hasControl) return;
-
-        // Điểm xuất phát của tia quét ở độ cao ngang ngực (0.8m)
-        Vector3 rayStart = transform.position + Vector3.up * 0.8f;
-        Vector3 rayDir = transform.forward;
-        float range = Mathf.Max(attackRange, 3.0f);
-
-        // Vẽ tia debug trong Unity Editor
-        Debug.DrawRay(rayStart, rayDir * range, Color.red, 1f);
-        Debug.Log($"[ArthurPlayer Debug] Casting SphereCast from {rayStart} in direction {rayDir} with range {range}");
-
-        RaycastHit[] hits = Physics.SphereCastAll(rayStart, 1.2f, rayDir, range);
-        foreach (var hit in hits)
-        {
-            Collider col = hit.collider;
-            if (col == null) continue;
-            if (col.transform.root == transform.root) continue; // Bỏ qua chính mình
-
-            // Kiểm tra xem đòn chém có bị tường/vật cản che chắn không (Line of Sight)
-            Vector3 targetCenter = col.bounds.center;
-            Vector3 dirToTarget = targetCenter - rayStart;
-            float distToTarget = dirToTarget.magnitude;
-
-            if (distToTarget > 0.1f)
-            {
-                RaycastHit[] losHits = Physics.RaycastAll(rayStart, dirToTarget.normalized, distToTarget);
-                bool blockedByWall = false;
-                foreach (var losHit in losHits)
-                {
-                    if (losHit.collider == null) continue;
-                    if (losHit.collider.transform.root == transform.root) continue;
-                    if (losHit.collider == col || losHit.collider.transform.IsChildOf(col.transform) || col.transform.IsChildOf(losHit.collider.transform)) continue;
-
-                    if (!losHit.collider.isTrigger && !IsEnemy(losHit.collider, out _) && losHit.collider.GetComponentInParent<ChoppableTree>() == null)
-                    {
-                        blockedByWall = true;
-                        break;
-                    }
-                }
-                if (blockedByWall) continue; // Đòn chém bị tường chặn!
-            }
-
-            if (IsEnemy(col, out Collider enemyCollider))
-            {
-                Transform enemyRoot = enemyCollider.transform.root;
-                if (!alreadyHitEnemies.Contains(enemyRoot))
-                {
-                    alreadyHitEnemies.Add(enemyRoot);
-                    Debug.Log($"[ArthurPlayer Raycast] HIT ENEMY: {enemyRoot.name} | Sát thương: {damageAmount}");
-                    
-                    // Phát âm thanh chém trúng quái (chỉ khi cầm vũ khí và trúng quái)
-                    if (GetActiveWeaponIndex() != 0)
-                    {
-                        if (isStandaloneMode)
-                        {
-                            AudioClip hitSound = Resources.Load<AudioClip>("Audio/ChemHit");
-                            PlayPlayerSFX(hitSound);
-                        }
-                    }
-                    
-                    TryDamageEnemy(enemyCollider);
-
-                    var netObj = enemyCollider.transform.root.GetComponent<NetworkObject>() ?? enemyCollider.GetComponentInParent<NetworkObject>() ?? enemyCollider.GetComponentInChildren<NetworkObject>();
-
-                    if (!isStandaloneMode && IsSpawned && netObj != null && !IsServer)
-                    {
-                        DamageEnemyServerRpc(netObj);
-                    }
-                }
-            }
-            else
-            {
-                // Kiểm tra xem có phải cây gỗ (ChoppableTree) hay không
-                ChoppableTree tree = col.GetComponentInParent<ChoppableTree>() ?? col.transform.root.GetComponentInChildren<ChoppableTree>();
-                if (tree == null)
-                {
-                    var forwarder = col.GetComponent<TreeColliderForwarder>();
-                    if (forwarder != null)
-                    {
-                        tree = forwarder.mainTree;
-                    }
-                }
-
-                if (tree != null)
-                {
-                    Transform treeRoot = tree.transform;
-                    if (!alreadyHitEnemies.Contains(treeRoot))
-                    {
-                        alreadyHitEnemies.Add(treeRoot);
-                        Vector3 hitPos = hit.point;
-                        int weaponIndex = GetActiveWeaponIndex();
-                        
-                        Debug.Log($"[ArthurPlayer Raycast] HIT TREE: {tree.name} | WeaponIndex: {weaponIndex}");
-                        tree.HitTree(hitPos, weaponIndex);
-                    }
-                }
-            }
-        }
+        // Raycast Attack đã bị xóa hoàn toàn. Tấn công cận chiến hiện tại dùng Hitbox Event Animation 100%.
     }
 
     private System.Collections.IEnumerator ComboChainCoroutine(int weapon, bool networkMode)
@@ -2851,8 +2753,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         }
 
         alreadyHitEnemies.Clear();
-        PerformRaycastAttack();
-        StartCoroutine(DelayedRaycastAttackCoroutine(0.15f));
+        DisableAllHitboxes();
 
         // Chạy Coroutine tự động kết thúc/nối combo thay vì phụ thuộc Animation Event
         if (comboChainCoroutine != null) StopCoroutine(comboChainCoroutine);
@@ -2861,8 +2762,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     private System.Collections.IEnumerator DelayedRaycastAttackCoroutine(float delay)
     {
-        yield return new WaitForSeconds(delay);
-        PerformRaycastAttack();
+        yield break;
     }
 
     private void HandleAttackSequenceEnd(bool isSlash)
@@ -3084,23 +2984,114 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         }
     }
 
-    public void EnableLeftHitbox() { alreadyHitEnemies.Clear(); PerformRaycastAttack(); }
-    public void DisableLeftHitbox() {}
-    public void EnableRightHitbox() { alreadyHitEnemies.Clear(); PerformRaycastAttack(); }
-    public void DisableRightHitbox() {}
-    public void EnableBothHitboxes() { alreadyHitEnemies.Clear(); PerformRaycastAttack(); }
-    public void DisableBothHitboxes() {}
-    public void EnableLeftWeaponHitbox() { alreadyHitEnemies.Clear(); PerformRaycastAttack(); }
-    public void DisableLeftWeaponHitbox() {}
-    public void EnableRightWeaponHitbox() { alreadyHitEnemies.Clear(); PerformRaycastAttack(); }
-    public void DisableRightWeaponHitbox() {}
-    public void EnableBothWeaponHitboxes() { alreadyHitEnemies.Clear(); PerformRaycastAttack(); }
-    public void DisableBothWeaponHitboxes() {}
-    public void DisableAllHitboxes() {}
+    // --- Đấm tay / Hitbox tổng hợp ---
+    public void EnableLeftHitbox()
+    {
+        alreadyHitEnemies.Clear();
+        if (leftHitbox != null) leftHitbox.enabled = true;
+    }
+    public void DisableLeftHitbox()
+    {
+        if (leftHitbox != null) leftHitbox.enabled = false;
+    }
 
-    public void OnPunchEnd() {}
-    public void OnSlashEnd() {}
-    public void OnAttackEnd() {}
+    public void EnableRightHitbox()
+    {
+        alreadyHitEnemies.Clear();
+        if (rightHitbox != null) rightHitbox.enabled = true;
+        if (axeWeaponHitbox != null) axeWeaponHitbox.enabled = true;
+    }
+    public void DisableRightHitbox()
+    {
+        if (rightHitbox != null) rightHitbox.enabled = false;
+        if (axeWeaponHitbox != null) axeWeaponHitbox.enabled = false;
+    }
+
+    public void EnableBothHitboxes()
+    {
+        alreadyHitEnemies.Clear();
+        if (leftHitbox != null) leftHitbox.enabled = true;
+        if (rightHitbox != null) rightHitbox.enabled = true;
+        if (axeWeaponHitbox != null) axeWeaponHitbox.enabled = true;
+    }
+    public void DisableBothHitboxes()
+    {
+        if (leftHitbox != null) leftHitbox.enabled = false;
+        if (rightHitbox != null) rightHitbox.enabled = false;
+        if (axeWeaponHitbox != null) axeWeaponHitbox.enabled = false;
+    }
+
+    // --- Kiếm / Vũ khí: Tay Trái ---
+    public void EnableLeftWeaponHitbox()
+    {
+        alreadyHitEnemies.Clear();
+        if (leftWeaponHitbox != null) leftWeaponHitbox.enabled = true;
+    }
+    public void DisableLeftWeaponHitbox()
+    {
+        if (leftWeaponHitbox != null) leftWeaponHitbox.enabled = false;
+    }
+
+    // --- Kiếm / Vũ khí: Tay Phải ---
+    public void EnableRightWeaponHitbox()
+    {
+        alreadyHitEnemies.Clear();
+        if (rightWeaponHitbox != null) rightWeaponHitbox.enabled = true;
+        if (axeWeaponHitbox != null) axeWeaponHitbox.enabled = true;
+    }
+    public void DisableRightWeaponHitbox()
+    {
+        if (rightWeaponHitbox != null) rightWeaponHitbox.enabled = false;
+        if (axeWeaponHitbox != null) axeWeaponHitbox.enabled = false;
+    }
+
+    // --- Kiếm / Vũ khí: Cả hai tay (Slash chính) ---
+    public void EnableBothWeaponHitbox() { EnableBothWeaponHitboxes(); }
+    public void DisableBothWeaponHitbox() { DisableBothWeaponHitboxes(); }
+    public void EnableBothWeaponHitboxes()
+    {
+        alreadyHitEnemies.Clear();
+        if (leftWeaponHitbox != null) leftWeaponHitbox.enabled = true;
+        if (rightWeaponHitbox != null) rightWeaponHitbox.enabled = true;
+        if (axeWeaponHitbox != null) axeWeaponHitbox.enabled = true;
+    }
+    public void DisableBothWeaponHitboxes()
+    {
+        if (leftWeaponHitbox != null) leftWeaponHitbox.enabled = false;
+        if (rightWeaponHitbox != null) rightWeaponHitbox.enabled = false;
+        if (axeWeaponHitbox != null) axeWeaponHitbox.enabled = false;
+    }
+
+    // --- Rìu (Axe) ---
+    public void EnableAxeWeaponHitbox()
+    {
+        alreadyHitEnemies.Clear();
+        if (axeWeaponHitbox != null) axeWeaponHitbox.enabled = true;
+        if (leftWeaponHitbox != null) leftWeaponHitbox.enabled = true;
+        if (rightWeaponHitbox != null) rightWeaponHitbox.enabled = true;
+    }
+    public void DisableAxeWeaponHitbox()
+    {
+        if (axeWeaponHitbox != null) axeWeaponHitbox.enabled = false;
+        if (leftWeaponHitbox != null) leftWeaponHitbox.enabled = false;
+        if (rightWeaponHitbox != null) rightWeaponHitbox.enabled = false;
+    }
+    public void EnableAxeHitbox() { EnableAxeWeaponHitbox(); }
+    public void DisableAxeHitbox() { DisableAxeWeaponHitbox(); }
+
+    public void DisableAllHitboxes()
+    {
+        if (leftHitbox != null) leftHitbox.enabled = false;
+        if (rightHitbox != null) rightHitbox.enabled = false;
+        if (leftWeaponHitbox != null) leftWeaponHitbox.enabled = false;
+        if (rightWeaponHitbox != null) rightWeaponHitbox.enabled = false;
+        if (axeWeaponHitbox != null) axeWeaponHitbox.enabled = false;
+        alreadyHitEnemies.Clear();
+    }
+
+    public void OnPunchEnd() { DisableAllHitboxes(); }
+    public void OnSlashEnd() { DisableAllHitboxes(); }
+    public void OnAttackEnd() { DisableAllHitboxes(); }
 
     private bool CanActivateHitbox()
     {
@@ -3128,6 +3119,27 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
                     var netObj = enemyCollider.GetComponentInParent<NetworkObject>();
                     if (netObj != null) DamageEnemyServerRpc(netObj);
                     else TryDamageEnemy(enemyCollider);
+                }
+            }
+        }
+        else
+        {
+            // Kiểm tra xem có phải cây gỗ (ChoppableTree) hay không
+            ChoppableTree tree = other.GetComponentInParent<ChoppableTree>() ?? other.transform.root.GetComponentInChildren<ChoppableTree>();
+            if (tree == null)
+            {
+                var forwarder = other.GetComponent<TreeColliderForwarder>();
+                if (forwarder != null) tree = forwarder.mainTree;
+            }
+            if (tree != null)
+            {
+                Transform treeRoot = tree.transform;
+                if (!alreadyHitEnemies.Contains(treeRoot))
+                {
+                    alreadyHitEnemies.Add(treeRoot);
+                    Vector3 hitPos = other.bounds.center;
+                    int weaponIndex = GetActiveWeaponIndex();
+                    tree.HitTree(hitPos, weaponIndex);
                 }
             }
         }
