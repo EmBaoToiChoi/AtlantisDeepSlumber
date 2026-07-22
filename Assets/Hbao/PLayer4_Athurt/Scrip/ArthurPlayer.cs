@@ -2075,14 +2075,16 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         // Xoay nhân vật: Luôn xoay theo hướng Camera để hỗ trợ đi ngang/lùi (strafe) mượt mà giống Elena
         // Cho phép xoay cả khi đang tấn công để nhân vật luôn hướng theo camera (chỉ thấy lưng, tránh vặn xương)
         bool isAttackingState = isAttacking || isExecutingAttack;
-        if (targetCamera != null && (!IsPlayingActionAnimation() || isAttackingState))
+        bool isHitState = IsPlayingHitAnimation();
+        if (targetCamera != null && (!IsPlayingActionAnimation() || isAttackingState || isHitState))
         {
             Vector3 camForward = targetCamera.transform.forward;
             camForward.y = 0f;
             camForward.Normalize();
             if (camForward != Vector3.zero)
             {
-                transform.forward = camForward;
+                Quaternion targetRot = Quaternion.LookRotation(camForward);
+                transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, Time.deltaTime * 25f);
             }
         }
 
@@ -2260,14 +2262,16 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         // Xoay nhân vật: Luôn xoay theo hướng Camera để hỗ trợ đi ngang/lùi (strafe) mượt mà giống Elena
         // Cho phép xoay cả khi đang tấn công để nhân vật luôn hướng theo camera (chỉ thấy lưng, tránh vặn xương)
         bool isAttackingState = isAttacking || isExecutingAttack;
-        if (targetCamera != null && (!IsPlayingActionAnimation() || isAttackingState))
+        bool isHitState = IsPlayingHitAnimation();
+        if (targetCamera != null && (!IsPlayingActionAnimation() || isAttackingState || isHitState))
         {
             Vector3 camForward = targetCamera.transform.forward;
             camForward.y = 0f;
             camForward.Normalize();
             if (camForward != Vector3.zero)
             {
-                transform.forward = camForward;
+                Quaternion targetRot = Quaternion.LookRotation(camForward);
+                transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, Time.deltaTime * 25f);
             }
         }
 
@@ -2667,6 +2671,30 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
             Collider col = hit.collider;
             if (col == null) continue;
             if (col.transform.root == transform.root) continue; // Bỏ qua chính mình
+
+            // Kiểm tra xem đòn chém có bị tường/vật cản che chắn không (Line of Sight)
+            Vector3 targetCenter = col.bounds.center;
+            Vector3 dirToTarget = targetCenter - rayStart;
+            float distToTarget = dirToTarget.magnitude;
+
+            if (distToTarget > 0.1f)
+            {
+                RaycastHit[] losHits = Physics.RaycastAll(rayStart, dirToTarget.normalized, distToTarget);
+                bool blockedByWall = false;
+                foreach (var losHit in losHits)
+                {
+                    if (losHit.collider == null) continue;
+                    if (losHit.collider.transform.root == transform.root) continue;
+                    if (losHit.collider == col || losHit.collider.transform.IsChildOf(col.transform) || col.transform.IsChildOf(losHit.collider.transform)) continue;
+
+                    if (!losHit.collider.isTrigger && !IsEnemy(losHit.collider, out _) && losHit.collider.GetComponentInParent<ChoppableTree>() == null)
+                    {
+                        blockedByWall = true;
+                        break;
+                    }
+                }
+                if (blockedByWall) continue; // Đòn chém bị tường chặn!
+            }
 
             if (IsEnemy(col, out Collider enemyCollider))
             {
@@ -3311,12 +3339,32 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
     private bool IsPlayingFullBodyAction()
     {
         if (anim == null || !anim.isActiveAndEnabled || anim.runtimeAnimatorController == null) return false;
+
+        bool isRecentlyPicked = (lastTriggeredAnimName == "Idle_Pick" || lastTriggeredAnimName == "Pick" || lastTriggeredAnimName == "Picknew")
+                                && (Time.time - lastActionTriggerTime < 1.2f);
+        if (isRecentlyPicked) return true;
+
         AnimatorStateInfo stateInfo = anim.GetCurrentAnimatorStateInfo(0);
         return stateInfo.IsName("LonVong") ||
                stateInfo.IsName("GetHit") ||
                stateInfo.IsName("GeiHit2") ||
                stateInfo.IsName("Idle_Pick") ||
+               stateInfo.IsName("Pick") ||
+               stateInfo.IsName("Picknew") ||
                stateInfo.IsName("Death");
+    }
+
+    private bool IsPlayingHitAnimation()
+    {
+        if (anim == null || !anim.isActiveAndEnabled || anim.runtimeAnimatorController == null) return false;
+        AnimatorStateInfo stateInfo = anim.GetCurrentAnimatorStateInfo(0);
+        bool isHitState = stateInfo.IsName("GetHit") || stateInfo.IsName("GeiHit2");
+        if (!isHitState && anim.layerCount > 1)
+        {
+            AnimatorStateInfo stateInfoLayer1 = anim.GetCurrentAnimatorStateInfo(1);
+            isHitState = stateInfoLayer1.IsName("GetHit") || stateInfoLayer1.IsName("GeiHit2");
+        }
+        return isHitState && stateInfo.normalizedTime < 0.95f;
     }
 
     private Transform FindClosestAttacker()
@@ -4130,7 +4178,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (isLoopingAnim && currentAnimState == animName) return;
 
         Debug.Log($"[ArthurPlayer] Kích hoạt Hoạt ảnh: '{animName}'");
-        if (animName == "LonVong")
+        if (animName == "LonVong" || animName == "GetHit" || animName == "GeiHit2" || animName.Contains("Hit"))
         {
             anim.applyRootMotion = false;
         }

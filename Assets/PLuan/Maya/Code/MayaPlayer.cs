@@ -2192,14 +2192,16 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
         }
 
         // Xoay nhân vật: Luôn xoay theo hướng Camera (Chỉ xoay khi không chơi hoạt ảnh hành động và KHÔNG bị khóa di chuyển)
-        if (targetCamera != null && !IsPlayingActionAnimation() && !IsLockingMovementAction())
+        bool isHitState = IsPlayingHitAnimation();
+        if (targetCamera != null && (!IsPlayingActionAnimation() || isHitState) && !IsLockingMovementAction())
         {
             Vector3 camForward = targetCamera.transform.forward;
             camForward.y = 0f;
             camForward.Normalize();
             if (camForward != Vector3.zero)
             {
-                transform.forward = camForward;
+                Quaternion targetRot = Quaternion.LookRotation(camForward);
+                transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, Time.deltaTime * 25f);
             }
         }
 
@@ -2375,14 +2377,16 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
         }
 
         // Xoay nhân vật: Luôn xoay theo hướng Camera (Chỉ xoay khi không chơi hoạt ảnh hành động và KHÔNG bị khóa di chuyển)
-        if (targetCamera != null && !IsPlayingActionAnimation() && !IsLockingMovementAction())
+        bool isHitState = IsPlayingHitAnimation();
+        if (targetCamera != null && (!IsPlayingActionAnimation() || isHitState) && !IsLockingMovementAction())
         {
             Vector3 camForward = targetCamera.transform.forward;
             camForward.y = 0f;
             camForward.Normalize();
             if (camForward != Vector3.zero)
             {
-                transform.forward = camForward;
+                Quaternion targetRot = Quaternion.LookRotation(camForward);
+                transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, Time.deltaTime * 25f);
             }
         }
 
@@ -2901,6 +2905,31 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
         foreach (var hitClient in hits)
         {
             if (hitClient.collider == null || hitClient.collider.transform.root == transform.root) continue;
+
+            // Kiểm tra xem đòn chém có bị tường/vật cản che chắn không (Line of Sight)
+            Vector3 targetCenter = hitClient.collider.bounds.center;
+            Vector3 dirToTarget = targetCenter - rayStartClient;
+            float distToTarget = dirToTarget.magnitude;
+
+            if (distToTarget > 0.1f)
+            {
+                RaycastHit[] losHits = Physics.RaycastAll(rayStartClient, dirToTarget.normalized, distToTarget);
+                bool blockedByWall = false;
+                foreach (var losHit in losHits)
+                {
+                    if (losHit.collider == null) continue;
+                    if (losHit.collider.transform.root == transform.root) continue;
+                    if (losHit.collider == hitClient.collider || losHit.collider.transform.IsChildOf(hitClient.collider.transform) || hitClient.collider.transform.IsChildOf(losHit.collider.transform)) continue;
+
+                    if (!losHit.collider.isTrigger && !IsEnemy(losHit.collider, out _) && losHit.collider.GetComponentInParent<ChoppableTree>() == null)
+                    {
+                        blockedByWall = true;
+                        break;
+                    }
+                }
+                if (blockedByWall) continue; // Đòn chém bị tường chặn!
+            }
+
             Transform root = hitClient.collider.transform.root;
             if (alreadyHitEnemies.Contains(root)) continue;
 
@@ -3691,6 +3720,19 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
         return isFullBodyAction && stateInfo.normalizedTime < 0.95f;
     }
 
+    private bool IsPlayingHitAnimation()
+    {
+        if (anim == null || !anim.isActiveAndEnabled || anim.runtimeAnimatorController == null) return false;
+        AnimatorStateInfo stateInfo = anim.GetCurrentAnimatorStateInfo(0);
+        bool isHitState = stateInfo.IsName("GetHit") || stateInfo.IsName("GeiHit2");
+        if (!isHitState && anim.layerCount > 1)
+        {
+            AnimatorStateInfo stateInfoLayer1 = anim.GetCurrentAnimatorStateInfo(1);
+            isHitState = stateInfoLayer1.IsName("GetHit") || stateInfoLayer1.IsName("GeiHit2");
+        }
+        return isHitState && stateInfo.normalizedTime < 0.95f;
+    }
+
     private bool HasParameter(string paramName)
     {
         if (anim == null) return false;
@@ -3841,6 +3883,11 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
         // Tránh lặp lại các hoạt ảnh di chuyển lặp đi lặp lại hàng frame (Idle, run, Walk)
         bool isLoopingAnim = animName == "Idle" || animName == "Walk" || animName == "run";
         if (isLoopingAnim && currentAnimState == animName) return;
+
+        if (animName == "LonVong" || animName == "GetHit" || animName == "GeiHit2" || animName.Contains("Hit"))
+        {
+            anim.applyRootMotion = false;
+        }
 
         Debug.Log($"[Animator Debug] {gameObject.name} kích hoạt Trigger hoạt ảnh: '{animName}' (isRooted={isRooted}, comboStep={comboStep})");
 

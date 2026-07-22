@@ -4128,15 +4128,17 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         // Quét trạng thái tấn công chuẩn xác
         bool isAttacking = IsPlayingAttackState(out _, out _);
 
-        // Xoay nhân vật: Luôn xoay theo hướng Camera — giống Arthur
+        // Xoay nhân vật: Luôn xoay mượt theo hướng Camera — dùng Quaternion.Slerp để triệt tiêu rung lắc khi chạy Shift
         bool isAttackingState = isAttacking || isExecutingAttack;
-        if (targetCamera != null && (!IsPlayingActionAnimation() || isAttackingState))
+        bool isHitState = IsPlayingHitAnimation();
+        if (targetCamera != null && (!IsPlayingActionAnimation() || isAttackingState || isHitState))
         {
             float yawRad = currentYaw * Mathf.Deg2Rad;
             Vector3 camForward = new Vector3(-Mathf.Sin(yawRad), 0f, Mathf.Cos(yawRad)).normalized;
             if (camForward != Vector3.zero)
             {
-                transform.forward = camForward;
+                Quaternion targetRot = Quaternion.LookRotation(camForward);
+                transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, Time.deltaTime * 25f);
             }
         }
 
@@ -4287,15 +4289,17 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         // --- ĐÃ SỬA: Đồng bộ kiểm tra trạng thái tấn công trên mạng cho chế độ Multiplayer ---
         bool isAttacking = IsPlayingAttackState(out _, out _);
 
-        // Xoay nhân vật: Luôn xoay theo hướng Camera — giống Arthur
+        // Xoay nhân vật: Luôn xoay mượt theo hướng Camera — dùng Quaternion.Slerp để triệt tiêu rung lắc khi chạy Shift
         bool isAttackingState = isAttacking || isExecutingAttack;
-        if (targetCamera != null && (!IsPlayingActionAnimation() || isAttackingState))
+        bool isHitState = IsPlayingHitAnimation();
+        if (targetCamera != null && (!IsPlayingActionAnimation() || isAttackingState || isHitState))
         {
             float yawRad = currentYaw * Mathf.Deg2Rad;
             Vector3 camForward = new Vector3(-Mathf.Sin(yawRad), 0f, Mathf.Cos(yawRad)).normalized;
             if (camForward != Vector3.zero)
             {
-                transform.forward = camForward;
+                Quaternion targetRot = Quaternion.LookRotation(camForward);
+                transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, Time.deltaTime * 25f);
             }
         }
 
@@ -4597,6 +4601,30 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             Collider col = hit.collider;
             if (col == null) continue;
             if (col.transform.root == transform.root) continue; // Bỏ qua chính mình
+
+            // Kiểm tra xem đòn chém có bị tường/vật cản che chắn không (Line of Sight)
+            Vector3 targetCenter = col.bounds.center;
+            Vector3 dirToTarget = targetCenter - rayStart;
+            float distToTarget = dirToTarget.magnitude;
+
+            if (distToTarget > 0.1f)
+            {
+                RaycastHit[] losHits = Physics.RaycastAll(rayStart, dirToTarget.normalized, distToTarget);
+                bool blockedByWall = false;
+                foreach (var losHit in losHits)
+                {
+                    if (losHit.collider == null) continue;
+                    if (losHit.collider.transform.root == transform.root) continue;
+                    if (losHit.collider == col || losHit.collider.transform.IsChildOf(col.transform) || col.transform.IsChildOf(losHit.collider.transform)) continue;
+
+                    if (!losHit.collider.isTrigger && !IsEnemy(losHit.collider, out _) && losHit.collider.GetComponentInParent<ChoppableTree>() == null)
+                    {
+                        blockedByWall = true;
+                        break;
+                    }
+                }
+                if (blockedByWall) continue; // Đòn chém bị tường chặn!
+            }
 
             if (IsEnemy(col, out Collider enemyCollider))
             {
@@ -7334,15 +7362,41 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     {
         if (anim == null || !anim.isActiveAndEnabled || anim.runtimeAnimatorController == null) return false;
 
-        if ((lastTriggeredAnimName == pickTrigger || lastTriggeredAnimName == "Idle_Pick" || lastTriggeredAnimName == "Pick")
-            && Time.time - lastActionTriggerTime < 0.15f)
+        bool isRecentlyPicked = (lastTriggeredAnimName == pickTrigger || lastTriggeredAnimName == "Idle_Pick" || lastTriggeredAnimName == "Pick" || lastTriggeredAnimName == "Picknew")
+                                && (Time.time - lastActionTriggerTime < 1.2f);
+        if (isRecentlyPicked) return true;
+
+        AnimatorStateInfo stateInfo = anim.GetCurrentAnimatorStateInfo(0);
+        bool isInPickState = stateInfo.IsName(pickTrigger) || stateInfo.IsName("Idle_Pick") || stateInfo.IsName("Pick") || stateInfo.IsName("Picknew");
+        if (!isInPickState && anim.layerCount > 1)
+        {
+            AnimatorStateInfo stateInfoLayer1 = anim.GetCurrentAnimatorStateInfo(1);
+            isInPickState = stateInfoLayer1.IsName(pickTrigger) || stateInfoLayer1.IsName("Idle_Pick") || stateInfoLayer1.IsName("Pick") || stateInfoLayer1.IsName("Picknew");
+            if (isInPickState) stateInfo = stateInfoLayer1;
+        }
+
+        return isInPickState && stateInfo.normalizedTime < 0.95f;
+    }
+
+    private bool IsPlayingHitAnimation()
+    {
+        if (anim == null || !anim.isActiveAndEnabled || anim.runtimeAnimatorController == null) return false;
+
+        if ((lastTriggeredAnimName == getHitTrigger || lastTriggeredAnimName == getHit2Trigger || lastTriggeredAnimName == "GetHit" || lastTriggeredAnimName == "GeiHit2")
+            && Time.time - lastActionTriggerTime < 0.2f)
         {
             return true;
         }
 
         AnimatorStateInfo stateInfo = anim.GetCurrentAnimatorStateInfo(0);
-        bool isInPickState = stateInfo.IsName(pickTrigger) || stateInfo.IsName("Idle_Pick") || stateInfo.IsName("Pick");
-        return isInPickState && stateInfo.normalizedTime < 0.95f;
+        bool isHitState = stateInfo.IsName(getHitTrigger) || stateInfo.IsName(getHit2Trigger) || stateInfo.IsName("GetHit") || stateInfo.IsName("GeiHit2");
+        if (!isHitState && anim.layerCount > 1)
+        {
+            AnimatorStateInfo stateInfoLayer1 = anim.GetCurrentAnimatorStateInfo(1);
+            isHitState = stateInfoLayer1.IsName(getHitTrigger) || stateInfoLayer1.IsName(getHit2Trigger) || stateInfoLayer1.IsName("GetHit") || stateInfoLayer1.IsName("GeiHit2");
+        }
+
+        return isHitState && stateInfo.normalizedTime < 0.95f;
     }
 
     private float lastActionTriggerTime = 0f;
@@ -7421,7 +7475,10 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             OnAimStateChanged(localIsAimingR);
         }
 
-        if (translatedName == rollTrigger || translatedName == "LonVong")
+        if (translatedName == rollTrigger || translatedName == "LonVong" ||
+            translatedName == getHitTrigger || translatedName == getHit2Trigger ||
+            translatedName == "GetHit" || translatedName == "GeiHit2" ||
+            translatedName.Contains("Hit"))
         {
             anim.applyRootMotion = false;
         }
