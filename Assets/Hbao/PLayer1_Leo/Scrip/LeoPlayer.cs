@@ -4133,25 +4133,43 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         // Quét trạng thái tấn công chuẩn xác
         bool isAttacking = IsPlayingAttackState(out _, out _);
 
-        // Xoay nhân vật: Luôn xoay mượt theo hướng Camera chuẩn như Arthur — triệt tiêu lắc qua lắc lại
+        // Xoay nhân vật chuẩn Genshin Impact: Xoay mặt về hướng di chuyển (movementTranslation) khi di chuyển, xoay theo Camera khi tấn công/ngắm bắn
         bool isAttackingState = isAttacking || isExecutingAttack;
         bool isHitState = IsPlayingHitAnimation();
         if (targetCamera != null && (!IsPlayingActionAnimation() || isAttackingState || isHitState))
         {
-            Vector3 camForward = targetCamera.transform.forward;
-            camForward.y = 0f;
-            camForward.Normalize();
-            if (camForward != Vector3.zero)
+            Vector3 turnDir = Vector3.zero;
+            if (IsAiming || isAttackingState)
             {
-                Quaternion targetRot = Quaternion.LookRotation(camForward);
-                transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, Time.deltaTime * 25f);
+                turnDir = targetCamera.transform.forward;
+            }
+            else if (isMoving)
+            {
+                turnDir = movementTranslation;
+            }
+
+            turnDir.y = 0f;
+            turnDir.Normalize();
+            if (turnDir != Vector3.zero)
+            {
+                Quaternion targetRot = Quaternion.LookRotation(turnDir);
+                transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, Time.deltaTime * 15f);
             }
         }
 
         if (isMoving)
         {
-            targetInputX = moveX * (isRunning ? 1.0f : 0.5f);
-            targetInputZ = moveZ * (isRunning ? 1.0f : 0.5f);
+            float moveMagnitude = new Vector2(moveX, moveZ).magnitude;
+            if (IsAiming)
+            {
+                targetInputX = moveX * (isRunning ? 1.0f : 0.5f);
+                targetInputZ = moveZ * (isRunning ? 1.0f : 0.5f);
+            }
+            else
+            {
+                targetInputX = 0f;
+                targetInputZ = moveMagnitude * (isRunning ? 1.0f : 0.5f);
+            }
             targetSpeed = new Vector2(targetInputX, targetInputZ).magnitude;
         }
 
@@ -4829,11 +4847,11 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
                 targetYaw -= mouseX * cameraSensitivity;
                 if (invertCameraY)
                 {
-                    targetPitch -= mouseY * cameraSensitivity;
+                    targetPitch += mouseY * cameraSensitivity;
                 }
                 else
                 {
-                    targetPitch += mouseY * cameraSensitivity;
+                    targetPitch -= mouseY * cameraSensitivity;
                 }
                 float currentMinPitch = IsAiming ? aimMinPitch : minPitch;
                 float currentMaxPitch = IsAiming ? aimMaxPitch : maxPitch;
