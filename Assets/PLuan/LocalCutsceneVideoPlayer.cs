@@ -497,6 +497,12 @@ public class LocalCutsceneVideoPlayer : NetworkBehaviour
         // Khôi phục hiển thị HUD
         SetHUDVisible(true);
 
+        if (ZombieQuestTargetManager.Instance != null)
+        {
+            ZombieQuestTargetManager.Instance.StartQuest();
+        }
+        
+
         // Khóa con trỏ chuột lại cho gameplay
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
