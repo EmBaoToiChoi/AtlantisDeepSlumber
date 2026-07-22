@@ -4064,7 +4064,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             currentSpeed *= 2f;
         }
 
-        bool shouldLockMovement = isMovementLocked || IsQSkillActive;
+        bool shouldLockMovement = isMovementLocked || IsQSkillActive || IsPlayingPickAnimation();
         float moveX = shouldLockMovement ? 0f : Input.GetAxis("Horizontal");
         float moveZ = shouldLockMovement ? 0f : Input.GetAxis("Vertical");
         Vector3 move = new Vector3(moveX, 0, moveZ);
@@ -4078,9 +4078,12 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         if (targetCamera != null)
         {
-            float yawRad = currentYaw * Mathf.Deg2Rad;
-            Vector3 camForward = new Vector3(-Mathf.Sin(yawRad), 0f, Mathf.Cos(yawRad)).normalized;
-            Vector3 camRight = new Vector3(Mathf.Cos(yawRad), 0f, Mathf.Sin(yawRad)).normalized;
+            Vector3 camForward = targetCamera.transform.forward;
+            camForward.y = 0f;
+            camForward.Normalize();
+            Vector3 camRight = targetCamera.transform.right;
+            camRight.y = 0f;
+            camRight.Normalize();
             move = camRight * moveX + camForward * moveZ;
         }
 
@@ -4130,13 +4133,14 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         // Quét trạng thái tấn công chuẩn xác
         bool isAttacking = IsPlayingAttackState(out _, out _);
 
-        // Xoay nhân vật: Luôn xoay mượt theo hướng Camera — dùng Quaternion.Slerp để triệt tiêu rung lắc khi chạy Shift
+        // Xoay nhân vật: Luôn xoay mượt theo hướng Camera chuẩn như Arthur — triệt tiêu lắc qua lắc lại
         bool isAttackingState = isAttacking || isExecutingAttack;
         bool isHitState = IsPlayingHitAnimation();
         if (targetCamera != null && (!IsPlayingActionAnimation() || isAttackingState || isHitState))
         {
-            float yawRad = currentYaw * Mathf.Deg2Rad;
-            Vector3 camForward = new Vector3(-Mathf.Sin(yawRad), 0f, Mathf.Cos(yawRad)).normalized;
+            Vector3 camForward = targetCamera.transform.forward;
+            camForward.y = 0f;
+            camForward.Normalize();
             if (camForward != Vector3.zero)
             {
                 Quaternion targetRot = Quaternion.LookRotation(camForward);
@@ -4225,7 +4229,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             currentSpeed *= 2f;
         }
 
-        bool shouldLockMovement = isMovementLocked || IsQSkillActive;
+        bool shouldLockMovement = isMovementLocked || IsQSkillActive || IsPlayingPickAnimation();
         float moveX = shouldLockMovement ? 0f : Input.GetAxis("Horizontal");
         float moveZ = shouldLockMovement ? 0f : Input.GetAxis("Vertical");
         Vector3 move = new Vector3(moveX, 0, moveZ);
@@ -4239,9 +4243,12 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         if (targetCamera != null)
         {
-            float yawRad = currentYaw * Mathf.Deg2Rad;
-            Vector3 camForward = new Vector3(-Mathf.Sin(yawRad), 0f, Mathf.Cos(yawRad)).normalized;
-            Vector3 camRight = new Vector3(Mathf.Cos(yawRad), 0f, Mathf.Sin(yawRad)).normalized;
+            Vector3 camForward = targetCamera.transform.forward;
+            camForward.y = 0f;
+            camForward.Normalize();
+            Vector3 camRight = targetCamera.transform.right;
+            camRight.y = 0f;
+            camRight.Normalize();
             move = camRight * moveX + camForward * moveZ;
         }
 
@@ -4291,13 +4298,14 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         // --- ĐÃ SỬA: Đồng bộ kiểm tra trạng thái tấn công trên mạng cho chế độ Multiplayer ---
         bool isAttacking = IsPlayingAttackState(out _, out _);
 
-        // Xoay nhân vật: Luôn xoay mượt theo hướng Camera — dùng Quaternion.Slerp để triệt tiêu rung lắc khi chạy Shift
+        // Xoay nhân vật: Luôn xoay mượt theo hướng Camera chuẩn như Arthur — triệt tiêu lắc qua lắc lại
         bool isAttackingState = isAttacking || isExecutingAttack;
         bool isHitState = IsPlayingHitAnimation();
         if (targetCamera != null && (!IsPlayingActionAnimation() || isAttackingState || isHitState))
         {
-            float yawRad = currentYaw * Mathf.Deg2Rad;
-            Vector3 camForward = new Vector3(-Mathf.Sin(yawRad), 0f, Mathf.Cos(yawRad)).normalized;
+            Vector3 camForward = targetCamera.transform.forward;
+            camForward.y = 0f;
+            camForward.Normalize();
             if (camForward != Vector3.zero)
             {
                 Quaternion targetRot = Quaternion.LookRotation(camForward);
