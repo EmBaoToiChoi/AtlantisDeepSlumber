@@ -2984,10 +2984,28 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         }
     }
 
+    private bool CanActivateHitbox()
+    {
+        return isStandaloneMode || (IsSpawned && IsOwner);
+    }
+
+    private void EnsureHitboxComponent(Collider col)
+    {
+        if (col != null)
+        {
+            col.isTrigger = true;
+            if (col.GetComponent<PlayerHitbox>() == null)
+            {
+                col.gameObject.AddComponent<PlayerHitbox>();
+            }
+        }
+    }
+
     // --- Đấm tay / Hitbox tổng hợp ---
     public void EnableLeftHitbox()
     {
         alreadyHitEnemies.Clear();
+        EnsureHitboxComponent(leftHitbox);
         if (leftHitbox != null) leftHitbox.enabled = true;
     }
     public void DisableLeftHitbox()
@@ -2998,6 +3016,8 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
     public void EnableRightHitbox()
     {
         alreadyHitEnemies.Clear();
+        EnsureHitboxComponent(rightHitbox);
+        EnsureHitboxComponent(axeWeaponHitbox);
         if (rightHitbox != null) rightHitbox.enabled = true;
         if (axeWeaponHitbox != null) axeWeaponHitbox.enabled = true;
     }
@@ -3010,6 +3030,9 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
     public void EnableBothHitboxes()
     {
         alreadyHitEnemies.Clear();
+        EnsureHitboxComponent(leftHitbox);
+        EnsureHitboxComponent(rightHitbox);
+        EnsureHitboxComponent(axeWeaponHitbox);
         if (leftHitbox != null) leftHitbox.enabled = true;
         if (rightHitbox != null) rightHitbox.enabled = true;
         if (axeWeaponHitbox != null) axeWeaponHitbox.enabled = true;
@@ -3025,6 +3048,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
     public void EnableLeftWeaponHitbox()
     {
         alreadyHitEnemies.Clear();
+        EnsureHitboxComponent(leftWeaponHitbox);
         if (leftWeaponHitbox != null) leftWeaponHitbox.enabled = true;
     }
     public void DisableLeftWeaponHitbox()
@@ -3092,11 +3116,6 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
     public void OnPunchEnd() { DisableAllHitboxes(); }
     public void OnSlashEnd() { DisableAllHitboxes(); }
     public void OnAttackEnd() { DisableAllHitboxes(); }
-
-    private bool CanActivateHitbox()
-    {
-        return isStandaloneMode || (IsSpawned && IsOwner);
-    }
 
     public void OnHitboxCollision(Collider other)
     {
