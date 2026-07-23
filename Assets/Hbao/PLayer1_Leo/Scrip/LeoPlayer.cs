@@ -3510,6 +3510,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (rb != null)
         {
             rb.isKinematic = false; // Tắt Kinematic để di chuyển trong chế độ chơi đơn lẻ
+            rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationY | RigidbodyConstraints.FreezeRotationZ;
         }
         targetCamera = Camera.main;
         if (targetCamera == null)
