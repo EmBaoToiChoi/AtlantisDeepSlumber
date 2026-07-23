@@ -2939,14 +2939,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     public string speedParam = "Speed";
     public string isArmedParam = "IsArmed";
 
-    [Header("Smooth Movement Settings")]
-    public float inputFilterSpeed = 8f;
-    public float rotationSmoothSpeedArmed = 10f;
-    public float rotationSmoothSpeedUnarmed = 12f;
-    [Tooltip("If true, the character rotates to face the camera direction when Armed, enabling backpedaling and strafing.")]
-    public bool rotateToCameraWhenArmed = true;
-    [Tooltip("If true, the character rotates to face the camera direction when Unarmed, enabling backpedaling and strafing without weapons.")]
-    public bool rotateToCameraWhenUnarmed = true;
+
 
     [Header("Player Settings & Stats")]
     public float moveSpeed = 3.5f;
@@ -3436,10 +3429,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         cameraSensitivity = 3f;
         cameraPivotHeight = 3.5f;
 
-        rotationSmoothSpeedArmed = 10f;
-        rotationSmoothSpeedUnarmed = 12f;
-        rotateToCameraWhenUnarmed = true;
-        rotateToCameraWhenArmed = true;
+
 
         if (anim == null)
         {
@@ -4037,8 +4027,8 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         if (isDialogueOpen)
         {
-            smoothedInputX = Mathf.MoveTowards(smoothedInputX, 0f, Time.deltaTime * inputFilterSpeed);
-            smoothedInputZ = Mathf.MoveTowards(smoothedInputZ, 0f, Time.deltaTime * inputFilterSpeed);
+            smoothedInputX = 0f;
+            smoothedInputZ = 0f;
             UpdateAnimatorParams(0f);
             if (rb != null) rb.linearVelocity = new Vector3(0f, rb.linearVelocity.y, 0f);
             if (!IsPlayingActionAnimation())
@@ -4050,8 +4040,8 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         if (IsPlayingPickAnimation())
         {
-            smoothedInputX = Mathf.MoveTowards(smoothedInputX, 0f, Time.deltaTime * inputFilterSpeed);
-            smoothedInputZ = Mathf.MoveTowards(smoothedInputZ, 0f, Time.deltaTime * inputFilterSpeed);
+            smoothedInputX = 0f;
+            smoothedInputZ = 0f;
             UpdateAnimatorParams(0f);
             if (rb != null) rb.linearVelocity = new Vector3(0f, rb.linearVelocity.y, 0f);
             return;
@@ -4159,16 +4149,18 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         if (isMoving)
         {
-            float moveMagnitude = new Vector2(moveX, moveZ).magnitude;
+            float moveMagnitude = Mathf.Clamp01(movementTranslation.magnitude);
+            float speedFactor = isRunning ? 2.0f : 1.0f;
             if (IsAiming)
             {
-                targetInputX = moveX * (isRunning ? 1.0f : 0.5f);
-                targetInputZ = moveZ * (isRunning ? 1.0f : 0.5f);
+                Vector3 localMove = transform.InverseTransformDirection(movementTranslation.normalized);
+                targetInputX = localMove.x * moveMagnitude * speedFactor;
+                targetInputZ = localMove.z * moveMagnitude * speedFactor;
             }
             else
             {
                 targetInputX = 0f;
-                targetInputZ = moveMagnitude * (isRunning ? 1.0f : 0.5f);
+                targetInputZ = moveMagnitude * speedFactor;
             }
             targetSpeed = new Vector2(targetInputX, targetInputZ).magnitude;
         }
@@ -4218,8 +4210,8 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         if (isDialogueOpen)
         {
-            smoothedInputX = Mathf.MoveTowards(smoothedInputX, 0f, Time.deltaTime * inputFilterSpeed);
-            smoothedInputZ = Mathf.MoveTowards(smoothedInputZ, 0f, Time.deltaTime * inputFilterSpeed);
+            smoothedInputX = 0f;
+            smoothedInputZ = 0f;
             UpdateAnimatorParams(0f);
             if (rb != null) rb.linearVelocity = new Vector3(0f, rb.linearVelocity.y, 0f);
             if (!IsPlayingActionAnimation())
@@ -4231,8 +4223,8 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         if (IsPlayingPickAnimation())
         {
-            smoothedInputX = Mathf.MoveTowards(smoothedInputX, 0f, Time.deltaTime * inputFilterSpeed);
-            smoothedInputZ = Mathf.MoveTowards(smoothedInputZ, 0f, Time.deltaTime * inputFilterSpeed);
+            smoothedInputX = 0f;
+            smoothedInputZ = 0f;
             UpdateAnimatorParams(0f);
             if (rb != null) rb.linearVelocity = new Vector3(0f, rb.linearVelocity.y, 0f);
             return;
@@ -4339,16 +4331,18 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         if (isMoving)
         {
-            float moveMagnitude = new Vector2(moveX, moveZ).magnitude;
+            float moveMagnitude = Mathf.Clamp01(movementTranslation.magnitude);
+            float speedFactor = isRunning ? 2.0f : 1.0f;
             if (IsAiming)
             {
-                targetInputX = moveX * (isRunning ? 1.0f : 0.5f);
-                targetInputZ = moveZ * (isRunning ? 1.0f : 0.5f);
+                Vector3 localMove = transform.InverseTransformDirection(movementTranslation.normalized);
+                targetInputX = localMove.x * moveMagnitude * speedFactor;
+                targetInputZ = localMove.z * moveMagnitude * speedFactor;
             }
             else
             {
                 targetInputX = 0f;
-                targetInputZ = moveMagnitude * (isRunning ? 1.0f : 0.5f);
+                targetInputZ = moveMagnitude * speedFactor;
             }
             targetSpeed = new Vector2(targetInputX, targetInputZ).magnitude;
         }
@@ -4729,13 +4723,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             transform.rotation = Quaternion.LookRotation(rollDirection);
         }
 
-        // Tắt RootMotionBridge trong suốt thời gian lộn để tránh lệch trái / giật Hips
-        var bridge = GetRootMotionBridge();
-        if (bridge != null)
-        {
-            bridge.BeginRoll();
-            bridge.enabled = false;
-        }
+        if (anim != null) anim.applyRootMotion = false;
 
         // Không đặt rb.isKinematic = true để di chuyển bằng velocity vật lý thuần túy
 
@@ -4768,13 +4756,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             transform.rotation = Quaternion.LookRotation(rollDirection);
         }
 
-        // Tắt RootMotionBridge trong suốt thời gian lộn để tránh lệch trái / giật Hips
-        var bridge = GetRootMotionBridge();
-        if (bridge != null)
-        {
-            bridge.BeginRoll();
-            bridge.enabled = false;
-        }
+        if (anim != null) anim.applyRootMotion = false;
 
         // Không đặt rb.isKinematic = true để di chuyển bằng velocity vật lý thuần túy
 
@@ -7710,18 +7692,14 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         }
     }
 
-    private void OnAnimatorMove()
-    {
-        if (anim != null && rb != null && anim.applyRootMotion)
-        {
-            // Chỉ lấy khoảng cách di chuyển tịnh tiến (deltaPosition) để đẩy nhân vật về trước
-            Vector3 nextPosition = rb.position + anim.deltaPosition;
-            rb.MovePosition(nextPosition);
-
-            // TUYỆT ĐỐI KHÔNG sử dụng anim.deltaRotation. Góc xoay cơ thể sẽ bị khóa cứng 
-            // theo hướng Camera điều khiển từ C#, triệt tiêu hoàn toàn lỗi xoắn xẹo xương sườn.
-        }
-    }
+    // private void OnAnimatorMove()
+    // {
+    //     if (anim != null && rb != null && anim.applyRootMotion)
+    //     {
+    //         Vector3 nextPosition = rb.position + anim.deltaPosition;
+    //         rb.MovePosition(nextPosition);
+    //     }
+    // }
     private bool IsLockingMovementAction()
     {
         if (anim == null || !anim.isActiveAndEnabled || anim.runtimeAnimatorController == null) return false;
@@ -8688,16 +8666,12 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             catch (System.Exception) {}
 
             AnimatorStateInfo stateInfo = anim.GetCurrentAnimatorStateInfo(1);
-            
-            bool isDrawOrSheatheActive = stateInfo.IsName("laykiemtaytrai") || stateInfo.IsName("Laykiemtayphai") ||
-                                         stateInfo.IsName("catkiemtaytrai") || stateInfo.IsName("catkiemtayphai");
-            
-            bool shouldBeActive = IsAiming || isRShootPending || (isExecutingAttack && !isRootedAttack) || isSwitchingWeapon || isDrawOrSheatheActive;
+            bool isSlashActive = !stateInfo.IsName("New State") && !stateInfo.IsName("Empty");
+            float targetAttackLayerWeight = isSlashActive ? 1f : 0f;
 
-            targetAttackLayerWeight = shouldBeActive ? 1f : 0f;
-
-            currentAttackLayerWeight = Mathf.MoveTowards(currentAttackLayerWeight, targetAttackLayerWeight, Time.deltaTime * 10f);
-            anim.SetLayerWeight(1, currentAttackLayerWeight);
+            float currentWeight = anim.GetLayerWeight(1);
+            float smoothedWeight = Mathf.MoveTowards(currentWeight, targetAttackLayerWeight, Time.deltaTime * 10f);
+            anim.SetLayerWeight(1, smoothedWeight);
         }
     }
 

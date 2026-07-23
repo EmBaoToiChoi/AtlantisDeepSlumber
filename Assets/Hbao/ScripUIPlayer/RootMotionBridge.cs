@@ -147,8 +147,7 @@ public class RootMotionBridge : MonoBehaviour
         }
         else
         {
-            // Không can thiệp vào transform hay rootBone khi di chuyển thông thường (walk/run/idle/turnaround)
-            // để hoạt ảnh và phép quay C# chạy tự nhiên 100% không bị giật khựng.
+            isRollLocked = false; // Tự động xả lock Hips khi không ở trong animation lộn, tránh vẹo xương sườn/hông
         }
     }
 
