@@ -41,6 +41,8 @@ public class FirePillarActivator : NetworkBehaviour
         NetworkVariableWritePermission.Server
     );
 
+    public bool IsActivated => (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening) ? m_IsActivated.Value : false;
+
     private void Awake()
     {
         // Ép buộc giá trị đúng để đồng bộ với logic của Shader mới (1 = Tắt, 0 = Bật)

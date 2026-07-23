@@ -2,7 +2,7 @@ using UnityEngine;
 using System.Collections;
 using Unity.Netcode;
 
-public class MazeGemQuestTrigger : NetworkBehaviour, IQuestTrigger
+public class CrystalPuzzleQuestTrigger : NetworkBehaviour, IQuestTrigger
 {
     public bool IsQuestCompleted => isQuestCompleted;
     public bool IsQuestActive => (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening) ? isQuestActive.Value : hasTriggeredQuest;
@@ -19,22 +19,22 @@ public class MazeGemQuestTrigger : NetworkBehaviour, IQuestTrigger
         return true;
     }
 
-    [Header("Quest Configuration")]
-    [Tooltip("Danh sách các GameObject viên ngọc trong mê cung cần thu thập (Hỗ trợ cả CrystalCore, CollectibleItemDrop hoặc GameObject bất kỳ)")]
-    public GameObject[] gemObjects;
+    [Header("Pedestal Puzzle Configuration")]
+    [Tooltip("Danh sách các trụ/phiến đá đặt ngọc (CrystalPuzzleSystem / CrystalPedestal)")]
+    public CrystalPuzzleSystem[] pedestals;
 
     [Header("Quest UI Settings")]
-    [Tooltip("Tiêu đề nhiệm vụ hiển thị trên UI (Ví dụ: TÌM NGỌC)")]
-    public string questTitle = "TÌM NGỌC";
+    [Tooltip("Tiêu đề nhiệm vụ hiển thị trên UI")]
+    public string questTitle = "ĐẶT NGỌC";
 
-    [Tooltip("Icon nhiệm vụ hiển thị bên cạnh tiêu đề. Nếu trống, script tự động lấy ngọc tím của HUD")]
+    [Tooltip("Icon nhiệm vụ hiển thị bên cạnh tiêu đề. Nếu trống, script tự lấy ngọc của HUD")]
     public Sprite questIconSprite;
 
     [Tooltip("Nội dung mô tả nhiệm vụ hiển thị trên UI")]
     [TextArea(3, 5)]
-    public string questDescription = "Tìm đường để lấy những viên ngọc trong mê cung.";
+    public string questDescription = "Di chuyển lại gần các công tắc và ấn F để tương tác và đặt 2 viên ngọc lên phiến đá.";
 
-    [Tooltip("Thời gian chờ trước khi ẩn bảng nhiệm vụ sau khi giải xong (giây)")]
+    [Tooltip("Thời gian chờ trước khi ẩn bảng nhiệm vụ sau khi hoàn thành (giây)")]
     public float hideDelayAfterComplete = 3f;
 
     [Tooltip("Khoảng thời gian (giây) giữa các lần kiểm tra cập nhật tiến trình trên UI")]
@@ -47,8 +47,8 @@ public class MazeGemQuestTrigger : NetworkBehaviour, IQuestTrigger
         NetworkVariableWritePermission.Server
     );
 
-    // Biến mạng đồng bộ số lượng ngọc đã thu thập
-    public NetworkVariable<int> collectedCount = new NetworkVariable<int>(
+    // Biến mạng đồng bộ số lượng ngọc đã đặt
+    public NetworkVariable<int> placedCount = new NetworkVariable<int>(
         0,
         NetworkVariableReadPermission.Everyone,
         NetworkVariableWritePermission.Server
@@ -60,41 +60,46 @@ public class MazeGemQuestTrigger : NetworkBehaviour, IQuestTrigger
 
     private bool hasTriggeredQuest = false;
     private bool isQuestCompleted = false;
-    
+
     private float nextPlayerSearchTime = 0f;
     private float nextCheckTime = 0f;
-    private int lastPressedCount = -1;
-    private int localCollectedCount = 0; // Dùng khi chơi offline
-    private System.Collections.Generic.HashSet<int> collectedGemIndices = new System.Collections.Generic.HashSet<int>();
+    private int lastPlacedCount = -1;
+    private int localPlacedCount = 0;
 
     private void Awake()
     {
         triggerCollider = GetComponent<Collider>();
         if (triggerCollider == null)
         {
-            Debug.LogError($"[MazeGemQuestTrigger] LỖI: GameObject '{gameObject.name}' bắt buộc phải có một Collider (ví dụ Box Collider) được bật 'Is Trigger'!");
+            Debug.LogWarning($"[CrystalPuzzleQuestTrigger] GameObject '{gameObject.name}' không có Collider trigger. Tạo/gán Box Collider trigger trên GameObject này để tự động phát hiện người chơi khi bước vào vùng nhiệm vụ.");
         }
         else if (!triggerCollider.isTrigger)
         {
             triggerCollider.isTrigger = true;
-            Debug.LogWarning($"[MazeGemQuestTrigger] Tự động chuyển Collider trên '{gameObject.name}' thành Trigger.");
         }
     }
 
     private void Start()
     {
-        if (gemObjects == null || gemObjects.Length == 0)
+        if (pedestals == null || pedestals.Length == 0)
         {
-            Debug.LogWarning("[MazeGemQuestTrigger] CẢNH BÁO: Danh sách gemObjects đang trống! Hãy kéo các GameObject viên ngọc (như CrystalCore hoặc CollectibleItemDrop) vào Inspector.");
+            pedestals = FindObjectsByType<CrystalPuzzleSystem>(FindObjectsSortMode.None);
+            if (pedestals != null && pedestals.Length > 0)
+            {
+                Debug.Log($"[CrystalPuzzleQuestTrigger] Tự động tìm thấy {pedestals.Length} trụ đặt ngọc (CrystalPuzzleSystem).");
+            }
+            else
+            {
+                Debug.LogWarning("[CrystalPuzzleQuestTrigger] CẢNH BÁO: Chưa gán pedestals (các trụ đặt ngọc) trong Inspector!");
+            }
         }
     }
 
     public override void OnNetworkSpawn()
     {
         isQuestActive.OnValueChanged += OnQuestActiveChanged;
-        collectedCount.OnValueChanged += OnCollectedCountChanged;
-        
-        // Nếu nhiệm vụ đã được kích hoạt trước khi player này kết nối
+        placedCount.OnValueChanged += OnPlacedCountChanged;
+
         if (isQuestActive.Value && IsPrerequisiteCompleted())
         {
             hasTriggeredQuest = true;
@@ -105,7 +110,7 @@ public class MazeGemQuestTrigger : NetworkBehaviour, IQuestTrigger
     public override void OnNetworkDespawn()
     {
         isQuestActive.OnValueChanged -= OnQuestActiveChanged;
-        collectedCount.OnValueChanged -= OnCollectedCountChanged;
+        placedCount.OnValueChanged -= OnPlacedCountChanged;
     }
 
     private void OnQuestActiveChanged(bool oldVal, bool newVal)
@@ -113,44 +118,17 @@ public class MazeGemQuestTrigger : NetworkBehaviour, IQuestTrigger
         if (newVal && IsPrerequisiteCompleted())
         {
             hasTriggeredQuest = true;
-            lastPressedCount = -1; // Ép cập nhật UI lập tức
+            lastPlacedCount = -1;
             UpdateQuestProgressUI();
-            Debug.Log("[MazeGemQuestTrigger] Nhiệm vụ tìm ngọc đã được kích hoạt đồng bộ từ mạng!");
         }
     }
 
-    private void OnCollectedCountChanged(int oldVal, int newVal)
+    private void OnPlacedCountChanged(int oldVal, int newVal)
     {
         if (isQuestActive.Value && IsPrerequisiteCompleted())
         {
             UpdateQuestProgressUI();
         }
-    }
-
-    private bool IsGemCollected(GameObject gem)
-    {
-        if (gem == null) return true;
-
-        // 1. Kiểm tra CrystalCore (nếu là ngọc CrystalCore trong minigame/mê cung)
-        var crystal = gem.GetComponent<CrystalCore>();
-        if (crystal != null)
-        {
-            if (!gem.activeInHierarchy) return true;
-            if (crystal.isSnapped != null && crystal.isSnapped.Value) return true;
-            if (crystal.holderId != null && crystal.holderId.Value != ulong.MaxValue) return true;
-            return false;
-        }
-
-        // 2. Kiểm tra CollectibleItemDrop (nếu là ngọc nhặt dạng vật phẩm drop)
-        var collectible = gem.GetComponent<CollectibleItemDrop>();
-        if (collectible != null)
-        {
-            if (!gem.activeInHierarchy) return true;
-            return false;
-        }
-
-        // 3. Nếu là GameObject bình thường, kiểm tra xem đã bị ẩn (SetActive false) hoặc Destroy chưa
-        return !gem.activeInHierarchy;
     }
 
     private void Update()
@@ -162,47 +140,43 @@ public class MazeGemQuestTrigger : NetworkBehaviour, IQuestTrigger
             FindLocalPlayer();
         }
 
-        // 1. Chỉ Server (hoặc offline) giám sát tiến trình thu thập ngọc
         bool isNetwork = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
+        
+        // Server / Offline kiểm tra tiến độ đặt ngọc từ các pedestals
         if (!isNetwork || IsServer)
         {
             bool active = isNetwork ? isQuestActive.Value : hasTriggeredQuest;
-            if (active && gemObjects != null && gemObjects.Length > 0)
+            if (active && pedestals != null && pedestals.Length > 0)
             {
-                // Kiểm tra từng ngọc trong danh sách
-                for (int i = 0; i < gemObjects.Length; i++)
+                int currentPlaced = 0;
+                foreach (var pedestal in pedestals)
                 {
-                    var gem = gemObjects[i];
-                    if (collectedGemIndices.Contains(i) || IsGemCollected(gem))
+                    if (pedestal != null && pedestal.IsCrystalPlaced)
                     {
-                        collectedGemIndices.Add(i);
+                        currentPlaced++;
                     }
                 }
 
-                int currentCollected = collectedGemIndices.Count;
-
-                // Cập nhật giá trị
                 if (isNetwork)
                 {
-                    if (collectedCount.Value != currentCollected)
+                    if (placedCount.Value != currentPlaced)
                     {
-                        collectedCount.Value = currentCollected;
-                        Debug.Log($"[MazeGemQuestTrigger Server] Đã thu thập: {currentCollected}/{gemObjects.Length} ngọc.");
+                        placedCount.Value = currentPlaced;
+                        Debug.Log($"[CrystalPuzzleQuestTrigger Server] Tiến độ đặt ngọc: {currentPlaced}/{pedestals.Length}");
                     }
                 }
                 else
                 {
-                    if (localCollectedCount != currentCollected)
+                    if (localPlacedCount != currentPlaced)
                     {
-                        localCollectedCount = currentCollected;
+                        localPlacedCount = currentPlaced;
                         UpdateQuestProgressUI();
-                        Debug.Log($"[MazeGemQuestTrigger Offline] Đã thu thập: {currentCollected}/{gemObjects.Length} ngọc.");
+                        Debug.Log($"[CrystalPuzzleQuestTrigger Offline] Tiến độ đặt ngọc: {currentPlaced}/{pedestals.Length}");
                     }
                 }
 
-                // Kiểm tra điều kiện hoàn thành
-                int totalNeeded = gemObjects.Length;
-                if (currentCollected >= totalNeeded)
+                int totalNeeded = pedestals.Length;
+                if (currentPlaced >= totalNeeded)
                 {
                     CompleteQuest();
                     return;
@@ -210,7 +184,7 @@ public class MazeGemQuestTrigger : NetworkBehaviour, IQuestTrigger
             }
         }
 
-        // 2. Client & Server định kỳ cập nhật UI
+        // Định kỳ cập nhật UI
         bool currentActive = isNetwork ? isQuestActive.Value : hasTriggeredQuest;
         if (currentActive && Time.time >= nextCheckTime)
         {
@@ -239,7 +213,6 @@ public class MazeGemQuestTrigger : NetworkBehaviour, IQuestTrigger
                 localHudCtl.UpdateQuestDescription(questDescription, this);
                 localHudCtl.UpdateQuestTitle(questTitle, this);
 
-                // Tự động giải quyết Sprite Icon (ưu tiên Inspector, sau đó đến cache HUD, sau đó đến Resources)
                 Sprite targetIcon = questIconSprite;
                 if (targetIcon == null && localHudCtl != null)
                 {
@@ -251,13 +224,14 @@ public class MazeGemQuestTrigger : NetworkBehaviour, IQuestTrigger
                 }
                 localHudCtl.UpdateQuestIcon(targetIcon, this);
 
-                int current = isNetwork ? collectedCount.Value : localCollectedCount;
-                int total = gemObjects != null ? gemObjects.Length : 2;
+                int current = isNetwork ? placedCount.Value : localPlacedCount;
+                int total = (pedestals != null && pedestals.Length > 0) ? pedestals.Length : 2;
 
-                if (current != lastPressedCount)
+                if (current != lastPlacedCount)
                 {
-                    lastPressedCount = current;
+                    lastPlacedCount = current;
                     localHudCtl.UpdateQuestProgress(current, total, this);
+                    Debug.Log($"[CrystalPuzzleQuestTrigger] Cập nhật tiến độ UI: {current}/{total}");
                 }
             }
         }
@@ -266,7 +240,7 @@ public class MazeGemQuestTrigger : NetworkBehaviour, IQuestTrigger
     private void CompleteQuest()
     {
         isQuestCompleted = true;
-        Debug.Log("[MazeGemQuestTrigger] Đã thu thập đủ ngọc trong mê cung! Nhiệm vụ hoàn thành.");
+        Debug.Log("[CrystalPuzzleQuestTrigger] Đã đặt đủ ngọc lên các bệ! Nhiệm vụ hoàn thành.");
 
         if (localHudCtl == null)
         {
@@ -275,16 +249,15 @@ public class MazeGemQuestTrigger : NetworkBehaviour, IQuestTrigger
 
         if (localHudCtl != null)
         {
-            int total = gemObjects != null ? gemObjects.Length : 2;
+            int total = (pedestals != null && pedestals.Length > 0) ? pedestals.Length : 2;
             localHudCtl.ShowQuest(true, this);
             localHudCtl.UpdateQuestProgress(total, total, this);
-            localHudCtl.UpdateQuestDescription("Nhiệm vụ hoàn thành: Đã thu thập đủ ngọc!", this);
+            localHudCtl.UpdateQuestDescription("Nhiệm vụ hoàn thành: Đã đặt đủ ngọc lên các phiến đá!", this);
             localHudCtl.UpdateQuestTitle(questTitle, this);
-            
-            Sprite targetIcon = questIconSprite != null ? questIconSprite : (localHudCtl.ngoc1Sprite != null ? localHudCtl.ngoc1Sprite : Resources.Load<Sprite>("crystal_purple"));
+
+            Sprite targetIcon = questIconSprite != null ? questIconSprite : (localHudCtl != null && localHudCtl.ngoc1Sprite != null ? localHudCtl.ngoc1Sprite : Resources.Load<Sprite>("crystal_purple"));
             localHudCtl.UpdateQuestIcon(targetIcon, this);
 
-            // Bắt đầu Coroutine để ẩn UI sau độ trễ
             StartCoroutine(HideQuestAfterDelay(hideDelayAfterComplete));
         }
         else
@@ -302,10 +275,9 @@ public class MazeGemQuestTrigger : NetworkBehaviour, IQuestTrigger
             localHudCtl.ShowQuest(false, this);
             localHudCtl.UpdateQuestIcon(null, this);
             localHudCtl.UpdateQuestTitle("NHIỆM VỤ", this);
-            Debug.Log("[MazeGemQuestTrigger] Đã ẩn UI nhiệm vụ hoàn thành.");
+            Debug.Log("[CrystalPuzzleQuestTrigger] Đã ẩn UI nhiệm vụ hoàn thành.");
         }
 
-        // Vô hiệu hóa script và trigger để giải phóng tài nguyên
         enabled = false;
         var col = GetComponent<Collider>();
         if (col != null)
@@ -328,15 +300,15 @@ public class MazeGemQuestTrigger : NetworkBehaviour, IQuestTrigger
                 if (!isQuestActive.Value)
                 {
                     isQuestActive.Value = true;
-                    Debug.Log($"[MazeGemQuestTrigger Server] Người chơi '{other.gameObject.name}' chạm Trigger - Kích hoạt nhiệm vụ tìm ngọc cho toàn bộ mạng!");
+                    Debug.Log($"[CrystalPuzzleQuestTrigger Server] Người chơi '{other.gameObject.name}' chạm Trigger - Kích hoạt nhiệm vụ đặt ngọc cho toàn bộ mạng!");
                 }
             }
             else
             {
                 hasTriggeredQuest = true;
-                lastPressedCount = -1; // Ép cập nhật ngay lập tức
+                lastPlacedCount = -1;
                 UpdateQuestProgressUI();
-                Debug.Log("[MazeGemQuestTrigger Offline] Người chơi chạm Trigger - Kích hoạt nhiệm vụ tìm ngọc.");
+                Debug.Log("[CrystalPuzzleQuestTrigger Offline] Người chơi chạm Trigger - Kích hoạt nhiệm vụ đặt ngọc.");
             }
         }
     }
@@ -344,11 +316,8 @@ public class MazeGemQuestTrigger : NetworkBehaviour, IQuestTrigger
     private bool IsPlayer(GameObject go)
     {
         if (go == null) return false;
-
         if (go.GetComponent<IPlayerHUDTarget>() != null || go.GetComponentInParent<IPlayerHUDTarget>() != null) return true;
-
         if (go.CompareTag("Player") || (go.transform.parent != null && go.transform.parent.CompareTag("Player"))) return true;
-
         return false;
     }
 
