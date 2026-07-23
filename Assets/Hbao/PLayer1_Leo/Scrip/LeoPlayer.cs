@@ -2940,6 +2940,10 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     public string isArmedParam = "IsArmed";
 
 
+    [Header("Smooth Movement Settings")]
+    public float inputFilterSpeed = 8f;
+    public float rotationSmoothSpeedArmed = 10f;
+    public float rotationSmoothSpeedUnarmed = 12f;
 
     [Header("Player Settings & Stats")]
     public float moveSpeed = 3.5f;
@@ -2953,7 +2957,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     [Tooltip("Tốc độ rơi xuống tối đa (m/s). Đặt cao hơn để rơi nhanh hơn.")]
     public float maxFallSpeed = 20f;
     [Tooltip("Chỉ áp extra gravity khi player đang trên không (false = luôn áp).")]
-    public bool onlyExtraGravityWhenAirborne = false;
+    public bool onlyExtraGravityWhenAirborne = true;
 
     [Header("Combo Attack Settings")]
 
@@ -3111,6 +3115,11 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     private Transform spineBone;
     private float localAimAngle = 0f;
     private Vector3 lastPositionForSpine;
+
+    // Hips bone lock — ngăn root motion drift trong animation walk/run
+    private Transform hipsBone;
+    private Vector3 initialHipsBoneLocalPos;
+    private bool hasHipsBone = false;
 
     public NetworkVariable<float> netAimAngle = new NetworkVariable<float>(
         0f,
@@ -3441,9 +3450,8 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         rb = GetComponent<Rigidbody>();
         if (rb != null)
         {
-            rb.isKinematic = false; // Mặc định tắt Kinematic để di chuyển được ở chế độ Standalone/Offline
             rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationY | RigidbodyConstraints.FreezeRotationZ;
-            rb.interpolation = RigidbodyInterpolation.None;
+            rb.interpolation = RigidbodyInterpolation.None; // Tắt Rigidbody Interpolation để tránh lệch frame giữa physics 50Hz và render Update
         }
 
         CreateSwordHitboxes();
@@ -3477,6 +3485,18 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         defaultCameraDistance = cameraDistance;
         defaultPivotHeight = cameraPivotHeight;
         lastPositionForSpine = transform.position;
+
+        // Cache Hips bone và lưu vị trí ban đầu để lock XZ khi di chuyển
+        if (anim != null)
+        {
+            hipsBone = anim.GetBoneTransform(HumanBodyBones.Hips);
+            if (hipsBone != null)
+            {
+                initialHipsBoneLocalPos = hipsBone.localPosition;
+                hasHipsBone = true;
+                Debug.Log($"[LeoPlayer] Cached Hips bone: {hipsBone.name}, Initial local pos: {initialHipsBoneLocalPos}");
+            }
+        }
 
         if (!IsNetworkActive)
         {
@@ -3758,6 +3778,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         var bridge = GetRootMotionBridge();
         if (bridge != null)
         {
+            bridge.ApplyFinalOffset();
             bridge.EndRoll();
             bridge.enabled = true;
         }
@@ -4099,22 +4120,24 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             knockbackVelocity = Vector3.Lerp(knockbackVelocity, Vector3.zero, Time.deltaTime * 8f);
         }
 
-        float currentYVelocity = rb != null ? rb.linearVelocity.y : 0f;
+        bool isArmed = (GetActiveWeaponIndex() == 2);
+        bool isMoving = (movementTranslation != Vector3.zero);
+
+        Vector3 desiredMoveVelocity = Vector3.zero;
         if (attackDashTimer > 0)
         {
-            targetMoveVelocity = attackDashDirection * attackDashSpeed;
+            desiredMoveVelocity = attackDashDirection * attackDashSpeed;
         }
         else if (shouldLockMovement && currentKnockback.magnitude <= 0.01f)
         {
-            targetMoveVelocity = Vector3.zero;
+            desiredMoveVelocity = Vector3.zero;
         }
         else
         {
-            targetMoveVelocity = movementTranslation * currentSpeed + currentKnockback;
+            desiredMoveVelocity = movementTranslation * currentSpeed + currentKnockback;
         }
 
-        bool isArmed = (GetActiveWeaponIndex() == 2);
-        bool isMoving = (movementTranslation != Vector3.zero);
+        targetMoveVelocity = desiredMoveVelocity;
 
         float targetInputX = 0f;
         float targetInputZ = 0f;
@@ -4282,22 +4305,24 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             knockbackVelocity = Vector3.Lerp(knockbackVelocity, Vector3.zero, Time.deltaTime * 8f);
         }
 
-        float currentYVelocity = rb != null ? rb.linearVelocity.y : 0f;
+        bool isArmed = (GetActiveWeaponIndex() == 2);
+        bool isMoving = (movementTranslation != Vector3.zero);
+
+        Vector3 desiredMoveVelocity = Vector3.zero;
         if (attackDashTimer > 0)
         {
-            targetMoveVelocity = attackDashDirection * attackDashSpeed;
+            desiredMoveVelocity = attackDashDirection * attackDashSpeed;
         }
         else if (shouldLockMovement && currentKnockback.magnitude <= 0.01f)
         {
-            targetMoveVelocity = Vector3.zero;
+            desiredMoveVelocity = Vector3.zero;
         }
         else
         {
-            targetMoveVelocity = movementTranslation * currentSpeed + currentKnockback;
+            desiredMoveVelocity = movementTranslation * currentSpeed + currentKnockback;
         }
 
-        bool isArmed = (GetActiveWeaponIndex() == 2);
-        bool isMoving = (movementTranslation != Vector3.zero);
+        targetMoveVelocity = desiredMoveVelocity;
 
         float targetInputX = 0f;
         float targetInputZ = 0f;
@@ -4725,9 +4750,10 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         if (anim != null) anim.applyRootMotion = false;
 
-        // Không đặt rb.isKinematic = true để di chuyển bằng velocity vật lý thuần túy
+        // Lock Hips bone trước khi bắt đầu roll để tránh vặn xương chân
+        var bridge = GetRootMotionBridge();
+        if (bridge != null) bridge.BeginRoll();
 
-        if (anim != null) anim.applyRootMotion = false;
         PlayAnimation("LonVong", 0.05f);
     }
 
@@ -4758,9 +4784,10 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         if (anim != null) anim.applyRootMotion = false;
 
-        // Không đặt rb.isKinematic = true để di chuyển bằng velocity vật lý thuần túy
+        // Lock Hips bone trước khi bắt đầu roll để tránh vặn xương chân
+        var bridge = GetRootMotionBridge();
+        if (bridge != null) bridge.BeginRoll();
 
-        if (anim != null) anim.applyRootMotion = false;
         PlayAnimation("LonVong", 0.05f, false);
         StartRollServerRpc(rollDirection, transform.position);
     }
@@ -4820,6 +4847,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     void LateUpdate()
     {
+
         // Spine bone twist and combo offset
         if (anim != null)
         {
@@ -7090,35 +7118,43 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             case "Idle":
                 return isArmed ? idleArmed : idleUnarmed;
             case "Walk":
-                if (isArmed)
+                if (IsAiming)
                 {
-                    if (isMovingBackward) return walkBackwardArmed;
-                    if (isMovingLeft) return walkLeftArmed;
-                    if (isMovingRight) return walkRightArmed;
-                    return walkForwardArmed;
+                    if (isArmed)
+                    {
+                        if (isMovingBackward) return walkBackwardArmed;
+                        if (isMovingLeft) return walkLeftArmed;
+                        if (isMovingRight) return walkRightArmed;
+                        return walkForwardArmed;
+                    }
+                    else
+                    {
+                        if (isMovingBackward) return walkBackwardUnarmed;
+                        if (isMovingLeft) return walkLeftUnarmed;
+                        if (isMovingRight) return walkRightUnarmed;
+                        return walkUnarmed;
+                    }
                 }
-                else
-                {
-                    if (isMovingBackward) return walkBackwardUnarmed;
-                    if (isMovingLeft) return walkLeftUnarmed;
-                    if (isMovingRight) return walkRightUnarmed;
-                    return walkUnarmed;
-                }
+                return isArmed ? walkForwardArmed : walkUnarmed;
             case "run":
-                if (isArmed)
+                if (IsAiming)
                 {
-                    if (isMovingBackward) return runBackwardArmed;
-                    if (isMovingLeft) return runLeftArmed;
-                    if (isMovingRight) return runRightArmed;
-                    return runForwardArmed;
+                    if (isArmed)
+                    {
+                        if (isMovingBackward) return runBackwardArmed;
+                        if (isMovingLeft) return runLeftArmed;
+                        if (isMovingRight) return runRightArmed;
+                        return runForwardArmed;
+                    }
+                    else
+                    {
+                        if (isMovingBackward) return runBackwardUnarmed;
+                        if (isMovingLeft) return runLeftUnarmed;
+                        if (isMovingRight) return runRightUnarmed;
+                        return runUnarmed;
+                    }
                 }
-                else
-                {
-                    if (isMovingBackward) return runBackwardUnarmed;
-                    if (isMovingLeft) return runLeftUnarmed;
-                    if (isMovingRight) return runRightUnarmed;
-                    return runUnarmed;
-                }
+                return isArmed ? runForwardArmed : runUnarmed;
             case "LonVong":
                 return rollTrigger;
             case "Punch1":
@@ -7740,8 +7776,8 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         if (rb == null) return;
 
-        // Kiểm tra xem có đang trên không không (dựa vào vậnl tốc dương Y)
-        bool isAirborne = rb.linearVelocity.y > 0.01f || rb.linearVelocity.y < -0.01f;
+        // Kiểm tra xem có đang trên không không (dựa vào vận tốc Y thực sự)
+        bool isAirborne = Mathf.Abs(rb.linearVelocity.y) > 0.5f;
 
         if (onlyExtraGravityWhenAirborne && !isAirborne) return;
 
@@ -7792,6 +7828,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (anim != null && anim.isActiveAndEnabled && anim.runtimeAnimatorController != null && anim.layerCount > 1)
         {
             anim.CrossFadeInFixedTime("New State", 0.1f, 1, 0f);
+            anim.SetLayerWeight(1, 0f);
         }
 
         // Network sync layer clearing
@@ -8666,11 +8703,17 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             catch (System.Exception) {}
 
             AnimatorStateInfo stateInfo = anim.GetCurrentAnimatorStateInfo(1);
-            bool isSlashActive = !stateInfo.IsName("New State") && !stateInfo.IsName("Empty");
+            bool isInTransition = anim.IsInTransition(1);
+            AnimatorStateInfo nextStateInfo = isInTransition ? anim.GetNextAnimatorStateInfo(1) : stateInfo;
+
+            bool isCurrentNewOrEmpty = stateInfo.IsName("New State") || stateInfo.IsName("Empty");
+            bool isNextNewOrEmpty = nextStateInfo.IsName("New State") || nextStateInfo.IsName("Empty");
+
+            bool isSlashActive = (!isCurrentNewOrEmpty && !isInTransition) || (!isNextNewOrEmpty && isInTransition);
             float targetAttackLayerWeight = isSlashActive ? 1f : 0f;
 
             float currentWeight = anim.GetLayerWeight(1);
-            float smoothedWeight = Mathf.MoveTowards(currentWeight, targetAttackLayerWeight, Time.deltaTime * 10f);
+            float smoothedWeight = Mathf.MoveTowards(currentWeight, targetAttackLayerWeight, Time.deltaTime * 15f);
             anim.SetLayerWeight(1, smoothedWeight);
         }
     }
