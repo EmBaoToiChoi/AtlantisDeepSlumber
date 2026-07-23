@@ -308,7 +308,6 @@ public class ChargePillarQuestTrigger : NetworkBehaviour, IQuestTrigger
         if (other == null || isQuestCompleted || !IsPrerequisiteCompleted()) return;
 
         bool isNetwork = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
-        if (isNetwork && !IsServer) return;
 
         if (IsPlayer(other.gameObject))
         {
@@ -316,8 +315,15 @@ public class ChargePillarQuestTrigger : NetworkBehaviour, IQuestTrigger
             {
                 if (!isQuestActive.Value)
                 {
-                    isQuestActive.Value = true;
-                    Debug.Log($"[ChargePillarQuestTrigger Server] Người chơi '{other.gameObject.name}' chạm Trigger - Kích hoạt nhiệm vụ sạc điện 3 trụ cho toàn bộ mạng!");
+                    if (IsServer)
+                    {
+                        isQuestActive.Value = true;
+                        Debug.Log($"[ChargePillarQuestTrigger Server] Người chơi '{other.gameObject.name}' chạm Trigger - Kích hoạt nhiệm vụ cho toàn bộ mạng!");
+                    }
+                    else
+                    {
+                        RequestActivateQuestServerRpc();
+                    }
                 }
             }
             else
@@ -325,8 +331,18 @@ public class ChargePillarQuestTrigger : NetworkBehaviour, IQuestTrigger
                 hasTriggeredQuest = true;
                 lastChargedCount = -1;
                 UpdateQuestProgressUI();
-                Debug.Log("[ChargePillarQuestTrigger Offline] Người chơi chạm Trigger - Kích hoạt nhiệm vụ sạc điện 3 trụ.");
+                Debug.Log("[ChargePillarQuestTrigger Offline] Người chơi chạm Trigger - Kích hoạt nhiệm vụ.");
             }
+        }
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    private void RequestActivateQuestServerRpc()
+    {
+        if (!isQuestActive.Value)
+        {
+            isQuestActive.Value = true;
+            Debug.Log("[ChargePillarQuestTrigger ServerRpc] Client yêu cầu kích hoạt nhiệm vụ sạc điện 3 trụ cho toàn bộ mạng!");
         }
     }
 

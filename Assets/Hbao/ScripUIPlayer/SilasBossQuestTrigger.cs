@@ -2,7 +2,7 @@ using UnityEngine;
 using System.Collections;
 using Unity.Netcode;
 
-public class MiniBossQuestTrigger : NetworkBehaviour, IQuestTrigger
+public class SilasBossQuestTrigger : NetworkBehaviour, IQuestTrigger
 {
     public bool IsQuestCompleted => isQuestCompleted;
     public bool IsQuestActive => (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening) ? isQuestActive.Value : hasTriggeredQuest;
@@ -19,20 +19,20 @@ public class MiniBossQuestTrigger : NetworkBehaviour, IQuestTrigger
         return true;
     }
 
-    [Header("Mini Boss Target Settings")]
-    [Tooltip("Kéo GameObject Mini Boss (có component MiniBossAI) vào đây")]
-    public MiniBossAI miniBoss;
+    [Header("Silas Boss Target Settings")]
+    [Tooltip("Kéo GameObject Silas (có component BossAI) vào đây")]
+    public BossAI silasBoss;
 
     [Header("Quest UI Settings")]
     [Tooltip("Tiêu đề nhiệm vụ hiển thị trên UI")]
-    public string questTitle = "TIÊU DIỆT MINI BOSS";
+    public string questTitle = "TIÊU DIỆT HOÀN TOÀN SILAS";
 
     [Tooltip("Icon nhiệm vụ hiển thị bên cạnh tiêu đề")]
     public Sprite questIconSprite;
 
     [Tooltip("Nội dung mô tả nhiệm vụ hiển thị trên UI")]
     [TextArea(3, 5)]
-    public string questDescription = "Tiêu diệt Mini Boss đang trấn giữ khu vực.";
+    public string questDescription = "Tiêu diệt hoàn toàn Silas.";
 
     [Tooltip("Thời gian chờ trước khi ẩn bảng nhiệm vụ sau khi hoàn thành (giây)")]
     public float hideDelayAfterComplete = 3f;
@@ -47,7 +47,7 @@ public class MiniBossQuestTrigger : NetworkBehaviour, IQuestTrigger
         NetworkVariableWritePermission.Server
     );
 
-    // Biến mạng đồng bộ số lượng Mini Boss đã diệt (0 hoặc 1)
+    // Biến mạng đồng bộ số lượng Silas đã diệt (0 hoặc 1)
     public NetworkVariable<int> bossDefeatedCount = new NetworkVariable<int>(
         0,
         NetworkVariableReadPermission.Everyone,
@@ -71,7 +71,7 @@ public class MiniBossQuestTrigger : NetworkBehaviour, IQuestTrigger
         triggerCollider = GetComponent<Collider>();
         if (triggerCollider == null)
         {
-            Debug.LogWarning($"[MiniBossQuestTrigger] GameObject '{gameObject.name}' chưa có Collider trigger. Cần có Box Collider trigger để tự động phát hiện người chơi khi bước vào vùng chiến đấu.");
+            Debug.LogWarning($"[SilasBossQuestTrigger] GameObject '{gameObject.name}' chưa có Collider trigger. Cần có Box Collider trigger để tự động phát hiện người chơi khi bước vào vùng chiến đấu.");
         }
         else if (!triggerCollider.isTrigger)
         {
@@ -81,16 +81,16 @@ public class MiniBossQuestTrigger : NetworkBehaviour, IQuestTrigger
 
     private void Start()
     {
-        if (miniBoss == null)
+        if (silasBoss == null)
         {
-            miniBoss = FindFirstObjectByType<MiniBossAI>();
-            if (miniBoss != null)
+            silasBoss = FindFirstObjectByType<BossAI>();
+            if (silasBoss != null)
             {
-                Debug.Log($"[MiniBossQuestTrigger] Tự động tìm thấy MiniBossAI trên '{miniBoss.gameObject.name}'.");
+                Debug.Log($"[SilasBossQuestTrigger] Tự động tìm thấy BossAI (Silas) trên '{silasBoss.gameObject.name}'.");
             }
             else
             {
-                Debug.LogWarning("[MiniBossQuestTrigger] CẢNH BÁO: Chưa gán MiniBossAI trong Inspector!");
+                Debug.LogWarning("[SilasBossQuestTrigger] CẢNH BÁO: Chưa gán BossAI (Silas) trong Inspector!");
             }
         }
     }
@@ -131,10 +131,11 @@ public class MiniBossQuestTrigger : NetworkBehaviour, IQuestTrigger
         }
     }
 
-    private bool IsBossDead()
+    private bool IsSilasDead()
     {
-        if (miniBoss == null) return false;
-        return miniBoss.IsDead || miniBoss.ActualCurrentHealth <= 0;
+        if (silasBoss == null) return false;
+        // Silas chết hoàn toàn khi IsDead = true HOẶC (đang ở Phase 2 và HP <= 0)
+        return silasBoss.IsDead || (silasBoss.IsPhase2 && silasBoss.ActualCurrentHealth <= 0);
     }
 
     private void Update()
@@ -148,20 +149,20 @@ public class MiniBossQuestTrigger : NetworkBehaviour, IQuestTrigger
 
         bool isNetwork = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
 
-        // Server / Offline kiểm tra Mini Boss đã chết chưa
+        // Server / Offline kiểm tra Silas đã bị hạ gục hoàn toàn chưa
         if (!isNetwork || IsServer)
         {
             bool active = isNetwork ? isQuestActive.Value : hasTriggeredQuest;
-            if (active && miniBoss != null)
+            if (active && silasBoss != null)
             {
-                int currentDefeated = IsBossDead() ? 1 : 0;
+                int currentDefeated = IsSilasDead() ? 1 : 0;
 
                 if (isNetwork)
                 {
                     if (bossDefeatedCount.Value != currentDefeated)
                     {
                         bossDefeatedCount.Value = currentDefeated;
-                        Debug.Log($"[MiniBossQuestTrigger Server] Tiến độ Mini Boss: {currentDefeated}/1");
+                        Debug.Log($"[SilasBossQuestTrigger Server] Tiến độ tiêu diệt Silas: {currentDefeated}/1");
                     }
                 }
                 else
@@ -170,7 +171,7 @@ public class MiniBossQuestTrigger : NetworkBehaviour, IQuestTrigger
                     {
                         localBossDefeatedCount = currentDefeated;
                         UpdateQuestProgressUI();
-                        Debug.Log($"[MiniBossQuestTrigger Offline] Tiến độ Mini Boss: {currentDefeated}/1");
+                        Debug.Log($"[SilasBossQuestTrigger Offline] Tiến độ tiêu diệt Silas: {currentDefeated}/1");
                     }
                 }
 
@@ -219,7 +220,7 @@ public class MiniBossQuestTrigger : NetworkBehaviour, IQuestTrigger
                 {
                     lastBossDefeatedCount = current;
                     localHudCtl.UpdateQuestProgress(current, total, this);
-                    Debug.Log($"[MiniBossQuestTrigger] Cập nhật tiến độ UI: {current}/{total}");
+                    Debug.Log($"[SilasBossQuestTrigger] Cập nhật tiến độ UI: {current}/{total}");
                 }
             }
         }
@@ -228,7 +229,7 @@ public class MiniBossQuestTrigger : NetworkBehaviour, IQuestTrigger
     private void CompleteQuest()
     {
         isQuestCompleted = true;
-        Debug.Log("[MiniBossQuestTrigger] Đã tiêu diệt thành công Mini Boss! Nhiệm vụ hoàn thành.");
+        Debug.Log("[SilasBossQuestTrigger] Đã tiêu diệt hoàn toàn Silas! Nhiệm vụ hoàn thành.");
 
         if (localHudCtl == null)
         {
@@ -239,7 +240,7 @@ public class MiniBossQuestTrigger : NetworkBehaviour, IQuestTrigger
         {
             localHudCtl.ShowQuest(true, this);
             localHudCtl.UpdateQuestProgress(1, 1, this);
-            localHudCtl.UpdateQuestDescription("Nhiệm vụ hoàn thành: Đã tiêu diệt thành công Mini Boss!", this);
+            localHudCtl.UpdateQuestDescription("Nhiệm vụ hoàn thành: Đã tiêu diệt hoàn toàn Silas!", this);
             localHudCtl.UpdateQuestTitle(questTitle, this);
             localHudCtl.UpdateQuestIcon(questIconSprite, this);
 
@@ -260,7 +261,7 @@ public class MiniBossQuestTrigger : NetworkBehaviour, IQuestTrigger
             localHudCtl.ShowQuest(false, this);
             localHudCtl.UpdateQuestIcon(null, this);
             localHudCtl.UpdateQuestTitle("NHIỆM VỤ", this);
-            Debug.Log("[MiniBossQuestTrigger] Đã ẩn UI nhiệm vụ hoàn thành.");
+            Debug.Log("[SilasBossQuestTrigger] Đã ẩn UI nhiệm vụ hoàn thành.");
         }
 
         enabled = false;
@@ -286,7 +287,7 @@ public class MiniBossQuestTrigger : NetworkBehaviour, IQuestTrigger
                     if (IsServer)
                     {
                         isQuestActive.Value = true;
-                        Debug.Log($"[MiniBossQuestTrigger Server] Người chơi '{other.gameObject.name}' chạm Trigger - Kích hoạt nhiệm vụ cho toàn bộ mạng!");
+                        Debug.Log($"[SilasBossQuestTrigger Server] Người chơi '{other.gameObject.name}' chạm Trigger - Kích hoạt nhiệm vụ cho toàn bộ mạng!");
                     }
                     else
                     {
@@ -299,7 +300,7 @@ public class MiniBossQuestTrigger : NetworkBehaviour, IQuestTrigger
                 hasTriggeredQuest = true;
                 lastBossDefeatedCount = -1;
                 UpdateQuestProgressUI();
-                Debug.Log("[MiniBossQuestTrigger Offline] Người chơi chạm Trigger - Kích hoạt nhiệm vụ.");
+                Debug.Log("[SilasBossQuestTrigger Offline] Người chơi chạm Trigger - Kích hoạt nhiệm vụ.");
             }
         }
     }
@@ -310,7 +311,7 @@ public class MiniBossQuestTrigger : NetworkBehaviour, IQuestTrigger
         if (!isQuestActive.Value)
         {
             isQuestActive.Value = true;
-            Debug.Log("[MiniBossQuestTrigger ServerRpc] Client yêu cầu kích hoạt nhiệm vụ Mini Boss cho toàn bộ mạng!");
+            Debug.Log("[SilasBossQuestTrigger ServerRpc] Client yêu cầu kích hoạt nhiệm vụ tiêu diệt Silas cho toàn bộ mạng!");
         }
     }
 

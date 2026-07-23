@@ -281,7 +281,6 @@ public class LaserMirrorQuestTrigger : NetworkBehaviour, IQuestTrigger
         if (other == null || isQuestCompleted || !IsPrerequisiteCompleted()) return;
 
         bool isNetwork = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
-        if (isNetwork && !IsServer) return;
 
         if (IsPlayer(other.gameObject))
         {
@@ -289,8 +288,15 @@ public class LaserMirrorQuestTrigger : NetworkBehaviour, IQuestTrigger
             {
                 if (!isQuestActive.Value)
                 {
-                    isQuestActive.Value = true;
-                    Debug.Log($"[LaserMirrorQuestTrigger Server] Người chơi '{other.gameObject.name}' chạm Trigger - Kích hoạt nhiệm vụ xoay gương dẫn lửa cho toàn bộ mạng!");
+                    if (IsServer)
+                    {
+                        isQuestActive.Value = true;
+                        Debug.Log($"[LaserMirrorQuestTrigger Server] Người chơi '{other.gameObject.name}' chạm Trigger - Kích hoạt nhiệm vụ cho toàn bộ mạng!");
+                    }
+                    else
+                    {
+                        RequestActivateQuestServerRpc();
+                    }
                 }
             }
             else
@@ -298,8 +304,18 @@ public class LaserMirrorQuestTrigger : NetworkBehaviour, IQuestTrigger
                 hasTriggeredQuest = true;
                 lastProgressCount = -1;
                 UpdateQuestProgressUI();
-                Debug.Log("[LaserMirrorQuestTrigger Offline] Người chơi chạm Trigger - Kích hoạt nhiệm vụ xoay gương dẫn lửa.");
+                Debug.Log("[LaserMirrorQuestTrigger Offline] Người chơi chạm Trigger - Kích hoạt nhiệm vụ.");
             }
+        }
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    private void RequestActivateQuestServerRpc()
+    {
+        if (!isQuestActive.Value)
+        {
+            isQuestActive.Value = true;
+            Debug.Log("[LaserMirrorQuestTrigger ServerRpc] Client yêu cầu kích hoạt nhiệm vụ xoay gương dẫn lửa cho toàn bộ mạng!");
         }
     }
 

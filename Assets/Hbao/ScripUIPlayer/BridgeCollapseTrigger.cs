@@ -424,16 +424,22 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
 
     private void OnTriggerEnter(Collider other)
     {
-        // Chỉ cho phép Server xử lý va chạm để tránh Client gọi lung tung
-        if (!IsServer || !IsPrerequisiteCompleted()) return;
+        if (!IsPrerequisiteCompleted()) return;
 
         // Kiểm tra sập cầu và chưa có video nào đang chạy
         if (!IsBridgeCollapsed() && !isCutscenePlaying)
         {
             if (IsPlayer(other.gameObject))
             {
-                Debug.Log($"[BridgeCollapseTrigger] Server nhận va chạm, bắt đầu chiếu Video.");
-                StartBridgeEventServer();
+                if (IsServer)
+                {
+                    Debug.Log($"[BridgeCollapseTrigger] Server nhận va chạm, bắt đầu chiếu Video.");
+                    StartBridgeEventServer();
+                }
+                else
+                {
+                    RequestBridgeEventServerRpc();
+                }
             }
         }
     }
