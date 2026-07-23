@@ -2114,16 +2114,18 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         if (isMoving)
         {
-            float moveMagnitude = new Vector2(moveX, moveZ).magnitude;
+            float moveMagnitude = Mathf.Clamp01(movementTranslation.magnitude);
+            float speedFactor = isRunning ? 2.0f : 1.0f;
             if (IsAiming || isBlocking)
             {
-                targetInputX = moveX * (isRunning ? 1.0f : 0.5f);
-                targetInputZ = moveZ * (isRunning ? 1.0f : 0.5f);
+                Vector3 localMove = transform.InverseTransformDirection(movementTranslation.normalized);
+                targetInputX = localMove.x * moveMagnitude * speedFactor;
+                targetInputZ = localMove.z * moveMagnitude * speedFactor;
             }
             else
             {
                 targetInputX = 0f;
-                targetInputZ = moveMagnitude * (isRunning ? 1.0f : 0.5f);
+                targetInputZ = moveMagnitude * speedFactor;
             }
             targetSpeed = new Vector2(targetInputX, targetInputZ).magnitude;
         }
@@ -2326,16 +2328,18 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         if (isMoving)
         {
-            float moveMagnitude = new Vector2(moveX, moveZ).magnitude;
+            float moveMagnitude = Mathf.Clamp01(movementTranslation.magnitude);
+            float speedFactor = isRunning ? 2.0f : 1.0f;
             if (IsAiming || isBlocking)
             {
-                targetInputX = moveX * (isRunning ? 1.0f : 0.5f);
-                targetInputZ = moveZ * (isRunning ? 1.0f : 0.5f);
+                Vector3 localMove = transform.InverseTransformDirection(movementTranslation.normalized);
+                targetInputX = localMove.x * moveMagnitude * speedFactor;
+                targetInputZ = localMove.z * moveMagnitude * speedFactor;
             }
             else
             {
                 targetInputX = 0f;
-                targetInputZ = moveMagnitude * (isRunning ? 1.0f : 0.5f);
+                targetInputZ = moveMagnitude * speedFactor;
             }
             targetSpeed = new Vector2(targetInputX, targetInputZ).magnitude;
         }
