@@ -2034,11 +2034,13 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         float moveZ = Input.GetAxis("Vertical");
         Vector3 move = new Vector3(moveX, 0, moveZ);
 
-        if (targetCamera == null)
+        if (targetCamera == null || !targetCamera.isActiveAndEnabled)
         {
             targetCamera = Camera.main;
             if (targetCamera == null)
+            {
                 targetCamera = FindObjectOfType<Camera>();
+            }
         }
 
         if (targetCamera != null)
@@ -2087,43 +2089,25 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         bool isAttacking = IsPlayingAttackState(out _, out _);
 
-        // Xoay nhân vật chuẩn Genshin Impact: Xoay mặt về hướng di chuyển (movementTranslation) khi di chuyển, xoay theo Camera khi tấn công/ngắm bắn
+        // Xoay nhân vật: Luôn xoay theo hướng Camera (Chỉ xoay khi không chơi hoạt ảnh hành động và KHÔNG bị khóa di chuyển)
         bool isAttackingState = isAttacking || isExecutingAttack;
         bool isHitState = IsPlayingHitAnimation();
         if (targetCamera != null && (!IsPlayingActionAnimation() || isAttackingState || isHitState) && !IsLockingMovementAction())
         {
-            Vector3 turnDir = Vector3.zero;
-            if (IsAiming || isAttackingState)
+            Vector3 camForward = targetCamera.transform.forward;
+            camForward.y = 0f;
+            camForward.Normalize();
+            if (camForward != Vector3.zero)
             {
-                turnDir = targetCamera.transform.forward;
-            }
-            else if (isMoving)
-            {
-                turnDir = movementTranslation;
-            }
-
-            turnDir.y = 0f;
-            turnDir.Normalize();
-            if (turnDir != Vector3.zero)
-            {
-                Quaternion targetRot = Quaternion.LookRotation(turnDir);
-                transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, Time.deltaTime * 15f);
+                Quaternion targetRot = Quaternion.LookRotation(camForward);
+                transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, Time.deltaTime * 25f);
             }
         }
 
         if (isMoving)
         {
-            float moveMagnitude = new Vector2(moveX, moveZ).magnitude;
-            if (IsAiming)
-            {
-                targetInputX = moveX * (isRunning ? 1.0f : 0.5f);
-                targetInputZ = moveZ * (isRunning ? 1.0f : 0.5f);
-            }
-            else
-            {
-                targetInputX = 0f;
-                targetInputZ = moveMagnitude * (isRunning ? 1.0f : 0.5f);
-            }
+            targetInputX = moveX * (isRunning ? 1.0f : 0.5f);
+            targetInputZ = moveZ * (isRunning ? 1.0f : 0.5f);
             targetSpeed = new Vector2(targetInputX, targetInputZ).magnitude;
         }
 
@@ -2244,11 +2228,13 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         float moveZ = Input.GetAxis("Vertical");
         Vector3 move = new Vector3(moveX, 0, moveZ);
 
-        if (targetCamera == null)
+        if (targetCamera == null || !targetCamera.isActiveAndEnabled)
         {
             targetCamera = Camera.main;
             if (targetCamera == null)
+            {
                 targetCamera = FindObjectOfType<Camera>();
+            }
         }
 
         if (targetCamera != null)
@@ -2297,27 +2283,18 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         bool isAttacking = IsPlayingAttackState(out _, out _);
 
-        // Xoay nhân vật chuẩn Genshin Impact: Xoay mặt về hướng di chuyển (movementTranslation) khi di chuyển, xoay theo Camera khi tấn công/ngắm bắn
+        // Xoay nhân vật: Luôn xoay theo hướng Camera (Chỉ xoay khi không chơi hoạt ảnh hành động và KHÔNG bị khóa di chuyển)
         bool isAttackingState = isAttacking || isExecutingAttack;
         bool isHitState = IsPlayingHitAnimation();
         if (targetCamera != null && (!IsPlayingActionAnimation() || isAttackingState || isHitState) && !IsLockingMovementAction())
         {
-            Vector3 turnDir = Vector3.zero;
-            if (IsAiming || isAttackingState)
+            Vector3 camForward = targetCamera.transform.forward;
+            camForward.y = 0f;
+            camForward.Normalize();
+            if (camForward != Vector3.zero)
             {
-                turnDir = targetCamera.transform.forward;
-            }
-            else if (isMoving)
-            {
-                turnDir = movementTranslation;
-            }
-
-            turnDir.y = 0f;
-            turnDir.Normalize();
-            if (turnDir != Vector3.zero)
-            {
-                Quaternion targetRot = Quaternion.LookRotation(turnDir);
-                transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, Time.deltaTime * 15f);
+                Quaternion targetRot = Quaternion.LookRotation(camForward);
+                transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, Time.deltaTime * 25f);
             }
         }
 
