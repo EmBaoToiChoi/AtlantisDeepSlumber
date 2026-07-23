@@ -31,6 +31,8 @@ public class FinalEnergyPillar : NetworkBehaviour
         NetworkVariableWritePermission.Server
     );
 
+    public bool IsActivated => (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening) ? m_IsActivated.Value : false;
+
     private bool m_WasHitThisFrame = false;
     private bool m_WasHitInEditor = false; // Nhận diện trúng laser trong Edit Mode
     private Material m_Material;

@@ -2,7 +2,7 @@ using UnityEngine;
 using System.Collections;
 using Unity.Netcode;
 
-public class StonePuzzleQuestTrigger : NetworkBehaviour, IQuestTrigger
+public class MiniBossQuestTrigger : NetworkBehaviour, IQuestTrigger
 {
     public bool IsQuestCompleted => isQuestCompleted;
     public bool IsQuestActive => (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening) ? isQuestActive.Value : hasTriggeredQuest;
@@ -19,33 +19,37 @@ public class StonePuzzleQuestTrigger : NetworkBehaviour, IQuestTrigger
         return true;
     }
 
-    [Header("Puzzle Configuration")]
-    [Tooltip("Tham chiếu tới PressurePlatePuzzleManager quản lý các nút sàn")]
-    public PressurePlatePuzzleManager puzzleManager;
+    [Header("Mini Boss Target Settings")]
+    [Tooltip("Kéo GameObject Mini Boss (có component MiniBossAI) vào đây")]
+    public MiniBossAI miniBoss;
 
     [Header("Quest UI Settings")]
-    [Tooltip("Tiêu đề nhiệm vụ hiển thị trên UI (Ví dụ: ĐẨY ĐÁ)")]
-    public string questTitle = "ĐẨY ĐÁ";
+    [Tooltip("Tiêu đề nhiệm vụ hiển thị trên UI")]
+    public string questTitle = "TIÊU DIỆT MINI BOSS";
 
     [Tooltip("Icon nhiệm vụ hiển thị bên cạnh tiêu đề")]
     public Sprite questIconSprite;
 
     [Tooltip("Nội dung mô tả nhiệm vụ hiển thị trên UI")]
     [TextArea(3, 5)]
-    public string questDescription = "Đẩy đá để tìm kiếm các phiến đá có hình dạng giống trên cửa để mở cửa.";
+    public string questDescription = "Tiêu diệt Mini Boss đang trấn giữ khu vực.";
 
-    [Tooltip("Ẩn bảng nhiệm vụ khi người chơi rời khỏi vùng Trigger (chỉ áp dụng khi chơi Offline/nếu muốn)")]
-    public bool hideWhenExitTrigger = false;
-
-    [Tooltip("Thời gian chờ trước khi ẩn bảng nhiệm vụ sau khi giải xong (giây)")]
+    [Tooltip("Thời gian chờ trước khi ẩn bảng nhiệm vụ sau khi hoàn thành (giây)")]
     public float hideDelayAfterComplete = 3f;
 
     [Tooltip("Khoảng thời gian (giây) giữa các lần kiểm tra cập nhật tiến trình trên UI")]
     public float checkInterval = 0.2f;
 
-    // Biến mạng đồng bộ trạng thái kích hoạt nhiệm vụ cho toàn bộ Client
+    // Biến mạng đồng bộ trạng thái kích hoạt nhiệm vụ
     public NetworkVariable<bool> isQuestActive = new NetworkVariable<bool>(
         false,
+        NetworkVariableReadPermission.Everyone,
+        NetworkVariableWritePermission.Server
+    );
+
+    // Biến mạng đồng bộ số lượng Mini Boss đã diệt (0 hoặc 1)
+    public NetworkVariable<int> bossDefeatedCount = new NetworkVariable<int>(
+        0,
         NetworkVariableReadPermission.Everyone,
         NetworkVariableWritePermission.Server
     );
@@ -54,40 +58,39 @@ public class StonePuzzleQuestTrigger : NetworkBehaviour, IQuestTrigger
     private PlayerHUDController localHudCtl;
     private Collider triggerCollider;
 
-    private bool isPlayerInside = false;
     private bool hasTriggeredQuest = false;
     private bool isQuestCompleted = false;
-    
+
     private float nextPlayerSearchTime = 0f;
     private float nextCheckTime = 0f;
-    private int lastPressedCount = -1;
+    private int lastBossDefeatedCount = -1;
+    private int localBossDefeatedCount = 0;
 
     private void Awake()
     {
         triggerCollider = GetComponent<Collider>();
         if (triggerCollider == null)
         {
-            Debug.LogError($"[StonePuzzleQuestTrigger] LỖI: GameObject '{gameObject.name}' bắt buộc phải có một Collider (ví dụ Box Collider) được bật 'Is Trigger'!");
+            Debug.LogWarning($"[MiniBossQuestTrigger] GameObject '{gameObject.name}' chưa có Collider trigger. Cần có Box Collider trigger để tự động phát hiện người chơi khi bước vào vùng chiến đấu.");
         }
         else if (!triggerCollider.isTrigger)
         {
             triggerCollider.isTrigger = true;
-            Debug.LogWarning($"[StonePuzzleQuestTrigger] Tự động chuyển Collider trên '{gameObject.name}' thành Trigger.");
         }
     }
 
     private void Start()
     {
-        if (puzzleManager == null)
+        if (miniBoss == null)
         {
-            puzzleManager = FindAnyObjectByType<PressurePlatePuzzleManager>();
-            if (puzzleManager != null)
+            miniBoss = FindFirstObjectByType<MiniBossAI>();
+            if (miniBoss != null)
             {
-                Debug.Log("[StonePuzzleQuestTrigger] Tự động tìm thấy PressurePlatePuzzleManager trong Start!");
+                Debug.Log($"[MiniBossQuestTrigger] Tự động tìm thấy MiniBossAI trên '{miniBoss.gameObject.name}'.");
             }
             else
             {
-                Debug.LogError("[StonePuzzleQuestTrigger] LỖI: Không tìm thấy PressurePlatePuzzleManager trong Scene. Vui lòng kéo gán thủ công!");
+                Debug.LogWarning("[MiniBossQuestTrigger] CẢNH BÁO: Chưa gán MiniBossAI trong Inspector!");
             }
         }
     }
@@ -95,8 +98,8 @@ public class StonePuzzleQuestTrigger : NetworkBehaviour, IQuestTrigger
     public override void OnNetworkSpawn()
     {
         isQuestActive.OnValueChanged += OnQuestActiveChanged;
-        
-        // Nếu nhiệm vụ đã được kích hoạt trước khi player này kết nối (ví dụ JIP - Join In Progress)
+        bossDefeatedCount.OnValueChanged += OnBossDefeatedCountChanged;
+
         if (isQuestActive.Value && IsPrerequisiteCompleted())
         {
             hasTriggeredQuest = true;
@@ -107,6 +110,7 @@ public class StonePuzzleQuestTrigger : NetworkBehaviour, IQuestTrigger
     public override void OnNetworkDespawn()
     {
         isQuestActive.OnValueChanged -= OnQuestActiveChanged;
+        bossDefeatedCount.OnValueChanged -= OnBossDefeatedCountChanged;
     }
 
     private void OnQuestActiveChanged(bool oldVal, bool newVal)
@@ -114,10 +118,23 @@ public class StonePuzzleQuestTrigger : NetworkBehaviour, IQuestTrigger
         if (newVal && IsPrerequisiteCompleted())
         {
             hasTriggeredQuest = true;
-            lastPressedCount = -1; // Ép cập nhật UI lập tức
+            lastBossDefeatedCount = -1;
             UpdateQuestProgressUI();
-            Debug.Log("[StonePuzzleQuestTrigger] Nhiệm vụ đã được kích hoạt đồng bộ từ mạng!");
         }
+    }
+
+    private void OnBossDefeatedCountChanged(int oldVal, int newVal)
+    {
+        if (isQuestActive.Value && IsPrerequisiteCompleted())
+        {
+            UpdateQuestProgressUI();
+        }
+    }
+
+    private bool IsBossDead()
+    {
+        if (miniBoss == null) return false;
+        return miniBoss.IsDead || miniBoss.ActualCurrentHealth <= 0;
     }
 
     private void Update()
@@ -129,28 +146,48 @@ public class StonePuzzleQuestTrigger : NetworkBehaviour, IQuestTrigger
             FindLocalPlayer();
         }
 
-        if (puzzleManager == null) return;
+        bool isNetwork = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
 
-        // Xác định nhiệm vụ đã active hay chưa
-        bool active = (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening) 
-            ? isQuestActive.Value 
-            : hasTriggeredQuest;
-
-        if (active)
+        // Server / Offline kiểm tra Mini Boss đã chết chưa
+        if (!isNetwork || IsServer)
         {
-            // Kiểm tra trạng thái giải câu đố của puzzleManager
-            if (puzzleManager.IsSolved())
+            bool active = isNetwork ? isQuestActive.Value : hasTriggeredQuest;
+            if (active && miniBoss != null)
             {
-                CompleteQuest();
-                return;
-            }
+                int currentDefeated = IsBossDead() ? 1 : 0;
 
-            // Định kỳ cập nhật tiến trình UI để tránh overhead mỗi frame
-            if (Time.time >= nextCheckTime)
-            {
-                nextCheckTime = Time.time + checkInterval;
-                UpdateQuestProgressUI();
+                if (isNetwork)
+                {
+                    if (bossDefeatedCount.Value != currentDefeated)
+                    {
+                        bossDefeatedCount.Value = currentDefeated;
+                        Debug.Log($"[MiniBossQuestTrigger Server] Tiến độ Mini Boss: {currentDefeated}/1");
+                    }
+                }
+                else
+                {
+                    if (localBossDefeatedCount != currentDefeated)
+                    {
+                        localBossDefeatedCount = currentDefeated;
+                        UpdateQuestProgressUI();
+                        Debug.Log($"[MiniBossQuestTrigger Offline] Tiến độ Mini Boss: {currentDefeated}/1");
+                    }
+                }
+
+                if (currentDefeated >= 1)
+                {
+                    CompleteQuest();
+                    return;
+                }
             }
+        }
+
+        // Định kỳ cập nhật UI
+        bool currentActive = isNetwork ? isQuestActive.Value : hasTriggeredQuest;
+        if (currentActive && Time.time >= nextCheckTime)
+        {
+            nextCheckTime = Time.time + checkInterval;
+            UpdateQuestProgressUI();
         }
     }
 
@@ -165,44 +202,25 @@ public class StonePuzzleQuestTrigger : NetworkBehaviour, IQuestTrigger
 
         if (localHudCtl != null)
         {
-            // Trong chế độ mạng, chỉ cần 1 người kích hoạt thì tất cả mọi người đều hiện UI liên tục (không phụ thuộc việc ở trong trigger)
             bool isNetwork = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
-            bool shouldShow = isNetwork ? isQuestActive.Value : (isPlayerInside || !hideWhenExitTrigger);
+            bool active = isNetwork ? isQuestActive.Value : hasTriggeredQuest;
 
-            if (shouldShow)
+            if (active)
             {
                 localHudCtl.ShowQuest(true, this);
                 localHudCtl.UpdateQuestDescription(questDescription, this);
                 localHudCtl.UpdateQuestTitle(questTitle, this);
                 localHudCtl.UpdateQuestIcon(questIconSprite, this);
 
-                // Tính toán số lượng nút sàn đang được kích hoạt
-                int pressedCount = 0;
-                int totalCount = 0;
+                int current = isNetwork ? bossDefeatedCount.Value : localBossDefeatedCount;
+                int total = 1;
 
-                if (puzzleManager.requiredPlates != null)
+                if (current != lastBossDefeatedCount)
                 {
-                    totalCount = puzzleManager.requiredPlates.Length;
-                    foreach (var plate in puzzleManager.requiredPlates)
-                    {
-                        if (plate != null && plate.IsPressed)
-                        {
-                            pressedCount++;
-                        }
-                    }
+                    lastBossDefeatedCount = current;
+                    localHudCtl.UpdateQuestProgress(current, total, this);
+                    Debug.Log($"[MiniBossQuestTrigger] Cập nhật tiến độ UI: {current}/{total}");
                 }
-
-                // Chỉ gọi API của UI khi giá trị tiến trình thay đổi để giảm chi phí render
-                if (pressedCount != lastPressedCount)
-                {
-                    lastPressedCount = pressedCount;
-                    localHudCtl.UpdateQuestProgress(pressedCount, totalCount, this);
-                    Debug.Log($"[StonePuzzleQuestTrigger] Cập nhật tiến độ nhiệm vụ: {pressedCount}/{totalCount}");
-                }
-            }
-            else
-            {
-                localHudCtl.ShowQuest(false, this);
             }
         }
     }
@@ -210,7 +228,7 @@ public class StonePuzzleQuestTrigger : NetworkBehaviour, IQuestTrigger
     private void CompleteQuest()
     {
         isQuestCompleted = true;
-        Debug.Log("[StonePuzzleQuestTrigger] Câu đố đã giải xong! Nhiệm vụ hoàn thành.");
+        Debug.Log("[MiniBossQuestTrigger] Đã tiêu diệt thành công Mini Boss! Nhiệm vụ hoàn thành.");
 
         if (localHudCtl == null)
         {
@@ -219,20 +237,16 @@ public class StonePuzzleQuestTrigger : NetworkBehaviour, IQuestTrigger
 
         if (localHudCtl != null)
         {
-            // Cập nhật UI hiển thị hoàn tất tối đa
-            int totalCount = puzzleManager.requiredPlates != null ? puzzleManager.requiredPlates.Length : 0;
             localHudCtl.ShowQuest(true, this);
-            localHudCtl.UpdateQuestProgress(totalCount, totalCount, this);
-            localHudCtl.UpdateQuestDescription("Nhiệm vụ hoàn thành: Cửa đã được mở!", this);
+            localHudCtl.UpdateQuestProgress(1, 1, this);
+            localHudCtl.UpdateQuestDescription("Nhiệm vụ hoàn thành: Đã tiêu diệt thành công Mini Boss!", this);
             localHudCtl.UpdateQuestTitle(questTitle, this);
             localHudCtl.UpdateQuestIcon(questIconSprite, this);
-            
-            // Bắt đầu Coroutine để ẩn UI sau độ trễ
+
             StartCoroutine(HideQuestAfterDelay(hideDelayAfterComplete));
         }
         else
         {
-            // Nếu không có HUD, tự vô hiệu hóa luôn
             enabled = false;
         }
     }
@@ -246,10 +260,9 @@ public class StonePuzzleQuestTrigger : NetworkBehaviour, IQuestTrigger
             localHudCtl.ShowQuest(false, this);
             localHudCtl.UpdateQuestIcon(null, this);
             localHudCtl.UpdateQuestTitle("NHIỆM VỤ", this);
-            Debug.Log("[StonePuzzleQuestTrigger] Đã ẩn UI nhiệm vụ hoàn thành.");
+            Debug.Log("[MiniBossQuestTrigger] Đã ẩn UI nhiệm vụ hoàn thành.");
         }
 
-        // Vô hiệu hóa script và trigger để giải phóng tài nguyên
         enabled = false;
         var col = GetComponent<Collider>();
         if (col != null)
@@ -262,9 +275,6 @@ public class StonePuzzleQuestTrigger : NetworkBehaviour, IQuestTrigger
     {
         if (other == null || isQuestCompleted || !IsPrerequisiteCompleted()) return;
 
-        // Kiểm tra va chạm: 
-        // - Chế độ chơi mạng: Chỉ Server được quyền thay đổi trạng thái của NetworkVariable
-        // - Chế độ offline: Xử lý bình thường
         bool isNetwork = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
         if (isNetwork && !IsServer) return;
 
@@ -275,61 +285,29 @@ public class StonePuzzleQuestTrigger : NetworkBehaviour, IQuestTrigger
                 if (!isQuestActive.Value)
                 {
                     isQuestActive.Value = true;
-                    Debug.Log($"[StonePuzzleQuestTrigger Server] Người chơi '{other.gameObject.name}' chạm Trigger - Kích hoạt nhiệm vụ cho toàn bộ mạng!");
+                    Debug.Log($"[MiniBossQuestTrigger Server] Người chơi '{other.gameObject.name}' chạm Trigger - Kích hoạt nhiệm vụ Mini Boss cho toàn bộ mạng!");
                 }
             }
             else
             {
-                isPlayerInside = true;
                 hasTriggeredQuest = true;
-                lastPressedCount = -1; // Reset để ép cập nhật UI ngay lập tức
+                lastBossDefeatedCount = -1;
                 UpdateQuestProgressUI();
-                Debug.Log("[StonePuzzleQuestTrigger Offline] Người chơi chạm Trigger - Kích hoạt nhiệm vụ đẩy đá.");
+                Debug.Log("[MiniBossQuestTrigger Offline] Người chơi chạm Trigger - Kích hoạt nhiệm vụ Mini Boss.");
             }
         }
-    }
-
-    private void OnTriggerExit(Collider other)
-    {
-        if (other == null || isQuestCompleted) return;
-
-        // Chỉ xử lý trong chế độ offline (vì chế độ mạng nhiệm vụ sẽ luôn bật cho đến khi hoàn thành)
-        bool isNetwork = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
-        if (isNetwork) return;
-
-        if (IsLocalPlayerObject(other.gameObject))
-        {
-            isPlayerInside = false;
-            UpdateQuestProgressUI();
-            Debug.Log("[StonePuzzleQuestTrigger Offline] Người chơi rời khỏi Trigger.");
-        }
-    }
-
-    private bool IsLocalPlayerObject(GameObject go)
-    {
-        if (localPlayer == null) return IsPlayer(go);
-
-        if (go == localPlayer.gameObject || go.transform.IsChildOf(localPlayer.transform) || localPlayer.transform.IsChildOf(go.transform))
-        {
-            return true;
-        }
-        return false;
     }
 
     private bool IsPlayer(GameObject go)
     {
         if (go == null) return false;
-
         if (go.GetComponent<IPlayerHUDTarget>() != null || go.GetComponentInParent<IPlayerHUDTarget>() != null) return true;
-
         if (go.CompareTag("Player") || (go.transform.parent != null && go.transform.parent.CompareTag("Player"))) return true;
-
         return false;
     }
 
     private void FindLocalPlayer()
     {
-        // 1. Dò tìm từ cache tĩnh của PlayerHUDController
         if (PlayerHUDController.LocalPlayerTarget != null)
         {
             var p = PlayerHUDController.LocalPlayerTarget;
@@ -340,7 +318,6 @@ public class StonePuzzleQuestTrigger : NetworkBehaviour, IQuestTrigger
             }
         }
 
-        // 2. Dò tìm từ danh sách ActivePlayers của PlayerHUDManager
         var activePlayers = PlayerHUDManager.ActivePlayers;
         foreach (var p in activePlayers)
         {
@@ -351,11 +328,9 @@ public class StonePuzzleQuestTrigger : NetworkBehaviour, IQuestTrigger
             }
         }
 
-        // 3. Dự phòng: tìm kiếm định kỳ trong các component của Scene
         if (Time.time >= nextPlayerSearchTime)
         {
             nextPlayerSearchTime = Time.time + 2f;
-
             var allComponents = FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None);
             foreach (var mono in allComponents)
             {

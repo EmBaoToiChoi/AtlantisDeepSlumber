@@ -1,5 +1,5 @@
 fileFormatVersion: 2
-guid: 337220300bdd0184483219283d0456e9
+guid: ea89cff6ada1da84e818e87424696d88
 TextureImporter:
   internalIDToNameTable: []
   externalObjects: {}
@@ -110,13 +110,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: miniboss_avatar_0
+      name: lightning_icon_transparent_0
       rect:
         serializedVersion: 2
-        x: 0
-        y: 0
-        width: 1024
-        height: 1024
+        x: 76
+        y: 717
+        width: 185
+        height: 288
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -125,8 +125,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 8d76a50e9a49ed44eb1c9763c82b88f7
-      internalID: 27145163
+      spriteID: 67c064b7a09663c4bb8a22910bac0984
+      internalID: -993051549
       vertices: []
       indices: 
       edges: []
@@ -135,7 +135,7 @@ TextureImporter:
     customData: 
     physicsShape: []
     bones: []
-    spriteID: f7a4f86240ffeda4389c8c596a1427b2
+    spriteID: c471618411cab6c48aae438665ab0ea8
     internalID: 0
     vertices: []
     indices: 
@@ -145,7 +145,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      miniboss_avatar_0: 27145163
+      lightning_icon_transparent_0: -993051549
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

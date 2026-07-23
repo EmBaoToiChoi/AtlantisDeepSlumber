@@ -2,8 +2,23 @@ using UnityEngine;
 using System.Collections;
 using Unity.Netcode;
 
-public class WaterFreezeQuestTrigger : NetworkBehaviour
+public class WaterFreezeQuestTrigger : NetworkBehaviour, IQuestTrigger
 {
+    public bool IsQuestCompleted => isQuestCompleted;
+    public bool IsQuestActive => (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening) ? isQuestActive.Value : hasTriggeredQuest;
+
+    [Header("Quest Prerequisite Settings")]
+    [Tooltip("Nhiệm vụ tiền đề bắt buộc phải hoàn thành trước khi nhiệm vụ này được hiển thị/kích hoạt")]
+    public MonoBehaviour prerequisiteQuest;
+
+    public bool IsPrerequisiteCompleted()
+    {
+        if (prerequisiteQuest == null) return true;
+        if (prerequisiteQuest is IQuestTrigger quest) return quest.IsQuestCompleted;
+        if (prerequisiteQuest is BridgeCollapseTrigger bridge) return bridge.IsBridgeRepaired();
+        return true;
+    }
+
     [Header("Quest Configuration")]
     [Tooltip("Tham chiếu tới WaterPuzzleController quản lý trạng thái nguồn nước")]
     public WaterPuzzleController puzzController;
@@ -78,7 +93,7 @@ public class WaterFreezeQuestTrigger : NetworkBehaviour
         isQuestActive.OnValueChanged += OnQuestActiveChanged;
         
         // Nếu nhiệm vụ đã được kích hoạt trước khi player này kết nối
-        if (isQuestActive.Value)
+        if (isQuestActive.Value && IsPrerequisiteCompleted())
         {
             hasTriggeredQuest = true;
             UpdateQuestProgressUI();
@@ -92,7 +107,7 @@ public class WaterFreezeQuestTrigger : NetworkBehaviour
 
     private void OnQuestActiveChanged(bool oldVal, bool newVal)
     {
-        if (newVal)
+        if (newVal && IsPrerequisiteCompleted())
         {
             hasTriggeredQuest = true;
             lastProgressCount = -1; // Ép cập nhật UI lập tức
@@ -103,7 +118,7 @@ public class WaterFreezeQuestTrigger : NetworkBehaviour
 
     private void Update()
     {
-        if (isQuestCompleted) return;
+        if (isQuestCompleted || !IsPrerequisiteCompleted()) return;
 
         if (localPlayer == null)
         {
@@ -137,6 +152,8 @@ public class WaterFreezeQuestTrigger : NetworkBehaviour
 
     private void UpdateQuestProgressUI()
     {
+        if (!IsPrerequisiteCompleted()) return;
+
         if (localHudCtl == null)
         {
             localHudCtl = FindAnyObjectByType<PlayerHUDController>();
@@ -145,10 +162,10 @@ public class WaterFreezeQuestTrigger : NetworkBehaviour
         if (localHudCtl != null && puzzController != null)
         {
             // Kích hoạt UI
-            localHudCtl.ShowQuest(true);
-            localHudCtl.UpdateQuestDescription(questDescription);
-            localHudCtl.UpdateQuestTitle(questTitle);
-            localHudCtl.UpdateQuestIcon(questIconSprite);
+            localHudCtl.ShowQuest(true, this);
+            localHudCtl.UpdateQuestDescription(questDescription, this);
+            localHudCtl.UpdateQuestTitle(questTitle, this);
+            localHudCtl.UpdateQuestIcon(questIconSprite, this);
 
             // Kiểm tra xem đã hoàn thành chưa (Frozen là bước 1/1, còn lại là 0/1)
             int currentProgress = (puzzController.CurrentState == WaterPuzzleController.WaterPuzzleState.Frozen) ? 1 : 0;
@@ -156,7 +173,7 @@ public class WaterFreezeQuestTrigger : NetworkBehaviour
             if (currentProgress != lastProgressCount)
             {
                 lastProgressCount = currentProgress;
-                localHudCtl.UpdateQuestProgress(currentProgress, 1);
+                localHudCtl.UpdateQuestProgress(currentProgress, 1, this);
                 Debug.Log($"[WaterFreezeQuestTrigger] Cập nhật tiến độ đóng băng: {currentProgress}/1");
             }
         }
@@ -175,11 +192,11 @@ public class WaterFreezeQuestTrigger : NetworkBehaviour
         if (localHudCtl != null)
         {
             // Cập nhật UI hiển thị hoàn tất tối đa
-            localHudCtl.ShowQuest(true);
-            localHudCtl.UpdateQuestProgress(1, 1);
-            localHudCtl.UpdateQuestDescription("Nhiệm vụ hoàn thành: Nguồn nước đã được đóng băng!");
-            localHudCtl.UpdateQuestTitle(questTitle);
-            localHudCtl.UpdateQuestIcon(questIconSprite);
+            localHudCtl.ShowQuest(true, this);
+            localHudCtl.UpdateQuestProgress(1, 1, this);
+            localHudCtl.UpdateQuestDescription("Nhiệm vụ hoàn thành: Nguồn nước đã được đóng băng!", this);
+            localHudCtl.UpdateQuestTitle(questTitle, this);
+            localHudCtl.UpdateQuestIcon(questIconSprite, this);
             
             // Bắt đầu Coroutine để ẩn UI sau độ trễ
             StartCoroutine(HideQuestAfterDelay(hideDelayAfterComplete));
@@ -196,9 +213,9 @@ public class WaterFreezeQuestTrigger : NetworkBehaviour
 
         if (localHudCtl != null)
         {
-            localHudCtl.ShowQuest(false);
-            localHudCtl.UpdateQuestIcon(null);
-            localHudCtl.UpdateQuestTitle("NHIỆM VỤ");
+            localHudCtl.ShowQuest(false, this);
+            localHudCtl.UpdateQuestIcon(null, this);
+            localHudCtl.UpdateQuestTitle("NHIỆM VỤ", this);
             Debug.Log("[WaterFreezeQuestTrigger] Đã ẩn UI nhiệm vụ hoàn thành.");
         }
 
@@ -213,7 +230,7 @@ public class WaterFreezeQuestTrigger : NetworkBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
-        if (other == null || isQuestCompleted) return;
+        if (other == null || isQuestCompleted || !IsPrerequisiteCompleted()) return;
 
         bool isNetwork = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
         if (isNetwork && !IsServer) return;

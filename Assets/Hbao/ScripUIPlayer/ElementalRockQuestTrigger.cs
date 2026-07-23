@@ -2,8 +2,23 @@ using UnityEngine;
 using System.Collections;
 using Unity.Netcode;
 
-public class ElementalRockQuestTrigger : NetworkBehaviour
+public class ElementalRockQuestTrigger : NetworkBehaviour, IQuestTrigger
 {
+    public bool IsQuestCompleted => isQuestCompleted;
+    public bool IsQuestActive => (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening) ? isQuestActive.Value : hasTriggeredQuest;
+
+    [Header("Quest Prerequisite Settings")]
+    [Tooltip("Nhiệm vụ tiền đề bắt buộc phải hoàn thành trước khi nhiệm vụ này được hiển thị/kích hoạt")]
+    public MonoBehaviour prerequisiteQuest;
+
+    public bool IsPrerequisiteCompleted()
+    {
+        if (prerequisiteQuest == null) return true;
+        if (prerequisiteQuest is IQuestTrigger quest) return quest.IsQuestCompleted;
+        if (prerequisiteQuest is BridgeCollapseTrigger bridge) return bridge.IsBridgeRepaired();
+        return true;
+    }
+
     [Header("Quest Configuration")]
     [Tooltip("Tham chiếu tới đối tượng đá nguyên tố (ElementalRockPuzzle) cần phá vỡ")]
     public ElementalRockPuzzle targetRock;
@@ -81,7 +96,7 @@ public class ElementalRockQuestTrigger : NetworkBehaviour
         isQuestActive.OnValueChanged += OnQuestActiveChanged;
         
         // Nếu nhiệm vụ đã được kích hoạt trước khi player này kết nối
-        if (isQuestActive.Value)
+        if (isQuestActive.Value && IsPrerequisiteCompleted())
         {
             hasTriggeredQuest = true;
             UpdateQuestProgressUI();
@@ -95,7 +110,7 @@ public class ElementalRockQuestTrigger : NetworkBehaviour
 
     private void OnQuestActiveChanged(bool oldVal, bool newVal)
     {
-        if (newVal)
+        if (newVal && IsPrerequisiteCompleted())
         {
             hasTriggeredQuest = true;
             lastStepCount = -1; // Ép cập nhật UI lập tức
@@ -106,7 +121,7 @@ public class ElementalRockQuestTrigger : NetworkBehaviour
 
     private void Update()
     {
-        if (isQuestCompleted) return;
+        if (isQuestCompleted || !IsPrerequisiteCompleted()) return;
 
         if (localPlayer == null)
         {
@@ -138,6 +153,8 @@ public class ElementalRockQuestTrigger : NetworkBehaviour
 
     private void UpdateQuestProgressUI()
     {
+        if (!IsPrerequisiteCompleted()) return;
+
         if (localHudCtl == null)
         {
             localHudCtl = FindAnyObjectByType<PlayerHUDController>();
@@ -146,10 +163,10 @@ public class ElementalRockQuestTrigger : NetworkBehaviour
         if (localHudCtl != null && targetRock != null)
         {
             // Kích hoạt UI
-            localHudCtl.ShowQuest(true);
-            localHudCtl.UpdateQuestDescription(questDescription);
-            localHudCtl.UpdateQuestTitle(questTitle);
-            localHudCtl.UpdateQuestIcon(questIconSprite);
+            localHudCtl.ShowQuest(true, this);
+            localHudCtl.UpdateQuestDescription(questDescription, this);
+            localHudCtl.UpdateQuestTitle(questTitle, this);
+            localHudCtl.UpdateQuestIcon(questIconSprite, this);
 
             // Lấy bước tiến hiện tại từ đá nguyên tố
             int currentStep = targetRock.CurrentStep;
@@ -157,7 +174,7 @@ public class ElementalRockQuestTrigger : NetworkBehaviour
             if (currentStep != lastStepCount)
             {
                 lastStepCount = currentStep;
-                localHudCtl.UpdateQuestProgress(currentStep, totalSteps);
+                localHudCtl.UpdateQuestProgress(currentStep, totalSteps, this);
                 Debug.Log($"[ElementalRockQuestTrigger] Cập nhật tiến độ đá nguyên tố: {currentStep}/{totalSteps}");
             }
         }
@@ -176,11 +193,11 @@ public class ElementalRockQuestTrigger : NetworkBehaviour
         if (localHudCtl != null)
         {
             // Cập nhật UI hiển thị hoàn tất tối đa
-            localHudCtl.ShowQuest(true);
-            localHudCtl.UpdateQuestProgress(totalSteps, totalSteps);
-            localHudCtl.UpdateQuestDescription("Nhiệm vụ hoàn thành: Đá nguyên tố đã bị phá vỡ!");
-            localHudCtl.UpdateQuestTitle(questTitle);
-            localHudCtl.UpdateQuestIcon(questIconSprite);
+            localHudCtl.ShowQuest(true, this);
+            localHudCtl.UpdateQuestProgress(totalSteps, totalSteps, this);
+            localHudCtl.UpdateQuestDescription("Nhiệm vụ hoàn thành: Đá nguyên tố đã bị phá vỡ!", this);
+            localHudCtl.UpdateQuestTitle(questTitle, this);
+            localHudCtl.UpdateQuestIcon(questIconSprite, this);
             
             // Bắt đầu Coroutine để ẩn UI sau độ trễ
             StartCoroutine(HideQuestAfterDelay(hideDelayAfterComplete));
@@ -197,9 +214,9 @@ public class ElementalRockQuestTrigger : NetworkBehaviour
 
         if (localHudCtl != null)
         {
-            localHudCtl.ShowQuest(false);
-            localHudCtl.UpdateQuestIcon(null);
-            localHudCtl.UpdateQuestTitle("NHIỆM VỤ");
+            localHudCtl.ShowQuest(false, this);
+            localHudCtl.UpdateQuestIcon(null, this);
+            localHudCtl.UpdateQuestTitle("NHIỆM VỤ", this);
             Debug.Log("[ElementalRockQuestTrigger] Đã ẩn UI nhiệm vụ hoàn thành.");
         }
 
@@ -214,7 +231,7 @@ public class ElementalRockQuestTrigger : NetworkBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
-        if (other == null || isQuestCompleted) return;
+        if (other == null || isQuestCompleted || !IsPrerequisiteCompleted()) return;
 
         bool isNetwork = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
         if (isNetwork && !IsServer) return;

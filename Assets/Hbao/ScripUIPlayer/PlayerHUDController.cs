@@ -219,6 +219,7 @@ public class PlayerHUDController : MonoBehaviour
     private VisualElement questIcon;
     private Label questTitleText;
     public Sprite defaultQuestIcon;
+    private object currentQuestOwner = null;
 
     // Coop Building UI system
     public static bool isCoopBuildingUIOpen = false;
@@ -3409,25 +3410,38 @@ public class PlayerHUDController : MonoBehaviour
         }
     }
 
-    public void ShowQuest(bool show)
+    public void ShowQuest(bool show, object owner = null)
     {
         InitializeUI();
         if (questPanel != null)
         {
             if (show)
             {
+                if (currentQuestOwner != null && owner != null && currentQuestOwner != owner)
+                {
+                    return;
+                }
+                if (owner != null)
+                {
+                    currentQuestOwner = owner;
+                }
                 questPanel.AddToClassList("show-quest");
             }
             else
             {
-                questPanel.RemoveFromClassList("show-quest");
+                if (owner == null || currentQuestOwner == owner)
+                {
+                    currentQuestOwner = null;
+                    questPanel.RemoveFromClassList("show-quest");
+                }
             }
-            Debug.Log($"[PlayerHUDController] ShowQuest({show})");
+            Debug.Log($"[PlayerHUDController] ShowQuest({show}) (owner: {owner?.GetType().Name ?? "null"})");
         }
     }
 
-    public void UpdateQuestProgress(int current, int target = 16)
+    public void UpdateQuestProgress(int current, int target = 16, object owner = null)
     {
+        if (currentQuestOwner != null && owner != null && currentQuestOwner != owner) return;
         InitializeUI();
         if (questProgressText != null)
         {
@@ -3459,8 +3473,9 @@ public class PlayerHUDController : MonoBehaviour
         }
     }
 
-    public void UpdateQuestDescription(string description)
+    public void UpdateQuestDescription(string description, object owner = null)
     {
+        if (currentQuestOwner != null && owner != null && currentQuestOwner != owner) return;
         InitializeUI();
         if (questDescriptionText != null)
         {
@@ -3468,8 +3483,9 @@ public class PlayerHUDController : MonoBehaviour
         }
     }
 
-    public void UpdateQuestTitle(string title)
+    public void UpdateQuestTitle(string title, object owner = null)
     {
+        if (currentQuestOwner != null && owner != null && currentQuestOwner != owner) return;
         InitializeUI();
         if (questTitleText != null)
         {
@@ -3477,8 +3493,9 @@ public class PlayerHUDController : MonoBehaviour
         }
     }
 
-    public void UpdateQuestIcon(Sprite iconSprite)
+    public void UpdateQuestIcon(Sprite iconSprite, object owner = null)
     {
+        if (currentQuestOwner != null && owner != null && currentQuestOwner != owner) return;
         InitializeUI();
         if (questIcon != null)
         {

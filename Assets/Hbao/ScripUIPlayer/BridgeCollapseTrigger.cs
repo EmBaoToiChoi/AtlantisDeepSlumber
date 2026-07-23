@@ -2,8 +2,23 @@ using UnityEngine;
 using Unity.Netcode;
 using UnityEngine.AI;
 
-public class BridgeCollapseTrigger : NetworkBehaviour
+public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
 {
+    public bool IsQuestCompleted => IsBridgeRepaired();
+    public bool IsQuestActive => IsBridgeCollapsed() && !IsBridgeRepaired();
+
+    [Header("Quest Prerequisite Settings")]
+    [Tooltip("Nhiệm vụ tiền đề bắt buộc phải hoàn thành trước khi nhiệm vụ này được hiển thị/kích hoạt")]
+    public MonoBehaviour prerequisiteQuest;
+
+    public bool IsPrerequisiteCompleted()
+    {
+        if (prerequisiteQuest == null) return true;
+        if (prerequisiteQuest is IQuestTrigger quest) return quest.IsQuestCompleted;
+        if (prerequisiteQuest is BridgeCollapseTrigger bridge) return bridge.IsBridgeRepaired();
+        return true;
+    }
+
     [Header("Cutscene Configuration")]
     [Tooltip("Kéo thả object chứa Video Player vào đây. Nếu để trống, cầu sẽ sập luôn.")]
     public UnityEngine.Video.VideoPlayer collapseVideo; 
@@ -410,7 +425,7 @@ public class BridgeCollapseTrigger : NetworkBehaviour
     private void OnTriggerEnter(Collider other)
     {
         // Chỉ cho phép Server xử lý va chạm để tránh Client gọi lung tung
-        if (!IsServer) return;
+        if (!IsServer || !IsPrerequisiteCompleted()) return;
 
         // Kiểm tra sập cầu và chưa có video nào đang chạy
         if (!IsBridgeCollapsed() && !isCutscenePlaying)
@@ -426,7 +441,7 @@ public class BridgeCollapseTrigger : NetworkBehaviour
     [ServerRpc(RequireOwnership = false)]
     private void RequestBridgeEventServerRpc()
     {
-        if (!IsServer || IsBridgeCollapsed() || isCutscenePlaying) return;
+        if (!IsServer || IsBridgeCollapsed() || isCutscenePlaying || !IsPrerequisiteCompleted()) return;
         StartBridgeEventServer();
     }
 
@@ -650,10 +665,10 @@ public class BridgeCollapseTrigger : NetworkBehaviour
 
         // 2. Hiện Quest UI
         PlayerHUDController localHud = FindAnyObjectByType<PlayerHUDController>();
-        if (localHud != null)
+        if (localHud != null && IsPrerequisiteCompleted())
         {
-            localHud.ShowQuest(true);
-            localHud.UpdateQuestProgress(0, requiredLogsToRepair);
+            localHud.ShowQuest(true, this);
+            localHud.UpdateQuestProgress(0, requiredLogsToRepair, this);
             localHud.ShowMissionAlert("CẦU ĐÃ BỊ SẬP! HÃY TÌM 16 THANH GỖ ĐỂ SỬA LẠI CẦU!", 5.0f);
         }
     }
@@ -664,7 +679,7 @@ public class BridgeCollapseTrigger : NetworkBehaviour
         if (localHud != null)
         {
             localHud.ShowInteractionPrompt(false, "");
-            localHud.ShowQuest(false);
+            localHud.ShowQuest(false, this);
             localHud.ShowMissionAlert("CẦU ĐÃ ĐƯỢC SỬA CHỮA THÀNH CÔNG!", 5.0f);
         }
     }
@@ -734,11 +749,11 @@ public class BridgeCollapseTrigger : NetworkBehaviour
 
         // 4. Hiển thị UI Quest trên Client (dùng dynamic lookup để luôn tìm đúng HUD đang active)
         PlayerHUDController localHudCtl = FindAnyObjectByType<PlayerHUDController>();
-        if (localHudCtl != null)
+        if (localHudCtl != null && IsPrerequisiteCompleted())
         {
             int currentProgress = (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening) ? logsSubmitted.Value : localLogsSubmittedCount;
-            localHudCtl.ShowQuest(true);
-            localHudCtl.UpdateQuestProgress(currentProgress, requiredLogsToRepair);
+            localHudCtl.ShowQuest(true, this);
+            localHudCtl.UpdateQuestProgress(currentProgress, requiredLogsToRepair, this);
             localHudCtl.ShowMissionAlert("HÃY TÌM 16 THANH GỖ ĐỂ SỬA LẠI CẦU!", 5.0f);
         }
 
@@ -949,8 +964,8 @@ public class BridgeCollapseTrigger : NetworkBehaviour
         if (localHudCtl != null)
         {
             localHudCtl.ShowInteractionPrompt(false, "");
-            localHudCtl.ShowQuest(false);
-            localHudCtl.ShowMissionAlert("CẦU ĐĐƯỢC SỬA CHỮA THÀNH CÔNG!", 5.0f);
+            localHudCtl.ShowQuest(false, this);
+            localHudCtl.ShowMissionAlert("CẦU ĐÃ ĐƯỢC SỬA CHỮA THÀNH CÔNG!", 5.0f);
         }
 
         // Dọn dẹp mũi tên chỉ đường nếu còn
@@ -1639,10 +1654,10 @@ public class BridgeCollapseTrigger : NetworkBehaviour
                         indicator.reachDistance = 4f;
                     }
                 }
-                if (localHudCtl != null)
+                if (localHudCtl != null && IsPrerequisiteCompleted())
                 {
-                    localHudCtl.ShowQuest(true);
-                    localHudCtl.UpdateQuestProgress(logsProgress, requiredLogsToRepair);
+                    localHudCtl.ShowQuest(true, this);
+                    localHudCtl.UpdateQuestProgress(logsProgress, requiredLogsToRepair, this);
                 }
             }
             else

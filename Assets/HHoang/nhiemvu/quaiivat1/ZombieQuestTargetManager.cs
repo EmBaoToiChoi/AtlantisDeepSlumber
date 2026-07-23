@@ -3,9 +3,24 @@ using System.Collections;
 using System.Collections.Generic;
 using Unity.Netcode;
 
-public class ZombieQuestTargetManager : NetworkBehaviour
+public class ZombieQuestTargetManager : NetworkBehaviour, IQuestTrigger
 {
     public static ZombieQuestTargetManager Instance;
+
+    public bool IsQuestCompleted => isQuestCompleted != null && isQuestCompleted.Value;
+    public bool IsQuestActive => isQuestActive != null && isQuestActive.Value;
+
+    [Header("Quest Prerequisite Settings")]
+    [Tooltip("Nhiệm vụ tiền đề bắt buộc phải hoàn thành trước khi nhiệm vụ này được hiển thị/kích hoạt")]
+    public MonoBehaviour prerequisiteQuest;
+
+    public bool IsPrerequisiteCompleted()
+    {
+        if (prerequisiteQuest == null) return true;
+        if (prerequisiteQuest is IQuestTrigger quest) return quest.IsQuestCompleted;
+        if (prerequisiteQuest is BridgeCollapseTrigger bridge) return bridge.IsBridgeRepaired();
+        return true;
+    }
 
     [Header("Quest Settings")]
     public string questTitle = "DỌN SẠCH KHU VỰC";
@@ -71,6 +86,11 @@ public class ZombieQuestTargetManager : NetworkBehaviour
     public void StartQuest()
     {
         if (!IsServer) return;
+        if (!IsPrerequisiteCompleted())
+        {
+            Debug.Log($"[ZombieQuest] Chưa hoàn thành nhiệm vụ tiền đề '{prerequisiteQuest.gameObject.name}'. Không thể khởi chạy.");
+            return;
+        }
         if (isQuestCompleted.Value || isQuestActive.Value) return;
 
         if (totalKillsNeeded == 0)
@@ -146,15 +166,16 @@ public class ZombieQuestTargetManager : NetworkBehaviour
 
     private void UpdateQuestUI()
     {
+        if (!IsPrerequisiteCompleted()) return;
         if (localHudCtl == null) localHudCtl = FindAnyObjectByType<PlayerHUDController>();
 
         if (localHudCtl != null)
         {
-            localHudCtl.ShowQuest(true);
-            localHudCtl.UpdateQuestTitle(questTitle);
-            localHudCtl.UpdateQuestDescription(questDescription);
-            localHudCtl.UpdateQuestIcon(questIconSprite);
-            localHudCtl.UpdateQuestProgress(currentKills.Value, totalKillsNeeded);
+            localHudCtl.ShowQuest(true, this);
+            localHudCtl.UpdateQuestTitle(questTitle, this);
+            localHudCtl.UpdateQuestDescription(questDescription, this);
+            localHudCtl.UpdateQuestIcon(questIconSprite, this);
+            localHudCtl.UpdateQuestProgress(currentKills.Value, totalKillsNeeded, this);
         }
     }
 
@@ -164,9 +185,9 @@ public class ZombieQuestTargetManager : NetworkBehaviour
 
         if (localHudCtl != null)
         {
-            localHudCtl.ShowQuest(true);
-            localHudCtl.UpdateQuestProgress(totalKillsNeeded, totalKillsNeeded);
-            localHudCtl.UpdateQuestDescription("Hoàn thành: Khu vực đã an toàn!");
+            localHudCtl.ShowQuest(true, this);
+            localHudCtl.UpdateQuestProgress(totalKillsNeeded, totalKillsNeeded, this);
+            localHudCtl.UpdateQuestDescription("Hoàn thành: Khu vực đã an toàn!", this);
             StartCoroutine(HideQuestAfterDelay(hideDelayAfterComplete));
         }
     }
@@ -176,7 +197,7 @@ public class ZombieQuestTargetManager : NetworkBehaviour
         yield return new WaitForSeconds(delay);
         if (localHudCtl != null)
         {
-            localHudCtl.ShowQuest(false);
+            localHudCtl.ShowQuest(false, this);
         }
     }
 }
