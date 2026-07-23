@@ -1047,7 +1047,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (rb != null)
         {
             rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationY | RigidbodyConstraints.FreezeRotationZ;
-            rb.interpolation = RigidbodyInterpolation.Interpolate;
+            rb.interpolation = RigidbodyInterpolation.None;
         }
     }
 
@@ -1962,12 +1962,10 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (anim != null && anim.isActiveAndEnabled && anim.runtimeAnimatorController != null)
         {
             if (anim.applyRootMotion) anim.applyRootMotion = false;
+
             anim.SetFloat(inputXParam, smoothedInputX);
             anim.SetFloat(inputZParam, smoothedInputZ);
-
-            float currentSpeedVal = anim.GetFloat(speedParam);
-            float smoothedSpeed = Mathf.MoveTowards(currentSpeedVal, targetSpeed, Time.deltaTime * inputFilterSpeed);
-            anim.SetFloat(speedParam, smoothedSpeed);
+            anim.SetFloat(speedParam, targetSpeed);
 
             bool isArmed = (GetActiveWeaponIndex() == 2 || GetActiveWeaponIndex() == 1);
             anim.SetBool(isArmedParam, isArmed);
@@ -1976,7 +1974,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
             {
                 netMoveX.Value = smoothedInputX;
                 netMoveZ.Value = smoothedInputZ;
-                netSpeed.Value = smoothedSpeed;
+                netSpeed.Value = targetSpeed;
             }
         }
     }
@@ -2137,8 +2135,8 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
             targetSpeed *= 0.4f;
         }
 
-        smoothedInputX = Mathf.MoveTowards(smoothedInputX, targetInputX, Time.deltaTime * inputFilterSpeed);
-        smoothedInputZ = Mathf.MoveTowards(smoothedInputZ, targetInputZ, Time.deltaTime * inputFilterSpeed);
+        smoothedInputX = targetInputX;
+        smoothedInputZ = targetInputZ;
         UpdateAnimatorParams(targetSpeed);
 
         if (!useBlendTree && !IsPlayingActionAnimation())
@@ -2349,8 +2347,8 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
             targetSpeed *= 0.4f;
         }
 
-        smoothedInputX = Mathf.MoveTowards(smoothedInputX, targetInputX, Time.deltaTime * inputFilterSpeed);
-        smoothedInputZ = Mathf.MoveTowards(smoothedInputZ, targetInputZ, Time.deltaTime * inputFilterSpeed);
+        smoothedInputX = targetInputX;
+        smoothedInputZ = targetInputZ;
         UpdateAnimatorParams(targetSpeed);
 
         if (!useBlendTree && !IsPlayingActionAnimation())
@@ -3501,10 +3499,10 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     private void FixedUpdate()
     {
-        if (rb != null)
+        if (rb != null && !rb.isKinematic)
         {
             float currentYVelocity = rb.linearVelocity.y;
-            rb.linearVelocity = Vector3.Lerp(rb.linearVelocity, new Vector3(targetMoveVelocity.x, currentYVelocity, targetMoveVelocity.z), Time.fixedDeltaTime * 15f);
+            rb.linearVelocity = new Vector3(targetMoveVelocity.x, currentYVelocity, targetMoveVelocity.z);
         }
     }
 

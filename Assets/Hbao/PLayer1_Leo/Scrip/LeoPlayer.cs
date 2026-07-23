@@ -3453,7 +3453,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         {
             rb.isKinematic = false; // Mặc định tắt Kinematic để di chuyển được ở chế độ Standalone/Offline
             rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationY | RigidbodyConstraints.FreezeRotationZ;
-            rb.interpolation = RigidbodyInterpolation.Interpolate;
+            rb.interpolation = RigidbodyInterpolation.None;
         }
 
         CreateSwordHitboxes();
@@ -4091,7 +4091,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             move = camRight * moveX + camForward * moveZ;
         }
 
-        if (move.magnitude > 1f)
+        if (move != Vector3.zero)
         {
             move.Normalize();
         }
@@ -4173,8 +4173,8 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             targetSpeed = new Vector2(targetInputX, targetInputZ).magnitude;
         }
 
-        smoothedInputX = Mathf.MoveTowards(smoothedInputX, targetInputX, Time.deltaTime * inputFilterSpeed);
-        smoothedInputZ = Mathf.MoveTowards(smoothedInputZ, targetInputZ, Time.deltaTime * inputFilterSpeed);
+        smoothedInputX = targetInputX;
+        smoothedInputZ = targetInputZ;
         UpdateAnimatorParams(targetSpeed);
 
         if (!useBlendTree && !IsPlayingActionAnimation())
@@ -4272,7 +4272,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             move = camRight * moveX + camForward * moveZ;
         }
 
-        if (move.magnitude > 1f)
+        if (move != Vector3.zero)
         {
             move.Normalize();
         }
@@ -4353,8 +4353,8 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             targetSpeed = new Vector2(targetInputX, targetInputZ).magnitude;
         }
 
-        smoothedInputX = Mathf.MoveTowards(smoothedInputX, targetInputX, Time.deltaTime * inputFilterSpeed);
-        smoothedInputZ = Mathf.MoveTowards(smoothedInputZ, targetInputZ, Time.deltaTime * inputFilterSpeed);
+        smoothedInputX = targetInputX;
+        smoothedInputZ = targetInputZ;
         UpdateAnimatorParams(targetSpeed);
 
         if (!useBlendTree && !IsPlayingActionAnimation())
@@ -4393,12 +4393,10 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (anim != null && anim.isActiveAndEnabled && anim.runtimeAnimatorController != null)
         {
             if (anim.applyRootMotion) anim.applyRootMotion = false;
+
             anim.SetFloat(inputXParam, smoothedInputX);
             anim.SetFloat(inputZParam, smoothedInputZ);
-
-            float currentSpeedVal = anim.GetFloat(speedParam);
-            float smoothedSpeed = Mathf.MoveTowards(currentSpeedVal, targetSpeed, Time.deltaTime * inputFilterSpeed);
-            anim.SetFloat(speedParam, smoothedSpeed);
+            anim.SetFloat(speedParam, targetSpeed);
 
             bool isArmed = (GetActiveWeaponIndex() == 2);
             anim.SetBool(isArmedParam, isArmed);
@@ -4407,7 +4405,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             {
                 netMoveX.Value = smoothedInputX;
                 netMoveZ.Value = smoothedInputZ;
-                netSpeed.Value = smoothedSpeed;
+                netSpeed.Value = targetSpeed;
             }
         }
     }
@@ -7744,10 +7742,10 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     {
         ApplyExtraGravity();
 
-        if (rb != null)
+        if (rb != null && !rb.isKinematic)
         {
             float currentYVelocity = rb.linearVelocity.y;
-            rb.linearVelocity = Vector3.Lerp(rb.linearVelocity, new Vector3(targetMoveVelocity.x, currentYVelocity, targetMoveVelocity.z), Time.fixedDeltaTime * 15f);
+            rb.linearVelocity = new Vector3(targetMoveVelocity.x, currentYVelocity, targetMoveVelocity.z);
         }
     }
 
