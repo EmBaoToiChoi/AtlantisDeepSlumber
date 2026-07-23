@@ -241,7 +241,8 @@ public class CollectibleItemDrop : NetworkBehaviour, IInteractableItem
                 if (hud != null) hud.ShowMissionAlert("Bạn phải ấn [G] thả rìu xuống mới bưng được gỗ!", 3.0f);
                 return;
             }
-            if (target != null && target.GetActiveWeaponIndex() != 1)
+            int activeWeapon = target != null ? target.GetActiveWeaponIndex() : 0;
+            if (activeWeapon != 0 && activeWeapon != 1)
             {
                 if (hud != null) hud.ShowMissionAlert("Bạn phải chọn ô vũ khí 1 và thả rìu mới bưng được gỗ!", 3.0f);
                 return;
