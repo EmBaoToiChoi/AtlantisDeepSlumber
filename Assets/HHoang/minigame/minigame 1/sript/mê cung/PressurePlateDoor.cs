@@ -84,15 +84,15 @@ public class PressurePlateDoor : NetworkBehaviour
                 // Nếu cửa này đã được một nút khác di chuyển trong frame này rồi thì bỏ qua
                 if (updatedDoorsThisFrame.Contains(door.doorTransform)) continue;
 
-                // KIỂM TRA ĐỒNG ĐỘI: Xem có NÚT NÀO BẤT KỲ đang bị dẫm mà cùng chung cánh cửa này không?
+                // KIỂM TRA ĐỒNG ĐỘI: Xem có NÚT NÀO hoặc CẦN GẠT NÀO BẤT KỲ đang kích hoạt mà cùng chung cánh cửa này không?
                 bool shouldOpenDoor = false;
                 foreach (var plate in allPlates)
                 {
-                    if (plate.isPressed.Value)
+                    if (plate != null && plate.isPressed.Value)
                     {
                         foreach (var pDoor in plate.doors)
                         {
-                            if (pDoor.doorTransform == door.doorTransform)
+                            if (pDoor != null && pDoor.doorTransform == door.doorTransform)
                             {
                                 shouldOpenDoor = true;
                                 break;
@@ -100,6 +100,25 @@ public class PressurePlateDoor : NetworkBehaviour
                         }
                     }
                     if (shouldOpenDoor) break;
+                }
+
+                if (!shouldOpenDoor && LeverDoor.allLevers != null)
+                {
+                    foreach (var lever in LeverDoor.allLevers)
+                    {
+                        if (lever != null && lever.isPressed.Value)
+                        {
+                            foreach (var pDoor in lever.doors)
+                            {
+                                if (pDoor != null && pDoor.doorTransform == door.doorTransform)
+                                {
+                                    shouldOpenDoor = true;
+                                    break;
+                                }
+                            }
+                        }
+                        if (shouldOpenDoor) break;
+                    }
                 }
 
                 Vector3 targetDoorPos = shouldOpenDoor ? (door.initialPos + door.slideOffset) : door.initialPos;
