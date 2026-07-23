@@ -101,17 +101,66 @@ public class AxeItem : NetworkBehaviour
 
     private void Update()
     {
+        bool isNetwork = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
+        ulong currentCarrierId = isNetwork ? carryingPlayerId.Value : (localPlayerCarrier != null ? 1u : 0u);
+        bool isCarried = (currentCarrierId != 0 || isCarryingLocally);
+
+        // BẢO VỆ VẬT LÝ KHI RÌU Ở TRÊN ĐẤT:
+        if (!isCarried)
+        {
+            // Bắt buộc tất cả solid physics colliders (isTrigger = false) luôn luôn BẬT khi rìu ở trên đất
+            if (colliders == null || colliders.Length == 0) colliders = GetComponents<Collider>();
+            if (colliders != null)
+            {
+                foreach (var col in colliders)
+                {
+                    if (col != null && !col.isTrigger)
+                    {
+                        col.enabled = true;
+                    }
+                }
+            }
+
+            if (rb == null) rb = GetComponent<Rigidbody>();
+            if (rb != null && rb.isKinematic)
+            {
+                rb.isKinematic = false;
+            }
+
+            // CHỐNG RỚT MAP SAFETY NET: Nếu Y < -10f (do bất kỳ bug vật lý nào), tự động đưa rìu lại mặt đất an toàn
+            if (transform.position.y < -10f)
+            {
+                Vector3 safePos = transform.position;
+                safePos.y = 5f;
+                if (Physics.Raycast(new Vector3(transform.position.x, 100f, transform.position.z), Vector3.down, out RaycastHit hit, 200f))
+                {
+                    safePos = hit.point + Vector3.up * 0.5f;
+                }
+                transform.position = safePos;
+                if (rb != null)
+                {
+                    rb.isKinematic = false;
+                    rb.linearVelocity = Vector3.zero;
+                    rb.angularVelocity = Vector3.zero;
+                }
+                if (colliders != null)
+                {
+                    foreach (var col in colliders)
+                    {
+                        if (col != null && !col.isTrigger) col.enabled = true;
+                    }
+                }
+            }
+        }
+
         // Chỉ chạy cho local player điều khiển giao diện & tương tác nhặt/thả
         if (PlayerHUDController.LocalPlayerTarget != null)
         {
             var playerObj = PlayerHUDController.LocalPlayerTarget as MonoBehaviour;
             if (playerObj != null)
             {
-                bool isNetwork = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
-                ulong currentCarrierId = isNetwork ? carryingPlayerId.Value : (localPlayerCarrier != null ? 1u : 0u);
-
                 float dist = Vector3.Distance(transform.position, playerObj.transform.position);
-                bool inRange = (currentCarrierId == 0 && dist <= 3f);
+                bool inRange = (!isCarried && dist <= 3f);
 
                 if (inRange)
                 {
