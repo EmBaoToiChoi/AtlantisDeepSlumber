@@ -285,7 +285,6 @@ public class RotatePillarQuestTrigger : NetworkBehaviour, IQuestTrigger
         if (other == null || isQuestCompleted || !IsPrerequisiteCompleted()) return;
 
         bool isNetwork = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
-        if (isNetwork && !IsServer) return;
 
         if (IsPlayer(other.gameObject))
         {
@@ -293,8 +292,15 @@ public class RotatePillarQuestTrigger : NetworkBehaviour, IQuestTrigger
             {
                 if (!isQuestActive.Value)
                 {
-                    isQuestActive.Value = true;
-                    Debug.Log($"[RotatePillarQuestTrigger Server] Người chơi '{other.gameObject.name}' chạm Trigger - Kích hoạt nhiệm vụ xoay trụ cho toàn bộ mạng!");
+                    if (IsServer)
+                    {
+                        isQuestActive.Value = true;
+                        Debug.Log($"[RotatePillarQuestTrigger Server] Người chơi '{other.gameObject.name}' chạm Trigger - Kích hoạt nhiệm vụ cho toàn bộ mạng!");
+                    }
+                    else
+                    {
+                        RequestActivateQuestServerRpc();
+                    }
                 }
             }
             else
@@ -302,8 +308,18 @@ public class RotatePillarQuestTrigger : NetworkBehaviour, IQuestTrigger
                 hasTriggeredQuest = true;
                 lastCorrectCount = -1;
                 UpdateQuestProgressUI();
-                Debug.Log("[RotatePillarQuestTrigger Offline] Người chơi chạm Trigger - Kích hoạt nhiệm vụ xoay trụ.");
+                Debug.Log("[RotatePillarQuestTrigger Offline] Người chơi chạm Trigger - Kích hoạt nhiệm vụ.");
             }
+        }
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    private void RequestActivateQuestServerRpc()
+    {
+        if (!isQuestActive.Value)
+        {
+            isQuestActive.Value = true;
+            Debug.Log("[RotatePillarQuestTrigger ServerRpc] Client yêu cầu kích hoạt nhiệm vụ xoay trụ cho toàn bộ mạng!");
         }
     }
 

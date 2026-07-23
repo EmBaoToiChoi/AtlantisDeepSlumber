@@ -315,7 +315,6 @@ public class ElementalPillarQuestTrigger : NetworkBehaviour, IQuestTrigger
         if (other == null || isQuestCompleted || !IsPrerequisiteCompleted()) return;
 
         bool isNetwork = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
-        if (isNetwork && !IsServer) return;
 
         if (IsPlayer(other.gameObject))
         {
@@ -323,8 +322,15 @@ public class ElementalPillarQuestTrigger : NetworkBehaviour, IQuestTrigger
             {
                 if (!isQuestActive.Value)
                 {
-                    isQuestActive.Value = true;
-                    Debug.Log($"[ElementalPillarQuestTrigger Server] Người chơi '{other.gameObject.name}' chạm Trigger - Kích hoạt nhiệm vụ trụ nguyên tố cho toàn bộ mạng!");
+                    if (IsServer)
+                    {
+                        isQuestActive.Value = true;
+                        Debug.Log($"[ElementalPillarQuestTrigger Server] Người chơi '{other.gameObject.name}' chạm Trigger - Kích hoạt nhiệm vụ cho toàn bộ mạng!");
+                    }
+                    else
+                    {
+                        RequestActivateQuestServerRpc();
+                    }
                 }
             }
             else
@@ -332,8 +338,18 @@ public class ElementalPillarQuestTrigger : NetworkBehaviour, IQuestTrigger
                 hasTriggeredQuest = true;
                 lastActivatedCount = -1;
                 UpdateQuestProgressUI();
-                Debug.Log("[ElementalPillarQuestTrigger Offline] Người chơi chạm Trigger - Kích hoạt nhiệm vụ trụ nguyên tố.");
+                Debug.Log("[ElementalPillarQuestTrigger Offline] Người chơi chạm Trigger - Kích hoạt nhiệm vụ.");
             }
+        }
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    private void RequestActivateQuestServerRpc()
+    {
+        if (!isQuestActive.Value)
+        {
+            isQuestActive.Value = true;
+            Debug.Log("[ElementalPillarQuestTrigger ServerRpc] Client yêu cầu kích hoạt nhiệm vụ trụ nguyên tố cho toàn bộ mạng!");
         }
     }
 
