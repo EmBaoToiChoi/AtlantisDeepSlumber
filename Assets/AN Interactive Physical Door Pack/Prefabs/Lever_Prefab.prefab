@@ -48,7 +48,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  GlobalObjectIdHash: 3811958833
+  GlobalObjectIdHash: 1338369873
   InScenePlacedSourceGlobalObjectIdHash: 1338369873
   DeferredDespawnTick: 0
   Ownership: 1
@@ -76,7 +76,7 @@ BoxCollider:
     serializedVersion: 2
     m_Bits: 0
   m_LayerOverridePriority: 0
-  m_IsTrigger: 0
+  m_IsTrigger: 1
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
@@ -102,12 +102,14 @@ MonoBehaviour:
     slideAudioSource: {fileID: 0}
     initialPos: {x: 0, y: 0, z: 0}
   leverHandle: {fileID: 9078037237241554317}
-  pulledRotationOffset: {x: 90, y: 0, z: 0}
+  pulledRotationOffset: {x: 120, y: 0, z: 0}
   leverRotateSpeed: 180
   interactKey: 102
   interactUI: {fileID: 0}
   leverAudioSource: {fileID: 0}
   pullSound: {fileID: 0}
+  isPlayerNearbyDebug: 0
+  isPressedDebug: 0
   isPressed:
     UpdateTraits:
       MinSecondsBetweenUpdates: 0
