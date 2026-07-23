@@ -16,6 +16,7 @@ GameObject:
   - component: {fileID: 501307779519731499}
   - component: {fileID: 5570923828042860514}
   - component: {fileID: 2606747154048726544}
+  - component: {fileID: -8344001746682714140}
   m_Layer: 0
   m_Name: Axe_Straight
   m_TagString: Untagged
@@ -108,7 +109,7 @@ BoxCollider:
   m_LayerOverridePriority: 0
   m_IsTrigger: 0
   m_ProvidesContacts: 0
-  m_Enabled: 0
+  m_Enabled: 1
   serializedVersion: 3
   m_Size: {x: 0.04, y: 0.4748158, z: 0.055}
   m_Center: {x: 0.00000006891787, y: -0.18752661, z: 0}
@@ -199,3 +200,15 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   ShowTopMostFoldoutHeaderGroup: 1
   customAxeIcon: {fileID: 552827468, guid: 15513dda7035f5442aad58e94248a046, type: 3}
+--- !u!114 &-8344001746682714140
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6446421710374224606}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9af35fd58f6f29d48a0193db93794d54, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 

@@ -4136,7 +4136,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (targetCamera != null && (!IsPlayingActionAnimation() || isAttackingState || isHitState) && !IsLockingMovementAction())
         {
             Vector3 turnDir = Vector3.zero;
-            if (IsAiming || isAttackingState)
+            if (IsAiming || isAttackingState || !isMoving)
             {
                 turnDir = targetCamera.transform.forward;
             }
@@ -4314,7 +4314,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (targetCamera != null && (!IsPlayingActionAnimation() || isAttackingState || isHitState) && !IsLockingMovementAction())
         {
             Vector3 turnDir = Vector3.zero;
-            if (IsAiming || isAttackingState)
+            if (IsAiming || isAttackingState || !isMoving)
             {
                 turnDir = targetCamera.transform.forward;
             }
