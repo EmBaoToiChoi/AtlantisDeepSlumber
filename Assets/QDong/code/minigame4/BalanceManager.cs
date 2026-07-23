@@ -145,22 +145,34 @@ public class BalanceManager : NetworkBehaviour
         if (IsServer)
         {
             targetRotation.Value = desiredRotation;
+            
+            Quaternion lerpRot = Quaternion.Lerp(
+                diskRigidbody.rotation,
+                desiredRotation,
+                Time.fixedDeltaTime * 5f
+            );
+            Quaternion nextRot = Quaternion.RotateTowards(
+                diskRigidbody.rotation,
+                lerpRot,
+                40f * Time.fixedDeltaTime // Xoay tối đa 40 độ / giây
+            );
+            // Dùng transform.rotation thay vì MoveRotation để triệt tiêu hoàn toàn lực hất vật lý (bounce) từ mặt sàn
+            diskRigidbody.transform.rotation = nextRot;
         }
-
-        // Mượt mà hóa vòng xoay (Lerp) kết hợp giới hạn vận tốc góc (RotateTowards)
-        // Tránh việc đĩa bật ngược lên quá nhanh hất văng người chơi khi có người trượt ra ngoài
-        Quaternion lerpRot = Quaternion.Lerp(
-            diskRigidbody.rotation,
-            desiredRotation,
-            Time.fixedDeltaTime * 5f
-        );
-        Quaternion nextRot = Quaternion.RotateTowards(
-            diskRigidbody.rotation,
-            lerpRot,
-            40f * Time.fixedDeltaTime // Xoay tối đa 40 độ / giây
-        );
-        // Dùng transform.rotation thay vì MoveRotation để triệt tiêu hoàn toàn lực hất vật lý (bounce) từ mặt sàn
-        diskRigidbody.transform.rotation = nextRot;
+        else
+        {
+            Quaternion lerpRot = Quaternion.Lerp(
+                diskRigidbody.rotation,
+                targetRotation.Value,
+                Time.fixedDeltaTime * 5f
+            );
+            Quaternion nextRot = Quaternion.RotateTowards(
+                diskRigidbody.rotation,
+                lerpRot,
+                40f * Time.fixedDeltaTime // Xoay tối đa 40 độ / giây
+            );
+            diskRigidbody.transform.rotation = nextRot;
+        }
 
         // Áp dụng lực hút nhẹ để nhân vật bám sát đĩa hơn khi đĩa di chuyển
         // Dừng khi đĩa đã bị khóa (hoàn thành puzzle) để tránh văng player lên

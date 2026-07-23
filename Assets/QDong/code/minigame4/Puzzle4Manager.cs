@@ -28,6 +28,8 @@ public class Puzzle4Manager : NetworkBehaviour
     // Cache local player để tránh FindObjectsByType mỗi frame trong FixedUpdate
     private Rigidbody cachedLocalPlayerRb = null;
     private Collider cachedLocalPlayerCollider = null;
+    private SlideEffect cachedLocalPlayerSlideEffect = null;
+    private Collider[] cachedLocalPlayerColliders = null;
     private bool localPlayerCached = false;
 
     // Sau này đổi sang VFX Graph
@@ -101,46 +103,35 @@ public class Puzzle4Manager : NetworkBehaviour
 
         if (isActive)
         {
-            Camera mainCam = Camera.main;
-            if (mainCam != null)
+            Camera[] allCams = Camera.allCameras;
+            foreach (Camera cam in allCams)
             {
-                mainCam.gameObject.SetActive(false);
+                if (cam.gameObject.CompareTag("MainCamera") && (sharedCamera == null || cam.gameObject != sharedCamera))
+                {
+                    cam.gameObject.SetActive(false);
+                }
             }
         }
         else
         {
-            // Khi tắt camera minigame, đảm bảo Camera.main của player được bật lại
-            Camera mainCam = Camera.main;
-            if (mainCam != null && !mainCam.gameObject.activeSelf)
+            // Bật lại camera của player cục bộ
+            if (localPlayerScript != null)
             {
-                mainCam.gameObject.SetActive(true);
-                Debug.Log("[Puzzle4] Đã bật lại Camera.main: " + mainCam.gameObject.name);
-            }
-            else if (mainCam == null)
-            {
-                // Nếu Camera.main trả về null do đã bị tắt, tìm thủ công tất cả Camera
-                Camera[] allCams = FindObjectsByType<Camera>(FindObjectsInactive.Include, FindObjectsSortMode.None);
-                foreach (Camera cam in allCams)
+                // Thay vì tìm chung chung, ta tìm chính xác Camera trong Prefab của người chơi cục bộ
+                Camera[] localCams = localPlayerScript.GetComponentsInChildren<Camera>(true);
+                foreach (Camera cam in localCams)
                 {
-                    if (cam.CompareTag("MainCamera") && cam.gameObject != sharedCamera)
+                    if (cam.CompareTag("MainCamera"))
                     {
                         cam.gameObject.SetActive(true);
-                        Debug.Log("[Puzzle4] Đã tìm và bật lại MainCamera: " + cam.gameObject.name);
+                        Debug.Log("[Puzzle4] Đã tìm và bật lại MainCamera của player cục bộ: " + cam.gameObject.name);
                         
-                        if (localPlayerScript != null)
-                        {
-                            var targetCamField = localPlayerScript.GetType().GetField("targetCamera", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-                            if (targetCamField != null) targetCamField.SetValue(localPlayerScript, cam);
-                        }
+                        var targetCamField = localPlayerScript.GetType().GetField("targetCamera", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                        if (targetCamField != null) targetCamField.SetValue(localPlayerScript, cam);
                         break;
                     }
                 }
             }
-            else
-            {
-                Debug.Log("[Puzzle4] Camera.main đang active: " + mainCam.gameObject.name + " | Depth: " + mainCam.depth);
-            }
-
             if (sharedCamera != null)
             {
                 Debug.Log("[Puzzle4] sharedCamera đã tắt: " + sharedCamera.name);
@@ -373,11 +364,10 @@ public class Puzzle4Manager : NetworkBehaviour
                     CacheLocalPlayer();
                 }
 
-                if (cachedLocalPlayerRb != null)
+                if (localPlayerCached && cachedLocalPlayerColliders != null)
                 {
-                    Collider[] cols = cachedLocalPlayerRb.GetComponentsInChildren<Collider>();
                     bool isOnBoard = false;
-                    foreach (var c in cols)
+                    foreach (var c in cachedLocalPlayerColliders)
                     {
                         if (balanceManager.IsPlayerOnBoard(c))
                         {
@@ -388,7 +378,15 @@ public class Puzzle4Manager : NetworkBehaviour
 
                     if (isOnBoard)
                     {
-                        cachedLocalPlayerRb.AddForce(slideForce + stickyForce, ForceMode.Force);
+                        if (cachedLocalPlayerRb != null)
+                        {
+                            cachedLocalPlayerRb.AddForce(slideForce + stickyForce, ForceMode.Force);
+                        }
+                        
+                        if (cachedLocalPlayerSlideEffect != null)
+                        {
+                            cachedLocalPlayerSlideEffect.ApplySlide(slideForce);
+                        }
                     }
                 }
             }
@@ -403,9 +401,11 @@ public class Puzzle4Manager : NetworkBehaviour
             if (mono is IPlayerHUDTarget player && player.IsOwner)
             {
                 cachedLocalPlayerRb = player.gameObject.GetComponent<Rigidbody>();
-                localPlayerCached = (cachedLocalPlayerRb != null);
-                if (localPlayerCached)
-                    Debug.Log("[Puzzle4Manager] Đã cache local player: " + player.gameObject.name);
+                cachedLocalPlayerSlideEffect = player.gameObject.GetComponent<SlideEffect>();
+                cachedLocalPlayerColliders = player.gameObject.GetComponentsInChildren<Collider>();
+                
+                localPlayerCached = true;
+                Debug.Log("[Puzzle4Manager] Đã cache local player: " + player.gameObject.name);
                 break;
             }
         }
