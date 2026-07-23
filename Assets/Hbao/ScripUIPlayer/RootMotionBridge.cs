@@ -147,14 +147,8 @@ public class RootMotionBridge : MonoBehaviour
         }
         else
         {
-            // Reset local position and rotation to prevent root motion drift from hit or other non-roll animations
-            transform.localRotation = initialTransformLocalRot;
-            transform.localPosition = initialTransformLocalPos;
-
-            if (hasRootBone && rootBone != null)
-            {
-                rootBone.localPosition = new Vector3(initialRootBoneLocalPos.x, rootBone.localPosition.y, initialRootBoneLocalPos.z);
-            }
+            // Không can thiệp vào transform hay rootBone khi di chuyển thông thường (walk/run/idle/turnaround)
+            // để hoạt ảnh và phép quay C# chạy tự nhiên 100% không bị giật khựng.
         }
     }
 
