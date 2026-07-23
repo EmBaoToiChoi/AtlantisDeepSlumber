@@ -3050,14 +3050,14 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     [Header("Camera Follow Settings")]
     public bool enableCameraFollow = true;
-    public Vector3 cameraOffset = new Vector3(0f, 10f, -6.5f);
+    public Vector3 cameraOffset = new Vector3(0f, 12f, -8f);
     public float cameraSmoothSpeed = 5f;
     public bool cameraLookAtPlayer = true;
-    public float cameraPivotHeight = 3.5f;
+    public float cameraPivotHeight = 1.0f;
     protected Camera targetCamera;
 
     [Header("Camera Rotation Settings")]
-    public float cameraSensitivity = 3f;
+    public float cameraSensitivity = 2f;
     public float minPitch = 10f;
     public float maxPitch = 80f;
     public float rotationSmoothSpeed = 15f;
