@@ -291,7 +291,6 @@ public class CrystalPuzzleQuestTrigger : NetworkBehaviour, IQuestTrigger
         if (other == null || isQuestCompleted || !IsPrerequisiteCompleted()) return;
 
         bool isNetwork = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
-        if (isNetwork && !IsServer) return;
 
         if (IsPlayer(other.gameObject))
         {
@@ -299,8 +298,15 @@ public class CrystalPuzzleQuestTrigger : NetworkBehaviour, IQuestTrigger
             {
                 if (!isQuestActive.Value)
                 {
-                    isQuestActive.Value = true;
-                    Debug.Log($"[CrystalPuzzleQuestTrigger Server] Người chơi '{other.gameObject.name}' chạm Trigger - Kích hoạt nhiệm vụ đặt ngọc cho toàn bộ mạng!");
+                    if (IsServer)
+                    {
+                        isQuestActive.Value = true;
+                        Debug.Log($"[CrystalPuzzleQuestTrigger Server] Người chơi '{other.gameObject.name}' chạm Trigger - Kích hoạt nhiệm vụ cho toàn bộ mạng!");
+                    }
+                    else
+                    {
+                        RequestActivateQuestServerRpc();
+                    }
                 }
             }
             else
@@ -308,8 +314,18 @@ public class CrystalPuzzleQuestTrigger : NetworkBehaviour, IQuestTrigger
                 hasTriggeredQuest = true;
                 lastPlacedCount = -1;
                 UpdateQuestProgressUI();
-                Debug.Log("[CrystalPuzzleQuestTrigger Offline] Người chơi chạm Trigger - Kích hoạt nhiệm vụ đặt ngọc.");
+                Debug.Log("[CrystalPuzzleQuestTrigger Offline] Người chơi chạm Trigger - Kích hoạt nhiệm vụ.");
             }
+        }
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    private void RequestActivateQuestServerRpc()
+    {
+        if (!isQuestActive.Value)
+        {
+            isQuestActive.Value = true;
+            Debug.Log("[CrystalPuzzleQuestTrigger ServerRpc] Client yêu cầu kích hoạt nhiệm vụ đặt ngọc cho toàn bộ mạng!");
         }
     }
 

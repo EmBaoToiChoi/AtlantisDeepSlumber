@@ -85,7 +85,12 @@ public class ZombieQuestTargetManager : NetworkBehaviour, IQuestTrigger
 
     public void StartQuest()
     {
-        if (!IsServer) return;
+        if (!IsServer)
+        {
+            StartQuestServerRpc();
+            return;
+        }
+
         if (!IsPrerequisiteCompleted())
         {
             Debug.Log($"[ZombieQuest] Chưa hoàn thành nhiệm vụ tiền đề '{prerequisiteQuest.gameObject.name}'. Không thể khởi chạy.");
@@ -109,6 +114,12 @@ public class ZombieQuestTargetManager : NetworkBehaviour, IQuestTrigger
 
         currentKills.Value = 0;
         isQuestActive.Value = true;
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    public void StartQuestServerRpc()
+    {
+        StartQuest();
     }
 
     private void OnZombieKilledServer()
