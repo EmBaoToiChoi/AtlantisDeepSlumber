@@ -5,8 +5,8 @@ using Unity.Netcode;
 public class MazeGemQuestTrigger : NetworkBehaviour
 {
     [Header("Quest Configuration")]
-    [Tooltip("Danh sách các viên ngọc trong mê cung cần thu thập")]
-    public CollectibleItemDrop[] gemObjects;
+    [Tooltip("Danh sách các GameObject viên ngọc trong mê cung cần thu thập (Hỗ trợ cả CrystalCore, CollectibleItemDrop hoặc GameObject bất kỳ)")]
+    public GameObject[] gemObjects;
 
     [Header("Quest UI Settings")]
     [Tooltip("Tiêu đề nhiệm vụ hiển thị trên UI (Ví dụ: TÌM NGỌC)")]
@@ -50,6 +50,7 @@ public class MazeGemQuestTrigger : NetworkBehaviour
     private float nextCheckTime = 0f;
     private int lastPressedCount = -1;
     private int localCollectedCount = 0; // Dùng khi chơi offline
+    private System.Collections.Generic.HashSet<int> collectedGemIndices = new System.Collections.Generic.HashSet<int>();
 
     private void Awake()
     {
@@ -69,13 +70,7 @@ public class MazeGemQuestTrigger : NetworkBehaviour
     {
         if (gemObjects == null || gemObjects.Length == 0)
         {
-            Debug.LogWarning("[MazeGemQuestTrigger] CẢNH BÁO: Danh sách gemObjects đang trống! Hãy gán các viên ngọc trong Inspector.");
-            // Tìm thử xem trong scene có viên ngọc nào không để cảnh báo cụ thể hơn
-            var allGems = FindObjectsByType<CollectibleItemDrop>(FindObjectsSortMode.None);
-            if (allGems.Length > 0)
-            {
-                Debug.LogWarning($"[MazeGemQuestTrigger] Gợi ý: Tìm thấy {allGems.Length} viên ngọc CollectibleItemDrop trong Scene. Hãy kéo chúng vào script này!");
-            }
+            Debug.LogWarning("[MazeGemQuestTrigger] CẢNH BÁO: Danh sách gemObjects đang trống! Hãy kéo các GameObject viên ngọc (như CrystalCore hoặc CollectibleItemDrop) vào Inspector.");
         }
     }
 
@@ -117,6 +112,32 @@ public class MazeGemQuestTrigger : NetworkBehaviour
         }
     }
 
+    private bool IsGemCollected(GameObject gem)
+    {
+        if (gem == null) return true;
+
+        // 1. Kiểm tra CrystalCore (nếu là ngọc CrystalCore trong minigame/mê cung)
+        var crystal = gem.GetComponent<CrystalCore>();
+        if (crystal != null)
+        {
+            if (!gem.activeInHierarchy) return true;
+            if (crystal.isSnapped != null && crystal.isSnapped.Value) return true;
+            if (crystal.holderId != null && crystal.holderId.Value != ulong.MaxValue) return true;
+            return false;
+        }
+
+        // 2. Kiểm tra CollectibleItemDrop (nếu là ngọc nhặt dạng vật phẩm drop)
+        var collectible = gem.GetComponent<CollectibleItemDrop>();
+        if (collectible != null)
+        {
+            if (!gem.activeInHierarchy) return true;
+            return false;
+        }
+
+        // 3. Nếu là GameObject bình thường, kiểm tra xem đã bị ẩn (SetActive false) hoặc Destroy chưa
+        return !gem.activeInHierarchy;
+    }
+
     private void Update()
     {
         if (isQuestCompleted) return;
@@ -133,15 +154,17 @@ public class MazeGemQuestTrigger : NetworkBehaviour
             bool active = isNetwork ? isQuestActive.Value : hasTriggeredQuest;
             if (active && gemObjects != null && gemObjects.Length > 0)
             {
-                // Đếm số lượng ngọc đã thu thập (các object bị null/hủy hoặc ẩn đi)
-                int currentCollected = 0;
-                foreach (var gem in gemObjects)
+                // Kiểm tra từng ngọc trong danh sách
+                for (int i = 0; i < gemObjects.Length; i++)
                 {
-                    if (gem == null || gem.gameObject == null || !gem.gameObject.activeInHierarchy)
+                    var gem = gemObjects[i];
+                    if (collectedGemIndices.Contains(i) || IsGemCollected(gem))
                     {
-                        currentCollected++;
+                        collectedGemIndices.Add(i);
                     }
                 }
+
+                int currentCollected = collectedGemIndices.Count;
 
                 // Cập nhật giá trị
                 if (isNetwork)

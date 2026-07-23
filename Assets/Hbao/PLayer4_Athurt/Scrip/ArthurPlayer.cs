@@ -380,6 +380,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
     protected float targetPitch = 45f;
     protected float cameraDistance = 14f;
     protected bool isCursorLocked = true;
+    protected Vector3 targetMoveVelocity;
 
     [Header("Camera Inversion Settings")]
     public bool invertCameraY = false;
@@ -2044,24 +2045,30 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
             move = camRight * moveX + camForward * moveZ;
         }
 
+        if (move != Vector3.zero)
+        {
+            move.Normalize();
+        }
+
         Vector3 movementTranslation = move;
-        if (isRootedAttack && IsPlayingActionAnimation())
+        if (IsLockingMovementAction())
         {
             movementTranslation = Vector3.zero;
         }
 
-        if (rb != null)
+        Vector3 currentKnockback = Vector3.zero;
+        if (knockbackVelocity.magnitude > 0.01f)
         {
-            Vector3 targetVelocity = movementTranslation * currentSpeed;
-            float currentYVelocity = rb.linearVelocity.y;
+            currentKnockback = knockbackVelocity;
+            knockbackVelocity = Vector3.Lerp(knockbackVelocity, Vector3.zero, Time.deltaTime * 8f);
+        }
 
-            if (knockbackVelocity.magnitude > 0.01f)
-            {
-                targetVelocity += knockbackVelocity;
-                knockbackVelocity = Vector3.Lerp(knockbackVelocity, Vector3.zero, Time.deltaTime * 8f);
-            }
+        Vector3 finalVelocity = movementTranslation * currentSpeed + currentKnockback;
+        targetMoveVelocity = finalVelocity;
 
-            rb.linearVelocity = new Vector3(targetVelocity.x, currentYVelocity, targetVelocity.z);
+        if (rb == null)
+        {
+            transform.Translate(finalVelocity * Time.deltaTime, Space.World);
         }
 
         bool isArmed = (GetActiveWeaponIndex() == 2 || GetActiveWeaponIndex() == 1);
@@ -2076,7 +2083,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         // Xoay nhân vật chuẩn Genshin Impact: Xoay mặt về hướng di chuyển (movementTranslation) khi di chuyển, xoay theo Camera khi tấn công/ngắm bắn
         bool isAttackingState = isAttacking || isExecutingAttack;
         bool isHitState = IsPlayingHitAnimation();
-        if (targetCamera != null && (!IsPlayingActionAnimation() || isAttackingState || isHitState))
+        if (targetCamera != null && (!IsPlayingActionAnimation() || isAttackingState || isHitState) && !IsLockingMovementAction())
         {
             Vector3 turnDir = Vector3.zero;
             if (IsAiming || isAttackingState)
@@ -2248,24 +2255,30 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
             move = camRight * moveX + camForward * moveZ;
         }
 
+        if (move != Vector3.zero)
+        {
+            move.Normalize();
+        }
+
         Vector3 movementTranslation = move;
-        if (isRootedAttack && IsPlayingActionAnimation())
+        if (IsLockingMovementAction())
         {
             movementTranslation = Vector3.zero;
         }
 
-        if (rb != null)
+        Vector3 currentKnockback = Vector3.zero;
+        if (knockbackVelocity.magnitude > 0.01f)
         {
-            Vector3 targetVelocity = movementTranslation * currentSpeed;
-            float currentYVelocity = rb.linearVelocity.y;
+            currentKnockback = knockbackVelocity;
+            knockbackVelocity = Vector3.Lerp(knockbackVelocity, Vector3.zero, Time.deltaTime * 8f);
+        }
 
-            if (knockbackVelocity.magnitude > 0.01f)
-            {
-                targetVelocity += knockbackVelocity;
-                knockbackVelocity = Vector3.Lerp(knockbackVelocity, Vector3.zero, Time.deltaTime * 8f);
-            }
+        Vector3 finalVelocity = movementTranslation * currentSpeed + currentKnockback;
+        targetMoveVelocity = finalVelocity;
 
-            rb.linearVelocity = new Vector3(targetVelocity.x, currentYVelocity, targetVelocity.z);
+        if (rb == null)
+        {
+            transform.Translate(finalVelocity * Time.deltaTime, Space.World);
         }
 
         bool isArmed = (GetActiveWeaponIndex() == 2 || GetActiveWeaponIndex() == 1);
@@ -2277,19 +2290,27 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         bool isAttacking = IsPlayingAttackState(out _, out _);
 
-        // Xoay nhân vật: Luôn xoay theo hướng Camera để hỗ trợ đi ngang/lùi (strafe) mượt mà giống Elena
-        // Cho phép xoay cả khi đang tấn công để nhân vật luôn hướng theo camera (chỉ thấy lưng, tránh vặn xương)
+        // Xoay nhân vật chuẩn Genshin Impact: Xoay mặt về hướng di chuyển (movementTranslation) khi di chuyển, xoay theo Camera khi tấn công/ngắm bắn
         bool isAttackingState = isAttacking || isExecutingAttack;
         bool isHitState = IsPlayingHitAnimation();
-        if (targetCamera != null && (!IsPlayingActionAnimation() || isAttackingState || isHitState))
+        if (targetCamera != null && (!IsPlayingActionAnimation() || isAttackingState || isHitState) && !IsLockingMovementAction())
         {
-            Vector3 camForward = targetCamera.transform.forward;
-            camForward.y = 0f;
-            camForward.Normalize();
-            if (camForward != Vector3.zero)
+            Vector3 turnDir = Vector3.zero;
+            if (IsAiming || isAttackingState)
             {
-                Quaternion targetRot = Quaternion.LookRotation(camForward);
-                transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, Time.deltaTime * 25f);
+                turnDir = targetCamera.transform.forward;
+            }
+            else if (isMoving)
+            {
+                turnDir = movementTranslation;
+            }
+
+            turnDir.y = 0f;
+            turnDir.Normalize();
+            if (turnDir != Vector3.zero)
+            {
+                Quaternion targetRot = Quaternion.LookRotation(turnDir);
+                transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, Time.deltaTime * 15f);
             }
         }
 
@@ -2524,11 +2545,11 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
                 targetYaw -= mouseX * cameraSensitivity;
                 if (invertCameraY)
                 {
-                    targetPitch += mouseY * cameraSensitivity;
+                    targetPitch -= mouseY * cameraSensitivity;
                 }
                 else
                 {
-                    targetPitch -= mouseY * cameraSensitivity;
+                    targetPitch += mouseY * cameraSensitivity;
                 }
                 float currentMinPitch = IsAiming ? aimMinPitch : minPitch;
                 float currentMaxPitch = IsAiming ? aimMaxPitch : maxPitch;
@@ -3382,6 +3403,53 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         }
         if (current.name.ToLower().Contains(keyword) && current.name.ToLower().Contains("hand")) return current;
         return null;
+    }
+
+    private bool IsLockingMovementAction()
+    {
+        if (anim == null || !anim.isActiveAndEnabled || anim.runtimeAnimatorController == null) return false;
+
+        if (isStandaloneMode ? isRollingStandalone : rollTimer > 0) return true;
+
+        bool isCurrentlyAttacking = IsPlayingAttackState(out _, out _) || 
+                                    (IsAttackAnimationName(lastTriggeredAnimName) && Time.time - lastActionTriggerTime < 0.35f);
+        if (isRootedAttack && isCurrentlyAttacking) return true;
+
+        bool isPicking = (lastTriggeredAnimName == "Idle_Pick" || lastTriggeredAnimName == "Pick" || lastTriggeredAnimName == "Picknew") && (Time.time - lastActionTriggerTime < 1.2f);
+
+        AnimatorStateInfo stateInfo = anim.GetCurrentAnimatorStateInfo(0);
+        bool isFullBodyAction = stateInfo.IsName("LonVong") || 
+                               stateInfo.IsName("GetHit") || 
+                               stateInfo.IsName("GeiHit2") || 
+                               stateInfo.IsName("Idle_Pick") || 
+                               stateInfo.IsName("Pick") ||
+                               stateInfo.IsName("Picknew") ||
+                               stateInfo.IsName("Death") ||
+                               isPicking;
+
+        if (!isFullBodyAction && anim.IsInTransition(0))
+        {
+            AnimatorStateInfo nextStateInfo = anim.GetNextAnimatorStateInfo(0);
+            isFullBodyAction = nextStateInfo.IsName("LonVong") || 
+                               nextStateInfo.IsName("GetHit") || 
+                               nextStateInfo.IsName("GeiHit2") || 
+                               nextStateInfo.IsName("Idle_Pick") || 
+                               nextStateInfo.IsName("Pick") ||
+                               nextStateInfo.IsName("Picknew") ||
+                               nextStateInfo.IsName("Death");
+            if (isFullBodyAction) stateInfo = nextStateInfo;
+        }
+
+        return isFullBodyAction && (isPicking || stateInfo.normalizedTime < 0.95f);
+    }
+
+    private void FixedUpdate()
+    {
+        if (rb != null)
+        {
+            float currentYVelocity = rb.linearVelocity.y;
+            rb.linearVelocity = Vector3.Lerp(rb.linearVelocity, new Vector3(targetMoveVelocity.x, currentYVelocity, targetMoveVelocity.z), Time.fixedDeltaTime * 15f);
+        }
     }
 
     private bool IsPlayingFullBodyAction()
