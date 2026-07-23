@@ -1961,6 +1961,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
     {
         if (anim != null && anim.isActiveAndEnabled && anim.runtimeAnimatorController != null)
         {
+            if (anim.applyRootMotion) anim.applyRootMotion = false;
             anim.SetFloat(inputXParam, smoothedInputX);
             anim.SetFloat(inputZParam, smoothedInputZ);
 
