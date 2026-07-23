@@ -15,10 +15,6 @@ public class PlayerHitbox : MonoBehaviour
     {
         CachePlayerReferences();
         hitboxCollider = GetComponent<Collider>();
-        if (hitboxCollider != null)
-        {
-            hitboxCollider.isTrigger = true;
-        }
     }
 
     private void CachePlayerReferences()

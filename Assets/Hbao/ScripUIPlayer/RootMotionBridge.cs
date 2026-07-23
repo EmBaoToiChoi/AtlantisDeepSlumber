@@ -100,15 +100,11 @@ public class RootMotionBridge : MonoBehaviour
             if (parentRb != null)
             {
                 parentRb.MovePosition(parentRb.position + anim.deltaPosition);
-                parentRb.MoveRotation(parentRb.rotation * anim.deltaRotation);
             }
             else
             {
                 // Cộng thêm khoảng dịch chuyển từ Root Motion vào vị trí của cha
                 parentTransform.position += anim.deltaPosition;
-                
-                // Cộng thêm góc xoay từ Root Motion vào cha
-                parentTransform.rotation *= anim.deltaRotation;
             }
         }
     }
