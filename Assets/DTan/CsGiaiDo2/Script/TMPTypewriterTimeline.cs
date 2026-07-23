@@ -17,36 +17,37 @@ public class TMPTypewriterTimeline : MonoBehaviour
         _tmpText = GetComponent<TMP_Text>();
     }
 
-    // Mỗi khi GameObject này được Active trên Timeline, chữ sẽ tự động chạy
     private void OnEnable()
     {
         if (_tmpText != null)
         {
-            // Lưu lại text gốc, ẩn toàn bộ chữ đi trước
-            string originalText = _tmpText.text;
-            _tmpText.maxVisibleCharacters = 0;
-
             if (_typewriterCoroutine != null)
             {
                 StopCoroutine(_typewriterCoroutine);
             }
-            _typewriterCoroutine = StartCoroutine(TypeText(originalText));
+            _typewriterCoroutine = StartCoroutine(TypeText());
         }
     }
 
-    private IEnumerator TypeText(string text)
+    private IEnumerator TypeText()
     {
-        // Đợi 1 frame để TextMesh Pro cập nhật đầy đủ thông tin ký tự
-        yield return null; 
-        
+        // 1. Ẩn chữ ngay lập tức
+        _tmpText.maxVisibleCharacters = 0;
+
+        // 2. Ép TMP cập nhật Mesh và đếm số ký tự ngay lập tức (KHÔNG cần yield return null)
+        _tmpText.ForceMeshUpdate(); 
+
         int totalCharacters = _tmpText.textInfo.characterCount;
         int currentVisible = 0;
 
+        // 3. Chạy hiệu ứng gõ chữ
         while (currentVisible <= totalCharacters)
         {
             _tmpText.maxVisibleCharacters = currentVisible;
             currentVisible++;
-            yield return new WaitForSeconds(delayPerChar);
+            
+            // Dùng WaitForSecondsRealtime nếu Timeline bị pause thời gian
+            yield return new WaitForSeconds(delayPerChar); 
         }
     }
 
