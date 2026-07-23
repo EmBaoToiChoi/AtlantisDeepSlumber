@@ -2089,24 +2089,43 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         bool isAttacking = IsPlayingAttackState(out _, out _);
 
-        // Xoay nhân vật: Luôn xoay theo hướng Camera — giống bản commit #911
+        // Xoay nhân vật chuẩn Genshin Impact: Xoay mặt về hướng di chuyển (movementTranslation) khi di chuyển, xoay theo Camera khi ngắm/bắn/đỡ đòn
         bool isAttackingState = isAttacking || isExecutingAttack;
         bool isHitState = IsPlayingHitAnimation();
         if (targetCamera != null && (!IsPlayingActionAnimation() || isAttackingState || isHitState) && !IsLockingMovementAction())
         {
-            Vector3 camForward = targetCamera.transform.forward;
-            camForward.y = 0f;
-            camForward.Normalize();
-            if (camForward != Vector3.zero)
+            Vector3 turnDir = Vector3.zero;
+            if (IsAiming || isAttackingState || isBlocking)
             {
-                transform.forward = camForward;
+                turnDir = targetCamera.transform.forward;
+            }
+            else if (isMoving)
+            {
+                turnDir = movementTranslation;
+            }
+
+            turnDir.y = 0f;
+            turnDir.Normalize();
+            if (turnDir != Vector3.zero)
+            {
+                Quaternion targetRot = Quaternion.LookRotation(turnDir);
+                transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, Time.deltaTime * 15f);
             }
         }
 
         if (isMoving)
         {
-            targetInputX = moveX * (isRunning ? 1.0f : 0.5f);
-            targetInputZ = moveZ * (isRunning ? 1.0f : 0.5f);
+            float moveMagnitude = new Vector2(moveX, moveZ).magnitude;
+            if (IsAiming || isBlocking)
+            {
+                targetInputX = moveX * (isRunning ? 1.0f : 0.5f);
+                targetInputZ = moveZ * (isRunning ? 1.0f : 0.5f);
+            }
+            else
+            {
+                targetInputX = 0f;
+                targetInputZ = moveMagnitude * (isRunning ? 1.0f : 0.5f);
+            }
             targetSpeed = new Vector2(targetInputX, targetInputZ).magnitude;
         }
 
@@ -2282,24 +2301,43 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         bool isAttacking = IsPlayingAttackState(out _, out _);
 
-        // Xoay nhân vật: Luôn xoay theo hướng Camera — giống bản commit #911
+        // Xoay nhân vật chuẩn Genshin Impact: Xoay mặt về hướng di chuyển (movementTranslation) khi di chuyển, xoay theo Camera khi ngắm/bắn/đỡ đòn
         bool isAttackingState = isAttacking || isExecutingAttack;
         bool isHitState = IsPlayingHitAnimation();
         if (targetCamera != null && (!IsPlayingActionAnimation() || isAttackingState || isHitState) && !IsLockingMovementAction())
         {
-            Vector3 camForward = targetCamera.transform.forward;
-            camForward.y = 0f;
-            camForward.Normalize();
-            if (camForward != Vector3.zero)
+            Vector3 turnDir = Vector3.zero;
+            if (IsAiming || isAttackingState || isBlocking)
             {
-                transform.forward = camForward;
+                turnDir = targetCamera.transform.forward;
+            }
+            else if (isMoving)
+            {
+                turnDir = movementTranslation;
+            }
+
+            turnDir.y = 0f;
+            turnDir.Normalize();
+            if (turnDir != Vector3.zero)
+            {
+                Quaternion targetRot = Quaternion.LookRotation(turnDir);
+                transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, Time.deltaTime * 15f);
             }
         }
 
         if (isMoving)
         {
-            targetInputX = moveX * (isRunning ? 1.0f : 0.5f);
-            targetInputZ = moveZ * (isRunning ? 1.0f : 0.5f);
+            float moveMagnitude = new Vector2(moveX, moveZ).magnitude;
+            if (IsAiming || isBlocking)
+            {
+                targetInputX = moveX * (isRunning ? 1.0f : 0.5f);
+                targetInputZ = moveZ * (isRunning ? 1.0f : 0.5f);
+            }
+            else
+            {
+                targetInputX = 0f;
+                targetInputZ = moveMagnitude * (isRunning ? 1.0f : 0.5f);
+            }
             targetSpeed = new Vector2(targetInputX, targetInputZ).magnitude;
         }
 

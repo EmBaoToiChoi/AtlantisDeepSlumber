@@ -2386,17 +2386,27 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
             transform.Translate(finalVelocity * Time.deltaTime, Space.World);
         }
 
-        // Xoay nhân vật: Luôn xoay theo hướng Camera (Chỉ xoay khi không chơi hoạt ảnh hành động và KHÔNG bị khóa di chuyển)
+        // Xoay nhân vật chuẩn Genshin Impact: Xoay mặt về hướng di chuyển khi chạy, xoay theo Camera khi ngắm/bắn
         bool isHitState = IsPlayingHitAnimation();
+        bool isMoving = (movementTranslation != Vector3.zero);
         if (targetCamera != null && (!IsPlayingActionAnimation() || isHitState) && !IsLockingMovementAction())
         {
-            Vector3 camForward = targetCamera.transform.forward;
-            camForward.y = 0f;
-            camForward.Normalize();
-            if (camForward != Vector3.zero)
+            Vector3 turnDir = Vector3.zero;
+            if (IsAiming || IsPlayingAttackState(out _, out _))
             {
-                Quaternion targetRot = Quaternion.LookRotation(camForward);
-                transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, Time.deltaTime * 25f);
+                turnDir = targetCamera.transform.forward;
+            }
+            else if (isMoving)
+            {
+                turnDir = movementTranslation;
+            }
+
+            turnDir.y = 0f;
+            turnDir.Normalize();
+            if (turnDir != Vector3.zero)
+            {
+                Quaternion targetRot = Quaternion.LookRotation(turnDir);
+                transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, Time.deltaTime * 15f);
             }
         }
 
