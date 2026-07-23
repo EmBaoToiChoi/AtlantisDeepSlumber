@@ -1101,6 +1101,13 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         Debug.Log("[ArthurPlayer] Chạy ở chế độ STANDALONE. Di chuyển và tấn công hoạt động cục bộ.");
         LockCursor(isCursorLocked);
 
+        if (rb == null) rb = GetComponent<Rigidbody>();
+        if (rb != null)
+        {
+            rb.isKinematic = false;
+            rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationY | RigidbodyConstraints.FreezeRotationZ;
+        }
+
         targetCamera = Camera.main;
         if (targetCamera == null)
             targetCamera = FindObjectOfType<Camera>();
