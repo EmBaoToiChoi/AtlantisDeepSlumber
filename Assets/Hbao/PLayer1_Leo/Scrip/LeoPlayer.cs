@@ -7988,10 +7988,39 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         return isStandaloneMode || (IsSpawned && IsOwner);
     }
 
+    private void SafeSetHitboxEnabled(Collider col, bool enabled)
+    {
+        if (col == null) return;
+
+        var axeItem = col.GetComponentInParent<AxeItem>();
+        if (axeItem != null)
+        {
+            // BẢO VỆ TUỆT ĐỐI: Solid physics collider (đứng trên đất) KHÔNG BAO GIỜ được tắt hoặc đổi sang trigger!
+            if (!col.isTrigger)
+            {
+                col.enabled = true;
+                return;
+            }
+            // Nếu cây rìu chưa được nhặt (nằm trên đất), không được tắt collider của nó
+            if (!PlayerHUDController.isCarryingAxe && transform.Find("Axe_Straight") == null)
+            {
+                return;
+            }
+        }
+
+        col.enabled = enabled;
+    }
+
     private void EnsureHitboxComponent(Collider col)
     {
         if (col != null)
         {
+            var axeItem = col.GetComponentInParent<AxeItem>();
+            if (axeItem != null && !col.isTrigger)
+            {
+                // KHÔNG BAO GIỜ biến solid collider thành trigger trên cây rìu
+                return;
+            }
             col.isTrigger = true;
             if (col.GetComponent<PlayerHitbox>() == null)
             {
@@ -8005,25 +8034,22 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     {
         alreadyHitEnemies.Clear();
         EnsureHitboxComponent(leftHitbox);
-        if (leftHitbox != null) leftHitbox.enabled = true;
+        SafeSetHitboxEnabled(leftHitbox, true);
     }
     public void DisableLeftHitbox()
     {
-        if (leftHitbox != null) leftHitbox.enabled = false;
+        SafeSetHitboxEnabled(leftHitbox, false);
     }
 
     public void EnableRightHitbox()
     {
         alreadyHitEnemies.Clear();
         EnsureHitboxComponent(rightHitbox);
-        EnsureHitboxComponent(axeWeaponHitbox);
-        if (rightHitbox != null) rightHitbox.enabled = true;
-        if (axeWeaponHitbox != null) axeWeaponHitbox.enabled = true;
+        SafeSetHitboxEnabled(rightHitbox, true);
     }
     public void DisableRightHitbox()
     {
-        if (rightHitbox != null) rightHitbox.enabled = false;
-        if (axeWeaponHitbox != null) axeWeaponHitbox.enabled = false;
+        SafeSetHitboxEnabled(rightHitbox, false);
     }
 
     public void EnableBothHitboxes()
@@ -8031,16 +8057,13 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         alreadyHitEnemies.Clear();
         EnsureHitboxComponent(leftHitbox);
         EnsureHitboxComponent(rightHitbox);
-        EnsureHitboxComponent(axeWeaponHitbox);
-        if (leftHitbox != null) leftHitbox.enabled = true;
-        if (rightHitbox != null) rightHitbox.enabled = true;
-        if (axeWeaponHitbox != null) axeWeaponHitbox.enabled = true;
+        SafeSetHitboxEnabled(leftHitbox, true);
+        SafeSetHitboxEnabled(rightHitbox, true);
     }
     public void DisableBothHitboxes()
     {
-        if (leftHitbox != null) leftHitbox.enabled = false;
-        if (rightHitbox != null) rightHitbox.enabled = false;
-        if (axeWeaponHitbox != null) axeWeaponHitbox.enabled = false;
+        SafeSetHitboxEnabled(leftHitbox, false);
+        SafeSetHitboxEnabled(rightHitbox, false);
     }
 
     // --- Kiếm / Vũ khí: Tay Trái ---
@@ -8048,11 +8071,11 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     {
         alreadyHitEnemies.Clear();
         EnsureHitboxComponent(leftWeaponHitbox);
-        if (leftWeaponHitbox != null) leftWeaponHitbox.enabled = true;
+        SafeSetHitboxEnabled(leftWeaponHitbox, true);
     }
     public void DisableLeftWeaponHitbox()
     {
-        if (leftWeaponHitbox != null) leftWeaponHitbox.enabled = false;
+        SafeSetHitboxEnabled(leftWeaponHitbox, false);
     }
 
     // --- Kiếm / Vũ khí: Tay Phải ---
@@ -8060,14 +8083,11 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     {
         alreadyHitEnemies.Clear();
         EnsureHitboxComponent(rightWeaponHitbox);
-        EnsureHitboxComponent(axeWeaponHitbox);
-        if (rightWeaponHitbox != null) rightWeaponHitbox.enabled = true;
-        if (axeWeaponHitbox != null) axeWeaponHitbox.enabled = true;
+        SafeSetHitboxEnabled(rightWeaponHitbox, true);
     }
     public void DisableRightWeaponHitbox()
     {
-        if (rightWeaponHitbox != null) rightWeaponHitbox.enabled = false;
-        if (axeWeaponHitbox != null) axeWeaponHitbox.enabled = false;
+        SafeSetHitboxEnabled(rightWeaponHitbox, false);
     }
 
     // --- Kiếm / Vũ khí: Cả hai tay (Slash chính) ---
@@ -8078,42 +8098,40 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         alreadyHitEnemies.Clear();
         EnsureHitboxComponent(leftWeaponHitbox);
         EnsureHitboxComponent(rightWeaponHitbox);
-        EnsureHitboxComponent(axeWeaponHitbox);
-        if (leftWeaponHitbox != null) leftWeaponHitbox.enabled = true;
-        if (rightWeaponHitbox != null) rightWeaponHitbox.enabled = true;
-        if (axeWeaponHitbox != null) axeWeaponHitbox.enabled = true;
+        SafeSetHitboxEnabled(leftWeaponHitbox, true);
+        SafeSetHitboxEnabled(rightWeaponHitbox, true);
     }
     public void DisableBothWeaponHitboxes()
     {
-        if (leftWeaponHitbox != null) leftWeaponHitbox.enabled = false;
-        if (rightWeaponHitbox != null) rightWeaponHitbox.enabled = false;
-        if (axeWeaponHitbox != null) axeWeaponHitbox.enabled = false;
+        SafeSetHitboxEnabled(leftWeaponHitbox, false);
+        SafeSetHitboxEnabled(rightWeaponHitbox, false);
     }
 
     // --- Rìu (Axe) ---
     public void EnableAxeWeaponHitbox()
     {
         alreadyHitEnemies.Clear();
-        if (axeWeaponHitbox != null) axeWeaponHitbox.enabled = true;
-        if (leftWeaponHitbox != null) leftWeaponHitbox.enabled = true;
-        if (rightWeaponHitbox != null) rightWeaponHitbox.enabled = true;
+        EnsureHitboxComponent(axeWeaponHitbox);
+        SafeSetHitboxEnabled(axeWeaponHitbox, true);
+        SafeSetHitboxEnabled(leftWeaponHitbox, true);
+        SafeSetHitboxEnabled(rightWeaponHitbox, true);
     }
     public void DisableAxeWeaponHitbox()
     {
-        if (axeWeaponHitbox != null) axeWeaponHitbox.enabled = false;
-        if (leftWeaponHitbox != null) leftWeaponHitbox.enabled = false;
-        if (rightWeaponHitbox != null) rightWeaponHitbox.enabled = false;
+        SafeSetHitboxEnabled(axeWeaponHitbox, false);
+        SafeSetHitboxEnabled(leftWeaponHitbox, false);
+        SafeSetHitboxEnabled(rightWeaponHitbox, false);
     }
     public void EnableAxeHitbox() { EnableAxeWeaponHitbox(); }
     public void DisableAxeHitbox() { DisableAxeWeaponHitbox(); }
 
     public void DisableAllHitboxes()
     {
-        if (leftHitbox != null) leftHitbox.enabled = false;
-        if (rightHitbox != null) rightHitbox.enabled = false;
-        if (leftWeaponHitbox != null) leftWeaponHitbox.enabled = false;
-        if (rightWeaponHitbox != null) rightWeaponHitbox.enabled = false;
-        if (axeWeaponHitbox != null) axeWeaponHitbox.enabled = false;
+        SafeSetHitboxEnabled(leftHitbox, false);
+        SafeSetHitboxEnabled(rightHitbox, false);
+        SafeSetHitboxEnabled(leftWeaponHitbox, false);
+        SafeSetHitboxEnabled(rightWeaponHitbox, false);
+        SafeSetHitboxEnabled(axeWeaponHitbox, false);
         alreadyHitEnemies.Clear();
     }
 
