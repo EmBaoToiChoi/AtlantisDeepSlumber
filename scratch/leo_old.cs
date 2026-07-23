@@ -2826,105 +2826,6 @@ public struct ComboParticleGroup
 /// </summary>
 public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 {
-    [Header("Audio Settings")]
-    [SerializeField] private AudioSource playerAudioSource;
-    [SerializeField] private AudioClip footstepClip;
-    [SerializeField] private AudioClip footstepClip2;
-    [SerializeField] private AudioClip attackClip;
-    [SerializeField] private AudioClip hitClip;
-    [SerializeField] private AudioClip deathClip;
-    [SerializeField] private AudioClip skillQClip;
-    [SerializeField] private AudioClip skillEClip;
-    [SerializeField] private AudioClip skillRClip;
-    private float footstepTimer = 0f;
-    private bool playSecondFootstep = false;
-
-    private void InitializeAudio()
-    {
-        if (playerAudioSource == null)
-        {
-            Transform child = transform.Find("PlayerSFXSource");
-            GameObject sfxObj;
-            if (child == null)
-            {
-                sfxObj = new GameObject("PlayerSFXSource");
-                sfxObj.transform.SetParent(transform);
-                sfxObj.transform.localPosition = Vector3.zero;
-            }
-            else
-            {
-                sfxObj = child.gameObject;
-            }
-            
-            playerAudioSource = sfxObj.GetComponent<AudioSource>();
-            if (playerAudioSource == null)
-            {
-                playerAudioSource = sfxObj.AddComponent<AudioSource>();
-            }
-        }
-        playerAudioSource.spatialBlend = 1.0f; // 3D Sound for distance attenuation
-        playerAudioSource.minDistance = 2.0f;
-        playerAudioSource.maxDistance = 25.0f;
-        playerAudioSource.rolloffMode = AudioRolloffMode.Linear;
-        playerAudioSource.playOnAwake = false;
-        playerAudioSource.mute = false;
-        playerAudioSource.volume = 1.0f;
-
-        if (footstepClip == null) footstepClip = Resources.Load<AudioClip>("Audio/Footstep");
-        if (footstepClip2 == null) footstepClip2 = Resources.Load<AudioClip>("Audio/Footstep2");
-        // Tạm thời comment các âm thanh chưa có để tránh loạn âm thanh
-        /*
-        if (attackClip == null) attackClip = Resources.Load<AudioClip>("Audio/HeavySwing");
-        if (hitClip == null) hitClip = Resources.Load<AudioClip>("Audio/HitHurt");
-        if (deathClip == null) deathClip = Resources.Load<AudioClip>("Audio/Death");
-        */
-        
-        // Tải âm thanh Skill mới thêm (Leo dùng ThunderSkill cho Skill R, không có BreakSkill)
-        if (skillRClip == null) skillRClip = Resources.Load<AudioClip>("Audio/ThunderSkill");
-
-        // Log warnings if audio files fail to load
-        if (footstepClip == null) Debug.LogWarning($"[Audio Debug] LeoPlayer: Failed to load Resources/Audio/Footstep");
-        else Debug.Log($"[Audio Debug] LeoPlayer: Successfully loaded Resources/Audio/Footstep");
-        if (footstepClip2 == null) Debug.LogWarning($"[Audio Debug] LeoPlayer: Failed to load Resources/Audio/Footstep2");
-        else Debug.Log($"[Audio Debug] LeoPlayer: Successfully loaded Resources/Audio/Footstep2");
-        /*
-        if (attackClip == null) Debug.LogWarning($"[Audio Debug] LeoPlayer: Failed to load Resources/Audio/HeavySwing");
-        else Debug.Log($"[Audio Debug] LeoPlayer: Successfully loaded Resources/Audio/HeavySwing");
-        if (hitClip == null) Debug.LogWarning($"[Audio Debug] LeoPlayer: Failed to load Resources/Audio/HitHurt");
-        if (deathClip == null) Debug.LogWarning($"[Audio Debug] LeoPlayer: Failed to load Resources/Audio/Death");
-        */
-        if (skillRClip == null) Debug.LogWarning($"[Audio Debug] LeoPlayer: Failed to load Resources/Audio/ThunderSkill (Skill R)");
-        else Debug.Log($"[Audio Debug] LeoPlayer: Successfully loaded Resources/Audio/ThunderSkill (Skill R)");
-    }
-
-    private void PlayPlayerSFX(AudioClip clip, float volumeScale = 1.0f)
-    {
-        if (clip == null)
-        {
-            Debug.LogWarning($"[Audio Debug] LeoPlayer: Attempted to play a NULL AudioClip!");
-            return;
-        }
-        if (playerAudioSource == null)
-        {
-            InitializeAudio();
-        }
-        float sfxVol = 0.9f;
-        float masterVol = 1.0f;
-        if (AudioManager.Instance != null)
-        {
-            sfxVol = AudioManager.Instance.SFXVolume;
-            masterVol = AudioManager.Instance.MasterVolume;
-        }
-        else
-        {
-            sfxVol = PlayerPrefs.GetFloat("SFXVolume", 90f) / 100f;
-            masterVol = PlayerPrefs.GetFloat("MasterVolume", 100f) / 100f;
-        }
-        float finalVolume = volumeScale * sfxVol * masterVol;
-        Debug.Log($"[Audio Debug] LeoPlayer: Playing SFX '{clip.name}' at volume {finalVolume} (scale={volumeScale}, sfxVol={sfxVol}, masterVol={masterVol})");
-        playerAudioSource.PlayOneShot(clip, finalVolume);
-    }
-
     [Header("Input Keys Configuration")]
     [Tooltip("Key to trigger roll/dodge.")]
     public KeyCode rollKey = KeyCode.LeftControl;
@@ -2987,8 +2888,6 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     public Collider leftWeaponHitbox;
     [Tooltip("Right weapon/sword hitbox collider.")]
     public Collider rightWeaponHitbox;
-    [Tooltip("Axe weapon hitbox collider.")]
-    public Collider axeWeaponHitbox;
 
     [Header("Weapon Visual References")]
     [Tooltip("Thanh kiếm trên tay trái")]
@@ -3050,14 +2949,14 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     [Header("Camera Follow Settings")]
     public bool enableCameraFollow = true;
-    public Vector3 cameraOffset = new Vector3(0f, 12f, -8f);
+    public Vector3 cameraOffset = new Vector3(0f, 10f, -6.5f);
     public float cameraSmoothSpeed = 5f;
     public bool cameraLookAtPlayer = true;
-    public float cameraPivotHeight = 1.0f;
+    public float cameraPivotHeight = 3.5f;
     protected Camera targetCamera;
 
     [Header("Camera Rotation Settings")]
-    public float cameraSensitivity = 2f;
+    public float cameraSensitivity = 3f;
     public float minPitch = 10f;
     public float maxPitch = 80f;
     public float rotationSmoothSpeed = 15f;
@@ -3067,7 +2966,6 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     protected float targetPitch = 45f;
     protected float cameraDistance = 14f;
     protected bool isCursorLocked = true;
-    protected Vector3 targetMoveVelocity;
 
     [Header("Camera Inversion Settings")]
     public bool invertCameraY = false;
@@ -3181,8 +3079,8 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     // ------------------------------------------------------------------
     public NetworkVariable<float> currentHealth = new NetworkVariable<float>(85f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     public NetworkVariable<int> activeWeaponIndex = new NetworkVariable<int>(1, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
-    public NetworkVariable<bool> isWeapon2Locked = new NetworkVariable<bool>(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
-    public NetworkVariable<bool> isSkillsUnlocked = new NetworkVariable<bool>(true, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+    public NetworkVariable<bool> isWeapon2Locked = new NetworkVariable<bool>(true, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+    public NetworkVariable<bool> isSkillsUnlocked = new NetworkVariable<bool>(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     public NetworkVariable<int> upgradePoints = new NetworkVariable<int>(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     public NetworkVariable<int> hpLevel = new NetworkVariable<int>(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     public NetworkVariable<int> mpLevel = new NetworkVariable<int>(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
@@ -3194,13 +3092,13 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     public NetworkVariable<float> weapon2Durability = new NetworkVariable<float>(100f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     public NetworkVariable<bool> isRollingNet = new NetworkVariable<bool>(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     public NetworkVariable<bool> isMovementLockedNet = new NetworkVariable<bool>(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
- 
+
     public NetworkVariable<bool> isAttackSpeedBoostedNet = new NetworkVariable<bool>(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     public NetworkVariable<bool> isQSkillActiveNet = new NetworkVariable<bool>(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     public NetworkVariable<bool> isAimingNet = new NetworkVariable<bool>(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     [HideInInspector]
     public GameObject pendingPickItem;
- 
+
     [Header("Local State & Inventory")]
     public string[] inventorySlots = new string[10] { "", "", "", "", "", "", "", "", "", "" };
     protected int localUpgradePoints = 0;
@@ -3213,8 +3111,8 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     protected float localHealth;
     protected float localWeapon1Durability = 100f;
     protected float localWeapon2Durability = 100f;
-    protected bool localWeapon2Locked = false;
-    protected bool localSkillsUnlocked = true;
+    protected bool localWeapon2Locked = true;
+    protected bool localSkillsUnlocked = false;
     protected int localActiveWeaponIndex = 1;
 
 
@@ -3318,7 +3216,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     // Death and hit
     public string deathUnarmedTrigger = "Death";
-    public string deathArmedTrigger = "Death";
+    public string deathArmedTrigger = "DeathArmed";
     public string getHitTrigger = "GetHit";
     public string getHit2Trigger = "GeiHit2";
 
@@ -3345,46 +3243,6 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     public float Weapon1MaxDurability => weapon1MaxDurability;
     public float Weapon2MaxDurability => weapon2MaxDurability;
     public string[] InventorySlots => inventorySlots;
-
-    private bool isDeathAnimFinished = false;
-    public bool IsDeathAnimationFinished => isDeathAnimFinished;
-    public void ResetDeathState()
-    {
-        isDeathAnimFinished = false;
-        enabled = true;
-    }
-
-    public void OnDeathAnimationEnd()
-    {
-        if (IsOwner || isStandaloneMode)
-        {
-            StartCoroutine(DeathEyelidsSequenceCoroutine());
-        }
-    }
-
-    private System.Collections.IEnumerator DeathEyelidsSequenceCoroutine()
-    {
-        if (CurrentHealth > 0f) yield break;
-        float duration = 1.5f;
-        PlayerDeathEffectManager.Instance.PlayDeathEffect(duration);
-        yield return new WaitForSeconds(duration);
-        if (CurrentHealth > 0f)
-        {
-            PlayerDeathEffectManager.Instance.ResetDeathEffect();
-            yield break;
-        }
-        isDeathAnimFinished = true;
-        if (!isStandaloneMode)
-        {
-            NotifyDeathAnimFinishedServerRpc();
-        }
-    }
-
-    [ServerRpc]
-    private void NotifyDeathAnimFinishedServerRpc()
-    {
-        isDeathAnimFinished = true;
-    }
     public float MaxHealth => maxHealth;
 
     // Invisibility Skill R (stub - legacy removed)
@@ -3461,7 +3319,6 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     private void Start()
     {
-        InitializeAudio();
         if (anim == null)
         {
             anim = GetComponent<Animator>();
@@ -3470,7 +3327,6 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         }
         if (anim != null)
         {
-            anim.applyRootMotion = false; // Tắt root motion mặc định để tránh ghi đè tốc độ di chuyển của code và lệch góc xoay
             GetRootMotionBridge();
             if (anim.layerCount > 1)
             {
@@ -3510,7 +3366,6 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (rb != null)
         {
             rb.isKinematic = false; // Tắt Kinematic để di chuyển trong chế độ chơi đơn lẻ
-            rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationY | RigidbodyConstraints.FreezeRotationZ;
         }
         targetCamera = Camera.main;
         if (targetCamera == null)
@@ -3559,7 +3414,6 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (rb != null)
         {
             rb.isKinematic = !IsOwner;
-            rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationY | RigidbodyConstraints.FreezeRotationZ;
         }
 
         if (!IsOwner)
@@ -3937,10 +3791,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         {
             if (anim != null) anim.applyRootMotion = false;
             if (rb != null) rb.linearVelocity = Vector3.zero;
-            if (currentAnimState != "Death")
-            {
-                PlayAnimation("Death", 0.15f);
-            }
+            PlayAnimation("Death", 0.15f);
             return;
         }
 
@@ -3981,50 +3832,6 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             return;
         }
         HandleOwnerUpdate();
-
-        // Footstep logic in Update()
-        bool isMoving = false;
-        bool isRunning = false;
-        if (isStandaloneMode || (IsSpawned && IsOwner))
-        {
-            float inputX = Input.GetAxis("Horizontal");
-            float inputZ = Input.GetAxis("Vertical");
-            isMoving = (inputX * inputX + inputZ * inputZ) > 0.01f;
-            isRunning = Input.GetKey(KeyCode.LeftShift);
-        }
-        else if (IsSpawned)
-        {
-            float netX = netMoveX.Value;
-            float netZ = netMoveZ.Value;
-            isMoving = (netX * netX + netZ * netZ) > 0.01f;
-            isRunning = (netX * netX + netZ * netZ) > 1.5f;
-        }
-
-        if (isMoving && currentAnimState != "Death" && (isStandaloneMode ? localHealth : currentHealth.Value) > 0)
-        {
-            bool isDialogue = (RakanDialogueController.Instance != null && RakanDialogueController.Instance.IsActive) ||
-                              (SilasDialogueController.Instance != null && SilasDialogueController.Instance.IsActive) ||
-                              (IntroDialogueController.Instance != null && IntroDialogueController.Instance.IsActive);
-            if (!isDialogue)
-            {
-                float delay = isRunning ? 0.3f : 0.5f;
-                footstepTimer += Time.deltaTime;
-                if (footstepTimer >= delay)
-                {
-                    footstepTimer = 0f;
-                    
-                    // Alternating footsteps: Footstep 1 then Footstep 2
-                    AudioClip clipToPlay = (playSecondFootstep && footstepClip2 != null) ? footstepClip2 : footstepClip;
-                    PlayPlayerSFX(clipToPlay, isRunning ? 0.5f : 0.35f);
-                    playSecondFootstep = !playSecondFootstep;
-                }
-            }
-        }
-        else
-        {
-            footstepTimer = 0f;
-            playSecondFootstep = false; // Reset to start with the first clip next time
-        }
     }
 
     private void HandleStandaloneUpdate()
@@ -4066,18 +3873,15 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             currentSpeed *= 2f;
         }
 
-        bool shouldLockMovement = isMovementLocked || IsQSkillActive || IsPlayingPickAnimation();
-        float moveX = shouldLockMovement ? 0f : Input.GetAxis("Horizontal");
-        float moveZ = shouldLockMovement ? 0f : Input.GetAxis("Vertical");
+        float moveX = isMovementLocked ? 0f : Input.GetAxis("Horizontal");
+        float moveZ = isMovementLocked ? 0f : Input.GetAxis("Vertical");
         Vector3 move = new Vector3(moveX, 0, moveZ);
 
-        if (targetCamera == null || !targetCamera.isActiveAndEnabled)
+        if (targetCamera == null)
         {
             targetCamera = Camera.main;
             if (targetCamera == null)
-            {
-                targetCamera = FindObjectOfType<Camera>();
-            }
+                targetCamera = FindAnyObjectByType<Camera>();
         }
 
         if (targetCamera != null)
@@ -4097,30 +3901,34 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         }
 
         Vector3 movementTranslation = move;
-        if (IsLockingMovementAction())
+        if (isRootedAttack && IsPlayingActionAnimation())
         {
             movementTranslation = Vector3.zero;
         }
 
-        Vector3 currentKnockback = Vector3.zero;
-        if (knockbackVelocity.magnitude > 0.01f)
+        if (rb != null)
         {
-            currentKnockback = knockbackVelocity;
-            knockbackVelocity = Vector3.Lerp(knockbackVelocity, Vector3.zero, Time.deltaTime * 8f);
-        }
+            Vector3 targetVelocity = movementTranslation * currentSpeed;
+            float currentYVelocity = rb.linearVelocity.y;
 
-        float currentYVelocity = rb != null ? rb.linearVelocity.y : 0f;
-        if (attackDashTimer > 0)
-        {
-            targetMoveVelocity = attackDashDirection * attackDashSpeed;
-        }
-        else if (shouldLockMovement && currentKnockback.magnitude <= 0.01f)
-        {
-            targetMoveVelocity = Vector3.zero;
-        }
-        else
-        {
-            targetMoveVelocity = movementTranslation * currentSpeed + currentKnockback;
+            if (knockbackVelocity.magnitude > 0.01f)
+            {
+                targetVelocity += knockbackVelocity;
+                knockbackVelocity = Vector3.Lerp(knockbackVelocity, Vector3.zero, Time.deltaTime * 8f);
+            }
+
+            if (attackDashTimer > 0)
+            {
+                rb.linearVelocity = new Vector3(attackDashDirection.x * attackDashSpeed, currentYVelocity, attackDashDirection.z * attackDashSpeed);
+            }
+            else if (isMovementLocked && knockbackVelocity.magnitude <= 0.01f)
+            {
+                rb.linearVelocity = new Vector3(0f, currentYVelocity, 0f);
+            }
+            else
+            {
+                rb.linearVelocity = new Vector3(targetVelocity.x, currentYVelocity, targetVelocity.z);
+            }
         }
 
         bool isArmed = (GetActiveWeaponIndex() == 2);
@@ -4133,10 +3941,9 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         // Quét trạng thái tấn công chuẩn xác
         bool isAttacking = IsPlayingAttackState(out _, out _);
 
-        // Xoay nhân vật: Luôn xoay theo hướng Camera — giống bản commit #911
+        // Xoay nhân vật: Luôn xoay theo hướng Camera — giống Arthur
         bool isAttackingState = isAttacking || isExecutingAttack;
-        bool isHitState = IsPlayingHitAnimation();
-        if (targetCamera != null && (!IsPlayingActionAnimation() || isAttackingState || isHitState) && !IsLockingMovementAction())
+        if (targetCamera != null && (!IsPlayingActionAnimation() || isAttackingState))
         {
             Vector3 camForward = targetCamera.transform.forward;
             camForward.y = 0f;
@@ -4228,18 +4035,15 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             currentSpeed *= 2f;
         }
 
-        bool shouldLockMovement = isMovementLocked || IsQSkillActive || IsPlayingPickAnimation();
-        float moveX = shouldLockMovement ? 0f : Input.GetAxis("Horizontal");
-        float moveZ = shouldLockMovement ? 0f : Input.GetAxis("Vertical");
+        float moveX = isMovementLocked ? 0f : Input.GetAxis("Horizontal");
+        float moveZ = isMovementLocked ? 0f : Input.GetAxis("Vertical");
         Vector3 move = new Vector3(moveX, 0, moveZ);
 
-        if (targetCamera == null || !targetCamera.isActiveAndEnabled)
+        if (targetCamera == null)
         {
             targetCamera = Camera.main;
             if (targetCamera == null)
-            {
-                targetCamera = FindObjectOfType<Camera>();
-            }
+                targetCamera = FindAnyObjectByType<Camera>();
         }
 
         if (targetCamera != null)
@@ -4259,30 +4063,34 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         }
 
         Vector3 movementTranslation = move;
-        if (IsLockingMovementAction())
+        if (isRootedAttack && IsPlayingActionAnimation())
         {
             movementTranslation = Vector3.zero;
         }
 
-        Vector3 currentKnockback = Vector3.zero;
-        if (knockbackVelocity.magnitude > 0.01f)
+        if (rb != null)
         {
-            currentKnockback = knockbackVelocity;
-            knockbackVelocity = Vector3.Lerp(knockbackVelocity, Vector3.zero, Time.deltaTime * 8f);
-        }
+            Vector3 targetVelocity = movementTranslation * currentSpeed;
+            float currentYVelocity = rb.linearVelocity.y;
 
-        float currentYVelocity = rb != null ? rb.linearVelocity.y : 0f;
-        if (attackDashTimer > 0)
-        {
-            targetMoveVelocity = attackDashDirection * attackDashSpeed;
-        }
-        else if (shouldLockMovement && currentKnockback.magnitude <= 0.01f)
-        {
-            targetMoveVelocity = Vector3.zero;
-        }
-        else
-        {
-            targetMoveVelocity = movementTranslation * currentSpeed + currentKnockback;
+            if (knockbackVelocity.magnitude > 0.01f)
+            {
+                targetVelocity += knockbackVelocity;
+                knockbackVelocity = Vector3.Lerp(knockbackVelocity, Vector3.zero, Time.deltaTime * 8f);
+            }
+
+            if (attackDashTimer > 0)
+            {
+                rb.linearVelocity = new Vector3(attackDashDirection.x * attackDashSpeed, currentYVelocity, attackDashDirection.z * attackDashSpeed);
+            }
+            else if (isMovementLocked && knockbackVelocity.magnitude <= 0.01f)
+            {
+                rb.linearVelocity = new Vector3(0f, currentYVelocity, 0f);
+            }
+            else
+            {
+                rb.linearVelocity = new Vector3(targetVelocity.x, currentYVelocity, targetVelocity.z);
+            }
         }
 
         bool isArmed = (GetActiveWeaponIndex() == 2);
@@ -4292,12 +4100,12 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         float targetInputZ = 0f;
         float targetSpeed = 0f;
 
+        // --- ĐÃ SỬA: Đồng bộ kiểm tra trạng thái tấn công trên mạng cho chế độ Multiplayer ---
         bool isAttacking = IsPlayingAttackState(out _, out _);
 
-        // Xoay nhân vật: Luôn xoay theo hướng Camera — giống bản commit #911
+        // Xoay nhân vật: Luôn xoay theo hướng Camera — giống Arthur
         bool isAttackingState = isAttacking || isExecutingAttack;
-        bool isHitState = IsPlayingHitAnimation();
-        if (targetCamera != null && (!IsPlayingActionAnimation() || isAttackingState || isHitState) && !IsLockingMovementAction())
+        if (targetCamera != null && (!IsPlayingActionAnimation() || isAttackingState))
         {
             Vector3 camForward = targetCamera.transform.forward;
             camForward.y = 0f;
@@ -4379,36 +4187,9 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         {
             float duration = GetAnimationClipLength("ChatRiu");
             if (duration > 0f) return duration;
-            return 0.8f;
+            return 2.267f;
         }
-        else if (weaponIndex == 2)
-        {
-            string animName = "attacktaytrai";
-            if (step == 2) animName = "attacktayphai";
-            else if (step == 3) animName = "Slash1Combo2";
-            else if (step == 4) animName = "Slash2combo2";
-            else if (step == 5) animName = "Slash3combo2";
-
-            float duration = GetAnimationClipLength(animName);
-            if (duration > 0f) return duration;
-
-            if (step == 1) return attacktaytraiDuration;
-            if (step == 2) return attacktayphaiDuration;
-            if (step == 3) return slash1Combo2Duration;
-            if (step == 4) return slash2combo2Duration;
-            if (step == 5) return slash3combo2Duration;
-            return slashAnimDuration;
-        }
-        else // weaponIndex == 0 (Unarmed / Punch)
-        {
-            string animName = "DamTrai";
-            if (step == 2) animName = "DamPhai";
-            else if (step == 3) animName = "Combodam";
-
-            float duration = GetAnimationClipLength(animName);
-            if (duration > 0f) return duration;
-            return step == 3 ? 0.8f : 0.55f;
-        }
+        return 0.5f;
     }
 
     // ======================================================
@@ -4417,8 +4198,6 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     // Combo Settings
     [Header("Combo Attack Settings")]
-    public float comboWindow = 1.2f;
-    public float comboTransitionThreshold = 0.75f;
     [Tooltip("Thời gian animation tấn công (giây). Dùng để tính combo window.")]
     public float punchAnimDuration = 0.5f;
     public float slashAnimDuration = 0.6f;
@@ -4453,7 +4232,6 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     private bool pendingAttackRequest = false;   // Buffer click chuột trong combo window
     private bool isExecutingAttack = false;       // Đang trong nhịp tấn công
     private float attackAnimStartTime = 0f;       // Thời điểm bắt đầu animation tấn công
-    private float lastAttackTime = 0f;            // Thời điểm nhát đánh gần nhất
     private float currentAttackAnimDuration = 0f; // Thời lượng animation tấn công hiện tại
     private int currentWeaponTypeAttacking = 1;  // Loại vũ khí đang dùng khi tấn công
     private Coroutine comboChainCoroutine;
@@ -4466,31 +4244,29 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         var carrier = GetComponent<PlayerLogCarrier>();
         if (carrier != null && carrier.isCarrying) return;
 
-        PerformComboAttack(networkMode);
+        if (isExecutingAttack)
+        {
+            // Đang đánh: kiểm tra xem có đang trong combo window không
+            float elapsed = Time.time - attackAnimStartTime;
+            float progress = currentAttackAnimDuration > 0 ? elapsed / currentAttackAnimDuration : 1f;
+            if (progress >= comboChainWindowPct)
+            {
+                // Nằm trong combo window -> kích hoạt đòn tiếp theo NGAY LẬP TỨC (hủy các frame thừa của đòn cũ)
+                Debug.Log("[LeoPlayer] Nhấp chuột trong Combo Window -> Chuyển sang đòn tiếp theo ngay lập tức!");
+                PerformComboAttack(networkMode);
+            }
+            // Ngoài window (quá sớm) -> bỏ qua click
+        }
+        else
+        {
+            // Chưa đang đánh -> bắt đầu tấn công ngay
+            PerformComboAttack(networkMode);
+        }
     }
 
     protected void PerformComboAttack(bool networkMode)
     {
         int weapon = GetActiveWeaponIndex();
-        float currentTime = Time.time;
-
-        // Kiểm tra xem đòn đánh trước đó đã kết thúc chưa (chống click liên tục làm ngắt giữa chừng đòn đấm/chém cũ)
-        if (comboStep > 0 && currentTime - lastAttackTime <= comboWindow)
-        {
-            float prevDuration = GetAttackDuration(weapon, comboStep);
-            float threshold = (comboTransitionThreshold > 0.1f) ? comboTransitionThreshold : 0.75f;
-            if (currentTime - lastAttackTime < prevDuration * threshold)
-            {
-                return; // Chặn bấm nhanh khi đòn cũ chưa đánh xong
-            }
-        }
-
-        if (currentTime - lastAttackTime > comboWindow)
-        {
-            comboStep = 0;
-        }
-        lastAttackTime = currentTime;
-
         if (!networkMode)
         {
             if (weapon == 1) Weapon1Durability = Mathf.Max(Weapon1Durability - 2f, 0f);
@@ -4501,7 +4277,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         isRootedAttack = false;
         SetMovementLock(false);
 
-        attackAnimStartTime = currentTime;
+        attackAnimStartTime = Time.time;
         isExecutingAttack = true;
         pendingAttackRequest = false;
 
@@ -4516,7 +4292,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             currentAttackAnimDuration = GetAnimationClipLength("ChatRiu");
             if (currentAttackAnimDuration <= 0f) currentAttackAnimDuration = 0.8f;
 
-            if (anim != null) anim.applyRootMotion = false;
+            if (anim != null) anim.applyRootMotion = isRootedAttack;
             PlayAnimation(animToPlay, 0.05f, false, isRootedAttack);
         }
         else if (weapon == 2)
@@ -4538,38 +4314,31 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             else if (comboStep == 5) currentAttackAnimDuration = slash3combo2Duration;
             else currentAttackAnimDuration = slashAnimDuration;
 
-            if (anim != null) anim.applyRootMotion = false;
+            if (anim != null) anim.applyRootMotion = isRootedAttack;
             PlayAnimation(animToPlay, 0.05f, false, isRootedAttack);
         }
         else
         {
-            // --- ĐẤM TAY (UNARMED): ĐÚNG CHUẨN 3 CLICK TUẦN TỰ CHO LEO ---
+            // --- ĐẤM TAY (UNARMED): ĐÚNG CHUẨN 3 CLICK TUẦN TỰ ---
             comboStep++;
-            if (comboStep > 3) comboStep = 1;
+            if (comboStep > 3) comboStep = 1; // <-- ĐÃ SỬA: Giới hạn chuẩn 3 đòn đấm tuần tự
 
-            animToPlay = "DamTrai";
-            if (comboStep == 2) animToPlay = "DamPhai";
-            else if (comboStep == 3) animToPlay = "Combodam";
+            animToPlay = "Punch1";
+            if (comboStep == 2) animToPlay = "Punch2";
+            else if (comboStep == 3) animToPlay = "Punch3";
 
-            float clipLen = GetAnimationClipLength(animToPlay);
-            currentAttackAnimDuration = (clipLen > 0.1f) ? clipLen : (comboStep == 3 ? 0.8f : 0.55f);
+            currentAttackAnimDuration = punchAnimDuration;
 
-            if (anim != null) anim.applyRootMotion = false;
             PlayAnimation(animToPlay, 0.05f, false, isRootedAttack);
         }
 
         currentWeaponTypeAttacking = weapon;
 
-        alreadyHitEnemies.Clear();
-        DisableAllHitboxes();
+        // Thực hiện quét Raycast (OverlapSphere) phát hiện mục tiêu tức thì
+        PerformRaycastAttack();
 
         if (comboChainCoroutine != null) StopCoroutine(comboChainCoroutine);
         comboChainCoroutine = StartCoroutine(ComboChainCoroutine(weapon, animToPlay, networkMode));
-    }
-
-    private System.Collections.IEnumerator DelayedRaycastAttackCoroutine(float delay)
-    {
-        yield break;
     }
 
     private System.Collections.IEnumerator ComboChainCoroutine(int weapon, string animToPlay, bool networkMode)
@@ -4608,43 +4377,111 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         }
     }
 
+    /// <summary>
+    /// Tắt tất cả hitbox ngay lập tức và clear danh sách đã hit.
+    /// Có thể gọi từ Animation Event hoặc code.
+    /// </summary>
+    private void DisableAllHitboxes()
+    {
+        // Hàm rỗng để không ảnh hưởng
+    }
 
     private void PerformRaycastAttack()
     {
-        // Raycast Attack đã bị xóa hoàn toàn. Tấn công cận chiến hiện tại dùng Hitbox Event Animation 100%.
+        if (!isStandaloneMode && !IsOwner) return;
+
+        Vector3 origin = transform.position + Vector3.up * 1f;
+        float range = attackRange;
+        Collider[] hits = Physics.OverlapSphere(origin, range);
+        
+        foreach (var col in hits)
+        {
+            if (IsEnemy(col, out Collider enemyCollider))
+            {
+                Transform enemyRoot = enemyCollider.transform.root;
+                if (!alreadyHitEnemies.Contains(enemyRoot))
+                {
+                    Vector3 toEnemy = (enemyCollider.bounds.center - origin);
+                    toEnemy.y = 0; // Ignore height difference
+                    
+                    float angle = Vector3.Angle(transform.forward, toEnemy.normalized);
+                    if (angle <= 75f)
+                    {
+                        alreadyHitEnemies.Add(enemyRoot);
+                        Debug.Log($"[LeoPlayer Raycast] HIT: {enemyRoot.name} | Damage: {damageAmount}");
+                        
+                        if (isStandaloneMode)
+                        {
+                            TryDamageEnemy(enemyCollider);
+                        }
+                        else if (IsOwner)
+                        {
+                            var netObj = enemyCollider.GetComponentInParent<NetworkObject>();
+                            if (netObj != null)
+                            {
+                                DamageEnemyServerRpc(netObj);
+                            }
+                            else
+                            {
+                                TryDamageEnemy(enemyCollider);
+                            }
+                        }
+                    }
+                }
+            }
+            else
+            {
+                // Kiểm tra xem có phải cây gỗ (ChoppableTree) hay không
+                ChoppableTree tree = col.GetComponentInParent<ChoppableTree>();
+                if (tree == null)
+                {
+                    var forwarder = col.GetComponent<TreeColliderForwarder>();
+                    if (forwarder != null)
+                    {
+                        tree = forwarder.mainTree;
+                    }
+                }
+
+                if (tree != null)
+                {
+                    Transform treeRoot = tree.transform;
+                    if (!alreadyHitEnemies.Contains(treeRoot))
+                    {
+                        Vector3 toTree = (col.bounds.center - origin);
+                        toTree.y = 0; // Ignore height difference
+                        
+                        float angle = Vector3.Angle(transform.forward, toTree.normalized);
+                        if (angle <= 75f)
+                        {
+                            alreadyHitEnemies.Add(treeRoot);
+                            Vector3 hitPos = col.ClosestPoint(origin);
+                            int weaponIndex = GetActiveWeaponIndex();
+                            
+                            Debug.Log($"[LeoPlayer Raycast] HIT Tree: {tree.name} | WeaponIndex: {weaponIndex}");
+                            tree.HitTree(hitPos, weaponIndex);
+                        }
+                    }
+                }
+            }
+        }
     }
 
     private void TryDamageEnemy(Collider col)
     {
-        if (col == null) return;
-        float actualDamage = damageAmount;
-        Debug.Log($"[LeoPlayer] TryDamageEnemy: col='{col.name}', parent='{col.transform.parent?.name}', damage={actualDamage}");
+        var e1 = col.GetComponentInParent<Enemy1_DapBua>();
+        if (e1 != null) { e1.TakeDamage(damageAmount); return; }
 
-        var e1 = col.GetComponentInParent<Enemy1_DapBua>() ?? col.GetComponentInChildren<Enemy1_DapBua>();
-        if (e1 != null) { Debug.Log($"[LeoPlayer] Found Enemy1_DapBua on {e1.name}"); e1.TakeDamage(actualDamage); return; }
+        var e2 = col.GetComponentInParent<Enemy2_Zombie>();
+        if (e2 != null) { e2.TakeDamage(damageAmount); return; }
 
-        var e2 = col.GetComponentInParent<Enemy2_Zombie>() ?? col.GetComponentInChildren<Enemy2_Zombie>();
-        if (e2 != null) { Debug.Log($"[LeoPlayer] Found Enemy2_Zombie on {e2.name}"); e2.TakeDamage(actualDamage); return; }
+        var e3 = col.GetComponentInParent<Enemy3_Buaa>();
+        if (e3 != null) { e3.TakeDamage(damageAmount); return; }
 
-        var e3 = col.GetComponentInParent<Enemy3_Buaa>() ?? col.GetComponentInChildren<Enemy3_Buaa>();
-        if (e3 != null) { Debug.Log($"[LeoPlayer] Found Enemy3_Buaa on {e3.name}"); e3.TakeDamage(actualDamage); return; }
+        var e4 = col.GetComponentInParent<Enemy4_Bongtoi>();
+        if (e4 != null) { e4.TakeDamage(damageAmount); return; }
 
-        var e4 = col.GetComponentInParent<Enemy4_Bongtoi>() ?? col.GetComponentInChildren<Enemy4_Bongtoi>();
-        if (e4 != null) { Debug.Log($"[LeoPlayer] Found Enemy4_Bongtoi on {e4.name}"); e4.TakeDamage(actualDamage); return; }
-
-        var e5 = col.GetComponentInParent<Enemy5_PhuThuy>() ?? col.GetComponentInChildren<Enemy5_PhuThuy>();
-        if (e5 != null) { Debug.Log($"[LeoPlayer] Found Enemy5_PhuThuy on {e5.name}"); e5.TakeDamage(actualDamage); return; }
-
-        var mb = col.GetComponentInParent<MiniBossAI>() ?? col.GetComponentInChildren<MiniBossAI>();
-        if (mb != null) { Debug.Log($"[LeoPlayer] Found MiniBossAI on {mb.name}"); mb.TakeDamage(actualDamage); return; }
-
-        var fb = col.GetComponentInParent<FinalBossAI>() ?? col.GetComponentInChildren<FinalBossAI>();
-        if (fb != null) { Debug.Log($"[LeoPlayer] Found FinalBossAI on {fb.name}"); fb.TakeDamage(actualDamage); return; }
-
-        var b = col.GetComponentInParent<BossAI>() ?? col.GetComponentInChildren<BossAI>();
-        if (b != null) { Debug.Log($"[LeoPlayer] Found BossAI on {b.name}"); b.TakeDamage(actualDamage); return; }
-
-        Debug.LogWarning($"[LeoPlayer] TryDamageEnemy: No enemy AI script found on collider {col.name} or its hierarchy!");
+        var e5 = col.GetComponentInParent<Enemy5_PhuThuy>();
+        if (e5 != null) { e5.TakeDamage(damageAmount); return; }
     }
 
     [ServerRpc]
@@ -4993,9 +4830,6 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     public void TakeDamage(float damage)
     {
-        // Nếu đã chết, không nhận thêm sát thương và không ngắt hoạt ảnh chết
-        if (CurrentHealth <= 0) return;
-
         // Miễn nhiễm sát thương hoàn toàn khi đang dùng Skill Q
         if (IsQSkillActive)
         {
@@ -5027,6 +4861,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             {
                 if (rb != null) rb.linearVelocity = Vector3.zero;
                 PlayAnimation("Death", 0.15f);
+                PlayerDeathEffectManager.Instance.PlayDeathEffect();
             }
             else
             {
@@ -5926,109 +5761,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     }
 
     /// <summary>
-    /// Kiểm tra xem có Tầm nhìn (Line of Sight) trực tiếp tới mục tiêu hay không (không bị tường/vật cản che chắn).
-    /// </summary>
-    private bool HasLineOfSightToTarget(Vector3 targetPos)
-    {
-        Vector3 origin = transform.position + Vector3.up * 1.0f;
-        Vector3 targetCenter = targetPos + Vector3.up * 1.0f;
-        Vector3 dir = targetCenter - origin;
-        float dist = dir.magnitude;
-
-        if (dist < 0.1f) return true;
-
-        RaycastHit[] hits = Physics.RaycastAll(origin, dir.normalized, dist);
-        foreach (var hit in hits)
-        {
-            if (hit.collider == null || hit.collider.isTrigger) continue;
-            if (hit.collider.transform.root == transform.root) continue;
-
-            if (hit.collider.CompareTag("Enemy") || hit.collider.CompareTag("Player")) continue;
-
-            if (hit.collider.GetComponentInParent<Enemy1_DapBua>() != null ||
-                hit.collider.GetComponentInParent<Enemy2_Zombie>() != null ||
-                hit.collider.GetComponentInParent<Enemy3_Buaa>() != null ||
-                hit.collider.GetComponentInParent<Enemy4_Bongtoi>() != null ||
-                hit.collider.GetComponentInParent<Enemy5_PhuThuy>() != null ||
-                hit.collider.GetComponentInParent<BossAI>() != null ||
-                hit.collider.GetComponentInParent<MiniBossAI>() != null ||
-                hit.collider.GetComponentInParent<FinalBossAI>() != null)
-            {
-                continue;
-            }
-
-            return false; // Vướng tường hoặc chướng ngại vật
-        }
-        return true;
-    }
-
-    /// <summary>
-    /// Tính toán vị trí chém an toàn xung quanh mục tiêu, đảm bảo không bị kẹt hay lọt vào trong tường.
-    /// </summary>
-    private Vector3 CalculateValidSlashPosition(Vector3 currentPos, Transform target)
-    {
-        if (target == null) return currentPos;
-        Vector3 targetPos = target.position;
-
-        Vector3 dirFromTarget = (currentPos - targetPos);
-        dirFromTarget.y = 0f;
-        if (dirFromTarget.sqrMagnitude < 0.001f) dirFromTarget = -target.forward;
-        dirFromTarget.Normalize();
-
-        float desiredDist = 1.3f;
-        float[] angles = new float[] { 0f, 45f, -45f, 90f, -90f, 135f, -135f, 180f };
-
-        foreach (float angle in angles)
-        {
-            Vector3 offsetDir = Quaternion.Euler(0, angle + UnityEngine.Random.Range(-10f, 10f), 0) * dirFromTarget;
-            Vector3 candidatePos = targetPos + offsetDir * desiredDist;
-            candidatePos.y = currentPos.y;
-
-            Vector3 rayStart = targetPos + Vector3.up * 0.5f;
-            Vector3 rayEnd = candidatePos + Vector3.up * 0.5f;
-            Vector3 rayDir = rayEnd - rayStart;
-            float checkDist = rayDir.magnitude;
-
-            bool hitsWall = false;
-            if (checkDist > 0.01f)
-            {
-                RaycastHit[] hits = Physics.RaycastAll(rayStart, rayDir.normalized, checkDist);
-                foreach (var hit in hits)
-                {
-                    if (hit.collider == null || hit.collider.isTrigger) continue;
-                    if (hit.collider.transform.root == target.root || hit.collider.transform.root == transform.root) continue;
-                    if (hit.collider.CompareTag("Enemy") || hit.collider.CompareTag("Player")) continue;
-
-                    if (hit.collider.GetComponentInParent<Enemy1_DapBua>() != null ||
-                        hit.collider.GetComponentInParent<Enemy2_Zombie>() != null ||
-                        hit.collider.GetComponentInParent<Enemy3_Buaa>() != null ||
-                        hit.collider.GetComponentInParent<Enemy4_Bongtoi>() != null ||
-                        hit.collider.GetComponentInParent<Enemy5_PhuThuy>() != null ||
-                        hit.collider.GetComponentInParent<BossAI>() != null ||
-                        hit.collider.GetComponentInParent<MiniBossAI>() != null ||
-                        hit.collider.GetComponentInParent<FinalBossAI>() != null)
-                    {
-                        continue;
-                    }
-
-                    hitsWall = true;
-                    break;
-                }
-            }
-
-            if (!hitsWall)
-            {
-                return candidatePos;
-            }
-        }
-
-        Vector3 fallbackPos = targetPos + dirFromTarget * 0.8f;
-        fallbackPos.y = currentPos.y;
-        return fallbackPos;
-    }
-
-    /// <summary>
-    /// Tìm mục tiêu gần nhất trong bán kính qSkillSearchRadius, không kể các Enemy đã chết và có Tầm nhìn (LOS) trực tiếp.
+    /// Tìm mục tiêu gần nhất trong bán kính qSkillSearchRadius, không kể các Enemy đã chết.
     /// Trả về Transform của mục tiêu hoặc null nếu không tìm thấy.
     /// </summary>
     private Transform FindNearestAliveEnemy()
@@ -6042,56 +5775,35 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         {
             if (e == null || e.IsDead) continue;
             float d = Vector3.Distance(transform.position, e.transform.position);
-            if (d <= qSkillSearchRadius && d < minDist && HasLineOfSightToTarget(e.transform.position)) { minDist = d; nearest = e.transform; }
+            if (d <= qSkillSearchRadius && d < minDist) { minDist = d; nearest = e.transform; }
         }
         Enemy2_Zombie[] e2s = FindObjectsByType<Enemy2_Zombie>(FindObjectsSortMode.None);
         foreach (var e in e2s)
         {
             if (e == null || e.IsDead) continue;
             float d = Vector3.Distance(transform.position, e.transform.position);
-            if (d <= qSkillSearchRadius && d < minDist && HasLineOfSightToTarget(e.transform.position)) { minDist = d; nearest = e.transform; }
+            if (d <= qSkillSearchRadius && d < minDist) { minDist = d; nearest = e.transform; }
         }
         Enemy3_Buaa[] e3s = FindObjectsByType<Enemy3_Buaa>(FindObjectsSortMode.None);
         foreach (var e in e3s)
         {
             if (e == null || e.IsDead) continue;
             float d = Vector3.Distance(transform.position, e.transform.position);
-            if (d <= qSkillSearchRadius && d < minDist && HasLineOfSightToTarget(e.transform.position)) { minDist = d; nearest = e.transform; }
+            if (d <= qSkillSearchRadius && d < minDist) { minDist = d; nearest = e.transform; }
         }
         Enemy4_Bongtoi[] e4s = FindObjectsByType<Enemy4_Bongtoi>(FindObjectsSortMode.None);
         foreach (var e in e4s)
         {
             if (e == null || e.IsDead) continue;
             float d = Vector3.Distance(transform.position, e.transform.position);
-            if (d <= qSkillSearchRadius && d < minDist && HasLineOfSightToTarget(e.transform.position)) { minDist = d; nearest = e.transform; }
+            if (d <= qSkillSearchRadius && d < minDist) { minDist = d; nearest = e.transform; }
         }
         Enemy5_PhuThuy[] e5s = FindObjectsByType<Enemy5_PhuThuy>(FindObjectsSortMode.None);
         foreach (var e in e5s)
         {
             if (e == null || e.IsDead) continue;
             float d = Vector3.Distance(transform.position, e.transform.position);
-            if (d <= qSkillSearchRadius && d < minDist && HasLineOfSightToTarget(e.transform.position)) { minDist = d; nearest = e.transform; }
-        }
-        BossAI[] bosses = FindObjectsByType<BossAI>(FindObjectsSortMode.None);
-        foreach (var e in bosses)
-        {
-            if (e == null || e.IsDead) continue;
-            float d = Vector3.Distance(transform.position, e.transform.position);
-            if (d <= qSkillSearchRadius && d < minDist && HasLineOfSightToTarget(e.transform.position)) { minDist = d; nearest = e.transform; }
-        }
-        MiniBossAI[] miniBosses = FindObjectsByType<MiniBossAI>(FindObjectsSortMode.None);
-        foreach (var e in miniBosses)
-        {
-            if (e == null || e.IsDead) continue;
-            float d = Vector3.Distance(transform.position, e.transform.position);
-            if (d <= qSkillSearchRadius && d < minDist && HasLineOfSightToTarget(e.transform.position)) { minDist = d; nearest = e.transform; }
-        }
-        FinalBossAI[] finalBosses = FindObjectsByType<FinalBossAI>(FindObjectsSortMode.None);
-        foreach (var e in finalBosses)
-        {
-            if (e == null || e.IsDead) continue;
-            float d = Vector3.Distance(transform.position, e.transform.position);
-            if (d <= qSkillSearchRadius && d < minDist && HasLineOfSightToTarget(e.transform.position)) { minDist = d; nearest = e.transform; }
+            if (d <= qSkillSearchRadius && d < minDist) { minDist = d; nearest = e.transform; }
         }
         return nearest;
     }
@@ -6112,12 +5824,6 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (e4 != null) { e4.TakeDamage(damage); return; }
         var e5 = enemyTransform.GetComponentInParent<Enemy5_PhuThuy>() ?? enemyTransform.GetComponentInChildren<Enemy5_PhuThuy>();
         if (e5 != null) { e5.TakeDamage(damage); return; }
-        var boss = enemyTransform.GetComponentInParent<BossAI>() ?? enemyTransform.GetComponentInChildren<BossAI>();
-        if (boss != null) { boss.TakeDamage(damage); return; }
-        var miniBoss = enemyTransform.GetComponentInParent<MiniBossAI>() ?? enemyTransform.GetComponentInChildren<MiniBossAI>();
-        if (miniBoss != null) { miniBoss.TakeDamage(damage); return; }
-        var finalBoss = enemyTransform.GetComponentInParent<FinalBossAI>() ?? enemyTransform.GetComponentInChildren<FinalBossAI>();
-        if (finalBoss != null) { finalBoss.TakeDamage(damage); return; }
     }
 
     /// <summary>
@@ -6136,12 +5842,6 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (e4 != null) return e4.IsDead;
         var e5 = enemyTransform.GetComponentInParent<Enemy5_PhuThuy>() ?? enemyTransform.GetComponentInChildren<Enemy5_PhuThuy>();
         if (e5 != null) return e5.IsDead;
-        var boss = enemyTransform.GetComponentInParent<BossAI>() ?? enemyTransform.GetComponentInChildren<BossAI>();
-        if (boss != null) return boss.IsDead;
-        var miniBoss = enemyTransform.GetComponentInParent<MiniBossAI>() ?? enemyTransform.GetComponentInChildren<MiniBossAI>();
-        if (miniBoss != null) return miniBoss.IsDead;
-        var finalBoss = enemyTransform.GetComponentInParent<FinalBossAI>() ?? enemyTransform.GetComponentInChildren<FinalBossAI>();
-        if (finalBoss != null) return finalBoss.IsDead;
         return true; // Không tìm thấy component = coi như chết
     }
 
@@ -6161,7 +5861,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             Transform target = FindNearestAliveEnemy();
             if (target == null)
             {
-                Debug.Log("[LeoPlayer] Q Skill: Không có enemy trong tầm hoặc bị che tường, hủy kỹ năng.");
+                Debug.Log("[LeoPlayer] Q Skill: Không có enemy trong tầm, hủy kỹ năng.");
                 return false;
             }
             StartCoroutine(QSkillCoroutineStandalone(target));
@@ -6169,7 +5869,6 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         }
         else if (IsOwner)
         {
-            isMovementLocked = true;
             TriggerQSkillServerRpc();
             return true; // Lạc quan, server sẽ xác nhận lại
         }
@@ -6182,7 +5881,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         Transform target = FindNearestAliveEnemy();
         if (target == null)
         {
-            Debug.Log("[LeoPlayer Server] Q Skill: Không có enemy trong tầm hoặc bị che tường, hủy kỹ năng.");
+            Debug.Log("[LeoPlayer Server] Q Skill: Không có enemy trong tầm, hủy kỹ năng.");
             // Báo lại client để không tính hồi chiêu - thông qua ClientRpc đặc biệt
             QSkillCancelledClientRpc();
             return;
@@ -6194,7 +5893,6 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     private void QSkillCancelledClientRpc()
     {
         Debug.Log("[LeoPlayer Client] Q Skill bị hủy vì không có enemy.");
-        isMovementLocked = false;
         // Thông báo cho HUD reset cooldown
         OnQSkillCancelled?.Invoke();
     }
@@ -6227,8 +5925,10 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
                 }
             }
 
-            // Dịch chuyển xung quanh mục tiêu tại vị trí an toàn không bị cản tường
-            Vector3 slashPos = CalculateValidSlashPosition(transform.position, currentTarget);
+            // Dịch chuyển xung quanh mục tiêu (vị trí ngẫu nhiên bán kính 1.5m)
+            Vector2 offset2D = UnityEngine.Random.insideUnitCircle.normalized * 1.5f;
+            Vector3 slashPos = currentTarget.position + new Vector3(offset2D.x, 0f, offset2D.y);
+            slashPos.y = transform.position.y;
             transform.position = slashPos;
 
             // Xoay mặt về phía mục tiêu
@@ -6239,9 +5939,8 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             // Gây sát thương
             TryDamageSpecificEnemy(currentTarget, qSkillDamagePerSlash);
 
-            // Phát VFX chém cục bộ ở tâm mục tiêu
-            Vector3 targetCenter = GetTargetCenterPosition(currentTarget);
-            SpawnQSlashVfxLocal(targetCenter);
+            // Phát VFX chém cục bộ
+            SpawnQSlashVfxLocal(currentTarget.position);
 
             qSkillTimeRemaining -= interval;
             yield return new WaitForSeconds(interval);
@@ -6284,8 +5983,10 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
                 }
             }
 
-            // Dịch chuyển xung quanh mục tiêu tại vị trí an toàn không bị cản tường
-            Vector3 slashPos = CalculateValidSlashPosition(transform.position, currentTarget);
+            // Dịch chuyển xung quanh mục tiêu
+            Vector2 offset2D = UnityEngine.Random.insideUnitCircle.normalized * 1.5f;
+            Vector3 slashPos = currentTarget.position + new Vector3(offset2D.x, 0f, offset2D.y);
+            slashPos.y = transform.position.y;
             transform.position = slashPos;
 
             // Xoay mặt về phía mục tiêu
@@ -6296,9 +5997,8 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             // Gây sát thương
             TryDamageSpecificEnemy(currentTarget, qSkillDamagePerSlash);
 
-            // Gọi ClientRpc để phát VFX chém ở tất cả client tại tâm mục tiêu
-            Vector3 targetCenter = GetTargetCenterPosition(currentTarget);
-            PlayQSlashVfxClientRpc(targetCenter);
+            // Gọi ClientRpc để phát VFX chém ở tất cả client
+            PlayQSlashVfxClientRpc(currentTarget.position);
 
             remaining -= interval;
             UpdateQTimerClientRpc(Mathf.Max(0f, remaining));
@@ -6339,43 +6039,6 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         SpawnQSlashVfxLocal(targetPos);
     }
 
-    private Vector3 GetTargetCenterPosition(Transform target)
-    {
-        if (target == null) return Vector3.zero;
-
-        // Thử tìm CapsuleCollider hoặc CharacterController trước
-        var cc = target.GetComponent<CharacterController>();
-        if (cc == null) cc = target.GetComponentInChildren<CharacterController>();
-        if (cc != null)
-        {
-            return target.position + Vector3.up * (cc.height * 0.5f);
-        }
-
-        var capsule = target.GetComponent<CapsuleCollider>();
-        if (capsule == null) capsule = target.GetComponentInChildren<CapsuleCollider>();
-        if (capsule != null)
-        {
-            return target.position + Vector3.up * (capsule.height * 0.5f);
-        }
-
-        var box = target.GetComponent<BoxCollider>();
-        if (box == null) box = target.GetComponentInChildren<BoxCollider>();
-        if (box != null)
-        {
-            return target.position + Vector3.up * (box.size.y * 0.5f);
-        }
-
-        // Nếu không có collider, thử tìm renderer bounds
-        var renderer = target.GetComponentInChildren<Renderer>();
-        if (renderer != null)
-        {
-            return renderer.bounds.center;
-        }
-
-        // Fallback mặc định
-        return target.position + Vector3.up * 1.0f;
-    }
-
     /// <summary>
     /// Phát VFX vết chém ảo ảnh tại vị trí mục tiêu.
     /// Ưu tiên dùng qSkillParticlePrefab, fallback về pool VFX cũ.
@@ -6383,15 +6046,12 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     private void SpawnQSlashVfxLocal(Vector3 targetPos)
     {
         Quaternion rot = Quaternion.Euler(0f, UnityEngine.Random.Range(0f, 360f), 0f);
-        Vector3 spawnPos = targetPos; // Đã là tâm mục tiêu được tính từ trước
-
-        // Tăng transform to lên (Scale 1.8f) per user request
-        Vector3 qScale = new Vector3(1.8f, 1.8f, 1.8f);
+        Vector3 spawnPos = targetPos + Vector3.up * 0.5f;
 
         // Dùng particle riêng nếu đã gán trong Inspector
         if (qSkillParticlePrefab != null)
         {
-            GetPooledVFX(qSkillParticlePrefab, spawnPos, rot, qScale);
+            GetPooledVFX(qSkillParticlePrefab, spawnPos, rot);
             return;
         }
 
@@ -6405,7 +6065,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (validVfx.Length == 0) return;
 
         GameObject chosenPrefab = validVfx[UnityEngine.Random.Range(0, validVfx.Length)];
-        GetPooledVFX(chosenPrefab, spawnPos, rot, qScale);
+        GetPooledVFX(chosenPrefab, spawnPos, rot);
     }
 
     private void OnQSkillActiveChanged(bool oldVal, bool newVal)
@@ -6599,8 +6259,8 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
                 {
                     localHealth = maxHealth;
                     localActiveWeaponIndex = 1;
-                    localWeapon2Locked = false;
-                    localSkillsUnlocked = true;
+                    localWeapon2Locked = true;
+                    localSkillsUnlocked = false;
                     localUpgradePoints = 0;
                     localHpLevel = 0;
                     localMpLevel = 0;
@@ -6613,8 +6273,8 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
                 {
                     SyncNetVarFloat(currentHealth, proxyPlayerTest != null ? proxyPlayerTest.currentHealth : null, maxHealth);
                     SyncNetVarInt(activeWeaponIndex, proxyPlayerTest != null ? proxyPlayerTest.activeWeaponIndex : null, 1);
-                    SyncNetVarBool(isWeapon2Locked, proxyPlayerTest != null ? proxyPlayerTest.isWeapon2Locked : null, false);
-                    SyncNetVarBool(isSkillsUnlocked, proxyPlayerTest != null ? proxyPlayerTest.isSkillsUnlocked : null, true);
+                    SyncNetVarBool(isWeapon2Locked, proxyPlayerTest != null ? proxyPlayerTest.isWeapon2Locked : null, true);
+                    SyncNetVarBool(isSkillsUnlocked, proxyPlayerTest != null ? proxyPlayerTest.isSkillsUnlocked : null, false);
                     SyncNetVarInt(upgradePoints, proxyPlayerTest != null ? proxyPlayerTest.upgradePoints : null, 0);
                     SyncNetVarInt(hpLevel, proxyPlayerTest != null ? proxyPlayerTest.hpLevel : null, 0);
                     SyncNetVarInt(mpLevel, proxyPlayerTest != null ? proxyPlayerTest.mpLevel : null, 0);
@@ -6677,7 +6337,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             SavePlayerStateToDatabase();
             if (newHealth <= 0f && oldHealth > 0f)
             {
-                // Defer death effect to OnDeathAnimationEnd
+                PlayerDeathEffectManager.Instance.PlayDeathEffect();
             }
             else if (newHealth > 0f && oldHealth <= 0f)
             {
@@ -7009,24 +6669,6 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     public void PlayAnimation(string animName, float fadeTime = 0.1f, bool alreadyPlayedLocally = false, bool isRooted = false)
     {
-        if (anim == null) return;
-
-        // Nếu đang chết, chỉ cho phép nhận các lệnh hồi sinh hoặc đưa về trạng thái rỗng/New State
-        if (currentAnimState == "Death")
-        {
-            if (CurrentHealth <= 0)
-            {
-                if (animName != "Idle" && animName != "Walk" && animName != "run" && animName != "New State" && animName != "Empty")
-                {
-                    return;
-                }
-            }
-            else
-            {
-                currentAnimState = "";
-            }
-        }
-
         var carrier = GetComponent<PlayerLogCarrier>();
         if (carrier != null && carrier.isCarrying && animName != "Death" && animName != "Idle" && animName != "Walk" && animName != "run")
         {
@@ -7119,7 +6761,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             case "GeiHit2":
                 return getHit2Trigger;
             case "Death":
-                return "Death";
+                return isArmed ? deathArmedTrigger : deathUnarmedTrigger;
             case "Idle_Pick":
             case "Pick":
                 return pickTrigger;
@@ -7253,8 +6895,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
                stateInfo.IsName("attacktayphai") ||
                stateInfo.IsName("Slash1Combo2") ||
                stateInfo.IsName("Slash2combo2") ||
-               stateInfo.IsName("Slash3combo2") ||
-               stateInfo.IsName("ChatRiu");
+               stateInfo.IsName("Slash3combo2");
     }
 
     private bool IsPlayingActionAnimation()
@@ -7292,41 +6933,15 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     {
         if (anim == null || !anim.isActiveAndEnabled || anim.runtimeAnimatorController == null) return false;
 
-        bool isRecentlyPicked = (lastTriggeredAnimName == pickTrigger || lastTriggeredAnimName == "Idle_Pick" || lastTriggeredAnimName == "Pick" || lastTriggeredAnimName == "Picknew")
-                                && (Time.time - lastActionTriggerTime < 1.2f);
-        if (isRecentlyPicked) return true;
-
-        AnimatorStateInfo stateInfo = anim.GetCurrentAnimatorStateInfo(0);
-        bool isInPickState = stateInfo.IsName(pickTrigger) || stateInfo.IsName("Idle_Pick") || stateInfo.IsName("Pick") || stateInfo.IsName("Picknew");
-        if (!isInPickState && anim.layerCount > 1)
-        {
-            AnimatorStateInfo stateInfoLayer1 = anim.GetCurrentAnimatorStateInfo(1);
-            isInPickState = stateInfoLayer1.IsName(pickTrigger) || stateInfoLayer1.IsName("Idle_Pick") || stateInfoLayer1.IsName("Pick") || stateInfoLayer1.IsName("Picknew");
-            if (isInPickState) stateInfo = stateInfoLayer1;
-        }
-
-        return isInPickState && stateInfo.normalizedTime < 0.95f;
-    }
-
-    private bool IsPlayingHitAnimation()
-    {
-        if (anim == null || !anim.isActiveAndEnabled || anim.runtimeAnimatorController == null) return false;
-
-        if ((lastTriggeredAnimName == getHitTrigger || lastTriggeredAnimName == getHit2Trigger || lastTriggeredAnimName == "GetHit" || lastTriggeredAnimName == "GeiHit2")
-            && Time.time - lastActionTriggerTime < 0.2f)
+        if ((lastTriggeredAnimName == pickTrigger || lastTriggeredAnimName == "Idle_Pick" || lastTriggeredAnimName == "Pick")
+            && Time.time - lastActionTriggerTime < 0.15f)
         {
             return true;
         }
 
         AnimatorStateInfo stateInfo = anim.GetCurrentAnimatorStateInfo(0);
-        bool isHitState = stateInfo.IsName(getHitTrigger) || stateInfo.IsName(getHit2Trigger) || stateInfo.IsName("GetHit") || stateInfo.IsName("GeiHit2");
-        if (!isHitState && anim.layerCount > 1)
-        {
-            AnimatorStateInfo stateInfoLayer1 = anim.GetCurrentAnimatorStateInfo(1);
-            isHitState = stateInfoLayer1.IsName(getHitTrigger) || stateInfoLayer1.IsName(getHit2Trigger) || stateInfoLayer1.IsName("GetHit") || stateInfoLayer1.IsName("GeiHit2");
-        }
-
-        return isHitState && stateInfo.normalizedTime < 0.95f;
+        bool isInPickState = stateInfo.IsName(pickTrigger) || stateInfo.IsName("Idle_Pick") || stateInfo.IsName("Pick");
+        return isInPickState && stateInfo.normalizedTime < 0.95f;
     }
 
     private float lastActionTriggerTime = 0f;
@@ -7348,47 +6963,6 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     private void PlayAnimationLocal(string animName, float fadeTime)
     {
-        // Play action sound effects
-        string translatedNameForAudio = TranslateAnimName(animName);
-        string animLower = animName.ToLower();
-        string transLower = translatedNameForAudio.ToLower();
-        bool isSlash = animLower.Contains("attack") || animLower.Contains("slash") || animLower.Contains("chem") || animLower.Contains("chatriu") ||
-                       transLower.Contains("attack") || transLower.Contains("slash") || transLower.Contains("chem") || transLower.Contains("chatriu");
-        bool isPunch = animLower.Contains("punch") || animLower.Contains("dam") ||
-                       transLower.Contains("punch") || transLower.Contains("dam");
-
-        if (isSlash && !isPunch)
-        {
-            AudioClip swingClip = Resources.Load<AudioClip>("Audio/ChemChuaHit");
-            PlayPlayerSFX(swingClip, 0.8f);
-        }
-        else if (isPunch)
-        {
-            AudioClip punchClip = Resources.Load<AudioClip>("Audio/Punch");
-            PlayPlayerSFX(punchClip);
-        }
-        else if (animLower.Contains("draw") || transLower.Contains("draw"))
-        {
-            AudioClip drawClip = Resources.Load<AudioClip>("Audio/RutKiem");
-            PlayPlayerSFX(drawClip);
-        }
-        else if (translatedNameForAudio == "SamSet" || animName == "SamSet")
-        {
-            PlayPlayerSFX(skillRClip); // Fireball / SamSet
-        }
-        else if (translatedNameForAudio == "Death" || animName == "Death")
-        {
-            PlayPlayerSFX(deathClip);
-        }
-        else if (translatedNameForAudio == "GetHit" || animName == "GetHit" || translatedNameForAudio == "GeiHit2" || animName == "GeiHit2")
-        {
-            PlayPlayerSFX(hitClip);
-        }
-        else if (translatedNameForAudio == "LonVong" || animName == "LonVong")
-        {
-            PlayPlayerSFX(Resources.Load<AudioClip>("Audio/SmokeBomb"), 0.5f); // Roll Whoosh
-        }
-
         if (anim == null) return;
 
         if (useBlendTree && (animName == "Idle" || animName == "Walk" || animName == "run"))
@@ -7405,10 +6979,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             OnAimStateChanged(localIsAimingR);
         }
 
-        if (translatedName == rollTrigger || translatedName == "LonVong" ||
-            translatedName == getHitTrigger || translatedName == getHit2Trigger ||
-            translatedName == "GetHit" || translatedName == "GeiHit2" ||
-            translatedName.Contains("Hit"))
+        if (translatedName == rollTrigger || translatedName == "LonVong")
         {
             anim.applyRootMotion = false;
         }
@@ -7528,24 +7099,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             anim.SetTrigger(translatedName);
             StartCoroutine(ResetTriggerNextFrame(translatedName));
 
-            int targetLayer = 0;
-            if (anim.layerCount > 1)
-            {
-                int stateHash = Animator.StringToHash(stateName);
-                bool hasLayer1 = anim.HasState(1, stateHash);
-                bool hasLayer0 = anim.HasState(0, stateHash);
-
-                if (hasLayer1 && (!isRootedAttack || !hasLayer0))
-                {
-                    targetLayer = 1;
-                    anim.SetLayerWeight(1, 1f);
-                }
-                else
-                {
-                    targetLayer = 0;
-                    if (hasLayer1) anim.SetLayerWeight(1, 0f);
-                }
-            }
+            int targetLayer = IsAttackAnimationName(translatedName) && !isRootedAttack ? 1 : 0;
             anim.CrossFadeInFixedTime(stateName, fadeTime, targetLayer, 0f);
 
             // Force evaluation to query the exact animation clip duration
@@ -7685,31 +7239,9 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             // theo hướng Camera điều khiển từ C#, triệt tiêu hoàn toàn lỗi xoắn xẹo xương sườn.
         }
     }
-    private bool IsLockingMovementAction()
-    {
-        if (anim == null || !anim.isActiveAndEnabled || anim.runtimeAnimatorController == null) return false;
-        if (isStandaloneMode ? isRollingStandalone : rollTimer > 0) return true;
-        if (isMovementLocked || IsQSkillActive) return true;
-
-        bool isCurrentlyAttacking = IsPlayingAttackState(out _, out _) || 
-                                    (IsAttackAnimationName(lastTriggeredAnimName) && Time.time - lastActionTriggerTime < 0.35f);
-        if (isRootedAttack && isCurrentlyAttacking) return true;
-
-        if (IsPlayingPickAnimation()) return true;
-        if (IsPlayingHitAnimation()) return true;
-
-        return false;
-    }
-
     private void FixedUpdate()
     {
         ApplyExtraGravity();
-
-        if (rb != null)
-        {
-            float currentYVelocity = rb.linearVelocity.y;
-            rb.linearVelocity = Vector3.Lerp(rb.linearVelocity, new Vector3(targetMoveVelocity.x, currentYVelocity, targetMoveVelocity.z), Time.fixedDeltaTime * 15f);
-        }
     }
 
     /// <summary>
@@ -7762,15 +7294,6 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     private void ClearAttackLayer()
     {
-        try
-        {
-            if (anim != null && anim.isActiveAndEnabled && anim.GetBool("IsPushing"))
-            {
-                return;
-            }
-        }
-        catch (System.Exception) {}
-
         comboStep = 0;
         isRootedAttack = false;
         SetMovementLock(false);
@@ -7950,149 +7473,35 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         return isStandaloneMode || (IsSpawned && IsOwner);
     }
 
-    private void EnsureHitboxComponent(Collider col)
-    {
-        if (col != null)
-        {
-            col.isTrigger = true;
-            if (col.GetComponent<PlayerHitbox>() == null)
-            {
-                col.gameObject.AddComponent<PlayerHitbox>();
-            }
-        }
-    }
+    // --- Đấm tay: Tay Trái ---
+    public void EnableLeftHitbox() { alreadyHitEnemies.Clear(); PerformRaycastAttack(); }
+    public void DisableLeftHitbox() {}
 
-    // --- Đấm tay / Hitbox tổng hợp ---
-    public void EnableLeftHitbox()
-    {
-        alreadyHitEnemies.Clear();
-        EnsureHitboxComponent(leftHitbox);
-        if (leftHitbox != null) leftHitbox.enabled = true;
-    }
-    public void DisableLeftHitbox()
-    {
-        if (leftHitbox != null) leftHitbox.enabled = false;
-    }
+    // --- Đấm tay: Tay Phải ---
+    public void EnableRightHitbox() { alreadyHitEnemies.Clear(); PerformRaycastAttack(); }
+    public void DisableRightHitbox() {}
 
-    public void EnableRightHitbox()
-    {
-        alreadyHitEnemies.Clear();
-        EnsureHitboxComponent(rightHitbox);
-        EnsureHitboxComponent(axeWeaponHitbox);
-        if (rightHitbox != null) rightHitbox.enabled = true;
-        if (axeWeaponHitbox != null) axeWeaponHitbox.enabled = true;
-    }
-    public void DisableRightHitbox()
-    {
-        if (rightHitbox != null) rightHitbox.enabled = false;
-        if (axeWeaponHitbox != null) axeWeaponHitbox.enabled = false;
-    }
+    // --- Đấm tay: Cả hai tay ---
+    public void EnableBothHitboxes() { alreadyHitEnemies.Clear(); PerformRaycastAttack(); }
+    public void DisableBothHitboxes() {}
 
-    public void EnableBothHitboxes()
-    {
-        alreadyHitEnemies.Clear();
-        EnsureHitboxComponent(leftHitbox);
-        EnsureHitboxComponent(rightHitbox);
-        EnsureHitboxComponent(axeWeaponHitbox);
-        if (leftHitbox != null) leftHitbox.enabled = true;
-        if (rightHitbox != null) rightHitbox.enabled = true;
-        if (axeWeaponHitbox != null) axeWeaponHitbox.enabled = true;
-    }
-    public void DisableBothHitboxes()
-    {
-        if (leftHitbox != null) leftHitbox.enabled = false;
-        if (rightHitbox != null) rightHitbox.enabled = false;
-        if (axeWeaponHitbox != null) axeWeaponHitbox.enabled = false;
-    }
+    // --- Kiếm: Tay Trái ---
+    public void EnableLeftWeaponHitbox() { alreadyHitEnemies.Clear(); PerformRaycastAttack(); }
+    public void DisableLeftWeaponHitbox() {}
 
-    // --- Kiếm / Vũ khí: Tay Trái ---
-    public void EnableLeftWeaponHitbox()
-    {
-        alreadyHitEnemies.Clear();
-        EnsureHitboxComponent(leftWeaponHitbox);
-        if (leftWeaponHitbox != null) leftWeaponHitbox.enabled = true;
-    }
-    public void DisableLeftWeaponHitbox()
-    {
-        if (leftWeaponHitbox != null) leftWeaponHitbox.enabled = false;
-    }
+    // --- Kiếm: Tay Phải ---
+    public void EnableRightWeaponHitbox() { alreadyHitEnemies.Clear(); PerformRaycastAttack(); }
+    public void DisableRightWeaponHitbox() {}
 
-    // --- Kiếm / Vũ khí: Tay Phải ---
-    public void EnableRightWeaponHitbox()
-    {
-        alreadyHitEnemies.Clear();
-        EnsureHitboxComponent(rightWeaponHitbox);
-        EnsureHitboxComponent(axeWeaponHitbox);
-        if (rightWeaponHitbox != null) rightWeaponHitbox.enabled = true;
-        if (axeWeaponHitbox != null) axeWeaponHitbox.enabled = true;
-    }
-    public void DisableRightWeaponHitbox()
-    {
-        if (rightWeaponHitbox != null) rightWeaponHitbox.enabled = false;
-        if (axeWeaponHitbox != null) axeWeaponHitbox.enabled = false;
-    }
-
-    // --- Kiếm / Vũ khí: Cả hai tay (Slash chính) ---
-    public void EnableBothWeaponHitbox() { EnableBothWeaponHitboxes(); }
-    public void DisableBothWeaponHitbox() { DisableBothWeaponHitboxes(); }
-    public void EnableBothWeaponHitboxes()
-    {
-        alreadyHitEnemies.Clear();
-        EnsureHitboxComponent(leftWeaponHitbox);
-        EnsureHitboxComponent(rightWeaponHitbox);
-        EnsureHitboxComponent(axeWeaponHitbox);
-        if (leftWeaponHitbox != null) leftWeaponHitbox.enabled = true;
-        if (rightWeaponHitbox != null) rightWeaponHitbox.enabled = true;
-        if (axeWeaponHitbox != null) axeWeaponHitbox.enabled = true;
-    }
-    public void DisableBothWeaponHitboxes()
-    {
-        if (leftWeaponHitbox != null) leftWeaponHitbox.enabled = false;
-        if (rightWeaponHitbox != null) rightWeaponHitbox.enabled = false;
-        if (axeWeaponHitbox != null) axeWeaponHitbox.enabled = false;
-    }
-
-    // --- Rìu (Axe) ---
-    public void EnableAxeWeaponHitbox()
-    {
-        alreadyHitEnemies.Clear();
-        if (axeWeaponHitbox != null) axeWeaponHitbox.enabled = true;
-        if (leftWeaponHitbox != null) leftWeaponHitbox.enabled = true;
-        if (rightWeaponHitbox != null) rightWeaponHitbox.enabled = true;
-    }
-    public void DisableAxeWeaponHitbox()
-    {
-        if (axeWeaponHitbox != null) axeWeaponHitbox.enabled = false;
-        if (leftWeaponHitbox != null) leftWeaponHitbox.enabled = false;
-        if (rightWeaponHitbox != null) rightWeaponHitbox.enabled = false;
-    }
-    public void EnableAxeHitbox() { EnableAxeWeaponHitbox(); }
-    public void DisableAxeHitbox() { DisableAxeWeaponHitbox(); }
-
-    public void DisableAllHitboxes()
-    {
-        if (leftHitbox != null) leftHitbox.enabled = false;
-        if (rightHitbox != null) rightHitbox.enabled = false;
-        if (leftWeaponHitbox != null) leftWeaponHitbox.enabled = false;
-        if (rightWeaponHitbox != null) rightWeaponHitbox.enabled = false;
-        if (axeWeaponHitbox != null) axeWeaponHitbox.enabled = false;
-        alreadyHitEnemies.Clear();
-    }
-
-    public void OnPunchEnd() { DisableAllHitboxes(); }
-    public void OnSlashEnd() { DisableAllHitboxes(); }
-    public void OnAttackEnd() { DisableAllHitboxes(); }
+    // --- Kiếm: Cả hai tay (Slash chính) ---
+    public void EnableBothWeaponHitboxes() { alreadyHitEnemies.Clear(); PerformRaycastAttack(); }
+    public void DisableBothWeaponHitboxes() {}
 
     // --- VFX Spawn Animation Events với Object Pooling ---
     private System.Collections.Generic.Dictionary<GameObject, System.Collections.Generic.List<GameObject>> vfxPools =
         new System.Collections.Generic.Dictionary<GameObject, System.Collections.Generic.List<GameObject>>();
 
     private GameObject GetPooledVFX(GameObject prefab, Transform parent)
-    {
-        return GetPooledVFX(prefab, parent, new Vector3(0.5f, 0.5f, 0.5f));
-    }
-
-    private GameObject GetPooledVFX(GameObject prefab, Transform parent, Vector3 scale)
     {
         if (prefab == null) return null;
 
@@ -8131,12 +7540,12 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             obj.transform.SetParent(parent);
             obj.transform.localPosition = Vector3.zero;
             obj.transform.localRotation = Quaternion.Euler(-90f, 0f, 0f);
-            obj.transform.localScale = scale;
+            obj.transform.localScale = new Vector3(0.5f, 0.5f, 0.5f);
         }
         else
         {
             obj.transform.SetParent(null);
-            obj.transform.localScale = scale;
+            obj.transform.localScale = new Vector3(0.5f, 0.5f, 0.5f);
         }
 
         obj.SetActive(true);
@@ -8144,11 +7553,6 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     }
 
     private GameObject GetPooledVFX(GameObject prefab, Vector3 position, Quaternion rotation)
-    {
-        return GetPooledVFX(prefab, position, rotation, new Vector3(0.5f, 0.5f, 0.5f));
-    }
-
-    private GameObject GetPooledVFX(GameObject prefab, Vector3 position, Quaternion rotation, Vector3 scale)
     {
         if (prefab == null) return null;
 
@@ -8188,7 +7592,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             obj.transform.rotation = rotation;
         }
 
-        obj.transform.localScale = scale;
+        obj.transform.localScale = new Vector3(0.5f, 0.5f, 0.5f);
         obj.SetActive(true);
         return obj;
     }
@@ -8354,6 +7758,14 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     // --- Animation Event: Kết thúc đòn đánh ---
     /// <summary>
+    /// Gọi từ Animation Event ở FRAME CUỐI của mỗi animation đấm/chém.
+    /// Đảm bảo tắt hitbox và đánh dấu kết thúc nhịp tấn công.
+    /// </summary>
+    public void OnAttackEnd() {}
+    public void OnSlashEnd() {}
+    public void OnPunchEnd() {}
+
+    /// <summary>
     /// Nhận va chạm từ PlayerHitbox khi enemy đi vào hitbox.
     /// Tính damage 1 lần duy nhất mỗi enemy trong mỗi đòn đánh.
     /// </summary>
@@ -8381,27 +7793,6 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
                 }
             }
         }
-        else
-        {
-            // Kiểm tra xem có phải cây gỗ (ChoppableTree) hay không
-            ChoppableTree tree = other.GetComponentInParent<ChoppableTree>() ?? other.transform.root.GetComponentInChildren<ChoppableTree>();
-            if (tree == null)
-            {
-                var forwarder = other.GetComponent<TreeColliderForwarder>();
-                if (forwarder != null) tree = forwarder.mainTree;
-            }
-            if (tree != null)
-            {
-                Transform treeRoot = tree.transform;
-                if (!alreadyHitEnemies.Contains(treeRoot))
-                {
-                    alreadyHitEnemies.Add(treeRoot);
-                    Vector3 hitPos = other.bounds.center;
-                    int weaponIndex = GetActiveWeaponIndex();
-                    tree.HitTree(hitPos, weaponIndex);
-                }
-            }
-        }
     }
 
 
@@ -8409,23 +7800,12 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     {
         enemyCollider = null;
         if (col == null) return false;
-        if (col.transform.root == transform.root) return false;
-        if (col.CompareTag("Player") || col.gameObject.layer == LayerMask.NameToLayer("Player")) return false;
 
-        bool isEnemyHit = col.CompareTag("Enemy") ||
-                          col.gameObject.layer == LayerMask.NameToLayer("Enemy") ||
-                          col.name.ToLower().Contains("enemy") ||
-                          col.name.ToLower().Contains("boss") ||
-                          col.GetComponentInParent<Enemy1_DapBua>() != null || col.transform.root.GetComponentInChildren<Enemy1_DapBua>() != null ||
-                          col.GetComponentInParent<Enemy2_Zombie>() != null || col.transform.root.GetComponentInChildren<Enemy2_Zombie>() != null ||
-                          col.GetComponentInParent<Enemy3_Buaa>() != null || col.transform.root.GetComponentInChildren<Enemy3_Buaa>() != null ||
-                          col.GetComponentInParent<Enemy4_Bongtoi>() != null || col.transform.root.GetComponentInChildren<Enemy4_Bongtoi>() != null ||
-                          col.GetComponentInParent<Enemy5_PhuThuy>() != null || col.transform.root.GetComponentInChildren<Enemy5_PhuThuy>() != null ||
-                          col.GetComponentInParent<MiniBossAI>() != null || col.transform.root.GetComponentInChildren<MiniBossAI>() != null ||
-                          col.GetComponentInParent<FinalBossAI>() != null || col.transform.root.GetComponentInChildren<FinalBossAI>() != null ||
-                          col.GetComponentInParent<BossAI>() != null || col.transform.root.GetComponentInChildren<BossAI>() != null;
-
-        if (isEnemyHit)
+        if (col.GetComponentInParent<Enemy1_DapBua>() != null ||
+            col.GetComponentInParent<Enemy2_Zombie>() != null ||
+            col.GetComponentInParent<Enemy3_Buaa>() != null ||
+            col.GetComponentInParent<Enemy4_Bongtoi>() != null ||
+            col.GetComponentInParent<Enemy5_PhuThuy>() != null)
         {
             enemyCollider = col;
             return true;
@@ -8436,53 +7816,23 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     [ServerRpc]
     private void DamageEnemyServerRpc(NetworkObjectReference enemyRef)
     {
-        PlaySlashHitSoundClientRpc();
-        Debug.Log($"[LeoPlayer Server] DamageEnemyServerRpc called by client {OwnerClientId}");
         if (enemyRef.TryGet(out NetworkObject netObj))
         {
-            Debug.Log($"[LeoPlayer Server] Successfully retrieved NetworkObject '{netObj.name}', ID: {netObj.NetworkObjectId}");
-            var col = netObj.GetComponent<Collider>() ?? netObj.GetComponentInChildren<Collider>();
-            if (col != null)
-            {
-                Debug.Log($"[LeoPlayer Server] Found enemy collider: '{col.name}'. Calling TryDamageEnemy.");
-                TryDamageEnemy(col);
-            }
+            var col = netObj.GetComponent<Collider>();
+            if (col != null) TryDamageEnemy(col);
             else
             {
-                float actualDamage = damageAmount;
-                Debug.Log($"[LeoPlayer Server] No collider found on NetworkObject '{netObj.name}'. Direct component check with damage={actualDamage}");
-                var e1 = netObj.GetComponent<Enemy1_DapBua>() ?? netObj.GetComponentInChildren<Enemy1_DapBua>();
-                if (e1 != null) { Debug.Log("[LeoPlayer Server] Direct e1 hit"); e1.TakeDamage(actualDamage); return; }
-                var e2 = netObj.GetComponent<Enemy2_Zombie>() ?? netObj.GetComponentInChildren<Enemy2_Zombie>();
-                if (e2 != null) { Debug.Log("[LeoPlayer Server] Direct e2 hit"); e2.TakeDamage(actualDamage); return; }
-                var e3 = netObj.GetComponent<Enemy3_Buaa>() ?? netObj.GetComponentInChildren<Enemy3_Buaa>();
-                if (e3 != null) { Debug.Log("[LeoPlayer Server] Direct e3 hit"); e3.TakeDamage(actualDamage); return; }
-                var e4 = netObj.GetComponent<Enemy4_Bongtoi>() ?? netObj.GetComponentInChildren<Enemy4_Bongtoi>();
-                if (e4 != null) { Debug.Log("[LeoPlayer Server] Direct e4 hit"); e4.TakeDamage(actualDamage); return; }
-                var e5 = netObj.GetComponent<Enemy5_PhuThuy>() ?? netObj.GetComponentInChildren<Enemy5_PhuThuy>();
-                if (e5 != null) { Debug.Log("[LeoPlayer Server] Direct e5 hit"); e5.TakeDamage(actualDamage); return; }
-                var mb = netObj.GetComponent<MiniBossAI>() ?? netObj.GetComponentInChildren<MiniBossAI>();
-                if (mb != null) { Debug.Log("[LeoPlayer Server] Direct mb hit"); mb.TakeDamage(actualDamage); return; }
-                var fb = netObj.GetComponent<FinalBossAI>() ?? netObj.GetComponentInChildren<FinalBossAI>();
-                if (fb != null) { Debug.Log("[LeoPlayer Server] Direct fb hit"); fb.TakeDamage(actualDamage); return; }
-                var b = netObj.GetComponent<BossAI>() ?? netObj.GetComponentInChildren<BossAI>();
-                if (b != null) { Debug.Log("[LeoPlayer Server] Direct b hit"); b.TakeDamage(actualDamage); return; }
-                Debug.LogWarning("[LeoPlayer Server] Direct check: No enemy AI components found!");
+                var e1 = netObj.GetComponentInChildren<Enemy1_DapBua>();
+                if (e1 != null) { e1.TakeDamage(damageAmount); return; }
+                var e2 = netObj.GetComponentInChildren<Enemy2_Zombie>();
+                if (e2 != null) { e2.TakeDamage(damageAmount); return; }
+                var e3 = netObj.GetComponentInChildren<Enemy3_Buaa>();
+                if (e3 != null) { e3.TakeDamage(damageAmount); return; }
+                var e4 = netObj.GetComponentInChildren<Enemy4_Bongtoi>();
+                if (e4 != null) { e4.TakeDamage(damageAmount); return; }
+                var e5 = netObj.GetComponentInChildren<Enemy5_PhuThuy>();
+                if (e5 != null) { e5.TakeDamage(damageAmount); return; }
             }
-        }
-        else
-        {
-            Debug.LogError("[LeoPlayer Server] Failed to retrieve NetworkObject from NetworkObjectReference!");
-        }
-    }
-    [ClientRpc]
-    private void PlaySlashHitSoundClientRpc()
-    {
-        if (isStandaloneMode) return;
-        if (GetActiveWeaponIndex() != 0)
-        {
-            AudioClip hitSound = Resources.Load<AudioClip>("Audio/ChemHit");
-            PlayPlayerSFX(hitSound);
         }
     }
 
@@ -8622,16 +7972,6 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         if (anim != null && anim.isActiveAndEnabled && anim.runtimeAnimatorController != null && anim.layerCount > 1)
         {
-            try
-            {
-                if (anim.GetBool("IsPushing"))
-                {
-                    anim.SetLayerWeight(1, 1f);
-                    return;
-                }
-            }
-            catch (System.Exception) {}
-
             AnimatorStateInfo stateInfo = anim.GetCurrentAnimatorStateInfo(1);
             
             bool isDrawOrSheatheActive = stateInfo.IsName("laykiemtaytrai") || stateInfo.IsName("Laykiemtayphai") ||
