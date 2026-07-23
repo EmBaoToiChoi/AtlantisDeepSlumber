@@ -783,7 +783,7 @@ MonoBehaviour:
   minPitch: 10
   maxPitch: 80
   rotationSmoothSpeed: 15
-  invertCameraY: 0
+  invertCameraY: 1
   aimCameraDistance: 3
   aimShoulderOffset: 1
   aimPivotHeight: 4
@@ -986,6 +986,8 @@ MonoBehaviour:
   deathArmedTrigger: DeathArmed
   getHitTrigger: GetHit
   getHit2Trigger: GeiHit2
+  comboWindow: 1.2
+  comboTransitionThreshold: 0.75
   punchAnimDuration: 0.5
   slashAnimDuration: 0.6
   attacktaytraiDuration: 0.5
