@@ -80,7 +80,7 @@ public class AtlantisMenuController : MonoBehaviour
     private float _appliedSfxVol = 90f;
     private float _appliedSens = 50f;
     private bool _appliedInvertY = false;
-    private LocalizationManager.Language _appliedLanguage = LocalizationManager.Language.English;
+    private LocalizationManager.Language _appliedLanguage = LocalizationManager.Language.Vietnamese;
     private string _appliedMicDevice = "Default";
     private string _appliedMicMode = "Push To Talk";
     private float _appliedMicInputVol = 100f;
@@ -92,7 +92,7 @@ public class AtlantisMenuController : MonoBehaviour
     private VisualElement _activeDropdownPopup;
     private string _resolutionValue = "1920x1080 (FHD)";
     private string _qualityValue    = "High";
-    private string _languageValueString = "English";
+    private string _languageValueString = "Vietnamese";
     private string _micDeviceValue = "Default";
     private string _micModeValue = "Push To Talk";
     private string _outputDeviceValue = "System Default";
@@ -289,7 +289,7 @@ public class AtlantisMenuController : MonoBehaviour
         LocalizationManager.Get("quality_medium"), 
         LocalizationManager.Get("quality_low") 
     };
-    private static readonly string[] LanguageChoices   = { "English", "Vietnamese" };
+    private static readonly string[] LanguageChoices   = { "Vietnamese" };
     private string[] MicDeviceChoices => GetMicrophoneDevices();
     private string[] MicModeChoices => new string[] { 
         LocalizationManager.Get("mic_mode_ptt"), 
