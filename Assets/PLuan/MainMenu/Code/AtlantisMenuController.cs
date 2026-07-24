@@ -604,7 +604,7 @@ public class AtlantisMenuController : MonoBehaviour
         // Khóa nút và đổi chữ để báo hiệu đang xử lý
         if (btnConfirm != null) {
             btnConfirm.SetEnabled(false);
-            btnConfirm.text = "CREATING...";
+            btnConfirm.text = "ĐANG TẠO...";
         }
 
         Debug.Log($"[HOST] Đang tạo phòng: {roomName}");
@@ -625,7 +625,7 @@ public class AtlantisMenuController : MonoBehaviour
                 Debug.Log("[Room] Đang kết nối về VPS...");
                 if (SceneLoader.Instance != null)
                 {
-                    SceneLoader.Instance.ShowLoading("PREPARING LOBBY...");
+                    SceneLoader.Instance.ShowLoading("Đang tải môi trường...");
                 }
                 _netBootstrap.StartServerAsHost();
             }
@@ -636,7 +636,7 @@ public class AtlantisMenuController : MonoBehaviour
                 Debug.LogError("[Room] THẤT BẠI: Không tìm thấy NetworkBootstrap trong cảnh!");
                 if (btnConfirm != null) {
                     btnConfirm.SetEnabled(true);
-                    btnConfirm.text = "CONFIRM";
+                    btnConfirm.text = "XÁC NHẬN";
                 }
             }
 
@@ -647,7 +647,7 @@ public class AtlantisMenuController : MonoBehaviour
             // Mở lại nút nếu lỗi để người dùng thử lại
             if (btnConfirm != null) {
                 btnConfirm.SetEnabled(true);
-                btnConfirm.text = "CONFIRM";
+                btnConfirm.text = "XÁC NHẬN";
             }
         }
     }
@@ -1468,7 +1468,7 @@ public class AtlantisMenuController : MonoBehaviour
             if (res.needsVerification)
             {
                 _currentRegEmail = res.email;
-                _root.Q<Label>("lbl-otp-msg").text = "Account not verified. Check email.";
+                _root.Q<Label>("lbl-otp-msg").text = "Tài khoản chưa xác thực. Vui lòng kiểm tra email.";
                 ShowPanel(_verifyOtpPanel);
                 StartResendTimer(30);
             }
@@ -1490,7 +1490,7 @@ public class AtlantisMenuController : MonoBehaviour
 
         if (pwd != confirm)
         {
-            ShowError(lblErr, "Passwords do not match.");
+            ShowError(lblErr, "Mật khẩu xác nhận không khớp.");
             return;
         }
 
@@ -1498,7 +1498,7 @@ public class AtlantisMenuController : MonoBehaviour
         if (btn != null)
         {
             btn.SetEnabled(false);
-            btn.text = "PROCESSING...";
+            btn.text = "ĐANG XỬ LÝ...";
         }
 
         lblErr.AddToClassList("hidden-element");
@@ -1507,7 +1507,7 @@ public class AtlantisMenuController : MonoBehaviour
         if (res.success)
         {
             _currentRegEmail = res.email ?? email;
-            _root.Q<Label>("lbl-otp-msg").text = "We've sent a code to your email.";
+            _root.Q<Label>("lbl-otp-msg").text = "Chúng tôi đã gửi mã xác thực tới email của bạn.";
             ShowPanel(_verifyOtpPanel);
             StartResendTimer(30);
         }
@@ -1520,7 +1520,7 @@ public class AtlantisMenuController : MonoBehaviour
         if (btn != null)
         {
             btn.SetEnabled(true);
-            btn.text = "CREATE ACCOUNT";
+            btn.text = "TẠO TÀI KHOẢN";
         }
     }
 
@@ -1540,7 +1540,7 @@ public class AtlantisMenuController : MonoBehaviour
             _root.Q<TextField>("input-login-email").value = _currentRegEmail;
             _root.Q<TextField>("input-login-password").value = "";
             ShowPanel(_loginPanel);
-            ShowError(_root.Q<Label>("lbl-login-error"), "Verification success! Please login.", false);
+            ShowError(_root.Q<Label>("lbl-login-error"), "Xác minh thành công! Vui lòng đăng nhập.", false);
         }
         else
         {
@@ -1556,7 +1556,7 @@ public class AtlantisMenuController : MonoBehaviour
 
         if (res.success)
         {
-            _root.Q<Label>("lbl-otp-msg").text = "A new code has been sent.";
+            _root.Q<Label>("lbl-otp-msg").text = "Mã xác thực mới đã được gửi.";
             StartResendTimer(30);
         }
         else
@@ -1602,12 +1602,12 @@ public class AtlantisMenuController : MonoBehaviour
 
         while (_resendTimerCount > 0)
         {
-            btn.text = $"RESEND IN {_resendTimerCount}S";
+            btn.text = $"GỬI LẠI TRONG {_resendTimerCount}S";
             await Task.Delay(1000);
             _resendTimerCount--;
         }
 
-        btn.text = "RESEND CODE";
+        btn.text = "GỬI LẠI MÃ";
         btn.SetEnabled(true);
     }
 

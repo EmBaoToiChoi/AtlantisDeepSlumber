@@ -2,31 +2,31 @@
     <Style src="project://database/Assets/PLuan/MainMenu/Code/AtlantisMenu.uss?fileID=7433441132597879392&amp;guid=8fa4b76500634d046bac501785335e61&amp;type=3#AtlantisMenu" />
     <ui:VisualElement class="root-screen" style="-unity-font-definition: url(&quot;project://database/Assets/PLuan/MainMenu/Font/Elms_Sans/static/ElmsSans-BoldItalic.ttf?fileID=12800000&amp;guid=516a0c13403c3af48ac760e7a0157fee&amp;type=3#ElmsSans-BoldItalic&quot;);">
         <ui:VisualElement name="user-profile-container" class="user-profile-box hidden-element" style="background-image: url(&quot;project://database/Assets/PLuan/TenDn,TenRoom.png?fileID=2800000&amp;guid=092267d7de866b849a9e7eedb67ce2a3&amp;type=3#TenDn,TenRoom&quot;);">
-            <ui:Label name="lbl-profile-hint" text="LOGGED IN AS:" class="user-profile-label" />
+            <ui:Label name="lbl-profile-hint" text="ĐĂNG NHẬP BỞI:" class="user-profile-label" />
             <ui:Label name="lbl-display-name" text="PLAYER_NAME" class="user-profile-name" />
-            <ui:Button name="btn-logout" text="LOGOUT" class="join-mini-btn logout-btn" />
+            <ui:Button name="btn-logout" text="ĐĂNG XUẤT" class="join-mini-btn logout-btn" />
         </ui:VisualElement>
         <ui:VisualElement name="login-panel" class="menu-container hidden-panel" style="background-image: url(&quot;project://database/Assets/PLuan/menuda.png?fileID=2800000&amp;guid=b71e5fe46dbce4849b9385c26298aaa1&amp;type=3#menuda&quot;);">
-            <ui:Label name="lbl-login-title" text="USER LOGIN" class="panel-title" />
+            <ui:Label name="lbl-login-title" text="ĐĂNG NHẬP" class="panel-title" />
             <ui:Label name="lbl-login-error" class="error-text hidden-element" />
             <ui:VisualElement class="form-group">
                 <ui:Label name="lbl-login-email" text="EMAIL" class="form-label" />
                 <ui:TextField name="input-login-email" class="form-input" />
             </ui:VisualElement>
             <ui:VisualElement class="form-group">
-                <ui:Label name="lbl-login-password" text="PASSWORD" class="form-label" />
+                <ui:Label name="lbl-login-password" text="MẬT KHẨU" class="form-label" />
                 <ui:TextField name="input-login-password" password="true" class="form-input" />
             </ui:VisualElement>
             <ui:VisualElement class="button-group" style="margin-top: 15px;">
-                <ui:Button name="btn-login" text="LOGIN" class="menu-btn" />
-                <ui:Button name="btn-goto-register" text="CREATE ACCOUNT" class="menu-btn back-btn" />
+                <ui:Button name="btn-login" text="ĐĂNG NHẬP" class="menu-btn" />
+                <ui:Button name="btn-goto-register" text="TẠO TÀI KHOẢN" class="menu-btn back-btn" />
             </ui:VisualElement>
         </ui:VisualElement>
         <ui:VisualElement name="register-panel" class="menu-container large-panel hidden-panel" style="background-image: url(&quot;project://database/Assets/PLuan/menuda.png?fileID=2800000&amp;guid=b71e5fe46dbce4849b9385c26298aaa1&amp;type=3#menuda&quot;);">
-            <ui:Label name="lbl-reg-title" text="NEW ACCOUNT" class="panel-title" />
+            <ui:Label name="lbl-reg-title" text="TÀI KHOẢN MỚI" class="panel-title" />
             <ui:Label name="lbl-reg-error" class="error-text hidden-element" />
             <ui:VisualElement class="form-group">
-                <ui:Label name="lbl-reg-name" text="DISPLAY NAME" class="form-label" />
+                <ui:Label name="lbl-reg-name" text="TÊN HIỂN THỊ" class="form-label" />
                 <ui:TextField name="input-reg-name" class="form-input" />
             </ui:VisualElement>
             <ui:VisualElement class="form-group">
@@ -34,114 +34,114 @@
                 <ui:TextField name="input-reg-email" class="form-input" />
             </ui:VisualElement>
             <ui:VisualElement class="form-group">
-                <ui:Label name="lbl-reg-password" text="PASSWORD" class="form-label" />
+                <ui:Label name="lbl-reg-password" text="MẬT KHẨU" class="form-label" />
                 <ui:TextField name="input-reg-password" password="true" class="form-input" />
             </ui:VisualElement>
             <ui:VisualElement class="form-group">
-                <ui:Label name="lbl-reg-confirm" text="CONFIRM PASSWORD" class="form-label" />
+                <ui:Label name="lbl-reg-confirm" text="XÁC NHẬN MẬT KHẨU" class="form-label" />
                 <ui:TextField name="input-reg-confirm" password="true" class="form-input" />
             </ui:VisualElement>
             <ui:VisualElement class="button-group" style="margin-top: 8px;">
-                <ui:Button name="btn-register" text="CREATE ACCOUNT" class="menu-btn" />
-                <ui:Button name="btn-goto-login" text="&lt; BACK TO LOGIN" class="menu-btn back-btn" />
+                <ui:Button name="btn-register" text="TẠO TÀI KHOẢN" class="menu-btn" />
+                <ui:Button name="btn-goto-login" text="&lt; QUAY LẠI" class="menu-btn back-btn" />
             </ui:VisualElement>
         </ui:VisualElement>
         <ui:VisualElement name="verify-otp-panel" class="menu-container hidden-panel" style="background-image: url(&quot;project://database/Assets/PLuan/menuda.png?fileID=2800000&amp;guid=b71e5fe46dbce4849b9385c26298aaa1&amp;type=3#menuda&quot;);">
-            <ui:Label name="lbl-otp-title" text="VERIFY EMAIL" class="panel-title" />
-            <ui:Label name="lbl-otp-msg" text="We&apos;ve sent a code to your email." class="info-text" />
-            <ui:Label name="lbl-otp-spam-note" text="* Don&apos;t see it? Check your Spam/Junk folder." class="spam-note" />
+            <ui:Label name="lbl-otp-title" text="XÁC MINH EMAIL" class="panel-title" />
+            <ui:Label name="lbl-otp-msg" text="Chúng tôi đã gửi mã xác thực tới email của bạn." class="info-text" />
+            <ui:Label name="lbl-otp-spam-note" text="* Không thấy? Hãy kiểm tra Thư rác nhé." class="spam-note" />
             <ui:Label name="lbl-otp-error" class="error-text hidden-element" />
             <ui:VisualElement class="form-group" style="margin-top: 10px;">
-                <ui:Label name="lbl-otp-code" text="OTP CODE" class="form-label" />
+                <ui:Label name="lbl-otp-code" text="MÃ XÁC THỰC" class="form-label" />
                 <ui:TextField name="input-otp" max-length="6" class="form-input otp-input" />
             </ui:VisualElement>
             <ui:VisualElement class="button-group" style="margin-top: 6px;">
-                <ui:Button name="btn-verify-otp" text="VERIFY" class="menu-btn" />
-                <ui:Button name="btn-resend-otp" text="RESEND CODE" class="menu-btn back-btn" />
-                <ui:Button name="btn-cancel-otp" text="&lt; CANCEL" class="menu-btn back-btn" style="margin-left: 0; margin-top: 6px;" />
+                <ui:Button name="btn-verify-otp" text="XÁC MINH" class="menu-btn" />
+                <ui:Button name="btn-resend-otp" text="GỬI LẠI MÃ" class="menu-btn back-btn" />
+                <ui:Button name="btn-cancel-otp" text="&lt; HỦY" class="menu-btn back-btn" style="margin-left: 0; margin-top: 6px;" />
             </ui:VisualElement>
         </ui:VisualElement>
         <ui:VisualElement name="main-menu-panel" class="menu-container hidden-panel" style="background-image: url(&quot;project://database/Assets/PLuan/menuda.png?fileID=2800000&amp;guid=b71e5fe46dbce4849b9385c26298aaa1&amp;type=3#menuda&quot;);">
             <ui:VisualElement class="button-group">
-                <ui:Button name="btn-play" text="PLAY" class="menu-btn" />
-                <ui:Button name="btn-options" text="OPTIONS" class="menu-btn" />
-                <ui:Button name="btn-quit" text="QUIT" class="menu-btn quit-btn" />
+                <ui:Button name="btn-play" text="VÀO GAME" class="menu-btn" />
+                <ui:Button name="btn-options" text="CÀI ĐẶT" class="menu-btn" />
+                <ui:Button name="btn-quit" text="THOÁT" class="menu-btn quit-btn" />
             </ui:VisualElement>
         </ui:VisualElement>
         <ui:VisualElement name="network-menu-panel" class="menu-container hidden-panel" style="background-image: url(&quot;project://database/Assets/PLuan/menuda.png?fileID=2800000&amp;guid=b71e5fe46dbce4849b9385c26298aaa1&amp;type=3#menuda&quot;);">
-            <ui:Label name="lbl-lobby-title" text="SESSION LOBBY" class="panel-title" />
+            <ui:Label name="lbl-lobby-title" text="SẢNH CHỜ" class="panel-title" />
             <ui:VisualElement class="button-group">
-                <ui:Button name="btn-create-host" text="CREATE (HOST)" class="menu-btn" />
-                <ui:Button name="btn-join-client" text="JOIN (CLIENT)" class="menu-btn" />
-                <ui:Button name="btn-lobby-back" text="&lt; BACK" class="menu-btn back-btn" />
+                <ui:Button name="btn-create-host" text="TẠO PHÒNG" class="menu-btn" />
+                <ui:Button name="btn-join-client" text="VÀO PHÒNG" class="menu-btn" />
+                <ui:Button name="btn-lobby-back" text="&lt; QUAY LẠI" class="menu-btn back-btn" />
             </ui:VisualElement>
         </ui:VisualElement>
         <ui:VisualElement name="create-room-panel" class="menu-container hidden-panel" style="background-image: url(&quot;project://database/Assets/PLuan/menuda.png?fileID=2800000&amp;guid=b71e5fe46dbce4849b9385c26298aaa1&amp;type=3#menuda&quot;);">
-            <ui:Label name="lbl-host-title" text="HOST SESSION" class="panel-title" />
+            <ui:Label name="lbl-host-title" text="TẠO PHÒNG" class="panel-title" />
             <ui:VisualElement class="form-group">
-                <ui:Label name="lbl-room-name" text="HOST / ROOM NAME" class="form-label" />
+                <ui:Label name="lbl-room-name" text="TÊN PHÒNG / CHỦ PHÒNG" class="form-label" />
                 <ui:TextField name="input-room-name" value="Atlantis Explorer" class="form-input" />
             </ui:VisualElement>
             <ui:VisualElement class="form-group">
-                <ui:Label name="lbl-privacy" text="PRIVACY" class="form-label" />
+                <ui:Label name="lbl-privacy" text="QUYỀN RIÊNG TƯ" class="form-label" />
                 <ui:RadioButtonGroup name="radio-privacy" value="0" class="radio-group">
-                    <ui:RadioButton name="radio-public" text="Public" class="radio-text-public" />
-                    <ui:RadioButton name="radio-private" text="Private" class="radio-text-private" />
+                    <ui:RadioButton name="radio-public" text="Công khai" class="radio-text-public" />
+                    <ui:RadioButton name="radio-private" text="Riêng tư" class="radio-text-private" />
                 </ui:RadioButtonGroup>
             </ui:VisualElement>
             <ui:VisualElement name="password-group" class="form-group hidden-element">
-                <ui:Label name="lbl-room-password" text="PASSWORD" class="form-label" />
+                <ui:Label name="lbl-room-password" text="MẬT KHẨU" class="form-label" />
                 <ui:TextField name="input-room-password" password="true" is-delayed="true" class="form-input" />
             </ui:VisualElement>
             <ui:VisualElement class="button-group" style="margin-top: 15px;">
-                <ui:Button name="btn-confirm-create" text="START HOSTING" class="menu-btn" />
-                <ui:Button name="btn-create-back" text="&lt; BACK" class="menu-btn back-btn" />
+                <ui:Button name="btn-confirm-create" text="BẮT ĐẦU" class="menu-btn" />
+                <ui:Button name="btn-create-back" text="&lt; QUAY LẠI" class="menu-btn back-btn" />
             </ui:VisualElement>
         </ui:VisualElement>
         <ui:VisualElement name="join-room-panel" class="menu-container large-panel hidden-panel" style="background-image: url(&quot;project://database/Assets/PLuan/menuda.png?fileID=2800000&amp;guid=b71e5fe46dbce4849b9385c26298aaa1&amp;type=3#menuda&quot;);">
-            <ui:Label name="lbl-browser-title" text="SESSION BROWSER" class="panel-title" />
+            <ui:Label name="lbl-browser-title" text="DANH SÁCH PHÒNG" class="panel-title" />
             <ui:VisualElement class="join-id-bar">
                 <ui:TextField name="input-room-id" max-length="6" class="form-input id-input" />
-                <ui:Button name="btn-join-by-id" text="JOIN BY ID" class="join-mini-btn id-btn" />
+                <ui:Button name="btn-join-by-id" text="VÀO BẰNG ID" class="join-mini-btn id-btn" />
             </ui:VisualElement>
             <ui:VisualElement class="table-header">
-                <ui:Label name="lbl-col-id" text="ROOM ID" class="col-id" />
-                <ui:Label name="lbl-col-name" text="ROOM NAME" class="col-name" />
-                <ui:Label name="lbl-col-host" text="HOST" class="col-host" />
-                <ui:Label name="lbl-col-players" text="PLAYERS" class="col-players" />
-                <ui:Label name="lbl-col-action" text="ACTION" class="col-action" />
+                <ui:Label name="lbl-col-id" text="ID PHÒNG" class="col-id" />
+                <ui:Label name="lbl-col-name" text="TÊN PHÒNG" class="col-name" />
+                <ui:Label name="lbl-col-host" text="CHỦ PHÒNG" class="col-host" />
+                <ui:Label name="lbl-col-players" text="NGƯỜI CHƠI" class="col-players" />
+                <ui:Label name="lbl-col-action" text="HÀNH ĐỘNG" class="col-action" />
             </ui:VisualElement>
             <ui:ScrollView mode="Vertical" name="room-scroll-view" class="room-list" />
             <ui:VisualElement style="margin-top: 15px; width: 100%; align-items: center; justify-content: center;">
-                <ui:Button name="btn-join-back" text="&lt; BACK" class="menu-btn back-btn" />
+                <ui:Button name="btn-join-back" text="&lt; QUAY LẠI" class="menu-btn back-btn" />
             </ui:VisualElement>
         </ui:VisualElement>
         <ui:VisualElement name="join-auth-panel" class="menu-container hidden-panel" style="background-image: url(&quot;project://database/Assets/PLuan/menuda.png?fileID=2800000&amp;guid=b71e5fe46dbce4849b9385c26298aaa1&amp;type=3#menuda&quot;);">
-            <ui:Label name="lbl-auth-title" text="ENTER PASSWORD" class="panel-title" />
-            <ui:Label name="auth-room-name" text="SESSION: ..." class="auth-room-label" />
+            <ui:Label name="lbl-auth-title" text="NHẬP MẬT KHẨU" class="panel-title" />
+            <ui:Label name="auth-room-name" text="PHÒNG: ..." class="auth-room-label" />
             <ui:VisualElement class="form-group">
-                <ui:Label name="lbl-auth-password" text="ROOM PASSWORD" class="form-label" />
+                <ui:Label name="lbl-auth-password" text="MẬT KHẨU PHÒNG" class="form-label" />
                 <ui:TextField name="input-join-password" password="true" class="form-input" />
             </ui:VisualElement>
             <ui:VisualElement class="button-group" style="margin-top: 15px;">
-                <ui:Button name="btn-confirm-join-private" text="CONNECT" class="menu-btn" />
-                <ui:Button name="btn-auth-cancel" text="&lt; CANCEL" class="menu-btn back-btn" />
+                <ui:Button name="btn-confirm-join-private" text="KẾT NỐI" class="menu-btn" />
+                <ui:Button name="btn-auth-cancel" text="&lt; HỦY" class="menu-btn back-btn" />
             </ui:VisualElement>
         </ui:VisualElement>
         <ui:VisualElement name="options-menu-panel" class="menu-container large-panel hidden-panel" style="background-image: url(&quot;project://database/Assets/PLuan/menuda.png?fileID=2800000&amp;guid=b71e5fe46dbce4849b9385c26298aaa1&amp;type=3#menuda&quot;);">
-            <ui:Label name="lbl-options-title" text="SYSTEM OPTIONS" class="panel-title" />
+            <ui:Label name="lbl-options-title" text="CÀI ĐẶT HỆ THỐNG" class="panel-title" />
             <ui:VisualElement class="options-tabs">
-                <ui:Button name="tab-general-btn" text="GENERAL" class="tab-btn active" />
-                <ui:Button name="tab-audio-btn" text="AUDIO" class="tab-btn" />
-                <ui:Button name="tab-graphics-btn" text="GRAPHICS" class="tab-btn" />
-                <ui:Button name="tab-controls-btn" text="CONTROLS" class="tab-btn" />
+                <ui:Button name="tab-general-btn" text="CHUNG" class="tab-btn active" />
+                <ui:Button name="tab-audio-btn" text="ÂM THANH" class="tab-btn" />
+                <ui:Button name="tab-graphics-btn" text="ĐỒ HỌA" class="tab-btn" />
+                <ui:Button name="tab-controls-btn" text="ĐIỀU KHIỂN" class="tab-btn" />
             </ui:VisualElement>
             <ui:ScrollView mode="Vertical" name="options-scroll-view" elastic="true" scroll-deceleration-rate="0.13" elasticity="0.1" class="options-content-scroll">
                 <ui:VisualElement name="tab-general" class="tab-content">
                     <ui:VisualElement class="form-group">
-                        <ui:Label name="lbl-opt-language" text="LANGUAGE" class="form-label" />
+                        <ui:Label name="lbl-opt-language" text="NGÔN NGỮ" class="form-label" />
                         <ui:VisualElement name="opt-language" class="custom-dropdown">
-                            <ui:Label name="opt-language-value" text="English" class="custom-dropdown-value" />
+                            <ui:Label name="opt-language-value" text="Vietnamese" class="custom-dropdown-value" />
                             <ui:Label text="▼" class="custom-dropdown-arrow" />
                         </ui:VisualElement>
                     </ui:VisualElement>
@@ -149,41 +149,41 @@
                 <ui:VisualElement name="tab-audio" class="tab-content hidden-element">
                     <ui:VisualElement class="form-group">
                         <ui:VisualElement class="slider-header">
-                            <ui:Label name="lbl-master-volume" text="MASTER VOLUME" class="form-label" />
+                            <ui:Label name="lbl-master-volume" text="ÂM THANH TỔNG" class="form-label" />
                             <ui:Label name="val-master" text="100%" class="slider-val" />
                         </ui:VisualElement>
                         <ui:Slider name="slider-master" low-value="0" high-value="100" value="100" class="custom-slider" />
                     </ui:VisualElement>
                     <ui:VisualElement class="form-group">
                         <ui:VisualElement class="slider-header">
-                            <ui:Label name="lbl-music-bgm" text="MUSIC (BGM)" class="form-label" />
+                            <ui:Label name="lbl-music-bgm" text="NHẠC NỀN" class="form-label" />
                             <ui:Label name="val-music" text="80%" class="slider-val" />
                         </ui:VisualElement>
                         <ui:Slider name="slider-music" low-value="0" high-value="100" value="80" class="custom-slider" />
                     </ui:VisualElement>
                     <ui:VisualElement class="form-group">
                         <ui:VisualElement class="slider-header">
-                            <ui:Label name="lbl-effects-sfx" text="EFFECTS (SFX)" class="form-label" />
+                            <ui:Label name="lbl-effects-sfx" text="HIỆU ỨNG" class="form-label" />
                             <ui:Label name="val-sfx" text="90%" class="slider-val" />
                         </ui:VisualElement>
                         <ui:Slider name="slider-sfx" low-value="0" high-value="100" value="90" class="custom-slider" />
                     </ui:VisualElement>
                     <ui:VisualElement class="form-group">
-                        <ui:Label name="lbl-opt-mic-device" text="MICROPHONE DEVICE" class="form-label" />
+                        <ui:Label name="lbl-opt-mic-device" text="THIẾT BỊ MICRO" class="form-label" />
                         <ui:VisualElement name="opt-mic-device" class="custom-dropdown">
                             <ui:Label name="opt-mic-device-value" text="Default" class="custom-dropdown-value" />
                             <ui:Label text="▼" class="custom-dropdown-arrow" />
                         </ui:VisualElement>
                     </ui:VisualElement>
                     <ui:VisualElement class="form-group">
-                        <ui:Label name="lbl-opt-output-device" text="OUTPUT DEVICE" class="form-label" />
+                        <ui:Label name="lbl-opt-output-device" text="THIẾT BỊ ĐẦU RA" class="form-label" />
                         <ui:VisualElement name="opt-output-device" class="custom-dropdown">
                             <ui:Label name="opt-output-device-value" text="System Default" class="custom-dropdown-value" />
                             <ui:Label text="▼" class="custom-dropdown-arrow" />
                         </ui:VisualElement>
                     </ui:VisualElement>
                     <ui:VisualElement class="form-group">
-                        <ui:Label name="lbl-opt-mic-mode" text="TRANSMISSION MODE" class="form-label" />
+                        <ui:Label name="lbl-opt-mic-mode" text="CHẾ ĐỘ TRUYỀN THÔNG TIN" class="form-label" />
                         <ui:VisualElement name="opt-mic-mode" class="custom-dropdown">
                             <ui:Label name="opt-mic-mode-value" text="Push To Talk" class="custom-dropdown-value" />
                             <ui:Label text="▼" class="custom-dropdown-arrow" />
@@ -191,14 +191,14 @@
                     </ui:VisualElement>
                     <ui:VisualElement class="form-group">
                         <ui:VisualElement class="slider-header">
-                            <ui:Label name="lbl-mic-input-vol" text="MIC INPUT VOLUME" class="form-label" />
+                            <ui:Label name="lbl-mic-input-vol" text="ÂM LƯỢNG THU (MICRO)" class="form-label" />
                             <ui:Label name="val-mic-input" text="100%" class="slider-val" />
                         </ui:VisualElement>
                         <ui:Slider name="slider-mic-input" low-value="0" high-value="100" value="100" class="custom-slider" />
                     </ui:VisualElement>
                     <ui:VisualElement class="form-group">
                         <ui:VisualElement class="slider-header">
-                            <ui:Label name="lbl-voice-playback-vol" text="PLAYER VOICE VOLUME" class="form-label" />
+                            <ui:Label name="lbl-voice-playback-vol" text="ÂM LƯỢNG NGƯỜI CHƠI KHÁC" class="form-label" />
                             <ui:Label name="val-voice-playback" text="100%" class="slider-val" />
                         </ui:VisualElement>
                         <ui:Slider name="slider-voice-playback" low-value="0" high-value="100" value="100" class="custom-slider" />
@@ -206,37 +206,37 @@
                 </ui:VisualElement>
                 <ui:VisualElement name="tab-graphics" class="tab-content hidden-element">
                     <ui:VisualElement class="form-group">
-                        <ui:Label name="lbl-resolution" text="RESOLUTION" class="form-label" />
+                        <ui:Label name="lbl-resolution" text="ĐỘ PHÂN GIẢI" class="form-label" />
                         <ui:VisualElement name="opt-resolution" class="custom-dropdown">
                             <ui:Label name="opt-resolution-value" text="1920x1080 (FHD)" class="custom-dropdown-value" />
                             <ui:Label text="▼" class="custom-dropdown-arrow" />
                         </ui:VisualElement>
                     </ui:VisualElement>
                     <ui:VisualElement class="form-group">
-                        <ui:Label name="lbl-graphics-quality" text="GRAPHICS QUALITY" class="form-label" />
+                        <ui:Label name="lbl-graphics-quality" text="CHẤT LƯỢNG ĐỒ HỌA" class="form-label" />
                         <ui:VisualElement name="opt-quality" class="custom-dropdown">
-                            <ui:Label name="opt-quality-value" text="High" class="custom-dropdown-value" />
+                            <ui:Label name="opt-quality-value" text="Cao" class="custom-dropdown-value" />
                             <ui:Label text="▼" class="custom-dropdown-arrow" />
                         </ui:VisualElement>
                     </ui:VisualElement>
                     <ui:VisualElement class="checkbox-group-wrapper">
-                        <ui:Toggle name="opt-fullscreen" label="FULLSCREEN MODE" value="true" class="checkbox-label" />
-                        <ui:Toggle name="opt-vsync" label="ENABLE V-SYNC" value="true" class="checkbox-label" />
+                        <ui:Toggle name="opt-fullscreen" label="TOÀN MÀN HÌNH" value="true" class="checkbox-label" />
+                        <ui:Toggle name="opt-vsync" label="ĐỒNG BỘ V-SYNC" value="true" class="checkbox-label" />
                     </ui:VisualElement>
                 </ui:VisualElement>
                 <ui:VisualElement name="tab-controls" class="tab-content hidden-element">
                     <ui:VisualElement class="form-group">
                         <ui:VisualElement class="slider-header">
-                            <ui:Label name="lbl-mouse-sens" text="MOUSE SENSITIVITY" class="form-label" />
+                            <ui:Label name="lbl-mouse-sens" text="ĐỘ NHẠY CHUỘT" class="form-label" />
                             <ui:Label name="val-sens" text="50" class="slider-val" />
                         </ui:VisualElement>
                         <ui:Slider name="slider-sens" low-value="1" high-value="100" value="50" class="custom-slider" />
                     </ui:VisualElement>
                     <ui:VisualElement class="checkbox-group-wrapper" style="margin-top: 20px;">
-                        <ui:Toggle name="opt-invert-y" label="INVERT Y-AXIS" value="false" class="checkbox-label" />
+                        <ui:Toggle name="opt-invert-y" label="ĐẢO TRỤC Y" value="false" class="checkbox-label" />
                     </ui:VisualElement>
                     <ui:VisualElement class="form-group" style="margin-top: 15px;">
-                        <ui:Label name="lbl-ptt-key" text="PUSH TO TALK KEY" class="form-label" />
+                        <ui:Label name="lbl-ptt-key" text="PHÍM NHẤN ĐỂ NÓI" class="form-label" />
                         <ui:VisualElement name="opt-ptt-key" class="custom-dropdown">
                             <ui:Label name="opt-ptt-key-value" text="V" class="custom-dropdown-value" />
                             <ui:Label text="▼" class="custom-dropdown-arrow" />
@@ -245,19 +245,19 @@
                 </ui:VisualElement>
             </ui:ScrollView>
             <ui:VisualElement class="options-actions">
-                <ui:Button name="btn-save-options" text="APPLY" class="join-mini-btn" />
-                <ui:Button name="btn-cancel-options" text="CANCEL" class="join-mini-btn cancel-btn" />
+                <ui:Button name="btn-save-options" text="ÁP DỤNG" class="join-mini-btn" />
+                <ui:Button name="btn-cancel-options" text="HỦY" class="join-mini-btn cancel-btn" />
             </ui:VisualElement>
         </ui:VisualElement>
         <ui:Label text="Atlantis: Deep Slumber // Pre-Alpha 0.2" class="version-text" />
     </ui:VisualElement>
     <ui:VisualElement name="confirm-overlay" class="confirm-overlay hidden-element">
         <ui:VisualElement class="confirm-dialog" style="background-image: url(&quot;project://database/Assets/PLuan/menuda.png?fileID=2800000&amp;guid=b71e5fe46dbce4849b9385c26298aaa1&amp;type=3#menuda&quot;);">
-            <ui:Label name="lbl-confirm-title" text="APPLY SETTINGS?" class="confirm-title" />
-            <ui:Label name="lbl-confirm-msg" text="Changes will be applied immediately." class="confirm-subtitle" />
+            <ui:Label name="lbl-confirm-title" text="LƯU CÀI ĐẶT?" class="confirm-title" />
+            <ui:Label name="lbl-confirm-msg" text="Các thay đổi sẽ được áp dụng ngay lập tức." class="confirm-subtitle" />
             <ui:VisualElement class="confirm-buttons">
-                <ui:Button name="btn-confirm-yes" text="CONFIRM" class="confirm-btn confirm-btn-yes" />
-                <ui:Button name="btn-confirm-no" text="CANCEL" class="confirm-btn confirm-btn-no" />
+                <ui:Button name="btn-confirm-yes" text="XÁC NHẬN" class="confirm-btn confirm-btn-yes" />
+                <ui:Button name="btn-confirm-no" text="HỦY" class="confirm-btn confirm-btn-no" />
             </ui:VisualElement>
         </ui:VisualElement>
     </ui:VisualElement>

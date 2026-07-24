@@ -2,11 +2,11 @@
     <Style src="./LoadingScreen.uss" />
     <ui:VisualElement name="loading-root" class="loading-overlay hidden-element">
         <ui:VisualElement class="loading-content">
-            <ui:Label name="lbl-loading-title" text="INITIALIZING SYSTEM..." class="loading-title" />
+            <ui:Label name="lbl-loading-title" text="ĐANG TẢI MÔI TRƯỜNG..." class="loading-title" />
             <ui:VisualElement class="progress-container">
                 <ui:VisualElement name="progress-fill" class="progress-fill" />
             </ui:VisualElement>
-            <ui:Label name="lbl-status" text="CONNECTING TO ATLANTIS NETWORK..." class="loading-status" />
+            <ui:Label name="lbl-status" text="Đang tải môi trường..." class="loading-status" />
         </ui:VisualElement>
     </ui:VisualElement>
 </ui:UXML>

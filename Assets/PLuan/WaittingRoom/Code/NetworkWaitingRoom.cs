@@ -279,7 +279,7 @@ public class NetworkWaitingRoom : NetworkBehaviour
         }
         if (_btnToggleCharPanel != null)
         {
-            _btnToggleCharPanel.text = "CHOOSE EXPLORER";
+            _btnToggleCharPanel.text = "CHỌN NHÂN VẬT";
         }
 
         // Đăng ký sự kiện Click cho 4 thẻ nhân vật
@@ -424,7 +424,7 @@ public class NetworkWaitingRoom : NetworkBehaviour
         _isSwapModeActive = !_isSwapModeActive;
         if (_btnSwapCharacter != null)
         {
-            _btnSwapCharacter.text = _isSwapModeActive ? "CANCEL SWAP" : "SWAP EXPLORER";
+            _btnSwapCharacter.text = _isSwapModeActive ? "HỦY ĐỔI" : "ĐỔI NHÂN VẬT";
         }
         UpdatePlayerUI();
     }
@@ -451,12 +451,12 @@ public class NetworkWaitingRoom : NetworkBehaviour
         {
             _charSelectPanel.style.display = DisplayStyle.Flex;
             _charPanelAnimCoroutine = StartCoroutine(ShowCharPanelCoroutine());
-            _btnToggleCharPanel.text = "HIDE SELECTION";
+            _btnToggleCharPanel.text = "ẨN BẢNG CHỌN";
         }
         else
         {
             _charPanelAnimCoroutine = StartCoroutine(HideCharPanelCoroutine());
-            _btnToggleCharPanel.text = "CHOOSE EXPLORER";
+            _btnToggleCharPanel.text = "CHỌN NHÂN VẬT";
         }
     }
 
@@ -586,7 +586,7 @@ public class NetworkWaitingRoom : NetworkBehaviour
             // Hiển thị cảnh báo nhân vật đã bị người khác chọn
             if (_lblWarning != null)
             {
-                _lblWarning.text = $"{_characters[charId].Name} IS ALREADY TAKEN!";
+                _lblWarning.text = $"{_characters[charId].Name.ToUpper()} ĐÃ ĐƯỢC CHỌN!";
                 _lblWarning.RemoveFromClassList("hidden-element");
                 _lblWarning.style.display = DisplayStyle.Flex;
                 CancelInvoke(nameof(HideWarningLabel));
@@ -800,14 +800,14 @@ public class NetworkWaitingRoom : NetworkBehaviour
     {
         string localName = PlayerPrefs.GetString("CurrentRoomName", "UNKNOWN");
         string localId = PlayerPrefs.GetString("CurrentRoomID", "XXXXXX");
-        if (_lblRoomName != null) _lblRoomName.text = $"SESSION: {localName.ToUpper()}";
+        if (_lblRoomName != null) _lblRoomName.text = $"PHÒNG: {localName.ToUpper()}";
         if (_lblRoomId != null) _lblRoomId.text = $"ID: #{localId}";
     }
 
 
     private void UpdateRoomUI()
     {
-        if (_lblRoomName != null) _lblRoomName.text = $"SESSION: {NetRoomName.Value.ToString().ToUpper()}";
+        if (_lblRoomName != null) _lblRoomName.text = $"PHÒNG: {NetRoomName.Value.ToString().ToUpper()}";
         if (_lblRoomId != null) _lblRoomId.text = $"ID: #{NetRoomId.Value.ToString()}";
     }
 
@@ -824,7 +824,7 @@ public class NetworkWaitingRoom : NetworkBehaviour
 
     private void UpdatePlayerUI()
     {
-        if (_lblPlayerCount != null) _lblPlayerCount.text = $"PLAYERS: {NetPlayers.Count}/4";
+        if (_lblPlayerCount != null) _lblPlayerCount.text = $"NGƯỜI CHƠI: {NetPlayers.Count}/4";
         
         // Reset all 4 character cards to default state
         for (int i = 0; i < 4; i++)
@@ -837,7 +837,7 @@ public class NetworkWaitingRoom : NetworkBehaviour
             }
             if (statusLbl != null)
             {
-                statusLbl.text = "FREE";
+                statusLbl.text = "TRỐNG";
                 statusLbl.RemoveFromClassList("active-status");
             }
         }
@@ -858,22 +858,22 @@ public class NetworkWaitingRoom : NetworkBehaviour
             }
             if (charId == 0)
             {
-                if (p.ClientId == NetworkManager.Singleton.LocalClientId) selectorsPerChar0.Insert(0, "YOU");
+                if (p.ClientId == NetworkManager.Singleton.LocalClientId) selectorsPerChar0.Insert(0, "BẠN");
                 else selectorsPerChar0.Add(p.Name.ToString().ToUpper());
             }
             else if (charId == 1)
             {
-                if (p.ClientId == NetworkManager.Singleton.LocalClientId) selectorsPerChar1.Insert(0, "YOU");
+                if (p.ClientId == NetworkManager.Singleton.LocalClientId) selectorsPerChar1.Insert(0, "BẠN");
                 else selectorsPerChar1.Add(p.Name.ToString().ToUpper());
             }
             else if (charId == 2)
             {
-                if (p.ClientId == NetworkManager.Singleton.LocalClientId) selectorsPerChar2.Insert(0, "YOU");
+                if (p.ClientId == NetworkManager.Singleton.LocalClientId) selectorsPerChar2.Insert(0, "BẠN");
                 else selectorsPerChar2.Add(p.Name.ToString().ToUpper());
             }
             else if (charId == 3)
             {
-                if (p.ClientId == NetworkManager.Singleton.LocalClientId) selectorsPerChar3.Insert(0, "YOU");
+                if (p.ClientId == NetworkManager.Singleton.LocalClientId) selectorsPerChar3.Insert(0, "BẠN");
                 else selectorsPerChar3.Add(p.Name.ToString().ToUpper());
             }
         }
@@ -909,7 +909,7 @@ public class NetworkWaitingRoom : NetworkBehaviour
         }
 
         // Cập nhật số lượng người chơi - sẻ ghi đè lại sau khi tính ready count
-        if (_lblPlayerCount != null) _lblPlayerCount.text = $"PLAYERS: {NetPlayers.Count}/4";
+        if (_lblPlayerCount != null) _lblPlayerCount.text = $"NGƯỜI CHƠI: {NetPlayers.Count}/4";
 
         // KIỂM TRA ĐIỀU KIỆN: Đủ 1 người VÀ tất cả đều ready
         int readyCount = 0;
@@ -919,7 +919,7 @@ public class NetworkWaitingRoom : NetworkBehaviour
 
         // Cập nhật text với thông tin ready
         if (_lblPlayerCount != null)
-            _lblPlayerCount.text = $"PLAYERS: {NetPlayers.Count}/4  ·  READY: {readyCount}/{(NetPlayers.Count > 0 ? NetPlayers.Count.ToString() : "0")}";
+            _lblPlayerCount.text = $"NGƯỜI CHƠI: {NetPlayers.Count}/4  ·  SẴN SÀNG: {readyCount}/{(NetPlayers.Count > 0 ? NetPlayers.Count.ToString() : "0")}";
 
         // KIỂM TRA XEM LOCAL CLIENT CÓ PHẢI LÀ CHỦ PHÒNG (SLOT 0) KHÔNG
         bool isRoomHost = false;
@@ -941,11 +941,11 @@ public class NetworkWaitingRoom : NetworkBehaviour
         // Hiển cảnh báo nếu có trùng nhân vật
         if (_lblWarning != null && duplicatesExist)
         {
-            _lblWarning.text = "DUPLICATE CHARACTER DETECTED!";
+            _lblWarning.text = "PHÁT HIỆN TRÙNG NHÂN VẬT!";
             _lblWarning.RemoveFromClassList("hidden-element");
             _lblWarning.style.display = DisplayStyle.Flex;
         }
-        else if (_lblWarning != null && !duplicatesExist && _lblWarning.text == "DUPLICATE CHARACTER DETECTED!")
+        else if (_lblWarning != null && !duplicatesExist && _lblWarning.text == "PHÁT HIỆN TRÙNG NHÂN VẬT!")
         {
             _lblWarning.AddToClassList("hidden-element");
             _lblWarning.style.display = DisplayStyle.None;
@@ -967,10 +967,10 @@ public class NetworkWaitingRoom : NetworkBehaviour
 
             // Chỉ enable START khi đủ điều kiện
             _btnStart.SetEnabled(canStart);
-            _btnStart.text = canStart ? "START EXPEDITION" :
-                             !enoughPlayers ? $"WAITING ({NetPlayers.Count}/4 PLAYERS)" :
-                             !allReady ? $"WAITING ({readyCount}/{NetPlayers.Count} READY)" :
-                             "START EXPEDITION";
+            _btnStart.text = canStart ? "BẮT ĐẦU THÁM HIỂM" :
+                             !enoughPlayers ? $"ĐANG CHỜ ({NetPlayers.Count}/4 NGƯỜI CHƠI)" :
+                             !allReady ? $"ĐANG CHỜ ({readyCount}/{NetPlayers.Count} SẴN SÀNG)" :
+                             "BẮT ĐẦU THÁM HIỂM";
         }
 
         // Cập nhật màu nút Ready cho bản thân
@@ -995,14 +995,14 @@ public class NetworkWaitingRoom : NetworkBehaviour
         }
         if (statusLbl != null)
         {
-            statusLbl.text = "FREE";
+            statusLbl.text = "TRỐNG";
             statusLbl.RemoveFromClassList("active-status");
             statusLbl.RemoveFromClassList("swap-status-active");
         }
 
         if (selectors.Count > 0)
         {
-            if (selectors.Contains("YOU"))
+            if (selectors.Contains("BẠN"))
             {
                 if (card != null)
                 {
@@ -1010,7 +1010,7 @@ public class NetworkWaitingRoom : NetworkBehaviour
                 }
                 if (statusLbl != null)
                 {
-                    statusLbl.text = "YOU";
+                    statusLbl.text = "BẠN";
                     statusLbl.AddToClassList("active-status");
                 }
             }
@@ -1025,7 +1025,7 @@ public class NetworkWaitingRoom : NetworkBehaviour
                     }
                     if (statusLbl != null)
                     {
-                        statusLbl.text = "SWAP";
+                        statusLbl.text = "ĐỔI";
                         statusLbl.AddToClassList("swap-status-active");
                     }
                 }
@@ -1039,7 +1039,7 @@ public class NetworkWaitingRoom : NetworkBehaviour
                     }
                     if (statusLbl != null)
                     {
-                        statusLbl.text = "TAKEN";
+                        statusLbl.text = "ĐÃ CHỌN";
                         statusLbl.RemoveFromClassList("active-status");
                     }
                 }
@@ -1056,7 +1056,7 @@ public class NetworkWaitingRoom : NetworkBehaviour
             {
                 if (p.IsReady) _btnReady.AddToClassList("ready-active");
                 else _btnReady.RemoveFromClassList("ready-active");
-                _btnReady.text = p.IsReady ? "READY!" : "READY?";
+                _btnReady.text = p.IsReady ? "ĐÃ SẴN SÀNG!" : "SẴN SÀNG?";
                 break;
             }
         }
@@ -1088,7 +1088,7 @@ public class NetworkWaitingRoom : NetworkBehaviour
             Debug.LogWarning("[CLIENT] Bạn cần phải chọn nhân vật trước khi ấn Ready!");
             if (_lblWarning != null)
             {
-                _lblWarning.text = "SELECT AN EXPLORER BEFORE READYING UP!";
+                _lblWarning.text = "VUI LÒNG CHỌN NHÂN VẬT TRƯỚC KHI SẴN SÀNG!";
                 _lblWarning.RemoveFromClassList("hidden-element");
                 _lblWarning.style.display = DisplayStyle.Flex;
                 
@@ -1555,7 +1555,7 @@ public class NetworkWaitingRoom : NetworkBehaviour
 
         if (SceneLoader.Instance != null)
         {
-            SceneLoader.Instance.ShowLoading("PREPARING EXPEDITION...");
+            SceneLoader.Instance.ShowLoading("ĐANG CHUẨN BỊ THÁM HIỂM...");
         }
     }
 
@@ -1628,7 +1628,7 @@ public class NetworkWaitingRoom : NetworkBehaviour
             string senderCharName = GetCharacterName(senderCharId);
             string targetCharName = GetCharacterName(targetCharId);
 
-            _lblSwapRequestMsg.text = $"{senderName.ToUpper()} WANTS TO SWAP {senderCharName} WITH YOUR {targetCharName}.";
+            _lblSwapRequestMsg.text = $"{senderName.ToUpper()} MUỐN ĐỔI {senderCharName} LẤY {targetCharName} CỦA BẠN.";
 
             _swapRequestModal.RemoveFromClassList("hidden-element");
             _swapRequestModal.style.display = DisplayStyle.Flex;
@@ -1699,7 +1699,7 @@ public class NetworkWaitingRoom : NetworkBehaviour
 
         if (_lblWarning != null)
         {
-            _lblWarning.text = $"{targetPlayerName.ToUpper()} DECLINED YOUR SWAP REQUEST!";
+            _lblWarning.text = $"{targetPlayerName.ToUpper()} ĐÃ TỪ CHỐI YÊU CẦU ĐỔI NHÂN VẬT!";
             _lblWarning.RemoveFromClassList("hidden-element");
             _lblWarning.style.display = DisplayStyle.Flex;
 
@@ -1720,7 +1720,7 @@ public class NetworkWaitingRoom : NetworkBehaviour
 
         if (_lblWarning != null)
         {
-            _lblWarning.text = $"{charName} IS ALREADY TAKEN!";
+            _lblWarning.text = $"{charName} ĐÃ ĐƯỢC CHỌN!";
             _lblWarning.RemoveFromClassList("hidden-element");
             _lblWarning.style.display = DisplayStyle.Flex;
             CancelInvoke(nameof(HideWarningLabel));
