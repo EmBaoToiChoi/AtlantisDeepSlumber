@@ -503,6 +503,39 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
     public void ResetDeathState()
     {
         isDeathAnimFinished = false;
+        currentAnimState = "";
+        lastTriggeredAnimName = "";
+        comboStep = 0;
+        isRootedAttack = false;
+
+        if (anim == null)
+        {
+            anim = GetComponent<Animator>();
+            if (anim == null)
+                anim = GetComponentInChildren<Animator>(true);
+        }
+
+        if (anim != null && anim.isActiveAndEnabled && anim.runtimeAnimatorController != null)
+        {
+            SafeResetTrigger("Death");
+            SafeResetTrigger("GetHit");
+            SafeResetTrigger("GeiHit2");
+            SafeResetTrigger("Dam1");
+            SafeResetTrigger("Dam2");
+            SafeResetTrigger("Dam3");
+            SafeResetTrigger("Bow_Shoot");
+            SafeResetTrigger("LonVong");
+
+            if (anim.layerCount > 1)
+            {
+                anim.SetLayerWeight(1, 0f);
+                anim.Play("New State", 1, 0f);
+            }
+
+            anim.Play("Idle", 0, 0f);
+            anim.Update(0f);
+        }
+
         enabled = true;
     }
 
@@ -1214,6 +1247,7 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
             else if (newHealth > 0f && oldHealth <= 0f)
             {
                 PlayerDeathEffectManager.Instance.ResetDeathEffect();
+                ResetDeathState();
             }
         }
     }
@@ -1225,6 +1259,10 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
             var flash = GetComponent<MaterialFlashBehaviour>();
             if (flash == null) flash = gameObject.AddComponent<MaterialFlashBehaviour>();
             flash.Flash(Color.red, 0.15f);
+        }
+        else if (newHealth > 0f && oldHealth <= 0f)
+        {
+            ResetDeathState();
         }
     }
 
@@ -3704,20 +3742,17 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         if (anim == null || !anim.isActiveAndEnabled || anim.runtimeAnimatorController == null) return;
 
-        // Nếu đang chết, chỉ cho phép nhận các lệnh hồi sinh hoặc đưa về trạng thái rỗng/New State
-        if (currentAnimState == "Death")
+        // Nếu đang chết (CurrentHealth <= 0), từ chối tất cả các lệnh hoạt ảnh ngoại trừ "Death"
+        if (CurrentHealth <= 0)
         {
-            if (CurrentHealth <= 0)
+            if (animName != "Death")
             {
-                if (animName != "Idle" && animName != "Walk" && animName != "run" && animName != "New State" && animName != "Empty")
-                {
-                    return;
-                }
+                return;
             }
-            else
-            {
-                currentAnimState = "";
-            }
+        }
+        else if (currentAnimState == "Death")
+        {
+            currentAnimState = "";
         }
 
         var carrier = GetComponent<PlayerLogCarrier>();
@@ -3765,6 +3800,7 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
         }
         else if (animName == "Death")
         {
+            if (currentAnimState == "Death" && anim != null) return;
             PlayPlayerSFX(deathClip);
         }
         else if (animName == "GetHit" || animName == "GeiHit2")
