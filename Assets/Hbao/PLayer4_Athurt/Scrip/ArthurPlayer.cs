@@ -3083,6 +3083,10 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         }
 
         col.enabled = enabled;
+        if (col.gameObject != null && col.gameObject != gameObject)
+        {
+            col.gameObject.SetActive(enabled);
+        }
     }
 
     private void EnsureHitboxComponent(Collider col)
@@ -3365,6 +3369,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
             col.size = new Vector3(0.6f, 0.6f, 0.6f);
             col.center = new Vector3(0f, 0f, 0.2f);
             col.enabled = false;
+            leftObj.SetActive(false);
             if (leftObj.GetComponent<PlayerHitbox>() == null) leftObj.AddComponent<PlayerHitbox>();
             leftHitbox = col;
         }
@@ -3385,9 +3390,12 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
             col.size = new Vector3(0.6f, 0.6f, 0.6f);
             col.center = new Vector3(0f, 0f, 0.2f);
             col.enabled = false;
+            rightObj.SetActive(false);
             if (rightObj.GetComponent<PlayerHitbox>() == null) rightObj.AddComponent<PlayerHitbox>();
             rightHitbox = col;
         }
+
+        DisableAllHitboxes();
 
         if (leftHandWeapon != null)
         {

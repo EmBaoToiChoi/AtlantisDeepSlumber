@@ -8077,6 +8077,10 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         }
 
         col.enabled = enabled;
+        if (col.gameObject != null && col.gameObject != gameObject)
+        {
+            col.gameObject.SetActive(enabled);
+        }
     }
 
     private void EnsureHitboxComponent(Collider col)
