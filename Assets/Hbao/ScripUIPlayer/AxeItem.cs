@@ -72,13 +72,16 @@ public class AxeItem : NetworkBehaviour
             Transform hand = GetAxeHoldingPoint(carrierObj);
             if (hand != null)
             {
-                if (transform.parent != hand)
+                bool canSetParent = !isNetwork || IsServer;
+                if (canSetParent && transform.parent != hand)
                 {
                     transform.SetParent(hand, false);
                     transform.localPosition = Vector3.zero;
                     transform.localRotation = Quaternion.identity;
-                    transform.localScale = originalWorldScale;
                 }
+                transform.position = hand.position;
+                transform.rotation = hand.rotation;
+                transform.localScale = originalWorldScale;
             }
         }
     }
@@ -262,6 +265,8 @@ public class AxeItem : NetworkBehaviour
 
     private void UpdateCarrierState(ulong carrierId)
     {
+        bool isNetwork = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
+
         // 1. Clean up trạng thái người cũ
         if (lastNetworkCarrier != null)
         {
@@ -302,7 +307,6 @@ public class AxeItem : NetworkBehaviour
                 Transform holdingPoint = GetAxeHoldingPoint(playerNetObj.gameObject);
                 Transform targetParent = (holdingPoint != null) ? holdingPoint : playerNetObj.transform;
 
-                bool isNetwork = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
                 if (!isNetwork || IsServer)
                 {
                     transform.SetParent(targetParent, false);
@@ -334,7 +338,11 @@ public class AxeItem : NetworkBehaviour
         else
         {
             // Rìu được thả xuống đất (Thực thi cho cả Server lẫn tất cả Client)
-            transform.SetParent(null);
+            bool canSetParent = !isNetwork || IsServer;
+            if (canSetParent)
+            {
+                transform.SetParent(null);
+            }
             transform.localScale = originalWorldScale;
 
             if (lastNetworkCarrier != null)
