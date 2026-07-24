@@ -337,17 +337,17 @@ public class Puzzle4UIToolkit : MonoBehaviour
         {
             if (angle < 5f)
             {
-                balanceStatusText.text  = "✦ STABLE";
+                balanceStatusText.text  = "✦ ỔN ĐỊNH";
                 balanceStatusText.color = new Color(0.3f, 1f, 0.5f);
             }
             else if (angle < 10f)
             {
-                balanceStatusText.text  = "⚠ WARNING";
+                balanceStatusText.text  = "⚠ CẢNH BÁO";
                 balanceStatusText.color = new Color(1f, 0.85f, 0.1f);
             }
             else
             {
-                balanceStatusText.text  = "✖ DANGER";
+                balanceStatusText.text  = "✖ NGUY HIỂM";
                 balanceStatusText.color = new Color(1f, 0.15f, 0.1f);
             }
         }

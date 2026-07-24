@@ -15,7 +15,7 @@
                     <ui:VisualElement class="seaweed-leaf leaf-3" />
                 </ui:VisualElement>
                 <ui:VisualElement class="top-info-row">
-                    <ui:Label name="lbl-room-name" text="SESSION: EXPLORER" class="room-title" />
+                    <ui:Label name="lbl-room-name" text="SẢNH CHỜ KHÁM PHÁ" class="room-title" />
                     <ui:Label name="lbl-room-id" text="ID: #XXXXXX" class="room-id-badge" />
                 </ui:VisualElement>
             </ui:VisualElement>
@@ -33,53 +33,53 @@
                         <ui:VisualElement name="char-img-0" class="char-card-portrait leo-img" />
                         <ui:VisualElement class="char-card-text-container">
                             <ui:Label text="LEO" class="char-card-name" />
-                            <ui:Label text="SHADOW ASSASSIN" class="char-card-role" />
+                            <ui:Label text="SÁT THỦ BÓNG ĐÊM" class="char-card-role" />
                         </ui:VisualElement>
-                        <ui:Label name="char-status-0" text="YOU" class="char-card-status active-status" />
+                        <ui:Label name="char-status-0" text="BẠN" class="char-card-status active-status" />
                     </ui:VisualElement>
                     <ui:VisualElement name="char-card-1" class="char-card">
                         <ui:VisualElement name="char-img-1" class="char-card-portrait maya-img" />
                         <ui:VisualElement class="char-card-text-container">
                             <ui:Label text="MAYA" class="char-card-name" />
-                            <ui:Label text="FIRE ELEMENTALIST" class="char-card-role" />
+                            <ui:Label text="PHÁP SƯ LỬA" class="char-card-role" />
                         </ui:VisualElement>
-                        <ui:Label name="char-status-1" text="FREE" class="char-card-status" />
+                        <ui:Label name="char-status-1" text="TRỐNG" class="char-card-status" />
                     </ui:VisualElement>
                     <ui:VisualElement name="char-card-2" class="char-card">
                         <ui:VisualElement name="char-img-2" class="char-card-portrait elena-img" />
                         <ui:VisualElement class="char-card-text-container">
                             <ui:Label text="ELENA" class="char-card-name" />
-                            <ui:Label text="ELVEN ARCHER" class="char-card-role" />
+                            <ui:Label text="CUNG THỦ TINH LINH" class="char-card-role" />
                         </ui:VisualElement>
-                        <ui:Label name="char-status-2" text="FREE" class="char-card-status" />
+                        <ui:Label name="char-status-2" text="TRỐNG" class="char-card-status" />
                     </ui:VisualElement>
                     <ui:VisualElement name="char-card-3" class="char-card">
                         <ui:VisualElement name="char-img-3" class="char-card-portrait arthur-img" />
                         <ui:VisualElement class="char-card-text-container">
                             <ui:Label text="ARTHUR" class="char-card-name" />
-                            <ui:Label text="ROYAL TANKER" class="char-card-role" />
+                            <ui:Label text="ĐẤU SĨ HOÀNG GIA" class="char-card-role" />
                         </ui:VisualElement>
-                        <ui:Label name="char-status-3" text="FREE" class="char-card-status" />
+                        <ui:Label name="char-status-3" text="TRỐNG" class="char-card-status" />
                     </ui:VisualElement>
                 </ui:VisualElement>
-                <ui:Label text="Hold SHIFT + Left Click to Inspect" class="char-inspect-tip" />
+                <ui:Label text="Giữ SHIFT + Chuột Trái để Xem Chi Tiết" class="char-inspect-tip" />
             </ui:VisualElement>
         </ui:VisualElement>
         <ui:VisualElement class="waiting-footer">
             <ui:VisualElement class="left-actions">
-                <ui:Button name="btn-ready" text="READY" class="action-btn ready-btn" />
-                <ui:Button name="btn-leave" text="LEAVE SESSION" class="action-btn leave-btn" />
+                <ui:Button name="btn-ready" text="SẴN SÀNG" class="action-btn ready-btn" />
+                <ui:Button name="btn-leave" text="RỜI PHÒNG" class="action-btn leave-btn" />
             </ui:VisualElement>
             <ui:VisualElement class="start-game-center" style="flex-direction: column; align-items: center;">
-                <ui:Label name="lbl-warning" text="DUPLICATE CHARACTER DETECTED!" class="warning-text hidden-element" />
-                <ui:Button name="btn-start" text="START EXPEDITION" class="action-btn start-btn hidden-element" />
+                <ui:Label name="lbl-warning" text="PHÁT HIỆN TRÙNG NHÂN VẬT!" class="warning-text hidden-element" />
+                <ui:Button name="btn-start" text="BẮT ĐẦU THÁM HIỂM" class="action-btn start-btn hidden-element" />
             </ui:VisualElement>
             <ui:VisualElement style="flex-direction: row; align-items: center; margin-right: 10px;">
-                <ui:Button name="btn-swap-character" text="SWAP EXPLORER" class="action-btn ready-btn hidden-element" style="margin-right: 8px;" />
-                <ui:Button name="btn-players-voice" text="PLAYERS VOICE" class="action-btn toggle-char-panel-btn ready-btn" style="margin-right: 8px;" />
-                <ui:Button name="btn-toggle-char-panel" text="CHOOSE EXPLORER" class="action-btn toggle-char-panel-btn ready-btn" style="margin-right: 8px;" />
+                <ui:Button name="btn-swap-character" text="ĐỔI NHÂN VẬT" class="action-btn ready-btn hidden-element" style="margin-right: 8px;" />
+                <ui:Button name="btn-players-voice" text="MIC NGƯỜI CHƠI" class="action-btn toggle-char-panel-btn ready-btn" style="margin-right: 8px;" />
+                <ui:Button name="btn-toggle-char-panel" text="CHỌN NHÂN VẬT" class="action-btn toggle-char-panel-btn ready-btn" style="margin-right: 8px;" />
                 <ui:VisualElement class="player-count-container">
-                    <ui:Label name="lbl-player-count" text="PLAYERS: 1/4" class="status-text" />
+                    <ui:Label name="lbl-player-count" text="NGƯỜI CHƠI: 1/4" class="status-text" />
                 </ui:VisualElement>
             </ui:VisualElement>
         </ui:VisualElement>
@@ -99,35 +99,35 @@
                     <ui:VisualElement name="details-portrait" class="details-large-portrait leo-img" />
                     <ui:VisualElement class="details-title-container">
                         <ui:Label name="details-name" text="LEO" class="details-char-name" />
-                        <ui:Label name="details-role" text="SHADOW ASSASSIN" class="details-char-role" />
+                        <ui:Label name="details-role" text="SÁT THỦ BÓNG ĐÊM" class="details-char-role" />
                     </ui:VisualElement>
                 </ui:VisualElement>
-                <ui:Label name="details-desc" text="A master of shadows and stealth, Leo can eliminate high-value targets before they even know he is there." class="details-char-desc" />
-                <ui:Label text="SPECIALIST SKILLS" class="details-section-title" />
+                <ui:Label name="details-desc" text="Bậc thầy bóng tối và ám sát, Leo có thể hạ gục các mục tiêu quan trọng trước khi chúng kịp nhận ra sự hiện diện của anh." class="details-char-desc" />
+                <ui:Label text="KỸ NĂNG ĐẶC BIỆT" class="details-section-title" />
                 <ui:VisualElement name="skills-container" class="details-skills-container">
                     <ui:VisualElement name="details-skill-box-0" class="details-skill-box">
                         <ui:VisualElement name="details-skill-img-0" class="details-skill-icon skill-icon-img" />
                         <ui:VisualElement class="details-skill-text-container">
-                            <ui:Label name="details-skill-name-0" text="Trench Dash" class="details-skill-title" />
-                            <ui:Label name="details-skill-desc-0" text="Dashes forward a short distance, granting immunity to physical pressure damage for 3 seconds." class="details-skill-desc" />
+                            <ui:Label name="details-skill-name-0" text="Lướt Nhanh" class="details-skill-title" />
+                            <ui:Label name="details-skill-desc-0" text="Lướt về phía trước một khoảng ngắn, miễn nhiễm với sát thương áp suất trong 3 giây." class="details-skill-desc" />
                         </ui:VisualElement>
                     </ui:VisualElement>
                     <ui:VisualElement name="details-skill-box-1" class="details-skill-box">
                         <ui:VisualElement name="details-skill-img-1" class="details-skill-icon skill-icon-img" />
                         <ui:VisualElement class="details-skill-text-container">
-                            <ui:Label name="details-skill-name-1" text="Sonar Scan" class="details-skill-title" />
-                            <ui:Label name="details-skill-desc-1" text="Emits a high-frequency acoustic pulse that reveals nearby resources." class="details-skill-desc" />
+                            <ui:Label name="details-skill-name-1" text="Quét Sóng Âm" class="details-skill-title" />
+                            <ui:Label name="details-skill-desc-1" text="Phát ra xung sóng âm tần số cao để định vị các tài nguyên xung quanh." class="details-skill-desc" />
                         </ui:VisualElement>
                     </ui:VisualElement>
                     <ui:VisualElement name="details-skill-box-2" class="details-skill-box">
                         <ui:VisualElement name="details-skill-img-2" class="details-skill-icon skill-icon-img" />
                         <ui:VisualElement class="details-skill-text-container">
-                            <ui:Label name="details-skill-name-2" text="Pressure Stabilizer" class="details-skill-title" />
-                            <ui:Label name="details-skill-desc-2" text="Overcharges dive suit exoskeleton, reducing environmental damage." class="details-skill-desc" />
+                            <ui:Label name="details-skill-name-2" text="Ổn Định Áp Suất" class="details-skill-title" />
+                            <ui:Label name="details-skill-desc-2" text="Tăng cường bộ giáp thám hiểm, giảm sát thương nhận vào từ môi trường." class="details-skill-desc" />
                         </ui:VisualElement>
                     </ui:VisualElement>
                 </ui:VisualElement>
-                <ui:Button name="btn-close-details" class="details-close-btn" text="CLOSE" />
+                <ui:Button name="btn-close-details" class="details-close-btn" text="ĐÓNG" />
             </ui:VisualElement>
         </ui:VisualElement>
         <ui:VisualElement name="swap-request-modal" class="details-modal hidden-element">
@@ -142,19 +142,19 @@
                     <ui:VisualElement class="seaweed-leaf leaf-2" />
                     <ui:VisualElement class="seaweed-leaf leaf-3" />
                 </ui:VisualElement>
-                <ui:Label text="CHARACTER SWAP REQUEST" class="details-char-role" style="font-size: 16px; letter-spacing: 2px; color: rgb(255, 165, 0); margin-bottom: 15px; -unity-font-style: bold;" />
-                <ui:Label name="lbl-swap-request-msg" text="Player 2 wants to swap Atlas with your Nyx." class="details-char-desc" style="text-align: center; font-size: 14px; margin-bottom: 25px; white-space: normal; -unity-text-wrap: true;" />
+                <ui:Label text="YÊU CẦU ĐỔI NHÂN VẬT" class="details-char-role" style="font-size: 16px; letter-spacing: 2px; color: rgb(255, 165, 0); margin-bottom: 15px; -unity-font-style: bold;" />
+                <ui:Label name="lbl-swap-request-msg" text="Player 2 muốn đổi Atlas lấy Nyx của bạn." class="details-char-desc" style="text-align: center; font-size: 14px; margin-bottom: 25px; white-space: normal; -unity-text-wrap: true;" />
                 <ui:VisualElement style="flex-direction: row; justify-content: space-around; width: 100%;">
-                    <ui:Button name="btn-swap-accept" text="ACCEPT" class="action-btn ready-btn" style="width: 150px; margin: 0; background-color: rgba(46, 213, 115, 0.15); border-left-color: rgb(46, 213, 115); color: rgb(46, 213, 115);" />
-                    <ui:Button name="btn-swap-decline" text="DECLINE" class="action-btn leave-btn" style="width: 150px; margin: 0;" />
+                    <ui:Button name="btn-swap-accept" text="ĐỒNG Ý" class="action-btn ready-btn" style="width: 150px; margin: 0; background-color: rgba(46, 213, 115, 0.15); border-left-color: rgb(46, 213, 115); color: rgb(46, 213, 115);" />
+                    <ui:Button name="btn-swap-decline" text="TỪ CHỐI" class="action-btn leave-btn" style="width: 150px; margin: 0;" />
                 </ui:VisualElement>
             </ui:VisualElement>
         </ui:VisualElement>
         <ui:VisualElement name="players-voice-modal" class="details-modal hidden-element">
             <ui:VisualElement class="swap-modal-container glow-border" style="width: 400px; padding: 25px; align-items: center; background-color: rgba(10, 25, 47, 0.95);">
-                <ui:Label text="PLAYERS VOICE CHAT" name="lbl-players-voice-title" class="details-char-role" style="font-size: 16px; letter-spacing: 2px; color: #00e5ff; margin-bottom: 15px; -unity-font-style: bold;" />
+                <ui:Label text="TRÒ CHUYỆN THOẠI" name="lbl-players-voice-title" class="details-char-role" style="font-size: 16px; letter-spacing: 2px; color: #00e5ff; margin-bottom: 15px; -unity-font-style: bold;" />
                 <ui:ScrollView name="players-voice-list" style="width: 100%; max-height: 250px; margin-bottom: 20px;" />
-                <ui:Button name="btn-close-players-voice" text="CLOSE" class="action-btn leave-btn" style="width: 150px; margin: 0;" />
+                <ui:Button name="btn-close-players-voice" text="ĐÓNG" class="action-btn leave-btn" style="width: 150px; margin: 0;" />
             </ui:VisualElement>
         </ui:VisualElement>
     </ui:VisualElement>

@@ -5,7 +5,7 @@
             <ui:VisualElement name="miniboss-avatar" class="miniboss-avatar" />
         </ui:VisualElement>
         <ui:VisualElement name="miniboss-hp-wrapper" class="miniboss-hp-wrapper">
-            <ui:Label name="miniboss-name" text="MINI BOSS" class="miniboss-name" />
+            <ui:Label name="miniboss-name" text="TRÙM PHỤ" class="miniboss-name" />
             <ui:VisualElement name="miniboss-health-bar-container" class="miniboss-health-bar-container">
                 <ui:VisualElement name="miniboss-hp-background" class="miniboss-hp-background">
                     <ui:VisualElement name="miniboss-hp-yellow-bar" class="miniboss-hp-yellow-bar" />

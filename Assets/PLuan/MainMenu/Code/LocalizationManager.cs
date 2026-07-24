@@ -4,7 +4,7 @@ using UnityEngine;
 public static class LocalizationManager
 {
     public enum Language { English, Vietnamese }
-    public static Language CurrentLanguage { get; private set; } = Language.English;
+    public static Language CurrentLanguage { get; private set; } = Language.Vietnamese;
 
     private static readonly Dictionary<Language, Dictionary<string, string>> _localizedText = new Dictionary<Language, Dictionary<string, string>>
     {
@@ -264,8 +264,8 @@ public static class LocalizationManager
 
     public static void Initialize()
     {
-        string saved = PlayerPrefs.GetString("Language", "English");
-        CurrentLanguage = saved == "Vietnamese" ? Language.Vietnamese : Language.English;
+        string saved = PlayerPrefs.GetString("Language", "Vietnamese");
+        CurrentLanguage = saved == "English" ? Language.English : Language.Vietnamese;
     }
 
     public static void SetLanguage(Language lang)

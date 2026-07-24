@@ -14,7 +14,7 @@
         <ui:Label name="lbl-players" text="1/4" class="room-col col-players" />
         
         <ui:VisualElement class="room-col col-action">
-            <ui:Button name="btn-join-room" text="JOIN" class="join-mini-btn" />
+            <ui:Button name="btn-join-room" text="VÀO" class="join-mini-btn" />
         </ui:VisualElement>
     </ui:VisualElement>
 
