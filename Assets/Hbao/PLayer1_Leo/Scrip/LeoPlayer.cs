@@ -3312,9 +3312,9 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     // Action and attack triggers
     public string rollTrigger = "Lonmeo";
     public string pickTrigger = "Pick";
-    public string punch1Trigger = "DamTrai";
-    public string punch2Trigger = "DamPhai";
-    public string punch3Trigger = "DamCombo";
+    public string punch1Trigger = "DAMTRAI 2";
+    public string punch2Trigger = "DAMPHAI 2";
+    public string punch3Trigger = "COMBODAM 1";
     public string slash1Trigger = "Combo1kiem";
     public string slash2Trigger = "Attackdoucombo";
     public string slash3Trigger = "Slash3"; // Tên trigger Slash3 trong Animator (có thể cấu hình lại)
@@ -4466,13 +4466,16 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         }
         else // weaponIndex == 0 (Unarmed / Punch)
         {
-            string animName = "DamTrai";
-            if (step == 2) animName = "DamPhai";
-            else if (step == 3) animName = "Combodam";
+            string animName = "DAMTRAI 2";
+            if (step == 2) animName = "DAMPHAI 2";
+            else if (step == 3) animName = "COMBODAM 1";
 
             float duration = GetAnimationClipLength(animName);
-            if (duration > 0f) return duration;
-            return step == 3 ? 0.8f : 0.55f;
+            if (duration > 0.05f) return duration;
+
+            if (step == 1) return 0.833f;
+            if (step == 2) return 0.663f;
+            return 2.500f;
         }
     }
 
@@ -4540,13 +4543,14 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         float currentTime = Time.time;
 
         // Kiểm tra xem đòn đánh trước đó đã kết thúc chưa (chống click liên tục làm ngắt giữa chừng đòn đấm/chém cũ)
-        if (comboStep > 0 && currentTime - lastAttackTime <= comboWindow)
+        // Kiểm tra chống spam: Bắt buộc đòn tấn công hiện tại phải chạy xong 100% thời lượng (length) mới được sang đòn mới
+        if (isExecutingAttack)
         {
-            float prevDuration = GetAttackDuration(weapon, comboStep);
-            float threshold = (comboTransitionThreshold > 0.1f) ? comboTransitionThreshold : 0.75f;
-            if (currentTime - lastAttackTime < prevDuration * threshold)
+            float elapsed = currentTime - attackAnimStartTime;
+            if (elapsed < currentAttackAnimDuration * 0.95f)
             {
-                return; // Chặn bấm nhanh khi đòn cũ chưa đánh xong
+                pendingAttackRequest = true; // Lưu nhấp chuột vào buffer, chờ hết animation cũ mới phát đòn tiếp
+                return;
             }
         }
 
@@ -4608,16 +4612,32 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         }
         else
         {
-            // --- ĐẤM TAY (UNARMED): ĐÚNG CHUẨN 3 CLICK TUẦN TỰ CHO LEO ---
+            // --- ĐẤM TAY (UNARMED): 3 CLICK TUẦN TỰ (DAMTRAI 2 -> DAMPHAI 2 -> COMBODAM 1) ---
             comboStep++;
             if (comboStep > 3) comboStep = 1;
 
-            animToPlay = "DamTrai";
-            if (comboStep == 2) animToPlay = "DamPhai";
-            else if (comboStep == 3) animToPlay = "Combodam";
+            animToPlay = "DAMTRAI 2";
+            if (comboStep == 2) animToPlay = "DAMPHAI 2";
+            else if (comboStep == 3) animToPlay = "COMBODAM 1";
 
             float clipLen = GetAnimationClipLength(animToPlay);
-            currentAttackAnimDuration = (clipLen > 0.1f) ? clipLen : (comboStep == 3 ? 0.8f : 0.55f);
+            if (clipLen <= 0.05f)
+            {
+                if (comboStep == 1) clipLen = GetAnimationClipLength("DamTrai");
+                else if (comboStep == 2) clipLen = GetAnimationClipLength("DamPhai");
+                else if (comboStep == 3) clipLen = GetAnimationClipLength("Combodam");
+            }
+
+            if (clipLen > 0.05f)
+            {
+                currentAttackAnimDuration = clipLen;
+            }
+            else
+            {
+                if (comboStep == 1) currentAttackAnimDuration = 0.833f;
+                else if (comboStep == 2) currentAttackAnimDuration = 0.663f;
+                else currentAttackAnimDuration = 2.500f;
+            }
 
             if (anim != null) anim.applyRootMotion = false;
             PlayAnimation(animToPlay, 0.05f, false, isRootedAttack);
@@ -6933,9 +6953,14 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         foreach (var clip in anim.runtimeAnimatorController.animationClips)
         {
-            if (clip != null && (clip.name == searchName || clip.name.ToLower() == searchName.ToLower()))
+            if (clip != null)
             {
-                return clip.length;
+                string cName = clip.name.Replace(" ", "").Replace("_", "").ToLower();
+                string sName = searchName.Replace(" ", "").Replace("_", "").ToLower();
+                if (cName == sName || clip.name.Equals(searchName, System.StringComparison.OrdinalIgnoreCase))
+                {
+                    return clip.length;
+                }
             }
         }
         return 0f;
@@ -7170,11 +7195,17 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             case "LonVong":
                 return rollTrigger;
             case "Punch1":
-                return punch1Trigger;
+            case "DAMTRAI 2":
+            case "DamTrai":
+                return string.IsNullOrEmpty(punch1Trigger) ? "DAMTRAI 2" : punch1Trigger;
             case "Punch2":
-                return punch2Trigger;
+            case "DAMPHAI 2":
+            case "DamPhai":
+                return string.IsNullOrEmpty(punch2Trigger) ? "DAMPHAI 2" : punch2Trigger;
             case "Punch3":
-                return punch3Trigger;
+            case "COMBODAM 1":
+            case "Combodam":
+                return string.IsNullOrEmpty(punch3Trigger) ? "COMBODAM 1" : punch3Trigger;
             case "Slash1":
                 return slash1Trigger;
             case "Slash2":
