@@ -184,7 +184,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  GlobalObjectIdHash: 3003380951
+  GlobalObjectIdHash: 2404185414
   InScenePlacedSourceGlobalObjectIdHash: 2404185414
   DeferredDespawnTick: 0
   Ownership: 1
@@ -210,12 +210,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   ShowTopMostFoldoutHeaderGroup: 1
-  maxHealth: 200
+  maxHealth: 100
   currentHealth:
     UpdateTraits:
       MinSecondsBetweenUpdates: 0
       MaxSecondsBetweenUpdates: 0
-    m_InternalValue: 90
+    m_InternalValue: 100
   currentState:
     UpdateTraits:
       MinSecondsBetweenUpdates: 0
