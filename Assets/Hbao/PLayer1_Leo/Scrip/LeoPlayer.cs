@@ -2942,8 +2942,8 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     [Header("Smooth Movement Settings")]
     public float inputFilterSpeed = 8f;
-    public float rotationSmoothSpeedArmed = 10f;
-    public float rotationSmoothSpeedUnarmed = 12f;
+    public float rotationSmoothSpeedArmed = 22f;
+    public float rotationSmoothSpeedUnarmed = 25f;
 
     [Header("Player Settings & Stats")]
     public float moveSpeed = 3.5f;
@@ -3111,6 +3111,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     private float smoothedYOffset = 0f;
     private float smoothedXOffset = 0f;
+    private float smoothedAimAngle = 0f;
     public float spineSmoothSpeed = 15f;
     private Transform spineBone;
     private float localAimAngle = 0f;
@@ -3451,7 +3452,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (rb != null)
         {
             rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationY | RigidbodyConstraints.FreezeRotationZ;
-            rb.interpolation = RigidbodyInterpolation.None; // Tắt Rigidbody Interpolation để tránh lệch frame giữa physics 50Hz và render Update
+            rb.interpolation = RigidbodyInterpolation.Interpolate; // Bật Rigidbody Interpolation để di chuyển và lộn vòng mượt mà ở mọi tần số quét
         }
 
         CreateSwordHitboxes();
@@ -4120,24 +4121,19 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             knockbackVelocity = Vector3.Lerp(knockbackVelocity, Vector3.zero, Time.deltaTime * 8f);
         }
 
-        bool isArmed = (GetActiveWeaponIndex() == 2);
         bool isMoving = (movementTranslation != Vector3.zero);
+        bool isArmed = (GetActiveWeaponIndex() == 2);
 
-        Vector3 desiredMoveVelocity = Vector3.zero;
+        Vector3 finalVelocity = movementTranslation * currentSpeed + currentKnockback;
         if (attackDashTimer > 0)
         {
-            desiredMoveVelocity = attackDashDirection * attackDashSpeed;
+            finalVelocity = attackDashDirection * attackDashSpeed;
         }
         else if (shouldLockMovement && currentKnockback.magnitude <= 0.01f)
         {
-            desiredMoveVelocity = Vector3.zero;
+            finalVelocity = Vector3.zero;
         }
-        else
-        {
-            desiredMoveVelocity = movementTranslation * currentSpeed + currentKnockback;
-        }
-
-        targetMoveVelocity = desiredMoveVelocity;
+        targetMoveVelocity = finalVelocity;
 
         float targetInputX = 0f;
         float targetInputZ = 0f;
@@ -4145,10 +4141,10 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         // Quét trạng thái tấn công chuẩn xác
         bool isAttacking = IsPlayingAttackState(out _, out _);
-
-        // Xoay nhân vật chuẩn Genshin Impact: Xoay mặt về hướng di chuyển (movementTranslation) khi di chuyển, xoay theo Camera khi ngắm/bắn
         bool isAttackingState = isAttacking || isExecutingAttack;
         bool isHitState = IsPlayingHitAnimation();
+
+        // Xoay nhân vật chuẩn Genshin Impact (Giống Arthur): Xoay mặt về hướng di chuyển khi di chuyển, xoay theo Camera khi ngắm/bắn
         if (targetCamera != null && (!IsPlayingActionAnimation() || isAttackingState || isHitState) && !IsLockingMovementAction())
         {
             Vector3 turnDir = Vector3.zero;
@@ -4166,7 +4162,16 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             if (turnDir != Vector3.zero)
             {
                 Quaternion targetRot = Quaternion.LookRotation(turnDir);
-                transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, Time.deltaTime * 15f);
+                float rotSpeed = isArmed ? rotationSmoothSpeedArmed : rotationSmoothSpeedUnarmed;
+                if (rotSpeed < 20f) rotSpeed = 25f;
+
+                float turnAngle = Vector3.Angle(transform.forward, turnDir);
+                if (turnAngle > 90f)
+                {
+                    rotSpeed = 55f; // Tăng tốc xoay tức thì khi đổi hướng gắt (U-turn W->S 180 độ) theo yêu cầu
+                }
+
+                transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, Time.deltaTime * rotSpeed);
             }
         }
 
@@ -4305,34 +4310,29 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             knockbackVelocity = Vector3.Lerp(knockbackVelocity, Vector3.zero, Time.deltaTime * 8f);
         }
 
-        bool isArmed = (GetActiveWeaponIndex() == 2);
         bool isMoving = (movementTranslation != Vector3.zero);
+        bool isArmed = (GetActiveWeaponIndex() == 2);
 
-        Vector3 desiredMoveVelocity = Vector3.zero;
+        Vector3 finalVelocity = movementTranslation * currentSpeed + currentKnockback;
         if (attackDashTimer > 0)
         {
-            desiredMoveVelocity = attackDashDirection * attackDashSpeed;
+            finalVelocity = attackDashDirection * attackDashSpeed;
         }
         else if (shouldLockMovement && currentKnockback.magnitude <= 0.01f)
         {
-            desiredMoveVelocity = Vector3.zero;
+            finalVelocity = Vector3.zero;
         }
-        else
-        {
-            desiredMoveVelocity = movementTranslation * currentSpeed + currentKnockback;
-        }
-
-        targetMoveVelocity = desiredMoveVelocity;
+        targetMoveVelocity = finalVelocity;
 
         float targetInputX = 0f;
         float targetInputZ = 0f;
         float targetSpeed = 0f;
 
         bool isAttacking = IsPlayingAttackState(out _, out _);
-
-        // Xoay nhân vật chuẩn Genshin Impact: Xoay mặt về hướng di chuyển (movementTranslation) khi di chuyển, xoay theo Camera khi ngắm/bắn
         bool isAttackingState = isAttacking || isExecutingAttack;
         bool isHitState = IsPlayingHitAnimation();
+
+        // Xoay nhân vật chuẩn Genshin Impact (Giống Arthur): Xoay mặt về hướng di chuyển khi di chuyển, xoay theo Camera khi ngắm/bắn
         if (targetCamera != null && (!IsPlayingActionAnimation() || isAttackingState || isHitState) && !IsLockingMovementAction())
         {
             Vector3 turnDir = Vector3.zero;
@@ -4350,7 +4350,16 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             if (turnDir != Vector3.zero)
             {
                 Quaternion targetRot = Quaternion.LookRotation(turnDir);
-                transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, Time.deltaTime * 15f);
+                float rotSpeedOwner = isArmed ? rotationSmoothSpeedArmed : rotationSmoothSpeedUnarmed;
+                if (rotSpeedOwner < 20f) rotSpeedOwner = 25f;
+
+                float turnAngle = Vector3.Angle(transform.forward, turnDir);
+                if (turnAngle > 90f)
+                {
+                    rotSpeedOwner = 55f; // Tăng tốc xoay tức thì khi đổi hướng gắt (U-turn W->S 180 độ) theo yêu cầu
+                }
+
+                transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, Time.deltaTime * rotSpeedOwner);
             }
         }
 
@@ -4749,11 +4758,6 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         }
 
         if (anim != null) anim.applyRootMotion = false;
-
-        // Lock Hips bone trước khi bắt đầu roll để tránh vặn xương chân
-        var bridge = GetRootMotionBridge();
-        if (bridge != null) bridge.BeginRoll();
-
         PlayAnimation("LonVong", 0.05f);
     }
 
@@ -4762,6 +4766,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         var carrier = GetComponent<PlayerLogCarrier>();
         if (carrier != null && carrier.isCarrying) return;
 
+        isRollingStandalone = true;
         rollTimer = rollDuration;
         rollCooldownTimer = rollCooldown;
 
@@ -4783,11 +4788,6 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         }
 
         if (anim != null) anim.applyRootMotion = false;
-
-        // Lock Hips bone trước khi bắt đầu roll để tránh vặn xương chân
-        var bridge = GetRootMotionBridge();
-        if (bridge != null) bridge.BeginRoll();
-
         PlayAnimation("LonVong", 0.05f, false);
         StartRollServerRpc(rollDirection, transform.position);
     }
@@ -4847,14 +4847,20 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     void LateUpdate()
     {
+        // Giống Arthur: Chỉ khóa localRotation và localPosition của model con khi KHÔNG LỘN VÒNG
+        bool isRollingCur = isRollingStandalone || (IsSpawned && isRollingNet.Value);
+        if (anim != null && anim.transform != transform && !isRollingCur)
+        {
+            anim.transform.localRotation = Quaternion.identity;
+            anim.transform.localPosition = Vector3.zero;
+        }
 
         // Spine bone twist and combo offset
         if (anim != null)
         {
-            // Chỉ thực hiện xoay cột sống Spine khi đang ngắm bắn (IsAiming)
-            // Khi chém/đấm thường, cột sống hoàn toàn chạy theo hoạt ảnh tự nhiên để tránh vặn xoắn mesh ở đòn chém sâu
             float targetYOffset = 0f;
             float targetXOffset = 0f;
+            float targetAimAngle = 0f;
 
             if (IsAiming)
             {
@@ -4862,21 +4868,25 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
                 float pitchVal = isStandaloneMode ? currentPitch : netAimPitch.Value;
                 float pitchFactor = invertSpinePitch ? -0.7f : 0.7f;
                 targetXOffset = (pitchVal - 45f) * pitchFactor + rSkillXOffset;
+                targetAimAngle = isStandaloneMode ? localAimAngle : netAimAngle.Value;
             }
 
             smoothedYOffset = Mathf.Lerp(smoothedYOffset, targetYOffset, Time.deltaTime * spineSmoothSpeed);
             smoothedXOffset = Mathf.Lerp(smoothedXOffset, targetXOffset, Time.deltaTime * spineSmoothSpeed);
+            smoothedAimAngle = Mathf.Lerp(smoothedAimAngle, targetAimAngle, Time.deltaTime * spineSmoothSpeed);
 
-            // Xoay xương cột sống cho Aiming
+            // Giống Arthur: Chỉ xoay xương cột sống khi ngắm bắn (IsAiming = true). Khi chạy thường không vặn Spine để tránh bị ép xương
             if (IsAiming || Mathf.Abs(smoothedYOffset) > 0.05f || Mathf.Abs(smoothedXOffset) > 0.05f)
             {
                 Transform spine = GetSpineBone();
                 if (spine != null)
                 {
-                    float baseAimAngle = isStandaloneMode ? localAimAngle : netAimAngle.Value;
-                    float finalYAngle = (IsAiming ? baseAimAngle : 0f) + smoothedYOffset;
+                    float finalYAngle = (IsAiming ? smoothedAimAngle : 0f) + smoothedYOffset;
                     
-                    spine.rotation = Quaternion.AngleAxis(finalYAngle, Vector3.up) * spine.rotation;
+                    if (Mathf.Abs(finalYAngle) > 0.01f)
+                    {
+                        spine.rotation = Quaternion.AngleAxis(finalYAngle, Vector3.up) * spine.rotation;
+                    }
             
                     if (Mathf.Abs(smoothedXOffset) > 0.01f)
                     {
@@ -4916,9 +4926,11 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
                 targetPitch = Mathf.Clamp(targetPitch, currentMinPitch, currentMaxPitch);
             }
 
-            // Làm mượt mà các góc xoay (Yaw & Pitch) bằng Lerp để di chuyển chuột vẫn mượt
-            currentYaw = Mathf.Lerp(currentYaw, targetYaw, Time.deltaTime * rotationSmoothSpeed);
-            currentPitch = Mathf.Lerp(currentPitch, targetPitch, Time.deltaTime * rotationSmoothSpeed);
+            // Làm mượt mà các góc xoay (Yaw & Pitch) bằng Exponential Decay mượt mà 100% không phụ thuộc fps
+            float camRotSpeed = rotationSmoothSpeed < 20f ? 30f : rotationSmoothSpeed;
+            float camSmoothFactor = 1f - Mathf.Exp(-camRotSpeed * Time.deltaTime);
+            currentYaw = Mathf.LerpAngle(currentYaw, targetYaw, camSmoothFactor);
+            currentPitch = Mathf.LerpAngle(currentPitch, targetPitch, camSmoothFactor);
 
             // Tính toán offset xoay dựa trên góc Yaw và Pitch đã được làm mượt
             float yawRad = currentYaw * Mathf.Deg2Rad;
@@ -7755,6 +7767,17 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     private void FixedUpdate()
     {
         ApplyExtraGravity();
+
+        bool isRolling = isStandaloneMode ? isRollingStandalone : (IsSpawned && isRollingNet.Value);
+        if (isRolling)
+        {
+            if (rb != null && !rb.isKinematic)
+            {
+                float currentYVelocity = rb.linearVelocity.y;
+                rb.linearVelocity = new Vector3(rollDirection.x * rollSpeed, currentYVelocity, rollDirection.z * rollSpeed);
+            }
+            return;
+        }
 
         if (rb != null && !rb.isKinematic)
         {

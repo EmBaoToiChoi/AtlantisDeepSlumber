@@ -132,39 +132,34 @@ public class RootMotionBridge : MonoBehaviour
         {
             if (hasRootBone && rootBone != null)
             {
-                // Lock Hips XZ về vị trí lúc BẮt ĐẦU roll — giữ model khớp capsule
-                Vector3 lockPos = isRollLocked ? rollLockHipsPos : initialRootBoneLocalPos;
+                // Lock Hips XZ về vị trí chuẩn tâm ban đầu — tuyệt đối không giật lệch sang trái/phải do lệch pha bước chân
                 Vector3 currentLocalPos = rootBone.localPosition;
-                rootBone.localPosition = new Vector3(lockPos.x, currentLocalPos.y, lockPos.z);
+                rootBone.localPosition = new Vector3(initialRootBoneLocalPos.x, currentLocalPos.y, initialRootBoneLocalPos.z);
             }
             else
             {
                 // Fallback: lock transform XZ
-                Vector3 lockPos = isRollLocked ? rollLockHipsPos : initialTransformLocalPos;
                 Vector3 currentLocalPos = transform.localPosition;
-                transform.localPosition = new Vector3(lockPos.x, currentLocalPos.y, lockPos.z);
+                transform.localPosition = new Vector3(initialTransformLocalPos.x, currentLocalPos.y, initialTransformLocalPos.z);
             }
         }
         else
         {
             isRollLocked = false; // Tự động xả lock Hips khi không ở trong animation lộn, tránh vẹo xương sườn/hông
+            if (transform.localRotation != Quaternion.identity)
+            {
+                transform.localRotation = Quaternion.identity;
+            }
         }
     }
 
     /// <summary>
     /// Gọi TRƯỚC khi bắt đầu roll animation.
-    /// Capture vị trí Hips hiện tại làm điểm lock — tránh lộn qua trái do lock sai tâm.
+    /// Kích hoạt lock Hips chuẩn tâm.
     /// </summary>
     public void BeginRoll()
     {
-        if (hasRootBone && rootBone != null)
-        {
-            rollLockHipsPos = rootBone.localPosition;
-        }
-        else
-        {
-            rollLockHipsPos = transform.localPosition;
-        }
+        rollLockHipsPos = initialRootBoneLocalPos;
         isRollLocked = true;
         enabled = true; // Đảm bảo bridge đang chạy để lock Hips
     }

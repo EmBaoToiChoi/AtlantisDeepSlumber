@@ -204,7 +204,7 @@ Rigidbody:
   m_IsKinematic: 0
   m_Interpolate: 1
   m_Constraints: 80
-  m_CollisionDetection: 1
+  m_CollisionDetection: 0
 --- !u!136 &6995139911269330768
 CapsuleCollider:
   m_ObjectHideFlags: 0
@@ -370,25 +370,11 @@ MonoBehaviour:
     TransitionIndex: 5
   - IsCrossFadeExit: 0
     Layer: 0
-    OriginatingState: -216566996
-    DestinationState: 20298039
-    TransitionDuration: 0.1
-    TriggerNameHash: 646380074
-    TransitionIndex: 6
-  - IsCrossFadeExit: 0
-    Layer: 0
     OriginatingState: 1654062508
     DestinationState: 1910553104
     TransitionDuration: 0.05
     TriggerNameHash: -726645050
     TransitionIndex: 1
-  - IsCrossFadeExit: 0
-    Layer: 0
-    OriginatingState: 1654062508
-    DestinationState: 20298039
-    TransitionDuration: 0.1
-    TriggerNameHash: 646380074
-    TransitionIndex: 2
   - IsCrossFadeExit: 0
     Layer: 0
     OriginatingState: 1910553104
@@ -671,8 +657,6 @@ MonoBehaviour:
   inputFilterSpeed: 8
   rotationSmoothSpeedArmed: 10
   rotationSmoothSpeedUnarmed: 12
-  rotateToCameraWhenArmed: 1
-  rotateToCameraWhenUnarmed: 1
   moveSpeed: 5
   runSpeedMultiplier: 1.5
   damageAmount: 20
@@ -778,7 +762,7 @@ MonoBehaviour:
   cameraOffset: {x: 0, y: 12, z: -8}
   cameraSmoothSpeed: 5
   cameraLookAtPlayer: 1
-  cameraPivotHeight: 1
+  cameraPivotHeight: 3.5
   cameraSensitivity: 2
   minPitch: 10
   maxPitch: 80
