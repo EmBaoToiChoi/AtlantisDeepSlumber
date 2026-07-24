@@ -59,6 +59,7 @@ public class PlayerCheckpointManager : NetworkBehaviour
     private Dictionary<ulong, Vector3> playerInitialPositions = new Dictionary<ulong, Vector3>();
     // Danh sách Client ID đang chờ hồi sinh
     private HashSet<ulong> respawningPlayers = new HashSet<ulong>();
+    private int globalLatestCheckpointIndex = -1;
 
     // --- Chế độ Chơi Đơn (Standalone) ---
     private int localPlayerCheckpointIndex = -1;
@@ -117,38 +118,47 @@ public class PlayerCheckpointManager : NetworkBehaviour
     {
         if (IsStandaloneMode())
         {
-            return checkpointIndex == localPlayerCheckpointIndex;
+            return checkpointIndex == localPlayerCheckpointIndex || checkpointIndex == globalLatestCheckpointIndex;
         }
 
         // Lấy tên của người chơi local
         string localName = GetLocalPlayerName();
-        if (string.IsNullOrEmpty(localName)) return false;
-
-        // Quét qua danh sách đồng bộ mạng để tìm checkpoint tương ứng
-        foreach (var data in networkPlayerCheckpoints)
+        if (!string.IsNullOrEmpty(localName))
         {
-            if (data.PlayerName.ToString() == localName)
+            // Quét qua danh sách đồng bộ mạng để tìm checkpoint tương ứng
+            foreach (var data in networkPlayerCheckpoints)
             {
-                return data.CheckpointIndex == checkpointIndex;
+                if (data.PlayerName.ToString() == localName)
+                {
+                    return data.CheckpointIndex == checkpointIndex;
+                }
             }
         }
+
+        if (globalLatestCheckpointIndex >= 0)
+        {
+            return checkpointIndex == globalLatestCheckpointIndex;
+        }
+
         return false;
     }
 
     /// <summary>
-    /// Đăng ký checkpoint mới khi người chơi đi vào vùng kích hoạt.
+    /// Đăng ký checkpoint mới khi 1 người chơi đi vào vùng kích hoạt.
+    /// Checkpoint này sẽ được đồng bộ áp dụng cho TOÀN BỘ người chơi trong đội.
     /// </summary>
     public void RegisterCheckpoint(IPlayerHUDTarget player, CheckpointZone checkpoint)
     {
-        if (player == null || checkpoint == null) return;
+        if (checkpoint == null) return;
 
         // A. Chế độ chơi đơn
-        if (player.isStandaloneMode)
+        if (player != null && player.isStandaloneMode)
         {
             if (localPlayerCheckpointIndex != checkpoint.checkpointIndex)
             {
                 localPlayerCheckpointIndex = checkpoint.checkpointIndex;
-                Debug.Log($"[Standalone Checkpoint] Đã lưu checkpoint '{checkpoint.gameObject.name}' (Index: {checkpoint.checkpointIndex}) cho người chơi chơi đơn!");
+                globalLatestCheckpointIndex = checkpoint.checkpointIndex;
+                Debug.Log($"[Standalone Checkpoint] Đã lưu checkpoint '{checkpoint.gameObject.name}' (Index: {checkpoint.checkpointIndex}) cho người chơi!");
             }
             return;
         }
@@ -156,30 +166,40 @@ public class PlayerCheckpointManager : NetworkBehaviour
         // B. Chế độ chơi mạng (Chỉ xử lý trên Server)
         if (!IsServer) return;
 
-        ulong clientId = player.OwnerClientId;
-        string playerName = player.DisplayName;
+        int newCpIdx = checkpoint.checkpointIndex;
+        globalLatestCheckpointIndex = newCpIdx;
 
-        // Lưu vào cache Server-side bằng ClientId để xử lý hồi sinh nhanh
-        playerCheckpointIndices[clientId] = checkpoint.checkpointIndex;
-
-        // Cập nhật hoặc thêm mới vào NetworkList để đồng bộ xuống toàn bộ Client
-        bool found = false;
-        for (int i = 0; i < networkPlayerCheckpoints.Count; i++)
+        // Cập nhật checkpoint mới cho TOÀN BỘ người chơi hiện có trong phòng
+        List<IPlayerHUDTarget> activePlayers = FindAllActivePlayers();
+        foreach (var p in activePlayers)
         {
-            if (networkPlayerCheckpoints[i].PlayerName.ToString() == playerName)
+            if (p == null || p.isStandaloneMode) continue;
+
+            ulong cId = p.OwnerClientId;
+            string pName = p.DisplayName;
+
+            // Lưu vào cache Server-side bằng ClientId
+            playerCheckpointIndices[cId] = newCpIdx;
+
+            // Cập nhật hoặc thêm mới vào NetworkList để đồng bộ xuống toàn bộ Client
+            bool found = false;
+            for (int i = 0; i < networkPlayerCheckpoints.Count; i++)
             {
-                networkPlayerCheckpoints[i] = new PlayerCheckpointData(playerName, checkpoint.checkpointIndex);
-                found = true;
-                break;
+                if (networkPlayerCheckpoints[i].PlayerName.ToString() == pName)
+                {
+                    networkPlayerCheckpoints[i] = new PlayerCheckpointData(pName, newCpIdx);
+                    found = true;
+                    break;
+                }
+            }
+
+            if (!found)
+            {
+                networkPlayerCheckpoints.Add(new PlayerCheckpointData(pName, newCpIdx));
             }
         }
 
-        if (!found)
-        {
-            networkPlayerCheckpoints.Add(new PlayerCheckpointData(playerName, checkpoint.checkpointIndex));
-        }
-
-        Debug.Log($"[Server Checkpoint] Đã đồng bộ checkpoint index {checkpoint.checkpointIndex} cho người chơi '{playerName}' (Client ID: {clientId})");
+        Debug.Log($"[Server Checkpoint] Đã đồng bộ checkpoint index {newCpIdx} cho TOÀN BỘ người chơi do '{player?.DisplayName}' kích hoạt!");
     }
 
     #region Standalone Respawn Logic
@@ -285,17 +305,26 @@ public class PlayerCheckpointManager : NetworkBehaviour
                 Debug.Log($"[Server Respawn] Đã lưu vị trí ban đầu cho Client ID {clientId} ({playerName}): {player.transform.position}");
             }
 
-            // 2. KHÔI PHỤC CHECKPOINT KHI KẾT NỐI LẠI (Reconnection hoặc Late joining)
+            // 2. KHÔI PHỤC HOẶC GÁN CHECKPOINT KHI KẾT NỐI LẠI (Reconnection hoặc Late joining)
             if (!playerCheckpointIndices.ContainsKey(clientId))
             {
+                bool foundInList = false;
                 foreach (var data in networkPlayerCheckpoints)
                 {
                     if (data.PlayerName.ToString() == playerName)
                     {
                         playerCheckpointIndices[clientId] = data.CheckpointIndex;
+                        foundInList = true;
                         Debug.Log($"[Server Respawn] Đã phục hồi checkpoint index {data.CheckpointIndex} cho '{playerName}' (Client ID mới: {clientId}) sau khi kết nối lại.");
                         break;
                     }
+                }
+
+                if (!foundInList && globalLatestCheckpointIndex >= 0)
+                {
+                    playerCheckpointIndices[clientId] = globalLatestCheckpointIndex;
+                    networkPlayerCheckpoints.Add(new PlayerCheckpointData(playerName, globalLatestCheckpointIndex));
+                    Debug.Log($"[Server Respawn] Đã gán checkpoint chung index {globalLatestCheckpointIndex} cho người chơi mới '{playerName}' (Client ID: {clientId}).");
                 }
             }
 
@@ -625,7 +654,6 @@ public class PlayerCheckpointManager : NetworkBehaviour
     private void HealAndResetPlayer(IPlayerHUDTarget player)
     {
         if (player == null) return;
-        player.ResetDeathState();
         GameObject playerGo = player.gameObject;
 
         // Reset trạng thái choáng vật lý nếu có
@@ -677,7 +705,7 @@ public class PlayerCheckpointManager : NetworkBehaviour
                         }
                     }
 
-                    // 3. Gán máu về tối đa
+                    // 3. Gán máu về tối đa TRƯỚC KHI reset trạng thái chết
                     if (isStandalone)
                     {
                         FieldInfo localHealthField = GetFieldInherited(script.GetType(), "localHealth", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
@@ -709,7 +737,10 @@ public class PlayerCheckpointManager : NetworkBehaviour
                         }
                     }
 
-                    // 4. Reset hoạt ảnh về Idle
+                    // 4. Reset trạng thái chết
+                    script.GetType().GetMethod("ResetDeathState", BindingFlags.Public | BindingFlags.Instance)?.Invoke(script, null);
+
+                    // 5. Reset hoạt ảnh về Idle
                     InvokePlayAnimationInherited(script, "Idle", 0.15f);
                 }
             }
@@ -719,11 +750,21 @@ public class PlayerCheckpointManager : NetworkBehaviour
             }
         }
 
+        player.ResetDeathState();
+
         Animator anim = playerGo.GetComponentInChildren<Animator>();
         if (anim != null)
         {
-            anim.Play("Idle", 0, 0f);
             anim.ResetTrigger("Death");
+            anim.ResetTrigger("GetHit");
+            anim.ResetTrigger("GeiHit2");
+            if (anim.layerCount > 1)
+            {
+                anim.SetLayerWeight(1, 0f);
+                anim.Play("New State", 1, 0f);
+            }
+            anim.Play("Idle", 0, 0f);
+            anim.Update(0f);
         }
     }
 
