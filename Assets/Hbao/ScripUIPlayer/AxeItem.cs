@@ -51,7 +51,7 @@ public class AxeItem : NetworkBehaviour
 
     private void LateUpdate()
     {
-        bool isNetwork = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
+        bool isNetwork = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening && NetworkManager.Singleton.SpawnManager != null && IsSpawned;
         GameObject carrierObj = null;
 
         if (isNetwork)
@@ -59,7 +59,7 @@ public class AxeItem : NetworkBehaviour
             ulong carrierId = carryingPlayerId.Value;
             if (carrierId != 0 && NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(carrierId, out NetworkObject playerNetObj))
             {
-                carrierObj = playerNetObj.gameObject;
+                if (playerNetObj != null) carrierObj = playerNetObj.gameObject;
             }
         }
         else
@@ -72,9 +72,13 @@ public class AxeItem : NetworkBehaviour
             Transform hand = GetAxeHoldingPoint(carrierObj);
             if (hand != null)
             {
-                transform.position = hand.position;
-                transform.rotation = hand.rotation;
-                AdjustScaleToPlayerRoot(carrierObj);
+                if (transform.parent != hand)
+                {
+                    transform.SetParent(hand, false);
+                    transform.localPosition = Vector3.zero;
+                    transform.localRotation = Quaternion.identity;
+                    transform.localScale = originalWorldScale;
+                }
             }
         }
     }
@@ -91,12 +95,7 @@ public class AxeItem : NetworkBehaviour
 
     private void AdjustScaleToPlayerRoot(GameObject player)
     {
-        Vector3 playerScale = player.transform.lossyScale;
-        transform.localScale = new Vector3(
-            originalWorldScale.x / (playerScale.x != 0f ? playerScale.x : 1f),
-            originalWorldScale.y / (playerScale.y != 0f ? playerScale.y : 1f),
-            originalWorldScale.z / (playerScale.z != 0f ? playerScale.z : 1f)
-        );
+        transform.localScale = originalWorldScale;
     }
 
     private void Update()
@@ -159,6 +158,21 @@ public class AxeItem : NetworkBehaviour
             var playerObj = PlayerHUDController.LocalPlayerTarget as MonoBehaviour;
             if (playerObj != null)
             {
+                // Cho phép thả bằng phím G bất kể khoảng cách nếu đang cầm rìu
+                if ((isCarryingLocally || PlayerHUDController.isCarryingAxe) && Input.GetKeyDown(KeyCode.G))
+                {
+                    bool isNetworkActive = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening && IsSpawned;
+                    if (isNetworkActive)
+                    {
+                        RequestDropServerRpc();
+                    }
+                    else
+                    {
+                        DropLocal();
+                    }
+                    return;
+                }
+
                 float dist = Vector3.Distance(transform.position, playerObj.transform.position);
                 bool inRange = (!isCarried && dist <= 3f);
 
@@ -193,19 +207,6 @@ public class AxeItem : NetworkBehaviour
                         var hud = PlayerHUDController.Instance;
                         if (hud != null) hud.ShowInteractionPrompt(false, "");
                     }
-
-                    // Nếu bản thân đang cầm rìu thì cho phép thả bằng phím G
-                    if (isCarryingLocally && Input.GetKeyDown(KeyCode.G))
-                    {
-                        if (isNetwork)
-                        {
-                            RequestDropServerRpc();
-                        }
-                        else
-                        {
-                            DropLocal();
-                        }
-                    }
                 }
             }
         }
@@ -218,10 +219,12 @@ public class AxeItem : NetworkBehaviour
 
         carryingPlayerId.Value = playerNetId;
         
-        // Thực hiện parenting của Netcode tới player root (NetworkObject)
-        if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(playerNetId, out NetworkObject playerNetObj))
+        if (NetworkManager.Singleton != null && NetworkManager.Singleton.SpawnManager != null && NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(playerNetId, out NetworkObject playerNetObj))
         {
-            NetworkObject.TrySetParent(playerNetObj, false);
+            if (playerNetObj != null)
+            {
+                NetworkObject.TrySetParent(playerNetObj, false);
+            }
         }
     }
 
@@ -233,14 +236,15 @@ public class AxeItem : NetworkBehaviour
         ulong lastCarrierId = carryingPlayerId.Value;
         carryingPlayerId.Value = 0;
 
-        // Hủy liên kết parent
         NetworkObject.TryRemoveParent();
 
-        // Đặt lại vị trí rơi
-        if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(lastCarrierId, out NetworkObject playerNetObj))
+        if (NetworkManager.Singleton != null && NetworkManager.Singleton.SpawnManager != null && NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(lastCarrierId, out NetworkObject playerNetObj))
         {
-            transform.position = playerNetObj.transform.position + playerNetObj.transform.forward * 1.2f + Vector3.up * 1.3f;
-            transform.rotation = Quaternion.identity;
+            if (playerNetObj != null)
+            {
+                transform.position = playerNetObj.transform.position + playerNetObj.transform.forward * 1.2f + Vector3.up * 1.3f;
+                transform.rotation = Quaternion.identity;
+            }
         }
 
         if (rb != null)
@@ -293,11 +297,16 @@ public class AxeItem : NetworkBehaviour
                 var nt = GetComponent<Unity.Netcode.Components.NetworkTransform>();
                 if (nt != null) nt.enabled = false;
 
-                // Parent cục bộ tới player root
+                // Parent tới Transform axeHoldingPoint trong PlayerAxeAnchor (vị trí tay cầm rìu)
+                Transform holdingPoint = GetAxeHoldingPoint(playerNetObj.gameObject);
+                Transform targetParent = (holdingPoint != null) ? holdingPoint : playerNetObj.transform;
+
                 bool isNetwork = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
                 if (!isNetwork || IsServer)
                 {
-                    transform.SetParent(playerNetObj.transform, false);
+                    transform.SetParent(targetParent, false);
+                    transform.localPosition = Vector3.zero;
+                    transform.localRotation = Quaternion.identity;
                 }
 
                 // Ẩn vũ khí hiện tại của nhân vật
@@ -323,12 +332,8 @@ public class AxeItem : NetworkBehaviour
         }
         else
         {
-            // Rìu được thả xuống đất
-            bool isNetwork = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
-            if (!isNetwork || IsServer)
-            {
-                transform.SetParent(null);
-            }
+            // Rìu được thả xuống đất (Thực thi cho cả Server lẫn tất cả Client)
+            transform.SetParent(null);
             transform.localScale = originalWorldScale;
             
             if (rb != null)
@@ -337,7 +342,10 @@ public class AxeItem : NetworkBehaviour
                 rb.linearVelocity = Vector3.zero;
                 rb.angularVelocity = Vector3.zero;
             }
-            foreach (var col in colliders) if (col != null) col.enabled = true;
+            if (colliders != null)
+            {
+                foreach (var col in colliders) if (col != null) col.enabled = true;
+            }
 
             // Bật lại NetworkTransform khi thả rìu ra
             var nt = GetComponent<Unity.Netcode.Components.NetworkTransform>();
@@ -377,8 +385,13 @@ public class AxeItem : NetworkBehaviour
         var nt = GetComponent<Unity.Netcode.Components.NetworkTransform>();
         if (nt != null) nt.enabled = false;
 
-        // Parent cục bộ tới player root
-        transform.SetParent(player.transform, false);
+        // Parent tới Transform axeHoldingPoint trong PlayerAxeAnchor (vị trí tay cầm rìu)
+        Transform holdingPoint = GetAxeHoldingPoint(player);
+        Transform targetParent = (holdingPoint != null) ? holdingPoint : player.transform;
+
+        transform.SetParent(targetParent, false);
+        transform.localPosition = Vector3.zero;
+        transform.localRotation = Quaternion.identity;
 
         var carrier = player.GetComponent<PlayerLogCarrier>();
         if (carrier != null) carrier.TogglePlayerWeapons(false);
@@ -396,9 +409,10 @@ public class AxeItem : NetworkBehaviour
 
     private void DropLocal()
     {
-        if (localPlayerCarrier != null)
+        var playerObj = (localPlayerCarrier != null) ? localPlayerCarrier : (PlayerHUDController.LocalPlayerTarget as MonoBehaviour)?.gameObject;
+        if (playerObj != null)
         {
-            var carrier = localPlayerCarrier.GetComponent<PlayerLogCarrier>();
+            var carrier = playerObj.GetComponent<PlayerLogCarrier>();
             if (carrier != null) carrier.TogglePlayerWeapons(true);
 
             PlayerHUDController.isCarryingAxe = false;
@@ -408,7 +422,7 @@ public class AxeItem : NetworkBehaviour
             }
 
             transform.SetParent(null);
-            transform.position = localPlayerCarrier.transform.position + localPlayerCarrier.transform.forward * 1.2f + Vector3.up * 1.3f;
+            transform.position = playerObj.transform.position + playerObj.transform.forward * 1.2f + Vector3.up * 1.3f;
             transform.rotation = Quaternion.identity;
             transform.localScale = originalWorldScale;
 
@@ -418,7 +432,10 @@ public class AxeItem : NetworkBehaviour
                 rb.linearVelocity = Vector3.zero;
                 rb.angularVelocity = Vector3.zero;
             }
-            foreach (var col in colliders) if (col != null) col.enabled = true;
+            if (colliders != null)
+            {
+                foreach (var col in colliders) if (col != null) col.enabled = true;
+            }
 
             var nt = GetComponent<Unity.Netcode.Components.NetworkTransform>();
             if (nt != null) nt.enabled = true;
@@ -504,11 +521,12 @@ public class AxeItem : NetworkBehaviour
     {
         if (player == null) return;
 
-        bool isNetwork = Unity.Netcode.NetworkManager.Singleton != null && Unity.Netcode.NetworkManager.Singleton.IsListening;
-        if (isNetwork)
+        bool isNetwork = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening && IsSpawned;
+        NetworkObject playerNetObj = player.GetComponent<NetworkObject>();
+
+        if (isNetwork && playerNetObj != null && playerNetObj.IsSpawned)
         {
-            ulong localNetId = player.GetComponent<NetworkObject>().NetworkObjectId;
-            RequestPickupServerRpc(localNetId);
+            RequestPickupServerRpc(playerNetObj.NetworkObjectId);
         }
         else
         {
