@@ -4064,6 +4064,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         {
             smoothedInputX = 0f;
             smoothedInputZ = 0f;
+            targetMoveVelocity = Vector3.zero;
             UpdateAnimatorParams(0f);
             if (rb != null) rb.linearVelocity = new Vector3(0f, rb.linearVelocity.y, 0f);
             return;
@@ -4253,6 +4254,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         {
             smoothedInputX = 0f;
             smoothedInputZ = 0f;
+            targetMoveVelocity = Vector3.zero;
             UpdateAnimatorParams(0f);
             if (rb != null) rb.linearVelocity = new Vector3(0f, rb.linearVelocity.y, 0f);
             return;
@@ -6966,8 +6968,8 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (string.Equals(triggerName, "ChatRiu", System.StringComparison.OrdinalIgnoreCase)) searchName = "Chat Cayy";
         else if (string.Equals(triggerName, "DrawLeft", System.StringComparison.OrdinalIgnoreCase)) searchName = "laykiemtaytrai";
         else if (string.Equals(triggerName, "DrawRight", System.StringComparison.OrdinalIgnoreCase)) searchName = "Laykiemtayphai";
-        else if (string.Equals(triggerName, "SheatheLeft", System.StringComparison.OrdinalIgnoreCase)) searchName = "catkiemtaytrai";
-        else if (string.Equals(triggerName, "SheatheRight", System.StringComparison.OrdinalIgnoreCase)) searchName = "catkiemtayphai";
+        else if (string.Equals(triggerName, "attacktaytrai", System.StringComparison.OrdinalIgnoreCase)) searchName = "ATTACKTRAINEW";
+        else if (string.Equals(triggerName, "attacktayphai", System.StringComparison.OrdinalIgnoreCase)) searchName = "ATTACKNEWPhai";
 
         foreach (var clip in anim.runtimeAnimatorController.animationClips)
         {
@@ -7215,15 +7217,30 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             case "Punch1":
             case "DAMTRAI 2":
             case "DamTrai":
-                return string.IsNullOrEmpty(punch1Trigger) ? "DAMTRAI 2" : punch1Trigger;
+                if (anim != null)
+                {
+                    anim.SetTrigger("DamTrai");
+                    anim.SetTrigger("DAMTRAI 2");
+                }
+                return "DAMTRAI 2";
             case "Punch2":
             case "DAMPHAI 2":
             case "DamPhai":
-                return string.IsNullOrEmpty(punch2Trigger) ? "DAMPHAI 2" : punch2Trigger;
+                if (anim != null)
+                {
+                    anim.SetTrigger("DamPhai");
+                    anim.SetTrigger("DAMPHAI 2");
+                }
+                return "DAMPHAI 2";
             case "Punch3":
             case "COMBODAM 1":
             case "Combodam":
-                return string.IsNullOrEmpty(punch3Trigger) ? "COMBODAM 1" : punch3Trigger;
+                if (anim != null)
+                {
+                    anim.SetTrigger("Combodam");
+                    anim.SetTrigger("COMBODAM 1");
+                }
+                return "COMBODAM 1";
             case "Slash1":
                 return slash1Trigger;
             case "Slash2":
@@ -7266,11 +7283,19 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
                name == "Punch1" ||
                name == "Punch2" ||
                name == "Punch3" ||
+               name == "DamTrai" ||
+               name == "DamPhai" ||
+               name == "Combodam" ||
+               name == "DAMTRAI 2" ||
+               name == "DAMPHAI 2" ||
+               name == "COMBODAM 1" ||
                name == "Slash1" ||
                name == "Slash2" ||
                name == "Slash3" ||
                name == "attacktaytrai" ||
                name == "attacktayphai" ||
+               name == "ATTACKTRAINEW" ||
+               name == "ATTACKNEWPhai" ||
                name == "Slash1Combo2" ||
                name == "Slash2combo2" ||
                name == "Slash3combo2" || name == "ChatRiu" ||
@@ -7293,11 +7318,19 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
                name == "Punch1" ||
                name == "Punch2" ||
                name == "Punch3" ||
+               name == "DamTrai" ||
+               name == "DamPhai" ||
+               name == "Combodam" ||
+               name == "DAMTRAI 2" ||
+               name == "DAMPHAI 2" ||
+               name == "COMBODAM 1" ||
                name == "Slash1" ||
                name == "Slash2" ||
                name == "Slash3" ||
                name == "attacktaytrai" ||
                name == "attacktayphai" ||
+               name == "ATTACKTRAINEW" ||
+               name == "ATTACKNEWPhai" ||
                name == "Slash1Combo2" ||
                name == "Slash2combo2" ||
                name == "Slash3combo2" ||
@@ -7524,7 +7557,8 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (translatedName == rollTrigger || translatedName == "LonVong" ||
             translatedName == getHitTrigger || translatedName == getHit2Trigger ||
             translatedName == "GetHit" || translatedName == "GeiHit2" ||
-            translatedName.Contains("Hit"))
+            translatedName.Contains("Hit") ||
+            translatedName == pickTrigger || translatedName == "Idle_Pick" || translatedName == "Pick" || translatedName == "Picknew")
         {
             anim.applyRootMotion = false;
         }
@@ -7587,6 +7621,12 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             anim.ResetTrigger("Punch1");
             anim.ResetTrigger("Punch2");
             anim.ResetTrigger("Punch3");
+            anim.ResetTrigger("DamTrai");
+            anim.ResetTrigger("DamPhai");
+            anim.ResetTrigger("Combodam");
+            anim.ResetTrigger("DAMTRAI 2");
+            anim.ResetTrigger("DAMPHAI 2");
+            anim.ResetTrigger("COMBODAM 1");
             anim.ResetTrigger("Slash1");
             anim.ResetTrigger("Slash2");
             anim.ResetTrigger("Slash3");
@@ -7636,12 +7676,19 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (IsActionAnimationName(translatedName))
         {
             string stateName = translatedName;
-            if (string.Equals(translatedName, "DrawLeft", System.StringComparison.OrdinalIgnoreCase)) stateName = "laykiemtaytrai";
+            if (translatedName == "attacktaytrai") stateName = "ATTACKTRAINEW";
+            else if (translatedName == "attacktayphai") stateName = "ATTACKNEWPhai";
+            else if (string.Equals(translatedName, "DrawLeft", System.StringComparison.OrdinalIgnoreCase)) stateName = "laykiemtaytrai";
             else if (string.Equals(translatedName, "DrawRight", System.StringComparison.OrdinalIgnoreCase)) stateName = "Laykiemtayphai";
             else if (string.Equals(translatedName, "SheatheLeft", System.StringComparison.OrdinalIgnoreCase)) stateName = "catkiemtaytrai";
             else if (string.Equals(translatedName, "SheatheRight", System.StringComparison.OrdinalIgnoreCase)) stateName = "catkiemtayphai";
 
             anim.SetTrigger(translatedName);
+            if (translatedName == "attacktaytrai" || stateName == "ATTACKTRAINEW") anim.SetTrigger("attacktaytrai");
+            if (translatedName == "attacktayphai" || stateName == "ATTACKNEWPhai") anim.SetTrigger("attacktayphai");
+            if (translatedName == "Slash1Combo2") anim.SetTrigger("Slash1Combo2");
+            if (translatedName == "Slash2combo2") anim.SetTrigger("Slash2combo2");
+            if (translatedName == "Slash3combo2") anim.SetTrigger("Slash3combo2");
             StartCoroutine(ResetTriggerNextFrame(translatedName));
 
             int targetLayer = 0;
@@ -7724,8 +7771,8 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         string[] candidates = null;
         if (requestedName == "attacktaytrai") candidates = new string[] { "ATTACKTRAINEW", "attacktaytrai", "Combo1kiem" };
-        else if (requestedName == "attacktayphai") candidates = new string[] { "Slash1Combo2", "ATTACKTRAINEW", "Attackdoucombo", "attacktayphai" };
-        else if (requestedName == "Slash1Combo2") candidates = new string[] { "Slash1combo2", "Slash1Combo2", "Slash2combo2", "Slash3combo2", "Slash3" };
+        else if (requestedName == "attacktayphai") candidates = new string[] { "ATTACKNEWPhai", "attacktayphai", "Slash1Combo2", "Attackdoucombo", "ATTACKTRAINEW" };
+        else if (requestedName == "Slash1Combo2") candidates = new string[] { "Slash1Combo2", "Slash1combo2", "Slash2combo2", "Slash3combo2", "Slash3" };
         else if (requestedName == "Slash2combo2") candidates = new string[] { "Slash2combo2", "Slash2Combo2", "Slash3combo2", "Slash2" };
         else if (requestedName == "Slash3combo2") candidates = new string[] { "Slash3combo2", "Slash3Combo2", "Slash2combo2", "Slash3" };
         else if (requestedName == "DAMTRAI 2") candidates = new string[] { "DAMTRAI 2", "DamTrai", "Punch1" };
@@ -7866,6 +7913,16 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             {
                 float currentYVelocity = rb.linearVelocity.y;
                 rb.linearVelocity = new Vector3(rollDirection.x * rollSpeed, currentYVelocity, rollDirection.z * rollSpeed);
+            }
+            return;
+        }
+
+        if (IsPlayingPickAnimation())
+        {
+            targetMoveVelocity = Vector3.zero;
+            if (rb != null && !rb.isKinematic)
+            {
+                rb.linearVelocity = new Vector3(0f, rb.linearVelocity.y, 0f);
             }
             return;
         }
@@ -8137,10 +8194,6 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         }
 
         col.enabled = enabled;
-        if (col.gameObject != null && col.gameObject != gameObject)
-        {
-            col.gameObject.SetActive(enabled);
-        }
     }
 
     private void EnsureHitboxComponent(Collider col)
