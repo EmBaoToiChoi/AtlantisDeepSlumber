@@ -242,13 +242,14 @@ public class AxeItem : NetworkBehaviour
         {
             if (playerNetObj != null)
             {
-                transform.position = playerNetObj.transform.position + playerNetObj.transform.forward * 1.2f + Vector3.up * 1.3f;
+                transform.position = GetDropPositionAtFeet(playerNetObj.gameObject);
                 transform.rotation = Quaternion.identity;
             }
         }
 
         if (rb != null)
         {
+            rb.isKinematic = false;
             rb.linearVelocity = Vector3.zero;
             rb.angularVelocity = Vector3.zero;
         }
@@ -335,6 +336,12 @@ public class AxeItem : NetworkBehaviour
             // Rìu được thả xuống đất (Thực thi cho cả Server lẫn tất cả Client)
             transform.SetParent(null);
             transform.localScale = originalWorldScale;
+
+            if (lastNetworkCarrier != null)
+            {
+                transform.position = GetDropPositionAtFeet(lastNetworkCarrier);
+                transform.rotation = Quaternion.identity;
+            }
             
             if (rb != null)
             {
@@ -407,6 +414,21 @@ public class AxeItem : NetworkBehaviour
         }
     }
 
+    private Vector3 GetDropPositionAtFeet(GameObject player)
+    {
+        if (player == null) return transform.position;
+        Vector3 playerPos = player.transform.position;
+        Vector3 dropPos = playerPos + player.transform.forward * 0.5f + Vector3.up * 0.1f;
+
+        // Quét Raycast xuống dưới để lấy chính xác vị trí mặt đất dưới chân player vừa bấm thả
+        if (Physics.Raycast(playerPos + Vector3.up * 0.5f, Vector3.down, out RaycastHit hit, 2.5f))
+        {
+            dropPos = hit.point + Vector3.up * 0.05f;
+        }
+
+        return dropPos;
+    }
+
     private void DropLocal()
     {
         var playerObj = (localPlayerCarrier != null) ? localPlayerCarrier : (PlayerHUDController.LocalPlayerTarget as MonoBehaviour)?.gameObject;
@@ -422,7 +444,7 @@ public class AxeItem : NetworkBehaviour
             }
 
             transform.SetParent(null);
-            transform.position = playerObj.transform.position + playerObj.transform.forward * 1.2f + Vector3.up * 1.3f;
+            transform.position = GetDropPositionAtFeet(playerObj);
             transform.rotation = Quaternion.identity;
             transform.localScale = originalWorldScale;
 
