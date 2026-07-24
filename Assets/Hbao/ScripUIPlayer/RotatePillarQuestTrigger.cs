@@ -4,7 +4,7 @@ using Unity.Netcode;
 
 public class RotatePillarQuestTrigger : NetworkBehaviour, IQuestTrigger
 {
-    public bool IsQuestCompleted => isQuestCompleted;
+    public bool IsQuestCompleted => (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening) ? isQuestCompletedNet.Value : isQuestCompletedLocal;
     public bool IsQuestActive => (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening) ? isQuestActive.Value : hasTriggeredQuest;
 
     [Header("Quest Prerequisite Settings")]
@@ -47,6 +47,13 @@ public class RotatePillarQuestTrigger : NetworkBehaviour, IQuestTrigger
         NetworkVariableWritePermission.Server
     );
 
+    // Biến mạng đồng bộ trạng thái hoàn thành nhiệm vụ
+    public NetworkVariable<bool> isQuestCompletedNet = new NetworkVariable<bool>(
+        false,
+        NetworkVariableReadPermission.Everyone,
+        NetworkVariableWritePermission.Server
+    );
+
     // Biến mạng đồng bộ số lượng trụ đã xoay đúng
     public NetworkVariable<int> correctCount = new NetworkVariable<int>(
         0,
@@ -59,7 +66,7 @@ public class RotatePillarQuestTrigger : NetworkBehaviour, IQuestTrigger
     private Collider triggerCollider;
 
     private bool hasTriggeredQuest = false;
-    private bool isQuestCompleted = false;
+    private bool isQuestCompletedLocal = false;
 
     private float nextPlayerSearchTime = 0f;
     private float nextCheckTime = 0f;
@@ -71,7 +78,7 @@ public class RotatePillarQuestTrigger : NetworkBehaviour, IQuestTrigger
         triggerCollider = GetComponent<Collider>();
         if (triggerCollider == null)
         {
-            Debug.LogWarning($"[RotatePillarQuestTrigger] GameObject '{gameObject.name}' chưa có Collider trigger. Cần có Box Collider trigger để tự động phát hiện người chơi khi lại gần vùng trụ.");
+            Debug.LogWarning($"[RotatePillarQuestTrigger] GameObject '{gameObject.name}' chưa có Collider trigger. Cần có Box Collider trigger để tự động phát hiện người chơi khi lại gần khu vực trụ.");
         }
         else if (!triggerCollider.isTrigger)
         {
@@ -90,7 +97,7 @@ public class RotatePillarQuestTrigger : NetworkBehaviour, IQuestTrigger
             }
             else
             {
-                Debug.LogWarning("[RotatePillarQuestTrigger] CẢNH BÁO: Chưa gán pillars (các trụ xoay) trong Inspector!");
+                Debug.LogWarning("[RotatePillarQuestTrigger] CẢNH BÁO: Chưa gán pillars trong Inspector!");
             }
         }
     }
@@ -99,8 +106,13 @@ public class RotatePillarQuestTrigger : NetworkBehaviour, IQuestTrigger
     {
         isQuestActive.OnValueChanged += OnQuestActiveChanged;
         correctCount.OnValueChanged += OnCorrectCountChanged;
+        isQuestCompletedNet.OnValueChanged += OnQuestCompletedChanged;
 
-        if (isQuestActive.Value && IsPrerequisiteCompleted())
+        if (isQuestCompletedNet.Value)
+        {
+            isQuestCompletedLocal = true;
+        }
+        else if (isQuestActive.Value && IsPrerequisiteCompleted())
         {
             hasTriggeredQuest = true;
             UpdateQuestProgressUI();
@@ -111,11 +123,21 @@ public class RotatePillarQuestTrigger : NetworkBehaviour, IQuestTrigger
     {
         isQuestActive.OnValueChanged -= OnQuestActiveChanged;
         correctCount.OnValueChanged -= OnCorrectCountChanged;
+        isQuestCompletedNet.OnValueChanged -= OnQuestCompletedChanged;
+    }
+
+    private void OnQuestCompletedChanged(bool oldVal, bool newVal)
+    {
+        if (newVal)
+        {
+            isQuestCompletedLocal = true;
+            ShowCompletionUI();
+        }
     }
 
     private void OnQuestActiveChanged(bool oldVal, bool newVal)
     {
-        if (newVal && IsPrerequisiteCompleted())
+        if (newVal && IsPrerequisiteCompleted() && !IsQuestCompleted)
         {
             hasTriggeredQuest = true;
             lastCorrectCount = -1;
@@ -125,7 +147,7 @@ public class RotatePillarQuestTrigger : NetworkBehaviour, IQuestTrigger
 
     private void OnCorrectCountChanged(int oldVal, int newVal)
     {
-        if (isQuestActive.Value && IsPrerequisiteCompleted())
+        if (isQuestActive.Value && IsPrerequisiteCompleted() && !IsQuestCompleted)
         {
             UpdateQuestProgressUI();
         }
@@ -139,7 +161,7 @@ public class RotatePillarQuestTrigger : NetworkBehaviour, IQuestTrigger
 
     private void Update()
     {
-        if (isQuestCompleted || !IsPrerequisiteCompleted()) return;
+        if (IsQuestCompleted || !IsPrerequisiteCompleted()) return;
 
         if (localPlayer == null)
         {
@@ -201,7 +223,7 @@ public class RotatePillarQuestTrigger : NetworkBehaviour, IQuestTrigger
 
     private void UpdateQuestProgressUI()
     {
-        if (!IsPrerequisiteCompleted()) return;
+        if (!IsPrerequisiteCompleted() || IsQuestCompleted) return;
 
         if (localHudCtl == null)
         {
@@ -235,7 +257,21 @@ public class RotatePillarQuestTrigger : NetworkBehaviour, IQuestTrigger
 
     private void CompleteQuest()
     {
-        isQuestCompleted = true;
+        if (isQuestCompletedLocal) return;
+        isQuestCompletedLocal = true;
+
+        bool isNetwork = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
+        if (isNetwork && IsServer)
+        {
+            isQuestCompletedNet.Value = true;
+            isQuestActive.Value = false;
+        }
+
+        ShowCompletionUI();
+    }
+
+    private void ShowCompletionUI()
+    {
         Debug.Log("[RotatePillarQuestTrigger] Đã xoay đúng góc tất cả các trụ! Nhiệm vụ hoàn thành.");
 
         if (localHudCtl == null)
@@ -282,7 +318,7 @@ public class RotatePillarQuestTrigger : NetworkBehaviour, IQuestTrigger
 
     private void OnTriggerEnter(Collider other)
     {
-        if (other == null || isQuestCompleted || !IsPrerequisiteCompleted()) return;
+        if (other == null || IsQuestCompleted || !IsPrerequisiteCompleted()) return;
 
         bool isNetwork = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
 

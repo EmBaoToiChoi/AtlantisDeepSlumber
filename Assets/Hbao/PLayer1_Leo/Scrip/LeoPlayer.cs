@@ -4455,7 +4455,13 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             else if (step == 5) animName = "Slash3combo2";
 
             float duration = GetAnimationClipLength(animName);
-            if (duration > 0f) return duration;
+            if (duration <= 0.05f)
+            {
+                if (step == 1) duration = GetAnimationClipLength("Combo1kiem");
+                else if (step == 2) duration = GetAnimationClipLength("Attackdoucombo");
+                else if (step == 3) duration = GetAnimationClipLength("Slash3");
+            }
+            if (duration > 0.05f) return duration;
 
             if (step == 1) return attacktaytraiDuration;
             if (step == 2) return attacktayphaiDuration;
@@ -4485,7 +4491,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     // Combo Settings
     [Header("Combo Attack Settings")]
-    public float comboWindow = 1.2f;
+    public float comboWindow = 4.0f; // Nâng window từ 1.2s lên 4.0s để đòn đấm combo COMBODAM 1 (2.5s) không bị hết hạn reset giữa chừng
     public float comboTransitionThreshold = 0.75f;
     [Tooltip("Thời gian animation tấn công (giây). Dùng để tính combo window.")]
     public float punchAnimDuration = 0.5f;
@@ -4542,16 +4548,16 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         int weapon = GetActiveWeaponIndex();
         float currentTime = Time.time;
 
-        // Kiểm tra xem đòn đánh trước đó đã kết thúc chưa (chống click liên tục làm ngắt giữa chừng đòn đấm/chém cũ)
-        // Kiểm tra chống spam: Bắt buộc đòn tấn công hiện tại phải chạy xong 100% thời lượng (length) mới được sang đòn mới
+        // Kiểm tra chống spam: Bắt buộc đòn tấn công hiện tại phải chạy xong thời lượng mới được sang đòn mới
         if (isExecutingAttack)
         {
             float elapsed = currentTime - attackAnimStartTime;
-            if (elapsed < currentAttackAnimDuration * 0.95f)
+            // Nếu đã đánh được trên 25% thời lượng đòn cũ, ghi nhận click vào buffer để nối combo tiếp
+            if (elapsed >= currentAttackAnimDuration * 0.25f)
             {
-                pendingAttackRequest = true; // Lưu nhấp chuột vào buffer, chờ hết animation cũ mới phát đòn tiếp
-                return;
+                pendingAttackRequest = true;
             }
+            return;
         }
 
         if (currentTime - lastAttackTime > comboWindow)
@@ -4600,12 +4606,27 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             else if (comboStep == 4) animToPlay = "Slash2combo2"; // Đòn 4: Song kiếm
             else if (comboStep == 5) animToPlay = "Slash3combo2"; // Đòn 5: Song kiếm
 
-            if (comboStep == 1) currentAttackAnimDuration = attacktaytraiDuration;
-            else if (comboStep == 2) currentAttackAnimDuration = attacktayphaiDuration;
-            else if (comboStep == 3) currentAttackAnimDuration = slash1Combo2Duration;
-            else if (comboStep == 4) currentAttackAnimDuration = slash2combo2Duration;
-            else if (comboStep == 5) currentAttackAnimDuration = slash3combo2Duration;
-            else currentAttackAnimDuration = slashAnimDuration;
+            float clipLen = GetAnimationClipLength(animToPlay);
+            if (clipLen <= 0.05f)
+            {
+                if (comboStep == 1) clipLen = GetAnimationClipLength("Combo1kiem");
+                else if (comboStep == 2) clipLen = GetAnimationClipLength("Attackdoucombo");
+                else if (comboStep == 3) clipLen = GetAnimationClipLength("Slash3");
+            }
+
+            if (clipLen > 0.05f)
+            {
+                currentAttackAnimDuration = clipLen;
+            }
+            else
+            {
+                if (comboStep == 1) currentAttackAnimDuration = attacktaytraiDuration;
+                else if (comboStep == 2) currentAttackAnimDuration = attacktayphaiDuration;
+                else if (comboStep == 3) currentAttackAnimDuration = slash1Combo2Duration;
+                else if (comboStep == 4) currentAttackAnimDuration = slash2combo2Duration;
+                else if (comboStep == 5) currentAttackAnimDuration = slash3combo2Duration;
+                else currentAttackAnimDuration = slashAnimDuration;
+            }
 
             if (anim != null) anim.applyRootMotion = false;
             PlayAnimation(animToPlay, 0.05f, false, isRootedAttack);
@@ -4659,37 +4680,34 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     private System.Collections.IEnumerator ComboChainCoroutine(int weapon, string animToPlay, bool networkMode)
     {
-        // ================================================================
-        // HITBOX được điều khiển hoàn toàn bởi ANIMATION EVENT.
-        // Coroutine này CHỈ quản lý combo chain (chờ hết animation
-        // để xử lý buffer click → tiếp tục combo hay reset).
-        // ================================================================
         float totalDuration = currentAttackAnimDuration;
+        float elapsed = 0f;
 
-        // Chờ hết thời lượng animation thực tế
-        yield return new WaitForSeconds(totalDuration);
+        // Chờ hết thời lượng animation thực tế của đòn tấn công
+        while (elapsed < totalDuration)
+        {
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
 
-        // Đảm bảo tắt hết hitbox khi animation kết thúc
+        // Tắt hết hitbox khi animation kết thúc
         DisableAllHitboxes();
 
-        // Kết thúc nhịp tấn công
-        isExecutingAttack = false;
-
-        // Kiểm tra có buffer click để tiếp tục combo không
+        // Kiểm tra xem có click được ghi nhận trong buffer không
         if (pendingAttackRequest)
         {
             pendingAttackRequest = false;
-            Debug.Log("[LeoPlayer] Tiếp tục combo từ buffer sau khi kết thúc đòn cũ.");
+            isExecutingAttack = false;
             PerformComboAttack(networkMode);
         }
         else
         {
-            // Không có buffer → reset combo step, mở khóa di chuyển, dọn dẹp Attack Layer
+            // Không có nhấp chuột tiếp theo -> Reset combo step, mở khóa di chuyển, trả về BlendTree
             comboStep = 0;
+            isExecutingAttack = false;
             isRootedAttack = false;
             SetMovementLock(false);
             ClearAttackLayer();
-            Debug.Log("[LeoPlayer] Kết thúc combo - không có input tiếp theo.");
         }
     }
 
@@ -7629,21 +7647,32 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             int targetLayer = 0;
             if (anim.layerCount > 1)
             {
-                int stateHash = Animator.StringToHash(stateName);
-                bool hasLayer1 = anim.HasState(1, stateHash);
-                bool hasLayer0 = anim.HasState(0, stateHash);
+                string candidateInLayer1 = ResolveExistingStateName(anim, 1, stateName);
+                int hash1 = Animator.StringToHash(candidateInLayer1);
+                bool hasLayer1 = anim.HasState(1, hash1);
+
+                string candidateInLayer0 = ResolveExistingStateName(anim, 0, stateName);
+                int hash0 = Animator.StringToHash(candidateInLayer0);
+                bool hasLayer0 = anim.HasState(0, hash0);
 
                 if (hasLayer1 && (!isRootedAttack || !hasLayer0))
                 {
                     targetLayer = 1;
+                    stateName = candidateInLayer1;
                     anim.SetLayerWeight(1, 1f);
                 }
                 else
                 {
                     targetLayer = 0;
+                    if (hasLayer0) stateName = candidateInLayer0;
                     if (hasLayer1) anim.SetLayerWeight(1, 0f);
                 }
             }
+            else
+            {
+                stateName = ResolveExistingStateName(anim, 0, stateName);
+            }
+
             anim.CrossFadeInFixedTime(stateName, fadeTime, targetLayer, 0f);
 
             // Force evaluation to query the exact animation clip duration
@@ -7661,7 +7690,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             if (isAttack && actualLength > 0.05f)
             {
                 currentAttackAnimDuration = actualLength;
-                Debug.Log($"[LeoPlayer] PlayAnimationLocal: '{translatedName}' dynamic duration set to {currentAttackAnimDuration}s (actual clip: {actualLength}s)");
+                Debug.Log($"[LeoPlayer] PlayAnimationLocal: '{translatedName}' -> state '{stateName}' dynamic duration set to {currentAttackAnimDuration}s (actual clip: {actualLength}s)");
             }
         }
         else
@@ -7684,6 +7713,37 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         {
             ClearAttackLayer();
         }
+    }
+
+    private string ResolveExistingStateName(Animator animator, int layer, string requestedName)
+    {
+        if (animator == null || !animator.isActiveAndEnabled) return requestedName;
+
+        int reqHash = Animator.StringToHash(requestedName);
+        if (animator.HasState(layer, reqHash)) return requestedName;
+
+        string[] candidates = null;
+        if (requestedName == "attacktaytrai") candidates = new string[] { "ATTACKTRAINEW", "attacktaytrai", "Combo1kiem" };
+        else if (requestedName == "attacktayphai") candidates = new string[] { "Slash1Combo2", "ATTACKTRAINEW", "Attackdoucombo", "attacktayphai" };
+        else if (requestedName == "Slash1Combo2") candidates = new string[] { "Slash1combo2", "Slash1Combo2", "Slash2combo2", "Slash3combo2", "Slash3" };
+        else if (requestedName == "Slash2combo2") candidates = new string[] { "Slash2combo2", "Slash2Combo2", "Slash3combo2", "Slash2" };
+        else if (requestedName == "Slash3combo2") candidates = new string[] { "Slash3combo2", "Slash3Combo2", "Slash2combo2", "Slash3" };
+        else if (requestedName == "DAMTRAI 2") candidates = new string[] { "DAMTRAI 2", "DamTrai", "Punch1" };
+        else if (requestedName == "DAMPHAI 2") candidates = new string[] { "DAMPHAI 2", "DamPhai", "Punch2" };
+        else if (requestedName == "COMBODAM 1") candidates = new string[] { "COMBODAM 1", "Combodam", "Punch3" };
+
+        if (candidates != null)
+        {
+            foreach (var cand in candidates)
+            {
+                if (animator.HasState(layer, Animator.StringToHash(cand)))
+                {
+                    return cand;
+                }
+            }
+        }
+
+        return requestedName;
     }
 
     /// <summary>

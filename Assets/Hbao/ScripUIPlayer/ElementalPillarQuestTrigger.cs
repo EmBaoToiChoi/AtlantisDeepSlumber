@@ -4,7 +4,7 @@ using Unity.Netcode;
 
 public class ElementalPillarQuestTrigger : NetworkBehaviour, IQuestTrigger
 {
-    public bool IsQuestCompleted => isQuestCompleted;
+    public bool IsQuestCompleted => (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening) ? isQuestCompletedNet.Value : isQuestCompletedLocal;
     public bool IsQuestActive => (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening) ? isQuestActive.Value : hasTriggeredQuest;
 
     [Header("Quest Prerequisite Settings")]
@@ -51,6 +51,13 @@ public class ElementalPillarQuestTrigger : NetworkBehaviour, IQuestTrigger
         NetworkVariableWritePermission.Server
     );
 
+    // Biến mạng đồng bộ trạng thái hoàn thành nhiệm vụ
+    public NetworkVariable<bool> isQuestCompletedNet = new NetworkVariable<bool>(
+        false,
+        NetworkVariableReadPermission.Everyone,
+        NetworkVariableWritePermission.Server
+    );
+
     // Biến mạng đồng bộ số lượng trụ đã kích hoạt
     public NetworkVariable<int> activatedCount = new NetworkVariable<int>(
         0,
@@ -63,7 +70,7 @@ public class ElementalPillarQuestTrigger : NetworkBehaviour, IQuestTrigger
     private Collider triggerCollider;
 
     private bool hasTriggeredQuest = false;
-    private bool isQuestCompleted = false;
+    private bool isQuestCompletedLocal = false;
 
     private float nextPlayerSearchTime = 0f;
     private float nextCheckTime = 0f;
@@ -108,8 +115,13 @@ public class ElementalPillarQuestTrigger : NetworkBehaviour, IQuestTrigger
     {
         isQuestActive.OnValueChanged += OnQuestActiveChanged;
         activatedCount.OnValueChanged += OnActivatedCountChanged;
+        isQuestCompletedNet.OnValueChanged += OnQuestCompletedChanged;
 
-        if (isQuestActive.Value && IsPrerequisiteCompleted())
+        if (isQuestCompletedNet.Value)
+        {
+            isQuestCompletedLocal = true;
+        }
+        else if (isQuestActive.Value && IsPrerequisiteCompleted())
         {
             hasTriggeredQuest = true;
             UpdateQuestProgressUI();
@@ -120,11 +132,21 @@ public class ElementalPillarQuestTrigger : NetworkBehaviour, IQuestTrigger
     {
         isQuestActive.OnValueChanged -= OnQuestActiveChanged;
         activatedCount.OnValueChanged -= OnActivatedCountChanged;
+        isQuestCompletedNet.OnValueChanged -= OnQuestCompletedChanged;
+    }
+
+    private void OnQuestCompletedChanged(bool oldVal, bool newVal)
+    {
+        if (newVal)
+        {
+            isQuestCompletedLocal = true;
+            ShowCompletionUI();
+        }
     }
 
     private void OnQuestActiveChanged(bool oldVal, bool newVal)
     {
-        if (newVal && IsPrerequisiteCompleted())
+        if (newVal && IsPrerequisiteCompleted() && !IsQuestCompleted)
         {
             hasTriggeredQuest = true;
             lastActivatedCount = -1;
@@ -134,7 +156,7 @@ public class ElementalPillarQuestTrigger : NetworkBehaviour, IQuestTrigger
 
     private void OnActivatedCountChanged(int oldVal, int newVal)
     {
-        if (isQuestActive.Value && IsPrerequisiteCompleted())
+        if (isQuestActive.Value && IsPrerequisiteCompleted() && !IsQuestCompleted)
         {
             UpdateQuestProgressUI();
         }
@@ -152,7 +174,7 @@ public class ElementalPillarQuestTrigger : NetworkBehaviour, IQuestTrigger
 
     private void Update()
     {
-        if (isQuestCompleted || !IsPrerequisiteCompleted()) return;
+        if (IsQuestCompleted || !IsPrerequisiteCompleted()) return;
 
         if (localPlayer == null)
         {
@@ -161,33 +183,33 @@ public class ElementalPillarQuestTrigger : NetworkBehaviour, IQuestTrigger
 
         bool isNetwork = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
 
-        // Server / Offline kiểm tra tiến độ kích hoạt các trụ nguyên tố
+        // Server / Offline kiểm tra tiến độ kích hoạt từ AscensionManager hoặc pillars
         if (!isNetwork || IsServer)
         {
             bool active = isNetwork ? isQuestActive.Value : hasTriggeredQuest;
-            if (active && pillars != null && pillars.Length > 0)
+            if (active)
             {
                 int currentActivated = 0;
-                bool allCorrect = true;
-
-                for (int i = 0; i < pillars.Length; i++)
+                if (pillars != null && pillars.Length > 0)
                 {
-                    var pillar = pillars[i];
-                    if (IsPillarActivated(pillar))
+                    foreach (var pillar in pillars)
                     {
-                        currentActivated++;
-                    }
-                    else
-                    {
-                        allCorrect = false;
-                    }
-
-                    // Kiểm tra so khớp đáp án nguyên tố với AscensionManager
-                    if (ascensionManager != null && ascensionManager.correctCombination != null && i < ascensionManager.correctCombination.Length)
-                    {
-                        if (pillar == null || pillar.currentElement.Value != ascensionManager.correctCombination[i])
+                        if (pillar != null && pillar.currentElement != null && pillar.currentElement.Value != ElementType.None)
                         {
-                            allCorrect = false;
+                            currentActivated++;
+                        }
+                    }
+                }
+                else if (ascensionManager != null && ascensionManager.pillarPositions != null)
+                {
+                    foreach (var pTrans in ascensionManager.pillarPositions)
+                    {
+                        if (pTrans != null && pTrans.TryGetComponent<ElementalPillar>(out var pillar))
+                        {
+                            if (pillar != null && pillar.currentElement != null && pillar.currentElement.Value != ElementType.None)
+                            {
+                                currentActivated++;
+                            }
                         }
                     }
                 }
@@ -197,7 +219,7 @@ public class ElementalPillarQuestTrigger : NetworkBehaviour, IQuestTrigger
                     if (activatedCount.Value != currentActivated)
                     {
                         activatedCount.Value = currentActivated;
-                        Debug.Log($"[ElementalPillarQuestTrigger Server] Tiến độ trụ nguyên tố: {currentActivated}/{pillars.Length}");
+                        Debug.Log($"[ElementalPillarQuestTrigger Server] Tiến độ trụ nguyên tố: {currentActivated}/4");
                     }
                 }
                 else
@@ -206,13 +228,12 @@ public class ElementalPillarQuestTrigger : NetworkBehaviour, IQuestTrigger
                     {
                         localActivatedCount = currentActivated;
                         UpdateQuestProgressUI();
-                        Debug.Log($"[ElementalPillarQuestTrigger Offline] Tiến độ trụ nguyên tố: {currentActivated}/{pillars.Length}");
+                        Debug.Log($"[ElementalPillarQuestTrigger Offline] Tiến độ trụ nguyên tố: {currentActivated}/4");
                     }
                 }
 
-                int totalNeeded = pillars.Length;
-                // Chỉ hoàn thành nhiệm vụ khi cả 4 trụ đều bật VÀ đúng đáp án nguyên tố
-                if (currentActivated >= totalNeeded && allCorrect)
+                int totalNeeded = (pillars != null && pillars.Length > 0) ? pillars.Length : 4;
+                if (currentActivated >= totalNeeded)
                 {
                     CompleteQuest();
                     return;
@@ -231,7 +252,7 @@ public class ElementalPillarQuestTrigger : NetworkBehaviour, IQuestTrigger
 
     private void UpdateQuestProgressUI()
     {
-        if (!IsPrerequisiteCompleted()) return;
+        if (!IsPrerequisiteCompleted() || IsQuestCompleted) return;
 
         if (localHudCtl == null)
         {
@@ -265,8 +286,22 @@ public class ElementalPillarQuestTrigger : NetworkBehaviour, IQuestTrigger
 
     private void CompleteQuest()
     {
-        isQuestCompleted = true;
-        Debug.Log("[ElementalPillarQuestTrigger] Đã chưởng kích hoạt đủ 4 trụ nguyên tố! Nhiệm vụ hoàn thành.");
+        if (isQuestCompletedLocal) return;
+        isQuestCompletedLocal = true;
+
+        bool isNetwork = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
+        if (isNetwork && IsServer)
+        {
+            isQuestCompletedNet.Value = true;
+            isQuestActive.Value = false;
+        }
+
+        ShowCompletionUI();
+    }
+
+    private void ShowCompletionUI()
+    {
+        Debug.Log("[ElementalPillarQuestTrigger] Đã chưởng đủ 4 trụ nguyên tố! Nhiệm vụ hoàn thành.");
 
         if (localHudCtl == null)
         {
@@ -278,7 +313,7 @@ public class ElementalPillarQuestTrigger : NetworkBehaviour, IQuestTrigger
             int total = (pillars != null && pillars.Length > 0) ? pillars.Length : 4;
             localHudCtl.ShowQuest(true, this);
             localHudCtl.UpdateQuestProgress(total, total, this);
-            localHudCtl.UpdateQuestDescription("Nhiệm vụ hoàn thành: Đã kích hoạt tất cả các trụ nguyên tố!", this);
+            localHudCtl.UpdateQuestDescription("Nhiệm vụ hoàn thành: Đã kích hoạt 4 trụ nguyên tố!", this);
             localHudCtl.UpdateQuestTitle(questTitle, this);
             localHudCtl.UpdateQuestIcon(questIconSprite, this);
 
@@ -312,7 +347,7 @@ public class ElementalPillarQuestTrigger : NetworkBehaviour, IQuestTrigger
 
     private void OnTriggerEnter(Collider other)
     {
-        if (other == null || isQuestCompleted || !IsPrerequisiteCompleted()) return;
+        if (other == null || IsQuestCompleted || !IsPrerequisiteCompleted()) return;
 
         bool isNetwork = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
 
