@@ -264,25 +264,26 @@ public static class LocalizationManager
 
     public static void Initialize()
     {
-        string saved = PlayerPrefs.GetString("Language", "Vietnamese");
-        CurrentLanguage = saved == "English" ? Language.English : Language.Vietnamese;
+        CurrentLanguage = Language.Vietnamese;
+        PlayerPrefs.SetString("Language", "Vietnamese");
+        PlayerPrefs.Save();
     }
 
     public static void SetLanguage(Language lang)
     {
-        CurrentLanguage = lang;
-        PlayerPrefs.SetString("Language", lang.ToString());
+        CurrentLanguage = Language.Vietnamese;
+        PlayerPrefs.SetString("Language", "Vietnamese");
         PlayerPrefs.Save();
     }
 
     public static void SetPreviewLanguage(Language lang)
     {
-        CurrentLanguage = lang;
+        CurrentLanguage = Language.Vietnamese;
     }
 
     public static string Get(string key)
     {
-        if (_localizedText[CurrentLanguage].TryGetValue(key, out string val))
+        if (_localizedText[Language.Vietnamese].TryGetValue(key, out string val))
             return val;
         return key;
     }

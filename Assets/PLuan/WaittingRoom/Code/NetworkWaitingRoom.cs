@@ -84,53 +84,53 @@ public class NetworkWaitingRoom : NetworkBehaviour
         new LobbyCharacterInfo
         {
             Name = "LEO",
-            Role = "SHADOW ASSASSIN",
-            Description = "A master of shadows and stealth, Leo can eliminate high-value targets before they even know he is there.",
+            Role = "SÁT THỦ BÓNG ĐÊM",
+            Description = "Bậc thầy bóng tối và ám sát, Leo có thể hạ gục các mục tiêu quan trọng trước khi chúng kịp nhận ra sự hiện diện của anh.",
             PortraitStyleClass = "leo-img",
             Skills = new LobbySkillInfo[]
             {
-                new LobbySkillInfo { Name = "Swift Strike", Description = "Dashes forward rapidly, slicing through all enemies in the path.", IconStyleClass = "leo-skill-0" },
-                new LobbySkillInfo { Name = "Smoke Cloak", Description = "Deploys a smoke screen to become invisible, increasing movement speed.", IconStyleClass = "leo-skill-1" },
-                new LobbySkillInfo { Name = "Shadow Execute", Description = "Performs a lethal execution, dealing massive physical damage to a single target.", IconStyleClass = "leo-skill-2" }
+                new LobbySkillInfo { Name = "Lướt Nhanh", Description = "Lướt về phía trước nhanh chóng, chém xuyên qua tất cả kẻ địch trên đường đi.", IconStyleClass = "leo-skill-0" },
+                new LobbySkillInfo { Name = "Màn Khói Bóng Đêm", Description = "Tạo ra màn khói để tàng hình và tăng tốc độ di chuyển.", IconStyleClass = "leo-skill-1" },
+                new LobbySkillInfo { Name = "Ảo Ảnh Chém", Description = "Thực hiện cú chém kết liễu chí mạng, gây sát thương vật lý khổng lồ lên mục tiêu.", IconStyleClass = "leo-skill-2" }
             }
         },
         new LobbyCharacterInfo
         {
             Name = "MAYA",
-            Role = "FIRE ELEMENTALIST",
-            Description = "A powerful support mage who controls the forces of fire to burn down enemies and protect her allies.",
+            Role = "PHÁP SƯ LỬA",
+            Description = "Pháp sư hỗ trợ hùng mạnh làm chủ sức mạnh của lửa để thiêu rụi kẻ thù và bảo vệ đồng đội.",
             PortraitStyleClass = "maya-img",
             Skills = new LobbySkillInfo[]
             {
-                new LobbySkillInfo { Name = "Fire Orb", Description = "Shoots a blazing fire orb that deals AoE thermal damage to enemies.", IconStyleClass = "maya-skill-0" },
-                new LobbySkillInfo { Name = "Blaze Shroud", Description = "Surrounds allies with a protective thermal shield, reducing damage taken.", IconStyleClass = "maya-skill-1" },
-                new LobbySkillInfo { Name = "Supernova", Description = "Triggers a massive fiery blast that incinerates nearby targets and heals allies.", IconStyleClass = "maya-skill-2" }
+                new LobbySkillInfo { Name = "Cầu Lửa", Description = "Bắn ra một quả cầu lửa rực cháy gây sát thương diện rộng lên kẻ địch.", IconStyleClass = "maya-skill-0" },
+                new LobbySkillInfo { Name = "Tăng Cường", Description = "Bao bọc đồng đội bằng lá chắn nhiệt bảo vệ, giảm sát thương nhận vào.", IconStyleClass = "maya-skill-1" },
+                new LobbySkillInfo { Name = "Tân Tinh Lửa", Description = "Kích hoạt vụ nổ lửa khổng lồ thiêu rụi các mục tiêu xung quanh và hồi máu cho đồng đội.", IconStyleClass = "maya-skill-2" }
             }
         },
         new LobbyCharacterInfo
         {
             Name = "ELENA",
-            Role = "ELVEN ARCHER",
-            Description = "With unparalleled precision, Elena rains down arrows on her enemies from a safe distance.",
+            Role = "CUNG THỦ TINH LINH",
+            Description = "Với độ chính xác vô song, Elena trút mưa tên xuống kẻ thù từ một khoảng cách an toàn.",
             PortraitStyleClass = "elena-img",
             Skills = new LobbySkillInfo[]
             {
-                new LobbySkillInfo { Name = "Arrow Volley", Description = "Fires a rapid succession of piercing arrows in a frontal cone.", IconStyleClass = "elena-skill-0" },
-                new LobbySkillInfo { Name = "Aura Shot", Description = "Enhances the next attack with celestial energy, stunning the target.", IconStyleClass = "elena-skill-1" },
-                new LobbySkillInfo { Name = "Rain of Stars", Description = "Summons a meteor shower of arrows that continuously damages enemies in an area.", IconStyleClass = "elena-skill-2" }
+                new LobbySkillInfo { Name = "Mưa Tên Liên Hoàn", Description = "Bắn liên tiếp các mũi tên xuyên thấu theo hình nón phía trước.", IconStyleClass = "elena-skill-0" },
+                new LobbySkillInfo { Name = "Bắt Tẩy", Description = "Tăng cường năng lượng linh hồn vào mũi tên tiếp theo, làm choáng mục tiêu.", IconStyleClass = "elena-skill-1" },
+                new LobbySkillInfo { Name = "Bão Tên Tinh Tú", Description = "Triệu hồi mưa tên tinh tú liên tục gây sát thương lên kẻ địch trong vùng ảnh hưởng.", IconStyleClass = "elena-skill-2" }
             }
         },
         new LobbyCharacterInfo
         {
             Name = "ARTHUR",
-            Role = "ROYAL TANKER",
-            Description = "A legendary shield-bearer who acts as a walking fortress, absorbing damage and protecting his team.",
+            Role = "ĐẤU SĨ HOÀNG GIA",
+            Description = "Chiến binh khiên huyền thoại như một pháo đài di động, chống chịu sát thương và bảo vệ đồng đội.",
             PortraitStyleClass = "arthur-img",
             Skills = new LobbySkillInfo[]
             {
-                new LobbySkillInfo { Name = "Shield Bash", Description = "Slams the royal shield forward, stunning enemies and dealing impact damage.", IconStyleClass = "arthur-skill-0" },
-                new LobbySkillInfo { Name = "Iron Fortress", Description = "Drastically increases defense and physical resistance for 5 seconds.", IconStyleClass = "arthur-skill-1" },
-                new LobbySkillInfo { Name = "Guardian Call", Description = "Creates a defensive zone that absorbs all incoming projectiles and heals allies.", IconStyleClass = "arthur-skill-2" }
+                new LobbySkillInfo { Name = "Dặm Khiên", Description = "Đập mạnh khiên hoàng gia về phía trước, làm choáng kẻ địch và gây sát thương va chạm.", IconStyleClass = "arthur-skill-0" },
+                new LobbySkillInfo { Name = "Bất Tử", Description = "Tăng mạnh khả năng phòng thủ và kháng sát thương vật lý trong 5 giây.", IconStyleClass = "arthur-skill-1" },
+                new LobbySkillInfo { Name = "Pháo Đài Bảo Vệ", Description = "Tạo vùng phòng thủ hấp thụ toàn bộ đạn phản hồi và hồi máu cho đồng đội.", IconStyleClass = "arthur-skill-2" }
             }
         }
     };
