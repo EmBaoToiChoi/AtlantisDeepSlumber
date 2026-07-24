@@ -62,7 +62,7 @@ public class Puzzle4Manager : NetworkBehaviour
             sharedCamera.SetActive(isActive);
         }
 
-        // Tự động tìm Player và vô hiệu hóa xoay camera thông qua Reflection để không chạm vào code gốc
+        // Tìm local player script của client này
         MonoBehaviour localPlayerScript = null;
         var allMonos = FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None);
         foreach (var mono in allMonos)
@@ -84,29 +84,30 @@ public class Puzzle4Manager : NetworkBehaviour
             {
                 enableCamField.SetValue(localPlayerScript, !isActive);
             }
-
-            // Gán lại camera mục tiêu để WASD di chuyển chuẩn xác theo góc nhìn
-            var targetCamField = type.GetField("targetCamera", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            if (targetCamField != null)
-            {
-                if (isActive && sharedCamera != null)
-                {
-                    targetCamField.SetValue(localPlayerScript, sharedCamera.GetComponent<Camera>());
-                }
-                else
-                {
-                    // Trả về Camera.main hoặc null để tự tìm
-                    targetCamField.SetValue(localPlayerScript, null);
-                }
-            }
         }
 
         if (isActive)
         {
-            Camera[] allCams = Camera.allCameras;
+            // KHÓA TRIỆT ĐỂ: Tắt enableCameraFollow trên TẤT CẢ nhân vật
+            // Nếu không làm, mỗi frame nhân vật tự tìm lại Camera.main và di chuyển nó → camera giật
+            foreach (var mono in allMonos)
+            {
+                if (mono is IPlayerHUDTarget)
+                {
+                    var enableCamField = mono.GetType().GetField("enableCameraFollow", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+                    if (enableCamField != null) enableCamField.SetValue(mono, false);
+                    
+                    // Null targetCamera để reset về null (họ sẽ không tự recover vì enableCameraFollow = false)
+                    var targetCamField = mono.GetType().GetField("targetCamera", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                    if (targetCamField != null) targetCamField.SetValue(mono, null);
+                }
+            }
+            
+            // Tắt tất cả MainCamera đang bật (trừ sharedCamera)
+            Camera[] allCams = FindObjectsByType<Camera>(FindObjectsSortMode.None);
             foreach (Camera cam in allCams)
             {
-                if (cam.gameObject.CompareTag("MainCamera") && (sharedCamera == null || cam.gameObject != sharedCamera))
+                if (cam.CompareTag("MainCamera") && (sharedCamera == null || cam.gameObject != sharedCamera))
                 {
                     cam.gameObject.SetActive(false);
                 }
@@ -114,27 +115,35 @@ public class Puzzle4Manager : NetworkBehaviour
         }
         else
         {
-            // Bật lại camera của player cục bộ
-            if (localPlayerScript != null)
+            // Bật lại MainCamera trong scene (tìm kể cả object đang tắt)
+            Camera mainCam = null;
+            Camera[] allCams = FindObjectsByType<Camera>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            foreach (Camera cam in allCams)
             {
-                // Thay vì tìm chung chung, ta tìm chính xác Camera trong Prefab của người chơi cục bộ
-                Camera[] localCams = localPlayerScript.GetComponentsInChildren<Camera>(true);
-                foreach (Camera cam in localCams)
+                if (sharedCamera != null && cam.gameObject == sharedCamera) continue;
+                
+                if (cam.CompareTag("MainCamera"))
                 {
-                    if (cam.CompareTag("MainCamera"))
-                    {
-                        cam.gameObject.SetActive(true);
-                        Debug.Log("[Puzzle4] Đã tìm và bật lại MainCamera của player cục bộ: " + cam.gameObject.name);
-                        
-                        var targetCamField = localPlayerScript.GetType().GetField("targetCamera", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-                        if (targetCamField != null) targetCamField.SetValue(localPlayerScript, cam);
-                        break;
-                    }
+                    cam.gameObject.SetActive(true);
+                    mainCam = cam;
                 }
             }
-            if (sharedCamera != null)
+            
+            // Mở khóa enableCameraFollow và gán lại targetCamera cho TẤT CẢ nhân vật
+            foreach (var mono in allMonos)
             {
-                Debug.Log("[Puzzle4] sharedCamera đã tắt: " + sharedCamera.name);
+                if (mono is IPlayerHUDTarget)
+                {
+                    var enableCamField = mono.GetType().GetField("enableCameraFollow", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+                    if (enableCamField != null) enableCamField.SetValue(mono, true);
+                    
+                    // Chỉ gán camera cho local player (IsOwner)
+                    if (((IPlayerHUDTarget)mono).IsOwner && mainCam != null)
+                    {
+                        var targetCamField = mono.GetType().GetField("targetCamera", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                        if (targetCamField != null) targetCamField.SetValue(mono, mainCam);
+                    }
+                }
             }
         }
     }
@@ -364,17 +373,12 @@ public class Puzzle4Manager : NetworkBehaviour
                     CacheLocalPlayer();
                 }
 
-                if (localPlayerCached && cachedLocalPlayerColliders != null)
+                if (localPlayerCached && localPlayerTransform != null && cachedDiskTransform != null)
                 {
-                    bool isOnBoard = false;
-                    foreach (var c in cachedLocalPlayerColliders)
-                    {
-                        if (balanceManager.IsPlayerOnBoard(c))
-                        {
-                            isOnBoard = true;
-                            break;
-                        }
-                    }
+                    // Thay thế Trigger vật lý bằng check khoảng cách (hoạt động chính xác dù 1 hay 4 người)
+                    Vector3 localPos = cachedDiskTransform.InverseTransformPoint(localPlayerTransform.position);
+                    float horizDist = new Vector2(localPos.x, localPos.z).magnitude;
+                    bool isOnBoard = (localPos.y > -1.5f) && (localPos.y < 5f) && (horizDist < 12f);
 
                     if (isOnBoard)
                     {
@@ -393,8 +397,14 @@ public class Puzzle4Manager : NetworkBehaviour
         }
     }
 
+    private Transform cachedDiskTransform;
+
     private void CacheLocalPlayer()
     {
+        // Cache transform của đĩa để so sánh khoảng cách không phụ thuộc Trigger vật lý
+        if (balanceManager != null)
+            cachedDiskTransform = balanceManager.diskRigidbody != null ? balanceManager.diskRigidbody.transform : balanceManager.transform;
+
         var allMonos = FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None);
         foreach (var mono in allMonos)
         {
@@ -403,6 +413,7 @@ public class Puzzle4Manager : NetworkBehaviour
                 cachedLocalPlayerRb = player.gameObject.GetComponent<Rigidbody>();
                 cachedLocalPlayerSlideEffect = player.gameObject.GetComponent<SlideEffect>();
                 cachedLocalPlayerColliders = player.gameObject.GetComponentsInChildren<Collider>();
+                localPlayerTransform = player.transform;
                 
                 localPlayerCached = true;
                 Debug.Log("[Puzzle4Manager] Đã cache local player: " + player.gameObject.name);

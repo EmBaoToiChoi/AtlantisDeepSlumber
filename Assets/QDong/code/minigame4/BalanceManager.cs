@@ -75,8 +75,11 @@ public class BalanceManager : NetworkBehaviour
             {
                 Debug.Log($"<color=green>[ĐĨA NGHIÊNG]</color> Phát hiện nhân vật {other.name} ĐẠT CHÂN lên đĩa. Số người hiện tại: {playersOnBoard.Count}");
                 
+                // Guard: Chỉ gọi RPC khi NetworkManager đã sẵn sàng
+                if (NetworkManager.Singleton == null || !NetworkManager.Singleton.IsListening) return;
+                
                 Puzzle4Manager p4Manager = FindAnyObjectByType<Puzzle4Manager>();
-                if (p4Manager != null && p4Manager.isMinigameStarted.Value && !p4Manager.puzzleCompleted.Value)
+                if (p4Manager != null && p4Manager.IsSpawned && p4Manager.isMinigameStarted.Value && !p4Manager.puzzleCompleted.Value)
                 {
                     NetworkObject netObj = other.GetComponentInParent<NetworkObject>();
                     if (netObj != null)
