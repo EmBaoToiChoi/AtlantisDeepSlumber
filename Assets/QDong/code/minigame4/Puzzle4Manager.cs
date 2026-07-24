@@ -367,29 +367,34 @@ public class Puzzle4Manager : NetworkBehaviour
                 // Ép mạnh hơn (x1.0 thay vì 0.8) vì lực trượt ngang đã mạnh hơn, tránh nảy văng.
                 Vector3 stickyForce = -normal * (slideForceMagn * 1.0f);
 
-                // Cache local player một lần thay vì FindObjectsByType mỗi frame
-                if (!localPlayerCached)
+                // Cache local players một lần thay vì FindObjectsByType mỗi frame
+                if (!playersCached)
                 {
-                    CacheLocalPlayer();
+                    CacheLocalPlayers();
                 }
 
-                if (localPlayerCached && localPlayerTransform != null && cachedDiskTransform != null)
+                if (playersCached && cachedDiskTransform != null)
                 {
-                    // Thay thế Trigger vật lý bằng check khoảng cách (hoạt động chính xác dù 1 hay 4 người)
-                    Vector3 localPos = cachedDiskTransform.InverseTransformPoint(localPlayerTransform.position);
-                    float horizDist = new Vector2(localPos.x, localPos.z).magnitude;
-                    bool isOnBoard = (localPos.y > -1.5f) && (localPos.y < 5f) && (horizDist < 12f);
-
-                    if (isOnBoard)
+                    foreach (var playerData in cachedLocalPlayers)
                     {
-                        if (cachedLocalPlayerRb != null)
-                        {
-                            cachedLocalPlayerRb.AddForce(slideForce + stickyForce, ForceMode.Force);
-                        }
+                        if (playerData.transform == null) continue;
                         
-                        if (cachedLocalPlayerSlideEffect != null)
+                        // Thay thế Trigger vật lý bằng check khoảng cách (hoạt động chính xác dù 1 hay 4 người)
+                        Vector3 localPos = cachedDiskTransform.InverseTransformPoint(playerData.transform.position);
+                        float horizDist = new Vector2(localPos.x, localPos.z).magnitude;
+                        bool isOnBoard = (localPos.y > -1.5f) && (localPos.y < 5f) && (horizDist < 12f);
+
+                        if (isOnBoard)
                         {
-                            cachedLocalPlayerSlideEffect.ApplySlide(slideForce);
+                            if (playerData.rb != null)
+                            {
+                                playerData.rb.AddForce(slideForce + stickyForce, ForceMode.Force);
+                            }
+                            
+                            if (playerData.slideEffect != null)
+                            {
+                                playerData.slideEffect.ApplySlide(slideForce);
+                            }
                         }
                     }
                 }
@@ -398,9 +403,22 @@ public class Puzzle4Manager : NetworkBehaviour
     }
 
     private Transform cachedDiskTransform;
-
-    private void CacheLocalPlayer()
+    
+    // Struct lưu thông tin cache cho từng nhân vật
+    private struct PlayerCacheData
     {
+        public Transform transform;
+        public Rigidbody rb;
+        public SlideEffect slideEffect;
+    }
+    
+    private System.Collections.Generic.List<PlayerCacheData> cachedLocalPlayers = new System.Collections.Generic.List<PlayerCacheData>();
+    private bool playersCached = false;
+
+    private void CacheLocalPlayers()
+    {
+        cachedLocalPlayers.Clear();
+        
         // Cache transform của đĩa để so sánh khoảng cách không phụ thuộc Trigger vật lý
         if (balanceManager != null)
             cachedDiskTransform = balanceManager.diskRigidbody != null ? balanceManager.diskRigidbody.transform : balanceManager.transform;
@@ -408,18 +426,21 @@ public class Puzzle4Manager : NetworkBehaviour
         var allMonos = FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None);
         foreach (var mono in allMonos)
         {
+            // Cache TẤT CẢ nhân vật mà Client này sở hữu (hoặc nếu là host test thì sẽ add hết cả 4)
             if (mono is IPlayerHUDTarget player && player.IsOwner)
             {
-                cachedLocalPlayerRb = player.gameObject.GetComponent<Rigidbody>();
-                cachedLocalPlayerSlideEffect = player.gameObject.GetComponent<SlideEffect>();
-                cachedLocalPlayerColliders = player.gameObject.GetComponentsInChildren<Collider>();
-                localPlayerTransform = player.transform;
-                
-                localPlayerCached = true;
-                Debug.Log("[Puzzle4Manager] Đã cache local player: " + player.gameObject.name);
-                break;
+                PlayerCacheData data = new PlayerCacheData
+                {
+                    transform = player.transform,
+                    rb = player.gameObject.GetComponent<Rigidbody>(),
+                    slideEffect = player.gameObject.GetComponent<SlideEffect>()
+                };
+                cachedLocalPlayers.Add(data);
+                Debug.Log("[Puzzle4Manager] Đã cache local player để trượt: " + player.gameObject.name);
             }
         }
+        
+        playersCached = true;
     }
 
     void LateUpdate()
