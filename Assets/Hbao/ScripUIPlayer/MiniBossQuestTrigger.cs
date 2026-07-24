@@ -4,7 +4,7 @@ using Unity.Netcode;
 
 public class MiniBossQuestTrigger : NetworkBehaviour, IQuestTrigger
 {
-    public bool IsQuestCompleted => isQuestCompleted;
+    public bool IsQuestCompleted => (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening) ? isQuestCompletedNet.Value : isQuestCompletedLocal;
     public bool IsQuestActive => (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening) ? isQuestActive.Value : hasTriggeredQuest;
 
     [Header("Quest Prerequisite Settings")]
@@ -47,6 +47,13 @@ public class MiniBossQuestTrigger : NetworkBehaviour, IQuestTrigger
         NetworkVariableWritePermission.Server
     );
 
+    // Biến mạng đồng bộ trạng thái hoàn thành nhiệm vụ
+    public NetworkVariable<bool> isQuestCompletedNet = new NetworkVariable<bool>(
+        false,
+        NetworkVariableReadPermission.Everyone,
+        NetworkVariableWritePermission.Server
+    );
+
     // Biến mạng đồng bộ số lượng Mini Boss đã diệt (0 hoặc 1)
     public NetworkVariable<int> bossDefeatedCount = new NetworkVariable<int>(
         0,
@@ -59,7 +66,7 @@ public class MiniBossQuestTrigger : NetworkBehaviour, IQuestTrigger
     private Collider triggerCollider;
 
     private bool hasTriggeredQuest = false;
-    private bool isQuestCompleted = false;
+    private bool isQuestCompletedLocal = false;
 
     private float nextPlayerSearchTime = 0f;
     private float nextCheckTime = 0f;
@@ -71,7 +78,7 @@ public class MiniBossQuestTrigger : NetworkBehaviour, IQuestTrigger
         triggerCollider = GetComponent<Collider>();
         if (triggerCollider == null)
         {
-            Debug.LogWarning($"[MiniBossQuestTrigger] GameObject '{gameObject.name}' chưa có Collider trigger. Cần có Box Collider trigger để tự động phát hiện người chơi khi bước vào vùng chiến đấu.");
+            Debug.LogWarning($"[MiniBossQuestTrigger] GameObject '{gameObject.name}' chưa có Collider trigger. Cần có Box Collider trigger để tự động phát hiện người chơi khi bước vào vùng Mini Boss.");
         }
         else if (!triggerCollider.isTrigger)
         {
@@ -90,7 +97,7 @@ public class MiniBossQuestTrigger : NetworkBehaviour, IQuestTrigger
             }
             else
             {
-                Debug.LogWarning("[MiniBossQuestTrigger] CẢNH BÁO: Chưa gán MiniBossAI trong Inspector!");
+                Debug.LogWarning("[MiniBossQuestTrigger] CẢNH BÁO: Chưa gán miniBoss (MiniBossAI) trong Inspector!");
             }
         }
     }
@@ -99,8 +106,13 @@ public class MiniBossQuestTrigger : NetworkBehaviour, IQuestTrigger
     {
         isQuestActive.OnValueChanged += OnQuestActiveChanged;
         bossDefeatedCount.OnValueChanged += OnBossDefeatedCountChanged;
+        isQuestCompletedNet.OnValueChanged += OnQuestCompletedChanged;
 
-        if (isQuestActive.Value && IsPrerequisiteCompleted())
+        if (isQuestCompletedNet.Value)
+        {
+            isQuestCompletedLocal = true;
+        }
+        else if (isQuestActive.Value && IsPrerequisiteCompleted())
         {
             hasTriggeredQuest = true;
             UpdateQuestProgressUI();
@@ -111,11 +123,21 @@ public class MiniBossQuestTrigger : NetworkBehaviour, IQuestTrigger
     {
         isQuestActive.OnValueChanged -= OnQuestActiveChanged;
         bossDefeatedCount.OnValueChanged -= OnBossDefeatedCountChanged;
+        isQuestCompletedNet.OnValueChanged -= OnQuestCompletedChanged;
+    }
+
+    private void OnQuestCompletedChanged(bool oldVal, bool newVal)
+    {
+        if (newVal)
+        {
+            isQuestCompletedLocal = true;
+            ShowCompletionUI();
+        }
     }
 
     private void OnQuestActiveChanged(bool oldVal, bool newVal)
     {
-        if (newVal && IsPrerequisiteCompleted())
+        if (newVal && IsPrerequisiteCompleted() && !IsQuestCompleted)
         {
             hasTriggeredQuest = true;
             lastBossDefeatedCount = -1;
@@ -125,7 +147,7 @@ public class MiniBossQuestTrigger : NetworkBehaviour, IQuestTrigger
 
     private void OnBossDefeatedCountChanged(int oldVal, int newVal)
     {
-        if (isQuestActive.Value && IsPrerequisiteCompleted())
+        if (isQuestActive.Value && IsPrerequisiteCompleted() && !IsQuestCompleted)
         {
             UpdateQuestProgressUI();
         }
@@ -139,7 +161,7 @@ public class MiniBossQuestTrigger : NetworkBehaviour, IQuestTrigger
 
     private void Update()
     {
-        if (isQuestCompleted || !IsPrerequisiteCompleted()) return;
+        if (IsQuestCompleted || !IsPrerequisiteCompleted()) return;
 
         if (localPlayer == null)
         {
@@ -148,7 +170,7 @@ public class MiniBossQuestTrigger : NetworkBehaviour, IQuestTrigger
 
         bool isNetwork = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
 
-        // Server / Offline kiểm tra Mini Boss đã chết chưa
+        // Server / Offline kiểm tra Mini Boss đã bị hạ gục chưa
         if (!isNetwork || IsServer)
         {
             bool active = isNetwork ? isQuestActive.Value : hasTriggeredQuest;
@@ -161,7 +183,7 @@ public class MiniBossQuestTrigger : NetworkBehaviour, IQuestTrigger
                     if (bossDefeatedCount.Value != currentDefeated)
                     {
                         bossDefeatedCount.Value = currentDefeated;
-                        Debug.Log($"[MiniBossQuestTrigger Server] Tiến độ Mini Boss: {currentDefeated}/1");
+                        Debug.Log($"[MiniBossQuestTrigger Server] Tiến độ tiêu diệt Mini Boss: {currentDefeated}/1");
                     }
                 }
                 else
@@ -170,7 +192,7 @@ public class MiniBossQuestTrigger : NetworkBehaviour, IQuestTrigger
                     {
                         localBossDefeatedCount = currentDefeated;
                         UpdateQuestProgressUI();
-                        Debug.Log($"[MiniBossQuestTrigger Offline] Tiến độ Mini Boss: {currentDefeated}/1");
+                        Debug.Log($"[MiniBossQuestTrigger Offline] Tiến độ tiêu diệt Mini Boss: {currentDefeated}/1");
                     }
                 }
 
@@ -193,7 +215,7 @@ public class MiniBossQuestTrigger : NetworkBehaviour, IQuestTrigger
 
     private void UpdateQuestProgressUI()
     {
-        if (!IsPrerequisiteCompleted()) return;
+        if (!IsPrerequisiteCompleted() || IsQuestCompleted) return;
 
         if (localHudCtl == null)
         {
@@ -227,8 +249,22 @@ public class MiniBossQuestTrigger : NetworkBehaviour, IQuestTrigger
 
     private void CompleteQuest()
     {
-        isQuestCompleted = true;
-        Debug.Log("[MiniBossQuestTrigger] Đã tiêu diệt thành công Mini Boss! Nhiệm vụ hoàn thành.");
+        if (isQuestCompletedLocal) return;
+        isQuestCompletedLocal = true;
+
+        bool isNetwork = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
+        if (isNetwork && IsServer)
+        {
+            isQuestCompletedNet.Value = true;
+            isQuestActive.Value = false;
+        }
+
+        ShowCompletionUI();
+    }
+
+    private void ShowCompletionUI()
+    {
+        Debug.Log("[MiniBossQuestTrigger] Đã tiêu diệt Mini Boss! Nhiệm vụ hoàn thành.");
 
         if (localHudCtl == null)
         {
@@ -239,7 +275,7 @@ public class MiniBossQuestTrigger : NetworkBehaviour, IQuestTrigger
         {
             localHudCtl.ShowQuest(true, this);
             localHudCtl.UpdateQuestProgress(1, 1, this);
-            localHudCtl.UpdateQuestDescription("Nhiệm vụ hoàn thành: Đã tiêu diệt thành công Mini Boss!", this);
+            localHudCtl.UpdateQuestDescription("Nhiệm vụ hoàn thành: Đã tiêu diệt Mini Boss!", this);
             localHudCtl.UpdateQuestTitle(questTitle, this);
             localHudCtl.UpdateQuestIcon(questIconSprite, this);
 
@@ -273,7 +309,7 @@ public class MiniBossQuestTrigger : NetworkBehaviour, IQuestTrigger
 
     private void OnTriggerEnter(Collider other)
     {
-        if (other == null || isQuestCompleted || !IsPrerequisiteCompleted()) return;
+        if (other == null || IsQuestCompleted || !IsPrerequisiteCompleted()) return;
 
         bool isNetwork = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
 

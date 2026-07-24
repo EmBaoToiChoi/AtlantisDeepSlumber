@@ -1660,9 +1660,11 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
                         indicator.reachDistance = 4f;
                     }
                 }
-                if (localHudCtl != null && IsPrerequisiteCompleted())
+                if (localHudCtl != null && IsPrerequisiteCompleted() && !IsBridgeRepaired())
                 {
                     localHudCtl.ShowQuest(true, this);
+                    localHudCtl.UpdateQuestTitle("SỬA CẦU SẬP", this);
+                    localHudCtl.UpdateQuestDescription(collapsed ? "Chặt 16 thanh gỗ để sửa cầu và tiếp tục hành trình." : "Đến vị trí cây cầu bị sập để kiểm tra.", this);
                     localHudCtl.UpdateQuestProgress(logsProgress, requiredLogsToRepair, this);
                 }
             }
@@ -1673,6 +1675,14 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
                 {
                     var indicator = localPlayer.gameObject.GetComponent<TreeGuidanceIndicator>();
                     if (indicator != null) Destroy(indicator);
+                }
+
+                if (localHudCtl != null && IsPrerequisiteCompleted() && !IsBridgeRepaired())
+                {
+                    localHudCtl.ShowQuest(true, this);
+                    localHudCtl.UpdateQuestTitle("SỬA CẦU SẬP", this);
+                    localHudCtl.UpdateQuestDescription("Đến vị trí cây cầu bị sập để kiểm tra và sửa chữa.", this);
+                    localHudCtl.UpdateQuestProgress(logsProgress, requiredLogsToRepair, this);
                 }
             }
         }

@@ -4,7 +4,7 @@ using Unity.Netcode;
 
 public class MazeGemQuestTrigger : NetworkBehaviour, IQuestTrigger
 {
-    public bool IsQuestCompleted => isQuestCompleted;
+    public bool IsQuestCompleted => (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening) ? isQuestCompletedNet.Value : isQuestCompletedLocal;
     public bool IsQuestActive => (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening) ? isQuestActive.Value : hasTriggeredQuest;
 
     [Header("Quest Prerequisite Settings")]
@@ -47,6 +47,13 @@ public class MazeGemQuestTrigger : NetworkBehaviour, IQuestTrigger
         NetworkVariableWritePermission.Server
     );
 
+    // Biến mạng đồng bộ trạng thái hoàn thành nhiệm vụ
+    public NetworkVariable<bool> isQuestCompletedNet = new NetworkVariable<bool>(
+        false,
+        NetworkVariableReadPermission.Everyone,
+        NetworkVariableWritePermission.Server
+    );
+
     // Biến mạng đồng bộ số lượng ngọc đã thu thập
     public NetworkVariable<int> collectedCount = new NetworkVariable<int>(
         0,
@@ -59,7 +66,7 @@ public class MazeGemQuestTrigger : NetworkBehaviour, IQuestTrigger
     private Collider triggerCollider;
 
     private bool hasTriggeredQuest = false;
-    private bool isQuestCompleted = false;
+    private bool isQuestCompletedLocal = false;
     
     private float nextPlayerSearchTime = 0f;
     private float nextCheckTime = 0f;
@@ -93,9 +100,13 @@ public class MazeGemQuestTrigger : NetworkBehaviour, IQuestTrigger
     {
         isQuestActive.OnValueChanged += OnQuestActiveChanged;
         collectedCount.OnValueChanged += OnCollectedCountChanged;
+        isQuestCompletedNet.OnValueChanged += OnQuestCompletedChanged;
         
-        // Nếu nhiệm vụ đã được kích hoạt trước khi player này kết nối
-        if (isQuestActive.Value && IsPrerequisiteCompleted())
+        if (isQuestCompletedNet.Value)
+        {
+            isQuestCompletedLocal = true;
+        }
+        else if (isQuestActive.Value && IsPrerequisiteCompleted())
         {
             hasTriggeredQuest = true;
             UpdateQuestProgressUI();
@@ -106,11 +117,21 @@ public class MazeGemQuestTrigger : NetworkBehaviour, IQuestTrigger
     {
         isQuestActive.OnValueChanged -= OnQuestActiveChanged;
         collectedCount.OnValueChanged -= OnCollectedCountChanged;
+        isQuestCompletedNet.OnValueChanged -= OnQuestCompletedChanged;
+    }
+
+    private void OnQuestCompletedChanged(bool oldVal, bool newVal)
+    {
+        if (newVal)
+        {
+            isQuestCompletedLocal = true;
+            ShowCompletionUI();
+        }
     }
 
     private void OnQuestActiveChanged(bool oldVal, bool newVal)
     {
-        if (newVal && IsPrerequisiteCompleted())
+        if (newVal && IsPrerequisiteCompleted() && !IsQuestCompleted)
         {
             hasTriggeredQuest = true;
             lastPressedCount = -1; // Ép cập nhật UI lập tức
@@ -121,7 +142,7 @@ public class MazeGemQuestTrigger : NetworkBehaviour, IQuestTrigger
 
     private void OnCollectedCountChanged(int oldVal, int newVal)
     {
-        if (isQuestActive.Value && IsPrerequisiteCompleted())
+        if (isQuestActive.Value && IsPrerequisiteCompleted() && !IsQuestCompleted)
         {
             UpdateQuestProgressUI();
         }
@@ -155,7 +176,7 @@ public class MazeGemQuestTrigger : NetworkBehaviour, IQuestTrigger
 
     private void Update()
     {
-        if (isQuestCompleted || !IsPrerequisiteCompleted()) return;
+        if (IsQuestCompleted || !IsPrerequisiteCompleted()) return;
 
         if (localPlayer == null)
         {
@@ -221,7 +242,7 @@ public class MazeGemQuestTrigger : NetworkBehaviour, IQuestTrigger
 
     private void UpdateQuestProgressUI()
     {
-        if (!IsPrerequisiteCompleted()) return;
+        if (!IsPrerequisiteCompleted() || IsQuestCompleted) return;
 
         if (localHudCtl == null)
         {
@@ -239,7 +260,6 @@ public class MazeGemQuestTrigger : NetworkBehaviour, IQuestTrigger
                 localHudCtl.UpdateQuestDescription(questDescription, this);
                 localHudCtl.UpdateQuestTitle(questTitle, this);
 
-                // Tự động giải quyết Sprite Icon (ưu tiên Inspector, sau đó đến cache HUD, sau đó đến Resources)
                 Sprite targetIcon = questIconSprite;
                 if (targetIcon == null && localHudCtl != null)
                 {
@@ -265,7 +285,21 @@ public class MazeGemQuestTrigger : NetworkBehaviour, IQuestTrigger
 
     private void CompleteQuest()
     {
-        isQuestCompleted = true;
+        if (isQuestCompletedLocal) return;
+        isQuestCompletedLocal = true;
+
+        bool isNetwork = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
+        if (isNetwork && IsServer)
+        {
+            isQuestCompletedNet.Value = true;
+            isQuestActive.Value = false;
+        }
+
+        ShowCompletionUI();
+    }
+
+    private void ShowCompletionUI()
+    {
         Debug.Log("[MazeGemQuestTrigger] Đã thu thập đủ ngọc trong mê cung! Nhiệm vụ hoàn thành.");
 
         if (localHudCtl == null)
@@ -281,10 +315,9 @@ public class MazeGemQuestTrigger : NetworkBehaviour, IQuestTrigger
             localHudCtl.UpdateQuestDescription("Nhiệm vụ hoàn thành: Đã thu thập đủ ngọc!", this);
             localHudCtl.UpdateQuestTitle(questTitle, this);
             
-            Sprite targetIcon = questIconSprite != null ? questIconSprite : (localHudCtl.ngoc1Sprite != null ? localHudCtl.ngoc1Sprite : Resources.Load<Sprite>("crystal_purple"));
+            Sprite targetIcon = questIconSprite != null ? questIconSprite : (localHudCtl != null && localHudCtl.ngoc1Sprite != null ? localHudCtl.ngoc1Sprite : Resources.Load<Sprite>("crystal_purple"));
             localHudCtl.UpdateQuestIcon(targetIcon, this);
 
-            // Bắt đầu Coroutine để ẩn UI sau độ trễ
             StartCoroutine(HideQuestAfterDelay(hideDelayAfterComplete));
         }
         else
@@ -316,10 +349,9 @@ public class MazeGemQuestTrigger : NetworkBehaviour, IQuestTrigger
 
     private void OnTriggerEnter(Collider other)
     {
-        if (other == null || isQuestCompleted || !IsPrerequisiteCompleted()) return;
+        if (other == null || IsQuestCompleted || !IsPrerequisiteCompleted()) return;
 
         bool isNetwork = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
-        if (isNetwork && !IsServer) return;
 
         if (IsPlayer(other.gameObject))
         {
@@ -327,17 +359,34 @@ public class MazeGemQuestTrigger : NetworkBehaviour, IQuestTrigger
             {
                 if (!isQuestActive.Value)
                 {
-                    isQuestActive.Value = true;
-                    Debug.Log($"[MazeGemQuestTrigger Server] Người chơi '{other.gameObject.name}' chạm Trigger - Kích hoạt nhiệm vụ tìm ngọc cho toàn bộ mạng!");
+                    if (IsServer)
+                    {
+                        isQuestActive.Value = true;
+                        Debug.Log($"[MazeGemQuestTrigger Server] Người chơi '{other.gameObject.name}' chạm Trigger - Kích hoạt nhiệm vụ cho toàn bộ mạng!");
+                    }
+                    else
+                    {
+                        RequestActivateQuestServerRpc();
+                    }
                 }
             }
             else
             {
                 hasTriggeredQuest = true;
-                lastPressedCount = -1; // Ép cập nhật ngay lập tức
+                lastPressedCount = -1;
                 UpdateQuestProgressUI();
-                Debug.Log("[MazeGemQuestTrigger Offline] Người chơi chạm Trigger - Kích hoạt nhiệm vụ tìm ngọc.");
+                Debug.Log("[MazeGemQuestTrigger Offline] Người chơi chạm Trigger - Kích hoạt nhiệm vụ.");
             }
+        }
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    private void RequestActivateQuestServerRpc()
+    {
+        if (!isQuestActive.Value)
+        {
+            isQuestActive.Value = true;
+            Debug.Log("[MazeGemQuestTrigger ServerRpc] Client yêu cầu kích hoạt nhiệm vụ cho toàn bộ mạng!");
         }
     }
 

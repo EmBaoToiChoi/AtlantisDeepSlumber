@@ -3419,7 +3419,14 @@ public class PlayerHUDController : MonoBehaviour
             {
                 if (currentQuestOwner != null && owner != null && currentQuestOwner != owner)
                 {
-                    return;
+                    if (currentQuestOwner is IQuestTrigger oldQuest && oldQuest.IsQuestCompleted)
+                    {
+                        currentQuestOwner = owner;
+                    }
+                    else
+                    {
+                        return;
+                    }
                 }
                 if (owner != null)
                 {
@@ -3429,7 +3436,7 @@ public class PlayerHUDController : MonoBehaviour
             }
             else
             {
-                if (owner == null || currentQuestOwner == owner)
+                if (owner == null || currentQuestOwner == owner || (currentQuestOwner is IQuestTrigger oldQuest && oldQuest.IsQuestCompleted))
                 {
                     currentQuestOwner = null;
                     questPanel.RemoveFromClassList("show-quest");
@@ -3441,7 +3448,17 @@ public class PlayerHUDController : MonoBehaviour
 
     public void UpdateQuestProgress(int current, int target = 16, object owner = null)
     {
-        if (currentQuestOwner != null && owner != null && currentQuestOwner != owner) return;
+        if (currentQuestOwner != null && owner != null && currentQuestOwner != owner)
+        {
+            if (currentQuestOwner is IQuestTrigger oldQuest && oldQuest.IsQuestCompleted)
+            {
+                currentQuestOwner = owner;
+            }
+            else
+            {
+                return;
+            }
+        }
         InitializeUI();
         if (questProgressText != null)
         {
