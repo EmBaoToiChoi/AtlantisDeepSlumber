@@ -3347,6 +3347,17 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     public void CreateSwordHitboxes()
     {
+        DisableAllHitboxes();
+        foreach (Transform child in GetComponentsInChildren<Transform>(true))
+        {
+            if (child != transform && (child.name.Contains("Hitbox") || child.name.Contains("hitbox") || child.name.Contains("HitboxPunch")))
+            {
+                child.gameObject.SetActive(false);
+                Collider c = child.GetComponent<Collider>();
+                if (c != null) c.enabled = false;
+            }
+        }
+
         Transform leftHand = FindBoneRecursive(transform, "left");
         Transform rightHand = FindBoneRecursive(transform, "right");
 
@@ -3354,15 +3365,26 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (rightHand == null) rightHand = transform;
 
         {
-            Transform existingLeft = leftHand.Find("LeftHitbox");
-            GameObject leftObj = existingLeft != null ? existingLeft.gameObject : new GameObject("LeftHitbox");
-            if (existingLeft == null)
+            GameObject leftObj = null;
+            if (leftHitbox != null)
             {
+                leftObj = leftHitbox.gameObject;
+            }
+            else
+            {
+                Transform existingLeft = leftHand.Find("LeftHitbox") ?? leftHand.Find("HitboxPunch");
+                if (existingLeft != null) leftObj = existingLeft.gameObject;
+            }
+
+            if (leftObj == null)
+            {
+                leftObj = new GameObject("LeftHitbox");
                 leftObj.transform.SetParent(leftHand);
                 leftObj.transform.localPosition = Vector3.zero;
                 leftObj.transform.localRotation = Quaternion.identity;
                 leftObj.transform.localScale = Vector3.one;
             }
+
             BoxCollider col = leftObj.GetComponent<BoxCollider>();
             if (col == null) col = leftObj.AddComponent<BoxCollider>();
             col.isTrigger = true;
@@ -3375,15 +3397,26 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         }
 
         {
-            Transform existingRight = rightHand.Find("RightHitbox");
-            GameObject rightObj = existingRight != null ? existingRight.gameObject : new GameObject("RightHitbox");
-            if (existingRight == null)
+            GameObject rightObj = null;
+            if (rightHitbox != null)
             {
+                rightObj = rightHitbox.gameObject;
+            }
+            else
+            {
+                Transform existingRight = rightHand.Find("RightHitbox") ?? rightHand.Find("HitboxPunch");
+                if (existingRight != null) rightObj = existingRight.gameObject;
+            }
+
+            if (rightObj == null)
+            {
+                rightObj = new GameObject("RightHitbox");
                 rightObj.transform.SetParent(rightHand);
                 rightObj.transform.localPosition = Vector3.zero;
                 rightObj.transform.localRotation = Quaternion.identity;
                 rightObj.transform.localScale = Vector3.one;
             }
+
             BoxCollider col = rightObj.GetComponent<BoxCollider>();
             if (col == null) col = rightObj.AddComponent<BoxCollider>();
             col.isTrigger = true;
