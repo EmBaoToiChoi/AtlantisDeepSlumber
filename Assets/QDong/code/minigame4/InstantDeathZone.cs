@@ -28,13 +28,7 @@ public class InstantDeathZone : MonoBehaviour
                     if (teleportTrigger != null && teleportTrigger.teleportTarget != null)
                     {
                         Vector3 spawnPos = teleportTrigger.teleportTarget.position;
-
-                        CharacterController cc = playerRoot.GetComponent<CharacterController>();
-                        if (cc != null) cc.enabled = false;
-
                         playerRoot.transform.position = spawnPos;
-
-                        if (cc != null) cc.enabled = true;
 
                         Rigidbody rb = playerRoot.GetComponent<Rigidbody>();
                         if (rb != null)

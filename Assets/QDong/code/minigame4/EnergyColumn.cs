@@ -86,11 +86,15 @@ public class EnergyColumn : NetworkBehaviour
                     {
                         Bounds bounds = mf.sharedMesh.bounds;
                         int fillAxis = mat.HasProperty("_FillAxis") ? mat.GetInt("_FillAxis") : 1;
-                        
                         float minB = bounds.min.y;
                         float maxB = bounds.max.y;
                         if (fillAxis == 0) { minB = bounds.min.x; maxB = bounds.max.x; }
                         else if (fillAxis == 2) { minB = bounds.min.z; maxB = bounds.max.z; }
+                        else if (fillAxis == 3) { 
+                            Bounds worldBounds = r.bounds;
+                            minB = worldBounds.min.y; 
+                            maxB = worldBounds.max.y; 
+                        }
 
                         propBlock.SetFloat("_MinBound", minB);
                         propBlock.SetFloat("_MaxBound", maxB);
