@@ -345,6 +345,8 @@ public class Enemy1_DapBua : NetworkBehaviour
         }
     }
 
+
+
     // ══════════════════════════════════════════════════════════
     //  PATROL  (Walk animation = Speed 0.5)
     // ══════════════════════════════════════════════════════════
@@ -477,15 +479,98 @@ public class Enemy1_DapBua : NetworkBehaviour
             return;
         }
 
-        // Đuổi theo → Run
+        // Đuổi theo → Run (bọc lót xung quanh Player, chống dồn toa)
         float runSpd = IsEnragedValue ? chaseRunSpeed * 1.5f : chaseRunSpeed;
         if (AgentReady)
         {
             agent.isStopped = false;
             agent.speed = runSpd;
-            agent.SetDestination(targetPlayer.position);
+            agent.obstacleAvoidanceType = ObstacleAvoidanceType.HighQualityObstacleAvoidance;
+            if (agent.radius < 0.45f) agent.radius = 0.45f;
+
+            float distToPlayer = Vector3.Distance(transform.position, targetPlayer.position);
+            agent.avoidancePriority = Mathf.Clamp(10 + Mathf.RoundToInt(distToPlayer * 4f), 5, 95);
+
+            Vector3 targetPos = GetSurroundingPosition(targetPlayer, Mathf.Max(1.8f, attackRange * 0.85f));
+            agent.SetDestination(targetPos);
         }
         SetSpeedNet(AgentReady && !agent.isStopped ? 1f : 0f);
+    }
+
+    public bool HasTargetPlayer => targetPlayer != null;
+
+    public void SetTargetPlayer(Transform player)
+    {
+        if (player == null || IsDead) return;
+        if (targetPlayer == null)
+        {
+            targetPlayer = player;
+            if (CurrentStateValue == EnemyState.Patrol)
+            {
+                ChangeState(EnemyState.Chase);
+            }
+        }
+    }
+
+    public void AlertNearbyAllies(Transform target, float radius = 15f)
+    {
+        if (target == null) return;
+        Collider[] allies = Physics.OverlapSphere(transform.position, radius);
+        foreach (var col in allies)
+        {
+            if (col == null || col.gameObject == gameObject) continue;
+            var e1 = col.GetComponentInParent<Enemy1_DapBua>();
+            if (e1 != null && !e1.HasTargetPlayer) e1.SetTargetPlayer(target);
+            var e2 = col.GetComponentInParent<Enemy2_Zombie>();
+            if (e2 != null && !e2.HasTargetPlayer) e2.SetTargetPlayer(target);
+            var e3 = col.GetComponentInParent<Enemy3_Buaa>();
+            if (e3 != null && !e3.HasTargetPlayer) e3.SetTargetPlayer(target);
+            var e4 = col.GetComponentInParent<Enemy4_Bongtoi>();
+            if (e4 != null && !e4.HasTargetPlayer) e4.SetTargetPlayer(target);
+            var e5 = col.GetComponentInParent<Enemy5_PhuThuy>();
+            if (e5 != null && !e5.HasTargetPlayer) e5.SetTargetPlayer(target);
+        }
+    }
+
+    public Vector3 GetSurroundingPosition(Transform target, float desiredDist)
+    {
+        if (target == null) return transform.position;
+
+        // 1. Calculate direction from target to this enemy
+        Vector3 toEnemy = transform.position - target.position;
+        toEnemy.y = 0;
+        if (toEnemy.sqrMagnitude < 0.001f) toEnemy = transform.forward;
+        else toEnemy.Normalize();
+
+        // 2. Separation force from nearby enemies to prevent clumping/stacking
+        Vector3 separation = Vector3.zero;
+        int count = 0;
+        Collider[] nearby = Physics.OverlapSphere(transform.position, 2.2f);
+        foreach (var col in nearby)
+        {
+            if (col != null && col.gameObject != gameObject && (col.CompareTag("Enemy") || col.gameObject.layer == LayerMask.NameToLayer("Enemy")))
+            {
+                Vector3 diff = transform.position - col.transform.position;
+                diff.y = 0;
+                float dist = diff.magnitude;
+                if (dist > 0.01f && dist < 2.2f)
+                {
+                    separation += diff.normalized * ((2.2f - dist) / 2.2f);
+                    count++;
+                }
+            }
+        }
+        if (count > 0) separation /= count;
+
+        // 3. Blend direction toward target ring position with separation vector
+        Vector3 finalDir = (toEnemy + separation * 1.2f).normalized;
+        Vector3 desiredPos = target.position + finalDir * desiredDist;
+
+        if (NavMesh.SamplePosition(desiredPos, out NavMeshHit hit, 3.5f, NavMesh.AllAreas))
+        {
+            return hit.position;
+        }
+        return target.position;
     }
 
     private void ReturnToPatrol()
@@ -496,6 +581,7 @@ public class Enemy1_DapBua : NetworkBehaviour
         waypointWaitTimer = 0f;
         GoToNextWaypoint();
     }
+
 
     // ══════════════════════════════════════════════════════════
     //  STAGGER
@@ -556,31 +642,29 @@ public class Enemy1_DapBua : NetworkBehaviour
         Vector3 ep = eyeTransform != null ? eyeTransform.position : transform.position + Vector3.up * 1.5f;
 
         // KHÓA MỤC TIÊU ƯU TIÊN: Nếu đang có mục tiêu và mục tiêu đó vẫn hợp lệ thì tiếp tục dí mục tiêu đó
+        int num = Physics.OverlapSphereNonAlloc(transform.position, sightRange, detectionResults, playerLayer);
+        if (num == 0) num = FallbackDetect();
+
+        bool found = false;
+        Transform bestTarget = null;
+        float minD = float.MaxValue;
+
+        // Current target distance (if valid)
+        float currentTargetDist = float.MaxValue;
         if (targetPlayer != null)
         {
             IPlayerHUDTarget ps = targetPlayer.GetComponentInParent<IPlayerHUDTarget>();
             Skeleton sk = targetPlayer.GetComponentInParent<Skeleton>();
-            bool isTargetDead = (ps != null && (ps.CurrentHealth <= 0 || ps.IsInvisible)) || (sk != null && sk.CurrentHealthValue <= 0);
-            if ((ps != null || sk != null) && !isTargetDead)
+            bool isDead = (ps != null && (ps.CurrentHealth <= 0 || ps.IsInvisible)) || (sk != null && sk.CurrentHealthValue <= 0);
+            if ((ps != null || sk != null) && !isDead)
             {
-                Vector3 center = targetPlayer.position + Vector3.up;
-                float d = Vector3.Distance(ep, center);
-                if (d <= sightRange)
-                {
-                    Vector3 dir = (center - ep).normalized;
-                    if (!Physics.Raycast(ep, dir, d, obstacleLayer, QueryTriggerInteraction.Ignore))
-                    {
-                        if (s != EnemyState.Chase) ChangeState(EnemyState.Chase);
-                        return; // Khóa mục tiêu thành công!
-                    }
-                }
+                currentTargetDist = Vector3.Distance(transform.position, targetPlayer.position);
+            }
+            else
+            {
+                targetPlayer = null;
             }
         }
-
-        int num = Physics.OverlapSphereNonAlloc(transform.position, sightRange, detectionResults, playerLayer);
-        if (num == 0) num = FallbackDetect();
-
-        bool found = false; Transform closest = null; float minD = float.MaxValue;
 
         for (int i = 0; i < num; i++)
         {
@@ -590,17 +674,36 @@ public class Enemy1_DapBua : NetworkBehaviour
             Skeleton sk = pt.GetComponentInParent<Skeleton>();
             bool isTargetDead = (ps != null && (ps.CurrentHealth <= 0 || ps.IsInvisible)) || (sk != null && sk.CurrentHealthValue <= 0);
             if ((ps == null && sk == null) || isTargetDead) continue;
+
             Vector3 center = pt.position + Vector3.up;
             float d = Vector3.Distance(ep, center);
             Vector3 dir = (center - ep).normalized;
+
+            // Vision Cone OR Proximity Detection Radius (4.5m radius for walking past)
             bool inFOV = Vector3.Angle(transform.forward, dir) < fieldOfView / 2f;
-            if ((inFOV || pt == targetPlayer) && !Physics.Raycast(ep, dir, d, obstacleLayer, QueryTriggerInteraction.Ignore))
-            { if (d < minD) { minD = d; closest = pt; found = true; } }
+            bool isProximity = d <= 4.5f;
+
+            if ((inFOV || isProximity || pt == targetPlayer) && !Physics.Raycast(ep, dir, d, obstacleLayer, QueryTriggerInteraction.Ignore))
+            {
+                if (d < minD)
+                {
+                    minD = d;
+                    bestTarget = pt;
+                    found = true;
+                }
+            }
         }
 
-        if (found && closest != null)
+        if (found && bestTarget != null)
         {
-            targetPlayer = closest;
+            // Dynamic Retargeting:
+            // Switch target if no target, or if bestTarget is significantly closer (> 2.5m closer) or within melee range (< 4.0m)
+            if (targetPlayer == null || (bestTarget != targetPlayer && (minD < currentTargetDist - 2.5f || minD < 4.0f)))
+            {
+                targetPlayer = bestTarget;
+            }
+
+            AlertNearbyAllies(targetPlayer);
             if (s != EnemyState.Chase) ChangeState(EnemyState.Chase);
         }
         else if (s == EnemyState.Chase)
@@ -1065,4 +1168,6 @@ public class Enemy1_DapBua : NetworkBehaviour
         public void Update() {}
         public void Exit() {}
     }
+
+
 }
