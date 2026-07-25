@@ -88,8 +88,6 @@ public class Puzzle4Manager : NetworkBehaviour
 
         if (isActive)
         {
-            // KHÓA TRIỆT ĐỂ: Tắt enableCameraFollow trên TẤT CẢ nhân vật
-            // Nếu không làm, mỗi frame nhân vật tự tìm lại Camera.main và di chuyển nó → camera giật
             foreach (var mono in allMonos)
             {
                 if (mono is IPlayerHUDTarget)
@@ -97,39 +95,46 @@ public class Puzzle4Manager : NetworkBehaviour
                     var enableCamField = mono.GetType().GetField("enableCameraFollow", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
                     if (enableCamField != null) enableCamField.SetValue(mono, false);
                     
-                    // Null targetCamera để reset về null (họ sẽ không tự recover vì enableCameraFollow = false)
                     var targetCamField = mono.GetType().GetField("targetCamera", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
                     if (targetCamField != null) targetCamField.SetValue(mono, null);
                 }
             }
             
-            // Tắt tất cả MainCamera đang bật (trừ sharedCamera)
             Camera[] allCams = FindObjectsByType<Camera>(FindObjectsSortMode.None);
             foreach (Camera cam in allCams)
             {
-                if (cam.CompareTag("MainCamera") && (sharedCamera == null || cam.gameObject != sharedCamera))
+                if (cam.CompareTag("MainCamera") && cam.gameObject.activeInHierarchy && (sharedCamera == null || cam.gameObject != sharedCamera))
                 {
+                    previousActiveCamera = cam;
                     cam.gameObject.SetActive(false);
+                    break;
                 }
             }
         }
         else
         {
-            // Bật lại MainCamera trong scene (tìm kể cả object đang tắt)
             Camera mainCam = null;
-            Camera[] allCams = FindObjectsByType<Camera>(FindObjectsInactive.Include, FindObjectsSortMode.None);
-            foreach (Camera cam in allCams)
+            if (previousActiveCamera != null)
             {
-                if (sharedCamera != null && cam.gameObject == sharedCamera) continue;
-                
-                if (cam.CompareTag("MainCamera"))
+                previousActiveCamera.gameObject.SetActive(true);
+                mainCam = previousActiveCamera;
+            }
+            else
+            {
+                Camera[] allCams = FindObjectsByType<Camera>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+                foreach (Camera cam in allCams)
                 {
-                    cam.gameObject.SetActive(true);
-                    mainCam = cam;
+                    if (sharedCamera != null && cam.gameObject == sharedCamera) continue;
+                    
+                    if (cam.CompareTag("MainCamera"))
+                    {
+                        cam.gameObject.SetActive(true);
+                        mainCam = cam;
+                        break;
+                    }
                 }
             }
             
-            // Mở khóa enableCameraFollow và gán lại targetCamera cho TẤT CẢ nhân vật
             foreach (var mono in allMonos)
             {
                 if (mono is IPlayerHUDTarget)
@@ -137,7 +142,6 @@ public class Puzzle4Manager : NetworkBehaviour
                     var enableCamField = mono.GetType().GetField("enableCameraFollow", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
                     if (enableCamField != null) enableCamField.SetValue(mono, true);
                     
-                    // Chỉ gán camera cho local player (IsOwner)
                     if (((IPlayerHUDTarget)mono).IsOwner && mainCam != null)
                     {
                         var targetCamField = mono.GetType().GetField("targetCamera", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
@@ -147,6 +151,8 @@ public class Puzzle4Manager : NetworkBehaviour
             }
         }
     }
+
+    private Camera previousActiveCamera = null;
 
     [ClientRpc]
     public void TeleportPlayerToCenterClientRpc(ulong objectId, Vector3 pos)
@@ -429,11 +435,17 @@ public class Puzzle4Manager : NetworkBehaviour
             // Cache TẤT CẢ nhân vật mà Client này sở hữu (hoặc nếu là host test thì sẽ add hết cả 4)
             if (mono is IPlayerHUDTarget player && player.IsOwner)
             {
+                SlideEffect se = player.gameObject.GetComponent<SlideEffect>();
+                if (se == null)
+                {
+                    se = player.gameObject.AddComponent<SlideEffect>();
+                }
+                
                 PlayerCacheData data = new PlayerCacheData
                 {
                     transform = player.transform,
                     rb = player.gameObject.GetComponent<Rigidbody>(),
-                    slideEffect = player.gameObject.GetComponent<SlideEffect>()
+                    slideEffect = se
                 };
                 cachedLocalPlayers.Add(data);
                 Debug.Log("[Puzzle4Manager] Đã cache local player để trượt: " + player.gameObject.name);
@@ -526,7 +538,7 @@ public class Puzzle4Manager : NetworkBehaviour
         {
             Debug.LogError("[Puzzle4Manager] trapFloor là NULL! Tự tìm Puzzle4TrapTrigger...");
             // Fallback: tự tìm trong scene
-            Puzzle4TrapTrigger found = FindAnyObjectByType<Puzzle4TrapTrigger>();
+            Puzzle4TrapTrigger found = FindAnyObjectByType<Puzzle4TrapTrigger>(FindObjectsInactive.Include);
             if (found != null)
             {
                 Debug.Log("[Puzzle4Manager] Tìm thấy Puzzle4TrapTrigger fallback: " + found.gameObject.name);
@@ -573,7 +585,7 @@ public class Puzzle4Manager : NetworkBehaviour
         // Fallback client-side: nếu server đã gọi CloseFloorClientRpc nhưng sàn vẫn chưa hiện,
         // thì client tự bật sàn lên (xảy ra khi trapFloor bị null trên server)
         Debug.Log("[Puzzle4Manager] Client-side: Đang thử bật sàn...");
-        Puzzle4TrapTrigger localTrapFloor = (trapFloor != null) ? trapFloor : FindAnyObjectByType<Puzzle4TrapTrigger>();
+        Puzzle4TrapTrigger localTrapFloor = (trapFloor != null) ? trapFloor : FindAnyObjectByType<Puzzle4TrapTrigger>(FindObjectsInactive.Include);
         if (localTrapFloor != null)
         {
             if (localTrapFloor.floorPartA != null) localTrapFloor.floorPartA.SetActive(true);
