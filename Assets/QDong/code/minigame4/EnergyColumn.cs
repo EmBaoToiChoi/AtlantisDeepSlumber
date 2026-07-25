@@ -86,6 +86,14 @@ public class EnergyColumn : NetworkBehaviour
                     {
                         Bounds bounds = mf.sharedMesh.bounds;
                         int fillAxis = mat.HasProperty("_FillAxis") ? mat.GetInt("_FillAxis") : 1;
+                        
+                        // Tự động ép trục nạp năng lượng thành World Y (từ dưới lên) cho tia sét
+                        if (r.gameObject.name.Contains("Setcuadong"))
+                        {
+                            fillAxis = 3;
+                            propBlock.SetInt("_FillAxis", 3);
+                        }
+
                         float minB = bounds.min.y;
                         float maxB = bounds.max.y;
                         if (fillAxis == 0) { minB = bounds.min.x; maxB = bounds.max.x; }
