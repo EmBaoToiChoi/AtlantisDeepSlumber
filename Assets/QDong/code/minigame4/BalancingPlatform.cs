@@ -8,7 +8,7 @@ public class BalancingPlatform : NetworkBehaviour
     public float playerWeightForce = 50f; // Sức nặng của mỗi người chơi
     
     private Rigidbody rb;
-    private HashSet<Collider> playersOnBoard = new HashSet<Collider>();
+    private Dictionary<Transform, int> playersOnBoard = new Dictionary<Transform, int>();
 
     private void Awake()
     {
@@ -33,7 +33,12 @@ public class BalancingPlatform : NetworkBehaviour
         // Check xem có đúng là Player không (nhớ tag nhân vật là "Player")
         if (other.CompareTag("Player"))
         {
-            playersOnBoard.Add(other);
+            Transform rootT = other.transform.root;
+            if (!playersOnBoard.ContainsKey(rootT))
+            {
+                playersOnBoard[rootT] = 0;
+            }
+            playersOnBoard[rootT]++;
         }
     }
 
@@ -44,7 +49,15 @@ public class BalancingPlatform : NetworkBehaviour
 
         if (other.CompareTag("Player"))
         {
-            playersOnBoard.Remove(other);
+            Transform rootT = other.transform.root;
+            if (playersOnBoard.ContainsKey(rootT))
+            {
+                playersOnBoard[rootT]--;
+                if (playersOnBoard[rootT] <= 0)
+                {
+                    playersOnBoard.Remove(rootT);
+                }
+            }
         }
     }
 
@@ -53,13 +66,21 @@ public class BalancingPlatform : NetworkBehaviour
         if (!IsServer) return; // Chốt chặn an toàn: Chỉ Server chạy code này
 
         // Dọn dẹp list nếu có player nào lỡ bị destroy (out game)
-        playersOnBoard.RemoveWhere(p => p == null);
+        List<Transform> keysToRemove = new List<Transform>();
+        foreach (var key in playersOnBoard.Keys)
+        {
+            if (key == null) keysToRemove.Add(key);
+        }
+        foreach (var key in keysToRemove)
+        {
+            playersOnBoard.Remove(key);
+        }
 
         // Áp dụng trọng lượng của từng người chơi lên đĩa
-        foreach (var player in playersOnBoard)
+        foreach (var player in playersOnBoard.Keys)
         {
             // Lấy vị trí của người chơi
-            Vector3 playerPos = player.transform.position;
+            Vector3 playerPos = player.position;
             
             // Ép một lực hướng thẳng xuống (Vector3.down) ngay tại vị trí người chơi đang đứng
             // Do đĩa có RigidBody và Joint ở tâm, ép lực ở rìa tự khắc nó sẽ nghiêng (Đòn bẩy)
