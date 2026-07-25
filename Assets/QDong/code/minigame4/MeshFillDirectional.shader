@@ -28,6 +28,7 @@ Shader "Custom/MeshFillDirectional"
         {
             float2 uv_MainTex;
             float3 localPos;
+            float3 worldPos;
         };
 
         fixed4 _Color;
@@ -50,7 +51,8 @@ Shader "Custom/MeshFillDirectional"
             // Chọn trục để làm chuẩn nạp năng lượng (Mặc định là trục Y = 1)
             float pos = IN.localPos.y; 
             if (_FillAxis == 0) pos = IN.localPos.x;
-            if (_FillAxis == 2) pos = IN.localPos.z;
+            else if (_FillAxis == 2) pos = IN.localPos.z;
+            else if (_FillAxis == 3) pos = IN.worldPos.y;
 
             // Tính toán tỷ lệ phần trăm (0 = Bottom, 1 = Top)
             float normalizedPos = (pos - _MinBound) / (_MaxBound - _MinBound);

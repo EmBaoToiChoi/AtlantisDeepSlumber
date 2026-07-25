@@ -174,21 +174,7 @@ public class Puzzle4FailZone : NetworkBehaviour
         )
             return;
 
-        CharacterController cc = netObj.GetComponent<CharacterController>();
-        if (cc != null) cc.enabled = false;
-
         netObj.transform.position = pos;
-
-        if (netObj.IsOwner)
-        {
-            Unity.Netcode.Components.NetworkTransform netTransform = netObj.GetComponent<Unity.Netcode.Components.NetworkTransform>();
-            if (netTransform != null)
-            {
-                netTransform.Teleport(pos, netObj.transform.rotation, netObj.transform.localScale);
-            }
-        }
-
-        if (cc != null) cc.enabled = true;
 
         Rigidbody rb =
             netObj.GetComponent<Rigidbody>();
