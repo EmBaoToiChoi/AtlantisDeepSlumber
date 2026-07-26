@@ -28,7 +28,12 @@ public class LeoInteraction : NetworkBehaviour
         // Chỉ cho sạc khi minigame đã bắt đầu
         Puzzle4Manager p4Manager = FindAnyObjectByType<Puzzle4Manager>();
         if (p4Manager == null || !p4Manager.isMinigameStarted.Value || p4Manager.puzzleCompleted.Value)
+        {
+            currentColumn.ShowInteractUI(false);
             return;
+        }
+
+        currentColumn.ShowInteractUI(true);
 
         if(Input.GetKey(KeyCode.C))
         {
@@ -46,6 +51,11 @@ public class LeoInteraction : NetworkBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
+        if (!IsOwner) return;
+
+        IPlayerHUDTarget info = GetComponent<IPlayerHUDTarget>();
+        if (info == null || info.CharacterClassIndex != 0) return;
+
         EnergyColumn column =
             other.GetComponent<EnergyColumn>();
 
@@ -55,10 +65,15 @@ public class LeoInteraction : NetworkBehaviour
 
     private void OnTriggerExit(Collider other)
     {
+        if (!IsOwner) return;
+
         EnergyColumn column =
             other.GetComponent<EnergyColumn>();
 
-        if(column != null)
+        if(column != null && currentColumn == column)
+        {
+            currentColumn.ShowInteractUI(false);
             currentColumn = null;
+        }
     }
 }

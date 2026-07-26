@@ -14,6 +14,7 @@ public class EnergyColumn : NetworkBehaviour
 
     public GameObject chargingEffect;
     public GameObject completedEffect;
+    public GameObject interactUI; // UI hiển thị phím C
 
     private bool completed = false;
 
@@ -29,6 +30,25 @@ public class EnergyColumn : NetworkBehaviour
 
         if(completedEffect != null)
             completedEffect.SetActive(false);
+            
+        if(interactUI != null)
+            interactUI.SetActive(false);
+    }
+
+    public void ShowInteractUI(bool show)
+    {
+        if (interactUI != null)
+        {
+            // Chỉ hiện khi chưa nạp đầy
+            if (show && !IsCompleted())
+            {
+                interactUI.SetActive(true);
+            }
+            else
+            {
+                interactUI.SetActive(false);
+            }
+        }
     }
 
     private float previousCharge = 0f;
@@ -167,6 +187,9 @@ public class EnergyColumn : NetworkBehaviour
         )
         {
             completed = true;
+
+            if (interactUI != null)
+                interactUI.SetActive(false); // Ẩn UI khi nạp xong
 
             Debug.Log(
                 gameObject.name +
