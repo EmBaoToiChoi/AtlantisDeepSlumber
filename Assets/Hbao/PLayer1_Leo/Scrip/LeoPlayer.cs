@@ -3343,7 +3343,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
 
     public float CurrentHealth =>
-        isStandaloneMode ? localHealth : currentHealth.Value;
+        localHealth > 0 ? localHealth : (isStandaloneMode ? localHealth : currentHealth.Value);
 
     // IPlayerHUDTarget Implementation
     bool IPlayerHUDTarget.isStandaloneMode => isStandaloneMode;
@@ -3359,7 +3359,22 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     public void ResetDeathState()
     {
         isDeathAnimFinished = false;
+        currentAnimState = "";
+        lastTriggeredAnimName = "";
         enabled = true;
+
+        if (anim != null && anim.isActiveAndEnabled && anim.runtimeAnimatorController != null)
+        {
+            anim.ResetTrigger("Death");
+            anim.ResetTrigger("GetHit");
+            anim.ResetTrigger("GeiHit2");
+            anim.Play("Idle", 0, 0f);
+        }
+        var netAnim = GetComponent<Unity.Netcode.Components.NetworkAnimator>();
+        if (netAnim != null)
+        {
+            try { netAnim.ResetTrigger("Death"); } catch {}
+        }
     }
 
     public void OnDeathAnimationEnd()
@@ -7939,6 +7954,17 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     private void FixedUpdate()
     {
+        if (CurrentHealth <= 0)
+        {
+            targetMoveVelocity = Vector3.zero;
+            if (rb != null && !rb.isKinematic)
+            {
+                rb.linearVelocity = new Vector3(0f, rb.linearVelocity.y, 0f);
+                rb.angularVelocity = Vector3.zero;
+            }
+            return;
+        }
+
         ApplyExtraGravity();
 
         bool isRolling = isStandaloneMode ? isRollingStandalone : (IsSpawned && isRollingNet.Value);
