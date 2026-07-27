@@ -3410,6 +3410,34 @@ public class PlayerHUDController : MonoBehaviour
         }
     }
 
+    private bool CanSwitchQuestOwner(object owner)
+    {
+        if (owner == null) return true;
+        if (currentQuestOwner == null || currentQuestOwner == owner) return true;
+
+        if (currentQuestOwner is IQuestTrigger oldQuest && oldQuest.IsQuestCompleted) return true;
+
+        if (owner is IQuestTrigger)
+        {
+            var method = owner.GetType().GetMethod("IsPrerequisiteCompleted");
+            if (method != null && method.ReturnType == typeof(bool))
+            {
+                try
+                {
+                    bool isPreCompleted = (bool)method.Invoke(owner, null);
+                    if (isPreCompleted) return true;
+                }
+                catch { }
+            }
+            else
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public void ShowQuest(bool show, object owner = null)
     {
         InitializeUI();
@@ -3419,7 +3447,7 @@ public class PlayerHUDController : MonoBehaviour
             {
                 if (currentQuestOwner != null && owner != null && currentQuestOwner != owner)
                 {
-                    if (currentQuestOwner is IQuestTrigger oldQuest && oldQuest.IsQuestCompleted)
+                    if (CanSwitchQuestOwner(owner))
                     {
                         currentQuestOwner = owner;
                     }
@@ -3436,7 +3464,7 @@ public class PlayerHUDController : MonoBehaviour
             }
             else
             {
-                if (owner == null || currentQuestOwner == owner || (currentQuestOwner is IQuestTrigger oldQuest && oldQuest.IsQuestCompleted))
+                if (owner == null || currentQuestOwner == owner || CanSwitchQuestOwner(owner))
                 {
                     currentQuestOwner = null;
                     questPanel.RemoveFromClassList("show-quest");
@@ -3450,7 +3478,7 @@ public class PlayerHUDController : MonoBehaviour
     {
         if (currentQuestOwner != null && owner != null && currentQuestOwner != owner)
         {
-            if (currentQuestOwner is IQuestTrigger oldQuest && oldQuest.IsQuestCompleted)
+            if (CanSwitchQuestOwner(owner))
             {
                 currentQuestOwner = owner;
             }
@@ -3492,7 +3520,17 @@ public class PlayerHUDController : MonoBehaviour
 
     public void UpdateQuestDescription(string description, object owner = null)
     {
-        if (currentQuestOwner != null && owner != null && currentQuestOwner != owner) return;
+        if (currentQuestOwner != null && owner != null && currentQuestOwner != owner)
+        {
+            if (CanSwitchQuestOwner(owner))
+            {
+                currentQuestOwner = owner;
+            }
+            else
+            {
+                return;
+            }
+        }
         InitializeUI();
         if (questDescriptionText != null)
         {
@@ -3502,7 +3540,17 @@ public class PlayerHUDController : MonoBehaviour
 
     public void UpdateQuestTitle(string title, object owner = null)
     {
-        if (currentQuestOwner != null && owner != null && currentQuestOwner != owner) return;
+        if (currentQuestOwner != null && owner != null && currentQuestOwner != owner)
+        {
+            if (CanSwitchQuestOwner(owner))
+            {
+                currentQuestOwner = owner;
+            }
+            else
+            {
+                return;
+            }
+        }
         InitializeUI();
         if (questTitleText != null)
         {
@@ -3512,7 +3560,17 @@ public class PlayerHUDController : MonoBehaviour
 
     public void UpdateQuestIcon(Sprite iconSprite, object owner = null)
     {
-        if (currentQuestOwner != null && owner != null && currentQuestOwner != owner) return;
+        if (currentQuestOwner != null && owner != null && currentQuestOwner != owner)
+        {
+            if (CanSwitchQuestOwner(owner))
+            {
+                currentQuestOwner = owner;
+            }
+            else
+            {
+                return;
+            }
+        }
         InitializeUI();
         if (questIcon != null)
         {
