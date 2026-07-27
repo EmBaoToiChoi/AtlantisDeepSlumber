@@ -1509,13 +1509,15 @@ public class BossAI : NetworkBehaviour
     {
         foreach (var pos in positions)
         {
-            // 1. Tạo vòng tròn cảnh báo decal (nếu hoạt động trên máy người chơi)
+            float bigRadius = Mathf.Max(earthBlastRadius * 1.5f, 5.0f); // Bán kính vòng tròn to duy nhất (5m - 6m)
+
+            // 1. Tạo vòng tròn cảnh báo decal (nếu có)
             if (warningDecalPrefab != null)
             {
                 GameObject warning = Instantiate(warningDecalPrefab, pos + Vector3.up * 0.05f, Quaternion.identity);
+                warning.transform.localScale = new Vector3(bigRadius * 2f, 1f, bigRadius * 2f);
                 
-                // Gắn script chớp đỏ cảnh báo
-                var flasher = warning.AddComponent<WarningDecalFlash>();
+                var flasher = warning.GetComponent<WarningDecalFlash>() ?? warning.AddComponent<WarningDecalFlash>();
                 if (flasher != null)
                 {
                     flasher.StartFlashing(warningDuration);
@@ -1524,13 +1526,13 @@ public class BossAI : NetworkBehaviour
                 Destroy(warning, warningDuration);
             }
 
-            // 2. Tạo vòng viền đỏ lập trình (Procedural) - Failsafe luôn hiển thị đỏ chớp tắt rực rỡ
-            GameObject proceduralRing = new GameObject("ProceduralWarningRing");
+            // 2. Tạo 1 vòng viền đỏ rực rỡ ProceduralWarningCircle duy nhất
+            GameObject proceduralRing = new GameObject("ProceduralWarningRing_Big");
             proceduralRing.transform.position = pos;
             var ring = proceduralRing.AddComponent<ProceduralWarningCircle>();
             if (ring != null)
             {
-                ring.StartWarning(warningDuration, earthBlastRadius);
+                ring.StartWarning(warningDuration, bigRadius);
             }
             Destroy(proceduralRing, warningDuration);
         }
@@ -1565,49 +1567,33 @@ public class BossAI : NetworkBehaviour
 
     private Vector3[] CalculateEarthBlastPositions()
     {
-        var activePlayers = GetAllActivePlayers();
-        var spots = new List<Vector3>();
+        Vector3 targetCenter = transform.position + transform.forward * 4f;
 
-        // Đảm bảo chia đều triệu hồi đá dưới chân TẤT CẢ các Player đang sống
-        foreach (var p in activePlayers)
+        if (targetPlayer != null && !IsPlayerDeadOrInvisible(targetPlayer))
         {
-            if (p == null || IsPlayerDeadOrInvisible(p)) continue;
-            
-            // 1. Triệu hồi ĐẦY ĐỦ chính xác 1 đốm đá ngay dưới chân từng Player
-            spots.Add(p.position);
-            
-            // 2. Triệu hồi thêm 2 đốm đá bẫy ngẫu nhiên xung quanh dưới chân người chơi đó (Chia đều cho cả 4 player)
-            for (int k = 0; k < 2; k++)
+            targetCenter = targetPlayer.position;
+        }
+        else
+        {
+            var activePlayers = GetAllActivePlayers();
+            foreach (var p in activePlayers)
             {
-                Vector2 randomOffset = Random.insideUnitCircle * 3.0f; // Bán kính 3m quanh player
-                Vector3 offsetPos = p.position + new Vector3(randomOffset.x, 0f, randomOffset.y);
-                if (NavMesh.SamplePosition(offsetPos, out NavMeshHit hit, 3.5f, NavMesh.AllAreas))
+                if (p != null && !IsPlayerDeadOrInvisible(p))
                 {
-                    spots.Add(hit.position);
-                }
-                else
-                {
-                    spots.Add(offsetPos);
+                    targetCenter = p.position;
+                    break;
                 }
             }
         }
 
-        // Nếu không có người chơi nào hoạt động, triệu hồi ngẫu nhiên xung quanh Boss
-        if (spots.Count == 0)
+        // Tìm vị trí hợp lệ trên NavMesh cho tâm triệu hồi
+        if (NavMesh.SamplePosition(targetCenter, out NavMeshHit hit, 4.5f, NavMesh.AllAreas))
         {
-            int targetCount = Random.Range(4, 7);
-            for (int i = 0; i < targetCount; i++)
-            {
-                Vector2 randomOffset = Random.insideUnitCircle * 8f;
-                Vector3 offsetPos = transform.position + new Vector3(randomOffset.x, 0, randomOffset.y);
-                if (NavMesh.SamplePosition(offsetPos, out NavMeshHit hit, 5f, NavMesh.AllAreas))
-                {
-                    spots.Add(hit.position);
-                }
-            }
+            targetCenter = hit.position;
         }
 
-        return spots.ToArray();
+        // Trả về duy nhất 1 vị trí cho 1 vòng tròn triệu hồi đá to lớn độc nhất
+        return new Vector3[] { targetCenter };
     }
 
     public void DealEarthBlastDamage(Vector3[] positions)
@@ -1615,9 +1601,11 @@ public class BossAI : NetworkBehaviour
         bool auth = isStandaloneMode || (IsNetworkActive && IsServer);
         if (!auth) return;
 
+        float bigRadius = Mathf.Max(earthBlastRadius * 1.5f, 5.0f);
+
         foreach (var pos in positions)
         {
-            Collider[] hits = Physics.OverlapSphere(pos, earthBlastRadius, playerLayer);
+            Collider[] hits = Physics.OverlapSphere(pos, bigRadius, playerLayer);
             HashSet<Transform> hitRoots = new HashSet<Transform>();
 
             foreach (var hit in hits)
@@ -1631,10 +1619,35 @@ public class BossAI : NetworkBehaviour
                     Vector3 force = knockbackDir.normalized * earthBlastKnockback;
 
                     EnemyDamageHelper.DealDamage(root, earthBlastDamage, force);
-                    Debug.Log($"[BossAI] Earth Blast hit player: {root.name} at {pos}");
+                    Debug.Log($"[BossAI] Earth Blast hit player: {root.name} inside big circle at {pos}");
                 }
             }
         }
+    }
+
+    private bool IsMinionDead(GameObject minion)
+    {
+        if (minion == null || !minion.activeInHierarchy) return true;
+
+        var e1 = minion.GetComponent<Enemy1_DapBua>();
+        if (e1 != null && e1.IsDead) return true;
+
+        var e2 = minion.GetComponent<Enemy2_Zombie>();
+        if (e2 != null && e2.IsDead) return true;
+
+        var e3 = minion.GetComponent<Enemy3_Buaa>();
+        if (e3 != null && e3.IsDead) return true;
+
+        var e4 = minion.GetComponent<Enemy4_Bongtoi>();
+        if (e4 != null && e4.IsDead) return true;
+
+        var e5 = minion.GetComponent<Enemy5_PhuThuy>();
+        if (e5 != null && e5.IsDead) return true;
+
+        var mb = minion.GetComponent<MiniBossAI>();
+        if (mb != null && mb.IsDead) return true;
+
+        return false;
     }
 
     private void SummonMinions()
@@ -1651,13 +1664,16 @@ public class BossAI : NetworkBehaviour
         // Dọn dẹp quái con đã chết hoặc biến mất
         for (int i = activeMinions.Count - 1; i >= 0; i--)
         {
-            if (activeMinions[i] == null) activeMinions.RemoveAt(i);
+            if (IsMinionDead(activeMinions[i]))
+            {
+                activeMinions.RemoveAt(i);
+            }
         }
 
-        // Giới hạn số lượng quái con đồng thời
-        if (activeMinions.Count >= maxMinionsAlive)
+        // CHỈ TRIỆU HỒI ĐỢT MỚI KHI TOÀN BỘ QUÁI ĐỢT TRƯỚC ĐÃ CHẾT HOÀN TOÀN (activeMinions.Count == 0)
+        if (activeMinions.Count > 0)
         {
-            Debug.Log("[BossAI] Đã đạt giới hạn quái con tối đa. Bỏ qua lượt triệu hồi này.");
+            Debug.Log($"[BossAI] Vẫn còn {activeMinions.Count} quái con đợt trước đang sống. Bỏ qua lượt triệu hồi này.");
             return;
         }
 

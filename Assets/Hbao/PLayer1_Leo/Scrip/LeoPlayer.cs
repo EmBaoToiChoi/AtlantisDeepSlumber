@@ -3258,6 +3258,9 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     [Header("Attack Speed Boost Skill E Settings")]
     public Material redSwordMaterial;
     public Material ghostBodyMaterial;
+    [Tooltip("Prefab VFX Gió xoay xung quanh và đi theo Leo khi bật Skill E")]
+    public GameObject eSkillWindVfxPrefab;
+    private GameObject activeESkillWindVfxInstance;
     [Tooltip("Gán texture 'sword_Emissive' ở đây để chỉ nhuộm đỏ phần lưỡi/đường vân kiếm mà giữ nguyên chuôi kiếm.")]
     public Texture2D swordEmissiveMap;
     [ColorUsage(true, true)]
@@ -5935,70 +5938,8 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     private void SetGhostVisuals(bool active)
     {
-        if (active)
-        {
-            if (originalBodyMaterials.Count > 0) return; // Đã nhuộm ghost rồi
-
-            Material ghostMat = ghostBodyMaterial;
-            if (ghostMat == null)
-            {
-                Shader ghostShader = Shader.Find("Sprites/Default");
-                if (ghostShader == null) ghostShader = Shader.Find("GUI/Text Shader");
-                if (ghostShader == null) ghostShader = Shader.Find("Universal Render Pipeline/Lit");
-                if (ghostShader == null) ghostShader = Shader.Find("Standard");
-                
-                ghostMat = new Material(ghostShader);
-                ghostMat.name = "DynamicWhiteGhostMaterial";
-                
-                // Đặt màu trắng mờ (transparent alpha)
-                ghostMat.color = new Color(1f, 1f, 1f, 0.6f);
-                
-                // Cấu hình Standard Shader để hỗ trợ Transparent
-                if (ghostMat.HasProperty("_Mode")) ghostMat.SetFloat("_Mode", 3f); // Transparent
-                if (ghostMat.HasProperty("_SrcBlend")) ghostMat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
-                if (ghostMat.HasProperty("_DstBlend")) ghostMat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
-                if (ghostMat.HasProperty("_ZWrite")) ghostMat.SetInt("_ZWrite", 0);
-                ghostMat.DisableKeyword("_ALPHATEST_ON");
-                ghostMat.EnableKeyword("_ALPHABLEND_ON");
-                ghostMat.DisableKeyword("_ALPHAPREMULTIPLY_ON");
-                ghostMat.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
-                
-                // Cấu hình URP Lit Shader để hỗ trợ Transparent
-                if (ghostMat.HasProperty("_Surface")) ghostMat.SetFloat("_Surface", 1f); // Transparent
-                if (ghostMat.HasProperty("_Blend")) ghostMat.SetFloat("_Blend", 0f);   // Alpha
-                if (ghostMat.HasProperty("_SrcBlend")) ghostMat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
-                if (ghostMat.HasProperty("_DstBlend")) ghostMat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
-                if (ghostMat.HasProperty("_ZWrite")) ghostMat.SetInt("_ZWrite", 0);
-                
-                // Kích hoạt Emission màu trắng rực rỡ để tạo hiệu ứng "hồn ma phát sáng"
-                ghostMat.EnableKeyword("_EMISSION");
-                if (ghostMat.HasProperty("_EmissionColor")) ghostMat.SetColor("_EmissionColor", new Color(1.5f, 1.5f, 1.5f, 1.0f));
-            }
-
-            Renderer[] renderers = GetComponentsInChildren<Renderer>(true);
-            foreach (var r in renderers)
-            {
-                // Bỏ qua particle system, các indicator chỉ hướng hoặc line vẽ AOE
-                if (r is ParticleSystemRenderer || r.gameObject.name.Contains("VFX") || r.gameObject.name.Contains("Indicator") || r.gameObject.name.Contains("Line"))
-                    continue;
-
-                if (r is SkinnedMeshRenderer || r is MeshRenderer)
-                {
-                    if (!originalBodyMaterials.ContainsKey(r))
-                    {
-                        originalBodyMaterials[r] = r.sharedMaterials;
-                    }
-
-                    Material[] newMats = new Material[r.sharedMaterials.Length];
-                    for (int i = 0; i < newMats.Length; i++)
-                    {
-                        newMats[i] = ghostMat;
-                    }
-                    r.materials = newMats;
-                }
-            }
-        }
-        else
+        // 1. Phục hồi và giữ nguyên Material cơ thể gốc của Leo (Không dùng material trắng trong suốt nữa)
+        if (originalBodyMaterials.Count > 0)
         {
             foreach (var kvp in originalBodyMaterials)
             {
@@ -6009,6 +5950,84 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             }
             originalBodyMaterials.Clear();
         }
+
+        // 2. Quản lý Prefab VFX Gió xoay xung quanh và đi theo Leo
+        if (active)
+        {
+            if (activeESkillWindVfxInstance == null)
+            {
+                if (eSkillWindVfxPrefab != null)
+                {
+                    activeESkillWindVfxInstance = Instantiate(eSkillWindVfxPrefab, transform.position + Vector3.up * 1.0f, Quaternion.identity, transform);
+                    activeESkillWindVfxInstance.transform.localPosition = new Vector3(0f, 1.0f, 0f);
+                    activeESkillWindVfxInstance.transform.localRotation = Quaternion.identity;
+                }
+                else
+                {
+                    // Tự động tạo hiệu ứng vòng xoáy gió (Wind Vortex VFX) rực rỡ đi theo Leo
+                    activeESkillWindVfxInstance = CreateProceduralWindVfx();
+                }
+            }
+        }
+        else
+        {
+            if (activeESkillWindVfxInstance != null)
+            {
+                Destroy(activeESkillWindVfxInstance);
+                activeESkillWindVfxInstance = null;
+            }
+        }
+    }
+
+    private GameObject CreateProceduralWindVfx()
+    {
+        GameObject windContainer = new GameObject("ESkill_SwirlingWindVFX");
+        windContainer.transform.SetParent(transform, false);
+        windContainer.transform.localPosition = new Vector3(0f, 1.0f, 0f);
+        windContainer.transform.localRotation = Quaternion.identity;
+
+        ParticleSystem ps = windContainer.AddComponent<ParticleSystem>();
+        ParticleSystemRenderer psRend = windContainer.GetComponent<ParticleSystemRenderer>();
+
+        var main = ps.main;
+        main.duration = 5.0f;
+        main.loop = true;
+        main.startLifetime = 0.6f;
+        main.startSpeed = 1.5f;
+        main.startSize = 0.35f;
+        main.startColor = new Color(0.7f, 0.95f, 1.0f, 0.75f);
+        main.simulationSpace = ParticleSystemSimulationSpace.World;
+
+        var emission = ps.emission;
+        emission.rateOverTime = 40;
+
+        var shape = ps.shape;
+        shape.shapeType = ParticleSystemShapeType.Circle;
+        shape.radius = 1.2f;
+
+        var vel = ps.velocityOverLifetime;
+        vel.enabled = true;
+        vel.orbitalY = 4.0f; // Xoay tròn 360 độ xung quanh Leo
+        vel.radial = -0.5f;  // Hút xoắn ốc quanh người Leo
+
+        var col = ps.colorOverLifetime;
+        col.enabled = true;
+        Gradient grad = new Gradient();
+        grad.SetKeys(
+            new GradientColorKey[] { new GradientColorKey(new Color(0.6f, 0.9f, 1.0f), 0f), new GradientColorKey(Color.white, 1f) },
+            new GradientAlphaKey[] { new GradientAlphaKey(0f, 0f), new GradientAlphaKey(0.8f, 0.3f), new GradientAlphaKey(0f, 1f) }
+        );
+        col.color = grad;
+
+        if (psRend != null)
+        {
+            Material windMat = new Material(Shader.Find("Particles/Standard Unlit") ?? Shader.Find("Sprites/Default"));
+            windMat.color = new Color(0.8f, 0.95f, 1f, 0.8f);
+            psRend.material = windMat;
+        }
+
+        ps.Play();
+        return windContainer;
     }
 
     // ======================================================
