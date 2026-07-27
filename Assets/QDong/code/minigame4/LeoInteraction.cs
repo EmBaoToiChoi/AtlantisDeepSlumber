@@ -25,9 +25,9 @@ public class LeoInteraction : NetworkBehaviour
         if(currentColumn == null)
             return;
 
-        // Chỉ cho sạc khi minigame đã bắt đầu
+        // Chỉ cho sạc khi minigame đã bắt đầu và chưa hoàn thành
         Puzzle4Manager p4Manager = FindAnyObjectByType<Puzzle4Manager>();
-        if (p4Manager == null || !p4Manager.isMinigameStarted.Value || p4Manager.puzzleCompleted.Value)
+        if (p4Manager == null || !p4Manager.isMinigameStarted.Value || p4Manager.puzzleCompleted.Value || currentColumn.IsCompleted())
         {
             currentColumn.ShowInteractUI(false);
             return;
@@ -56,8 +56,8 @@ public class LeoInteraction : NetworkBehaviour
         IPlayerHUDTarget info = GetComponent<IPlayerHUDTarget>();
         if (info == null || info.CharacterClassIndex != 0) return;
 
-        EnergyColumn column =
-            other.GetComponent<EnergyColumn>();
+        EnergyColumn column = other.GetComponent<EnergyColumn>();
+        if (column == null) column = other.GetComponentInParent<EnergyColumn>();
 
         if(column != null)
             currentColumn = column;
@@ -67,10 +67,19 @@ public class LeoInteraction : NetworkBehaviour
     {
         if (!IsOwner) return;
 
-        EnergyColumn column =
-            other.GetComponent<EnergyColumn>();
+        EnergyColumn column = other.GetComponent<EnergyColumn>();
+        if (column == null) column = other.GetComponentInParent<EnergyColumn>();
 
-        if(column != null && currentColumn == column)
+        if(column != null && (currentColumn == column || currentColumn == null))
+        {
+            if (currentColumn != null) currentColumn.ShowInteractUI(false);
+            currentColumn = null;
+        }
+    }
+
+    private void OnDisable()
+    {
+        if (currentColumn != null)
         {
             currentColumn.ShowInteractUI(false);
             currentColumn = null;

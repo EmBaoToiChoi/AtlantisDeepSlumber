@@ -33,20 +33,45 @@ public class EnergyColumn : NetworkBehaviour
             
         if(interactUI != null)
             interactUI.SetActive(false);
+
+        // Tự động tắt bất kỳ World Space Canvas con nào trên cột trụ (xóa Canva ở Hình 1)
+        Canvas[] worldCanvases = GetComponentsInChildren<Canvas>(true);
+        foreach (var c in worldCanvases)
+        {
+            if (c != null) c.gameObject.SetActive(false);
+        }
     }
 
     public void ShowInteractUI(bool show)
     {
+        // 1. Tắt hoàn toàn Canva cũ (World Space Canvas)
         if (interactUI != null)
         {
-            // Chỉ hiện khi chưa nạp đầy
+            interactUI.SetActive(false);
+        }
+
+        Canvas[] worldCanvases = GetComponentsInChildren<Canvas>(true);
+        foreach (var c in worldCanvases)
+        {
+            if (c != null && c.gameObject.activeSelf) c.gameObject.SetActive(false);
+        }
+
+        // 2. Chuyển sang dùng UI Toolkit của PlayerHUDController như các nút hướng dẫn trước
+        PlayerHUDController hud = PlayerHUDController.Instance;
+        if (hud == null)
+        {
+            hud = FindFirstObjectByType<PlayerHUDController>();
+        }
+
+        if (hud != null)
+        {
             if (show && !IsCompleted())
             {
-                interactUI.SetActive(true);
+                hud.ShowInteractionPrompt(true, "Ấn [C] để sạc điện");
             }
             else
             {
-                interactUI.SetActive(false);
+                hud.ShowInteractionPrompt(false, "");
             }
         }
     }
