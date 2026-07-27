@@ -3850,11 +3850,21 @@ public class PlayerHUDController : MonoBehaviour
         isTreeCameraActive = true;
         activeFallingTree = tree.transform;
         treeCameraTransitionTimer = 0f;
-        
+
+        Vector3 dir = playerPos - tree.transform.position;
+        dir.y = 0f;
+        if (dir.sqrMagnitude < 0.1f)
+        {
+            dir = (playerBehavior != null) ? -playerBehavior.transform.forward : -Vector3.forward;
+        }
+        fixedTreeCamDir = dir.normalized;
+
         initialCamPosBeforeTree = mainCam.transform.position;
         initialCamRotBeforeTree = mainCam.transform.rotation;
         normalCamOffsetFromPlayer = initialCamPosBeforeTree - playerPos;
     }
+
+    private Vector3 fixedTreeCamDir = Vector3.back;
 
     private void UpdateTreeFallCamera()
     {
@@ -3868,14 +3878,8 @@ public class PlayerHUDController : MonoBehaviour
         Vector3 playerPos = (playerBehavior != null) ? playerBehavior.transform.position : activeFallingTree.position;
         Vector3 treePos = activeFallingTree.position;
 
-        // Tính hướng từ cây đến người chơi để đặt camera sau lưng người chơi nhìn về phía cây
-        Vector3 dirFromTreeToPlayer = playerPos - treePos;
-        dirFromTreeToPlayer.y = 0f;
-        if (dirFromTreeToPlayer.sqrMagnitude < 0.1f)
-        {
-            dirFromTreeToPlayer = (playerBehavior != null) ? -playerBehavior.transform.forward : -Vector3.forward;
-        }
-        dirFromTreeToPlayer = dirFromTreeToPlayer.normalized;
+        // Dùng hướng cố định ban đầu fixedTreeCamDir thay vì tính liên tục để tránh camera bị tự xoay tròn khi player di chuyển sát gốc cây
+        Vector3 dirFromTreeToPlayer = fixedTreeCamDir;
 
         // Target camera position: lùi xa ra khỏi cây và nâng cao lên
         Vector3 targetCamPos = treePos + dirFromTreeToPlayer * treeCamDistance + Vector3.up * treeCamHeight;
