@@ -9,7 +9,7 @@ AnimatorStateTransition:
   m_Name: 
   m_Conditions:
   - m_ConditionMode: 1
-    m_ConditionEvent: DungYen
+    m_ConditionEvent: Di
     m_EventTreshold: 0
   m_DstStateMachine: {fileID: 0}
   m_DstState: {fileID: -7223413765679989745}
@@ -17,9 +17,9 @@ AnimatorStateTransition:
   m_Mute: 0
   m_IsExit: 0
   serializedVersion: 3
-  m_TransitionDuration: 1.8930197
+  m_TransitionDuration: 0.83815855
   m_TransitionOffset: 0
-  m_ExitTime: 0
+  m_ExitTime: 0.000000021506725
   m_HasExitTime: 0
   m_HasFixedDuration: 1
   m_InterruptionSource: 0
@@ -73,7 +73,7 @@ AnimatorState:
   m_MirrorParameterActive: 0
   m_CycleOffsetParameterActive: 0
   m_TimeParameterActive: 0
-  m_Motion: {fileID: 7400000, guid: 15ab1328c8927f64ea5dc1fd53266da5, type: 2}
+  m_Motion: {fileID: 7400000, guid: ff0601e3954580f498bf90f0762e27c2, type: 2}
   m_Tag: 
   m_SpeedParameter: 
   m_MirrorParameter: 
@@ -246,6 +246,12 @@ AnimatorController:
     m_DefaultInt: 0
     m_DefaultBool: 0
     m_Controller: {fileID: 9100000}
+  - m_Name: Di
+    m_Type: 9
+    m_DefaultFloat: 0
+    m_DefaultInt: 0
+    m_DefaultBool: 0
+    m_Controller: {fileID: 9100000}
   m_AnimatorLayers:
   - serializedVersion: 5
     m_Name: Base Layer
@@ -385,9 +391,9 @@ AnimatorStateTransition:
   m_Mute: 0
   m_IsExit: 0
   serializedVersion: 3
-  m_TransitionDuration: 0.5307461
-  m_TransitionOffset: 0.255173
-  m_ExitTime: 0.46918866
+  m_TransitionDuration: 0.475648
+  m_TransitionOffset: 0.076300025
+  m_ExitTime: 0.4772469
   m_HasExitTime: 0
   m_HasFixedDuration: 1
   m_InterruptionSource: 0
