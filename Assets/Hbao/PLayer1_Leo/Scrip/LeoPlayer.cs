@@ -3260,6 +3260,8 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     public Material ghostBodyMaterial;
     [Tooltip("Prefab VFX Gió xoay xung quanh và đi theo Leo khi bật Skill E")]
     public GameObject eSkillWindVfxPrefab;
+    [Tooltip("Độ cao điều chỉnh Y cho Prefab VFX Gió (Mặc định = 0.0f sát chân/người Leo)")]
+    public float eSkillWindVfxYOffset = 0.0f;
     private GameObject activeESkillWindVfxInstance;
     [Tooltip("Gán texture 'sword_Emissive' ở đây để chỉ nhuộm đỏ phần lưỡi/đường vân kiếm mà giữ nguyên chuôi kiếm.")]
     public Texture2D swordEmissiveMap;
@@ -5958,8 +5960,8 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             {
                 if (eSkillWindVfxPrefab != null)
                 {
-                    activeESkillWindVfxInstance = Instantiate(eSkillWindVfxPrefab, transform.position + Vector3.up * 1.0f, Quaternion.identity, transform);
-                    activeESkillWindVfxInstance.transform.localPosition = new Vector3(0f, 1.0f, 0f);
+                    activeESkillWindVfxInstance = Instantiate(eSkillWindVfxPrefab, transform.position + Vector3.up * eSkillWindVfxYOffset, Quaternion.identity, transform);
+                    activeESkillWindVfxInstance.transform.localPosition = new Vector3(0f, eSkillWindVfxYOffset, 0f);
                     activeESkillWindVfxInstance.transform.localRotation = Quaternion.identity;
                 }
                 else
@@ -5983,7 +5985,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     {
         GameObject windContainer = new GameObject("ESkill_SwirlingWindVFX");
         windContainer.transform.SetParent(transform, false);
-        windContainer.transform.localPosition = new Vector3(0f, 1.0f, 0f);
+        windContainer.transform.localPosition = new Vector3(0f, eSkillWindVfxYOffset > 0 ? eSkillWindVfxYOffset : 0.5f, 0f);
         windContainer.transform.localRotation = Quaternion.identity;
 
         ParticleSystem ps = windContainer.AddComponent<ParticleSystem>();
