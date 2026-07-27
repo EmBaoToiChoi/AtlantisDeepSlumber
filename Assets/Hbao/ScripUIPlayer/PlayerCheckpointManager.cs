@@ -433,12 +433,11 @@ public class PlayerCheckpointManager : NetworkBehaviour
                 }
             }
 
-            // Buộc Animator chơi hoạt ảnh Idle cục bộ để đứng thẳng ngay lập tức
-            Animator anim = netObj.GetComponentInChildren<Animator>();
-            if (anim != null)
+            // Reset toàn bộ trạng thái chết (currentAnimState, triggers, health) trên client
+            var playerTarget = netObj.GetComponent<IPlayerHUDTarget>();
+            if (playerTarget != null)
             {
-                anim.Play("Idle", 0, 0f);
-                anim.ResetTrigger("Death");
+                HealAndResetPlayer(playerTarget);
             }
 
             // Nếu đây là người chơi của chúng ta, mở mắt (ResetDeathEffect) sau khi chờ 1 frame để camera cập nhật vị trí
