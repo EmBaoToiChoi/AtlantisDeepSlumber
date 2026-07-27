@@ -35,4 +35,8 @@ public class RakanRMD : MonoBehaviour
     {
         animator.SetTrigger("KhoangTay");
     }
+    public void RutKiem()
+    {
+        animator.SetTrigger("RutKiem");
+    }
 }
