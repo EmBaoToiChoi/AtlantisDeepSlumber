@@ -4041,6 +4041,12 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     private void HandleStandaloneUpdate()
     {
+        if (CurrentHealth <= 0)
+        {
+            targetMoveVelocity = Vector3.zero;
+            if (rb != null) { rb.linearVelocity = Vector3.zero; rb.angularVelocity = Vector3.zero; }
+            return;
+        }
         bool isDialogueOpen = (RakanDialogueController.Instance != null && RakanDialogueController.Instance.IsActive) ||
                               (SilasDialogueController.Instance != null && SilasDialogueController.Instance.IsActive) ||
                               (IntroDialogueController.Instance != null && IntroDialogueController.Instance.IsActive) ||
@@ -7115,6 +7121,12 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     {
         if (anim == null) return;
 
+        // Không phát hoạt ảnh Death nếu người chơi đang sống (máu > 0)
+        if (animName == "Death" && CurrentHealth > 0)
+        {
+            return;
+        }
+
         // Nếu đang chết, chỉ cho phép nhận các lệnh hồi sinh hoặc đưa về trạng thái rỗng/New State
         if (currentAnimState == "Death")
         {
@@ -7888,6 +7900,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     // }
     private bool IsLockingMovementAction()
     {
+        if (CurrentHealth <= 0) return true;
         if (anim == null || !anim.isActiveAndEnabled || anim.runtimeAnimatorController == null) return false;
         if (isStandaloneMode ? isRollingStandalone : rollTimer > 0) return true;
         if (isMovementLocked || IsQSkillActive) return true;

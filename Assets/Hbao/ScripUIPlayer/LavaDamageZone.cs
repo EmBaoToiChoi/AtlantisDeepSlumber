@@ -37,6 +37,12 @@ public class LavaDamageZone : MonoBehaviour
 
         if (IsAnyPlayer(other.gameObject, out GameObject playerRoot))
         {
+            if (IsPlayerDead(playerRoot))
+            {
+                if (nextDamageTime.ContainsKey(playerRoot)) nextDamageTime.Remove(playerRoot);
+                return;
+            }
+
             float currentTime = Time.time;
             if (!nextDamageTime.TryGetValue(playerRoot, out float nextTime))
             {
@@ -65,9 +71,25 @@ public class LavaDamageZone : MonoBehaviour
         }
     }
 
+    private bool IsPlayerDead(GameObject playerRoot)
+    {
+        if (playerRoot == null) return true;
+        var elena = playerRoot.GetComponent<ElenaPlayer>();
+        if (elena != null) return elena.CurrentHealth <= 0f;
+        var arthur = playerRoot.GetComponent<ArthurPlayer>();
+        if (arthur != null) return arthur.CurrentHealth <= 0f;
+        var leo = playerRoot.GetComponent<LeoPlayer>();
+        if (leo != null) return leo.CurrentHealth <= 0f;
+        var maya = playerRoot.GetComponent<MayaPlayer>();
+        if (maya != null) return maya.CurrentHealth <= 0f;
+        var simple = playerRoot.GetComponent<SimplePlayerTest>();
+        if (simple != null) return simple.CurrentHealth <= 0f;
+        return false;
+    }
+
     private void DealDamage(GameObject playerRoot, float damage)
     {
-        if (damage <= 0f) return;
+        if (damage <= 0f || IsPlayerDead(playerRoot)) return;
 
         Debug.Log($"[LavaDamageZone] Gây {damage} sát thương cho {playerRoot.name}");
 
