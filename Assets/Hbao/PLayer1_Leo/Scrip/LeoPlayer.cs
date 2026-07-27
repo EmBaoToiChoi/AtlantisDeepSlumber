@@ -5135,7 +5135,8 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
             if (localHealth <= 0)
             {
-                if (rb != null) rb.linearVelocity = Vector3.zero;
+                targetMoveVelocity = Vector3.zero;
+                if (rb != null) { rb.linearVelocity = Vector3.zero; rb.angularVelocity = Vector3.zero; }
                 PlayAnimation("Death", 0.15f);
             }
             else
@@ -5154,7 +5155,8 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         if (currentHealth.Value <= 0)
         {
-            if (rb != null) rb.linearVelocity = Vector3.zero;
+            targetMoveVelocity = Vector3.zero;
+            if (rb != null) { rb.linearVelocity = Vector3.zero; rb.angularVelocity = Vector3.zero; }
             PlayAnimation("Death", 0.15f);
         }
         else
@@ -7931,7 +7933,6 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (isRootedAttack && isCurrentlyAttacking) return true;
 
         if (IsPlayingPickAnimation()) return true;
-        if (IsPlayingHitAnimation()) return true;
 
         return false;
     }

@@ -3189,6 +3189,8 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
 
             if (localHealth <= 0)
             {
+                targetMoveVelocity = Vector3.zero;
+                if (rb != null) { rb.linearVelocity = Vector3.zero; rb.angularVelocity = Vector3.zero; }
                 Debug.LogWarning($"[MayaPlayer] {gameObject.name} đã chết!");
                 PlayAnimation("Death", 0.15f);
             }
@@ -3207,6 +3209,8 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         if (currentHealth.Value <= 0)
         {
+            targetMoveVelocity = Vector3.zero;
+            if (rb != null) { rb.linearVelocity = Vector3.zero; rb.angularVelocity = Vector3.zero; }
             Debug.LogWarning($"[MayaPlayer] {gameObject.name} đã chết!");
             PlayAnimation("Death", 0.15f);
         }

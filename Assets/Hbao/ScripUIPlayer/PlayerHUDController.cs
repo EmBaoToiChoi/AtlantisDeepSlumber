@@ -1433,16 +1433,20 @@ public class PlayerHUDController : MonoBehaviour
             }
 
             // Tự động ẩn/hiện con trỏ chuột phù hợp với trạng thái UI hành trang
-            if (LocalPlayerTarget != null)
+            if (isNowVisible)
             {
-                LocalPlayerTarget.SetCursorLock(!isNowVisible);
+                UnityEngine.Cursor.lockState = CursorLockMode.None;
+                UnityEngine.Cursor.visible = true;
+                if (LocalPlayerTarget != null)
+                {
+                    LocalPlayerTarget.SetCursorLock(false);
+                }
             }
             else
             {
-                if (isNowVisible)
+                if (LocalPlayerTarget != null)
                 {
-                    UnityEngine.Cursor.lockState = CursorLockMode.None;
-                    UnityEngine.Cursor.visible = true;
+                    LocalPlayerTarget.SetCursorLock(true);
                 }
                 else
                 {
