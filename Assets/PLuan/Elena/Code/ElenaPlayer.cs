@@ -486,7 +486,7 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
     /// Máu hiện tại: đọc từ NetworkVariable khi online, đọc từ biến local khi standalone.
     /// </summary>
     public float CurrentHealth =>
-        isStandaloneMode ? localHealth : currentHealth.Value;
+        localHealth > 0 ? localHealth : (isStandaloneMode ? localHealth : currentHealth.Value);
 
     // IPlayerHUDTarget Implementation
     bool IPlayerHUDTarget.isStandaloneMode => isStandaloneMode;
@@ -2497,6 +2497,17 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     void FixedUpdate()
     {
+        if (CurrentHealth <= 0)
+        {
+            targetMoveVelocity = Vector3.zero;
+            if (rb != null && !rb.isKinematic)
+            {
+                rb.linearVelocity = new Vector3(0f, rb.linearVelocity.y, 0f);
+                rb.angularVelocity = Vector3.zero;
+            }
+            return;
+        }
+
         if (rb != null && !rb.isKinematic)
         {
             Vector3 extraGravityForce = Physics.gravity * (gravityMultiplier - 1f);
@@ -3722,6 +3733,11 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (anim != null && HasParameter(paramName))
         {
             anim.ResetTrigger(paramName);
+        }
+        var netAnim = GetComponent<Unity.Netcode.Components.NetworkAnimator>();
+        if (netAnim != null)
+        {
+            try { netAnim.ResetTrigger(paramName); } catch {}
         }
     }
 

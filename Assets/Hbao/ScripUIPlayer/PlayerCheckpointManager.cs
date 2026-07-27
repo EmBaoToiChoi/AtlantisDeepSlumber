@@ -704,22 +704,20 @@ public class PlayerCheckpointManager : NetworkBehaviour
                         }
                     }
 
-                    // 3. Gán máu về tối đa TRƯỚC KHI reset trạng thái chết
-                    if (isStandalone)
+                    // 3. Gán máu về tối đa TRƯỚC KHI reset trạng thái chết (cho cả Standalone lẫn Network)
+                    FieldInfo localHealthField = GetFieldInherited(script.GetType(), "localHealth", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+                    if (localHealthField != null)
                     {
-                        FieldInfo localHealthField = GetFieldInherited(script.GetType(), "localHealth", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-                        if (localHealthField != null)
-                        {
-                            localHealthField.SetValue(script, maxHp);
-                        }
-
-                        MethodInfo updateHudMethod = GetMethodInherited(script.GetType(), "UpdateHealthHUD", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-                        if (updateHudMethod != null)
-                        {
-                            updateHudMethod.Invoke(script, new object[] { maxHp });
-                        }
+                        localHealthField.SetValue(script, maxHp);
                     }
-                    else if (IsServer)
+
+                    MethodInfo updateHudMethod = GetMethodInherited(script.GetType(), "UpdateHealthHUD", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+                    if (updateHudMethod != null)
+                    {
+                        updateHudMethod.Invoke(script, new object[] { maxHp });
+                    }
+
+                    if (!isStandalone && IsServer)
                     {
                         FieldInfo currentHealthField = GetFieldInherited(script.GetType(), "currentHealth", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
                         if (currentHealthField != null)

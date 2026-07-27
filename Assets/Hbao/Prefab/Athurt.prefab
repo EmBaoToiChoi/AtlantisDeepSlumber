@@ -279,8 +279,8 @@ MonoBehaviour:
   rotationSmoothSpeedUnarmed: 12
   rotateToCameraWhenArmed: 1
   rotateToCameraWhenUnarmed: 1
-  moveSpeed: 4
-  runSpeedMultiplier: 8
+  moveSpeed: 6
+  runSpeedMultiplier: 1.5
   damageAmount: 15
   attackRange: 3
   comboWindow: 1
