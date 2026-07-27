@@ -4,7 +4,7 @@ using Unity.Netcode;
 
 public class StonePuzzleQuestTrigger : NetworkBehaviour, IQuestTrigger
 {
-    public bool IsQuestCompleted => isQuestCompleted;
+    public bool IsQuestCompleted => (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening) ? isQuestCompletedNet.Value : isQuestCompleted;
     public bool IsQuestActive => (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening) ? isQuestActive.Value : hasTriggeredQuest;
 
     [Header("Quest Prerequisite Settings")]
@@ -45,6 +45,13 @@ public class StonePuzzleQuestTrigger : NetworkBehaviour, IQuestTrigger
 
     // Biến mạng đồng bộ trạng thái kích hoạt nhiệm vụ cho toàn bộ Client
     public NetworkVariable<bool> isQuestActive = new NetworkVariable<bool>(
+        false,
+        NetworkVariableReadPermission.Everyone,
+        NetworkVariableWritePermission.Server
+    );
+
+    // Biến mạng đồng bộ trạng thái hoàn thành nhiệm vụ cho toàn bộ Client
+    public NetworkVariable<bool> isQuestCompletedNet = new NetworkVariable<bool>(
         false,
         NetworkVariableReadPermission.Everyone,
         NetworkVariableWritePermission.Server
@@ -95,9 +102,13 @@ public class StonePuzzleQuestTrigger : NetworkBehaviour, IQuestTrigger
     public override void OnNetworkSpawn()
     {
         isQuestActive.OnValueChanged += OnQuestActiveChanged;
+        isQuestCompletedNet.OnValueChanged += OnQuestCompletedChanged;
         
-        // Nếu nhiệm vụ đã được kích hoạt trước khi player này kết nối (ví dụ JIP - Join In Progress)
-        if (isQuestActive.Value && IsPrerequisiteCompleted())
+        if (isQuestCompletedNet.Value)
+        {
+            isQuestCompleted = true;
+        }
+        else if (isQuestActive.Value && IsPrerequisiteCompleted())
         {
             hasTriggeredQuest = true;
             UpdateQuestProgressUI();
@@ -107,6 +118,15 @@ public class StonePuzzleQuestTrigger : NetworkBehaviour, IQuestTrigger
     public override void OnNetworkDespawn()
     {
         isQuestActive.OnValueChanged -= OnQuestActiveChanged;
+        isQuestCompletedNet.OnValueChanged -= OnQuestCompletedChanged;
+    }
+
+    private void OnQuestCompletedChanged(bool oldVal, bool newVal)
+    {
+        if (newVal)
+        {
+            isQuestCompleted = true;
+        }
     }
 
     private void OnQuestActiveChanged(bool oldVal, bool newVal)
@@ -209,7 +229,16 @@ public class StonePuzzleQuestTrigger : NetworkBehaviour, IQuestTrigger
 
     private void CompleteQuest()
     {
+        if (isQuestCompleted) return;
         isQuestCompleted = true;
+
+        bool isNetwork = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
+        if (isNetwork && IsServer)
+        {
+            isQuestCompletedNet.Value = true;
+            isQuestActive.Value = false;
+        }
+
         Debug.Log("[StonePuzzleQuestTrigger] Câu đố đã giải xong! Nhiệm vụ hoàn thành.");
 
         if (localHudCtl == null)

@@ -16,10 +16,8 @@ public class LeoInteraction : NetworkBehaviour
         if(!IsOwner)
             return;
 
-        IPlayerHUDTarget info =
-            GetComponent<IPlayerHUDTarget>();
-
-        if(info == null || info.CharacterClassIndex != 0) // 0 là Leo
+        IPlayerHUDTarget info = GetComponent<IPlayerHUDTarget>();
+        if(info == null)
             return;
 
         if(currentColumn == null)

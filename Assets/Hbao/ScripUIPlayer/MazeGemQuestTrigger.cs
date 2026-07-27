@@ -244,32 +244,29 @@ public class MazeGemQuestTrigger : NetworkBehaviour, IQuestTrigger
     {
         if (!IsPrerequisiteCompleted() || IsQuestCompleted) return;
 
-        if (localHudCtl == null)
+        PlayerHUDController activeHud = PlayerHUDController.Instance ?? localHudCtl ?? FindAnyObjectByType<PlayerHUDController>();
+        if (activeHud != null)
         {
-            localHudCtl = FindAnyObjectByType<PlayerHUDController>();
-        }
-
-        if (localHudCtl != null)
-        {
+            localHudCtl = activeHud;
             bool isNetwork = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
             bool active = isNetwork ? isQuestActive.Value : hasTriggeredQuest;
 
             if (active)
             {
-                localHudCtl.ShowQuest(true, this);
-                localHudCtl.UpdateQuestDescription(questDescription, this);
-                localHudCtl.UpdateQuestTitle(questTitle, this);
+                activeHud.ShowQuest(true, this);
+                activeHud.UpdateQuestDescription(questDescription, this);
+                activeHud.UpdateQuestTitle(questTitle, this);
 
                 Sprite targetIcon = questIconSprite;
-                if (targetIcon == null && localHudCtl != null)
+                if (targetIcon == null && activeHud != null)
                 {
-                    targetIcon = localHudCtl.ngoc1Sprite;
+                    targetIcon = activeHud.ngoc1Sprite;
                 }
                 if (targetIcon == null)
                 {
                     targetIcon = Resources.Load<Sprite>("crystal_purple");
                 }
-                localHudCtl.UpdateQuestIcon(targetIcon, this);
+                activeHud.UpdateQuestIcon(targetIcon, this);
 
                 int current = isNetwork ? collectedCount.Value : localCollectedCount;
                 int total = gemObjects != null ? gemObjects.Length : 2;
@@ -277,7 +274,7 @@ public class MazeGemQuestTrigger : NetworkBehaviour, IQuestTrigger
                 if (current != lastPressedCount)
                 {
                     lastPressedCount = current;
-                    localHudCtl.UpdateQuestProgress(current, total, this);
+                    activeHud.UpdateQuestProgress(current, total, this);
                 }
             }
         }
@@ -355,6 +352,10 @@ public class MazeGemQuestTrigger : NetworkBehaviour, IQuestTrigger
 
         if (IsPlayer(other.gameObject))
         {
+            hasTriggeredQuest = true;
+            lastPressedCount = -1;
+            UpdateQuestProgressUI();
+
             if (isNetwork)
             {
                 if (!isQuestActive.Value)
@@ -372,9 +373,6 @@ public class MazeGemQuestTrigger : NetworkBehaviour, IQuestTrigger
             }
             else
             {
-                hasTriggeredQuest = true;
-                lastPressedCount = -1;
-                UpdateQuestProgressUI();
                 Debug.Log("[MazeGemQuestTrigger Offline] Người chơi chạm Trigger - Kích hoạt nhiệm vụ.");
             }
         }
