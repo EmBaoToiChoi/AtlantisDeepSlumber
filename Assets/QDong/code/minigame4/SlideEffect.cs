@@ -53,8 +53,8 @@ public class SlideEffect : NetworkBehaviour
         if (!IsOwner) return;
         slideVelocity += force * Time.fixedDeltaTime;
 
-        // Giới hạn tốc độ trượt tối đa để tránh văng ra ngoài
-        float maxSpeed = 8f;
+        // Giới hạn tốc độ trượt tối đa để tránh văng ra ngoài, giảm xuống để người chơi có thể chạy ngược lại
+        float maxSpeed = 4.5f;
         if (slideVelocity.magnitude > maxSpeed)
             slideVelocity = slideVelocity.normalized * maxSpeed;
     }
