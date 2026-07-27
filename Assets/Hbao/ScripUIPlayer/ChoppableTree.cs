@@ -317,24 +317,52 @@ public class ChoppableTree : NetworkBehaviour
         CreateRealisticDustEffect(adjustedHitPos, 0.6f, 15);
     }
 
-    private Material FindLitMaterial()
+    private Shader GetGuaranteedLitShader()
     {
-        // Thử tìm Shader URP Lit hoặc Standard trước để làm màu lòng gỗ chuẩn xác
         bool isURP = UnityEngine.Rendering.GraphicsSettings.currentRenderPipeline != null;
         Shader s = null;
+
         if (isURP)
         {
-            s = Shader.Find("Universal Render Pipeline/Lit");
+            s = Shader.Find("Universal Render Pipeline/Lit") ??
+                Shader.Find("Universal Render Pipeline/Simple Lit") ??
+                Shader.Find("Universal Render Pipeline/Unlit");
         }
+
+        // Built-in Render Pipeline hoặc Fallback
         if (s == null) s = Shader.Find("Standard");
+        if (s == null) s = Shader.Find("Legacy Shaders/Diffuse");
+        if (s == null) s = Shader.Find("Mobile/Diffuse");
+        if (s == null) s = Shader.Find("Bumped Diffuse");
         if (s == null) s = Shader.Find("Sprites/Default");
 
+        if (s == null)
+        {
+            // Tìm bất kỳ MeshRenderer nào có shader chuẩn trong Scene
+            var rends = FindObjectsByType<MeshRenderer>(FindObjectsSortMode.None);
+            foreach (var r in rends)
+            {
+                if (r != null && r.sharedMaterial != null && r.sharedMaterial.shader != null)
+                {
+                    string shaderName = r.sharedMaterial.shader.name;
+                    if (!shaderName.Contains("ALP") && !shaderName.Contains("Tree") && !shaderName.Contains("Wind"))
+                    {
+                        return r.sharedMaterial.shader;
+                    }
+                }
+            }
+        }
+        return s;
+    }
+
+    private Material FindLitMaterial()
+    {
+        Shader s = GetGuaranteedLitShader();
         if (s != null)
         {
             return new Material(s);
         }
 
-        // Fallback sao chép từ renderer của chính cái cây
         var treeRends = GetComponentsInChildren<Renderer>(true);
         foreach (var r in treeRends)
         {
@@ -864,12 +892,13 @@ public class ChoppableTree : NetworkBehaviour
     private Material GetStumpBarkLitMaterial()
     {
         Material sourceMat = GetTrunkMaterial();
-        Material litMat = FindLitMaterial();
-        if (litMat == null) return sourceMat;
+        Shader s = GetGuaranteedLitShader();
+        Material litMat = (s != null) ? new Material(s) : FindLitMaterial();
+        if (litMat == null && sourceMat != null) litMat = new Material(sourceMat);
 
         Texture mainTex = null;
         Texture bumpMap = null;
-        Color baseColor = Color.white;
+        Color baseColor = new Color(0.45f, 0.32f, 0.20f); // Màu vỏ cây đậm chuẩn tự nhiên
 
         if (sourceMat != null)
         {
@@ -889,31 +918,33 @@ public class ChoppableTree : NetworkBehaviour
             else if (sourceMat.HasProperty("_Color")) baseColor = sourceMat.GetColor("_Color");
         }
 
-        if (mainTex != null)
+        if (litMat != null)
         {
-            if (litMat.HasProperty("_BaseMap"))
+            if (mainTex != null)
             {
-                litMat.SetTexture("_BaseMap", mainTex);
-                litMat.SetTextureScale("_BaseMap", new Vector2(4f, 2f));
+                if (litMat.HasProperty("_BaseMap"))
+                {
+                    litMat.SetTexture("_BaseMap", mainTex);
+                    litMat.SetTextureScale("_BaseMap", new Vector2(4f, 2f));
+                }
+                if (litMat.HasProperty("_MainTex"))
+                {
+                    litMat.SetTexture("_MainTex", mainTex);
+                    litMat.SetTextureScale("_MainTex", new Vector2(4f, 2f));
+                }
             }
-            if (litMat.HasProperty("_MainTex"))
+            if (bumpMap != null)
             {
-                litMat.SetTexture("_MainTex", mainTex);
-                litMat.SetTextureScale("_MainTex", new Vector2(4f, 2f));
+                if (litMat.HasProperty("_BumpMap"))
+                {
+                    litMat.SetTexture("_BumpMap", bumpMap);
+                    litMat.SetTextureScale("_BumpMap", new Vector2(4f, 2f));
+                }
             }
-        }
 
-        if (bumpMap != null)
-        {
-            if (litMat.HasProperty("_BumpMap"))
-            {
-                litMat.SetTexture("_BumpMap", bumpMap);
-                litMat.SetTextureScale("_BumpMap", new Vector2(4f, 2f));
-            }
+            if (litMat.HasProperty("_BaseColor")) litMat.SetColor("_BaseColor", baseColor);
+            else if (litMat.HasProperty("_Color")) litMat.SetColor("_Color", baseColor);
         }
-
-        if (litMat.HasProperty("_BaseColor")) litMat.SetColor("_BaseColor", baseColor);
-        else if (litMat.HasProperty("_Color")) litMat.SetColor("_Color", baseColor);
 
         return litMat;
     }
@@ -925,7 +956,7 @@ public class ChoppableTree : NetworkBehaviour
         // Bắn Raycast tìm chính xác độ cao mặt đất thực tế
         Vector3 spawnPos = transform.position;
         int layerMask = ~LayerMask.GetMask("Player", "Ignore Raycast");
-        if (Physics.Raycast(spawnPos + Vector3.up * 3f, Vector3.down, out RaycastHit hit, 6f, layerMask))
+        if (Physics.Raycast(spawnPos + Vector3.up * 6f, Vector3.down, out RaycastHit hit, 12f, layerMask))
         {
             if (hit.collider.gameObject != gameObject && !hit.collider.name.ToLower().Contains("tree"))
             {
@@ -933,29 +964,29 @@ public class ChoppableTree : NetworkBehaviour
             }
         }
 
-        // Tính bán kính & chiều cao gốc cây to rộng như nãy
-        float treeRadius = 0.65f; // Đường kính to 1.3m rộng rãi như lúc nãy
+        // Tính bán kính & chiều cao gốc cây
+        float treeRadius = 0.65f;
         Renderer mainRend = GetComponentInChildren<Renderer>();
         if (mainRend != null)
         {
             treeRadius = Mathf.Clamp(mainRend.bounds.extents.x, 0.55f, 1.2f);
         }
 
-        float stumpHeight = 1.0f; // Chiều cao 1.0m to đẹp hoành tráng
+        float stumpHeight = 1.15f; // Chiều cao 1.15m nhô cao rõ ràng trên mặt đất
 
-        // 1. Tạo GameObject phần gốc cây độc lập tại độ cao mặt đất chuẩn
+        // 1. Tạo GameObject phần gốc cây độc lập
         spawnedStump = new GameObject($"{name}_Stump");
         spawnedStump.transform.position = spawnPos;
         spawnedStump.transform.rotation = transform.rotation;
-        if (transform.parent != null)
+        if (transform.parent != null && transform.parent.gameObject.activeInHierarchy)
         {
             spawnedStump.transform.SetParent(transform.parent, true);
         }
 
-        // 2. Thêm BoxCollider cứng cáp bao trọn gốc cây để nhân vật KHÔNG THỂ ĐI XUYÊN
+        // 2. Thêm BoxCollider cứng cáp bao trọn gốc cây
         BoxCollider boxCol = spawnedStump.AddComponent<BoxCollider>();
         boxCol.center = new Vector3(0f, stumpHeight * 0.5f, 0f);
-        boxCol.size = new Vector3(treeRadius * 2.2f, stumpHeight * 1.05f, treeRadius * 2.2f);
+        boxCol.size = new Vector3(treeRadius * 2.2f, stumpHeight * 1.1f, treeRadius * 2.2f);
 
         // 3. Thân gốc cây thẳng đứng (Stump Body)
         GameObject stumpBody = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
@@ -967,7 +998,6 @@ public class ChoppableTree : NetworkBehaviour
         Collider bodyCol = stumpBody.GetComponent<Collider>();
         if (bodyCol != null) Destroy(bodyCol);
 
-        // Gán Material vỏ cây chuẩn (Lấy Albedo & Normal map gán vào Shader tiêu chuẩn)
         Renderer bodyRend = stumpBody.GetComponent<Renderer>();
         Material trunkMat = GetStumpBarkLitMaterial();
         if (bodyRend != null && trunkMat != null)
