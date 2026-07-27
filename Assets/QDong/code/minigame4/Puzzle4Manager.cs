@@ -364,13 +364,12 @@ public class Puzzle4Manager : NetworkBehaviour
                 Vector3 normal = balanceManager.diskRigidbody.transform.up;
                 Vector3 downhill = Vector3.ProjectOnPlane(Vector3.down, normal).normalized;
                 
-                // TĂNG ĐỘ NHẠY TRƯỢT: 
-                // Cộng thêm 50 lực cơ bản để vượt qua ma sát mặt sàn ngay từ 1 độ nghiêng đầu tiên
-                // Tăng hệ số nhân từ x20 lên x50 để trượt nhanh hơn khi nghiêng
-                float slideForceMagn = 50f + (balanceManager.CurrentAngle * 50f); 
+                // GIẢM ĐỘ NHẠY TRƯỢT ĐỂ DỄ CHƠI HƠN: 
+                // Giảm lực cơ bản và hệ số nhân để người chơi có thể chạy ngược lên
+                float slideForceMagn = 20f + (balanceManager.CurrentAngle * 15f); 
                 
-                // Giới hạn lực đẩy tối đa 
-                if (slideForceMagn > 500f) slideForceMagn = 500f;
+                // Giới hạn lực đẩy tối đa để không làm người chơi bị kẹt đứng im ngoài mép
+                if (slideForceMagn > 180f) slideForceMagn = 180f;
 
                 Vector3 slideForce = downhill * slideForceMagn;
                 
