@@ -782,10 +782,30 @@ public class PlayerHUDController : MonoBehaviour
         btnUpgradeCooldown = root.Q<Button>("btn-upgrade-cooldown");
         btnUpgradeDamage = root.Q<Button>("btn-upgrade-damage");
 
-        if (btnUpgradeHp != null) btnUpgradeHp.clicked += () => UpgradeStat(0);
-        if (btnUpgradeMp != null) btnUpgradeMp.clicked += () => UpgradeStat(1);
-        if (btnUpgradeCooldown != null) btnUpgradeCooldown.clicked += () => UpgradeStat(2);
-        if (btnUpgradeDamage != null) btnUpgradeDamage.clicked += () => UpgradeStat(3);
+        if (btnUpgradeHp != null)
+        {
+            btnUpgradeHp.clicked += () => UpgradeStat(0);
+            btnUpgradeHp.RegisterCallback<ClickEvent>(evt => { UpgradeStat(0); evt.StopPropagation(); });
+            btnUpgradeHp.RegisterCallback<PointerDownEvent>(evt => { UpgradeStat(0); evt.StopPropagation(); });
+        }
+        if (btnUpgradeMp != null)
+        {
+            btnUpgradeMp.clicked += () => UpgradeStat(1);
+            btnUpgradeMp.RegisterCallback<ClickEvent>(evt => { UpgradeStat(1); evt.StopPropagation(); });
+            btnUpgradeMp.RegisterCallback<PointerDownEvent>(evt => { UpgradeStat(1); evt.StopPropagation(); });
+        }
+        if (btnUpgradeCooldown != null)
+        {
+            btnUpgradeCooldown.clicked += () => UpgradeStat(2);
+            btnUpgradeCooldown.RegisterCallback<ClickEvent>(evt => { UpgradeStat(2); evt.StopPropagation(); });
+            btnUpgradeCooldown.RegisterCallback<PointerDownEvent>(evt => { UpgradeStat(2); evt.StopPropagation(); });
+        }
+        if (btnUpgradeDamage != null)
+        {
+            btnUpgradeDamage.clicked += () => UpgradeStat(3);
+            btnUpgradeDamage.RegisterCallback<ClickEvent>(evt => { UpgradeStat(3); evt.StopPropagation(); });
+            btnUpgradeDamage.RegisterCallback<PointerDownEvent>(evt => { UpgradeStat(3); evt.StopPropagation(); });
+        }
 
         // Khởi tạo và dịch ngôn ngữ giao diện HUD
         LocalizationManager.Initialize();
@@ -2546,78 +2566,40 @@ public class PlayerHUDController : MonoBehaviour
 
     public void SetupEventSystemForInputSystem()
     {
-        // 1. Tìm tất cả EventSystem trong Scene
-        var allEventSystems = FindObjectsByType<UnityEngine.EventSystems.EventSystem>(FindObjectsSortMode.None);
-        UnityEngine.EventSystems.EventSystem activeES = null;
-
-        if (allEventSystems != null && allEventSystems.Length > 0)
+        var activeES = UnityEngine.EventSystems.EventSystem.current;
+        if (activeES == null)
         {
-            for (int i = 0; i < allEventSystems.Length; i++)
+            var allES = FindObjectsByType<UnityEngine.EventSystems.EventSystem>(FindObjectsSortMode.None);
+            if (allES != null && allES.Length > 0)
             {
-                var es = allEventSystems[i];
-                if (es != null)
-                {
-                    if (activeES == null)
-                    {
-                        activeES = es;
-                        activeES.gameObject.SetActive(true);
-                        activeES.enabled = true;
-                        
-                        // Đảm bảo InputModule đi kèm cũng được kích hoạt
-                        var baseModule = activeES.GetComponent<UnityEngine.EventSystems.BaseInputModule>();
-                        if (baseModule != null)
-                        {
-                            baseModule.enabled = true;
-                        }
-                        
-#if ENABLE_INPUT_SYSTEM
-                        var inputSystemModule = activeES.GetComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
-                        if (inputSystemModule == null)
-                        {
-                            var oldStandalone = activeES.GetComponent<UnityEngine.EventSystems.StandaloneInputModule>();
-                            if (oldStandalone != null)
-                            {
-                                DestroyImmediate(oldStandalone);
-                            }
-                            inputSystemModule = activeES.gameObject.AddComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
-                        }
-                        if (inputSystemModule != null)
-                        {
-                            inputSystemModule.enabled = true;
-                            // Đảm bảo có actions được gán
-                            inputSystemModule.AssignDefaultActions();
-                        }
-#endif
-                        Debug.Log($"[PlayerHUDController] Giữ lại và kích hoạt EventSystem: {activeES.gameObject.name}");
-                    }
-                    else
-                    {
-                        Debug.LogWarning($"[PlayerHUDController] Xóa EventSystem trùng lặp: {es.gameObject.name}");
-                        DestroyImmediate(es.gameObject);
-                    }
-                }
+                activeES = allES[0];
             }
         }
 
-        // 2. Nếu không tìm thấy EventSystem nào, tạo mới sạch sẽ
         if (activeES == null)
         {
             GameObject esObj = new GameObject("EventSystem");
             activeES = esObj.AddComponent<UnityEngine.EventSystems.EventSystem>();
-            esObj.SetActive(true);
-            activeES.enabled = true;
+        }
+
+        activeES.gameObject.SetActive(true);
+        activeES.enabled = true;
+
+        var standalone = activeES.GetComponent<UnityEngine.EventSystems.StandaloneInputModule>();
+        if (standalone == null)
+        {
+            standalone = activeES.gameObject.AddComponent<UnityEngine.EventSystems.StandaloneInputModule>();
+        }
+        standalone.enabled = true;
 
 #if ENABLE_INPUT_SYSTEM
-            var inputModule = esObj.AddComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
-            inputModule.enabled = true;
-            inputModule.AssignDefaultActions();
-            Debug.Log("[PlayerHUDController] Đã tạo mới EventSystem với InputSystemUIInputModule và gọi AssignDefaultActions.");
-#else
-            var inputModule = esObj.AddComponent<UnityEngine.EventSystems.StandaloneInputModule>();
-            inputModule.enabled = true;
-            Debug.Log("[PlayerHUDController] Đã tạo mới EventSystem với StandaloneInputModule.");
-#endif
+        var inputSystemModule = activeES.GetComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
+        if (inputSystemModule != null)
+        {
+            inputSystemModule.enabled = true;
+            inputSystemModule.AssignDefaultActions();
         }
+#endif
     }
 
     private void UpdateTeammatesHUD()
