@@ -1,6 +1,7 @@
 using UnityEngine;
 using Unity.Netcode;
 using System.Collections;
+using System.Collections.Generic;
 
 public class ChoppableTree : NetworkBehaviour
 {
@@ -755,14 +756,36 @@ public class ChoppableTree : NetworkBehaviour
             if (col != null) col.enabled = false;
         }
 
-        // 2. Xác định đối tượng quay (Nên là visualModel nếu khác gameObject, hoặc chính gameObject)
-        Transform fallTransform = (visualModel != null && visualModel != gameObject) ? visualModel.transform : transform;
+        // 2. Tạo FallPivot tại đúng vị trí mặt cắt trên đỉnh gốc cây (y = 1.15m)
+        Vector3 pivotWorldPos = transform.position + Vector3.up * stumpHeight;
+        GameObject fallPivot = new GameObject($"{name}_FallPivot");
+        fallPivot.transform.position = pivotWorldPos;
+        fallPivot.transform.rotation = transform.rotation;
 
-        Vector3 startWorldPos = fallTransform.position;
-        Quaternion startWorldRot = fallTransform.rotation;
+        if (transform.parent != null && transform.parent.gameObject.activeInHierarchy)
+        {
+            fallPivot.transform.SetParent(transform.parent, true);
+        }
 
-        // Điểm bản lề gãy cây nằm đúng ở đỉnh phần gốc cây (y = stumpHeight)
-        Vector3 pivotWorldPos = startWorldPos + Vector3.up * stumpHeight;
+        // Chuyển toàn bộ phần thân trên của cây (Visual Model / Renderers) sang fallPivot
+        if (visualModel != null && visualModel != gameObject)
+        {
+            visualModel.transform.SetParent(fallPivot.transform, true);
+        }
+        else
+        {
+            List<Transform> childrenToMove = new List<Transform>();
+            foreach (Transform child in transform)
+            {
+                if (spawnedStump != null && child == spawnedStump.transform) continue;
+                if (child == fallPivot.transform) continue;
+                childrenToMove.Add(child);
+            }
+            foreach (var child in childrenToMove)
+            {
+                child.SetParent(fallPivot.transform, true);
+            }
+        }
 
         // 3. Chọn hướng ngã ngẫu nhiên xung quanh trục Y (Đồng bộ giữa Server và tất cả Client bằng vị trí cây làm seed)
         int seed = (int)(transform.position.x * 100f + transform.position.z * 10f);
@@ -776,6 +799,7 @@ public class ChoppableTree : NetworkBehaviour
         float duration = 2.0f;
         float elapsed = 0f;
 
+        Quaternion startWorldRot = fallPivot.transform.rotation;
         Quaternion targetWorldRot = Quaternion.AngleAxis(90f, fallRotationAxis) * startWorldRot;
 
         // Sinh dăm gỗ & khói bụi gãy cây ngay tại mặt cắt gốc
@@ -786,31 +810,22 @@ public class ChoppableTree : NetworkBehaviour
         {
             elapsed += Time.deltaTime;
             float t = elapsed / duration;
-            
-            // Hiệu ứng ngã nhanh dần đều (dưới tác dụng trọng lực)
-            float tSmooth = t * t; 
+            float tSmooth = t * t; // Hiệu ứng ngã nhanh dần đều
 
-            // Tính toán quay mượt mà xung quanh điểm bản lề pivotWorldPos
-            Quaternion currentRot = Quaternion.Slerp(startWorldRot, targetWorldRot, tSmooth);
-            Quaternion deltaRot = currentRot * Quaternion.Inverse(startWorldRot);
-
-            fallTransform.rotation = currentRot;
-            fallTransform.position = pivotWorldPos + deltaRot * (startWorldPos - pivotWorldPos);
-
+            fallPivot.transform.rotation = Quaternion.Slerp(startWorldRot, targetWorldRot, tSmooth);
             yield return null;
         }
 
-        Quaternion finalDeltaRot = targetWorldRot * Quaternion.Inverse(startWorldRot);
-        fallTransform.rotation = targetWorldRot;
-        fallTransform.position = pivotWorldPos + finalDeltaRot * (startWorldPos - pivotWorldPos);
+        fallPivot.transform.rotation = targetWorldRot;
 
-        // Sinh hiệu ứng khói bụi lớn đậm nét khi ngọn cây đập xuống đất
-        Vector3 treeTopPos = pivotWorldPos + (fallTransform.rotation * (Vector3.up * 4.0f));
+        // Sinh hiệu ứng khói bụi lớn khi ngọn cây đập xuống đất
+        Vector3 treeTopPos = pivotWorldPos + (fallPivot.transform.rotation * (Vector3.up * 4.0f));
         CreateRealisticDustEffect(treeTopPos, 2.2f, 50);
         CreateRealisticDustEffect(pivotWorldPos, 2.0f, 40);
 
-        // Chờ một chút ngắn trước khi ẩn hoàn toàn
+        // Chờ một chút ngắn trước khi ẩn hoàn toàn phần thân cây ngã
         yield return new WaitForSeconds(0.2f);
+        Destroy(fallPivot);
         gameObject.SetActive(false);
     }
 
