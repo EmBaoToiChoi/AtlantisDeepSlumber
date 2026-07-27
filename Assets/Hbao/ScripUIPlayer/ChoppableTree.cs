@@ -24,6 +24,7 @@ public class ChoppableTree : NetworkBehaviour
     private int currentHits = 0;
     private bool isShaking = false;
     private Vector3 originalLocalPos;
+    private GameObject spawnedStump;
 
     private void Awake()
     {
@@ -125,6 +126,7 @@ public class ChoppableTree : NetworkBehaviour
         
         if (isCutDown.Value)
         {
+            CreateTreeStump();
             gameObject.SetActive(false);
         }
     }
@@ -661,6 +663,8 @@ public class ChoppableTree : NetworkBehaviour
 
     private IEnumerator FallDownCoroutine()
     {
+        CreateTreeStump();
+
         // Kích hoạt camera nhìn cây ngã nếu ở gần người chơi
         if (PlayerHUDController.Instance != null && PlayerHUDController.LocalPlayerTarget != null)
         {
@@ -826,6 +830,107 @@ public class ChoppableTree : NetworkBehaviour
     {
         yield return new WaitForSeconds(delay);
         SpawnCollectibleLogLocal(1);
+    }
+
+    private Material GetTreeBarkMaterial()
+    {
+        var treeRends = GetComponentsInChildren<Renderer>(true);
+        foreach (var r in treeRends)
+        {
+            if (r != null && r.sharedMaterial != null)
+            {
+                if (r is ParticleSystemRenderer) continue;
+                if (r.gameObject.name.Contains("TreeCutMark") || r.gameObject.name.Contains("Stump")) continue;
+                return r.sharedMaterial;
+            }
+        }
+        return null;
+    }
+
+    private void CreateTreeStump()
+    {
+        if (spawnedStump != null) return;
+
+        // Tính bán kính & chiều cao gốc cây
+        float treeRadius = 0.45f;
+        CapsuleCollider cap = GetComponent<CapsuleCollider>();
+        if (cap == null) cap = GetComponentInChildren<CapsuleCollider>();
+        if (cap != null)
+        {
+            treeRadius = cap.radius * transform.lossyScale.x;
+        }
+
+        float stumpHeight = 0.5f;
+
+        // Tạo GameObject phần gốc cây ở vị trí cây ban đầu
+        spawnedStump = new GameObject($"{name}_Stump");
+        spawnedStump.transform.position = transform.position;
+        spawnedStump.transform.rotation = transform.rotation;
+        if (transform.parent != null)
+        {
+            spawnedStump.transform.SetParent(transform.parent, true);
+        }
+
+        // 1. Thân gốc cây (Cylinder dùng vỏ cây của chính cây đó)
+        GameObject stumpBody = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+        stumpBody.name = "StumpBody";
+        stumpBody.transform.SetParent(spawnedStump.transform, false);
+        stumpBody.transform.localPosition = new Vector3(0f, stumpHeight * 0.5f, 0f);
+        stumpBody.transform.localScale = new Vector3(treeRadius * 2f, stumpHeight * 0.5f, treeRadius * 2f);
+
+        Collider bodyCol = stumpBody.GetComponent<Collider>();
+        if (bodyCol != null) Destroy(bodyCol);
+
+        // CapsuleCollider cho phần gốc cây để nhân vật có thể va chạm/đứng lên gốc cây
+        CapsuleCollider stumpCol = spawnedStump.AddComponent<CapsuleCollider>();
+        stumpCol.center = new Vector3(0f, stumpHeight * 0.5f, 0f);
+        stumpCol.radius = treeRadius;
+        stumpCol.height = stumpHeight;
+
+        Renderer bodyRend = stumpBody.GetComponent<Renderer>();
+        Material treeBarkMat = GetTreeBarkMaterial();
+        if (bodyRend != null && treeBarkMat != null)
+        {
+            bodyRend.sharedMaterial = treeBarkMat;
+        }
+
+        // 2. Mặt cắt gỗ bên trên gốc cây (nắp lòng gỗ)
+        GameObject cutCap = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+        cutCap.name = "StumpCutCap";
+        cutCap.transform.SetParent(spawnedStump.transform, false);
+        cutCap.transform.localPosition = new Vector3(0f, stumpHeight + 0.002f, 0f);
+        cutCap.transform.localScale = new Vector3(treeRadius * 1.98f, 0.005f, treeRadius * 1.98f);
+
+        Collider capCol = cutCap.GetComponent<Collider>();
+        if (capCol != null) Destroy(capCol);
+
+        Renderer capRend = cutCap.GetComponent<Renderer>();
+        if (capRend != null)
+        {
+            Material cutMat = FindLitMaterial();
+            if (cutMat != null)
+            {
+                if (cutMat.HasProperty("_BaseMap")) cutMat.SetTexture("_BaseMap", null);
+                if (cutMat.HasProperty("_MainTex")) cutMat.SetTexture("_MainTex", null);
+                if (cutMat.HasProperty("_BumpMap")) cutMat.SetTexture("_BumpMap", null);
+                if (cutMat.HasProperty("_MetallicGlossMap")) cutMat.SetTexture("_MetallicGlossMap", null);
+                if (cutMat.HasProperty("_OcclusionMap")) cutMat.SetTexture("_OcclusionMap", null);
+                if (cutMat.HasProperty("_EmissionMap")) cutMat.SetTexture("_EmissionMap", null);
+
+                Color woodColor = new Color(0.88f, 0.72f, 0.48f); // Màu lòng gỗ tự nhiên
+                if (cutMat.HasProperty("_BaseColor")) cutMat.SetColor("_BaseColor", woodColor);
+                else if (cutMat.HasProperty("_Color")) cutMat.SetColor("_Color", woodColor);
+
+                if (cutMat.HasProperty("_Surface"))
+                {
+                    cutMat.SetFloat("_Surface", 0f);
+                    cutMat.DisableKeyword("_SURFACE_TYPE_TRANSPARENT");
+                    cutMat.EnableKeyword("_SURFACE_TYPE_OPAQUE");
+                }
+                cutMat.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Geometry;
+                capRend.sharedMaterial = cutMat;
+            }
+        }
     }
 }
 
