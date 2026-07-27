@@ -271,7 +271,7 @@ public class ChoppableTree : NetworkBehaviour
         if (currentHits >= requiredHits)
         {
             isCutDown.Value = true;
-            StartCoroutine(SpawnLogsAfterDelay(2f));
+            StartCoroutine(SpawnLogsAfterDelay(0.2f));
         }
     }
 
@@ -284,7 +284,7 @@ public class ChoppableTree : NetworkBehaviour
         if (currentHits >= requiredHits)
         {
             StartCoroutine(FallDownCoroutine());
-            StartCoroutine(SpawnCollectibleLogLocalAfterDelay(2f));
+            StartCoroutine(SpawnCollectibleLogLocalAfterDelay(0.2f));
         }
     }
 
@@ -493,16 +493,18 @@ public class ChoppableTree : NetworkBehaviour
     {
         if (woodLogPrefab == null) return;
 
+        Vector3 stumpTopPos = transform.position + Vector3.up * 1.25f;
+
         for (int i = 0; i < count; i++)
         {
             float groundY = transform.position.y;
 
-            // Văng bó gỗ ra phía ngoài gốc cây với khoảng cách an toàn (1.8m -> 2.4m)
+            // Tính vị trí đáp xuống mặt đất bên ngoài gốc cây (1.8m -> 2.4m)
             float angle = Random.Range(0f, 360f) * Mathf.Deg2Rad;
             float distance = Random.Range(1.8f, 2.4f);
-            Vector3 spawnPos = transform.position + new Vector3(Mathf.Cos(angle) * distance, 1.2f, Mathf.Sin(angle) * distance);
+            Vector3 targetLandPos = transform.position + new Vector3(Mathf.Cos(angle) * distance, 1.2f, Mathf.Sin(angle) * distance);
 
-            Vector3 rayStart = new Vector3(spawnPos.x, transform.position.y + 3f, spawnPos.z);
+            Vector3 rayStart = new Vector3(targetLandPos.x, transform.position.y + 3f, targetLandPos.z);
             int layerMask = ~LayerMask.GetMask("Player", "Ignore Raycast");
             if (Physics.Raycast(rayStart, Vector3.down, out RaycastHit hit, 6f, layerMask))
             {
@@ -512,9 +514,10 @@ public class ChoppableTree : NetworkBehaviour
                 }
             }
 
-            spawnPos.y = groundY + 0.6f;
+            targetLandPos.y = groundY + 0.5f;
 
-            GameObject log = WoodLogObjectPool.Instance.GetOrCreate(woodLogPrefab, spawnPos, Quaternion.identity);
+            // Sinh bó gỗ ngay đỉnh gốc cây (stumpTopPos) và văng vồng cầu rớt xuống đất
+            GameObject log = WoodLogObjectPool.Instance.GetOrCreate(woodLogPrefab, stumpTopPos, Quaternion.identity);
             
             var netObj = log.GetComponent<NetworkObject>();
             if (netObj != null)
@@ -527,6 +530,8 @@ public class ChoppableTree : NetworkBehaviour
             {
                 cid.woodAmount.Value = Random.Range(5, 11);
             }
+
+            StartCoroutine(AnimateLogDropFromStump(log, stumpTopPos, targetLandPos));
         }
     }
 
@@ -534,16 +539,18 @@ public class ChoppableTree : NetworkBehaviour
     {
         if (woodLogPrefab == null) return;
 
+        Vector3 stumpTopPos = transform.position + Vector3.up * 1.25f;
+
         for (int i = 0; i < count; i++)
         {
             float groundY = transform.position.y;
 
-            // Văng bó gỗ ra phía ngoài gốc cây với khoảng cách an toàn (1.8m -> 2.4m)
+            // Tính vị trí đáp xuống mặt đất bên ngoài gốc cây (1.8m -> 2.4m)
             float angle = Random.Range(0f, 360f) * Mathf.Deg2Rad;
             float distance = Random.Range(1.8f, 2.4f);
-            Vector3 spawnPos = transform.position + new Vector3(Mathf.Cos(angle) * distance, 1.2f, Mathf.Sin(angle) * distance);
+            Vector3 targetLandPos = transform.position + new Vector3(Mathf.Cos(angle) * distance, 1.2f, Mathf.Sin(angle) * distance);
 
-            Vector3 rayStart = new Vector3(spawnPos.x, transform.position.y + 3f, spawnPos.z);
+            Vector3 rayStart = new Vector3(targetLandPos.x, transform.position.y + 3f, targetLandPos.z);
             int layerMask = ~LayerMask.GetMask("Player", "Ignore Raycast");
             if (Physics.Raycast(rayStart, Vector3.down, out RaycastHit hit, 6f, layerMask))
             {
@@ -553,15 +560,50 @@ public class ChoppableTree : NetworkBehaviour
                 }
             }
 
-            spawnPos.y = groundY + 0.6f;
+            targetLandPos.y = groundY + 0.5f;
 
-            GameObject log = WoodLogObjectPool.Instance.GetOrCreate(woodLogPrefab, spawnPos, Quaternion.identity);
+            // Sinh bó gỗ ngay đỉnh gốc cây (stumpTopPos) và văng vồng cầu rớt xuống đất
+            GameObject log = WoodLogObjectPool.Instance.GetOrCreate(woodLogPrefab, stumpTopPos, Quaternion.identity);
             
             var cid = log.GetComponent<CollectibleItemDrop>();
             if (cid != null)
             {
                 cid.localWoodAmount = Random.Range(5, 11);
             }
+
+            StartCoroutine(AnimateLogDropFromStump(log, stumpTopPos, targetLandPos));
+        }
+    }
+
+    private IEnumerator AnimateLogDropFromStump(GameObject logObj, Vector3 startPos, Vector3 targetPos)
+    {
+        if (logObj == null) yield break;
+
+        float duration = 0.65f;
+        float elapsed = 0f;
+        Quaternion startRot = logObj.transform.rotation;
+        Quaternion targetRot = Quaternion.Euler(Random.Range(-15f, 15f), Random.Range(0f, 360f), Random.Range(-15f, 15f));
+
+        while (elapsed < duration)
+        {
+            if (logObj == null) yield break;
+            elapsed += Time.deltaTime;
+            float t = elapsed / duration;
+            float tArc = Mathf.Sin(t * Mathf.PI);
+
+            Vector3 currentPos = Vector3.Lerp(startPos, targetPos, t);
+            currentPos.y += tArc * 0.7f; // Đường cong vồng văng gỗ từ gốc cây rớt xuống đất
+
+            logObj.transform.position = currentPos;
+            logObj.transform.rotation = Quaternion.Slerp(startRot, targetRot, t);
+
+            yield return null;
+        }
+
+        if (logObj != null)
+        {
+            logObj.transform.position = targetPos;
+            logObj.transform.rotation = targetRot;
         }
     }
 
@@ -693,6 +735,8 @@ public class ChoppableTree : NetworkBehaviour
     {
         CreateTreeStump();
 
+        float stumpHeight = 1.15f;
+
         // Kích hoạt camera nhìn cây ngã nếu ở gần người chơi
         if (PlayerHUDController.Instance != null && PlayerHUDController.LocalPlayerTarget != null)
         {
@@ -711,22 +755,32 @@ public class ChoppableTree : NetworkBehaviour
             if (col != null) col.enabled = false;
         }
 
-        // 2. Chọn hướng ngã ngẫu nhiên xung quanh trục Y (Đồng bộ giữa Server và tất cả Client bằng vị trí cây làm seed)
+        // 2. Xác định đối tượng quay (Nên là visualModel nếu khác gameObject, hoặc chính gameObject)
+        Transform fallTransform = (visualModel != null && visualModel != gameObject) ? visualModel.transform : transform;
+
+        Vector3 startWorldPos = fallTransform.position;
+        Quaternion startWorldRot = fallTransform.rotation;
+
+        // Điểm bản lề gãy cây nằm đúng ở đỉnh phần gốc cây (y = stumpHeight)
+        Vector3 pivotWorldPos = startWorldPos + Vector3.up * stumpHeight;
+
+        // 3. Chọn hướng ngã ngẫu nhiên xung quanh trục Y (Đồng bộ giữa Server và tất cả Client bằng vị trí cây làm seed)
         int seed = (int)(transform.position.x * 100f + transform.position.z * 10f);
         Random.State oldState = Random.state;
         Random.InitState(seed);
         float randomAngle = Random.Range(0f, 360f);
-        Random.state = oldState; // Khôi phục lại trạng thái random
+        Random.state = oldState;
 
         Vector3 fallRotationAxis = Quaternion.Euler(0f, randomAngle, 0f) * Vector3.right;
 
         float duration = 2.0f;
         float elapsed = 0f;
-        
-        Quaternion startRot = visualModel.transform.localRotation;
-        
-        // Tạo góc quay đích: xoay nghiêng 90 độ xung quanh trục ngã
-        Quaternion targetRot = Quaternion.AngleAxis(90f, fallRotationAxis) * startRot;
+
+        Quaternion targetWorldRot = Quaternion.AngleAxis(90f, fallRotationAxis) * startWorldRot;
+
+        // Sinh dăm gỗ & khói bụi gãy cây ngay tại mặt cắt gốc
+        CreateRealisticDustEffect(pivotWorldPos, 1.2f, 30);
+        SpawnWoodSplinters();
 
         while (elapsed < duration)
         {
@@ -736,23 +790,24 @@ public class ChoppableTree : NetworkBehaviour
             // Hiệu ứng ngã nhanh dần đều (dưới tác dụng trọng lực)
             float tSmooth = t * t; 
 
-            visualModel.transform.localRotation = Quaternion.Slerp(startRot, targetRot, tSmooth);
-            
+            // Tính toán quay mượt mà xung quanh điểm bản lề pivotWorldPos
+            Quaternion currentRot = Quaternion.Slerp(startWorldRot, targetWorldRot, tSmooth);
+            Quaternion deltaRot = currentRot * Quaternion.Inverse(startWorldRot);
+
+            fallTransform.rotation = currentRot;
+            fallTransform.position = pivotWorldPos + deltaRot * (startWorldPos - pivotWorldPos);
+
             yield return null;
         }
 
-        visualModel.transform.localRotation = targetRot;
+        Quaternion finalDeltaRot = targetWorldRot * Quaternion.Inverse(startWorldRot);
+        fallTransform.rotation = targetWorldRot;
+        fallTransform.position = pivotWorldPos + finalDeltaRot * (startWorldPos - pivotWorldPos);
 
-        // Sinh hiệu ứng khói bụi lớn đậm nét khi cây đập xuống đất
-        // 1. Bụi ở gốc cây (tăng scale và số lượng)
-        CreateRealisticDustEffect(transform.position, 2.8f, 75);
-
-        // 2. Bụi ở ngọn cây (tăng scale và số lượng)
-        if (visualModel != null)
-        {
-            Vector3 treeTopPos = transform.position + (visualModel.transform.rotation * (Vector3.up * 4.0f));
-            CreateRealisticDustEffect(treeTopPos, 2.2f, 50);
-        }
+        // Sinh hiệu ứng khói bụi lớn đậm nét khi ngọn cây đập xuống đất
+        Vector3 treeTopPos = pivotWorldPos + (fallTransform.rotation * (Vector3.up * 4.0f));
+        CreateRealisticDustEffect(treeTopPos, 2.2f, 50);
+        CreateRealisticDustEffect(pivotWorldPos, 2.0f, 40);
 
         // Chờ một chút ngắn trước khi ẩn hoàn toàn
         yield return new WaitForSeconds(0.2f);
@@ -983,10 +1038,12 @@ public class ChoppableTree : NetworkBehaviour
             spawnedStump.transform.SetParent(transform.parent, true);
         }
 
-        // 2. Thêm BoxCollider cứng cáp bao trọn gốc cây
-        BoxCollider boxCol = spawnedStump.AddComponent<BoxCollider>();
-        boxCol.center = new Vector3(0f, stumpHeight * 0.5f, 0f);
-        boxCol.size = new Vector3(treeRadius * 2.2f, stumpHeight * 1.1f, treeRadius * 2.2f);
+        // 2. Thêm CapsuleCollider tròn mượt màng bao trọn gốc cây (bo tròn XZ, chống kẹt góc và xoay tròn)
+        CapsuleCollider capCol = spawnedStump.AddComponent<CapsuleCollider>();
+        capCol.center = new Vector3(0f, stumpHeight * 0.5f, 0f);
+        capCol.radius = treeRadius * 0.95f;
+        capCol.height = stumpHeight * 1.05f;
+        capCol.direction = 1; // Hướng trục Y
 
         // 3. Thân gốc cây thẳng đứng (Stump Body)
         GameObject stumpBody = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
@@ -996,7 +1053,7 @@ public class ChoppableTree : NetworkBehaviour
         stumpBody.transform.localScale = new Vector3(treeRadius * 2f, stumpHeight * 0.5f, treeRadius * 2f);
 
         Collider bodyCol = stumpBody.GetComponent<Collider>();
-        if (bodyCol != null) Destroy(bodyCol);
+        if (bodyCol != null) DestroyImmediate(bodyCol);
 
         Renderer bodyRend = stumpBody.GetComponent<Renderer>();
         Material trunkMat = GetStumpBarkLitMaterial();
@@ -1012,8 +1069,8 @@ public class ChoppableTree : NetworkBehaviour
         cutCap.transform.localPosition = new Vector3(0f, stumpHeight + 0.005f, 0f);
         cutCap.transform.localScale = new Vector3(treeRadius * 1.96f, 0.008f, treeRadius * 1.96f);
 
-        Collider capCol = cutCap.GetComponent<Collider>();
-        if (capCol != null) Destroy(capCol);
+        Collider capCutCol = cutCap.GetComponent<Collider>();
+        if (capCutCol != null) DestroyImmediate(capCutCol);
 
         Renderer capRend = cutCap.GetComponent<Renderer>();
         if (capRend != null)
