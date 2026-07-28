@@ -2630,16 +2630,37 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
             Vector3 pivotPosition = (transform.position + Vector3.up * cameraPivotHeight) + rightOffsetVec;
             Vector3 targetPosition = pivotPosition + rotatedOffset;
 
-            // Thực hiện kiểm tra va chạm của camera với tường/vật cản bằng SphereCast
+            // Thực hiện kiểm tra va chạm của camera với tường/vật cản bằng SphereCastAll
             float collisionSafetyDistance = 0.4f; // Khoảng cách an toàn để tránh camera sát tường gây lỗi clipping plane
             int cameraLayerMask = ~LayerMask.GetMask("Player", "Ignore Raycast"); // Bỏ qua người chơi và các vật thể Ignore Raycast
             Vector3 rayDirection = rotatedOffset.normalized;
             float maxRayDistance = rotatedOffset.magnitude;
 
-            if (Physics.SphereCast(pivotPosition, 0.2f, rayDirection, out RaycastHit hit, maxRayDistance, cameraLayerMask))
+            // Dùng QueryTriggerInteraction.Ignore và SphereCastAll để camera KHÔNG BAO GIỜ va chạm vào Hitbox tấn công hoặc vật thể của bản thân
+            RaycastHit[] hits = Physics.SphereCastAll(pivotPosition, 0.2f, rayDirection, maxRayDistance, cameraLayerMask, QueryTriggerInteraction.Ignore);
+            float nearestObstacleDistance = maxRayDistance;
+            bool hitObstacle = false;
+
+            foreach (var h in hits)
             {
-                // Thu nhỏ khoảng cách nếu va chạm với tường
-                float clampedDistance = Mathf.Max(0.5f, hit.distance - collisionSafetyDistance);
+                if (h.collider != null && !h.collider.isTrigger)
+                {
+                    // Bỏ qua tất cả các collider thuộc bản thân nhân vật Arthur hoặc vật thể con trên tay/vũ khí
+                    if (!h.collider.transform.IsChildOf(transform) && h.collider.transform.root != transform.root)
+                    {
+                        if (h.distance < nearestObstacleDistance)
+                        {
+                            nearestObstacleDistance = h.distance;
+                            hitObstacle = true;
+                        }
+                    }
+                }
+            }
+
+            if (hitObstacle)
+            {
+                // Thu nhỏ khoảng cách nếu thực sự va chạm với tường/vật cản môi trường
+                float clampedDistance = Mathf.Max(0.5f, nearestObstacleDistance - collisionSafetyDistance);
                 targetPosition = pivotPosition + rayDirection * clampedDistance;
             }
 
@@ -3143,6 +3164,14 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
                 return;
             }
             col.isTrigger = true;
+
+            // Đưa Hitbox về layer Ignore Raycast để hoàn toàn không bị Raycast/SphereCast của camera hay bất kỳ hệ thống nào ngắm trúng
+            int ignoreRaycastLayer = LayerMask.NameToLayer("Ignore Raycast");
+            if (ignoreRaycastLayer != -1)
+            {
+                col.gameObject.layer = ignoreRaycastLayer;
+            }
+
             if (col.GetComponent<PlayerHitbox>() == null)
             {
                 col.gameObject.AddComponent<PlayerHitbox>();
