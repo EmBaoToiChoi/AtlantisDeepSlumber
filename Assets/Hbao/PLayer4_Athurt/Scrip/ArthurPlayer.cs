@@ -2741,9 +2741,31 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
     private System.Collections.IEnumerator ComboChainCoroutine(int weapon, bool networkMode)
     {
         float totalDuration = currentAttackAnimDuration;
+        float hitEnableTime = totalDuration * 0.15f;
+        float hitDisableTime = totalDuration * 0.85f;
 
-        // Chờ hết thời lượng animation thực tế
-        yield return new WaitForSeconds(totalDuration);
+        // Fallback: Tự động kích hoạt Hitbox phù hợp với vũ khí sau 15% thời lượng animation (đảm bảo gây dame kể cả khi Animation Event không trigger)
+        yield return new WaitForSeconds(hitEnableTime);
+        if (isExecutingAttack)
+        {
+            if (weapon == 2)
+            {
+                EnableBothWeaponHitboxes();
+            }
+            else if (weapon == 0)
+            {
+                EnableBothHitboxes();
+            }
+        }
+
+        // Tắt Hitbox sau 85% thời lượng animation
+        float remainingHitWindow = Mathf.Max(0f, hitDisableTime - hitEnableTime);
+        yield return new WaitForSeconds(remainingHitWindow);
+        DisableAllHitboxes();
+
+        // Chờ hết animation còn lại
+        float remainingAnimTime = Mathf.Max(0f, totalDuration - hitDisableTime);
+        yield return new WaitForSeconds(remainingAnimTime);
 
         // Kết thúc nhịp tấn công
         isExecutingAttack = false;
@@ -3103,6 +3125,10 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
             }
         }
 
+        if (enabled && col.gameObject != null)
+        {
+            col.gameObject.SetActive(true);
+        }
         col.enabled = enabled;
     }
 
@@ -3130,6 +3156,15 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         alreadyHitEnemies.Clear();
         EnsureHitboxComponent(leftHitbox);
         SafeSetHitboxEnabled(leftHitbox, true);
+
+        int weapon = GetActiveWeaponIndex();
+        if (weapon == 2)
+        {
+            EnsureHitboxComponent(leftWeaponHitbox);
+            SafeSetHitboxEnabled(leftWeaponHitbox, true);
+            EnsureHitboxComponent(rightWeaponHitbox);
+            SafeSetHitboxEnabled(rightWeaponHitbox, true);
+        }
     }
     public void DisableLeftHitbox()
     {
@@ -3141,6 +3176,15 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         alreadyHitEnemies.Clear();
         EnsureHitboxComponent(rightHitbox);
         SafeSetHitboxEnabled(rightHitbox, true);
+
+        int weapon = GetActiveWeaponIndex();
+        if (weapon == 2)
+        {
+            EnsureHitboxComponent(rightWeaponHitbox);
+            SafeSetHitboxEnabled(rightWeaponHitbox, true);
+            EnsureHitboxComponent(leftWeaponHitbox);
+            SafeSetHitboxEnabled(leftWeaponHitbox, true);
+        }
     }
     public void DisableRightHitbox()
     {
@@ -3154,6 +3198,12 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         EnsureHitboxComponent(rightHitbox);
         SafeSetHitboxEnabled(leftHitbox, true);
         SafeSetHitboxEnabled(rightHitbox, true);
+
+        int weapon = GetActiveWeaponIndex();
+        if (weapon == 2)
+        {
+            EnableBothWeaponHitboxes();
+        }
     }
     public void DisableBothHitboxes()
     {
@@ -3408,8 +3458,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
             col.size = new Vector3(0.6f, 0.6f, 0.6f);
             col.center = new Vector3(0f, 0f, 0.2f);
             col.enabled = false;
-            leftObj.SetActive(false);
-            if (leftObj.GetComponent<PlayerHitbox>() == null) leftObj.AddComponent<PlayerHitbox>();
+            EnsureHitboxComponent(col);
             leftHitbox = col;
         }
 
@@ -3440,8 +3489,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
             col.size = new Vector3(0.6f, 0.6f, 0.6f);
             col.center = new Vector3(0f, 0f, 0.2f);
             col.enabled = false;
-            rightObj.SetActive(false);
-            if (rightObj.GetComponent<PlayerHitbox>() == null) rightObj.AddComponent<PlayerHitbox>();
+            EnsureHitboxComponent(col);
             rightHitbox = col;
         }
 
@@ -3455,10 +3503,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
             {
                 col.isTrigger = true;
                 col.enabled = false;
-                if (leftHandWeapon.GetComponent<PlayerHitbox>() == null)
-                {
-                    leftHandWeapon.AddComponent<PlayerHitbox>();
-                }
+                EnsureHitboxComponent(col);
                 leftWeaponHitbox = col;
             }
         }
@@ -3475,10 +3520,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
             {
                 col.isTrigger = true;
                 col.enabled = false;
-                if (rightHandWeapon.GetComponent<PlayerHitbox>() == null)
-                {
-                    rightHandWeapon.AddComponent<PlayerHitbox>();
-                }
+                EnsureHitboxComponent(col);
                 rightWeaponHitbox = col;
             }
         }
