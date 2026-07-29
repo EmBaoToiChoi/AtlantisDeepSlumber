@@ -502,9 +502,12 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
     public bool IsDeathAnimationFinished => isDeathAnimFinished;
     public void ResetDeathState()
     {
+        StopAllCoroutines();
+        PlayerDeathEffectManager.Instance.ResetDeathEffect();
+        localHealth = maxHealth;
         isDeathAnimFinished = false;
-        currentAnimState = "";
-        lastTriggeredAnimName = "";
+        currentAnimState = "Idle";
+        lastTriggeredAnimName = "Idle";
         comboStep = 0;
         isRootedAttack = false;
 
@@ -541,6 +544,7 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     public void OnDeathAnimationEnd()
     {
+        if (localHealth > 0f || CurrentHealth > 0f) return;
         if (IsOwner || isStandaloneMode)
         {
             StartCoroutine(DeathEyelidsSequenceCoroutine());
@@ -549,11 +553,15 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     private System.Collections.IEnumerator DeathEyelidsSequenceCoroutine()
     {
-        if (CurrentHealth > 0f) yield break;
+        if (localHealth > 0f || CurrentHealth > 0f)
+        {
+            PlayerDeathEffectManager.Instance.ResetDeathEffect();
+            yield break;
+        }
         float duration = 1.5f;
         PlayerDeathEffectManager.Instance.PlayDeathEffect(duration);
         yield return new WaitForSeconds(duration);
-        if (CurrentHealth > 0f)
+        if (localHealth > 0f || CurrentHealth > 0f)
         {
             PlayerDeathEffectManager.Instance.ResetDeathEffect();
             yield break;
@@ -3842,6 +3850,11 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     private void PlayAnimationLocal(string animName, float fadeTime, bool isRooted)
     {
+        if (animName == "Death" && (localHealth > 0f || CurrentHealth > 0f))
+        {
+            return;
+        }
+
         // Play action sound effects
         if (animName == "Bow_Shoot")
         {
