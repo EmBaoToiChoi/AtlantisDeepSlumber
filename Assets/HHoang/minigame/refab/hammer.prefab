@@ -14,7 +14,6 @@ GameObject:
   - component: {fileID: 3757026998652082172}
   - component: {fileID: 4558854496615132669}
   - component: {fileID: 7623701140335971292}
-  - component: {fileID: 3393846210070696112}
   m_Layer: 0
   m_Name: hammer
   m_TagString: Untagged
@@ -32,7 +31,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 4.97, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalScale: {x: 3.9097402, y: 3.9097402, z: 3.9097402}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 8030442214239055040}
@@ -50,8 +49,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  GlobalObjectIdHash: 1628760620
-  InScenePlacedSourceGlobalObjectIdHash: 0
+  GlobalObjectIdHash: 208511190
+  InScenePlacedSourceGlobalObjectIdHash: 1628760620
   DeferredDespawnTick: 0
   Ownership: 1
   AlwaysReplicateAsRoot: 0
@@ -81,8 +80,8 @@ MonoBehaviour:
   axisX: 0
   axisY: 0
   axisZ: 1
-  startAngle: -80
-  swingSpeed: 1
+  startAngle: -60
+  swingSpeed: 1.5
   contactDamage: 25
   damageCooldown: 1
 --- !u!54 &3757026998652082172
@@ -147,27 +146,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   highlightColor: {r: 1, g: 1, b: 1, a: 1}
   emissionIntensity: 0.6
---- !u!135 &3393846210070696112
-SphereCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5614472667803085451}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Radius: 0.7
-  m_Center: {x: 0, y: -3.87, z: 0}
 --- !u!1 &7835534080243024604
 GameObject:
   m_ObjectHideFlags: 0
@@ -196,7 +174,7 @@ Transform:
   m_GameObject: {fileID: 7835534080243024604}
   serializedVersion: 2
   m_LocalRotation: {x: -0.00000004371139, y: 1, z: -0.000000075497894, w: -0.00000004371139}
-  m_LocalPosition: {x: 0, y: -0.1329999, z: 0}
+  m_LocalPosition: {x: 0, y: 0.39, z: 0}
   m_LocalScale: {x: 0.001, y: 0.001, z: 0.001}
   m_ConstrainProportionsScale: 0
   m_Children: []

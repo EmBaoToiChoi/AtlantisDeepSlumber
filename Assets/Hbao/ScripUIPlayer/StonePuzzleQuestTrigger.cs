@@ -200,9 +200,14 @@ public class StonePuzzleQuestTrigger : NetworkBehaviour, IQuestTrigger
 
                 // Tính toán số lượng nút sàn đang được kích hoạt
                 int pressedCount = 0;
-                int totalCount = 0;
+                int totalCount = 2;
 
-                if (puzzleManager.requiredPlates != null)
+                if (puzzleManager == null)
+                {
+                    puzzleManager = FindAnyObjectByType<PressurePlatePuzzleManager>();
+                }
+
+                if (puzzleManager != null && puzzleManager.requiredPlates != null && puzzleManager.requiredPlates.Length > 0)
                 {
                     totalCount = puzzleManager.requiredPlates.Length;
                     foreach (var plate in puzzleManager.requiredPlates)

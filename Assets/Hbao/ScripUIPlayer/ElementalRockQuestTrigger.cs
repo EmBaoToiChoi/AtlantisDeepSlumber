@@ -24,7 +24,7 @@ public class ElementalRockQuestTrigger : NetworkBehaviour, IQuestTrigger
     public ElementalRockPuzzle targetRock;
 
     [Tooltip("Số bước/nguyên tố cần kích hoạt của câu đố đá")]
-    public int totalSteps = 4;
+    public int totalSteps = 2;
 
     [Header("Quest UI Settings")]
     [Tooltip("Tiêu đề nhiệm vụ hiển thị trên UI (Ví dụ: NGUYÊN TỐ)")]
@@ -77,6 +77,7 @@ public class ElementalRockQuestTrigger : NetworkBehaviour, IQuestTrigger
 
     private void Start()
     {
+        totalSteps = 2;
         if (targetRock == null)
         {
             targetRock = FindAnyObjectByType<ElementalRockPuzzle>();

@@ -595,6 +595,55 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         }
     }
 
+    private System.Collections.IEnumerator FallbackDeathSequenceCoroutine()
+    {
+        yield return new WaitForSeconds(1.2f);
+        if ((localHealth <= 0f || CurrentHealth <= 0f) && !isDeathAnimFinished)
+        {
+            Debug.Log($"[ArthurPlayer] Kích hoạt quy trình chớp mắt dự phòng cho {gameObject.name}");
+            OnDeathAnimationEnd();
+        }
+    }
+
+    private void PlayDeathAnimationSafely(float fadeTime)
+    {
+        if (anim == null) return;
+
+        if (anim.layerCount > 1)
+        {
+            anim.SetLayerWeight(1, 0f);
+        }
+
+        try { anim.ResetTrigger("GetHit"); } catch {}
+        try { anim.ResetTrigger("GeiHit2"); } catch {}
+        try { anim.ResetTrigger("AnhitCoVuKhi"); } catch {}
+        try { anim.ResetTrigger("DoKhienDinhSatThuong"); } catch {}
+
+        try { anim.SetTrigger("Death"); } catch {}
+        try { anim.SetTrigger("die"); } catch {}
+        try { anim.SetTrigger("DeathTrigger"); } catch {}
+
+        string[] candidateStates = { "Death", "death", "Die", "Dead", "die" };
+        bool crossFaded = false;
+        foreach (var state in candidateStates)
+        {
+            int hash = Animator.StringToHash(state);
+            if (anim.HasState(0, hash))
+            {
+                anim.CrossFadeInFixedTime(state, fadeTime, 0, 0f);
+                crossFaded = true;
+                break;
+            }
+        }
+
+        if (!crossFaded)
+        {
+            try { anim.CrossFadeInFixedTime("Death", fadeTime, 0, 0f); } catch {}
+        }
+
+        StartCoroutine(FallbackDeathSequenceCoroutine());
+    }
+
     [ServerRpc]
     private void NotifyDeathAnimFinishedServerRpc()
     {
@@ -4604,6 +4653,14 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
             if (!string.IsNullOrEmpty(drawRightTrigger)) anim.ResetTrigger(drawRightTrigger);
             if (!string.IsNullOrEmpty(sheatheLeftTrigger)) anim.ResetTrigger(sheatheLeftTrigger);
             if (!string.IsNullOrEmpty(sheatheRightTrigger)) anim.ResetTrigger(sheatheRightTrigger);
+        }
+
+        if (animName == "Death")
+        {
+            PlayDeathAnimationSafely(fadeTime);
+            currentAnimState = "Death";
+            lastTriggeredAnimName = "Death";
+            return;
         }
 
         anim.SetTrigger(animName);

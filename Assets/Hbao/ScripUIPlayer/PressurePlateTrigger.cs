@@ -250,9 +250,20 @@ public class PressurePlateTrigger : NetworkBehaviour
             overlappingColliders.Add(other);
             Debug.Log($"[PressurePlateTrigger] Thêm vào OnTriggerEnter: {other.gameObject.name}, số lượng hiện tại: {overlappingColliders.Count}");
         }
-        else
+    }
+
+    private void OnTriggerStay(Collider other)
+    {
+        if (other == null) return;
+        if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening && !IsServer) return;
+
+        if (IsValidObject(other.gameObject))
         {
-            Debug.Log($"[PressurePlateTrigger] Vật thể {other.gameObject.name} không hợp lệ (Không phải Player hoặc Stone).");
+            if (!overlappingColliders.Contains(other))
+            {
+                overlappingColliders.Add(other);
+                Debug.Log($"[PressurePlateTrigger] Thêm vào OnTriggerStay: {other.gameObject.name}, số lượng hiện tại: {overlappingColliders.Count}");
+            }
         }
     }
 
@@ -279,10 +290,6 @@ public class PressurePlateTrigger : NetworkBehaviour
         {
             overlappingColliders.Add(collision.collider);
             Debug.Log($"[PressurePlateTrigger] Thêm vào OnCollisionEnter: {collision.gameObject.name}, số lượng hiện tại: {overlappingColliders.Count}");
-        }
-        else
-        {
-            Debug.Log($"[PressurePlateTrigger] Vật thể {collision.gameObject.name} không hợp lệ (Không phải Player hoặc Stone).");
         }
     }
 
@@ -313,13 +320,16 @@ public class PressurePlateTrigger : NetworkBehaviour
         if (go.GetComponent<PushableStone>() != null || 
             go.GetComponentInParent<PushableStone>() != null ||
             go.GetComponentInChildren<PushableStone>() != null ||
-            go.transform.root.GetComponentInChildren<PushableStone>() != null)
+            go.transform.root.GetComponentInChildren<PushableStone>() != null ||
+            go.transform.root.GetComponent<PushableStone>() != null)
         {
             return true;
         }
 
         string nameLower = go.name.ToLower();
-        if (nameLower.Contains("stone") || nameLower.Contains("da") || nameLower.Contains("rock") || nameLower.Contains("brick"))
+        string rootNameLower = go.transform.root.name.ToLower();
+        if (nameLower.Contains("stone") || nameLower.Contains("da") || nameLower.Contains("rock") || nameLower.Contains("brick") ||
+            rootNameLower.Contains("stone") || rootNameLower.Contains("da") || rootNameLower.Contains("rock") || rootNameLower.Contains("brick"))
         {
             return true;
         }
@@ -330,10 +340,16 @@ public class PressurePlateTrigger : NetworkBehaviour
     private bool IsPlayer(GameObject go)
     {
         if (go == null) return false;
-        if (go.GetComponentInParent<IPlayerHUDTarget>() != null || go.GetComponent<IPlayerHUDTarget>() != null) return true;
+        if (go.CompareTag("Player")) return true;
+        if (go.GetComponent<IPlayerHUDTarget>() != null || go.GetComponentInParent<IPlayerHUDTarget>() != null || go.GetComponentInChildren<IPlayerHUDTarget>() != null) return true;
+        if (go.transform.root.GetComponent<IPlayerHUDTarget>() != null || go.transform.root.GetComponentInChildren<IPlayerHUDTarget>() != null) return true;
+        if (go.layer == LayerMask.NameToLayer("Player") || go.transform.root.gameObject.layer == LayerMask.NameToLayer("Player")) return true;
         
         string nameLower = go.name.ToLower();
-        if (nameLower.Contains("player") || go.CompareTag("Player") || nameLower.Contains("leo") || nameLower.Contains("elena") || nameLower.Contains("maya") || nameLower.Contains("arthur"))
+        string rootNameLower = go.transform.root.name.ToLower();
+        if (nameLower.Contains("player") || rootNameLower.Contains("player") || 
+            rootNameLower.Contains("leo") || rootNameLower.Contains("elena") || 
+            rootNameLower.Contains("maya") || rootNameLower.Contains("arthur"))
         {
             return true;
         }

@@ -3411,6 +3411,53 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         }
     }
 
+    private System.Collections.IEnumerator FallbackDeathSequenceCoroutine()
+    {
+        yield return new WaitForSeconds(1.2f);
+        if ((localHealth <= 0f || CurrentHealth <= 0f) && !isDeathAnimFinished)
+        {
+            Debug.Log($"[LeoPlayer] Kích hoạt quy trình chớp mắt dự phòng cho {gameObject.name}");
+            OnDeathAnimationEnd();
+        }
+    }
+
+    private void PlayDeathAnimationSafely(float fadeTime)
+    {
+        if (anim == null) return;
+
+        if (anim.layerCount > 1)
+        {
+            anim.SetLayerWeight(1, 0f);
+        }
+
+        try { anim.ResetTrigger("GetHit"); } catch {}
+        try { anim.ResetTrigger("GeiHit2"); } catch {}
+
+        try { anim.SetTrigger("Death"); } catch {}
+        try { anim.SetTrigger("die"); } catch {}
+        try { anim.SetTrigger("DeathTrigger"); } catch {}
+
+        string[] candidateStates = { "Death", "death", "Die", "Dead", "die" };
+        bool crossFaded = false;
+        foreach (var state in candidateStates)
+        {
+            int hash = Animator.StringToHash(state);
+            if (anim.HasState(0, hash))
+            {
+                anim.CrossFadeInFixedTime(state, fadeTime, 0, 0f);
+                crossFaded = true;
+                break;
+            }
+        }
+
+        if (!crossFaded)
+        {
+            try { anim.CrossFadeInFixedTime("Death", fadeTime, 0, 0f); } catch {}
+        }
+
+        StartCoroutine(FallbackDeathSequenceCoroutine());
+    }
+
     [ServerRpc]
     private void NotifyDeathAnimFinishedServerRpc()
     {
@@ -7846,7 +7893,14 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         }
         else
         {
-            anim.SetTrigger(translatedName);
+            if (translatedName == "Death")
+            {
+                PlayDeathAnimationSafely(fadeTime);
+            }
+            else
+            {
+                anim.SetTrigger(translatedName);
+            }
         }
         bool isMovingAttack = IsAttackAnimationName(translatedName) && !isRootedAttack;
         if (!isMovingAttack)

@@ -557,6 +557,52 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
         }
     }
 
+    private System.Collections.IEnumerator FallbackDeathSequenceCoroutine()
+    {
+        yield return new WaitForSeconds(1.2f);
+        if ((localHealth <= 0f || CurrentHealth <= 0f) && !isDeathAnimFinished)
+        {
+            Debug.Log($"[MayaPlayer] Kích hoạt quy trình chớp mắt dự phòng cho {gameObject.name}");
+            OnDeathAnimationEnd();
+        }
+    }
+
+    private void PlayDeathAnimationSafely(float fadeTime)
+    {
+        if (anim == null) return;
+
+        if (anim.layerCount > 1)
+        {
+            anim.SetLayerWeight(1, 0f);
+        }
+
+        SafeResetTrigger("GetHit");
+        SafeResetTrigger("GeiHit2");
+        SafeSetTrigger("Death");
+        SafeSetTrigger("die");
+        SafeSetTrigger("DeathTrigger");
+
+        string[] candidateStates = { "Death", "death", "Die", "Dead", "die" };
+        bool crossFaded = false;
+        foreach (var state in candidateStates)
+        {
+            int hash = Animator.StringToHash(state);
+            if (anim.HasState(0, hash))
+            {
+                anim.CrossFadeInFixedTime(state, fadeTime, 0, 0f);
+                crossFaded = true;
+                break;
+            }
+        }
+
+        if (!crossFaded)
+        {
+            try { anim.CrossFadeInFixedTime("Death", fadeTime, 0, 0f); } catch {}
+        }
+
+        StartCoroutine(FallbackDeathSequenceCoroutine());
+    }
+
     [ServerRpc]
     private void NotifyDeathAnimFinishedServerRpc()
     {
@@ -4070,11 +4116,18 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
         }
         else
         {
-            if (anim.layerCount > 1 && (animName == drawWeaponTrigger || animName == sheathWeaponTrigger || animName == "Shooting"))
+            if (animName == "Death")
             {
-                anim.SetLayerWeight(1, 1f);
+                PlayDeathAnimationSafely(fadeTime);
             }
-            SafeSetTrigger(animName);
+            else
+            {
+                if (anim.layerCount > 1 && (animName == drawWeaponTrigger || animName == sheathWeaponTrigger || animName == "Shooting"))
+                {
+                    anim.SetLayerWeight(1, 1f);
+                }
+                SafeSetTrigger(animName);
+            }
         }
 
         // Chỉ cập nhật currentAnimState cho các hoạt ảnh di chuyển hoặc hoạt ảnh hành động toàn thân (không phải đòn đánh di chuyển)
