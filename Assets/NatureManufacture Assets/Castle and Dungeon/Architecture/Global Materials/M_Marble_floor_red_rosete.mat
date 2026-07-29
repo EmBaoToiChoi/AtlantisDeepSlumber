@@ -549,16 +549,16 @@ Material:
     - _Base2SmoothnessRemapMin: 0
     - _Base2TriplanarThreshold: 5
     - _Base2UsePlanarUV: 1
-    - _BaseAORemapMax: 0.927
-    - _BaseAORemapMin: 0.543
+    - _BaseAORemapMax: 0.372
+    - _BaseAORemapMin: 0.405
     - _BaseEmissionMaskIntensivity: 67.6
     - _BaseEmissionMaskIntensivity_1: 69.1
     - _BaseEmissionMaskTreshold: 59.6
     - _BaseEmissionMaskTreshold_1: 56.3
     - _BaseMetallic: 0
-    - _BaseNormalScale: 8
-    - _BaseSmoothnessRemapMax: 0.722
-    - _BaseSmoothnessRemapMin: 0.43
+    - _BaseNormalScale: 1.9
+    - _BaseSmoothnessRemapMax: 0.558
+    - _BaseSmoothnessRemapMin: 0.301
     - _BaseTriplanarThreshold: 5
     - _BaseUsePlanarUV: 0
     - _Blend: 0
@@ -571,20 +571,20 @@ Material:
     - _CastShadows: 1
     - _CoatMask: 0
     - _ConservativeDepthOffsetEnable: 0
-    - _CoverAORemapMax: 1
-    - _CoverAORemapMin: 0.57
+    - _CoverAORemapMax: 0.223
+    - _CoverAORemapMin: 0.431
     - _CoverEmissionMaskIntensivity: 80.1
     - _CoverEmissionMaskTreshold: 51.7
-    - _CoverHardness: 6.29
+    - _CoverHardness: 6.25
     - _CoverHeightMapMax: 1
     - _CoverHeightMapMin: 0
     - _CoverHeightMapOffset: 0
     - _CoverMaskPower: 10
-    - _CoverMetallic: 1
-    - _CoverNormalBlendHardness: 5.86
+    - _CoverMetallic: 0.55
+    - _CoverNormalBlendHardness: 2.74
     - _CoverNormalScale: 0
-    - _CoverSmoothnessRemapMax: 1
-    - _CoverSmoothnessRemapMin: 1
+    - _CoverSmoothnessRemapMax: 0.617
+    - _CoverSmoothnessRemapMin: 0.409
     - _CoverTessMapMax: 0.003
     - _CoverTessMapMin: -0.001
     - _CoverTessMapOffset: 0
@@ -594,7 +594,7 @@ Material:
     - _Cover_Amount_Grow_Speed: 3
     - _Cover_Max_Angle: 90
     - _Cover_Min_Height: -10000
-    - _Cover_Min_Height_Blending: 480
+    - _Cover_Min_Height_Blending: 245
     - _Cover_UV0_UV2: 1
     - _Cull: 2
     - _CullMode: 2
@@ -794,14 +794,14 @@ Material:
     - _ShapeHeightMapMin: 0.76
     - _ShapeHeightMapOffset: 0.18
     - _ShapeNormalStrenght: 1
-    - _ShapeNormalStrenght1: 0
-    - _ShapeNormalStrenght_1: 0.49
+    - _ShapeNormalStrenght1: 0.751
+    - _ShapeNormalStrenght_1: 1.301
     - _ShapeNormalStrenght_2: 1
     - _ShapeTessMapMax: 0.05
     - _ShapeTessMapMin: -0.05
     - _ShapeTessMapOffset: 0
     - _Shape_AO_Curvature_Reduction: 1
-    - _Shape_Normal_Blend_Hardness: 1.76
+    - _Shape_Normal_Blend_Hardness: 1.086
     - _Shape_UV0_UV2: 1
     - _Shape_UsePlanarUV: 0
     - _Shininess: 0.078125
@@ -900,7 +900,7 @@ Material:
     - _Use_ShapeHeightBInvertedT_Static_MaskF: 1
     - _Use_ShapeHeightBT_Static_MaskF: 1
     - _VertexColorBBlendStrenght: 55.6
-    - _VertexColorGBlendStrenght: 100
+    - _VertexColorGBlendStrenght: 34.9
     - _VertexColorMode: 0
     - _Vertex_Color_Height_Blend_Strenght: 0.17
     - _WetSmoothness: 0.364
