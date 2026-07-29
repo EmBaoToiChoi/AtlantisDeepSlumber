@@ -500,7 +500,7 @@ public class Enemy1_DapBua : NetworkBehaviour
 
         if (waitingAtWaypoint)
         {
-            // Đứng tại điểm thoáng → Idle 2-3 giây rồi mới đi tiếp
+            if (AgentReady) agent.isStopped = true;
             SetSpeedNet(0f);
             waypointWaitTimer -= Time.deltaTime;
             if (waypointWaitTimer <= 0f)
@@ -510,18 +510,26 @@ public class Enemy1_DapBua : NetworkBehaviour
         }
         else
         {
-            // Đang di chuyển đến waypoint
-            bool moving = AgentReady && agent.velocity.magnitude > 0.15f;
-            SetSpeedNet(moving ? 0.5f : 0f);
-
             if (AgentReady)
             {
-                if (!agent.pathPending && (agent.remainingDistance <= agent.stoppingDistance + 0.4f || !agent.hasPath))
+                if (agent.isStopped) agent.isStopped = false;
+
+                bool isMoving = agent.velocity.magnitude > 0.15f;
+                SetSpeedNet(isMoving ? 0.5f : 0f);
+
+                if (!agent.pathPending)
                 {
-                    agent.isStopped = true;
-                    SetSpeedNet(0f); // → Idle
-                    waitingAtWaypoint = true;
-                    waypointWaitTimer = Random.Range(2.0f, 3.0f); // Dừng 2 - 3 giây
+                    if (agent.hasPath && agent.remainingDistance <= agent.stoppingDistance + 0.4f)
+                    {
+                        agent.isStopped = true;
+                        SetSpeedNet(0f);
+                        waitingAtWaypoint = true;
+                        waypointWaitTimer = Random.Range(2.0f, 3.0f);
+                    }
+                    else if (!agent.hasPath || agent.pathStatus == NavMeshPathStatus.PathInvalid)
+                    {
+                        GoToNextWaypoint();
+                    }
                 }
             }
             else
@@ -537,11 +545,7 @@ public class Enemy1_DapBua : NetworkBehaviour
     // ══════════════════════════════════════════════════════════
     private void HandleChase()
     {
-        if (targetPlayer == null) { ReturnToPatrol(); return; }
-        IPlayerHUDTarget ps = targetPlayer.GetComponentInParent<IPlayerHUDTarget>();
-        Skeleton sk = targetPlayer.GetComponentInParent<Skeleton>();
-        bool isTargetDead = (ps != null && (ps.CurrentHealth <= 0 || ps.IsInvisible)) || (sk != null && sk.CurrentHealthValue <= 0);
-        if ((ps == null && sk == null) || isTargetDead) { targetPlayer = null; ReturnToPatrol(); return; }
+        if (targetPlayer == null || !IsPlayerAliveAndValid(targetPlayer)) { targetPlayer = null; ReturnToPatrol(); return; }
 
         // Kiểm tra khuất tường nghiêm ngặt - ngắt rượt đuổi nếu bị tường chắn
         Vector3 ep1 = eyeTransform != null ? eyeTransform.position : transform.position + Vector3.up * 1.5f;
@@ -687,6 +691,11 @@ public class Enemy1_DapBua : NetworkBehaviour
         CurrentStateValue = EnemyState.Patrol;
         waitingAtWaypoint = false;
         waypointWaitTimer = 0f;
+        if (AgentReady)
+        {
+            agent.isStopped = false;
+            agent.ResetPath();
+        }
         GoToNextWaypoint();
     }
 
@@ -752,15 +761,48 @@ public class Enemy1_DapBua : NetworkBehaviour
         return true;
     }
 
+    private System.Collections.Generic.List<Transform> GetAllAlivePlayers()
+    {
+        System.Collections.Generic.List<Transform> list = new System.Collections.Generic.List<Transform>();
+
+        if (IsNetworkActive && Unity.Netcode.NetworkManager.Singleton != null && Unity.Netcode.NetworkManager.Singleton.IsListening)
+        {
+            foreach (var kvp in Unity.Netcode.NetworkManager.Singleton.ConnectedClients)
+            {
+                var clientObj = kvp.Value.PlayerObject;
+                if (clientObj != null && clientObj.gameObject.activeInHierarchy)
+                {
+                    if (IsPlayerAliveAndValid(clientObj.transform))
+                    {
+                        list.Add(clientObj.transform);
+                    }
+                }
+            }
+        }
+
+        GameObject[] players = GameObject.FindGameObjectsWithTag("Player");
+        foreach (var p in players)
+        {
+            if (p != null && p.activeInHierarchy)
+            {
+                Transform t = p.transform;
+                if (!list.Contains(t) && IsPlayerAliveAndValid(t))
+                {
+                    list.Add(t);
+                }
+            }
+        }
+
+        return list;
+    }
+
     private void DetectPlayer()
     {
         EnemyState s = CurrentStateValue;
         if (s == EnemyState.Dead || s == EnemyState.Stagger || s == EnemyState.Attack) return;
 
         Vector3 ep = eyeTransform != null ? eyeTransform.position : transform.position + Vector3.up * 1.5f;
-
-        int num = Physics.OverlapSphereNonAlloc(transform.position, sightRange, detectionResults, playerLayer);
-        if (num == 0) num = FallbackDetect();
+        System.Collections.Generic.List<Transform> alivePlayers = GetAllAlivePlayers();
 
         bool found = false;
         Transform bestTarget = null;
@@ -779,14 +821,14 @@ public class Enemy1_DapBua : NetworkBehaviour
             }
         }
 
-        for (int i = 0; i < num; i++)
+        foreach (var pt in alivePlayers)
         {
-            if (detectionResults[i] == null) continue;
-            Transform pt = detectionResults[i].transform;
-            if (!IsPlayerAliveAndValid(pt)) continue;
+            if (pt == null || !IsPlayerAliveAndValid(pt)) continue;
 
             Vector3 center = pt.position + Vector3.up;
             float d = Vector3.Distance(ep, center);
+            if (d > sightRange) continue;
+
             Vector3 dir = (center - ep).normalized;
 
             bool inFOV = Vector3.Angle(transform.forward, dir) < fieldOfView / 2f;
@@ -830,34 +872,6 @@ public class Enemy1_DapBua : NetworkBehaviour
             AlertNearbyAllies(targetPlayer);
             if (s != EnemyState.Chase) ChangeState(EnemyState.Chase);
         }
-    }
-
-    private int FallbackDetect()
-    {
-        int c = 0;
-        GameObject[] players = GameObject.FindGameObjectsWithTag("Player");
-        foreach (var p in players)
-        {
-            if (c >= detectionResults.Length) break;
-            if (p == null || !p.activeInHierarchy) continue;
-            if (Vector3.Distance(transform.position, p.transform.position) <= sightRange)
-            {
-                Collider col = p.GetComponent<Collider>() ?? p.GetComponentInChildren<Collider>();
-                if (col != null) detectionResults[c++] = col;
-            }
-        }
-        if (c == 0 && IsNetworkActive && NetworkManager.Singleton != null)
-        {
-            foreach (var kvp in NetworkManager.Singleton.ConnectedClients)
-            {
-                if (c >= detectionResults.Length) break;
-                var po = kvp.Value.PlayerObject;
-                if (po == null || !po.gameObject.activeInHierarchy || Vector3.Distance(transform.position, po.transform.position) > sightRange) continue;
-                Collider col = po.GetComponent<Collider>() ?? po.GetComponentInChildren<Collider>();
-                if (col != null) detectionResults[c++] = col;
-            }
-        }
-        return c;
     }
 
     // ══════════════════════════════════════════════════════════
