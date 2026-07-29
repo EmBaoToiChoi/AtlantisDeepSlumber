@@ -764,7 +764,7 @@ public class Enemy4_Bongtoi : NetworkBehaviour
         if (auth && !hasDealtDamage)
         {
             hasDealtDamage = true;
-            DealConeDamage(15f, attackRange + 0.5f, 80f, 2.0f);
+            DealConeDamage(6f, attackRange + 0.5f, 80f, 2.0f);
         }
     }
     public void DisableClawHitbox()  { hasDealtDamage = false; }
@@ -774,7 +774,7 @@ public class Enemy4_Bongtoi : NetworkBehaviour
         if (auth && !hasDealtDamage)
         {
             hasDealtDamage = true;
-            DealConeDamage(20f, attackRange + 1f, 90f, 2.5f);
+            DealConeDamage(8f, attackRange + 1f, 90f, 2.5f);
         }
     }
     public void DisableWeaponHitbox(){ hasDealtDamage = false; }
