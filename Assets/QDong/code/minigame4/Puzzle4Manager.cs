@@ -88,27 +88,26 @@ public class Puzzle4Manager : NetworkBehaviour
 
         if (isActive)
         {
-            // KHÓA TRIỆT ĐỂ: Tắt enableCameraFollow trên TẤT CẢ nhân vật
-            // Nếu không làm, mỗi frame nhân vật tự tìm lại Camera.main và di chuyển nó → camera giật
+            // Lấy sCam một lần để dùng cho owner
+            Camera sCam = sharedCamera != null ? sharedCamera.GetComponent<Camera>() : null;
+            if (sCam != null) sCam.enabled = true;
+
             foreach (var mono in allMonos)
             {
-                if (mono is IPlayerHUDTarget)
+                if (mono is IPlayerHUDTarget player)
                 {
+                    // Tắt camera follow cho TẤT CẢ nhân vật (tránh giật camera)
                     var enableCamField = mono.GetType().GetField("enableCameraFollow", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
                     if (enableCamField != null) enableCamField.SetValue(mono, false);
-                    
-                    // Gán targetCamera thành sharedCamera để người chơi di chuyển đúng hướng thay vì bị liệt phím W S
-                    var targetCamField = mono.GetType().GetField("targetCamera", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-                    if (targetCamField != null)
+
+                    // Chỉ gán targetCamera = sharedCamera cho NHÂN VẬT CỦA CLIENT NÀY (IsOwner)
+                    // Không gán cho nhân vật của người chơi khác (network copies) vì sẽ bị sai hướng
+                    if (player.IsOwner)
                     {
-                        if (sharedCamera != null)
+                        var targetCamField = mono.GetType().GetField("targetCamera", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                        if (targetCamField != null)
                         {
-                            Camera sCam = sharedCamera.GetComponent<Camera>();
                             targetCamField.SetValue(mono, sCam);
-                        }
-                        else
-                        {
-                            targetCamField.SetValue(mono, null);
                         }
                     }
                 }
@@ -126,17 +125,38 @@ public class Puzzle4Manager : NetworkBehaviour
         }
         else
         {
-            // Bật lại MainCamera trong scene (tìm kể cả object đang tắt)
+            // Bật lại MainCamera của Local Player (tránh bật nhầm Camera của người chơi khác trên Client)
             Camera mainCam = null;
-            Camera[] allCams = FindObjectsByType<Camera>(FindObjectsInactive.Include, FindObjectsSortMode.None);
-            foreach (Camera cam in allCams)
+            
+            // Ưu tiên 1: Tìm Camera.main nằm trong người của Local Player
+            if (localPlayerScript != null)
             {
-                if (sharedCamera != null && cam.gameObject == sharedCamera) continue;
-                
-                if (cam.CompareTag("MainCamera"))
+                Camera[] localCams = localPlayerScript.GetComponentsInChildren<Camera>(true);
+                foreach (Camera c in localCams)
                 {
-                    cam.gameObject.SetActive(true);
-                    mainCam = cam;
+                    if (c.CompareTag("MainCamera"))
+                    {
+                        c.gameObject.SetActive(true);
+                        mainCam = c;
+                        break;
+                    }
+                }
+            }
+            
+            // Ưu tiên 2: Nếu scene chỉ dùng 1 Camera chung, tìm cái đầu tiên và bật nó lên
+            if (mainCam == null)
+            {
+                Camera[] allCams = FindObjectsByType<Camera>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+                foreach (Camera cam in allCams)
+                {
+                    if (sharedCamera != null && cam.gameObject == sharedCamera) continue;
+                    
+                    if (cam.CompareTag("MainCamera"))
+                    {
+                        cam.gameObject.SetActive(true);
+                        mainCam = cam;
+                        break; // Quan trọng: Không bật bừa bãi tất cả Camera!
+                    }
                 }
             }
             
