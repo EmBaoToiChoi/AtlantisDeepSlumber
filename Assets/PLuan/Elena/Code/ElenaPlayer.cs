@@ -500,6 +500,8 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     private bool isDeathAnimFinished = false;
     public bool IsDeathAnimationFinished => isDeathAnimFinished;
+    protected float respawnImmunityTimer = 0f;
+
     public void ResetDeathState()
     {
         StopAllCoroutines();
@@ -509,6 +511,7 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
         lastTriggeredAnimName = "Idle";
         comboStep = 0;
         isRootedAttack = false;
+        respawnImmunityTimer = 2.0f; // 2 giây bất tử khi vừa hồi sinh ở Checkpoint
 
         if (anim == null)
         {
@@ -531,9 +534,10 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
             if (anim.layerCount > 1)
             {
                 anim.SetLayerWeight(1, 0f);
-                anim.Play("New State", 1, 0f);
+                try { anim.Play("New State", 1, 0f); } catch {}
             }
 
+            try { anim.Rebind(); } catch {}
             anim.Play("Idle", 0, 0f);
             anim.Update(0f);
         }
@@ -1005,6 +1009,12 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     protected virtual void Awake()
     {
+        maxHealth = 100f;
+        localHealth = 100f;
+        currentAnimState = "Idle";
+        lastTriggeredAnimName = "Idle";
+        isDeathAnimFinished = false;
+
         // Ép tên Trigger luôn đúng với Animator tiếng Việt của Elena, bỏ qua giá trị cũ bị lưu ở Inspector
         drawWeaponTrigger = "LayCung";
         sheathWeaponTrigger = "CatCung";
@@ -1132,6 +1142,10 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
     public override void OnNetworkSpawn()
     {
         isStandaloneMode = false;
+        localHealth = currentHealth.Value > 0f ? currentHealth.Value : maxHealth;
+        currentAnimState = "Idle";
+        lastTriggeredAnimName = "Idle";
+        isDeathAnimFinished = false;
 
         var rb = GetComponent<Rigidbody>();
         if (rb != null)
@@ -1789,6 +1803,11 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     void Update()
     {
+        if (respawnImmunityTimer > 0f)
+        {
+            respawnImmunityTimer -= Time.deltaTime;
+        }
+
         if (shoulderSeagullVisual != null)
         {
             shoulderSeagullVisual.SetActive(IsSeagullOnShoulder);
@@ -3190,8 +3209,8 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     public void TakeDamage(float damage)
     {
-        // Nếu đã chết, không nhận thêm sát thương và không ngắt hoạt ảnh chết
-        if (CurrentHealth <= 0) return;
+        // Nếu vừa hồi sinh ở Checkpoint hoặc đã chết, không nhận thêm sát thương
+        if (respawnImmunityTimer > 0f || CurrentHealth <= 0 || localHealth <= 0f) return;
 
         // Né chiêu (miễn nhiễm sát thương khi đang lộn vòng)
         if (isStandaloneMode)

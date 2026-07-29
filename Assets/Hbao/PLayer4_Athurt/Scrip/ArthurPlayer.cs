@@ -540,6 +540,8 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     private bool isDeathAnimFinished = false;
     public bool IsDeathAnimationFinished => isDeathAnimFinished;
+    protected float respawnImmunityTimer = 0f;
+
     public void ResetDeathState()
     {
         StopAllCoroutines();
@@ -548,6 +550,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         currentAnimState = "Idle";
         lastTriggeredAnimName = "Idle";
         enabled = true;
+        respawnImmunityTimer = 2.0f; // 2 giây bất tử khi vừa hồi sinh ở Checkpoint
 
         if (anim != null && anim.isActiveAndEnabled && anim.runtimeAnimatorController != null)
         {
@@ -561,6 +564,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
                 try { anim.Play("New State", 1, 0f); } catch {}
             }
 
+            try { anim.Rebind(); } catch {}
             anim.Play("Idle", 0, 0f);
             anim.Update(0f);
         }
@@ -1108,6 +1112,10 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
     {
         characterClassIndex = 3;
         maxHealth = 150f;
+        localHealth = 150f;
+        currentAnimState = "Idle";
+        lastTriggeredAnimName = "Idle";
+        isDeathAnimFinished = false;
         moveSpeed = 4f;
         runSpeedMultiplier = 2.0f;
         damageAmount = 15f;
@@ -1227,6 +1235,10 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
     public override void OnNetworkSpawn()
     {
         isStandaloneMode = false;
+        localHealth = currentHealth.Value > 0f ? currentHealth.Value : maxHealth;
+        currentAnimState = "Idle";
+        lastTriggeredAnimName = "Idle";
+        isDeathAnimFinished = false;
 
         var rbComp = GetComponent<Rigidbody>();
         if (rbComp != null)
@@ -1970,6 +1982,11 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
                     EndQSkillServerRpc();
                 }
             }
+        }
+
+        if (respawnImmunityTimer > 0f)
+        {
+            respawnImmunityTimer -= Time.deltaTime;
         }
 
         if (CurrentHealth <= 0)
@@ -3828,8 +3845,8 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     public void TakeDamage(float damage)
     {
-        // Nếu đã chết, không nhận thêm sát thương và không ngắt hoạt ảnh chết
-        if (CurrentHealth <= 0) return;
+        // Nếu vừa hồi sinh ở Checkpoint hoặc đã chết, không nhận thêm sát thương
+        if (respawnImmunityTimer > 0f || CurrentHealth <= 0 || localHealth <= 0f) return;
 
         // Kiểm tra trạng thái bất tử (Skill E)
         bool invincible = isStandaloneMode ? isESkillActive : isESkillActiveNet.Value;
