@@ -241,27 +241,66 @@ public class PlayerCheckpointManager : NetworkBehaviour
         }
     }
 
+    private Vector3 GetCalculatedSpawnPosition(IPlayerHUDTarget player, ulong clientId)
+    {
+        // 1. Kiểm tra Checkpoint cá nhân/đội đã đăng ký
+        int targetCpIndex = -1;
+        if (player != null && player.isStandaloneMode)
+        {
+            targetCpIndex = localPlayerCheckpointIndex;
+        }
+        else if (playerCheckpointIndices.ContainsKey(clientId))
+        {
+            targetCpIndex = playerCheckpointIndices[clientId];
+        }
+
+        if (targetCpIndex >= 0)
+        {
+            CheckpointZone zone = checkpoints.Find(c => c.checkpointIndex == targetCpIndex);
+            if (zone != null) return zone.GetSpawnPosition();
+        }
+
+        // 2. Dự phòng: Checkpoint toàn cục mới nhất đã được ai đó kích hoạt
+        if (globalLatestCheckpointIndex >= 0)
+        {
+            CheckpointZone zone = checkpoints.Find(c => c.checkpointIndex == globalLatestCheckpointIndex);
+            if (zone != null) return zone.GetSpawnPosition();
+        }
+
+        // 3. Dự phòng: Checkpoint đầu tiên trong danh sách checkpoints của Scene (Index 0)
+        if (checkpoints != null && checkpoints.Count > 0 && checkpoints[0] != null)
+        {
+            return checkpoints[0].GetSpawnPosition();
+        }
+
+        // 4. Dự phòng: defaultSpawnPoint
+        if (defaultSpawnPoint != null)
+        {
+            return defaultSpawnPoint.position;
+        }
+
+        // 5. Dự phòng: Vị trí ban đầu đã lưu
+        if (player != null && !player.isStandaloneMode && playerInitialPositions.ContainsKey(clientId))
+        {
+            return playerInitialPositions[clientId];
+        }
+        if (player != null && player.isStandaloneMode && hasStoredLocalInitialPos && localPlayerInitialPosition != Vector3.zero)
+        {
+            return localPlayerInitialPosition;
+        }
+
+        // 6. Cuối cùng mới lấy transform.position
+        return player != null ? player.transform.position : Vector3.zero;
+    }
+
     private IEnumerator RespawnPlayerStandaloneCoroutine(IPlayerHUDTarget player)
     {
         localPlayerRespawning = true;
         Debug.LogWarning($"[Standalone Respawn] Người chơi '{player.DisplayName}' đã chết! Thực hiện hồi sinh ngay...");
         yield return null;
 
-        // Xác định vị trí hồi sinh
-        Vector3 spawnPos = localPlayerInitialPosition;
-        if (defaultSpawnPoint != null)
-        {
-            spawnPos = defaultSpawnPoint.position;
-        }
-
-        if (localPlayerCheckpointIndex >= 0)
-        {
-            CheckpointZone activeZone = checkpoints.Find(c => c.checkpointIndex == localPlayerCheckpointIndex);
-            if (activeZone != null)
-            {
-                spawnPos = activeZone.GetSpawnPosition();
-            }
-        }
+        // Xác định vị trí hồi sinh Checkpoint chuẩn xác
+        Vector3 spawnPos = GetCalculatedSpawnPosition(player, 0);
 
         // Dịch chuyển người chơi và triệt tiêu vận tốc vật lý
         player.transform.position = spawnPos;
@@ -367,22 +406,8 @@ public class PlayerCheckpointManager : NetworkBehaviour
             yield break;
         }
 
-        // Xác định vị trí hồi sinh
-        Vector3 spawnPos = playerInitialPositions.ContainsKey(clientId) ? playerInitialPositions[clientId] : player.transform.position;
-        if (defaultSpawnPoint != null)
-        {
-            spawnPos = defaultSpawnPoint.position;
-        }
-
-        if (playerCheckpointIndices.ContainsKey(clientId))
-        {
-            int cpIdx = playerCheckpointIndices[clientId];
-            CheckpointZone activeZone = checkpoints.Find(c => c.checkpointIndex == cpIdx);
-            if (activeZone != null)
-            {
-                spawnPos = activeZone.GetSpawnPosition();
-            }
-        }
+        // Xác định vị trí hồi sinh Checkpoint chuẩn xác
+        Vector3 spawnPos = GetCalculatedSpawnPosition(player, clientId);
 
         // Dịch chuyển trên Server
         player.transform.position = spawnPos;
