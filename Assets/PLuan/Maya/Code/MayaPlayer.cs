@@ -496,12 +496,39 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
     public bool IsDeathAnimationFinished => isDeathAnimFinished;
     public void ResetDeathState()
     {
+        StopAllCoroutines();
+        PlayerDeathEffectManager.Instance.ResetDeathEffect();
+        localHealth = maxHealth;
         isDeathAnimFinished = false;
+        currentAnimState = "Idle";
+        lastTriggeredAnimName = "Idle";
         enabled = true;
+
+        if (anim != null && anim.isActiveAndEnabled && anim.runtimeAnimatorController != null)
+        {
+            SafeResetTrigger("Death");
+            SafeResetTrigger("GetHit");
+            SafeResetTrigger("GeiHit2");
+
+            if (anim.layerCount > 1)
+            {
+                anim.SetLayerWeight(1, 0f);
+                anim.Play("New State", 1, 0f);
+            }
+
+            anim.Play("Idle", 0, 0f);
+            anim.Update(0f);
+        }
+        var netAnim = GetComponent<Unity.Netcode.Components.NetworkAnimator>();
+        if (netAnim != null)
+        {
+            try { netAnim.ResetTrigger("Death"); } catch {}
+        }
     }
 
     public void OnDeathAnimationEnd()
     {
+        if (localHealth > 0f || CurrentHealth > 0f) return;
         if (IsOwner || isStandaloneMode)
         {
             StartCoroutine(DeathEyelidsSequenceCoroutine());
@@ -510,11 +537,15 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     private System.Collections.IEnumerator DeathEyelidsSequenceCoroutine()
     {
-        if (CurrentHealth > 0f) yield break;
+        if (localHealth > 0f || CurrentHealth > 0f)
+        {
+            PlayerDeathEffectManager.Instance.ResetDeathEffect();
+            yield break;
+        }
         float duration = 1.5f;
         PlayerDeathEffectManager.Instance.PlayDeathEffect(duration);
         yield return new WaitForSeconds(duration);
-        if (CurrentHealth > 0f)
+        if (localHealth > 0f || CurrentHealth > 0f)
         {
             PlayerDeathEffectManager.Instance.ResetDeathEffect();
             yield break;
@@ -3908,6 +3939,11 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     private void PlayAnimationLocal(string animName, float fadeTime, bool isRooted)
     {
+        if (animName == "Death" && (localHealth > 0f || CurrentHealth > 0f))
+        {
+            return;
+        }
+
         // Play action sound effects
         string animLower = animName.ToLower();
         bool isSlash = animLower.Contains("attack") || animLower.Contains("slash") || animLower.Contains("chem") || animLower.Contains("chatriu") || animName == "Shooting";
