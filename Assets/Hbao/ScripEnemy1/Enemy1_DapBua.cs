@@ -194,6 +194,15 @@ public class Enemy1_DapBua : NetworkBehaviour
             }
         }
 
+        if (playerLayer.value == 0)
+        {
+            playerLayer = LayerMask.GetMask("Player");
+            if (playerLayer.value == 0)
+            {
+                playerLayer = ~0;
+            }
+        }
+
         var na = GetComponent<Unity.Netcode.Components.NetworkAnimator>();
         if (na != null)
         {
@@ -233,15 +242,11 @@ public class Enemy1_DapBua : NetworkBehaviour
         var nt = GetComponent<Unity.Netcode.Components.NetworkTransform>();
         if (nt != null) { nt.PositionThreshold = 0.001f; nt.RotAngleThreshold = 0.01f; nt.ScaleThreshold = 0.01f; }
 
-        // ── Client-side: nhận sync animation từ Server ──
-        // Base Layer: Speed float (Idle/Walk/Run)
         netSpeed.OnValueChanged   += (_, v) => ApplySpeedAnim(v);
-        // Anhit Layer: trigger synced via hitCounter
         hitCounter.OnValueChanged += (_, _) => { if (anim != null) anim.SetTrigger(hitTrigger); };
         currentHealth.OnValueChanged += OnHealthNetChanged;
         currentState.OnValueChanged  += OnStateChanged;
 
-        // Khởi tạo animation theo giá trị hiện tại
         ApplySpeedAnim(netSpeed.Value);
 
         if (IsServer)
@@ -255,9 +260,7 @@ public class Enemy1_DapBua : NetworkBehaviour
         }
         else
         {
-            // Client KHÔNG điều khiển NavMeshAgent - NetworkTransform từ Server
             if (agent != null) agent.enabled = false;
-            // Áp dụng trạng thái ban đầu khi client spawn muộn
             OnStateChanged(EnemyState.Patrol, currentState.Value);
         }
     }
@@ -274,10 +277,7 @@ public class Enemy1_DapBua : NetworkBehaviour
     {
         if (newState == EnemyState.Dead)
         {
-            if (!IsServer)
-            {
-                ApplyLocalDeathEffects();
-            }
+            ApplyLocalDeathEffects();
         }
     }
 
@@ -316,7 +316,6 @@ public class Enemy1_DapBua : NetworkBehaviour
     private void Update()
     {
         if (isBossProxy || isMiniBossProxy || isFinalBossProxy) return;
-        // Enrage scale (mọi client)
         if (IsEnragedValue && !hasRoared)
         {
             transform.localScale = Vector3.Lerp(transform.localScale, Vector3.one * 1.15f, Time.deltaTime * 3f);
@@ -743,6 +742,16 @@ public class Enemy1_DapBua : NetworkBehaviour
     // ══════════════════════════════════════════════════════════
     //  DETECTION
     // ══════════════════════════════════════════════════════════
+    private bool IsPlayerAliveAndValid(Transform pt)
+    {
+        if (pt == null || !pt.gameObject.activeInHierarchy) return false;
+        IPlayerHUDTarget ps = pt.GetComponentInParent<IPlayerHUDTarget>();
+        if (ps != null && (ps.CurrentHealth <= 0 || ps.IsInvisible)) return false;
+        Skeleton sk = pt.GetComponentInParent<Skeleton>();
+        if (sk != null && sk.CurrentHealthValue <= 0) return false;
+        return true;
+    }
+
     private void DetectPlayer()
     {
         EnemyState s = CurrentStateValue;
@@ -750,7 +759,6 @@ public class Enemy1_DapBua : NetworkBehaviour
 
         Vector3 ep = eyeTransform != null ? eyeTransform.position : transform.position + Vector3.up * 1.5f;
 
-        // KHÓA MỤC TIÊU ƯU TIÊN: Nếu đang có mục tiêu và mục tiêu đó vẫn hợp lệ thì tiếp tục dí mục tiêu đó
         int num = Physics.OverlapSphereNonAlloc(transform.position, sightRange, detectionResults, playerLayer);
         if (num == 0) num = FallbackDetect();
 
@@ -758,14 +766,10 @@ public class Enemy1_DapBua : NetworkBehaviour
         Transform bestTarget = null;
         float minD = float.MaxValue;
 
-        // Current target distance (if valid)
         float currentTargetDist = float.MaxValue;
         if (targetPlayer != null)
         {
-            IPlayerHUDTarget ps = targetPlayer.GetComponentInParent<IPlayerHUDTarget>();
-            Skeleton sk = targetPlayer.GetComponentInParent<Skeleton>();
-            bool isDead = (ps != null && (ps.CurrentHealth <= 0 || ps.IsInvisible)) || (sk != null && sk.CurrentHealthValue <= 0);
-            if ((ps != null || sk != null) && !isDead)
+            if (IsPlayerAliveAndValid(targetPlayer))
             {
                 currentTargetDist = Vector3.Distance(transform.position, targetPlayer.position);
             }
@@ -779,18 +783,14 @@ public class Enemy1_DapBua : NetworkBehaviour
         {
             if (detectionResults[i] == null) continue;
             Transform pt = detectionResults[i].transform;
-            IPlayerHUDTarget ps = pt.GetComponentInParent<IPlayerHUDTarget>();
-            Skeleton sk = pt.GetComponentInParent<Skeleton>();
-            bool isTargetDead = (ps != null && (ps.CurrentHealth <= 0 || ps.IsInvisible)) || (sk != null && sk.CurrentHealthValue <= 0);
-            if ((ps == null && sk == null) || isTargetDead) continue;
+            if (!IsPlayerAliveAndValid(pt)) continue;
 
             Vector3 center = pt.position + Vector3.up;
             float d = Vector3.Distance(ep, center);
             Vector3 dir = (center - ep).normalized;
 
-            // Vision Cone OR Proximity Detection Radius (4.5m radius for walking past)
             bool inFOV = Vector3.Angle(transform.forward, dir) < fieldOfView / 2f;
-            bool isProximity = d <= 4.5f;
+            bool isProximity = d <= 5.5f;
 
             if ((inFOV || isProximity || pt == targetPlayer) && !Physics.Raycast(ep, dir, d, obstacleLayer, QueryTriggerInteraction.Ignore))
             {
@@ -805,9 +805,24 @@ public class Enemy1_DapBua : NetworkBehaviour
 
         if (found && bestTarget != null)
         {
-            // Dynamic Retargeting:
-            // Switch target if no target, or if bestTarget is significantly closer (> 2.5m closer) or within melee range (< 4.0m)
-            if (targetPlayer == null || (bestTarget != targetPlayer && (minD < currentTargetDist - 2.5f || minD < 4.0f)))
+            bool shouldSwitch = false;
+            if (targetPlayer == null)
+            {
+                shouldSwitch = true;
+            }
+            else if (bestTarget != targetPlayer)
+            {
+                if (minD < currentTargetDist - 1.8f || minD < 4.5f)
+                {
+                    shouldSwitch = true;
+                }
+                else if (minD <= 7.0f && (System.Math.Abs(GetHashCode()) % 2 == 0))
+                {
+                    shouldSwitch = true;
+                }
+            }
+
+            if (shouldSwitch)
             {
                 targetPlayer = bestTarget;
             }
@@ -815,20 +830,21 @@ public class Enemy1_DapBua : NetworkBehaviour
             AlertNearbyAllies(targetPlayer);
             if (s != EnemyState.Chase) ChangeState(EnemyState.Chase);
         }
-        else if (s == EnemyState.Chase)
-        {
-            ReturnToPatrol();
-        }
     }
 
     private int FallbackDetect()
     {
         int c = 0;
-        foreach (var p in GameObject.FindGameObjectsWithTag("Player"))
+        GameObject[] players = GameObject.FindGameObjectsWithTag("Player");
+        foreach (var p in players)
         {
             if (c >= detectionResults.Length) break;
+            if (p == null || !p.activeInHierarchy) continue;
             if (Vector3.Distance(transform.position, p.transform.position) <= sightRange)
-            { var col = p.GetComponent<Collider>(); if (col != null) detectionResults[c++] = col; }
+            {
+                Collider col = p.GetComponent<Collider>() ?? p.GetComponentInChildren<Collider>();
+                if (col != null) detectionResults[c++] = col;
+            }
         }
         if (c == 0 && IsNetworkActive && NetworkManager.Singleton != null)
         {
@@ -836,8 +852,9 @@ public class Enemy1_DapBua : NetworkBehaviour
             {
                 if (c >= detectionResults.Length) break;
                 var po = kvp.Value.PlayerObject;
-                if (po == null || Vector3.Distance(transform.position, po.transform.position) > sightRange) continue;
-                var col = po.GetComponent<Collider>(); if (col != null) detectionResults[c++] = col;
+                if (po == null || !po.gameObject.activeInHierarchy || Vector3.Distance(transform.position, po.transform.position) > sightRange) continue;
+                Collider col = po.GetComponent<Collider>() ?? po.GetComponentInChildren<Collider>();
+                if (col != null) detectionResults[c++] = col;
             }
         }
         return c;
