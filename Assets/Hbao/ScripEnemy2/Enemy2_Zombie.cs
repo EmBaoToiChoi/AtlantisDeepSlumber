@@ -322,7 +322,6 @@ public class Enemy2_Zombie : NetworkBehaviour
             agent.speed = patrolWalkSpeed;
             agent.SetDestination(nextPosition);
         }
-        SetSpeedNet(0.5f); // Walk
     }
 
     private void ApplyPatrolEnemySeparation()
@@ -482,7 +481,8 @@ public class Enemy2_Zombie : NetworkBehaviour
             Vector3 targetPos = GetSurroundingPosition(targetPlayer, Mathf.Max(1.4f, attackRange * 0.85f));
             agent.SetDestination(targetPos);
         }
-        SetSpeedNet(AgentReady && !agent.isStopped ? 1f : 0f);
+        bool isMoving = AgentReady && agent.velocity.magnitude > 0.2f;
+        SetSpeedNet(isMoving ? 1f : 0f);
     }
 
     public bool HasTargetPlayer => targetPlayer != null;
@@ -585,6 +585,7 @@ public class Enemy2_Zombie : NetworkBehaviour
             agent.isStopped = false;
             agent.ResetPath();
         }
+        SetSpeedNet(0f);
         GoToNextWaypoint();
     }
 
@@ -617,6 +618,12 @@ public class Enemy2_Zombie : NetworkBehaviour
     private bool IsPlayerAliveAndValid(Transform pt)
     {
         if (pt == null || !pt.gameObject.activeInHierarchy) return false;
+
+        // Lọc hoàn toàn các đối tượng UI / Canvas / HealthBar
+        if (pt.gameObject.layer == LayerMask.NameToLayer("UI")) return false;
+        string n = pt.name.ToLower();
+        if (n.Contains("ui") || n.Contains("canvas") || n.Contains("hud") || n.Contains("healthbar") || n.Contains("health_bar")) return false;
+
         IPlayerHUDTarget ps = pt.GetComponentInParent<IPlayerHUDTarget>();
         if (ps != null && (ps.CurrentHealth <= 0 || ps.IsInvisible)) return false;
         Skeleton sk = pt.GetComponentInParent<Skeleton>();
@@ -635,9 +642,10 @@ public class Enemy2_Zombie : NetworkBehaviour
                 var clientObj = kvp.Value.PlayerObject;
                 if (clientObj != null && clientObj.gameObject.activeInHierarchy)
                 {
-                    if (IsPlayerAliveAndValid(clientObj.transform))
+                    Transform t = clientObj.transform.root;
+                    if (IsPlayerAliveAndValid(t) && !list.Contains(t))
                     {
-                        list.Add(clientObj.transform);
+                        list.Add(t);
                     }
                 }
             }
@@ -648,8 +656,8 @@ public class Enemy2_Zombie : NetworkBehaviour
         {
             if (p != null && p.activeInHierarchy)
             {
-                Transform t = p.transform;
-                if (!list.Contains(t) && IsPlayerAliveAndValid(t))
+                Transform t = p.transform.root;
+                if (IsPlayerAliveAndValid(t) && !list.Contains(t))
                 {
                     list.Add(t);
                 }
