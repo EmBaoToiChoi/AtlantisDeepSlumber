@@ -272,10 +272,11 @@ public class PlayerCheckpointManager : NetworkBehaviour
         HealAndResetPlayer(player);
         Debug.Log($"[Checkpoint Debug] HealAndResetPlayer completed");
 
-        // Chờ thêm 1 frame để camera cập nhật vị trí mới theo player trước khi mở mắt
+        // Chờ 2 frame để camera và Animator cập nhật tư thế đứng Idle dưới màn hình đen
         yield return null;
+        yield return new WaitForEndOfFrame();
 
-        // Mở mắt (ResetDeathEffect)
+        // Mở mắt (ResetDeathEffect) khi nhân vật đã sẵn sàng đứng ở Checkpoint
         PlayerDeathEffectManager.Instance.ResetDeathEffect();
         Debug.Log($"[Checkpoint Debug] ResetDeathEffect called. Eyes opened.");
 
@@ -450,10 +451,7 @@ public class PlayerCheckpointManager : NetworkBehaviour
 
     private IEnumerator OpenEyesAfterFrameCoroutine()
     {
-        yield return null; // Chờ 1 frame để camera cập nhật vị trí mới theo player
-        PlayerDeathEffectManager.Instance.ResetDeathEffect();
-
-        // Reset trạng thái chết cục bộ trên client của Owner
+        // 1. Reset trạng thái chết cục bộ và chuyển Animator về Idle trước bên dưới màn hình đen
         foreach (var mb in FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None))
         {
             if (mb == null) continue;
@@ -472,6 +470,13 @@ public class PlayerCheckpointManager : NetworkBehaviour
                 }
             }
         }
+
+        // 2. Chờ 2 frame để Camera và Animator cập nhật tư thế đứng Idle dưới màn hình đen
+        yield return null;
+        yield return new WaitForEndOfFrame();
+
+        // 3. Mở mắt UI (ResetDeathEffect) khi nhân vật đã sẵn sàng đứng ở Checkpoint
+        PlayerDeathEffectManager.Instance.ResetDeathEffect();
     }
 
     #endregion

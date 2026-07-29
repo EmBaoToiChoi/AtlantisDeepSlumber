@@ -3359,7 +3359,6 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     public void ResetDeathState()
     {
         StopAllCoroutines();
-        PlayerDeathEffectManager.Instance.ResetDeathEffect();
         localHealth = maxHealth;
         isDeathAnimFinished = false;
         currentAnimState = "Idle";
@@ -7255,12 +7254,12 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             return;
         }
 
-        // Nếu đang chết, chỉ cho phép nhận các lệnh hồi sinh hoặc đưa về trạng thái rỗng/New State
-        if (currentAnimState == "Death")
+        // Nếu đang chết, từ chối tất cả các lệnh hoạt ảnh ngoại trừ "Death", "New State" hoặc "Empty"
+        if (currentAnimState == "Death" || localHealth <= 0f || CurrentHealth <= 0f)
         {
-            if (CurrentHealth <= 0)
+            if (CurrentHealth <= 0f || localHealth <= 0f)
             {
-                if (animName != "Idle" && animName != "Walk" && animName != "run" && animName != "New State" && animName != "Empty")
+                if (animName != "Death" && animName != "New State" && animName != "Empty")
                 {
                     return;
                 }
