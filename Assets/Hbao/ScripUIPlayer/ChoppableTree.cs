@@ -18,6 +18,9 @@ public class ChoppableTree : NetworkBehaviour
     [Tooltip("Prefab gốc cây custom (ví dụ aspen-stump) xuất hiện bên dưới thân cây khi cây bị chặt")]
     public GameObject treeStumpPrefab;
 
+    [Tooltip("Góc xoay bù thêm (X,Y,Z) cho Prefab gốc cây nếu 3D model bị nằm ngang (mặc định X: 0 vì Prefab đã được dựng đứng)")]
+    public Vector3 stumpRotationOffset = Vector3.zero;
+
     // Trạng thái mạng đồng bộ
     public NetworkVariable<bool> isCutDown = new NetworkVariable<bool>(
         false,
@@ -1048,10 +1051,10 @@ public class ChoppableTree : NetworkBehaviour
         // Nếu có Prefab gốc cây custom, sinh trực tiếp Prefab đó dưới vị trí thân cây
         if (treeStumpPrefab != null)
         {
-            Quaternion uprightRotation = Quaternion.Euler(0f, transform.eulerAngles.y, 0f);
-            spawnedStump = Instantiate(treeStumpPrefab, spawnPos, uprightRotation);
+            Quaternion finalRotation = Quaternion.Euler(0f, transform.eulerAngles.y, 0f) * Quaternion.Euler(stumpRotationOffset);
+            spawnedStump = Instantiate(treeStumpPrefab, spawnPos, finalRotation);
             spawnedStump.name = $"{name}_Stump";
-            spawnedStump.transform.rotation = uprightRotation;
+            spawnedStump.transform.rotation = finalRotation;
             if (transform.parent != null && transform.parent.gameObject.activeInHierarchy)
             {
                 spawnedStump.transform.SetParent(transform.parent, true);

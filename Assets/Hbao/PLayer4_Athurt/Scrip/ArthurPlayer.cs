@@ -552,6 +552,13 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         enabled = true;
         respawnImmunityTimer = 2.0f; // 2 giây bất tử khi vừa hồi sinh ở Checkpoint
 
+        if (rb != null)
+        {
+            rb.isKinematic = isStandaloneMode ? false : !IsOwner;
+            rb.linearVelocity = Vector3.zero;
+            rb.angularVelocity = Vector3.zero;
+        }
+
         if (anim != null && anim.isActiveAndEnabled && anim.runtimeAnimatorController != null)
         {
             try { anim.ResetTrigger("Death"); } catch {}
@@ -618,6 +625,15 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     private void PlayDeathAnimationSafely(float fadeTime)
     {
+        // 1. Triệt tiêu vận tốc & khóa vật lý ngay lập tức để không bị trượt đi khi chết
+        targetMoveVelocity = Vector3.zero;
+        if (rb != null)
+        {
+            rb.linearVelocity = Vector3.zero;
+            rb.angularVelocity = Vector3.zero;
+            rb.isKinematic = true;
+        }
+
         if (anim == null) return;
 
         if (anim.layerCount > 1)
@@ -652,7 +668,15 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
             try { anim.CrossFadeInFixedTime("Death", fadeTime, 0, 0f); } catch {}
         }
 
-        StartCoroutine(FallbackDeathSequenceCoroutine());
+        // Kích hoạt ngay lập tức quy trình nhắm mắt UI
+        if (IsOwner || isStandaloneMode)
+        {
+            StartCoroutine(DeathEyelidsSequenceCoroutine());
+        }
+        else
+        {
+            StartCoroutine(FallbackDeathSequenceCoroutine());
+        }
     }
 
     [ServerRpc]
