@@ -579,6 +579,8 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     private void PlayDeathAnimationSafely(float fadeTime)
     {
+        isDeathAnimFinished = false; // Đảm bảo trạng thái chưa xong để không bị Server hồi sinh vội
+
         // 1. Triệt tiêu vận tốc & khóa vật lý ngay lập tức để không bị trượt đi khi chết
         targetMoveVelocity = Vector3.zero;
         if (rb != null)

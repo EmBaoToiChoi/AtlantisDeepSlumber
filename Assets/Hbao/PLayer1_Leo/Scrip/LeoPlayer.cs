@@ -3441,6 +3441,8 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     private void PlayDeathAnimationSafely(float fadeTime)
     {
+        isDeathAnimFinished = false; // Đảm bảo trạng thái chưa xong để không bị Server hồi sinh vội
+
         // 1. Triệt tiêu vận tốc & khóa vật lý ngay lập tức để không bị trượt đi khi chết
         targetMoveVelocity = Vector3.zero;
         if (rb != null)
@@ -6922,11 +6924,13 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         if (newHealth <= 0f)
         {
+            isDeathAnimFinished = false;
             targetMoveVelocity = Vector3.zero;
-            if (rb != null && !rb.isKinematic)
+            if (rb != null)
             {
-                rb.linearVelocity = new Vector3(0f, rb.linearVelocity.y, 0f);
+                rb.linearVelocity = Vector3.zero;
                 rb.angularVelocity = Vector3.zero;
+                rb.isKinematic = true;
             }
 
             if (currentAnimState != "Death")
@@ -6959,11 +6963,13 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         if (newHealth <= 0f)
         {
+            isDeathAnimFinished = false;
             targetMoveVelocity = Vector3.zero;
-            if (rb != null && !rb.isKinematic)
+            if (rb != null)
             {
-                rb.linearVelocity = new Vector3(0f, rb.linearVelocity.y, 0f);
+                rb.linearVelocity = Vector3.zero;
                 rb.angularVelocity = Vector3.zero;
+                rb.isKinematic = true;
             }
 
             if (currentAnimState != "Death")
