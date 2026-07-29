@@ -3401,8 +3401,25 @@ public class PlayerHUDController : MonoBehaviour
         if (owner == null) return true;
         if (currentQuestOwner == null || currentQuestOwner == owner) return true;
 
-        if (currentQuestOwner is IQuestTrigger oldQuest && oldQuest.IsQuestCompleted) return true;
+        // If the owner making the request is already completed, it cannot take over an active quest
+        if (owner is IQuestTrigger newQuest && newQuest.IsQuestCompleted)
+        {
+            return false;
+        }
 
+        // If current owner is completed, a new uncompleted quest can switch to take ownership
+        if (currentQuestOwner is IQuestTrigger oldQuest && oldQuest.IsQuestCompleted)
+        {
+            return true;
+        }
+
+        // If current owner is a missing/destroyed object, allow switch
+        if (currentQuestOwner is UnityEngine.Object uObj && uObj == null)
+        {
+            return true;
+        }
+
+        // Check if new owner has prerequisite completed AND current quest owner is either completed or not active
         if (owner is IQuestTrigger)
         {
             var method = owner.GetType().GetMethod("IsPrerequisiteCompleted");
@@ -3411,13 +3428,16 @@ public class PlayerHUDController : MonoBehaviour
                 try
                 {
                     bool isPreCompleted = (bool)method.Invoke(owner, null);
-                    if (isPreCompleted) return true;
+                    if (isPreCompleted)
+                    {
+                        if (currentQuestOwner is IQuestTrigger activeQuest)
+                        {
+                            return activeQuest.IsQuestCompleted;
+                        }
+                        return true;
+                    }
                 }
                 catch { }
-            }
-            else
-            {
-                return true;
             }
         }
 
@@ -3450,7 +3470,9 @@ public class PlayerHUDController : MonoBehaviour
             }
             else
             {
-                if (owner == null || currentQuestOwner == owner || CanSwitchQuestOwner(owner))
+                // Crucial fix: Only hide quest UI if requested by current owner or if owner is unspecified (null).
+                // Do NOT allow a previous/other quest owner to hide an active quest's UI.
+                if (owner == null || currentQuestOwner == owner)
                 {
                     currentQuestOwner = null;
                     questPanel.RemoveFromClassList("show-quest");

@@ -24,14 +24,14 @@ public class BossAI : NetworkBehaviour
 
     // ─── Máu Boss ──────────────────────────────────────────────
     [Header("Health")]
-    public float maxHealth = 1000f;
+    public float maxHealth = 600f;
     public NetworkVariable<float> currentHealth = new NetworkVariable<float>(
-        1000f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        600f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
     // ─── Thiết lập Phase 2 ─────────────────────────────────────
     [Header("Phase 2 Settings (Enrage)")]
     [Tooltip("Lượng máu tối đa của Boss ở Phase 2 (có thể tùy chỉnh)")]
-    public float phase2MaxHealth = 1500f;
+    public float phase2MaxHealth = 600f;
     [Tooltip("Hệ số nhân sát thương ở Phase 2")]
     public float phase2DamageMultiplier = 1.3f;
     [Tooltip("Hệ số nhân tốc độ di chuyển ở Phase 2")]
@@ -50,7 +50,7 @@ public class BossAI : NetworkBehaviour
     public GameObject earthBlastPrefab;
     public float warningDuration = 1.5f;
     public float earthBlastRadius = 3.0f;
-    public float earthBlastDamage = 50f;
+    public float earthBlastDamage = 5f;
     public float earthBlastKnockback = 15f;
     public string earthSummonTrigger = "EarthSummon";
     public float earthSummonInterval = 5f;
@@ -69,6 +69,8 @@ public class BossAI : NetworkBehaviour
     [Tooltip("Giới hạn số lượng quái con tối đa được sinh ra còn sống đồng thời")]
     public int maxMinionsAlive = 10;
     private float minionSummonTimer;
+    private bool hasSummonedMinions = false;
+    private float hitStaggerCooldownTimer = 0f;
     private List<GameObject> activeMinions = new List<GameObject>();
 
     // ─── Đồng bộ trạng thái FSM qua mạng ───────────────────────
@@ -390,6 +392,7 @@ public class BossAI : NetworkBehaviour
         // Giảm thời gian hồi chiêu
         if (attackCooldownTimer > 0) attackCooldownTimer -= Time.deltaTime;
         if (kickCooldownTimer > 0) kickCooldownTimer -= Time.deltaTime;
+        if (hitStaggerCooldownTimer > 0f) hitStaggerCooldownTimer -= Time.deltaTime;
 
         if (IsBossActive && !IsDead && targetPlayer != null)
         {
@@ -400,11 +403,14 @@ public class BossAI : NetworkBehaviour
                 TriggerEarthSummon();
             }
  
-            minionSummonTimer -= Time.deltaTime;
-            if (minionSummonTimer <= 0)
+            if (!hasSummonedMinions)
             {
-                minionSummonTimer = minionSummonInterval;
-                SummonMinions();
+                minionSummonTimer -= Time.deltaTime;
+                if (minionSummonTimer <= 0)
+                {
+                    minionSummonTimer = minionSummonInterval;
+                    SummonMinions();
+                }
             }
         }
 
@@ -1073,16 +1079,8 @@ public class BossAI : NetworkBehaviour
 
         float activeHp = ActualCurrentHealth;
 
-        // Xử lý khi hết máu lần đầu (Chuyển sang Phase 2 Gồng Cuồng Nộ)
         if (activeHp <= 0f)
         {
-            if (!IsPhase2 && !hasEnraged)
-            {
-                hasEnraged = true;
-                ChangeState(BossState.Enrage);
-                return;
-            }
-
             ChangeState(BossState.Dead);
             return;
         }
@@ -1093,10 +1091,13 @@ public class BossAI : NetworkBehaviour
         {
             ExecuteDodge();
         }
-        else
+        else if (damage >= 35f && hitStaggerCooldownTimer <= 0f)
         {
-            // Khi bị dính sát thương thì chuyển sang trạng thái Hit (chạy hoạt ảnh anhit)
-            ChangeState(BossState.Hit);
+            if (CurrentStateValue != BossState.Attack && CurrentStateValue != BossState.Kick && CurrentStateValue != BossState.Dead && CurrentStateValue != BossState.Hit && CurrentStateValue != BossState.Enrage)
+            {
+                hitStaggerCooldownTimer = 5.0f;
+                ChangeState(BossState.Hit);
+            }
         }
     }
 
@@ -1550,7 +1551,7 @@ public class BossAI : NetworkBehaviour
                 blast.transform.localScale = Vector3.one * earthBlastScale;
 
                 // Tự động thiết lập Collider toàn diện (cả vòng tròn ngoài lẫn tất cả các mảnh đá visual của Prefab)
-                EarthBlastDamageZone.SetupRockColliders(blast, earthBlastRadius, earthBlastScale, 30f);
+                EarthBlastDamageZone.SetupRockColliders(blast, earthBlastRadius, earthBlastScale, earthBlastDamage);
 
                 // Thử kích hoạt Elemental VFX nếu có
                 var locationVfx = blast.GetComponent<PixPlays.ElementalVFX.LocationVfx>();
@@ -1655,11 +1656,15 @@ public class BossAI : NetworkBehaviour
         bool auth = isStandaloneMode || (IsNetworkActive && IsServer);
         if (!auth) return;
 
+        if (hasSummonedMinions) return; // Chỉ triệu hồi 1 lần duy nhất trong toàn bộ trận đấu
+
         if (minionPrefab == null)
         {
             Debug.LogWarning("[BossAI] Không có Minion Prefab nào được gán để triệu hồi!");
             return;
         }
+
+        hasSummonedMinions = true;
 
         // Dọn dẹp quái con đã chết hoặc biến mất
         for (int i = activeMinions.Count - 1; i >= 0; i--)

@@ -1012,7 +1012,7 @@ public class Enemy1_DapBua : NetworkBehaviour
         if (auth && !hasDealtDamage1)
         {
             hasDealtDamage1 = true;
-            DealConeDamage(15f, attackRange + 0.5f, 80f, 2.0f);
+            DealConeDamage(7f, attackRange + 0.5f, 80f, 2.0f);
         }
     }
     public void DisableWeaponHitbox()  { DisableHitboxes(); hasDealtDamage1 = false; hasDealtDamage2 = false; }
@@ -1025,11 +1025,11 @@ public class Enemy1_DapBua : NetworkBehaviour
             int aType = isStandaloneMode ? 0 : attackType.Value;
             if (aType == 2)
             {
-                DealConeDamage(10f, attackRange + 0.5f, 80f, 1.5f);
+                DealConeDamage(5f, attackRange + 0.5f, 80f, 1.5f);
             }
             else
             {
-                DealConeDamage(15f, attackRange + 0.5f, 80f, 2.0f);
+                DealConeDamage(7f, attackRange + 0.5f, 80f, 2.0f);
             }
         }
     }
@@ -1045,7 +1045,7 @@ public class Enemy1_DapBua : NetworkBehaviour
                 if (!hasDealtDamage2)
                 {
                     hasDealtDamage2 = true;
-                    DealConeDamage(25f, attackRange + 1.2f, 95f, 3.0f);
+                    DealConeDamage(10f, attackRange + 1.2f, 95f, 3.0f);
                 }
             }
             else
@@ -1053,7 +1053,7 @@ public class Enemy1_DapBua : NetworkBehaviour
                 if (!hasDealtDamage1)
                 {
                     hasDealtDamage1 = true;
-                    DealConeDamage(15f, attackRange + 0.5f, 80f, 2.0f);
+                    DealConeDamage(7f, attackRange + 0.5f, 80f, 2.0f);
                 }
             }
         }

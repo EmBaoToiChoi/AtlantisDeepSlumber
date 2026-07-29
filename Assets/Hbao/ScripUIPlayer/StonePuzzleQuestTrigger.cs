@@ -16,6 +16,8 @@ public class StonePuzzleQuestTrigger : NetworkBehaviour, IQuestTrigger
         if (prerequisiteQuest == null) return true;
         if (prerequisiteQuest is IQuestTrigger quest) return quest.IsQuestCompleted;
         if (prerequisiteQuest is BridgeCollapseTrigger bridge) return bridge.IsBridgeRepaired();
+        var trigger = prerequisiteQuest.GetComponent<IQuestTrigger>();
+        if (trigger != null) return trigger.IsQuestCompleted;
         return true;
     }
 

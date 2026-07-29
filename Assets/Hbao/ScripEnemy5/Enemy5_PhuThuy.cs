@@ -41,7 +41,7 @@ public class Enemy5_PhuThuy : NetworkBehaviour
     [Header("Spell Settings")]
     public GameObject spellProjectilePrefab;
     public float spellSpeed  = 12f;
-    public float spellDamage = 20f;
+    public float spellDamage = 7f;
 
     [Header("Drops")]
     public GameObject expGemPrefab;

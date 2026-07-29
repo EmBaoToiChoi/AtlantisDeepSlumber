@@ -71,7 +71,7 @@ public class Skeleton : NetworkBehaviour
     public GameObject weaponHitbox;
     public Transform attackCheckPoint;
     public float attackRadius = 1.2f;
-    public float attackDamage = 15f;
+    public float attackDamage = 7f;
     public float knockbackForce = 5f;
 
     private Transform targetEnemy;
