@@ -86,6 +86,7 @@ public class Enemy3_Buaa : NetworkBehaviour
     private float lastDamageTime;
     private int recentHitCount;
     private bool isFrenzied, isEnraged;
+    private float loseSightTimer;
 
     // ─── FSM States ───
     private IEnemyState currentFSMState;
@@ -391,14 +392,10 @@ public class Enemy3_Buaa : NetworkBehaviour
             }
         }
 
-        if (count > 0)
+        if (count > 0 && !waitingAtWaypoint)
         {
             separation /= count;
-            Vector3 pushTarget = transform.position + separation * 0.8f;
-            if (NavMesh.SamplePosition(pushTarget, out NavMeshHit hit, 1.5f, NavMesh.AllAreas))
-            {
-                agent.Warp(hit.position);
-            }
+            agent.Move(separation * Time.deltaTime * 1.5f);
         }
     }
 
@@ -461,6 +458,30 @@ public class Enemy3_Buaa : NetworkBehaviour
         Skeleton sk = targetPlayer.GetComponentInParent<Skeleton>();
         bool isTargetDead = (ps != null && (ps.CurrentHealth <= 0 || ps.IsInvisible)) || (sk != null && sk.CurrentHealthValue <= 0);
         if ((ps == null && sk == null) || isTargetDead) { targetPlayer = null; ReturnToPatrol(); return; }
+
+        Vector3 ep1 = eyeTransform != null ? eyeTransform.position : transform.position + Vector3.up * 1.5f;
+        Vector3 ep2 = transform.position + Vector3.up * 0.6f;
+        Vector3 targetCenter = targetPlayer.position + Vector3.up * 1.0f;
+        float dToPlayer = Vector3.Distance(ep1, targetCenter);
+        Vector3 dirToPlayer = (targetCenter - ep1).normalized;
+
+        bool wallBlocked = Physics.Raycast(ep1, dirToPlayer, dToPlayer, obstacleLayer, QueryTriggerInteraction.Ignore) ||
+                           Physics.Raycast(ep2, dirToPlayer, dToPlayer, obstacleLayer, QueryTriggerInteraction.Ignore);
+
+        if (wallBlocked)
+        {
+            loseSightTimer += Time.deltaTime;
+            if (loseSightTimer > 0.8f)
+            {
+                targetPlayer = null;
+                ReturnToPatrol();
+                return;
+            }
+        }
+        else
+        {
+            loseSightTimer = 0f;
+        }
         Vector3 ld = (targetPlayer.position - transform.position); ld.y = 0;
         if (ld.sqrMagnitude > 0.01f) transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(ld), Time.deltaTime * 12f);
         Vector3 flatEnemy = transform.position; flatEnemy.y = 0;
