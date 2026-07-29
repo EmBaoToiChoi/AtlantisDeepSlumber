@@ -15,6 +15,9 @@ public class ChoppableTree : NetworkBehaviour
     [Tooltip("Prefab thanh gỗ thu thập (gắn CollectibleItemDrop)")]
     public GameObject woodLogPrefab;
 
+    [Tooltip("Prefab gốc cây custom (ví dụ aspen-stump) xuất hiện bên dưới thân cây khi cây bị chặt")]
+    public GameObject treeStumpPrefab;
+
     // Trạng thái mạng đồng bộ
     public NetworkVariable<bool> isCutDown = new NetworkVariable<bool>(
         false,
@@ -1032,6 +1035,38 @@ public class ChoppableTree : NetworkBehaviour
             {
                 spawnPos.y = hit.point.y;
             }
+        }
+
+        // Tự động tìm Prefab gốc cây nếu chưa được kéo gán trong Inspector
+        if (treeStumpPrefab == null)
+        {
+            treeStumpPrefab = Resources.Load<GameObject>("Prefab/aspen-stump");
+            if (treeStumpPrefab == null) treeStumpPrefab = Resources.Load<GameObject>("aspen-stump");
+            if (treeStumpPrefab == null) treeStumpPrefab = Resources.Load<GameObject>("Hbao/Prefab/aspen-stump");
+        }
+
+        // Nếu có Prefab gốc cây custom, sinh trực tiếp Prefab đó dưới vị trí thân cây
+        if (treeStumpPrefab != null)
+        {
+            spawnedStump = Instantiate(treeStumpPrefab, spawnPos, transform.rotation);
+            spawnedStump.name = $"{name}_Stump";
+            if (transform.parent != null && transform.parent.gameObject.activeInHierarchy)
+            {
+                spawnedStump.transform.SetParent(transform.parent, true);
+            }
+
+            // Đảm bảo gốc cây có Collider va chạm để nhân vật không đi xuyên qua
+            Collider stumpCol = spawnedStump.GetComponent<Collider>();
+            if (stumpCol == null) stumpCol = spawnedStump.GetComponentInChildren<Collider>();
+            if (stumpCol == null)
+            {
+                CapsuleCollider customCapCol = spawnedStump.AddComponent<CapsuleCollider>();
+                customCapCol.center = new Vector3(0f, 0.6f, 0f);
+                customCapCol.radius = 0.6f;
+                customCapCol.height = 1.2f;
+            }
+            Debug.Log($"[ChoppableTree] Đã tạo thành công gốc cây Prefab '{treeStumpPrefab.name}' cho {name}!");
+            return;
         }
 
         // Tính bán kính & chiều cao gốc cây
