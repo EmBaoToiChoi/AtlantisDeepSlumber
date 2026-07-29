@@ -362,14 +362,10 @@ public class Enemy5_PhuThuy : NetworkBehaviour
             }
         }
 
-        if (count > 0)
+        if (count > 0 && !waitingAtWaypoint)
         {
             separation /= count;
-            Vector3 pushTarget = transform.position + separation * 0.8f;
-            if (NavMesh.SamplePosition(pushTarget, out NavMeshHit hit, 1.5f, NavMesh.AllAreas))
-            {
-                agent.Warp(hit.position);
-            }
+            agent.Move(separation * Time.deltaTime * 1.5f);
         }
     }
 
@@ -430,9 +426,18 @@ public class Enemy5_PhuThuy : NetworkBehaviour
         if (blinkTimer > 0 || targetPlayer == null || !AgentReady) return;
 
         Vector3 away = (transform.position - targetPlayer.position).normalized;
-        Vector3 blinkTarget = transform.position + away * 6.5f + transform.right * (Random.value < 0.5f ? 2.5f : -2.5f);
+        Vector3 blinkDir = (away + transform.right * (Random.value < 0.5f ? 0.6f : -0.6f)).normalized;
+        float blinkDist = 6.5f;
 
-        if (NavMesh.SamplePosition(blinkTarget, out NavMeshHit hit, 6.5f, NavMesh.AllAreas))
+        // TIA RAYCAST CHỐNG TỐC BIẾN XUYÊN TƯỜNG
+        if (Physics.Raycast(transform.position + Vector3.up * 0.8f, blinkDir, out RaycastHit wallHit, blinkDist, obstacleLayer, QueryTriggerInteraction.Ignore))
+        {
+            blinkDist = Mathf.Max(1.0f, wallHit.distance - 0.8f);
+        }
+
+        Vector3 blinkTarget = transform.position + blinkDir * blinkDist;
+
+        if (NavMesh.SamplePosition(blinkTarget, out NavMeshHit hit, 3.0f, NavMesh.AllAreas))
         {
             agent.Warp(hit.position);
             blinkTimer = 3.5f;
@@ -450,16 +455,20 @@ public class Enemy5_PhuThuy : NetworkBehaviour
         bool isTargetDead = (ps != null && (ps.CurrentHealth <= 0 || ps.IsInvisible)) || (sk != null && sk.CurrentHealthValue <= 0);
         if ((ps == null && sk == null) || isTargetDead) { targetPlayer = null; ReturnToPatrol(); return; }
 
-        Vector3 ep = eyeTransform != null ? eyeTransform.position : transform.position + Vector3.up * 1.5f;
-        Vector3 center = targetPlayer.position + Vector3.up * 1.0f;
-        float d = Vector3.Distance(ep, center);
-        Vector3 dir = (center - ep).normalized;
+        Vector3 ep1 = eyeTransform != null ? eyeTransform.position : transform.position + Vector3.up * 1.5f;
+        Vector3 ep2 = transform.position + Vector3.up * 0.6f;
+        Vector3 targetCenter = targetPlayer.position + Vector3.up * 1.0f;
+        float d = Vector3.Distance(ep1, targetCenter);
+        Vector3 dir = (targetCenter - ep1).normalized;
 
-        // Wall blocking line of sight check - prevent seeing/chasing through walls
-        if (Physics.Raycast(ep, dir, d, obstacleLayer, QueryTriggerInteraction.Ignore))
+        // Wall blocking line of sight check - ngắt rượt đuổi nếu bị tường chắn
+        bool wallBlocked = Physics.Raycast(ep1, dir, d, obstacleLayer, QueryTriggerInteraction.Ignore) ||
+                           Physics.Raycast(ep2, dir, d, obstacleLayer, QueryTriggerInteraction.Ignore);
+
+        if (wallBlocked)
         {
             loseSightTimer += Time.deltaTime;
-            if (loseSightTimer > 2.5f || (AgentReady && agent.hasPath && agent.pathStatus == NavMeshPathStatus.PathPartial))
+            if (loseSightTimer > 0.8f || (AgentReady && agent.hasPath && agent.pathStatus == NavMeshPathStatus.PathPartial))
             {
                 targetPlayer = null;
                 ReturnToPatrol();
@@ -627,10 +636,19 @@ public class Enemy5_PhuThuy : NetworkBehaviour
     private void HandleAttack()
     {
         if (targetPlayer == null) { EndAttack(); return; }
+
+        float dist = Vector3.Distance(transform.position, targetPlayer.position);
+        if (dist < 4.5f && blinkTimer <= 0)
+        {
+            ExecuteBlinkEscape();
+            EndAttack();
+            return;
+        }
+
         if (AgentReady) agent.isStopped = true; SetSpeedNet(0f);
         stateTimer -= Time.deltaTime;
         float elapsed = attackDuration - stateTimer;
-        if (elapsed < attackDuration * 0.5f) { Vector3 ld = (targetPlayer.position - transform.position); ld.y = 0; if (ld.sqrMagnitude > 0.01f) transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(ld), Time.deltaTime * 18f); }
+        if (elapsed < attackDuration * 0.5f) { Vector3 ld = (targetPlayer.position - transform.position); ld.y = 0; if (ld.sqrMagnitude > 0.01f) transform.rotation = Quaternion.LookRotation(ld); }
         if (stateTimer <= 0) EndAttack();
     }
 
