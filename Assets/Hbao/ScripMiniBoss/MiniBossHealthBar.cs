@@ -161,7 +161,7 @@ public class MiniBossHealthBar : MonoBehaviour
         }
 
         float maxHp = boss.maxHealth;
-        if (maxHp <= 0f) maxHp = 1200f;
+        if (maxHp <= 0f) maxHp = 500f;
 
         float actualHp = boss.ActualCurrentHealth;
 

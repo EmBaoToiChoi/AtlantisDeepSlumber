@@ -19,7 +19,7 @@ public class MiniBossAI : NetworkBehaviour
 
     [Header("Health Settings")]
     public float phase1MaxHealth = 500f;
-    public float phase2MaxHealth = 700f;
+    public float phase2MaxHealth = 500f;
     [HideInInspector] public float maxHealth = 500f;
     public NetworkVariable<float> currentHealth = new NetworkVariable<float>(
         500f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
@@ -150,7 +150,8 @@ public class MiniBossAI : NetworkBehaviour
 
     private Transform targetPlayer;
     private float stateTimer;
-    private float hitStaggerDuration = 0.55f;
+    private float hitStaggerDuration = 0.25f;
+    private float hitStaggerCooldownTimer = 0f;
     private bool hasDealtDamage;
     private int currentAttackIndex = 0;
 
@@ -321,26 +322,29 @@ public class MiniBossAI : NetworkBehaviour
         float activeHp = ActualCurrentHealth;
         if (activeHp <= 0f)
         {
-            if (!localIsPhase2 && (!IsSpawned || !isPhase2Network.Value))
-            {
-                ChangeState(MiniBossState.Enrage);
-            }
-            else
-            {
-                ChangeState(MiniBossState.Dead);
-            }
+            ChangeState(MiniBossState.Dead);
             return;
         }
 
-        // Trigger stagger hit animation if not in attack or already in hit state
-        if (CurrentStateValue != MiniBossState.Attack && CurrentStateValue != MiniBossState.Dead && CurrentStateValue != MiniBossState.Hit)
+        // Chỉ giật đòn (Hit state) khi chịu sát thương cực lớn từ kỹ năng (damage >= 35f) và đã hết 5s cooldown.
+        // Bình thường Boss có Super Armor: vẫn chịu damage và chớp đỏ đầy đủ nhưng không bị đứt chuỗi tấn công/di chuyển.
+        if (damage >= 35f && hitStaggerCooldownTimer <= 0f)
         {
-            ChangeState(MiniBossState.Hit);
+            if (CurrentStateValue != MiniBossState.Attack && CurrentStateValue != MiniBossState.Dead && CurrentStateValue != MiniBossState.Hit && CurrentStateValue != MiniBossState.Enrage)
+            {
+                hitStaggerCooldownTimer = 5.0f;
+                ChangeState(MiniBossState.Hit);
+            }
         }
     }
 
     private void Update()
     {
+        if (hitStaggerCooldownTimer > 0f)
+        {
+            hitStaggerCooldownTimer -= Time.deltaTime;
+        }
+
         bool aiAuth = isStandaloneMode || (IsNetworkActive && IsServer);
         if (!aiAuth) return;
 

@@ -527,7 +527,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
     private bool IsNetworkActive =>
         NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
 
-    public float CurrentHealth => localHealth > 0 ? localHealth : (isStandaloneMode ? localHealth : currentHealth.Value);
+    public float CurrentHealth => isStandaloneMode ? localHealth : currentHealth.Value;
 
     bool IPlayerHUDTarget.isStandaloneMode => isStandaloneMode;
     public bool IsStandaloneMode => isStandaloneMode;
@@ -1337,19 +1337,32 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     private void OnHealthChanged(float oldHealth, float newHealth)
     {
+        localHealth = newHealth;
         UpdateHealthHUD(newHealth);
+
+        if (newHealth <= 0f)
+        {
+            targetMoveVelocity = Vector3.zero;
+            if (rb != null && !rb.isKinematic)
+            {
+                rb.linearVelocity = new Vector3(0f, rb.linearVelocity.y, 0f);
+                rb.angularVelocity = Vector3.zero;
+            }
+
+            if (currentAnimState != "Death")
+            {
+                PlayAnimation("Death", 0.15f);
+            }
+        }
+        else if (newHealth > 0f && oldHealth <= 0f)
+        {
+            PlayerDeathEffectManager.Instance.ResetDeathEffect();
+            ResetDeathState();
+        }
 
         if (IsOwner)
         {
             SavePlayerStateToDatabase();
-            if (newHealth <= 0f && oldHealth > 0f)
-            {
-                // Defer death effect to OnDeathAnimationEnd
-            }
-            else if (newHealth > 0f && oldHealth <= 0f)
-            {
-                PlayerDeathEffectManager.Instance.ResetDeathEffect();
-            }
         }
     }
 

@@ -7,7 +7,7 @@ using System.Collections.Generic;
 /// </summary>
 public class EarthBlastDamageZone : MonoBehaviour
 {
-    public float damage = 30f;
+    public float damage = 5f;
     public float damageCooldown = 1.0f;
     private Dictionary<Transform, float> lastDamageTimes = new Dictionary<Transform, float>();
 

@@ -280872,21 +280872,9 @@ PrefabInstance:
       propertyPath: landingPoint
       value: 
       objectReference: {fileID: 1941652719}
-    - target: {fileID: 7074382907316884614, guid: ce5b12c86dd74644796e6604896d9c1d, type: 3}
-      propertyPath: fireSpewDamage
-      value: 5
-      objectReference: {fileID: 0}
-    - target: {fileID: 7074382907316884614, guid: ce5b12c86dd74644796e6604896d9c1d, type: 3}
-      propertyPath: fireBarrageDamage
-      value: 5
-      objectReference: {fileID: 0}
-    - target: {fileID: 7074382907316884614, guid: ce5b12c86dd74644796e6604896d9c1d, type: 3}
-      propertyPath: currentHealth.m_InternalValue
-      value: 900
-      objectReference: {fileID: 0}
     - target: {fileID: 8572541257309697589, guid: ce5b12c86dd74644796e6604896d9c1d, type: 3}
       propertyPath: m_Name
-      value: Wolverine Weapon X
+      value: King Atlantis
       objectReference: {fileID: 0}
     - target: {fileID: 9060143446167350415, guid: ce5b12c86dd74644796e6604896d9c1d, type: 3}
       propertyPath: m_LocalPosition.x

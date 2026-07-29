@@ -3,7 +3,7 @@ using Unity.Netcode;
 
 public class SpellBall : NetworkBehaviour
 {
-    public float damage = 20f;
+    public float damage = 7f;
     public float knockback = 5f;
 
     private float lifeTimer = 5f;

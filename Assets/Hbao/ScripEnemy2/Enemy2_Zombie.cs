@@ -835,7 +835,7 @@ public class Enemy2_Zombie : NetworkBehaviour
         {
             hasDealtDamage = true;
             bool frantic = CurrentHealthValue <= maxHealth * 0.4f;
-            DealConeDamage(frantic ? 15f : 12f, 2.0f, 90f, 1.0f);
+            DealConeDamage(frantic ? 8f : 5f, 2.0f, 90f, 1.0f);
         }
     }
     public void DisableClawHitbox() { hasDealtDamage = false; }

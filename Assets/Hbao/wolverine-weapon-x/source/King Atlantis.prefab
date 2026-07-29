@@ -1462,7 +1462,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 919132149155446097, guid: b7835acf007488845ae76dcec8a5e20a, type: 3}
       propertyPath: m_Name
-      value: Wolverine Weapon X
+      value: King Atlantis
       objectReference: {fileID: 0}
     - target: {fileID: 919132149155446097, guid: b7835acf007488845ae76dcec8a5e20a, type: 3}
       propertyPath: m_Layer
@@ -2579,7 +2579,7 @@ MonoBehaviour:
     UpdateTraits:
       MinSecondsBetweenUpdates: 0
       MaxSecondsBetweenUpdates: 0
-    m_InternalValue: 1200
+    m_InternalValue: 900
   currentState:
     UpdateTraits:
       MinSecondsBetweenUpdates: 0
@@ -2688,6 +2688,7 @@ MonoBehaviour:
   swordDamage: 5
   swordImpactRadius: 2
   swordRainTriggerParam: AttackCombo
+  swordSpawnRotationOffset: {x: 90, y: 0, z: 0}
   fireBarragePrefab: {fileID: 2883180979609552342, guid: da5df83ad7870f44bbe3cacedd92be63, type: 3}
   fireBarrageWarningDecalPrefab: {fileID: 7883966873594125846, guid: 6aeee1ac8b24a1e45baedae4f3b12b52, type: 3}
   fireBarrageImpactVFX: {fileID: 2427901435903505602, guid: 8a915dbbc4b23bf4f931629039cfbf6f, type: 3}
@@ -2696,7 +2697,7 @@ MonoBehaviour:
   fireBarrageInterval: 0.5
   fireBarrageWarningDuration: 0.7
   fireBarrageDropSpeed: 30
-  fireBarrageDamage: 20
+  fireBarrageDamage: 5
   fireBarrageImpactRadius: 2.5
   fireBarrageTriggerParam: AttackCombo
   walkSpeed: 2.2
@@ -2724,7 +2725,7 @@ MonoBehaviour:
   fireSpewWindupDuration: 1
   fireSpewActiveDuration: 1.5
   fireSpewRadius: 7
-  fireSpewDamage: 35
+  fireSpewDamage: 5
   fireSpewKnockback: 12
   fireSpewVFX: {fileID: 6531319713837899222, guid: 3ecc26f6d4062be44b0a099e114ff00c, type: 3}
   fireSpewSFX: {fileID: 0}

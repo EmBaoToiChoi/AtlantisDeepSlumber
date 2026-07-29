@@ -486,7 +486,7 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
     /// Máu hiện tại: đọc từ NetworkVariable khi online, đọc từ biến local khi standalone.
     /// </summary>
     public float CurrentHealth =>
-        localHealth > 0 ? localHealth : (isStandaloneMode ? localHealth : currentHealth.Value);
+        isStandaloneMode ? localHealth : currentHealth.Value;
 
     // IPlayerHUDTarget Implementation
     bool IPlayerHUDTarget.isStandaloneMode => isStandaloneMode;
@@ -1234,31 +1234,59 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     private void OnHealthChanged(float oldHealth, float newHealth)
     {
+        localHealth = newHealth;
         UpdateHealthHUD(newHealth);
-        
-        // Tự động lưu lên DB khi máu thay đổi
+
+        if (newHealth <= 0f)
+        {
+            targetMoveVelocity = Vector3.zero;
+            if (rb != null && !rb.isKinematic)
+            {
+                rb.linearVelocity = new Vector3(0f, rb.linearVelocity.y, 0f);
+                rb.angularVelocity = Vector3.zero;
+            }
+
+            if (currentAnimState != "Death")
+            {
+                PlayAnimation("Death", 0.15f);
+            }
+        }
+        else if (newHealth > 0f && oldHealth <= 0f)
+        {
+            PlayerDeathEffectManager.Instance.ResetDeathEffect();
+            ResetDeathState();
+        }
+
         if (IsOwner)
         {
             SavePlayerStateToDatabase();
-            if (newHealth <= 0f && oldHealth > 0f)
-            {
-                // Defer death effect to OnDeathAnimationEnd
-            }
-            else if (newHealth > 0f && oldHealth <= 0f)
-            {
-                PlayerDeathEffectManager.Instance.ResetDeathEffect();
-                ResetDeathState();
-            }
         }
     }
 
     private void OnHealthChangedShared(float oldHealth, float newHealth)
     {
+        localHealth = newHealth;
+
         if (newHealth < oldHealth)
         {
             var flash = GetComponent<MaterialFlashBehaviour>();
             if (flash == null) flash = gameObject.AddComponent<MaterialFlashBehaviour>();
             flash.Flash(Color.red, 0.15f);
+        }
+
+        if (newHealth <= 0f)
+        {
+            targetMoveVelocity = Vector3.zero;
+            if (rb != null && !rb.isKinematic)
+            {
+                rb.linearVelocity = new Vector3(0f, rb.linearVelocity.y, 0f);
+                rb.angularVelocity = Vector3.zero;
+            }
+
+            if (currentAnimState != "Death")
+            {
+                PlayAnimation("Death", 0.15f);
+            }
         }
         else if (newHealth > 0f && oldHealth <= 0f)
         {
