@@ -1048,8 +1048,10 @@ public class ChoppableTree : NetworkBehaviour
         // Nếu có Prefab gốc cây custom, sinh trực tiếp Prefab đó dưới vị trí thân cây
         if (treeStumpPrefab != null)
         {
-            spawnedStump = Instantiate(treeStumpPrefab, spawnPos, transform.rotation);
+            Quaternion uprightRotation = Quaternion.Euler(0f, transform.eulerAngles.y, 0f);
+            spawnedStump = Instantiate(treeStumpPrefab, spawnPos, uprightRotation);
             spawnedStump.name = $"{name}_Stump";
+            spawnedStump.transform.rotation = uprightRotation;
             if (transform.parent != null && transform.parent.gameObject.activeInHierarchy)
             {
                 spawnedStump.transform.SetParent(transform.parent, true);

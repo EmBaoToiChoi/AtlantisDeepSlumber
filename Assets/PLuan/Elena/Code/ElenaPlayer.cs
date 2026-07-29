@@ -503,7 +503,6 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
     public void ResetDeathState()
     {
         StopAllCoroutines();
-        PlayerDeathEffectManager.Instance.ResetDeathEffect();
         localHealth = maxHealth;
         isDeathAnimFinished = false;
         currentAnimState = "Idle";
@@ -3857,10 +3856,10 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
             return;
         }
 
-        // Nếu đang chết (CurrentHealth <= 0), từ chối tất cả các lệnh hoạt ảnh ngoại trừ "Death"
-        if (CurrentHealth <= 0)
+        // Nếu đang chết (CurrentHealth <= 0), từ chối tất cả các lệnh hoạt ảnh ngoại trừ "Death", "New State" hoặc "Empty"
+        if (CurrentHealth <= 0 || localHealth <= 0f || currentAnimState == "Death")
         {
-            if (animName != "Death")
+            if (animName != "Death" && animName != "New State" && animName != "Empty")
             {
                 return;
             }
