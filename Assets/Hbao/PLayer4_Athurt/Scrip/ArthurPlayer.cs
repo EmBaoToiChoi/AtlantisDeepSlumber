@@ -543,7 +543,6 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
     public void ResetDeathState()
     {
         StopAllCoroutines();
-        PlayerDeathEffectManager.Instance.ResetDeathEffect();
         localHealth = maxHealth;
         isDeathAnimFinished = false;
         currentAnimState = "Idle";
@@ -552,10 +551,18 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         if (anim != null && anim.isActiveAndEnabled && anim.runtimeAnimatorController != null)
         {
-            anim.ResetTrigger("Death");
-            anim.ResetTrigger("GetHit");
-            anim.ResetTrigger("GeiHit2");
+            try { anim.ResetTrigger("Death"); } catch {}
+            try { anim.ResetTrigger("GetHit"); } catch {}
+            try { anim.ResetTrigger("GeiHit2"); } catch {}
+
+            if (anim.layerCount > 1)
+            {
+                anim.SetLayerWeight(1, 0f);
+                try { anim.Play("New State", 1, 0f); } catch {}
+            }
+
             anim.Play("Idle", 0, 0f);
+            anim.Update(0f);
         }
         var netAnim = GetComponent<Unity.Netcode.Components.NetworkAnimator>();
         if (netAnim != null)
@@ -3664,7 +3671,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     private bool IsLockingMovementAction()
     {
-        if (CurrentHealth <= 0) return true;
+        if (localHealth <= 0f || CurrentHealth <= 0f || currentAnimState == "Death" || lastTriggeredAnimName == "Death") return true;
         if (anim == null || !anim.isActiveAndEnabled || anim.runtimeAnimatorController == null) return false;
 
         if (isStandaloneMode ? isRollingStandalone : rollTimer > 0) return true;
@@ -4410,6 +4417,8 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     protected virtual bool IsPlayingActionAnimation()
     {
+        if (localHealth <= 0f || CurrentHealth <= 0f || currentAnimState == "Death" || lastTriggeredAnimName == "Death") return true;
+
         if (anim == null)
         {
             anim = GetComponent<Animator>();
@@ -4457,12 +4466,12 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
             return;
         }
 
-        // Nếu đang chết, chỉ cho phép nhận các lệnh hồi sinh hoặc đưa về trạng thái rỗng/New State
-        if (currentAnimState == "Death")
+        // Nếu đang chết, từ chối tất cả các lệnh hoạt ảnh ngoại trừ "Death", "New State" hoặc "Empty"
+        if (currentAnimState == "Death" || localHealth <= 0f || CurrentHealth <= 0f)
         {
-            if (CurrentHealth <= 0)
+            if (CurrentHealth <= 0f || localHealth <= 0f)
             {
-                if (animName != "Idle" && animName != "Walk" && animName != "run" && animName != "New State" && animName != "Empty")
+                if (animName != "Death" && animName != "New State" && animName != "Empty")
                 {
                     return;
                 }
