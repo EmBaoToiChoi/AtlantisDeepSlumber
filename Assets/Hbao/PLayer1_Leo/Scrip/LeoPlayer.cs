@@ -3358,9 +3358,12 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     public bool IsDeathAnimationFinished => isDeathAnimFinished;
     public void ResetDeathState()
     {
+        StopAllCoroutines();
+        PlayerDeathEffectManager.Instance.ResetDeathEffect();
+        localHealth = maxHealth;
         isDeathAnimFinished = false;
-        currentAnimState = "";
-        lastTriggeredAnimName = "";
+        currentAnimState = "Idle";
+        lastTriggeredAnimName = "Idle";
         enabled = true;
 
         if (anim != null && anim.isActiveAndEnabled && anim.runtimeAnimatorController != null)
@@ -3379,6 +3382,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     public void OnDeathAnimationEnd()
     {
+        if (localHealth > 0f || CurrentHealth > 0f) return;
         if (IsOwner || isStandaloneMode)
         {
             StartCoroutine(DeathEyelidsSequenceCoroutine());
@@ -3387,11 +3391,15 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     private System.Collections.IEnumerator DeathEyelidsSequenceCoroutine()
     {
-        if (CurrentHealth > 0f) yield break;
+        if (localHealth > 0f || CurrentHealth > 0f)
+        {
+            PlayerDeathEffectManager.Instance.ResetDeathEffect();
+            yield break;
+        }
         float duration = 1.5f;
         PlayerDeathEffectManager.Instance.PlayDeathEffect(duration);
         yield return new WaitForSeconds(duration);
-        if (CurrentHealth > 0f)
+        if (localHealth > 0f || CurrentHealth > 0f)
         {
             PlayerDeathEffectManager.Instance.ResetDeathEffect();
             yield break;
@@ -7569,6 +7577,10 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     private System.Collections.IEnumerator ResetTriggerNextFrame(string triggerName)
     {
         yield return null;
+        if (triggerName == "Slash2combo2" || triggerName == "Slash3combo2" || triggerName == "Slash1Combo2" || triggerName == "attacktaytrai" || triggerName == "attacktayphai")
+        {
+            yield break;
+        }
         if (anim != null && !string.IsNullOrEmpty(triggerName))
         {
             anim.ResetTrigger(triggerName);
@@ -7582,6 +7594,11 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     private void PlayAnimationLocal(string animName, float fadeTime)
     {
+        if (animName == "Death" && (localHealth > 0f || CurrentHealth > 0f))
+        {
+            return;
+        }
+
         // Play action sound effects
         string translatedNameForAudio = TranslateAnimName(animName);
         string animLower = animName.ToLower();
@@ -7787,10 +7804,12 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
                 int hash0 = Animator.StringToHash(candidateInLayer0);
                 bool hasLayer0 = anim.HasState(0, hash0);
 
-                if (hasLayer1 && (!isRootedAttack || !hasLayer0))
+                bool isSlashCombo = isAttack || translatedName == "Slash2combo2" || translatedName == "Slash3combo2" || translatedName == "Slash1Combo2" || translatedName == "attacktaytrai" || translatedName == "attacktayphai";
+
+                if (isSlashCombo || (hasLayer1 && (!isRootedAttack || !hasLayer0)))
                 {
                     targetLayer = 1;
-                    stateName = candidateInLayer1;
+                    if (hasLayer1) stateName = candidateInLayer1;
                     anim.SetLayerWeight(1, 1f);
                 }
                 else
@@ -8415,6 +8434,22 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         SafeSetHitboxEnabled(axeWeaponHitbox, false);
         alreadyHitEnemies.Clear();
     }
+
+    // --- Alias Animation Event Receivers (Tự động hứng đúng sự kiện trong Animation Clip) ---
+    public void EnableHitbox() { EnableBothWeaponHitboxes(); }
+    public void DisableHitbox() { DisableAllHitboxes(); }
+    public void EnableWeaponHitbox() { EnableBothWeaponHitboxes(); }
+    public void DisableWeaponHitbox() { DisableAllHitboxes(); }
+    public void EnableWeapon() { EnableBothWeaponHitboxes(); }
+    public void DisableWeapon() { DisableAllHitboxes(); }
+    public void EnableSword() { EnableBothWeaponHitboxes(); }
+    public void DisableSword() { DisableAllHitboxes(); }
+    public void HitboxOn() { EnableBothWeaponHitboxes(); }
+    public void HitboxOff() { DisableAllHitboxes(); }
+    public void OnHitboxEnable() { EnableBothWeaponHitboxes(); }
+    public void OnHitboxDisable() { DisableAllHitboxes(); }
+    public void OnAttackHit() { EnableBothWeaponHitboxes(); }
+    public void OnHit() { EnableBothWeaponHitboxes(); }
 
     public void OnPunchEnd() { DisableAllHitboxes(); }
     public void OnSlashEnd() { DisableAllHitboxes(); }

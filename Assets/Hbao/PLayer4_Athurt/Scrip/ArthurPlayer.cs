@@ -542,9 +542,12 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
     public bool IsDeathAnimationFinished => isDeathAnimFinished;
     public void ResetDeathState()
     {
+        StopAllCoroutines();
+        PlayerDeathEffectManager.Instance.ResetDeathEffect();
+        localHealth = maxHealth;
         isDeathAnimFinished = false;
-        currentAnimState = "";
-        lastTriggeredAnimName = "";
+        currentAnimState = "Idle";
+        lastTriggeredAnimName = "Idle";
         enabled = true;
 
         if (anim != null && anim.isActiveAndEnabled && anim.runtimeAnimatorController != null)
@@ -563,6 +566,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     public void OnDeathAnimationEnd()
     {
+        if (localHealth > 0f || CurrentHealth > 0f) return;
         if (IsOwner || isStandaloneMode)
         {
             StartCoroutine(DeathEyelidsSequenceCoroutine());
@@ -571,11 +575,15 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     private System.Collections.IEnumerator DeathEyelidsSequenceCoroutine()
     {
-        if (CurrentHealth > 0f) yield break;
+        if (localHealth > 0f || CurrentHealth > 0f)
+        {
+            PlayerDeathEffectManager.Instance.ResetDeathEffect();
+            yield break;
+        }
         float duration = 1.5f;
         PlayerDeathEffectManager.Instance.PlayDeathEffect(duration);
         yield return new WaitForSeconds(duration);
-        if (CurrentHealth > 0f)
+        if (localHealth > 0f || CurrentHealth > 0f)
         {
             PlayerDeathEffectManager.Instance.ResetDeathEffect();
             yield break;
@@ -4451,6 +4459,11 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     protected virtual void PlayAnimationLocal(string animName, float fadeTime)
     {
+        if (animName == "Death" && (localHealth > 0f || CurrentHealth > 0f))
+        {
+            return;
+        }
+
         // Play action sound effects
         string animLower = animName.ToLower();
         bool isSlash = animLower.Contains("attack") || animLower.Contains("slash") || animLower.Contains("chem") || animLower.Contains("chatriu");
