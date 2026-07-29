@@ -33620,6 +33620,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Prefab_Temple_Altar_Windows
       objectReference: {fileID: 0}
+    - target: {fileID: 5247090363502729395, guid: aa2ddcb4164ff0842914a08d25c8c1ea, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 5277126231085429633, guid: aa2ddcb4164ff0842914a08d25c8c1ea, type: 3}
       propertyPath: m_StaticEditorFlags
       value: 2147483647
@@ -77277,6 +77281,10 @@ PrefabInstance:
       value: Prefab_Temple_Altar_Floor
       objectReference: {fileID: 0}
     - target: {fileID: 6201002231826494036, guid: 8ddee2afd1351d04abf70eed37c29081, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6201002231826494036, guid: 8ddee2afd1351d04abf70eed37c29081, type: 3}
       propertyPath: m_StaticEditorFlags
       value: 2147483647
       objectReference: {fileID: 0}
@@ -95942,6 +95950,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Prefab_Temple_Altar_Roof_Top
       objectReference: {fileID: 0}
+    - target: {fileID: 9104395279155877193, guid: 53657c2496dffdd46bb83df7de8d753e, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 9220713925777782572, guid: 53657c2496dffdd46bb83df7de8d753e, type: 3}
       propertyPath: m_StaticEditorFlags
       value: 2147483647
@@ -104948,6 +104960,10 @@ PrefabInstance:
       value: Prefab_Temple_Front_Doors
       objectReference: {fileID: 0}
     - target: {fileID: 5153645003733889302, guid: 2af64cd1810c03e49a4f27176c890275, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 5153645003733889302, guid: 2af64cd1810c03e49a4f27176c890275, type: 3}
       propertyPath: m_StaticEditorFlags
       value: 0
       objectReference: {fileID: 0}
@@ -108279,6 +108295,10 @@ PrefabInstance:
     - target: {fileID: 2771733174505006732, guid: 119335ff83f7de348adf35d2362cf705, type: 3}
       propertyPath: m_Name
       value: Prefab_Temple_Top_Roof (2)
+      objectReference: {fileID: 0}
+    - target: {fileID: 2771733174505006732, guid: 119335ff83f7de348adf35d2362cf705, type: 3}
+      propertyPath: m_IsActive
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 2771733174505006732, guid: 119335ff83f7de348adf35d2362cf705, type: 3}
       propertyPath: m_StaticEditorFlags
@@ -131770,6 +131790,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Prefab_Temple_Altar_Wall
       objectReference: {fileID: 0}
+    - target: {fileID: 3105572015727881514, guid: 1ef198071403ec74c80626d88f444917, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 3163815448514034204, guid: 1ef198071403ec74c80626d88f444917, type: 3}
       propertyPath: m_StaticEditorFlags
       value: 2147483647
@@ -132159,6 +132183,10 @@ PrefabInstance:
     - target: {fileID: 149728579551565040, guid: c9de2626281b0a84580662f871588172, type: 3}
       propertyPath: m_Name
       value: Prefab_Temple_Wall_Windows_End
+      objectReference: {fileID: 0}
+    - target: {fileID: 149728579551565040, guid: c9de2626281b0a84580662f871588172, type: 3}
+      propertyPath: m_IsActive
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 199565704477323098, guid: c9de2626281b0a84580662f871588172, type: 3}
       propertyPath: m_StaticEditorFlags
@@ -141785,6 +141813,10 @@ PrefabInstance:
       value: prefab_floor_plane_01 (1)
       objectReference: {fileID: 0}
     - target: {fileID: 4839018748015245193, guid: afd148522247bde47a1c0a0967ec90e0, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 4839018748015245193, guid: afd148522247bde47a1c0a0967ec90e0, type: 3}
       propertyPath: m_StaticEditorFlags
       value: 0
       objectReference: {fileID: 0}
@@ -149104,6 +149136,10 @@ PrefabInstance:
     - target: {fileID: 149728579551565040, guid: cca74601f6f1b3044b55848ad4f6f693, type: 3}
       propertyPath: m_Name
       value: Prefab_Temple_Wall_Windows_X2
+      objectReference: {fileID: 0}
+    - target: {fileID: 149728579551565040, guid: cca74601f6f1b3044b55848ad4f6f693, type: 3}
+      propertyPath: m_IsActive
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 149728579551565040, guid: cca74601f6f1b3044b55848ad4f6f693, type: 3}
       propertyPath: m_StaticEditorFlags
@@ -167922,15 +167958,6 @@ Transform:
   - {fileID: 540502527}
   - {fileID: 274593221}
   - {fileID: 711668219}
-  - {fileID: 946283005}
-  - {fileID: 1077056523}
-  - {fileID: 743772323}
-  - {fileID: 477430039}
-  - {fileID: 673845473}
-  - {fileID: 979032633}
-  - {fileID: 981553705}
-  - {fileID: 135761821}
-  - {fileID: 1822412733}
   - {fileID: 3676051407654598233}
   - {fileID: 3676051406472385162}
   - {fileID: 3676051408132175933}
@@ -167943,6 +167970,15 @@ Transform:
   - {fileID: 3676051408064187742}
   - {fileID: 3676051406754297083}
   - {fileID: 4570076996177960751}
+  - {fileID: 946283005}
+  - {fileID: 1077056523}
+  - {fileID: 743772323}
+  - {fileID: 477430039}
+  - {fileID: 673845473}
+  - {fileID: 979032633}
+  - {fileID: 981553705}
+  - {fileID: 135761821}
+  - {fileID: 1822412733}
   - {fileID: 1642115475}
   - {fileID: 1156511537}
   - {fileID: 1453419563}
@@ -217307,6 +217343,10 @@ PrefabInstance:
       value: Prefab_Temple_Top_Roof (1)
       objectReference: {fileID: 0}
     - target: {fileID: 2771733174505006732, guid: 119335ff83f7de348adf35d2362cf705, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 2771733174505006732, guid: 119335ff83f7de348adf35d2362cf705, type: 3}
       propertyPath: m_StaticEditorFlags
       value: 2147483647
       objectReference: {fileID: 0}
@@ -254791,6 +254831,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Prefab_Temple_Altar_Roof
       objectReference: {fileID: 0}
+    - target: {fileID: 6845653955252987547, guid: 3d9051d6e2ca7a3489eb99890fb9c8ab, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 6859424403867667208, guid: 3d9051d6e2ca7a3489eb99890fb9c8ab, type: 3}
       propertyPath: m_StaticEditorFlags
       value: 2147483647
@@ -271273,6 +271317,10 @@ PrefabInstance:
       value: Prefab_Temple_Wall_Windows_X2
       objectReference: {fileID: 0}
     - target: {fileID: 149728579551565040, guid: cca74601f6f1b3044b55848ad4f6f693, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 149728579551565040, guid: cca74601f6f1b3044b55848ad4f6f693, type: 3}
       propertyPath: m_StaticEditorFlags
       value: 2147483647
       objectReference: {fileID: 0}
@@ -277004,6 +277052,10 @@ PrefabInstance:
       value: Prefab_Temple_Top_Roof
       objectReference: {fileID: 0}
     - target: {fileID: 2771733174505006732, guid: 119335ff83f7de348adf35d2362cf705, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 2771733174505006732, guid: 119335ff83f7de348adf35d2362cf705, type: 3}
       propertyPath: m_StaticEditorFlags
       value: 2147483647
       objectReference: {fileID: 0}
@@ -281244,7 +281296,7 @@ Transform:
   m_GameObject: {fileID: 2089306181}
   serializedVersion: 2
   m_LocalRotation: {x: -0.039551742, y: 0.70165825, z: 0.0049717803, w: 0.71139777}
-  m_LocalPosition: {x: 254.3, y: 0.0000019073, z: -131.7}
+  m_LocalPosition: {x: 262.1, y: 0.0000019073, z: -131.7}
   m_LocalScale: {x: 624.38434, y: 50, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
