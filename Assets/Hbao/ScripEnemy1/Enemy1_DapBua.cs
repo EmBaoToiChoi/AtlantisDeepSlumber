@@ -183,6 +183,8 @@ public class Enemy1_DapBua : NetworkBehaviour
         }
 
         gameObject.tag = "Enemy";
+        if (agent == null) agent = GetComponent<UnityEngine.AI.NavMeshAgent>();
+        if (agent != null && !agent.enabled) agent.enabled = true;
         if (anim == null) anim = GetComponent<Animator>() ?? GetComponentInChildren<Animator>(true);
 
         if (obstacleLayer.value == 0)
@@ -193,6 +195,9 @@ public class Enemy1_DapBua : NetworkBehaviour
                 obstacleLayer = ~(LayerMask.GetMask("Player", "Enemy", "Ignore Raycast", "UI", "Water"));
             }
         }
+        // Luôn loại bỏ layer Player và Enemy khỏi obstacleLayer để tia Raycast không đụng nhầm
+        int excludeMask = LayerMask.GetMask("Player", "Enemy", "Ignore Raycast", "UI");
+        if (excludeMask != 0) obstacleLayer &= ~excludeMask;
 
         if (playerLayer.value == 0)
         {
@@ -515,19 +520,19 @@ public class Enemy1_DapBua : NetworkBehaviour
                 bool isMoving = agent.velocity.magnitude > 0.15f;
                 SetSpeedNet(isMoving ? 0.5f : 0f);
 
-                if (!agent.pathPending)
+                if (!agent.pathPending && agent.hasPath)
                 {
-                    if (agent.hasPath && agent.remainingDistance <= agent.stoppingDistance + 0.4f)
+                    if (agent.remainingDistance > 0.1f && agent.remainingDistance <= agent.stoppingDistance + 0.5f)
                     {
                         agent.isStopped = true;
                         SetSpeedNet(0f);
                         waitingAtWaypoint = true;
                         waypointWaitTimer = Random.Range(2.0f, 3.0f);
                     }
-                    else if (!agent.hasPath || agent.pathStatus == NavMeshPathStatus.PathInvalid)
-                    {
-                        GoToNextWaypoint();
-                    }
+                }
+                else if (!agent.pathPending && (!agent.hasPath || agent.pathStatus == NavMeshPathStatus.PathInvalid))
+                {
+                    GoToNextWaypoint();
                 }
             }
             else
@@ -545,20 +550,27 @@ public class Enemy1_DapBua : NetworkBehaviour
     {
         if (targetPlayer == null || !IsPlayerAliveAndValid(targetPlayer)) { targetPlayer = null; ReturnToPatrol(); return; }
 
-        // Kiểm tra khuất tường nghiêm ngặt - ngắt rượt đuổi nếu bị tường chắn
         Vector3 ep1 = eyeTransform != null ? eyeTransform.position : transform.position + Vector3.up * 1.5f;
-        Vector3 ep2 = transform.position + Vector3.up * 0.6f;
         Vector3 targetCenter = targetPlayer.position + Vector3.up * 1.0f;
         float dToPlayer = Vector3.Distance(ep1, targetCenter);
         Vector3 dirToPlayer = (targetCenter - ep1).normalized;
 
-        bool wallBlocked = Physics.Raycast(ep1, dirToPlayer, dToPlayer, obstacleLayer, QueryTriggerInteraction.Ignore) ||
-                           Physics.Raycast(ep2, dirToPlayer, dToPlayer, obstacleLayer, QueryTriggerInteraction.Ignore);
+        bool wallBlocked = false;
+        if (dToPlayer > 3.5f)
+        {
+            if (Physics.Raycast(ep1, dirToPlayer, out RaycastHit h1, dToPlayer - 0.3f, obstacleLayer, QueryTriggerInteraction.Ignore))
+            {
+                if (h1.collider != null && h1.transform != targetPlayer && !h1.transform.IsChildOf(targetPlayer) && !h1.collider.CompareTag("Player"))
+                {
+                    wallBlocked = true;
+                }
+            }
+        }
 
         if (wallBlocked)
         {
             loseSightTimer += Time.deltaTime;
-            if (loseSightTimer > 0.8f)
+            if (loseSightTimer > 1.5f)
             {
                 targetPlayer = null;
                 ReturnToPatrol();
@@ -761,10 +773,27 @@ public class Enemy1_DapBua : NetworkBehaviour
         if (n.Contains("ui") || n.Contains("canvas") || n.Contains("hud") || n.Contains("healthbar") || n.Contains("health_bar")) return false;
 
         IPlayerHUDTarget ps = pt.GetComponentInParent<IPlayerHUDTarget>();
-        if (ps != null && (ps.CurrentHealth <= 0 || ps.IsInvisible)) return false;
+        if (ps != null)
+        {
+            if (ps.CurrentHealth <= 0 || ps.IsInvisible) return false;
+            return true;
+        }
+
         Skeleton sk = pt.GetComponentInParent<Skeleton>();
-        if (sk != null && sk.CurrentHealthValue <= 0) return false;
-        return true;
+        if (sk != null)
+        {
+            if (sk.CurrentHealthValue <= 0) return false;
+            return true;
+        }
+
+        Transform curr = pt;
+        while (curr != null)
+        {
+            if (curr.CompareTag("Player")) return true;
+            curr = curr.parent;
+        }
+
+        return false;
     }
 
     private System.Collections.Generic.List<Transform> GetAllAlivePlayers()
@@ -778,7 +807,7 @@ public class Enemy1_DapBua : NetworkBehaviour
                 var clientObj = kvp.Value.PlayerObject;
                 if (clientObj != null && clientObj.gameObject.activeInHierarchy)
                 {
-                    Transform t = clientObj.transform.root;
+                    Transform t = clientObj.transform;
                     if (IsPlayerAliveAndValid(t) && !list.Contains(t))
                     {
                         list.Add(t);
@@ -792,7 +821,7 @@ public class Enemy1_DapBua : NetworkBehaviour
         {
             if (p != null && p.activeInHierarchy)
             {
-                Transform t = p.transform.root;
+                Transform t = p.transform;
                 if (IsPlayerAliveAndValid(t) && !list.Contains(t))
                 {
                     list.Add(t);
@@ -832,7 +861,7 @@ public class Enemy1_DapBua : NetworkBehaviour
         {
             if (pt == null || !IsPlayerAliveAndValid(pt)) continue;
 
-            Vector3 center = pt.position + Vector3.up;
+            Vector3 center = pt.position + Vector3.up * 1.0f;
             float d = Vector3.Distance(ep, center);
             if (d > sightRange) continue;
 
@@ -841,9 +870,21 @@ public class Enemy1_DapBua : NetworkBehaviour
             bool inFOV = Vector3.Angle(transform.forward, dir) < fieldOfView / 2f;
             bool isProximity = d <= 5.5f;
 
-            if ((inFOV || isProximity || pt == targetPlayer) && !Physics.Raycast(ep, dir, d, obstacleLayer, QueryTriggerInteraction.Ignore))
+            if (inFOV || isProximity || pt == targetPlayer)
             {
-                if (d < minD)
+                bool clearLOS = true;
+                if (d > 3.0f)
+                {
+                    if (Physics.Raycast(ep, dir, out RaycastHit hit, d - 0.2f, obstacleLayer, QueryTriggerInteraction.Ignore))
+                    {
+                        if (hit.collider != null && hit.transform != pt && !hit.transform.IsChildOf(pt) && !hit.collider.CompareTag("Player"))
+                        {
+                            clearLOS = false;
+                        }
+                    }
+                }
+
+                if (clearLOS && d < minD)
                 {
                     minD = d;
                     bestTarget = pt;

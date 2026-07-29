@@ -107,6 +107,8 @@ public class Enemy5_PhuThuy : NetworkBehaviour
     private void Awake()
     {
         gameObject.tag = "Enemy";
+        if (agent == null) agent = GetComponent<UnityEngine.AI.NavMeshAgent>();
+        if (agent != null && !agent.enabled) agent.enabled = true;
         propBlock = new MaterialPropertyBlock();
         if (anim == null) anim = GetComponent<Animator>() ?? GetComponentInChildren<Animator>(true);
 
@@ -118,6 +120,9 @@ public class Enemy5_PhuThuy : NetworkBehaviour
                 obstacleLayer = ~(LayerMask.GetMask("Player", "Enemy", "Ignore Raycast", "UI", "Water"));
             }
         }
+        // Luôn loại bỏ layer Player và Enemy khỏi obstacleLayer để tia Raycast không đụng nhầm
+        int excludeMask = LayerMask.GetMask("Player", "Enemy", "Ignore Raycast", "UI");
+        if (excludeMask != 0) obstacleLayer &= ~excludeMask;
 
         if (playerLayer.value == 0)
         {
@@ -416,19 +421,19 @@ public class Enemy5_PhuThuy : NetworkBehaviour
                 bool isMoving = agent.velocity.magnitude > 0.15f;
                 SetSpeedNet(isMoving ? 0.5f : 0f);
 
-                if (!agent.pathPending)
+                if (!agent.pathPending && agent.hasPath)
                 {
-                    if (agent.hasPath && agent.remainingDistance <= agent.stoppingDistance + 0.4f)
+                    if (agent.remainingDistance > 0.1f && agent.remainingDistance <= agent.stoppingDistance + 0.5f)
                     {
                         agent.isStopped = true;
                         SetSpeedNet(0f);
                         waitingAtWaypoint = true;
                         waypointWaitTimer = Random.Range(2.0f, 3.0f);
                     }
-                    else if (!agent.hasPath || agent.pathStatus == NavMeshPathStatus.PathInvalid)
-                    {
-                        GoToNextWaypoint();
-                    }
+                }
+                else if (!agent.pathPending && (!agent.hasPath || agent.pathStatus == NavMeshPathStatus.PathInvalid))
+                {
+                    GoToNextWaypoint();
                 }
             }
             else
@@ -439,50 +444,32 @@ public class Enemy5_PhuThuy : NetworkBehaviour
         }
     }
 
-    private void ExecuteBlinkEscape()
-    {
-        if (blinkTimer > 0 || targetPlayer == null || !AgentReady) return;
-
-        Vector3 away = (transform.position - targetPlayer.position).normalized;
-        Vector3 blinkDir = (away + transform.right * (Random.value < 0.5f ? 0.6f : -0.6f)).normalized;
-        float blinkDist = 6.5f;
-
-        // TIA RAYCAST CHỐNG TỐC BIẾN XUYÊN TƯỜNG
-        if (Physics.Raycast(transform.position + Vector3.up * 0.8f, blinkDir, out RaycastHit wallHit, blinkDist, obstacleLayer, QueryTriggerInteraction.Ignore))
-        {
-            blinkDist = Mathf.Max(1.0f, wallHit.distance - 0.8f);
-        }
-
-        Vector3 blinkTarget = transform.position + blinkDir * blinkDist;
-
-        if (NavMesh.SamplePosition(blinkTarget, out NavMeshHit hit, 3.0f, NavMesh.AllAreas))
-        {
-            agent.Warp(hit.position);
-            blinkTimer = 3.5f;
-            isBlinking = true;
-            if (anim != null) anim.SetTrigger(hitTrigger);
-        }
-    }
-
     // ── Chase (Kiting) ──
     private void HandleChase()
     {
         if (targetPlayer == null || !IsPlayerAliveAndValid(targetPlayer)) { targetPlayer = null; ReturnToPatrol(); return; }
 
         Vector3 ep1 = eyeTransform != null ? eyeTransform.position : transform.position + Vector3.up * 1.5f;
-        Vector3 ep2 = transform.position + Vector3.up * 0.6f;
         Vector3 targetCenter = targetPlayer.position + Vector3.up * 1.0f;
         float d = Vector3.Distance(ep1, targetCenter);
         Vector3 dir = (targetCenter - ep1).normalized;
 
-        // Wall blocking line of sight check - ngắt rượt đuổi nếu bị tường chắn
-        bool wallBlocked = Physics.Raycast(ep1, dir, d, obstacleLayer, QueryTriggerInteraction.Ignore) ||
-                           Physics.Raycast(ep2, dir, d, obstacleLayer, QueryTriggerInteraction.Ignore);
+        bool wallBlocked = false;
+        if (d > 3.5f)
+        {
+            if (Physics.Raycast(ep1, dir, out RaycastHit h1, d - 0.3f, obstacleLayer, QueryTriggerInteraction.Ignore))
+            {
+                if (h1.collider != null && h1.transform != targetPlayer && !h1.transform.IsChildOf(targetPlayer) && !h1.collider.CompareTag("Player"))
+                {
+                    wallBlocked = true;
+                }
+            }
+        }
 
         if (wallBlocked)
         {
             loseSightTimer += Time.deltaTime;
-            if (loseSightTimer > 0.8f || (AgentReady && agent.hasPath && agent.pathStatus == NavMeshPathStatus.PathPartial))
+            if (loseSightTimer > 1.5f)
             {
                 targetPlayer = null;
                 ReturnToPatrol();
@@ -494,6 +481,7 @@ public class Enemy5_PhuThuy : NetworkBehaviour
             loseSightTimer = 0f;
         }
 
+        // Luôn quay mặt về phía Player
         Vector3 ld = (targetPlayer.position - transform.position); ld.y = 0;
         if (ld.sqrMagnitude > 0.01f) transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(ld), Time.deltaTime * 18f);
         Vector3 flatEnemy = transform.position; flatEnemy.y = 0;
@@ -501,50 +489,47 @@ public class Enemy5_PhuThuy : NetworkBehaviour
         float dist = Vector3.Distance(flatEnemy, flatPlayer);
         float spd = CurrentHealthValue < maxHealth * 0.5f ? chaseRunSpeed * 1.35f : chaseRunSpeed;
 
-        // EMERGENCY BLINK ESCAPE if player gets too close (< 4.2m)
-        if (dist < 4.2f && blinkTimer <= 0)
-        {
-            ExecuteBlinkEscape();
-            return;
-        }
-
-        // A. QUÁ GẦN (< minAttackRange = 7.5m): Thoái lui Kiting tốc độ cao
+        // A. QUÁ GẦN (< minAttackRange): ĐI LÙI ra xa Player (walk backward)
         if (dist < minAttackRange)
         {
-            Vector3 away = (transform.position - targetPlayer.position).normalized;
-            Vector3 rp = transform.position + away * 5.5f;
-            NavMeshHit h;
-            if (NavMesh.SamplePosition(rp, out h, 5.5f, NavMesh.AllAreas))
+            Vector3 away = (transform.position - targetPlayer.position);
+            away.y = 0;
+            away = away.normalized;
+
+            // Tính điểm đến phía sau lưng (hướng xa Player)
+            float retreatDist = Mathf.Clamp(minAttackRange - dist + 2.0f, 2.0f, 6.0f);
+            Vector3 retreatPos = transform.position + away * retreatDist;
+
+            // Kiểm tra tường phía sau: nếu bị chặn thì đi chéo sang bên
+            if (Physics.Raycast(transform.position + Vector3.up * 0.8f, away, out RaycastHit wallCheck, retreatDist, obstacleLayer, QueryTriggerInteraction.Ignore))
+            {
+                // Bị tường chặn phía sau → thử đi chéo sang trái/phải
+                Vector3 perp = new Vector3(-away.z, 0, away.x);
+                Vector3 sideDir = (away + perp * (Random.value < 0.5f ? 1.2f : -1.2f)).normalized;
+                retreatPos = transform.position + sideDir * retreatDist;
+            }
+
+            if (NavMesh.SamplePosition(retreatPos, out NavMeshHit navHit, 4.0f, NavMesh.AllAreas))
             {
                 if (AgentReady)
                 {
                     agent.isStopped = false;
-                    agent.speed = spd + 2.2f;
-                    agent.SetDestination(h.position);
-                }
-            }
-            else
-            {
-                Vector3 perp = new Vector3(-away.z, 0, away.x);
-                Vector3 alt = transform.position + perp * (Random.value < 0.5f ? 5f : -5f);
-                if (NavMesh.SamplePosition(alt, out NavMeshHit h2, 5f, NavMesh.AllAreas) && AgentReady)
-                {
-                    agent.speed = spd + 2.2f;
-                    agent.SetDestination(h2.position);
+                    agent.speed = spd * 0.85f; // Đi lùi chậm hơn chạy tới một chút
+                    agent.SetDestination(navHit.position);
                 }
             }
 
-            // Fire spell while backpedaling if cooldown ready
-            if (attackCooldownTimer <= 0 && dist >= 3.5f)
+            // Vừa đi lùi vừa bắn phép nếu cooldown sẵn sàng
+            if (attackCooldownTimer <= 0 && dist >= 3.0f)
             {
                 ChangeState(EnemyState.Attack);
             }
 
-            SetSpeedNet(AgentReady && !agent.isStopped ? 1f : 0f);
+            SetSpeedNet(AgentReady && !agent.isStopped ? 0.5f : 0f); // Walk animation khi đi lùi
             return;
         }
 
-        // B. TẦM LÝ TƯỞNG (7.5m <= dist <= 16m): Đứng bắn phép
+        // B. TẦM LÝ TƯỞNG (minAttackRange <= dist <= maxAttackRange): Đứng bắn phép
         if (dist >= minAttackRange && dist <= maxAttackRange)
         {
             if (AgentReady) agent.isStopped = true;
@@ -553,7 +538,7 @@ public class Enemy5_PhuThuy : NetworkBehaviour
             return;
         }
 
-        // C. QUÁ XA (> 16m): Tiến lại gần
+        // C. QUÁ XA (> maxAttackRange): Tiến lại gần
         if (AgentReady)
         {
             agent.isStopped = false;
@@ -666,9 +651,9 @@ public class Enemy5_PhuThuy : NetworkBehaviour
         if (targetPlayer == null) { EndAttack(); return; }
 
         float dist = Vector3.Distance(transform.position, targetPlayer.position);
-        if (dist < 4.5f && blinkTimer <= 0)
+        // Nếu Player áp sát quá gần trong lúc đang cast phép → hủy đánh, quay về Chase để đi lùi
+        if (dist < 4.5f)
         {
-            ExecuteBlinkEscape();
             EndAttack();
             return;
         }
@@ -697,10 +682,27 @@ public class Enemy5_PhuThuy : NetworkBehaviour
         if (n.Contains("ui") || n.Contains("canvas") || n.Contains("hud") || n.Contains("healthbar") || n.Contains("health_bar")) return false;
 
         IPlayerHUDTarget ps = pt.GetComponentInParent<IPlayerHUDTarget>();
-        if (ps != null && (ps.CurrentHealth <= 0 || ps.IsInvisible)) return false;
+        if (ps != null)
+        {
+            if (ps.CurrentHealth <= 0 || ps.IsInvisible) return false;
+            return true;
+        }
+
         Skeleton sk = pt.GetComponentInParent<Skeleton>();
-        if (sk != null && sk.CurrentHealthValue <= 0) return false;
-        return true;
+        if (sk != null)
+        {
+            if (sk.CurrentHealthValue <= 0) return false;
+            return true;
+        }
+
+        Transform curr = pt;
+        while (curr != null)
+        {
+            if (curr.CompareTag("Player")) return true;
+            curr = curr.parent;
+        }
+
+        return false;
     }
 
     private System.Collections.Generic.List<Transform> GetAllAlivePlayers()
@@ -714,7 +716,7 @@ public class Enemy5_PhuThuy : NetworkBehaviour
                 var clientObj = kvp.Value.PlayerObject;
                 if (clientObj != null && clientObj.gameObject.activeInHierarchy)
                 {
-                    Transform t = clientObj.transform.root;
+                    Transform t = clientObj.transform;
                     if (IsPlayerAliveAndValid(t) && !list.Contains(t))
                     {
                         list.Add(t);
@@ -728,7 +730,7 @@ public class Enemy5_PhuThuy : NetworkBehaviour
         {
             if (p != null && p.activeInHierarchy)
             {
-                Transform t = p.transform.root;
+                Transform t = p.transform;
                 if (IsPlayerAliveAndValid(t) && !list.Contains(t))
                 {
                     list.Add(t);
@@ -768,7 +770,7 @@ public class Enemy5_PhuThuy : NetworkBehaviour
         {
             if (pt == null || !IsPlayerAliveAndValid(pt)) continue;
 
-            Vector3 center = pt.position + Vector3.up;
+            Vector3 center = pt.position + Vector3.up * 1.0f;
             float d = Vector3.Distance(ep, center);
             if (d > sightRange) continue;
 
@@ -777,9 +779,21 @@ public class Enemy5_PhuThuy : NetworkBehaviour
             bool inFOV = Vector3.Angle(transform.forward, dir) < fieldOfView / 2f;
             bool isProximity = d <= 5.5f;
 
-            if ((inFOV || isProximity || pt == targetPlayer) && !Physics.Raycast(ep, dir, d, obstacleLayer, QueryTriggerInteraction.Ignore))
+            if (inFOV || isProximity || pt == targetPlayer)
             {
-                if (d < minD)
+                bool clearLOS = true;
+                if (d > 3.0f)
+                {
+                    if (Physics.Raycast(ep, dir, out RaycastHit hit, d - 0.2f, obstacleLayer, QueryTriggerInteraction.Ignore))
+                    {
+                        if (hit.collider != null && hit.transform != pt && !hit.transform.IsChildOf(pt) && !hit.collider.CompareTag("Player"))
+                        {
+                            clearLOS = false;
+                        }
+                    }
+                }
+
+                if (clearLOS && d < minD)
                 {
                     minD = d;
                     bestTarget = pt;
