@@ -51,12 +51,12 @@ public class Enemy5_PhuThuy : NetworkBehaviour
     [Range(0f, 1f)] public float repairItemDropChance = 0.3f;
 
     [Header("AI Settings")]
-    public float sightRange     = 18f;
-    public float fieldOfView    = 110f;
-    public float maxAttackRange = 13f;
-    public float minAttackRange = 5.5f;  // Kiting: thoái lui nếu Player gần hơn
+    public float sightRange     = 24f;     // Tầm phát hiện xa hơn
+    public float fieldOfView    = 120f;
+    public float maxAttackRange = 16f;     // Tầm bắn xa
+    public float minAttackRange = 7.5f;    // Kiting: bắt đầu thoái lui khi Player gần hơn 7.5m
     public float patrolWalkSpeed = 2.5f;
-    public float chaseRunSpeed   = 3.8f;
+    public float chaseRunSpeed   = 4.5f;    // Tốc độ chạy kiting nhanh hơn
     public float patrolWaitMin = 1.5f;
     public float patrolWaitMax = 5f;
     [Range(0f, 1f)] public float patrolMoveChance = 0.65f;
@@ -91,6 +91,7 @@ public class Enemy5_PhuThuy : NetworkBehaviour
     private int recentHitCount;
     private bool isBlinking;
     private float blinkTimer;
+    private float loseSightTimer;
 
     // ─── FSM States ───
     private IEnemyState currentFSMState;
@@ -108,6 +109,16 @@ public class Enemy5_PhuThuy : NetworkBehaviour
         gameObject.tag = "Enemy";
         propBlock = new MaterialPropertyBlock();
         if (anim == null) anim = GetComponent<Animator>() ?? GetComponentInChildren<Animator>(true);
+
+        if (obstacleLayer.value == 0)
+        {
+            obstacleLayer = LayerMask.GetMask("Default", "Obstacle", "Environment", "Ground", "Wall", "Map", "Structure", "Terrain");
+            if (obstacleLayer.value == 0)
+            {
+                obstacleLayer = ~(LayerMask.GetMask("Player", "Enemy", "Ignore Raycast", "UI", "Water"));
+            }
+        }
+
         var na = GetComponent<Unity.Netcode.Components.NetworkAnimator>();
         if (na != null)
         {
@@ -239,20 +250,48 @@ public class Enemy5_PhuThuy : NetworkBehaviour
     // ── Patrol (Walk) ──
     private Vector3 GetRandomNavMeshPosition(float range)
     {
+        Vector3 origin = transform.position;
         for (int i = 0; i < 30; i++)
         {
             Vector3 randomDirection = Random.insideUnitSphere * range;
-            randomDirection += transform.position;
-            NavMeshHit navHit;
-            if (NavMesh.SamplePosition(randomDirection, out navHit, range, NavMesh.AllAreas))
+            randomDirection += origin;
+            if (NavMesh.SamplePosition(randomDirection, out NavMeshHit navHit, range, NavMesh.AllAreas))
             {
-                if (Vector3.Distance(transform.position, navHit.position) > 2.0f)
+                float dist = Vector3.Distance(origin, navHit.position);
+                if (dist > 2.5f)
                 {
-                    return navHit.position;
+                    Vector3 dir = (navHit.position - origin).normalized;
+                    if (!Physics.Raycast(origin + Vector3.up * 0.5f, dir, dist, obstacleLayer, QueryTriggerInteraction.Ignore))
+                    {
+                        return navHit.position;
+                    }
                 }
             }
         }
-        return transform.position;
+        return origin;
+    }
+
+    private Vector3 GetUniquePatrolPosition(Vector3 basePos)
+    {
+        float angle = (System.Math.Abs(GetHashCode()) % 8) * 45f;
+        Vector3 offset = Quaternion.Euler(0, angle, 0) * Vector3.forward * 1.8f;
+        Vector3 targetPos = basePos + offset;
+
+        Collider[] cols = Physics.OverlapSphere(targetPos, 1.5f);
+        foreach (var c in cols)
+        {
+            if (c != null && c.gameObject != gameObject && (c.CompareTag("Enemy") || c.gameObject.layer == LayerMask.NameToLayer("Enemy")))
+            {
+                Vector3 shift = (targetPos - c.transform.position).normalized * 1.5f;
+                targetPos += shift;
+            }
+        }
+
+        if (NavMesh.SamplePosition(targetPos, out NavMeshHit hit, 2.5f, NavMesh.AllAreas))
+        {
+            return hit.position;
+        }
+        return basePos;
     }
 
     private void GoToNextWaypoint()
@@ -274,17 +313,17 @@ public class Enemy5_PhuThuy : NetworkBehaviour
             do { n = Random.Range(0, waypoints.Length); attempts++; } while (waypoints[n] == null && attempts < 10);
             if (waypoints[n] == null)
             {
-                nextPosition = GetRandomNavMeshPosition(12f);
+                nextPosition = GetUniquePatrolPosition(GetRandomNavMeshPosition(12f));
             }
             else
             {
                 currentWaypointIndex = n;
-                nextPosition = waypoints[currentWaypointIndex].position;
+                nextPosition = GetUniquePatrolPosition(waypoints[currentWaypointIndex].position);
             }
         }
         else
         {
-            nextPosition = GetRandomNavMeshPosition(12f);
+            nextPosition = GetUniquePatrolPosition(GetRandomNavMeshPosition(12f));
         }
 
         waitingAtWaypoint = false;
@@ -297,13 +336,71 @@ public class Enemy5_PhuThuy : NetworkBehaviour
         SetSpeedNet(0.5f);
     }
 
+    private void ApplyPatrolEnemySeparation()
+    {
+        if (!AgentReady) return;
+
+        agent.obstacleAvoidanceType = ObstacleAvoidanceType.HighQualityObstacleAvoidance;
+        if (agent.radius < 0.45f) agent.radius = 0.45f;
+        agent.avoidancePriority = Mathf.Clamp(30 + System.Math.Abs(GetHashCode() % 40), 10, 80);
+
+        Collider[] nearby = Physics.OverlapSphere(transform.position, 1.8f);
+        Vector3 separation = Vector3.zero;
+        int count = 0;
+        foreach (var col in nearby)
+        {
+            if (col != null && col.gameObject != gameObject && (col.CompareTag("Enemy") || col.gameObject.layer == LayerMask.NameToLayer("Enemy")))
+            {
+                Vector3 diff = transform.position - col.transform.position;
+                diff.y = 0;
+                float dist = diff.magnitude;
+                if (dist > 0.01f && dist < 1.8f)
+                {
+                    separation += diff.normalized * ((1.8f - dist) / 1.8f);
+                    count++;
+                }
+            }
+        }
+
+        if (count > 0)
+        {
+            separation /= count;
+            Vector3 pushTarget = transform.position + separation * 0.8f;
+            if (NavMesh.SamplePosition(pushTarget, out NavMeshHit hit, 1.5f, NavMesh.AllAreas))
+            {
+                agent.Warp(hit.position);
+            }
+        }
+    }
+
     private void HandlePatrol()
     {
+        if (targetPlayer != null) { ChangeState(EnemyState.Chase); return; }
+        if (!AgentReady) return;
+
+        ApplyPatrolEnemySeparation();
+
+        // 1. Gặp tường: Quay mặt né tường ngay lập tức và chuyển hướng
+        if (Physics.Raycast(transform.position + Vector3.up * 0.8f, transform.forward, out RaycastHit wallHit, 1.2f, obstacleLayer, QueryTriggerInteraction.Ignore))
+        {
+            if (!wallHit.collider.CompareTag("Player") && !wallHit.collider.CompareTag("Enemy"))
+            {
+                Vector3 avoidDir = Vector3.Reflect(transform.forward, wallHit.normal);
+                avoidDir.y = 0;
+                if (avoidDir.sqrMagnitude > 0.01f) transform.rotation = Quaternion.LookRotation(avoidDir.normalized);
+                GoToNextWaypoint();
+                return;
+            }
+        }
+
         if (waitingAtWaypoint)
         {
-            SetSpeedNet(0f);
+            SetSpeedNet(0f); // Idle tại điểm thoáng 2-3s
             waypointWaitTimer -= Time.deltaTime;
-            if (waypointWaitTimer <= 0) { if (Random.value <= patrolMoveChance) GoToNextWaypoint(); else waypointWaitTimer = Random.Range(patrolWaitMin, patrolWaitMax); }
+            if (waypointWaitTimer <= 0f)
+            {
+                GoToNextWaypoint();
+            }
         }
         else
         {
@@ -312,12 +409,12 @@ public class Enemy5_PhuThuy : NetworkBehaviour
 
             if (AgentReady)
             {
-                if (!agent.pathPending && (agent.remainingDistance <= agent.stoppingDistance + 0.3f || !agent.hasPath))
+                if (!agent.pathPending && (agent.remainingDistance <= agent.stoppingDistance + 0.4f || !agent.hasPath))
                 {
                     agent.isStopped = true;
                     SetSpeedNet(0f);
                     waitingAtWaypoint = true;
-                    waypointWaitTimer = Random.Range(patrolWaitMin, patrolWaitMax);
+                    waypointWaitTimer = Random.Range(2.0f, 3.0f); // Dừng 2 - 3 giây
                 }
             }
             else
@@ -325,6 +422,22 @@ public class Enemy5_PhuThuy : NetworkBehaviour
                 SnapToNavMesh();
                 if (AgentReady) GoToNextWaypoint();
             }
+        }
+    }
+
+    private void ExecuteBlinkEscape()
+    {
+        if (blinkTimer > 0 || targetPlayer == null || !AgentReady) return;
+
+        Vector3 away = (transform.position - targetPlayer.position).normalized;
+        Vector3 blinkTarget = transform.position + away * 6.5f + transform.right * (Random.value < 0.5f ? 2.5f : -2.5f);
+
+        if (NavMesh.SamplePosition(blinkTarget, out NavMeshHit hit, 6.5f, NavMesh.AllAreas))
+        {
+            agent.Warp(hit.position);
+            blinkTimer = 3.5f;
+            isBlinking = true;
+            if (anim != null) anim.SetTrigger(hitTrigger);
         }
     }
 
@@ -336,30 +449,88 @@ public class Enemy5_PhuThuy : NetworkBehaviour
         Skeleton sk = targetPlayer.GetComponentInParent<Skeleton>();
         bool isTargetDead = (ps != null && (ps.CurrentHealth <= 0 || ps.IsInvisible)) || (sk != null && sk.CurrentHealthValue <= 0);
         if ((ps == null && sk == null) || isTargetDead) { targetPlayer = null; ReturnToPatrol(); return; }
+
+        Vector3 ep = eyeTransform != null ? eyeTransform.position : transform.position + Vector3.up * 1.5f;
+        Vector3 center = targetPlayer.position + Vector3.up * 1.0f;
+        float d = Vector3.Distance(ep, center);
+        Vector3 dir = (center - ep).normalized;
+
+        // Wall blocking line of sight check - prevent seeing/chasing through walls
+        if (Physics.Raycast(ep, dir, d, obstacleLayer, QueryTriggerInteraction.Ignore))
+        {
+            loseSightTimer += Time.deltaTime;
+            if (loseSightTimer > 2.5f || (AgentReady && agent.hasPath && agent.pathStatus == NavMeshPathStatus.PathPartial))
+            {
+                targetPlayer = null;
+                ReturnToPatrol();
+                return;
+            }
+        }
+        else
+        {
+            loseSightTimer = 0f;
+        }
+
         Vector3 ld = (targetPlayer.position - transform.position); ld.y = 0;
-        if (ld.sqrMagnitude > 0.01f) transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(ld), Time.deltaTime * 15f);
+        if (ld.sqrMagnitude > 0.01f) transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(ld), Time.deltaTime * 18f);
         Vector3 flatEnemy = transform.position; flatEnemy.y = 0;
         Vector3 flatPlayer = targetPlayer.position; flatPlayer.y = 0;
         float dist = Vector3.Distance(flatEnemy, flatPlayer);
-        float spd = CurrentHealthValue < maxHealth * 0.5f ? chaseRunSpeed * 1.3f : chaseRunSpeed;
+        float spd = CurrentHealthValue < maxHealth * 0.5f ? chaseRunSpeed * 1.35f : chaseRunSpeed;
 
-        // A. QUÁ GẦN: Thoái lui kiting
+        // EMERGENCY BLINK ESCAPE if player gets too close (< 4.2m)
+        if (dist < 4.2f && blinkTimer <= 0)
+        {
+            ExecuteBlinkEscape();
+            return;
+        }
+
+        // A. QUÁ GẦN (< minAttackRange = 7.5m): Thoái lui Kiting tốc độ cao
         if (dist < minAttackRange)
         {
             Vector3 away = (transform.position - targetPlayer.position).normalized;
-            Vector3 rp = transform.position + away * 4.5f;
+            Vector3 rp = transform.position + away * 5.5f;
             NavMeshHit h;
-            if (NavMesh.SamplePosition(rp, out h, 4.5f, NavMesh.AllAreas)) { if (AgentReady) { agent.isStopped = false; agent.speed = spd + 1.5f; agent.SetDestination(h.position); } }
-            else { Vector3 perp = new Vector3(-away.z, 0, away.x); Vector3 alt = transform.position + perp * (Random.value < 0.5f ? 4f : -4f); NavMeshHit h2; if (NavMesh.SamplePosition(alt, out h2, 4f, NavMesh.AllAreas) && AgentReady) agent.SetDestination(h2.position); }
+            if (NavMesh.SamplePosition(rp, out h, 5.5f, NavMesh.AllAreas))
+            {
+                if (AgentReady)
+                {
+                    agent.isStopped = false;
+                    agent.speed = spd + 2.2f;
+                    agent.SetDestination(h.position);
+                }
+            }
+            else
+            {
+                Vector3 perp = new Vector3(-away.z, 0, away.x);
+                Vector3 alt = transform.position + perp * (Random.value < 0.5f ? 5f : -5f);
+                if (NavMesh.SamplePosition(alt, out NavMeshHit h2, 5f, NavMesh.AllAreas) && AgentReady)
+                {
+                    agent.speed = spd + 2.2f;
+                    agent.SetDestination(h2.position);
+                }
+            }
+
+            // Fire spell while backpedaling if cooldown ready
+            if (attackCooldownTimer <= 0 && dist >= 3.5f)
+            {
+                ChangeState(EnemyState.Attack);
+            }
+
             SetSpeedNet(AgentReady && !agent.isStopped ? 1f : 0f);
             return;
         }
 
-        // B. TẦM LÝ TƯỞNG: Đứng tấn công
+        // B. TẦM LÝ TƯỞNG (7.5m <= dist <= 16m): Đứng bắn phép
         if (dist >= minAttackRange && dist <= maxAttackRange)
-        { if (AgentReady) agent.isStopped = true; SetSpeedNet(0f); if (attackCooldownTimer <= 0) ChangeState(EnemyState.Attack); return; }
+        {
+            if (AgentReady) agent.isStopped = true;
+            SetSpeedNet(0f);
+            if (attackCooldownTimer <= 0) ChangeState(EnemyState.Attack);
+            return;
+        }
 
-        // C. QUÁ XA: Tiến lại (giữ cự ly và giãn cách khỏi quái khác)
+        // C. QUÁ XA (> 16m): Tiến lại gần
         if (AgentReady)
         {
             agent.isStopped = false;

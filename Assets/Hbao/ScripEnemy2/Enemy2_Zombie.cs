@@ -98,6 +98,16 @@ public class Enemy2_Zombie : NetworkBehaviour
     {
         gameObject.tag = "Enemy";
         if (anim == null) anim = GetComponent<Animator>() ?? GetComponentInChildren<Animator>(true);
+
+        if (obstacleLayer.value == 0)
+        {
+            obstacleLayer = LayerMask.GetMask("Default", "Obstacle", "Environment", "Ground", "Wall", "Map", "Structure", "Terrain");
+            if (obstacleLayer.value == 0)
+            {
+                obstacleLayer = ~(LayerMask.GetMask("Player", "Enemy", "Ignore Raycast", "UI", "Water"));
+            }
+        }
+
         var na = GetComponent<Unity.Netcode.Components.NetworkAnimator>();
         if (na != null)
         {
@@ -240,6 +250,29 @@ public class Enemy2_Zombie : NetworkBehaviour
         return transform.position;
     }
 
+    private Vector3 GetUniquePatrolPosition(Vector3 basePos)
+    {
+        float angle = (System.Math.Abs(GetHashCode()) % 8) * 45f;
+        Vector3 offset = Quaternion.Euler(0, angle, 0) * Vector3.forward * 1.8f;
+        Vector3 targetPos = basePos + offset;
+
+        Collider[] cols = Physics.OverlapSphere(targetPos, 1.5f);
+        foreach (var c in cols)
+        {
+            if (c != null && c.gameObject != gameObject && (c.CompareTag("Enemy") || c.gameObject.layer == LayerMask.NameToLayer("Enemy")))
+            {
+                Vector3 shift = (targetPos - c.transform.position).normalized * 1.5f;
+                targetPos += shift;
+            }
+        }
+
+        if (NavMesh.SamplePosition(targetPos, out NavMeshHit hit, 2.5f, NavMesh.AllAreas))
+        {
+            return hit.position;
+        }
+        return basePos;
+    }
+
     private void GoToNextWaypoint()
     {
         bool hasWaypoints = false;
@@ -259,17 +292,17 @@ public class Enemy2_Zombie : NetworkBehaviour
             do { n = Random.Range(0, waypoints.Length); attempts++; } while (waypoints[n] == null && attempts < 10);
             if (waypoints[n] == null)
             {
-                nextPosition = GetRandomNavMeshPosition(12f);
+                nextPosition = GetUniquePatrolPosition(GetRandomNavMeshPosition(12f));
             }
             else
             {
                 currentWaypointIndex = n;
-                nextPosition = waypoints[currentWaypointIndex].position;
+                nextPosition = GetUniquePatrolPosition(waypoints[currentWaypointIndex].position);
             }
         }
         else
         {
-            nextPosition = GetRandomNavMeshPosition(12f);
+            nextPosition = GetUniquePatrolPosition(GetRandomNavMeshPosition(12f));
         }
 
         waitingAtWaypoint = false;
@@ -282,13 +315,71 @@ public class Enemy2_Zombie : NetworkBehaviour
         SetSpeedNet(0.5f); // Walk
     }
 
+    private void ApplyPatrolEnemySeparation()
+    {
+        if (!AgentReady) return;
+
+        agent.obstacleAvoidanceType = ObstacleAvoidanceType.HighQualityObstacleAvoidance;
+        if (agent.radius < 0.45f) agent.radius = 0.45f;
+        agent.avoidancePriority = Mathf.Clamp(30 + System.Math.Abs(GetHashCode() % 40), 10, 80);
+
+        Collider[] nearby = Physics.OverlapSphere(transform.position, 1.8f);
+        Vector3 separation = Vector3.zero;
+        int count = 0;
+        foreach (var col in nearby)
+        {
+            if (col != null && col.gameObject != gameObject && (col.CompareTag("Enemy") || col.gameObject.layer == LayerMask.NameToLayer("Enemy")))
+            {
+                Vector3 diff = transform.position - col.transform.position;
+                diff.y = 0;
+                float dist = diff.magnitude;
+                if (dist > 0.01f && dist < 1.8f)
+                {
+                    separation += diff.normalized * ((1.8f - dist) / 1.8f);
+                    count++;
+                }
+            }
+        }
+
+        if (count > 0)
+        {
+            separation /= count;
+            Vector3 pushTarget = transform.position + separation * 0.8f;
+            if (NavMesh.SamplePosition(pushTarget, out NavMeshHit hit, 1.5f, NavMesh.AllAreas))
+            {
+                agent.Warp(hit.position);
+            }
+        }
+    }
+
     private void HandlePatrol()
     {
+        if (targetPlayer != null) { ChangeState(EnemyState.Chase); return; }
+        if (!AgentReady) return;
+
+        ApplyPatrolEnemySeparation();
+
+        // 1. Gặp tường: Quay mặt né tường ngay lập tức và chuyển hướng
+        if (Physics.Raycast(transform.position + Vector3.up * 0.8f, transform.forward, out RaycastHit wallHit, 1.2f, obstacleLayer, QueryTriggerInteraction.Ignore))
+        {
+            if (!wallHit.collider.CompareTag("Player") && !wallHit.collider.CompareTag("Enemy"))
+            {
+                Vector3 avoidDir = Vector3.Reflect(transform.forward, wallHit.normal);
+                avoidDir.y = 0;
+                if (avoidDir.sqrMagnitude > 0.01f) transform.rotation = Quaternion.LookRotation(avoidDir.normalized);
+                GoToNextWaypoint();
+                return;
+            }
+        }
+
         if (waitingAtWaypoint)
         {
-            SetSpeedNet(0f); // Idle tại waypoint
+            SetSpeedNet(0f); // Idle tại điểm thoáng 2-3s
             waypointWaitTimer -= Time.deltaTime;
-            if (waypointWaitTimer <= 0) { if (Random.value <= patrolMoveChance) GoToNextWaypoint(); else waypointWaitTimer = Random.Range(patrolWaitMin, patrolWaitMax); }
+            if (waypointWaitTimer <= 0f)
+            {
+                GoToNextWaypoint();
+            }
         }
         else
         {
@@ -297,12 +388,12 @@ public class Enemy2_Zombie : NetworkBehaviour
 
             if (AgentReady)
             {
-                if (!agent.pathPending && (agent.remainingDistance <= agent.stoppingDistance + 0.3f || !agent.hasPath))
+                if (!agent.pathPending && (agent.remainingDistance <= agent.stoppingDistance + 0.4f || !agent.hasPath))
                 {
                     agent.isStopped = true;
                     SetSpeedNet(0f);
                     waitingAtWaypoint = true;
-                    waypointWaitTimer = Random.Range(patrolWaitMin, patrolWaitMax);
+                    waypointWaitTimer = Random.Range(2.0f, 3.0f); // Dừng 2 - 3 giây
                 }
             }
             else
