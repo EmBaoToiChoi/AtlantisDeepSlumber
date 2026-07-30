@@ -11,7 +11,7 @@ public class Enemy2_Zombie : NetworkBehaviour
     public enum EnemyState { Patrol, Chase, Stagger, Attack, Dead }
 
     [Header("Health")]
-    public float maxHealth = 80f;
+    public float maxHealth = 120f;
     public NetworkVariable<float> currentHealth = new NetworkVariable<float>(80f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     public NetworkVariable<EnemyState> currentState = new NetworkVariable<EnemyState>(EnemyState.Patrol, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
@@ -294,6 +294,9 @@ public class Enemy2_Zombie : NetworkBehaviour
 
     private void GoToNextWaypoint()
     {
+        waitingAtWaypoint = false;
+        waypointWaitTimer = 0f;
+
         if (waypoints == null || waypoints.Length == 0)
         {
             Vector3 rndPos = GetUniquePatrolPosition(GetRandomNavMeshPosition(12f));
@@ -301,6 +304,7 @@ public class Enemy2_Zombie : NetworkBehaviour
             {
                 agent.isStopped = false;
                 agent.speed = patrolWalkSpeed;
+                agent.ResetPath();
                 agent.SetDestination(rndPos);
             }
             return;
@@ -320,11 +324,11 @@ public class Enemy2_Zombie : NetworkBehaviour
 
         Vector3 nextPosition = waypoints[currentWaypointIndex].position;
 
-        waitingAtWaypoint = false;
         if (AgentReady)
         {
             agent.isStopped = false;
             agent.speed = patrolWalkSpeed;
+            agent.ResetPath();
             agent.SetDestination(nextPosition);
         }
     }
