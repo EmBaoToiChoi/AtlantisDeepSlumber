@@ -21,6 +21,9 @@ public class ChoppableTree : NetworkBehaviour
     [Tooltip("Góc xoay bù thêm (X,Y,Z) cho Prefab gốc cây nếu 3D model bị nằm ngang (mặc định X: 0 vì Prefab đã được dựng đứng)")]
     public Vector3 stumpRotationOffset = Vector3.zero;
 
+    [Tooltip("Độ nâng độ cao Y (m) cho gốc cây nhô lên trên mặt đất. Tăng chỉ số này nếu gốc cây bị chìm dưới đất.")]
+    public float stumpYOffset = 0.35f;
+
     // Trạng thái mạng đồng bộ
     public NetworkVariable<bool> isCutDown = new NetworkVariable<bool>(
         false,
@@ -1049,6 +1052,7 @@ public class ChoppableTree : NetworkBehaviour
                 spawnPos.y = hit.point.y;
             }
         }
+        spawnPos.y += stumpYOffset;
 
         // Tự động tìm Prefab gốc cây nếu chưa được kéo gán trong Inspector
         if (treeStumpPrefab == null)

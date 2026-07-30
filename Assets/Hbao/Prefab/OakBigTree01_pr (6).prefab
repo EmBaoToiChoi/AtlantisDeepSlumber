@@ -405,6 +405,7 @@ MonoBehaviour:
   woodLogPrefab: {fileID: 2641059679227332086, guid: 7d1b213b7fbc2f049b5093a36390d239, type: 3}
   treeStumpPrefab: {fileID: 5240253724138249903, guid: df94deee5ba5e6f459ff1c5a42986172, type: 3}
   stumpRotationOffset: {x: 345.6254, y: 310.76776, z: 263.98773}
+  stumpYOffset: 0.7
   isCutDown:
     UpdateTraits:
       MinSecondsBetweenUpdates: 0
