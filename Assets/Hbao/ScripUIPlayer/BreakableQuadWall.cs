@@ -37,15 +37,24 @@ public class BreakableQuadWall : NetworkBehaviour
     [Range(0f, 1f)]
     public float soundVolume = 1f;
 
-    [Header("--- LỰC NỔ MẢNH VỠ (DÙNG CHO BROKEN DEBRIS PREFAB) ---")]
+    [Header("--- LỰC NỔ & MẢNH VỠ NỔ (DEBRIS PIECES) ---")]
+    [Tooltip("Số lượng mảnh đá/gỗ nhỏ sinh ra khi Quad bị vỡ (ví dụ 15 - 25 mảnh)")]
+    public int debrisPieceCount = 20;
+
+    [Tooltip("Kích thước của các mảnh đá vỡ nhỏ (X, Y, Z - ví dụ 0.4, 0.4, 0.4 để mảnh đá vỡ nhỏ rơi xuống)")]
+    public Vector3 debrisPieceScale = new Vector3(0.4f, 0.4f, 0.4f);
+
+    [Tooltip("Tự động gán Material của Quad cho các mảnh đá vỡ nhỏ")]
+    public bool useQuadMaterialForDebris = true;
+
     [Tooltip("Lực nổ tác động lên các mảnh vỡ có Rigidbody")]
-    public float explosionForce = 500f;
+    public float explosionForce = 15f;
 
     [Tooltip("Bán kính tác động của lực nổ mảnh vỡ")]
-    public float explosionRadius = 5f;
+    public float explosionRadius = 6f;
 
     [Tooltip("Điểm nâng tâm nổ (Upward modifier) tạo hiệu ứng văng lên cao")]
-    public float explosionUpward = 1f;
+    public float explosionUpward = 1.2f;
 
     [Header("--- CẤU HÌNH THỜI GIAN & HÀNH ĐỘNG ---")]
     [Tooltip("Thời gian chờ (giây) từ khi người chơi chạm đến khi Quad vỡ (0 = vỡ ngay lập tức)")]
@@ -227,24 +236,75 @@ public class BreakableQuadWall : NetworkBehaviour
             }
         }
 
-        // 5. Sinh ra Prefab mảnh vỡ 3D văng nổ ra (nếu có)
+        // 5. Sinh ra các mảnh vỡ đá 3D nhỏ nổ văng ra và rơi xuống đất
         if (brokenDebrisPrefab != null)
         {
-            GameObject debrisInstance = Instantiate(brokenDebrisPrefab, GetQuadCenterPosition(), finalVFXRot);
-            debrisInstance.transform.localScale = transform.lossyScale;
+            Bounds bounds = meshRenderer != null ? meshRenderer.bounds : (wallCollider != null ? wallCollider.bounds : new Bounds(transform.position, Vector3.one * 3f));
+            Material quadMat = (meshRenderer != null && meshRenderer.sharedMaterial != null) ? meshRenderer.sharedMaterial : null;
 
-            Rigidbody[] rbs = debrisInstance.GetComponentsInChildren<Rigidbody>();
-            foreach (Rigidbody rb in rbs)
+            int childCount = brokenDebrisPrefab.transform.childCount;
+
+            if (childCount > 1)
             {
-                if (rb != null)
+                // Nếu Prefab đã chứa sẵn cụm nhiều mảnh vỡ con
+                GameObject debrisInstance = Instantiate(brokenDebrisPrefab, GetQuadCenterPosition(), finalVFXRot);
+                debrisInstance.transform.localScale = Vector3.one;
+
+                Rigidbody[] rbs = debrisInstance.GetComponentsInChildren<Rigidbody>();
+                foreach (Rigidbody rb in rbs)
                 {
-                    rb.AddExplosionForce(explosionForce, finalVFXPos, explosionRadius, explosionUpward, ForceMode.Impulse);
+                    if (rb != null)
+                    {
+                        rb.AddExplosionForce(explosionForce, finalVFXPos, explosionRadius, explosionUpward, ForceMode.Impulse);
+                    }
                 }
-            }
 
-            if (vfxLifetime > 0f)
+                if (vfxLifetime > 0f) Destroy(debrisInstance, vfxLifetime);
+            }
+            else
             {
-                Destroy(debrisInstance, vfxLifetime);
+                // Nếu Prefab là 1 Cube hoặc mảnh đá đơn lẻ, tự động sinh ra cụm nhiều mảnh vỡ nhỏ (debrisPieceCount) rải rác trên tường
+                GameObject debrisContainer = new GameObject($"{name}_DebrisCluster");
+
+                int countToSpawn = Mathf.Max(1, debrisPieceCount);
+                for (int i = 0; i < countToSpawn; i++)
+                {
+                    Vector3 randomPoint = new Vector3(
+                        Random.Range(bounds.min.x, bounds.max.x),
+                        Random.Range(bounds.min.y, bounds.max.y),
+                        Random.Range(bounds.min.z, bounds.max.z)
+                    );
+
+                    Quaternion randomRot = Random.rotation;
+                    GameObject piece = Instantiate(brokenDebrisPrefab, randomPoint, randomRot, debrisContainer.transform);
+
+                    // Đặt kích thước nhỏ vừa phải cho mảnh đá (0.4m x 0.4m x 0.4m)
+                    piece.transform.localScale = debrisPieceScale;
+
+                    // Gán Material của Quad để đá vỡ đồng bộ màu sắc với bức tường
+                    if (useQuadMaterialForDebris && quadMat != null)
+                    {
+                        Renderer pRend = piece.GetComponent<Renderer>() ?? piece.GetComponentInChildren<Renderer>();
+                        if (pRend != null) pRend.material = quadMat;
+                    }
+
+                    // Đảm bảo mảnh đá có Collider & Rigidbody để nảy và rơi xuống đất theo vật lý
+                    Collider pCol = piece.GetComponent<Collider>() ?? piece.GetComponentInChildren<Collider>();
+                    if (pCol == null) piece.AddComponent<BoxCollider>();
+
+                    Rigidbody pRb = piece.GetComponent<Rigidbody>() ?? piece.GetComponentInChildren<Rigidbody>();
+                    if (pRb == null) pRb = piece.AddComponent<Rigidbody>();
+
+                    pRb.mass = 0.4f;
+                    pRb.useGravity = true;
+                    pRb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+
+                    // Tác động lực nổ văng và xoay ngẫu nhiên
+                    pRb.AddExplosionForce(explosionForce, finalVFXPos, explosionRadius, explosionUpward, ForceMode.Impulse);
+                    pRb.AddTorque(Random.insideUnitSphere * 12f, ForceMode.Impulse);
+                }
+
+                if (vfxLifetime > 0f) Destroy(debrisContainer, vfxLifetime);
             }
         }
 
