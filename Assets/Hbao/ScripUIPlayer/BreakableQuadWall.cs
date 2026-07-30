@@ -4,6 +4,23 @@ using System.Collections;
 
 public class BreakableQuadWall : NetworkBehaviour
 {
+    [Header("--- VỊ TRÍ SPAWN VFX & TÙY CHỈNH ---")]
+    [Tooltip("Nếu tích chọn, VFX sẽ xuất hiện chính giữa tâm Quad. Nếu bỏ tích, VFX xuất hiện tại điểm chạm chân/người chơi")]
+    public bool spawnAtQuadCenter = true;
+
+    [Tooltip("Offset dịch chuyển vị trí VFX (X, Y, Z) so với tâm Quad hoặc điểm chạm")]
+    public Vector3 vfxSpawnOffset = Vector3.zero;
+
+    [Tooltip("Sử dụng Offset theo hướng xoay của Quad (Local Space) thay vì hệ tọa độ thế giới (World Space)")]
+    public bool useLocalOffset = true;
+
+    [Header("--- HƯỚNG XOAY VFX (ROTATION) ---")]
+    [Tooltip("Nếu tích chọn, VFX sẽ xoay theo góc xoay của Quad. Nếu bỏ tích, VFX sẽ dùng góc xoay mặc định (Identity)")]
+    public bool useQuadRotation = true;
+
+    [Tooltip("Offset góc xoay VFX (Góc Euler X, Y, Z - ví dụ: X = -90 để xoay VFX hướng ra ngoài hay lên trên)")]
+    public Vector3 vfxRotationOffset = Vector3.zero;
+
     [Header("--- CẤU HÌNH HIỆU ỨNG VỠ (VFX & ÂM THANH) ---")]
     [Tooltip("Prefab VFX hiệu ứng vỡ/nổ khi người chơi chạm vào Quad (Kéo Prefab Particle System vào đây)")]
     public GameObject shatterVFXPrefab;
@@ -70,6 +87,13 @@ public class BreakableQuadWall : NetworkBehaviour
         if (wallCollider == null) wallCollider = GetComponentInChildren<Collider>();
 
         originalPosition = transform.position;
+    }
+
+    public Vector3 GetQuadCenterPosition()
+    {
+        if (meshRenderer != null) return meshRenderer.bounds.center;
+        if (wallCollider != null) return wallCollider.bounds.center;
+        return transform.position;
     }
 
     public override void OnNetworkSpawn()
@@ -160,6 +184,13 @@ public class BreakableQuadWall : NetworkBehaviour
 
     private IEnumerator ShatterCoroutine(Vector3 contactPoint)
     {
+        // Tính toán vị trí & góc xoay spawn VFX dựa theo thiết lập
+        Vector3 basePos = spawnAtQuadCenter ? GetQuadCenterPosition() : contactPoint;
+        Vector3 finalVFXPos = basePos + (useLocalOffset ? transform.TransformVector(vfxSpawnOffset) : vfxSpawnOffset);
+        
+        Quaternion baseRot = useQuadRotation ? transform.rotation : Quaternion.identity;
+        Quaternion finalVFXRot = baseRot * Quaternion.Euler(vfxRotationOffset);
+
         // 1. Rung lắc trước khi vỡ (nếu bật)
         if (enableShakeEffect && shakeDuration > 0f)
         {
@@ -183,13 +214,13 @@ public class BreakableQuadWall : NetworkBehaviour
         // 3. Âm thanh vỡ
         if (shatterSound != null)
         {
-            AudioSource.PlayClipAtPoint(shatterSound, contactPoint, soundVolume);
+            AudioSource.PlayClipAtPoint(shatterSound, finalVFXPos, soundVolume);
         }
 
-        // 4. Sinh ra Prefab VFX vỡ (Particle System / Explosion VFX)
+        // 4. Sinh ra Prefab VFX vỡ (Particle System / Explosion VFX) tại vị trí & góc xoay đã thiết lập
         if (shatterVFXPrefab != null)
         {
-            GameObject vfxInstance = Instantiate(shatterVFXPrefab, contactPoint, transform.rotation);
+            GameObject vfxInstance = Instantiate(shatterVFXPrefab, finalVFXPos, finalVFXRot);
             if (vfxLifetime > 0f)
             {
                 Destroy(vfxInstance, vfxLifetime);
@@ -199,7 +230,7 @@ public class BreakableQuadWall : NetworkBehaviour
         // 5. Sinh ra Prefab mảnh vỡ 3D văng nổ ra (nếu có)
         if (brokenDebrisPrefab != null)
         {
-            GameObject debrisInstance = Instantiate(brokenDebrisPrefab, transform.position, transform.rotation);
+            GameObject debrisInstance = Instantiate(brokenDebrisPrefab, GetQuadCenterPosition(), finalVFXRot);
             debrisInstance.transform.localScale = transform.lossyScale;
 
             Rigidbody[] rbs = debrisInstance.GetComponentsInChildren<Rigidbody>();
@@ -207,7 +238,7 @@ public class BreakableQuadWall : NetworkBehaviour
             {
                 if (rb != null)
                 {
-                    rb.AddExplosionForce(explosionForce, contactPoint, explosionRadius, explosionUpward, ForceMode.Impulse);
+                    rb.AddExplosionForce(explosionForce, finalVFXPos, explosionRadius, explosionUpward, ForceMode.Impulse);
                 }
             }
 

@@ -165215,6 +165215,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   ShowTopMostFoldoutHeaderGroup: 1
+  spawnAtQuadCenter: 1
+  vfxSpawnOffset: {x: 0, y: 0, z: 0}
+  useLocalOffset: 1
+  useQuadRotation: 1
+  vfxRotationOffset: {x: -90, y: 0, z: 0}
   shatterVFXPrefab: {fileID: 4060967071236614201, guid: 3d164b7d14e44244589693d586e6a368, type: 3}
   brokenDebrisPrefab: {fileID: 0}
   vfxLifetime: 5
