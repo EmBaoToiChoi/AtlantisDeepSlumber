@@ -47,6 +47,10 @@ public class Enemy2_Zombie : NetworkBehaviour
     public GameObject repairItemPrefab;
     [Range(0f, 1f)] public float repairItemDropChance = 0.3f;
 
+    [Header("Chase Range Settings")]
+    [Tooltip("Khoảng cách tối đa rượt đuổi player. Nếu player chạy xa vượt quá khoảng cách này (tính từ khu vực tuần tra hoặc Zombie), Zombie lập tức bỏ đuổi và quay về 3 điểm tuần tra ban đầu.")]
+    public float maxChaseDistance = 18f;
+
     [Header("AI Settings")]
     public float sightRange = 12f;
     public float fieldOfView = 110f;
@@ -75,6 +79,7 @@ public class Enemy2_Zombie : NetworkBehaviour
     private float detectionTimer;
     private const float DETECTION_INTERVAL = 0.15f;
     private float staggerTimer;
+    private float staggerCooldownTimer;
     private float attackCooldownTimer;
     private float attackDuration;
     private float stateTimer;
@@ -157,7 +162,7 @@ public class Enemy2_Zombie : NetworkBehaviour
         if (nt != null) { nt.PositionThreshold = 0.001f; nt.RotAngleThreshold = 0.01f; nt.ScaleThreshold = 0.01f; }
 
         netSpeed.OnValueChanged       += (_, v) => ApplySpeedAnim(v);
-        hitCounter.OnValueChanged     += (_, _) => { if (anim != null) anim.SetTrigger(hitTrigger); };
+        hitCounter.OnValueChanged     += (_, _) => { if (anim != null && CurrentStateValue != EnemyState.Attack && staggerCooldownTimer <= 0f) anim.SetTrigger(hitTrigger); };
         currentHealth.OnValueChanged  += OnHealthNetChanged;
         currentState.OnValueChanged   += OnStateChanged;
 
@@ -170,7 +175,7 @@ public class Enemy2_Zombie : NetworkBehaviour
     public override void OnNetworkDespawn()
     {
         netSpeed.OnValueChanged       -= (_, v) => ApplySpeedAnim(v);
-        hitCounter.OnValueChanged     -= (_, _) => { if (anim != null) anim.SetTrigger(hitTrigger); };
+        hitCounter.OnValueChanged     -= (_, _) => { if (anim != null && CurrentStateValue != EnemyState.Attack && staggerCooldownTimer <= 0f) anim.SetTrigger(hitTrigger); };
         currentHealth.OnValueChanged  -= OnHealthNetChanged;
         currentState.OnValueChanged   -= OnStateChanged;
     }
@@ -189,6 +194,19 @@ public class Enemy2_Zombie : NetworkBehaviour
     private void ApplyLocalDeathEffects()
     {
         if (clawHitbox != null) clawHitbox.SetActive(false);
+
+        // Tắt toàn bộ Collider & NavMeshAgent lập tức khi gục để không cấn/chặn đường Player
+        Collider[] allColliders = GetComponentsInChildren<Collider>(true);
+        foreach (var col in allColliders)
+        {
+            if (col != null) col.enabled = false;
+        }
+
+        if (agent != null)
+        {
+            agent.enabled = false;
+        }
+
         if (anim != null)
         {
             anim.ResetTrigger(atkTrigger);
@@ -219,22 +237,8 @@ public class Enemy2_Zombie : NetworkBehaviour
         if (!aiAuth) return;
         if (agent != null && agent.isActiveAndEnabled && !agent.isOnNavMesh) SnapToNavMesh();
 
-        // --- BỘ GIẢI QUYẾT VA CHẠM TRÁNH XUYÊN TƯỜNG (WALL COLLISION RESOLVER) ---
-        if (agent != null && agent.isActiveAndEnabled && agent.isOnNavMesh && agent.velocity.sqrMagnitude > 0.01f)
-        {
-            Vector3 rayOrigin = transform.position + Vector3.up * 1.0f;
-            Vector3 moveDir = agent.velocity.normalized;
-            if (Physics.Raycast(rayOrigin, moveDir, out RaycastHit hit, 0.8f))
-            {
-                if (!hit.collider.CompareTag("Player") && !hit.collider.CompareTag("Enemy") && hit.collider.gameObject.layer != LayerMask.NameToLayer("Enemy") && !hit.collider.name.ToLower().Contains("skeleton") && !hit.collider.isTrigger)
-                {
-                    Vector3 pushBack = hit.normal * 0.15f;
-                    agent.Warp(transform.position + pushBack);
-                }
-            }
-        }
-        // -----------------------------------------------------------------------------------------------------------------------------
-
+        // Count down timers
+        if (staggerCooldownTimer > 0) staggerCooldownTimer -= Time.deltaTime;
         if (attackCooldownTimer > 0) attackCooldownTimer -= Time.deltaTime;
         detectionTimer -= Time.deltaTime;
         if (detectionTimer <= 0) { detectionTimer = DETECTION_INTERVAL; DetectPlayer(); }
@@ -290,35 +294,31 @@ public class Enemy2_Zombie : NetworkBehaviour
 
     private void GoToNextWaypoint()
     {
-        bool hasWaypoints = false;
-        if (waypoints != null && waypoints.Length > 0)
+        if (waypoints == null || waypoints.Length == 0)
         {
-            foreach (var wp in waypoints)
+            Vector3 rndPos = GetUniquePatrolPosition(GetRandomNavMeshPosition(12f));
+            if (AgentReady)
             {
-                if (wp != null) { hasWaypoints = true; break; }
+                agent.isStopped = false;
+                agent.speed = patrolWalkSpeed;
+                agent.SetDestination(rndPos);
             }
+            return;
         }
 
-        Vector3 nextPosition;
-        if (hasWaypoints)
+        // Chuyển sang điểm kế tiếp theo đúng thứ tự tuần tự: 0 -> 1 -> 2 -> 0
+        currentWaypointIndex = (currentWaypointIndex + 1) % waypoints.Length;
+
+        int attempts = 0;
+        while (waypoints[currentWaypointIndex] == null && attempts < waypoints.Length)
         {
-            int n;
-            int attempts = 0;
-            do { n = Random.Range(0, waypoints.Length); attempts++; } while (waypoints[n] == null && attempts < 10);
-            if (waypoints[n] == null)
-            {
-                nextPosition = GetUniquePatrolPosition(GetRandomNavMeshPosition(12f));
-            }
-            else
-            {
-                currentWaypointIndex = n;
-                nextPosition = GetUniquePatrolPosition(waypoints[currentWaypointIndex].position);
-            }
+            currentWaypointIndex = (currentWaypointIndex + 1) % waypoints.Length;
+            attempts++;
         }
-        else
-        {
-            nextPosition = GetUniquePatrolPosition(GetRandomNavMeshPosition(12f));
-        }
+
+        if (waypoints[currentWaypointIndex] == null) return;
+
+        Vector3 nextPosition = waypoints[currentWaypointIndex].position;
 
         waitingAtWaypoint = false;
         if (AgentReady)
@@ -385,8 +385,25 @@ public class Enemy2_Zombie : NetworkBehaviour
         if (waitingAtWaypoint)
         {
             if (AgentReady) agent.isStopped = true;
-            SetSpeedNet(0f);
+            SetSpeedNet(0f); // Animator Speed = 0 (Idle)
+
+            // Quay mặt mượt về điểm kế tiếp trong khi đứng chờ
+            if (waypoints != null && waypoints.Length > 0)
+            {
+                int nextIdx = (currentWaypointIndex + 1) % waypoints.Length;
+                if (waypoints[nextIdx] != null)
+                {
+                    Vector3 dirToNext = waypoints[nextIdx].position - transform.position;
+                    dirToNext.y = 0;
+                    if (dirToNext.sqrMagnitude > 0.01f)
+                    {
+                        transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(dirToNext.normalized), Time.deltaTime * 5f);
+                    }
+                }
+            }
+
             waypointWaitTimer -= Time.deltaTime;
+            // Đảm bảo không đứng và quay mặt 1 chỗ quá 3s (chờ tối đa từ 1.0s đến 2.5s)
             if (waypointWaitTimer <= 0f)
             {
                 GoToNextWaypoint();
@@ -399,7 +416,7 @@ public class Enemy2_Zombie : NetworkBehaviour
                 if (agent.isStopped) agent.isStopped = false;
 
                 bool isMoving = agent.velocity.magnitude > 0.15f;
-                SetSpeedNet(isMoving ? 0.5f : 0f);
+                SetSpeedNet(isMoving ? 0.5f : 0f); // Animator Speed = 0.5 (Walk)
 
                 if (!agent.pathPending && agent.hasPath)
                 {
@@ -408,7 +425,8 @@ public class Enemy2_Zombie : NetworkBehaviour
                         agent.isStopped = true;
                         SetSpeedNet(0f);
                         waitingAtWaypoint = true;
-                        waypointWaitTimer = Random.Range(2.0f, 3.0f);
+                        // Thời gian đứng nghỉ ngẫu nhiên dưới 3s (1.0s -> 2.5s)
+                        waypointWaitTimer = Random.Range(1.0f, 2.5f);
                     }
                 }
                 else if (!agent.pathPending && (!agent.hasPath || agent.pathStatus == NavMeshPathStatus.PathInvalid))
@@ -424,10 +442,80 @@ public class Enemy2_Zombie : NetworkBehaviour
         }
     }
 
+    private float GetNavMeshPathDistance(Vector3 start, Vector3 target)
+    {
+        NavMeshPath path = new NavMeshPath();
+        if (NavMesh.CalculatePath(start, target, NavMesh.AllAreas, path))
+        {
+            if (path.status == NavMeshPathStatus.PathComplete || path.status == NavMeshPathStatus.PathPartial)
+            {
+                float dist = 0f;
+                for (int i = 0; i < path.corners.Length - 1; i++)
+                {
+                    dist += Vector3.Distance(path.corners[i], path.corners[i + 1]);
+                }
+                return dist;
+            }
+        }
+        return Vector3.Distance(start, target);
+    }
+
+    private Vector3 GetPatrolCenterPosition()
+    {
+        if (waypoints != null && waypoints.Length > 0)
+        {
+            Vector3 center = Vector3.zero;
+            int count = 0;
+            foreach (var wp in waypoints)
+            {
+                if (wp != null) { center += wp.position; count++; }
+            }
+            if (count > 0) return center / count;
+        }
+        return transform.position;
+    }
+
+    private Vector3 GetPredictedTargetPosition(Transform player)
+    {
+        if (player == null) return transform.position;
+        Vector3 pPos = player.position;
+
+        Vector3 velocity = Vector3.zero;
+        var rb = player.GetComponent<Rigidbody>() ?? player.GetComponentInChildren<Rigidbody>();
+        if (rb != null) velocity = rb.linearVelocity;
+        else
+        {
+            var cc = player.GetComponent<CharacterController>() ?? player.GetComponentInChildren<CharacterController>();
+            if (cc != null) velocity = cc.velocity;
+        }
+
+        velocity.y = 0;
+        if (velocity.sqrMagnitude > 0.5f)
+        {
+            Vector3 predicted = pPos + velocity.normalized * Mathf.Min(velocity.magnitude * 0.4f, 2.5f);
+            if (NavMesh.SamplePosition(predicted, out NavMeshHit hit, 2.5f, NavMesh.AllAreas))
+            {
+                return hit.position;
+            }
+        }
+        return pPos;
+    }
+
     // ── Chase (Run) ──
     private void HandleChase()
     {
         if (targetPlayer == null || !IsPlayerAliveAndValid(targetPlayer)) { targetPlayer = null; ReturnToPatrol(); return; }
+
+        // Kiểm tra nếu Player đã chạy vượt quá vùng rượt đuổi tối đa (maxChaseDistance)
+        float dToPatrolCenter = Vector3.Distance(GetPatrolCenterPosition(), targetPlayer.position);
+        float dToSelf = Vector3.Distance(transform.position, targetPlayer.position);
+
+        if (dToSelf > maxChaseDistance || dToPatrolCenter > maxChaseDistance + 4f)
+        {
+            targetPlayer = null;
+            ReturnToPatrol();
+            return;
+        }
 
         Vector3 ep1 = eyeTransform != null ? eyeTransform.position : transform.position + Vector3.up * 1.5f;
         Vector3 targetCenter = targetPlayer.position + Vector3.up * 1.0f;
@@ -449,7 +537,7 @@ public class Enemy2_Zombie : NetworkBehaviour
         if (wallBlocked)
         {
             loseSightTimer += Time.deltaTime;
-            if (loseSightTimer > 1.5f)
+            if (loseSightTimer > 2.0f)
             {
                 targetPlayer = null;
                 ReturnToPatrol();
@@ -460,8 +548,14 @@ public class Enemy2_Zombie : NetworkBehaviour
         {
             loseSightTimer = 0f;
         }
+
+        // Quay mặt mượt về phía player đang rượt đuổi (phản xạ nhanh 20f khi rượt)
         Vector3 ld = (targetPlayer.position - transform.position); ld.y = 0;
-        if (ld.sqrMagnitude > 0.01f) transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(ld), Time.deltaTime * 12f);
+        if (ld.sqrMagnitude > 0.01f)
+        {
+            transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(ld.normalized), Time.deltaTime * 20f);
+        }
+
         Vector3 flatEnemy = transform.position; flatEnemy.y = 0;
         Vector3 flatPlayer = targetPlayer.position; flatPlayer.y = 0;
         float dist = Vector3.Distance(flatEnemy, flatPlayer);
@@ -477,25 +571,202 @@ public class Enemy2_Zombie : NetworkBehaviour
             return;
         }
         
-        bool frantic = CurrentHealthValue <= maxHealth * 0.4f;
+        bool frantic = CurrentHealthValue <= maxHealth * 0.35f;
         float swarmBonus = GetSwarmSpeedBonus();
-        float moveSpeed = (frantic ? chaseRunSpeed * 1.4f : chaseRunSpeed) + swarmBonus;
+        float moveSpeed = (frantic ? chaseRunSpeed * 1.35f : chaseRunSpeed) + swarmBonus;
 
         if (AgentReady)
         {
             agent.isStopped = false;
             agent.speed = moveSpeed;
+            agent.stoppingDistance = attackRange * 0.8f;
             agent.obstacleAvoidanceType = ObstacleAvoidanceType.HighQualityObstacleAvoidance;
-            if (agent.radius < 0.45f) agent.radius = 0.45f;
 
-            float distToPlayer = Vector3.Distance(transform.position, targetPlayer.position);
-            agent.avoidancePriority = Mathf.Clamp(10 + Mathf.RoundToInt(distToPlayer * 4f), 5, 95);
+            // Di chuyển đón đầu bước đi của Player + Móc bọc bên hông nếu có đồng đội
+            Vector3 chaseDestination = GetPredictedTargetPosition(targetPlayer);
+            int chasers = GetChaserCountForPlayer(targetPlayer);
+            if (chasers == 1)
+            {
+                // Con quái thứ 2 sẽ chạy chếch bọc lót sang hông 1.4m
+                Vector3 dirToP = (targetPlayer.position - transform.position).normalized;
+                Vector3 sideDir = Vector3.Cross(dirToP, Vector3.up) * (System.Math.Abs(GetHashCode()) % 2 == 0 ? 1.4f : -1.4f);
+                Vector3 flankPos = chaseDestination + sideDir;
+                if (NavMesh.SamplePosition(flankPos, out NavMeshHit hit, 2.0f, NavMesh.AllAreas))
+                {
+                    chaseDestination = hit.position;
+                }
+            }
 
-            Vector3 targetPos = GetSurroundingPosition(targetPlayer, Mathf.Max(1.4f, attackRange * 0.85f));
-            agent.SetDestination(targetPos);
+            agent.SetDestination(chaseDestination);
         }
+
         bool isMoving = AgentReady && agent.velocity.magnitude > 0.2f;
         SetSpeedNet(isMoving ? 1f : 0f);
+    }
+
+    private Transform GetEnemyTargetPlayer(MonoBehaviour mono)
+    {
+        if (mono == null) return null;
+        var field = mono.GetType().GetField("targetPlayer", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public);
+        if (field != null) return field.GetValue(mono) as Transform;
+        return null;
+    }
+
+    private int GetChaserCountForPlayer(Transform pt)
+    {
+        if (pt == null) return 0;
+        int chasers = 0;
+        Collider[] enemies = Physics.OverlapSphere(pt.position, 25f);
+        System.Collections.Generic.HashSet<GameObject> countedEnemies = new System.Collections.Generic.HashSet<GameObject>();
+
+        foreach (var col in enemies)
+        {
+            if (col == null || col.gameObject == gameObject) continue;
+
+            var e2 = col.GetComponentInParent<Enemy2_Zombie>();
+            if (e2 != null)
+            {
+                if (e2 != this && !countedEnemies.Contains(e2.gameObject))
+                {
+                    countedEnemies.Add(e2.gameObject);
+                    if (e2.targetPlayer == pt && e2.CurrentStateValue != EnemyState.Dead && e2.CurrentStateValue != EnemyState.Patrol)
+                    {
+                        chasers++;
+                    }
+                }
+                continue;
+            }
+
+            var otherEnemy = col.GetComponentInParent<MonoBehaviour>();
+            if (otherEnemy != null && otherEnemy.gameObject != gameObject && !countedEnemies.Contains(otherEnemy.gameObject))
+            {
+                countedEnemies.Add(otherEnemy.gameObject);
+                Transform target = GetEnemyTargetPlayer(otherEnemy);
+                if (target == pt)
+                {
+                    chasers++;
+                }
+            }
+        }
+        return chasers;
+    }
+
+    private void DetectPlayer()
+    {
+        EnemyState s = CurrentStateValue;
+        if (s == EnemyState.Dead || s == EnemyState.Stagger || s == EnemyState.Attack) return;
+
+        Vector3 ep = eyeTransform != null ? eyeTransform.position : transform.position + Vector3.up * 1.5f;
+        var alivePlayers = GetAllAlivePlayers();
+        if (alivePlayers == null || alivePlayers.Count == 0) return;
+
+        Transform bestTarget = null;
+        float minPathDist = float.MaxValue;
+
+        // Nếu mục tiêu hiện tại đã bị >= 2 quái khác rượt đuổi, tự động quét xem có player nào khác rảnh hơn không
+        if (targetPlayer != null && IsPlayerAliveAndValid(targetPlayer))
+        {
+            int currentChasers = GetChaserCountForPlayer(targetPlayer);
+            if (currentChasers >= 2 && alivePlayers.Count > 1)
+            {
+                foreach (var otherPt in alivePlayers)
+                {
+                    if (otherPt != null && otherPt != targetPlayer && IsPlayerAliveAndValid(otherPt))
+                    {
+                        if (GetChaserCountForPlayer(otherPt) < 2)
+                        {
+                            float dOther = Vector3.Distance(ep, otherPt.position);
+                            if (dOther <= sightRange)
+                            {
+                                targetPlayer = otherPt;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        float currentTargetDist = float.MaxValue;
+        if (targetPlayer != null && IsPlayerAliveAndValid(targetPlayer))
+        {
+            currentTargetDist = GetNavMeshPathDistance(transform.position, targetPlayer.position);
+        }
+        else
+        {
+            targetPlayer = null;
+        }
+
+        foreach (var pt in alivePlayers)
+        {
+            if (pt == null || !IsPlayerAliveAndValid(pt)) continue;
+
+            Vector3 center = pt.position + Vector3.up * 1.0f;
+            float d = Vector3.Distance(ep, center);
+            if (d > sightRange) continue;
+
+            // Kiểm tra số lượng quái đang dí player này (Tối đa 2 quái dí 1 player)
+            int chasers = GetChaserCountForPlayer(pt);
+            if (chasers >= 2 && pt != targetPlayer && alivePlayers.Count > 1)
+            {
+                // Đã có 2 quái dí player này -> Bỏ qua để tìm player khác vắng hơn
+                continue;
+            }
+
+            Vector3 dir = (center - ep).normalized;
+            bool inFOV = Vector3.Angle(transform.forward, dir) < fieldOfView / 2f;
+            bool isProximity = d <= 5.5f;
+
+            if (inFOV || isProximity || pt == targetPlayer)
+            {
+                bool clearLOS = true;
+                if (d > 3.0f)
+                {
+                    if (Physics.Raycast(ep, dir, out RaycastHit hit, d - 0.2f, obstacleLayer, QueryTriggerInteraction.Ignore))
+                    {
+                        if (hit.collider != null && hit.transform != pt && !hit.transform.IsChildOf(pt) && !hit.collider.CompareTag("Player"))
+                        {
+                            clearLOS = false;
+                        }
+                    }
+                }
+
+                if (clearLOS)
+                {
+                    float pathDist = GetNavMeshPathDistance(transform.position, pt.position);
+                    if (pathDist < minPathDist)
+                    {
+                        minPathDist = pathDist;
+                        bestTarget = pt;
+                    }
+                }
+            }
+        }
+
+        if (bestTarget != null)
+        {
+            bool shouldSwitch = false;
+            if (targetPlayer == null)
+            {
+                shouldSwitch = true;
+            }
+            else if (bestTarget != targetPlayer)
+            {
+                // Ưu tiên chuyển sang player gần nhất theo NavMesh nếu gần hơn ít nhất 2.0m
+                if (minPathDist < currentTargetDist - 2.0f)
+                {
+                    shouldSwitch = true;
+                }
+            }
+
+            if (shouldSwitch)
+            {
+                targetPlayer = bestTarget;
+            }
+
+            AlertNearbyAllies(targetPlayer);
+            if (s != EnemyState.Chase) ChangeState(EnemyState.Chase);
+        }
     }
 
     public bool HasTargetPlayer => targetPlayer != null;
@@ -697,96 +968,6 @@ public class Enemy2_Zombie : NetworkBehaviour
         return list;
     }
 
-    private void DetectPlayer()
-    {
-        EnemyState s = CurrentStateValue;
-        if (s == EnemyState.Dead || s == EnemyState.Stagger || s == EnemyState.Attack) return;
-
-        Vector3 ep = eyeTransform != null ? eyeTransform.position : transform.position + Vector3.up * 1.5f;
-        System.Collections.Generic.List<Transform> alivePlayers = GetAllAlivePlayers();
-
-        bool found = false;
-        Transform bestTarget = null;
-        float minD = float.MaxValue;
-
-        float currentTargetDist = float.MaxValue;
-        if (targetPlayer != null)
-        {
-            if (IsPlayerAliveAndValid(targetPlayer))
-            {
-                currentTargetDist = Vector3.Distance(transform.position, targetPlayer.position);
-            }
-            else
-            {
-                targetPlayer = null;
-            }
-        }
-
-        foreach (var pt in alivePlayers)
-        {
-            if (pt == null || !IsPlayerAliveAndValid(pt)) continue;
-
-            Vector3 center = pt.position + Vector3.up * 1.0f;
-            float d = Vector3.Distance(ep, center);
-            if (d > sightRange) continue;
-
-            Vector3 dir = (center - ep).normalized;
-
-            bool inFOV = Vector3.Angle(transform.forward, dir) < fieldOfView / 2f;
-            bool isProximity = d <= 5.5f;
-
-            if (inFOV || isProximity || pt == targetPlayer)
-            {
-                bool clearLOS = true;
-                if (d > 3.0f)
-                {
-                    if (Physics.Raycast(ep, dir, out RaycastHit hit, d - 0.2f, obstacleLayer, QueryTriggerInteraction.Ignore))
-                    {
-                        if (hit.collider != null && hit.transform != pt && !hit.transform.IsChildOf(pt) && !hit.collider.CompareTag("Player"))
-                        {
-                            clearLOS = false;
-                        }
-                    }
-                }
-
-                if (clearLOS && d < minD)
-                {
-                    minD = d;
-                    bestTarget = pt;
-                    found = true;
-                }
-            }
-        }
-
-        if (found && bestTarget != null)
-        {
-            bool shouldSwitch = false;
-            if (targetPlayer == null)
-            {
-                shouldSwitch = true;
-            }
-            else if (bestTarget != targetPlayer)
-            {
-                if (minD < currentTargetDist - 1.8f || minD < 4.5f)
-                {
-                    shouldSwitch = true;
-                }
-                else if (minD <= 7.0f && (System.Math.Abs(GetHashCode()) % 2 == 0))
-                {
-                    shouldSwitch = true;
-                }
-            }
-
-            if (shouldSwitch)
-            {
-                targetPlayer = bestTarget;
-            }
-
-            AlertNearbyAllies(targetPlayer);
-            if (s != EnemyState.Chase) ChangeState(EnemyState.Chase);
-        }
-    }
-
     private void ChangeState(EnemyState newState)
     {
         if (currentFSMState != null)
@@ -882,6 +1063,11 @@ public class Enemy2_Zombie : NetworkBehaviour
 
     public void TakeDamage(float damage)
     {
+        TakeDamage(damage, null);
+    }
+
+    public void TakeDamage(float damage, Transform attacker)
+    {
         Debug.Log($"[Enemy2_Zombie] TakeDamage: dmg={damage}, isServer={IsServer}, isClient={IsClient}, isSpawned={IsSpawned}, localHp={localHealth}, currentHpNet={currentHealth.Value}");
         if (CurrentStateValue == EnemyState.Dead) return;
 
@@ -890,22 +1076,68 @@ public class Enemy2_Zombie : NetworkBehaviour
         {
             currentHealth.Value = Mathf.Max(0f, currentHealth.Value - damage);
             localHealth = currentHealth.Value;
-            hitCounter.Value++;
+            if (CurrentStateValue != EnemyState.Attack && staggerCooldownTimer <= 0f)
+            {
+                hitCounter.Value++;
+            }
         }
-        else if (anim != null)
+        else if (anim != null && CurrentStateValue != EnemyState.Attack && staggerCooldownTimer <= 0f)
         {
             anim.SetTrigger(hitTrigger);
         }
 
         EnemyDamageEffectHelper.PlayDamageEffects(gameObject, damage);
 
+        // Khóa mục tiêu lập tức vào người chơi tấn công mình (nếu chưa có mục tiêu)
+        if (attacker != null && IsPlayerAliveAndValid(attacker))
+        {
+            if (targetPlayer == null)
+            {
+                targetPlayer = attacker;
+                AlertNearbyAllies(targetPlayer);
+            }
+        }
+        else if (targetPlayer == null)
+        {
+            var alivePlayers = GetAllAlivePlayers();
+            if (alivePlayers.Count > 0)
+            {
+                targetPlayer = alivePlayers[0];
+                AlertNearbyAllies(targetPlayer);
+            }
+        }
+
         bool isAuth = isStandaloneMode || (IsSpawned && IsServer) || !IsSpawned;
         if (!isAuth) return;
 
         float activeHp = ActualCurrentHealth;
         if (activeHp <= 0f) { ChangeState(EnemyState.Dead); return; }
-        float now = Time.time; if (now - lastDamageTime > 3f) recentHitCount = 0; recentHitCount++; lastDamageTime = now;
-        if ((damage >= 20f || recentHitCount >= 3) && CurrentStateValue != EnemyState.Stagger) { recentHitCount = 0; staggerTimer = 0.55f; ChangeState(EnemyState.Stagger); }
+
+        // Nếu đang thực hiện đòn đánh (Attack State), kích hoạt Hyper Armor (không bị hủy đòn cào)
+        if (CurrentStateValue == EnemyState.Attack)
+        {
+            return;
+        }
+
+        // Chống lặp Anhit liên tục: Chỉ bị stagger nếu đã hết staggerCooldownTimer
+        float now = Time.time;
+        if (now - lastDamageTime > 3f) recentHitCount = 0;
+        recentHitCount++;
+        lastDamageTime = now;
+
+        if ((damage >= 20f || recentHitCount >= 3) && CurrentStateValue != EnemyState.Stagger && staggerCooldownTimer <= 0f)
+        {
+            recentHitCount = 0;
+            staggerTimer = 0.35f; // Thời gian khựng ngắn 0.35s để phản công ngay lập tức
+            staggerCooldownTimer = 2.0f; // Cooldown 2s chống bị khóa cứng đòn đánh (Stun Lock)
+            ChangeState(EnemyState.Stagger);
+        }
+
+        // Nếu bị tấn công khi đang đi tuần, lập tức quay sang rượt đuổi
+        if (CurrentStateValue == EnemyState.Patrol && targetPlayer != null)
+        {
+            ChangeState(EnemyState.Chase);
+        }
     }
 
     /// <summary>
@@ -966,6 +1198,8 @@ public class Enemy2_Zombie : NetworkBehaviour
     private void SnapToNavMesh() { if (agent == null || !agent.isActiveAndEnabled) return; if (!agent.isOnNavMesh) { NavMeshHit h; if (NavMesh.SamplePosition(transform.position, out h, 10f, NavMesh.AllAreas)) agent.Warp(h.position); } }
     public void EnableClawHitbox()
     {
+        if (clawHitbox != null) clawHitbox.SetActive(true);
+
         bool auth = isStandaloneMode || (IsNetworkActive && IsServer);
         if (auth && !hasDealtDamage)
         {
@@ -974,7 +1208,11 @@ public class Enemy2_Zombie : NetworkBehaviour
             DealConeDamage(frantic ? 8f : 5f, 2.0f, 90f, 1.0f);
         }
     }
-    public void DisableClawHitbox() { hasDealtDamage = false; }
+    public void DisableClawHitbox()
+    {
+        if (clawHitbox != null) clawHitbox.SetActive(false);
+        hasDealtDamage = false;
+    }
 
     // ─── Nested FSM States ───
     private class PatrolState : IEnemyState
