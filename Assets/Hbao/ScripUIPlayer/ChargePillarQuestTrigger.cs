@@ -90,19 +90,28 @@ public class ChargePillarQuestTrigger : NetworkBehaviour, IQuestTrigger
     {
         if (pillars == null || pillars.Length == 0)
         {
-            var firePillars = FindObjectsByType<FirePillarActivator>(FindObjectsSortMode.None);
-            if (firePillars != null && firePillars.Length > 0)
+            var energyCols = FindObjectsByType<EnergyColumn>(FindObjectsSortMode.None);
+            if (energyCols != null && energyCols.Length > 0)
             {
-                pillars = firePillars;
-                Debug.Log($"[ChargePillarQuestTrigger] Tự động tìm thấy {pillars.Length} trụ FirePillarActivator.");
+                pillars = energyCols;
+                Debug.Log($"[ChargePillarQuestTrigger] Tự động tìm thấy {pillars.Length} trụ EnergyColumn.");
             }
             else
             {
-                var energyPillars = FindObjectsByType<FinalEnergyPillar>(FindObjectsSortMode.None);
-                if (energyPillars != null && energyPillars.Length > 0)
+                var firePillars = FindObjectsByType<FirePillarActivator>(FindObjectsSortMode.None);
+                if (firePillars != null && firePillars.Length > 0)
                 {
-                    pillars = energyPillars;
-                    Debug.Log($"[ChargePillarQuestTrigger] Tự động tìm thấy {pillars.Length} trụ FinalEnergyPillar.");
+                    pillars = firePillars;
+                    Debug.Log($"[ChargePillarQuestTrigger] Tự động tìm thấy {pillars.Length} trụ FirePillarActivator.");
+                }
+                else
+                {
+                    var energyPillars = FindObjectsByType<FinalEnergyPillar>(FindObjectsSortMode.None);
+                    if (energyPillars != null && energyPillars.Length > 0)
+                    {
+                        pillars = energyPillars;
+                        Debug.Log($"[ChargePillarQuestTrigger] Tự động tìm thấy {pillars.Length} trụ FinalEnergyPillar.");
+                    }
                 }
             }
         }
@@ -163,9 +172,60 @@ public class ChargePillarQuestTrigger : NetworkBehaviour, IQuestTrigger
     {
         if (pillar == null) return false;
 
+        // 1. Kiem tra truc tiep pillar component
+        if (pillar is EnergyColumn col) return col.IsCompleted();
         if (pillar is FirePillarActivator f) return f.IsActivated;
         if (pillar is FinalEnergyPillar e) return e.IsActivated;
         if (pillar is PillarInteract p) return p.IsCorrectDirection();
+
+        // 2. Kiem tra cac component tren GameObject/children/parent cua pillar (tránh truong hop keo NetworkObject hoac MonoBehaviour khac vao Inspector)
+        GameObject go = pillar.gameObject;
+        if (go != null)
+        {
+            var energyCol = go.GetComponent<EnergyColumn>() ?? go.GetComponentInChildren<EnergyColumn>() ?? go.GetComponentInParent<EnergyColumn>();
+            if (energyCol != null) return energyCol.IsCompleted();
+
+            var fireCol = go.GetComponent<FirePillarActivator>() ?? go.GetComponentInChildren<FirePillarActivator>() ?? go.GetComponentInParent<FirePillarActivator>();
+            if (fireCol != null) return fireCol.IsActivated;
+
+            var finalCol = go.GetComponent<FinalEnergyPillar>() ?? go.GetComponentInChildren<FinalEnergyPillar>() ?? go.GetComponentInParent<FinalEnergyPillar>();
+            if (finalCol != null) return finalCol.IsActivated;
+
+            var pillarCol = go.GetComponent<PillarInteract>() ?? go.GetComponentInChildren<PillarInteract>() ?? go.GetComponentInParent<PillarInteract>();
+            if (pillarCol != null) return pillarCol.IsCorrectDirection();
+
+            // Reflection tren tat ca MonoBehaviour thuoc GameObject
+            var components = go.GetComponents<MonoBehaviour>();
+            foreach (var comp in components)
+            {
+                if (comp == null || comp == pillar) continue;
+
+                var isCompMethod = comp.GetType().GetMethod("IsCompleted");
+                if (isCompMethod != null && isCompMethod.ReturnType == typeof(bool))
+                {
+                    return (bool)isCompMethod.Invoke(comp, null);
+                }
+
+                var isActProp = comp.GetType().GetProperty("IsActivated");
+                if (isActProp != null && isActProp.PropertyType == typeof(bool))
+                {
+                    return (bool)isActProp.GetValue(comp);
+                }
+
+                var isActField = comp.GetType().GetField("isActivated");
+                if (isActField != null && isActField.FieldType == typeof(bool))
+                {
+                    return (bool)isActField.GetValue(comp);
+                }
+            }
+        }
+
+        // 3. Reflection truc tiep tren pillar
+        var method = pillar.GetType().GetMethod("IsCompleted");
+        if (method != null && method.ReturnType == typeof(bool))
+        {
+            return (bool)method.Invoke(pillar, null);
+        }
 
         var prop = pillar.GetType().GetProperty("IsActivated");
         if (prop != null && prop.PropertyType == typeof(bool))
@@ -271,9 +331,10 @@ public class ChargePillarQuestTrigger : NetworkBehaviour, IQuestTrigger
                 if (current != lastChargedCount)
                 {
                     lastChargedCount = current;
-                    localHudCtl.UpdateQuestProgress(current, total, this);
                     Debug.Log($"[ChargePillarQuestTrigger] Cập nhật tiến độ UI: {current}/{total}");
                 }
+
+                localHudCtl.UpdateQuestProgress(current, total, this);
             }
         }
     }
