@@ -24,30 +24,27 @@ public class VideoCutsceneController : NetworkBehaviour
     public bool isPlaying = false;
     
     private bool serverReceivedFinishSignal = false;
-    
-    // [ĐÃ THÊM] Cờ để chống spam nút ESC gửi nhiều tín hiệu làm lag mạng
     private bool hasRequestedSkip = false;
+
+    // [ĐÃ THÊM] Danh sách lưu trữ ID của các người chơi đang đứng trong vùng Trigger
+    private HashSet<ulong> playersInZone = new HashSet<ulong>();
 
     private void Update()
     {
         if (!IsSpawned) return;
 
-        // [ĐÃ THÊM] Nếu màn hình video đang hiển thị và chưa ai bấm skip
         if (videoUI != null && videoUI.activeSelf && !hasRequestedSkip)
         {
-            // Bất kỳ ai nhấn ESC (hoặc ông có thể đổi sang phím Space/Enter tùy ý)
             if (Input.GetKeyDown(KeyCode.Escape))
             {
-                hasRequestedSkip = true; // Khóa lại, không cho bấm 2 lần
+                hasRequestedSkip = true; 
                 Debug.Log("[VideoCutscene] Phát hiện phím ESC! Đang yêu cầu Skip cutscene cho cả phòng...");
                 
-                // Gỡ event chạy hết video để không báo cáo đúp
                 if (videoPlayer != null)
                 {
                     videoPlayer.loopPointReached -= OnClientVideoFinished;
                 }
 
-                // Gọi Server báo là xem xong rồi để Server ngắt phim của mọi người!
                 ReportFinishToServerRpc();
             }
         }
@@ -92,7 +89,6 @@ public class VideoCutsceneController : NetworkBehaviour
         TeleportToSafeZoneClientRpc(targetClientIds);
         PlayCutsceneClientRpc();
 
-        // Server đứng hình ở đây chờ xem phim xong HOẶC có người bấm ESC
         yield return new WaitUntil(() => serverReceivedFinishSignal);
 
         StopVideoClientRpc();
@@ -115,8 +111,7 @@ public class VideoCutsceneController : NetworkBehaviour
     private void PlayCutsceneClientRpc()
     {
         if (videoUI != null) videoUI.SetActive(true); 
-        
-        hasRequestedSkip = false; // [ĐÃ THÊM] Reset lại cờ skip mỗi lần bắt đầu xem phim
+        hasRequestedSkip = false; 
 
         if (videoPlayer != null)
         {
@@ -246,12 +241,59 @@ public class VideoCutsceneController : NetworkBehaviour
         }
     }
 
+    // =========================================================================
+    // [ĐÃ THAY ĐỔI] LOGIC TRIGGER NHIỀU NGƯỜI CHƠI
+    // =========================================================================
+
     private void OnTriggerEnter(Collider other)
     {
         if (!IsSpawned || !IsServer) return; 
+        if (isPlaying || (playOnlyOnce && hasPlayed)) return; // Nếu đang phát hoặc đã phát rồi thì bỏ qua
 
         if (other.CompareTag("Player"))
         {
+            // Lấy NetworkObject của người chơi để lưu ClientId
+            var netObj = other.GetComponentInParent<NetworkObject>();
+            if (netObj != null && netObj.IsPlayerObject)
+            {
+                playersInZone.Add(netObj.OwnerClientId); // Thêm vào danh sách
+                CheckCutsceneCondition();
+            }
+        }
+    }
+
+    private void OnTriggerExit(Collider other)
+    {
+        if (!IsSpawned || !IsServer) return;
+
+        if (other.CompareTag("Player"))
+        {
+            var netObj = other.GetComponentInParent<NetworkObject>();
+            if (netObj != null && netObj.IsPlayerObject)
+            {
+                playersInZone.Remove(netObj.OwnerClientId); // Xóa khỏi danh sách khi đi ra ngoài
+            }
+        }
+    }
+
+    private void CheckCutsceneCondition()
+    {
+        // Lấy tổng số người chơi đang kết nối trong phòng
+        int totalPlayersInRoom = NetworkManager.Singleton.ConnectedClientsList.Count;
+        
+        // Tính toán số người cần thiết (Tổng - 1, nhưng ít nhất phải là 1)
+        int requiredPlayers = Mathf.Max(1, totalPlayersInRoom - 1);
+
+        // Đề phòng trường hợp có người ngắt kết nối (Disconnect) khi đang đứng trong zone
+        // Xóa những ClientId không còn tồn tại trong phòng ra khỏi danh sách playersInZone
+        playersInZone.RemoveWhere(id => !NetworkManager.Singleton.ConnectedClients.ContainsKey(id));
+
+        Debug.Log($"[VideoCutscene] Số người trong vùng: {playersInZone.Count} / Cần thiết: {requiredPlayers} (Tổng user: {totalPlayersInRoom})");
+
+        // Nếu số người đứng trong zone đủ yêu cầu => Phát Cutscene!
+        if (playersInZone.Count >= requiredPlayers)
+        {
+            playersInZone.Clear(); // Dọn dẹp danh sách
             StartCutsceneServer();
         }
     }
