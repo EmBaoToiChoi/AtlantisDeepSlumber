@@ -373,19 +373,6 @@ public class Enemy2_Zombie : NetworkBehaviour
 
         ApplyPatrolEnemySeparation();
 
-        // 1. Gặp tường: Quay mặt né tường ngay lập tức và chuyển hướng
-        if (Physics.Raycast(transform.position + Vector3.up * 0.8f, transform.forward, out RaycastHit wallHit, 1.2f, obstacleLayer, QueryTriggerInteraction.Ignore))
-        {
-            if (!wallHit.collider.CompareTag("Player") && !wallHit.collider.CompareTag("Enemy"))
-            {
-                Vector3 avoidDir = Vector3.Reflect(transform.forward, wallHit.normal);
-                avoidDir.y = 0;
-                if (avoidDir.sqrMagnitude > 0.01f) transform.rotation = Quaternion.LookRotation(avoidDir.normalized);
-                GoToNextWaypoint();
-                return;
-            }
-        }
-
         if (waitingAtWaypoint)
         {
             if (AgentReady) agent.isStopped = true;
@@ -422,9 +409,10 @@ public class Enemy2_Zombie : NetworkBehaviour
                 bool isMoving = agent.velocity.magnitude > 0.15f;
                 SetSpeedNet(isMoving ? 0.5f : 0f); // Animator Speed = 0.5 (Walk)
 
+                // Kiểm tra khi đến gần Waypoint (khoảng cách <= 0.8m)
                 if (!agent.pathPending && agent.hasPath)
                 {
-                    if (agent.remainingDistance > 0.1f && agent.remainingDistance <= agent.stoppingDistance + 0.5f)
+                    if (agent.remainingDistance > 0.1f && agent.remainingDistance <= Mathf.Max(0.8f, agent.stoppingDistance + 0.3f))
                     {
                         agent.isStopped = true;
                         SetSpeedNet(0f);
