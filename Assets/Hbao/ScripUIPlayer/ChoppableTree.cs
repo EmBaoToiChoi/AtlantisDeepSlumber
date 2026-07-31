@@ -607,8 +607,8 @@ public class ChoppableTree : NetworkBehaviour
             {
                 chip = Instantiate(prefabToUse, startP, Random.rotation);
                 chip.name = $"WoodChip_{i}";
-                Vector3 origS = (prefabToUse == firewoodChipPrefab) ? firewoodChipPrefab.transform.localScale : prefabToUse.transform.localScale * 0.45f;
-                if (origS == Vector3.zero) origS = new Vector3(0.35f, 0.35f, 0.35f);
+                Vector3 origS = (prefabToUse == firewoodChipPrefab) ? firewoodChipPrefab.transform.localScale * 1.8f : prefabToUse.transform.localScale * 1.25f;
+                if (origS.magnitude < 0.5f) origS = new Vector3(0.6f, 0.6f, 0.9f);
                 chip.transform.localScale = origS;
                 chip.SetActive(true);
 
@@ -623,7 +623,7 @@ public class ChoppableTree : NetworkBehaviour
                 chip = GameObject.CreatePrimitive(PrimitiveType.Cube);
                 chip.name = $"WoodChip_{i}";
                 chip.transform.position = startP;
-                chip.transform.localScale = new Vector3(Random.Range(0.2f, 0.3f), Random.Range(0.2f, 0.3f), Random.Range(0.5f, 0.7f));
+                chip.transform.localScale = new Vector3(Random.Range(0.45f, 0.65f), Random.Range(0.45f, 0.65f), Random.Range(0.9f, 1.3f));
                 chip.transform.rotation = Random.rotation;
 
                 Collider cCol = chip.GetComponent<Collider>();
@@ -651,8 +651,8 @@ public class ChoppableTree : NetworkBehaviour
             {
                 if (chips[i] == null) continue;
                 Vector3 current = Vector3.Lerp(chipStartPos[i], chipLandPos[i], t);
-                // Tạo vòm cong parabol văng lên không trung rồi rớt xuống
-                float arc = Mathf.Sin(t * Mathf.PI) * 1.2f;
+                // Tạo vòm cong parabol văng cao lên không trung (2.2m) rồi rớt xuống
+                float arc = Mathf.Sin(t * Mathf.PI) * 2.2f;
                 current.y += arc;
 
                 chips[i].transform.position = current;
@@ -888,11 +888,16 @@ public class ChoppableTree : NetworkBehaviour
             }
         }
 
-        // 1. Tắt toàn bộ colliders để người chơi không bị kẹt hoặc va chạm khi cây đang ngã
+        // 1. Xóa bỏ hoàn toàn (Destroy) toàn bộ Collider trên cây gục ngã (ngoại trừ gốc cây spawnedStump)
+        // để người chơi không bao giờ bị bước đè lên tán lá/thân cây ngã gây lỗi đứng trên không trung!
         Collider[] colliders = GetComponentsInChildren<Collider>(true);
         foreach (var col in colliders)
         {
-            if (col != null) col.enabled = false;
+            if (col != null && (spawnedStump == null || !col.transform.IsChildOf(spawnedStump.transform)))
+            {
+                col.enabled = false;
+                DestroyImmediate(col);
+            }
         }
 
         // 2. Tạo FallPivot tại đúng vị trí mặt cắt trên đỉnh gốc cây (y = 1.15m)
@@ -923,6 +928,17 @@ public class ChoppableTree : NetworkBehaviour
             foreach (var child in childrenToMove)
             {
                 child.SetParent(fallPivot.transform, true);
+            }
+        }
+
+        // Xóa sạch tất cả collider còn sót lại trên fallPivot để đảm bảo thân cây ngã hoàn toàn không có va chạm
+        Collider[] pivotCols = fallPivot.GetComponentsInChildren<Collider>(true);
+        foreach (var c in pivotCols)
+        {
+            if (c != null)
+            {
+                c.enabled = false;
+                DestroyImmediate(c);
             }
         }
 
