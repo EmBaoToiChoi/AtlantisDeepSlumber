@@ -35392,11 +35392,11 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 3432249965985869131, guid: da85c45ebfc60bb4182217be1d2a6dd6, type: 3}
       propertyPath: sightRange
-      value: 90
+      value: 25
       objectReference: {fileID: 0}
     - target: {fileID: 3432249965985869131, guid: da85c45ebfc60bb4182217be1d2a6dd6, type: 3}
       propertyPath: maxChaseDistance
-      value: 100
+      value: 26
       objectReference: {fileID: 0}
     - target: {fileID: 3432249965985869131, guid: da85c45ebfc60bb4182217be1d2a6dd6, type: 3}
       propertyPath: 'waypoints.Array.data[0]'
