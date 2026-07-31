@@ -429,7 +429,33 @@ public class Enemy2_Zombie : NetworkBehaviour
             else
             {
                 SnapToNavMesh();
-                if (AgentReady) GoToNextWaypoint();
+                if (AgentReady)
+                {
+                    GoToNextWaypoint();
+                }
+                else
+                {
+                    // Fallback di chuyển thủ công nếu khu vực chưa được Bake NavMesh (Tránh bị kẹt đứng im vĩnh viễn)
+                    if (waypoints != null && waypoints.Length > 0 && currentWaypointIndex >= 0 && currentWaypointIndex < waypoints.Length)
+                    {
+                        Transform wp = waypoints[currentWaypointIndex];
+                        if (wp != null)
+                        {
+                            Vector3 dir = (wp.position - transform.position);
+                            dir.y = 0;
+                            if (dir.sqrMagnitude > 0.25f)
+                            {
+                                transform.position += dir.normalized * patrolWalkSpeed * Time.deltaTime;
+                                transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(dir.normalized), Time.deltaTime * 5f);
+                                SetSpeedNet(0.5f);
+                            }
+                            else
+                            {
+                                GoToNextWaypoint();
+                            }
+                        }
+                    }
+                }
             }
         }
     }
@@ -1297,6 +1323,19 @@ public class Enemy2_Zombie : NetworkBehaviour
     {
         if (clawHitbox != null) clawHitbox.SetActive(false);
         hasDealtDamage = false;
+    }
+    private void OnDrawGizmosSelected()
+    {
+        Vector3 eye = eyeTransform != null ? eyeTransform.position : transform.position + Vector3.up * 1.5f;
+        Gizmos.color = Color.yellow; Gizmos.DrawWireSphere(eye, sightRange);
+        Vector3 l = Quaternion.AngleAxis(-fieldOfView / 2f, Vector3.up) * transform.forward;
+        Vector3 r = Quaternion.AngleAxis( fieldOfView / 2f, Vector3.up) * transform.forward;
+        Gizmos.DrawRay(eye, l * sightRange); Gizmos.DrawRay(eye, r * sightRange);
+        Gizmos.color = Color.red; Gizmos.DrawWireSphere(transform.position, attackRange);
+
+        // Bán kính rượt đuổi tối đa (Max Chase Distance) màu xanh Cyan trong Scene View
+        Gizmos.color = Color.cyan;
+        Gizmos.DrawWireSphere(GetPatrolCenterPosition(), maxChaseDistance);
     }
 
     // ─── Nested FSM States ───
