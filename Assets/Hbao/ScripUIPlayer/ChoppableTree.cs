@@ -322,7 +322,6 @@ public class ChoppableTree : NetworkBehaviour
         if (currentHits >= requiredHits)
         {
             isCutDown.Value = true;
-            StartCoroutine(SpawnLogsAfterDelay(0.2f));
         }
     }
 
@@ -335,7 +334,6 @@ public class ChoppableTree : NetworkBehaviour
         if (currentHits >= requiredHits)
         {
             StartCoroutine(FallDownCoroutine());
-            StartCoroutine(SpawnCollectibleLogLocalAfterDelay(0.2f));
         }
     }
 
@@ -559,22 +557,21 @@ public class ChoppableTree : NetworkBehaviour
         }
     }
 
-    private void SpawnCollectibleLogLocal(int count)
+    private void TriggerWoodDropAnimation()
     {
         if (woodLogPrefab == null) ResolveWoodLogPrefab();
-        Debug.Log($"[ChoppableTree] {name}: SpawnCollectibleLogLocal gọi với count={count}, woodLogPrefab={(woodLogPrefab != null ? woodLogPrefab.name : "NULL")}");
+        int woodAmount = Random.Range(5, 11);
+        bool isNet = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
+        
+        Debug.Log($"[ChoppableTree] {name}: TriggerWoodDropAnimation được kích hoạt! isNet={isNet}, IsServer={(isNet ? IsServer : false)}");
 
-        for (int i = 0; i < count; i++)
+        if (WoodLogObjectPool.Instance != null)
         {
-            int woodAmount = Random.Range(5, 11);
-            if (WoodLogObjectPool.Instance != null)
-            {
-                WoodLogObjectPool.Instance.StartCoroutine(AnimateScatteredWoodChipsAndMerge(woodAmount, isNetwork: false));
-            }
-            else
-            {
-                StartCoroutine(AnimateScatteredWoodChipsAndMerge(woodAmount, isNetwork: false));
-            }
+            WoodLogObjectPool.Instance.StartCoroutine(AnimateScatteredWoodChipsAndMerge(woodAmount, isNet));
+        }
+        else
+        {
+            StartCoroutine(AnimateScatteredWoodChipsAndMerge(woodAmount, isNet));
         }
     }
 
@@ -956,6 +953,7 @@ public class ChoppableTree : NetworkBehaviour
     private IEnumerator FallDownCoroutine()
     {
         CreateTreeStump();
+        TriggerWoodDropAnimation();
 
         float stumpHeight = 1.15f;
 
@@ -1159,13 +1157,13 @@ public class ChoppableTree : NetworkBehaviour
     private IEnumerator SpawnLogsAfterDelay(float delay)
     {
         yield return new WaitForSeconds(delay);
-        SpawnWoodLogs(1);
+        TriggerWoodDropAnimation();
     }
 
     private IEnumerator SpawnCollectibleLogLocalAfterDelay(float delay)
     {
         yield return new WaitForSeconds(delay);
-        SpawnCollectibleLogLocal(1);
+        TriggerWoodDropAnimation();
     }
 
     private Material GetTrunkMaterial()
