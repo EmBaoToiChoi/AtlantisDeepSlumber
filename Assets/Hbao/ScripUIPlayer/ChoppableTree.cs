@@ -81,6 +81,19 @@ public class ChoppableTree : NetworkBehaviour
         }
         originalLocalPos = visualModel.transform.localPosition;
         ResolveWoodLogPrefab();
+        SetupNavMeshObstacle();
+    }
+
+    private void SetupNavMeshObstacle()
+    {
+        UnityEngine.AI.NavMeshObstacle obs = GetComponent<UnityEngine.AI.NavMeshObstacle>();
+        if (obs == null) obs = gameObject.AddComponent<UnityEngine.AI.NavMeshObstacle>();
+        obs.shape = UnityEngine.AI.NavMeshObstacleShape.Capsule;
+        obs.center = new Vector3(0f, 2.5f, 0f);
+        obs.radius = 0.65f;
+        obs.height = 5.0f;
+        obs.carving = true;
+        obs.carveOnlyStationary = true;
     }
 
     private void ResolveWoodLogPrefab()
@@ -530,7 +543,14 @@ public class ChoppableTree : NetworkBehaviour
         for (int i = 0; i < count; i++)
         {
             int woodAmount = Random.Range(5, 11);
-            StartCoroutine(AnimateScatteredWoodChipsAndMerge(woodAmount, isNetwork: true));
+            if (WoodLogObjectPool.Instance != null)
+            {
+                WoodLogObjectPool.Instance.StartCoroutine(AnimateScatteredWoodChipsAndMerge(woodAmount, isNetwork: true));
+            }
+            else
+            {
+                StartCoroutine(AnimateScatteredWoodChipsAndMerge(woodAmount, isNetwork: true));
+            }
         }
     }
 
@@ -541,7 +561,14 @@ public class ChoppableTree : NetworkBehaviour
         for (int i = 0; i < count; i++)
         {
             int woodAmount = Random.Range(5, 11);
-            StartCoroutine(AnimateScatteredWoodChipsAndMerge(woodAmount, isNetwork: false));
+            if (WoodLogObjectPool.Instance != null)
+            {
+                WoodLogObjectPool.Instance.StartCoroutine(AnimateScatteredWoodChipsAndMerge(woodAmount, isNetwork: false));
+            }
+            else
+            {
+                StartCoroutine(AnimateScatteredWoodChipsAndMerge(woodAmount, isNetwork: false));
+            }
         }
     }
 
@@ -574,29 +601,30 @@ public class ChoppableTree : NetworkBehaviour
         Quaternion[] chipRotations = new Quaternion[chipCount];
 
         Renderer mainRend = GetComponentInChildren<Renderer>();
-        Material treeMat = (mainRend != null && mainRend.sharedMaterial != null) ? mainRend.sharedMaterial : null;
+        Material treeMat = GetTrunkMaterial();
+        if (treeMat == null && mainRend != null && mainRend.sharedMaterial != null) treeMat = mainRend.sharedMaterial;
 
         for (int i = 0; i < chipCount; i++)
         {
-            // Mỗi mảnh gỗ văng ra theo 1 hướng ngẫu nhiên né gốc cây (1.8m -> 3.2m)
-            float chipAngle = (i * (360f / chipCount) + Random.Range(-20f, 20f)) * Mathf.Deg2Rad;
+            // Mỗi mảnh gỗ văng ra theo 1 hướng ngẫu nhiên né gốc cây (2.0m -> 3.5m)
+            float chipAngle = (i * (360f / chipCount) + Random.Range(-25f, 25f)) * Mathf.Deg2Rad;
             Vector3 chipDir = new Vector3(Mathf.Cos(chipAngle), 0f, Mathf.Sin(chipAngle)).normalized;
 
-            Vector3 startP = transform.position + chipDir * 0.8f + Vector3.up * 1.2f;
-            Vector3 landP = transform.position + chipDir * Random.Range(2.0f, 3.2f);
+            Vector3 startP = transform.position + chipDir * 0.8f + Vector3.up * 1.5f;
+            Vector3 landP = transform.position + chipDir * Random.Range(2.2f, 3.6f);
             
             // Raycast tìm đất cho mảnh gỗ nhỏ
-            Vector3 chipRay = new Vector3(landP.x, transform.position.y + 4f, landP.z);
-            if (Physics.Raycast(chipRay, Vector3.down, out RaycastHit chipHit, 8f, layerMask))
+            Vector3 chipRay = new Vector3(landP.x, transform.position.y + 5f, landP.z);
+            if (Physics.Raycast(chipRay, Vector3.down, out RaycastHit chipHit, 10f, layerMask))
             {
                 string hN = chipHit.collider.gameObject.name.ToLower();
                 if (chipHit.collider.gameObject != gameObject && !hN.Contains("stump") && !hN.Contains("tree"))
                 {
-                    landP.y = chipHit.point.y + 0.1f;
+                    landP.y = chipHit.point.y + 0.15f;
                 }
-                else landP.y = groundY + 0.1f;
+                else landP.y = groundY + 0.15f;
             }
-            else landP.y = groundY + 0.1f;
+            else landP.y = groundY + 0.15f;
 
             chipStartPos[i] = startP;
             chipLandPos[i] = landP;
@@ -607,10 +635,18 @@ public class ChoppableTree : NetworkBehaviour
             {
                 chip = Instantiate(prefabToUse, startP, Random.rotation);
                 chip.name = $"WoodChip_{i}";
-                Vector3 origS = (prefabToUse == firewoodChipPrefab) ? firewoodChipPrefab.transform.localScale * 1.8f : prefabToUse.transform.localScale * 1.25f;
-                if (origS.magnitude < 0.5f) origS = new Vector3(0.6f, 0.6f, 0.9f);
-                chip.transform.localScale = origS;
+
+                // Kích hoạt toàn bộ GameObject và Renderer con để đảm bảo gỗ luôn hiển thị 100%
                 chip.SetActive(true);
+                Transform[] allChilds = chip.GetComponentsInChildren<Transform>(true);
+                foreach (var ch in allChilds) if (ch != null) ch.gameObject.SetActive(true);
+
+                Renderer[] childRends = chip.GetComponentsInChildren<Renderer>(true);
+                foreach (var r in childRends) if (r != null) r.enabled = true;
+
+                Vector3 origS = (prefabToUse == firewoodChipPrefab) ? firewoodChipPrefab.transform.localScale * 2.2f : prefabToUse.transform.localScale * 1.5f;
+                if (origS.magnitude < 0.8f) origS = new Vector3(0.8f, 0.8f, 1.2f);
+                chip.transform.localScale = origS;
 
                 // Tắt Collider & Rigidbody để không gây va chạm vật lý lúc văng
                 Collider[] cCols = chip.GetComponentsInChildren<Collider>(true);
@@ -620,19 +656,32 @@ public class ChoppableTree : NetworkBehaviour
             }
             else
             {
-                chip = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                // Tạo khối hình trụ Cylinder 3D gỗ lớn
+                chip = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
                 chip.name = $"WoodChip_{i}";
                 chip.transform.position = startP;
-                chip.transform.localScale = new Vector3(Random.Range(0.45f, 0.65f), Random.Range(0.45f, 0.65f), Random.Range(0.9f, 1.3f));
+                chip.transform.localScale = new Vector3(0.45f, 0.6f, 0.45f);
                 chip.transform.rotation = Random.rotation;
 
                 Collider cCol = chip.GetComponent<Collider>();
                 if (cCol != null) cCol.enabled = false;
 
-                if (treeMat != null)
+                Renderer cRend = chip.GetComponent<Renderer>();
+                if (cRend != null)
                 {
-                    Renderer cRend = chip.GetComponent<Renderer>();
-                    if (cRend != null) cRend.material = treeMat;
+                    cRend.enabled = true;
+                    Material woodMat = FindLitMaterial();
+                    if (woodMat != null)
+                    {
+                        Color woodDarkColor = new Color(0.55f, 0.35f, 0.18f); // Màu thanh gỗ nâu tự nhiên
+                        if (woodMat.HasProperty("_BaseColor")) woodMat.SetColor("_BaseColor", woodDarkColor);
+                        else if (woodMat.HasProperty("_Color")) woodMat.SetColor("_Color", woodDarkColor);
+                        cRend.material = woodMat;
+                    }
+                    else if (treeMat != null)
+                    {
+                        cRend.material = treeMat;
+                    }
                 }
             }
 
@@ -1224,23 +1273,22 @@ public class ChoppableTree : NetworkBehaviour
             // Gán layer va chạm của cây gốc
             spawnedStump.layer = gameObject.layer;
 
-            // Thêm 1 CapsuleCollider hình trụ bo tròn mượt tuyệt đối chống kẹt xoay vòng tròn và CHỐNG ĐI XUYÊN GỐC CÂY
+            // Thêm 1 CapsuleCollider hình trụ bo tròn mượt tuyệt đối, cao hẳn 5.0m lên bầu trời 
+            // CHỐNG TUYỆT ĐỐI VIỆC NHÂN VẬT LEO DẪM LÊN ĐỈNH GỐC CÂY GÂY TRÔI/BAY LÊN KHÔNG TRUNG!
             CapsuleCollider smoothCapCol = spawnedStump.AddComponent<CapsuleCollider>();
             smoothCapCol.isTrigger = false; // Đảm bảo là vật cản cứng, không đi xuyên qua được!
             
             // Tính toán bounds thực tế của Prefab gốc cây
             Renderer sRend = spawnedStump.GetComponentInChildren<Renderer>();
-            float sRadius = 0.65f;
-            float sHeight = 1.2f;
+            float sRadius = 0.6f;
             if (sRend != null)
             {
-                sRadius = Mathf.Clamp(sRend.bounds.extents.x, 0.55f, 0.95f);
-                sHeight = Mathf.Clamp(sRend.bounds.size.y, 0.9f, 1.8f);
+                sRadius = Mathf.Clamp(sRend.bounds.extents.x, 0.5f, 0.9f);
             }
 
-            smoothCapCol.center = new Vector3(0f, sHeight * 0.5f, 0f);
-            smoothCapCol.radius = Mathf.Max(0.6f, sRadius);
-            smoothCapCol.height = Mathf.Max(1.3f, sHeight);
+            smoothCapCol.center = new Vector3(0f, 2.5f, 0f);
+            smoothCapCol.radius = sRadius;
+            smoothCapCol.height = 5.0f; // Chiều cao 5.0m nhô cao qua khỏi đầu nhân vật, chống bước leo đè lên đỉnh
             smoothCapCol.direction = 1; // Hướng Y
 
             // Gán PhysicMaterial trơn nhẵn 0 ma sát để nhân vật lướt qua mượt mà không bị xoay vòng
@@ -1253,16 +1301,26 @@ public class ChoppableTree : NetworkBehaviour
             };
             smoothCapCol.material = smoothMat;
 
+            // Gán NavMeshObstacle tự động đục lỗ NavMesh để Enemy không bao giờ đi xuyên qua gốc cây
+            UnityEngine.AI.NavMeshObstacle stumpObs = spawnedStump.GetComponent<UnityEngine.AI.NavMeshObstacle>();
+            if (stumpObs == null) stumpObs = spawnedStump.AddComponent<UnityEngine.AI.NavMeshObstacle>();
+            stumpObs.shape = UnityEngine.AI.NavMeshObstacleShape.Capsule;
+            stumpObs.center = new Vector3(0f, 2.5f, 0f);
+            stumpObs.radius = sRadius * 1.1f;
+            stumpObs.height = 5.0f;
+            stumpObs.carving = true;
+            stumpObs.carveOnlyStationary = true;
+
             Debug.Log($"[ChoppableTree] Đã tạo thành công gốc cây Prefab '{treeStumpPrefab.name}' trơn nhẵn cho {name}!");
             return;
         }
 
         // Tính bán kính & chiều cao gốc cây
-        float treeRadius = 0.65f;
+        float treeRadius = 0.6f;
         Renderer mainRend = GetComponentInChildren<Renderer>();
         if (mainRend != null)
         {
-            treeRadius = Mathf.Clamp(mainRend.bounds.extents.x, 0.55f, 1.2f);
+            treeRadius = Mathf.Clamp(mainRend.bounds.extents.x, 0.5f, 1.1f);
         }
 
         float stumpHeight = 1.15f; // Chiều cao 1.15m nhô cao rõ ràng trên mặt đất
@@ -1276,11 +1334,11 @@ public class ChoppableTree : NetworkBehaviour
             spawnedStump.transform.SetParent(transform.parent, true);
         }
 
-        // 2. Thêm CapsuleCollider tròn mượt màng bao trọn gốc cây (bo tròn XZ, chống kẹt góc và xoay tròn)
+        // 2. Thêm CapsuleCollider tròn mượt màng cao hẳn 5.0m (chống leo đè lên đỉnh gốc cây gây bay lên không)
         CapsuleCollider capCol = spawnedStump.AddComponent<CapsuleCollider>();
-        capCol.center = new Vector3(0f, stumpHeight * 0.5f, 0f);
-        capCol.radius = treeRadius * 0.9f;
-        capCol.height = stumpHeight * 1.05f;
+        capCol.center = new Vector3(0f, 2.5f, 0f);
+        capCol.radius = treeRadius;
+        capCol.height = 5.0f;
         capCol.direction = 1; // Hướng trục Y
 
         PhysicsMaterial smoothMatFallback = new PhysicsMaterial("StumpSmoothMatFallback")
@@ -1291,6 +1349,15 @@ public class ChoppableTree : NetworkBehaviour
             bounceCombine = PhysicsMaterialCombine.Minimum
         };
         capCol.material = smoothMatFallback;
+
+        UnityEngine.AI.NavMeshObstacle fallbackObs = spawnedStump.GetComponent<UnityEngine.AI.NavMeshObstacle>();
+        if (fallbackObs == null) fallbackObs = spawnedStump.AddComponent<UnityEngine.AI.NavMeshObstacle>();
+        fallbackObs.shape = UnityEngine.AI.NavMeshObstacleShape.Capsule;
+        fallbackObs.center = new Vector3(0f, 2.5f, 0f);
+        fallbackObs.radius = treeRadius * 1.1f;
+        fallbackObs.height = 5.0f;
+        fallbackObs.carving = true;
+        fallbackObs.carveOnlyStationary = true;
 
         // 3. Thân gốc cây thẳng đứng (Stump Body)
         GameObject stumpBody = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
