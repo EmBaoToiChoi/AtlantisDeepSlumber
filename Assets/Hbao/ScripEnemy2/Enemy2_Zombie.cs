@@ -8,7 +8,7 @@ using UnityEngine.AI;
 /// </summary>
 public class Enemy2_Zombie : NetworkBehaviour
 {
-    public enum EnemyState { Patrol, Chase, Stagger, Attack, Dead }
+    public enum EnemyState { Patrol, Chase, Stagger, Attack, Dead, Flee }
 
     [Header("Health")]
     public float maxHealth = 120f;
@@ -88,6 +88,12 @@ public class Enemy2_Zombie : NetworkBehaviour
     private int recentHitCount;
     private float loseSightTimer;
 
+    [Header("Tactical Flee AI")]
+    public bool canTacticalFlee = true;
+    public float fleeHealthThreshold = 0.25f;
+    private bool hasFledTactically = false;
+    private float fleeTimer;
+
     // ─── FSM States ───
     private IEnemyState currentFSMState;
     private PatrolState patrolState;
@@ -95,6 +101,7 @@ public class Enemy2_Zombie : NetworkBehaviour
     private AttackState attackState;
     private StaggerState staggerState;
     private DeadState deadState;
+    private FleeState fleeState;
 
     private readonly Collider[] detectionResults = new Collider[8];
     private readonly Collider[] damageResults    = new Collider[8];
@@ -142,6 +149,7 @@ public class Enemy2_Zombie : NetworkBehaviour
         attackState = new AttackState(this);
         staggerState = new StaggerState(this);
         deadState = new DeadState(this);
+        fleeState = new FleeState(this);
     }
 
     private void Start() { if (!IsNetworkActive) { isStandaloneMode = true; InitStandalone(); } }
@@ -182,6 +190,11 @@ public class Enemy2_Zombie : NetworkBehaviour
 
     private void OnStateChanged(EnemyState oldState, EnemyState newState)
     {
+        CurrentStateValue = newState;
+        if (newState == EnemyState.Patrol)
+        {
+            targetPlayer = null;
+        }
         if (newState == EnemyState.Dead)
         {
             if (!IsServer)
@@ -980,31 +993,21 @@ public class Enemy2_Zombie : NetworkBehaviour
     }
 
 
-    private void ReturnToPatrol()
-    {
-        targetPlayer = null;
-        CurrentStateValue = EnemyState.Patrol;
-        waitingAtWaypoint = false;
-        waypointWaitTimer = 0f;
-        if (AgentReady)
-        {
-            agent.isStopped = false;
-            agent.ResetPath();
-        }
-        SetSpeedNet(0f);
-        GoToNextWaypoint();
-    }
-
     private void HandleStagger()
     {
         if (AgentReady) agent.isStopped = true; SetSpeedNet(0f);
         staggerTimer -= Time.deltaTime;
-        if (staggerTimer <= 0) { if (targetPlayer != null) ChangeState(EnemyState.Chase); else ReturnToPatrol(); }
+        if (staggerTimer <= 0) { if (targetPlayer != null && IsPlayerAliveAndValid(targetPlayer)) ChangeState(EnemyState.Chase); else ReturnToPatrol(); }
     }
 
     private void HandleAttack()
     {
-        if (targetPlayer == null) { EndAttack(); return; }
+        if (targetPlayer == null || !IsPlayerAliveAndValid(targetPlayer))
+        {
+            targetPlayer = null;
+            EndAttack();
+            return;
+        }
         if (AgentReady) agent.isStopped = true; SetSpeedNet(0f);
         stateTimer -= Time.deltaTime;
         float elapsed = attackDuration - stateTimer;
@@ -1018,8 +1021,33 @@ public class Enemy2_Zombie : NetworkBehaviour
         attackCooldownTimer = frantic ? 0.15f : 0.6f;
         if (clawHitbox != null) clawHitbox.SetActive(false);
         detectionTimer = 0f;
-        if (targetPlayer != null) ChangeState(EnemyState.Chase); else ReturnToPatrol();
+        if (targetPlayer != null && IsPlayerAliveAndValid(targetPlayer))
+        {
+            ChangeState(EnemyState.Chase);
+        }
+        else
+        {
+            targetPlayer = null;
+            ReturnToPatrol();
+        }
     }
+
+    private void ReturnToPatrol()
+    {
+        targetPlayer = null;
+        ChangeState(EnemyState.Patrol);
+        waitingAtWaypoint = false;
+        waypointWaitTimer = 0f;
+        if (AgentReady)
+        {
+            agent.isStopped = false;
+            agent.ResetPath();
+        }
+        SetSpeedNet(0f);
+        GoToNextWaypoint();
+    }
+
+
 
     private bool IsPlayerAliveAndValid(Transform pt)
     {
@@ -1031,6 +1059,7 @@ public class Enemy2_Zombie : NetworkBehaviour
         if (n.Contains("ui") || n.Contains("canvas") || n.Contains("hud") || n.Contains("healthbar") || n.Contains("health_bar")) return false;
 
         IPlayerHUDTarget ps = pt.GetComponentInParent<IPlayerHUDTarget>();
+        if (ps == null) ps = pt.GetComponentInChildren<IPlayerHUDTarget>();
         if (ps != null)
         {
             if (ps.CurrentHealth <= 0 || ps.IsInvisible) return false;
@@ -1047,7 +1076,33 @@ public class Enemy2_Zombie : NetworkBehaviour
         Transform curr = pt;
         while (curr != null)
         {
-            if (curr.CompareTag("Player")) return true;
+            if (curr.CompareTag("Player"))
+            {
+                var monoComponents = curr.GetComponents<MonoBehaviour>();
+                foreach (var mono in monoComponents)
+                {
+                    if (mono == null) continue;
+                    var prop = mono.GetType().GetProperty("CurrentHealth");
+                    if (prop != null && prop.PropertyType == typeof(float))
+                    {
+                        float hp = (float)prop.GetValue(mono);
+                        if (hp <= 0) return false;
+                    }
+                    var deadField = mono.GetType().GetField("isDead", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
+                    if (deadField != null && deadField.FieldType == typeof(bool))
+                    {
+                        bool dead = (bool)deadField.GetValue(mono);
+                        if (dead) return false;
+                    }
+                    var isDeadProp = mono.GetType().GetProperty("IsDead", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
+                    if (isDeadProp != null && isDeadProp.PropertyType == typeof(bool))
+                    {
+                        bool dead = (bool)isDeadProp.GetValue(mono);
+                        if (dead) return false;
+                    }
+                }
+                return true;
+            }
             curr = curr.parent;
         }
 
@@ -1106,6 +1161,7 @@ public class Enemy2_Zombie : NetworkBehaviour
             case EnemyState.Attack:  currentFSMState = attackState; break;
             case EnemyState.Stagger: currentFSMState = staggerState; break;
             case EnemyState.Dead:    currentFSMState = deadState;   break;
+            case EnemyState.Flee:    currentFSMState = fleeState;   break;
         }
 
         if (currentFSMState != null)
@@ -1234,6 +1290,14 @@ public class Enemy2_Zombie : NetworkBehaviour
 
         float activeHp = ActualCurrentHealth;
         if (activeHp <= 0f) { ChangeState(EnemyState.Dead); return; }
+
+        if (canTacticalFlee && !hasFledTactically && (activeHp / maxHealth) <= fleeHealthThreshold && CurrentStateValue != EnemyState.Flee)
+        {
+            hasFledTactically = true;
+            AlertNearbyAllies(targetPlayer, 22f);
+            ChangeState(EnemyState.Flee);
+            return;
+        }
 
         // Nếu đang thực hiện đòn đánh (Attack State), kích hoạt Hyper Armor (không bị hủy đòn cào)
         if (CurrentStateValue == EnemyState.Attack)
@@ -1423,5 +1487,55 @@ public class Enemy2_Zombie : NetworkBehaviour
         public void Exit() {}
     }
 
+    private void HandleFlee()
+    {
+        fleeTimer -= Time.deltaTime;
+
+        if (targetPlayer != null && IsPlayerAliveAndValid(targetPlayer))
+        {
+            Vector3 fleeDir = (transform.position - targetPlayer.position).normalized;
+            Vector3 desiredFleePos = transform.position + fleeDir * 12.0f;
+
+            if (NavMesh.SamplePosition(desiredFleePos, out NavMeshHit hit, 6.0f, NavMesh.AllAreas))
+            {
+                if (AgentReady)
+                {
+                    agent.isStopped = false;
+                    agent.speed = chaseRunSpeed * 1.35f;
+                    agent.SetDestination(hit.position);
+                }
+            }
+            SetSpeedNet(1.0f);
+
+            float distToPlayer = Vector3.Distance(transform.position, targetPlayer.position);
+            if (distToPlayer > 16.0f || fleeTimer <= 0f)
+            {
+                targetPlayer = null;
+                ReturnToPatrol();
+                return;
+            }
+        }
+        else
+        {
+            ReturnToPatrol();
+        }
+    }
+
+    private class FleeState : IEnemyState
+    {
+        private Enemy2_Zombie enemy;
+        public FleeState(Enemy2_Zombie enemy) { this.enemy = enemy; }
+        public void Enter()
+        {
+            enemy.fleeTimer = 4.0f;
+            if (enemy.AgentReady)
+            {
+                enemy.agent.isStopped = false;
+                enemy.agent.speed = enemy.chaseRunSpeed * 1.35f;
+            }
+        }
+        public void Update() { enemy.HandleFlee(); }
+        public void Exit() {}
+    }
 
 }

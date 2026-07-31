@@ -9,7 +9,7 @@ using UnityEngine.AI;
 /// </summary>
 public class Enemy1_DapBua : NetworkBehaviour
 {
-    public enum EnemyState { Patrol, Chase, Stagger, Attack, Dead }
+    public enum EnemyState { Patrol, Chase, Stagger, Attack, Dead, Flee }
 
     // ─── Health ────────────────────────────────────────────────
     [Header("Health")]
@@ -147,6 +147,12 @@ public class Enemy1_DapBua : NetworkBehaviour
     private float dodgeTimer;
     private float loseSightTimer;
 
+    [Header("Tactical Flee AI")]
+    public bool canTacticalFlee = true;
+    public float fleeHealthThreshold = 0.25f;
+    private bool hasFledTactically = false;
+    private float fleeTimer;
+
     // ─── FSM States ───
     private IEnemyState currentFSMState;
     private PatrolState patrolState;
@@ -154,6 +160,7 @@ public class Enemy1_DapBua : NetworkBehaviour
     private AttackState attackState;
     private StaggerState staggerState;
     private DeadState deadState;
+    private FleeState fleeState;
 
     private readonly Collider[] detectionResults = new Collider[8];
     private readonly Collider[] damageResults    = new Collider[8];
@@ -225,6 +232,7 @@ public class Enemy1_DapBua : NetworkBehaviour
         attackState = new AttackState(this);
         staggerState = new StaggerState(this);
         deadState = new DeadState(this);
+        fleeState = new FleeState(this);
     }
 
     private void Start()
@@ -283,6 +291,11 @@ public class Enemy1_DapBua : NetworkBehaviour
 
     private void OnStateChanged(EnemyState oldState, EnemyState newState)
     {
+        CurrentStateValue = newState;
+        if (newState == EnemyState.Patrol)
+        {
+            targetPlayer = null;
+        }
         if (newState == EnemyState.Dead)
         {
             ApplyLocalDeathEffects();
@@ -937,7 +950,7 @@ public class Enemy1_DapBua : NetworkBehaviour
     private void ReturnToPatrol()
     {
         targetPlayer = null;
-        CurrentStateValue = EnemyState.Patrol;
+        ChangeState(EnemyState.Patrol);
         waitingAtWaypoint = false;
         waypointWaitTimer = 0f;
         if (AgentReady)
@@ -948,6 +961,7 @@ public class Enemy1_DapBua : NetworkBehaviour
         SetSpeedNet(0f);
         GoToNextWaypoint();
     }
+
 
 
     // ══════════════════════════════════════════════════════════
@@ -971,7 +985,12 @@ public class Enemy1_DapBua : NetworkBehaviour
     // ══════════════════════════════════════════════════════════
     private void HandleAttack()
     {
-        if (targetPlayer == null) { EndAttack(); return; }
+        if (targetPlayer == null || !IsPlayerAliveAndValid(targetPlayer))
+        {
+            targetPlayer = null;
+            EndAttack();
+            return;
+        }
         if (AgentReady) agent.isStopped = true;
         SetSpeedNet(0f); // Không di chuyển khi tấn công
 
@@ -994,8 +1013,15 @@ public class Enemy1_DapBua : NetworkBehaviour
         attackCooldownTimer = (CurrentHealthValue < maxHealth * 0.5f) ? 0.3f : 0.7f;
         DisableHitboxes();
         detectionTimer = 0f;
-        if (targetPlayer != null) ChangeState(EnemyState.Chase);
-        else ReturnToPatrol();
+        if (targetPlayer != null && IsPlayerAliveAndValid(targetPlayer))
+        {
+            ChangeState(EnemyState.Chase);
+        }
+        else
+        {
+            targetPlayer = null;
+            ReturnToPatrol();
+        }
     }
 
     // ══════════════════════════════════════════════════════════
@@ -1011,6 +1037,7 @@ public class Enemy1_DapBua : NetworkBehaviour
         if (n.Contains("ui") || n.Contains("canvas") || n.Contains("hud") || n.Contains("healthbar") || n.Contains("health_bar")) return false;
 
         IPlayerHUDTarget ps = pt.GetComponentInParent<IPlayerHUDTarget>();
+        if (ps == null) ps = pt.GetComponentInChildren<IPlayerHUDTarget>();
         if (ps != null)
         {
             if (ps.CurrentHealth <= 0 || ps.IsInvisible) return false;
@@ -1027,7 +1054,27 @@ public class Enemy1_DapBua : NetworkBehaviour
         Transform curr = pt;
         while (curr != null)
         {
-            if (curr.CompareTag("Player")) return true;
+            if (curr.CompareTag("Player"))
+            {
+                var monoComponents = curr.GetComponents<MonoBehaviour>();
+                foreach (var mono in monoComponents)
+                {
+                    if (mono == null) continue;
+                    var prop = mono.GetType().GetProperty("CurrentHealth");
+                    if (prop != null && prop.PropertyType == typeof(float))
+                    {
+                        float hp = (float)prop.GetValue(mono);
+                        if (hp <= 0) return false;
+                    }
+                    var deadField = mono.GetType().GetField("isDead");
+                    if (deadField != null && deadField.FieldType == typeof(bool))
+                    {
+                        bool dead = (bool)deadField.GetValue(mono);
+                        if (dead) return false;
+                    }
+                }
+                return true;
+            }
             curr = curr.parent;
         }
 
@@ -1245,6 +1292,7 @@ public class Enemy1_DapBua : NetworkBehaviour
             case EnemyState.Attack:  currentFSMState = attackState; break;
             case EnemyState.Stagger: currentFSMState = staggerState; break;
             case EnemyState.Dead:    currentFSMState = deadState;   break;
+            case EnemyState.Flee:    currentFSMState = fleeState;   break;
         }
 
         if (currentFSMState != null)
@@ -1410,6 +1458,14 @@ public class Enemy1_DapBua : NetworkBehaviour
 
         float activeHp = ActualCurrentHealth;
         if (activeHp <= 0f) { ChangeState(EnemyState.Dead); return; }
+
+        if (canTacticalFlee && !hasFledTactically && (activeHp / maxHealth) <= fleeHealthThreshold && CurrentStateValue != EnemyState.Flee)
+        {
+            hasFledTactically = true;
+            AlertNearbyAllies(targetPlayer, 22f);
+            ChangeState(EnemyState.Flee);
+            return;
+        }
         if (activeHp <= maxHealth * 0.5f && !IsEnragedValue)
         {
             IsEnragedValue = true; staggerTimer = 1.2f;
@@ -1695,5 +1751,55 @@ public class Enemy1_DapBua : NetworkBehaviour
         public void Exit() {}
     }
 
+    private void HandleFlee()
+    {
+        fleeTimer -= Time.deltaTime;
+
+        if (targetPlayer != null && IsPlayerAliveAndValid(targetPlayer))
+        {
+            Vector3 fleeDir = (transform.position - targetPlayer.position).normalized;
+            Vector3 desiredFleePos = transform.position + fleeDir * 12.0f;
+
+            if (NavMesh.SamplePosition(desiredFleePos, out NavMeshHit hit, 6.0f, NavMesh.AllAreas))
+            {
+                if (AgentReady)
+                {
+                    agent.isStopped = false;
+                    agent.speed = chaseRunSpeed * 1.35f;
+                    agent.SetDestination(hit.position);
+                }
+            }
+            SetSpeedNet(1.0f);
+
+            float distToPlayer = Vector3.Distance(transform.position, targetPlayer.position);
+            if (distToPlayer > 16.0f || fleeTimer <= 0f)
+            {
+                targetPlayer = null;
+                ReturnToPatrol();
+                return;
+            }
+        }
+        else
+        {
+            ReturnToPatrol();
+        }
+    }
+
+    private class FleeState : IEnemyState
+    {
+        private Enemy1_DapBua enemy;
+        public FleeState(Enemy1_DapBua enemy) { this.enemy = enemy; }
+        public void Enter()
+        {
+            enemy.fleeTimer = 4.0f;
+            if (enemy.AgentReady)
+            {
+                enemy.agent.isStopped = false;
+                enemy.agent.speed = enemy.chaseRunSpeed * 1.35f;
+            }
+        }
+        public void Update() { enemy.HandleFlee(); }
+        public void Exit() {}
+    }
 
 }
