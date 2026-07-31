@@ -493,12 +493,73 @@ public class Enemy2_Zombie : NetworkBehaviour
         return pPos;
     }
 
+    private bool IsTargetReachableOnNavMesh(Transform player)
+    {
+        if (player == null) return false;
+
+        // 1. Kiểm tra vị trí Player có nằm gần NavMesh không (bán kính 2.5m)
+        if (!NavMesh.SamplePosition(player.position, out NavMeshHit hit, 2.5f, NavMesh.AllAreas))
+        {
+            return false;
+        }
+
+        // 2. Tính toán đường đi NavMesh thực tế từ Zombie tới Player
+        NavMeshPath path = new NavMeshPath();
+        if (NavMesh.CalculatePath(transform.position, hit.position, NavMesh.AllAreas, path))
+        {
+            // Chỉ coi là tiếp cận được nếu đường đi NavMesh thông suốt 100% (PathComplete)
+            if (path.status == NavMeshPathStatus.PathComplete)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     // ── Chase (Run) ──
     private void HandleChase()
     {
         if (targetPlayer == null || !IsPlayerAliveAndValid(targetPlayer)) { targetPlayer = null; ReturnToPatrol(); return; }
 
-        // Kiểm tra nếu Player đã chạy vượt quá vùng rượt đuổi tối đa (maxChaseDistance)
+        // 1. Kiểm tra nếu Player hiện tại không nằm trên NavMesh hoặc đường đi bị đứt đoạn (vực, lửa, vùng cấm...)
+        if (!IsTargetReachableOnNavMesh(targetPlayer))
+        {
+            // Tìm xem có Player nào khác trong tầm nhìn nằm trên NavMesh hợp lệ mà ĐANG CÓ ÍT HƠN 2 QUÁI DÍ không
+            Transform altTarget = null;
+            var alivePlayers = GetAllAlivePlayers();
+            foreach (var pt in alivePlayers)
+            {
+                if (pt != null && pt != targetPlayer && IsPlayerAliveAndValid(pt))
+                {
+                    int chasers = GetChaserCountForPlayer(pt);
+                    if (chasers < 2 || alivePlayers.Count == 1)
+                    {
+                        float d = Vector3.Distance(transform.position, pt.position);
+                        if (d <= sightRange && IsTargetReachableOnNavMesh(pt))
+                        {
+                            altTarget = pt;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (altTarget != null)
+            {
+                targetPlayer = altTarget;
+                AlertNearbyAllies(targetPlayer);
+            }
+            else
+            {
+                // Nếu không có Player nào khác tiếp cận được (hoặc tất cả đều đã đủ 2 quái dí), lập tức hủy dí và quay về tuần tra 3 điểm
+                targetPlayer = null;
+                ReturnToPatrol();
+                return;
+            }
+        }
+
+        // 2. Kiểm tra nếu Player đã chạy vượt quá vùng rượt đuổi tối đa (maxChaseDistance)
         float dToPatrolCenter = Vector3.Distance(GetPatrolCenterPosition(), targetPlayer.position);
         float dToSelf = Vector3.Distance(transform.position, targetPlayer.position);
 
@@ -590,6 +651,35 @@ public class Enemy2_Zombie : NetworkBehaviour
             }
 
             agent.SetDestination(chaseDestination);
+
+            // Kiểm tra nếu đường đi đụng mép NavMesh không thể đi tiếp được nữa
+            if (agent.pathStatus == NavMeshPathStatus.PathInvalid || 
+               (!agent.pathPending && agent.hasPath && agent.pathStatus == NavMeshPathStatus.PathPartial && agent.remainingDistance < 1.5f))
+            {
+                Transform alt = null;
+                var alivePlayers = GetAllAlivePlayers();
+                foreach (var pt in alivePlayers)
+                {
+                    if (pt != null && pt != targetPlayer && IsPlayerAliveAndValid(pt) && IsTargetReachableOnNavMesh(pt))
+                    {
+                        if (GetChaserCountForPlayer(pt) < 2 || alivePlayers.Count == 1)
+                        {
+                            alt = pt;
+                            break;
+                        }
+                    }
+                }
+                if (alt != null)
+                {
+                    targetPlayer = alt;
+                }
+                else
+                {
+                    targetPlayer = null;
+                    ReturnToPatrol();
+                    return;
+                }
+            }
         }
 
         bool isMoving = AgentReady && agent.velocity.magnitude > 0.2f;
@@ -692,6 +782,9 @@ public class Enemy2_Zombie : NetworkBehaviour
         foreach (var pt in alivePlayers)
         {
             if (pt == null || !IsPlayerAliveAndValid(pt)) continue;
+
+            // Kiểm tra Player có nằm trên đường đi NavMesh hợp lệ không (Bỏ qua nếu Player đứng ngoài NavMesh)
+            if (!IsTargetReachableOnNavMesh(pt)) continue;
 
             Vector3 center = pt.position + Vector3.up * 1.0f;
             float d = Vector3.Distance(ep, center);
