@@ -557,13 +557,18 @@ public class ChoppableTree : NetworkBehaviour
         }
     }
 
+    private bool hasDroppedLogs = false;
+
     private void TriggerWoodDropAnimation()
     {
+        if (hasDroppedLogs) return;
+        hasDroppedLogs = true;
+
         if (woodLogPrefab == null) ResolveWoodLogPrefab();
         int woodAmount = Random.Range(5, 11);
         bool isNet = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
         
-        Debug.Log($"[ChoppableTree] {name}: TriggerWoodDropAnimation được kích hoạt! isNet={isNet}, IsServer={(isNet ? IsServer : false)}");
+        Debug.Log($"[ChoppableTree] {name}: TriggerWoodDropAnimation được kích hoạt DUY NHẤT 1 LẦN! isNet={isNet}, IsServer={(isNet ? IsServer : false)}");
 
         if (WoodLogObjectPool.Instance != null)
         {
@@ -1156,14 +1161,12 @@ public class ChoppableTree : NetworkBehaviour
 
     private IEnumerator SpawnLogsAfterDelay(float delay)
     {
-        yield return new WaitForSeconds(delay);
-        TriggerWoodDropAnimation();
+        yield break;
     }
 
     private IEnumerator SpawnCollectibleLogLocalAfterDelay(float delay)
     {
-        yield return new WaitForSeconds(delay);
-        TriggerWoodDropAnimation();
+        yield break;
     }
 
     private Material GetTrunkMaterial()
