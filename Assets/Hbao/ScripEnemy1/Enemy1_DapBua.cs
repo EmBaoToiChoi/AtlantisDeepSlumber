@@ -1157,10 +1157,20 @@ public class Enemy1_DapBua : NetworkBehaviour
 
             Vector3 dir = (center - ep).normalized;
 
+            // 1. Cảm biến Âm thanh (Nghe tiếng bước chân chạy hoặc giao tranh phía sau lưng trong 8.5m)
+            bool isMovingFast = false;
+            var rb = pt.GetComponent<Rigidbody>() ?? pt.GetComponentInChildren<Rigidbody>();
+            if (rb != null && rb.linearVelocity.sqrMagnitude > 2.5f) isMovingFast = true;
+            else {
+                var cc = pt.GetComponent<CharacterController>() ?? pt.GetComponentInChildren<CharacterController>();
+                if (cc != null && cc.velocity.sqrMagnitude > 2.5f) isMovingFast = true;
+            }
+
+            bool hearingSound = d <= 8.5f && isMovingFast;
             bool inFOV = Vector3.Angle(transform.forward, dir) < fieldOfView / 2f;
             bool isProximity = d <= 5.5f;
 
-            if (inFOV || isProximity || pt == targetPlayer)
+            if (inFOV || isProximity || hearingSound || pt == targetPlayer)
             {
                 bool clearLOS = true;
                 if (d > 3.0f)
