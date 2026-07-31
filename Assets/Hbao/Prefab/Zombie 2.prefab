@@ -156,12 +156,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   ShowTopMostFoldoutHeaderGroup: 1
-  maxHealth: 200
+  maxHealth: 170
   currentHealth:
     UpdateTraits:
       MinSecondsBetweenUpdates: 0
       MaxSecondsBetweenUpdates: 0
-    m_InternalValue: 200
+    m_InternalValue: 170
   currentState:
     UpdateTraits:
       MinSecondsBetweenUpdates: 0
@@ -202,11 +202,12 @@ MonoBehaviour:
   expDropPoint: {fileID: 1697686860353705976}
   repairItemPrefab: {fileID: 2217945438620940750, guid: c0dc53cb41f8a574480ed87a8b9bebba, type: 3}
   repairItemDropChance: 0.2
-  sightRange: 40
-  fieldOfView: 90
+  sightRange: 25
+  fieldOfView: 110
   attackRange: 2
   patrolWalkSpeed: 2.5
-  chaseRunSpeed: 5
+  chaseRunSpeed: 6
+  maxChaseDistance: 26
   patrolWaitMin: 1
   patrolWaitMax: 4
   patrolMoveChance: 0.7
