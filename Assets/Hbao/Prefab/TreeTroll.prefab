@@ -240,7 +240,6 @@ MeshRenderer:
   m_RendererPriority: 0
   m_Materials:
   - {fileID: 2100000, guid: 1f390b5531d4a124d93a7ca4bc882264, type: 2}
-  - {fileID: 2100000, guid: 24e3f83dfad5d794a91d00c595110aa1, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -296,10 +295,9 @@ GameObject:
   - component: {fileID: 1054666164639193421}
   - component: {fileID: 4421298536776591418}
   - component: {fileID: 239964592289516688}
-  - component: {fileID: 2013213560825553005}
   - component: {fileID: 454780748530360449}
   m_Layer: 13
-  m_Name: OakBigTree01_pr (6)
+  m_Name: TreeTroll
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -374,7 +372,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  GlobalObjectIdHash: 1709077626
+  GlobalObjectIdHash: 3501884773
   InScenePlacedSourceGlobalObjectIdHash: 0
   DeferredDespawnTick: 0
   Ownership: 1
@@ -387,34 +385,6 @@ MonoBehaviour:
   AutoObjectParentSync: 1
   SyncOwnerTransformWhenParented: 1
   AllowOwnerToParent: 0
---- !u!114 &2013213560825553005
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5467546501562613012}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1b99cec750533b042bfc8e694ba57c58, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  ShowTopMostFoldoutHeaderGroup: 1
-  visualModel: {fileID: 5467546501562613012}
-  requiredHits: 10
-  woodLogPrefab: {fileID: 2641059679227332086, guid: 7d1b213b7fbc2f049b5093a36390d239, type: 3}
-  treeStumpPrefab: {fileID: 5240253724138249903, guid: df94deee5ba5e6f459ff1c5a42986172, type: 3}
-  stumpRotationOffset: {x: 345.6254, y: 310.76776, z: 263.98773}
-  stumpYOffset: 1
-  firewoodChipPrefab: {fileID: 6599571129962894683, guid: 3b63b182d4cfd4646900e498771acd78, type: 3}
-  scatteredChipCount: 6
-  chipScatterDuration: 0.75
-  chipMergeDuration: 0.45
-  isCutDown:
-    UpdateTraits:
-      MinSecondsBetweenUpdates: 0
-      MaxSecondsBetweenUpdates: 0
-    m_InternalValue: 0
 --- !u!114 &454780748530360449
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -611,7 +581,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 656835580603783229}
-  - component: {fileID: 4897733415068750546}
+  - component: {fileID: 7050580463568311627}
   m_Layer: 13
   m_Name: MeshCollider
   m_TagString: Untagged
@@ -628,14 +598,14 @@ Transform:
   m_GameObject: {fileID: 8323321099908690457}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0.07, y: 3.22, z: -0.12}
+  m_LocalPosition: {x: -1.565271, y: 14.343437, z: 2.211366}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 1054666164639193421}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!65 &4897733415068750546
-BoxCollider:
+--- !u!64 &7050580463568311627
+MeshCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -652,6 +622,7 @@ BoxCollider:
   m_IsTrigger: 0
   m_ProvidesContacts: 0
   m_Enabled: 1
-  serializedVersion: 3
-  m_Size: {x: 2.7773135, y: 8.955587, z: 3.936135}
-  m_Center: {x: 0.049548786, y: 1.2618074, z: 0.006483197}
+  serializedVersion: 5
+  m_Convex: 0
+  m_CookingOptions: 30
+  m_Mesh: {fileID: -3298800115395149385, guid: 6366e10f9cacd274ebee65ade5a76def, type: 3}

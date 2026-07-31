@@ -24,6 +24,19 @@ public class ChoppableTree : NetworkBehaviour
     [Tooltip("Độ nâng độ cao Y (m) cho gốc cây nhô lên trên mặt đất. Tăng chỉ số này nếu gốc cây bị chìm dưới đất.")]
     public float stumpYOffset = 0.35f;
 
+    [Header("--- HIỆU ỨNG VĂNG & GỘP MẢNH GỖ NHỎ ---")]
+    [Tooltip("Prefab mảnh gỗ đơn lẻ (firewood_single) văng ra trước khi gộp thành bó gỗ. Nếu để trống sẽ tự động tìm kiếm prefab firewood_single.")]
+    public GameObject firewoodChipPrefab;
+
+    [Tooltip("Số lượng mảnh gỗ nhỏ văng vãi ra đất trước khi gộp thành 1 bó gỗ (Mặc định 6 mảnh)")]
+    public int scatteredChipCount = 6;
+
+    [Tooltip("Thời gian các mảnh gỗ nhỏ văng ra đất (giây)")]
+    public float chipScatterDuration = 0.75f;
+
+    [Tooltip("Thời gian các mảnh gỗ nhỏ bay tụ lại gộp thành bó gỗ (giây)")]
+    public float chipMergeDuration = 0.45f;
+
     // Trạng thái mạng đồng bộ
     public NetworkVariable<bool> isCutDown = new NetworkVariable<bool>(
         false,
@@ -72,6 +85,29 @@ public class ChoppableTree : NetworkBehaviour
 
     private void ResolveWoodLogPrefab()
     {
+#if UNITY_EDITOR
+        if (firewoodChipPrefab == null)
+        {
+            string[] guids = UnityEditor.AssetDatabase.FindAssets("firewood_single t:Prefab");
+            if (guids.Length > 0)
+            {
+                string path = UnityEditor.AssetDatabase.GUIDToAssetPath(guids[0]);
+                firewoodChipPrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(path);
+                Debug.Log($"[ChoppableTree] {name}: Editor auto-loaded firewoodChipPrefab: {path}");
+            }
+        }
+        if (woodLogPrefab == null || woodLogPrefab == gameObject || woodLogPrefab.GetComponent<ChoppableTree>() != null)
+        {
+            string[] guids = UnityEditor.AssetDatabase.FindAssets("wood_stack t:Prefab");
+            if (guids.Length > 0)
+            {
+                string path = UnityEditor.AssetDatabase.GUIDToAssetPath(guids[0]);
+                woodLogPrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(path);
+                Debug.Log($"[ChoppableTree] {name}: Editor auto-loaded woodLogPrefab: {path}");
+            }
+        }
+#endif
+
         if (woodLogPrefab == null || woodLogPrefab == gameObject || woodLogPrefab.GetComponent<ChoppableTree>() != null)
         {
             Debug.LogWarning($"[ChoppableTree] {name}: woodLogPrefab chưa được cấu hình đúng. Đang tự động tìm kiếm...");
@@ -110,14 +146,8 @@ public class ChoppableTree : NetworkBehaviour
             }
 
             GameObject loaded = Resources.Load<GameObject>("wood_stack");
-            if (loaded == null)
-            {
-                loaded = Resources.Load<GameObject>("firewood_single");
-            }
-            if (loaded == null)
-            {
-                loaded = Resources.Load<GameObject>("WoodLog");
-            }
+            if (loaded == null) loaded = Resources.Load<GameObject>("firewood_single");
+            if (loaded == null) loaded = Resources.Load<GameObject>("WoodLog");
 
             if (loaded != null)
             {
@@ -127,6 +157,17 @@ public class ChoppableTree : NetworkBehaviour
             }
 
             Debug.LogError($"[ChoppableTree] {name}: Không thể tìm thấy WoodLog prefab hợp lệ!");
+        }
+
+        if (firewoodChipPrefab == null)
+        {
+            firewoodChipPrefab = Resources.Load<GameObject>("firewood_single");
+            if (firewoodChipPrefab == null) firewoodChipPrefab = Resources.Load<GameObject>("Prefab/firewood_single");
+            if (firewoodChipPrefab == null) firewoodChipPrefab = Resources.Load<GameObject>("Hbao/Prefab/firewood_single");
+            if (firewoodChipPrefab != null)
+            {
+                Debug.Log($"[ChoppableTree] {name}: Tự động cấu hình firewoodChipPrefab từ Resources: {firewoodChipPrefab.name}");
+            }
         }
     }
 
@@ -281,7 +322,6 @@ public class ChoppableTree : NetworkBehaviour
         if (currentHits >= requiredHits)
         {
             isCutDown.Value = true;
-            StartCoroutine(SpawnLogsAfterDelay(0.2f));
         }
     }
 
@@ -294,7 +334,6 @@ public class ChoppableTree : NetworkBehaviour
         if (currentHits >= requiredHits)
         {
             StartCoroutine(FallDownCoroutine());
-            StartCoroutine(SpawnCollectibleLogLocalAfterDelay(0.2f));
         }
     }
 
@@ -501,130 +540,295 @@ public class ChoppableTree : NetworkBehaviour
 
     private void SpawnWoodLogs(int count)
     {
-        if (woodLogPrefab == null) return;
+        if (woodLogPrefab == null) ResolveWoodLogPrefab();
+        Debug.Log($"[ChoppableTree] {name}: SpawnWoodLogs gọi với count={count}, woodLogPrefab={(woodLogPrefab != null ? woodLogPrefab.name : "NULL")}");
 
         for (int i = 0; i < count; i++)
         {
-            float groundY = transform.position.y;
-
-            // Hướng văng ngẫu nhiên ra bên ngoài gốc cây
-            float angle = Random.Range(0f, 360f) * Mathf.Deg2Rad;
-            Vector3 spawnDir = new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)).normalized;
-
-            // Vị trí xuất hiện ban đầu (startPos) nằm bên ngoài gốc cây 1.8m
-            Vector3 startPos = transform.position + spawnDir * 1.8f + Vector3.up * 1.0f;
-
-            // Vị trí đáp đất (targetLandPos) cách tâm gốc cây 2.8m -> 3.6m
-            float landDistance = Random.Range(2.8f, 3.6f);
-            Vector3 targetLandPos = transform.position + spawnDir * landDistance;
-
-            Vector3 rayStart = new Vector3(targetLandPos.x, transform.position.y + 4f, targetLandPos.z);
-            int layerMask = ~LayerMask.GetMask("Player", "Ignore Raycast");
-            if (Physics.Raycast(rayStart, Vector3.down, out RaycastHit hit, 8f, layerMask))
+            int woodAmount = Random.Range(5, 11);
+            if (WoodLogObjectPool.Instance != null)
             {
-                string hitName = hit.collider.gameObject.name.ToLower();
-                if (hit.collider.gameObject != gameObject && !hitName.Contains("player") && !hitName.Contains("stump") && !hitName.Contains("tree"))
-                {
-                    groundY = hit.point.y;
-                }
+                WoodLogObjectPool.Instance.StartCoroutine(AnimateScatteredWoodChipsAndMerge(woodAmount, isNetwork: true));
             }
-
-            targetLandPos.y = groundY + 0.15f;
-
-            // Sinh bó gỗ bên ngoài hẳn gốc cây (startPos) và văng ra đất
-            GameObject log = WoodLogObjectPool.Instance.GetOrCreate(woodLogPrefab, startPos, Quaternion.identity);
-            
-            var netObj = log.GetComponent<NetworkObject>();
-            if (netObj != null)
+            else
             {
-                netObj.Spawn();
+                StartCoroutine(AnimateScatteredWoodChipsAndMerge(woodAmount, isNetwork: true));
             }
-
-            var cid = log.GetComponent<CollectibleItemDrop>();
-            if (cid != null)
-            {
-                cid.woodAmount.Value = Random.Range(5, 11);
-            }
-
-            StartCoroutine(AnimateLogDropFromStump(log, startPos, targetLandPos));
         }
     }
 
-    private void SpawnCollectibleLogLocal(int count)
-    {
-        if (woodLogPrefab == null) return;
+    private bool hasDroppedLogs = false;
 
-        for (int i = 0; i < count; i++)
+    private void TriggerWoodDropAnimation()
+    {
+        if (hasDroppedLogs) return;
+        hasDroppedLogs = true;
+
+        if (woodLogPrefab == null) ResolveWoodLogPrefab();
+        int woodAmount = Random.Range(5, 11);
+        bool isNet = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
+        
+        Debug.Log($"[ChoppableTree] {name}: TriggerWoodDropAnimation được kích hoạt DUY NHẤT 1 LẦN! isNet={isNet}, IsServer={(isNet ? IsServer : false)}");
+
+        if (WoodLogObjectPool.Instance != null)
         {
-            float groundY = transform.position.y;
-
-            // Hướng văng ngẫu nhiên ra bên ngoài gốc cây
-            float angle = Random.Range(0f, 360f) * Mathf.Deg2Rad;
-            Vector3 spawnDir = new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)).normalized;
-
-            // Vị trí xuất hiện ban đầu (startPos) nằm bên ngoài gốc cây 1.8m
-            Vector3 startPos = transform.position + spawnDir * 1.8f + Vector3.up * 1.0f;
-
-            // Vị trí đáp đất (targetLandPos) cách tâm gốc cây 2.8m -> 3.6m
-            float landDistance = Random.Range(2.8f, 3.6f);
-            Vector3 targetLandPos = transform.position + spawnDir * landDistance;
-
-            Vector3 rayStart = new Vector3(targetLandPos.x, transform.position.y + 4f, targetLandPos.z);
-            int layerMask = ~LayerMask.GetMask("Player", "Ignore Raycast");
-            if (Physics.Raycast(rayStart, Vector3.down, out RaycastHit hit, 8f, layerMask))
-            {
-                string hitName = hit.collider.gameObject.name.ToLower();
-                if (hit.collider.gameObject != gameObject && !hitName.Contains("player") && !hitName.Contains("stump") && !hitName.Contains("tree"))
-                {
-                    groundY = hit.point.y;
-                }
-            }
-
-            targetLandPos.y = groundY + 0.15f;
-
-            // Sinh bó gỗ bên ngoài hẳn gốc cây (startPos) và văng ra đất
-            GameObject log = WoodLogObjectPool.Instance.GetOrCreate(woodLogPrefab, startPos, Quaternion.identity);
-            
-            var cid = log.GetComponent<CollectibleItemDrop>();
-            if (cid != null)
-            {
-                cid.localWoodAmount = Random.Range(5, 11);
-            }
-
-            StartCoroutine(AnimateLogDropFromStump(log, startPos, targetLandPos));
+            WoodLogObjectPool.Instance.StartCoroutine(AnimateScatteredWoodChipsAndMerge(woodAmount, isNet));
+        }
+        else
+        {
+            StartCoroutine(AnimateScatteredWoodChipsAndMerge(woodAmount, isNet));
         }
     }
 
-    private IEnumerator AnimateLogDropFromStump(GameObject logObj, Vector3 startPos, Vector3 targetPos)
+    private IEnumerator AnimateScatteredWoodChipsAndMerge(int woodAmount, bool isNetwork)
     {
-        if (logObj == null) yield break;
+        // 1. Tính toán điểm đáp đất cuối cùng của Bó Gỗ (ngoài hẳn gốc cây 3.5m -> 4.5m)
+        float angleMain = Random.Range(0f, 360f) * Mathf.Deg2Rad;
+        Vector3 mainDir = new Vector3(Mathf.Cos(angleMain), 0f, Mathf.Sin(angleMain)).normalized;
+        Vector3 bundleLandPos = transform.position + mainDir * Random.Range(3.5f, 4.5f);
 
-        float duration = 0.65f;
+        // Bắn Raycast tìm chính xác độ cao đất cho điểm nảy bó gỗ
+        float groundY = transform.position.y;
+        Vector3 rayStart = new Vector3(bundleLandPos.x, transform.position.y + 5f, bundleLandPos.z);
+        int layerMask = ~LayerMask.GetMask("Player", "Ignore Raycast");
+        if (Physics.Raycast(rayStart, Vector3.down, out RaycastHit hit, 10f, layerMask))
+        {
+            string hitName = hit.collider.gameObject.name.ToLower();
+            if (hit.collider.gameObject != gameObject && !hitName.Contains("player") && !hitName.Contains("stump") && !hitName.Contains("tree"))
+            {
+                groundY = hit.point.y;
+            }
+        }
+        bundleLandPos.y = groundY + 0.25f;
+
+        // 2. Tạo cụm các mảnh gỗ nhỏ văng ra xung quanh né xa gốc cây (bán kính rộng 3.2m -> 4.8m)
+        int chipCount = Mathf.Max(3, scatteredChipCount);
+        GameObject[] chips = new GameObject[chipCount];
+        Vector3[] chipStartPos = new Vector3[chipCount];
+        Vector3[] chipLandPos = new Vector3[chipCount];
+        Quaternion[] chipRotations = new Quaternion[chipCount];
+
+        Renderer mainRend = GetComponentInChildren<Renderer>();
+        Material treeMat = GetTrunkMaterial();
+        if (treeMat == null && mainRend != null && mainRend.sharedMaterial != null) treeMat = mainRend.sharedMaterial;
+
+        for (int i = 0; i < chipCount; i++)
+        {
+            // Mỗi mảnh gỗ văng ra theo 1 hướng ngẫu nhiên né xa gốc cây (3.2m -> 4.8m)
+            float chipAngle = (i * (360f / chipCount) + Random.Range(-25f, 25f)) * Mathf.Deg2Rad;
+            Vector3 chipDir = new Vector3(Mathf.Cos(chipAngle), 0f, Mathf.Sin(chipAngle)).normalized;
+
+            Vector3 startP = transform.position + chipDir * 1.5f + Vector3.up * 1.8f;
+            Vector3 landP = transform.position + chipDir * Random.Range(3.2f, 4.8f);
+            
+            // Raycast tìm đất cho mảnh gỗ nhỏ
+            Vector3 chipRay = new Vector3(landP.x, transform.position.y + 5f, landP.z);
+            if (Physics.Raycast(chipRay, Vector3.down, out RaycastHit chipHit, 10f, layerMask))
+            {
+                string hN = chipHit.collider.gameObject.name.ToLower();
+                if (chipHit.collider.gameObject != gameObject && !hN.Contains("stump") && !hN.Contains("tree"))
+                {
+                    landP.y = chipHit.point.y + 0.25f;
+                }
+                else landP.y = groundY + 0.25f;
+            }
+            else landP.y = groundY + 0.25f;
+
+            chipStartPos[i] = startP;
+            chipLandPos[i] = landP;
+
+            GameObject chip;
+            GameObject prefabToUse = firewoodChipPrefab != null ? firewoodChipPrefab : woodLogPrefab;
+            if (prefabToUse != null)
+            {
+                chip = Instantiate(prefabToUse, startP, Random.rotation);
+                chip.name = $"WoodChip_{i}";
+
+                // Kích hoạt toàn bộ GameObject/Renderer con và RESET localPosition về Vector3.zero
+                // (Khắc phục triệt để lỗi Prefab firewood_single bị đặt lệch tâm Z = 4.88m trong Asset!)
+                chip.SetActive(true);
+                Transform[] allChilds = chip.GetComponentsInChildren<Transform>(true);
+                foreach (var ch in allChilds)
+                {
+                    if (ch != null)
+                    {
+                        ch.gameObject.SetActive(true);
+                        if (ch != chip.transform)
+                        {
+                            ch.localPosition = Vector3.zero;
+                            ch.localRotation = Quaternion.identity;
+                        }
+                    }
+                }
+
+                Renderer[] childRends = chip.GetComponentsInChildren<Renderer>(true);
+                foreach (var r in childRends)
+                {
+                    if (r != null)
+                    {
+                        r.enabled = true;
+                        // Bảo vệ Shader dùng trong Built-in Render Pipeline (Standard Shader / Diffuse)
+                        if (r.sharedMaterial == null && r.material == null)
+                        {
+                            Material defaultMat = new Material(Shader.Find("Standard") ?? Shader.Find("Diffuse"));
+                            defaultMat.color = new Color(0.55f, 0.35f, 0.18f);
+                            r.material = defaultMat;
+                        }
+                    }
+                }
+
+                Debug.Log($"[ChoppableTree] {name}: Đã sinh thành công mảnh gỗ văng #{i} từ Prefab '{prefabToUse.name}' tại vị trí {startP}");
+
+                Vector3 origS = (prefabToUse == firewoodChipPrefab) ? firewoodChipPrefab.transform.localScale * 2.5f : prefabToUse.transform.localScale * 1.5f;
+                if (origS.magnitude < 0.8f) origS = new Vector3(0.8f, 0.8f, 1.2f);
+                chip.transform.localScale = origS;
+
+                // Tắt Collider & Rigidbody để không gây va chạm vật lý lúc văng
+                Collider[] cCols = chip.GetComponentsInChildren<Collider>(true);
+                foreach (var c in cCols) if (c != null) c.enabled = false;
+                Rigidbody[] rbs = chip.GetComponentsInChildren<Rigidbody>(true);
+                foreach (var r in rbs) if (r != null) r.isKinematic = true;
+            }
+            else
+            {
+                // Tạo khối hình trụ Cylinder 3D gỗ lớn
+                chip = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+                chip.name = $"WoodChip_{i}";
+                chip.transform.position = startP;
+                chip.transform.localScale = new Vector3(0.45f, 0.6f, 0.45f);
+                chip.transform.rotation = Random.rotation;
+
+                Collider cCol = chip.GetComponent<Collider>();
+                if (cCol != null) cCol.enabled = false;
+
+                Renderer cRend = chip.GetComponent<Renderer>();
+                if (cRend != null)
+                {
+                    cRend.enabled = true;
+                    Material woodMat = FindLitMaterial();
+                    if (woodMat != null)
+                    {
+                        Color woodDarkColor = new Color(0.55f, 0.35f, 0.18f); // Màu thanh gỗ nâu tự nhiên
+                        if (woodMat.HasProperty("_BaseColor")) woodMat.SetColor("_BaseColor", woodDarkColor);
+                        else if (woodMat.HasProperty("_Color")) woodMat.SetColor("_Color", woodDarkColor);
+                        cRend.material = woodMat;
+                    }
+                    else if (treeMat != null)
+                    {
+                        cRend.material = treeMat;
+                    }
+                }
+            }
+
+            chipRotations[i] = chip.transform.rotation;
+            chips[i] = chip;
+        }
+
+        // 3. Hiệu ứng mảnh gỗ nhỏ văng nảy ra đất (Phase 1: Scatter)
         float elapsed = 0f;
-        Quaternion startRot = logObj.transform.rotation;
-        Quaternion targetRot = Quaternion.Euler(Random.Range(-15f, 15f), Random.Range(0f, 360f), Random.Range(-15f, 15f));
-
-        while (elapsed < duration)
+        while (elapsed < chipScatterDuration)
         {
-            if (logObj == null) yield break;
             elapsed += Time.deltaTime;
-            float t = elapsed / duration;
-            float tArc = Mathf.Sin(t * Mathf.PI);
+            float t = elapsed / chipScatterDuration;
 
-            Vector3 currentPos = Vector3.Lerp(startPos, targetPos, t);
-            currentPos.y += tArc * 0.7f; // Đường cong vồng văng gỗ từ gốc cây rớt xuống đất
+            for (int i = 0; i < chipCount; i++)
+            {
+                if (chips[i] == null) continue;
+                Vector3 current = Vector3.Lerp(chipStartPos[i], chipLandPos[i], t);
+                // Tạo vòm cong parabol văng cao lên không trung (2.2m) rồi rớt xuống
+                float arc = Mathf.Sin(t * Mathf.PI) * 2.2f;
+                current.y += arc;
 
-            logObj.transform.position = currentPos;
-            logObj.transform.rotation = Quaternion.Slerp(startRot, targetRot, t);
-
+                chips[i].transform.position = current;
+                chips[i].transform.rotation = Quaternion.Slerp(chipRotations[i], Quaternion.Euler(0f, chipRotations[i].eulerAngles.y + 180f, 0f), t);
+            }
             yield return null;
         }
 
-        if (logObj != null)
+        // Dừng ngắn 0.15s trên mặt đất
+        yield return new WaitForSeconds(0.15f);
+
+        // 4. Hiệu ứng các mảnh gỗ nhỏ bay tập trung gộp lại thành Bó Gỗ (Phase 2: Merge)
+        elapsed = 0f;
+        while (elapsed < chipMergeDuration)
         {
-            logObj.transform.position = targetPos;
-            logObj.transform.rotation = targetRot;
+            elapsed += Time.deltaTime;
+            float t = elapsed / chipMergeDuration;
+            float smoothT = t * t * (3f - 2f * t);
+
+            for (int i = 0; i < chipCount; i++)
+            {
+                if (chips[i] == null) continue;
+                Vector3 current = Vector3.Lerp(chipLandPos[i], bundleLandPos, smoothT);
+                // Vòm cong nhẹ khi hội tụ
+                float arc = Mathf.Sin(t * Mathf.PI) * 0.8f;
+                current.y += arc;
+
+                chips[i].transform.position = current;
+                Vector3 origScale = (firewoodChipPrefab != null) ? firewoodChipPrefab.transform.localScale : new Vector3(0.2f, 0.2f, 0.5f);
+                chips[i].transform.localScale = Vector3.Lerp(origScale, Vector3.zero, t);
+            }
+            yield return null;
         }
+
+        // Hủy toàn bộ mảnh gỗ nhỏ
+        for (int i = 0; i < chipCount; i++)
+        {
+            if (chips[i] != null) Destroy(chips[i]);
+        }
+
+        // 5. Sinh ra Bó Gỗ chính (woodLogPrefab / wood_stack) đúng vị trí nảy gộp
+        if (woodLogPrefab != null)
+        {
+            GameObject log = WoodLogObjectPool.Instance.GetOrCreate(woodLogPrefab, bundleLandPos, Quaternion.identity);
+            
+            // Đặt tất cả Colliders trên Bó Gỗ thành IsTrigger = true
+            // Đảm bảo nhân vật bước tới nhặt đồ mượt mà, KHÔNG bị nhảy đứng lên không trung!
+            Collider[] logCols = log.GetComponentsInChildren<Collider>(true);
+            foreach (var c in logCols)
+            {
+                if (c != null) c.isTrigger = true;
+            }
+
+            if (isNetwork && IsServer)
+            {
+                var netObj = log.GetComponent<NetworkObject>();
+                if (netObj != null) netObj.Spawn();
+            }
+
+            var cid = log.GetComponent<CollectibleItemDrop>();
+            if (cid != null)
+            {
+                if (isNetwork && IsServer) cid.woodAmount.Value = woodAmount;
+                else cid.localWoodAmount = woodAmount;
+            }
+
+            // Hiệu ứng nảy pop-up nở ra cho bó gỗ chính khi xuất hiện
+            StartCoroutine(AnimateBundlePopUp(log, bundleLandPos));
+        }
+    }
+
+    private IEnumerator AnimateBundlePopUp(GameObject logObj, Vector3 targetPos)
+    {
+        if (logObj == null) yield break;
+        Vector3 baseScale = logObj.transform.localScale;
+        if (baseScale == Vector3.zero) baseScale = Vector3.one;
+
+        float elapsed = 0f;
+        float duration = 0.35f;
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float t = elapsed / duration;
+            // Overshoot elastic pop
+            float scaleMultiplier = Mathf.Sin(t * Mathf.PI * 0.85f) * 1.25f;
+            if (t >= 0.8f) scaleMultiplier = Mathf.Lerp(1.25f, 1f, (t - 0.8f) / 0.2f);
+
+            logObj.transform.localScale = baseScale * scaleMultiplier;
+            yield return null;
+        }
+        logObj.transform.localScale = baseScale;
     }
 
     private void SpawnWoodSplinters()
@@ -754,6 +958,7 @@ public class ChoppableTree : NetworkBehaviour
     private IEnumerator FallDownCoroutine()
     {
         CreateTreeStump();
+        TriggerWoodDropAnimation();
 
         float stumpHeight = 1.15f;
 
@@ -768,11 +973,16 @@ public class ChoppableTree : NetworkBehaviour
             }
         }
 
-        // 1. Tắt toàn bộ colliders để người chơi không bị kẹt hoặc va chạm khi cây đang ngã
+        // 1. Xóa bỏ hoàn toàn (Destroy) toàn bộ Collider trên cây gục ngã (ngoại trừ gốc cây spawnedStump)
+        // để người chơi không bao giờ bị bước đè lên tán lá/thân cây ngã gây lỗi đứng trên không trung!
         Collider[] colliders = GetComponentsInChildren<Collider>(true);
         foreach (var col in colliders)
         {
-            if (col != null) col.enabled = false;
+            if (col != null && (spawnedStump == null || !col.transform.IsChildOf(spawnedStump.transform)))
+            {
+                col.enabled = false;
+                DestroyImmediate(col);
+            }
         }
 
         // 2. Tạo FallPivot tại đúng vị trí mặt cắt trên đỉnh gốc cây (y = 1.15m)
@@ -803,6 +1013,17 @@ public class ChoppableTree : NetworkBehaviour
             foreach (var child in childrenToMove)
             {
                 child.SetParent(fallPivot.transform, true);
+            }
+        }
+
+        // Xóa sạch tất cả collider còn sót lại trên fallPivot để đảm bảo thân cây ngã hoàn toàn không có va chạm
+        Collider[] pivotCols = fallPivot.GetComponentsInChildren<Collider>(true);
+        foreach (var c in pivotCols)
+        {
+            if (c != null)
+            {
+                c.enabled = false;
+                DestroyImmediate(c);
             }
         }
 
@@ -940,14 +1161,12 @@ public class ChoppableTree : NetworkBehaviour
 
     private IEnumerator SpawnLogsAfterDelay(float delay)
     {
-        yield return new WaitForSeconds(delay);
-        SpawnWoodLogs(1);
+        yield break;
     }
 
     private IEnumerator SpawnCollectibleLogLocalAfterDelay(float delay)
     {
-        yield return new WaitForSeconds(delay);
-        SpawnCollectibleLogLocal(1);
+        yield break;
     }
 
     private Material GetTrunkMaterial()
@@ -1074,26 +1293,42 @@ public class ChoppableTree : NetworkBehaviour
                 spawnedStump.transform.SetParent(transform.parent, true);
             }
 
-            // Đảm bảo gốc cây có Collider va chạm để nhân vật không đi xuyên qua
-            Collider stumpCol = spawnedStump.GetComponent<Collider>();
-            if (stumpCol == null) stumpCol = spawnedStump.GetComponentInChildren<Collider>();
-            if (stumpCol == null)
+            // Giữ nguyên 100% tất cả MeshCollider/BoxCollider gốc của Prefab gốc cây
+            Collider[] existingCols = spawnedStump.GetComponentsInChildren<Collider>(true);
+            foreach (var c in existingCols)
             {
-                CapsuleCollider customCapCol = spawnedStump.AddComponent<CapsuleCollider>();
-                customCapCol.center = new Vector3(0f, 0.6f, 0f);
-                customCapCol.radius = 0.6f;
-                customCapCol.height = 1.2f;
+                if (c != null)
+                {
+                    c.enabled = true;
+                    c.isTrigger = false;
+                }
             }
-            Debug.Log($"[ChoppableTree] Đã tạo thành công gốc cây Prefab '{treeStumpPrefab.name}' cho {name}!");
+
+            // Nếu Prefab gốc cây chưa có Collider nào, tự động thêm MeshCollider
+            if (existingCols == null || existingCols.Length == 0)
+            {
+                MeshFilter mf = spawnedStump.GetComponentInChildren<MeshFilter>();
+                if (mf != null && mf.sharedMesh != null)
+                {
+                    MeshCollider mc = spawnedStump.AddComponent<MeshCollider>();
+                    mc.sharedMesh = mf.sharedMesh;
+                }
+                else
+                {
+                    spawnedStump.AddComponent<BoxCollider>();
+                }
+            }
+
+            Debug.Log($"[ChoppableTree] Đã tạo thành công gốc cây Prefab '{treeStumpPrefab.name}' giữ nguyên MeshCollider gốc cho {name}!");
             return;
         }
 
         // Tính bán kính & chiều cao gốc cây
-        float treeRadius = 0.65f;
+        float treeRadius = 0.6f;
         Renderer mainRend = GetComponentInChildren<Renderer>();
         if (mainRend != null)
         {
-            treeRadius = Mathf.Clamp(mainRend.bounds.extents.x, 0.55f, 1.2f);
+            treeRadius = Mathf.Clamp(mainRend.bounds.extents.x, 0.5f, 1.1f);
         }
 
         float stumpHeight = 1.15f; // Chiều cao 1.15m nhô cao rõ ràng trên mặt đất
@@ -1107,12 +1342,30 @@ public class ChoppableTree : NetworkBehaviour
             spawnedStump.transform.SetParent(transform.parent, true);
         }
 
-        // 2. Thêm CapsuleCollider tròn mượt màng bao trọn gốc cây (bo tròn XZ, chống kẹt góc và xoay tròn)
+        // 2. Thêm CapsuleCollider tròn mượt màng cao hẳn 5.0m (chống leo đè lên đỉnh gốc cây gây bay lên không)
         CapsuleCollider capCol = spawnedStump.AddComponent<CapsuleCollider>();
-        capCol.center = new Vector3(0f, stumpHeight * 0.5f, 0f);
-        capCol.radius = treeRadius * 0.95f;
-        capCol.height = stumpHeight * 1.05f;
+        capCol.center = new Vector3(0f, 2.5f, 0f);
+        capCol.radius = treeRadius;
+        capCol.height = 5.0f;
         capCol.direction = 1; // Hướng trục Y
+
+        PhysicsMaterial smoothMatFallback = new PhysicsMaterial("StumpSmoothMatFallback")
+        {
+            dynamicFriction = 0f,
+            staticFriction = 0f,
+            frictionCombine = PhysicsMaterialCombine.Minimum,
+            bounceCombine = PhysicsMaterialCombine.Minimum
+        };
+        capCol.material = smoothMatFallback;
+
+        UnityEngine.AI.NavMeshObstacle fallbackObs = spawnedStump.GetComponent<UnityEngine.AI.NavMeshObstacle>();
+        if (fallbackObs == null) fallbackObs = spawnedStump.AddComponent<UnityEngine.AI.NavMeshObstacle>();
+        fallbackObs.shape = UnityEngine.AI.NavMeshObstacleShape.Capsule;
+        fallbackObs.center = new Vector3(0f, 2.5f, 0f);
+        fallbackObs.radius = treeRadius * 1.1f;
+        fallbackObs.height = 5.0f;
+        fallbackObs.carving = true;
+        fallbackObs.carveOnlyStationary = true;
 
         // 3. Thân gốc cây thẳng đứng (Stump Body)
         GameObject stumpBody = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
