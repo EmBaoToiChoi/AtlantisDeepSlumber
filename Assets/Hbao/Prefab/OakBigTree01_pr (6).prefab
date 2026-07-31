@@ -406,6 +406,10 @@ MonoBehaviour:
   treeStumpPrefab: {fileID: 5240253724138249903, guid: df94deee5ba5e6f459ff1c5a42986172, type: 3}
   stumpRotationOffset: {x: 345.6254, y: 310.76776, z: 263.98773}
   stumpYOffset: 1
+  firewoodChipPrefab: {fileID: 6599571129962894683, guid: 3b63b182d4cfd4646900e498771acd78, type: 3}
+  scatteredChipCount: 6
+  chipScatterDuration: 0.75
+  chipMergeDuration: 0.45
   isCutDown:
     UpdateTraits:
       MinSecondsBetweenUpdates: 0
