@@ -140,6 +140,7 @@ public class SeagullController : NetworkBehaviour
         age = 0f;
         isControlled = false;
         localIsReturning = false;
+        freeLookDistanceMultiplier = 1.5f;
 
         // Tự động sửa chữa cameraOffset nếu giá trị trong Inspector của prefab bị sai lệch (quá ngắn hoặc bằng 0)
         if (cameraOffset.magnitude < 1.0f || cameraOffset.z > -1.0f)
@@ -178,7 +179,7 @@ public class SeagullController : NetworkBehaviour
         autoFlyDirection.Normalize();
         
         transform.rotation = Quaternion.LookRotation(autoFlyDirection) * Quaternion.Euler(0f, returnRotationYOffset, 0f);
-        
+
         if (anim == null)
         {
             anim = GetComponentInChildren<Animator>();
@@ -245,7 +246,7 @@ public class SeagullController : NetworkBehaviour
             return;
         }
         
-        // 2 giây đầu: Chim tự động bay về phía trước và tăng tốc dần từ 30% đến 100% tốc độ
+        // 2 giây đầu: Chim tự động bay thẳng lên về phía trước và tăng tốc dần
         if (age < 2f)
         {
             float launchSpeed = flySpeed * Mathf.Lerp(0.3f, 1.0f, age / 2f);
@@ -265,7 +266,7 @@ public class SeagullController : NetworkBehaviour
                 StartControl();
             }
 
-            // Chỉ người chơi Elena (chủ sở hữu con chim này) mới có quyền điều khiển
+            // Người chơi Elena (chủ sở hữu con chim này) mới có quyền điều khiển sau khi kết thúc 2s cất cánh
             if (isStandaloneMode || IsOwner)
             {
                 HandleOwnerControl();
@@ -602,94 +603,67 @@ public class SeagullController : NetworkBehaviour
 
         Vector3 lookTarget = transform.position + transform.up * 0.2f;
 
-        if (age < 2f && playerCamStartPos != Vector3.zero)
+        // Duy trì FOV khi điều khiển chim bay
+        cam.fieldOfView = Mathf.Lerp(cam.fieldOfView, targetFOV, Time.deltaTime * 5f);
+
+        // Góc xoay gốc của camera: Owner lấy từ targetPitch/targetYaw, Non-Owner lấy từ rotation hiện tại của chim (đã sync qua network)
+        Quaternion baseRot;
+        if (isControlled && (isStandaloneMode || IsOwner))
         {
-            // Tăng dần khoảng cách camera lên 1.5 lần để zoom rộng tầm nhìn cất cánh
-            freeLookDistanceMultiplier = Mathf.Lerp(freeLookDistanceMultiplier, 1.5f, Time.deltaTime * 5f);
-
-            // Sử dụng SmoothStep để chuyển đổi camera mượt mà, tránh robotic
-            float t = Mathf.SmoothStep(0f, 1f, age / 2f);
-            
-            // Hướng cơ bản không roll của chim tại thời điểm bắt đầu
-            Quaternion baseRot = Quaternion.Euler(0f, transform.rotation.eulerAngles.y, 0f);
-            
-            // Góc xoay tự do mặc định (chế độ bay theo sau)
-            Quaternion freeLookRot = Quaternion.Euler(defaultPitch, 0f, 0f);
-            Quaternion finalCamRot = baseRot * freeLookRot;
-            
-            // Vị trí camera góc nhìn thứ 3 của chim trên mặt cầu hoàn hảo
-            Vector3 birdCamPos = lookTarget + finalCamRot * new Vector3(0f, 0f, -baseDistance) * freeLookDistanceMultiplier;
-            cam.transform.position = Vector3.Lerp(playerCamStartPos, birdCamPos, t);
-            
-            // Hướng nhìn chuyển tiếp mượt mà từ góc nhìn cũ của player sang hướng nhìn tập trung vào con chim
-            Quaternion lookAtBirdRot = Quaternion.LookRotation(lookTarget - cam.transform.position);
-            cam.transform.rotation = Quaternion.Slerp(playerCamStartRot, lookAtBirdRot, t);
-
-            // Cập nhật FOV rộng dần ra tạo cảm giác tốc độ và không gian rộng
-            cam.fieldOfView = Mathf.Lerp(playerCamStartFOV, targetFOV, t);
-
-            // Thêm hiệu ứng rung camera nhẹ (camera shake) trong 0.5s đầu khi chim tung cánh cất cánh
-            if (age < 0.5f)
-            {
-                float shakeStrength = 0.05f * (1f - (age / 0.5f));
-                Vector3 shakeOffset = new Vector3(
-                    Random.Range(-1f, 1f),
-                    Random.Range(-1f, 1f),
-                    Random.Range(-1f, 1f)
-                ).normalized * shakeStrength;
-                cam.transform.position += shakeOffset;
-            }
+            baseRot = Quaternion.Euler(targetPitch, targetYaw, 0f);
         }
         else
         {
-            // Duy trì FOV khi điều khiển chim bay
-            cam.fieldOfView = Mathf.Lerp(cam.fieldOfView, targetFOV, Time.deltaTime * 5f);
+            Vector3 birdEuler = transform.rotation.eulerAngles;
+            float birdPitch = birdEuler.x > 180f ? birdEuler.x - 360f : birdEuler.x;
+            float birdYaw = birdEuler.y;
+            baseRot = Quaternion.Euler(birdPitch, birdYaw, 0f);
+        }
 
-            // Sử dụng hướng bay (Yaw/Pitch) không có Roll làm gốc cho camera để giữ đường chân trời thẳng, không bị nghiêng lệch
-            Quaternion baseRot = Quaternion.Euler(targetPitch, targetYaw, 0f);
+        // Nếu đang giữ Ctrl xoay camera tự do xung quanh chim (chỉ áp dụng cho owner)
+        bool ctrlHeld = (isStandaloneMode || IsOwner) && (Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl));
+        if (ctrlHeld || freeLookYaw != 0f || freeLookPitch != 0f || Mathf.Abs(currentFreeLookYaw) > 0.01f || Mathf.Abs(currentFreeLookPitch - defaultPitch) > 0.01f)
+        {
+            // Tăng khoảng cách camera (zoom out) trong chế độ Free Look để không bị vướng model con chim
+            freeLookDistanceMultiplier = Mathf.Lerp(freeLookDistanceMultiplier, 2.0f, Time.deltaTime * 5f);
 
-            // Nếu đang giữ Ctrl xoay camera tự do xung quanh chim
-            bool ctrlHeld = Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl);
-            if (ctrlHeld || freeLookYaw != 0f || freeLookPitch != 0f || Mathf.Abs(currentFreeLookYaw) > 0.01f || Mathf.Abs(currentFreeLookPitch - defaultPitch) > 0.01f)
-            {
-                // Tăng khoảng cách camera (zoom out) trong chế độ Free Look để không bị vướng model con chim
-                freeLookDistanceMultiplier = Mathf.Lerp(freeLookDistanceMultiplier, 2.0f, Time.deltaTime * 5f);
+            // Nội suy góc quay camera tự do để tránh việc camera cắt xuyên qua model khi xoay chuột nhanh
+            currentFreeLookYaw = Mathf.Lerp(currentFreeLookYaw, freeLookYaw, Time.deltaTime * cameraSmoothSpeed);
+            currentFreeLookPitch = Mathf.Lerp(currentFreeLookPitch, freeLookPitch, Time.deltaTime * cameraSmoothSpeed);
 
-                // Nội suy góc quay camera tự do để tránh việc camera cắt xuyên qua model khi xoay chuột nhanh
-                currentFreeLookYaw = Mathf.Lerp(currentFreeLookYaw, freeLookYaw, Time.deltaTime * cameraSmoothSpeed);
-                currentFreeLookPitch = Mathf.Lerp(currentFreeLookPitch, freeLookPitch, Time.deltaTime * cameraSmoothSpeed);
+            Quaternion freeLookRot = Quaternion.Euler(currentFreeLookPitch, currentFreeLookYaw, 0f);
+            Quaternion finalCamRot = baseRot * freeLookRot;
+            
+            // Vị trí camera xoay quanh chim trên mặt cầu hoàn hảo (khoảng cách luôn cố định tính từ tâm lookTarget)
+            Vector3 targetPos = lookTarget + finalCamRot * new Vector3(0f, 0f, -baseDistance) * freeLookDistanceMultiplier;
+            cam.transform.position = Vector3.Lerp(cam.transform.position, targetPos, Time.deltaTime * cameraSmoothSpeed);
+            
+            // Camera luôn hướng nhìn vào chim (Slerp mượt mà)
+            Quaternion targetRot = Quaternion.LookRotation(lookTarget - cam.transform.position);
+            cam.transform.rotation = Quaternion.Slerp(cam.transform.rotation, targetRot, Time.deltaTime * cameraSmoothSpeed);
+        }
+        else
+        {
+            // Trả khoảng cách camera về mặc định khi bay (zoom rộng 1.5 lần)
+            freeLookDistanceMultiplier = Mathf.Lerp(freeLookDistanceMultiplier, 1.5f, Time.deltaTime * 5f);
 
-                Quaternion freeLookRot = Quaternion.Euler(currentFreeLookPitch, currentFreeLookYaw, 0f);
-                Quaternion finalCamRot = baseRot * freeLookRot;
-                
-                // Vị trí camera xoay quanh chim trên mặt cầu hoàn hảo (khoảng cách luôn cố định tính từ tâm lookTarget)
-                Vector3 targetPos = lookTarget + finalCamRot * new Vector3(0f, 0f, -baseDistance) * freeLookDistanceMultiplier;
-                cam.transform.position = targetPos;
-                
-                // Camera luôn hướng nhìn vào chim (Slerp mượt mà)
-                Quaternion targetRot = Quaternion.LookRotation(lookTarget - cam.transform.position);
-                cam.transform.rotation = Quaternion.Slerp(cam.transform.rotation, targetRot, Time.deltaTime * cameraSmoothSpeed);
-            }
-            else
-            {
-                // Trả khoảng cách camera về mặc định khi bay (zoom rộng 1.5 lần)
-                freeLookDistanceMultiplier = Mathf.Lerp(freeLookDistanceMultiplier, 1.5f, Time.deltaTime * 5f);
+            freeLookYaw = 0f;
+            freeLookPitch = defaultPitch;
+            currentFreeLookYaw = Mathf.Lerp(currentFreeLookYaw, 0f, Time.deltaTime * cameraSmoothSpeed);
+            currentFreeLookPitch = Mathf.Lerp(currentFreeLookPitch, defaultPitch, Time.deltaTime * cameraSmoothSpeed);
 
-                freeLookYaw = 0f;
-                freeLookPitch = defaultPitch;
-                currentFreeLookYaw = Mathf.Lerp(currentFreeLookYaw, 0f, Time.deltaTime * cameraSmoothSpeed);
-                currentFreeLookPitch = Mathf.Lerp(currentFreeLookPitch, defaultPitch, Time.deltaTime * cameraSmoothSpeed);
+            // Góc nhìn thứ 3 bình thường bám theo sau chim
+            Quaternion freeLookRot = Quaternion.Euler(currentFreeLookPitch, currentFreeLookYaw, 0f);
+            Quaternion finalCamRot = baseRot * freeLookRot;
 
-                // Góc nhìn thứ 3 bình thường bám theo sau chim
-                Quaternion freeLookRot = Quaternion.Euler(currentFreeLookPitch, currentFreeLookYaw, 0f);
-                Quaternion finalCamRot = baseRot * freeLookRot;
+            Vector3 targetPos = lookTarget + finalCamRot * new Vector3(0f, 0f, -baseDistance) * freeLookDistanceMultiplier;
 
-                Vector3 targetPos = lookTarget + finalCamRot * new Vector3(0f, 0f, -baseDistance) * freeLookDistanceMultiplier;
-                cam.transform.position = Vector3.Lerp(cam.transform.position, targetPos, Time.deltaTime * cameraSmoothSpeed);
+            // Ở những khung hình đầu tiên (vừa ấn Q), chuyển vị trí camera nhanh để focus ngay vào con chim theo góc nhìn Elena
+            float moveSpeed = age < 0.3f ? 30f : cameraSmoothSpeed;
+            cam.transform.position = Vector3.Lerp(cam.transform.position, targetPos, Time.deltaTime * moveSpeed);
 
-                Quaternion targetRot = Quaternion.LookRotation(lookTarget - cam.transform.position);
-                cam.transform.rotation = Quaternion.Slerp(cam.transform.rotation, targetRot, Time.deltaTime * cameraSmoothSpeed);
-            }
+            Quaternion targetRot = Quaternion.LookRotation(lookTarget - cam.transform.position);
+            cam.transform.rotation = Quaternion.Slerp(cam.transform.rotation, targetRot, Time.deltaTime * moveSpeed);
         }
     }
 
