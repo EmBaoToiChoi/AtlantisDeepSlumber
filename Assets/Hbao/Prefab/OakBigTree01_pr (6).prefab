@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 3513501602152332629}
   - component: {fileID: 307558063927896202}
   - component: {fileID: 6873340570894625017}
-  m_Layer: 0
+  m_Layer: 13
   m_Name: HQ_OakTree01_LOD1
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -98,7 +98,7 @@ GameObject:
   - component: {fileID: 7144931121683987394}
   - component: {fileID: 8360680857671255772}
   - component: {fileID: 2718860271736684317}
-  m_Layer: 0
+  m_Layer: 13
   m_Name: HQ_OakTree01_LOD2
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -186,7 +186,7 @@ GameObject:
   - component: {fileID: 5013059027730643763}
   - component: {fileID: 7131164122215428339}
   - component: {fileID: 6433375372522123880}
-  m_Layer: 0
+  m_Layer: 13
   m_Name: HQ_OakTree01_LOD0
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -298,7 +298,7 @@ GameObject:
   - component: {fileID: 239964592289516688}
   - component: {fileID: 2013213560825553005}
   - component: {fileID: 454780748530360449}
-  m_Layer: 0
+  m_Layer: 13
   m_Name: OakBigTree01_pr (6)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -404,7 +404,12 @@ MonoBehaviour:
   requiredHits: 10
   woodLogPrefab: {fileID: 2641059679227332086, guid: 7d1b213b7fbc2f049b5093a36390d239, type: 3}
   treeStumpPrefab: {fileID: 5240253724138249903, guid: df94deee5ba5e6f459ff1c5a42986172, type: 3}
-  stumpRotationOffset: {x: 345.62543, y: 104.587776, z: 263.98773}
+  stumpRotationOffset: {x: 345.6254, y: 310.76776, z: 263.98773}
+  stumpYOffset: 1
+  firewoodChipPrefab: {fileID: 6599571129962894683, guid: 3b63b182d4cfd4646900e498771acd78, type: 3}
+  scatteredChipCount: 6
+  chipScatterDuration: 0.75
+  chipMergeDuration: 0.45
   isCutDown:
     UpdateTraits:
       MinSecondsBetweenUpdates: 0
@@ -435,7 +440,7 @@ GameObject:
   - component: {fileID: 7073781044817929390}
   - component: {fileID: 5483159924255240457}
   - component: {fileID: 5874648856356346440}
-  m_Layer: 0
+  m_Layer: 13
   m_Name: HQ_OakTree01_LOD3
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -522,7 +527,7 @@ GameObject:
   - component: {fileID: 5128127556903928799}
   - component: {fileID: 5770625704184064176}
   - component: {fileID: 7835216268803185052}
-  m_Layer: 0
+  m_Layer: 13
   m_Name: Billboard
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -606,8 +611,8 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 656835580603783229}
-  - component: {fileID: 7050580463568311627}
-  m_Layer: 0
+  - component: {fileID: 4897733415068750546}
+  m_Layer: 13
   m_Name: MeshCollider
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -623,14 +628,14 @@ Transform:
   m_GameObject: {fileID: 8323321099908690457}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -1.565271, y: 14.343437, z: 2.211366}
+  m_LocalPosition: {x: 0.07, y: 3.22, z: -0.12}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 1054666164639193421}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!64 &7050580463568311627
-MeshCollider:
+--- !u!65 &4897733415068750546
+BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -647,7 +652,6 @@ MeshCollider:
   m_IsTrigger: 0
   m_ProvidesContacts: 0
   m_Enabled: 1
-  serializedVersion: 5
-  m_Convex: 0
-  m_CookingOptions: 30
-  m_Mesh: {fileID: -3298800115395149385, guid: 6366e10f9cacd274ebee65ade5a76def, type: 3}
+  serializedVersion: 3
+  m_Size: {x: 2.7773135, y: 8.955587, z: 3.936135}
+  m_Center: {x: 0.049548786, y: 1.2618074, z: 0.006483197}

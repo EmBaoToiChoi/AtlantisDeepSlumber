@@ -9,7 +9,7 @@ using UnityEngine.AI;
 /// </summary>
 public class Enemy4_Bongtoi : NetworkBehaviour
 {
-    public enum EnemyState { Patrol, Chase, Stagger, Attack, Dead }
+    public enum EnemyState { Patrol, Chase, Stagger, Attack, Dead, Flee }
 
     [Header("Health")]
     public float maxHealth = 120f;
@@ -53,6 +53,7 @@ public class Enemy4_Bongtoi : NetworkBehaviour
     public float sightRange = 13f;
     public float fieldOfView = 100f;
     public float attackRange = 2.2f;
+    public float maxChaseDistance = 18.0f;
     public float patrolWalkSpeed = 2.5f;
     public float chaseRunSpeed   = 5.5f;
     public float patrolWaitMin = 1f;
@@ -78,6 +79,7 @@ public class Enemy4_Bongtoi : NetworkBehaviour
     private float detectionTimer;
     private const float DETECTION_INTERVAL = 0.15f;
     private float staggerTimer;
+    private float staggerCooldownTimer;
     private float attackCooldownTimer;
     private float attackDuration;
     private float stateTimer;
@@ -87,6 +89,11 @@ public class Enemy4_Bongtoi : NetworkBehaviour
     private bool wasEnraged;
     private float loseSightTimer;
     private MaterialPropertyBlock propBlock;
+    [Header("Tactical Flee AI")]
+    public bool canTacticalFlee = true;
+    public float fleeHealthThreshold = 0.25f;
+    private bool hasFledTactically = false;
+    private float fleeTimer;
 
     // ─── FSM States ───
     private IEnemyState currentFSMState;
@@ -95,6 +102,7 @@ public class Enemy4_Bongtoi : NetworkBehaviour
     private AttackState attackState;
     private StaggerState staggerState;
     private DeadState deadState;
+    private FleeState fleeState;
     public Renderer[] modelRenderers;
 
     private readonly Collider[] detectionResults = new Collider[8];
@@ -144,6 +152,7 @@ public class Enemy4_Bongtoi : NetworkBehaviour
         attackState = new AttackState(this);
         staggerState = new StaggerState(this);
         deadState = new DeadState(this);
+        fleeState = new FleeState(this);
     }
 
     private void Start() { if (!IsNetworkActive) { isStandaloneMode = true; InitStandalone(); } }
@@ -181,6 +190,11 @@ public class Enemy4_Bongtoi : NetworkBehaviour
 
     private void OnStateChanged(EnemyState oldState, EnemyState newState)
     {
+        CurrentStateValue = newState;
+        if (newState == EnemyState.Patrol)
+        {
+            targetPlayer = null;
+        }
         if (newState == EnemyState.Dead)
         {
             if (!IsServer)
@@ -241,6 +255,7 @@ public class Enemy4_Bongtoi : NetworkBehaviour
         }
         // ------------------------------------------------------------------------
 
+        if (staggerCooldownTimer > 0f) staggerCooldownTimer -= Time.deltaTime;
         if (attackCooldownTimer > 0) attackCooldownTimer -= Time.deltaTime;
         detectionTimer -= Time.deltaTime;
         if (detectionTimer <= 0) { detectionTimer = DETECTION_INTERVAL; DetectPlayer(); }
@@ -248,6 +263,16 @@ public class Enemy4_Bongtoi : NetworkBehaviour
         {
             currentFSMState.Update();
         }
+    }
+
+    private void OnDrawGizmosSelected()
+    {
+        Gizmos.color = Color.cyan;
+        Gizmos.DrawWireSphere(transform.position, sightRange);
+        Gizmos.color = Color.red;
+        Gizmos.DrawWireSphere(transform.position, attackRange);
+        Gizmos.color = Color.yellow;
+        Gizmos.DrawWireSphere(GetPatrolCenterPosition(), maxChaseDistance);
     }
 
 
@@ -442,6 +467,52 @@ public class Enemy4_Bongtoi : NetworkBehaviour
     {
         if (targetPlayer == null || !IsPlayerAliveAndValid(targetPlayer)) { targetPlayer = null; ReturnToPatrol(); return; }
 
+        // 1. Kiểm tra nếu Player hiện tại không nằm trên NavMesh hoặc đường đi bị đứt đoạn
+        if (!IsTargetReachableOnNavMesh(targetPlayer))
+        {
+            Transform altTarget = null;
+            var alivePlayers = GetAllAlivePlayers();
+            foreach (var pt in alivePlayers)
+            {
+                if (pt != null && pt != targetPlayer && IsPlayerAliveAndValid(pt))
+                {
+                    int chasers = GetChaserCountForPlayer(pt);
+                    if (chasers < 2 || alivePlayers.Count == 1)
+                    {
+                        float d = Vector3.Distance(transform.position, pt.position);
+                        if (d <= sightRange && IsTargetReachableOnNavMesh(pt))
+                        {
+                            altTarget = pt;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (altTarget != null)
+            {
+                targetPlayer = altTarget;
+                AlertNearbyAllies(targetPlayer);
+            }
+            else
+            {
+                targetPlayer = null;
+                ReturnToPatrol();
+                return;
+            }
+        }
+
+        // 2. Kiểm tra nếu Player đã chạy vượt quá vùng rượt đuổi tối đa (maxChaseDistance)
+        float dToPatrolCenter = Vector3.Distance(GetPatrolCenterPosition(), targetPlayer.position);
+        float dToSelf = Vector3.Distance(transform.position, targetPlayer.position);
+
+        if (dToSelf > maxChaseDistance || dToPatrolCenter > maxChaseDistance + 4f)
+        {
+            targetPlayer = null;
+            ReturnToPatrol();
+            return;
+        }
+
         Vector3 ep1 = eyeTransform != null ? eyeTransform.position : transform.position + Vector3.up * 1.5f;
         Vector3 targetCenter = targetPlayer.position + Vector3.up * 1.0f;
         float dToPlayer = Vector3.Distance(ep1, targetCenter);
@@ -501,11 +572,156 @@ public class Enemy4_Bongtoi : NetworkBehaviour
             float distToPlayer = Vector3.Distance(transform.position, targetPlayer.position);
             agent.avoidancePriority = Mathf.Clamp(10 + Mathf.RoundToInt(distToPlayer * 4f), 5, 95);
 
-            Vector3 targetPos = GetFlankingPosition(targetPlayer, Mathf.Max(1.4f, attackRange * 0.85f));
-            agent.SetDestination(targetPos);
+            Vector3 chaseDestination = GetPredictedTargetPosition(targetPlayer);
+            int chasers = GetChaserCountForPlayer(targetPlayer);
+            if (chasers == 1)
+            {
+                Vector3 dirToP = (targetPlayer.position - transform.position).normalized;
+                Vector3 sideDir = Vector3.Cross(dirToP, Vector3.up) * (System.Math.Abs(GetHashCode()) % 2 == 0 ? 1.5f : -1.5f);
+                Vector3 flankPos = chaseDestination + sideDir;
+                if (NavMesh.SamplePosition(flankPos, out NavMeshHit hit, 2.0f, NavMesh.AllAreas))
+                {
+                    chaseDestination = hit.position;
+                }
+            }
+
+            agent.SetDestination(chaseDestination);
+
+            if (agent.pathStatus == NavMeshPathStatus.PathInvalid || 
+               (!agent.pathPending && agent.hasPath && agent.pathStatus == NavMeshPathStatus.PathPartial && agent.remainingDistance < 1.5f))
+            {
+                Transform alt = null;
+                var alivePlayers = GetAllAlivePlayers();
+                foreach (var pt in alivePlayers)
+                {
+                    if (pt != null && pt != targetPlayer && IsPlayerAliveAndValid(pt) && IsTargetReachableOnNavMesh(pt))
+                    {
+                        if (GetChaserCountForPlayer(pt) < 2 || alivePlayers.Count == 1)
+                        {
+                            alt = pt;
+                            break;
+                        }
+                    }
+                }
+                if (alt != null)
+                {
+                    targetPlayer = alt;
+                }
+                else
+                {
+                    targetPlayer = null;
+                    ReturnToPatrol();
+                    return;
+                }
+            }
         }
         bool isMoving = AgentReady && agent.velocity.magnitude > 0.2f;
         SetSpeedNet(isMoving ? 1f : 0f);
+    }
+
+    private Vector3 GetPredictedTargetPosition(Transform player)
+    {
+        if (player == null) return transform.position;
+        Vector3 pPos = player.position;
+
+        Vector3 velocity = Vector3.zero;
+        var rb = player.GetComponent<Rigidbody>() ?? player.GetComponentInChildren<Rigidbody>();
+        if (rb != null) velocity = rb.linearVelocity;
+        else
+        {
+            var cc = player.GetComponent<CharacterController>() ?? player.GetComponentInChildren<CharacterController>();
+            if (cc != null) velocity = cc.velocity;
+        }
+
+        velocity.y = 0;
+        if (velocity.sqrMagnitude > 0.5f)
+        {
+            Vector3 predicted = pPos + velocity.normalized * Mathf.Min(velocity.magnitude * 0.4f, 2.5f);
+            if (NavMesh.SamplePosition(predicted, out NavMeshHit hit, 2.5f, NavMesh.AllAreas))
+            {
+                return hit.position;
+            }
+        }
+        return pPos;
+    }
+
+    private bool IsTargetReachableOnNavMesh(Transform player)
+    {
+        if (player == null) return false;
+        NavMeshPath path = new NavMeshPath();
+        if (NavMesh.CalculatePath(transform.position, player.position, NavMesh.AllAreas, path))
+        {
+            if (path.status == NavMeshPathStatus.PathComplete) return true;
+        }
+        return false;
+    }
+
+    private float GetNavMeshPathDistance(Vector3 start, Vector3 target)
+    {
+        NavMeshPath path = new NavMeshPath();
+        if (NavMesh.CalculatePath(start, target, NavMesh.AllAreas, path))
+        {
+            if (path.status == NavMeshPathStatus.PathComplete || path.status == NavMeshPathStatus.PathPartial)
+            {
+                float dist = 0f;
+                for (int i = 0; i < path.corners.Length - 1; i++)
+                {
+                    dist += Vector3.Distance(path.corners[i], path.corners[i + 1]);
+                }
+                return dist;
+            }
+        }
+        return Vector3.Distance(start, target);
+    }
+
+    private Vector3 GetPatrolCenterPosition()
+    {
+        if (waypoints != null && waypoints.Length > 0 && waypoints[0] != null)
+        {
+            return waypoints[0].position;
+        }
+        return transform.position;
+    }
+
+    private int GetChaserCountForPlayer(Transform pt)
+    {
+        if (pt == null) return 0;
+        int chasers = 0;
+        Collider[] enemies = Physics.OverlapSphere(pt.position, sightRange * 1.2f);
+        System.Collections.Generic.HashSet<GameObject> countedEnemies = new System.Collections.Generic.HashSet<GameObject>();
+
+        foreach (var c in enemies)
+        {
+            if (c == null) continue;
+            MonoBehaviour otherEnemy = c.GetComponentInParent<MonoBehaviour>();
+            if (otherEnemy == null) otherEnemy = c.GetComponent<MonoBehaviour>();
+            if (otherEnemy != null && otherEnemy.gameObject != gameObject && !countedEnemies.Contains(otherEnemy.gameObject))
+            {
+                countedEnemies.Add(otherEnemy.gameObject);
+                Transform target = GetEnemyTargetPlayer(otherEnemy);
+                if (target == pt)
+                {
+                    chasers++;
+                }
+            }
+        }
+        return chasers;
+    }
+
+    private Transform GetEnemyTargetPlayer(MonoBehaviour mono)
+    {
+        if (mono == null) return null;
+        try
+        {
+            var type = mono.GetType();
+            var field = type.GetField("targetPlayer", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+            if (field != null)
+            {
+                return field.GetValue(mono) as Transform;
+            }
+        }
+        catch { }
+        return null;
     }
 
     public bool HasTargetPlayer => targetPlayer != null;
@@ -617,7 +833,7 @@ public class Enemy4_Bongtoi : NetworkBehaviour
     private void ReturnToPatrol()
     {
         targetPlayer = null;
-        CurrentStateValue = EnemyState.Patrol;
+        ChangeState(EnemyState.Patrol);
         waitingAtWaypoint = false;
         waypointWaitTimer = 0f;
         if (AgentReady)
@@ -629,11 +845,17 @@ public class Enemy4_Bongtoi : NetworkBehaviour
         GoToNextWaypoint();
     }
 
-    private void HandleStagger() { if (AgentReady) agent.isStopped = true; SetSpeedNet(0f); staggerTimer -= Time.deltaTime; if (staggerTimer <= 0) { if (targetPlayer != null) ChangeState(EnemyState.Chase); else ReturnToPatrol(); } }
+
+    private void HandleStagger() { if (AgentReady) agent.isStopped = true; SetSpeedNet(0f); staggerTimer -= Time.deltaTime; if (staggerTimer <= 0) { if (targetPlayer != null && IsPlayerAliveAndValid(targetPlayer)) ChangeState(EnemyState.Chase); else ReturnToPatrol(); } }
 
     private void HandleAttack()
     {
-        if (targetPlayer == null) { EndAttack(); return; }
+        if (targetPlayer == null || !IsPlayerAliveAndValid(targetPlayer))
+        {
+            targetPlayer = null;
+            EndAttack();
+            return;
+        }
         if (AgentReady) agent.isStopped = true; SetSpeedNet(0f);
         stateTimer -= Time.deltaTime;
         float elapsed = attackDuration - stateTimer;
@@ -645,7 +867,7 @@ public class Enemy4_Bongtoi : NetworkBehaviour
     {
         attackCooldownTimer = (CurrentHealthValue < maxHealth * 0.5f) ? 0.3f : 0.6f;
         DisableHitboxes(); detectionTimer = 0f;
-        if (targetPlayer != null) ChangeState(EnemyState.Chase); else ReturnToPatrol();
+        if (targetPlayer != null && IsPlayerAliveAndValid(targetPlayer)) ChangeState(EnemyState.Chase); else { targetPlayer = null; ReturnToPatrol(); }
     }
 
     private bool IsPlayerAliveAndValid(Transform pt)
@@ -658,6 +880,7 @@ public class Enemy4_Bongtoi : NetworkBehaviour
         if (n.Contains("ui") || n.Contains("canvas") || n.Contains("hud") || n.Contains("healthbar") || n.Contains("health_bar")) return false;
 
         IPlayerHUDTarget ps = pt.GetComponentInParent<IPlayerHUDTarget>();
+        if (ps == null) ps = pt.GetComponentInChildren<IPlayerHUDTarget>();
         if (ps != null)
         {
             if (ps.CurrentHealth <= 0 || ps.IsInvisible) return false;
@@ -674,7 +897,33 @@ public class Enemy4_Bongtoi : NetworkBehaviour
         Transform curr = pt;
         while (curr != null)
         {
-            if (curr.CompareTag("Player")) return true;
+            if (curr.CompareTag("Player"))
+            {
+                var monoComponents = curr.GetComponents<MonoBehaviour>();
+                foreach (var mono in monoComponents)
+                {
+                    if (mono == null) continue;
+                    var prop = mono.GetType().GetProperty("CurrentHealth");
+                    if (prop != null && prop.PropertyType == typeof(float))
+                    {
+                        float hp = (float)prop.GetValue(mono);
+                        if (hp <= 0) return false;
+                    }
+                    var deadField = mono.GetType().GetField("isDead", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
+                    if (deadField != null && deadField.FieldType == typeof(bool))
+                    {
+                        bool dead = (bool)deadField.GetValue(mono);
+                        if (dead) return false;
+                    }
+                    var isDeadProp = mono.GetType().GetProperty("IsDead", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
+                    if (isDeadProp != null && isDeadProp.PropertyType == typeof(bool))
+                    {
+                        bool dead = (bool)isDeadProp.GetValue(mono);
+                        if (dead) return false;
+                    }
+                }
+                return true;
+            }
             curr = curr.parent;
         }
 
@@ -729,12 +978,36 @@ public class Enemy4_Bongtoi : NetworkBehaviour
         Transform bestTarget = null;
         float minD = float.MaxValue;
 
+        // Nếu mục tiêu hiện tại đã bị >= 2 quái khác rượt đuổi, tự động quét xem có player nào khác rảnh hơn không
+        if (targetPlayer != null && IsPlayerAliveAndValid(targetPlayer))
+        {
+            int currentChasers = GetChaserCountForPlayer(targetPlayer);
+            if (currentChasers >= 2 && alivePlayers.Count > 1)
+            {
+                foreach (var otherPt in alivePlayers)
+                {
+                    if (otherPt != null && otherPt != targetPlayer && IsPlayerAliveAndValid(otherPt) && IsTargetReachableOnNavMesh(otherPt))
+                    {
+                        if (GetChaserCountForPlayer(otherPt) < 2)
+                        {
+                            float dOther = GetNavMeshPathDistance(transform.position, otherPt.position);
+                            if (dOther <= sightRange)
+                            {
+                                targetPlayer = otherPt;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         float currentTargetDist = float.MaxValue;
         if (targetPlayer != null)
         {
             if (IsPlayerAliveAndValid(targetPlayer))
             {
-                currentTargetDist = Vector3.Distance(transform.position, targetPlayer.position);
+                currentTargetDist = GetNavMeshPathDistance(transform.position, targetPlayer.position);
             }
             else
             {
@@ -746,16 +1019,36 @@ public class Enemy4_Bongtoi : NetworkBehaviour
         {
             if (pt == null || !IsPlayerAliveAndValid(pt)) continue;
 
+            // Bỏ qua nếu Player đứng ngoài NavMesh hoặc không có đường đi tới
+            if (!IsTargetReachableOnNavMesh(pt)) continue;
+
             Vector3 center = pt.position + Vector3.up * 1.0f;
             float d = Vector3.Distance(ep, center);
             if (d > sightRange) continue;
 
+            // Kiểm tra số lượng quái đang dí player này (Tối đa 2 quái dí 1 player)
+            int chasers = GetChaserCountForPlayer(pt);
+            if (chasers >= 2 && pt != targetPlayer && alivePlayers.Count > 1)
+            {
+                continue;
+            }
+
             Vector3 dir = (center - ep).normalized;
 
+            // 1. Cảm biến Âm thanh (Nghe tiếng bước chân chạy hoặc giao tranh phía sau lưng trong 8.5m)
+            bool isMovingFast = false;
+            var rb = pt.GetComponent<Rigidbody>() ?? pt.GetComponentInChildren<Rigidbody>();
+            if (rb != null && rb.linearVelocity.sqrMagnitude > 2.5f) isMovingFast = true;
+            else {
+                var cc = pt.GetComponent<CharacterController>() ?? pt.GetComponentInChildren<CharacterController>();
+                if (cc != null && cc.velocity.sqrMagnitude > 2.5f) isMovingFast = true;
+            }
+
+            bool hearingSound = d <= 8.5f && isMovingFast;
             bool inFOV = Vector3.Angle(transform.forward, dir) < fieldOfView / 2f;
             bool isProximity = d <= 5.5f;
 
-            if (inFOV || isProximity || pt == targetPlayer)
+            if (inFOV || isProximity || hearingSound || pt == targetPlayer)
             {
                 bool clearLOS = true;
                 if (d > 3.0f)
@@ -769,11 +1062,15 @@ public class Enemy4_Bongtoi : NetworkBehaviour
                     }
                 }
 
-                if (clearLOS && d < minD)
+                if (clearLOS)
                 {
-                    minD = d;
-                    bestTarget = pt;
-                    found = true;
+                    float pathDist = GetNavMeshPathDistance(transform.position, pt.position);
+                    if (pathDist < minD)
+                    {
+                        minD = pathDist;
+                        bestTarget = pt;
+                        found = true;
+                    }
                 }
             }
         }
@@ -851,6 +1148,7 @@ public class Enemy4_Bongtoi : NetworkBehaviour
             case EnemyState.Attack:  currentFSMState = attackState; break;
             case EnemyState.Stagger: currentFSMState = staggerState; break;
             case EnemyState.Dead:    currentFSMState = deadState;   break;
+            case EnemyState.Flee:    currentFSMState = fleeState;   break;
         }
 
         if (currentFSMState != null)
@@ -939,8 +1237,9 @@ public class Enemy4_Bongtoi : NetworkBehaviour
             localHealth = currentHealth.Value;
             hitCounter.Value++;
         }
-        else if (anim != null)
+        else if (anim != null && staggerCooldownTimer <= 0f)
         {
+            staggerCooldownTimer = 1.2f;
             anim.SetTrigger(hitTrigger);
         }
 
@@ -951,6 +1250,14 @@ public class Enemy4_Bongtoi : NetworkBehaviour
 
         float activeHp = ActualCurrentHealth;
         if (activeHp <= 0f) { ChangeState(EnemyState.Dead); return; }
+
+        if (canTacticalFlee && !hasFledTactically && (activeHp / maxHealth) <= fleeHealthThreshold && CurrentStateValue != EnemyState.Flee)
+        {
+            hasFledTactically = true;
+            AlertNearbyAllies(targetPlayer, 22f);
+            ChangeState(EnemyState.Flee);
+            return;
+        }
         float now = Time.time; if (now - lastDamageTime > 3f) recentHitCount = 0; recentHitCount++; lastDamageTime = now;
         if ((damage >= 25f || recentHitCount >= 3) && CurrentStateValue != EnemyState.Stagger) { recentHitCount = 0; staggerTimer = 0.55f; ChangeState(EnemyState.Stagger); }
     }
@@ -1110,6 +1417,57 @@ public class Enemy4_Bongtoi : NetworkBehaviour
             enemy.Die();
         }
         public void Update() {}
+        public void Exit() {}
+    }
+
+    private void HandleFlee()
+    {
+        fleeTimer -= Time.deltaTime;
+
+        if (targetPlayer != null && IsPlayerAliveAndValid(targetPlayer))
+        {
+            Vector3 fleeDir = (transform.position - targetPlayer.position).normalized;
+            Vector3 desiredFleePos = transform.position + fleeDir * 12.0f;
+
+            if (NavMesh.SamplePosition(desiredFleePos, out NavMeshHit hit, 6.0f, NavMesh.AllAreas))
+            {
+                if (AgentReady)
+                {
+                    agent.isStopped = false;
+                    agent.speed = chaseRunSpeed * 1.35f;
+                    agent.SetDestination(hit.position);
+                }
+            }
+            SetSpeedNet(1.0f);
+
+            float distToPlayer = Vector3.Distance(transform.position, targetPlayer.position);
+            if (distToPlayer > 16.0f || fleeTimer <= 0f)
+            {
+                targetPlayer = null;
+                ReturnToPatrol();
+                return;
+            }
+        }
+        else
+        {
+            ReturnToPatrol();
+        }
+    }
+
+    private class FleeState : IEnemyState
+    {
+        private Enemy4_Bongtoi enemy;
+        public FleeState(Enemy4_Bongtoi enemy) { this.enemy = enemy; }
+        public void Enter()
+        {
+            enemy.fleeTimer = 4.0f;
+            if (enemy.AgentReady)
+            {
+                enemy.agent.isStopped = false;
+                enemy.agent.speed = enemy.chaseRunSpeed * 1.35f;
+            }
+        }
+        public void Update() { enemy.HandleFlee(); }
         public void Exit() {}
     }
 

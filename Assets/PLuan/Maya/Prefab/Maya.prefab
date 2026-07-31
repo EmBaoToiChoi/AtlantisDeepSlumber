@@ -194,7 +194,7 @@ Transform:
   m_GameObject: {fileID: 5286910216465157266}
   serializedVersion: 2
   m_LocalRotation: {x: 0.5, y: -0.5, z: 0.5, w: -0.5}
-  m_LocalPosition: {x: 0, y: -0.048, z: 0.374}
+  m_LocalPosition: {x: 0, y: -0.05, z: 0.72}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -287,6 +287,15 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   ShowTopMostFoldoutHeaderGroup: 1
+  playerAudioSource: {fileID: 0}
+  footstepClip: {fileID: 0}
+  footstepClip2: {fileID: 0}
+  attackClip: {fileID: 0}
+  hitClip: {fileID: 0}
+  deathClip: {fileID: 0}
+  skillQClip: {fileID: 0}
+  skillEClip: {fileID: 0}
+  skillRClip: {fileID: 0}
   moveSpeed: 5
   runSpeedMultiplier: 2
   damageAmount: 20
@@ -824,6 +833,14 @@ MonoBehaviour:
       ParameterType: 4
     - name: ChatRiu
       NameHash: -1219495144
+      Synchronize: 1
+      ParameterType: 9
+    - name: Kicked
+      NameHash: 2134575295
+      Synchronize: 1
+      ParameterType: 9
+    - name: Death
+      NameHash: 646380074
       Synchronize: 1
       ParameterType: 9
   AnimatorParametersExpanded: 0
