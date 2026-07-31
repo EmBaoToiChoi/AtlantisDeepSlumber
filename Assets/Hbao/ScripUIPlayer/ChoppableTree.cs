@@ -145,6 +145,8 @@ public class ChoppableTree : NetworkBehaviour
         if (firewoodChipPrefab == null)
         {
             firewoodChipPrefab = Resources.Load<GameObject>("firewood_single");
+            if (firewoodChipPrefab == null) firewoodChipPrefab = Resources.Load<GameObject>("Prefab/firewood_single");
+            if (firewoodChipPrefab == null) firewoodChipPrefab = Resources.Load<GameObject>("Hbao/Prefab/firewood_single");
             if (firewoodChipPrefab != null)
             {
                 Debug.Log($"[ChoppableTree] {name}: Tự động cấu hình firewoodChipPrefab từ Resources: {firewoodChipPrefab.name}");
@@ -600,14 +602,20 @@ public class ChoppableTree : NetworkBehaviour
             chipLandPos[i] = landP;
 
             GameObject chip;
-            if (firewoodChipPrefab != null)
+            GameObject prefabToUse = firewoodChipPrefab != null ? firewoodChipPrefab : woodLogPrefab;
+            if (prefabToUse != null)
             {
-                chip = Instantiate(firewoodChipPrefab, startP, Random.rotation);
+                chip = Instantiate(prefabToUse, startP, Random.rotation);
                 chip.name = $"WoodChip_{i}";
+                Vector3 origS = (prefabToUse == firewoodChipPrefab) ? firewoodChipPrefab.transform.localScale : prefabToUse.transform.localScale * 0.45f;
+                if (origS == Vector3.zero) origS = new Vector3(0.35f, 0.35f, 0.35f);
+                chip.transform.localScale = origS;
+                chip.SetActive(true);
+
                 // Tắt Collider & Rigidbody để không gây va chạm vật lý lúc văng
-                Collider[] cCols = chip.GetComponentsInChildren<Collider>();
+                Collider[] cCols = chip.GetComponentsInChildren<Collider>(true);
                 foreach (var c in cCols) if (c != null) c.enabled = false;
-                Rigidbody[] rbs = chip.GetComponentsInChildren<Rigidbody>();
+                Rigidbody[] rbs = chip.GetComponentsInChildren<Rigidbody>(true);
                 foreach (var r in rbs) if (r != null) r.isKinematic = true;
             }
             else
@@ -615,7 +623,7 @@ public class ChoppableTree : NetworkBehaviour
                 chip = GameObject.CreatePrimitive(PrimitiveType.Cube);
                 chip.name = $"WoodChip_{i}";
                 chip.transform.position = startP;
-                chip.transform.localScale = new Vector3(Random.Range(0.12f, 0.18f), Random.Range(0.12f, 0.18f), Random.Range(0.35f, 0.55f));
+                chip.transform.localScale = new Vector3(Random.Range(0.2f, 0.3f), Random.Range(0.2f, 0.3f), Random.Range(0.5f, 0.7f));
                 chip.transform.rotation = Random.rotation;
 
                 Collider cCol = chip.GetComponent<Collider>();
@@ -673,7 +681,8 @@ public class ChoppableTree : NetworkBehaviour
                 current.y += arc;
 
                 chips[i].transform.position = current;
-                chips[i].transform.localScale = Vector3.Lerp(new Vector3(0.15f, 0.15f, 0.45f), Vector3.zero, t);
+                Vector3 origScale = (firewoodChipPrefab != null) ? firewoodChipPrefab.transform.localScale : new Vector3(0.2f, 0.2f, 0.5f);
+                chips[i].transform.localScale = Vector3.Lerp(origScale, Vector3.zero, t);
             }
             yield return null;
         }
@@ -689,6 +698,14 @@ public class ChoppableTree : NetworkBehaviour
         {
             GameObject log = WoodLogObjectPool.Instance.GetOrCreate(woodLogPrefab, bundleLandPos, Quaternion.identity);
             
+            // Đặt tất cả Colliders trên Bó Gỗ thành IsTrigger = true
+            // Đảm bảo nhân vật bước tới nhặt đồ mượt mà, KHÔNG bị nhảy đứng lên không trung!
+            Collider[] logCols = log.GetComponentsInChildren<Collider>(true);
+            foreach (var c in logCols)
+            {
+                if (c != null) c.isTrigger = true;
+            }
+
             if (isNetwork && IsServer)
             {
                 var netObj = log.GetComponent<NetworkObject>();
@@ -1177,15 +1194,23 @@ public class ChoppableTree : NetworkBehaviour
                 spawnedStump.transform.SetParent(transform.parent, true);
             }
 
-            // Xóa/Tắt tất cả MeshCollider gồ ghề của gốc cây 3D để tránh làm kẹt xoay vòng tròn nhân vật
+            // Xóa/Tắt tất cả MeshCollider/BoxCollider gồ ghề của gốc cây 3D để tránh làm kẹt xoay vòng tròn nhân vật
             Collider[] existingCols = spawnedStump.GetComponentsInChildren<Collider>(true);
             foreach (var c in existingCols)
             {
-                if (c != null) Destroy(c);
+                if (c != null)
+                {
+                    c.enabled = false;
+                    DestroyImmediate(c);
+                }
             }
 
-            // Thêm 1 CapsuleCollider hình trụ bo tròn mượt tuyệt đối chống kẹt xoay vòng tròn
+            // Gán layer va chạm của cây gốc
+            spawnedStump.layer = gameObject.layer;
+
+            // Thêm 1 CapsuleCollider hình trụ bo tròn mượt tuyệt đối chống kẹt xoay vòng tròn và CHỐNG ĐI XUYÊN GỐC CÂY
             CapsuleCollider smoothCapCol = spawnedStump.AddComponent<CapsuleCollider>();
+            smoothCapCol.isTrigger = false; // Đảm bảo là vật cản cứng, không đi xuyên qua được!
             
             // Tính toán bounds thực tế của Prefab gốc cây
             Renderer sRend = spawnedStump.GetComponentInChildren<Renderer>();
@@ -1193,13 +1218,13 @@ public class ChoppableTree : NetworkBehaviour
             float sHeight = 1.2f;
             if (sRend != null)
             {
-                sRadius = Mathf.Clamp(sRend.bounds.extents.x, 0.45f, 0.85f);
-                sHeight = Mathf.Clamp(sRend.bounds.size.y, 0.8f, 1.6f);
+                sRadius = Mathf.Clamp(sRend.bounds.extents.x, 0.55f, 0.95f);
+                sHeight = Mathf.Clamp(sRend.bounds.size.y, 0.9f, 1.8f);
             }
 
             smoothCapCol.center = new Vector3(0f, sHeight * 0.5f, 0f);
-            smoothCapCol.radius = sRadius * 0.9f;
-            smoothCapCol.height = sHeight;
+            smoothCapCol.radius = Mathf.Max(0.6f, sRadius);
+            smoothCapCol.height = Mathf.Max(1.3f, sHeight);
             smoothCapCol.direction = 1; // Hướng Y
 
             // Gán PhysicMaterial trơn nhẵn 0 ma sát để nhân vật lướt qua mượt mà không bị xoay vòng

@@ -611,7 +611,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 656835580603783229}
-  - component: {fileID: 7050580463568311627}
+  - component: {fileID: 4897733415068750546}
   m_Layer: 13
   m_Name: MeshCollider
   m_TagString: Untagged
@@ -628,14 +628,14 @@ Transform:
   m_GameObject: {fileID: 8323321099908690457}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -1.565271, y: 14.343437, z: 2.211366}
+  m_LocalPosition: {x: 0.07, y: 3.22, z: -0.12}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 1054666164639193421}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!64 &7050580463568311627
-MeshCollider:
+--- !u!65 &4897733415068750546
+BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -652,7 +652,6 @@ MeshCollider:
   m_IsTrigger: 0
   m_ProvidesContacts: 0
   m_Enabled: 1
-  serializedVersion: 5
-  m_Convex: 0
-  m_CookingOptions: 30
-  m_Mesh: {fileID: -3298800115395149385, guid: 6366e10f9cacd274ebee65ade5a76def, type: 3}
+  serializedVersion: 3
+  m_Size: {x: 2.7773135, y: 8.955587, z: 3.936135}
+  m_Center: {x: 0.049548786, y: 1.2618074, z: 0.006483197}
