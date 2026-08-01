@@ -5380,7 +5380,7 @@ Transform:
   m_GameObject: {fileID: 6673259597275801327}
   serializedVersion: 2
   m_LocalRotation: {x: -0.000000011256373, y: -0.85717124, z: 0.000000018734072, w: 0.5150316}
-  m_LocalPosition: {x: 0.027038574, y: 0.010999918, z: -0.0035400817}
+  m_LocalPosition: {x: 0.027038574, y: 0.754, z: -0.0035400817}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -5404,9 +5404,9 @@ Light:
   m_CookieSize: 10
   m_Shadows:
     m_Type: 2
-    m_Resolution: 0
+    m_Resolution: 3
     m_CustomResolution: -1
-    m_Strength: 0.81
+    m_Strength: 1
     m_Bias: 0.05
     m_NormalBias: 0.4
     m_NearPlane: 0.43
@@ -5431,12 +5431,12 @@ Light:
   m_Cookie: {fileID: 0}
   m_DrawHalo: 0
   m_Flare: {fileID: 0}
-  m_RenderMode: 2
+  m_RenderMode: 1
   m_CullingMask:
     serializedVersion: 2
     m_Bits: 4294967295
   m_RenderingLayerMask: 1
-  m_Lightmapping: 1
+  m_Lightmapping: 4
   m_LightShadowCasterMode: 2
   m_AreaSize: {x: 0.5, y: 0.5}
   m_BounceIntensity: 2
