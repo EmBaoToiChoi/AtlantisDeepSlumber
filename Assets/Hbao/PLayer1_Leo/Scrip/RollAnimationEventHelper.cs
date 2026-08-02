@@ -280,31 +280,31 @@ public class RollAnimationEventHelper : MonoBehaviour
     public void PlayLeftSlashVFX()
     {
         EnsurePlayerReference();
-        if (player != null) player.PlayLeftSlashVFX();
+        if (player != null) { player.PlayLeftSlashVFX(); player.PerformRaycastSlashDamage(1.0f); }
     }
 
     public void PlayRightSlashVFX()
     {
         EnsurePlayerReference();
-        if (player != null) player.PlayRightSlashVFX();
+        if (player != null) { player.PlayRightSlashVFX(); player.PerformRaycastSlashDamage(1.0f); }
     }
 
     public void PlayDualSlashVFX()
     {
         EnsurePlayerReference();
-        if (player != null) player.PlayDualSlashVFX();
+        if (player != null) { player.PlayDualSlashVFX(); player.PerformRaycastSlashDamage(1.25f); }
     }
 
     public void PlayDualSlash1VFX()
     {
         EnsurePlayerReference();
-        if (player != null) player.PlayDualSlash1VFX();
+        if (player != null) { player.PlayDualSlash1VFX(); player.PerformRaycastSlashDamage(1.2f); }
     }
 
     public void PlayDualSlash2VFX()
     {
         EnsurePlayerReference();
-        if (player != null) player.PlayDualSlash2VFX();
+        if (player != null) { player.PlayDualSlash2VFX(); player.PerformRaycastSlashDamage(1.3f); }
     }
 
     public void OnShootRSkill()

@@ -496,8 +496,9 @@ public class Enemy5_PhuThuy : NetworkBehaviour
             return;
         }
 
-        // B. TẦM LÝ TƯỞNG (minAttackRange <= dist <= maxAttackRange): Dừng lại bắn phép
-        if (dist >= minAttackRange && dist <= maxAttackRange)
+        // B. TẦM LÝ TƯỞNG (minAttackRange <= dist <= effectiveMaxAttackRange): Dừng lại bắn phép
+        float effectiveMaxAttackRange = Mathf.Min(maxAttackRange, 14.0f);
+        if (dist >= minAttackRange && dist <= effectiveMaxAttackRange)
         {
             if (AgentReady) agent.isStopped = true;
             SetSpeedNet(0f);
@@ -505,7 +506,7 @@ public class Enemy5_PhuThuy : NetworkBehaviour
             return;
         }
 
-        // C. QUÁ XA (> maxAttackRange): Tiến lại gần + Đoán hướng di chuyển
+        // C. QUÁ XA (> effectiveMaxAttackRange): Tiến lại gần + Đoán hướng di chuyển
         if (AgentReady)
         {
             agent.isStopped = false;
@@ -550,11 +551,15 @@ public class Enemy5_PhuThuy : NetworkBehaviour
         SetSpeedNet(isMoving ? 1f : 0f);
     }
 
-    // ── Dự đoán vị trí của Target Player (Lead Intercept Prediction) ──
+    // ── Dự đoán vị trí của Target Player (Mượt mà không bị giật rung) ──
     private Vector3 GetPredictedTargetPosition(Transform player)
     {
         if (player == null) return transform.position;
         Vector3 pPos = player.position;
+        float dist = Vector3.Distance(transform.position, pPos);
+
+        // Nếu khoảng cách xa (> 10m), nhắm thẳng vị trí hiện tại để xoay mượt tuyệt đối
+        if (dist > 10.0f) return pPos;
 
         Vector3 velocity = Vector3.zero;
         var rb = player.GetComponent<Rigidbody>() ?? player.GetComponentInChildren<Rigidbody>();
@@ -566,15 +571,10 @@ public class Enemy5_PhuThuy : NetworkBehaviour
         }
 
         velocity.y = 0;
-        if (velocity.sqrMagnitude > 0.5f)
+        if (velocity.sqrMagnitude > 1.0f)
         {
-            float dist = Vector3.Distance(transform.position, pPos);
-            float travelTime = Mathf.Clamp(dist / Mathf.Max(spellSpeed, 1f), 0.1f, 0.8f);
-            Vector3 predicted = pPos + velocity.normalized * Mathf.Min(velocity.magnitude * travelTime, 3.5f);
-            if (NavMesh.SamplePosition(predicted, out NavMeshHit hit, 3.0f, NavMesh.AllAreas))
-            {
-                return hit.position;
-            }
+            Vector3 predicted = pPos + velocity.normalized * Mathf.Clamp(velocity.magnitude * 0.35f, 0.4f, 1.2f);
+            return predicted;
         }
         return pPos;
     }
@@ -727,15 +727,23 @@ public class Enemy5_PhuThuy : NetworkBehaviour
 
         stateTimer -= Time.deltaTime;
 
-        // BẢO ĐẢM 100%: Luôn luôn xoay mặt nhắm bắn chính xác về phía Player trong toàn bộ quá trình gồng chưởng
         Transform aimTarget = (targetPlayer != null && IsPlayerAliveAndValid(targetPlayer)) ? targetPlayer : null;
         if (aimTarget != null)
         {
+            float distToTarget = Vector3.Distance(transform.position, aimTarget.position);
+            // Nếu Player chạy quá xa (> 18m) khi đang gồng chiêu, lập tức hủy chiêu rượt đuổi luôn không đứng đơ
+            if (distToTarget > 18.0f && hasCastSpell)
+            {
+                EndAttack();
+                return;
+            }
+
             Vector3 targetPos = GetPredictedTargetPosition(aimTarget);
             Vector3 ld = (targetPos - transform.position); ld.y = 0;
             if (ld.sqrMagnitude > 0.01f)
             {
-                transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(ld), Time.deltaTime * 18f);
+                Quaternion targetRot = Quaternion.LookRotation(ld);
+                transform.rotation = Quaternion.RotateTowards(transform.rotation, targetRot, 540f * Time.deltaTime);
             }
         }
 

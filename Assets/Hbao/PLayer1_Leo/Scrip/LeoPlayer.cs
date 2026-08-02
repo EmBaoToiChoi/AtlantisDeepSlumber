@@ -4845,9 +4845,79 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     }
 
 
-    private void PerformRaycastAttack()
+
+
+    public void PerformRaycastSlashDamage(float rangeMultiplier = 1.0f)
     {
-        // Raycast Attack đã bị xóa hoàn toàn. Tấn công cận chiến hiện tại dùng Hitbox Event Animation 100%.
+        bool isAuth = isStandaloneMode || (IsSpawned && IsOwner) || (IsSpawned && IsServer);
+        if (!isAuth) return;
+
+        float sweepRadius = 1.4f;
+        float sweepDistance = (attackRange > 0 ? attackRange : 2.5f) * rangeMultiplier + 0.8f;
+        Vector3 origin = transform.position + Vector3.up * 1.1f;
+        Vector3 direction = transform.forward;
+
+        // Quét Raycast/SphereCast 140 độ phía trước ngực Leo trùng khớp với Animation Event chém
+        RaycastHit[] hits = Physics.SphereCastAll(origin, sweepRadius, direction, sweepDistance);
+        foreach (var hit in hits)
+        {
+            if (hit.collider == null) continue;
+            GameObject hitGo = hit.collider.gameObject;
+            if (hitGo == gameObject || hitGo.transform.IsChildOf(transform)) continue;
+
+            Transform enemyRoot = GetEnemyRootFromCollider(hit.collider);
+            if (enemyRoot != null && !alreadyHitEnemies.Contains(enemyRoot))
+            {
+                alreadyHitEnemies.Add(enemyRoot);
+                float actualDamage = damageAmount;
+                Vector3 knockbackForce = transform.forward * 3.5f + Vector3.up * 1.0f;
+                
+                // Trừ máu quái ngay lập tức trùng khớp với Event Animation
+                EnemyDamageHelper.DealDamage(enemyRoot, actualDamage, knockbackForce);
+
+                if (hitClip != null) PlayPlayerSFX(hitClip, 0.9f);
+                EnemyDamageEffectHelper.PlayDamageEffects(enemyRoot.gameObject, actualDamage);
+
+                Debug.Log($"[LeoPlayer Raycast Combat] Raycast chém trúng quái: {enemyRoot.name} ({actualDamage} DMG)");
+            }
+        }
+    }
+
+    private Transform GetEnemyRootFromCollider(Collider col)
+    {
+        if (col == null) return null;
+        if (col.CompareTag("Player") || col.gameObject.layer == LayerMask.NameToLayer("Player")) return null;
+
+        var e1 = col.GetComponentInParent<Enemy1_DapBua>() ?? col.GetComponentInChildren<Enemy1_DapBua>();
+        if (e1 != null) return e1.transform;
+
+        var e2 = col.GetComponentInParent<Enemy2_Zombie>() ?? col.GetComponentInChildren<Enemy2_Zombie>();
+        if (e2 != null) return e2.transform;
+
+        var e3 = col.GetComponentInParent<Enemy3_Buaa>() ?? col.GetComponentInChildren<Enemy3_Buaa>();
+        if (e3 != null) return e3.transform;
+
+        var e4 = col.GetComponentInParent<Enemy4_Bongtoi>() ?? col.GetComponentInChildren<Enemy4_Bongtoi>();
+        if (e4 != null) return e4.transform;
+
+        var e5 = col.GetComponentInParent<Enemy5_PhuThuy>() ?? col.GetComponentInChildren<Enemy5_PhuThuy>();
+        if (e5 != null) return e5.transform;
+
+        var mb = col.GetComponentInParent<MiniBossAI>() ?? col.GetComponentInChildren<MiniBossAI>();
+        if (mb != null) return mb.transform;
+
+        var fb = col.GetComponentInParent<FinalBossAI>() ?? col.GetComponentInChildren<FinalBossAI>();
+        if (fb != null) return fb.transform;
+
+        var b = col.GetComponentInParent<BossAI>() ?? col.GetComponentInChildren<BossAI>();
+        if (b != null) return b.transform;
+
+        var sk = col.GetComponentInParent<Skeleton>() ?? col.GetComponentInChildren<Skeleton>();
+        if (sk != null) return sk.transform;
+
+        if (col.CompareTag("Enemy") || col.gameObject.layer == LayerMask.NameToLayer("Enemy")) return col.transform;
+
+        return null;
     }
 
     private void TryDamageEnemy(Collider col)
@@ -8456,6 +8526,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         alreadyHitEnemies.Clear();
         EnsureHitboxComponent(leftHitbox);
         SafeSetHitboxEnabled(leftHitbox, true);
+        PerformRaycastSlashDamage(1.0f);
     }
     public void DisableLeftHitbox()
     {
@@ -8467,6 +8538,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         alreadyHitEnemies.Clear();
         EnsureHitboxComponent(rightHitbox);
         SafeSetHitboxEnabled(rightHitbox, true);
+        PerformRaycastSlashDamage(1.0f);
     }
     public void DisableRightHitbox()
     {
@@ -8480,6 +8552,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         EnsureHitboxComponent(rightHitbox);
         SafeSetHitboxEnabled(leftHitbox, true);
         SafeSetHitboxEnabled(rightHitbox, true);
+        PerformRaycastSlashDamage(1.2f);
     }
     public void DisableBothHitboxes()
     {
@@ -8493,6 +8566,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         alreadyHitEnemies.Clear();
         EnsureHitboxComponent(leftWeaponHitbox);
         SafeSetHitboxEnabled(leftWeaponHitbox, true);
+        PerformRaycastSlashDamage(1.0f);
     }
     public void DisableLeftWeaponHitbox()
     {
@@ -8505,6 +8579,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         alreadyHitEnemies.Clear();
         EnsureHitboxComponent(rightWeaponHitbox);
         SafeSetHitboxEnabled(rightWeaponHitbox, true);
+        PerformRaycastSlashDamage(1.0f);
     }
     public void DisableRightWeaponHitbox()
     {
@@ -8521,6 +8596,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         EnsureHitboxComponent(rightWeaponHitbox);
         SafeSetHitboxEnabled(leftWeaponHitbox, true);
         SafeSetHitboxEnabled(rightWeaponHitbox, true);
+        PerformRaycastSlashDamage(1.25f);
     }
     public void DisableBothWeaponHitboxes()
     {
@@ -8536,6 +8612,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         SafeSetHitboxEnabled(axeWeaponHitbox, true);
         SafeSetHitboxEnabled(leftWeaponHitbox, true);
         SafeSetHitboxEnabled(rightWeaponHitbox, true);
+        PerformRaycastSlashDamage(1.35f);
     }
     public void DisableAxeWeaponHitbox()
     {
