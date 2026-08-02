@@ -592,17 +592,16 @@ public class MiniBossAI : NetworkBehaviour
         cloneAI.phase1MaxHealth = phase1MaxHealth * 0.45f;
         cloneAI.localHealth = phase1MaxHealth * 0.45f;
         cloneAI.maxHealth = phase1MaxHealth * 0.45f;
+        cloneAI.localIsBossActive = true;
 
         if (!cloneAI.isStandaloneMode && IsServer)
         {
+            cloneAI.isBossActive.Value = true;
             cloneAI.currentHealth.Value = cloneAI.maxHealth;
         }
 
         // Tạm thời tắt agent trong lúc thực hiện hiệu ứng tách bóng từ thân
         if (cloneAI.agent != null) cloneAI.agent.enabled = false;
-
-        // Gắn thanh máu trên đầu cho Phân Thân
-        cloneAI.EnsureCloneOverheadHealthBar();
     }
 
     private IEnumerator AnimateShadowClonesEmerging(GameObject cloneL, GameObject cloneR, Vector3 targetL, Vector3 targetR)
@@ -1197,10 +1196,13 @@ public class MiniBossAI : NetworkBehaviour
 
     public void CheckShadowBlinkDodge(float damage)
     {
+        // KHÔNG BAO GIỜ TỐC BIẾN NÉ ĐÒN NẾU ĐANG TRONG TRẠNG THÁI GỒNG TRIỆU HỒI HOẶC ENRAGE
+        if (isSummonInvulnerable || CurrentStateValue == MiniBossState.Enrage || CurrentStateValue == MiniBossState.Dead) return;
+
         recentDamageTaken += damage;
         recentDamageResetTimer = 1.0f;
 
-        if (recentDamageTaken >= 75f && shadowBlinkTimer <= 0f && CurrentStateValue != MiniBossState.Dead)
+        if (recentDamageTaken >= 75f && shadowBlinkTimer <= 0f)
         {
             recentDamageTaken = 0f;
             shadowBlinkTimer = 10f;
