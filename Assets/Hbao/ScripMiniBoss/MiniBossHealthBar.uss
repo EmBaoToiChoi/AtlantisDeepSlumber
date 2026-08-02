@@ -5,15 +5,16 @@
     left: 50%;
     translate: -50% 0;
     width: 750px;
-    height: 110px;
+    height: auto;
+    min-height: 110px;
     flex-direction: row;
-    align-items: center;
+    align-items: flex-start;
     justify-content: flex-start;
-    background-color: rgba(15, 10, 5, 0.85);
+    background-color: rgba(15, 10, 5, 0.88);
     border-width: 3px;
     border-color: rgb(215, 145, 35); /* Golden amber border fitting the Mini Boss armor */
     border-radius: 16px;
-    padding: 10px 20px;
+    padding: 12px 20px;
     box-shadow: 0px 8px 24px rgba(0, 0, 0, 0.85), inset 0px 0px 12px rgba(255, 150, 0, 0.25);
 }
 
@@ -29,6 +30,7 @@
     margin-right: 18px;
     box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.6);
     flex-shrink: 0;
+    margin-top: 4px;
 }
 
 /* Avatar image (using the generated spiky golden bone knight) */
@@ -133,4 +135,70 @@
 .miniboss-hp-progress-bar.flash {
     animation-name: miniboss-flash-anim;
     animation-duration: 0.2s;
+}
+
+/* ══════════════════════════════════════════════════════════ */
+/*  2 SUB-HEALTH BARS FOR MINI BOSS CLONES                    */
+/* ══════════════════════════════════════════════════════════ */
+.clones-sub-container {
+    width: 100%;
+    flex-direction: row;
+    justify-content: space-between;
+    margin-top: 10px;
+    display: none;
+}
+
+.clone-hp-wrapper {
+    width: 48.5%;
+    flex-direction: column;
+}
+
+.clone-name {
+    color: rgb(255, 185, 100);
+    font-size: 13px;
+    -unity-font-style: bold;
+    margin-bottom: 3px;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.9);
+}
+
+.clone-hp-background {
+    width: 100%;
+    height: 18px;
+    background-color: rgba(20, 10, 5, 0.95);
+    border-width: 1.5px;
+    border-color: rgb(180, 110, 30);
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+}
+
+.clone-hp-yellow-bar {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background-color: rgb(235, 190, 30);
+    border-radius: 3px;
+    transition-property: width;
+    transition-duration: 0.5s;
+}
+
+.clone-hp-progress-bar {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background-color: rgb(190, 35, 30);
+    border-radius: 3px;
+    transition-property: width;
+    transition-duration: 0.12s;
+}
+
+.clone-hp-text {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    color: rgb(255, 255, 255);
+    font-size: 10px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.95);
 }

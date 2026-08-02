@@ -563,6 +563,21 @@
     text-shadow: 0 0 5px rgba(0, 0, 0, 0.8);
 }
 
+/* --- Skill Name Label (Tên kỹ năng phía trên ô Cooldown) --- */
+.skill-name-label {
+    position: absolute;
+    top: -20px;
+    left: -30px;
+    right: -30px;
+    color: #ffd700;
+    -unity-font-style: bold;
+    font-size: 11px;
+    -unity-text-align: middle-center;
+    text-shadow: 0px 1px 3px rgba(0, 0, 0, 0.95);
+    white-space: nowrap;
+    z-index: 12;
+}
+
 /* --- Minimap Hotkey (M) --- */
 .minimap-hotkey-container {
     position: absolute;

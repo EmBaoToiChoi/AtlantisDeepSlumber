@@ -139,6 +139,9 @@ public class PlayerHUDController : MonoBehaviour
     private VisualElement skillImgQ; // Tham chiếu tới hình ảnh kỹ năng để ẩn
     private VisualElement skillImgR; // Tham chiếu tới hình ảnh kỹ năng để ẩn
     private VisualElement skillImgE; // Tham chiếu tới hình ảnh kỹ năng để ẩn
+    private Label skillNameLabelQ; // Label hiển thị tên Skill Q (Ảo Ảnh Chém)
+    private Label skillNameLabelR; // Label hiển thị tên Skill R (Chưởng Nguyên Tố)
+    private Label skillNameLabelE; // Label hiển thị tên Skill E (Tăng Tốc Chạy)
     private bool isSkillsUnlocked = false; // Trạng thái đã mở khóa kỹ năng hay chưa
     public int currentSelectedWeapon = 1; // Thêm biến lưu vũ khí đang chọn
     public static bool isAnyUIOpen = false; // Trạng thái static báo hiệu bất kỳ UI nào đang mở
@@ -720,6 +723,33 @@ public class PlayerHUDController : MonoBehaviour
         skillImgQ = root.Q<VisualElement>("skill-img-q");
         skillImgR = root.Q<VisualElement>("skill-img-r");
         skillImgE = root.Q<VisualElement>("skill-img-e");
+
+        skillNameLabelQ = root.Q<Label>("skill-name-label-q");
+        skillNameLabelR = root.Q<Label>("skill-name-label-r");
+        skillNameLabelE = root.Q<Label>("skill-name-label-e");
+
+        // Tự động tạo Label tên Skill nếu chưa có trong UXML
+        if (skillNameLabelQ == null && cooldownQ != null && cooldownQ.parent != null)
+        {
+            skillNameLabelQ = new Label("Ảo Ảnh Chém");
+            skillNameLabelQ.name = "skill-name-label-q";
+            skillNameLabelQ.AddToClassList("skill-name-label");
+            cooldownQ.parent.Add(skillNameLabelQ);
+        }
+        if (skillNameLabelR == null && cooldownR != null && cooldownR.parent != null)
+        {
+            skillNameLabelR = new Label("Chưởng Nguyên Tố");
+            skillNameLabelR.name = "skill-name-label-r";
+            skillNameLabelR.AddToClassList("skill-name-label");
+            cooldownR.parent.Add(skillNameLabelR);
+        }
+        if (skillNameLabelE == null && cooldownE != null && cooldownE.parent != null)
+        {
+            skillNameLabelE = new Label("Tăng Tốc Chạy");
+            skillNameLabelE.name = "skill-name-label-e";
+            skillNameLabelE.AddToClassList("skill-name-label");
+            cooldownE.parent.Add(skillNameLabelE);
+        }
 
         // Ẩn kỹ năng ngay từ đầu nếu đang khóa
         if (!isSkillsUnlocked)
@@ -2457,6 +2487,34 @@ public class PlayerHUDController : MonoBehaviour
         {
             skillImgE.style.backgroundImage = new StyleBackground(profile.skillESprite);
         }
+
+        // Cập nhật tên Skill tương ứng theo từng nhân vật
+        string qName = "Ảo Ảnh Chém";
+        string eName = "Tăng Tốc Chạy";
+        string rName = "Chưởng Nguyên Tố";
+
+        if (profileIndex == 1) // Maya
+        {
+            qName = "Sóng Âm";
+            eName = "Lá Chắn Nước";
+            rName = "Thủy Quái";
+        }
+        else if (profileIndex == 2) // Elena
+        {
+            qName = "Bắn Tốc Độ";
+            eName = "Mưa Mũi Tên";
+            rName = "Băng Sương";
+        }
+        else if (profileIndex == 3) // Arthur
+        {
+            qName = "Kiếm Khí";
+            eName = "Khiên Thánh";
+            rName = "Xoay Kiếm";
+        }
+
+        if (skillNameLabelQ != null) skillNameLabelQ.text = qName;
+        if (skillNameLabelE != null) skillNameLabelE.text = eName;
+        if (skillNameLabelR != null) skillNameLabelR.text = rName;
 
         // 4. Tùy chỉnh UI Skill R indicator theo từng nhân vật
         if (invisibilityIndicator != null)

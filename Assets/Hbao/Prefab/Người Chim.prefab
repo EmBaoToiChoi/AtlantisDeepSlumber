@@ -210,12 +210,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   ShowTopMostFoldoutHeaderGroup: 1
-  maxHealth: 100
+  maxHealth: 150
   currentHealth:
     UpdateTraits:
       MinSecondsBetweenUpdates: 0
       MaxSecondsBetweenUpdates: 0
-    m_InternalValue: 100
+    m_InternalValue: 150
   currentState:
     UpdateTraits:
       MinSecondsBetweenUpdates: 0
@@ -241,21 +241,24 @@ MonoBehaviour:
   - {fileID: 0}
   spellProjectilePrefab: {fileID: 2883180979609552342, guid: fc1b06f88f3a91444b1ec370e0274ce3, type: 3}
   spellSpeed: 12
-  spellDamage: 20
+  spellDamage: 5
   expGemPrefab: {fileID: 7388330026054526502, guid: b6f0bcc3b9d52f840a55991f2dbef13f, type: 3}
   expDropAmount: 25
   expDropPoint: {fileID: 1745995649854752103}
   repairItemPrefab: {fileID: 3330552459412152781}
   repairItemDropChance: 0.2
-  sightRange: 60
-  fieldOfView: 110
-  maxAttackRange: 13
-  minAttackRange: 5.5
+  sightRange: 40
+  fieldOfView: 180
+  maxAttackRange: 40
+  minAttackRange: 20
+  maxChaseDistance: 41
   patrolWalkSpeed: 2.5
   chaseRunSpeed: 3.8
   patrolWaitMin: 1.5
   patrolWaitMax: 5
   patrolMoveChance: 0.65
+  canTacticalFlee: 1
+  fleeHealthThreshold: 0.3
   playerLayer:
     serializedVersion: 2
     m_Bits: 8

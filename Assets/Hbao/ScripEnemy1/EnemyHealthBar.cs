@@ -10,6 +10,7 @@ public class EnemyHealthBar : MonoBehaviour
     public Enemy3_Buaa enemy3;
     public Enemy4_Bongtoi enemy4;
     public Enemy5_PhuThuy enemy5;
+    public MiniBossAI miniBoss;
     public Skeleton skeleton;
     public UIDocument uiDocument;
 
@@ -84,8 +85,17 @@ public class EnemyHealthBar : MonoBehaviour
 
     private void FindEnemyInParent()
     {
-        if (enemy == null && enemy2 == null && enemy3 == null && enemy4 == null && enemy5 == null && skeleton == null)
+        if (miniBoss != null)
         {
+            enemy = null; enemy2 = null; enemy3 = null; enemy4 = null; enemy5 = null; skeleton = null;
+            return;
+        }
+
+        if (enemy == null && enemy2 == null && enemy3 == null && enemy4 == null && enemy5 == null && miniBoss == null && skeleton == null)
+        {
+            miniBoss = GetComponentInParent<MiniBossAI>();
+            if (miniBoss != null) return;
+
             enemy = GetComponentInParent<Enemy1_DapBua>();
             if (enemy != null) return;
 
@@ -107,6 +117,15 @@ public class EnemyHealthBar : MonoBehaviour
 
     private void InitEnemyHealthAndName()
     {
+        if (miniBoss != null)
+        {
+            // Mini Boss & Clones dùng thanh máu ở UI trên cùng góc màn hình (MiniBossHealthBar.cs), không dùng thanh máu 3D trên đầu
+            if (quadTransform != null) quadTransform.gameObject.SetActive(false);
+            if (uiDocument != null) uiDocument.enabled = false;
+            enabled = false;
+            return;
+        }
+
         string enemyName = "Enemy";
         float curHp = 100f;
 
@@ -170,6 +189,7 @@ public class EnemyHealthBar : MonoBehaviour
 
     private float GetMaxHealth()
     {
+        if (miniBoss != null) return miniBoss.maxHealth;
         if (enemy != null) return enemy.maxHealth;
         if (enemy2 != null) return enemy2.maxHealth;
         if (enemy3 != null) return enemy3.maxHealth;
@@ -181,6 +201,7 @@ public class EnemyHealthBar : MonoBehaviour
 
     private float GetActualHealth()
     {
+        if (miniBoss != null) return miniBoss.ActualCurrentHealth;
         if (enemy != null) return enemy.ActualCurrentHealth;
         if (enemy2 != null) return enemy2.ActualCurrentHealth;
         if (enemy3 != null) return enemy3.ActualCurrentHealth;
