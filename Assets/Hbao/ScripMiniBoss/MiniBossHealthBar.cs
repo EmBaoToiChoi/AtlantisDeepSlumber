@@ -1,14 +1,17 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UIElements;
 
 /// <summary>
 /// Script managing the Mini Boss HUD health bar using UI Toolkit (UXML + USS).
-/// Includes slow yellow draining lag bar, hit shake, and hit flash effects.
+/// Includes main boss health bar, 2 clone sub-health bars with yellow lag drain,
+/// hit shake, and hit flash effects.
+/// UI only disappears when ALL 3 (Main Boss + 2 Clones) are dead.
 /// </summary>
 public class MiniBossHealthBar : MonoBehaviour
 {
     [Header("References")]
-    [Tooltip("Reference to the MiniBossAI component (auto-discovered if empty)")]
+    [Tooltip("Reference to the main MiniBossAI component (auto-discovered if empty)")]
     public MiniBossAI boss;
     
     [Tooltip("Reference to the UIDocument containing the layout")]
@@ -20,10 +23,33 @@ public class MiniBossHealthBar : MonoBehaviour
     private Label nameLabel;
     private Label hpTextLabel;
 
+    // 2 Clone Sub-Bar Visual Elements
+    private VisualElement clonesSubContainer;
+    
+    private VisualElement clone1Wrapper;
+    private VisualElement clone1ProgressBar;
+    private VisualElement clone1YellowBar;
+    private Label clone1HpTextLabel;
+
+    private VisualElement clone2Wrapper;
+    private VisualElement clone2ProgressBar;
+    private VisualElement clone2YellowBar;
+    private Label clone2HpTextLabel;
+
+    // Lag bar tracking for main boss
     private float displayedHealth = -1f;
     private float yellowHealth = -1f;
     private float yellowDrainDelay = 0.5f;
     private float yellowDrainTimer = 0f;
+
+    // Lag bar tracking for clone 1 & clone 2
+    private float clone1DisplayedHp = -1f;
+    private float clone1YellowHp = -1f;
+    private float clone1YellowDrainTimer = 0f;
+
+    private float clone2DisplayedHp = -1f;
+    private float clone2YellowHp = -1f;
+    private float clone2YellowDrainTimer = 0f;
 
     private float shakeTimer = 0f;
     private float flashTimer = 0f;
@@ -55,6 +81,18 @@ public class MiniBossHealthBar : MonoBehaviour
             yellowBar = root.Q<VisualElement>("miniboss-hp-yellow-bar");
             nameLabel = root.Q<Label>("miniboss-name");
             hpTextLabel = root.Q<Label>("miniboss-hp-text");
+
+            clonesSubContainer = root.Q<VisualElement>("clones-sub-container");
+
+            clone1Wrapper = root.Q<VisualElement>("clone1-wrapper");
+            clone1ProgressBar = root.Q<VisualElement>("clone1-hp-progress-bar");
+            clone1YellowBar = root.Q<VisualElement>("clone1-hp-yellow-bar");
+            clone1HpTextLabel = root.Q<Label>("clone1-hp-text");
+
+            clone2Wrapper = root.Q<VisualElement>("clone2-wrapper");
+            clone2ProgressBar = root.Q<VisualElement>("clone2-hp-progress-bar");
+            clone2YellowBar = root.Q<VisualElement>("clone2-hp-yellow-bar");
+            clone2HpTextLabel = root.Q<Label>("clone2-hp-text");
         }
     }
 
@@ -101,27 +139,51 @@ public class MiniBossHealthBar : MonoBehaviour
 
     private void Update()
     {
-        if (boss == null || !boss.gameObject.activeInHierarchy || !boss.enabled)
-        {
-            HideUI();
-            return;
-        }
-
-        // Check if Final Boss HUD is active to prevent UI overlap
+        // 1. Check if Final Boss HUD is active to prevent UI overlap
         var finalBoss = FindFirstObjectByType<FinalBossAI>();
         bool isFinalBossActive = finalBoss != null && 
             finalBoss.gameObject.activeInHierarchy && 
             finalBoss.CurrentStateValue != FinalBossAI.FinalBossState.Sitting && 
             !finalBoss.IsDead;
 
-        // Hide UI if boss is dead, inactive, or if Final Boss HUD is active
-        if (boss.IsDead || !boss.IsBossActive || boss.ActualCurrentHealth <= 0 || isFinalBossActive)
+        if (isFinalBossActive)
         {
             HideUI();
             return;
         }
 
-        // Show UI if active and alive
+        // 2. Discover all Mini Boss instances (Main Boss + Clones)
+        var allBosses = FindObjectsByType<MiniBossAI>(FindObjectsSortMode.None);
+        MiniBossAI mainBoss = null;
+        List<MiniBossAI> activeClones = new List<MiniBossAI>();
+
+        foreach (var b in allBosses)
+        {
+            if (b == null || !b.gameObject.activeInHierarchy || !b.enabled) continue;
+            if (b.IsDead || !b.IsBossActive || b.ActualCurrentHealth <= 0) continue;
+
+            if (b.isClone)
+            {
+                activeClones.Add(b);
+            }
+            else if (mainBoss == null)
+            {
+                mainBoss = b;
+            }
+        }
+
+        if (mainBoss != null) boss = mainBoss;
+
+        // 3. UI only disappears when ALL 3 (Main Boss + Clones) are dead / inactive
+        bool anyAlive = (mainBoss != null && !mainBoss.IsDead && mainBoss.IsBossActive && mainBoss.ActualCurrentHealth > 0) || (activeClones.Count > 0);
+
+        if (!anyAlive)
+        {
+            HideUI();
+            return;
+        }
+
+        // Show HUD container if any target is alive
         if (rootContainer != null && rootContainer.style.display == DisplayStyle.None)
         {
             rootContainer.style.display = DisplayStyle.Flex;
@@ -147,23 +209,30 @@ public class MiniBossHealthBar : MonoBehaviour
             }
         }
 
-        UpdateHealthAnimation();
+        UpdateMainHealthAnimation(mainBoss);
+        UpdateClonesHealthAnimation(activeClones);
     }
 
-    private void UpdateHealthAnimation()
+    private void UpdateMainHealthAnimation(MiniBossAI targetBoss)
     {
-        if (boss == null) return;
-
         if (progressBar == null || yellowBar == null || nameLabel == null || hpTextLabel == null)
         {
             QueryVisualElements();
             return;
         }
 
-        float maxHp = boss.maxHealth;
-        if (maxHp <= 0f) maxHp = 500f;
+        if (targetBoss == null)
+        {
+            progressBar.style.width = Length.Percent(0);
+            yellowBar.style.width = Length.Percent(0);
+            hpTextLabel.text = "0 / 0 (Đã hạ)";
+            return;
+        }
 
-        float actualHp = boss.ActualCurrentHealth;
+        float maxHp = targetBoss.maxHealth;
+        if (maxHp <= 0f) maxHp = 1200f;
+
+        float actualHp = targetBoss.ActualCurrentHealth;
 
         if (displayedHealth < 0f)
         {
@@ -204,7 +273,6 @@ public class MiniBossHealthBar : MonoBehaviour
             yellowDrainTimer += Time.deltaTime;
             if (yellowDrainTimer >= yellowDrainDelay)
             {
-                // Smoothly drain the yellow bar
                 yellowHealth = Mathf.MoveTowards(yellowHealth, actualHp, maxHp * 0.35f * Time.deltaTime);
             }
         }
@@ -216,6 +284,83 @@ public class MiniBossHealthBar : MonoBehaviour
 
         float yellowPercent = Mathf.Clamp01(yellowHealth / maxHp) * 100f;
         yellowBar.style.width = Length.Percent(yellowPercent);
+    }
+
+    private void UpdateClonesHealthAnimation(List<MiniBossAI> activeClones)
+    {
+        if (clonesSubContainer == null)
+        {
+            QueryVisualElements();
+            if (clonesSubContainer == null) return;
+        }
+
+        if (activeClones.Count == 0)
+        {
+            clonesSubContainer.style.display = DisplayStyle.None;
+            return;
+        }
+
+        clonesSubContainer.style.display = DisplayStyle.Flex;
+
+        // --- Clone 1 ---
+        if (activeClones.Count >= 1 && activeClones[0] != null && !activeClones[0].IsDead)
+        {
+            if (clone1Wrapper != null) clone1Wrapper.style.display = DisplayStyle.Flex;
+            UpdateSubBar(activeClones[0], ref clone1DisplayedHp, ref clone1YellowHp, ref clone1YellowDrainTimer, clone1ProgressBar, clone1YellowBar, clone1HpTextLabel);
+        }
+        else
+        {
+            if (clone1Wrapper != null) clone1Wrapper.style.display = DisplayStyle.None;
+        }
+
+        // --- Clone 2 ---
+        if (activeClones.Count >= 2 && activeClones[1] != null && !activeClones[1].IsDead)
+        {
+            if (clone2Wrapper != null) clone2Wrapper.style.display = DisplayStyle.Flex;
+            UpdateSubBar(activeClones[1], ref clone2DisplayedHp, ref clone2YellowHp, ref clone2YellowDrainTimer, clone2ProgressBar, clone2YellowBar, clone2HpTextLabel);
+        }
+        else
+        {
+            if (clone2Wrapper != null) clone2Wrapper.style.display = DisplayStyle.None;
+        }
+    }
+
+    private void UpdateSubBar(MiniBossAI clone, ref float dispHp, ref float yellowHp, ref float drainTimer, VisualElement progBar, VisualElement yelBar, Label txtLabel)
+    {
+        if (clone == null || progBar == null || yelBar == null || txtLabel == null) return;
+
+        float maxHp = clone.maxHealth;
+        if (maxHp <= 0f) maxHp = 270f;
+        float actualHp = clone.ActualCurrentHealth;
+
+        if (dispHp < 0f)
+        {
+            dispHp = actualHp;
+            yellowHp = actualHp;
+        }
+
+        dispHp = actualHp;
+
+        float percent = Mathf.Clamp01(dispHp / maxHp) * 100f;
+        progBar.style.width = Length.Percent(percent);
+        txtLabel.text = $"{(int)Mathf.Max(0, dispHp)} / {(int)maxHp}";
+
+        if (actualHp < yellowHp)
+        {
+            drainTimer += Time.deltaTime;
+            if (drainTimer >= yellowDrainDelay)
+            {
+                yellowHp = Mathf.MoveTowards(yellowHp, actualHp, maxHp * 0.45f * Time.deltaTime);
+            }
+        }
+        else
+        {
+            yellowHp = actualHp;
+            drainTimer = 0f;
+        }
+
+        float yellowPercent = Mathf.Clamp01(yellowHp / maxHp) * 100f;
+        yelBar.style.width = Length.Percent(yellowPercent);
     }
 
     private void UpdateHPBars(float current, float max)

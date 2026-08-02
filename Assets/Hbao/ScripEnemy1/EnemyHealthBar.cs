@@ -117,15 +117,19 @@ public class EnemyHealthBar : MonoBehaviour
 
     private void InitEnemyHealthAndName()
     {
+        if (miniBoss != null)
+        {
+            // Mini Boss & Clones dùng thanh máu ở UI trên cùng góc màn hình (MiniBossHealthBar.cs), không dùng thanh máu 3D trên đầu
+            if (quadTransform != null) quadTransform.gameObject.SetActive(false);
+            if (uiDocument != null) uiDocument.enabled = false;
+            enabled = false;
+            return;
+        }
+
         string enemyName = "Enemy";
         float curHp = 100f;
 
-        if (miniBoss != null)
-        {
-            enemyName = miniBoss.isClone ? "Mini Boss (Phân Thân)" : miniBoss.gameObject.name;
-            curHp = miniBoss.ActualCurrentHealth;
-        }
-        else if (enemy != null)
+        if (enemy != null)
         {
             enemyName = enemy.gameObject.name;
             curHp = enemy.ActualCurrentHealth;

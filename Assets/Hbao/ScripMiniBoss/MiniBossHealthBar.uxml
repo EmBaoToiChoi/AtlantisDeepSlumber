@@ -13,6 +13,27 @@
                     <ui:Label name="miniboss-hp-text" text="1200 / 1200" class="miniboss-hp-text" />
                 </ui:VisualElement>
             </ui:VisualElement>
+
+            <!-- 2 Thanh máu nhỏ của 2 Phân Thân trong HUD UI Screen -->
+            <ui:VisualElement name="clones-sub-container" class="clones-sub-container">
+                <ui:VisualElement name="clone1-wrapper" class="clone-hp-wrapper">
+                    <ui:Label name="clone1-name" text="Phân Thân 1" class="clone-name" />
+                    <ui:VisualElement name="clone1-hp-background" class="clone-hp-background">
+                        <ui:VisualElement name="clone1-hp-yellow-bar" class="clone-hp-yellow-bar" />
+                        <ui:VisualElement name="clone1-hp-progress-bar" class="clone-hp-progress-bar" />
+                        <ui:Label name="clone1-hp-text" text="270 / 270" class="clone-hp-text" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+
+                <ui:VisualElement name="clone2-wrapper" class="clone-hp-wrapper">
+                    <ui:Label name="clone2-name" text="Phân Thân 2" class="clone-name" />
+                    <ui:VisualElement name="clone2-hp-background" class="clone-hp-background">
+                        <ui:VisualElement name="clone2-hp-yellow-bar" class="clone-hp-yellow-bar" />
+                        <ui:VisualElement name="clone2-hp-progress-bar" class="clone-hp-progress-bar" />
+                        <ui:Label name="clone2-hp-text" text="270 / 270" class="clone-hp-text" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+            </ui:VisualElement>
         </ui:VisualElement>
     </ui:VisualElement>
 </ui:UXML>

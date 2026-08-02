@@ -374,10 +374,19 @@ public class MiniBossAI : NetworkBehaviour
     {
         if (!isClone) return;
 
+        // Tính toán tỷ lệ Un-scale để UI không bị méo/phóng to 3x theo parent scale (3,3,3)
+        Vector3 unscaleFactor = new Vector3(
+            1f / Mathf.Max(transform.localScale.x, 0.001f),
+            1f / Mathf.Max(transform.localScale.y, 0.001f),
+            1f / Mathf.Max(transform.localScale.z, 0.001f)
+        );
+
         var existingHealthBar = GetComponentInChildren<EnemyHealthBar>(true);
         if (existingHealthBar != null)
         {
             existingHealthBar.gameObject.SetActive(true);
+            existingHealthBar.transform.localPosition = new Vector3(0f, 0.95f, 0f);
+            existingHealthBar.transform.localScale = unscaleFactor;
             existingHealthBar.enemy = null; existingHealthBar.enemy2 = null; existingHealthBar.enemy3 = null;
             existingHealthBar.enemy4 = null; existingHealthBar.enemy5 = null; existingHealthBar.skeleton = null;
             existingHealthBar.miniBoss = this;
@@ -389,6 +398,8 @@ public class MiniBossAI : NetworkBehaviour
         if (existingFallback != null)
         {
             existingFallback.gameObject.SetActive(true);
+            existingFallback.transform.localPosition = new Vector3(0f, 0.95f, 0f);
+            existingFallback.transform.localScale = Vector3.Scale(new Vector3(0.015f, 0.015f, 0.015f), unscaleFactor);
             existingFallback.miniBoss = this;
             return;
         }
@@ -399,9 +410,10 @@ public class MiniBossAI : NetworkBehaviour
         {
             GameObject newHealthBar = Instantiate(sample.gameObject, transform);
             newHealthBar.name = "HealthBar";
-            newHealthBar.transform.localPosition = Vector3.up * 2.5f; // Cao hơn đầu 2.5m
+            // Đặt vị trí tương đối 0.95m x scale 3.0 = 2.85m (nằm ngay trên đỉnh đầu MiniBoss)
+            newHealthBar.transform.localPosition = new Vector3(0f, 0.95f, 0f);
             newHealthBar.transform.localRotation = Quaternion.identity;
-            newHealthBar.transform.localScale = Vector3.one;
+            newHealthBar.transform.localScale = unscaleFactor;
             newHealthBar.SetActive(true);
 
             EnemyHealthBar hpScript = newHealthBar.GetComponent<EnemyHealthBar>();
@@ -419,9 +431,9 @@ public class MiniBossAI : NetworkBehaviour
             // 2. Dự phòng: Tự động dựng Canvas Thanh máu World-Space trực tiếp nếu Scene không có quái thường nào khác
             GameObject canvasObj = new GameObject("CloneHealthBarCanvas");
             canvasObj.transform.SetParent(transform, false);
-            canvasObj.transform.localPosition = Vector3.up * 2.5f;
+            canvasObj.transform.localPosition = new Vector3(0f, 0.95f, 0f);
             canvasObj.transform.localRotation = Quaternion.identity;
-            canvasObj.transform.localScale = new Vector3(0.015f, 0.015f, 0.015f);
+            canvasObj.transform.localScale = Vector3.Scale(new Vector3(0.015f, 0.015f, 0.015f), unscaleFactor);
 
             Canvas canvas = canvasObj.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.WorldSpace;
@@ -490,6 +502,9 @@ public class MiniBossAI : NetworkBehaviour
             hasSummonedClones = true;
             SummonClones();
         }
+
+        // KIỂM TRA TỐC BIẾN NÉ ĐÒN KHI BỊ DỒN SÁT THƯƠNG
+        CheckShadowBlinkDodge(damage);
 
         // HYPER ARMOR FIX: Khi đang tấn công (Attack State), Enrage hoặc Dead -> Không bị hủy đòn chém
         if (CurrentStateValue == MiniBossState.Attack || CurrentStateValue == MiniBossState.Enrage || CurrentStateValue == MiniBossState.Dead)
@@ -655,18 +670,17 @@ public class MiniBossAI : NetworkBehaviour
 
     private void PlaySummonCloneVisuals()
     {
-        Vector3 spawnPos = transform.position + Vector3.up * 0.5f;
         if (enrageVFXPrefab != null)
         {
-            // Đi theo MiniBoss 100%
-            GameObject vfx = Instantiate(enrageVFXPrefab, spawnPos, transform.rotation, transform);
-            vfx.transform.localPosition = Vector3.up * 0.5f;
+            // Đi theo đúng giữa tâm ngực MiniBoss 100% (cao 0.45m x scale 3.0 = 1.35m giữa ngực)
+            GameObject vfx = Instantiate(enrageVFXPrefab, transform.position, transform.rotation, transform);
+            vfx.transform.localPosition = new Vector3(0f, 0.45f, 0f);
             vfx.transform.localRotation = Quaternion.identity;
             Destroy(vfx, 3.5f);
         }
         if (enrageSFXSound != null)
         {
-            AudioSource.PlayClipAtPoint(enrageSFXSound, spawnPos, 1.0f);
+            AudioSource.PlayClipAtPoint(enrageSFXSound, transform.position + Vector3.up * 1.35f, 1.0f);
         }
     }
 
@@ -698,6 +712,12 @@ public class MiniBossAI : NetworkBehaviour
         if (attackCooldownTimer > 0) attackCooldownTimer -= Time.deltaTime;
         if (shadowBlinkTimer > 0) shadowBlinkTimer -= Time.deltaTime;
         if (furiousChargeTimer > 0) furiousChargeTimer -= Time.deltaTime;
+
+        if (recentDamageResetTimer > 0f)
+        {
+            recentDamageResetTimer -= Time.deltaTime;
+            if (recentDamageResetTimer <= 0f) recentDamageTaken = 0f;
+        }
 
         bool aiAuth = isStandaloneMode || (IsNetworkActive && IsServer);
         if (!aiAuth) return;
@@ -884,6 +904,24 @@ public class MiniBossAI : NetworkBehaviour
             return;
         }
 
+        // CHIẾN THUẬT BAO VÂY GỌNG KÌM 3 PHÍA CHO PHÂN THÂN
+        Vector3 chaseDestination = targetPlayer.position;
+        if (isClone)
+        {
+            int flankSign = (GetInstanceID() % 2 == 0) ? 1 : -1;
+            float angleOffset = flankSign * 60f; // Trái +60 độ, Phải -60 độ
+            Vector3 dirFromPlayer = (transform.position - targetPlayer.position).normalized;
+            if (dirFromPlayer.sqrMagnitude < 0.01f) dirFromPlayer = -targetPlayer.forward;
+            
+            Vector3 flankDir = Quaternion.Euler(0, angleOffset, 0) * dirFromPlayer;
+            Vector3 desiredFlankPos = targetPlayer.position + flankDir * (attackRange * 0.85f);
+
+            if (NavMesh.SamplePosition(desiredFlankPos, out NavMeshHit flankHit, 3.5f, NavMesh.AllAreas))
+            {
+                chaseDestination = flankHit.position;
+            }
+        }
+
         // Di chuyển áp sát mục tiêu (Tự động tăng tốc cực mạnh nếu đang Cuồng Phong Lao Tới)
         if (AgentReady)
         {
@@ -894,7 +932,7 @@ public class MiniBossAI : NetworkBehaviour
                 : baseRun;
 
             agent.speed = activeRunSpeed;
-            agent.SetDestination(targetPlayer.position);
+            agent.SetDestination(chaseDestination);
         }
         
         SetSpeedNet(AgentReady && !agent.isStopped ? 1.0f : 0f); // Run animation
@@ -943,18 +981,17 @@ public class MiniBossAI : NetworkBehaviour
 
     private void PlayShadowBlinkVisuals()
     {
-        Vector3 spawnPos = transform.position + Vector3.up * 0.5f;
         if (shadowBlinkVFX != null)
         {
-            // Gán VFX đi theo thân MiniBoss 100% khi tăng tốc/chạy
-            GameObject vfx = Instantiate(shadowBlinkVFX, spawnPos, transform.rotation, transform);
-            vfx.transform.localPosition = Vector3.up * 0.5f;
+            // Gán VFX đi theo tâm thân người MiniBoss 100% (cao 0.45m x scale 3.0 = 1.35m giữa ngực)
+            GameObject vfx = Instantiate(shadowBlinkVFX, transform.position, transform.rotation, transform);
+            vfx.transform.localPosition = new Vector3(0f, 0.45f, 0f);
             vfx.transform.localRotation = Quaternion.identity;
             Destroy(vfx, 2.5f);
         }
         if (shadowBlinkSFX != null)
         {
-            AudioSource.PlayClipAtPoint(shadowBlinkSFX, transform.position, 1.0f);
+            AudioSource.PlayClipAtPoint(shadowBlinkSFX, transform.position + Vector3.up * 1.35f, 1.0f);
         }
     }
 
@@ -989,7 +1026,7 @@ public class MiniBossAI : NetworkBehaviour
             leapTimer += Time.deltaTime;
         }
 
-        if (targetPlayer != null && (!isLeaping || leapTimer < 0f))
+        if (targetPlayer != null)
         {
             RotateTowards(targetPlayer.position);
         }
@@ -1042,7 +1079,11 @@ public class MiniBossAI : NetworkBehaviour
             if (c != null && !c.isTrigger) c.enabled = false;
         }
 
-        if (IsPhase2)
+        if (isClone)
+        {
+            TriggerSoulBurstExplosion();
+        }
+        else if (IsPhase2)
         {
             TriggerDeathExplosion();
         }
@@ -1092,6 +1133,97 @@ public class MiniBossAI : NetworkBehaviour
                     EnemyDamageHelper.DealDamage(root, explosionDamage, force);
                 }
             }
+        }
+    }
+
+    public void HealBoss(float amount)
+    {
+        if (IsDead || ActualCurrentHealth <= 0) return;
+
+        if (isStandaloneMode)
+        {
+            localHealth = Mathf.Min(localHealth + amount, maxHealth);
+        }
+        else if (IsServer)
+        {
+            currentHealth.Value = Mathf.Min(currentHealth.Value + amount, maxHealth);
+        }
+
+        PlaySummonCloneVisuals();
+    }
+
+    private void TriggerSoulBurstExplosion()
+    {
+        Vector3 explodePos = transform.position + Vector3.up * 1.2f;
+        PlayDeathExplosionEffects();
+
+        bool auth = isStandaloneMode || (IsNetworkActive && IsServer);
+        if (auth)
+        {
+            // Sát thương bạo nổ linh hồn gây dame cho Player đứng gần
+            Collider[] hits = Physics.OverlapSphere(explodePos, 3.5f, playerLayer);
+            HashSet<Transform> damagedRoots = new HashSet<Transform>();
+
+            foreach (var hit in hits)
+            {
+                Transform root = GetPlayerRoot(hit.transform);
+                if (root != null && !damagedRoots.Contains(root))
+                {
+                    damagedRoots.Add(root);
+                    Vector3 kbDir = (root.position - transform.position).normalized + Vector3.up * 0.5f;
+                    EnemyDamageHelper.DealDamage(root, 25f, kbDir * 6f);
+                }
+            }
+
+            // Hồi 10% máu cho Trùm Phụ chính nếu đứng gần dưới 15m
+            var allBosses = FindObjectsByType<MiniBossAI>(FindObjectsSortMode.None);
+            foreach (var b in allBosses)
+            {
+                if (b != null && !b.isClone && !b.IsDead && b.ActualCurrentHealth > 0)
+                {
+                    if (Vector3.Distance(transform.position, b.transform.position) <= 15.0f)
+                    {
+                        float healAmount = b.maxHealth * 0.10f;
+                        b.HealBoss(healAmount);
+                        Debug.Log($"[MiniBossAI] Phân thân hy sinh! Trùm Phụ chính đứng gần được hồi {healAmount} HP!");
+                    }
+                }
+            }
+        }
+    }
+
+    private float recentDamageTaken = 0f;
+    private float recentDamageResetTimer = 0f;
+
+    public void CheckShadowBlinkDodge(float damage)
+    {
+        recentDamageTaken += damage;
+        recentDamageResetTimer = 1.0f;
+
+        if (recentDamageTaken >= 75f && shadowBlinkTimer <= 0f && CurrentStateValue != MiniBossState.Dead)
+        {
+            recentDamageTaken = 0f;
+            shadowBlinkTimer = 10f;
+            ExecuteShadowBlinkDodge();
+        }
+    }
+
+    private void ExecuteShadowBlinkDodge()
+    {
+        if (targetPlayer == null) return;
+
+        Vector3 escapeDir = (transform.position - targetPlayer.position).normalized;
+        escapeDir += (Random.insideUnitSphere * 0.4f);
+        escapeDir.y = 0;
+        escapeDir = escapeDir.normalized;
+
+        Vector3 blinkTarget = transform.position + escapeDir * 4.5f;
+        if (NavMesh.SamplePosition(blinkTarget, out NavMeshHit hit, 4.0f, NavMesh.AllAreas))
+        {
+            PlayShadowBlinkVisuals();
+            if (AgentReady) agent.Warp(hit.position);
+            FaceTargetImmediately(targetPlayer.position);
+            Debug.Log($"[MiniBossAI] Mini Boss/Phân Thân bị dồn dame sát thương! KÍCH HOẠT TỐC BIẾN NÉ ĐÒN 4.5M!");
         }
     }
 
@@ -1222,7 +1354,7 @@ public class MiniBossAI : NetworkBehaviour
     private Transform FindNearestReachablePlayer()
     {
         Transform best = null;
-        float minD = float.MaxValue;
+        float minScore = float.MaxValue;
         var players = GetAllActivePlayers();
         foreach (var p in players)
         {
@@ -1230,9 +1362,13 @@ public class MiniBossAI : NetworkBehaviour
             if (IsTargetReachableOnNavMesh(p))
             {
                 float d = GetNavMeshPathDistance(transform.position, p.position);
-                if (d < minD)
+                float hpRatio = GetPlayerHealthRatio(p);
+                float score = d * (0.5f + 0.5f * hpRatio);
+                if (hpRatio < 0.35f) score *= 0.6f; // Ưu tiên tập trung săn Player yếu máu (<35% HP)
+
+                if (score < minScore)
                 {
-                    minD = d;
+                    minScore = score;
                     best = p;
                 }
             }
@@ -1360,7 +1496,9 @@ public class MiniBossAI : NetworkBehaviour
         dir.y = 0;
         if (dir.sqrMagnitude > 0.01f)
         {
-            transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(dir), Time.deltaTime * 14f);
+            Quaternion targetRot = Quaternion.LookRotation(dir);
+            float rotSpeed = (CurrentStateValue == MiniBossState.Attack) ? 540f : 360f;
+            transform.rotation = Quaternion.RotateTowards(transform.rotation, targetRot, rotSpeed * Time.deltaTime);
         }
     }
 
@@ -1441,6 +1579,22 @@ public class MiniBossAI : NetworkBehaviour
         {
             hitPlayersThisAttack.Clear();
             boss.hasDealtDamage = false;
+
+            // BẢO ĐẢM 100%: Lập tức quay mặt chính diện thẳng 100% về phía Player đang đuổi theo ngay khi bắt đầu vung kiếm!
+            if (boss.targetPlayer != null)
+            {
+                boss.FaceTargetImmediately(boss.targetPlayer.position);
+            }
+
+            // TẢN NHỊP ĐÁNH LIÊN HOÀN 1-2-3 GIỮA TRÙM PHỤ VÀ PHÂN THÂN
+            var allBosses = Object.FindObjectsByType<MiniBossAI>(FindObjectsSortMode.None);
+            foreach (var b in allBosses)
+            {
+                if (b != null && b != boss && b.isClone && b.CurrentStateValue == MiniBossState.Chase)
+                {
+                    b.attackCooldownTimer = Mathf.Max(b.attackCooldownTimer, 0.4f);
+                }
+            }
 
             if (!boss.isStandaloneMode)
             {

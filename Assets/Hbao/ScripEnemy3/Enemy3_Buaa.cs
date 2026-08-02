@@ -223,7 +223,7 @@ public class Enemy3_Buaa : NetworkBehaviour
 
     private void OnStateChanged(EnemyState oldState, EnemyState newState)
     {
-        CurrentStateValue = newState;
+        if (isStandaloneMode) localState = newState;
         if (newState == EnemyState.Patrol)
         {
             targetPlayer = null;
