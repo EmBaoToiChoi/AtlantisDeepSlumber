@@ -6,7 +6,8 @@ using UnityEngine.UIElements;
 /// Script managing the Mini Boss HUD health bar using UI Toolkit (UXML + USS).
 /// Includes main boss health bar, 2 clone sub-health bars with yellow lag drain,
 /// hit shake, and hit flash effects.
-/// UI only disappears when ALL 3 (Main Boss + 2 Clones) are dead.
+/// UI only appears when player activates the Mini Boss trigger box, and
+/// only disappears when ALL 3 (Main Boss + 2 Clones) are dead.
 /// </summary>
 public class MiniBossHealthBar : MonoBehaviour
 {
@@ -98,7 +99,8 @@ public class MiniBossHealthBar : MonoBehaviour
 
     private void InitBossHealthAndName()
     {
-        if (boss == null)
+        // Ẩn HUD mặc định cho tới khi Player đi vào Trigger Box kích hoạt Boss (IsBossActive == true)
+        if (boss == null || !boss.IsBossActive || boss.IsDead)
         {
             if (rootContainer != null) rootContainer.style.display = DisplayStyle.None;
             return;
@@ -164,26 +166,27 @@ public class MiniBossHealthBar : MonoBehaviour
 
             if (b.isClone)
             {
-                activeClones.Add(b);
+                if (b.IsBossActive) activeClones.Add(b);
             }
             else if (mainBoss == null)
             {
-                mainBoss = b;
+                // Chỉ lấy Main Boss nếu đã được kích hoạt qua Trigger Box (IsBossActive == true)
+                if (b.IsBossActive) mainBoss = b;
             }
         }
 
         if (mainBoss != null) boss = mainBoss;
 
-        // 3. UI only disappears when ALL 3 (Main Boss + Clones) are dead / inactive
-        bool anyAlive = (mainBoss != null && !mainBoss.IsDead && mainBoss.ActualCurrentHealth > 0) || (activeClones.Count > 0);
+        // 3. CHỈ HIỂN THỊ HUD khi Main Boss đã được kích hoạt qua Trigger Box (IsBossActive == true)
+        bool anyActiveAndAlive = (mainBoss != null && mainBoss.IsBossActive && !mainBoss.IsDead && mainBoss.ActualCurrentHealth > 0) || (activeClones.Count > 0);
 
-        if (!anyAlive)
+        if (!anyActiveAndAlive)
         {
             HideUI();
             return;
         }
 
-        // Show HUD container if any target is alive
+        // Show HUD container if boss trigger box was activated and boss/clones are alive
         if (rootContainer != null && rootContainer.style.display == DisplayStyle.None)
         {
             rootContainer.style.display = DisplayStyle.Flex;
@@ -317,7 +320,7 @@ public class MiniBossHealthBar : MonoBehaviour
         if (activeClones.Count >= 2 && activeClones[1] != null && !activeClones[1].IsDead)
         {
             if (clone2Wrapper != null) clone2Wrapper.style.display = DisplayStyle.Flex;
-            UpdateSubBar(activeClones[1], ref clone2DisplayedHp, ref clone2YellowHp, ref clone2YellowDrainTimer, clone2ProgressBar, clone2YellowBar, clone2HpTextLabel);
+            UpdateSubBar(activeClones[2], ref clone2DisplayedHp, ref clone2YellowHp, ref clone2YellowDrainTimer, clone2ProgressBar, clone2YellowBar, clone2HpTextLabel);
         }
         else
         {

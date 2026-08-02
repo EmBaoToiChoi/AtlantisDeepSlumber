@@ -766,7 +766,7 @@ public class Enemy5_PhuThuy : NetworkBehaviour
         attackCooldownTimer = 1.6f;
         detectionTimer = 0f;
         
-        // Nếu targetPlayer bị mất, tìm lại Player gần nhất rảnh rỗi trong tầm nhìn
+        // Nếu Player chết hoặc rời khỏi tầm nhìn -> Lập tức quay về điểm tuần tra, không đứng giật giật!
         if (targetPlayer == null || !IsPlayerAliveAndValid(targetPlayer))
         {
             targetPlayer = FindNearestAlivePlayer();
@@ -774,13 +774,16 @@ public class Enemy5_PhuThuy : NetworkBehaviour
 
         if (targetPlayer != null && IsPlayerAliveAndValid(targetPlayer))
         {
-            ChangeState(EnemyState.Chase);
+            float d = Vector3.Distance(transform.position, targetPlayer.position);
+            if (d <= sightRange)
+            {
+                ChangeState(EnemyState.Chase);
+                return;
+            }
         }
-        else
-        {
-            targetPlayer = null;
-            ReturnToPatrol();
-        }
+
+        targetPlayer = null;
+        ReturnToPatrol();
     }
 
     private bool IsPlayerAliveAndValid(Transform pt)
@@ -878,13 +881,13 @@ public class Enemy5_PhuThuy : NetworkBehaviour
     {
         var list = GetAllAlivePlayers();
         Transform nearest = null;
-        float minDist = float.MaxValue;
+        float minDist = sightRange; // CHỈ TÌM PLAYER TRONG TẦM NHÌN (sightRange), KHÔNG TÌM XA 100M!
         foreach (var p in list)
         {
             if (p != null)
             {
                 float d = Vector3.Distance(transform.position, p.position);
-                if (d < minDist)
+                if (d <= minDist)
                 {
                     minDist = d;
                     nearest = p;
