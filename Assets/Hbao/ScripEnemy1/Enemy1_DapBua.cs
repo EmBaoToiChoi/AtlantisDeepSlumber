@@ -291,7 +291,7 @@ public class Enemy1_DapBua : NetworkBehaviour
 
     private void OnStateChanged(EnemyState oldState, EnemyState newState)
     {
-        CurrentStateValue = newState;
+        if (isStandaloneMode) localState = newState;
         if (newState == EnemyState.Patrol)
         {
             targetPlayer = null;

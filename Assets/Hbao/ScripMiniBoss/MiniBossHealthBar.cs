@@ -3,12 +3,13 @@ using UnityEngine.UIElements;
 
 /// <summary>
 /// Script managing the Mini Boss HUD health bar using UI Toolkit (UXML + USS).
-/// Includes slow yellow draining lag bar, hit shake, and hit flash effects.
+/// Displays main boss health bar with yellow lag drain, hit shake, and hit flash.
+/// UI appears when player activates the Mini Boss trigger box, and hides when Main Boss dies.
 /// </summary>
 public class MiniBossHealthBar : MonoBehaviour
 {
     [Header("References")]
-    [Tooltip("Reference to the MiniBossAI component (auto-discovered if empty)")]
+    [Tooltip("Reference to the main MiniBossAI component (auto-discovered if empty)")]
     public MiniBossAI boss;
     
     [Tooltip("Reference to the UIDocument containing the layout")]
@@ -20,6 +21,7 @@ public class MiniBossHealthBar : MonoBehaviour
     private Label nameLabel;
     private Label hpTextLabel;
 
+    // Lag bar tracking for main boss
     private float displayedHealth = -1f;
     private float yellowHealth = -1f;
     private float yellowDrainDelay = 0.5f;
@@ -39,7 +41,7 @@ public class MiniBossHealthBar : MonoBehaviour
         
         if (boss == null)
         {
-            boss = FindFirstObjectByType<MiniBossAI>();
+            FindMainBoss();
         }
 
         InitBossHealthAndName();
@@ -58,9 +60,23 @@ public class MiniBossHealthBar : MonoBehaviour
         }
     }
 
+    private void FindMainBoss()
+    {
+        var allBosses = FindObjectsByType<MiniBossAI>(FindObjectsSortMode.None);
+        foreach (var b in allBosses)
+        {
+            if (b != null && b.gameObject.activeInHierarchy && b.enabled && !b.isClone)
+            {
+                boss = b;
+                break;
+            }
+        }
+    }
+
     private void InitBossHealthAndName()
     {
-        if (boss == null)
+        // Ẩn HUD mặc định cho tới khi Player đi vào Trigger Box kích hoạt Boss (IsBossActive == true)
+        if (boss == null || !boss.IsBossActive || boss.IsDead)
         {
             if (rootContainer != null) rootContainer.style.display = DisplayStyle.None;
             return;
@@ -68,7 +84,7 @@ public class MiniBossHealthBar : MonoBehaviour
 
         if (rootContainer != null)
         {
-            rootContainer.style.display = boss.IsBossActive ? DisplayStyle.Flex : DisplayStyle.None;
+            rootContainer.style.display = DisplayStyle.Flex;
         }
 
         string bossName = boss.gameObject.name;
@@ -101,27 +117,33 @@ public class MiniBossHealthBar : MonoBehaviour
 
     private void Update()
     {
-        if (boss == null || !boss.gameObject.activeInHierarchy || !boss.enabled)
-        {
-            HideUI();
-            return;
-        }
-
-        // Check if Final Boss HUD is active to prevent UI overlap
+        // 1. Check if Final Boss HUD is active to prevent UI overlap
         var finalBoss = FindFirstObjectByType<FinalBossAI>();
         bool isFinalBossActive = finalBoss != null && 
             finalBoss.gameObject.activeInHierarchy && 
             finalBoss.CurrentStateValue != FinalBossAI.FinalBossState.Sitting && 
             !finalBoss.IsDead;
 
-        // Hide UI if boss is dead, inactive, or if Final Boss HUD is active
-        if (boss.IsDead || !boss.IsBossActive || boss.ActualCurrentHealth <= 0 || isFinalBossActive)
+        if (isFinalBossActive)
         {
             HideUI();
             return;
         }
 
-        // Show UI if active and alive
+        // 2. Discover main boss
+        if (boss == null || !boss.gameObject.activeInHierarchy || boss.isClone)
+        {
+            FindMainBoss();
+        }
+
+        // 3. CHỈ HIỂN THỊ HUD khi Main Boss tồn tại, active qua trigger box (IsBossActive == true) và chưa chết
+        if (boss == null || !boss.IsBossActive || boss.IsDead || boss.ActualCurrentHealth <= 0)
+        {
+            HideUI();
+            return;
+        }
+
+        // Show HUD container if boss trigger box was activated and boss is alive
         if (rootContainer != null && rootContainer.style.display == DisplayStyle.None)
         {
             rootContainer.style.display = DisplayStyle.Flex;
@@ -147,23 +169,29 @@ public class MiniBossHealthBar : MonoBehaviour
             }
         }
 
-        UpdateHealthAnimation();
+        UpdateMainHealthAnimation(boss);
     }
 
-    private void UpdateHealthAnimation()
+    private void UpdateMainHealthAnimation(MiniBossAI targetBoss)
     {
-        if (boss == null) return;
-
         if (progressBar == null || yellowBar == null || nameLabel == null || hpTextLabel == null)
         {
             QueryVisualElements();
             return;
         }
 
-        float maxHp = boss.maxHealth;
+        if (targetBoss == null)
+        {
+            progressBar.style.width = Length.Percent(0);
+            yellowBar.style.width = Length.Percent(0);
+            hpTextLabel.text = "0 / 0 (Đã hạ)";
+            return;
+        }
+
+        float maxHp = targetBoss.maxHealth;
         if (maxHp <= 0f) maxHp = 500f;
 
-        float actualHp = boss.ActualCurrentHealth;
+        float actualHp = targetBoss.ActualCurrentHealth;
 
         if (displayedHealth < 0f)
         {
@@ -204,7 +232,6 @@ public class MiniBossHealthBar : MonoBehaviour
             yellowDrainTimer += Time.deltaTime;
             if (yellowDrainTimer >= yellowDrainDelay)
             {
-                // Smoothly drain the yellow bar
                 yellowHealth = Mathf.MoveTowards(yellowHealth, actualHp, maxHp * 0.35f * Time.deltaTime);
             }
         }

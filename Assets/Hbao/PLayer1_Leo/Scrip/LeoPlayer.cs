@@ -4845,9 +4845,79 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     }
 
 
-    private void PerformRaycastAttack()
+
+
+    public void PerformRaycastSlashDamage(float rangeMultiplier = 1.0f)
     {
-        // Raycast Attack đã bị xóa hoàn toàn. Tấn công cận chiến hiện tại dùng Hitbox Event Animation 100%.
+        bool isAuth = isStandaloneMode || (IsSpawned && IsOwner) || (IsSpawned && IsServer);
+        if (!isAuth) return;
+
+        float sweepRadius = 1.4f;
+        float sweepDistance = (attackRange > 0 ? attackRange : 2.5f) * rangeMultiplier + 0.8f;
+        Vector3 origin = transform.position + Vector3.up * 1.1f;
+        Vector3 direction = transform.forward;
+
+        // Quét Raycast/SphereCast 140 độ phía trước ngực Leo trùng khớp với Animation Event chém
+        RaycastHit[] hits = Physics.SphereCastAll(origin, sweepRadius, direction, sweepDistance);
+        foreach (var hit in hits)
+        {
+            if (hit.collider == null) continue;
+            GameObject hitGo = hit.collider.gameObject;
+            if (hitGo == gameObject || hitGo.transform.IsChildOf(transform)) continue;
+
+            Transform enemyRoot = GetEnemyRootFromCollider(hit.collider);
+            if (enemyRoot != null && !alreadyHitEnemies.Contains(enemyRoot))
+            {
+                alreadyHitEnemies.Add(enemyRoot);
+                float actualDamage = damageAmount;
+                Vector3 knockbackForce = transform.forward * 3.5f + Vector3.up * 1.0f;
+                
+                // Trừ máu quái ngay lập tức trùng khớp với Event Animation
+                EnemyDamageHelper.DealDamage(enemyRoot, actualDamage, knockbackForce);
+
+                if (hitClip != null) PlayPlayerSFX(hitClip, 0.9f);
+                EnemyDamageEffectHelper.PlayDamageEffects(enemyRoot.gameObject, actualDamage);
+
+                Debug.Log($"[LeoPlayer Raycast Combat] Raycast chém trúng quái: {enemyRoot.name} ({actualDamage} DMG)");
+            }
+        }
+    }
+
+    private Transform GetEnemyRootFromCollider(Collider col)
+    {
+        if (col == null) return null;
+        if (col.CompareTag("Player") || col.gameObject.layer == LayerMask.NameToLayer("Player")) return null;
+
+        var e1 = col.GetComponentInParent<Enemy1_DapBua>() ?? col.GetComponentInChildren<Enemy1_DapBua>();
+        if (e1 != null) return e1.transform;
+
+        var e2 = col.GetComponentInParent<Enemy2_Zombie>() ?? col.GetComponentInChildren<Enemy2_Zombie>();
+        if (e2 != null) return e2.transform;
+
+        var e3 = col.GetComponentInParent<Enemy3_Buaa>() ?? col.GetComponentInChildren<Enemy3_Buaa>();
+        if (e3 != null) return e3.transform;
+
+        var e4 = col.GetComponentInParent<Enemy4_Bongtoi>() ?? col.GetComponentInChildren<Enemy4_Bongtoi>();
+        if (e4 != null) return e4.transform;
+
+        var e5 = col.GetComponentInParent<Enemy5_PhuThuy>() ?? col.GetComponentInChildren<Enemy5_PhuThuy>();
+        if (e5 != null) return e5.transform;
+
+        var mb = col.GetComponentInParent<MiniBossAI>() ?? col.GetComponentInChildren<MiniBossAI>();
+        if (mb != null) return mb.transform;
+
+        var fb = col.GetComponentInParent<FinalBossAI>() ?? col.GetComponentInChildren<FinalBossAI>();
+        if (fb != null) return fb.transform;
+
+        var b = col.GetComponentInParent<BossAI>() ?? col.GetComponentInChildren<BossAI>();
+        if (b != null) return b.transform;
+
+        var sk = col.GetComponentInParent<Skeleton>() ?? col.GetComponentInChildren<Skeleton>();
+        if (sk != null) return sk.transform;
+
+        if (col.CompareTag("Enemy") || col.gameObject.layer == LayerMask.NameToLayer("Enemy")) return col.transform;
+
+        return null;
     }
 
     private void TryDamageEnemy(Collider col)
@@ -5241,39 +5311,27 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         }
 
         SetMovementLock(false);
-        InterruptCombo(); // Ng\u1eaft combo khi b\u1ecb tr\u00fang \u0111\u00f2n
+        InterruptCombo();
 
-        if (isStandaloneMode)
+        // 1. Trừ máu localHealth và cập nhật HUD/Hiệu ứng chớp đỏ lập tức
+        localHealth = Mathf.Max(localHealth - damage, 0f);
+        UpdateHealthHUD(localHealth);
+
+        var flash = GetComponent<MaterialFlashBehaviour>();
+        if (flash == null) flash = gameObject.AddComponent<MaterialFlashBehaviour>();
+        flash.Flash(Color.red, 0.15f);
+
+        Debug.Log($"[LeoPlayer] Recieved {damage} DMG. Local Health: {localHealth}");
+
+        // 2. Đồng bộ NetworkVariable trên Server nếu đang trong chế độ Network
+        if (!isStandaloneMode && IsServer)
         {
-            localHealth = Mathf.Max(localHealth - damage, 0f);
-            UpdateHealthHUD(localHealth);
-            Debug.Log($"[LeoPlayer Standalone] Recieved {damage} DMG. Health: {localHealth}");
-
-            var flash = GetComponent<MaterialFlashBehaviour>();
-            if (flash == null) flash = gameObject.AddComponent<MaterialFlashBehaviour>();
-            flash.Flash(Color.red, 0.15f);
-
-            if (localHealth <= 0)
-            {
-                targetMoveVelocity = Vector3.zero;
-                if (rb != null) { rb.linearVelocity = Vector3.zero; rb.angularVelocity = Vector3.zero; }
-                PlayAnimation("Death", 0.15f);
-            }
-            else
-            {
-                string hitAnim = Random.value < 0.5f ? "GetHit" : "GeiHit2";
-                PlayAnimation(hitAnim, 0.05f);
-            }
-            return;
+            float finalHp = Mathf.Max(currentHealth.Value - damage, 0f);
+            SyncNetVarFloat(currentHealth, proxyPlayerTest != null ? proxyPlayerTest.currentHealth : null, finalHp);
         }
 
-        if (!IsServer) return;
-
-        float finalHp = Mathf.Max(currentHealth.Value - damage, 0f);
-        SyncNetVarFloat(currentHealth, proxyPlayerTest != null ? proxyPlayerTest.currentHealth : null, finalHp);
-        Debug.Log($"[LeoPlayer Server] Client {OwnerClientId} recieved {damage} DMG. Health: {currentHealth.Value}");
-
-        if (currentHealth.Value <= 0)
+        // 3. Xử lý bị dính đòn / chết
+        if (localHealth <= 0 || (!isStandaloneMode && IsServer && currentHealth.Value <= 0))
         {
             targetMoveVelocity = Vector3.zero;
             if (rb != null) { rb.linearVelocity = Vector3.zero; rb.angularVelocity = Vector3.zero; }
@@ -6459,47 +6517,53 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         if (rb != null) rb.linearVelocity = Vector3.zero;
 
-        Transform currentTarget = initialTarget;
-        float interval = qSkillDuration / Mathf.Max(qSkillSlashCount, 1);
-
-        for (int i = 0; i < qSkillSlashCount; i++)
+        try
         {
-            // Kiểm tra mục tiêu hiện tại
-            if (currentTarget == null || IsEnemyDead(currentTarget))
+            Transform currentTarget = initialTarget;
+            float interval = qSkillDuration / Mathf.Max(qSkillSlashCount, 1);
+
+            for (int i = 0; i < qSkillSlashCount; i++)
             {
-                currentTarget = FindNearestAliveEnemy();
-                if (currentTarget == null)
+                // Kiểm tra mục tiêu hiện tại
+                if (currentTarget == null || IsEnemyDead(currentTarget))
                 {
-                    Debug.Log("[LeoPlayer] Q Skill: Không còn enemy, kết thúc sớm.");
-                    break;
+                    currentTarget = FindNearestAliveEnemy();
+                    if (currentTarget == null)
+                    {
+                        Debug.Log("[LeoPlayer] Q Skill: Không còn enemy, kết thúc sớm.");
+                        break;
+                    }
                 }
+
+                // Dịch chuyển xung quanh mục tiêu tại vị trí an toàn không bị cản tường
+                Vector3 slashPos = CalculateValidSlashPosition(transform.position, currentTarget);
+                transform.position = slashPos;
+
+                // Xoay mặt về phía mục tiêu
+                Vector3 dir = (currentTarget.position - transform.position);
+                dir.y = 0f;
+                if (dir.sqrMagnitude > 0.001f) transform.rotation = Quaternion.LookRotation(dir.normalized);
+
+                // Gây sát thương
+                TryDamageSpecificEnemy(currentTarget, qSkillDamagePerSlash);
+
+                // Phát VFX chém cục bộ ở tâm mục tiêu
+                Vector3 targetCenter = GetTargetCenterPosition(currentTarget);
+                SpawnQSlashVfxLocal(targetCenter);
+
+                qSkillTimeRemaining -= interval;
+                yield return new WaitForSeconds(interval);
             }
-
-            // Dịch chuyển xung quanh mục tiêu tại vị trí an toàn không bị cản tường
-            Vector3 slashPos = CalculateValidSlashPosition(transform.position, currentTarget);
-            transform.position = slashPos;
-
-            // Xoay mặt về phía mục tiêu
-            Vector3 dir = (currentTarget.position - transform.position);
-            dir.y = 0f;
-            if (dir.sqrMagnitude > 0.001f) transform.rotation = Quaternion.LookRotation(dir.normalized);
-
-            // Gây sát thương
-            TryDamageSpecificEnemy(currentTarget, qSkillDamagePerSlash);
-
-            // Phát VFX chém cục bộ ở tâm mục tiêu
-            Vector3 targetCenter = GetTargetCenterPosition(currentTarget);
-            SpawnQSlashVfxLocal(targetCenter);
-
-            qSkillTimeRemaining -= interval;
-            yield return new WaitForSeconds(interval);
         }
-
-        // Kết thúc Skill Q
-        isQSkillActiveLocal = false;
-        qSkillTimeRemaining = 0f;
-        isMovementLocked = false;
-        SetLeoRenderersActive(true);
+        finally
+        {
+            // BẢO ĐẢM 100%: Tự động mở khóa di chuyển & khôi phục hiển thị nhân vật trong MỌI TRƯỜNG HỢP
+            isQSkillActiveLocal = false;
+            qSkillTimeRemaining = 0f;
+            isMovementLocked = false;
+            SetLeoRenderersActive(true);
+            if (rb != null) rb.linearVelocity = Vector3.zero;
+        }
     }
 
     /// <summary>
@@ -6517,47 +6581,52 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         // Đồng bộ timer về client owner
         UpdateQTimerClientRpc(remaining);
 
-        Transform currentTarget = initialTarget;
-
-        for (int i = 0; i < qSkillSlashCount; i++)
+        try
         {
-            // Kiểm tra mục tiêu hiện tại
-            if (currentTarget == null || IsEnemyDead(currentTarget))
+            Transform currentTarget = initialTarget;
+
+            for (int i = 0; i < qSkillSlashCount; i++)
             {
-                currentTarget = FindNearestAliveEnemy();
-                if (currentTarget == null)
+                // Kiểm tra mục tiêu hiện tại
+                if (currentTarget == null || IsEnemyDead(currentTarget))
                 {
-                    Debug.Log("[LeoPlayer Server] Q Skill: Không còn enemy, kết thúc sớm.");
-                    break;
+                    currentTarget = FindNearestAliveEnemy();
+                    if (currentTarget == null)
+                    {
+                        Debug.Log("[LeoPlayer Server] Q Skill: Không còn enemy, kết thúc sớm.");
+                        break;
+                    }
                 }
+
+                // Dịch chuyển xung quanh mục tiêu tại vị trí an toàn không bị cản tường
+                Vector3 slashPos = CalculateValidSlashPosition(transform.position, currentTarget);
+                transform.position = slashPos;
+
+                // Xoay mặt về phía mục tiêu
+                Vector3 dir = (currentTarget.position - transform.position);
+                dir.y = 0f;
+                if (dir.sqrMagnitude > 0.001f) transform.rotation = Quaternion.LookRotation(dir.normalized);
+
+                // Gây sát thương
+                TryDamageSpecificEnemy(currentTarget, qSkillDamagePerSlash);
+
+                // Gọi ClientRpc để phát VFX chém ở tất cả client tại tâm mục tiêu
+                Vector3 targetCenter = GetTargetCenterPosition(currentTarget);
+                PlayQSlashVfxClientRpc(targetCenter);
+
+                remaining -= interval;
+                UpdateQTimerClientRpc(Mathf.Max(0f, remaining));
+                yield return new WaitForSeconds(interval);
             }
-
-            // Dịch chuyển xung quanh mục tiêu tại vị trí an toàn không bị cản tường
-            Vector3 slashPos = CalculateValidSlashPosition(transform.position, currentTarget);
-            transform.position = slashPos;
-
-            // Xoay mặt về phía mục tiêu
-            Vector3 dir = (currentTarget.position - transform.position);
-            dir.y = 0f;
-            if (dir.sqrMagnitude > 0.001f) transform.rotation = Quaternion.LookRotation(dir.normalized);
-
-            // Gây sát thương
-            TryDamageSpecificEnemy(currentTarget, qSkillDamagePerSlash);
-
-            // Gọi ClientRpc để phát VFX chém ở tất cả client tại tâm mục tiêu
-            Vector3 targetCenter = GetTargetCenterPosition(currentTarget);
-            PlayQSlashVfxClientRpc(targetCenter);
-
-            remaining -= interval;
-            UpdateQTimerClientRpc(Mathf.Max(0f, remaining));
-            yield return new WaitForSeconds(interval);
         }
-
-        // Kết thúc Skill Q
-        isQSkillActiveNet.Value = false;
-        SetQSkillStateClientRpc(false);
-        SetMovementLockServerSide(false);
-        UpdateQTimerClientRpc(0f);
+        finally
+        {
+            // BẢO ĐẢM 100%: Tự động mở khóa di chuyển & reset trạng thái mạng cho tất cả Client
+            isQSkillActiveNet.Value = false;
+            SetQSkillStateClientRpc(false);
+            SetMovementLockServerSide(false);
+            UpdateQTimerClientRpc(0f);
+        }
     }
 
     private void SetMovementLockServerSide(bool locked)
@@ -6573,6 +6642,10 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     {
         qSkillTimeRemaining = active ? qSkillDuration : 0f;
         SetLeoRenderersActive(!active);
+        if (!active)
+        {
+            isMovementLocked = false;
+        }
     }
 
     [ClientRpc]
@@ -6670,6 +6743,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         else
         {
             qSkillTimeRemaining = 0f;
+            isMovementLocked = false; // Bảo đảm 100% mở khóa di chuyển khi kỹ năng Q kết thúc
         }
     }
 
@@ -6952,7 +7026,10 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     private void OnHealthChangedShared(float oldHealth, float newHealth)
     {
+        if (isStandaloneMode) return;
+
         localHealth = newHealth;
+        UpdateHealthHUD(localHealth);
 
         if (newHealth < oldHealth)
         {
@@ -8362,11 +8439,8 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     private void OnMovementLockedNetChanged(bool oldVal, bool newVal)
     {
-        if (!IsOwner)
-        {
-            isMovementLocked = newVal;
-            if (newVal && rb != null) rb.linearVelocity = new Vector3(0f, rb.linearVelocity.y, 0f);
-        }
+        isMovementLocked = newVal;
+        if (newVal && rb != null) rb.linearVelocity = new Vector3(0f, rb.linearVelocity.y, 0f);
     }
 
     // ======================================================
@@ -8440,9 +8514,9 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     // --- Đấm tay / Hitbox tổng hợp ---
     public void EnableLeftHitbox()
     {
-        alreadyHitEnemies.Clear();
         EnsureHitboxComponent(leftHitbox);
         SafeSetHitboxEnabled(leftHitbox, true);
+        PerformRaycastSlashDamage(1.0f);
     }
     public void DisableLeftHitbox()
     {
@@ -8451,9 +8525,9 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     public void EnableRightHitbox()
     {
-        alreadyHitEnemies.Clear();
         EnsureHitboxComponent(rightHitbox);
         SafeSetHitboxEnabled(rightHitbox, true);
+        PerformRaycastSlashDamage(1.0f);
     }
     public void DisableRightHitbox()
     {
@@ -8462,11 +8536,11 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     public void EnableBothHitboxes()
     {
-        alreadyHitEnemies.Clear();
         EnsureHitboxComponent(leftHitbox);
         EnsureHitboxComponent(rightHitbox);
         SafeSetHitboxEnabled(leftHitbox, true);
         SafeSetHitboxEnabled(rightHitbox, true);
+        PerformRaycastSlashDamage(1.2f);
     }
     public void DisableBothHitboxes()
     {
@@ -8477,9 +8551,9 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     // --- Kiếm / Vũ khí: Tay Trái ---
     public void EnableLeftWeaponHitbox()
     {
-        alreadyHitEnemies.Clear();
         EnsureHitboxComponent(leftWeaponHitbox);
         SafeSetHitboxEnabled(leftWeaponHitbox, true);
+        PerformRaycastSlashDamage(1.0f);
     }
     public void DisableLeftWeaponHitbox()
     {
@@ -8489,9 +8563,9 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     // --- Kiếm / Vũ khí: Tay Phải ---
     public void EnableRightWeaponHitbox()
     {
-        alreadyHitEnemies.Clear();
         EnsureHitboxComponent(rightWeaponHitbox);
         SafeSetHitboxEnabled(rightWeaponHitbox, true);
+        PerformRaycastSlashDamage(1.0f);
     }
     public void DisableRightWeaponHitbox()
     {
@@ -8503,11 +8577,11 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     public void DisableBothWeaponHitbox() { DisableBothWeaponHitboxes(); }
     public void EnableBothWeaponHitboxes()
     {
-        alreadyHitEnemies.Clear();
         EnsureHitboxComponent(leftWeaponHitbox);
         EnsureHitboxComponent(rightWeaponHitbox);
         SafeSetHitboxEnabled(leftWeaponHitbox, true);
         SafeSetHitboxEnabled(rightWeaponHitbox, true);
+        PerformRaycastSlashDamage(1.25f);
     }
     public void DisableBothWeaponHitboxes()
     {
@@ -8518,11 +8592,11 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     // --- Rìu (Axe) ---
     public void EnableAxeWeaponHitbox()
     {
-        alreadyHitEnemies.Clear();
         EnsureHitboxComponent(axeWeaponHitbox);
         SafeSetHitboxEnabled(axeWeaponHitbox, true);
         SafeSetHitboxEnabled(leftWeaponHitbox, true);
         SafeSetHitboxEnabled(rightWeaponHitbox, true);
+        PerformRaycastSlashDamage(1.35f);
     }
     public void DisableAxeWeaponHitbox()
     {

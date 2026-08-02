@@ -583,9 +583,12 @@ public class ChoppableTree : NetworkBehaviour
     private IEnumerator AnimateScatteredWoodChipsAndMerge(int woodAmount, bool isNetwork)
     {
         // 1. Tính toán điểm đáp đất cuối cùng của Bó Gỗ (ngoài hẳn gốc cây 3.5m -> 4.5m)
-        float angleMain = Random.Range(0f, 360f) * Mathf.Deg2Rad;
+        // Sử dụng hạt giống tọa độ cây (transform.position) để tạo vị trí chuẩn xác 100% giống nhau giữa Server và tất cả Client!
+        float treeHash = Mathf.Abs(Mathf.Sin(Vector3.Dot(transform.position, new Vector3(12.9898f, 78.233f, 37.719f))) * 43758.5453f) % 1.0f;
+        float angleMain = (treeHash * 360f) * Mathf.Deg2Rad;
+        float bundleDist = 3.5f + (treeHash * 1.0f); // Bán kính nảy 3.5m -> 4.5m
         Vector3 mainDir = new Vector3(Mathf.Cos(angleMain), 0f, Mathf.Sin(angleMain)).normalized;
-        Vector3 bundleLandPos = transform.position + mainDir * Random.Range(3.5f, 4.5f);
+        Vector3 bundleLandPos = transform.position + mainDir * bundleDist;
 
         // Bắn Raycast tìm chính xác độ cao đất cho điểm nảy bó gỗ
         float groundY = transform.position.y;
@@ -614,12 +617,14 @@ public class ChoppableTree : NetworkBehaviour
 
         for (int i = 0; i < chipCount; i++)
         {
-            // Mỗi mảnh gỗ văng ra theo 1 hướng ngẫu nhiên né xa gốc cây (3.2m -> 4.8m)
-            float chipAngle = (i * (360f / chipCount) + Random.Range(-25f, 25f)) * Mathf.Deg2Rad;
+            // Mỗi mảnh gỗ văng ra theo hướng đồng bộ né xa gốc cây (3.2m -> 4.8m)
+            float chipSeed = (treeHash + i * 0.173f) % 1.0f;
+            float chipAngle = (i * (360f / chipCount) + (chipSeed * 40f - 20f)) * Mathf.Deg2Rad;
             Vector3 chipDir = new Vector3(Mathf.Cos(chipAngle), 0f, Mathf.Sin(chipAngle)).normalized;
 
             Vector3 startP = transform.position + chipDir * 1.5f + Vector3.up * 1.8f;
-            Vector3 landP = transform.position + chipDir * Random.Range(3.2f, 4.8f);
+            float chipDist = 3.2f + (chipSeed * 1.4f);
+            Vector3 landP = transform.position + chipDir * chipDist;
             
             // Raycast tìm đất cho mảnh gỗ nhỏ
             Vector3 chipRay = new Vector3(landP.x, transform.position.y + 5f, landP.z);
@@ -780,6 +785,13 @@ public class ChoppableTree : NetworkBehaviour
         // 5. Sinh ra Bó Gỗ chính (woodLogPrefab / wood_stack) đúng vị trí nảy gộp
         if (woodLogPrefab != null)
         {
+            // Trong chế độ Mạng (Network): Chỉ SERVER mới khởi tạo Bó Gỗ và Spawn NetworkObject.
+            // Client kết nối sẽ tự động nhận 1 Bó Gỗ duy nhất từ Server qua Netcode!
+            if (isNetwork && !IsServer)
+            {
+                yield break;
+            }
+
             GameObject log = WoodLogObjectPool.Instance.GetOrCreate(woodLogPrefab, bundleLandPos, Quaternion.identity);
             
             // Đặt tất cả Colliders trên Bó Gỗ thành IsTrigger = true
@@ -790,17 +802,17 @@ public class ChoppableTree : NetworkBehaviour
                 if (c != null) c.isTrigger = true;
             }
 
-            if (isNetwork && IsServer)
-            {
-                var netObj = log.GetComponent<NetworkObject>();
-                if (netObj != null) netObj.Spawn();
-            }
-
             var cid = log.GetComponent<CollectibleItemDrop>();
             if (cid != null)
             {
                 if (isNetwork && IsServer) cid.woodAmount.Value = woodAmount;
                 else cid.localWoodAmount = woodAmount;
+            }
+
+            if (isNetwork && IsServer)
+            {
+                var netObj = log.GetComponent<NetworkObject>();
+                if (netObj != null && !netObj.IsSpawned) netObj.Spawn();
             }
 
             // Hiệu ứng nảy pop-up nở ra cho bó gỗ chính khi xuất hiện
