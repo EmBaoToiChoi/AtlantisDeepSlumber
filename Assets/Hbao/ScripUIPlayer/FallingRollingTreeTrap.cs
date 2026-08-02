@@ -63,15 +63,18 @@ public class FallingRollingTreeTrap : NetworkBehaviour
     private bool isStandaloneMode = false;
 
     private bool IsNetworkActive => NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
-    private bool IsServerAuth => isStandaloneMode || (IsNetworkActive && IsServer);
+    private bool IsServerAuth => isStandaloneMode || NetworkManager.Singleton == null || !NetworkManager.Singleton.IsListening || (NetworkManager.Singleton != null && NetworkManager.Singleton.IsServer);
 
     public TreeState CurrentState
     {
-        get => isStandaloneMode ? localState : currentStateNet.Value;
+        get => isStandaloneMode ? localState : (IsSpawned ? currentStateNet.Value : localState);
         private set
         {
-            if (isStandaloneMode) localState = value;
-            else if (IsServer) currentStateNet.Value = value;
+            localState = value;
+            if (!isStandaloneMode && IsSpawned && IsServer)
+            {
+                currentStateNet.Value = value;
+            }
         }
     }
 
@@ -85,13 +88,36 @@ public class FallingRollingTreeTrap : NetworkBehaviour
 
     private void Awake()
     {
-        if (treeMesh == null) treeMesh = transform;
+        // TỰ ĐỘNG ĐỊNH VỊ ROOT CÂY HIỂN THỊ THỰC SỰ (TreeTroll)
+        // Tránh trường hợp ô Tree Mesh bị gán nhầm vào child 'MeshCollider' khiến chỉ Collider xoay còn hình ảnh cây đứng im!
+        if (treeMesh == null || treeMesh.name.Contains("MeshCollider"))
+        {
+            var lod = GetComponentInParent<LODGroup>() ?? GetComponentInChildren<LODGroup>();
+            if (lod != null)
+            {
+                treeMesh = lod.transform;
+            }
+            else if (transform.parent != null && transform.parent.name.Contains("Tree"))
+            {
+                treeMesh = transform.parent;
+            }
+            else if (transform.root != null)
+            {
+                treeMesh = transform.root;
+            }
+            else
+            {
+                treeMesh = transform;
+            }
+        }
+
         initialRotation = treeMesh.rotation;
         targetFallRotation = initialRotation * Quaternion.Euler(fallRotationAngle);
 
         if (wallLayer == 0)
         {
-            wallLayer = LayerMask.GetMask("Default", "Environment", "Wall", "Obstacle", "Ground");
+            wallLayer = LayerMask.GetMask("Wall", "Obstacle", "Environment");
+            if (wallLayer == 0) wallLayer = LayerMask.GetMask("Default");
         }
     }
 
@@ -137,6 +163,10 @@ public class FallingRollingTreeTrap : NetworkBehaviour
             }
             treeDamageCollider = autoBox;
         }
+        else
+        {
+            treeDamageCollider.isTrigger = true;
+        }
     }
 
     public override void OnNetworkSpawn()
@@ -155,33 +185,51 @@ public class FallingRollingTreeTrap : NetworkBehaviour
 
     private void SetupTriggerProxies()
     {
-        // 1. Box 1: Fall Trigger
+        // 1. Box 1: Fall Trigger (Đảm bảo 100% isTrigger = true và Rigidbody Kinematic)
         if (fallTriggerBox != null)
         {
+            fallTriggerBox.isTrigger = true;
+            EnsureKinematicRigidbody(fallTriggerBox.gameObject);
             fallProxy = fallTriggerBox.gameObject.GetComponent<TriggerProxy>() ?? fallTriggerBox.gameObject.AddComponent<TriggerProxy>();
             fallProxy.onTriggerEnterAction = OnFallTriggerEntered;
+            fallProxy.onTriggerStayAction = OnFallTriggerEntered;
         }
 
-        // 2. Box 2: Roll Trigger
+        // 2. Box 2: Roll Trigger (Đảm bảo 100% isTrigger = true và Rigidbody Kinematic)
         if (rollTriggerBox != null)
         {
+            rollTriggerBox.isTrigger = true;
+            EnsureKinematicRigidbody(rollTriggerBox.gameObject);
             rollProxy = rollTriggerBox.gameObject.GetComponent<TriggerProxy>() ?? rollTriggerBox.gameObject.AddComponent<TriggerProxy>();
             rollProxy.onTriggerEnterAction = OnRollTriggerEntered;
+            rollProxy.onTriggerStayAction = OnRollTriggerEntered;
         }
 
         // 3. Damage Trigger trên Cây
         if (treeDamageCollider != null)
         {
+            treeDamageCollider.isTrigger = true;
+            EnsureKinematicRigidbody(treeDamageCollider.gameObject);
             damageProxy = treeDamageCollider.gameObject.GetComponent<TriggerProxy>() ?? treeDamageCollider.gameObject.AddComponent<TriggerProxy>();
             damageProxy.onTriggerEnterAction = OnTreeDamageTriggerEntered;
             damageProxy.onTriggerStayAction = OnTreeDamageTriggerEntered;
         }
     }
 
+    private void EnsureKinematicRigidbody(GameObject go)
+    {
+        if (go == null) return;
+        var rb = go.GetComponent<Rigidbody>();
+        if (rb == null)
+        {
+            rb = go.AddComponent<Rigidbody>();
+        }
+        rb.isKinematic = true;
+        rb.useGravity = false;
+    }
+
     private void Update()
     {
-        if (!IsServerAuth) return;
-
         switch (CurrentState)
         {
             case TreeState.Falling:
@@ -197,14 +245,25 @@ public class FallingRollingTreeTrap : NetworkBehaviour
     // --- PHASE 1: KÍCH HOẠT CÂY NGÃ ---
     private void OnFallTriggerEntered(Collider other)
     {
-        if (!IsServerAuth) return;
-        if (CurrentState != TreeState.Standing) return;
+        if (other == null) return;
+        
+        Debug.Log($"[FallingRollingTreeTrap DEBUG] Vừa chạm Box 1 bởi Object: '{other.name}' (Tag: '{other.tag}', Layer: '{LayerMask.LayerToName(other.gameObject.layer)}'). State hiện tại: {CurrentState}");
+
+        if (CurrentState != TreeState.Standing)
+        {
+            Debug.LogWarning($"[FallingRollingTreeTrap DEBUG] Bỏ qua ngã vì CurrentState = {CurrentState} (không phải Standing)!");
+            return;
+        }
 
         if (IsPlayer(other.gameObject, out Transform playerTransform))
         {
-            Debug.Log($"[FallingRollingTreeTrap] Player {playerTransform.name} chạm Box 1 -> Cây bắt đầu ngã!");
+            Debug.Log($"<color=green>[FallingRollingTreeTrap SUCCESS] Nhận diện thành công Player '{playerTransform.name}' chạm Box 1 -> CÂY BẮT ĐẦU NGÃ!</color>");
             hitPlayersThisFall.Clear();
             CurrentState = TreeState.Falling;
+        }
+        else
+        {
+            Debug.LogWarning($"[FallingRollingTreeTrap DEBUG] Object '{other.name}' không được nhận diện là Player! Hãy kiểm tra Tag 'Player' hoặc Component Player.");
         }
     }
 
@@ -229,7 +288,6 @@ public class FallingRollingTreeTrap : NetworkBehaviour
     // Sát thương khi cây ngã (duy nhất 1 lần) & khi cây lăn (liên tục -5 HP) + Đẩy Player an toàn chống xuyên tường
     private void OnTreeDamageTriggerEntered(Collider other)
     {
-        if (!IsServerAuth) return;
         if (CurrentState != TreeState.Falling && CurrentState != TreeState.Rolling) return;
 
         if (IsPlayer(other.gameObject, out Transform playerTransform))
@@ -324,12 +382,15 @@ public class FallingRollingTreeTrap : NetworkBehaviour
     // --- PHASE 2: KÍCH HOẠT CÂY LĂN ---
     private void OnRollTriggerEntered(Collider other)
     {
-        if (!IsServerAuth) return;
+        if (other == null) return;
+
+        Debug.Log($"[FallingRollingTreeTrap DEBUG] Vừa chạm Box 2 bởi Object: '{other.name}' (Tag: '{other.tag}', Layer: '{LayerMask.LayerToName(other.gameObject.layer)}'). State hiện tại: {CurrentState}");
+
         if (CurrentState != TreeState.FallenOnGround && CurrentState != TreeState.Falling) return;
 
         if (IsPlayer(other.gameObject, out Transform playerTransform))
         {
-            Debug.Log($"[FallingRollingTreeTrap] Player {playerTransform.name} chạm Box 2 -> Cây bắt đầu lăn về phía trước!");
+            Debug.Log($"<color=green>[FallingRollingTreeTrap SUCCESS] Player '{playerTransform.name}' chạm Box 2 -> CÂY BẮT ĐẦU LĂN VỀ PHÍA TRƯỚC!</color>");
             treeMesh.rotation = targetFallRotation;
             CurrentState = TreeState.Rolling;
         }
@@ -337,26 +398,43 @@ public class FallingRollingTreeTrap : NetworkBehaviour
 
     private void UpdateTreeRolling()
     {
-        Vector3 moveDir = transform.TransformDirection(rollDirection).normalized;
-        if (moveDir.sqrMagnitude < 0.01f) moveDir = transform.forward;
+        Vector3 moveDir = rollDirection;
+        if (moveDir.sqrMagnitude < 0.01f)
+        {
+            moveDir = transform.forward;
+        }
+        moveDir.y = 0;
+        moveDir = moveDir.normalized;
+        if (moveDir.sqrMagnitude < 0.01f) moveDir = Vector3.forward;
 
         float moveDist = rollMoveSpeed * Time.deltaTime;
 
-        // Kiểm tra xem cây lăn có chạm Tường / Chướng ngại vật phía trước không
-        Vector3 rayOrigin = treeMesh.position + Vector3.up * 0.5f;
-        if (Physics.SphereCast(rayOrigin, 0.8f, moveDir, out RaycastHit hit, moveDist + 0.3f, wallLayer, QueryTriggerInteraction.Ignore))
+        // Kiểm tra xem cây lăn có chạm Tường / Chướng ngại vật phía trước không (Bỏ qua mặt đất & chính bản thân cây)
+        Vector3 rayOrigin = treeMesh.position + Vector3.up * 1.0f;
+        RaycastHit[] hits = Physics.SphereCastAll(rayOrigin, 0.7f, moveDir, moveDist + 0.5f, wallLayer, QueryTriggerInteraction.Ignore);
+        foreach (var hit in hits)
         {
-            if (!hit.collider.CompareTag("Player") && !hit.collider.CompareTag("Enemy") && hit.collider.gameObject != gameObject)
-            {
-                Debug.Log($"[FallingRollingTreeTrap] Cây lăn đụng tường ({hit.collider.name})! Dừng lại nằm yên tại chỗ, KHÔNG destroy.");
-                CurrentState = TreeState.StoppedAtWall;
-                return;
-            }
+            if (hit.collider == null) continue;
+            if (hit.collider.transform.IsChildOf(transform) || transform.IsChildOf(hit.collider.transform)) continue;
+            if (hit.collider.CompareTag("Player") || hit.collider.CompareTag("Enemy")) continue;
+
+            // Bỏ qua mặt đất phẳng (Normal hướng lên trời)
+            if (Vector3.Dot(hit.normal, Vector3.up) > 0.6f) continue;
+
+            Debug.Log($"[FallingRollingTreeTrap] Cây lăn đụng tường ({hit.collider.name})! Dừng lại nằm yên tại chỗ, KHÔNG destroy.");
+            CurrentState = TreeState.StoppedAtWall;
+            return;
         }
 
-        // Di chuyển cây lăn về phía trước & xoay tròn thân cây
+        // 1. Di chuyển cả cây tịnh tiến về phía trước theo moveDir
         treeMesh.position += moveDir * moveDist;
-        treeMesh.Rotate(Vector3.right * rollRotationSpeed * Time.deltaTime, Space.Self);
+
+        // 2. Tự động tính trục xoay tròn lăn bánh vuông góc với hướng di chuyển (Space.World)
+        Vector3 rollAxis = Vector3.Cross(Vector3.up, moveDir).normalized;
+        if (rollAxis.sqrMagnitude > 0.01f)
+        {
+            treeMesh.Rotate(rollAxis, rollRotationSpeed * Time.deltaTime, Space.World);
+        }
     }
 
     private bool IsPlayer(GameObject go, out Transform playerTransform)
@@ -364,21 +442,33 @@ public class FallingRollingTreeTrap : NetworkBehaviour
         playerTransform = null;
         if (go == null) return false;
 
-        if (go.CompareTag("Player"))
+        Transform root = go.transform.root;
+        if (root.CompareTag("Player") || go.CompareTag("Player"))
         {
-            playerTransform = go.transform;
+            playerTransform = root;
             return true;
         }
 
+        var leo = go.GetComponentInParent<LeoPlayer>();
+        if (leo != null) { playerTransform = leo.transform; return true; }
+
+        var arthur = go.GetComponentInParent<ArthurPlayer>();
+        if (arthur != null) { playerTransform = arthur.transform; return true; }
+
+        var elena = go.GetComponentInParent<ElenaPlayer>() ?? (MonoBehaviour)go.GetComponentInParent<ElenaArcher>();
+        if (elena != null) { playerTransform = elena.transform; return true; }
+
+        var maya = go.GetComponentInParent<MayaPlayer>() ?? (MonoBehaviour)go.GetComponentInParent<MayaSupport>();
+        if (maya != null) { playerTransform = maya.transform; return true; }
+
+        var cc = go.GetComponentInParent<CharacterController>();
+        if (cc != null) { playerTransform = cc.transform; return true; }
+
         var p = go.GetComponentInParent<IPlayerHUDTarget>() ?? go.GetComponentInChildren<IPlayerHUDTarget>();
-        if (p != null)
+        if (p != null && p is MonoBehaviour mono)
         {
-            MonoBehaviour mono = p as MonoBehaviour;
-            if (mono != null)
-            {
-                playerTransform = mono.transform;
-                return true;
-            }
+            playerTransform = mono.transform;
+            return true;
         }
 
         return false;
