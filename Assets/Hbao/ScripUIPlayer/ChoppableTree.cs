@@ -780,6 +780,13 @@ public class ChoppableTree : NetworkBehaviour
         // 5. Sinh ra Bó Gỗ chính (woodLogPrefab / wood_stack) đúng vị trí nảy gộp
         if (woodLogPrefab != null)
         {
+            // Trong chế độ Mạng (Network): Chỉ SERVER mới khởi tạo Bó Gỗ và Spawn NetworkObject.
+            // Client kết nối sẽ tự động nhận 1 Bó Gỗ duy nhất từ Server qua Netcode!
+            if (isNetwork && !IsServer)
+            {
+                yield break;
+            }
+
             GameObject log = WoodLogObjectPool.Instance.GetOrCreate(woodLogPrefab, bundleLandPos, Quaternion.identity);
             
             // Đặt tất cả Colliders trên Bó Gỗ thành IsTrigger = true
@@ -790,17 +797,17 @@ public class ChoppableTree : NetworkBehaviour
                 if (c != null) c.isTrigger = true;
             }
 
-            if (isNetwork && IsServer)
-            {
-                var netObj = log.GetComponent<NetworkObject>();
-                if (netObj != null) netObj.Spawn();
-            }
-
             var cid = log.GetComponent<CollectibleItemDrop>();
             if (cid != null)
             {
                 if (isNetwork && IsServer) cid.woodAmount.Value = woodAmount;
                 else cid.localWoodAmount = woodAmount;
+            }
+
+            if (isNetwork && IsServer)
+            {
+                var netObj = log.GetComponent<NetworkObject>();
+                if (netObj != null && !netObj.IsSpawned) netObj.Spawn();
             }
 
             // Hiệu ứng nảy pop-up nở ra cho bó gỗ chính khi xuất hiện

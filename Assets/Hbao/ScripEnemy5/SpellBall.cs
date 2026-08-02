@@ -4,8 +4,8 @@ using Unity.Netcode;
 public class SpellBall : NetworkBehaviour
 {
     [Header("Spell Ball Properties")]
-    public float speed = 12f;
-    public float damage = 20f;
+    public float speed = 14f;
+    public float damage = 10f;
     public float knockback = 3f;
     public float lifeTimer = 5f;
 
@@ -14,6 +14,7 @@ public class SpellBall : NetworkBehaviour
 
     private bool IsNetworkActive => NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
     private bool isHit = false;
+    private float spawnTime;
 
     private void Awake()
     {
@@ -25,6 +26,8 @@ public class SpellBall : NetworkBehaviour
 
     private void Start()
     {
+        spawnTime = Time.time;
+
         // Tự động đảm bảo có Collider dạng Trigger để bắt va chạm
         Collider rootCol = GetComponent<Collider>();
         if (rootCol == null)
@@ -52,7 +55,7 @@ public class SpellBall : NetworkBehaviour
 
     private void Update()
     {
-        // Di chuyển đạn về phía trước liên tục theo hướng transform.forward
+        // Di chuyển đạn về phía trước liên tục theo hướng transform.forward (bay song song mặt đất)
         if (!isHit)
         {
             transform.position += transform.forward * speed * Time.deltaTime;
@@ -86,6 +89,16 @@ public class SpellBall : NetworkBehaviour
         if (other.CompareTag("Enemy") || other.gameObject.layer == LayerMask.NameToLayer("Enemy"))
         {
             return;
+        }
+
+        // Bỏ qua va chạm với đất đai / địa hình trong 0.15 giây đầu vừa sinh ra để tránh đạn bị cắm xuống đất
+        if (Time.time - spawnTime < 0.15f)
+        {
+            string n = other.name.ToLower();
+            if (n.Contains("ground") || n.Contains("terrain") || n.Contains("floor") || n.Contains("map") || n.Contains("mesh"))
+            {
+                return;
+            }
         }
 
         bool isServerOrStandalone = !IsNetworkActive || IsServer;
