@@ -433,10 +433,10 @@ public class Enemy5_PhuThuy : NetworkBehaviour
             }
         }
 
-        if (wallBlocked)
+        if (wallBlocked && d > sightRange + 3.0f)
         {
             loseSightTimer += Time.deltaTime;
-            if (loseSightTimer > 1.5f)
+            if (loseSightTimer > 4.5f)
             {
                 targetPlayer = null;
                 ReturnToPatrol();
@@ -722,20 +722,16 @@ public class Enemy5_PhuThuy : NetworkBehaviour
 
     private void HandleAttack()
     {
-        if (targetPlayer == null || !IsPlayerAliveAndValid(targetPlayer))
-        {
-            // Nếu mất mục tiêu giữa chừng, vẫn tiếp tục gồng chưởng bắn ra phía trước
-        }
-
         if (AgentReady) agent.isStopped = true;
         SetSpeedNet(0f);
 
         stateTimer -= Time.deltaTime;
 
-        // Xoay mặt nhắm bắn chính xác về phía Player trong lúc gồng chưởng
-        if (targetPlayer != null && IsPlayerAliveAndValid(targetPlayer))
+        // BẢO ĐẢM 100%: Luôn luôn xoay mặt nhắm bắn chính xác về phía Player trong toàn bộ quá trình gồng chưởng
+        Transform aimTarget = (targetPlayer != null && IsPlayerAliveAndValid(targetPlayer)) ? targetPlayer : null;
+        if (aimTarget != null)
         {
-            Vector3 targetPos = GetPredictedTargetPosition(targetPlayer);
+            Vector3 targetPos = GetPredictedTargetPosition(aimTarget);
             Vector3 ld = (targetPos - transform.position); ld.y = 0;
             if (ld.sqrMagnitude > 0.01f)
             {
@@ -743,9 +739,9 @@ public class Enemy5_PhuThuy : NetworkBehaviour
             }
         }
 
-        // BẢO ĐẢM 100%: Dự phòng nếu Animation Event từ Keyframe bị lỡ/bỏ qua, đạn vẫn sẽ tự động phóng ở 45% thời lượng chiêu!
+        // BẢO ĐẢM 100%: Dự phòng nếu Animation Event từ Keyframe bị lỡ/bỏ qua, đạn vẫn sẽ tự động phóng ở 50% thời lượng chiêu!
         bool auth = isStandaloneMode || (IsNetworkActive && IsServer);
-        if (auth && !hasCastSpell && stateTimer <= attackDuration * 0.45f)
+        if (auth && !hasCastSpell && stateTimer <= attackDuration * 0.5f)
         {
             hasCastSpell = true;
             LaunchSpellBall();
@@ -761,6 +757,13 @@ public class Enemy5_PhuThuy : NetworkBehaviour
     {
         attackCooldownTimer = 1.6f;
         detectionTimer = 0f;
+        
+        // Nếu targetPlayer bị mất, tìm lại Player gần nhất rảnh rỗi trong tầm nhìn
+        if (targetPlayer == null || !IsPlayerAliveAndValid(targetPlayer))
+        {
+            targetPlayer = FindNearestAlivePlayer();
+        }
+
         if (targetPlayer != null && IsPlayerAliveAndValid(targetPlayer))
         {
             ChangeState(EnemyState.Chase);
@@ -861,6 +864,26 @@ public class Enemy5_PhuThuy : NetworkBehaviour
         }
 
         return list;
+    }
+
+    private Transform FindNearestAlivePlayer()
+    {
+        var list = GetAllAlivePlayers();
+        Transform nearest = null;
+        float minDist = float.MaxValue;
+        foreach (var p in list)
+        {
+            if (p != null)
+            {
+                float d = Vector3.Distance(transform.position, p.position);
+                if (d < minDist)
+                {
+                    minDist = d;
+                    nearest = p;
+                }
+            }
+        }
+        return nearest;
     }
 
     private void DetectPlayer()
@@ -1047,12 +1070,8 @@ public class Enemy5_PhuThuy : NetworkBehaviour
                                    Resources.Load<GameObject>("Hbao/Prefab/SpellBall");
         }
 
-        // Spawn point ở vị trí đầu gậy hoặc phía trước ngực Phù Thủy (cao 1.35m)
-        Vector3 spawnPt = staffTipTransform != null ? staffTipTransform.position : transform.position + transform.forward * 0.8f + Vector3.up * 1.35f;
-        if (spawnPt.y < transform.position.y + 1.2f)
-        {
-            spawnPt.y = transform.position.y + 1.2f;
-        }
+        // Spawn point vừa tầm ngực/bụng Người chơi (cao 0.75m), không bị bắn quá cao qua đầu
+        Vector3 spawnPt = transform.position + transform.forward * 0.9f + Vector3.up * 0.75f;
 
         // Nếu targetPlayer bị null đúng lúc bắn, bắn thẳng về phía trước theo transform.forward
         Vector3 targetPos = (targetPlayer != null && IsPlayerAliveAndValid(targetPlayer))

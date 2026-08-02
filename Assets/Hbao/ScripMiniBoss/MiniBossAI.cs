@@ -329,7 +329,59 @@ public class MiniBossAI : NetworkBehaviour
         else
             isBossActive.Value = true;
 
-        Debug.Log("[MiniBossAI] Mini Boss has been activated! Combat start!");
+        // BẢO ĐẢM 100%: Lập tức quét tìm Player gần nhất để rượt đuổi tấn công ngay lập tức!
+        DetectAndSwitchTarget();
+        if (targetPlayer == null)
+        {
+            targetPlayer = FindNearestReachablePlayer();
+        }
+        if (targetPlayer != null)
+        {
+            ChangeState(MiniBossState.Chase);
+        }
+
+        // Tự động khôi phục/gắn Thanh Máu hiển thị trên đầu nếu đây là Phân Thân
+        if (isClone)
+        {
+            EnsureCloneOverheadHealthBar();
+        }
+
+        Debug.Log($"[MiniBossAI] {(isClone ? "Phân Thân Mini Boss" : "Mini Boss")} đã KÍCH HOẠT! Nhắm mục tiêu: {(targetPlayer != null ? targetPlayer.name : "None")} - Xuất chiến rượt đuổi!");
+    }
+
+    public void EnsureCloneOverheadHealthBar()
+    {
+        if (!isClone) return;
+
+        var existingHealthBar = GetComponentInChildren<EnemyHealthBar>(true);
+        if (existingHealthBar != null)
+        {
+            existingHealthBar.gameObject.SetActive(true);
+            existingHealthBar.miniBoss = this;
+            return;
+        }
+
+        // Nếu Phân thân chưa có Canvas thanh máu trên đầu, tự động nhân bản từ Enemy khác trong Scene
+        EnemyHealthBar sample = FindFirstObjectByType<EnemyHealthBar>(FindObjectsInactive.Include);
+        if (sample != null && sample.gameObject != null)
+        {
+            GameObject newHealthBar = Instantiate(sample.gameObject, transform);
+            newHealthBar.name = "HealthBar";
+            newHealthBar.transform.localPosition = Vector3.up * 2.4f; // Cao hơn đầu 2.4m
+            newHealthBar.transform.localRotation = Quaternion.identity;
+            newHealthBar.transform.localScale = Vector3.one;
+            newHealthBar.SetActive(true);
+
+            EnemyHealthBar hpScript = newHealthBar.GetComponent<EnemyHealthBar>();
+            if (hpScript != null)
+            {
+                hpScript.enemy = null; hpScript.enemy2 = null; hpScript.enemy3 = null;
+                hpScript.enemy4 = null; hpScript.enemy5 = null; hpScript.skeleton = null;
+                hpScript.miniBoss = this;
+                hpScript.enabled = true;
+            }
+            Debug.Log("[MiniBossAI] Đã tự động tạo & hiển thị Thanh Máu World-Space trên đầu cho Phân Thân Mini Boss!");
+        }
     }
 
     public void TakeDamage(float damage)
@@ -423,9 +475,12 @@ public class MiniBossAI : NetworkBehaviour
         if (NavMesh.SamplePosition(targetPosLeft, out NavMeshHit hitL, 4.0f, NavMesh.AllAreas)) targetPosLeft = hitL.position;
         if (NavMesh.SamplePosition(targetPosRight, out NavMeshHit hitR, 4.0f, NavMesh.AllAreas)) targetPosRight = hitR.position;
 
-        // Sinh 2 phân thân ngay TẠI VỊ TRÍ GỐC TRONG THÂN CỦA MINI BOSS
+        // 1. Sinh 2 phân thân ngay TẠI VỊ TRÍ GỐC TRONG THÂN CỦA MINI BOSS với kích thước 0
         GameObject cloneLeft = Instantiate(prefabToSpawn, transform.position, transform.rotation);
         GameObject cloneRight = Instantiate(prefabToSpawn, transform.position, transform.rotation);
+
+        cloneLeft.transform.localScale = Vector3.zero;
+        cloneRight.transform.localScale = Vector3.zero;
 
         MiniBossAI leftAI = cloneLeft.GetComponent<MiniBossAI>();
         MiniBossAI rightAI = cloneRight.GetComponent<MiniBossAI>();
@@ -433,7 +488,17 @@ public class MiniBossAI : NetworkBehaviour
         ConfigureClone(leftAI);
         ConfigureClone(rightAI);
 
-        // Bắt đầu Coroutine hiệu ứng trượt 2 bóng phân thân từ trong thân ra 2 bên
+        // 2. Đồng bộ NetworkObject NGAY LẬP TỨC để tất cả Client cùng nhìn thấy 2 bóng xuất hiện
+        if (!isStandaloneMode && IsServer)
+        {
+            NetworkObject netL = cloneLeft.GetComponent<NetworkObject>();
+            if (netL != null && !netL.IsSpawned) netL.Spawn();
+
+            NetworkObject netR = cloneRight.GetComponent<NetworkObject>();
+            if (netR != null && !netR.IsSpawned) netR.Spawn();
+        }
+
+        // 3. Bắt đầu Coroutine hiệu ứng trượt 2 bóng phân thân từ trong thân ra 2 bên
         StartCoroutine(AnimateShadowClonesEmerging(cloneLeft, cloneRight, targetPosLeft, targetPosRight));
     }
 
@@ -446,8 +511,16 @@ public class MiniBossAI : NetworkBehaviour
         cloneAI.localHealth = phase1MaxHealth * 0.45f;
         cloneAI.maxHealth = phase1MaxHealth * 0.45f;
 
+        if (!cloneAI.isStandaloneMode && IsServer)
+        {
+            cloneAI.currentHealth.Value = cloneAI.maxHealth;
+        }
+
         // Tạm thời tắt agent trong lúc thực hiện hiệu ứng tách bóng từ thân
         if (cloneAI.agent != null) cloneAI.agent.enabled = false;
+
+        // Gắn thanh máu trên đầu cho Phân Thân
+        cloneAI.EnsureCloneOverheadHealthBar();
     }
 
     private IEnumerator AnimateShadowClonesEmerging(GameObject cloneL, GameObject cloneR, Vector3 targetL, Vector3 targetR)
@@ -511,23 +584,17 @@ public class MiniBossAI : NetworkBehaviour
             }
             cloneAI.ActivateBoss();
         }
-
-        if (!isStandaloneMode && IsServer)
-        {
-            NetworkObject netObj = cloneObj.GetComponent<NetworkObject>();
-            if (netObj != null && !netObj.IsSpawned)
-            {
-                netObj.Spawn();
-            }
-        }
     }
 
     private void PlaySummonCloneVisuals()
     {
-        Vector3 spawnPos = transform.position + Vector3.up * 1f;
+        Vector3 spawnPos = transform.position + Vector3.up * 0.5f;
         if (enrageVFXPrefab != null)
         {
-            GameObject vfx = Instantiate(enrageVFXPrefab, spawnPos, transform.rotation);
+            // Đi theo MiniBoss 100%
+            GameObject vfx = Instantiate(enrageVFXPrefab, spawnPos, transform.rotation, transform);
+            vfx.transform.localPosition = Vector3.up * 0.5f;
+            vfx.transform.localRotation = Quaternion.identity;
             Destroy(vfx, 3.5f);
         }
         if (enrageSFXSound != null)
@@ -809,15 +876,18 @@ public class MiniBossAI : NetworkBehaviour
 
     private void PlayShadowBlinkVisuals()
     {
-        Vector3 spawnPos = transform.position + Vector3.up * 1f;
+        Vector3 spawnPos = transform.position + Vector3.up * 0.5f;
         if (shadowBlinkVFX != null)
         {
-            GameObject vfx = Instantiate(shadowBlinkVFX, spawnPos, Quaternion.identity);
+            // Gán VFX đi theo thân MiniBoss 100% khi tăng tốc/chạy
+            GameObject vfx = Instantiate(shadowBlinkVFX, spawnPos, transform.rotation, transform);
+            vfx.transform.localPosition = Vector3.up * 0.5f;
+            vfx.transform.localRotation = Quaternion.identity;
             Destroy(vfx, 2.5f);
         }
         if (shadowBlinkSFX != null)
         {
-            AudioSource.PlayClipAtPoint(shadowBlinkSFX, spawnPos, 1.0f);
+            AudioSource.PlayClipAtPoint(shadowBlinkSFX, transform.position, 1.0f);
         }
     }
 
