@@ -3,13 +3,13 @@ using UnityEngine;
 using UnityEngine.AI;
 
 /// <summary>
-/// Enemy 5 - Phù Thủy (Ranged/Kiting)
-/// Animator Float "Speed": 0=Idle, 0.5=Walk (patrol), 1=Run (kiting/chase)
+/// Enemy 5 - Phù Thủy (Ranged/Kiting/Predictive Fireball AI)
+/// Animator Float "Speed": 0=Idle, 0.5=Walk (patrol/retreat), 1=Run (kiting/chase/flee)
 /// Attack trigger: quai5Attack
 /// </summary>
 public class Enemy5_PhuThuy : NetworkBehaviour
 {
-    public enum EnemyState { Patrol, Chase, Stagger, Attack, Dead }
+    public enum EnemyState { Patrol, Chase, Stagger, Attack, Dead, Flee }
 
     [Header("Health")]
     public float maxHealth = 90f;
@@ -40,8 +40,8 @@ public class Enemy5_PhuThuy : NetworkBehaviour
 
     [Header("Spell Settings")]
     public GameObject spellProjectilePrefab;
-    public float spellSpeed  = 12f;
-    public float spellDamage = 7f;
+    public float spellSpeed  = 14f;
+    public float spellDamage = 10f;
 
     [Header("Drops")]
     public GameObject expGemPrefab;
@@ -51,15 +51,22 @@ public class Enemy5_PhuThuy : NetworkBehaviour
     [Range(0f, 1f)] public float repairItemDropChance = 0.3f;
 
     [Header("AI Settings")]
-    public float sightRange     = 24f;     // Tầm phát hiện xa hơn
+    public float sightRange     = 24f;     // Tầm phát hiện xa
     public float fieldOfView    = 120f;
     public float maxAttackRange = 16f;     // Tầm bắn xa
     public float minAttackRange = 7.5f;    // Kiting: bắt đầu thoái lui khi Player gần hơn 7.5m
+    public float maxChaseDistance = 22f;   // Tầm đuổi tối đa
     public float patrolWalkSpeed = 2.5f;
-    public float chaseRunSpeed   = 4.5f;    // Tốc độ chạy kiting nhanh hơn
+    public float chaseRunSpeed   = 4.5f;    // Tốc độ chạy kiting
     public float patrolWaitMin = 1.5f;
     public float patrolWaitMax = 5f;
     [Range(0f, 1f)] public float patrolMoveChance = 0.65f;
+
+    [Header("Tactical Flee AI")]
+    public bool canTacticalFlee = true;
+    public float fleeHealthThreshold = 0.30f; // Bắt đầu bỏ chạy và kiting xa khi HP < 30%
+    private bool hasFledTactically = false;
+    private float fleeTimer;
 
     [Header("Layers")]
     public LayerMask playerLayer;
@@ -74,7 +81,6 @@ public class Enemy5_PhuThuy : NetworkBehaviour
 
     public Renderer[] modelRenderers;
     private MaterialPropertyBlock propBlock;
-    private bool wasEnraged;
 
     private Transform targetPlayer;
     private int currentWaypointIndex = -1;
@@ -83,6 +89,7 @@ public class Enemy5_PhuThuy : NetworkBehaviour
     private float detectionTimer;
     private const float DETECTION_INTERVAL = 0.15f;
     private float staggerTimer;
+    private float staggerCooldownTimer;
     private float attackCooldownTimer;
     private float attackDuration = 1.2f;
     private float stateTimer;
@@ -100,6 +107,7 @@ public class Enemy5_PhuThuy : NetworkBehaviour
     private AttackState attackState;
     private StaggerState staggerState;
     private DeadState deadState;
+    private FleeState fleeState;
 
     private readonly Collider[] detectionResults = new Collider[8];
     private bool AgentReady => agent != null && agent.isActiveAndEnabled && agent.isOnNavMesh;
@@ -120,7 +128,6 @@ public class Enemy5_PhuThuy : NetworkBehaviour
                 obstacleLayer = ~(LayerMask.GetMask("Player", "Enemy", "Ignore Raycast", "UI", "Water"));
             }
         }
-        // Luôn loại bỏ layer Player và Enemy khỏi obstacleLayer để tia Raycast không đụng nhầm
         int excludeMask = LayerMask.GetMask("Player", "Enemy", "Ignore Raycast", "UI");
         if (excludeMask != 0) obstacleLayer &= ~excludeMask;
 
@@ -147,6 +154,7 @@ public class Enemy5_PhuThuy : NetworkBehaviour
         attackState = new AttackState(this);
         staggerState = new StaggerState(this);
         deadState = new DeadState(this);
+        fleeState = new FleeState(this);
     }
 
     private void Start() { if (!IsNetworkActive) { isStandaloneMode = true; InitStandalone(); } }
@@ -198,51 +206,40 @@ public class Enemy5_PhuThuy : NetworkBehaviour
         {
             anim.ResetTrigger(attackTrigger);
             anim.ResetTrigger(hitTrigger);
-            anim.ResetTrigger(dieTrigger);
-
-            for (int i = 1; i < anim.layerCount; i++)
-            {
-                anim.SetLayerWeight(i, 0f);
-            }
-            anim.Play("Quai5Die", 0, 0f);
+            anim.SetTrigger(dieTrigger);
         }
+        Collider col = GetComponent<Collider>(); if (col != null) col.enabled = false;
+        Collider[] cols = GetComponentsInChildren<Collider>(); foreach (var c in cols) c.enabled = false;
     }
 
-    private void OnHealthNetChanged(float oldVal, float newVal)
+    private void OnHealthNetChanged(float oldHealth, float newHealth)
     {
-        localHealth = newVal;
-        float diff = oldVal - newVal;
-        if (diff > 0)
+        localHealth = newHealth;
+        if (newHealth <= 0f && CurrentStateValue != EnemyState.Dead)
         {
-            EnemyDamageEffectHelper.PlayDamageEffects(gameObject, diff);
+            ApplyLocalDeathEffects();
         }
     }
 
     private void Update()
     {
-        UpdateEnrageVisuals();
         bool aiAuth = isStandaloneMode || (IsNetworkActive && IsServer);
         if (!aiAuth) return;
         if (agent != null && agent.isActiveAndEnabled && !agent.isOnNavMesh) SnapToNavMesh();
 
-        // --- BỘ GIẢI QUYẾT VA CHẠM TRÁNH XUYÊN TƯỜNG (WALL COLLISION RESOLVER) ---
-        if (agent != null && agent.isActiveAndEnabled && agent.isOnNavMesh && agent.velocity.sqrMagnitude > 0.01f)
+        if (staggerCooldownTimer > 0f) staggerCooldownTimer -= Time.deltaTime;
+        if (attackCooldownTimer > 0) attackCooldownTimer -= Time.deltaTime;
+
+        if (isBlinking)
         {
-            Vector3 rayOrigin = transform.position + Vector3.up * 1.0f;
-            Vector3 moveDir = agent.velocity.normalized;
-            if (Physics.Raycast(rayOrigin, moveDir, out RaycastHit hit, 0.8f))
+            blinkTimer -= Time.deltaTime;
+            if (blinkTimer <= 0f)
             {
-                if (!hit.collider.CompareTag("Player") && !hit.collider.CompareTag("Enemy") && hit.collider.gameObject.layer != LayerMask.NameToLayer("Enemy") && !hit.collider.name.ToLower().Contains("skeleton") && !hit.collider.isTrigger)
-                {
-                    Vector3 pushBack = hit.normal * 0.15f;
-                    agent.Warp(transform.position + pushBack);
-                }
+                isBlinking = false;
+                if (AgentReady) agent.speed = chaseRunSpeed;
             }
         }
-        // ------------------------------------------------------------------------
 
-        if (attackCooldownTimer > 0) attackCooldownTimer -= Time.deltaTime;
-        if (blinkTimer > 0) { blinkTimer -= Time.deltaTime; if (blinkTimer <= 0) isBlinking = false; }
         detectionTimer -= Time.deltaTime;
         if (detectionTimer <= 0) { detectionTimer = DETECTION_INTERVAL; DetectPlayer(); }
         if (currentFSMState != null)
@@ -251,38 +248,23 @@ public class Enemy5_PhuThuy : NetworkBehaviour
         }
     }
 
-
-
-    private void UpdateEnrageVisuals()
-    {
-        if (modelRenderers == null || modelRenderers.Length == 0 || propBlock == null) return;
-        bool enraged = CurrentHealthValue < maxHealth * 0.5f;
-        if (enraged) { wasEnraged = true; float pp = Mathf.PingPong(Time.time * 3f, 1f); Color c = Color.Lerp(Color.white, new Color(0f, 0.6f, 1f), pp); foreach (var r in modelRenderers) { if (r != null) { r.GetPropertyBlock(propBlock); propBlock.SetColor("_Color", c); r.SetPropertyBlock(propBlock); } } }
-        else if (wasEnraged) { wasEnraged = false; foreach (var r in modelRenderers) { if (r != null) { r.GetPropertyBlock(propBlock); propBlock.SetColor("_Color", Color.white); r.SetPropertyBlock(propBlock); } } }
-    }
-
     // ── Patrol (Walk) ──
     private Vector3 GetRandomNavMeshPosition(float range)
     {
-        Vector3 origin = transform.position;
         for (int i = 0; i < 30; i++)
         {
             Vector3 randomDirection = Random.insideUnitSphere * range;
-            randomDirection += origin;
-            if (NavMesh.SamplePosition(randomDirection, out NavMeshHit navHit, range, NavMesh.AllAreas))
+            randomDirection += transform.position;
+            NavMeshHit navHit;
+            if (NavMesh.SamplePosition(randomDirection, out navHit, range, NavMesh.AllAreas))
             {
-                float dist = Vector3.Distance(origin, navHit.position);
-                if (dist > 2.5f)
+                if (Vector3.Distance(transform.position, navHit.position) > 2.0f)
                 {
-                    Vector3 dir = (navHit.position - origin).normalized;
-                    if (!Physics.Raycast(origin + Vector3.up * 0.5f, dir, dist, obstacleLayer, QueryTriggerInteraction.Ignore))
-                    {
-                        return navHit.position;
-                    }
+                    return navHit.position;
                 }
             }
         }
-        return origin;
+        return transform.position;
     }
 
     private Vector3 GetUniquePatrolPosition(Vector3 basePos)
@@ -297,11 +279,13 @@ public class Enemy5_PhuThuy : NetworkBehaviour
             if (c != null && c.gameObject != gameObject && (c.CompareTag("Enemy") || c.gameObject.layer == LayerMask.NameToLayer("Enemy")))
             {
                 Vector3 shift = (targetPos - c.transform.position).normalized * 1.5f;
+                shift.y = 0;
                 targetPos += shift;
             }
         }
 
-        if (NavMesh.SamplePosition(targetPos, out NavMeshHit hit, 2.5f, NavMesh.AllAreas))
+        NavMeshHit hit;
+        if (NavMesh.SamplePosition(targetPos, out hit, 3.0f, NavMesh.AllAreas))
         {
             return hit.position;
         }
@@ -310,76 +294,33 @@ public class Enemy5_PhuThuy : NetworkBehaviour
 
     private void GoToNextWaypoint()
     {
-        bool hasWaypoints = false;
+        if (!AgentReady) return;
+        waitingAtWaypoint = false;
+        agent.isStopped = false;
+        agent.speed = patrolWalkSpeed;
+
         if (waypoints != null && waypoints.Length > 0)
         {
+            System.Collections.Generic.List<Transform> validWaypoints = new System.Collections.Generic.List<Transform>();
             foreach (var wp in waypoints)
             {
-                if (wp != null) { hasWaypoints = true; break; }
+                if (wp != null) validWaypoints.Add(wp);
             }
-        }
 
-        Vector3 nextPosition;
-        if (hasWaypoints)
-        {
-            int n;
-            int attempts = 0;
-            do { n = Random.Range(0, waypoints.Length); attempts++; } while (waypoints[n] == null && attempts < 10);
-            if (waypoints[n] == null)
+            if (validWaypoints.Count > 0)
             {
-                nextPosition = GetUniquePatrolPosition(GetRandomNavMeshPosition(12f));
-            }
-            else
-            {
-                currentWaypointIndex = n;
-                nextPosition = GetUniquePatrolPosition(waypoints[currentWaypointIndex].position);
-            }
-        }
-        else
-        {
-            nextPosition = GetUniquePatrolPosition(GetRandomNavMeshPosition(12f));
-        }
-
-        waitingAtWaypoint = false;
-        if (AgentReady)
-        {
-            agent.isStopped = false;
-            agent.speed = patrolWalkSpeed;
-            agent.SetDestination(nextPosition);
-        }
-    }
-
-    private void ApplyPatrolEnemySeparation()
-    {
-        if (!AgentReady) return;
-
-        agent.obstacleAvoidanceType = ObstacleAvoidanceType.HighQualityObstacleAvoidance;
-        if (agent.radius < 0.45f) agent.radius = 0.45f;
-        agent.avoidancePriority = Mathf.Clamp(30 + System.Math.Abs(GetHashCode() % 40), 10, 80);
-
-        Collider[] nearby = Physics.OverlapSphere(transform.position, 1.8f);
-        Vector3 separation = Vector3.zero;
-        int count = 0;
-        foreach (var col in nearby)
-        {
-            if (col != null && col.gameObject != gameObject && (col.CompareTag("Enemy") || col.gameObject.layer == LayerMask.NameToLayer("Enemy")))
-            {
-                Vector3 diff = transform.position - col.transform.position;
-                diff.y = 0;
-                float dist = diff.magnitude;
-                if (dist > 0.01f && dist < 1.8f)
-                {
-                    separation += diff.normalized * ((1.8f - dist) / 1.8f);
-                    count++;
-                }
+                currentWaypointIndex = (currentWaypointIndex + 1) % validWaypoints.Count;
+                Transform targetWp = validWaypoints[currentWaypointIndex];
+                Vector3 targetPos = GetUniquePatrolPosition(targetWp.position);
+                agent.SetDestination(targetPos);
+                SetSpeedNet(0.5f); // Walk animation
+                return;
             }
         }
 
-        if (count > 0 && !waitingAtWaypoint)
-        {
-            separation /= count;
-            agent.Move(separation * Time.deltaTime * 1.5f);
-        }
+        Vector3 randomPos = GetRandomNavMeshPosition(8f);
+        agent.SetDestination(randomPos);
+        SetSpeedNet(0.5f);
     }
 
     private void HandlePatrol()
@@ -387,9 +328,6 @@ public class Enemy5_PhuThuy : NetworkBehaviour
         if (targetPlayer != null) { ChangeState(EnemyState.Chase); return; }
         if (!AgentReady) return;
 
-        ApplyPatrolEnemySeparation();
-
-        // 1. Gặp tường: Quay mặt né tường ngay lập tức và chuyển hướng
         if (Physics.Raycast(transform.position + Vector3.up * 0.8f, transform.forward, out RaycastHit wallHit, 1.2f, obstacleLayer, QueryTriggerInteraction.Ignore))
         {
             if (!wallHit.collider.CompareTag("Player") && !wallHit.collider.CompareTag("Enemy"))
@@ -404,50 +342,79 @@ public class Enemy5_PhuThuy : NetworkBehaviour
 
         if (waitingAtWaypoint)
         {
-            if (AgentReady) agent.isStopped = true;
             SetSpeedNet(0f);
             waypointWaitTimer -= Time.deltaTime;
             if (waypointWaitTimer <= 0f)
             {
+                waitingAtWaypoint = false;
                 GoToNextWaypoint();
             }
+            return;
         }
-        else
+
+        if (!agent.pathPending && agent.remainingDistance <= agent.stoppingDistance + 0.6f)
         {
-            if (AgentReady)
-            {
-                if (agent.isStopped) agent.isStopped = false;
-
-                bool isMoving = agent.velocity.magnitude > 0.15f;
-                SetSpeedNet(isMoving ? 0.5f : 0f);
-
-                if (!agent.pathPending && agent.hasPath)
-                {
-                    if (agent.remainingDistance > 0.1f && agent.remainingDistance <= agent.stoppingDistance + 0.5f)
-                    {
-                        agent.isStopped = true;
-                        SetSpeedNet(0f);
-                        waitingAtWaypoint = true;
-                        waypointWaitTimer = Random.Range(2.0f, 3.0f);
-                    }
-                }
-                else if (!agent.pathPending && (!agent.hasPath || agent.pathStatus == NavMeshPathStatus.PathInvalid))
-                {
-                    GoToNextWaypoint();
-                }
-            }
-            else
-            {
-                SnapToNavMesh();
-                if (AgentReady) GoToNextWaypoint();
-            }
+            agent.isStopped = true;
+            SetSpeedNet(0f);
+            waitingAtWaypoint = true;
+            waypointWaitTimer = Random.Range(patrolWaitMin, patrolWaitMax);
+        }
+        else if (!agent.pathPending && (!agent.hasPath || agent.pathStatus == NavMeshPathStatus.PathInvalid))
+        {
+            GoToNextWaypoint();
         }
     }
 
-    // ── Chase (Kiting) ──
+    // ── Chase & Kiting AI ──
     private void HandleChase()
     {
         if (targetPlayer == null || !IsPlayerAliveAndValid(targetPlayer)) { targetPlayer = null; ReturnToPatrol(); return; }
+
+        // 1. Kiểm tra NavMesh reachability
+        if (!IsTargetReachableOnNavMesh(targetPlayer))
+        {
+            Transform altTarget = null;
+            var alivePlayers = GetAllAlivePlayers();
+            foreach (var pt in alivePlayers)
+            {
+                if (pt != null && pt != targetPlayer && IsPlayerAliveAndValid(pt))
+                {
+                    int chasers = GetChaserCountForPlayer(pt);
+                    if (chasers < 2 || alivePlayers.Count == 1)
+                    {
+                        float dCheck = Vector3.Distance(transform.position, pt.position);
+                        if (dCheck <= sightRange && IsTargetReachableOnNavMesh(pt))
+                        {
+                            altTarget = pt;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (altTarget != null)
+            {
+                targetPlayer = altTarget;
+                AlertNearbyAllies(targetPlayer);
+            }
+            else
+            {
+                targetPlayer = null;
+                ReturnToPatrol();
+                return;
+            }
+        }
+
+        // 2. Kiểm tra maxChaseDistance
+        float dToPatrolCenter = Vector3.Distance(GetPatrolCenterPosition(), targetPlayer.position);
+        float dToSelf = Vector3.Distance(transform.position, targetPlayer.position);
+
+        if (dToSelf > maxChaseDistance || dToPatrolCenter > maxChaseDistance + 4f)
+        {
+            targetPlayer = null;
+            ReturnToPatrol();
+            return;
+        }
 
         Vector3 ep1 = eyeTransform != null ? eyeTransform.position : transform.position + Vector3.up * 1.5f;
         Vector3 targetCenter = targetPlayer.position + Vector3.up * 1.0f;
@@ -481,7 +448,7 @@ public class Enemy5_PhuThuy : NetworkBehaviour
             loseSightTimer = 0f;
         }
 
-        // Luôn quay mặt về phía Player
+        // Quay mặt xoay mượt về phía Player
         Vector3 ld = (targetPlayer.position - transform.position); ld.y = 0;
         if (ld.sqrMagnitude > 0.01f) transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(ld), Time.deltaTime * 18f);
         Vector3 flatEnemy = transform.position; flatEnemy.y = 0;
@@ -489,23 +456,24 @@ public class Enemy5_PhuThuy : NetworkBehaviour
         float dist = Vector3.Distance(flatEnemy, flatPlayer);
         float spd = CurrentHealthValue < maxHealth * 0.5f ? chaseRunSpeed * 1.35f : chaseRunSpeed;
 
-        // A. QUÁ GẦN (< minAttackRange): ĐI LÙI ra xa Player (walk backward)
+        // A. QUÁ GẦN (< minAttackRange): Đi lùi thả diều lượn vòng ra xa Player
         if (dist < minAttackRange)
         {
             Vector3 away = (transform.position - targetPlayer.position);
             away.y = 0;
             away = away.normalized;
 
-            // Tính điểm đến phía sau lưng (hướng xa Player)
-            float retreatDist = Mathf.Clamp(minAttackRange - dist + 2.0f, 2.0f, 6.0f);
-            Vector3 retreatPos = transform.position + away * retreatDist;
+            // Thêm độ lệch góc strafe 35 độ để di chuyển lượn hình vòng cung quanh Player
+            float strafeAngle = (System.Math.Abs(GetHashCode()) % 2 == 0 ? 35f : -35f);
+            Vector3 strafeDir = Quaternion.Euler(0, strafeAngle, 0) * away;
 
-            // Kiểm tra tường phía sau: nếu bị chặn thì đi chéo sang bên
-            if (Physics.Raycast(transform.position + Vector3.up * 0.8f, away, out RaycastHit wallCheck, retreatDist, obstacleLayer, QueryTriggerInteraction.Ignore))
+            float retreatDist = Mathf.Clamp(minAttackRange - dist + 2.8f, 2.8f, 7.5f);
+            Vector3 retreatPos = transform.position + strafeDir * retreatDist;
+
+            if (Physics.Raycast(transform.position + Vector3.up * 0.8f, strafeDir, out RaycastHit wallCheck, retreatDist, obstacleLayer, QueryTriggerInteraction.Ignore))
             {
-                // Bị tường chặn phía sau → thử đi chéo sang trái/phải
                 Vector3 perp = new Vector3(-away.z, 0, away.x);
-                Vector3 sideDir = (away + perp * (Random.value < 0.5f ? 1.2f : -1.2f)).normalized;
+                Vector3 sideDir = (away + perp * (System.Math.Abs(GetHashCode()) % 2 == 0 ? 1.4f : -1.4f)).normalized;
                 retreatPos = transform.position + sideDir * retreatDist;
             }
 
@@ -514,22 +482,21 @@ public class Enemy5_PhuThuy : NetworkBehaviour
                 if (AgentReady)
                 {
                     agent.isStopped = false;
-                    agent.speed = spd * 0.85f; // Đi lùi chậm hơn chạy tới một chút
+                    agent.speed = spd * 0.95f;
                     agent.SetDestination(navHit.position);
                 }
             }
 
-            // Vừa đi lùi vừa bắn phép nếu cooldown sẵn sàng
             if (attackCooldownTimer <= 0 && dist >= 3.0f)
             {
                 ChangeState(EnemyState.Attack);
             }
 
-            SetSpeedNet(AgentReady && !agent.isStopped ? 0.5f : 0f); // Walk animation khi đi lùi
+            SetSpeedNet(AgentReady && !agent.isStopped ? 0.5f : 0f);
             return;
         }
 
-        // B. TẦM LÝ TƯỞNG (minAttackRange <= dist <= maxAttackRange): Đứng bắn phép
+        // B. TẦM LÝ TƯỞNG (minAttackRange <= dist <= maxAttackRange): Dừng lại bắn phép
         if (dist >= minAttackRange && dist <= maxAttackRange)
         {
             if (AgentReady) agent.isStopped = true;
@@ -538,7 +505,7 @@ public class Enemy5_PhuThuy : NetworkBehaviour
             return;
         }
 
-        // C. QUÁ XA (> maxAttackRange): Tiến lại gần
+        // C. QUÁ XA (> maxAttackRange): Tiến lại gần + Đoán hướng di chuyển
         if (AgentReady)
         {
             agent.isStopped = false;
@@ -549,11 +516,146 @@ public class Enemy5_PhuThuy : NetworkBehaviour
             float distToPlayer = Vector3.Distance(transform.position, targetPlayer.position);
             agent.avoidancePriority = Mathf.Clamp(10 + Mathf.RoundToInt(distToPlayer * 4f), 5, 95);
 
-            Vector3 targetPos = GetSurroundingPosition(targetPlayer, minAttackRange * 1.1f);
+            Vector3 targetPos = GetPredictedTargetPosition(targetPlayer);
             agent.SetDestination(targetPos);
+
+            if (agent.pathStatus == NavMeshPathStatus.PathInvalid || 
+               (!agent.pathPending && agent.hasPath && agent.pathStatus == NavMeshPathStatus.PathPartial && agent.remainingDistance < 1.5f))
+            {
+                Transform alt = null;
+                var alivePlayers = GetAllAlivePlayers();
+                foreach (var pt in alivePlayers)
+                {
+                    if (pt != null && pt != targetPlayer && IsPlayerAliveAndValid(pt) && IsTargetReachableOnNavMesh(pt))
+                    {
+                        if (GetChaserCountForPlayer(pt) < 2 || alivePlayers.Count == 1)
+                        {
+                            alt = pt; break;
+                        }
+                    }
+                }
+                if (alt != null)
+                {
+                    targetPlayer = alt;
+                }
+                else
+                {
+                    targetPlayer = null;
+                    ReturnToPatrol();
+                    return;
+                }
+            }
         }
         bool isMoving = AgentReady && agent.velocity.magnitude > 0.2f;
         SetSpeedNet(isMoving ? 1f : 0f);
+    }
+
+    // ── Dự đoán vị trí của Target Player (Lead Intercept Prediction) ──
+    private Vector3 GetPredictedTargetPosition(Transform player)
+    {
+        if (player == null) return transform.position;
+        Vector3 pPos = player.position;
+
+        Vector3 velocity = Vector3.zero;
+        var rb = player.GetComponent<Rigidbody>() ?? player.GetComponentInChildren<Rigidbody>();
+        if (rb != null) velocity = rb.linearVelocity;
+        else
+        {
+            var cc = player.GetComponent<CharacterController>() ?? player.GetComponentInChildren<CharacterController>();
+            if (cc != null) velocity = cc.velocity;
+        }
+
+        velocity.y = 0;
+        if (velocity.sqrMagnitude > 0.5f)
+        {
+            float dist = Vector3.Distance(transform.position, pPos);
+            float travelTime = Mathf.Clamp(dist / Mathf.Max(spellSpeed, 1f), 0.1f, 0.8f);
+            Vector3 predicted = pPos + velocity.normalized * Mathf.Min(velocity.magnitude * travelTime, 3.5f);
+            if (NavMesh.SamplePosition(predicted, out NavMeshHit hit, 3.0f, NavMesh.AllAreas))
+            {
+                return hit.position;
+            }
+        }
+        return pPos;
+    }
+
+    private bool IsTargetReachableOnNavMesh(Transform player)
+    {
+        if (player == null) return false;
+        NavMeshPath path = new NavMeshPath();
+        if (NavMesh.CalculatePath(transform.position, player.position, NavMesh.AllAreas, path))
+        {
+            if (path.status == NavMeshPathStatus.PathComplete) return true;
+        }
+        return false;
+    }
+
+    private float GetNavMeshPathDistance(Vector3 start, Vector3 target)
+    {
+        NavMeshPath path = new NavMeshPath();
+        if (NavMesh.CalculatePath(start, target, NavMesh.AllAreas, path))
+        {
+            if (path.status == NavMeshPathStatus.PathComplete || path.status == NavMeshPathStatus.PathPartial)
+            {
+                float dist = 0f;
+                for (int i = 0; i < path.corners.Length - 1; i++)
+                {
+                    dist += Vector3.Distance(path.corners[i], path.corners[i + 1]);
+                }
+                return dist;
+            }
+        }
+        return Vector3.Distance(start, target);
+    }
+
+    private Vector3 GetPatrolCenterPosition()
+    {
+        if (waypoints != null && waypoints.Length > 0 && waypoints[0] != null)
+        {
+            return waypoints[0].position;
+        }
+        return transform.position;
+    }
+
+    private int GetChaserCountForPlayer(Transform pt)
+    {
+        if (pt == null) return 0;
+        int chasers = 0;
+        Collider[] enemies = Physics.OverlapSphere(pt.position, sightRange * 1.2f);
+        System.Collections.Generic.HashSet<GameObject> countedEnemies = new System.Collections.Generic.HashSet<GameObject>();
+
+        foreach (var c in enemies)
+        {
+            if (c == null) continue;
+            MonoBehaviour otherEnemy = c.GetComponentInParent<MonoBehaviour>();
+            if (otherEnemy == null) otherEnemy = c.GetComponent<MonoBehaviour>();
+            if (otherEnemy != null && otherEnemy.gameObject != gameObject && !countedEnemies.Contains(otherEnemy.gameObject))
+            {
+                countedEnemies.Add(otherEnemy.gameObject);
+                Transform target = GetEnemyTargetPlayer(otherEnemy);
+                if (target == pt)
+                {
+                    chasers++;
+                }
+            }
+        }
+        return chasers;
+    }
+
+    private Transform GetEnemyTargetPlayer(MonoBehaviour mono)
+    {
+        if (mono == null) return null;
+        try
+        {
+            var type = mono.GetType();
+            var field = type.GetField("targetPlayer", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+            if (field != null)
+            {
+                return field.GetValue(mono) as Transform;
+            }
+        }
+        catch { }
+        return null;
     }
 
     public bool HasTargetPlayer => targetPlayer != null;
@@ -591,48 +693,10 @@ public class Enemy5_PhuThuy : NetworkBehaviour
         }
     }
 
-    public Vector3 GetSurroundingPosition(Transform target, float desiredDist)
-    {
-        if (target == null) return transform.position;
-
-        Vector3 toEnemy = transform.position - target.position;
-        toEnemy.y = 0;
-        if (toEnemy.sqrMagnitude < 0.001f) toEnemy = transform.forward;
-        else toEnemy.Normalize();
-
-        Vector3 separation = Vector3.zero;
-        int count = 0;
-        Collider[] nearby = Physics.OverlapSphere(transform.position, 2.5f);
-        foreach (var col in nearby)
-        {
-            if (col != null && col.gameObject != gameObject && (col.CompareTag("Enemy") || col.gameObject.layer == LayerMask.NameToLayer("Enemy")))
-            {
-                Vector3 diff = transform.position - col.transform.position;
-                diff.y = 0;
-                float dist = diff.magnitude;
-                if (dist > 0.01f && dist < 2.5f)
-                {
-                    separation += diff.normalized * ((2.5f - dist) / 2.5f);
-                    count++;
-                }
-            }
-        }
-        if (count > 0) separation /= count;
-
-        Vector3 finalDir = (toEnemy + separation * 1.5f).normalized;
-        Vector3 desiredPos = target.position + finalDir * desiredDist;
-
-        if (NavMesh.SamplePosition(desiredPos, out NavMeshHit hit, 4.0f, NavMesh.AllAreas))
-        {
-            return hit.position;
-        }
-        return target.position;
-    }
-
     private void ReturnToPatrol()
     {
         targetPlayer = null;
-        CurrentStateValue = EnemyState.Patrol;
+        ChangeState(EnemyState.Patrol);
         waitingAtWaypoint = false;
         waypointWaitTimer = 0f;
         if (AgentReady)
@@ -644,44 +708,71 @@ public class Enemy5_PhuThuy : NetworkBehaviour
         GoToNextWaypoint();
     }
 
-    private void HandleStagger() { if (AgentReady) agent.isStopped = true; SetSpeedNet(0f); staggerTimer -= Time.deltaTime; if (staggerTimer <= 0) { if (targetPlayer != null) ChangeState(EnemyState.Chase); else ReturnToPatrol(); } }
+    private void HandleStagger()
+    {
+        if (AgentReady) agent.isStopped = true;
+        SetSpeedNet(0f);
+        staggerTimer -= Time.deltaTime;
+        if (staggerTimer <= 0)
+        {
+            if (targetPlayer != null && IsPlayerAliveAndValid(targetPlayer)) ChangeState(EnemyState.Chase);
+            else ReturnToPatrol();
+        }
+    }
 
     private void HandleAttack()
     {
-        if (targetPlayer == null) { EndAttack(); return; }
-
-        float dist = Vector3.Distance(transform.position, targetPlayer.position);
-        // Nếu Player áp sát quá gần trong lúc đang cast phép → hủy đánh, quay về Chase để đi lùi
-        if (dist < 4.5f)
+        if (targetPlayer == null || !IsPlayerAliveAndValid(targetPlayer))
         {
+            targetPlayer = null;
             EndAttack();
             return;
         }
 
-        if (AgentReady) agent.isStopped = true; SetSpeedNet(0f);
+        if (AgentReady) agent.isStopped = true;
+        SetSpeedNet(0f);
+
         stateTimer -= Time.deltaTime;
-        float elapsed = attackDuration - stateTimer;
-        if (elapsed < attackDuration * 0.5f) { Vector3 ld = (targetPlayer.position - transform.position); ld.y = 0; if (ld.sqrMagnitude > 0.01f) transform.rotation = Quaternion.LookRotation(ld); }
-        if (stateTimer <= 0) EndAttack();
+
+        // Xoay mặt nhắm bắn chính xác về phía Player trong lúc gồng chưởng
+        Vector3 targetPos = GetPredictedTargetPosition(targetPlayer);
+        Vector3 ld = (targetPos - transform.position); ld.y = 0;
+        if (ld.sqrMagnitude > 0.01f)
+        {
+            transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(ld), Time.deltaTime * 18f);
+        }
+
+        if (stateTimer <= 0)
+        {
+            EndAttack();
+        }
     }
 
     private void EndAttack()
     {
-        attackCooldownTimer = (CurrentHealthValue < maxHealth * 0.5f) ? 0.3f : 0.7f;
+        attackCooldownTimer = 1.6f;
         detectionTimer = 0f;
-        if (targetPlayer != null) ChangeState(EnemyState.Chase); else ReturnToPatrol();
+        if (targetPlayer != null && IsPlayerAliveAndValid(targetPlayer))
+        {
+            ChangeState(EnemyState.Chase);
+        }
+        else
+        {
+            targetPlayer = null;
+            ReturnToPatrol();
+        }
     }
 
     private bool IsPlayerAliveAndValid(Transform pt)
     {
         if (pt == null || !pt.gameObject.activeInHierarchy) return false;
 
-        // Lọc hoàn toàn các đối tượng UI / Canvas / HealthBar
         if (pt.gameObject.layer == LayerMask.NameToLayer("UI")) return false;
         string n = pt.name.ToLower();
         if (n.Contains("ui") || n.Contains("canvas") || n.Contains("hud") || n.Contains("healthbar") || n.Contains("health_bar")) return false;
 
         IPlayerHUDTarget ps = pt.GetComponentInParent<IPlayerHUDTarget>();
+        if (ps == null) ps = pt.GetComponentInChildren<IPlayerHUDTarget>();
         if (ps != null)
         {
             if (ps.CurrentHealth <= 0 || ps.IsInvisible) return false;
@@ -698,7 +789,33 @@ public class Enemy5_PhuThuy : NetworkBehaviour
         Transform curr = pt;
         while (curr != null)
         {
-            if (curr.CompareTag("Player")) return true;
+            if (curr.CompareTag("Player"))
+            {
+                var monoComponents = curr.GetComponents<MonoBehaviour>();
+                foreach (var mono in monoComponents)
+                {
+                    if (mono == null) continue;
+                    var prop = mono.GetType().GetProperty("CurrentHealth");
+                    if (prop != null && prop.PropertyType == typeof(float))
+                    {
+                        float hp = (float)prop.GetValue(mono);
+                        if (hp <= 0) return false;
+                    }
+                    var deadField = mono.GetType().GetField("isDead", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
+                    if (deadField != null && deadField.FieldType == typeof(bool))
+                    {
+                        bool dead = (bool)deadField.GetValue(mono);
+                        if (dead) return false;
+                    }
+                    var isDeadProp = mono.GetType().GetProperty("IsDead", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
+                    if (isDeadProp != null && isDeadProp.PropertyType == typeof(bool))
+                    {
+                        bool dead = (bool)isDeadProp.GetValue(mono);
+                        if (dead) return false;
+                    }
+                }
+                return true;
+            }
             curr = curr.parent;
         }
 
@@ -753,12 +870,36 @@ public class Enemy5_PhuThuy : NetworkBehaviour
         Transform bestTarget = null;
         float minD = float.MaxValue;
 
+        // Nếu mục tiêu hiện tại đã bị >= 2 quái khác rượt đuổi, tự động quét xem có player nào khác rảnh hơn không
+        if (targetPlayer != null && IsPlayerAliveAndValid(targetPlayer))
+        {
+            int currentChasers = GetChaserCountForPlayer(targetPlayer);
+            if (currentChasers >= 2 && alivePlayers.Count > 1)
+            {
+                foreach (var otherPt in alivePlayers)
+                {
+                    if (otherPt != null && otherPt != targetPlayer && IsPlayerAliveAndValid(otherPt) && IsTargetReachableOnNavMesh(otherPt))
+                    {
+                        if (GetChaserCountForPlayer(otherPt) < 2)
+                        {
+                            float dOther = GetNavMeshPathDistance(transform.position, otherPt.position);
+                            if (dOther <= sightRange)
+                            {
+                                targetPlayer = otherPt;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         float currentTargetDist = float.MaxValue;
         if (targetPlayer != null)
         {
             if (IsPlayerAliveAndValid(targetPlayer))
             {
-                currentTargetDist = Vector3.Distance(transform.position, targetPlayer.position);
+                currentTargetDist = GetNavMeshPathDistance(transform.position, targetPlayer.position);
             }
             else
             {
@@ -770,16 +911,34 @@ public class Enemy5_PhuThuy : NetworkBehaviour
         {
             if (pt == null || !IsPlayerAliveAndValid(pt)) continue;
 
+            // Bỏ qua nếu Player đứng ngoài NavMesh hoặc không có đường đi tới
+            if (!IsTargetReachableOnNavMesh(pt)) continue;
+
             Vector3 center = pt.position + Vector3.up * 1.0f;
             float d = Vector3.Distance(ep, center);
             if (d > sightRange) continue;
 
+            int chasers = GetChaserCountForPlayer(pt);
+            if (chasers >= 2 && pt != targetPlayer && alivePlayers.Count > 1)
+            {
+                continue;
+            }
+
             Vector3 dir = (center - ep).normalized;
 
-            bool inFOV = Vector3.Angle(transform.forward, dir) < fieldOfView / 2f;
-            bool isProximity = d <= 5.5f;
+            bool isMovingFast = false;
+            var rb = pt.GetComponent<Rigidbody>() ?? pt.GetComponentInChildren<Rigidbody>();
+            if (rb != null && rb.linearVelocity.sqrMagnitude > 2.5f) isMovingFast = true;
+            else {
+                var cc = pt.GetComponent<CharacterController>() ?? pt.GetComponentInChildren<CharacterController>();
+                if (cc != null && cc.velocity.sqrMagnitude > 2.5f) isMovingFast = true;
+            }
 
-            if (inFOV || isProximity || pt == targetPlayer)
+            bool hearingSound = d <= 10.0f && isMovingFast;
+            bool inFOV = Vector3.Angle(transform.forward, dir) < fieldOfView / 2f;
+            bool isProximity = d <= 6.5f;
+
+            if (inFOV || isProximity || hearingSound || pt == targetPlayer)
             {
                 bool clearLOS = true;
                 if (d > 3.0f)
@@ -793,11 +952,15 @@ public class Enemy5_PhuThuy : NetworkBehaviour
                     }
                 }
 
-                if (clearLOS && d < minD)
+                if (clearLOS)
                 {
-                    minD = d;
-                    bestTarget = pt;
-                    found = true;
+                    float pathDist = GetNavMeshPathDistance(transform.position, pt.position);
+                    if (pathDist < minD)
+                    {
+                        minD = pathDist;
+                        bestTarget = pt;
+                        found = true;
+                    }
                 }
             }
         }
@@ -847,6 +1010,7 @@ public class Enemy5_PhuThuy : NetworkBehaviour
             case EnemyState.Attack:  currentFSMState = attackState; break;
             case EnemyState.Stagger: currentFSMState = staggerState; break;
             case EnemyState.Dead:    currentFSMState = deadState;   break;
+            case EnemyState.Flee:    currentFSMState = fleeState;   break;
         }
 
         if (currentFSMState != null)
@@ -872,25 +1036,49 @@ public class Enemy5_PhuThuy : NetworkBehaviour
     {
         if (targetPlayer == null) return;
         Vector3 spawnPt = staffTipTransform != null ? staffTipTransform.position : transform.position + transform.forward * 1.2f + Vector3.up * 1.2f;
-        Vector3 dir = (targetPlayer.position + Vector3.up - spawnPt).normalized;
-        if (spellProjectilePrefab != null)
+        
+        // Đoán hướng di chuyển đón đầu bước đi của Player
+        Vector3 targetPos = GetPredictedTargetPosition(targetPlayer);
+        Vector3 mainDir = (targetPos + Vector3.up * 1.0f - spawnPt).normalized;
+
+        float activeHpRatio = ActualCurrentHealth / maxHealth;
+        bool multiShot = activeHpRatio <= 0.65f || Vector3.Distance(transform.position, targetPlayer.position) > 10.0f;
+
+        float[] angles = multiShot ? new float[] { 0f, -14f, 14f } : new float[] { 0f };
+
+        foreach (float angle in angles)
         {
-            var proj = Instantiate(spellProjectilePrefab, spawnPt, Quaternion.LookRotation(dir));
-            var rb = proj.GetComponent<Rigidbody>(); if (rb != null) rb.linearVelocity = dir * spellSpeed;
-            var spellBall = proj.GetComponent<SpellBall>();
-            if (spellBall == null)
+            Vector3 dir = Quaternion.Euler(0, angle, 0) * mainDir;
+            if (spellProjectilePrefab != null)
             {
-                spellBall = proj.AddComponent<SpellBall>();
+                var proj = Instantiate(spellProjectilePrefab, spawnPt, Quaternion.LookRotation(dir));
+                var spellBall = proj.GetComponent<SpellBall>();
+                if (spellBall == null)
+                {
+                    spellBall = proj.AddComponent<SpellBall>();
+                }
+                spellBall.caster = gameObject;
+                spellBall.speed = spellSpeed;
+                spellBall.damage = spellDamage;
+                spellBall.knockback = 1.5f;
+
+                var rb = proj.GetComponent<Rigidbody>();
+                if (rb != null)
+                {
+                    rb.useGravity = false;
+                    rb.isKinematic = true;
+                }
+                
+                var no = proj.GetComponent<NetworkObject>();
+                if (no != null && !isStandaloneMode) no.Spawn(true);
             }
-            spellBall.damage = spellDamage;
-            spellBall.knockback = 1.5f;
-            
-            var no = proj.GetComponent<NetworkObject>(); if (no != null && !isStandaloneMode) no.Spawn(true);
-        }
-        else
-        {
-            if (Physics.Raycast(spawnPt, dir, out RaycastHit hit, maxAttackRange + 2f))
-            { EnemyDamageHelper.DealDamage(hit.collider.transform, spellDamage, dir * 1.5f); }
+            else
+            {
+                if (Physics.Raycast(spawnPt, dir, out RaycastHit hit, maxAttackRange + 2f))
+                {
+                    EnemyDamageHelper.DealDamage(hit.collider.transform, spellDamage, dir * 1.5f);
+                }
+            }
         }
     }
 
@@ -905,8 +1093,9 @@ public class Enemy5_PhuThuy : NetworkBehaviour
             localHealth = currentHealth.Value;
             hitCounter.Value++;
         }
-        else if (anim != null)
+        else if (anim != null && staggerCooldownTimer <= 0f)
         {
+            staggerCooldownTimer = 1.2f;
             anim.SetTrigger(hitTrigger);
         }
 
@@ -917,9 +1106,27 @@ public class Enemy5_PhuThuy : NetworkBehaviour
 
         float activeHp = ActualCurrentHealth;
         if (activeHp <= 0f) { ChangeState(EnemyState.Dead); return; }
+
+        // CHIẾN THUẬT RÚT LUI BỎ CHẠY KHI THẤP MÁU (< 30% HP)
+        if (canTacticalFlee && !hasFledTactically && (activeHp / maxHealth) <= fleeHealthThreshold && CurrentStateValue != EnemyState.Flee)
+        {
+            hasFledTactically = true;
+            AlertNearbyAllies(targetPlayer, 22f); // Gọi tất cả đồng đội xung quanh đến cứu
+            ChangeState(EnemyState.Flee);
+            return;
+        }
+
         float now = Time.time; if (now - lastDamageTime > 3f) recentHitCount = 0; recentHitCount++; lastDamageTime = now;
-        if ((damage >= 22f || recentHitCount >= 3) && CurrentStateValue != EnemyState.Stagger) { recentHitCount = 0; staggerTimer = 0.5f; ChangeState(EnemyState.Stagger); }
-        else if (!isBlinking && Random.value < 0.35f && CurrentStateValue == EnemyState.Chase) ExecuteBlinkDodge();
+        if ((damage >= 22f || recentHitCount >= 3) && CurrentStateValue != EnemyState.Stagger)
+        {
+            recentHitCount = 0;
+            staggerTimer = 0.5f;
+            ChangeState(EnemyState.Stagger);
+        }
+        else if (!isBlinking && Random.value < 0.4f && CurrentStateValue == EnemyState.Chase)
+        {
+            ExecuteBlinkDodge();
+        }
     }
 
     /// <summary>
@@ -940,9 +1147,18 @@ public class Enemy5_PhuThuy : NetworkBehaviour
     {
         if (targetPlayer == null || !AgentReady) return;
         Vector3 tp = (targetPlayer.position - transform.position).normalized;
-        Vector3 perp = new Vector3(-tp.z, 0, tp.x) * (Random.value < 0.5f ? 1f : -1f);
-        NavMeshHit h; if (NavMesh.SamplePosition(transform.position + perp * 3.2f, out h, 3.2f, NavMesh.AllAreas))
-        { isBlinking = true; blinkTimer = 0.25f; agent.isStopped = false; agent.speed = 16f; agent.SetDestination(h.position); }
+        float sideAngle = (Random.value < 0.5f ? 1f : -1f) * Random.Range(65f, 115f);
+        Vector3 blinkDir = Quaternion.Euler(0, sideAngle, 0) * (-tp);
+        
+        NavMeshHit h;
+        if (NavMesh.SamplePosition(transform.position + blinkDir * 4.5f, out h, 4.5f, NavMesh.AllAreas))
+        {
+            isBlinking = true;
+            blinkTimer = 0.35f;
+            agent.isStopped = false;
+            agent.Warp(h.position); // Tốc biến bí thuật tức thì sang vị trí an toàn
+            agent.speed = chaseRunSpeed;
+        }
     }
 
     private void Die()
@@ -988,6 +1204,39 @@ public class Enemy5_PhuThuy : NetworkBehaviour
     private void DespawnEnemy() { if (isStandaloneMode) { Destroy(gameObject); return; } if (IsServer && IsSpawned) GetComponent<NetworkObject>().Despawn(); }
     private void SnapToNavMesh() { if (agent == null || !agent.isActiveAndEnabled) return; if (!agent.isOnNavMesh) { NavMeshHit h; if (NavMesh.SamplePosition(transform.position, out h, 10f, NavMesh.AllAreas)) agent.Warp(h.position); } }
 
+    private void HandleFlee()
+    {
+        fleeTimer -= Time.deltaTime;
+
+        if (targetPlayer != null && IsPlayerAliveAndValid(targetPlayer))
+        {
+            Vector3 fleeDir = (transform.position - targetPlayer.position).normalized;
+            Vector3 desiredFleePos = transform.position + fleeDir * 14.0f;
+
+            if (NavMesh.SamplePosition(desiredFleePos, out NavMeshHit hit, 6.0f, NavMesh.AllAreas))
+            {
+                if (AgentReady)
+                {
+                    agent.isStopped = false;
+                    agent.speed = chaseRunSpeed * 1.35f;
+                    agent.SetDestination(hit.position);
+                }
+            }
+            SetSpeedNet(1.0f); // Run animation
+
+            float distToPlayer = Vector3.Distance(transform.position, targetPlayer.position);
+            if (distToPlayer > minAttackRange + 4f || fleeTimer <= 0f)
+            {
+                ChangeState(EnemyState.Chase);
+                return;
+            }
+        }
+        else
+        {
+            ReturnToPatrol();
+        }
+    }
+
     private void OnDrawGizmosSelected()
     {
         Vector3 eye = eyeTransform != null ? eyeTransform.position : transform.position + Vector3.up * 1.5f;
@@ -997,6 +1246,7 @@ public class Enemy5_PhuThuy : NetworkBehaviour
         Gizmos.DrawRay(eye, l * sightRange); Gizmos.DrawRay(eye, r * sightRange);
         Gizmos.color = new Color(1f, 0.64f, 0f, 0.8f); Gizmos.DrawWireSphere(transform.position, minAttackRange);
         Gizmos.color = Color.cyan; Gizmos.DrawWireSphere(transform.position, maxAttackRange);
+        Gizmos.color = Color.yellow; Gizmos.DrawWireSphere(GetPatrolCenterPosition(), maxChaseDistance);
     }
 
     // ─── Nested FSM States ───
@@ -1066,5 +1316,20 @@ public class Enemy5_PhuThuy : NetworkBehaviour
         public void Exit() {}
     }
 
-
+    private class FleeState : IEnemyState
+    {
+        private Enemy5_PhuThuy enemy;
+        public FleeState(Enemy5_PhuThuy enemy) { this.enemy = enemy; }
+        public void Enter()
+        {
+            enemy.fleeTimer = 4.0f;
+            if (enemy.AgentReady)
+            {
+                enemy.agent.isStopped = false;
+                enemy.agent.speed = enemy.chaseRunSpeed * 1.35f;
+            }
+        }
+        public void Update() { enemy.HandleFlee(); }
+        public void Exit() {}
+    }
 }
