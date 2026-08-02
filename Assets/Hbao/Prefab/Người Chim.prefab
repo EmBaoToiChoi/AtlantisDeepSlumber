@@ -249,8 +249,8 @@ MonoBehaviour:
   repairItemDropChance: 0.2
   sightRange: 60
   fieldOfView: 110
-  maxAttackRange: 13
-  minAttackRange: 5.5
+  maxAttackRange: 60
+  minAttackRange: 61
   maxChaseDistance: 22
   patrolWalkSpeed: 2.5
   chaseRunSpeed: 3.8

@@ -279,14 +279,29 @@ public class MiniBossAI : NetworkBehaviour
 
         if (IsServer)
         {
-            maxHealth = phase1MaxHealth;
-            currentHealth.Value = phase1MaxHealth;
+            if (isClone)
+            {
+                maxHealth = phase1MaxHealth * 0.45f;
+                currentHealth.Value = maxHealth;
+                localHealth = maxHealth;
+                isBossActive.Value = true;
+            }
+            else
+            {
+                maxHealth = phase1MaxHealth;
+                currentHealth.Value = phase1MaxHealth;
+                ChangeState(MiniBossState.Idle);
+            }
             SnapToNavMesh();
-            ChangeState(MiniBossState.Idle);
         }
         else
         {
             if (agent != null) agent.enabled = false;
+        }
+
+        if (isClone)
+        {
+            EnsureCloneOverheadHealthBar();
         }
     }
 
@@ -321,15 +336,21 @@ public class MiniBossAI : NetworkBehaviour
 
     public void ActivateBoss()
     {
-        bool auth = isStandaloneMode || (IsNetworkActive && IsServer);
+        bool auth = isStandaloneMode || (IsNetworkActive && IsServer) || isClone || !IsSpawned;
         if (!auth) return;
 
-        if (isStandaloneMode)
+        if (isStandaloneMode || !IsSpawned)
+        {
             localIsBossActive = true;
-        else
+            localHealth = maxHealth > 0 ? maxHealth : phase1MaxHealth * 0.45f;
+        }
+        
+        if (!isStandaloneMode && IsServer && IsSpawned)
+        {
             isBossActive.Value = true;
+        }
 
-        // BẢO ĐẢM 100%: Lập tức quét tìm Player gần nhất để rượt đuổi tấn công ngay lập tức!
+        // BẢO ĐẢM 100%: Lập tức quét tìm Player gần nhất và chuyển sang trạng thái Chase rượt đuổi ngay lập tức!
         DetectAndSwitchTarget();
         if (targetPlayer == null)
         {
@@ -346,7 +367,7 @@ public class MiniBossAI : NetworkBehaviour
             EnsureCloneOverheadHealthBar();
         }
 
-        Debug.Log($"[MiniBossAI] {(isClone ? "Phân Thân Mini Boss" : "Mini Boss")} đã KÍCH HOẠT! Nhắm mục tiêu: {(targetPlayer != null ? targetPlayer.name : "None")} - Xuất chiến rượt đuổi!");
+        Debug.Log($"[MiniBossAI] {(isClone ? "Phân Thân Mini Boss" : "Mini Boss")} đã KÍCH HOẠT! Nhắm mục tiêu: {(targetPlayer != null ? targetPlayer.name : "None")} - State: {CurrentStateValue}");
     }
 
     public void EnsureCloneOverheadHealthBar()
@@ -357,17 +378,28 @@ public class MiniBossAI : NetworkBehaviour
         if (existingHealthBar != null)
         {
             existingHealthBar.gameObject.SetActive(true);
+            existingHealthBar.enemy = null; existingHealthBar.enemy2 = null; existingHealthBar.enemy3 = null;
+            existingHealthBar.enemy4 = null; existingHealthBar.enemy5 = null; existingHealthBar.skeleton = null;
             existingHealthBar.miniBoss = this;
+            existingHealthBar.enabled = true;
             return;
         }
 
-        // Nếu Phân thân chưa có Canvas thanh máu trên đầu, tự động nhân bản từ Enemy khác trong Scene
+        var existingFallback = GetComponentInChildren<CloneWorldHealthBarFallback>(true);
+        if (existingFallback != null)
+        {
+            existingFallback.gameObject.SetActive(true);
+            existingFallback.miniBoss = this;
+            return;
+        }
+
+        // 1. Thử copy mẫu HealthBar World-Space UI Toolkit từ Enemy khác trong Scene
         EnemyHealthBar sample = FindFirstObjectByType<EnemyHealthBar>(FindObjectsInactive.Include);
         if (sample != null && sample.gameObject != null)
         {
             GameObject newHealthBar = Instantiate(sample.gameObject, transform);
             newHealthBar.name = "HealthBar";
-            newHealthBar.transform.localPosition = Vector3.up * 2.4f; // Cao hơn đầu 2.4m
+            newHealthBar.transform.localPosition = Vector3.up * 2.5f; // Cao hơn đầu 2.5m
             newHealthBar.transform.localRotation = Quaternion.identity;
             newHealthBar.transform.localScale = Vector3.one;
             newHealthBar.SetActive(true);
@@ -380,7 +412,42 @@ public class MiniBossAI : NetworkBehaviour
                 hpScript.miniBoss = this;
                 hpScript.enabled = true;
             }
-            Debug.Log("[MiniBossAI] Đã tự động tạo & hiển thị Thanh Máu World-Space trên đầu cho Phân Thân Mini Boss!");
+            Debug.Log("[MiniBossAI] Đã tự động copy Thanh Máu World-Space trên đầu cho Phân Thân Mini Boss!");
+        }
+        else
+        {
+            // 2. Dự phòng: Tự động dựng Canvas Thanh máu World-Space trực tiếp nếu Scene không có quái thường nào khác
+            GameObject canvasObj = new GameObject("CloneHealthBarCanvas");
+            canvasObj.transform.SetParent(transform, false);
+            canvasObj.transform.localPosition = Vector3.up * 2.5f;
+            canvasObj.transform.localRotation = Quaternion.identity;
+            canvasObj.transform.localScale = new Vector3(0.015f, 0.015f, 0.015f);
+
+            Canvas canvas = canvasObj.AddComponent<Canvas>();
+            canvas.renderMode = RenderMode.WorldSpace;
+
+            GameObject bgObj = new GameObject("Background");
+            bgObj.transform.SetParent(canvasObj.transform, false);
+            var bgImg = bgObj.AddComponent<UnityEngine.UI.Image>();
+            bgImg.color = new Color(0.1f, 0.1f, 0.1f, 0.85f);
+            var bgRect = bgObj.GetComponent<RectTransform>();
+            bgRect.sizeDelta = new Vector2(100f, 14f);
+
+            GameObject fillObj = new GameObject("Fill");
+            fillObj.transform.SetParent(bgObj.transform, false);
+            var fillImg = fillObj.AddComponent<UnityEngine.UI.Image>();
+            fillImg.color = new Color(0.95f, 0.2f, 0.2f, 1f);
+            var fillRect = fillObj.GetComponent<RectTransform>();
+            fillRect.anchorMin = Vector2.zero;
+            fillRect.anchorMax = Vector2.one;
+            fillRect.offsetMin = new Vector2(1.5f, 1.5f);
+            fillRect.offsetMax = new Vector2(-1.5f, -1.5f);
+
+            var fallbackComp = canvasObj.AddComponent<CloneWorldHealthBarFallback>();
+            fallbackComp.miniBoss = this;
+            fallbackComp.fillRect = fillRect;
+
+            Debug.Log("[MiniBossAI] Đã tự động dựng Canvas Thanh Máu World-Space dự phòng cho Phân Thân!");
         }
     }
 
@@ -1456,5 +1523,27 @@ public class MiniBossAI : NetworkBehaviour
         }
         public void Update() { }
         public void Exit() { }
+    }
+}
+
+public class CloneWorldHealthBarFallback : MonoBehaviour
+{
+    public MiniBossAI miniBoss;
+    public RectTransform fillRect;
+    private Camera mainCam;
+
+    private void Update()
+    {
+        if (mainCam == null || !mainCam.gameObject.activeInHierarchy) mainCam = Camera.main;
+        if (mainCam != null)
+        {
+            transform.rotation = Quaternion.LookRotation(transform.position - mainCam.transform.position);
+        }
+
+        if (miniBoss != null && fillRect != null)
+        {
+            float hpRatio = Mathf.Clamp01(miniBoss.ActualCurrentHealth / Mathf.Max(miniBoss.maxHealth, 1f));
+            fillRect.anchorMax = new Vector2(hpRatio, 1f);
+        }
     }
 }
