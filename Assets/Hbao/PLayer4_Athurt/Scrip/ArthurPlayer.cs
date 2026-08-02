@@ -1439,6 +1439,8 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     private void OnHealthChanged(float oldHealth, float newHealth)
     {
+        if (isStandaloneMode) return;
+
         localHealth = newHealth;
         UpdateHealthHUD(newHealth);
 
@@ -3910,34 +3912,23 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
             }
         }
 
-        if (isStandaloneMode)
-        {
-            localHealth = Mathf.Max(localHealth - damage, 0f);
-            UpdateHealthHUD(localHealth);
+        // 1. Trừ máu localHealth và cập nhật HUD/Hiệu ứng chớp đỏ lập tức
+        localHealth = Mathf.Max(localHealth - damage, 0f);
+        UpdateHealthHUD(localHealth);
 
-            InterruptCombo();
-
-            if (localHealth <= 0)
-            {
-                targetMoveVelocity = Vector3.zero;
-                if (rb != null) { rb.linearVelocity = Vector3.zero; rb.angularVelocity = Vector3.zero; }
-                PlayAnimation("Death", 0.15f);
-            }
-            else
-            {
-                string hitAnim = Random.value < 0.5f ? "GetHit" : "GeiHit2";
-                PlayAnimation(hitAnim, 0.05f);
-            }
-            return;
-        }
-
-        if (!IsServer) return;
-
-        currentHealth.Value = Mathf.Max(currentHealth.Value - damage, 0f);
+        var flash = GetComponent<MaterialFlashBehaviour>();
+        if (flash == null) flash = gameObject.AddComponent<MaterialFlashBehaviour>();
+        flash.Flash(Color.red, 0.15f);
 
         InterruptCombo();
 
-        if (currentHealth.Value <= 0)
+        // 2. Đồng bộ NetworkVariable trên Server nếu đang trong chế độ Network
+        if (!isStandaloneMode && IsServer)
+        {
+            currentHealth.Value = Mathf.Max(currentHealth.Value - damage, 0f);
+        }
+
+        if (localHealth <= 0 || (!isStandaloneMode && IsServer && currentHealth.Value <= 0))
         {
             targetMoveVelocity = Vector3.zero;
             if (rb != null) { rb.linearVelocity = Vector3.zero; rb.angularVelocity = Vector3.zero; }

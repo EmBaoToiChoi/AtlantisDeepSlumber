@@ -106,7 +106,7 @@ public class MiniBossHealthBar : MonoBehaviour
 
         if (rootContainer != null)
         {
-            rootContainer.style.display = boss.IsBossActive ? DisplayStyle.Flex : DisplayStyle.None;
+            rootContainer.style.display = DisplayStyle.Flex;
         }
 
         string bossName = boss.gameObject.name;
@@ -160,7 +160,7 @@ public class MiniBossHealthBar : MonoBehaviour
         foreach (var b in allBosses)
         {
             if (b == null || !b.gameObject.activeInHierarchy || !b.enabled) continue;
-            if (b.IsDead || !b.IsBossActive || b.ActualCurrentHealth <= 0) continue;
+            if (b.IsDead) continue;
 
             if (b.isClone)
             {
@@ -175,7 +175,7 @@ public class MiniBossHealthBar : MonoBehaviour
         if (mainBoss != null) boss = mainBoss;
 
         // 3. UI only disappears when ALL 3 (Main Boss + Clones) are dead / inactive
-        bool anyAlive = (mainBoss != null && !mainBoss.IsDead && mainBoss.IsBossActive && mainBoss.ActualCurrentHealth > 0) || (activeClones.Count > 0);
+        bool anyAlive = (mainBoss != null && !mainBoss.IsDead && mainBoss.ActualCurrentHealth > 0) || (activeClones.Count > 0);
 
         if (!anyAlive)
         {
@@ -230,7 +230,7 @@ public class MiniBossHealthBar : MonoBehaviour
         }
 
         float maxHp = targetBoss.maxHealth;
-        if (maxHp <= 0f) maxHp = 1200f;
+        if (maxHp <= 0f) maxHp = 500f;
 
         float actualHp = targetBoss.ActualCurrentHealth;
 
@@ -330,7 +330,7 @@ public class MiniBossHealthBar : MonoBehaviour
         if (clone == null || progBar == null || yelBar == null || txtLabel == null) return;
 
         float maxHp = clone.maxHealth;
-        if (maxHp <= 0f) maxHp = 270f;
+        if (maxHp <= 0f) maxHp = 225f;
         float actualHp = clone.ActualCurrentHealth;
 
         if (dispHp < 0f)

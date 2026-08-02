@@ -5311,39 +5311,27 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         }
 
         SetMovementLock(false);
-        InterruptCombo(); // Ng\u1eaft combo khi b\u1ecb tr\u00fang \u0111\u00f2n
+        InterruptCombo();
 
-        if (isStandaloneMode)
+        // 1. Trừ máu localHealth và cập nhật HUD/Hiệu ứng chớp đỏ lập tức
+        localHealth = Mathf.Max(localHealth - damage, 0f);
+        UpdateHealthHUD(localHealth);
+
+        var flash = GetComponent<MaterialFlashBehaviour>();
+        if (flash == null) flash = gameObject.AddComponent<MaterialFlashBehaviour>();
+        flash.Flash(Color.red, 0.15f);
+
+        Debug.Log($"[LeoPlayer] Recieved {damage} DMG. Local Health: {localHealth}");
+
+        // 2. Đồng bộ NetworkVariable trên Server nếu đang trong chế độ Network
+        if (!isStandaloneMode && IsServer)
         {
-            localHealth = Mathf.Max(localHealth - damage, 0f);
-            UpdateHealthHUD(localHealth);
-            Debug.Log($"[LeoPlayer Standalone] Recieved {damage} DMG. Health: {localHealth}");
-
-            var flash = GetComponent<MaterialFlashBehaviour>();
-            if (flash == null) flash = gameObject.AddComponent<MaterialFlashBehaviour>();
-            flash.Flash(Color.red, 0.15f);
-
-            if (localHealth <= 0)
-            {
-                targetMoveVelocity = Vector3.zero;
-                if (rb != null) { rb.linearVelocity = Vector3.zero; rb.angularVelocity = Vector3.zero; }
-                PlayAnimation("Death", 0.15f);
-            }
-            else
-            {
-                string hitAnim = Random.value < 0.5f ? "GetHit" : "GeiHit2";
-                PlayAnimation(hitAnim, 0.05f);
-            }
-            return;
+            float finalHp = Mathf.Max(currentHealth.Value - damage, 0f);
+            SyncNetVarFloat(currentHealth, proxyPlayerTest != null ? proxyPlayerTest.currentHealth : null, finalHp);
         }
 
-        if (!IsServer) return;
-
-        float finalHp = Mathf.Max(currentHealth.Value - damage, 0f);
-        SyncNetVarFloat(currentHealth, proxyPlayerTest != null ? proxyPlayerTest.currentHealth : null, finalHp);
-        Debug.Log($"[LeoPlayer Server] Client {OwnerClientId} recieved {damage} DMG. Health: {currentHealth.Value}");
-
-        if (currentHealth.Value <= 0)
+        // 3. Xử lý bị dính đòn / chết
+        if (localHealth <= 0 || (!isStandaloneMode && IsServer && currentHealth.Value <= 0))
         {
             targetMoveVelocity = Vector3.zero;
             if (rb != null) { rb.linearVelocity = Vector3.zero; rb.angularVelocity = Vector3.zero; }
@@ -7038,7 +7026,10 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     private void OnHealthChangedShared(float oldHealth, float newHealth)
     {
+        if (isStandaloneMode) return;
+
         localHealth = newHealth;
+        UpdateHealthHUD(localHealth);
 
         if (newHealth < oldHealth)
         {
@@ -8523,7 +8514,6 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     // --- Đấm tay / Hitbox tổng hợp ---
     public void EnableLeftHitbox()
     {
-        alreadyHitEnemies.Clear();
         EnsureHitboxComponent(leftHitbox);
         SafeSetHitboxEnabled(leftHitbox, true);
         PerformRaycastSlashDamage(1.0f);
@@ -8535,7 +8525,6 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     public void EnableRightHitbox()
     {
-        alreadyHitEnemies.Clear();
         EnsureHitboxComponent(rightHitbox);
         SafeSetHitboxEnabled(rightHitbox, true);
         PerformRaycastSlashDamage(1.0f);
@@ -8547,7 +8536,6 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     public void EnableBothHitboxes()
     {
-        alreadyHitEnemies.Clear();
         EnsureHitboxComponent(leftHitbox);
         EnsureHitboxComponent(rightHitbox);
         SafeSetHitboxEnabled(leftHitbox, true);
@@ -8563,7 +8551,6 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     // --- Kiếm / Vũ khí: Tay Trái ---
     public void EnableLeftWeaponHitbox()
     {
-        alreadyHitEnemies.Clear();
         EnsureHitboxComponent(leftWeaponHitbox);
         SafeSetHitboxEnabled(leftWeaponHitbox, true);
         PerformRaycastSlashDamage(1.0f);
@@ -8576,7 +8563,6 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     // --- Kiếm / Vũ khí: Tay Phải ---
     public void EnableRightWeaponHitbox()
     {
-        alreadyHitEnemies.Clear();
         EnsureHitboxComponent(rightWeaponHitbox);
         SafeSetHitboxEnabled(rightWeaponHitbox, true);
         PerformRaycastSlashDamage(1.0f);
@@ -8591,7 +8577,6 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     public void DisableBothWeaponHitbox() { DisableBothWeaponHitboxes(); }
     public void EnableBothWeaponHitboxes()
     {
-        alreadyHitEnemies.Clear();
         EnsureHitboxComponent(leftWeaponHitbox);
         EnsureHitboxComponent(rightWeaponHitbox);
         SafeSetHitboxEnabled(leftWeaponHitbox, true);
@@ -8607,7 +8592,6 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     // --- Rìu (Axe) ---
     public void EnableAxeWeaponHitbox()
     {
-        alreadyHitEnemies.Clear();
         EnsureHitboxComponent(axeWeaponHitbox);
         SafeSetHitboxEnabled(axeWeaponHitbox, true);
         SafeSetHitboxEnabled(leftWeaponHitbox, true);
