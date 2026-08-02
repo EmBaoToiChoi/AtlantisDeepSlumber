@@ -1035,11 +1035,21 @@ public class Enemy5_PhuThuy : NetworkBehaviour
     private void LaunchSpellBall()
     {
         if (targetPlayer == null) return;
-        Vector3 spawnPt = staffTipTransform != null ? staffTipTransform.position : transform.position + transform.forward * 1.2f + Vector3.up * 1.2f;
         
+        // Spawn point ở vị trí đầu gậy hoặc phía trước ngực Phù Thủy (cao 1.35m)
+        Vector3 spawnPt = staffTipTransform != null ? staffTipTransform.position : transform.position + transform.forward * 0.8f + Vector3.up * 1.35f;
+        if (spawnPt.y < transform.position.y + 1.2f)
+        {
+            spawnPt.y = transform.position.y + 1.2f;
+        }
+
         // Đoán hướng di chuyển đón đầu bước đi của Player
         Vector3 targetPos = GetPredictedTargetPosition(targetPlayer);
-        Vector3 mainDir = (targetPos + Vector3.up * 1.0f - spawnPt).normalized;
+        
+        // Ép hướng bay 100% NGANG SONG SONG MẶT ĐẤT (bỏ qua độ dốc Y để đạn không bị cắm xuống đất)
+        Vector3 dirToTarget = targetPos - transform.position;
+        dirToTarget.y = 0f;
+        Vector3 mainDir = dirToTarget.sqrMagnitude > 0.01f ? dirToTarget.normalized : new Vector3(transform.forward.x, 0, transform.forward.z).normalized;
 
         float activeHpRatio = ActualCurrentHealth / maxHealth;
         bool multiShot = activeHpRatio <= 0.65f || Vector3.Distance(transform.position, targetPlayer.position) > 10.0f;
@@ -1049,6 +1059,8 @@ public class Enemy5_PhuThuy : NetworkBehaviour
         foreach (float angle in angles)
         {
             Vector3 dir = Quaternion.Euler(0, angle, 0) * mainDir;
+            dir.y = 0f; // Bảo đảm 100% đạn bay ngang thẳng ra
+
             if (spellProjectilePrefab != null)
             {
                 var proj = Instantiate(spellProjectilePrefab, spawnPt, Quaternion.LookRotation(dir));

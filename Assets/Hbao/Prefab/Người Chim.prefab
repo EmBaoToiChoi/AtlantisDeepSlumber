@@ -210,12 +210,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   ShowTopMostFoldoutHeaderGroup: 1
-  maxHealth: 100
+  maxHealth: 150
   currentHealth:
     UpdateTraits:
       MinSecondsBetweenUpdates: 0
       MaxSecondsBetweenUpdates: 0
-    m_InternalValue: 100
+    m_InternalValue: 150
   currentState:
     UpdateTraits:
       MinSecondsBetweenUpdates: 0
@@ -251,11 +251,14 @@ MonoBehaviour:
   fieldOfView: 110
   maxAttackRange: 13
   minAttackRange: 5.5
+  maxChaseDistance: 22
   patrolWalkSpeed: 2.5
   chaseRunSpeed: 3.8
   patrolWaitMin: 1.5
   patrolWaitMax: 5
   patrolMoveChance: 0.65
+  canTacticalFlee: 1
+  fleeHealthThreshold: 0.3
   playerLayer:
     serializedVersion: 2
     m_Bits: 8

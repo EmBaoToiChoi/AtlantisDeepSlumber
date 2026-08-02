@@ -10,6 +10,7 @@ public class EnemyHealthBar : MonoBehaviour
     public Enemy3_Buaa enemy3;
     public Enemy4_Bongtoi enemy4;
     public Enemy5_PhuThuy enemy5;
+    public MiniBossAI miniBoss;
     public Skeleton skeleton;
     public UIDocument uiDocument;
 
@@ -101,6 +102,9 @@ public class EnemyHealthBar : MonoBehaviour
             enemy5 = GetComponentInParent<Enemy5_PhuThuy>();
             if (enemy5 != null) return;
 
+            miniBoss = GetComponentInParent<MiniBossAI>();
+            if (miniBoss != null) return;
+
             skeleton = GetComponentInParent<Skeleton>();
         }
     }
@@ -134,6 +138,11 @@ public class EnemyHealthBar : MonoBehaviour
         {
             enemyName = enemy5.gameObject.name;
             curHp = enemy5.ActualCurrentHealth;
+        }
+        else if (miniBoss != null)
+        {
+            enemyName = miniBoss.isClone ? "Mini Boss (Phân Thân)" : miniBoss.gameObject.name;
+            curHp = miniBoss.ActualCurrentHealth;
         }
         else if (skeleton != null)
         {
@@ -175,6 +184,7 @@ public class EnemyHealthBar : MonoBehaviour
         if (enemy3 != null) return enemy3.maxHealth;
         if (enemy4 != null) return enemy4.maxHealth;
         if (enemy5 != null) return enemy5.maxHealth;
+        if (miniBoss != null) return miniBoss.maxHealth;
         if (skeleton != null) return skeleton.maxHealth;
         return 100f;
     }
@@ -186,6 +196,7 @@ public class EnemyHealthBar : MonoBehaviour
         if (enemy3 != null) return enemy3.ActualCurrentHealth;
         if (enemy4 != null) return enemy4.ActualCurrentHealth;
         if (enemy5 != null) return enemy5.ActualCurrentHealth;
+        if (miniBoss != null) return miniBoss.ActualCurrentHealth;
         if (skeleton != null) return skeleton.ActualCurrentHealth;
         return 0f;
     }
