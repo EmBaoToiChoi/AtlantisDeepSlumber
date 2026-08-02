@@ -79,6 +79,7 @@
     </ui:VisualElement>
     <ui:VisualElement class="hud-skills-wrapper" style="-unity-font-definition: url(&quot;project://database/Assets/UI%20Toolkit/UnityThemes/UnityDefaultRuntimeTheme.tss?fileID=2230732570650464555&amp;guid=8dcf67e479d58bd47908bf0d5e1cc1d0&amp;type=3#NotInter-Regular&quot;);">
         <ui:VisualElement class="skill-slot">
+            <ui:Label name="skill-name-label-q" text="Ảo Ảnh Chém" class="skill-name-label" />
             <ui:VisualElement name="skill-img-q" class="skill-image" style="background-image: url(&quot;project://database/Assets/Hbao/Image/Skill%201,.png?fileID=2800000&amp;guid=aa0fb8d4832b5c04289b5050bec3c919&amp;type=3#Skill 1,&quot;);" />
             <ui:VisualElement name="skill-cooldown-q" class="skill-cooldown-overlay" style="height: 0%;" />
             <ui:Label name="skill-cooldown-text-q" class="skill-cooldown-text" />
@@ -90,6 +91,7 @@
             </ui:VisualElement>
         </ui:VisualElement>
         <ui:VisualElement class="skill-slot skill-slot-center">
+            <ui:Label name="skill-name-label-r" text="Chưởng Nguyên Tố" class="skill-name-label" />
             <ui:VisualElement name="skill-img-r" class="skill-image" style="background-image: url(&quot;project://database/Assets/Hbao/Image/ST-Skill3.png?fileID=2800000&amp;guid=5e3b766110bc4f54da0aa69f3c984baa&amp;type=3#ST-Skill3&quot;);" />
             <ui:VisualElement name="skill-cooldown-r" class="skill-cooldown-overlay" style="height: 0%;" />
             <ui:Label name="skill-cooldown-text-r" class="skill-cooldown-text" />
@@ -101,6 +103,7 @@
             </ui:VisualElement>
         </ui:VisualElement>
         <ui:VisualElement class="skill-slot">
+            <ui:Label name="skill-name-label-e" text="Tăng Tốc Chạy" class="skill-name-label" />
             <ui:VisualElement name="skill-img-e" class="skill-image" style="background-image: url(&quot;project://database/Assets/Hbao/Image/Skill%202.png?fileID=2800000&amp;guid=a78801096338d0f47b5d2b17270fdd15&amp;type=3#Skill 2&quot;);" />
             <ui:VisualElement name="skill-cooldown-e" class="skill-cooldown-overlay" style="height: 0%;" />
             <ui:Label name="skill-cooldown-text-e" class="skill-cooldown-text" />

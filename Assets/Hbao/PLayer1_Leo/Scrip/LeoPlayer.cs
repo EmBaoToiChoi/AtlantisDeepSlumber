@@ -6459,47 +6459,53 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         if (rb != null) rb.linearVelocity = Vector3.zero;
 
-        Transform currentTarget = initialTarget;
-        float interval = qSkillDuration / Mathf.Max(qSkillSlashCount, 1);
-
-        for (int i = 0; i < qSkillSlashCount; i++)
+        try
         {
-            // Kiểm tra mục tiêu hiện tại
-            if (currentTarget == null || IsEnemyDead(currentTarget))
+            Transform currentTarget = initialTarget;
+            float interval = qSkillDuration / Mathf.Max(qSkillSlashCount, 1);
+
+            for (int i = 0; i < qSkillSlashCount; i++)
             {
-                currentTarget = FindNearestAliveEnemy();
-                if (currentTarget == null)
+                // Kiểm tra mục tiêu hiện tại
+                if (currentTarget == null || IsEnemyDead(currentTarget))
                 {
-                    Debug.Log("[LeoPlayer] Q Skill: Không còn enemy, kết thúc sớm.");
-                    break;
+                    currentTarget = FindNearestAliveEnemy();
+                    if (currentTarget == null)
+                    {
+                        Debug.Log("[LeoPlayer] Q Skill: Không còn enemy, kết thúc sớm.");
+                        break;
+                    }
                 }
+
+                // Dịch chuyển xung quanh mục tiêu tại vị trí an toàn không bị cản tường
+                Vector3 slashPos = CalculateValidSlashPosition(transform.position, currentTarget);
+                transform.position = slashPos;
+
+                // Xoay mặt về phía mục tiêu
+                Vector3 dir = (currentTarget.position - transform.position);
+                dir.y = 0f;
+                if (dir.sqrMagnitude > 0.001f) transform.rotation = Quaternion.LookRotation(dir.normalized);
+
+                // Gây sát thương
+                TryDamageSpecificEnemy(currentTarget, qSkillDamagePerSlash);
+
+                // Phát VFX chém cục bộ ở tâm mục tiêu
+                Vector3 targetCenter = GetTargetCenterPosition(currentTarget);
+                SpawnQSlashVfxLocal(targetCenter);
+
+                qSkillTimeRemaining -= interval;
+                yield return new WaitForSeconds(interval);
             }
-
-            // Dịch chuyển xung quanh mục tiêu tại vị trí an toàn không bị cản tường
-            Vector3 slashPos = CalculateValidSlashPosition(transform.position, currentTarget);
-            transform.position = slashPos;
-
-            // Xoay mặt về phía mục tiêu
-            Vector3 dir = (currentTarget.position - transform.position);
-            dir.y = 0f;
-            if (dir.sqrMagnitude > 0.001f) transform.rotation = Quaternion.LookRotation(dir.normalized);
-
-            // Gây sát thương
-            TryDamageSpecificEnemy(currentTarget, qSkillDamagePerSlash);
-
-            // Phát VFX chém cục bộ ở tâm mục tiêu
-            Vector3 targetCenter = GetTargetCenterPosition(currentTarget);
-            SpawnQSlashVfxLocal(targetCenter);
-
-            qSkillTimeRemaining -= interval;
-            yield return new WaitForSeconds(interval);
         }
-
-        // Kết thúc Skill Q
-        isQSkillActiveLocal = false;
-        qSkillTimeRemaining = 0f;
-        isMovementLocked = false;
-        SetLeoRenderersActive(true);
+        finally
+        {
+            // BẢO ĐẢM 100%: Tự động mở khóa di chuyển & khôi phục hiển thị nhân vật trong MỌI TRƯỜNG HỢP
+            isQSkillActiveLocal = false;
+            qSkillTimeRemaining = 0f;
+            isMovementLocked = false;
+            SetLeoRenderersActive(true);
+            if (rb != null) rb.linearVelocity = Vector3.zero;
+        }
     }
 
     /// <summary>
@@ -6517,47 +6523,52 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         // Đồng bộ timer về client owner
         UpdateQTimerClientRpc(remaining);
 
-        Transform currentTarget = initialTarget;
-
-        for (int i = 0; i < qSkillSlashCount; i++)
+        try
         {
-            // Kiểm tra mục tiêu hiện tại
-            if (currentTarget == null || IsEnemyDead(currentTarget))
+            Transform currentTarget = initialTarget;
+
+            for (int i = 0; i < qSkillSlashCount; i++)
             {
-                currentTarget = FindNearestAliveEnemy();
-                if (currentTarget == null)
+                // Kiểm tra mục tiêu hiện tại
+                if (currentTarget == null || IsEnemyDead(currentTarget))
                 {
-                    Debug.Log("[LeoPlayer Server] Q Skill: Không còn enemy, kết thúc sớm.");
-                    break;
+                    currentTarget = FindNearestAliveEnemy();
+                    if (currentTarget == null)
+                    {
+                        Debug.Log("[LeoPlayer Server] Q Skill: Không còn enemy, kết thúc sớm.");
+                        break;
+                    }
                 }
+
+                // Dịch chuyển xung quanh mục tiêu tại vị trí an toàn không bị cản tường
+                Vector3 slashPos = CalculateValidSlashPosition(transform.position, currentTarget);
+                transform.position = slashPos;
+
+                // Xoay mặt về phía mục tiêu
+                Vector3 dir = (currentTarget.position - transform.position);
+                dir.y = 0f;
+                if (dir.sqrMagnitude > 0.001f) transform.rotation = Quaternion.LookRotation(dir.normalized);
+
+                // Gây sát thương
+                TryDamageSpecificEnemy(currentTarget, qSkillDamagePerSlash);
+
+                // Gọi ClientRpc để phát VFX chém ở tất cả client tại tâm mục tiêu
+                Vector3 targetCenter = GetTargetCenterPosition(currentTarget);
+                PlayQSlashVfxClientRpc(targetCenter);
+
+                remaining -= interval;
+                UpdateQTimerClientRpc(Mathf.Max(0f, remaining));
+                yield return new WaitForSeconds(interval);
             }
-
-            // Dịch chuyển xung quanh mục tiêu tại vị trí an toàn không bị cản tường
-            Vector3 slashPos = CalculateValidSlashPosition(transform.position, currentTarget);
-            transform.position = slashPos;
-
-            // Xoay mặt về phía mục tiêu
-            Vector3 dir = (currentTarget.position - transform.position);
-            dir.y = 0f;
-            if (dir.sqrMagnitude > 0.001f) transform.rotation = Quaternion.LookRotation(dir.normalized);
-
-            // Gây sát thương
-            TryDamageSpecificEnemy(currentTarget, qSkillDamagePerSlash);
-
-            // Gọi ClientRpc để phát VFX chém ở tất cả client tại tâm mục tiêu
-            Vector3 targetCenter = GetTargetCenterPosition(currentTarget);
-            PlayQSlashVfxClientRpc(targetCenter);
-
-            remaining -= interval;
-            UpdateQTimerClientRpc(Mathf.Max(0f, remaining));
-            yield return new WaitForSeconds(interval);
         }
-
-        // Kết thúc Skill Q
-        isQSkillActiveNet.Value = false;
-        SetQSkillStateClientRpc(false);
-        SetMovementLockServerSide(false);
-        UpdateQTimerClientRpc(0f);
+        finally
+        {
+            // BẢO ĐẢM 100%: Tự động mở khóa di chuyển & reset trạng thái mạng cho tất cả Client
+            isQSkillActiveNet.Value = false;
+            SetQSkillStateClientRpc(false);
+            SetMovementLockServerSide(false);
+            UpdateQTimerClientRpc(0f);
+        }
     }
 
     private void SetMovementLockServerSide(bool locked)
@@ -6573,6 +6584,10 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     {
         qSkillTimeRemaining = active ? qSkillDuration : 0f;
         SetLeoRenderersActive(!active);
+        if (!active)
+        {
+            isMovementLocked = false;
+        }
     }
 
     [ClientRpc]
@@ -6670,6 +6685,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         else
         {
             qSkillTimeRemaining = 0f;
+            isMovementLocked = false; // Bảo đảm 100% mở khóa di chuyển khi kỹ năng Q kết thúc
         }
     }
 
@@ -8362,11 +8378,8 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     private void OnMovementLockedNetChanged(bool oldVal, bool newVal)
     {
-        if (!IsOwner)
-        {
-            isMovementLocked = newVal;
-            if (newVal && rb != null) rb.linearVelocity = new Vector3(0f, rb.linearVelocity.y, 0f);
-        }
+        isMovementLocked = newVal;
+        if (newVal && rb != null) rb.linearVelocity = new Vector3(0f, rb.linearVelocity.y, 0f);
     }
 
     // ======================================================
