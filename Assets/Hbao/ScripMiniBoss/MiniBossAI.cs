@@ -652,8 +652,6 @@ public class MiniBossAI : NetworkBehaviour
     private void FinishCloneSetup(GameObject cloneObj, Vector3 finalPos)
     {
         if (cloneObj == null) return;
-        cloneObj.transform.position = finalPos;
-        cloneObj.transform.localScale = transform.localScale;
 
         MiniBossAI cloneAI = cloneObj.GetComponent<MiniBossAI>();
         if (cloneAI != null)
@@ -661,9 +659,18 @@ public class MiniBossAI : NetworkBehaviour
             if (cloneAI.agent != null)
             {
                 cloneAI.agent.enabled = true;
-                cloneAI.SnapToNavMesh();
+                cloneAI.agent.Warp(finalPos);
             }
+            else
+            {
+                cloneObj.transform.position = finalPos;
+            }
+            cloneObj.transform.localScale = transform.localScale;
             cloneAI.ActivateBoss();
+        }
+        else
+        {
+            cloneObj.transform.position = finalPos;
         }
     }
 
