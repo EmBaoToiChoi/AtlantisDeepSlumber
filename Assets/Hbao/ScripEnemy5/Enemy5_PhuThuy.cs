@@ -724,9 +724,7 @@ public class Enemy5_PhuThuy : NetworkBehaviour
     {
         if (targetPlayer == null || !IsPlayerAliveAndValid(targetPlayer))
         {
-            targetPlayer = null;
-            EndAttack();
-            return;
+            // Nếu mất mục tiêu giữa chừng, vẫn tiếp tục gồng chưởng bắn ra phía trước
         }
 
         if (AgentReady) agent.isStopped = true;
@@ -735,11 +733,22 @@ public class Enemy5_PhuThuy : NetworkBehaviour
         stateTimer -= Time.deltaTime;
 
         // Xoay mặt nhắm bắn chính xác về phía Player trong lúc gồng chưởng
-        Vector3 targetPos = GetPredictedTargetPosition(targetPlayer);
-        Vector3 ld = (targetPos - transform.position); ld.y = 0;
-        if (ld.sqrMagnitude > 0.01f)
+        if (targetPlayer != null && IsPlayerAliveAndValid(targetPlayer))
         {
-            transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(ld), Time.deltaTime * 18f);
+            Vector3 targetPos = GetPredictedTargetPosition(targetPlayer);
+            Vector3 ld = (targetPos - transform.position); ld.y = 0;
+            if (ld.sqrMagnitude > 0.01f)
+            {
+                transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(ld), Time.deltaTime * 18f);
+            }
+        }
+
+        // BẢO ĐẢM 100%: Dự phòng nếu Animation Event từ Keyframe bị lỡ/bỏ qua, đạn vẫn sẽ tự động phóng ở 45% thời lượng chiêu!
+        bool auth = isStandaloneMode || (IsNetworkActive && IsServer);
+        if (auth && !hasCastSpell && stateTimer <= attackDuration * 0.45f)
+        {
+            hasCastSpell = true;
+            LaunchSpellBall();
         }
 
         if (stateTimer <= 0)
@@ -768,22 +777,18 @@ public class Enemy5_PhuThuy : NetworkBehaviour
         if (pt == null || !pt.gameObject.activeInHierarchy) return false;
 
         if (pt.gameObject.layer == LayerMask.NameToLayer("UI")) return false;
-        string n = pt.name.ToLower();
-        if (n.Contains("ui") || n.Contains("canvas") || n.Contains("hud") || n.Contains("healthbar") || n.Contains("health_bar")) return false;
 
-        IPlayerHUDTarget ps = pt.GetComponentInParent<IPlayerHUDTarget>();
-        if (ps == null) ps = pt.GetComponentInChildren<IPlayerHUDTarget>();
-        if (ps != null)
+        // Bỏ qua nếu người chơi đang tàng hình (Invisible)
+        var monoComponents = pt.GetComponentsInParent<MonoBehaviour>();
+        foreach (var mono in monoComponents)
         {
-            if (ps.CurrentHealth <= 0 || ps.IsInvisible) return false;
-            return true;
-        }
-
-        Skeleton sk = pt.GetComponentInParent<Skeleton>();
-        if (sk != null)
-        {
-            if (sk.CurrentHealthValue <= 0) return false;
-            return true;
+            if (mono == null) continue;
+            var invisProp = mono.GetType().GetProperty("IsInvisible", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
+            if (invisProp != null && invisProp.PropertyType == typeof(bool))
+            {
+                bool isInvis = (bool)invisProp.GetValue(mono);
+                if (isInvis) return false;
+            }
         }
 
         Transform curr = pt;
@@ -791,8 +796,8 @@ public class Enemy5_PhuThuy : NetworkBehaviour
         {
             if (curr.CompareTag("Player"))
             {
-                var monoComponents = curr.GetComponents<MonoBehaviour>();
-                foreach (var mono in monoComponents)
+                var monoComps = curr.GetComponents<MonoBehaviour>();
+                foreach (var mono in monoComps)
                 {
                     if (mono == null) continue;
                     var prop = mono.GetType().GetProperty("CurrentHealth");
@@ -1034,8 +1039,14 @@ public class Enemy5_PhuThuy : NetworkBehaviour
 
     private void LaunchSpellBall()
     {
-        if (targetPlayer == null) return;
-        
+        // Tự động tìm lại Prefab quả cầu lửa từ Resources nếu bị null
+        if (spellProjectilePrefab == null)
+        {
+            spellProjectilePrefab = Resources.Load<GameObject>("SpellBall") ?? 
+                                   Resources.Load<GameObject>("Prefab/SpellBall") ?? 
+                                   Resources.Load<GameObject>("Hbao/Prefab/SpellBall");
+        }
+
         // Spawn point ở vị trí đầu gậy hoặc phía trước ngực Phù Thủy (cao 1.35m)
         Vector3 spawnPt = staffTipTransform != null ? staffTipTransform.position : transform.position + transform.forward * 0.8f + Vector3.up * 1.35f;
         if (spawnPt.y < transform.position.y + 1.2f)
@@ -1043,8 +1054,10 @@ public class Enemy5_PhuThuy : NetworkBehaviour
             spawnPt.y = transform.position.y + 1.2f;
         }
 
-        // Đoán hướng di chuyển đón đầu bước đi của Player
-        Vector3 targetPos = GetPredictedTargetPosition(targetPlayer);
+        // Nếu targetPlayer bị null đúng lúc bắn, bắn thẳng về phía trước theo transform.forward
+        Vector3 targetPos = (targetPlayer != null && IsPlayerAliveAndValid(targetPlayer))
+            ? GetPredictedTargetPosition(targetPlayer)
+            : transform.position + transform.forward * 10f;
         
         // Ép hướng bay 100% NGANG SONG SONG MẶT ĐẤT (bỏ qua độ dốc Y để đạn không bị cắm xuống đất)
         Vector3 dirToTarget = targetPos - transform.position;
@@ -1052,7 +1065,7 @@ public class Enemy5_PhuThuy : NetworkBehaviour
         Vector3 mainDir = dirToTarget.sqrMagnitude > 0.01f ? dirToTarget.normalized : new Vector3(transform.forward.x, 0, transform.forward.z).normalized;
 
         float activeHpRatio = ActualCurrentHealth / maxHealth;
-        bool multiShot = activeHpRatio <= 0.65f || Vector3.Distance(transform.position, targetPlayer.position) > 10.0f;
+        bool multiShot = activeHpRatio <= 0.65f || (targetPlayer != null && Vector3.Distance(transform.position, targetPlayer.position) > 10.0f);
 
         float[] angles = multiShot ? new float[] { 0f, -14f, 14f } : new float[] { 0f };
 

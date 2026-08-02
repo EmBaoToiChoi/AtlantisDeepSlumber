@@ -45,8 +45,15 @@ public class MiniBossAI : NetworkBehaviour
     public NetworkVariable<int> summonCloneCounter = new NetworkVariable<int>(
         0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
-    [Header("Shadow Teleport Skill Settings")]
-    public float shadowBlinkCooldown = 7.0f;
+    [Header("Furious Charge Skill Settings (Chỉ thỉnh thoảng mới tăng tốc)")]
+    public float furiousChargeSpeed = 15.5f;
+    public float furiousChargeCooldown = 20.0f; // Cooldown 20 giây lâu lâu mới thực hiện 1 lần
+    private float furiousChargeTimer = 0f;
+    private bool isFuriousCharging = false;
+    private float furiousChargeDurationTimer = 0f;
+
+    [Header("Shadow Teleport Skill Settings (Chỉ dùng khi lỗi địa hình)")]
+    public float shadowBlinkCooldown = 18.0f;
     private float shadowBlinkTimer = 0f;
     public GameObject shadowBlinkVFX;
     public AudioClip shadowBlinkSFX;
@@ -556,6 +563,7 @@ public class MiniBossAI : NetworkBehaviour
         if (hitStaggerCooldownTimer > 0f) hitStaggerCooldownTimer -= Time.deltaTime;
         if (attackCooldownTimer > 0) attackCooldownTimer -= Time.deltaTime;
         if (shadowBlinkTimer > 0) shadowBlinkTimer -= Time.deltaTime;
+        if (furiousChargeTimer > 0) furiousChargeTimer -= Time.deltaTime;
 
         bool aiAuth = isStandaloneMode || (IsNetworkActive && IsServer);
         if (!aiAuth) return;
@@ -679,11 +687,12 @@ public class MiniBossAI : NetworkBehaviour
         if (targetPlayer == null || IsPlayerDeadOrInvisible(targetPlayer))
         {
             targetPlayer = null;
+            isFuriousCharging = false;
             ChangeState(MiniBossState.Idle);
             return;
         }
 
-        // 1. Kiểm tra NavMesh Reachability
+        // 1. Kiểm tra NavMesh Reachability (Chỉ dùng Tốc Biến khi Player ở vị trí lỗi địa hình/ngoài bản đồ)
         if (!IsTargetReachableOnNavMesh(targetPlayer))
         {
             Transform altTarget = FindNearestReachablePlayer();
@@ -704,36 +713,56 @@ public class MiniBossAI : NetworkBehaviour
             }
         }
 
-        // 2. Kỹ thuật Bí thuật Tốc Biến (Shadow Teleport Blink) chém người chơi yếu máu hoặc bị hở sườn
-        if (shadowBlinkTimer <= 0f)
-        {
-            float targetHpRatio = GetPlayerHealthRatio(targetPlayer);
-            float distToTarget = Vector3.Distance(transform.position, targetPlayer.position);
+        float dist = Vector3.Distance(transform.position, targetPlayer.position);
 
-            if (targetHpRatio <= 0.35f || distToTarget > 8.0f || Random.value < 0.20f)
+        // 2. Kỹ năng Cuồng Phong Tăng Tốc Lao Tới (Chỉ thỉnh thoảng 20s kích hoạt 1 lần khi Player ở rất xa > 9.5m)
+        if (!isFuriousCharging && furiousChargeTimer <= 0f && dist > 9.5f)
+        {
+            if (Random.value < 0.40f)
             {
-                ExecuteShadowBlink(targetPlayer);
-                return;
+                isFuriousCharging = true;
+                furiousChargeDurationTimer = 2.2f;
+                furiousChargeTimer = IsPhase2 ? 15.0f : furiousChargeCooldown;
+                PlayShadowBlinkVisuals();
+                Debug.Log($"[MiniBossAI] Lâu lâu Mini Boss gồng nộ KÍCH HOẠT CUỒNG PHONG LAO TỐC ĐỘ CAO (15.5 m/s)!");
+            }
+            else
+            {
+                furiousChargeTimer = 3.0f; // Nếu chưa kích hoạt thì chờ thêm 3s mới quét lại
             }
         }
 
-        float dist = Vector3.Distance(transform.position, targetPlayer.position);
+        if (isFuriousCharging)
+        {
+            furiousChargeDurationTimer -= Time.deltaTime;
+            if (furiousChargeDurationTimer <= 0f || dist <= attackRange)
+            {
+                isFuriousCharging = false;
+            }
+        }
 
         if (dist <= attackRange && attackCooldownTimer <= 0)
         {
+            isFuriousCharging = false;
             if (AgentReady) agent.isStopped = true;
             SetSpeedNet(0f);
             ChangeState(MiniBossState.Attack);
             return;
         }
 
-        // Run towards target
+        // Di chuyển áp sát mục tiêu (Tự động tăng tốc cực mạnh nếu đang Cuồng Phong Lao Tới)
         if (AgentReady)
         {
             agent.isStopped = false;
-            agent.speed = IsPhase2 ? (runSpeed * phase2SpeedMultiplier) : runSpeed;
+            float baseRun = IsPhase2 ? (runSpeed * phase2SpeedMultiplier) : runSpeed;
+            float activeRunSpeed = isFuriousCharging 
+                ? (IsPhase2 ? (furiousChargeSpeed * phase2SpeedMultiplier) : furiousChargeSpeed)
+                : baseRun;
+
+            agent.speed = activeRunSpeed;
             agent.SetDestination(targetPlayer.position);
         }
+        
         SetSpeedNet(AgentReady && !agent.isStopped ? 1.0f : 0f); // Run animation
         RotateTowards(targetPlayer.position);
     }
