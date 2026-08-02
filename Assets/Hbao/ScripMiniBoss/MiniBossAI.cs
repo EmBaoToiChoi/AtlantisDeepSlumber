@@ -223,6 +223,12 @@ public class MiniBossAI : NetworkBehaviour
 
     private void Start()
     {
+        if (agent != null)
+        {
+            agent.stoppingDistance = 2.4f;
+            agent.obstacleAvoidanceType = UnityEngine.AI.ObstacleAvoidanceType.LowQualityObstacleAvoidance;
+        }
+
         var rb = GetComponent<Rigidbody>();
         if (rb != null)
         {
@@ -530,48 +536,57 @@ public class MiniBossAI : NetworkBehaviour
 
     private void SummonClones()
     {
-        Debug.Log("[MiniBossAI] Máu xuống dưới 50% HP! Gồng nộ và 2 bóng phân thân tách từ trong người ra 2 bên!");
+        Debug.Log("[MiniBossAI] Máu xuống 50% HP! Triệu hồi 2 phân thân kế bên và tiếp tục combat bình thường!");
 
-        // Kích hoạt trạng thái MIỄN THƯƠNG tuyệt đối trong suốt quá trình triệu hồi
-        isSummonInvulnerable = true;
+        PlaySummonCloneVisuals();
 
-        // Mini Boss chính đứng lại gồng nộ
-        if (AgentReady) agent.isStopped = true;
-        SetSpeedNet(0f);
-        ChangeState(MiniBossState.Enrage);
+        Vector3 bossScale = transform.localScale;
+        if (bossScale.sqrMagnitude < 0.1f) bossScale = new Vector3(3f, 3f, 3f);
 
-        if (!isStandaloneMode && IsServer)
-        {
-            summonCloneCounter.Value++;
-        }
-        else
-        {
-            PlaySummonCloneVisuals();
-        }
-
-        GameObject prefabToSpawn = clonePrefab != null ? clonePrefab : gameObject;
-
-        Vector3 targetPosLeft = transform.position - transform.right * 3.0f;
-        Vector3 targetPosRight = transform.position + transform.right * 3.0f;
+        Vector3 targetPosLeft = transform.position - transform.right * 2.5f;
+        Vector3 targetPosRight = transform.position + transform.right * 2.5f;
 
         if (NavMesh.SamplePosition(targetPosLeft, out NavMeshHit hitL, 4.0f, NavMesh.AllAreas)) targetPosLeft = hitL.position;
         if (NavMesh.SamplePosition(targetPosRight, out NavMeshHit hitR, 4.0f, NavMesh.AllAreas)) targetPosRight = hitR.position;
 
-        // 1. Sinh 2 phân thân ngay TẠI VỊ TRÍ GỐC TRONG THÂN CỦA MINI BOSS với kích thước 0
-        GameObject cloneLeft = Instantiate(prefabToSpawn, transform.position, transform.rotation);
-        GameObject cloneRight = Instantiate(prefabToSpawn, transform.position, transform.rotation);
+        GameObject prefabToSpawn = clonePrefab;
+        bool instantiatedFromSceneObject = false;
+        if (prefabToSpawn == null)
+        {
+            prefabToSpawn = gameObject;
+            instantiatedFromSceneObject = true;
+        }
 
-        cloneLeft.transform.localScale = Vector3.zero;
-        cloneRight.transform.localScale = Vector3.zero;
+        // 1. Sinh 2 phân thân ngay KẾ BÊN MINI BOSS ở vị trí và kích thước bình thường
+        GameObject cloneLeft = Instantiate(prefabToSpawn, targetPosLeft, transform.rotation);
+        GameObject cloneRight = Instantiate(prefabToSpawn, targetPosRight, transform.rotation);
+
+        // Nếu clone tạo từ gameObject Scene: Xóa NetworkObject trùng lặp trên Clone để NGO không tiêu hủy Boss gốc
+        if (instantiatedFromSceneObject)
+        {
+            var netL = cloneLeft.GetComponent<NetworkObject>();
+            if (netL != null) DestroyImmediate(netL);
+
+            var netR = cloneRight.GetComponent<NetworkObject>();
+            if (netR != null) DestroyImmediate(netR);
+        }
+
+        cloneLeft.transform.position = targetPosLeft;
+        cloneRight.transform.position = targetPosRight;
+        cloneLeft.transform.localScale = bossScale;
+        cloneRight.transform.localScale = bossScale;
+
+        // Bảo đảm 100% kích thước MiniBoss chính không bị ảnh hưởng
+        transform.localScale = bossScale;
 
         MiniBossAI leftAI = cloneLeft.GetComponent<MiniBossAI>();
         MiniBossAI rightAI = cloneRight.GetComponent<MiniBossAI>();
 
-        ConfigureClone(leftAI);
-        ConfigureClone(rightAI);
+        ConfigureClone(leftAI, targetPosLeft);
+        ConfigureClone(rightAI, targetPosRight);
 
-        // 2. Đồng bộ NetworkObject NGAY LẬP TỨC để tất cả Client cùng nhìn thấy 2 bóng xuất hiện
-        if (!isStandaloneMode && IsServer)
+        // Đồng bộ Network nếu dùng clonePrefab hợp lệ
+        if (!isStandaloneMode && IsServer && !instantiatedFromSceneObject)
         {
             NetworkObject netL = cloneLeft.GetComponent<NetworkObject>();
             if (netL != null && !netL.IsSpawned) netL.Spawn();
@@ -580,11 +595,12 @@ public class MiniBossAI : NetworkBehaviour
             if (netR != null && !netR.IsSpawned) netR.Spawn();
         }
 
-        // 3. Bắt đầu Coroutine hiệu ứng trượt 2 bóng phân thân từ trong thân ra 2 bên
-        StartCoroutine(AnimateShadowClonesEmerging(cloneLeft, cloneRight, targetPosLeft, targetPosRight));
+        // Tiếp tục combat bình thường ngay lập tức!
+        isSummonInvulnerable = false;
+        if (targetPlayer != null) ChangeState(MiniBossState.Chase);
     }
 
-    private void ConfigureClone(MiniBossAI cloneAI)
+    private void ConfigureClone(MiniBossAI cloneAI, Vector3 spawnPos)
     {
         if (cloneAI == null) return;
         cloneAI.isClone = true;
@@ -600,53 +616,18 @@ public class MiniBossAI : NetworkBehaviour
             cloneAI.currentHealth.Value = cloneAI.maxHealth;
         }
 
-        // Tạm thời tắt agent trong lúc thực hiện hiệu ứng tách bóng từ thân
-        if (cloneAI.agent != null) cloneAI.agent.enabled = false;
-    }
+        // Ẩn toàn bộ thanh máu của Phân thân
+        var hpBars = cloneAI.GetComponentsInChildren<EnemyHealthBar>();
+        foreach (var hp in hpBars) if (hp != null) hp.enabled = false;
 
-    private IEnumerator AnimateShadowClonesEmerging(GameObject cloneL, GameObject cloneR, Vector3 targetL, Vector3 targetR)
-    {
-        Vector3 startPos = transform.position;
-        float elapsed = 0f;
-        float duration = 0.75f; // Thời gian hiệu ứng 2 bóng tách từ thân là 0.75s
-
-        Vector3 origScale = transform.localScale;
-
-        // Bắt đầu từ quy mô nhỏ và vị trí trong thân Mini Boss
-        if (cloneL != null) cloneL.transform.localScale = Vector3.zero;
-        if (cloneR != null) cloneR.transform.localScale = Vector3.zero;
-
-        while (elapsed < duration)
+        // Bật NavMeshAgent cho phân thân và Warp tới vị trí kế bên Boss
+        if (cloneAI.agent != null)
         {
-            elapsed += Time.deltaTime;
-            float t = Mathf.Clamp01(elapsed / duration);
-            float smoothT = t * t * (3f - 2f * t);
-
-            if (cloneL != null)
-            {
-                cloneL.transform.position = Vector3.Lerp(startPos, targetL, smoothT);
-                cloneL.transform.localScale = Vector3.Lerp(Vector3.zero, origScale, smoothT);
-            }
-            if (cloneR != null)
-            {
-                cloneR.transform.position = Vector3.Lerp(startPos, targetR, smoothT);
-                cloneR.transform.localScale = Vector3.Lerp(Vector3.zero, origScale, smoothT);
-            }
-
-            yield return null;
+            cloneAI.agent.enabled = true;
+            cloneAI.agent.Warp(spawnPos);
         }
-
-        // Hoàn tất hiệu ứng tách bóng -> Khởi chạy NavMeshAgent và sẵn sàng chiến đấu
-        FinishCloneSetup(cloneL, targetL);
-        FinishCloneSetup(cloneR, targetR);
-
-        // Đợi thêm 0.35s kết thúc đòn gồng nộ
-        yield return new WaitForSeconds(0.35f);
-
-        // HẾT QUÁ TRÌNH TRIỆU HỒI: Tắt Miễn Thương tuyệt đối & Trở lại bình thường!
-        isSummonInvulnerable = false;
-        if (targetPlayer != null) ChangeState(MiniBossState.Chase);
-        else ChangeState(MiniBossState.Idle);
+        cloneAI.ActivateBoss();
+        cloneAI.ChangeState(MiniBossState.Chase);
     }
 
     private void FinishCloneSetup(GameObject cloneObj, Vector3 finalPos)
@@ -1203,18 +1184,8 @@ public class MiniBossAI : NetworkBehaviour
 
     public void CheckShadowBlinkDodge(float damage)
     {
-        // KHÔNG BAO GIỜ TỐC BIẾN NÉ ĐÒN NẾU ĐANG TRONG TRẠNG THÁI GỒNG TRIỆU HỒI HOẶC ENRAGE
-        if (isSummonInvulnerable || CurrentStateValue == MiniBossState.Enrage || CurrentStateValue == MiniBossState.Dead) return;
-
-        recentDamageTaken += damage;
-        recentDamageResetTimer = 1.0f;
-
-        if (recentDamageTaken >= 75f && shadowBlinkTimer <= 0f)
-        {
-            recentDamageTaken = 0f;
-            shadowBlinkTimer = 10f;
-            ExecuteShadowBlinkDodge();
-        }
+        // Tắt hoàn toàn tốc biến / dịch chuyển né đòn khi đánh nhau theo yêu cầu!
+        return;
     }
 
     private void ExecuteShadowBlinkDodge()
@@ -1435,8 +1406,7 @@ public class MiniBossAI : NetworkBehaviour
 
     public void DealSwordDamageContinuously(HashSet<Transform> hitThisAttack)
     {
-        Vector3 kbDir = transform.forward;
-        Vector3 finalKnockback = kbDir * knockbackForce;
+        Vector3 finalKnockback = Vector3.zero; // Không đẩy Player khi chém
         float finalDamage = IsPhase2 ? (attackDamage * 1.25f) : attackDamage;
 
         if (swordBase != null && swordTip != null)
