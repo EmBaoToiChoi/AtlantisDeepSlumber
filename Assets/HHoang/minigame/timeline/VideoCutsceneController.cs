@@ -77,7 +77,7 @@ public class VideoCutsceneController : NetworkBehaviour
 
     private System.Collections.IEnumerator WaitAndTeleportAndFinish()
     {
-        yield return new WaitForSeconds(1f);
+        yield return new WaitForSeconds(1f); // Đợi 1 giây để màn hình đen từ từ hiện lên hết
 
         int count = Mathf.Min(NetworkManager.Singleton.ConnectedClientsList.Count, playerSpots.Count);
         ulong[] targetClientIds = new ulong[count];
@@ -102,7 +102,13 @@ public class VideoCutsceneController : NetworkBehaviour
     private void PrepareCutsceneClientRpc()
     {
         TogglePlayerMovement(false); 
-        if (blackScreenUI != null) blackScreenUI.SetActive(true); 
+        
+        // [ĐÃ SỬA TẠI ĐÂY] Làm mờ dần màn hình thành đen đặc (alpha từ 0 -> 1) trong 1 giây
+        if (blackScreenUI != null) 
+        {
+            StartCoroutine(FadeCanvasGroup(blackScreenUI, 0f, 1f, 1f, false));
+        }
+
         if (objectToHide != null) objectToHide.SetActive(false);
         if (videoPlayer != null) videoPlayer.Prepare(); 
     }
@@ -147,7 +153,12 @@ public class VideoCutsceneController : NetworkBehaviour
     private void FinishCutsceneClientRpc()
     {
         if (objectToHide != null) objectToHide.SetActive(true);
-        if (blackScreenUI != null) blackScreenUI.SetActive(false); 
+        
+        // [ĐÃ SỬA TẠI ĐÂY] Làm sáng dần màn hình (alpha từ 1 -> 0) trong 1 giây, sau đó tắt hẳn object
+        if (blackScreenUI != null) 
+        {
+            StartCoroutine(FadeCanvasGroup(blackScreenUI, 1f, 0f, 1f, true));
+        }
         
         TogglePlayerMovement(true);
         isPlaying = false;
@@ -242,21 +253,21 @@ public class VideoCutsceneController : NetworkBehaviour
     }
 
     // =========================================================================
-    // [ĐÃ THAY ĐỔI] LOGIC TRIGGER NHIỀU NGƯỜI CHƠI
+    // LOGIC TRIGGER NHIỀU NGƯỜI CHƠI (LƯU TRẠNG THÁI)
     // =========================================================================
 
     private void OnTriggerEnter(Collider other)
     {
         if (!IsSpawned || !IsServer) return; 
-        if (isPlaying || (playOnlyOnce && hasPlayed)) return; // Nếu đang phát hoặc đã phát rồi thì bỏ qua
+        if (isPlaying || (playOnlyOnce && hasPlayed)) return;
 
         if (other.CompareTag("Player"))
         {
-            // Lấy NetworkObject của người chơi để lưu ClientId
             var netObj = other.GetComponentInParent<NetworkObject>();
             if (netObj != null && netObj.IsPlayerObject)
             {
-                playersInZone.Add(netObj.OwnerClientId); // Thêm vào danh sách
+                // Thêm người chơi vào danh sách. (HashSet sẽ tự động bỏ qua nếu đã có sẵn)
+                playersInZone.Add(netObj.OwnerClientId); 
                 CheckCutsceneCondition();
             }
         }
@@ -264,37 +275,56 @@ public class VideoCutsceneController : NetworkBehaviour
 
     private void OnTriggerExit(Collider other)
     {
-        if (!IsSpawned || !IsServer) return;
-
-        if (other.CompareTag("Player"))
-        {
-            var netObj = other.GetComponentInParent<NetworkObject>();
-            if (netObj != null && netObj.IsPlayerObject)
-            {
-                playersInZone.Remove(netObj.OwnerClientId); // Xóa khỏi danh sách khi đi ra ngoài
-            }
-        }
+        // KHÔNG LÀM GÌ CẢ Ở ĐÂY NỮA
+        // Việc bỏ trống hàm này giúp hệ thống "nhớ" những ai đã từng chạm vào Trigger
     }
 
     private void CheckCutsceneCondition()
     {
-        // Lấy tổng số người chơi đang kết nối trong phòng
         int totalPlayersInRoom = NetworkManager.Singleton.ConnectedClientsList.Count;
-        
-        // Tính toán số người cần thiết (Tổng - 1, nhưng ít nhất phải là 1)
         int requiredPlayers = Mathf.Max(1, totalPlayersInRoom - 1);
 
-        // Đề phòng trường hợp có người ngắt kết nối (Disconnect) khi đang đứng trong zone
-        // Xóa những ClientId không còn tồn tại trong phòng ra khỏi danh sách playersInZone
+        // Vẫn giữ nguyên logic xóa những người đã Disconnect ra khỏi danh sách
         playersInZone.RemoveWhere(id => !NetworkManager.Singleton.ConnectedClients.ContainsKey(id));
 
-        Debug.Log($"[VideoCutscene] Số người trong vùng: {playersInZone.Count} / Cần thiết: {requiredPlayers} (Tổng user: {totalPlayersInRoom})");
+        Debug.Log($"[VideoCutscene] Số người đã check-in: {playersInZone.Count} / Cần thiết: {requiredPlayers} (Tổng user: {totalPlayersInRoom})");
 
-        // Nếu số người đứng trong zone đủ yêu cầu => Phát Cutscene!
         if (playersInZone.Count >= requiredPlayers)
         {
-            playersInZone.Clear(); // Dọn dẹp danh sách
+            playersInZone.Clear(); 
             StartCutsceneServer();
+        }
+    }
+
+    // =========================================================================
+    // [ĐÃ THÊM] HIỆU ỨNG MỜ DẦN (FADE IN / FADE OUT) CHO MÀN HÌNH ĐEN
+    // =========================================================================
+    private System.Collections.IEnumerator FadeCanvasGroup(GameObject targetObj, float startAlpha, float endAlpha, float duration, bool disableAfter)
+    {
+        if (targetObj == null) yield break;
+
+        // Tự động tìm hoặc gắn CanvasGroup vào UI để có thể chỉnh độ trong suốt
+        CanvasGroup canvasGroup = targetObj.GetComponent<CanvasGroup>();
+        if (canvasGroup == null)
+        {
+            canvasGroup = targetObj.AddComponent<CanvasGroup>();
+        }
+
+        if (!targetObj.activeSelf) targetObj.SetActive(true);
+
+        float time = 0;
+        while (time < duration)
+        {
+            time += Time.deltaTime;
+            canvasGroup.alpha = Mathf.Lerp(startAlpha, endAlpha, time / duration);
+            yield return null;
+        }
+        
+        canvasGroup.alpha = endAlpha;
+
+        if (disableAfter)
+        {
+            targetObj.SetActive(false);
         }
     }
 }
