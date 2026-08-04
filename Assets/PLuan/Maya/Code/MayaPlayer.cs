@@ -395,9 +395,9 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     [Header("Camera Character Fade Settings")]
     [Tooltip("Khoảng cách từ camera đến nhân vật bắt đầu làm mờ (Genshin Impact style)")]
-    public float fadeStartDistance = 1.8f;
+    public float fadeStartDistance = 3.0f;
     [Tooltip("Khoảng cách từ camera đến nhân vật làm mờ hoàn toàn")]
-    public float fadeEndDistance = 0.5f;
+    public float fadeEndDistance = 1.0f;
 
     private MaterialPropertyBlock fadePropBlock;
     private Renderer[] cachedFadeRenderers;
@@ -3023,12 +3023,6 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
         {
             if (r == null) continue;
 
-            if (currentFadeAlpha <= 0.03f)
-            {
-                r.enabled = false;
-                continue;
-            }
-
             r.enabled = true;
 
             foreach (var mat in r.materials)
@@ -3037,6 +3031,7 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
 
                 if (isFadedMode)
                 {
+                    if (mat.HasProperty("_Mode")) mat.SetFloat("_Mode", 2f);
                     mat.SetOverrideTag("RenderType", "Transparent");
                     mat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
                     mat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
@@ -3045,11 +3040,12 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
                     mat.EnableKeyword("_ALPHABLEND_ON");
                     mat.DisableKeyword("_ALPHAPREMULTIPLY_ON");
                     mat.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
-                    if (mat.HasProperty("_Surface")) mat.SetFloat("_Surface", 1);
-                    if (mat.HasProperty("_Blend")) mat.SetFloat("_Blend", 0);
+                    if (mat.HasProperty("_Surface")) mat.SetFloat("_Surface", 1f);
+                    if (mat.HasProperty("_Blend")) mat.SetFloat("_Blend", 0f);
                 }
                 else
                 {
+                    if (mat.HasProperty("_Mode")) mat.SetFloat("_Mode", 0f);
                     mat.SetOverrideTag("RenderType", "");
                     mat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.One);
                     mat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.Zero);
@@ -3058,7 +3054,7 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
                     mat.DisableKeyword("_ALPHABLEND_ON");
                     mat.DisableKeyword("_ALPHAPREMULTIPLY_ON");
                     mat.renderQueue = -1;
-                    if (mat.HasProperty("_Surface")) mat.SetFloat("_Surface", 0);
+                    if (mat.HasProperty("_Surface")) mat.SetFloat("_Surface", 0f);
                 }
 
                 if (mat.HasProperty("_Color"))
