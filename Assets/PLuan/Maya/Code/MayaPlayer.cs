@@ -4268,6 +4268,13 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
                     anim.SetLayerWeight(1, 1f);
                 }
                 SafeSetTrigger(animName);
+
+                if (isDrawOrSheath)
+                {
+                    StartCoroutine(ResetTriggerNextFrame(animName));
+                    int targetLayer = anim.layerCount > 1 ? 1 : 0;
+                    anim.CrossFadeInFixedTime(animName, fadeTime, targetLayer, 0f);
+                }
             }
         }
 

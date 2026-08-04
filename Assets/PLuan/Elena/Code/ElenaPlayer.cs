@@ -4190,6 +4190,13 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
                     arrowHandVisual.SetActive(false);
                 }
                 SafeSetTrigger(animName);
+
+                if (isDrawOrSheath)
+                {
+                    StartCoroutine(ResetTriggerNextFrame(animName));
+                    int targetLayer = anim.layerCount > 1 ? 1 : 0;
+                    anim.CrossFadeInFixedTime(animName, fadeTime, targetLayer, 0f);
+                }
             }
         }
 
