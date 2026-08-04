@@ -746,6 +746,10 @@ MonoBehaviour:
   aimCameraSmoothSpeed: 10
   aimMinPitch: -80
   aimMaxPitch: 80
+  cameraHideDistance: 2.5
+  cameraObstacleLayers:
+    serializedVersion: 2
+    m_Bits: 9105
   maxSpineTwistAngle: 80
   punch1YOffset: 20
   punch1XOffset: 20

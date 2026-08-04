@@ -564,6 +564,10 @@ MonoBehaviour:
   rSkillSpineXOffset: 0
   rSkillMovingSpineYOffset: 60
   rSkillMovingSpineXOffset: 0
+  cameraHideDistance: 2.5
+  cameraObstacleLayers:
+    serializedVersion: 2
+    m_Bits: 9105
   spineSmoothSpeed: 10
   netAimAngle:
     UpdateTraits:

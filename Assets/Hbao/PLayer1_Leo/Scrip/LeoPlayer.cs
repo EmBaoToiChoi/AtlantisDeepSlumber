@@ -3081,6 +3081,10 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     [Tooltip("Khoảng cách từ camera đến nhân vật khiến nhân vật tàng hình (ẩn hẳn) để không che camera")]
     public float cameraHideDistance = 2.5f;
 
+    [Header("Camera Collision Settings")]
+    [Tooltip("Các Layer khiến camera bị zoom khi vướng phải. Tích chọn các layer bạn muốn camera va chạm & zoom, bỏ chọn các layer KHÔNG muốn camera bị zoom (ví dụ: Lá cây, NPC, Decor...).")]
+    public LayerMask cameraObstacleLayers;
+
     private Renderer[] cachedCharacterRenderers;
     private bool isCharacterHidden = false;
 
@@ -5212,7 +5216,11 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
             // Thực hiện kiểm tra va chạm của camera với tường/vật cản bằng SphereCastAll
             float collisionSafetyDistance = 0.4f; // Khoảng cách an toàn để tránh camera sát tường gây lỗi clipping plane
-            int cameraLayerMask = ~LayerMask.GetMask("Player", "Ignore Raycast"); // Bỏ qua người chơi và các vật thể Ignore Raycast
+            int cameraLayerMask = cameraObstacleLayers.value;
+            if (cameraLayerMask == 0)
+            {
+                cameraLayerMask = ~LayerMask.GetMask("Player", "Ignore Raycast", "UI");
+            }
             Vector3 rayDirection = rotatedOffset.normalized;
             float maxRayDistance = rotatedOffset.magnitude;
 
