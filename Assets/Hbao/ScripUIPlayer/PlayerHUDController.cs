@@ -1634,11 +1634,7 @@ public class PlayerHUDController : MonoBehaviour
             NotifyHUDChange();
         }
 
-        // Standalone Mode: gọi trực tiếp phương thức chuyển đổi hoạt ảnh
-        if (currentSelectedWeapon != oldWeapon && LocalPlayerTarget != null && LocalPlayerTarget.IsStandaloneMode)
-        {
-            LocalPlayerTarget.PlayWeaponSwitchAnimation(oldWeapon, currentSelectedWeapon);
-        }
+        // NotifyHUDChange() đã tự động gọi UpdateStateFromHUD -> PlayWeaponSwitchAnimation cho cả Standalone lẫn Netcode.
     }
 
     private void ShowSkillWarning(VisualElement icon)
