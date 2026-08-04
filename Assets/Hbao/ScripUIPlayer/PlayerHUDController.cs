@@ -198,8 +198,8 @@ public class PlayerHUDController : MonoBehaviour
     private VisualElement weaponLock2; // Tham chiếu tới overlay khóa vũ khí
     private VisualElement lockIcon2;   // Tham chiếu tới icon ổ khóa để rung
     private VisualElement weaponImg2;  // Tham chiếu tới hình ảnh vũ khí để ẩn
-    private bool isWeapon2Locked = true;
-    public bool Weapon2Locked => isWeapon2Locked;
+    private bool isWeapon2Locked = false;
+    public bool Weapon2Locked => false;
     private float warningTimer = 0f;
     private const float WARNING_DURATION = 2f;
 
@@ -784,13 +784,14 @@ public class PlayerHUDController : MonoBehaviour
         }
         weaponWarning = root.Q<Label>("weapon-warning");
         weaponLock2 = root.Q<VisualElement>("weapon-lock-2");
-        if (weaponLock2 != null) lockIcon2 = weaponLock2.Q<VisualElement>(null, "weapon-lock-icon");
-        weaponImg2 = root.Q<VisualElement>("weapon-img-2");
-
-        // Ẩn vũ khí 2 ngay từ đầu nếu đang khóa
-        if (isWeapon2Locked && weaponImg2 != null)
+        if (weaponLock2 != null)
         {
-            weaponImg2.style.visibility = Visibility.Hidden;
+            weaponLock2.style.display = DisplayStyle.None;
+        }
+        weaponImg2 = root.Q<VisualElement>("weapon-img-2");
+        if (weaponImg2 != null)
+        {
+            weaponImg2.style.visibility = Visibility.Visible;
         }
 
         // Tìm kiếm nhãn tên thực tế của tài khoản từ PlayerPrefs
@@ -812,30 +813,10 @@ public class PlayerHUDController : MonoBehaviour
         btnUpgradeCooldown = root.Q<Button>("btn-upgrade-cooldown");
         btnUpgradeDamage = root.Q<Button>("btn-upgrade-damage");
 
-        if (btnUpgradeHp != null)
-        {
-            btnUpgradeHp.clicked += () => UpgradeStat(0);
-            btnUpgradeHp.RegisterCallback<ClickEvent>(evt => { UpgradeStat(0); evt.StopPropagation(); });
-            btnUpgradeHp.RegisterCallback<PointerDownEvent>(evt => { UpgradeStat(0); evt.StopPropagation(); });
-        }
-        if (btnUpgradeMp != null)
-        {
-            btnUpgradeMp.clicked += () => UpgradeStat(1);
-            btnUpgradeMp.RegisterCallback<ClickEvent>(evt => { UpgradeStat(1); evt.StopPropagation(); });
-            btnUpgradeMp.RegisterCallback<PointerDownEvent>(evt => { UpgradeStat(1); evt.StopPropagation(); });
-        }
-        if (btnUpgradeCooldown != null)
-        {
-            btnUpgradeCooldown.clicked += () => UpgradeStat(2);
-            btnUpgradeCooldown.RegisterCallback<ClickEvent>(evt => { UpgradeStat(2); evt.StopPropagation(); });
-            btnUpgradeCooldown.RegisterCallback<PointerDownEvent>(evt => { UpgradeStat(2); evt.StopPropagation(); });
-        }
-        if (btnUpgradeDamage != null)
-        {
-            btnUpgradeDamage.clicked += () => UpgradeStat(3);
-            btnUpgradeDamage.RegisterCallback<ClickEvent>(evt => { UpgradeStat(3); evt.StopPropagation(); });
-            btnUpgradeDamage.RegisterCallback<PointerDownEvent>(evt => { UpgradeStat(3); evt.StopPropagation(); });
-        }
+        if (btnUpgradeHp != null) btnUpgradeHp.clicked += () => UpgradeStat(0);
+        if (btnUpgradeMp != null) btnUpgradeMp.clicked += () => UpgradeStat(1);
+        if (btnUpgradeCooldown != null) btnUpgradeCooldown.clicked += () => UpgradeStat(2);
+        if (btnUpgradeDamage != null) btnUpgradeDamage.clicked += () => UpgradeStat(3);
 
         // Khởi tạo và dịch ngôn ngữ giao diện HUD
         LocalizationManager.Initialize();
@@ -1164,6 +1145,17 @@ public class PlayerHUDController : MonoBehaviour
                 {
                     if (currentCooldownQ <= 0f && LocalPlayerTarget != null && !LocalPlayerTarget.IsQSkillActive)
                     {
+                        // Kiểm tra bắt buộc phải ở Ô vũ khí 2 (Phím 2) đối với nhân vật Leo
+                        if (LocalPlayerTarget is LeoPlayer || LocalPlayerTarget.CharacterClassIndex == 0)
+                        {
+                            if (currentSelectedWeapon != 2)
+                            {
+                                ShowWeaponWarningCustom("Cần chuyển sang Ô vũ khí 2 (Phím 2) để sử dụng kỹ năng Q!");
+                                ShowMissionAlert("Cần chuyển sang Ô vũ khí 2 (Phím 2) để sử dụng kỹ năng Q!", 2.5f);
+                                return;
+                            }
+                        }
+
                         bool activated = LocalPlayerTarget.TriggerQSkill();
                         if (activated)
                         {
@@ -1480,6 +1472,16 @@ public class PlayerHUDController : MonoBehaviour
             if (isNowVisible)
             {
                 SetupEventSystemForInputSystem();
+
+                // Cập nhật ngay toàn bộ vật phẩm đã lưu và giao diện nâng cấp của người chơi khi mở Tab
+                if (LocalPlayerTarget != null)
+                {
+                    if (LocalPlayerTarget.InventorySlots != null)
+                    {
+                        SetInventorySlots(LocalPlayerTarget.InventorySlots);
+                    }
+                    LocalPlayerTarget.RefreshUpgradeHUD();
+                }
             }
 
             // Tự động ẩn/hiện con trỏ chuột phù hợp với trạng thái UI hành trang
@@ -1634,11 +1636,7 @@ public class PlayerHUDController : MonoBehaviour
             NotifyHUDChange();
         }
 
-        // Standalone Mode: gọi trực tiếp phương thức chuyển đổi hoạt ảnh
-        if (currentSelectedWeapon != oldWeapon && LocalPlayerTarget != null && LocalPlayerTarget.IsStandaloneMode)
-        {
-            LocalPlayerTarget.PlayWeaponSwitchAnimation(oldWeapon, currentSelectedWeapon);
-        }
+        // NotifyHUDChange() đã tự động gọi UpdateStateFromHUD -> PlayWeaponSwitchAnimation cho cả Standalone lẫn Netcode.
     }
 
     private void ShowSkillWarning(VisualElement icon)
@@ -1718,6 +1716,16 @@ public class PlayerHUDController : MonoBehaviour
             }).StartingIn(240);
         }
     }
+
+    public void ShowWeaponWarningCustom(string message)
+    {
+        if (weaponWarning == null) return;
+
+        weaponWarning.text = message;
+        weaponWarning.AddToClassList("show-warning");
+        warningTimer = WARNING_DURATION;
+    }
+
     private void NotifyHUDChange()
     {
         if (LocalPlayerTarget != null && (LocalPlayerTarget.IsStandaloneMode || (LocalPlayerTarget.IsSpawned && LocalPlayerTarget.IsOwner)))
@@ -2178,11 +2186,44 @@ public class PlayerHUDController : MonoBehaviour
     // =========================================================================
     //  Hành trang: Click Chuột phải sử dụng và chạy Cooldown sửa vũ khí
     // =========================================================================
+    private void ConsumeItemInSlot(int slotIndex)
+    {
+        if (LocalPlayerTarget == null || LocalPlayerTarget.InventorySlots == null) return;
+        if (slotIndex < 0 || slotIndex >= LocalPlayerTarget.InventorySlots.Length) return;
+
+        string slotVal = LocalPlayerTarget.InventorySlots[slotIndex];
+        if (string.IsNullOrEmpty(slotVal)) return;
+
+        string baseName = slotVal;
+        int count = 1;
+        if (slotVal.Contains(":"))
+        {
+            var parts = slotVal.Split(':');
+            baseName = parts[0];
+            int.TryParse(parts[1], out count);
+        }
+
+        if (count > 1)
+        {
+            LocalPlayerTarget.InventorySlots[slotIndex] = baseName + ":" + (count - 1);
+        }
+        else
+        {
+            LocalPlayerTarget.InventorySlots[slotIndex] = "";
+        }
+
+        SetInventorySlots(LocalPlayerTarget.InventorySlots);
+
+        if (!LocalPlayerTarget.IsStandaloneMode) LocalPlayerTarget.SavePlayerStateToDatabase();
+    }
+
     private void UseItem(int index)
     {
         if (isCooldownActive || currentInventoryData == null || index >= currentInventoryData.Length) return;
 
         string slotVal = currentInventoryData[index];
+        if (string.IsNullOrEmpty(slotVal)) return;
+
         string itemName = slotVal;
         if (slotVal.Contains(":"))
         {
@@ -2206,6 +2247,15 @@ public class PlayerHUDController : MonoBehaviour
                 if (tooltipElement != null) tooltipElement.style.opacity = 0f;
 
                 StartCoroutine(AnimateCooldown(slot, cdOverlay, cdText, index));
+            }
+        }
+        else if (itemName == "Ngoc1" || itemName == "Ngoc2" || itemName.Contains("Potion") || itemName.Contains("HP") || itemName.Contains("Heal"))
+        {
+            if (LocalPlayerTarget != null)
+            {
+                LocalPlayerTarget.Heal(30f);
+                ConsumeItemInSlot(index);
+                Debug.Log($"[PlayerHUDController] Đã sử dụng {itemName} để hồi 30 HP!");
             }
         }
     }
@@ -3372,10 +3422,10 @@ public class PlayerHUDController : MonoBehaviour
             if (actionHintsGroup != null) actionHintsGroup.style.display = DisplayStyle.None;
         }
 
-        // 4. Hiển thị phím Vũ khí 2 (nếu đã được mở khóa)
+        // 4. Hiển thị phím Vũ khí 2
         if (hintWeapon2 != null)
         {
-            hintWeapon2.style.display = isWeapon2Locked ? DisplayStyle.None : DisplayStyle.Flex;
+            hintWeapon2.style.display = DisplayStyle.Flex;
         }
 
         // 5. Hiển thị các phím kỹ năng Q, E, R (nếu đã được mở khóa)

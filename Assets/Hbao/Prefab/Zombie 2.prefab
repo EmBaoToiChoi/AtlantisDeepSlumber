@@ -205,8 +205,8 @@ MonoBehaviour:
   sightRange: 25
   fieldOfView: 110
   attackRange: 2
-  patrolWalkSpeed: 2.5
-  chaseRunSpeed: 6
+  patrolWalkSpeed: 4
+  chaseRunSpeed: 8
   maxChaseDistance: 26
   patrolWaitMin: 1
   patrolWaitMax: 4
@@ -223,6 +223,8 @@ MonoBehaviour:
   atkLeftTrigger: AttackLeft
   atkRightTrigger: AttackRight
   atkComboTrigger: AttackCombo
+  canTacticalFlee: 1
+  fleeHealthThreshold: 0.25
 --- !u!114 &6261648165529911941
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -392,6 +394,7 @@ MonoBehaviour:
   enemy3: {fileID: 0}
   enemy4: {fileID: 0}
   enemy5: {fileID: 0}
+  miniBoss: {fileID: 0}
   skeleton: {fileID: 0}
   uiDocument: {fileID: 6889952582565404750}
 --- !u!136 &7030156770436047528

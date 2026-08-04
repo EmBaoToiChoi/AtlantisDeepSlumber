@@ -1485,6 +1485,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     private void UpdateHealthHUD(float health)
     {
+        if (!isStandaloneMode && !IsOwner) return;
         PlayerHUDController hud = FindObjectOfType<PlayerHUDController>();
         if (hud != null)
             hud.SetHealth(health / maxHealth);
@@ -1576,6 +1577,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     private void UpdateUpgradeHUD()
     {
+        if (!isStandaloneMode && !IsOwner) return;
         PlayerHUDController hud = FindObjectOfType<PlayerHUDController>();
         if (hud != null)
         {
@@ -1848,6 +1850,8 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (!IsSpawned || !IsOwner) return;
         UpgradeStatServerRpc(statType);
     }
+
+    public void RefreshUpgradeHUD() => UpdateUpgradeHUD();
 
     [ServerRpc]
     private void UpgradeStatServerRpc(int statType)
@@ -4071,7 +4075,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
     private void UpdateStateServerRpc(int weaponIndex, bool weapon2Locked, bool skillsUnlocked)
     {
         activeWeaponIndex.Value = weaponIndex;
-        isWeapon2Locked.Value = weapon2Locked;
+        isWeapon2Locked.Value = false;
         isSkillsUnlocked.Value = skillsUnlocked;
         SavePlayerStateClientRpc();
     }

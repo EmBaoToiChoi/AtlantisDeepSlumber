@@ -320,8 +320,8 @@ MonoBehaviour:
   fieldOfView: 110
   attackRange: 2
   maxChaseDistance: 26
-  patrolWalkSpeed: 2.5
-  chaseRunSpeed: 5.5
+  patrolWalkSpeed: 4
+  chaseRunSpeed: 8
   patrolWaitMin: 1
   patrolWaitMax: 4
   patrolMoveChance: 0.7
@@ -336,6 +336,8 @@ MonoBehaviour:
   dieTrigger: Qual4Dle
   atk1Trigger: qual44attack
   atk2Trigger: qual4combo
+  canTacticalFlee: 1
+  fleeHealthThreshold: 0.25
   modelRenderers: []
 --- !u!114 &2788456930648622136
 MonoBehaviour:

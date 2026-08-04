@@ -55,6 +55,13 @@ public class SpellBall : NetworkBehaviour
 
     private void Update()
     {
+        // Nếu kẻ thi triển (caster) đã bị tiêu diệt / xoá khỏi màn chơi, tự động tiêu huỷ quả cầu lửa
+        if (caster == null || !caster.activeInHierarchy)
+        {
+            DespawnOrDestroy();
+            return;
+        }
+
         // Di chuyển đạn về phía trước liên tục theo hướng transform.forward (bay song song mặt đất)
         if (!isHit)
         {

@@ -437,12 +437,28 @@ public class Enemy3_Buaa : NetworkBehaviour
         }
     }
 
+    private void CheckForwardMapBoundaryAndTurn()
+    {
+        if (!AgentReady || waitingAtWaypoint) return;
+
+        Vector3 forwardPos = transform.position + transform.forward * 1.8f;
+        bool hasNavMeshAhead = NavMesh.SamplePosition(forwardPos, out NavMeshHit hit, 1.2f, NavMesh.AllAreas);
+        bool hasGroundAhead = Physics.Raycast(forwardPos + Vector3.up * 1f, Vector3.down, 2.5f);
+
+        if (!hasNavMeshAhead || !hasGroundAhead)
+        {
+            transform.rotation = Quaternion.LookRotation(-transform.forward);
+            GoToNextWaypoint();
+        }
+    }
+
     private void HandlePatrol()
     {
         if (targetPlayer != null) { ChangeState(EnemyState.Chase); return; }
         if (!AgentReady) return;
 
         ApplyPatrolEnemySeparation();
+        CheckForwardMapBoundaryAndTurn();
 
         // 1. Gặp tường: Quay mặt né tường ngay lập tức và chuyển hướng
         if (Physics.Raycast(transform.position + Vector3.up * 0.8f, transform.forward, out RaycastHit wallHit, 1.2f, obstacleLayer, QueryTriggerInteraction.Ignore))

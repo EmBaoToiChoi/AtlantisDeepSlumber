@@ -23,6 +23,10 @@ public class RotatePillarQuestTrigger : NetworkBehaviour, IQuestTrigger
     [Tooltip("Danh sách 4 trụ xoay (PillarInteract)")]
     public PillarInteract[] pillars;
 
+    [Header("Puzzle Manager (Optional)")]
+    [Tooltip("Kéo PuzzleManager chứa logic mở cửa vào đây")]
+    public PuzzleManager puzzleManager;
+
     [Header("Quest UI Settings")]
     [Tooltip("Tiêu đề nhiệm vụ hiển thị trên UI")]
     public string questTitle = "XOAY TRỤ KÝ TỰ";
@@ -100,6 +104,11 @@ public class RotatePillarQuestTrigger : NetworkBehaviour, IQuestTrigger
                 Debug.LogWarning("[RotatePillarQuestTrigger] CẢNH BÁO: Chưa gán pillars trong Inspector!");
             }
         }
+
+        if (puzzleManager == null)
+        {
+            puzzleManager = FindFirstObjectByType<PuzzleManager>();
+        }
     }
 
     public override void OnNetworkSpawn()
@@ -149,6 +158,7 @@ public class RotatePillarQuestTrigger : NetworkBehaviour, IQuestTrigger
     {
         if (isQuestActive.Value && IsPrerequisiteCompleted() && !IsQuestCompleted)
         {
+            lastCorrectCount = -1; // Ép cập nhật lại UI ngay lập tức khi số trụ đúng thay đổi
             UpdateQuestProgressUI();
         }
     }
@@ -179,7 +189,7 @@ public class RotatePillarQuestTrigger : NetworkBehaviour, IQuestTrigger
                 int currentCorrect = 0;
                 foreach (var pillar in pillars)
                 {
-                    if (IsPillarCorrect(pillar))
+                    if (pillar != null && IsPillarCorrect(pillar))
                     {
                         currentCorrect++;
                     }
@@ -204,7 +214,10 @@ public class RotatePillarQuestTrigger : NetworkBehaviour, IQuestTrigger
                 }
 
                 int totalNeeded = pillars.Length;
-                if (currentCorrect >= totalNeeded)
+                bool puzzleSolved = puzzleManager != null ? puzzleManager.IsPuzzleSolved : true;
+
+                // CHỈ HOÀN THÀNH NHIỆM VỤ KHI 100% CÁC TRỤ ĐÃ XOAY ĐÚNG VÀ PUZZLE THỰC SỰ ĐÃ GIẢI XONG!
+                if (currentCorrect >= totalNeeded && puzzleSolved)
                 {
                     CompleteQuest();
                     return;
