@@ -813,30 +813,10 @@ public class PlayerHUDController : MonoBehaviour
         btnUpgradeCooldown = root.Q<Button>("btn-upgrade-cooldown");
         btnUpgradeDamage = root.Q<Button>("btn-upgrade-damage");
 
-        if (btnUpgradeHp != null)
-        {
-            btnUpgradeHp.clicked += () => UpgradeStat(0);
-            btnUpgradeHp.RegisterCallback<ClickEvent>(evt => { UpgradeStat(0); evt.StopPropagation(); });
-            btnUpgradeHp.RegisterCallback<PointerDownEvent>(evt => { UpgradeStat(0); evt.StopPropagation(); });
-        }
-        if (btnUpgradeMp != null)
-        {
-            btnUpgradeMp.clicked += () => UpgradeStat(1);
-            btnUpgradeMp.RegisterCallback<ClickEvent>(evt => { UpgradeStat(1); evt.StopPropagation(); });
-            btnUpgradeMp.RegisterCallback<PointerDownEvent>(evt => { UpgradeStat(1); evt.StopPropagation(); });
-        }
-        if (btnUpgradeCooldown != null)
-        {
-            btnUpgradeCooldown.clicked += () => UpgradeStat(2);
-            btnUpgradeCooldown.RegisterCallback<ClickEvent>(evt => { UpgradeStat(2); evt.StopPropagation(); });
-            btnUpgradeCooldown.RegisterCallback<PointerDownEvent>(evt => { UpgradeStat(2); evt.StopPropagation(); });
-        }
-        if (btnUpgradeDamage != null)
-        {
-            btnUpgradeDamage.clicked += () => UpgradeStat(3);
-            btnUpgradeDamage.RegisterCallback<ClickEvent>(evt => { UpgradeStat(3); evt.StopPropagation(); });
-            btnUpgradeDamage.RegisterCallback<PointerDownEvent>(evt => { UpgradeStat(3); evt.StopPropagation(); });
-        }
+        if (btnUpgradeHp != null) btnUpgradeHp.clicked += () => UpgradeStat(0);
+        if (btnUpgradeMp != null) btnUpgradeMp.clicked += () => UpgradeStat(1);
+        if (btnUpgradeCooldown != null) btnUpgradeCooldown.clicked += () => UpgradeStat(2);
+        if (btnUpgradeDamage != null) btnUpgradeDamage.clicked += () => UpgradeStat(3);
 
         // Khởi tạo và dịch ngôn ngữ giao diện HUD
         LocalizationManager.Initialize();
@@ -1492,6 +1472,16 @@ public class PlayerHUDController : MonoBehaviour
             if (isNowVisible)
             {
                 SetupEventSystemForInputSystem();
+
+                // Cập nhật ngay toàn bộ vật phẩm đã lưu và giao diện nâng cấp của người chơi khi mở Tab
+                if (LocalPlayerTarget != null)
+                {
+                    if (LocalPlayerTarget.InventorySlots != null)
+                    {
+                        SetInventorySlots(LocalPlayerTarget.InventorySlots);
+                    }
+                    LocalPlayerTarget.RefreshUpgradeHUD();
+                }
             }
 
             // Tự động ẩn/hiện con trỏ chuột phù hợp với trạng thái UI hành trang
@@ -2200,11 +2190,44 @@ public class PlayerHUDController : MonoBehaviour
     // =========================================================================
     //  Hành trang: Click Chuột phải sử dụng và chạy Cooldown sửa vũ khí
     // =========================================================================
+    private void ConsumeItemInSlot(int slotIndex)
+    {
+        if (LocalPlayerTarget == null || LocalPlayerTarget.InventorySlots == null) return;
+        if (slotIndex < 0 || slotIndex >= LocalPlayerTarget.InventorySlots.Length) return;
+
+        string slotVal = LocalPlayerTarget.InventorySlots[slotIndex];
+        if (string.IsNullOrEmpty(slotVal)) return;
+
+        string baseName = slotVal;
+        int count = 1;
+        if (slotVal.Contains(":"))
+        {
+            var parts = slotVal.Split(':');
+            baseName = parts[0];
+            int.TryParse(parts[1], out count);
+        }
+
+        if (count > 1)
+        {
+            LocalPlayerTarget.InventorySlots[slotIndex] = baseName + ":" + (count - 1);
+        }
+        else
+        {
+            LocalPlayerTarget.InventorySlots[slotIndex] = "";
+        }
+
+        SetInventorySlots(LocalPlayerTarget.InventorySlots);
+
+        if (!LocalPlayerTarget.IsStandaloneMode) LocalPlayerTarget.SavePlayerStateToDatabase();
+    }
+
     private void UseItem(int index)
     {
         if (isCooldownActive || currentInventoryData == null || index >= currentInventoryData.Length) return;
 
         string slotVal = currentInventoryData[index];
+        if (string.IsNullOrEmpty(slotVal)) return;
+
         string itemName = slotVal;
         if (slotVal.Contains(":"))
         {
@@ -2228,6 +2251,15 @@ public class PlayerHUDController : MonoBehaviour
                 if (tooltipElement != null) tooltipElement.style.opacity = 0f;
 
                 StartCoroutine(AnimateCooldown(slot, cdOverlay, cdText, index));
+            }
+        }
+        else if (itemName == "Ngoc1" || itemName == "Ngoc2" || itemName.Contains("Potion") || itemName.Contains("HP") || itemName.Contains("Heal"))
+        {
+            if (LocalPlayerTarget != null)
+            {
+                LocalPlayerTarget.Heal(30f);
+                ConsumeItemInSlot(index);
+                Debug.Log($"[PlayerHUDController] Đã sử dụng {itemName} để hồi 30 HP!");
             }
         }
     }

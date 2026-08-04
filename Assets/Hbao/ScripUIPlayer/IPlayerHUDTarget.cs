@@ -34,6 +34,7 @@ public interface IPlayerHUDTarget
     // Upgrades
     void UpgradeStatFromHUD(int statType);
     void StandaloneUpgradeStat(int statType);
+    void RefreshUpgradeHUD();
     
     // Controls
     void SetCursorLock(bool locked);
