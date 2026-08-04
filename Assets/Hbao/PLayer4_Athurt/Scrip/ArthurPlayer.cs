@@ -1851,6 +1851,8 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         UpgradeStatServerRpc(statType);
     }
 
+    public void RefreshUpgradeHUD() => UpdateUpgradeHUD();
+
     [ServerRpc]
     private void UpgradeStatServerRpc(int statType)
     {

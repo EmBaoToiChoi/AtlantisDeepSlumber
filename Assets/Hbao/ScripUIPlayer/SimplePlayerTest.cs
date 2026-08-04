@@ -1187,6 +1187,8 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
         Debug.Log($"[Standalone] Đã nâng cấp Stat {statType}. Cấp độ mới: HP={localHpLevel}, MP={localMpLevel}, Cooldown={localCooldownLevel}, Damage={localDamageLevel}. Điểm còn: {localUpgradePoints}");
     }
 
+    public void RefreshUpgradeHUD() => UpdateUpgradeHUD();
+
     // ------------------------------------------------------------------
     //  Nâng cấp chỉ số online qua Server RPC (Netcode Mode)
     // ------------------------------------------------------------------
