@@ -393,6 +393,17 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
     public float aimMinPitch = -80f;
     public float aimMaxPitch = 80f;
 
+    [Header("Camera Character Fade Settings")]
+    [Tooltip("Khoảng cách từ camera đến nhân vật bắt đầu làm mờ (Genshin Impact style)")]
+    public float fadeStartDistance = 1.8f;
+    [Tooltip("Khoảng cách từ camera đến nhân vật làm mờ hoàn toàn")]
+    public float fadeEndDistance = 0.5f;
+
+    private MaterialPropertyBlock fadePropBlock;
+    private Renderer[] cachedFadeRenderers;
+    private float currentFadeAlpha = 1f;
+    private bool isFadedMode = false;
+
     private float defaultCameraDistance;
     private float defaultPivotHeight;
     private float currentShoulderOffset = 0f;
@@ -2695,7 +2706,11 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         }
 
         bool shouldFollow = isStandaloneMode || (IsSpawned && IsOwner);
-        if (!shouldFollow || !enableCameraFollow || SeagullController.ActiveSeagull != null) return;
+        if (!shouldFollow || !enableCameraFollow || SeagullController.ActiveSeagull != null)
+        {
+            UpdateCameraCharacterFade(10f);
+            return;
+        }
 
         if (targetCamera == null)
         {
@@ -2797,6 +2812,109 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
                     pivotPosition - targetCamera.transform.position
                 );
             }
+
+            float currentCamDist = Vector3.Distance(pivotPosition, targetCamera.transform.position);
+            UpdateCameraCharacterFade(currentCamDist);
+        }
+    }
+
+    private void UpdateCameraCharacterFade(float currentCamDist)
+    {
+        float targetAlpha = 1f;
+        if (currentCamDist < fadeStartDistance)
+        {
+            targetAlpha = Mathf.Clamp01((currentCamDist - fadeEndDistance) / Mathf.Max(0.01f, fadeStartDistance - fadeEndDistance));
+        }
+
+        currentFadeAlpha = Mathf.Lerp(currentFadeAlpha, targetAlpha, Time.deltaTime * 18f);
+        if (Mathf.Abs(currentFadeAlpha - targetAlpha) < 0.001f)
+        {
+            currentFadeAlpha = targetAlpha;
+        }
+
+        if (fadePropBlock == null) fadePropBlock = new MaterialPropertyBlock();
+
+        if (cachedFadeRenderers == null || cachedFadeRenderers.Length == 0)
+        {
+            System.Collections.Generic.List<Renderer> rendList = new System.Collections.Generic.List<Renderer>();
+            foreach (var r in GetComponentsInChildren<Renderer>(true))
+            {
+                if (r == null) continue;
+                if (r is ParticleSystemRenderer || r is LineRenderer || r is TrailRenderer) continue;
+                string n = r.gameObject.name;
+                if (n.Contains("Indicator") || n.Contains("Canvas") || n.Contains("UI") || n.Contains("Ring")) continue;
+                rendList.Add(r);
+            }
+            cachedFadeRenderers = rendList.ToArray();
+        }
+
+        bool shouldUpdateFade = (currentFadeAlpha < 0.99f) || isFadedMode;
+        if (!shouldUpdateFade) return;
+
+        isFadedMode = (currentFadeAlpha < 0.99f);
+
+        foreach (var r in cachedFadeRenderers)
+        {
+            if (r == null) continue;
+
+            if (currentFadeAlpha <= 0.03f)
+            {
+                r.enabled = false;
+                continue;
+            }
+
+            r.enabled = true;
+
+            foreach (var mat in r.materials)
+            {
+                if (mat == null) continue;
+
+                if (isFadedMode)
+                {
+                    mat.SetOverrideTag("RenderType", "Transparent");
+                    mat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+                    mat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+                    mat.SetInt("_ZWrite", 0);
+                    mat.DisableKeyword("_ALPHATEST_ON");
+                    mat.EnableKeyword("_ALPHABLEND_ON");
+                    mat.DisableKeyword("_ALPHAPREMULTIPLY_ON");
+                    mat.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
+                    if (mat.HasProperty("_Surface")) mat.SetFloat("_Surface", 1);
+                    if (mat.HasProperty("_Blend")) mat.SetFloat("_Blend", 0);
+                }
+                else
+                {
+                    mat.SetOverrideTag("RenderType", "");
+                    mat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.One);
+                    mat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.Zero);
+                    mat.SetInt("_ZWrite", 1);
+                    mat.DisableKeyword("_ALPHATEST_ON");
+                    mat.DisableKeyword("_ALPHABLEND_ON");
+                    mat.DisableKeyword("_ALPHAPREMULTIPLY_ON");
+                    mat.renderQueue = -1;
+                    if (mat.HasProperty("_Surface")) mat.SetFloat("_Surface", 0);
+                }
+
+                if (mat.HasProperty("_Color"))
+                {
+                    Color c = mat.GetColor("_Color");
+                    c.a = currentFadeAlpha;
+                    mat.SetColor("_Color", c);
+                }
+                if (mat.HasProperty("_BaseColor"))
+                {
+                    Color c = mat.GetColor("_BaseColor");
+                    c.a = currentFadeAlpha;
+                    mat.SetColor("_BaseColor", c);
+                }
+            }
+
+            r.GetPropertyBlock(fadePropBlock);
+            fadePropBlock.SetFloat("_Alpha", currentFadeAlpha);
+            Color fadeCol = new Color(1f, 1f, 1f, currentFadeAlpha);
+            fadePropBlock.SetColor("_Color", fadeCol);
+            fadePropBlock.SetColor("_BaseColor", fadeCol);
+            r.SetPropertyBlock(fadePropBlock);
         }
     }
 
