@@ -1389,12 +1389,15 @@
 
 .quest-title {
     color: rgb(255, 215, 0);
-    font-size: 18px;
+    font-size: 16px;
     -unity-font-style: bold;
-    letter-spacing: 1.5px;
+    letter-spacing: 1px;
     text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
     padding: 0;
     margin: 0;
+    white-space: normal;
+    flex-shrink: 1;
+    flex-grow: 1;
 }
 
 .quest-divider {
@@ -1587,12 +1590,15 @@
 
 .quest-title {
     color: rgb(255, 215, 0);
-    font-size: 18px;
+    font-size: 16px;
     -unity-font-style: bold;
-    letter-spacing: 1.5px;
+    letter-spacing: 1px;
     text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
     padding: 0;
     margin: 0;
+    white-space: normal;
+    flex-shrink: 1;
+    flex-grow: 1;
 }
 
 .quest-divider {
