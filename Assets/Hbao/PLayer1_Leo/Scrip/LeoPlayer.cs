@@ -6534,6 +6534,20 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (PlayerLevel < 15 && !IsSkillsUnlocked) return false;
         if (IsQSkillActive) return false;
 
+        // Bắt buộc Leo phải ở Ô Vũ khí 2 (song kiếm) mới dùng được Skill Q
+        int currentWeapon = GetActiveWeaponIndex();
+        if (currentWeapon != 2)
+        {
+            Debug.Log("[LeoPlayer] Q Skill chỉ sử dụng được khi ở Ô vũ khí 2!");
+            PlayerHUDController hud = FindAnyObjectByType<PlayerHUDController>();
+            if (hud != null)
+            {
+                hud.ShowWeaponWarningCustom("Cần chuyển sang Ô vũ khí 2 (Phím 2) để sử dụng kỹ năng Q!");
+                hud.ShowMissionAlert("Cần chuyển sang Ô vũ khí 2 (Phím 2) để sử dụng kỹ năng Q!", 2.5f);
+            }
+            return false;
+        }
+
         if (isStandaloneMode)
         {
             Transform target = FindNearestAliveEnemy();
@@ -6557,6 +6571,14 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     [ServerRpc]
     private void TriggerQSkillServerRpc()
     {
+        int currentWeapon = GetActiveWeaponIndex();
+        if (currentWeapon != 2)
+        {
+            Debug.Log("[LeoPlayer Server] Hủy Q Skill do player không ở vũ khí 2!");
+            QSkillCancelledClientRpc();
+            return;
+        }
+
         Transform target = FindNearestAliveEnemy();
         if (target == null)
         {
@@ -6847,7 +6869,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     private void UpdateStateServerRpc(int weaponIndex, bool weapon2Locked, bool skillsUnlocked)
     {
         SyncNetVarInt(activeWeaponIndex, proxyPlayerTest != null ? proxyPlayerTest.activeWeaponIndex : null, weaponIndex);
-        SyncNetVarBool(isWeapon2Locked, proxyPlayerTest != null ? proxyPlayerTest.isWeapon2Locked : null, weapon2Locked);
+        SyncNetVarBool(isWeapon2Locked, proxyPlayerTest != null ? proxyPlayerTest.isWeapon2Locked : null, false);
         SyncNetVarBool(isSkillsUnlocked, proxyPlayerTest != null ? proxyPlayerTest.isSkillsUnlocked : null, skillsUnlocked);
         SavePlayerStateClientRpc();
     }

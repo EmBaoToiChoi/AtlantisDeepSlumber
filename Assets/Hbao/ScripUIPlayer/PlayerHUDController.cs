@@ -198,8 +198,8 @@ public class PlayerHUDController : MonoBehaviour
     private VisualElement weaponLock2; // Tham chiếu tới overlay khóa vũ khí
     private VisualElement lockIcon2;   // Tham chiếu tới icon ổ khóa để rung
     private VisualElement weaponImg2;  // Tham chiếu tới hình ảnh vũ khí để ẩn
-    private bool isWeapon2Locked = true;
-    public bool Weapon2Locked => isWeapon2Locked;
+    private bool isWeapon2Locked = false;
+    public bool Weapon2Locked => false;
     private float warningTimer = 0f;
     private const float WARNING_DURATION = 2f;
 
@@ -784,13 +784,14 @@ public class PlayerHUDController : MonoBehaviour
         }
         weaponWarning = root.Q<Label>("weapon-warning");
         weaponLock2 = root.Q<VisualElement>("weapon-lock-2");
-        if (weaponLock2 != null) lockIcon2 = weaponLock2.Q<VisualElement>(null, "weapon-lock-icon");
-        weaponImg2 = root.Q<VisualElement>("weapon-img-2");
-
-        // Ẩn vũ khí 2 ngay từ đầu nếu đang khóa
-        if (isWeapon2Locked && weaponImg2 != null)
+        if (weaponLock2 != null)
         {
-            weaponImg2.style.visibility = Visibility.Hidden;
+            weaponLock2.style.display = DisplayStyle.None;
+        }
+        weaponImg2 = root.Q<VisualElement>("weapon-img-2");
+        if (weaponImg2 != null)
+        {
+            weaponImg2.style.visibility = Visibility.Visible;
         }
 
         // Tìm kiếm nhãn tên thực tế của tài khoản từ PlayerPrefs
@@ -1164,6 +1165,17 @@ public class PlayerHUDController : MonoBehaviour
                 {
                     if (currentCooldownQ <= 0f && LocalPlayerTarget != null && !LocalPlayerTarget.IsQSkillActive)
                     {
+                        // Kiểm tra bắt buộc phải ở Ô vũ khí 2 (Phím 2) đối với nhân vật Leo
+                        if (LocalPlayerTarget is LeoPlayer || LocalPlayerTarget.CharacterClassIndex == 0)
+                        {
+                            if (currentSelectedWeapon != 2)
+                            {
+                                ShowWeaponWarningCustom("Cần chuyển sang Ô vũ khí 2 (Phím 2) để sử dụng kỹ năng Q!");
+                                ShowMissionAlert("Cần chuyển sang Ô vũ khí 2 (Phím 2) để sử dụng kỹ năng Q!", 2.5f);
+                                return;
+                            }
+                        }
+
                         bool activated = LocalPlayerTarget.TriggerQSkill();
                         if (activated)
                         {
@@ -1718,6 +1730,16 @@ public class PlayerHUDController : MonoBehaviour
             }).StartingIn(240);
         }
     }
+
+    public void ShowWeaponWarningCustom(string message)
+    {
+        if (weaponWarning == null) return;
+
+        weaponWarning.text = message;
+        weaponWarning.AddToClassList("show-warning");
+        warningTimer = WARNING_DURATION;
+    }
+
     private void NotifyHUDChange()
     {
         if (LocalPlayerTarget != null && (LocalPlayerTarget.IsStandaloneMode || (LocalPlayerTarget.IsSpawned && LocalPlayerTarget.IsOwner)))
@@ -3372,10 +3394,10 @@ public class PlayerHUDController : MonoBehaviour
             if (actionHintsGroup != null) actionHintsGroup.style.display = DisplayStyle.None;
         }
 
-        // 4. Hiển thị phím Vũ khí 2 (nếu đã được mở khóa)
+        // 4. Hiển thị phím Vũ khí 2
         if (hintWeapon2 != null)
         {
-            hintWeapon2.style.display = isWeapon2Locked ? DisplayStyle.None : DisplayStyle.Flex;
+            hintWeapon2.style.display = DisplayStyle.Flex;
         }
 
         // 5. Hiển thị các phím kỹ năng Q, E, R (nếu đã được mở khóa)
