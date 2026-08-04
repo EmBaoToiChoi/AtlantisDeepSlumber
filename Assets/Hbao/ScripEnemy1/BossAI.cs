@@ -374,6 +374,15 @@ public class BossAI : NetworkBehaviour
 
         if (agent != null && agent.isActiveAndEnabled && !agent.isOnNavMesh) SnapToNavMesh();
 
+        // 0. KHI MỤC TIÊU HIỆN TẠI CHẾT HOẶC TÀNG HÌNH -> LẬP TỨC ĐỔI MỤC TIÊU NGAY KHÔNG CHỜ TIMER!
+        if (targetPlayer != null && IsPlayerDeadOrInvisible(targetPlayer))
+        {
+            Debug.Log($"[BossAI] Player '{targetPlayer.name}' đã chết hoặc tàng hình! Lập tức chuyển đổi mục tiêu ngay!");
+            targetPlayer = null;
+            isOrbiting = false;
+            DetectAndSwitchTarget();
+        }
+
         // --- BỘ GIẢI QUYẾT VA CHẠM TRÁNH XUYÊN TƯỜNG (WALL COLLISION RESOLVER) ---
         if (agent != null && agent.isActiveAndEnabled && agent.isOnNavMesh && agent.velocity.sqrMagnitude > 0.01f)
         {
@@ -608,9 +617,15 @@ public class BossAI : NetworkBehaviour
                     agent.isStopped = false;
                     agent.speed = IsPhase2 ? (chaseRunSpeed * phase2SpeedMultiplier) : chaseRunSpeed;
                     
-                    // Điểm áp sát sát sườn player
+                    // TIÊN ĐOÁN VỊ TRÍ ĐÓN ĐẦU HƯỚNG CHẠY CỦA PLAYER (Predictive Lead Targeting - Anti Kiting)
                     Vector3 targetPos = targetPlayer.position;
-                    agent.SetDestination(targetPos);
+                    Vector3 vel = GetTargetVelocity(targetPlayer);
+                    if (vel.sqrMagnitude > 0.1f)
+                    {
+                        float leadTime = Mathf.Clamp(dist / chaseRunSpeed, 0.2f, 0.75f);
+                        targetPos += new Vector3(vel.x, 0, vel.z) * leadTime;
+                    }
+                    SafeSetDestination(targetPos);
                     
                     // Nếu đã đứng siêu sát (trong tầm đánh) -> Đứng yên chờ cooldown nhưng vẫn hướng mặt về Player
                     if (dist <= attackRange - 0.2f)
@@ -628,13 +643,21 @@ public class BossAI : NetworkBehaviour
         }
         else if (!isDodging)
         {
-            // 4. Nếu ở xa mục tiêu -> Chạy nhanh đuổi theo (Run animation, Speed = 1f)
+            // 4. Nếu ở xa mục tiêu -> Chạy nhanh đuổi theo (Run animation, Speed = 1f, Đón đầu hướng di chuyển)
             isOrbiting = false;
             if (AgentReady)
             {
                 agent.isStopped = false;
                 agent.speed = IsPhase2 ? (chaseRunSpeed * phase2SpeedMultiplier) : chaseRunSpeed;
-                agent.SetDestination(targetPlayer.position);
+
+                Vector3 targetPos = targetPlayer.position;
+                Vector3 vel = GetTargetVelocity(targetPlayer);
+                if (vel.sqrMagnitude > 0.1f)
+                {
+                    float leadTime = Mathf.Clamp(dist / chaseRunSpeed, 0.2f, 0.85f);
+                    targetPos += new Vector3(vel.x, 0, vel.z) * leadTime;
+                }
+                SafeSetDestination(targetPos);
             }
             SetSpeedNet(AgentReady && !agent.isStopped ? 1f : 0f);
             RotateTowards(targetPlayer.position);
@@ -741,18 +764,64 @@ public class BossAI : NetworkBehaviour
         return list;
     }
 
+    private float GetNavMeshPathDistance(Vector3 startPos, Vector3 endPos, out NavMeshPathStatus status)
+    {
+        status = NavMeshPathStatus.PathInvalid;
+        NavMeshPath path = new NavMeshPath();
+        if (agent != null && agent.isActiveAndEnabled && agent.isOnNavMesh)
+        {
+            if (NavMesh.CalculatePath(startPos, endPos, NavMesh.AllAreas, path))
+            {
+                status = path.status;
+                if (path.status == NavMeshPathStatus.PathComplete || path.status == NavMeshPathStatus.PathPartial)
+                {
+                    float dist = 0f;
+                    for (int i = 0; i < path.corners.Length - 1; i++)
+                    {
+                        dist += Vector3.Distance(path.corners[i], path.corners[i + 1]);
+                    }
+                    return dist;
+                }
+            }
+        }
+        status = NavMeshPathStatus.PathComplete;
+        return Vector3.Distance(startPos, endPos);
+    }
+
+    private float GetPlayerHealthPercent(Transform player)
+    {
+        if (player == null) return 1f;
+        var ps = player.GetComponentInParent<IPlayerHUDTarget>();
+        if (ps != null && ps.MaxHealth > 0) return ps.CurrentHealth / ps.MaxHealth;
+        var sk = player.GetComponentInParent<Skeleton>();
+        if (sk != null && sk.maxHealth > 0) return sk.CurrentHealthValue / sk.maxHealth;
+        return 1f;
+    }
+
+    private Vector3 GetTargetVelocity(Transform target)
+    {
+        if (target == null) return Vector3.zero;
+        var cc = target.GetComponentInParent<CharacterController>();
+        if (cc != null) return cc.velocity;
+        var rb = target.GetComponentInParent<Rigidbody>();
+        if (rb != null) return rb.linearVelocity;
+        var ag = target.GetComponentInParent<NavMeshAgent>();
+        if (ag != null) return ag.velocity;
+        return Vector3.zero;
+    }
+
     private void DetectAndSwitchTarget()
     {
         if (IsDead) return;
 
         Transform closest = null;
-        float minD = float.MaxValue;
+        float minTacticalScore = float.MaxValue;
         Vector3 eyePos = eyeTransform != null ? eyeTransform.position : transform.position + Vector3.up * 1.5f;
 
         // Loại trừ Layer "Player" và "Enemy" khỏi bộ lọc vật cản (Raycast) để tránh việc Raycast tự va chạm vào chính thân thể Player/Boss rồi nghĩ là bị che mắt
         int raycastMask = obstacleLayer.value & ~LayerMask.GetMask("Player", "Enemy");
 
-        // KHÓA MỤC TIÊU ƯU TIÊN: Nếu đang có mục tiêu và mục tiêu đó vẫn hợp lệ thì tiếp tục dí mục tiêu đó, không đổi người gần hơn
+        // KHÓA MỤC TIÊU ƯU TIÊN: Nếu đang có mục tiêu và mục tiêu đó vẫn hợp lệ thì tiếp tục dí mục tiêu đó
         if (targetPlayer != null)
         {
             if (!IsPlayerDeadOrInvisible(targetPlayer))
@@ -778,30 +847,43 @@ public class BossAI : NetworkBehaviour
 
             if (IsPlayerDeadOrInvisible(pTrans)) continue;
 
-            // Tính khoảng cách từ mắt Boss tới tâm ngực Player (cao hơn 1m so với chân) để tránh việc Raycast bị chạm đất/nền sàn làm mất mục tiêu ở cự ly gần!
             Vector3 targetCenter = pTrans.position + Vector3.up * 1.0f;
-            float d = Vector3.Distance(eyePos, targetCenter);
+            float straightDist = Vector3.Distance(eyePos, targetCenter);
             
             // Chỉ kiểm tra tầm nhìn khi ở trong khoảng cách sightRange
-            if (d <= sightRange)
+            if (straightDist <= sightRange)
             {
                 Vector3 dir = (targetCenter - eyePos).normalized;
                 
                 // Tầm quét cực nhạy: 360 độ cự ly gần (4m) hoặc góc quạt FOV rộng ở cự ly xa
-                bool inFOV = Vector3.Angle(transform.forward, dir) < fieldOfView / 2f || d <= 4f;
+                bool inFOV = Vector3.Angle(transform.forward, dir) < fieldOfView / 2f || straightDist <= 4f;
 
-                if (inFOV && !Physics.Raycast(eyePos, dir, d, raycastMask))
+                if (inFOV && !Physics.Raycast(eyePos, dir, straightDist, raycastMask))
                 {
-                    if (d < minD)
+                    // TÍNH QUÃNG ĐƯỜNG NAVMESH THỰC TẾ (Shortest & Fastest Travel Path)
+                    float realNavPathDist = GetNavMeshPathDistance(transform.position, pTrans.position, out NavMeshPathStatus status);
+                    
+                    if (status != NavMeshPathStatus.PathInvalid)
                     {
-                        minD = d;
-                        closest = pTrans;
+                        // CHIẾN THUẬT THÔNG MINH: Đánh giá trọng số kết liễu Player yếu máu (% HP < 35%)
+                        float hpPercent = GetPlayerHealthPercent(pTrans);
+                        float tacticalScore = realNavPathDist;
+                        if (hpPercent < 0.35f)
+                        {
+                            tacticalScore *= 0.6f; // Ưu tiên 40% kết liễu Player yếu máu!
+                        }
+
+                        if (tacticalScore < minTacticalScore)
+                        {
+                            minTacticalScore = tacticalScore;
+                            closest = pTrans;
+                        }
                     }
                 }
             }
         }
 
-        // Tự động chuyển đổi mục tiêu thông minh sang player gần nhất
+        // Tự động chuyển đổi mục tiêu thông minh sang player tối ưu nhất
         if (closest != null)
         {
             targetPlayer = closest;
@@ -1065,11 +1147,6 @@ public class BossAI : NetworkBehaviour
         {
             currentHealth.Value = Mathf.Max(0f, currentHealth.Value - damage);
             localHealth = currentHealth.Value;
-            hitCounter.Value++;
-        }
-        else if (anim != null)
-        {
-            anim.SetTrigger(hitTrigger);
         }
 
         EnemyDamageEffectHelper.PlayDamageEffects(gameObject, damage);
@@ -1085,17 +1162,24 @@ public class BossAI : NetworkBehaviour
             return;
         }
 
+        // SUPER ARMOR BẢO VỆ: Khi Boss Silas đang chém (Attack), đang đá (Kick) hoặc đang gồng nộ (Enrage),
+        // Silas hoàn toàn miễn nhiễm bị ngắt chiêu (Hyper Armor), giúp thi triển đòn đánh mượt mà không bị đóng đơ hoạt ảnh hit!
+        if (CurrentStateValue == BossState.Attack || CurrentStateValue == BossState.Kick || CurrentStateValue == BossState.Enrage)
+        {
+            return;
+        }
+
         // Phản xạ nhảy né đòn (Dodge) nhanh nhạy khi bị tấn công (Phase 1 né 25%, Phase 2 điên cuồng chỉ né 10%)
         float dodgeChance = IsPhase2 ? 0.1f : 0.25f;
         if (!isDodging && Random.value < dodgeChance && CurrentStateValue == BossState.Chase)
         {
             ExecuteDodge();
         }
-        else if (damage >= 35f && hitStaggerCooldownTimer <= 0f)
+        else if (damage >= 45f && hitStaggerCooldownTimer <= 0f)
         {
-            if (CurrentStateValue != BossState.Attack && CurrentStateValue != BossState.Kick && CurrentStateValue != BossState.Dead && CurrentStateValue != BossState.Hit && CurrentStateValue != BossState.Enrage)
+            if (CurrentStateValue != BossState.Hit)
             {
-                hitStaggerCooldownTimer = 5.0f;
+                hitStaggerCooldownTimer = 6.0f; // Cooldown 6.0s giữa các lần dính choáng
                 ChangeState(BossState.Hit);
             }
         }
@@ -1682,6 +1766,17 @@ public class BossAI : NetworkBehaviour
             return;
         }
 
+        // Lấy danh sách tất cả các Player đang sống để tự động chia đều quái con rượt đuổi
+        var activePlayers = GetAllActivePlayers();
+        List<Transform> alivePlayers = new List<Transform>();
+        foreach (var p in activePlayers)
+        {
+            if (p != null && !IsPlayerDeadOrInvisible(p))
+            {
+                alivePlayers.Add(p);
+            }
+        }
+
         // Xác định tâm sinh quái là vị trí hiện tại của Boss AI để triệu hồi ngẫu nhiên xung quanh Boss
         Vector3 spawnCenter = transform.position;
 
@@ -1700,7 +1795,15 @@ public class BossAI : NetworkBehaviour
             }
 
             GameObject minion = Instantiate(minionPrefab, spawnPos, Quaternion.identity);
-            
+
+            // TỰ ĐỘNG PHÂN CHIA MỤC TIÊU CHO CÁC QUÁI CON ĐỂ RƯỢT ĐỦ CÁC PLAYER KHÁC NHAU (tránh tập trung dí 1 người)
+            if (alivePlayers.Count > 0)
+            {
+                Transform assignedTarget = alivePlayers[i % alivePlayers.Count];
+                AssignMinionTarget(minion, assignedTarget);
+                Debug.Log($"[BossAI] Phân công quái con {i + 1} ({minion.name}) dí đánh Player: {assignedTarget.name}");
+            }
+
             if (isStandaloneMode)
             {
                 activeMinions.Add(minion);
@@ -1722,7 +1825,90 @@ public class BossAI : NetworkBehaviour
         }
     }
 
+    private void AssignMinionTarget(GameObject minion, Transform target)
+    {
+        if (minion == null || target == null) return;
+
+        var e1 = minion.GetComponent<Enemy1_DapBua>();
+        if (e1 != null) { e1.SetTargetPlayer(target); return; }
+
+        var e2 = minion.GetComponent<Enemy2_Zombie>();
+        if (e2 != null) { e2.SetTargetPlayer(target); return; }
+
+        var e3 = minion.GetComponent<Enemy3_Buaa>();
+        if (e3 != null) { e3.SetTargetPlayer(target); return; }
+
+        var e4 = minion.GetComponent<Enemy4_Bongtoi>();
+        if (e4 != null) { e4.SetTargetPlayer(target); return; }
+
+        var e5 = minion.GetComponent<Enemy5_PhuThuy>();
+        if (e5 != null) { e5.SetTargetPlayer(target); return; }
+
+        var comps = minion.GetComponents<MonoBehaviour>();
+        foreach (var c in comps)
+        {
+            if (c == null) continue;
+
+            var method = c.GetType().GetMethod("SetTargetPlayer", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            if (method != null)
+            {
+                method.Invoke(c, new object[] { target });
+                return;
+            }
+
+            var f = c.GetType().GetField("targetPlayer", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            if (f != null)
+            {
+                f.SetValue(c, target);
+                return;
+            }
+
+            var p = c.GetType().GetProperty("TargetPlayer", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            if (p != null && p.CanWrite)
+            {
+                p.SetValue(c, target);
+                return;
+            }
+        }
+    }
+
     // ─── Hỗ trợ đồng bộ hóa & Xoay ─────────────────────────────
+
+    /// <summary>
+    /// Đặt điểm đến an toàn cho NavMeshAgent: Tính toán trước đường đi NavMesh để đảm bảo điểm đến đã được bake,
+    /// tránh việc cắm đầu đâm mặt vào tường không bake hoặc góc khuất.
+    /// </summary>
+    private void SafeSetDestination(Vector3 targetPos)
+    {
+        if (!AgentReady) return;
+
+        NavMeshPath path = new NavMeshPath();
+        if (NavMesh.CalculatePath(transform.position, targetPos, NavMesh.AllAreas, path))
+        {
+            if (path.status == NavMeshPathStatus.PathComplete)
+            {
+                agent.SetDestination(targetPos);
+                return;
+            }
+            else if (path.status == NavMeshPathStatus.PathPartial && path.corners.Length > 0)
+            {
+                // Nếu đường đi bị ngắt bởi tường/vùng chưa bake, di chuyển tới góc NavMesh hợp lệ cuối cùng
+                Vector3 lastValidCorner = path.corners[path.corners.Length - 1];
+                agent.SetDestination(lastValidCorner);
+                return;
+            }
+        }
+
+        // Fallback: Tìm vị trí NavMesh hợp lệ gần nhất trong phạm vi 4m
+        if (NavMesh.SamplePosition(targetPos, out NavMeshHit hit, 4.0f, NavMesh.AllAreas))
+        {
+            agent.SetDestination(hit.position);
+        }
+        else
+        {
+            agent.SetDestination(targetPos);
+        }
+    }
 
     private void SnapToNavMesh()
     {
