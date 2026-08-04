@@ -286874,7 +286874,7 @@ MonoBehaviour:
   - {fileID: 1190472399}
   networkManagerPrefab: {fileID: 9063953144509991988, guid: 1d9128ab07eb31f409a5056cda47c73b, type: 3}
   autoStartNetworkInEditor: 1
-  debugStartMode: 1
+  debugStartMode: 3
   debugConnectAddress: 165.99.14.40
   debugCharacterId: 1
 --- !u!114 &2109755150
