@@ -198,11 +198,14 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
     private int localActiveWeaponIndex = 1;
     private Coroutine weaponSwitchSafetyCoroutine;
     private float lastWeaponSwitchTime = 0f;
+    private bool isWeaponSwitchAnimPlaying = false;
+    private bool hasWeaponBeforeSwitchAnim = false;
 
     private System.Collections.IEnumerator SyncWeaponVisualsSafetyRoutine(int targetWeapon, float delay)
     {
         yield return new WaitForSeconds(delay);
         UpdateWeaponVisualsInstant(targetWeapon);
+        isWeaponSwitchAnimPlaying = false;
         weaponSwitchSafetyCoroutine = null;
     }
 
@@ -2084,7 +2087,7 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
             {
                 anim.SetFloat("MoveX", netMoveX.Value);
                 anim.SetFloat("MoveZ", netMoveZ.Value);
-                bool hasWeapon = GetActiveWeaponIndex() == 2;
+                bool hasWeapon = isWeaponSwitchAnimPlaying ? hasWeaponBeforeSwitchAnim : (GetActiveWeaponIndex() == 2);
                 anim.SetBool("HasWeapon", hasWeapon);
             }
         }
@@ -2139,8 +2142,8 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (anim == null || !anim.isActiveAndEnabled || anim.runtimeAnimatorController == null)
             return;
 
-        // Cập nhật trạng thái HasWeapon (vũ khí đang cầm cung: activeWeaponIndex == 2)
-        bool hasWeapon = GetActiveWeaponIndex() == 2;
+        // Cập nhật trạng thái HasWeapon - đông cứng giá trị cũ khi đang phát animation rút/cất vũ khí
+        bool hasWeapon = isWeaponSwitchAnimPlaying ? hasWeaponBeforeSwitchAnim : (GetActiveWeaponIndex() == 2);
         anim.SetBool("HasWeapon", hasWeapon);
 
         float animMoveX = 0f;
@@ -3653,20 +3656,13 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
     public void PlayWeaponSwitchAnimation(int oldWeapon, int newWeapon)
     {
         int targetWeapon = newWeapon;
-        if (oldWeapon == targetWeapon)
-        {
-            UpdateWeaponVisualsInstant(targetWeapon);
-            return;
-        }
+        if (oldWeapon == targetWeapon) return;
 
-        float now = Time.time;
-        bool isSpamming = (now - lastWeaponSwitchTime < 0.35f);
-        lastWeaponSwitchTime = now;
+        lastWeaponSwitchTime = Time.time;
 
-        if (isSpamming)
-        {
-            UpdateWeaponVisualsInstant(targetWeapon);
-        }
+        // Đông cứng giá trị HasWeapon cũ để Animator không nhảy thẳng qua bool transition
+        hasWeaponBeforeSwitchAnim = (oldWeapon == 2);
+        isWeaponSwitchAnimPlaying = true;
 
         if (weaponSwitchSafetyCoroutine != null)
         {
@@ -3689,7 +3685,8 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
             }
         }
 
-        weaponSwitchSafetyCoroutine = StartCoroutine(SyncWeaponVisualsSafetyRoutine(targetWeapon, 0.45f));
+        // Safety fallback: Sau 0.5s tự động ép hiển thị đúng và mở khóa HasWeapon
+        weaponSwitchSafetyCoroutine = StartCoroutine(SyncWeaponVisualsSafetyRoutine(targetWeapon, 0.5f));
     }
 
     private bool IsAttackAnimationName(string name)
@@ -4289,6 +4286,7 @@ private void StartRollServerRpc(Vector3 direction)
     {
         if (weaponOnBackVisual != null) weaponOnBackVisual.SetActive(false);
         if (weaponInHandVisual != null) weaponInHandVisual.SetActive(true);
+        isWeaponSwitchAnimPlaying = false; // Mở khóa HasWeapon
         if (weaponSwitchSafetyCoroutine != null)
         {
             StopCoroutine(weaponSwitchSafetyCoroutine);
@@ -4302,6 +4300,7 @@ private void StartRollServerRpc(Vector3 direction)
     {
         if (weaponOnBackVisual != null) weaponOnBackVisual.SetActive(true);
         if (weaponInHandVisual != null) weaponInHandVisual.SetActive(false);
+        isWeaponSwitchAnimPlaying = false; // Mở khóa HasWeapon
         if (weaponSwitchSafetyCoroutine != null)
         {
             StopCoroutine(weaponSwitchSafetyCoroutine);
