@@ -16,6 +16,7 @@ public class PuzzleManager : NetworkBehaviour
     [SerializeField] private ParticleSystem dustEffect; 
 
     private NetworkVariable<bool> isPuzzleSolved = new NetworkVariable<bool>(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+    public bool IsPuzzleSolved => isPuzzleSolved != null && isPuzzleSolved.Value;
 
     public override void OnNetworkSpawn()
     {

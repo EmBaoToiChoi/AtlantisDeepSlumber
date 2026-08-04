@@ -1483,6 +1483,7 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     private void UpdateHealthHUD(float health)
     {
+        if (!isStandaloneMode && !IsOwner) return;
         PlayerHUDController hud = FindObjectOfType<PlayerHUDController>();
         if (hud != null)
             hud.SetHealth(health / maxHealth);
@@ -1583,6 +1584,7 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
     // ------------------------------------------------------------------
     private void UpdateUpgradeHUD()
     {
+        if (!isStandaloneMode && !IsOwner) return;
         PlayerHUDController hud = FindObjectOfType<PlayerHUDController>();
         if (hud != null)
         {

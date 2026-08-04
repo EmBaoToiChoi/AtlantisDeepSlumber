@@ -202,6 +202,9 @@ public class Enemy5_PhuThuy : NetworkBehaviour
 
     private void ApplyLocalDeathEffects()
     {
+        hasCastSpell = true;
+        CancelInvoke(nameof(DespawnEnemy));
+        StopAllCoroutines();
         if (anim != null)
         {
             anim.ResetTrigger(attackTrigger);
@@ -722,6 +725,12 @@ public class Enemy5_PhuThuy : NetworkBehaviour
 
     private void HandleAttack()
     {
+        if (IsDead || CurrentStateValue == EnemyState.Dead)
+        {
+            EndAttack();
+            return;
+        }
+
         if (AgentReady) agent.isStopped = true;
         SetSpeedNet(0f);
 
@@ -730,14 +739,6 @@ public class Enemy5_PhuThuy : NetworkBehaviour
         Transform aimTarget = (targetPlayer != null && IsPlayerAliveAndValid(targetPlayer)) ? targetPlayer : null;
         if (aimTarget != null)
         {
-            float distToTarget = Vector3.Distance(transform.position, aimTarget.position);
-            // Nếu Player chạy quá xa (> 18m) khi đang gồng chiêu, lập tức hủy chiêu rượt đuổi luôn không đứng đơ
-            if (distToTarget > 18.0f && hasCastSpell)
-            {
-                EndAttack();
-                return;
-            }
-
             Vector3 targetPos = GetPredictedTargetPosition(aimTarget);
             Vector3 ld = (targetPos - transform.position); ld.y = 0;
             if (ld.sqrMagnitude > 0.01f)
@@ -747,9 +748,9 @@ public class Enemy5_PhuThuy : NetworkBehaviour
             }
         }
 
-        // BẢO ĐẢM 100%: Dự phòng nếu Animation Event từ Keyframe bị lỡ/bỏ qua, đạn vẫn sẽ tự động phóng ở 50% thời lượng chiêu!
+        // BẢO ĐẢM 100%: Dự phòng nếu Animation Event từ Keyframe bị lỡ/bỏ qua, đạn vẫn sẽ tự động phóng ở 55% thời lượng chiêu!
         bool auth = isStandaloneMode || (IsNetworkActive && IsServer);
-        if (auth && !hasCastSpell && stateTimer <= attackDuration * 0.5f)
+        if (auth && !hasCastSpell && stateTimer <= attackDuration * 0.55f)
         {
             hasCastSpell = true;
             LaunchSpellBall();
@@ -1067,22 +1068,27 @@ public class Enemy5_PhuThuy : NetworkBehaviour
     public void TriggerSpellLaunch()
     {
         bool auth = isStandaloneMode || (IsNetworkActive && IsServer);
-        if (!auth || CurrentStateValue != EnemyState.Attack || hasCastSpell) return;
-        hasCastSpell = true; LaunchSpellBall();
+        if (!auth || IsDead || CurrentStateValue == EnemyState.Dead || !gameObject.activeInHierarchy || hasCastSpell) return;
+        hasCastSpell = true;
+        LaunchSpellBall();
     }
 
     private void LaunchSpellBall()
     {
+        if (IsDead || CurrentStateValue == EnemyState.Dead || !gameObject.activeInHierarchy) return;
+
         // Tự động tìm lại Prefab quả cầu lửa từ Resources nếu bị null
         if (spellProjectilePrefab == null)
         {
-            spellProjectilePrefab = Resources.Load<GameObject>("SpellBall") ?? 
+            spellProjectilePrefab = Resources.Load<GameObject>("Fireball 1") ?? 
+                                   Resources.Load<GameObject>("Fireball") ?? 
+                                   Resources.Load<GameObject>("SpellBall") ?? 
                                    Resources.Load<GameObject>("Prefab/SpellBall") ?? 
                                    Resources.Load<GameObject>("Hbao/Prefab/SpellBall");
         }
 
-        // Spawn point vừa tầm ngực/bụng Người chơi (cao 0.75m), không bị bắn quá cao qua đầu
-        Vector3 spawnPt = transform.position + transform.forward * 0.9f + Vector3.up * 0.75f;
+        // Spawn point vừa tầm ngực/bụng Người chơi (cao 0.75m), dùng staffTipTransform nếu có
+        Vector3 spawnPt = staffTipTransform != null ? staffTipTransform.position : (transform.position + transform.forward * 0.9f + Vector3.up * 0.75f);
 
         // Nếu targetPlayer bị null đúng lúc bắn, bắn thẳng về phía trước theo transform.forward
         Vector3 targetPos = (targetPlayer != null && IsPlayerAliveAndValid(targetPlayer))
@@ -1090,7 +1096,7 @@ public class Enemy5_PhuThuy : NetworkBehaviour
             : transform.position + transform.forward * 10f;
         
         // Ép hướng bay 100% NGANG SONG SONG MẶT ĐẤT (bỏ qua độ dốc Y để đạn không bị cắm xuống đất)
-        Vector3 dirToTarget = targetPos - transform.position;
+        Vector3 dirToTarget = targetPos - spawnPt;
         dirToTarget.y = 0f;
         Vector3 mainDir = dirToTarget.sqrMagnitude > 0.01f ? dirToTarget.normalized : new Vector3(transform.forward.x, 0, transform.forward.z).normalized;
 
@@ -1125,7 +1131,7 @@ public class Enemy5_PhuThuy : NetworkBehaviour
                 }
                 
                 var no = proj.GetComponent<NetworkObject>();
-                if (no != null && !isStandaloneMode) no.Spawn(true);
+                if (no != null && !isStandaloneMode && IsServer) no.Spawn(true);
             }
             else
             {
@@ -1218,9 +1224,18 @@ public class Enemy5_PhuThuy : NetworkBehaviour
 
     private void Die()
     {
+        hasCastSpell = true;
+        CancelInvoke();
+        StopAllCoroutines();
         if (AgentReady) agent.isStopped = true; SetSpeedNet(0f);
         ApplyLocalDeathEffects();
         DropExperience(); DropItems(); Invoke(nameof(DespawnEnemy), 2.5f);
+    }
+
+    private void OnDestroy()
+    {
+        CancelInvoke();
+        StopAllCoroutines();
     }
 
     private void DropExperience()
