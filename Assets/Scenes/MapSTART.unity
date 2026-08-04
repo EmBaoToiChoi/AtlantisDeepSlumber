@@ -184417,9 +184417,9 @@ MonoBehaviour:
   puzzleManager: {fileID: 0}
   questTitle: "\u0110\u1EA8Y \u0110\xC1"
   questIconSprite: {fileID: 1185662120, guid: b3e2417305ffdb046a78931037001d53, type: 3}
-  questDescription: "\u0110\u1EA9y \u0111\xE1 \u0111\u1EC3 t\xECm ki\u1EBFm c\xE1c
-    phi\u1EBFn \u0111\xE1 c\xF3 h\xECnh d\u1EA1ng gi\u1ED1ng tr\xEAn c\u1EEDa \u0111\u1EC3
-    m\u1EDF c\u1EEDa."
+  questDescription: "T\xECm ki\u1EBFm c\xE1c phi\u1EBFn \u0111\xE1 c\xF3 h\xECnh
+    d\u1EA1ng gi\u1ED1ng tr\xEAn c\u1EEDa \u0111\u1EC3 \u0111\u1EA9y ch\xFAng ra
+    v\xE0 \u0111\u1EA1p l\xEAn \u0111\u1EC3 m\u1EDF c\u1EEDa."
   hideWhenExitTrigger: 0
   hideDelayAfterComplete: 3
   checkInterval: 0.2
@@ -208648,7 +208648,7 @@ MonoBehaviour:
   ShowTopMostFoldoutHeaderGroup: 1
   prerequisiteQuest: {fileID: 0}
   questTitle: "D\u1ECCN S\u1EA0CH KHU V\u1EF0C"
-  questDescription: "Ti\xEAu di\u1EC7t t\u1EA5t c\u1EA3 qu\xE1i v\u1EADy sung quanh
+  questDescription: "Ti\xEAu di\u1EC7t t\u1EA5t c\u1EA3 qu\xE1i v\u1EADy xung quanh
     \u0111\xE2y"
   questIconSprite: {fileID: 1770962063, guid: c0db0aa45f63e9142b63342f4b32edac, type: 3}
   zombieTargets:
