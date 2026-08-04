@@ -75,11 +75,13 @@ public class AxeItem : NetworkBehaviour
                 if (transform.parent != hand)
                 {
                     transform.SetParent(hand, false);
+                    transform.localPosition = Vector3.zero;
+                    transform.localRotation = Quaternion.identity;
                 }
 
-                // Ép vị trí rìu dính chặt 100% vào axeHoldingPoint tương tự Leo và Arthur
-                transform.localPosition = Vector3.zero;
-                transform.localRotation = Quaternion.identity;
+                // Đặt vị trí và góc quay rìu chính xác theo Transform tay cầm ở mọi khung hình
+                transform.position = hand.position;
+                transform.rotation = hand.rotation;
                 transform.localScale = originalWorldScale;
 
                 if (rb == null) rb = GetComponent<Rigidbody>();

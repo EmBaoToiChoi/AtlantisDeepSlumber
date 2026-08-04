@@ -781,6 +781,19 @@ public class PlayerHUDController : MonoBehaviour
                     ToggleInventory();
                 }
             });
+
+            // Đảm bảo inventory-frame và các container con nhận đúng sự kiện Pointer
+            var invFrame = inventoryOverlay.Q<VisualElement>(className: "inventory-frame");
+            if (invFrame != null) invFrame.pickingMode = PickingMode.Position;
+
+            var slotsContainer = inventoryOverlay.Q<VisualElement>(className: "inventory-slots-container");
+            if (slotsContainer != null) slotsContainer.pickingMode = PickingMode.Position;
+
+            var upgradesContainer = inventoryOverlay.Q<VisualElement>(className: "upgrades-container");
+            if (upgradesContainer != null) upgradesContainer.pickingMode = PickingMode.Position;
+
+            var upgradeRowContainer = inventoryOverlay.Q<VisualElement>(className: "upgrade-row-container");
+            if (upgradeRowContainer != null) upgradeRowContainer.pickingMode = PickingMode.Position;
         }
         weaponWarning = root.Q<Label>("weapon-warning");
         weaponLock2 = root.Q<VisualElement>("weapon-lock-2");
@@ -845,6 +858,7 @@ public class PlayerHUDController : MonoBehaviour
             slot.Clear();
             Label indexLabel = new Label((index + 1).ToString());
             indexLabel.AddToClassList("inventory-slot-index");
+            indexLabel.pickingMode = PickingMode.Ignore; // Cho phép click xuyên qua tới slot cha
             slot.Add(indexLabel);
 
             // Đăng ký các sự kiện Drag & Drop và Hover Tooltip
@@ -1150,7 +1164,6 @@ public class PlayerHUDController : MonoBehaviour
                         {
                             if (currentSelectedWeapon != 2)
                             {
-                                ShowWeaponWarningCustom("Cần chuyển sang Ô vũ khí 2 (Phím 2) để sử dụng kỹ năng Q!");
                                 ShowMissionAlert("Cần chuyển sang Ô vũ khí 2 (Phím 2) để sử dụng kỹ năng Q!", 2.5f);
                                 return;
                             }
@@ -1641,12 +1654,7 @@ public class PlayerHUDController : MonoBehaviour
 
     private void ShowSkillWarning(VisualElement icon)
     {
-        if (weaponWarning == null) return;
-
-        Debug.Log("Kỹ năng đang bị khóa");
-        weaponWarning.text = LocalizationManager.Get("hud_warning_skill_locked");
-        weaponWarning.AddToClassList("show-warning");
-        warningTimer = WARNING_DURATION;
+        ShowMissionAlert(LocalizationManager.Get("hud_warning_skill_locked"), 2.5f);
 
         // Hiệu ứng rung ổ khóa kỹ năng
         if (icon != null)
@@ -1679,12 +1687,7 @@ public class PlayerHUDController : MonoBehaviour
 
     private void ShowWeaponWarning()
     {
-        if (weaponWarning == null) return;
-
-        Debug.Log("Vũ khí đang bị khóa");
-        weaponWarning.text = LocalizationManager.Get("hud_warning_weapon_locked");
-        weaponWarning.AddToClassList("show-warning");
-        warningTimer = WARNING_DURATION;
+        ShowMissionAlert(LocalizationManager.Get("hud_warning_weapon_locked"), 2.5f);
 
         // Hiệu ứng rung ổ khóa qua lại
         if (lockIcon2 != null)
@@ -1719,11 +1722,7 @@ public class PlayerHUDController : MonoBehaviour
 
     public void ShowWeaponWarningCustom(string message)
     {
-        if (weaponWarning == null) return;
-
-        weaponWarning.text = message;
-        weaponWarning.AddToClassList("show-warning");
-        warningTimer = WARNING_DURATION;
+        ShowMissionAlert(message, 2.5f);
     }
 
     private void NotifyHUDChange()
@@ -1877,6 +1876,7 @@ public class PlayerHUDController : MonoBehaviour
 
                 VisualElement itemIcon = new VisualElement();
                 itemIcon.AddToClassList("inventory-item-icon");
+                itemIcon.pickingMode = PickingMode.Ignore; // Cho phép click xuyên qua tới slot cha
                 itemIcon.style.width = Length.Percent(80);
                 itemIcon.style.height = Length.Percent(80);
 
@@ -1918,6 +1918,7 @@ public class PlayerHUDController : MonoBehaviour
                 {
                     Label stackLabel = new Label("x" + count);
                     stackLabel.AddToClassList("inventory-item-stack-count");
+                    stackLabel.pickingMode = PickingMode.Ignore; // Cho phép click xuyên qua tới slot cha
                     slot.Add(stackLabel);
                 }
             }
