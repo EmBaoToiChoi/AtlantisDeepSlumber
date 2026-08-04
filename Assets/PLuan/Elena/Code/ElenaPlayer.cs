@@ -398,6 +398,17 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
     
     private float smoothedYOffset = 0f;
     private float smoothedXOffset = 0f;
+
+    [Header("Camera Character Fade Settings")]
+    [Tooltip("Khoảng cách từ camera đến nhân vật bắt đầu làm mờ (Genshin Impact style)")]
+    public float fadeStartDistance = 1.8f;
+    [Tooltip("Khoảng cách từ camera đến nhân vật làm mờ hoàn toàn")]
+    public float fadeEndDistance = 0.5f;
+
+    private MaterialPropertyBlock fadePropBlock;
+    private Renderer[] cachedFadeRenderers;
+    private float currentFadeAlpha = 1f;
+    private bool isFadedMode = false;
     public float spineSmoothSpeed = 15f;
     private Transform spineBone;
     private float localAimAngle = 0f;
@@ -2774,7 +2785,11 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         // Camera follow hoạt động cho cả standalone lẫn Netcode owner
         bool shouldFollow = isStandaloneMode || (IsSpawned && IsOwner);
-        if (!shouldFollow || !enableCameraFollow || SeagullController.ActiveSeagull != null) return;
+        if (!shouldFollow || !enableCameraFollow || SeagullController.ActiveSeagull != null)
+        {
+            UpdateCameraCharacterFade(10f);
+            return;
+        }
 
         if (targetCamera == null)
         {
@@ -2833,16 +2848,35 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
             Vector3 pivotPosition = (transform.position + Vector3.up * cameraPivotHeight) + rightOffsetVec;
             Vector3 targetPosition = pivotPosition + rotatedOffset;
 
-            // Thực hiện kiểm tra va chạm của camera với tường/vật cản bằng SphereCast
+            // Thực hiện kiểm tra va chạm của camera với tường/vật cản bằng SphereCastAll
             float collisionSafetyDistance = 0.4f; // Khoảng cách an toàn để tránh camera sát tường gây lỗi clipping plane
             int cameraLayerMask = ~LayerMask.GetMask("Player", "Ignore Raycast"); // Bỏ qua người chơi và các vật thể Ignore Raycast
             Vector3 rayDirection = rotatedOffset.normalized;
             float maxRayDistance = rotatedOffset.magnitude;
 
-            if (Physics.SphereCast(pivotPosition, 0.2f, rayDirection, out RaycastHit hit, maxRayDistance, cameraLayerMask))
+            // Dùng QueryTriggerInteraction.Ignore và SphereCastAll để camera KHÔNG BAO GIỜ va chạm vào Hitbox tấn công hoặc vật thể của bản thân
+            RaycastHit[] hits = Physics.SphereCastAll(pivotPosition, 0.2f, rayDirection, maxRayDistance, cameraLayerMask, QueryTriggerInteraction.Ignore);
+            float nearestObstacleDistance = maxRayDistance;
+            bool hitObstacle = false;
+
+            foreach (var h in hits)
             {
-                // Thu nhỏ khoảng cách nếu va chạm với tường
-                float clampedDistance = Mathf.Max(0.5f, hit.distance - collisionSafetyDistance);
+                if (h.collider != null && !h.collider.isTrigger)
+                {
+                    if (!h.collider.transform.IsChildOf(transform) && h.collider.transform.root != transform.root)
+                    {
+                        if (h.distance < nearestObstacleDistance)
+                        {
+                            nearestObstacleDistance = h.distance;
+                            hitObstacle = true;
+                        }
+                    }
+                }
+            }
+
+            if (hitObstacle)
+            {
+                float clampedDistance = Mathf.Max(0.5f, nearestObstacleDistance - collisionSafetyDistance);
                 targetPosition = pivotPosition + rayDirection * clampedDistance;
             }
 
@@ -2855,6 +2889,109 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
                     pivotPosition - targetCamera.transform.position
                 );
             }
+
+            float currentCamDist = Vector3.Distance(pivotPosition, targetCamera.transform.position);
+            UpdateCameraCharacterFade(currentCamDist);
+        }
+    }
+
+    private void UpdateCameraCharacterFade(float currentCamDist)
+    {
+        float targetAlpha = 1f;
+        if (currentCamDist < fadeStartDistance)
+        {
+            targetAlpha = Mathf.Clamp01((currentCamDist - fadeEndDistance) / Mathf.Max(0.01f, fadeStartDistance - fadeEndDistance));
+        }
+
+        currentFadeAlpha = Mathf.Lerp(currentFadeAlpha, targetAlpha, Time.deltaTime * 18f);
+        if (Mathf.Abs(currentFadeAlpha - targetAlpha) < 0.001f)
+        {
+            currentFadeAlpha = targetAlpha;
+        }
+
+        if (fadePropBlock == null) fadePropBlock = new MaterialPropertyBlock();
+
+        if (cachedFadeRenderers == null || cachedFadeRenderers.Length == 0)
+        {
+            System.Collections.Generic.List<Renderer> rendList = new System.Collections.Generic.List<Renderer>();
+            foreach (var r in GetComponentsInChildren<Renderer>(true))
+            {
+                if (r == null) continue;
+                if (r is ParticleSystemRenderer || r is LineRenderer || r is TrailRenderer) continue;
+                string n = r.gameObject.name;
+                if (n.Contains("Indicator") || n.Contains("Canvas") || n.Contains("UI") || n.Contains("Ring")) continue;
+                rendList.Add(r);
+            }
+            cachedFadeRenderers = rendList.ToArray();
+        }
+
+        bool shouldUpdateFade = (currentFadeAlpha < 0.99f) || isFadedMode;
+        if (!shouldUpdateFade) return;
+
+        isFadedMode = (currentFadeAlpha < 0.99f);
+
+        foreach (var r in cachedFadeRenderers)
+        {
+            if (r == null) continue;
+
+            if (currentFadeAlpha <= 0.03f)
+            {
+                r.enabled = false;
+                continue;
+            }
+
+            r.enabled = true;
+
+            foreach (var mat in r.materials)
+            {
+                if (mat == null) continue;
+
+                if (isFadedMode)
+                {
+                    mat.SetOverrideTag("RenderType", "Transparent");
+                    mat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+                    mat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+                    mat.SetInt("_ZWrite", 0);
+                    mat.DisableKeyword("_ALPHATEST_ON");
+                    mat.EnableKeyword("_ALPHABLEND_ON");
+                    mat.DisableKeyword("_ALPHAPREMULTIPLY_ON");
+                    mat.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
+                    if (mat.HasProperty("_Surface")) mat.SetFloat("_Surface", 1);
+                    if (mat.HasProperty("_Blend")) mat.SetFloat("_Blend", 0);
+                }
+                else
+                {
+                    mat.SetOverrideTag("RenderType", "");
+                    mat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.One);
+                    mat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.Zero);
+                    mat.SetInt("_ZWrite", 1);
+                    mat.DisableKeyword("_ALPHATEST_ON");
+                    mat.DisableKeyword("_ALPHABLEND_ON");
+                    mat.DisableKeyword("_ALPHAPREMULTIPLY_ON");
+                    mat.renderQueue = -1;
+                    if (mat.HasProperty("_Surface")) mat.SetFloat("_Surface", 0);
+                }
+
+                if (mat.HasProperty("_Color"))
+                {
+                    Color c = mat.GetColor("_Color");
+                    c.a = currentFadeAlpha;
+                    mat.SetColor("_Color", c);
+                }
+                if (mat.HasProperty("_BaseColor"))
+                {
+                    Color c = mat.GetColor("_BaseColor");
+                    c.a = currentFadeAlpha;
+                    mat.SetColor("_BaseColor", c);
+                }
+            }
+
+            r.GetPropertyBlock(fadePropBlock);
+            fadePropBlock.SetFloat("_Alpha", currentFadeAlpha);
+            Color fadeCol = new Color(1f, 1f, 1f, currentFadeAlpha);
+            fadePropBlock.SetColor("_Color", fadeCol);
+            fadePropBlock.SetColor("_BaseColor", fadeCol);
+            r.SetPropertyBlock(fadePropBlock);
         }
     }
 
