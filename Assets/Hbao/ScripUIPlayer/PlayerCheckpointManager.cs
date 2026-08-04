@@ -151,41 +151,43 @@ public class PlayerCheckpointManager : NetworkBehaviour
     {
         if (checkpoint == null) return;
 
-        // A. Chế độ chơi đơn
-        if (player != null && player.isStandaloneMode)
+        // Luôn cập nhật chỉ số checkpoint cục bộ và checkpoint mới nhất
+        localPlayerCheckpointIndex = checkpoint.checkpointIndex;
+        if (checkpoint.checkpointIndex > globalLatestCheckpointIndex || globalLatestCheckpointIndex < 0)
         {
-            if (localPlayerCheckpointIndex != checkpoint.checkpointIndex)
+            globalLatestCheckpointIndex = checkpoint.checkpointIndex;
+        }
+
+        bool isNetwork = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
+
+        if (isNetwork)
+        {
+            if (!IsServer)
             {
-                localPlayerCheckpointIndex = checkpoint.checkpointIndex;
-                globalLatestCheckpointIndex = checkpoint.checkpointIndex;
-                Debug.Log($"[Standalone Checkpoint] Đã lưu checkpoint '{checkpoint.gameObject.name}' (Index: {checkpoint.checkpointIndex}) cho người chơi!");
+                RegisterCheckpointServerRpc(checkpoint.checkpointIndex);
             }
-            return;
+            else
+            {
+                RegisterCheckpointInternal(checkpoint.checkpointIndex, player != null ? player.DisplayName : "");
+            }
         }
-
-        // B. Chế độ chơi mạng
-        if (!IsServer)
+        else
         {
-            RegisterCheckpointServerRpc(checkpoint.checkpointIndex);
-            return;
+            Debug.Log($"[Standalone Checkpoint] Đã lưu checkpoint '{checkpoint.gameObject.name}' (Index: {checkpoint.checkpointIndex}) cho người chơi!");
         }
-
-        RegisterCheckpointInternal(checkpoint.checkpointIndex, player != null ? player.DisplayName : "");
     }
 
     [ServerRpc(RequireOwnership = false)]
     private void RegisterCheckpointServerRpc(int checkpointIndex, ServerRpcParams rpcParams = default)
     {
-        RegisterCheckpointInternal(checkpointIndex, "");
+        ulong senderId = rpcParams.Receive.SenderClientId;
+        Debug.Log($"[Server Checkpoint] Nhận yêu cầu lưu checkpoint index {checkpointIndex} từ Client ID {senderId}");
+        RegisterCheckpointInternal(checkpointIndex, $"Client {senderId}");
     }
 
     private void RegisterCheckpointInternal(int newCpIdx, string activatorName)
     {
-        if (newCpIdx >= globalLatestCheckpointIndex)
-        {
-            globalLatestCheckpointIndex = newCpIdx;
-        }
-        else if (globalLatestCheckpointIndex < 0)
+        if (newCpIdx > globalLatestCheckpointIndex || globalLatestCheckpointIndex < 0)
         {
             globalLatestCheckpointIndex = newCpIdx;
         }
@@ -196,7 +198,7 @@ public class PlayerCheckpointManager : NetworkBehaviour
         List<IPlayerHUDTarget> activePlayers = FindAllActivePlayers();
         foreach (var p in activePlayers)
         {
-            if (p == null || p.isStandaloneMode) continue;
+            if (p == null) continue;
 
             ulong cId = p.OwnerClientId;
             string pName = p.DisplayName;
@@ -219,6 +221,15 @@ public class PlayerCheckpointManager : NetworkBehaviour
             if (!found)
             {
                 networkPlayerCheckpoints.Add(new PlayerCheckpointData(pName, targetIndex));
+            }
+        }
+
+        // Cập nhật bổ sung cho tất cả Client ID đang kết nối
+        if (NetworkManager.Singleton != null && NetworkManager.Singleton.ConnectedClientsIds != null)
+        {
+            foreach (var clientId in NetworkManager.Singleton.ConnectedClientsIds)
+            {
+                playerCheckpointIndices[clientId] = targetIndex;
             }
         }
 
@@ -266,6 +277,12 @@ public class PlayerCheckpointManager : NetworkBehaviour
 
     private Vector3 GetCalculatedSpawnPosition(IPlayerHUDTarget player, ulong clientId)
     {
+        if (checkpoints == null || checkpoints.Count == 0)
+        {
+            checkpoints = new List<CheckpointZone>(FindObjectsByType<CheckpointZone>(FindObjectsSortMode.None));
+            checkpoints.Sort((a, b) => a.checkpointIndex.CompareTo(b.checkpointIndex));
+        }
+
         int targetCpIndex = -1;
 
         if (player != null && player.isStandaloneMode)

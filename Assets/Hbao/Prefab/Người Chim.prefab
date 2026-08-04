@@ -252,8 +252,8 @@ MonoBehaviour:
   maxAttackRange: 40
   minAttackRange: 20
   maxChaseDistance: 41
-  patrolWalkSpeed: 2.5
-  chaseRunSpeed: 3.8
+  patrolWalkSpeed: 4
+  chaseRunSpeed: 6
   patrolWaitMin: 1.5
   patrolWaitMax: 5
   patrolMoveChance: 0.65

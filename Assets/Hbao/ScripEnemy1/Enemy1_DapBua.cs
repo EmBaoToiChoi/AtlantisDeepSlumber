@@ -440,12 +440,36 @@ public class Enemy1_DapBua : NetworkBehaviour
         return basePos;
     }
 
+    private void CheckForwardMapBoundaryAndTurn()
+    {
+        if (!AgentReady || waitingAtWaypoint) return;
+
+        Vector3 forwardPos = transform.position + transform.forward * 1.8f;
+        bool hasNavMeshAhead = NavMesh.SamplePosition(forwardPos, out NavMeshHit hit, 1.2f, NavMesh.AllAreas);
+        bool hasGroundAhead = Physics.Raycast(forwardPos + Vector3.up * 1f, Vector3.down, 2.5f);
+
+        if (!hasNavMeshAhead || !hasGroundAhead)
+        {
+            transform.rotation = Quaternion.LookRotation(-transform.forward);
+            GoToNextWaypoint();
+        }
+    }
+
     private void GoToNextWaypoint()
     {
         waitingAtWaypoint = false;
         waypointWaitTimer = 0f;
 
-        if (waypoints == null || waypoints.Length == 0)
+        bool hasValidWaypoints = false;
+        if (waypoints != null && waypoints.Length > 0)
+        {
+            foreach (var wp in waypoints)
+            {
+                if (wp != null) { hasValidWaypoints = true; break; }
+            }
+        }
+
+        if (!hasValidWaypoints)
         {
             Vector3 rndPos = GetUniquePatrolPosition(GetRandomNavMeshPosition(12f));
             if (AgentReady)
@@ -520,6 +544,7 @@ public class Enemy1_DapBua : NetworkBehaviour
         if (!AgentReady) return;
 
         ApplyPatrolEnemySeparation();
+        CheckForwardMapBoundaryAndTurn();
 
         if (waitingAtWaypoint)
         {
