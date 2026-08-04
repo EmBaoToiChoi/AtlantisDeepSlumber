@@ -1801,6 +1801,8 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
         UpgradeStatServerRpc(statType);
     }
 
+    public void RefreshUpgradeHUD() => UpdateUpgradeHUD();
+
     [ServerRpc]
     private void UpgradeStatServerRpc(int statType)
     {
@@ -3466,7 +3468,7 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
     private void UpdateStateServerRpc(int weaponIndex, bool weapon2Locked, bool skillsUnlocked)
     {
         activeWeaponIndex.Value = weaponIndex;
-        isWeapon2Locked.Value = weapon2Locked;
+        isWeapon2Locked.Value = false;
         isSkillsUnlocked.Value = skillsUnlocked;
         SavePlayerStateClientRpc();
     }
@@ -4188,6 +4190,13 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
                     arrowHandVisual.SetActive(false);
                 }
                 SafeSetTrigger(animName);
+
+                if (isDrawOrSheath)
+                {
+                    StartCoroutine(ResetTriggerNextFrame(animName));
+                    int targetLayer = anim.layerCount > 1 ? 1 : 0;
+                    anim.CrossFadeInFixedTime(animName, fadeTime, targetLayer, 0f);
+                }
             }
         }
 

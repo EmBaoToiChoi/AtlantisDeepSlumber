@@ -264,8 +264,8 @@ MonoBehaviour:
   fieldOfView: 110
   attackRange: 2.2
   maxChaseDistance: 26
-  patrolWalkSpeed: 2.5
-  chaseRunSpeed: 5
+  patrolWalkSpeed: 4
+  chaseRunSpeed: 8
   patrolWaitMin: 1.5
   patrolWaitMax: 5
   patrolMoveChance: 0.7
@@ -281,6 +281,8 @@ MonoBehaviour:
   atk1Trigger: quai3attack
   atk2Trigger: quai3combo
   atk3Trigger: quai3runlumpattack
+  canTacticalFlee: 1
+  fleeHealthThreshold: 0.25
   modelRenderers: []
 --- !u!114 &1735193794928468104
 MonoBehaviour:

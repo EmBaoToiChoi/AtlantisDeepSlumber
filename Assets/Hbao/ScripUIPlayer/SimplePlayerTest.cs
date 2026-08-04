@@ -1187,6 +1187,8 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
         Debug.Log($"[Standalone] Đã nâng cấp Stat {statType}. Cấp độ mới: HP={localHpLevel}, MP={localMpLevel}, Cooldown={localCooldownLevel}, Damage={localDamageLevel}. Điểm còn: {localUpgradePoints}");
     }
 
+    public void RefreshUpgradeHUD() => UpdateUpgradeHUD();
+
     // ------------------------------------------------------------------
     //  Nâng cấp chỉ số online qua Server RPC (Netcode Mode)
     // ------------------------------------------------------------------
@@ -1970,7 +1972,7 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
     private void UpdateStateServerRpc(int weaponIndex, bool weapon2Locked, bool skillsUnlocked)
     {
         activeWeaponIndex.Value = weaponIndex;
-        isWeapon2Locked.Value = weapon2Locked;
+        isWeapon2Locked.Value = false;
         isSkillsUnlocked.Value = skillsUnlocked;
         SavePlayerStateClientRpc();
     }
@@ -2018,8 +2020,8 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
                 if (hud != null)
                 {
                     hud.SetInventorySlots(inventorySlots);
-                    hud.SetSkillsUnlocked(false, false); // Khóa kỹ năng mặc định
-                    hud.SetWeapon2Locked(true, false); // Khóa vũ khí 2 mặc định
+                    hud.SetSkillsUnlocked(false, false);
+                    hud.SetWeapon2Locked(false, false);
                     hud.SelectWeapon(state.activeWeaponIndex);
                     // Cập nhật lại UI sau khi các NetworkVariables được đồng bộ
                     hud.UpdateUpgradeUI(state.upgradePoints, state.hpLevel, state.mpLevel, state.cooldownLevel, state.damageLevel);

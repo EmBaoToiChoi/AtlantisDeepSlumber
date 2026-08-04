@@ -1871,6 +1871,8 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
         UpgradeStatServerRpc(statType);
     }
 
+    public void RefreshUpgradeHUD() => UpdateUpgradeHUD();
+
     [ServerRpc]
     private void UpgradeStatServerRpc(int statType)
     {
@@ -3552,7 +3554,7 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
     private void UpdateStateServerRpc(int weaponIndex, bool weapon2Locked, bool skillsUnlocked)
     {
         activeWeaponIndex.Value = weaponIndex;
-        isWeapon2Locked.Value = weapon2Locked;
+        isWeapon2Locked.Value = false;
         isSkillsUnlocked.Value = skillsUnlocked;
         SavePlayerStateClientRpc();
     }
@@ -4266,6 +4268,13 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
                     anim.SetLayerWeight(1, 1f);
                 }
                 SafeSetTrigger(animName);
+
+                if (isDrawOrSheath)
+                {
+                    StartCoroutine(ResetTriggerNextFrame(animName));
+                    int targetLayer = anim.layerCount > 1 ? 1 : 0;
+                    anim.CrossFadeInFixedTime(animName, fadeTime, targetLayer, 0f);
+                }
             }
         }
 
