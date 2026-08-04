@@ -198,14 +198,11 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
     private int localActiveWeaponIndex = 1;
     private Coroutine weaponSwitchSafetyCoroutine;
     private float lastWeaponSwitchTime = 0f;
-    private bool isWeaponSwitchAnimPlaying = false;
-    private bool hasWeaponBeforeSwitchAnim = false;
 
     private System.Collections.IEnumerator SyncWeaponVisualsSafetyRoutine(int targetWeapon, float delay)
     {
         yield return new WaitForSeconds(delay);
         UpdateWeaponVisualsInstant(targetWeapon);
-        isWeaponSwitchAnimPlaying = false;
         weaponSwitchSafetyCoroutine = null;
     }
 
@@ -550,6 +547,9 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
             if (anim == null)
                 anim = GetComponentInChildren<Animator>(true);
         }
+
+        if (string.IsNullOrEmpty(drawWeaponTrigger) || drawWeaponTrigger == "DrawWeapon") drawWeaponTrigger = "LayCung";
+        if (string.IsNullOrEmpty(sheathWeaponTrigger) || sheathWeaponTrigger == "SheathWeapon") sheathWeaponTrigger = "CatCung";
 
         if (anim != null && anim.isActiveAndEnabled && anim.runtimeAnimatorController != null)
         {
@@ -2087,7 +2087,7 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
             {
                 anim.SetFloat("MoveX", netMoveX.Value);
                 anim.SetFloat("MoveZ", netMoveZ.Value);
-                bool hasWeapon = isWeaponSwitchAnimPlaying ? hasWeaponBeforeSwitchAnim : (GetActiveWeaponIndex() == 2);
+                bool hasWeapon = GetActiveWeaponIndex() == 2;
                 anim.SetBool("HasWeapon", hasWeapon);
             }
         }
@@ -2142,8 +2142,8 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (anim == null || !anim.isActiveAndEnabled || anim.runtimeAnimatorController == null)
             return;
 
-        // Cập nhật trạng thái HasWeapon - đông cứng giá trị cũ khi đang phát animation rút/cất vũ khí
-        bool hasWeapon = isWeaponSwitchAnimPlaying ? hasWeaponBeforeSwitchAnim : (GetActiveWeaponIndex() == 2);
+        // Cập nhật trạng thái HasWeapon (vũ khí đang cầm cung: activeWeaponIndex == 2)
+        bool hasWeapon = GetActiveWeaponIndex() == 2;
         anim.SetBool("HasWeapon", hasWeapon);
 
         float animMoveX = 0f;
@@ -2375,7 +2375,10 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
                 }
                 else
                 {
-                    PerformComboAttack(false);
+                    if (GetActiveWeaponIndex() != 2)
+                    {
+                        PerformComboAttack(false);
+                    }
                 }
             }
         }
@@ -2989,6 +2992,8 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (carrier != null && carrier.isCarrying) return;
 
         int weapon = GetActiveWeaponIndex();
+        if (weapon == 2) return; // Vũ khí 2 (Cung) chỉ bắn đạn khi Nhắm (chuột phải) + Click trái, không dùng chém Chem1!
+
         if (!networkMode)
         {
             if (weapon == 1) Weapon1Durability = Mathf.Max(Weapon1Durability - 2f, 0f);
@@ -3656,13 +3661,12 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
     public void PlayWeaponSwitchAnimation(int oldWeapon, int newWeapon)
     {
         int targetWeapon = newWeapon;
+        Debug.Log($"<color=yellow>[WEAPON_DEBUG] PlayWeaponSwitchAnimation: old={oldWeapon} -> new={newWeapon}, drawTrig='{drawWeaponTrigger}', sheathTrig='{sheathWeaponTrigger}'</color>");
         if (oldWeapon == targetWeapon) return;
 
         lastWeaponSwitchTime = Time.time;
 
-        // Đông cứng giá trị HasWeapon cũ để Animator không nhảy thẳng qua bool transition
-        hasWeaponBeforeSwitchAnim = (oldWeapon == 2);
-        isWeaponSwitchAnimPlaying = true;
+        ClearAttackLayer(); // Tắt weight Layer 1 để Layer 0 (Base Layer) tự do chạy animation rút/cất và đổi stance
 
         if (weaponSwitchSafetyCoroutine != null)
         {
@@ -3675,6 +3679,10 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
             if (!string.IsNullOrEmpty(drawWeaponTrigger))
             {
                 PlayAnimationLocal(drawWeaponTrigger, 0.1f, false);
+                if (anim != null && anim.isActiveAndEnabled && anim.HasState(0, Animator.StringToHash(drawWeaponTrigger)))
+                {
+                    anim.CrossFadeInFixedTime(drawWeaponTrigger, 0.1f, 0, 0f);
+                }
             }
         }
         else if (targetWeapon == 1)
@@ -3682,6 +3690,10 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
             if (!string.IsNullOrEmpty(sheathWeaponTrigger))
             {
                 PlayAnimationLocal(sheathWeaponTrigger, 0.1f, false);
+                if (anim != null && anim.isActiveAndEnabled && anim.HasState(0, Animator.StringToHash(sheathWeaponTrigger)))
+                {
+                    anim.CrossFadeInFixedTime(sheathWeaponTrigger, 0.1f, 0, 0f);
+                }
             }
         }
 
@@ -3972,9 +3984,18 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     private void SafeSetTrigger(string paramName)
     {
-        if (anim != null && HasParameter(paramName))
+        if (anim != null)
         {
-            anim.SetTrigger(paramName);
+            bool hasParam = HasParameter(paramName);
+            Debug.Log($"<color=cyan>[WEAPON_DEBUG] SafeSetTrigger: '{paramName}' | AnimFound=true | HasParameter={hasParam}</color>");
+            if (hasParam)
+            {
+                anim.SetTrigger(paramName);
+            }
+        }
+        else
+        {
+            Debug.LogError($"<color=red>[WEAPON_DEBUG] SafeSetTrigger: '{paramName}' FAILED - anim component is NULL!</color>");
         }
     }
 
@@ -4181,7 +4202,7 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
                 bool isDrawOrSheath = (!string.IsNullOrEmpty(drawWeaponTrigger) && animName == drawWeaponTrigger) ||
                                       (!string.IsNullOrEmpty(sheathWeaponTrigger) && animName == sheathWeaponTrigger);
 
-                if (anim.layerCount > 1 && (isDrawOrSheath || animName == "Bow_Shoot"))
+                if (anim.layerCount > 1 && animName == "Bow_Shoot")
                 {
                     anim.SetLayerWeight(1, 1f);
                 }
@@ -4190,13 +4211,6 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
                     arrowHandVisual.SetActive(false);
                 }
                 SafeSetTrigger(animName);
-
-                if (isDrawOrSheath)
-                {
-                    StartCoroutine(ResetTriggerNextFrame(animName));
-                    int targetLayer = anim.layerCount > 1 ? 1 : 0;
-                    anim.CrossFadeInFixedTime(animName, fadeTime, targetLayer, 0f);
-                }
             }
         }
 
@@ -4286,7 +4300,6 @@ private void StartRollServerRpc(Vector3 direction)
     {
         if (weaponOnBackVisual != null) weaponOnBackVisual.SetActive(false);
         if (weaponInHandVisual != null) weaponInHandVisual.SetActive(true);
-        isWeaponSwitchAnimPlaying = false; // Mở khóa HasWeapon
         if (weaponSwitchSafetyCoroutine != null)
         {
             StopCoroutine(weaponSwitchSafetyCoroutine);
@@ -4300,7 +4313,6 @@ private void StartRollServerRpc(Vector3 direction)
     {
         if (weaponOnBackVisual != null) weaponOnBackVisual.SetActive(true);
         if (weaponInHandVisual != null) weaponInHandVisual.SetActive(false);
-        isWeaponSwitchAnimPlaying = false; // Mở khóa HasWeapon
         if (weaponSwitchSafetyCoroutine != null)
         {
             StopCoroutine(weaponSwitchSafetyCoroutine);
