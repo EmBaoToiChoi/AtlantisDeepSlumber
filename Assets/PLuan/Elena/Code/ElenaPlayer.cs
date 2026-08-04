@@ -196,6 +196,16 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
     private int localLevel = 0;
     private float localExp = 0f;
     private int localActiveWeaponIndex = 1;
+    private Coroutine weaponSwitchSafetyCoroutine;
+    private float lastWeaponSwitchTime = 0f;
+
+    private System.Collections.IEnumerator SyncWeaponVisualsSafetyRoutine(int targetWeapon, float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        UpdateWeaponVisualsInstant(targetWeapon);
+        weaponSwitchSafetyCoroutine = null;
+    }
+
 
     [Header("Player Experience & Level")]
     public NetworkVariable<int> playerLevel = new NetworkVariable<int>(
@@ -3640,22 +3650,44 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     public void PlayWeaponSwitchAnimation(int oldWeapon, int newWeapon)
     {
-        if (oldWeapon == newWeapon) return;
+        int targetWeapon = newWeapon;
+        if (oldWeapon == targetWeapon)
+        {
+            UpdateWeaponVisualsInstant(targetWeapon);
+            return;
+        }
 
-        if (newWeapon == 2)
+        float now = Time.time;
+        bool isSpamming = (now - lastWeaponSwitchTime < 0.35f);
+        lastWeaponSwitchTime = now;
+
+        if (isSpamming)
+        {
+            UpdateWeaponVisualsInstant(targetWeapon);
+        }
+
+        if (weaponSwitchSafetyCoroutine != null)
+        {
+            StopCoroutine(weaponSwitchSafetyCoroutine);
+            weaponSwitchSafetyCoroutine = null;
+        }
+
+        if (targetWeapon == 2)
         {
             if (!string.IsNullOrEmpty(drawWeaponTrigger))
             {
                 PlayAnimationLocal(drawWeaponTrigger, 0.1f, false);
             }
         }
-        else if (newWeapon == 1)
+        else if (targetWeapon == 1)
         {
             if (!string.IsNullOrEmpty(sheathWeaponTrigger))
             {
                 PlayAnimationLocal(sheathWeaponTrigger, 0.1f, false);
             }
         }
+
+        weaponSwitchSafetyCoroutine = StartCoroutine(SyncWeaponVisualsSafetyRoutine(targetWeapon, 0.45f));
     }
 
     private bool IsAttackAnimationName(string name)
@@ -4147,7 +4179,10 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
             }
             else
             {
-                if (anim.layerCount > 1 && (animName == drawWeaponTrigger || animName == sheathWeaponTrigger || animName == "Bow_Shoot"))
+                bool isDrawOrSheath = (!string.IsNullOrEmpty(drawWeaponTrigger) && animName == drawWeaponTrigger) ||
+                                      (!string.IsNullOrEmpty(sheathWeaponTrigger) && animName == sheathWeaponTrigger);
+
+                if (anim.layerCount > 1 && (isDrawOrSheath || animName == "Bow_Shoot"))
                 {
                     anim.SetLayerWeight(1, 1f);
                 }
@@ -4156,6 +4191,13 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
                     arrowHandVisual.SetActive(false);
                 }
                 SafeSetTrigger(animName);
+
+                if (isDrawOrSheath)
+                {
+                    StartCoroutine(ResetTriggerNextFrame(animName));
+                    int targetLayer = anim.layerCount > 1 ? 1 : 0;
+                    anim.CrossFadeInFixedTime(animName, fadeTime, targetLayer, 0f);
+                }
             }
         }
 
@@ -4245,6 +4287,11 @@ private void StartRollServerRpc(Vector3 direction)
     {
         if (weaponOnBackVisual != null) weaponOnBackVisual.SetActive(false);
         if (weaponInHandVisual != null) weaponInHandVisual.SetActive(true);
+        if (weaponSwitchSafetyCoroutine != null)
+        {
+            StopCoroutine(weaponSwitchSafetyCoroutine);
+            weaponSwitchSafetyCoroutine = null;
+        }
         Debug.Log("[Animation Event] Đã rút vũ khí lên tay!");
     }
 
@@ -4253,6 +4300,11 @@ private void StartRollServerRpc(Vector3 direction)
     {
         if (weaponOnBackVisual != null) weaponOnBackVisual.SetActive(true);
         if (weaponInHandVisual != null) weaponInHandVisual.SetActive(false);
+        if (weaponSwitchSafetyCoroutine != null)
+        {
+            StopCoroutine(weaponSwitchSafetyCoroutine);
+            weaponSwitchSafetyCoroutine = null;
+        }
         Debug.Log("[Animation Event] Đã cất vũ khí vào lưng!");
     }
 
