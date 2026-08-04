@@ -154,22 +154,61 @@ public class ElementalPillarQuestTrigger : NetworkBehaviour, IQuestTrigger
         }
     }
 
+    private bool IsPuzzleSolved()
+    {
+        // 1. Nếu có AscensionManager, bắt buộc kiểm tra xem đáp án đã ĐÚNG hay chưa
+        if (ascensionManager != null)
+        {
+            if (ascensionManager.passwordPillar != null)
+            {
+                return ascensionManager.passwordPillar.isSolved.Value;
+            }
+
+            if (ascensionManager.correctCombination != null && ascensionManager.pillarPositions != null && ascensionManager.correctCombination.Length > 0)
+            {
+                if (ascensionManager.pillarPositions.Length == ascensionManager.correctCombination.Length)
+                {
+                    for (int i = 0; i < ascensionManager.pillarPositions.Length; i++)
+                    {
+                        var pTrans = ascensionManager.pillarPositions[i];
+                        if (pTrans == null) return false;
+                        if (pTrans.TryGetComponent<ElementalPillar>(out var p))
+                        {
+                            if (p == null || p.currentElement == null || p.currentElement.Value != ascensionManager.correctCombination[i])
+                            {
+                                return false;
+                            }
+                        }
+                        else return false;
+                    }
+                    return true;
+                }
+            }
+        }
+
+        // 2. Nếu không có AscensionManager, kiểm tra xem tất cả các trụ trong mảng pillars đã kích hoạt hết chưa
+        int totalNeeded = (pillars != null && pillars.Length > 0) ? pillars.Length : 4;
+        int currentActivated = 0;
+        if (pillars != null && pillars.Length > 0)
+        {
+            foreach (var pillar in pillars)
+            {
+                if (pillar != null && pillar.currentElement != null && pillar.currentElement.Value != ElementType.None)
+                {
+                    currentActivated++;
+                }
+            }
+        }
+        return currentActivated >= totalNeeded;
+    }
+
     private void OnActivatedCountChanged(int oldVal, int newVal)
     {
         if (isQuestActive.Value && IsPrerequisiteCompleted() && !IsQuestCompleted)
         {
+            lastActivatedCount = -1; // Ép cập nhật tiến độ UI ngay cả khi đếm lại từ 0
             UpdateQuestProgressUI();
         }
-    }
-
-    private bool IsPillarActivated(ElementalPillar pillar)
-    {
-        if (pillar == null) return false;
-        if (pillar.currentElement != null)
-        {
-            return pillar.currentElement.Value != ElementType.None;
-        }
-        return false;
     }
 
     private void Update()
@@ -232,8 +271,8 @@ public class ElementalPillarQuestTrigger : NetworkBehaviour, IQuestTrigger
                     }
                 }
 
-                int totalNeeded = (pillars != null && pillars.Length > 0) ? pillars.Length : 4;
-                if (currentActivated >= totalNeeded)
+                // CHỈ KHÓA HOÀN THÀNH NHIỆM VỤ KHI CÂU ĐỐ ĐÃ GIẢI ĐÚNG ĐÁP ÁN!
+                if (IsPuzzleSolved())
                 {
                     CompleteQuest();
                     return;

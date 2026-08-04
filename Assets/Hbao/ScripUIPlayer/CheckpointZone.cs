@@ -73,9 +73,20 @@ public class CheckpointZone : MonoBehaviour
         return transform.position + Vector3.up * 0.1f;
     }
 
+    private bool IsPlayerCollider(Collider col)
+    {
+        if (col == null) return false;
+        if (col.CompareTag("Player")) return true;
+        if (col.transform.parent != null && col.transform.parent.CompareTag("Player")) return true;
+        if (col.transform.root != null && col.transform.root.CompareTag("Player")) return true;
+        if (col.GetComponentInParent<IPlayerHUDTarget>() != null) return true;
+        if (col.GetComponent<IPlayerHUDTarget>() != null) return true;
+        return false;
+    }
+
     private void OnTriggerEnter(Collider other)
     {
-        if (!other.CompareTag("Player")) return;
+        if (!IsPlayerCollider(other)) return;
 
         // Tìm component IPlayerHUDTarget trên người chơi chạm vào để hỗ trợ cả 4 class nhân vật
         IPlayerHUDTarget player = other.GetComponentInParent<IPlayerHUDTarget>();

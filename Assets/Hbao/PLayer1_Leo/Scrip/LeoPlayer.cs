@@ -5660,6 +5660,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     private void UpdateUpgradeHUD()
     {
+        if (!isStandaloneMode && !IsOwner) return;
         PlayerHUDController hud = FindAnyObjectByType<PlayerHUDController>();
         if (hud != null)
         {
@@ -7125,6 +7126,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     private void UpdateHealthHUD(float health)
     {
+        if (!isStandaloneMode && !IsOwner) return;
         PlayerHUDController hud = FindAnyObjectByType<PlayerHUDController>();
         if (hud != null)
             hud.SetHealth(health / maxHealth);
