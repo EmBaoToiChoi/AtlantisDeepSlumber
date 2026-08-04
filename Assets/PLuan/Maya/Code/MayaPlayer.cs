@@ -393,16 +393,12 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
     private float smoothedYOffset = 0f;
     private float smoothedXOffset = 0f;
 
-    [Header("Camera Character Fade Settings")]
-    [Tooltip("Khoảng cách từ camera đến nhân vật bắt đầu làm mờ (Genshin Impact style)")]
-    public float fadeStartDistance = 3.0f;
-    [Tooltip("Khoảng cách từ camera đến nhân vật làm mờ hoàn toàn")]
-    public float fadeEndDistance = 1.0f;
+    [Header("Camera Character Invisibility Settings")]
+    [Tooltip("Khoảng cách từ camera đến nhân vật khiến nhân vật tàng hình (ẩn hẳn) để không che camera")]
+    public float cameraHideDistance = 2.5f;
 
-    private MaterialPropertyBlock fadePropBlock;
-    private Renderer[] cachedFadeRenderers;
-    private float currentFadeAlpha = 1f;
-    private bool isFadedMode = false;
+    private Renderer[] cachedCharacterRenderers;
+    private bool isCharacterHidden = false;
     public float spineSmoothSpeed = 15f;
     private Transform spineBone;
     private float localAimAngle = 0f;
@@ -2876,7 +2872,7 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
         bool shouldFollow = isStandaloneMode || (IsSpawned && IsOwner);
         if (!shouldFollow || !enableCameraFollow || SeagullController.ActiveSeagull != null)
         {
-            UpdateCameraCharacterFade(10f);
+            UpdateCameraCharacterVisibility(10f);
             return;
         }
 
@@ -2980,27 +2976,18 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
             }
 
             float currentCamDist = Vector3.Distance(pivotPosition, targetCamera.transform.position);
-            UpdateCameraCharacterFade(currentCamDist);
+            UpdateCameraCharacterVisibility(currentCamDist);
         }
     }
 
-    private void UpdateCameraCharacterFade(float currentCamDist)
+    private void UpdateCameraCharacterVisibility(float currentCamDist)
     {
-        float targetAlpha = 1f;
-        if (currentCamDist < fadeStartDistance)
-        {
-            targetAlpha = Mathf.Clamp01((currentCamDist - fadeEndDistance) / Mathf.Max(0.01f, fadeStartDistance - fadeEndDistance));
-        }
+        bool shouldHide = currentCamDist < cameraHideDistance;
 
-        currentFadeAlpha = Mathf.Lerp(currentFadeAlpha, targetAlpha, Time.deltaTime * 18f);
-        if (Mathf.Abs(currentFadeAlpha - targetAlpha) < 0.001f)
-        {
-            currentFadeAlpha = targetAlpha;
-        }
+        if (shouldHide == isCharacterHidden && cachedCharacterRenderers != null && cachedCharacterRenderers.Length > 0) return;
+        isCharacterHidden = shouldHide;
 
-        if (fadePropBlock == null) fadePropBlock = new MaterialPropertyBlock();
-
-        if (cachedFadeRenderers == null || cachedFadeRenderers.Length == 0)
+        if (cachedCharacterRenderers == null || cachedCharacterRenderers.Length == 0)
         {
             System.Collections.Generic.List<Renderer> rendList = new System.Collections.Generic.List<Renderer>();
             foreach (var r in GetComponentsInChildren<Renderer>(true))
@@ -3011,72 +2998,15 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
                 if (n.Contains("Indicator") || n.Contains("Canvas") || n.Contains("UI") || n.Contains("Ring")) continue;
                 rendList.Add(r);
             }
-            cachedFadeRenderers = rendList.ToArray();
+            cachedCharacterRenderers = rendList.ToArray();
         }
 
-        bool shouldUpdateFade = (currentFadeAlpha < 0.99f) || isFadedMode;
-        if (!shouldUpdateFade) return;
-
-        isFadedMode = (currentFadeAlpha < 0.99f);
-
-        foreach (var r in cachedFadeRenderers)
+        foreach (var r in cachedCharacterRenderers)
         {
-            if (r == null) continue;
-
-            r.enabled = true;
-
-            foreach (var mat in r.materials)
+            if (r != null)
             {
-                if (mat == null) continue;
-
-                if (isFadedMode)
-                {
-                    if (mat.HasProperty("_Mode")) mat.SetFloat("_Mode", 2f);
-                    mat.SetOverrideTag("RenderType", "Transparent");
-                    mat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
-                    mat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
-                    mat.SetInt("_ZWrite", 0);
-                    mat.DisableKeyword("_ALPHATEST_ON");
-                    mat.EnableKeyword("_ALPHABLEND_ON");
-                    mat.DisableKeyword("_ALPHAPREMULTIPLY_ON");
-                    mat.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
-                    if (mat.HasProperty("_Surface")) mat.SetFloat("_Surface", 1f);
-                    if (mat.HasProperty("_Blend")) mat.SetFloat("_Blend", 0f);
-                }
-                else
-                {
-                    if (mat.HasProperty("_Mode")) mat.SetFloat("_Mode", 0f);
-                    mat.SetOverrideTag("RenderType", "");
-                    mat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.One);
-                    mat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.Zero);
-                    mat.SetInt("_ZWrite", 1);
-                    mat.DisableKeyword("_ALPHATEST_ON");
-                    mat.DisableKeyword("_ALPHABLEND_ON");
-                    mat.DisableKeyword("_ALPHAPREMULTIPLY_ON");
-                    mat.renderQueue = -1;
-                    if (mat.HasProperty("_Surface")) mat.SetFloat("_Surface", 0f);
-                }
-
-                if (mat.HasProperty("_Color"))
-                {
-                    Color c = mat.GetColor("_Color");
-                    c.a = currentFadeAlpha;
-                    mat.SetColor("_Color", c);
-                }
-                if (mat.HasProperty("_BaseColor"))
-                {
-                    Color c = mat.GetColor("_BaseColor");
-                    c.a = currentFadeAlpha;
-                    mat.SetColor("_BaseColor", c);
-                }
+                r.enabled = !shouldHide;
             }
-
-            r.GetPropertyBlock(fadePropBlock);
-            fadePropBlock.SetFloat("_Alpha", currentFadeAlpha);
-            Color fadeCol = new Color(1f, 1f, 1f, currentFadeAlpha);
-            fadePropBlock.SetColor("_Color", fadeCol);
-            fadePropBlock.SetColor("_BaseColor", fadeCol);
-            r.SetPropertyBlock(fadePropBlock);
         }
     }
 
