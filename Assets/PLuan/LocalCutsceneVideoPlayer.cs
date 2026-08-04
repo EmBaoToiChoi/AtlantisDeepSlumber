@@ -17,6 +17,9 @@ public class LocalCutsceneVideoPlayer : NetworkBehaviour
     [Tooltip("Kéo thả file video CutsceneMoDau.mp4 vào đây")]
     public VideoClip videoClip;
 
+    [Tooltip("CHỈ DÙNG CHO VPS/SERVER ẢO: Nhập chính xác thời lượng video (giây). Ví dụ 4 phút = 240.")]
+    public float vpsVideoDuration = 183f;
+
     [Header("Waiting Settings")]
     [Tooltip("Thời gian chờ tối đa (giây) trước khi tự động chạy video (đề phòng có người chơi bị kẹt không load được map)")]
     public float maxWaitTimeout = 20f;
@@ -92,15 +95,8 @@ public class LocalCutsceneVideoPlayer : NetworkBehaviour
             serverWaitTimer = 0f;
             serverReadyClients.Clear();
             
-            // Tính toán thời gian video trên Server (Độc lập với card màn hình VPS)
-            if (videoClip != null)
-            {
-                videoDuration = (float)videoClip.length;
-            }
-            else
-            {
-                videoDuration = 10f; // Hồi phòng khi không có clip
-            }
+            // Dùng số thời lượng cấu hình tay cho an toàn trên Server/VPS
+            videoDuration = vpsVideoDuration;
             videoTimer = 0f;
         }
     }
@@ -129,13 +125,17 @@ public class LocalCutsceneVideoPlayer : NetworkBehaviour
                     cutsceneStarted.Value = true;
                 }
             }
-            // 2. Quản lý tự động đếm giây hết video (Tránh lỗi VPS headless không chạy được VideoPlayer.loopPointReached)
-            else if (!cutsceneFinished.Value)
+            // 2. CHỈ đếm giờ nếu đang chạy trên VPS (isBatchMode = true)
+            else if (!cutsceneFinished.Value && Application.isBatchMode)
             {
-                videoTimer += Time.unscaledDeltaTime;
+                // Giới hạn dt tối đa 0.1s mỗi frame để tránh giật lag làm trôi thời gian
+                float dt = Time.unscaledDeltaTime;
+                if (dt > 0.1f) dt = 0.1f;
+                
+                videoTimer += dt;
                 if (videoTimer >= videoDuration)
                 {
-                    Debug.Log("[LocalCutsceneVideoPlayer] [SERVER] Hết thời lượng video. Đang tự động kết thúc cutscene...");
+                    Debug.Log("[LocalCutsceneVideoPlayer] [SERVER VPS] Hết thời lượng video. Đang tự động kết thúc cutscene...");
                     cutsceneFinished.Value = true;
                 }
             }
@@ -276,6 +276,9 @@ public class LocalCutsceneVideoPlayer : NetworkBehaviour
         videoPlayer.timeUpdateMode = VideoTimeUpdateMode.DSPTime;
         videoPlayer.audioOutputMode = VideoAudioOutputMode.Direct;
 
+        // Đăng ký Event để biết khi nào video thực sự chiếu xong
+        videoPlayer.loopPointReached += OnVideoCompleted;
+
         // CHỈ CHỦ PHÒNG (ROOM HOST) MỚI HIỂN THỊ NÚT SKIP
         if (IsLocalRoomHost())
         {
@@ -290,6 +293,25 @@ public class LocalCutsceneVideoPlayer : NetworkBehaviour
         {
             Cursor.lockState = CursorLockMode.None;
             Cursor.visible = true;
+        }
+    }
+
+    // --- SỰ KIỆN KHI VIDEO PHÁT XONG (TỰ ĐỘNG) ---
+    private void OnVideoCompleted(VideoPlayer vp)
+    {
+        // Gỡ event ra để tránh lỗi bộ nhớ
+        vp.loopPointReached -= OnVideoCompleted;
+        Debug.Log("[LocalCutsceneVideoPlayer] Video đã phát đến frame cuối cùng tự nhiên.");
+
+        // Nếu máy này là Server (Host), ra lệnh kết thúc toàn bộ cho mọi người
+        if (IsServer)
+        {
+            cutsceneFinished.Value = true;
+        }
+        else
+        {
+            // Nếu là Client xem xong, tự kết thúc ở máy mình
+            EndCutscene();
         }
     }
 

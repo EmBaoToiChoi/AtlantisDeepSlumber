@@ -23,9 +23,12 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
     [Tooltip("Kéo thả object chứa Video Player vào đây. Nếu để trống, cầu sẽ sập luôn.")]
     public UnityEngine.Video.VideoPlayer collapseVideo; 
 
-    // [SỬA Ở ĐÂY]: Thêm biến để nhét cái UI Canvas chứa video vào
     [Tooltip("Kéo thả cái Canvas chứa Raw Image (video) vào đây để code tự bật/tắt")]
     public GameObject cutsceneUI; 
+
+    [Header("External Cutscene Integration")]
+    [Tooltip("Kéo thả GameObject chứa VideoCutsceneController chạy khi hoàn thành đủ gỗ vào đây")]
+    public VideoCutsceneController buildCompleteCutscene;
 
     [Header("Player Movement Scripts")]
     [Tooltip("Điền tên chính xác của 4 script di chuyển vào đây (VD: Player1Move, ArthurController, v.v.)")]
@@ -184,21 +187,18 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
 
     private void Awake()
     {
-        // Fallback nếu mainBridgeObject bị bỏ trống trong Inspector
         if (mainBridgeObject == null && stableBridgeSegments != null && stableBridgeSegments.Length > 0)
         {
             mainBridgeObject = stableBridgeSegments[0];
             Debug.Log("[BridgeCollapseTrigger] Tự động gán mainBridgeObject bằng stableBridgeSegments[0] làm fallback!");
         }
 
-        // Lưu lại vị trí, góc xoay ban đầu của cây cầu nguyên khối
         if (mainBridgeObject != null)
         {
             originalBridgePos = mainBridgeObject.transform.position;
             originalBridgeRot = mainBridgeObject.transform.rotation;
         }
 
-        // --- ĐẢM BẢO ẨN HOÀN TOÀN CẦU LÚC KHỞI ĐẦU ---
         SetStableSegmentsActive(false);
         SetBrokenSegmentsActive(false);
         if (mainBridgeObject != null)
@@ -206,7 +206,6 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
             mainBridgeObject.SetActive(false);
         }
 
-        // Tự động tìm kiếm nếu chưa được kéo thả trong Inspector
         if (bridgeObstacle == null)
         {
             bridgeObstacle = GetComponentInChildren<NavMeshObstacle>();
@@ -216,7 +215,6 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
             bridgeOffMeshLink = GetComponentInChildren<OffMeshLink>();
         }
 
-        // Mặc định lúc đầu chưa có cầu thì chặn đường đi (Obstacle bật, Link tắt)
         if (bridgeObstacle != null) bridgeObstacle.enabled = true;
         if (bridgeOffMeshLink != null) bridgeOffMeshLink.activated = false;
     }
@@ -225,7 +223,6 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
     {
         hud = FindAnyObjectByType<PlayerHUDController>();
         ResolveWoodLogPrefab();
-        // Đảm bảo WoodLogObjectPool được khởi tạo sớm
         var pool = WoodLogObjectPool.Instance;
     }
 
@@ -291,18 +288,15 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
 
     public override void OnNetworkSpawn()
     {
-        // Đồng bộ local với NetworkVariable ban đầu khi spawn trên mạng
         localCollapseTriggered = hasCollapsed.Value;
         localRepaired = hasBeenRepaired.Value;
         localLogsSubmittedCount = logsSubmitted.Value;
 
-        // Đăng ký nhận sự kiện thay đổi trạng thái từ Server
         hasCollapsed.OnValueChanged += OnCollapseStateChanged;
         hasBeenRepaired.OnValueChanged += OnRepairStateChanged;
         logsSubmitted.OnValueChanged += OnLogsSubmittedChanged;
         isReadyToBuild.OnValueChanged += OnReadyToBuildChanged;
 
-        // Cập nhật trạng thái hiển thị cho người vào trễ
         ApplyBridgeVisualState(hasCollapsed.Value, hasBeenRepaired.Value, logsSubmitted.Value);
     }
 
@@ -333,13 +327,11 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
 
     private void Update()
     {
-        // 1. Tìm local player nếu chưa có
         if (localPlayer == null)
         {
             FindLocalPlayer();
         }
 
-        // 1.5. Đảm bảo gắn chỉ đường cho local player nếu cầu sập và chưa sửa xong
         if (IsBridgeCollapsed() && !IsBridgeRepaired() && localPlayer != null)
         {
             var indicator = localPlayer.gameObject.GetComponent<TreeGuidanceIndicator>();
@@ -358,7 +350,6 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
             }
         }
 
-        // 2. Coop Building Progress and Decay logic
         bool isNetwork = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
         bool ready = isNetwork ? isReadyToBuild.Value : localReadyToBuild;
         float currentProgress = isNetwork ? buildProgress.Value : localBuildProgress;
@@ -376,7 +367,7 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
                     }
 
                     float decayRate = coopBuildDecayRate;
-                    if (playerCount == 1) decayRate = 0.5f; // Rất chậm, dễ thở cho 1 người chơi
+                    if (playerCount == 1) decayRate = 0.5f;
                     else if (playerCount == 2) decayRate = 2.0f;
                     else if (playerCount == 3) decayRate = 4.0f;
                     else decayRate = 6.0f;
@@ -392,14 +383,12 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
                 }
             }
 
-            // Hiển thị các mảnh cầu theo phần trăm tiến trình
             UpdateProgressiveBridgeSegments(currentProgress);
 
-            // Emit particles when progress increases
             if (currentProgress > lastProgress)
             {
                 SetParticlesActive(true);
-                particleStopTimer = 0.5f; // keep playing for 0.5s after clicks stop
+                particleStopTimer = 0.5f;
             }
             lastProgress = currentProgress;
 
@@ -412,7 +401,6 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
                 }
             }
 
-            // Periodically sync UI alert / quest to say "4 người các ngươi hãy lại đây ấn F và click liên tục để xây cầu"
             PlayerHUDController localHudCtl = FindAnyObjectByType<PlayerHUDController>();
             if (localHudCtl != null)
             {
@@ -426,7 +414,6 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
     {
         if (!IsPrerequisiteCompleted()) return;
 
-        // Kiểm tra sập cầu và chưa có video nào đang chạy
         if (!IsBridgeCollapsed() && !isCutscenePlaying)
         {
             if (IsPlayer(other.gameObject))
@@ -457,7 +444,6 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
         {
             isCutscenePlaying = true;
 
-            // 1. Giấu toàn bộ player khỏi quái vật bằng cách đổi Tag
             var activePlayers = PlayerHUDManager.ActivePlayers;
             foreach (var p in activePlayers)
             {
@@ -471,22 +457,16 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
                 }
             }
 
-            // 2. TÌM VÀ ĐÓNG BĂNG TOÀN BỘ QUÁI VẬT TRÊN SERVER
             NavMeshAgent[] allEnemies = FindObjectsByType<NavMeshAgent>(FindObjectsSortMode.None);
             foreach (var enemy in allEnemies)
             {
                 if (enemy != null && enemy.isActiveAndEnabled)
                 {
-                    enemy.isStopped = true; // Bắt quái đứng im tại chỗ
+                    enemy.isStopped = true;
                 }
             }
 
-            
-
-            // 3. Gọi các Client bật VIDEO lên xem
             PlayCutsceneClientRpc();
-            
-            // Server bấm giờ bằng độ dài của video (Dùng lại hàm WaitForSeconds bình thường)
             StartCoroutine(WaitAndCollapseServer((float)collapseVideo.length));
         }
         else
@@ -503,7 +483,6 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
             objectToHideDuringCutscene.SetActive(false);
         }
 
-        // Bật UI lên khi bắt đầu chiếu phim
         if (cutsceneUI != null) 
         {
             cutsceneUI.SetActive(true);
@@ -514,14 +493,12 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
             collapseVideo.Play();
         }
 
-        // --- KHÓA DI CHUYỂN & PHANH GẤP ---
         if (localPlayer == null) FindLocalPlayer();
         if (localPlayer != null)
         {
             MonoBehaviour playerObj = localPlayer as MonoBehaviour;
             if (playerObj != null)
             {
-                // 1. Tắt các script điều khiển
                 MonoBehaviour[] allScripts = playerObj.GetComponents<MonoBehaviour>();
                 foreach (var script in allScripts)
                 {
@@ -532,16 +509,13 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
                     }
                 }
 
-                // 2. [THÊM MỚI]: Thắng gấp Rigidbody (Xóa sạch lực quán tính)
                 Rigidbody rb = playerObj.GetComponent<Rigidbody>();
                 if (rb != null)
                 {
-                    // Vì m đang xài Unity 6 nên dùng linearVelocity (nếu nó báo đỏ thì đổi thành velocity nha)
                     rb.linearVelocity = Vector3.zero; 
                     rb.angularVelocity = Vector3.zero;
                 }
 
-                // 3. [THÊM MỚI]: Thắng gấp NavMeshAgent (Nếu nhân vật xài NavMesh)
                 UnityEngine.AI.NavMeshAgent agent = playerObj.GetComponent<UnityEngine.AI.NavMeshAgent>();
                 if (agent != null && agent.isActiveAndEnabled)
                 {
@@ -549,13 +523,10 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
                     agent.isStopped = true;
                 }
 
-                // 4. [THÊM MỚI]: Ép Animator dừng chạy (Moonwalk)
                 Animator anim = playerObj.GetComponentInChildren<Animator>();
                 if (anim != null)
                 {
-                    // Nếu game m xài parameter "Speed" hoặc "MoveSpeed" để chạy thì ép nó về 0 ở đây
-                    // Ví dụ: anim.SetFloat("Speed", 0f);
-                    anim.speed = 0f; // Tạm thời đóng băng luôn hoạt ảnh cho chắc cốp
+                    anim.speed = 0f;
                 }
             }
         }
@@ -563,11 +534,9 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
 
     private System.Collections.IEnumerator WaitAndCollapseServer(float duration)
     {
-        // Trả lại hàm chờ bình thường vì thời gian game vẫn trôi
         yield return new WaitForSeconds(duration);
         isCutscenePlaying = false;
         
-        // 1. Phim hết, trả lại Tag "Player" để quái nhận diện lại mục tiêu
         var activePlayers = PlayerHUDManager.ActivePlayers;
         foreach (var p in activePlayers)
         {
@@ -581,7 +550,6 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
             }
         }
 
-        // 2. MỞ KHÓA CHO TOÀN BỘ QUÁI CHẠY TIẾP
         NavMeshAgent[] allEnemies = FindObjectsByType<NavMeshAgent>(FindObjectsSortMode.None);
         foreach (var enemy in allEnemies)
         {
@@ -593,7 +561,6 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
 
         TriggerBridgeCollapseServer();
     }
-
 
     #region Collapse Logic
 
@@ -607,42 +574,34 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
         isReadyToBuild.Value = false;
         logsSubmitted.Value = 0;
         
-        // Server thực hiện spawn gỗ xung quanh cầu
         SpawnWoodLogsServer();
-        
-        // Thông báo tất cả client hiển thị quest UI
         ShowCollapseUIClientRpc();
     }
 
-[ClientRpc]
+    [ClientRpc]
     private void ShowCollapseUIClientRpc()
     {
-        // --- BẬT LẠI OBJECT KHI XEM PHIM XONG ---
         if (objectToHideDuringCutscene != null)
         {
             objectToHideDuringCutscene.SetActive(true);
         }
 
-        // Tắt cái Canvas UI đi khi phim sập cầu chiếu xong
         if (cutsceneUI != null)
         {
             cutsceneUI.SetActive(false);
         }
 
-        // 1. TẮT VIDEO
         if (collapseVideo != null)
         {
             collapseVideo.Stop(); 
         }
 
-        // --- BẬT LẠI DI CHUYỂN & XẢ ĐÔNG NHÂN VẬT ---
         if (localPlayer == null) FindLocalPlayer();
         if (localPlayer != null)
         {
             MonoBehaviour playerObj = localPlayer as MonoBehaviour;
             if (playerObj != null)
             {
-                // Bật lại các script điều khiển
                 MonoBehaviour[] allScripts = playerObj.GetComponents<MonoBehaviour>();
                 foreach (var script in allScripts)
                 {
@@ -653,14 +612,12 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
                     }
                 }
 
-                // [XẢ ĐÔNG 1]: Thả NavMeshAgent cho nó đi lại bình thường
                 UnityEngine.AI.NavMeshAgent agent = playerObj.GetComponent<UnityEngine.AI.NavMeshAgent>();
                 if (agent != null && agent.isActiveAndEnabled)
                 {
                     agent.isStopped = false;
                 }
 
-                // [XẢ ĐÔNG 2]: Trả lại tốc độ hoạt ảnh bình thường (Cái này làm m bị đơ nè)
                 Animator anim = playerObj.GetComponentInChildren<Animator>();
                 if (anim != null)
                 {
@@ -669,7 +626,6 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
             }
         }
 
-        // 2. Hiện Quest UI
         PlayerHUDController localHud = FindAnyObjectByType<PlayerHUDController>();
         if (localHud != null && IsPrerequisiteCompleted())
         {
@@ -678,6 +634,7 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
             localHud.ShowMissionAlert("CẦU ĐÃ BỊ SẬP! HÃY TÌM 16 THANH GỖ ĐỂ SỬA LẠI CẦU!", 5.0f);
         }
     }
+
     [ClientRpc]
     private void ShowRepairCompleteUIClientRpc()
     {
@@ -708,22 +665,19 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
             bridgeOffMeshLink.activated = false;
         }
 
-        // Đảm bảo lưu lại vị trí ban đầu của cầu trước khi bị ẩn đi
         if (mainBridgeObject != null && originalBridgePos == Vector3.zero)
         {
             originalBridgePos = mainBridgeObject.transform.position;
             originalBridgeRot = mainBridgeObject.transform.rotation;
         }
 
-        // --- ẨN HOÀN TOÀN CÁC PHÂN ĐOẠN (KHÔNG HIỂN THỊ MẢNH VỠ HAY GHOST LÚC SẬP BAN ĐẦU) ---
         SetStableSegmentsActive(false);
         SetBrokenSegmentsActive(false);
         if (mainBridgeObject != null)
         {
-            mainBridgeObject.SetActive(false); // Ẩn hoàn toàn
+            mainBridgeObject.SetActive(false);
         }
 
-        // Tìm local player để thêm mũi tên hướng dẫn chỉ về cây gỗ nhiệm vụ tương ứng
         if (localPlayer == null)
         {
             FindLocalPlayer();
@@ -747,13 +701,11 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
             }
         }
 
-        // 3. Chạy Animator (nếu có)
         if (bridgeAnimator != null && !string.IsNullOrEmpty(collapseTriggerName))
         {
             bridgeAnimator.SetTrigger(collapseTriggerName);
         }
 
-        // 4. Hiển thị UI Quest trên Client (dùng dynamic lookup để luôn tìm đúng HUD đang active)
         PlayerHUDController localHudCtl = FindAnyObjectByType<PlayerHUDController>();
         if (localHudCtl != null && IsPrerequisiteCompleted())
         {
@@ -763,13 +715,11 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
             localHudCtl.ShowMissionAlert("HÃY TÌM 16 THANH GỖ ĐỂ SỬA LẠI CẦU!", 5.0f);
         }
 
-        // 5. Nếu là Standalone thì tự động spawn gỗ cục bộ
         if (NetworkManager.Singleton == null || !NetworkManager.Singleton.IsListening)
         {
             SpawnWoodLogsLocal();
         }
 
-        // 6. Hiển thị đối thoại giải thích sự kiện sập cầu
         if (IntroDialogueController.Instance != null)
         {
             IntroDialogueController.Instance.StartBridgeCollapseDialogue();
@@ -808,7 +758,6 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
         }
         else
         {
-            // Chế độ offline/standalone
             var carrier = localPlayer.gameObject.GetComponent<PlayerLogCarrier>();
             int amount = carrier != null ? carrier.carriedLogCount : 1;
             if (carrier != null)
@@ -824,6 +773,12 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
                 if (localLogsSubmittedCount >= requiredLogsToRepair)
                 {
                     localReadyToBuild = true;
+                    
+                    if (buildCompleteCutscene != null)
+                    {
+                        buildCompleteCutscene.StartCutscene();
+                    }
+
                     if (IntroDialogueController.Instance != null)
                     {
                         IntroDialogueController.Instance.StartReadyToBuildDialogue();
@@ -863,6 +818,11 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
             {
                 isReadyToBuild.Value = true;
                 Debug.Log("[BridgeCollapseTrigger] Server: Cầu đã đủ gỗ, chuyển sang ReadyToBuild!");
+
+                if (buildCompleteCutscene != null)
+                {
+                    buildCompleteCutscene.StartCutscene();
+                }
             }
         }
     }
@@ -885,18 +845,22 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
     {
         if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening)
         {
-            // Chế độ online: Gửi ServerRpc
             SubmitLogsServerRpc(amount);
         }
         else
         {
-            // Chế độ offline/standalone
             ConsumePlayerWood(localPlayer, amount);
             localLogsSubmittedCount += amount;
             
             if (localLogsSubmittedCount >= requiredLogsToRepair)
             {
                 localReadyToBuild = true;
+
+                if (buildCompleteCutscene != null)
+                {
+                    buildCompleteCutscene.StartCutscene();
+                }
+
                 if (IntroDialogueController.Instance != null)
                 {
                     IntroDialogueController.Instance.StartReadyToBuildDialogue();
@@ -935,10 +899,7 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
             
             if (actualToSubmit > 0)
             {
-                // Trừ gỗ trên server
                 ConsumePlayerWood(playerTarget, actualToSubmit);
-                
-                // Cập nhật tiến trình
                 logsSubmitted.Value += actualToSubmit;
                 
                 Debug.Log($"[BridgeCollapseTrigger] Server: Client {clientId} đã gửi {actualToSubmit} thanh gỗ. Tiến trình: {logsSubmitted.Value}/{requiredLogsToRepair}");
@@ -947,6 +908,11 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
                 {
                     isReadyToBuild.Value = true;
                     Debug.Log("[BridgeCollapseTrigger] Server: Cầu đã đủ gỗ, chuyển sang ReadyToBuild!");
+
+                    if (buildCompleteCutscene != null)
+                    {
+                        buildCompleteCutscene.StartCutscene();
+                    }
                 }
             }
         }
@@ -965,7 +931,6 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
             bridgeOffMeshLink.activated = true;
         }
 
-        // 1. Tắt nhắc nhở tương tác (dùng dynamic HUD lookup)
         PlayerHUDController localHudCtl = FindAnyObjectByType<PlayerHUDController>();
         if (localHudCtl != null)
         {
@@ -974,7 +939,6 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
             localHudCtl.ShowMissionAlert("CẦU ĐÃ ĐƯỢC SỬA CHỮA THÀNH CÔNG!", 5.0f);
         }
 
-        // Dọn dẹp mũi tên chỉ đường nếu còn
         if (localPlayer != null)
         {
             var indicator = localPlayer.gameObject.GetComponent<TreeGuidanceIndicator>();
@@ -984,7 +948,6 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
             }
         }
 
-        // 2. Khôi phục cây cầu gốc (xóa ghost mode, hiện lại và khôi phục materials)
         if (mainBridgeObject != null)
         {
             ApplyGhostMode(mainBridgeObject, false);
@@ -995,7 +958,6 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
         SetStableSegmentsActive(true);
         SetBrokenSegmentsActive(false);
 
-        // 3. Khôi phục tất cả materials đã lưu
         for (int i = 0; i < savedRenderers.Count; i++)
         {
             if (savedRenderers[i] != null)
@@ -1008,13 +970,11 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
         DestroySolidBridgeInstance();
         isGhostModeActive = false;
 
-        // 4. Chạy Animator sửa cầu (nếu có)
         if (bridgeAnimator != null && !string.IsNullOrEmpty(repairTriggerName))
         {
             bridgeAnimator.SetTrigger(repairTriggerName);
         }
 
-        // 5. NPC di chuyển và đối thoại sau khi cầu được sửa
         if (IntroDialogueController.Instance != null)
         {
             IntroDialogueController.Instance.TriggerMoveAndDialogueAfterBridge();
@@ -1036,7 +996,6 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
         localLogsSubmittedCount = newVal;
         Debug.Log($"[BridgeCollapseTrigger] Tiến trình xây cầu thay đổi: {newVal}/{requiredLogsToRepair}");
         
-        // Cập nhật UI - dùng dynamic lookup để luôn tìm đúng HUD đang active trên màn hình của client này
         PlayerHUDController localHudCtl = FindAnyObjectByType<PlayerHUDController>();
         if (localHudCtl != null)
         {
@@ -1048,11 +1007,6 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
 
     #region Blueprint & Wood Spawning Effects
 
-    // ... (Toàn bộ các logic khác bên dưới giữ nguyên không thay đổi)
-    /// <summary>
-    /// Chuyển bridge sang chế độ Ghost (màu trắng trong suốt) hoặc khôi phục lại.
-    /// Lưu materials gốc khi bật ghost, khôi phục khi tắt ghost.
-    /// </summary>
     private void ApplyGhostMode(GameObject bridgeRoot, bool enableGhost)
     {
         if (bridgeRoot == null) return;
@@ -1062,11 +1016,9 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
             if (isGhostModeActive) return;
             isGhostModeActive = true;
 
-            // Xóa danh sách lưu cũ
             savedRenderers.Clear();
             savedMaterials.Clear();
 
-            // Lưu material của toàn bộ Renderer con và tắt renderer để ẩn hoàn toàn cầu ghost
             Renderer[] renderers = bridgeRoot.GetComponentsInChildren<Renderer>(true);
             foreach (var r in renderers)
             {
@@ -1074,11 +1026,10 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
                 {
                     savedRenderers.Add(r);
                     savedMaterials.Add(r.sharedMaterials);
-                    r.enabled = false; // Tắt renderer để ẩn cầu ghost
+                    r.enabled = false;
                 }
             }
 
-            // Đảm bảo bật tất cả các GameObjects chứa Renderer con (ví dụ các mảnh cầu)
             if (stableBridgeSegments != null)
             {
                 foreach (var go in stableBridgeSegments)
@@ -1087,7 +1038,6 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
                 }
             }
 
-            // Tắt toàn bộ colliders để người chơi không va chạm/đi trên đó được khi đang xây
             foreach (var col in mainBridgeObject.GetComponentsInChildren<Collider>(true))
             {
                 col.enabled = false;
@@ -1098,7 +1048,6 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
             if (!isGhostModeActive) return;
             isGhostModeActive = false;
 
-            // Khôi phục tất cả materials đã lưu
             for (int i = 0; i < savedRenderers.Count; i++)
             {
                 if (savedRenderers[i] != null)
@@ -1109,14 +1058,12 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
             savedRenderers.Clear();
             savedMaterials.Clear();
 
-            // Bật toàn bộ Renderers con và khôi phục hiển thị bình thường
             mainBridgeObject.SetActive(true);
             foreach (var r in mainBridgeObject.GetComponentsInChildren<Renderer>(true))
             {
                 r.enabled = true;
             }
 
-            // Bật lại toàn bộ colliders để người chơi có thể đi qua cầu sau khi sửa xong
             foreach (var col in mainBridgeObject.GetComponentsInChildren<Collider>(true))
             {
                 col.enabled = true;
@@ -1149,7 +1096,6 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
         bool isNetwork = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
         float progress = isNetwork ? buildProgress.Value : localBuildProgress;
 
-        // 1. Xác định xem có sử dụng chế độ Z-scale growth hay Segment-By-Segment
         bool useZScaleGrowth = false;
         if (displayMode == BridgeDisplayMode.ForceScaleGrowth)
         {
@@ -1189,7 +1135,6 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
             }
         }
 
-        // 2. Chế độ Z-scale growth (cầu nguyên khối co giãn)
         if (useZScaleGrowth && solidBridgeInstance != null)
         {
             float minVal, maxVal;
@@ -1198,19 +1143,18 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
             float localLength = maxVal - minVal;
             float progressFactor = progress / 100f;
 
-            // Rìa đang xây ở vị trí tương ứng trên trục dọc
             float localPosOnAxis = minVal + localLength * progressFactor;
             
             Vector3 leadingEdgeLocal = Vector3.zero;
-            if (axis == 0) // X
+            if (axis == 0)
             {
                 leadingEdgeLocal = new Vector3(localPosOnAxis, 0.2f, Random.Range(-1.2f, 1.2f));
             }
-            else if (axis == 1) // Y
+            else if (axis == 1)
             {
                 leadingEdgeLocal = new Vector3(Random.Range(-1.2f, 1.2f), localPosOnAxis, Random.Range(-1.2f, 1.2f));
             }
-            else // Z
+            else
             {
                 leadingEdgeLocal = new Vector3(Random.Range(-1.2f, 1.2f), 0.2f, localPosOnAxis);
             }
@@ -1219,14 +1163,12 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
             return worldPos;
         }
 
-        // 3. Chế độ Segment-By-Segment (phân mảnh lắp ghép)
         if (!useZScaleGrowth)
         {
             GameObject[] segments = GetBridgeSegments();
             if (segments != null && segments.Length > 0)
             {
                 int N = segments.Length;
-                // Xác định mảnh cầu đang trong quá trình xây dựng ở ngưỡng progress hiện tại
                 int activeCount = Mathf.Min(Mathf.FloorToInt((progress / 100f) * N), N);
                 int currentBuildIndex = Mathf.Clamp(activeCount, 0, N - 1);
                 
@@ -1250,7 +1192,6 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
                     }
                     else
                     {
-                        // Fallback về vị trí của mảnh cầu đó
                         worldPos = activeSegment.transform.position + Vector3.up * 0.2f;
                         return worldPos;
                     }
@@ -1258,7 +1199,6 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
             }
         }
 
-        // 4. Fallback cuối cùng nếu không thuộc các trường hợp trên
         if (mainBridgeObject != null)
         {
             Renderer[] renderers = mainBridgeObject.GetComponentsInChildren<Renderer>(true);
@@ -1268,8 +1208,6 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
                 if (randomRenderer != null)
                 {
                     worldPos = randomRenderer.bounds.center;
-                    
-                    // Add small random offset within the bounds of this specific renderer part
                     float offsetX = Random.Range(-randomRenderer.bounds.extents.x * 0.6f, randomRenderer.bounds.extents.x * 0.6f);
                     float offsetZ = Random.Range(-randomRenderer.bounds.extents.z * 0.6f, randomRenderer.bounds.extents.z * 0.6f);
                     float offsetY = randomRenderer.bounds.extents.y + 0.15f;
@@ -1278,8 +1216,6 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
                     return worldPos;
                 }
             }
-            
-            // Fallback to mainBridgeObject pivot
             worldPos = mainBridgeObject.transform.position + Vector3.up * 0.5f;
         }
         return worldPos;
@@ -1345,7 +1281,6 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
 
     private void PlayBuildEffectLocal(Vector3 worldPos, int effectType)
     {
-
         AudioSource audioSource = GetComponent<AudioSource>();
         if (audioSource == null)
         {
@@ -1644,7 +1579,6 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
 
             if (collapsed)
             {
-
                 if (localPlayer == null) FindLocalPlayer();
                 if (localPlayer != null)
                 {
