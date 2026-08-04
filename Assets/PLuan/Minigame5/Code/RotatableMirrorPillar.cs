@@ -305,7 +305,8 @@ public class RotatableMirrorPillar : NetworkBehaviour
         // Tính toán vị trí camera mục tiêu dựa vào khoảng cách zoom và độ cao đã tilt
         float currentHeight = camHeight + m_CameraOrbitPitchOffset;
         Vector3 targetCamPos = t.position - lookDir * m_DynamicCamDistance + Vector3.up * currentHeight;
-        targetCamPos = GetClampedCameraPosition(t.position, targetCamPos);
+        Vector3 rayPivot = t.position + Vector3.up * (currentHeight * 0.5f);
+        targetCamPos = GetClampedCameraPosition(rayPivot, targetCamPos);
         
         Vector3 lookTarget = t.position + lookDir * lookAheadDistance;
         Quaternion targetCamRot = Quaternion.LookRotation(lookTarget - targetCamPos);
@@ -546,11 +547,11 @@ public class RotatableMirrorPillar : NetworkBehaviour
     private Vector3 GetClampedCameraPosition(Vector3 pivot, Vector3 targetPos)
     {
         float collisionSafetyDistance = 0.4f;
-        int cameraLayerMask = ~LayerMask.GetMask("Player", "Ignore Raycast");
+        int cameraLayerMask = ~LayerMask.GetMask("Player", "Ignore Raycast", "UI", "Water");
         Vector3 rayDirection = targetPos - pivot;
         float maxRayDistance = rayDirection.magnitude;
 
-        RaycastHit[] hits = Physics.SphereCastAll(pivot, 0.2f, rayDirection.normalized, maxRayDistance, cameraLayerMask);
+        RaycastHit[] hits = Physics.SphereCastAll(pivot, 0.2f, rayDirection.normalized, maxRayDistance, cameraLayerMask, QueryTriggerInteraction.Ignore);
         
         RaycastHit closestHit = default;
         bool hasHit = false;
@@ -558,7 +559,13 @@ public class RotatableMirrorPillar : NetworkBehaviour
 
         foreach (var hit in hits)
         {
+            if (hit.collider == null || hit.collider.isTrigger)
+                continue;
+
             if (hit.transform.IsChildOf(transform) || hit.transform == transform)
+                continue;
+
+            if (hit.distance < 0.2f)
                 continue;
 
             if (hit.distance < minDistance)
@@ -571,7 +578,7 @@ public class RotatableMirrorPillar : NetworkBehaviour
 
         if (hasHit)
         {
-            float clampedDistance = Mathf.Max(0.5f, closestHit.distance - collisionSafetyDistance);
+            float clampedDistance = Mathf.Max(1.5f, closestHit.distance - collisionSafetyDistance);
             return pivot + rayDirection.normalized * clampedDistance;
         }
         return targetPos;

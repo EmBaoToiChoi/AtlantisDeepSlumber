@@ -1,32 +1,32 @@
 /* Container chính nằm trên cao chính giữa màn hình */
 .boss-hud-container {
     position: absolute;
-    top: 40px;
+    top: 20px;
     left: 50%;
     translate: -50% 0;
-    width: 750px;
-    height: 110px;
+    width: 540px;
+    height: 76px;
     flex-direction: row;
     align-items: center;
     justify-content: flex-start;
     background-color: rgba(15, 8, 8, 0.85);
-    border-width: 3px;
+    border-width: 2px;
     border-color: rgb(215, 35, 35); /* Viền màu đỏ nổi bật kiểu Boss Fight */
-    border-radius: 16px;
-    padding: 10px 20px;
+    border-radius: 12px;
+    padding: 8px 14px;
     box-shadow: 0px 8px 24px rgba(0, 0, 0, 0.85), inset 0px 0px 12px rgba(255, 0, 0, 0.25);
 }
 
 /* Khung viền avatar của Boss */
 .boss-avatar-frame {
-    width: 80px;
-    height: 80px;
-    border-width: 3px;
+    width: 54px;
+    height: 54px;
+    border-width: 2px;
     border-color: rgb(220, 185, 45); /* Viền vàng kim loại cổ điển */
-    border-radius: 40px; /* Bo tròn hoàn hảo thành hình tròn */
+    border-radius: 27px; /* Bo tròn hoàn hảo thành hình tròn */
     overflow: hidden;
     background-color: rgb(25, 25, 25);
-    margin-right: 18px;
+    margin-right: 12px;
     box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.6);
     flex-shrink: 0;
 }
@@ -48,17 +48,17 @@
 /* Tên hiển thị của Boss */
 .boss-name {
     color: rgb(255, 235, 235);
-    font-size: 22px;
+    font-size: 16px;
     -unity-font-style: bold;
     text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.95);
-    margin-bottom: 6px;
+    margin-bottom: 3px;
     letter-spacing: 1px;
 }
 
 /* Container bọc ngoài thanh máu */
 .boss-health-bar-container {
     width: 100%;
-    height: 32px;
+    height: 22px;
 }
 
 /* Nền tối của thanh máu */
@@ -104,7 +104,7 @@
     width: 100%;
     height: 100%;
     color: rgb(255, 255, 255);
-    font-size: 13px;
+    font-size: 11px;
     -unity-font-style: bold;
     -unity-text-align: middle-center;
     text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.95);

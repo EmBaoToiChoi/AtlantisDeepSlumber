@@ -6544,7 +6544,6 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             PlayerHUDController hud = FindAnyObjectByType<PlayerHUDController>();
             if (hud != null)
             {
-                hud.ShowWeaponWarningCustom("Cần chuyển sang Ô vũ khí 2 (Phím 2) để sử dụng kỹ năng Q!");
                 hud.ShowMissionAlert("Cần chuyển sang Ô vũ khí 2 (Phím 2) để sử dụng kỹ năng Q!", 2.5f);
             }
             return false;
