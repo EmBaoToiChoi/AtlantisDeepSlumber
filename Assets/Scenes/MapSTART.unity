@@ -162930,14 +162930,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 1540000670}
     m_Modifications:
-    - target: {fileID: 2050928385180241433, guid: f07bdcaba459c7847a289e211592f98a, type: 3}
-      propertyPath: phase2MaxHealth
-      value: 500
-      objectReference: {fileID: 0}
-    - target: {fileID: 2050928385180241433, guid: f07bdcaba459c7847a289e211592f98a, type: 3}
-      propertyPath: earthBlastDamage
-      value: 5
-      objectReference: {fileID: 0}
     - target: {fileID: 2846290685344558318, guid: f07bdcaba459c7847a289e211592f98a, type: 3}
       propertyPath: m_LocalPosition.x
       value: -70.88
