@@ -22,11 +22,11 @@ public class BossAI : NetworkBehaviour
 {
     public enum BossState { Idle, Chase, Attack, Kick, Hit, Enrage, Dead }
 
-    // ─── Máu Boss ──────────────────────────────────────────────
+    // ─── Máu Boss (Chỉ duy nhất 1 Phase 700 HP) ─────────────────
     [Header("Health")]
-    public float maxHealth = 600f;
+    public float maxHealth = 700f;
     public NetworkVariable<float> currentHealth = new NetworkVariable<float>(
-        600f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        700f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
     // ─── Thiết lập Phase 2 ─────────────────────────────────────
     [Header("Phase 2 Settings (Enrage)")]
@@ -1137,10 +1137,27 @@ public class BossAI : NetworkBehaviour
     //  NHẬN SÁT THƯƠNG & XỬ LÝ CHẾT (TAKE DAMAGE & DEAD)
     // ══════════════════════════════════════════════════════════
 
+    [ServerRpc(RequireOwnership = false)]
+    public void TakeDamageServerRpc(float damage)
+    {
+        TakeDamage(damage);
+    }
+
     public void TakeDamage(float damage)
     {
         if (IsDead) return;
-        if (CurrentStateValue == BossState.Enrage) return; // Bất tử khi đang gồng nộ
+        if (CurrentStateValue == BossState.Enrage)
+        {
+            Debug.Log("[BossAI] Boss đang Gồng Nộ (Phase 2) - Miễn nhiễm sát thương!");
+            return;
+        }
+
+        // NẾU LÀ CLIENT TRONG MẠNG (NETCODE): GỌI SERVER RPC ĐỂ SERVER TRỪ MÁU ĐỒNG BỘ CHO TOÀN BỘ SERVER & CLIENTS!
+        if (!isStandaloneMode && IsSpawned && !IsServer)
+        {
+            TakeDamageServerRpc(damage);
+            return;
+        }
 
         localHealth = Mathf.Max(0f, localHealth - damage);
         if (!isStandaloneMode && IsSpawned && IsServer)
@@ -1163,7 +1180,7 @@ public class BossAI : NetworkBehaviour
         }
 
         // SUPER ARMOR BẢO VỆ: Khi Boss Silas đang chém (Attack), đang đá (Kick) hoặc đang gồng nộ (Enrage),
-        // Silas hoàn toàn miễn nhiễm bị ngắt chiêu (Hyper Armor), giúp thi triển đòn đánh mượt mà không bị đóng đơ hoạt ảnh hit!
+        // Silas vẫn bị trừ máu bình thường nhưng hoàn toàn miễn nhiễm bị ngắt chiêu (Hyper Armor)!
         if (CurrentStateValue == BossState.Attack || CurrentStateValue == BossState.Kick || CurrentStateValue == BossState.Enrage)
         {
             return;
