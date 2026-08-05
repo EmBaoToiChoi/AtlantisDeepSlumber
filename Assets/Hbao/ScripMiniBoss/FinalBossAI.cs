@@ -159,10 +159,11 @@ public class FinalBossAI : NetworkBehaviour
     public float runDistanceThreshold = 5.0f;
 
     [Header("AI Vision & Attack Ranges")]
-    public float sightRange = 25f;
-    public float fieldOfView = 140f;
-    public float attackRange = 3.0f;
-    public float attackCooldown = 2.0f;
+    public float sightRange = 50f;
+    public float fieldOfView = 360f;
+    [Tooltip("Tầm đánh tầm xa (bắn 3 vệt chém)")]
+    public float attackRange = 35.0f;
+    public float attackCooldown = 1.8f;
     private float attackCooldownTimer;
 
     [Header("Shockwave (Gồng Hất Tung) Settings")]
@@ -186,7 +187,7 @@ public class FinalBossAI : NetworkBehaviour
     public float shockwaveWaveKnockup = 9.0f;
 
     [Header("Ranged Projectile Settings (Đòn Đánh Tầm Xa)")]
-    [Tooltip("Prefab đạn tầm xa dùng chung cho cả 3 đòn đánh (DamPhai, DamTrai, Cào Xa)")]
+    [Tooltip("Prefab đạn tầm xa (Slash_B_vertical Variant 1)")]
     public GameObject rangedProjectilePrefab;
     [Tooltip("Vị trí xuất phát của chưởng đạn (nếu để trống sẽ tự động lấy trước ngực Boss)")]
     public Transform projectileSpawnPoint;
@@ -194,6 +195,8 @@ public class FinalBossAI : NetworkBehaviour
     public float projectileSpeed = 18.0f;
     [Tooltip("Sát thương của chưởng đạn khi trúng Player")]
     public float projectileDamage = 15.0f;
+    [Tooltip("Bù góc xoay cho VFX nếu vệt chém bị lệch hướng (X, Y, Z)")]
+    public Vector3 projectileRotationOffset = Vector3.zero;
 
     [Header("Fire Spew (Phun Lửa) Settings")]
     public float fireSpewInterval = 10f;
@@ -500,6 +503,12 @@ public class FinalBossAI : NetworkBehaviour
         {
             TriggerJumpDownForce();
         }
+        // Press keyboard key K during play mode to force fire the 3 slash projectiles immediately for debug testing!
+        if (Input.GetKeyDown(KeyCode.K))
+        {
+            Debug.Log("[FinalBossAI] PHÍM K ĐƯỢC NHẤN: BẮN THỬ 3 VỆT CHÉM SLASH VFX NGAY LẬP TỨC!");
+            SpawnRangedProjectile();
+        }
 #endif
         bool aiAuth = isStandaloneMode || (IsNetworkActive && IsServer);
         if (!aiAuth) return;
@@ -714,36 +723,57 @@ public class FinalBossAI : NetworkBehaviour
 
     public void SpawnRangedProjectile()
     {
-        Vector3 spawnPos = projectileSpawnPoint != null ? projectileSpawnPoint.position : transform.position + Vector3.up * 1.6f + transform.forward * 1.0f;
+        if (rangedProjectilePrefab == null)
+        {
+            Debug.LogWarning("[FinalBossAI] Ô 'Ranged Projectile Prefab' chưa được gán trong Inspector trên King Atlantis!");
+            return;
+        }
+
+        Vector3 spawnPos = projectileSpawnPoint != null ? projectileSpawnPoint.position : transform.position + Vector3.up * 1.6f + transform.forward * 1.2f;
         Vector3 targetPos = targetPlayer != null ? targetPlayer.position + Vector3.up * 1.0f : transform.position + transform.forward * 10f + Vector3.up * 1.6f;
         Vector3 centerDir = (targetPos - spawnPos).normalized;
         if (centerDir.sqrMagnitude < 0.01f) centerDir = transform.forward;
 
-        if (rangedProjectilePrefab != null)
+        if (!isStandaloneMode && IsSpawned)
         {
-            // BẮN NGUYÊN 1 LẦN 3 TIA CHÉM (Trái -15°, Giữa 0°, Phải +15°) TỪ NẮM ĐẤM (projectileSpawnPoint)
-            float[] angles = new float[] { 0f, -15f, 15f };
-
-            foreach (float angle in angles)
+            if (IsServer)
             {
-                Vector3 shootDir = Quaternion.Euler(0, angle, 0) * centerDir;
-                GameObject proj = Instantiate(rangedProjectilePrefab, spawnPos, Quaternion.LookRotation(shootDir));
-                var comp = proj.GetComponent<FinalBossProjectile>() ?? proj.AddComponent<FinalBossProjectile>();
-                comp.Initialize(shootDir, projectileSpeed, projectileDamage, transform);
-
-                if (!isStandaloneMode && IsServer && IsSpawned)
-                {
-                    var netObj = proj.GetComponent<NetworkObject>();
-                    if (netObj != null) netObj.Spawn(true);
-                }
+                SpawnRangedProjectileClientRpc(spawnPos, centerDir);
             }
-
-            Debug.Log($"[FinalBossAI] Bắn 3 tia chém Slash VFX từ nắm đấm tới target player: {targetPlayer?.name}");
         }
         else
         {
-            Debug.LogWarning("[FinalBossAI] Chưa gán rangedProjectilePrefab trong Inspector! Hãy kéo Prefab chưởng đạn Slash VFX vào ô 'Ranged Projectile Prefab'.");
+            SpawnRangedProjectileLocally(spawnPos, centerDir);
         }
+    }
+
+    [ClientRpc]
+    private void SpawnRangedProjectileClientRpc(Vector3 spawnPos, Vector3 centerDir)
+    {
+        SpawnRangedProjectileLocally(spawnPos, centerDir);
+    }
+
+    private void SpawnRangedProjectileLocally(Vector3 spawnPos, Vector3 centerDir)
+    {
+        if (rangedProjectilePrefab == null) return;
+
+        float[] angles = new float[] { 0f, -15f, 15f };
+
+        foreach (float angle in angles)
+        {
+            Vector3 shootDir = Quaternion.Euler(0, angle, 0) * centerDir;
+            Quaternion rot = Quaternion.LookRotation(shootDir) * Quaternion.Euler(projectileRotationOffset);
+
+            Debug.DrawRay(spawnPos, shootDir * 25f, Color.red, 3.0f);
+
+            GameObject proj = Instantiate(rangedProjectilePrefab, spawnPos, rot);
+            proj.transform.localScale = rangedProjectilePrefab.transform.localScale;
+
+            var comp = proj.GetComponent<FinalBossProjectile>() ?? proj.AddComponent<FinalBossProjectile>();
+            comp.Initialize(shootDir, projectileSpeed, projectileDamage, transform);
+        }
+
+        Debug.Log($"[FinalBossAI] ===> XUẤT VIỆN BẮN 3 VỆT CHÉM SLASH VFX '{rangedProjectilePrefab.name}' thành công từ vị trí {spawnPos}!");
     }
 
     public Transform GetPlayerRootPublic(Transform t)
@@ -845,42 +875,38 @@ public class FinalBossAI : NetworkBehaviour
     {
         var list = new List<Transform>();
 
-        // 1. Fast path: Use cached players from PlayerHUDManager (No GC / search overhead!)
-        if (PlayerHUDManager.ActivePlayers != null && PlayerHUDManager.ActivePlayers.Count > 0)
+        // 1. Tag lookup
+        GameObject[] players = GameObject.FindGameObjectsWithTag("Player");
+        foreach (var p in players)
+        {
+            if (p != null && !list.Contains(p.transform))
+            {
+                list.Add(p.transform);
+            }
+        }
+
+        // 2. Character components lookup (Leo, Arthur, Elena, Maya)
+        var leos = FindObjectsByType<LeoPlayer>(FindObjectsSortMode.None);
+        foreach (var p in leos) { if (p != null && !list.Contains(p.transform)) list.Add(p.transform); }
+
+        var arthurs = FindObjectsByType<ArthurPlayer>(FindObjectsSortMode.None);
+        foreach (var p in arthurs) { if (p != null && !list.Contains(p.transform)) list.Add(p.transform); }
+
+        var elenas = FindObjectsByType<ElenaPlayer>(FindObjectsSortMode.None);
+        foreach (var p in elenas) { if (p != null && !list.Contains(p.transform)) list.Add(p.transform); }
+
+        var mayas = FindObjectsByType<MayaPlayer>(FindObjectsSortMode.None);
+        foreach (var p in mayas) { if (p != null && !list.Contains(p.transform)) list.Add(p.transform); }
+
+        // 3. Fallback: PlayerHUDManager
+        if (PlayerHUDManager.ActivePlayers != null)
         {
             foreach (var p in PlayerHUDManager.ActivePlayers)
             {
                 var mono = p as MonoBehaviour;
-                if (mono != null && mono.gameObject != null)
+                if (mono != null && mono.gameObject != null && !list.Contains(mono.transform))
                 {
-                    Transform t = mono.transform;
-                    if (!list.Contains(t)) list.Add(t);
-                }
-            }
-        }
-
-        // 2. Fallback: Tag lookup (much faster than FindObjectsByType)
-        if (list.Count == 0)
-        {
-            GameObject[] players = GameObject.FindGameObjectsWithTag("Player");
-            foreach (var p in players)
-            {
-                if (p != null && !list.Contains(p.transform))
-                {
-                    list.Add(p.transform);
-                }
-            }
-        }
-
-        // 3. Last resort: Simple test script check
-        if (list.Count == 0)
-        {
-            var simples = FindObjectsByType<SimplePlayerTest>(FindObjectsSortMode.None);
-            foreach (var p in simples)
-            {
-                if (p != null && !list.Contains(p.transform))
-                {
-                    list.Add(p.transform);
+                    list.Add(mono.transform);
                 }
             }
         }
@@ -890,31 +916,17 @@ public class FinalBossAI : NetworkBehaviour
 
     private void DetectAndSwitchTarget()
     {
-        if (IsDead || CurrentStateValue == FinalBossState.Sitting || CurrentStateValue == FinalBossState.JumpDown || CurrentStateValue == FinalBossState.Grow || CurrentStateValue == FinalBossState.SwordRain || CurrentStateValue == FinalBossState.FireBarrage) return;
+        if (IsDead || CurrentStateValue == FinalBossState.Sitting || CurrentStateValue == FinalBossState.JumpDown) return;
+
+        // Nếu đang có mục tiêu sống thì tiếp tục giữ mục tiêu đó
+        if (targetPlayer != null && !IsPlayerDeadOrInvisible(targetPlayer))
+        {
+            return;
+        }
 
         Transform closest = null;
         float minD = float.MaxValue;
         Vector3 eyePos = eyeTransform != null ? eyeTransform.position : transform.position + Vector3.up * 1.5f;
-        int raycastMask = obstacleLayer.value & ~LayerMask.GetMask("Player", "Enemy");
-
-        // KHÓA MỤC TIÊU ƯU TIÊN: Nếu đang có mục tiêu và mục tiêu đó vẫn hợp lệ thì tiếp tục dí mục tiêu đó
-        if (targetPlayer != null)
-        {
-            if (!IsPlayerDeadOrInvisible(targetPlayer))
-            {
-                Vector3 targetCenter = targetPlayer.position + Vector3.up * 1.0f;
-                float d = Vector3.Distance(eyePos, targetCenter);
-                float currentSight = IsBossActive ? 50f : sightRange;
-                if (d <= currentSight)
-                {
-                    Vector3 dir = (targetCenter - eyePos).normalized;
-                    if (!Physics.Raycast(eyePos, dir, d, raycastMask, QueryTriggerInteraction.Ignore))
-                    {
-                        return; // Khóa mục tiêu thành công!
-                    }
-                }
-            }
-        }
 
         var activePlayers = GetAllActivePlayers();
         for (int i = 0; i < activePlayers.Count; i++)
@@ -923,33 +935,18 @@ public class FinalBossAI : NetworkBehaviour
             if (pTrans == null || pTrans == transform) continue;
             if (IsPlayerDeadOrInvisible(pTrans)) continue;
 
-            Vector3 targetCenter = pTrans.position + Vector3.up * 1.0f;
-            float d = Vector3.Distance(eyePos, targetCenter);
-            
-            float currentSight = IsBossActive ? 50f : sightRange;
-            if (d <= currentSight)
+            float d = Vector3.Distance(eyePos, pTrans.position);
+            if (d < minD)
             {
-                Vector3 dir = (targetCenter - eyePos).normalized;
-                bool inFOV = IsBossActive || Vector3.Angle(transform.forward, dir) < fieldOfView / 2f || d <= 5f;
-
-                if (inFOV && !Physics.Raycast(eyePos, dir, d, raycastMask, QueryTriggerInteraction.Ignore))
-                {
-                    if (d < minD)
-                    {
-                        minD = d;
-                        closest = pTrans;
-                    }
-                }
+                minD = d;
+                closest = pTrans;
             }
         }
 
         if (closest != null)
         {
             targetPlayer = closest;
-        }
-        else if (CurrentStateValue == FinalBossState.Chase)
-        {
-            targetPlayer = null;
+            Debug.Log($"[FinalBossAI] Tự động khóa mục tiêu Player: {targetPlayer.name} ở khoảng cách {minD:F1}m!");
         }
     }
 
@@ -1072,6 +1069,7 @@ public class FinalBossAI : NetworkBehaviour
         {
             if (boss.startActiveWithoutMiniboss)
             {
+                boss.ActivateBoss();
                 boss.SetHUDVisible(true);
                 boss.ChangeState(FinalBossState.JumpDown);
                 return;
@@ -1083,6 +1081,7 @@ public class FinalBossAI : NetworkBehaviour
             // When Silas dies (or Rakan dies if configured), show HUD and jump down immediately!
             if (silasDead || rakanDead)
             {
+                boss.ActivateBoss();
                 boss.SetHUDVisible(true);
                 boss.ChangeState(FinalBossState.JumpDown);
             }
@@ -1178,6 +1177,7 @@ public class FinalBossAI : NetworkBehaviour
         private void Landed()
         {
             boss.transform.position = endPos;
+            boss.ActivateBoss();
 
             if (boss.agent != null)
             {
@@ -1323,30 +1323,37 @@ public class FinalBossAI : NetworkBehaviour
     private class AttackState : IEnemyState
     {
         private FinalBossAI boss;
-        private FinalBossAttackConfig config;
         private bool hasSpawnedProjectile;
+        private float spawnTimer;
 
         public AttackState(FinalBossAI boss) { this.boss = boss; }
 
         public void Enter()
         {
             hasSpawnedProjectile = false;
+            spawnTimer = 0.35f; // Đếm lùi 0.35s từ khi vung tay là bắn đạn 3 tia
 
-            // Chọn ngẫu nhiên 1 trong 3 đòn đánh tầm xa: RightPunch (DamPhai), LeftPunch (DamTrai), Swipe (Cào Xa)
+            // Chọn ngẫu nhiên 1 trong 3 đòn đánh: RightPunch (DamPhai), LeftPunch (DamTrai), Swipe (Cào Xa)
             boss.currentAttackIndex = Random.Range(0, boss.attackTriggers.Length);
 
-            if (!boss.isStandaloneMode)
+            // Luôn luôn kích hoạt Trigger hoạt ảnh Animator trên máy này
+            if (boss.anim != null && boss.attackTriggers != null && boss.currentAttackIndex < boss.attackTriggers.Length)
+            {
+                boss.anim.SetTrigger(boss.attackTriggers[boss.currentAttackIndex]);
+            }
+
+            if (!boss.isStandaloneMode && boss.IsServer)
             {
                 boss.attackTypeSync.Value = boss.currentAttackIndex;
                 boss.attackCounter.Value++;
             }
-            else
-            {
-                if (boss.anim != null) boss.anim.SetTrigger(boss.attackTriggers[boss.currentAttackIndex]);
-            }
 
-            config = boss.attackConfigs[boss.currentAttackIndex];
-            boss.stateTimer = config.duration;
+            float duration = 1.8f;
+            if (boss.attackConfigs != null && boss.currentAttackIndex < boss.attackConfigs.Length && boss.attackConfigs[boss.currentAttackIndex].duration > 0f)
+            {
+                duration = boss.attackConfigs[boss.currentAttackIndex].duration;
+            }
+            boss.stateTimer = duration;
 
             if (boss.AgentReady)
             {
@@ -1365,14 +1372,15 @@ public class FinalBossAI : NetworkBehaviour
                 boss.RotateTowards(boss.targetPlayer.position);
             }
 
-            float elapsed = config.duration - boss.stateTimer;
-            float elapsedPercent = elapsed / config.duration;
-
-            // BẮN ĐẠN PREFAB TẦM XA KHI VUNG TAY
-            if (elapsedPercent >= 0.35f && !hasSpawnedProjectile)
+            // BẮN ĐẠN PREFAB TẦM XA KHI ĐẾN TIMER VUNG TAY (0.35s)
+            if (!hasSpawnedProjectile)
             {
-                hasSpawnedProjectile = true;
-                boss.SpawnRangedProjectile();
+                spawnTimer -= Time.deltaTime;
+                if (spawnTimer <= 0f)
+                {
+                    hasSpawnedProjectile = true;
+                    boss.SpawnRangedProjectile();
+                }
             }
 
             if (boss.stateTimer <= 0)
@@ -2504,20 +2512,26 @@ public class FinalBossProjectile : MonoBehaviour
             }
         }
 
-        // GIỮ NGUYÊN HÌNH DẠNG TIA CHÉM (SLASH VFX): Bật loop và simulationSpace World để tia luôn sáng rực bay tới Player
+        // ĐẢM BẢO HIỂN THỊ CHÍNH XÁC PREFAB TIA CHÉM (SLASH VFX): Bật hiển thị và kích hoạt particle phát ra
         var particles = GetComponentsInChildren<ParticleSystem>(true);
         foreach (var ps in particles)
         {
-            var main = ps.main;
-            main.loop = true;
-            main.simulationSpace = ParticleSystemSimulationSpace.World;
-            ps.Play();
+            ps.gameObject.SetActive(true);
+            ps.Clear(true);
+            ps.Play(true);
         }
 
         var vfxGraphs = GetComponentsInChildren<UnityEngine.VFX.VisualEffect>(true);
         foreach (var ve in vfxGraphs)
         {
+            ve.gameObject.SetActive(true);
             ve.Play();
+        }
+
+        var renderers = GetComponentsInChildren<Renderer>(true);
+        foreach (var r in renderers)
+        {
+            r.enabled = true;
         }
 
         Destroy(gameObject, 5f);

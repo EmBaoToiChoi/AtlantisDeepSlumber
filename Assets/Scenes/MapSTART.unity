@@ -294017,10 +294017,6 @@ PrefabInstance:
       propertyPath: landingPoint
       value: 
       objectReference: {fileID: 1941652719}
-    - target: {fileID: 7074382907316884614, guid: ce5b12c86dd74644796e6604896d9c1d, type: 3}
-      propertyPath: startActiveWithoutMiniboss
-      value: 1
-      objectReference: {fileID: 0}
     - target: {fileID: 8572541257309697589, guid: ce5b12c86dd74644796e6604896d9c1d, type: 3}
       propertyPath: m_Name
       value: King Atlantis
