@@ -2612,7 +2612,7 @@ MonoBehaviour:
   ShowTopMostFoldoutHeaderGroup: 1
   bossMiniboss: {fileID: 0}
   miniBoss: {fileID: 0}
-  startActiveWithoutMiniboss: 0
+  startActiveWithoutMiniboss: 1
   maxHealth: 900
   currentHealth:
     UpdateTraits:
@@ -2762,8 +2762,8 @@ MonoBehaviour:
   shockwaveWaveKnockup: 9
   rangedProjectilePrefab: {fileID: 9380231799744250, guid: 70a5a9d014f9ae94d85a8d9e66f53a5e, type: 3}
   projectileSpawnPoint: {fileID: 5889684584516781391}
-  projectileSpeed: 18
-  projectileDamage: 15
+  projectileSpeed: 10
+  projectileDamage: 5
   fireSpewInterval: 10
   fireSpewWindupDuration: 1
   fireSpewActiveDuration: 1.5
