@@ -224,6 +224,10 @@ public class FinalBossAI : NetworkBehaviour
     public float fireBarrageCooldown = 12f;
     public float fireBarrageCooldownTimer;
 
+    [Header("Sword Rain Cooldown")]
+    public float swordRainCooldown = 10f;
+    public float swordRainCooldownTimer;
+
     [Header("Weapon & Hand Detection Settings")]
     public Transform leftHandBase;
     public Transform leftHandTip;
@@ -493,9 +497,23 @@ public class FinalBossAI : NetworkBehaviour
         Debug.Log("[FinalBossAI] Final Boss has been activated! Combat start!");
     }
 
+    [ServerRpc(RequireOwnership = false)]
+    public void TakeDamageServerRpc(float damageAmount)
+    {
+        TakeDamage(damageAmount);
+    }
+
     public void TakeDamage(float damage)
     {
-        if (IsDead || CurrentStateValue == FinalBossState.Sitting || CurrentStateValue == FinalBossState.JumpDown || CurrentStateValue == FinalBossState.Grow || CurrentStateValue == FinalBossState.SwordRain || CurrentStateValue == FinalBossState.FireBarrage) return;
+        // Loại bỏ việc chặn sát thương khi đang cast chiêu SwordRain/FireBarrage để đảm bảo chém là LUÔN MÔT 100% TRỪ MÁU!
+        if (IsDead || CurrentStateValue == FinalBossState.Sitting || CurrentStateValue == FinalBossState.JumpDown || CurrentStateValue == FinalBossState.Grow) return;
+
+        // Nếu là Client đánh Boss trên mạng -> Gửi ServerRpc để Server trừ máu chuẩn xác 100%
+        if (!isStandaloneMode && IsSpawned && !IsServer)
+        {
+            TakeDamageServerRpc(damage);
+            return;
+        }
 
         localHealth = Mathf.Max(0f, localHealth - damage);
         if (!isStandaloneMode && IsSpawned && IsServer)
@@ -586,6 +604,7 @@ public class FinalBossAI : NetworkBehaviour
         {
             if (fireSpewCooldownTimer > 0) fireSpewCooldownTimer -= Time.deltaTime;
             if (fireBarrageCooldownTimer > 0) fireBarrageCooldownTimer -= Time.deltaTime;
+            if (swordRainCooldownTimer > 0) swordRainCooldownTimer -= Time.deltaTime;
         }
 
         // Perform target scans at intervals
@@ -1346,24 +1365,16 @@ public class FinalBossAI : NetworkBehaviour
 
                 if (boss.isEnraged || boss.ActualCurrentHealth <= 600f)
                 {
-                    // PHASE 2: Kích hoạt linh hoạt cả 3 chiêu Phun Lửa, Cầu Lửa, Mưa Kiếm và Vệt Chém 3 Tia!
-                    float roll = Random.value;
-                    if (roll < 0.55f)
-                    {
-                        boss.ChangeState(FinalBossState.Attack);
-                    }
-                    else if (roll < 0.70f && boss.fireSpewCooldownTimer <= 0)
-                    {
-                        boss.ChangeState(FinalBossState.FireSpew);
-                    }
-                    else if (roll < 0.85f && boss.fireBarrageCooldownTimer <= 0)
-                    {
-                        boss.ChangeState(FinalBossState.FireBarrage);
-                    }
-                    else
-                    {
-                        boss.ChangeState(FinalBossState.SwordRain);
-                    }
+                    // PHASE 2: Chọn ngẫu nhiên công bằng giữa tất cả các kỹ năng đã hồi chiêu (Mưa Kiếm, Cầu Lửa, Phun Lửa, Vệt Chém)
+                    var availableSkills = new List<FinalBossState>();
+                    availableSkills.Add(FinalBossState.Attack); // Đòn chém thường (3 vệt / 5 vệt chém) luôn có thể dùng
+
+                    if (boss.fireSpewCooldownTimer <= 0) availableSkills.Add(FinalBossState.FireSpew);
+                    if (boss.fireBarrageCooldownTimer <= 0) availableSkills.Add(FinalBossState.FireBarrage);
+                    if (boss.swordRainCooldownTimer <= 0) availableSkills.Add(FinalBossState.SwordRain);
+
+                    FinalBossState chosenSkill = availableSkills[Random.Range(0, availableSkills.Count)];
+                    boss.ChangeState(chosenSkill);
                 }
                 else
                 {
@@ -1705,17 +1716,21 @@ public class FinalBossAI : NetworkBehaviour
                 }
                 else
                 {
-                    // Đợi thêm 3 giây giãn cách trước khi chuyển sang kỹ năng tiếp theo (stageTimer âm xuống <= -3.0f)
-                    if (stageTimer <= -3.0f)
+                    if (stageTimer <= -1.0f)
                     {
-                        boss.fireSpewCooldownTimer = boss.fireSpewInterval;
-                        boss.ChangeState(FinalBossState.FireBarrage);
+                        if (boss.targetPlayer != null) boss.ChangeState(FinalBossState.Chase);
+                        else boss.ChangeState(FinalBossState.Idle);
                     }
                 }
             }
         }
 
-        public void Exit() { }
+        public void Exit()
+        {
+            boss.fireSpewCooldownTimer = boss.fireSpewInterval;
+            if (boss.anim != null) boss.anim.ResetTrigger(boss.fireSpewTriggerParam);
+            if (boss.AgentReady) boss.agent.isStopped = false;
+        }
     }
 
     // ══════════════════════════════════════════════════════════
@@ -2185,14 +2200,19 @@ public class FinalBossAI : NetworkBehaviour
                 }
             }
 
-            // Đợi thêm 3 giây giãn cách trước khi chuyển sang kỹ năng tiếp theo
-            if (timer >= boss.swordRainDuration + 3.0f)
+            if (timer >= boss.swordRainDuration + 1.0f)
             {
-                boss.ChangeState(FinalBossState.FireSpew);
+                if (boss.targetPlayer != null) boss.ChangeState(FinalBossState.Chase);
+                else boss.ChangeState(FinalBossState.Idle);
             }
         }
 
-        public void Exit() { }
+        public void Exit()
+        {
+            boss.swordRainCooldownTimer = boss.swordRainCooldown;
+            if (boss.anim != null) boss.anim.ResetTrigger(boss.swordRainTriggerParam);
+            if (boss.AgentReady) boss.agent.isStopped = false;
+        }
     }
 
     // ══════════════════════════════════════════════════════════
@@ -2452,8 +2472,7 @@ public class FinalBossAI : NetworkBehaviour
                 }
             }
 
-            // Đợi thêm 3 giây giãn cách trước khi kết thúc chuỗi kỹ năng liên tiếp và quay về đuổi theo người chơi
-            if (timer >= boss.fireBarrageDuration + 3.0f)
+            if (timer >= boss.fireBarrageDuration + 1.0f)
             {
                 boss.ActivateBoss();
 
@@ -2462,7 +2481,12 @@ public class FinalBossAI : NetworkBehaviour
             }
         }
 
-        public void Exit() { }
+        public void Exit()
+        {
+            boss.fireBarrageCooldownTimer = boss.fireBarrageCooldown;
+            if (boss.anim != null) boss.anim.ResetTrigger(boss.fireBarrageTriggerParam);
+            if (boss.AgentReady) boss.agent.isStopped = false;
+        }
     }
 
     // ══════════════════════════════════════════════════════════
