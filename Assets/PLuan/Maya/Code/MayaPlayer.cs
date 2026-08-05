@@ -194,6 +194,16 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
     private int localLevel = 0;
     private float localExp = 0f;
     private int localActiveWeaponIndex = 1;
+    private Coroutine weaponSwitchSafetyCoroutine;
+    private float lastWeaponSwitchTime = 0f;
+
+    private System.Collections.IEnumerator SyncWeaponVisualsSafetyRoutine(int targetWeapon, float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        UpdateWeaponVisualsInstant(targetWeapon);
+        weaponSwitchSafetyCoroutine = null;
+    }
+
 
     [Header("Player Experience & Level")]
     public NetworkVariable<int> playerLevel = new NetworkVariable<int>(
@@ -392,6 +402,17 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
     
     private float smoothedYOffset = 0f;
     private float smoothedXOffset = 0f;
+
+    [Header("Camera Character Invisibility Settings")]
+    [Tooltip("Khoảng cách từ camera đến nhân vật khiến nhân vật tàng hình (ẩn hẳn) để không che camera")]
+    public float cameraHideDistance = 2.5f;
+
+    [Header("Camera Collision Settings")]
+    [Tooltip("Các Layer khiến camera bị zoom khi vướng phải. Tích chọn các layer bạn muốn camera va chạm & zoom, bỏ chọn các layer KHÔNG muốn camera bị zoom (ví dụ: Lá cây, NPC, Decor...).")]
+    public LayerMask cameraObstacleLayers;
+
+    private Renderer[] cachedCharacterRenderers;
+    private bool isCharacterHidden = false;
     public float spineSmoothSpeed = 15f;
     private Transform spineBone;
     private float localAimAngle = 0f;
@@ -589,6 +610,9 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
             rb.angularVelocity = Vector3.zero;
             rb.isKinematic = true;
         }
+
+        if (string.IsNullOrEmpty(drawWeaponTrigger)) drawWeaponTrigger = "LayVuKhi";
+        if (string.IsNullOrEmpty(sheathWeaponTrigger)) sheathWeaponTrigger = "CatVuKhi";
 
         if (anim == null) return;
 
@@ -1462,6 +1486,7 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     private void UpdateHealthHUD(float health)
     {
+        if (!isStandaloneMode && !IsOwner) return;
         PlayerHUDController hud = FindObjectOfType<PlayerHUDController>();
         if (hud != null)
             hud.SetHealth(health / maxHealth);
@@ -1562,6 +1587,7 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
     // ------------------------------------------------------------------
     private void UpdateUpgradeHUD()
     {
+        if (!isStandaloneMode && !IsOwner) return;
         PlayerHUDController hud = FindObjectOfType<PlayerHUDController>();
         if (hud != null)
         {
@@ -1844,6 +1870,8 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (!IsSpawned || !IsOwner) return;
         UpgradeStatServerRpc(statType);
     }
+
+    public void RefreshUpgradeHUD() => UpdateUpgradeHUD();
 
     [ServerRpc]
     private void UpgradeStatServerRpc(int statType)
@@ -2431,7 +2459,10 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
                 }
                 else
                 {
-                    PerformComboAttack(false);
+                    if (GetActiveWeaponIndex() != 2)
+                    {
+                        PerformComboAttack(false);
+                    }
                 }
             }
         }
@@ -2863,7 +2894,11 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         // Camera follow hoạt động cho cả standalone lẫn Netcode owner
         bool shouldFollow = isStandaloneMode || (IsSpawned && IsOwner);
-        if (!shouldFollow || !enableCameraFollow || SeagullController.ActiveSeagull != null) return;
+        if (!shouldFollow || !enableCameraFollow || SeagullController.ActiveSeagull != null)
+        {
+            UpdateCameraCharacterVisibility(10f);
+            return;
+        }
 
         if (targetCamera == null)
         {
@@ -2922,16 +2957,39 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
             Vector3 pivotPosition = (transform.position + Vector3.up * cameraPivotHeight) + rightOffsetVec;
             Vector3 targetPosition = pivotPosition + rotatedOffset;
 
-            // Thực hiện kiểm tra va chạm của camera với tường/vật cản bằng SphereCast
+            // Thực hiện kiểm tra va chạm của camera với tường/vật cản bằng SphereCastAll
             float collisionSafetyDistance = 0.4f; // Khoảng cách an toàn để tránh camera sát tường gây lỗi clipping plane
-            int cameraLayerMask = ~LayerMask.GetMask("Player", "Ignore Raycast"); // Bỏ qua người chơi và các vật thể Ignore Raycast
+            int cameraLayerMask = cameraObstacleLayers.value;
+            if (cameraLayerMask == 0)
+            {
+                cameraLayerMask = ~LayerMask.GetMask("Player", "Ignore Raycast", "UI");
+            }
             Vector3 rayDirection = rotatedOffset.normalized;
             float maxRayDistance = rotatedOffset.magnitude;
 
-            if (Physics.SphereCast(pivotPosition, 0.2f, rayDirection, out RaycastHit hit, maxRayDistance, cameraLayerMask))
+            // Dùng QueryTriggerInteraction.Ignore và SphereCastAll để camera KHÔNG BAO GIỜ va chạm vào Hitbox tấn công hoặc vật thể của bản thân
+            RaycastHit[] hits = Physics.SphereCastAll(pivotPosition, 0.2f, rayDirection, maxRayDistance, cameraLayerMask, QueryTriggerInteraction.Ignore);
+            float nearestObstacleDistance = maxRayDistance;
+            bool hitObstacle = false;
+
+            foreach (var h in hits)
             {
-                // Thu nhỏ khoảng cách nếu va chạm với tường
-                float clampedDistance = Mathf.Max(0.5f, hit.distance - collisionSafetyDistance);
+                if (h.collider != null && !h.collider.isTrigger)
+                {
+                    if (!h.collider.transform.IsChildOf(transform) && h.collider.transform.root != transform.root)
+                    {
+                        if (h.distance < nearestObstacleDistance)
+                        {
+                            nearestObstacleDistance = h.distance;
+                            hitObstacle = true;
+                        }
+                    }
+                }
+            }
+
+            if (hitObstacle)
+            {
+                float clampedDistance = Mathf.Max(0.5f, nearestObstacleDistance - collisionSafetyDistance);
                 targetPosition = pivotPosition + rayDirection * clampedDistance;
             }
 
@@ -2943,6 +3001,39 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
                 targetCamera.transform.rotation = Quaternion.LookRotation(
                     pivotPosition - targetCamera.transform.position
                 );
+            }
+
+            float currentCamDist = Vector3.Distance(pivotPosition, targetCamera.transform.position);
+            UpdateCameraCharacterVisibility(currentCamDist);
+        }
+    }
+
+    private void UpdateCameraCharacterVisibility(float currentCamDist)
+    {
+        bool shouldHide = currentCamDist < cameraHideDistance;
+
+        if (shouldHide == isCharacterHidden && cachedCharacterRenderers != null && cachedCharacterRenderers.Length > 0) return;
+        isCharacterHidden = shouldHide;
+
+        if (cachedCharacterRenderers == null || cachedCharacterRenderers.Length == 0)
+        {
+            System.Collections.Generic.List<Renderer> rendList = new System.Collections.Generic.List<Renderer>();
+            foreach (var r in GetComponentsInChildren<Renderer>(true))
+            {
+                if (r == null) continue;
+                if (r is ParticleSystemRenderer || r is LineRenderer || r is TrailRenderer) continue;
+                string n = r.gameObject.name;
+                if (n.Contains("Indicator") || n.Contains("Canvas") || n.Contains("UI") || n.Contains("Ring")) continue;
+                rendList.Add(r);
+            }
+            cachedCharacterRenderers = rendList.ToArray();
+        }
+
+        foreach (var r in cachedCharacterRenderers)
+        {
+            if (r != null)
+            {
+                r.enabled = !shouldHide;
             }
         }
     }
@@ -2990,6 +3081,8 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (carrier != null && carrier.isCarrying) return;
 
         int weapon = GetActiveWeaponIndex();
+        if (weapon == 2) return; // Vũ khí 2 (Gậy phép) chỉ bắn đạn khi Nhắm (chuột phải) + Click trái, không dùng chém Chem1!
+
         if (!networkMode)
         {
             if (weapon == 1) Weapon1Durability = Mathf.Max(Weapon1Durability - 2f, 0f);
@@ -3466,7 +3559,7 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
     private void UpdateStateServerRpc(int weaponIndex, bool weapon2Locked, bool skillsUnlocked)
     {
         activeWeaponIndex.Value = weaponIndex;
-        isWeapon2Locked.Value = weapon2Locked;
+        isWeapon2Locked.Value = false;
         isSkillsUnlocked.Value = skillsUnlocked;
         SavePlayerStateClientRpc();
     }
@@ -3653,22 +3746,45 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     public void PlayWeaponSwitchAnimation(int oldWeapon, int newWeapon)
     {
-        if (oldWeapon == newWeapon) return;
+        int targetWeapon = newWeapon;
+        Debug.Log($"<color=yellow>[WEAPON_DEBUG] PlayWeaponSwitchAnimation: old={oldWeapon} -> new={newWeapon}, drawTrig='{drawWeaponTrigger}', sheathTrig='{sheathWeaponTrigger}'</color>");
+        if (oldWeapon == targetWeapon) return;
 
-        if (newWeapon == 2)
+        lastWeaponSwitchTime = Time.time;
+
+        ClearAttackLayer(); // Tắt weight Layer 1 để Layer 0 (Base Layer) tự do chạy animation rút/cất và đổi stance
+
+        if (weaponSwitchSafetyCoroutine != null)
+        {
+            StopCoroutine(weaponSwitchSafetyCoroutine);
+            weaponSwitchSafetyCoroutine = null;
+        }
+
+        if (targetWeapon == 2)
         {
             if (!string.IsNullOrEmpty(drawWeaponTrigger))
             {
                 PlayAnimationLocal(drawWeaponTrigger, 0.1f, false);
+                if (anim != null && anim.isActiveAndEnabled && anim.HasState(0, Animator.StringToHash(drawWeaponTrigger)))
+                {
+                    anim.CrossFadeInFixedTime(drawWeaponTrigger, 0.1f, 0, 0f);
+                }
             }
         }
-        else if (newWeapon == 1)
+        else if (targetWeapon == 1)
         {
             if (!string.IsNullOrEmpty(sheathWeaponTrigger))
             {
                 PlayAnimationLocal(sheathWeaponTrigger, 0.1f, false);
+                if (anim != null && anim.isActiveAndEnabled && anim.HasState(0, Animator.StringToHash(sheathWeaponTrigger)))
+                {
+                    anim.CrossFadeInFixedTime(sheathWeaponTrigger, 0.1f, 0, 0f);
+                }
             }
         }
+
+        // Safety fallback: Sau 0.5s tự động ép hiển thị đúng và mở khóa HasWeapon
+        weaponSwitchSafetyCoroutine = StartCoroutine(SyncWeaponVisualsSafetyRoutine(targetWeapon, 0.5f));
     }
 
     private bool IsAttackAnimationName(string name)
@@ -3954,9 +4070,18 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     private void SafeSetTrigger(string paramName)
     {
-        if (anim != null && HasParameter(paramName))
+        if (anim != null)
         {
-            anim.SetTrigger(paramName);
+            bool hasParam = HasParameter(paramName);
+            Debug.Log($"<color=cyan>[WEAPON_DEBUG] SafeSetTrigger: '{paramName}' | AnimFound=true | HasParameter={hasParam}</color>");
+            if (hasParam)
+            {
+                anim.SetTrigger(paramName);
+            }
+        }
+        else
+        {
+            Debug.LogError($"<color=red>[WEAPON_DEBUG] SafeSetTrigger: '{paramName}' FAILED - anim component is NULL!</color>");
         }
     }
 
@@ -4156,7 +4281,10 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
             }
             else
             {
-                if (anim.layerCount > 1 && (animName == drawWeaponTrigger || animName == sheathWeaponTrigger || animName == "Shooting"))
+                bool isDrawOrSheath = (!string.IsNullOrEmpty(drawWeaponTrigger) && animName == drawWeaponTrigger) ||
+                                      (!string.IsNullOrEmpty(sheathWeaponTrigger) && animName == sheathWeaponTrigger);
+
+                if (anim.layerCount > 1 && animName == "Shooting")
                 {
                     anim.SetLayerWeight(1, 1f);
                 }
@@ -4250,6 +4378,11 @@ private void StartRollServerRpc(Vector3 direction)
     {
         if (weaponOnBackVisual != null) weaponOnBackVisual.SetActive(false);
         if (weaponInHandVisual != null) weaponInHandVisual.SetActive(true);
+        if (weaponSwitchSafetyCoroutine != null)
+        {
+            StopCoroutine(weaponSwitchSafetyCoroutine);
+            weaponSwitchSafetyCoroutine = null;
+        }
         Debug.Log("[Animation Event] Đã rút vũ khí lên tay!");
     }
 
@@ -4258,6 +4391,11 @@ private void StartRollServerRpc(Vector3 direction)
     {
         if (weaponOnBackVisual != null) weaponOnBackVisual.SetActive(true);
         if (weaponInHandVisual != null) weaponInHandVisual.SetActive(false);
+        if (weaponSwitchSafetyCoroutine != null)
+        {
+            StopCoroutine(weaponSwitchSafetyCoroutine);
+            weaponSwitchSafetyCoroutine = null;
+        }
         Debug.Log("[Animation Event] Đã cất vũ khí vào lưng!");
     }
 

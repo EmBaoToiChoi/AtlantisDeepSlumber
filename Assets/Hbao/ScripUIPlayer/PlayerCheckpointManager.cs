@@ -151,35 +151,60 @@ public class PlayerCheckpointManager : NetworkBehaviour
     {
         if (checkpoint == null) return;
 
-        // A. Chế độ chơi đơn
-        if (player != null && player.isStandaloneMode)
+        // Luôn cập nhật chỉ số checkpoint cục bộ và checkpoint mới nhất
+        localPlayerCheckpointIndex = checkpoint.checkpointIndex;
+        if (checkpoint.checkpointIndex > globalLatestCheckpointIndex || globalLatestCheckpointIndex < 0)
         {
-            if (localPlayerCheckpointIndex != checkpoint.checkpointIndex)
-            {
-                localPlayerCheckpointIndex = checkpoint.checkpointIndex;
-                globalLatestCheckpointIndex = checkpoint.checkpointIndex;
-                Debug.Log($"[Standalone Checkpoint] Đã lưu checkpoint '{checkpoint.gameObject.name}' (Index: {checkpoint.checkpointIndex}) cho người chơi!");
-            }
-            return;
+            globalLatestCheckpointIndex = checkpoint.checkpointIndex;
         }
 
-        // B. Chế độ chơi mạng (Chỉ xử lý trên Server)
-        if (!IsServer) return;
+        bool isNetwork = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
 
-        int newCpIdx = checkpoint.checkpointIndex;
-        globalLatestCheckpointIndex = newCpIdx;
+        if (isNetwork)
+        {
+            if (!IsServer)
+            {
+                RegisterCheckpointServerRpc(checkpoint.checkpointIndex);
+            }
+            else
+            {
+                RegisterCheckpointInternal(checkpoint.checkpointIndex, player != null ? player.DisplayName : "");
+            }
+        }
+        else
+        {
+            Debug.Log($"[Standalone Checkpoint] Đã lưu checkpoint '{checkpoint.gameObject.name}' (Index: {checkpoint.checkpointIndex}) cho người chơi!");
+        }
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    private void RegisterCheckpointServerRpc(int checkpointIndex, ServerRpcParams rpcParams = default)
+    {
+        ulong senderId = rpcParams.Receive.SenderClientId;
+        Debug.Log($"[Server Checkpoint] Nhận yêu cầu lưu checkpoint index {checkpointIndex} từ Client ID {senderId}");
+        RegisterCheckpointInternal(checkpointIndex, $"Client {senderId}");
+    }
+
+    private void RegisterCheckpointInternal(int newCpIdx, string activatorName)
+    {
+        if (newCpIdx > globalLatestCheckpointIndex || globalLatestCheckpointIndex < 0)
+        {
+            globalLatestCheckpointIndex = newCpIdx;
+        }
+
+        int targetIndex = globalLatestCheckpointIndex >= 0 ? globalLatestCheckpointIndex : newCpIdx;
 
         // Cập nhật checkpoint mới cho TOÀN BỘ người chơi hiện có trong phòng
         List<IPlayerHUDTarget> activePlayers = FindAllActivePlayers();
         foreach (var p in activePlayers)
         {
-            if (p == null || p.isStandaloneMode) continue;
+            if (p == null) continue;
 
             ulong cId = p.OwnerClientId;
             string pName = p.DisplayName;
 
             // Lưu vào cache Server-side bằng ClientId
-            playerCheckpointIndices[cId] = newCpIdx;
+            playerCheckpointIndices[cId] = targetIndex;
 
             // Cập nhật hoặc thêm mới vào NetworkList để đồng bộ xuống toàn bộ Client
             bool found = false;
@@ -187,7 +212,7 @@ public class PlayerCheckpointManager : NetworkBehaviour
             {
                 if (networkPlayerCheckpoints[i].PlayerName.ToString() == pName)
                 {
-                    networkPlayerCheckpoints[i] = new PlayerCheckpointData(pName, newCpIdx);
+                    networkPlayerCheckpoints[i] = new PlayerCheckpointData(pName, targetIndex);
                     found = true;
                     break;
                 }
@@ -195,11 +220,20 @@ public class PlayerCheckpointManager : NetworkBehaviour
 
             if (!found)
             {
-                networkPlayerCheckpoints.Add(new PlayerCheckpointData(pName, newCpIdx));
+                networkPlayerCheckpoints.Add(new PlayerCheckpointData(pName, targetIndex));
             }
         }
 
-        Debug.Log($"[Server Checkpoint] Đã đồng bộ checkpoint index {newCpIdx} cho TOÀN BỘ người chơi do '{player?.DisplayName}' kích hoạt!");
+        // Cập nhật bổ sung cho tất cả Client ID đang kết nối
+        if (NetworkManager.Singleton != null && NetworkManager.Singleton.ConnectedClientsIds != null)
+        {
+            foreach (var clientId in NetworkManager.Singleton.ConnectedClientsIds)
+            {
+                playerCheckpointIndices[clientId] = targetIndex;
+            }
+        }
+
+        Debug.Log($"[Server Checkpoint] Đã đồng bộ checkpoint index {targetIndex} cho TOÀN BỘ người chơi do '{activatorName}' kích hoạt!");
     }
 
     #region Standalone Respawn Logic
@@ -243,27 +277,43 @@ public class PlayerCheckpointManager : NetworkBehaviour
 
     private Vector3 GetCalculatedSpawnPosition(IPlayerHUDTarget player, ulong clientId)
     {
-        // 1. Kiểm tra Checkpoint cá nhân/đội đã đăng ký
-        int targetCpIndex = -1;
-        if (player != null && player.isStandaloneMode)
+        if (checkpoints == null || checkpoints.Count == 0)
         {
-            targetCpIndex = localPlayerCheckpointIndex;
-        }
-        else if (playerCheckpointIndices.ContainsKey(clientId))
-        {
-            targetCpIndex = playerCheckpointIndices[clientId];
+            checkpoints = new List<CheckpointZone>(FindObjectsByType<CheckpointZone>(FindObjectsSortMode.None));
+            checkpoints.Sort((a, b) => a.checkpointIndex.CompareTo(b.checkpointIndex));
         }
 
+        int targetCpIndex = -1;
+
+        if (player != null && player.isStandaloneMode)
+        {
+            targetCpIndex = localPlayerCheckpointIndex >= 0 ? localPlayerCheckpointIndex : globalLatestCheckpointIndex;
+        }
+        else
+        {
+            if (playerCheckpointIndices.ContainsKey(clientId) && playerCheckpointIndices[clientId] >= 0)
+            {
+                targetCpIndex = playerCheckpointIndices[clientId];
+            }
+
+            // Nếu globalLatestCheckpointIndex mới hơn hoặc bằng checkpoint của player, ưu tiên dùng checkpoint chung mới nhất của đội
+            if (globalLatestCheckpointIndex >= 0 && (targetCpIndex < 0 || globalLatestCheckpointIndex >= targetCpIndex))
+            {
+                targetCpIndex = globalLatestCheckpointIndex;
+            }
+        }
+
+        // 1. CheckpointZone tương ứng với targetCpIndex
         if (targetCpIndex >= 0)
         {
-            CheckpointZone zone = checkpoints.Find(c => c.checkpointIndex == targetCpIndex);
+            CheckpointZone zone = checkpoints.Find(c => c != null && c.checkpointIndex == targetCpIndex);
             if (zone != null) return zone.GetSpawnPosition();
         }
 
-        // 2. Dự phòng: Checkpoint toàn cục mới nhất đã được ai đó kích hoạt
+        // 2. Dự phòng: Checkpoint toàn cục mới nhất đã được bất kỳ đồng đội nào kích hoạt trước đó
         if (globalLatestCheckpointIndex >= 0)
         {
-            CheckpointZone zone = checkpoints.Find(c => c.checkpointIndex == globalLatestCheckpointIndex);
+            CheckpointZone zone = checkpoints.Find(c => c != null && c.checkpointIndex == globalLatestCheckpointIndex);
             if (zone != null) return zone.GetSpawnPosition();
         }
 
@@ -279,8 +329,8 @@ public class PlayerCheckpointManager : NetworkBehaviour
             return defaultSpawnPoint.position;
         }
 
-        // 5. Dự phòng: Vị trí ban đầu đã lưu
-        if (player != null && !player.isStandaloneMode && playerInitialPositions.ContainsKey(clientId))
+        // 5. Dự phòng: Vị trí ban đầu xuất phát của player khi bắt đầu game
+        if (player != null && !player.isStandaloneMode && playerInitialPositions.ContainsKey(clientId) && playerInitialPositions[clientId] != Vector3.zero)
         {
             return playerInitialPositions[clientId];
         }
@@ -289,8 +339,57 @@ public class PlayerCheckpointManager : NetworkBehaviour
             return localPlayerInitialPosition;
         }
 
-        // 6. Cuối cùng mới lấy transform.position
+        // 6. Trường hợp không có checkpoint nào, thử tìm lại checkpoint index 0 trong scene lần nữa
+        var firstCp = FindObjectOfType<CheckpointZone>();
+        if (firstCp != null) return firstCp.GetSpawnPosition();
+
         return player != null ? player.transform.position : Vector3.zero;
+    }
+
+    private void TeleportPlayerSafely(GameObject go, Vector3 pos)
+    {
+        if (go == null) return;
+
+        // Tắt CharacterController tạm thời nếu có để gán transform.position không bị cưỡng chế đè lại
+        CharacterController cc = go.GetComponent<CharacterController>();
+        if (cc == null) cc = go.GetComponentInChildren<CharacterController>();
+        if (cc == null) cc = go.GetComponentInParent<CharacterController>();
+
+        bool wasCcEnabled = false;
+        if (cc != null)
+        {
+            wasCcEnabled = cc.enabled;
+            cc.enabled = false;
+        }
+
+        // Triệt tiêu vận tốc Rigidbody
+        ResetRigidbodyVelocity(go);
+
+        // Gán vị trí mới
+        go.transform.position = pos;
+
+        // Gọi NetworkTransform.Teleport nếu có component
+        var netTransform = go.GetComponent<Unity.Netcode.Components.NetworkTransform>();
+        if (netTransform == null) netTransform = go.GetComponentInChildren<Unity.Netcode.Components.NetworkTransform>();
+        if (netTransform == null) netTransform = go.GetComponentInParent<Unity.Netcode.Components.NetworkTransform>();
+
+        if (netTransform != null && netTransform.IsSpawned)
+        {
+            try
+            {
+                netTransform.Teleport(pos, go.transform.rotation, go.transform.localScale);
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogWarning($"[PlayerCheckpointManager] NetworkTransform.Teleport warning: {ex.Message}");
+            }
+        }
+
+        // Bật lại CharacterController
+        if (cc != null && wasCcEnabled)
+        {
+            cc.enabled = true;
+        }
     }
 
     private IEnumerator RespawnPlayerStandaloneCoroutine(IPlayerHUDTarget player)
@@ -302,9 +401,8 @@ public class PlayerCheckpointManager : NetworkBehaviour
         // Xác định vị trí hồi sinh Checkpoint chuẩn xác
         Vector3 spawnPos = GetCalculatedSpawnPosition(player, 0);
 
-        // Dịch chuyển người chơi và triệt tiêu vận tốc vật lý
-        player.transform.position = spawnPos;
-        ResetRigidbodyVelocity(player.gameObject);
+        // Dịch chuyển an toàn (tắt CC, reset RB, gọi Teleport)
+        TeleportPlayerSafely(player.gameObject, spawnPos);
         Debug.Log($"[Checkpoint Debug] Teleported player to {spawnPos}");
 
         // Hồi máu đầy và reset trạng thái hoạt ảnh
@@ -409,9 +507,8 @@ public class PlayerCheckpointManager : NetworkBehaviour
         // Xác định vị trí hồi sinh Checkpoint chuẩn xác
         Vector3 spawnPos = GetCalculatedSpawnPosition(player, clientId);
 
-        // Dịch chuyển trên Server
-        player.transform.position = spawnPos;
-        ResetRigidbodyVelocity(player.gameObject);
+        // Dịch chuyển trên Server an toàn
+        TeleportPlayerSafely(player.gameObject, spawnPos);
 
         // Gửi ClientRpc dịch chuyển và reset vật lý trên tất cả các Client khác
         TeleportPlayerClientRpc(player.gameObject.GetComponent<NetworkObject>().NetworkObjectId, spawnPos);
@@ -432,8 +529,7 @@ public class PlayerCheckpointManager : NetworkBehaviour
         if (NetworkManager.Singleton == null) return;
         if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(networkObjectId, out NetworkObject netObj))
         {
-            netObj.transform.position = pos;
-            ResetRigidbodyVelocity(netObj.gameObject);
+            TeleportPlayerSafely(netObj.gameObject, pos);
 
             // Reset trạng thái choáng trên client
             var stun = netObj.GetComponent<PlayerKickedStun>() ?? netObj.GetComponentInChildren<PlayerKickedStun>();

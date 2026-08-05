@@ -330,8 +330,8 @@ MonoBehaviour:
   chem1Duration: 1.2
   chem2Duration: 1.2
   chem3Duration: 1.2
-  drawWeaponTrigger: DrawWeapon
-  sheathWeaponTrigger: SheathWeapon
+  drawWeaponTrigger: LayCung
+  sheathWeaponTrigger: CatCung
   weaponOnBackVisual: {fileID: 4219419514360819340}
   weaponInHandVisual: {fileID: 9036345359565503848}
   maxHealth: 100
@@ -496,9 +496,9 @@ MonoBehaviour:
   minPitch: 10
   maxPitch: 80
   rotationSmoothSpeed: 15
-  aimCameraDistance: 2
+  aimCameraDistance: 3
   aimShoulderOffset: 0.8
-  aimPivotHeight: 3
+  aimPivotHeight: 3.5
   aimCameraSmoothSpeed: 10
   aimAttackRange: 25
   aimMinPitch: -80
@@ -564,6 +564,10 @@ MonoBehaviour:
   rSkillSpineXOffset: 0
   rSkillMovingSpineYOffset: 60
   rSkillMovingSpineXOffset: 0
+  cameraHideDistance: 2.5
+  cameraObstacleLayers:
+    serializedVersion: 2
+    m_Bits: 9105
   spineSmoothSpeed: 10
   netAimAngle:
     UpdateTraits:

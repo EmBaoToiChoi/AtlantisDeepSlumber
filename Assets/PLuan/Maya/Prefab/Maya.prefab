@@ -475,8 +475,8 @@ MonoBehaviour:
   maxPitch: 80
   rotationSmoothSpeed: 15
   aimCameraDistance: 4
-  aimShoulderOffset: 3
-  aimPivotHeight: 4
+  aimShoulderOffset: 1.5
+  aimPivotHeight: 3
   aimCameraSmoothSpeed: 10
   aimAttackRange: 25
   aimMinPitch: -80
@@ -536,6 +536,10 @@ MonoBehaviour:
   aimSpineXOffset: 0
   aimMovingSpineYOffset: 0
   aimMovingSpineXOffset: 0
+  cameraHideDistance: 2.5
+  cameraObstacleLayers:
+    serializedVersion: 2
+    m_Bits: 9105
   spineSmoothSpeed: 15
   netAimAngle:
     UpdateTraits:

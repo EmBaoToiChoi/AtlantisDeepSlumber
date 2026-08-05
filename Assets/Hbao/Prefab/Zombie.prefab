@@ -368,8 +368,8 @@ MonoBehaviour:
   sightRange: 25
   fieldOfView: 110
   attackRange: 1.8
-  patrolWalkSpeed: 2
-  chaseRunSpeed: 4.5
+  patrolWalkSpeed: 3
+  chaseRunSpeed: 5
   patrolWaitMin: 1
   patrolWaitMax: 5
   patrolMoveChance: 0.65
@@ -383,6 +383,8 @@ MonoBehaviour:
   hitTrigger: Anhit
   dieTrigger: Die
   atkTrigger: Attack
+  canTacticalFlee: 1
+  fleeHealthThreshold: 0.25
 --- !u!195 &3031514467880730867
 NavMeshAgent:
   m_ObjectHideFlags: 0

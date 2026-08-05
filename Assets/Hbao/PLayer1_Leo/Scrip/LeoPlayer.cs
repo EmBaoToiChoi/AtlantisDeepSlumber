@@ -3077,6 +3077,17 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     public float aimMinPitch = -80f;
     public float aimMaxPitch = 80f;
 
+    [Header("Camera Character Invisibility Settings")]
+    [Tooltip("Khoảng cách từ camera đến nhân vật khiến nhân vật tàng hình (ẩn hẳn) để không che camera")]
+    public float cameraHideDistance = 2.5f;
+
+    [Header("Camera Collision Settings")]
+    [Tooltip("Các Layer khiến camera bị zoom khi vướng phải. Tích chọn các layer bạn muốn camera va chạm & zoom, bỏ chọn các layer KHÔNG muốn camera bị zoom (ví dụ: Lá cây, NPC, Decor...).")]
+    public LayerMask cameraObstacleLayers;
+
+    private Renderer[] cachedCharacterRenderers;
+    private bool isCharacterHidden = false;
+
     private float defaultCameraDistance;
     private float defaultPivotHeight;
     private float currentShoulderOffset = 0f;
@@ -5138,7 +5149,11 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         }
 
         bool shouldFollow = isStandaloneMode || (IsSpawned && IsOwner);
-        if (!shouldFollow || !enableCameraFollow || SeagullController.ActiveSeagull != null) return;
+        if (!shouldFollow || !enableCameraFollow || SeagullController.ActiveSeagull != null)
+        {
+            UpdateCameraCharacterVisibility(10f);
+            return;
+        }
 
         if (targetCamera == null)
         {
@@ -5199,16 +5214,39 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             Vector3 pivotPosition = (transform.position + Vector3.up * cameraPivotHeight) + rightOffsetVec;
             Vector3 targetPosition = pivotPosition + rotatedOffset;
 
-            // Thực hiện kiểm tra va chạm của camera với tường/vật cản bằng SphereCast
+            // Thực hiện kiểm tra va chạm của camera với tường/vật cản bằng SphereCastAll
             float collisionSafetyDistance = 0.4f; // Khoảng cách an toàn để tránh camera sát tường gây lỗi clipping plane
-            int cameraLayerMask = ~LayerMask.GetMask("Player", "Ignore Raycast"); // Bỏ qua người chơi và các vật thể Ignore Raycast
+            int cameraLayerMask = cameraObstacleLayers.value;
+            if (cameraLayerMask == 0)
+            {
+                cameraLayerMask = ~LayerMask.GetMask("Player", "Ignore Raycast", "UI");
+            }
             Vector3 rayDirection = rotatedOffset.normalized;
             float maxRayDistance = rotatedOffset.magnitude;
 
-            if (Physics.SphereCast(pivotPosition, 0.2f, rayDirection, out RaycastHit hit, maxRayDistance, cameraLayerMask))
+            // Dùng QueryTriggerInteraction.Ignore và SphereCastAll để camera KHÔNG BAO GIỜ va chạm vào Hitbox tấn công hoặc vật thể của bản thân
+            RaycastHit[] hits = Physics.SphereCastAll(pivotPosition, 0.2f, rayDirection, maxRayDistance, cameraLayerMask, QueryTriggerInteraction.Ignore);
+            float nearestObstacleDistance = maxRayDistance;
+            bool hitObstacle = false;
+
+            foreach (var h in hits)
             {
-                // Thu nhỏ khoảng cách nếu va chạm với tường
-                float clampedDistance = Mathf.Max(0.5f, hit.distance - collisionSafetyDistance);
+                if (h.collider != null && !h.collider.isTrigger)
+                {
+                    if (!h.collider.transform.IsChildOf(transform) && h.collider.transform.root != transform.root)
+                    {
+                        if (h.distance < nearestObstacleDistance)
+                        {
+                            nearestObstacleDistance = h.distance;
+                            hitObstacle = true;
+                        }
+                    }
+                }
+            }
+
+            if (hitObstacle)
+            {
+                float clampedDistance = Mathf.Max(0.5f, nearestObstacleDistance - collisionSafetyDistance);
                 targetPosition = pivotPosition + rayDirection * clampedDistance;
             }
 
@@ -5220,6 +5258,39 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
                 targetCamera.transform.rotation = Quaternion.LookRotation(
                     pivotPosition - targetCamera.transform.position
                 );
+            }
+
+            float currentCamDist = Vector3.Distance(pivotPosition, targetCamera.transform.position);
+            UpdateCameraCharacterVisibility(currentCamDist);
+        }
+    }
+
+    private void UpdateCameraCharacterVisibility(float currentCamDist)
+    {
+        bool shouldHide = currentCamDist < cameraHideDistance;
+
+        if (shouldHide == isCharacterHidden && cachedCharacterRenderers != null && cachedCharacterRenderers.Length > 0) return;
+        isCharacterHidden = shouldHide;
+
+        if (cachedCharacterRenderers == null || cachedCharacterRenderers.Length == 0)
+        {
+            System.Collections.Generic.List<Renderer> rendList = new System.Collections.Generic.List<Renderer>();
+            foreach (var r in GetComponentsInChildren<Renderer>(true))
+            {
+                if (r == null) continue;
+                if (r is ParticleSystemRenderer || r is LineRenderer || r is TrailRenderer) continue;
+                string n = r.gameObject.name;
+                if (n.Contains("Indicator") || n.Contains("Canvas") || n.Contains("UI") || n.Contains("Ring")) continue;
+                rendList.Add(r);
+            }
+            cachedCharacterRenderers = rendList.ToArray();
+        }
+
+        foreach (var r in cachedCharacterRenderers)
+        {
+            if (r != null)
+            {
+                r.enabled = !shouldHide;
             }
         }
     }
@@ -5540,6 +5611,8 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         UpgradeStatServerRpc(statType);
     }
 
+    public void RefreshUpgradeHUD() => UpdateUpgradeHUD();
+
     [ServerRpc]
     private void UpgradeStatServerRpc(int statType)
     {
@@ -5597,6 +5670,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     private void UpdateUpgradeHUD()
     {
+        if (!isStandaloneMode && !IsOwner) return;
         PlayerHUDController hud = FindAnyObjectByType<PlayerHUDController>();
         if (hud != null)
         {
@@ -6462,6 +6536,19 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (PlayerLevel < 15 && !IsSkillsUnlocked) return false;
         if (IsQSkillActive) return false;
 
+        // Bắt buộc Leo phải ở Ô Vũ khí 2 (song kiếm) mới dùng được Skill Q
+        int currentWeapon = GetActiveWeaponIndex();
+        if (currentWeapon != 2)
+        {
+            Debug.Log("[LeoPlayer] Q Skill chỉ sử dụng được khi ở Ô vũ khí 2!");
+            PlayerHUDController hud = FindAnyObjectByType<PlayerHUDController>();
+            if (hud != null)
+            {
+                hud.ShowMissionAlert("Cần chuyển sang Ô vũ khí 2 (Phím 2) để sử dụng kỹ năng Q!", 2.5f);
+            }
+            return false;
+        }
+
         if (isStandaloneMode)
         {
             Transform target = FindNearestAliveEnemy();
@@ -6485,6 +6572,14 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     [ServerRpc]
     private void TriggerQSkillServerRpc()
     {
+        int currentWeapon = GetActiveWeaponIndex();
+        if (currentWeapon != 2)
+        {
+            Debug.Log("[LeoPlayer Server] Hủy Q Skill do player không ở vũ khí 2!");
+            QSkillCancelledClientRpc();
+            return;
+        }
+
         Transform target = FindNearestAliveEnemy();
         if (target == null)
         {
@@ -6775,7 +6870,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     private void UpdateStateServerRpc(int weaponIndex, bool weapon2Locked, bool skillsUnlocked)
     {
         SyncNetVarInt(activeWeaponIndex, proxyPlayerTest != null ? proxyPlayerTest.activeWeaponIndex : null, weaponIndex);
-        SyncNetVarBool(isWeapon2Locked, proxyPlayerTest != null ? proxyPlayerTest.isWeapon2Locked : null, weapon2Locked);
+        SyncNetVarBool(isWeapon2Locked, proxyPlayerTest != null ? proxyPlayerTest.isWeapon2Locked : null, false);
         SyncNetVarBool(isSkillsUnlocked, proxyPlayerTest != null ? proxyPlayerTest.isSkillsUnlocked : null, skillsUnlocked);
         SavePlayerStateClientRpc();
     }
@@ -7062,6 +7157,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     private void UpdateHealthHUD(float health)
     {
+        if (!isStandaloneMode && !IsOwner) return;
         PlayerHUDController hud = FindAnyObjectByType<PlayerHUDController>();
         if (hud != null)
             hud.SetHealth(health / maxHealth);

@@ -72,27 +72,45 @@ public class AxeItem : NetworkBehaviour
             Transform hand = GetAxeHoldingPoint(carrierObj);
             if (hand != null)
             {
-                bool canSetParent = !isNetwork || IsServer;
-                if (canSetParent && transform.parent != hand)
+                if (transform.parent != hand)
                 {
                     transform.SetParent(hand, false);
                     transform.localPosition = Vector3.zero;
                     transform.localRotation = Quaternion.identity;
                 }
+
+                // Đặt vị trí và góc quay rìu chính xác theo Transform tay cầm ở mọi khung hình
                 transform.position = hand.position;
                 transform.rotation = hand.rotation;
                 transform.localScale = originalWorldScale;
+
+                if (rb == null) rb = GetComponent<Rigidbody>();
+                if (rb != null) rb.isKinematic = true;
+
+                var nt = GetComponent<Unity.Netcode.Components.NetworkTransform>();
+                if (nt != null && nt.enabled) nt.enabled = false;
             }
         }
     }
 
     private Transform GetAxeHoldingPoint(GameObject player)
     {
+        if (player == null) return null;
+
         var anchor = player.GetComponentInChildren<PlayerAxeAnchor>();
         if (anchor != null && anchor.axeHoldingPoint != null)
         {
             return anchor.axeHoldingPoint;
         }
+
+        // Tự động tìm xương tay phải (Right Hand) của Animator nếu chưa gán trong Anchor
+        var anim = player.GetComponent<Animator>() ?? player.GetComponentInChildren<Animator>();
+        if (anim != null && anim.isHuman)
+        {
+            Transform handBone = anim.GetBoneTransform(HumanBodyBones.RightHand);
+            if (handBone != null) return handBone;
+        }
+
         return FindRightHand(player.transform);
     }
 
@@ -107,10 +125,30 @@ public class AxeItem : NetworkBehaviour
         ulong currentCarrierId = isNetwork ? carryingPlayerId.Value : (localPlayerCarrier != null ? 1u : 0u);
         bool isCarried = (currentCarrierId != 0 || isCarryingLocally);
 
-        // BẢO VỆ VẬT LÝ KHI RÌU Ở TRÊN ĐẤT:
-        if (!isCarried)
+        if (isCarried)
         {
-            // Bắt buộc tất cả solid physics colliders (isTrigger = false) luôn luôn BẬT khi rìu ở trên đất
+            // TẮT TOÀN BỘ VẬT LÝ KHI ĐANG CẦM RÌU ĐỂ KHÔNG BỊ VƯỚNG TÁC ĐỘNG VẬT LÝ VỚI CÂY TRONG LÚC CHẶT
+            if (colliders == null || colliders.Length == 0) colliders = GetComponents<Collider>();
+            if (colliders != null)
+            {
+                foreach (var col in colliders)
+                {
+                    if (col != null && !col.isTrigger)
+                    {
+                        col.enabled = false;
+                    }
+                }
+            }
+
+            if (rb == null) rb = GetComponent<Rigidbody>();
+            if (rb != null) rb.isKinematic = true;
+
+            var nt = GetComponent<Unity.Netcode.Components.NetworkTransform>();
+            if (nt != null && nt.enabled) nt.enabled = false;
+        }
+        else
+        {
+            // BẢO VỆ VẬT LÝ KHI RÌU Ở TRÊN ĐẤT:
             if (colliders == null || colliders.Length == 0) colliders = GetComponents<Collider>();
             if (colliders != null)
             {
