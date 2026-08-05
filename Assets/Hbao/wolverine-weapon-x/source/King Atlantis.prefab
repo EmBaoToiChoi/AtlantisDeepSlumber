@@ -2612,7 +2612,7 @@ MonoBehaviour:
   ShowTopMostFoldoutHeaderGroup: 1
   bossMiniboss: {fileID: 0}
   miniBoss: {fileID: 0}
-  startActiveWithoutMiniboss: 1
+  startActiveWithoutMiniboss: 0
   maxHealth: 900
   currentHealth:
     UpdateTraits:
@@ -2794,6 +2794,8 @@ MonoBehaviour:
   fireSpewCooldownTimer: 0
   fireBarrageCooldown: 12
   fireBarrageCooldownTimer: 0
+  swordRainCooldown: 10
+  swordRainCooldownTimer: 0
   leftHandBase: {fileID: 7812698304109883653}
   leftHandTip: {fileID: 4203785077346276878}
   rightHandBase: {fileID: 3663721840516115787}
