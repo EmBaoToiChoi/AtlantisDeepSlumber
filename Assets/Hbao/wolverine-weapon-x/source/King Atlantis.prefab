@@ -2699,6 +2699,21 @@ MonoBehaviour:
       MinSecondsBetweenUpdates: 0
       MaxSecondsBetweenUpdates: 0
     m_InternalValue: 0
+  netScale:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: {x: 1, y: 1, z: 1}
+  netIsEnraged:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 0
+  netIsLastStand:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 0
   agent: {fileID: 1678383650614655758}
   anim: {fileID: 3124430114824042229}
   visualRoot: {fileID: 6460684099497095113}
@@ -2762,8 +2777,11 @@ MonoBehaviour:
   shockwaveWaveKnockup: 9
   rangedProjectilePrefab: {fileID: 9380231799744250, guid: 70a5a9d014f9ae94d85a8d9e66f53a5e, type: 3}
   projectileSpawnPoint: {fileID: 5889684584516781391}
-  projectileSpeed: 10
+  projectileSpeed: 20
   projectileDamage: 5
+  projectileRotationOffset: {x: 0, y: 0, z: 0}
+  isEnraged: 0
+  isLastStand: 0
   fireSpewInterval: 10
   fireSpewWindupDuration: 1
   fireSpewActiveDuration: 1.5
@@ -2773,6 +2791,9 @@ MonoBehaviour:
   fireSpewVFX: {fileID: 6531319713837899222, guid: 3ecc26f6d4062be44b0a099e114ff00c, type: 3}
   fireSpewSFX: {fileID: 0}
   fireSpewTriggerParam: FireSpew
+  fireSpewCooldownTimer: 0
+  fireBarrageCooldown: 12
+  fireBarrageCooldownTimer: 0
   leftHandBase: {fileID: 7812698304109883653}
   leftHandTip: {fileID: 4203785077346276878}
   rightHandBase: {fileID: 3663721840516115787}

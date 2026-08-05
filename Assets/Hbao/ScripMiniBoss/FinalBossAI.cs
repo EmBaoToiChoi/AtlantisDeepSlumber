@@ -29,9 +29,9 @@ public class FinalBossAI : NetworkBehaviour
     public bool startActiveWithoutMiniboss = false;
 
     [Header("Health Settings")]
-    public float maxHealth = 1200f;
+    public float maxHealth = 1100f;
     public NetworkVariable<float> currentHealth = new NetworkVariable<float>(
-        1200f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        1100f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
     [Header("Network State Sync")]
     public NetworkVariable<FinalBossState> currentState = new NetworkVariable<FinalBossState>(
@@ -68,6 +68,12 @@ public class FinalBossAI : NetworkBehaviour
         0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     public NetworkVariable<int> fireBarrageCounter = new NetworkVariable<int>(
         0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+    public NetworkVariable<Vector3> netScale = new NetworkVariable<Vector3>(
+        Vector3.one, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+    public NetworkVariable<bool> netIsEnraged = new NetworkVariable<bool>(
+        false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+    public NetworkVariable<bool> netIsLastStand = new NetworkVariable<bool>(
+        false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
     // Standalone fallback variables
     private float localHealth;
@@ -193,10 +199,14 @@ public class FinalBossAI : NetworkBehaviour
     public Transform projectileSpawnPoint;
     [Tooltip("Tốc độ bay của chưởng đạn")]
     public float projectileSpeed = 18.0f;
-    [Tooltip("Sát thương của chưởng đạn khi trúng Player")]
-    public float projectileDamage = 15.0f;
+    [Tooltip("Sát thương của 1 chưởng đạn (mỗi tia trúng -5 HP, dính cả 3 tia -15 HP)")]
+    public float projectileDamage = 5.0f;
     [Tooltip("Bù góc xoay cho VFX nếu vệt chém bị lệch hướng (X, Y, Z)")]
     public Vector3 projectileRotationOffset = Vector3.zero;
+
+    [Header("Phase 2 & Enrage Settings")]
+    public bool isEnraged = false;
+    public bool isLastStand = false;
 
     [Header("Fire Spew (Phun Lửa) Settings")]
     public float fireSpewInterval = 10f;
@@ -208,7 +218,15 @@ public class FinalBossAI : NetworkBehaviour
     public GameObject fireSpewVFX;
     public AudioClip fireSpewSFX;
     public string fireSpewTriggerParam = "FireSpew";
-    private float fireSpewCooldownTimer;
+    public float fireSpewCooldownTimer;
+
+    [Header("Fire Barrage Cooldown")]
+    public float fireBarrageCooldown = 12f;
+    public float fireBarrageCooldownTimer;
+
+    [Header("Sword Rain Cooldown")]
+    public float swordRainCooldown = 10f;
+    public float swordRainCooldownTimer;
 
     [Header("Weapon & Hand Detection Settings")]
     public Transform leftHandBase;
@@ -372,6 +390,12 @@ public class FinalBossAI : NetworkBehaviour
         fireBarrageCounter.OnValueChanged += (_, _) => {
             if (anim != null) anim.SetTrigger(fireBarrageTriggerParam);
         };
+        netScale.OnValueChanged += (_, newScale) => transform.localScale = newScale;
+        netIsEnraged.OnValueChanged += (_, enraged) => isEnraged = enraged;
+        netIsLastStand.OnValueChanged += (_, lastStand) => {
+            isLastStand = lastStand;
+            if (lastStand) attackCooldown = 1.35f;
+        };
         currentHealth.OnValueChanged += OnHealthNetChanged;
 
         ApplySpeedAnim(netSpeed.Value);
@@ -379,6 +403,9 @@ public class FinalBossAI : NetworkBehaviour
         if (IsServer)
         {
             currentHealth.Value = maxHealth;
+            netScale.Value = transform.localScale;
+            netIsEnraged.Value = false;
+            netIsLastStand.Value = false;
             isHUDVisible.Value = startActiveWithoutMiniboss;
             fireSpewCooldownTimer = fireSpewInterval;
             SnapToNavMesh();
@@ -421,6 +448,9 @@ public class FinalBossAI : NetworkBehaviour
         fireBarrageCounter.OnValueChanged -= (_, _) => {
             if (anim != null) anim.SetTrigger(fireBarrageTriggerParam);
         };
+        netScale.OnValueChanged -= (_, newScale) => transform.localScale = newScale;
+        netIsEnraged.OnValueChanged -= (_, enraged) => isEnraged = enraged;
+        netIsLastStand.OnValueChanged -= (_, lastStand) => { isLastStand = lastStand; };
         currentHealth.OnValueChanged -= OnHealthNetChanged;
     }
 
@@ -431,6 +461,14 @@ public class FinalBossAI : NetworkBehaviour
         if (diff > 0)
         {
             EnemyDamageEffectHelper.PlayDamageEffects(gameObject, diff);
+        }
+
+        // Tự động đồng bộ cờ Phase 2 và Cuồng Bạo trên tất cả Client khi máu giảm
+        if (newVal <= 600f) isEnraged = true;
+        if (newVal <= 100f && newVal > 0f)
+        {
+            isLastStand = true;
+            attackCooldown = 1.35f;
         }
     }
 
@@ -459,9 +497,23 @@ public class FinalBossAI : NetworkBehaviour
         Debug.Log("[FinalBossAI] Final Boss has been activated! Combat start!");
     }
 
+    [ServerRpc(RequireOwnership = false)]
+    public void TakeDamageServerRpc(float damageAmount)
+    {
+        TakeDamage(damageAmount);
+    }
+
     public void TakeDamage(float damage)
     {
-        if (IsDead || CurrentStateValue == FinalBossState.Sitting || CurrentStateValue == FinalBossState.JumpDown || CurrentStateValue == FinalBossState.Grow || CurrentStateValue == FinalBossState.SwordRain || CurrentStateValue == FinalBossState.FireBarrage) return;
+        // Loại bỏ việc chặn sát thương khi đang cast chiêu SwordRain/FireBarrage để đảm bảo chém là LUÔN MÔT 100% TRỪ MÁU!
+        if (IsDead || CurrentStateValue == FinalBossState.Sitting || CurrentStateValue == FinalBossState.JumpDown || CurrentStateValue == FinalBossState.Grow) return;
+
+        // Nếu là Client đánh Boss trên mạng -> Gửi ServerRpc để Server trừ máu chuẩn xác 100%
+        if (!isStandaloneMode && IsSpawned && !IsServer)
+        {
+            TakeDamageServerRpc(damage);
+            return;
+        }
 
         localHealth = Mathf.Max(0f, localHealth - damage);
         if (!isStandaloneMode && IsSpawned && IsServer)
@@ -480,6 +532,21 @@ public class FinalBossAI : NetworkBehaviour
         {
             ChangeState(FinalBossState.Dead);
             return;
+        }
+
+        // CHUYỂN PHASE 2 KHI MÁU XUỐNG DƯỚI/BẰNG 600 HP (PHASE 1 CÓ 500 HP, PHASE 2 CÓ 600 HP -> MAX 1100 HP) -> GẦM THÉT VÀ PHÓNG TO!
+        if (!isEnraged && activeHp <= 600f && CurrentStateValue != FinalBossState.Grow)
+        {
+            ChangeState(FinalBossState.Grow);
+            return;
+        }
+
+        // TRẠNG THÁI CUỒNG BẠO CUỐI TRẬN (LAST STAND) KHI MÁU <= 100 HP: TĂNG TỐC ĐÁNH +25% VÀ BẮN 5 VỆT CHÉM QUẠT RỘNG!
+        if (!isLastStand && activeHp <= 100f && activeHp > 0f)
+        {
+            isLastStand = true;
+            attackCooldown = 1.35f; // Tăng +25% tốc độ ra chiêu!
+            Debug.Log("[FinalBossAI] ===> KING ATLANTIS VÀO TRẠNG THÁI CUỒNG BẠO CUỐI TRẬN (<=100 HP)! MẮT RỰC ĐỎ, TỐC ĐỘ +25%, BẮN 5 VỆT CHÉM QUẠT RỘNG!");
         }
 
         // Trigger stagger hit animation if not attacking/roaring/spewing/growing/raining/barraging/dead/already hit
@@ -536,6 +603,8 @@ public class FinalBossAI : NetworkBehaviour
         if (IsBossActive && !IsDead && CurrentStateValue != FinalBossState.Sitting && CurrentStateValue != FinalBossState.JumpDown)
         {
             if (fireSpewCooldownTimer > 0) fireSpewCooldownTimer -= Time.deltaTime;
+            if (fireBarrageCooldownTimer > 0) fireBarrageCooldownTimer -= Time.deltaTime;
+            if (swordRainCooldownTimer > 0) swordRainCooldownTimer -= Time.deltaTime;
         }
 
         // Perform target scans at intervals
@@ -729,8 +798,13 @@ public class FinalBossAI : NetworkBehaviour
             return;
         }
 
-        Vector3 spawnPos = projectileSpawnPoint != null ? projectileSpawnPoint.position : transform.position + Vector3.up * 1.6f + transform.forward * 1.2f;
-        Vector3 targetPos = targetPlayer != null ? targetPlayer.position + Vector3.up * 1.0f : transform.position + transform.forward * 10f + Vector3.up * 1.6f;
+        // Căn chỉnh điểm ngắm đúng tầm ngực/bụng Player (0.7m Y height)
+        Vector3 targetPos = targetPlayer != null ? targetPlayer.position + Vector3.up * 0.7f : transform.position + transform.forward * 10f + Vector3.up * 0.8f;
+
+        // Căn chỉnh điểm xuất phát phù hợp theo độ phồng to của Boss
+        float scaleY = transform.localScale.y;
+        Vector3 spawnPos = projectileSpawnPoint != null ? projectileSpawnPoint.position : transform.position + Vector3.up * (1.2f * scaleY) + transform.forward * (1.0f * scaleY);
+
         Vector3 centerDir = (targetPos - spawnPos).normalized;
         if (centerDir.sqrMagnitude < 0.01f) centerDir = transform.forward;
 
@@ -757,13 +831,15 @@ public class FinalBossAI : NetworkBehaviour
     {
         if (rangedProjectilePrefab == null) return;
 
-        float[] angles = new float[] { 0f, -15f, 15f };
+        // Bình thường bắn 3 vệt chém (0°, -15°, 15°). Khi Cuồng Bạo (<=100 HP) bắn hẳn 5 vệt chém quạt rộng!
+        float[] angles = isLastStand ? new float[] { 0f, -15f, 15f, -30f, 30f } : new float[] { 0f, -15f, 15f };
 
         foreach (float angle in angles)
         {
             Vector3 shootDir = Quaternion.Euler(0, angle, 0) * centerDir;
             Quaternion rot = Quaternion.LookRotation(shootDir) * Quaternion.Euler(projectileRotationOffset);
 
+            // Vẽ tia cảnh báo đường bắn đỏ rực trong Scene view
             Debug.DrawRay(spawnPos, shootDir * 25f, Color.red, 3.0f);
 
             GameObject proj = Instantiate(rangedProjectilePrefab, spawnPos, rot);
@@ -773,7 +849,7 @@ public class FinalBossAI : NetworkBehaviour
             comp.Initialize(shootDir, projectileSpeed, projectileDamage, transform);
         }
 
-        Debug.Log($"[FinalBossAI] ===> XUẤT VIỆN BẮN 3 VỆT CHÉM SLASH VFX '{rangedProjectilePrefab.name}' thành công từ vị trí {spawnPos}!");
+        Debug.Log($"[FinalBossAI] ===> XUẤT VIỆN BẮN {angles.Length} VỆT CHÉM SLASH VFX '{rangedProjectilePrefab.name}' THÀNH CÔNG từ vị trí {spawnPos}!");
     }
 
     public Transform GetPlayerRootPublic(Transform t)
@@ -828,7 +904,7 @@ public class FinalBossAI : NetworkBehaviour
 
         Vector3 kbDir = transform.forward;
         Vector3 finalKnockback = kbDir * 10f; // punching knockback
-        float finalDamage = 25f;
+        float finalDamage = 5f; // Đập/cào tay cận chiến -5 HP
 
         if (baseT != null && tipT != null)
         {
@@ -851,9 +927,9 @@ public class FinalBossAI : NetworkBehaviour
         }
         else
         {
-            // Fallback: SphereCast in front
+            // Fallback: SphereCast cận chiến ngay trước mặt Boss (2.5m)
             Vector3 origin = transform.position + Vector3.up * 1.2f;
-            RaycastHit[] hits = Physics.SphereCastAll(origin, attackThickness * 1.5f, transform.forward, attackRange, playerLayer);
+            RaycastHit[] hits = Physics.SphereCastAll(origin, attackThickness * 1.5f, transform.forward, 2.5f, playerLayer);
             foreach (var hit in hits)
             {
                 Transform root = GetPlayerRoot(hit.collider.transform);
@@ -914,40 +990,34 @@ public class FinalBossAI : NetworkBehaviour
         return list;
     }
 
+    private int roundRobinPlayerIndex = 0;
+
     private void DetectAndSwitchTarget()
     {
         if (IsDead || CurrentStateValue == FinalBossState.Sitting || CurrentStateValue == FinalBossState.JumpDown) return;
 
-        // Nếu đang có mục tiêu sống thì tiếp tục giữ mục tiêu đó
-        if (targetPlayer != null && !IsPlayerDeadOrInvisible(targetPlayer))
-        {
-            return;
-        }
-
-        Transform closest = null;
-        float minD = float.MaxValue;
-        Vector3 eyePos = eyeTransform != null ? eyeTransform.position : transform.position + Vector3.up * 1.5f;
-
         var activePlayers = GetAllActivePlayers();
-        for (int i = 0; i < activePlayers.Count; i++)
+        var validPlayers = new List<Transform>();
+        foreach (var p in activePlayers)
         {
-            Transform pTrans = activePlayers[i];
-            if (pTrans == null || pTrans == transform) continue;
-            if (IsPlayerDeadOrInvisible(pTrans)) continue;
-
-            float d = Vector3.Distance(eyePos, pTrans.position);
-            if (d < minD)
+            if (p != null && p != transform && !IsPlayerDeadOrInvisible(p))
             {
-                minD = d;
-                closest = pTrans;
+                validPlayers.Add(p);
             }
         }
 
-        if (closest != null)
+        if (validPlayers.Count == 0)
         {
-            targetPlayer = closest;
-            Debug.Log($"[FinalBossAI] Tự động khóa mục tiêu Player: {targetPlayer.name} ở khoảng cách {minD:F1}m!");
+            targetPlayer = null;
+            return;
         }
+
+        // Xoay luân phiên quanh các Player (Round-Robin) để bắn chém xa liên tục tới từng Player!
+        roundRobinPlayerIndex = roundRobinPlayerIndex % validPlayers.Count;
+        targetPlayer = validPlayers[roundRobinPlayerIndex];
+        roundRobinPlayerIndex = (roundRobinPlayerIndex + 1) % validPlayers.Count;
+
+        Debug.Log($"[FinalBossAI] Xoay mục tiêu luân phiên sang Player: {targetPlayer.name} ({validPlayers.Count} players đang chơi)!");
     }
 
     private bool IsPlayerDeadOrInvisible(Transform player)
@@ -1287,12 +1357,29 @@ public class FinalBossAI : NetworkBehaviour
 
             float dist = Vector3.Distance(boss.transform.position, boss.targetPlayer.position);
 
-            // Đứng từ xa bắn chiêu tầm xa (Tầm đánh rộng, ví dụ 35m)
+            // Đứng từ xa bắn chiêu tầm xa hoặc dùng chiêu Phase 2
             if (boss.attackCooldownTimer <= 0)
             {
                 if (boss.AgentReady) boss.agent.isStopped = true;
                 boss.SetSpeedNet(0f);
-                boss.ChangeState(FinalBossState.Attack);
+
+                if (boss.isEnraged || boss.ActualCurrentHealth <= 600f)
+                {
+                    // PHASE 2: Chọn ngẫu nhiên công bằng giữa tất cả các kỹ năng đã hồi chiêu (Mưa Kiếm, Cầu Lửa, Phun Lửa, Vệt Chém)
+                    var availableSkills = new List<FinalBossState>();
+                    availableSkills.Add(FinalBossState.Attack); // Đòn chém thường (3 vệt / 5 vệt chém) luôn có thể dùng
+
+                    if (boss.fireSpewCooldownTimer <= 0) availableSkills.Add(FinalBossState.FireSpew);
+                    if (boss.fireBarrageCooldownTimer <= 0) availableSkills.Add(FinalBossState.FireBarrage);
+                    if (boss.swordRainCooldownTimer <= 0) availableSkills.Add(FinalBossState.SwordRain);
+
+                    FinalBossState chosenSkill = availableSkills[Random.Range(0, availableSkills.Count)];
+                    boss.ChangeState(chosenSkill);
+                }
+                else
+                {
+                    boss.ChangeState(FinalBossState.Attack);
+                }
                 return;
             }
 
@@ -1325,11 +1412,13 @@ public class FinalBossAI : NetworkBehaviour
         private FinalBossAI boss;
         private bool hasSpawnedProjectile;
         private float spawnTimer;
+        private HashSet<Transform> hitPlayersThisAttack = new HashSet<Transform>();
 
         public AttackState(FinalBossAI boss) { this.boss = boss; }
 
         public void Enter()
         {
+            hitPlayersThisAttack.Clear();
             hasSpawnedProjectile = false;
             spawnTimer = 0.35f; // Đếm lùi 0.35s từ khi vung tay là bắn đạn 3 tia
 
@@ -1383,6 +1472,9 @@ public class FinalBossAI : NetworkBehaviour
                 }
             }
 
+            // CÀO/ĐẬP TAY VẬT LÝ TRỰC TIẾP LÊN PLAYER Ở GẦN (-5 HP)
+            boss.DealFistDamageContinuously(hitPlayersThisAttack, boss.currentAttackIndex);
+
             if (boss.stateTimer <= 0)
             {
                 boss.attackCooldownTimer = boss.attackCooldown;
@@ -1391,7 +1483,14 @@ public class FinalBossAI : NetworkBehaviour
             }
         }
 
-        public void Exit() { }
+        public void Exit()
+        {
+            if (boss.anim != null && boss.attackTriggers != null && boss.currentAttackIndex < boss.attackTriggers.Length)
+            {
+                boss.anim.ResetTrigger(boss.attackTriggers[boss.currentAttackIndex]);
+            }
+            if (boss.AgentReady) boss.agent.isStopped = false;
+        }
     }
 
     private class ShockwaveState : IEnemyState
@@ -1446,6 +1545,65 @@ public class FinalBossAI : NetworkBehaviour
         public void Exit() { }
     }
 
+    private class GrowState : IEnemyState
+    {
+        private FinalBossAI boss;
+        private float timer;
+        private Vector3 startScale;
+        private Vector3 targetScale;
+
+        public GrowState(FinalBossAI boss) { this.boss = boss; }
+
+        public void Enter()
+        {
+            timer = 0f;
+            startScale = boss.transform.localScale;
+            targetScale = startScale * 1.6f; // Phóng to kích thước thân thể 1.6 lần
+
+            if (boss.AgentReady)
+            {
+                boss.agent.isStopped = true;
+                boss.agent.velocity = Vector3.zero;
+            }
+            boss.SetSpeedNet(0f);
+
+            if (!boss.isStandaloneMode) boss.growCounter.Value++;
+            else if (boss.anim != null) boss.anim.SetTrigger(boss.growTriggerParam);
+
+            boss.PlayGrowVFX();
+            Debug.Log("[FinalBossAI] PHASE 2 KÍCH HOẠT (<= 500 HP)! KING ATLANTIS GẦM THÉT VÀ PHÓNG TO THÂN THỂ!");
+        }
+
+        public void Update()
+        {
+            timer += Time.deltaTime;
+            float progress = Mathf.Clamp01(timer / boss.growDuration);
+            boss.transform.localScale = Vector3.Lerp(startScale, targetScale, progress);
+
+            if (!boss.isStandaloneMode && boss.IsServer)
+            {
+                boss.netScale.Value = boss.transform.localScale;
+            }
+
+            if (timer >= boss.growDuration)
+            {
+                boss.isEnraged = true; // Đạt Phase 2 thành công!
+                if (!boss.isStandaloneMode && boss.IsServer)
+                {
+                    boss.netIsEnraged.Value = true;
+                }
+                if (boss.targetPlayer != null) boss.ChangeState(FinalBossState.Chase);
+                else boss.ChangeState(FinalBossState.Idle);
+            }
+        }
+
+        public void Exit()
+        {
+            if (boss.anim != null) boss.anim.ResetTrigger(boss.growTriggerParam);
+            if (boss.AgentReady) boss.agent.isStopped = false;
+        }
+    }
+
     private class HitState : IEnemyState
     {
         private FinalBossAI boss;
@@ -1471,7 +1629,11 @@ public class FinalBossAI : NetworkBehaviour
             }
         }
 
-        public void Exit() { }
+        public void Exit()
+        {
+            if (boss.anim != null) boss.anim.ResetTrigger(boss.hitTriggerParam);
+            if (boss.AgentReady) boss.agent.isStopped = false;
+        }
     }
 
     private class DeadState : IEnemyState
@@ -1554,17 +1716,21 @@ public class FinalBossAI : NetworkBehaviour
                 }
                 else
                 {
-                    // Đợi thêm 3 giây giãn cách trước khi chuyển sang kỹ năng tiếp theo (stageTimer âm xuống <= -3.0f)
-                    if (stageTimer <= -3.0f)
+                    if (stageTimer <= -1.0f)
                     {
-                        boss.fireSpewCooldownTimer = boss.fireSpewInterval;
-                        boss.ChangeState(FinalBossState.FireBarrage);
+                        if (boss.targetPlayer != null) boss.ChangeState(FinalBossState.Chase);
+                        else boss.ChangeState(FinalBossState.Idle);
                     }
                 }
             }
         }
 
-        public void Exit() { }
+        public void Exit()
+        {
+            boss.fireSpewCooldownTimer = boss.fireSpewInterval;
+            if (boss.anim != null) boss.anim.ResetTrigger(boss.fireSpewTriggerParam);
+            if (boss.AgentReady) boss.agent.isStopped = false;
+        }
     }
 
     // ══════════════════════════════════════════════════════════
@@ -1671,35 +1837,17 @@ public class FinalBossAI : NetworkBehaviour
             vfx.transform.SetParent(transform);
             Destroy(vfx, growDuration + 1f);
         }
+        else if (shockwaveVFX != null)
+        {
+            // Fallback VFX sóng năng lượng bùng nổ xung quanh khi hóa to qua Phase 2
+            GameObject vfx = Instantiate(shockwaveVFX, spawnPos, Quaternion.identity);
+            vfx.transform.localScale = Vector3.one * 2.5f;
+            Destroy(vfx, growDuration + 1f);
+        }
         if (growSFX != null)
         {
             AudioSource.PlayClipAtPoint(growSFX, spawnPos, 1.0f);
         }
-    }
-
-    private class GrowState : IEnemyState
-    {
-        private FinalBossAI boss;
-
-        public GrowState(FinalBossAI boss) { this.boss = boss; }
-
-        public void Enter()
-        {
-            if (boss.AgentReady)
-            {
-                boss.agent.isStopped = true;
-                boss.agent.velocity = Vector3.zero;
-            }
-            boss.SetSpeedNet(0f);
-        }
-
-        public void Update()
-        {
-            // Chuyển thẳng sang kỹ năng Mưa Kiếm mà không phóng to scale
-            boss.ChangeState(FinalBossState.SwordRain);
-        }
-
-        public void Exit() { }
     }
 
     // ══════════════════════════════════════════════════════════
@@ -1730,10 +1878,42 @@ public class FinalBossAI : NetworkBehaviour
             }
             else
             {
-                sword = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                sword.transform.localScale = new Vector3(0.15f, 2.0f, 0.4f);
+                // Tạo đại kiếm 3D phát sáng màu hoàng kim hiển thị cực rõ khi Inspector chưa gán Prefab
+                sword = new GameObject("SpectralSummonedSword");
+                
+                GameObject blade = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                blade.name = "Blade";
+                blade.transform.SetParent(sword.transform);
+                blade.transform.localPosition = new Vector3(0, 1.2f, 0);
+                blade.transform.localScale = new Vector3(0.35f, 2.8f, 0.12f);
+
+                GameObject hilt = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                hilt.name = "Hilt";
+                hilt.transform.SetParent(sword.transform);
+                hilt.transform.localPosition = new Vector3(0, 0f, 0);
+                hilt.transform.localScale = new Vector3(1.2f, 0.2f, 0.2f);
+
+                GameObject pommel = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+                pommel.name = "Pommel";
+                pommel.transform.SetParent(sword.transform);
+                pommel.transform.localPosition = new Vector3(0, -0.3f, 0);
+                pommel.transform.localScale = new Vector3(0.45f, 0.45f, 0.45f);
+
+                Shader shader = Shader.Find("Sprites/Default") ?? Shader.Find("UI/Default");
+                Material goldMat = new Material(shader != null ? shader : Shader.Find("Legacy Shaders/Particles/Alpha Blended Premultiply"));
+                goldMat.color = new Color(1.0f, 0.75f, 0.1f, 1.0f); // Màu hoàng kim rực rỡ
+
+                var renderers = sword.GetComponentsInChildren<Renderer>();
+                foreach (var r in renderers) { if (r != null) r.material = goldMat; }
             }
         }
+
+        // Bật hiển thị tất cả Renderer và ParticleSystem của thanh kiếm
+        var allRenderers = sword.GetComponentsInChildren<Renderer>(true);
+        foreach (var r in allRenderers) { if (r != null) r.enabled = true; }
+
+        var allParticles = sword.GetComponentsInChildren<ParticleSystem>(true);
+        foreach (var ps in allParticles) { if (ps != null) { ps.Clear(); ps.Play(); } }
 
         // Đảm bảo luôn có Rigidbody Kinematic ở Root để va chạm Trigger hoạt động chuẩn xác 100%
         var rb = sword.GetComponent<Rigidbody>();
@@ -2020,14 +2200,19 @@ public class FinalBossAI : NetworkBehaviour
                 }
             }
 
-            // Đợi thêm 3 giây giãn cách trước khi chuyển sang kỹ năng tiếp theo
-            if (timer >= boss.swordRainDuration + 3.0f)
+            if (timer >= boss.swordRainDuration + 1.0f)
             {
-                boss.ChangeState(FinalBossState.FireSpew);
+                if (boss.targetPlayer != null) boss.ChangeState(FinalBossState.Chase);
+                else boss.ChangeState(FinalBossState.Idle);
             }
         }
 
-        public void Exit() { }
+        public void Exit()
+        {
+            boss.swordRainCooldownTimer = boss.swordRainCooldown;
+            if (boss.anim != null) boss.anim.ResetTrigger(boss.swordRainTriggerParam);
+            if (boss.AgentReady) boss.agent.isStopped = false;
+        }
     }
 
     // ══════════════════════════════════════════════════════════
@@ -2287,8 +2472,7 @@ public class FinalBossAI : NetworkBehaviour
                 }
             }
 
-            // Đợi thêm 3 giây giãn cách trước khi kết thúc chuỗi kỹ năng liên tiếp và quay về đuổi theo người chơi
-            if (timer >= boss.fireBarrageDuration + 3.0f)
+            if (timer >= boss.fireBarrageDuration + 1.0f)
             {
                 boss.ActivateBoss();
 
@@ -2297,7 +2481,12 @@ public class FinalBossAI : NetworkBehaviour
             }
         }
 
-        public void Exit() { }
+        public void Exit()
+        {
+            boss.fireBarrageCooldownTimer = boss.fireBarrageCooldown;
+            if (boss.anim != null) boss.anim.ResetTrigger(boss.fireBarrageTriggerParam);
+            if (boss.AgentReady) boss.agent.isStopped = false;
+        }
     }
 
     // ══════════════════════════════════════════════════════════
@@ -2377,6 +2566,20 @@ public class FallingSwordProjectile : MonoBehaviour
         {
             bossOwner.PlaySwordImpactEffects(targetGroundPos);
             bossOwner.DealSwordImpactDamage(targetGroundPos, damage, impactRadius, playerLayer);
+            StartCoroutine(RoutineRecycleAfterImpale());
+        }
+        else
+        {
+            Destroy(gameObject, 2.0f);
+        }
+    }
+
+    private System.Collections.IEnumerator RoutineRecycleAfterImpale()
+    {
+        // Giữ thanh kiếm cắm sâu xuống mặt đất 2.0 giây cho người chơi nhìn thấy kiếm triệu hồi cực kỳ đẹp mắt!
+        yield return new WaitForSeconds(2.0f);
+        if (bossOwner != null)
+        {
             bossOwner.RecycleSword(gameObject);
         }
         else
@@ -2512,11 +2715,15 @@ public class FinalBossProjectile : MonoBehaviour
             }
         }
 
-        // ĐẢM BẢO HIỂN THỊ CHÍNH XÁC PREFAB TIA CHÉM (SLASH VFX): Bật hiển thị và kích hoạt particle phát ra
+        // GIỮ NGUYÊN HÌNH DẠNG VÀ ĐỘ SÁNG CỦA VỆT CHÉM (SLASH VFX) TRONG SUỐT HÀNH TRÌNH BAY
         var particles = GetComponentsInChildren<ParticleSystem>(true);
         foreach (var ps in particles)
         {
             ps.gameObject.SetActive(true);
+            var main = ps.main;
+            main.loop = true; // Ép lặp lại liên tục
+            main.stopAction = ParticleSystemStopAction.None; // Ngăn tự động tắt/hủy object
+            main.startLifetime = 5.0f; // Kéo dài thời gian tồn tại hạt lên 5 giây để không bị tắt giữa đường
             ps.Clear(true);
             ps.Play(true);
         }
@@ -2543,6 +2750,13 @@ public class FinalBossProjectile : MonoBehaviour
         if (moveDirection.sqrMagnitude > 0.01f)
         {
             transform.rotation = Quaternion.LookRotation(moveDirection);
+        }
+
+        // Đảm bảo tất cả Renderers của VFX luôn được bật hiển thị liên tục khi bay
+        var renderers = GetComponentsInChildren<Renderer>(true);
+        foreach (var r in renderers)
+        {
+            if (r != null && !r.enabled) r.enabled = true;
         }
     }
 
