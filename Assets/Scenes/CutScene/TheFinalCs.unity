@@ -13310,7 +13310,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!4 &563906122
 Transform:
   m_ObjectHideFlags: 0
@@ -43870,7 +43870,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &1476149864
 RectTransform:
   m_ObjectHideFlags: 0
@@ -43950,8 +43950,8 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 40
-  m_fontSizeBase: 40
+  m_fontSize: 100
+  m_fontSizeBase: 100
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
@@ -43991,7 +43991,7 @@ MonoBehaviour:
   m_margin: {x: -287.48517, y: -61.708282, z: -176.86365, w: -77.10062}
   m_isUsingLegacyAnimationComponent: 0
   m_isVolumetricText: 0
-  m_hasFontAssetChanged: 1
+  m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
 --- !u!222 &1476149867
@@ -54382,6 +54382,8 @@ PlayableDirector:
     value: {fileID: 1107961999}
   - key: {fileID: 8605532676555652922, guid: 8819b66d4d3ca88458c56abe52336086, type: 2}
     value: {fileID: 1905986647}
+  - key: {fileID: -3361822896220895873, guid: 8819b66d4d3ca88458c56abe52336086, type: 2}
+    value: {fileID: 1476149863}
   m_ExposedReferences:
     m_References: []
 --- !u!1 &1800783994
