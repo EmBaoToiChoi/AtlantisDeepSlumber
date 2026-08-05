@@ -312,7 +312,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  GlobalObjectIdHash: 1209928473
+  GlobalObjectIdHash: 870471847
   InScenePlacedSourceGlobalObjectIdHash: 870471847
   DeferredDespawnTick: 0
   Ownership: 1
@@ -529,11 +529,11 @@ MonoBehaviour:
   agent: {fileID: 6975396423995706817}
   anim: {fileID: 8169567763737278100}
   eyeTransform: {fileID: 8819950804527126295}
-  patrolWalkSpeed: 2
-  chaseRunSpeed: 5.5
-  orbitSpeed: 3
+  patrolWalkSpeed: 4
+  chaseRunSpeed: 8
+  orbitSpeed: 4
   dodgeSpeed: 12
-  sightRange: 158.1
+  sightRange: 180
   fieldOfView: 120
   attackRange: 3
   kickDetectRange: 2
@@ -695,6 +695,7 @@ MonoBehaviour:
   attackRange: 2
   patrolWalkSpeed: 2.5
   chaseRunSpeed: 5
+  maxChaseDistance: 18
   patrolWaitMin: 1
   patrolWaitMax: 4
   patrolMoveChance: 0.7
@@ -710,6 +711,8 @@ MonoBehaviour:
   atkLeftTrigger: AttackLeft
   atkRightTrigger: AttackRight
   atkComboTrigger: AttackCombo
+  canTacticalFlee: 1
+  fleeHealthThreshold: 0.25
 --- !u!4 &5850156809102003619 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -1070350730909333850, guid: 0f23067026bf65c4fb196b7802330f3e, type: 3}
