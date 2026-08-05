@@ -2512,11 +2512,15 @@ public class FinalBossProjectile : MonoBehaviour
             }
         }
 
-        // ĐẢM BẢO HIỂN THỊ CHÍNH XÁC PREFAB TIA CHÉM (SLASH VFX): Bật hiển thị và kích hoạt particle phát ra
+        // GIỮ NGUYÊN HÌNH DẠNG VÀ ĐỘ SÁNG CỦA VỆT CHÉM (SLASH VFX) TRONG SUỐT HÀNH TRÌNH BAY
         var particles = GetComponentsInChildren<ParticleSystem>(true);
         foreach (var ps in particles)
         {
             ps.gameObject.SetActive(true);
+            var main = ps.main;
+            main.loop = true; // Ép lặp lại liên tục
+            main.stopAction = ParticleSystemStopAction.None; // Ngăn tự động tắt/hủy object
+            main.startLifetime = 5.0f; // Kéo dài thời gian tồn tại hạt lên 5 giây để không bị tắt giữa đường
             ps.Clear(true);
             ps.Play(true);
         }
@@ -2543,6 +2547,13 @@ public class FinalBossProjectile : MonoBehaviour
         if (moveDirection.sqrMagnitude > 0.01f)
         {
             transform.rotation = Quaternion.LookRotation(moveDirection);
+        }
+
+        // Đảm bảo tất cả Renderers của VFX luôn được bật hiển thị liên tục khi bay
+        var renderers = GetComponentsInChildren<Renderer>(true);
+        foreach (var r in renderers)
+        {
+            if (r != null && !r.enabled) r.enabled = true;
         }
     }
 
