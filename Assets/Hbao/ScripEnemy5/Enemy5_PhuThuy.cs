@@ -1117,19 +1117,20 @@ public class Enemy5_PhuThuy : NetworkBehaviour
         dirToTarget.y = 0f;
         Vector3 mainDir = dirToTarget.sqrMagnitude > 0.01f ? dirToTarget.normalized : new Vector3(transform.forward.x, 0, transform.forward.z).normalized;
 
-        float activeHpRatio = ActualCurrentHealth / maxHealth;
-        bool multiShot = activeHpRatio <= 0.65f || (targetPlayer != null && Vector3.Distance(transform.position, targetPlayer.position) > 10.0f);
-
-        float[] angles = multiShot ? new float[] { 0f, -14f, 14f } : new float[] { 0f };
+        // Phóng 3 tia lửa theo 3 hướng tỏa quạt (-15 độ, 0 độ, +15 độ)
+        float[] angles = new float[] { 0f, -15f, 15f };
 
         foreach (float angle in angles)
         {
             Vector3 dir = Quaternion.Euler(0, angle, 0) * mainDir;
             dir.y = 0f; // Bảo đảm 100% đạn bay ngang thẳng ra
 
+            // Dịch vị trí sinh đạn ra phía trước 0.3m theo hướng bắn để không bị chạm đầu gậy
+            Vector3 fireSpawnPt = spawnPt + dir * 0.3f;
+
             if (spellProjectilePrefab != null)
             {
-                var proj = Instantiate(spellProjectilePrefab, spawnPt, Quaternion.LookRotation(dir));
+                var proj = Instantiate(spellProjectilePrefab, fireSpawnPt, Quaternion.LookRotation(dir));
                 var spellBall = proj.GetComponent<SpellBall>();
                 if (spellBall == null)
                 {
