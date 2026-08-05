@@ -2,16 +2,26 @@ using UnityEditor;
 using UnityEngine;
 using System.IO;
 
+public enum PainterToolMode
+{
+    Draw,   // Chế độ Vẽ
+    Erase   // Chế độ Tẩy / Xóa nét
+}
+
 /// <summary>
 /// Công cụ hỗ trợ vẽ ký hiệu / gợi ý trực tiếp lên bức tường trong Scene View của Unity Editor.
-/// Sử dụng Shader Sprites/Default chuẩn để đảm bảo KHÔNG BỊ LỖI MÀU TÍM (Magenta Shader Error).
-/// Lớp Overlay hoàn toàn trong suốt, chỉ hiển thị đúng nét vẽ màu sắc bạn quết lên.
+/// TỰ ĐỘNG LƯU NGẦM (Auto-Save) khi tắt chế độ vẽ và tự động thiết lập TextureImporter (AlphaIsTransparency & IsReadable).
 /// </summary>
 public class WallTexturePainterWindow : EditorWindow
 {
     private GameObject targetWallObject;
+    private PainterToolMode currentToolMode = PainterToolMode.Draw;
     private Color brushColor = Color.red; // Mặc định màu đỏ nổi bật
-    private int brushRadius = 35;
+    private int brushRadius = 3;          // Mặc định nét vẽ nhỏ mảnh (radius = 3)
+    private int textureResolutionIndex = 1; // 0: 1024x1024, 1: 2048x2048, 2: 4096x4096 (4K)
+    private readonly int[] resolutions = new int[] { 1024, 2048, 4096 };
+    private readonly string[] resolutionOptions = new string[] { "1024x1024 (Thường)", "2048x2048 (Nét mịn HD)", "4096x4096 (Nét siêu mảnh 4K)" };
+
     private bool isPaintingMode = false;
 
     private Texture2D editableTexture;
@@ -23,7 +33,7 @@ public class WallTexturePainterWindow : EditorWindow
     public static void ShowWindow()
     {
         WallTexturePainterWindow window = GetWindow<WallTexturePainterWindow>("Wall Painter");
-        window.minSize = new Vector2(350, 480);
+        window.minSize = new Vector2(350, 560);
     }
 
     private void OnGUI()
@@ -49,8 +59,40 @@ public class WallTexturePainterWindow : EditorWindow
         }
 
         EditorGUILayout.Space(5);
-        brushColor = EditorGUILayout.ColorField("Màu cọ vẽ:", brushColor);
-        brushRadius = EditorGUILayout.IntSlider("Kích thước cọ vẽ:", brushRadius, 5, 100);
+
+        // NÚT CHỌN CHẾ ĐỘ: VẼ HOẶC TẨY / XÓA NÉT
+        EditorGUILayout.LabelField("Chọn Công Cụ:", EditorStyles.boldLabel);
+        GUILayout.BeginHorizontal();
+
+        GUI.backgroundColor = (currentToolMode == PainterToolMode.Draw) ? new Color(0.3f, 0.8f, 1f) : Color.white;
+        if (GUILayout.Button("🖌 VẼ NÉT", GUILayout.Height(30)))
+        {
+            currentToolMode = PainterToolMode.Draw;
+        }
+
+        GUI.backgroundColor = (currentToolMode == PainterToolMode.Erase) ? new Color(1f, 0.6f, 0.2f) : Color.white;
+        if (GUILayout.Button("🧹 TẨY / XÓA NÉT", GUILayout.Height(30)))
+        {
+            currentToolMode = PainterToolMode.Erase;
+        }
+        GUI.backgroundColor = Color.white;
+
+        GUILayout.EndHorizontal();
+
+        EditorGUILayout.Space(5);
+
+        if (currentToolMode == PainterToolMode.Draw)
+        {
+            brushColor = EditorGUILayout.ColorField("Màu cọ vẽ:", brushColor);
+        }
+        else
+        {
+            EditorGUILayout.HelpBox("Đang ở Chế Độ Tẩy: Di chuột và bấm vẽ để xóa nét thừa.", MessageType.Info);
+        }
+
+        // TÙY CHỈNH NÉT SIÊU MẢNH TỪ 1 PIXEL
+        brushRadius = EditorGUILayout.IntSlider("Kích thước cọ / tẩy (Nét vẽ):", brushRadius, 1, 80);
+        textureResolutionIndex = EditorGUILayout.Popup("Độ nét bức ảnh (Resolution):", textureResolutionIndex, resolutionOptions);
 
         EditorGUILayout.Space(10);
 
@@ -72,15 +114,15 @@ public class WallTexturePainterWindow : EditorWindow
             }
             GUI.backgroundColor = Color.white;
 
-            EditorGUILayout.HelpBox("Đang bật chế độ vẽ!\nNhấn giữ CHUỘT TRÁI trong Scene View để vẽ lên mặt tường.", MessageType.Warning);
+            EditorGUILayout.HelpBox("💡 MẸO: Giữ phím SHIFT khi vẽ để nhanh chóng chuyển sang CỤC TẨY xóa nét!", MessageType.Warning);
 
             EditorGUILayout.Space(10);
             if (GUILayout.Button("Lưu Hình Vẽ Thành File PNG (Asset)", GUILayout.Height(35)))
             {
-                SavePaintedTextureToAsset();
+                SavePaintedTextureToAsset(true);
             }
 
-            if (GUILayout.Button("Xóa Sạch Nét Vẽ (Reset)", GUILayout.Height(25)))
+            if (GUILayout.Button("Xóa Tất Cả (Reset)", GUILayout.Height(25)))
             {
                 ClearDrawing();
             }
@@ -98,7 +140,7 @@ public class WallTexturePainterWindow : EditorWindow
             return;
         }
 
-        // 1. TẠO LỚP OVERLAY QUAD ĐÈ SÁT MẶT TƯỜNG
+        // 1. TẠO / TÌM LỚP OVERLAY QUAD ĐÈ SÁT MẶT TƯỜNG
         Transform existingOverlay = targetWallObject.transform.Find("Wall_Hint_Overlay");
         if (existingOverlay != null)
         {
@@ -110,7 +152,6 @@ public class WallTexturePainterWindow : EditorWindow
             overlayQuadObject.name = "Wall_Hint_Overlay";
             overlayQuadObject.transform.SetParent(targetWallObject.transform, false);
 
-            // Căn chỉnh Quad sát mặt tường
             Bounds bounds = targetRenderer.bounds;
             overlayQuadObject.transform.position = bounds.center + targetWallObject.transform.forward * -0.01f;
             overlayQuadObject.transform.rotation = targetWallObject.transform.rotation;
@@ -123,17 +164,51 @@ public class WallTexturePainterWindow : EditorWindow
         if (overlayCollider == null) overlayCollider = overlayQuadObject.AddComponent<MeshCollider>();
         overlayCollider.convex = false;
 
-        // 2. KHỞI TẠO TEXTURE TRONG SUỐT
-        int width = 1024;
-        int height = 1024;
+        int res = resolutions[textureResolutionIndex];
+        bool loadedExisting = false;
 
-        if (editableTexture == null)
+        // 2. KHÔI PHỤC NẠP LẠI HÌNH VẼ CŨ
+        if (editableTexture != null)
         {
-            editableTexture = new Texture2D(width, height, TextureFormat.RGBA32, false);
-            ClearDrawingInternal();
+            loadedExisting = true;
+        }
+        else
+        {
+            // Tìm file PNG đã tự động lưu trước đó
+            string savePath = $"Assets/PLuan/Minigame5/Texture/Wall_Hint_{targetWallObject.name}.png";
+            Texture2D savedTexAsset = AssetDatabase.LoadAssetAtPath<Texture2D>(savePath);
+
+            Texture srcTextureToLoad = null;
+            if (savedTexAsset != null)
+            {
+                srcTextureToLoad = savedTexAsset;
+                res = savedTexAsset.width;
+            }
+            else
+            {
+                Renderer overlayRend = overlayQuadObject.GetComponent<Renderer>();
+                if (overlayRend != null && overlayRend.sharedMaterial != null && overlayRend.sharedMaterial.mainTexture != null)
+                {
+                    srcTextureToLoad = overlayRend.sharedMaterial.mainTexture;
+                }
+            }
+
+            if (srcTextureToLoad != null)
+            {
+                editableTexture = CopyTextureToEditable(srcTextureToLoad, res, res);
+                loadedExisting = true;
+                Debug.Log($"[WallPainter] NẠP THÀNH CÔNG hình vẽ cũ ({res}x{res})!");
+            }
         }
 
-        // 3. SỬ DỤNG SHADER SPRITES/DEFAULT HOẶC URP UNLIT TRONG SUỐT (Chống lỗi màu tím Magenta 100%)
+        if (!loadedExisting || editableTexture == null)
+        {
+            editableTexture = new Texture2D(res, res, TextureFormat.RGBA32, false);
+            ClearDrawingInternal();
+            Debug.Log($"[WallPainter] Tạo mới bản vẽ trong suốt ({res}x{res}).");
+        }
+
+        // 3. SỬ DỤNG SHADER SPRITES/DEFAULT
         Shader overlayShader = Shader.Find("Sprites/Default");
         if (overlayShader == null) overlayShader = Shader.Find("Universal Render Pipeline/2D/Sprite-Unlit-Default");
         if (overlayShader == null) overlayShader = Shader.Find("Unlit/Transparent");
@@ -143,15 +218,27 @@ public class WallTexturePainterWindow : EditorWindow
 
         ApplyTextureToMaterial(overlayMaterial, editableTexture);
 
-        Renderer overlayRend = overlayQuadObject.GetComponent<Renderer>();
-        if (overlayRend != null) overlayRend.sharedMaterial = overlayMaterial;
+        Renderer rend = overlayQuadObject.GetComponent<Renderer>();
+        if (rend != null) rend.sharedMaterial = overlayMaterial;
 
         isPaintingMode = true;
         SceneView.duringSceneGui -= OnSceneGUI;
         SceneView.duringSceneGui += OnSceneGUI;
         SceneView.RepaintAll();
+    }
 
-        Debug.Log("[WallPainter] Đã sửa xong Shader! Lớp vẽ giờ đây hoàn toàn trong suốt.");
+    private Texture2D CopyTextureToEditable(Texture srcTex, int width, int height)
+    {
+        Texture2D result = new Texture2D(width, height, TextureFormat.RGBA32, false);
+        RenderTexture rt = RenderTexture.GetTemporary(width, height, 0, RenderTextureFormat.Default, RenderTextureReadWrite.Linear);
+        Graphics.Blit(srcTex, rt);
+        RenderTexture prev = RenderTexture.active;
+        RenderTexture.active = rt;
+        result.ReadPixels(new Rect(0, 0, width, height), 0, 0);
+        result.Apply();
+        RenderTexture.active = prev;
+        RenderTexture.ReleaseTemporary(rt);
+        return result;
     }
 
     private void ApplyTextureToMaterial(Material mat, Texture tex)
@@ -176,11 +263,27 @@ public class WallTexturePainterWindow : EditorWindow
         ClearDrawingInternal();
         if (overlayMaterial != null) ApplyTextureToMaterial(overlayMaterial, editableTexture);
         SceneView.RepaintAll();
-        Debug.Log("[WallPainter] Đã xóa sạch nét vẽ.");
+
+        // Xóa luôn file PNG nếu có
+        if (targetWallObject != null)
+        {
+            string savePath = $"Assets/PLuan/Minigame5/Texture/Wall_Hint_{targetWallObject.name}.png";
+            if (File.Exists(savePath))
+            {
+                AssetDatabase.DeleteAsset(savePath);
+            }
+        }
+        Debug.Log("[WallPainter] Đã xóa sạch toàn bộ hình vẽ.");
     }
 
     private void StopPaintingMode()
     {
+        // TỰ ĐỘNG LƯU NGẦM HÌNH VẼ KHI BẤM TẮT CHẾ ĐỘ VẼ
+        if (isPaintingMode && editableTexture != null)
+        {
+            SavePaintedTextureToAsset(false);
+        }
+
         isPaintingMode = false;
         SceneView.duringSceneGui -= OnSceneGUI;
         SceneView.RepaintAll();
@@ -203,28 +306,33 @@ public class WallTexturePainterWindow : EditorWindow
             int controlID = GUIUtility.GetControlID(FocusType.Passive);
             HandleUtility.AddDefaultControl(controlID);
 
-            // Hiển thị vòng cọ vẽ
-            Handles.color = brushColor;
-            Handles.DrawWireDisc(hitInfo.point, hitInfo.normal, brushRadius * 0.03f);
+            bool isErasing = (currentToolMode == PainterToolMode.Erase) || e.shift;
 
-            // Khi người chơi BẤM CHUỘT hoặc KÉO CHUỘT TRÁI
+            float worldBrushRadius = (brushRadius / (float)editableTexture.width) * overlayQuadObject.transform.lossyScale.x;
+            worldBrushRadius = Mathf.Max(worldBrushRadius, 0.005f);
+
+            Handles.color = isErasing ? Color.cyan : brushColor;
+            Handles.DrawWireDisc(hitInfo.point, hitInfo.normal, worldBrushRadius);
+
             if ((e.type == EventType.MouseDown || e.type == EventType.MouseDrag) && e.button == 0)
             {
                 Vector2 uv = hitInfo.textureCoord;
-                PaintPixelAtUV(uv);
+                PaintPixelAtUV(uv, isErasing);
                 e.Use();
                 SceneView.RepaintAll();
             }
         }
     }
 
-    private void PaintPixelAtUV(Vector2 uv)
+    private void PaintPixelAtUV(Vector2 uv, bool isErasing)
     {
         int w = editableTexture.width;
         int h = editableTexture.height;
 
         int px = Mathf.Clamp((int)(uv.x * w), 0, w - 1);
         int py = Mathf.Clamp((int)(uv.y * h), 0, h - 1);
+
+        Color applyColor = isErasing ? Color.clear : brushColor;
 
         for (int x = -brushRadius; x <= brushRadius; x++)
         {
@@ -236,7 +344,7 @@ public class WallTexturePainterWindow : EditorWindow
                     int ny = py + y;
                     if (nx >= 0 && nx < w && ny >= 0 && ny < h)
                     {
-                        editableTexture.SetPixel(nx, ny, brushColor);
+                        editableTexture.SetPixel(nx, ny, applyColor);
                     }
                 }
             }
@@ -247,7 +355,7 @@ public class WallTexturePainterWindow : EditorWindow
         EditorUtility.SetDirty(overlayMaterial);
     }
 
-    private void SavePaintedTextureToAsset()
+    private void SavePaintedTextureToAsset(bool showDialog = true)
     {
         if (editableTexture == null || targetWallObject == null) return;
 
@@ -263,13 +371,26 @@ public class WallTexturePainterWindow : EditorWindow
 
         AssetDatabase.Refresh();
 
+        // TỰ ĐỘNG CẤU HÌNH THUỘC TÍNH FILE ẢNH ĐỂ HỖ TRỢ ALPHA TRONG SUỐT VÀ NẠP LẠI
+        TextureImporter importer = AssetImporter.GetAtPath(savePath) as TextureImporter;
+        if (importer != null)
+        {
+            importer.alphaIsTransparency = true;
+            importer.isReadable = true;
+            importer.mipmapEnabled = false;
+            importer.SaveAndReimport();
+        }
+
         Texture2D savedTex = AssetDatabase.LoadAssetAtPath<Texture2D>(savePath);
         if (savedTex != null && overlayMaterial != null)
         {
             ApplyTextureToMaterial(overlayMaterial, savedTex);
         }
 
-        Debug.Log($"[WallPainter] Đã lưu file ảnh ký hiệu vào: {savePath}");
-        EditorUtility.DisplayDialog("Thành công", $"Đã lưu hình vẽ gợi ý thành file Asset:\n{savePath}", "OK");
+        Debug.Log($"[WallPainter] Đã tự động lưu hình vẽ vào: {savePath}");
+        if (showDialog)
+        {
+            EditorUtility.DisplayDialog("Thành công", $"Đã lưu hình vẽ gợi ý thành file Asset:\n{savePath}", "OK");
+        }
     }
 }
