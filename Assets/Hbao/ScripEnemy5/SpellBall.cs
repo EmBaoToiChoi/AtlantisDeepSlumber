@@ -15,9 +15,13 @@ public class SpellBall : NetworkBehaviour
     private bool IsNetworkActive => NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
     private bool isHit = false;
     private float spawnTime;
+    private Vector3 spawnPosition;
 
     private void Awake()
     {
+        spawnTime = Time.time;
+        spawnPosition = transform.position;
+
         if (string.IsNullOrEmpty(gameObject.tag) || gameObject.tag == "Untagged")
         {
             gameObject.tag = "Lua";
@@ -26,7 +30,11 @@ public class SpellBall : NetworkBehaviour
 
     private void Start()
     {
-        spawnTime = Time.time;
+        if (spawnTime <= 0f)
+        {
+            spawnTime = Time.time;
+            spawnPosition = transform.position;
+        }
 
         // Tự động đảm bảo có Collider dạng Trigger để bắt va chạm
         Collider rootCol = GetComponent<Collider>();
@@ -65,7 +73,8 @@ public class SpellBall : NetworkBehaviour
         // Di chuyển đạn về phía trước liên tục theo hướng transform.forward (bay song song mặt đất)
         if (!isHit)
         {
-            transform.position += transform.forward * speed * Time.deltaTime;
+            float moveSpeed = speed > 0f ? speed : 14f;
+            transform.position += transform.forward * moveSpeed * Time.deltaTime;
         }
 
         // Chỉ Server hoặc Standalone quản lý thời gian sống của viên đạn
@@ -86,26 +95,19 @@ public class SpellBall : NetworkBehaviour
         // Bỏ qua va chạm với kẻ thi triển (Caster / Enemy5) và các bộ phận thuộc caster
         if (caster != null)
         {
-            if (other.transform.root == caster.transform.root || other.transform.IsChildOf(caster.transform))
+            if (other.transform.root == caster.transform.root || other.transform.IsChildOf(caster.transform) || caster.transform.IsChildOf(other.transform.root))
             {
                 return;
             }
         }
 
-        // Bỏ qua va chạm với quái vật khác
-        if (other.CompareTag("Enemy") || other.gameObject.layer == LayerMask.NameToLayer("Enemy"))
+        // Bỏ qua va chạm với quái vật khác / kẻ thi triển
+        if (other.CompareTag("Enemy") || 
+            other.gameObject.layer == LayerMask.NameToLayer("Enemy") ||
+            other.GetComponentInParent<Enemy5_PhuThuy>() != null ||
+            (other.GetComponentInParent<NetworkBehaviour>() != null && (other.name.ToLower().Contains("enemy") || other.name.ToLower().Contains("nguoi chim"))))
         {
             return;
-        }
-
-        // Bỏ qua va chạm với đất đai / địa hình trong 0.15 giây đầu vừa sinh ra để tránh đạn bị cắm xuống đất
-        if (Time.time - spawnTime < 0.15f)
-        {
-            string n = other.name.ToLower();
-            if (n.Contains("ground") || n.Contains("terrain") || n.Contains("floor") || n.Contains("map") || n.Contains("mesh"))
-            {
-                return;
-            }
         }
 
         bool isServerOrStandalone = !IsNetworkActive || IsServer;
@@ -115,6 +117,16 @@ public class SpellBall : NetworkBehaviour
                         other.gameObject.layer == LayerMask.NameToLayer("Player") ||
                         other.GetComponentInParent<IPlayerHUDTarget>() != null ||
                         other.GetComponentInChildren<IPlayerHUDTarget>() != null;
+
+        // Nếu KHÔNG PHẢI là Player: Bỏ qua va chạm nếu vừa mới sinh ra (dưới 0.25 giây) hoặc ở gần vị trí vừa sinh ra (< 1.2m)
+        // để tránh việc đạn bị nổ/kẹt ngay lập tức do va chạm gậy (Staff), tay, hoặc mặt đất
+        if (!isPlayer)
+        {
+            if (Time.time - spawnTime < 0.25f || Vector3.Distance(transform.position, spawnPosition) < 1.2f)
+            {
+                return;
+            }
+        }
 
         if (isPlayer)
         {
