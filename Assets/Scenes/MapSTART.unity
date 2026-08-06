@@ -87181,6 +87181,7 @@ MonoBehaviour:
   - MayaPlayer
   - ElenaPlayer
   - ArthurPlayer
+  disableTeleport: 0
   playOnlyOnce: 1
   isPlaying: 0
 --- !u!114 &570163603
@@ -89718,6 +89719,7 @@ MonoBehaviour:
   - MayaPlayer
   - ElenaPlayer
   - ArthurPlayer
+  disableTeleport: 0
   playOnlyOnce: 1
   isPlaying: 0
 --- !u!114 &600321948
@@ -97397,6 +97399,7 @@ MonoBehaviour:
   - MayaPlayer
   - ElenaPlayer
   - ArthurPlayer
+  disableTeleport: 0
   playOnlyOnce: 1
   isPlaying: 0
 --- !u!114 &662951820
@@ -143785,6 +143788,7 @@ MonoBehaviour:
   - MayaPlayer
   - ElenaPlayer
   - ArthurPlayer
+  disableTeleport: 0
   playOnlyOnce: 1
   isPlaying: 0
 --- !u!114 &1062175251
@@ -152047,6 +152051,7 @@ MonoBehaviour:
   - MayaPlayer
   - ElenaPlayer
   - ArthurPlayer
+  disableTeleport: 0
   playOnlyOnce: 1
   isPlaying: 0
 --- !u!114 &1144429721
@@ -157092,6 +157097,7 @@ MonoBehaviour:
   - MayaPlayer
   - ElenaPlayer
   - ArthurPlayer
+  disableTeleport: 0
   playOnlyOnce: 1
   isPlaying: 0
 --- !u!114 &1195200833
@@ -183002,6 +183008,7 @@ MonoBehaviour:
   - MayaPlayer
   - ElenaPlayer
   - ArthurPlayer
+  disableTeleport: 0
   playOnlyOnce: 1
   isPlaying: 0
 --- !u!114 &1404430340
@@ -274401,6 +274408,7 @@ MonoBehaviour:
   - MayaPlayer
   - ElenaPlayer
   - ArthurPlayer
+  disableTeleport: 0
   playOnlyOnce: 1
   isPlaying: 0
 --- !u!114 &1913123926
@@ -283791,6 +283799,7 @@ MonoBehaviour:
   - MayaPlayer
   - ElenaPlayer
   - ArthurPlayer
+  disableTeleport: 0
   playOnlyOnce: 1
   isPlaying: 0
 --- !u!4 &2012417109
