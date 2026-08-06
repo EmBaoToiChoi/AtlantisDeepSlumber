@@ -76,6 +76,8 @@ public class ElementalRockPuzzle : NetworkBehaviour
     public Renderer waterRenderer;
     public Renderer iceRenderer;
     public Renderer lightningRenderer;
+    [Tooltip("Nếu tích chọn, 2 model nguyên tố (Băng/Sét) sẽ rơi ra cùng với các mảnh đá vỡ khi nổ. Mặc định tắt để chỉ rơi đá bể.")]
+    public bool dropElementModelsOnShatter = false;
 
     [Header("Glow Colors (HDR)")]
     [ColorUsage(true, true)] public Color fireGlowColor = Color.red * 5f;
@@ -1147,6 +1149,9 @@ public class ElementalRockPuzzle : NetworkBehaviour
 
     private void ShatterElementIcons(GameObject previewParent, Bounds bounds)
     {
+        // Nếu không cho phép rơi model nguyên tố thì bỏ qua ngay lập tức (chỉ rơi các mảnh đá bể)
+        if (!dropElementModelsOnShatter) return;
+
         // Chỉ chạy hiệu ứng văng nguyên tố khi chơi thật (tránh lỗi Instantiate/DestroyImmediate trong Edit Mode)
         if (!Application.isPlaying) return;
 

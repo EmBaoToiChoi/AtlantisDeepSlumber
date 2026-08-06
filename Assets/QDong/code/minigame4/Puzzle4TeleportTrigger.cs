@@ -89,9 +89,19 @@ public class Puzzle4TeleportTrigger : NetworkBehaviour
 
             cutsceneController.StartCutscene();
 
+            // Đợi tối đa 2 giây để cutscene bắt đầu (tránh bị kẹt nếu cutscene đã phát trước đó)
+            float waitTimer = 0f;
+            while (!cutsceneController.isPlaying && waitTimer < 2.0f)
+            {
+                waitTimer += Time.deltaTime;
+                yield return null;
+            }
+
             // Đợi cho đến khi cutscene kết thúc hoàn toàn (hoặc người chơi nhấn ESC skip)
-            yield return new WaitUntil(() => cutsceneController.isPlaying);
-            yield return new WaitUntil(() => !cutsceneController.isPlaying);
+            while (cutsceneController.isPlaying)
+            {
+                yield return null;
+            }
         }
 
         // 2. PHIM KẾT THÚC HOÀN TOÀN -> THỰC HIỆN TELEPORT TẤT CẢ NGƯỜI CHƠI LÊN ĐĨA
@@ -116,16 +126,50 @@ public class Puzzle4TeleportTrigger : NetworkBehaviour
     {
         if (p4Manager == null) return;
 
-        // Fallback: Tự động tìm đĩa (BalanceManager) nếu chưa gán teleportTarget trong Inspector
-        if (teleportTarget == null)
+        Vector3 centerDiskPos = Vector3.zero;
+        bool foundDiskPos = false;
+
+        // Ưu tiên 1: Lấy tọa độ trực tiếp từ đĩa cân (BalanceManager / diskRigidbody)
+        if (p4Manager.balanceManager != null)
+        {
+            if (p4Manager.balanceManager.diskRigidbody != null)
+            {
+                centerDiskPos = p4Manager.balanceManager.diskRigidbody.transform.position;
+                foundDiskPos = true;
+            }
+            else
+            {
+                centerDiskPos = p4Manager.balanceManager.transform.position;
+                foundDiskPos = true;
+            }
+        }
+
+        // Ưu tiên 2: Tự tìm BalanceManager trong Scene nếu chưa được gán
+        if (!foundDiskPos)
         {
             BalanceManager bm = FindAnyObjectByType<BalanceManager>();
             if (bm != null)
             {
-                teleportTarget = bm.transform;
-                Debug.Log("[Puzzle4Teleport] Tự động gán teleportTarget từ BalanceManager: " + bm.name);
+                centerDiskPos = bm.diskRigidbody != null ? bm.diskRigidbody.transform.position : bm.transform.position;
+                foundDiskPos = true;
             }
         }
+
+        // Ưu tiên 3: Dùng teleportTarget nếu có
+        if (!foundDiskPos && teleportTarget != null)
+        {
+            centerDiskPos = teleportTarget.position;
+            foundDiskPos = true;
+        }
+
+        if (!foundDiskPos)
+        {
+            Debug.LogError("[Puzzle4Teleport] KHÔNG TÌM THẤY đĩa cân (BalanceManager)! Không thể dịch chuyển người chơi.");
+            return;
+        }
+
+        // Nâng độ cao lên +1.5m so với tâm đĩa để người chơi thả chân đứng trên mặt đĩa
+        centerDiskPos.y += 1.5f;
 
         int playerIndex = 0;
         GameObject[] allPlayers = GameObject.FindGameObjectsWithTag("Player");
@@ -139,11 +183,11 @@ public class Puzzle4TeleportTrigger : NetworkBehaviour
             {
                 teleportedPlayers.Add(playerObj);
 
-                Vector3 spawnPos = teleportTarget != null ? teleportTarget.position : playerObj.transform.position;
+                Vector3 spawnPos = centerDiskPos;
 
-                // Offset vị trí đứng thẳng chân trên đĩa (trục Y = 0)
+                // Offset vị trí đứng giữa đĩa cho từng người chơi
                 Vector3 offset = Vector3.zero;
-                float dist = 1.0f;
+                float dist = 1.2f;
                 if (playerIndex == 0) offset = new Vector3(dist, 0f, dist);
                 else if (playerIndex == 1) offset = new Vector3(-dist, 0f, dist);
                 else if (playerIndex == 2) offset = new Vector3(dist, 0f, -dist);
