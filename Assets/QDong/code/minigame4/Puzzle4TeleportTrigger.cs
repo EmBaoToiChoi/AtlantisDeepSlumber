@@ -36,34 +36,39 @@ public class Puzzle4TeleportTrigger : NetworkBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
-        if (!IsServer || activated)
+        bool isServerOrOffline = (NetworkManager.Singleton == null || !NetworkManager.Singleton.IsListening) || IsServer;
+        Debug.Log($"[PUZZLE4_DEBUG] OnTriggerEnter va chạm bởi '{other.name}' (Tag: {other.tag}). IsServerOrOffline: {isServerOrOffline}, IsServer: {IsServer}, activated: {activated}");
+
+        if (!isServerOrOffline || activated)
             return;
 
         // Chặn kích hoạt lại nếu minigame đã hoàn thành
         Puzzle4Manager p4Manager = FindAnyObjectByType<Puzzle4Manager>();
         if (p4Manager != null && p4Manager.puzzleCompleted.Value)
         {
-            Debug.Log("[Puzzle4Teleport] Minigame đã hoàn thành, không kích hoạt lại.");
+            Debug.Log("[PUZZLE4_DEBUG] Minigame đã hoàn thành, không kích hoạt lại.");
             return;
         }
 
-        if (other.CompareTag("Player"))
+        if (other.CompareTag("Player") || other.GetComponentInParent<IPlayerHUDTarget>() != null)
         {
             NetworkObject netObj = other.GetComponentInParent<NetworkObject>();
-            if (netObj != null && netObj.IsPlayerObject)
+            bool isValidPlayer = (netObj != null) || other.CompareTag("Player") || other.GetComponentInParent<IPlayerHUDTarget>() != null;
+
+            if (isValidPlayer)
             {
-                playersTouched.Add(netObj.OwnerClientId);
-                playersTouched.RemoveWhere(id => NetworkManager.Singleton == null || !NetworkManager.Singleton.ConnectedClients.ContainsKey(id));
+                ulong clientId = netObj != null ? netObj.OwnerClientId : 0;
+                playersTouched.Add(clientId);
 
                 int requiredCount = GetRequiredPlayersCount();
-                int totalInRoom = NetworkManager.Singleton != null ? NetworkManager.Singleton.ConnectedClientsIds.Count : 1;
+                int totalInRoom = (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening) ? NetworkManager.Singleton.ConnectedClientsIds.Count : 1;
 
-                Debug.Log($"[Puzzle4Teleport] Số người đã check-in: {playersTouched.Count}/{requiredCount} (Tổng user: {totalInRoom})");
+                Debug.Log($"[PUZZLE4_DEBUG] Số người đã check-in: {playersTouched.Count}/{requiredCount} (Tổng user: {totalInRoom})");
 
                 if (playersTouched.Count >= requiredCount)
                 {
                     activated = true;
-                    Debug.Log("[Puzzle4Teleport] Đã ĐỦ NGƯỜI CHẠM BOX! Kích hoạt Bẫy và Cutscene...");
+                    Debug.Log("[PUZZLE4_DEBUG] Đã ĐỦ NGƯỜI CHẠM BOX! Kích hoạt Bẫy và Cutscene...");
 
                     if (trapTrigger != null)
                     {
@@ -78,115 +83,249 @@ public class Puzzle4TeleportTrigger : NetworkBehaviour
 
     private IEnumerator PlayCutsceneAndTeleportAtEndRoutine(Puzzle4Manager p4Manager)
     {
-        bool hasTeleported = false;
+        Debug.Log($"[PUZZLE4_DEBUG] PlayCutsceneAndTeleportAtEndRoutine BẮT ĐẦU. CutsceneController: {(cutsceneController != null ? cutsceneController.name : "NULL")}");
 
-        // 1. CHẠY CUTSCENE
+        // 1. CHẠY CUTSCENE (NẾU CÓ)
         if (cutsceneController != null)
         {
+            // Tắt hoàn toàn tự động teleport của VideoCutsceneController
+            // để Puzzle4 tự quản lý teleport
+            cutsceneController.disableTeleport = true;
+            if (cutsceneController.playerSpots != null)
+            {
+                cutsceneController.playerSpots.Clear();
+            }
+
+            Debug.Log("[PUZZLE4_DEBUG] Gọi cutsceneController.StartCutscene()...");
             cutsceneController.StartCutscene();
 
-            // Đợi cho đến khi VideoPlayer chuẩn bị xong và bắt đầu Play
-            yield return new WaitUntil(() => cutsceneController.isPlaying && cutsceneController.videoPlayer != null && cutsceneController.videoPlayer.isPlaying);
-
-            var vp = cutsceneController.videoPlayer;
-
-            // Vòng lặp chờ canh thời gian: khi thời gian còn lại <= 1s (hoặc bị skip)
-            while (cutsceneController.isPlaying)
+            // Chờ cutscene bắt đầu (isPlaying = true được set trong StartCutsceneServer)
+            float waitStartTimeout = 5f;
+            float waited = 0f;
+            while (!cutsceneController.isPlaying && waited < waitStartTimeout)
             {
-                double timeRemaining = vp.length - vp.time;
-
-                // Nếu phim còn tầm 1 giây (hoặc người chơi nhấn ESC làm vp ngừng chạy) thì Teleport ngầm ngay
-                if (!hasTeleported && (timeRemaining <= teleportBeforeFinishTime || !vp.isPlaying))
-                {
-                    hasTeleported = true;
-                    Debug.Log($"[Puzzle4Teleport] Phim còn {timeRemaining:F1}s -> Thực hiện Teleport ngầm tới đĩa!");
-                    ExecuteTeleportToCenter(p4Manager);
-                }
-
+                waited += Time.deltaTime;
                 yield return null;
             }
+            Debug.Log($"[PUZZLE4_DEBUG] Cutscene isPlaying = {cutsceneController.isPlaying} (chờ {waited:F1}s)");
+
+            // QUAN TRỌNG: Trên Dedicated Server (VPS), videoPlayer.isPlaying sẽ KHÔNG BAO GIỜ true
+            // vì PlayCutsceneClientRpc() là ClientRpc và không chạy trên Dedicated Server.
+            // Nên ta KHÔNG được chờ videoPlayer.isPlaying!
+            // Thay vào đó, ta chờ cho isPlaying trở về false (được set bởi WaitAndTeleportAndFinish trên server).
+
+            Debug.Log("[PUZZLE4_DEBUG] Chờ cutscene kết thúc (isPlaying -> false)...");
+            while (cutsceneController.isPlaying)
+            {
+                yield return null;
+            }
+            Debug.Log("[PUZZLE4_DEBUG] Cutscene đã kết thúc! isPlaying = false. Bắt đầu teleport...");
         }
 
-        // Fallback: Nếu không có CutsceneController hoặc phim lỗi, đảm bảo luôn teleport
-        if (!hasTeleported)
-        {
-            ExecuteTeleportToCenter(p4Manager);
-        }
+        // 2. TELEPORT TẤT CẢ NGƯỜI CHƠI LÊN ĐĨA CÂN
+        Debug.Log("[PUZZLE4_DEBUG] Gọi ExecuteTeleportToCenter...");
+        ExecuteTeleportToCenter(p4Manager);
 
-        // 2. BẮT ĐẦU MINIGAME SAU KHI PHIM KẾT THÚC HOÀN TOÀN
+        // 3. BẮT ĐẦU MINIGAME
         if (p4Manager != null)
         {
-            Debug.Log("[Puzzle4Teleport] Phim kết thúc hoàn toàn! Bắt đầu minigame!");
+            Debug.Log("[PUZZLE4_DEBUG] Phim kết thúc hoàn toàn! Gọi p4Manager.StartMinigameFromTeleport()...");
             p4Manager.StartMinigameFromTeleport();
         }
         else
         {
-            Debug.LogError("[Puzzle4Teleport] LỖI: Không tìm thấy Puzzle4Manager trên Server!");
+            Debug.LogError("[PUZZLE4_DEBUG] LỖI: Không tìm thấy Puzzle4Manager trên Server!");
         }
     }
 
     private void ExecuteTeleportToCenter(Puzzle4Manager p4Manager)
     {
-        if (p4Manager == null) return;
-
-        int playerIndex = 0;
-        GameObject[] allPlayers = GameObject.FindGameObjectsWithTag("Player");
-        HashSet<NetworkObject> teleportedPlayers = new HashSet<NetworkObject>();
-
-        foreach (GameObject pObj in allPlayers)
+        if (p4Manager == null)
         {
-            NetworkObject playerObj = pObj.GetComponentInParent<NetworkObject>();
+            p4Manager = FindAnyObjectByType<Puzzle4Manager>();
+        }
 
-            if (playerObj != null && playerObj.IsSpawned && !teleportedPlayers.Contains(playerObj))
+        Debug.Log($"[PUZZLE4_DEBUG] ExecuteTeleportToCenter BẮT ĐẦU. p4Manager: {(p4Manager != null ? p4Manager.name : "NULL")}");
+
+        Vector3 centerDiskPos = Vector3.zero;
+        bool foundDiskPos = false;
+
+        // Ưu tiên 1: Dùng teleportTarget từ Inspector (Teleport minigame4)
+        if (teleportTarget != null)
+        {
+            centerDiskPos = teleportTarget.position;
+            foundDiskPos = true;
+            Debug.Log($"[PUZZLE4_DEBUG] Lấy tọa độ đĩa từ teleportTarget Inspector: {centerDiskPos}");
+        }
+
+        // Ưu tiên 2: Tự động lấy vị trí đĩa từ BalanceManager (đĩa nghiêng vòng quay)
+        if (!foundDiskPos)
+        {
+            BalanceManager bm = p4Manager != null ? p4Manager.balanceManager : null;
+            if (bm == null) bm = FindAnyObjectByType<BalanceManager>();
+
+            if (bm != null)
             {
-                teleportedPlayers.Add(playerObj);
-
-                Vector3 spawnPos = teleportTarget != null ? teleportTarget.position : playerObj.transform.position;
-
-                // Offset vị trí đứng thẳng chân trên đĩa (trục Y = 0)
-                Vector3 offset = Vector3.zero;
-                float dist = 1.0f;
-                if (playerIndex == 0) offset = new Vector3(dist, 0f, dist);
-                else if (playerIndex == 1) offset = new Vector3(-dist, 0f, dist);
-                else if (playerIndex == 2) offset = new Vector3(dist, 0f, -dist);
-                else if (playerIndex == 3) offset = new Vector3(-dist, 0f, -dist);
-
-                spawnPos += offset;
-                playerIndex++;
-
-                CharacterController cc = playerObj.GetComponent<CharacterController>();
-                if (cc != null) cc.enabled = false;
-
-                p4Manager.TeleportPlayerToCenterClientRpc(playerObj.NetworkObjectId, spawnPos);
-
-                Unity.Netcode.Components.NetworkTransform netTransform = playerObj.GetComponent<Unity.Netcode.Components.NetworkTransform>();
-                if (netTransform != null)
-                {
-                    try
-                    {
-                        netTransform.Teleport(spawnPos, playerObj.transform.rotation, playerObj.transform.localScale);
-                    }
-                    catch (System.Exception e)
-                    {
-                        Debug.LogWarning($"[Puzzle4Teleport] Không thể gọi Teleport trực tiếp cho Client {playerObj.OwnerClientId}: {e.Message}");
-                    }
-                }
-                else
-                {
-                    playerObj.transform.position = spawnPos;
-                }
-
-                Rigidbody rb = playerObj.GetComponent<Rigidbody>();
-                if (rb != null)
-                {
-                    rb.linearVelocity = Vector3.zero;
-                    rb.angularVelocity = Vector3.zero;
-                    rb.Sleep();
-                }
-
-                if (cc != null) cc.enabled = true;
+                centerDiskPos = bm.diskRigidbody != null ? bm.diskRigidbody.transform.position : bm.transform.position;
+                foundDiskPos = true;
+                Debug.Log($"[PUZZLE4_DEBUG] Lấy tọa độ đĩa từ BalanceManager: {centerDiskPos}");
             }
         }
+
+        // Ưu tiên 3: Tìm GameObject "đĩa nghiêng vòng quay"
+        if (!foundDiskPos)
+        {
+            GameObject diskObj = GameObject.Find("đĩa nghiêng vòng quay");
+            if (diskObj != null)
+            {
+                centerDiskPos = diskObj.transform.position;
+                foundDiskPos = true;
+                Debug.Log($"[PUZZLE4_DEBUG] Lấy tọa độ đĩa từ GameObject 'đĩa nghiêng vòng quay': {centerDiskPos}");
+            }
+        }
+
+        if (!foundDiskPos)
+        {
+            Debug.LogError("[PUZZLE4_DEBUG] KHÔNG TÌM THẤY đĩa cân! Bỏ qua teleport.");
+            return;
+        }
+
+        // Nâng độ cao +1.5m lên mặt đĩa nếu chưa có offset
+        if (teleportTarget == null)
+        {
+            centerDiskPos.y += 1.5f;
+        }
+
+        Debug.Log($"[PUZZLE4_DEBUG] Thực hiện Teleport tất cả người chơi tới tâm đĩa cân tại {centerDiskPos}");
+
+        bool isNetcodeActive = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
+
+        if (isNetcodeActive)
+        {
+            // --- NẾU ĐANG CHẠY NETCODE ONLINE / HOST ---
+            List<NetworkObject> netPlayers = new List<NetworkObject>();
+
+            foreach (var client in NetworkManager.Singleton.ConnectedClientsList)
+            {
+                if (client.PlayerObject != null && !netPlayers.Contains(client.PlayerObject))
+                {
+                    netPlayers.Add(client.PlayerObject);
+                }
+            }
+
+            GameObject[] taggedPlayers = GameObject.FindGameObjectsWithTag("Player");
+            foreach (GameObject pObj in taggedPlayers)
+            {
+                NetworkObject netObj = pObj.GetComponentInParent<NetworkObject>();
+                if (netObj != null && !netPlayers.Contains(netObj))
+                {
+                    netPlayers.Add(netObj);
+                }
+            }
+
+            Debug.Log($"[PUZZLE4_DEBUG] Netcode Active: True. Tìm thấy {netPlayers.Count} người chơi trong Netcode.");
+
+            int pIdx = 0;
+            foreach (NetworkObject playerObj in netPlayers)
+            {
+                Vector3 spawnPos = centerDiskPos;
+                float dist = 1.2f;
+                if (pIdx == 0) spawnPos += new Vector3(dist, 0f, dist);
+                else if (pIdx == 1) spawnPos += new Vector3(-dist, 0f, dist);
+                else if (pIdx == 2) spawnPos += new Vector3(dist, 0f, -dist);
+                else if (pIdx == 3) spawnPos += new Vector3(-dist, 0f, -dist);
+                pIdx++;
+
+                Debug.Log($"[PUZZLE4_DEBUG] Server gửi TeleportPlayerToCenterClientRpc cho NetworkObjectId: {playerObj.NetworkObjectId} (OwnerClientId: {playerObj.OwnerClientId}) tới pos: {spawnPos}");
+
+                if (p4Manager != null)
+                {
+                    p4Manager.TeleportPlayerToCenterClientRpc(playerObj.NetworkObjectId, spawnPos);
+                }
+            }
+        }
+        else
+        {
+            // --- NẾU TEST OFFLINE TRONG UNITY EDITOR (KHÔNG START HOST/NETCODE) ---
+            List<GameObject> offlinePlayers = new List<GameObject>();
+
+            GameObject[] taggedPlayers = GameObject.FindGameObjectsWithTag("Player");
+            foreach (GameObject pObj in taggedPlayers)
+            {
+                if (!offlinePlayers.Contains(pObj)) offlinePlayers.Add(pObj);
+            }
+
+            var allMonos = FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None);
+            foreach (var mono in allMonos)
+            {
+                if (mono is IPlayerHUDTarget)
+                {
+                    if (!offlinePlayers.Contains(mono.gameObject)) offlinePlayers.Add(mono.gameObject);
+                }
+            }
+
+            int pIdx = 0;
+            foreach (GameObject pObj in offlinePlayers)
+            {
+                Vector3 spawnPos = centerDiskPos;
+                float dist = 1.2f;
+                if (pIdx == 0) spawnPos += new Vector3(dist, 0f, dist);
+                else if (pIdx == 1) spawnPos += new Vector3(-dist, 0f, dist);
+                else if (pIdx == 2) spawnPos += new Vector3(dist, 0f, -dist);
+                else if (pIdx == 3) spawnPos += new Vector3(-dist, 0f, -dist);
+                pIdx++;
+
+                StartCoroutine(DirectOfflineTeleportRoutine(pObj, spawnPos));
+            }
+        }
+    }
+
+    private IEnumerator DirectOfflineTeleportRoutine(GameObject playerObj, Vector3 pos)
+    {
+        if (playerObj == null) yield break;
+
+        CharacterController cc = playerObj.GetComponentInParent<CharacterController>();
+        if (cc == null) cc = playerObj.GetComponent<CharacterController>();
+
+        UnityEngine.AI.NavMeshAgent nav = playerObj.GetComponentInParent<UnityEngine.AI.NavMeshAgent>();
+        if (nav == null) nav = playerObj.GetComponent<UnityEngine.AI.NavMeshAgent>();
+
+        Rigidbody rb = playerObj.GetComponentInParent<Rigidbody>();
+        if (rb == null) rb = playerObj.GetComponent<Rigidbody>();
+
+        bool wasKinematic = false;
+        if (rb != null)
+        {
+            wasKinematic = rb.isKinematic;
+            rb.isKinematic = true;
+            rb.linearVelocity = Vector3.zero;
+            rb.angularVelocity = Vector3.zero;
+        }
+
+        if (cc != null) cc.enabled = false;
+        if (nav != null) nav.enabled = false;
+
+        yield return new WaitForEndOfFrame();
+
+        playerObj.transform.position = pos;
+        if (rb != null) rb.position = pos;
+
+        Physics.SyncTransforms();
+
+        yield return new WaitForEndOfFrame();
+
+        if (rb != null)
+        {
+            rb.isKinematic = wasKinematic;
+            rb.linearVelocity = Vector3.zero;
+            rb.angularVelocity = Vector3.zero;
+            rb.Sleep();
+        }
+
+        if (cc != null) cc.enabled = true;
+        if (nav != null) nav.enabled = true;
+
+        Debug.Log($"[Puzzle4Teleport] Đã Teleport OFFLINE thành công nhân vật {playerObj.name} tới {pos}");
     }
 
     [ClientRpc]
