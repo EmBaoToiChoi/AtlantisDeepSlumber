@@ -15,6 +15,8 @@ public class VideoCutsceneController : NetworkBehaviour
     public Transform safeZone; 
     public List<Transform> playerSpots = new List<Transform>();
     public List<string> scriptNamesToDisable = new List<string>();
+    [Tooltip("Bật tùy chọn này để VideoCutsceneController KHÔNG thực hiện bất kỳ lượt Teleport nào (để script bên ngoài như Minigame 4 tự quản lý teleport)")]
+    public bool disableTeleport = false;
 
     [Header("Security")]
     public bool playOnlyOnce = true;
@@ -86,13 +88,21 @@ public class VideoCutsceneController : NetworkBehaviour
             targetClientIds[i] = NetworkManager.Singleton.ConnectedClientsList[i].ClientId;
         }
 
-        TeleportToSafeZoneClientRpc(targetClientIds);
+        if (!disableTeleport && safeZone != null)
+        {
+            TeleportToSafeZoneClientRpc(targetClientIds);
+        }
+
         PlayCutsceneClientRpc();
 
         yield return new WaitUntil(() => serverReceivedFinishSignal);
 
         StopVideoClientRpc();
-        TeleportAllPlayersClientRpc(targetClientIds);
+
+        if (!disableTeleport && playerSpots != null && playerSpots.Count > 0)
+        {
+            TeleportAllPlayersClientRpc(targetClientIds);
+        }
 
         yield return new WaitForSeconds(1f);
         FinishCutsceneClientRpc();
