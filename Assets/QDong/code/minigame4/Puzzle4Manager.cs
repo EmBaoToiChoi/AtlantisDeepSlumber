@@ -202,6 +202,8 @@ public class Puzzle4Manager : NetworkBehaviour
             }
         }
 
+        Physics.SyncTransforms();
+
         if (cc != null) cc.enabled = true;
 
         Rigidbody rb = netObj.GetComponent<Rigidbody>();
