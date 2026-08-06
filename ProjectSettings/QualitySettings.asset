@@ -225,7 +225,6 @@ QualitySettings:
     excludedTargetPlatforms:
     - WebGL
     - Server
-    - Standalone
   - serializedVersion: 4
     name: Very High
     pixelLightCount: 3
@@ -280,6 +279,7 @@ QualitySettings:
     excludedTargetPlatforms:
     - Server
     - WebGL
+    - Standalone
   - serializedVersion: 4
     name: Ultra
     pixelLightCount: 4
