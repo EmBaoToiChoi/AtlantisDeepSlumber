@@ -121295,7 +121295,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   ShowTopMostFoldoutHeaderGroup: 1
-  videoClip: {fileID: 32900000, guid: d1015d683f6a2e044ada97463305da7b, type: 3}
+  videoClip: {fileID: 32900000, guid: 8357e412d1d83ea41aebd61a4bcd5f57, type: 3}
   vpsVideoDuration: 183
   maxWaitTimeout: 100
   backgroundColor: {r: 0, g: 0, b: 0, a: 1}
@@ -174320,7 +174320,7 @@ Transform:
   m_GameObject: {fileID: 1377902926}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -232.36, y: 70.02, z: 445.7}
+  m_LocalPosition: {x: -234.4, y: 77.8, z: 466}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -174339,7 +174339,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   checkpointIndex: 6
-  radius: 10
+  radius: 20
   spawnPointOverride: {fileID: 0}
 --- !u!120 &1377902929
 LineRenderer:
