@@ -81,6 +81,9 @@ public class CheckpointZone : MonoBehaviour
         if (col.transform.root != null && col.transform.root.CompareTag("Player")) return true;
         if (col.GetComponentInParent<IPlayerHUDTarget>() != null) return true;
         if (col.GetComponent<IPlayerHUDTarget>() != null) return true;
+        if (col.GetComponentInChildren<IPlayerHUDTarget>() != null) return true;
+        if (col.transform.root != null && col.transform.root.GetComponent<IPlayerHUDTarget>() != null) return true;
+        if (col.transform.root != null && col.transform.root.GetComponentInChildren<IPlayerHUDTarget>() != null) return true;
         return false;
     }
 
@@ -88,11 +91,14 @@ public class CheckpointZone : MonoBehaviour
     {
         if (!IsPlayerCollider(other)) return;
 
-        // Tìm component IPlayerHUDTarget trên người chơi chạm vào để hỗ trợ cả 4 class nhân vật
+        // Tìm component IPlayerHUDTarget trên người chơi chạm vào hỗ trợ tất cả các lớp nhân vật
         IPlayerHUDTarget player = other.GetComponentInParent<IPlayerHUDTarget>();
-        if (player == null)
+        if (player == null) player = other.GetComponent<IPlayerHUDTarget>();
+        if (player == null) player = other.GetComponentInChildren<IPlayerHUDTarget>();
+        if (player == null && other.transform.root != null)
         {
-            player = other.GetComponent<IPlayerHUDTarget>();
+            player = other.transform.root.GetComponent<IPlayerHUDTarget>();
+            if (player == null) player = other.transform.root.GetComponentInChildren<IPlayerHUDTarget>();
         }
 
         if (player != null && PlayerCheckpointManager.Instance != null)
