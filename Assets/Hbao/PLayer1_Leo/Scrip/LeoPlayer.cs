@@ -4876,6 +4876,27 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             GameObject hitGo = hit.collider.gameObject;
             if (hitGo == gameObject || hitGo.transform.IsChildOf(transform)) continue;
 
+            // Kiểm tra chặt cây nếu đang ở ô vũ khí 1 (Rìu)
+            if (GetActiveWeaponIndex() == 1)
+            {
+                ChoppableTree tree = hit.collider.GetComponentInParent<ChoppableTree>() ?? hit.collider.transform.root.GetComponentInChildren<ChoppableTree>();
+                if (tree == null)
+                {
+                    var forwarder = hit.collider.GetComponent<TreeColliderForwarder>();
+                    if (forwarder != null) tree = forwarder.mainTree;
+                }
+                if (tree != null)
+                {
+                    Transform treeRoot = tree.transform;
+                    if (!alreadyHitEnemies.Contains(treeRoot))
+                    {
+                        alreadyHitEnemies.Add(treeRoot);
+                        Vector3 hitPos = hit.point != Vector3.zero ? hit.point : hit.collider.bounds.center;
+                        tree.HitTree(hitPos, 1);
+                    }
+                }
+            }
+
             Transform enemyRoot = GetEnemyRootFromCollider(hit.collider);
             if (enemyRoot != null && !alreadyHitEnemies.Contains(enemyRoot))
             {
@@ -8573,17 +8594,13 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         var axeItem = col.GetComponentInParent<AxeItem>();
         if (axeItem != null)
         {
-            // BẢO VỆ TUỆT ĐỐI: Solid physics collider (đứng trên đất) KHÔNG BAO GIỜ được tắt hoặc đổi sang trigger!
-            if (!col.isTrigger)
-            {
-                col.enabled = true;
-                return;
-            }
-            // Nếu cây rìu chưa được nhặt (nằm trên đất), không được tắt collider của nó
-            if (!PlayerHUDController.isCarryingAxe && transform.Find("Axe_Straight") == null)
+            // Nếu cây rìu chưa được nhặt (nằm trên đất), không được can thiệp vào collider của nó
+            if (!PlayerHUDController.isCarryingAxe && !IsHoldingAxe())
             {
                 return;
             }
+            // Khi đang cầm trên tay để chặt cây, đảm bảo luôn là Trigger để không gây phản lực vật lý cứng với cây
+            col.isTrigger = true;
         }
 
         col.enabled = enabled;
@@ -8594,12 +8611,19 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (col != null)
         {
             var axeItem = col.GetComponentInParent<AxeItem>();
-            if (axeItem != null && !col.isTrigger)
+            if (axeItem != null)
             {
-                // KHÔNG BAO GIỜ biến solid collider thành trigger trên cây rìu
-                return;
+                if (!PlayerHUDController.isCarryingAxe && !IsHoldingAxe())
+                {
+                    return; // Không can thiệp rìu nằm trên đất
+                }
+                col.isTrigger = true;
             }
-            col.isTrigger = true;
+            else
+            {
+                col.isTrigger = true;
+            }
+
             if (col.GetComponent<PlayerHitbox>() == null)
             {
                 col.gameObject.AddComponent<PlayerHitbox>();
