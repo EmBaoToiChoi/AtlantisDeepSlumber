@@ -15,6 +15,8 @@ public class WaterFreezeQuestTrigger : NetworkBehaviour, IQuestTrigger
     {
         if (prerequisiteQuest == null) return true;
         if (prerequisiteQuest is IQuestTrigger quest) return quest.IsQuestCompleted;
+        var trigger = prerequisiteQuest.GetComponent<IQuestTrigger>() ?? prerequisiteQuest.GetComponentInChildren<IQuestTrigger>();
+        if (trigger != null) return trigger.IsQuestCompleted;
         if (prerequisiteQuest is BridgeCollapseTrigger bridge) return bridge.IsBridgeRepaired();
         return true;
     }
@@ -145,6 +147,11 @@ public class WaterFreezeQuestTrigger : NetworkBehaviour, IQuestTrigger
             FindLocalPlayer();
         }
 
+        if (puzzController == null)
+        {
+            puzzController = FindAnyObjectByType<WaterPuzzleController>();
+        }
+
         if (puzzController == null) return;
 
         // Xác định nhiệm vụ đã active hay chưa
@@ -152,15 +159,24 @@ public class WaterFreezeQuestTrigger : NetworkBehaviour, IQuestTrigger
             ? isQuestActive.Value 
             : hasTriggeredQuest;
 
+        // Nếu nguồn nước đã được đóng băng (Frozen = 3), hoàn thành nhiệm vụ ngay lập tức bất kể đã chạm Trigger hay chưa
+        if (puzzController.CurrentState == WaterPuzzleController.WaterPuzzleState.Frozen)
+        {
+            if (!active)
+            {
+                bool isNetwork = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
+                if (isNetwork && IsServer)
+                {
+                    isQuestActive.Value = true;
+                }
+                hasTriggeredQuest = true;
+            }
+            CompleteQuest();
+            return;
+        }
+
         if (active)
         {
-            // Kiểm tra xem nước đã đóng băng chưa (Frozen = 3)
-            if (puzzController.CurrentState == WaterPuzzleController.WaterPuzzleState.Frozen)
-            {
-                CompleteQuest();
-                return;
-            }
-
             // Định kỳ cập nhật tiến trình UI để tránh overhead mỗi frame
             if (Time.time >= nextCheckTime)
             {

@@ -209,8 +209,8 @@ public class AxeItem : NetworkBehaviour
             var playerObj = PlayerHUDController.LocalPlayerTarget as MonoBehaviour;
             if (playerObj != null)
             {
-                // Cho phép thả bằng phím G bất kể khoảng cách nếu đang cầm rìu
-                if ((isCarryingLocally || PlayerHUDController.isCarryingAxe) && Input.GetKeyDown(KeyCode.G))
+                // Cho phép thả bằng phím G nếu chính người chơi này đang cầm cây rìu này
+                if (isCarryingLocally && Input.GetKeyDown(KeyCode.G))
                 {
                     bool isNetworkActive = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening && IsSpawned;
                     if (isNetworkActive)
@@ -280,9 +280,21 @@ public class AxeItem : NetworkBehaviour
     }
 
     [ServerRpc(RequireOwnership = false)]
-    private void RequestDropServerRpc()
+    private void RequestDropServerRpc(ServerRpcParams rpcParams = default)
     {
         if (carryingPlayerId.Value == 0) return;
+
+        // XÁC NHẬN CHỈ NGƯỜI ĐANG CẦM RÌU NÀY MỚI CÓ QUYỀN THẢ RÌU NÀY
+        ulong senderClientId = rpcParams.Receive.SenderClientId;
+        if (NetworkManager.Singleton != null && NetworkManager.Singleton.SpawnManager != null && 
+            NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(carryingPlayerId.Value, out NetworkObject carrierNetObj))
+        {
+            if (carrierNetObj != null && carrierNetObj.OwnerClientId != senderClientId)
+            {
+                Debug.LogWarning($"[AxeItem] Rejecting RequestDropServerRpc from Client {senderClientId} because axe is carried by Client {carrierNetObj.OwnerClientId}");
+                return;
+            }
+        }
 
         ulong lastCarrierId = carryingPlayerId.Value;
         carryingPlayerId.Value = 0;
