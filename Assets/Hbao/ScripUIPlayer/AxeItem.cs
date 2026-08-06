@@ -127,21 +127,26 @@ public class AxeItem : NetworkBehaviour
 
         if (isCarried)
         {
-            // TẮT TOÀN BỘ VẬT LÝ KHI ĐANG CẦM RÌU ĐỂ KHÔNG BỊ VƯỚNG TÁC ĐỘNG VẬT LÝ VỚI CÂY TRONG LÚC CHẶT
+            // CHUYỂN TOÀN BỘ COLLIDER THÀNH TRIGGER KHI ĐANG CẦM RÌU ĐỂ KHÔNG BỊ PHẢN LỰC VẬT LÝ VỚI CÂY KHI CHẶT
             if (colliders == null || colliders.Length == 0) colliders = GetComponents<Collider>();
             if (colliders != null)
             {
                 foreach (var col in colliders)
                 {
-                    if (col != null && !col.isTrigger)
+                    if (col != null)
                     {
-                        col.enabled = false;
+                        col.isTrigger = true; // Luôn là Trigger khi cầm trên tay
                     }
                 }
             }
 
             if (rb == null) rb = GetComponent<Rigidbody>();
-            if (rb != null) rb.isKinematic = true;
+            if (rb != null)
+            {
+                rb.isKinematic = true;
+                rb.linearVelocity = Vector3.zero;
+                rb.angularVelocity = Vector3.zero;
+            }
 
             var nt = GetComponent<Unity.Netcode.Components.NetworkTransform>();
             if (nt != null && nt.enabled) nt.enabled = false;
@@ -154,8 +159,9 @@ public class AxeItem : NetworkBehaviour
             {
                 foreach (var col in colliders)
                 {
-                    if (col != null && !col.isTrigger)
+                    if (col != null)
                     {
+                        col.isTrigger = false; // Trả lại solid collider khi ở trên đất
                         col.enabled = true;
                     }
                 }
@@ -187,7 +193,11 @@ public class AxeItem : NetworkBehaviour
                 {
                     foreach (var col in colliders)
                     {
-                        if (col != null && !col.isTrigger) col.enabled = true;
+                        if (col != null)
+                        {
+                            col.isTrigger = false;
+                            col.enabled = true;
+                        }
                     }
                 }
             }
