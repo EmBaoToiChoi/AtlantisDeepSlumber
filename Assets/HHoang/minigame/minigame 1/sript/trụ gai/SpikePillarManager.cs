@@ -76,32 +76,54 @@ public class SpikePillarManager : NetworkBehaviour
             }
         }
 
-        // 2. Spawn trụ gai theo chu kỳ (Chạy trên cả Server và Client để tự spawn cục bộ)
+        // 2. Spawn trụ gai theo chu kỳ (Chỉ Server/Host đếm giờ để chọn điểm spawn ngẫu nhiên và đồng bộ qua ClientRpc)
         bool active = isNetworkActive ? isSpawningActive.Value : isSpawningActiveOffline;
-        if (active && pool != null && spawnPoints != null && spawnPoints.Length > 0)
+        if (active && (!isNetworkActive || isServerInstance) && pool != null && spawnPoints != null && spawnPoints.Length > 0)
         {
             if (Time.time >= nextSpawnTime)
             {
-                SpawnPillarLocal();
                 nextSpawnTime = Time.time + spawnInterval;
+                int randomIndex = Random.Range(0, spawnPoints.Length);
+
+                if (isNetworkActive)
+                {
+                    // Đồng bộ điểm spawn ngẫu nhiên cho tất cả người chơi qua ClientRpc
+                    SpawnPillarClientRpc(randomIndex);
+                }
+                else
+                {
+                    SpawnPillarLocalWithIndex(randomIndex);
+                }
             }
         }
     }
 
-    private void SpawnPillarLocal()
+    [ClientRpc]
+    private void SpawnPillarClientRpc(int spawnIndex)
+    {
+        SpawnPillarLocalWithIndex(spawnIndex);
+    }
+
+    private void SpawnPillarLocalWithIndex(int spawnIndex)
     {
         if (spawnPoints == null || spawnPoints.Length == 0) return;
+        if (spawnIndex < 0 || spawnIndex >= spawnPoints.Length) return;
 
-        // Chọn ngẫu nhiên 1 trong các điểm spawn được cấu hình
-        int randomIndex = Random.Range(0, spawnPoints.Length);
-        Transform selectedPoint = spawnPoints[randomIndex];
-
+        Transform selectedPoint = spawnPoints[spawnIndex];
         if (selectedPoint == null) return;
 
-        SpikePillarLocal pillar = pool.GetPillar();
-        if (pillar != null)
+        if (pool == null)
         {
-            pillar.Initialize(selectedPoint.position, rollDirection, pool);
+            pool = GetComponentInChildren<SpikePillarPool>() ?? FindAnyObjectByType<SpikePillarPool>();
+        }
+
+        if (pool != null)
+        {
+            SpikePillarLocal pillar = pool.GetPillar();
+            if (pillar != null)
+            {
+                pillar.Initialize(selectedPoint.position, rollDirection, pool);
+            }
         }
     }
 

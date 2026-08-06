@@ -15,6 +15,8 @@ public class VideoCutsceneController : NetworkBehaviour
     public Transform safeZone; 
     public List<Transform> playerSpots = new List<Transform>();
     public List<string> scriptNamesToDisable = new List<string>();
+    [Tooltip("Bật tùy chọn này để VideoCutsceneController KHÔNG thực hiện bất kỳ lượt Teleport nào (để script bên ngoài như Minigame 4 tự quản lý teleport)")]
+    public bool disableTeleport = false;
 
     [Header("Security")]
     public bool playOnlyOnce = true;
@@ -66,6 +68,7 @@ public class VideoCutsceneController : NetworkBehaviour
 
     private void StartCutsceneServer()
     {
+        Debug.Log($"[PUZZLE4_DEBUG] VideoCutsceneController.StartCutsceneServer được gọi. isPlaying: {isPlaying}, disableTeleport: {disableTeleport}");
         if (isPlaying || (playOnlyOnce && hasPlayed)) return;
         isPlaying = true;
         hasPlayed = true; 
@@ -86,16 +89,32 @@ public class VideoCutsceneController : NetworkBehaviour
             targetClientIds[i] = NetworkManager.Singleton.ConnectedClientsList[i].ClientId;
         }
 
-        TeleportToSafeZoneClientRpc(targetClientIds);
+        if (!disableTeleport && safeZone != null)
+        {
+            Debug.Log("[PUZZLE4_DEBUG] VideoCutsceneController gọi TeleportToSafeZoneClientRpc...");
+            TeleportToSafeZoneClientRpc(targetClientIds);
+        }
+
         PlayCutsceneClientRpc();
 
         yield return new WaitUntil(() => serverReceivedFinishSignal);
 
+        Debug.Log("[PUZZLE4_DEBUG] VideoCutsceneController đã nhận signal kết thúc video (serverReceivedFinishSignal = true).");
         StopVideoClientRpc();
-        TeleportAllPlayersClientRpc(targetClientIds);
+
+        if (!disableTeleport && playerSpots != null && playerSpots.Count > 0)
+        {
+            Debug.Log("[PUZZLE4_DEBUG] VideoCutsceneController gọi TeleportAllPlayersClientRpc...");
+            TeleportAllPlayersClientRpc(targetClientIds);
+        }
 
         yield return new WaitForSeconds(1f);
         FinishCutsceneClientRpc();
+
+        // QUAN TRỌNG: Trên Dedicated Server, ClientRpc KHÔNG chạy trên server,
+        // nên isPlaying sẽ không được set false. Ta phải tự set ở đây.
+        isPlaying = false;
+        Debug.Log("[PUZZLE4_DEBUG] VideoCutsceneController: Server đã set isPlaying = false sau FinishCutsceneClientRpc.");
     }
 
     [ClientRpc]

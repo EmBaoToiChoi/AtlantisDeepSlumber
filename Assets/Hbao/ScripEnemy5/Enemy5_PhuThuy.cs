@@ -1106,6 +1106,7 @@ public class Enemy5_PhuThuy : NetworkBehaviour
 
         // Spawn point vừa tầm ngực/bụng Người chơi (cao 0.75m), dùng staffTipTransform nếu có
         Vector3 spawnPt = staffTipTransform != null ? staffTipTransform.position : (transform.position + transform.forward * 0.9f + Vector3.up * 0.75f);
+        spawnPt.y = Mathf.Max(spawnPt.y, transform.position.y + 0.6f);
 
         // Nếu targetPlayer bị null đúng lúc bắn, bắn thẳng về phía trước theo transform.forward
         Vector3 targetPos = (targetPlayer != null && IsPlayerAliveAndValid(targetPlayer))
@@ -1137,7 +1138,7 @@ public class Enemy5_PhuThuy : NetworkBehaviour
                     spellBall = proj.AddComponent<SpellBall>();
                 }
                 spellBall.caster = gameObject;
-                spellBall.speed = spellSpeed;
+                spellBall.speed = spellSpeed > 0f ? spellSpeed : 14f;
                 spellBall.damage = spellDamage;
                 spellBall.knockback = 1.5f;
 

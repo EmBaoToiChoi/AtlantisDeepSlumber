@@ -5,6 +5,11 @@ using System.Collections;
 
 public class Puzzle4Manager : NetworkBehaviour
 {
+    //cuscene
+    [Header("Cutscene Settings")]
+    public VideoCutsceneController completionCutscene;
+    public GameObject objectToEnableAfterCutscene;
+    //
     public EnergyColumn A;
     public EnergyColumn B;
     public EnergyColumn C;
@@ -182,35 +187,80 @@ public class Puzzle4Manager : NetworkBehaviour
     [ClientRpc]
     public void TeleportPlayerToCenterClientRpc(ulong objectId, Vector3 pos)
     {
-        if (!NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(objectId, out NetworkObject netObj))
-            return;
+        ulong localId = (NetworkManager.Singleton != null) ? NetworkManager.Singleton.LocalClientId : 999;
+        Debug.Log($"[PUZZLE4_DEBUG] ClientRpc nhận tại Client LocalClientId={localId} cho Target ObjectId={objectId}, Pos={pos}");
 
-        // Disable CharacterController tạm thời để set position không bị block
+        if (!NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(objectId, out NetworkObject netObj))
+        {
+            Debug.LogError($"[PUZZLE4_DEBUG] KHÔNG TÌM THẤY SpawnedObject cho ObjectId={objectId} trên Client {localId}!");
+            return;
+        }
+
+        StartCoroutine(TeleportPlayerRoutine(netObj, pos));
+    }
+
+    private IEnumerator TeleportPlayerRoutine(NetworkObject netObj, Vector3 pos)
+    {
+        if (netObj == null) yield break;
+
+        Debug.Log($"[PUZZLE4_DEBUG] TeleportPlayerRoutine BẮT ĐẦU cho '{netObj.name}' (OwnerClientId: {netObj.OwnerClientId}, IsOwner: {netObj.IsOwner}). Tọa độ cũ: {netObj.transform.position}, Tọa độ mới cần đến: {pos}");
+
         CharacterController cc = netObj.GetComponent<CharacterController>();
+        UnityEngine.AI.NavMeshAgent nav = netObj.GetComponent<UnityEngine.AI.NavMeshAgent>();
+        Rigidbody rb = netObj.GetComponent<Rigidbody>();
+
+        bool wasKinematic = false;
+        if (rb != null)
+        {
+            wasKinematic = rb.isKinematic;
+            rb.isKinematic = true;
+            rb.linearVelocity = Vector3.zero;
+            rb.angularVelocity = Vector3.zero;
+        }
+
         if (cc != null) cc.enabled = false;
+        if (nav != null) nav.enabled = false;
+
+        yield return new WaitForEndOfFrame();
 
         netObj.transform.position = pos;
-
-        // Bắt buộc gọi Teleport của NetworkTransform trên client làm chủ (Owner)
-        // để tránh bị hệ thống tự kéo giật ngược về vị trí cũ (ClientNetworkTransform)
-        if (netObj.IsOwner)
+        if (rb != null)
         {
-            Unity.Netcode.Components.NetworkTransform netTransform = netObj.GetComponent<Unity.Netcode.Components.NetworkTransform>();
-            if (netTransform != null)
+            rb.position = pos;
+        }
+
+        Debug.Log($"[PUZZLE4_DEBUG] Đã gán position = {pos}. Transform hiện tại: {netObj.transform.position}, Rigidbody position: {(rb != null ? rb.position : Vector3.zero)}");
+
+        Unity.Netcode.Components.NetworkTransform netTransform = netObj.GetComponent<Unity.Netcode.Components.NetworkTransform>();
+        if (netTransform != null)
+        {
+            try
             {
                 netTransform.Teleport(pos, netObj.transform.rotation, netObj.transform.localScale);
+                Debug.Log($"[PUZZLE4_DEBUG] NetworkTransform.Teleport đã gọi tới {pos} thành công!");
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogWarning($"[PUZZLE4_DEBUG] NetworkTransform.Teleport warning cho Client {netObj.OwnerClientId}: {e.Message}");
             }
         }
 
-        if (cc != null) cc.enabled = true;
+        Physics.SyncTransforms();
 
-        Rigidbody rb = netObj.GetComponent<Rigidbody>();
+        yield return new WaitForEndOfFrame();
+
         if (rb != null)
         {
+            rb.isKinematic = wasKinematic;
             rb.linearVelocity = Vector3.zero;
             rb.angularVelocity = Vector3.zero;
             rb.Sleep();
         }
+
+        if (cc != null) cc.enabled = true;
+        if (nav != null) nav.enabled = true;
+
+        Debug.Log($"[PUZZLE4_DEBUG] TeleportPlayerRoutine HOÀN THÀNH cho {netObj.name} (Client {netObj.OwnerClientId}). Tọa độ cuối cùng: {netObj.transform.position}");
     }
 
     void Start()
@@ -657,6 +707,41 @@ public class Puzzle4Manager : NetworkBehaviour
 
         if(centerExplosion != null)
             centerExplosion.SetActive(false);
+
+            if (IsServer)
+        {
+            StartCoroutine(RunCutsceneAndEnableObject());
+        }
+    }
+    // ==========================================
+    // [CÁC HÀM THÊM MỚI] Xử lý Cutscene & Bật Object
+    // ==========================================
+    private IEnumerator RunCutsceneAndEnableObject()
+    {
+        if (completionCutscene != null)
+        {
+            // Kích hoạt cutscene
+            completionCutscene.StartCutscene();
+            
+            // Đợi 1 giây để hệ thống video setup và biến isPlaying chuyển thành true
+            yield return new WaitForSeconds(1f);
+            
+            // Tạm dừng logic ở đây cho đến khi video chạy xong (isPlaying quay về false)
+            yield return new WaitUntil(() => !completionCutscene.isPlaying);
+        }
+
+        // Khi video xong, gọi ClientRpc để bật object trên toàn bộ Client
+        EnableRewardObjectClientRpc();
+    }
+
+    [ClientRpc]
+    private void EnableRewardObjectClientRpc()
+    {
+        if (objectToEnableAfterCutscene != null)
+        {
+            objectToEnableAfterCutscene.SetActive(true);
+            Debug.Log("[Puzzle4Manager] Cutscene hoàn tất - Đã bật Object thành công.");
+        }
     }
 
 }

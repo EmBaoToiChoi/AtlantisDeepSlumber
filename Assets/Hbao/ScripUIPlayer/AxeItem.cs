@@ -127,21 +127,26 @@ public class AxeItem : NetworkBehaviour
 
         if (isCarried)
         {
-            // TẮT TOÀN BỘ VẬT LÝ KHI ĐANG CẦM RÌU ĐỂ KHÔNG BỊ VƯỚNG TÁC ĐỘNG VẬT LÝ VỚI CÂY TRONG LÚC CHẶT
+            // CHUYỂN TOÀN BỘ COLLIDER THÀNH TRIGGER KHI ĐANG CẦM RÌU ĐỂ KHÔNG BỊ PHẢN LỰC VẬT LÝ VỚI CÂY KHI CHẶT
             if (colliders == null || colliders.Length == 0) colliders = GetComponents<Collider>();
             if (colliders != null)
             {
                 foreach (var col in colliders)
                 {
-                    if (col != null && !col.isTrigger)
+                    if (col != null)
                     {
-                        col.enabled = false;
+                        col.isTrigger = true; // Luôn là Trigger khi cầm trên tay
                     }
                 }
             }
 
             if (rb == null) rb = GetComponent<Rigidbody>();
-            if (rb != null) rb.isKinematic = true;
+            if (rb != null)
+            {
+                rb.isKinematic = true;
+                rb.linearVelocity = Vector3.zero;
+                rb.angularVelocity = Vector3.zero;
+            }
 
             var nt = GetComponent<Unity.Netcode.Components.NetworkTransform>();
             if (nt != null && nt.enabled) nt.enabled = false;
@@ -154,8 +159,9 @@ public class AxeItem : NetworkBehaviour
             {
                 foreach (var col in colliders)
                 {
-                    if (col != null && !col.isTrigger)
+                    if (col != null)
                     {
+                        col.isTrigger = false; // Trả lại solid collider khi ở trên đất
                         col.enabled = true;
                     }
                 }
@@ -187,7 +193,11 @@ public class AxeItem : NetworkBehaviour
                 {
                     foreach (var col in colliders)
                     {
-                        if (col != null && !col.isTrigger) col.enabled = true;
+                        if (col != null)
+                        {
+                            col.isTrigger = false;
+                            col.enabled = true;
+                        }
                     }
                 }
             }
@@ -199,8 +209,8 @@ public class AxeItem : NetworkBehaviour
             var playerObj = PlayerHUDController.LocalPlayerTarget as MonoBehaviour;
             if (playerObj != null)
             {
-                // Cho phép thả bằng phím G bất kể khoảng cách nếu đang cầm rìu
-                if ((isCarryingLocally || PlayerHUDController.isCarryingAxe) && Input.GetKeyDown(KeyCode.G))
+                // Cho phép thả bằng phím G nếu chính người chơi này đang cầm cây rìu này
+                if (isCarryingLocally && Input.GetKeyDown(KeyCode.G))
                 {
                     bool isNetworkActive = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening && IsSpawned;
                     if (isNetworkActive)
@@ -270,9 +280,21 @@ public class AxeItem : NetworkBehaviour
     }
 
     [ServerRpc(RequireOwnership = false)]
-    private void RequestDropServerRpc()
+    private void RequestDropServerRpc(ServerRpcParams rpcParams = default)
     {
         if (carryingPlayerId.Value == 0) return;
+
+        // XÁC NHẬN CHỈ NGƯỜI ĐANG CẦM RÌU NÀY MỚI CÓ QUYỀN THẢ RÌU NÀY
+        ulong senderClientId = rpcParams.Receive.SenderClientId;
+        if (NetworkManager.Singleton != null && NetworkManager.Singleton.SpawnManager != null && 
+            NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(carryingPlayerId.Value, out NetworkObject carrierNetObj))
+        {
+            if (carrierNetObj != null && carrierNetObj.OwnerClientId != senderClientId)
+            {
+                Debug.LogWarning($"[AxeItem] Rejecting RequestDropServerRpc from Client {senderClientId} because axe is carried by Client {carrierNetObj.OwnerClientId}");
+                return;
+            }
+        }
 
         ulong lastCarrierId = carryingPlayerId.Value;
         carryingPlayerId.Value = 0;
