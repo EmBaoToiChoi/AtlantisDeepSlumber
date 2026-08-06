@@ -81,7 +81,9 @@ public class Puzzle4TeleportTrigger : NetworkBehaviour
         // 1. CHẠY CUTSCENE (NẾU CÓ)
         if (cutsceneController != null)
         {
-            // Xóa playerSpots của VideoCutsceneController để tránh bị tự động teleport kéo giật về vị trí cũ sau khi xong phim
+            // Tắt hoàn toàn tự động teleport của VideoCutsceneController (cả lúc bắt đầu lẫn kết thúc phim)
+            cutsceneController.disableTeleport = true;
+
             if (cutsceneController.playerSpots != null)
             {
                 cutsceneController.playerSpots.Clear();

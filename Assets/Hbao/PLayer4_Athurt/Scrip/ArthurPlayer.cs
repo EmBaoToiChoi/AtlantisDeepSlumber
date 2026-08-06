@@ -3313,17 +3313,13 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         var axeItem = col.GetComponentInParent<AxeItem>();
         if (axeItem != null)
         {
-            // BẢO VỆ TUỆT ĐỐI: Solid physics collider (đứng trên đất) KHÔNG BAO GIỜ được tắt hoặc đổi sang trigger!
-            if (!col.isTrigger)
-            {
-                col.enabled = true;
-                return;
-            }
-            // Nếu cây rìu chưa được nhặt (nằm trên đất), không được tắt collider của nó
-            if (!PlayerHUDController.isCarryingAxe && transform.Find("Axe_Straight") == null)
+            // Nếu cây rìu chưa được nhặt (nằm trên đất), không được can thiệp vào collider của nó
+            if (!PlayerHUDController.isCarryingAxe && !IsHoldingAxe())
             {
                 return;
             }
+            // Khi đang cầm trên tay để chặt cây, đảm bảo luôn là Trigger để không gây phản lực vật lý cứng với cây
+            col.isTrigger = true;
         }
 
         if (enabled && col.gameObject != null)
@@ -3338,12 +3334,18 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (col != null)
         {
             var axeItem = col.GetComponentInParent<AxeItem>();
-            if (axeItem != null && !col.isTrigger)
+            if (axeItem != null)
             {
-                // KHÔNG BAO GIỜ biến solid collider thành trigger trên cây rìu
-                return;
+                if (!PlayerHUDController.isCarryingAxe && !IsHoldingAxe())
+                {
+                    return; // Không can thiệp rìu nằm trên đất
+                }
+                col.isTrigger = true;
             }
-            col.isTrigger = true;
+            else
+            {
+                col.isTrigger = true;
+            }
 
             // Đưa Hitbox về layer Ignore Raycast để hoàn toàn không bị Raycast/SphereCast của camera hay bất kỳ hệ thống nào ngắm trúng
             int ignoreRaycastLayer = LayerMask.NameToLayer("Ignore Raycast");

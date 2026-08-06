@@ -143,6 +143,43 @@ public class PlayerCheckpointManager : NetworkBehaviour
         return false;
     }
 
+    public override void OnNetworkSpawn()
+    {
+        base.OnNetworkSpawn();
+        if (networkPlayerCheckpoints != null)
+        {
+            networkPlayerCheckpoints.OnListChanged += OnNetworkCheckpointsChanged;
+        }
+    }
+
+    public override void OnNetworkDespawn()
+    {
+        base.OnNetworkDespawn();
+        if (networkPlayerCheckpoints != null)
+        {
+            networkPlayerCheckpoints.OnListChanged -= OnNetworkCheckpointsChanged;
+        }
+    }
+
+    private void OnNetworkCheckpointsChanged(NetworkListEvent<PlayerCheckpointData> changeEvent)
+    {
+        string localName = GetLocalPlayerName();
+        foreach (var data in networkPlayerCheckpoints)
+        {
+            if (data.CheckpointIndex > globalLatestCheckpointIndex)
+            {
+                globalLatestCheckpointIndex = data.CheckpointIndex;
+            }
+            if (!string.IsNullOrEmpty(localName) && data.PlayerName.ToString() == localName)
+            {
+                if (data.CheckpointIndex > localPlayerCheckpointIndex)
+                {
+                    localPlayerCheckpointIndex = data.CheckpointIndex;
+                }
+            }
+        }
+    }
+
     /// <summary>
     /// Đăng ký checkpoint mới khi 1 người chơi đi vào vùng kích hoạt.
     /// Checkpoint này sẽ được đồng bộ áp dụng cho TOÀN BỘ người chơi trong đội.
@@ -151,11 +188,16 @@ public class PlayerCheckpointManager : NetworkBehaviour
     {
         if (checkpoint == null) return;
 
+        int newIndex = checkpoint.checkpointIndex;
+
         // Luôn cập nhật chỉ số checkpoint cục bộ và checkpoint mới nhất
-        localPlayerCheckpointIndex = checkpoint.checkpointIndex;
-        if (checkpoint.checkpointIndex > globalLatestCheckpointIndex || globalLatestCheckpointIndex < 0)
+        if (newIndex > localPlayerCheckpointIndex)
         {
-            globalLatestCheckpointIndex = checkpoint.checkpointIndex;
+            localPlayerCheckpointIndex = newIndex;
+        }
+        if (newIndex > globalLatestCheckpointIndex || globalLatestCheckpointIndex < 0)
+        {
+            globalLatestCheckpointIndex = newIndex;
         }
 
         bool isNetwork = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
@@ -164,16 +206,16 @@ public class PlayerCheckpointManager : NetworkBehaviour
         {
             if (!IsServer)
             {
-                RegisterCheckpointServerRpc(checkpoint.checkpointIndex);
+                RegisterCheckpointServerRpc(newIndex);
             }
             else
             {
-                RegisterCheckpointInternal(checkpoint.checkpointIndex, player != null ? player.DisplayName : "");
+                RegisterCheckpointInternal(newIndex, player != null ? player.DisplayName : "");
             }
         }
         else
         {
-            Debug.Log($"[Standalone Checkpoint] Đã lưu checkpoint '{checkpoint.gameObject.name}' (Index: {checkpoint.checkpointIndex}) cho người chơi!");
+            Debug.Log($"[Standalone Checkpoint] Đã lưu checkpoint '{checkpoint.gameObject.name}' (Index: {newIndex}) cho người chơi!");
         }
     }
 
@@ -233,7 +275,24 @@ public class PlayerCheckpointManager : NetworkBehaviour
             }
         }
 
+        // Phát ClientRpc thông báo đồng bộ checkpoint index mới tới toàn bộ Client
+        SyncCheckpointClientRpc(targetIndex);
+
         Debug.Log($"[Server Checkpoint] Đã đồng bộ checkpoint index {targetIndex} cho TOÀN BỘ người chơi do '{activatorName}' kích hoạt!");
+    }
+
+    [ClientRpc]
+    private void SyncCheckpointClientRpc(int checkpointIndex)
+    {
+        if (checkpointIndex > globalLatestCheckpointIndex || globalLatestCheckpointIndex < 0)
+        {
+            globalLatestCheckpointIndex = checkpointIndex;
+        }
+        if (checkpointIndex > localPlayerCheckpointIndex)
+        {
+            localPlayerCheckpointIndex = checkpointIndex;
+        }
+        Debug.Log($"[Client Checkpoint] Đã cập nhật checkpoint index {checkpointIndex} trên Client từ Server.");
     }
 
     #region Standalone Respawn Logic
@@ -317,13 +376,14 @@ public class PlayerCheckpointManager : NetworkBehaviour
             if (zone != null) return zone.GetSpawnPosition();
         }
 
-        // 3. Dự phòng: Checkpoint đầu tiên trong danh sách checkpoints của Scene (Index 0)
-        if (checkpoints != null && checkpoints.Count > 0 && checkpoints[0] != null)
+        // 3. Dự phòng: Checkpoint cục bộ mới nhất của người chơi này
+        if (localPlayerCheckpointIndex >= 0)
         {
-            return checkpoints[0].GetSpawnPosition();
+            CheckpointZone zone = checkpoints.Find(c => c != null && c.checkpointIndex == localPlayerCheckpointIndex);
+            if (zone != null) return zone.GetSpawnPosition();
         }
 
-        // 4. Dự phòng: defaultSpawnPoint
+        // 4. Dự phòng: defaultSpawnPoint do lập trình viên cấu hình sẵn
         if (defaultSpawnPoint != null)
         {
             return defaultSpawnPoint.position;
@@ -339,7 +399,13 @@ public class PlayerCheckpointManager : NetworkBehaviour
             return localPlayerInitialPosition;
         }
 
-        // 6. Trường hợp không có checkpoint nào, thử tìm lại checkpoint index 0 trong scene lần nữa
+        // 6. Dự phòng: Checkpoint đầu tiên trong danh sách checkpoints của Scene (Index 0)
+        if (checkpoints != null && checkpoints.Count > 0 && checkpoints[0] != null)
+        {
+            return checkpoints[0].GetSpawnPosition();
+        }
+
+        // 7. Trường hợp không có checkpoint nào, thử tìm lại checkpoint index 0 trong scene lần nữa
         var firstCp = FindObjectOfType<CheckpointZone>();
         if (firstCp != null) return firstCp.GetSpawnPosition();
 
