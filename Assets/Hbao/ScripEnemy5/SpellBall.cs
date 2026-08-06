@@ -59,22 +59,16 @@ public class SpellBall : NetworkBehaviour
         }
         rb.useGravity = false;
         rb.isKinematic = true;
+        rb.constraints = RigidbodyConstraints.FreezeAll;
     }
 
     private void Update()
     {
-        // Nếu kẻ thi triển (caster) đã bị tiêu diệt / xoá khỏi màn chơi, tự động tiêu huỷ quả cầu lửa
-        if (caster == null || !caster.activeInHierarchy)
-        {
-            DespawnOrDestroy();
-            return;
-        }
-
-        // Di chuyển đạn về phía trước liên tục theo hướng transform.forward (bay song song mặt đất)
+        // Di chuyển đạn về phía trước liên tục theo hướng transform.forward
         if (!isHit)
         {
             float moveSpeed = speed > 0f ? speed : 14f;
-            transform.position += transform.forward * moveSpeed * Time.deltaTime;
+            transform.Translate(Vector3.forward * moveSpeed * Time.deltaTime);
         }
 
         // Chỉ Server hoặc Standalone quản lý thời gian sống của viên đạn
@@ -89,8 +83,13 @@ public class SpellBall : NetworkBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
-        if (isHit) return;
-        if (other == null) return;
+        if (isHit || other == null) return;
+
+        // Bỏ qua va chạm với các quả cầu lửa khác (tránh 3 quả cầu lửa va chạm lây nhau)
+        if (other.GetComponentInParent<SpellBall>() != null || other.CompareTag("Lua"))
+        {
+            return;
+        }
 
         // Bỏ qua va chạm với kẻ thi triển (Caster / Enemy5) và các bộ phận thuộc caster
         if (caster != null)
@@ -101,12 +100,26 @@ public class SpellBall : NetworkBehaviour
             }
         }
 
-        // Bỏ qua va chạm với quái vật khác / kẻ thi triển
+        // Bỏ qua va chạm với tất cả quái vật khác / kẻ thi triển
         if (other.CompareTag("Enemy") || 
             other.gameObject.layer == LayerMask.NameToLayer("Enemy") ||
             other.GetComponentInParent<Enemy5_PhuThuy>() != null ||
-            (other.GetComponentInParent<NetworkBehaviour>() != null && (other.name.ToLower().Contains("enemy") || other.name.ToLower().Contains("nguoi chim"))))
+            other.GetComponentInParent<Enemy1_DapBua>() != null ||
+            other.GetComponentInParent<Enemy2_Zombie>() != null ||
+            other.GetComponentInParent<Enemy3_Buaa>() != null ||
+            other.GetComponentInParent<Enemy4_Bongtoi>() != null ||
+            (other.name != null && (other.name.ToLower().Contains("enemy") || other.name.ToLower().Contains("nguoi chim"))))
         {
+            return;
+        }
+
+        // Kiểm tra xem có va chạm với Đá Nguyên Tố (ElementalRockPuzzle) không
+        ElementalRockPuzzle rock = other.GetComponentInParent<ElementalRockPuzzle>();
+        if (rock != null)
+        {
+            rock.NotifyElementHit(gameObject);
+            isHit = true;
+            DespawnOrDestroy();
             return;
         }
 
@@ -116,7 +129,11 @@ public class SpellBall : NetworkBehaviour
         bool isPlayer = other.CompareTag("Player") ||
                         other.gameObject.layer == LayerMask.NameToLayer("Player") ||
                         other.GetComponentInParent<IPlayerHUDTarget>() != null ||
-                        other.GetComponentInChildren<IPlayerHUDTarget>() != null;
+                        other.GetComponentInChildren<IPlayerHUDTarget>() != null ||
+                        other.GetComponentInParent<ArthurPlayer>() != null ||
+                        other.GetComponentInParent<ElenaPlayer>() != null ||
+                        other.GetComponentInParent<LeoPlayer>() != null ||
+                        other.GetComponentInParent<MayaPlayer>() != null;
 
         // Nếu KHÔNG PHẢI là Player: Bỏ qua va chạm nếu vừa mới sinh ra (dưới 0.25 giây) hoặc ở gần vị trí vừa sinh ra (< 1.2m)
         // để tránh việc đạn bị nổ/kẹt ngay lập tức do va chạm gậy (Staff), tay, hoặc mặt đất
@@ -130,11 +147,11 @@ public class SpellBall : NetworkBehaviour
 
         if (isPlayer)
         {
+            isHit = true;
             if (isServerOrStandalone)
             {
                 EnemyDamageHelper.DealDamage(other.transform, damage, transform.forward * knockback);
             }
-            isHit = true;
             DespawnOrDestroy();
         }
         else if (!other.isTrigger)
@@ -147,13 +164,25 @@ public class SpellBall : NetworkBehaviour
 
     private void DespawnOrDestroy()
     {
-        if (IsNetworkActive && IsServer && GetComponent<NetworkObject>() != null && GetComponent<NetworkObject>().IsSpawned)
+        var netObj = GetComponent<NetworkObject>();
+        if (netObj != null && netObj.IsSpawned)
         {
-            GetComponent<NetworkObject>().Despawn();
+            if (IsServer)
+            {
+                netObj.Despawn(true);
+            }
+            else
+            {
+                gameObject.SetActive(false);
+            }
         }
         else if (!IsNetworkActive)
         {
             Destroy(gameObject);
+        }
+        else
+        {
+            gameObject.SetActive(false);
         }
     }
 }
