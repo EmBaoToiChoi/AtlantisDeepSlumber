@@ -89712,12 +89712,8 @@ MonoBehaviour:
   videoUI: {fileID: 2072754211}
   blackScreenUI: {fileID: 1362276688}
   objectToHide: {fileID: 1067848955}
-  safeZone: {fileID: 1529819078}
-  playerSpots:
-  - {fileID: 1905615206}
-  - {fileID: 331556971}
-  - {fileID: 1343125357}
-  - {fileID: 1375980845}
+  safeZone: {fileID: 0}
+  playerSpots: []
   scriptNamesToDisable:
   - LeoPlayer
   - MayaPlayer
