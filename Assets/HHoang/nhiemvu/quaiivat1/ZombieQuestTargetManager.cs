@@ -40,9 +40,11 @@ public class ZombieQuestTargetManager : NetworkBehaviour, IQuestTrigger
     [Header("Next Actions (Sau Nhiệm Vụ)")]
     [Tooltip("Kéo cục Cutscene của bạn vào đây")]
     public VideoCutsceneController cutsceneToPlayAfter;
+
     
-    [Tooltip("Kéo Object bạn muốn BẬT LÊN sau khi xong nhiệm vụ (VD: Cánh cửa mới, ngọc rớt ra...)")]
-    public GameObject objectToEnableAfterQuest;
+    // ĐÃ ĐỔI THÀNH LIST CHO PHÉP KÉO NHIỀU OBJECT
+    [Tooltip("Kéo DANH SÁCH các Object bạn muốn BẬT LÊN sau khi xong nhiệm vụ")]
+    public List<GameObject> objectsToEnableAfterQuest = new List<GameObject>();
     // ==========================================
 
     // --- BIẾN ĐỒNG BỘ MẠNG ---
@@ -161,14 +163,17 @@ public class ZombieQuestTargetManager : NetworkBehaviour, IQuestTrigger
             CompleteQuestUI();
 
             // ===============================================
-            // BẬT LẠI COLLIDER THAY VÌ BẬT NGUYÊN OBJECT
+            // BẬT LẠI COLLIDER CHO TẤT CẢ OBJECT TRONG LIST
             // ===============================================
-            if (objectToEnableAfterQuest != null)
+            foreach (var obj in objectsToEnableAfterQuest)
             {
-                Collider col = objectToEnableAfterQuest.GetComponent<Collider>();
-                if (col != null)
+                if (obj != null)
                 {
-                    col.enabled = true; // Mở lại cho người chơi chạm vào
+                    Collider col = obj.GetComponent<Collider>();
+                    if (col != null)
+                    {
+                        col.enabled = true; // Mở lại cho người chơi chạm vào
+                    }
                 }
             }
             // ===============================================
@@ -211,4 +216,32 @@ public class ZombieQuestTargetManager : NetworkBehaviour, IQuestTrigger
             localHudCtl.ShowQuest(false, this);
         }
     }
+
+    // =========================================================================
+    // CODE THÊM MỚI Ở ĐÂY: Hàm public để bật thủ công ô "Box Collider"
+    // =========================================================================
+    [Header("Manual Box Collider Settings")]
+    [Tooltip("Kéo Object có chứa thành phần Box Collider mà bạn muốn bật thủ công vào đây")]
+    public GameObject targetBoxColliderObject;
+
+    /// <summary>
+    /// Gọi hàm này từ bất kỳ đâu (Button, Script khác...) để bật dấu tick Box Collider.
+    /// </summary>
+    public void EnableSpecificBoxCollider()
+    {
+        if (targetBoxColliderObject != null)
+        {
+            BoxCollider boxCol = targetBoxColliderObject.GetComponent<BoxCollider>();
+            if (boxCol != null)
+            {
+                boxCol.enabled = true; // Bật dấu tick "Box Collider"
+                Debug.Log($"[ZombieQuest] Đã bật thành công Box Collider trên: {targetBoxColliderObject.name}");
+            }
+            else
+            {
+                Debug.LogWarning($"[ZombieQuest] Object {targetBoxColliderObject.name} không có BoxCollider!");
+            }
+        }
+    }
+    // =========================================================================
 }
