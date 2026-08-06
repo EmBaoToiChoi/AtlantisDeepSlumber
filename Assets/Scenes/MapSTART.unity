@@ -89119,7 +89119,7 @@ MonoBehaviour:
   videoUI: {fileID: 2072754211}
   blackScreenUI: {fileID: 1362276688}
   objectToHide: {fileID: 1067848955}
-  safeZone: {fileID: 1529819078}
+  safeZone: {fileID: 0}
   playerSpots: []
   scriptNamesToDisable:
   - LeoPlayer
