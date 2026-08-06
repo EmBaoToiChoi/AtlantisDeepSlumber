@@ -5,6 +5,11 @@ using System.Collections;
 
 public class Puzzle4Manager : NetworkBehaviour
 {
+    //cuscene
+    [Header("Cutscene Settings")]
+    public VideoCutsceneController completionCutscene;
+    public GameObject objectToEnableAfterCutscene;
+    //
     public EnergyColumn A;
     public EnergyColumn B;
     public EnergyColumn C;
@@ -659,6 +664,41 @@ public class Puzzle4Manager : NetworkBehaviour
 
         if(centerExplosion != null)
             centerExplosion.SetActive(false);
+
+            if (IsServer)
+        {
+            StartCoroutine(RunCutsceneAndEnableObject());
+        }
+    }
+    // ==========================================
+    // [CÁC HÀM THÊM MỚI] Xử lý Cutscene & Bật Object
+    // ==========================================
+    private IEnumerator RunCutsceneAndEnableObject()
+    {
+        if (completionCutscene != null)
+        {
+            // Kích hoạt cutscene
+            completionCutscene.StartCutscene();
+            
+            // Đợi 1 giây để hệ thống video setup và biến isPlaying chuyển thành true
+            yield return new WaitForSeconds(1f);
+            
+            // Tạm dừng logic ở đây cho đến khi video chạy xong (isPlaying quay về false)
+            yield return new WaitUntil(() => !completionCutscene.isPlaying);
+        }
+
+        // Khi video xong, gọi ClientRpc để bật object trên toàn bộ Client
+        EnableRewardObjectClientRpc();
+    }
+
+    [ClientRpc]
+    private void EnableRewardObjectClientRpc()
+    {
+        if (objectToEnableAfterCutscene != null)
+        {
+            objectToEnableAfterCutscene.SetActive(true);
+            Debug.Log("[Puzzle4Manager] Cutscene hoàn tất - Đã bật Object thành công.");
+        }
     }
 
 }
