@@ -210342,8 +210342,11 @@ MonoBehaviour:
   - {fileID: 1448756644}
   - {fileID: 377120382}
   hideDelayAfterComplete: 3
-  cutsceneToPlayAfter: {fileID: 1913123925}
-  objectToEnableAfterQuest: {fileID: 1327183832}
+  cutsceneToPlayAfter: {fileID: 0}
+  objectsToEnableAfterQuest:
+  - {fileID: 1913123923}
+  - {fileID: 1327183832}
+  targetBoxColliderObject: {fileID: 0}
 --- !u!114 &1536427546
 MonoBehaviour:
   m_ObjectHideFlags: 0
