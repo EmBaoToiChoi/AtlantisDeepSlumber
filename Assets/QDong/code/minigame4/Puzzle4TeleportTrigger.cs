@@ -78,45 +78,32 @@ public class Puzzle4TeleportTrigger : NetworkBehaviour
 
     private IEnumerator PlayCutsceneAndTeleportAtEndRoutine(Puzzle4Manager p4Manager)
     {
-        bool hasTeleported = false;
-
-        // 1. CHẠY CUTSCENE
+        // 1. CHẠY CUTSCENE (NẾU CÓ)
         if (cutsceneController != null)
         {
+            // Xóa playerSpots của VideoCutsceneController để tránh bị tự động teleport kéo giật về vị trí cũ sau khi xong phim
+            if (cutsceneController.playerSpots != null)
+            {
+                cutsceneController.playerSpots.Clear();
+            }
+
             cutsceneController.StartCutscene();
 
-            // Đợi cho đến khi VideoPlayer chuẩn bị xong và bắt đầu Play
-            yield return new WaitUntil(() => cutsceneController.isPlaying && cutsceneController.videoPlayer != null && cutsceneController.videoPlayer.isPlaying);
-
-            var vp = cutsceneController.videoPlayer;
-
-            // Vòng lặp chờ canh thời gian: khi thời gian còn lại <= 1s (hoặc bị skip)
-            while (cutsceneController.isPlaying)
-            {
-                double timeRemaining = vp.length - vp.time;
-
-                // Nếu phim còn tầm 1 giây (hoặc người chơi nhấn ESC làm vp ngừng chạy) thì Teleport ngầm ngay
-                if (!hasTeleported && (timeRemaining <= teleportBeforeFinishTime || !vp.isPlaying))
-                {
-                    hasTeleported = true;
-                    Debug.Log($"[Puzzle4Teleport] Phim còn {timeRemaining:F1}s -> Thực hiện Teleport ngầm tới đĩa!");
-                    ExecuteTeleportToCenter(p4Manager);
-                }
-
-                yield return null;
-            }
+            // Đợi cho đến khi cutscene kết thúc hoàn toàn (hoặc người chơi nhấn ESC skip)
+            yield return new WaitUntil(() => cutsceneController.isPlaying);
+            yield return new WaitUntil(() => !cutsceneController.isPlaying);
         }
 
-        // Fallback: Nếu không có CutsceneController hoặc phim lỗi, đảm bảo luôn teleport
-        if (!hasTeleported)
-        {
-            ExecuteTeleportToCenter(p4Manager);
-        }
+        // 2. PHIM KẾT THÚC HOÀN TOÀN -> THỰC HIỆN TELEPORT TẤT CẢ NGƯỜI CHƠI LÊN ĐĨA
+        Debug.Log("[Puzzle4Teleport] Phim kết thúc hoàn toàn! Thực hiện Teleport tất cả người chơi tới đĩa...");
+        ExecuteTeleportToCenter(p4Manager);
 
-        // 2. BẮT ĐẦU MINIGAME SAU KHI PHIM KẾT THÚC HOÀN TOÀN
+        yield return new WaitForSeconds(0.2f);
+
+        // 3. BẮT ĐẦU MINIGAME
         if (p4Manager != null)
         {
-            Debug.Log("[Puzzle4Teleport] Phim kết thúc hoàn toàn! Bắt đầu minigame!");
+            Debug.Log("[Puzzle4Teleport] Bắt đầu minigame!");
             p4Manager.StartMinigameFromTeleport();
         }
         else
@@ -128,6 +115,17 @@ public class Puzzle4TeleportTrigger : NetworkBehaviour
     private void ExecuteTeleportToCenter(Puzzle4Manager p4Manager)
     {
         if (p4Manager == null) return;
+
+        // Fallback: Tự động tìm đĩa (BalanceManager) nếu chưa gán teleportTarget trong Inspector
+        if (teleportTarget == null)
+        {
+            BalanceManager bm = FindAnyObjectByType<BalanceManager>();
+            if (bm != null)
+            {
+                teleportTarget = bm.transform;
+                Debug.Log("[Puzzle4Teleport] Tự động gán teleportTarget từ BalanceManager: " + bm.name);
+            }
+        }
 
         int playerIndex = 0;
         GameObject[] allPlayers = GameObject.FindGameObjectsWithTag("Player");
