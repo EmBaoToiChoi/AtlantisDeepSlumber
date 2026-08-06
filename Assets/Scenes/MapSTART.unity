@@ -89120,11 +89120,7 @@ MonoBehaviour:
   blackScreenUI: {fileID: 1362276688}
   objectToHide: {fileID: 1067848955}
   safeZone: {fileID: 1529819078}
-  playerSpots:
-  - {fileID: 1905615206}
-  - {fileID: 331556971}
-  - {fileID: 1729066152}
-  - {fileID: 1343125357}
+  playerSpots: []
   scriptNamesToDisable:
   - LeoPlayer
   - MayaPlayer
@@ -290328,7 +290324,7 @@ Transform:
   m_GameObject: {fileID: 2127404097}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 1.21, z: 0}
+  m_LocalPosition: {x: 0, y: 1.59, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
