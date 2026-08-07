@@ -10713,7 +10713,7 @@ MonoBehaviour:
   m_text: "T\u1ED1t l\u1EAFm, s\u1ED1 l\u01B0\u1EE3ng g\u1ED7 n\xE0y \u0111\u1EE7
     \u0111\u1EC3 x\xE2y th\xE0nh c\u1EA7u r\u1ED3i."
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 5c7a92cce04a5ee478f36d2f5b537e05, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 6551b436ac6e447438384ddc0c7721bb, type: 2}
   m_sharedMaterial: {fileID: 97671534423474389, guid: 5c7a92cce04a5ee478f36d2f5b537e05, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
@@ -10738,8 +10738,8 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 40
-  m_fontSizeBase: 40
+  m_fontSize: 36
+  m_fontSizeBase: 36
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
@@ -10780,7 +10780,7 @@ MonoBehaviour:
   m_margin: {x: -287.48517, y: -61.708282, z: -176.86365, w: -77.10062}
   m_isUsingLegacyAnimationComponent: 0
   m_isVolumetricText: 0
-  m_hasFontAssetChanged: 0
+  m_hasFontAssetChanged: 1
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
 --- !u!222 &375338942
@@ -23064,6 +23064,8 @@ PlayableDirector:
     value: {fileID: 1611533158}
   - key: {fileID: 8699705805266525768, guid: b89c93c8d0fb51a4f9c1f928c2e523d7, type: 2}
     value: {fileID: 1658812655}
+  - key: {fileID: -9219720473236451759, guid: b89c93c8d0fb51a4f9c1f928c2e523d7, type: 2}
+    value: {fileID: 1768449703}
   m_ExposedReferences:
     m_References:
     - d9fee4e9aaa6e5249a2c581b3a75083b: {fileID: 1329118140}
@@ -27552,11 +27554,12 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "G\u1ED7 \u0111\xE3 \u0111\u1EE7. C\xE1c ng\u01B0\u01A1i mau d\u1EF1ng
-    c\u1EA7u cho ta! K\u1EBB n\xE0o l\u01A1i tay, ta s\u1EBD n\xE9m th\u1EB3ng xu\u1ED1ng
-    v\u1EF1c dung nham kia. B\u1EAFt \u0111\u1EA7u \u0111i!"
+  m_text: "T\u1ED1t l\u1EAFm, s\u1ED1 l\u01B0\u1EE3ng g\u1ED7 n\xE0y \u0111\xE3 \u0111\u1EE7
+    r\u1ED3i. C\xE1c ng\u01B0\u1EDDi mau d\u1EF1ng c\u1EA7u \u0111i! Nhanh tay l\xEAn
+    m\u1ED9t ch\xFAt, t\xF4i kh\xF4ng mu\u1ED1n n\xE1n l\u1EA1i ch\u1ED7 n\xE0y qu\xE1
+    l\xE2u \u0111\xE2u. B\u1EAFt \u0111\u1EA7u \u0111i!"
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 5c7a92cce04a5ee478f36d2f5b537e05, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 6551b436ac6e447438384ddc0c7721bb, type: 2}
   m_sharedMaterial: {fileID: 97671534423474389, guid: 5c7a92cce04a5ee478f36d2f5b537e05, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
@@ -27581,8 +27584,8 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 40
-  m_fontSizeBase: 40
+  m_fontSize: 36
+  m_fontSizeBase: 36
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
@@ -27623,7 +27626,7 @@ MonoBehaviour:
   m_margin: {x: -287.48517, y: -61.708282, z: -176.86365, w: -77.10062}
   m_isUsingLegacyAnimationComponent: 0
   m_isVolumetricText: 0
-  m_hasFontAssetChanged: 0
+  m_hasFontAssetChanged: 1
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
 --- !u!222 &1017656282
@@ -44191,8 +44194,8 @@ MonoBehaviour:
   m_text: "R\xF5 r\u1ED3i! M\u1ECDi ng\u01B0\u1EDDi v\xE0o v\u1ECB tr\xED \u0111i,
     b\u1EAFt \u0111\u1EA7u x\xE2y c\u1EA7u th\xF4i!"
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 5c7a92cce04a5ee478f36d2f5b537e05, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 6551b436ac6e447438384ddc0c7721bb, type: 2}
+  m_sharedMaterial: {fileID: -3394599491205377259, guid: 6551b436ac6e447438384ddc0c7721bb, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -44216,8 +44219,8 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 40
-  m_fontSizeBase: 40
+  m_fontSize: 36
+  m_fontSizeBase: 36
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
