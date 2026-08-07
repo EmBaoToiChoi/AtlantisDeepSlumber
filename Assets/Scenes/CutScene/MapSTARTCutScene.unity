@@ -23164,7 +23164,7 @@ AudioSource:
   m_Enabled: 1
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
-  m_audioClip: {fileID: 8300000, guid: 55f3a3c919b8d9c4ca29513e9039da95, type: 3}
+  m_audioClip: {fileID: 0}
   m_Resource: {fileID: 8300000, guid: 55f3a3c919b8d9c4ca29513e9039da95, type: 3}
   m_PlayOnAwake: 1
   m_Volume: 1
@@ -23572,6 +23572,7 @@ MonoBehaviour:
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -30101,7 +30102,7 @@ AudioSource:
   m_Enabled: 1
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
-  m_audioClip: {fileID: 8300000, guid: 7d3679f1eb66ebc41b178ac30b2757e9, type: 3}
+  m_audioClip: {fileID: 0}
   m_Resource: {fileID: 8300000, guid: 7d3679f1eb66ebc41b178ac30b2757e9, type: 3}
   m_PlayOnAwake: 1
   m_Volume: 1
@@ -30690,7 +30691,7 @@ AudioSource:
   m_Enabled: 1
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
-  m_audioClip: {fileID: 8300000, guid: acbc193d0f8fa344f975b56a43afe7a6, type: 3}
+  m_audioClip: {fileID: 0}
   m_Resource: {fileID: 8300000, guid: acbc193d0f8fa344f975b56a43afe7a6, type: 3}
   m_PlayOnAwake: 1
   m_Volume: 1
@@ -44830,6 +44831,7 @@ MonoBehaviour:
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -55785,6 +55787,7 @@ MonoBehaviour:
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -68677,6 +68680,7 @@ MonoBehaviour:
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -69704,7 +69708,7 @@ AudioSource:
   m_Enabled: 1
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
-  m_audioClip: {fileID: 8300000, guid: 7f5ca50a946bf90449acdc3fcfa83741, type: 3}
+  m_audioClip: {fileID: 0}
   m_Resource: {fileID: 8300000, guid: 7f5ca50a946bf90449acdc3fcfa83741, type: 3}
   m_PlayOnAwake: 1
   m_Volume: 1
@@ -79706,6 +79710,7 @@ MonoBehaviour:
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -82943,6 +82948,7 @@ MonoBehaviour:
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -85474,6 +85480,7 @@ MonoBehaviour:
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -90925,7 +90932,7 @@ AudioSource:
   m_Enabled: 1
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
-  m_audioClip: {fileID: 8300000, guid: 7d3679f1eb66ebc41b178ac30b2757e9, type: 3}
+  m_audioClip: {fileID: 0}
   m_Resource: {fileID: 8300000, guid: 7d3679f1eb66ebc41b178ac30b2757e9, type: 3}
   m_PlayOnAwake: 1
   m_Volume: 1
@@ -92510,6 +92517,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   ShowTopMostFoldoutHeaderGroup: 1
+  cutsceneController: {fileID: 0}
   DaChanCua1: {fileID: 1132074064}
   DaChanCua2: {fileID: 1133277655}
   daChanCuaChuaRoi: {fileID: 206957917}
@@ -95203,7 +95211,7 @@ Light:
   m_Enabled: 1
   serializedVersion: 11
   m_Type: 1
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Color: {r: 0.7247686, g: 0.8396226, b: 0.814013, a: 1}
   m_Intensity: 0.75
   m_Range: 2500
   m_SpotAngle: 30
@@ -107714,6 +107722,7 @@ MonoBehaviour:
   prerequisiteQuest: {fileID: 0}
   collapseVideo: {fileID: 0}
   cutsceneUI: {fileID: 0}
+  buildCompleteCutscene: {fileID: 0}
   playerMovementScriptNames: []
   objectToHideDuringCutscene: {fileID: 0}
   bridgeObstacle: {fileID: 0}
@@ -143309,6 +143318,7 @@ MonoBehaviour:
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -153287,6 +153297,7 @@ MonoBehaviour:
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -161421,6 +161432,7 @@ MonoBehaviour:
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -172306,6 +172318,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   ShowTopMostFoldoutHeaderGroup: 1
+  completionCutscene: {fileID: 0}
+  objectToEnableAfterCutscene: {fileID: 0}
   A: {fileID: 1255146431}
   B: {fileID: 308492518}
   C: {fileID: 97499273}
@@ -174479,7 +174493,7 @@ AudioSource:
   m_Enabled: 1
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
-  m_audioClip: {fileID: 8300000, guid: 364f149043eee434cb1a6abf63ec5b94, type: 3}
+  m_audioClip: {fileID: 0}
   m_Resource: {fileID: 8300000, guid: 364f149043eee434cb1a6abf63ec5b94, type: 3}
   m_PlayOnAwake: 1
   m_Volume: 1
@@ -187386,6 +187400,7 @@ MonoBehaviour:
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
