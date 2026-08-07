@@ -66918,6 +66918,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   ShowTopMostFoldoutHeaderGroup: 1
+  completionCutscene: {fileID: 0}
+  objectToEnableAfterCutscene: {fileID: 0}
   A: {fileID: 1223686451}
   B: {fileID: 1980623374}
   C: {fileID: 1086633229}
@@ -119109,7 +119111,7 @@ Light:
   m_Enabled: 1
   serializedVersion: 11
   m_Type: 1
-  m_Color: {r: 0, g: 0.6784314, b: 0.70980394, a: 1}
+  m_Color: {r: 0.66415983, g: 0.7056295, b: 0.7075472, a: 1}
   m_Intensity: 1.62
   m_Range: 10
   m_SpotAngle: 30
@@ -119149,7 +119151,7 @@ Light:
     serializedVersion: 2
     m_Bits: 4294967295
   m_RenderingLayerMask: 1
-  m_Lightmapping: 2
+  m_Lightmapping: 4
   m_LightShadowCasterMode: 0
   m_AreaSize: {x: 1, y: 1}
   m_BounceIntensity: 1
@@ -151787,7 +151789,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 2
+      value: 4.65
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode

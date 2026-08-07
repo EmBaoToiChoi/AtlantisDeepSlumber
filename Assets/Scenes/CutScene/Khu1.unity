@@ -45098,7 +45098,7 @@ Terrain:
   m_GameObject: {fileID: 733476945}
   m_Enabled: 1
   serializedVersion: 6
-  m_TerrainData: {fileID: 15600000, guid: 1419c69c1ef1a61449eff1b7811bf470, type: 2}
+  m_TerrainData: {fileID: 0}
   m_TreeDistance: 5000
   m_TreeBillboardDistance: 50
   m_TreeCrossFadeLength: 5
@@ -102967,7 +102967,7 @@ Light:
   m_Enabled: 1
   serializedVersion: 11
   m_Type: 1
-  m_Color: {r: 1, g: 0.95686275, b: 0.8392157, a: 1}
+  m_Color: {r: 0.6468049, g: 0.8018868, b: 0.7796417, a: 1}
   m_Intensity: 1
   m_Range: 10
   m_SpotAngle: 30
@@ -133929,6 +133929,7 @@ MonoBehaviour:
   prerequisiteQuest: {fileID: 0}
   collapseVideo: {fileID: 0}
   cutsceneUI: {fileID: 0}
+  buildCompleteCutscene: {fileID: 0}
   playerMovementScriptNames: []
   objectToHideDuringCutscene: {fileID: 0}
   bridgeObstacle: {fileID: 0}
