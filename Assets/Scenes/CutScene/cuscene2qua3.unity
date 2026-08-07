@@ -23093,7 +23093,7 @@ MonoBehaviour:
       m_Calls: []
   m_text: "\xE0 th\xEC ra l\xE0 nh\u01B0 v\u1EADy, t\xF4i hi\u1EC3u r\u1ED3i."
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 5c7a92cce04a5ee478f36d2f5b537e05, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 6551b436ac6e447438384ddc0c7721bb, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
@@ -29923,7 +29923,7 @@ MonoBehaviour:
     c\xE1c ng\u01B0\u01A1i c\xF2n nh\u1EDB 2 vi\xEAn \u0111\xE1 c\xE1c ng\u01B0\u01A1i
     \u0111\xE3 nh\u1EB7t ban n\xE3y \u1EDF m\xEA cung kh\xF4ng."
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 5c7a92cce04a5ee478f36d2f5b537e05, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 6551b436ac6e447438384ddc0c7721bb, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
@@ -35896,7 +35896,7 @@ MonoBehaviour:
   m_text: "c\xE1c ng\u01B0\u01A1i h\xE3y \u0111\u1EB7t 2 vi\xEAn \u0111\xE1 nguy\xEAn
     t\u1ED1 \u0111\xF3 v\xE0o \u0111\xE2y."
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 5c7a92cce04a5ee478f36d2f5b537e05, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 6551b436ac6e447438384ddc0c7721bb, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
@@ -51323,7 +51323,7 @@ MonoBehaviour:
     b\u1ECBt k\xEDn h\u1EBFt r\u1ED3i! Kh\xF4ng ch\u1EC9 v\u1EADy, qu\xE1i c\xF2n
     \u0111ang \u1ED3 \u1EA1t xu\u1EA5t hi\u1EC7n k\xECa!"
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 5c7a92cce04a5ee478f36d2f5b537e05, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 6551b436ac6e447438384ddc0c7721bb, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
@@ -72831,7 +72831,7 @@ MonoBehaviour:
   m_text: "Su\xFDt ch\xFAt n\u1EEFa th\xEC th\xE0nh \u0111\u1ED1ng th\u1ECBt b\u0103m
     v\u1EDBi c\xE1i b\u1EABy b\xE1nh r\u0103ng \u0111\xF3 r\u1ED3i..."
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 5c7a92cce04a5ee478f36d2f5b537e05, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 6551b436ac6e447438384ddc0c7721bb, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
