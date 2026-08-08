@@ -37,6 +37,19 @@ public class PlayerHUDController : MonoBehaviour
             {
                 localPlayerTarget = null;
             }
+            if (localPlayerTarget == null)
+            {
+                var allMBs = FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None);
+                foreach (var mb in allMBs)
+                {
+                    if (mb is IPlayerHUDTarget target)
+                    {
+                        localPlayerTarget = target;
+                        Debug.Log($"[PlayerHUDController] LocalPlayerTarget tự động tìm thấy: {mb.gameObject.name}");
+                        break;
+                    }
+                }
+            }
             return localPlayerTarget;
         }
         set
@@ -923,6 +936,7 @@ public class PlayerHUDController : MonoBehaviour
         {
             crosshairElement = new VisualElement();
             crosshairElement.name = "aim-crosshair";
+            crosshairElement.pickingMode = PickingMode.Ignore; // Tránh chặn click chuột trên inventory
             crosshairElement.style.position = Position.Absolute;
             crosshairElement.style.left = Length.Percent(50f);
             crosshairElement.style.top = Length.Percent(50f);
@@ -964,6 +978,16 @@ public class PlayerHUDController : MonoBehaviour
         }
 
         isUIInitialized = true;
+
+        // Đảm bảo UIDocument có PanelEventHandler + PanelRaycaster để nhận pointer events
+        EnsurePanelEventComponents();
+
+        // Đăng ký listener cấp root để chẩn đoán xem panel có nhận pointer events hay không
+        root.RegisterCallback<PointerDownEvent>(evt =>
+        {
+            Debug.Log($"[HUD ROOT] PointerDownEvent nhận được! target={evt.target}, button={evt.button}, pos={evt.position}");
+        }, TrickleDown.TrickleDown);
+
         Debug.Log("[PlayerHUDController] UI Toolkit đã được khởi tạo thành công!");
 
         if (lastSelectedProfileIndex != -1)
@@ -1009,6 +1033,7 @@ public class PlayerHUDController : MonoBehaviour
     void Update()
     {
         InitializeUI(); // Đảm bảo khởi tạo nếu OnEnable chạy trước khi rootVisualElement sẵn sàng
+        HandleManualInventoryClick(); // Hệ thống fallback xử lý click chuột thủ công khi Inventory mở
         UpdateTeammatesHUD();
         UpdateMinimap();
         UpdateWorldMap();
@@ -1500,16 +1525,28 @@ public class PlayerHUDController : MonoBehaviour
         {
             inventoryOverlay.ToggleInClassList("show-inventory");
             bool isNowVisible = inventoryOverlay.ClassListContains("show-inventory");
-            inventoryOverlay.pickingMode = isNowVisible ? PickingMode.Position : PickingMode.Ignore; // Kích hoạt cản/nhận chuột khi hiện
-            Debug.Log("Đã " + (isNowVisible ? "mở" : "đóng") + " hành trang");
+            inventoryOverlay.pickingMode = isNowVisible ? PickingMode.Position : PickingMode.Ignore;
+
+            // Cưỡng ép visibility/opacity trong code để không phụ thuộc CSS transition
+            if (isNowVisible)
+            {
+                inventoryOverlay.style.visibility = Visibility.Visible;
+                inventoryOverlay.style.opacity = 1f;
+            }
+
+            Debug.Log("Đã " + (isNowVisible ? "mở" : "đóng") + " hành trang" +
+                      $" | pickingMode={inventoryOverlay.pickingMode}" +
+                      $" | visibility={inventoryOverlay.resolvedStyle.visibility}" +
+                      $" | panel={inventoryOverlay.panel != null}");
 
             // Đồng bộ trạng thái static UI
             isAnyUIOpen = isNowVisible;
 
-            // Đảm bảo EventSystem được cấu hình đúng khi mở UI
+            // Đảm bảo EventSystem và PanelEventHandler được cấu hình đúng khi mở UI
             if (isNowVisible)
             {
                 SetupEventSystemForInputSystem();
+                EnsurePanelEventComponents();
 
                 // Cập nhật ngay toàn bộ vật phẩm đã lưu và giao diện nâng cấp của người chơi khi mở Tab
                 if (LocalPlayerTarget != null)
@@ -2747,6 +2784,124 @@ public class PlayerHUDController : MonoBehaviour
         }
         standalone.enabled = true;
 #endif
+    }
+
+    /// <summary>
+    /// Đảm bảo UIDocument có PanelEventHandler và PanelRaycaster để nhận pointer events.
+    /// Trong Unity 6, hai component này thường được auto-add nhưng có thể bị thiếu
+    /// khi GameObject bị disable/enable lại (HUD switching).
+    /// </summary>
+    private void EnsurePanelEventComponents()
+    {
+        if (uiDocument == null) return;
+        GameObject go = uiDocument.gameObject;
+
+        // PanelEventHandler: cần thiết để UI Toolkit nhận events từ EventSystem
+        var handler = go.GetComponent<UnityEngine.UIElements.PanelEventHandler>();
+        if (handler == null)
+        {
+            handler = go.AddComponent<UnityEngine.UIElements.PanelEventHandler>();
+            Debug.Log("[PlayerHUDController] Đã tạo PanelEventHandler trên UIDocument!");
+        }
+        handler.enabled = true;
+
+        // PanelRaycaster: cần thiết để EventSystem raycast tới UI Toolkit panel
+        var raycaster = go.GetComponent<UnityEngine.UIElements.PanelRaycaster>();
+        if (raycaster == null)
+        {
+            raycaster = go.AddComponent<UnityEngine.UIElements.PanelRaycaster>();
+            Debug.Log("[PlayerHUDController] Đã tạo PanelRaycaster trên UIDocument!");
+        }
+        raycaster.enabled = true;
+
+        Debug.Log($"[PlayerHUDController] EnsurePanelEventComponents: handler={handler.enabled}, raycaster={raycaster.enabled}");
+    }
+
+    /// <summary>
+    /// Hệ thống Fallback: Xử lý click chuột thủ công bằng panel.Pick() khi Inventory mở.
+    /// Gọi trong Update() để bypass hoàn toàn EventSystem pipeline nếu pointer events không hoạt động.
+    /// </summary>
+    private void HandleManualInventoryClick()
+    {
+        if (!isAnyUIOpen) return;
+        if (inventoryOverlay == null || !inventoryOverlay.ClassListContains("show-inventory")) return;
+        if (uiDocument == null || uiDocument.rootVisualElement == null) return;
+
+        var panel = uiDocument.rootVisualElement.panel;
+        if (panel == null) return;
+
+        // Chuyển đổi tọa độ chuột từ Unity Screen (y=0 ở dưới) sang GUI Screen (y=0 ở trên)
+        Vector2 guiMousePos = new Vector2(Input.mousePosition.x, Screen.height - Input.mousePosition.y);
+
+        // Kiểm tra chuột trái
+        if (Input.GetMouseButtonDown(0))
+        {
+            Vector2 panelPos = RuntimePanelUtils.ScreenToPanel(panel, guiMousePos);
+            VisualElement picked = panel.Pick(panelPos);
+            if (picked != null)
+            {
+                Debug.Log($"[Inventory Fallback] Click trái tại: {picked.name ?? picked.GetType().Name} (class: {string.Join(",", picked.GetClasses())})");
+
+                // Kiểm tra nếu click vào inventory slot (hoặc con của slot)
+                VisualElement slotElement = picked;
+                while (slotElement != null && !(slotElement.name != null && slotElement.name.StartsWith("inventory-slot-")))
+                {
+                    slotElement = slotElement.parent;
+                }
+                if (slotElement != null)
+                {
+                    int slotIdx = int.Parse(slotElement.name.Replace("inventory-slot-", ""));
+                    Debug.Log($"[Inventory Fallback] Phát hiện click trái vào slot {slotIdx}!");
+                }
+
+                // Kiểm tra nếu click vào nút upgrade (hoặc nhãn chữ bên trong nút)
+                VisualElement currElem = picked;
+                Button btn = null;
+                while (currElem != null)
+                {
+                    if (currElem is Button b) { btn = b; break; }
+                    currElem = currElem.parent;
+                }
+
+                if (btn != null)
+                {
+                    Debug.Log($"[Inventory Fallback] Kích hoạt nâng cấp qua Button: {btn.name}!");
+                    if (btn.name == "btn-upgrade-hp") UpgradeStat(0);
+                    else if (btn.name == "btn-upgrade-mp") UpgradeStat(1);
+                    else if (btn.name == "btn-upgrade-cooldown") UpgradeStat(2);
+                    else if (btn.name == "btn-upgrade-damage") UpgradeStat(3);
+                }
+
+                // Kiểm tra nếu click vào overlay background ngoài khung (đóng inventory)
+                if (picked == inventoryOverlay)
+                {
+                    ToggleInventory();
+                }
+            }
+        }
+
+        // Kiểm tra chuột phải — sử dụng vật phẩm
+        if (Input.GetMouseButtonDown(1))
+        {
+            Vector2 panelPos = RuntimePanelUtils.ScreenToPanel(panel, guiMousePos);
+            VisualElement picked = panel.Pick(panelPos);
+            if (picked != null)
+            {
+                Debug.Log($"[Inventory Fallback] Click phải tại: {picked.name ?? picked.GetType().Name}");
+
+                VisualElement slotElement = picked;
+                while (slotElement != null && !(slotElement.name != null && slotElement.name.StartsWith("inventory-slot-")))
+                {
+                    slotElement = slotElement.parent;
+                }
+                if (slotElement != null)
+                {
+                    int slotIdx = int.Parse(slotElement.name.Replace("inventory-slot-", ""));
+                    Debug.Log($"[Inventory Fallback] Phát hiện click phải vào slot {slotIdx} → UseItem!");
+                    UseItem(slotIdx);
+                }
+            }
+        }
     }
 
     private void UpdateTeammatesHUD()
