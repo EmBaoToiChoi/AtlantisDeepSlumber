@@ -37,6 +37,19 @@ public class PlayerHUDController : MonoBehaviour
             {
                 localPlayerTarget = null;
             }
+            if (localPlayerTarget == null)
+            {
+                var allMBs = FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None);
+                foreach (var mb in allMBs)
+                {
+                    if (mb is IPlayerHUDTarget target)
+                    {
+                        localPlayerTarget = target;
+                        Debug.Log($"[PlayerHUDController] LocalPlayerTarget tự động tìm thấy: {mb.gameObject.name}");
+                        break;
+                    }
+                }
+            }
             return localPlayerTarget;
         }
         set
@@ -774,6 +787,9 @@ public class PlayerHUDController : MonoBehaviour
         if (inventoryOverlay != null)
         {
             inventoryOverlay.pickingMode = PickingMode.Ignore; // Mặc định ẩn, bỏ qua cản chuột
+            inventoryOverlay.style.display = DisplayStyle.None;
+            inventoryOverlay.style.visibility = Visibility.Hidden;
+            inventoryOverlay.style.opacity = 0f;
             inventoryOverlay.RegisterCallback<PointerDownEvent>(evt =>
             {
                 if (evt.target == inventoryOverlay)
@@ -786,6 +802,16 @@ public class PlayerHUDController : MonoBehaviour
             var invFrame = inventoryOverlay.Q<VisualElement>(className: "inventory-frame");
             if (invFrame != null) invFrame.pickingMode = PickingMode.Position;
 
+            // Đảm bảo mọi container trung gian đều nhận pointer events
+            var invContent = inventoryOverlay.Q<VisualElement>(className: "inventory-content");
+            if (invContent != null) invContent.pickingMode = PickingMode.Position;
+
+            var invLeftPanel = inventoryOverlay.Q<VisualElement>(className: "inventory-left-panel");
+            if (invLeftPanel != null) invLeftPanel.pickingMode = PickingMode.Position;
+
+            var invHeader = inventoryOverlay.Q<VisualElement>(className: "inventory-header");
+            if (invHeader != null) invHeader.pickingMode = PickingMode.Position;
+
             var slotsContainer = inventoryOverlay.Q<VisualElement>(className: "inventory-slots-container");
             if (slotsContainer != null) slotsContainer.pickingMode = PickingMode.Position;
 
@@ -794,6 +820,20 @@ public class PlayerHUDController : MonoBehaviour
 
             var upgradeRowContainer = inventoryOverlay.Q<VisualElement>(className: "upgrade-row-container");
             if (upgradeRowContainer != null) upgradeRowContainer.pickingMode = PickingMode.Position;
+
+            // Đảm bảo từng upgrade-row nhận click cho nút upgrade bên trong
+            var upgradeRows = inventoryOverlay.Query<VisualElement>(className: "upgrade-row").ToList();
+            foreach (var row in upgradeRows)
+            {
+                row.pickingMode = PickingMode.Position;
+            }
+
+            // Đảm bảo preview panel cũng nhận pointer events
+            var previewContainer = inventoryOverlay.Q<VisualElement>(className: "inventory-preview-container");
+            if (previewContainer != null) previewContainer.pickingMode = PickingMode.Position;
+
+            var previewCard = inventoryOverlay.Q<VisualElement>(className: "inventory-preview-card");
+            if (previewCard != null) previewCard.pickingMode = PickingMode.Position;
         }
         weaponWarning = root.Q<Label>("weapon-warning");
         weaponLock2 = root.Q<VisualElement>("weapon-lock-2");
@@ -853,6 +893,7 @@ public class PlayerHUDController : MonoBehaviour
             int index = i;
             VisualElement slot = inventorySlotsUI[i];
             slot.name = $"inventory-slot-{index}";
+            slot.pickingMode = PickingMode.Position; // Đảm bảo nhận click chuột
 
             // Vẽ nhãn số thứ tự mờ ở góc ô hành trang
             slot.Clear();
@@ -898,6 +939,7 @@ public class PlayerHUDController : MonoBehaviour
         {
             crosshairElement = new VisualElement();
             crosshairElement.name = "aim-crosshair";
+            crosshairElement.pickingMode = PickingMode.Ignore; // Tránh chặn click chuột trên inventory
             crosshairElement.style.position = Position.Absolute;
             crosshairElement.style.left = Length.Percent(50f);
             crosshairElement.style.top = Length.Percent(50f);
@@ -939,6 +981,16 @@ public class PlayerHUDController : MonoBehaviour
         }
 
         isUIInitialized = true;
+
+        // Đảm bảo UIDocument có PanelEventHandler + PanelRaycaster để nhận pointer events
+        EnsurePanelEventComponents();
+
+        // Đăng ký listener cấp root để chẩn đoán xem panel có nhận pointer events hay không
+        root.RegisterCallback<PointerDownEvent>(evt =>
+        {
+            Debug.Log($"[HUD ROOT] PointerDownEvent nhận được! target={evt.target}, button={evt.button}, pos={evt.position}");
+        }, TrickleDown.TrickleDown);
+
         Debug.Log("[PlayerHUDController] UI Toolkit đã được khởi tạo thành công!");
 
         if (lastSelectedProfileIndex != -1)
@@ -984,6 +1036,7 @@ public class PlayerHUDController : MonoBehaviour
     void Update()
     {
         InitializeUI(); // Đảm bảo khởi tạo nếu OnEnable chạy trước khi rootVisualElement sẵn sàng
+        HandleManualInventoryClick(); // Hệ thống fallback xử lý click chuột thủ công khi Inventory mở
         UpdateTeammatesHUD();
         UpdateMinimap();
         UpdateWorldMap();
@@ -1475,16 +1528,35 @@ public class PlayerHUDController : MonoBehaviour
         {
             inventoryOverlay.ToggleInClassList("show-inventory");
             bool isNowVisible = inventoryOverlay.ClassListContains("show-inventory");
-            inventoryOverlay.pickingMode = isNowVisible ? PickingMode.Position : PickingMode.Ignore; // Kích hoạt cản/nhận chuột khi hiện
-            Debug.Log("Đã " + (isNowVisible ? "mở" : "đóng") + " hành trang");
+            inventoryOverlay.pickingMode = isNowVisible ? PickingMode.Position : PickingMode.Ignore;
+
+            // Cưỡng ép visibility/opacity/display trong code để mở/đóng hoàn toàn
+            if (isNowVisible)
+            {
+                inventoryOverlay.style.display = DisplayStyle.Flex;
+                inventoryOverlay.style.visibility = Visibility.Visible;
+                inventoryOverlay.style.opacity = 1f;
+            }
+            else
+            {
+                inventoryOverlay.style.display = DisplayStyle.None;
+                inventoryOverlay.style.visibility = Visibility.Hidden;
+                inventoryOverlay.style.opacity = 0f;
+            }
+
+            Debug.Log("Đã " + (isNowVisible ? "mở" : "đóng") + " hành trang" +
+                      $" | pickingMode={inventoryOverlay.pickingMode}" +
+                      $" | visibility={inventoryOverlay.resolvedStyle.visibility}" +
+                      $" | panel={inventoryOverlay.panel != null}");
 
             // Đồng bộ trạng thái static UI
             isAnyUIOpen = isNowVisible;
 
-            // Đảm bảo EventSystem được cấu hình đúng khi mở UI
+            // Đảm bảo EventSystem và PanelEventHandler được cấu hình đúng khi mở UI
             if (isNowVisible)
             {
                 SetupEventSystemForInputSystem();
+                EnsurePanelEventComponents();
 
                 // Cập nhật ngay toàn bộ vật phẩm đã lưu và giao diện nâng cấp của người chơi khi mở Tab
                 if (LocalPlayerTarget != null)
@@ -1520,10 +1592,12 @@ public class PlayerHUDController : MonoBehaviour
                 }
             }
 
-            // Ẩn tooltip khi đóng hành trang để tránh tình trạng tooltip hiển thị thừa
-            if (!isNowVisible && tooltipElement != null)
+            // Ẩn tooltip và drag ghost khi đóng hành trang để tránh tình trạng hiển thị thừa
+            if (!isNowVisible)
             {
-                tooltipElement.style.opacity = 0f;
+                if (tooltipElement != null) tooltipElement.style.opacity = 0f;
+                if (dragGhost != null) dragGhost.style.display = DisplayStyle.None;
+                draggedSlotIndex = -1;
             }
 
             // Tự động lưu trạng thái người chơi vào MongoDB khi đóng hành trang
@@ -1955,6 +2029,7 @@ public class PlayerHUDController : MonoBehaviour
     // =========================================================================
     private void OnSlotPointerDown(PointerDownEvent evt, int index)
     {
+        Debug.Log($"[Inventory] OnSlotPointerDown: slot={index}, button={evt.button}, target={evt.target}");
         // 1. Kiểm tra nếu là Click chuột phải (evt.button == 1) -> Sử dụng vật phẩm
         if (evt.button == 1)
         {
@@ -2694,21 +2769,334 @@ public class PlayerHUDController : MonoBehaviour
         activeES.gameObject.SetActive(true);
         activeES.enabled = true;
 
+#if ENABLE_INPUT_SYSTEM
+        // Ưu tiên InputSystemUIInputModule (New Input System) — tạo nếu chưa có
+        var inputSystemModule = activeES.GetComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
+        if (inputSystemModule == null)
+        {
+            inputSystemModule = activeES.gameObject.AddComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
+        }
+        inputSystemModule.enabled = true;
+        inputSystemModule.AssignDefaultActions();
+
+        // TẮT StandaloneInputModule vì nó xung đột với InputSystemUIInputModule
+        // Khi cả hai cùng enabled, StandaloneInputModule "nuốt" pointer events
+        // khiến UI Toolkit không nhận được click chuột
+        var standalone = activeES.GetComponent<UnityEngine.EventSystems.StandaloneInputModule>();
+        if (standalone != null)
+        {
+            standalone.enabled = false;
+        }
+#else
+        // Fallback: Chỉ dùng StandaloneInputModule khi KHÔNG có New Input System
         var standalone = activeES.GetComponent<UnityEngine.EventSystems.StandaloneInputModule>();
         if (standalone == null)
         {
             standalone = activeES.gameObject.AddComponent<UnityEngine.EventSystems.StandaloneInputModule>();
         }
         standalone.enabled = true;
-
-#if ENABLE_INPUT_SYSTEM
-        var inputSystemModule = activeES.GetComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
-        if (inputSystemModule != null)
-        {
-            inputSystemModule.enabled = true;
-            inputSystemModule.AssignDefaultActions();
-        }
 #endif
+    }
+
+    /// <summary>
+    /// Đảm bảo UIDocument có PanelEventHandler và PanelRaycaster để nhận pointer events.
+    /// Trong Unity 6, hai component này thường được auto-add nhưng có thể bị thiếu
+    /// khi GameObject bị disable/enable lại (HUD switching).
+    /// </summary>
+    private void EnsurePanelEventComponents()
+    {
+        if (uiDocument == null) return;
+        GameObject go = uiDocument.gameObject;
+
+        // PanelEventHandler: cần thiết để UI Toolkit nhận events từ EventSystem
+        var handler = go.GetComponent<UnityEngine.UIElements.PanelEventHandler>();
+        if (handler == null)
+        {
+            handler = go.AddComponent<UnityEngine.UIElements.PanelEventHandler>();
+            Debug.Log("[PlayerHUDController] Đã tạo PanelEventHandler trên UIDocument!");
+        }
+        handler.enabled = true;
+
+        // PanelRaycaster: cần thiết để EventSystem raycast tới UI Toolkit panel
+        var raycaster = go.GetComponent<UnityEngine.UIElements.PanelRaycaster>();
+        if (raycaster == null)
+        {
+            raycaster = go.AddComponent<UnityEngine.UIElements.PanelRaycaster>();
+            Debug.Log("[PlayerHUDController] Đã tạo PanelRaycaster trên UIDocument!");
+        }
+        raycaster.enabled = true;
+
+        Debug.Log($"[PlayerHUDController] EnsurePanelEventComponents: handler={handler.enabled}, raycaster={raycaster.enabled}");
+    }
+
+    /// <summary>
+    /// Hệ thống Fallback: Xử lý click chuột thủ công bằng panel.Pick() khi Inventory mở.
+    /// Gọi trong Update() để bypass hoàn toàn EventSystem pipeline nếu pointer events không hoạt động.
+    /// </summary>
+    /// <summary>
+    /// Set sprite background cho dragGhost từ tên vật phẩm
+    /// </summary>
+    private void SetDragGhostSprite(string itemName)
+    {
+        if (dragGhost == null) return;
+        if (itemName == "RepairHammer" && repairHammerSprite != null)
+        {
+            dragGhost.style.backgroundImage = new StyleBackground(repairHammerSprite);
+        }
+        else if (itemName == "Ngoc1" && ngoc1Sprite != null)
+        {
+            dragGhost.style.backgroundImage = new StyleBackground(ngoc1Sprite);
+        }
+        else if (itemName == "Ngoc2" && ngoc2Sprite != null)
+        {
+            dragGhost.style.backgroundImage = new StyleBackground(ngoc2Sprite);
+        }
+        else if ((itemName.Equals("WoodLog", System.StringComparison.OrdinalIgnoreCase) || 
+                  itemName.Equals("ThanhGo", System.StringComparison.OrdinalIgnoreCase) ||
+                  itemName.Equals("wood_stack", System.StringComparison.OrdinalIgnoreCase)) && woodLogSprite != null)
+        {
+            dragGhost.style.backgroundImage = new StyleBackground(woodLogSprite);
+        }
+        else
+        {
+            dragGhost.style.backgroundImage = StyleKeyword.Null;
+        }
+    }
+
+    /// <summary>
+    /// Cập nhật hiển thị Tooltip chú thích vật phẩm theo vị trí con trỏ chuột
+    /// </summary>
+    private void UpdateItemTooltipInfo(string itemName, Vector2 panelPos)
+    {
+        if (tooltipElement == null || tooltipTitle == null || tooltipDesc == null) return;
+
+        if (string.IsNullOrEmpty(itemName))
+        {
+            tooltipElement.style.opacity = 0f;
+            return;
+        }
+
+        if (itemName == "RepairHammer")
+        {
+            tooltipTitle.text = "BÚA RÈN MA THUẬT";
+            tooltipDesc.text = "Click chuột phải để rèn lại 100% độ bền vũ khí đang trang bị.";
+        }
+        else if (itemName == "Ngoc1")
+        {
+            tooltipTitle.text = "NGỌC TÍM BÍ ẨN";
+            tooltipDesc.text = "Viên ngọc lấp lánh cất giấu bí thuật... Click chuột phải để sử dụng hồi 30 HP.";
+        }
+        else if (itemName == "Ngoc2")
+        {
+            tooltipTitle.text = "NGỌC ĐỎ BÍ ẨN";
+            tooltipDesc.text = "Viên ngọc rực lửa mang năng lượng thần bí... Click chuột phải để sử dụng hồi 30 HP.";
+        }
+        else if (itemName.Equals("WoodLog", System.StringComparison.OrdinalIgnoreCase) || 
+                 itemName.Equals("ThanhGo", System.StringComparison.OrdinalIgnoreCase) ||
+                 itemName.Equals("wood_stack", System.StringComparison.OrdinalIgnoreCase))
+        {
+            tooltipTitle.text = "THANH GỖ";
+            tooltipDesc.text = "Vật liệu chắc chắn dùng để xây dựng/sửa chữa cầu.";
+        }
+        else if (itemName.Contains("Potion") || itemName.Contains("HP") || itemName.Contains("Heal"))
+        {
+            tooltipTitle.text = "BÌNH THUỐC MÁU";
+            tooltipDesc.text = "Click chuột phải để hồi 30 sinh lực (HP).";
+        }
+        else
+        {
+            tooltipTitle.text = itemName.ToUpper();
+            tooltipDesc.text = "Vật phẩm trong hành trang.";
+        }
+
+        tooltipElement.style.left = panelPos.x + 15f;
+        tooltipElement.style.top = panelPos.y + 15f;
+        tooltipElement.style.opacity = 1f;
+    }
+
+    /// <summary>
+    /// Hệ thống Fallback: Xử lý click chuột, kéo thả (Drag & Drop) và chú thích vật phẩm (Tooltip)
+    /// </summary>
+    private void HandleManualInventoryClick()
+    {
+        if (!isAnyUIOpen) return;
+        if (inventoryOverlay == null || !inventoryOverlay.ClassListContains("show-inventory")) return;
+        if (uiDocument == null || uiDocument.rootVisualElement == null) return;
+
+        var panel = uiDocument.rootVisualElement.panel;
+        if (panel == null) return;
+
+        // Chuyển đổi tọa độ chuột từ Unity Screen (y=0 ở dưới) sang GUI Screen (y=0 ở trên)
+        Vector2 guiMousePos = new Vector2(Input.mousePosition.x, Screen.height - Input.mousePosition.y);
+        Vector2 panelPos = RuntimePanelUtils.ScreenToPanel(panel, guiMousePos);
+
+        VisualElement picked = panel.Pick(panelPos);
+
+        // 1. Xử lý BẮT ĐẦU KÉO THẢ (Mouse Down 0)
+        if (Input.GetMouseButtonDown(0))
+        {
+            if (picked != null)
+            {
+                Debug.Log($"[Inventory Fallback] Click trái tại: {picked.name ?? picked.GetType().Name} (class: {string.Join(",", picked.GetClasses())})");
+
+                // Kiểm tra nếu click vào inventory slot (hoặc con của slot)
+                VisualElement slotElement = picked;
+                while (slotElement != null && !(slotElement.name != null && slotElement.name.StartsWith("inventory-slot-")))
+                {
+                    slotElement = slotElement.parent;
+                }
+                if (slotElement != null)
+                {
+                    int slotIdx = int.Parse(slotElement.name.Replace("inventory-slot-", ""));
+                    Debug.Log($"[Inventory Fallback] Bắt đầu kéo slot {slotIdx}!");
+
+                    // Kích hoạt kéo thả nếu ô có đồ
+                    string[] invData = LocalPlayerTarget != null && LocalPlayerTarget.InventorySlots != null ? LocalPlayerTarget.InventorySlots : currentInventoryData;
+                    if (invData != null && slotIdx >= 0 && slotIdx < invData.Length && !string.IsNullOrEmpty(invData[slotIdx]))
+                    {
+                        draggedSlotIndex = slotIdx;
+                        string itemVal = invData[slotIdx];
+                        string itemName = itemVal.Split(':')[0];
+
+                        SetDragGhostSprite(itemName);
+                        if (dragGhost != null)
+                        {
+                            dragGhost.style.left = panelPos.x - 27f;
+                            dragGhost.style.top = panelPos.y - 27f;
+                            dragGhost.style.display = DisplayStyle.Flex;
+                        }
+                        if (tooltipElement != null) tooltipElement.style.opacity = 0f;
+                    }
+                }
+
+                // Kiểm tra nếu click vào nút upgrade (hoặc nhãn chữ bên trong nút)
+                VisualElement currElem = picked;
+                Button btn = null;
+                while (currElem != null)
+                {
+                    if (currElem is Button b) { btn = b; break; }
+                    currElem = currElem.parent;
+                }
+
+                if (btn != null)
+                {
+                    Debug.Log($"[Inventory Fallback] Kích hoạt nâng cấp qua Button: {btn.name}!");
+                    if (btn.name == "btn-upgrade-hp") UpgradeStat(0);
+                    else if (btn.name == "btn-upgrade-mp") UpgradeStat(1);
+                    else if (btn.name == "btn-upgrade-cooldown") UpgradeStat(2);
+                    else if (btn.name == "btn-upgrade-damage") UpgradeStat(3);
+                }
+
+                // Kiểm tra nếu click vào overlay background ngoài khung (đóng inventory)
+                if (picked == inventoryOverlay)
+                {
+                    ToggleInventory();
+                    return;
+                }
+            }
+        }
+
+        // 2. Xử lý DI CHUYỂN KÉO THẢ (Mouse Holding 0)
+        if (Input.GetMouseButton(0) && draggedSlotIndex != -1)
+        {
+            if (dragGhost != null)
+            {
+                dragGhost.style.left = panelPos.x - 27f;
+                dragGhost.style.top = panelPos.y - 27f;
+                dragGhost.style.display = DisplayStyle.Flex;
+            }
+            if (tooltipElement != null) tooltipElement.style.opacity = 0f;
+        }
+
+        // 3. Xử lý THẢ CHUỘT (Mouse Up 0)
+        if (Input.GetMouseButtonUp(0) && draggedSlotIndex != -1)
+        {
+            if (dragGhost != null)
+            {
+                dragGhost.style.display = DisplayStyle.None;
+            }
+
+            // Tìm ô đích tại vị trí thả chuột
+            VisualElement slotElement = picked;
+            while (slotElement != null && !(slotElement.name != null && slotElement.name.StartsWith("inventory-slot-")))
+            {
+                slotElement = slotElement.parent;
+            }
+
+            if (slotElement != null)
+            {
+                int targetIndex = int.Parse(slotElement.name.Replace("inventory-slot-", ""));
+                if (targetIndex != draggedSlotIndex && LocalPlayerTarget != null && LocalPlayerTarget.InventorySlots != null)
+                {
+                    Debug.Log($"[Inventory Fallback] Tráo đổi vật phẩm từ slot {draggedSlotIndex} sang slot {targetIndex}");
+                    string temp = LocalPlayerTarget.InventorySlots[draggedSlotIndex];
+                    LocalPlayerTarget.InventorySlots[draggedSlotIndex] = LocalPlayerTarget.InventorySlots[targetIndex];
+                    LocalPlayerTarget.InventorySlots[targetIndex] = temp;
+
+                    SetInventorySlots(LocalPlayerTarget.InventorySlots);
+                    if (!LocalPlayerTarget.IsStandaloneMode) LocalPlayerTarget.SavePlayerStateToDatabase();
+                }
+            }
+            else if (picked == inventoryOverlay || picked == null)
+            {
+                // Thả ra ngoài khung hành trang -> Vứt vật phẩm ra đất!
+                Debug.Log($"[Inventory Fallback] Vứt vật phẩm ở slot {draggedSlotIndex} ra đất!");
+                DropItemFromInventory(draggedSlotIndex);
+            }
+
+            draggedSlotIndex = -1;
+        }
+
+        // 4. Xử lý CLICK CHUỘT PHẢI (Mouse Down 1) — Sử dụng vật phẩm
+        if (Input.GetMouseButtonDown(1))
+        {
+            if (picked != null)
+            {
+                Debug.Log($"[Inventory Fallback] Click phải tại: {picked.name ?? picked.GetType().Name}");
+
+                VisualElement slotElement = picked;
+                while (slotElement != null && !(slotElement.name != null && slotElement.name.StartsWith("inventory-slot-")))
+                {
+                    slotElement = slotElement.parent;
+                }
+                if (slotElement != null)
+                {
+                    int slotIdx = int.Parse(slotElement.name.Replace("inventory-slot-", ""));
+                    Debug.Log($"[Inventory Fallback] Click phải vào slot {slotIdx} → UseItem!");
+                    UseItem(slotIdx);
+                }
+            }
+        }
+
+        // 5. Xử lý HOVER HIỂN THỊ CHÚ THÍCH (Tooltip) khi không kéo thả
+        if (draggedSlotIndex == -1)
+        {
+            VisualElement hoverSlot = picked;
+            while (hoverSlot != null && !(hoverSlot.name != null && hoverSlot.name.StartsWith("inventory-slot-")))
+            {
+                hoverSlot = hoverSlot.parent;
+            }
+
+            if (hoverSlot != null)
+            {
+                int slotIdx = int.Parse(hoverSlot.name.Replace("inventory-slot-", ""));
+                string[] invData = LocalPlayerTarget != null && LocalPlayerTarget.InventorySlots != null ? LocalPlayerTarget.InventorySlots : currentInventoryData;
+                if (invData != null && slotIdx >= 0 && slotIdx < invData.Length && !string.IsNullOrEmpty(invData[slotIdx]))
+                {
+                    string slotVal = invData[slotIdx];
+                    string itemName = slotVal.Split(':')[0];
+                    UpdateItemTooltipInfo(itemName, panelPos);
+                }
+                else
+                {
+                    if (tooltipElement != null) tooltipElement.style.opacity = 0f;
+                }
+            }
+            else
+            {
+                if (tooltipElement != null) tooltipElement.style.opacity = 0f;
+            }
+        }
     }
 
     private void UpdateTeammatesHUD()
