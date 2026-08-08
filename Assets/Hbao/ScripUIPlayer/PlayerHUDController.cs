@@ -786,6 +786,16 @@ public class PlayerHUDController : MonoBehaviour
             var invFrame = inventoryOverlay.Q<VisualElement>(className: "inventory-frame");
             if (invFrame != null) invFrame.pickingMode = PickingMode.Position;
 
+            // Đảm bảo mọi container trung gian đều nhận pointer events
+            var invContent = inventoryOverlay.Q<VisualElement>(className: "inventory-content");
+            if (invContent != null) invContent.pickingMode = PickingMode.Position;
+
+            var invLeftPanel = inventoryOverlay.Q<VisualElement>(className: "inventory-left-panel");
+            if (invLeftPanel != null) invLeftPanel.pickingMode = PickingMode.Position;
+
+            var invHeader = inventoryOverlay.Q<VisualElement>(className: "inventory-header");
+            if (invHeader != null) invHeader.pickingMode = PickingMode.Position;
+
             var slotsContainer = inventoryOverlay.Q<VisualElement>(className: "inventory-slots-container");
             if (slotsContainer != null) slotsContainer.pickingMode = PickingMode.Position;
 
@@ -794,6 +804,20 @@ public class PlayerHUDController : MonoBehaviour
 
             var upgradeRowContainer = inventoryOverlay.Q<VisualElement>(className: "upgrade-row-container");
             if (upgradeRowContainer != null) upgradeRowContainer.pickingMode = PickingMode.Position;
+
+            // Đảm bảo từng upgrade-row nhận click cho nút upgrade bên trong
+            var upgradeRows = inventoryOverlay.Query<VisualElement>(className: "upgrade-row").ToList();
+            foreach (var row in upgradeRows)
+            {
+                row.pickingMode = PickingMode.Position;
+            }
+
+            // Đảm bảo preview panel cũng nhận pointer events
+            var previewContainer = inventoryOverlay.Q<VisualElement>(className: "inventory-preview-container");
+            if (previewContainer != null) previewContainer.pickingMode = PickingMode.Position;
+
+            var previewCard = inventoryOverlay.Q<VisualElement>(className: "inventory-preview-card");
+            if (previewCard != null) previewCard.pickingMode = PickingMode.Position;
         }
         weaponWarning = root.Q<Label>("weapon-warning");
         weaponLock2 = root.Q<VisualElement>("weapon-lock-2");
@@ -853,6 +877,7 @@ public class PlayerHUDController : MonoBehaviour
             int index = i;
             VisualElement slot = inventorySlotsUI[i];
             slot.name = $"inventory-slot-{index}";
+            slot.pickingMode = PickingMode.Position; // Đảm bảo nhận click chuột
 
             // Vẽ nhãn số thứ tự mờ ở góc ô hành trang
             slot.Clear();
@@ -1955,6 +1980,7 @@ public class PlayerHUDController : MonoBehaviour
     // =========================================================================
     private void OnSlotPointerDown(PointerDownEvent evt, int index)
     {
+        Debug.Log($"[Inventory] OnSlotPointerDown: slot={index}, button={evt.button}, target={evt.target}");
         // 1. Kiểm tra nếu là Click chuột phải (evt.button == 1) -> Sử dụng vật phẩm
         if (evt.button == 1)
         {
@@ -2694,20 +2720,32 @@ public class PlayerHUDController : MonoBehaviour
         activeES.gameObject.SetActive(true);
         activeES.enabled = true;
 
+#if ENABLE_INPUT_SYSTEM
+        // Ưu tiên InputSystemUIInputModule (New Input System) — tạo nếu chưa có
+        var inputSystemModule = activeES.GetComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
+        if (inputSystemModule == null)
+        {
+            inputSystemModule = activeES.gameObject.AddComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
+        }
+        inputSystemModule.enabled = true;
+        inputSystemModule.AssignDefaultActions();
+
+        // TẮT StandaloneInputModule vì nó xung đột với InputSystemUIInputModule
+        // Khi cả hai cùng enabled, StandaloneInputModule "nuốt" pointer events
+        // khiến UI Toolkit không nhận được click chuột
+        var standalone = activeES.GetComponent<UnityEngine.EventSystems.StandaloneInputModule>();
+        if (standalone != null)
+        {
+            standalone.enabled = false;
+        }
+#else
+        // Fallback: Chỉ dùng StandaloneInputModule khi KHÔNG có New Input System
         var standalone = activeES.GetComponent<UnityEngine.EventSystems.StandaloneInputModule>();
         if (standalone == null)
         {
             standalone = activeES.gameObject.AddComponent<UnityEngine.EventSystems.StandaloneInputModule>();
         }
         standalone.enabled = true;
-
-#if ENABLE_INPUT_SYSTEM
-        var inputSystemModule = activeES.GetComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
-        if (inputSystemModule != null)
-        {
-            inputSystemModule.enabled = true;
-            inputSystemModule.AssignDefaultActions();
-        }
 #endif
     }
 
