@@ -210421,12 +210421,11 @@ MonoBehaviour:
   - {fileID: 146214943}
   - {fileID: 1448756644}
   - {fileID: 377120382}
-  hideDelayAfterComplete: 3
+  hideDelayAfterComplete: 0
   cutsceneToPlayAfter: {fileID: 0}
   objectsToEnableAfterQuest:
-  - {fileID: 1913123923}
   - {fileID: 1327183832}
-  targetBoxColliderObject: {fileID: 0}
+  targetBoxColliderObject: {fileID: 1913123923}
 --- !u!114 &1536427546
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -274141,10 +274140,10 @@ BoxCollider:
   m_LayerOverridePriority: 0
   m_IsTrigger: 1
   m_ProvidesContacts: 0
-  m_Enabled: 0
+  m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 17.96473, y: 1, z: 20.257528}
-  m_Center: {x: -8.482365, y: 0, z: -0.48103756}
+  m_Size: {x: 20.674904, y: 1, z: 20.257528}
+  m_Center: {x: -7.1272774, y: 0, z: -0.481038}
 --- !u!114 &1913123925
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -274210,7 +274209,7 @@ Transform:
   m_GameObject: {fileID: 1913123923}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -112.09, y: 10.47, z: 62.292}
+  m_LocalPosition: {x: -108.73, y: 10.47, z: 62.292}
   m_LocalScale: {x: 1, y: 1, z: 2.2071}
   m_ConstrainProportionsScale: 0
   m_Children:
