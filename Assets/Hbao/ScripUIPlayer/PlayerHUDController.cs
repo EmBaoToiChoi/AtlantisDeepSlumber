@@ -787,6 +787,9 @@ public class PlayerHUDController : MonoBehaviour
         if (inventoryOverlay != null)
         {
             inventoryOverlay.pickingMode = PickingMode.Ignore; // Mặc định ẩn, bỏ qua cản chuột
+            inventoryOverlay.style.display = DisplayStyle.None;
+            inventoryOverlay.style.visibility = Visibility.Hidden;
+            inventoryOverlay.style.opacity = 0f;
             inventoryOverlay.RegisterCallback<PointerDownEvent>(evt =>
             {
                 if (evt.target == inventoryOverlay)
@@ -1527,11 +1530,18 @@ public class PlayerHUDController : MonoBehaviour
             bool isNowVisible = inventoryOverlay.ClassListContains("show-inventory");
             inventoryOverlay.pickingMode = isNowVisible ? PickingMode.Position : PickingMode.Ignore;
 
-            // Cưỡng ép visibility/opacity trong code để không phụ thuộc CSS transition
+            // Cưỡng ép visibility/opacity/display trong code để mở/đóng hoàn toàn
             if (isNowVisible)
             {
+                inventoryOverlay.style.display = DisplayStyle.Flex;
                 inventoryOverlay.style.visibility = Visibility.Visible;
                 inventoryOverlay.style.opacity = 1f;
+            }
+            else
+            {
+                inventoryOverlay.style.display = DisplayStyle.None;
+                inventoryOverlay.style.visibility = Visibility.Hidden;
+                inventoryOverlay.style.opacity = 0f;
             }
 
             Debug.Log("Đã " + (isNowVisible ? "mở" : "đóng") + " hành trang" +
