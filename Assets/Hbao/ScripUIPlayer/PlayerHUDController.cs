@@ -1582,10 +1582,12 @@ public class PlayerHUDController : MonoBehaviour
                 }
             }
 
-            // Ẩn tooltip khi đóng hành trang để tránh tình trạng tooltip hiển thị thừa
-            if (!isNowVisible && tooltipElement != null)
+            // Ẩn tooltip và drag ghost khi đóng hành trang để tránh tình trạng hiển thị thừa
+            if (!isNowVisible)
             {
-                tooltipElement.style.opacity = 0f;
+                if (tooltipElement != null) tooltipElement.style.opacity = 0f;
+                if (dragGhost != null) dragGhost.style.display = DisplayStyle.None;
+                draggedSlotIndex = -1;
             }
 
             // Tự động lưu trạng thái người chơi vào MongoDB khi đóng hành trang
@@ -2821,6 +2823,90 @@ public class PlayerHUDController : MonoBehaviour
     /// Hệ thống Fallback: Xử lý click chuột thủ công bằng panel.Pick() khi Inventory mở.
     /// Gọi trong Update() để bypass hoàn toàn EventSystem pipeline nếu pointer events không hoạt động.
     /// </summary>
+    /// <summary>
+    /// Set sprite background cho dragGhost từ tên vật phẩm
+    /// </summary>
+    private void SetDragGhostSprite(string itemName)
+    {
+        if (dragGhost == null) return;
+        if (itemName == "RepairHammer" && repairHammerSprite != null)
+        {
+            dragGhost.style.backgroundImage = new StyleBackground(repairHammerSprite);
+        }
+        else if (itemName == "Ngoc1" && ngoc1Sprite != null)
+        {
+            dragGhost.style.backgroundImage = new StyleBackground(ngoc1Sprite);
+        }
+        else if (itemName == "Ngoc2" && ngoc2Sprite != null)
+        {
+            dragGhost.style.backgroundImage = new StyleBackground(ngoc2Sprite);
+        }
+        else if ((itemName.Equals("WoodLog", System.StringComparison.OrdinalIgnoreCase) || 
+                  itemName.Equals("ThanhGo", System.StringComparison.OrdinalIgnoreCase) ||
+                  itemName.Equals("wood_stack", System.StringComparison.OrdinalIgnoreCase)) && woodLogSprite != null)
+        {
+            dragGhost.style.backgroundImage = new StyleBackground(woodLogSprite);
+        }
+        else
+        {
+            dragGhost.style.backgroundImage = StyleKeyword.Null;
+        }
+    }
+
+    /// <summary>
+    /// Cập nhật hiển thị Tooltip chú thích vật phẩm theo vị trí con trỏ chuột
+    /// </summary>
+    private void UpdateItemTooltipInfo(string itemName, Vector2 panelPos)
+    {
+        if (tooltipElement == null || tooltipTitle == null || tooltipDesc == null) return;
+
+        if (string.IsNullOrEmpty(itemName))
+        {
+            tooltipElement.style.opacity = 0f;
+            return;
+        }
+
+        if (itemName == "RepairHammer")
+        {
+            tooltipTitle.text = "BÚA RÈN MA THUẬT";
+            tooltipDesc.text = "Click chuột phải để rèn lại 100% độ bền vũ khí đang trang bị.";
+        }
+        else if (itemName == "Ngoc1")
+        {
+            tooltipTitle.text = "NGỌC TÍM BÍ ẨN";
+            tooltipDesc.text = "Viên ngọc lấp lánh cất giấu bí thuật... Click chuột phải để sử dụng hồi 30 HP.";
+        }
+        else if (itemName == "Ngoc2")
+        {
+            tooltipTitle.text = "NGỌC ĐỎ BÍ ẨN";
+            tooltipDesc.text = "Viên ngọc rực lửa mang năng lượng thần bí... Click chuột phải để sử dụng hồi 30 HP.";
+        }
+        else if (itemName.Equals("WoodLog", System.StringComparison.OrdinalIgnoreCase) || 
+                 itemName.Equals("ThanhGo", System.StringComparison.OrdinalIgnoreCase) ||
+                 itemName.Equals("wood_stack", System.StringComparison.OrdinalIgnoreCase))
+        {
+            tooltipTitle.text = "THANH GỖ";
+            tooltipDesc.text = "Vật liệu chắc chắn dùng để xây dựng/sửa chữa cầu.";
+        }
+        else if (itemName.Contains("Potion") || itemName.Contains("HP") || itemName.Contains("Heal"))
+        {
+            tooltipTitle.text = "BÌNH THUỐC MÁU";
+            tooltipDesc.text = "Click chuột phải để hồi 30 sinh lực (HP).";
+        }
+        else
+        {
+            tooltipTitle.text = itemName.ToUpper();
+            tooltipDesc.text = "Vật phẩm trong hành trang.";
+        }
+
+        tooltipElement.style.left = panelPos.x + 15f;
+        tooltipElement.style.top = panelPos.y + 15f;
+        tooltipElement.style.opacity = 1f;
+    }
+
+    /// <summary>
+    /// Hệ thống Fallback: Xử lý click chuột, kéo thả (Drag & Drop) và chú thích vật phẩm (Tooltip)
+    /// </summary>
     private void HandleManualInventoryClick()
     {
         if (!isAnyUIOpen) return;
@@ -2832,12 +2918,13 @@ public class PlayerHUDController : MonoBehaviour
 
         // Chuyển đổi tọa độ chuột từ Unity Screen (y=0 ở dưới) sang GUI Screen (y=0 ở trên)
         Vector2 guiMousePos = new Vector2(Input.mousePosition.x, Screen.height - Input.mousePosition.y);
+        Vector2 panelPos = RuntimePanelUtils.ScreenToPanel(panel, guiMousePos);
 
-        // Kiểm tra chuột trái
+        VisualElement picked = panel.Pick(panelPos);
+
+        // 1. Xử lý BẮT ĐẦU KÉO THẢ (Mouse Down 0)
         if (Input.GetMouseButtonDown(0))
         {
-            Vector2 panelPos = RuntimePanelUtils.ScreenToPanel(panel, guiMousePos);
-            VisualElement picked = panel.Pick(panelPos);
             if (picked != null)
             {
                 Debug.Log($"[Inventory Fallback] Click trái tại: {picked.name ?? picked.GetType().Name} (class: {string.Join(",", picked.GetClasses())})");
@@ -2851,7 +2938,25 @@ public class PlayerHUDController : MonoBehaviour
                 if (slotElement != null)
                 {
                     int slotIdx = int.Parse(slotElement.name.Replace("inventory-slot-", ""));
-                    Debug.Log($"[Inventory Fallback] Phát hiện click trái vào slot {slotIdx}!");
+                    Debug.Log($"[Inventory Fallback] Bắt đầu kéo slot {slotIdx}!");
+
+                    // Kích hoạt kéo thả nếu ô có đồ
+                    string[] invData = LocalPlayerTarget != null && LocalPlayerTarget.InventorySlots != null ? LocalPlayerTarget.InventorySlots : currentInventoryData;
+                    if (invData != null && slotIdx >= 0 && slotIdx < invData.Length && !string.IsNullOrEmpty(invData[slotIdx]))
+                    {
+                        draggedSlotIndex = slotIdx;
+                        string itemVal = invData[slotIdx];
+                        string itemName = itemVal.Split(':')[0];
+
+                        SetDragGhostSprite(itemName);
+                        if (dragGhost != null)
+                        {
+                            dragGhost.style.left = panelPos.x - 27f;
+                            dragGhost.style.top = panelPos.y - 27f;
+                            dragGhost.style.display = DisplayStyle.Flex;
+                        }
+                        if (tooltipElement != null) tooltipElement.style.opacity = 0f;
+                    }
                 }
 
                 // Kiểm tra nếu click vào nút upgrade (hoặc nhãn chữ bên trong nút)
@@ -2876,15 +2981,65 @@ public class PlayerHUDController : MonoBehaviour
                 if (picked == inventoryOverlay)
                 {
                     ToggleInventory();
+                    return;
                 }
             }
         }
 
-        // Kiểm tra chuột phải — sử dụng vật phẩm
+        // 2. Xử lý DI CHUYỂN KÉO THẢ (Mouse Holding 0)
+        if (Input.GetMouseButton(0) && draggedSlotIndex != -1)
+        {
+            if (dragGhost != null)
+            {
+                dragGhost.style.left = panelPos.x - 27f;
+                dragGhost.style.top = panelPos.y - 27f;
+                dragGhost.style.display = DisplayStyle.Flex;
+            }
+            if (tooltipElement != null) tooltipElement.style.opacity = 0f;
+        }
+
+        // 3. Xử lý THẢ CHUỘT (Mouse Up 0)
+        if (Input.GetMouseButtonUp(0) && draggedSlotIndex != -1)
+        {
+            if (dragGhost != null)
+            {
+                dragGhost.style.display = DisplayStyle.None;
+            }
+
+            // Tìm ô đích tại vị trí thả chuột
+            VisualElement slotElement = picked;
+            while (slotElement != null && !(slotElement.name != null && slotElement.name.StartsWith("inventory-slot-")))
+            {
+                slotElement = slotElement.parent;
+            }
+
+            if (slotElement != null)
+            {
+                int targetIndex = int.Parse(slotElement.name.Replace("inventory-slot-", ""));
+                if (targetIndex != draggedSlotIndex && LocalPlayerTarget != null && LocalPlayerTarget.InventorySlots != null)
+                {
+                    Debug.Log($"[Inventory Fallback] Tráo đổi vật phẩm từ slot {draggedSlotIndex} sang slot {targetIndex}");
+                    string temp = LocalPlayerTarget.InventorySlots[draggedSlotIndex];
+                    LocalPlayerTarget.InventorySlots[draggedSlotIndex] = LocalPlayerTarget.InventorySlots[targetIndex];
+                    LocalPlayerTarget.InventorySlots[targetIndex] = temp;
+
+                    SetInventorySlots(LocalPlayerTarget.InventorySlots);
+                    if (!LocalPlayerTarget.IsStandaloneMode) LocalPlayerTarget.SavePlayerStateToDatabase();
+                }
+            }
+            else if (picked == inventoryOverlay || picked == null)
+            {
+                // Thả ra ngoài khung hành trang -> Vứt vật phẩm ra đất!
+                Debug.Log($"[Inventory Fallback] Vứt vật phẩm ở slot {draggedSlotIndex} ra đất!");
+                DropItemFromInventory(draggedSlotIndex);
+            }
+
+            draggedSlotIndex = -1;
+        }
+
+        // 4. Xử lý CLICK CHUỘT PHẢI (Mouse Down 1) — Sử dụng vật phẩm
         if (Input.GetMouseButtonDown(1))
         {
-            Vector2 panelPos = RuntimePanelUtils.ScreenToPanel(panel, guiMousePos);
-            VisualElement picked = panel.Pick(panelPos);
             if (picked != null)
             {
                 Debug.Log($"[Inventory Fallback] Click phải tại: {picked.name ?? picked.GetType().Name}");
@@ -2897,9 +3052,39 @@ public class PlayerHUDController : MonoBehaviour
                 if (slotElement != null)
                 {
                     int slotIdx = int.Parse(slotElement.name.Replace("inventory-slot-", ""));
-                    Debug.Log($"[Inventory Fallback] Phát hiện click phải vào slot {slotIdx} → UseItem!");
+                    Debug.Log($"[Inventory Fallback] Click phải vào slot {slotIdx} → UseItem!");
                     UseItem(slotIdx);
                 }
+            }
+        }
+
+        // 5. Xử lý HOVER HIỂN THỊ CHÚ THÍCH (Tooltip) khi không kéo thả
+        if (draggedSlotIndex == -1)
+        {
+            VisualElement hoverSlot = picked;
+            while (hoverSlot != null && !(hoverSlot.name != null && hoverSlot.name.StartsWith("inventory-slot-")))
+            {
+                hoverSlot = hoverSlot.parent;
+            }
+
+            if (hoverSlot != null)
+            {
+                int slotIdx = int.Parse(hoverSlot.name.Replace("inventory-slot-", ""));
+                string[] invData = LocalPlayerTarget != null && LocalPlayerTarget.InventorySlots != null ? LocalPlayerTarget.InventorySlots : currentInventoryData;
+                if (invData != null && slotIdx >= 0 && slotIdx < invData.Length && !string.IsNullOrEmpty(invData[slotIdx]))
+                {
+                    string slotVal = invData[slotIdx];
+                    string itemName = slotVal.Split(':')[0];
+                    UpdateItemTooltipInfo(itemName, panelPos);
+                }
+                else
+                {
+                    if (tooltipElement != null) tooltipElement.style.opacity = 0f;
+                }
+            }
+            else
+            {
+                if (tooltipElement != null) tooltipElement.style.opacity = 0f;
             }
         }
     }
