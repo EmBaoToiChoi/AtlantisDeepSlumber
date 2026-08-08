@@ -3262,6 +3262,12 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     [Tooltip("Bán kính vòng tròn định vị chiêu R")]
     public float rSkillAoeRadius = 3f;
 
+    [Tooltip("Prefab VFX vòng tròn định vị tâm bắn chiêu R dưới đất khi ngắm (Nếu để trống sẽ dùng vòng tròn LineRenderer xanh mặc định)")]
+    public GameObject rSkillAoeIndicatorPrefab;
+    [Tooltip("Tỷ lệ scale tùy chỉnh thêm cho Prefab VFX vòng tròn định vị chiêu R (Mặc định (1,1,1))")]
+    public Vector3 rSkillAoeIndicatorScale = Vector3.one;
+    private GameObject activeAoeIndicatorInstance;
+
     private LineRenderer aoeIndicatorLine;
     private Vector3 aoeTargetPosition;
     private Vector3 pendingRShootPosition;
@@ -5752,6 +5758,17 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     private void CreateAoeIndicator()
     {
+        if (rSkillAoeIndicatorPrefab != null)
+        {
+            if (activeAoeIndicatorInstance == null)
+            {
+                activeAoeIndicatorInstance = Instantiate(rSkillAoeIndicatorPrefab);
+                activeAoeIndicatorInstance.transform.rotation = rSkillAoeIndicatorPrefab.transform.rotation;
+                activeAoeIndicatorInstance.transform.localScale = Vector3.Scale(rSkillAoeIndicatorPrefab.transform.localScale, rSkillAoeIndicatorScale);
+            }
+            return;
+        }
+
         if (aoeIndicatorLine != null) return;
 
         GameObject indicatorObj = new GameObject("LeoR_AoeIndicator");
@@ -5776,7 +5793,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     private void UpdateAoeIndicatorPosition()
     {
-        if (aoeIndicatorLine == null) return;
+        if (activeAoeIndicatorInstance == null && aoeIndicatorLine == null) return;
         if (targetCamera == null) return;
 
         Ray ray = targetCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
@@ -5803,32 +5820,48 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         aoeTargetPosition = targetPoint;
 
-        int segments = aoeIndicatorLine.positionCount;
-        for (int i = 0; i < segments; i++)
+        if (activeAoeIndicatorInstance != null)
         {
-            float angle = i * (2f * Mathf.PI / segments);
-            float x = Mathf.Cos(angle) * rSkillAoeRadius;
-            float z = Mathf.Sin(angle) * rSkillAoeRadius;
-            Vector3 pointPos = targetPoint + new Vector3(x, 0f, z);
-
-            Vector3 rayStart = pointPos + Vector3.up * 5f;
-            if (Physics.Raycast(rayStart, Vector3.down, out RaycastHit groundHit, 10f, layerMask))
-            {
-                pointPos.y = groundHit.point.y + 0.05f;
-            }
-            else
-            {
-                pointPos.y = targetPoint.y + 0.05f;
-            }
-
-            aoeIndicatorLine.SetPosition(i, pointPos);
+            activeAoeIndicatorInstance.transform.position = targetPoint + Vector3.up * 0.05f;
+            activeAoeIndicatorInstance.SetActive(true);
+            return;
         }
 
-        aoeIndicatorLine.enabled = true;
+        if (aoeIndicatorLine != null)
+        {
+            int segments = aoeIndicatorLine.positionCount;
+            for (int i = 0; i < segments; i++)
+            {
+                float angle = i * (2f * Mathf.PI / segments);
+                float x = Mathf.Cos(angle) * rSkillAoeRadius;
+                float z = Mathf.Sin(angle) * rSkillAoeRadius;
+                Vector3 pointPos = targetPoint + new Vector3(x, 0f, z);
+
+                Vector3 rayStart = pointPos + Vector3.up * 5f;
+                if (Physics.Raycast(rayStart, Vector3.down, out RaycastHit groundHit, 10f, layerMask))
+                {
+                    pointPos.y = groundHit.point.y + 0.05f;
+                }
+                else
+                {
+                    pointPos.y = targetPoint.y + 0.05f;
+                }
+
+                aoeIndicatorLine.SetPosition(i, pointPos);
+            }
+
+            aoeIndicatorLine.enabled = true;
+        }
     }
 
     private void HideAoeIndicator()
     {
+        if (activeAoeIndicatorInstance != null)
+        {
+            Destroy(activeAoeIndicatorInstance);
+            activeAoeIndicatorInstance = null;
+        }
+
         if (aoeIndicatorLine != null)
         {
             if (aoeIndicatorLine.gameObject != null)
