@@ -5,15 +5,16 @@ using UnityEngine;
 /// Component quản lý hiệu ứng khi quái vật chết:
 /// 1. Phát âm thanh chết 3D (3D spatial audio) cho cả 4 Player xung quanh nghe thấy.
 /// 2. Tạo hiệu ứng hố rớt (Ground Hole VFX với vết nứt đất đỏ) dưới chân quái.
-/// 3. Từ từ cho xác quái bị tuột (chìm) xuống hố trước khi bị despawn/destroy.
-/// 4. Tự động tắt vòng lặp (looping) của VFX sau khi quái lọt xuống để vết nứt & hố mờ dần mượt mà.
+/// 3. Chờ quái hoàn thiện animation Die và VFX mở rộng hoàn chỉnh (vfx đã oke).
+/// 4. Từ từ cho xác quái tuột (chìm) xuống hố trước khi bị despawn/destroy.
+/// 5. Tự động tắt vòng lặp (looping) của VFX sau khi quái lọt xuống để vết nứt & hố mờ dần mượt mà.
 /// </summary>
 public class EnemyDeathSinkBehaviour : MonoBehaviour
 {
     [Header("Sink Settings")]
-    public float sinkSpeed = 0.9f;
-    public float sinkDuration = 2.2f;
-    public float delayBeforeSink = 0.3f;
+    public float sinkSpeed = 0.75f;
+    public float sinkDuration = 2.8f;
+    public float delayBeforeSink = 1.2f; // Chờ quái gục xong & VFX hiện nguyên hình hoàn chỉnh
 
     private static GameObject defaultVfxPrefab;
     private static AudioClip defaultDeathClip;
@@ -96,8 +97,10 @@ public class EnemyDeathSinkBehaviour : MonoBehaviour
 
     private IEnumerator SinkRoutine()
     {
+        // Bước 1: Chờ quái hoàn thiện Animation Die và VFX hố rớt hiện nguyên hình đẹp mắt
         yield return new WaitForSeconds(delayBeforeSink);
 
+        // Bước 2: Từ từ tuột (chìm) xác quái xuống lòng hố/map
         float elapsed = 0f;
         while (elapsed < sinkDuration)
         {
@@ -107,7 +110,7 @@ public class EnemyDeathSinkBehaviour : MonoBehaviour
             yield return null;
         }
 
-        // Khi quái đã lọt xuống dưới hố, dừng tạo thêm hạt (emission) để vết nứt & hố mờ dần mượt mà
+        // Bước 3: Khi xác đã chìm xong bên dưới map, dừng tạo thêm hạt (emission) để vết nứt & hố mờ dần mượt mà
         if (spawnedVfx != null)
         {
             ParticleSystem[] psList = spawnedVfx.GetComponentsInChildren<ParticleSystem>();

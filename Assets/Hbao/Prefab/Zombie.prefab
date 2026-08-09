@@ -367,7 +367,7 @@ MonoBehaviour:
   hitSoundClip: {fileID: 0}
   deathSoundClip: {fileID: 0}
   deathVfxPrefab: {fileID: 4748681987041982144, guid: 1f740c2847fa1ab42a43104c062f09bb, type: 3}
-  deathVfxScale: 2
+  deathVfxScale: 1.5
   maxChaseDistance: 26
   sightRange: 25
   fieldOfView: 110
