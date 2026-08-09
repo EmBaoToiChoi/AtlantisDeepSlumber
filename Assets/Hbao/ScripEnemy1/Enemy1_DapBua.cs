@@ -1569,7 +1569,7 @@ public class Enemy1_DapBua : NetworkBehaviour
         SetSpeedNet(0f);
         ApplyLocalDeathEffects();
         DropExperience(); DropItems();
-        Invoke(nameof(DespawnEnemy), 2.5f);
+        Invoke(nameof(DespawnEnemy), 6.0f);
     }
 
     private void DropExperience()

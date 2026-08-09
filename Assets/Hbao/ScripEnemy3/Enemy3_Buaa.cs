@@ -1313,7 +1313,7 @@ public class Enemy3_Buaa : NetworkBehaviour
     {
         if (AgentReady) agent.isStopped = true; SetSpeedNet(0f);
         ApplyLocalDeathEffects();
-        DropExperience(); DropItems(); Invoke(nameof(DespawnEnemy), 2.5f);
+        DropExperience(); DropItems(); Invoke(nameof(DespawnEnemy), 6.0f);
     }
 
     private void DropExperience()
