@@ -26,7 +26,6 @@ Material:
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords:
   - _BUILTIN_SURFACE_TYPE_TRANSPARENT
-  - _LUT
   - _SURFACE_TYPE_TRANSPARENT
   m_InvalidKeywords:
   - _MESHEDGETRANSPARENT
@@ -139,6 +138,7 @@ Material:
     - _DepthFadeMin: 0
     - _DetailNormalMapScale: 1
     - _DstBlend: 10
+    - _DstBlendAlpha: 0
     - _EDGEFADE: 0
     - _EdgeFade: 0.652
     - _EdgeFadeMax: 1
@@ -147,10 +147,10 @@ Material:
     - _GlossMapScale: 1
     - _Glossiness: 0.5
     - _GlossyReflections: 1
-    - _LUT: 1
+    - _LUT: 0
     - _MESHEDGETRANSPARENT: 1
     - _MaskFeather: 0.2
-    - _MaskFeather2: 0.2
+    - _MaskFeather2: 0.122
     - _MaskIntensity: 0
     - _MaskIntensity2: 0
     - _MaskRepeat: 0
@@ -161,12 +161,13 @@ Material:
     - _Parallax: 0.02
     - _QueueControl: 0
     - _QueueOffset: 0
-    - _RemapDark: 0.845
-    - _RemapWhite: 1
+    - _RemapDark: 1
+    - _RemapWhite: 0
     - _Repeat: 0
     - _SmoothnessTextureChannel: 0
     - _SpecularHighlights: 1
     - _SrcBlend: 5
+    - _SrcBlendAlpha: 1
     - _Surface: 1
     - _USEMASK: 0
     - _USEMASK2: 0

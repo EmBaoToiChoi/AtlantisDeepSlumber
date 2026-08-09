@@ -139,10 +139,11 @@ Material:
     - _DepthFadeMin: 0
     - _DetailNormalMapScale: 1
     - _DstBlend: 10
+    - _DstBlendAlpha: 0
     - _EDGEFADE: 0
     - _EdgeFade: 0.652
     - _EdgeFadeMax: 1
-    - _EdgeFadeMin: 0.066
+    - _EdgeFadeMin: 0
     - _Fade: 2
     - _GlossMapScale: 1
     - _Glossiness: 0.5
@@ -150,7 +151,7 @@ Material:
     - _LUT: 1
     - _MESHEDGETRANSPARENT: 1
     - _MaskFeather: 0.2
-    - _MaskFeather2: 0.2
+    - _MaskFeather2: 0.342
     - _MaskIntensity: 0
     - _MaskIntensity2: 0
     - _MaskRepeat: 0
@@ -161,12 +162,13 @@ Material:
     - _Parallax: 0.02
     - _QueueControl: 0
     - _QueueOffset: 0
-    - _RemapDark: 0
-    - _RemapWhite: 1
+    - _RemapDark: 1
+    - _RemapWhite: 0
     - _Repeat: 0
     - _SmoothnessTextureChannel: 0
     - _SpecularHighlights: 1
     - _SrcBlend: 5
+    - _SrcBlendAlpha: 1
     - _Surface: 1
     - _USEMASK: 0
     - _USEMASK2: 0
