@@ -1,0 +1,24 @@
+fileFormatVersion: 2
+guid: 85bd64f25c3a81f44bb6ed629488736e
+ShaderImporter:
+  externalObjects: {}
+  defaultTextures:
+  - _MainTexture: {fileID: 2800000, guid: 788d74a2951ba514fa76781ea2676e75, type: 3}
+  - _RadialUVDistortNoise: {fileID: 2800000, guid: 801b4be3075bc4840b14161c01e73734,
+      type: 3}
+  - _LUT: {fileID: 2800000, guid: ad076c925f735e941a6e5c7604603b41, type: 3}
+  - _DistortionNoise: {fileID: 2800000, guid: 801b4be3075bc4840b14161c01e73734, type: 3}
+  - _CutoutTexture: {fileID: 2800000, guid: 33fec401cab050343a3ee851eca78e34, type: 3}
+  - _texcoord2: {instanceID: 0}
+  - _texcoord: {instanceID: 0}
+  nonModifiableTextures: []
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 340466
+  packageName: Stylized VFX Bundle
+  packageVersion: 1.0.1
+  assetPath: Assets/Vefects/Stylized AoE VFX/Shared/Shaders/SH_Vefects_BIRP_Area_Whirlpool_01.shader
+  uploadId: 860344

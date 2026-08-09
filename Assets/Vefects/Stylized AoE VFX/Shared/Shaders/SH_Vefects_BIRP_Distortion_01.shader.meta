@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 72d1a9a0c65641743afb512a3d4e4fff
+ShaderImporter:
+  externalObjects: {}
+  defaultTextures: []
+  nonModifiableTextures: []
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 340466
+  packageName: Stylized VFX Bundle
+  packageVersion: 1.0.1
+  assetPath: Assets/Vefects/Stylized AoE VFX/Shared/Shaders/SH_Vefects_BIRP_Distortion_01.shader
+  uploadId: 860344

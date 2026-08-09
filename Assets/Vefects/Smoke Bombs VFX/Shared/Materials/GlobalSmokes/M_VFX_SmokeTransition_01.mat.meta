@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 6e4fac4ef0dc27e43af9bf31341b42fb
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 340466
+  packageName: Stylized VFX Bundle
+  packageVersion: 1.0.1
+  assetPath: Assets/Vefects/Smoke Bombs VFX/Shared/Materials/GlobalSmokes/M_VFX_SmokeTransition_01.mat
+  uploadId: 860344

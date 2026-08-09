@@ -1,0 +1,9 @@
+1. Install VFX Graph and Shader Graph into your project. Make sure you update to the latest version.
+
+2. Close and reopen Unity again.
+
+3. Double click on the "Stylized VFX Shader Graph Assets.unitypackage" file.
+
+4. Import the assets.
+
+5. Enjoy!

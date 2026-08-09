@@ -1,0 +1,81 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: M_VFX_Refraction_Shockwave_01
+  m_Shader: {fileID: 4800000, guid: 2d7875695fe3dec4f9126d35f90b5ce1, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords:
+  - _RECEIVESHADOWS_OFF
+  - _RECEIVE_SHADOWS_OFF
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _CutoutTexture:
+        m_Texture: {fileID: 2800000, guid: 33fec401cab050343a3ee851eca78e34, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _DistortionDist:
+        m_Texture: {fileID: 2800000, guid: 801b4be3075bc4840b14161c01e73734, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _DistortionNoise:
+        m_Texture: {fileID: 2800000, guid: 68605b0bf89549e44a292f62228c5350, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _texcoord:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - unity_Lightmaps:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - unity_LightmapsInd:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - unity_ShadowMasks:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Ints: []
+    m_Floats:
+    - _AlphaCutoff: 0.5
+    - _Cull: 0
+    - _CutoutErosion: 0
+    - _CutoutErosionSmoothness: 0.5
+    - _DepthFade: 1
+    - _DistortionDistLerp: 0.1
+    - _DistortionLerp: 1
+    - _Dst: 10
+    - _QueueControl: 0
+    - _QueueOffset: 0
+    - _ReceiveShadows: 0
+    - _Src: 5
+    - _ZTest: 2
+    - _ZWrite: 0
+    - __dirty: 0
+    m_Colors:
+    - _CutoutMaskSelector: {r: 0, g: 1, b: 0, a: 0}
+    - _DistDistUVP: {r: 0.01, g: -0.2, b: 0, a: 0}
+    - _DistDistUVS: {r: 1, g: 1, b: 0, a: 0}
+    - _DistUVP: {r: 0, g: 0, b: 0, a: 0}
+    - _DistUVS: {r: 1, g: 1, b: 0, a: 0}
+    - _DistortionNoiseSelector: {r: 0, g: 1, b: 0, a: 0}
+    - _EmissionColor: {r: 1, g: 1, b: 1, a: 1}
+  m_BuildTextureStacks: []

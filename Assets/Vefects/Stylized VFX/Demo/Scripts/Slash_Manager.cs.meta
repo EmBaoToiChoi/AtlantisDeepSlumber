@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 5c3060eced1a18344925692f87507691
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 340466
+  packageName: Stylized VFX Bundle
+  packageVersion: 1.0.1
+  assetPath: Assets/Vefects/Stylized VFX/Demo/Scripts/Slash_Manager.cs
+  uploadId: 860344
