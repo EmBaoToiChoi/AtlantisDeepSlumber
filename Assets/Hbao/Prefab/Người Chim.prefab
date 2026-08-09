@@ -247,6 +247,10 @@ MonoBehaviour:
   expDropPoint: {fileID: 1745995649854752103}
   repairItemPrefab: {fileID: 3330552459412152781}
   repairItemDropChance: 0.2
+  hitSoundClip: {fileID: 0}
+  deathSoundClip: {fileID: 0}
+  deathVfxPrefab: {fileID: 4748681987041982144, guid: 1f740c2847fa1ab42a43104c062f09bb, type: 3}
+  deathVfxScale: 2
   sightRange: 40
   fieldOfView: 180
   maxAttackRange: 40

@@ -98,6 +98,13 @@ public class Enemy1_DapBua : NetworkBehaviour
     public GameObject repairItemPrefab;
     [Range(0f, 1f)] public float repairItemDropChance = 0.3f;
 
+    [Header("Hit & Death Sound / VFX")]
+    public AudioClip hitSoundClip;
+    public AudioClip deathSoundClip;
+    public GameObject deathVfxPrefab;
+    [Tooltip("Kích thước/Bán kính hiển thị của VFX hố rớt bên dưới chân quái để ôm trọn xác quái.")]
+    public float deathVfxScale = 2.0f;
+
     // ─── AI Settings ───────────────────────────────────────────
     [Header("AI Settings")]
     public float sightRange = 15f;
@@ -336,6 +343,8 @@ public class Enemy1_DapBua : NetworkBehaviour
             }
             anim.Play("quai1Die", 0, 0f);
         }
+
+        EnemyDeathSinkBehaviour.ApplyDeathEffects(gameObject, deathSoundClip, deathVfxPrefab, deathVfxScale);
     }
 
     private void OnHealthNetChanged(float oldVal, float newVal)
@@ -344,7 +353,7 @@ public class Enemy1_DapBua : NetworkBehaviour
         float diff = oldVal - newVal;
         if (diff > 0)
         {
-            EnemyDamageEffectHelper.PlayDamageEffects(gameObject, diff);
+            EnemyDamageEffectHelper.PlayDamageEffects(gameObject, diff, hitSoundClip);
         }
     }
 
@@ -1476,7 +1485,7 @@ public class Enemy1_DapBua : NetworkBehaviour
             anim.SetTrigger(hitTrigger);
         }
 
-        EnemyDamageEffectHelper.PlayDamageEffects(gameObject, damage);
+        EnemyDamageEffectHelper.PlayDamageEffects(gameObject, damage, hitSoundClip);
 
         bool isAuth = isStandaloneMode || (IsSpawned && IsServer) || !IsSpawned;
         if (!isAuth) return;
