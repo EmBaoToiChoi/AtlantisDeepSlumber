@@ -187,7 +187,7 @@ ParticleSystem:
       serializedVersion: 2
       minMaxState: 0
       minColor: {r: 1, g: 1, b: 1, a: 1}
-      maxColor: {r: 0.5754717, g: 0.5754717, b: 0.5754717, a: 1}
+      maxColor: {r: 0.46226418, g: 0.32108334, b: 0.08940014, a: 1}
       maxGradient:
         serializedVersion: 2
         key0: {r: 1, g: 1, b: 1, a: 1}
@@ -1221,7 +1221,7 @@ ParticleSystem:
         ctime6: 0
         ctime7: 0
         atime0: 3277
-        atime1: 43149
+        atime1: 43176
         atime2: 65535
         atime3: 0
         atime4: 0
@@ -1229,7 +1229,7 @@ ParticleSystem:
         atime6: 0
         atime7: 0
         m_Mode: 0
-        m_ColorSpace: -1
+        m_ColorSpace: 0
         m_NumColorKeys: 2
         m_NumAlphaKeys: 3
       minGradient:
@@ -4793,7 +4793,7 @@ AudioSource:
   OutputAudioMixerGroup: {fileID: 0}
   m_audioClip: {fileID: 0}
   m_Resource: {fileID: 0}
-  m_PlayOnAwake: 1
+  m_PlayOnAwake: 0
   m_Volume: 1
   m_Pitch: 1
   Loop: 0
@@ -4924,7 +4924,7 @@ MonoBehaviour:
     m_InternalValue: 0
   rotationDuration: 3
   dustEffect: {fileID: 5124164831975672177}
-  pillarAudio: {fileID: 0}
+  pillarAudio: {fileID: 7460610453148788214}
   rotateSound: {fileID: 8300000, guid: 9e34d6509f644204f8872be6509eeef2, type: 3}
   puzzleManager: {fileID: 0}
 --- !u!65 &6966750601905269346
