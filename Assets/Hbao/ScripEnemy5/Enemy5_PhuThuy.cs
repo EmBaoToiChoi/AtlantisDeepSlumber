@@ -50,6 +50,13 @@ public class Enemy5_PhuThuy : NetworkBehaviour
     public GameObject repairItemPrefab;
     [Range(0f, 1f)] public float repairItemDropChance = 0.3f;
 
+    [Header("Hit & Death Sound / VFX")]
+    public AudioClip hitSoundClip;
+    public AudioClip deathSoundClip;
+    public GameObject deathVfxPrefab;
+    [Tooltip("Kích thước/Bán kính hiển thị của VFX hố rớt bên dưới chân quái để ôm trọn xác quái.")]
+    public float deathVfxScale = 1.75f;
+
     [Header("AI Settings")]
     public float sightRange     = 24f;     // Tầm phát hiện xa
     public float fieldOfView    = 120f;
@@ -213,11 +220,18 @@ public class Enemy5_PhuThuy : NetworkBehaviour
         }
         Collider col = GetComponent<Collider>(); if (col != null) col.enabled = false;
         Collider[] cols = GetComponentsInChildren<Collider>(); foreach (var c in cols) c.enabled = false;
+
+        EnemyDeathSinkBehaviour.ApplyDeathEffects(gameObject, deathSoundClip, deathVfxPrefab, deathVfxScale);
     }
 
     private void OnHealthNetChanged(float oldHealth, float newHealth)
     {
         localHealth = newHealth;
+        float diff = oldHealth - newHealth;
+        if (diff > 0)
+        {
+            EnemyDamageEffectHelper.PlayDamageEffects(gameObject, diff, hitSoundClip);
+        }
         if (newHealth <= 0f && CurrentStateValue != EnemyState.Dead)
         {
             ApplyLocalDeathEffects();
@@ -1179,7 +1193,7 @@ public class Enemy5_PhuThuy : NetworkBehaviour
             anim.SetTrigger(hitTrigger);
         }
 
-        EnemyDamageEffectHelper.PlayDamageEffects(gameObject, damage);
+        EnemyDamageEffectHelper.PlayDamageEffects(gameObject, damage, hitSoundClip);
 
         bool isAuth = isStandaloneMode || (IsSpawned && IsServer) || !IsSpawned;
         if (!isAuth) return;

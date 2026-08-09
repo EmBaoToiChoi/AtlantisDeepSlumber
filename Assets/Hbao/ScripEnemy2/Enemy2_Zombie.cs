@@ -47,6 +47,13 @@ public class Enemy2_Zombie : NetworkBehaviour
     public GameObject repairItemPrefab;
     [Range(0f, 1f)] public float repairItemDropChance = 0.3f;
 
+    [Header("Hit & Death Sound / VFX")]
+    public AudioClip hitSoundClip;
+    public AudioClip deathSoundClip;
+    public GameObject deathVfxPrefab;
+    [Tooltip("Kích thước/Bán kính hiển thị của VFX hố rớt bên dưới chân quái để ôm trọn xác quái.")]
+    public float deathVfxScale = 1.85f;
+
     [Header("Chase Range Settings")]
     [Tooltip("Khoảng cách tối đa rượt đuổi player. Nếu player chạy xa vượt quá khoảng cách này (tính từ khu vực tuần tra hoặc Zombie), Zombie lập tức bỏ đuổi và quay về 3 điểm tuần tra ban đầu.")]
     public float maxChaseDistance = 18f;
@@ -232,6 +239,8 @@ public class Enemy2_Zombie : NetworkBehaviour
             }
             anim.Play("quai2Die", 0, 0f);
         }
+
+        EnemyDeathSinkBehaviour.ApplyDeathEffects(gameObject, deathSoundClip, deathVfxPrefab, deathVfxScale);
     }
 
     private void OnHealthNetChanged(float oldVal, float newVal)
@@ -240,7 +249,7 @@ public class Enemy2_Zombie : NetworkBehaviour
         float diff = oldVal - newVal;
         if (diff > 0)
         {
-            EnemyDamageEffectHelper.PlayDamageEffects(gameObject, diff);
+            EnemyDamageEffectHelper.PlayDamageEffects(gameObject, diff, hitSoundClip);
         }
     }
 
@@ -1289,7 +1298,7 @@ public class Enemy2_Zombie : NetworkBehaviour
             anim.SetTrigger(hitTrigger);
         }
 
-        EnemyDamageEffectHelper.PlayDamageEffects(gameObject, damage);
+        EnemyDamageEffectHelper.PlayDamageEffects(gameObject, damage, hitSoundClip);
 
         // Khóa mục tiêu lập tức vào người chơi tấn công mình (nếu chưa có mục tiêu)
         if (attacker != null && IsPlayerAliveAndValid(attacker))
