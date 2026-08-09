@@ -1,0 +1,19 @@
+fileFormatVersion: 2
+guid: 8068858afe9b61447bee5b352a1d2d3e
+ShaderImporter:
+  externalObjects: {}
+  defaultTextures:
+  - _MainTexture: {fileID: 2800000, guid: 97335d921d023cf429d492cfbfd31b33, type: 3}
+  - _texcoord: {instanceID: 0}
+  - _texcoord2: {instanceID: 0}
+  nonModifiableTextures: []
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 340466
+  packageName: Stylized VFX Bundle
+  packageVersion: 1.0.1
+  assetPath: Assets/Vefects/Stylized AoE VFX/Shared/Shaders/SH_Vefects_BIRP_Lightning_Bolt_01.shader
+  uploadId: 860344

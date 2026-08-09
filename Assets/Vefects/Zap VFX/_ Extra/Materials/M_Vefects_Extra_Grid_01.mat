@@ -8,7 +8,7 @@ Material:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: M_Vefects_Extra_Grid_01
-  m_Shader: {fileID: 4800000, guid: bdec76083a39a714aa7f996f954d5c23, type: 3}
+  m_Shader: {fileID: 4800000, guid: 54d8f8223a798ac41b4e7fc71d4d76be, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
@@ -24,7 +24,7 @@ Material:
     serializedVersion: 3
     m_TexEnvs:
     - _Texture:
-        m_Texture: {fileID: 2800000, guid: 42d8d36a2bc0d624d97c7aa3fcd8a8db, type: 3}
+        m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _texcoord:

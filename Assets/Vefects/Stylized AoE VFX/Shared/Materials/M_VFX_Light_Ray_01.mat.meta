@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 07b9c99b4a4b2c54c9a5c82cf3597d42
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 340466
+  packageName: Stylized VFX Bundle
+  packageVersion: 1.0.1
+  assetPath: Assets/Vefects/Stylized AoE VFX/Shared/Materials/M_VFX_Light_Ray_01.mat
+  uploadId: 860344

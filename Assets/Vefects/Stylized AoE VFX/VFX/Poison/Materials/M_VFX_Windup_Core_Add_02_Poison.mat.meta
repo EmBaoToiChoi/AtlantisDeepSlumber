@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 06d4909b5155002419da31cd05ee699f
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 340466
+  packageName: Stylized VFX Bundle
+  packageVersion: 1.0.1
+  assetPath: Assets/Vefects/Stylized AoE VFX/VFX/Poison/Materials/M_VFX_Windup_Core_Add_02_Poison.mat
+  uploadId: 860344

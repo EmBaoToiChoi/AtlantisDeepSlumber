@@ -1,0 +1,20 @@
+fileFormatVersion: 2
+guid: a7deb118db2b7dd4da048b9fa46574f5
+ShaderImporter:
+  externalObjects: {}
+  defaultTextures:
+  - _Texture: {instanceID: 0}
+  - _Noise: {instanceID: 0}
+  - _texcoord: {instanceID: 0}
+  - _texcoord2: {instanceID: 0}
+  nonModifiableTextures: []
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 340466
+  packageName: Stylized VFX Bundle
+  packageVersion: 1.0.1
+  assetPath: Assets/Vefects/Stylized VFX/Stylized VFX Shuriken/Shared/Shaders/SH_VFX_Vefects_AB_Dissolve_BIRP_New.shader
+  uploadId: 860344

@@ -1,0 +1,20 @@
+fileFormatVersion: 2
+guid: 2faba0d9d5323ca44a88578729beadce
+ShaderImporter:
+  externalObjects: {}
+  defaultTextures:
+  - _LUT: {fileID: 2800000, guid: 3bff47adc6d72ff4eadcdd5922aea74f, type: 3}
+  - _MainTexture: {fileID: 2800000, guid: b7830ee931c46784fa1076e02fa9e339, type: 3}
+  - _DistortionTexture: {fileID: 2800000, guid: 6f282ed6b98e16f44a7a673df7b37443,
+      type: 3}
+  nonModifiableTextures: []
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 340466
+  packageName: Stylized VFX Bundle
+  packageVersion: 1.0.1
+  assetPath: Assets/Vefects/Stylized AoE VFX/Shared/Shaders/SH_Vefects_BIRP_Zone_Indicator_Light_01.shader
+  uploadId: 860344

@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 1f32753e1546c154680f337c326fb81b
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 340466
+  packageName: Stylized VFX Bundle
+  packageVersion: 1.0.1
+  assetPath: Assets/Vefects/Smoke Bombs VFX/Shared/Materials/Toxic/M_VFX_FresnelToxic_02.mat
+  uploadId: 860344

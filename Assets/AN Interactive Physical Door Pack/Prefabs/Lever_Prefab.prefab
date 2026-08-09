@@ -106,7 +106,15 @@ MonoBehaviour:
   pulledRotationOffset: {x: 120, y: 0, z: 0}
   leverRotateSpeed: 180
   interactKey: 102
+  promptMessage: "Gi\u1EEF F \u0111\u1EC3 m\u1EDF c\u1EEDa m\xEA cung"
   interactUI: {fileID: 0}
+  enableGlowEffect: 1
+  hoverGlowColor: {r: 0.2, g: 0.85, b: 1, a: 1}
+  glowColor: {r: 1, g: 0.75, b: 0.25, a: 1}
+  maxLightIntensity: 4
+  lightRange: 3.2
+  leverGlowLight: {fileID: 0}
+  leverActiveVfxPrefab: {fileID: 0}
   leverAudioSource: {fileID: 0}
   pullSound: {fileID: 0}
   isPlayerNearbyDebug: 0
@@ -165,7 +173,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0.000000057601167, y: 0.7071067, z: -0.000000057601156, w: 0.7071068}
   m_LocalPosition: {x: 0.00089495664, y: 0.99733603, z: 0.16808398}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalScale: {x: 1.5, y: 1.5, z: 1.5}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 1577609632647162967}
@@ -202,8 +210,8 @@ MeshRenderer:
   m_RendererPriority: 0
   m_Materials:
   - {fileID: -6436591170870349062, guid: 7b85b6477edc82240b543ad474b2eb7f, type: 3}
-  - {fileID: 8830196273332348141, guid: 7b85b6477edc82240b543ad474b2eb7f, type: 3}
-  - {fileID: 7626191068330388430, guid: 7b85b6477edc82240b543ad474b2eb7f, type: 3}
+  - {fileID: 2100000, guid: 4200c12637a9b6c43b4daa48c3511b37, type: 2}
+  - {fileID: 2100000, guid: 15f7b62fb3e9a854290f9b1e258665c3, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -255,7 +263,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: -0.7071068, y: 0, z: 0, w: 0.7071068}
   m_LocalPosition: {x: 0.0038933088, y: 0.99769384, z: 0.12363574}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalScale: {x: 1.5, y: 1.5, z: 1.5}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 1577609632647162967}

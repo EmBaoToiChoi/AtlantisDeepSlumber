@@ -1,0 +1,20 @@
+fileFormatVersion: 2
+guid: 7ff60927abb1fce4eb2ae145fb1d76c6
+ShaderImporter:
+  externalObjects: {}
+  defaultTextures:
+  - _DecalTexture: {fileID: 2800000, guid: 04b65e545b916e74d918756d1513018b, type: 3}
+  - _LUT: {fileID: 2800000, guid: ebc6571ef101faa4a98d42416dea7ae5, type: 3}
+  - _texcoord: {instanceID: 0}
+  - _texcoord2: {instanceID: 0}
+  nonModifiableTextures: []
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 340466
+  packageName: Stylized VFX Bundle
+  packageVersion: 1.0.1
+  assetPath: Assets/Vefects/Stylized AoE VFX/Shared/Shaders/SH_Vefects_BIRP_Fake_Decal_Cracks_01.shader
+  uploadId: 860344

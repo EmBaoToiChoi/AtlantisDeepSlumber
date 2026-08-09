@@ -27,9 +27,34 @@ public class LeverDoor : NetworkBehaviour
     [Header("--- TƯƠNG TÁC PHÍM ---")]
     [Tooltip("Phím cần giữ để gạt cần (Mặc định là F)")]
     public KeyCode interactKey = KeyCode.F;
+
+    [Tooltip("Thông báo UI Toolkit hiển thị ở phía trên giữa màn hình")]
+    public string promptMessage = "Giữ F để mở cửa mê cung";
     
     [Tooltip("(Tuỳ chọn) Kéo UI hiển thị gợi ý 'Giữ F' vào đây")]
     public GameObject interactUI; 
+
+    [Header("--- HIỆU ỨNG NỔI BẬT CẦN GẠT (GLOW VFX) ---")]
+    [Tooltip("Bật hiệu ứng ánh sáng mượt mà & hạt ma thuật phát ra từ cần gạt khi tương tác")]
+    public bool enableGlowEffect = true;
+
+    [Tooltip("Màu ánh sáng nhấp nháy nhịp thở khi đứng gần cần gạt (Mặc định: Xanh ngọc mờ huyền bí / Cyan Blue)")]
+    public Color hoverGlowColor = new Color(0.2f, 0.85f, 1f, 1f);
+
+    [Tooltip("Màu quầng sáng bùng phát rực rỡ khi đè giữ phím F gạt cần (Mặc định: Vàng kim hổ phách / Warm Gold)")]
+    public Color glowColor = new Color(1f, 0.75f, 0.25f, 1f);
+
+    [Tooltip("Cường độ ánh sáng tối đa khi gạt cần")]
+    public float maxLightIntensity = 4.0f;
+
+    [Tooltip("Bán kính quầng sáng mờ dần xung quanh cần gạt (mét)")]
+    public float lightRange = 3.2f;
+
+    [Tooltip("(Tuỳ chọn) PointLight gắn trên cần gạt (Nếu để trống sẽ tự động khởi tạo)")]
+    public Light leverGlowLight;
+
+    [Tooltip("(Tuỳ chọn) Kéo Prefab VFX quầng sáng / hạt hiệu ứng tại đây nếu có (Nếu để trống sẽ tự động sinh hạt ánh sáng đẹp mắt)")]
+    public GameObject leverActiveVfxPrefab; 
 
     [Header("--- ÂM THANH (TUỲ CHỌN) ---")]
     public AudioSource leverAudioSource;
@@ -51,6 +76,10 @@ public class LeverDoor : NetworkBehaviour
     private bool isPlayerNearby = false;
     private bool lastSentState = false;
     private bool isInitialized = false;
+    private bool isPromptShowing = false;
+    private float currentLightIntensity = 0f;
+    private GameObject activeVfxInstance;
+    private ParticleSystem autoParticleSys;
 
     // Thuộc tính kiểm tra trạng thái cần gạt (tự động tương thích cả khi chơi Offline thử nghiệm hoặc Online Netcode)
     public bool IsLeverPressed
@@ -67,8 +96,28 @@ public class LeverDoor : NetworkBehaviour
         if (!allLevers.Contains(this)) allLevers.Add(this);
     }
 
+    void OnDisable()
+    {
+        if (isPromptShowing)
+        {
+            isPromptShowing = false;
+            PlayerHUDController hud = PlayerHUDController.Instance != null 
+                ? PlayerHUDController.Instance 
+                : FindFirstObjectByType<PlayerHUDController>();
+            if (hud != null) hud.ShowInteractionPrompt(false, "");
+        }
+    }
+
     void OnDestroy()
     {
+        if (isPromptShowing)
+        {
+            isPromptShowing = false;
+            PlayerHUDController hud = PlayerHUDController.Instance != null 
+                ? PlayerHUDController.Instance 
+                : FindFirstObjectByType<PlayerHUDController>();
+            if (hud != null) hud.ShowInteractionPrompt(false, "");
+        }
         allLevers.Remove(this);
     }
 
@@ -117,6 +166,9 @@ public class LeverDoor : NetworkBehaviour
         // Cập nhật biến Debug xem trong Inspector
         isPlayerNearbyDebug = isPlayerNearby;
         isPressedDebug = IsLeverPressed;
+
+        // Cập nhật UI Toolkit gợi ý tương tác
+        UpdatePromptUI();
 
         // Reset bộ đếm chống lặp cửa mỗi frame
         if (Time.frameCount != lastFrameCount)
@@ -203,6 +255,9 @@ public class LeverDoor : NetworkBehaviour
                 leverRotateSpeed * Time.deltaTime
             );
         }
+
+        // 4. Xử lý hiệu ứng ánh sáng dịu & VFX nổi bật cần gạt
+        UpdateGlowEffect();
     }
 
     private void SetPressedState(bool pressed)
@@ -240,6 +295,174 @@ public class LeverDoor : NetworkBehaviour
         return false;
     }
 
+    private void UpdateGlowEffect()
+    {
+        if (!enableGlowEffect || leverHandle == null) return;
+
+        bool isPressed = IsLeverPressed;
+
+        // Tự động khởi tạo PointLight nếu chưa có
+        if (leverGlowLight == null)
+        {
+            Transform existingLight = leverHandle.Find("LeverAutoGlowLight");
+            if (existingLight != null)
+            {
+                leverGlowLight = existingLight.GetComponent<Light>();
+            }
+            else
+            {
+                GameObject lightObj = new GameObject("LeverAutoGlowLight");
+                lightObj.transform.SetParent(leverHandle);
+                lightObj.transform.localPosition = Vector3.zero;
+                leverGlowLight = lightObj.AddComponent<Light>();
+                leverGlowLight.type = LightType.Point;
+                leverGlowLight.range = lightRange;
+                leverGlowLight.color = glowColor;
+                leverGlowLight.intensity = 0f;
+                leverGlowLight.enabled = false;
+            }
+        }
+
+        // Tính toán cường độ & màu sắc ánh sáng dựa trên trạng thái
+        float targetIntensity = 0f;
+        Color targetColor = glowColor;
+        float targetRange = lightRange;
+
+        if (isPressed)
+        {
+            // Trạng thái gạt cần: Sáng rực rỡ + hiệu ứng chớp sáng ma thuật mượt mà
+            float microFlicker = (Mathf.PerlinNoise(Time.time * 10f, 0f) - 0.5f) * 0.6f;
+            targetIntensity = maxLightIntensity + microFlicker;
+            targetColor = glowColor;
+            targetRange = lightRange * 1.25f;
+        }
+        else if (isPlayerNearby)
+        {
+            // Trạng thái đứng gần: Ánh sáng nhịp thở huyền bí dịu mát
+            float pulse = 0.5f + Mathf.Sin(Time.time * 3.5f) * 0.35f;
+            targetIntensity = pulse * 1.5f;
+            targetColor = hoverGlowColor;
+            targetRange = lightRange * 0.85f;
+        }
+
+        currentLightIntensity = Mathf.MoveTowards(currentLightIntensity, targetIntensity, maxLightIntensity * 4.5f * Time.deltaTime);
+
+        if (leverGlowLight != null)
+        {
+            leverGlowLight.color = Color.Lerp(leverGlowLight.color, targetColor, 10f * Time.deltaTime);
+            leverGlowLight.range = Mathf.Lerp(leverGlowLight.range, targetRange, 8f * Time.deltaTime);
+            leverGlowLight.intensity = currentLightIntensity;
+            leverGlowLight.enabled = currentLightIntensity > 0.02f;
+        }
+
+        // Xử lý VFX hạt phát sáng
+        if (leverActiveVfxPrefab != null)
+        {
+            if (isPressed && activeVfxInstance == null)
+            {
+                activeVfxInstance = Instantiate(leverActiveVfxPrefab, leverHandle.position, leverHandle.rotation, leverHandle);
+            }
+            else if (!isPressed && activeVfxInstance != null)
+            {
+                Destroy(activeVfxInstance);
+                activeVfxInstance = null;
+            }
+        }
+        else
+        {
+            // Nếu không gán Prefab thủ công, tự động khởi tạo hệ thống hạt ánh sáng bay lơ lửng
+            EnsureAutoParticleSystem();
+            if (autoParticleSys != null)
+            {
+                var emission = autoParticleSys.emission;
+                emission.enabled = isPressed;
+            }
+        }
+    }
+
+    private void EnsureAutoParticleSystem()
+    {
+        if (autoParticleSys != null) return;
+
+        Transform existing = leverHandle.Find("LeverAutoSparkleParticles");
+        if (existing != null)
+        {
+            autoParticleSys = existing.GetComponent<ParticleSystem>();
+            return;
+        }
+
+        GameObject psObj = new GameObject("LeverAutoSparkleParticles");
+        psObj.transform.SetParent(leverHandle);
+        psObj.transform.localPosition = Vector3.zero;
+        psObj.transform.localRotation = Quaternion.Euler(-90f, 0f, 0f);
+
+        autoParticleSys = psObj.AddComponent<ParticleSystem>();
+        
+        var main = autoParticleSys.main;
+        main.duration = 1f;
+        main.loop = true;
+        main.startLifetime = new ParticleSystem.MinMaxCurve(0.8f, 1.4f);
+        main.startSpeed = new ParticleSystem.MinMaxCurve(0.4f, 0.9f);
+        main.startSize = new ParticleSystem.MinMaxCurve(0.06f, 0.18f);
+        main.startColor = new ParticleSystem.MinMaxGradient(glowColor, new Color(1f, 1f, 0.8f, 1f));
+        main.simulationSpace = ParticleSystemSimulationSpace.World;
+        main.gravityModifier = -0.06f; // Bay lên từ từ
+
+        var shape = autoParticleSys.shape;
+        shape.shapeType = ParticleSystemShapeType.Sphere;
+        shape.radius = 0.25f;
+
+        var emission = autoParticleSys.emission;
+        emission.rateOverTime = 30f;
+        emission.enabled = false;
+
+        var colorOverLifetime = autoParticleSys.colorOverLifetime;
+        colorOverLifetime.enabled = true;
+        Gradient grad = new Gradient();
+        grad.SetKeys(
+            new GradientColorKey[] { new GradientColorKey(glowColor, 0.0f), new GradientColorKey(Color.white, 0.5f), new GradientColorKey(glowColor, 1.0f) },
+            new GradientAlphaKey[] { new GradientAlphaKey(0f, 0.0f), new GradientAlphaKey(1.0f, 0.25f), new GradientAlphaKey(0f, 1.0f) }
+        );
+        colorOverLifetime.color = grad;
+
+        var renderer = psObj.GetComponent<ParticleSystemRenderer>();
+        if (renderer != null)
+        {
+            renderer.renderMode = ParticleSystemRenderMode.Billboard;
+            Shader particleShader = Shader.Find("Particles/Standard Unlit") ?? Shader.Find("Sprites/Default");
+            if (particleShader != null)
+            {
+                Material pMat = new Material(particleShader);
+                pMat.color = glowColor;
+                renderer.material = pMat;
+            }
+        }
+    }
+
+    private void UpdatePromptUI()
+    {
+        bool shouldShow = isPlayerNearby && !IsLeverPressed;
+
+        if (shouldShow != isPromptShowing)
+        {
+            isPromptShowing = shouldShow;
+
+            PlayerHUDController hud = PlayerHUDController.Instance != null 
+                ? PlayerHUDController.Instance 
+                : FindFirstObjectByType<PlayerHUDController>();
+
+            if (hud != null)
+            {
+                hud.ShowInteractionPrompt(shouldShow, shouldShow ? promptMessage : "");
+            }
+
+            if (interactUI != null)
+            {
+                interactUI.SetActive(shouldShow);
+            }
+        }
+    }
+
     private void OnTriggerEnter(Collider other)
     {
         if (IsPlayerCollider(other))
@@ -248,7 +471,7 @@ public class LeverDoor : NetworkBehaviour
             if (!IsSpawned || netObj == null || netObj.IsLocalPlayer || netObj.IsOwner)
             {
                 isPlayerNearby = true;
-                if (interactUI != null) interactUI.SetActive(true);
+                UpdatePromptUI();
             }
         }
     }
@@ -261,7 +484,7 @@ public class LeverDoor : NetworkBehaviour
             if (!IsSpawned || netObj == null || netObj.IsLocalPlayer || netObj.IsOwner)
             {
                 isPlayerNearby = true;
-                if (interactUI != null) interactUI.SetActive(true);
+                UpdatePromptUI();
             }
         }
     }
@@ -274,7 +497,7 @@ public class LeverDoor : NetworkBehaviour
             if (!IsSpawned || netObj == null || netObj.IsLocalPlayer || netObj.IsOwner)
             {
                 isPlayerNearby = false;
-                if (interactUI != null) interactUI.SetActive(false);
+                UpdatePromptUI();
 
                 if (lastSentState)
                 {

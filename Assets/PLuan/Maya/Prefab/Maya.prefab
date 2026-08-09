@@ -489,7 +489,10 @@ MonoBehaviour:
   eSkillHealRadius: 5
   eSkillHealDuration: 5
   eSkillHealAmount: 10
-  eSkillVfxPrefab: {fileID: 7193163566217465855, guid: aff4be9b49fb9e24abf3be6c0820b719, type: 3}
+  eSkillTargetingVfxPrefab: {fileID: 4748681987041982144, guid: b94815a5db14e594790c77978da0b138, type: 3}
+  eSkillVfxPrefab: {fileID: 660570046470276339, guid: f7f7b221b134bdf4097445f9151296db, type: 3}
+  eSkillHealBurstVfxPrefab: {fileID: 4748681987041982144, guid: 423ad7dfefe75574aa12f0d5ac132fef, type: 3}
+  eSkillPlayerHealVfxPrefab: {fileID: 3180190772059161819, guid: acc591f3f3af45842beb61b22a2ee1c0, type: 3}
   eSkillMaxPiercingNormalAttacks: 3
   eSkillRemainingNormalAttacksNet:
     UpdateTraits:
@@ -694,6 +697,13 @@ MonoBehaviour:
     TransitionIndex: 1
   - IsCrossFadeExit: 0
     Layer: 0
+    OriginatingState: 254849398
+    DestinationState: 348857124
+    TransitionDuration: 0.25
+    TriggerNameHash: 348857124
+    TransitionIndex: 2
+  - IsCrossFadeExit: 0
+    Layer: 0
     OriginatingState: -39148367
     DestinationState: 1688466699
     TransitionDuration: 0.1
@@ -719,6 +729,13 @@ MonoBehaviour:
     DestinationState: 1143134817
     TransitionDuration: 0.25
     TriggerNameHash: 1143134817
+    TransitionIndex: 0
+  - IsCrossFadeExit: 0
+    Layer: 0
+    OriginatingState: -938096726
+    DestinationState: 1903501910
+    TransitionDuration: 0.25
+    TriggerNameHash: 1903501910
     TransitionIndex: 1
   - IsCrossFadeExit: 0
     Layer: 1
