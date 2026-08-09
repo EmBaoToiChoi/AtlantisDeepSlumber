@@ -1,0 +1,19 @@
+fileFormatVersion: 2
+guid: 33779a84e90e4094f8d8b28f55aa4d8d
+ShaderImporter:
+  externalObjects: {}
+  defaultTextures:
+  - _MainTexture: {fileID: 2800000, guid: bdba5d759aeeee440a01d2005c43ae4e, type: 3}
+  - _texcoord2: {instanceID: 0}
+  - _texcoord: {instanceID: 0}
+  nonModifiableTextures: []
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 340466
+  packageName: Stylized VFX Bundle
+  packageVersion: 1.0.1
+  assetPath: Assets/Vefects/Stylized AoE VFX/Shared/Shaders/SH_Vefects_BIRP_Energy_Disc_Thin_01.shader
+  uploadId: 860344

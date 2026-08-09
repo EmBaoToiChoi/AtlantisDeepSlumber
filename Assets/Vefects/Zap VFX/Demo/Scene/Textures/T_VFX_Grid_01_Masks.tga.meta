@@ -1,5 +1,5 @@
 fileFormatVersion: 2
-guid: da13cff96126c2142a4282f9b0b912f2
+guid: 5ac64883b1ddd3241a3e49df7c2978c8
 TextureImporter:
   internalIDToNameTable: []
   externalObjects: {}
@@ -112,8 +112,8 @@ TextureImporter:
   assetBundleVariant: 
 AssetOrigin:
   serializedVersion: 1
-  productId: 303478
-  packageName: Zap VFX
-  packageVersion: 1.0.0
-  assetPath: Assets/Vefects/Zap VFX/Demo/Scene/Textures/T_VFX_Grid_01_Masks.tga
-  uploadId: 712890
+  productId: 340466
+  packageName: Stylized VFX Bundle
+  packageVersion: 1.0.1
+  assetPath: Assets/Vefects/Stylized VFX/Demo/Scene/Textures/T_VFX_Grid_01_Masks.tga
+  uploadId: 860344

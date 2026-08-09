@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: a17951e1ab6b4124c9120ad2dcc048a8
+ShaderImporter:
+  externalObjects: {}
+  defaultTextures: []
+  nonModifiableTextures: []
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 340466
+  packageName: Stylized VFX Bundle
+  packageVersion: 1.0.1
+  assetPath: Assets/Vefects/Stylized VFX/_ Extra/Shaders/SH_Vefects_Extra_Billboard_01_Unlit_BIRP.shader
+  uploadId: 860344

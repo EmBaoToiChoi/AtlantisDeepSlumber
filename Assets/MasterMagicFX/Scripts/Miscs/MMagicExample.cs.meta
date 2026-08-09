@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 73e77fbe3e6469e4984be84823539e19
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 312910
+  packageName: MasterMagicFX
+  packageVersion: 0.1
+  assetPath: Assets/MasterMagicFX/Scripts/Miscs/MMagicExample.cs
+  uploadId: 740422

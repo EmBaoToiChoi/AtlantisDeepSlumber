@@ -1,0 +1,113 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: M_VFX_Decal_Area_01_Blood
+  m_Shader: {fileID: 4800000, guid: e39298289dc6eb3469b8bd2919440719, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords:
+  - _RECEIVESHADOWS_OFF
+  - _RECEIVE_SHADOWS_OFF
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 1
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _DecalOpTexture:
+        m_Texture: {fileID: 2800000, guid: 765ec1769f212f44d9908bf5e2c525ce, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _DecalTexture:
+        m_Texture: {fileID: 2800000, guid: a9e3ca617beadc84c9cafa940c488eb2, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _LUT:
+        m_Texture: {fileID: 2800000, guid: 4ee33d76d8be9bf4fa459e7d56fb4319, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _RadialUVDistortNoise:
+        m_Texture: {fileID: 2800000, guid: 6f282ed6b98e16f44a7a673df7b37443, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _texcoord:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _texcoord2:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - unity_Lightmaps:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - unity_LightmapsInd:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - unity_ShadowMasks:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Ints: []
+    m_Floats:
+    - _AlphaCutoff: 0.5
+    - _Cull: 1
+    - _DecalHeightCut: 0.072
+    - _DecalRotation: 0
+    - _DecalScaleFromCenter: 1
+    - _DecalSize: 7
+    - _Dst: 10
+    - _Emissive: 1
+    - _EnvironmentReflections: 0
+    - _ErosionSmoothness: 0.3
+    - _FakeDecalDepthFade: 1
+    - _FakeDecalDepthFadeErosion: 0
+    - _FakeDecalDepthFadeErosionSmoothness: 0.5
+    - _LUTAmplitude: 1
+    - _LUTErosionSmoothness: 1
+    - _LUTOffset: 0
+    - _LUTPanSpeed: 0
+    - _NormalizedErosion: 0
+    - _NormalizedErosionSmoothness: 1
+    - _OpacityBoost: 1
+    - _QueueControl: 0
+    - _QueueOffset: 0
+    - _RadialUVDistortIntensity: 0.069
+    - _ReceiveShadows: 0
+    - _Smoothness: 0
+    - _Specular: 0
+    - _SpecularHighlights: 0
+    - _Src: 5
+    - _TextureColor: 0
+    - _ZTest: 2
+    - _ZWrite: 0
+    - __dirty: 0
+    m_Colors:
+    - _ColorTint: {r: 1, g: 1, b: 1, a: 1}
+    - _DecalOpTextureSelector: {r: 0, g: 1, b: 0, a: 0}
+    - _DecalOpUVPanSpeed: {r: 0, g: 0, b: 0, a: 0}
+    - _DecalOpUVScale: {r: 1, g: 1, b: 0, a: 0}
+    - _DecalPanSpeed: {r: 0, g: 0.3, b: 0, a: 0}
+    - _DecalScaleFromCenterNonUniform: {r: 1, g: 1, b: 0, a: 0}
+    - _DecalTextureSelector: {r: 0, g: 1, b: 0, a: 0}
+    - _DecalUVPanSpeed: {r: 0, g: 0.3, b: 0, a: 0}
+    - _DecalUVScale: {r: 1, g: 2, b: 0, a: 0}
+    - _EmissionColor: {r: 1, g: 1, b: 1, a: 1}
+    - _RadialUVDistortScale: {r: 1, g: 1, b: 0, a: 0}
+    - _RadialUVDistortSpeed: {r: 0.1, g: 0.01, b: 0, a: 0}
+    - _RadialUVPanSpeed: {r: 0, g: 0, b: 0, a: 0}
+    - _RadialUVTile: {r: 1, g: 1, b: 0, a: 0}
+  m_BuildTextureStacks: []

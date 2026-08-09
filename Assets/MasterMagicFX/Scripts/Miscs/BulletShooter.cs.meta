@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: e2a9a11e6c69f9c45be7cfab23894cd3
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 312910
+  packageName: MasterMagicFX
+  packageVersion: 0.1
+  assetPath: Assets/MasterMagicFX/Scripts/Miscs/BulletShooter.cs
+  uploadId: 740422

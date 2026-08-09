@@ -1,5 +1,5 @@
 fileFormatVersion: 2
-guid: e800259053abbf14fa54d05dd53dee19
+guid: 6dbfe52752bf9e64d8b2bef3ff9e2b5d
 NativeFormatImporter:
   externalObjects: {}
   mainObjectFileID: 2100000
@@ -8,8 +8,8 @@ NativeFormatImporter:
   assetBundleVariant: 
 AssetOrigin:
   serializedVersion: 1
-  productId: 303478
-  packageName: Zap VFX
-  packageVersion: 1.0.0
-  assetPath: Assets/Vefects/Zap VFX/Demo/Scene/Materials/M_Sky.mat
-  uploadId: 712890
+  productId: 340466
+  packageName: Stylized VFX Bundle
+  packageVersion: 1.0.1
+  assetPath: Assets/Vefects/Stylized VFX/Demo/Scene/Materials/M_Sky.mat
+  uploadId: 860344
