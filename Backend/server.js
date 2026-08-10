@@ -5,6 +5,7 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const nodemailer = require('nodemailer');
 const cors = require('cors');
+const os = require('os');
 const User = require('./models/User');
 const Room = require('./models/Room');
 const Admin = require('./models/Admin');
@@ -13,6 +14,85 @@ const AdminLog = require('./models/AdminLog');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// ─── System Metrics & Traffic Tracking ────────────────────────────────────────
+const networkStats = {
+    totalRequests: 0,
+    totalBytesRx: 0,
+    totalBytesTx: 0,
+    activeConnections: 0,
+    recentRequestTimestamps: []
+};
+
+// Middleware theo dõi lưu lượng mạng và số lượng Request
+app.use((req, res, next) => {
+    networkStats.totalRequests++;
+    networkStats.activeConnections++;
+    const now = Date.now();
+    networkStats.recentRequestTimestamps.push(now);
+
+    // Xóa các mốc thời gian quá 10 giây trước để tính RPS
+    const tenSecAgo = now - 10000;
+    while (networkStats.recentRequestTimestamps.length > 0 && networkStats.recentRequestTimestamps[0] < tenSecAgo) {
+        networkStats.recentRequestTimestamps.shift();
+    }
+
+    // Ước tính dung lượng Request gửi lên
+    const reqSize = Number(req.headers['content-length']) || (req.url.length + 100);
+    networkStats.totalBytesRx += reqSize;
+
+    const originalEnd = res.end;
+    res.end = function (chunk, encoding) {
+        if (chunk) {
+            networkStats.totalBytesTx += Buffer.isBuffer(chunk) ? chunk.length : Buffer.byteLength(chunk || '', encoding);
+        }
+        networkStats.activeConnections = Math.max(0, networkStats.activeConnections - 1);
+        originalEnd.apply(res, arguments);
+    };
+
+    next();
+});
+
+// Hàm tính toán CPU % theo độ lệch thời gian (Delta Sampling)
+let previousCpuTimes = null;
+function calculateCpuUsage() {
+    const cpus = os.cpus();
+    if (!cpus || cpus.length === 0) {
+        return { usagePercent: 0, cores: 1, model: 'Unknown', speed: 0 };
+    }
+
+    let totalIdle = 0;
+    let totalTick = 0;
+    for (const cpu of cpus) {
+        for (const type in cpu.times) {
+            totalTick += cpu.times[type];
+        }
+        totalIdle += cpu.times.idle;
+    }
+
+    let usagePercent = 0;
+    if (previousCpuTimes) {
+        const idleDelta = totalIdle - previousCpuTimes.idle;
+        const totalDelta = totalTick - previousCpuTimes.total;
+        if (totalDelta > 0) {
+            const rawPercent = (1 - (idleDelta / totalDelta)) * 100;
+            usagePercent = Math.max(0, Math.min(100, Math.round(rawPercent * 10) / 10));
+        }
+    }
+    previousCpuTimes = { idle: totalIdle, total: totalTick };
+
+    return {
+        usagePercent,
+        cores: cpus.length,
+        model: cpus[0].model,
+        speed: cpus[0].speed
+    };
+}
+
+// Khởi tạo mẫu CPU ban đầu
+calculateCpuUsage();
+// Cập nhật mẫu CPU liên tục mỗi giây để luôn có delta chính xác khi client request
+setInterval(calculateCpuUsage, 1000);
 
 // ─── Middleware ───────────────────────────────────────────────────────────────
 app.use(cors());
@@ -919,6 +999,170 @@ app.delete('/api/admin/rooms/:roomId', authenticateAdminToken, async (req, res) 
     } catch (err) {
         console.error('[AdminDeleteRoom]', err);
         res.status(500).json({ success: false, message: `Lỗi khi xóa phòng chơi: ${err.message}` });
+    }
+});
+
+// GET /api/admin/system-metrics (Lấy thông số CPU, RAM, Network, Database & Uptime)
+app.get('/api/admin/system-metrics', authenticateAdminToken, async (req, res) => {
+    try {
+        const cpu = calculateCpuUsage();
+        const loadAvg = os.loadavg(); // [1m, 5m, 15m]
+
+        const totalMem = os.totalmem();
+        const freeMem = os.freemem();
+        const usedMem = totalMem - freeMem;
+        const memUsagePercent = Math.round((usedMem / totalMem) * 1000) / 10;
+        const processMemory = process.memoryUsage();
+
+        // Network Interfaces
+        const rawInterfaces = os.networkInterfaces();
+        const interfaces = [];
+        for (const [name, addrs] of Object.entries(rawInterfaces)) {
+            if (!addrs) continue;
+            for (const addr of addrs) {
+                if (addr.family === 'IPv4') {
+                    interfaces.push({
+                        name,
+                        address: addr.address,
+                        netmask: addr.netmask,
+                        mac: addr.mac,
+                        internal: addr.internal
+                    });
+                }
+            }
+        }
+
+        // Tính RPS (Requests Per Second) trong 10 giây qua
+        const now = Date.now();
+        const recentTenSecCount = networkStats.recentRequestTimestamps.filter(t => t >= now - 10000).length;
+        const requestsPerSec = Math.round((recentTenSecCount / 10) * 10) / 10;
+
+        // MongoDB Ping Latency
+        let dbPingMs = 0;
+        let dbState = 'disconnected';
+        if (mongoose.connection.readyState === 1) {
+            dbState = 'connected';
+            const startPing = Date.now();
+            try {
+                await mongoose.connection.db.admin().ping();
+                dbPingMs = Date.now() - startPing;
+            } catch (e) {
+                dbPingMs = -1;
+            }
+        } else if (mongoose.connection.readyState === 2) {
+            dbState = 'connecting';
+        }
+
+        const metrics = {
+            cpu: {
+                usagePercent: cpu.usagePercent,
+                cores: cpu.cores,
+                model: cpu.model,
+                speed: cpu.speed,
+                loadAvg: loadAvg.map(l => Math.round(l * 100) / 100)
+            },
+            memory: {
+                totalBytes: totalMem,
+                usedBytes: usedMem,
+                freeBytes: freeMem,
+                usagePercent: memUsagePercent,
+                totalMB: Math.round(totalMem / (1024 * 1024)),
+                usedMB: Math.round(usedMem / (1024 * 1024)),
+                freeMB: Math.round(freeMem / (1024 * 1024)),
+                process: {
+                    rssMB: Math.round(processMemory.rss / (1024 * 1024) * 10) / 10,
+                    heapTotalMB: Math.round(processMemory.heapTotal / (1024 * 1024) * 10) / 10,
+                    heapUsedMB: Math.round(processMemory.heapUsed / (1024 * 1024) * 10) / 10,
+                    externalMB: Math.round(processMemory.external / (1024 * 1024) * 10) / 10
+                }
+            },
+            network: {
+                totalRequests: networkStats.totalRequests,
+                totalBytesRx: networkStats.totalBytesRx,
+                totalBytesTx: networkStats.totalBytesTx,
+                activeConnections: networkStats.activeConnections,
+                requestsPerSec,
+                interfaces
+            },
+            database: {
+                status: dbState,
+                pingLatencyMs: dbPingMs
+            },
+            system: {
+                hostname: os.hostname(),
+                platform: os.platform(),
+                arch: os.arch(),
+                release: os.release(),
+                nodeVersion: process.version,
+                osUptimeSec: Math.floor(os.uptime()),
+                processUptimeSec: Math.floor(process.uptime()),
+                timestamp: new Date().toISOString()
+            }
+        };
+
+        res.json({ success: true, metrics });
+    } catch (err) {
+        console.error('[AdminSystemMetrics]', err);
+        res.status(500).json({ success: false, message: `Lỗi thu thập thông số hệ thống: ${err.message}` });
+    }
+});
+
+// POST /api/admin/server/restart (Khởi động lại Server an toàn)
+app.post('/api/admin/server/restart', authenticateAdminToken, async (req, res) => {
+    try {
+        const reason = req.body?.reason || 'Quản trị viên yêu cầu khởi động lại qua Control Panel';
+
+        // Ghi Log Hoạt Động
+        await writeAdminLog(
+            req.admin.username,
+            req.admin.displayName,
+            'Khởi động lại Server',
+            'Hệ thống Máy chủ Atlantis',
+            `Khởi động lại tiến trình server. Lý do: ${reason}`
+        );
+
+        res.json({
+            success: true,
+            message: 'Lệnh khởi động lại đã được tiếp nhận. Máy chủ sẽ tự khởi động lại trong 1 giây...'
+        });
+
+        // Hẹn giờ khởi động lại để đảm bảo client nhận được response
+        setTimeout(() => {
+            console.log(`\x1b[33m%s\x1b[0m`, `[Server] Restart triggered by admin: ${req.admin.username} (${req.admin.displayName})`);
+            process.exit(0);
+        }, 1000);
+    } catch (err) {
+        console.error('[AdminRestartServer]', err);
+        res.status(500).json({ success: false, message: `Lỗi khi yêu cầu khởi động lại: ${err.message}` });
+    }
+});
+
+// POST /api/admin/rooms/cleanup (Dọn dẹp các phòng rác / không có người chơi)
+app.post('/api/admin/rooms/cleanup', authenticateAdminToken, async (req, res) => {
+    try {
+        const result = await Room.deleteMany({
+            $or: [
+                { players: { $size: 0 } },
+                { status: 'ended' }
+            ]
+        });
+
+        await writeAdminLog(
+            req.admin.username,
+            req.admin.displayName,
+            'Dọn dẹp phòng chơi',
+            'Cơ sở dữ liệu Phòng',
+            `Đã dọn dẹp ${result.deletedCount} phòng chơi trống hoặc đã kết thúc.`
+        );
+
+        res.json({
+            success: true,
+            message: `Đã dọn dẹp thành công ${result.deletedCount} phòng rác!`,
+            deletedCount: result.deletedCount
+        });
+    } catch (err) {
+        console.error('[AdminCleanupRooms]', err);
+        res.status(500).json({ success: false, message: `Lỗi dọn dẹp phòng: ${err.message}` });
     }
 });
 

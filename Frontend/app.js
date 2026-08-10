@@ -9,6 +9,7 @@ let cachedUsers = [];
 let cachedRooms = [];
 let cachedLogs = [];
 let cachedAdmins = [];
+let liveMetricsTimer = null;
 
 // DOM Elements
 const gateOverlay = document.getElementById('gateOverlay');
@@ -19,6 +20,9 @@ const inputAdminPassword = document.getElementById('adminPassword');
 const btnConnect = document.getElementById('btnConnect');
 const btnLogout = document.getElementById('btnLogout');
 const btnRefresh = document.getElementById('btnRefresh');
+
+// Header & Actions
+const btnHeaderRestartServer = document.getElementById('btnHeaderRestartServer');
 
 // Profile DOM Elements
 const txtAdminDisplayName = document.getElementById('txtAdminDisplayName');
@@ -32,7 +36,7 @@ const currentTabTitle = document.getElementById('currentTabTitle');
 const currentTabDesc = document.getElementById('currentTabDesc');
 const navAdminAccounts = document.getElementById('navAdminAccounts');
 
-// Stats Elements
+// Stats Elements (Overview)
 const statTotalUsers = document.getElementById('statTotalUsers');
 const statVerifiedUsers = document.getElementById('statVerifiedUsers');
 const statActiveRooms = document.getElementById('statActiveRooms');
@@ -40,6 +44,75 @@ const statTotalRooms = document.getElementById('statTotalRooms');
 const statAvgHp = document.getElementById('statAvgHp');
 const statAvgDmg = document.getElementById('statAvgDmg');
 const statAvgPoints = document.getElementById('statAvgPoints');
+
+// Overview Mini Metrics Elements
+const btnQuickViewSystem = document.getElementById('btnQuickViewSystem');
+const overviewCpuBar = document.getElementById('overviewCpuBar');
+const overviewCpuText = document.getElementById('overviewCpuText');
+const overviewCpuCores = document.getElementById('overviewCpuCores');
+const overviewRamBar = document.getElementById('overviewRamBar');
+const overviewRamText = document.getElementById('overviewRamText');
+const overviewRamUsed = document.getElementById('overviewRamUsed');
+const overviewNetRx = document.getElementById('overviewNetRx');
+const overviewNetTx = document.getElementById('overviewNetTx');
+const overviewNetRps = document.getElementById('overviewNetRps');
+const overviewUptime = document.getElementById('overviewUptime');
+const overviewDbPing = document.getElementById('overviewDbPing');
+
+// System Monitor Toolbar Elements
+const toggleLiveMetrics = document.getElementById('toggleLiveMetrics');
+const txtDbPing = document.getElementById('txtDbPing');
+const dbPingBadge = document.getElementById('dbPingBadge');
+const txtMetricsLastUpdated = document.getElementById('txtMetricsLastUpdated');
+const btnSystemRestartServer = document.getElementById('btnSystemRestartServer');
+
+// Hardware Metrics Elements (tab-system)
+const cpuRadialBar = document.getElementById('cpuRadialBar');
+const valCpuPercent = document.getElementById('valCpuPercent');
+const valCpuCores = document.getElementById('valCpuCores');
+const valCpuSpeed = document.getElementById('valCpuSpeed');
+const valCpuLoadAvg = document.getElementById('valCpuLoadAvg');
+const valCpuModel = document.getElementById('valCpuModel');
+
+const ramRadialBar = document.getElementById('ramRadialBar');
+const valRamPercent = document.getElementById('valRamPercent');
+const valRamUsedTotal = document.getElementById('valRamUsedTotal');
+const valRamFree = document.getElementById('valRamFree');
+const valNodeRss = document.getElementById('valNodeRss');
+const valNodeHeap = document.getElementById('valNodeHeap');
+
+const valNetRx = document.getElementById('valNetRx');
+const valNetTx = document.getElementById('valNetTx');
+const valNetRps = document.getElementById('valNetRps');
+const valNetTotalReq = document.getElementById('valNetTotalReq');
+const interfaceChipsList = document.getElementById('interfaceChipsList');
+
+const valHostName = document.getElementById('valHostName');
+const valHostOs = document.getElementById('valHostOs');
+const valNodeVersion = document.getElementById('valNodeVersion');
+const valProcessUptime = document.getElementById('valProcessUptime');
+const valOsUptime = document.getElementById('valOsUptime');
+
+// Server Operations Panel Elements
+const btnOpRestartServer = document.getElementById('btnOpRestartServer');
+const btnOpCleanupRooms = document.getElementById('btnOpCleanupRooms');
+
+// Modal Elements - Restart Server Confirmation
+const restartConfirmModal = document.getElementById('restartConfirmModal');
+const btnCloseRestartModal = document.getElementById('btnCloseRestartModal');
+const btnCancelRestart = document.getElementById('btnCancelRestart');
+const btnConfirmRestart = document.getElementById('btnConfirmRestart');
+const restartReason = document.getElementById('restartReason');
+
+// Fullscreen Reboot Overlay Elements
+const rebootOverlay = document.getElementById('rebootOverlay');
+const txtRebootTitle = document.getElementById('txtRebootTitle');
+const txtRebootSubtitle = document.getElementById('txtRebootSubtitle');
+const rebootTimerVal = document.getElementById('rebootTimerVal');
+const step1 = document.getElementById('step1');
+const step2 = document.getElementById('step2');
+const step3 = document.getElementById('step3');
+const step3Text = document.getElementById('step3Text');
 
 // User Elements
 const searchUserInput = document.getElementById('searchUser');
@@ -145,6 +218,10 @@ function loadSavedCredentials() {
         
         showDashboardUI();
         fetchStats();
+        fetchSystemMetrics();
+        if (!toggleLiveMetrics || toggleLiveMetrics.checked) {
+            startLiveMetricsTimer();
+        }
     }
 }
 
@@ -178,6 +255,10 @@ async function loginAdmin(username, password) {
             
             showDashboardUI();
             fetchStats();
+            fetchSystemMetrics();
+            if (!toggleLiveMetrics || toggleLiveMetrics.checked) {
+                startLiveMetricsTimer();
+            }
             if (data.isFirstLogin) {
                 firstLoginModal.classList.add('show');
             }
@@ -257,6 +338,42 @@ function setupEventListeners() {
         });
     });
 
+    // Server Restart buttons
+    if (btnHeaderRestartServer) btnHeaderRestartServer.addEventListener('click', openRestartModal);
+    if (btnSystemRestartServer) btnSystemRestartServer.addEventListener('click', openRestartModal);
+    if (btnOpRestartServer) btnOpRestartServer.addEventListener('click', openRestartModal);
+    if (btnCloseRestartModal) btnCloseRestartModal.addEventListener('click', closeRestartModal);
+    if (btnCancelRestart) btnCancelRestart.addEventListener('click', closeRestartModal);
+    if (restartConfirmModal) {
+        restartConfirmModal.addEventListener('click', (e) => {
+            if (e.target === restartConfirmModal) closeRestartModal();
+        });
+    }
+    if (btnConfirmRestart) btnConfirmRestart.addEventListener('click', handleConfirmRestart);
+
+    // Clean empty rooms button
+    if (btnOpCleanupRooms) btnOpCleanupRooms.addEventListener('click', handleCleanupRooms);
+
+    // Quick View System button in Overview
+    if (btnQuickViewSystem) {
+        btnQuickViewSystem.addEventListener('click', () => {
+            switchTab('tab-system');
+        });
+    }
+
+    // Live Metrics Toggle
+    if (toggleLiveMetrics) {
+        toggleLiveMetrics.addEventListener('change', () => {
+            if (toggleLiveMetrics.checked) {
+                startLiveMetricsTimer();
+                showToast('Đã bật chế độ cập nhật phần cứng trực tiếp (3s).', 'info');
+            } else {
+                stopLiveMetricsTimer();
+                showToast('Đã tắt tự động cập nhật phần cứng.', 'info');
+            }
+        });
+    }
+
     searchUserInput.addEventListener('input', applyUserFilters);
     filterVerifiedSelect.addEventListener('change', applyUserFilters);
     searchLogInput.addEventListener('input', applyLogFilters);
@@ -317,7 +434,10 @@ function switchTab(tabId) {
 
     if (tabId === 'tab-overview') {
         currentTabTitle.textContent = 'Hệ thống điều khiển trung tâm';
-        currentTabDesc.textContent = 'Thống kê trạng thái thời gian thực của cơ sở dữ liệu game.';
+        currentTabDesc.textContent = 'Thống kê trạng thái thời gian thực của cơ sở dữ liệu và máy chủ game.';
+    } else if (tabId === 'tab-system') {
+        currentTabTitle.textContent = 'Giám sát Hệ thống & Tài nguyên Máy chủ';
+        currentTabDesc.textContent = 'Theo dõi CPU, RAM, Network I/O, thời gian hoạt động và điều khiển tiến trình Backend.';
     } else if (tabId === 'tab-users') {
         currentTabTitle.textContent = 'Quản lý Tài khoản & Trạng thái';
         currentTabDesc.textContent = 'Tra cứu người chơi, kích hoạt tài khoản và chỉnh sửa các chỉ số nâng cấp game.';
@@ -337,15 +457,26 @@ function switchTab(tabId) {
 
 async function loadTabContent(tabId) {
     if (tabId === 'tab-overview') {
-        await fetchStats();
-    } else if (tabId === 'tab-users') {
-        await fetchUsers();
-    } else if (tabId === 'tab-rooms') {
-        await fetchRooms();
-    } else if (tabId === 'tab-logs') {
-        await fetchLogs();
-    } else if (tabId === 'tab-admin-accounts') {
-        await fetchAdminAccounts();
+        await Promise.all([fetchStats(), fetchSystemMetrics()]);
+        if (!toggleLiveMetrics || toggleLiveMetrics.checked) {
+            startLiveMetricsTimer();
+        }
+    } else if (tabId === 'tab-system') {
+        await fetchSystemMetrics();
+        if (!toggleLiveMetrics || toggleLiveMetrics.checked) {
+            startLiveMetricsTimer();
+        }
+    } else {
+        stopLiveMetricsTimer();
+        if (tabId === 'tab-users') {
+            await fetchUsers();
+        } else if (tabId === 'tab-rooms') {
+            await fetchRooms();
+        } else if (tabId === 'tab-logs') {
+            await fetchLogs();
+        } else if (tabId === 'tab-admin-accounts') {
+            await fetchAdminAccounts();
+        }
     }
 }
 
@@ -980,6 +1111,291 @@ function removeToast(toast) {
             toast.parentNode.removeChild(toast);
         }
     }, 300);
+}
+
+// ─── SYSTEM METRICS & HARDWARE MONITOR ───────────────────────────────────────
+
+async function fetchSystemMetrics() {
+    if (!ADMIN_TOKEN) return;
+    try {
+        const res = await fetch(`${API_URL}/api/admin/system-metrics`, {
+            headers: getHeaders()
+        });
+        if (res.ok) {
+            const data = await res.json();
+            if (data.success && data.metrics) {
+                updateSystemMetricsUI(data.metrics);
+            }
+        }
+    } catch (err) {
+        console.error('[FetchMetrics Error]', err);
+    }
+}
+
+function updateSystemMetricsUI(metrics) {
+    if (!metrics) return;
+    const { cpu, memory, network, database, system } = metrics;
+
+    // 1. CPU Metrics
+    const cpuPercent = cpu?.usagePercent || 0;
+    if (valCpuPercent) valCpuPercent.textContent = `${cpuPercent.toFixed(1)}%`;
+    if (valCpuCores) valCpuCores.textContent = `${cpu.cores || 1} Nhân (${(cpu.cores || 1) * 2} Luồng)`;
+    if (valCpuSpeed) valCpuSpeed.textContent = `${cpu.speed || 0} MHz`;
+    if (valCpuLoadAvg) valCpuLoadAvg.textContent = cpu.loadAvg ? cpu.loadAvg.map(n => n.toFixed(2)).join(', ') : '0.00, 0.00, 0.00';
+    if (valCpuModel) valCpuModel.textContent = cpu.model || 'Standard CPU';
+    updateRadialGauge(cpuRadialBar, cpuPercent);
+
+    // 2. RAM & Memory Metrics
+    const ramPercent = memory?.usagePercent || 0;
+    if (valRamPercent) valRamPercent.textContent = `${ramPercent.toFixed(1)}%`;
+    if (valRamUsedTotal) valRamUsedTotal.textContent = `${formatBytes(memory.usedBytes)} / ${formatBytes(memory.totalBytes)}`;
+    if (valRamFree) valRamFree.textContent = formatBytes(memory.freeBytes);
+    if (valNodeRss) valNodeRss.textContent = `${memory.process?.rssMB || 0} MB`;
+    if (valNodeHeap) valNodeHeap.textContent = `${memory.process?.heapUsedMB || 0} / ${memory.process?.heapTotalMB || 0} MB`;
+    updateRadialGauge(ramRadialBar, ramPercent);
+
+    // 3. Network & Traffic Metrics
+    if (valNetRx) valNetRx.textContent = formatBytes(network?.totalBytesRx || 0);
+    if (valNetTx) valNetTx.textContent = formatBytes(network?.totalBytesTx || 0);
+    if (valNetRps) valNetRps.textContent = `${network?.requestsPerSec || 0} req/s`;
+    if (valNetTotalReq) valNetTotalReq.textContent = (network?.totalRequests || 0).toLocaleString();
+
+    if (interfaceChipsList && network?.interfaces) {
+        if (network.interfaces.length > 0) {
+            interfaceChipsList.innerHTML = network.interfaces.map(iface => `
+                <div class="interface-chip" title="MAC: ${escapeHTML(iface.mac || 'N/A')}">
+                    <strong>${escapeHTML(iface.name)}:</strong> ${escapeHTML(iface.address)}
+                </div>
+            `).join('');
+        } else {
+            interfaceChipsList.innerHTML = '<span class="text-muted text-sm">Không phát hiện card mạng IPv4.</span>';
+        }
+    }
+
+    // 4. Host & Runtime Info
+    if (valHostName) valHostName.textContent = system?.hostname || 'atlantis-server';
+    if (valHostOs) valHostOs.textContent = `${system?.platform || 'Linux'} (${system?.arch || 'x64'}) - ${system?.release || ''}`;
+    if (valNodeVersion) valNodeVersion.textContent = system?.nodeVersion || 'v20.x';
+    if (valProcessUptime) valProcessUptime.textContent = formatUptime(system?.processUptimeSec);
+    if (valOsUptime) valOsUptime.textContent = formatUptime(system?.osUptimeSec);
+
+    // 5. Toolbar Ping & Last Updated
+    if (txtDbPing) {
+        const ping = database?.pingLatencyMs ?? -1;
+        txtDbPing.textContent = ping >= 0 ? `${ping} ms` : 'Offline';
+        if (dbPingBadge) {
+            const dot = dbPingBadge.querySelector('.ping-dot');
+            if (dot) {
+                dot.style.background = ping >= 0 && ping < 80 ? 'var(--green)' : ping < 200 ? 'var(--warning)' : 'var(--danger)';
+            }
+        }
+    }
+    if (txtMetricsLastUpdated) {
+        const now = new Date();
+        txtMetricsLastUpdated.textContent = `Cập nhật: ${now.toLocaleTimeString('vi-VN')}`;
+    }
+
+    // 6. Overview Tab Mini Hardware Widgets
+    if (overviewCpuBar) overviewCpuBar.style.width = `${Math.min(100, Math.max(0, cpuPercent))}%`;
+    if (overviewCpuText) overviewCpuText.textContent = `${cpuPercent.toFixed(1)}%`;
+    if (overviewCpuCores) overviewCpuCores.textContent = `${cpu.cores || 1} Cores`;
+
+    if (overviewRamBar) overviewRamBar.style.width = `${Math.min(100, Math.max(0, ramPercent))}%`;
+    if (overviewRamText) overviewRamText.textContent = `${ramPercent.toFixed(1)}%`;
+    if (overviewRamUsed) overviewRamUsed.textContent = `${formatBytes(memory.usedBytes)}`;
+
+    if (overviewNetRx) overviewNetRx.textContent = formatBytes(network?.totalBytesRx || 0);
+    if (overviewNetTx) overviewNetTx.textContent = formatBytes(network?.totalBytesTx || 0);
+    if (overviewNetRps) overviewNetRps.textContent = `${network?.requestsPerSec || 0} req/s`;
+    if (overviewUptime) overviewUptime.textContent = formatUptime(system?.processUptimeSec);
+    if (overviewDbPing) overviewDbPing.textContent = `Ping: ${database?.pingLatencyMs >= 0 ? database.pingLatencyMs : 0}ms`;
+}
+
+function updateRadialGauge(circleElem, percent) {
+    if (!circleElem) return;
+    const circumference = 263.89; // 2 * pi * 42
+    const p = Math.min(100, Math.max(0, percent));
+    const offset = circumference - (p / 100) * circumference;
+    circleElem.style.strokeDashoffset = offset;
+}
+
+function startLiveMetricsTimer() {
+    stopLiveMetricsTimer();
+    liveMetricsTimer = setInterval(() => {
+        if (activeTab === 'tab-system' || activeTab === 'tab-overview') {
+            fetchSystemMetrics();
+        }
+    }, 3000);
+}
+
+function stopLiveMetricsTimer() {
+    if (liveMetricsTimer) {
+        clearInterval(liveMetricsTimer);
+        liveMetricsTimer = null;
+    }
+}
+
+// ─── RESTART SERVER & ROOM CLEANUP WORKFLOWS ─────────────────────────────────
+
+function openRestartModal() {
+    if (restartReason) restartReason.value = '';
+    if (restartConfirmModal) restartConfirmModal.classList.add('show');
+}
+
+function closeRestartModal() {
+    if (restartConfirmModal) restartConfirmModal.classList.remove('show');
+}
+
+async function handleConfirmRestart() {
+    closeRestartModal();
+    
+    const reason = restartReason ? restartReason.value.trim() : '';
+    
+    // Hiển thị Overlay đếm ngược khởi động lại
+    if (rebootOverlay) {
+        rebootOverlay.style.display = 'flex';
+        txtRebootTitle.textContent = 'ĐANG KHỞI ĐỘNG LẠI MÁY CHỦ';
+        txtRebootSubtitle.textContent = 'Vui lòng đợi trong giây lát, hệ thống đang gửi tín hiệu và tự động kết nối lại...';
+        
+        step1.className = 'step-item active';
+        step2.className = 'step-item';
+        step3.className = 'step-item';
+        step3Text.textContent = 'Đang kiểm tra trạng thái sức khỏe máy chủ (/health)...';
+    }
+    
+    let elapsedSeconds = 0;
+    if (rebootTimerVal) rebootTimerVal.textContent = '0s';
+    const timerTicker = setInterval(() => {
+        elapsedSeconds++;
+        if (rebootTimerVal) rebootTimerVal.textContent = `${elapsedSeconds}s`;
+    }, 1000);
+
+    try {
+        // Gửi yêu cầu khởi động lại Server
+        const res = await fetch(`${API_URL}/api/admin/server/restart`, {
+            method: 'POST',
+            headers: getHeaders(),
+            body: JSON.stringify({ reason: reason || 'Khởi động lại máy chủ từ Admin Dashboard' })
+        });
+        
+        if (!res.ok) {
+            const errData = await res.json().catch(() => ({}));
+            throw new Error(errData.message || 'Không thể gửi lệnh khởi động lại.');
+        }
+
+        step1.className = 'step-item done';
+        step2.className = 'step-item active';
+
+        // Đợi 1.5 giây để tiến trình cũ kết thúc và supervisor nạp lại tiến trình mới
+        await new Promise(r => setTimeout(r, 1500));
+        
+        step2.className = 'step-item done';
+        step3.className = 'step-item active';
+
+        // Bắt đầu Health-Check Polling kiểm tra máy chủ đã sẵn sàng chưa
+        let reconnected = false;
+        let attempts = 0;
+        const maxAttempts = 30; // 30 giây tối đa
+
+        while (!reconnected && attempts < maxAttempts) {
+            attempts++;
+            step3Text.textContent = `Đang kiểm tra kết nối lại máy chủ... (Lần ${attempts})`;
+            await new Promise(r => setTimeout(r, 1000));
+            
+            try {
+                const healthRes = await fetch(`${API_URL}/health?t=${Date.now()}`, {
+                    cache: 'no-store'
+                });
+                if (healthRes.ok) {
+                    const healthData = await healthRes.json();
+                    if (healthData.status === 'ok') {
+                        reconnected = true;
+                        break;
+                    }
+                }
+            } catch (e) {
+                // Server đang khởi động lại, tiếp tục vòng lặp
+            }
+        }
+
+        clearInterval(timerTicker);
+
+        if (reconnected) {
+            step3.className = 'step-item done';
+            txtRebootTitle.textContent = 'KHỞI ĐỘNG LẠI THÀNH CÔNG!';
+            txtRebootSubtitle.textContent = 'Máy chủ đã online và sẵn sàng phục vụ!';
+            
+            showToast('Máy chủ đã khởi động lại và kết nối thành công!', 'success');
+            
+            setTimeout(() => {
+                if (rebootOverlay) rebootOverlay.style.display = 'none';
+                fetchStats();
+                fetchSystemMetrics();
+            }, 1200);
+        } else {
+            txtRebootTitle.textContent = 'KẾT NỐI MẤT NHIỀU THỜI GIAN';
+            txtRebootSubtitle.textContent = 'Máy chủ có thể đang mất nhiều thời gian hơn để khởi động lại. Vui lòng thử làm mới trang.';
+            showToast('Không thể xác nhận server đã online sau 30s. Hãy thử tải lại trang.', 'warning');
+            setTimeout(() => {
+                if (rebootOverlay) rebootOverlay.style.display = 'none';
+            }, 3000);
+        }
+
+    } catch (err) {
+        clearInterval(timerTicker);
+        if (rebootOverlay) rebootOverlay.style.display = 'none';
+        console.error('[Restart Error]', err);
+        showToast(`Lỗi khi khởi động lại máy chủ: ${err.message}`, 'error');
+    }
+}
+
+async function handleCleanupRooms() {
+    if (!confirm('Bạn có chắc chắn muốn dọn dẹp các phòng chơi trống không có người hoặc đã kết thúc không?')) {
+        return;
+    }
+
+    try {
+        const res = await fetch(`${API_URL}/api/admin/rooms/cleanup`, {
+            method: 'POST',
+            headers: getHeaders()
+        });
+        const data = await res.json();
+        if (res.ok) {
+            showToast(data.message || 'Dọn dẹp phòng rác thành công!', 'success');
+            fetchStats();
+            if (activeTab === 'tab-rooms') fetchRooms();
+        } else {
+            showToast(data.message || 'Lỗi khi dọn dẹp phòng.', 'error');
+        }
+    } catch (err) {
+        console.error(err);
+        showToast('Không thể thực hiện dọn dẹp phòng.', 'error');
+    }
+}
+
+// ─── FORMATTING HELPERS ──────────────────────────────────────────────────────
+
+function formatBytes(bytes) {
+    if (bytes === 0 || !bytes) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+}
+
+function formatUptime(seconds) {
+    if (!seconds || seconds <= 0) return '0s';
+    const d = Math.floor(seconds / (3600 * 24));
+    const h = Math.floor((seconds % (3600 * 24)) / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = Math.floor(seconds % 60);
+    
+    const parts = [];
+    if (d > 0) parts.push(`${d}d`);
+    if (h > 0) parts.push(`${h}h`);
+    if (m > 0) parts.push(`${m}m`);
+    if (s > 0 && d === 0) parts.push(`${s}s`);
+    return parts.join(' ') || '0s';
 }
 
 // ─── UTILITIES ───────────────────────────────────────────────────────────────
