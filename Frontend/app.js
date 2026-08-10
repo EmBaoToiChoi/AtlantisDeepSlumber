@@ -1126,6 +1126,12 @@ async function fetchSystemMetrics() {
             if (data.success && data.metrics) {
                 updateSystemMetricsUI(data.metrics);
             }
+        } else {
+            const errData = await res.json().catch(() => ({}));
+            console.warn('[SystemMetrics Error]', res.status, errData);
+            if (res.status === 404) {
+                console.error('API /api/admin/system-metrics chưa có trên Backend VPS. Vui lòng cập nhật (git pull/upload) file server.js mới lên VPS.');
+            }
         }
     } catch (err) {
         console.error('[FetchMetrics Error]', err);
