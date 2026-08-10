@@ -252,6 +252,7 @@ const toastContainer = document.getElementById('toastContainer');
 
 // ─── INITIALIZATION ──────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
+    initTheme();
     initParticles();
     
     // Tự động điều chỉnh IP nếu ứng dụng chạy trên cùng VPS, loại trừ trường hợp mở bằng file cục bộ
@@ -382,6 +383,35 @@ function showDashboardUI() {
 }
 
 // ─── EVENTS SETUP ────────────────────────────────────────────────────────────
+// ─── THEME (LIGHT / DARK MODE) ───────────────────────────────────────────────
+
+function initTheme() {
+    const savedTheme = localStorage.getItem('atlantis_theme') || 'dark';
+    applyTheme(savedTheme);
+}
+
+function applyTheme(theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+    const themeIcon = document.getElementById('themeIcon');
+    const themeLabel = document.getElementById('themeLabel');
+    if (themeIcon && themeLabel) {
+        if (theme === 'light') {
+            themeIcon.textContent = '☀️';
+            themeLabel.textContent = 'Chế độ sáng';
+        } else {
+            themeIcon.textContent = '🌙';
+            themeLabel.textContent = 'Chế độ tối';
+        }
+    }
+}
+
+function toggleTheme() {
+    const current = document.documentElement.getAttribute('data-theme') || 'dark';
+    const next = current === 'dark' ? 'light' : 'dark';
+    applyTheme(next);
+    localStorage.setItem('atlantis_theme', next);
+}
+
 function setupEventListeners() {
     btnConnect.addEventListener('click', () => {
         const username = inputAdminUsername.value.trim();
@@ -404,6 +434,10 @@ function setupEventListeners() {
         localStorage.removeItem('atlantis_admin_role');
         location.reload();
     });
+
+    // Theme Toggle
+    const btnToggleTheme = document.getElementById('btnToggleTheme');
+    if (btnToggleTheme) btnToggleTheme.addEventListener('click', toggleTheme);
 
     btnRefresh.addEventListener('click', () => {
         const icon = btnRefresh.querySelector('svg');
@@ -1950,6 +1984,7 @@ function openDeployModal() {
     if (dockerDeployModal) {
         dockerDeployModal.classList.add('show');
         fetchDeployLogs();
+        pollDeployProgress();
     }
 }
 
@@ -1971,11 +2006,6 @@ async function handleStartDeploy() {
 
     deploySeconds = 0;
     if (txtDeployTimer) txtDeployTimer.textContent = 'Thời gian: 0s';
-    clearInterval(deployTicker);
-    deployTicker = setInterval(() => {
-        deploySeconds++;
-        if (txtDeployTimer) txtDeployTimer.textContent = `Thời gian: ${deploySeconds}s`;
-    }, 1000);
 
     try {
         const res = await fetch(`${API_URL}/api/admin/docker/deploy`, {
@@ -2010,12 +2040,14 @@ async function handleStartDeploy() {
 function pollDeployProgress() {
     if (deployPollingTimer) clearInterval(deployPollingTimer);
     
+    // Tự động kiểm tra ngay lập tức
+    fetchDeployLogs();
+
     deployPollingTimer = setInterval(async () => {
         const state = await fetchDeployLogs();
         if (state && !state.isDeploying) {
             clearInterval(deployPollingTimer);
             deployPollingTimer = null;
-            clearInterval(deployTicker);
             
             if (state.status === 'success') {
                 showToast('Rebuild & Thay Image Game Server thành công rực rỡ!', 'success');
@@ -2060,7 +2092,20 @@ async function fetchDeployLogs() {
 
 function updateDeployStepperUI(state) {
     if (!state) return;
-    const { currentStep, isDeploying, status, stepName, logs, error } = state;
+    const { currentStep, isDeploying, status, stepName, logs, error, startTime, endTime } = state;
+
+    // Cập nhật đồng hồ thời gian tổng thể chuẩn xác từ Backend
+    if (txtDeployTimer) {
+        if (isDeploying && startTime) {
+            const elapsed = Math.max(0, Math.round((Date.now() - startTime) / 1000));
+            txtDeployTimer.textContent = `Thời gian: ${elapsed}s`;
+        } else if (startTime && endTime) {
+            const total = Math.max(0, Math.round((endTime - startTime) / 1000));
+            txtDeployTimer.textContent = `Tổng thời gian: ${total}s`;
+        } else if (status === 'success') {
+            txtDeployTimer.textContent = 'Hoàn tất';
+        }
+    }
 
     // Update Status Badge
     if (txtDeployStatus && dotDeployStatus) {
@@ -2209,9 +2254,11 @@ function uploadBuildFile() {
             }
 
             if (txtUploadProgressStatus) {
-                txtUploadProgressStatus.textContent = percent === 100 
-                    ? 'Đang giải nén file trên VPS...' 
-                    : `Đang tải lên VPS: ${percent}% (${(e.loaded / (1024 * 1024)).toFixed(1)} / ${(e.total / (1024 * 1024)).toFixed(1)} MB)`;
+                if (percent === 100) {
+                    txtUploadProgressStatus.textContent = 'Tải lên hoàn tất 100%! Đang khởi động quy trình giải nén & Rebuild trên VPS...';
+                } else {
+                    txtUploadProgressStatus.textContent = `Đang tải lên VPS: ${percent}% (${(e.loaded / (1024 * 1024)).toFixed(1)} / ${(e.total / (1024 * 1024)).toFixed(1)} MB)`;
+                }
             }
         }
     };
@@ -2231,11 +2278,9 @@ function uploadBuildFile() {
         try {
             const data = JSON.parse(xhr.responseText);
             if (xhr.status === 200 && data.success) {
-                showToast(data.message || 'Tải lên và giải nén thành công!', 'success');
-                if (autoDeploy) {
-                    openDeployModal();
-                    pollDeployProgress();
-                }
+                showToast(data.message || 'Tải lên thành công! Đang tiến hành Deploy...', 'success');
+                openDeployModal();
+                pollDeployProgress();
                 handleClearSelectedBuildFile();
             } else {
                 showToast(data.message || 'Lỗi khi tải lên file build.', 'error');
