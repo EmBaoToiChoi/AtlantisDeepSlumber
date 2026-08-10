@@ -42,7 +42,11 @@ public class NetworkBootstrap : MonoBehaviour
         // TỰ ĐỘNG BẬT SERVER NẾU CHẠY TRÊN VPS (Headless Mode)
         if (UnityEngine.Application.isBatchMode)
         {
-            Debug.Log("[SERVER] Phát hiện đang chạy trên VPS. Đang tự động khởi động Server...");
+            // Tối ưu hóa CPU cho VPS: Giới hạn 30 FPS giúp CPU giảm từ 100% xuống còn 2-5%
+            UnityEngine.Application.targetFrameRate = 30;
+            UnityEngine.QualitySettings.vSyncCount = 0;
+
+            Debug.Log("[SERVER] Phát hiện đang chạy trên VPS. Đang tự động khởi động Server (FrameRate: 30 FPS)...");
             StartServerOnVPS();
         }
     }
