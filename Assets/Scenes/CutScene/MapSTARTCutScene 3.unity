@@ -134181,6 +134181,7 @@ MonoBehaviour:
   prerequisiteQuest: {fileID: 0}
   collapseVideo: {fileID: 0}
   cutsceneUI: {fileID: 0}
+  buildCompleteCutscene: {fileID: 0}
   playerMovementScriptNames: []
   objectToHideDuringCutscene: {fileID: 0}
   bridgeObstacle: {fileID: 0}
@@ -206199,6 +206200,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   ShowTopMostFoldoutHeaderGroup: 1
+  completionCutscene: {fileID: 0}
+  objectToEnableAfterCutscene: {fileID: 0}
   A: {fileID: 1255146431}
   B: {fileID: 308492518}
   C: {fileID: 97499273}
@@ -249553,6 +249556,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 335080842}
     m_Modifications:
+    - target: {fileID: 75962860964120328, guid: b65eab6e9f009704bae7f67f63dfaf64, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: d541128ccf144554c84f25f4788afd70, type: 2}
     - target: {fileID: 2578172958423070593, guid: b65eab6e9f009704bae7f67f63dfaf64, type: 3}
       propertyPath: m_LocalPosition.x
       value: -297.53366
@@ -249593,6 +249600,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 2927828673664641452, guid: b65eab6e9f009704bae7f67f63dfaf64, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: fa770603a26bc5e43bc32037a2bb3d29, type: 2}
     - target: {fileID: 4079896176590189029, guid: b65eab6e9f009704bae7f67f63dfaf64, type: 3}
       propertyPath: m_Name
       value: DaNguyenTo
