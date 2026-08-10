@@ -6,6 +6,9 @@ const jwt = require('jsonwebtoken');
 const nodemailer = require('nodemailer');
 const cors = require('cors');
 const os = require('os');
+const fs = require('fs');
+const path = require('path');
+const { exec, spawn } = require('child_process');
 const User = require('./models/User');
 const Room = require('./models/Room');
 const Admin = require('./models/Admin');
@@ -93,6 +96,59 @@ function calculateCpuUsage() {
 calculateCpuUsage();
 // Cập nhật mẫu CPU liên tục mỗi giây để luôn có delta chính xác khi client request
 setInterval(calculateCpuUsage, 1000);
+
+// Hàm lấy thông tin RAM chuẩn cho Linux (tránh hiểu lầm Buffer/Cache là RAM đã dùng)
+function getSystemMemory() {
+    const totalMem = os.totalmem();
+    let freeMem = os.freemem();
+
+    // Trên Linux, đọc /proc/meminfo để lấy MemAvailable chính xác (đã trừ buffer/cache)
+    if (process.platform === 'linux') {
+        try {
+            const meminfo = fs.readFileSync('/proc/meminfo', 'utf8');
+            const match = meminfo.match(/MemAvailable:\s+(\d+)\s+kB/i);
+            if (match && match[1]) {
+                freeMem = parseInt(match[1], 10) * 1024;
+            }
+        } catch (e) {
+            // fallback sang os.freemem()
+        }
+    }
+
+    const usedMem = Math.max(0, totalMem - freeMem);
+    const memUsagePercent = Math.max(0, Math.min(100, Math.round((usedMem / totalMem) * 1000) / 10));
+
+    return {
+        totalBytes: totalMem,
+        usedBytes: usedMem,
+        freeBytes: freeMem,
+        usagePercent: memUsagePercent
+    };
+}
+
+// Hàm lấy DB Ping có bộ đệm Cache 10s tránh spam lệnh tới MongoDB Atlas
+let cachedDbPing = 0;
+let lastDbPingTime = 0;
+async function getDatabasePing() {
+    const now = Date.now();
+    if (now - lastDbPingTime < 10000 && lastDbPingTime > 0) {
+        return cachedDbPing;
+    }
+
+    if (mongoose.connection.readyState === 1) {
+        const start = Date.now();
+        try {
+            await mongoose.connection.db.admin().ping();
+            cachedDbPing = Date.now() - start;
+            lastDbPingTime = now;
+            return cachedDbPing;
+        } catch (e) {
+            cachedDbPing = -1;
+            return -1;
+        }
+    }
+    return -1;
+}
 
 // ─── Middleware ───────────────────────────────────────────────────────────────
 app.use(cors());
@@ -222,6 +278,17 @@ function validateEmail(email) {
 // Health check
 app.get('/health', (req, res) => {
     res.json({ status: 'ok', service: 'Atlantis Auth Backend' });
+});
+
+// Ping check endpoint (Đo độ trễ và kiểm tra độ ổn định kết nối cho Web & Game)
+app.all(['/api/ping', '/ping'], (req, res) => {
+    const clientTime = req.body?.clientTime || Number(req.query?.clientTime) || null;
+    res.json({
+        success: true,
+        status: 'online',
+        serverTime: Date.now(),
+        clientTime: clientTime
+    });
 });
 
 // POST /api/register
@@ -1164,6 +1231,442 @@ app.post('/api/admin/rooms/cleanup', authenticateAdminToken, async (req, res) =>
         console.error('[AdminCleanupRooms]', err);
         res.status(500).json({ success: false, message: `Lỗi dọn dẹp phòng: ${err.message}` });
     }
+});
+
+// ─── DOCKER GAME SERVER MANAGER & DEPLOYMENT ENGINE ──────────────────────────
+
+const dockerDeployState = {
+    isDeploying: false,
+    currentStep: 0,
+    totalSteps: 4,
+    stepName: '',
+    status: 'idle', // 'idle' | 'running' | 'success' | 'error'
+    logs: [],
+    startTime: null,
+    endTime: null,
+    error: null
+};
+
+function appendDeployLog(text) {
+    if (!text) return;
+    const lines = text.toString().split('\n');
+    for (const line of lines) {
+        if (line.trim().length > 0) {
+            const time = new Date().toLocaleTimeString('vi-VN');
+            dockerDeployState.logs.push(`[${time}] ${line}`);
+            if (dockerDeployState.logs.length > 1500) {
+                dockerDeployState.logs.shift();
+            }
+        }
+    }
+}
+
+function runExecCommand(cmd, options = {}) {
+    return new Promise((resolve) => {
+        appendDeployLog(`$ ${cmd}`);
+        let stdoutAcc = '';
+        let stderrAcc = '';
+
+        const child = spawn(cmd, { shell: true, ...options });
+
+        child.stdout.on('data', (chunk) => {
+            const str = chunk.toString();
+            stdoutAcc += str;
+            appendDeployLog(str);
+        });
+
+        child.stderr.on('data', (chunk) => {
+            const str = chunk.toString();
+            stderrAcc += str;
+            appendDeployLog(str);
+        });
+
+        child.on('close', (code) => {
+            resolve({ code: code || 0, stdout: stdoutAcc, stderr: stderrAcc });
+        });
+
+        child.on('error', (err) => {
+            appendDeployLog(`[Lỗi thực thi]: ${err.message}`);
+            resolve({ code: 1, error: err, stdout: stdoutAcc, stderr: stderrAcc });
+        });
+    });
+}
+
+function getGameServerDir() {
+    const candidateDirs = [
+        '/root/AtlantisDeepSlumberServer',
+        path.resolve(__dirname, '..'),
+        '/root',
+        process.cwd()
+    ];
+    for (const d of candidateDirs) {
+        try {
+            if (fs.existsSync(d) && (fs.existsSync(path.join(d, 'Dockerfile')) || fs.existsSync(path.join(d, 'Assets')))) {
+                return d;
+            }
+        } catch (e) {}
+    }
+    return '/root/AtlantisDeepSlumberServer';
+}
+
+async function executeDockerDeploy(adminUser) {
+    dockerDeployState.isDeploying = true;
+    dockerDeployState.status = 'running';
+    dockerDeployState.currentStep = 1;
+    dockerDeployState.stepName = 'Dừng và xóa Container cũ (live_server)';
+    dockerDeployState.logs = [];
+    dockerDeployState.startTime = Date.now();
+    dockerDeployState.endTime = null;
+    dockerDeployState.error = null;
+
+    appendDeployLog('══════════════════════════════════════════════════════════════════');
+    appendDeployLog(`🚀 BẮT ĐẦU QUY TRÌNH REBUILD & THAY IMAGE DOCKER`);
+    appendDeployLog(`👤 Người thực hiện: ${adminUser.displayName} (@${adminUser.username})`);
+    appendDeployLog('══════════════════════════════════════════════════════════════════');
+
+    try {
+        // BƯỚC 1: docker stop live_server && docker rm live_server
+        appendDeployLog('\n▶ [BƯỚC 1/4] Dừng và xóa Container cũ: live_server...');
+        await runExecCommand('docker stop live_server 2>/dev/null || true');
+        await runExecCommand('docker rm -f live_server 2>/dev/null || true');
+        appendDeployLog('✔ [BƯỚC 1/4] Hoàn tất dừng & xóa container cũ.');
+
+        // BƯỚC 2: docker rmi -f vps_server
+        dockerDeployState.currentStep = 2;
+        dockerDeployState.stepName = 'Xóa Image Docker cũ (vps_server)';
+        appendDeployLog('\n▶ [BƯỚC 2/4] Xóa Image cũ để giải phóng dung lượng đĩa...');
+        await runExecCommand('docker rmi -f vps_server 2>/dev/null || true');
+        appendDeployLog('✔ [BƯỚC 2/4] Đã xóa image cũ.');
+
+        // BƯỚC 3: docker build -t vps_server .
+        dockerDeployState.currentStep = 3;
+        dockerDeployState.stepName = 'Build Image Docker mới (docker build -t vps_server .)';
+        const workDir = getGameServerDir();
+        appendDeployLog(`\n▶ [BƯỚC 3/4] Đang Build Docker Image mới tại thư mục: ${workDir}...`);
+        
+        const buildResult = await runExecCommand('docker build -t vps_server .', { cwd: workDir });
+        if (buildResult.code !== 0 && !buildResult.stdout?.includes('Successfully tagged') && !buildResult.stdout?.includes('naming to docker.io/library/vps_server')) {
+            throw new Error(`Lỗi khi Build Docker Image: ${buildResult.stderr || buildResult.stdout || 'Build failed'}`);
+        }
+        appendDeployLog('✔ [BƯỚC 3/4] Build Image Docker vps_server thành công!');
+
+        // BƯỚC 4: docker run -d -p 7777:7777/udp --name live_server vps_server
+        dockerDeployState.currentStep = 4;
+        dockerDeployState.stepName = 'Khởi động Container mới (docker run -d -p 7777:7777/udp --name live_server vps_server)';
+        appendDeployLog('\n▶ [BƯỚC 4/4] Khởi động Container mới (live_server) tại cổng 7777/udp...');
+        
+        const runResult = await runExecCommand('docker run -d -p 7777:7777/udp --name live_server vps_server');
+        if (runResult.code !== 0) {
+            throw new Error(`Lỗi khi khởi động Container: ${runResult.stderr || 'Run container failed'}`);
+        }
+        appendDeployLog('✔ [BƯỚC 4/4] Container live_server đã được khởi động thành công!');
+
+        dockerDeployState.status = 'success';
+        dockerDeployState.stepName = 'Hoàn tất Rebuild & Deploy!';
+        dockerDeployState.endTime = Date.now();
+        const duration = Math.round((dockerDeployState.endTime - dockerDeployState.startTime) / 1000);
+        appendDeployLog(`\n🎉 HOÀN TẤT THÀNH CÔNG trong ${duration} giây! Game Server đang online tại cổng 7777/udp.`);
+
+        await writeAdminLog(
+            adminUser.username,
+            adminUser.displayName,
+            'Rebuild Docker Game Server',
+            'Docker Manager',
+            `Đã hoàn tất Rebuild Image vps_server và khởi chạy container live_server trong ${duration}s.`
+        );
+
+    } catch (err) {
+        dockerDeployState.status = 'error';
+        dockerDeployState.error = err.message;
+        dockerDeployState.endTime = Date.now();
+        appendDeployLog(`\n❌ [LỖI TRIỂN KHAI]: ${err.message}`);
+        console.error('[DockerDeploy Error]', err);
+    } finally {
+        dockerDeployState.isDeploying = false;
+    }
+}
+
+// GET /api/admin/docker/status (Lấy trạng thái container live_server)
+app.get('/api/admin/docker/status', authenticateAdminToken, (req, res) => {
+    exec('docker inspect live_server', { timeout: 4000 }, (err, stdout) => {
+        let containerInfo = {
+            name: 'live_server',
+            image: 'vps_server',
+            status: 'not_found', // 'running' | 'exited' | 'not_found'
+            state: 'Không tìm thấy container',
+            ports: '7777:7777/udp',
+            created: '-',
+            startedAt: '-',
+            raw: null
+        };
+
+        if (!err && stdout) {
+            try {
+                const parsed = JSON.parse(stdout);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    const data = parsed[0];
+                    const isRunning = data.State?.Running || false;
+                    containerInfo = {
+                        name: data.Name ? data.Name.replace(/^\//, '') : 'live_server',
+                        image: data.Config?.Image || 'vps_server',
+                        status: isRunning ? 'running' : 'exited',
+                        state: isRunning ? 'Đang hoạt động (Running)' : `Đã dừng (${data.State?.Status || 'Exited'})`,
+                        ports: '7777:7777/udp',
+                        created: data.Created ? new Date(data.Created).toLocaleString('vi-VN') : '-',
+                        startedAt: data.State?.StartedAt ? new Date(data.State.StartedAt).toLocaleString('vi-VN') : '-',
+                        id: data.Id ? data.Id.substring(0, 12) : '-'
+                    };
+                }
+            } catch (e) {}
+        }
+
+        res.json({
+            success: true,
+            container: containerInfo,
+            deployState: {
+                isDeploying: dockerDeployState.isDeploying,
+                currentStep: dockerDeployState.currentStep,
+                totalSteps: dockerDeployState.totalSteps,
+                stepName: dockerDeployState.stepName,
+                status: dockerDeployState.status,
+                error: dockerDeployState.error
+            }
+        });
+    });
+});
+
+// POST /api/admin/docker/deploy (Bắt đầu tiến trình Rebuild 4 bước)
+app.post('/api/admin/docker/deploy', authenticateAdminToken, (req, res) => {
+    if (dockerDeployState.isDeploying) {
+        return res.status(400).json({
+            success: false,
+            message: 'Tiến trình Rebuild & Deploy Docker đang chạy. Vui lòng đợi hoàn tất.'
+        });
+    }
+
+    // Chạy bất đồng bộ
+    executeDockerDeploy(req.admin);
+
+    res.json({
+        success: true,
+        message: 'Đã bắt đầu tiến trình Rebuild & Deploy Docker Image!'
+    });
+});
+
+// GET /api/admin/docker/deploy-logs (Lấy log tiến trình deploy)
+app.get('/api/admin/docker/deploy-logs', authenticateAdminToken, (req, res) => {
+    res.json({
+        success: true,
+        deployState: dockerDeployState
+    });
+});
+
+// GET /api/admin/docker/game-logs (Lấy log in-game từ container live_server)
+app.get('/api/admin/docker/game-logs', authenticateAdminToken, (req, res) => {
+    const tailLines = Number(req.query.lines) || 250;
+    exec(`docker logs --tail ${tailLines} --timestamps live_server`, { maxBuffer: 1024 * 1024 * 5, timeout: 5000 }, (err, stdout, stderr) => {
+        let logs = (stdout || '') + (stderr || '');
+        if (err && !logs) {
+            logs = `[Docker Logs]: Không thể lấy log container live_server (${err.message}). Có thể container chưa chạy.`;
+        }
+        res.json({
+            success: true,
+            logs: logs.trim() || 'Chưa có log từ Game Server.'
+        });
+    });
+});
+
+async function executeDockerDeployWithFile(adminUser, tempFilePath, stagingDir, filename, sizeMB, ext) {
+    dockerDeployState.isDeploying = true;
+    dockerDeployState.status = 'running';
+    dockerDeployState.currentStep = 1;
+    dockerDeployState.stepName = 'Giải nén & Merge file build vào máy chủ';
+    dockerDeployState.logs = [];
+    dockerDeployState.startTime = Date.now();
+    dockerDeployState.endTime = null;
+    dockerDeployState.error = null;
+
+    appendDeployLog('══════════════════════════════════════════════════════════════════');
+    appendDeployLog(`🚀 BẮT ĐẦU QUY TRÌNH DEPLOY BẢN BUILD MỚI`);
+    appendDeployLog(`👤 Người thực hiện: ${adminUser.displayName} (@${adminUser.username})`);
+    appendDeployLog(`📦 File build: ${filename} (${sizeMB} MB, định dạng .${ext})`);
+    appendDeployLog('══════════════════════════════════════════════════════════════════');
+
+    const workDir = getGameServerDir();
+
+    try {
+        // BƯỚC 1: GIẢI NÉN VÀ MERGE
+        appendDeployLog('\n▶ [BƯỚC 1/4] Đang giải nén file build trên VPS...');
+        
+        try {
+            if (!fs.existsSync(stagingDir)) fs.mkdirSync(stagingDir, { recursive: true });
+        } catch (e) {}
+
+        let extractCmd = '';
+        if (ext === 'rar') {
+            extractCmd = `(which unar >/dev/null 2>&1 || which 7z >/dev/null 2>&1 || (DEBIAN_FRONTEND=noninteractive apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq unar p7zip-full unzip)); unar -f -o "${stagingDir}" "${tempFilePath}" || 7z x -y "${tempFilePath}" -o"${stagingDir}" || unrar x -o+ "${tempFilePath}" "${stagingDir}/"`;
+        } else if (ext === '7z') {
+            extractCmd = `which 7z >/dev/null 2>&1 || (DEBIAN_FRONTEND=noninteractive apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq p7zip-full); 7z x -y "${tempFilePath}" -o"${stagingDir}"`;
+        } else if (ext === 'tar' || ext === 'gz' || ext === 'tgz') {
+            extractCmd = `tar -xf "${tempFilePath}" -C "${stagingDir}"`;
+        } else {
+            extractCmd = `unzip -o "${tempFilePath}" -d "${stagingDir}" 2>/dev/null || (which 7z >/dev/null 2>&1 && 7z x -y "${tempFilePath}" -o"${stagingDir}") || python3 -m zipfile -e "${tempFilePath}" "${stagingDir}"`;
+        }
+
+        const extractRes = await runExecCommand(extractCmd, { maxBuffer: 1024 * 1024 * 20, timeout: 5 * 60 * 1000 });
+        if (extractRes.code !== 0 && (!fs.existsSync(stagingDir) || fs.readdirSync(stagingDir).length === 0)) {
+            throw new Error(`Lỗi giải nén file .${ext}: ${extractRes.stderr || 'Không thể giải nén file'}`);
+        }
+        appendDeployLog('✔ Giải nén thành công vào thư mục đệm!');
+
+        appendDeployLog(`\n▶ [MERGE] Đang MERGE các file cập nhật vào thư mục máy chủ (${workDir})...`);
+        let sourceMergePath = stagingDir;
+        const innerCandidate = path.join(stagingDir, 'AtlantisDeepSlumberServer');
+        if (fs.existsSync(innerCandidate) && fs.statSync(innerCandidate).isDirectory()) {
+            sourceMergePath = innerCandidate;
+            appendDeployLog(`ℹ Phát hiện thư mục lồng AtlantisDeepSlumberServer -> Merge toàn bộ nội dung con.`);
+        }
+
+        const mergeCmd = `cp -rf "${sourceMergePath}"/. "${workDir}/"`;
+        const mergeRes = await runExecCommand(mergeCmd, { timeout: 60000 });
+        if (mergeRes.code !== 0) {
+            throw new Error(`Lỗi khi merge file vào thư mục server: ${mergeRes.stderr || 'Merge failed'}`);
+        }
+        appendDeployLog('✔ MERGE thư mục hoàn tất! Đã đồng bộ mã nguồn và giữ nguyên toàn bộ cấu hình hệ thống.');
+
+        // Dọn dẹp file tạm
+        try { fs.unlinkSync(tempFilePath); } catch (e) {}
+        try { fs.rmSync(stagingDir, { recursive: true, force: true }); } catch (e) {}
+
+        // BƯỚC 2: DỪNG & XÓA CONTAINER CŨ + XÓA IMAGE CŨ
+        dockerDeployState.currentStep = 2;
+        dockerDeployState.stepName = 'Dừng Container cũ & Xóa Image cũ';
+        appendDeployLog('\n▶ [BƯỚC 2/4] Dừng container cũ và dọn dẹp image cũ...');
+        await runExecCommand('docker stop live_server 2>/dev/null || true');
+        await runExecCommand('docker rm -f live_server 2>/dev/null || true');
+        await runExecCommand('docker rmi -f vps_server 2>/dev/null || true');
+        appendDeployLog('✔ Đã dừng container cũ và xóa image cũ.');
+
+        // BƯỚC 3: DOCKER BUILD
+        dockerDeployState.currentStep = 3;
+        dockerDeployState.stepName = 'Build Docker Image mới (vps_server)';
+        appendDeployLog(`\n▶ [BƯỚC 3/4] Đang Build Docker Image mới tại thư mục: ${workDir}...`);
+        const buildResult = await runExecCommand('docker build -t vps_server .', { cwd: workDir });
+        if (buildResult.code !== 0 && !buildResult.stdout?.includes('Successfully tagged') && !buildResult.stdout?.includes('naming to docker.io/library/vps_server')) {
+            throw new Error(`Lỗi khi Build Docker Image: ${buildResult.stderr || buildResult.stdout || 'Build failed'}`);
+        }
+        appendDeployLog('✔ Build Image Docker vps_server thành công!');
+
+        // BƯỚC 4: DOCKER RUN
+        dockerDeployState.currentStep = 4;
+        dockerDeployState.stepName = 'Khởi chạy Container mới (Port 7777/udp)';
+        appendDeployLog('\n▶ [BƯỚC 4/4] Khởi động Container mới (live_server) tại cổng 7777/udp...');
+        const runResult = await runExecCommand('docker run -d -p 7777:7777/udp --name live_server vps_server');
+        if (runResult.code !== 0) {
+            throw new Error(`Lỗi khi khởi động Container: ${runResult.stderr || 'Run container failed'}`);
+        }
+        appendDeployLog('✔ Container live_server đã được khởi động thành công!');
+
+        dockerDeployState.status = 'success';
+        dockerDeployState.stepName = 'Hoàn tất Deploy!';
+        dockerDeployState.endTime = Date.now();
+        const duration = Math.round((dockerDeployState.endTime - dockerDeployState.startTime) / 1000);
+        appendDeployLog(`\n🎉 HOÀN TẤT THÀNH CÔNG trong ${duration} giây! Game Server đang online tại cổng 7777/udp.`);
+
+        await writeAdminLog(
+            adminUser.username,
+            adminUser.displayName,
+            'Upload & Deploy Build Game',
+            'Docker Manager',
+            `Đã tải lên file build ${filename} (${sizeMB} MB), merge và khởi chạy container live_server trong ${duration}s.`
+        );
+
+    } catch (err) {
+        dockerDeployState.status = 'error';
+        dockerDeployState.error = err.message;
+        dockerDeployState.endTime = Date.now();
+        appendDeployLog(`\n❌ [LỖI TRIỂN KHAI]: ${err.message}`);
+        console.error('[DockerDeploy Error]', err);
+        // Dọn dẹp nếu còn file tạm
+        try { fs.unlinkSync(tempFilePath); } catch (e) {}
+        try { fs.rmSync(stagingDir, { recursive: true, force: true }); } catch (e) {}
+    } finally {
+        dockerDeployState.isDeploying = false;
+    }
+}
+
+// POST /api/admin/docker/upload-build (Upload file build .zip, .rar, .7z trực tiếp từ PC lên VPS, Tự động Merge & Deploy)
+app.post('/api/admin/docker/upload-build', authenticateAdminToken, (req, res) => {
+    // Hỗ trợ file nặng hàng GB không bị timeout
+    req.setTimeout(30 * 60 * 1000); // 30 phút
+    res.setTimeout(30 * 60 * 1000);
+
+    const autoDeploy = req.headers['x-auto-deploy'] === 'true' || req.query.autoDeploy === 'true';
+    const filename = req.headers['x-file-name'] ? decodeURIComponent(req.headers['x-file-name']) : 'atlantis_server_build.zip';
+    const ext = filename.split('.').pop().toLowerCase();
+    const tempFilePath = path.join(os.tmpdir(), `atlantis_server_build_${Date.now()}.${ext}`);
+    const stagingDir = path.join(os.tmpdir(), `atlantis_staging_${Date.now()}`);
+
+    const writeStream = fs.createWriteStream(tempFilePath);
+
+    req.pipe(writeStream);
+
+    writeStream.on('finish', async () => {
+        try {
+            const stats = fs.statSync(tempFilePath);
+            const sizeMB = (stats.size / (1024 * 1024)).toFixed(2);
+
+            // Bắt đầu quy trình giải nén & deploy bất đồng bộ trong background
+            executeDockerDeployWithFile(req.admin, tempFilePath, stagingDir, filename, sizeMB, ext);
+
+            // Phản hồi NGAY LẬP TỨC để frontend mở modal xem log real-time
+            res.json({
+                success: true,
+                message: `Đã tải lên hoàn tất file build (${sizeMB} MB)! Đang tiến hành giải nén và Deploy trong nền...`,
+                isDeploying: true,
+                fileSizeMB: sizeMB
+            });
+        } catch (err) {
+            console.error('[UploadBuild Error]', err);
+            res.status(500).json({ success: false, message: `Lỗi xử lý file tải lên: ${err.message}` });
+        }
+    });
+
+    writeStream.on('error', (err) => {
+        console.error('[UploadStream Error]', err);
+        res.status(500).json({ success: false, message: `Lỗi khi ghi file tải lên: ${err.message}` });
+    });
+});
+
+// POST /api/admin/docker/action (Restart / Stop / Start Container)
+app.post('/api/admin/docker/action', authenticateAdminToken, async (req, res) => {
+    const { action } = req.body; // 'restart' | 'stop' | 'start'
+    if (!['restart', 'stop', 'start'].includes(action)) {
+        return res.status(400).json({ success: false, message: 'Thao tác không hợp lệ.' });
+    }
+
+    exec(`docker ${action} live_server`, { timeout: 10000 }, async (err, stdout, stderr) => {
+        if (err) {
+            return res.status(500).json({
+                success: false,
+                message: `Lỗi khi thực hiện ${action} container: ${stderr || err.message}`
+            });
+        }
+
+        const actionText = action === 'restart' ? 'Khởi động lại' : action === 'stop' ? 'Dừng' : 'Bật';
+        await writeAdminLog(
+            req.admin.username,
+            req.admin.displayName,
+            `${actionText} Docker Server`,
+            'Docker Manager',
+            `Đã thực hiện lệnh ${action} trên container live_server.`
+        );
+
+        res.json({
+            success: true,
+            message: `Đã ${actionText.toLowerCase()} container live_server thành công!`
+        });
+    });
 });
 
 

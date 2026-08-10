@@ -114,6 +114,88 @@ const step2 = document.getElementById('step2');
 const step3 = document.getElementById('step3');
 const step3Text = document.getElementById('step3Text');
 
+// Ping & Stability Benchmark Elements
+const btnRunStabilityTest = document.getElementById('btnRunStabilityTest');
+const txtLivePingVal = document.getElementById('txtLivePingVal');
+const alarmLevelPill = document.getElementById('alarmLevelPill');
+const alarmLevelText = document.getElementById('alarmLevelText');
+const txtAvgPingVal = document.getElementById('txtAvgPingVal');
+const txtJitterVal = document.getElementById('txtJitterVal');
+const txtStabilityScore = document.getElementById('txtStabilityScore');
+const txtStabilityRating = document.getElementById('txtStabilityRating');
+const badgeGameQuality = document.getElementById('badgeGameQuality');
+const txtGameQualityDesc = document.getElementById('txtGameQualityDesc');
+const txtTestStatus = document.getElementById('txtTestStatus');
+const pingBarsTrack = document.getElementById('pingBarsTrack');
+let clientPingHistory = [];
+let isTestingStability = false;
+
+// Docker Game Server & Console Elements
+const badgeDockerSysStatus = document.getElementById('badgeDockerSysStatus');
+const btnSysOpenDeployModal = document.getElementById('btnSysOpenDeployModal');
+const btnSysDockerRestart = document.getElementById('btnSysDockerRestart');
+const btnSysViewGameLogs = document.getElementById('btnSysViewGameLogs');
+
+const gamelogDockerStatusChip = document.getElementById('gamelogDockerStatusChip');
+const txtGamelogContainerState = document.getElementById('txtGamelogContainerState');
+const btnOpenDeployFromLogs = document.getElementById('btnOpenDeployFromLogs');
+const btnDockerRestartFromLogs = document.getElementById('btnDockerRestartFromLogs');
+const btnDockerTogglePower = document.getElementById('btnDockerTogglePower');
+const txtDockerPowerLabel = document.getElementById('txtDockerPowerLabel');
+
+const inputFilterGameLogs = document.getElementById('inputFilterGameLogs');
+const toggleLiveGameLogs = document.getElementById('toggleLiveGameLogs');
+const toggleAutoScrollLogs = document.getElementById('toggleAutoScrollLogs');
+const btnRefreshGameLogs = document.getElementById('btnRefreshGameLogs');
+const btnCopyGameLogs = document.getElementById('btnCopyGameLogs');
+const btnClearTerminalScreen = document.getElementById('btnClearTerminalScreen');
+const txtLogLineCount = document.getElementById('txtLogLineCount');
+const gameTerminalViewport = document.getElementById('gameTerminalViewport');
+const gameTerminalPre = document.getElementById('gameTerminalPre');
+
+// Deploy Modal Elements
+const dockerDeployModal = document.getElementById('dockerDeployModal');
+const btnCloseDeployModal = document.getElementById('btnCloseDeployModal');
+const btnCancelDeploy = document.getElementById('btnCancelDeploy');
+const btnStartDeployProcess = document.getElementById('btnStartDeployProcess');
+const depStep1 = document.getElementById('depStep1');
+const depStep2 = document.getElementById('depStep2');
+const depStep3 = document.getElementById('depStep3');
+const depStep4 = document.getElementById('depStep4');
+const depConn1 = document.getElementById('depConn1');
+const depConn2 = document.getElementById('depConn2');
+const depConn3 = document.getElementById('depConn3');
+const dotDeployStatus = document.getElementById('dotDeployStatus');
+const txtDeployStatus = document.getElementById('txtDeployStatus');
+const txtDeployTimer = document.getElementById('txtDeployTimer');
+const deployTerminalBody = document.getElementById('deployTerminalBody');
+const deployTerminalPre = document.getElementById('deployTerminalPre');
+
+// Build Upload Elements
+const buildDropzone = document.getElementById('buildDropzone');
+const inputBuildZipFile = document.getElementById('inputBuildZipFile');
+const dropzoneContent = document.getElementById('dropzoneContent');
+const dropzoneFileInfo = document.getElementById('dropzoneFileInfo');
+const btnBrowseFile = document.getElementById('btnBrowseFile');
+const txtSelectedFileName = document.getElementById('txtSelectedFileName');
+const txtSelectedFileSize = document.getElementById('txtSelectedFileSize');
+const btnRemoveSelectedFile = document.getElementById('btnRemoveSelectedFile');
+const chkAutoDeployAfterUpload = document.getElementById('chkAutoDeployAfterUpload');
+const btnStartUploadBuild = document.getElementById('btnStartUploadBuild');
+const uploadProgressWrapper = document.getElementById('uploadProgressWrapper');
+const txtUploadProgressStatus = document.getElementById('txtUploadProgressStatus');
+const txtUploadSpeed = document.getElementById('txtUploadSpeed');
+const uploadProgressFill = document.getElementById('uploadProgressFill');
+
+let selectedBuildFile = null;
+let isUploadingBuild = false;
+let gameLogsTimer = null;
+let deployPollingTimer = null;
+let rawGameLogs = '';
+let currentContainerStatus = 'not_found';
+let deployTicker = null;
+let deploySeconds = 0;
+
 // User Elements
 const searchUserInput = document.getElementById('searchUser');
 const filterVerifiedSelect = document.getElementById('filterVerified');
@@ -170,6 +252,7 @@ const toastContainer = document.getElementById('toastContainer');
 
 // ─── INITIALIZATION ──────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
+    initTheme();
     initParticles();
     
     // Tự động điều chỉnh IP nếu ứng dụng chạy trên cùng VPS, loại trừ trường hợp mở bằng file cục bộ
@@ -300,6 +383,35 @@ function showDashboardUI() {
 }
 
 // ─── EVENTS SETUP ────────────────────────────────────────────────────────────
+// ─── THEME (LIGHT / DARK MODE) ───────────────────────────────────────────────
+
+function initTheme() {
+    const savedTheme = localStorage.getItem('atlantis_theme') || 'dark';
+    applyTheme(savedTheme);
+}
+
+function applyTheme(theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+    const themeIcon = document.getElementById('themeIcon');
+    const themeLabel = document.getElementById('themeLabel');
+    if (themeIcon && themeLabel) {
+        if (theme === 'light') {
+            themeIcon.textContent = '☀️';
+            themeLabel.textContent = 'Chế độ sáng';
+        } else {
+            themeIcon.textContent = '🌙';
+            themeLabel.textContent = 'Chế độ tối';
+        }
+    }
+}
+
+function toggleTheme() {
+    const current = document.documentElement.getAttribute('data-theme') || 'dark';
+    const next = current === 'dark' ? 'light' : 'dark';
+    applyTheme(next);
+    localStorage.setItem('atlantis_theme', next);
+}
+
 function setupEventListeners() {
     btnConnect.addEventListener('click', () => {
         const username = inputAdminUsername.value.trim();
@@ -322,6 +434,10 @@ function setupEventListeners() {
         localStorage.removeItem('atlantis_admin_role');
         location.reload();
     });
+
+    // Theme Toggle
+    const btnToggleTheme = document.getElementById('btnToggleTheme');
+    if (btnToggleTheme) btnToggleTheme.addEventListener('click', toggleTheme);
 
     btnRefresh.addEventListener('click', () => {
         const icon = btnRefresh.querySelector('svg');
@@ -366,12 +482,89 @@ function setupEventListeners() {
         toggleLiveMetrics.addEventListener('change', () => {
             if (toggleLiveMetrics.checked) {
                 startLiveMetricsTimer();
-                showToast('Đã bật chế độ cập nhật phần cứng trực tiếp (3s).', 'info');
+                showToast('Đã bật chế độ cập nhật Realtime (1s).', 'info');
             } else {
                 stopLiveMetricsTimer();
                 showToast('Đã tắt tự động cập nhật phần cứng.', 'info');
             }
         });
+    }
+
+    // Ping & Stability Benchmark Button
+    if (btnRunStabilityTest) {
+        btnRunStabilityTest.addEventListener('click', runStabilityBenchmark);
+    }
+
+    // Docker & Deploy Modal Buttons
+    if (btnSysOpenDeployModal) btnSysOpenDeployModal.addEventListener('click', openDeployModal);
+    if (btnOpenDeployFromLogs) btnOpenDeployFromLogs.addEventListener('click', openDeployModal);
+    if (btnCloseDeployModal) btnCloseDeployModal.addEventListener('click', closeDeployModal);
+    if (btnCancelDeploy) btnCancelDeploy.addEventListener('click', closeDeployModal);
+    if (btnStartDeployProcess) btnStartDeployProcess.addEventListener('click', handleStartDeploy);
+
+    if (btnSysDockerRestart) btnSysDockerRestart.addEventListener('click', () => handleDockerAction('restart'));
+    if (btnDockerRestartFromLogs) btnDockerRestartFromLogs.addEventListener('click', () => handleDockerAction('restart'));
+    if (btnDockerTogglePower) btnDockerTogglePower.addEventListener('click', handleDockerPowerToggle);
+    if (btnSysViewGameLogs) btnSysViewGameLogs.addEventListener('click', () => switchTab('tab-gamelogs'));
+
+    if (inputFilterGameLogs) inputFilterGameLogs.addEventListener('input', applyGameLogFilter);
+    if (btnRefreshGameLogs) btnRefreshGameLogs.addEventListener('click', fetchGameLogs);
+    if (btnCopyGameLogs) btnCopyGameLogs.addEventListener('click', handleCopyGameLogs);
+    if (btnClearTerminalScreen) btnClearTerminalScreen.addEventListener('click', handleClearTerminal);
+
+    if (toggleLiveGameLogs) {
+        toggleLiveGameLogs.addEventListener('change', () => {
+            if (toggleLiveGameLogs.checked) {
+                startLiveGameLogsTimer();
+                showToast('Đã bật theo dõi log game trực tiếp (2s).', 'info');
+            } else {
+                stopLiveGameLogsTimer();
+                showToast('Đã tắt tự động làm mới log.', 'info');
+            }
+        });
+    }
+
+    // Build Upload Event Listeners
+    if (buildDropzone && inputBuildZipFile) {
+        buildDropzone.addEventListener('click', (e) => {
+            if (e.target !== btnRemoveSelectedFile && !btnRemoveSelectedFile?.contains(e.target)) {
+                inputBuildZipFile.click();
+            }
+        });
+
+        inputBuildZipFile.addEventListener('change', (e) => {
+            if (e.target.files && e.target.files.length > 0) {
+                handleSelectBuildFile(e.target.files[0]);
+            }
+        });
+
+        buildDropzone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            buildDropzone.classList.add('dragover');
+        });
+
+        buildDropzone.addEventListener('dragleave', () => {
+            buildDropzone.classList.remove('dragover');
+        });
+
+        buildDropzone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            buildDropzone.classList.remove('dragover');
+            if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                handleSelectBuildFile(e.dataTransfer.files[0]);
+            }
+        });
+    }
+
+    if (btnRemoveSelectedFile) {
+        btnRemoveSelectedFile.addEventListener('click', (e) => {
+            e.stopPropagation();
+            handleClearSelectedBuildFile();
+        });
+    }
+
+    if (btnStartUploadBuild) {
+        btnStartUploadBuild.addEventListener('click', uploadBuildFile);
     }
 
     searchUserInput.addEventListener('input', applyUserFilters);
@@ -438,6 +631,9 @@ function switchTab(tabId) {
     } else if (tabId === 'tab-system') {
         currentTabTitle.textContent = 'Giám sát Hệ thống & Tài nguyên Máy chủ';
         currentTabDesc.textContent = 'Theo dõi CPU, RAM, Network I/O, thời gian hoạt động và điều khiển tiến trình Backend.';
+    } else if (tabId === 'tab-gamelogs') {
+        currentTabTitle.textContent = 'Logs Game Server & Quản Lý Docker';
+        currentTabDesc.textContent = 'Xem terminal log in-game trực tiếp từ container live_server và điều khiển Rebuild Image 4 bước.';
     } else if (tabId === 'tab-users') {
         currentTabTitle.textContent = 'Quản lý Tài khoản & Trạng thái';
         currentTabDesc.textContent = 'Tra cứu người chơi, kích hoạt tài khoản và chỉnh sửa các chỉ số nâng cấp game.';
@@ -462,12 +658,19 @@ async function loadTabContent(tabId) {
             startLiveMetricsTimer();
         }
     } else if (tabId === 'tab-system') {
-        await fetchSystemMetrics();
+        await Promise.all([fetchSystemMetrics(), fetchDockerStatus()]);
         if (!toggleLiveMetrics || toggleLiveMetrics.checked) {
             startLiveMetricsTimer();
         }
+    } else if (tabId === 'tab-gamelogs') {
+        stopLiveMetricsTimer();
+        await Promise.all([fetchDockerStatus(), fetchGameLogs()]);
+        if (!toggleLiveGameLogs || toggleLiveGameLogs.checked) {
+            startLiveGameLogsTimer();
+        }
     } else {
         stopLiveMetricsTimer();
+        stopLiveGameLogsTimer();
         if (tabId === 'tab-users') {
             await fetchUsers();
         } else if (tabId === 'tab-rooms') {
@@ -1118,6 +1321,9 @@ function removeToast(toast) {
 async function fetchSystemMetrics() {
     if (!ADMIN_TOKEN) return;
     try {
+        // Đồng thời đo Ping thực tế từ Client tới Server
+        measureClientPing();
+
         const res = await fetch(`${API_URL}/api/admin/system-metrics`, {
             headers: getHeaders()
         });
@@ -1231,7 +1437,7 @@ function startLiveMetricsTimer() {
         if (activeTab === 'tab-system' || activeTab === 'tab-overview') {
             fetchSystemMetrics();
         }
-    }, 3000);
+    }, 1000);
 }
 
 function stopLiveMetricsTimer() {
@@ -1402,6 +1608,698 @@ function formatUptime(seconds) {
     if (m > 0) parts.push(`${m}m`);
     if (s > 0 && d === 0) parts.push(`${s}s`);
     return parts.join(' ') || '0s';
+}
+
+// ─── CLIENT PING & STABILITY BENCHMARK ───────────────────────────────────────
+
+async function measureClientPing() {
+    if (isTestingStability) return;
+    try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3000);
+        const start = performance.now();
+        const res = await fetch(`${API_URL}/api/ping?clientTime=${Date.now()}&_t=${Date.now()}`, {
+            cache: 'no-store',
+            signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+        if (res.ok) {
+            const latency = Math.max(1, Math.min(999, Math.round(performance.now() - start)));
+            clientPingHistory.push(latency);
+            if (clientPingHistory.length > 15) clientPingHistory.shift();
+
+            updatePingUI(latency);
+        }
+    } catch (err) {
+        if (err.name === 'AbortError') {
+            updatePingUI(999);
+        }
+    }
+}
+
+function updatePingUI(latency) {
+    if (!txtLivePingVal) return;
+
+    txtLivePingVal.textContent = latency;
+
+    // Calculate Average
+    const sum = clientPingHistory.reduce((a, b) => a + b, 0);
+    const avg = clientPingHistory.length > 0 ? Math.round(sum / clientPingHistory.length) : latency;
+    if (txtAvgPingVal) txtAvgPingVal.textContent = avg;
+
+    // Calculate Jitter
+    let jitter = 0;
+    if (clientPingHistory.length > 1) {
+        let diffSum = 0;
+        for (let i = 1; i < clientPingHistory.length; i++) {
+            diffSum += Math.abs(clientPingHistory[i] - clientPingHistory[i - 1]);
+        }
+        jitter = Math.round((diffSum / (clientPingHistory.length - 1)) * 10) / 10;
+    }
+    if (txtJitterVal) txtJitterVal.textContent = `±${jitter} ms`;
+
+    // Stability %
+    const penalty = (jitter * 1.8) + (avg > 90 ? (avg - 90) * 0.25 : 0);
+    const stability = Math.max(15, Math.min(100, Math.round(100 - penalty)));
+    if (txtStabilityScore) txtStabilityScore.textContent = `${stability}%`;
+
+    // Determine Alarm Level & Colors
+    if (alarmLevelPill && alarmLevelText) {
+        if (latency < 60) {
+            alarmLevelPill.className = 'ping-alarm-pill level-good';
+            alarmLevelText.textContent = '🟢 MỨC 1: HOÀN HẢO (< 60ms)';
+            if (txtStabilityRating) txtStabilityRating.textContent = 'Rất ổn định (Phản hồi tức thì)';
+            if (badgeGameQuality) {
+                badgeGameQuality.className = 'badge badge-success';
+                badgeGameQuality.textContent = 'ĐẠT CHUẨN THI ĐẤU';
+            }
+            if (txtGameQualityDesc) txtGameQualityDesc.textContent = 'Phản hồi tức thì, combo kỹ năng chuẩn xác không có độ trễ.';
+        } else if (latency <= 120) {
+            alarmLevelPill.className = 'ping-alarm-pill level-moderate';
+            alarmLevelText.textContent = '🟡 MỨC 2: BÌNH THƯỜNG (60-120ms)';
+            if (txtStabilityRating) txtStabilityRating.textContent = 'Ổn định (Chơi mượt)';
+            if (badgeGameQuality) {
+                badgeGameQuality.className = 'badge badge-warning';
+                badgeGameQuality.textContent = 'KẾT NỐI ỔN ĐỊNH';
+            }
+            if (txtGameQualityDesc) txtGameQualityDesc.textContent = 'Chơi game bình thường, độ trễ vừa phải, trải nghiệm tốt.';
+        } else if (latency <= 200) {
+            alarmLevelPill.className = 'ping-alarm-pill level-warning';
+            alarmLevelText.textContent = '🟠 MỨC 3: CẢNH BÁO (121-200ms)';
+            if (txtStabilityRating) txtStabilityRating.textContent = 'Trung bình (Trễ mạng nhẹ)';
+            if (badgeGameQuality) {
+                badgeGameQuality.className = 'badge badge-warning';
+                badgeGameQuality.textContent = 'CẢNH BÁO GIẬT LAG';
+            }
+            if (txtGameQualityDesc) txtGameQualityDesc.textContent = 'Có hiện tượng trễ mạng, tung chiêu có thể bị delay nhẹ.';
+        } else {
+            alarmLevelPill.className = 'ping-alarm-pill level-danger';
+            alarmLevelText.textContent = '🔴 MỨC 4: BÁO ĐỘNG ĐỎ (> 200ms)';
+            if (txtStabilityRating) txtStabilityRating.textContent = 'Kém / Không ổn định';
+            if (badgeGameQuality) {
+                badgeGameQuality.className = 'badge badge-danger';
+                badgeGameQuality.textContent = 'LAG NẶNG / NGUY HIỂM';
+            }
+            if (txtGameQualityDesc) txtGameQualityDesc.textContent = 'Mạng rất kém! Khuyến nghị kiểm tra kết nối trước khi vào trận.';
+        }
+    }
+}
+
+async function runStabilityBenchmark() {
+    if (isTestingStability) return;
+    isTestingStability = true;
+
+    if (btnRunStabilityTest) {
+        btnRunStabilityTest.disabled = true;
+        btnRunStabilityTest.innerHTML = '<span>Đang đo kiểm tra (10 lần)...</span>';
+    }
+
+    if (txtTestStatus) txtTestStatus.textContent = 'Đang tiến hành đo 10 gói tin ping liên tiếp...';
+
+    const bars = pingBarsTrack ? pingBarsTrack.querySelectorAll('.ping-sample-bar') : [];
+    bars.forEach(b => {
+        b.className = 'ping-sample-bar';
+        b.style.height = '10%';
+        const tag = b.querySelector('.bar-tag');
+        if (tag) tag.textContent = '...';
+    });
+
+    const results = [];
+    for (let i = 0; i < 10; i++) {
+        const bar = bars[i];
+        if (bar) {
+            bar.className = 'ping-sample-bar testing';
+            bar.style.height = '40%';
+        }
+
+        const start = performance.now();
+        let ping = 999;
+        try {
+            const res = await fetch(`${API_URL}/api/ping?t=${Date.now()}`, { cache: 'no-store' });
+            if (res.ok) {
+                ping = Math.max(1, Math.round(performance.now() - start));
+            }
+        } catch (e) {
+            ping = 999;
+        }
+
+        results.push(ping);
+        clientPingHistory.push(ping);
+        if (clientPingHistory.length > 20) clientPingHistory.shift();
+
+        // Update bar
+        if (bar) {
+            const heightPercent = Math.min(100, Math.max(15, Math.round((ping / 250) * 100)));
+            bar.style.height = `${heightPercent}%`;
+            const tag = bar.querySelector('.bar-tag');
+            if (tag) tag.textContent = `${ping}ms`;
+
+            if (ping < 60) bar.className = 'ping-sample-bar good';
+            else if (ping <= 120) bar.className = 'ping-sample-bar moderate';
+            else if (ping <= 200) bar.className = 'ping-sample-bar warning';
+            else bar.className = 'ping-sample-bar danger';
+        }
+
+        updatePingUI(ping);
+        await new Promise(r => setTimeout(r, 200));
+    }
+
+    // Benchmark summary
+    const minPing = Math.min(...results);
+    const maxPing = Math.max(...results);
+    const avgPing = Math.round(results.reduce((a, b) => a + b, 0) / results.length);
+
+    if (txtTestStatus) {
+        txtTestStatus.textContent = `Hoàn tất! Min: ${minPing}ms | Max: ${maxPing}ms | Avg: ${avgPing}ms`;
+    }
+
+    if (btnRunStabilityTest) {
+        btnRunStabilityTest.disabled = false;
+        btnRunStabilityTest.innerHTML = `
+            <svg viewBox="0 0 24 24" class="icon-btn">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/>
+            </svg>
+            <span>Đo lại Độ Ổn Định</span>
+        `;
+    }
+
+    isTestingStability = false;
+
+    if (avgPing < 80) {
+        showToast(`Kết quả kiểm tra xuất sắc! Ping TB: ${avgPing}ms (Đạt chuẩn thi đấu)`, 'success');
+    } else if (avgPing <= 150) {
+        showToast(`Kết quả: Ping TB ${avgPing}ms (Kết nối chơi game ổn định)`, 'info');
+    } else {
+        showToast(`Cảnh báo: Ping TB ${avgPing}ms (Mạng có hiện tượng lag trễ)`, 'error');
+    }
+}
+
+// ─── DOCKER GAME SERVER & LIVE LOGS MANAGER ─────────────────────────────────
+
+async function fetchDockerStatus() {
+    if (!ADMIN_TOKEN) return;
+    try {
+        const res = await fetch(`${API_URL}/api/admin/docker/status`, {
+            headers: getHeaders()
+        });
+        if (res.ok) {
+            const data = await res.json();
+            if (data.success) {
+                updateDockerStatusUI(data.container, data.deployState);
+            }
+        }
+    } catch (err) {
+        console.error('[FetchDockerStatus Error]', err);
+    }
+}
+
+function updateDockerStatusUI(container, deployState) {
+    if (!container) return;
+    currentContainerStatus = container.status || 'not_found';
+    const isRunning = currentContainerStatus === 'running';
+
+    // Update tab-system badge
+    if (badgeDockerSysStatus) {
+        if (isRunning) {
+            badgeDockerSysStatus.className = 'badge badge-success';
+            badgeDockerSysStatus.textContent = '🟢 DOCKER: RUNNING (Port 7777)';
+        } else if (currentContainerStatus === 'exited') {
+            badgeDockerSysStatus.className = 'badge badge-danger';
+            badgeDockerSysStatus.textContent = '🔴 DOCKER: STOPPED';
+        } else {
+            badgeDockerSysStatus.className = 'badge badge-warning';
+            badgeDockerSysStatus.textContent = '⚪ DOCKER: NOT FOUND';
+        }
+    }
+
+    // Update tab-gamelogs status chip
+    if (gamelogDockerStatusChip && txtGamelogContainerState) {
+        const dot = gamelogDockerStatusChip.querySelector('.ping-dot');
+        if (dot) {
+            dot.style.background = isRunning ? 'var(--green)' : 'var(--danger)';
+        }
+        txtGamelogContainerState.textContent = `Container: live_server (${isRunning ? 'RUNNING' : 'STOPPED'})`;
+    }
+
+    // Update Power button label
+    if (txtDockerPowerLabel) {
+        txtDockerPowerLabel.textContent = isRunning ? 'Dừng Container' : 'Khởi động Container';
+    }
+
+    // If currently deploying, update modal stepper
+    if (deployState && deployState.isDeploying) {
+        updateDeployStepperUI(deployState);
+        if (!deployPollingTimer) {
+            pollDeployProgress();
+        }
+    }
+}
+
+async function fetchGameLogs() {
+    if (!ADMIN_TOKEN) return;
+    try {
+        const res = await fetch(`${API_URL}/api/admin/docker/game-logs?lines=300`, {
+            headers: getHeaders()
+        });
+        if (res.ok) {
+            const data = await res.json();
+            if (data.success) {
+                rawGameLogs = data.logs || '';
+                renderGameLogs();
+            }
+        }
+    } catch (err) {
+        console.error('[FetchGameLogs Error]', err);
+    }
+}
+
+function renderGameLogs() {
+    if (!gameTerminalPre) return;
+    const filterQuery = inputFilterGameLogs ? inputFilterGameLogs.value.trim().toLowerCase() : '';
+    
+    const lines = rawGameLogs.split('\n');
+    let filteredLines = lines;
+    if (filterQuery) {
+        filteredLines = lines.filter(l => l.toLowerCase().includes(filterQuery));
+    }
+
+    if (txtLogLineCount) {
+        txtLogLineCount.textContent = `${filteredLines.length} / ${lines.length} dòng log`;
+    }
+
+    if (filteredLines.length === 0) {
+        gameTerminalPre.innerHTML = filterQuery 
+            ? `<span style="color: var(--text-muted);">Không tìm thấy dòng log nào khớp với từ khóa "${escapeHTML(filterQuery)}".</span>`
+            : '<span style="color: var(--text-muted);">Chưa có log từ Game Server.</span>';
+        return;
+    }
+
+    // Syntax highlighting for game logs
+    const formattedHtml = filteredLines.map(line => {
+        const escaped = escapeHTML(line);
+        if (line.includes('[ERROR]') || line.includes('Exception') || line.includes('Error') || line.includes('Failed')) {
+            return `<span style="color: #ff5f56; font-weight: bold;">${escaped}</span>`;
+        } else if (line.includes('[WARN]') || line.includes('Warning') || line.includes('Disconnect')) {
+            return `<span style="color: #ffbd2e;">${escaped}</span>`;
+        } else if (line.includes('[SERVER]') || line.includes('Dedicated Server') || line.includes('Lobby')) {
+            return `<span style="color: #00e8ff; font-weight: 600;">${escaped}</span>`;
+        } else if (line.includes('[CLIENT]') || line.includes('Connected') || line.includes('Approved') || line.includes('Player')) {
+            return `<span style="color: #00ffc4;">${escaped}</span>`;
+        } else {
+            return `<span style="color: #c9d8e8;">${escaped}</span>`;
+        }
+    }).join('\n');
+
+    gameTerminalPre.innerHTML = formattedHtml;
+
+    // Auto-scroll to bottom if enabled
+    if (toggleAutoScrollLogs && toggleAutoScrollLogs.checked && gameTerminalViewport) {
+        gameTerminalViewport.scrollTop = gameTerminalViewport.scrollHeight;
+    }
+}
+
+function applyGameLogFilter() {
+    renderGameLogs();
+}
+
+function handleCopyGameLogs() {
+    if (!rawGameLogs) {
+        showToast('Không có dữ liệu log để sao chép.', 'warning');
+        return;
+    }
+    navigator.clipboard.writeText(rawGameLogs)
+        .then(() => showToast('Đã sao chép toàn bộ log game vào Clipboard!', 'success'))
+        .catch(() => showToast('Không thể sao chép log.', 'error'));
+}
+
+function handleClearTerminal() {
+    if (gameTerminalPre) {
+        gameTerminalPre.innerHTML = '<span style="color: var(--text-muted);">Màn hình đã được xóa. Bấm "Làm mới" để tải lại log.</span>';
+    }
+    if (txtLogLineCount) {
+        txtLogLineCount.textContent = '0 dòng log';
+    }
+}
+
+async function handleDockerAction(action) {
+    const actionName = action === 'restart' ? 'Khởi động lại' : action === 'stop' ? 'Dừng' : 'Bật';
+    if (!confirm(`Bạn có chắc chắn muốn ${actionName} Container live_server không?`)) {
+        return;
+    }
+
+    try {
+        showToast(`Đang gửi lệnh ${actionName} container...`, 'info');
+        const res = await fetch(`${API_URL}/api/admin/docker/action`, {
+            method: 'POST',
+            headers: getHeaders(),
+            body: JSON.stringify({ action })
+        });
+        const data = await res.json();
+        if (res.ok) {
+            showToast(data.message || `${actionName} container thành công!`, 'success');
+            setTimeout(() => {
+                fetchDockerStatus();
+                fetchGameLogs();
+            }, 1000);
+        } else {
+            showToast(data.message || `Lỗi khi ${actionName} container.`, 'error');
+        }
+    } catch (err) {
+        console.error(err);
+        showToast('Lỗi mạng khi điều khiển container.', 'error');
+    }
+}
+
+function handleDockerPowerToggle() {
+    if (currentContainerStatus === 'running') {
+        handleDockerAction('stop');
+    } else {
+        handleDockerAction('start');
+    }
+}
+
+// ─── DEPLOY MODAL & REBUILD AUTOMATION ───────────────────────────────────────
+
+function openDeployModal() {
+    if (dockerDeployModal) {
+        dockerDeployModal.classList.add('show');
+        fetchDeployLogs();
+        pollDeployProgress();
+    }
+}
+
+function closeDeployModal() {
+    if (dockerDeployModal) {
+        dockerDeployModal.classList.remove('show');
+    }
+}
+
+async function handleStartDeploy() {
+    if (!confirm('Xác nhận bắt đầu Rebuild Image (vps_server) và Deploy lại Game Server (live_server)?')) {
+        return;
+    }
+
+    if (btnStartDeployProcess) {
+        btnStartDeployProcess.disabled = true;
+        btnStartDeployProcess.innerHTML = '<span>Đang khởi động tiến trình...</span>';
+    }
+
+    deploySeconds = 0;
+    if (txtDeployTimer) txtDeployTimer.textContent = 'Thời gian: 0s';
+
+    try {
+        const res = await fetch(`${API_URL}/api/admin/docker/deploy`, {
+            method: 'POST',
+            headers: getHeaders()
+        });
+        const data = await res.json();
+        if (res.ok) {
+            showToast('Đã bắt đầu tiến trình Rebuild & Deploy Docker!', 'info');
+            pollDeployProgress();
+        } else {
+            showToast(data.message || 'Không thể bắt đầu Deploy.', 'error');
+            if (btnStartDeployProcess) {
+                btnStartDeployProcess.disabled = false;
+                btnStartDeployProcess.innerHTML = `
+                    <svg viewBox="0 0 24 24" class="icon-btn">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/>
+                    </svg>
+                    <span>BẮT ĐẦU REBUILD & DEPLOY</span>
+                `;
+            }
+        }
+    } catch (err) {
+        console.error(err);
+        showToast('Lỗi mạng khi bắt đầu Deploy.', 'error');
+        if (btnStartDeployProcess) {
+            btnStartDeployProcess.disabled = false;
+        }
+    }
+}
+
+function pollDeployProgress() {
+    if (deployPollingTimer) clearInterval(deployPollingTimer);
+    
+    // Tự động kiểm tra ngay lập tức
+    fetchDeployLogs();
+
+    deployPollingTimer = setInterval(async () => {
+        const state = await fetchDeployLogs();
+        if (state && !state.isDeploying) {
+            clearInterval(deployPollingTimer);
+            deployPollingTimer = null;
+            
+            if (state.status === 'success') {
+                showToast('Rebuild & Thay Image Game Server thành công rực rỡ!', 'success');
+            } else if (state.status === 'error') {
+                showToast(`Deploy thất bại: ${state.error || 'Xem chi tiết trong log'}`, 'error');
+            }
+
+            if (btnStartDeployProcess) {
+                btnStartDeployProcess.disabled = false;
+                btnStartDeployProcess.innerHTML = `
+                    <svg viewBox="0 0 24 24" class="icon-btn">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/>
+                    </svg>
+                    <span>REBUILD & DEPLOY LẠI</span>
+                `;
+            }
+
+            fetchDockerStatus();
+            fetchGameLogs();
+        }
+    }, 1000);
+}
+
+async function fetchDeployLogs() {
+    if (!ADMIN_TOKEN) return null;
+    try {
+        const res = await fetch(`${API_URL}/api/admin/docker/deploy-logs`, {
+            headers: getHeaders()
+        });
+        if (res.ok) {
+            const data = await res.json();
+            if (data.success && data.deployState) {
+                updateDeployStepperUI(data.deployState);
+                return data.deployState;
+            }
+        }
+    } catch (err) {
+        console.error('[FetchDeployLogs Error]', err);
+    }
+    return null;
+}
+
+function updateDeployStepperUI(state) {
+    if (!state) return;
+    const { currentStep, isDeploying, status, stepName, logs, error, startTime, endTime } = state;
+
+    // Cập nhật đồng hồ thời gian tổng thể chuẩn xác từ Backend
+    if (txtDeployTimer) {
+        if (isDeploying && startTime) {
+            const elapsed = Math.max(0, Math.round((Date.now() - startTime) / 1000));
+            txtDeployTimer.textContent = `Thời gian: ${elapsed}s`;
+        } else if (startTime && endTime) {
+            const total = Math.max(0, Math.round((endTime - startTime) / 1000));
+            txtDeployTimer.textContent = `Tổng thời gian: ${total}s`;
+        } else if (status === 'success') {
+            txtDeployTimer.textContent = 'Hoàn tất';
+        }
+    }
+
+    // Update Status Badge
+    if (txtDeployStatus && dotDeployStatus) {
+        if (isDeploying) {
+            txtDeployStatus.textContent = `Đang chạy: ${stepName}`;
+            dotDeployStatus.style.background = 'var(--cyan)';
+        } else if (status === 'success') {
+            txtDeployStatus.textContent = 'Hoàn tất thành công (Container Online)';
+            dotDeployStatus.style.background = 'var(--green)';
+        } else if (status === 'error') {
+            txtDeployStatus.textContent = `Lỗi: ${error || 'Thất bại'}`;
+            dotDeployStatus.style.background = 'var(--danger)';
+        } else {
+            txtDeployStatus.textContent = 'Sẵn sàng thực thi';
+            dotDeployStatus.style.background = 'var(--warning)';
+        }
+    }
+
+    // Update Stepper steps
+    const steps = [depStep1, depStep2, depStep3, depStep4];
+    const connectors = [depConn1, depConn2, depConn3];
+
+    steps.forEach((s, idx) => {
+        if (!s) return;
+        const stepNum = idx + 1;
+        s.className = 'deploy-step-item';
+        if (stepNum < currentStep || (status === 'success' && stepNum <= 4)) {
+            s.classList.add('done');
+        } else if (stepNum === currentStep) {
+            if (status === 'error') s.classList.add('error');
+            else if (isDeploying) s.classList.add('active');
+        }
+    });
+
+    connectors.forEach((c, idx) => {
+        if (!c) return;
+        if (idx + 1 < currentStep || status === 'success') {
+            c.className = 'step-connector done';
+        } else {
+            c.className = 'step-connector';
+        }
+    });
+
+    // Update Terminal Logs
+    if (deployTerminalPre && logs) {
+        deployTerminalPre.textContent = logs.join('\n') || 'Đang chuẩn bị chạy lệnh...';
+        if (deployTerminalBody) {
+            deployTerminalBody.scrollTop = deployTerminalBody.scrollHeight;
+        }
+    }
+}
+
+function startLiveGameLogsTimer() {
+    stopLiveGameLogsTimer();
+    gameLogsTimer = setInterval(() => {
+        if (activeTab === 'tab-gamelogs') {
+            fetchGameLogs();
+            fetchDockerStatus();
+        }
+    }, 2000);
+}
+
+function stopLiveGameLogsTimer() {
+    if (gameLogsTimer) {
+        clearInterval(gameLogsTimer);
+        gameLogsTimer = null;
+    }
+}
+
+// ─── BUILD UPLOAD & AUTO DEPLOY HANDLERS ────────────────────────────────────
+
+function handleSelectBuildFile(file) {
+    if (!file) return;
+    const ext = file.name.split('.').pop().toLowerCase();
+    if (!['zip', 'rar', '7z', 'gz', 'tar', 'tgz'].includes(ext)) {
+        showToast('Vui lòng chọn file nén bản build định dạng WinRAR (.rar), 7-Zip (.7z) hoặc .zip', 'warning');
+        return;
+    }
+
+    selectedBuildFile = file;
+    const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
+
+    if (txtSelectedFileName) txtSelectedFileName.textContent = file.name;
+    if (txtSelectedFileSize) txtSelectedFileSize.textContent = `${sizeMB} MB`;
+
+    if (dropzoneContent) dropzoneContent.style.display = 'none';
+    if (dropzoneFileInfo) dropzoneFileInfo.style.display = 'flex';
+    if (btnStartUploadBuild) btnStartUploadBuild.disabled = false;
+
+    showToast(`Đã chọn file build: ${file.name} (${sizeMB} MB)`, 'info');
+}
+
+function handleClearSelectedBuildFile() {
+    selectedBuildFile = null;
+    if (inputBuildZipFile) inputBuildZipFile.value = '';
+    if (dropzoneContent) dropzoneContent.style.display = 'flex';
+    if (dropzoneFileInfo) dropzoneFileInfo.style.display = 'none';
+    if (btnStartUploadBuild) btnStartUploadBuild.disabled = true;
+    if (uploadProgressWrapper) uploadProgressWrapper.style.display = 'none';
+}
+
+function uploadBuildFile() {
+    if (!selectedBuildFile) {
+        showToast('Vui lòng chọn file build trước khi tải lên.', 'warning');
+        return;
+    }
+
+    if (isUploadingBuild) return;
+    isUploadingBuild = true;
+
+    if (btnStartUploadBuild) {
+        btnStartUploadBuild.disabled = true;
+        btnStartUploadBuild.innerHTML = '<span>Đang tải lên...</span>';
+    }
+
+    if (uploadProgressWrapper) uploadProgressWrapper.style.display = 'block';
+    if (uploadProgressFill) uploadProgressFill.style.width = '0%';
+    if (txtUploadProgressStatus) txtUploadProgressStatus.textContent = 'Bắt đầu truyền file lên VPS: 0%';
+    if (txtUploadSpeed) txtUploadSpeed.textContent = '0 MB/s';
+
+    const autoDeploy = chkAutoDeployAfterUpload ? chkAutoDeployAfterUpload.checked : true;
+    const startTime = Date.now();
+    let lastLoaded = 0;
+    let lastTime = startTime;
+
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', `${API_URL}/api/admin/docker/upload-build?autoDeploy=${autoDeploy}`, true);
+    xhr.setRequestHeader('Authorization', `Bearer ${ADMIN_TOKEN}`);
+    xhr.setRequestHeader('x-file-name', encodeURIComponent(selectedBuildFile.name));
+    xhr.setRequestHeader('x-auto-deploy', autoDeploy ? 'true' : 'false');
+    xhr.setRequestHeader('Content-Type', 'application/octet-stream');
+
+    xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable) {
+            const percent = Math.round((e.loaded / e.total) * 100);
+            if (uploadProgressFill) uploadProgressFill.style.width = `${percent}%`;
+
+            const now = Date.now();
+            const timeDelta = (now - lastTime) / 1000;
+            if (timeDelta >= 0.5) {
+                const speedBps = (e.loaded - lastLoaded) / timeDelta;
+                const speedMBps = (speedBps / (1024 * 1024)).toFixed(2);
+                if (txtUploadSpeed) txtUploadSpeed.textContent = `${speedMBps} MB/s`;
+                lastLoaded = e.loaded;
+                lastTime = now;
+            }
+
+            if (txtUploadProgressStatus) {
+                if (percent === 100) {
+                    txtUploadProgressStatus.textContent = 'Tải lên hoàn tất 100%! Đang khởi động quy trình giải nén & Rebuild trên VPS...';
+                } else {
+                    txtUploadProgressStatus.textContent = `Đang tải lên VPS: ${percent}% (${(e.loaded / (1024 * 1024)).toFixed(1)} / ${(e.total / (1024 * 1024)).toFixed(1)} MB)`;
+                }
+            }
+        }
+    };
+
+    xhr.onload = () => {
+        isUploadingBuild = false;
+        if (btnStartUploadBuild) {
+            btnStartUploadBuild.disabled = false;
+            btnStartUploadBuild.innerHTML = `
+                <svg viewBox="0 0 24 24" class="icon-btn">
+                    <path d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/>
+                </svg>
+                <span>Tải Lên & Cập Nhật Server Ngay</span>
+            `;
+        }
+
+        try {
+            const data = JSON.parse(xhr.responseText);
+            if (xhr.status === 200 && data.success) {
+                showToast(data.message || 'Tải lên thành công! Đang tiến hành Deploy...', 'success');
+                openDeployModal();
+                pollDeployProgress();
+                handleClearSelectedBuildFile();
+            } else {
+                showToast(data.message || 'Lỗi khi tải lên file build.', 'error');
+            }
+        } catch (e) {
+            showToast('Lỗi xử lý phản hồi từ máy chủ.', 'error');
+        }
+    };
+
+    xhr.onerror = () => {
+        isUploadingBuild = false;
+        if (btnStartUploadBuild) {
+            btnStartUploadBuild.disabled = false;
+            btnStartUploadBuild.innerHTML = '<span>Thử tải lên lại</span>';
+        }
+        showToast('Lỗi kết nối khi truyền file lên VPS.', 'error');
+    };
+
+    xhr.send(selectedBuildFile);
 }
 
 // ─── UTILITIES ───────────────────────────────────────────────────────────────
