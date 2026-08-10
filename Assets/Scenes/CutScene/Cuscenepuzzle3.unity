@@ -11885,7 +11885,7 @@ MonoBehaviour:
       m_Calls: []
   m_text: "Th\u1EADt may qu\xE1... C\xE1c ng\u01B0\u01A1i \u1ED5n c\u1EA3 ch\u1EE9?"
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 5c7a92cce04a5ee478f36d2f5b537e05, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 6551b436ac6e447438384ddc0c7721bb, type: 2}
   m_sharedMaterial: {fileID: 97671534423474389, guid: 5c7a92cce04a5ee478f36d2f5b537e05, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
@@ -12981,7 +12981,7 @@ MonoBehaviour:
     \u0111i, h\xECnh nh\u01B0 c\xF3 ch\xFAt gi\u1ED1ng v\u1EDBi nh\u1EEFng c\xE1i
     tr\u1EE5 nguy\xEAn t\u1ED1 n\xE0y \u0111\u1EA5y!"
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 5c7a92cce04a5ee478f36d2f5b537e05, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 6551b436ac6e447438384ddc0c7721bb, type: 2}
   m_sharedMaterial: {fileID: 97671534423474389, guid: 5c7a92cce04a5ee478f36d2f5b537e05, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
@@ -127303,7 +127303,7 @@ MonoBehaviour:
       m_Calls: []
   m_text: "\u0110\u01B0\u1EE3c, t\xF4i giao cho c\u1EADu"
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 5c7a92cce04a5ee478f36d2f5b537e05, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 6551b436ac6e447438384ddc0c7721bb, type: 2}
   m_sharedMaterial: {fileID: 97671534423474389, guid: 5c7a92cce04a5ee478f36d2f5b537e05, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
@@ -129761,7 +129761,7 @@ MonoBehaviour:
     c\u1EE7a ch\xFAng \u0111\xE3 c\u1EA1n ki\u1EC7t r\u1ED3i, ch\xFAng ta ph\u1EA3i
     s\u1EA1c l\u1EA1i nguy\xEAn t\u1ED1 cho ch\xFAng"
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 5c7a92cce04a5ee478f36d2f5b537e05, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 6551b436ac6e447438384ddc0c7721bb, type: 2}
   m_sharedMaterial: {fileID: 97671534423474389, guid: 5c7a92cce04a5ee478f36d2f5b537e05, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
