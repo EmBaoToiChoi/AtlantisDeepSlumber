@@ -85743,6 +85743,8 @@ MonoBehaviour:
   videoClip: {fileID: 32900000, guid: 56f4bf51485c91e41916610d48675a1e, type: 3}
   vpsVideoDuration: 183
   maxWaitTimeout: 100
+  waitingVideoClip: {fileID: 0}
+  testWaitingHoldDuration: 10
   backgroundColor: {r: 0, g: 0, b: 0, a: 1}
 --- !u!4 &867667537
 Transform:
@@ -134729,8 +134731,12 @@ PrefabInstance:
       value: 2147483647
       objectReference: {fileID: 0}
     - target: {fileID: 6673259597275801313, guid: 354ee22049fad544faed84281c1e6223, type: 3}
+      propertyPath: m_Range
+      value: 25.8
+      objectReference: {fileID: 0}
+    - target: {fileID: 6673259597275801313, guid: 354ee22049fad544faed84281c1e6223, type: 3}
       propertyPath: m_Intensity
-      value: 7
+      value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 6673259597275801313, guid: 354ee22049fad544faed84281c1e6223, type: 3}
       propertyPath: m_RenderMode
@@ -134738,11 +134744,27 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6673259597275801313, guid: 354ee22049fad544faed84281c1e6223, type: 3}
       propertyPath: m_Lightmapping
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 6673259597275801313, guid: 354ee22049fad544faed84281c1e6223, type: 3}
+      propertyPath: m_Shadows.m_Bias
       value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 6673259597275801313, guid: 354ee22049fad544faed84281c1e6223, type: 3}
       propertyPath: m_BounceIntensity
       value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6673259597275801313, guid: 354ee22049fad544faed84281c1e6223, type: 3}
+      propertyPath: m_Shadows.m_NearPlane
+      value: 2.34
+      objectReference: {fileID: 0}
+    - target: {fileID: 6673259597275801313, guid: 354ee22049fad544faed84281c1e6223, type: 3}
+      propertyPath: m_Shadows.m_NormalBias
+      value: 0.602
+      objectReference: {fileID: 0}
+    - target: {fileID: 6673259597275801313, guid: 354ee22049fad544faed84281c1e6223, type: 3}
+      propertyPath: m_Shadows.m_Resolution
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 6673259597275801313, guid: 354ee22049fad544faed84281c1e6223, type: 3}
       propertyPath: m_UseViewFrustumForShadowCasterCull
@@ -145015,8 +145037,12 @@ PrefabInstance:
       value: 2147483647
       objectReference: {fileID: 0}
     - target: {fileID: 6673259597275801313, guid: 354ee22049fad544faed84281c1e6223, type: 3}
+      propertyPath: m_Range
+      value: 25.8
+      objectReference: {fileID: 0}
+    - target: {fileID: 6673259597275801313, guid: 354ee22049fad544faed84281c1e6223, type: 3}
       propertyPath: m_Intensity
-      value: 7
+      value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 6673259597275801313, guid: 354ee22049fad544faed84281c1e6223, type: 3}
       propertyPath: m_RenderMode
@@ -145024,11 +145050,27 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6673259597275801313, guid: 354ee22049fad544faed84281c1e6223, type: 3}
       propertyPath: m_Lightmapping
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 6673259597275801313, guid: 354ee22049fad544faed84281c1e6223, type: 3}
+      propertyPath: m_Shadows.m_Bias
       value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 6673259597275801313, guid: 354ee22049fad544faed84281c1e6223, type: 3}
       propertyPath: m_BounceIntensity
       value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6673259597275801313, guid: 354ee22049fad544faed84281c1e6223, type: 3}
+      propertyPath: m_Shadows.m_NearPlane
+      value: 2.34
+      objectReference: {fileID: 0}
+    - target: {fileID: 6673259597275801313, guid: 354ee22049fad544faed84281c1e6223, type: 3}
+      propertyPath: m_Shadows.m_NormalBias
+      value: 0.602
+      objectReference: {fileID: 0}
+    - target: {fileID: 6673259597275801313, guid: 354ee22049fad544faed84281c1e6223, type: 3}
+      propertyPath: m_Shadows.m_Resolution
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 6673259597275801313, guid: 354ee22049fad544faed84281c1e6223, type: 3}
       propertyPath: m_UseViewFrustumForShadowCasterCull
