@@ -1139,10 +1139,12 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         bool auth = isStandaloneMode || (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening && IsServer);
         if (!auth) return;
 
-        float effectiveRadius = Mathf.Max(2.5f, currentVfxScale * 0.5f);
+        // currentVfxScale chính là bán kính thị giác của vòng tròn VFX trên mặt đất
+        // Enemy nào nằm trong vùng VFX nhìn thấy được -> stun ngay lập tức
+        float effectiveRadius = currentVfxScale;
         System.Collections.Generic.HashSet<GameObject> stunnedEnemies = new System.Collections.Generic.HashSet<GameObject>();
 
-        // 1. Quét theo Collider bằng OverlapSphere
+        // 1. Quét theo Collider bằng OverlapSphere với bán kính = đúng kích thước VFX
         Collider[] hits = Physics.OverlapSphere(vfxCenterPos, effectiveRadius);
         foreach (var col in hits)
         {
