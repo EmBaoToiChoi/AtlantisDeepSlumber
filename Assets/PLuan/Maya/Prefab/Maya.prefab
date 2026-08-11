@@ -261,7 +261,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  GlobalObjectIdHash: 230630563
+  GlobalObjectIdHash: 3274260924
   InScenePlacedSourceGlobalObjectIdHash: 230630563
   DeferredDespawnTick: 0
   Ownership: 1
@@ -508,6 +508,8 @@ MonoBehaviour:
   qSkillDuration: 10
   qSkillSpreadAngle: 10
   qSkillSkeletonPrefab: {fileID: 5277984816960544984, guid: 2ee0035ff29f0194a9810f37fe0da731, type: 3}
+  qSkillSummonVfxPrefab: {fileID: 4748681987041982144, guid: b94815a5db14e594790c77978da0b138, type: 3}
+  qSkillSummonRitualDuration: 5
   isQSkillActiveNet:
     UpdateTraits:
       MinSecondsBetweenUpdates: 0

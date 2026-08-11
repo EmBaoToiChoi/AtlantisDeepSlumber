@@ -1356,7 +1356,7 @@ public class Enemy4_Bongtoi : NetworkBehaviour
     {
         if (AgentReady) agent.isStopped = true; SetSpeedNet(0f);
         ApplyLocalDeathEffects();
-        DropExperience(); DropItems(); Invoke(nameof(DespawnEnemy), 6.0f);
+        DropExperience(); DropItems(); Invoke(nameof(DespawnEnemy), 5.2f);
     }
 
     private void DropExperience()

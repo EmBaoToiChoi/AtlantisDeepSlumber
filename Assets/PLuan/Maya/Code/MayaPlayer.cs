@@ -336,11 +336,17 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
     );
     public bool IsESkillActive => eSkillActiveTimer > 0f;
 
-    [Header("Q Skill (Triple Attacks) Settings")]
+    [Header("Q Skill (Summon Allied Minion) Settings")]
     public float qSkillCooldown = 15f; // Cooldown của kỹ năng Q (giây)
     public float qSkillDuration = 10f; // Thời lượng tác dụng kỹ năng Q (giây)
     public float qSkillSpreadAngle = 10f; // Góc lệch của các tia bên cạnh
     public GameObject qSkillSkeletonPrefab; // Prefab con Skeleton đệ triệu hồi
+    [Tooltip("Prefab VFX vòng tròn ma thuật triệu hồi dưới đất (nếu để trống sẽ dùng VFX_Heal_Area_01 / Maya_Summon_Ritual).")]
+    public GameObject qSkillSummonVfxPrefab;
+    [Tooltip("Thời gian (giây) vòng ma thuật hiện dưới đất trước khi đệ trồi từ dưới mặt đất bay lên.")]
+    public float qSkillSummonRitualDuration = 5.0f;
+    [Tooltip("Tỷ lệ scale của VFX vòng triệu hồi ma thuật dưới đất.")]
+    public float qSkillSummonVfxScale = 2.2f;
     private float qSkillCooldownTimer = 0f; // Bộ đếm cooldown Q
     private float qSkillDurationTimer = 0f; // Bộ đếm thời lượng Q
     private bool localIsQSkillActive = false; // Trạng thái kỹ năng Q ở local
@@ -966,6 +972,33 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
         return true;
     }
 
+    private Vector3 GetSafeSummonPosition()
+    {
+        Vector3 defaultPos = transform.position + transform.forward * 3f;
+
+        for (int i = 0; i < 10; i++)
+        {
+            Vector3 randomOffset = (i == 0) ? transform.forward * 3f : Random.insideUnitSphere * 3.5f;
+            randomOffset.y = 0f;
+            Vector3 candidatePos = transform.position + randomOffset;
+
+            if (UnityEngine.AI.NavMesh.SamplePosition(candidatePos, out UnityEngine.AI.NavMeshHit navHit, 4.0f, UnityEngine.AI.NavMesh.AllAreas))
+            {
+                if (!Physics.CheckSphere(navHit.position + Vector3.up * 0.5f, 0.5f, LayerMask.GetMask("Default", "Wall", "Obstacle")))
+                {
+                    return navHit.position;
+                }
+            }
+        }
+
+        if (UnityEngine.AI.NavMesh.SamplePosition(defaultPos, out UnityEngine.AI.NavMeshHit fallbackHit, 5.0f, UnityEngine.AI.NavMesh.AllAreas))
+        {
+            return fallbackHit.position;
+        }
+
+        return defaultPos;
+    }
+
     private void SpawnSkeletonLocal()
     {
         if (qSkillSkeletonPrefab == null)
@@ -974,14 +1007,10 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
             return;
         }
 
-        Vector3 spawnPos = transform.position + transform.forward * 2f;
-        spawnPos.y = transform.position.y;
+        Vector3 groundPos = GetSafeSummonPosition();
         Quaternion spawnRot = Quaternion.LookRotation(transform.forward);
 
-        GameObject skeleton = Instantiate(qSkillSkeletonPrefab, spawnPos, spawnRot);
-        skeleton.SetActive(true);
-
-        StartCoroutine(DespawnSkeletonAfterTime(skeleton, 15f));
+        StartCoroutine(PerformSummonSequence(groundPos, spawnRot));
     }
 
     [ServerRpc]
@@ -995,16 +1024,135 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         isQSkillActiveNet.Value = true;
 
-        Vector3 spawnPos = transform.position + transform.forward * 2f;
-        spawnPos.y = transform.position.y;
+        Vector3 groundPos = GetSafeSummonPosition();
         Quaternion spawnRot = Quaternion.LookRotation(transform.forward);
 
-        GameObject skeleton = Instantiate(qSkillSkeletonPrefab, spawnPos, spawnRot);
+        SpawnQSkillSummonVfxClientRpc(groundPos, qSkillSummonRitualDuration);
+        StartCoroutine(PerformSummonSequence(groundPos, spawnRot));
+    }
+
+    [ClientRpc]
+    private void SpawnQSkillSummonVfxClientRpc(Vector3 groundPos, float duration)
+    {
+        if (IsServer) return;
+        SpawnRitualVfxLocal(groundPos, duration);
+    }
+
+    private GameObject SpawnRitualVfxLocal(Vector3 groundPos, float duration)
+    {
+        GameObject prefabToUse = qSkillSummonVfxPrefab;
+        if (prefabToUse == null)
+        {
+            prefabToUse = Resources.Load<GameObject>("VFX/Maya_Summon_Ritual");
+            if (prefabToUse == null)
+            {
+                prefabToUse = Resources.Load<GameObject>("VFX_Heal_Area_01");
+                if (prefabToUse == null)
+                {
+                    prefabToUse = Resources.Load<GameObject>("Par_PurpleField");
+                }
+            }
+        }
+
+        if (prefabToUse != null)
+        {
+            Vector3 vfxPos = groundPos + Vector3.up * 0.05f;
+            GameObject vfxObj = Instantiate(prefabToUse, vfxPos, Quaternion.identity);
+            vfxObj.transform.localScale = Vector3.one * Mathf.Max(0.5f, qSkillSummonVfxScale);
+
+            Transform capsuleChild = vfxObj.transform.Find("Capsule");
+            if (capsuleChild != null)
+            {
+                capsuleChild.gameObject.SetActive(false);
+            }
+
+            ParticleSystem[] psList = vfxObj.GetComponentsInChildren<ParticleSystem>(true);
+            foreach (var ps in psList)
+            {
+                if (ps != null)
+                {
+                    var main = ps.main;
+                    main.loop = true;
+                    if (!ps.isPlaying) ps.Play();
+                }
+            }
+            return vfxObj;
+        }
+        return null;
+    }
+
+    private System.Collections.IEnumerator PerformSummonSequence(Vector3 groundPos, Quaternion spawnRot)
+    {
+        GameObject ritualVfxObj = SpawnRitualVfxLocal(groundPos, qSkillSummonRitualDuration);
+
+        float waitBeforeRise = Mathf.Max(1.0f, qSkillSummonRitualDuration - 1.8f);
+        yield return new WaitForSeconds(waitBeforeRise);
+
+        Vector3 undergroundPos = groundPos + Vector3.down * 1.6f;
+        GameObject skeleton = Instantiate(qSkillSkeletonPrefab, undergroundPos, spawnRot);
         skeleton.SetActive(true);
 
-        if (skeleton.TryGetComponent<NetworkObject>(out var netObj))
+        var agent = skeleton.GetComponent<UnityEngine.AI.NavMeshAgent>();
+        if (agent != null) agent.enabled = false;
+
+        var cols = skeleton.GetComponentsInChildren<Collider>(true);
+        foreach (var c in cols) if (c != null) c.enabled = false;
+
+        var anim = skeleton.GetComponentInChildren<Animator>();
+        if (anim != null)
         {
-            netObj.Spawn();
+            anim.Play("Spawn", 0, 0f);
+        }
+
+        float riseDuration = 1.8f;
+        float elapsed = 0f;
+        while (elapsed < riseDuration && skeleton != null)
+        {
+            float delta = Time.deltaTime;
+            elapsed += delta;
+            float t = Mathf.Clamp01(elapsed / riseDuration);
+            float smoothT = t * t * (3f - 2f * t);
+            skeleton.transform.position = Vector3.Lerp(undergroundPos, groundPos, smoothT);
+            yield return null;
+        }
+
+        if (skeleton != null)
+        {
+            skeleton.transform.position = groundPos;
+
+            foreach (var c in cols) if (c != null) c.enabled = true;
+            if (agent != null) agent.enabled = true;
+
+            var skelAI = skeleton.GetComponent<Skeleton>();
+            if (skelAI != null)
+            {
+                skelAI.currentState = Skeleton.State.Follow;
+            }
+
+            if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening && IsServer)
+            {
+                if (skeleton.TryGetComponent<NetworkObject>(out var netObj) && !netObj.IsSpawned)
+                {
+                    netObj.Spawn();
+                }
+            }
+        }
+
+        yield return new WaitForSeconds(Mathf.Max(0.1f, qSkillSummonRitualDuration - waitBeforeRise - riseDuration));
+
+        if (ritualVfxObj != null)
+        {
+            ParticleSystem[] psList = ritualVfxObj.GetComponentsInChildren<ParticleSystem>(true);
+            foreach (var ps in psList)
+            {
+                if (ps != null)
+                {
+                    var main = ps.main;
+                    main.loop = false;
+                    ps.Stop(true, ParticleSystemStopBehavior.StopEmitting);
+                }
+            }
+            Destroy(ritualVfxObj, 1.0f);
         }
 
         StartCoroutine(DespawnSkeletonAfterTime(skeleton, 15f));

@@ -14,14 +14,81 @@ public class ArrowProjectile : NetworkBehaviour
     // Danh sách lưu các quái vật đã trúng đòn để tránh việc một mũi tên xuyên gây sát thương nhiều lần trên cùng một quái
     private System.Collections.Generic.HashSet<Transform> hitEnemyRoots = new System.Collections.Generic.HashSet<Transform>();
 
+    [Header("Visual Effects (VFX) Settings")]
+    [Tooltip("Prefab VFX năng lượng xanh dương đi kèm mũi tên (nếu để trống sẽ dùng Par_BlueShoot_Bullet / Elena_Arrow_VFX).")]
+    public GameObject arrowVfxPrefab;
+    [Tooltip("Offset vị trí tương đối của VFX so với đầu/thân mũi tên.")]
+    public Vector3 arrowVfxOffset = Vector3.zero;
+    [Tooltip("Góc xoay tương đối của VFX so với hướng bay của mũi tên.")]
+    public Vector3 arrowVfxRotation = Vector3.zero;
+    [Tooltip("Tỷ lệ scale của VFX đạn ma thuật xanh.")]
+    public float arrowVfxScale = 1.0f;
+
+    private GameObject activeVfxInstance;
+    private static GameObject defaultArrowVfxPrefab;
+
+    private void OnEnable()
+    {
+        AttachArrowVfx();
+    }
+
     private void Start()
     {
         Debug.Log($"[ArrowProjectile] Mũi tên được khởi tạo tại: {transform.position}, góc xoay: {transform.rotation.eulerAngles}, tỉ lệ scale: {transform.localScale}, Trạng thái active: {gameObject.activeSelf}, Trạng thái xuyên thấu: {isPiercing}");
+
+        AttachArrowVfx();
 
         // Phá hủy cục bộ nếu không thuộc Netcode hoặc chạy trên Server để dọn dẹp
         if (NetworkManager.Singleton == null || NetworkManager.Singleton.IsServer)
         {
             Destroy(gameObject, lifetime);
+        }
+    }
+
+    private void AttachArrowVfx()
+    {
+        if (activeVfxInstance != null) return;
+
+        GameObject prefabToUse = arrowVfxPrefab;
+        if (prefabToUse == null)
+        {
+            if (defaultArrowVfxPrefab == null)
+            {
+                defaultArrowVfxPrefab = Resources.Load<GameObject>("VFX/Elena_Arrow_VFX");
+                if (defaultArrowVfxPrefab == null)
+                {
+                    defaultArrowVfxPrefab = Resources.Load<GameObject>("Par_BlueShoot_Bullet");
+                }
+            }
+            prefabToUse = defaultArrowVfxPrefab;
+        }
+
+        if (prefabToUse != null)
+        {
+            activeVfxInstance = Instantiate(prefabToUse, transform);
+            
+            Transform capsuleChild = activeVfxInstance.transform.Find("Capsule");
+            if (capsuleChild != null)
+            {
+                capsuleChild.gameObject.SetActive(false);
+            }
+
+            activeVfxInstance.transform.localPosition = arrowVfxOffset;
+            activeVfxInstance.transform.localRotation = Quaternion.Euler(arrowVfxRotation);
+            activeVfxInstance.transform.localScale = Vector3.one * Mathf.Max(0.1f, arrowVfxScale);
+
+            // Bật Loop = true cho tất cả ParticleSystem (Particles_Shell, Particles_BulletHead, Par_BurstParticles)
+            // để vệt năng lượng xanh lướt đi liên tục trên đường bay của mũi tên
+            ParticleSystem[] psList = activeVfxInstance.GetComponentsInChildren<ParticleSystem>(true);
+            foreach (var ps in psList)
+            {
+                if (ps != null)
+                {
+                    var main = ps.main;
+                    main.loop = true;
+                    if (!ps.isPlaying) ps.Play();
+                }
+            }
         }
     }
 
@@ -164,8 +231,33 @@ public class ArrowProjectile : NetworkBehaviour
         }
     }
 
+    private void DetachOrCleanVfx()
+    {
+        if (activeVfxInstance != null)
+        {
+            // Tách VFX ra khỏi mũi tên để vệt sáng mờ dần tự nhiên theo đuôi khi mũi tên cắm/trúng mục tiêu
+            activeVfxInstance.transform.SetParent(null);
+
+            ParticleSystem[] psList = activeVfxInstance.GetComponentsInChildren<ParticleSystem>(true);
+            foreach (var ps in psList)
+            {
+                if (ps != null)
+                {
+                    var main = ps.main;
+                    main.loop = false;
+                    ps.Stop(true, ParticleSystemStopBehavior.StopEmitting);
+                }
+            }
+
+            Destroy(activeVfxInstance, 1.5f);
+            activeVfxInstance = null;
+        }
+    }
+
     private void DespawnOrDestroy()
     {
+        DetachOrCleanVfx();
+
         if (NetworkObject != null && NetworkObject.IsSpawned)
         {
             NetworkObject.Despawn(true);
@@ -174,5 +266,10 @@ public class ArrowProjectile : NetworkBehaviour
         {
             Destroy(gameObject);
         }
+    }
+
+    private void OnDestroy()
+    {
+        DetachOrCleanVfx();
     }
 }
