@@ -231,6 +231,7 @@ MonoBehaviour:
   enemy3: {fileID: 0}
   enemy4: {fileID: 0}
   enemy5: {fileID: 0}
+  miniBoss: {fileID: 0}
   skeleton: {fileID: 0}
   uiDocument: {fileID: 0}
 --- !u!1 &5277984816960544984
@@ -336,11 +337,11 @@ MonoBehaviour:
   agent: {fileID: 76743162995532616}
   anim: {fileID: 3953146574012429588}
   rb: {fileID: 7808999867850628448}
-  sightRange: 12
+  sightRange: 15
   attackRange: 1.8
   followDistance: 2.5
-  followSpeed: 4
-  chaseSpeed: 5.5
+  followSpeed: 6
+  chaseSpeed: 7
   attackCooldown: 1.5
   spawnDuration: 1.5
   despawnDelay: 2.5
@@ -355,7 +356,7 @@ MonoBehaviour:
   weaponHitbox: {fileID: 2452489325672332158}
   attackCheckPoint: {fileID: 0}
   attackRadius: 1.2
-  attackDamage: 15
+  attackDamage: 5
   knockbackForce: 5
 --- !u!114 &2188998574798157342
 MonoBehaviour:
