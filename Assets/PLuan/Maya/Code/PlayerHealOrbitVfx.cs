@@ -55,8 +55,22 @@ public class PlayerHealOrbitVfx : MonoBehaviour
         itemPrefab = prefab;
     }
 
+    private void Awake()
+    {
+        if (Application.isBatchMode)
+        {
+            Destroy(gameObject);
+            return;
+        }
+    }
+
     private void Start()
     {
+        if (Application.isBatchMode) return;
+
+        // Đảm bảo luôn tự hủy sau thời gian tối đa để tránh leak memory
+        Destroy(gameObject, duration + 1.0f);
+
         if (enableLightGlow)
         {
             GameObject lightObj = new GameObject("HealAuraLight");

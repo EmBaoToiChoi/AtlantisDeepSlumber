@@ -58,7 +58,6 @@ QualitySettings:
     terrainFadeLength: 5
     terrainMaxTrees: 50
     excludedTargetPlatforms:
-    - Standalone
     - Server
     - WebGL
   - serializedVersion: 4
@@ -115,7 +114,6 @@ QualitySettings:
     excludedTargetPlatforms:
     - WebGL
     - Server
-    - Standalone
   - serializedVersion: 4
     name: Medium
     pixelLightCount: 1
@@ -170,7 +168,6 @@ QualitySettings:
     excludedTargetPlatforms:
     - Server
     - WebGL
-    - Standalone
   - serializedVersion: 4
     name: High
     pixelLightCount: 2
@@ -225,7 +222,6 @@ QualitySettings:
     excludedTargetPlatforms:
     - WebGL
     - Server
-    - Standalone
   - serializedVersion: 4
     name: Very High
     pixelLightCount: 3
@@ -280,7 +276,6 @@ QualitySettings:
     excludedTargetPlatforms:
     - Server
     - WebGL
-    - Standalone
   - serializedVersion: 4
     name: Ultra
     pixelLightCount: 4

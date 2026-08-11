@@ -223,6 +223,37 @@
                         <ui:Toggle name="opt-fullscreen" label="TOÀN MÀN HÌNH" value="true" class="checkbox-label" />
                         <ui:Toggle name="opt-vsync" label="ĐỒNG BỘ V-SYNC" value="true" class="checkbox-label" />
                     </ui:VisualElement>
+                    <ui:VisualElement class="form-group">
+                        <ui:Label name="lbl-antialiasing" text="KHỬ RĂNG CƯA" class="form-label" />
+                        <ui:VisualElement name="opt-aa" class="custom-dropdown">
+                            <ui:Label name="opt-aa-value" text="Tắt" class="custom-dropdown-value" />
+                            <ui:Label text="▼" class="custom-dropdown-arrow" />
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                    <ui:VisualElement class="form-group">
+                        <ui:Label name="lbl-shadow-quality" text="CHẤT LƯỢNG BÓNG ĐỔ" class="form-label" />
+                        <ui:VisualElement name="opt-shadows" class="custom-dropdown">
+                            <ui:Label name="opt-shadows-value" text="Cao" class="custom-dropdown-value" />
+                            <ui:Label text="▼" class="custom-dropdown-arrow" />
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                    <ui:VisualElement class="form-group">
+                        <ui:Label name="lbl-particle-quality" text="CHẤT LƯỢNG HẠT" class="form-label" />
+                        <ui:VisualElement name="opt-particles" class="custom-dropdown">
+                            <ui:Label name="opt-particles-value" text="Cao" class="custom-dropdown-value" />
+                            <ui:Label text="▼" class="custom-dropdown-arrow" />
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                    <ui:VisualElement class="form-group">
+                        <ui:Label name="lbl-fps-cap" text="GIỚI HẠN FPS" class="form-label" />
+                        <ui:VisualElement name="opt-fpscap" class="custom-dropdown">
+                            <ui:Label name="opt-fpscap-value" text="Không giới hạn" class="custom-dropdown-value" />
+                            <ui:Label text="▼" class="custom-dropdown-arrow" />
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                    <ui:VisualElement class="checkbox-group-wrapper">
+                        <ui:Toggle name="opt-postfx" label="HIỆU ỨNG HẬU KỲ" value="true" class="checkbox-label" />
+                    </ui:VisualElement>
                 </ui:VisualElement>
                 <ui:VisualElement name="tab-controls" class="tab-content hidden-element">
                     <ui:VisualElement class="form-group">
