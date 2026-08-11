@@ -25,10 +25,33 @@ public class NetworkBootstrap : MonoBehaviour
             // Tự động thêm HUD hiển thị FPS và Ping vào đối tượng này
             gameObject.AddComponent<FPSPingDisplay>();
 
-            // Tối ưu hóa tốc độ nạp tài nguyên bất đồng bộ trong nền và đưa lên GPU nhanh hơn
-            QualitySettings.asyncUploadTimeSlice = 4; // Tăng từ mặc định 2ms lên 4ms để nạp nhanh hơn mỗi frame
-            QualitySettings.asyncUploadBufferSize = 64; // Tăng kích thước bộ đệm tải lên GPU từ mặc định lên 64MB
-            Application.backgroundLoadingPriority = ThreadPriority.High; // Tăng quyền ưu tiên cho luồng tải trong nền
+            if (Application.isBatchMode)
+            {
+                // ─── TỐI ƯU HÓA ĐẶC BIỆT CHO VPS DEDICATED SERVER ───
+                Application.targetFrameRate = 30; // Giới hạn 30 FPS giúp CPU chỉ tiêu thụ 2-5%
+                QualitySettings.vSyncCount = 0;
+                QualitySettings.shadows = ShadowQuality.Disable;
+                QualitySettings.globalTextureMipmapLimit = 3; // Giảm độ phân giải texture ở Server xuống 1/8 -> Tiết kiệm 1GB - 1.5GB RAM trên VPS!
+                QualitySettings.skinWeights = SkinWeights.OneBone;
+                QualitySettings.anisotropicFiltering = AnisotropicFiltering.Disable;
+                QualitySettings.particleRaycastBudget = 16;
+                Time.fixedDeltaTime = 1f / 30f; // 30 ticks/giây cho physics server
+                AudioListener.volume = 0f; // Tắt xử lý âm thanh ở Server
+
+                Debug.Log("[SERVER] Đã kích hoạt chế độ siêu tối ưu RAM & CPU cho VPS (30 FPS, No Shadows, 1/8 Textures).");
+            }
+            else
+            {
+                // ─── TỐI ƯU HÓA CHO CLIENT (MÁY NGƯỜI CHƠI) ───
+                // Áp dụng cài đặt đồ họa đã lưu của người chơi (VSync, FPS cap, quality, AA, shadows, ...).
+                // GraphicsSettingsManager.ApplyAll() đọc PlayerPrefs và set QualitySettings + Application.targetFrameRate + Screen.SetResolution.
+                GraphicsSettingsManager.ApplyAll();
+
+                // Tối ưu hóa tốc độ nạp tài nguyên bất đồng bộ trong nền và đưa lên GPU nhanh hơn
+                QualitySettings.asyncUploadTimeSlice = 4; // Tăng từ mặc định 2ms lên 4ms để nạp nhanh hơn mỗi frame
+                QualitySettings.asyncUploadBufferSize = 64; // Tăng kích thước bộ đệm tải lên GPU từ mặc định lên 64MB
+                Application.backgroundLoadingPriority = ThreadPriority.High; // Tăng quyền ưu tiên cho luồng tải trong nền
+            }
         }
         else
         {
@@ -42,12 +65,25 @@ public class NetworkBootstrap : MonoBehaviour
         // TỰ ĐỘNG BẬT SERVER NẾU CHẠY TRÊN VPS (Headless Mode)
         if (UnityEngine.Application.isBatchMode)
         {
-            // Tối ưu hóa CPU cho VPS: Giới hạn 30 FPS giúp CPU giảm từ 100% xuống còn 2-5%
-            UnityEngine.Application.targetFrameRate = 30;
-            UnityEngine.QualitySettings.vSyncCount = 0;
-
             Debug.Log("[SERVER] Phát hiện đang chạy trên VPS. Đang tự động khởi động Server (FrameRate: 30 FPS)...");
             StartServerOnVPS();
+        }
+    }
+
+    private float _lastGcTime = 0f;
+
+    private void Update()
+    {
+        // Tự động thu gom rác bộ nhớ & giải phóng RAM không dùng định kỳ (mỗi 45 giây)
+        if (Time.unscaledTime - _lastGcTime > 45f)
+        {
+            _lastGcTime = Time.unscaledTime;
+            System.GC.Collect();
+            Resources.UnloadUnusedAssets();
+            if (Application.isBatchMode)
+            {
+                Debug.Log("[SERVER] Đã thu gom rác RAM (GC & UnloadUnusedAssets) định kỳ.");
+            }
         }
     }
 

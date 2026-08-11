@@ -56,7 +56,7 @@ public class PlayerVoicePlayback : MonoBehaviour
 
     public void QueueSamples(float[] samples)
     {
-        if (isLocalPlayer) return;
+        if (isLocalPlayer || Application.isBatchMode) return;
 
         lastTimeReceivedVoice = Time.time;
 
