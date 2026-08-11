@@ -3,34 +3,37 @@ using UnityEngine;
 
 /// <summary>
 /// Component quản lý hiệu ứng khi quái vật chết:
-/// 1. Phát âm thanh chết 3D (3D spatial audio) cho cả 4 Player xung quanh nghe thấy.
-/// 2. Tạo hiệu ứng hố rớt (Ground Hole VFX với vết nứt đất đỏ) dưới chân quái.
-/// 3. Chờ quái hoàn thiện animation Die và VFX mở rộng hoàn chỉnh (vfx đã oke).
-/// 4. Từ từ cho xác quái tuột (chìm) xuống hố trước khi bị despawn/destroy.
-/// 5. Tự động tắt vòng lặp (looping) của VFX sau khi quái lọt xuống để vết nứt & hố mờ dần mượt mà.
+/// 1. Phát âm thanh chết 3D cho 4 Player xung quanh nghe thấy.
+/// 2. Chờ quái phát hết animation Die và nằm yên trên mặt đất 2.0 giây.
+/// 3. Kích hoạt hố đen tử thần (VFX_Dark_Area_01) VÀ xúc tu/xích tối (Enemy_Death_Tentacles) quấn quanh xác quái.
+/// 4. Từ từ kéo/tuột xác quái chìm xuống lòng hố/map.
+/// 5. Ngay khi xác quái vừa chìm xong xuống đất, tắt & xóa ngay lập tức VFX hố và xúc tu.
 /// </summary>
 public class EnemyDeathSinkBehaviour : MonoBehaviour
 {
     [Header("Sink Settings")]
-    public float sinkSpeed = 0.75f;
+    public float sinkSpeed = 0.9f;
     public float sinkDuration = 2.8f;
-    public float delayBeforeSink = 1.2f; // Chờ quái gục xong & VFX hiện nguyên hình hoàn chỉnh
+    public float delayBeforeSink = 2.0f; // Chờ quái gục và nằm yên 2s trước khi hố & xúc tu xuất hiện
 
     private static GameObject defaultVfxPrefab;
+    private static GameObject defaultTentacleVfxPrefab;
     private static AudioClip defaultDeathClip;
 
     private GameObject spawnedVfx;
+    private GameObject spawnedTentaclesVfx;
+    private GameObject customVfxPrefabToUse;
+    private float vfxScaleToUse = 1.85f;
 
     public static void ApplyDeathEffects(GameObject enemy, AudioClip customDeathClip = null, GameObject customVfxPrefab = null, float vfxScale = 1.85f)
     {
         if (enemy == null) return;
 
-        // Tránh gắn trùng lặp component nếu quái đã ở trạng thái chết
         if (enemy.GetComponent<EnemyDeathSinkBehaviour>() != null) return;
 
         Vector3 deathPos = enemy.transform.position;
 
-        // 1. Âm thanh khi chết (3D Spatial Audio cho cả 4 player nghe thấy)
+        // 1. Phát âm thanh khi chết
         AudioClip clipToPlay = customDeathClip;
         if (clipToPlay == null)
         {
@@ -54,27 +57,7 @@ public class EnemyDeathSinkBehaviour : MonoBehaviour
             }
         }
 
-        // 2. Tạo VFX vết nứt & hố tử thần dưới chân quái (vùng VFX to ôm trọn xác quái)
-        GameObject vfxPrefab = customVfxPrefab;
-        if (vfxPrefab == null)
-        {
-            if (defaultVfxPrefab == null)
-            {
-                defaultVfxPrefab = Resources.Load<GameObject>("VFX_Dark_Area_01");
-                if (defaultVfxPrefab == null) defaultVfxPrefab = Resources.Load<GameObject>("VFX_Void_Area_01");
-            }
-            vfxPrefab = defaultVfxPrefab;
-        }
-
-        GameObject spawnedVfxObj = null;
-        if (vfxPrefab != null)
-        {
-            Vector3 vfxPos = deathPos + Vector3.up * 0.05f;
-            spawnedVfxObj = Instantiate(vfxPrefab, vfxPos, Quaternion.identity);
-            spawnedVfxObj.transform.localScale = Vector3.one * Mathf.Max(0.5f, vfxScale);
-        }
-
-        // 3. Tắt toàn bộ Colliders và NavMeshAgent trên quái để rơi xuyên đất mượt mà
+        // 2. Tắt toàn bộ Colliders và NavMeshAgent trên quái lập tức
         var agent = enemy.GetComponent<UnityEngine.AI.NavMeshAgent>();
         if (agent != null) agent.enabled = false;
 
@@ -84,9 +67,10 @@ public class EnemyDeathSinkBehaviour : MonoBehaviour
             if (c != null) c.enabled = false;
         }
 
-        // 4. Đính kèm component làm xác quái từ từ tuột xuống hố
+        // 3. Đính kèm component quản lý thời gian gục -> hố rớt + xúc tu quấn -> chìm xác
         var sinker = enemy.AddComponent<EnemyDeathSinkBehaviour>();
-        sinker.spawnedVfx = spawnedVfxObj;
+        sinker.customVfxPrefabToUse = customVfxPrefab;
+        sinker.vfxScaleToUse = vfxScale;
         sinker.StartSinking();
     }
 
@@ -97,10 +81,57 @@ public class EnemyDeathSinkBehaviour : MonoBehaviour
 
     private IEnumerator SinkRoutine()
     {
-        // Bước 1: Chờ quái hoàn thiện Animation Die và VFX hố rớt hiện nguyên hình đẹp mắt
+        // Giai đoạn 1: Chờ quái phát animation Die và nằm yên trên mặt đất 2.0s
         yield return new WaitForSeconds(delayBeforeSink);
 
-        // Bước 2: Từ từ tuột (chìm) xác quái xuống lòng hố/map
+        // Giai đoạn 2: Tạo hố rớt đất VÀ xúc tu/xích tối quấn quanh xác quái
+        Vector3 deathPos = transform.position;
+
+        GameObject vfxPrefab = customVfxPrefabToUse;
+        if (vfxPrefab == null)
+        {
+            if (defaultVfxPrefab == null)
+            {
+                defaultVfxPrefab = Resources.Load<GameObject>("VFX_Dark_Area_01");
+                if (defaultVfxPrefab == null) defaultVfxPrefab = Resources.Load<GameObject>("VFX_Void_Area_01");
+            }
+            vfxPrefab = defaultVfxPrefab;
+        }
+
+        if (vfxPrefab != null)
+        {
+            Vector3 vfxPos = deathPos + Vector3.up * 0.05f;
+            spawnedVfx = Instantiate(vfxPrefab, vfxPos, Quaternion.identity);
+            spawnedVfx.transform.localScale = Vector3.one * Mathf.Max(0.5f, vfxScaleToUse);
+        }
+
+        // Tải VFX xúc tu / xích ma thuật quấn quanh xác quái
+        if (defaultTentacleVfxPrefab == null)
+        {
+            defaultTentacleVfxPrefab = Resources.Load<GameObject>("VFX/Enemy_Death_Tentacles");
+            if (defaultTentacleVfxPrefab == null)
+            {
+                defaultTentacleVfxPrefab = Resources.Load<GameObject>("Par_Restraint");
+            }
+        }
+
+        if (defaultTentacleVfxPrefab != null)
+        {
+            spawnedTentaclesVfx = Instantiate(defaultTentacleVfxPrefab, transform);
+            
+            // Tắt mesh Capsule thử nghiệm nếu có trong prefab
+            Transform capsuleChild = spawnedTentaclesVfx.transform.Find("Capsule");
+            if (capsuleChild != null)
+            {
+                capsuleChild.gameObject.SetActive(false);
+            }
+
+            spawnedTentaclesVfx.transform.localPosition = Vector3.up * 0.3f;
+            spawnedTentaclesVfx.transform.localRotation = Quaternion.identity;
+            spawnedTentaclesVfx.transform.localScale = Vector3.one * (vfxScaleToUse * 0.9f);
+        }
+
+        // Giai đoạn 3: Từ từ cho xúc tu quấn xác quái và kéo chìm xuống hố/map
         float elapsed = 0f;
         while (elapsed < sinkDuration)
         {
@@ -110,32 +141,47 @@ public class EnemyDeathSinkBehaviour : MonoBehaviour
             yield return null;
         }
 
-        // Bước 3: Khi xác đã chìm xong bên dưới map, dừng tạo thêm hạt (emission) để vết nứt & hố mờ dần mượt mà
+        // Giai đoạn 4: Ngay khi hạ xác xuống xong, TẮT VÀ XÓA NGAY LẬP TỨC các VFX hố rớt & xúc tu
+        ClearAllVfx();
+    }
+
+    private void ClearAllVfx()
+    {
         if (spawnedVfx != null)
         {
-            ParticleSystem[] psList = spawnedVfx.GetComponentsInChildren<ParticleSystem>();
+            ParticleSystem[] psList = spawnedVfx.GetComponentsInChildren<ParticleSystem>(true);
             foreach (var ps in psList)
             {
                 if (ps != null)
                 {
                     var main = ps.main;
                     main.loop = false;
-                    ps.Stop(true, ParticleSystemStopBehavior.StopEmitting);
+                    ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
                 }
             }
-
-            Destroy(spawnedVfx, 2.0f);
+            Destroy(spawnedVfx);
             spawnedVfx = null;
+        }
+
+        if (spawnedTentaclesVfx != null)
+        {
+            ParticleSystem[] psList = spawnedTentaclesVfx.GetComponentsInChildren<ParticleSystem>(true);
+            foreach (var ps in psList)
+            {
+                if (ps != null)
+                {
+                    var main = ps.main;
+                    main.loop = false;
+                    ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+                }
+            }
+            Destroy(spawnedTentaclesVfx);
+            spawnedTentaclesVfx = null;
         }
     }
 
     private void OnDestroy()
     {
-        // Cleanup VFX nếu quái bị destroy sớm
-        if (spawnedVfx != null)
-        {
-            Destroy(spawnedVfx);
-            spawnedVfx = null;
-        }
+        ClearAllVfx();
     }
 }

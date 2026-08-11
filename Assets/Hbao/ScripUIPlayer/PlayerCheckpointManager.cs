@@ -89,8 +89,30 @@ public class PlayerCheckpointManager : NetworkBehaviour
         Instance = this;
     }
 
+    private void OnEnable()
+    {
+        UnityEngine.SceneManagement.SceneManager.sceneLoaded += OnSceneLoaded;
+    }
+
+    private void OnDisable()
+    {
+        UnityEngine.SceneManagement.SceneManager.sceneLoaded -= OnSceneLoaded;
+    }
+
+    /// <summary>
+    /// Khi scene được load (kể cả khi play lại từ đầu), reset toàn bộ checkpoint state.
+    /// </summary>
+    private void OnSceneLoaded(UnityEngine.SceneManagement.Scene scene, UnityEngine.SceneManagement.LoadSceneMode mode)
+    {
+        Debug.Log($"[PlayerCheckpointManager] Scene '{scene.name}' loaded (mode: {mode}). Resetting all checkpoint data.");
+        ResetAllCheckpointData();
+    }
+
     private void Start()
     {
+        // Reset toàn bộ dữ liệu checkpoint khi bắt đầu chơi mới
+        ResetAllCheckpointData();
+
         // Tự động quét và sắp xếp checkpoints theo chỉ số checkpointIndex nếu danh sách trống
         if (checkpoints == null || checkpoints.Count == 0)
         {
@@ -101,6 +123,51 @@ public class PlayerCheckpointManager : NetworkBehaviour
             // Cache vị trí tất cả checkpoints đã được gán sẵn trong Inspector
             CacheAllCheckpointPositions();
         }
+    }
+
+    /// <summary>
+    /// Reset toàn bộ trạng thái checkpoint về mặc định.
+    /// Gọi khi bắt đầu game mới hoặc khi scene được load lại.
+    /// </summary>
+    public void ResetAllCheckpoints()
+    {
+        Debug.Log("[PlayerCheckpointManager] ResetAllCheckpoints() called externally.");
+        ResetAllCheckpointData();
+    }
+
+    /// <summary>
+    /// Internal: Xóa sạch toàn bộ dữ liệu checkpoint trong bộ nhớ.
+    /// Không ảnh hưởng đến danh sách CheckpointZone (vì chúng là object trong scene).
+    /// </summary>
+    private void ResetAllCheckpointData()
+    {
+        // Reset checkpoint index về -1 (chưa chạm checkpoint nào)
+        localPlayerCheckpointIndex = -1;
+        globalLatestCheckpointIndex = -1;
+
+        // Reset trạng thái respawn standalone
+        localPlayerRespawning = false;
+        hasStoredLocalInitialPos = false;
+        localPlayerInitialPosition = Vector3.zero;
+        hasLocalPlayerDied = false;
+        localPlayerDeathTime = 0f;
+
+        // Xóa cache vị trí checkpoint cũ (sẽ được cache lại từ CheckpointZone trong scene)
+        cachedCheckpointPositions.Clear();
+
+        // Xóa dữ liệu network checkpoint
+        playerCheckpointIndices.Clear();
+        playerInitialPositions.Clear();
+        respawningPlayers.Clear();
+        playerDeathTimes.Clear();
+
+        // Xóa NetworkList nếu là Server
+        if (networkPlayerCheckpoints != null && IsServer)
+        {
+            networkPlayerCheckpoints.Clear();
+        }
+
+        Debug.Log("[PlayerCheckpointManager] All checkpoint data has been reset.");
     }
 
     /// <summary>

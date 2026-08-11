@@ -4644,10 +4644,16 @@ private void StartRollServerRpc(Vector3 direction)
         arrowObj.transform.localScale = arrowPrefab.transform.localScale;
         arrowObj.SetActive(true);
         
-        if (arrowObj.TryGetComponent<NetworkObject>(out var netObj))
+        bool hasNetObj = arrowObj.TryGetComponent<NetworkObject>(out var netObj);
+        if (hasNetObj && netObj != null)
         {
             netObj.Spawn(true);
         }
+        else
+        {
+            SpawnArrowVisualClientRpc(spawnPos, shootDirection, isESkillActiveNet.Value && eSkillRemainingArrowsNet.Value > 0);
+        }
+
         if (arrowObj.TryGetComponent<ArrowProjectile>(out var proj))
         {
             proj.owner = this;
@@ -4670,6 +4676,24 @@ private void StartRollServerRpc(Vector3 direction)
             {
                 proj.isPiercing = false;
             }
+        }
+    }
+
+    [ClientRpc]
+    private void SpawnArrowVisualClientRpc(Vector3 spawnPos, Vector3 shootDirection, bool isPiercing)
+    {
+        if (IsServer) return;
+        if (arrowPrefab == null) return;
+
+        GameObject arrowObj = Instantiate(arrowPrefab, spawnPos, Quaternion.LookRotation(shootDirection));
+        arrowObj.transform.localScale = arrowPrefab.transform.localScale;
+        arrowObj.SetActive(true);
+
+        if (arrowObj.TryGetComponent<ArrowProjectile>(out var proj))
+        {
+            proj.owner = this;
+            proj.speed = arrowSpeed;
+            proj.isPiercing = isPiercing;
         }
     }
 

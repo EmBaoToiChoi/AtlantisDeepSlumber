@@ -215,7 +215,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
     [Tooltip("Prefab VFX bọc toàn thân khi vào trạng thái bất tử của Skill E (nếu để trống sẽ dùng Par_YellowShield).")]
     public GameObject eSkillVfxPrefab;
     [Tooltip("Độ cao của VFX bọc toàn thân tính từ vị trí chân Arthur.")]
-    public float eSkillVfxHeightOffset = 1.0f;
+    public float eSkillVfxHeightOffset = 0.25f;
     [Tooltip("Tỷ lệ scale của VFX bọc toàn thân Arthur.")]
     public float eSkillVfxScale = 1.5f;
 
@@ -236,9 +236,9 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
     [Tooltip("Prefab VFX vòng tròn mở rộng khi dặm khiên Skill Q (nếu để trống sẽ tự động dùng Par_FireShoot_Muzzle).")]
     public GameObject qSkillVfxPrefab;
     [Tooltip("Hệ số nhân scale của vòng tròn VFX cho khớp chính xác với bán kính qSkillRadius.")]
-    public float qSkillVfxScaleMultiplier = 1.8f;
+    public float qSkillVfxScaleMultiplier = 3.5f;
     [Tooltip("Thời gian (giây) VFX nổ và nở rộng to ra theo bán kính choáng.")]
-    public float qSkillVfxExpandDuration = 0.5f;
+    public float qSkillVfxExpandDuration = 0.6f;
     [HideInInspector]
     public bool isQSkillActive = false;
     [HideInInspector]
@@ -1076,11 +1076,11 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         if (prefabToUse != null)
         {
-            Vector3 groundPos = spawnPos + Vector3.up * 0.05f;
-            Quaternion rotation = Quaternion.Euler(90f, 0f, 0f);
+            Vector3 groundPos = spawnPos + Vector3.up * 0.2f;
+            Quaternion rotation = Quaternion.identity;
             GameObject vfxObj = Instantiate(prefabToUse, groundPos, rotation);
             
-            float targetScale = radius * 2.5f * qSkillVfxScaleMultiplier;
+            float targetScale = radius * 3.5f * qSkillVfxScaleMultiplier;
             StartCoroutine(AnimateQSkillVfxExpansion(vfxObj, targetScale, qSkillVfxExpandDuration));
         }
     }
@@ -1111,7 +1111,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         {
             vfxObj.transform.localScale = Vector3.one * targetScale;
             // Cho phép toàn bộ ParticleSystem diễn hoạt tự nhiên đến khi kết thúc hoàn toàn (không bị ngắt giữa chừng)
-            Destroy(vfxObj, 3.5f);
+            Destroy(vfxObj, 4.5f);
         }
     }
 
