@@ -302,7 +302,7 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
     public float eSkillHealDuration = 5f;
     public float eSkillHealAmount = 10f;
     [Tooltip("Hệ số scale VFX vùng hồi máu dưới đất cho to rõ rực rỡ.")]
-    public float eSkillVfxScaleMultiplier = 2.0f;
+    public float eSkillVfxScaleMultiplier = 1.2f;
 
     [Tooltip("VFX 1: Prefab VFX hiển thị vị trí ngắm dưới đất khi đè phím E (Nếu để trống sẽ dùng hình trụ xanh mặc định)")]
     public GameObject eSkillTargetingVfxPrefab;
@@ -841,7 +841,7 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
         {
             GameObject vfxObj = Instantiate(prefabToUse, position, Quaternion.identity);
             vfxObj.transform.SetParent(zoneObj.transform);
-            vfxObj.transform.localScale = Vector3.one * (eSkillHealRadius * 0.8f * Mathf.Max(1.0f, eSkillVfxScaleMultiplier)); // Phóng to VFX hoành tráng
+            vfxObj.transform.localScale = Vector3.one * Mathf.Max(0.1f, eSkillVfxScaleMultiplier); // Scale vừa vặn 1.2x
 
             ParticleSystem[] psList = vfxObj.GetComponentsInChildren<ParticleSystem>(true);
             foreach (var ps in psList)
@@ -922,7 +922,7 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
         {
             GameObject vfx = Instantiate(prefabToUse, position, Quaternion.identity);
             vfx.transform.SetParent(visualObj.transform);
-            vfx.transform.localScale = Vector3.one * (eSkillHealRadius * 0.8f * Mathf.Max(1.0f, eSkillVfxScaleMultiplier)); // Phóng to VFX hoành tráng
+            vfx.transform.localScale = Vector3.one * Mathf.Max(0.1f, eSkillVfxScaleMultiplier); // Scale vừa vặn 1.2x
 
             ParticleSystem[] psList = vfx.GetComponentsInChildren<ParticleSystem>(true);
             foreach (var ps in psList)
@@ -1205,6 +1205,7 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
             var skelAI = skeleton.GetComponent<Skeleton>();
             if (skelAI != null)
             {
+                skelAI.isStandaloneMode = isStandaloneMode || !IsNetworkActive;
                 skelAI.SetSummoner(transform);
                 skelAI.currentState = Skeleton.State.Follow;
             }
