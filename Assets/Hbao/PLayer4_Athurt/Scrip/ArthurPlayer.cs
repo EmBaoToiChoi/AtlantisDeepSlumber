@@ -236,7 +236,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
     [Tooltip("Prefab VFX vòng tròn mở rộng khi dặm khiên Skill Q (nếu để trống sẽ tự động dùng Par_FireShoot_Muzzle).")]
     public GameObject qSkillVfxPrefab;
     [Tooltip("Hệ số nhân scale của vòng tròn VFX cho khớp chính xác với bán kính qSkillRadius.")]
-    public float qSkillVfxScaleMultiplier = 3.5f;
+    public float qSkillVfxScaleMultiplier = 1.0f;
     [Tooltip("Thời gian (giây) VFX nổ và nở rộng to ra theo bán kính choáng.")]
     public float qSkillVfxExpandDuration = 0.6f;
     [HideInInspector]
@@ -1040,6 +1040,10 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         // 1. Kích hoạt VFX nổ vòng tròn mở rộng dưới đất ĐÚNG TẠI KHUNG HÌNH ANIMATION EVENT DẶM KHIÊN
         SpawnQSkillCircleVfx(transform.position, qSkillRadius);
+        if (!isStandaloneMode && IsOwner)
+        {
+            SpawnQSkillCircleVfxClientRpc(transform.position, qSkillRadius);
+        }
 
         // 2. Kích hoạt stun quái xung quanh & đồng bộ VFX choáng trên đầu quái
         if (isStandaloneMode || IsOwner)
@@ -1055,6 +1059,13 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
                 StartQSkillBuffServerRpc();
             }
         }
+    }
+
+    [ClientRpc]
+    private void SpawnQSkillCircleVfxClientRpc(Vector3 spawnPos, float radius)
+    {
+        if (IsOwner) return;
+        SpawnQSkillCircleVfx(spawnPos, radius);
     }
 
     /// <summary>Khởi tạo VFX nổ và nở rộng ra theo bán kính choáng qSkillRadius.</summary>
@@ -1080,7 +1091,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
             Quaternion rotation = Quaternion.identity;
             GameObject vfxObj = Instantiate(prefabToUse, groundPos, rotation);
             
-            float targetScale = radius * 3.5f * qSkillVfxScaleMultiplier;
+            float targetScale = radius * 2.0f * Mathf.Max(0.1f, qSkillVfxScaleMultiplier);
             StartCoroutine(AnimateQSkillVfxExpansion(vfxObj, targetScale, qSkillVfxExpandDuration));
         }
     }
@@ -1115,14 +1126,17 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         }
     }
 
-    /// <summary>Dùng OverlapSphere để tìm và choáng tất cả enemy trong bán kính qSkillRadius.</summary>
+    /// <summary>Dùng OverlapSphere để tìm và choáng tất cả enemy trong vùng VFX choáng.</summary>
     private void ApplyQSkillStunToNearbyEnemies()
     {
         bool auth = isStandaloneMode || (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening && IsServer);
         if (!auth) return;
 
-        Collider[] hits = Physics.OverlapSphere(transform.position, qSkillRadius);
-        Debug.Log($"[{gameObject.name}] Skill Q: Quét bán kính {qSkillRadius}m -> {hits.Length} collider(s)");
+        float visualRadius = (qSkillRadius * 2.0f * Mathf.Max(0.1f, qSkillVfxScaleMultiplier)) * 0.5f;
+        float effectiveStunRadius = Mathf.Max(qSkillRadius, visualRadius);
+
+        Collider[] hits = Physics.OverlapSphere(transform.position, effectiveStunRadius);
+        Debug.Log($"[{gameObject.name}] Skill Q: Quét bán kính {effectiveStunRadius}m -> {hits.Length} collider(s)");
 
         foreach (var col in hits)
         {
