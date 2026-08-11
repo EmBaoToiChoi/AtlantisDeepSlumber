@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 
 public class AudioManager : MonoBehaviour
@@ -14,6 +15,9 @@ public class AudioManager : MonoBehaviour
     public float MasterVolume { get; private set; } = 1.0f;
     public float MusicVolume { get; private set; } = 0.8f;
     public float SFXVolume { get; private set; } = 0.9f;
+
+    private float _bgmVolumeMultiplier = 1.0f;
+    private Coroutine _fadeCoroutine;
 
     private void Awake()
     {
@@ -42,8 +46,9 @@ public class AudioManager : MonoBehaviour
     private void OnSceneLoaded(UnityEngine.SceneManagement.Scene scene, UnityEngine.SceneManagement.LoadSceneMode mode)
     {
         Debug.Log($"[AudioManager] SceneLoaded: '{scene.name}'");
-        if (IsMenuOrLobbyScene(scene.name))
+        if (IsMenuOrLobbyScene(scene.name) || IsCutsceneScene(scene.name))
         {
+            // Duy trì hoặc phát nhạc nền khi ở MainMenu, Lobby, WaitingRoom và MapSTART (Cutscene mở đầu)
             if (_bgmSource != null && !_bgmSource.isPlaying)
             {
                 PlayBGM("Audio/BGM");
@@ -61,6 +66,13 @@ public class AudioManager : MonoBehaviour
         if (string.IsNullOrEmpty(sceneName)) return false;
         string lower = sceneName.ToLower().Replace(" ", "").Replace("_", "");
         return lower.Contains("mainmenu") || lower.Contains("menu") || lower.Contains("lobby") || lower.Contains("waiting");
+    }
+
+    public bool IsCutsceneScene(string sceneName)
+    {
+        if (string.IsNullOrEmpty(sceneName)) return false;
+        string lower = sceneName.ToLower().Replace(" ", "").Replace("_", "");
+        return lower.Contains("mapstart") || lower.Contains("cutscene");
     }
 
     private void InitializeAudioManager()
@@ -113,11 +125,68 @@ public class AudioManager : MonoBehaviour
         Debug.Log($"[AudioManager] Volumes updated - Master: {masterPercent}%, Music: {musicPercent}%, SFX: {sfxPercent}%, Saved={saveToPrefs}");
     }
 
+    public void SetBGMVolumeMultiplier(float multiplier)
+    {
+        _bgmVolumeMultiplier = Mathf.Clamp01(multiplier);
+        ApplyMusicVolume();
+    }
+
+    public void FadeBGMToMultiplier(float targetMultiplier, float duration = 1.0f)
+    {
+        if (_fadeCoroutine != null) StopCoroutine(_fadeCoroutine);
+        _fadeCoroutine = StartCoroutine(FadeToMultiplierCoroutine(targetMultiplier, duration));
+    }
+
+    private IEnumerator FadeToMultiplierCoroutine(float targetMultiplier, float duration)
+    {
+        if (_bgmSource == null || !_bgmSource.isPlaying) yield break;
+
+        float startMul = _bgmVolumeMultiplier;
+        float elapsed = 0f;
+        while (elapsed < duration)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            float t = Mathf.Clamp01(elapsed / duration);
+            _bgmVolumeMultiplier = Mathf.Lerp(startMul, targetMultiplier, t);
+            ApplyMusicVolume();
+            yield return null;
+        }
+        _bgmVolumeMultiplier = targetMultiplier;
+        ApplyMusicVolume();
+    }
+
+    public void FadeOutBGM(float duration = 2.0f)
+    {
+        if (_fadeCoroutine != null) StopCoroutine(_fadeCoroutine);
+        _fadeCoroutine = StartCoroutine(FadeOutBGMCoroutine(duration));
+    }
+
+    private IEnumerator FadeOutBGMCoroutine(float duration)
+    {
+        if (_bgmSource == null || !_bgmSource.isPlaying) yield break;
+
+        float startVol = _bgmSource.volume;
+        float elapsed = 0f;
+        while (elapsed < duration)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            float t = Mathf.Clamp01(elapsed / duration);
+            if (_bgmSource != null)
+            {
+                _bgmSource.volume = Mathf.Lerp(startVol, 0f, t);
+            }
+            yield return null;
+        }
+
+        StopBGM();
+        _bgmVolumeMultiplier = 1.0f;
+    }
+
     private void ApplyMusicVolume()
     {
         if (_bgmSource != null)
         {
-            _bgmSource.volume = MusicVolume * MasterVolume;
+            _bgmSource.volume = MusicVolume * MasterVolume * _bgmVolumeMultiplier;
         }
     }
 
@@ -128,10 +197,17 @@ public class AudioManager : MonoBehaviour
 
     public void StopBGM()
     {
+        if (_fadeCoroutine != null)
+        {
+            StopCoroutine(_fadeCoroutine);
+            _fadeCoroutine = null;
+        }
+
         if (_bgmSource != null)
         {
             _bgmSource.Stop();
             _bgmSource.clip = null;
+            _bgmVolumeMultiplier = 1.0f;
             Debug.Log("[AudioManager] Stopped BGM.");
         }
     }
@@ -141,7 +217,7 @@ public class AudioManager : MonoBehaviour
         if (clip == null) return;
 
         string activeScene = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
-        if (!IsMenuOrLobbyScene(activeScene))
+        if (!IsMenuOrLobbyScene(activeScene) && !IsCutsceneScene(activeScene))
         {
             Debug.Log($"[AudioManager] In-game scene ('{activeScene}'): BGM playback suppressed for gameplay SFX.");
             StopBGM();
@@ -154,6 +230,7 @@ public class AudioManager : MonoBehaviour
         }
 
         _bgmSource.clip = clip;
+        _bgmVolumeMultiplier = 1.0f;
         ApplyMusicVolume();
         _bgmSource.Play();
         Debug.Log($"[AudioManager] Playing BGM Clip: {clip.name}");
@@ -181,3 +258,4 @@ public class AudioManager : MonoBehaviour
         AudioSource.PlayClipAtPoint(clip, position, finalVolume);
     }
 }
+

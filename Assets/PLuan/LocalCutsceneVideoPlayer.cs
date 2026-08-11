@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
@@ -27,9 +28,13 @@ public class LocalCutsceneVideoPlayer : NetworkBehaviour
     [Tooltip("Kéo thả file video BackgroundLoading.mp4 vào đây để phát nền trong lúc chờ người chơi")]
     public VideoClip waitingVideoClip;
 
-    [Header("Preview / Test Settings")]
-    [Tooltip("Thời gian (giây) giữ màn hình chờ để xem trước toàn cảnh kể cả khi test 1 mình (Nhấn SPACE để bắt đầu ngay lập tức, đặt = 0 để tắt)")]
-    public float testWaitingHoldDuration = 10f;
+    [Header("Cutscene Background Music Settings")]
+    [Tooltip("Âm lượng nhạc nền MainMenu khi bắt đầu chiếu Cutscene (0.25 = 25% làm nền nhẹ)")]
+    [Range(0.0f, 1.0f)]
+    public float cutsceneBgmVolume = 0.25f;
+
+    [Tooltip("Thời gian (giây) nhạc nền tiếp tục phát sau khi Cutscene bắt đầu trước khi tự động tắt dần")]
+    public float cutsceneBgmDuration = 55.0f;
 
     [Header("UI Styling")]
     [Tooltip("Màu nền phía sau video (mặc định là đen để che game load)")]
@@ -59,6 +64,7 @@ public class LocalCutsceneVideoPlayer : NetworkBehaviour
     private GameObject detectedPlayer = null;
     private bool isCutsceneEnded = false;
     private PlayerHUDController cachedHud = null;
+    private Coroutine cutsceneBgmCoroutine = null;
     
     // Quản lý đếm thời gian
     private float serverWaitTimer = 0f;
@@ -122,20 +128,6 @@ public class LocalCutsceneVideoPlayer : NetworkBehaviour
 
     private void Update()
     {
-        // Phím tắt SPACE hoặc ENTER để bỏ qua màn hình chờ ngay lập tức khi đang test/preview
-        if (!cutsceneStarted.Value && (Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.Return)))
-        {
-            if (IsServer)
-            {
-                Debug.Log("[LocalCutsceneVideoPlayer] [TEST MODE] Nhấn phím tắt kết thúc xem trước màn hình chờ, bắt đầu cutscene ngay.");
-                cutsceneStarted.Value = true;
-            }
-            else
-            {
-                RequestSkipCutsceneServerRpc();
-            }
-        }
-
         // --- LOGIC DÀNH RIÊNG CHO SERVER ---
         if (IsServer)
         {
@@ -144,13 +136,10 @@ public class LocalCutsceneVideoPlayer : NetworkBehaviour
             {
                 serverWaitTimer += Time.unscaledDeltaTime;
                 int target = GetTargetPlayersCount();
-                bool allReady = (readyClientsCount.Value >= target);
-                bool holdSatisfied = (testWaitingHoldDuration <= 0f || serverWaitTimer >= testWaitingHoldDuration);
-                bool timeout = (serverWaitTimer >= maxWaitTimeout);
 
-                if ((allReady && holdSatisfied) || timeout)
+                if (readyClientsCount.Value >= target || serverWaitTimer >= maxWaitTimeout)
                 {
-                    Debug.Log($"[LocalCutsceneVideoPlayer] Đủ điều kiện bắt đầu cutscene. Sẵn sàng: {readyClientsCount.Value}/{target}. Đã giữ chờ: {serverWaitTimer:F1}s. Timeout: {timeout}");
+                    Debug.Log($"[LocalCutsceneVideoPlayer] Đủ điều kiện bắt đầu cutscene. Sẵn sàng: {readyClientsCount.Value}/{target}. Timeout: {serverWaitTimer >= maxWaitTimeout}");
                     cutsceneStarted.Value = true;
                 }
             }
@@ -351,9 +340,7 @@ public class LocalCutsceneVideoPlayer : NetworkBehaviour
         waitingSubText.fontSize = 14;
         waitingSubText.color = new Color(0.78f, 0.94f, 1f, 0.9f);
         waitingSubText.alignment = TextAnchor.MiddleCenter;
-        waitingSubText.text = (testWaitingHoldDuration > 0f) 
-            ? "Đang xem trước màn hình chờ • Nhấn [SPACE] để bắt đầu Cutscene ngay" 
-            : "Đang đồng bộ hóa dữ liệu toàn bộ nhà thám hiểm...";
+        waitingSubText.text = "Đang đồng bộ hóa dữ liệu toàn bộ nhà thám hiểm...";
 
         Shadow subShadow = subGo.GetComponent<Shadow>();
         subShadow.effectColor = new Color(0f, 0f, 0f, 0.9f);
@@ -423,12 +410,39 @@ public class LocalCutsceneVideoPlayer : NetworkBehaviour
         videoPlayer.Play();
         Debug.Log("[LocalCutsceneVideoPlayer] Video cutscene đã bắt đầu phát.");
 
+        // Giảm nhỏ âm lượng BGM xuống 25% (20-30%) để làm nền cho Cutscene và bắt đầu đếm 55s trước khi tắt
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.FadeBGMToMultiplier(cutsceneBgmVolume, 1.5f);
+            if (cutsceneBgmCoroutine != null) StopCoroutine(cutsceneBgmCoroutine);
+            cutsceneBgmCoroutine = StartCoroutine(CutsceneBgmTimerCoroutine());
+        }
+
         // Hiện con trỏ chuột cho chủ phòng bấm Skip nếu cần
         if (IsLocalRoomHost())
         {
             Cursor.lockState = CursorLockMode.None;
             Cursor.visible = true;
         }
+    }
+
+    private IEnumerator CutsceneBgmTimerCoroutine()
+    {
+        // Chờ đến trước mốc kết thúc 3 giây để fade out êm ái
+        float waitTime = Mathf.Max(0f, cutsceneBgmDuration - 3.0f);
+        float elapsed = 0f;
+        while (elapsed < waitTime && isCutscenePlaying)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            yield return null;
+        }
+
+        if (isCutscenePlaying && AudioManager.Instance != null)
+        {
+            Debug.Log($"[LocalCutsceneVideoPlayer] Đạt mốc {cutsceneBgmDuration}s cutscene. Đang fade out và tắt nhạc nền...");
+            AudioManager.Instance.FadeOutBGM(3.0f);
+        }
+        cutsceneBgmCoroutine = null;
     }
 
     // --- SỰ KIỆN KHI VIDEO PHÁT XONG (TỰ ĐỘNG) ---
@@ -625,6 +639,18 @@ public class LocalCutsceneVideoPlayer : NetworkBehaviour
 
         isCutscenePlaying = false;
 
+        // Dừng đếm giờ BGM và tắt nhạc nền nếu chưa tắt
+        if (cutsceneBgmCoroutine != null)
+        {
+            StopCoroutine(cutsceneBgmCoroutine);
+            cutsceneBgmCoroutine = null;
+        }
+
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.StopBGM();
+        }
+
         // Dừng video phát
         if (videoPlayer != null)
         {
@@ -699,6 +725,17 @@ public class LocalCutsceneVideoPlayer : NetworkBehaviour
 
     private void OnDestroy()
     {
+        if (cutsceneBgmCoroutine != null)
+        {
+            StopCoroutine(cutsceneBgmCoroutine);
+            cutsceneBgmCoroutine = null;
+        }
+
+        if (AudioManager.Instance != null && !cutsceneFinished.Value)
+        {
+            AudioManager.Instance.StopBGM();
+        }
+
         // Dự phòng dọn dẹp và khôi phục an toàn nếu đối tượng bị xóa đột ngột từ Server trước khi chạy hết
         if (!cutsceneFinished.Value)
         {
