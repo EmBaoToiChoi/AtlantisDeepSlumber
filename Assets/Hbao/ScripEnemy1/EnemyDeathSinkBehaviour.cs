@@ -17,11 +17,9 @@ public class EnemyDeathSinkBehaviour : MonoBehaviour
     public float delayBeforeSink = 2.0f; // Chờ quái gục và nằm yên 2s trước khi hố & xúc tu xuất hiện
 
     private static GameObject defaultVfxPrefab;
-    private static GameObject defaultTentacleVfxPrefab;
     private static AudioClip defaultDeathClip;
 
     private GameObject spawnedVfx;
-    private GameObject spawnedTentaclesVfx;
     private GameObject customVfxPrefabToUse;
     private float vfxScaleToUse = 1.85f;
 
@@ -67,7 +65,7 @@ public class EnemyDeathSinkBehaviour : MonoBehaviour
             if (c != null) c.enabled = false;
         }
 
-        // 3. Đính kèm component quản lý thời gian gục -> hố rớt + xúc tu quấn -> chìm xác
+        // 3. Đính kèm component quản lý thời gian gục -> hố rớt -> chìm xác
         var sinker = enemy.AddComponent<EnemyDeathSinkBehaviour>();
         sinker.customVfxPrefabToUse = customVfxPrefab;
         sinker.vfxScaleToUse = vfxScale;
@@ -81,10 +79,10 @@ public class EnemyDeathSinkBehaviour : MonoBehaviour
 
     private IEnumerator SinkRoutine()
     {
-        // Giai đoạn 1: Chờ quái phát animation Die và nằm yên trên mặt đất 2.0s
+        // Giai đoạn 1: Chờ quái phát hết animation Die và nằm yên trên mặt đất 2.0s
         yield return new WaitForSeconds(delayBeforeSink);
 
-        // Giai đoạn 2: Tạo hố rớt đất VÀ xúc tu/xích tối quấn quanh xác quái
+        // Giai đoạn 2: Tạo hố rớt đất dưới chân quái
         Vector3 deathPos = transform.position;
 
         GameObject vfxPrefab = customVfxPrefabToUse;
@@ -103,35 +101,20 @@ public class EnemyDeathSinkBehaviour : MonoBehaviour
             Vector3 vfxPos = deathPos + Vector3.up * 0.05f;
             spawnedVfx = Instantiate(vfxPrefab, vfxPos, Quaternion.identity);
             spawnedVfx.transform.localScale = Vector3.one * Mathf.Max(0.5f, vfxScaleToUse);
-        }
 
-        // Tải VFX xúc tu / xích ma thuật quấn quanh xác quái
-        if (defaultTentacleVfxPrefab == null)
-        {
-            defaultTentacleVfxPrefab = Resources.Load<GameObject>("VFX/Enemy_Death_Tentacles");
-            if (defaultTentacleVfxPrefab == null)
+            ParticleSystem[] psList = spawnedVfx.GetComponentsInChildren<ParticleSystem>(true);
+            foreach (var ps in psList)
             {
-                defaultTentacleVfxPrefab = Resources.Load<GameObject>("Par_Restraint");
+                if (ps != null)
+                {
+                    var main = ps.main;
+                    main.loop = true;
+                    if (!ps.isPlaying) ps.Play();
+                }
             }
         }
 
-        if (defaultTentacleVfxPrefab != null)
-        {
-            spawnedTentaclesVfx = Instantiate(defaultTentacleVfxPrefab, transform);
-            
-            // Tắt mesh Capsule thử nghiệm nếu có trong prefab
-            Transform capsuleChild = spawnedTentaclesVfx.transform.Find("Capsule");
-            if (capsuleChild != null)
-            {
-                capsuleChild.gameObject.SetActive(false);
-            }
-
-            spawnedTentaclesVfx.transform.localPosition = Vector3.up * 0.3f;
-            spawnedTentaclesVfx.transform.localRotation = Quaternion.identity;
-            spawnedTentaclesVfx.transform.localScale = Vector3.one * (vfxScaleToUse * 0.9f);
-        }
-
-        // Giai đoạn 3: Từ từ cho xúc tu quấn xác quái và kéo chìm xuống hố/map
+        // Giai đoạn 3: Xác quái từ từ rơi/chìm xuống hố trong 2.8s
         float elapsed = 0f;
         while (elapsed < sinkDuration)
         {
@@ -141,7 +124,7 @@ public class EnemyDeathSinkBehaviour : MonoBehaviour
             yield return null;
         }
 
-        // Giai đoạn 4: Ngay khi hạ xác xuống xong, TẮT VÀ XÓA NGAY LẬP TỨC các VFX hố rớt & xúc tu
+        // Giai đoạn 4: Ngay khi hạ xác xuống xong hoàn toàn, TẮT VÀ XÓA NGAY LẬP TỨC VFX HỐ RỚT
         ClearAllVfx();
     }
 
@@ -161,22 +144,6 @@ public class EnemyDeathSinkBehaviour : MonoBehaviour
             }
             Destroy(spawnedVfx);
             spawnedVfx = null;
-        }
-
-        if (spawnedTentaclesVfx != null)
-        {
-            ParticleSystem[] psList = spawnedTentaclesVfx.GetComponentsInChildren<ParticleSystem>(true);
-            foreach (var ps in psList)
-            {
-                if (ps != null)
-                {
-                    var main = ps.main;
-                    main.loop = false;
-                    ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
-                }
-            }
-            Destroy(spawnedTentaclesVfx);
-            spawnedTentaclesVfx = null;
         }
     }
 

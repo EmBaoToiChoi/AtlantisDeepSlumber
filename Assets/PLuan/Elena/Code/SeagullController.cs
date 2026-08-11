@@ -303,18 +303,30 @@ public class SeagullController : NetworkBehaviour
             activeSpeedVfxInstance.transform.localScale = Vector3.one * Mathf.Max(0.2f, speedVfxScale);
 
             ParticleSystem[] psList = activeSpeedVfxInstance.GetComponentsInChildren<ParticleSystem>(true);
+            Color goldenYellow = new Color(1.0f, 0.85f, 0.1f, 1.0f);
             foreach (var ps in psList)
             {
                 if (ps != null)
                 {
                     var main = ps.main;
                     main.loop = true;
+                    main.startColor = goldenYellow;
+
+                    var col = ps.colorOverLifetime;
+                    if (col.enabled)
+                    {
+                        Gradient grad = new Gradient();
+                        grad.SetKeys(
+                            new GradientColorKey[] { new GradientColorKey(goldenYellow, 0f), new GradientColorKey(new Color(1.0f, 0.6f, 0.0f), 1f) },
+                            new GradientAlphaKey[] { new GradientAlphaKey(1.0f, 0f), new GradientAlphaKey(0f, 1f) }
+                        );
+                        col.color = grad;
+                    }
+
                     if (!ps.isPlaying) ps.Play();
                 }
             }
         }
-
-        CreateWingtipSpeedTrails();
     }
 
     private void CreateWingtipSpeedTrails()
