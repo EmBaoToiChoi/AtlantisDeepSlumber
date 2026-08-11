@@ -122688,6 +122688,7 @@ MonoBehaviour:
   videoClip: {fileID: 32900000, guid: 8357e412d1d83ea41aebd61a4bcd5f57, type: 3}
   vpsVideoDuration: 183
   maxWaitTimeout: 100
+  waitingVideoClip: {fileID: 32900000, guid: c24e834809a36024fbf33446f0475b26, type: 3}
   backgroundColor: {r: 0, g: 0, b: 0, a: 1}
 --- !u!4 &867667537
 Transform:

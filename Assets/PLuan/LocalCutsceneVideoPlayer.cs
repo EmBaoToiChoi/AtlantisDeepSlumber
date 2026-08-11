@@ -24,6 +24,13 @@ public class LocalCutsceneVideoPlayer : NetworkBehaviour
     [Tooltip("Thời gian chờ tối đa (giây) trước khi tự động chạy video (đề phòng có người chơi bị kẹt không load được map)")]
     public float maxWaitTimeout = 20f;
 
+    [Tooltip("Kéo thả file video BackgroundLoading.mp4 vào đây để phát nền trong lúc chờ người chơi")]
+    public VideoClip waitingVideoClip;
+
+    [Header("Preview / Test Settings")]
+    [Tooltip("Thời gian (giây) giữ màn hình chờ để xem trước toàn cảnh kể cả khi test 1 mình (Nhấn SPACE để bắt đầu ngay lập tức, đặt = 0 để tắt)")]
+    public float testWaitingHoldDuration = 10f;
+
     [Header("UI Styling")]
     [Tooltip("Màu nền phía sau video (mặc định là đen để che game load)")]
     public Color backgroundColor = Color.black;
@@ -38,8 +45,13 @@ public class LocalCutsceneVideoPlayer : NetworkBehaviour
     private RawImage videoRawImage;
     private RenderTexture videoRenderTexture;
     
+    // --- Biến quản lý màn hình chờ người chơi ---
+    private VideoPlayer waitingVideoPlayer;
+    private RenderTexture waitingVideoRenderTexture;
+    private RawImage waitingVideoRawImage;
     private GameObject waitingOverlayObj;
     private Text waitingText;
+    private Text waitingSubText;
     private GameObject skipButtonObj;
 
     private bool isCutscenePlaying = false;
@@ -110,6 +122,20 @@ public class LocalCutsceneVideoPlayer : NetworkBehaviour
 
     private void Update()
     {
+        // Phím tắt SPACE hoặc ENTER để bỏ qua màn hình chờ ngay lập tức khi đang test/preview
+        if (!cutsceneStarted.Value && (Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.Return)))
+        {
+            if (IsServer)
+            {
+                Debug.Log("[LocalCutsceneVideoPlayer] [TEST MODE] Nhấn phím tắt kết thúc xem trước màn hình chờ, bắt đầu cutscene ngay.");
+                cutsceneStarted.Value = true;
+            }
+            else
+            {
+                RequestSkipCutsceneServerRpc();
+            }
+        }
+
         // --- LOGIC DÀNH RIÊNG CHO SERVER ---
         if (IsServer)
         {
@@ -118,10 +144,13 @@ public class LocalCutsceneVideoPlayer : NetworkBehaviour
             {
                 serverWaitTimer += Time.unscaledDeltaTime;
                 int target = GetTargetPlayersCount();
+                bool allReady = (readyClientsCount.Value >= target);
+                bool holdSatisfied = (testWaitingHoldDuration <= 0f || serverWaitTimer >= testWaitingHoldDuration);
+                bool timeout = (serverWaitTimer >= maxWaitTimeout);
 
-                if (readyClientsCount.Value >= target || serverWaitTimer >= maxWaitTimeout)
+                if ((allReady && holdSatisfied) || timeout)
                 {
-                    Debug.Log($"[LocalCutsceneVideoPlayer] Đủ điều kiện bắt đầu. Sẵn sàng: {readyClientsCount.Value}/{target}. Timeout: {serverWaitTimer >= maxWaitTimeout}");
+                    Debug.Log($"[LocalCutsceneVideoPlayer] Đủ điều kiện bắt đầu cutscene. Sẵn sàng: {readyClientsCount.Value}/{target}. Đã giữ chờ: {serverWaitTimer:F1}s. Timeout: {timeout}");
                     cutsceneStarted.Value = true;
                 }
             }
@@ -218,7 +247,7 @@ public class LocalCutsceneVideoPlayer : NetworkBehaviour
         scaler.referenceResolution = new Vector2(1920, 1080);
         scaler.matchWidthOrHeight = 0.5f;
 
-        // 2. Nền đen che game
+        // 2. Nền đen dự phòng
         GameObject bgGo = new GameObject("Background", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
         bgGo.transform.SetParent(canvasGo.transform, false);
         Image bgImage = bgGo.GetComponent<Image>();
@@ -228,7 +257,52 @@ public class LocalCutsceneVideoPlayer : NetworkBehaviour
         bgRect.anchorMax = Vector2.one;
         bgRect.sizeDelta = Vector2.zero;
 
-        // 3. RawImage để hiển thị video (Lúc đầu ẩn đi để hiện chữ chờ)
+        // 3. Khởi tạo Video Nền lặp cho màn hình chờ (BackgroundLoading.mp4) nếu được cấu hình
+#if UNITY_EDITOR
+        if (waitingVideoClip == null)
+        {
+            waitingVideoClip = UnityEditor.AssetDatabase.LoadAssetAtPath<VideoClip>("Assets/PLuan/MainMenu/IMG/BackgroundLoading.mp4");
+        }
+#endif
+        if (waitingVideoClip != null)
+        {
+            GameObject waitRawGo = new GameObject("WaitingVideoRawImage", typeof(RectTransform), typeof(CanvasRenderer), typeof(RawImage));
+            waitRawGo.transform.SetParent(canvasGo.transform, false);
+            waitingVideoRawImage = waitRawGo.GetComponent<RawImage>();
+            RectTransform waitRawRect = waitRawGo.GetComponent<RectTransform>();
+            waitRawRect.anchorMin = Vector2.zero;
+            waitRawRect.anchorMax = Vector2.one;
+            waitRawRect.sizeDelta = Vector2.zero;
+
+            int rtW = Screen.width > 0 ? Screen.width : 1920;
+            int rtH = Screen.height > 0 ? Screen.height : 1080;
+            waitingVideoRenderTexture = new RenderTexture(rtW, rtH, 0);
+            waitingVideoRenderTexture.name = "WaitingExplorers_RT";
+            waitingVideoRawImage.texture = waitingVideoRenderTexture;
+
+            waitingVideoPlayer = gameObject.AddComponent<VideoPlayer>();
+            waitingVideoPlayer.playOnAwake = false;
+            waitingVideoPlayer.source = VideoSource.VideoClip;
+            waitingVideoPlayer.clip = waitingVideoClip;
+            waitingVideoPlayer.isLooping = true; // Bật Loop cho video chờ người chơi
+            waitingVideoPlayer.renderMode = VideoRenderMode.RenderTexture;
+            waitingVideoPlayer.targetTexture = waitingVideoRenderTexture;
+            waitingVideoPlayer.timeUpdateMode = VideoTimeUpdateMode.DSPTime;
+            waitingVideoPlayer.audioOutputMode = VideoAudioOutputMode.None;
+            waitingVideoPlayer.Play();
+        }
+
+        // 4. Lớp Scrim / Vignette làm dịu video nền
+        GameObject scrimGo = new GameObject("WaitingScrim", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        scrimGo.transform.SetParent(canvasGo.transform, false);
+        Image scrimImg = scrimGo.GetComponent<Image>();
+        scrimImg.color = new Color(0.01f, 0.05f, 0.11f, 0.62f);
+        RectTransform scrimRect = scrimGo.GetComponent<RectTransform>();
+        scrimRect.anchorMin = Vector2.zero;
+        scrimRect.anchorMax = Vector2.one;
+        scrimRect.sizeDelta = Vector2.zero;
+
+        // 5. RawImage để hiển thị video Cutscene chính (Lúc đầu ẩn đi)
         GameObject rawImageGo = new GameObject("VideoRawImage", typeof(RectTransform), typeof(CanvasRenderer), typeof(RawImage));
         rawImageGo.transform.SetParent(canvasGo.transform, false);
         videoRawImage = rawImageGo.GetComponent<RawImage>();
@@ -238,27 +312,88 @@ public class LocalCutsceneVideoPlayer : NetworkBehaviour
         videoRect.anchorMax = Vector2.one;
         videoRect.sizeDelta = Vector2.zero;
 
-        // 4. Chữ hiển thị đang chờ người chơi
-        waitingOverlayObj = new GameObject("WaitingOverlayText", typeof(RectTransform), typeof(CanvasRenderer), typeof(Text));
+        // 6. Cụm Giao Diện Chờ Người Chơi Đáy Màn Hình (Không Khung Viền)
+        waitingOverlayObj = new GameObject("WaitingOverlayContainer", typeof(RectTransform));
         waitingOverlayObj.transform.SetParent(canvasGo.transform, false);
-        waitingText = waitingOverlayObj.GetComponent<Text>();
+        RectTransform cardRect = waitingOverlayObj.GetComponent<RectTransform>();
+        cardRect.anchorMin = new Vector2(0.5f, 0f);
+        cardRect.anchorMax = new Vector2(0.5f, 0f);
+        cardRect.pivot = new Vector2(0.5f, 0f);
+        cardRect.anchoredPosition = new Vector2(0, 50);
+        cardRect.sizeDelta = new Vector2(900, 100);
+
+        // 6.1 Chữ chính chờ người chơi
+        GameObject textGo = new GameObject("WaitingMainText", typeof(RectTransform), typeof(CanvasRenderer), typeof(Text), typeof(Shadow));
+        textGo.transform.SetParent(waitingOverlayObj.transform, false);
+        waitingText = textGo.GetComponent<Text>();
         waitingText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        waitingText.fontSize = 32;
+        waitingText.fontSize = 24;
+        waitingText.fontStyle = FontStyle.Bold;
         waitingText.color = Color.white;
         waitingText.alignment = TextAnchor.MiddleCenter;
+        waitingText.text = $"Đang chờ nhà thám hiểm ({readyClientsCount.Value}/4)";
+        
+        Shadow textShadow = textGo.GetComponent<Shadow>();
+        textShadow.effectColor = new Color(0f, 0.9f, 1f, 0.75f);
+        textShadow.effectDistance = new Vector2(0f, 0f);
 
-        RectTransform textRect = waitingOverlayObj.GetComponent<RectTransform>();
-        textRect.anchorMin = Vector2.zero;
-        textRect.anchorMax = Vector2.one;
-        textRect.sizeDelta = Vector2.zero;
+        RectTransform textRect = textGo.GetComponent<RectTransform>();
+        textRect.anchorMin = new Vector2(0, 0.5f);
+        textRect.anchorMax = new Vector2(1, 1);
+        textRect.offsetMin = Vector2.zero;
+        textRect.offsetMax = Vector2.zero;
+
+        // 6.2 Chữ phụ / Gợi ý
+        GameObject subGo = new GameObject("WaitingSubText", typeof(RectTransform), typeof(CanvasRenderer), typeof(Text), typeof(Shadow));
+        subGo.transform.SetParent(waitingOverlayObj.transform, false);
+        waitingSubText = subGo.GetComponent<Text>();
+        waitingSubText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        waitingSubText.fontSize = 14;
+        waitingSubText.color = new Color(0.78f, 0.94f, 1f, 0.9f);
+        waitingSubText.alignment = TextAnchor.MiddleCenter;
+        waitingSubText.text = (testWaitingHoldDuration > 0f) 
+            ? "Đang xem trước màn hình chờ • Nhấn [SPACE] để bắt đầu Cutscene ngay" 
+            : "Đang đồng bộ hóa dữ liệu toàn bộ nhà thám hiểm...";
+
+        Shadow subShadow = subGo.GetComponent<Shadow>();
+        subShadow.effectColor = new Color(0f, 0f, 0f, 0.9f);
+        subShadow.effectDistance = new Vector2(1f, -1f);
+
+        RectTransform subRect = subGo.GetComponent<RectTransform>();
+        subRect.anchorMin = new Vector2(0, 0);
+        subRect.anchorMax = new Vector2(1, 0.5f);
+        subRect.offsetMin = Vector2.zero;
+        subRect.offsetMax = Vector2.zero;
     }
 
     private void StartVideoPlayback()
     {
         isCutscenePlaying = true;
         
-        // Ẩn chữ chờ và hiển thị khung hình Video RawImage
-        if (waitingOverlayObj != null) waitingOverlayObj.SetActive(false);
+        // Ẩn và dọn dẹp các thành phần video & UI của màn hình chờ
+        if (waitingVideoPlayer != null)
+        {
+            waitingVideoPlayer.Stop();
+            Destroy(waitingVideoPlayer);
+            waitingVideoPlayer = null;
+        }
+        if (waitingVideoRenderTexture != null)
+        {
+            waitingVideoRenderTexture.Release();
+            Destroy(waitingVideoRenderTexture);
+            waitingVideoRenderTexture = null;
+        }
+        if (waitingVideoRawImage != null)
+        {
+            Destroy(waitingVideoRawImage.gameObject);
+            waitingVideoRawImage = null;
+        }
+        if (waitingOverlayObj != null)
+        {
+            Destroy(waitingOverlayObj);
+            waitingOverlayObj = null;
+        }
+
         if (videoRawImage != null) videoRawImage.gameObject.SetActive(true);
 
         // Tạo RenderTexture khớp độ phân giải màn hình
@@ -530,6 +665,20 @@ public class LocalCutsceneVideoPlayer : NetworkBehaviour
         Cursor.visible = false;
 
         // Giải phóng và dọn dẹp các tài nguyên giao diện
+        if (waitingVideoPlayer != null)
+        {
+            waitingVideoPlayer.Stop();
+            Destroy(waitingVideoPlayer);
+            waitingVideoPlayer = null;
+        }
+
+        if (waitingVideoRenderTexture != null)
+        {
+            waitingVideoRenderTexture.Release();
+            Destroy(waitingVideoRenderTexture);
+            waitingVideoRenderTexture = null;
+        }
+
         if (cutsceneCanvas != null)
         {
             Destroy(cutsceneCanvas.gameObject);
@@ -575,6 +724,20 @@ public class LocalCutsceneVideoPlayer : NetworkBehaviour
 
             Cursor.lockState = CursorLockMode.Locked;
             Cursor.visible = false;
+        }
+
+        if (waitingVideoPlayer != null)
+        {
+            waitingVideoPlayer.Stop();
+            Destroy(waitingVideoPlayer);
+            waitingVideoPlayer = null;
+        }
+
+        if (waitingVideoRenderTexture != null)
+        {
+            waitingVideoRenderTexture.Release();
+            Destroy(waitingVideoRenderTexture);
+            waitingVideoRenderTexture = null;
         }
 
         if (cutsceneCanvas != null)
