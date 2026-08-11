@@ -469,6 +469,23 @@ public class MiniBossAI : NetworkBehaviour
         }
     }
 
+    public void ApplyStun(float duration)
+    {
+        if (IsDead) return;
+        EnemyStunVfxBehaviour.ApplyStunVfx(gameObject, duration, null, 2.8f, 2.2f);
+        if (!isStandaloneMode && IsSpawned && IsServer)
+        {
+            ApplyStunVfxClientRpc(duration);
+        }
+    }
+
+    [ClientRpc]
+    private void ApplyStunVfxClientRpc(float duration)
+    {
+        if (IsDead) return;
+        EnemyStunVfxBehaviour.ApplyStunVfx(gameObject, duration, null, 2.8f, 2.2f);
+    }
+
     public void TakeDamage(float damage)
     {
         if (IsDead || CurrentStateValue == MiniBossState.Enrage || isSummonInvulnerable) return;
