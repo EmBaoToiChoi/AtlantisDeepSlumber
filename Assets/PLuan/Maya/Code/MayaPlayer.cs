@@ -298,9 +298,11 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     [Header("E Skill Healing Zone Settings")]
     public float eSkillCooldown = 10f; // Cooldown của kỹ năng E (giây)
-    public float eSkillHealRadius = 5f;
+    public float eSkillHealRadius = 10f; // Bán kính vùng hồi máu (tăng gấp đôi từ 5m lên 10m)
     public float eSkillHealDuration = 5f;
     public float eSkillHealAmount = 10f;
+    [Tooltip("Hệ số scale VFX vùng hồi máu dưới đất cho to rõ rực rỡ.")]
+    public float eSkillVfxScaleMultiplier = 2.0f;
 
     [Tooltip("VFX 1: Prefab VFX hiển thị vị trí ngắm dưới đất khi đè phím E (Nếu để trống sẽ dùng hình trụ xanh mặc định)")]
     public GameObject eSkillTargetingVfxPrefab;
@@ -714,6 +716,17 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     private void UpdateETargetingIndicator()
     {
+        bool isLocal = isStandaloneMode || (IsSpawned && IsOwner);
+        if (!isLocal)
+        {
+            if (eTargetingIndicator != null)
+            {
+                Destroy(eTargetingIndicator);
+                eTargetingIndicator = null;
+            }
+            return;
+        }
+
         if (isETargeting)
         {
             if (eTargetingIndicator == null)
@@ -814,10 +827,32 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
         zone.healBurstVfxPrefab = eSkillHealBurstVfxPrefab;
         zone.playerHealVfxPrefab = eSkillPlayerHealVfxPrefab;
 
-        if (eSkillVfxPrefab != null)
+        GameObject prefabToUse = eSkillVfxPrefab;
+        if (prefabToUse == null)
         {
-            GameObject vfxObj = Instantiate(eSkillVfxPrefab, position, Quaternion.identity);
+            prefabToUse = Resources.Load<GameObject>("VFX_Heal_Area_01");
+            if (prefabToUse == null)
+            {
+                prefabToUse = Resources.Load<GameObject>("VFX/Maya_Summon_Ritual");
+            }
+        }
+
+        if (prefabToUse != null)
+        {
+            GameObject vfxObj = Instantiate(prefabToUse, position, Quaternion.identity);
             vfxObj.transform.SetParent(zoneObj.transform);
+            vfxObj.transform.localScale = Vector3.one * (eSkillHealRadius * 0.8f * Mathf.Max(1.0f, eSkillVfxScaleMultiplier)); // Phóng to VFX hoành tráng
+
+            ParticleSystem[] psList = vfxObj.GetComponentsInChildren<ParticleSystem>(true);
+            foreach (var ps in psList)
+            {
+                if (ps != null)
+                {
+                    var main = ps.main;
+                    main.startDelay = 0f;
+                    if (!ps.isPlaying) ps.Play(true);
+                }
+            }
             Destroy(vfxObj, eSkillHealDuration);
         }
         else
@@ -873,10 +908,32 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
         clientZone.healBurstVfxPrefab = eSkillHealBurstVfxPrefab;
         clientZone.playerHealVfxPrefab = eSkillPlayerHealVfxPrefab;
 
-        if (eSkillVfxPrefab != null)
+        GameObject prefabToUse = eSkillVfxPrefab;
+        if (prefabToUse == null)
         {
-            GameObject vfx = Instantiate(eSkillVfxPrefab, position, Quaternion.identity);
+            prefabToUse = Resources.Load<GameObject>("VFX_Heal_Area_01");
+            if (prefabToUse == null)
+            {
+                prefabToUse = Resources.Load<GameObject>("VFX/Maya_Summon_Ritual");
+            }
+        }
+
+        if (prefabToUse != null)
+        {
+            GameObject vfx = Instantiate(prefabToUse, position, Quaternion.identity);
             vfx.transform.SetParent(visualObj.transform);
+            vfx.transform.localScale = Vector3.one * (eSkillHealRadius * 0.8f * Mathf.Max(1.0f, eSkillVfxScaleMultiplier)); // Phóng to VFX hoành tráng
+
+            ParticleSystem[] psList = vfx.GetComponentsInChildren<ParticleSystem>(true);
+            foreach (var ps in psList)
+            {
+                if (ps != null)
+                {
+                    var main = ps.main;
+                    main.startDelay = 0f;
+                    if (!ps.isPlaying) ps.Play(true);
+                }
+            }
         }
         else
         {
@@ -1031,11 +1088,33 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
         StartCoroutine(PerformSummonSequence(groundPos, spawnRot));
     }
 
+    private GameObject activeSummonRitualVfx;
+
     [ClientRpc]
     private void SpawnQSkillSummonVfxClientRpc(Vector3 groundPos, float duration)
     {
         if (IsServer) return;
-        SpawnRitualVfxLocal(groundPos, duration);
+        activeSummonRitualVfx = SpawnRitualVfxLocal(groundPos, duration);
+    }
+
+    [ClientRpc]
+    private void DestroyQSkillSummonVfxClientRpc()
+    {
+        if (activeSummonRitualVfx != null)
+        {
+            ParticleSystem[] psList = activeSummonRitualVfx.GetComponentsInChildren<ParticleSystem>(true);
+            foreach (var ps in psList)
+            {
+                if (ps != null)
+                {
+                    var main = ps.main;
+                    main.loop = false;
+                    ps.Stop(true, ParticleSystemStopBehavior.StopEmitting);
+                }
+            }
+            Destroy(activeSummonRitualVfx, 0.3f);
+            activeSummonRitualVfx = null;
+        }
     }
 
     private GameObject SpawnRitualVfxLocal(Vector3 groundPos, float duration)
@@ -1126,6 +1205,7 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
             var skelAI = skeleton.GetComponent<Skeleton>();
             if (skelAI != null)
             {
+                skelAI.SetSummoner(transform);
                 skelAI.currentState = Skeleton.State.Follow;
             }
 
@@ -1138,8 +1218,7 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
             }
         }
 
-        yield return new WaitForSeconds(Mathf.Max(0.1f, qSkillSummonRitualDuration - waitBeforeRise - riseDuration));
-
+        // Triệu hồi hoàn tất -> Xóa vòng ma thuật ngay lập tức trên Server và tất cả Client
         if (ritualVfxObj != null)
         {
             ParticleSystem[] psList = ritualVfxObj.GetComponentsInChildren<ParticleSystem>(true);
@@ -1152,7 +1231,13 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
                     ps.Stop(true, ParticleSystemStopBehavior.StopEmitting);
                 }
             }
-            Destroy(ritualVfxObj, 1.0f);
+            Destroy(ritualVfxObj, 0.3f);
+            ritualVfxObj = null;
+        }
+
+        if (IsServer)
+        {
+            DestroyQSkillSummonVfxClientRpc();
         }
 
         StartCoroutine(DespawnSkeletonAfterTime(skeleton, 15f));

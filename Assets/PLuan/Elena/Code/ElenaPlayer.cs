@@ -802,11 +802,25 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (seagullPrefab == null) return;
         isSeagullOnShoulder.Value = false;
         GameObject seagullObj = Instantiate(seagullPrefab, spawnPos, spawnRot);
-        NetworkObject netObj = seagullObj.GetComponent<NetworkObject>();
-        if (netObj != null)
+        bool hasNetObj = seagullObj.TryGetComponent<NetworkObject>(out var netObj);
+        if (hasNetObj && netObj != null)
         {
             netObj.SpawnWithOwnership(ownerClientId);
         }
+        else
+        {
+            SpawnSeagullVisualClientRpc(spawnPos, spawnRot);
+        }
+    }
+
+    [ClientRpc]
+    private void SpawnSeagullVisualClientRpc(Vector3 spawnPos, Quaternion spawnRot)
+    {
+        if (IsServer) return;
+        if (seagullPrefab == null) return;
+
+        isSeagullOnShoulder.Value = false;
+        GameObject seagullObj = Instantiate(seagullPrefab, spawnPos, spawnRot);
     }
 
     public bool TriggerQSkill()
@@ -4550,7 +4564,7 @@ private void StartRollServerRpc(Vector3 direction)
             {
                 if (arrowPrefab != null)
                 {
-                    if (IsQSkillActive)
+                    if (IsESkillActive || IsQSkillActive)
                     {
                         Vector3 dirLeft = Quaternion.Euler(0f, -qSkillSpreadAngle, 0f) * shootDirection;
                         Vector3 dirRight = Quaternion.Euler(0f, qSkillSpreadAngle, 0f) * shootDirection;
@@ -4617,7 +4631,7 @@ private void StartRollServerRpc(Vector3 direction)
 
         if (arrowPrefab != null)
         {
-            if (isQSkillActiveNet.Value)
+            if (isESkillActiveNet.Value || isQSkillActiveNet.Value)
             {
                 Vector3 dirLeft = Quaternion.Euler(0f, -qSkillSpreadAngle, 0f) * shootDirection;
                 Vector3 dirRight = Quaternion.Euler(0f, qSkillSpreadAngle, 0f) * shootDirection;
@@ -4659,6 +4673,10 @@ private void StartRollServerRpc(Vector3 direction)
             proj.owner = this;
             proj.damage = damageAmount;
             proj.speed = arrowSpeed;
+            if (IsServer && proj.IsSpawned)
+            {
+                proj.netSpeed.Value = arrowSpeed;
+            }
             
             // Xử lý đạn xuyên thấu E-skill trên Server
             if (isESkillActiveNet.Value && eSkillRemainingArrowsNet.Value > 0)

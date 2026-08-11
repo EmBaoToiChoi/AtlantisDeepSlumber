@@ -4,6 +4,8 @@ using UnityEngine;
 public class ArrowProjectile : NetworkBehaviour
 {
     public float speed = 30f;
+    public NetworkVariable<float> netSpeed = new NetworkVariable<float>(
+        30f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     public float lifetime = 4f;
     public float damage = 20f;
     public bool isPiercing = false; // Cờ kiểm tra xem mũi tên có xuyên thấu quái vật hay không
@@ -94,7 +96,8 @@ public class ArrowProjectile : NetworkBehaviour
 
     private void Update()
     {
-        transform.Translate(Vector3.forward * speed * Time.deltaTime);
+        float currentSpeed = (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening && IsSpawned) ? netSpeed.Value : speed;
+        transform.Translate(Vector3.forward * currentSpeed * Time.deltaTime);
     }
 
     private bool isHitPlay = false;

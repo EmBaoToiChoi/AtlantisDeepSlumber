@@ -196,8 +196,13 @@ public class Skeleton : NetworkBehaviour
         {
             if (localSummoner == null)
             {
-                var player = FindObjectOfType<SimplePlayerTest>();
-                if (player != null) localSummoner = player.transform;
+                var maya = FindObjectOfType<MayaPlayer>();
+                if (maya != null) localSummoner = maya.transform;
+                else
+                {
+                    var player = FindObjectOfType<SimplePlayerTest>();
+                    if (player != null) localSummoner = player.transform;
+                }
             }
             return localSummoner;
         }
