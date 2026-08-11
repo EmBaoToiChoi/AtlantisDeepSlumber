@@ -57,6 +57,11 @@ public class Enemy5_PhuThuy : NetworkBehaviour
     [Tooltip("Kích thước/Bán kính hiển thị của VFX hố rớt bên dưới chân quái để ôm trọn xác quái.")]
     public float deathVfxScale = 1.75f;
 
+    [Header("Stun VFX Settings")]
+    public GameObject stunVfxPrefab;
+    public float stunVfxHeightOffset = 2.1f;
+    public float stunVfxScale = 1.8f;
+
     [Header("AI Settings")]
     public float sightRange     = 24f;     // Tầm phát hiện xa
     public float fieldOfView    = 120f;
@@ -198,6 +203,14 @@ public class Enemy5_PhuThuy : NetworkBehaviour
 
     private void OnStateChanged(EnemyState oldState, EnemyState newState)
     {
+        if (newState == EnemyState.Stagger)
+        {
+            EnemyStunVfxBehaviour.ApplyStunVfx(gameObject, staggerTimer > 0 ? staggerTimer : 5.0f, stunVfxPrefab, stunVfxHeightOffset, stunVfxScale);
+        }
+        else
+        {
+            EnemyStunVfxBehaviour.RemoveStunVfx(gameObject);
+        }
         if (newState == EnemyState.Dead)
         {
             if (!IsServer)
@@ -207,8 +220,29 @@ public class Enemy5_PhuThuy : NetworkBehaviour
         }
     }
 
+    public void DisableHeadUI()
+    {
+        var uiDocs = GetComponentsInChildren<UnityEngine.UIElements.UIDocument>(true);
+        foreach (var doc in uiDocs) { if (doc != null) doc.gameObject.SetActive(false); }
+
+        var healthBars = GetComponentsInChildren<MonoBehaviour>(true);
+        foreach (var hb in healthBars)
+        {
+            if (hb is EnemyHealthBar || hb is ZombieHealthBar || hb is Enemy3HealthBar || hb is Enemy4HealthBar || hb is Enemy5HealthBar)
+            {
+                hb.gameObject.SetActive(false);
+            }
+        }
+
+        Transform quad = transform.Find("Quad");
+        if (quad != null) quad.gameObject.SetActive(false);
+        Transform headUi = transform.Find("HeadUI");
+        if (headUi != null) headUi.gameObject.SetActive(false);
+    }
+
     private void ApplyLocalDeathEffects()
     {
+        DisableHeadUI();
         hasCastSpell = true;
         StopAllCoroutines();
         if (anim != null)
@@ -220,12 +254,17 @@ public class Enemy5_PhuThuy : NetworkBehaviour
         Collider col = GetComponent<Collider>(); if (col != null) col.enabled = false;
         Collider[] cols = GetComponentsInChildren<Collider>(); foreach (var c in cols) c.enabled = false;
 
+        EnemyStunVfxBehaviour.RemoveStunVfx(gameObject);
         EnemyDeathSinkBehaviour.ApplyDeathEffects(gameObject, deathSoundClip, deathVfxPrefab, deathVfxScale);
     }
 
     private void OnHealthNetChanged(float oldHealth, float newHealth)
     {
         localHealth = newHealth;
+        if (newHealth <= 0f)
+        {
+            DisableHeadUI();
+        }
         float diff = oldHealth - newHealth;
         if (diff > 0)
         {
@@ -1233,7 +1272,19 @@ public class Enemy5_PhuThuy : NetworkBehaviour
 
         staggerTimer = duration;
         ChangeState(EnemyState.Stagger);
+        EnemyStunVfxBehaviour.ApplyStunVfx(gameObject, duration, stunVfxPrefab, stunVfxHeightOffset, stunVfxScale);
+        if (!isStandaloneMode && IsServer)
+        {
+            ApplyStunVfxClientRpc(duration);
+        }
         Debug.Log($"[Enemy5_PhuThuy] Bị choáng (Skill Q Arthur) trong {duration}s");
+    }
+
+    [ClientRpc]
+    private void ApplyStunVfxClientRpc(float duration)
+    {
+        staggerTimer = duration;
+        EnemyStunVfxBehaviour.ApplyStunVfx(gameObject, duration, stunVfxPrefab, stunVfxHeightOffset, stunVfxScale);
     }
 
     private void ExecuteBlinkDodge()

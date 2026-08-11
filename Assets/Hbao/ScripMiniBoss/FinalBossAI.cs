@@ -558,8 +558,18 @@ public class FinalBossAI : NetworkBehaviour
 
     public void ApplyStun(float duration)
     {
-        // Stun logic can be added here if desired, or we can trigger hit stagger
+        EnemyStunVfxBehaviour.ApplyStunVfx(gameObject, duration, null, 3.5f, 2.5f);
+        if (!isStandaloneMode && IsServer)
+        {
+            ApplyStunVfxClientRpc(duration);
+        }
         TakeDamage(0f);
+    }
+
+    [ClientRpc]
+    private void ApplyStunVfxClientRpc(float duration)
+    {
+        EnemyStunVfxBehaviour.ApplyStunVfx(gameObject, duration, null, 3.5f, 2.5f);
     }
 
     private void Update()

@@ -304,8 +304,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  GlobalObjectIdHash: 2562930507
-  InScenePlacedSourceGlobalObjectIdHash: 0
+  GlobalObjectIdHash: 562638665
+  InScenePlacedSourceGlobalObjectIdHash: 2562930507
   DeferredDespawnTick: 0
   Ownership: 1
   AlwaysReplicateAsRoot: 0
@@ -368,6 +368,9 @@ MonoBehaviour:
   deathSoundClip: {fileID: 0}
   deathVfxPrefab: {fileID: 4748681987041982144, guid: 1f740c2847fa1ab42a43104c062f09bb, type: 3}
   deathVfxScale: 1.5
+  stunVfxPrefab: {fileID: 1814081831277689395, guid: 1fcb85616f261094d9b1339d621c9b33, type: 3}
+  stunVfxHeightOffset: 2
+  stunVfxScale: 1.8
   maxChaseDistance: 26
   sightRange: 25
   fieldOfView: 110

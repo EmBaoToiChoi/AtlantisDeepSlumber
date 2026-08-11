@@ -37,6 +37,7 @@ public class Skeleton : NetworkBehaviour
     }
 
     public float ActualCurrentHealth => CurrentHealthValue;
+    public bool IsDead => ActualCurrentHealth <= 0f || localState == State.Dead;
 
     public State currentState
     {

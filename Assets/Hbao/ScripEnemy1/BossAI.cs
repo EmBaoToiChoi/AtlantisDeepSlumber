@@ -1213,7 +1213,18 @@ public class BossAI : NetworkBehaviour
 
         stateTimer = duration;
         ChangeState(BossState.Hit);
+        EnemyStunVfxBehaviour.ApplyStunVfx(gameObject, duration, null, 3.2f, 2.4f);
+        if (!isStandaloneMode && IsServer)
+        {
+            ApplyStunVfxClientRpc(duration);
+        }
         Debug.Log($"[BossAI] Boss bị choáng (Stun) trong {duration} giây.");
+    }
+
+    [ClientRpc]
+    private void ApplyStunVfxClientRpc(float duration)
+    {
+        EnemyStunVfxBehaviour.ApplyStunVfx(gameObject, duration, null, 3.2f, 2.4f);
     }
 
     public void OnSkillEAnimEnd()

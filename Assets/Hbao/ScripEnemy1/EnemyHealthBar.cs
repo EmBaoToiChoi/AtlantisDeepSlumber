@@ -270,8 +270,28 @@ public class EnemyHealthBar : MonoBehaviour
         }
     }
 
+    private bool IsEnemyDead()
+    {
+        if (enemy != null && enemy.IsDead) return true;
+        if (enemy2 != null && enemy2.IsDead) return true;
+        if (enemy3 != null && enemy3.IsDead) return true;
+        if (enemy4 != null && enemy4.IsDead) return true;
+        if (enemy5 != null && enemy5.IsDead) return true;
+        if (skeleton != null && (skeleton.ActualCurrentHealth <= 0f || skeleton.currentState == Skeleton.State.Dead)) return true;
+        if (miniBoss != null && miniBoss.IsDead) return true;
+        return GetActualHealth() <= 0f;
+    }
+
     private void Update()
     {
+        if (IsEnemyDead() || GetActualHealth() <= 0f)
+        {
+            if (quadTransform != null && quadTransform.gameObject.activeSelf) quadTransform.gameObject.SetActive(false);
+            if (uiDocument != null && uiDocument.gameObject.activeSelf) uiDocument.gameObject.SetActive(false);
+            gameObject.SetActive(false);
+            return;
+        }
+
         // Luôn kiểm tra camera nếu bị mất (ví dụ khi đổi scene)
         if (mainCamera == null || !mainCamera.gameObject.activeInHierarchy) mainCamera = Camera.main;
 
