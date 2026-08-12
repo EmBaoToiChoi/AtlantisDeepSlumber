@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections.Generic;
 
 /// <summary>
 /// Đại diện cho một vùng Checkpoint vô hình.
@@ -87,6 +88,17 @@ public class CheckpointZone : MonoBehaviour
         return false;
     }
 
+    // Theo dõi player nào đã trigger checkpoint này trong session hiện tại
+    private HashSet<int> triggeredPlayerInstanceIds = new HashSet<int>();
+
+    /// <summary>
+    /// Reset trạng thái trigger khi scene load lại (cho phép trigger lại từ đầu).
+    /// </summary>
+    private void OnEnable()
+    {
+        triggeredPlayerInstanceIds.Clear();
+    }
+
     private void OnTriggerEnter(Collider other)
     {
         if (!IsPlayerCollider(other)) return;
@@ -101,10 +113,25 @@ public class CheckpointZone : MonoBehaviour
             if (player == null) player = other.transform.root.GetComponentInChildren<IPlayerHUDTarget>();
         }
 
-        if (player != null && PlayerCheckpointManager.Instance != null)
+        if (player == null || PlayerCheckpointManager.Instance == null) return;
+
+        // KHÔNG đăng ký checkpoint nếu player đang chết
+        if (player.CurrentHealth <= 0)
         {
-            PlayerCheckpointManager.Instance.RegisterCheckpoint(player, this);
+            return;
         }
+
+        // KHÔNG đăng ký nếu player này đã trigger checkpoint này rồi trong session hiện tại
+        int playerInstanceId = player.gameObject.GetInstanceID();
+        if (triggeredPlayerInstanceIds.Contains(playerInstanceId))
+        {
+            return;
+        }
+
+        // Đánh dấu player đã trigger checkpoint này
+        triggeredPlayerInstanceIds.Add(playerInstanceId);
+
+        PlayerCheckpointManager.Instance.RegisterCheckpoint(player, this);
     }
 
     private void OnDrawGizmos()
