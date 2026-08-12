@@ -1737,6 +1737,9 @@ public class MiniBossAI : NetworkBehaviour
 
 private void Die()
     {
+        // 1. Dừng toàn bộ Coroutine đòn đánh/gây sát thương của boss ngay lập tức để không gây mất máu player sau khi chết
+        StopAllCoroutines();
+
         if (!isClone)
         {
             PlayBossAudioNet(0);
@@ -1755,10 +1758,11 @@ private void Die()
 
         if (visualRoot != null) visualRoot.localPosition = Vector3.zero;
 
+        // 2. Tắt toàn bộ Collider và Trigger để boss đã chết không còn gây sát thương
         var colliders = GetComponentsInChildren<Collider>();
         foreach (var c in colliders)
         {
-            if (c != null && !c.isTrigger) c.enabled = false;
+            if (c != null) c.enabled = false;
         }
 
         if (isClone)
@@ -1818,24 +1822,45 @@ private void Die()
 
         // 4. Kích hoạt onBossDeathEvent của Boss chính
         var mainBoss = FindMainBoss() ?? this;
-        if (mainBoss != null && mainBoss.onBossDeathEvent != null)
+        bool hasInvoked = false;
+
+        if (mainBoss != null && mainBoss.onBossDeathEvent != null && mainBoss.onBossDeathEvent.GetPersistentEventCount() > 0)
         {
-            try { mainBoss.onBossDeathEvent.Invoke(); } catch (System.Exception ex) { Debug.LogError($"[MiniBossAI] Error invoking onBossDeathEvent: {ex}"); }
+            try 
+            { 
+                mainBoss.onBossDeathEvent.Invoke(); 
+                hasInvoked = true;
+                Debug.Log("[MiniBossAI] Đã gọi mainBoss.onBossDeathEvent.Invoke() thành công!");
+            } 
+            catch (System.Exception ex) { Debug.LogError($"[MiniBossAI] Error invoking onBossDeathEvent: {ex}"); }
         }
-        if (onBossDeathEvent != null && onBossDeathEvent != mainBoss?.onBossDeathEvent)
+        else if (onBossDeathEvent != null && onBossDeathEvent.GetPersistentEventCount() > 0)
         {
-            try { onBossDeathEvent.Invoke(); } catch (System.Exception ex) { Debug.LogError($"[MiniBossAI] Error invoking local onBossDeathEvent: {ex}"); }
+            try 
+            { 
+                onBossDeathEvent.Invoke(); 
+                hasInvoked = true;
+                Debug.Log("[MiniBossAI] Đã gọi local onBossDeathEvent.Invoke() thành công!");
+            } 
+            catch (System.Exception ex) { Debug.LogError($"[MiniBossAI] Error invoking local onBossDeathEvent: {ex}"); }
         }
 
         // 5. Tìm VideoCutsceneController liên kết trong Scene để kích hoạt StartCutscene()
-        var allCutscenes = FindObjectsByType<VideoCutsceneController>(FindObjectsSortMode.None);
-        foreach (var cs in allCutscenes)
+        if (!hasInvoked)
         {
-            if (cs != null && !cs.isPlaying)
+            var allCutscenes = FindObjectsByType<VideoCutsceneController>(FindObjectsSortMode.None);
+            foreach (var cs in allCutscenes)
             {
-                Debug.Log($"[MiniBossAI] Tự động kích hoạt VideoCutsceneController: '{cs.gameObject.name}'");
-                cs.StartCutscene();
-                break;
+                if (cs != null && !cs.isPlaying && (!cs.playOnlyOnce || !cs.hasPlayed))
+                {
+                    string n = cs.gameObject.name.ToLower();
+                    if (n.Contains("miniboss") || n.Contains("boss") || n.Contains("cutscene3") || n.Contains("cutscene4"))
+                    {
+                        Debug.Log($"[MiniBossAI] Tự động kích hoạt VideoCutsceneController: '{cs.gameObject.name}'");
+                        cs.StartCutscene();
+                        break;
+                    }
+                }
             }
         }
     }

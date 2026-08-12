@@ -20,7 +20,8 @@ public class VideoCutsceneController : NetworkBehaviour
 
     [Header("Security")]
     public bool playOnlyOnce = true;
-    private bool hasPlayed = false;
+    public bool hasPlayed = false;
+    public bool HasPlayed => hasPlayed;
 
     [Header("Status")]
     public bool isPlaying = false;
