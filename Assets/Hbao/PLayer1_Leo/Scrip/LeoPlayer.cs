@@ -4911,7 +4911,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
                 Vector3 knockbackForce = transform.forward * 3.5f + Vector3.up * 1.0f;
                 
                 // Trừ máu quái ngay lập tức trùng khớp với Event Animation
-                EnemyDamageHelper.DealDamage(enemyRoot, actualDamage, knockbackForce);
+                TryDamageSpecificEnemy(enemyRoot, actualDamage);
 
                 if (hitClip != null) PlayPlayerSFX(hitClip, 0.9f);
                 EnemyDamageEffectHelper.PlayDamageEffects(enemyRoot.gameObject, actualDamage);
@@ -6377,7 +6377,15 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             if (hit.collider == null || hit.collider.isTrigger) continue;
             if (hit.collider.transform.root == transform.root) continue;
 
-            if (hit.collider.CompareTag("Enemy") || hit.collider.CompareTag("Player")) continue;
+            if (hit.collider.CompareTag("Enemy") || hit.collider.CompareTag("Player") ||
+                hit.collider.gameObject.layer == LayerMask.NameToLayer("Enemy") ||
+                hit.collider.name.ToLower().Contains("enemy") ||
+                hit.collider.name.ToLower().Contains("clone") ||
+                hit.collider.transform.root.name.ToLower().Contains("clone") ||
+                hit.collider.transform.root.name.ToLower().Contains("boss"))
+            {
+                continue;
+            }
 
             if (hit.collider.GetComponentInParent<Enemy1_DapBua>() != null ||
                 hit.collider.GetComponentInParent<Enemy2_Zombie>() != null ||
@@ -6431,7 +6439,15 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
                 {
                     if (hit.collider == null || hit.collider.isTrigger) continue;
                     if (hit.collider.transform.root == target.root || hit.collider.transform.root == transform.root) continue;
-                    if (hit.collider.CompareTag("Enemy") || hit.collider.CompareTag("Player")) continue;
+                    if (hit.collider.CompareTag("Enemy") || hit.collider.CompareTag("Player") ||
+                        hit.collider.gameObject.layer == LayerMask.NameToLayer("Enemy") ||
+                        hit.collider.name.ToLower().Contains("enemy") ||
+                        hit.collider.name.ToLower().Contains("clone") ||
+                        hit.collider.transform.root.name.ToLower().Contains("clone") ||
+                        hit.collider.transform.root.name.ToLower().Contains("boss"))
+                    {
+                        continue;
+                    }
 
                     if (hit.collider.GetComponentInParent<Enemy1_DapBua>() != null ||
                         hit.collider.GetComponentInParent<Enemy2_Zombie>() != null ||

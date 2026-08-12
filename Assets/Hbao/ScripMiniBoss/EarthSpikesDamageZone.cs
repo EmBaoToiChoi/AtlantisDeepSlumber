@@ -9,10 +9,10 @@ public class EarthSpikesDamageZone : MonoBehaviour
     public float baseDamageRadius = 3.2f;
     [Tooltip("Độ cao tối đa của gai nhô lên (sẽ tự động nhân theo Scale Y)")]
     public float baseMaxSpikeHeight = 2.5f;
-    [Tooltip("Thời gian chờ đòn gồng trước khi gai nhô lên khỏi mặt đất (0.35s)")]
-    public float spikeEmergenceDelay = 0.35f;
+    [Tooltip("Thời gian chờ đòn gồng/vòng sáng trước khi gai đá nhô lên hoàn toàn khỏi mặt đất (1.0s)")]
+    public float spikeEmergenceDelay = 1.0f;
     [Tooltip("Thời gian duy trì đâm gai cắm trên mặt đất trước khi rút xuống")]
-    public float spikeActiveDuration = 1.8f;
+    public float spikeActiveDuration = 1.6f;
     [Tooltip("Thời gian sống tối đa của VFX hiệu ứng")]
     public float vfxLifespan = 3.5f;
 
@@ -80,6 +80,7 @@ public class EarthSpikesDamageZone : MonoBehaviour
 
     private void TryProcessPlayerDamage(Collider col)
     {
+        if (!IsSpikeActive()) return;
         if (col == null) return;
 
         Transform playerRoot = GetPlayerRoot(col);

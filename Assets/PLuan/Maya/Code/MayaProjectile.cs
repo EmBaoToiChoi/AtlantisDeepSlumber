@@ -73,13 +73,10 @@ public class MayaProjectile : NetworkBehaviour
         {
             PlayHitSound();
             
-            // Chỉ xử lý va chạm trên Server hoặc chế độ Standalone
-            bool isServerOrStandalone = NetworkManager.Singleton == null || NetworkManager.Singleton.IsServer;
-            if (!isServerOrStandalone) return;
+            // Xử lý va chạm trực tiếp lên quái vật
             Transform enemyRoot = other.transform.root;
             if (hitEnemyRoots.Contains(enemyRoot))
             {
-                // Bỏ qua nếu quái vật này đã bị đạn này bắn trúng rồi
                 return;
             }
             hitEnemyRoots.Add(enemyRoot);

@@ -133,24 +133,60 @@ public class MiniBossAI : NetworkBehaviour
         set { if (isStandaloneMode || isClone) localState = value; else currentState.Value = value; }
     }
 
+    [Header("Clones Tracking")]
+    public MiniBossAI clone1Instance;
+    public MiniBossAI clone2Instance;
+    private static bool isDefeatCutsceneSequenceRunning = false;
+
     public float ActualCurrentHealth => (isStandaloneMode || isClone || !IsSpawned) ? localHealth : currentHealth.Value;
     public bool IsBossActive => (isStandaloneMode || isClone) ? localIsBossActive : isBossActive.Value;
     public bool IsDead => CurrentStateValue == MiniBossState.Dead;
 
     public bool AreAllBossesAndClonesDead()
     {
-        var allBosses = FindObjectsByType<MiniBossAI>(FindObjectsSortMode.None);
-        foreach (var b in allBosses)
+        var mainBoss = FindMainBoss() ?? (isClone ? null : this);
+        if (mainBoss == null) mainBoss = this;
+
+        // 1. Kiểm tra Boss chính
+        if (mainBoss != this && !mainBoss.IsDead && mainBoss.ActualCurrentHealth > 0f)
         {
-            if (b != null && b.gameObject.activeInHierarchy)
+            return false;
+        }
+
+        // 2. Kiểm tra 2 phân thân nếu boss chính đã từng triệu hồi
+        if (mainBoss.hasSummonedClones)
+        {
+            if (mainBoss.clone1Instance != null && mainBoss.clone1Instance != this && mainBoss.clone1Instance.gameObject.activeInHierarchy)
             {
-                if (!b.IsDead && b.ActualCurrentHealth > 0f)
+                if (!mainBoss.clone1Instance.IsDead && mainBoss.clone1Instance.ActualCurrentHealth > 0f)
                 {
-                    return false; // Còn ít nhất 1 boss hoặc phân thân đang sống!
+                    return false;
+                }
+            }
+
+            if (mainBoss.clone2Instance != null && mainBoss.clone2Instance != this && mainBoss.clone2Instance.gameObject.activeInHierarchy)
+            {
+                if (!mainBoss.clone2Instance.IsDead && mainBoss.clone2Instance.ActualCurrentHealth > 0f)
+                {
+                    return false;
                 }
             }
         }
-        return true; // Tất cả cả boss chính và 2 phân thân đều đã tiêu diệt hoàn toàn!
+
+        // 3. Quét toàn bộ Scene để đảm bảo không còn phân thân nào khác chưa chết
+        var allBosses = FindObjectsByType<MiniBossAI>(FindObjectsSortMode.None);
+        foreach (var b in allBosses)
+        {
+            if (b != null && b != this && b.gameObject.activeInHierarchy)
+            {
+                if (!b.IsDead && b.ActualCurrentHealth > 0f)
+                {
+                    return false;
+                }
+            }
+        }
+
+        return true;
     }
 
     [Header("Components")]
@@ -559,12 +595,94 @@ public class MiniBossAI : NetworkBehaviour
         EnemyStunVfxBehaviour.ApplyStunVfx(gameObject, duration, null, 2.8f, 2.2f);
     }
 
+    public MiniBossAI FindMainBoss()
+    {
+        var all = FindObjectsByType<MiniBossAI>(FindObjectsSortMode.None);
+        foreach (var b in all)
+        {
+            if (b != null && !b.isClone && b.gameObject.activeInHierarchy)
+            {
+                return b;
+            }
+        }
+        return null;
+    }
+
+    public void DamageCloneNet(int cloneIndex, float damage)
+    {
+        ApplyDamageToClone(cloneIndex, damage);
+        DamageCloneClientRpc(cloneIndex, damage);
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    public void DamageCloneServerRpc(int cloneIndex, float damage)
+    {
+        DamageCloneNet(cloneIndex, damage);
+    }
+
+    [ClientRpc]
+    private void DamageCloneClientRpc(int cloneIndex, float damage)
+    {
+        if (!IsServer)
+        {
+            ApplyDamageToClone(cloneIndex, damage);
+        }
+    }
+
+    public void ApplyDamageToClone(int cloneIndex, float damage)
+    {
+        MiniBossAI targetClone = null;
+        var all = FindObjectsByType<MiniBossAI>(FindObjectsSortMode.None);
+        foreach (var b in all)
+        {
+            if (b != null && b.isClone && b.gameObject.activeInHierarchy)
+            {
+                bool isClone2 = b.gameObject.name.Contains("2") || b.gameObject.name.Contains("Right");
+                if ((cloneIndex == 2 && isClone2) || (cloneIndex == 1 && !isClone2))
+                {
+                    targetClone = b;
+                    break;
+                }
+            }
+        }
+
+        if (targetClone != null && !targetClone.IsDead)
+        {
+            targetClone.localHealth = Mathf.Max(0f, targetClone.localHealth - damage);
+            EnemyDamageEffectHelper.PlayDamageEffects(targetClone.gameObject, damage);
+
+            if (targetClone.localHealth <= 0f)
+            {
+                targetClone.ChangeState(MiniBossState.Dead);
+            }
+        }
+    }
+
     public void TakeDamage(float damage)
     {
         if (isClone)
         {
             isSummonInvulnerable = false;
             if (localState == MiniBossState.Enrage) localState = MiniBossState.Chase;
+
+            // Nếu đang trong Network mode: Gửi RPC qua Boss chính để đồng bộ cho toàn bộ Server & 4 Player
+            if (!isStandaloneMode && IsNetworkActive)
+            {
+                var mainBoss = FindMainBoss();
+                if (mainBoss != null && mainBoss.IsSpawned)
+                {
+                    int idx = (gameObject.name.Contains("2") || gameObject.name.Contains("Right")) ? 2 : 1;
+                    if (IsServer)
+                    {
+                        mainBoss.DamageCloneNet(idx, damage);
+                    }
+                    else
+                    {
+                        mainBoss.DamageCloneServerRpc(idx, damage);
+                    }
+                    return;
+                }
+            }
         }
 
         if (IsDead) return;
@@ -745,6 +863,25 @@ public class MiniBossAI : NetworkBehaviour
         cloneLeft.SetActive(true);
         cloneRight.SetActive(true);
 
+        cloneLeft.tag = "Enemy";
+        cloneRight.tag = "Enemy";
+        int enemyLayerIndex = LayerMask.NameToLayer("Enemy");
+        if (enemyLayerIndex != -1)
+        {
+            cloneLeft.layer = enemyLayerIndex;
+            cloneRight.layer = enemyLayerIndex;
+            foreach (var t in cloneLeft.GetComponentsInChildren<Transform>(true))
+            {
+                t.gameObject.tag = "Enemy";
+                t.gameObject.layer = enemyLayerIndex;
+            }
+            foreach (var t in cloneRight.GetComponentsInChildren<Transform>(true))
+            {
+                t.gameObject.tag = "Enemy";
+                t.gameObject.layer = enemyLayerIndex;
+            }
+        }
+
         cloneLeft.transform.position = leftStartPos;
         cloneRight.transform.position = rightStartPos;
         cloneLeft.transform.localScale = bossScale;
@@ -832,6 +969,9 @@ public class MiniBossAI : NetworkBehaviour
 
         ConfigureClone(leftAI, targetPosLeft);
         ConfigureClone(rightAI, targetPosRight);
+
+        clone1Instance = leftAI;
+        clone2Instance = rightAI;
 
         // Đăng ký trực tiếp 2 phân thân vào thanh máu UI HUD chính của MiniBoss
         var hudBar = FindFirstObjectByType<MiniBossHealthBar>();
@@ -1187,8 +1327,8 @@ public class MiniBossAI : NetworkBehaviour
             dmgZone.damageAmount = earthSpikesDamage;
             dmgZone.baseDamageRadius = 3.2f;
             dmgZone.baseMaxSpikeHeight = 2.5f;
-            dmgZone.spikeEmergenceDelay = 0.35f;
-            dmgZone.spikeActiveDuration = 1.8f;
+            dmgZone.spikeEmergenceDelay = 1.0f;
+            dmgZone.spikeActiveDuration = 1.6f;
             dmgZone.vfxLifespan = 3.5f;
 
             Debug.Log($"[MiniBossAI] Thi triển kỹ năng Gai Đất nhô lên (VFX_Earth_Area_01, Scale {spikesObj.transform.localScale}) tại vị trí Player ({targetPos})!");
@@ -1238,8 +1378,8 @@ public class MiniBossAI : NetworkBehaviour
             if (recentDamageResetTimer <= 0f) recentDamageTaken = 0f;
         }
 
-        // SKILL PHASE 2: Cứ 10 - 15 giây tự động tìm Player và thi triển kỹ năng Gai Đất nhô lên (VFX_Earth_Area_01)
-        if (IsBossActive && !IsDead && !isSummonInvulnerable && (hasSummonedClones || IsPhase2))
+        // SKILL PHASE 2: Chỉ MiniBoss chính mới thi triển kỹ năng Gai Đất và chỉ khi MiniBoss chính còn sống
+        if (!isClone && IsBossActive && !IsDead && !isSummonInvulnerable && (hasSummonedClones || IsPhase2))
         {
             earthSpikesTimer -= Time.deltaTime;
             if (earthSpikesTimer <= 0f)
@@ -1600,6 +1740,13 @@ private void Die()
         if (!isClone)
         {
             PlayBossAudioNet(0);
+
+            // Dọn sạch toàn bộ bãi gai đá đang tồn tại trên sàn đấu ngay khi MiniBoss chính bị hạ gục
+            var allSpikes = FindObjectsByType<EarthSpikesDamageZone>(FindObjectsSortMode.None);
+            foreach (var spike in allSpikes)
+            {
+                if (spike != null) Destroy(spike.gameObject);
+            }
         }
 
         if (AgentReady) agent.isStopped = true;
@@ -1626,20 +1773,7 @@ private void Die()
         // --- CHỈ KÍCH HOẠT CUTSCENE KHI CẢ BOSS CHÍNH VÀ 2 PHÂN THÂN ĐỀU ĐÃ BỊ TIÊU DIỆT HOÀN TOÀN ---
         if (AreAllBossesAndClonesDead())
         {
-            bool isAuth = isStandaloneMode || (IsNetworkActive && IsServer);
-            if (isAuth)
-            {
-                var mainBoss = isClone ? FindFirstObjectByType<MiniBossAI>() : this;
-                if (mainBoss != null && mainBoss.onBossDeathEvent != null)
-                {
-                    mainBoss.onBossDeathEvent.Invoke();
-                }
-                else
-                {
-                    onBossDeathEvent?.Invoke();
-                }
-                Debug.Log("[MiniBossAI] TẤT CẢ BOSS CHÍNH VÀ 2 PHÂN THÂN ĐÃ BỊ TIÊU DIỆT HOÀN TOÀN -> KÍCH HOẠT CUTSCENE CHIẾN THẮNG!");
-            }
+            TriggerBossDefeatCutscene();
         }
         // --------------------------------------------------------------------------------------------
 
@@ -1654,6 +1788,56 @@ private void Die()
 
         Debug.Log("[MiniBossAI] Mini Boss is dead!");
         Destroy(gameObject, 5f);
+    }
+
+    public void TriggerBossDefeatCutscene()
+    {
+        if (isDefeatCutsceneSequenceRunning) return;
+        isDefeatCutsceneSequenceRunning = true;
+
+        Debug.Log("[MiniBossAI] TẤT CẢ BOSS CHÍNH VÀ 2 PHÂN THÂN ĐÃ BỊ TIÊU DIỆT HOÀN TOÀN -> BẮT ĐẦU QUY TRÌNH HỦY UI VÀ CHẠY CUTSCENE!");
+
+        StartCoroutine(DefeatCutsceneSequenceRoutine());
+    }
+
+    private IEnumerator DefeatCutsceneSequenceRoutine()
+    {
+        // 1. Chờ 1.5s để thanh máu UI cập nhật hoàn tất 0 (Đã hạ) cho người chơi thấy rõ
+        yield return new WaitForSeconds(1.5f);
+
+        // 2. Ẩn / Hủy hoàn toàn UI MiniBossHealthBar
+        var healthBar = FindFirstObjectByType<MiniBossHealthBar>();
+        if (healthBar != null)
+        {
+            healthBar.HideUI();
+            healthBar.enabled = false;
+        }
+
+        // 3. Chờ thêm 0.3s cho UI biến mất hoàn toàn
+        yield return new WaitForSeconds(0.3f);
+
+        // 4. Kích hoạt onBossDeathEvent của Boss chính
+        var mainBoss = FindMainBoss() ?? this;
+        if (mainBoss != null && mainBoss.onBossDeathEvent != null)
+        {
+            try { mainBoss.onBossDeathEvent.Invoke(); } catch (System.Exception ex) { Debug.LogError($"[MiniBossAI] Error invoking onBossDeathEvent: {ex}"); }
+        }
+        if (onBossDeathEvent != null && onBossDeathEvent != mainBoss?.onBossDeathEvent)
+        {
+            try { onBossDeathEvent.Invoke(); } catch (System.Exception ex) { Debug.LogError($"[MiniBossAI] Error invoking local onBossDeathEvent: {ex}"); }
+        }
+
+        // 5. Tìm VideoCutsceneController liên kết trong Scene để kích hoạt StartCutscene()
+        var allCutscenes = FindObjectsByType<VideoCutsceneController>(FindObjectsSortMode.None);
+        foreach (var cs in allCutscenes)
+        {
+            if (cs != null && !cs.isPlaying)
+            {
+                Debug.Log($"[MiniBossAI] Tự động kích hoạt VideoCutsceneController: '{cs.gameObject.name}'");
+                cs.StartCutscene();
+                break;
+            }
+        }
     }
 
     private void TriggerDeathExplosion()
