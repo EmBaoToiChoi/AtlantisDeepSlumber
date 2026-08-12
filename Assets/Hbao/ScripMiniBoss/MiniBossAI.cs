@@ -745,17 +745,12 @@ public class MiniBossAI : NetworkBehaviour
 
         yield return new WaitForSeconds(0.4f);
 
-        // 2. Sinh 2 phân thân ở độ sâu -1.2m (nửa thân trên vừa nhô lên ngay tại hố tử thần)
+        // 2. Sinh 2 phân thân từ chính bản thể MiniBoss khổng lồ (độ sâu -1.2m)
         Vector3 leftStartPos = targetPosLeft - Vector3.up * 1.2f;
         Vector3 rightStartPos = targetPosRight - Vector3.up * 1.2f;
 
-        GameObject prefabToSpawn = clonePrefab;
-        bool instantiatedFromSceneObject = false;
-        if (prefabToSpawn == null || prefabToSpawn.GetComponent<MiniBossAI>() == null)
-        {
-            prefabToSpawn = gameObject;
-            instantiatedFromSceneObject = true;
-        }
+        // BẢO ĐẢM 100%: Luôn nhân bản từ chính MiniBoss (gameObject) để tránh sinh nhầm quái nhỏ
+        GameObject prefabToSpawn = gameObject;
 
         GameObject cloneLeft = Instantiate(prefabToSpawn, leftStartPos, transform.rotation);
         GameObject cloneRight = Instantiate(prefabToSpawn, rightStartPos, transform.rotation);
@@ -763,14 +758,11 @@ public class MiniBossAI : NetworkBehaviour
         cloneLeft.name = "MiniBoss_Clone1";
         cloneRight.name = "MiniBoss_Clone2";
 
-        if (instantiatedFromSceneObject)
-        {
-            var netL = cloneLeft.GetComponent<NetworkObject>();
-            if (netL != null) DestroyImmediate(netL);
+        var netL = cloneLeft.GetComponent<NetworkObject>();
+        if (netL != null) DestroyImmediate(netL);
 
-            var netR = cloneRight.GetComponent<NetworkObject>();
-            if (netR != null) DestroyImmediate(netR);
-        }
+        var netR = cloneRight.GetComponent<NetworkObject>();
+        if (netR != null) DestroyImmediate(netR);
 
         var dbL = cloneLeft.GetComponent<Enemy1_DapBua>();
         if (dbL != null) DestroyImmediate(dbL);
@@ -791,10 +783,13 @@ public class MiniBossAI : NetworkBehaviour
 
         if (leftAI != null)
         {
+            leftAI.isStandaloneMode = true;
             leftAI.isClone = true;
             leftAI.hasSummonedClones = true;
             leftAI.isSummonInvulnerable = false;
-            leftAI.maxHealth = phase1MaxHealth * 0.45f;
+            leftAI.localIsBossActive = true;
+            leftAI.phase1MaxHealth = phase1MaxHealth * 0.45f;
+            leftAI.maxHealth = leftAI.phase1MaxHealth;
             leftAI.localHealth = leftAI.maxHealth;
             if (leftAI.agent != null) leftAI.agent.enabled = false;
             if (leftAI.visualRoot != null) leftAI.visualRoot.localPosition = Vector3.zero;
@@ -807,10 +802,13 @@ public class MiniBossAI : NetworkBehaviour
 
         if (rightAI != null)
         {
+            rightAI.isStandaloneMode = true;
             rightAI.isClone = true;
             rightAI.hasSummonedClones = true;
             rightAI.isSummonInvulnerable = false;
-            rightAI.maxHealth = phase1MaxHealth * 0.45f;
+            rightAI.localIsBossActive = true;
+            rightAI.phase1MaxHealth = phase1MaxHealth * 0.45f;
+            rightAI.maxHealth = rightAI.phase1MaxHealth;
             rightAI.localHealth = rightAI.maxHealth;
             if (rightAI.agent != null) rightAI.agent.enabled = false;
             if (rightAI.visualRoot != null) rightAI.visualRoot.localPosition = Vector3.zero;
@@ -1047,16 +1045,20 @@ public class MiniBossAI : NetworkBehaviour
     private void ConfigureClone(MiniBossAI cloneAI, Vector3 spawnPos)
     {
         if (cloneAI == null) return;
+        cloneAI.isStandaloneMode = true; // BẮT BUỘC: Đánh dấu StandaloneMode = true để AI vòng lặp tự động chạy trên phân thân
         cloneAI.isClone = true;
         cloneAI.hasSummonedClones = true;
-        cloneAI.isSummonInvulnerable = false; // Mở khóa trạng thái gồng
-        cloneAI.isStandaloneMode = isStandaloneMode; // Đồng bộ chế độ standalone để AI tự động update
+        cloneAI.isSummonInvulnerable = false; // Mở khóa gồng
         cloneAI.phase1MaxHealth = phase1MaxHealth * 0.45f;
-        cloneAI.localHealth = phase1MaxHealth * 0.45f;
-        cloneAI.maxHealth = phase1MaxHealth * 0.45f;
+        cloneAI.maxHealth = cloneAI.phase1MaxHealth;
+        cloneAI.localHealth = cloneAI.maxHealth;
         cloneAI.localIsBossActive = true;
+        cloneAI.localState = MiniBossState.Idle;
 
-        if (!cloneAI.isStandaloneMode && IsServer)
+        var db = cloneAI.GetComponent<Enemy1_DapBua>();
+        if (db != null) DestroyImmediate(db);
+
+        if (!isStandaloneMode && IsServer && cloneAI.IsSpawned)
         {
             cloneAI.isBossActive.Value = true;
             cloneAI.currentHealth.Value = cloneAI.maxHealth;
@@ -1192,10 +1194,10 @@ public class MiniBossAI : NetworkBehaviour
             EarthSpikesDamageZone dmgZone = spikesObj.GetComponent<EarthSpikesDamageZone>();
             if (dmgZone == null) dmgZone = spikesObj.AddComponent<EarthSpikesDamageZone>();
             dmgZone.damageAmount = earthSpikesDamage;
-            dmgZone.damageRadius = 2.6f;
-            dmgZone.maxSpikeHeight = 2.2f;
+            dmgZone.damageRadius = 3.2f;
+            dmgZone.maxSpikeHeight = 2.5f;
             dmgZone.spikeEmergenceDelay = 0.35f;
-            dmgZone.spikeActiveDuration = 1.6f;
+            dmgZone.spikeActiveDuration = 1.8f;
             dmgZone.vfxLifespan = 3.5f;
 
             Debug.Log($"[MiniBossAI] Thi triển kỹ năng Gai Đất nhô lên (VFX_Earth_Area_01) tại vị trí Player ({targetPos})!");
