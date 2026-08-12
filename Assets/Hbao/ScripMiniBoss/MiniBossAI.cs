@@ -27,11 +27,11 @@ public class MiniBossAI : NetworkBehaviour
     public enum MiniBossState { Idle, Chase, Attack, Hit, Enrage, Dead }
 
     [Header("Health Settings")]
-    public float phase1MaxHealth = 500f;
+    public float phase1MaxHealth = 700f;
     public float phase2MaxHealth = 700f;
-    [HideInInspector] public float maxHealth = 500f;
+    [HideInInspector] public float maxHealth = 700f;
     public NetworkVariable<float> currentHealth = new NetworkVariable<float>(
-        500f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        700f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
     [Header("Phase 2 Settings")]
     public float phase2SpeedMultiplier = 1.3f;
@@ -56,16 +56,15 @@ public class MiniBossAI : NetworkBehaviour
     public NetworkVariable<int> summonCloneCounter = new NetworkVariable<int>(
         0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
-    [Header("Phase 2 Earth Spikes Skill Settings (Mô phỏng đâm gai đất cứ 10-15s)")]
+    [Header("Earth Spikes Skill Settings (5s triệu hồi 1 lần, 4-5 bãi đá)")]
     [Tooltip("Prefab hiệu ứng gai đất nhô lên VFX_Earth_Area_01")]
     public GameObject earthSpikesVFXPrefab;
-    [Tooltip("Khoảng thời gian ngẫu nhiên tối thiểu giữa các lần gọi kỹ năng Gai Đất (giây)")]
-    public float earthSpikesIntervalMin = 10f;
-    [Tooltip("Khoảng thời gian ngẫu nhiên tối đa giữa các lần gọi kỹ năng Gai Đất (giây)")]
-    public float earthSpikesIntervalMax = 15f;
+    [Tooltip("Khoảng thời gian giữa các lần gọi kỹ năng Gai Đất (5 giây)")]
+    public float earthSpikesIntervalMin = 5f;
+    public float earthSpikesIntervalMax = 5f;
     [Tooltip("Sát thương mỗi lần đâm gai (-5 HP)")]
     public float earthSpikesDamage = 5f;
-    private float earthSpikesTimer = 0f;
+    private float earthSpikesTimer = 5f;
 
     [Header("Furious Charge Skill Settings (Chỉ thỉnh thoảng mới tăng tốc)")]
     public float furiousChargeSpeed = 15.5f;
@@ -712,18 +711,15 @@ public class MiniBossAI : NetworkBehaviour
         // Tự động kích hoạt khi nhận sát thương nếu chưa active
         if (!IsBossActive) ActivateBoss();
 
-        // Phase 2 Check (chuyển giai đoạn Cuồng Nộ khi mất hết máu Phase 1)
-        if (!IsPhase2 && activeHp <= 0f)
+        // KÍCH HOẠT PHASE 2 & TRIỆU HỒI PHÂN THÂN KHI MÁU XUỐNG DƯỚI 50% HP (<= 350 HP)
+        if (!isClone && !IsPhase2 && (activeHp / maxHealth) <= 0.50f)
         {
             TriggerPhase2Transition();
-            return;
-        }
-
-        // TRIỆU HỒI 2 BẢN SAO PHÂN THÂN KHI MÁU XUỐNG DƯỚI 50% HP
-        if (!isClone && !hasSummonedClones && (activeHp / maxHealth) <= 0.50f)
-        {
-            hasSummonedClones = true;
-            SummonClones();
+            if (!hasSummonedClones)
+            {
+                hasSummonedClones = true;
+                SummonClones();
+            }
         }
 
         // KIỂM TRA TỐC BIẾN NÉ ĐÒN KHI BỊ DỒN SÁT THƯƠNG
@@ -1256,7 +1252,7 @@ public class MiniBossAI : NetworkBehaviour
 
     private void ResetEarthSpikesTimer()
     {
-        earthSpikesTimer = Random.Range(earthSpikesIntervalMin, earthSpikesIntervalMax);
+        earthSpikesTimer = 5f;
     }
 
     private void TryLaunchEarthSpikesSkill()
@@ -1268,30 +1264,58 @@ public class MiniBossAI : NetworkBehaviour
         if (target == null) target = FindNearestReachablePlayer();
         if (target == null) return;
 
-        Vector3 targetPos = target.position;
-        if (NavMesh.SamplePosition(targetPos, out NavMeshHit hit, 4.0f, NavMesh.AllAreas))
+        int spikeCount = Random.Range(4, 6); // 4 đến 5 bãi đá
+        List<Vector3> spikePositions = new List<Vector3>();
+
+        // Bãi 1: Ngay vị trí Player mục tiêu
+        Vector3 playerPos = target.position;
+        if (NavMesh.SamplePosition(playerPos, out NavMeshHit hitCenter, 4.0f, NavMesh.AllAreas))
         {
-            targetPos = hit.position;
+            spikePositions.Add(hitCenter.position);
         }
+        else
+        {
+            spikePositions.Add(playerPos);
+        }
+
+        // Các bãi còn lại: Phân bố ngẫu nhiên xung quanh khu vực giao tranh (bán kính 4m - 14m)
+        for (int i = 1; i < spikeCount; i++)
+        {
+            Vector2 randomCircle = Random.insideUnitCircle.normalized * Random.Range(4.5f, 13.5f);
+            Vector3 randomCandidate = target.position + new Vector3(randomCircle.x, 0f, randomCircle.y);
+
+            if (NavMesh.SamplePosition(randomCandidate, out NavMeshHit hitRnd, 5.0f, NavMesh.AllAreas))
+            {
+                spikePositions.Add(hitRnd.position);
+            }
+            else
+            {
+                spikePositions.Add(randomCandidate);
+            }
+        }
+
+        Vector3[] finalPositions = spikePositions.ToArray();
 
         if (!isStandaloneMode && IsServer)
         {
-            TriggerEarthSpikesClientRpc(targetPos);
+            TriggerEarthSpikesClientRpc(finalPositions);
         }
         else if (isStandaloneMode)
         {
-            ExecuteEarthSpikesSkill(targetPos);
+            ExecuteEarthSpikesSkill(finalPositions);
         }
     }
 
     [ClientRpc]
-    private void TriggerEarthSpikesClientRpc(Vector3 targetPos)
+    private void TriggerEarthSpikesClientRpc(Vector3[] spawnPositions)
     {
-        ExecuteEarthSpikesSkill(targetPos);
+        ExecuteEarthSpikesSkill(spawnPositions);
     }
 
-    private void ExecuteEarthSpikesSkill(Vector3 targetPos)
+    private void ExecuteEarthSpikesSkill(Vector3[] spawnPositions)
     {
+        if (spawnPositions == null || spawnPositions.Length == 0) return;
+
         // 1. Animation phát đòn cho MiniBoss
         if (anim != null)
         {
@@ -1317,21 +1341,25 @@ public class MiniBossAI : NetworkBehaviour
 
         if (vfxPrefabToSpawn != null)
         {
-            GameObject spikesObj = Instantiate(vfxPrefabToSpawn, targetPos, Quaternion.identity);
-            
-            // BẢO TỒN SCALE CỦA PREFAB (Ví dụ: Scale 2,2,2 bạn đã chỉnh trong Inspector)
-            spikesObj.transform.localScale = vfxPrefabToSpawn.transform.localScale;
+            for (int i = 0; i < spawnPositions.Length; i++)
+            {
+                Vector3 pos = spawnPositions[i];
+                GameObject spikesObj = Instantiate(vfxPrefabToSpawn, pos, Quaternion.identity);
 
-            EarthSpikesDamageZone dmgZone = spikesObj.GetComponent<EarthSpikesDamageZone>();
-            if (dmgZone == null) dmgZone = spikesObj.AddComponent<EarthSpikesDamageZone>();
-            dmgZone.damageAmount = earthSpikesDamage;
-            dmgZone.baseDamageRadius = 3.2f;
-            dmgZone.baseMaxSpikeHeight = 2.5f;
-            dmgZone.spikeEmergenceDelay = 1.0f;
-            dmgZone.spikeActiveDuration = 1.6f;
-            dmgZone.vfxLifespan = 3.5f;
+                // BẢO TỒN SCALE CỦA PREFAB (Ví dụ: Scale 2,2,2 bạn đã chỉnh trong Inspector)
+                spikesObj.transform.localScale = vfxPrefabToSpawn.transform.localScale;
 
-            Debug.Log($"[MiniBossAI] Thi triển kỹ năng Gai Đất nhô lên (VFX_Earth_Area_01, Scale {spikesObj.transform.localScale}) tại vị trí Player ({targetPos})!");
+                EarthSpikesDamageZone dmgZone = spikesObj.GetComponent<EarthSpikesDamageZone>();
+                if (dmgZone == null) dmgZone = spikesObj.AddComponent<EarthSpikesDamageZone>();
+                dmgZone.damageAmount = earthSpikesDamage;
+                dmgZone.baseDamageRadius = 3.2f;
+                dmgZone.baseMaxSpikeHeight = 2.5f;
+                dmgZone.spikeEmergenceDelay = 1.0f;
+                dmgZone.spikeActiveDuration = 1.6f;
+                dmgZone.vfxLifespan = 3.5f;
+            }
+
+            Debug.Log($"[MiniBossAI] Triệu hồi đồng loạt {spawnPositions.Length} bãi Gai Đất (VFX_Earth_Area_01) ở các vị trí ngẫu nhiên!");
         }
     }
 
@@ -1342,19 +1370,15 @@ public class MiniBossAI : NetworkBehaviour
         if (isStandaloneMode)
         {
             localIsPhase2 = true;
-            localHealth = phase2MaxHealth;
-            maxHealth = phase2MaxHealth;
         }
         else if (IsServer)
         {
             isPhase2Network.Value = true;
-            currentHealth.Value = phase2MaxHealth;
-            maxHealth = phase2MaxHealth;
             enrageCounter.Value++;
         }
 
-        ChangeState(MiniBossState.Enrage);
-        Debug.Log("[MiniBossAI] Phase 2 Enrage Triggered!");
+        if (anim != null) anim.speed = phase2AnimSpeed;
+        Debug.Log($"[MiniBossAI] Đạt mốc 50% máu ({ActualCurrentHealth}/{maxHealth} HP) -> Chuyển Phase 2 Cuồng Nộ và Triệu Hồi Phân Thân!");
     }
 
     private void Update()
@@ -1378,8 +1402,8 @@ public class MiniBossAI : NetworkBehaviour
             if (recentDamageResetTimer <= 0f) recentDamageTaken = 0f;
         }
 
-        // SKILL PHASE 2: Chỉ MiniBoss chính mới thi triển kỹ năng Gai Đất và chỉ khi MiniBoss chính còn sống
-        if (!isClone && IsBossActive && !IsDead && !isSummonInvulnerable && (hasSummonedClones || IsPhase2))
+        // SKILL GAI ĐẤT: MiniBoss chính thi triển kỹ năng Gai Đất (5s triệu hồi 1 lần, 4-5 bãi đá)
+        if (!isClone && IsBossActive && !IsDead && !isSummonInvulnerable)
         {
             earthSpikesTimer -= Time.deltaTime;
             if (earthSpikesTimer <= 0f)
