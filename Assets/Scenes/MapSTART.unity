@@ -122913,8 +122913,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   ShowTopMostFoldoutHeaderGroup: 1
-  videoClip: {fileID: 32900000, guid: 9b2cf829e0011ee4498425f0ff0a6777, type: 3}
-  vpsVideoDuration: 183
+  videoClip: {fileID: 32900000, guid: be80c09b85f6e494abaaabf434b1a0b7, type: 3}
+  vpsVideoDuration: 168
   maxWaitTimeout: 100
   waitingVideoClip: {fileID: 32900000, guid: c24e834809a36024fbf33446f0475b26, type: 3}
   cutsceneBgmVolume: 0.25
