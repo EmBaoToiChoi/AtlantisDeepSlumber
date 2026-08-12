@@ -5,16 +5,19 @@ public class EarthSpikesDamageZone : MonoBehaviour
 {
     [Header("Damage Settings")]
     public float damageAmount = 5f;
-    [Tooltip("Bán kính vùng đâm gai chuẩn xác theo mô hình VFX_Earth_Area_01 (mặc định 3.2m)")]
-    public float damageRadius = 3.2f;
-    [Tooltip("Độ cao tối đa của gai nhô lên (người chơi nhảy cao hơn 2.5m sẽ né được gai)")]
-    public float maxSpikeHeight = 2.5f;
+    [Tooltip("Bán kính vùng đâm gai cơ sở (sẽ tự động nhân theo Scale của Transform)")]
+    public float baseDamageRadius = 3.2f;
+    [Tooltip("Độ cao tối đa của gai nhô lên (sẽ tự động nhân theo Scale Y)")]
+    public float baseMaxSpikeHeight = 2.5f;
     [Tooltip("Thời gian chờ đòn gồng trước khi gai nhô lên khỏi mặt đất (0.35s)")]
     public float spikeEmergenceDelay = 0.35f;
     [Tooltip("Thời gian duy trì đâm gai cắm trên mặt đất trước khi rút xuống")]
     public float spikeActiveDuration = 1.8f;
     [Tooltip("Thời gian sống tối đa của VFX hiệu ứng")]
     public float vfxLifespan = 3.5f;
+
+    public float EffectiveDamageRadius => baseDamageRadius * transform.lossyScale.x;
+    public float EffectiveMaxSpikeHeight => baseMaxSpikeHeight * transform.lossyScale.y;
 
     private Dictionary<Transform, float> playerDamageTimers = new Dictionary<Transform, float>();
     private float elapsedTime = 0f;
@@ -24,10 +27,10 @@ public class EarthSpikesDamageZone : MonoBehaviour
     {
         Destroy(gameObject, vfxLifespan);
 
-        // Tự động gắn Trigger Collider để phát hiện Player chạy từ bên ngoài vào bãi gai lập tức
+        // Tự động gắn Trigger Collider với bán kính chuẩn cơ sở (Scale sẽ tự động nhân lên)
         triggerCollider = gameObject.AddComponent<SphereCollider>();
         triggerCollider.isTrigger = true;
-        triggerCollider.radius = damageRadius;
+        triggerCollider.radius = baseDamageRadius;
         triggerCollider.center = new Vector3(0f, 0.5f, 0f);
     }
 
@@ -66,7 +69,8 @@ public class EarthSpikesDamageZone : MonoBehaviour
     private void ScanAndDamagePlayersInRadius()
     {
         Vector3 centerPos = transform.position;
-        Collider[] hits = Physics.OverlapSphere(centerPos + Vector3.up * 0.5f, damageRadius);
+        float scaledRadius = EffectiveDamageRadius;
+        Collider[] hits = Physics.OverlapSphere(centerPos + Vector3.up * (0.5f * transform.lossyScale.y), scaledRadius);
 
         foreach (var col in hits)
         {
@@ -82,15 +86,17 @@ public class EarthSpikesDamageZone : MonoBehaviour
         if (playerRoot == null) return;
 
         Vector3 centerPos = transform.position;
+        float scaledRadius = EffectiveDamageRadius;
+        float scaledMaxHeight = EffectiveMaxSpikeHeight;
 
-        // 1. Kiểm tra độ cao: Nếu Player nhảy cao hơn độ cao gai nhô (2.5m) -> Không bị dính
+        // 1. Kiểm tra độ cao (đã nhân theo Scale Y)
         float heightDiff = playerRoot.position.y - centerPos.y;
-        if (heightDiff < -1.0f || heightDiff > maxSpikeHeight) return;
+        if (heightDiff < -1.0f || heightDiff > scaledMaxHeight) return;
 
-        // 2. Kiểm tra khoảng cách phẳng (X-Z)
+        // 2. Kiểm tra khoảng cách phẳng X-Z (đã nhân theo Scale X)
         Vector2 playerFlatPos = new Vector2(playerRoot.position.x, playerRoot.position.z);
         Vector2 centerFlatPos = new Vector2(centerPos.x, centerPos.z);
-        if (Vector2.Distance(playerFlatPos, centerFlatPos) > damageRadius) return;
+        if (Vector2.Distance(playerFlatPos, centerFlatPos) > scaledRadius) return;
 
         if (!playerDamageTimers.ContainsKey(playerRoot))
         {
@@ -102,9 +108,9 @@ public class EarthSpikesDamageZone : MonoBehaviour
         // Gây sát thương -5 HP lập tức khi bước/chạy vào gai (hoặc tiếp tục đứng trên bãi gai sau 0.5s)
         if (playerDamageTimers[playerRoot] <= 0f)
         {
-            playerDamageTimers[playerRoot] = 0.5f; // Cooldown 0.5s nếu tiếp tục đứng trên bãi gai
-            EnemyDamageHelper.DealDamage(playerRoot, damageAmount, Vector3.up * 3.0f + (playerRoot.position - centerPos).normalized * 1.5f);
-            Debug.Log($"[EarthSpikesDamageZone] Player '{playerRoot.name}' chạy vào bãi gai! Trừ -{damageAmount} HP!");
+            playerDamageTimers[playerRoot] = 0.5f;
+            EnemyDamageHelper.DealDamage(playerRoot, damageAmount, Vector3.up * 3.5f + (playerRoot.position - centerPos).normalized * 2.0f);
+            Debug.Log($"[EarthSpikesDamageZone] Player '{playerRoot.name}' dính bãi gai (Scale {transform.lossyScale.x}x)! Trừ -{damageAmount} HP!");
         }
     }
 
@@ -141,7 +147,9 @@ public class EarthSpikesDamageZone : MonoBehaviour
     private void OnDrawGizmosSelected()
     {
         Gizmos.color = new Color(1f, 0.2f, 0f, 0.8f);
-        Gizmos.DrawWireSphere(transform.position + Vector3.up * 0.5f, damageRadius);
-        Gizmos.DrawWireCube(transform.position + Vector3.up * (maxSpikeHeight * 0.5f), new Vector3(damageRadius * 2f, maxSpikeHeight, damageRadius * 2f));
+        float scaledRadius = EffectiveDamageRadius;
+        float scaledMaxHeight = EffectiveMaxSpikeHeight;
+        Gizmos.DrawWireSphere(transform.position + Vector3.up * (0.5f * transform.lossyScale.y), scaledRadius);
+        Gizmos.DrawWireCube(transform.position + Vector3.up * (scaledMaxHeight * 0.5f), new Vector3(scaledRadius * 2f, scaledMaxHeight, scaledRadius * 2f));
     }
 }

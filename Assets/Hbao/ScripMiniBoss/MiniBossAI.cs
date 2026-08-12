@@ -137,6 +137,22 @@ public class MiniBossAI : NetworkBehaviour
     public bool IsBossActive => isStandaloneMode ? localIsBossActive : isBossActive.Value;
     public bool IsDead => CurrentStateValue == MiniBossState.Dead;
 
+    public bool AreAllBossesAndClonesDead()
+    {
+        var allBosses = FindObjectsByType<MiniBossAI>(FindObjectsSortMode.None);
+        foreach (var b in allBosses)
+        {
+            if (b != null && b.gameObject.activeInHierarchy)
+            {
+                if (!b.IsDead && b.ActualCurrentHealth > 0f)
+                {
+                    return false; // Còn ít nhất 1 boss hoặc phân thân đang sống!
+                }
+            }
+        }
+        return true; // Tất cả cả boss chính và 2 phân thân đều đã tiêu diệt hoàn toàn!
+    }
+
     [Header("Components")]
     public NavMeshAgent agent;
     public Animator anim;
@@ -236,10 +252,28 @@ public class MiniBossAI : NetworkBehaviour
     private void CleanupConflictingEnemyScripts()
     {
         var dapBua = GetComponent<Enemy1_DapBua>();
-        if (dapBua != null)
+        if (dapBua != null) DestroyImmediate(dapBua);
+
+        var zombie = GetComponent<Enemy2_Zombie>();
+        if (zombie != null) DestroyImmediate(zombie);
+
+        var phuThuy = GetComponent<Enemy5_PhuThuy>();
+        if (phuThuy != null) DestroyImmediate(phuThuy);
+
+        var childBars = GetComponentsInChildren<EnemyHealthBar>(true);
+        foreach (var hp in childBars)
         {
-            Debug.LogWarning($"[MiniBossAI] Tự động xóa script Enemy1_DapBua bị gắn nhầm trên {gameObject.name} để giải phóng HP và AI của MiniBoss!");
-            DestroyImmediate(dapBua);
+            if (hp != null && hp.gameObject != gameObject)
+            {
+                if (hp.enemy != null && hp.enemy.gameObject != gameObject)
+                    DestroyImmediate(hp.enemy.gameObject);
+                if (hp.enemy2 != null && hp.enemy2.gameObject != gameObject)
+                    DestroyImmediate(hp.enemy2.gameObject);
+                if (hp.enemy5 != null && hp.enemy5.gameObject != gameObject)
+                    DestroyImmediate(hp.enemy5.gameObject);
+
+                DestroyImmediate(hp.gameObject);
+            }
         }
     }
 
@@ -520,63 +554,38 @@ public class MiniBossAI : NetworkBehaviour
             return;
         }
 
-        // 1. Thử copy mẫu HealthBar World-Space UI Toolkit từ Enemy khác trong Scene
-        EnemyHealthBar sample = FindFirstObjectByType<EnemyHealthBar>(FindObjectsInactive.Include);
-        if (sample != null && sample.gameObject != null)
-        {
-            GameObject newHealthBar = Instantiate(sample.gameObject, transform);
-            newHealthBar.name = "HealthBar";
-            // Đặt vị trí tương đối 0.95m x scale 3.0 = 2.85m (nằm ngay trên đỉnh đầu MiniBoss)
-            newHealthBar.transform.localPosition = new Vector3(0f, 0.95f, 0f);
-            newHealthBar.transform.localRotation = Quaternion.identity;
-            newHealthBar.transform.localScale = unscaleFactor;
-            newHealthBar.SetActive(true);
+        // Tự động dựng Canvas UI Thanh máu World-Space sạch sẽ (0 Mesh, 0 Collider, 0 Script rác)
+        GameObject canvasObj = new GameObject("CloneHealthBarCanvas");
+        canvasObj.transform.SetParent(transform, false);
+        canvasObj.transform.localPosition = new Vector3(0f, 0.95f, 0f);
+        canvasObj.transform.localRotation = Quaternion.identity;
+        canvasObj.transform.localScale = Vector3.Scale(new Vector3(0.015f, 0.015f, 0.015f), unscaleFactor);
 
-            EnemyHealthBar hpScript = newHealthBar.GetComponent<EnemyHealthBar>();
-            if (hpScript != null)
-            {
-                hpScript.enemy = null; hpScript.enemy2 = null; hpScript.enemy3 = null;
-                hpScript.enemy4 = null; hpScript.enemy5 = null; hpScript.skeleton = null;
-                hpScript.miniBoss = this;
-                hpScript.enabled = true;
-            }
-            Debug.Log("[MiniBossAI] Đã tự động copy Thanh Máu World-Space trên đầu cho Phân Thân Mini Boss!");
-        }
-        else
-        {
-            // 2. Dự phòng: Tự động dựng Canvas Thanh máu World-Space trực tiếp nếu Scene không có quái thường nào khác
-            GameObject canvasObj = new GameObject("CloneHealthBarCanvas");
-            canvasObj.transform.SetParent(transform, false);
-            canvasObj.transform.localPosition = new Vector3(0f, 0.95f, 0f);
-            canvasObj.transform.localRotation = Quaternion.identity;
-            canvasObj.transform.localScale = Vector3.Scale(new Vector3(0.015f, 0.015f, 0.015f), unscaleFactor);
+        Canvas canvas = canvasObj.AddComponent<Canvas>();
+        canvas.renderMode = RenderMode.WorldSpace;
 
-            Canvas canvas = canvasObj.AddComponent<Canvas>();
-            canvas.renderMode = RenderMode.WorldSpace;
+        GameObject bgObj = new GameObject("Background");
+        bgObj.transform.SetParent(canvasObj.transform, false);
+        var bgImg = bgObj.AddComponent<UnityEngine.UI.Image>();
+        bgImg.color = new Color(0.1f, 0.1f, 0.1f, 0.85f);
+        var bgRect = bgObj.GetComponent<RectTransform>();
+        bgRect.sizeDelta = new Vector2(100f, 14f);
 
-            GameObject bgObj = new GameObject("Background");
-            bgObj.transform.SetParent(canvasObj.transform, false);
-            var bgImg = bgObj.AddComponent<UnityEngine.UI.Image>();
-            bgImg.color = new Color(0.1f, 0.1f, 0.1f, 0.85f);
-            var bgRect = bgObj.GetComponent<RectTransform>();
-            bgRect.sizeDelta = new Vector2(100f, 14f);
+        GameObject fillObj = new GameObject("Fill");
+        fillObj.transform.SetParent(bgObj.transform, false);
+        var fillImg = fillObj.AddComponent<UnityEngine.UI.Image>();
+        fillImg.color = new Color(0.95f, 0.2f, 0.2f, 1f);
+        var fillRect = fillObj.GetComponent<RectTransform>();
+        fillRect.anchorMin = Vector2.zero;
+        fillRect.anchorMax = Vector2.one;
+        fillRect.offsetMin = new Vector2(1.5f, 1.5f);
+        fillRect.offsetMax = new Vector2(-1.5f, -1.5f);
 
-            GameObject fillObj = new GameObject("Fill");
-            fillObj.transform.SetParent(bgObj.transform, false);
-            var fillImg = fillObj.AddComponent<UnityEngine.UI.Image>();
-            fillImg.color = new Color(0.95f, 0.2f, 0.2f, 1f);
-            var fillRect = fillObj.GetComponent<RectTransform>();
-            fillRect.anchorMin = Vector2.zero;
-            fillRect.anchorMax = Vector2.one;
-            fillRect.offsetMin = new Vector2(1.5f, 1.5f);
-            fillRect.offsetMax = new Vector2(-1.5f, -1.5f);
+        var fallbackComp = canvasObj.AddComponent<CloneWorldHealthBarFallback>();
+        fallbackComp.miniBoss = this;
+        fallbackComp.fillRect = fillRect;
 
-            var fallbackComp = canvasObj.AddComponent<CloneWorldHealthBarFallback>();
-            fallbackComp.miniBoss = this;
-            fallbackComp.fillRect = fillRect;
-
-            Debug.Log("[MiniBossAI] Đã tự động dựng Canvas Thanh Máu World-Space dự phòng cho Phân Thân!");
-        }
+        Debug.Log("[MiniBossAI] Đã khởi tạo Canvas Thanh máu World-Space sạch sẽ cho Phân thân MiniBoss!");
     }
 
     public void ApplyStun(float duration)
@@ -1189,18 +1198,20 @@ public class MiniBossAI : NetworkBehaviour
         if (vfxPrefabToSpawn != null)
         {
             GameObject spikesObj = Instantiate(vfxPrefabToSpawn, targetPos, Quaternion.identity);
-            spikesObj.transform.localScale = Vector3.one;
+            
+            // BẢO TỒN SCALE CỦA PREFAB (Ví dụ: Scale 2,2,2 bạn đã chỉnh trong Inspector)
+            spikesObj.transform.localScale = vfxPrefabToSpawn.transform.localScale;
 
             EarthSpikesDamageZone dmgZone = spikesObj.GetComponent<EarthSpikesDamageZone>();
             if (dmgZone == null) dmgZone = spikesObj.AddComponent<EarthSpikesDamageZone>();
             dmgZone.damageAmount = earthSpikesDamage;
-            dmgZone.damageRadius = 3.2f;
-            dmgZone.maxSpikeHeight = 2.5f;
+            dmgZone.baseDamageRadius = 3.2f;
+            dmgZone.baseMaxSpikeHeight = 2.5f;
             dmgZone.spikeEmergenceDelay = 0.35f;
             dmgZone.spikeActiveDuration = 1.8f;
             dmgZone.vfxLifespan = 3.5f;
 
-            Debug.Log($"[MiniBossAI] Thi triển kỹ năng Gai Đất nhô lên (VFX_Earth_Area_01) tại vị trí Player ({targetPos})!");
+            Debug.Log($"[MiniBossAI] Thi triển kỹ năng Gai Đất nhô lên (VFX_Earth_Area_01, Scale {spikesObj.transform.localScale}) tại vị trí Player ({targetPos})!");
         }
     }
 
