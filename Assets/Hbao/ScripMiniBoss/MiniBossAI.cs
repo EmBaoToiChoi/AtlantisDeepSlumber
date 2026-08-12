@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.AI;
+using UnityEngine.Events;
 
 /// <summary>
 /// Mini Boss AI Script using FSM (Finite State Machine).
@@ -17,6 +18,11 @@ using UnityEngine.AI;
 /// </summary>
 public class MiniBossAI : NetworkBehaviour
 {
+    //cus
+    [Header("Death Event Trigger")]
+    [Tooltip("Kéo object chứa VideoCutsceneController vào đây và chọn hàm StartCutscene")]
+    public UnityEvent onBossDeathEvent;
+
     public enum MiniBossState { Idle, Chase, Attack, Hit, Enrage, Dead }
 
     [Header("Health Settings")]
@@ -1069,7 +1075,7 @@ public class MiniBossAI : NetworkBehaviour
         }
     }
 
-    private void Die()
+private void Die()
     {
         if (AgentReady) agent.isStopped = true;
         if (agent != null) agent.enabled = false;
@@ -1091,6 +1097,19 @@ public class MiniBossAI : NetworkBehaviour
         {
             TriggerDeathExplosion();
         }
+
+        // --- CODE GỌI CUTSCENE THÊM Ở ĐÂY ---
+        // Chỉ kích hoạt sự kiện khi đây là Boss chính (không phải clone) 
+        // và lệnh này chỉ được phát đi từ phía Server/Host để đồng bộ cho cả phòng.
+        if (!isClone)
+        {
+            bool isAuth = isStandaloneMode || (IsNetworkActive && IsServer);
+            if (isAuth)
+            {
+                onBossDeathEvent?.Invoke();
+            }
+        }
+        // ------------------------------------
 
         if (!isStandaloneMode && IsServer)
         {
