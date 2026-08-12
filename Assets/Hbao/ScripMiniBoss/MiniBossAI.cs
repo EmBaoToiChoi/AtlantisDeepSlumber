@@ -326,9 +326,12 @@ public class MiniBossAI : NetworkBehaviour
 
     private void InitStandalone()
     {
-        maxHealth = phase1MaxHealth;
-        localHealth = phase1MaxHealth;
-        localIsPhase2 = false;
+        if (!isClone)
+        {
+            maxHealth = phase1MaxHealth;
+            localHealth = phase1MaxHealth;
+            localIsPhase2 = false;
+        }
         SnapToNavMesh();
         ApplySpeedAnim(0f);
         ChangeState(MiniBossState.Idle);
@@ -825,6 +828,13 @@ public class MiniBossAI : NetworkBehaviour
 
         ConfigureClone(leftAI, targetPosLeft);
         ConfigureClone(rightAI, targetPosRight);
+
+        // Đăng ký trực tiếp 2 phân thân vào thanh máu UI HUD chính của MiniBoss
+        var hudBar = FindFirstObjectByType<MiniBossHealthBar>();
+        if (hudBar != null)
+        {
+            hudBar.RegisterClones(leftAI, rightAI);
+        }
 
         // Đợi thêm 0.6s để người chơi ngắm cả 3 con Boss đứng oai phong trên mặt đất trước khi camera zoom out
         yield return new WaitForSeconds(0.6f);
@@ -1599,18 +1609,25 @@ private void Die()
             TriggerDeathExplosion();
         }
 
-        // --- CODE GỌI CUTSCENE THÊM Ở ĐÂY ---
-        // Chỉ kích hoạt sự kiện khi đây là Boss chính (không phải clone) 
-        // và lệnh này chỉ được phát đi từ phía Server/Host để đồng bộ cho cả phòng.
-        if (!isClone)
+        // --- CHỈ KÍCH HOẠT CUTSCENE KHI CẢ BOSS CHÍNH VÀ 2 PHÂN THÂN ĐỀU ĐÃ BỊ TIÊU DIỆT HOÀN TOÀN ---
+        if (AreAllBossesAndClonesDead())
         {
             bool isAuth = isStandaloneMode || (IsNetworkActive && IsServer);
             if (isAuth)
             {
-                onBossDeathEvent?.Invoke();
+                var mainBoss = isClone ? FindFirstObjectByType<MiniBossAI>() : this;
+                if (mainBoss != null && mainBoss.onBossDeathEvent != null)
+                {
+                    mainBoss.onBossDeathEvent.Invoke();
+                }
+                else
+                {
+                    onBossDeathEvent?.Invoke();
+                }
+                Debug.Log("[MiniBossAI] TẤT CẢ BOSS CHÍNH VÀ 2 PHÂN THÂN ĐÃ BỊ TIÊU DIỆT HOÀN TOÀN -> KÍCH HOẠT CUTSCENE CHIẾN THẮNG!");
             }
         }
-        // ------------------------------------
+        // --------------------------------------------------------------------------------------------
 
         if (!isStandaloneMode && IsServer)
         {
