@@ -51,10 +51,21 @@ public class MiniBossAI : NetworkBehaviour
     public GameObject summonHoleVFXPrefab;
     [Tooltip("Kích thước scale cho VFX vùng triệu hồi hố tử thần (mặc định 0.5)")]
     public float summonHoleVFXScale = 0.5f;
-    private bool hasSummonedClones = false;
+    public bool hasSummonedClones = false;
     public bool isSummonInvulnerable = false; // Trạng thái MIỄN THƯƠNG trong lúc đang gồng triệu hồi
     public NetworkVariable<int> summonCloneCounter = new NetworkVariable<int>(
         0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+
+    [Header("Phase 2 Earth Spikes Skill Settings (Mô phỏng đâm gai đất cứ 10-15s)")]
+    [Tooltip("Prefab hiệu ứng gai đất nhô lên VFX_Earth_Area_01")]
+    public GameObject earthSpikesVFXPrefab;
+    [Tooltip("Khoảng thời gian ngẫu nhiên tối thiểu giữa các lần gọi kỹ năng Gai Đất (giây)")]
+    public float earthSpikesIntervalMin = 10f;
+    [Tooltip("Khoảng thời gian ngẫu nhiên tối đa giữa các lần gọi kỹ năng Gai Đất (giây)")]
+    public float earthSpikesIntervalMax = 15f;
+    [Tooltip("Sát thương mỗi lần đâm gai (-5 HP)")]
+    public float earthSpikesDamage = 5f;
+    private float earthSpikesTimer = 0f;
 
     [Header("Furious Charge Skill Settings (Chỉ thỉnh thoảng mới tăng tốc)")]
     public float furiousChargeSpeed = 15.5f;
@@ -222,9 +233,20 @@ public class MiniBossAI : NetworkBehaviour
 
     private bool AgentReady => agent != null && agent.isActiveAndEnabled && agent.isOnNavMesh;
 
+    private void CleanupConflictingEnemyScripts()
+    {
+        var dapBua = GetComponent<Enemy1_DapBua>();
+        if (dapBua != null)
+        {
+            Debug.LogWarning($"[MiniBossAI] Tự động xóa script Enemy1_DapBua bị gắn nhầm trên {gameObject.name} để giải phóng HP và AI của MiniBoss!");
+            DestroyImmediate(dapBua);
+        }
+    }
+
     private void Awake()
     {
         gameObject.tag = "Enemy";
+        CleanupConflictingEnemyScripts();
         if (agent == null) agent = GetComponent<NavMeshAgent>();
         if (agent != null && !agent.enabled) agent.enabled = true;
         if (anim == null) anim = GetComponent<Animator>() ?? GetComponentInChildren<Animator>(true);
@@ -247,6 +269,7 @@ public class MiniBossAI : NetworkBehaviour
 
     private void Start()
     {
+        ResetEarthSpikesTimer();
         if (agent != null)
         {
             agent.stoppingDistance = 2.4f;
@@ -728,7 +751,7 @@ public class MiniBossAI : NetworkBehaviour
 
         GameObject prefabToSpawn = clonePrefab;
         bool instantiatedFromSceneObject = false;
-        if (prefabToSpawn == null)
+        if (prefabToSpawn == null || prefabToSpawn.GetComponent<MiniBossAI>() == null)
         {
             prefabToSpawn = gameObject;
             instantiatedFromSceneObject = true;
@@ -748,6 +771,12 @@ public class MiniBossAI : NetworkBehaviour
             var netR = cloneRight.GetComponent<NetworkObject>();
             if (netR != null) DestroyImmediate(netR);
         }
+
+        var dbL = cloneLeft.GetComponent<Enemy1_DapBua>();
+        if (dbL != null) DestroyImmediate(dbL);
+
+        var dbR = cloneRight.GetComponent<Enemy1_DapBua>();
+        if (dbR != null) DestroyImmediate(dbR);
 
         cloneLeft.SetActive(true);
         cloneRight.SetActive(true);
@@ -899,15 +928,17 @@ public class MiniBossAI : NetworkBehaviour
         Vector3 startCamPos = mainCam.transform.position;
         Quaternion startCamRot = mainCam.transform.rotation;
 
-        Vector3 bossFocusCenter = transform.position + Vector3.up * 1.5f;
+        // Tính toán tâm điểm bao quát giữa MiniBoss chính và 2 vị trí hố triệu hồi 2 bên
+        Vector3 bossFocusCenter = (transform.position + posLeft + posRight) / 3.0f + Vector3.up * 2.0f;
 
         Vector3 dirFromBossToCam = (startCamPos - bossFocusCenter).normalized;
         if (dirFromBossToCam.sqrMagnitude < 0.01f) dirFromBossToCam = -transform.forward;
-        dirFromBossToCam.y = 0.15f;
+        dirFromBossToCam.y = 0.25f;
         dirFromBossToCam = dirFromBossToCam.normalized;
 
-        float cutsceneDistance = 6.5f;
-        Vector3 targetCamPos = bossFocusCenter + dirFromBossToCam * cutsceneDistance + Vector3.up * 0.6f;
+        // Camera lùi xa (11.5m) và nâng cao (+3.5m) để thấy rộng bao quát toàn bộ 3 con Boss từ trên xuống
+        float cutsceneDistance = 11.5f;
+        Vector3 targetCamPos = bossFocusCenter + dirFromBossToCam * cutsceneDistance + Vector3.up * 3.5f;
         Quaternion targetCamRot = Quaternion.LookRotation(bossFocusCenter - targetCamPos);
 
         Vector3 playerCamOffset = Vector3.zero;
@@ -1017,7 +1048,9 @@ public class MiniBossAI : NetworkBehaviour
     {
         if (cloneAI == null) return;
         cloneAI.isClone = true;
-        cloneAI.hasSummonedClones = true; // Khóa không cho phân thân triệu hồi tiếp
+        cloneAI.hasSummonedClones = true;
+        cloneAI.isSummonInvulnerable = false; // Mở khóa trạng thái gồng
+        cloneAI.isStandaloneMode = isStandaloneMode; // Đồng bộ chế độ standalone để AI tự động update
         cloneAI.phase1MaxHealth = phase1MaxHealth * 0.45f;
         cloneAI.localHealth = phase1MaxHealth * 0.45f;
         cloneAI.maxHealth = phase1MaxHealth * 0.45f;
@@ -1029,17 +1062,22 @@ public class MiniBossAI : NetworkBehaviour
             cloneAI.currentHealth.Value = cloneAI.maxHealth;
         }
 
-        // Ẩn toàn bộ thanh máu của Phân thân
-        var hpBars = cloneAI.GetComponentsInChildren<EnemyHealthBar>();
-        foreach (var hp in hpBars) if (hp != null) hp.enabled = false;
-
-        // Bật NavMeshAgent cho phân thân và Warp tới vị trí kế bên Boss
+        // Bật NavMeshAgent cho phân thân và tìm mục tiêu Player để nhắm đánh ngay
         if (cloneAI.agent != null)
         {
             cloneAI.agent.enabled = true;
+            cloneAI.agent.isStopped = false;
+            cloneAI.agent.speed = runSpeed > 1f ? runSpeed : 6.0f;
+            cloneAI.agent.stoppingDistance = 2.4f;
             cloneAI.agent.Warp(spawnPos);
         }
+
         cloneAI.ActivateBoss();
+        cloneAI.DetectAndSwitchTarget();
+        if (cloneAI.targetPlayer == null)
+        {
+            cloneAI.targetPlayer = cloneAI.FindNearestReachablePlayer();
+        }
         cloneAI.ChangeState(MiniBossState.Chase);
     }
 
@@ -1072,15 +1110,95 @@ public class MiniBossAI : NetworkBehaviour
     {
         if (enrageVFXPrefab != null)
         {
-            // Đi theo đúng giữa tâm ngực MiniBoss 100% (cao 0.45m x scale 3.0 = 1.35m giữa ngực)
+            // Đi theo đúng giữa tâm ngực/thân MiniBoss (Y=0.20f x scale 3.0 = 0.6m ngực) và thu nhỏ scale vừa vặn (0.35x)
             GameObject vfx = Instantiate(enrageVFXPrefab, transform.position, transform.rotation, transform);
-            vfx.transform.localPosition = new Vector3(0f, 0.45f, 0f);
+            vfx.transform.localPosition = new Vector3(0f, 0.20f, 0f);
             vfx.transform.localRotation = Quaternion.identity;
+            vfx.transform.localScale = new Vector3(0.35f, 0.35f, 0.35f);
             Destroy(vfx, 3.5f);
         }
         if (enrageSFXSound != null)
         {
             AudioSource.PlayClipAtPoint(enrageSFXSound, transform.position + Vector3.up * 1.35f, 1.0f);
+        }
+    }
+
+    private void ResetEarthSpikesTimer()
+    {
+        earthSpikesTimer = Random.Range(earthSpikesIntervalMin, earthSpikesIntervalMax);
+    }
+
+    private void TryLaunchEarthSpikesSkill()
+    {
+        bool auth = isStandaloneMode || (IsNetworkActive && IsServer);
+        if (!auth) return;
+
+        Transform target = targetPlayer;
+        if (target == null) target = FindNearestReachablePlayer();
+        if (target == null) return;
+
+        Vector3 targetPos = target.position;
+        if (NavMesh.SamplePosition(targetPos, out NavMeshHit hit, 4.0f, NavMesh.AllAreas))
+        {
+            targetPos = hit.position;
+        }
+
+        if (!isStandaloneMode && IsServer)
+        {
+            TriggerEarthSpikesClientRpc(targetPos);
+        }
+        else if (isStandaloneMode)
+        {
+            ExecuteEarthSpikesSkill(targetPos);
+        }
+    }
+
+    [ClientRpc]
+    private void TriggerEarthSpikesClientRpc(Vector3 targetPos)
+    {
+        ExecuteEarthSpikesSkill(targetPos);
+    }
+
+    private void ExecuteEarthSpikesSkill(Vector3 targetPos)
+    {
+        // 1. Animation phát đòn cho MiniBoss
+        if (anim != null)
+        {
+            if (attackTriggers != null && attackTriggers.Length > 0 && !string.IsNullOrEmpty(attackTriggers[0]))
+            {
+                anim.SetTrigger(attackTriggers[0]);
+            }
+            else if (!string.IsNullOrEmpty(enrageTrigger))
+            {
+                anim.SetTrigger(enrageTrigger);
+            }
+        }
+
+        // 2. Prefab Gai Đất nhô lên (VFX_Earth_Area_01)
+        GameObject vfxPrefabToSpawn = earthSpikesVFXPrefab;
+        if (vfxPrefabToSpawn == null)
+        {
+#if UNITY_EDITOR
+            vfxPrefabToSpawn = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Vefects/Stylized AoE VFX/VFX/Earth/Particles/VFX_Earth_Area_01.prefab");
+#endif
+            if (vfxPrefabToSpawn == null) vfxPrefabToSpawn = summonHoleVFXPrefab;
+        }
+
+        if (vfxPrefabToSpawn != null)
+        {
+            GameObject spikesObj = Instantiate(vfxPrefabToSpawn, targetPos, Quaternion.identity);
+            spikesObj.transform.localScale = Vector3.one;
+
+            EarthSpikesDamageZone dmgZone = spikesObj.GetComponent<EarthSpikesDamageZone>();
+            if (dmgZone == null) dmgZone = spikesObj.AddComponent<EarthSpikesDamageZone>();
+            dmgZone.damageAmount = earthSpikesDamage;
+            dmgZone.damageRadius = 2.6f;
+            dmgZone.maxSpikeHeight = 2.2f;
+            dmgZone.spikeEmergenceDelay = 0.35f;
+            dmgZone.spikeActiveDuration = 1.6f;
+            dmgZone.vfxLifespan = 3.5f;
+
+            Debug.Log($"[MiniBossAI] Thi triển kỹ năng Gai Đất nhô lên (VFX_Earth_Area_01) tại vị trí Player ({targetPos})!");
         }
     }
 
@@ -1125,6 +1243,17 @@ public class MiniBossAI : NetworkBehaviour
         {
             recentDamageResetTimer -= Time.deltaTime;
             if (recentDamageResetTimer <= 0f) recentDamageTaken = 0f;
+        }
+
+        // SKILL PHASE 2: Cứ 10 - 15 giây tự động tìm Player và thi triển kỹ năng Gai Đất nhô lên (VFX_Earth_Area_01)
+        if (IsBossActive && !IsDead && !isSummonInvulnerable && (hasSummonedClones || IsPhase2))
+        {
+            earthSpikesTimer -= Time.deltaTime;
+            if (earthSpikesTimer <= 0f)
+            {
+                ResetEarthSpikesTimer();
+                TryLaunchEarthSpikesSkill();
+            }
         }
 
         bool aiAuth = isStandaloneMode || (IsNetworkActive && IsServer);

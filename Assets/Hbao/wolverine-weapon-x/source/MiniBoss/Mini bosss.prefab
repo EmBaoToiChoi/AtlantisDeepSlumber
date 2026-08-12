@@ -359,9 +359,6 @@ PrefabInstance:
       addedObject: {fileID: 1703176840125515835}
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 41eca5cdab10b724496731cb73fdedd9, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 1519926050500799462}
-    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 41eca5cdab10b724496731cb73fdedd9, type: 3}
-      insertIndex: -1
       addedObject: {fileID: 3953951991089151068}
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 41eca5cdab10b724496731cb73fdedd9, type: 3}
       insertIndex: -1
@@ -461,13 +458,18 @@ MonoBehaviour:
   isClone: 0
   clonePrefab: {fileID: 4817351704256837389}
   summonHoleVFXPrefab: {fileID: 7639752885123374874, guid: 49b65b7f1d666d94abb46325e69627ed, type: 3}
-  summonHoleVFXScale: 2.5
+  summonHoleVFXScale: 2
+  hasSummonedClones: 0
   isSummonInvulnerable: 0
   summonCloneCounter:
     UpdateTraits:
       MinSecondsBetweenUpdates: 0
       MaxSecondsBetweenUpdates: 0
     m_InternalValue: 0
+  earthSpikesVFXPrefab: {fileID: 4748681987041982144, guid: 8abd2534334de4b47b6426b5056e2c8a, type: 3}
+  earthSpikesIntervalMin: 10
+  earthSpikesIntervalMax: 15
+  earthSpikesDamage: 5
   furiousChargeSpeed: 15.5
   furiousChargeCooldown: 20
   shadowBlinkCooldown: 18
@@ -475,7 +477,7 @@ MonoBehaviour:
   shadowBlinkSFX: {fileID: 0}
   preSummonAudioClip: {fileID: 8300000, guid: fb3ac37c8083f444690e2cd75000eebe, type: 3}
   summonSkillAudioClip: {fileID: 8300000, guid: 26748a0abcc80f442b7253d132ab6fc8, type: 3}
-  bossAudioVolume: 0.85
+  bossAudioVolume: 0.5
   loopBossAudio: 1
   bossAudioSource: {fileID: 0}
   currentState:
@@ -610,95 +612,6 @@ NavMeshAgent:
   m_BaseOffset: 0
   m_WalkableMask: 4294967295
   m_ObstacleAvoidanceType: 4
---- !u!114 &1519926050500799462
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4817351704256837389}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e9d26389f2cc6cc438a7d3a373fd1426, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  ShowTopMostFoldoutHeaderGroup: 1
-  maxHealth: 300
-  currentHealth:
-    UpdateTraits:
-      MinSecondsBetweenUpdates: 0
-      MaxSecondsBetweenUpdates: 0
-    m_InternalValue: 100
-  currentState:
-    UpdateTraits:
-      MinSecondsBetweenUpdates: 0
-      MaxSecondsBetweenUpdates: 0
-    m_InternalValue: 0
-  isEnraged:
-    UpdateTraits:
-      MinSecondsBetweenUpdates: 0
-      MaxSecondsBetweenUpdates: 0
-    m_InternalValue: 0
-  netSpeed:
-    UpdateTraits:
-      MinSecondsBetweenUpdates: 0
-      MaxSecondsBetweenUpdates: 0
-    m_InternalValue: 0
-  hitCounter:
-    UpdateTraits:
-      MinSecondsBetweenUpdates: 0
-      MaxSecondsBetweenUpdates: 0
-    m_InternalValue: 0
-  attackType:
-    UpdateTraits:
-      MinSecondsBetweenUpdates: 0
-      MaxSecondsBetweenUpdates: 0
-    m_InternalValue: 0
-  agent: {fileID: 0}
-  anim: {fileID: 0}
-  eyeTransform: {fileID: 0}
-  hammerHitbox: {fileID: 0}
-  hammerHitboxLeft: {fileID: 0}
-  hammerHitboxRight: {fileID: 0}
-  waypoints:
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
-  expGemPrefab: {fileID: 0}
-  expDropAmount: 25
-  expDropPoint: {fileID: 0}
-  repairItemPrefab: {fileID: 0}
-  repairItemDropChance: 0.3
-  hitSoundClip: {fileID: 0}
-  deathSoundClip: {fileID: 0}
-  deathVfxPrefab: {fileID: 0}
-  deathVfxScale: 2
-  stunVfxPrefab: {fileID: 0}
-  stunVfxHeightOffset: 2.4
-  stunVfxScale: 2
-  sightRange: 15
-  fieldOfView: 90
-  attackRange: 2
-  patrolWalkSpeed: 2.5
-  chaseRunSpeed: 5
-  maxChaseDistance: 18
-  patrolWaitMin: 1
-  patrolWaitMax: 4
-  patrolMoveChance: 0.7
-  playerLayer:
-    serializedVersion: 2
-    m_Bits: 0
-  obstacleLayer:
-    serializedVersion: 2
-    m_Bits: 0
-  speedParam: Speed
-  hitTrigger: Hit
-  dieTrigger: Die
-  atkLeftTrigger: AttackLeft
-  atkRightTrigger: AttackRight
-  atkComboTrigger: AttackCombo
-  canTacticalFlee: 1
-  fleeHealthThreshold: 0.25
 --- !u!114 &3953951991089151068
 MonoBehaviour:
   m_ObjectHideFlags: 0
