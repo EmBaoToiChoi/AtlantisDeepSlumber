@@ -133,7 +133,7 @@ public class MiniBossAI : NetworkBehaviour
         set { if (isStandaloneMode) localState = value; else currentState.Value = value; }
     }
 
-    public float ActualCurrentHealth => (isStandaloneMode || !IsSpawned) ? localHealth : currentHealth.Value;
+    public float ActualCurrentHealth => (isStandaloneMode || isClone || !IsSpawned) ? localHealth : currentHealth.Value;
     public bool IsBossActive => isStandaloneMode ? localIsBossActive : isBossActive.Value;
     public bool IsDead => CurrentStateValue == MiniBossState.Dead;
 
@@ -326,9 +326,12 @@ public class MiniBossAI : NetworkBehaviour
 
     private void InitStandalone()
     {
-        maxHealth = phase1MaxHealth;
-        localHealth = phase1MaxHealth;
-        localIsPhase2 = false;
+        if (!isClone)
+        {
+            maxHealth = phase1MaxHealth;
+            localHealth = phase1MaxHealth;
+            localIsPhase2 = false;
+        }
         SnapToNavMesh();
         ApplySpeedAnim(0f);
         ChangeState(MiniBossState.Idle);
@@ -522,70 +525,21 @@ public class MiniBossAI : NetworkBehaviour
 
     public void EnsureCloneOverheadHealthBar()
     {
-        if (!isClone) return;
-
-        // Tính toán tỷ lệ Un-scale để UI không bị méo/phóng to 3x theo parent scale (3,3,3)
-        Vector3 unscaleFactor = new Vector3(
-            1f / Mathf.Max(transform.localScale.x, 0.001f),
-            1f / Mathf.Max(transform.localScale.y, 0.001f),
-            1f / Mathf.Max(transform.localScale.z, 0.001f)
-        );
-
-        var existingHealthBar = GetComponentInChildren<EnemyHealthBar>(true);
-        if (existingHealthBar != null)
+        // Theo yêu cầu người dùng: Không tạo bất kỳ UI World Space nào trên đầu phân thân.
+        // Chỉ hiển thị và trừ máu trên Thanh UI HUD chính (MiniBossHealthBar) ở góc trên màn hình.
+        var existingCanvas = GetComponentsInChildren<Canvas>(true);
+        foreach (var c in existingCanvas)
         {
-            existingHealthBar.gameObject.SetActive(true);
-            existingHealthBar.transform.localPosition = new Vector3(0f, 0.95f, 0f);
-            existingHealthBar.transform.localScale = unscaleFactor;
-            existingHealthBar.enemy = null; existingHealthBar.enemy2 = null; existingHealthBar.enemy3 = null;
-            existingHealthBar.enemy4 = null; existingHealthBar.enemy5 = null; existingHealthBar.skeleton = null;
-            existingHealthBar.miniBoss = this;
-            existingHealthBar.enabled = true;
-            return;
+            if (c != null && (c.name.Contains("CloneHealthBar") || c.name.Contains("HealthBar")))
+            {
+                DestroyImmediate(c.gameObject);
+            }
         }
-
-        var existingFallback = GetComponentInChildren<CloneWorldHealthBarFallback>(true);
-        if (existingFallback != null)
+        var fallbacks = GetComponentsInChildren<CloneWorldHealthBarFallback>(true);
+        foreach (var f in fallbacks)
         {
-            existingFallback.gameObject.SetActive(true);
-            existingFallback.transform.localPosition = new Vector3(0f, 0.95f, 0f);
-            existingFallback.transform.localScale = Vector3.Scale(new Vector3(0.015f, 0.015f, 0.015f), unscaleFactor);
-            existingFallback.miniBoss = this;
-            return;
+            if (f != null) DestroyImmediate(f.gameObject);
         }
-
-        // Tự động dựng Canvas UI Thanh máu World-Space sạch sẽ (0 Mesh, 0 Collider, 0 Script rác)
-        GameObject canvasObj = new GameObject("CloneHealthBarCanvas");
-        canvasObj.transform.SetParent(transform, false);
-        canvasObj.transform.localPosition = new Vector3(0f, 0.95f, 0f);
-        canvasObj.transform.localRotation = Quaternion.identity;
-        canvasObj.transform.localScale = Vector3.Scale(new Vector3(0.015f, 0.015f, 0.015f), unscaleFactor);
-
-        Canvas canvas = canvasObj.AddComponent<Canvas>();
-        canvas.renderMode = RenderMode.WorldSpace;
-
-        GameObject bgObj = new GameObject("Background");
-        bgObj.transform.SetParent(canvasObj.transform, false);
-        var bgImg = bgObj.AddComponent<UnityEngine.UI.Image>();
-        bgImg.color = new Color(0.1f, 0.1f, 0.1f, 0.85f);
-        var bgRect = bgObj.GetComponent<RectTransform>();
-        bgRect.sizeDelta = new Vector2(100f, 14f);
-
-        GameObject fillObj = new GameObject("Fill");
-        fillObj.transform.SetParent(bgObj.transform, false);
-        var fillImg = fillObj.AddComponent<UnityEngine.UI.Image>();
-        fillImg.color = new Color(0.95f, 0.2f, 0.2f, 1f);
-        var fillRect = fillObj.GetComponent<RectTransform>();
-        fillRect.anchorMin = Vector2.zero;
-        fillRect.anchorMax = Vector2.one;
-        fillRect.offsetMin = new Vector2(1.5f, 1.5f);
-        fillRect.offsetMax = new Vector2(-1.5f, -1.5f);
-
-        var fallbackComp = canvasObj.AddComponent<CloneWorldHealthBarFallback>();
-        fallbackComp.miniBoss = this;
-        fallbackComp.fillRect = fillRect;
-
-        Debug.Log("[MiniBossAI] Đã khởi tạo Canvas Thanh máu World-Space sạch sẽ cho Phân thân MiniBoss!");
     }
 
     public void ApplyStun(float duration)
@@ -607,6 +561,11 @@ public class MiniBossAI : NetworkBehaviour
 
     public void TakeDamage(float damage)
     {
+        if (isClone)
+        {
+            isSummonInvulnerable = false; // Phân thân không bao giờ bị dính gồng bất tử
+        }
+
         if (IsDead || CurrentStateValue == MiniBossState.Enrage || isSummonInvulnerable) return;
 
         localHealth = Mathf.Max(0f, localHealth - damage);
@@ -869,6 +828,13 @@ public class MiniBossAI : NetworkBehaviour
 
         ConfigureClone(leftAI, targetPosLeft);
         ConfigureClone(rightAI, targetPosRight);
+
+        // Đăng ký trực tiếp 2 phân thân vào thanh máu UI HUD chính của MiniBoss
+        var hudBar = FindFirstObjectByType<MiniBossHealthBar>();
+        if (hudBar != null)
+        {
+            hudBar.RegisterClones(leftAI, rightAI);
+        }
 
         // Đợi thêm 0.6s để người chơi ngắm cả 3 con Boss đứng oai phong trên mặt đất trước khi camera zoom out
         yield return new WaitForSeconds(0.6f);
@@ -1643,18 +1609,25 @@ private void Die()
             TriggerDeathExplosion();
         }
 
-        // --- CODE GỌI CUTSCENE THÊM Ở ĐÂY ---
-        // Chỉ kích hoạt sự kiện khi đây là Boss chính (không phải clone) 
-        // và lệnh này chỉ được phát đi từ phía Server/Host để đồng bộ cho cả phòng.
-        if (!isClone)
+        // --- CHỈ KÍCH HOẠT CUTSCENE KHI CẢ BOSS CHÍNH VÀ 2 PHÂN THÂN ĐỀU ĐÃ BỊ TIÊU DIỆT HOÀN TOÀN ---
+        if (AreAllBossesAndClonesDead())
         {
             bool isAuth = isStandaloneMode || (IsNetworkActive && IsServer);
             if (isAuth)
             {
-                onBossDeathEvent?.Invoke();
+                var mainBoss = isClone ? FindFirstObjectByType<MiniBossAI>() : this;
+                if (mainBoss != null && mainBoss.onBossDeathEvent != null)
+                {
+                    mainBoss.onBossDeathEvent.Invoke();
+                }
+                else
+                {
+                    onBossDeathEvent?.Invoke();
+                }
+                Debug.Log("[MiniBossAI] TẤT CẢ BOSS CHÍNH VÀ 2 PHÂN THÂN ĐÃ BỊ TIÊU DIỆT HOÀN TOÀN -> KÍCH HOẠT CUTSCENE CHIẾN THẮNG!");
             }
         }
-        // ------------------------------------
+        // --------------------------------------------------------------------------------------------
 
         if (!isStandaloneMode && IsServer)
         {

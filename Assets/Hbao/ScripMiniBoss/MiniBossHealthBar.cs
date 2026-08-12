@@ -120,10 +120,24 @@ public class MiniBossHealthBar : MonoBehaviour
         }
     }
 
+    public void RegisterClones(MiniBossAI c1, MiniBossAI c2)
+    {
+        clone1AI = c1;
+        clone2AI = c2;
+        clonesDiscovered = true;
+        clone1DisplayedHealth = -1f;
+        clone2DisplayedHealth = -1f;
+        Debug.Log($"[MiniBossHealthBar] Đăng ký trực tiếp 2 phân thân thành công: Clone1={c1?.name}, Clone2={c2?.name}");
+    }
+
     private void DiscoverClones()
     {
-        clone1AI = null;
-        clone2AI = null;
+        if (clone1AI != null && clone2AI != null && clone1AI.gameObject.activeInHierarchy && clone2AI.gameObject.activeInHierarchy)
+        {
+            clonesDiscovered = true;
+            return;
+        }
+
         var allBosses = FindObjectsByType<MiniBossAI>(FindObjectsSortMode.None);
         foreach (var b in allBosses)
         {
@@ -131,13 +145,15 @@ public class MiniBossHealthBar : MonoBehaviour
             {
                 if (b.isClone || b.gameObject.name.Contains("Clone") || b.gameObject.name.Contains("(Clone)"))
                 {
-                    if (clone1AI == null)
+                    if (clone1AI == null || !clone1AI.gameObject.activeInHierarchy)
                     {
                         clone1AI = b;
+                        clone1DisplayedHealth = -1f;
                     }
-                    else if (clone2AI == null && b != clone1AI)
+                    else if ((clone2AI == null || !clone2AI.gameObject.activeInHierarchy) && b != clone1AI)
                     {
                         clone2AI = b;
+                        clone2DisplayedHealth = -1f;
                         break;
                     }
                 }
