@@ -62278,7 +62278,7 @@ Transform:
   m_GameObject: {fileID: 335355748}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -56, y: 13.48, z: 96}
+  m_LocalPosition: {x: -568, y: 57.794, z: 518.8}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -87563,6 +87563,7 @@ MonoBehaviour:
   - ArthurPlayer
   disableTeleport: 0
   playOnlyOnce: 1
+  hasPlayed: 0
   isPlaying: 0
 --- !u!114 &570163603
 MonoBehaviour:
@@ -90101,6 +90102,7 @@ MonoBehaviour:
   - ArthurPlayer
   disableTeleport: 0
   playOnlyOnce: 1
+  hasPlayed: 0
   isPlaying: 0
 --- !u!114 &600321948
 MonoBehaviour:
@@ -97781,6 +97783,7 @@ MonoBehaviour:
   - ArthurPlayer
   disableTeleport: 0
   playOnlyOnce: 1
+  hasPlayed: 0
   isPlaying: 0
 --- !u!114 &662951820
 MonoBehaviour:
@@ -123579,6 +123582,7 @@ MonoBehaviour:
   - ArthurPlayer
   disableTeleport: 0
   playOnlyOnce: 1
+  hasPlayed: 0
   isPlaying: 0
 --- !u!114 &876999960
 MonoBehaviour:
@@ -144754,6 +144758,7 @@ MonoBehaviour:
   - ArthurPlayer
   disableTeleport: 0
   playOnlyOnce: 1
+  hasPlayed: 0
   isPlaying: 0
 --- !u!114 &1062175251
 MonoBehaviour:
@@ -153017,6 +153022,7 @@ MonoBehaviour:
   - ArthurPlayer
   disableTeleport: 0
   playOnlyOnce: 1
+  hasPlayed: 0
   isPlaying: 0
 --- !u!114 &1144429721
 MonoBehaviour:
@@ -157989,6 +157995,7 @@ MonoBehaviour:
   - ArthurPlayer
   disableTeleport: 0
   playOnlyOnce: 1
+  hasPlayed: 0
   isPlaying: 0
 --- !u!114 &1195200833
 MonoBehaviour:
@@ -183885,6 +183892,7 @@ MonoBehaviour:
   - ArthurPlayer
   disableTeleport: 0
   playOnlyOnce: 1
+  hasPlayed: 0
   isPlaying: 0
 --- !u!114 &1404430340
 MonoBehaviour:
@@ -259308,6 +259316,7 @@ MonoBehaviour:
   - ArthurPlayer
   disableTeleport: 0
   playOnlyOnce: 1
+  hasPlayed: 0
   isPlaying: 0
 --- !u!114 &1793279254
 MonoBehaviour:
@@ -275736,6 +275745,7 @@ MonoBehaviour:
   - ArthurPlayer
   disableTeleport: 0
   playOnlyOnce: 1
+  hasPlayed: 0
   isPlaying: 0
 --- !u!114 &1913123926
 MonoBehaviour:
@@ -285229,6 +285239,7 @@ MonoBehaviour:
   - ArthurPlayer
   disableTeleport: 0
   playOnlyOnce: 1
+  hasPlayed: 0
   isPlaying: 0
 --- !u!4 &2012417109
 Transform:
