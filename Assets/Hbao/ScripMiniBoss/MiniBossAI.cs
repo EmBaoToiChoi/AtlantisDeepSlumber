@@ -125,16 +125,16 @@ public class MiniBossAI : NetworkBehaviour
     private bool isStandaloneMode = false;
     private bool IsNetworkActive => NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
 
-    public bool IsPhase2 => isStandaloneMode ? localIsPhase2 : isPhase2Network.Value;
+    public bool IsPhase2 => (isStandaloneMode || isClone) ? localIsPhase2 : isPhase2Network.Value;
 
     public MiniBossState CurrentStateValue
     {
-        get => isStandaloneMode ? localState : currentState.Value;
-        set { if (isStandaloneMode) localState = value; else currentState.Value = value; }
+        get => (isStandaloneMode || isClone) ? localState : currentState.Value;
+        set { if (isStandaloneMode || isClone) localState = value; else currentState.Value = value; }
     }
 
     public float ActualCurrentHealth => (isStandaloneMode || isClone || !IsSpawned) ? localHealth : currentHealth.Value;
-    public bool IsBossActive => isStandaloneMode ? localIsBossActive : isBossActive.Value;
+    public bool IsBossActive => (isStandaloneMode || isClone) ? localIsBossActive : isBossActive.Value;
     public bool IsDead => CurrentStateValue == MiniBossState.Dead;
 
     public bool AreAllBossesAndClonesDead()
@@ -563,13 +563,17 @@ public class MiniBossAI : NetworkBehaviour
     {
         if (isClone)
         {
-            isSummonInvulnerable = false; // Phân thân không bao giờ bị dính gồng bất tử
+            isSummonInvulnerable = false;
+            if (localState == MiniBossState.Enrage) localState = MiniBossState.Chase;
         }
 
-        if (IsDead || CurrentStateValue == MiniBossState.Enrage || isSummonInvulnerable) return;
+        if (IsDead) return;
+
+        // Chỉ kiểm tra gồng/cuồng nộ bất tử cho Boss chính, KHÔNG áp dụng cho Phân Thân!
+        if (!isClone && (CurrentStateValue == MiniBossState.Enrage || isSummonInvulnerable)) return;
 
         localHealth = Mathf.Max(0f, localHealth - damage);
-        if (!isStandaloneMode && IsSpawned && IsServer)
+        if (!isStandaloneMode && !isClone && IsSpawned && IsServer)
         {
             currentHealth.Value = Mathf.Max(0f, currentHealth.Value - damage);
             localHealth = currentHealth.Value;
@@ -577,7 +581,7 @@ public class MiniBossAI : NetworkBehaviour
 
         EnemyDamageEffectHelper.PlayDamageEffects(gameObject, damage);
 
-        bool isAuth = isStandaloneMode || (IsSpawned && IsServer) || !IsSpawned;
+        bool isAuth = isStandaloneMode || isClone || (IsSpawned && IsServer) || !IsSpawned;
         if (!isAuth) return;
 
         float activeHp = ActualCurrentHealth;
@@ -1020,18 +1024,28 @@ public class MiniBossAI : NetworkBehaviour
     private void ConfigureClone(MiniBossAI cloneAI, Vector3 spawnPos)
     {
         if (cloneAI == null) return;
-        cloneAI.isStandaloneMode = true; // BẮT BUỘC: Đánh dấu StandaloneMode = true để AI vòng lặp tự động chạy trên phân thân
+        cloneAI.isStandaloneMode = true;
         cloneAI.isClone = true;
         cloneAI.hasSummonedClones = true;
-        cloneAI.isSummonInvulnerable = false; // Mở khóa gồng
+        cloneAI.isSummonInvulnerable = false;
         cloneAI.phase1MaxHealth = phase1MaxHealth * 0.45f;
         cloneAI.maxHealth = cloneAI.phase1MaxHealth;
         cloneAI.localHealth = cloneAI.maxHealth;
         cloneAI.localIsBossActive = true;
-        cloneAI.localState = MiniBossState.Idle;
+        cloneAI.localState = MiniBossState.Chase;
 
         var db = cloneAI.GetComponent<Enemy1_DapBua>();
         if (db != null) DestroyImmediate(db);
+
+        // Tự động xóa sạch hiệu ứng lửa gồng kế thừa nếu có để phân thân trở về trạng thái chiến đấu sạch sẽ
+        var oldAuras = cloneAI.GetComponentsInChildren<ParticleSystem>();
+        foreach (var ps in oldAuras)
+        {
+            if (ps != null && (ps.gameObject.name.Contains("FireAura") || ps.gameObject.name.Contains("Enrage") || ps.gameObject.name.Contains("Aura")))
+            {
+                DestroyImmediate(ps.gameObject);
+            }
+        }
 
         if (!isStandaloneMode && IsServer && cloneAI.IsSpawned)
         {
