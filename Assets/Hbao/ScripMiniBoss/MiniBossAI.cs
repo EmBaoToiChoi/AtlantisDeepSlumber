@@ -49,8 +49,8 @@ public class MiniBossAI : NetworkBehaviour
     public GameObject clonePrefab; // Prefab phân thân (nếu null sẽ dùng chính bản thân MiniBoss)
     [Tooltip("Prefab hố tử thần / Ma trận triệu hồi hố tối dưới đất tại vị trí 2 phân thân nhô lên")]
     public GameObject summonHoleVFXPrefab;
-    [Tooltip("Kích thước scale cho VFX vùng triệu hồi hố tử thần (mặc định 2.5)")]
-    public float summonHoleVFXScale = 2.5f;
+    [Tooltip("Kích thước scale cho VFX vùng triệu hồi hố tử thần (mặc định 1.0)")]
+    public float summonHoleVFXScale = 1.0f;
     private bool hasSummonedClones = false;
     public bool isSummonInvulnerable = false; // Trạng thái MIỄN THƯƠNG trong lúc đang gồng triệu hồi
     public NetworkVariable<int> summonCloneCounter = new NetworkVariable<int>(
@@ -718,9 +718,9 @@ public class MiniBossAI : NetworkBehaviour
 
         yield return new WaitForSeconds(0.4f);
 
-        // 2. Sinh 2 phân thân ở độ sâu -3.5m phía dưới mặt đất (ngay bên dưới hố tử thần)
-        Vector3 leftStartPos = targetPosLeft - Vector3.up * 3.5f;
-        Vector3 rightStartPos = targetPosRight - Vector3.up * 3.5f;
+        // 2. Sinh 2 phân thân ở độ sâu -1.8m phía dưới mặt đất (đảm bảo nửa thân trên vừa lộ diện trên hố tử thần)
+        Vector3 leftStartPos = targetPosLeft - Vector3.up * 1.8f;
+        Vector3 rightStartPos = targetPosRight - Vector3.up * 1.8f;
 
         GameObject prefabToSpawn = clonePrefab;
         bool instantiatedFromSceneObject = false;
@@ -742,19 +742,42 @@ public class MiniBossAI : NetworkBehaviour
             if (netR != null) DestroyImmediate(netR);
         }
 
+        cloneLeft.SetActive(true);
+        cloneRight.SetActive(true);
+
         cloneLeft.transform.position = leftStartPos;
         cloneRight.transform.position = rightStartPos;
         cloneLeft.transform.localScale = bossScale;
         cloneRight.transform.localScale = bossScale;
         transform.localScale = bossScale;
 
-        // Tạm thời tắt NavMeshAgent và Collider của phân thân trong lúc đang nhô lên
+        // BẢO ĐẢM HIỂN THỊ: Bật toàn bộ Renderer & đánh dấu isClone = true ngay lập tức từ khi sinh ra
         MiniBossAI leftAI = cloneLeft.GetComponent<MiniBossAI>();
         MiniBossAI rightAI = cloneRight.GetComponent<MiniBossAI>();
 
-        if (leftAI != null && leftAI.agent != null) leftAI.agent.enabled = false;
-        if (rightAI != null && rightAI.agent != null) rightAI.agent.enabled = false;
+        if (leftAI != null)
+        {
+            leftAI.isClone = true;
+            leftAI.hasSummonedClones = true;
+            leftAI.maxHealth = phase1MaxHealth * 0.45f;
+            leftAI.localHealth = leftAI.maxHealth;
+            if (leftAI.agent != null) leftAI.agent.enabled = false;
+        }
 
+        if (rightAI != null)
+        {
+            rightAI.isClone = true;
+            rightAI.hasSummonedClones = true;
+            rightAI.maxHealth = phase1MaxHealth * 0.45f;
+            rightAI.localHealth = rightAI.maxHealth;
+            if (rightAI.agent != null) rightAI.agent.enabled = false;
+        }
+
+        // Bật tất cả Mesh / SkinnedMeshRenderer của 2 phân thân
+        foreach (var r in cloneLeft.GetComponentsInChildren<Renderer>(true)) if (r != null) r.enabled = true;
+        foreach (var r in cloneRight.GetComponentsInChildren<Renderer>(true)) if (r != null) r.enabled = true;
+
+        // Tạm thời tắt Collider của phân thân trong lúc đang nhô lên
         var leftColliders = cloneLeft.GetComponentsInChildren<Collider>();
         foreach (var c in leftColliders) if (c != null) c.enabled = false;
 
@@ -821,8 +844,8 @@ public class MiniBossAI : NetworkBehaviour
 
         if (vfx != null)
         {
-            // Tự động scale rộng ra để bao quát cả khu vực phân thân nhô lên
-            float s = summonHoleVFXScale > 0.1f ? summonHoleVFXScale : 2.5f;
+            // Scale vừa vặn cho vùng triệu hồi hố tử thần
+            float s = summonHoleVFXScale > 0.05f ? summonHoleVFXScale : 1.0f;
             vfx.transform.localScale = new Vector3(s, s, s);
 
             // Bật Looping cho tất cả ParticleSystem con để VFX không bị tắt nhanh trong quá trình triệu hồi (6.0s)
