@@ -2,28 +2,29 @@ using System.Collections;
 using UnityEngine;
 
 /// <summary>
-/// Component quản lý hiệu ứng khi quái vật chết:
-/// 1. Phát âm thanh chết 3D cho 4 Player xung quanh nghe thấy.
+/// Component quản lý hiệu ứng khi 5 con quái vật (Enemy 1 -> 5) chết:
+/// 1. Phát âm thanh gục chết 3D cho 4 Player xung quanh nghe thấy.
 /// 2. Chờ quái phát hết animation Die và nằm yên trên mặt đất 2.0 giây.
-/// 3. Kích hoạt hố đen tử thần (VFX_Dark_Area_01) VÀ xúc tu/xích tối (Enemy_Death_Tentacles) quấn quanh xác quái.
-/// 4. Từ từ kéo/tuột xác quái chìm xuống lòng hố/map.
-/// 5. Ngay khi xác quái vừa chìm xong xuống đất, tắt & xóa ngay lập tức VFX hố và xúc tu.
+/// 3. Kích hoạt hố đen tử thần mở rộng rực rỡ (VFX_Dark_Area_01) dưới chân quái.
+/// 4. Quái bị hút và chìm sâu xuống lòng đất với vận tốc rơi 1.8m/s, kết hợp co nhỏ và xoay độ nghiêng về phía lòng hố.
+/// 5. Ngay khi xác quái vừa rơi chìm hẳn xuống đất, TẮT VÀ XÓA NGAY LẬP TỨC VFX hố đen.
+/// Đồng bộ hoàn hảo cho cả 4 người chơi trong phòng Multiplayer.
 /// </summary>
 public class EnemyDeathSinkBehaviour : MonoBehaviour
 {
     [Header("Sink Settings")]
-    public float sinkSpeed = 0.9f;
-    public float sinkDuration = 2.8f;
-    public float delayBeforeSink = 2.0f; // Chờ quái gục và nằm yên 2s trước khi hố & xúc tu xuất hiện
+    public float sinkSpeed = 1.8f;      // Tăng tốc độ chìm sâu xuống lòng đất để nhìn rõ rệt đợt rơi
+    public float sinkDuration = 2.0f;   // Thời gian xác bị hút rơi sâu xuống hố (2.0s)
+    public float delayBeforeSink = 2.0f;// Chờ quái gục và nằm yên 2s trước khi hố xuất hiện
 
     private static GameObject defaultVfxPrefab;
     private static AudioClip defaultDeathClip;
 
     private GameObject spawnedVfx;
     private GameObject customVfxPrefabToUse;
-    private float vfxScaleToUse = 1.85f;
+    private float vfxScaleToUse = 1.5f; // Chỉnh hố đen vừa vặn 1.5f theo yêu cầu
 
-    public static void ApplyDeathEffects(GameObject enemy, AudioClip customDeathClip = null, GameObject customVfxPrefab = null, float vfxScale = 1.85f)
+    public static void ApplyDeathEffects(GameObject enemy, AudioClip customDeathClip = null, GameObject customVfxPrefab = null, float vfxScale = 1.5f)
     {
         if (enemy == null) return;
 
@@ -79,10 +80,10 @@ public class EnemyDeathSinkBehaviour : MonoBehaviour
 
     private IEnumerator SinkRoutine()
     {
-        // Giai đoạn 1: Chờ quái phát hết animation Die và nằm yên trên mặt đất 2.0s
+        // Giai đoạn 1: Chờ quái phát hết animation Die và nằm yên trên mặt đất đúng 2.0s
         yield return new WaitForSeconds(delayBeforeSink);
 
-        // Giai đoạn 2: Tạo hố rớt đất dưới chân quái
+        // Giai đoạn 2: Tạo hố đen tử thần kích thước vừa vặn 1.5f dưới chân quái
         Vector3 deathPos = transform.position;
 
         GameObject vfxPrefab = customVfxPrefabToUse;
@@ -100,7 +101,7 @@ public class EnemyDeathSinkBehaviour : MonoBehaviour
         {
             Vector3 vfxPos = deathPos + Vector3.up * 0.05f;
             spawnedVfx = Instantiate(vfxPrefab, vfxPos, Quaternion.identity);
-            spawnedVfx.transform.localScale = Vector3.one * Mathf.Max(0.5f, vfxScaleToUse);
+            spawnedVfx.transform.localScale = Vector3.one * 1.5f;
 
             ParticleSystem[] psList = spawnedVfx.GetComponentsInChildren<ParticleSystem>(true);
             foreach (var ps in psList)
@@ -114,17 +115,29 @@ public class EnemyDeathSinkBehaviour : MonoBehaviour
             }
         }
 
-        // Giai đoạn 3: Xác quái từ từ rơi/chìm xuống hố trong 2.8s
+        // Giai đoạn 3: Xác quái bị hút rơi mạnh xuống sâu dưới lòng đất (tạo chuyển động rơi cực kỳ rõ rệt)
+        Vector3 initialScale = transform.localScale;
         float elapsed = 0f;
+
         while (elapsed < sinkDuration)
         {
             float delta = Time.deltaTime;
             elapsed += delta;
+            float progress = Mathf.Clamp01(elapsed / sinkDuration);
+
+            // Rơi sâu xuống lòng đất với vận tốc 1.8m/s
             transform.position += Vector3.down * (sinkSpeed * delta);
+
+            // Co nhỏ nhẹ xác lại khi chìm vào lòng hư vô (từ 100% -> 60%)
+            transform.localScale = Vector3.Lerp(initialScale, initialScale * 0.6f, progress);
+
+            // Nghiêng nhẹ xác theo chiều rơi chìm xuống hố
+            transform.Rotate(Vector3.right * (25f * delta), Space.World);
+
             yield return null;
         }
 
-        // Giai đoạn 4: Ngay khi hạ xác xuống xong hoàn toàn, TẮT VÀ XÓA NGAY LẬP TỨC VFX HỐ RỚT
+        // Giai đoạn 4: Ngay khi xác quái vừa chìm biến mất hoàn toàn xuống lòng đất, TẮT VÀ XÓA NGAY LẬP TỨC VFX HỐ
         ClearAllVfx();
     }
 
