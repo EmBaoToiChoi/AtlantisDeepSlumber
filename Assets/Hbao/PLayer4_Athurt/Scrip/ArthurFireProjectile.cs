@@ -143,9 +143,6 @@ public class ArthurFireProjectile : NetworkBehaviour
             return;
         }
 
-        // Chỉ xử lý va chạm trên Server hoặc chế độ Standalone
-        bool isServerOrStandalone = NetworkManager.Singleton == null || NetworkManager.Singleton.IsServer;
-        if (!isServerOrStandalone) return;
         if (isHit) return;
 
         // Bỏ qua va chạm với bất kỳ đối tượng Player nào

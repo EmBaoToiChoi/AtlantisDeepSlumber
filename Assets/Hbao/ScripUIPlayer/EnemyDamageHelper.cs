@@ -2,11 +2,12 @@ using UnityEngine;
 
 public static class EnemyDamageHelper
 {
-    public static void DealDamage(Transform playerTransform, float damage, Vector3 knockbackForce)
+    public static void DealDamage(Transform targetTransform, float damage, Vector3 knockbackForce)
     {
-        if (playerTransform == null) return;
+        if (targetTransform == null) return;
 
-        var skeleton = playerTransform.GetComponentInParent<Skeleton>();
+        // 1. Kiểm tra đối tượng là Player
+        var skeleton = targetTransform.GetComponentInParent<Skeleton>() ?? targetTransform.GetComponentInChildren<Skeleton>();
         if (skeleton != null)
         {
             skeleton.TakeDamage(damage);
@@ -14,7 +15,7 @@ public static class EnemyDamageHelper
             return;
         }
 
-        var simple = playerTransform.GetComponentInParent<SimplePlayerTest>();
+        var simple = targetTransform.GetComponentInParent<SimplePlayerTest>() ?? targetTransform.GetComponentInChildren<SimplePlayerTest>();
         if (simple != null)
         {
             simple.RequestTakeDamage(damage);
@@ -22,7 +23,7 @@ public static class EnemyDamageHelper
             return;
         }
 
-        var leo = playerTransform.GetComponentInParent<LeoPlayer>();
+        var leo = targetTransform.GetComponentInParent<LeoPlayer>() ?? targetTransform.GetComponentInChildren<LeoPlayer>();
         if (leo != null)
         {
             leo.RequestTakeDamage(damage);
@@ -30,7 +31,7 @@ public static class EnemyDamageHelper
             return;
         }
 
-        var arthur = playerTransform.GetComponentInParent<ArthurPlayer>();
+        var arthur = targetTransform.GetComponentInParent<ArthurPlayer>() ?? targetTransform.GetComponentInChildren<ArthurPlayer>();
         if (arthur != null)
         {
             arthur.RequestTakeDamage(damage);
@@ -38,7 +39,7 @@ public static class EnemyDamageHelper
             return;
         }
 
-        var elena = playerTransform.GetComponentInParent<ElenaPlayer>();
+        var elena = targetTransform.GetComponentInParent<ElenaPlayer>() ?? targetTransform.GetComponentInChildren<ElenaPlayer>();
         if (elena != null)
         {
             elena.RequestTakeDamage(damage);
@@ -46,20 +47,57 @@ public static class EnemyDamageHelper
             return;
         }
 
-        var maya = playerTransform.GetComponentInParent<MayaPlayer>();
+        var maya = targetTransform.GetComponentInParent<MayaPlayer>() ?? targetTransform.GetComponentInChildren<MayaPlayer>();
         if (maya != null)
         {
             maya.RequestTakeDamage(damage);
             maya.ApplyKnockback(knockbackForce);
             return;
         }
+
+        // 2. Dự phòng an toàn: Kiểm tra đối tượng là Enemy/Boss (MiniBossAI, FinalBossAI, BossAI, etc.)
+        var mb = targetTransform.GetComponentInParent<MiniBossAI>() ?? targetTransform.GetComponentInChildren<MiniBossAI>();
+        if (mb != null)
+        {
+            mb.TakeDamage(damage);
+            return;
+        }
+
+        var fb = targetTransform.GetComponentInParent<FinalBossAI>() ?? targetTransform.GetComponentInChildren<FinalBossAI>();
+        if (fb != null)
+        {
+            fb.TakeDamage(damage);
+            return;
+        }
+
+        var b = targetTransform.GetComponentInParent<BossAI>() ?? targetTransform.GetComponentInChildren<BossAI>();
+        if (b != null)
+        {
+            b.TakeDamage(damage);
+            return;
+        }
+
+        var e1 = targetTransform.GetComponentInParent<Enemy1_DapBua>() ?? targetTransform.GetComponentInChildren<Enemy1_DapBua>();
+        if (e1 != null) { e1.TakeDamage(damage); return; }
+
+        var e2 = targetTransform.GetComponentInParent<Enemy2_Zombie>() ?? targetTransform.GetComponentInChildren<Enemy2_Zombie>();
+        if (e2 != null) { e2.TakeDamage(damage); return; }
+
+        var e3 = targetTransform.GetComponentInParent<Enemy3_Buaa>() ?? targetTransform.GetComponentInChildren<Enemy3_Buaa>();
+        if (e3 != null) { e3.TakeDamage(damage); return; }
+
+        var e4 = targetTransform.GetComponentInParent<Enemy4_Bongtoi>() ?? targetTransform.GetComponentInChildren<Enemy4_Bongtoi>();
+        if (e4 != null) { e4.TakeDamage(damage); return; }
+
+        var e5 = targetTransform.GetComponentInParent<Enemy5_PhuThuy>() ?? targetTransform.GetComponentInChildren<Enemy5_PhuThuy>();
+        if (e5 != null) { e5.TakeDamage(damage); return; }
     }
 
     public static void DealKickDamageWithStun(Transform playerTransform, float damage, Vector3 knockbackForce, float stunDuration)
     {
         if (playerTransform == null) return;
 
-        // Trừ máu trước (không áp dụng đẩy lùi qua DealDamage thường để tránh đẩy lực 2 lần)
+        // Trừ máu trước
         DealDamage(playerTransform, damage, Vector3.zero);
 
         // Áp dụng hiệu ứng ngã / khóa di chuyển
@@ -70,7 +108,6 @@ public static class EnemyDamageHelper
         }
         else
         {
-            // Dự phòng (fallback) nếu chưa gắn script PlayerKickedStun: chỉ đẩy lùi thông thường
             var skeleton = playerTransform.GetComponentInParent<Skeleton>();
             if (skeleton != null) { skeleton.ApplyKnockback(knockbackForce); return; }
             var simple = playerTransform.GetComponentInParent<SimplePlayerTest>();

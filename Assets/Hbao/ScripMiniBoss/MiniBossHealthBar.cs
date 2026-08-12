@@ -220,28 +220,38 @@ public class MiniBossHealthBar : MonoBehaviour
     /// </summary>
     private bool AreAllBossesAndClonesDead()
     {
-        // Boss chính còn sống → chưa ẩn UI
+        // 1. Boss chính còn sống → chưa ẩn UI
         if (boss != null && boss.gameObject.activeInHierarchy && !boss.IsDead && boss.ActualCurrentHealth > 0)
         {
             return false;
         }
 
-        // Nếu chưa triệu hồi phân thân → chỉ cần boss chính chết là ẩn UI
-        if (!clonesDiscovered && clone1AI == null && clone2AI == null)
+        // 2. Nếu boss đã triệu hồi phân thân hoặc có phân thân trong Scene:
+        bool hasClones = (boss != null && boss.hasSummonedClones) || clonesDiscovered || clone1AI != null || clone2AI != null;
+        if (hasClones)
         {
-            return true;
-        }
+            if (clone1AI != null && clone1AI.gameObject.activeInHierarchy && !clone1AI.IsDead && clone1AI.ActualCurrentHealth > 0)
+            {
+                return false;
+            }
 
-        // Clone 1 còn sống → chưa ẩn UI
-        if (clone1AI != null && clone1AI.gameObject.activeInHierarchy && !clone1AI.IsDead && clone1AI.ActualCurrentHealth > 0)
-        {
-            return false;
-        }
+            if (clone2AI != null && clone2AI.gameObject.activeInHierarchy && !clone2AI.IsDead && clone2AI.ActualCurrentHealth > 0)
+            {
+                return false;
+            }
 
-        // Clone 2 còn sống → chưa ẩn UI
-        if (clone2AI != null && clone2AI.gameObject.activeInHierarchy && !clone2AI.IsDead && clone2AI.ActualCurrentHealth > 0)
-        {
-            return false;
+            // Quét tìm trong scene nếu biến tham chiếu bị lạc
+            var allBosses = FindObjectsByType<MiniBossAI>(FindObjectsSortMode.None);
+            foreach (var b in allBosses)
+            {
+                if (b != null && b != boss && b.isClone && b.gameObject.activeInHierarchy)
+                {
+                    if (!b.IsDead && b.ActualCurrentHealth > 0)
+                    {
+                        return false;
+                    }
+                }
+            }
         }
 
         return true;

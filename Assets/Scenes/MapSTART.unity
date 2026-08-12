@@ -317178,6 +317178,10 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 6911834658827931775, guid: a4c9e9fc680c04043ad3fd5d51bf546b, type: 3}
+      propertyPath: summonHoleVFXScale
+      value: 1.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 6911834658827931775, guid: a4c9e9fc680c04043ad3fd5d51bf546b, type: 3}
       propertyPath: onBossDeathEvent.m_PersistentCalls.m_Calls.Array.data[0].m_Target
       value: 
       objectReference: {fileID: 876999959}

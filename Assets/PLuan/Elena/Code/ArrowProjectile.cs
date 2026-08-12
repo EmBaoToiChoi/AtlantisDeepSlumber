@@ -143,13 +143,10 @@ public class ArrowProjectile : NetworkBehaviour
         {
             PlayHitSound();
             
-            // Chỉ xử lý sát thương trên Server hoặc chế độ Standalone
-            bool isServerOrStandalone = NetworkManager.Singleton == null || NetworkManager.Singleton.IsServer;
-            if (!isServerOrStandalone) return;
+            // Xử lý sát thương trực tiếp lên quái vật
             Transform enemyRoot = other.transform.root;
             if (hitEnemyRoots.Contains(enemyRoot))
             {
-                // Bỏ qua nếu quái vật này đã bị mũi tên này bắn trúng rồi
                 return;
             }
             hitEnemyRoots.Add(enemyRoot);
