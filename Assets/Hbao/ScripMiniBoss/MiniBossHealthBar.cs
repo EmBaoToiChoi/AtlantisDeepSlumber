@@ -132,37 +132,26 @@ public class MiniBossHealthBar : MonoBehaviour
 
     private void DiscoverClones()
     {
-        if (clone1AI != null && clone2AI != null && clone1AI.gameObject.activeInHierarchy && clone2AI.gameObject.activeInHierarchy)
-        {
-            clonesDiscovered = true;
-            return;
-        }
+        if (clonesDiscovered) return; // Khóa cứng một khi đã phát hiện hoặc đăng ký, không bao giờ ghi đè lại!
 
         var allBosses = FindObjectsByType<MiniBossAI>(FindObjectsSortMode.None);
         foreach (var b in allBosses)
         {
-            if (b != null && b.gameObject.activeInHierarchy && b != boss)
+            if (b != null && b.gameObject.activeInHierarchy && b != boss && b.isClone)
             {
-                if (b.isClone || b.gameObject.name.Contains("Clone") || b.gameObject.name.Contains("(Clone)"))
+                if (clone1AI == null)
                 {
-                    if (clone1AI == null || !clone1AI.gameObject.activeInHierarchy)
-                    {
-                        clone1AI = b;
-                        clone1DisplayedHealth = -1f;
-                    }
-                    else if ((clone2AI == null || !clone2AI.gameObject.activeInHierarchy) && b != clone1AI)
-                    {
-                        clone2AI = b;
-                        clone2DisplayedHealth = -1f;
-                        break;
-                    }
+                    clone1AI = b;
+                    clone1DisplayedHealth = -1f;
+                }
+                else if (clone2AI == null && b != clone1AI)
+                {
+                    clone2AI = b;
+                    clone2DisplayedHealth = -1f;
+                    clonesDiscovered = true;
+                    break;
                 }
             }
-        }
-
-        if (clone1AI != null || clone2AI != null)
-        {
-            clonesDiscovered = true;
         }
     }
 
