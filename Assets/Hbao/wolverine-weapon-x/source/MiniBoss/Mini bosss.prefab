@@ -428,6 +428,21 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   ShowTopMostFoldoutHeaderGroup: 1
+  onBossDeathEvent:
+    m_PersistentCalls:
+      m_Calls:
+      - m_Target: {fileID: 0}
+        m_TargetAssemblyTypeName: VideoCutsceneController, Assembly-CSharp
+        m_MethodName: StartCutscene
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
   phase1MaxHealth: 500
   phase2MaxHealth: 700
   maxHealth: 1200
@@ -443,6 +458,26 @@ MonoBehaviour:
   enrageTrigger: Enrage
   enrageVFXPrefab: {fileID: 2692375763741349971, guid: a047b1cf5e54c6b43a92f67dd966d4b1, type: 3}
   enrageSFXSound: {fileID: 0}
+  isClone: 0
+  clonePrefab: {fileID: 4817351704256837389}
+  summonHoleVFXPrefab: {fileID: 7639752885123374874, guid: 49b65b7f1d666d94abb46325e69627ed, type: 3}
+  summonHoleVFXScale: 2.5
+  isSummonInvulnerable: 0
+  summonCloneCounter:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 0
+  furiousChargeSpeed: 15.5
+  furiousChargeCooldown: 20
+  shadowBlinkCooldown: 18
+  shadowBlinkVFX: {fileID: 0}
+  shadowBlinkSFX: {fileID: 0}
+  preSummonAudioClip: {fileID: 8300000, guid: fb3ac37c8083f444690e2cd75000eebe, type: 3}
+  summonSkillAudioClip: {fileID: 8300000, guid: 26748a0abcc80f442b7253d132ab6fc8, type: 3}
+  bossAudioVolume: 0.85
+  loopBossAudio: 1
+  bossAudioSource: {fileID: 0}
   currentState:
     UpdateTraits:
       MinSecondsBetweenUpdates: 0
@@ -484,6 +519,11 @@ MonoBehaviour:
       MaxSecondsBetweenUpdates: 0
     m_InternalValue: 0
   enrageCounter:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 0
+  shadowBlinkCounter:
     UpdateTraits:
       MinSecondsBetweenUpdates: 0
       MaxSecondsBetweenUpdates: 0
@@ -629,11 +669,19 @@ MonoBehaviour:
   expDropPoint: {fileID: 0}
   repairItemPrefab: {fileID: 0}
   repairItemDropChance: 0.3
+  hitSoundClip: {fileID: 0}
+  deathSoundClip: {fileID: 0}
+  deathVfxPrefab: {fileID: 0}
+  deathVfxScale: 2
+  stunVfxPrefab: {fileID: 0}
+  stunVfxHeightOffset: 2.4
+  stunVfxScale: 2
   sightRange: 15
   fieldOfView: 90
   attackRange: 2
   patrolWalkSpeed: 2.5
   chaseRunSpeed: 5
+  maxChaseDistance: 18
   patrolWaitMin: 1
   patrolWaitMax: 4
   patrolMoveChance: 0.7
@@ -649,6 +697,8 @@ MonoBehaviour:
   atkLeftTrigger: AttackLeft
   atkRightTrigger: AttackRight
   atkComboTrigger: AttackCombo
+  canTacticalFlee: 1
+  fleeHealthThreshold: 0.25
 --- !u!114 &3953951991089151068
 MonoBehaviour:
   m_ObjectHideFlags: 0

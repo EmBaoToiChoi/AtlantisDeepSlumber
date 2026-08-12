@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Reflection;
 using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.AI;
@@ -46,6 +47,10 @@ public class MiniBossAI : NetworkBehaviour
     [Header("Summon Clones Skill Settings (50% HP)")]
     public bool isClone = false; // Đánh dấu nếu đây là bản sao phân thân
     public GameObject clonePrefab; // Prefab phân thân (nếu null sẽ dùng chính bản thân MiniBoss)
+    [Tooltip("Prefab hố tử thần / Ma trận triệu hồi hố tối dưới đất tại vị trí 2 phân thân nhô lên")]
+    public GameObject summonHoleVFXPrefab;
+    [Tooltip("Kích thước scale cho VFX vùng triệu hồi hố tử thần (mặc định 2.5)")]
+    public float summonHoleVFXScale = 2.5f;
     private bool hasSummonedClones = false;
     public bool isSummonInvulnerable = false; // Trạng thái MIỄN THƯƠNG trong lúc đang gồng triệu hồi
     public NetworkVariable<int> summonCloneCounter = new NetworkVariable<int>(
@@ -63,6 +68,19 @@ public class MiniBossAI : NetworkBehaviour
     private float shadowBlinkTimer = 0f;
     public GameObject shadowBlinkVFX;
     public AudioClip shadowBlinkSFX;
+
+    [Header("MiniBoss Synchronized Looping Audio Settings (Mọi người đều nghe)")]
+    [Tooltip("Âm thanh / Nhạc nền lúc CHƯA triệu hồi phân thân (Trạng thái chiến đấu bình thường, tự động Loop)")]
+    public AudioClip preSummonAudioClip;
+    [Tooltip("Âm thanh / Nhạc nền LÚC TRIỆU HỒI phân thân (Trạng thái gồng skill triệu hồi 2 phân thân, tự động Loop)")]
+    public AudioClip summonSkillAudioClip;
+    [Tooltip("Âm lượng âm thanh MiniBoss (0.0 đến 1.0)")]
+    [Range(0f, 1f)] public float bossAudioVolume = 0.85f;
+    [Tooltip("Tự động lặp lại (Loop) âm thanh")]
+    public bool loopBossAudio = true;
+
+    [Tooltip("AudioSource dùng phát nhạc (Nếu để trống script sẽ tự tìm/tạo AudioSource)")]
+    public AudioSource bossAudioSource;
 
     [Header("Network State Sync")]
     public NetworkVariable<MiniBossState> currentState = new NetworkVariable<MiniBossState>(
@@ -346,6 +364,63 @@ public class MiniBossAI : NetworkBehaviour
         }
     }
 
+    private AudioSource EnsureAudioSource()
+    {
+        if (bossAudioSource == null)
+        {
+            bossAudioSource = GetComponent<AudioSource>();
+            if (bossAudioSource == null)
+            {
+                bossAudioSource = gameObject.AddComponent<AudioSource>();
+            }
+            bossAudioSource.playOnAwake = false;
+            bossAudioSource.spatialBlend = 0f; // 2D Sound so all 4 players hear clearly across the scene
+            bossAudioSource.volume = bossAudioVolume;
+            bossAudioSource.loop = loopBossAudio;
+        }
+        return bossAudioSource;
+    }
+
+    public void PlayBossAudioNet(int audioType)
+    {
+        if (!isStandaloneMode && IsNetworkActive && IsServer)
+        {
+            PlayBossAudioClientRpc(audioType);
+        }
+        else
+        {
+            ExecutePlayBossAudio(audioType);
+        }
+    }
+
+    [ClientRpc]
+    private void PlayBossAudioClientRpc(int audioType)
+    {
+        ExecutePlayBossAudio(audioType);
+    }
+
+    private void ExecutePlayBossAudio(int audioType)
+    {
+        AudioSource audio = EnsureAudioSource();
+        if (audio == null) return;
+
+        if (audioType == 0)
+        {
+            if (audio.isPlaying) audio.Stop();
+            return;
+        }
+
+        AudioClip clipToPlay = (audioType == 2) ? summonSkillAudioClip : preSummonAudioClip;
+        if (clipToPlay == null) return;
+
+        if (audio.clip == clipToPlay && audio.isPlaying) return;
+
+        audio.clip = clipToPlay;
+        audio.volume = bossAudioVolume;
+        audio.loop = loopBossAudio;
+        audio.Play();
+    }
+
     public void ActivateBoss()
     {
         bool auth = isStandaloneMode || (IsNetworkActive && IsServer) || isClone || !IsSpawned;
@@ -360,6 +435,12 @@ public class MiniBossAI : NetworkBehaviour
         if (!isStandaloneMode && IsServer && IsSpawned)
         {
             isBossActive.Value = true;
+        }
+
+        // Kích hoạt phát âm thanh lúc chiến đấu bình thường (lặp lại & đồng bộ cho 4 Player)
+        if (!isClone)
+        {
+            PlayBossAudioNet(1);
         }
 
         // BẢO ĐẢM 100%: Lập tức quét tìm Player gần nhất và chuyển sang trạng thái Chase rượt đuổi ngay lập tức!
@@ -559,18 +640,87 @@ public class MiniBossAI : NetworkBehaviour
 
     private void SummonClones()
     {
-        Debug.Log("[MiniBossAI] Máu xuống 50% HP! Triệu hồi 2 phân thân kế bên và tiếp tục combat bình thường!");
+        Debug.Log("[MiniBossAI] Máu xuống 50% HP! Bắt đầu chuỗi đồng bộ camera zoom triệu hồi 2 phân thân cho cả 4 Player!");
 
-        PlaySummonCloneVisuals();
+        // Phát âm thanh triệu hồi phân thân (lặp lại & đồng bộ cho 4 Player)
+        PlayBossAudioNet(2);
 
-        Vector3 bossScale = transform.localScale;
-        if (bossScale.sqrMagnitude < 0.1f) bossScale = new Vector3(3f, 3f, 3f);
+        isSummonInvulnerable = true;
+        if (AgentReady)
+        {
+            agent.isStopped = true;
+        }
+        SetSpeedNet(0f);
 
         Vector3 targetPosLeft = transform.position - transform.right * 2.5f;
         Vector3 targetPosRight = transform.position + transform.right * 2.5f;
 
         if (NavMesh.SamplePosition(targetPosLeft, out NavMeshHit hitL, 4.0f, NavMesh.AllAreas)) targetPosLeft = hitL.position;
         if (NavMesh.SamplePosition(targetPosRight, out NavMeshHit hitR, 4.0f, NavMesh.AllAreas)) targetPosRight = hitR.position;
+
+        if (!isStandaloneMode && IsServer)
+        {
+            summonCloneCounter.Value++;
+            TriggerSummonCutsceneClientRpc(targetPosLeft, targetPosRight);
+        }
+        else if (isStandaloneMode)
+        {
+            StartCoroutine(SummonCloneCameraCutsceneClientRoutine(targetPosLeft, targetPosRight));
+        }
+
+        StartCoroutine(SummonCloneSequenceServerRoutine(targetPosLeft, targetPosRight));
+    }
+
+    [ClientRpc]
+    private void TriggerSummonCutsceneClientRpc(Vector3 posLeft, Vector3 posRight)
+    {
+        StartCoroutine(SummonCloneCameraCutsceneClientRoutine(posLeft, posRight));
+    }
+
+    private IEnumerator SummonCloneSequenceServerRoutine(Vector3 targetPosLeft, Vector3 targetPosRight)
+    {
+        PlaySummonCloneVisuals();
+        if (anim != null && !string.IsNullOrEmpty(enrageTrigger))
+        {
+            anim.SetTrigger(enrageTrigger);
+        }
+
+        // Chờ 1.2s cho camera zoom in cận cảnh hoàn tất
+        yield return new WaitForSeconds(1.2f);
+
+        // Server thực hiện chuỗi sinh 2 hố tử thần và cho 2 phân thân nhô lên từ dưới đất
+        bool auth = isStandaloneMode || (IsNetworkActive && IsServer);
+        if (auth)
+        {
+            yield return StartCoroutine(ExecuteRisingClonesSequence(targetPosLeft, targetPosRight));
+        }
+        else
+        {
+            yield return new WaitForSeconds(3.5f);
+        }
+
+        // Chờ thêm 1.2s cho camera zoom out quay về player
+        yield return new WaitForSeconds(1.2f);
+
+        isSummonInvulnerable = false;
+
+        // Chuyển âm thanh quay về nhạc nền chiến đấu bình thường
+        PlayBossAudioNet(1);
+
+        if (targetPlayer != null) ChangeState(MiniBossState.Chase);
+        else ChangeState(MiniBossState.Idle);
+    }
+
+    private IEnumerator ExecuteRisingClonesSequence(Vector3 targetPosLeft, Vector3 targetPosRight)
+    {
+        Vector3 bossScale = transform.localScale;
+        if (bossScale.sqrMagnitude < 0.1f) bossScale = new Vector3(3f, 3f, 3f);
+
+        yield return new WaitForSeconds(0.4f);
+
+        // 2. Sinh 2 phân thân ở độ sâu -3.5m phía dưới mặt đất (ngay bên dưới hố tử thần)
+        Vector3 leftStartPos = targetPosLeft - Vector3.up * 3.5f;
+        Vector3 rightStartPos = targetPosRight - Vector3.up * 3.5f;
 
         GameObject prefabToSpawn = clonePrefab;
         bool instantiatedFromSceneObject = false;
@@ -580,11 +730,9 @@ public class MiniBossAI : NetworkBehaviour
             instantiatedFromSceneObject = true;
         }
 
-        // 1. Sinh 2 phân thân ngay KẾ BÊN MINI BOSS ở vị trí và kích thước bình thường
-        GameObject cloneLeft = Instantiate(prefabToSpawn, targetPosLeft, transform.rotation);
-        GameObject cloneRight = Instantiate(prefabToSpawn, targetPosRight, transform.rotation);
+        GameObject cloneLeft = Instantiate(prefabToSpawn, leftStartPos, transform.rotation);
+        GameObject cloneRight = Instantiate(prefabToSpawn, rightStartPos, transform.rotation);
 
-        // Nếu clone tạo từ gameObject Scene: Xóa NetworkObject trùng lặp trên Clone để NGO không tiêu hủy Boss gốc
         if (instantiatedFromSceneObject)
         {
             var netL = cloneLeft.GetComponent<NetworkObject>();
@@ -594,21 +742,50 @@ public class MiniBossAI : NetworkBehaviour
             if (netR != null) DestroyImmediate(netR);
         }
 
-        cloneLeft.transform.position = targetPosLeft;
-        cloneRight.transform.position = targetPosRight;
+        cloneLeft.transform.position = leftStartPos;
+        cloneRight.transform.position = rightStartPos;
         cloneLeft.transform.localScale = bossScale;
         cloneRight.transform.localScale = bossScale;
-
-        // Bảo đảm 100% kích thước MiniBoss chính không bị ảnh hưởng
         transform.localScale = bossScale;
 
+        // Tạm thời tắt NavMeshAgent và Collider của phân thân trong lúc đang nhô lên
         MiniBossAI leftAI = cloneLeft.GetComponent<MiniBossAI>();
         MiniBossAI rightAI = cloneRight.GetComponent<MiniBossAI>();
+
+        if (leftAI != null && leftAI.agent != null) leftAI.agent.enabled = false;
+        if (rightAI != null && rightAI.agent != null) rightAI.agent.enabled = false;
+
+        var leftColliders = cloneLeft.GetComponentsInChildren<Collider>();
+        foreach (var c in leftColliders) if (c != null) c.enabled = false;
+
+        var rightColliders = cloneRight.GetComponentsInChildren<Collider>();
+        foreach (var c in rightColliders) if (c != null) c.enabled = false;
+
+        // 3. TỪ TỪ CHO 2 CON NHÂN BẢN NHÔ LÊN TỪ DƯỚI ĐẤT (2.5 GIÂY)
+        float riseDuration = 2.5f;
+        float riseElapsed = 0f;
+        while (riseElapsed < riseDuration)
+        {
+            riseElapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(riseElapsed / riseDuration);
+            float smoothT = Mathf.SmoothStep(0f, 1f, t);
+
+            if (cloneLeft != null) cloneLeft.transform.position = Vector3.Lerp(leftStartPos, targetPosLeft, smoothT);
+            if (cloneRight != null) cloneRight.transform.position = Vector3.Lerp(rightStartPos, targetPosRight, smoothT);
+
+            yield return null;
+        }
+
+        if (cloneLeft != null) cloneLeft.transform.position = targetPosLeft;
+        if (cloneRight != null) cloneRight.transform.position = targetPosRight;
+
+        // Bật lại Collider và kích hoạt AI cho 2 phân thân khi đã nhô lên mặt đất
+        foreach (var c in leftColliders) if (c != null) c.enabled = true;
+        foreach (var c in rightColliders) if (c != null) c.enabled = true;
 
         ConfigureClone(leftAI, targetPosLeft);
         ConfigureClone(rightAI, targetPosRight);
 
-        // Đồng bộ Network nếu dùng clonePrefab hợp lệ
         if (!isStandaloneMode && IsServer && !instantiatedFromSceneObject)
         {
             NetworkObject netL = cloneLeft.GetComponent<NetworkObject>();
@@ -618,9 +795,183 @@ public class MiniBossAI : NetworkBehaviour
             if (netR != null && !netR.IsSpawned) netR.Spawn();
         }
 
-        // Tiếp tục combat bình thường ngay lập tức!
-        isSummonInvulnerable = false;
-        if (targetPlayer != null) ChangeState(MiniBossState.Chase);
+        // Đợi thêm 0.6s để người chơi ngắm cả 3 con Boss đứng oai phong trên mặt đất trước khi camera zoom out
+        yield return new WaitForSeconds(0.6f);
+    }
+
+    private GameObject PlayCloneSpawnVFX(Vector3 spawnPos)
+    {
+        Vector3 fxPos = spawnPos;
+        GameObject vfx = null;
+        if (summonHoleVFXPrefab != null)
+        {
+            vfx = Instantiate(summonHoleVFXPrefab, fxPos, Quaternion.identity);
+            Destroy(vfx, 6.0f);
+        }
+        else if (enrageVFXPrefab != null)
+        {
+            vfx = Instantiate(enrageVFXPrefab, fxPos + Vector3.up * 0.2f, Quaternion.identity);
+            Destroy(vfx, 5.0f);
+        }
+        else if (shadowBlinkVFX != null)
+        {
+            vfx = Instantiate(shadowBlinkVFX, fxPos + Vector3.up * 0.2f, Quaternion.identity);
+            Destroy(vfx, 4.0f);
+        }
+
+        if (vfx != null)
+        {
+            // Tự động scale rộng ra để bao quát cả khu vực phân thân nhô lên
+            float s = summonHoleVFXScale > 0.1f ? summonHoleVFXScale : 2.5f;
+            vfx.transform.localScale = new Vector3(s, s, s);
+
+            // Bật Looping cho tất cả ParticleSystem con để VFX không bị tắt nhanh trong quá trình triệu hồi (6.0s)
+            var particleSystems = vfx.GetComponentsInChildren<ParticleSystem>(true);
+            foreach (var ps in particleSystems)
+            {
+                if (ps != null)
+                {
+                    var main = ps.main;
+                    main.loop = true;
+                    if (!ps.isPlaying) ps.Play();
+                }
+            }
+        }
+
+        if (shadowBlinkSFX != null)
+        {
+            AudioSource.PlayClipAtPoint(shadowBlinkSFX, fxPos + Vector3.up * 1.0f, 1.0f);
+        }
+        return vfx;
+    }
+
+    private IEnumerator SummonCloneCameraCutsceneClientRoutine(Vector3 posLeft, Vector3 posRight)
+    {
+        Camera mainCam = Camera.main;
+        if (mainCam == null) mainCam = FindFirstObjectByType<Camera>();
+        if (mainCam == null) yield break;
+
+        MonoBehaviour localPlayer = GetLocalPlayerScript();
+        if (localPlayer != null)
+        {
+            SetPlayerField(localPlayer, "enableCameraFollow", false);
+        }
+
+        Vector3 startCamPos = mainCam.transform.position;
+        Quaternion startCamRot = mainCam.transform.rotation;
+
+        Vector3 bossFocusCenter = transform.position + Vector3.up * 1.5f;
+
+        Vector3 dirFromBossToCam = (startCamPos - bossFocusCenter).normalized;
+        if (dirFromBossToCam.sqrMagnitude < 0.01f) dirFromBossToCam = -transform.forward;
+        dirFromBossToCam.y = 0.15f;
+        dirFromBossToCam = dirFromBossToCam.normalized;
+
+        float cutsceneDistance = 6.5f;
+        Vector3 targetCamPos = bossFocusCenter + dirFromBossToCam * cutsceneDistance + Vector3.up * 0.6f;
+        Quaternion targetCamRot = Quaternion.LookRotation(bossFocusCenter - targetCamPos);
+
+        Vector3 playerCamOffset = Vector3.zero;
+        if (localPlayer != null)
+        {
+            playerCamOffset = startCamPos - localPlayer.transform.position;
+        }
+
+        // 1. ZOOM IN TUTU LẠI GẦN MINI BOSS (1.2 GIÂY)
+        float zoomInDuration = 1.2f;
+        float elapsed = 0f;
+        while (elapsed < zoomInDuration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.SmoothStep(0f, 1f, elapsed / zoomInDuration);
+            mainCam.transform.position = Vector3.Lerp(startCamPos, targetCamPos, t);
+            mainCam.transform.rotation = Quaternion.Slerp(startCamRot, targetCamRot, t);
+            yield return null;
+        }
+        mainCam.transform.position = targetCamPos;
+        mainCam.transform.rotation = targetCamRot;
+
+        // 2. SINH 2 HỐ TỬ THẦN TẠI VỊ TRÍ ĐỒNG BỘ CHO TẤT CẢ CLIENT
+        PlayCloneSpawnVFX(posLeft);
+        PlayCloneSpawnVFX(posRight);
+
+        // 3. DỪNG XEM CẢNH HỐ TỬ THẦN & PHÂN THÂN NHÔ LÊN (3.5 GIÂY)
+        float holdDuration = 3.5f;
+        float holdElapsed = 0f;
+        while (holdElapsed < holdDuration)
+        {
+            holdElapsed += Time.deltaTime;
+            // Rung nhẹ camera khi 2 con nhân bản đang từ từ nhô lên từ dưới đất
+            Vector3 shakeOffset = (holdElapsed > 0.4f && holdElapsed < 3.0f) ? (Random.insideUnitSphere * 0.03f) : Vector3.zero;
+            mainCam.transform.position = targetCamPos + shakeOffset;
+            mainCam.transform.rotation = targetCamRot;
+            yield return null;
+        }
+
+        // 4. ZOOM OUT TUTU QUAY VỀ VỊ TRÍ PLAYER (1.2 GIÂY)
+        float zoomOutDuration = 1.2f;
+        elapsed = 0f;
+        while (elapsed < zoomOutDuration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.SmoothStep(0f, 1f, elapsed / zoomOutDuration);
+
+            Vector3 returnCamPos = startCamPos;
+            Quaternion returnCamRot = startCamRot;
+
+            if (localPlayer != null)
+            {
+                returnCamPos = localPlayer.transform.position + playerCamOffset;
+            }
+
+            mainCam.transform.position = Vector3.Lerp(targetCamPos, returnCamPos, t);
+            mainCam.transform.rotation = Quaternion.Slerp(targetCamRot, returnCamRot, t);
+            yield return null;
+        }
+
+        // KHÔI PHỤC THEO DÕI CAMERA CHO LOCAL PLAYER
+        if (localPlayer != null)
+        {
+            SetPlayerField(localPlayer, "enableCameraFollow", true);
+        }
+    }
+
+    private MonoBehaviour GetLocalPlayerScript()
+    {
+        var scripts = FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None);
+        foreach (var script in scripts)
+        {
+            if (script == null) continue;
+            System.Type t = script.GetType();
+            string n = t.Name;
+            if (n == "LeoPlayer" || n == "ArthurPlayer" || n == "ElenaPlayer" || n == "MayaPlayer" || n == "SimplePlayerTest")
+            {
+                var isOwnerProp = t.GetProperty("IsOwner", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+                var isSpawnedProp = t.GetProperty("IsSpawned", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+                var isStandaloneField = t.GetField("isStandaloneMode", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+
+                bool isStandalone = isStandaloneField != null && (bool)isStandaloneField.GetValue(script);
+                bool isOwner = isOwnerProp != null && (bool)isOwnerProp.GetValue(script, null);
+                bool isSpawned = isSpawnedProp != null && (bool)isSpawnedProp.GetValue(script, null);
+
+                if (isStandalone || (isSpawned && isOwner))
+                {
+                    return script;
+                }
+            }
+        }
+        return null;
+    }
+
+    private void SetPlayerField(MonoBehaviour playerScript, string fieldName, object value)
+    {
+        if (playerScript == null) return;
+        System.Type type = playerScript.GetType();
+        var field = type.GetField(fieldName, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+        if (field != null)
+        {
+            field.SetValue(playerScript, value);
+        }
     }
 
     private void ConfigureClone(MiniBossAI cloneAI, Vector3 spawnPos)
@@ -1077,6 +1428,11 @@ public class MiniBossAI : NetworkBehaviour
 
 private void Die()
     {
+        if (!isClone)
+        {
+            PlayBossAudioNet(0);
+        }
+
         if (AgentReady) agent.isStopped = true;
         if (agent != null) agent.enabled = false;
         SetSpeedNet(0f);
