@@ -127,21 +127,24 @@ public class MiniBossHealthBar : MonoBehaviour
         var allBosses = FindObjectsByType<MiniBossAI>(FindObjectsSortMode.None);
         foreach (var b in allBosses)
         {
-            if (b != null && b.isClone && b.gameObject.activeInHierarchy)
+            if (b != null && b.gameObject.activeInHierarchy && b != boss)
             {
-                if (clone1AI == null)
+                if (b.isClone || b.gameObject.name.Contains("Clone") || b.gameObject.name.Contains("(Clone)"))
                 {
-                    clone1AI = b;
-                }
-                else if (clone2AI == null)
-                {
-                    clone2AI = b;
-                    break;
+                    if (clone1AI == null)
+                    {
+                        clone1AI = b;
+                    }
+                    else if (clone2AI == null && b != clone1AI)
+                    {
+                        clone2AI = b;
+                        break;
+                    }
                 }
             }
         }
 
-        if (clone1AI != null && clone2AI != null)
+        if (clone1AI != null || clone2AI != null)
         {
             clonesDiscovered = true;
         }
@@ -292,13 +295,13 @@ public class MiniBossHealthBar : MonoBehaviour
         // Main Boss Health
         UpdateMainHealthAnimation(boss);
 
-        // Clone Discovery (quét mỗi 0.5 giây sau khi boss triệu hồi xong)
-        if (!clonesDiscovered && boss != null && boss.IsBossActive)
+        // Clone Discovery (quét liên tục khi boss triệu hồi)
+        if ((!clonesDiscovered || clone1AI == null || clone2AI == null) && boss != null && boss.IsBossActive)
         {
             cloneScanTimer -= Time.deltaTime;
             if (cloneScanTimer <= 0f)
             {
-                cloneScanTimer = 0.5f;
+                cloneScanTimer = 0.25f;
                 DiscoverClones();
             }
         }
