@@ -186301,7 +186301,7 @@ MonoBehaviour:
   stoneEndPos: {fileID: 0}
   cinematicCamera: {fileID: 1493331150}
   stoneFallDuration: 1.5
-  cinematicWaitTime: 4
+  cinematicWaitTime: 5
 --- !u!114 &1435272570
 MonoBehaviour:
   m_ObjectHideFlags: 0
