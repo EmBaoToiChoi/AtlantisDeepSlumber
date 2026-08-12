@@ -49,8 +49,8 @@ public class MiniBossAI : NetworkBehaviour
     public GameObject clonePrefab; // Prefab phân thân (nếu null sẽ dùng chính bản thân MiniBoss)
     [Tooltip("Prefab hố tử thần / Ma trận triệu hồi hố tối dưới đất tại vị trí 2 phân thân nhô lên")]
     public GameObject summonHoleVFXPrefab;
-    [Tooltip("Kích thước scale cho VFX vùng triệu hồi hố tử thần (mặc định 1.0)")]
-    public float summonHoleVFXScale = 1.0f;
+    [Tooltip("Kích thước scale cho VFX vùng triệu hồi hố tử thần (mặc định 0.5)")]
+    public float summonHoleVFXScale = 0.5f;
     private bool hasSummonedClones = false;
     public bool isSummonInvulnerable = false; // Trạng thái MIỄN THƯƠNG trong lúc đang gồng triệu hồi
     public NetworkVariable<int> summonCloneCounter = new NetworkVariable<int>(
@@ -652,11 +652,11 @@ public class MiniBossAI : NetworkBehaviour
         }
         SetSpeedNet(0f);
 
-        Vector3 targetPosLeft = transform.position - transform.right * 2.5f;
-        Vector3 targetPosRight = transform.position + transform.right * 2.5f;
+        Vector3 targetPosLeft = transform.position - transform.right * 5.5f;
+        Vector3 targetPosRight = transform.position + transform.right * 5.5f;
 
-        if (NavMesh.SamplePosition(targetPosLeft, out NavMeshHit hitL, 4.0f, NavMesh.AllAreas)) targetPosLeft = hitL.position;
-        if (NavMesh.SamplePosition(targetPosRight, out NavMeshHit hitR, 4.0f, NavMesh.AllAreas)) targetPosRight = hitR.position;
+        if (NavMesh.SamplePosition(targetPosLeft, out NavMeshHit hitL, 5.0f, NavMesh.AllAreas)) targetPosLeft = hitL.position;
+        if (NavMesh.SamplePosition(targetPosRight, out NavMeshHit hitR, 5.0f, NavMesh.AllAreas)) targetPosRight = hitR.position;
 
         if (!isStandaloneMode && IsServer)
         {
@@ -675,6 +675,10 @@ public class MiniBossAI : NetworkBehaviour
     private void TriggerSummonCutsceneClientRpc(Vector3 posLeft, Vector3 posRight)
     {
         StartCoroutine(SummonCloneCameraCutsceneClientRoutine(posLeft, posRight));
+        if (!IsServer)
+        {
+            StartCoroutine(ExecuteRisingClonesSequence(posLeft, posRight));
+        }
     }
 
     private IEnumerator SummonCloneSequenceServerRoutine(Vector3 targetPosLeft, Vector3 targetPosRight)
@@ -718,9 +722,9 @@ public class MiniBossAI : NetworkBehaviour
 
         yield return new WaitForSeconds(0.4f);
 
-        // 2. Sinh 2 phân thân ở độ sâu -1.8m phía dưới mặt đất (đảm bảo nửa thân trên vừa lộ diện trên hố tử thần)
-        Vector3 leftStartPos = targetPosLeft - Vector3.up * 1.8f;
-        Vector3 rightStartPos = targetPosRight - Vector3.up * 1.8f;
+        // 2. Sinh 2 phân thân ở độ sâu -1.2m (nửa thân trên vừa nhô lên ngay tại hố tử thần)
+        Vector3 leftStartPos = targetPosLeft - Vector3.up * 1.2f;
+        Vector3 rightStartPos = targetPosRight - Vector3.up * 1.2f;
 
         GameObject prefabToSpawn = clonePrefab;
         bool instantiatedFromSceneObject = false;
@@ -732,6 +736,9 @@ public class MiniBossAI : NetworkBehaviour
 
         GameObject cloneLeft = Instantiate(prefabToSpawn, leftStartPos, transform.rotation);
         GameObject cloneRight = Instantiate(prefabToSpawn, rightStartPos, transform.rotation);
+
+        cloneLeft.name = "MiniBoss_Clone1";
+        cloneRight.name = "MiniBoss_Clone2";
 
         if (instantiatedFromSceneObject)
         {
@@ -749,9 +756,7 @@ public class MiniBossAI : NetworkBehaviour
         cloneRight.transform.position = rightStartPos;
         cloneLeft.transform.localScale = bossScale;
         cloneRight.transform.localScale = bossScale;
-        transform.localScale = bossScale;
 
-        // BẢO ĐẢM HIỂN THỊ: Bật toàn bộ Renderer & đánh dấu isClone = true ngay lập tức từ khi sinh ra
         MiniBossAI leftAI = cloneLeft.GetComponent<MiniBossAI>();
         MiniBossAI rightAI = cloneRight.GetComponent<MiniBossAI>();
 
@@ -759,23 +764,43 @@ public class MiniBossAI : NetworkBehaviour
         {
             leftAI.isClone = true;
             leftAI.hasSummonedClones = true;
+            leftAI.isSummonInvulnerable = false;
             leftAI.maxHealth = phase1MaxHealth * 0.45f;
             leftAI.localHealth = leftAI.maxHealth;
             if (leftAI.agent != null) leftAI.agent.enabled = false;
+            if (leftAI.visualRoot != null) leftAI.visualRoot.localPosition = Vector3.zero;
+            if (leftAI.anim != null)
+            {
+                leftAI.anim.Rebind();
+                leftAI.anim.Update(0f);
+            }
         }
 
         if (rightAI != null)
         {
             rightAI.isClone = true;
             rightAI.hasSummonedClones = true;
+            rightAI.isSummonInvulnerable = false;
             rightAI.maxHealth = phase1MaxHealth * 0.45f;
             rightAI.localHealth = rightAI.maxHealth;
             if (rightAI.agent != null) rightAI.agent.enabled = false;
+            if (rightAI.visualRoot != null) rightAI.visualRoot.localPosition = Vector3.zero;
+            if (rightAI.anim != null)
+            {
+                rightAI.anim.Rebind();
+                rightAI.anim.Update(0f);
+            }
         }
 
-        // Bật tất cả Mesh / SkinnedMeshRenderer của 2 phân thân
-        foreach (var r in cloneLeft.GetComponentsInChildren<Renderer>(true)) if (r != null) r.enabled = true;
-        foreach (var r in cloneRight.GetComponentsInChildren<Renderer>(true)) if (r != null) r.enabled = true;
+        // BẢO ĐẢM HIỂN THỊ: Bật toàn bộ Renderer & SkinnedMeshRenderer của 2 phân thân
+        foreach (var r in cloneLeft.GetComponentsInChildren<Renderer>(true))
+        {
+            if (r != null) { r.enabled = true; r.gameObject.SetActive(true); }
+        }
+        foreach (var r in cloneRight.GetComponentsInChildren<Renderer>(true))
+        {
+            if (r != null) { r.enabled = true; r.gameObject.SetActive(true); }
+        }
 
         // Tạm thời tắt Collider của phân thân trong lúc đang nhô lên
         var leftColliders = cloneLeft.GetComponentsInChildren<Collider>();
@@ -809,15 +834,6 @@ public class MiniBossAI : NetworkBehaviour
         ConfigureClone(leftAI, targetPosLeft);
         ConfigureClone(rightAI, targetPosRight);
 
-        if (!isStandaloneMode && IsServer && !instantiatedFromSceneObject)
-        {
-            NetworkObject netL = cloneLeft.GetComponent<NetworkObject>();
-            if (netL != null && !netL.IsSpawned) netL.Spawn();
-
-            NetworkObject netR = cloneRight.GetComponent<NetworkObject>();
-            if (netR != null && !netR.IsSpawned) netR.Spawn();
-        }
-
         // Đợi thêm 0.6s để người chơi ngắm cả 3 con Boss đứng oai phong trên mặt đất trước khi camera zoom out
         yield return new WaitForSeconds(0.6f);
     }
@@ -844,8 +860,8 @@ public class MiniBossAI : NetworkBehaviour
 
         if (vfx != null)
         {
-            // Scale vừa vặn cho vùng triệu hồi hố tử thần
-            float s = summonHoleVFXScale > 0.05f ? summonHoleVFXScale : 1.0f;
+            // Scale vừa vặn gọn gàng cho vùng triệu hồi hố tử thần
+            float s = summonHoleVFXScale > 0.01f ? summonHoleVFXScale : 0.5f;
             vfx.transform.localScale = new Vector3(s, s, s);
 
             // Bật Looping cho tất cả ParticleSystem con để VFX không bị tắt nhanh trong quá trình triệu hồi (6.0s)
@@ -1092,6 +1108,14 @@ public class MiniBossAI : NetworkBehaviour
 
     private void Update()
     {
+        // Khóa 100% di chuyển và tấn công của MiniBoss trong suốt thời gian triệu hồi phân thân
+        if (isSummonInvulnerable)
+        {
+            if (AgentReady) agent.isStopped = true;
+            SetSpeedNet(0f);
+            return;
+        }
+
         if (hitStaggerCooldownTimer > 0f) hitStaggerCooldownTimer -= Time.deltaTime;
         if (attackCooldownTimer > 0) attackCooldownTimer -= Time.deltaTime;
         if (shadowBlinkTimer > 0) shadowBlinkTimer -= Time.deltaTime;
