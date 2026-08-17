@@ -120,13 +120,22 @@ public class LobbySpotlightBeam : MonoBehaviour
         coneFilter.sharedMesh = GenerateConeMesh(topRadius, bottomRadius, beamHeight, 36);
 
         _coneRenderer = _volumetricConeObj.AddComponent<MeshRenderer>();
-        Shader beamShader = Shader.Find("Custom/VolumetricSpotlightBeam");
-        if (beamShader == null) beamShader = Shader.Find("Universal Render Pipeline/Particles/Unlit");
-        if (beamShader == null) beamShader = Shader.Find("Mobile/Particles/Additive");
-        if (beamShader == null) beamShader = Shader.Find("Sprites/Default");
+        
+        Material loadedBeamMat = Resources.Load<Material>("M_LobbySpotlightBeam");
+        if (loadedBeamMat != null)
+        {
+            _coneMaterial = new Material(loadedBeamMat);
+        }
+        else
+        {
+            Shader beamShader = Shader.Find("Custom/VolumetricSpotlightBeam");
+            if (beamShader == null) beamShader = Shader.Find("Mobile/Particles/Additive");
+            if (beamShader == null) beamShader = Shader.Find("Particles/Standard Unlit");
+            if (beamShader == null) beamShader = Shader.Find("Sprites/Default");
+            _coneMaterial = new Material(beamShader);
+        }
 
-        _coneMaterial = new Material(beamShader);
-        _coneMaterial.SetColor("_Color", beamColor);
+        _coneMaterial.SetColor("_Color", SingleGoldColor);
         _coneMaterial.SetFloat("_Intensity", 0.32f);
         _coneMaterial.SetFloat("_TopFade", 0.15f);
         _coneMaterial.SetFloat("_BottomFade", 0.35f);
@@ -147,11 +156,20 @@ public class LobbySpotlightBeam : MonoBehaviour
         discFilter.sharedMesh = GenerateDiscMesh(bottomRadius * 1.05f, 36);
 
         _groundRenderer = _groundDiscObj.AddComponent<MeshRenderer>();
-        Shader discShader = Shader.Find("Custom/LobbyGroundLightDisc");
-        if (discShader == null) discShader = beamShader;
+        
+        Material loadedDiscMat = Resources.Load<Material>("M_LobbyGroundDisc");
+        if (loadedDiscMat != null)
+        {
+            _groundMaterial = new Material(loadedDiscMat);
+        }
+        else
+        {
+            Shader discShader = Shader.Find("Custom/LobbyGroundLightDisc");
+            if (discShader == null) discShader = _coneMaterial != null ? _coneMaterial.shader : Shader.Find("Mobile/Particles/Additive");
+            _groundMaterial = new Material(discShader);
+        }
 
-        _groundMaterial = new Material(discShader);
-        _groundMaterial.SetColor("_Color", beamColor);
+        _groundMaterial.SetColor("_Color", SingleGoldColor);
         _groundMaterial.SetFloat("_Intensity", 0.35f);
         _groundRenderer.material = _groundMaterial;
         _groundRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;

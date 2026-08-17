@@ -2,7 +2,7 @@ Shader "Custom/LobbyGroundLightDisc"
 {
     Properties
     {
-        [HDR] _Color ("Core Color", Color) = (0.85, 0.92, 1.0, 0.4)
+        _Color ("Core Color", Color) = (1.0, 0.88, 0.42, 1.0)
         _Intensity ("Intensity", Float) = 0.35
         _InnerRadius ("Inner Core Radius", Range(0.0, 0.8)) = 0.05
         _OuterSoftness ("Outer Softness", Range(0.1, 1.0)) = 0.85
@@ -17,99 +17,12 @@ Shader "Custom/LobbyGroundLightDisc"
             "Queue" = "Transparent+110"
             "RenderType" = "Transparent"
             "IgnoreProjector" = "True"
-            "RenderPipeline" = "UniversalPipeline"
         }
 
         LOD 100
         Cull Off
         ZWrite Off
         Blend One One // Soft Additive blending for subtle floor light glow
-
-        Pass
-        {
-            Name "GroundDiscURP"
-            Tags { "LightMode" = "UniversalForward" }
-
-            HLSLPROGRAM
-            #pragma vertex vert
-            #pragma fragment frag
-            #pragma multi_compile_instancing
-            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
-
-            struct Attributes
-            {
-                float4 positionOS : POSITION;
-                float2 uv         : TEXCOORD0;
-                float4 color      : COLOR;
-                UNITY_VERTEX_INPUT_INSTANCE_ID
-            };
-
-            struct Varyings
-            {
-                float4 positionCS : SV_POSITION;
-                float2 uv         : TEXCOORD0;
-                float4 color      : COLOR;
-                UNITY_VERTEX_INPUT_INSTANCE_ID
-            };
-
-            CBUFFER_START(UnityPerMaterial)
-                float4 _Color;
-                float _Intensity;
-                float _InnerRadius;
-                float _OuterSoftness;
-                float _RingIntensity;
-                float _PulseSpeed;
-            CBUFFER_END
-
-            Varyings vert(Attributes input)
-            {
-                Varyings output;
-                UNITY_SETUP_INSTANCE_ID(input);
-                UNITY_TRANSFER_INSTANCE_ID(input, output);
-
-                output.positionCS = TransformObjectToHClip(input.positionOS.xyz);
-                output.uv = input.uv;
-                output.color = input.color;
-                return output;
-            }
-
-            half4 frag(Varyings input) : SV_Target
-            {
-                UNITY_SETUP_INSTANCE_ID(input);
-
-                float2 centeredUV = input.uv - float2(0.5, 0.5);
-                float dist = length(centeredUV) * 2.0;
-
-                // Ultra smooth soft radial falloff (no harsh ring)
-                float core = 1.0 - smoothstep(_InnerRadius, _InnerRadius + _OuterSoftness, dist);
-                
-                float pulse = sin(_Time.y * _PulseSpeed) * 0.5 + 0.5;
-                float ringDist = abs(dist - (0.5 + pulse * 0.1));
-                float ring = (1.0 - smoothstep(0.0, 0.2, ringDist)) * _RingIntensity;
-
-                float combinedAlpha = saturate(core + ring) * input.color.a;
-                half3 finalColor = _Color.rgb * _Intensity * combinedAlpha * input.color.rgb;
-
-                return half4(finalColor, 1.0);
-            }
-            ENDHLSL
-        }
-    }
-
-    // Fallback for compatibility
-    SubShader
-    {
-        Tags
-        {
-            "Queue" = "Transparent+110"
-            "RenderType" = "Transparent"
-            "IgnoreProjector" = "True"
-        }
-
-        LOD 100
-        Cull Off
-        ZWrite Off
-        Blend One One
 
         Pass
         {
@@ -153,7 +66,9 @@ Shader "Custom/LobbyGroundLightDisc"
                 float2 centeredUV = i.uv - float2(0.5, 0.5);
                 float dist = length(centeredUV) * 2.0;
 
+                // Ultra smooth soft radial falloff (no harsh ring)
                 float core = 1.0 - smoothstep(_InnerRadius, _InnerRadius + _OuterSoftness, dist);
+                
                 float pulse = sin(_Time.y * _PulseSpeed) * 0.5 + 0.5;
                 float ringDist = abs(dist - (0.5 + pulse * 0.1));
                 float ring = (1.0 - smoothstep(0.0, 0.2, ringDist)) * _RingIntensity;
@@ -166,5 +81,5 @@ Shader "Custom/LobbyGroundLightDisc"
             ENDCG
         }
     }
-    FallBack "Transparent/VertexLit"
+    FallBack "Mobile/Particles/Additive"
 }
