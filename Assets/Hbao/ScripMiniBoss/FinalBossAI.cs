@@ -2535,6 +2535,13 @@ public class FallingSwordProjectile : MonoBehaviour
         impactRadius = radius;
         playerLayer = layer;
         isFalling = true;
+        enabled = true;
+
+        var renderers = GetComponentsInChildren<Renderer>(true);
+        foreach (var r in renderers) { if (r != null) r.enabled = true; }
+
+        var particles = GetComponentsInChildren<ParticleSystem>(true);
+        foreach (var ps in particles) { if (ps != null) { ps.Clear(); ps.Play(); } }
     }
 
     public void Initialize(FinalBossAI owner, Vector3 groundPos, float speed, float dmg, float radius, LayerMask layer)
@@ -2559,14 +2566,17 @@ public class FallingSwordProjectile : MonoBehaviour
     {
         if (!isFalling) return;
 
-        // Quét tìm Player bằng IPlayerHUDTarget (chính xác tuyệt đối kể cả chạm collider con)
+        // Quét tìm Player bằng IPlayerHUDTarget hoặc Tag Player
         var hudTarget = other.GetComponentInParent<IPlayerHUDTarget>() ?? other.GetComponentInChildren<IPlayerHUDTarget>();
-        if (hudTarget != null)
+        Transform playerRoot = null;
+        if (hudTarget != null) playerRoot = hudTarget.transform;
+        else if (other.CompareTag("Player")) playerRoot = other.transform;
+
+        if (playerRoot != null)
         {
-            Transform playerRoot = hudTarget.transform;
             isFalling = false;
-            Vector3 knockbackDir = (playerRoot.position - transform.position).normalized + Vector3.up * 0.5f;
-            EnemyDamageHelper.DealDamage(playerRoot, damage, knockbackDir * 5f);
+            Vector3 knockbackDir = (playerRoot.position - transform.position).normalized + Vector3.up * 0.4f;
+            EnemyDamageHelper.DealDamage(playerRoot, damage, knockbackDir * 4f);
 
             if (bossOwner != null)
             {
