@@ -3292,8 +3292,8 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     [Header("Ghost Slash Skill Q Settings")]
     [Tooltip("Particle prefab riêng cho hiệu ứng Ảo ảnh Chém. Nếu để trống sẽ dùng pool VFX cũ.")]
     public GameObject qSkillParticlePrefab;
-    [Tooltip("Kích thước Scale của hiệu ứng vết chém Skill Q (Mặc định: 1.8f)")]
-    public float qSkillVfxScale = 1.8f;
+    [Tooltip("Kích thước Scale của hiệu ứng vết chém Skill Q (Mặc định: 0.5f)")]
+    public float qSkillVfxScale = 0.5f;
     [Tooltip("Độ cao điều chỉnh Y cho tâm hiệu ứng chém (0.0f = đúng tâm mục tiêu)")]
     public float qSkillVfxYOffset = 0.0f;
     [Tooltip("Tự động căn giữa toàn bộ GameObject con của VFX về tâm (0,0,0) để triệt tiêu các offset lệch 7.5m, 15m trong Prefab demo")]

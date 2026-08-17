@@ -64,6 +64,8 @@ public class MiniBossAI : NetworkBehaviour, ISwordRainOwner
     public float earthSpikesIntervalMax = 10f;
     [Tooltip("Sát thương mỗi lần đâm gai (-5 HP)")]
     public float earthSpikesDamage = 5f;
+    [Tooltip("Thời gian chờ đòn gồng/vòng sáng vàng trước khi gai đá nhô lên và gây sát thương (1.85s)")]
+    public float earthSpikesEmergenceDelay = 1.85f;
     private float earthSpikesTimer = 5f;
 
     [Header("Furious Charge Skill Settings (Chỉ thỉnh thoảng mới tăng tốc)")]
@@ -1413,9 +1415,9 @@ public class MiniBossAI : NetworkBehaviour, ISwordRainOwner
                 dmgZone.damageAmount = earthSpikesDamage;
                 dmgZone.baseDamageRadius = 3.2f;
                 dmgZone.baseMaxSpikeHeight = 2.5f;
-                dmgZone.spikeEmergenceDelay = 1.0f;
+                dmgZone.spikeEmergenceDelay = earthSpikesEmergenceDelay;
                 dmgZone.spikeActiveDuration = 1.6f;
-                dmgZone.vfxLifespan = 3.5f;
+                dmgZone.vfxLifespan = earthSpikesEmergenceDelay + 2.3f;
             }
 
             Debug.Log($"[MiniBossAI] Triệu hồi đồng loạt {spawnPositions.Length} bãi Gai Đất (VFX_Earth_Area_01) ở các vị trí ngẫu nhiên!");
@@ -1428,63 +1430,59 @@ public class MiniBossAI : NetworkBehaviour, ISwordRainOwner
         if (!auth) return;
 
         var players = GetAllActivePlayers();
-        List<Vector3> targetPositions = new List<Vector3>();
+        List<Vector3> clusterSpots = new List<Vector3>();
 
-        // 1. Quét tìm tất cả Player: Mỗi Player sẽ bị nhắm dội NHIỀU thanh kiếm (4 - 6 kiếm/người)
+        // 1. Quét tìm tất cả Player: Mỗi Player sẽ bị nhắm các bãi dội chùm kiếm (ngay dưới chân và quanh 2-3m)
         foreach (var p in players)
         {
             if (p != null && !IsPlayerDeadOrInvisible(p))
             {
-                // Kiếm 1: Ngay tâm dưới chân Player
-                targetPositions.Add(p.position);
+                // Bãi 1: Ngay tâm dưới chân Player
+                clusterSpots.Add(p.position);
 
-                // Các kiếm tiếp theo (3-5 kiếm nữa): Xoay quanh bán kính 1.2m - 3.8m quanh Player
-                int extraSwordsForThisPlayer = Random.Range(3, 6);
-                for (int k = 0; k < extraSwordsForThisPlayer; k++)
+                // Bãi 2: Bán kính 1.8m - 3.2m quanh Player
+                Vector2 randomOffset = Random.insideUnitCircle.normalized * Random.Range(1.8f, 3.2f);
+                Vector3 offsetPos = p.position + new Vector3(randomOffset.x, 0f, randomOffset.y);
+                if (NavMesh.SamplePosition(offsetPos, out NavMeshHit hit, 4f, NavMesh.AllAreas))
                 {
-                    Vector2 randomOffset = Random.insideUnitCircle * Random.Range(1.2f, 3.8f);
-                    Vector3 offsetPos = p.position + new Vector3(randomOffset.x, 0f, randomOffset.y);
-                    if (NavMesh.SamplePosition(offsetPos, out NavMeshHit hit, 4f, NavMesh.AllAreas))
-                    {
-                        targetPositions.Add(hit.position);
-                    }
-                    else
-                    {
-                        targetPositions.Add(offsetPos);
-                    }
+                    clusterSpots.Add(hit.position);
+                }
+                else
+                {
+                    clusterSpots.Add(offsetPos);
                 }
             }
         }
 
-        // 2. Thêm các điểm ngẫu nhiên xung quanh khu vực giao tranh (tổng cộng 15 - 25 thanh kiếm)
-        int minTotalSwords = Mathf.Max(15, targetPositions.Count);
-        int targetTotalSwords = Random.Range(minTotalSwords, minTotalSwords + 8);
-        int neededRandom = Mathf.Max(0, targetTotalSwords - targetPositions.Count);
+        // 2. Thêm các điểm bãi ngẫu nhiên xung quanh khu vực giao tranh (tổng cộng 5 - 8 bãi chùm kiếm)
+        int minSpots = Mathf.Max(5, clusterSpots.Count);
+        int targetTotalSpots = Random.Range(minSpots, minSpots + 3);
+        int neededRandom = Mathf.Max(0, targetTotalSpots - clusterSpots.Count);
 
         for (int i = 0; i < neededRandom; i++)
         {
-            Vector2 randomOffset = Random.insideUnitCircle * Random.Range(3f, 14f);
+            Vector2 randomOffset = Random.insideUnitCircle * Random.Range(3.5f, 13f);
             Vector3 offsetPos = transform.position + new Vector3(randomOffset.x, 0, randomOffset.y);
             if (NavMesh.SamplePosition(offsetPos, out NavMeshHit hit, 6f, NavMesh.AllAreas))
             {
-                targetPositions.Add(hit.position);
+                clusterSpots.Add(hit.position);
             }
             else
             {
-                targetPositions.Add(offsetPos);
+                clusterSpots.Add(offsetPos);
             }
         }
 
-        // Tráo ngẫu nhiên thứ tự rơi để các thanh kiếm rơi đan xen khắp các người chơi
-        for (int i = 0; i < targetPositions.Count; i++)
+        // Tráo ngẫu nhiên thứ tự bãi rơi
+        for (int i = 0; i < clusterSpots.Count; i++)
         {
-            int rnd = Random.Range(0, targetPositions.Count);
-            Vector3 temp = targetPositions[i];
-            targetPositions[i] = targetPositions[rnd];
-            targetPositions[rnd] = temp;
+            int rnd = Random.Range(0, clusterSpots.Count);
+            Vector3 temp = clusterSpots[i];
+            clusterSpots[i] = clusterSpots[rnd];
+            clusterSpots[rnd] = temp;
         }
 
-        Vector3[] finalPositions = targetPositions.ToArray();
+        Vector3[] finalPositions = clusterSpots.ToArray();
 
         // 3. Kích hoạt animation triệu hồi và đồng bộ qua ClientRpc
         if (!isStandaloneMode && IsServer)
@@ -1498,7 +1496,7 @@ public class MiniBossAI : NetworkBehaviour, ISwordRainOwner
             StartCoroutine(RoutineExecuteSwordRainBackground(finalPositions));
         }
 
-        Debug.Log($"[MiniBossAI] Triệu hồi Mưa Kiếm Hoàng Kim: Phóng hàng loạt kiếm lên trời và dội xuống {finalPositions.Length} thanh kiếm vào các Player!");
+        Debug.Log($"[MiniBossAI] Triệu hồi Mưa Kiếm Hoàng Kim: {finalPositions.Length} bãi dội kiếm (mỗi bãi 3-5 thanh kiếm cắm chụm vào 1 chỗ)! Boss vẫn tiếp tục đánh trả bình thường!");
     }
 
     [ClientRpc]
@@ -1517,12 +1515,12 @@ public class MiniBossAI : NetworkBehaviour, ISwordRainOwner
         // 1. Phóng hàng loạt thanh kiếm vút từ đầu/thân MiniBoss bay vút lên trời
         StartCoroutine(RoutineLaunchAscendingSwords());
 
-        // Chờ 0.4s sau khi kiếm bay vút lên cao thì bắt đầu dội kiếm từ trên trời xuống
+        // Chờ 0.4s sau khi kiếm bay vút lên cao thì bắt đầu dội các chùm kiếm từ trên trời xuống
         yield return new WaitForSeconds(0.4f);
 
         float elapsed = 0f;
         int spawnIdx = 0;
-        float dynamicInterval = Mathf.Clamp(swordRainDuration / targetPositions.Length, 0.25f, swordSpawnInterval);
+        float dynamicInterval = Mathf.Clamp(swordRainDuration / Mathf.Max(1, targetPositions.Length), 0.8f, 1.4f);
 
         while (spawnIdx < targetPositions.Length && elapsed < swordRainDuration)
         {
@@ -2833,7 +2831,7 @@ private void Die()
 
     private IEnumerator RoutineDropSwordAtPosition(Vector3 groundPos)
     {
-        Debug.Log($"[MiniBossAI] RoutineDropSwordAtPosition bắt đầu tại {groundPos}");
+        Debug.Log($"[MiniBossAI] Bắt đầu dội chùm kiếm rơi tại {groundPos}");
         GameObject warning = GetPooledWarning(groundPos + Vector3.up * 0.05f);
 
         var flasher = warning.GetComponent<WarningDecalFlash>();
@@ -2846,19 +2844,37 @@ private void Die()
 
         RecycleWarning(warning);
 
-        Vector3 skyPos = groundPos + Vector3.up * 22.0f;
-        Quaternion rot = Quaternion.LookRotation(Vector3.down) * Quaternion.Euler(swordSpawnRotationOffset);
-        GameObject sword = GetPooledSword(skyPos, rot);
-        Debug.Log($"[MiniBossAI] Đã triệu hồi thanh kiếm rơi tại {skyPos} với góc xoay {rot.eulerAngles}");
+        // RƠI NHIỀU KIẾM VÀO CÙNG 1 CHỖ (Chùm 3 đến 5 thanh kiếm cắm chụm xuống cùng 1 vị trí)
+        int swordsInCluster = Random.Range(3, 6);
+        for (int k = 0; k < swordsInCluster; k++)
+        {
+            Vector3 offset = Vector3.zero;
+            if (k > 0)
+            {
+                Vector2 r = Random.insideUnitCircle * Random.Range(0.2f, 0.65f);
+                offset = new Vector3(r.x, 0f, r.y);
+            }
 
-        var ascProj = sword.GetComponent<AscendingSwordProjectile>();
-        if (ascProj != null) ascProj.enabled = false;
+            Vector3 targetDropPos = groundPos + offset;
+            Vector3 skyPos = targetDropPos + Vector3.up * (22.0f + k * 1.5f);
+            Quaternion rot = Quaternion.LookRotation(Vector3.down) * Quaternion.Euler(swordSpawnRotationOffset);
 
-        var proj = sword.GetComponent<FallingSwordProjectile>();
-        if (proj == null) proj = sword.AddComponent<FallingSwordProjectile>();
-        proj.enabled = true;
+            GameObject sword = GetPooledSword(skyPos, rot);
+            var ascProj = sword.GetComponent<AscendingSwordProjectile>();
+            if (ascProj != null) ascProj.enabled = false;
 
-        proj.Initialize(this, groundPos, swordDropSpeed, swordDamage, swordImpactRadius, playerLayer);
+            var proj = sword.GetComponent<FallingSwordProjectile>();
+            if (proj == null) proj = sword.AddComponent<FallingSwordProjectile>();
+            proj.enabled = true;
+
+            proj.Initialize(this, targetDropPos, swordDropSpeed, swordDamage, swordImpactRadius, playerLayer);
+
+            // Giãn cách cực ngắn 0.05s giữa các kiếm trong cùng 1 chùm để tạo hiệu ứng cắm phập phập phập liên hồi
+            if (k < swordsInCluster - 1)
+            {
+                yield return new WaitForSeconds(0.05f);
+            }
+        }
     }
 
     public void PlaySwordImpactEffects(Vector3 impactPos)
@@ -2866,8 +2882,22 @@ private void Die()
         if (swordImpactVFX != null)
         {
             GameObject vfx = Instantiate(swordImpactVFX, impactPos, Quaternion.identity);
+            vfx.transform.localScale = swordImpactVFX.transform.localScale;
             Destroy(vfx, 2.5f);
         }
+        else
+        {
+#if UNITY_EDITOR
+            GameObject fallbackVfx = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Vefects/Stylized AoE VFX/VFX/Fire/Particles/VFX_Fire_Area_01.prefab");
+            if (fallbackVfx != null)
+            {
+                GameObject vfx = Instantiate(fallbackVfx, impactPos, Quaternion.identity);
+                vfx.transform.localScale = fallbackVfx.transform.localScale;
+                Destroy(vfx, 2.5f);
+            }
+#endif
+        }
+
         if (swordImpactSFX != null)
         {
             AudioSource.PlayClipAtPoint(swordImpactSFX, impactPos, 1.0f);
@@ -2879,18 +2909,37 @@ private void Die()
         bool auth = isStandaloneMode || (IsNetworkActive && IsServer);
         if (!auth) return;
 
-        Collider[] hits = Physics.OverlapSphere(impactPos, radius, layer);
         HashSet<Transform> hitRoots = new HashSet<Transform>();
 
+        // 1. Quét theo khoảng cách trực tiếp tới toàn bộ Player đang chơi (Bảo đảm 100% trừ máu không phụ thuộc LayerMask/Collider)
+        var allPlayers = GetAllActivePlayers();
+        foreach (var p in allPlayers)
+        {
+            if (p != null && !IsPlayerDeadOrInvisible(p))
+            {
+                float dist = Vector3.Distance(impactPos, p.position);
+                if (dist <= radius + 0.8f)
+                {
+                    hitRoots.Add(p);
+                    Vector3 knockbackDir = (p.position - impactPos).normalized + Vector3.up * 0.4f;
+                    EnemyDamageHelper.DealDamage(p, damage, knockbackDir * 4f);
+                    Debug.Log($"[MiniBossAI] Mưa Kiếm đánh trúng player: {p.name} trừ {damage} HP!");
+                }
+            }
+        }
+
+        // 2. Quét dự phòng thêm bằng Physics.OverlapSphere
+        LayerMask mask = (layer.value == 0) ? ~0 : layer;
+        Collider[] hits = Physics.OverlapSphere(impactPos, radius, mask, QueryTriggerInteraction.Ignore);
         foreach (var hit in hits)
         {
             Transform root = GetPlayerRoot(hit.transform);
             if (root != null && !hitRoots.Contains(root))
             {
                 hitRoots.Add(root);
-                Vector3 knockbackDir = (root.position - impactPos).normalized + Vector3.up * 0.5f;
-                EnemyDamageHelper.DealDamage(root, damage, knockbackDir * 5f);
-                Debug.Log($"[MiniBossAI] Sword Rain hit player: {root.name} for {damage} HP");
+                Vector3 knockbackDir = (root.position - impactPos).normalized + Vector3.up * 0.4f;
+                EnemyDamageHelper.DealDamage(root, damage, knockbackDir * 4f);
+                Debug.Log($"[MiniBossAI] Mưa Kiếm đánh trúng collider player: {root.name} trừ {damage} HP!");
             }
         }
     }
