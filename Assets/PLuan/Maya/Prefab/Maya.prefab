@@ -261,7 +261,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  GlobalObjectIdHash: 3274260924
+  GlobalObjectIdHash: 184724721
   InScenePlacedSourceGlobalObjectIdHash: 230630563
   DeferredDespawnTick: 0
   Ownership: 1
@@ -489,6 +489,7 @@ MonoBehaviour:
   eSkillHealRadius: 5
   eSkillHealDuration: 5
   eSkillHealAmount: 10
+  eSkillVfxScaleMultiplier: 2
   eSkillTargetingVfxPrefab: {fileID: 4748681987041982144, guid: b94815a5db14e594790c77978da0b138, type: 3}
   eSkillVfxPrefab: {fileID: 660570046470276339, guid: f7f7b221b134bdf4097445f9151296db, type: 3}
   eSkillHealBurstVfxPrefab: {fileID: 4748681987041982144, guid: 423ad7dfefe75574aa12f0d5ac132fef, type: 3}
@@ -510,6 +511,7 @@ MonoBehaviour:
   qSkillSkeletonPrefab: {fileID: 5277984816960544984, guid: 2ee0035ff29f0194a9810f37fe0da731, type: 3}
   qSkillSummonVfxPrefab: {fileID: 4748681987041982144, guid: b94815a5db14e594790c77978da0b138, type: 3}
   qSkillSummonRitualDuration: 5
+  qSkillSummonVfxScale: 2.2
   isQSkillActiveNet:
     UpdateTraits:
       MinSecondsBetweenUpdates: 0
@@ -1014,7 +1016,7 @@ MonoBehaviour:
   scanSpeed: 30
   maxScanRadius: 70
   highlightDuration: 3
-  scanWavePrefab: {fileID: 7188585948263974077, guid: 79d45982395e08343b85250ca8109e40, type: 3}
+  scanWavePrefab: {fileID: 4851665612577618193, guid: 3597beb8cefe5bb448eb1915e81f35b1, type: 3}
 --- !u!114 &8600861756046183746
 MonoBehaviour:
   m_ObjectHideFlags: 0

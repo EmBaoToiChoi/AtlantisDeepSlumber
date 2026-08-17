@@ -240,7 +240,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  GlobalObjectIdHash: 774590898
+  GlobalObjectIdHash: 3567254981
   InScenePlacedSourceGlobalObjectIdHash: 477345140
   DeferredDespawnTick: 0
   Ownership: 1
@@ -905,13 +905,14 @@ MonoBehaviour:
   rSkillLightningDamage: 40
   rSkillAoeRadius: 3
   rSkillAoeIndicatorPrefab: {fileID: 119818, guid: a9d2e99c8ddafbe47a228db68d12852b, type: 3}
+  rSkillAoeIndicatorScale: {x: 1, y: 1, z: 1}
   redSwordMaterial: {fileID: 0}
   ghostBodyMaterial: {fileID: 0}
   eSkillWindVfxPrefab: {fileID: 2692375763741349971, guid: ae785f4f29854cc49a5b451244d3079d, type: 3}
   eSkillWindVfxYOffset: 0
   swordEmissiveMap: {fileID: 2800000, guid: cc4a1e70692c8de43bb41adf40016a90, type: 3}
   redEmissiveColor: {r: 1024, g: 0, b: 0, a: 1}
-  qSkillParticlePrefab: {fileID: 6438811975416736645, guid: 9f9e5972d4aa84545b6da5d63c048d25, type: 3}
+  qSkillParticlePrefab: {fileID: 3527912838208871524, guid: 66c21d72a7c581f40828fd8612103bbd, type: 3}
   qSkillDuration: 1.5
   qSkillSlashCount: 5
   qSkillDamagePerSlash: 15
@@ -1104,6 +1105,10 @@ MonoBehaviour:
   maxScanRadius: 50
   highlightDuration: 4
   scanWavePrefab: {fileID: 7188585948263974077, guid: 79d45982395e08343b85250ca8109e40, type: 3}
+  waveScaleMultiplier: 1
+  waveHeightOffset: 1
+  autoLoopParticles: 1
+  hideHitSubEffects: 1
 --- !u!114 &4359720027828633858
 MonoBehaviour:
   m_ObjectHideFlags: 0

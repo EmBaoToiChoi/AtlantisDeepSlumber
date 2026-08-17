@@ -16,7 +16,7 @@ using UnityEngine.AI;
 ///   - Radial shockwave defensive skill triggered if any player gets too close, dealing stun (kicked stun) and knockback.
 ///   - Synchronizes health, states, and animator triggers across clients via Unity Netcode.
 /// </summary>
-public class FinalBossAI : NetworkBehaviour
+public class FinalBossAI : NetworkBehaviour, ISwordRainOwner
 {
     public enum FinalBossState { Sitting, JumpDown, Grow, SwordRain, FireSpew, FireBarrage, Idle, Chase, Attack, Shockwave, Hit, Dead }
 
@@ -2509,9 +2509,16 @@ public class FinalBossAI : NetworkBehaviour
     public void OnFireSpewImpact() { }
 }
 
+public interface ISwordRainOwner
+{
+    void PlaySwordImpactEffects(Vector3 impactPos);
+    void DealSwordImpactDamage(Vector3 impactPos, float damage, float radius, LayerMask layer);
+    void RecycleSword(GameObject sword);
+}
+
 public class FallingSwordProjectile : MonoBehaviour
 {
-    private FinalBossAI bossOwner;
+    private ISwordRainOwner bossOwner;
     private Vector3 targetGroundPos;
     private float dropSpeed;
     private float damage;
@@ -2519,7 +2526,7 @@ public class FallingSwordProjectile : MonoBehaviour
     private LayerMask playerLayer;
     private bool isFalling;
 
-    public void Initialize(FinalBossAI owner, Vector3 groundPos, float speed, float dmg, float radius, LayerMask layer)
+    public void Initialize(ISwordRainOwner owner, Vector3 groundPos, float speed, float dmg, float radius, LayerMask layer)
     {
         bossOwner = owner;
         targetGroundPos = groundPos;
@@ -2528,6 +2535,11 @@ public class FallingSwordProjectile : MonoBehaviour
         impactRadius = radius;
         playerLayer = layer;
         isFalling = true;
+    }
+
+    public void Initialize(FinalBossAI owner, Vector3 groundPos, float speed, float dmg, float radius, LayerMask layer)
+    {
+        Initialize((ISwordRainOwner)owner, groundPos, speed, dmg, radius, layer);
     }
 
     private void Update()
