@@ -141,6 +141,21 @@ public class BossAI : NetworkBehaviour, IFireBarrageOwner
     private bool isCastingFireBarrage = false;
     private Queue<GameObject> fireBarragePool = new Queue<GameObject>();
 
+    // ─── Thiết lập Nhạc Chiến Đấu Boss (Boss Battle Music) ────
+    [Header("Boss Battle Music (Nhạc Chiến Đấu Boss)")]
+    [Tooltip("Âm thanh/Nhạc nền trận chiến duy trì lặp lại trong suốt trận đánh Boss")]
+    public AudioClip bossBattleBGM;
+    [Tooltip("Âm lượng nhạc trận chiến (0.0 đến 1.0)")]
+    [Range(0f, 1f)] public float bossBattleBGMVolume = 0.8f;
+    [Tooltip("Tự động lặp lại âm thanh trong suốt trận đấu")]
+    public bool loopBattleBGM = true;
+    [Tooltip("Thời gian Fade In khi bắt đầu chiến đấu (giây)")]
+    public float battleBGMFadeInDuration = 1.5f;
+    [Tooltip("Thời gian Fade Out khi Boss bị tiêu diệt (giây)")]
+    public float battleBGMFadeOutDuration = 2.5f;
+    private AudioSource battleBgmAudioSource;
+    private Coroutine battleBgmFadeCoroutine;
+
     // ─── Thiết lập Triệu Hồi Quái Con (Minion Summon) ────────────
     [Header("Minion Spawning Settings")]
     [Tooltip("Prefab của quái con để triệu hồi. Bắt buộc có NetworkObject.")]
@@ -417,6 +432,7 @@ public class BossAI : NetworkBehaviour, IFireBarrageOwner
         currentHealth.OnValueChanged += OnHealthNetChanged;
         earthSummonCounter.OnValueChanged += (_, _) => { if (anim != null) anim.SetTrigger(earthSummonTrigger); };
         fireBarrageCounter.OnValueChanged += (_, _) => { if (anim != null && !string.IsNullOrEmpty(fireBarrageTriggerParam)) anim.SetTrigger(fireBarrageTriggerParam); };
+        isBossActive.OnValueChanged += (oldVal, newVal) => { if (newVal) StartBattleMusic(); else StopBattleMusic(true); };
 
         // Lắng nghe sự kiện gồng nộ đồng bộ hóa của Client
         isPhase2Network.OnValueChanged += (oldVal, newVal) =>
@@ -454,6 +470,7 @@ public class BossAI : NetworkBehaviour, IFireBarrageOwner
         currentHealth.OnValueChanged -= OnHealthNetChanged;
         earthSummonCounter.OnValueChanged -= (_, _) => { if (anim != null) anim.SetTrigger(earthSummonTrigger); };
         fireBarrageCounter.OnValueChanged -= (_, _) => { if (anim != null && !string.IsNullOrEmpty(fireBarrageTriggerParam)) anim.SetTrigger(fireBarrageTriggerParam); };
+        StopBattleMusic(false);
     }
 
     private void OnHealthNetChanged(float oldVal, float newVal)
@@ -504,6 +521,7 @@ public class BossAI : NetworkBehaviour, IFireBarrageOwner
 
         if (IsBossActive && !IsDead && targetPlayer != null && !isCastingEarthSummon && !isCastingFireBarrage)
         {
+            StartBattleMusic();
             if (fireBarrageCooldownTimer > 0) fireBarrageCooldownTimer -= Time.deltaTime;
 
             if (fireBarrageCooldownTimer <= 0)
@@ -1405,6 +1423,16 @@ public class BossAI : NetworkBehaviour, IFireBarrageOwner
             anim.ResetTrigger(hitTrigger);
             anim.ResetTrigger(enrageTrigger);
             if (!string.IsNullOrEmpty(dieTrigger)) anim.SetTrigger(dieTrigger);
+        }
+
+        // Tắt nhạc chiến đấu êm dịu khi Boss chết (đồng bộ sang tất cả Client)
+        if (!isStandaloneMode && IsServer)
+        {
+            PlayBattleBGMClientRpc(false);
+        }
+        else
+        {
+            StopBattleMusic(true);
         }
 
         // Vô hiệu hóa va chạm để không cản đường
@@ -2861,5 +2889,101 @@ public class BossAI : NetworkBehaviour, IFireBarrageOwner
             Gizmos.DrawWireSphere(swordBase.position, swordThickness);
             Gizmos.DrawWireSphere(swordTip.position, swordThickness);
         }
+    }
+
+    // ══════════════════════════════════════════════════════════
+    //  BOSS BATTLE MUSIC (NHẠC CHIẾN ĐẤU DUY TRÌ)
+    // ══════════════════════════════════════════════════════════
+
+    [ClientRpc]
+    private void PlayBattleBGMClientRpc(bool play)
+    {
+        if (play) StartBattleMusic();
+        else StopBattleMusic(true);
+    }
+
+    public void StartBattleMusic()
+    {
+        if (bossBattleBGM == null || IsDead) return;
+
+        if (battleBgmAudioSource == null)
+        {
+            battleBgmAudioSource = gameObject.AddComponent<AudioSource>();
+            battleBgmAudioSource.playOnAwake = false;
+            battleBgmAudioSource.spatialBlend = 0f; // 2D BGM toàn diện cho toàn sàn đấu
+        }
+
+        // Đảm bảo LUÔN LUÔN BẬT LOOP để nhạc duy trì lặp lại vô tận trong suốt trận đấu
+        battleBgmAudioSource.clip = bossBattleBGM;
+        battleBgmAudioSource.loop = true;
+
+        if (!battleBgmAudioSource.isPlaying)
+        {
+            battleBgmAudioSource.volume = 0f;
+            battleBgmAudioSource.Play();
+            if (battleBgmFadeCoroutine != null) StopCoroutine(battleBgmFadeCoroutine);
+            battleBgmFadeCoroutine = StartCoroutine(RoutineFadeBattleMusic(bossBattleBGMVolume, battleBGMFadeInDuration));
+            Debug.Log("[BossAI] Bắt đầu phát âm thanh chiến đấu Boss duy trì LẶP LẠI (Loop = True) đồng bộ mạng!");
+        }
+    }
+
+    public void StopBattleMusic(bool fade = true)
+    {
+        if (battleBgmAudioSource == null || !battleBgmAudioSource.isPlaying) return;
+
+        if (battleBgmFadeCoroutine != null) StopCoroutine(battleBgmFadeCoroutine);
+        if (fade && gameObject.activeInHierarchy)
+        {
+            battleBgmFadeCoroutine = StartCoroutine(RoutineFadeOutAndStop(battleBGMFadeOutDuration));
+        }
+        else
+        {
+            battleBgmAudioSource.Stop();
+        }
+    }
+
+    private System.Collections.IEnumerator RoutineFadeBattleMusic(float targetVol, float duration)
+    {
+        if (battleBgmAudioSource == null) yield break;
+        float elapsed = 0f;
+        float startVol = battleBgmAudioSource.volume;
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            if (battleBgmAudioSource != null)
+            {
+                battleBgmAudioSource.volume = Mathf.Lerp(startVol, targetVol, elapsed / duration);
+            }
+            yield return null;
+        }
+        if (battleBgmAudioSource != null) battleBgmAudioSource.volume = targetVol;
+    }
+
+    private System.Collections.IEnumerator RoutineFadeOutAndStop(float duration)
+    {
+        if (battleBgmAudioSource == null) yield break;
+        float elapsed = 0f;
+        float startVol = battleBgmAudioSource.volume;
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            if (battleBgmAudioSource != null)
+            {
+                battleBgmAudioSource.volume = Mathf.Lerp(startVol, 0f, elapsed / duration);
+            }
+            yield return null;
+        }
+        if (battleBgmAudioSource != null)
+        {
+            battleBgmAudioSource.volume = 0f;
+            battleBgmAudioSource.Stop();
+        }
+    }
+
+    private void OnDestroy()
+    {
+        StopBattleMusic(false);
     }
 }
