@@ -12,7 +12,7 @@ public class ElementalScanner : NetworkBehaviour
     public float highlightDuration = 4f;
 
     [Header("Hiệu ứng Sóng quét (Visual Wave)")]
-    [Tooltip("Prefab hiệu ứng sóng quét (ví dụ: Effect_09_HoloShield)")]
+    [Tooltip("Prefab hiệu ứng sóng quét (ví dụ: Effect_09_HoloShield hoặc Effect_09_HoloShield(IncludeHit))")]
     public GameObject scanWavePrefab; 
 
     [Tooltip("Hệ số nhân kích thước sóng quét (mặc định 1.0)")]
@@ -46,17 +46,34 @@ public class ElementalScanner : NetworkBehaviour
 
     void Update()
     {
-        // 1. BỘ LỌC PHÍM Z: Chỉ Owner (máy của người chơi) có kỹ năng (Maya/Elemental Sight) mới kích hoạt
-        if (IsOwner && hasElementalSight)
+        // 1. BỘ LỌC PHÍM Z: Hỗ trợ cả Online (IsOwner) lẫn Standalone / Test đơn lẻ
+        bool canTrigger = false;
+        if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening && IsSpawned)
+        {
+            canTrigger = IsOwner && hasElementalSight;
+        }
+        else
+        {
+            canTrigger = hasElementalSight;
+        }
+
+        if (canTrigger)
         {
             if (Input.GetKeyDown(KeyCode.Z) && !isScanning)
             {
-                // Báo lên Server để Server đồng bộ hiệu ứng cho tất cả người chơi
-                TriggerScanServerRpc();
+                if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening && IsSpawned)
+                {
+                    TriggerScanServerRpc();
+                }
+                else
+                {
+                    // Chế độ chơi đơn / Offline
+                    StartScanLocal();
+                }
             }
         }
 
-        // 2. BỘ XỬ LÝ HIỆU ỨNG QUÉT: Chạy mượt mà trên tất cả Client
+        // 2. BỘ XỬ LÝ HIỆU ỨNG QUÉT
         if (isScanning)
         {
             currentRadius += scanSpeed * Time.deltaTime;
@@ -99,6 +116,94 @@ public class ElementalScanner : NetworkBehaviour
         }
     }
 
+    // --- KHỞI CHẠY QUÉT & TẠO HIỆU ỨNG ---
+
+    private void StartScanLocal()
+    {
+        isScanning = true;
+        currentRadius = 0f;
+        scanCenter = transform.position + Vector3.up * waveHeightOffset; 
+
+        if (scanWavePrefab != null)
+        {
+            currentWave = Instantiate(scanWavePrefab, scanCenter, Quaternion.identity);
+            currentWave.transform.localScale = Vector3.zero;
+
+            // 1. Reset localPosition của các GameObject con về (0,0,0) để tránh bị offset nhân lên không trung
+            Transform[] allChildren = currentWave.GetComponentsInChildren<Transform>(true);
+            for (int i = 0; i < allChildren.Length; i++)
+            {
+                if (allChildren[i] != currentWave.transform)
+                {
+                    allChildren[i].localPosition = Vector3.zero;
+                }
+            }
+
+            // 2. Tắt TẤT CẢ Collider trên quả cầu sóng để không chặn/đẩy Player hay va chạm vật lý
+            Collider[] colliders = currentWave.GetComponentsInChildren<Collider>(true);
+            for (int i = 0; i < colliders.Length; i++)
+            {
+                colliders[i].enabled = false;
+            }
+
+            // 3. Tắt các script tự huỷ / mờ dần của Asset pack (NewMaterialChange, ShieldActivate)
+            MonoBehaviour[] allScripts = currentWave.GetComponentsInChildren<MonoBehaviour>(true);
+            for (int i = 0; i < allScripts.Length; i++)
+            {
+                string scriptName = allScripts[i].GetType().Name;
+                if (scriptName == "NewMaterialChange" || scriptName == "ShieldActivate")
+                {
+                    allScripts[i].enabled = false;
+                }
+            }
+
+            // Đảm bảo material luôn hiển thị rõ (MaskCutOut = 1.0f)
+            Renderer[] renderers = currentWave.GetComponentsInChildren<Renderer>(true);
+            for (int i = 0; i < renderers.Length; i++)
+            {
+                if (renderers[i].material != null && renderers[i].material.HasProperty("_MaskCutOut"))
+                {
+                    renderers[i].material.SetFloat("_MaskCutOut", 1.0f);
+                }
+            }
+
+            // 4. Tắt riêng hiệu ứng đạn phụ va chạm (MultipleObjectsMake / Effect_15_MultipleShot)
+            // CHÚ Ý: Tuyệt đối không tắt nhầm Root hoặc effect khiên chính (HoloShield)
+            if (hideHitSubEffects)
+            {
+                for (int i = 0; i < allChildren.Length; i++)
+                {
+                    Transform t = allChildren[i];
+                    if (t != currentWave.transform)
+                    {
+                        string childName = t.name.ToLower();
+                        if (childName.Contains("multipleshot") || childName.Contains("shieldhit") || childName.Contains("forhit"))
+                        {
+                            t.gameObject.SetActive(false);
+                        }
+                    }
+                }
+            }
+
+            // 5. Tự động bật Loop và Scale Mode Hierarchy cho toàn bộ hạt Particle System
+            if (autoLoopParticles)
+            {
+                ParticleSystem[] particles = currentWave.GetComponentsInChildren<ParticleSystem>(true);
+                for (int i = 0; i < particles.Length; i++)
+                {
+                    var ps = particles[i];
+                    var main = ps.main;
+                    main.loop = true; 
+                    main.scalingMode = ParticleSystemScalingMode.Hierarchy; 
+                    ps.Play();
+                }
+            }
+
+            // Đảm bảo Root luôn Active và hiển thị
+            currentWave.SetActive(true);
+        }
+    }
+
     // --- ĐỒNG BỘ MẠNG (RPC) ---
 
     [ServerRpc]
@@ -110,60 +215,7 @@ public class ElementalScanner : NetworkBehaviour
     [ClientRpc]
     private void TriggerScanClientRpc()
     {
-        isScanning = true;
-        currentRadius = 0f;
-        scanCenter = transform.position + Vector3.up * waveHeightOffset; 
-
-        // Khởi tạo quả cầu hiệu ứng tại vị trí quét
-        if (scanWavePrefab != null)
-        {
-            currentWave = Instantiate(scanWavePrefab, scanCenter, Quaternion.identity);
-            currentWave.transform.localScale = Vector3.zero;
-
-            // 1. Reset localPosition của toàn bộ GameObject con về gốc (0, 0, 0)
-            // Tránh trường hợp GameObject con có offset y=1 khiến khi scale x140 bị bay lên trời
-            Transform[] allChildren = currentWave.GetComponentsInChildren<Transform>(true);
-            for (int i = 0; i < allChildren.Length; i++)
-            {
-                if (allChildren[i] != currentWave.transform)
-                {
-                    allChildren[i].localPosition = Vector3.zero;
-                }
-            }
-
-            // 2. Tự động bật Loop và Scale Mode Hierarchy cho toàn bộ hạt Particle System
-            if (autoLoopParticles)
-            {
-                ParticleSystem[] particles = currentWave.GetComponentsInChildren<ParticleSystem>(true);
-                for (int i = 0; i < particles.Length; i++)
-                {
-                    var ps = particles[i];
-                    var main = ps.main;
-                    main.loop = true; // Cho phép lặp liên tục trong suốt thời gian quét
-                    main.scalingMode = ParticleSystemScalingMode.Hierarchy; // Phình to theo Scale của Transform cha
-                    ps.Play();
-                }
-            }
-
-            // 3. Tắt các hiệu ứng đạn phụ va chạm nếu có trong Prefab (ví dụ MultipleObjectsMake / Hit sparks)
-            if (hideHitSubEffects)
-            {
-                MultipleObjectsMake[] subMakers = currentWave.GetComponentsInChildren<MultipleObjectsMake>(true);
-                for (int i = 0; i < subMakers.Length; i++)
-                {
-                    subMakers[i].gameObject.SetActive(false);
-                }
-
-                for (int i = 0; i < allChildren.Length; i++)
-                {
-                    string childName = allChildren[i].name.ToLower();
-                    if (childName.Contains("hit") || childName.Contains("multipleshot"))
-                    {
-                        allChildren[i].gameObject.SetActive(false);
-                    }
-                }
-            }
-        }
+        StartScanLocal();
     }
 
     private void TurnOffAllHighlights()

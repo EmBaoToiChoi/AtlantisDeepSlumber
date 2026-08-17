@@ -84,8 +84,8 @@ public class MiniBossAI : NetworkBehaviour, ISwordRainOwner
     public float swordSpawnInterval = 0.4f;
     public float warningDuration = 1.5f;
     public float swordDropSpeed = 35.0f;
-    public float swordDamage = 5.0f;
-    public float swordImpactRadius = 2.0f;
+    public float swordDamage = 15.0f;
+    public float swordImpactRadius = 2.5f;
     public string swordRainTriggerParam = "AttackCombo";
     public Vector3 swordSpawnRotationOffset = new Vector3(90f, 0f, 0f); // Xoay bù để kiếm cắm thẳng xuống
     public float swordRainIntervalMin = 5.0f;
@@ -2278,6 +2278,12 @@ private void Die()
         var simples = FindObjectsByType<SimplePlayerTest>(FindObjectsSortMode.None);
         foreach (var p in simples) if (p != null && !list.Contains(p.transform)) list.Add(p.transform);
 
+        var skeletons = FindObjectsByType<Skeleton>(FindObjectsSortMode.None);
+        foreach (var p in skeletons) if (p != null && !list.Contains(p.transform)) list.Add(p.transform);
+
+        var taggedPlayers = GameObject.FindGameObjectsWithTag("Player");
+        foreach (var go in taggedPlayers) if (go != null && !list.Contains(go.transform)) list.Add(go.transform);
+
         return list;
     }
 
@@ -2752,6 +2758,16 @@ private void Die()
         var allParticles = sword.GetComponentsInChildren<ParticleSystem>(true);
         foreach (var ps in allParticles) { if (ps != null) { ps.Clear(); ps.Play(); } }
 
+        // Đảm bảo toàn bộ Collider đều là Trigger
+        var allColliders = sword.GetComponentsInChildren<Collider>(true);
+        foreach (var c in allColliders) { if (c != null) c.isTrigger = true; }
+
+        var rootCol = sword.GetComponent<BoxCollider>();
+        if (rootCol == null) rootCol = sword.AddComponent<BoxCollider>();
+        rootCol.size = new Vector3(1.5f, 3.5f, 1.5f);
+        rootCol.center = new Vector3(0f, 1.2f, 0f);
+        rootCol.isTrigger = true;
+
         // Đảm bảo luôn có Rigidbody Kinematic ở Root để va chạm Trigger hoạt động chuẩn xác 100%
         var rb = sword.GetComponent<Rigidbody>();
         if (rb == null) rb = sword.AddComponent<Rigidbody>();
@@ -2906,7 +2922,7 @@ private void Die()
 
     public void DealSwordImpactDamage(Vector3 impactPos, float damage, float radius, LayerMask layer)
     {
-        bool auth = isStandaloneMode || (IsNetworkActive && IsServer);
+        bool auth = isStandaloneMode || !IsNetworkActive || (IsNetworkActive && IsServer);
         if (!auth) return;
 
         HashSet<Transform> hitRoots = new HashSet<Transform>();
@@ -2918,7 +2934,9 @@ private void Die()
             if (p != null && !IsPlayerDeadOrInvisible(p))
             {
                 float dist = Vector3.Distance(impactPos, p.position);
-                if (dist <= radius + 0.8f)
+                float xzDist = Vector2.Distance(new Vector2(impactPos.x, impactPos.z), new Vector2(p.position.x, p.position.z));
+                float heightDiff = p.position.y - impactPos.y;
+                if (dist <= radius + 0.8f || (xzDist <= radius && heightDiff >= -1.0f && heightDiff <= 3.5f))
                 {
                     hitRoots.Add(p);
                     Vector3 knockbackDir = (p.position - impactPos).normalized + Vector3.up * 0.4f;
