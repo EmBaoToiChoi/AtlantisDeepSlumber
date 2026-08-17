@@ -18089,6 +18089,10 @@ MonoBehaviour:
   playerNetworkPrefab2: {fileID: 3399711919171922761, guid: 6f19b5a7843f73843a191527c80e4695, type: 3}
   playerNetworkPrefab3: {fileID: 7595190172702314866, guid: 50b9b69c6970d1c4b880c1c329b7ac96, type: 3}
   playerNetworkPrefab4: {fileID: 211356629623521554, guid: 8102635196d3b3c4c9caf5ad9eae580a, type: 3}
+  enableSpotlightBeams: 1
+  spotlightHeight: 8.5
+  spotlightIntensity: 1.8
+  useCharacterTheming: 0
   NetRoomName:
     UpdateTraits:
       MinSecondsBetweenUpdates: 0

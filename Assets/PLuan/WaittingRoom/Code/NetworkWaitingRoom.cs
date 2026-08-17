@@ -19,6 +19,16 @@ public class NetworkWaitingRoom : NetworkBehaviour
     public GameObject playerNetworkPrefab3; // Aurelia
     public GameObject playerNetworkPrefab4; // Titan
 
+    [Header("Mr. Bean Overhead Spotlight Beams")]
+    [Tooltip("Bật hiệu ứng chùm sáng giáng từ trên đầu xuống khi chọn nhân vật (kiểu Mr. Bean)")]
+    [SerializeField] private bool enableSpotlightBeams = true;
+    [SerializeField] private float spotlightHeight = 8.5f;
+    [SerializeField] private float spotlightIntensity = 1.8f;
+    [SerializeField] private bool useCharacterTheming = false;
+
+    private LobbySpotlightBeam[] _slotBeams = new LobbySpotlightBeam[4];
+    private int[] _lastSlotCharacterIds = new int[] { -1, -1, -1, -1 };
+
     public NetworkVariable<Unity.Collections.FixedString64Bytes> NetRoomName = new NetworkVariable<Unity.Collections.FixedString64Bytes>(
         "ATLANTIS EXPEDITION", NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     
@@ -487,6 +497,9 @@ public class NetworkWaitingRoom : NetworkBehaviour
         if (_uiDocument == null) Debug.LogError("[Lobby] THẤT BẠI: Bạn chưa kéo UI Document!");
         if (slots == null || slots.Length == 0) Debug.LogError("[Lobby] THẤT BẠI: Danh sách Slots đang trống!");
 
+        // Khởi tạo các chùm sáng Mr. Bean cho các slots
+        InitializeSpotlightBeams();
+
         // TỰ ĐỘNG KIỂM TRA NẾU VÀO PHÒNG MUỘN
         InvokeRepeating(nameof(CheckForSpawn), 0.5f, 1.0f);
     }
@@ -651,6 +664,25 @@ public class NetworkWaitingRoom : NetworkBehaviour
         Debug.Log($"[CLIENT] Yêu cầu chọn nhân vật: {charId}");
         PlayerPrefs.SetInt("SelectedCharacterId", charId);
         PlayerPrefs.Save();
+
+        // Kích hoạt ngay lập tức chùm sáng trên slot của chính mình để phản hồi tức thì
+        if (NetworkManager.Singleton != null && enableSpotlightBeams)
+        {
+            ulong myId = NetworkManager.Singleton.LocalClientId;
+            foreach (var p in NetPlayers)
+            {
+                if (p.ClientId == myId && p.Slot >= 0 && p.Slot < 4)
+                {
+                    if (_slotBeams != null && _slotBeams[p.Slot] != null)
+                    {
+                        _slotBeams[p.Slot].PlayBeamDrop(charId);
+                        _lastSlotCharacterIds[p.Slot] = charId;
+                    }
+                    break;
+                }
+            }
+        }
+
         ChangeCharacterServerRpc(charId);
     }
 
@@ -976,10 +1008,90 @@ public class NetworkWaitingRoom : NetworkBehaviour
         // Cập nhật màu nút Ready cho bản thân
         UpdateReadyButtonState();
 
+        // Cập nhật chùm sáng Mr. Bean cho các slot
+        UpdateSpotlightBeams();
+
         // Refresh player voice list if open
         if (_playersVoiceModal != null && _playersVoiceModal.style.display == DisplayStyle.Flex)
         {
             PopulatePlayersVoiceList();
+        }
+    }
+
+    private void InitializeSpotlightBeams()
+    {
+        if (!enableSpotlightBeams || slots == null) return;
+
+        for (int i = 0; i < slots.Length && i < 4; i++)
+        {
+            if (slots[i] == null) continue;
+
+            // Tìm hoặc tạo LobbySpotlightBeam cho từng slot
+            var existingBeam = slots[i].GetComponentInChildren<LobbySpotlightBeam>();
+            if (existingBeam == null)
+            {
+                GameObject beamObj = new GameObject($"LobbySpotlightBeam_Slot{i}");
+                beamObj.transform.SetParent(slots[i]);
+                beamObj.transform.localPosition = Vector3.zero;
+                beamObj.transform.localRotation = Quaternion.identity;
+
+                existingBeam = beamObj.AddComponent<LobbySpotlightBeam>();
+            }
+
+            existingBeam.slotTransform = slots[i];
+            existingBeam.beamHeight = spotlightHeight;
+            existingBeam.lightIntensity = spotlightIntensity;
+            existingBeam.useCharacterTheming = useCharacterTheming;
+            existingBeam.BuildComponentsIfNeeded();
+
+            _slotBeams[i] = existingBeam;
+        }
+    }
+
+    private void UpdateSpotlightBeams()
+    {
+        if (!enableSpotlightBeams || _slotBeams == null) return;
+
+        // Lưu danh sách characterId hiện tại của từng slot (0..3)
+        int[] currentSlotCharIds = new int[] { -1, -1, -1, -1 };
+
+        if (NetPlayers != null)
+        {
+            foreach (var p in NetPlayers)
+            {
+                if (p.Slot >= 0 && p.Slot < 4)
+                {
+                    currentSlotCharIds[p.Slot] = p.CharacterId;
+                }
+            }
+        }
+
+        for (int i = 0; i < 4; i++)
+        {
+            if (_slotBeams[i] == null) continue;
+
+            int charId = currentSlotCharIds[i];
+            int lastCharId = _lastSlotCharacterIds[i];
+
+            if (charId >= 0)
+            {
+                if (lastCharId != charId)
+                {
+                    // Kích hoạt đợt giáng sáng mới khi mới chọn hoặc đổi nhân vật
+                    _slotBeams[i].PlayBeamDrop(charId);
+                    _lastSlotCharacterIds[i] = charId;
+                }
+                else
+                {
+                    _slotBeams[i].SetBeamActive(true, charId);
+                }
+            }
+            else
+            {
+                // Chưa chọn hoặc slot trống -> ẩn chùm sáng
+                _slotBeams[i].SetBeamActive(false);
+                _lastSlotCharacterIds[i] = -1;
+            }
         }
     }
     private void UpdateCardUI(int charId, List<string> selectors)
