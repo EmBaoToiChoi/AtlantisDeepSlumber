@@ -472,6 +472,32 @@ MonoBehaviour:
   earthSummonTrigger: EarthSummon
   earthSummonInterval: 5
   earthBlastScale: 5
+  tornadoPrefab: {fileID: 8337239312643627552, guid: 9d847abb63f67374fad7521470bdc08a, type: 3}
+  tornadoCount: 5
+  tornadoSpawnRadius: 2.5
+  tornadoSpeed: 7
+  tornadoLifetime: 5
+  tornadoScale: 1.5
+  tornadoDamage: 15
+  tornadoLiftHeight: 4.5
+  tornadoTrapDuration: 1.2
+  fireBarragePrefab: {fileID: 2883180979609552342, guid: da5df83ad7870f44bbe3cacedd92be63, type: 3}
+  fireBarrageWarningDecalPrefab: {fileID: 7883966873594125846, guid: 6aeee1ac8b24a1e45baedae4f3b12b52, type: 3}
+  fireBarrageImpactVFX: {fileID: 2427901435903505602, guid: 8a915dbbc4b23bf4f931629039cfbf6f, type: 3}
+  fireBarrageImpactSFX: {fileID: 0}
+  minFireballsCount: 5
+  maxFireballsCount: 6
+  fireballPlayerOffsetMin: 1.5
+  fireballPlayerOffsetMax: 5.5
+  fireBarrageScale: 3.5
+  fireBarrageDuration: 6
+  fireBarrageInterval: 0.5
+  fireBarrageWarningDuration: 0.7
+  fireBarrageDropSpeed: 30
+  fireBarrageDamage: 5
+  fireBarrageImpactRadius: 2.5
+  fireBarrageTriggerParam: AttackCombo
+  fireBarrageCooldown: 12
   minionPrefab: {fileID: 5764630933208192827, guid: c39f677d839639b4dae69d3b08885fa7, type: 3}
   minionSpawnRadius: 6
   minionSummonInterval: 10
