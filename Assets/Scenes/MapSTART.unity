@@ -164851,6 +164851,10 @@ PrefabInstance:
       propertyPath: minionSummonRitualVfxPrefab
       value: 
       objectReference: {fileID: 5912743102478726200, guid: 8cdd983bc8b8cff4282de83a1f209cc2, type: 3}
+    - target: {fileID: 2050928385180241433, guid: f07bdcaba459c7847a289e211592f98a, type: 3}
+      propertyPath: fireBarrageWarningDecalPrefab
+      value: 
+      objectReference: {fileID: 698295203230062403, guid: d6fc1bf64a02b5a419ec69c2819fe003, type: 3}
     - target: {fileID: 2846290685344558318, guid: f07bdcaba459c7847a289e211592f98a, type: 3}
       propertyPath: m_LocalPosition.x
       value: -70.88
