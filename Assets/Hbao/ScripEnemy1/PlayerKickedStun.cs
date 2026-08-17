@@ -131,6 +131,9 @@ public class PlayerKickedStun : NetworkBehaviour
             playerScript.enabled = false;
         }
 
+        // Kích hoạt rung camera bão tố cho Player bị cuốn
+        CameraShakeHelper.Shake(liftDuration + 0.2f, 0.2f);
+
         Vector3 startPos = transform.position;
         Vector3 peakPos = startPos + Vector3.up * liftHeight;
 
@@ -153,6 +156,9 @@ public class PlayerKickedStun : NetworkBehaviour
         }
 
         transform.position = startPos;
+
+        // Rung nhẹ khi đập người xuống đất
+        CameraShakeHelper.Shake(0.35f, 0.16f);
 
         // 3. Rơi xuống đất -> Kích hoạt hoạt ảnh té ngã và đứng dậy
         if (anim != null && anim.isActiveAndEnabled)

@@ -1699,6 +1699,12 @@ public class BossAI : NetworkBehaviour
 
     private void SpawnTornadoWaveLocal(Vector3[] spawnPositions, Vector3[] moveDirections)
     {
+        // Rung nhẹ camera kiểu gió lốc cuốn khi 5 lốc xoáy xuất hiện
+        if (enableEarthquakeCameraShake)
+        {
+            CameraShakeHelper.Shake(1.2f, 0.15f);
+        }
+
         GameObject prefabToUse = tornadoPrefab;
         if (prefabToUse == null)
         {
@@ -1768,6 +1774,12 @@ public class BossAI : NetworkBehaviour
 
     private void SpawnWarningIndicatorsLocal(Vector3[] positions)
     {
+        // Rung nhẹ râm ran cảnh báo mặt đất đang nứt ra trong suốt thời gian gồng triệu hồi
+        if (enableEarthquakeCameraShake)
+        {
+            CameraShakeHelper.Shake(warningDuration, 0.12f);
+        }
+
         foreach (var pos in positions)
         {
             // Tạo Prefab hiệu ứng cảnh báo (Par_RedField / Decal) với Scale phù hợp
@@ -2141,6 +2153,12 @@ public class BossAI : NetworkBehaviour
 
     private void SpawnMinionRitualCirclesLocal(Vector3[] positions, float duration)
     {
+        // Rung nhẹ ma quái khi các cổng triệu hồi quái con mở ra
+        if (enableEarthquakeCameraShake)
+        {
+            CameraShakeHelper.Shake(minionSummonRitualDuration, 0.10f);
+        }
+
         // Xóa bất kỳ vòng ma thuật cũ nếu còn sót lại
         DestroyMinionRitualCirclesLocal();
 
