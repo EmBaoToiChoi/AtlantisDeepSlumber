@@ -120,7 +120,7 @@ public class BossAI : NetworkBehaviour, IFireBarrageOwner
     [Tooltip("Khoảng cách tối đa từ người chơi đến vị trí rơi cầu lửa (m)")]
     public float fireballPlayerOffsetMax = 5.5f;
     [Tooltip("Kích thước Scale của quả cầu lửa (phóng to để nhìn rõ uy lực)")]
-    public float fireBarrageScale = 3.5f;
+    public float fireBarrageScale = 6.0f;
     [Tooltip("Tổng thời gian thực hiện chiêu chưởng đốm lửa (giây)")]
     public float fireBarrageDuration = 6.0f;
     [Tooltip("Khoảng cách thời gian giữa mỗi đợt thả cầu lửa (giây)")]
@@ -132,7 +132,7 @@ public class BossAI : NetworkBehaviour, IFireBarrageOwner
     [Tooltip("Sát thương mỗi cầu lửa")]
     public float fireBarrageDamage = 5.0f;
     [Tooltip("Bán kính nổ sát thương của cầu lửa (m)")]
-    public float fireBarrageImpactRadius = 2.5f;
+    public float fireBarrageImpactRadius = 3.5f;
     [Tooltip("Tên Trigger trong Animator của Boss")]
     public string fireBarrageTriggerParam = "AttackCombo";
     [Tooltip("Thời gian hồi chiêu chưởng đốm lửa (giây)")]
@@ -2490,7 +2490,7 @@ public class BossAI : NetworkBehaviour, IFireBarrageOwner
                 else
                 {
                     orb = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-                    orb.transform.localScale = Vector3.one * 0.8f;
+                    orb.transform.localScale = Vector3.one * 1.5f;
                     var r = orb.GetComponent<Renderer>();
                     if (r != null)
                     {
@@ -2501,15 +2501,45 @@ public class BossAI : NetworkBehaviour, IFireBarrageOwner
             }
         }
 
+        // Tắt toàn bộ script PixPlays bên thứ 3 để tránh tự hủy/can thiệp
+        var pixScripts = orb.GetComponentsInChildren<MonoBehaviour>(true);
+        foreach (var mb in pixScripts)
+        {
+            if (mb != null && mb.GetType().Namespace != null && mb.GetType().Namespace.Contains("PixPlays"))
+            {
+                mb.enabled = false;
+            }
+        }
+
         var rb = orb.GetComponent<Rigidbody>();
         if (rb == null) rb = orb.AddComponent<Rigidbody>();
         rb.isKinematic = true;
         rb.useGravity = false;
 
+        var col = orb.GetComponent<SphereCollider>();
+        if (col == null) col = orb.AddComponent<SphereCollider>();
+        col.isTrigger = true;
+        col.radius = 1.2f;
+
         orb.transform.position = spawnPos;
         orb.transform.rotation = rotation;
         orb.transform.localScale = Vector3.one * fireBarrageScale;
         orb.SetActive(true);
+
+        // Kích hoạt tất cả Particle Systems con của quả cầu lửa
+        ParticleSystem[] psList = orb.GetComponentsInChildren<ParticleSystem>(true);
+        foreach (var ps in psList)
+        {
+            if (ps != null)
+            {
+                var main = ps.main;
+                main.scalingMode = ParticleSystemScalingMode.Hierarchy;
+                main.loop = true;
+                ps.Clear(true);
+                ps.Play(true);
+            }
+        }
+
         return orb;
     }
 
@@ -2539,15 +2569,17 @@ public class BossAI : NetworkBehaviour, IFireBarrageOwner
 
     private System.Collections.IEnumerator RoutineDropFireBarrageAtPosition(Vector3 groundPos)
     {
-        GameObject prefabToUse = fireBarrageWarningDecalPrefab != null ? fireBarrageWarningDecalPrefab : warningDecalPrefab;
+        // 1. Sinh vòng tròn cảnh báo dưới sàn: ưu tiên warningDecalPrefab (Par_RedField) hoặc fireBarrageWarningDecalPrefab
+        GameObject prefabToUse = warningDecalPrefab != null ? warningDecalPrefab : fireBarrageWarningDecalPrefab;
         GameObject warning = null;
 
         if (prefabToUse != null)
         {
             warning = Instantiate(prefabToUse, groundPos + Vector3.up * 0.05f, Quaternion.identity);
+            warning.transform.localScale = Vector3.one * (fireBarrageImpactRadius * 0.9f);
+
             var flasher = warning.GetComponent<WarningDecalFlash>();
-            if (flasher == null) flasher = warning.AddComponent<WarningDecalFlash>();
-            flasher.StartFlashing(fireBarrageWarningDuration);
+            if (flasher != null) flasher.StartFlashing(fireBarrageWarningDuration);
 
             ParticleSystem[] psList = warning.GetComponentsInChildren<ParticleSystem>(true);
             foreach (var ps in psList)
@@ -2556,7 +2588,19 @@ public class BossAI : NetworkBehaviour, IFireBarrageOwner
                 {
                     var main = ps.main;
                     main.scalingMode = ParticleSystemScalingMode.Hierarchy;
-                    if (!ps.isPlaying) ps.Play();
+                    main.loop = true;
+                    ps.Clear(true);
+                    ps.Play(true);
+                }
+            }
+
+            var vfxList = warning.GetComponentsInChildren<UnityEngine.VFX.VisualEffect>(true);
+            foreach (var ve in vfxList)
+            {
+                if (ve != null)
+                {
+                    ve.Reinit();
+                    ve.Play();
                 }
             }
 
@@ -2565,7 +2609,8 @@ public class BossAI : NetworkBehaviour, IFireBarrageOwner
 
         yield return new WaitForSeconds(fireBarrageWarningDuration);
 
-        Vector3 skyPos = groundPos + Vector3.up * 16.0f;
+        // 2. Thả quả cầu lửa khổng lồ từ trên trời rơi xuống
+        Vector3 skyPos = groundPos + Vector3.up * 18.0f;
         GameObject fireOrb = GetPooledFireBarrage(skyPos, Quaternion.LookRotation(Vector3.down));
 
         var proj = fireOrb.GetComponent<FallingFireOrbProjectile>();
@@ -2579,9 +2624,43 @@ public class BossAI : NetworkBehaviour, IFireBarrageOwner
         if (fireBarrageImpactVFX != null)
         {
             GameObject vfx = Instantiate(fireBarrageImpactVFX, impactPos, Quaternion.identity);
-            vfx.transform.localScale = Vector3.one * (fireBarrageScale * 0.8f);
-            Destroy(vfx, 2.5f);
+            vfx.transform.localScale = Vector3.one * (fireBarrageScale * 0.9f);
+
+            // Tắt các script tự hủy xung đột của PixPlays
+            var pixScripts = vfx.GetComponentsInChildren<MonoBehaviour>(true);
+            foreach (var mb in pixScripts)
+            {
+                if (mb != null && mb.GetType().Namespace != null && mb.GetType().Namespace.Contains("PixPlays"))
+                {
+                    mb.enabled = false;
+                }
+            }
+
+            var psList = vfx.GetComponentsInChildren<ParticleSystem>(true);
+            foreach (var ps in psList)
+            {
+                if (ps != null)
+                {
+                    var main = ps.main;
+                    main.scalingMode = ParticleSystemScalingMode.Hierarchy;
+                    ps.Clear(true);
+                    ps.Play(true);
+                }
+            }
+
+            var veList = vfx.GetComponentsInChildren<UnityEngine.VFX.VisualEffect>(true);
+            foreach (var ve in veList)
+            {
+                if (ve != null)
+                {
+                    ve.Reinit();
+                    ve.Play();
+                }
+            }
+
+            Destroy(vfx, 3.5f);
         }
+
         if (fireBarrageImpactSFX != null)
         {
             AudioSource.PlayClipAtPoint(fireBarrageImpactSFX, impactPos, 1.0f);
@@ -2599,18 +2678,39 @@ public class BossAI : NetworkBehaviour, IFireBarrageOwner
         bool auth = isStandaloneMode || (IsNetworkActive && IsServer);
         if (!auth) return;
 
-        Collider[] hits = Physics.OverlapSphere(impactPos, radius, layer);
         HashSet<Transform> hitRoots = new HashSet<Transform>();
 
+        // 1. Quét OverlapSphere tất cả Colliders không bị lọc sai bởi LayerMask
+        Collider[] hits = Physics.OverlapSphere(impactPos, radius);
         foreach (var hit in hits)
         {
+            if (hit == null) continue;
             Transform root = GetPlayerRoot(hit.transform);
             if (root != null && !hitRoots.Contains(root))
             {
                 hitRoots.Add(root);
                 Vector3 knockbackDir = (root.position - impactPos).normalized + Vector3.up * 0.4f;
                 EnemyDamageHelper.DealDamage(root, damage, knockbackDir * 6f);
-                Debug.Log($"[BossAI] Fire Barrage hit player: {root.name} for {damage} HP");
+                Debug.Log($"[BossAI] Cầu lửa nổ trúng Player (OverlapSphere): {root.name} -> Trừ {damage} HP!");
+            }
+        }
+
+        // 2. Quét cự ly khoảng cách trực tiếp tới toàn bộ Player còn sống (đảm bảo 100% trúng nếu đứng trong vùng)
+        var activePlayers = GetAllActivePlayers();
+        foreach (var p in activePlayers)
+        {
+            if (p == null || IsPlayerDeadOrInvisible(p)) continue;
+            Transform root = GetPlayerRoot(p);
+            if (root != null && !hitRoots.Contains(root))
+            {
+                float dist = Vector3.Distance(root.position, impactPos);
+                if (dist <= radius + 0.5f)
+                {
+                    hitRoots.Add(root);
+                    Vector3 knockbackDir = (root.position - impactPos).normalized + Vector3.up * 0.4f;
+                    EnemyDamageHelper.DealDamage(root, damage, knockbackDir * 6f);
+                    Debug.Log($"[BossAI] Cầu lửa nổ trúng Player (Distance check): {root.name} -> Trừ {damage} HP!");
+                }
             }
         }
     }

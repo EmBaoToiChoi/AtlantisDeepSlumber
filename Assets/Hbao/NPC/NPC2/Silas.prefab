@@ -489,13 +489,13 @@ MonoBehaviour:
   maxFireballsCount: 6
   fireballPlayerOffsetMin: 1.5
   fireballPlayerOffsetMax: 5.5
-  fireBarrageScale: 3.5
+  fireBarrageScale: 6
   fireBarrageDuration: 6
   fireBarrageInterval: 0.5
   fireBarrageWarningDuration: 0.7
   fireBarrageDropSpeed: 30
   fireBarrageDamage: 5
-  fireBarrageImpactRadius: 2.5
+  fireBarrageImpactRadius: 3.5
   fireBarrageTriggerParam: AttackCombo
   fireBarrageCooldown: 12
   minionPrefab: {fileID: 5764630933208192827, guid: c39f677d839639b4dae69d3b08885fa7, type: 3}
