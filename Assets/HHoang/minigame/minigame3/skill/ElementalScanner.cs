@@ -1,104 +1,6 @@
-/*using UnityEngine;
-using Unity.Netcode;
 using System.Collections.Generic;
-
-public class ElementalScanner : NetworkBehaviour 
-{
-    public bool hasElementalSight = false; 
-
-    [Header("Cấu hình Quét Map")]
-    public float scanSpeed = 30f;       
-    public float maxScanRadius = 50f;   
-    public float highlightDuration = 4f;
-
-    [Header("Hiệu ứng Sóng quét (Visual Wave)")]
-    public GameObject scanWavePrefab; // MỚI THÊM: Kéo Prefab quả cầu sóng vào đây
-    private GameObject currentWave;   // MỚI THÊM: Lưu trữ quả cầu đang quét
-
-    private bool isScanning = false;
-    private float currentRadius = 0f;
-    private Vector3 scanCenter;
-    
-    private static List<ElementalTarget> allTargets = new List<ElementalTarget>();
-
-    public static void RegisterTarget(ElementalTarget target)
-    {
-        if (!allTargets.Contains(target)) allTargets.Add(target);
-    }
-
-    public static void UnregisterTarget(ElementalTarget target)
-    {
-        if (allTargets.Contains(target)) allTargets.Remove(target); 
-    }
-
-    void Update()
-    {
-        if (!IsOwner || !hasElementalSight) return;
-
-        if (Input.GetKeyDown(KeyCode.Z) && !isScanning)
-        {
-            StartScan();
-        }
-
-        if (isScanning)
-        {
-            currentRadius += scanSpeed * Time.deltaTime;
-
-            // MỚI THÊM: Phình to quả cầu sóng quét ra xung quanh
-            if (currentWave != null)
-            {
-                // Bán kính = currentRadius, nên Đường kính (Scale) = currentRadius * 2
-                float diameter = currentRadius * 2f;
-                currentWave.transform.localScale = new Vector3(diameter, diameter, diameter);
-            }
-
-            foreach (var target in allTargets)
-            {
-                if (target == null) continue;
-                float distance = Vector3.Distance(scanCenter, target.transform.position);
-                if (distance <= currentRadius)
-                {
-                    target.SetHighlight(true);
-                }
-            }
-
-            if (currentRadius >= maxScanRadius)
-            {
-                isScanning = false;
-                
-                // MỚI THÊM: Huỷ quả cầu khi quét xong
-                if (currentWave != null) Destroy(currentWave);
-                
-                Invoke(nameof(TurnOffAllHighlights), highlightDuration);
-            }
-        }
-    }
-
-    void StartScan()
-    {
-        isScanning = true;
-        currentRadius = 0f;
-        scanCenter = transform.position; 
-
-        // MỚI THÊM: Tạo quả cầu ngay vị trí nhân vật lúc bắt đầu quét
-        if (scanWavePrefab != null)
-        {
-            currentWave = Instantiate(scanWavePrefab, scanCenter, Quaternion.identity);
-            currentWave.transform.localScale = Vector3.zero; // Bắt đầu từ 0
-        }
-    }
-
-    void TurnOffAllHighlights()
-    {
-        foreach (var target in allTargets)
-        {
-            if (target != null) target.SetHighlight(false);
-        }
-    }
-}*/
+using Unity.Netcode;
 using UnityEngine;
-using Unity.Netcode;
-using System.Collections.Generic;
 
 public class ElementalScanner : NetworkBehaviour 
 {
@@ -110,9 +12,22 @@ public class ElementalScanner : NetworkBehaviour
     public float highlightDuration = 4f;
 
     [Header("Hiệu ứng Sóng quét (Visual Wave)")]
+    [Tooltip("Prefab hiệu ứng sóng quét (ví dụ: Effect_09_HoloShield hoặc Effect_09_HoloShield(IncludeHit))")]
     public GameObject scanWavePrefab; 
-    private GameObject currentWave;   
 
+    [Tooltip("Hệ số nhân kích thước sóng quét (mặc định 1.0)")]
+    public float waveScaleMultiplier = 1.0f;
+
+    [Tooltip("Độ cao tâm sóng quét tính từ chân nhân vật (1.0m tương đương ngang ngực)")]
+    public float waveHeightOffset = 1.0f;
+
+    [Tooltip("Tự động kích hoạt chế độ Loop và Hierarchy Scaling cho toàn bộ Particle Systems trong Prefab")]
+    public bool autoLoopParticles = true;
+
+    [Tooltip("Tự động tắt các hiệu ứng tia đạn va chạm (Hit/Shot) phụ kèm theo trong Prefab")]
+    public bool hideHitSubEffects = true;
+
+    private GameObject currentWave;   
     private bool isScanning = false;
     private float currentRadius = 0f;
     private Vector3 scanCenter;
@@ -131,81 +46,186 @@ public class ElementalScanner : NetworkBehaviour
 
     void Update()
     {
-        // 1. BỘ LỌC PHÍM Z: CHỈ DUY NHẤT Owner (Máy của bạn) và có skill (Maya) mới qua được chốt này
-        if (IsOwner && hasElementalSight)
+        // 1. BỘ LỌC PHÍM Z: Hỗ trợ cả Online (IsOwner) lẫn Standalone / Test đơn lẻ
+        bool canTrigger = false;
+        if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening && IsSpawned)
+        {
+            canTrigger = IsOwner && hasElementalSight;
+        }
+        else
+        {
+            canTrigger = hasElementalSight;
+        }
+
+        if (canTrigger)
         {
             if (Input.GetKeyDown(KeyCode.Z) && !isScanning)
             {
-                // Báo lên Server để Server hô hào tất cả mọi người cùng bật hiệu ứng
-                TriggerScanServerRpc();
+                if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening && IsSpawned)
+                {
+                    TriggerScanServerRpc();
+                }
+                else
+                {
+                    // Chế độ chơi đơn / Offline
+                    StartScanLocal();
+                }
             }
         }
 
-        // 2. BỘ XỬ LÝ HIỆU ỨNG: Chạy trên màn hình của TẤT CẢ mọi người
+        // 2. BỘ XỬ LÝ HIỆU ỨNG QUÉT
         if (isScanning)
         {
             currentRadius += scanSpeed * Time.deltaTime;
 
-            // Phình to quả cầu sóng quét ra xung quanh
+            // Phình to quả cầu sóng quét theo bán kính thực tế
             if (currentWave != null)
             {
-                float diameter = currentRadius * 2f;
+                float diameter = currentRadius * 2f * waveScaleMultiplier;
                 currentWave.transform.localScale = new Vector3(diameter, diameter, diameter);
             }
 
-            foreach (var target in allTargets)
+            // Quét và làm sáng các mục tiêu nằm trong tầm quét
+            for (int i = 0; i < allTargets.Count; i++)
             {
+                var target = allTargets[i];
                 if (target == null) continue;
+
                 float distance = Vector3.Distance(scanCenter, target.transform.position);
                 if (distance <= currentRadius)
                 {
-                    // Tự bật sáng trên từng máy
                     target.SetHighlight(true);
                 }
             }
 
+            // Hoàn tất quét khi đạt bán kính tối đa
             if (currentRadius >= maxScanRadius)
             {
                 isScanning = false;
                 
-                // Huỷ quả cầu khi quét xong
-                if (currentWave != null) Destroy(currentWave);
+                // Huỷ quả cầu sóng quét khi hoàn thành
+                if (currentWave != null)
+                {
+                    Destroy(currentWave);
+                    currentWave = null;
+                }
                 
+                CancelInvoke(nameof(TurnOffAllHighlights));
                 Invoke(nameof(TurnOffAllHighlights), highlightDuration);
             }
+        }
+    }
+
+    // --- KHỞI CHẠY QUÉT & TẠO HIỆU ỨNG ---
+
+    private void StartScanLocal()
+    {
+        isScanning = true;
+        currentRadius = 0f;
+        scanCenter = transform.position + Vector3.up * waveHeightOffset; 
+
+        if (scanWavePrefab != null)
+        {
+            currentWave = Instantiate(scanWavePrefab, scanCenter, Quaternion.identity);
+            currentWave.transform.localScale = Vector3.zero;
+
+            // 1. Reset localPosition của các GameObject con về (0,0,0) để tránh bị offset nhân lên không trung
+            Transform[] allChildren = currentWave.GetComponentsInChildren<Transform>(true);
+            for (int i = 0; i < allChildren.Length; i++)
+            {
+                if (allChildren[i] != currentWave.transform)
+                {
+                    allChildren[i].localPosition = Vector3.zero;
+                }
+            }
+
+            // 2. Tắt TẤT CẢ Collider trên quả cầu sóng để không chặn/đẩy Player hay va chạm vật lý
+            Collider[] colliders = currentWave.GetComponentsInChildren<Collider>(true);
+            for (int i = 0; i < colliders.Length; i++)
+            {
+                colliders[i].enabled = false;
+            }
+
+            // 3. Tắt các script tự huỷ / mờ dần của Asset pack (NewMaterialChange, ShieldActivate)
+            MonoBehaviour[] allScripts = currentWave.GetComponentsInChildren<MonoBehaviour>(true);
+            for (int i = 0; i < allScripts.Length; i++)
+            {
+                string scriptName = allScripts[i].GetType().Name;
+                if (scriptName == "NewMaterialChange" || scriptName == "ShieldActivate")
+                {
+                    allScripts[i].enabled = false;
+                }
+            }
+
+            // Đảm bảo material luôn hiển thị rõ (MaskCutOut = 1.0f)
+            Renderer[] renderers = currentWave.GetComponentsInChildren<Renderer>(true);
+            for (int i = 0; i < renderers.Length; i++)
+            {
+                if (renderers[i].material != null && renderers[i].material.HasProperty("_MaskCutOut"))
+                {
+                    renderers[i].material.SetFloat("_MaskCutOut", 1.0f);
+                }
+            }
+
+            // 4. Tắt riêng hiệu ứng đạn phụ va chạm (MultipleObjectsMake / Effect_15_MultipleShot)
+            // CHÚ Ý: Tuyệt đối không tắt nhầm Root hoặc effect khiên chính (HoloShield)
+            if (hideHitSubEffects)
+            {
+                for (int i = 0; i < allChildren.Length; i++)
+                {
+                    Transform t = allChildren[i];
+                    if (t != currentWave.transform)
+                    {
+                        string childName = t.name.ToLower();
+                        if (childName.Contains("multipleshot") || childName.Contains("shieldhit") || childName.Contains("forhit"))
+                        {
+                            t.gameObject.SetActive(false);
+                        }
+                    }
+                }
+            }
+
+            // 5. Tự động bật Loop và Scale Mode Hierarchy cho toàn bộ hạt Particle System
+            if (autoLoopParticles)
+            {
+                ParticleSystem[] particles = currentWave.GetComponentsInChildren<ParticleSystem>(true);
+                for (int i = 0; i < particles.Length; i++)
+                {
+                    var ps = particles[i];
+                    var main = ps.main;
+                    main.loop = true; 
+                    main.scalingMode = ParticleSystemScalingMode.Hierarchy; 
+                    ps.Play();
+                }
+            }
+
+            // Đảm bảo Root luôn Active và hiển thị
+            currentWave.SetActive(true);
         }
     }
 
     // --- ĐỒNG BỘ MẠNG (RPC) ---
 
     [ServerRpc]
-    void TriggerScanServerRpc()
+    private void TriggerScanServerRpc()
     {
-        // Server nhận lệnh từ con Maya, rồi phát lệnh xuống toàn bộ máy trong phòng
         TriggerScanClientRpc();
     }
 
     [ClientRpc]
-    void TriggerScanClientRpc()
+    private void TriggerScanClientRpc()
     {
-        // Khởi động quá trình quét trên MỌI MÁY
-        isScanning = true;
-        currentRadius = 0f;
-        scanCenter = transform.position; 
-
-        // Tạo quả cầu ngay vị trí nhân vật lúc bắt đầu quét
-        if (scanWavePrefab != null)
-        {
-            currentWave = Instantiate(scanWavePrefab, scanCenter, Quaternion.identity);
-            currentWave.transform.localScale = Vector3.zero; 
-        }
+        StartScanLocal();
     }
 
-    void TurnOffAllHighlights()
+    private void TurnOffAllHighlights()
     {
-        foreach (var target in allTargets)
+        for (int i = 0; i < allTargets.Count; i++)
         {
-            if (target != null) target.SetHighlight(false);
+            if (allTargets[i] != null)
+            {
+                allTargets[i].SetHighlight(false);
+            }
         }
     }
 }

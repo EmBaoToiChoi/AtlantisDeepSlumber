@@ -17,14 +17,14 @@ using UnityEngine.Events;
 ///   - 50% HP Shadow Clone Summoning Skill (triệu hồi 2 phân thân đồng chiến đấu).
 ///   - Alternates between 3 attacks: Nhaychemdat, NhayDanh, and XoayChem.
 /// </summary>
-public class MiniBossAI : NetworkBehaviour
+public class MiniBossAI : NetworkBehaviour, ISwordRainOwner
 {
     //cus
     [Header("Death Event Trigger")]
     [Tooltip("Kéo object chứa VideoCutsceneController vào đây và chọn hàm StartCutscene")]
     public UnityEvent onBossDeathEvent;
 
-    public enum MiniBossState { Idle, Chase, Attack, Hit, Enrage, Dead }
+    public enum MiniBossState { Idle, Chase, Attack, SwordRain, Hit, Enrage, Dead }
 
     [Header("Health Settings")]
     public float phase1MaxHealth = 700f;
@@ -56,14 +56,16 @@ public class MiniBossAI : NetworkBehaviour
     public NetworkVariable<int> summonCloneCounter = new NetworkVariable<int>(
         0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
-    [Header("Earth Spikes Skill Settings (5s triệu hồi 1 lần, 4-5 bãi đá)")]
+    [Header("Earth Spikes Skill Settings (5-10s triệu hồi 1 lần, 4-5 bãi đá)")]
     [Tooltip("Prefab hiệu ứng gai đất nhô lên VFX_Earth_Area_01")]
     public GameObject earthSpikesVFXPrefab;
-    [Tooltip("Khoảng thời gian giữa các lần gọi kỹ năng Gai Đất (5 giây)")]
+    [Tooltip("Khoảng thời gian tối thiểu giữa các lần gọi kỹ năng Gai Đất (5-10 giây)")]
     public float earthSpikesIntervalMin = 5f;
-    public float earthSpikesIntervalMax = 5f;
+    public float earthSpikesIntervalMax = 10f;
     [Tooltip("Sát thương mỗi lần đâm gai (-5 HP)")]
     public float earthSpikesDamage = 5f;
+    [Tooltip("Thời gian chờ đòn gồng/vòng sáng vàng trước khi gai đá nhô lên và gây sát thương (1.85s)")]
+    public float earthSpikesEmergenceDelay = 1.85f;
     private float earthSpikesTimer = 5f;
 
     [Header("Furious Charge Skill Settings (Chỉ thỉnh thoảng mới tăng tốc)")]
@@ -72,6 +74,24 @@ public class MiniBossAI : NetworkBehaviour
     private float furiousChargeTimer = 0f;
     private bool isFuriousCharging = false;
     private float furiousChargeDurationTimer = 0f;
+
+    [Header("Sword Rain (Mưa Kiếm 10s) Settings (5-10s triệu hồi 1 lần)")]
+    public GameObject swordPrefab;
+    public GameObject warningDecalPrefab;
+    public GameObject swordImpactVFX;
+    public AudioClip swordImpactSFX;
+    public float swordRainDuration = 10.0f;
+    public float swordSpawnInterval = 0.4f;
+    public float warningDuration = 1.5f;
+    public float swordDropSpeed = 35.0f;
+    public float swordDamage = 15.0f;
+    public float swordImpactRadius = 2.5f;
+    public string swordRainTriggerParam = "AttackCombo";
+    public Vector3 swordSpawnRotationOffset = new Vector3(90f, 0f, 0f); // Xoay bù để kiếm cắm thẳng xuống
+    public float swordRainIntervalMin = 5.0f;
+    public float swordRainIntervalMax = 10.0f;
+    private float swordRainTimer = 5.0f;
+    private bool isSwordRainActive = false;
 
     [Header("Shadow Teleport Skill Settings (Chỉ dùng khi lỗi địa hình)")]
     public float shadowBlinkCooldown = 18.0f;
@@ -114,6 +134,8 @@ public class MiniBossAI : NetworkBehaviour
     public NetworkVariable<int> enrageCounter = new NetworkVariable<int>(
         0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     public NetworkVariable<int> shadowBlinkCounter = new NetworkVariable<int>(
+        0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+    public NetworkVariable<int> swordRainCounter = new NetworkVariable<int>(
         0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
     // Standalone fallback variables
@@ -255,6 +277,7 @@ public class MiniBossAI : NetworkBehaviour
     private IdleState idleState;
     private ChaseState chaseState;
     private AttackState attackState;
+    private SwordRainState swordRainState;
     private HitState hitState;
     private EnrageState enrageState;
     private DeadState deadState;
@@ -331,6 +354,7 @@ public class MiniBossAI : NetworkBehaviour
         idleState = new IdleState(this);
         chaseState = new ChaseState(this);
         attackState = new AttackState(this);
+        swordRainState = new SwordRainState(this);
         hitState = new HitState(this);
         enrageState = new EnrageState(this);
         deadState = new DeadState(this);
@@ -339,6 +363,7 @@ public class MiniBossAI : NetworkBehaviour
     private void Start()
     {
         ResetEarthSpikesTimer();
+        ResetSwordRainTimer();
         if (agent != null)
         {
             agent.stoppingDistance = 2.4f;
@@ -389,6 +414,7 @@ public class MiniBossAI : NetworkBehaviour
         };
         shadowBlinkCounter.OnValueChanged += (_, _) => PlayShadowBlinkVisuals();
         summonCloneCounter.OnValueChanged += (_, _) => PlaySummonCloneVisuals();
+        swordRainCounter.OnValueChanged += (_, _) => TriggerSwordRainAnim();
         isPhase2Network.OnValueChanged += (oldVal, newVal) => {
             if (newVal)
             {
@@ -445,8 +471,38 @@ public class MiniBossAI : NetworkBehaviour
         };
         shadowBlinkCounter.OnValueChanged -= (_, _) => PlayShadowBlinkVisuals();
         summonCloneCounter.OnValueChanged -= (_, _) => PlaySummonCloneVisuals();
+        swordRainCounter.OnValueChanged -= (_, _) => TriggerSwordRainAnim();
         currentHealth.OnValueChanged -= OnHealthNetChanged;
         deathExplosionCounter.OnValueChanged -= (_, _) => PlayDeathExplosionEffects();
+    }
+
+    private void TriggerSwordRainAnim()
+    {
+        if (anim != null)
+        {
+            if (!string.IsNullOrEmpty(swordRainTriggerParam) && HasParameter(anim, swordRainTriggerParam))
+            {
+                anim.SetTrigger(swordRainTriggerParam);
+            }
+            else if (!string.IsNullOrEmpty(enrageTrigger) && HasParameter(anim, enrageTrigger))
+            {
+                anim.SetTrigger(enrageTrigger);
+            }
+            else if (attackTriggers != null && attackTriggers.Length > 0 && HasParameter(anim, attackTriggers[0]))
+            {
+                anim.SetTrigger(attackTriggers[0]);
+            }
+        }
+    }
+
+    private static bool HasParameter(Animator animator, string paramName)
+    {
+        if (animator == null || string.IsNullOrEmpty(paramName)) return false;
+        foreach (var param in animator.parameters)
+        {
+            if (param.name == paramName) return true;
+        }
+        return false;
     }
 
     private void OnHealthNetChanged(float oldVal, float newVal)
@@ -725,8 +781,8 @@ public class MiniBossAI : NetworkBehaviour
         // KIỂM TRA TỐC BIẾN NÉ ĐÒN KHI BỊ DỒN SÁT THƯƠNG
         CheckShadowBlinkDodge(damage);
 
-        // HYPER ARMOR FIX: Khi đang tấn công (Attack State), Enrage hoặc Dead -> Không bị hủy đòn chém
-        if (CurrentStateValue == MiniBossState.Attack || CurrentStateValue == MiniBossState.Enrage || CurrentStateValue == MiniBossState.Dead)
+        // HYPER ARMOR FIX: Khi đang tấn công (Attack State), Mưa Kiếm (SwordRain), Enrage hoặc Dead -> Không bị hủy đòn chém
+        if (CurrentStateValue == MiniBossState.Attack || CurrentStateValue == MiniBossState.SwordRain || CurrentStateValue == MiniBossState.Enrage || CurrentStateValue == MiniBossState.Dead)
         {
             return;
         }
@@ -1252,7 +1308,12 @@ public class MiniBossAI : NetworkBehaviour
 
     private void ResetEarthSpikesTimer()
     {
-        earthSpikesTimer = 5f;
+        earthSpikesTimer = Random.Range(earthSpikesIntervalMin, earthSpikesIntervalMax);
+    }
+
+    private void ResetSwordRainTimer()
+    {
+        swordRainTimer = Random.Range(swordRainIntervalMin, swordRainIntervalMax);
     }
 
     private void TryLaunchEarthSpikesSkill()
@@ -1354,12 +1415,151 @@ public class MiniBossAI : NetworkBehaviour
                 dmgZone.damageAmount = earthSpikesDamage;
                 dmgZone.baseDamageRadius = 3.2f;
                 dmgZone.baseMaxSpikeHeight = 2.5f;
-                dmgZone.spikeEmergenceDelay = 1.0f;
+                dmgZone.spikeEmergenceDelay = earthSpikesEmergenceDelay;
                 dmgZone.spikeActiveDuration = 1.6f;
-                dmgZone.vfxLifespan = 3.5f;
+                dmgZone.vfxLifespan = earthSpikesEmergenceDelay + 2.3f;
             }
 
             Debug.Log($"[MiniBossAI] Triệu hồi đồng loạt {spawnPositions.Length} bãi Gai Đất (VFX_Earth_Area_01) ở các vị trí ngẫu nhiên!");
+        }
+    }
+
+    private void TryLaunchSwordRainSkill()
+    {
+        bool auth = isStandaloneMode || (IsNetworkActive && IsServer);
+        if (!auth) return;
+
+        var players = GetAllActivePlayers();
+        List<Vector3> clusterSpots = new List<Vector3>();
+
+        // 1. Quét tìm tất cả Player: Mỗi Player sẽ bị nhắm các bãi dội chùm kiếm (ngay dưới chân và quanh 2-3m)
+        foreach (var p in players)
+        {
+            if (p != null && !IsPlayerDeadOrInvisible(p))
+            {
+                // Bãi 1: Ngay tâm dưới chân Player
+                clusterSpots.Add(p.position);
+
+                // Bãi 2: Bán kính 1.8m - 3.2m quanh Player
+                Vector2 randomOffset = Random.insideUnitCircle.normalized * Random.Range(1.8f, 3.2f);
+                Vector3 offsetPos = p.position + new Vector3(randomOffset.x, 0f, randomOffset.y);
+                if (NavMesh.SamplePosition(offsetPos, out NavMeshHit hit, 4f, NavMesh.AllAreas))
+                {
+                    clusterSpots.Add(hit.position);
+                }
+                else
+                {
+                    clusterSpots.Add(offsetPos);
+                }
+            }
+        }
+
+        // 2. Thêm các điểm bãi ngẫu nhiên xung quanh khu vực giao tranh (tổng cộng 5 - 8 bãi chùm kiếm)
+        int minSpots = Mathf.Max(5, clusterSpots.Count);
+        int targetTotalSpots = Random.Range(minSpots, minSpots + 3);
+        int neededRandom = Mathf.Max(0, targetTotalSpots - clusterSpots.Count);
+
+        for (int i = 0; i < neededRandom; i++)
+        {
+            Vector2 randomOffset = Random.insideUnitCircle * Random.Range(3.5f, 13f);
+            Vector3 offsetPos = transform.position + new Vector3(randomOffset.x, 0, randomOffset.y);
+            if (NavMesh.SamplePosition(offsetPos, out NavMeshHit hit, 6f, NavMesh.AllAreas))
+            {
+                clusterSpots.Add(hit.position);
+            }
+            else
+            {
+                clusterSpots.Add(offsetPos);
+            }
+        }
+
+        // Tráo ngẫu nhiên thứ tự bãi rơi
+        for (int i = 0; i < clusterSpots.Count; i++)
+        {
+            int rnd = Random.Range(0, clusterSpots.Count);
+            Vector3 temp = clusterSpots[i];
+            clusterSpots[i] = clusterSpots[rnd];
+            clusterSpots[rnd] = temp;
+        }
+
+        Vector3[] finalPositions = clusterSpots.ToArray();
+
+        // 3. Kích hoạt animation triệu hồi và đồng bộ qua ClientRpc
+        if (!isStandaloneMode && IsServer)
+        {
+            swordRainCounter.Value++;
+            TriggerSwordRainSequenceClientRpc(finalPositions);
+        }
+        else
+        {
+            TriggerSwordRainAnim();
+            StartCoroutine(RoutineExecuteSwordRainBackground(finalPositions));
+        }
+
+        Debug.Log($"[MiniBossAI] Triệu hồi Mưa Kiếm Hoàng Kim: {finalPositions.Length} bãi dội kiếm (mỗi bãi 3-5 thanh kiếm cắm chụm vào 1 chỗ)! Boss vẫn tiếp tục đánh trả bình thường!");
+    }
+
+    [ClientRpc]
+    private void TriggerSwordRainSequenceClientRpc(Vector3[] finalPositions)
+    {
+        TriggerSwordRainAnim();
+        StartCoroutine(RoutineExecuteSwordRainBackground(finalPositions));
+    }
+
+    private IEnumerator RoutineExecuteSwordRainBackground(Vector3[] targetPositions)
+    {
+        if (targetPositions == null || targetPositions.Length == 0) yield break;
+
+        isSwordRainActive = true;
+
+        // 1. Phóng hàng loạt thanh kiếm vút từ đầu/thân MiniBoss bay vút lên trời
+        StartCoroutine(RoutineLaunchAscendingSwords());
+
+        // Chờ 0.4s sau khi kiếm bay vút lên cao thì bắt đầu dội các chùm kiếm từ trên trời xuống
+        yield return new WaitForSeconds(0.4f);
+
+        float elapsed = 0f;
+        int spawnIdx = 0;
+        float dynamicInterval = Mathf.Clamp(swordRainDuration / Mathf.Max(1, targetPositions.Length), 0.8f, 1.4f);
+
+        while (spawnIdx < targetPositions.Length && elapsed < swordRainDuration)
+        {
+            if (IsDead) yield break;
+
+            Vector3 targetPos = targetPositions[spawnIdx];
+            spawnIdx++;
+
+            StartCoroutine(RoutineDropSwordAtPosition(targetPos));
+
+            yield return new WaitForSeconds(dynamicInterval);
+            elapsed += dynamicInterval;
+        }
+
+        isSwordRainActive = false;
+    }
+
+    private IEnumerator RoutineLaunchAscendingSwords()
+    {
+        int count = Random.Range(12, 18); // 12 đến 18 thanh kiếm bay vút lên trời từ đầu MiniBoss
+        Vector3 headPos = transform.position + Vector3.up * 2.6f;
+
+        for (int i = 0; i < count; i++)
+        {
+            if (IsDead) yield break;
+
+            Vector2 randomSpread = Random.insideUnitCircle * 1.0f;
+            Vector3 spawnPos = headPos + new Vector3(randomSpread.x, Random.Range(-0.2f, 0.4f), randomSpread.y);
+
+            Vector3 upwardDir = (Vector3.up * 3.5f + new Vector3(randomSpread.x * 0.6f, 0f, randomSpread.y * 0.6f)).normalized;
+            Quaternion rot = Quaternion.LookRotation(upwardDir) * Quaternion.Euler(swordSpawnRotationOffset);
+
+            GameObject sword = GetPooledSword(spawnPos, rot);
+            var ascProj = sword.GetComponent<AscendingSwordProjectile>();
+            if (ascProj == null) ascProj = sword.AddComponent<AscendingSwordProjectile>();
+
+            ascProj.Initialize(this, spawnPos, upwardDir, 30.0f, 26.0f);
+
+            yield return new WaitForSeconds(0.04f); // Bắn liên hồi từng thanh kiếm vút lên trời cực nhanh
         }
     }
 
@@ -1402,7 +1602,7 @@ public class MiniBossAI : NetworkBehaviour
             if (recentDamageResetTimer <= 0f) recentDamageTaken = 0f;
         }
 
-        // SKILL GAI ĐẤT: MiniBoss chính thi triển kỹ năng Gai Đất (5s triệu hồi 1 lần, 4-5 bãi đá)
+        // SKILL GAI ĐẤT: MiniBoss chính thi triển kỹ năng Gai Đất (mỗi 5-10s triệu hồi 1 lần, 4-5 bãi đá)
         if (!isClone && IsBossActive && !IsDead && !isSummonInvulnerable)
         {
             earthSpikesTimer -= Time.deltaTime;
@@ -1410,6 +1610,17 @@ public class MiniBossAI : NetworkBehaviour
             {
                 ResetEarthSpikesTimer();
                 TryLaunchEarthSpikesSkill();
+            }
+        }
+
+        // SKILL MƯA KIẾM: MiniBoss chính thi triển kỹ năng Mưa Kiếm (mỗi 5-10s triệu hồi 1 lần, 5-10 kiếm rơi 10s)
+        if (!isClone && IsBossActive && !IsDead && !isSummonInvulnerable)
+        {
+            swordRainTimer -= Time.deltaTime;
+            if (swordRainTimer <= 0f && !isSwordRainActive)
+            {
+                ResetSwordRainTimer();
+                TryLaunchSwordRainSkill();
             }
         }
 
@@ -1464,12 +1675,13 @@ public class MiniBossAI : NetworkBehaviour
 
         switch (newState)
         {
-            case MiniBossState.Idle:   currentFSMState = idleState;   break;
-            case MiniBossState.Chase:  currentFSMState = chaseState;  break;
-            case MiniBossState.Attack: currentFSMState = attackState; break;
-            case MiniBossState.Hit:    currentFSMState = hitState;    break;
-            case MiniBossState.Enrage: currentFSMState = enrageState; break;
-            case MiniBossState.Dead:   currentFSMState = deadState;   break;
+            case MiniBossState.Idle:      currentFSMState = idleState;      break;
+            case MiniBossState.Chase:     currentFSMState = chaseState;     break;
+            case MiniBossState.Attack:    currentFSMState = attackState;    break;
+            case MiniBossState.SwordRain: currentFSMState = swordRainState; break;
+            case MiniBossState.Hit:       currentFSMState = hitState;       break;
+            case MiniBossState.Enrage:    currentFSMState = enrageState;    break;
+            case MiniBossState.Dead:      currentFSMState = deadState;      break;
         }
 
         if (currentFSMState != null)
@@ -2066,6 +2278,12 @@ private void Die()
         var simples = FindObjectsByType<SimplePlayerTest>(FindObjectsSortMode.None);
         foreach (var p in simples) if (p != null && !list.Contains(p.transform)) list.Add(p.transform);
 
+        var skeletons = FindObjectsByType<Skeleton>(FindObjectsSortMode.None);
+        foreach (var p in skeletons) if (p != null && !list.Contains(p.transform)) list.Add(p.transform);
+
+        var taggedPlayers = GameObject.FindGameObjectsWithTag("Player");
+        foreach (var go in taggedPlayers) if (go != null && !list.Contains(go.transform)) list.Add(go.transform);
+
         return list;
     }
 
@@ -2457,6 +2675,344 @@ private void Die()
         }
         public void Update() { }
         public void Exit() { }
+    }
+
+    private class SwordRainState : IEnemyState
+    {
+        private MiniBossAI boss;
+        public SwordRainState(MiniBossAI boss) { this.boss = boss; }
+
+        public void Enter()
+        {
+            boss.TryLaunchSwordRainSkill();
+            if (boss.targetPlayer != null) boss.ChangeState(MiniBossState.Chase);
+            else boss.ChangeState(MiniBossState.Idle);
+        }
+
+        public void Update() { }
+        public void Exit() { }
+    }
+
+    // ══════════════════════════════════════════════════════════
+    //  SWORD RAIN OBJECT POOLING & LOGIC
+    // ══════════════════════════════════════════════════════════
+
+    private Queue<GameObject> swordPool = new Queue<GameObject>();
+    private Queue<GameObject> warningPool = new Queue<GameObject>();
+
+    public GameObject GetPooledSword(Vector3 spawnPos, Quaternion rotation)
+    {
+        GameObject sword = null;
+        while (swordPool.Count > 0)
+        {
+            var candidate = swordPool.Dequeue();
+            if (candidate != null)
+            {
+                sword = candidate;
+                break;
+            }
+        }
+
+        if (sword == null)
+        {
+            if (swordPrefab != null)
+            {
+                sword = Instantiate(swordPrefab);
+            }
+            else
+            {
+                // Tạo đại kiếm 3D phát sáng màu hoàng kim hiển thị cực rõ khi Inspector chưa gán Prefab
+                sword = new GameObject("SpectralSummonedSword_MiniBoss");
+                
+                GameObject blade = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                blade.name = "Blade";
+                blade.transform.SetParent(sword.transform);
+                blade.transform.localPosition = new Vector3(0, 1.2f, 0);
+                blade.transform.localScale = new Vector3(0.35f, 2.8f, 0.12f);
+
+                GameObject hilt = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                hilt.name = "Hilt";
+                hilt.transform.SetParent(sword.transform);
+                hilt.transform.localPosition = new Vector3(0, 0f, 0);
+                hilt.transform.localScale = new Vector3(1.2f, 0.2f, 0.2f);
+
+                GameObject pommel = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+                pommel.name = "Pommel";
+                pommel.transform.SetParent(sword.transform);
+                pommel.transform.localPosition = new Vector3(0, -0.3f, 0);
+                pommel.transform.localScale = new Vector3(0.45f, 0.45f, 0.45f);
+
+                Shader shader = Shader.Find("Sprites/Default") ?? Shader.Find("UI/Default");
+                Material goldMat = new Material(shader != null ? shader : Shader.Find("Legacy Shaders/Particles/Alpha Blended Premultiply"));
+                goldMat.color = new Color(1.0f, 0.75f, 0.1f, 1.0f); // Màu hoàng kim rực rỡ
+
+                var renderers = sword.GetComponentsInChildren<Renderer>();
+                foreach (var r in renderers) { if (r != null) r.material = goldMat; }
+            }
+        }
+
+        // Bật hiển thị tất cả Renderer và ParticleSystem của thanh kiếm
+        var allRenderers = sword.GetComponentsInChildren<Renderer>(true);
+        foreach (var r in allRenderers) { if (r != null) r.enabled = true; }
+
+        var allParticles = sword.GetComponentsInChildren<ParticleSystem>(true);
+        foreach (var ps in allParticles) { if (ps != null) { ps.Clear(); ps.Play(); } }
+
+        // Đảm bảo toàn bộ Collider đều là Trigger
+        var allColliders = sword.GetComponentsInChildren<Collider>(true);
+        foreach (var c in allColliders) { if (c != null) c.isTrigger = true; }
+
+        var rootCol = sword.GetComponent<BoxCollider>();
+        if (rootCol == null) rootCol = sword.AddComponent<BoxCollider>();
+        rootCol.size = new Vector3(1.5f, 3.5f, 1.5f);
+        rootCol.center = new Vector3(0f, 1.2f, 0f);
+        rootCol.isTrigger = true;
+
+        // Đảm bảo luôn có Rigidbody Kinematic ở Root để va chạm Trigger hoạt động chuẩn xác 100%
+        var rb = sword.GetComponent<Rigidbody>();
+        if (rb == null) rb = sword.AddComponent<Rigidbody>();
+        rb.isKinematic = true;
+        rb.useGravity = false;
+
+        sword.transform.position = spawnPos;
+        sword.transform.rotation = rotation;
+        sword.SetActive(true);
+        return sword;
+    }
+
+    public void RecycleSword(GameObject sword)
+    {
+        if (sword == null) return;
+        sword.SetActive(false);
+        if (!swordPool.Contains(sword))
+        {
+            swordPool.Enqueue(sword);
+        }
+    }
+
+    public GameObject GetPooledWarning(Vector3 spawnPos)
+    {
+        GameObject warning = null;
+        while (warningPool.Count > 0)
+        {
+            var candidate = warningPool.Dequeue();
+            if (candidate != null)
+            {
+                warning = candidate;
+                break;
+            }
+        }
+
+        if (warning == null)
+        {
+            if (warningDecalPrefab != null)
+            {
+                warning = Instantiate(warningDecalPrefab);
+            }
+            else
+            {
+                warning = new GameObject("ProceduralWarningRing_MiniBoss");
+                warning.AddComponent<ProceduralWarningCircle>();
+            }
+        }
+
+        warning.transform.position = spawnPos;
+        warning.SetActive(true);
+        return warning;
+    }
+
+    public void RecycleWarning(GameObject warning)
+    {
+        if (warning == null) return;
+        warning.SetActive(false);
+        if (!warningPool.Contains(warning))
+        {
+            warningPool.Enqueue(warning);
+        }
+    }
+
+    [ClientRpc]
+    private void TriggerSwordRainDropClientRpc(Vector3[] positions)
+    {
+        ExecuteSwordRainDropLocal(positions);
+    }
+
+    public void ExecuteSwordRainDropLocal(Vector3[] positions)
+    {
+        foreach (var pos in positions)
+        {
+            StartCoroutine(RoutineDropSwordAtPosition(pos));
+        }
+    }
+
+    private IEnumerator RoutineDropSwordAtPosition(Vector3 groundPos)
+    {
+        Debug.Log($"[MiniBossAI] Bắt đầu dội chùm kiếm rơi tại {groundPos}");
+        GameObject warning = GetPooledWarning(groundPos + Vector3.up * 0.05f);
+
+        var flasher = warning.GetComponent<WarningDecalFlash>();
+        if (flasher != null) flasher.StartFlashing(warningDuration);
+
+        var ring = warning.GetComponent<ProceduralWarningCircle>();
+        if (ring != null) ring.StartWarning(warningDuration, swordImpactRadius);
+
+        yield return new WaitForSeconds(warningDuration);
+
+        RecycleWarning(warning);
+
+        // RƠI NHIỀU KIẾM VÀO CÙNG 1 CHỖ (Chùm 3 đến 5 thanh kiếm cắm chụm xuống cùng 1 vị trí)
+        int swordsInCluster = Random.Range(3, 6);
+        for (int k = 0; k < swordsInCluster; k++)
+        {
+            Vector3 offset = Vector3.zero;
+            if (k > 0)
+            {
+                Vector2 r = Random.insideUnitCircle * Random.Range(0.2f, 0.65f);
+                offset = new Vector3(r.x, 0f, r.y);
+            }
+
+            Vector3 targetDropPos = groundPos + offset;
+            Vector3 skyPos = targetDropPos + Vector3.up * (22.0f + k * 1.5f);
+            Quaternion rot = Quaternion.LookRotation(Vector3.down) * Quaternion.Euler(swordSpawnRotationOffset);
+
+            GameObject sword = GetPooledSword(skyPos, rot);
+            var ascProj = sword.GetComponent<AscendingSwordProjectile>();
+            if (ascProj != null) ascProj.enabled = false;
+
+            var proj = sword.GetComponent<FallingSwordProjectile>();
+            if (proj == null) proj = sword.AddComponent<FallingSwordProjectile>();
+            proj.enabled = true;
+
+            proj.Initialize(this, targetDropPos, swordDropSpeed, swordDamage, swordImpactRadius, playerLayer);
+
+            // Giãn cách cực ngắn 0.05s giữa các kiếm trong cùng 1 chùm để tạo hiệu ứng cắm phập phập phập liên hồi
+            if (k < swordsInCluster - 1)
+            {
+                yield return new WaitForSeconds(0.05f);
+            }
+        }
+    }
+
+    public void PlaySwordImpactEffects(Vector3 impactPos)
+    {
+        if (swordImpactVFX != null)
+        {
+            GameObject vfx = Instantiate(swordImpactVFX, impactPos, Quaternion.identity);
+            vfx.transform.localScale = swordImpactVFX.transform.localScale;
+            Destroy(vfx, 2.5f);
+        }
+        else
+        {
+#if UNITY_EDITOR
+            GameObject fallbackVfx = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Vefects/Stylized AoE VFX/VFX/Fire/Particles/VFX_Fire_Area_01.prefab");
+            if (fallbackVfx != null)
+            {
+                GameObject vfx = Instantiate(fallbackVfx, impactPos, Quaternion.identity);
+                vfx.transform.localScale = fallbackVfx.transform.localScale;
+                Destroy(vfx, 2.5f);
+            }
+#endif
+        }
+
+        if (swordImpactSFX != null)
+        {
+            AudioSource.PlayClipAtPoint(swordImpactSFX, impactPos, 1.0f);
+        }
+    }
+
+    public void DealSwordImpactDamage(Vector3 impactPos, float damage, float radius, LayerMask layer)
+    {
+        bool auth = isStandaloneMode || !IsNetworkActive || (IsNetworkActive && IsServer);
+        if (!auth) return;
+
+        HashSet<Transform> hitRoots = new HashSet<Transform>();
+
+        // 1. Quét theo khoảng cách trực tiếp tới toàn bộ Player đang chơi (Bảo đảm 100% trừ máu không phụ thuộc LayerMask/Collider)
+        var allPlayers = GetAllActivePlayers();
+        foreach (var p in allPlayers)
+        {
+            if (p != null && !IsPlayerDeadOrInvisible(p))
+            {
+                float dist = Vector3.Distance(impactPos, p.position);
+                float xzDist = Vector2.Distance(new Vector2(impactPos.x, impactPos.z), new Vector2(p.position.x, p.position.z));
+                float heightDiff = p.position.y - impactPos.y;
+                if (dist <= radius + 0.8f || (xzDist <= radius && heightDiff >= -1.0f && heightDiff <= 3.5f))
+                {
+                    hitRoots.Add(p);
+                    Vector3 knockbackDir = (p.position - impactPos).normalized + Vector3.up * 0.4f;
+                    EnemyDamageHelper.DealDamage(p, damage, knockbackDir * 4f);
+                    Debug.Log($"[MiniBossAI] Mưa Kiếm đánh trúng player: {p.name} trừ {damage} HP!");
+                }
+            }
+        }
+
+        // 2. Quét dự phòng thêm bằng Physics.OverlapSphere
+        LayerMask mask = (layer.value == 0) ? ~0 : layer;
+        Collider[] hits = Physics.OverlapSphere(impactPos, radius, mask, QueryTriggerInteraction.Ignore);
+        foreach (var hit in hits)
+        {
+            Transform root = GetPlayerRoot(hit.transform);
+            if (root != null && !hitRoots.Contains(root))
+            {
+                hitRoots.Add(root);
+                Vector3 knockbackDir = (root.position - impactPos).normalized + Vector3.up * 0.4f;
+                EnemyDamageHelper.DealDamage(root, damage, knockbackDir * 4f);
+                Debug.Log($"[MiniBossAI] Mưa Kiếm đánh trúng collider player: {root.name} trừ {damage} HP!");
+            }
+        }
+    }
+}
+
+public class AscendingSwordProjectile : MonoBehaviour
+{
+    private ISwordRainOwner bossOwner;
+    private Vector3 flyDirection;
+    private float flySpeed;
+    private float maxDistance;
+    private float currentDistance;
+    private bool isFlying;
+
+    public void Initialize(ISwordRainOwner owner, Vector3 startPos, Vector3 direction, float speed, float distance)
+    {
+        bossOwner = owner;
+        transform.position = startPos;
+        flyDirection = direction.normalized;
+        flySpeed = speed;
+        maxDistance = distance;
+        currentDistance = 0f;
+        isFlying = true;
+        enabled = true;
+
+        var fallProj = GetComponent<FallingSwordProjectile>();
+        if (fallProj != null) fallProj.enabled = false;
+
+        var renderers = GetComponentsInChildren<Renderer>(true);
+        foreach (var r in renderers) { if (r != null) r.enabled = true; }
+
+        var particles = GetComponentsInChildren<ParticleSystem>(true);
+        foreach (var ps in particles) { if (ps != null) { ps.Clear(); ps.Play(); } }
+    }
+
+    private void Update()
+    {
+        if (!isFlying) return;
+
+        float step = flySpeed * Time.deltaTime;
+        transform.position += flyDirection * step;
+        currentDistance += step;
+
+        if (currentDistance >= maxDistance)
+        {
+            isFlying = false;
+            if (bossOwner != null)
+            {
+                bossOwner.RecycleSword(gameObject);
+            }
+            else
+            {
+                gameObject.SetActive(false);
+            }
+        }
     }
 }
 
