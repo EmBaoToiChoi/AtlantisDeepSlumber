@@ -71,8 +71,15 @@ public class PlayerKickedStun : NetworkBehaviour
     /// </summary>
     public void ApplyKickedStun(float duration, Vector3 knockbackForce)
     {
-        if (!IsServer) return;
-        ApplyKickedStunClientRpc(duration, knockbackForce);
+        if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening && IsSpawned)
+        {
+            if (!IsServer) return;
+            ApplyKickedStunClientRpc(duration, knockbackForce);
+        }
+        else
+        {
+            StartCoroutine(StunRoutine(duration, knockbackForce));
+        }
     }
 
     [ClientRpc]
@@ -80,6 +87,108 @@ public class PlayerKickedStun : NetworkBehaviour
     {
         // Chạy coroutine khóa điều khiển trên mọi máy khách (đặc biệt là máy Owner)
         StartCoroutine(StunRoutine(duration, knockbackForce));
+    }
+
+    /// <summary>
+    /// Kích hoạt hiệu ứng bị lốc xoáy hất tung lên cao, xoay vòng trên không, rơi xuống đất và ngã rồi đứng dậy.
+    /// </summary>
+    public void ApplyTornadoKnockup(float liftHeight = 4.5f, float liftDuration = 1.2f)
+    {
+        if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening && IsSpawned)
+        {
+            if (!IsServer) return;
+            ApplyTornadoKnockupClientRpc(liftHeight, liftDuration);
+        }
+        else
+        {
+            StartCoroutine(TornadoTrapRoutine(liftHeight, liftDuration));
+        }
+    }
+
+    [ClientRpc]
+    private void ApplyTornadoKnockupClientRpc(float liftHeight, float liftDuration)
+    {
+        StartCoroutine(TornadoTrapRoutine(liftHeight, liftDuration));
+    }
+
+    private IEnumerator TornadoTrapRoutine(float liftHeight, float liftDuration)
+    {
+        if (isStunned) yield break;
+        isStunned = true;
+
+        if (targetCamera == null)
+        {
+            targetCamera = Camera.main ?? FindFirstObjectByType<Camera>();
+        }
+        if (targetCamera != null)
+        {
+            lastCameraOffset = targetCamera.transform.position - transform.position;
+        }
+
+        // 1. Tạm thời vô hiệu hóa script điều khiển
+        if (playerScript != null)
+        {
+            playerScript.enabled = false;
+        }
+
+        Vector3 startPos = transform.position;
+        Vector3 peakPos = startPos + Vector3.up * liftHeight;
+
+        // 2. Giai đoạn bay lên & xoay tít trên không trong tâm bão
+        float elapsed = 0f;
+        while (elapsed < liftDuration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / liftDuration);
+            
+            // Bay lên và hạ xuống theo đường cong Parabola (sin(t * PI))
+            float heightFactor = Mathf.Sin(t * Mathf.PI);
+            Vector3 wobble = new Vector3(Mathf.Cos(elapsed * 15f) * 0.35f, 0f, Mathf.Sin(elapsed * 15f) * 0.35f);
+            transform.position = Vector3.Lerp(startPos, peakPos, heightFactor) + wobble;
+
+            // Xoay tròn đều quanh trục Y như bị lốc xoáy cuốn
+            transform.Rotate(Vector3.up, 720f * Time.deltaTime, Space.World);
+
+            yield return null;
+        }
+
+        transform.position = startPos;
+
+        // 3. Rơi xuống đất -> Kích hoạt hoạt ảnh té ngã và đứng dậy
+        if (anim != null && anim.isActiveAndEnabled)
+        {
+            isWaitingForStandUp = true;
+            if (!string.IsNullOrEmpty(kickedTriggerName))
+            {
+                anim.SetTrigger(kickedTriggerName);
+            }
+            else if (!string.IsNullOrEmpty(kickedStateName))
+            {
+                anim.Play(kickedStateName, 0, 0f);
+            }
+            else
+            {
+                anim.Play("te", 0, 0f);
+            }
+        }
+
+        // 4. Giữ khóa điều khiển cho đến khi hoạt ảnh té & đứng dậy (NgoiDay) hoàn tất
+        float safetyTimer = 4.0f;
+        yield return new WaitForSeconds(0.5f); // Chờ Animator chuyển vào state ngã
+
+        while (isWaitingForStandUp && safetyTimer > 0)
+        {
+            safetyTimer -= Time.deltaTime;
+            yield return null;
+        }
+
+        // 5. Bật lại điều khiển cho Player sau khi đứng dậy hoàn tất
+        if (playerScript != null && !IsPlayerDead())
+        {
+            playerScript.enabled = true;
+        }
+
+        isStunned = false;
     }
 
     private IEnumerator StunRoutine(float duration, Vector3 knockbackForce)
