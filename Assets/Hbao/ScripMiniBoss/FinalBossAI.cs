@@ -16,7 +16,7 @@ using UnityEngine.AI;
 ///   - Radial shockwave defensive skill triggered if any player gets too close, dealing stun (kicked stun) and knockback.
 ///   - Synchronizes health, states, and animator triggers across clients via Unity Netcode.
 /// </summary>
-public class FinalBossAI : NetworkBehaviour
+public class FinalBossAI : NetworkBehaviour, ISwordRainOwner, IFireBarrageOwner
 {
     public enum FinalBossState { Sitting, JumpDown, Grow, SwordRain, FireSpew, FireBarrage, Idle, Chase, Attack, Shockwave, Hit, Dead }
 
@@ -140,8 +140,8 @@ public class FinalBossAI : NetworkBehaviour
     public float swordSpawnInterval = 0.4f;
     public float warningDuration = 0.7f;
     public float swordDropSpeed = 35.0f;
-    public float swordDamage = 5.0f;
-    public float swordImpactRadius = 2.0f;
+    public float swordDamage = 15.0f;
+    public float swordImpactRadius = 2.5f;
     public string swordRainTriggerParam = "AttackCombo";
     public Vector3 swordSpawnRotationOffset = new Vector3(90f, 0f, 0f); // Xoay bù để kiếm cắm thẳng xuống
 
@@ -157,6 +157,21 @@ public class FinalBossAI : NetworkBehaviour
     public float fireBarrageDamage = 20.0f;
     public float fireBarrageImpactRadius = 2.5f;
     public string fireBarrageTriggerParam = "AttackCombo";
+
+    // ─── Thiết lập Nhạc Chiến Đấu Boss (Boss Battle Music) ────
+    [Header("Boss Battle Music (Nhạc Chiến Đấu Boss)")]
+    [Tooltip("Âm thanh/Nhạc nền trận chiến duy trì lặp lại trong suốt trận đánh Final Boss")]
+    public AudioClip bossBattleBGM;
+    [Tooltip("Âm lượng nhạc trận chiến (0.0 đến 1.0)")]
+    [Range(0f, 1f)] public float bossBattleBGMVolume = 0.8f;
+    [Tooltip("Tự động lặp lại âm thanh trong suốt trận đấu")]
+    public bool loopBattleBGM = true;
+    [Tooltip("Thời gian Fade In khi bắt đầu chiến đấu (giây)")]
+    public float battleBGMFadeInDuration = 1.5f;
+    [Tooltip("Thời gian Fade Out khi Final Boss bị tiêu diệt (giây)")]
+    public float battleBGMFadeOutDuration = 2.5f;
+    private AudioSource battleBgmAudioSource;
+    private Coroutine battleBgmFadeCoroutine;
 
     [Header("Movement Speeds")]
     public float walkSpeed = 2.2f;
@@ -390,6 +405,7 @@ public class FinalBossAI : NetworkBehaviour
         fireBarrageCounter.OnValueChanged += (_, _) => {
             if (anim != null) anim.SetTrigger(fireBarrageTriggerParam);
         };
+        isBossActive.OnValueChanged += (oldVal, newVal) => { if (newVal) StartBattleMusic(); else StopBattleMusic(true); };
         netScale.OnValueChanged += (_, newScale) => transform.localScale = newScale;
         netIsEnraged.OnValueChanged += (_, enraged) => isEnraged = enraged;
         netIsLastStand.OnValueChanged += (_, lastStand) => {
@@ -448,6 +464,7 @@ public class FinalBossAI : NetworkBehaviour
         fireBarrageCounter.OnValueChanged -= (_, _) => {
             if (anim != null) anim.SetTrigger(fireBarrageTriggerParam);
         };
+        StopBattleMusic(false);
         netScale.OnValueChanged -= (_, newScale) => transform.localScale = newScale;
         netIsEnraged.OnValueChanged -= (_, enraged) => isEnraged = enraged;
         netIsLastStand.OnValueChanged -= (_, lastStand) => { isLastStand = lastStand; };
@@ -558,8 +575,18 @@ public class FinalBossAI : NetworkBehaviour
 
     public void ApplyStun(float duration)
     {
-        // Stun logic can be added here if desired, or we can trigger hit stagger
+        EnemyStunVfxBehaviour.ApplyStunVfx(gameObject, duration, null, 3.5f, 2.5f);
+        if (!isStandaloneMode && IsServer)
+        {
+            ApplyStunVfxClientRpc(duration);
+        }
         TakeDamage(0f);
+    }
+
+    [ClientRpc]
+    private void ApplyStunVfxClientRpc(float duration)
+    {
+        EnemyStunVfxBehaviour.ApplyStunVfx(gameObject, duration, null, 3.5f, 2.5f);
     }
 
     private void Update()
@@ -602,6 +629,7 @@ public class FinalBossAI : NetworkBehaviour
         if (shockwaveCooldownTimer > 0) shockwaveCooldownTimer -= Time.deltaTime;
         if (IsBossActive && !IsDead && CurrentStateValue != FinalBossState.Sitting && CurrentStateValue != FinalBossState.JumpDown)
         {
+            StartBattleMusic();
             if (fireSpewCooldownTimer > 0) fireSpewCooldownTimer -= Time.deltaTime;
             if (fireBarrageCooldownTimer > 0) fireBarrageCooldownTimer -= Time.deltaTime;
             if (swordRainCooldownTimer > 0) swordRainCooldownTimer -= Time.deltaTime;
@@ -1658,6 +1686,14 @@ public class FinalBossAI : NetworkBehaviour
             if (!boss.isStandaloneMode) boss.dieCounter.Value++;
             else if (boss.anim != null) boss.anim.SetTrigger(boss.dieTriggerParam);
 
+            if (!boss.isStandaloneMode && boss.IsServer)
+            {
+                boss.PlayBattleBGMClientRpc(false);
+            }
+            else
+            {
+                boss.StopBattleMusic(true);
+            }
             Debug.Log("[FinalBossAI] Final Boss is dead!");
             Destroy(boss.gameObject, 6f);
         }
@@ -1915,6 +1951,16 @@ public class FinalBossAI : NetworkBehaviour
         var allParticles = sword.GetComponentsInChildren<ParticleSystem>(true);
         foreach (var ps in allParticles) { if (ps != null) { ps.Clear(); ps.Play(); } }
 
+        // Đảm bảo toàn bộ Collider đều là Trigger
+        var allColliders = sword.GetComponentsInChildren<Collider>(true);
+        foreach (var c in allColliders) { if (c != null) c.isTrigger = true; }
+
+        var rootCol = sword.GetComponent<BoxCollider>();
+        if (rootCol == null) rootCol = sword.AddComponent<BoxCollider>();
+        rootCol.size = new Vector3(1.5f, 3.5f, 1.5f);
+        rootCol.center = new Vector3(0f, 1.2f, 0f);
+        rootCol.isTrigger = true;
+
         // Đảm bảo luôn có Rigidbody Kinematic ở Root để va chạm Trigger hoạt động chuẩn xác 100%
         var rb = sword.GetComponent<Rigidbody>();
         if (rb == null) rb = sword.AddComponent<Rigidbody>();
@@ -2033,12 +2079,33 @@ public class FinalBossAI : NetworkBehaviour
 
     public void DealSwordImpactDamage(Vector3 impactPos, float damage, float radius, LayerMask layer)
     {
-        bool auth = isStandaloneMode || (IsNetworkActive && IsServer);
+        bool auth = isStandaloneMode || !IsNetworkActive || (IsNetworkActive && IsServer);
         if (!auth) return;
 
-        Collider[] hits = Physics.OverlapSphere(impactPos, radius, layer);
         HashSet<Transform> hitRoots = new HashSet<Transform>();
 
+        // 1. Quét theo khoảng cách trực tiếp tới toàn bộ Player đang chơi (Bảo đảm 100% trừ máu không phụ thuộc LayerMask/Collider)
+        var allPlayers = GetAllActivePlayers();
+        foreach (var p in allPlayers)
+        {
+            if (p != null && !IsPlayerDeadOrInvisible(p))
+            {
+                float dist = Vector3.Distance(impactPos, p.position);
+                float xzDist = Vector2.Distance(new Vector2(impactPos.x, impactPos.z), new Vector2(p.position.x, p.position.z));
+                float heightDiff = p.position.y - impactPos.y;
+                if (dist <= radius + 0.8f || (xzDist <= radius && heightDiff >= -1.0f && heightDiff <= 3.5f))
+                {
+                    hitRoots.Add(p);
+                    Vector3 knockbackDir = (p.position - impactPos).normalized + Vector3.up * 0.4f;
+                    EnemyDamageHelper.DealDamage(p, damage, knockbackDir * 5f);
+                    Debug.Log($"[FinalBossAI] Sword Rain hit player: {p.name} for {damage} HP");
+                }
+            }
+        }
+
+        // 2. Quét dự phòng thêm bằng Physics.OverlapSphere
+        LayerMask mask = (layer.value == 0) ? ~0 : layer;
+        Collider[] hits = Physics.OverlapSphere(impactPos, radius, mask, QueryTriggerInteraction.Ignore);
         foreach (var hit in hits)
         {
             Transform root = GetPlayerRoot(hit.transform);
@@ -2047,7 +2114,7 @@ public class FinalBossAI : NetworkBehaviour
                 hitRoots.Add(root);
                 Vector3 knockbackDir = (root.position - impactPos).normalized + Vector3.up * 0.5f;
                 EnemyDamageHelper.DealDamage(root, damage, knockbackDir * 5f);
-                Debug.Log($"[FinalBossAI] Sword Rain hit player: {root.name} for {damage} HP");
+                Debug.Log($"[FinalBossAI] Sword Rain hit collider player: {root.name} for {damage} HP");
             }
         }
     }
@@ -2497,34 +2564,172 @@ public class FinalBossAI : NetworkBehaviour
     public void OnSwipeSwing() { }
     public void OnShockwaveImpact() { }
     public void OnFireSpewImpact() { }
+    // ══════════════════════════════════════════════════════════
+    //  BOSS BATTLE MUSIC (NHẠC CHIẾN ĐẤU DUY TRÌ)
+    // ══════════════════════════════════════════════════════════
+
+    [ClientRpc]
+    private void PlayBattleBGMClientRpc(bool play)
+    {
+        if (play) StartBattleMusic();
+        else StopBattleMusic(true);
+    }
+
+    public void StartBattleMusic()
+    {
+        if (bossBattleBGM == null || IsDead) return;
+
+        if (battleBgmAudioSource == null)
+        {
+            battleBgmAudioSource = gameObject.AddComponent<AudioSource>();
+            battleBgmAudioSource.playOnAwake = false;
+            battleBgmAudioSource.spatialBlend = 0f; // 2D BGM toàn diện cho toàn sàn đấu
+        }
+
+        // Đảm bảo LUÔN LUÔN BẬT LOOP để nhạc duy trì lặp lại vô tận trong suốt trận đấu
+        battleBgmAudioSource.clip = bossBattleBGM;
+        battleBgmAudioSource.loop = true;
+
+        if (!battleBgmAudioSource.isPlaying)
+        {
+            battleBgmAudioSource.volume = 0f;
+            battleBgmAudioSource.Play();
+            if (battleBgmFadeCoroutine != null) StopCoroutine(battleBgmFadeCoroutine);
+            battleBgmFadeCoroutine = StartCoroutine(RoutineFadeBattleMusic(bossBattleBGMVolume, battleBGMFadeInDuration));
+            Debug.Log("[FinalBossAI] Bắt đầu phát âm thanh chiến đấu Final Boss duy trì LẶP LẠI (Loop = True) đồng bộ mạng!");
+        }
+    }
+
+    public void StopBattleMusic(bool fade = true)
+    {
+        if (battleBgmAudioSource == null || !battleBgmAudioSource.isPlaying) return;
+
+        if (battleBgmFadeCoroutine != null) StopCoroutine(battleBgmFadeCoroutine);
+        if (fade && gameObject.activeInHierarchy)
+        {
+            battleBgmFadeCoroutine = StartCoroutine(RoutineFadeOutAndStop(battleBGMFadeOutDuration));
+        }
+        else
+        {
+            battleBgmAudioSource.Stop();
+        }
+    }
+
+    private System.Collections.IEnumerator RoutineFadeBattleMusic(float targetVol, float duration)
+    {
+        if (battleBgmAudioSource == null) yield break;
+        float elapsed = 0f;
+        float startVol = battleBgmAudioSource.volume;
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            if (battleBgmAudioSource != null)
+            {
+                battleBgmAudioSource.volume = Mathf.Lerp(startVol, targetVol, elapsed / duration);
+            }
+            yield return null;
+        }
+        if (battleBgmAudioSource != null) battleBgmAudioSource.volume = targetVol;
+    }
+
+    private System.Collections.IEnumerator RoutineFadeOutAndStop(float duration)
+    {
+        if (battleBgmAudioSource == null) yield break;
+        float elapsed = 0f;
+        float startVol = battleBgmAudioSource.volume;
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            if (battleBgmAudioSource != null)
+            {
+                battleBgmAudioSource.volume = Mathf.Lerp(startVol, 0f, elapsed / duration);
+            }
+            yield return null;
+        }
+        if (battleBgmAudioSource != null)
+        {
+            battleBgmAudioSource.volume = 0f;
+            battleBgmAudioSource.Stop();
+        }
+    }
+
+    private void OnDestroy()
+    {
+        StopBattleMusic(false);
+    }
+}
+
+public interface ISwordRainOwner
+{
+    void PlaySwordImpactEffects(Vector3 impactPos);
+    void DealSwordImpactDamage(Vector3 impactPos, float damage, float radius, LayerMask layer);
+    void RecycleSword(GameObject sword);
+}
+
+public interface IFireBarrageOwner
+{
+    void PlayFireBarrageImpactEffects(Vector3 impactPos);
+    void DealFireBarrageImpactDamage(Vector3 impactPos, float damage, float radius, LayerMask layer);
+    void RecycleFireBarrage(GameObject orb);
 }
 
 public class FallingSwordProjectile : MonoBehaviour
 {
-    private FinalBossAI bossOwner;
+    private ISwordRainOwner bossOwner;
     private Vector3 targetGroundPos;
     private float dropSpeed;
     private float damage;
     private float impactRadius;
     private LayerMask playerLayer;
     private bool isFalling;
+    private HashSet<Transform> hitTargets = new HashSet<Transform>();
 
-    public void Initialize(FinalBossAI owner, Vector3 groundPos, float speed, float dmg, float radius, LayerMask layer)
+    public void Initialize(ISwordRainOwner owner, Vector3 groundPos, float speed, float dmg, float radius, LayerMask layer)
     {
         bossOwner = owner;
         targetGroundPos = groundPos;
         dropSpeed = speed;
         damage = dmg;
-        impactRadius = radius;
+        impactRadius = Mathf.Max(radius, 2.5f);
         playerLayer = layer;
         isFalling = true;
+        enabled = true;
+        hitTargets.Clear();
+
+        // Đảm bảo toàn bộ Collider là Trigger và có BoxCollider Trigger bao phủ toàn thân kiếm
+        var colliders = GetComponentsInChildren<Collider>(true);
+        foreach (var c in colliders) { if (c != null) c.isTrigger = true; }
+
+        var rootCol = GetComponent<BoxCollider>();
+        if (rootCol == null) rootCol = gameObject.AddComponent<BoxCollider>();
+        rootCol.size = new Vector3(1.5f, 3.5f, 1.5f);
+        rootCol.center = new Vector3(0f, 1.2f, 0f);
+        rootCol.isTrigger = true;
+
+        var renderers = GetComponentsInChildren<Renderer>(true);
+        foreach (var r in renderers) { if (r != null) r.enabled = true; }
+
+        var particles = GetComponentsInChildren<ParticleSystem>(true);
+        foreach (var ps in particles) { if (ps != null) { ps.Clear(); ps.Play(); } }
+    }
+
+    public void Initialize(FinalBossAI owner, Vector3 groundPos, float speed, float dmg, float radius, LayerMask layer)
+    {
+        Initialize((ISwordRainOwner)owner, groundPos, speed, dmg, radius, layer);
     }
 
     private void Update()
     {
         if (!isFalling) return;
 
-        transform.position += Vector3.down * dropSpeed * Time.deltaTime;
+        Vector3 prevPos = transform.position;
+        Vector3 newPos = prevPos + Vector3.down * dropSpeed * Time.deltaTime;
+        transform.position = newPos;
+
+        // Quét tìm va chạm trực tiếp khi kiếm đang lao vút từ trên trời xuống
+        CheckFallingDamage(prevPos, newPos);
 
         if (transform.position.y <= targetGroundPos.y + 0.2f)
         {
@@ -2533,35 +2738,80 @@ public class FallingSwordProjectile : MonoBehaviour
         }
     }
 
+    private void CheckFallingDamage(Vector3 prevPos, Vector3 newPos)
+    {
+        var allPlayers = FindAllPlayers();
+        foreach (var p in allPlayers)
+        {
+            if (p != null && !hitTargets.Contains(p))
+            {
+                float xzDist = Vector2.Distance(new Vector2(newPos.x, newPos.z), new Vector2(p.position.x, p.position.z));
+                float minY = Mathf.Min(prevPos.y, newPos.y) - 1.0f;
+                float maxY = Mathf.Max(prevPos.y, newPos.y) + 2.5f;
+
+                if (xzDist <= 1.5f && p.position.y >= minY && p.position.y <= maxY)
+                {
+                    ApplyDamageToPlayer(p, "Mid-air strike");
+                }
+            }
+        }
+    }
+
     private void OnTriggerEnter(Collider other)
     {
         if (!isFalling) return;
 
-        // Quét tìm Player bằng IPlayerHUDTarget (chính xác tuyệt đối kể cả chạm collider con)
-        var hudTarget = other.GetComponentInParent<IPlayerHUDTarget>() ?? other.GetComponentInChildren<IPlayerHUDTarget>();
-        if (hudTarget != null)
+        Transform playerRoot = ResolvePlayerRoot(other.transform);
+        if (playerRoot != null && !hitTargets.Contains(playerRoot))
         {
-            Transform playerRoot = hudTarget.transform;
-            isFalling = false;
-            Vector3 knockbackDir = (playerRoot.position - transform.position).normalized + Vector3.up * 0.5f;
-            EnemyDamageHelper.DealDamage(playerRoot, damage, knockbackDir * 5f);
-
-            if (bossOwner != null)
-            {
-                bossOwner.PlaySwordImpactEffects(transform.position);
-                bossOwner.RecycleSword(gameObject);
-            }
-            else
-            {
-                gameObject.SetActive(false);
-            }
+            ApplyDamageToPlayer(playerRoot, "Trigger contact");
         }
+    }
+
+    private void ApplyDamageToPlayer(Transform playerRoot, string source)
+    {
+        if (playerRoot == null || hitTargets.Contains(playerRoot)) return;
+        hitTargets.Add(playerRoot);
+
+        Vector3 knockbackDir = (playerRoot.position - transform.position).normalized + Vector3.up * 0.4f;
+        EnemyDamageHelper.DealDamage(playerRoot, damage, knockbackDir * 4f);
+        Debug.Log($"[FallingSwordProjectile] {source} -> Trúng Player '{playerRoot.name}' trừ -{damage} HP!");
     }
 
     private void OnImpact()
     {
         transform.position = targetGroundPos;
 
+        // 1. Gây sát thương nổ bãi chùm kiếm cho toàn bộ Player trong bán kính impactRadius
+        var allPlayers = FindAllPlayers();
+        foreach (var p in allPlayers)
+        {
+            if (p != null && !hitTargets.Contains(p))
+            {
+                float dist = Vector3.Distance(targetGroundPos, p.position);
+                float xzDist = Vector2.Distance(new Vector2(targetGroundPos.x, targetGroundPos.z), new Vector2(p.position.x, p.position.z));
+                float heightDiff = p.position.y - targetGroundPos.y;
+
+                if (dist <= impactRadius + 0.8f || (xzDist <= impactRadius && heightDiff >= -1.0f && heightDiff <= 3.5f))
+                {
+                    ApplyDamageToPlayer(p, "Ground Impact AOE");
+                }
+            }
+        }
+
+        // 2. Quét dự phòng thêm bằng Physics.OverlapSphere
+        LayerMask mask = (playerLayer.value == 0) ? ~0 : playerLayer;
+        Collider[] hits = Physics.OverlapSphere(targetGroundPos, impactRadius, mask, QueryTriggerInteraction.Ignore);
+        foreach (var h in hits)
+        {
+            Transform root = ResolvePlayerRoot(h.transform);
+            if (root != null && !hitTargets.Contains(root))
+            {
+                ApplyDamageToPlayer(root, "OverlapSphere Impact");
+            }
+        }
+
+        // 3. Kích hoạt hiệu ứng âm thanh, VFX và thông báo cho Boss Owner
         if (bossOwner != null)
         {
             bossOwner.PlaySwordImpactEffects(targetGroundPos);
@@ -2572,6 +2822,73 @@ public class FallingSwordProjectile : MonoBehaviour
         {
             Destroy(gameObject, 2.0f);
         }
+    }
+
+    private System.Collections.Generic.List<Transform> FindAllPlayers()
+    {
+        var list = new System.Collections.Generic.List<Transform>();
+
+        var leos = FindObjectsByType<LeoPlayer>(FindObjectsSortMode.None);
+        foreach (var p in leos) if (p != null && !list.Contains(p.transform)) list.Add(p.transform);
+
+        var arthurs = FindObjectsByType<ArthurPlayer>(FindObjectsSortMode.None);
+        foreach (var p in arthurs) if (p != null && !list.Contains(p.transform)) list.Add(p.transform);
+
+        var elenas = FindObjectsByType<ElenaPlayer>(FindObjectsSortMode.None);
+        foreach (var p in elenas) if (p != null && !list.Contains(p.transform)) list.Add(p.transform);
+
+        var elenaArchers = FindObjectsByType<ElenaArcher>(FindObjectsSortMode.None);
+        foreach (var p in elenaArchers) if (p != null && !list.Contains(p.transform)) list.Add(p.transform);
+
+        var mayas = FindObjectsByType<MayaPlayer>(FindObjectsSortMode.None);
+        foreach (var p in mayas) if (p != null && !list.Contains(p.transform)) list.Add(p.transform);
+
+        var mayaSupports = FindObjectsByType<MayaSupport>(FindObjectsSortMode.None);
+        foreach (var p in mayaSupports) if (p != null && !list.Contains(p.transform)) list.Add(p.transform);
+
+        var simplePlayers = FindObjectsByType<SimplePlayerTest>(FindObjectsSortMode.None);
+        foreach (var p in simplePlayers) if (p != null && !list.Contains(p.transform)) list.Add(p.transform);
+
+        var skeletons = FindObjectsByType<Skeleton>(FindObjectsSortMode.None);
+        foreach (var p in skeletons) if (p != null && !list.Contains(p.transform)) list.Add(p.transform);
+
+        var taggedPlayers = GameObject.FindGameObjectsWithTag("Player");
+        foreach (var go in taggedPlayers) if (go != null && !list.Contains(go.transform)) list.Add(go.transform);
+
+        return list;
+    }
+
+    private Transform ResolvePlayerRoot(Transform t)
+    {
+        if (t == null) return null;
+        if (t.CompareTag("Player")) return t;
+
+        var hudTarget = t.GetComponentInParent<IPlayerHUDTarget>();
+        if (hudTarget != null)
+        {
+            var mono = hudTarget as MonoBehaviour;
+            if (mono != null && mono.gameObject != null) return mono.transform;
+        }
+
+        var leo = t.GetComponentInParent<LeoPlayer>();
+        if (leo != null) return leo.transform;
+
+        var arthur = t.GetComponentInParent<ArthurPlayer>();
+        if (arthur != null) return arthur.transform;
+
+        var elena = t.GetComponentInParent<ElenaPlayer>() ?? (MonoBehaviour)t.GetComponentInParent<ElenaArcher>();
+        if (elena != null) return elena.transform;
+
+        var maya = t.GetComponentInParent<MayaPlayer>() ?? (MonoBehaviour)t.GetComponentInParent<MayaSupport>();
+        if (maya != null) return maya.transform;
+
+        var simple = t.GetComponentInParent<SimplePlayerTest>();
+        if (simple != null) return simple.transform;
+
+        var skeleton = t.GetComponentInParent<Skeleton>();
+        if (skeleton != null) return skeleton.transform;
+
+        return null;
     }
 
     private System.Collections.IEnumerator RoutineRecycleAfterImpale()
@@ -2591,7 +2908,7 @@ public class FallingSwordProjectile : MonoBehaviour
 
 public class FallingFireOrbProjectile : MonoBehaviour
 {
-    private FinalBossAI bossOwner;
+    private IFireBarrageOwner bossOwner;
     private Vector3 targetGroundPos;
     private float dropSpeed;
     private float damage;
@@ -2599,7 +2916,7 @@ public class FallingFireOrbProjectile : MonoBehaviour
     private LayerMask playerLayer;
     private bool isFalling;
 
-    public void Initialize(FinalBossAI owner, Vector3 groundPos, float speed, float dmg, float radius, LayerMask layer)
+    public void Initialize(IFireBarrageOwner owner, Vector3 groundPos, float speed, float dmg, float radius, LayerMask layer)
     {
         bossOwner = owner;
         targetGroundPos = groundPos;
@@ -2609,18 +2926,39 @@ public class FallingFireOrbProjectile : MonoBehaviour
         playerLayer = layer;
         isFalling = true;
 
-        // Restart child Particle Systems and Visual Effects upon activation from Object Pool
+        // Tắt tất cả script PixPlays bên thứ 3 để tránh tự hủy hay can thiệp
+        var mbList = GetComponentsInChildren<MonoBehaviour>(true);
+        foreach (var mb in mbList)
+        {
+            if (mb != null && mb != this && mb.GetType().Namespace != null && mb.GetType().Namespace.Contains("PixPlays"))
+            {
+                mb.enabled = false;
+            }
+        }
+
+        // Kích hoạt tất cả Particle Systems
         var particles = GetComponentsInChildren<ParticleSystem>(true);
         foreach (var ps in particles)
         {
-            ps.Clear();
-            ps.Play();
+            if (ps != null)
+            {
+                var main = ps.main;
+                main.scalingMode = ParticleSystemScalingMode.Hierarchy;
+                main.loop = true;
+                ps.Clear(true);
+                ps.Play(true);
+            }
         }
+
+        // Kích hoạt tất cả VFX Graphs
         var vfxGraphs = GetComponentsInChildren<UnityEngine.VFX.VisualEffect>(true);
         foreach (var ve in vfxGraphs)
         {
-            ve.Reinit();
-            ve.Play();
+            if (ve != null)
+            {
+                ve.Reinit();
+                ve.Play();
+            }
         }
     }
 
@@ -2629,6 +2967,21 @@ public class FallingFireOrbProjectile : MonoBehaviour
         if (!isFalling) return;
 
         transform.position += Vector3.down * dropSpeed * Time.deltaTime;
+
+        // Quét va chạm liên tục với Player khi đang rơi (bán kính 2.0m)
+        Collider[] hits = Physics.OverlapSphere(transform.position, 2.0f);
+        foreach (var hit in hits)
+        {
+            if (hit == null) continue;
+            var hudTarget = hit.GetComponentInParent<IPlayerHUDTarget>() ?? hit.GetComponentInChildren<IPlayerHUDTarget>();
+            if (hudTarget != null && hudTarget is MonoBehaviour mb)
+            {
+                Transform playerRoot = mb.transform;
+                isFalling = false;
+                OnDirectHitPlayer(playerRoot);
+                return;
+            }
+        }
 
         if (transform.position.y <= targetGroundPos.y + 0.2f)
         {
@@ -2641,24 +2994,29 @@ public class FallingFireOrbProjectile : MonoBehaviour
     {
         if (!isFalling) return;
 
-        // Quét tìm Player bằng IPlayerHUDTarget (chính xác tuyệt đối kể cả chạm collider con)
         var hudTarget = other.GetComponentInParent<IPlayerHUDTarget>() ?? other.GetComponentInChildren<IPlayerHUDTarget>();
-        if (hudTarget != null)
+        if (hudTarget != null && hudTarget is MonoBehaviour mb)
         {
-            Transform playerRoot = hudTarget.transform;
+            Transform playerRoot = mb.transform;
             isFalling = false;
-            Vector3 knockbackDir = (playerRoot.position - transform.position).normalized + Vector3.up * 0.5f;
-            EnemyDamageHelper.DealDamage(playerRoot, damage, knockbackDir * 5f);
+            OnDirectHitPlayer(playerRoot);
+        }
+    }
 
-            if (bossOwner != null)
-            {
-                bossOwner.PlayFireBarrageImpactEffects(transform.position);
-                bossOwner.RecycleFireBarrage(gameObject);
-            }
-            else
-            {
-                gameObject.SetActive(false);
-            }
+    private void OnDirectHitPlayer(Transform playerRoot)
+    {
+        Vector3 knockbackDir = (playerRoot.position - transform.position).normalized + Vector3.up * 0.5f;
+        EnemyDamageHelper.DealDamage(playerRoot, damage, knockbackDir * 5f);
+        Debug.Log($"[FallingFireOrb] Cầu lửa rơi trúng trực tiếp Player: {playerRoot.name} -> Trừ {damage} HP!");
+
+        if (bossOwner != null)
+        {
+            bossOwner.PlayFireBarrageImpactEffects(transform.position);
+            bossOwner.RecycleFireBarrage(gameObject);
+        }
+        else
+        {
+            gameObject.SetActive(false);
         }
     }
 

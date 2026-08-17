@@ -1,0 +1,26 @@
+fileFormatVersion: 2
+guid: f4a25a78ebfcce646be88bccf6896579
+ShaderImporter:
+  externalObjects: {}
+  defaultTextures:
+  - _Emissive_Noise_Texture: {instanceID: 0}
+  - _Texture0: {instanceID: 0}
+  - _Piercing_Texture: {instanceID: 0}
+  - _TextureSample1: {instanceID: 0}
+  - _Distortion_Noise_Texture: {instanceID: 0}
+  - _Distortion_Mask: {instanceID: 0}
+  - _Color_Noise_Texture: {instanceID: 0}
+  - _Texture1: {instanceID: 0}
+  - _texcoord: {instanceID: 0}
+  - _texcoord2: {instanceID: 0}
+  nonModifiableTextures: []
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 340466
+  packageName: Stylized VFX Bundle
+  packageVersion: 1.0.1
+  assetPath: Assets/Vefects/Stylized VFX/Stylized VFX Shuriken/Shared/Shaders/SH_VFX_Vefects_Piercing_BIRP_New.shader
+  uploadId: 860344

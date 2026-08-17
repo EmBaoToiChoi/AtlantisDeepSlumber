@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 985f99688d3593f44bde37f6e1c4f843
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 340466
+  packageName: Stylized VFX Bundle
+  packageVersion: 1.0.1
+  assetPath: Assets/Vefects/Smoke Bombs VFX/Shared/Materials/GlobalSmokes/M_VFX_FresnelSmoke_06.mat
+  uploadId: 860344

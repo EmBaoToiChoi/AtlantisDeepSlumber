@@ -36,7 +36,15 @@ public class Skeleton : NetworkBehaviour
         set { if (isStandaloneMode) localHealth = value; else currentHealth.Value = value; }
     }
 
+    public void Heal(float amount)
+    {
+        if (IsDead) return;
+        CurrentHealthValue = Mathf.Min(maxHealth, CurrentHealthValue + amount);
+        Debug.Log($"[Skeleton] Healed {amount} HP. Current Health: {CurrentHealthValue}/{maxHealth}");
+    }
+
     public float ActualCurrentHealth => CurrentHealthValue;
+    public bool IsDead => ActualCurrentHealth <= 0f || localState == State.Dead;
 
     public State currentState
     {
@@ -88,7 +96,7 @@ public class Skeleton : NetworkBehaviour
     private System.Collections.Generic.List<Transform> hitTargetsThisAttack = new System.Collections.Generic.List<Transform>();
 
     private bool AgentReady => agent != null && agent.isActiveAndEnabled && agent.isOnNavMesh;
-    private bool IsServerOrStandalone => isStandaloneMode || (IsNetworkActive && IsServer);
+    private bool IsServerOrStandalone => isStandaloneMode || !IsNetworkActive || (IsNetworkActive && IsServer);
 
     private void Awake()
     {
@@ -173,41 +181,67 @@ public class Skeleton : NetworkBehaviour
 
     public void SetSummoner(Transform summoner)
     {
-        if (IsServerOrStandalone)
+        if (summoner == null) return;
+        localSummoner = summoner;
+
+        if (IsNetworkActive && IsServer)
         {
-            if (isStandaloneMode)
+            if (summoner.TryGetComponent<NetworkObject>(out var netObj))
             {
-                localSummoner = summoner;
-            }
-            else
-            {
-                if (summoner.TryGetComponent<NetworkObject>(out var netObj))
-                {
-                    summonerRef.Value = netObj;
-                }
+                summonerRef.Value = netObj;
             }
         }
     }
 
     private Transform GetSummonerTransform()
     {
-        if (isStandaloneMode)
+        Transform sum = null;
+        if (!isStandaloneMode && summonerRef.Value.TryGet(out NetworkObject netObj))
         {
-            if (localSummoner == null)
+            sum = netObj.transform;
+        }
+
+        if (sum == null)
+        {
+            sum = localSummoner;
+        }
+
+        if (sum == null)
+        {
+            var maya = FindObjectOfType<MayaPlayer>();
+            if (maya != null)
+            {
+                localSummoner = maya.transform;
+                sum = localSummoner;
+            }
+            else
             {
                 var player = FindObjectOfType<SimplePlayerTest>();
-                if (player != null) localSummoner = player.transform;
+                if (player != null)
+                {
+                    localSummoner = player.transform;
+                    sum = localSummoner;
+                }
+                else
+                {
+                    var activePlayers = PlayerHUDManager.ActivePlayers;
+                    if (activePlayers != null)
+                    {
+                        foreach (var p in activePlayers)
+                        {
+                            if (p != null && p.gameObject != null)
+                            {
+                                localSummoner = p.transform;
+                                sum = localSummoner;
+                                break;
+                            }
+                        }
+                    }
+                }
             }
-            return localSummoner;
         }
-        else
-        {
-            if (summonerRef.Value.TryGet(out NetworkObject netObj))
-            {
-                return netObj.transform;
-            }
-            return null;
-        }
+
+        return sum;
     }
 
     private void Update()

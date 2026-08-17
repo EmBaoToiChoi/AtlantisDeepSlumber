@@ -4,7 +4,9 @@ using UnityEngine.UIElements;
 /// <summary>
 /// Script managing the Mini Boss HUD health bar using UI Toolkit (UXML + USS).
 /// Displays main boss health bar with yellow lag drain, hit shake, and hit flash.
-/// UI appears when player activates the Mini Boss trigger box, and hides when Main Boss dies.
+/// Also displays 2 clone health bars when MiniBoss summons its shadow clones at 50% HP.
+/// UI appears when player activates the Mini Boss trigger box, and hides only when
+/// BOTH the Main Boss AND all clones are dead.
 /// </summary>
 public class MiniBossHealthBar : MonoBehaviour
 {
@@ -15,17 +17,47 @@ public class MiniBossHealthBar : MonoBehaviour
     [Tooltip("Reference to the UIDocument containing the layout")]
     public UIDocument uiDocument;
 
+    // Main boss UI elements
     private VisualElement rootContainer;
     private VisualElement progressBar;
     private VisualElement yellowBar;
     private Label nameLabel;
     private Label hpTextLabel;
 
+    // Clone sub-container & UI elements
+    private VisualElement clonesSubContainer;
+
+    private VisualElement clone1ProgressBar;
+    private VisualElement clone1YellowBar;
+    private Label clone1NameLabel;
+    private Label clone1HpTextLabel;
+
+    private VisualElement clone2ProgressBar;
+    private VisualElement clone2YellowBar;
+    private Label clone2NameLabel;
+    private Label clone2HpTextLabel;
+
+    // Clone AI references (auto-discovered)
+    private MiniBossAI clone1AI;
+    private MiniBossAI clone2AI;
+    private bool clonesDiscovered = false;
+    private float cloneScanTimer = 0f;
+
     // Lag bar tracking for main boss
     private float displayedHealth = -1f;
     private float yellowHealth = -1f;
     private float yellowDrainDelay = 0.5f;
     private float yellowDrainTimer = 0f;
+
+    // Lag bar tracking for clone 1
+    private float clone1DisplayedHealth = -1f;
+    private float clone1YellowHealth = -1f;
+    private float clone1YellowDrainTimer = 0f;
+
+    // Lag bar tracking for clone 2
+    private float clone2DisplayedHealth = -1f;
+    private float clone2YellowHealth = -1f;
+    private float clone2YellowDrainTimer = 0f;
 
     private float shakeTimer = 0f;
     private float flashTimer = 0f;
@@ -57,6 +89,21 @@ public class MiniBossHealthBar : MonoBehaviour
             yellowBar = root.Q<VisualElement>("miniboss-hp-yellow-bar");
             nameLabel = root.Q<Label>("miniboss-name");
             hpTextLabel = root.Q<Label>("miniboss-hp-text");
+
+            // Clone sub-container
+            clonesSubContainer = root.Q<VisualElement>("clones-sub-container");
+
+            // Clone 1
+            clone1ProgressBar = root.Q<VisualElement>("clone1-hp-progress-bar");
+            clone1YellowBar = root.Q<VisualElement>("clone1-hp-yellow-bar");
+            clone1NameLabel = root.Q<Label>("clone1-name");
+            clone1HpTextLabel = root.Q<Label>("clone1-hp-text");
+
+            // Clone 2
+            clone2ProgressBar = root.Q<VisualElement>("clone2-hp-progress-bar");
+            clone2YellowBar = root.Q<VisualElement>("clone2-hp-yellow-bar");
+            clone2NameLabel = root.Q<Label>("clone2-name");
+            clone2HpTextLabel = root.Q<Label>("clone2-hp-text");
         }
     }
 
@@ -69,6 +116,41 @@ public class MiniBossHealthBar : MonoBehaviour
             {
                 boss = b;
                 break;
+            }
+        }
+    }
+
+    public void RegisterClones(MiniBossAI c1, MiniBossAI c2)
+    {
+        clone1AI = c1;
+        clone2AI = c2;
+        clonesDiscovered = true;
+        clone1DisplayedHealth = -1f;
+        clone2DisplayedHealth = -1f;
+        Debug.Log($"[MiniBossHealthBar] Đăng ký trực tiếp 2 phân thân thành công: Clone1={c1?.name}, Clone2={c2?.name}");
+    }
+
+    private void DiscoverClones()
+    {
+        if (clonesDiscovered) return; // Khóa cứng một khi đã phát hiện hoặc đăng ký, không bao giờ ghi đè lại!
+
+        var allBosses = FindObjectsByType<MiniBossAI>(FindObjectsSortMode.None);
+        foreach (var b in allBosses)
+        {
+            if (b != null && b.gameObject.activeInHierarchy && b != boss && b.isClone)
+            {
+                if (clone1AI == null)
+                {
+                    clone1AI = b;
+                    clone1DisplayedHealth = -1f;
+                }
+                else if (clone2AI == null && b != clone1AI)
+                {
+                    clone2AI = b;
+                    clone2DisplayedHealth = -1f;
+                    clonesDiscovered = true;
+                    break;
+                }
             }
         }
     }
@@ -105,6 +187,12 @@ public class MiniBossHealthBar : MonoBehaviour
         yellowHealth = curHp;
 
         UpdateHPBars(curHp, maxHp);
+
+        // Ẩn thanh máu phân thân mặc định
+        if (clonesSubContainer != null)
+        {
+            clonesSubContainer.style.display = DisplayStyle.None;
+        }
     }
 
     public void HideUI()
@@ -113,6 +201,49 @@ public class MiniBossHealthBar : MonoBehaviour
         {
             rootContainer.style.display = DisplayStyle.None;
         }
+    }
+
+    /// <summary>
+    /// Kiểm tra cả MiniBoss chính VÀ tất cả Phân thân đã chết hết chưa.
+    /// Chỉ khi TẤT CẢ đều chết/null mới trả về true → ẩn UI.
+    /// </summary>
+    private bool AreAllBossesAndClonesDead()
+    {
+        // 1. Boss chính còn sống → chưa ẩn UI
+        if (boss != null && boss.gameObject.activeInHierarchy && !boss.IsDead && boss.ActualCurrentHealth > 0)
+        {
+            return false;
+        }
+
+        // 2. Nếu boss đã triệu hồi phân thân hoặc có phân thân trong Scene:
+        bool hasClones = (boss != null && boss.hasSummonedClones) || clonesDiscovered || clone1AI != null || clone2AI != null;
+        if (hasClones)
+        {
+            if (clone1AI != null && clone1AI.gameObject.activeInHierarchy && !clone1AI.IsDead && clone1AI.ActualCurrentHealth > 0)
+            {
+                return false;
+            }
+
+            if (clone2AI != null && clone2AI.gameObject.activeInHierarchy && !clone2AI.IsDead && clone2AI.ActualCurrentHealth > 0)
+            {
+                return false;
+            }
+
+            // Quét tìm trong scene nếu biến tham chiếu bị lạc
+            var allBosses = FindObjectsByType<MiniBossAI>(FindObjectsSortMode.None);
+            foreach (var b in allBosses)
+            {
+                if (b != null && b != boss && b.isClone && b.gameObject.activeInHierarchy)
+                {
+                    if (!b.IsDead && b.ActualCurrentHealth > 0)
+                    {
+                        return false;
+                    }
+                }
+            }
+        }
+
+        return true;
     }
 
     private void Update()
@@ -136,14 +267,21 @@ public class MiniBossHealthBar : MonoBehaviour
             FindMainBoss();
         }
 
-        // 3. CHỈ HIỂN THỊ HUD khi Main Boss tồn tại, active qua trigger box (IsBossActive == true) và chưa chết
-        if (boss == null || !boss.IsBossActive || boss.IsDead || boss.ActualCurrentHealth <= 0)
+        // 3. CHỈ HIỂN THỊ HUD khi Main Boss tồn tại, active qua trigger box (IsBossActive == true)
+        if (boss == null || !boss.IsBossActive)
         {
             HideUI();
             return;
         }
 
-        // Show HUD container if boss trigger box was activated and boss is alive
+        // 4. CHỈ ẨN UI KHI CẢ BOSS LẪN 2 PHÂN THÂN ĐỀU ĐÃ CHẾT
+        if (AreAllBossesAndClonesDead())
+        {
+            HideUI();
+            return;
+        }
+
+        // Show HUD container if boss trigger box was activated and boss/clones are still alive
         if (rootContainer != null && rootContainer.style.display == DisplayStyle.None)
         {
             rootContainer.style.display = DisplayStyle.Flex;
@@ -169,7 +307,105 @@ public class MiniBossHealthBar : MonoBehaviour
             }
         }
 
+        // Main Boss Health
         UpdateMainHealthAnimation(boss);
+
+        // Clone Discovery (quét liên tục khi boss triệu hồi)
+        if ((!clonesDiscovered || clone1AI == null || clone2AI == null) && boss != null && boss.IsBossActive)
+        {
+            cloneScanTimer -= Time.deltaTime;
+            if (cloneScanTimer <= 0f)
+            {
+                cloneScanTimer = 0.25f;
+                DiscoverClones();
+            }
+        }
+
+        // Clone Health Bars
+        UpdateCloneHealthBars();
+    }
+
+    private void UpdateCloneHealthBars()
+    {
+        if (clonesSubContainer == null) return;
+
+        // Chỉ hiển thị thanh máu phân thân khi đã triệu hồi và tìm thấy ít nhất 1 phân thân
+        bool hasAnyClone = (clone1AI != null && clone1AI.gameObject.activeInHierarchy) ||
+                           (clone2AI != null && clone2AI.gameObject.activeInHierarchy);
+
+        if (!hasAnyClone)
+        {
+            if (clonesSubContainer.style.display != DisplayStyle.None)
+                clonesSubContainer.style.display = DisplayStyle.None;
+            return;
+        }
+
+        if (clonesSubContainer.style.display != DisplayStyle.Flex)
+            clonesSubContainer.style.display = DisplayStyle.Flex;
+
+        // Update Clone 1
+        UpdateSingleCloneBar(clone1AI, clone1ProgressBar, clone1YellowBar, clone1NameLabel, clone1HpTextLabel,
+            ref clone1DisplayedHealth, ref clone1YellowHealth, ref clone1YellowDrainTimer, "Phân Thân 1");
+
+        // Update Clone 2
+        UpdateSingleCloneBar(clone2AI, clone2ProgressBar, clone2YellowBar, clone2NameLabel, clone2HpTextLabel,
+            ref clone2DisplayedHealth, ref clone2YellowHealth, ref clone2YellowDrainTimer, "Phân Thân 2");
+    }
+
+    private void UpdateSingleCloneBar(MiniBossAI cloneAI, VisualElement cloneProgress, VisualElement cloneYellow,
+        Label cloneName, Label cloneHpText,
+        ref float cloneDisplayed, ref float cloneYellowHp, ref float cloneYellowTimer,
+        string defaultName)
+    {
+        if (cloneProgress == null || cloneYellow == null) return;
+
+        // Phân thân đã chết hoặc bị hủy
+        if (cloneAI == null || !cloneAI.gameObject.activeInHierarchy || cloneAI.IsDead || cloneAI.ActualCurrentHealth <= 0)
+        {
+            cloneProgress.style.width = Length.Percent(0);
+            cloneYellow.style.width = Length.Percent(0);
+            if (cloneHpText != null) cloneHpText.text = "0 (Đã hạ)";
+            if (cloneName != null) cloneName.text = defaultName + " ☠";
+            return;
+        }
+
+        float maxHp = cloneAI.maxHealth;
+        if (maxHp <= 0f) maxHp = 225f;
+
+        float actualHp = cloneAI.ActualCurrentHealth;
+
+        if (cloneDisplayed < 0f)
+        {
+            cloneDisplayed = actualHp;
+            cloneYellowHp = actualHp;
+        }
+
+        if (cloneName != null) cloneName.text = defaultName;
+
+        cloneDisplayed = actualHp;
+
+        float percent = Mathf.Clamp01(cloneDisplayed / maxHp) * 100f;
+        cloneProgress.style.width = Length.Percent(percent);
+
+        if (cloneHpText != null) cloneHpText.text = $"{(int)Mathf.Max(0, cloneDisplayed)} / {(int)maxHp}";
+
+        // Yellow lag bar
+        if (actualHp < cloneYellowHp)
+        {
+            cloneYellowTimer += Time.deltaTime;
+            if (cloneYellowTimer >= yellowDrainDelay)
+            {
+                cloneYellowHp = Mathf.MoveTowards(cloneYellowHp, actualHp, maxHp * 0.35f * Time.deltaTime);
+            }
+        }
+        else
+        {
+            cloneYellowHp = actualHp;
+            cloneYellowTimer = 0f;
+        }
+
+        float yellowPercent = Mathf.Clamp01(cloneYellowHp / maxHp) * 100f;
+        cloneYellow.style.width = Length.Percent(yellowPercent);
     }
 
     private void UpdateMainHealthAnimation(MiniBossAI targetBoss)
@@ -180,11 +416,11 @@ public class MiniBossHealthBar : MonoBehaviour
             return;
         }
 
-        if (targetBoss == null)
+        if (targetBoss == null || targetBoss.IsDead || targetBoss.ActualCurrentHealth <= 0)
         {
             progressBar.style.width = Length.Percent(0);
             yellowBar.style.width = Length.Percent(0);
-            hpTextLabel.text = "0 / 0 (Đã hạ)";
+            hpTextLabel.text = "0 (Đã hạ)";
             return;
         }
 

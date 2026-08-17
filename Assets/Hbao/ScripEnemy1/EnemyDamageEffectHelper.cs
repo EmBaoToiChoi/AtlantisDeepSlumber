@@ -7,7 +7,9 @@ using System.Collections.Generic;
 /// </summary>
 public static class EnemyDamageEffectHelper
 {
-    public static void PlayDamageEffects(GameObject enemy, float damage)
+    private static AudioClip defaultHitClip;
+
+    public static void PlayDamageEffects(GameObject enemy, float damage, AudioClip customHitClip = null)
     {
         if (enemy == null) return;
 
@@ -18,6 +20,35 @@ public static class EnemyDamageEffectHelper
 
         // 2. Tạo sát thương nổi (Floating Damage Text)
         DamageTextSpawner.Spawn(enemy.transform.position, damage, Color.red);
+
+        // 3. Phát âm thanh khi ăn hit (3D Spatial Audio cho Player ở gần nghe thấy)
+        PlayHitSound(enemy.transform.position, customHitClip);
+    }
+
+    public static void PlayHitSound(Vector3 position, AudioClip customHitClip = null)
+    {
+        AudioClip clipToPlay = customHitClip;
+        if (clipToPlay == null)
+        {
+            if (defaultHitClip == null)
+            {
+                defaultHitClip = Resources.Load<AudioClip>("Audio/ChemHit");
+                if (defaultHitClip == null) defaultHitClip = Resources.Load<AudioClip>("Audio/Punch");
+            }
+            clipToPlay = defaultHitClip;
+        }
+
+        if (clipToPlay != null)
+        {
+            if (AudioManager.Instance != null)
+            {
+                AudioManager.Instance.PlaySFX(clipToPlay, position, 0.85f);
+            }
+            else
+            {
+                AudioSource.PlayClipAtPoint(clipToPlay, position, 0.85f);
+            }
+        }
     }
 }
 

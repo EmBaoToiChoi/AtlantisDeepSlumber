@@ -3262,6 +3262,12 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     [Tooltip("Bán kính vòng tròn định vị chiêu R")]
     public float rSkillAoeRadius = 3f;
 
+    [Tooltip("Prefab VFX vòng tròn định vị tâm bắn chiêu R dưới đất khi ngắm (Nếu để trống sẽ dùng vòng tròn LineRenderer xanh mặc định)")]
+    public GameObject rSkillAoeIndicatorPrefab;
+    [Tooltip("Tỷ lệ scale tùy chỉnh thêm cho Prefab VFX vòng tròn định vị chiêu R (Mặc định (1,1,1))")]
+    public Vector3 rSkillAoeIndicatorScale = Vector3.one;
+    private GameObject activeAoeIndicatorInstance;
+
     private LineRenderer aoeIndicatorLine;
     private Vector3 aoeTargetPosition;
     private Vector3 pendingRShootPosition;
@@ -3286,6 +3292,16 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     [Header("Ghost Slash Skill Q Settings")]
     [Tooltip("Particle prefab riêng cho hiệu ứng Ảo ảnh Chém. Nếu để trống sẽ dùng pool VFX cũ.")]
     public GameObject qSkillParticlePrefab;
+    [Tooltip("Kích thước Scale của hiệu ứng vết chém Skill Q (Mặc định: 0.5f)")]
+    public float qSkillVfxScale = 0.5f;
+    [Tooltip("Độ cao điều chỉnh Y cho tâm hiệu ứng chém (0.0f = đúng tâm mục tiêu)")]
+    public float qSkillVfxYOffset = 0.0f;
+    [Tooltip("Tự động căn giữa toàn bộ GameObject con của VFX về tâm (0,0,0) để triệt tiêu các offset lệch 7.5m, 15m trong Prefab demo")]
+    public bool qSkillVfxAutoCenterChildren = true;
+    [Tooltip("Bật/tắt Loop cho hiệu ứng chém. Mặc định false (chém dứt khoát 1 lần theo từng hit)")]
+    public bool qSkillVfxLoop = false;
+    [Tooltip("Thời gian tồn tại của mỗi vết chém trước khi thu hồi vào Object Pool (giây)")]
+    public float qSkillVfxLifetime = 1.2f;
     public float qSkillDuration = 1.5f;
     public int qSkillSlashCount = 5;
     public float qSkillDamagePerSlash = 15f;
@@ -4905,7 +4921,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
                 Vector3 knockbackForce = transform.forward * 3.5f + Vector3.up * 1.0f;
                 
                 // Trừ máu quái ngay lập tức trùng khớp với Event Animation
-                EnemyDamageHelper.DealDamage(enemyRoot, actualDamage, knockbackForce);
+                TryDamageSpecificEnemy(enemyRoot, actualDamage);
 
                 if (hitClip != null) PlayPlayerSFX(hitClip, 0.9f);
                 EnemyDamageEffectHelper.PlayDamageEffects(enemyRoot.gameObject, actualDamage);
@@ -5752,6 +5768,17 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     private void CreateAoeIndicator()
     {
+        if (rSkillAoeIndicatorPrefab != null)
+        {
+            if (activeAoeIndicatorInstance == null)
+            {
+                activeAoeIndicatorInstance = Instantiate(rSkillAoeIndicatorPrefab);
+                activeAoeIndicatorInstance.transform.rotation = rSkillAoeIndicatorPrefab.transform.rotation;
+                activeAoeIndicatorInstance.transform.localScale = Vector3.Scale(rSkillAoeIndicatorPrefab.transform.localScale, rSkillAoeIndicatorScale);
+            }
+            return;
+        }
+
         if (aoeIndicatorLine != null) return;
 
         GameObject indicatorObj = new GameObject("LeoR_AoeIndicator");
@@ -5776,7 +5803,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     private void UpdateAoeIndicatorPosition()
     {
-        if (aoeIndicatorLine == null) return;
+        if (activeAoeIndicatorInstance == null && aoeIndicatorLine == null) return;
         if (targetCamera == null) return;
 
         Ray ray = targetCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
@@ -5803,32 +5830,48 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         aoeTargetPosition = targetPoint;
 
-        int segments = aoeIndicatorLine.positionCount;
-        for (int i = 0; i < segments; i++)
+        if (activeAoeIndicatorInstance != null)
         {
-            float angle = i * (2f * Mathf.PI / segments);
-            float x = Mathf.Cos(angle) * rSkillAoeRadius;
-            float z = Mathf.Sin(angle) * rSkillAoeRadius;
-            Vector3 pointPos = targetPoint + new Vector3(x, 0f, z);
-
-            Vector3 rayStart = pointPos + Vector3.up * 5f;
-            if (Physics.Raycast(rayStart, Vector3.down, out RaycastHit groundHit, 10f, layerMask))
-            {
-                pointPos.y = groundHit.point.y + 0.05f;
-            }
-            else
-            {
-                pointPos.y = targetPoint.y + 0.05f;
-            }
-
-            aoeIndicatorLine.SetPosition(i, pointPos);
+            activeAoeIndicatorInstance.transform.position = targetPoint + Vector3.up * 0.05f;
+            activeAoeIndicatorInstance.SetActive(true);
+            return;
         }
 
-        aoeIndicatorLine.enabled = true;
+        if (aoeIndicatorLine != null)
+        {
+            int segments = aoeIndicatorLine.positionCount;
+            for (int i = 0; i < segments; i++)
+            {
+                float angle = i * (2f * Mathf.PI / segments);
+                float x = Mathf.Cos(angle) * rSkillAoeRadius;
+                float z = Mathf.Sin(angle) * rSkillAoeRadius;
+                Vector3 pointPos = targetPoint + new Vector3(x, 0f, z);
+
+                Vector3 rayStart = pointPos + Vector3.up * 5f;
+                if (Physics.Raycast(rayStart, Vector3.down, out RaycastHit groundHit, 10f, layerMask))
+                {
+                    pointPos.y = groundHit.point.y + 0.05f;
+                }
+                else
+                {
+                    pointPos.y = targetPoint.y + 0.05f;
+                }
+
+                aoeIndicatorLine.SetPosition(i, pointPos);
+            }
+
+            aoeIndicatorLine.enabled = true;
+        }
     }
 
     private void HideAoeIndicator()
     {
+        if (activeAoeIndicatorInstance != null)
+        {
+            Destroy(activeAoeIndicatorInstance);
+            activeAoeIndicatorInstance = null;
+        }
+
         if (aoeIndicatorLine != null)
         {
             if (aoeIndicatorLine.gameObject != null)
@@ -6344,7 +6387,15 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             if (hit.collider == null || hit.collider.isTrigger) continue;
             if (hit.collider.transform.root == transform.root) continue;
 
-            if (hit.collider.CompareTag("Enemy") || hit.collider.CompareTag("Player")) continue;
+            if (hit.collider.CompareTag("Enemy") || hit.collider.CompareTag("Player") ||
+                hit.collider.gameObject.layer == LayerMask.NameToLayer("Enemy") ||
+                hit.collider.name.ToLower().Contains("enemy") ||
+                hit.collider.name.ToLower().Contains("clone") ||
+                hit.collider.transform.root.name.ToLower().Contains("clone") ||
+                hit.collider.transform.root.name.ToLower().Contains("boss"))
+            {
+                continue;
+            }
 
             if (hit.collider.GetComponentInParent<Enemy1_DapBua>() != null ||
                 hit.collider.GetComponentInParent<Enemy2_Zombie>() != null ||
@@ -6398,7 +6449,15 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
                 {
                     if (hit.collider == null || hit.collider.isTrigger) continue;
                     if (hit.collider.transform.root == target.root || hit.collider.transform.root == transform.root) continue;
-                    if (hit.collider.CompareTag("Enemy") || hit.collider.CompareTag("Player")) continue;
+                    if (hit.collider.CompareTag("Enemy") || hit.collider.CompareTag("Player") ||
+                        hit.collider.gameObject.layer == LayerMask.NameToLayer("Enemy") ||
+                        hit.collider.name.ToLower().Contains("enemy") ||
+                        hit.collider.name.ToLower().Contains("clone") ||
+                        hit.collider.transform.root.name.ToLower().Contains("clone") ||
+                        hit.collider.transform.root.name.ToLower().Contains("boss"))
+                    {
+                        continue;
+                    }
 
                     if (hit.collider.GetComponentInParent<Enemy1_DapBua>() != null ||
                         hit.collider.GetComponentInParent<Enemy2_Zombie>() != null ||
@@ -6820,29 +6879,62 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     private void SpawnQSlashVfxLocal(Vector3 targetPos)
     {
         Quaternion rot = Quaternion.Euler(0f, UnityEngine.Random.Range(0f, 360f), 0f);
-        Vector3 spawnPos = targetPos; // Đã là tâm mục tiêu được tính từ trước
+        Vector3 spawnPos = targetPos + Vector3.up * qSkillVfxYOffset; // Tâm mục tiêu kèm Y offset
 
-        // Tăng transform to lên (Scale 1.8f) per user request
-        Vector3 qScale = new Vector3(1.8f, 1.8f, 1.8f);
+        Vector3 qScale = new Vector3(qSkillVfxScale, qSkillVfxScale, qSkillVfxScale);
+
+        GameObject vfxInstance = null;
 
         // Dùng particle riêng nếu đã gán trong Inspector
         if (qSkillParticlePrefab != null)
         {
-            GetPooledVFX(qSkillParticlePrefab, spawnPos, rot, qScale);
-            return;
+            vfxInstance = GetPooledVFX(qSkillParticlePrefab, spawnPos, rot, qScale);
+        }
+        else
+        {
+            // Fallback: chọn ngẫu nhiên trong pool VFX cũ
+            GameObject[] vfxOptions = {
+                leftSlashVfxPrefab,
+                rightSlashVfxPrefab,
+                dualSlashVfxPrefab
+            };
+            var validVfx = System.Array.FindAll(vfxOptions, v => v != null);
+            if (validVfx.Length > 0)
+            {
+                GameObject chosenPrefab = validVfx[UnityEngine.Random.Range(0, validVfx.Length)];
+                vfxInstance = GetPooledVFX(chosenPrefab, spawnPos, rot, qScale);
+            }
         }
 
-        // Fallback: chọn ngẫu nhiên trong pool VFX cũ
-        GameObject[] vfxOptions = {
-            leftSlashVfxPrefab,
-            rightSlashVfxPrefab,
-            dualSlashVfxPrefab
-        };
-        var validVfx = System.Array.FindAll(vfxOptions, v => v != null);
-        if (validVfx.Length == 0) return;
+        if (vfxInstance != null)
+        {
+            // 1. Căn giữa Transform toàn bộ object con nếu có offset demo của asset pack (ví dụ x=7.5, x=15 trong FlameButterfly)
+            if (qSkillVfxAutoCenterChildren)
+            {
+                Transform[] allChildren = vfxInstance.GetComponentsInChildren<Transform>(true);
+                for (int i = 0; i < allChildren.Length; i++)
+                {
+                    if (allChildren[i] != vfxInstance.transform)
+                    {
+                        allChildren[i].localPosition = Vector3.zero;
+                    }
+                }
+            }
 
-        GameObject chosenPrefab = validVfx[UnityEngine.Random.Range(0, validVfx.Length)];
-        GetPooledVFX(chosenPrefab, spawnPos, rot, qScale);
+            // 2. Thiết lập Loop, Scale Mode và kích hoạt lại Particle System
+            ParticleSystem[] psList = vfxInstance.GetComponentsInChildren<ParticleSystem>(true);
+            for (int i = 0; i < psList.Length; i++)
+            {
+                var main = psList[i].main;
+                main.loop = qSkillVfxLoop;
+                main.scalingMode = ParticleSystemScalingMode.Hierarchy;
+                psList[i].Clear(true);
+                psList[i].Play(true);
+            }
+
+            // 3. Tự động thu hồi vào Pool sau khi chém xong
+            StartCoroutine(DeactivateAfterDelay(vfxInstance, qSkillVfxLifetime));
+        }
     }
 
     private void OnQSkillActiveChanged(bool oldVal, bool newVal)

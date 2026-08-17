@@ -28124,7 +28124,7 @@ Light:
   m_Enabled: 1
   serializedVersion: 11
   m_Type: 1
-  m_Color: {r: 0, g: 0.6784314, b: 0.70980394, a: 1}
+  m_Color: {r: 0.7162246, g: 0.81610894, b: 0.8207547, a: 1}
   m_Intensity: 1.62
   m_Range: 10
   m_SpotAngle: 30
@@ -44754,7 +44754,7 @@ MonoBehaviour:
   m_text: "Nh\u01B0ng xung quanh \u0111\xE2y ch\u1EC9 c\xF3 nh\u1EEFng t\u1EA3ng
     \u0111\xE1 n\xE0y th\xF4i th\u1EED xem d\u01B0\u1EDBi n\xF3 c\xF3 g\xEC kh\xF4ng?"
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 5c7a92cce04a5ee478f36d2f5b537e05, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 6551b436ac6e447438384ddc0c7721bb, type: 2}
   m_sharedMaterial: {fileID: 97671534423474389, guid: 5c7a92cce04a5ee478f36d2f5b537e05, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
@@ -44820,7 +44820,7 @@ MonoBehaviour:
   m_margin: {x: -287.48517, y: -61.708282, z: -176.86365, w: -77.10062}
   m_isUsingLegacyAnimationComponent: 0
   m_isVolumetricText: 0
-  m_hasFontAssetChanged: 0
+  m_hasFontAssetChanged: 1
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
 --- !u!222 &436010001
@@ -85244,7 +85244,7 @@ MonoBehaviour:
   m_text: "Theo ta ngh\u0129 c\xF3 m\u1EADt th\u1EA5t hay m\u1ED9t c\xF4ng t\u1EAFc
     n\xE0o \u0111\xF3 c\xF3 k\xED hi\u1EC7u nh\u01B0 n\xE0y xung quanh \u0111\xE2y."
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 5c7a92cce04a5ee478f36d2f5b537e05, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 6551b436ac6e447438384ddc0c7721bb, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
@@ -92414,6 +92414,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   ShowTopMostFoldoutHeaderGroup: 1
+  cutsceneController: {fileID: 0}
   DaChanCua1: {fileID: 1132074064}
   DaChanCua2: {fileID: 1133277655}
   daChanCuaChuaRoi: {fileID: 206957917}
@@ -107594,6 +107595,7 @@ MonoBehaviour:
   prerequisiteQuest: {fileID: 0}
   collapseVideo: {fileID: 0}
   cutsceneUI: {fileID: 0}
+  buildCompleteCutscene: {fileID: 0}
   playerMovementScriptNames: []
   objectToHideDuringCutscene: {fileID: 0}
   bridgeObstacle: {fileID: 0}
@@ -153618,7 +153620,7 @@ MonoBehaviour:
   m_text: "C\xE1c ng\u01B0\u01A1i c\xF3 th\u1EA5y k\xFD hi\u1EC7u \u1EDF tr\xEAn
     t\u01B0\u1EDDng kh\xF4ng."
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 5c7a92cce04a5ee478f36d2f5b537e05, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 6551b436ac6e447438384ddc0c7721bb, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
@@ -170019,8 +170021,8 @@ MonoBehaviour:
   m_text: "Ch\xFAng t\xF4i hi\u1EC3u r\u1ED3i, \u0111i ki\u1EC3m tra m\u1EA5y t\u1EA3ng
     \u0111\xE1 th\xF4i m\u1ECDi ng\u01B0\u1EDDi."
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 5c7a92cce04a5ee478f36d2f5b537e05, type: 2}
-  m_sharedMaterial: {fileID: 97671534423474389, guid: 5c7a92cce04a5ee478f36d2f5b537e05, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 6551b436ac6e447438384ddc0c7721bb, type: 2}
+  m_sharedMaterial: {fileID: -3394599491205377259, guid: 6551b436ac6e447438384ddc0c7721bb, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -172929,6 +172931,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   ShowTopMostFoldoutHeaderGroup: 1
+  completionCutscene: {fileID: 0}
+  objectToEnableAfterCutscene: {fileID: 0}
   A: {fileID: 1255146431}
   B: {fileID: 308492518}
   C: {fileID: 97499273}

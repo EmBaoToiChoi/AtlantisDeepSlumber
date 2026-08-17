@@ -1,0 +1,21 @@
+fileFormatVersion: 2
+guid: 19a46dce278ca5744888576bbd913520
+ShaderImporter:
+  externalObjects: {}
+  defaultTextures:
+  - _MainTexture: {fileID: 2800000, guid: c7a560b9a279a0e46a72a34198bacc81, type: 3}
+  - _DistortionNoise: {fileID: 2800000, guid: 801b4be3075bc4840b14161c01e73734, type: 3}
+  - _LUT: {fileID: 2800000, guid: 1f420744f170db04591672392e913387, type: 3}
+  - _texcoord2: {instanceID: 0}
+  - _texcoord: {instanceID: 0}
+  nonModifiableTextures: []
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 340466
+  packageName: Stylized VFX Bundle
+  packageVersion: 1.0.1
+  assetPath: Assets/Vefects/Stylized AoE VFX/Shared/Shaders/SH_Vefects_BIRP_Impact_Hemisphere_01.shader
+  uploadId: 860344

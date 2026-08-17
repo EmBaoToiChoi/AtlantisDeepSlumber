@@ -298,10 +298,23 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     [Header("E Skill Healing Zone Settings")]
     public float eSkillCooldown = 10f; // Cooldown của kỹ năng E (giây)
-    public float eSkillHealRadius = 5f;
+    public float eSkillHealRadius = 10f; // Bán kính vùng hồi máu (tăng gấp đôi từ 5m lên 10m)
     public float eSkillHealDuration = 5f;
     public float eSkillHealAmount = 10f;
+    [Tooltip("Hệ số scale VFX vùng hồi máu dưới đất cho to rõ rực rỡ.")]
+    public float eSkillVfxScaleMultiplier = 1.2f;
+
+    [Tooltip("VFX 1: Prefab VFX hiển thị vị trí ngắm dưới đất khi đè phím E (Nếu để trống sẽ dùng hình trụ xanh mặc định)")]
+    public GameObject eSkillTargetingVfxPrefab;
+
+    [Tooltip("VFX 2: Prefab VFX duy trì phát sáng/xoay trên mặt đất trong 5 giây tại vùng hồi máu")]
     public GameObject eSkillVfxPrefab;
+
+    [Tooltip("VFX 3: Prefab VFX bùng nổ hiệu ứng hồi máu khi hết 5 giây (khi vùng hồi máu kết thúc và hồi HP)")]
+    public GameObject eSkillHealBurstVfxPrefab;
+
+    [Tooltip("VFX 4: Prefab VFX dấu + (plus sign) hiển thị xung quanh người các player khi nhận máu từ vùng hồi chiêu E")]
+    public GameObject eSkillPlayerHealVfxPrefab;
 
     private float eSkillCooldownTimer = 0f; // Bộ đếm cooldown E
     private float eSkillActiveTimer = 0f;   // Bộ đếm thời lượng kích hoạt E
@@ -325,11 +338,17 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
     );
     public bool IsESkillActive => eSkillActiveTimer > 0f;
 
-    [Header("Q Skill (Triple Attacks) Settings")]
+    [Header("Q Skill (Summon Allied Minion) Settings")]
     public float qSkillCooldown = 15f; // Cooldown của kỹ năng Q (giây)
     public float qSkillDuration = 10f; // Thời lượng tác dụng kỹ năng Q (giây)
     public float qSkillSpreadAngle = 10f; // Góc lệch của các tia bên cạnh
     public GameObject qSkillSkeletonPrefab; // Prefab con Skeleton đệ triệu hồi
+    [Tooltip("Prefab VFX vòng tròn ma thuật triệu hồi dưới đất (nếu để trống sẽ dùng VFX_Heal_Area_01 / Maya_Summon_Ritual).")]
+    public GameObject qSkillSummonVfxPrefab;
+    [Tooltip("Thời gian (giây) vòng ma thuật hiện dưới đất trước khi đệ trồi từ dưới mặt đất bay lên.")]
+    public float qSkillSummonRitualDuration = 5.0f;
+    [Tooltip("Tỷ lệ scale của VFX vòng triệu hồi ma thuật dưới đất.")]
+    public float qSkillSummonVfxScale = 2.2f;
     private float qSkillCooldownTimer = 0f; // Bộ đếm cooldown Q
     private float qSkillDurationTimer = 0f; // Bộ đếm thời lượng Q
     private bool localIsQSkillActive = false; // Trạng thái kỹ năng Q ở local
@@ -697,31 +716,52 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     private void UpdateETargetingIndicator()
     {
+        bool isLocal = isStandaloneMode || (IsSpawned && IsOwner);
+        if (!isLocal)
+        {
+            if (eTargetingIndicator != null)
+            {
+                Destroy(eTargetingIndicator);
+                eTargetingIndicator = null;
+            }
+            return;
+        }
+
         if (isETargeting)
         {
             if (eTargetingIndicator == null)
             {
-                eTargetingIndicator = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-                var indicatorCol = eTargetingIndicator.GetComponent<Collider>();
-                if (indicatorCol != null)
+                if (eSkillTargetingVfxPrefab != null)
                 {
-                    Destroy(indicatorCol);
+                    eTargetingIndicator = Instantiate(eSkillTargetingVfxPrefab);
                 }
-                
-                var renderer = eTargetingIndicator.GetComponent<Renderer>();
-                if (renderer != null)
+                else
                 {
-                    Shader transparentShader = Shader.Find("Sprites/Default");
-                    if (transparentShader != null)
+                    eTargetingIndicator = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+                    var indicatorCol = eTargetingIndicator.GetComponent<Collider>();
+                    if (indicatorCol != null)
                     {
-                        Material mat = new Material(transparentShader);
-                        mat.color = new Color(0.2f, 1f, 0.3f, 0.3f);
-                        renderer.material = mat;
+                        Destroy(indicatorCol);
+                    }
+                    
+                    var renderer = eTargetingIndicator.GetComponent<Renderer>();
+                    if (renderer != null)
+                    {
+                        Shader transparentShader = Shader.Find("Sprites/Default");
+                        if (transparentShader != null)
+                        {
+                            Material mat = new Material(transparentShader);
+                            mat.color = new Color(0.2f, 1f, 0.3f, 0.3f);
+                            renderer.material = mat;
+                        }
                     }
                 }
             }
 
-            eTargetingIndicator.transform.localScale = new Vector3(eSkillHealRadius * 2f, 0.02f, eSkillHealRadius * 2f);
+            if (eSkillTargetingVfxPrefab == null)
+            {
+                eTargetingIndicator.transform.localScale = new Vector3(eSkillHealRadius * 2f, 0.02f, eSkillHealRadius * 2f);
+            }
 
             if (targetCamera != null)
             {
@@ -784,35 +824,59 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
         zone.radius = eSkillHealRadius;
         zone.duration = eSkillHealDuration;
         zone.healAmount = eSkillHealAmount;
+        zone.healBurstVfxPrefab = eSkillHealBurstVfxPrefab;
+        zone.playerHealVfxPrefab = eSkillPlayerHealVfxPrefab;
 
-        // Always spawn the green cylinder visual for demo purposes
-        GameObject cylinder = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-        var col = cylinder.GetComponent<Collider>();
-        if (col != null) Destroy(col);
-
-        cylinder.transform.SetParent(zoneObj.transform);
-        cylinder.transform.localPosition = new Vector3(0f, 0.05f, 0f);
-        cylinder.transform.localScale = new Vector3(eSkillHealRadius * 2f, 0.01f, eSkillHealRadius * 2f);
-        cylinder.transform.localRotation = Quaternion.identity;
-
-        var renderer = cylinder.GetComponent<Renderer>();
-        if (renderer != null)
+        GameObject prefabToUse = eSkillVfxPrefab;
+        if (prefabToUse == null)
         {
-            Shader transparentShader = Shader.Find("Sprites/Default");
-            if (transparentShader != null)
+            prefabToUse = Resources.Load<GameObject>("VFX_Heal_Area_01");
+            if (prefabToUse == null)
             {
-                Material mat = new Material(transparentShader);
-                mat.color = new Color(0.2f, 0.8f, 0.3f, 0.25f);
-                renderer.material = mat;
+                prefabToUse = Resources.Load<GameObject>("VFX/Maya_Summon_Ritual");
             }
         }
 
-        // Optionally spawn custom VFX prefab if assigned
-        if (eSkillVfxPrefab != null)
+        if (prefabToUse != null)
         {
-            GameObject vfxObj = Instantiate(eSkillVfxPrefab, position, Quaternion.identity);
+            GameObject vfxObj = Instantiate(prefabToUse, position, Quaternion.identity);
             vfxObj.transform.SetParent(zoneObj.transform);
+            vfxObj.transform.localScale = Vector3.one * Mathf.Max(0.1f, eSkillVfxScaleMultiplier); // Scale vừa vặn 1.2x
+
+            ParticleSystem[] psList = vfxObj.GetComponentsInChildren<ParticleSystem>(true);
+            foreach (var ps in psList)
+            {
+                if (ps != null)
+                {
+                    var main = ps.main;
+                    main.startDelay = 0f;
+                    if (!ps.isPlaying) ps.Play(true);
+                }
+            }
             Destroy(vfxObj, eSkillHealDuration);
+        }
+        else
+        {
+            GameObject cylinder = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            var col = cylinder.GetComponent<Collider>();
+            if (col != null) Destroy(col);
+
+            cylinder.transform.SetParent(zoneObj.transform);
+            cylinder.transform.localPosition = new Vector3(0f, 0.05f, 0f);
+            cylinder.transform.localScale = new Vector3(eSkillHealRadius * 2f, 0.01f, eSkillHealRadius * 2f);
+            cylinder.transform.localRotation = Quaternion.identity;
+
+            var renderer = cylinder.GetComponent<Renderer>();
+            if (renderer != null)
+            {
+                Shader transparentShader = Shader.Find("Sprites/Default");
+                if (transparentShader != null)
+                {
+                    Material mat = new Material(transparentShader);
+                    mat.color = new Color(0.2f, 0.8f, 0.3f, 0.25f);
+                    renderer.material = mat;
+                }
+            }
         }
     }
 
@@ -825,6 +889,8 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
         zone.radius = eSkillHealRadius;
         zone.duration = eSkillHealDuration;
         zone.healAmount = eSkillHealAmount;
+        zone.healBurstVfxPrefab = null; // Visuals are handled by ClientRpc for all players
+        zone.playerHealVfxPrefab = null;
 
         SpawnHealingZoneVisualClientRpc(position);
     }
@@ -835,36 +901,63 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
         GameObject visualObj = new GameObject("MayaHealingZone_VisualClient");
         visualObj.transform.position = position;
 
-        // Always spawn the green cylinder visual for demo purposes
-        GameObject cylinder = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-        var col = cylinder.GetComponent<Collider>();
-        if (col != null) Destroy(col);
+        var clientZone = visualObj.AddComponent<MayaHealingZone>();
+        clientZone.radius = eSkillHealRadius;
+        clientZone.duration = eSkillHealDuration;
+        clientZone.healAmount = 0f;
+        clientZone.healBurstVfxPrefab = eSkillHealBurstVfxPrefab;
+        clientZone.playerHealVfxPrefab = eSkillPlayerHealVfxPrefab;
 
-        cylinder.transform.SetParent(visualObj.transform);
-        cylinder.transform.localPosition = new Vector3(0f, 0.05f, 0f);
-        cylinder.transform.localScale = new Vector3(eSkillHealRadius * 2f, 0.01f, eSkillHealRadius * 2f);
-        cylinder.transform.localRotation = Quaternion.identity;
-
-        var renderer = cylinder.GetComponent<Renderer>();
-        if (renderer != null)
+        GameObject prefabToUse = eSkillVfxPrefab;
+        if (prefabToUse == null)
         {
-            Shader transparentShader = Shader.Find("Sprites/Default");
-            if (transparentShader != null)
+            prefabToUse = Resources.Load<GameObject>("VFX_Heal_Area_01");
+            if (prefabToUse == null)
             {
-                Material mat = new Material(transparentShader);
-                mat.color = new Color(0.2f, 0.8f, 0.3f, 0.25f);
-                renderer.material = mat;
+                prefabToUse = Resources.Load<GameObject>("VFX/Maya_Summon_Ritual");
             }
         }
 
-        // Optionally spawn custom VFX prefab if assigned
-        if (eSkillVfxPrefab != null)
+        if (prefabToUse != null)
         {
-            GameObject vfx = Instantiate(eSkillVfxPrefab, position, Quaternion.identity);
+            GameObject vfx = Instantiate(prefabToUse, position, Quaternion.identity);
             vfx.transform.SetParent(visualObj.transform);
-        }
+            vfx.transform.localScale = Vector3.one * Mathf.Max(0.1f, eSkillVfxScaleMultiplier); // Scale vừa vặn 1.2x
 
-        Destroy(visualObj, eSkillHealDuration);
+            ParticleSystem[] psList = vfx.GetComponentsInChildren<ParticleSystem>(true);
+            foreach (var ps in psList)
+            {
+                if (ps != null)
+                {
+                    var main = ps.main;
+                    main.startDelay = 0f;
+                    if (!ps.isPlaying) ps.Play(true);
+                }
+            }
+        }
+        else
+        {
+            GameObject cylinder = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            var col = cylinder.GetComponent<Collider>();
+            if (col != null) Destroy(col);
+
+            cylinder.transform.SetParent(visualObj.transform);
+            cylinder.transform.localPosition = new Vector3(0f, 0.05f, 0f);
+            cylinder.transform.localScale = new Vector3(eSkillHealRadius * 2f, 0.01f, eSkillHealRadius * 2f);
+            cylinder.transform.localRotation = Quaternion.identity;
+
+            var renderer = cylinder.GetComponent<Renderer>();
+            if (renderer != null)
+            {
+                Shader transparentShader = Shader.Find("Sprites/Default");
+                if (transparentShader != null)
+                {
+                    Material mat = new Material(transparentShader);
+                    mat.color = new Color(0.2f, 0.8f, 0.3f, 0.25f);
+                    renderer.material = mat;
+                }
+            }
+        }
     }
 
     private void EndESkill()
@@ -936,6 +1029,33 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
         return true;
     }
 
+    private Vector3 GetSafeSummonPosition()
+    {
+        Vector3 defaultPos = transform.position + transform.forward * 3f;
+
+        for (int i = 0; i < 10; i++)
+        {
+            Vector3 randomOffset = (i == 0) ? transform.forward * 3f : Random.insideUnitSphere * 3.5f;
+            randomOffset.y = 0f;
+            Vector3 candidatePos = transform.position + randomOffset;
+
+            if (UnityEngine.AI.NavMesh.SamplePosition(candidatePos, out UnityEngine.AI.NavMeshHit navHit, 4.0f, UnityEngine.AI.NavMesh.AllAreas))
+            {
+                if (!Physics.CheckSphere(navHit.position + Vector3.up * 0.5f, 0.5f, LayerMask.GetMask("Default", "Wall", "Obstacle")))
+                {
+                    return navHit.position;
+                }
+            }
+        }
+
+        if (UnityEngine.AI.NavMesh.SamplePosition(defaultPos, out UnityEngine.AI.NavMeshHit fallbackHit, 5.0f, UnityEngine.AI.NavMesh.AllAreas))
+        {
+            return fallbackHit.position;
+        }
+
+        return defaultPos;
+    }
+
     private void SpawnSkeletonLocal()
     {
         if (qSkillSkeletonPrefab == null)
@@ -944,14 +1064,10 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
             return;
         }
 
-        Vector3 spawnPos = transform.position + transform.forward * 2f;
-        spawnPos.y = transform.position.y;
+        Vector3 groundPos = GetSafeSummonPosition();
         Quaternion spawnRot = Quaternion.LookRotation(transform.forward);
 
-        GameObject skeleton = Instantiate(qSkillSkeletonPrefab, spawnPos, spawnRot);
-        skeleton.SetActive(true);
-
-        StartCoroutine(DespawnSkeletonAfterTime(skeleton, 15f));
+        StartCoroutine(PerformSummonSequence(groundPos, spawnRot));
     }
 
     [ServerRpc]
@@ -965,16 +1081,164 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         isQSkillActiveNet.Value = true;
 
-        Vector3 spawnPos = transform.position + transform.forward * 2f;
-        spawnPos.y = transform.position.y;
+        Vector3 groundPos = GetSafeSummonPosition();
         Quaternion spawnRot = Quaternion.LookRotation(transform.forward);
 
-        GameObject skeleton = Instantiate(qSkillSkeletonPrefab, spawnPos, spawnRot);
+        SpawnQSkillSummonVfxClientRpc(groundPos, qSkillSummonRitualDuration);
+        StartCoroutine(PerformSummonSequence(groundPos, spawnRot));
+    }
+
+    private GameObject activeSummonRitualVfx;
+
+    [ClientRpc]
+    private void SpawnQSkillSummonVfxClientRpc(Vector3 groundPos, float duration)
+    {
+        if (IsServer) return;
+        activeSummonRitualVfx = SpawnRitualVfxLocal(groundPos, duration);
+    }
+
+    [ClientRpc]
+    private void DestroyQSkillSummonVfxClientRpc()
+    {
+        if (activeSummonRitualVfx != null)
+        {
+            ParticleSystem[] psList = activeSummonRitualVfx.GetComponentsInChildren<ParticleSystem>(true);
+            foreach (var ps in psList)
+            {
+                if (ps != null)
+                {
+                    var main = ps.main;
+                    main.loop = false;
+                    ps.Stop(true, ParticleSystemStopBehavior.StopEmitting);
+                }
+            }
+            Destroy(activeSummonRitualVfx, 0.3f);
+            activeSummonRitualVfx = null;
+        }
+    }
+
+    private GameObject SpawnRitualVfxLocal(Vector3 groundPos, float duration)
+    {
+        GameObject prefabToUse = qSkillSummonVfxPrefab;
+        if (prefabToUse == null)
+        {
+            prefabToUse = Resources.Load<GameObject>("VFX/Maya_Summon_Ritual");
+            if (prefabToUse == null)
+            {
+                prefabToUse = Resources.Load<GameObject>("VFX_Heal_Area_01");
+                if (prefabToUse == null)
+                {
+                    prefabToUse = Resources.Load<GameObject>("Par_PurpleField");
+                }
+            }
+        }
+
+        if (prefabToUse != null)
+        {
+            Vector3 vfxPos = groundPos + Vector3.up * 0.05f;
+            GameObject vfxObj = Instantiate(prefabToUse, vfxPos, Quaternion.identity);
+            vfxObj.transform.localScale = Vector3.one * Mathf.Max(0.5f, qSkillSummonVfxScale);
+
+            Transform capsuleChild = vfxObj.transform.Find("Capsule");
+            if (capsuleChild != null)
+            {
+                capsuleChild.gameObject.SetActive(false);
+            }
+
+            ParticleSystem[] psList = vfxObj.GetComponentsInChildren<ParticleSystem>(true);
+            foreach (var ps in psList)
+            {
+                if (ps != null)
+                {
+                    var main = ps.main;
+                    main.loop = true;
+                    if (!ps.isPlaying) ps.Play();
+                }
+            }
+            return vfxObj;
+        }
+        return null;
+    }
+
+    private System.Collections.IEnumerator PerformSummonSequence(Vector3 groundPos, Quaternion spawnRot)
+    {
+        GameObject ritualVfxObj = SpawnRitualVfxLocal(groundPos, qSkillSummonRitualDuration);
+
+        float waitBeforeRise = Mathf.Max(1.0f, qSkillSummonRitualDuration - 1.8f);
+        yield return new WaitForSeconds(waitBeforeRise);
+
+        Vector3 undergroundPos = groundPos + Vector3.down * 1.6f;
+        GameObject skeleton = Instantiate(qSkillSkeletonPrefab, undergroundPos, spawnRot);
         skeleton.SetActive(true);
 
-        if (skeleton.TryGetComponent<NetworkObject>(out var netObj))
+        var agent = skeleton.GetComponent<UnityEngine.AI.NavMeshAgent>();
+        if (agent != null) agent.enabled = false;
+
+        var cols = skeleton.GetComponentsInChildren<Collider>(true);
+        foreach (var c in cols) if (c != null) c.enabled = false;
+
+        var anim = skeleton.GetComponentInChildren<Animator>();
+        if (anim != null)
         {
-            netObj.Spawn();
+            anim.Play("Spawn", 0, 0f);
+        }
+
+        float riseDuration = 1.8f;
+        float elapsed = 0f;
+        while (elapsed < riseDuration && skeleton != null)
+        {
+            float delta = Time.deltaTime;
+            elapsed += delta;
+            float t = Mathf.Clamp01(elapsed / riseDuration);
+            float smoothT = t * t * (3f - 2f * t);
+            skeleton.transform.position = Vector3.Lerp(undergroundPos, groundPos, smoothT);
+            yield return null;
+        }
+
+        if (skeleton != null)
+        {
+            skeleton.transform.position = groundPos;
+
+            foreach (var c in cols) if (c != null) c.enabled = true;
+            if (agent != null) agent.enabled = true;
+
+            var skelAI = skeleton.GetComponent<Skeleton>();
+            if (skelAI != null)
+            {
+                skelAI.isStandaloneMode = isStandaloneMode || !IsNetworkActive;
+                skelAI.SetSummoner(transform);
+                skelAI.currentState = Skeleton.State.Follow;
+            }
+
+            if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening && IsServer)
+            {
+                if (skeleton.TryGetComponent<NetworkObject>(out var netObj) && !netObj.IsSpawned)
+                {
+                    netObj.Spawn();
+                }
+            }
+        }
+
+        // Triệu hồi hoàn tất -> Xóa vòng ma thuật ngay lập tức trên Server và tất cả Client
+        if (ritualVfxObj != null)
+        {
+            ParticleSystem[] psList = ritualVfxObj.GetComponentsInChildren<ParticleSystem>(true);
+            foreach (var ps in psList)
+            {
+                if (ps != null)
+                {
+                    var main = ps.main;
+                    main.loop = false;
+                    ps.Stop(true, ParticleSystemStopBehavior.StopEmitting);
+                }
+            }
+            Destroy(ritualVfxObj, 0.3f);
+            ritualVfxObj = null;
+        }
+
+        if (IsServer)
+        {
+            DestroyQSkillSummonVfxClientRpc();
         }
 
         StartCoroutine(DespawnSkeletonAfterTime(skeleton, 15f));

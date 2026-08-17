@@ -49,6 +49,18 @@ public class Enemy4_Bongtoi : NetworkBehaviour
     public GameObject repairItemPrefab;
     [Range(0f, 1f)] public float repairItemDropChance = 0.35f;
 
+    [Header("Hit & Death Sound / VFX")]
+    public AudioClip hitSoundClip;
+    public AudioClip deathSoundClip;
+    public GameObject deathVfxPrefab;
+    [Tooltip("Kích thước/Bán kính hiển thị của VFX hố rớt bên dưới chân quái để ôm trọn xác quái.")]
+    public float deathVfxScale = 1.9f;
+
+    [Header("Stun VFX Settings")]
+    public GameObject stunVfxPrefab;
+    public float stunVfxHeightOffset = 2.3f;
+    public float stunVfxScale = 1.9f;
+
     [Header("AI Settings")]
     public float sightRange = 13f;
     public float fieldOfView = 100f;
@@ -195,6 +207,14 @@ public class Enemy4_Bongtoi : NetworkBehaviour
         {
             targetPlayer = null;
         }
+        if (newState == EnemyState.Stagger)
+        {
+            EnemyStunVfxBehaviour.ApplyStunVfx(gameObject, staggerTimer > 0 ? staggerTimer : 5.0f, stunVfxPrefab, stunVfxHeightOffset, stunVfxScale);
+        }
+        else
+        {
+            EnemyStunVfxBehaviour.RemoveStunVfx(gameObject);
+        }
         if (newState == EnemyState.Dead)
         {
             if (!IsServer)
@@ -204,8 +224,29 @@ public class Enemy4_Bongtoi : NetworkBehaviour
         }
     }
 
+    public void DisableHeadUI()
+    {
+        var uiDocs = GetComponentsInChildren<UnityEngine.UIElements.UIDocument>(true);
+        foreach (var doc in uiDocs) { if (doc != null) doc.gameObject.SetActive(false); }
+
+        var healthBars = GetComponentsInChildren<MonoBehaviour>(true);
+        foreach (var hb in healthBars)
+        {
+            if (hb is EnemyHealthBar || hb is ZombieHealthBar || hb is Enemy3HealthBar || hb is Enemy4HealthBar || hb is Enemy5HealthBar)
+            {
+                hb.gameObject.SetActive(false);
+            }
+        }
+
+        Transform quad = transform.Find("Quad");
+        if (quad != null) quad.gameObject.SetActive(false);
+        Transform headUi = transform.Find("HeadUI");
+        if (headUi != null) headUi.gameObject.SetActive(false);
+    }
+
     private void ApplyLocalDeathEffects()
     {
+        DisableHeadUI();
         DisableHitboxes();
         if (anim != null)
         {
@@ -220,15 +261,22 @@ public class Enemy4_Bongtoi : NetworkBehaviour
             }
             anim.Play("Quai4Die", 0, 0f);
         }
+
+        EnemyStunVfxBehaviour.RemoveStunVfx(gameObject);
+        EnemyDeathSinkBehaviour.ApplyDeathEffects(gameObject, deathSoundClip, deathVfxPrefab, deathVfxScale);
     }
 
     private void OnHealthNetChanged(float oldVal, float newVal)
     {
         localHealth = newVal;
+        if (newVal <= 0f)
+        {
+            DisableHeadUI();
+        }
         float diff = oldVal - newVal;
         if (diff > 0)
         {
-            EnemyDamageEffectHelper.PlayDamageEffects(gameObject, diff);
+            EnemyDamageEffectHelper.PlayDamageEffects(gameObject, diff, hitSoundClip);
         }
     }
 
@@ -1259,7 +1307,7 @@ public class Enemy4_Bongtoi : NetworkBehaviour
             anim.SetTrigger(hitTrigger);
         }
 
-        EnemyDamageEffectHelper.PlayDamageEffects(gameObject, damage);
+        EnemyDamageEffectHelper.PlayDamageEffects(gameObject, damage, hitSoundClip);
 
         bool isAuth = isStandaloneMode || (IsSpawned && IsServer) || !IsSpawned;
         if (!isAuth) return;
@@ -1289,14 +1337,26 @@ public class Enemy4_Bongtoi : NetworkBehaviour
 
         staggerTimer = duration;
         ChangeState(EnemyState.Stagger);
+        EnemyStunVfxBehaviour.ApplyStunVfx(gameObject, duration, stunVfxPrefab, stunVfxHeightOffset, stunVfxScale);
+        if (!isStandaloneMode && IsServer)
+        {
+            ApplyStunVfxClientRpc(duration);
+        }
         Debug.Log($"[Enemy4_Bongtoi] Bị choáng (Skill Q Arthur) trong {duration}s");
+    }
+
+    [ClientRpc]
+    private void ApplyStunVfxClientRpc(float duration)
+    {
+        staggerTimer = duration;
+        EnemyStunVfxBehaviour.ApplyStunVfx(gameObject, duration, stunVfxPrefab, stunVfxHeightOffset, stunVfxScale);
     }
 
     private void Die()
     {
         if (AgentReady) agent.isStopped = true; SetSpeedNet(0f);
         ApplyLocalDeathEffects();
-        DropExperience(); DropItems(); Invoke(nameof(DespawnEnemy), 2.5f);
+        DropExperience(); DropItems(); Invoke(nameof(DespawnEnemy), 5.2f);
     }
 
     private void DropExperience()

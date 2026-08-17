@@ -61,6 +61,13 @@ public class PlayerCheckpointManager : NetworkBehaviour
     private HashSet<ulong> respawningPlayers = new HashSet<ulong>();
     private int globalLatestCheckpointIndex = -1;
 
+    // Cache vị trí checkpoint ĐÃ KÍCH HOẠT (player đã đi qua) - dùng cho respawn
+    private Dictionary<int, Vector3> cachedCheckpointPositions = new Dictionary<int, Vector3>();
+    // Lookup vị trí TẤT CẢ checkpoint trong scene (dùng để tìm vị trí khi cần)
+    private Dictionary<int, Vector3> allCheckpointPositions = new Dictionary<int, Vector3>();
+    // Flag đánh dấu đã có ít nhất 1 checkpoint được kích hoạt trong session này
+    private bool hasActivatedAnyCheckpoint = false;
+
     // --- Chế độ Chơi Đơn (Standalone) ---
     private int localPlayerCheckpointIndex = -1;
     private Vector3 localPlayerInitialPosition = Vector3.zero;
@@ -86,15 +93,118 @@ public class PlayerCheckpointManager : NetworkBehaviour
         Instance = this;
     }
 
+    private void OnEnable()
+    {
+        UnityEngine.SceneManagement.SceneManager.sceneLoaded += OnSceneLoaded;
+    }
+
+    private void OnDisable()
+    {
+        UnityEngine.SceneManagement.SceneManager.sceneLoaded -= OnSceneLoaded;
+    }
+
+    /// <summary>
+    /// Khi scene được load (kể cả khi play lại từ đầu), reset toàn bộ checkpoint state.
+    /// </summary>
+    private void OnSceneLoaded(UnityEngine.SceneManagement.Scene scene, UnityEngine.SceneManagement.LoadSceneMode mode)
+    {
+        Debug.Log($"[PlayerCheckpointManager] Scene '{scene.name}' loaded (mode: {mode}). Resetting all checkpoint data.");
+        ResetAllCheckpointData();
+    }
+
     private void Start()
     {
+        // Reset toàn bộ dữ liệu checkpoint khi bắt đầu chơi mới
+        ResetAllCheckpointData();
+
         // Tự động quét và sắp xếp checkpoints theo chỉ số checkpointIndex nếu danh sách trống
         if (checkpoints == null || checkpoints.Count == 0)
         {
-            checkpoints = new List<CheckpointZone>(FindObjectsOfType<CheckpointZone>());
-            checkpoints.Sort((a, b) => a.checkpointIndex.CompareTo(b.checkpointIndex));
-            Debug.Log($"[PlayerCheckpointManager] Đã tự động quét và sắp xếp {checkpoints.Count} Checkpoint(s) trong scene.");
+            RescanCheckpoints();
         }
+        else
+        {
+            // Cache vị trí tất cả checkpoints đã được gán sẵn trong Inspector
+            CacheAllCheckpointPositions();
+        }
+    }
+
+    /// <summary>
+    /// Reset toàn bộ trạng thái checkpoint về mặc định.
+    /// Gọi khi bắt đầu game mới hoặc khi scene được load lại.
+    /// </summary>
+    public void ResetAllCheckpoints()
+    {
+        Debug.Log("[PlayerCheckpointManager] ResetAllCheckpoints() called externally.");
+        ResetAllCheckpointData();
+    }
+
+    /// <summary>
+    /// Internal: Xóa sạch toàn bộ dữ liệu checkpoint trong bộ nhớ.
+    /// Không ảnh hưởng đến danh sách CheckpointZone (vì chúng là object trong scene).
+    /// </summary>
+    private void ResetAllCheckpointData()
+    {
+        // Reset checkpoint index về -1 (chưa chạm checkpoint nào)
+        localPlayerCheckpointIndex = -1;
+        globalLatestCheckpointIndex = -1;
+        hasActivatedAnyCheckpoint = false;
+
+        // Reset trạng thái respawn standalone
+        localPlayerRespawning = false;
+        hasStoredLocalInitialPos = false;
+        localPlayerInitialPosition = Vector3.zero;
+        hasLocalPlayerDied = false;
+        localPlayerDeathTime = 0f;
+
+        // Xóa cache vị trí checkpoint ĐÃ KÍCH HOẠT (quan trọng: KHÔNG xóa allCheckpointPositions)
+        cachedCheckpointPositions.Clear();
+
+        // Xóa dữ liệu network checkpoint
+        playerCheckpointIndices.Clear();
+        playerInitialPositions.Clear();
+        respawningPlayers.Clear();
+        playerDeathTimes.Clear();
+
+        // Xóa NetworkList nếu là Server
+        try
+        {
+            if (networkPlayerCheckpoints != null && IsServer)
+            {
+                networkPlayerCheckpoints.Clear();
+            }
+        }
+        catch (System.Exception) { /* Bỏ qua nếu chưa spawn network */ }
+
+        Debug.Log("[PlayerCheckpointManager] All checkpoint data has been reset. hasActivatedAnyCheckpoint=false");
+    }
+
+    /// <summary>
+    /// Quét lại toàn bộ CheckpointZone trong scene và cache vị trí.
+    /// </summary>
+    private void RescanCheckpoints()
+    {
+        checkpoints = new List<CheckpointZone>(FindObjectsByType<CheckpointZone>(FindObjectsSortMode.None));
+        checkpoints.Sort((a, b) => a.checkpointIndex.CompareTo(b.checkpointIndex));
+        CacheAllCheckpointPositions();
+        Debug.Log($"[PlayerCheckpointManager] Đã tự động quét và sắp xếp {checkpoints.Count} Checkpoint(s) trong scene.");
+    }
+
+    /// <summary>
+    /// Lưu vị trí hồi sinh của tất cả CheckpointZone vào lookup dictionary (allCheckpointPositions).
+    /// KHÔNG ghi vào cachedCheckpointPositions (chỉ checkpoint ĐÃ KÍCH HOẠT mới được cache).
+    /// </summary>
+    private void CacheAllCheckpointPositions()
+    {
+        allCheckpointPositions.Clear();
+        foreach (var cp in checkpoints)
+        {
+            if (cp != null)
+            {
+                allCheckpointPositions[cp.checkpointIndex] = cp.GetSpawnPosition();
+            }
+        }
+        Debug.Log($"[PlayerCheckpointManager] Cached {allCheckpointPositions.Count} checkpoint positions into lookup table.");
     }
 
     private void Update()
@@ -166,6 +276,8 @@ public class PlayerCheckpointManager : NetworkBehaviour
         string localName = GetLocalPlayerName();
         foreach (var data in networkPlayerCheckpoints)
         {
+            // Đánh dấu đã có checkpoint được kích hoạt
+            hasActivatedAnyCheckpoint = true;
             if (data.CheckpointIndex > globalLatestCheckpointIndex)
             {
                 globalLatestCheckpointIndex = data.CheckpointIndex;
@@ -188,7 +300,26 @@ public class PlayerCheckpointManager : NetworkBehaviour
     {
         if (checkpoint == null) return;
 
+        // Không đăng ký checkpoint nếu player đang chết hoặc đang respawn
+        if (player != null && player.CurrentHealth <= 0)
+        {
+            Debug.Log($"[Checkpoint] Bỏ qua checkpoint '{checkpoint.gameObject.name}' vì player đang chết.");
+            return;
+        }
+        if (localPlayerRespawning)
+        {
+            Debug.Log($"[Checkpoint] Bỏ qua checkpoint '{checkpoint.gameObject.name}' vì player đang respawn.");
+            return;
+        }
+
         int newIndex = checkpoint.checkpointIndex;
+
+        // Cache vị trí checkpoint ĐÃ KÍCH HOẠT
+        cachedCheckpointPositions[newIndex] = checkpoint.GetSpawnPosition();
+        // Cập nhật lookup table
+        allCheckpointPositions[newIndex] = checkpoint.GetSpawnPosition();
+        // Đánh dấu đã có checkpoint được kích hoạt
+        hasActivatedAnyCheckpoint = true;
 
         // Luôn cập nhật chỉ số checkpoint cục bộ và checkpoint mới nhất
         if (newIndex > localPlayerCheckpointIndex)
@@ -215,7 +346,7 @@ public class PlayerCheckpointManager : NetworkBehaviour
         }
         else
         {
-            Debug.Log($"[Standalone Checkpoint] Đã lưu checkpoint '{checkpoint.gameObject.name}' (Index: {newIndex}) cho người chơi!");
+            Debug.Log($"[Standalone Checkpoint] Đã lưu checkpoint '{checkpoint.gameObject.name}' (Index: {newIndex}) tại {cachedCheckpointPositions[newIndex]} cho người chơi!");
         }
     }
 
@@ -235,6 +366,9 @@ public class PlayerCheckpointManager : NetworkBehaviour
         }
 
         int targetIndex = globalLatestCheckpointIndex >= 0 ? globalLatestCheckpointIndex : newCpIdx;
+
+        // Cache vị trí checkpoint ngay lập tức để không bị mất khi CheckpointZone bị destroy
+        CacheCheckpointPosition(targetIndex);
 
         // Cập nhật checkpoint mới cho TOÀN BỘ người chơi hiện có trong phòng
         List<IPlayerHUDTarget> activePlayers = FindAllActivePlayers();
@@ -275,14 +409,51 @@ public class PlayerCheckpointManager : NetworkBehaviour
             }
         }
 
-        // Phát ClientRpc thông báo đồng bộ checkpoint index mới tới toàn bộ Client
-        SyncCheckpointClientRpc(targetIndex);
+        // Lấy vị trí checkpoint để gửi tới Client qua RPC
+        Vector3 cpPos = Vector3.zero;
+        if (cachedCheckpointPositions.ContainsKey(targetIndex))
+        {
+            cpPos = cachedCheckpointPositions[targetIndex];
+        }
 
-        Debug.Log($"[Server Checkpoint] Đã đồng bộ checkpoint index {targetIndex} cho TOÀN BỘ người chơi do '{activatorName}' kích hoạt!");
+        // Phát ClientRpc thông báo đồng bộ checkpoint index mới + vị trí tới toàn bộ Client
+        SyncCheckpointClientRpc(targetIndex, cpPos);
+
+        Debug.Log($"[Server Checkpoint] Đã đồng bộ checkpoint index {targetIndex} (pos: {cpPos}) cho TOÀN BỘ người chơi do '{activatorName}' kích hoạt!");
+    }
+
+    /// <summary>
+    /// Cache vị trí checkpoint theo index từ danh sách CheckpointZone.
+    /// </summary>
+    private void CacheCheckpointPosition(int cpIndex)
+    {
+        // Ưu tiên lấy từ CheckpointZone còn tồn tại
+        if (checkpoints != null)
+        {
+            foreach (var cp in checkpoints)
+            {
+                if (cp != null && cp.checkpointIndex == cpIndex)
+                {
+                    cachedCheckpointPositions[cpIndex] = cp.GetSpawnPosition();
+                    return;
+                }
+            }
+        }
+
+        // Thử tìm lại trong scene nếu không có trong list
+        var allZones = FindObjectsByType<CheckpointZone>(FindObjectsSortMode.None);
+        foreach (var zone in allZones)
+        {
+            if (zone != null && zone.checkpointIndex == cpIndex)
+            {
+                cachedCheckpointPositions[cpIndex] = zone.GetSpawnPosition();
+                return;
+            }
+        }
     }
 
     [ClientRpc]
-    private void SyncCheckpointClientRpc(int checkpointIndex)
+    private void SyncCheckpointClientRpc(int checkpointIndex, Vector3 checkpointPosition)
     {
         if (checkpointIndex > globalLatestCheckpointIndex || globalLatestCheckpointIndex < 0)
         {
@@ -292,7 +463,14 @@ public class PlayerCheckpointManager : NetworkBehaviour
         {
             localPlayerCheckpointIndex = checkpointIndex;
         }
-        Debug.Log($"[Client Checkpoint] Đã cập nhật checkpoint index {checkpointIndex} trên Client từ Server.");
+        // Đánh dấu đã có checkpoint được kích hoạt
+        hasActivatedAnyCheckpoint = true;
+        // Cache vị trí checkpoint trên Client để đảm bảo luôn có dữ liệu chính xác
+        if (checkpointPosition != Vector3.zero)
+        {
+            cachedCheckpointPositions[checkpointIndex] = checkpointPosition;
+        }
+        Debug.Log($"[Client Checkpoint] Đã cập nhật checkpoint index {checkpointIndex} (pos: {checkpointPosition}) trên Client từ Server.");
     }
 
     #region Standalone Respawn Logic
@@ -336,79 +514,146 @@ public class PlayerCheckpointManager : NetworkBehaviour
 
     private Vector3 GetCalculatedSpawnPosition(IPlayerHUDTarget player, ulong clientId)
     {
-        if (checkpoints == null || checkpoints.Count == 0)
+        // Quét lại checkpoints nếu danh sách trống hoặc tất cả entries đều null
+        if (checkpoints == null || checkpoints.Count == 0 || checkpoints.TrueForAll(c => c == null))
         {
-            checkpoints = new List<CheckpointZone>(FindObjectsByType<CheckpointZone>(FindObjectsSortMode.None));
-            checkpoints.Sort((a, b) => a.checkpointIndex.CompareTo(b.checkpointIndex));
+            RescanCheckpoints();
         }
 
         int targetCpIndex = -1;
 
-        if (player != null && player.isStandaloneMode)
+        // CHỈ tìm checkpoint nếu đã có ít nhất 1 checkpoint được kích hoạt trong session này
+        if (hasActivatedAnyCheckpoint)
         {
-            targetCpIndex = localPlayerCheckpointIndex >= 0 ? localPlayerCheckpointIndex : globalLatestCheckpointIndex;
-        }
-        else
-        {
-            if (playerCheckpointIndices.ContainsKey(clientId) && playerCheckpointIndices[clientId] >= 0)
+            if (player != null && player.isStandaloneMode)
             {
-                targetCpIndex = playerCheckpointIndices[clientId];
+                // Standalone: ưu tiên checkpoint cao nhất giữa local và global
+                targetCpIndex = Mathf.Max(localPlayerCheckpointIndex, globalLatestCheckpointIndex);
+            }
+            else
+            {
+                // Network: lấy checkpoint index từ server-side cache
+                if (playerCheckpointIndices.ContainsKey(clientId) && playerCheckpointIndices[clientId] >= 0)
+                {
+                    targetCpIndex = playerCheckpointIndices[clientId];
+                }
+
+                // Nếu globalLatestCheckpointIndex mới hơn hoặc bằng checkpoint của player, ưu tiên dùng checkpoint chung mới nhất của đội
+                if (globalLatestCheckpointIndex >= 0 && (targetCpIndex < 0 || globalLatestCheckpointIndex >= targetCpIndex))
+                {
+                    targetCpIndex = globalLatestCheckpointIndex;
+                }
+            }
+        }
+
+        Debug.Log($"[Checkpoint Respawn] Đang tính vị trí hồi sinh cho clientId={clientId}, " +
+                  $"targetCpIndex={targetCpIndex}, globalLatest={globalLatestCheckpointIndex}, " +
+                  $"localCp={localPlayerCheckpointIndex}, hasActivated={hasActivatedAnyCheckpoint}, " +
+                  $"activatedCacheCount={cachedCheckpointPositions.Count}");
+
+        // === NẾU CHƯA CÓ CHECKPOINT NÀO ĐƯỢC KÍCH HOẠT → về defaultSpawnPoint ngay ===
+        if (!hasActivatedAnyCheckpoint || targetCpIndex < 0)
+        {
+            // Ưu tiên 1: defaultSpawnPoint
+            if (defaultSpawnPoint != null)
+            {
+                Debug.Log($"[Checkpoint Respawn] Chưa kích hoạt checkpoint nào. Dùng defaultSpawnPoint tại {defaultSpawnPoint.position}");
+                return defaultSpawnPoint.position;
             }
 
-            // Nếu globalLatestCheckpointIndex mới hơn hoặc bằng checkpoint của player, ưu tiên dùng checkpoint chung mới nhất của đội
-            if (globalLatestCheckpointIndex >= 0 && (targetCpIndex < 0 || globalLatestCheckpointIndex >= targetCpIndex))
+            // Ưu tiên 2: Vị trí ban đầu của player
+            if (player != null && player.isStandaloneMode && hasStoredLocalInitialPos && localPlayerInitialPosition != Vector3.zero)
             {
-                targetCpIndex = globalLatestCheckpointIndex;
+                Debug.Log($"[Checkpoint Respawn] Chưa kích hoạt checkpoint nào. Dùng standalone initial position tại {localPlayerInitialPosition}");
+                return localPlayerInitialPosition;
             }
+            if (player != null && !player.isStandaloneMode && playerInitialPositions.ContainsKey(clientId) && playerInitialPositions[clientId] != Vector3.zero)
+            {
+                Debug.Log($"[Checkpoint Respawn] Chưa kích hoạt checkpoint nào. Dùng network initial position tại {playerInitialPositions[clientId]}");
+                return playerInitialPositions[clientId];
+            }
+
+            // Ưu tiên 3: Checkpoint index 0 (điểm đầu tiên)
+            if (checkpoints != null && checkpoints.Count > 0 && checkpoints[0] != null)
+            {
+                Debug.Log($"[Checkpoint Respawn] Chưa kích hoạt checkpoint nào. Dùng checkpoint đầu tiên (index 0).");
+                return checkpoints[0].GetSpawnPosition();
+            }
+
+            Debug.LogWarning($"[Checkpoint Respawn] Chưa kích hoạt checkpoint nào và không tìm thấy defaultSpawnPoint!");
+            return player != null ? player.transform.position : Vector3.zero;
         }
 
-        // 1. CheckpointZone tương ứng với targetCpIndex
+        // === ĐÃ CÓ CHECKPOINT KÍCH HOẠT → tìm vị trí checkpoint ===
+
+        // 1. CheckpointZone tương ứng với targetCpIndex (ưu tiên object còn sống)
         if (targetCpIndex >= 0)
         {
             CheckpointZone zone = checkpoints.Find(c => c != null && c.checkpointIndex == targetCpIndex);
-            if (zone != null) return zone.GetSpawnPosition();
+            if (zone != null)
+            {
+                Vector3 pos = zone.GetSpawnPosition();
+                Debug.Log($"[Checkpoint Respawn] Sử dụng CheckpointZone index {targetCpIndex} tại {pos}");
+                return pos;
+            }
+
+            // Fallback: dùng vị trí đã cache (checkpoint ĐÃ KÍCH HOẠT) nếu CheckpointZone bị destroy/null
+            if (cachedCheckpointPositions.ContainsKey(targetCpIndex) && cachedCheckpointPositions[targetCpIndex] != Vector3.zero)
+            {
+                Vector3 pos = cachedCheckpointPositions[targetCpIndex];
+                Debug.Log($"[Checkpoint Respawn] CheckpointZone index {targetCpIndex} đã bị destroy, sử dụng vị trí đã cache: {pos}");
+                return pos;
+            }
+
+            // Fallback: dùng lookup table nếu có
+            if (allCheckpointPositions.ContainsKey(targetCpIndex) && allCheckpointPositions[targetCpIndex] != Vector3.zero)
+            {
+                Vector3 pos = allCheckpointPositions[targetCpIndex];
+                Debug.Log($"[Checkpoint Respawn] Sử dụng allCheckpointPositions lookup index {targetCpIndex} tại {pos}");
+                return pos;
+            }
         }
 
-        // 2. Dự phòng: Checkpoint toàn cục mới nhất đã được bất kỳ đồng đội nào kích hoạt trước đó
-        if (globalLatestCheckpointIndex >= 0)
+        // 2. Dự phòng: Checkpoint ĐÃ KÍCH HOẠT có index cao nhất
+        if (cachedCheckpointPositions.Count > 0)
         {
-            CheckpointZone zone = checkpoints.Find(c => c != null && c.checkpointIndex == globalLatestCheckpointIndex);
-            if (zone != null) return zone.GetSpawnPosition();
+            int highestIndex = -1;
+            Vector3 highestPos = Vector3.zero;
+            foreach (var kvp in cachedCheckpointPositions)
+            {
+                if (kvp.Key > highestIndex && kvp.Value != Vector3.zero)
+                {
+                    highestIndex = kvp.Key;
+                    highestPos = kvp.Value;
+                }
+            }
+            if (highestIndex >= 0)
+            {
+                Debug.Log($"[Checkpoint Respawn] Fallback: highest ACTIVATED checkpoint index {highestIndex} tại {highestPos}");
+                return highestPos;
+            }
         }
 
-        // 3. Dự phòng: Checkpoint cục bộ mới nhất của người chơi này
-        if (localPlayerCheckpointIndex >= 0)
-        {
-            CheckpointZone zone = checkpoints.Find(c => c != null && c.checkpointIndex == localPlayerCheckpointIndex);
-            if (zone != null) return zone.GetSpawnPosition();
-        }
-
-        // 4. Dự phòng: defaultSpawnPoint do lập trình viên cấu hình sẵn
+        // 3. Dự phòng cuối: defaultSpawnPoint
         if (defaultSpawnPoint != null)
         {
+            Debug.LogWarning($"[Checkpoint Respawn] Fallback cuối: defaultSpawnPoint tại {defaultSpawnPoint.position}");
             return defaultSpawnPoint.position;
         }
 
-        // 5. Dự phòng: Vị trí ban đầu xuất phát của player khi bắt đầu game
-        if (player != null && !player.isStandaloneMode && playerInitialPositions.ContainsKey(clientId) && playerInitialPositions[clientId] != Vector3.zero)
-        {
-            return playerInitialPositions[clientId];
-        }
+        // 4. Dự phòng: Vị trí ban đầu xuất phát của player
         if (player != null && player.isStandaloneMode && hasStoredLocalInitialPos && localPlayerInitialPosition != Vector3.zero)
         {
+            Debug.LogWarning($"[Checkpoint Respawn] Fallback: standalone initial position tại {localPlayerInitialPosition}");
             return localPlayerInitialPosition;
         }
-
-        // 6. Dự phòng: Checkpoint đầu tiên trong danh sách checkpoints của Scene (Index 0)
-        if (checkpoints != null && checkpoints.Count > 0 && checkpoints[0] != null)
+        if (player != null && !player.isStandaloneMode && playerInitialPositions.ContainsKey(clientId) && playerInitialPositions[clientId] != Vector3.zero)
         {
-            return checkpoints[0].GetSpawnPosition();
+            Debug.LogWarning($"[Checkpoint Respawn] Fallback: network initial position tại {playerInitialPositions[clientId]}");
+            return playerInitialPositions[clientId];
         }
 
-        // 7. Trường hợp không có checkpoint nào, thử tìm lại checkpoint index 0 trong scene lần nữa
-        var firstCp = FindObjectOfType<CheckpointZone>();
-        if (firstCp != null) return firstCp.GetSpawnPosition();
-
+        Debug.LogError($"[Checkpoint Respawn] KHÔNG TÌM THẤY CHECKPOINT NÀO! Player sẽ hồi sinh tại chỗ.");
         return player != null ? player.transform.position : Vector3.zero;
     }
 

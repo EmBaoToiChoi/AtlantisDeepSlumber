@@ -22,15 +22,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 1165c03b4e763b14cbec02d14e250a2d, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 0
+      value: -104.205956
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 1165c03b4e763b14cbec02d14e250a2d, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0
+      value: 13.020128
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 1165c03b4e763b14cbec02d14e250a2d, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 0
+      value: 155.72299
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 1165c03b4e763b14cbec02d14e250a2d, type: 3}
       propertyPath: m_LocalRotation.w
@@ -132,8 +132,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  GlobalObjectIdHash: 4026660329
-  InScenePlacedSourceGlobalObjectIdHash: 0
+  GlobalObjectIdHash: 1139627226
+  InScenePlacedSourceGlobalObjectIdHash: 4026660329
   DeferredDespawnTick: 0
   Ownership: 1
   AlwaysReplicateAsRoot: 0
@@ -161,7 +161,12 @@ MonoBehaviour:
   speed: 30
   lifetime: 500
   damage: 20
+  isPiercing: 0
   owner: {fileID: 0}
+  arrowVfxPrefab: {fileID: 2580380945974098950, guid: 390d6fb5b95c85d4199a646adba244d5, type: 3}
+  arrowVfxOffset: {x: 0, y: 0, z: 0}
+  arrowVfxRotation: {x: 0, y: 0, z: 0}
+  arrowVfxScale: 1
 --- !u!65 &4119406935162352293
 BoxCollider:
   m_ObjectHideFlags: 0

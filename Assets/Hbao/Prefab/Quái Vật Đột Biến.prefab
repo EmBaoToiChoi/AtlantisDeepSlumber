@@ -196,7 +196,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   GlobalObjectIdHash: 3251164908
-  InScenePlacedSourceGlobalObjectIdHash: 0
+  InScenePlacedSourceGlobalObjectIdHash: 3251164908
   DeferredDespawnTick: 0
   Ownership: 1
   AlwaysReplicateAsRoot: 0
@@ -260,6 +260,13 @@ MonoBehaviour:
   expDropPoint: {fileID: 2382866152611396582}
   repairItemPrefab: {fileID: 2217945438620940750, guid: c0dc53cb41f8a574480ed87a8b9bebba, type: 3}
   repairItemDropChance: 0.2
+  hitSoundClip: {fileID: 8300000, guid: da196b33c51350b4b9843488600c7f2d, type: 3}
+  deathSoundClip: {fileID: 8300000, guid: da196b33c51350b4b9843488600c7f2d, type: 3}
+  deathVfxPrefab: {fileID: 4748681987041982144, guid: 1f740c2847fa1ab42a43104c062f09bb, type: 3}
+  deathVfxScale: 1.5
+  stunVfxPrefab: {fileID: 1814081831277689395, guid: 1fcb85616f261094d9b1339d621c9b33, type: 3}
+  stunVfxHeightOffset: 2.6
+  stunVfxScale: 2.2
   sightRange: 25
   fieldOfView: 110
   attackRange: 2.2

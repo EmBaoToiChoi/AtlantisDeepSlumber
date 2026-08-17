@@ -211,6 +211,17 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
     public bool isESkillPlayingAnim = false;
     protected float eSkillTimeRemaining = 0f;
 
+    [Header("Skill E - Visual Invulnerability VFX Settings")]
+    [Tooltip("Prefab VFX bọc toàn thân khi vào trạng thái bất tử của Skill E (nếu để trống sẽ dùng Par_YellowShield).")]
+    public GameObject eSkillVfxPrefab;
+    [Tooltip("Độ cao của VFX bọc toàn thân tính từ vị trí chân Arthur.")]
+    public float eSkillVfxHeightOffset = 0.25f;
+    [Tooltip("Tỷ lệ scale của VFX bọc toàn thân Arthur.")]
+    public float eSkillVfxScale = 1.5f;
+
+    private GameObject activeESkillVfxInstance;
+    private static GameObject defaultESkillVfxPrefab;
+
     [Header("Skill Q - Dặm Khiên / Vòng Choáng")]
     [Tooltip("Tên Trigger Animation trong Animator khi kích hoạt Skill Q (dặm khiên xuống đất).")]
     public string qSkillAnimTrigger = "SkillQ";
@@ -220,6 +231,14 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
     public float qSkillRadius = 6f;
     [Tooltip("Thời gian hồi chiêu Q trên server (giây) - dùng để reset trạng thái sau khi stun xong")]
     public float qSkillDuration = 1.5f;
+
+    [Header("Skill Q - Visual VFX Settings")]
+    [Tooltip("Prefab VFX vòng tròn mở rộng khi dặm khiên Skill Q (nếu để trống sẽ tự động dùng Par_FireShoot_Muzzle).")]
+    public GameObject qSkillVfxPrefab;
+    [Tooltip("Hệ số nhân scale của vòng tròn VFX cho gọn gàng vừa vặn.")]
+    public float qSkillVfxScaleMultiplier = 0.55f;
+    [Tooltip("Thời gian (giây) VFX nổ và nở rộng to ra theo bán kính choáng.")]
+    public float qSkillVfxExpandDuration = 0.6f;
     [HideInInspector]
     public bool isQSkillActive = false;
     [HideInInspector]
@@ -1016,10 +1035,17 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
     // EVENT ĐÓN NHẬN TỪ ANIMATION EVENT KHUNG HÌNH DẶM KHIÊN (cuối animation SkillQ)
     public void OnSkillQShieldSlam()
     {
-        Debug.Log($"[{gameObject.name}] OnSkillQShieldSlam: Hoạt ảnh dặm khiên kết thúc -> Kích hoạt vòng choáng!");
+        Debug.Log($"[{gameObject.name}] OnSkillQShieldSlam: Hoạt ảnh dặm khiên chạm đất -> Kích hoạt VFX & vòng choáng!");
         isQSkillPlayingAnim = false;
 
-        // Chỉ chạy logic stun trên Owner hoặc Standalone
+        // 1. Kích hoạt VFX nổ vòng tròn mở rộng dưới đất ĐÚNG TẠI KHUNG HÌNH ANIMATION EVENT DẶM KHIÊN
+        SpawnQSkillCircleVfx(transform.position, qSkillRadius);
+        if (!isStandaloneMode && IsOwner)
+        {
+            SpawnQSkillCircleVfxClientRpc(transform.position, qSkillRadius);
+        }
+
+        // 2. Kích hoạt stun quái xung quanh & đồng bộ VFX choáng trên đầu quái
         if (isStandaloneMode || IsOwner)
         {
             isQSkillActive = true;
@@ -1035,34 +1061,143 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         }
     }
 
-    /// <summary>Dùng OverlapSphere để tìm và choáng tất cả enemy trong bán kính qSkillRadius.</summary>
+    [ClientRpc]
+    private void SpawnQSkillCircleVfxClientRpc(Vector3 spawnPos, float radius)
+    {
+        if (IsOwner) return;
+        SpawnQSkillCircleVfx(spawnPos, radius);
+    }
+
+    /// <summary>Khởi tạo VFX nổ và nở rộng ra theo bán kính choáng qSkillRadius.</summary>
+    public void SpawnQSkillCircleVfx(Vector3 spawnPos, float radius)
+    {
+        GameObject prefabToUse = qSkillVfxPrefab;
+        if (prefabToUse == null)
+        {
+            prefabToUse = Resources.Load<GameObject>("VFX/Par_FireShoot_Muzzle");
+            if (prefabToUse == null)
+            {
+                prefabToUse = Resources.Load<GameObject>("VFX/Arthur_ShieldSlam_Circle");
+                if (prefabToUse == null)
+                {
+                    prefabToUse = Resources.Load<GameObject>("VFX_Earth_Burst_01");
+                }
+            }
+        }
+
+        if (prefabToUse != null)
+        {
+            Vector3 groundPos = spawnPos + Vector3.up * 0.2f;
+            Quaternion rotation = Quaternion.identity;
+            GameObject vfxObj = Instantiate(prefabToUse, groundPos, rotation);
+            
+            float targetScale = radius * 1.0f * Mathf.Max(0.1f, qSkillVfxScaleMultiplier);
+            StartCoroutine(AnimateQSkillVfxExpansion(vfxObj, targetScale, qSkillVfxExpandDuration));
+        }
+    }
+
+    private System.Collections.IEnumerator AnimateQSkillVfxExpansion(GameObject vfxObj, float targetScale, float duration)
+    {
+        if (vfxObj == null) yield break;
+
+        float elapsed = 0f;
+        float startScale = targetScale * 0.15f;
+        vfxObj.transform.localScale = Vector3.one * startScale;
+
+        while (elapsed < duration && vfxObj != null)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / duration);
+            float smoothT = 1f - (1f - t) * (1f - t);
+            float currentScale = Mathf.Lerp(startScale, targetScale, smoothT);
+            
+            if (vfxObj != null)
+            {
+                vfxObj.transform.localScale = Vector3.one * currentScale;
+                StunEnemiesInVfxArea(vfxObj.transform.position, currentScale);
+            }
+            yield return null;
+        }
+
+        if (vfxObj != null)
+        {
+            vfxObj.transform.localScale = Vector3.one * targetScale;
+            StunEnemiesInVfxArea(vfxObj.transform.position, targetScale);
+            Destroy(vfxObj, 4.5f);
+        }
+    }
+
+    /// <summary>Dùng OverlapSphere & kiểm tra khoảng cách để choáng tất cả enemy trong vùng VFX choáng.</summary>
     private void ApplyQSkillStunToNearbyEnemies()
+    {
+        float targetScale = qSkillRadius * 1.0f * Mathf.Max(0.1f, qSkillVfxScaleMultiplier);
+        StunEnemiesInVfxArea(transform.position, targetScale);
+    }
+
+    public void StunEnemiesInVfxArea(Vector3 vfxCenterPos, float currentVfxScale)
     {
         bool auth = isStandaloneMode || (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening && IsServer);
         if (!auth) return;
 
-        Collider[] hits = Physics.OverlapSphere(transform.position, qSkillRadius);
-        Debug.Log($"[{gameObject.name}] Skill Q: Quét bán kính {qSkillRadius}m -> {hits.Length} collider(s)");
+        // currentVfxScale chính là bán kính thị giác của vòng tròn VFX trên mặt đất
+        // Enemy nào nằm trong vùng VFX nhìn thấy được -> stun ngay lập tức
+        float effectiveRadius = currentVfxScale;
+        System.Collections.Generic.HashSet<GameObject> stunnedEnemies = new System.Collections.Generic.HashSet<GameObject>();
 
+        // 1. Quét theo Collider bằng OverlapSphere với bán kính = đúng kích thước VFX
+        Collider[] hits = Physics.OverlapSphere(vfxCenterPos, effectiveRadius);
         foreach (var col in hits)
         {
             if (col == null) continue;
+            GameObject rootObj = col.transform.root.gameObject;
+            if (stunnedEnemies.Contains(rootObj)) continue;
 
-            var e1 = col.GetComponentInParent<Enemy1_DapBua>();
-            if (e1 != null && !e1.IsDead) { e1.ApplyStun(qSkillStunDuration); continue; }
-
-            var e2 = col.GetComponentInParent<Enemy2_Zombie>();
-            if (e2 != null && !e2.IsDead) { e2.ApplyStun(qSkillStunDuration); continue; }
-
-            var e3 = col.GetComponentInParent<Enemy3_Buaa>();
-            if (e3 != null && !e3.IsDead) { e3.ApplyStun(qSkillStunDuration); continue; }
-
-            var e4 = col.GetComponentInParent<Enemy4_Bongtoi>();
-            if (e4 != null && !e4.IsDead) { e4.ApplyStun(qSkillStunDuration); continue; }
-
-            var e5 = col.GetComponentInParent<Enemy5_PhuThuy>();
-            if (e5 != null && !e5.IsDead) { e5.ApplyStun(qSkillStunDuration); continue; }
+            if (TryStunObject(col.gameObject, rootObj, stunnedEnemies)) continue;
         }
+
+        // 2. Quét trực tiếp vị trí đối tượng trong Scene để đảm bảo không sót bất kỳ Enemy nào nằm trong vùng VFX
+        MonoBehaviour[] allMonos = FindObjectsOfType<MonoBehaviour>();
+        foreach (var mono in allMonos)
+        {
+            if (mono == null || stunnedEnemies.Contains(mono.gameObject)) continue;
+
+            float dist = Vector3.Distance(mono.transform.position, vfxCenterPos);
+            if (dist <= effectiveRadius)
+            {
+                TryStunObject(mono.gameObject, mono.gameObject, stunnedEnemies);
+            }
+        }
+    }
+
+    private bool TryStunObject(GameObject targetObj, GameObject rootObj, System.Collections.Generic.HashSet<GameObject> stunnedSet)
+    {
+        if (targetObj == null || rootObj == null) return false;
+
+        var e1 = targetObj.GetComponentInParent<Enemy1_DapBua>();
+        if (e1 != null && !e1.IsDead) { e1.ApplyStun(qSkillStunDuration); stunnedSet.Add(rootObj); return true; }
+
+        var e2 = targetObj.GetComponentInParent<Enemy2_Zombie>();
+        if (e2 != null && !e2.IsDead) { e2.ApplyStun(qSkillStunDuration); stunnedSet.Add(rootObj); return true; }
+
+        var e3 = targetObj.GetComponentInParent<Enemy3_Buaa>();
+        if (e3 != null && !e3.IsDead) { e3.ApplyStun(qSkillStunDuration); stunnedSet.Add(rootObj); return true; }
+
+        var e4 = targetObj.GetComponentInParent<Enemy4_Bongtoi>();
+        if (e4 != null && !e4.IsDead) { e4.ApplyStun(qSkillStunDuration); stunnedSet.Add(rootObj); return true; }
+
+        var e5 = targetObj.GetComponentInParent<Enemy5_PhuThuy>();
+        if (e5 != null && !e5.IsDead) { e5.ApplyStun(qSkillStunDuration); stunnedSet.Add(rootObj); return true; }
+
+        var mb = targetObj.GetComponentInParent<MiniBossAI>();
+        if (mb != null && !mb.IsDead) { mb.ApplyStun(qSkillStunDuration); stunnedSet.Add(rootObj); return true; }
+
+        var fb = targetObj.GetComponentInParent<FinalBossAI>();
+        if (fb != null && !fb.IsDead) { fb.ApplyStun(qSkillStunDuration); stunnedSet.Add(rootObj); return true; }
+
+        var b = targetObj.GetComponentInParent<BossAI>();
+        if (b != null && !b.IsDead) { b.ApplyStun(qSkillStunDuration); stunnedSet.Add(rootObj); return true; }
+
+        return false;
     }
 
     public void TriggerAttackSpeedBoostSkill()
@@ -1093,7 +1228,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
     // EVENT ĐÓN NHẬN TỪ ANIMATION EVENT KHUNG HÌNH CUỐI CỦA SKILL E
     public void OnSkillEAnimEnd()
     {
-        Debug.Log($"[{gameObject.name}] OnSkillEAnimEnd: Hoạt ảnh kết thúc -> Bắt đầu bất tử 5s!");
+        Debug.Log($"[{gameObject.name}] OnSkillEAnimEnd: Hoạt ảnh gồng kết thúc -> Kích hoạt trạng thái bất tử 5s & VFX bọc toàn thân!");
         isESkillPlayingAnim = false;
 
         if (isStandaloneMode || IsOwner)
@@ -1101,10 +1236,85 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
             isESkillActive = true;
             eSkillTimeRemaining = eSkillDuration;
 
-            if (!isStandaloneMode)
+            if (isStandaloneMode)
+            {
+                SpawnESkillBodyVfx(eSkillDuration);
+            }
+            else
             {
                 StartESkillBuffServerRpc();
             }
+        }
+    }
+
+    /// <summary>Khởi tạo VFX bọc toàn thân Arthur khi vào trạng thái bất tử của Skill E.</summary>
+    public void SpawnESkillBodyVfx(float duration)
+    {
+        if (activeESkillVfxInstance != null)
+        {
+            Destroy(activeESkillVfxInstance);
+            activeESkillVfxInstance = null;
+        }
+
+        GameObject prefabToUse = eSkillVfxPrefab;
+        if (prefabToUse == null)
+        {
+            if (defaultESkillVfxPrefab == null)
+            {
+                defaultESkillVfxPrefab = Resources.Load<GameObject>("VFX/Arthur_Invulnerable_Shield");
+                if (defaultESkillVfxPrefab == null)
+                {
+                    defaultESkillVfxPrefab = Resources.Load<GameObject>("Par_YellowShield");
+                }
+            }
+            prefabToUse = defaultESkillVfxPrefab;
+        }
+
+        if (prefabToUse != null)
+        {
+            activeESkillVfxInstance = Instantiate(prefabToUse, transform);
+            
+            Transform capsuleChild = activeESkillVfxInstance.transform.Find("Capsule");
+            if (capsuleChild != null)
+            {
+                capsuleChild.gameObject.SetActive(false);
+            }
+
+            activeESkillVfxInstance.transform.localPosition = Vector3.up * eSkillVfxHeightOffset;
+            activeESkillVfxInstance.transform.localRotation = Quaternion.identity;
+            activeESkillVfxInstance.transform.localScale = Vector3.one * Mathf.Max(0.5f, eSkillVfxScale);
+
+            ParticleSystem[] psList = activeESkillVfxInstance.GetComponentsInChildren<ParticleSystem>(true);
+            foreach (var ps in psList)
+            {
+                if (ps != null)
+                {
+                    var main = ps.main;
+                    main.loop = true;
+                    if (!ps.isPlaying) ps.Play();
+                }
+            }
+        }
+    }
+
+    /// <summary>Gỡ bỏ VFX bọc toàn thân khi hết thời gian bất tử của Skill E.</summary>
+    public void RemoveESkillBodyVfx()
+    {
+        if (activeESkillVfxInstance != null)
+        {
+            ParticleSystem[] psList = activeESkillVfxInstance.GetComponentsInChildren<ParticleSystem>(true);
+            foreach (var ps in psList)
+            {
+                if (ps != null)
+                {
+                    var main = ps.main;
+                    main.loop = false;
+                    ps.Stop(true, ParticleSystemStopBehavior.StopEmitting);
+                }
+            }
+
+            Destroy(activeESkillVfxInstance, 0.5f);
+            activeESkillVfxInstance = null;
         }
     }
 
@@ -3205,10 +3415,12 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (newVal)
         {
             eSkillTimeRemaining = eSkillDuration;
+            SpawnESkillBodyVfx(eSkillDuration);
         }
         else
         {
             eSkillTimeRemaining = 0f;
+            RemoveESkillBodyVfx();
         }
     }
 
@@ -3230,6 +3442,21 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (!IsOwner && !string.IsNullOrEmpty(qSkillAnimTrigger))
         {
             PlayAnimationLocal(qSkillAnimTrigger, 0.1f);
+        }
+    }
+
+    [ServerRpc]
+    private void SpawnQSkillVfxServerRpc(Vector3 pos, float radius)
+    {
+        SpawnQSkillVfxClientRpc(pos, radius);
+    }
+
+    [ClientRpc]
+    private void SpawnQSkillVfxClientRpc(Vector3 pos, float radius)
+    {
+        if (!IsOwner)
+        {
+            SpawnQSkillCircleVfx(pos, radius);
         }
     }
 

@@ -156,7 +156,8 @@ public class MiniBossQuestTrigger : NetworkBehaviour, IQuestTrigger
     private bool IsBossDead()
     {
         if (miniBoss == null) return false;
-        return miniBoss.IsDead || miniBoss.ActualCurrentHealth <= 0;
+        // Chỉ xác nhận hoàn thành khi CẢ 1 MINIBOSS CHÍNH VÀ 2 PHÂN THÂN ĐỀU ĐÃ BỊ TIÊU DIỆT HOÀN TOÀN
+        return miniBoss.AreAllBossesAndClonesDead();
     }
 
     private void Update()

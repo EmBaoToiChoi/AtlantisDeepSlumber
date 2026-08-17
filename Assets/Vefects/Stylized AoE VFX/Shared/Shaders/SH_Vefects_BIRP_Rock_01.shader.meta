@@ -1,0 +1,20 @@
+fileFormatVersion: 2
+guid: b4b5beecf5cf05747a57b54befcc804e
+ShaderImporter:
+  externalObjects: {}
+  defaultTextures:
+  - _MainTexture1: {fileID: 2800000, guid: 5269ea886daaf364eb89ad3370fbb4b2, type: 3}
+  - _NoiseTexture: {fileID: 2800000, guid: 788d74a2951ba514fa76781ea2676e75, type: 3}
+  - _LUT: {fileID: 2800000, guid: f4931b91aa4bf84409e23cf0213f74f7, type: 3}
+  - _texcoord: {instanceID: 0}
+  nonModifiableTextures: []
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 340466
+  packageName: Stylized VFX Bundle
+  packageVersion: 1.0.1
+  assetPath: Assets/Vefects/Stylized AoE VFX/Shared/Shaders/SH_Vefects_BIRP_Rock_01.shader
+  uploadId: 860344

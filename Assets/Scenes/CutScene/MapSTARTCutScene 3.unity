@@ -11160,7 +11160,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 127
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &89563735
 Transform:
   m_ObjectHideFlags: 0
@@ -11204,8 +11204,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 90953542}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.18626031, y: -0.04689213, z: 0.059686743, w: 0.97956413}
-  m_LocalPosition: {x: -0.0000022123706, y: 0.98299515, z: -0.0000040880764}
+  m_LocalRotation: {x: -0.5653957, y: -0.07607661, z: 0.02201032, w: 0.82100886}
+  m_LocalPosition: {x: -0.000000014901163, y: 0.9760803, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -11236,7 +11236,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 92807516}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.225097, y: 0.00045064214, z: -0.01954344, w: -0.9741403}
+  m_LocalRotation: {x: -0.35018185, y: -0.21001554, z: 0.12149074, w: -0.9047134}
   m_LocalPosition: {x: 0.000000005587937, y: 0.33632734, z: 0.0000000074505815}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -12288,7 +12288,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 102979561}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.02589193, y: -0.0086105475, z: 0.09797342, w: -0.994815}
+  m_LocalRotation: {x: -0.33785984, y: -0.007986039, z: 0.092703655, w: -0.93658584}
   m_LocalPosition: {x: 0.005856569, y: 0.072454475, z: 0.03365032}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -20887,8 +20887,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: "V\u1EADy c\u1EE9 \u0111i ti\u1EBFp th\xF4i."
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 5c7a92cce04a5ee478f36d2f5b537e05, type: 2}
-  m_sharedMaterial: {fileID: 97671534423474389, guid: 5c7a92cce04a5ee478f36d2f5b537e05, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 6551b436ac6e447438384ddc0c7721bb, type: 2}
+  m_sharedMaterial: {fileID: -3394599491205377259, guid: 6551b436ac6e447438384ddc0c7721bb, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -20923,6 +20923,7 @@ MonoBehaviour:
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -21461,7 +21462,7 @@ AudioSource:
   m_Enabled: 1
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
-  m_audioClip: {fileID: 8300000, guid: 7683cc1e3a1f50149b17147f5f822de7, type: 3}
+  m_audioClip: {fileID: 0}
   m_Resource: {fileID: 8300000, guid: 7683cc1e3a1f50149b17147f5f822de7, type: 3}
   m_PlayOnAwake: 1
   m_Volume: 1
@@ -22600,7 +22601,7 @@ Light:
   m_Enabled: 1
   serializedVersion: 11
   m_Type: 1
-  m_Color: {r: 0, g: 0.6784314, b: 0.70980394, a: 1}
+  m_Color: {r: 0.66162336, g: 0.78667027, b: 0.7924528, a: 1}
   m_Intensity: 1.62
   m_Range: 10
   m_SpotAngle: 30
@@ -23160,7 +23161,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 197135849}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.29724747, y: -0.10575704, z: 0.033148214, w: 0.9483463}
+  m_LocalRotation: {x: 0.33642894, y: -0.11498436, z: 0.032670796, w: 0.93409145}
   m_LocalPosition: {x: -0.000000022351713, y: 0.3976436, z: 0.00000005960462}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -23905,7 +23906,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 205712601}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.01943925, y: 0.025676228, z: -0.10809691, w: 0.99361867}
+  m_LocalRotation: {x: -0.00017219782, y: -0.06860529, z: -0.3031114, w: 0.9504824}
   m_LocalPosition: {x: 0.000000043772165, y: 0.3925284, z: 0.00000010244546}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -26129,8 +26130,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 211871821}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.031749256, y: 0.06696793, z: 0.99645185, w: -0.039888058}
-  m_LocalPosition: {x: 0.17876457, y: -0.12046193, z: 0.011637396}
+  m_LocalRotation: {x: 0.057279386, y: 0.11895424, z: 0.9906457, w: -0.034496125}
+  m_LocalPosition: {x: 0.17875107, y: -0.12046218, z: 0.011637701}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -26364,7 +26365,7 @@ AudioSource:
   m_Enabled: 1
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
-  m_audioClip: {fileID: 8300000, guid: 97813e39cd9d69346b3dc68707cd5972, type: 3}
+  m_audioClip: {fileID: 0}
   m_Resource: {fileID: 8300000, guid: 97813e39cd9d69346b3dc68707cd5972, type: 3}
   m_PlayOnAwake: 1
   m_Volume: 1
@@ -27188,7 +27189,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 222373117}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.039726928, y: -0.00000008940697, z: 0.00000016391277, w: 0.99921066}
+  m_LocalRotation: {x: 0.036244635, y: 0.00060772896, z: 0.011251898, w: 0.9992794}
   m_LocalPosition: {x: 3.3391737e-11, y: 0.3265945, z: 0.000000022351742}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -27508,8 +27509,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 235054155}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.543782, y: 0.04566325, z: -0.12563126, w: 0.82851243}
-  m_LocalPosition: {x: 0, y: 0.9466325, z: 0.000000030013428}
+  m_LocalRotation: {x: 0.47935992, y: 0.06996718, z: -0.024874128, w: 0.8744713}
+  m_LocalPosition: {x: 0, y: 0.93997425, z: 0.000000029802326}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -28615,7 +28616,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 127
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &257053526
 Transform:
   m_ObjectHideFlags: 0
@@ -30679,7 +30680,7 @@ AudioSource:
   m_Enabled: 1
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
-  m_audioClip: {fileID: 8300000, guid: 7d3679f1eb66ebc41b178ac30b2757e9, type: 3}
+  m_audioClip: {fileID: 0}
   m_Resource: {fileID: 8300000, guid: 7d3679f1eb66ebc41b178ac30b2757e9, type: 3}
   m_PlayOnAwake: 1
   m_Volume: 1
@@ -31268,8 +31269,8 @@ AudioSource:
   m_Enabled: 1
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
-  m_audioClip: {fileID: 8300000, guid: d3a62c64195ecb44da7506a7dcfa41ea, type: 3}
-  m_Resource: {fileID: 8300000, guid: d3a62c64195ecb44da7506a7dcfa41ea, type: 3}
+  m_audioClip: {fileID: 0}
+  m_Resource: {fileID: 8300000, guid: 0c88e7133f3345e4f928513920109725, type: 3}
   m_PlayOnAwake: 1
   m_Volume: 1
   m_Pitch: 1
@@ -55269,8 +55270,8 @@ MonoBehaviour:
   m_text: "T\u1EA3ng \u0111\xE1 n\xE0y \u0111\xE3 ch\u1EB7n \u0111\u01B0\u1EDDng
     \u0111i ti\u1EBFp c\u1EE7a ch\xFAng ta."
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 5c7a92cce04a5ee478f36d2f5b537e05, type: 2}
-  m_sharedMaterial: {fileID: 97671534423474389, guid: 5c7a92cce04a5ee478f36d2f5b537e05, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 6551b436ac6e447438384ddc0c7721bb, type: 2}
+  m_sharedMaterial: {fileID: -3394599491205377259, guid: 6551b436ac6e447438384ddc0c7721bb, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -55305,6 +55306,7 @@ MonoBehaviour:
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -60195,8 +60197,8 @@ AudioSource:
   m_Enabled: 1
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
-  m_audioClip: {fileID: 8300000, guid: 1822f79881adb5b4dadc5ba60ce9cba7, type: 3}
-  m_Resource: {fileID: 8300000, guid: 1822f79881adb5b4dadc5ba60ce9cba7, type: 3}
+  m_audioClip: {fileID: 0}
+  m_Resource: {fileID: 8300000, guid: 84e01679da332064cba880c15f3ccb6f, type: 3}
   m_PlayOnAwake: 1
   m_Volume: 1
   m_Pitch: 1
@@ -63278,7 +63280,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 553556452}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.06734342, y: 0.024666999, z: 0.0483822, w: -0.99625075}
+  m_LocalRotation: {x: -0.35189232, y: 0.041706804, z: -0.021754684, w: -0.93485785}
   m_LocalPosition: {x: -0.00000005960466, y: 0.3220371, z: 0.0000000372529}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -64404,8 +64406,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 575894309}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.032319035, y: 0.06283884, z: 0.99678385, w: 0.03779883}
-  m_LocalPosition: {x: -0.17876385, y: -0.12046174, z: 0.03585519}
+  m_LocalRotation: {x: -0.057166256, y: 0.22661804, z: 0.9638682, w: 0.1278065}
+  m_LocalPosition: {x: -0.17875107, y: -0.12046218, z: 0.03584744}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -64976,8 +64978,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: "C\xE1i g\xEC v\u1EEBa x\u1EA3y ra v\u1EADy?\n"
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 5c7a92cce04a5ee478f36d2f5b537e05, type: 2}
-  m_sharedMaterial: {fileID: 97671534423474389, guid: 5c7a92cce04a5ee478f36d2f5b537e05, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 6551b436ac6e447438384ddc0c7721bb, type: 2}
+  m_sharedMaterial: {fileID: -3394599491205377259, guid: 6551b436ac6e447438384ddc0c7721bb, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -65012,6 +65014,7 @@ MonoBehaviour:
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -66879,6 +66882,7 @@ MonoBehaviour:
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -70037,8 +70041,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 626674152}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.0024504198, y: -0.00037232408, z: 0.000043055068, w: 0.99999696}
-  m_LocalPosition: {x: -0.0037162781, y: 2.308074, z: 0.004866807}
+  m_LocalRotation: {x: 0.0016670858, y: -0.009424764, z: 0.021800261, w: 0.9997165}
+  m_LocalPosition: {x: 0.022260679, y: 2.1677656, z: -0.041383475}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -76360,8 +76364,8 @@ AudioSource:
   m_Enabled: 1
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
-  m_audioClip: {fileID: 8300000, guid: 93ec1abf4ab811b49bbd5e0f1f53d467, type: 3}
-  m_Resource: {fileID: 8300000, guid: 93ec1abf4ab811b49bbd5e0f1f53d467, type: 3}
+  m_audioClip: {fileID: 0}
+  m_Resource: {fileID: 8300000, guid: 3580d1f5f48d19b4d8183b5f38a3d436, type: 3}
   m_PlayOnAwake: 1
   m_Volume: 1
   m_Pitch: 1
@@ -76754,7 +76758,7 @@ AudioSource:
   m_Enabled: 1
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
-  m_audioClip: {fileID: 8300000, guid: 46b477a2899b82247b99168469f7ca87, type: 3}
+  m_audioClip: {fileID: 0}
   m_Resource: {fileID: 8300000, guid: 46b477a2899b82247b99168469f7ca87, type: 3}
   m_PlayOnAwake: 1
   m_Volume: 1
@@ -88197,7 +88201,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 844831197}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.11716723, y: 0.06002057, z: -0.014529524, w: 0.9911903}
+  m_LocalRotation: {x: 0.117194794, y: 0.060024, z: -0.014528111, w: 0.9911869}
   m_LocalPosition: {x: -0.0051722224, y: 0.065187275, z: 0.02179617}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -90800,8 +90804,8 @@ MonoBehaviour:
   m_text: "Nh\u01B0ng t\xF4i th\u1EA5y n\xF3 c\xF3 s\u1EF1 kh\xE1c bi\u1EC7t so v\u1EDBi
     t\u1EA3ng \u0111\xE1 kia."
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 5c7a92cce04a5ee478f36d2f5b537e05, type: 2}
-  m_sharedMaterial: {fileID: 97671534423474389, guid: 5c7a92cce04a5ee478f36d2f5b537e05, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 6551b436ac6e447438384ddc0c7721bb, type: 2}
+  m_sharedMaterial: {fileID: -3394599491205377259, guid: 6551b436ac6e447438384ddc0c7721bb, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -90836,6 +90840,7 @@ MonoBehaviour:
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -93914,7 +93919,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 904182006}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.03624247, y: -0, z: -0, w: 0.9993431}
+  m_LocalRotation: {x: -0.034574952, y: -0.0017735509, z: -0.010629415, w: 0.99934405}
   m_LocalPosition: {x: -3.3270112e-10, y: 0.2171576, z: -0.01577177}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -95658,7 +95663,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 921194567}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.18721625, y: 0.027561277, z: -0.014451951, w: -0.98182565}
+  m_LocalRotation: {x: -0.12967812, y: 0.041560616, z: -0.0076159826, w: -0.99065554}
   m_LocalPosition: {x: -0.000000017695132, y: 0.051037982, z: -0.00000008242203}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -95913,6 +95918,7 @@ MonoBehaviour:
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -96313,7 +96319,7 @@ AudioSource:
   m_Enabled: 1
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
-  m_audioClip: {fileID: 8300000, guid: 8fbc8af19b3cc6e4f817b5c9b6b535de, type: 3}
+  m_audioClip: {fileID: 0}
   m_Resource: {fileID: 8300000, guid: 8fbc8af19b3cc6e4f817b5c9b6b535de, type: 3}
   m_PlayOnAwake: 1
   m_Volume: 1
@@ -98765,7 +98771,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &976907230
 Transform:
   m_ObjectHideFlags: 0
@@ -104271,6 +104277,7 @@ MonoBehaviour:
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -110185,7 +110192,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1060816920}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.13199468, y: 0.03848532, z: -0.008355483, w: 0.99046785}
+  m_LocalRotation: {x: 0.55080605, y: 0.06520544, z: 0.012363106, w: 0.8319905}
   m_LocalPosition: {x: -0.000000012107183, y: 0.042430297, z: 0.00000011082726}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -110734,8 +110741,8 @@ MonoBehaviour:
   m_text: "L\u1EA1i th\xEAm m\u1ED9t t\u1EA3ng \u0111\xE1 ch\u1EB7n \u0111\u01B0\u1EDDng
     \u0111i n\u1EEFa \xE0?\n"
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 5c7a92cce04a5ee478f36d2f5b537e05, type: 2}
-  m_sharedMaterial: {fileID: 97671534423474389, guid: 5c7a92cce04a5ee478f36d2f5b537e05, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 6551b436ac6e447438384ddc0c7721bb, type: 2}
+  m_sharedMaterial: {fileID: -3394599491205377259, guid: 6551b436ac6e447438384ddc0c7721bb, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -110770,6 +110777,7 @@ MonoBehaviour:
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -112484,7 +112492,7 @@ AudioSource:
   m_Enabled: 1
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
-  m_audioClip: {fileID: 8300000, guid: 7d3679f1eb66ebc41b178ac30b2757e9, type: 3}
+  m_audioClip: {fileID: 0}
   m_Resource: {fileID: 8300000, guid: 7d3679f1eb66ebc41b178ac30b2757e9, type: 3}
   m_PlayOnAwake: 1
   m_Volume: 1
@@ -114760,7 +114768,7 @@ AudioSource:
   m_Enabled: 1
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
-  m_audioClip: {fileID: 8300000, guid: e2ce99cb4c9eec747bb66af3efc2324c, type: 3}
+  m_audioClip: {fileID: 0}
   m_Resource: {fileID: 8300000, guid: e2ce99cb4c9eec747bb66af3efc2324c, type: 3}
   m_PlayOnAwake: 1
   m_Volume: 1
@@ -120361,7 +120369,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1201244090}
   serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalRotation: {x: 0.0033857964, y: -0.005305542, z: -0.0052120225, w: 0.9999666}
   m_LocalPosition: {x: 8.8639665e-11, y: 0.29030627, z: 0.000000007450581}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -120482,7 +120490,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1715311666}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.074315175, y: -0.0016404967, z: 0.05121713, w: 0.9959174}
+  m_LocalRotation: {x: -0.024392191, y: -0.062838465, z: -0.14081995, w: 0.9877379}
   m_LocalPosition: {x: 0, y: 0.61540616, z: -0.00000007450575}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -122151,7 +122159,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1233612368}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.048343115, y: 0.0000001192093, z: -0.00000005960465, w: 0.99883085}
+  m_LocalRotation: {x: 0.019034075, y: 0.026876498, z: -0.015887665, w: 0.9993313}
   m_LocalPosition: {x: -8.6499856e-11, y: 0.05944228, z: 0.02815885}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -124943,10 +124951,10 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls: []
   m_text: "\u0110\u01B0\u1EE3c th\xF4i, ch\xFAng t\xF4i s\u1EBD th\u1EED ph\xE1 n\xF3
-    b\u1EB1ng nguy\xEAn t\u1ED1 c\u1EE7a m\xECnh xem."
+    b\u1EB1ng s\u1EE9c m\u1EA1nh nguy\xEAn t\u1ED1 c\u1EE7a m\xECnh xem."
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 5c7a92cce04a5ee478f36d2f5b537e05, type: 2}
-  m_sharedMaterial: {fileID: 97671534423474389, guid: 5c7a92cce04a5ee478f36d2f5b537e05, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 6551b436ac6e447438384ddc0c7721bb, type: 2}
+  m_sharedMaterial: {fileID: -3394599491205377259, guid: 6551b436ac6e447438384ddc0c7721bb, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -124981,6 +124989,7 @@ MonoBehaviour:
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -130585,8 +130594,8 @@ MonoBehaviour:
   m_text: "C\xE1c ng\u01B0\u01A1i h\xE3y s\u1EED d\u1EE5ng s\u1EE9c m\u1EA1nh nguy\xEAn
     t\u1ED1 \u0111\u1EC3 ph\xE1 hu\u1EF7 n\xF3 \u0111i."
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 5c7a92cce04a5ee478f36d2f5b537e05, type: 2}
-  m_sharedMaterial: {fileID: 97671534423474389, guid: 5c7a92cce04a5ee478f36d2f5b537e05, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 6551b436ac6e447438384ddc0c7721bb, type: 2}
+  m_sharedMaterial: {fileID: -3394599491205377259, guid: 6551b436ac6e447438384ddc0c7721bb, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -130621,6 +130630,7 @@ MonoBehaviour:
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -132132,7 +132142,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1292830253}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.6008843, y: -0.36507985, z: 0.6159104, w: 0.3554001}
+  m_LocalRotation: {x: 0.6650441, y: -0.2594481, z: 0.5910385, w: 0.3756016}
   m_LocalPosition: {x: -0.16211125, y: 0.26667032, z: -0.0039101094}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -134181,6 +134191,7 @@ MonoBehaviour:
   prerequisiteQuest: {fileID: 0}
   collapseVideo: {fileID: 0}
   cutsceneUI: {fileID: 0}
+  buildCompleteCutscene: {fileID: 0}
   playerMovementScriptNames: []
   objectToHideDuringCutscene: {fileID: 0}
   bridgeObstacle: {fileID: 0}
@@ -137185,7 +137196,7 @@ MonoBehaviour:
     \u0111i\u1EC3m nh\u1EEFng t\u1EA3ng \u0111\xE1 n\xE0y s\u1EBD c\xF3 k\xFD hi\u1EC7u
     nguy\xEAn t\u1ED1 tr\xEAn ch\xFAng."
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 5c7a92cce04a5ee478f36d2f5b537e05, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 6551b436ac6e447438384ddc0c7721bb, type: 2}
   m_sharedMaterial: {fileID: 97671534423474389, guid: 5c7a92cce04a5ee478f36d2f5b537e05, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
@@ -137221,6 +137232,7 @@ MonoBehaviour:
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -138323,7 +138335,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1374529968}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.5977003, y: -0.36791885, z: 0.61869705, w: -0.35299304}
+  m_LocalRotation: {x: -0.6380905, y: -0.3003335, z: 0.6236978, w: -0.33710748}
   m_LocalPosition: {x: 0.16211125, y: 0.26673418, z: -0.0047895927}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -138862,7 +138874,7 @@ AudioSource:
   m_Enabled: 1
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
-  m_audioClip: {fileID: 8300000, guid: 7d3679f1eb66ebc41b178ac30b2757e9, type: 3}
+  m_audioClip: {fileID: 0}
   m_Resource: {fileID: 8300000, guid: 7d3679f1eb66ebc41b178ac30b2757e9, type: 3}
   m_PlayOnAwake: 1
   m_Volume: 1
@@ -141843,11 +141855,11 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "Nh\u1EEFng t\u1EA3ng \u0111\xE1 n\xE0y v\u1EEBa r\u01A1i xu\u1ED1ng, l\xE0m
-    cho \u0111\u01B0\u1EDDng lui c\u1EE7a b\u1ECDn m\xECnh b\u1ECB k\u1EB9t r\u1ED3i.\n"
+  m_text: "T\u1EA3ng \u0111\xE1 v\u1EEBa s\u1EADp xu\u1ED1ng, ch\u1EB7n m\u1EA5t
+    \u0111\u01B0\u1EDDng quay v\u1EC1 c\u1EE7a ch\xFAng ta r\u1ED3i. "
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 5c7a92cce04a5ee478f36d2f5b537e05, type: 2}
-  m_sharedMaterial: {fileID: 97671534423474389, guid: 5c7a92cce04a5ee478f36d2f5b537e05, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 6551b436ac6e447438384ddc0c7721bb, type: 2}
+  m_sharedMaterial: {fileID: -3394599491205377259, guid: 6551b436ac6e447438384ddc0c7721bb, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -141882,6 +141894,7 @@ MonoBehaviour:
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -150665,11 +150678,10 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "N\xF3 c\xF3 k\xFD hi\u1EC7u n\u1ED5i \u0111\u01B0\u1EE3c kh\u1EAFc v\xE0o
-    t\u1EA3ng \u0111\xE1 n\xE0y,"
+  m_text: "N\xF3 c\xF3 c\xE1c k\xFD hi\u1EC7u tr\xEAn t\u1EA3ng \u0111\xE1 n\xE0y."
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 5c7a92cce04a5ee478f36d2f5b537e05, type: 2}
-  m_sharedMaterial: {fileID: 97671534423474389, guid: 5c7a92cce04a5ee478f36d2f5b537e05, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 6551b436ac6e447438384ddc0c7721bb, type: 2}
+  m_sharedMaterial: {fileID: -3394599491205377259, guid: 6551b436ac6e447438384ddc0c7721bb, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -150704,6 +150716,7 @@ MonoBehaviour:
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -157758,8 +157771,8 @@ AudioSource:
   m_Enabled: 1
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
-  m_audioClip: {fileID: 8300000, guid: 6ab8781d5fc74db428c3b6b79b06affb, type: 3}
-  m_Resource: {fileID: 8300000, guid: 6ab8781d5fc74db428c3b6b79b06affb, type: 3}
+  m_audioClip: {fileID: 0}
+  m_Resource: {fileID: 8300000, guid: d416e2a1b6ac1fa46b30005d4ac91c88, type: 3}
   m_PlayOnAwake: 1
   m_Volume: 1
   m_Pitch: 1
@@ -159514,7 +159527,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1554423732}
   serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalRotation: {x: 0.0033856034, y: -0.005325541, z: -0.0051915348, w: 0.9999667}
   m_LocalPosition: {x: 3.7831188e-10, y: 0.25401804, z: -0.0000000018626451}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -173776,8 +173789,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1668511770}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.5472624, y: -0.044419415, z: 0.13018775, w: 0.8255798}
-  m_LocalPosition: {x: 0, y: 0.9446093, z: 0.000000007504902}
+  m_LocalRotation: {x: 0.5498908, y: -0.03764318, z: 0.05258943, w: 0.83272886}
+  m_LocalPosition: {x: 0, y: 0.93777204, z: 0.0000000074505797}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -174784,8 +174797,8 @@ MonoBehaviour:
   m_text: "Nh\u01B0ng t\xF4i kh\xF4ng bi\u1EBFt l\xE0 c\xE1c k\xFD hi\u1EC7u n\xE0y
     c\xF3 \xFD ngh\u0129a l\xE0 g\xEC?"
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 5c7a92cce04a5ee478f36d2f5b537e05, type: 2}
-  m_sharedMaterial: {fileID: 97671534423474389, guid: 5c7a92cce04a5ee478f36d2f5b537e05, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 6551b436ac6e447438384ddc0c7721bb, type: 2}
+  m_sharedMaterial: {fileID: -3394599491205377259, guid: 6551b436ac6e447438384ddc0c7721bb, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -174820,6 +174833,7 @@ MonoBehaviour:
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -176231,7 +176245,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1699848001}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.2165151, y: 0.028312791, z: -0.04257299, w: 0.97493964}
+  m_LocalRotation: {x: 0.3103055, y: -0.16396132, z: -0.0013461122, w: 0.93638957}
   m_LocalPosition: {x: 0.000000013504181, y: 0.3363273, z: 0.0000000074505797}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -176334,6 +176348,7 @@ MonoBehaviour:
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -180412,7 +180427,7 @@ AudioSource:
   m_Enabled: 1
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
-  m_audioClip: {fileID: 8300000, guid: 45b4802b1d4b69e498374a0287272f9b, type: 3}
+  m_audioClip: {fileID: 0}
   m_Resource: {fileID: 8300000, guid: 45b4802b1d4b69e498374a0287272f9b, type: 3}
   m_PlayOnAwake: 1
   m_Volume: 1
@@ -186600,12 +186615,12 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "B\xE2y gi\u1EDD ch\u1EC9 c\xF2n m\u1EE9c l\xE0 \u0111i ti\u1EBFp th\xF4i,
-    v\xEC \u0111\u01B0\u1EDDng lui n\xF3 \u0111\xE3 b\u1ECB b\u1ECBt k\xEDn n\xEAn
-    c\u1EE9 theo con \u0111\u01B0\u1EDDng n\xE0y m\xE0 \u0111i v\u1EADy."
+  m_text: "Xem ra ch\xFAng ta ch\u1EC9 c\xF3 th\u1EC3 ti\u1EBFp t\u1EE5c ti\u1EBFn
+    v\xE0o cung \u0111i\u1EC7n th\xF4i, c\u1EE9 mem theo con \u0111\u01B0\u1EDDng
+    n\xE0y m\xE0 \u0111i v\u1EADy.\r\n"
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 5c7a92cce04a5ee478f36d2f5b537e05, type: 2}
-  m_sharedMaterial: {fileID: 97671534423474389, guid: 5c7a92cce04a5ee478f36d2f5b537e05, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 6551b436ac6e447438384ddc0c7721bb, type: 2}
+  m_sharedMaterial: {fileID: -3394599491205377259, guid: 6551b436ac6e447438384ddc0c7721bb, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -186640,6 +186655,7 @@ MonoBehaviour:
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -186670,7 +186686,7 @@ MonoBehaviour:
   m_margin: {x: -287.48517, y: -61.708282, z: -176.86365, w: -77.10062}
   m_isUsingLegacyAnimationComponent: 0
   m_isVolumetricText: 0
-  m_hasFontAssetChanged: 1
+  m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
 --- !u!222 &1795031439
@@ -194779,6 +194795,7 @@ MonoBehaviour:
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -194941,7 +194958,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1838588693}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.08044841, y: 0.00499881, z: -0.010169421, w: 0.99669445}
+  m_LocalRotation: {x: 0.029769208, y: 0.018580684, z: 0.10995494, w: 0.99331695}
   m_LocalPosition: {x: -0.00000011362137, y: 0.6101587, z: -0.000000018626444}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -200073,7 +200090,7 @@ AudioSource:
   m_Enabled: 1
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
-  m_audioClip: {fileID: 8300000, guid: 57e24b4df1c53de4ba5ef2f6525ad143, type: 3}
+  m_audioClip: {fileID: 0}
   m_Resource: {fileID: 8300000, guid: 57e24b4df1c53de4ba5ef2f6525ad143, type: 3}
   m_PlayOnAwake: 1
   m_Volume: 1
@@ -201053,7 +201070,7 @@ AudioSource:
   m_Enabled: 1
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
-  m_audioClip: {fileID: 8300000, guid: 941b361bea62cec44a000695385d643c, type: 3}
+  m_audioClip: {fileID: 0}
   m_Resource: {fileID: 8300000, guid: 941b361bea62cec44a000695385d643c, type: 3}
   m_PlayOnAwake: 1
   m_Volume: 1
@@ -201530,7 +201547,7 @@ AudioSource:
   m_Enabled: 1
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
-  m_audioClip: {fileID: 8300000, guid: 8510a1520f8f37b43b0ff630141f2dcb, type: 3}
+  m_audioClip: {fileID: 0}
   m_Resource: {fileID: 8300000, guid: 8510a1520f8f37b43b0ff630141f2dcb, type: 3}
   m_PlayOnAwake: 1
   m_Volume: 1
@@ -203739,7 +203756,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1897282897}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.02248089, y: -0.026379138, z: 0.10466184, w: 0.9939038}
+  m_LocalRotation: {x: 0.001036316, y: 0.030025478, z: 0.2639216, w: 0.96407616}
   m_LocalPosition: {x: -0.00000007823112, y: 0.39276436, z: 0.00000013783576}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -205963,7 +205980,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1923828645}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.0745822, y: 0.03189329, z: 0.031693812, w: 0.9962007}
+  m_LocalRotation: {x: 0.43971673, y: 0.021824926, z: 0.012113391, w: 0.8977896}
   m_LocalPosition: {x: 0.00000004470346, y: 0.33052176, z: 0.000000007450573}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -206199,6 +206216,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   ShowTopMostFoldoutHeaderGroup: 1
+  completionCutscene: {fileID: 0}
+  objectToEnableAfterCutscene: {fileID: 0}
   A: {fileID: 1255146431}
   B: {fileID: 308492518}
   C: {fileID: 97499273}
@@ -206913,8 +206932,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1933598602}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.18180849, y: 0.05030501, z: -0.06734092, w: 0.9797348}
-  m_LocalPosition: {x: -0.000013301705, y: 0.9830819, z: -0.0000022810775}
+  m_LocalRotation: {x: -0.21955486, y: 0.07225924, z: -0.060818918, w: 0.97101766}
+  m_LocalPosition: {x: -0.000000029802319, y: 0.97596365, z: 3.4924597e-10}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -221579,6 +221598,7 @@ MonoBehaviour:
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -230145,7 +230165,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2144274487}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.30878514, y: 0.09858617, z: -0.032198057, w: 0.9454607}
+  m_LocalRotation: {x: 0.3353152, y: 0.10505317, z: -0.032094073, w: 0.93568027}
   m_LocalPosition: {x: 0.000000029802306, y: 0.38470855, z: -0.0000001788139}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -249553,6 +249573,14 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 335080842}
     m_Modifications:
+    - target: {fileID: 75962860964120328, guid: b65eab6e9f009704bae7f67f63dfaf64, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: d541128ccf144554c84f25f4788afd70, type: 2}
+    - target: {fileID: 999979809826295541, guid: b65eab6e9f009704bae7f67f63dfaf64, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -0.00661
+      objectReference: {fileID: 0}
     - target: {fileID: 2578172958423070593, guid: b65eab6e9f009704bae7f67f63dfaf64, type: 3}
       propertyPath: m_LocalPosition.x
       value: -297.53366
@@ -249593,6 +249621,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 2927828673664641452, guid: b65eab6e9f009704bae7f67f63dfaf64, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: fa770603a26bc5e43bc32037a2bb3d29, type: 2}
     - target: {fileID: 4079896176590189029, guid: b65eab6e9f009704bae7f67f63dfaf64, type: 3}
       propertyPath: m_Name
       value: DaNguyenTo
@@ -249608,6 +249640,10 @@ PrefabInstance:
     - target: {fileID: 6279490064650068139, guid: b65eab6e9f009704bae7f67f63dfaf64, type: 3}
       propertyPath: InScenePlacedSourceGlobalObjectIdHash
       value: 2245054762
+      objectReference: {fileID: 0}
+    - target: {fileID: 7795879388679643250, guid: b65eab6e9f009704bae7f67f63dfaf64, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -0.00661
       objectReference: {fileID: 0}
     m_RemovedComponents:
     - {fileID: 1233756417432247283, guid: b65eab6e9f009704bae7f67f63dfaf64, type: 3}

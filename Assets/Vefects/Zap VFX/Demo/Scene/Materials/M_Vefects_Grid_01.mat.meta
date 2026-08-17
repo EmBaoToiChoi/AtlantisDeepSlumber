@@ -1,5 +1,5 @@
 fileFormatVersion: 2
-guid: d1e978451fb0060438c76219336aa576
+guid: 540eb69d90c258a4b83b33517074f151
 NativeFormatImporter:
   externalObjects: {}
   mainObjectFileID: 2100000
@@ -8,8 +8,8 @@ NativeFormatImporter:
   assetBundleVariant: 
 AssetOrigin:
   serializedVersion: 1
-  productId: 303478
-  packageName: Zap VFX
-  packageVersion: 1.0.0
-  assetPath: Assets/Vefects/Zap VFX/Demo/Scene/Materials/M_Vefects_Grid_01.mat
-  uploadId: 712890
+  productId: 340466
+  packageName: Stylized VFX Bundle
+  packageVersion: 1.0.1
+  assetPath: Assets/Vefects/Stylized VFX/Demo/Scene/Materials/M_Vefects_Grid_01.mat
+  uploadId: 860344

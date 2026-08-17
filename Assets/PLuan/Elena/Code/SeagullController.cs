@@ -59,6 +59,19 @@ public class SeagullController : NetworkBehaviour
     [Tooltip("Layer của tường và mặt đất cần cản/trượt")]
     public LayerMask obstacleMask = ~0;
 
+    [Header("Speed Boost Trail & Visual VFX Settings")]
+    [Tooltip("Prefab VFX vệt sáng bứt tốc độ phía sau chim (nếu để trống sẽ tự động dùng Seagull_Speed_Trail).")]
+    public GameObject speedTrailVfxPrefab;
+    [Tooltip("Offset vị trí tương đối phía sau chim.")]
+    public Vector3 speedVfxOffset = new Vector3(0f, 0.2f, -0.6f);
+    [Tooltip("Tỷ lệ scale của VFX vệt sáng bứt tốc.")]
+    public float speedVfxScale = 1.3f;
+    [Tooltip("Tùy chọn tự động đổi màu mô hình chim thành trắng tinh tế.")]
+    public bool makeBirdPureWhite = true;
+
+    private GameObject activeSpeedVfxInstance;
+    private static GameObject defaultSpeedTrailPrefab;
+
     private Vector3 currentVelocity;
     private float targetPitch = 0f;
     private float targetYaw = 0f;
@@ -104,6 +117,12 @@ public class SeagullController : NetworkBehaviour
         {
             col.isTrigger = true;
         }
+    }
+
+    private void OnEnable()
+    {
+        MakeBirdWhite();
+        AttachSpeedTrailVfx();
     }
 
     private void Start()
@@ -190,6 +209,9 @@ public class SeagullController : NetworkBehaviour
             anim.Play(flyAnimName);
         }
 
+        MakeBirdWhite();
+        AttachSpeedTrailVfx();
+
         if (IsServer)
         {
             isMovingNet.Value = true;
@@ -211,6 +233,141 @@ public class SeagullController : NetworkBehaviour
         if (ActiveSeagull == this)
         {
             ActiveSeagull = null;
+        }
+        if (activeSpeedVfxInstance != null)
+        {
+            Destroy(activeSpeedVfxInstance);
+            activeSpeedVfxInstance = null;
+        }
+    }
+
+    private void MakeBirdWhite()
+    {
+        if (!makeBirdPureWhite) return;
+
+        Renderer[] renderers = GetComponentsInChildren<Renderer>(true);
+        foreach (var rend in renderers)
+        {
+            if (rend == null) continue;
+            if (rend is TrailRenderer || rend is ParticleSystemRenderer) continue;
+
+            Material[] mats = rend.materials;
+            foreach (var mat in mats)
+            {
+                if (mat == null) continue;
+                if (mat.HasProperty("_Color")) mat.SetColor("_Color", Color.white);
+                if (mat.HasProperty("_BaseColor")) mat.SetColor("_BaseColor", Color.white);
+                if (mat.HasProperty("_Tint")) mat.SetColor("_Tint", Color.white);
+                if (mat.HasProperty("_MainTex") && mat.mainTexture != null)
+                {
+                    mat.color = Color.white;
+                }
+            }
+        }
+    }
+
+    private void AttachSpeedTrailVfx()
+    {
+        if (activeSpeedVfxInstance != null) return;
+
+        GameObject prefabToUse = speedTrailVfxPrefab;
+        if (prefabToUse == null)
+        {
+            if (defaultSpeedTrailPrefab == null)
+            {
+                defaultSpeedTrailPrefab = Resources.Load<GameObject>("VFX/Seagull_Speed_Trail");
+                if (defaultSpeedTrailPrefab == null)
+                {
+                    defaultSpeedTrailPrefab = Resources.Load<GameObject>("Par_LightShoot_Trails");
+                    if (defaultSpeedTrailPrefab == null)
+                    {
+                        defaultSpeedTrailPrefab = Resources.Load<GameObject>("Par_BlueShoot_Trails");
+                    }
+                }
+            }
+            prefabToUse = defaultSpeedTrailPrefab;
+        }
+
+        if (prefabToUse != null)
+        {
+            activeSpeedVfxInstance = Instantiate(prefabToUse, transform);
+            
+            Transform capsuleChild = activeSpeedVfxInstance.transform.Find("Capsule");
+            if (capsuleChild != null)
+            {
+                capsuleChild.gameObject.SetActive(false);
+            }
+
+            activeSpeedVfxInstance.transform.localPosition = speedVfxOffset;
+            activeSpeedVfxInstance.transform.localRotation = Quaternion.identity;
+            activeSpeedVfxInstance.transform.localScale = Vector3.one * Mathf.Max(0.2f, speedVfxScale);
+
+            ParticleSystem[] psList = activeSpeedVfxInstance.GetComponentsInChildren<ParticleSystem>(true);
+            Color goldenYellow = new Color(1.0f, 0.85f, 0.1f, 1.0f);
+            foreach (var ps in psList)
+            {
+                if (ps != null)
+                {
+                    var main = ps.main;
+                    main.loop = true;
+                    main.startColor = goldenYellow;
+
+                    var col = ps.colorOverLifetime;
+                    if (col.enabled)
+                    {
+                        Gradient grad = new Gradient();
+                        grad.SetKeys(
+                            new GradientColorKey[] { new GradientColorKey(goldenYellow, 0f), new GradientColorKey(new Color(1.0f, 0.6f, 0.0f), 1f) },
+                            new GradientAlphaKey[] { new GradientAlphaKey(1.0f, 0f), new GradientAlphaKey(0f, 1f) }
+                        );
+                        col.color = grad;
+                    }
+
+                    if (!ps.isPlaying) ps.Play();
+                }
+            }
+        }
+    }
+
+    private void CreateWingtipSpeedTrails()
+    {
+        Transform[] wingTips = GetComponentsInChildren<Transform>(true);
+        Transform leftWing = null;
+        Transform rightWing = null;
+        Transform tail = null;
+
+        foreach (var t in wingTips)
+        {
+            if (t == null) continue;
+            string n = t.name.ToLower();
+            if (n.Contains("wing") && (n.Contains("l") || n.Contains("left"))) leftWing = t;
+            else if (n.Contains("wing") && (n.Contains("r") || n.Contains("right"))) rightWing = t;
+            else if (n.Contains("tail")) tail = t;
+        }
+
+        Transform[] targets = new Transform[] { leftWing, rightWing, tail };
+        foreach (var target in targets)
+        {
+            Transform parentToUse = target != null ? target : transform;
+            GameObject trailObj = new GameObject("SpeedTrailRibbon");
+            trailObj.transform.SetParent(parentToUse, false);
+            trailObj.transform.localPosition = target == null ? Vector3.back * 0.4f : Vector3.zero;
+
+            TrailRenderer tr = trailObj.AddComponent<TrailRenderer>();
+            tr.time = 0.6f;
+            tr.startWidth = 0.25f;
+            tr.endWidth = 0.0f;
+            tr.autodestruct = false;
+
+            Material trailMat = new Material(Shader.Find("Sprites/Default"));
+            tr.material = trailMat;
+
+            Gradient gradient = new Gradient();
+            gradient.SetKeys(
+                new GradientColorKey[] { new GradientColorKey(Color.white, 0.0f), new GradientColorKey(new Color(0.5f, 0.85f, 1.0f), 1.0f) },
+                new GradientAlphaKey[] { new GradientAlphaKey(0.85f, 0.0f), new GradientAlphaKey(0.0f, 1.0f) }
+            );
+            tr.colorGradient = gradient;
         }
     }
 

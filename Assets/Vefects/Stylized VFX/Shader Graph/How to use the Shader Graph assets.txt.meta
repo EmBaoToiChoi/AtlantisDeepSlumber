@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 7f3858f5bb0b99b488939450d6813514
+TextScriptImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 340466
+  packageName: Stylized VFX Bundle
+  packageVersion: 1.0.1
+  assetPath: Assets/Vefects/Stylized VFX/Shader Graph/How to use the Shader Graph
+    assets.txt
+  uploadId: 860344

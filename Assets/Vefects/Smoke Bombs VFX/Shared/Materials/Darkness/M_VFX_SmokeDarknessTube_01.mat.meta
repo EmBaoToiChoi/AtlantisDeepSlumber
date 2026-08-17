@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: f8fe3265f3e506b46b73fe2f95369d2c
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 340466
+  packageName: Stylized VFX Bundle
+  packageVersion: 1.0.1
+  assetPath: Assets/Vefects/Smoke Bombs VFX/Shared/Materials/Darkness/M_VFX_SmokeDarknessTube_01.mat
+  uploadId: 860344

@@ -137,6 +137,14 @@ public class Enemy3HealthBar : MonoBehaviour
 
     private void Update()
     {
+        if (enemy == null || enemy.IsDead || enemy.ActualCurrentHealth <= 0f)
+        {
+            if (quadTransform != null && quadTransform.gameObject.activeSelf) quadTransform.gameObject.SetActive(false);
+            if (uiDocument != null && uiDocument.gameObject.activeSelf) uiDocument.gameObject.SetActive(false);
+            gameObject.SetActive(false);
+            return;
+        }
+
         if (mainCamera == null || !mainCamera.gameObject.activeInHierarchy) mainCamera = Camera.main;
 
         // Billboard logic: Đảm bảo thanh máu luôn quay mặt phẳng đối diện Camera góc nhìn Player

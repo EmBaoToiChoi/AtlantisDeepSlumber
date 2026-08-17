@@ -233,7 +233,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  GlobalObjectIdHash: 2302201610
+  GlobalObjectIdHash: 3911320723
   InScenePlacedSourceGlobalObjectIdHash: 2302201610
   DeferredDespawnTick: 0
   Ownership: 1
@@ -315,10 +315,16 @@ MonoBehaviour:
   eSkillDuration: 5
   isESkillActive: 0
   isESkillPlayingAnim: 0
+  eSkillVfxPrefab: {fileID: 2692375763741349971, guid: ae785f4f29854cc49a5b451244d3079d, type: 3}
+  eSkillVfxHeightOffset: 1
+  eSkillVfxScale: 1.5
   qSkillAnimTrigger: SkillQ
   qSkillStunDuration: 5
   qSkillRadius: 6
   qSkillDuration: 1.5
+  qSkillVfxPrefab: {fileID: 7760650975612943243, guid: 38773fefc1b6be94cb0847651f10f9e7, type: 3}
+  qSkillVfxScaleMultiplier: 1
+  qSkillVfxExpandDuration: 0.45
   isQSkillActive: 0
   isQSkillPlayingAnim: 0
   maxHealth: 150

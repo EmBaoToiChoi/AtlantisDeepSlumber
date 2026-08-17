@@ -137,6 +137,14 @@ public class Enemy5HealthBar : MonoBehaviour
 
     private void Update()
     {
+        if (enemy == null || enemy.IsDead || enemy.ActualCurrentHealth <= 0f)
+        {
+            if (quadTransform != null && quadTransform.gameObject.activeSelf) quadTransform.gameObject.SetActive(false);
+            if (uiDocument != null && uiDocument.gameObject.activeSelf) uiDocument.gameObject.SetActive(false);
+            gameObject.SetActive(false);
+            return;
+        }
+
         if (mainCamera == null || !mainCamera.gameObject.activeInHierarchy) mainCamera = Camera.main;
 
         // Xoay mặt phẳng UI đối diện với hướng camera của người chơi (Billboard Effect)

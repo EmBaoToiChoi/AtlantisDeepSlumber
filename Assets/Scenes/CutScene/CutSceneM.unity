@@ -7189,7 +7189,7 @@ MonoBehaviour:
     \u0111\u1EA1i d\u01B0\u01A1ng, nh\u01B0ng ch\u01B0a c\xF3 manh m\u1ED1i hay v\u1ECB
     tr\xED c\u1EE7a n\xF3 nh\u01B0 th\u1EC3 n\xE0o c\u1EA3?"
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 5c7a92cce04a5ee478f36d2f5b537e05, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 6551b436ac6e447438384ddc0c7721bb, type: 2}
   m_sharedMaterial: {fileID: 97671534423474389, guid: 5c7a92cce04a5ee478f36d2f5b537e05, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
@@ -7214,13 +7214,13 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 40
-  m_fontSizeBase: 40
+  m_fontSize: 36
+  m_fontSizeBase: 36
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
   m_fontSizeMax: 72
-  m_fontStyle: 0
+  m_fontStyle: 1
   m_HorizontalAlignment: 2
   m_VerticalAlignment: 256
   m_textAlignment: 65535
@@ -7528,7 +7528,7 @@ MonoBehaviour:
   m_text: "Theo t\xF4i ngh\u0129 \u1EDF h\xF2n \u0111\u1EA3o \u0111\xF3 ch\u1EAFc
     r\u1EA5t l\xE0 th\u1ECBnh v\u01B0\u1EE3ng gi\xE0u c\xF3 khi gi\xE0u t\xE0i nguy\xEAn?\n"
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 5c7a92cce04a5ee478f36d2f5b537e05, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 6551b436ac6e447438384ddc0c7721bb, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
@@ -7553,13 +7553,13 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 40
-  m_fontSizeBase: 40
+  m_fontSize: 36
+  m_fontSizeBase: 36
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
   m_fontSizeMax: 72
-  m_fontStyle: 0
+  m_fontStyle: 1
   m_HorizontalAlignment: 2
   m_VerticalAlignment: 256
   m_textAlignment: 65535
@@ -9589,7 +9589,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5640826928241862688, guid: 1972d9ffc310c974d97db04e2325f8a7, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -19.22
+      value: -19.176
       objectReference: {fileID: 0}
     - target: {fileID: 5640826928241862688, guid: 1972d9ffc310c974d97db04e2325f8a7, type: 3}
       propertyPath: m_LocalPosition.y
@@ -9597,27 +9597,35 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5640826928241862688, guid: 1972d9ffc310c974d97db04e2325f8a7, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 2.6449997
+      value: 2.806
       objectReference: {fileID: 0}
     - target: {fileID: 5640826928241862688, guid: 1972d9ffc310c974d97db04e2325f8a7, type: 3}
       propertyPath: m_LocalRotation.w
-      value: 0.50594175
+      value: 0.7027
       objectReference: {fileID: 0}
     - target: {fileID: 5640826928241862688, guid: 1972d9ffc310c974d97db04e2325f8a7, type: 3}
       propertyPath: m_LocalRotation.x
-      value: 0.50594175
+      value: 0.7027
       objectReference: {fileID: 0}
     - target: {fileID: 5640826928241862688, guid: 1972d9ffc310c974d97db04e2325f8a7, type: 3}
       propertyPath: m_LocalRotation.y
-      value: 0.4939868
+      value: -0.078820415
       objectReference: {fileID: 0}
     - target: {fileID: 5640826928241862688, guid: 1972d9ffc310c974d97db04e2325f8a7, type: 3}
       propertyPath: m_LocalRotation.z
-      value: -0.4939868
+      value: 0.078820415
+      objectReference: {fileID: 0}
+    - target: {fileID: 5640826928241862688, guid: 1972d9ffc310c974d97db04e2325f8a7, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 90
+      objectReference: {fileID: 0}
+    - target: {fileID: 5640826928241862688, guid: 1972d9ffc310c974d97db04e2325f8a7, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: -12.8
       objectReference: {fileID: 0}
     - target: {fileID: 5640826928241862688, guid: 1972d9ffc310c974d97db04e2325f8a7, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
-      value: 359.7039
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 6080858903842315743, guid: 1972d9ffc310c974d97db04e2325f8a7, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
@@ -19020,10 +19028,10 @@ AudioSource:
   m_Enabled: 1
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
-  m_audioClip: {fileID: 8300000, guid: 1818d4435165bc048a6bde8e34cbd0d5, type: 3}
-  m_Resource: {fileID: 8300000, guid: 1818d4435165bc048a6bde8e34cbd0d5, type: 3}
+  m_audioClip: {fileID: 8300000, guid: 493b6a5dd0b205e4caf0947f972445f3, type: 3}
+  m_Resource: {fileID: 8300000, guid: 493b6a5dd0b205e4caf0947f972445f3, type: 3}
   m_PlayOnAwake: 1
-  m_Volume: 0.5
+  m_Volume: 0.2
   m_Pitch: 1
   Loop: 0
   Mute: 0
@@ -23313,8 +23321,8 @@ AudioSource:
   m_Enabled: 1
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
-  m_audioClip: {fileID: 8300000, guid: 79f42828c00cc1246be29462cc2de444, type: 3}
-  m_Resource: {fileID: 8300000, guid: 79f42828c00cc1246be29462cc2de444, type: 3}
+  m_audioClip: {fileID: 8300000, guid: a5f41923c331fe14188ebf49b07c51bf, type: 3}
+  m_Resource: {fileID: 8300000, guid: a5f41923c331fe14188ebf49b07c51bf, type: 3}
   m_PlayOnAwake: 1
   m_Volume: 1
   m_Pitch: 1
@@ -25470,7 +25478,7 @@ MonoBehaviour:
     tin \u0111\u1ED3n v\u1EC1 h\xF2n \u0111\u1EA3o \u0111\xF3 l\xE0 th\u1EADt hay
     kh\xF4ng?"
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 5c7a92cce04a5ee478f36d2f5b537e05, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 6551b436ac6e447438384ddc0c7721bb, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
@@ -25495,13 +25503,13 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 40
-  m_fontSizeBase: 40
+  m_fontSize: 36
+  m_fontSizeBase: 36
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
   m_fontSizeMax: 72
-  m_fontStyle: 0
+  m_fontStyle: 1
   m_HorizontalAlignment: 2
   m_VerticalAlignment: 256
   m_textAlignment: 65535
@@ -28079,8 +28087,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: "\u0110\u01B0\u1EE3c, giao k\xE8o th\xE0nh l\u1EADp. \u0110i th\xF4i."
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 5c7a92cce04a5ee478f36d2f5b537e05, type: 2}
-  m_sharedMaterial: {fileID: 97671534423474389, guid: 5c7a92cce04a5ee478f36d2f5b537e05, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 6551b436ac6e447438384ddc0c7721bb, type: 2}
+  m_sharedMaterial: {fileID: -3394599491205377259, guid: 6551b436ac6e447438384ddc0c7721bb, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -28104,13 +28112,13 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 40
-  m_fontSizeBase: 40
+  m_fontSize: 36
+  m_fontSizeBase: 36
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
   m_fontSizeMax: 72
-  m_fontStyle: 0
+  m_fontStyle: 1
   m_HorizontalAlignment: 2
   m_VerticalAlignment: 256
   m_textAlignment: 65535
@@ -31582,10 +31590,10 @@ AudioSource:
   m_Enabled: 1
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
-  m_audioClip: {fileID: 8300000, guid: 1818d4435165bc048a6bde8e34cbd0d5, type: 3}
-  m_Resource: {fileID: 8300000, guid: 1818d4435165bc048a6bde8e34cbd0d5, type: 3}
+  m_audioClip: {fileID: 8300000, guid: efcb220fcfc1615439d5fea71f6577fe, type: 3}
+  m_Resource: {fileID: 8300000, guid: efcb220fcfc1615439d5fea71f6577fe, type: 3}
   m_PlayOnAwake: 1
-  m_Volume: 0.1
+  m_Volume: 0.05
   m_Pitch: 1
   Loop: 1
   Mute: 0
@@ -31830,7 +31838,7 @@ MonoBehaviour:
       m_Calls: []
   m_text: "\xD4ng l\xE0 ai? Bi\u1EBFt nh\u1EEFng g\xEC?"
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 5c7a92cce04a5ee478f36d2f5b537e05, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 6551b436ac6e447438384ddc0c7721bb, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
@@ -31855,13 +31863,13 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 40
-  m_fontSizeBase: 40
+  m_fontSize: 36
+  m_fontSizeBase: 36
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
   m_fontSizeMax: 72
-  m_fontStyle: 0
+  m_fontStyle: 1
   m_HorizontalAlignment: 2
   m_VerticalAlignment: 256
   m_textAlignment: 65535
@@ -32118,8 +32126,8 @@ MonoBehaviour:
     m\xF3n c\u1ED5 v\u1EADt nh\u1ECF \u0111\u1EC3 h\u1ED9 th\xE2n. C\xE1c ng\u01B0\u1EDDi
     ngh\u0129 sao?\n"
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 5c7a92cce04a5ee478f36d2f5b537e05, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 6551b436ac6e447438384ddc0c7721bb, type: 2}
+  m_sharedMaterial: {fileID: -3394599491205377259, guid: 6551b436ac6e447438384ddc0c7721bb, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -32143,13 +32151,13 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 40
-  m_fontSizeBase: 40
+  m_fontSize: 36
+  m_fontSizeBase: 36
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
   m_fontSizeMax: 72
-  m_fontStyle: 0
+  m_fontStyle: 1
   m_HorizontalAlignment: 2
   m_VerticalAlignment: 256
   m_textAlignment: 65535
@@ -32765,7 +32773,7 @@ MonoBehaviour:
   m_text: "T\xF4i kh\xF4ng bi\u1EBFt n\u01A1i \u0111\xF3 c\xF3 ng\u01B0\u1EDDi d\xE2n
     kh\xF4ng?, hay ch\u1EC9 l\xE0 1 h\xF2n \u0111\u1EA3o hoang"
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 5c7a92cce04a5ee478f36d2f5b537e05, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 6551b436ac6e447438384ddc0c7721bb, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
@@ -32790,13 +32798,13 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 40
-  m_fontSizeBase: 40
+  m_fontSize: 36
+  m_fontSizeBase: 36
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
   m_fontSizeMax: 72
-  m_fontStyle: 0
+  m_fontStyle: 1
   m_HorizontalAlignment: 2
   m_VerticalAlignment: 256
   m_textAlignment: 65535
@@ -38513,10 +38521,10 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls: []
   m_text: "C\xF3 ng\u01B0\u1EDDi d\u1EABn \u0111\u01B0\u1EDDng th\xEC \u0111\u1ED1ng
-    c\u01A1 quan \u0111\xF3 ch\xFAng ta x\u1EED l\xED h\u1EBFt!\"\n"
+    c\u01A1 quan \u0111\xF3 ch\xFAng ta x\u1EED l\xED h\u1EBFt!\n"
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 5c7a92cce04a5ee478f36d2f5b537e05, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 6551b436ac6e447438384ddc0c7721bb, type: 2}
+  m_sharedMaterial: {fileID: -3394599491205377259, guid: 6551b436ac6e447438384ddc0c7721bb, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -38540,13 +38548,13 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 40
-  m_fontSizeBase: 40
+  m_fontSize: 36
+  m_fontSizeBase: 36
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
   m_fontSizeMax: 72
-  m_fontStyle: 0
+  m_fontStyle: 1
   m_HorizontalAlignment: 2
   m_VerticalAlignment: 256
   m_textAlignment: 65535
@@ -38581,7 +38589,7 @@ MonoBehaviour:
   m_margin: {x: -287.48517, y: -61.708282, z: -176.86365, w: -77.10062}
   m_isUsingLegacyAnimationComponent: 0
   m_isVolumetricText: 0
-  m_hasFontAssetChanged: 1
+  m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
 --- !u!222 &1822391822
@@ -40030,7 +40038,7 @@ MonoBehaviour:
     S\xE9t \u2014 th\u1EE9 m\xE0 nh\xF3m c\xE1c ng\u01B0\u1EDDi \u0111ang s\u1EDF
     h\u1EEFu."
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 5c7a92cce04a5ee478f36d2f5b537e05, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 6551b436ac6e447438384ddc0c7721bb, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
@@ -40055,13 +40063,13 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 40
-  m_fontSizeBase: 40
+  m_fontSize: 36
+  m_fontSizeBase: 36
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
   m_fontSizeMax: 72
-  m_fontStyle: 0
+  m_fontStyle: 1
   m_HorizontalAlignment: 2
   m_VerticalAlignment: 256
   m_textAlignment: 65535
@@ -43022,7 +43030,7 @@ MonoBehaviour:
       m_Calls: []
   m_text: "Ta bi\u1EBFt h\xF2n \u0111\u1EA3o \u0111\xF3. N\xF3 t\xEAn l\xE0 Atlantis."
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 5c7a92cce04a5ee478f36d2f5b537e05, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 6551b436ac6e447438384ddc0c7721bb, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
@@ -43047,13 +43055,13 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 40
-  m_fontSizeBase: 40
+  m_fontSize: 36
+  m_fontSizeBase: 36
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
   m_fontSizeMax: 72
-  m_fontStyle: 0
+  m_fontStyle: 1
   m_HorizontalAlignment: 2
   m_VerticalAlignment: 256
   m_textAlignment: 65535

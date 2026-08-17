@@ -2754,6 +2754,11 @@ MonoBehaviour:
   fireBarrageDamage: 5
   fireBarrageImpactRadius: 2.5
   fireBarrageTriggerParam: AttackCombo
+  bossBattleBGM: {fileID: 8300000, guid: 68250f86e0d2b384987dd4cf4443d451, type: 3}
+  bossBattleBGMVolume: 0.5
+  loopBattleBGM: 1
+  battleBGMFadeInDuration: 1.5
+  battleBGMFadeOutDuration: 2.5
   walkSpeed: 2.2
   runSpeed: 6
   runDistanceThreshold: 5
@@ -3122,6 +3127,13 @@ MonoBehaviour:
   expDropPoint: {fileID: 0}
   repairItemPrefab: {fileID: 0}
   repairItemDropChance: 0.3
+  hitSoundClip: {fileID: 0}
+  deathSoundClip: {fileID: 0}
+  deathVfxPrefab: {fileID: 0}
+  deathVfxScale: 2
+  stunVfxPrefab: {fileID: 0}
+  stunVfxHeightOffset: 2.4
+  stunVfxScale: 2
   sightRange: 15
   fieldOfView: 90
   attackRange: 2

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="vi" data-theme="dark">
 
 <head>
     <meta charset="UTF-8">
@@ -87,6 +87,12 @@
                     </svg>
                     <span>Tổng quan</span>
                 </button>
+                <button class="nav-item" data-tab="tab-system">
+                    <svg viewBox="0 0 24 24" class="nav-icon">
+                        <path d="M4 2h16a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm0 2v4h16V4H4zm16 6H4v10h16V10zm-14 3h4v4H6v-4zm6 0h4v4h-4v-4z" />
+                    </svg>
+                    <span>Giám sát Hệ thống</span>
+                </button>
                 <button class="nav-item" data-tab="tab-users">
                     <svg viewBox="0 0 24 24" class="nav-icon">
                         <path
@@ -100,6 +106,12 @@
                             d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H8V4h12v12z" />
                     </svg>
                     <span>Phòng chơi</span>
+                </button>
+                <button class="nav-item" data-tab="tab-gamelogs">
+                    <svg viewBox="0 0 24 24" class="nav-icon">
+                        <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm-5 14H4v-4h11v4zm0-5H4V9h11v4zm5 5h-4V9h4v9z"/>
+                    </svg>
+                    <span>Logs Game & Docker</span>
                 </button>
                 <button class="nav-item" data-tab="tab-logs">
                     <svg viewBox="0 0 24 24" class="nav-icon">
@@ -122,8 +134,12 @@
                     <div class="status-dot online"></div>
                     <span id="txtConnectionState">Đã kết nối</span>
                 </div>
+                <button id="btnToggleTheme" class="theme-toggle-btn" title="Chuyển chế độ Sáng / Tối">
+                    <span class="theme-icon" id="themeIcon">🌙</span>
+                    <span id="themeLabel">Chế độ tối</span>
+                </button>
                 <button id="btnOpenChangePw" class="btn-edit"
-                    style="width: 100%; margin: 12px 0 6px 0; text-align: center;">
+                    style="width: 100%; margin: 6px 0; text-align: center;">
                     Đổi mật khẩu
                 </button>
                 <button id="btnLogout" class="btn-text" style="width: 100%; text-align: center;">Đăng xuất</button>
@@ -140,6 +156,12 @@
                         game.</p>
                 </div>
                 <div class="header-actions">
+                    <button class="btn-danger-outline glow-danger" id="btnHeaderRestartServer" title="Khởi động lại tiến trình máy chủ Backend">
+                        <svg viewBox="0 0 24 24" class="icon-power">
+                            <path d="M13 3h-2v10h2V3zm4.83 2.17l-1.42 1.42A6.92 6.92 0 0 1 19 12c0 3.87-3.13 7-7 7s-7-3.13-7-7c0-2.05.88-3.9 2.29-5.18L5.87 5.4C4.12 7.02 3 9.37 3 12c0 4.97 4.03 9 9 9s9-4.03 9-9c0-2.63-1.12-4.98-2.87-6.6l-.3-.23z"/>
+                        </svg>
+                        Khởi động lại Server
+                    </button>
                     <button class="btn-secondary" id="btnRefresh">
                         <svg viewBox="0 0 24 24" class="icon-refresh">
                             <path
@@ -255,6 +277,549 @@
                                 <span class="text-highlight font-semibold" id="statAvgPoints">0</span>
                             </div>
                         </div>
+                    </div>
+
+                    <div class="content-panel">
+                        <div class="panel-header-flex">
+                            <h3>Tài nguyên Máy chủ (Server Metrics)</h3>
+                            <button class="btn-text text-sm" id="btnQuickViewSystem">Xem chi tiết &rarr;</button>
+                        </div>
+                        <div class="mini-metrics-grid">
+                            <div class="mini-metric-box">
+                                <span class="mini-label">CPU LOAD</span>
+                                <div class="mini-bar-track">
+                                    <div class="mini-bar-fill cyan" id="overviewCpuBar" style="width: 0%;"></div>
+                                </div>
+                                <div class="mini-val-row">
+                                    <span class="mini-val text-cyan" id="overviewCpuText">0%</span>
+                                    <span class="mini-sub" id="overviewCpuCores">- Cores</span>
+                                </div>
+                            </div>
+                            <div class="mini-metric-box">
+                                <span class="mini-label">RAM USAGE</span>
+                                <div class="mini-bar-track">
+                                    <div class="mini-bar-fill magenta" id="overviewRamBar" style="width: 0%;"></div>
+                                </div>
+                                <div class="mini-val-row">
+                                    <span class="mini-val text-magenta" id="overviewRamText">0%</span>
+                                    <span class="mini-sub" id="overviewRamUsed">- MB</span>
+                                </div>
+                            </div>
+                            <div class="mini-metric-box">
+                                <span class="mini-label">NETWORK TRAFFIC</span>
+                                <div class="mini-net-vals">
+                                    <span>↓ <strong id="overviewNetRx">0 KB</strong></span>
+                                    <span>↑ <strong id="overviewNetTx">0 KB</strong></span>
+                                </div>
+                                <span class="mini-sub" id="overviewNetRps">0.0 req/s</span>
+                            </div>
+                            <div class="mini-metric-box">
+                                <span class="mini-label">SERVER UPTIME</span>
+                                <span class="mini-val text-green font-mono" id="overviewUptime">0h 0m</span>
+                                <span class="mini-sub" id="overviewDbPing">Ping: 0ms</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB: SYSTEM MONITOR (CPU, RAM, NETWORK, SERVER CONTROLS) -->
+            <div id="tab-system" class="tab-pane">
+                <!-- Top Toolbar -->
+                <div class="system-toolbar">
+                    <div class="toolbar-left">
+                        <div class="live-indicator">
+                            <div class="pulse-dot"></div>
+                            <span>TRỰC TIẾP (LIVE)</span>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="toggleLiveMetrics" checked>
+                            <span class="toggle-slider"></span>
+                            <span class="toggle-label">Cập nhật Realtime (1s)</span>
+                        </label>
+                        <div class="ping-badge" id="dbPingBadge">
+                            <span class="ping-dot"></span>
+                            <span>DB Ping: <strong id="txtDbPing">0 ms</strong></span>
+                        </div>
+                    </div>
+                    <div class="toolbar-right">
+                        <span class="last-updated" id="txtMetricsLastUpdated">Cập nhật: --:--:--</span>
+                        <button class="btn-danger glow-danger" id="btnSystemRestartServer">
+                            <svg viewBox="0 0 24 24" class="icon-btn">
+                                <path d="M13 3h-2v10h2V3zm4.83 2.17l-1.42 1.42A6.92 6.92 0 0 1 19 12c0 3.87-3.13 7-7 7s-7-3.13-7-7c0-2.05.88-3.9 2.29-5.18L5.87 5.4C4.12 7.02 3 9.37 3 12c0 4.97 4.03 9 9 9s9-4.03 9-9c0-2.63-1.12-4.98-2.87-6.6l-.3-.23z"/>
+                            </svg>
+                            Reset Server Nhanh
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Hardware & Metrics Grid -->
+                <div class="hardware-grid">
+                    <!-- CPU CARD -->
+                    <div class="hardware-card glow-cyan">
+                        <div class="hw-card-header">
+                            <div class="hw-title-group">
+                                <span class="hw-label">BỘ XỬ LÝ TRUNG TÂM</span>
+                                <h3>CPU Load & Usage</h3>
+                            </div>
+                            <div class="hw-icon-badge cyan">
+                                <svg viewBox="0 0 24 24">
+                                    <path d="M17 17H7V7h10v10zm2-14v2h2v2h-2v2h2v2h-2v2h2v2h-2v2h-2v2h-2v-2h-2v2h-2v-2H9v2H7v-2H5v-2H3v-2h2v-2H3v-2h2V9H3V7h2V5h2V3h2v2h2V3h2v2h2V3h2v2h2V3h2zm-4 4H9v6h6V7z"/>
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="hw-meter-container">
+                            <div class="radial-meter-box">
+                                <svg viewBox="0 0 100 100" class="radial-progress-svg">
+                                    <circle class="circle-bg" cx="50" cy="50" r="42" stroke-width="8" fill="none"/>
+                                    <circle class="circle-bar cpu-bar" id="cpuRadialBar" cx="50" cy="50" r="42" stroke-width="8" fill="none" stroke-dasharray="263.89" stroke-dashoffset="263.89"/>
+                                </svg>
+                                <div class="radial-center-text">
+                                    <span class="radial-val" id="valCpuPercent">0%</span>
+                                    <span class="radial-sub">USAGE</span>
+                                </div>
+                            </div>
+                            <div class="hw-meter-details">
+                                <div class="detail-row">
+                                    <span class="detail-label">Số Nhân (Cores):</span>
+                                    <span class="detail-value text-highlight" id="valCpuCores">-</span>
+                                </div>
+                                <div class="detail-row">
+                                    <span class="detail-label">Xung nhịp CPU:</span>
+                                    <span class="detail-value" id="valCpuSpeed">- MHz</span>
+                                </div>
+                                <div class="detail-row">
+                                    <span class="detail-label">Load Avg (1m, 5m, 15m):</span>
+                                    <span class="detail-value font-mono" id="valCpuLoadAvg">0.00, 0.00, 0.00</span>
+                                </div>
+                                <div class="detail-row">
+                                    <span class="detail-label">Mẫu CPU Model:</span>
+                                    <span class="detail-value text-truncate" id="valCpuModel" title="CPU Model">-</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- RAM CARD -->
+                    <div class="hardware-card glow-magenta">
+                        <div class="hw-card-header">
+                            <div class="hw-title-group">
+                                <span class="hw-label">BỘ NHỚ HỆ THỐNG</span>
+                                <h3>RAM & Heap Memory</h3>
+                            </div>
+                            <div class="hw-icon-badge magenta">
+                                <svg viewBox="0 0 24 24">
+                                    <path d="M2 7h20v10H2V7zm2 2v6h16V9H4zm2 1h2v4H6v-4zm4 0h2v4h-2v-4zm4 0h2v4h-2v-4zm4 0h2v4h-2v-4z"/>
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="hw-meter-container">
+                            <div class="radial-meter-box">
+                                <svg viewBox="0 0 100 100" class="radial-progress-svg">
+                                    <circle class="circle-bg" cx="50" cy="50" r="42" stroke-width="8" fill="none"/>
+                                    <circle class="circle-bar ram-bar" id="ramRadialBar" cx="50" cy="50" r="42" stroke-width="8" fill="none" stroke-dasharray="263.89" stroke-dashoffset="263.89"/>
+                                </svg>
+                                <div class="radial-center-text">
+                                    <span class="radial-val" id="valRamPercent">0%</span>
+                                    <span class="radial-sub">USED</span>
+                                </div>
+                            </div>
+                            <div class="hw-meter-details">
+                                <div class="detail-row">
+                                    <span class="detail-label">Đã dùng / Tổng RAM:</span>
+                                    <span class="detail-value text-highlight" id="valRamUsedTotal">0 MB / 0 MB</span>
+                                </div>
+                                <div class="detail-row">
+                                    <span class="detail-label">RAM Còn Trống:</span>
+                                    <span class="detail-value text-success" id="valRamFree">0 MB</span>
+                                </div>
+                                <div class="detail-row">
+                                    <span class="detail-label">Node Process RSS:</span>
+                                    <span class="detail-value" id="valNodeRss">0 MB</span>
+                                </div>
+                                <div class="detail-row">
+                                    <span class="detail-label">Node Heap (Used / Total):</span>
+                                    <span class="detail-value font-mono" id="valNodeHeap">0 / 0 MB</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- NETWORK & TRAFFIC CARD -->
+                    <div class="hardware-card glow-green">
+                        <div class="hw-card-header">
+                            <div class="hw-title-group">
+                                <span class="hw-label">LƯU LƯỢNG & KẾT NỐI</span>
+                                <h3>Network & Traffic I/O</h3>
+                            </div>
+                            <div class="hw-icon-badge green">
+                                <svg viewBox="0 0 24 24">
+                                    <path d="M4 1h16a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1zm0 8h16a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-4a1 1 0 0 1 1-1zm0 8h16a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-4a1 1 0 0 1 1-1zM6 4h2v1H6V4zm0 8h2v1H6v-1zm0 8h2v1H6v-1z"/>
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="network-stats-grid">
+                            <div class="net-stat-item">
+                                <span class="net-stat-label">Dữ Liệu Nhận (RX)</span>
+                                <span class="net-stat-value text-cyan" id="valNetRx">0 KB</span>
+                            </div>
+                            <div class="net-stat-item">
+                                <span class="net-stat-label">Dữ Liệu Gửi (TX)</span>
+                                <span class="net-stat-value text-green" id="valNetTx">0 KB</span>
+                            </div>
+                            <div class="net-stat-item">
+                                <span class="net-stat-label">Tốc Độ Yêu Cầu (RPS)</span>
+                                <span class="net-stat-value text-warning" id="valNetRps">0.0 req/s</span>
+                            </div>
+                            <div class="net-stat-item">
+                                <span class="net-stat-label">Tổng Yêu Cầu (Requests)</span>
+                                <span class="net-stat-value" id="valNetTotalReq">0</span>
+                            </div>
+                        </div>
+                        <div class="net-interfaces-container">
+                            <span class="detail-label" style="display: block; margin-bottom: 6px;">Danh Sách Card Mạng (Network Interfaces):</span>
+                            <div class="interface-chips" id="interfaceChipsList">
+                                <!-- Network chips injected via JS -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- HOST & SERVER INFO CARD -->
+                    <div class="hardware-card glow-warning">
+                        <div class="hw-card-header">
+                            <div class="hw-title-group">
+                                <span class="hw-label">HỆ ĐIỀU HÀNH & MÁY CHỦ</span>
+                                <h3>Host & Runtime Info</h3>
+                            </div>
+                            <div class="hw-icon-badge warning">
+                                <svg viewBox="0 0 24 24">
+                                    <path d="M19 4H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zm0 14H5V8h14v10z"/>
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="host-info-list">
+                            <div class="detail-row">
+                                <span class="detail-label">Tên Máy Chủ (Hostname):</span>
+                                <span class="detail-value text-highlight font-mono" id="valHostName">-</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Hệ Điều Hành & Nền tảng:</span>
+                                <span class="detail-value" id="valHostOs">-</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Phiên Bản Node.js:</span>
+                                <span class="detail-value text-green font-mono" id="valNodeVersion">-</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Thời Gian Chạy Server (Uptime):</span>
+                                <span class="detail-value text-cyan font-mono" id="valProcessUptime">-</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Thời Gian Máy Chủ (OS Uptime):</span>
+                                <span class="detail-value font-mono" id="valOsUptime">-</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PING, STABILITY & ALARM LEVEL CHECKER CARD -->
+                <div class="ping-stability-panel margin-top-lg">
+                    <div class="panel-header-flex">
+                        <div>
+                            <span class="hw-label">KIỂM ĐỊNH KẾT NỐI & ĐỘ TRỄ GAMEPLAY</span>
+                            <h3>Kiểm Tra Ping & Mức Độ Ổn Định Kết Nối Server</h3>
+                        </div>
+                        <div class="ping-test-actions">
+                            <button class="btn-primary glow-cyan" id="btnRunStabilityTest">
+                                <svg viewBox="0 0 24 24" class="icon-btn">
+                                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/>
+                                </svg>
+                                <span>Chạy Đo Độ Ổn Định (10 Lần)</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="ping-metrics-row margin-top-md">
+                        <!-- Current Ping Box -->
+                        <div class="ping-metric-card glow-cyan">
+                            <span class="ping-card-label">PING HIỆN TẠI</span>
+                            <div class="ping-value-row">
+                                <span class="ping-big-val text-cyan" id="txtLivePingVal">0</span>
+                                <span class="ping-unit">ms</span>
+                            </div>
+                            <div class="ping-alarm-pill level-good" id="alarmLevelPill">
+                                <span class="alarm-dot"></span>
+                                <span id="alarmLevelText">🟢 MỨC 1: HOÀN HẢO (&lt; 60ms)</span>
+                            </div>
+                        </div>
+
+                        <!-- Average Ping Box -->
+                        <div class="ping-metric-card">
+                            <span class="ping-card-label">PING TRUNG BÌNH (AVG)</span>
+                            <div class="ping-value-row">
+                                <span class="ping-big-val text-highlight" id="txtAvgPingVal">0</span>
+                                <span class="ping-unit">ms</span>
+                            </div>
+                            <span class="text-sm text-secondary">Độ dao động (Jitter): <strong id="txtJitterVal">±0 ms</strong></span>
+                        </div>
+
+                        <!-- Stability Score Box -->
+                        <div class="ping-metric-card glow-green">
+                            <span class="ping-card-label">MỨC ĐỘ ỔN ĐỊNH</span>
+                            <div class="ping-value-row">
+                                <span class="ping-big-val text-green" id="txtStabilityScore">100%</span>
+                            </div>
+                            <span class="text-sm text-secondary" id="txtStabilityRating">Rất ổn định (Mượt mà)</span>
+                        </div>
+
+                        <!-- Packet Loss & Quality Box -->
+                        <div class="ping-metric-card">
+                            <span class="ping-card-label">ĐÁNH GIÁ KẾT NỐI CHƠI GAME</span>
+                            <div class="gameplay-rating-box">
+                                <span class="badge badge-success" id="badgeGameQuality">ĐẠT CHUẨN THI ĐẤU</span>
+                            </div>
+                            <span class="text-sm text-secondary" id="txtGameQualityDesc" style="margin-top: 6px; display: block;">Phản hồi tức thì, không bị trễ chiêu.</span>
+                        </div>
+                    </div>
+
+                    <!-- Stability Test Live Graph / Bars -->
+                    <div class="stability-graph-box margin-top-md">
+                        <div class="graph-header">
+                            <span class="text-sm font-semibold">Biểu đồ độ trễ 10 mẫu kiểm tra liên tiếp:</span>
+                            <span class="text-xs text-muted" id="txtTestStatus">Sẵn sàng đo kiểm tra</span>
+                        </div>
+                        <div class="ping-bars-container" id="pingBarsTrack">
+                            <div class="ping-sample-bar" style="height: 20%;" title="Lần 1"><span class="bar-tag">--</span></div>
+                            <div class="ping-sample-bar" style="height: 20%;" title="Lần 2"><span class="bar-tag">--</span></div>
+                            <div class="ping-sample-bar" style="height: 20%;" title="Lần 3"><span class="bar-tag">--</span></div>
+                            <div class="ping-sample-bar" style="height: 20%;" title="Lần 4"><span class="bar-tag">--</span></div>
+                            <div class="ping-sample-bar" style="height: 20%;" title="Lần 5"><span class="bar-tag">--</span></div>
+                            <div class="ping-sample-bar" style="height: 20%;" title="Lần 6"><span class="bar-tag">--</span></div>
+                            <div class="ping-sample-bar" style="height: 20%;" title="Lần 7"><span class="bar-tag">--</span></div>
+                            <div class="ping-sample-bar" style="height: 20%;" title="Lần 8"><span class="bar-tag">--</span></div>
+                            <div class="ping-sample-bar" style="height: 20%;" title="Lần 9"><span class="bar-tag">--</span></div>
+                            <div class="ping-sample-bar" style="height: 20%;" title="Lần 10"><span class="bar-tag">--</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Server Management Operations Panel -->
+                <div class="server-operations-panel margin-top-lg">
+                    <h3 class="panel-section-title">
+                        <svg viewBox="0 0 24 24" class="icon-sm">
+                            <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.488.488 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54A.484.484 0 0 0 14 2h-4c-.25 0-.46.18-.49.42l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.63 8.47c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h4c.25 0 .46-.18.49-.42l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
+                        </svg>
+                        Bảng Điều Khiển Tác Vụ Máy Chủ
+                    </h3>
+                    <div class="operations-grid">
+                        <div class="op-card">
+                            <div class="op-desc">
+                                <h4>Khởi động lại Tiến trình Server (Reset Server)</h4>
+                                <p class="text-secondary text-sm">Gửi tín hiệu an toàn để khởi động lại máy chủ backend thông qua PM2 / Daemon supervisor. Kết nối sẽ được khôi phục tự động trong vài giây.</p>
+                            </div>
+                            <button class="btn-danger glow-danger" id="btnOpRestartServer">
+                                <svg viewBox="0 0 24 24" class="icon-btn">
+                                    <path d="M13 3h-2v10h2V3zm4.83 2.17l-1.42 1.42A6.92 6.92 0 0 1 19 12c0 3.87-3.13 7-7 7s-7-3.13-7-7c0-2.05.88-3.9 2.29-5.18L5.87 5.4C4.12 7.02 3 9.37 3 12c0 4.97 4.03 9 9 9s9-4.03 9-9c0-2.63-1.12-4.98-2.87-6.6l-.3-.23z"/>
+                                </svg>
+                                Khởi động lại ngay
+                            </button>
+                        </div>
+
+                        <div class="op-card">
+                            <div class="op-desc">
+                                <h4>Dọn dẹp Phòng Rác & Phòng Đã Kết Thúc</h4>
+                                <p class="text-secondary text-sm">Quét và xóa toàn bộ các phòng chơi trống không còn người tham gia hoặc các phòng đã ở trạng thái kết thúc để giải phóng bộ nhớ DB.</p>
+                            </div>
+                            <button class="btn-secondary" id="btnOpCleanupRooms">
+                                <svg viewBox="0 0 24 24" class="icon-btn">
+                                    <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/>
+                                </svg>
+                                Dọn dẹp phòng trống
+                            </button>
+                        </div>
+                        <!-- DOCKER GAME SERVER CARD -->
+                        <div class="op-card glow-cyan">
+                            <div class="op-desc">
+                                <div class="card-tag-row">
+                                    <span class="badge badge-success" id="badgeDockerSysStatus">🟢 DOCKER: RUNNING</span>
+                                    <span class="text-xs text-muted font-mono">Port: 7777/udp</span>
+                                </div>
+                                <h4>Game Server Dedicated (Container: live_server)</h4>
+                                <p class="text-secondary text-sm">Quản lý máy chủ Unity Dedicated Server chạy trên Docker. Bạn có thể tự động Rebuild Image, thay đổi code mới hoặc khởi động lại container nhanh.</p>
+                            </div>
+                            <div class="docker-quick-btn-group">
+                                <button class="btn-primary glow-cyan" id="btnSysOpenDeployModal">
+                                    <svg viewBox="0 0 24 24" class="icon-btn">
+                                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14h2v2h-2v-2zm0-10h2v8h-2V6z"/>
+                                    </svg>
+                                    Rebuild & Thay Image (4 Bước)
+                                </button>
+                                <button class="btn-secondary" id="btnSysDockerRestart">
+                                    <svg viewBox="0 0 24 24" class="icon-btn">
+                                        <path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
+                                    </svg>
+                                    Restart Container
+                                </button>
+                                <button class="btn-secondary" id="btnSysViewGameLogs">
+                                    <svg viewBox="0 0 24 24" class="icon-btn">
+                                        <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm-5 14H4v-4h11v4zm0-5H4V9h11v4zm5 5h-4V9h4v9z"/>
+                                    </svg>
+                                    Xem Console Log Game
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB: GAME & DOCKER LOGS CONSOLE -->
+            <div id="tab-gamelogs" class="tab-pane">
+                <!-- Top Control Bar -->
+                <div class="gamelog-toolbar">
+                    <div class="gamelog-info-group">
+                        <div class="docker-status-chip" id="gamelogDockerStatusChip">
+                            <span class="ping-dot" style="background: var(--green);"></span>
+                            <span id="txtGamelogContainerState">Container: live_server (RUNNING)</span>
+                        </div>
+                        <span class="text-sm text-secondary font-mono">Image: <strong>vps_server</strong> | Port: <strong>7777/udp</strong></span>
+                    </div>
+
+                    <div class="gamelog-actions-group">
+                        <button class="btn-primary glow-cyan" id="btnOpenDeployFromLogs">
+                            <svg viewBox="0 0 24 24" class="icon-btn">
+                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/>
+                            </svg>
+                            <span>Rebuild & Thay Image (4 Bước)</span>
+                        </button>
+                        <button class="btn-secondary" id="btnDockerRestartFromLogs" title="Khởi động lại Container trong 1s">
+                            <svg viewBox="0 0 24 24" class="icon-btn">
+                                <path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
+                            </svg>
+                            <span>Restart Container</span>
+                        </button>
+                        <button class="btn-danger-outline" id="btnDockerTogglePower" title="Dừng hoặc Bật Container">
+                            <span id="txtDockerPowerLabel">Dừng Container</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- DIRECT BUILD UPLOAD & AUTO-DEPLOY CARD -->
+                <div class="build-upload-card margin-top-md glow-cyan">
+                    <div class="upload-header">
+                        <div class="upload-title-group">
+                            <span class="hw-label">CẬP NHẬT FILE BUILD TỪ MÁY TÍNH LÊN VPS (TỰ ĐỘNG MERGE)</span>
+                            <h3>Tải Lên File Build Linux Server (.rar / .zip / .7z) & Tự Động Rebuild Image</h3>
+                        </div>
+                        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                            <span class="badge badge-success font-mono">Tự Động Merge Thư Mục</span>
+                            <span class="badge badge-info font-mono">Hỗ Trợ WinRAR / 7-Zip (GB+)</span>
+                        </div>
+                    </div>
+
+                    <div class="upload-dropzone margin-top-sm" id="buildDropzone">
+                        <input type="file" id="inputBuildZipFile" accept=".zip,.rar,.7z,.tar,.tar.gz,.tgz" style="display: none;">
+                        <div class="dropzone-content" id="dropzoneContent">
+                            <svg viewBox="0 0 24 24" class="icon-upload-cloud">
+                                <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/>
+                            </svg>
+                            <h4>Kéo thả file <strong>AtlantisDeepSlumberServer (.rar / .zip / .7z)</strong> vào đây hoặc <span class="browse-link" id="btnBrowseFile">Chọn File từ Máy Tính</span></h4>
+                            <p class="text-xs text-muted">Hỗ trợ đầy đủ định dạng WinRAR (.rar), 7-Zip (.7z), .zip, .tar.gz (Tự động giải nén và Merge đè file cập nhật vào ~/AtlantisDeepSlumberServer)</p>
+                        </div>
+                        <div class="dropzone-file-info" id="dropzoneFileInfo" style="display: none;">
+                            <div class="file-icon-badge">📦</div>
+                            <div class="file-details">
+                                <strong id="txtSelectedFileName">AtlantisDeepSlumberServer.rar</strong>
+                                <span class="text-xs text-muted" id="txtSelectedFileSize">0 MB</span>
+                            </div>
+                            <button type="button" class="btn-close-sm" id="btnRemoveSelectedFile" title="Hủy chọn file">×</button>
+                        </div>
+                    </div>
+
+                    <!-- Upload Controls & Progress -->
+                    <div class="upload-controls-row margin-top-md">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="chkAutoDeployAfterUpload" checked>
+                            <span>Tự động Rebuild & Chạy Server ngay sau khi tải lên hoàn tất (Khuyến nghị)</span>
+                        </label>
+
+                        <button class="btn-primary glow-cyan" id="btnStartUploadBuild" disabled>
+                            <svg viewBox="0 0 24 24" class="icon-btn">
+                                <path d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/>
+                            </svg>
+                            <span>Tải Lên & Cập Nhật Server Ngay</span>
+                        </button>
+                    </div>
+
+                    <!-- Upload Progress Bar -->
+                    <div class="upload-progress-wrapper margin-top-sm" id="uploadProgressWrapper" style="display: none;">
+                        <div class="progress-info-row">
+                            <span class="text-xs font-semibold" id="txtUploadProgressStatus">Đang tải lên: 0%</span>
+                            <span class="text-xs text-muted font-mono" id="txtUploadSpeed">0 MB/s</span>
+                        </div>
+                        <div class="upload-progress-bar-track">
+                            <div class="upload-progress-bar-fill" id="uploadProgressFill" style="width: 0%;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Secondary Filter & Options Bar -->
+                <div class="terminal-filter-bar margin-top-md">
+                    <div class="search-box" style="flex: 1; max-width: 450px;">
+                        <svg viewBox="0 0 24 24" class="icon-search">
+                            <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z" />
+                        </svg>
+                        <input type="text" id="inputFilterGameLogs" placeholder="Lọc log theo từ khóa (VD: Player, Room, Error, FPS, RPC)...">
+                    </div>
+
+                    <div class="terminal-toggles">
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="toggleLiveGameLogs" checked>
+                            <span class="toggle-slider"></span>
+                            <span class="toggle-label">Live Logs (2s)</span>
+                        </label>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="toggleAutoScrollLogs" checked>
+                            <span class="toggle-slider"></span>
+                            <span class="toggle-label">Tự động cuộn</span>
+                        </label>
+                        <button class="btn-icon" id="btnRefreshGameLogs" title="Làm mới log">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
+                            </svg>
+                        </button>
+                        <button class="btn-icon" id="btnCopyGameLogs" title="Sao chép toàn bộ log">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
+                            </svg>
+                        </button>
+                        <button class="btn-icon" id="btnClearTerminalScreen" title="Xóa màn hình console">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- CYBER TERMINAL SCREEN -->
+                <div class="cyber-terminal-card margin-top-md">
+                    <div class="terminal-header-bar">
+                        <div class="terminal-dots">
+                            <span class="dot-red"></span>
+                            <span class="dot-yellow"></span>
+                            <span class="dot-green"></span>
+                        </div>
+                        <div class="terminal-title">
+                            <svg viewBox="0 0 24 24" class="icon-terminal-sm">
+                                <path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H4V8h16v10zm-2-1h-6v-2h6v2zm-9.7-3.7L5.6 12l2.7-2.3 1.4 1.4-1.3 1.2 1.3 1.2-1.4 1.2z"/>
+                            </svg>
+                            <span>LIVE CONSOLE: Unity Dedicated Server (live_server)</span>
+                        </div>
+                        <div class="terminal-line-count">
+                            <span id="txtLogLineCount">0 dòng log</span>
+                        </div>
+                    </div>
+                    <div class="terminal-viewport" id="gameTerminalViewport">
+                        <pre class="terminal-pre font-mono" id="gameTerminalPre">Đang tải log từ container live_server...</pre>
                     </div>
                 </div>
             </div>
@@ -550,6 +1115,156 @@
             <footer class="modal-footer">
                 <button type="button" class="btn-secondary" id="btnCancelEdit">Hủy</button>
                 <button type="submit" form="editForm" class="btn-primary glow-cyan">Lưu Thay Đổi</button>
+            </footer>
+        </div>
+    </div>
+
+    <!-- MODAL: RESTART SERVER CONFIRMATION -->
+    <div class="modal-overlay" id="restartConfirmModal">
+        <div class="modal-card" style="max-width: 480px;">
+            <header class="modal-header">
+                <div class="modal-title-danger">
+                    <svg viewBox="0 0 24 24" class="icon-danger-warning">
+                        <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/>
+                    </svg>
+                    <h3>Xác nhận Khởi động lại Máy chủ</h3>
+                </div>
+                <button class="btn-close" id="btnCloseRestartModal">×</button>
+            </header>
+            <div class="modal-body">
+                <p style="line-height: 1.6; font-size: 14px; margin-bottom: 16px;">
+                    Bạn có chắc chắn muốn <strong style="color: var(--danger);">Khởi động lại (Reset)</strong> toàn bộ tiến trình Backend của <strong>Atlantis: Deep Slumber</strong> không?
+                </p>
+                <div class="alert-box-warning">
+                    <svg viewBox="0 0 24 24" class="alert-icon">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+                    </svg>
+                    <div>
+                        <strong style="color: var(--warning);">Lưu ý:</strong>
+                        <p class="text-sm" style="margin-top: 4px; color: var(--text-secondary);">
+                            Tiến trình Node.js sẽ thoát và PM2 / Daemon sẽ tự động nạp lại máy chủ ngay lập tức. Mọi kết nối sẽ được khôi phục tự động trong 1-3 giây.
+                        </p>
+                    </div>
+                </div>
+                <div class="input-group margin-top-md">
+                    <label for="restartReason">Lý do khởi động lại (Tùy chọn ghi vào Log):</label>
+                    <input type="text" id="restartReason" placeholder="VD: Giải phóng RAM / Cập nhật cấu hình...">
+                </div>
+            </div>
+            <footer class="modal-footer">
+                <button type="button" class="btn-secondary" id="btnCancelRestart">Hủy bỏ</button>
+                <button type="button" class="btn-danger glow-danger" id="btnConfirmRestart">
+                    <span>XÁC NHẬN KHỞI ĐỘNG LẠI</span>
+                </button>
+            </footer>
+        </div>
+    </div>
+
+    <!-- FULLSCREEN REBOOTING OVERLAY (LIVE POLLING RECONNECT) -->
+    <div class="reboot-overlay" id="rebootOverlay" style="display: none;">
+        <div class="reboot-card">
+            <div class="reboot-spinner">
+                <div class="reboot-pulse-ring"></div>
+                <svg viewBox="0 0 100 100" class="sub-aquatic-logo spinning-slow">
+                    <circle cx="50" cy="50" r="45" stroke="var(--cyan-glow)" stroke-width="2" fill="none" stroke-dasharray="8 4" />
+                    <path d="M50,15 L75,70 L25,70 Z" fill="none" stroke="var(--cyan)" stroke-width="3" stroke-linejoin="round" />
+                    <circle cx="50" cy="50" r="6" fill="var(--danger)" />
+                </svg>
+            </div>
+            <h2 id="txtRebootTitle">ĐANG KHỞI ĐỘNG LẠI MÁY CHỦ</h2>
+            <p class="subtitle" id="txtRebootSubtitle">Vui lòng đợi trong giây lát, hệ thống đang tự động kết nối lại...</p>
+            
+            <div class="reboot-step-list">
+                <div class="step-item active" id="step1">
+                    <span class="step-bullet">1</span>
+                    <span>Đã gửi lệnh Reset xuống Backend</span>
+                </div>
+                <div class="step-item" id="step2">
+                    <span class="step-bullet">2</span>
+                    <span>Tiến trình đang khởi động lại (PM2 Supervisor)</span>
+                </div>
+                <div class="step-item" id="step3">
+                    <span class="step-bullet">3</span>
+                    <span id="step3Text">Đang kiểm tra trạng thái sức khỏe máy chủ (/health)...</span>
+                </div>
+            </div>
+
+            <div class="reboot-timer">
+                Thời gian chờ: <strong id="rebootTimerVal">0s</strong>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: DOCKER REBUILD & DEPLOY MODAL (4 STEPS AUTOMATION) -->
+    <div class="modal-overlay" id="dockerDeployModal">
+        <div class="modal-card deploy-modal-card" style="max-width: 860px; width: 95%;">
+            <header class="modal-header">
+                <div class="modal-title-group" style="display: flex; align-items: center; gap: 10px;">
+                    <svg viewBox="0 0 24 24" style="width: 24px; height: 24px; fill: var(--cyan);">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/>
+                    </svg>
+                    <h3 style="margin: 0;">Rebuild & Thay Image Game Server (4 Bước Tự Động)</h3>
+                </div>
+                <button class="btn-close" id="btnCloseDeployModal">×</button>
+            </header>
+            <div class="modal-body">
+                <!-- 4 Steps Visual Stepper -->
+                <div class="deploy-stepper-container">
+                    <div class="deploy-step-item" id="depStep1">
+                        <div class="step-circle">1</div>
+                        <div class="step-label">
+                            <strong>Dừng & Xóa Container</strong>
+                            <span>docker stop/rm live_server</span>
+                        </div>
+                    </div>
+                    <div class="step-connector" id="depConn1"></div>
+                    <div class="deploy-step-item" id="depStep2">
+                        <div class="step-circle">2</div>
+                        <div class="step-label">
+                            <strong>Xóa Image Cũ</strong>
+                            <span>docker rmi -f vps_server</span>
+                        </div>
+                    </div>
+                    <div class="step-connector" id="depConn2"></div>
+                    <div class="deploy-step-item" id="depStep3">
+                        <div class="step-circle">3</div>
+                        <div class="step-label">
+                            <strong>Rebuild Image Mới</strong>
+                            <span>docker build -t vps_server .</span>
+                        </div>
+                    </div>
+                    <div class="step-connector" id="depConn3"></div>
+                    <div class="deploy-step-item" id="depStep4">
+                        <div class="step-circle">4</div>
+                        <div class="step-label">
+                            <strong>Chạy Container 7777</strong>
+                            <span>docker run live_server</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Live Deploy Terminal Output -->
+                <div class="deploy-terminal-box margin-top-md">
+                    <div class="deploy-term-header">
+                        <div class="term-status-badge" id="deployStatusBadge">
+                            <span class="ping-dot" id="dotDeployStatus" style="background: var(--warning);"></span>
+                            <span id="txtDeployStatus">Sẵn sàng thực thi</span>
+                        </div>
+                        <span class="text-xs text-muted font-mono" id="txtDeployTimer">Thời gian: 0s</span>
+                    </div>
+                    <div class="deploy-term-body" id="deployTerminalBody">
+                        <pre class="deploy-terminal-pre font-mono" id="deployTerminalPre">Bấm "BẮT ĐẦU REBUILD & DEPLOY" để kích hoạt chuỗi 4 lệnh tự động trên VPS...</pre>
+                    </div>
+                </div>
+            </div>
+            <footer class="modal-footer">
+                <button type="button" class="btn-secondary" id="btnCancelDeploy">Đóng</button>
+                <button type="button" class="btn-primary glow-cyan" id="btnStartDeployProcess">
+                    <svg viewBox="0 0 24 24" class="icon-btn">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/>
+                    </svg>
+                    <span>BẮT ĐẦU REBUILD & DEPLOY</span>
+                </button>
             </footer>
         </div>
     </div>

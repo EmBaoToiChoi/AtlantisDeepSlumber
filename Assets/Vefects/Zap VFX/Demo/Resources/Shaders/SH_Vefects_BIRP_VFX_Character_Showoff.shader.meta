@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: cbd0770966fec354083a04a356303a79
+ShaderImporter:
+  externalObjects: {}
+  defaultTextures: []
+  nonModifiableTextures: []
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 340466
+  packageName: Stylized VFX Bundle
+  packageVersion: 1.0.1
+  assetPath: Assets/Vefects/Stylized AoE VFX/Demo/Resources/Shaders/SH_Vefects_BIRP_VFX_Character_Showoff.shader
+  uploadId: 860344

@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEngine.UIElements;
 using UnityEngine.Video; // Bổ sung thư viện xử lý Video
 using System.Threading.Tasks; // <-- THÊM DÒNG NÀY ĐỂ FIX LỖI BIÊN DỊCH ASYNC/AWAIT
+using static UnityEngine.ShadowQuality;
 
 public class AtlantisMenuController : MonoBehaviour
 {
@@ -92,6 +93,11 @@ public class AtlantisMenuController : MonoBehaviour
     private VisualElement _activeDropdownPopup;
     private string _resolutionValue = "1920x1080 (FHD)";
     private string _qualityValue    = "High";
+    private int _aaIndex            = 0; // 0=Off, 1=2x, 2=4x, 3=8x
+    private int _shadowIndex        = 3; // 0=Off, 1=Low, 2=Medium, 3=High
+    private int _particleIndex      = 2; // 0=Low, 1=Medium, 2=High
+    private int _fpsCapIndex        = 0; // 0=Unlimited, 1=30, 2=60, 3=120, 4=144
+    private bool _postfxValue       = true;
     private string _languageValueString = "Vietnamese";
     private string _micDeviceValue = "Default";
     private string _micModeValue = "Push To Talk";
@@ -117,6 +123,10 @@ public class AtlantisMenuController : MonoBehaviour
     {
         if (_netBootstrap == null) _netBootstrap = FindFirstObjectByType<NetworkBootstrap>();
         if (_netBootstrap == null) _netBootstrap = NetworkBootstrap.Instance;
+
+        // Áp dụng graphics settings đã lưu ngay khi scene Main Menu load
+        // (NetworkBootstrap cũng gọi ApplyAll trong Awake — đây là lớp bảo hiểm idempotent).
+        GraphicsSettingsManager.ApplyAll();
 
         _uiDocument = GetComponent<UIDocument>();
         if (_uiDocument == null) return;
@@ -283,11 +293,35 @@ public class AtlantisMenuController : MonoBehaviour
     // CUSTOM DROPDOWN
     // =========================================================================
     private static readonly string[] ResolutionChoices = { "3840x2160 (4K)", "2560x1440 (2K)", "1920x1080 (FHD)", "1280x720 (HD)" };
-    private string[] QualityChoices => new string[] { 
-        LocalizationManager.Get("quality_ultra"), 
-        LocalizationManager.Get("quality_high"), 
-        LocalizationManager.Get("quality_medium"), 
-        LocalizationManager.Get("quality_low") 
+    private string[] QualityChoices => new string[] {
+        LocalizationManager.Get("quality_ultra"),
+        LocalizationManager.Get("quality_high"),
+        LocalizationManager.Get("quality_medium"),
+        LocalizationManager.Get("quality_low")
+    };
+    private string[] AaChoices => new string[] {
+        LocalizationManager.Get("aa_off"),
+        LocalizationManager.Get("aa_2x"),
+        LocalizationManager.Get("aa_4x"),
+        LocalizationManager.Get("aa_8x")
+    };
+    private string[] ShadowChoices => new string[] {
+        LocalizationManager.Get("shadow_off"),
+        LocalizationManager.Get("shadow_low"),
+        LocalizationManager.Get("shadow_medium"),
+        LocalizationManager.Get("shadow_high")
+    };
+    private string[] ParticleChoices => new string[] {
+        LocalizationManager.Get("particles_low"),
+        LocalizationManager.Get("particles_medium"),
+        LocalizationManager.Get("particles_high")
+    };
+    private string[] FpsCapChoices => new string[] {
+        LocalizationManager.Get("fps_uncapped"),
+        LocalizationManager.Get("fps_30"),
+        LocalizationManager.Get("fps_60"),
+        LocalizationManager.Get("fps_120"),
+        LocalizationManager.Get("fps_144")
     };
     private static readonly string[] LanguageChoices   = { "Vietnamese" };
     private string[] MicDeviceChoices => GetMicrophoneDevices();
@@ -344,6 +378,36 @@ public class AtlantisMenuController : MonoBehaviour
                 evt.StopPropagation();
                 ToggleDropdown(qualEl, QualityChoices, ref _qualityValue, "opt-quality-value");
             });
+
+        // --- Graphics sub-options ---
+        var aaEl       = _root.Q<VisualElement>("opt-aa");
+        var shadowEl   = _root.Q<VisualElement>("opt-shadows");
+        var particleEl = _root.Q<VisualElement>("opt-particles");
+        var fpscapEl   = _root.Q<VisualElement>("opt-fpscap");
+
+        if (aaEl != null) aaEl.RegisterCallback<PointerUpEvent>(evt =>
+        {
+            evt.StopPropagation();
+            ToggleDropdownInt(aaEl, AaChoices, _aaIndex, "opt-aa-value", idx => _aaIndex = idx);
+        });
+
+        if (shadowEl != null) shadowEl.RegisterCallback<PointerUpEvent>(evt =>
+        {
+            evt.StopPropagation();
+            ToggleDropdownInt(shadowEl, ShadowChoices, _shadowIndex, "opt-shadows-value", idx => _shadowIndex = idx);
+        });
+
+        if (particleEl != null) particleEl.RegisterCallback<PointerUpEvent>(evt =>
+        {
+            evt.StopPropagation();
+            ToggleDropdownInt(particleEl, ParticleChoices, _particleIndex, "opt-particles-value", idx => _particleIndex = idx);
+        });
+
+        if (fpscapEl != null) fpscapEl.RegisterCallback<PointerUpEvent>(evt =>
+        {
+            evt.StopPropagation();
+            ToggleDropdownInt(fpscapEl, FpsCapChoices, _fpsCapIndex, "opt-fpscap-value", idx => _fpsCapIndex = idx);
+        });
 
         if (langEl != null)
         {
@@ -404,6 +468,46 @@ public class AtlantisMenuController : MonoBehaviour
         }
     }
 
+    /// <summary>Phiên bản index-based của ToggleDropdown, dùng cho dropdown graphics (AA/Shadows/Particles/FPSCap).</summary>
+    private void ToggleDropdownInt(VisualElement trigger, string[] choices, int currentIndex, string valueLabelName, System.Action<int> onSelected)
+    {
+        if (_activeDropdownPopup != null)
+        {
+            CloseDropdownPopup();
+            return;
+        }
+
+        string capturedLabelName = valueLabelName;
+        string[] capturedChoices = choices;
+        System.Action<int> capturedOnSelected = onSelected;
+
+        var rootScreen = _root.Q<VisualElement>(className: "root-screen") ?? _root;
+        var popup = new VisualElement();
+        popup.AddToClassList("custom-dropdown-popup");
+
+        for (int i = 0; i < capturedChoices.Length; i++)
+        {
+            int choiceIdx = i;
+            string choiceText = capturedChoices[i];
+            var item = new Label(choiceText);
+            item.AddToClassList("custom-dropdown-item");
+            item.RegisterCallback<PointerUpEvent>(e =>
+            {
+                e.StopPropagation();
+                var lbl = _root.Q<Label>(capturedLabelName);
+                if (lbl != null) lbl.text = choiceText;
+                capturedOnSelected?.Invoke(choiceIdx);
+                CloseDropdownPopup();
+            });
+            popup.Add(item);
+        }
+
+        rootScreen.Add(popup);
+        _activeDropdownPopup = popup;
+        popup.RegisterCallback<GeometryChangedEvent>(_ => PositionPopup(popup, trigger, rootScreen));
+        PositionPopup(popup, trigger, rootScreen);
+    }
+
     private void ToggleDropdown(VisualElement trigger, string[] choices, ref string currentValue, string valueLabelName, System.Action<string> onValueChange = null)
     {
         // Nếu popup này đang mở thì đóng lại
@@ -416,7 +520,6 @@ public class AtlantisMenuController : MonoBehaviour
         string capturedLabelName = valueLabelName;
         string[] capturedChoices = choices;
         var capturedRef = trigger;
-
         // Tạo popup và gắn vào root-screen (position: absolute)
         var rootScreen = _root.Q<VisualElement>(className: "root-screen") ?? _root;
         var popup = new VisualElement();
@@ -1053,11 +1156,20 @@ public class AtlantisMenuController : MonoBehaviour
         _appliedSfxVol = PlayerPrefs.GetFloat("SFXVolume", 90f);
         _appliedSens = _root.Q<Slider>("slider-sens")?.value ?? 50f;
         _appliedInvertY = _root.Q<Toggle>("opt-invert-y")?.value ?? false;
-        
+
         _appliedResolution = _resolutionValue;
         _appliedQuality = _qualityValue;
         _appliedFullscreen = _root.Q<Toggle>("opt-fullscreen")?.value ?? true;
         _appliedVsync = _root.Q<Toggle>("opt-vsync")?.value ?? true;
+        _postfxValue = _root.Q<Toggle>("opt-postfx")?.value ?? true;
+
+        // Đồng bộ index graphics sub-options từ PlayerPrefs (để IsAnyOptionChanged hoạt động đúng).
+        GraphicsSettingsManager.ApplyAll();
+        var curGfx = GraphicsSettingsManager.Current;
+        _aaIndex       = GraphicsSettingsManager.AaToIndex(curGfx.AntiAliasing);
+        _shadowIndex   = GraphicsSettingsManager.ShadowToIndex(curGfx.Shadows);
+        _particleIndex = GraphicsSettingsManager.ParticleToIndex(curGfx.Particles);
+        _fpsCapIndex   = GraphicsSettingsManager.FpsCapToIndex(curGfx.FpsCap);
 
         if (MicManager.Instance != null)
         {
@@ -1132,6 +1244,14 @@ public class AtlantisMenuController : MonoBehaviour
         
         if ((_root.Q<Toggle>("opt-fullscreen")?.value ?? true) != _appliedFullscreen) return true;
         if ((_root.Q<Toggle>("opt-vsync")?.value ?? true) != _appliedVsync) return true;
+        if ((_root.Q<Toggle>("opt-postfx")?.value ?? true) != _postfxValue) return true;
+
+        // Graphics sub-options: so sánh theo snapshot hiện tại (đã được ApplyAll đồng bộ vào PlayerPrefs).
+        var curGfx = GraphicsSettingsManager.Current;
+        if (GraphicsSettingsManager.AaToIndex(curGfx.AntiAliasing)       != _aaIndex)       return true;
+        if (GraphicsSettingsManager.ShadowToIndex(curGfx.Shadows)         != _shadowIndex)   return true;
+        if (GraphicsSettingsManager.ParticleToIndex(curGfx.Particles)     != _particleIndex) return true;
+        if (GraphicsSettingsManager.FpsCapToIndex(curGfx.FpsCap)         != _fpsCapIndex)   return true;
         if ((_root.Q<Toggle>("opt-invert-y")?.value ?? false) != _appliedInvertY) return true;
         
         return false;
@@ -1280,7 +1400,7 @@ public class AtlantisMenuController : MonoBehaviour
 
         var qualLbl = _root.Q<Label>("opt-quality-value");
         if (qualLbl != null) qualLbl.text = _qualityValue;
-        
+
         var langLbl = _root.Q<Label>("opt-language-value");
         if (langLbl != null) langLbl.text = _languageValueString;
 
@@ -1301,6 +1421,18 @@ public class AtlantisMenuController : MonoBehaviour
         var pttKeyLbl = _root.Q<Label>("opt-ptt-key-value");
         if (pttKeyLbl != null) pttKeyLbl.text = _pttKeyValue;
 
+        // --- Graphics sub-options: read from PlayerPrefs to keep UI in sync after Cancel ---
+        var cur = GraphicsSettingsManager.Current;
+        _aaIndex       = GraphicsSettingsManager.AaToIndex(cur.AntiAliasing);
+        _shadowIndex   = GraphicsSettingsManager.ShadowToIndex(cur.Shadows);
+        _particleIndex = GraphicsSettingsManager.ParticleToIndex(cur.Particles);
+        _fpsCapIndex   = GraphicsSettingsManager.FpsCapToIndex(cur.FpsCap);
+        _postfxValue   = cur.PostFX;
+        SyncGraphicsLabelsFromIndex();
+
+        // --- Graphics sub-options: keep label text in sync with current index state ---
+        SyncGraphicsLabelsFromIndex();
+
         SetSliderValue("slider-master", "val-master", _appliedMasterVol, true);
         SetSliderValue("slider-music", "val-music", _appliedMusicVol, true);
         SetSliderValue("slider-sfx", "val-sfx", _appliedSfxVol, true);
@@ -1313,7 +1445,10 @@ public class AtlantisMenuController : MonoBehaviour
 
         var vsyncToggle = _root.Q<Toggle>("opt-vsync");
         if (vsyncToggle != null) vsyncToggle.value = _appliedVsync;
-        
+
+        var postfxTgl = _root.Q<Toggle>("opt-postfx");
+        if (postfxTgl != null) postfxTgl.value = _postfxValue;
+
         var invertToggle = _root.Q<Toggle>("opt-invert-y");
         if (invertToggle != null) invertToggle.value = _appliedInvertY;
     }
@@ -1326,6 +1461,41 @@ public class AtlantisMenuController : MonoBehaviour
         if (label != null) label.text = Mathf.RoundToInt(val) + (isPercent ? "%" : "");
     }
 
+    /// <summary>Đồng bộ text hiển thị 4 dropdown graphics + toggle postfx từ các field index.</summary>
+    private void SyncGraphicsLabelsFromIndex()
+    {
+        if (AaChoices.Length > 0)
+        {
+            int idx = Mathf.Clamp(_aaIndex, 0, AaChoices.Length - 1);
+            _aaIndex = idx;
+            var lbl = _root.Q<Label>("opt-aa-value");
+            if (lbl != null) lbl.text = AaChoices[idx];
+        }
+        if (ShadowChoices.Length > 0)
+        {
+            int idx = Mathf.Clamp(_shadowIndex, 0, ShadowChoices.Length - 1);
+            _shadowIndex = idx;
+            var lbl = _root.Q<Label>("opt-shadows-value");
+            if (lbl != null) lbl.text = ShadowChoices[idx];
+        }
+        if (ParticleChoices.Length > 0)
+        {
+            int idx = Mathf.Clamp(_particleIndex, 0, ParticleChoices.Length - 1);
+            _particleIndex = idx;
+            var lbl = _root.Q<Label>("opt-particles-value");
+            if (lbl != null) lbl.text = ParticleChoices[idx];
+        }
+        if (FpsCapChoices.Length > 0)
+        {
+            int idx = Mathf.Clamp(_fpsCapIndex, 0, FpsCapChoices.Length - 1);
+            _fpsCapIndex = idx;
+            var lbl = _root.Q<Label>("opt-fpscap-value");
+            if (lbl != null) lbl.text = FpsCapChoices[idx];
+        }
+        var postfxTgl = _root.Q<Toggle>("opt-postfx");
+        if (postfxTgl != null) postfxTgl.value = _postfxValue;
+    }
+
     private void SaveOptions()
     {
         HideConfirmOverlay();
@@ -1334,6 +1504,7 @@ public class AtlantisMenuController : MonoBehaviour
         _appliedQuality = _qualityValue;
         _appliedFullscreen = _root.Q<Toggle>("opt-fullscreen")?.value ?? true;
         _appliedVsync = _root.Q<Toggle>("opt-vsync")?.value ?? true;
+        _postfxValue = _root.Q<Toggle>("opt-postfx")?.value ?? true;
         
         _appliedMasterVol = _root.Q<Slider>("slider-master")?.value ?? 100f;
         _appliedMusicVol = _root.Q<Slider>("slider-music")?.value ?? 80f;
@@ -1381,28 +1552,23 @@ public class AtlantisMenuController : MonoBehaviour
             MicManager.Instance.RestartRecording();
         }
 
-        // --- RESOLUTION ---
-        // Parse "WxH (label)" → e.g. "1920x1080 (FHD)" → 1920, 1080
-        bool fullscreen = _appliedFullscreen;
-        ParseResolution(_resolutionValue, out int w, out int h);
-        if (w > 0 && h > 0)
-            Screen.SetResolution(w, h, fullscreen ? FullScreenMode.FullScreenWindow : FullScreenMode.Windowed);
-
-        // --- V-SYNC ---
-        bool vsync = _appliedVsync;
-        QualitySettings.vSyncCount = vsync ? 1 : 0;
-
-        // --- GRAPHICS QUALITY ---
-        int qualityIndex = _qualityValue switch
+        // --- GRAPHICS (resolution / vsync / quality / aa / shadows / particles / fps cap / postfx) ---
+        // Đọc lại từ UI để chắc chắn khớp với lựa chọn mới nhất, build snapshot rồi nhờ manager lưu + áp dụng.
+        var gfx = new GraphicsSettingsManager.GraphicsSnapshot
         {
-            "Ultra (Cinematic)" => QualitySettings.names.Length - 1,
-            "High"              => Mathf.Max(0, QualitySettings.names.Length - 2),
-            "Medium"            => Mathf.Max(0, QualitySettings.names.Length / 2),
-            _                   => 0, // Low (Performance)
+            Resolution   = _resolutionValue,
+            Quality      = _qualityValue,
+            Fullscreen   = _appliedFullscreen,
+            VSync        = _appliedVsync,
+            FpsCap       = GraphicsSettingsManager.FpsCapFromIndex(_fpsCapIndex),
+            AntiAliasing = GraphicsSettingsManager.AaFromIndex(_aaIndex),
+            Shadows      = GraphicsSettingsManager.ShadowFromIndex(_shadowIndex),
+            PostFX       = _postfxValue,
+            Particles    = GraphicsSettingsManager.ParticleFromIndex(_particleIndex),
         };
-        QualitySettings.SetQualityLevel(qualityIndex, true);
+        GraphicsSettingsManager.SaveAndApply(gfx);
 
-        Debug.Log($"[Options] Applied: {w}x{h} | Fullscreen={fullscreen} | VSync={vsync} | Quality={_qualityValue} (idx {qualityIndex})");
+        Debug.Log($"[Options] Graphics applied: {gfx.Resolution} | FS={gfx.Fullscreen} | VSync={gfx.VSync} | Quality={gfx.Quality} | AA={gfx.AntiAliasing}x | Shadows={gfx.Shadows} | Particles={gfx.Particles} | FPS={gfx.FpsCap} | PostFX={gfx.PostFX}");
 
         ShowPanel(_mainMenuPanel);
     }
