@@ -2805,18 +2805,39 @@ public class FallingFireOrbProjectile : MonoBehaviour
         playerLayer = layer;
         isFalling = true;
 
-        // Restart child Particle Systems and Visual Effects upon activation from Object Pool
+        // Tắt tất cả script PixPlays bên thứ 3 để tránh tự hủy hay can thiệp
+        var mbList = GetComponentsInChildren<MonoBehaviour>(true);
+        foreach (var mb in mbList)
+        {
+            if (mb != null && mb != this && mb.GetType().Namespace != null && mb.GetType().Namespace.Contains("PixPlays"))
+            {
+                mb.enabled = false;
+            }
+        }
+
+        // Kích hoạt tất cả Particle Systems
         var particles = GetComponentsInChildren<ParticleSystem>(true);
         foreach (var ps in particles)
         {
-            ps.Clear();
-            ps.Play();
+            if (ps != null)
+            {
+                var main = ps.main;
+                main.scalingMode = ParticleSystemScalingMode.Hierarchy;
+                main.loop = true;
+                ps.Clear(true);
+                ps.Play(true);
+            }
         }
+
+        // Kích hoạt tất cả VFX Graphs
         var vfxGraphs = GetComponentsInChildren<UnityEngine.VFX.VisualEffect>(true);
         foreach (var ve in vfxGraphs)
         {
-            ve.Reinit();
-            ve.Play();
+            if (ve != null)
+            {
+                ve.Reinit();
+                ve.Play();
+            }
         }
     }
 
@@ -2825,6 +2846,21 @@ public class FallingFireOrbProjectile : MonoBehaviour
         if (!isFalling) return;
 
         transform.position += Vector3.down * dropSpeed * Time.deltaTime;
+
+        // Quét va chạm liên tục với Player khi đang rơi (bán kính 2.0m)
+        Collider[] hits = Physics.OverlapSphere(transform.position, 2.0f);
+        foreach (var hit in hits)
+        {
+            if (hit == null) continue;
+            var hudTarget = hit.GetComponentInParent<IPlayerHUDTarget>() ?? hit.GetComponentInChildren<IPlayerHUDTarget>();
+            if (hudTarget != null && hudTarget is MonoBehaviour mb)
+            {
+                Transform playerRoot = mb.transform;
+                isFalling = false;
+                OnDirectHitPlayer(playerRoot);
+                return;
+            }
+        }
 
         if (transform.position.y <= targetGroundPos.y + 0.2f)
         {
@@ -2837,24 +2873,29 @@ public class FallingFireOrbProjectile : MonoBehaviour
     {
         if (!isFalling) return;
 
-        // Quét tìm Player bằng IPlayerHUDTarget (chính xác tuyệt đối kể cả chạm collider con)
         var hudTarget = other.GetComponentInParent<IPlayerHUDTarget>() ?? other.GetComponentInChildren<IPlayerHUDTarget>();
-        if (hudTarget != null)
+        if (hudTarget != null && hudTarget is MonoBehaviour mb)
         {
-            Transform playerRoot = hudTarget.transform;
+            Transform playerRoot = mb.transform;
             isFalling = false;
-            Vector3 knockbackDir = (playerRoot.position - transform.position).normalized + Vector3.up * 0.5f;
-            EnemyDamageHelper.DealDamage(playerRoot, damage, knockbackDir * 5f);
+            OnDirectHitPlayer(playerRoot);
+        }
+    }
 
-            if (bossOwner != null)
-            {
-                bossOwner.PlayFireBarrageImpactEffects(transform.position);
-                bossOwner.RecycleFireBarrage(gameObject);
-            }
-            else
-            {
-                gameObject.SetActive(false);
-            }
+    private void OnDirectHitPlayer(Transform playerRoot)
+    {
+        Vector3 knockbackDir = (playerRoot.position - transform.position).normalized + Vector3.up * 0.5f;
+        EnemyDamageHelper.DealDamage(playerRoot, damage, knockbackDir * 5f);
+        Debug.Log($"[FallingFireOrb] Cầu lửa rơi trúng trực tiếp Player: {playerRoot.name} -> Trừ {damage} HP!");
+
+        if (bossOwner != null)
+        {
+            bossOwner.PlayFireBarrageImpactEffects(transform.position);
+            bossOwner.RecycleFireBarrage(gameObject);
+        }
+        else
+        {
+            gameObject.SetActive(false);
         }
     }
 
