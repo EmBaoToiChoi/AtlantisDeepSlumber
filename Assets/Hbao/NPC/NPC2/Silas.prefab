@@ -472,6 +472,15 @@ MonoBehaviour:
   earthSummonTrigger: EarthSummon
   earthSummonInterval: 5
   earthBlastScale: 5
+  tornadoPrefab: {fileID: 8337239312643627552, guid: 9d847abb63f67374fad7521470bdc08a, type: 3}
+  tornadoCount: 5
+  tornadoSpawnRadius: 2.5
+  tornadoSpeed: 7
+  tornadoLifetime: 5
+  tornadoScale: 1.5
+  tornadoDamage: 15
+  tornadoLiftHeight: 4.5
+  tornadoTrapDuration: 1.2
   minionPrefab: {fileID: 5764630933208192827, guid: c39f677d839639b4dae69d3b08885fa7, type: 3}
   minionSpawnRadius: 6
   minionSummonInterval: 10
