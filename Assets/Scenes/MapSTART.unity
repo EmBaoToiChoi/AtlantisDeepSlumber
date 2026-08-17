@@ -43261,6 +43261,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Effect_50_GenesisBreaker
       objectReference: {fileID: 0}
+    - target: {fileID: 8388466950824095792, guid: 547c3c54726d33b49bf3810ee190a7be, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 8388466950824095797, guid: 547c3c54726d33b49bf3810ee190a7be, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0
@@ -49340,7 +49344,7 @@ Transform:
   m_GameObject: {fileID: 255776024}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -85.11511, y: 17.186943, z: 62.149323}
+  m_LocalPosition: {x: -600.26514, y: 62.2, z: 595.4193}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -103202,6 +103206,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Effect_50_GenesisDroneBlaster
       objectReference: {fileID: 0}
+    - target: {fileID: 6852847330999259004, guid: 3d8d5f101fe01164d88c2f188ad6974d, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 6852847330999259006, guid: 3d8d5f101fe01164d88c2f188ad6974d, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0
@@ -104873,6 +104881,10 @@ PrefabInstance:
     - target: {fileID: 4295440196865602167, guid: a0661de1d0027544399fed12c668178b, type: 3}
       propertyPath: m_Name
       value: Effect_25_CriticalSlash
+      objectReference: {fileID: 0}
+    - target: {fileID: 4295440196865602167, guid: a0661de1d0027544399fed12c668178b, type: 3}
+      propertyPath: m_IsActive
+      value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -210951,7 +210963,7 @@ Transform:
   m_GameObject: {fileID: 1540000669}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -10.1, y: 10.69, z: 40.1}
+  m_LocalPosition: {x: -525.25, y: 54.73, z: 573.37}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -280948,6 +280960,10 @@ PrefabInstance:
     - target: {fileID: 7385442801184268036, guid: 4873ade85befa8e42b268370137a5e0e, type: 3}
       propertyPath: m_Name
       value: Effect_09_GloryShield
+      objectReference: {fileID: 0}
+    - target: {fileID: 7385442801184268036, guid: 4873ade85befa8e42b268370137a5e0e, type: 3}
+      propertyPath: m_IsActive
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 7385442801184268039, guid: 4873ade85befa8e42b268370137a5e0e, type: 3}
       propertyPath: m_LocalPosition.x

@@ -158,6 +158,21 @@ public class FinalBossAI : NetworkBehaviour, ISwordRainOwner, IFireBarrageOwner
     public float fireBarrageImpactRadius = 2.5f;
     public string fireBarrageTriggerParam = "AttackCombo";
 
+    // ─── Thiết lập Nhạc Chiến Đấu Boss (Boss Battle Music) ────
+    [Header("Boss Battle Music (Nhạc Chiến Đấu Boss)")]
+    [Tooltip("Âm thanh/Nhạc nền trận chiến duy trì lặp lại trong suốt trận đánh Final Boss")]
+    public AudioClip bossBattleBGM;
+    [Tooltip("Âm lượng nhạc trận chiến (0.0 đến 1.0)")]
+    [Range(0f, 1f)] public float bossBattleBGMVolume = 0.8f;
+    [Tooltip("Tự động lặp lại âm thanh trong suốt trận đấu")]
+    public bool loopBattleBGM = true;
+    [Tooltip("Thời gian Fade In khi bắt đầu chiến đấu (giây)")]
+    public float battleBGMFadeInDuration = 1.5f;
+    [Tooltip("Thời gian Fade Out khi Final Boss bị tiêu diệt (giây)")]
+    public float battleBGMFadeOutDuration = 2.5f;
+    private AudioSource battleBgmAudioSource;
+    private Coroutine battleBgmFadeCoroutine;
+
     [Header("Movement Speeds")]
     public float walkSpeed = 2.2f;
     public float runSpeed = 6.0f;
@@ -390,6 +405,7 @@ public class FinalBossAI : NetworkBehaviour, ISwordRainOwner, IFireBarrageOwner
         fireBarrageCounter.OnValueChanged += (_, _) => {
             if (anim != null) anim.SetTrigger(fireBarrageTriggerParam);
         };
+        isBossActive.OnValueChanged += (oldVal, newVal) => { if (newVal) StartBattleMusic(); else StopBattleMusic(true); };
         netScale.OnValueChanged += (_, newScale) => transform.localScale = newScale;
         netIsEnraged.OnValueChanged += (_, enraged) => isEnraged = enraged;
         netIsLastStand.OnValueChanged += (_, lastStand) => {
@@ -448,6 +464,7 @@ public class FinalBossAI : NetworkBehaviour, ISwordRainOwner, IFireBarrageOwner
         fireBarrageCounter.OnValueChanged -= (_, _) => {
             if (anim != null) anim.SetTrigger(fireBarrageTriggerParam);
         };
+        StopBattleMusic(false);
         netScale.OnValueChanged -= (_, newScale) => transform.localScale = newScale;
         netIsEnraged.OnValueChanged -= (_, enraged) => isEnraged = enraged;
         netIsLastStand.OnValueChanged -= (_, lastStand) => { isLastStand = lastStand; };
@@ -612,6 +629,7 @@ public class FinalBossAI : NetworkBehaviour, ISwordRainOwner, IFireBarrageOwner
         if (shockwaveCooldownTimer > 0) shockwaveCooldownTimer -= Time.deltaTime;
         if (IsBossActive && !IsDead && CurrentStateValue != FinalBossState.Sitting && CurrentStateValue != FinalBossState.JumpDown)
         {
+            StartBattleMusic();
             if (fireSpewCooldownTimer > 0) fireSpewCooldownTimer -= Time.deltaTime;
             if (fireBarrageCooldownTimer > 0) fireBarrageCooldownTimer -= Time.deltaTime;
             if (swordRainCooldownTimer > 0) swordRainCooldownTimer -= Time.deltaTime;
@@ -1668,6 +1686,14 @@ public class FinalBossAI : NetworkBehaviour, ISwordRainOwner, IFireBarrageOwner
             if (!boss.isStandaloneMode) boss.dieCounter.Value++;
             else if (boss.anim != null) boss.anim.SetTrigger(boss.dieTriggerParam);
 
+            if (!boss.isStandaloneMode && boss.IsServer)
+            {
+                boss.PlayBattleBGMClientRpc(false);
+            }
+            else
+            {
+                boss.StopBattleMusic(true);
+            }
             Debug.Log("[FinalBossAI] Final Boss is dead!");
             Destroy(boss.gameObject, 6f);
         }
@@ -2538,6 +2564,101 @@ public class FinalBossAI : NetworkBehaviour, ISwordRainOwner, IFireBarrageOwner
     public void OnSwipeSwing() { }
     public void OnShockwaveImpact() { }
     public void OnFireSpewImpact() { }
+    // ══════════════════════════════════════════════════════════
+    //  BOSS BATTLE MUSIC (NHẠC CHIẾN ĐẤU DUY TRÌ)
+    // ══════════════════════════════════════════════════════════
+
+    [ClientRpc]
+    private void PlayBattleBGMClientRpc(bool play)
+    {
+        if (play) StartBattleMusic();
+        else StopBattleMusic(true);
+    }
+
+    public void StartBattleMusic()
+    {
+        if (bossBattleBGM == null || IsDead) return;
+
+        if (battleBgmAudioSource == null)
+        {
+            battleBgmAudioSource = gameObject.AddComponent<AudioSource>();
+            battleBgmAudioSource.playOnAwake = false;
+            battleBgmAudioSource.spatialBlend = 0f; // 2D BGM toàn diện cho toàn sàn đấu
+        }
+
+        // Đảm bảo LUÔN LUÔN BẬT LOOP để nhạc duy trì lặp lại vô tận trong suốt trận đấu
+        battleBgmAudioSource.clip = bossBattleBGM;
+        battleBgmAudioSource.loop = true;
+
+        if (!battleBgmAudioSource.isPlaying)
+        {
+            battleBgmAudioSource.volume = 0f;
+            battleBgmAudioSource.Play();
+            if (battleBgmFadeCoroutine != null) StopCoroutine(battleBgmFadeCoroutine);
+            battleBgmFadeCoroutine = StartCoroutine(RoutineFadeBattleMusic(bossBattleBGMVolume, battleBGMFadeInDuration));
+            Debug.Log("[FinalBossAI] Bắt đầu phát âm thanh chiến đấu Final Boss duy trì LẶP LẠI (Loop = True) đồng bộ mạng!");
+        }
+    }
+
+    public void StopBattleMusic(bool fade = true)
+    {
+        if (battleBgmAudioSource == null || !battleBgmAudioSource.isPlaying) return;
+
+        if (battleBgmFadeCoroutine != null) StopCoroutine(battleBgmFadeCoroutine);
+        if (fade && gameObject.activeInHierarchy)
+        {
+            battleBgmFadeCoroutine = StartCoroutine(RoutineFadeOutAndStop(battleBGMFadeOutDuration));
+        }
+        else
+        {
+            battleBgmAudioSource.Stop();
+        }
+    }
+
+    private System.Collections.IEnumerator RoutineFadeBattleMusic(float targetVol, float duration)
+    {
+        if (battleBgmAudioSource == null) yield break;
+        float elapsed = 0f;
+        float startVol = battleBgmAudioSource.volume;
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            if (battleBgmAudioSource != null)
+            {
+                battleBgmAudioSource.volume = Mathf.Lerp(startVol, targetVol, elapsed / duration);
+            }
+            yield return null;
+        }
+        if (battleBgmAudioSource != null) battleBgmAudioSource.volume = targetVol;
+    }
+
+    private System.Collections.IEnumerator RoutineFadeOutAndStop(float duration)
+    {
+        if (battleBgmAudioSource == null) yield break;
+        float elapsed = 0f;
+        float startVol = battleBgmAudioSource.volume;
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            if (battleBgmAudioSource != null)
+            {
+                battleBgmAudioSource.volume = Mathf.Lerp(startVol, 0f, elapsed / duration);
+            }
+            yield return null;
+        }
+        if (battleBgmAudioSource != null)
+        {
+            battleBgmAudioSource.volume = 0f;
+            battleBgmAudioSource.Stop();
+        }
+    }
+
+    private void OnDestroy()
+    {
+        StopBattleMusic(false);
+    }
 }
 
 public interface ISwordRainOwner

@@ -513,6 +513,11 @@ MonoBehaviour:
   fireBarrageTriggerParam: AttackCombo
   fireBarrageCooldown: 12
   fireBarrageCooldownTimer: 0
+  bossBattleBGM: {fileID: 8300000, guid: 68250f86e0d2b384987dd4cf4443d451, type: 3}
+  bossBattleBGMVolume: 0.5
+  loopBattleBGM: 1
+  battleBGMFadeInDuration: 1.5
+  battleBGMFadeOutDuration: 2.5
   minionPrefab: {fileID: 5764630933208192827, guid: c39f677d839639b4dae69d3b08885fa7, type: 3}
   minionSummonRitualVfxPrefab: {fileID: 5912743102478726200, guid: 8cdd983bc8b8cff4282de83a1f209cc2, type: 3}
   minionSummonVfxScale: 1
