@@ -2,8 +2,8 @@ using System.Collections;
 using UnityEngine;
 
 /// <summary>
-/// Quản lý hiệu ứng rung Camera (Camera Shake / Earthquake / Tornado Vortex) dữ dội và sống động cho người chơi.
-/// Kết hợp cả độ lệch vị trí (Position Offset) lẫn góc nghiêng lắc (Rotational Roll/Pitch Shake).
+/// Quản lý hiệu ứng rung Camera (Camera Shake / Earthquake / Tornado Vortex / Meteor Impact) dữ dội và sống động cho người chơi.
+/// Hỗ trợ cả rung toàn cục lẫn rung suy giảm theo khoảng cách (Distance Attenuation).
 /// Sử dụng WaitForEndOfFrame() để áp dụng sau khi LateUpdate của các script Player hoàn tất.
 /// </summary>
 public class CameraShakeHelper : MonoBehaviour
@@ -26,13 +26,39 @@ public class CameraShakeHelper : MonoBehaviour
     }
 
     /// <summary>
-    /// Rung camera dữ dội (động đất, bão tố, lốc cuốn, va chạm mạnh)
+    /// Rung camera dữ dội toàn cục (động đất, bão tố, lốc cuốn)
     /// </summary>
     /// <param name="duration">Thời gian rung (giây)</param>
     /// <param name="intensity">Cường độ rung (0.35f - 0.7f rung rất rõ và mạnh mẽ)</param>
     public static void Shake(float duration = 0.8f, float intensity = 0.55f)
     {
         Instance.TriggerShake(duration, intensity);
+    }
+
+    /// <summary>
+    /// Rung camera có tính toán suy giảm theo khoảng cách: người đứng gần điểm nổ nhất sẽ rung mạnh nhất, càng xa càng yếu.
+    /// </summary>
+    /// <param name="impactPos">Tọa độ điểm va chạm/nổ</param>
+    /// <param name="duration">Thời gian rung (giây)</param>
+    /// <param name="maxIntensity">Cường độ rung tối đa khi đứng sát điểm nổ (0.6f - 0.9f)</param>
+    /// <param name="maxDistance">Khoảng cách tối đa còn cảm nhận được độ rung (m)</param>
+    public static void ShakeAtPosition(Vector3 impactPos, float duration = 0.5f, float maxIntensity = 0.75f, float maxDistance = 25f)
+    {
+        Camera cam = Camera.main;
+        if (cam == null) cam = FindFirstObjectByType<Camera>();
+        if (cam == null) return;
+
+        float dist = Vector3.Distance(cam.transform.position, impactPos);
+        if (dist >= maxDistance) return;
+
+        // Tính toán suy giảm Quadratic: Đứng gần rung cực mạnh, càng xa giảm dần mượt mà
+        float factor = Mathf.Clamp01(1.0f - (dist / maxDistance));
+        float intensity = maxIntensity * factor * factor;
+
+        if (intensity > 0.03f)
+        {
+            Instance.TriggerShake(duration, intensity);
+        }
     }
 
     public void TriggerShake(float duration, float intensity)

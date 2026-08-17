@@ -18,9 +18,12 @@ using UnityEngine.AI;
 ///   - Kích hoạt thêm combo chém mới: hoạt ảnh "attack2" (50% tỉ lệ chém combo này trong Phase 2).
 /// Hỗ trợ cả chế độ mạng (Netcode) và offline (Standalone).
 /// </summary>
-public class BossAI : NetworkBehaviour
+public class BossAI : NetworkBehaviour, IFireBarrageOwner
 {
     public enum BossState { Idle, Chase, Attack, Kick, Hit, Enrage, Dead }
+
+    public NetworkVariable<int> fireBarrageCounter = new NetworkVariable<int>(
+        0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
     // ─── Máu Boss (Chỉ duy nhất 1 Phase 700 HP) ─────────────────
     [Header("Health")]
@@ -97,6 +100,46 @@ public class BossAI : NetworkBehaviour
     public float tornadoLiftHeight = 4.5f;
     [Tooltip("Thời gian Player bị xoay tít trên không (giây)")]
     public float tornadoTrapDuration = 1.2f;
+
+    // ─── Thiết lập Chưởng Đốm Lửa (Fire Barrage Settings) ────
+    [Header("Fire Barrage (Chưởng Đốm Lửa) Settings")]
+    [Tooltip("Prefab cầu lửa rơi từ trên trời xuống")]
+    public GameObject fireBarragePrefab;
+    [Tooltip("Prefab decal cảnh báo rơi cầu lửa dưới sàn")]
+    public GameObject fireBarrageWarningDecalPrefab;
+    [Tooltip("VFX nổ khi cầu lửa chạm đất")]
+    public GameObject fireBarrageImpactVFX;
+    [Tooltip("Âm thanh khi cầu lửa va chạm nổ")]
+    public AudioClip fireBarrageImpactSFX;
+    [Tooltip("Số lượng cầu lửa tối thiểu mỗi đợt")]
+    public int minFireballsCount = 5;
+    [Tooltip("Số lượng cầu lửa tối đa mỗi đợt")]
+    public int maxFireballsCount = 6;
+    [Tooltip("Khoảng cách tối thiểu từ người chơi đến vị trí rơi cầu lửa (m)")]
+    public float fireballPlayerOffsetMin = 1.5f;
+    [Tooltip("Khoảng cách tối đa từ người chơi đến vị trí rơi cầu lửa (m)")]
+    public float fireballPlayerOffsetMax = 5.5f;
+    [Tooltip("Kích thước Scale của quả cầu lửa (phóng to để nhìn rõ uy lực)")]
+    public float fireBarrageScale = 3.5f;
+    [Tooltip("Tổng thời gian thực hiện chiêu chưởng đốm lửa (giây)")]
+    public float fireBarrageDuration = 6.0f;
+    [Tooltip("Khoảng cách thời gian giữa mỗi đợt thả cầu lửa (giây)")]
+    public float fireBarrageInterval = 0.5f;
+    [Tooltip("Thời gian cảnh báo decal dưới sàn trước khi cầu lửa rơi xuống (giây)")]
+    public float fireBarrageWarningDuration = 0.7f;
+    [Tooltip("Tốc độ rơi của cầu lửa (m/s)")]
+    public float fireBarrageDropSpeed = 30.0f;
+    [Tooltip("Sát thương mỗi cầu lửa")]
+    public float fireBarrageDamage = 5.0f;
+    [Tooltip("Bán kính nổ sát thương của cầu lửa (m)")]
+    public float fireBarrageImpactRadius = 2.5f;
+    [Tooltip("Tên Trigger trong Animator của Boss")]
+    public string fireBarrageTriggerParam = "AttackCombo";
+    [Tooltip("Thời gian hồi chiêu chưởng đốm lửa (giây)")]
+    public float fireBarrageCooldown = 12.0f;
+    public float fireBarrageCooldownTimer;
+    private bool isCastingFireBarrage = false;
+    private Queue<GameObject> fireBarragePool = new Queue<GameObject>();
 
     // ─── Thiết lập Triệu Hồi Quái Con (Minion Summon) ────────────
     [Header("Minion Spawning Settings")]
@@ -334,6 +377,7 @@ public class BossAI : NetworkBehaviour
         }
 
         earthSummonCooldownTimer = Random.Range(earthSummonMinInterval, earthSummonMaxInterval);
+        fireBarrageCooldownTimer = fireBarrageCooldown;
         minionSummonTimer = minionSummonInterval;
  
         if (!IsNetworkActive)
@@ -372,6 +416,7 @@ public class BossAI : NetworkBehaviour
         enrageCounter.OnValueChanged += OnEnrageCounterChanged;
         currentHealth.OnValueChanged += OnHealthNetChanged;
         earthSummonCounter.OnValueChanged += (_, _) => { if (anim != null) anim.SetTrigger(earthSummonTrigger); };
+        fireBarrageCounter.OnValueChanged += (_, _) => { if (anim != null && !string.IsNullOrEmpty(fireBarrageTriggerParam)) anim.SetTrigger(fireBarrageTriggerParam); };
 
         // Lắng nghe sự kiện gồng nộ đồng bộ hóa của Client
         isPhase2Network.OnValueChanged += (oldVal, newVal) =>
@@ -408,6 +453,7 @@ public class BossAI : NetworkBehaviour
         enrageCounter.OnValueChanged -= OnEnrageCounterChanged;
         currentHealth.OnValueChanged -= OnHealthNetChanged;
         earthSummonCounter.OnValueChanged -= (_, _) => { if (anim != null) anim.SetTrigger(earthSummonTrigger); };
+        fireBarrageCounter.OnValueChanged -= (_, _) => { if (anim != null && !string.IsNullOrEmpty(fireBarrageTriggerParam)) anim.SetTrigger(fireBarrageTriggerParam); };
     }
 
     private void OnHealthNetChanged(float oldVal, float newVal)
@@ -456,13 +502,22 @@ public class BossAI : NetworkBehaviour
         if (kickCooldownTimer > 0) kickCooldownTimer -= Time.deltaTime;
         if (hitStaggerCooldownTimer > 0f) hitStaggerCooldownTimer -= Time.deltaTime;
 
-        if (IsBossActive && !IsDead && targetPlayer != null)
+        if (IsBossActive && !IsDead && targetPlayer != null && !isCastingEarthSummon && !isCastingFireBarrage)
         {
-            earthSummonCooldownTimer -= Time.deltaTime;
-            if (earthSummonCooldownTimer <= 0)
+            if (fireBarrageCooldownTimer > 0) fireBarrageCooldownTimer -= Time.deltaTime;
+
+            if (fireBarrageCooldownTimer <= 0)
             {
-                earthSummonCooldownTimer = Random.Range(earthSummonMinInterval, earthSummonMaxInterval);
-                TriggerEarthSummon();
+                TriggerFireBarrage();
+            }
+            else
+            {
+                earthSummonCooldownTimer -= Time.deltaTime;
+                if (earthSummonCooldownTimer <= 0)
+                {
+                    earthSummonCooldownTimer = Random.Range(earthSummonMinInterval, earthSummonMaxInterval);
+                    TriggerEarthSummon();
+                }
             }
  
             if (!hasSummonedMinions)
@@ -1658,8 +1713,20 @@ public class BossAI : NetworkBehaviour
 
         DealEarthBlastDamage(positions);
 
-        // SAU KHI ĐÁ NHÔ LÊN XONG -> KÍCH HOẠT 5 LỐC XOÁY XUNG QUANH BOSS BẢO VỆ RỒI DI CHUYỂN THẲNG RA NGOÀI
+        // 1. SAU KHI ĐÁ NHÔ LÊN XONG -> KÍCH HOẠT 5 LỐC XOÁY XUNG QUANH BOSS BẢO VỆ RỒI DI CHUYỂN THẲNG RA NGOÀI
         TriggerTornadoWave();
+
+        // 2. KẾ TIẾP COMBO -> CHƯỞNG CẦU LỬA (FIRE BARRAGE) RƠI TỪ TRÊN TRỜI XUỐNG
+        StartCoroutine(RoutineChainFireBarrageAfterTornado(1.0f));
+    }
+
+    private System.Collections.IEnumerator RoutineChainFireBarrageAfterTornado(float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        if (IsBossActive && !IsDead && targetPlayer != null && !isCastingEarthSummon)
+        {
+            TriggerFireBarrage();
+        }
     }
 
     private void TriggerTornadoWave()
@@ -2236,6 +2303,316 @@ public class BossAI : NetworkBehaviour
             }
         }
         activeMinionRituals.Clear();
+    }
+
+    // ══════════════════════════════════════════════════════════
+    //  FIRE BARRAGE (CHƯỞNG ĐỐM LỬA) LOGIC & OBJECT POOLING
+    // ══════════════════════════════════════════════════════════
+
+    private void TriggerFireBarrage()
+    {
+        bool auth = isStandaloneMode || (IsNetworkActive && IsServer);
+        if (!auth) return;
+
+        fireBarrageCooldownTimer = fireBarrageCooldown;
+        isCastingFireBarrage = true;
+
+        if (AgentReady)
+        {
+            agent.isStopped = true;
+            agent.velocity = Vector3.zero;
+        }
+        SetSpeedNet(0f);
+
+        if (!isStandaloneMode)
+        {
+            fireBarrageCounter.Value++;
+        }
+        else
+        {
+            if (anim != null && !string.IsNullOrEmpty(fireBarrageTriggerParam))
+            {
+                anim.SetTrigger(fireBarrageTriggerParam);
+            }
+        }
+
+        StartCoroutine(FireBarrageRoutine());
+    }
+
+    private System.Collections.IEnumerator FireBarrageRoutine()
+    {
+        float elapsed = 0f;
+        float spawnTimer = 0f;
+
+        while (elapsed < fireBarrageDuration)
+        {
+            elapsed += Time.deltaTime;
+            spawnTimer -= Time.deltaTime;
+
+            if (AgentReady)
+            {
+                agent.isStopped = true;
+                agent.velocity = Vector3.zero;
+            }
+            SetSpeedNet(0f);
+
+            if (targetPlayer != null)
+            {
+                RotateTowards(targetPlayer.position);
+            }
+
+            if (spawnTimer <= 0f)
+            {
+                spawnTimer = fireBarrageInterval;
+                Vector3[] targets = CalculateFireBarrageTargets();
+
+                if (!isStandaloneMode)
+                {
+                    TriggerFireBarrageDropClientRpc(targets);
+                }
+                else
+                {
+                    ExecuteFireBarrageDropLocal(targets);
+                }
+            }
+
+            yield return null;
+        }
+
+        yield return new WaitForSeconds(0.5f);
+
+        isCastingFireBarrage = false;
+        if (AgentReady)
+        {
+            agent.isStopped = false;
+        }
+    }
+
+    private Vector3[] CalculateFireBarrageTargets()
+    {
+        var activePlayers = GetAllActivePlayers();
+        var alivePlayers = new List<Transform>();
+        foreach (var p in activePlayers)
+        {
+            if (p != null && !IsPlayerDeadOrInvisible(p))
+            {
+                alivePlayers.Add(p);
+            }
+        }
+
+        int targetCount = Random.Range(minFireballsCount, maxFireballsCount + 1); // 5 đến 6 quả
+        List<Vector3> spots = new List<Vector3>();
+
+        if (alivePlayers.Count > 0)
+        {
+            // Phân phối ngẫu nhiên 5-6 quả cầu lửa xung quanh các Player còn sống
+            // Đảm bảo mỗi vị trí chỉ có ĐÚNG 1 QUẢ CẦU LỬA rơi xuống và không bị chồng chéo
+            for (int i = 0; i < targetCount; i++)
+            {
+                Transform targetP = alivePlayers[i % alivePlayers.Count];
+                Vector3 basePos = targetP.position;
+
+                bool foundValidPos = false;
+                for (int attempt = 0; attempt < 12; attempt++)
+                {
+                    Vector2 randomDir = Random.insideUnitCircle.normalized;
+                    float randomDist = Random.Range(fireballPlayerOffsetMin, fireballPlayerOffsetMax);
+                    Vector3 candidatePos = basePos + new Vector3(randomDir.x * randomDist, 0f, randomDir.y * randomDist);
+
+                    if (NavMesh.SamplePosition(candidatePos, out NavMeshHit hit, 3.5f, NavMesh.AllAreas))
+                    {
+                        // Kiểm tra không để 2 quả cầu lửa rơi cùng 1 chỗ (cách nhau tối thiểu 2.2m)
+                        bool tooClose = false;
+                        foreach (var existing in spots)
+                        {
+                            if (Vector3.Distance(existing, hit.position) < 2.2f)
+                            {
+                                tooClose = true;
+                                break;
+                            }
+                        }
+
+                        if (!tooClose)
+                        {
+                            spots.Add(hit.position);
+                            foundValidPos = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (!foundValidPos)
+                {
+                    Vector2 fallbackOffset = Random.insideUnitCircle * 4f;
+                    spots.Add(basePos + new Vector3(fallbackOffset.x, 0f, fallbackOffset.y));
+                }
+            }
+        }
+        else
+        {
+            for (int i = 0; i < targetCount; i++)
+            {
+                Vector2 randomOffset = Random.insideUnitCircle * 7f;
+                Vector3 offsetPos = transform.position + new Vector3(randomOffset.x, 0, randomOffset.y);
+                if (NavMesh.SamplePosition(offsetPos, out NavMeshHit hit, 4f, NavMesh.AllAreas))
+                {
+                    spots.Add(hit.position);
+                }
+            }
+        }
+
+        return spots.ToArray();
+    }
+
+    public GameObject GetPooledFireBarrage(Vector3 spawnPos, Quaternion rotation)
+    {
+        GameObject orb = null;
+        while (fireBarragePool.Count > 0)
+        {
+            var candidate = fireBarragePool.Dequeue();
+            if (candidate != null)
+            {
+                orb = candidate;
+                break;
+            }
+        }
+
+        if (orb == null)
+        {
+            if (fireBarragePrefab != null)
+            {
+                orb = Instantiate(fireBarragePrefab);
+            }
+            else
+            {
+                orb = Resources.Load<GameObject>("Fireball 2");
+                if (orb != null) orb = Instantiate(orb);
+                else
+                {
+                    orb = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+                    orb.transform.localScale = Vector3.one * 0.8f;
+                    var r = orb.GetComponent<Renderer>();
+                    if (r != null)
+                    {
+                        r.material = new Material(Shader.Find("Sprites/Default") ?? Shader.Find("UI/Default"));
+                        r.material.color = new Color(1f, 0.3f, 0f);
+                    }
+                }
+            }
+        }
+
+        var rb = orb.GetComponent<Rigidbody>();
+        if (rb == null) rb = orb.AddComponent<Rigidbody>();
+        rb.isKinematic = true;
+        rb.useGravity = false;
+
+        orb.transform.position = spawnPos;
+        orb.transform.rotation = rotation;
+        orb.transform.localScale = Vector3.one * fireBarrageScale;
+        orb.SetActive(true);
+        return orb;
+    }
+
+    public void RecycleFireBarrage(GameObject orb)
+    {
+        if (orb == null) return;
+        orb.SetActive(false);
+        if (!fireBarragePool.Contains(orb))
+        {
+            fireBarragePool.Enqueue(orb);
+        }
+    }
+
+    [ClientRpc]
+    private void TriggerFireBarrageDropClientRpc(Vector3[] positions)
+    {
+        ExecuteFireBarrageDropLocal(positions);
+    }
+
+    public void ExecuteFireBarrageDropLocal(Vector3[] positions)
+    {
+        foreach (var pos in positions)
+        {
+            StartCoroutine(RoutineDropFireBarrageAtPosition(pos));
+        }
+    }
+
+    private System.Collections.IEnumerator RoutineDropFireBarrageAtPosition(Vector3 groundPos)
+    {
+        GameObject prefabToUse = fireBarrageWarningDecalPrefab != null ? fireBarrageWarningDecalPrefab : warningDecalPrefab;
+        GameObject warning = null;
+
+        if (prefabToUse != null)
+        {
+            warning = Instantiate(prefabToUse, groundPos + Vector3.up * 0.05f, Quaternion.identity);
+            var flasher = warning.GetComponent<WarningDecalFlash>();
+            if (flasher == null) flasher = warning.AddComponent<WarningDecalFlash>();
+            flasher.StartFlashing(fireBarrageWarningDuration);
+
+            ParticleSystem[] psList = warning.GetComponentsInChildren<ParticleSystem>(true);
+            foreach (var ps in psList)
+            {
+                if (ps != null)
+                {
+                    var main = ps.main;
+                    main.scalingMode = ParticleSystemScalingMode.Hierarchy;
+                    if (!ps.isPlaying) ps.Play();
+                }
+            }
+
+            Destroy(warning, fireBarrageWarningDuration);
+        }
+
+        yield return new WaitForSeconds(fireBarrageWarningDuration);
+
+        Vector3 skyPos = groundPos + Vector3.up * 16.0f;
+        GameObject fireOrb = GetPooledFireBarrage(skyPos, Quaternion.LookRotation(Vector3.down));
+
+        var proj = fireOrb.GetComponent<FallingFireOrbProjectile>();
+        if (proj == null) proj = fireOrb.AddComponent<FallingFireOrbProjectile>();
+
+        proj.Initialize(this, groundPos, fireBarrageDropSpeed, fireBarrageDamage, fireBarrageImpactRadius, playerLayer);
+    }
+
+    public void PlayFireBarrageImpactEffects(Vector3 impactPos)
+    {
+        if (fireBarrageImpactVFX != null)
+        {
+            GameObject vfx = Instantiate(fireBarrageImpactVFX, impactPos, Quaternion.identity);
+            vfx.transform.localScale = Vector3.one * (fireBarrageScale * 0.8f);
+            Destroy(vfx, 2.5f);
+        }
+        if (fireBarrageImpactSFX != null)
+        {
+            AudioSource.PlayClipAtPoint(fireBarrageImpactSFX, impactPos, 1.0f);
+        }
+
+        // Rung camera suy giảm theo khoảng cách: Đứng gần rung mạnh nhất, càng xa càng yếu
+        if (enableEarthquakeCameraShake)
+        {
+            CameraShakeHelper.ShakeAtPosition(impactPos, 0.5f, 0.75f, 25.0f);
+        }
+    }
+
+    public void DealFireBarrageImpactDamage(Vector3 impactPos, float damage, float radius, LayerMask layer)
+    {
+        bool auth = isStandaloneMode || (IsNetworkActive && IsServer);
+        if (!auth) return;
+
+        Collider[] hits = Physics.OverlapSphere(impactPos, radius, layer);
+        HashSet<Transform> hitRoots = new HashSet<Transform>();
+
+        foreach (var hit in hits)
+        {
+            Transform root = GetPlayerRoot(hit.transform);
+            if (root != null && !hitRoots.Contains(root))
+            {
+                hitRoots.Add(root);
+                Vector3 knockbackDir = (root.position - impactPos).normalized + Vector3.up * 0.4f;
+                EnemyDamageHelper.DealDamage(root, damage, knockbackDir * 6f);
+                Debug.Log($"[BossAI] Fire Barrage hit player: {root.name} for {damage} HP");
+            }
+        }
     }
 
     private void AssignMinionTarget(GameObject minion, Transform target)
