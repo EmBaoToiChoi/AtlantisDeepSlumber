@@ -65,6 +65,8 @@ public class BossAI : NetworkBehaviour
     public float earthBlastPlayerOffsetMin = 2.0f;
     [Tooltip("Khoảng cách tối đa từ người chơi đến bãi đá (m) - giữ ở cự ly gần người chơi")]
     public float earthBlastPlayerOffsetMax = 5.5f;
+    [Tooltip("Kích thước Scale của Prefab hiệu ứng cảnh báo (Par_RedField / Decal)")]
+    public float warningVfxScale = 1.0f;
     public float earthBlastScale = 5.0f; // Scale đá to hơn (mặc định FinalBoss là 3.0f)
     [Tooltip("Bật/Tắt hiệu ứng rung camera kiểu động đất khi đá trồi lên")]
     public bool enableEarthquakeCameraShake = true;
@@ -75,12 +77,35 @@ public class BossAI : NetworkBehaviour
     private float earthSummonCooldownTimer;
     private bool isCastingEarthSummon = false;
 
+    // ─── Thiết lập Lốc Xoáy Bảo Vệ & Tấn Công (Tornado Wave) ────
+    [Header("Tornado Wave Settings")]
+    [Tooltip("Prefab hiệu ứng lốc xoáy (ví dụ: Par_Tornado hoặc Effect_01_StormTornado)")]
+    public GameObject tornadoPrefab;
+    [Tooltip("Số lượng lốc xoáy sinh ra xung quanh Boss")]
+    public int tornadoCount = 5;
+    [Tooltip("Khoảng cách (bán kính) từ Boss khi bắt đầu sinh 5 lốc xoáy (m)")]
+    public float tornadoSpawnRadius = 2.5f;
+    [Tooltip("Tốc độ di chuyển của lốc xoáy thẳng ra ngoài (m/s)")]
+    public float tornadoSpeed = 7.0f;
+    [Tooltip("Thời gian tồn tại của lốc xoáy (giây)")]
+    public float tornadoLifetime = 5.0f;
+    [Tooltip("Scale của lốc xoáy")]
+    public float tornadoScale = 1.5f;
+    [Tooltip("Sát thương khi lốc xoáy va chạm Player")]
+    public float tornadoDamage = 15.0f;
+    [Tooltip("Độ cao hất tung Player lên không trung (m)")]
+    public float tornadoLiftHeight = 4.5f;
+    [Tooltip("Thời gian Player bị xoay tít trên không (giây)")]
+    public float tornadoTrapDuration = 1.2f;
+
     // ─── Thiết lập Triệu Hồi Quái Con (Minion Summon) ────────────
     [Header("Minion Spawning Settings")]
     [Tooltip("Prefab của quái con để triệu hồi. Bắt buộc có NetworkObject.")]
     public GameObject minionPrefab;
     [Tooltip("Prefab vòng tròn triệu hồi dưới sàn trước khi quái ngoi lên (Nếu để trống sẽ tự động dùng Decal/Vòng ma thuật)")]
     public GameObject minionSummonRitualVfxPrefab;
+    [Tooltip("Kích thước Scale của vòng ma thuật triệu hồi quái con")]
+    public float minionSummonVfxScale = 1.0f;
     [Tooltip("Thời gian vòng tròn ma thuật sáng dưới sàn trước khi quái bắt đầu ngoi lên (giây)")]
     public float minionSummonRitualDuration = 2.0f;
     [Tooltip("Thời gian quái từ từ trồi từ dưới sàn lên (giây)")]
@@ -99,6 +124,7 @@ public class BossAI : NetworkBehaviour
     private bool hasSummonedMinions = false;
     private float hitStaggerCooldownTimer = 0f;
     private List<GameObject> activeMinions = new List<GameObject>();
+    private List<GameObject> activeMinionRituals = new List<GameObject>();
 
     // ─── Đồng bộ trạng thái FSM qua mạng ───────────────────────
     [Header("Network State Sync")]
@@ -1631,6 +1657,107 @@ public class BossAI : NetworkBehaviour
         }
 
         DealEarthBlastDamage(positions);
+
+        // SAU KHI ĐÁ NHÔ LÊN XONG -> KÍCH HOẠT 5 LỐC XOÁY XUNG QUANH BOSS BẢO VỆ RỒI DI CHUYỂN THẲNG RA NGOÀI
+        TriggerTornadoWave();
+    }
+
+    private void TriggerTornadoWave()
+    {
+        Vector3 bossCenter = transform.position;
+        int count = Mathf.Max(1, tornadoCount);
+        float angleStep = 360f / count; // 360 / 5 = 72 độ
+
+        Vector3[] spawnPositions = new Vector3[count];
+        Vector3[] moveDirections = new Vector3[count];
+
+        for (int i = 0; i < count; i++)
+        {
+            float angle = (transform.eulerAngles.y + i * angleStep) * Mathf.Deg2Rad;
+            Vector3 dir = new Vector3(Mathf.Sin(angle), 0f, Mathf.Cos(angle)).normalized;
+            Vector3 spawnPos = bossCenter + dir * tornadoSpawnRadius + Vector3.up * 0.1f;
+
+            spawnPositions[i] = spawnPos;
+            moveDirections[i] = dir;
+        }
+
+        if (IsNetworkActive && IsServer)
+        {
+            SpawnTornadoWaveClientRpc(spawnPositions, moveDirections);
+        }
+        else
+        {
+            SpawnTornadoWaveLocal(spawnPositions, moveDirections);
+        }
+    }
+
+    [ClientRpc]
+    private void SpawnTornadoWaveClientRpc(Vector3[] spawnPositions, Vector3[] moveDirections)
+    {
+        SpawnTornadoWaveLocal(spawnPositions, moveDirections);
+    }
+
+    private void SpawnTornadoWaveLocal(Vector3[] spawnPositions, Vector3[] moveDirections)
+    {
+        // Rung nhẹ camera kiểu gió lốc cuốn khi 5 lốc xoáy xuất hiện
+        if (enableEarthquakeCameraShake)
+        {
+            CameraShakeHelper.Shake(1.2f, 0.15f);
+        }
+
+        GameObject prefabToUse = tornadoPrefab;
+        if (prefabToUse == null)
+        {
+            prefabToUse = Resources.Load<GameObject>("Par_Tornado");
+            if (prefabToUse == null)
+            {
+                prefabToUse = Resources.Load<GameObject>("VFX/Par_Tornado");
+            }
+        }
+
+        if (prefabToUse == null)
+        {
+            Debug.LogWarning("[BossAI] Không tìm thấy Prefab Lốc Xoáy (tornadoPrefab)! Hãy gán prefab vào ô Tornado Prefab trên Inspector.");
+            return;
+        }
+
+        for (int i = 0; i < spawnPositions.Length; i++)
+        {
+            Vector3 pos = spawnPositions[i];
+            Vector3 dir = moveDirections[i];
+            Quaternion rot = Quaternion.LookRotation(dir, Vector3.up);
+
+            GameObject tornadoObj = Instantiate(prefabToUse, pos, rot);
+            tornadoObj.transform.localScale = Vector3.one * tornadoScale;
+
+            // 1. Tự động tắt script ObjectMove có sẵn trong Asset Pack để tránh xung đột di chuyển / tự hủy
+            MonoBehaviour[] subScripts = tornadoObj.GetComponentsInChildren<MonoBehaviour>(true);
+            for (int s = 0; s < subScripts.Length; s++)
+            {
+                if (subScripts[s] != null && subScripts[s].GetType().Name == "ObjectMove")
+                {
+                    subScripts[s].enabled = false;
+                }
+            }
+
+            // 2. Cấu hình tự động bật Loop và Scale Mode Hierarchy cho toàn bộ hạt Particle Systems
+            ParticleSystem[] psList = tornadoObj.GetComponentsInChildren<ParticleSystem>(true);
+            foreach (var ps in psList)
+            {
+                if (ps != null)
+                {
+                    var main = ps.main;
+                    main.scalingMode = ParticleSystemScalingMode.Hierarchy;
+                    main.loop = true;
+                    ps.Clear(true);
+                    if (!ps.isPlaying) ps.Play(true);
+                }
+            }
+
+            // 3. Gắn và kích hoạt BossTornadoProjectile quản lý di chuyển, sát thương và hất tung
+            var projectile = tornadoObj.GetComponent<BossTornadoProjectile>() ?? tornadoObj.AddComponent<BossTornadoProjectile>();
+            projectile.Initialize(dir, tornadoSpeed, tornadoLifetime, tornadoDamage, tornadoLiftHeight, tornadoTrapDuration, isStandaloneMode || (IsNetworkActive && IsServer));
+        }
     }
 
     [ClientRpc]
@@ -1647,17 +1774,33 @@ public class BossAI : NetworkBehaviour
 
     private void SpawnWarningIndicatorsLocal(Vector3[] positions)
     {
+        // Rung nhẹ râm ran cảnh báo mặt đất đang nứt ra trong suốt thời gian gồng triệu hồi
+        if (enableEarthquakeCameraShake)
+        {
+            CameraShakeHelper.Shake(warningDuration, 0.12f);
+        }
+
         foreach (var pos in positions)
         {
-            float radius = Mathf.Max(earthBlastRadius, 2.5f);
-
-            // 1. Tạo vòng tròn cảnh báo decal (nếu có)
+            // Tạo Prefab hiệu ứng cảnh báo (Par_RedField / Decal) với Scale phù hợp
             if (warningDecalPrefab != null)
             {
                 GameObject warning = Instantiate(warningDecalPrefab, pos + Vector3.up * 0.05f, Quaternion.identity);
-                warning.transform.localScale = new Vector3(radius * 2f, 1f, radius * 2f);
-                
-                var flasher = warning.GetComponent<WarningDecalFlash>() ?? warning.AddComponent<WarningDecalFlash>();
+                warning.transform.localScale = Vector3.one * warningVfxScale;
+
+                // Tự động kích hoạt chế độ Scaling Mode Hierarchy cho Particle System
+                ParticleSystem[] psList = warning.GetComponentsInChildren<ParticleSystem>(true);
+                foreach (var ps in psList)
+                {
+                    if (ps != null)
+                    {
+                        var main = ps.main;
+                        main.scalingMode = ParticleSystemScalingMode.Hierarchy;
+                        if (!ps.isPlaying) ps.Play();
+                    }
+                }
+
+                var flasher = warning.GetComponent<WarningDecalFlash>();
                 if (flasher != null)
                 {
                     flasher.StartFlashing(warningDuration);
@@ -1665,16 +1808,6 @@ public class BossAI : NetworkBehaviour
 
                 Destroy(warning, warningDuration);
             }
-
-            // 2. Tạo vòng viền đỏ rực rỡ ProceduralWarningCircle
-            GameObject proceduralRing = new GameObject("ProceduralWarningRing_Earth");
-            proceduralRing.transform.position = pos;
-            var ring = proceduralRing.AddComponent<ProceduralWarningCircle>();
-            if (ring != null)
-            {
-                ring.StartWarning(warningDuration, radius);
-            }
-            Destroy(proceduralRing, warningDuration);
         }
     }
 
@@ -1921,6 +2054,19 @@ public class BossAI : NetworkBehaviour
             Transform assignedTarget = alivePlayers.Count > 0 ? alivePlayers[i % alivePlayers.Count] : null;
             StartCoroutine(EmergeMinionCoroutine(groundPos, assignedTarget));
         }
+
+        // Chờ thời gian quái trồi lên hoàn tất
+        yield return new WaitForSeconds(minionRiseDuration);
+
+        // Triệu hồi hoàn tất -> Hủy NGAY LẬP TỨC toàn bộ vòng ma thuật triệu hồi trên Server và tất cả Client
+        if (IsNetworkActive && IsServer)
+        {
+            DestroyMinionRitualCirclesClientRpc();
+        }
+        else
+        {
+            DestroyMinionRitualCirclesLocal();
+        }
     }
 
     private System.Collections.IEnumerator EmergeMinionCoroutine(Vector3 groundPos, Transform assignedTarget)
@@ -2007,10 +2153,17 @@ public class BossAI : NetworkBehaviour
 
     private void SpawnMinionRitualCirclesLocal(Vector3[] positions, float duration)
     {
+        // Rung nhẹ ma quái khi các cổng triệu hồi quái con mở ra
+        if (enableEarthquakeCameraShake)
+        {
+            CameraShakeHelper.Shake(minionSummonRitualDuration, 0.10f);
+        }
+
+        // Xóa bất kỳ vòng ma thuật cũ nếu còn sót lại
+        DestroyMinionRitualCirclesLocal();
+
         foreach (var pos in positions)
         {
-            float radius = minionRitualCircleRadius;
-
             // 1. Dùng Prefab vòng tròn triệu hồi nếu có gán, hoặc warningDecalPrefab / Fallback
             GameObject prefabToUse = minionSummonRitualVfxPrefab;
             if (prefabToUse == null)
@@ -2029,39 +2182,60 @@ public class BossAI : NetworkBehaviour
             if (prefabToUse != null)
             {
                 GameObject ritualObj = Instantiate(prefabToUse, pos + Vector3.up * 0.05f, Quaternion.identity);
-                ritualObj.transform.localScale = new Vector3(radius * 2f, 1f, radius * 2f);
+                ritualObj.transform.localScale = Vector3.one * minionSummonVfxScale;
 
-                var flasher = ritualObj.GetComponent<WarningDecalFlash>() ?? ritualObj.AddComponent<WarningDecalFlash>();
+                var flasher = ritualObj.GetComponent<WarningDecalFlash>();
                 if (flasher != null)
                 {
                     flasher.StartFlashing(duration);
                 }
 
-                // Kích hoạt tất cả Particle Systems của vòng ma thuật
+                // Kích hoạt tất cả Particle Systems của vòng ma thuật theo Hierarchy Scale
                 ParticleSystem[] psList = ritualObj.GetComponentsInChildren<ParticleSystem>(true);
                 foreach (var ps in psList)
                 {
                     if (ps != null)
                     {
                         var main = ps.main;
+                        main.scalingMode = ParticleSystemScalingMode.Hierarchy;
                         main.loop = true;
                         if (!ps.isPlaying) ps.Play();
                     }
                 }
 
+                activeMinionRituals.Add(ritualObj);
                 Destroy(ritualObj, duration);
             }
-
-            // 2. Luôn tạo thêm vòng viền phát sáng ProceduralWarningCircle màu đỏ/tím dưới sàn
-            GameObject ringObj = new GameObject("ProceduralSummonRing");
-            ringObj.transform.position = pos;
-            var ring = ringObj.AddComponent<ProceduralWarningCircle>();
-            if (ring != null)
-            {
-                ring.StartWarning(duration, radius);
-            }
-            Destroy(ringObj, duration);
         }
+    }
+
+    [ClientRpc]
+    private void DestroyMinionRitualCirclesClientRpc()
+    {
+        DestroyMinionRitualCirclesLocal();
+    }
+
+    private void DestroyMinionRitualCirclesLocal()
+    {
+        for (int i = activeMinionRituals.Count - 1; i >= 0; i--)
+        {
+            var ritualObj = activeMinionRituals[i];
+            if (ritualObj != null)
+            {
+                ParticleSystem[] psList = ritualObj.GetComponentsInChildren<ParticleSystem>(true);
+                foreach (var ps in psList)
+                {
+                    if (ps != null)
+                    {
+                        var main = ps.main;
+                        main.loop = false;
+                        ps.Stop(true, ParticleSystemStopBehavior.StopEmitting);
+                    }
+                }
+                Destroy(ritualObj, 0.2f);
+            }
+        }
+        activeMinionRituals.Clear();
     }
 
     private void AssignMinionTarget(GameObject minion, Transform target)
