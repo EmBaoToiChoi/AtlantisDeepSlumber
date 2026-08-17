@@ -71,9 +71,9 @@ public class BossAI : NetworkBehaviour
     [Tooltip("Bật/Tắt hiệu ứng rung camera kiểu động đất khi đá trồi lên")]
     public bool enableEarthquakeCameraShake = true;
     [Tooltip("Thời gian rung camera khi đá nhô lên (giây)")]
-    public float earthquakeShakeDuration = 0.65f;
-    [Tooltip("Cường độ rung camera (0.1f - 0.2f rung nhẹ êm ái, không gây chóng mặt)")]
-    public float earthquakeShakeIntensity = 0.16f;
+    public float earthquakeShakeDuration = 0.85f;
+    [Tooltip("Cường độ rung camera dữ dội (0.4f - 0.8f)")]
+    public float earthquakeShakeIntensity = 0.65f;
     private float earthSummonCooldownTimer;
     private bool isCastingEarthSummon = false;
 
@@ -1699,10 +1699,10 @@ public class BossAI : NetworkBehaviour
 
     private void SpawnTornadoWaveLocal(Vector3[] spawnPositions, Vector3[] moveDirections)
     {
-        // Rung nhẹ camera kiểu gió lốc cuốn khi 5 lốc xoáy xuất hiện
+        // Rung dữ dội camera kiểu bão tố gầm rú khi 5 lốc xoáy xuất hiện
         if (enableEarthquakeCameraShake)
         {
-            CameraShakeHelper.Shake(1.2f, 0.15f);
+            CameraShakeHelper.Shake(1.5f, 0.55f);
         }
 
         GameObject prefabToUse = tornadoPrefab;
@@ -1774,10 +1774,10 @@ public class BossAI : NetworkBehaviour
 
     private void SpawnWarningIndicatorsLocal(Vector3[] positions)
     {
-        // Rung nhẹ râm ran cảnh báo mặt đất đang nứt ra trong suốt thời gian gồng triệu hồi
+        // Rung râm ran cảnh báo mặt đất đang nứt ra trong suốt thời gian gồng triệu hồi
         if (enableEarthquakeCameraShake)
         {
-            CameraShakeHelper.Shake(warningDuration, 0.12f);
+            CameraShakeHelper.Shake(warningDuration, 0.40f);
         }
 
         foreach (var pos in positions)
@@ -2153,10 +2153,10 @@ public class BossAI : NetworkBehaviour
 
     private void SpawnMinionRitualCirclesLocal(Vector3[] positions, float duration)
     {
-        // Rung nhẹ ma quái khi các cổng triệu hồi quái con mở ra
+        // Rung rùng mình khi các cổng triệu hồi quái con mở ra
         if (enableEarthquakeCameraShake)
         {
-            CameraShakeHelper.Shake(minionSummonRitualDuration, 0.10f);
+            CameraShakeHelper.Shake(minionSummonRitualDuration, 0.35f);
         }
 
         // Xóa bất kỳ vòng ma thuật cũ nếu còn sót lại

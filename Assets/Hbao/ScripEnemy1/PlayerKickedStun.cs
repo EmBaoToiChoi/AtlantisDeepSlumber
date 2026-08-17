@@ -94,15 +94,29 @@ public class PlayerKickedStun : NetworkBehaviour
     /// </summary>
     public void ApplyTornadoKnockup(float liftHeight = 4.5f, float liftDuration = 1.2f)
     {
+        if (isStunned) return;
+
         if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening && IsSpawned)
         {
-            if (!IsServer) return;
-            ApplyTornadoKnockupClientRpc(liftHeight, liftDuration);
+            if (IsServer)
+            {
+                ApplyTornadoKnockupClientRpc(liftHeight, liftDuration);
+            }
+            else if (IsOwner)
+            {
+                RequestTornadoKnockupServerRpc(liftHeight, liftDuration);
+            }
         }
         else
         {
             StartCoroutine(TornadoTrapRoutine(liftHeight, liftDuration));
         }
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    private void RequestTornadoKnockupServerRpc(float liftHeight, float liftDuration)
+    {
+        ApplyTornadoKnockupClientRpc(liftHeight, liftDuration);
     }
 
     [ClientRpc]
@@ -131,8 +145,24 @@ public class PlayerKickedStun : NetworkBehaviour
             playerScript.enabled = false;
         }
 
-        // Kích hoạt rung camera bão tố cho Player bị cuốn
-        CameraShakeHelper.Shake(liftDuration + 0.2f, 0.2f);
+        // Vô hiệu hóa CharacterController / Rigidbody để không bị khóa vị trí ở mặt đất
+        var cc = GetComponent<CharacterController>();
+        if (cc != null) cc.enabled = false;
+
+        bool wasKinematic = false;
+        if (rb != null)
+        {
+            wasKinematic = rb.isKinematic;
+            rb.linearVelocity = Vector3.zero;
+            rb.isKinematic = true;
+            rb.useGravity = false;
+        }
+
+        var navAgent = GetComponent<UnityEngine.AI.NavMeshAgent>();
+        if (navAgent != null) navAgent.enabled = false;
+
+        // Kích hoạt rung camera bão tố DỮ DỘI cho Player bị cuốn
+        CameraShakeHelper.Shake(liftDuration + 0.3f, 0.65f);
 
         Vector3 startPos = transform.position;
         Vector3 peakPos = startPos + Vector3.up * liftHeight;
@@ -146,19 +176,33 @@ public class PlayerKickedStun : NetworkBehaviour
             
             // Bay lên và hạ xuống theo đường cong Parabola (sin(t * PI))
             float heightFactor = Mathf.Sin(t * Mathf.PI);
-            Vector3 wobble = new Vector3(Mathf.Cos(elapsed * 15f) * 0.35f, 0f, Mathf.Sin(elapsed * 15f) * 0.35f);
+            Vector3 wobble = new Vector3(Mathf.Cos(elapsed * 18f) * 0.45f, 0f, Mathf.Sin(elapsed * 18f) * 0.45f);
             transform.position = Vector3.Lerp(startPos, peakPos, heightFactor) + wobble;
 
             // Xoay tròn đều quanh trục Y như bị lốc xoáy cuốn
-            transform.Rotate(Vector3.up, 720f * Time.deltaTime, Space.World);
+            transform.Rotate(Vector3.up, 800f * Time.deltaTime, Space.World);
 
             yield return null;
         }
 
         transform.position = startPos;
 
-        // Rung nhẹ khi đập người xuống đất
-        CameraShakeHelper.Shake(0.35f, 0.16f);
+        // Bật lại vật lý
+        if (rb != null)
+        {
+            rb.isKinematic = wasKinematic;
+            rb.useGravity = true;
+            rb.linearVelocity = Vector3.zero;
+        }
+        if (cc != null) cc.enabled = true;
+        if (navAgent != null)
+        {
+            navAgent.enabled = true;
+            navAgent.Warp(startPos);
+        }
+
+        // Rung mạnh khi đập người xuống đất
+        CameraShakeHelper.Shake(0.5f, 0.55f);
 
         // 3. Rơi xuống đất -> Kích hoạt hoạt ảnh té ngã và đứng dậy
         if (anim != null && anim.isActiveAndEnabled)
