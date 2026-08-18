@@ -35,6 +35,7 @@ public class FinalEnergyPillar : NetworkBehaviour
 
     private bool m_WasHitThisFrame = false;
     private bool m_WasHitInEditor = false; // Nhận diện trúng laser trong Edit Mode
+    private bool m_EditorLastActiveState = false; // Lưu trạng thái trước đó trong Edit Mode
     private Material m_Material;
     private Coroutine m_TransitionCoroutine;
 
@@ -141,9 +142,13 @@ public class FinalEnergyPillar : NetworkBehaviour
                 activeEffectObject.SetActive(active);
             }
 
-            // Kích hoạt sự kiện ngay lập tức trong Edit Mode để preview
-            if (active) OnActivated?.Invoke();
-            else OnDeactivated?.Invoke();
+            // Kích hoạt sự kiện trong Edit Mode chỉ khi trạng thái thay đổi
+            if (m_EditorLastActiveState != active)
+            {
+                m_EditorLastActiveState = active;
+                if (active) OnActivated?.Invoke();
+                else OnDeactivated?.Invoke();
+            }
             return;
         }
 
