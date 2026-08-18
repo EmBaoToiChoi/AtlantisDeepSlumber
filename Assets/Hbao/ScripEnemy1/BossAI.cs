@@ -2697,7 +2697,7 @@ public class BossAI : NetworkBehaviour, IFireBarrageOwner
         // Rung camera suy giảm theo khoảng cách: Đứng gần rung mạnh nhất, càng xa càng yếu
         if (enableEarthquakeCameraShake)
         {
-            CameraShakeHelper.ShakeAtPosition(impactPos, 0.5f, 0.75f, 25.0f);
+            CameraShakeHelper.ShakeAtPosition(impactPos, 0.6f, 1.2f, 45.0f);
         }
     }
 

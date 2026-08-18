@@ -405,6 +405,11 @@ public class MiniBossAI : NetworkBehaviour, ISwordRainOwner
         attackCounter.OnValueChanged += (_, _) => {
             if (anim != null && attackTypeSync.Value >= 0 && attackTypeSync.Value < attackTriggers.Length)
                 anim.SetTrigger(attackTriggers[attackTypeSync.Value]);
+
+            if (!IsServer && !isStandaloneMode)
+            {
+                StartCoroutine(ExecuteAttackLeapClientRoutine(attackTypeSync.Value));
+            }
         };
         hitCounter.OnValueChanged += (_, _) => { if (anim != null) anim.SetTrigger(hitTrigger); };
         dieCounter.OnValueChanged += (_, _) => { if (anim != null) anim.SetTrigger(dieTrigger); };
@@ -713,6 +718,12 @@ public class MiniBossAI : NetworkBehaviour, ISwordRainOwner
         }
     }
 
+    [ServerRpc(RequireOwnership = false)]
+    public void TakeDamageServerRpc(float damageAmount)
+    {
+        TakeDamage(damageAmount);
+    }
+
     public void TakeDamage(float damage)
     {
         if (isClone)
@@ -744,6 +755,13 @@ public class MiniBossAI : NetworkBehaviour, ISwordRainOwner
 
         // Chỉ kiểm tra gồng/cuồng nộ bất tử cho Boss chính, KHÔNG áp dụng cho Phân Thân!
         if (!isClone && (CurrentStateValue == MiniBossState.Enrage || isSummonInvulnerable)) return;
+
+        // Nếu là Client đánh Boss trên mạng -> Gửi ServerRpc để Server trừ máu chuẩn xác 100%
+        if (!isStandaloneMode && !isClone && IsSpawned && !IsServer)
+        {
+            TakeDamageServerRpc(damage);
+            return;
+        }
 
         localHealth = Mathf.Max(0f, localHealth - damage);
         if (!isStandaloneMode && !isClone && IsSpawned && IsServer)
@@ -1137,12 +1155,11 @@ public class MiniBossAI : NetworkBehaviour, ISwordRainOwner
         // 3. DỪNG XEM CẢNH HỐ TỬ THẦN & PHÂN THÂN NHÔ LÊN (3.5 GIÂY)
         float holdDuration = 3.5f;
         float holdElapsed = 0f;
+        CameraShakeHelper.Shake(3.5f, 1.1f); // Rung dữ dội toàn màn hình khi 2 hố tử thần trồi lên
         while (holdElapsed < holdDuration)
         {
             holdElapsed += Time.deltaTime;
-            // Rung nhẹ camera khi 2 con nhân bản đang từ từ nhô lên từ dưới đất
-            Vector3 shakeOffset = (holdElapsed > 0.4f && holdElapsed < 3.0f) ? (Random.insideUnitSphere * 0.03f) : Vector3.zero;
-            mainCam.transform.position = targetCamPos + shakeOffset;
+            mainCam.transform.position = targetCamPos;
             mainCam.transform.rotation = targetCamRot;
             yield return null;
         }
@@ -1880,6 +1897,7 @@ public class MiniBossAI : NetworkBehaviour, ISwordRainOwner
         }
 
         FaceTargetImmediately(target.position);
+        CameraShakeHelper.ShakeAtPosition(navHit.position, 0.5f, 1.0f, 35.0f);
         Debug.Log($"[MiniBossAI] Bí thuật Tốc Biến Bóng Tối xuất hiện đằng sau {target.name}!");
 
         ChangeState(MiniBossState.Attack);
@@ -1925,6 +1943,10 @@ public class MiniBossAI : NetworkBehaviour, ISwordRainOwner
             {
                 isLeaping = false;
                 if (visualRoot != null) visualRoot.localPosition = Vector3.zero;
+                if (currentAttackIndex == 1 || currentLeapHeight > 2.0f)
+                {
+                    CameraShakeHelper.ShakeAtPosition(transform.position, 0.7f, 1.3f, 40.0f);
+                }
             }
         }
         else if (isLeaping && leapTimer < 0f)
@@ -2223,6 +2245,7 @@ private void Die()
     private void PlayDeathExplosionEffects()
     {
         Vector3 spawnPos = transform.position + Vector3.up * 1.2f;
+        CameraShakeHelper.Shake(1.5f, 1.5f); // Rung màn hình cực mạnh khi bạo nổ tử thần!
         if (deathExplosionVFX != null)
         {
             GameObject vfx = Instantiate(deathExplosionVFX, spawnPos, Quaternion.identity);
@@ -2237,6 +2260,7 @@ private void Die()
     public void PlayEnrageVFX()
     {
         Vector3 spawnPos = transform.position + Vector3.up * 1f;
+        CameraShakeHelper.Shake(1.8f, 1.0f); // Rung chấn động khi Boss gầm thét chuyển Phase
         if (enrageVFXPrefab != null)
         {
             GameObject vfx = Instantiate(enrageVFXPrefab, spawnPos, transform.rotation);
@@ -2636,6 +2660,38 @@ private void Die()
         }
     }
 
+    private IEnumerator ExecuteAttackLeapClientRoutine(int attackIndex)
+    {
+        if (attackIndex < 0 || attackIndex >= attackConfigs.Length) yield break;
+        AttackConfig config = attackConfigs[attackIndex];
+
+        float startDelay = config.duration * config.leapStartPercent;
+        if (startDelay > 0f) yield return new WaitForSeconds(startDelay);
+
+        float leapDuration = config.duration * config.leapDurationPercent;
+        float elapsed = 0f;
+
+        while (elapsed < leapDuration)
+        {
+            elapsed += Time.deltaTime;
+            float progress = Mathf.Clamp01(elapsed / leapDuration);
+            if (visualRoot != null)
+            {
+                float yOffset = config.peakHeight * Mathf.Sin(Mathf.PI * progress);
+                visualRoot.localPosition = new Vector3(0, yOffset, 0);
+            }
+            yield return null;
+        }
+
+        if (visualRoot != null) visualRoot.localPosition = Vector3.zero;
+
+        // Rung camera chấn động khi đòn Nhaychemdat tiếp đất trên Client
+        if (attackIndex == 0 || config.peakHeight > 2.0f)
+        {
+            CameraShakeHelper.ShakeAtPosition(transform.position, 0.7f, 1.3f, 40.0f);
+        }
+    }
+
     private class HitState : IEnemyState
     {
         private MiniBossAI boss;
@@ -2895,6 +2951,7 @@ private void Die()
 
     public void PlaySwordImpactEffects(Vector3 impactPos)
     {
+        CameraShakeHelper.ShakeAtPosition(impactPos, 0.6f, 1.2f, 40.0f);
         if (swordImpactVFX != null)
         {
             GameObject vfx = Instantiate(swordImpactVFX, impactPos, Quaternion.identity);
