@@ -2756,6 +2756,7 @@ MonoBehaviour:
   fireSpewDamage: 5
   fireSpewKnockback: 12
   fireSpewVFX: {fileID: 6531319713837899222, guid: 3ecc26f6d4062be44b0a099e114ff00c, type: 3}
+  skyFireGroundImpactVFX: {fileID: 2427901435903505602, guid: 8a915dbbc4b23bf4f931629039cfbf6f, type: 3}
   fireSpewSFX: {fileID: 0}
   fireSpewTriggerParam: FireSpew
   fireSpewCooldownTimer: 0

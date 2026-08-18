@@ -120,7 +120,7 @@ public class FinalBossAI : NetworkBehaviour
 
     [Header("Enrage / Grow (Gồng & Phóng To) Settings")]
     public float growDuration = 3.0f;
-    public float growScaleMultiplier = 3.0f;
+    public float growScaleMultiplier = 2.2f;
     public string growTriggerParam = "Shockwave";
     public GameObject growVFX;
     public AudioClip growSFX;
@@ -198,6 +198,7 @@ public class FinalBossAI : NetworkBehaviour
     public float fireSpewDamage = 5f;
     public float fireSpewKnockback = 12f;
     public GameObject fireSpewVFX;
+    public GameObject skyFireGroundImpactVFX;
     public AudioClip fireSpewSFX;
     public string fireSpewTriggerParam = "FireSpew";
     public float fireSpewCooldownTimer;
@@ -323,6 +324,15 @@ public class FinalBossAI : NetworkBehaviour
             fireSpewVFX = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(
                 "Assets/PixPlays/ElementalBeams/FireBeam/Version_BuiltIn/FireBeam.prefab");
         }
+        if (skyFireGroundImpactVFX == null)
+        {
+            skyFireGroundImpactVFX = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/SpecialSkillsEffectsPack/AllEffects/EffectsSet_2(ScriptBased)/Effects/Effect_22_BigShot/Effect_22_Parts/Effect_22_Impact.prefab")
+                ?? UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/Vefects/Anime Stylized VFX/Shared/Particles/VFX_Explosion_Floor.prefab")
+                ?? UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/SpecialSkillsEffectsPack/AllEffects/EffectsSet_2(ScriptBased)/Effects/Effect_14_RuinExplosion/Effect_14_RuinExplosion.prefab");
+        }
 #endif
     }
 
@@ -398,7 +408,7 @@ public class FinalBossAI : NetworkBehaviour
             netIsEnraged.Value = false;
             netIsLastStand.Value = false;
             isHUDVisible.Value = startActiveWithoutMiniboss;
-            fireSpewCooldownTimer = fireSpewInterval;
+            fireSpewCooldownTimer = 2.0f; // Sẵn sàng tung combo sớm ngay ở Phase 1
             SnapToNavMesh();
             ChangeState(FinalBossState.Sitting);
         }
@@ -490,8 +500,14 @@ public class FinalBossAI : NetworkBehaviour
 
     public void TakeDamage(float damage)
     {
-        // Loại bỏ việc chặn sát thương khi đang cast chiêu SwordRain/FireBarrage để đảm bảo chém là LUÔN MÔT 100% TRỪ MÁU!
-        if (IsDead || CurrentStateValue == FinalBossState.Sitting || CurrentStateValue == FinalBossState.JumpDown || CurrentStateValue == FinalBossState.Grow) return;
+        if (IsDead || CurrentStateValue == FinalBossState.Sitting || CurrentStateValue == FinalBossState.JumpDown) return;
+
+        // HOÀN TOÀN BẤT TỬ KHI ĐANG GỒNG BIẾN HÌNH QUA PHASE 2 (GROW STATE)!
+        if (CurrentStateValue == FinalBossState.Grow)
+        {
+            Debug.Log("[FinalBossAI] Boss đang Gồng Biến Hình qua Phase 2 -> BẤT TỬ, miễn nhiễm mọi sát thương!");
+            return;
+        }
 
         // Nếu là Client đánh Boss trên mạng -> Gửi ServerRpc để Server trừ máu chuẩn xác 100%
         if (!isStandaloneMode && IsSpawned && !IsServer)
@@ -543,6 +559,8 @@ public class FinalBossAI : NetworkBehaviour
 
     public void ApplyStun(float duration)
     {
+        if (CurrentStateValue == FinalBossState.Grow || CurrentStateValue == FinalBossState.Dead) return;
+
         EnemyStunVfxBehaviour.ApplyStunVfx(gameObject, duration, null, 3.5f, 2.5f);
         if (!isStandaloneMode && IsServer)
         {
@@ -907,7 +925,8 @@ public class FinalBossAI : NetworkBehaviour
             Debug.DrawRay(spawnPos, shootDir * 25f, Color.red, 3.0f);
 
             GameObject proj = Instantiate(rangedProjectilePrefab, spawnPos, rot);
-            proj.transform.localScale = rangedProjectilePrefab.transform.localScale;
+            // Thu nhỏ scale vừa vặn, sắc nét và thẩm mỹ (0.4x kích thước gốc)
+            proj.transform.localScale = rangedProjectilePrefab.transform.localScale * 0.4f;
 
             var comp = proj.GetComponent<FinalBossProjectile>() ?? proj.AddComponent<FinalBossProjectile>();
             comp.Initialize(shootDir, projectileSpeed, projectileDamage, transform);
@@ -1426,22 +1445,16 @@ public class FinalBossAI : NetworkBehaviour
 
             float dist = Vector3.Distance(boss.transform.position, boss.targetPlayer.position);
 
-            // Đứng từ xa bắn chiêu tầm xa hoặc dùng chiêu Phase 2
+            // Đứng từ xa bắn chiêu tầm xa hoặc dùng combo kết hợp chưởng lửa + chém
             if (boss.attackCooldownTimer <= 0)
             {
                 if (boss.AgentReady) boss.agent.isStopped = true;
                 boss.SetSpeedNet(0f);
 
-                if (boss.isEnraged || boss.ActualCurrentHealth <= (boss.maxHealth * 0.5f))
+                // DÙNG NGAY TỪ PHASE 1 VÀ PHASE 2: Khi hồi chiêu xong thì tung ngay Combo Chưởng Lửa + Chém Xa!
+                if (boss.fireSpewCooldownTimer <= 0)
                 {
-                    // PHASE 2: Chọn ngẫu nhiên giữa Phun Lửa và Vệt Chém Tầm Xa
-                    var availableSkills = new List<FinalBossState>();
-                    availableSkills.Add(FinalBossState.Attack); // Đòn chém thường (3 vệt / 5 vệt chém) luôn có thể dùng
-
-                    if (boss.fireSpewCooldownTimer <= 0) availableSkills.Add(FinalBossState.FireSpew);
-
-                    FinalBossState chosenSkill = availableSkills[Random.Range(0, availableSkills.Count)];
-                    boss.ChangeState(chosenSkill);
+                    boss.ChangeState(FinalBossState.FireSpew);
                 }
                 else
                 {
@@ -1627,8 +1640,9 @@ public class FinalBossAI : NetworkBehaviour
         {
             timer = 0f;
             startScale = boss.transform.localScale;
-            // Phóng to kích thước thân thể theo tỷ lệ growScaleMultiplier từ Inspector (mặc định x1.4)
-            targetScale = startScale * boss.growScaleMultiplier;
+            // Tăng kích thước Phase 2 to lớn, uy dũng (tối thiểu x2.2 lần kích thước ban đầu)
+            float mult = boss.growScaleMultiplier <= 1.5f ? 2.2f : boss.growScaleMultiplier;
+            targetScale = startScale * mult;
 
             if (boss.AgentReady)
             {
@@ -1647,7 +1661,7 @@ public class FinalBossAI : NetworkBehaviour
             }
 
             boss.PlayGrowVFX();
-            Debug.Log($"[FinalBossAI] PHASE 2 KÍCH HOẠT (<= 50% HP: {boss.ActualCurrentHealth}/{boss.maxHealth})! KING ATLANTIS GẦM THÉT VÀ PHÓNG TO THÂN THỂ x{boss.growScaleMultiplier}!");
+            Debug.Log($"[FinalBossAI] PHASE 2 KÍCH HOẠT (<= 50% HP: {boss.ActualCurrentHealth}/{boss.maxHealth})! KING ATLANTIS GẦM THÉT VÀ PHÓNG TO THÂN THỂ x{mult}!");
         }
 
         public void Update()
@@ -1942,15 +1956,17 @@ public class FinalBossAI : NetworkBehaviour
         // Chờ tia lửa bay lên tầng mây (0.35 giây)
         yield return new WaitForSeconds(0.35f);
 
-        // BƯỚC 2: 5 TIA LỬA LẦN LƯỢT GIÁNG THẲNG TỪ TRÊN CAO XUỐNG VỊ TRÍ PLAYER
+        // BƯỚC 2: 5 TIA LỬA LẦN LƯỢT GIÁNG THẲNG TỪ TRÊN CAO CẮM SÂU XUỐNG VỊ TRÍ PLAYER
         for (int i = 0; i < targetPositions.Length; i++)
         {
             Vector3 groundPos = targetPositions[i];
-            Vector3 skySpawnPos = groundPos + Vector3.up * 16.0f; // Bắt đầu từ độ cao 16 mét
+            // Khởi tạo cột lửa cắm từ trên trời cao 20m đâm thẳng xuống tận mặt đất
+            Vector3 skySpawnPos = groundPos + Vector3.up * 20.0f;
             Quaternion downRot = Quaternion.Euler(90f, 0f, 0f); // Đâm thẳng đứng xuống mặt đất
 
             GameObject downBeam = Instantiate(fireSpewVFX, skySpawnPos, downRot);
-            downBeam.transform.localScale = new Vector3(1.3f, 1.3f, 1.3f);
+            // Kéo dài trục Z lên 4.8 lần để tia lửa nối liền từ trên trời đâm ngập sâu vào mặt đất/Player!
+            downBeam.transform.localScale = new Vector3(1.5f, 1.5f, 4.8f);
 
             var particles = downBeam.GetComponentsInChildren<ParticleSystem>(true);
             foreach (var ps in particles)
@@ -1961,6 +1977,21 @@ public class FinalBossAI : NetworkBehaviour
                 ps.Play(true);
             }
 
+            // BÙNG NỔ VFX DƯỚI MẶT ĐẤT KHI TIA LỬA CHẠM ĐẤT
+            if (skyFireGroundImpactVFX != null)
+            {
+                GameObject groundImpact = Instantiate(skyFireGroundImpactVFX, groundPos + Vector3.up * 0.05f, Quaternion.identity);
+                groundImpact.transform.localScale = Vector3.one * 1.5f;
+                Destroy(groundImpact, 2.5f);
+            }
+            else
+            {
+                // Fallback cột lửa phụ bùng lên từ mặt đất
+                GameObject groundEruption = Instantiate(fireSpewVFX, groundPos + Vector3.up * 0.05f, Quaternion.Euler(-90f, 0f, 0f));
+                groundEruption.transform.localScale = new Vector3(1.3f, 1.3f, 2.2f);
+                Destroy(groundEruption, 1.4f);
+            }
+
             // Gắn vùng gây sát thương va chạm
             var damageZone = downBeam.GetComponent<FireBeamDamageZone>() ?? downBeam.AddComponent<FireBeamDamageZone>();
             damageZone.Initialize(this, fireSpewDamage, fireSpewKnockback);
@@ -1968,7 +1999,7 @@ public class FinalBossAI : NetworkBehaviour
             // Rung giật camera mặt đất tại điểm nổ
             CameraShakeHelper.ShakeAtPosition(groundPos, 0.6f, 1.3f, 35f);
 
-            // Gây sát thương nổ diện rộng tại mặt đất để chắc chắn trúng 100%
+            // Gây sát thương nổ diện rộng tại mặt đất để chắc chắn trúng 100% (-5 HP)
             bool auth = isStandaloneMode || (IsNetworkActive && IsServer);
             if (auth)
             {
@@ -2022,8 +2053,8 @@ public class FinalBossAI : NetworkBehaviour
             vfx.transform.localPosition = new Vector3(0f, 1.2f, 0f);
             vfx.transform.localRotation = Quaternion.identity;
 
-            // Đặt kích thước bao bọc vừa vặn xung quanh cơ thể Boss (không bị quá to)
-            vfx.transform.localScale = new Vector3(1.35f, 1.35f, 1.35f);
+            // Đặt kích thước bao bọc vừa vặn xung quanh cơ thể khổng lồ của Boss
+            vfx.transform.localScale = new Vector3(1.5f, 1.5f, 1.5f);
 
             // Ép Loop toàn bộ ParticleSystems để phát sáng liên tục trong 3s biến hình
             var particles = vfx.GetComponentsInChildren<ParticleSystem>(true);
@@ -2567,11 +2598,11 @@ public class FinalBossProjectile : MonoBehaviour
         rb.isKinematic = true;
         rb.useGravity = false;
 
-        // TỰ ĐỘNG GẮN / CẤU HÌNH BOX COLLIDER RỘNG 4M PHỦ KÍN TOÀN BỘ VỆT CHÉM TRĂNG KHUYẾT
+        // TỰ ĐỘNG GẮN / CẤU HÌNH BOX COLLIDER VỪA VẶN PHỦ KÍN VỆT CHÉM TRĂNG KHUYẾT
         var box = GetComponent<BoxCollider>();
         if (box == null) box = gameObject.AddComponent<BoxCollider>();
-        box.size = new Vector3(4.0f, 2.5f, 2.2f);
-        box.center = new Vector3(0f, 0.5f, 0f);
+        box.size = new Vector3(2.0f, 1.4f, 1.4f);
+        box.center = new Vector3(0f, 0.35f, 0f);
         box.isTrigger = true;
 
         var colliders = GetComponentsInChildren<Collider>(true);
@@ -2647,15 +2678,15 @@ public class FinalBossProjectile : MonoBehaviour
             float xzDist = Vector2.Distance(new Vector2(currentPos.x, currentPos.z), new Vector2(p.position.x, p.position.z));
             float heightDiff = Mathf.Abs(p.position.y - currentPos.y);
 
-            // Bán kính phủ sóng vệt chém rộng 2.4m, chiều cao 2.8m
-            if (xzDist <= 2.4f && heightDiff <= 2.8f)
+            // Bán kính phủ sóng vệt chém vừa vặn 1.6m, chiều cao 2.0m
+            if (xzDist <= 1.6f && heightDiff <= 2.0f)
             {
                 ApplyDamageToPlayer(p);
             }
         }
 
         // 2. Quét phủ hitbox bằng Physics.OverlapBox
-        Collider[] hits = Physics.OverlapBox(currentPos + Vector3.up * 0.5f, new Vector3(2.0f, 1.3f, 1.3f), transform.rotation);
+        Collider[] hits = Physics.OverlapBox(currentPos + Vector3.up * 0.35f, new Vector3(1.0f, 0.8f, 0.8f), transform.rotation);
         foreach (var hit in hits)
         {
             if (hit == null) continue;
