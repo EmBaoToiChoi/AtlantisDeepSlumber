@@ -2072,125 +2072,48 @@ public class FinalBossAI : NetworkBehaviour
             if (fireSpewVFX == null) yield break;
         }
 
-        // BƯỚC 1: BẮN TIA LỬA THẲNG LÊN TRỜI TỪ NGỰC/MIỆNG BOSS (VỪA VẶN, SẮC NÉT)
+        // BƯỚC 1: BẮN TIA LỬA THẲNG LÊN TRỜI TỪ NGỰC/MIỆNG BOSS
         Vector3 bossMouthPos = transform.position + Vector3.up * 1.6f;
+        Vector3 skyTarget = bossMouthPos + Vector3.up * 22.0f;
         Quaternion upRot = Quaternion.Euler(-90f, 0f, 0f);
         GameObject upBeam = Instantiate(fireSpewVFX, bossMouthPos, upRot);
-        upBeam.transform.localScale = new Vector3(2.2f, 2.2f, 3.5f);
-        EnsureMaterialShaderValid(upBeam);
-
-        // Vô hiệu hóa script quản lý PixPlays để không can thiệp tắt hạt
-        var upMbList = upBeam.GetComponentsInChildren<MonoBehaviour>(true);
-        foreach (var mb in upMbList)
-        {
-            if (mb != null && mb.GetType().Namespace != null && mb.GetType().Namespace.Contains("PixPlays"))
-                mb.enabled = false;
-        }
+        TriggerVfxPlayback(upBeam, bossMouthPos, skyTarget, 1.5f, 2.0f);
 
         CameraShakeHelper.Shake(0.8f, 1.0f);
         if (fireSpewSFX != null) AudioSource.PlayClipAtPoint(fireSpewSFX, bossMouthPos, 1.0f);
-
-        // Kích hoạt tất cả hạt trong tia lửa bắn lên trời
-        var upParticles = upBeam.GetComponentsInChildren<ParticleSystem>(true);
-        foreach (var ps in upParticles)
-        {
-            if (ps == null) continue;
-            ps.gameObject.SetActive(true);
-            var main = ps.main;
-            main.scalingMode = ParticleSystemScalingMode.Hierarchy;
-            main.loop = true;
-            var em = ps.emission;
-            em.enabled = true;
-            ps.Clear(true);
-            ps.Play(true);
-        }
-        var upRenderers = upBeam.GetComponentsInChildren<Renderer>(true);
-        foreach (var r in upRenderers) if (r != null) r.enabled = true;
-
         Destroy(upBeam, 1.5f);
 
         // Chờ tia lửa bay lên tầng mây (0.35 giây)
         yield return new WaitForSeconds(0.35f);
 
-        // BƯỚC 2: CÁC CỘT LỬA GIÁNG TỪ TRÊN TRỜI CẮM SÂU XUỐNG ĐẤT (CÂN BẰNG, ĐƯỜNG KÍNH ĐẸP MẮT)
+        // BƯỚC 2: CÁC CỘT LỬA GIÁNG TỪ TRÊN TRỜI CẮM SÂU XUỐNG ĐẤT
         for (int i = 0; i < targetPositions.Length; i++)
         {
             Vector3 groundPos = targetPositions[i];
             Vector3 skySpawnPos = groundPos + Vector3.up * 20.0f;
             Quaternion downRot = Quaternion.Euler(90f, 0f, 0f);
 
-            // 1. CỘT LỬA TỪ TRÊN TRỜI ĐÂM XUỐNG (VỪA VẶN, KHÔNG BỊ TO QUÁ MỨC)
+            // 1. Cột lửa cắm từ trời xuống
             GameObject downBeam = Instantiate(fireSpewVFX, skySpawnPos, downRot);
-            downBeam.transform.localScale = new Vector3(2.4f, 2.4f, 4.2f);
-            EnsureMaterialShaderValid(downBeam);
-
-            // Vô hiệu hóa script quản lý PixPlays để không bị tắt hạt
-            var downMbList = downBeam.GetComponentsInChildren<MonoBehaviour>(true);
-            foreach (var mb in downMbList)
-            {
-                if (mb != null && mb.GetType().Namespace != null && mb.GetType().Namespace.Contains("PixPlays"))
-                    mb.enabled = false;
-            }
-
-            var particles = downBeam.GetComponentsInChildren<ParticleSystem>(true);
-            foreach (var ps in particles)
-            {
-                if (ps == null) continue;
-                ps.gameObject.SetActive(true);
-                var main = ps.main;
-                main.scalingMode = ParticleSystemScalingMode.Hierarchy;
-                main.loop = true;
-                var em = ps.emission;
-                em.enabled = true;
-                ps.Clear(true);
-                ps.Play(true);
-            }
-
-            var renderers = downBeam.GetComponentsInChildren<Renderer>(true);
-            foreach (var r in renderers) if (r != null) r.enabled = true;
+            TriggerVfxPlayback(downBeam, skySpawnPos, groundPos, 1.8f, 2.5f);
 
             // Gắn vùng gây sát thương va chạm
             var damageZone = downBeam.GetComponent<FireBeamDamageZone>() ?? downBeam.AddComponent<FireBeamDamageZone>();
             damageZone.Initialize(this, fireSpewDamage, fireSpewKnockback);
 
-            // 2. BÙNG NỔ VFX DƯỚI MẶT ĐẤT (FIREAOEVFX) VỪA VẶN
+            // 2. Vùng nổ mặt đất
             GameObject groundImpactPrefab = skyFireGroundImpactVFX != null ? skyFireGroundImpactVFX : fireSpewVFX;
             if (groundImpactPrefab != null)
             {
                 GameObject groundImpact = Instantiate(groundImpactPrefab, groundPos + Vector3.up * 0.1f, Quaternion.identity);
-                groundImpact.transform.localScale = Vector3.one * 2.2f; // Kích thước vừa vặn 2.2x
-                EnsureMaterialShaderValid(groundImpact);
-
-                var aoeMbList = groundImpact.GetComponentsInChildren<MonoBehaviour>(true);
-                foreach (var mb in aoeMbList)
-                {
-                    if (mb != null && mb.GetType().Namespace != null && mb.GetType().Namespace.Contains("PixPlays"))
-                        mb.enabled = false;
-                }
-
-                var aoeParticles = groundImpact.GetComponentsInChildren<ParticleSystem>(true);
-                foreach (var ps in aoeParticles)
-                {
-                    if (ps == null) continue;
-                    ps.gameObject.SetActive(true);
-                    var main = ps.main;
-                    main.scalingMode = ParticleSystemScalingMode.Hierarchy;
-                    var em = ps.emission;
-                    em.enabled = true;
-                    ps.Clear(true);
-                    ps.Play(true);
-                }
-
-                var aoeRenderers = groundImpact.GetComponentsInChildren<Renderer>(true);
-                foreach (var r in aoeRenderers) if (r != null) r.enabled = true;
-
-                Destroy(groundImpact, 3.0f);
+                TriggerVfxPlayback(groundImpact, groundPos, groundPos + Vector3.up, 2.5f, 3.5f);
+                Destroy(groundImpact, 2.5f);
             }
 
             // Rung giật camera mặt đất tại điểm nổ
             CameraShakeHelper.ShakeAtPosition(groundPos, 0.6f, 1.3f, 35f);
 
-            // Gây sát thương nổ diện rộng tại mặt đất để chắc chắn trúng 100% (-5 HP)
+            // Gây sát thương nổ diện rộng tại mặt đất (-5 HP)
             bool auth = isStandaloneMode || (IsNetworkActive && IsServer);
             if (auth)
             {
@@ -2269,11 +2192,11 @@ public class FinalBossAI : NetworkBehaviour
         float[] angles = new float[] { -24f, -12f, 0f, 12f, 24f };
         Vector3[] localOffsets = new Vector3[]
         {
-            new Vector3(-3.2f, 0.4f, 0.6f),
-            new Vector3(-1.6f, 0.8f, 1.0f),
+            new Vector3(-3.0f, 0.4f, 0.6f),
+            new Vector3(-1.5f, 0.8f, 1.0f),
             new Vector3(0f, 1.2f, 1.4f),
-            new Vector3(1.6f, 0.8f, 1.0f),
-            new Vector3(3.2f, 0.4f, 0.6f)
+            new Vector3(1.5f, 0.8f, 1.0f),
+            new Vector3(3.0f, 0.4f, 0.6f)
         };
 
         for (int i = 0; i < angles.Length; i++)
@@ -2284,36 +2207,14 @@ public class FinalBossAI : NetworkBehaviour
             Vector3 shootDir = Quaternion.Euler(0, angle, 0) * transform.forward;
             Quaternion rot = Quaternion.LookRotation(shootDir);
 
-            GameObject beam = Instantiate(genesisLaserVFX, spawnPoint, rot, transform);
-            // Kéo dài và phóng to vừa vặn, cân đối thẩm mỹ (rộng 1.3x, dài 3.8x)
-            beam.transform.localScale = new Vector3(1.3f, 1.3f, 3.8f);
-            EnsureMaterialShaderValid(beam);
-
-            // Ép Loop toàn bộ ParticleSystem để tia laser duy trì liên tục trong suốt 2.5s
-            var particles = beam.GetComponentsInChildren<ParticleSystem>(true);
-            foreach (var ps in particles)
-            {
-                if (ps == null) continue;
-                ps.gameObject.SetActive(true);
-                var main = ps.main;
-                main.loop = true; // Ép Loop liên tục
-                main.scalingMode = ParticleSystemScalingMode.Hierarchy;
-                main.stopAction = ParticleSystemStopAction.None;
-                main.startLifetime = Mathf.Max(main.startLifetime.constant, 3.5f);
-                var em = ps.emission;
-                em.enabled = true;
-                ps.Clear(true);
-                ps.Play(true);
-            }
-
-            var renderers = beam.GetComponentsInChildren<Renderer>(true);
-            foreach (var r in renderers) if (r != null) r.enabled = true;
+            GameObject beam = Instantiate(genesisLaserVFX, spawnPoint, rot);
+            TriggerVfxPlayback(beam, spawnPoint, spawnPoint + shootDir * 40f, 2.8f, 2.5f);
 
             // Gắn vùng gây sát thương va chạm liên tục (-5 HP)
             var damageZone = beam.GetComponent<GenesisBeamDamageZone>() ?? beam.AddComponent<GenesisBeamDamageZone>();
-            damageZone.Initialize(this, aerialLaserDamage, 8f, 40f, 2.2f);
+            damageZone.Initialize(this, aerialLaserDamage, 8f, 40f, 2.5f);
 
-            Destroy(beam, 2.6f);
+            Destroy(beam, 2.8f);
         }
 
         CameraShakeHelper.Shake(2.0f, 1.0f);
@@ -2321,34 +2222,32 @@ public class FinalBossAI : NetworkBehaviour
     }
 
     /// <summary>
-    /// Tự động kiểm tra và sửa lỗi Material bị mất Shader (màu hồng) trên Built-in Render Pipeline
+    /// Kích hoạt đúng cơ chế phát của tất cả các hệ thống VFX (PixPlays BaseVfx, ParticleSystems)
     /// </summary>
-    public void EnsureMaterialShaderValid(GameObject go)
+    private void TriggerVfxPlayback(GameObject vfx, Vector3 source, Vector3 target, float duration = 2.5f, float radius = 3.0f)
     {
-        if (go == null) return;
-        var renderers = go.GetComponentsInChildren<Renderer>(true);
-        Shader fallbackShader = Shader.Find("Particles/Standard Unlit") 
-            ?? Shader.Find("Mobile/Particles/Additive") 
-            ?? Shader.Find("Legacy Shaders/Particles/Additive")
-            ?? Shader.Find("Sprites/Default");
+        if (vfx == null) return;
 
-        foreach (var r in renderers)
+        // 1. Nếu là VFX của gói PixPlays (FireBeam, FireAoeVFX...) -> Khởi tạo VfxData và gọi Play(data) để kích hoạt Coroutine bắn chùm tia!
+        var baseVfxList = vfx.GetComponentsInChildren<PixPlays.ElementalVFX.BaseVfx>(true);
+        foreach (var bv in baseVfxList)
         {
-            if (r == null) continue;
-            var mats = r.sharedMaterials;
-            bool changed = false;
-            for (int i = 0; i < mats.Length; i++)
+            if (bv != null)
             {
-                if (mats[i] != null && (mats[i].shader == null || mats[i].shader.name.Contains("Error") || mats[i].shader.name == "Hidden/InternalErrorShader"))
-                {
-                    if (fallbackShader != null)
-                    {
-                        mats[i].shader = fallbackShader;
-                        changed = true;
-                    }
-                }
+                var data = new PixPlays.ElementalVFX.VfxData(source, target, duration, radius);
+                bv.Play(data);
             }
-            if (changed) r.sharedMaterials = mats;
+        }
+
+        // 2. Kích hoạt toàn bộ ParticleSystem bên trong
+        var particles = vfx.GetComponentsInChildren<ParticleSystem>(true);
+        foreach (var ps in particles)
+        {
+            if (ps != null)
+            {
+                ps.gameObject.SetActive(true);
+                ps.Play(true);
+            }
         }
     }
 
@@ -2376,7 +2275,6 @@ public class FinalBossAI : NetworkBehaviour
 
             // Đặt kích thước bao bọc vừa vặn xung quanh cơ thể của Boss
             vfx.transform.localScale = new Vector3(1.2f, 1.2f, 1.2f);
-            EnsureMaterialShaderValid(vfx);
 
             // Ép Loop toàn bộ ParticleSystems để phát sáng liên tục trong 3s biến hình
             var particles = vfx.GetComponentsInChildren<ParticleSystem>(true);
