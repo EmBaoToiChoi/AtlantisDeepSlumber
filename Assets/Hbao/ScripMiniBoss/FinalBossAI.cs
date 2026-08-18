@@ -18,7 +18,7 @@ using UnityEngine.AI;
 /// </summary>
 public class FinalBossAI : NetworkBehaviour
 {
-    public enum FinalBossState { Sitting, JumpDown, Grow, AerialLaser, FireSpew, Idle, Chase, Attack, Shockwave, Hit, Dead }
+    public enum FinalBossState { Sitting, JumpDown, Grow, AerialLaser, DroneLaser, FireSpew, Idle, Chase, Attack, Shockwave, Hit, Dead }
 
     [Header("Miniboss Reference")]
     [Tooltip("Reference to the Boss AI (e.g. Silas) that must die before the final boss jumps down.")]
@@ -61,6 +61,8 @@ public class FinalBossAI : NetworkBehaviour
     public NetworkVariable<int> fireSpewCounter = new NetworkVariable<int>(
         0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     public NetworkVariable<int> aerialLaserCounter = new NetworkVariable<int>(
+        0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+    public NetworkVariable<int> droneLaserCounter = new NetworkVariable<int>(
         0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     public NetworkVariable<int> growCounter = new NetworkVariable<int>(
         0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
@@ -201,6 +203,14 @@ public class FinalBossAI : NetworkBehaviour
     public float aerialHeight = 5.5f;
     public float aerialFlyDuration = 4.5f;
 
+    [Header("Phase 2 Drone Laser Barrage (12 Tia Laser Xoay Tròn Quanh Boss)")]
+    public GameObject droneBlasterVFX;
+    public float droneLaserCooldown = 18f;
+    public float droneLaserCooldownTimer = 0f;
+    public float droneLaserDamage = 5f;
+    public float droneLaserDuration = 6.0f;
+    public float droneLaserRotationSpeed = 35f;
+
     [Header("Fire Spew (Phun Lửa) Settings")]
     public float fireSpewInterval = 10f;
     public float fireSpewWindupDuration = 1.0f;
@@ -261,6 +271,7 @@ public class FinalBossAI : NetworkBehaviour
     private FireSpewState stateFireSpew;
     private GrowState stateGrow;
     private AerialLaserState stateAerialLaser;
+    private DroneLaserState stateDroneLaser;
     private HitState stateHit;
     private DeadState stateDead;
 
@@ -310,6 +321,7 @@ public class FinalBossAI : NetworkBehaviour
         stateFireSpew = new FireSpewState(this);
         stateGrow = new GrowState(this);
         stateAerialLaser = new AerialLaserState(this);
+        stateDroneLaser = new DroneLaserState(this);
         stateHit = new HitState(this);
         localHealth = maxHealth;
         stateDead = new DeadState(this);
@@ -348,6 +360,11 @@ public class FinalBossAI : NetworkBehaviour
         {
             genesisLaserVFX = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(
                 "Assets/SpecialSkillsEffectsPack/AllEffects/EffectsSet_2(ScriptBased)/Effects/Effect_50_WingsofGenesis/Effect_50_GenesisBreaker.prefab");
+        }
+        if (droneBlasterVFX == null)
+        {
+            droneBlasterVFX = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/SpecialSkillsEffectsPack/AllEffects/EffectsSet_2(ScriptBased)/Effects/Effect_50_WingsofGenesis/Effect_50_GenesisDroneBlaster.prefab");
         }
 #endif
     }
@@ -406,6 +423,10 @@ public class FinalBossAI : NetworkBehaviour
             if (anim != null && attackTriggers != null && attackTriggers.Length > 2)
                 anim.SetTrigger(attackTriggers[2]);
         };
+        droneLaserCounter.OnValueChanged += (_, _) => {
+            if (anim != null && attackTriggers != null && attackTriggers.Length > 2)
+                anim.SetTrigger(attackTriggers[2]);
+        };
         growCounter.OnValueChanged += (_, _) => {
             if (anim != null) anim.SetTrigger(growTriggerParam);
             PlayGrowVFX();
@@ -459,7 +480,14 @@ public class FinalBossAI : NetworkBehaviour
         fireSpewCounter.OnValueChanged -= (_, _) => {
             if (anim != null) anim.SetTrigger(fireSpewTriggerParam);
         };
-        aerialLaserCounter.OnValueChanged -= (_, _) => { };
+        aerialLaserCounter.OnValueChanged -= (_, _) => {
+            if (anim != null && attackTriggers != null && attackTriggers.Length > 2)
+                anim.SetTrigger(attackTriggers[2]);
+        };
+        droneLaserCounter.OnValueChanged -= (_, _) => {
+            if (anim != null && attackTriggers != null && attackTriggers.Length > 2)
+                anim.SetTrigger(attackTriggers[2]);
+        };
         growCounter.OnValueChanged -= (_, _) => {
             if (anim != null) anim.SetTrigger(growTriggerParam);
             PlayGrowVFX();
@@ -636,10 +664,11 @@ public class FinalBossAI : NetworkBehaviour
         if (attackCooldownTimer > 0) attackCooldownTimer -= Time.deltaTime;
         if (shockwaveCooldownTimer > 0) shockwaveCooldownTimer -= Time.deltaTime;
         if (aerialLaserCooldownTimer > 0) aerialLaserCooldownTimer -= Time.deltaTime;
+        if (droneLaserCooldownTimer > 0) droneLaserCooldownTimer -= Time.deltaTime;
+        if (fireSpewCooldownTimer > 0) fireSpewCooldownTimer -= Time.deltaTime;
         if (IsBossActive && !IsDead && CurrentStateValue != FinalBossState.Sitting && CurrentStateValue != FinalBossState.JumpDown)
         {
             StartBattleMusic();
-            if (fireSpewCooldownTimer > 0) fireSpewCooldownTimer -= Time.deltaTime;
         }
 
         // BẢO ĐẢM TỰ ĐỘNG KÍCH HOẠT PHASE 2 NGAY KHI MÁU <= 50% MÁU TỐI ĐA
@@ -725,6 +754,9 @@ public class FinalBossAI : NetworkBehaviour
                 break;
             case FinalBossState.AerialLaser:
                 currentFSMState = stateAerialLaser;
+                break;
+            case FinalBossState.DroneLaser:
+                currentFSMState = stateDroneLaser;
                 break;
             case FinalBossState.Dead:
                 currentFSMState = stateDead;
@@ -842,7 +874,7 @@ public class FinalBossAI : NetworkBehaviour
         Collider[] hits = Physics.OverlapSphere(transform.position, shockwaveRadius, playerLayer);
         foreach (var hit in hits)
         {
-            Transform root = GetPlayerRoot(hit.transform);
+            Transform root = GetPlayerRoot(hit.GetComponent<Collider>().transform);
             if (root != null && !hitRoots.Contains(root))
             {
                 hitRoots.Add(root);
@@ -1488,24 +1520,27 @@ public class FinalBossAI : NetworkBehaviour
 
                 if (boss.isEnraged || boss.ActualCurrentHealth <= (boss.maxHealth * 0.5f))
                 {
-                    // PHASE 2: Ưu tiên dùng kỹ năng Bay Lên Cao Bắn 5 Tia Laser Genesis Breaker khi hồi chiêu
+                    // PHASE 2: HOÀN TOÀN KHÔNG CÓ CHƯỞNG LỬA (NO FIRE SPEW IN PHASE 2)
+                    // CHIÊU 1: Triệu hồi 3 cụm Drone Blaster (12 tia laser xanh xoay tròn 360° quanh Boss)
+                    if (boss.droneLaserCooldownTimer <= 0)
+                    {
+                        boss.ChangeState(FinalBossState.DroneLaser);
+                        return;
+                    }
+
+                    // CHIÊU 2: Bay Lên Cao Bắn 5 Tia Laser Genesis Breaker
                     if (boss.aerialLaserCooldownTimer <= 0)
                     {
                         boss.ChangeState(FinalBossState.AerialLaser);
                         return;
                     }
 
-                    if (boss.fireSpewCooldownTimer <= 0)
-                    {
-                        boss.ChangeState(FinalBossState.FireSpew);
-                        return;
-                    }
-
+                    // CHIÊU 3: Đòn đánh chém kiếm phát ra các vệt chém tầm xa Critical Slash
                     boss.ChangeState(FinalBossState.Attack);
                     return;
                 }
 
-                // PHASE 1: Dùng Combo Chưởng Lửa + Chém Xa hoặc Đòn Chém Thường
+                // PHASE 1: Dùng Chưởng Lửa Lên Trời & Giáng Cột Lửa hoặc Đòn Đánh Cận Chiến
                 if (boss.fireSpewCooldownTimer <= 0)
                 {
                     boss.ChangeState(FinalBossState.FireSpew);
@@ -1597,14 +1632,17 @@ public class FinalBossAI : NetworkBehaviour
                 boss.RotateTowards(aimPos);
             }
 
-            // BẮN ĐẠN PREFAB TẦM XA KHI ĐẾN TIMER VUNG TAY (0.35s)
+            // BẮN ĐẠN KIẾM TẦM XA (CRITICAL SLASH) KHI Ở PHASE 2 (MÁU <= 50% HOẶC ENRAGED)
             if (!hasSpawnedProjectile)
             {
                 spawnTimer -= Time.deltaTime;
                 if (spawnTimer <= 0f)
                 {
                     hasSpawnedProjectile = true;
-                    boss.SpawnRangedProjectile();
+                    if (boss.isEnraged || boss.ActualCurrentHealth <= (boss.maxHealth * 0.5f))
+                    {
+                        boss.SpawnRangedProjectile();
+                    }
                 }
             }
 
@@ -1849,6 +1887,58 @@ public class FinalBossAI : NetworkBehaviour
         }
     }
 
+    private class DroneLaserState : IEnemyState
+    {
+        private FinalBossAI boss;
+        private float stateTimer;
+
+        public DroneLaserState(FinalBossAI boss) { this.boss = boss; }
+
+        public void Enter()
+        {
+            stateTimer = boss.droneLaserDuration + 0.4f;
+
+            if (boss.AgentReady)
+            {
+                boss.agent.isStopped = true;
+                boss.agent.velocity = Vector3.zero;
+            }
+            boss.SetSpeedNet(0f);
+
+            // Kích hoạt hoạt ảnh gầm gồng năng lượng
+            if (boss.anim != null && boss.attackTriggers != null && boss.attackTriggers.Length > 2)
+            {
+                boss.anim.SetTrigger(boss.attackTriggers[2]);
+            }
+
+            // Kích hoạt triệu hồi cụm Drone Blaster xoay tròn đồng bộ mạng
+            boss.ExecuteDroneBarrage();
+        }
+
+        public void Update()
+        {
+            stateTimer -= Time.deltaTime;
+
+            if (boss.targetPlayer != null)
+            {
+                boss.RotateTowards(boss.targetPlayer.position);
+            }
+
+            if (stateTimer <= 0)
+            {
+                boss.droneLaserCooldownTimer = boss.droneLaserCooldown;
+                if (boss.targetPlayer != null) boss.ChangeState(FinalBossState.Chase);
+                else boss.ChangeState(FinalBossState.Idle);
+            }
+        }
+
+        public void Exit()
+        {
+            boss.droneLaserCooldownTimer = boss.droneLaserCooldown;
+            if (boss.AgentReady) boss.agent.isStopped = false;
+        }
+    }
+
     private class HitState : IEnemyState
     {
         private FinalBossAI boss;
@@ -1923,16 +2013,12 @@ public class FinalBossAI : NetworkBehaviour
     {
         private FinalBossAI boss;
         private float stateTimer;
-        private bool hasSlashComboTriggered;
-        private float slashComboDelay = 0.65f;
 
         public FireSpewState(FinalBossAI boss) { this.boss = boss; }
 
         public void Enter()
         {
-            hasSlashComboTriggered = false;
-            // Thời lượng toàn bộ chuỗi Combo cân bằng ở 2.0s (nhịp độ dứt khoát, không bị lê thê)
-            stateTimer = 2.0f;
+            stateTimer = 1.8f;
 
             if (boss.AgentReady)
             {
@@ -1951,36 +2037,19 @@ public class FinalBossAI : NetworkBehaviour
                 boss.anim.SetTrigger(boss.fireSpewTriggerParam);
             }
 
-            // GIAI ĐOẠN 1: Bắn chưởng lửa lên trời và gọi 5 cột lửa giáng xuống vị trí Player
+            // Bắn chưởng lửa lên trời và gọi các cột lửa giáng xuống vị trí Player
             boss.ExecuteSkyFireBarrage();
         }
 
         public void Update()
         {
             stateTimer -= Time.deltaTime;
-            float elapsed = 2.0f - stateTimer;
 
             if (boss.targetPlayer != null)
             {
                 // Xoay hướng đón đầu Player trong suốt nhịp tung chiêu
                 Vector3 aimPos = boss.GetPredictedTargetPosition(boss.targetPlayer, boss.projectileSpeed);
                 boss.RotateTowards(aimPos);
-            }
-
-            // GIAI ĐOẠN 2: KẾT HỢP COMBO VỆT CHÉM TẦM XA (CRITICAL SLASH) KHI MƯA LỬA ĐANG GIÁNG XUỐNG (sau 0.65s)
-            if (!hasSlashComboTriggered && elapsed >= slashComboDelay)
-            {
-                hasSlashComboTriggered = true;
-
-                // Kích hoạt hoạt ảnh vung kiếm chém
-                if (boss.anim != null && boss.attackTriggers != null && boss.attackTriggers.Length > 0)
-                {
-                    boss.anim.SetTrigger(boss.attackTriggers[0]);
-                }
-
-                // Bắn 3 vệt chém đón đầu (đồng bộ Network)
-                boss.SpawnRangedProjectile();
-                Debug.Log("[FinalBossAI] ===> KẾT HỢP COMBO HOÀN HẢO: MƯA CỘT LỬA TRÊN TRỜI + VỆT CHÉM TẦM XA ĐÓN ĐẦU!");
             }
 
             if (stateTimer <= 0)
@@ -2072,12 +2141,12 @@ public class FinalBossAI : NetworkBehaviour
             if (fireSpewVFX == null) yield break;
         }
 
-        // BƯỚC 1: BẮN TIA LỬA THẲNG LÊN TRỜI TỪ NGỰC/MIỆNG BOSS
+        // BƯỚC 1: BẮN TIA LỬA THẲNG LÊN TRỜI TỪ NGỰC/MIỆNG BOSS (THON GỌN, SẮC NÉT)
         Vector3 bossMouthPos = transform.position + Vector3.up * 1.6f;
         Vector3 skyTarget = bossMouthPos + Vector3.up * 22.0f;
         Quaternion upRot = Quaternion.Euler(-90f, 0f, 0f);
         GameObject upBeam = Instantiate(fireSpewVFX, bossMouthPos, upRot);
-        TriggerVfxPlayback(upBeam, bossMouthPos, skyTarget, 1.5f, 2.0f);
+        TriggerVfxPlayback(upBeam, bossMouthPos, skyTarget, 1.5f, 0.8f, 0.45f);
 
         CameraShakeHelper.Shake(0.8f, 1.0f);
         if (fireSpewSFX != null) AudioSource.PlayClipAtPoint(fireSpewSFX, bossMouthPos, 1.0f);
@@ -2086,27 +2155,27 @@ public class FinalBossAI : NetworkBehaviour
         // Chờ tia lửa bay lên tầng mây (0.35 giây)
         yield return new WaitForSeconds(0.35f);
 
-        // BƯỚC 2: CÁC CỘT LỬA GIÁNG TỪ TRÊN TRỜI CẮM SÂU XUỐNG ĐẤT
+        // BƯỚC 2: CÁC CỘT LỬA GIÁNG TỪ TRÊN TRỜI CẮM SÂU XUỐNG ĐẤT (THON GỌN, ĐẸP MẮT)
         for (int i = 0; i < targetPositions.Length; i++)
         {
             Vector3 groundPos = targetPositions[i];
             Vector3 skySpawnPos = groundPos + Vector3.up * 20.0f;
             Quaternion downRot = Quaternion.Euler(90f, 0f, 0f);
 
-            // 1. Cột lửa cắm từ trời xuống
+            // 1. Cột lửa cắm từ trời xuống (Scale 0.45x thon gọn)
             GameObject downBeam = Instantiate(fireSpewVFX, skySpawnPos, downRot);
-            TriggerVfxPlayback(downBeam, skySpawnPos, groundPos, 1.8f, 2.5f);
+            TriggerVfxPlayback(downBeam, skySpawnPos, groundPos, 1.8f, 0.9f, 0.45f);
 
             // Gắn vùng gây sát thương va chạm
             var damageZone = downBeam.GetComponent<FireBeamDamageZone>() ?? downBeam.AddComponent<FireBeamDamageZone>();
             damageZone.Initialize(this, fireSpewDamage, fireSpewKnockback);
 
-            // 2. Vùng nổ mặt đất
+            // 2. Vùng nổ mặt đất (Scale 0.5x vừa vặn)
             GameObject groundImpactPrefab = skyFireGroundImpactVFX != null ? skyFireGroundImpactVFX : fireSpewVFX;
             if (groundImpactPrefab != null)
             {
                 GameObject groundImpact = Instantiate(groundImpactPrefab, groundPos + Vector3.up * 0.1f, Quaternion.identity);
-                TriggerVfxPlayback(groundImpact, groundPos, groundPos + Vector3.up, 2.5f, 3.5f);
+                TriggerVfxPlayback(groundImpact, groundPos, groundPos + Vector3.up, 2.5f, 1.2f, 0.5f);
                 Destroy(groundImpact, 2.5f);
             }
 
@@ -2117,7 +2186,7 @@ public class FinalBossAI : NetworkBehaviour
             bool auth = isStandaloneMode || (IsNetworkActive && IsServer);
             if (auth)
             {
-                ApplySkyFireImpactDamage(groundPos, fireSpewDamage, 2.5f);
+                ApplySkyFireImpactDamage(groundPos, fireSpewDamage, 2.0f);
             }
 
             Destroy(downBeam, 1.8f);
@@ -2188,7 +2257,7 @@ public class FinalBossAI : NetworkBehaviour
             if (genesisLaserVFX == null) return;
         }
 
-        // Bắn 5 tia Laser Genesis Breaker theo hình quạt quanh thân Boss ra phía trước
+        // Bắn 5 tia Laser Genesis Breaker theo hình quạt quanh thân Boss, chĩa chéo cắm xuống mặt đất
         float[] angles = new float[] { -24f, -12f, 0f, 12f, 24f };
         Vector3[] localOffsets = new Vector3[]
         {
@@ -2204,29 +2273,96 @@ public class FinalBossAI : NetworkBehaviour
             float angle = angles[i];
             Vector3 offset = localOffsets[i];
             Vector3 spawnPoint = transform.TransformPoint(offset);
-            Vector3 shootDir = Quaternion.Euler(0, angle, 0) * transform.forward;
+            // Chếch góc 18° cắm thẳng xuống mặt đất nơi Player đang đứng
+            Vector3 shootDir = Quaternion.Euler(18f, angle, 0) * transform.forward;
             Quaternion rot = Quaternion.LookRotation(shootDir);
 
             GameObject beam = Instantiate(genesisLaserVFX, spawnPoint, rot);
-            TriggerVfxPlayback(beam, spawnPoint, spawnPoint + shootDir * 40f, 2.8f, 2.5f);
+            beam.transform.localScale = new Vector3(1.2f, 1.2f, 2.5f); // Kéo dài tia laser đâm xuống mặt đất
+            TriggerVfxPlayback(beam, spawnPoint, spawnPoint + shootDir * 45f, 3.2f, 2.2f, 1.0f, true);
 
             // Gắn vùng gây sát thương va chạm liên tục (-5 HP)
             var damageZone = beam.GetComponent<GenesisBeamDamageZone>() ?? beam.AddComponent<GenesisBeamDamageZone>();
-            damageZone.Initialize(this, aerialLaserDamage, 8f, 40f, 2.5f);
+            damageZone.Initialize(this, aerialLaserDamage, 8f, 45f, 2.5f);
 
-            Destroy(beam, 2.8f);
+            Destroy(beam, 3.0f);
         }
 
         CameraShakeHelper.Shake(2.0f, 1.0f);
-        Debug.Log("[FinalBossAI] ===> XẢ 5 TIA GENESIS BREAKER LASER QUANH THÂN BOSS RA PHÍA TRƯỚC (-5 HP)!");
+        Debug.Log("[FinalBossAI] ===> XẢ 5 TIA GENESIS BREAKER LASER CẮM XUỐNG MẶT ĐẤT (LOOP = TRUE, -5 HP)!");
+    }
+
+    public void ExecuteDroneBarrage()
+    {
+        if (!isStandaloneMode && IsSpawned)
+        {
+            if (IsServer)
+            {
+                droneLaserCounter.Value++;
+                ExecuteDroneBarrageClientRpc();
+            }
+        }
+        else
+        {
+            ExecuteDroneBarrageLocally();
+        }
+    }
+
+    [ClientRpc]
+    private void ExecuteDroneBarrageClientRpc()
+    {
+        ExecuteDroneBarrageLocally();
+    }
+
+    private void ExecuteDroneBarrageLocally()
+    {
+        if (droneBlasterVFX == null)
+        {
+#if UNITY_EDITOR
+            droneBlasterVFX = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/SpecialSkillsEffectsPack/AllEffects/EffectsSet_2(ScriptBased)/Effects/Effect_50_WingsofGenesis/Effect_50_GenesisDroneBlaster.prefab");
+#endif
+            if (droneBlasterVFX == null) return;
+        }
+
+        Vector3 centerPos = transform.position + Vector3.up * 1.8f;
+        GameObject holder = new GameObject("RotatingDroneCluster");
+        holder.transform.position = centerPos;
+        holder.transform.rotation = Quaternion.identity;
+
+        var rotator = holder.AddComponent<RotatingDroneBlasterGroup>();
+        rotator.Initialize(this, droneLaserRotationSpeed, droneLaserDuration, droneLaserDamage);
+
+        // Sinh ra 3 cụm Drone Blaster xếp cách đều 120° quanh Boss (Mỗi cụm có 4 tia -> Tổng 12 tia laser!)
+        float[] angles = new float[] { 0f, 120f, 240f };
+        float radius = 4.6f; // Bán kính cách tâm Boss
+
+        foreach (float angle in angles)
+        {
+            Vector3 offsetDir = Quaternion.Euler(0, angle, 0) * Vector3.forward;
+            Vector3 spawnPos = centerPos + offsetDir * radius;
+            // Chếch góc 12° cắm thẳng xuống mặt đất để tia laser quét dọc trên sàn đấu
+            Quaternion spawnRot = Quaternion.LookRotation(offsetDir) * Quaternion.Euler(12f, 0f, 0f);
+
+            GameObject droneUnit = Instantiate(droneBlasterVFX, spawnPos, spawnRot, holder.transform);
+            droneUnit.transform.localScale = new Vector3(1.1f, 1.1f, 2.0f); // Kéo dài tia laser chạm xuống đất
+            TriggerVfxPlayback(droneUnit, spawnPos, spawnPos + offsetDir * 40f, droneLaserDuration, 2.0f, 1.0f, true);
+
+            rotator.RegisterDroneUnit(droneUnit.transform);
+        }
+
+        CameraShakeHelper.Shake(1.2f, 0.8f);
+        Debug.Log("[FinalBossAI] ===> TRIỆU HỒI 3 CỤM DRONE BLASTER (12 TIA LASER CẮM XUỐNG ĐẤT, LOOP = TRUE) QUAY 360°!");
     }
 
     /// <summary>
-    /// Kích hoạt đúng cơ chế phát của tất cả các hệ thống VFX (PixPlays BaseVfx, ParticleSystems)
+    /// Kích hoạt đúng cơ chế phát của tất cả các hệ thống VFX (PixPlays BaseVfx, ParticleSystems) với Loop và kích thước tùy chỉnh
     /// </summary>
-    private void TriggerVfxPlayback(GameObject vfx, Vector3 source, Vector3 target, float duration = 2.5f, float radius = 3.0f)
+    private void TriggerVfxPlayback(GameObject vfx, Vector3 source, Vector3 target, float duration = 2.5f, float radius = 3.0f, float scaleMultiplier = 1.0f, bool forceLoop = true)
     {
         if (vfx == null) return;
+
+        vfx.transform.localScale = Vector3.one * scaleMultiplier;
 
         // 1. Nếu là VFX của gói PixPlays (FireBeam, FireAoeVFX...) -> Khởi tạo VfxData và gọi Play(data) để kích hoạt Coroutine bắn chùm tia!
         var baseVfxList = vfx.GetComponentsInChildren<PixPlays.ElementalVFX.BaseVfx>(true);
@@ -2239,15 +2375,41 @@ public class FinalBossAI : NetworkBehaviour
             }
         }
 
-        // 2. Kích hoạt toàn bộ ParticleSystem bên trong
+        // 2. Kích hoạt và ép Loop toàn bộ ParticleSystem bên trong
         var particles = vfx.GetComponentsInChildren<ParticleSystem>(true);
         foreach (var ps in particles)
         {
             if (ps != null)
             {
                 ps.gameObject.SetActive(true);
+                var main = ps.main;
+                if (forceLoop)
+                {
+                    main.loop = true; // Ép Loop liên tục
+                    main.stopAction = ParticleSystemStopAction.None;
+                    main.startLifetime = Mathf.Max(main.startLifetime.constant, duration + 1.0f);
+                }
+                var em = ps.emission;
+                em.enabled = true;
+                ps.Clear(true);
                 ps.Play(true);
             }
+        }
+
+        var vfxGraphs = vfx.GetComponentsInChildren<UnityEngine.VFX.VisualEffect>(true);
+        foreach (var ve in vfxGraphs)
+        {
+            if (ve != null)
+            {
+                ve.gameObject.SetActive(true);
+                ve.Play();
+            }
+        }
+
+        var renderers = vfx.GetComponentsInChildren<Renderer>(true);
+        foreach (var r in renderers)
+        {
+            if (r != null) r.enabled = true;
         }
     }
 
@@ -3233,6 +3395,101 @@ public class GenesisBeamDamageZone : MonoBehaviour
                     Vector3 force = forward * knockback + Vector3.up * 2f;
                     EnemyDamageHelper.DealDamage(p, damage, force);
                     Debug.Log($"[GenesisBeamDamageZone] Tia Laser Genesis Breaker quét trúng Player '{p.name}' (-{damage} HP)!");
+                }
+            }
+        }
+    }
+}
+
+/// <summary>
+/// Quản lý nhóm 3 cụm Drone Blaster (Tổng cộng 12 tia laser xanh) xoay tròn 360° quanh Boss để người chơi né đòn
+/// </summary>
+public class RotatingDroneBlasterGroup : MonoBehaviour
+{
+    private FinalBossAI bossOwner;
+    private float rotationSpeed = 35f; // Tốc độ xoay vòng tròn quanh Boss (độ/giây)
+    private float duration = 6.0f;
+    private float timer = 0f;
+    private float damage = 5f;
+    private float damageTickInterval = 0.35f;
+    private float damageTickTimer = 0f;
+    private float laserLength = 35f;
+    private float laserWidth = 2.2f;
+    private List<Transform> droneUnits = new List<Transform>();
+
+    public void Initialize(FinalBossAI owner, float rotSpeed = 35f, float lifeTime = 6.0f, float dmg = 5f)
+    {
+        bossOwner = owner;
+        rotationSpeed = rotSpeed;
+        duration = lifeTime;
+        damage = dmg;
+        timer = 0f;
+    }
+
+    public void RegisterDroneUnit(Transform unit)
+    {
+        if (unit != null && !droneUnits.Contains(unit))
+            droneUnits.Add(unit);
+    }
+
+    private void Update()
+    {
+        timer += Time.deltaTime;
+
+        // Đi theo vị trí của Boss để tâm xoay luôn bám sát theo Boss
+        if (bossOwner != null)
+        {
+            Vector3 targetCenter = bossOwner.transform.position + Vector3.up * 1.5f;
+            transform.position = Vector3.Lerp(transform.position, targetCenter, Time.deltaTime * 10f);
+        }
+
+        // Xoay tròn toàn bộ cụm drone theo trục Y
+        transform.Rotate(Vector3.up, rotationSpeed * Time.deltaTime, Space.World);
+
+        // Kiểm tra gây sát thương dọc theo các tia laser cho người chơi (-5 HP)
+        damageTickTimer -= Time.deltaTime;
+        if (damageTickTimer <= 0f)
+        {
+            damageTickTimer = damageTickInterval;
+            CheckLaserDamage();
+        }
+
+        if (timer >= duration)
+        {
+            Destroy(gameObject);
+        }
+    }
+
+    private void CheckLaserDamage()
+    {
+        if (bossOwner == null) return;
+        bool isAuth = bossOwner.isStandaloneModePublic || (bossOwner.IsNetworkActivePublic && bossOwner.IsServerPublic);
+        if (!isAuth) return;
+
+        var players = bossOwner.GetAllActivePlayers();
+        foreach (var unit in droneUnits)
+        {
+            if (unit == null) continue;
+            Vector3 origin = unit.position;
+            Vector3 forward = unit.forward;
+
+            foreach (var p in players)
+            {
+                if (p == null || bossOwner.IsPlayerDeadOrInvisiblePublic(p)) continue;
+
+                Vector3 toPlayer = p.position - origin;
+                float projection = Vector3.Dot(toPlayer, forward);
+
+                if (projection >= 0f && projection <= laserLength)
+                {
+                    Vector3 closestPoint = origin + forward * projection;
+                    float dist = Vector3.Distance(closestPoint, p.position);
+                    if (dist <= laserWidth)
+                    {
+                        Vector3 pushDir = unit.right; // Đẩy người chơi theo chiều quay của laser
+                        EnemyDamageHelper.DealDamage(p, damage, pushDir * 6f + Vector3.up * 2f);
+                        Debug.Log($"[RotatingDroneBlasterGroup] Tia laser drone quét trúng Player '{p.name}' (-{damage} HP)!");
+                    }
                 }
             }
         }

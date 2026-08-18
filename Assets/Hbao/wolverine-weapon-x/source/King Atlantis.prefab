@@ -2679,6 +2679,16 @@ MonoBehaviour:
       MinSecondsBetweenUpdates: 0
       MaxSecondsBetweenUpdates: 0
     m_InternalValue: 0
+  aerialLaserCounter:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 0
+  droneLaserCounter:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 0
   growCounter:
     UpdateTraits:
       MinSecondsBetweenUpdates: 0
@@ -2749,6 +2759,18 @@ MonoBehaviour:
   projectileRotationOffset: {x: 0, y: 0, z: 0}
   isEnraged: 0
   isLastStand: 0
+  genesisLaserVFX: {fileID: 8388466950824095792, guid: 547c3c54726d33b49bf3810ee190a7be, type: 3}
+  aerialLaserCooldown: 14
+  aerialLaserCooldownTimer: 0
+  aerialLaserDamage: 5
+  aerialHeight: 5.5
+  aerialFlyDuration: 4.5
+  droneBlasterVFX: {fileID: 6852847330999259004, guid: 3d8d5f101fe01164d88c2f188ad6974d, type: 3}
+  droneLaserCooldown: 18
+  droneLaserCooldownTimer: 0
+  droneLaserDamage: 5
+  droneLaserDuration: 6
+  droneLaserRotationSpeed: 35
   fireSpewInterval: 10
   fireSpewWindupDuration: 1
   fireSpewActiveDuration: 1.5
