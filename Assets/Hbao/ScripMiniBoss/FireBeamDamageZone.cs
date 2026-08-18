@@ -4,7 +4,7 @@ using Unity.Netcode;
 
 public class FireBeamDamageZone : MonoBehaviour
 {
-    private float damage = 35f;
+    private float damage = 5f;
     private float knockback = 12f;
     private float hitCooldown = 0.5f;
     private MonoBehaviour bossOwner;

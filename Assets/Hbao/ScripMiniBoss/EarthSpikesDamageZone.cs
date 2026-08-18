@@ -22,6 +22,7 @@ public class EarthSpikesDamageZone : MonoBehaviour
     private Dictionary<Transform, float> playerDamageTimers = new Dictionary<Transform, float>();
     private float elapsedTime = 0f;
     private SphereCollider triggerCollider;
+    private bool hasTriggeredEmergenceShake = false;
 
     private void Start()
     {
@@ -37,6 +38,13 @@ public class EarthSpikesDamageZone : MonoBehaviour
     private void Update()
     {
         elapsedTime += Time.deltaTime;
+
+        // Rung chấn động mặt đất khi gai đá bắt đầu nhô lên
+        if (!hasTriggeredEmergenceShake && elapsedTime >= spikeEmergenceDelay)
+        {
+            hasTriggeredEmergenceShake = true;
+            CameraShakeHelper.ShakeAtPosition(transform.position, 0.6f, 1.2f, 40f);
+        }
 
         // Quét liên tục tất cả Player trong bán kính khi gai đang nhô lên
         if (IsSpikeActive())

@@ -458,7 +458,7 @@ MonoBehaviour:
   isClone: 0
   clonePrefab: {fileID: 4817351704256837389}
   summonHoleVFXPrefab: {fileID: 7639752885123374874, guid: 49b65b7f1d666d94abb46325e69627ed, type: 3}
-  summonHoleVFXScale: 2
+  summonHoleVFXScale: 1.5
   hasSummonedClones: 0
   isSummonInvulnerable: 0
   summonCloneCounter:
@@ -470,8 +470,23 @@ MonoBehaviour:
   earthSpikesIntervalMin: 10
   earthSpikesIntervalMax: 15
   earthSpikesDamage: 5
+  earthSpikesEmergenceDelay: 1.85
   furiousChargeSpeed: 15.5
   furiousChargeCooldown: 20
+  swordPrefab: {fileID: 8449004803641222730, guid: 5cdf1ac831646004288735c99ac51e4a, type: 3}
+  warningDecalPrefab: {fileID: 698295203230062403, guid: d6fc1bf64a02b5a419ec69c2819fe003, type: 3}
+  swordImpactVFX: {fileID: 4748681987041982144, guid: dd5b5df89b4ca004ab1376a4cbbf6ee2, type: 3}
+  swordImpactSFX: {fileID: 0}
+  swordRainDuration: 10
+  swordSpawnInterval: 0.4
+  warningDuration: 1.5
+  swordDropSpeed: 35
+  swordDamage: 5
+  swordImpactRadius: 2
+  swordRainTriggerParam: AttackCombo
+  swordSpawnRotationOffset: {x: 90, y: 0, z: 0}
+  swordRainIntervalMin: 5
+  swordRainIntervalMax: 10
   shadowBlinkCooldown: 18
   shadowBlinkVFX: {fileID: 0}
   shadowBlinkSFX: {fileID: 0}
@@ -530,6 +545,13 @@ MonoBehaviour:
       MinSecondsBetweenUpdates: 0
       MaxSecondsBetweenUpdates: 0
     m_InternalValue: 0
+  swordRainCounter:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 0
+  clone1Instance: {fileID: 0}
+  clone2Instance: {fileID: 0}
   agent: {fileID: 1703176840125515835}
   anim: {fileID: 2265688441336657869}
   visualRoot: {fileID: 4404191871906338738}
@@ -553,8 +575,8 @@ MonoBehaviour:
     m_Bits: 1
   deathExplosionVFX: {fileID: 490251359132586323, guid: ff49dc7c04963ca499da8bce1a2cabf2, type: 3}
   deathExplosionSound: {fileID: 0}
-  explosionRadius: 6
-  explosionDamage: 50
+  explosionRadius: 10
+  explosionDamage: 10
   explosionKnockback: 20
   deathExplosionCounter:
     UpdateTraits:
