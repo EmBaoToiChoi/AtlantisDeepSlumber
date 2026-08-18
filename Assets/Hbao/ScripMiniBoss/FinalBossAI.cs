@@ -163,7 +163,7 @@ public class FinalBossAI : NetworkBehaviour
     public float shockwaveTriggerRange = 3.5f;
     public float shockwaveCooldown = 10f;
     public float shockwaveRadius = 6f;
-    public float shockwaveDamage = 45f;
+    public float shockwaveDamage = 5f;
     public float shockwaveKnockback = 20f;
     public float shockwaveStunDuration = 2.0f;
     public float shockwaveDuration = 1.8f;
@@ -1644,17 +1644,14 @@ public class FinalBossAI : NetworkBehaviour
                 boss.RotateTowards(aimPos);
             }
 
-            // BẮN ĐẠN KIẾM TẦM XA (CRITICAL SLASH) KHI Ở PHASE 2 (MÁU <= 50% HOẶC ENRAGED)
+            // BẮN ĐẠN KIẾM TẦM XA (CRITICAL SLASH) KHI VUNG TAY TẤN CÔNG (ÁP DỤNG CẢ PHASE 1 VÀ PHASE 2)
             if (!hasSpawnedProjectile)
             {
                 spawnTimer -= Time.deltaTime;
                 if (spawnTimer <= 0f)
                 {
                     hasSpawnedProjectile = true;
-                    if (boss.isEnraged || boss.ActualCurrentHealth <= (boss.maxHealth * 0.5f))
-                    {
-                        boss.SpawnRangedProjectile();
-                    }
+                    boss.SpawnRangedProjectile();
                 }
             }
 
@@ -2153,13 +2150,13 @@ public class FinalBossAI : NetworkBehaviour
             if (fireSpewVFX == null) yield break;
         }
 
-        // BƯỚC 1: BẮN TIA LỬA THẲNG LÊN TRỜI TỪ NGỰC/MIỆNG BOSS (THON GỌN, SẮC NÉT)
+        // BƯỚC 1: BẮN TIA LỬA THẲNG LÊN TRỜI TỪ NGỰC/MIỆNG BOSS (TO ĐẸP, RÕ RÀNG: Scale 0.85x)
         Vector3 bossMouthPos = transform.position + Vector3.up * 1.6f;
-        Vector3 skyTarget = bossMouthPos + Vector3.up * 22.0f;
+        Vector3 skyTarget = bossMouthPos + Vector3.up * 25.0f;
         Quaternion upRot = Quaternion.Euler(-90f, 0f, 0f);
         GameObject upBeam = Instantiate(fireSpewVFX, bossMouthPos, upRot);
-        upBeam.transform.localScale = Vector3.one * 0.45f;
-        TriggerVfxPlayback(upBeam, bossMouthPos, skyTarget, 1.5f, 0.8f, 1.0f, false);
+        upBeam.transform.localScale = Vector3.one * 0.85f;
+        TriggerVfxPlayback(upBeam, bossMouthPos, skyTarget, 1.5f, 1.5f, 1.0f, false);
 
         CameraShakeHelper.Shake(1.5f, 1.6f); // RUNG MẠNH khi Boss bắn chưởng lửa lên trời
         if (fireSpewSFX != null) AudioSource.PlayClipAtPoint(fireSpewSFX, bossMouthPos, 1.0f);
@@ -2168,41 +2165,37 @@ public class FinalBossAI : NetworkBehaviour
         // Chờ tia lửa bay lên tầng mây (0.35 giây)
         yield return new WaitForSeconds(0.35f);
 
-        // BƯỚC 2: CÁC CỘT LỬA GIÁNG TỪ TRÊN TRỜI CẮM SÂU XUỐNG ĐẤT (THON GỌN, ĐẸP MẮT)
+        // BƯỚC 2: CÁC CỘT LỬA GIÁNG TỪ TRÊN TRỜI CẮM SÂU XUỐNG ĐẤT (TO ĐẸP, RÕ RÀNG: Scale 0.85x - 1.1x)
         for (int i = 0; i < targetPositions.Length; i++)
         {
             Vector3 groundPos = targetPositions[i];
-            Vector3 skySpawnPos = groundPos + Vector3.up * 20.0f;
+            Vector3 skySpawnPos = groundPos + Vector3.up * 22.0f;
             Quaternion downRot = Quaternion.Euler(90f, 0f, 0f);
 
-            // 1. Cột lửa cắm từ trời xuống (Scale 0.45x thon gọn)
+            // 1. Cột lửa cắm từ trời xuống (Scale 0.85x rõ nét, uy lực)
             GameObject downBeam = Instantiate(fireSpewVFX, skySpawnPos, downRot);
-            downBeam.transform.localScale = Vector3.one * 0.45f;
-            TriggerVfxPlayback(downBeam, skySpawnPos, groundPos, 1.8f, 0.9f, 1.0f, false);
+            downBeam.transform.localScale = Vector3.one * 0.85f;
+            TriggerVfxPlayback(downBeam, skySpawnPos, groundPos, 1.8f, 1.5f, 1.0f, false);
 
             // Gắn vùng gây sát thương va chạm
             var damageZone = downBeam.GetComponent<FireBeamDamageZone>() ?? downBeam.AddComponent<FireBeamDamageZone>();
             damageZone.Initialize(this, fireSpewDamage, fireSpewKnockback);
 
-            // 2. Vùng nổ mặt đất (Scale 0.5x vừa vặn)
+            // 2. Vùng nổ mặt đất (Scale 1.1x rực rỡ, bề thế)
             GameObject groundImpactPrefab = skyFireGroundImpactVFX != null ? skyFireGroundImpactVFX : fireSpewVFX;
             if (groundImpactPrefab != null)
             {
                 GameObject groundImpact = Instantiate(groundImpactPrefab, groundPos + Vector3.up * 0.1f, Quaternion.identity);
-                groundImpact.transform.localScale = Vector3.one * 0.5f;
-                TriggerVfxPlayback(groundImpact, groundPos, groundPos + Vector3.up, 2.5f, 1.2f, 1.0f, false);
+                groundImpact.transform.localScale = Vector3.one * 1.1f;
+                TriggerVfxPlayback(groundImpact, groundPos, groundPos + Vector3.up, 2.5f, 2.0f, 1.0f, false);
                 Destroy(groundImpact, 2.5f);
             }
 
             // Rung giật camera mặt đất tại điểm nổ
             CameraShakeHelper.ShakeAtPosition(groundPos, 1.0f, 2.0f, 45f); // RUNG CỰC MẠNH tại điểm cột lửa giáng xuống
 
-            // Gây sát thương nổ diện rộng tại mặt đất (-5 HP)
-            bool auth = isStandaloneMode || (IsNetworkActive && IsServer);
-            if (auth)
-            {
-                ApplySkyFireImpactDamage(groundPos, fireSpewDamage, 2.0f);
-            }
+            // Gây sát thương nổ diện rộng tại mặt đất (-5 HP, bán kính quét rộng 3.8m)
+            ApplySkyFireImpactDamage(groundPos, fireSpewDamage, 3.8f);
 
             Destroy(downBeam, 1.8f);
 
@@ -2217,14 +2210,15 @@ public class FinalBossAI : NetworkBehaviour
         foreach (var p in players)
         {
             if (p == null || IsPlayerDeadOrInvisible(p)) continue;
-            float dist = Vector3.Distance(center, p.position);
-            if (dist <= radius)
+            float xzDist = Vector2.Distance(new Vector2(center.x, center.z), new Vector2(p.position.x, p.position.z));
+            float heightDiff = Mathf.Abs(p.position.y - center.y);
+            if (xzDist <= radius && heightDiff <= 4.0f)
             {
                 Vector3 knockbackDir = (p.position - center).normalized;
                 if (knockbackDir.sqrMagnitude < 0.01f) knockbackDir = Vector3.up;
                 Vector3 force = knockbackDir * fireSpewKnockback + Vector3.up * 5f;
                 EnemyDamageHelper.DealDamage(p, dmg, force);
-                Debug.Log($"[FinalBossAI] Tia lửa giáng trúng Player '{p.name}' (-{dmg} HP)!");
+                Debug.Log($"[FinalBossAI] Cột lửa giáng trúng Player '{p.name}' (-{dmg} HP)!");
             }
         }
     }
@@ -2293,18 +2287,18 @@ public class FinalBossAI : NetworkBehaviour
             Quaternion rot = Quaternion.LookRotation(shootDir);
 
             GameObject beam = Instantiate(genesisLaserVFX, spawnPoint, rot);
-            beam.transform.localScale = new Vector3(1.3f, 1.3f, 4.0f); // Kéo DÀI MẠNH tia laser đâm thẳng xuống mặt đất
-            TriggerVfxPlayback(beam, spawnPoint, spawnPoint + shootDir * 55f, 3.2f, 2.5f, 1.0f, true);
+            beam.transform.localScale = new Vector3(0.65f, 0.65f, 2.6f); // Scale vừa vặn, sắc nét và thẩm mỹ
+            TriggerVfxPlayback(beam, spawnPoint, spawnPoint + shootDir * 55f, 3.2f, 2.0f, 1.0f, true);
 
-            // Gắn vùng gây sát thương va chạm liên tục (-5 HP) - beamLength dài 55m, beamRadius rộng 3.5m
+            // Gắn vùng gây sát thương va chạm liên tục (-5 HP) - beamLength dài 55m, beamRadius rộng 2.8m
             var damageZone = beam.GetComponent<GenesisBeamDamageZone>() ?? beam.AddComponent<GenesisBeamDamageZone>();
-            damageZone.Initialize(this, aerialLaserDamage, 10f, 55f, 3.5f);
+            damageZone.Initialize(this, aerialLaserDamage, 10f, 55f, 2.8f);
 
             Destroy(beam, 3.2f);
         }
 
         CameraShakeHelper.Shake(2.5f, 1.8f); // RUNG DỮ DỘI khi 5 tia Genesis Breaker cắm xuống đất
-        Debug.Log("[FinalBossAI] ===> XẢ 5 TIA GENESIS BREAKER LASER CẮM XUỐNG MẶT ĐẤT (LOOP = TRUE, -5 HP)!");
+        Debug.Log("[FinalBossAI] ===> XẢ 5 TIA GENESIS BREAKER LASER CẮM XUỐNG MẶT ĐẤT (LOOP = TRUE, SCALE 0.65x, -5 HP)!");
     }
 
     public void ExecuteDroneBarrage()
@@ -3141,14 +3135,9 @@ public class FinalBossProjectile : MonoBehaviour
         hitPlayers.Add(playerRoot);
         Vector3 knockback = moveDirection * 12f + Vector3.up * 2f;
 
-        // Chỉ gửi lệnh trừ máu nếu là Server HOẶC là Client sở hữu Player này để đồng bộ sát thương chuẩn xác trên mạng 4 người
-        bool shouldDealDamage = !Unity.Netcode.NetworkManager.Singleton || !Unity.Netcode.NetworkManager.Singleton.IsListening || Unity.Netcode.NetworkManager.Singleton.IsServer || IsLocalPlayer(playerRoot);
-
-        if (shouldDealDamage)
-        {
-            EnemyDamageHelper.DealDamage(playerRoot, damage, knockback);
-            Debug.Log($"[FinalBossProjectile] Vệt chém CriticalSlash đánh trúng Player '{playerRoot.name}' -> Chắc chắn trừ -{damage} HP!");
-        }
+        // Trực tiếp trừ máu chắc chắn 100% (-5 HP)
+        EnemyDamageHelper.DealDamage(playerRoot, damage, knockback);
+        Debug.Log($"[FinalBossProjectile] Vệt chém CriticalSlash đánh trúng Player '{playerRoot.name}' -> Trừ đúng -{damage} HP!");
 
         CameraShakeHelper.ShakeAtPosition(transform.position, 0.6f, 1.2f, 35f);
     }
@@ -3383,9 +3372,9 @@ public class GenesisBeamDamageZone : MonoBehaviour
     private float tickTimer = 0f;
     private float tickInterval = 0.35f;
     private float beamLength = 50f;
-    private float beamRadius = 3.2f;
+    private float beamRadius = 2.8f;
 
-    public void Initialize(FinalBossAI owner, float dmg, float kb, float length = 50f, float radius = 3.2f)
+    public void Initialize(FinalBossAI owner, float dmg, float kb, float length = 50f, float radius = 2.8f)
     {
         bossOwner = owner;
         damage = dmg;
@@ -3406,26 +3395,30 @@ public class GenesisBeamDamageZone : MonoBehaviour
 
     private void CheckAndDamagePlayersInBeam()
     {
-        if (bossOwner == null) return;
-        bool isAuth = bossOwner.isStandaloneModePublic || (bossOwner.IsNetworkActivePublic && bossOwner.IsServerPublic);
-        if (!isAuth) return;
+        var players = bossOwner != null ? bossOwner.GetAllActivePlayers() : new List<Transform>();
+        if (players.Count == 0)
+        {
+            GameObject[] found = GameObject.FindGameObjectsWithTag("Player");
+            foreach (var go in found) if (go != null) players.Add(go.transform);
+        }
 
-        var players = bossOwner.GetAllActivePlayers();
         Vector3 origin = transform.position;
         Vector3 forward = transform.forward;
 
         foreach (var p in players)
         {
-            if (p == null || bossOwner.IsPlayerDeadOrInvisiblePublic(p)) continue;
+            if (p == null) continue;
+            if (bossOwner != null && bossOwner.IsPlayerDeadOrInvisiblePublic(p)) continue;
 
-            Vector3 toPlayer = p.position - origin;
+            Vector3 playerCenter = p.position + Vector3.up * 1.0f;
+            Vector3 toPlayer = playerCenter - origin;
             float projection = Vector3.Dot(toPlayer, forward);
 
             // Nằm dọc theo chiều dài của tia (từ 0 đến beamLength)
             if (projection >= 0f && projection <= beamLength)
             {
                 Vector3 closestPointOnRay = origin + forward * projection;
-                float distToBeam = Vector3.Distance(closestPointOnRay, p.position);
+                float distToBeam = Vector3.Distance(closestPointOnRay, playerCenter);
 
                 // Nằm trong bán kính bao phủ của tia laser
                 if (distToBeam <= beamRadius)
@@ -3452,7 +3445,7 @@ public class RotatingDroneBlasterGroup : MonoBehaviour
     private float damageTickInterval = 0.35f;
     private float damageTickTimer = 0f;
     private float laserLength = 35f;
-    private float laserWidth = 2.2f;
+    private float laserWidth = 2.4f;
     private List<Transform> droneUnits = new List<Transform>();
 
     public void Initialize(FinalBossAI owner, float rotSpeed = 35f, float lifeTime = 6.0f, float dmg = 5f)
@@ -3500,11 +3493,13 @@ public class RotatingDroneBlasterGroup : MonoBehaviour
 
     private void CheckLaserDamage()
     {
-        if (bossOwner == null) return;
-        bool isAuth = bossOwner.isStandaloneModePublic || (bossOwner.IsNetworkActivePublic && bossOwner.IsServerPublic);
-        if (!isAuth) return;
+        var players = bossOwner != null ? bossOwner.GetAllActivePlayers() : new List<Transform>();
+        if (players.Count == 0)
+        {
+            GameObject[] found = GameObject.FindGameObjectsWithTag("Player");
+            foreach (var go in found) if (go != null) players.Add(go.transform);
+        }
 
-        var players = bossOwner.GetAllActivePlayers();
         foreach (var unit in droneUnits)
         {
             if (unit == null) continue;
@@ -3513,15 +3508,17 @@ public class RotatingDroneBlasterGroup : MonoBehaviour
 
             foreach (var p in players)
             {
-                if (p == null || bossOwner.IsPlayerDeadOrInvisiblePublic(p)) continue;
+                if (p == null) continue;
+                if (bossOwner != null && bossOwner.IsPlayerDeadOrInvisiblePublic(p)) continue;
 
-                Vector3 toPlayer = p.position - origin;
+                Vector3 playerCenter = p.position + Vector3.up * 1.0f;
+                Vector3 toPlayer = playerCenter - origin;
                 float projection = Vector3.Dot(toPlayer, forward);
 
                 if (projection >= 0f && projection <= laserLength)
                 {
                     Vector3 closestPoint = origin + forward * projection;
-                    float dist = Vector3.Distance(closestPoint, p.position);
+                    float dist = Vector3.Distance(closestPoint, playerCenter);
                     if (dist <= laserWidth)
                     {
                         Vector3 pushDir = unit.right; // Đẩy người chơi theo chiều quay của laser

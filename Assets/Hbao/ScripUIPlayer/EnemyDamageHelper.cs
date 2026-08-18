@@ -4,54 +4,74 @@ public static class EnemyDamageHelper
 {
     public static void DealDamage(Transform targetTransform, float damage, Vector3 knockbackForce)
     {
-        if (targetTransform == null) return;
+        if (targetTransform == null || damage <= 0f) return;
 
-        // 1. Kiểm tra đối tượng là Player
-        var skeleton = targetTransform.GetComponentInParent<Skeleton>() ?? targetTransform.GetComponentInChildren<Skeleton>();
+        // 1. Kiểm tra đối tượng là Player (hỗ trợ toàn bộ class: Leo, Arthur, Elena, Maya, SimplePlayerTest, Skeleton)
+        var leo = targetTransform.GetComponentInParent<LeoPlayer>() ?? targetTransform.GetComponentInChildren<LeoPlayer>() ?? targetTransform.GetComponent<LeoPlayer>();
+        if (leo != null)
+        {
+            leo.RequestTakeDamage(damage);
+            leo.TakeDamage(damage);
+            leo.ApplyKnockback(knockbackForce);
+            Debug.Log($"[EnemyDamageHelper] Đã gây {damage} sát thương cho LeoPlayer '{leo.name}'");
+            return;
+        }
+
+        var arthur = targetTransform.GetComponentInParent<ArthurPlayer>() ?? targetTransform.GetComponentInChildren<ArthurPlayer>() ?? targetTransform.GetComponent<ArthurPlayer>();
+        if (arthur != null)
+        {
+            arthur.RequestTakeDamage(damage);
+            arthur.TakeDamage(damage);
+            arthur.ApplyKnockback(knockbackForce);
+            Debug.Log($"[EnemyDamageHelper] Đã gây {damage} sát thương cho ArthurPlayer '{arthur.name}'");
+            return;
+        }
+
+        var elena = targetTransform.GetComponentInParent<ElenaPlayer>() ?? targetTransform.GetComponentInChildren<ElenaPlayer>() ?? targetTransform.GetComponent<ElenaPlayer>();
+        if (elena != null)
+        {
+            elena.RequestTakeDamage(damage);
+            elena.TakeDamage(damage);
+            elena.ApplyKnockback(knockbackForce);
+            Debug.Log($"[EnemyDamageHelper] Đã gây {damage} sát thương cho ElenaPlayer '{elena.name}'");
+            return;
+        }
+
+        var maya = targetTransform.GetComponentInParent<MayaPlayer>() ?? targetTransform.GetComponentInChildren<MayaPlayer>() ?? targetTransform.GetComponent<MayaPlayer>();
+        if (maya != null)
+        {
+            maya.RequestTakeDamage(damage);
+            maya.TakeDamage(damage);
+            maya.ApplyKnockback(knockbackForce);
+            Debug.Log($"[EnemyDamageHelper] Đã gây {damage} sát thương cho MayaPlayer '{maya.name}'");
+            return;
+        }
+
+        var simple = targetTransform.GetComponentInParent<SimplePlayerTest>() ?? targetTransform.GetComponentInChildren<SimplePlayerTest>() ?? targetTransform.GetComponent<SimplePlayerTest>();
+        if (simple != null)
+        {
+            simple.RequestTakeDamage(damage);
+            simple.TakeDamage(damage);
+            simple.ApplyKnockback(knockbackForce);
+            Debug.Log($"[EnemyDamageHelper] Đã gây {damage} sát thương cho SimplePlayerTest '{simple.name}'");
+            return;
+        }
+
+        var skeleton = targetTransform.GetComponentInParent<Skeleton>() ?? targetTransform.GetComponentInChildren<Skeleton>() ?? targetTransform.GetComponent<Skeleton>();
         if (skeleton != null)
         {
             skeleton.TakeDamage(damage);
             skeleton.ApplyKnockback(knockbackForce);
+            Debug.Log($"[EnemyDamageHelper] Đã gây {damage} sát thương cho Skeleton '{skeleton.name}'");
             return;
         }
 
-        var simple = targetTransform.GetComponentInParent<SimplePlayerTest>() ?? targetTransform.GetComponentInChildren<SimplePlayerTest>();
-        if (simple != null)
+        // 2. Fallback trực tiếp qua interface IPlayerHUDTarget
+        var hudTarget = targetTransform.GetComponentInParent<IPlayerHUDTarget>() ?? targetTransform.GetComponentInChildren<IPlayerHUDTarget>() ?? targetTransform.GetComponent<IPlayerHUDTarget>();
+        if (hudTarget != null && hudTarget is MonoBehaviour mono)
         {
-            simple.RequestTakeDamage(damage);
-            simple.ApplyKnockback(knockbackForce);
-            return;
-        }
-
-        var leo = targetTransform.GetComponentInParent<LeoPlayer>() ?? targetTransform.GetComponentInChildren<LeoPlayer>();
-        if (leo != null)
-        {
-            leo.RequestTakeDamage(damage);
-            leo.ApplyKnockback(knockbackForce);
-            return;
-        }
-
-        var arthur = targetTransform.GetComponentInParent<ArthurPlayer>() ?? targetTransform.GetComponentInChildren<ArthurPlayer>();
-        if (arthur != null)
-        {
-            arthur.RequestTakeDamage(damage);
-            arthur.ApplyKnockback(knockbackForce);
-            return;
-        }
-
-        var elena = targetTransform.GetComponentInParent<ElenaPlayer>() ?? targetTransform.GetComponentInChildren<ElenaPlayer>();
-        if (elena != null)
-        {
-            elena.RequestTakeDamage(damage);
-            elena.ApplyKnockback(knockbackForce);
-            return;
-        }
-
-        var maya = targetTransform.GetComponentInParent<MayaPlayer>() ?? targetTransform.GetComponentInChildren<MayaPlayer>();
-        if (maya != null)
-        {
-            maya.RequestTakeDamage(damage);
-            maya.ApplyKnockback(knockbackForce);
+            mono.SendMessage("RequestTakeDamage", damage, SendMessageOptions.DontRequireReceiver);
+            mono.SendMessage("TakeDamage", damage, SendMessageOptions.DontRequireReceiver);
             return;
         }
 
