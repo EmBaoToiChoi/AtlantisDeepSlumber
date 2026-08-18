@@ -257,13 +257,8 @@ public class RotatePillarQuestTrigger : NetworkBehaviour, IQuestTrigger
 
                 int current = isNetwork ? correctCount.Value : localCorrectCount;
                 int total = (pillars != null && pillars.Length > 0) ? pillars.Length : 4;
-
-                if (current != lastCorrectCount)
-                {
-                    lastCorrectCount = current;
-                    localHudCtl.UpdateQuestProgress(current, total, this);
-                    Debug.Log($"[RotatePillarQuestTrigger] Cập nhật tiến độ UI: {current}/{total}");
-                }
+                lastCorrectCount = current;
+                localHudCtl.UpdateQuestProgress(current, total, this);
             }
         }
     }

@@ -237,13 +237,8 @@ public class MiniBossQuestTrigger : NetworkBehaviour, IQuestTrigger
 
                 int current = isNetwork ? bossDefeatedCount.Value : localBossDefeatedCount;
                 int total = 1;
-
-                if (current != lastBossDefeatedCount)
-                {
-                    lastBossDefeatedCount = current;
-                    localHudCtl.UpdateQuestProgress(current, total, this);
-                    Debug.Log($"[MiniBossQuestTrigger] Cập nhật tiến độ UI: {current}/{total}");
-                }
+                lastBossDefeatedCount = current;
+                localHudCtl.UpdateQuestProgress(current, total, this);
             }
         }
     }

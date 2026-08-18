@@ -7,8 +7,13 @@ public class ZombieQuestTargetManager : NetworkBehaviour, IQuestTrigger
 {
     public static ZombieQuestTargetManager Instance;
 
-    public bool IsQuestCompleted => isQuestCompleted != null && isQuestCompleted.Value;
-    public bool IsQuestActive => isQuestActive != null && isQuestActive.Value;
+    public bool IsQuestCompleted => (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening) 
+        ? (isQuestCompleted != null && isQuestCompleted.Value) 
+        : isQuestCompletedLocal;
+
+    public bool IsQuestActive => (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening) 
+        ? (isQuestActive != null && isQuestActive.Value) 
+        : isQuestActiveLocal;
 
     [Header("Quest Prerequisite Settings")]
     [Tooltip("Nhiệm vụ tiền đề bắt buộc phải hoàn thành trước khi nhiệm vụ này được hiển thị/kích hoạt")]
@@ -19,6 +24,8 @@ public class ZombieQuestTargetManager : NetworkBehaviour, IQuestTrigger
         if (prerequisiteQuest == null) return true;
         if (prerequisiteQuest is IQuestTrigger quest) return quest.IsQuestCompleted;
         if (prerequisiteQuest is BridgeCollapseTrigger bridge) return bridge.IsBridgeRepaired();
+        var trigger = prerequisiteQuest.GetComponent<IQuestTrigger>() ?? prerequisiteQuest.GetComponentInChildren<IQuestTrigger>();
+        if (trigger != null) return trigger.IsQuestCompleted;
         return true;
     }
 
@@ -34,6 +41,12 @@ public class ZombieQuestTargetManager : NetworkBehaviour, IQuestTrigger
     [Header("Delay Settings")]
     public float hideDelayAfterComplete = 3f;
 
+    [Header("Auto Start & UI Settings")]
+    [Tooltip("Tự động kích hoạt nhiệm vụ khi vào game nếu điều kiện tiên quyết đã thỏa")]
+    public bool autoStartIfPrerequisiteMet = true;
+    [Tooltip("Khoảng thời gian (giây) giữa các lần kiểm tra cập nhật tiến trình trên UI")]
+    public float checkInterval = 0.2f;
+
     // ==========================================
     // THÊM 2 BIẾN NÀY ĐỂ KÍCH HOẠT SAU NHIỆM VỤ
     // ==========================================
@@ -41,7 +54,6 @@ public class ZombieQuestTargetManager : NetworkBehaviour, IQuestTrigger
     [Tooltip("Kéo cục Cutscene của bạn vào đây")]
     public VideoCutsceneController cutsceneToPlayAfter;
 
-    
     // ĐÃ ĐỔI THÀNH LIST CHO PHÉP KÉO NHIỀU OBJECT
     [Tooltip("Kéo DANH SÁCH các Object bạn muốn BẬT LÊN sau khi xong nhiệm vụ")]
     public List<GameObject> objectsToEnableAfterQuest = new List<GameObject>();
@@ -51,9 +63,15 @@ public class ZombieQuestTargetManager : NetworkBehaviour, IQuestTrigger
     private NetworkVariable<int> currentKills = new NetworkVariable<int>(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     private NetworkVariable<bool> isQuestActive = new NetworkVariable<bool>(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     private NetworkVariable<bool> isQuestCompleted = new NetworkVariable<bool>(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
-    
+
+    // Fallback cho chế độ Singleplayer / Offline
+    private bool isQuestActiveLocal = false;
+    private bool isQuestCompletedLocal = false;
+    private int localKills = 0;
+
     private int totalKillsNeeded = 0;
     private PlayerHUDController localHudCtl;
+    private float nextCheckTime = 0f;
 
     private void Awake()
     {
@@ -63,7 +81,7 @@ public class ZombieQuestTargetManager : NetworkBehaviour, IQuestTrigger
 
     private void Start()
     {
-        totalKillsNeeded = (zombieTargets != null) ? zombieTargets.Count : 0;
+        totalKillsNeeded = GetTotalKillsNeeded();
     }
 
     public override void OnNetworkSpawn()
@@ -72,8 +90,13 @@ public class ZombieQuestTargetManager : NetworkBehaviour, IQuestTrigger
         isQuestActive.OnValueChanged += OnQuestActiveChanged;
         isQuestCompleted.OnValueChanged += OnQuestCompletedChanged;
 
-        if (isQuestActive.Value && !isQuestCompleted.Value)
+        if (isQuestCompleted.Value)
         {
+            isQuestCompletedLocal = true;
+        }
+        else if (isQuestActive.Value && IsPrerequisiteCompleted())
+        {
+            isQuestActiveLocal = true;
             UpdateQuestUI();
         }
     }
@@ -85,9 +108,51 @@ public class ZombieQuestTargetManager : NetworkBehaviour, IQuestTrigger
         isQuestCompleted.OnValueChanged -= OnQuestCompletedChanged;
     }
 
+    private void Update()
+    {
+        if (IsQuestCompleted) return;
+
+        bool isNetwork = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
+
+        // Tự động kích hoạt nhiệm vụ nếu đủ điều kiện tiên quyết và chưa active
+        if (autoStartIfPrerequisiteMet && IsPrerequisiteCompleted() && !IsQuestActive)
+        {
+            if (!isNetwork || IsServer)
+            {
+                StartQuest();
+            }
+        }
+
+        // Định kỳ cập nhật và làm mới UI nếu nhiệm vụ đang active
+        if (IsQuestActive)
+        {
+            if (Time.time >= nextCheckTime)
+            {
+                nextCheckTime = Time.time + checkInterval;
+                UpdateQuestUI();
+            }
+        }
+    }
+
+    public int GetTotalKillsNeeded()
+    {
+        if (zombieTargets != null && zombieTargets.Count > 0)
+        {
+            int count = 0;
+            foreach (var z in zombieTargets)
+            {
+                if (z != null) count++;
+            }
+            return count > 0 ? count : zombieTargets.Count;
+        }
+        return totalKillsNeeded;
+    }
+
     public void StartQuest()
     {
-        if (!IsServer)
+        bool isNetwork = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
+
+        if (isNetwork && !IsServer)
         {
             StartQuestServerRpc();
             return;
@@ -95,11 +160,13 @@ public class ZombieQuestTargetManager : NetworkBehaviour, IQuestTrigger
 
         if (!IsPrerequisiteCompleted())
         {
-            Debug.Log($"[ZombieQuest] Chưa hoàn thành nhiệm vụ tiền đề '{prerequisiteQuest.gameObject.name}'. Không thể khởi chạy.");
+            Debug.Log($"[ZombieQuest] Chưa hoàn thành nhiệm vụ tiền đề '{(prerequisiteQuest != null ? prerequisiteQuest.gameObject.name : "null")}'. Không thể khởi chạy.");
             return;
         }
-        if (isQuestCompleted.Value || isQuestActive.Value) return;
 
+        if (IsQuestCompleted || IsQuestActive) return;
+
+        totalKillsNeeded = GetTotalKillsNeeded();
         if (totalKillsNeeded == 0)
         {
             Debug.LogError($"[ZombieQuest] LỖI: Danh sách ZombieTargets trống!");
@@ -110,12 +177,23 @@ public class ZombieQuestTargetManager : NetworkBehaviour, IQuestTrigger
         {
             if (zombie != null)
             {
+                zombie.OnTargetDestroyed.RemoveListener(OnZombieKilledServer);
                 zombie.OnTargetDestroyed.AddListener(OnZombieKilledServer);
             }
         }
 
-        currentKills.Value = 0;
-        isQuestActive.Value = true;
+        if (isNetwork)
+        {
+            currentKills.Value = 0;
+            isQuestActive.Value = true;
+        }
+        else
+        {
+            localKills = 0;
+            isQuestActiveLocal = true;
+        }
+
+        UpdateQuestUI();
     }
 
     [ServerRpc(RequireOwnership = false)]
@@ -126,23 +204,53 @@ public class ZombieQuestTargetManager : NetworkBehaviour, IQuestTrigger
 
     private void OnZombieKilledServer()
     {
-        if (!isQuestActive.Value || isQuestCompleted.Value) return;
+        bool isNetwork = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
+        if (isNetwork && !IsServer) return;
+        if (!IsQuestActive || IsQuestCompleted) return;
 
-        currentKills.Value++; 
-        
-        if (currentKills.Value >= totalKillsNeeded)
+        int kills = 0;
+        int target = GetTotalKillsNeeded();
+
+        if (isNetwork)
+        {
+            currentKills.Value++;
+            kills = currentKills.Value;
+        }
+        else
+        {
+            localKills++;
+            kills = localKills;
+            UpdateQuestUI();
+        }
+
+        if (kills >= target)
+        {
+            CompleteQuest();
+        }
+    }
+
+    public void CompleteQuest()
+    {
+        bool isNetwork = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
+        if (isNetwork && !IsServer) return;
+
+        if (isNetwork)
         {
             isQuestCompleted.Value = true;
             isQuestActive.Value = false;
+        }
+        else
+        {
+            isQuestCompletedLocal = true;
+            isQuestActiveLocal = false;
+            CompleteQuestUI();
+            EnablePostQuestObjects();
+        }
 
-            // ===============================================
-            // GỌI CUTSCENE GỐC TỪ SERVER KHI ĐỦ SỐ KILL
-            // ===============================================
-            if (cutsceneToPlayAfter != null)
-            {
-                cutsceneToPlayAfter.StartCutscene();
-            }
-            // ===============================================
+        // Kích hoạt cutscene sau khi hoàn thành nhiệm vụ
+        if (cutsceneToPlayAfter != null)
+        {
+            cutsceneToPlayAfter.StartCutscene();
         }
     }
 
@@ -160,38 +268,44 @@ public class ZombieQuestTargetManager : NetworkBehaviour, IQuestTrigger
     {
         if (newVal == true)
         {
+            isQuestCompletedLocal = true;
             CompleteQuestUI();
+            EnablePostQuestObjects();
+        }
+    }
 
-            // ===============================================
-            // BẬT LẠI COLLIDER CHO TẤT CẢ OBJECT TRONG LIST
-            // ===============================================
-            foreach (var obj in objectsToEnableAfterQuest)
+    private void EnablePostQuestObjects()
+    {
+        foreach (var obj in objectsToEnableAfterQuest)
+        {
+            if (obj != null)
             {
-                if (obj != null)
+                Collider col = obj.GetComponent<Collider>();
+                if (col != null)
                 {
-                    Collider col = obj.GetComponent<Collider>();
-                    if (col != null)
-                    {
-                        col.enabled = true; // Mở lại cho người chơi chạm vào
-                    }
+                    col.enabled = true; // Mở lại cho người chơi chạm vào
                 }
             }
-            // ===============================================
         }
     }
 
     private void UpdateQuestUI()
     {
-        if (!IsPrerequisiteCompleted()) return;
+        if (!IsPrerequisiteCompleted() || IsQuestCompleted) return;
+
         if (localHudCtl == null) localHudCtl = FindAnyObjectByType<PlayerHUDController>();
 
         if (localHudCtl != null)
         {
+            bool isNetwork = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
+            int current = isNetwork ? currentKills.Value : localKills;
+            int target = GetTotalKillsNeeded();
+
             localHudCtl.ShowQuest(true, this);
             localHudCtl.UpdateQuestTitle(questTitle, this);
             localHudCtl.UpdateQuestDescription(questDescription, this);
             localHudCtl.UpdateQuestIcon(questIconSprite, this);
-            localHudCtl.UpdateQuestProgress(currentKills.Value, totalKillsNeeded, this);
+            localHudCtl.UpdateQuestProgress(current, target, this);
         }
     }
 
@@ -201,9 +315,12 @@ public class ZombieQuestTargetManager : NetworkBehaviour, IQuestTrigger
 
         if (localHudCtl != null)
         {
+            int target = GetTotalKillsNeeded();
             localHudCtl.ShowQuest(true, this);
-            localHudCtl.UpdateQuestProgress(totalKillsNeeded, totalKillsNeeded, this);
+            localHudCtl.UpdateQuestProgress(target, target, this);
             localHudCtl.UpdateQuestDescription("Hoàn thành: Khu vực đã an toàn!", this);
+            localHudCtl.UpdateQuestTitle(questTitle, this);
+            localHudCtl.UpdateQuestIcon(questIconSprite, this);
             StartCoroutine(HideQuestAfterDelay(hideDelayAfterComplete));
         }
     }
@@ -214,6 +331,8 @@ public class ZombieQuestTargetManager : NetworkBehaviour, IQuestTrigger
         if (localHudCtl != null)
         {
             localHudCtl.ShowQuest(false, this);
+            localHudCtl.UpdateQuestIcon(null, this);
+            localHudCtl.UpdateQuestTitle("NHIỆM VỤ", this);
         }
     }
 

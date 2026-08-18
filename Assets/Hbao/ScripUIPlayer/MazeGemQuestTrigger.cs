@@ -272,12 +272,8 @@ public class MazeGemQuestTrigger : NetworkBehaviour, IQuestTrigger
 
                 int current = isNetwork ? collectedCount.Value : localCollectedCount;
                 int total = gemObjects != null ? gemObjects.Length : 2;
-
-                if (current != lastPressedCount)
-                {
-                    lastPressedCount = current;
-                    activeHud.UpdateQuestProgress(current, total, this);
-                }
+                lastPressedCount = current;
+                activeHud.UpdateQuestProgress(current, total, this);
             }
         }
     }
