@@ -42,11 +42,11 @@ public class FireBeamDamageZone : MonoBehaviour
 
     private void ScanAndDamageNearbyPlayers()
     {
-        Vector3 origin = transform.position;
-        Vector3 forward = transform.forward;
+        Vector3 top = transform.position;
+        Vector3 bottom = transform.position + transform.forward * 35f;
 
-        // Quét tất cả collider trong bán kính quanh chân cột lửa
-        Collider[] hits = Physics.OverlapSphere(origin, scanRadius * 1.5f);
+        // Quét toàn bộ hình trụ Capsule dọc theo cột lửa từ trời xuống đất
+        Collider[] hits = Physics.OverlapCapsule(top, bottom, scanRadius);
         foreach (var hit in hits)
         {
             if (hit != null) TryDealDamage(hit);

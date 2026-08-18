@@ -2287,18 +2287,18 @@ public class FinalBossAI : NetworkBehaviour
             Quaternion rot = Quaternion.LookRotation(shootDir);
 
             GameObject beam = Instantiate(genesisLaserVFX, spawnPoint, rot);
-            beam.transform.localScale = new Vector3(0.65f, 0.65f, 2.6f); // Scale vừa vặn, sắc nét và thẩm mỹ
-            TriggerVfxPlayback(beam, spawnPoint, spawnPoint + shootDir * 55f, 3.2f, 2.0f, 1.0f, true);
+            beam.transform.localScale = new Vector3(0.42f, 0.42f, 2.2f); // Scale nhỏ gọn, thanh mảnh, sắc nét
+            TriggerVfxPlayback(beam, spawnPoint, spawnPoint + shootDir * 55f, 3.2f, 1.8f, 1.0f, true);
 
-            // Gắn vùng gây sát thương va chạm liên tục (-5 HP) - beamLength dài 55m, beamRadius rộng 2.8m
+            // Gắn vùng gây sát thương va chạm liên tục (-5 HP) - beamLength dài 55m, beamRadius rộng 2.4m
             var damageZone = beam.GetComponent<GenesisBeamDamageZone>() ?? beam.AddComponent<GenesisBeamDamageZone>();
-            damageZone.Initialize(this, aerialLaserDamage, 10f, 55f, 2.8f);
+            damageZone.Initialize(this, aerialLaserDamage, 10f, 55f, 2.4f);
 
             Destroy(beam, 3.2f);
         }
 
         CameraShakeHelper.Shake(2.5f, 1.8f); // RUNG DỮ DỘI khi 5 tia Genesis Breaker cắm xuống đất
-        Debug.Log("[FinalBossAI] ===> XẢ 5 TIA GENESIS BREAKER LASER CẮM XUỐNG MẶT ĐẤT (LOOP = TRUE, SCALE 0.65x, -5 HP)!");
+        Debug.Log("[FinalBossAI] ===> XẢ 5 TIA GENESIS BREAKER LASER CẮM XUỐNG MẶT ĐẤT (LOOP = TRUE, SCALE 0.42x, -5 HP)!");
     }
 
     public void ExecuteDroneBarrage()
@@ -3083,7 +3083,7 @@ public class FinalBossProjectile : MonoBehaviour
     {
         Vector3 currentPos = transform.position;
 
-        // 1. Quét theo khoảng cách trực tiếp tới toàn bộ người chơi đang chơi
+        // 1. Quét theo khoảng cách trực tiếp tới toàn bộ người chơi đang chơi (Bán kính mở rộng 2.4m)
         var players = FindAllActivePlayers();
         foreach (var p in players)
         {
@@ -3092,15 +3092,15 @@ public class FinalBossProjectile : MonoBehaviour
             float xzDist = Vector2.Distance(new Vector2(currentPos.x, currentPos.z), new Vector2(p.position.x, p.position.z));
             float heightDiff = Mathf.Abs(p.position.y - currentPos.y);
 
-            // Bán kính phủ sóng vệt chém vừa vặn 1.6m, chiều cao 2.0m
-            if (xzDist <= 1.6f && heightDiff <= 2.0f)
+            // Bán kính phủ sóng vệt chém 2.4m, chiều cao 3.0m
+            if (xzDist <= 2.4f && heightDiff <= 3.0f)
             {
                 ApplyDamageToPlayer(p);
             }
         }
 
         // 2. Quét phủ hitbox bằng Physics.OverlapBox
-        Collider[] hits = Physics.OverlapBox(currentPos + Vector3.up * 0.35f, new Vector3(1.0f, 0.8f, 0.8f), transform.rotation);
+        Collider[] hits = Physics.OverlapBox(currentPos + Vector3.up * 0.35f, new Vector3(1.6f, 1.2f, 1.2f), transform.rotation);
         foreach (var hit in hits)
         {
             if (hit == null) continue;
@@ -3369,28 +3369,24 @@ public class GenesisBeamDamageZone : MonoBehaviour
     private FinalBossAI bossOwner;
     private float damage = 5f;
     private float knockback = 8f;
-    private float tickTimer = 0f;
-    private float tickInterval = 0.35f;
-    private float beamLength = 50f;
-    private float beamRadius = 2.8f;
+    private float hitCooldown = 0.35f;
+    private float beamLength = 55f;
+    private float beamRadius = 2.4f;
+    private Dictionary<Transform, float> lastHitTimes = new Dictionary<Transform, float>();
 
-    public void Initialize(FinalBossAI owner, float dmg, float kb, float length = 50f, float radius = 2.8f)
+    public void Initialize(FinalBossAI owner, float dmg, float kb, float length = 55f, float radius = 2.4f)
     {
         bossOwner = owner;
         damage = dmg;
         knockback = kb;
         beamLength = length;
         beamRadius = radius;
+        lastHitTimes.Clear();
     }
 
     private void Update()
     {
-        tickTimer -= Time.deltaTime;
-        if (tickTimer <= 0f)
-        {
-            tickTimer = tickInterval;
-            CheckAndDamagePlayersInBeam();
-        }
+        CheckAndDamagePlayersInBeam();
     }
 
     private void CheckAndDamagePlayersInBeam()
@@ -3399,12 +3395,31 @@ public class GenesisBeamDamageZone : MonoBehaviour
         if (players.Count == 0)
         {
             GameObject[] found = GameObject.FindGameObjectsWithTag("Player");
-            foreach (var go in found) if (go != null) players.Add(go.transform);
+            foreach (var go in found) if (go != null && !players.Contains(go.transform)) players.Add(go.transform);
         }
 
         Vector3 origin = transform.position;
         Vector3 forward = transform.forward;
+        Vector3 endPoint = origin + forward * beamLength;
 
+        // 1. Quét va chạm vật lý OverlapCapsule dọc theo toàn bộ tia laser
+        Collider[] hits = Physics.OverlapCapsule(origin, endPoint, beamRadius);
+        foreach (var hit in hits)
+        {
+            if (hit == null) continue;
+            Transform root = hit.transform.root;
+            if (root == null || root.CompareTag("Enemy") || (bossOwner != null && root == bossOwner.transform)) continue;
+
+            var player = hit.GetComponentInParent<IPlayerHUDTarget>() ?? hit.GetComponentInChildren<IPlayerHUDTarget>();
+            Transform pRoot = player != null ? player.transform : (root.CompareTag("Player") ? root : null);
+
+            if (pRoot != null)
+            {
+                TryDamagePlayer(pRoot, forward);
+            }
+        }
+
+        // 2. Quét toán học khoảng cách 3D từ player đến đoạn thẳng tia laser
         foreach (var p in players)
         {
             if (p == null) continue;
@@ -3414,21 +3429,32 @@ public class GenesisBeamDamageZone : MonoBehaviour
             Vector3 toPlayer = playerCenter - origin;
             float projection = Vector3.Dot(toPlayer, forward);
 
-            // Nằm dọc theo chiều dài của tia (từ 0 đến beamLength)
             if (projection >= 0f && projection <= beamLength)
             {
                 Vector3 closestPointOnRay = origin + forward * projection;
                 float distToBeam = Vector3.Distance(closestPointOnRay, playerCenter);
 
-                // Nằm trong bán kính bao phủ của tia laser
                 if (distToBeam <= beamRadius)
                 {
-                    Vector3 force = forward * knockback + Vector3.up * 2f;
-                    EnemyDamageHelper.DealDamage(p, damage, force);
-                    Debug.Log($"[GenesisBeamDamageZone] Tia Laser Genesis Breaker quét trúng Player '{p.name}' (-{damage} HP)!");
+                    TryDamagePlayer(p, forward);
                 }
             }
         }
+    }
+
+    private void TryDamagePlayer(Transform playerTransform, Vector3 dir)
+    {
+        if (playerTransform == null) return;
+
+        if (lastHitTimes.TryGetValue(playerTransform, out float lastTime))
+        {
+            if (Time.time - lastTime < hitCooldown) return;
+        }
+
+        lastHitTimes[playerTransform] = Time.time;
+        Vector3 force = dir * knockback + Vector3.up * 2f;
+        EnemyDamageHelper.DealDamage(playerTransform, damage, force);
+        Debug.Log($"[GenesisBeamDamageZone] Tia Laser Genesis Breaker quét trúng Player '{playerTransform.name}' -> Trừ đúng -{damage} HP!");
     }
 }
 
@@ -3442,11 +3468,11 @@ public class RotatingDroneBlasterGroup : MonoBehaviour
     private float duration = 6.0f;
     private float timer = 0f;
     private float damage = 5f;
-    private float damageTickInterval = 0.35f;
-    private float damageTickTimer = 0f;
+    private float hitCooldown = 0.35f;
     private float laserLength = 35f;
     private float laserWidth = 2.4f;
     private List<Transform> droneUnits = new List<Transform>();
+    private Dictionary<Transform, float> lastHitTimes = new Dictionary<Transform, float>();
 
     public void Initialize(FinalBossAI owner, float rotSpeed = 35f, float lifeTime = 6.0f, float dmg = 5f)
     {
@@ -3455,6 +3481,7 @@ public class RotatingDroneBlasterGroup : MonoBehaviour
         duration = lifeTime;
         damage = dmg;
         timer = 0f;
+        lastHitTimes.Clear();
     }
 
     public void RegisterDroneUnit(Transform unit)
@@ -3477,13 +3504,8 @@ public class RotatingDroneBlasterGroup : MonoBehaviour
         // Xoay tròn toàn bộ cụm drone theo trục Y
         transform.Rotate(Vector3.up, rotationSpeed * Time.deltaTime, Space.World);
 
-        // Kiểm tra gây sát thương dọc theo các tia laser cho người chơi (-5 HP)
-        damageTickTimer -= Time.deltaTime;
-        if (damageTickTimer <= 0f)
-        {
-            damageTickTimer = damageTickInterval;
-            CheckLaserDamage();
-        }
+        // Kiểm tra gây sát thương dọc theo các tia laser thời gian thực mỗi frame
+        CheckLaserDamage();
 
         if (timer >= duration)
         {
@@ -3497,7 +3519,7 @@ public class RotatingDroneBlasterGroup : MonoBehaviour
         if (players.Count == 0)
         {
             GameObject[] found = GameObject.FindGameObjectsWithTag("Player");
-            foreach (var go in found) if (go != null) players.Add(go.transform);
+            foreach (var go in found) if (go != null && !players.Contains(go.transform)) players.Add(go.transform);
         }
 
         foreach (var unit in droneUnits)
@@ -3505,7 +3527,26 @@ public class RotatingDroneBlasterGroup : MonoBehaviour
             if (unit == null) continue;
             Vector3 origin = unit.position;
             Vector3 forward = unit.forward;
+            Vector3 endPoint = origin + forward * laserLength;
 
+            // 1. Quét va chạm vật lý OverlapCapsule dọc theo luồng tia laser của drone
+            Collider[] hits = Physics.OverlapCapsule(origin, endPoint, laserWidth);
+            foreach (var hit in hits)
+            {
+                if (hit == null) continue;
+                Transform root = hit.transform.root;
+                if (root == null || root.CompareTag("Enemy") || (bossOwner != null && root == bossOwner.transform)) continue;
+
+                var player = hit.GetComponentInParent<IPlayerHUDTarget>() ?? hit.GetComponentInChildren<IPlayerHUDTarget>();
+                Transform pRoot = player != null ? player.transform : (root.CompareTag("Player") ? root : null);
+
+                if (pRoot != null)
+                {
+                    TryDamagePlayer(pRoot, unit.right);
+                }
+            }
+
+            // 2. Quét khoảng cách 3D từ player đến trục tia laser của drone
             foreach (var p in players)
             {
                 if (p == null) continue;
@@ -3521,12 +3562,24 @@ public class RotatingDroneBlasterGroup : MonoBehaviour
                     float dist = Vector3.Distance(closestPoint, playerCenter);
                     if (dist <= laserWidth)
                     {
-                        Vector3 pushDir = unit.right; // Đẩy người chơi theo chiều quay của laser
-                        EnemyDamageHelper.DealDamage(p, damage, pushDir * 6f + Vector3.up * 2f);
-                        Debug.Log($"[RotatingDroneBlasterGroup] Tia laser drone quét trúng Player '{p.name}' (-{damage} HP)!");
+                        TryDamagePlayer(p, unit.right);
                     }
                 }
             }
         }
+    }
+
+    private void TryDamagePlayer(Transform playerTransform, Vector3 pushDir)
+    {
+        if (playerTransform == null) return;
+
+        if (lastHitTimes.TryGetValue(playerTransform, out float lastTime))
+        {
+            if (Time.time - lastTime < hitCooldown) return;
+        }
+
+        lastHitTimes[playerTransform] = Time.time;
+        EnemyDamageHelper.DealDamage(playerTransform, damage, pushDir * 6f + Vector3.up * 2f);
+        Debug.Log($"[RotatingDroneBlasterGroup] Tia laser drone quét trúng Player '{playerTransform.name}' -> Trừ đúng -{damage} HP!");
     }
 }
