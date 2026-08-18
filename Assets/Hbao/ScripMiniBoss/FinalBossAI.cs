@@ -2072,12 +2072,12 @@ public class FinalBossAI : NetworkBehaviour
             if (fireSpewVFX == null) yield break;
         }
 
-        // BƯỚC 1: BẮN TIA LỬA THẲNG LÊN TRỜI TỪ NGỰC/MIỆNG BOSS
+        // BƯỚC 1: BẮN TIA LỬA THẲNG LÊN TRỜI TỪ NGỰC/MIỆNG BOSS (THON GỌN, SẮC NÉT)
         Vector3 bossMouthPos = transform.position + Vector3.up * 1.6f;
         Vector3 skyTarget = bossMouthPos + Vector3.up * 22.0f;
         Quaternion upRot = Quaternion.Euler(-90f, 0f, 0f);
         GameObject upBeam = Instantiate(fireSpewVFX, bossMouthPos, upRot);
-        TriggerVfxPlayback(upBeam, bossMouthPos, skyTarget, 1.5f, 2.0f);
+        TriggerVfxPlayback(upBeam, bossMouthPos, skyTarget, 1.5f, 0.8f, 0.45f);
 
         CameraShakeHelper.Shake(0.8f, 1.0f);
         if (fireSpewSFX != null) AudioSource.PlayClipAtPoint(fireSpewSFX, bossMouthPos, 1.0f);
@@ -2086,27 +2086,27 @@ public class FinalBossAI : NetworkBehaviour
         // Chờ tia lửa bay lên tầng mây (0.35 giây)
         yield return new WaitForSeconds(0.35f);
 
-        // BƯỚC 2: CÁC CỘT LỬA GIÁNG TỪ TRÊN TRỜI CẮM SÂU XUỐNG ĐẤT
+        // BƯỚC 2: CÁC CỘT LỬA GIÁNG TỪ TRÊN TRỜI CẮM SÂU XUỐNG ĐẤT (THON GỌN, ĐẸP MẮT)
         for (int i = 0; i < targetPositions.Length; i++)
         {
             Vector3 groundPos = targetPositions[i];
             Vector3 skySpawnPos = groundPos + Vector3.up * 20.0f;
             Quaternion downRot = Quaternion.Euler(90f, 0f, 0f);
 
-            // 1. Cột lửa cắm từ trời xuống
+            // 1. Cột lửa cắm từ trời xuống (Scale 0.45x thon gọn)
             GameObject downBeam = Instantiate(fireSpewVFX, skySpawnPos, downRot);
-            TriggerVfxPlayback(downBeam, skySpawnPos, groundPos, 1.8f, 2.5f);
+            TriggerVfxPlayback(downBeam, skySpawnPos, groundPos, 1.8f, 0.9f, 0.45f);
 
             // Gắn vùng gây sát thương va chạm
             var damageZone = downBeam.GetComponent<FireBeamDamageZone>() ?? downBeam.AddComponent<FireBeamDamageZone>();
             damageZone.Initialize(this, fireSpewDamage, fireSpewKnockback);
 
-            // 2. Vùng nổ mặt đất
+            // 2. Vùng nổ mặt đất (Scale 0.5x vừa vặn)
             GameObject groundImpactPrefab = skyFireGroundImpactVFX != null ? skyFireGroundImpactVFX : fireSpewVFX;
             if (groundImpactPrefab != null)
             {
                 GameObject groundImpact = Instantiate(groundImpactPrefab, groundPos + Vector3.up * 0.1f, Quaternion.identity);
-                TriggerVfxPlayback(groundImpact, groundPos, groundPos + Vector3.up, 2.5f, 3.5f);
+                TriggerVfxPlayback(groundImpact, groundPos, groundPos + Vector3.up, 2.5f, 1.2f, 0.5f);
                 Destroy(groundImpact, 2.5f);
             }
 
@@ -2117,7 +2117,7 @@ public class FinalBossAI : NetworkBehaviour
             bool auth = isStandaloneMode || (IsNetworkActive && IsServer);
             if (auth)
             {
-                ApplySkyFireImpactDamage(groundPos, fireSpewDamage, 2.5f);
+                ApplySkyFireImpactDamage(groundPos, fireSpewDamage, 2.0f);
             }
 
             Destroy(downBeam, 1.8f);
@@ -2208,11 +2208,11 @@ public class FinalBossAI : NetworkBehaviour
             Quaternion rot = Quaternion.LookRotation(shootDir);
 
             GameObject beam = Instantiate(genesisLaserVFX, spawnPoint, rot);
-            TriggerVfxPlayback(beam, spawnPoint, spawnPoint + shootDir * 40f, 2.8f, 2.5f);
+            TriggerVfxPlayback(beam, spawnPoint, spawnPoint + shootDir * 40f, 2.8f, 1.8f, 1.0f);
 
             // Gắn vùng gây sát thương va chạm liên tục (-5 HP)
             var damageZone = beam.GetComponent<GenesisBeamDamageZone>() ?? beam.AddComponent<GenesisBeamDamageZone>();
-            damageZone.Initialize(this, aerialLaserDamage, 8f, 40f, 2.5f);
+            damageZone.Initialize(this, aerialLaserDamage, 8f, 40f, 2.0f);
 
             Destroy(beam, 2.8f);
         }
@@ -2222,11 +2222,13 @@ public class FinalBossAI : NetworkBehaviour
     }
 
     /// <summary>
-    /// Kích hoạt đúng cơ chế phát của tất cả các hệ thống VFX (PixPlays BaseVfx, ParticleSystems)
+    /// Kích hoạt đúng cơ chế phát của tất cả các hệ thống VFX (PixPlays BaseVfx, ParticleSystems) với kích thước tùy chỉnh
     /// </summary>
-    private void TriggerVfxPlayback(GameObject vfx, Vector3 source, Vector3 target, float duration = 2.5f, float radius = 3.0f)
+    private void TriggerVfxPlayback(GameObject vfx, Vector3 source, Vector3 target, float duration = 2.5f, float radius = 3.0f, float scaleMultiplier = 1.0f)
     {
         if (vfx == null) return;
+
+        vfx.transform.localScale = Vector3.one * scaleMultiplier;
 
         // 1. Nếu là VFX của gói PixPlays (FireBeam, FireAoeVFX...) -> Khởi tạo VfxData và gọi Play(data) để kích hoạt Coroutine bắn chùm tia!
         var baseVfxList = vfx.GetComponentsInChildren<PixPlays.ElementalVFX.BaseVfx>(true);

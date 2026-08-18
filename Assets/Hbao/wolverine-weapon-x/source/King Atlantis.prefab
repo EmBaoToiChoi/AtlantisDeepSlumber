@@ -2679,6 +2679,11 @@ MonoBehaviour:
       MinSecondsBetweenUpdates: 0
       MaxSecondsBetweenUpdates: 0
     m_InternalValue: 0
+  aerialLaserCounter:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 0
   growCounter:
     UpdateTraits:
       MinSecondsBetweenUpdates: 0
@@ -2749,6 +2754,12 @@ MonoBehaviour:
   projectileRotationOffset: {x: 0, y: 0, z: 0}
   isEnraged: 0
   isLastStand: 0
+  genesisLaserVFX: {fileID: 0}
+  aerialLaserCooldown: 14
+  aerialLaserCooldownTimer: 0
+  aerialLaserDamage: 5
+  aerialHeight: 5.5
+  aerialFlyDuration: 4.5
   fireSpewInterval: 10
   fireSpewWindupDuration: 1
   fireSpewActiveDuration: 1.5
