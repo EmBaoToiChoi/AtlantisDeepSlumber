@@ -122,7 +122,7 @@ public class FinalBossAI : NetworkBehaviour
 
     [Header("Enrage / Grow (Gồng & Phóng To) Settings")]
     public float growDuration = 3.0f;
-    public float growScaleMultiplier = 2.2f;
+    public float growScaleMultiplier = 1.35f;
     public string growTriggerParam = "Shockwave";
     public GameObject growVFX;
     public AudioClip growSFX;
@@ -1690,8 +1690,8 @@ public class FinalBossAI : NetworkBehaviour
             timer = 0f;
             boss.hasTriggeredPhase2Grow = true;
             startScale = boss.transform.localScale;
-            // Tăng kích thước Phase 2 to lớn, uy dũng (tối thiểu x2.2 lần kích thước ban đầu)
-            float mult = boss.growScaleMultiplier <= 1.5f ? 2.2f : boss.growScaleMultiplier;
+            // Tăng kích thước Phase 2 vừa vặn, oai vệ (x1.35) không bị to quá choán hết bản đồ
+            float mult = Mathf.Clamp(boss.growScaleMultiplier, 1.2f, 1.45f);
             targetScale = startScale * mult;
 
             if (boss.AgentReady)
@@ -2067,12 +2067,12 @@ public class FinalBossAI : NetworkBehaviour
             if (fireSpewVFX == null) yield break;
         }
 
-        // BƯỚC 1: BẮN TIA LỬA THẲNG LÊN TRỜI TỪ NGỰC/MIỆNG BOSS (SIÊU TO, CỰC DÀY & KHÔNG BỊ HẸP)
+        // BƯỚC 1: BẮN TIA LỬA THẲNG LÊN TRỜI TỪ NGỰC/MIỆNG BOSS (VỪA VẶN, SẮC NÉT)
         Vector3 bossMouthPos = transform.position + Vector3.up * 1.6f;
         Quaternion upRot = Quaternion.Euler(-90f, 0f, 0f);
         GameObject upBeam = Instantiate(fireSpewVFX, bossMouthPos, upRot);
-        // Tăng bề ngang lên 8.0x để cột lửa khổng lồ, tròn trịa và không hề bị hẹp!
-        upBeam.transform.localScale = new Vector3(8.0f, 8.0f, 5.0f);
+        upBeam.transform.localScale = new Vector3(2.2f, 2.2f, 3.5f);
+        EnsureMaterialShaderValid(upBeam);
 
         // Vô hiệu hóa script quản lý PixPlays để không can thiệp tắt hạt
         var upMbList = upBeam.GetComponentsInChildren<MonoBehaviour>(true);
@@ -2094,7 +2094,6 @@ public class FinalBossAI : NetworkBehaviour
             var main = ps.main;
             main.scalingMode = ParticleSystemScalingMode.Hierarchy;
             main.loop = true;
-            main.startSizeMultiplier = Mathf.Max(main.startSizeMultiplier, 3.5f) * 1.5f;
             var em = ps.emission;
             em.enabled = true;
             ps.Clear(true);
@@ -2108,16 +2107,17 @@ public class FinalBossAI : NetworkBehaviour
         // Chờ tia lửa bay lên tầng mây (0.35 giây)
         yield return new WaitForSeconds(0.35f);
 
-        // BƯỚC 2: CÁC CỘT LỬA KHỔNG LỒ GIÁNG TỪ TRÊN TRỜI CẮM SÂU XUỐNG ĐẤT (CỰC TO, RỘNG 9.0x)
+        // BƯỚC 2: CÁC CỘT LỬA GIÁNG TỪ TRÊN TRỜI CẮM SÂU XUỐNG ĐẤT (CÂN BẰNG, ĐƯỜNG KÍNH ĐẸP MẮT)
         for (int i = 0; i < targetPositions.Length; i++)
         {
             Vector3 groundPos = targetPositions[i];
-            Vector3 skySpawnPos = groundPos + Vector3.up * 22.0f;
+            Vector3 skySpawnPos = groundPos + Vector3.up * 20.0f;
             Quaternion downRot = Quaternion.Euler(90f, 0f, 0f);
 
-            // 1. CỘT LỬA TỪ TRÊN TRỜI ĐÂM XUỐNG (SIÊU RỘNG 9.0x KHÔNG BỊ HẸP)
+            // 1. CỘT LỬA TỪ TRÊN TRỜI ĐÂM XUỐNG (VỪA VẶN, KHÔNG BỊ TO QUÁ MỨC)
             GameObject downBeam = Instantiate(fireSpewVFX, skySpawnPos, downRot);
-            downBeam.transform.localScale = new Vector3(9.0f, 9.0f, 7.5f);
+            downBeam.transform.localScale = new Vector3(2.4f, 2.4f, 4.2f);
+            EnsureMaterialShaderValid(downBeam);
 
             // Vô hiệu hóa script quản lý PixPlays để không bị tắt hạt
             var downMbList = downBeam.GetComponentsInChildren<MonoBehaviour>(true);
@@ -2135,7 +2135,6 @@ public class FinalBossAI : NetworkBehaviour
                 var main = ps.main;
                 main.scalingMode = ParticleSystemScalingMode.Hierarchy;
                 main.loop = true;
-                main.startSizeMultiplier = Mathf.Max(main.startSizeMultiplier, 3.5f) * 1.5f;
                 var em = ps.emission;
                 em.enabled = true;
                 ps.Clear(true);
@@ -2149,12 +2148,13 @@ public class FinalBossAI : NetworkBehaviour
             var damageZone = downBeam.GetComponent<FireBeamDamageZone>() ?? downBeam.AddComponent<FireBeamDamageZone>();
             damageZone.Initialize(this, fireSpewDamage, fireSpewKnockback);
 
-            // 2. BÙNG NỔ VFX DƯỚI MẶT ĐẤT (FIREAOEVFX) SIÊU TO RỰC RỠ BAO PHỦ SÀN ĐẤU
+            // 2. BÙNG NỔ VFX DƯỚI MẶT ĐẤT (FIREAOEVFX) VỪA VẶN
             GameObject groundImpactPrefab = skyFireGroundImpactVFX != null ? skyFireGroundImpactVFX : fireSpewVFX;
             if (groundImpactPrefab != null)
             {
                 GameObject groundImpact = Instantiate(groundImpactPrefab, groundPos + Vector3.up * 0.1f, Quaternion.identity);
-                groundImpact.transform.localScale = Vector3.one * 5.0f; // Kích thước to x5.0 rực rỡ bao trùm mặt đất
+                groundImpact.transform.localScale = Vector3.one * 2.2f; // Kích thước vừa vặn 2.2x
+                EnsureMaterialShaderValid(groundImpact);
 
                 var aoeMbList = groundImpact.GetComponentsInChildren<MonoBehaviour>(true);
                 foreach (var mb in aoeMbList)
@@ -2183,13 +2183,13 @@ public class FinalBossAI : NetworkBehaviour
             }
 
             // Rung giật camera mặt đất tại điểm nổ
-            CameraShakeHelper.ShakeAtPosition(groundPos, 0.7f, 1.5f, 35f);
+            CameraShakeHelper.ShakeAtPosition(groundPos, 0.6f, 1.3f, 35f);
 
             // Gây sát thương nổ diện rộng tại mặt đất để chắc chắn trúng 100% (-5 HP)
             bool auth = isStandaloneMode || (IsNetworkActive && IsServer);
             if (auth)
             {
-                ApplySkyFireImpactDamage(groundPos, fireSpewDamage, 3.2f);
+                ApplySkyFireImpactDamage(groundPos, fireSpewDamage, 2.5f);
             }
 
             Destroy(downBeam, 1.8f);
@@ -2280,8 +2280,9 @@ public class FinalBossAI : NetworkBehaviour
             Quaternion rot = Quaternion.LookRotation(shootDir);
 
             GameObject beam = Instantiate(genesisLaserVFX, spawnPoint, rot, transform);
-            // Kéo dài và phóng to cực đại (rộng 3.0x, dài 6.5x bao phủ toàn bộ đấu trường)
-            beam.transform.localScale = new Vector3(3.0f, 3.0f, 6.5f);
+            // Kéo dài và phóng to vừa vặn, cân đối thẩm mỹ (rộng 1.3x, dài 3.8x)
+            beam.transform.localScale = new Vector3(1.3f, 1.3f, 3.8f);
+            EnsureMaterialShaderValid(beam);
 
             // Ép Loop toàn bộ ParticleSystem để tia laser duy trì liên tục trong suốt 2.5s
             var particles = beam.GetComponentsInChildren<ParticleSystem>(true);
@@ -2305,13 +2306,45 @@ public class FinalBossAI : NetworkBehaviour
 
             // Gắn vùng gây sát thương va chạm liên tục (-5 HP)
             var damageZone = beam.GetComponent<GenesisBeamDamageZone>() ?? beam.AddComponent<GenesisBeamDamageZone>();
-            damageZone.Initialize(this, aerialLaserDamage, 8f, 50f, 3.2f);
+            damageZone.Initialize(this, aerialLaserDamage, 8f, 40f, 2.2f);
 
             Destroy(beam, 2.6f);
         }
 
-        CameraShakeHelper.Shake(2.5f, 1.2f);
-        Debug.Log("[FinalBossAI] ===> XẢ 5 TIA GENESIS BREAKER LASER KHỔNG LỒ QUANH THÂN BOSS RA PHÍA TRƯỚC (-5 HP)!");
+        CameraShakeHelper.Shake(2.0f, 1.0f);
+        Debug.Log("[FinalBossAI] ===> XẢ 5 TIA GENESIS BREAKER LASER QUANH THÂN BOSS RA PHÍA TRƯỚC (-5 HP)!");
+    }
+
+    /// <summary>
+    /// Tự động kiểm tra và sửa lỗi Material bị mất Shader (màu hồng) trên Built-in Render Pipeline
+    /// </summary>
+    public void EnsureMaterialShaderValid(GameObject go)
+    {
+        if (go == null) return;
+        var renderers = go.GetComponentsInChildren<Renderer>(true);
+        Shader fallbackShader = Shader.Find("Particles/Standard Unlit") 
+            ?? Shader.Find("Mobile/Particles/Additive") 
+            ?? Shader.Find("Legacy Shaders/Particles/Additive")
+            ?? Shader.Find("Sprites/Default");
+
+        foreach (var r in renderers)
+        {
+            if (r == null) continue;
+            var mats = r.sharedMaterials;
+            bool changed = false;
+            for (int i = 0; i < mats.Length; i++)
+            {
+                if (mats[i] != null && (mats[i].shader == null || mats[i].shader.name.Contains("Error") || mats[i].shader.name == "Hidden/InternalErrorShader"))
+                {
+                    if (fallbackShader != null)
+                    {
+                        mats[i].shader = fallbackShader;
+                        changed = true;
+                    }
+                }
+            }
+            if (changed) r.sharedMaterials = mats;
+        }
     }
 
     private void PlayGrowVFX()
@@ -2336,8 +2369,9 @@ public class FinalBossAI : NetworkBehaviour
             vfx.transform.localPosition = new Vector3(0f, 1.2f, 0f);
             vfx.transform.localRotation = Quaternion.identity;
 
-            // Đặt kích thước bao bọc vừa vặn xung quanh cơ thể khổng lồ của Boss
-            vfx.transform.localScale = new Vector3(1.5f, 1.5f, 1.5f);
+            // Đặt kích thước bao bọc vừa vặn xung quanh cơ thể của Boss
+            vfx.transform.localScale = new Vector3(1.2f, 1.2f, 1.2f);
+            EnsureMaterialShaderValid(vfx);
 
             // Ép Loop toàn bộ ParticleSystems để phát sáng liên tục trong 3s biến hình
             var particles = vfx.GetComponentsInChildren<ParticleSystem>(true);
