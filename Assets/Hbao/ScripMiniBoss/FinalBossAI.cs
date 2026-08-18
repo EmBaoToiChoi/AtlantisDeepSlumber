@@ -260,6 +260,7 @@ public class FinalBossAI : NetworkBehaviour
     private ShockwaveState stateShockwave;
     private FireSpewState stateFireSpew;
     private GrowState stateGrow;
+    private AerialLaserState stateAerialLaser;
     private HitState stateHit;
     private DeadState stateDead;
 
@@ -308,6 +309,7 @@ public class FinalBossAI : NetworkBehaviour
         stateShockwave = new ShockwaveState(this);
         stateFireSpew = new FireSpewState(this);
         stateGrow = new GrowState(this);
+        stateAerialLaser = new AerialLaserState(this);
         stateHit = new HitState(this);
         localHealth = maxHealth;
         stateDead = new DeadState(this);
@@ -340,7 +342,7 @@ public class FinalBossAI : NetworkBehaviour
             skyFireGroundImpactVFX = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(
                 "Assets/PixPlays/ElementalAOE/FireAOE/Version_BuiltIn/FireAoeVFX.prefab")
                 ?? UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(
-                "Assets/SpecialSkillsEffectsPack/AllEffects/EffectsSet_2(ScriptBased)/Effects/Effect_22_BigShot/Effect_22_Parts/Effect_22_Impact.prefab");
+                "Assets/SpecialSkillsEffectsPack/AllEffects/EffectsSet_2(ScriptBased)/Effects/Effect_08_FlameEruption/Effect_08_FlameEruption.prefab");
         }
         if (genesisLaserVFX == null)
         {
@@ -720,6 +722,9 @@ public class FinalBossAI : NetworkBehaviour
                 break;
             case FinalBossState.Grow:
                 currentFSMState = stateGrow;
+                break;
+            case FinalBossState.AerialLaser:
+                currentFSMState = stateAerialLaser;
                 break;
             case FinalBossState.Dead:
                 currentFSMState = stateDead;
