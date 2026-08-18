@@ -219,13 +219,9 @@ public class StonePuzzleQuestTrigger : NetworkBehaviour, IQuestTrigger
                     }
                 }
 
-                // Chỉ gọi API của UI khi giá trị tiến trình thay đổi để giảm chi phí render
-                if (pressedCount != lastPressedCount)
-                {
-                    lastPressedCount = pressedCount;
-                    localHudCtl.UpdateQuestProgress(pressedCount, totalCount, this);
-                    Debug.Log($"[StonePuzzleQuestTrigger] Cập nhật tiến độ nhiệm vụ: {pressedCount}/{totalCount}");
-                }
+                // Cập nhật tiến độ chính xác (ví dụ 0/2, 1/2, 2/2) ngay lập tức
+                lastPressedCount = pressedCount;
+                localHudCtl.UpdateQuestProgress(pressedCount, totalCount, this);
             }
             else
             {
@@ -298,11 +294,7 @@ public class StonePuzzleQuestTrigger : NetworkBehaviour, IQuestTrigger
     {
         if (other == null || isQuestCompleted || !IsPrerequisiteCompleted()) return;
 
-        // Kiểm tra va chạm: 
-        // - Chế độ chơi mạng: Chỉ Server được quyền thay đổi trạng thái của NetworkVariable
-        // - Chế độ offline: Xử lý bình thường
         bool isNetwork = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
-        if (isNetwork && !IsServer) return;
 
         if (IsPlayer(other.gameObject))
         {
@@ -310,18 +302,34 @@ public class StonePuzzleQuestTrigger : NetworkBehaviour, IQuestTrigger
             {
                 if (!isQuestActive.Value)
                 {
-                    isQuestActive.Value = true;
-                    Debug.Log($"[StonePuzzleQuestTrigger Server] Người chơi '{other.gameObject.name}' chạm Trigger - Kích hoạt nhiệm vụ cho toàn bộ mạng!");
+                    if (IsServer)
+                    {
+                        isQuestActive.Value = true;
+                        Debug.Log($"[StonePuzzleQuestTrigger Server] Người chơi '{other.gameObject.name}' chạm Trigger - Kích hoạt nhiệm vụ cho toàn bộ mạng!");
+                    }
+                    else
+                    {
+                        RequestActivateQuestServerRpc();
+                    }
                 }
             }
             else
             {
                 isPlayerInside = true;
                 hasTriggeredQuest = true;
-                lastPressedCount = -1; // Reset để ép cập nhật UI ngay lập tức
                 UpdateQuestProgressUI();
                 Debug.Log("[StonePuzzleQuestTrigger Offline] Người chơi chạm Trigger - Kích hoạt nhiệm vụ đẩy đá.");
             }
+        }
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    private void RequestActivateQuestServerRpc()
+    {
+        if (!isQuestActive.Value)
+        {
+            isQuestActive.Value = true;
+            Debug.Log("[StonePuzzleQuestTrigger ServerRpc] Client yêu cầu kích hoạt nhiệm vụ Đẩy Đá cho toàn bộ mạng!");
         }
     }
 

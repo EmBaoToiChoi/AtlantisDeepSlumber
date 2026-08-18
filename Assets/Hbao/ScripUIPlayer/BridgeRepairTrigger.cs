@@ -78,16 +78,20 @@ public class BridgeRepairTrigger : MonoBehaviour
                             float buildProgressVal = (Unity.Netcode.NetworkManager.Singleton != null && Unity.Netcode.NetworkManager.Singleton.IsListening) ? bridgeController.buildProgress.Value : bridgeController.localBuildProgress;
                             if (PlayerHUDController.isCoopBuildingUIOpen)
                             {
-                                localHud.ShowInteractionPrompt(true, $"Ấn [F] để thoát xây cầu (Tiến độ: {(int)buildProgressVal}%)");
+                                localHud.ShowInteractionPrompt(true, $"Spam [SPACE] để xây cầu | [F] để thoát (Tiến độ: {(int)buildProgressVal}%)");
                             }
                             else
                             {
-                                localHud.ShowInteractionPrompt(true, $"Ấn [F] để xây cầu (Tiến độ: {(int)buildProgressVal}%)");
+                                localHud.ShowInteractionPrompt(true, $"Ấn [SPACE] hoặc [F] để xây cầu (Tiến độ: {(int)buildProgressVal}%)");
                             }
 
                             if (Input.GetKeyDown(KeyCode.F))
                             {
                                 localHud.ToggleCoopBuildUI(bridgeController);
+                            }
+                            else if (Input.GetKeyDown(KeyCode.Space) && !PlayerHUDController.isCoopBuildingUIOpen)
+                            {
+                                localHud.OpenCoopBuildUI(bridgeController);
                             }
                         }
                         else

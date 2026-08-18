@@ -16,6 +16,8 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
         if (prerequisiteQuest == null) return true;
         if (prerequisiteQuest is IQuestTrigger quest) return quest.IsQuestCompleted;
         if (prerequisiteQuest is BridgeCollapseTrigger bridge) return bridge.IsBridgeRepaired();
+        var trigger = prerequisiteQuest.GetComponent<IQuestTrigger>() ?? prerequisiteQuest.GetComponentInChildren<IQuestTrigger>();
+        if (trigger != null) return trigger.IsQuestCompleted;
         return true;
     }
 
@@ -325,6 +327,8 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
         ApplyBridgeVisualState(IsBridgeCollapsed(), IsBridgeRepaired(), GetLogsSubmittedCount());
     }
 
+    private float nextUiCheckTime = 0f;
+
     private void Update()
     {
         if (localPlayer == null)
@@ -400,12 +404,31 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
                     SetParticlesActive(false);
                 }
             }
+        }
 
-            PlayerHUDController localHudCtl = FindAnyObjectByType<PlayerHUDController>();
-            if (localHudCtl != null)
+        // Định kỳ duy trì và cập nhật UI nhiệm vụ sửa cầu
+        if (IsBridgeCollapsed() && !IsBridgeRepaired() && IsPrerequisiteCompleted())
+        {
+            if (Time.time >= nextUiCheckTime)
             {
-                localHudCtl.UpdateQuestDescription("Hãy lại gần cầu và nhấn Space để cùng nhau xây dựng");
-                localHudCtl.UpdateQuestProgress((int)currentProgress, 100);
+                nextUiCheckTime = Time.time + 0.2f;
+                PlayerHUDController localHudCtl = FindAnyObjectByType<PlayerHUDController>();
+                if (localHudCtl != null)
+                {
+                    localHudCtl.ShowQuest(true, this);
+                    localHudCtl.UpdateQuestTitle("SỬA CẦU SẬP", this);
+                    if (ready)
+                    {
+                        localHudCtl.UpdateQuestDescription("Hãy lại gần cầu và nhấn Space để cùng nhau xây dựng", this);
+                        localHudCtl.UpdateQuestProgress((int)currentProgress, 100, this);
+                    }
+                    else
+                    {
+                        int submitted = GetLogsSubmittedCount();
+                        localHudCtl.UpdateQuestDescription("Chặt 16 thanh gỗ để sửa cầu và tiếp tục hành trình.", this);
+                        localHudCtl.UpdateQuestProgress(submitted, requiredLogsToRepair, this);
+                    }
+                }
             }
         }
     }

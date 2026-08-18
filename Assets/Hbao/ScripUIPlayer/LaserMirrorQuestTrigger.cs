@@ -237,13 +237,8 @@ public class LaserMirrorQuestTrigger : NetworkBehaviour, IQuestTrigger
                 bool isActivated = isNetwork ? isFinalActivated.Value : (finalPillar != null && finalPillar.IsActivated);
                 int current = isActivated ? 4 : 0;
                 int total = 4;
-
-                if (current != lastProgressCount)
-                {
-                    lastProgressCount = current;
-                    localHudCtl.UpdateQuestProgress(current, total, this);
-                    Debug.Log($"[LaserMirrorQuestTrigger] Cập nhật tiến độ UI: {current}/{total}");
-                }
+                lastProgressCount = current;
+                localHudCtl.UpdateQuestProgress(current, total, this);
             }
         }
     }
