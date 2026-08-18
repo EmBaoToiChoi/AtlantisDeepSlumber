@@ -11,7 +11,6 @@ public static class EnemyDamageHelper
         if (leo != null)
         {
             leo.RequestTakeDamage(damage);
-            leo.TakeDamage(damage);
             leo.ApplyKnockback(knockbackForce);
             Debug.Log($"[EnemyDamageHelper] Đã gây {damage} sát thương cho LeoPlayer '{leo.name}'");
             return;
@@ -21,7 +20,6 @@ public static class EnemyDamageHelper
         if (arthur != null)
         {
             arthur.RequestTakeDamage(damage);
-            arthur.TakeDamage(damage);
             arthur.ApplyKnockback(knockbackForce);
             Debug.Log($"[EnemyDamageHelper] Đã gây {damage} sát thương cho ArthurPlayer '{arthur.name}'");
             return;
@@ -31,7 +29,6 @@ public static class EnemyDamageHelper
         if (elena != null)
         {
             elena.RequestTakeDamage(damage);
-            elena.TakeDamage(damage);
             elena.ApplyKnockback(knockbackForce);
             Debug.Log($"[EnemyDamageHelper] Đã gây {damage} sát thương cho ElenaPlayer '{elena.name}'");
             return;
@@ -41,7 +38,6 @@ public static class EnemyDamageHelper
         if (maya != null)
         {
             maya.RequestTakeDamage(damage);
-            maya.TakeDamage(damage);
             maya.ApplyKnockback(knockbackForce);
             Debug.Log($"[EnemyDamageHelper] Đã gây {damage} sát thương cho MayaPlayer '{maya.name}'");
             return;
@@ -51,7 +47,6 @@ public static class EnemyDamageHelper
         if (simple != null)
         {
             simple.RequestTakeDamage(damage);
-            simple.TakeDamage(damage);
             simple.ApplyKnockback(knockbackForce);
             Debug.Log($"[EnemyDamageHelper] Đã gây {damage} sát thương cho SimplePlayerTest '{simple.name}'");
             return;
@@ -71,7 +66,6 @@ public static class EnemyDamageHelper
         if (hudTarget != null && hudTarget is MonoBehaviour mono)
         {
             mono.SendMessage("RequestTakeDamage", damage, SendMessageOptions.DontRequireReceiver);
-            mono.SendMessage("TakeDamage", damage, SendMessageOptions.DontRequireReceiver);
             return;
         }
 

@@ -2612,7 +2612,7 @@ MonoBehaviour:
   ShowTopMostFoldoutHeaderGroup: 1
   bossMiniboss: {fileID: 0}
   miniBoss: {fileID: 0}
-  startActiveWithoutMiniboss: 1
+  startActiveWithoutMiniboss: 0
   maxHealth: 1000
   currentHealth:
     UpdateTraits:
