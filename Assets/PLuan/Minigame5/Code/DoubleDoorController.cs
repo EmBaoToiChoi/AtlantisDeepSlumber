@@ -1,5 +1,9 @@
 using UnityEngine;
 
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
+
 [ExecuteAlways]
 public class DoubleDoorController : MonoBehaviour
 {
@@ -12,66 +16,124 @@ public class DoubleDoorController : MonoBehaviour
     [SerializeField] private Vector3 rightOpenRotationOffset = new Vector3(0, 90f, 0); // Độ lệch xoay khi mở của cánh phải (thường dương quanh Y)
     [SerializeField] private float openSpeed = 2f; // Tốc độ mở cửa mượt mà
 
-    private Quaternion m_LeftClosedRot;
-    private Quaternion m_LeftOpenRot;
-    private Quaternion m_RightClosedRot;
-    private Quaternion m_RightOpenRot;
+    [Header("Góc đóng ban đầu (Tự động ghi nhận)")]
+    [SerializeField] private bool hasSavedClosedRotations = false;
+    [SerializeField] private Quaternion defaultLeftClosedRot = Quaternion.identity;
+    [SerializeField] private Quaternion defaultRightClosedRot = Quaternion.identity;
+
+    [Header("Xem trước trong Editor (0 = Đóng, 1 = Mở)")]
+    [Range(0f, 1f)]
+    [SerializeField] private float previewProgress = 0f;
 
     private bool m_IsOpen = false;
-    private bool m_Initialized = false;
+    private float m_CurrentOpenProgress = 0f;
 
-    private void InitRotations()
+    public bool IsOpen => m_IsOpen;
+    public float CurrentProgress => m_CurrentOpenProgress;
+
+    /// <summary>
+    /// Ghi nhận góc quay hiện tại của 2 cánh cửa làm góc ĐÓNG chuẩn
+    /// </summary>
+    public void SaveCurrentAsClosedRotation()
     {
-        if (m_Initialized) return;
+        if (leftWing != null) defaultLeftClosedRot = leftWing.localRotation;
+        if (rightWing != null) defaultRightClosedRot = rightWing.localRotation;
+        hasSavedClosedRotations = true;
 
-        // Lưu giữ góc đóng ban đầu được thiết lập trong scene
-        if (leftWing != null)
-        {
-            m_LeftClosedRot = leftWing.localRotation;
-            m_LeftOpenRot = m_LeftClosedRot * Quaternion.Euler(leftOpenRotationOffset);
-        }
-        if (rightWing != null)
-        {
-            m_RightClosedRot = rightWing.localRotation;
-            m_RightOpenRot = m_RightClosedRot * Quaternion.Euler(rightOpenRotationOffset);
-        }
-        
-        m_Initialized = true;
-    }
-
-    void Start()
-    {
-        InitRotations();
-    }
-
-    void OnEnable()
-    {
-        m_Initialized = false; // Reset để nhận diện lại góc xoay khi bật/tắt component
-    }
-
-    void Update()
-    {
-        // Đảm bảo khởi tạo các góc xoay gốc
-        InitRotations();
-
-        // Trong Edit Mode, nếu người chơi thay đổi Vector cấu hình góc mở trong Inspector, cập nhật lại góc mục tiêu tương ứng
+#if UNITY_EDITOR
         if (!Application.isPlaying)
         {
-            if (leftWing != null) m_LeftOpenRot = m_LeftClosedRot * Quaternion.Euler(leftOpenRotationOffset);
-            if (rightWing != null) m_RightOpenRot = m_RightClosedRot * Quaternion.Euler(rightOpenRotationOffset);
+            EditorUtility.SetDirty(this);
         }
+#endif
+    }
 
-        // Nội suy mượt mà góc xoay của 2 cánh cửa
+    /// <summary>
+    /// Reset 2 cánh cửa về góc ĐÓNG chuẩn ban đầu
+    /// </summary>
+    public void ResetToClosedRotation()
+    {
+        EnsureClosedRotationsInitialized();
+        if (leftWing != null) leftWing.localRotation = defaultLeftClosedRot;
+        if (rightWing != null) rightWing.localRotation = defaultRightClosedRot;
+        m_CurrentOpenProgress = 0f;
+        previewProgress = 0f;
+        m_IsOpen = false;
+
+#if UNITY_EDITOR
+        if (!Application.isPlaying)
+        {
+            EditorUtility.SetDirty(this);
+            SceneView.RepaintAll();
+        }
+#endif
+    }
+
+    private void EnsureClosedRotationsInitialized()
+    {
+        if (!hasSavedClosedRotations)
+        {
+            SaveCurrentAsClosedRotation();
+        }
+    }
+
+    private void Awake()
+    {
+        EnsureClosedRotationsInitialized();
+    }
+
+    private void Start()
+    {
+        EnsureClosedRotationsInitialized();
+        if (Application.isPlaying)
+        {
+            // Bắt đầu game ở vị trí đóng hoặc theo trạng thái m_IsOpen
+            m_CurrentOpenProgress = m_IsOpen ? 1f : 0f;
+            ApplyRotationByProgress(m_CurrentOpenProgress);
+        }
+    }
+
+    private void OnValidate()
+    {
+        if (!Application.isPlaying)
+        {
+            EnsureClosedRotationsInitialized();
+            ApplyRotationByProgress(previewProgress);
+        }
+    }
+
+    /// <summary>
+    /// Áp dụng góc xoay theo tiến trình từ 0.0 (Đóng) đến 1.0 (Mở)
+    /// </summary>
+    public void ApplyRotationByProgress(float progress)
+    {
+        EnsureClosedRotationsInitialized();
+        progress = Mathf.Clamp01(progress);
+        m_CurrentOpenProgress = progress;
+
         if (leftWing != null)
         {
-            Quaternion targetRot = m_IsOpen ? m_LeftOpenRot : m_LeftClosedRot;
-            leftWing.localRotation = Quaternion.Slerp(leftWing.localRotation, targetRot, Time.deltaTime * openSpeed);
+            Quaternion leftOpenRot = defaultLeftClosedRot * Quaternion.Euler(leftOpenRotationOffset);
+            leftWing.localRotation = Quaternion.Slerp(defaultLeftClosedRot, leftOpenRot, progress);
         }
 
         if (rightWing != null)
         {
-            Quaternion targetRot = m_IsOpen ? m_RightOpenRot : m_RightClosedRot;
-            rightWing.localRotation = Quaternion.Slerp(rightWing.localRotation, targetRot, Time.deltaTime * openSpeed);
+            Quaternion rightOpenRot = defaultRightClosedRot * Quaternion.Euler(rightOpenRotationOffset);
+            rightWing.localRotation = Quaternion.Slerp(defaultRightClosedRot, rightOpenRot, progress);
+        }
+    }
+
+    private void Update()
+    {
+        if (Application.isPlaying)
+        {
+            float targetProgress = m_IsOpen ? 1f : 0f;
+            if (!Mathf.Approximately(m_CurrentOpenProgress, targetProgress))
+            {
+                m_CurrentOpenProgress = Mathf.MoveTowards(m_CurrentOpenProgress, targetProgress, Time.deltaTime * openSpeed);
+                ApplyRotationByProgress(m_CurrentOpenProgress);
+            }
         }
     }
 
@@ -81,13 +143,12 @@ public class DoubleDoorController : MonoBehaviour
         m_IsOpen = true;
         Debug.Log("[DoubleDoorController] Lệnh MỞ cửa được kích hoạt.");
 
-        #if UnityEditor
+#if UNITY_EDITOR
         if (!Application.isPlaying)
         {
-            // Buộc Unity Editor cập nhật khung hình để thấy hiệu ứng xoay cửa trong Scene view
-            UnityEditor.EditorApplication.QueuePlayerLoopUpdate();
+            StartEditorAnimation(1f);
         }
-        #endif
+#endif
     }
 
     [ContextMenu("Close Door")]
@@ -96,17 +157,75 @@ public class DoubleDoorController : MonoBehaviour
         m_IsOpen = false;
         Debug.Log("[DoubleDoorController] Lệnh ĐÓNG cửa được kích hoạt.");
 
-        #if UnityEditor
+#if UNITY_EDITOR
         if (!Application.isPlaying)
         {
-            UnityEditor.EditorApplication.QueuePlayerLoopUpdate();
+            StartEditorAnimation(0f);
         }
-        #endif
+#endif
     }
 
     // Nhận trạng thái trực tiếp từ Unity Event của Trụ Final (True = Mở, False = Đóng)
     public void SetDoorState(bool open)
     {
-        m_IsOpen = open;
+        if (open) OpenDoor();
+        else CloseDoor();
     }
+
+#if UNITY_EDITOR
+    private double m_LastEditorTime;
+    private float m_EditorTargetProgress;
+    private bool m_IsAnimatingInEditor = false;
+
+    public void StartEditorAnimation(float target)
+    {
+        EnsureClosedRotationsInitialized();
+        m_EditorTargetProgress = target;
+        m_LastEditorTime = EditorApplication.timeSinceStartup;
+
+        if (!m_IsAnimatingInEditor)
+        {
+            m_IsAnimatingInEditor = true;
+            EditorApplication.update += HandleEditorUpdate;
+        }
+    }
+
+    private void HandleEditorUpdate()
+    {
+        if (this == null || Application.isPlaying)
+        {
+            EditorApplication.update -= HandleEditorUpdate;
+            m_IsAnimatingInEditor = false;
+            return;
+        }
+
+        double currentTime = EditorApplication.timeSinceStartup;
+        float dt = (float)(currentTime - m_LastEditorTime);
+        m_LastEditorTime = currentTime;
+
+        if (dt > 0.1f) dt = 0.1f;
+
+        m_CurrentOpenProgress = Mathf.MoveTowards(m_CurrentOpenProgress, m_EditorTargetProgress, dt * openSpeed);
+        previewProgress = m_CurrentOpenProgress;
+        ApplyRotationByProgress(m_CurrentOpenProgress);
+
+        EditorUtility.SetDirty(this);
+        SceneView.RepaintAll();
+
+        if (Mathf.Approximately(m_CurrentOpenProgress, m_EditorTargetProgress))
+        {
+            EditorApplication.update -= HandleEditorUpdate;
+            m_IsAnimatingInEditor = false;
+        }
+    }
+
+    private void OnDisable()
+    {
+        if (!Application.isPlaying && m_IsAnimatingInEditor)
+        {
+            EditorApplication.update -= HandleEditorUpdate;
+            m_IsAnimatingInEditor = false;
+        }
+    }
+#endif
 }
