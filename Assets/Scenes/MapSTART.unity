@@ -43249,67 +43249,6 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 4445928934366878, guid: 758c1c67a97adca44b4e2cae02698689, type: 3}
   m_PrefabInstance: {fileID: 173282190}
   m_PrefabAsset: {fileID: 0}
---- !u!1001 &175889311
-PrefabInstance:
-  m_ObjectHideFlags: 0
-  serializedVersion: 2
-  m_Modification:
-    serializedVersion: 3
-    m_TransformParent: {fileID: 0}
-    m_Modifications:
-    - target: {fileID: 8388466950824095792, guid: 547c3c54726d33b49bf3810ee190a7be, type: 3}
-      propertyPath: m_Name
-      value: Effect_50_GenesisBreaker
-      objectReference: {fileID: 0}
-    - target: {fileID: 8388466950824095792, guid: 547c3c54726d33b49bf3810ee190a7be, type: 3}
-      propertyPath: m_IsActive
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 8388466950824095797, guid: 547c3c54726d33b49bf3810ee190a7be, type: 3}
-      propertyPath: m_LocalPosition.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 8388466950824095797, guid: 547c3c54726d33b49bf3810ee190a7be, type: 3}
-      propertyPath: m_LocalPosition.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 8388466950824095797, guid: 547c3c54726d33b49bf3810ee190a7be, type: 3}
-      propertyPath: m_LocalPosition.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 8388466950824095797, guid: 547c3c54726d33b49bf3810ee190a7be, type: 3}
-      propertyPath: m_LocalRotation.w
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 8388466950824095797, guid: 547c3c54726d33b49bf3810ee190a7be, type: 3}
-      propertyPath: m_LocalRotation.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 8388466950824095797, guid: 547c3c54726d33b49bf3810ee190a7be, type: 3}
-      propertyPath: m_LocalRotation.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 8388466950824095797, guid: 547c3c54726d33b49bf3810ee190a7be, type: 3}
-      propertyPath: m_LocalRotation.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 8388466950824095797, guid: 547c3c54726d33b49bf3810ee190a7be, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 8388466950824095797, guid: 547c3c54726d33b49bf3810ee190a7be, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 8388466950824095797, guid: 547c3c54726d33b49bf3810ee190a7be, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.z
-      value: 0
-      objectReference: {fileID: 0}
-    m_RemovedComponents: []
-    m_RemovedGameObjects: []
-    m_AddedGameObjects: []
-    m_AddedComponents: []
-  m_SourcePrefab: {fileID: 100100000, guid: 547c3c54726d33b49bf3810ee190a7be, type: 3}
 --- !u!1 &176038065
 GameObject:
   m_ObjectHideFlags: 0
@@ -103194,67 +103133,6 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 114688159551363921, guid: 3df8a8fe6362c5e46801d75bbb5ddda9, type: 3}
   m_PrefabInstance: {fileID: 713647670}
   m_PrefabAsset: {fileID: 0}
---- !u!1001 &714007134
-PrefabInstance:
-  m_ObjectHideFlags: 0
-  serializedVersion: 2
-  m_Modification:
-    serializedVersion: 3
-    m_TransformParent: {fileID: 0}
-    m_Modifications:
-    - target: {fileID: 6852847330999259004, guid: 3d8d5f101fe01164d88c2f188ad6974d, type: 3}
-      propertyPath: m_Name
-      value: Effect_50_GenesisDroneBlaster
-      objectReference: {fileID: 0}
-    - target: {fileID: 6852847330999259004, guid: 3d8d5f101fe01164d88c2f188ad6974d, type: 3}
-      propertyPath: m_IsActive
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 6852847330999259006, guid: 3d8d5f101fe01164d88c2f188ad6974d, type: 3}
-      propertyPath: m_LocalPosition.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 6852847330999259006, guid: 3d8d5f101fe01164d88c2f188ad6974d, type: 3}
-      propertyPath: m_LocalPosition.y
-      value: 6.7
-      objectReference: {fileID: 0}
-    - target: {fileID: 6852847330999259006, guid: 3d8d5f101fe01164d88c2f188ad6974d, type: 3}
-      propertyPath: m_LocalPosition.z
-      value: -7.62
-      objectReference: {fileID: 0}
-    - target: {fileID: 6852847330999259006, guid: 3d8d5f101fe01164d88c2f188ad6974d, type: 3}
-      propertyPath: m_LocalRotation.w
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 6852847330999259006, guid: 3d8d5f101fe01164d88c2f188ad6974d, type: 3}
-      propertyPath: m_LocalRotation.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 6852847330999259006, guid: 3d8d5f101fe01164d88c2f188ad6974d, type: 3}
-      propertyPath: m_LocalRotation.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 6852847330999259006, guid: 3d8d5f101fe01164d88c2f188ad6974d, type: 3}
-      propertyPath: m_LocalRotation.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 6852847330999259006, guid: 3d8d5f101fe01164d88c2f188ad6974d, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 6852847330999259006, guid: 3d8d5f101fe01164d88c2f188ad6974d, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 6852847330999259006, guid: 3d8d5f101fe01164d88c2f188ad6974d, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.z
-      value: 0
-      objectReference: {fileID: 0}
-    m_RemovedComponents: []
-    m_RemovedGameObjects: []
-    m_AddedGameObjects: []
-    m_AddedComponents: []
-  m_SourcePrefab: {fileID: 100100000, guid: 3d8d5f101fe01164d88c2f188ad6974d, type: 3}
 --- !u!1 &716238902 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 1002701165745139844, guid: f0c835118da655543999966ad97b459e, type: 3}
@@ -296957,10 +296835,6 @@ PrefabInstance:
       propertyPath: landingPoint
       value: 
       objectReference: {fileID: 1941652719}
-    - target: {fileID: 7074382907316884614, guid: ce5b12c86dd74644796e6604896d9c1d, type: 3}
-      propertyPath: genesisLaserVFX
-      value: 
-      objectReference: {fileID: 8388466950824095792, guid: 547c3c54726d33b49bf3810ee190a7be, type: 3}
     - target: {fileID: 8572541257309697589, guid: ce5b12c86dd74644796e6604896d9c1d, type: 3}
       propertyPath: m_Name
       value: King Atlantis
@@ -318545,5 +318419,3 @@ SceneRoots:
   - {fileID: 1172835357}
   - {fileID: 1332403965}
   - {fileID: 297678054}
-  - {fileID: 175889311}
-  - {fileID: 714007134}
