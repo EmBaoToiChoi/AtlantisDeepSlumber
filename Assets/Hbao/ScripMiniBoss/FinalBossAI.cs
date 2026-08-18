@@ -405,31 +405,43 @@ public class FinalBossAI : NetworkBehaviour
         attackCounter.OnValueChanged += (_, _) => {
             if (anim != null && attackTypeSync.Value >= 0 && attackTypeSync.Value < attackTriggers.Length)
                 anim.SetTrigger(attackTriggers[attackTypeSync.Value]);
+            CameraShakeHelper.Shake(0.4f, 0.8f); // Rung nhẹ khi đòn đánh cận chiến
         };
         shockwaveCounter.OnValueChanged += (_, _) => {
             if (anim != null) anim.SetTrigger(shockwaveTriggerParam);
             PlayShockwaveVFX();
+            CameraShakeHelper.Shake(1.5f, 1.8f); // RUNG MẠNH khi sóng chấn nổ tung
         };
         jumpDownCounter.OnValueChanged += (_, _) => {
             if (anim != null) anim.SetTrigger(jumpDownTriggerParam);
         };
-        landingSlamCounter.OnValueChanged += (_, _) => PlayLandingSlamVFX();
+        landingSlamCounter.OnValueChanged += (_, _) => {
+            PlayLandingSlamVFX();
+            CameraShakeHelper.Shake(2.0f, 2.0f); // RUNG CỰC MẠNH khi Boss đáp xuống đất
+        };
         hitCounter.OnValueChanged += (_, _) => { if (anim != null) anim.SetTrigger(hitTriggerParam); };
-        dieCounter.OnValueChanged += (_, _) => { if (anim != null) anim.SetTrigger(dieTriggerParam); };
+        dieCounter.OnValueChanged += (_, _) => {
+            if (anim != null) anim.SetTrigger(dieTriggerParam);
+            CameraShakeHelper.Shake(2.5f, 2.2f); // RUNG CHẤN ĐỘNG khi Boss ngã chết
+        };
         fireSpewCounter.OnValueChanged += (_, _) => {
             if (anim != null) anim.SetTrigger(fireSpewTriggerParam);
+            CameraShakeHelper.Shake(1.2f, 1.5f); // RUNG MẠNH khi gồng bắn chưởng lửa
         };
         aerialLaserCounter.OnValueChanged += (_, _) => {
             if (anim != null && attackTriggers != null && attackTriggers.Length > 2)
                 anim.SetTrigger(attackTriggers[2]);
+            CameraShakeHelper.Shake(1.8f, 1.6f); // RUNG DỮ DỘI khi Boss bay lên bắn 5 tia
         };
         droneLaserCounter.OnValueChanged += (_, _) => {
             if (anim != null && attackTriggers != null && attackTriggers.Length > 2)
                 anim.SetTrigger(attackTriggers[2]);
+            CameraShakeHelper.Shake(1.5f, 1.4f); // RUNG MẠNH khi triệu hồi 12 tia laser xoay tròn
         };
         growCounter.OnValueChanged += (_, _) => {
             if (anim != null) anim.SetTrigger(growTriggerParam);
             PlayGrowVFX();
+            CameraShakeHelper.Shake(3.0f, 2.0f); // RUNG CỰC KỲ CHẤN ĐỘNG khi Boss biến lớn Phase 2
         };
         isBossActive.OnValueChanged += (oldVal, newVal) => { if (newVal) StartBattleMusic(); else StopBattleMusic(true); };
         netScale.OnValueChanged += (_, newScale) => transform.localScale = newScale;
@@ -1010,7 +1022,7 @@ public class FinalBossAI : NetworkBehaviour
     private void PlayShockwaveVFX()
     {
         Vector3 spawnPos = transform.position + Vector3.up * 0.5f;
-        CameraShakeHelper.Shake(1.2f, 1.4f); // Rung dữ dội toàn màn hình khi gồng nổ hất tung
+        CameraShakeHelper.Shake(2.0f, 2.0f); // RUNG CỰC MẠNH khi Shockwave nổ tung hất player
 
         if (shockwaveVFX != null)
         {
@@ -1883,7 +1895,7 @@ public class FinalBossAI : NetworkBehaviour
                 boss.agent.enabled = true;
                 boss.SnapToNavMesh();
             }
-            CameraShakeHelper.Shake(0.5f, 1.2f);
+            CameraShakeHelper.Shake(1.5f, 1.8f); // RUNG MẠNH khi Boss hạ cánh đáp xuống sau chiêu bay lên
         }
     }
 
@@ -2146,9 +2158,10 @@ public class FinalBossAI : NetworkBehaviour
         Vector3 skyTarget = bossMouthPos + Vector3.up * 22.0f;
         Quaternion upRot = Quaternion.Euler(-90f, 0f, 0f);
         GameObject upBeam = Instantiate(fireSpewVFX, bossMouthPos, upRot);
-        TriggerVfxPlayback(upBeam, bossMouthPos, skyTarget, 1.5f, 0.8f, 0.45f);
+        upBeam.transform.localScale = Vector3.one * 0.45f;
+        TriggerVfxPlayback(upBeam, bossMouthPos, skyTarget, 1.5f, 0.8f, 1.0f, false);
 
-        CameraShakeHelper.Shake(0.8f, 1.0f);
+        CameraShakeHelper.Shake(1.5f, 1.6f); // RUNG MẠNH khi Boss bắn chưởng lửa lên trời
         if (fireSpewSFX != null) AudioSource.PlayClipAtPoint(fireSpewSFX, bossMouthPos, 1.0f);
         Destroy(upBeam, 1.5f);
 
@@ -2164,7 +2177,8 @@ public class FinalBossAI : NetworkBehaviour
 
             // 1. Cột lửa cắm từ trời xuống (Scale 0.45x thon gọn)
             GameObject downBeam = Instantiate(fireSpewVFX, skySpawnPos, downRot);
-            TriggerVfxPlayback(downBeam, skySpawnPos, groundPos, 1.8f, 0.9f, 0.45f);
+            downBeam.transform.localScale = Vector3.one * 0.45f;
+            TriggerVfxPlayback(downBeam, skySpawnPos, groundPos, 1.8f, 0.9f, 1.0f, false);
 
             // Gắn vùng gây sát thương va chạm
             var damageZone = downBeam.GetComponent<FireBeamDamageZone>() ?? downBeam.AddComponent<FireBeamDamageZone>();
@@ -2175,12 +2189,13 @@ public class FinalBossAI : NetworkBehaviour
             if (groundImpactPrefab != null)
             {
                 GameObject groundImpact = Instantiate(groundImpactPrefab, groundPos + Vector3.up * 0.1f, Quaternion.identity);
-                TriggerVfxPlayback(groundImpact, groundPos, groundPos + Vector3.up, 2.5f, 1.2f, 0.5f);
+                groundImpact.transform.localScale = Vector3.one * 0.5f;
+                TriggerVfxPlayback(groundImpact, groundPos, groundPos + Vector3.up, 2.5f, 1.2f, 1.0f, false);
                 Destroy(groundImpact, 2.5f);
             }
 
             // Rung giật camera mặt đất tại điểm nổ
-            CameraShakeHelper.ShakeAtPosition(groundPos, 0.6f, 1.3f, 35f);
+            CameraShakeHelper.ShakeAtPosition(groundPos, 1.0f, 2.0f, 45f); // RUNG CỰC MẠNH tại điểm cột lửa giáng xuống
 
             // Gây sát thương nổ diện rộng tại mặt đất (-5 HP)
             bool auth = isStandaloneMode || (IsNetworkActive && IsServer);
@@ -2273,22 +2288,22 @@ public class FinalBossAI : NetworkBehaviour
             float angle = angles[i];
             Vector3 offset = localOffsets[i];
             Vector3 spawnPoint = transform.TransformPoint(offset);
-            // Chếch góc 18° cắm thẳng xuống mặt đất nơi Player đang đứng
-            Vector3 shootDir = Quaternion.Euler(18f, angle, 0) * transform.forward;
+            // Chếch góc 30° cắm sâu xuống mặt đất để tia chạm sàn chắc chắn
+            Vector3 shootDir = Quaternion.Euler(30f, angle, 0) * transform.forward;
             Quaternion rot = Quaternion.LookRotation(shootDir);
 
             GameObject beam = Instantiate(genesisLaserVFX, spawnPoint, rot);
-            beam.transform.localScale = new Vector3(1.2f, 1.2f, 2.5f); // Kéo dài tia laser đâm xuống mặt đất
-            TriggerVfxPlayback(beam, spawnPoint, spawnPoint + shootDir * 45f, 3.2f, 2.2f, 1.0f, true);
+            beam.transform.localScale = new Vector3(1.3f, 1.3f, 4.0f); // Kéo DÀI MẠNH tia laser đâm thẳng xuống mặt đất
+            TriggerVfxPlayback(beam, spawnPoint, spawnPoint + shootDir * 55f, 3.2f, 2.5f, 1.0f, true);
 
-            // Gắn vùng gây sát thương va chạm liên tục (-5 HP)
+            // Gắn vùng gây sát thương va chạm liên tục (-5 HP) - beamLength dài 55m, beamRadius rộng 3.5m
             var damageZone = beam.GetComponent<GenesisBeamDamageZone>() ?? beam.AddComponent<GenesisBeamDamageZone>();
-            damageZone.Initialize(this, aerialLaserDamage, 8f, 45f, 2.5f);
+            damageZone.Initialize(this, aerialLaserDamage, 10f, 55f, 3.5f);
 
-            Destroy(beam, 3.0f);
+            Destroy(beam, 3.2f);
         }
 
-        CameraShakeHelper.Shake(2.0f, 1.0f);
+        CameraShakeHelper.Shake(2.5f, 1.8f); // RUNG DỮ DỘI khi 5 tia Genesis Breaker cắm xuống đất
         Debug.Log("[FinalBossAI] ===> XẢ 5 TIA GENESIS BREAKER LASER CẮM XUỐNG MẶT ĐẤT (LOOP = TRUE, -5 HP)!");
     }
 
@@ -2351,65 +2366,81 @@ public class FinalBossAI : NetworkBehaviour
             rotator.RegisterDroneUnit(droneUnit.transform);
         }
 
-        CameraShakeHelper.Shake(1.2f, 0.8f);
+        CameraShakeHelper.Shake(2.0f, 1.5f); // RUNG MẠNH khi 12 tia laser drone bắt đầu quét vòng tròn
         Debug.Log("[FinalBossAI] ===> TRIỆU HỒI 3 CỤM DRONE BLASTER (12 TIA LASER CẮM XUỐNG ĐẤT, LOOP = TRUE) QUAY 360°!");
     }
 
     /// <summary>
     /// Kích hoạt đúng cơ chế phát của tất cả các hệ thống VFX (PixPlays BaseVfx, ParticleSystems) với Loop và kích thước tùy chỉnh
     /// </summary>
-    private void TriggerVfxPlayback(GameObject vfx, Vector3 source, Vector3 target, float duration = 2.5f, float radius = 3.0f, float scaleMultiplier = 1.0f, bool forceLoop = true)
+    private void TriggerVfxPlayback(GameObject vfx, Vector3 source, Vector3 target, float duration = 2.5f, float radius = 3.0f, float scaleMultiplier = 1.0f, bool forceLoop = false)
     {
         if (vfx == null) return;
 
-        vfx.transform.localScale = Vector3.one * scaleMultiplier;
+        // Chỉ override scale khi scaleMultiplier khác 1.0 (tránh ghi đè scale đã set riêng bên ngoài)
+        if (Mathf.Abs(scaleMultiplier - 1.0f) > 0.01f)
+        {
+            vfx.transform.localScale = Vector3.one * scaleMultiplier;
+        }
 
-        // 1. Nếu là VFX của gói PixPlays (FireBeam, FireAoeVFX...) -> Khởi tạo VfxData và gọi Play(data) để kích hoạt Coroutine bắn chùm tia!
+        // 1. Kiểm tra xem VFX có phải là PixPlays (FireBeam, FireAoeVFX...) hay không
         var baseVfxList = vfx.GetComponentsInChildren<PixPlays.ElementalVFX.BaseVfx>(true);
-        foreach (var bv in baseVfxList)
-        {
-            if (bv != null)
-            {
-                var data = new PixPlays.ElementalVFX.VfxData(source, target, duration, radius);
-                bv.Play(data);
-            }
-        }
+        bool isPixPlaysVfx = baseVfxList != null && baseVfxList.Length > 0;
 
-        // 2. Kích hoạt và ép Loop toàn bộ ParticleSystem bên trong
-        var particles = vfx.GetComponentsInChildren<ParticleSystem>(true);
-        foreach (var ps in particles)
+        if (isPixPlaysVfx)
         {
-            if (ps != null)
+            // PixPlays VFX: CHỈ gọi Play(data) - PixPlays tự quản lý ParticleSystem, Material, Coroutine
+            // KHÔNG CAN THIỆP ps.Clear/ps.Play thủ công → tránh conflict gây hồng/pink material
+            foreach (var bv in baseVfxList)
             {
-                ps.gameObject.SetActive(true);
-                var main = ps.main;
-                if (forceLoop)
+                if (bv != null)
                 {
-                    main.loop = true; // Ép Loop liên tục
-                    main.stopAction = ParticleSystemStopAction.None;
-                    main.startLifetime = Mathf.Max(main.startLifetime.constant, duration + 1.0f);
+                    var data = new PixPlays.ElementalVFX.VfxData(source, target, duration, radius);
+                    bv.Play(data);
                 }
-                var em = ps.emission;
-                em.enabled = true;
-                ps.Clear(true);
-                ps.Play(true);
             }
         }
-
-        var vfxGraphs = vfx.GetComponentsInChildren<UnityEngine.VFX.VisualEffect>(true);
-        foreach (var ve in vfxGraphs)
+        else
         {
-            if (ve != null)
+            // Non-PixPlays VFX (Genesis Breaker, Drone Blaster, CriticalSlash...): Can thiệp ParticleSystem thủ công
+            var particles = vfx.GetComponentsInChildren<ParticleSystem>(true);
+            foreach (var ps in particles)
             {
-                ve.gameObject.SetActive(true);
-                ve.Play();
+                if (ps != null)
+                {
+                    ps.gameObject.SetActive(true);
+                    var main = ps.main;
+                    if (forceLoop)
+                    {
+                        main.loop = true;
+                        main.stopAction = ParticleSystemStopAction.None;
+                        if (main.startLifetime.mode == ParticleSystemCurveMode.Constant)
+                        {
+                            main.startLifetime = Mathf.Max(main.startLifetime.constant, duration + 1.0f);
+                        }
+                    }
+                    var em = ps.emission;
+                    em.enabled = true;
+                    ps.Clear(true);
+                    ps.Play(true);
+                }
             }
-        }
 
-        var renderers = vfx.GetComponentsInChildren<Renderer>(true);
-        foreach (var r in renderers)
-        {
-            if (r != null) r.enabled = true;
+            var vfxGraphs = vfx.GetComponentsInChildren<UnityEngine.VFX.VisualEffect>(true);
+            foreach (var ve in vfxGraphs)
+            {
+                if (ve != null)
+                {
+                    ve.gameObject.SetActive(true);
+                    ve.Play();
+                }
+            }
+
+            var renderers = vfx.GetComponentsInChildren<Renderer>(true);
+            foreach (var r in renderers)
+            {
+                if (r != null) r.enabled = true;
+            }
         }
     }
 
@@ -2447,7 +2478,10 @@ public class FinalBossAI : NetworkBehaviour
                 var main = ps.main;
                 main.loop = true; // Ép Loop liên tục
                 main.stopAction = ParticleSystemStopAction.None;
-                main.startLifetime = Mathf.Max(main.startLifetime.constant, growDuration + 1.0f);
+                if (main.startLifetime.mode == ParticleSystemCurveMode.Constant)
+                {
+                    main.startLifetime = Mathf.Max(main.startLifetime.constant, growDuration + 1.0f);
+                }
                 var em = ps.emission;
                 em.enabled = true;
                 ps.Clear(true);
@@ -3002,7 +3036,11 @@ public class FinalBossProjectile : MonoBehaviour
             var main = ps.main;
             main.loop = true; // Ép lặp lại liên tục (Loop)
             main.stopAction = ParticleSystemStopAction.None; // Không tự hủy
-            main.startLifetime = Mathf.Max(main.startLifetime.constant, 4.0f); // Thời gian tồn tại dài
+            // An toàn: chỉ truy cập .constant khi mode là Constant
+            if (main.startLifetime.mode == ParticleSystemCurveMode.Constant)
+            {
+                main.startLifetime = Mathf.Max(main.startLifetime.constant, 4.0f);
+            }
             var em = ps.emission;
             em.enabled = true;
             ps.Clear(true);
