@@ -7,48 +7,6 @@
     overflow: visible;
 }
 
-.player-name-label {
-    color: rgb(255, 255, 255);
-    font-size: 15px;
-    -unity-font-style: bold;
-    -unity-text-align: middle-center;
-    letter-spacing: 1px;
-    
-    /* Nền tối kính mờ (dark glassmorphism) giúp tương phản mạnh với chữ trắng */
-    background-color: rgba(10, 10, 12, 0.65);
-    
-    /* Padding bo tròn dạng badge sang trọng (Explicit properties for compatibility) */
-    padding-top: 4.0px;
-    padding-bottom: 4.0px;
-    padding-left: 12.0px;
-    padding-right: 12.0px;
-    
-    border-top-left-radius: 10.0px;
-    border-top-right-radius: 10.0px;
-    border-bottom-left-radius: 10.0px;
-    border-bottom-right-radius: 10.0px;
-    
-    white-space: nowrap;
-    
-    /* Viền mỏng sáng nhẹ tạo hiệu ứng nổi khối */
-    border-left-width: 1.0px;
-    border-right-width: 1.0px;
-    border-top-width: 1.0px;
-    border-bottom-width: 1.0px;
-    
-    border-left-color: rgba(255, 255, 255, 0.15);
-    border-right-color: rgba(255, 255, 255, 0.15);
-    border-top-color: rgba(255, 255, 255, 0.15);
-    border-bottom-color: rgba(255, 255, 255, 0.15);
-    
-    /* Text outline đen sắc nét để chữ cực dễ đọc trên mọi địa hình sáng/tối */
-    -unity-text-outline-width: 1.0px;
-    -unity-text-outline-color: rgb(0, 0, 0);
-    
-    /* Text shadow mềm giống tên enemy */
-    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
-}
-
 .nameplate-wrapper {
     position: absolute;
     bottom: 0;
@@ -56,13 +14,65 @@
     justify-content: flex-end;
 }
 
-.nameplate-arrow {
+.nameplate-box {
+    position: relative;
+    min-width: 200px;
+    height: 48px;
+    padding-left: 36px;
+    padding-right: 36px;
+    align-items: center;
+    justify-content: center;
+}
+
+.nameplate-bg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: none;
+    background-image: url("project://database/Assets/Synty/InterfaceFantasyMenus/Sprites/FantasyMenus/SPR_FantasyMenus_Menu_Button_12_Background.png?fileID=2800000&guid=387518e5d920c4b4c9219d74a5729311&type=3#SPR_FantasyMenus_Menu_Button_12_Background");
+    -unity-background-scale-mode: stretch-to-fill;
+    -unity-background-image-tint-color: rgba(8, 14, 26, 0.9);
+    z-index: 1;
+}
+
+.nameplate-frame {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: none;
+    background-image: url("project://database/Assets/Synty/InterfaceFantasyMenus/Sprites/FantasyMenus/SPR_FantasyMenus_Menu_Button_12_Frame.png?fileID=2800000&guid=36d4bec83f61f134bbd04c1619e97c33&type=3#SPR_FantasyMenus_Menu_Button_12_Frame");
+    -unity-background-scale-mode: stretch-to-fill;
+    z-index: 3;
+}
+
+.player-name-label {
     color: rgb(255, 255, 255);
-    font-size: 10px;
-    margin-top: -3px; /* Đè nhẹ lên viền của nhãn tên để liền mạch */
-    -unity-text-outline-width: 1.0px;
-    -unity-text-outline-color: rgb(0, 0, 0); /* Viền đen giúp mũi tên rõ nét trên mọi nền */
-    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+    font-size: 15px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    letter-spacing: 1px;
+    white-space: nowrap;
+    -unity-text-outline-width: 1px;
+    -unity-text-outline-color: rgb(0, 0, 0);
+    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.9);
+    margin: 0;
     padding: 0;
-    margin-bottom: 5px; /* Tạo khoảng trống nhẹ dưới mũi tên trước khi chỉ vào đầu nhân vật */
+    z-index: 2;
+}
+
+.nameplate-arrow {
+    color: rgb(255, 215, 0);
+    font-size: 12px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    margin-top: -4px;
+    -unity-text-outline-width: 1px;
+    -unity-text-outline-color: rgb(0, 0, 0);
+    text-shadow: 0 0 6px rgba(255, 215, 0, 0.6);
+    padding: 0;
+    margin-bottom: 4px;
 }
