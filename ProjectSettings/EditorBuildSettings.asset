@@ -11,9 +11,12 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/Lobby.unity
     guid: 1a61f552d67d4324abce04818f76743a
-  - enabled: 1
+  - enabled: 0
     path: Assets/Scenes/MapSTART.unity
     guid: f271a376ab2aae04b97debeaa4bbabaa
+  - enabled: 1
+    path: Assets/Scenes/MapFinal.unity
+    guid: e14dfd0b6ab34ac4d991ec2b5e98f649
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 289c1b55c9541489481df5cc06664110, type: 3}
   m_UseUCBPForAssetBundles: 0
