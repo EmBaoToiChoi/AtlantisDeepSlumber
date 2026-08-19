@@ -1058,7 +1058,7 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     public bool IsHoldingAxe()
     {
-        return GetComponentInChildren<AxeItem>(true) != null;
+        return GetComponentInChildren<AxeItem>(true) != null || (PlayerHUDController.isCarryingAxe && PlayerHUDController.LocalPlayerTarget as MonoBehaviour == this);
     }
 
     public int GetActiveWeaponIndex()
@@ -3110,84 +3110,89 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
             aimDir.Normalize();
         }
 
-        Vector3 rayStartClient = transform.position + Vector3.up * 0.8f;
-        float range = Mathf.Max(attackRange, 3.0f);
-        RaycastHit[] hits = Physics.SphereCastAll(rayStartClient, 1.2f, aimDir, range);
+        Vector3 rayStartClient = transform.position + Vector3.up * 1.0f;
+        float range = Mathf.Max(attackRange, 3.5f);
+        RaycastHit[] hits = Physics.SphereCastAll(rayStartClient, 1.4f, aimDir, range);
 
         foreach (var hitClient in hits)
         {
             if (hitClient.collider == null || hitClient.collider.transform.root == transform.root) continue;
 
-            // Kiểm tra xem đòn chém có bị tường/vật cản che chắn không (Line of Sight)
-            Vector3 targetCenter = hitClient.collider.bounds.center;
-            Vector3 dirToTarget = targetCenter - rayStartClient;
-            float distToTarget = dirToTarget.magnitude;
-
-            if (distToTarget > 0.1f)
+            // 1. Chém cây gỗ (ChoppableTree) cho Elena
+            ChoppableTree tree = hitClient.collider.GetComponentInParent<ChoppableTree>() ?? hitClient.collider.GetComponentInChildren<ChoppableTree>();
+            if (tree == null)
             {
-                RaycastHit[] losHits = Physics.RaycastAll(rayStartClient, dirToTarget.normalized, distToTarget);
-                bool blockedByWall = false;
-                foreach (var losHit in losHits)
+                var forwarder = hitClient.collider.GetComponent<TreeColliderForwarder>() ?? hitClient.collider.GetComponentInParent<TreeColliderForwarder>();
+                if (forwarder != null) tree = forwarder.mainTree;
+            }
+            if (tree != null)
+            {
+                Transform treeRoot = tree.transform;
+                if (!alreadyHitEnemies.Contains(treeRoot))
                 {
-                    if (losHit.collider == null) continue;
-                    if (losHit.collider.transform.root == transform.root) continue;
-                    if (losHit.collider == hitClient.collider || losHit.collider.transform.IsChildOf(hitClient.collider.transform) || hitClient.collider.transform.IsChildOf(losHit.collider.transform)) continue;
-
-                    if (!losHit.collider.isTrigger && !IsEnemy(losHit.collider, out _) && losHit.collider.GetComponentInParent<ChoppableTree>() == null)
-                    {
-                        blockedByWall = true;
-                        break;
-                    }
+                    alreadyHitEnemies.Add(treeRoot);
+                    Vector3 hitPos = hitClient.point != Vector3.zero ? hitClient.point : hitClient.collider.bounds.center;
+                    int weaponIndex = (PlayerHUDController.isCarryingAxe || IsHoldingAxe()) ? 1 : GetActiveWeaponIndex();
+                    tree.HitTree(hitPos, weaponIndex);
                 }
-                if (blockedByWall) continue; // Đòn chém bị tường chặn!
+                continue;
             }
 
-            Transform root = hitClient.collider.transform.root;
-            if (alreadyHitEnemies.Contains(root)) continue;
-
+            // 2. Kiểm tra nếu là quái (Enemy)
             if (IsEnemy(hitClient.collider, out Collider enemyCollider))
             {
-                alreadyHitEnemies.Add(root);
-                TryDamageEnemy(enemyCollider);
+                // Kiểm tra xem đòn chém có bị tường/vật cản che chắn không (Line of Sight)
+                Vector3 targetCenter = enemyCollider.bounds.center;
+                Vector3 dirToTarget = targetCenter - rayStartClient;
+                float distToTarget = dirToTarget.magnitude;
 
-                var netObj = enemyCollider.transform.root.GetComponent<NetworkObject>() ?? enemyCollider.GetComponentInParent<NetworkObject>() ?? enemyCollider.GetComponentInChildren<NetworkObject>();
+                if (distToTarget > 0.1f)
+                {
+                    RaycastHit[] losHits = Physics.RaycastAll(rayStartClient, dirToTarget.normalized, distToTarget);
+                    bool blockedByWall = false;
+                    foreach (var losHit in losHits)
+                    {
+                        if (losHit.collider == null) continue;
+                        if (losHit.collider.transform.root == transform.root) continue;
+                        if (losHit.collider == enemyCollider || losHit.collider.transform.IsChildOf(enemyCollider.transform) || enemyCollider.transform.IsChildOf(losHit.collider.transform)) continue;
 
-                if (!isStandaloneMode && IsSpawned && netObj != null && !IsServer)
-                {
-                    DamageEnemyServerRpc(netObj);
+                        if (!losHit.collider.isTrigger && !IsEnemy(losHit.collider, out _) && losHit.collider.GetComponentInParent<ChoppableTree>() == null)
+                        {
+                            blockedByWall = true;
+                            break;
+                        }
+                    }
+                    if (blockedByWall) continue; // Đòn chém bị tường chặn!
                 }
-            }
-            else
-            {
-                alreadyHitEnemies.Add(root);
-                // Chém cây gỗ (ChoppableTree) cho Elena
-                ChoppableTree tree = hitClient.collider.GetComponentInParent<ChoppableTree>() ?? hitClient.collider.transform.root.GetComponentInChildren<ChoppableTree>();
-                if (tree == null)
+
+                Transform enemyRoot = enemyCollider.transform.root;
+                if (!alreadyHitEnemies.Contains(enemyRoot))
                 {
-                    var forwarder = hitClient.collider.GetComponent<TreeColliderForwarder>();
-                    if (forwarder != null) tree = forwarder.mainTree;
-                }
-                if (tree != null)
-                {
-                    Vector3 hitPos = hitClient.point;
-                    int weaponIndex = GetActiveWeaponIndex();
-                    tree.HitTree(hitPos, weaponIndex);
+                    alreadyHitEnemies.Add(enemyRoot);
+                    TryDamageEnemy(enemyCollider);
+
+                    var netObj = enemyCollider.transform.root.GetComponent<NetworkObject>() ?? enemyCollider.GetComponentInParent<NetworkObject>() ?? enemyCollider.GetComponentInChildren<NetworkObject>();
+
+                    if (!isStandaloneMode && IsSpawned && netObj != null && !IsServer)
+                    {
+                        DamageEnemyServerRpc(netObj);
+                    }
                 }
             }
         }
     }
 
-    public void EnableLeftHitbox() { PerformMeleeRaycastAttack(); }
+    public void EnableLeftHitbox() { alreadyHitEnemies.Clear(); PerformMeleeRaycastAttack(); }
     public void DisableLeftHitbox() {}
-    public void EnableRightHitbox() { PerformMeleeRaycastAttack(); }
+    public void EnableRightHitbox() { alreadyHitEnemies.Clear(); PerformMeleeRaycastAttack(); }
     public void DisableRightHitbox() {}
-    public void EnableBothHitboxes() { PerformMeleeRaycastAttack(); }
+    public void EnableBothHitboxes() { alreadyHitEnemies.Clear(); PerformMeleeRaycastAttack(); }
     public void DisableBothHitboxes() {}
-    public void EnableLeftWeaponHitbox() { PerformMeleeRaycastAttack(); }
+    public void EnableLeftWeaponHitbox() { alreadyHitEnemies.Clear(); PerformMeleeRaycastAttack(); }
     public void DisableLeftWeaponHitbox() {}
-    public void EnableRightWeaponHitbox() { PerformMeleeRaycastAttack(); }
+    public void EnableRightWeaponHitbox() { alreadyHitEnemies.Clear(); PerformMeleeRaycastAttack(); }
     public void DisableRightWeaponHitbox() {}
-    public void EnableBothWeaponHitboxes() { PerformMeleeRaycastAttack(); }
+    public void EnableBothWeaponHitboxes() { alreadyHitEnemies.Clear(); PerformMeleeRaycastAttack(); }
     public void DisableBothWeaponHitboxes() {}
 
     private void UpdateWeaponVisualsInstant(int weaponIndex)
@@ -3277,27 +3282,31 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
     void AttackServerRpc(Vector3 aimDir)
     {
         // Trừ độ bền vũ khí trên Server (dù trúng hay trượt)
-        int weapon = GetActiveWeaponIndex();
+        int weapon = (PlayerHUDController.isCarryingAxe || IsHoldingAxe()) ? 1 : GetActiveWeaponIndex();
         if (weapon == 1) weapon1Durability.Value = Mathf.Max(weapon1Durability.Value - 2f, 0f);
         else weapon2Durability.Value = Mathf.Max(weapon2Durability.Value - 2f, 0f);
 
-        Vector3 rayStart = transform.position + Vector3.up * 0.5f;
-        Debug.DrawRay(rayStart, aimDir * attackRange, Color.red, 0.5f);
+        Vector3 rayStart = transform.position + Vector3.up * 1.0f;
+        float range = Mathf.Max(attackRange, 3.5f);
+        RaycastHit[] hits = Physics.SphereCastAll(rayStart, 1.4f, aimDir, range);
 
-        if (!Physics.Raycast(rayStart, aimDir, out RaycastHit hit, attackRange)) return;
+        foreach (var hit in hits)
+        {
+            if (hit.collider == null || hit.collider.transform.root == transform.root) continue;
 
-        // Chém cây gỗ (ChoppableTree) cho Elena trên Server
-        ChoppableTree tree = hit.collider.GetComponentInParent<ChoppableTree>();
-        if (tree == null)
-        {
-            var forwarder = hit.collider.GetComponent<TreeColliderForwarder>();
-            if (forwarder != null) tree = forwarder.mainTree;
-        }
-        if (tree != null)
-        {
-            Vector3 hitPos = hit.point;
-            int weaponIndex = GetActiveWeaponIndex();
-            tree.HitTree(hitPos, weaponIndex);
+            // Chém cây gỗ (ChoppableTree) cho Elena trên Server
+            ChoppableTree tree = hit.collider.GetComponentInParent<ChoppableTree>() ?? hit.collider.GetComponentInChildren<ChoppableTree>();
+            if (tree == null)
+            {
+                var forwarder = hit.collider.GetComponent<TreeColliderForwarder>() ?? hit.collider.GetComponentInParent<TreeColliderForwarder>();
+                if (forwarder != null) tree = forwarder.mainTree;
+            }
+            if (tree != null)
+            {
+                Vector3 hitPos = hit.point != Vector3.zero ? hit.point : hit.collider.bounds.center;
+                tree.HitTree(hitPos, weapon);
+                break;
+            }
         }
     }
 

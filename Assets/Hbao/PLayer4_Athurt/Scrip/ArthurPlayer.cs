@@ -3749,10 +3749,10 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         else
         {
             // Kiểm tra xem có phải cây gỗ (ChoppableTree) hay không
-            ChoppableTree tree = other.GetComponentInParent<ChoppableTree>() ?? other.transform.root.GetComponentInChildren<ChoppableTree>();
+            ChoppableTree tree = other.GetComponentInParent<ChoppableTree>() ?? other.GetComponentInChildren<ChoppableTree>();
             if (tree == null)
             {
-                var forwarder = other.GetComponent<TreeColliderForwarder>();
+                var forwarder = other.GetComponent<TreeColliderForwarder>() ?? other.GetComponentInParent<TreeColliderForwarder>();
                 if (forwarder != null) tree = forwarder.mainTree;
             }
             if (tree != null)

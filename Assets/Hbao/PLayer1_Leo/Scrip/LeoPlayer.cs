@@ -4895,10 +4895,10 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             // Kiểm tra chặt cây nếu đang ở ô vũ khí 1 (Rìu)
             if (GetActiveWeaponIndex() == 1)
             {
-                ChoppableTree tree = hit.collider.GetComponentInParent<ChoppableTree>() ?? hit.collider.transform.root.GetComponentInChildren<ChoppableTree>();
+                ChoppableTree tree = hit.collider.GetComponentInParent<ChoppableTree>() ?? hit.collider.GetComponentInChildren<ChoppableTree>();
                 if (tree == null)
                 {
-                    var forwarder = hit.collider.GetComponent<TreeColliderForwarder>();
+                    var forwarder = hit.collider.GetComponent<TreeColliderForwarder>() ?? hit.collider.GetComponentInParent<TreeColliderForwarder>();
                     if (forwarder != null) tree = forwarder.mainTree;
                 }
                 if (tree != null)
@@ -9150,10 +9150,10 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         else
         {
             // Kiểm tra xem có phải cây gỗ (ChoppableTree) hay không
-            ChoppableTree tree = other.GetComponentInParent<ChoppableTree>() ?? other.transform.root.GetComponentInChildren<ChoppableTree>();
+            ChoppableTree tree = other.GetComponentInParent<ChoppableTree>() ?? other.GetComponentInChildren<ChoppableTree>();
             if (tree == null)
             {
-                var forwarder = other.GetComponent<TreeColliderForwarder>();
+                var forwarder = other.GetComponent<TreeColliderForwarder>() ?? other.GetComponentInParent<TreeColliderForwarder>();
                 if (forwarder != null) tree = forwarder.mainTree;
             }
             if (tree != null)
