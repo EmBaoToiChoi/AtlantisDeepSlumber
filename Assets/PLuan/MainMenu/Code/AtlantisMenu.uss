@@ -44,7 +44,8 @@
 
 #create-room-panel,
 #login-panel,
-#verify-otp-panel {
+#verify-otp-panel,
+#join-auth-panel {
     align-self: center;
     margin-left: 0 !important;
     margin-right: 0 !important;
@@ -77,6 +78,30 @@
     max-width: 92%;
     max-height: 92% !important;
     padding: 135px 65px 30px 65px !important;
+    background-image: url("project://database/Assets/PLuan/Synty_Popup_05_Exact.png");
+    -unity-background-scale-mode: stretch-to-fill;
+    -unity-slice-left: 200;
+    -unity-slice-right: 200;
+    -unity-slice-top: 100;
+    -unity-slice-bottom: 100;
+    -unity-slice-scale: 0.38;
+    background-color: transparent !important;
+    border-radius: 0 !important;
+    border-width: 0 !important;
+    justify-content: flex-start;
+    align-items: stretch;
+    box-shadow: none !important;
+}
+
+#join-room-panel {
+    align-self: center;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    width: 1080px;
+    height: 700px !important;
+    max-width: 94%;
+    max-height: 92% !important;
+    padding: 135px 70px 30px 70px !important;
     background-image: url("project://database/Assets/PLuan/Synty_Popup_05_Exact.png");
     -unity-background-scale-mode: stretch-to-fill;
     -unity-slice-left: 200;
@@ -177,14 +202,12 @@
     text-shadow: 0 0 22px rgba(255, 70, 70, 1), 0 0 8px rgba(255, 255, 255, 0.9), 2px 2px 4px rgba(0, 0, 0, 1);
 }
 
-#join-room-panel {
-    padding-top: 140px !important; /* Pushed down to prevent ID bar from overlapping top frame */
-}
-
 #create-room-panel .panel-title,
 #login-panel .panel-title,
 #register-panel .panel-title,
-#verify-otp-panel .panel-title {
+#verify-otp-panel .panel-title,
+#join-room-panel .panel-title,
+#join-auth-panel .panel-title {
     display: flex !important;
     font-size: 26px;
     -unity-font-style: bold;
@@ -210,7 +233,8 @@
 #create-room-panel .form-group,
 #login-panel .form-group,
 #register-panel .form-group,
-#verify-otp-panel .form-group {
+#verify-otp-panel .form-group,
+#join-auth-panel .form-group {
     width: 100%;
     margin-bottom: 10px;
     align-items: center;
@@ -219,7 +243,8 @@
 #create-room-panel .form-label,
 #login-panel .form-label,
 #register-panel .form-label,
-#verify-otp-panel .form-label {
+#verify-otp-panel .form-label,
+#join-auth-panel .form-label {
     color: rgb(160, 220, 255);
     font-size: 13px;
     letter-spacing: 2px;
@@ -233,7 +258,8 @@
 #create-room-panel .form-input,
 #login-panel .form-input,
 #register-panel .form-input,
-#verify-otp-panel .form-input {
+#verify-otp-panel .form-input,
+#join-auth-panel .form-input {
     background-image: url("project://database/Assets/PLuan/Synty_Input_01_Exact.png") !important;
     -unity-background-scale-mode: stretch-to-fill;
     -unity-slice-left: 100;
@@ -259,7 +285,9 @@
 #register-panel .form-input .unity-base-text-field__input,
 #register-panel .form-input .unity-text-field__input,
 #verify-otp-panel .form-input .unity-base-text-field__input,
-#verify-otp-panel .form-input .unity-text-field__input {
+#verify-otp-panel .form-input .unity-text-field__input,
+#join-auth-panel .form-input .unity-base-text-field__input,
+#join-auth-panel .form-input .unity-text-field__input {
     background-color: transparent !important;
     border-width: 0 !important;
     color: rgb(240, 250, 255);
@@ -278,7 +306,8 @@
 #create-room-panel .form-input:focus-within,
 #login-panel .form-input:focus-within,
 #register-panel .form-input:focus-within,
-#verify-otp-panel .form-input:focus-within {
+#verify-otp-panel .form-input:focus-within,
+#join-auth-panel .form-input:focus-within {
     text-shadow: 0 0 10px rgba(0, 235, 255, 0.8);
 }
 
@@ -642,108 +671,120 @@
 }
 
 /* --- BROWSER TABLE & LIST --- */
+.join-toolbar {
+    flex-direction: row;
+    justify-content: flex-end;
+    align-items: center;
+    width: 100%;
+    margin-bottom: 12px;
+}
+
 .join-id-bar {
     flex-direction: row;
-    width: 100%;
-    height: 42px;
-    margin-bottom: 25px;
     align-items: center;
-    justify-content: space-between;
+    height: 44px;
 }
-.id-input {
-    flex-grow: 1;
-    height: 100%;
-    margin-right: 15px;
-    border-width: 0 !important; /* Remove outer box outline */
-    background-color: transparent !important;
-}
-.id-input,
-.id-input .unity-base-text-field,
-.id-input .unity-text-field__input,
-.id-input .unity-base-text-field__input {
+
+.join-id-bar .id-input {
+    width: 200px;
+    height: 44px;
+    margin-right: 10px;
+    background-image: url("project://database/Assets/PLuan/Synty_Input_01_Exact.png") !important;
+    -unity-background-scale-mode: stretch-to-fill;
+    -unity-slice-left: 100;
+    -unity-slice-right: 100;
+    -unity-slice-top: 0;
+    -unity-slice-bottom: 0;
+    -unity-slice-scale: 0.35;
     background-color: transparent !important;
     border-width: 0 !important;
-    box-shadow: none !important;
-}
-.id-input .unity-base-text-field__input {
-    height: 100%;
-    font-size: 16px;
-    letter-spacing: 6px;
-    -unity-font-style: bold;
-    color: rgb(0, 255, 255);
-    -unity-text-align: middle-center;
-    padding: 0;
-    background-color: transparent !important; /* Completely transparent background, no box */
-    border-width: 0 0 1px 0 !important; /* 1px Bottom line underline style only */
-    border-bottom-color: rgba(0, 190, 255, 0.35) !important; /* Ambient blue-green line */
     border-radius: 0 !important;
-    transition: border-bottom-color 0.25s ease-out, text-shadow 0.25s ease-out;
+    padding: 0 20px;
+    justify-content: center;
 }
-.id-input .unity-base-text-field__input:focus {
-    border-bottom-color: rgb(0, 255, 255) !important; /* Lights up bright cyan */
-    text-shadow: 0 0 10px rgba(0, 255, 255, 0.75);
-}
-.id-btn {
-    background-color: transparent !important; /* No background */
-    border-width: 0 !important; /* No border outline */
-    color: rgb(120, 230, 255) !important;
-    font-size: 13px !important;
-    letter-spacing: 1px;
+
+.join-id-bar .id-input .unity-base-text-field__input {
+    color: rgb(240, 250, 255);
+    --unity-cursor-color: rgb(255, 255, 255);
+    -unity-cursor-color: rgb(255, 255, 255);
+    caret-color: rgb(255, 255, 255);
+    --unity-selection-color: rgba(0, 190, 255, 0.6);
+    font-size: 15px;
+    letter-spacing: 3px;
     -unity-font-style: bold;
-    padding: 0 20px !important;
-    height: 100% !important;
-    transition: all 0.2s ease-out;
-}
-.id-btn:hover {
+    -unity-text-align: middle-center;
     background-color: transparent !important;
-    color: rgb(255, 255, 255) !important;
+    border-width: 0 !important;
+    padding: 0 !important;
+    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.9);
+}
+
+.join-id-action-btn {
+    height: 44px;
+    padding: 0 20px;
+    font-size: 15px;
+    -unity-font-style: bold;
+    letter-spacing: 1.5px;
+    color: rgb(225, 245, 255);
+    background-color: transparent;
+    border-width: 0;
+    border-radius: 0;
+    cursor: link;
+    transition: all 0.25s ease-out;
+    text-shadow: 0 0 10px rgba(0, 190, 255, 0.7);
+    justify-content: center;
+    align-items: center;
+}
+
+.join-id-action-btn:hover {
     scale: 1.05 1.05;
-    text-shadow: 0 0 12px rgba(0, 255, 255, 0.95) !important;
+    color: rgb(255, 255, 255);
+    background-image: url("project://database/Assets/Synty/InterfaceFantasyMenus/Sprites/FantasyMenus/SPR_FantasyMenus_Menu_Button_06_Frame.png");
+    -unity-background-scale-mode: stretch-to-fill;
+    -unity-slice-left: 500;
+    -unity-slice-right: 500;
+    -unity-slice-top: 0;
+    -unity-slice-bottom: 0;
+    -unity-slice-scale: 0.3;
+    text-shadow: 0 0 18px rgba(0, 240, 255, 1);
 }
 
 .table-header {
     flex-direction: row;
     width: 100%;
     border-bottom-width: 1px;
-    border-bottom-color: rgba(0, 190, 255, 0.15); /* Soft, ambient divider line */
-    padding-bottom: 10px;
-    margin-bottom: 12px;
+    border-bottom-color: rgba(0, 200, 255, 0.3);
+    padding-bottom: 8px;
+    margin-bottom: 8px;
     padding-left: 16px;
-    padding-right: 32px; /* 16px padding + 16px scrollbar space offset to align with margin-right of items */
+    padding-right: 28px;
 }
+
 .table-header Label {
-    color: rgb(0, 190, 255);
-    font-size: 11px;
+    color: rgb(130, 220, 255);
+    font-size: 13px;
     -unity-font-style: bold;
     letter-spacing: 2px;
+    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.9);
 }
 
 .room-list {
     flex-grow: 1;
     flex-shrink: 1;
-    min-height: 180px;
-    max-height: 320px;
+    min-height: 220px;
+    max-height: 330px;
     width: 100%;
-    padding-right: 0 !important; /* Clean space, margin handled by child items */
-}
-.room-list .unity-scroll-view__content-container {
-    width: 100%;
-    overflow: hidden;
-}
-.room-list .unity-scroll-view__horizontal-scroller {
-    display: none !important;
+    margin-bottom: 8px;
+    padding-right: 0 !important;
 }
 
-#btn-join-back {
-    font-size: 20px !important;
-    letter-spacing: 2px !important;
-    align-self: center !important;
-    white-space: nowrap !important;
-    text-overflow: clip !important;
-    width: auto !important;
-    max-width: 100% !important;
-    margin-left: 0 !important;
-    margin-right: 0 !important;
+.join-bottom-bar {
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    margin-top: auto;
+    margin-bottom: 5px;
 }
 
 .room-item {
