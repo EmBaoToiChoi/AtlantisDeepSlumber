@@ -3643,19 +3643,7 @@ public class PlayerHUDController : MonoBehaviour
         var card = new VisualElement();
         card.AddToClassList("teammate-card");
 
-        var avatarContainer = new VisualElement();
-        avatarContainer.AddToClassList("teammate-avatar-container");
-        var avatarImg = new VisualElement();
-        avatarImg.name = "avatar-image";
-        avatarImg.AddToClassList("teammate-avatar-image");
-        avatarContainer.Add(avatarImg);
-
-        var avatarBorder = new VisualElement();
-        avatarBorder.AddToClassList("teammate-avatar-border");
-        avatarContainer.Add(avatarBorder);
-
-        card.Add(avatarContainer);
-
+        // 1. Stats Wrapper (rendered first in DOM so left tips are tucked under avatar)
         var statsWrapper = new VisualElement();
         statsWrapper.AddToClassList("teammate-stats-wrapper");
 
@@ -3674,34 +3662,86 @@ public class PlayerHUDController : MonoBehaviour
         nameLevelRow.Add(levelLabel);
         statsWrapper.Add(nameLevelRow);
 
+        // HP Container with sword frame
+        var hpContainer = new VisualElement();
+        hpContainer.AddToClassList("teammate-stat-bar-container");
+        hpContainer.AddToClassList("teammate-hp-bar-container");
+
         var hpTrack = new VisualElement();
         hpTrack.AddToClassList("teammate-track-bg");
         hpTrack.AddToClassList("teammate-hp-track");
         var hpFill = new VisualElement();
         hpFill.name = "hp-fill";
-        hpFill.AddToClassList("teammate-hp-fill");
+        hpFill.AddToClassList("fill-core");
+        hpFill.AddToClassList("hp-fill");
         hpTrack.Add(hpFill);
-        statsWrapper.Add(hpTrack);
+        hpContainer.Add(hpTrack);
+
+        var hpFrame = new VisualElement();
+        hpFrame.AddToClassList("teammate-stat-bar-frame");
+        hpContainer.Add(hpFrame);
+
+        statsWrapper.Add(hpContainer);
+
+        // MP Container with sword frame
+        var mpContainer = new VisualElement();
+        mpContainer.AddToClassList("teammate-stat-bar-container");
+        mpContainer.AddToClassList("teammate-mp-bar-container");
 
         var mpTrack = new VisualElement();
         mpTrack.AddToClassList("teammate-track-bg");
         mpTrack.AddToClassList("teammate-mp-track");
         var mpFill = new VisualElement();
         mpFill.name = "mp-fill";
-        mpFill.AddToClassList("teammate-mp-fill");
+        mpFill.AddToClassList("fill-core");
+        mpFill.AddToClassList("mp-fill");
         mpTrack.Add(mpFill);
-        statsWrapper.Add(mpTrack);
+        mpContainer.Add(mpTrack);
+
+        var mpFrame = new VisualElement();
+        mpFrame.AddToClassList("teammate-stat-bar-frame");
+        mpContainer.Add(mpFrame);
+
+        statsWrapper.Add(mpContainer);
+
+        // EXP Container with sword frame
+        var expContainer = new VisualElement();
+        expContainer.AddToClassList("teammate-stat-bar-container");
+        expContainer.AddToClassList("teammate-exp-bar-container");
 
         var expTrack = new VisualElement();
         expTrack.AddToClassList("teammate-track-bg");
         expTrack.AddToClassList("teammate-exp-track");
         var expFill = new VisualElement();
         expFill.name = "exp-fill";
-        expFill.AddToClassList("teammate-exp-fill");
+        expFill.AddToClassList("fill-core");
+        expFill.AddToClassList("exp-fill");
         expTrack.Add(expFill);
-        statsWrapper.Add(expTrack);
+        expContainer.Add(expTrack);
+
+        var expFrame = new VisualElement();
+        expFrame.AddToClassList("teammate-stat-bar-frame");
+        expContainer.Add(expFrame);
+
+        statsWrapper.Add(expContainer);
 
         card.Add(statsWrapper);
+
+        // 2. Avatar Container (rendered second in DOM so it sits on top)
+        var avatarContainer = new VisualElement();
+        avatarContainer.AddToClassList("teammate-avatar-container");
+
+        var avatarImg = new VisualElement();
+        avatarImg.name = "avatar-image";
+        avatarImg.AddToClassList("teammate-avatar-image");
+        avatarContainer.Add(avatarImg);
+
+        var avatarBorder = new VisualElement();
+        avatarBorder.AddToClassList("teammate-avatar-border");
+        avatarContainer.Add(avatarBorder);
+
+        card.Add(avatarContainer);
+
         return card;
     }
 
