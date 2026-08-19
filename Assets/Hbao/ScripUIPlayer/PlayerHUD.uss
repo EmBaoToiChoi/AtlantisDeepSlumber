@@ -1202,7 +1202,7 @@
 
 .teammates-container {
     position: absolute;
-    bottom: 145px;
+    bottom: 175px;
     left: 30px;
     flex-direction: column;
     align-items: flex-start;
@@ -1212,12 +1212,12 @@
 .teammate-card {
     flex-direction: row;
     align-items: center;
-    background-color: rgba(0, 0, 0, 0.25);
-    border-radius: 32px;
+    background-color: rgba(0, 0, 0, 0.2);
+    border-radius: 30px;
     padding: 6px 12px;
-    margin-bottom: 12px;
+    margin-bottom: 10px;
     border-width: 0;
-    width: 240px;
+    position: relative;
     transition-property: scale;
     transition-duration: 0.2s;
 }
@@ -1226,21 +1226,32 @@
     scale: 1.02 1.02;
 }
 
+.teammate-stats-wrapper {
+    flex-direction: column;
+    justify-content: center;
+    margin-left: 50px;
+}
+
 .teammate-avatar-container {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    margin-top: -40px;
     width: 80px;
     height: 80px;
     background-color: transparent;
     border-width: 0;
     justify-content: center;
     align-items: center;
-    margin-right: 6px;
-    position: relative;
+    pointer-events: none;
+    z-index: 5;
 }
 
 .teammate-avatar-image {
     width: 58px;
     height: 58px;
     border-radius: 29px;
+    background-color: rgb(15, 20, 30);
     -unity-background-scale-mode: scale-and-crop;
     overflow: hidden;
 }
@@ -1255,76 +1266,96 @@
     background-image: url("project://database/Assets/Synty/InterfaceFantasyMenus/Sprites/FantasyMenus/SPR_FantasyMenus_Frame_Hexagon_01.png?fileID=2800000&guid=3a8ac9a83f434884fb081391eb919721&type=3#SPR_FantasyMenus_Frame_Hexagon_01");
 }
 
-.teammate-stats-wrapper {
-    flex-direction: column;
-    justify-content: center;
-    flex-grow: 1;
-}
-
 .teammate-name-level-row {
     flex-direction: row;
     justify-content: flex-start;
     align-items: center;
-    margin-bottom: 3px;
+    margin-bottom: 2px;
+    margin-left: 36px;
 }
 
 .teammate-name-label {
     color: rgb(255, 255, 255);
-    font-size: 12px;
+    font-size: 13px;
     -unity-font-style: bold;
     max-width: 110px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
     margin-right: 6px;
+    -unity-text-outline-width: 1px;
+    -unity-text-outline-color: rgba(0, 0, 0, 0.5);
 }
 
 .teammate-level-label {
     color: rgba(255, 255, 255, 0.85);
-    font-size: 11px;
+    font-size: 12px;
     -unity-font-style: bold;
+    -unity-text-outline-width: 1px;
+    -unity-text-outline-color: rgba(0, 0, 0, 0.5);
 }
 
-.teammate-track-bg {
-    background-color: rgba(0, 0, 0, 0.45);
-    margin-bottom: 2.5px;
-    border-radius: 3px;
-    overflow: hidden;
+.teammate-stat-bar-container {
     position: relative;
-}
-
-.teammate-hp-track {
-    width: 150px;
-    height: 10px;
-}
-
-.teammate-mp-track {
-    width: 120px;
-    height: 7px;
-}
-
-.teammate-exp-track {
-    width: 90px;
-    height: 4px;
+    justify-content: center;
     margin-bottom: 0;
 }
 
-.teammate-hp-fill {
-    background-color: rgb(240, 245, 255);
-    height: 100%;
-    width: 100%;
+.teammate-stat-bar-frame {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: none;
+    background-image: url("project://database/Assets/Synty/InterfaceFantasyMenus/Sprites/FantasyMenus/SPR_FantasyMenus_Menu_Button_16_Frame.png?fileID=2800000&guid=30899411b4447044da0027e0c416bba6&type=3#SPR_FantasyMenus_Menu_Button_16_Frame");
 }
 
-.teammate-mp-fill {
-    background-color: rgb(40, 160, 255);
-    height: 100%;
-    width: 100%;
+.teammate-track-bg {
+    background-color: rgba(6, 10, 18, 0.85);
+    border-radius: 2px;
+    position: absolute;
+    overflow: hidden;
+    border-width: 0;
 }
 
-.teammate-exp-fill {
-    background-color: rgb(75, 225, 100);
-    height: 100%;
-    width: 100%;
+.teammate-hp-bar-container {
+    width: 210px;
+    height: 20px;
+    margin-bottom: -2px;
+}
+
+.teammate-hp-track {
+    top: 5px;
+    bottom: 5px;
+    left: 24px;
+    right: 24px;
+}
+
+.teammate-mp-bar-container {
+    width: 178px;
+    height: 17px;
+    margin-bottom: -2px;
+}
+
+.teammate-mp-track {
+    top: 4px;
+    bottom: 4px;
+    left: 21px;
+    right: 21px;
+}
+
+.teammate-exp-bar-container {
+    width: 150px;
+    height: 14px;
+    margin-bottom: 0;
+}
+
+.teammate-exp-track {
+    top: 3px;
+    bottom: 3px;
+    left: 18px;
+    right: 18px;
 }
 
 /* ========================================================================= */
