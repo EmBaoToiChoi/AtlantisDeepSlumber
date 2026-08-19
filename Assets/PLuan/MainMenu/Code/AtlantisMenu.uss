@@ -1,4 +1,3 @@
-/* --- CẤU TRÚC GỐC & BACKGROUND --- */
 .root-screen {
     flex-grow: 1;
     justify-content: center;
@@ -7,9 +6,7 @@
     height: 100%;
     -unity-background-scale-mode: scale-and-crop;
     background-color: rgb(0, 4, 8);
-    
-    /* Gán Font Asset của bạn vào đây */
-    /* -unity-font-definition: url('project://database/Assets/YourPath/Orbitron-Regular.asset'); */
+    -unity-font-definition: url("project://database/Assets/PLuan/MainMenu/Font/Cinzel-Vietnamese.ttf");
 }
 
 /* --- MENU & PANELS --- */
@@ -51,9 +48,52 @@
     padding: 130px 55px 45px 55px !important;
 }
 
-#main-menu-panel,
 #network-menu-panel {
     padding-top: 100px !important;
+}
+
+#main-menu-panel {
+    width: 460px;
+    height: 450px;
+    margin-left: 5%;
+    padding: 90px 40px 45px 40px !important;
+    background-image: url("project://database/Assets/Synty/InterfaceFantasyMenus/Sprites/FantasyMenus/SPR_FantasyMenus_Frame_Box_Large_06.png");
+    -unity-background-scale-mode: stretch-to-fill;
+    -unity-slice-left: 300;
+    -unity-slice-top: 500;
+    -unity-slice-right: 300;
+    -unity-slice-bottom: 300;
+    -unity-slice-scale: 0.34;
+    background-color: transparent !important;
+    border-width: 0 !important;
+    align-items: center;
+    justify-content: center;
+}
+
+#main-menu-panel .button-group {
+    width: 100%;
+    align-items: center;
+    justify-content: center;
+}
+
+#main-menu-panel .menu-btn {
+    width: 360px;
+    height: 62px;
+    padding: 0 20px;
+    margin-bottom: 8px;
+    font-size: 24px;
+    letter-spacing: 4px;
+    color: rgb(185, 235, 255);
+    text-shadow: 0 0 10px rgba(0, 180, 255, 0.4), 1px 1px 3px rgba(0, 0, 0, 0.9);
+    -unity-text-align: middle-center;
+    justify-content: center;
+    align-items: center;
+}
+
+#main-menu-panel .quit-btn {
+    color: rgb(245, 145, 145);
+    text-shadow: 0 0 10px rgba(255, 80, 80, 0.4), 1px 1px 3px rgba(0, 0, 0, 0.9);
+    margin-top: 6px;
 }
 
 #join-room-panel {
@@ -102,6 +142,7 @@
 /* --- MAIN BUTTONS --- */
 .menu-btn {
     background-color: transparent;
+    background-image: none;
     border-width: 0;
     color: rgb(140, 210, 245);
     padding: 16px 20px;
@@ -120,24 +161,38 @@
     text-shadow: 1px 1px 4px rgba(0, 0, 0, 0.9);
 }
 
-/* Glow Text rực rỡ dải Cyan khi Hover */
+/* Hover: Hiện khung Button_FantasyMenus_Basic_04 */
 .menu-btn:hover {
     color: rgb(255, 255, 255);
     
     /* Hiệu ứng phóng lớn (Scale) */
-    scale: 1.08 1.08;
+    scale: 1.05 1.05;
     
     /* Giãn cách chữ tạo hiệu ứng "Scanning" */
-    letter-spacing: 6px;
+    letter-spacing: 7px;
     
     background-color: transparent;
+    background-image: url("project://database/Assets/Synty/InterfaceFantasyMenus/Sprites/FantasyMenus/SPR_FantasyMenus_Menu_Button_06_Frame.png");
+    -unity-background-scale-mode: stretch-to-fill;
+    -unity-slice-left: 500;
+    -unity-slice-right: 500;
+    -unity-slice-top: 0;
+    -unity-slice-bottom: 0;
+    -unity-slice-scale: 0.36;
     
     /* Hào quang (Glow) cực mạnh */
-    text-shadow: 0 0 20px rgba(0, 255, 255, 1);
+    text-shadow: 0 0 25px rgba(0, 255, 255, 1), 0 0 10px rgba(255, 255, 255, 0.8);
 }
 .menu-btn:active {
-    scale: 0.95 0.95;
+    scale: 0.96 0.96;
     background-color: transparent;
+    background-image: url("project://database/Assets/Synty/InterfaceFantasyMenus/Sprites/FantasyMenus/SPR_FantasyMenus_Menu_Button_06_Frame.png");
+    -unity-background-scale-mode: stretch-to-fill;
+    -unity-slice-left: 500;
+    -unity-slice-right: 500;
+    -unity-slice-top: 0;
+    -unity-slice-bottom: 0;
+    -unity-slice-scale: 0.36;
     color: rgba(0, 255, 255, 0.8);
     transition: all 0.05s;
 }
@@ -146,27 +201,45 @@
 .back-btn { 
     color: rgb(220, 120, 120); 
     background-color: transparent; 
+    background-image: none;
     margin-top: 8px; 
 }
 .back-btn:hover { 
     color: rgb(255, 150, 150); 
     background-color: transparent; 
+    background-image: url("project://database/Assets/Synty/InterfaceFantasyMenus/Sprites/FantasyMenus/SPR_FantasyMenus_Menu_Button_06_Frame.png");
+    -unity-background-scale-mode: stretch-to-fill;
+    -unity-slice-left: 500;
+    -unity-slice-right: 500;
+    -unity-slice-top: 0;
+    -unity-slice-bottom: 0;
+    -unity-slice-scale: 0.35;
+    -unity-background-image-tint-color: rgba(255, 140, 140, 0.95);
     text-shadow: 0 0 15px rgba(255, 50, 50, 0.8); 
-    scale: 1.08 1.08;
+    scale: 1.05 1.05;
 }
 
 /* Nút Quit - Giữ sắc đỏ nhưng tinh chỉnh để hợp với nền tối */
 .quit-btn { 
     color: rgb(220, 120, 120); 
     background-color: transparent; 
+    background-image: none;
     margin-top: 25px; 
 }
 .quit-btn:hover { 
     color: rgb(255, 150, 150); 
     background-color: transparent; 
+    background-image: url("project://database/Assets/Synty/InterfaceFantasyMenus/Sprites/FantasyMenus/SPR_FantasyMenus_Menu_Button_06_Frame.png");
+    -unity-background-scale-mode: stretch-to-fill;
+    -unity-slice-left: 500;
+    -unity-slice-right: 500;
+    -unity-slice-top: 0;
+    -unity-slice-bottom: 0;
+    -unity-slice-scale: 0.35;
+    -unity-background-image-tint-color: rgba(255, 140, 140, 0.95);
     /* Đổ bóng đỏ rực */
     text-shadow: 0 0 15px rgba(255, 50, 50, 0.8);
-    scale: 1.08 1.08;
+    scale: 1.05 1.05;
 }
 
 .version-text {
@@ -803,7 +876,7 @@
 }
 
 /* =========================================================================
-   CONFIRMATION OVERLAY (XÁC NHẬN LƯU)
+   CONFIRMATION OVERLAY (XÁC NHẬN LƯU) - SYNTY POPUP 02 EXACT
    ========================================================================= */
 .confirm-overlay {
     position: absolute;
@@ -817,32 +890,44 @@
 }
 
 .confirm-dialog {
-    background-image: url("project://database/Assets/PLuan/WaittingRoom/Textures/ui_frame_bg.jpg");
+    background-image: url("project://database/Assets/PLuan/Synty_Popup_02_Exact.png");
     -unity-background-scale-mode: stretch-to-fill;
-    background-color: transparent;
-    border-width: 0;
-    border-radius: 0;
-    padding: 60px 50px 50px 50px;
+    background-color: transparent !important;
+    border-width: 0 !important;
+    border-radius: 0 !important;
+    padding: 175px 60px 0 60px;
     align-items: center;
-    box-shadow: 0 0 40px rgba(0, 190, 255, 0.2);
-    width: 440px;
+    justify-content: space-between;
+    box-shadow: none;
+    width: 780px;
+    height: 330px;
+}
+
+.confirm-content {
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    margin-top: 0;
 }
 
 .confirm-title {
-    color: rgb(0, 230, 255);
-    font-size: 24px;
+    color: rgb(255, 255, 255); /* Pure crisp white font */
+    font-size: 27px;
     -unity-font-style: bold;
-    margin-bottom: 15px;
-    text-shadow: 0 0 10px rgba(0, 230, 255, 0.5);
-    letter-spacing: 2px;
+    margin-bottom: 8px;
+    text-shadow: 1px 1px 4px rgba(0, 0, 0, 0.95), 0 0 15px rgba(0, 200, 255, 0.35);
+    letter-spacing: 3px;
+    -unity-text-align: middle-center;
 }
 
 .confirm-subtitle {
-    color: rgb(150, 200, 220);
-    font-size: 14px;
+    color: rgb(225, 235, 245);
+    font-size: 15px;
     white-space: normal;
     -unity-text-align: middle-center;
-    margin-bottom: 30px;
+    padding: 0 40px;
+    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.95);
+    letter-spacing: 1px;
 }
 
 .confirm-buttons {
@@ -850,43 +935,60 @@
     justify-content: center;
     align-items: center;
     width: 100%;
-    margin-top: 10px;
+    margin-bottom: -48px;
 }
 
 .confirm-btn {
     background-color: transparent !important;
     border-width: 0 !important;
     border-radius: 0 !important;
-    font-size: 20px !important; /* Premium larger text size */
+    font-size: 15px !important;
     -unity-font-style: bold;
-    padding: 10px 20px !important;
-    transition: all 0.25s ease-out;
+    width: 270px;
+    height: 64px;
+    padding: 2px 25px 0 110px !important;
+    transition: all 0.2s ease-out;
     cursor: link;
     flex-shrink: 0 !important;
-    flex-grow: 0 !important; /* Stop stretching */
+    flex-grow: 0 !important;
     white-space: nowrap !important;
     -unity-text-align: middle-center !important;
+    justify-content: center;
+    align-items: center;
+    letter-spacing: 1.5px;
+    margin: 0 35px;
+    color: rgb(255, 255, 255) !important;
+    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.95);
 }
 
 .confirm-btn-yes {
-    color: rgb(0, 230, 255) !important;
+    background-image: url("project://database/Assets/PLuan/Synty_Btn_Confirm_09.png");
+    -unity-background-scale-mode: stretch-to-fill;
+    -unity-slice-left: 150;
+    -unity-slice-right: 100;
+    -unity-slice-top: 0;
+    -unity-slice-bottom: 0;
+    -unity-slice-scale: 0.40;
 }
 .confirm-btn-yes:hover {
-    background-color: transparent !important;
-    color: rgb(255, 255, 255) !important;
-    scale: 1.08 1.08;
-    text-shadow: 0 0 15px rgba(0, 255, 255, 0.85);
+    scale: 1.05 1.05;
+    letter-spacing: 3px;
+    text-shadow: 0 0 15px rgba(0, 255, 255, 1);
 }
 
 .confirm-btn-no {
-    color: rgb(255, 120, 120) !important;
-    margin-left: 60px !important; /* Premium gap spacing between the two centered buttons */
+    background-image: url("project://database/Assets/PLuan/Synty_Btn_Cancel_09.png");
+    -unity-background-scale-mode: stretch-to-fill;
+    -unity-slice-left: 150;
+    -unity-slice-right: 100;
+    -unity-slice-top: 0;
+    -unity-slice-bottom: 0;
+    -unity-slice-scale: 0.40;
 }
 .confirm-btn-no:hover {
-    background-color: transparent !important;
-    color: rgb(255, 180, 180) !important;
-    scale: 1.08 1.08;
-    text-shadow: 0 0 15px rgba(255, 80, 80, 0.85);
+    scale: 1.05 1.05;
+    letter-spacing: 3px;
+    text-shadow: 0 0 15px rgba(255, 100, 100, 1);
 }
 
 /* =========================================================================
