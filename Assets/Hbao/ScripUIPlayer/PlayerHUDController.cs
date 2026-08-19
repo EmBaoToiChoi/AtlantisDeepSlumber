@@ -553,120 +553,23 @@ public class PlayerHUDController : MonoBehaviour
         weaponSlot2 = root.Q<VisualElement>("weapon-slot-2");
         weaponImg1 = root.Q<VisualElement>("weapon-img-1");
 
-        // Tích hợp động UI Tàng hình (Skill R)
+        // Tích hợp động UI Kỹ Năng E & Q Indicator (Menu_Button_05 Frame)
         VisualElement weaponsWrapper = root.Q<VisualElement>(className: "hud-weapons-wrapper");
-        if (invisibilityIndicator == null && weaponsWrapper != null)
-        {
-            invisibilityIndicator = new VisualElement();
-            invisibilityIndicator.name = "invisibility-indicator";
-            invisibilityIndicator.AddToClassList("invisibility-indicator");
-            
-            invisibilityIndicator.style.flexDirection = FlexDirection.Row;
-            invisibilityIndicator.style.alignItems = Align.Center;
-            invisibilityIndicator.style.backgroundColor = new Color(0f, 0f, 0f, 0.25f);
-            invisibilityIndicator.style.borderTopWidth = 1f;
-            invisibilityIndicator.style.borderBottomWidth = 1f;
-            invisibilityIndicator.style.borderLeftWidth = 1f;
-            invisibilityIndicator.style.borderRightWidth = 1f;
 
-            invisibilityIndicator.style.borderTopColor = Color.white;
-            invisibilityIndicator.style.borderBottomColor = Color.white;
-            invisibilityIndicator.style.borderLeftColor = Color.white;
-            invisibilityIndicator.style.borderRightColor = Color.white;
-
-            invisibilityIndicator.style.borderTopLeftRadius = 4;
-            invisibilityIndicator.style.borderTopRightRadius = 4;
-            invisibilityIndicator.style.borderBottomLeftRadius = 4;
-            invisibilityIndicator.style.borderBottomRightRadius = 4;
-            invisibilityIndicator.style.paddingLeft = 10;
-            invisibilityIndicator.style.paddingRight = 10;
-            invisibilityIndicator.style.paddingTop = 6;
-            invisibilityIndicator.style.paddingBottom = 6;
-            invisibilityIndicator.style.width = 210;
-            invisibilityIndicator.style.justifyContent = Justify.SpaceBetween;
-            invisibilityIndicator.style.alignSelf = Align.FlexEnd;
-            invisibilityIndicator.style.marginBottom = 5;
-            invisibilityIndicator.style.display = DisplayStyle.None; // Mặc định ẩn
-
-            Label label = new Label("TÀNG HÌNH");
-            label.name = "invisibility-text";
-            label.style.color = Color.white;
-            label.style.fontSize = 12;
-            label.style.unityFontStyleAndWeight = FontStyle.Bold;
-            label.style.marginLeft = 0;
-            label.style.marginRight = 0;
-            label.style.marginTop = 0;
-            label.style.marginBottom = 0;
-
-            invisibilityTimerLabel = new Label("5.0s");
-            invisibilityTimerLabel.name = "invisibility-timer";
-            invisibilityTimerLabel.style.color = Color.white;
-            invisibilityTimerLabel.style.fontSize = 12;
-            invisibilityTimerLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
-            invisibilityTimerLabel.style.marginLeft = 0;
-            invisibilityTimerLabel.style.marginRight = 0;
-            invisibilityTimerLabel.style.marginTop = 0;
-            invisibilityTimerLabel.style.marginBottom = 0;
-
-            invisibilityIndicator.Add(label);
-            invisibilityIndicator.Add(invisibilityTimerLabel);
-
-            weaponsWrapper.Insert(0, invisibilityIndicator);
-        }
-
-        // Tích hợp động UI Tăng tốc chém (Skill E)
+        // UI Skill E Indicator
         if (speedBoostIndicator == null && weaponsWrapper != null)
         {
             speedBoostIndicator = new VisualElement();
             speedBoostIndicator.name = "speedboost-indicator";
             speedBoostIndicator.AddToClassList("speedboost-indicator");
-            
-            speedBoostIndicator.style.flexDirection = FlexDirection.Row;
-            speedBoostIndicator.style.alignItems = Align.Center;
-            speedBoostIndicator.style.backgroundColor = new Color(0f, 0f, 0f, 0.25f);
-            speedBoostIndicator.style.borderTopWidth = 1f;
-            speedBoostIndicator.style.borderBottomWidth = 1f;
-            speedBoostIndicator.style.borderLeftWidth = 1f;
-            speedBoostIndicator.style.borderRightWidth = 1f;
 
-            speedBoostIndicator.style.borderTopColor = Color.white;
-            speedBoostIndicator.style.borderBottomColor = Color.white;
-            speedBoostIndicator.style.borderLeftColor = Color.white;
-            speedBoostIndicator.style.borderRightColor = Color.white;
-
-            speedBoostIndicator.style.borderTopLeftRadius = 4;
-            speedBoostIndicator.style.borderTopRightRadius = 4;
-            speedBoostIndicator.style.borderBottomLeftRadius = 4;
-            speedBoostIndicator.style.borderBottomRightRadius = 4;
-            speedBoostIndicator.style.paddingLeft = 10;
-            speedBoostIndicator.style.paddingRight = 10;
-            speedBoostIndicator.style.paddingTop = 6;
-            speedBoostIndicator.style.paddingBottom = 6;
-            speedBoostIndicator.style.width = 210;
-            speedBoostIndicator.style.justifyContent = Justify.SpaceBetween;
-            speedBoostIndicator.style.alignSelf = Align.FlexEnd;
-            speedBoostIndicator.style.marginBottom = 5;
-            speedBoostIndicator.style.display = DisplayStyle.None; // Mặc định ẩn
-
-            Label label = new Label("TĂNG TỐC CHÉM");
+            Label label = new Label("TĂNG TỐC CHẠY");
             label.name = "speedboost-text";
-            label.style.color = Color.white;
-            label.style.fontSize = 12;
-            label.style.unityFontStyleAndWeight = FontStyle.Bold;
-            label.style.marginLeft = 0;
-            label.style.marginRight = 0;
-            label.style.marginTop = 0;
-            label.style.marginBottom = 0;
+            label.AddToClassList("skill-active-indicator-title");
 
             speedBoostTimerLabel = new Label("10.0s");
             speedBoostTimerLabel.name = "speedboost-timer";
-            speedBoostTimerLabel.style.color = Color.white;
-            speedBoostTimerLabel.style.fontSize = 12;
-            speedBoostTimerLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
-            speedBoostTimerLabel.style.marginLeft = 0;
-            speedBoostTimerLabel.style.marginRight = 0;
-            speedBoostTimerLabel.style.marginTop = 0;
-            speedBoostTimerLabel.style.marginBottom = 0;
+            speedBoostTimerLabel.AddToClassList("skill-active-indicator-timer");
 
             speedBoostIndicator.Add(label);
             speedBoostIndicator.Add(speedBoostTimerLabel);
@@ -674,57 +577,20 @@ public class PlayerHUDController : MonoBehaviour
             weaponsWrapper.Insert(0, speedBoostIndicator);
         }
 
-        // Tích hợp động UI Ảo ảnh chém (Skill Q)
+        // UI Skill Q Indicator
         if (qSkillIndicator == null && weaponsWrapper != null)
         {
             qSkillIndicator = new VisualElement();
             qSkillIndicator.name = "qskill-indicator";
             qSkillIndicator.AddToClassList("qskill-indicator");
 
-            qSkillIndicator.style.flexDirection = FlexDirection.Row;
-            qSkillIndicator.style.alignItems = Align.Center;
-            qSkillIndicator.style.backgroundColor = new Color(0f, 0f, 0f, 0.25f);
-            qSkillIndicator.style.borderTopWidth = 1f;
-            qSkillIndicator.style.borderBottomWidth = 1f;
-            qSkillIndicator.style.borderLeftWidth = 1f;
-            qSkillIndicator.style.borderRightWidth = 1f;
-            qSkillIndicator.style.borderTopColor = Color.white;
-            qSkillIndicator.style.borderBottomColor = Color.white;
-            qSkillIndicator.style.borderLeftColor = Color.white;
-            qSkillIndicator.style.borderRightColor = Color.white;
-            qSkillIndicator.style.borderTopLeftRadius = 4;
-            qSkillIndicator.style.borderTopRightRadius = 4;
-            qSkillIndicator.style.borderBottomLeftRadius = 4;
-            qSkillIndicator.style.borderBottomRightRadius = 4;
-            qSkillIndicator.style.paddingLeft = 10;
-            qSkillIndicator.style.paddingRight = 10;
-            qSkillIndicator.style.paddingTop = 6;
-            qSkillIndicator.style.paddingBottom = 6;
-            qSkillIndicator.style.width = 210;
-            qSkillIndicator.style.justifyContent = Justify.SpaceBetween;
-            qSkillIndicator.style.alignSelf = Align.FlexEnd;
-            qSkillIndicator.style.marginBottom = 5;
-            qSkillIndicator.style.display = DisplayStyle.None; // Mặc định ẩn
-
             Label labelQ = new Label("ẢO ẢNH CHÉM");
             labelQ.name = "qskill-text";
-            labelQ.style.color = Color.white;
-            labelQ.style.fontSize = 12;
-            labelQ.style.unityFontStyleAndWeight = FontStyle.Bold;
-            labelQ.style.marginLeft = 0;
-            labelQ.style.marginRight = 0;
-            labelQ.style.marginTop = 0;
-            labelQ.style.marginBottom = 0;
+            labelQ.AddToClassList("skill-active-indicator-title");
 
             qSkillTimerLabel = new Label("1.5s");
             qSkillTimerLabel.name = "qskill-timer";
-            qSkillTimerLabel.style.color = Color.white;
-            qSkillTimerLabel.style.fontSize = 12;
-            qSkillTimerLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
-            qSkillTimerLabel.style.marginLeft = 0;
-            qSkillTimerLabel.style.marginRight = 0;
-            qSkillTimerLabel.style.marginTop = 0;
-            qSkillTimerLabel.style.marginBottom = 0;
+            qSkillTimerLabel.AddToClassList("skill-active-indicator-timer");
 
             qSkillIndicator.Add(labelQ);
             qSkillIndicator.Add(qSkillTimerLabel);
@@ -1068,24 +934,10 @@ public class PlayerHUDController : MonoBehaviour
 
         if (LocalPlayerTarget != null)
         {
-            if (LocalPlayerTarget.IsInvisible)
-            {
-                if (invisibilityIndicator != null)
-                {
-                    invisibilityIndicator.style.display = DisplayStyle.Flex;
-                }
-                if (invisibilityTimerLabel != null)
-                {
-                    invisibilityTimerLabel.text = $"{Mathf.Max(0f, LocalPlayerTarget.InvisibilityTimeRemaining):F1}s";
-                }
-            }
-            else
-            {
                 if (invisibilityIndicator != null)
                 {
                     invisibilityIndicator.style.display = DisplayStyle.None;
                 }
-            }
 
             if (LocalPlayerTarget.IsAttackSpeedBoosted)
             {
@@ -1240,10 +1092,7 @@ public class PlayerHUDController : MonoBehaviour
                         bool activated = LocalPlayerTarget.TriggerQSkill();
                         if (activated)
                         {
-                            if (LocalPlayerTarget.CharacterClassIndex != 2 && LocalPlayerTarget.CharacterClassIndex != 1)
-                            {
-                                currentCooldownQ = cooldownTimeQ;
-                            }
+                            currentCooldownQ = cooldownTimeQ;
                             Debug.Log("Đã dùng kỹ năng Q");
                         }
                         else
@@ -2634,112 +2483,84 @@ public class PlayerHUDController : MonoBehaviour
         string eName = "Tăng Tốc Chạy";
         string rName = "Chưởng Nguyên Tố";
 
-        if (profileIndex == 1) // Maya
+        if (profileIndex == 1) // Maya (Support)
         {
-            qName = "Sóng Âm";
-            eName = "Lá Chắn Nước";
-            rName = "Thủy Quái";
+            qName = "Triệu Hồi Người Xương";
+            eName = "Hồi Huyết";
+            rName = "Chưởng Nguyên Tố";
         }
-        else if (profileIndex == 2) // Elena
+        else if (profileIndex == 2) // Elena (Archer)
         {
-            qName = "Bắn Tốc Độ";
-            eName = "Mưa Mũi Tên";
-            rName = "Băng Sương";
+            qName = "Triệu Hồi Dò Đường";
+            eName = "Bắn Ra 3 Tên";
+            rName = "Chưởng Nguyên Tố";
         }
-        else if (profileIndex == 3) // Arthur
+        else if (profileIndex == 3) // Arthur (Tanker)
         {
-            qName = "Kiếm Khí";
-            eName = "Khiên Thánh";
-            rName = "Xoay Kiếm";
+            qName = "Làm Choáng Diện Rộng";
+            eName = "Miễn Nhiễm";
+            rName = "Chưởng Nguyên Tố";
         }
 
         if (skillNameLabelQ != null) skillNameLabelQ.text = qName;
         if (skillNameLabelE != null) skillNameLabelE.text = eName;
         if (skillNameLabelR != null) skillNameLabelR.text = rName;
 
-        // 4. Tùy chỉnh UI Skill R indicator theo từng nhân vật
+        // 4. UI Skill R không cần hiển thị indicator thanh banner đếm ngược (chỉ hồi chiêu trên ô kỹ năng)
         if (invisibilityIndicator != null)
         {
-            var skillRLabel = invisibilityIndicator.Q<Label>("invisibility-text");
-            if (profileIndex == 3) // Arthur Tanker
-            {
-                // Đổi text và màu sang đỏ cho skill "Tăng Cường"
-                if (skillRLabel != null) skillRLabel.text = "TĂNG CƯỜNG";
-                invisibilityIndicator.style.borderTopColor = new Color(0.9f, 0.1f, 0.1f, 1f);
-                invisibilityIndicator.style.borderBottomColor = new Color(0.9f, 0.1f, 0.1f, 1f);
-                invisibilityIndicator.style.borderLeftColor = new Color(0.9f, 0.1f, 0.1f, 1f);
-                invisibilityIndicator.style.borderRightColor = new Color(0.9f, 0.1f, 0.1f, 1f);
-                invisibilityIndicator.style.backgroundColor = new Color(0.25f, 0f, 0f, 0.4f);
-                if (skillRLabel != null) skillRLabel.style.color = new Color(1f, 0.45f, 0.45f, 1f);
-                if (invisibilityTimerLabel != null) invisibilityTimerLabel.style.color = new Color(1f, 0.45f, 0.45f, 1f);
-            }
-            else
-            {
-                // Khôi phục màu mặc định (trắng / tàng hình) cho các class khác
-                if (skillRLabel != null) skillRLabel.text = "TÀNG HÌNH";
-                invisibilityIndicator.style.borderTopColor = Color.white;
-                invisibilityIndicator.style.borderBottomColor = Color.white;
-                invisibilityIndicator.style.borderLeftColor = Color.white;
-                invisibilityIndicator.style.borderRightColor = Color.white;
-                invisibilityIndicator.style.backgroundColor = new Color(0f, 0f, 0f, 0.25f);
-                if (skillRLabel != null) skillRLabel.style.color = Color.white;
-                if (invisibilityTimerLabel != null) invisibilityTimerLabel.style.color = Color.white;
-            }
+            invisibilityIndicator.style.display = DisplayStyle.None;
         }
 
-        // 5. Tùy chỉnh UI Skill E indicator theo từng nhân vật (Bất tử cho Arthur)
+        // 5. Tùy chỉnh UI Skill E indicator theo từng nhân vật
         if (speedBoostIndicator != null)
         {
             var skillELabel = speedBoostIndicator.Q<Label>("speedboost-text");
-            if (profileIndex == 3) // Arthur Tanker
+            if (profileIndex == 0) // Leo
             {
-                if (skillELabel != null) skillELabel.text = "BẤT TỬ";
-                speedBoostIndicator.style.borderTopColor = new Color(1f, 0.84f, 0f, 1f); // Màu Vàng Hoàng Kim
-                speedBoostIndicator.style.borderBottomColor = new Color(1f, 0.84f, 0f, 1f);
-                speedBoostIndicator.style.borderLeftColor = new Color(1f, 0.84f, 0f, 1f);
-                speedBoostIndicator.style.borderRightColor = new Color(1f, 0.84f, 0f, 1f);
-                speedBoostIndicator.style.backgroundColor = new Color(0.25f, 0.2f, 0f, 0.4f);
-                if (skillELabel != null) skillELabel.style.color = new Color(1f, 0.9f, 0.5f, 1f);
-                if (speedBoostTimerLabel != null) speedBoostTimerLabel.style.color = new Color(1f, 0.9f, 0.5f, 1f);
+                if (skillELabel != null) skillELabel.text = "TĂNG TỐC CHẠY";
+            }
+            else if (profileIndex == 1) // Maya
+            {
+                if (skillELabel != null) skillELabel.text = "HỒI HUYẾT";
+            }
+            else if (profileIndex == 2) // Elena
+            {
+                if (skillELabel != null) skillELabel.text = "BẮN RA 3 TÊN";
+            }
+            else if (profileIndex == 3) // Arthur Tanker
+            {
+                if (skillELabel != null) skillELabel.text = "MIỄN NHIỄM";
             }
             else
             {
-                if (skillELabel != null) skillELabel.text = "TĂNG TỐC CHÉM";
-                speedBoostIndicator.style.borderTopColor = Color.white;
-                speedBoostIndicator.style.borderBottomColor = Color.white;
-                speedBoostIndicator.style.borderLeftColor = Color.white;
-                speedBoostIndicator.style.borderRightColor = Color.white;
-                speedBoostIndicator.style.backgroundColor = new Color(0f, 0f, 0f, 0.25f);
-                if (skillELabel != null) skillELabel.style.color = Color.white;
-                if (speedBoostTimerLabel != null) speedBoostTimerLabel.style.color = Color.white;
+                if (skillELabel != null) skillELabel.text = "TĂNG TỐC CHẠY";
             }
         }
 
-        // 6. Tùy chỉnh UI Skill Q indicator theo từng nhân vật (Dặm Khiên cho Arthur)
+        // 6. Tùy chỉnh UI Skill Q indicator theo từng nhân vật
         if (qSkillIndicator != null)
         {
             var skillQLabel = qSkillIndicator.Q<Label>("qskill-text");
-            if (profileIndex == 3) // Arthur Tanker
+            if (profileIndex == 0) // Leo
             {
-                if (skillQLabel != null) skillQLabel.text = "DẶM KHIÊN";
-                qSkillIndicator.style.borderTopColor = new Color(0.85f, 0.5f, 0.2f, 1f); // Màu Cam Đất / Bronze
-                qSkillIndicator.style.borderBottomColor = new Color(0.85f, 0.5f, 0.2f, 1f);
-                qSkillIndicator.style.borderLeftColor = new Color(0.85f, 0.5f, 0.2f, 1f);
-                qSkillIndicator.style.borderRightColor = new Color(0.85f, 0.5f, 0.2f, 1f);
-                qSkillIndicator.style.backgroundColor = new Color(0.2f, 0.12f, 0.05f, 0.4f);
-                if (skillQLabel != null) skillQLabel.style.color = new Color(1f, 0.8f, 0.6f, 1f);
-                if (qSkillTimerLabel != null) qSkillTimerLabel.style.color = new Color(1f, 0.8f, 0.6f, 1f);
+                if (skillQLabel != null) skillQLabel.text = "ẢO ẢNH CHÉM";
+            }
+            else if (profileIndex == 1) // Maya
+            {
+                if (skillQLabel != null) skillQLabel.text = "TRIỆU HỒI NGƯỜI XƯƠNG";
+            }
+            else if (profileIndex == 2) // Elena
+            {
+                if (skillQLabel != null) skillQLabel.text = "TRIỆU HỒI DÒ ĐƯỜNG";
+            }
+            else if (profileIndex == 3) // Arthur Tanker
+            {
+                if (skillQLabel != null) skillQLabel.text = "LÀM CHOÁNG DIỆN RỘNG";
             }
             else
             {
                 if (skillQLabel != null) skillQLabel.text = "ẢO ẢNH CHÉM";
-                qSkillIndicator.style.borderTopColor = Color.white;
-                qSkillIndicator.style.borderBottomColor = Color.white;
-                qSkillIndicator.style.borderLeftColor = Color.white;
-                qSkillIndicator.style.borderRightColor = Color.white;
-                qSkillIndicator.style.backgroundColor = new Color(0f, 0f, 0f, 0.25f);
-                if (skillQLabel != null) skillQLabel.style.color = Color.white;
-                if (qSkillTimerLabel != null) qSkillTimerLabel.style.color = Color.white;
             }
         }
 
