@@ -42,17 +42,58 @@
     flex-shrink: 1;
 }
 
-#create-room-panel {
-    height: 640px !important;
-    max-height: 85% !important;
-    padding: 130px 55px 45px 55px !important;
+#create-room-panel,
+#login-panel,
+#verify-otp-panel {
+    align-self: center;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    width: 720px;
+    height: 610px !important;
+    max-width: 92%;
+    max-height: 90% !important;
+    padding: 145px 65px 35px 65px !important;
+    background-image: url("project://database/Assets/PLuan/Synty_Popup_05_Exact.png");
+    -unity-background-scale-mode: stretch-to-fill;
+    -unity-slice-left: 200;
+    -unity-slice-right: 200;
+    -unity-slice-top: 100;
+    -unity-slice-bottom: 100;
+    -unity-slice-scale: 0.38;
+    background-color: transparent !important;
+    border-radius: 0 !important;
+    border-width: 0 !important;
+    justify-content: flex-start;
+    align-items: stretch;
+    box-shadow: none !important;
 }
 
+#register-panel {
+    align-self: center;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    width: 720px;
+    height: 700px !important;
+    max-width: 92%;
+    max-height: 92% !important;
+    padding: 135px 65px 30px 65px !important;
+    background-image: url("project://database/Assets/PLuan/Synty_Popup_05_Exact.png");
+    -unity-background-scale-mode: stretch-to-fill;
+    -unity-slice-left: 200;
+    -unity-slice-right: 200;
+    -unity-slice-top: 100;
+    -unity-slice-bottom: 100;
+    -unity-slice-scale: 0.38;
+    background-color: transparent !important;
+    border-radius: 0 !important;
+    border-width: 0 !important;
+    justify-content: flex-start;
+    align-items: stretch;
+    box-shadow: none !important;
+}
+
+#main-menu-panel,
 #network-menu-panel {
-    padding-top: 100px !important;
-}
-
-#main-menu-panel {
     position: absolute;
     bottom: 50px;
     left: 70;
@@ -69,7 +110,8 @@
     flex-direction: row;
 }
 
-#main-menu-panel .button-group {
+#main-menu-panel .button-group,
+#network-menu-panel .button-group {
     flex-direction: row;
     width: auto;
     align-items: center;
@@ -78,7 +120,8 @@
     margin-left: 40px;
 }
 
-#main-menu-panel .menu-btn {
+#main-menu-panel .menu-btn,
+#network-menu-panel .menu-btn {
     width: 260px;
     height: 68px;
     margin: 0 14px;
@@ -99,7 +142,8 @@
     cursor: link;
 }
 
-#main-menu-panel .menu-btn:hover {
+#main-menu-panel .menu-btn:hover,
+#network-menu-panel .menu-btn:hover {
     scale: 1.06 1.06;
     letter-spacing: 5px;
     color: rgb(255, 255, 255) !important;
@@ -113,12 +157,15 @@
     text-shadow: 0 0 22px rgba(0, 240, 255, 1), 0 0 8px rgba(255, 255, 255, 0.9), 2px 2px 4px rgba(0, 0, 0, 1);
 }
 
-#main-menu-panel .quit-btn {
+#main-menu-panel .quit-btn,
+#network-menu-panel .quit-btn {
     color: rgb(255, 160, 160) !important;
     text-shadow: 0 0 12px rgba(255, 60, 60, 0.7), 2px 2px 5px rgba(0, 0, 0, 0.95);
+    margin-top: 0 !important;
 }
 
-#main-menu-panel .quit-btn:hover {
+#main-menu-panel .quit-btn:hover,
+#network-menu-panel .quit-btn:hover {
     color: rgb(255, 255, 255) !important;
     background-image: url("project://database/Assets/Synty/InterfaceFantasyMenus/Sprites/FantasyMenus/SPR_FantasyMenus_Menu_Button_06_Frame.png") !important;
     -unity-background-scale-mode: stretch-to-fill;
@@ -134,21 +181,254 @@
     padding-top: 140px !important; /* Pushed down to prevent ID bar from overlapping top frame */
 }
 
-#create-room-panel .menu-btn {
-    font-size: 20px !important; /* Slightly smaller button text */
-    margin-bottom: 6px !important; /* Bring buttons closer vertically */
-    padding: 8px 12px !important; /* Tighter padding for spacing */
+#create-room-panel .panel-title,
+#login-panel .panel-title,
+#register-panel .panel-title,
+#verify-otp-panel .panel-title {
+    display: flex !important;
+    font-size: 26px;
+    -unity-font-style: bold;
+    color: rgb(240, 248, 255);
+    letter-spacing: 5px;
+    -unity-text-align: middle-center;
+    text-shadow: 0 0 16px rgba(0, 200, 255, 0.75), 2px 2px 4px rgba(0, 0, 0, 0.95);
+    margin-top: 0;
+    margin-bottom: 6px;
+    align-self: center;
 }
 
-#create-room-panel .back-btn {
-    margin-top: 5px !important; /* Bring back button closer to the host button */
+.panel-divider {
+    width: 70%;
+    height: 8px;
+    margin-bottom: 16px;
+    align-self: center;
+    background-image: url("project://database/Assets/Synty/InterfaceFantasyMenus/Sprites/General/SPR_FantasyMenus_Line_Horizontal_01.png");
+    -unity-background-scale-mode: scale-to-fit;
+    -unity-background-image-tint-color: rgba(0, 210, 255, 0.75);
+}
+
+#create-room-panel .form-group,
+#login-panel .form-group,
+#register-panel .form-group,
+#verify-otp-panel .form-group {
+    width: 100%;
+    margin-bottom: 10px;
+    align-items: center;
+}
+
+#create-room-panel .form-label,
+#login-panel .form-label,
+#register-panel .form-label,
+#verify-otp-panel .form-label {
+    color: rgb(160, 220, 255);
+    font-size: 13px;
+    letter-spacing: 2px;
+    margin-bottom: 6px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    align-self: center;
+    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.9);
+}
+
+#create-room-panel .form-input,
+#login-panel .form-input,
+#register-panel .form-input,
+#verify-otp-panel .form-input {
+    background-image: url("project://database/Assets/PLuan/Synty_Input_01_Exact.png") !important;
+    -unity-background-scale-mode: stretch-to-fill;
+    -unity-slice-left: 100;
+    -unity-slice-right: 100;
+    -unity-slice-top: 0;
+    -unity-slice-bottom: 0;
+    -unity-slice-scale: 0.35;
+    background-color: transparent !important;
+    border-width: 0 !important;
+    border-radius: 0 !important;
+    width: 90%;
+    height: 48px;
+    padding: 0 32px;
+    justify-content: center;
+    align-self: center;
+    transition: all 0.25s ease-out;
+}
+
+#create-room-panel .form-input .unity-base-text-field__input,
+#create-room-panel .form-input .unity-text-field__input,
+#login-panel .form-input .unity-base-text-field__input,
+#login-panel .form-input .unity-text-field__input,
+#register-panel .form-input .unity-base-text-field__input,
+#register-panel .form-input .unity-text-field__input,
+#verify-otp-panel .form-input .unity-base-text-field__input,
+#verify-otp-panel .form-input .unity-text-field__input {
+    background-color: transparent !important;
+    border-width: 0 !important;
+    color: rgb(240, 250, 255);
+    --unity-cursor-color: rgb(255, 255, 255);
+    -unity-cursor-color: rgb(255, 255, 255);
+    caret-color: rgb(255, 255, 255);
+    --unity-selection-color: rgba(0, 190, 255, 0.6);
+    font-size: 15px;
+    letter-spacing: 1.5px;
+    padding: 0 !important;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.9);
+}
+
+#create-room-panel .form-input:focus-within,
+#login-panel .form-input:focus-within,
+#register-panel .form-input:focus-within,
+#verify-otp-panel .form-input:focus-within {
+    text-shadow: 0 0 10px rgba(0, 235, 255, 0.8);
+}
+
+#create-room-panel .radio-group {
+    flex-direction: row;
+    margin-top: 8px;
+    justify-content: center;
+    align-items: center;
+    align-self: center;
+}
+
+#create-room-panel .radio-group .unity-radio-button {
+    margin: 0 24px;
+    flex-direction: row;
+    align-items: center;
+    cursor: link;
+}
+
+#create-room-panel .radio-group .unity-radio-button__input {
+    flex-direction: row;
+    align-items: center;
+    background-color: transparent !important;
+    border-width: 0 !important;
+}
+
+#create-room-panel .radio-group .unity-radio-button__checkmark-background {
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    min-height: 32px;
+    background-image: url("project://database/Assets/PLuan/Synty_Radio_Unchecked.png");
+    -unity-background-scale-mode: scale-to-fit;
+    background-color: transparent !important;
+    border-width: 0 !important;
+    border-radius: 0 !important;
+    justify-content: center;
+    align-items: center;
+}
+
+#create-room-panel .radio-group .unity-radio-button:checked .unity-radio-button__checkmark-background {
+    background-image: url("project://database/Assets/PLuan/Synty_Radio_Checked.png") !important;
+}
+
+#create-room-panel .radio-group .unity-radio-button__checkmark,
+#create-room-panel .radio-group .unity-radio-button__indicator {
+    display: none !important;
+    opacity: 0 !important;
+}
+
+#create-room-panel .radio-group .unity-radio-button__label,
+#create-room-panel .radio-group .unity-radio-button__text {
+    color: rgb(170, 225, 255);
+    font-size: 15px;
+    -unity-font-style: bold;
+    margin-left: 10px;
+    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.95);
+    transition: color 0.2s ease-out, text-shadow 0.2s ease-out;
+}
+
+#create-room-panel .radio-group .unity-radio-button:hover .unity-radio-button__label,
+#create-room-panel .radio-group .unity-radio-button:hover .unity-radio-button__text {
+    color: rgb(255, 255, 255);
+    text-shadow: 0 0 10px rgba(0, 230, 255, 0.8), 1px 1px 3px rgba(0, 0, 0, 0.95);
 }
 
 #create-room-panel #password-group.hidden-element {
-    display: flex !important; /* Force layout space preservation */
-    visibility: hidden; /* Hide contents */
+    visibility: hidden;
     opacity: 0;
     pointer-events: none;
+}
+
+.create-room-btn-group,
+.auth-btn-group {
+    flex-direction: row !important;
+    justify-content: center !important;
+    align-items: center !important;
+    width: 100% !important;
+    margin-top: auto;
+    margin-bottom: 10px;
+}
+
+.confirm-action-btn,
+.back-action-btn {
+    width: 220px;
+    height: 52px;
+    margin: 0 10px;
+    padding: 0 10px;
+    font-size: 17px !important;
+    -unity-font-style: bold;
+    letter-spacing: 1.5px;
+    white-space: nowrap !important;
+    text-overflow: clip !important;
+    -unity-text-align: middle-center;
+    justify-content: center;
+    align-items: center;
+    transition: all 0.3s ease-out;
+    cursor: link;
+    background-color: transparent !important;
+    border-width: 0 !important;
+    border-radius: 0 !important;
+}
+
+.confirm-action-btn {
+    color: rgb(225, 245, 255) !important;
+    background-image: none !important;
+    text-shadow: 0 0 12px rgba(0, 190, 255, 0.75), 2px 2px 4px rgba(0, 0, 0, 0.95);
+}
+
+.confirm-action-btn:hover {
+    scale: 1.05 1.05;
+    letter-spacing: 2.5px;
+    color: rgb(255, 255, 255) !important;
+    background-image: url("project://database/Assets/Synty/InterfaceFantasyMenus/Sprites/FantasyMenus/SPR_FantasyMenus_Menu_Button_06_Frame.png") !important;
+    -unity-background-scale-mode: stretch-to-fill;
+    -unity-slice-left: 500;
+    -unity-slice-right: 500;
+    -unity-slice-top: 0;
+    -unity-slice-bottom: 0;
+    -unity-slice-scale: 0.34;
+    text-shadow: 0 0 22px rgba(0, 240, 255, 1), 0 0 8px rgba(255, 255, 255, 0.9), 2px 2px 4px rgba(0, 0, 0, 1);
+}
+
+.back-action-btn {
+    color: rgb(255, 160, 160) !important;
+    background-image: none !important;
+    text-shadow: 0 0 12px rgba(255, 60, 60, 0.75), 2px 2px 4px rgba(0, 0, 0, 0.95);
+}
+
+.back-action-btn:hover {
+    scale: 1.05 1.05;
+    letter-spacing: 2.5px;
+    color: rgb(255, 255, 255) !important;
+    background-image: url("project://database/Assets/Synty/InterfaceFantasyMenus/Sprites/FantasyMenus/SPR_FantasyMenus_Menu_Button_06_Frame.png") !important;
+    -unity-background-scale-mode: stretch-to-fill;
+    -unity-slice-left: 500;
+    -unity-slice-right: 500;
+    -unity-slice-top: 0;
+    -unity-slice-bottom: 0;
+    -unity-slice-scale: 0.34;
+    -unity-background-image-tint-color: rgba(255, 100, 100, 1);
+    text-shadow: 0 0 22px rgba(255, 70, 70, 1), 0 0 8px rgba(255, 255, 255, 0.9), 2px 2px 4px rgba(0, 0, 0, 1);
+}
+
+#verify-otp-panel .auth-btn-group .confirm-action-btn,
+#verify-otp-panel .auth-btn-group .back-action-btn {
+    width: 170px;
+    height: 48px;
+    margin: 0 5px;
+    font-size: 15px !important;
+    letter-spacing: 1px;
 }
 
 .hidden-panel { 
@@ -298,6 +578,10 @@
     border-bottom-width: 2px !important;
     border-color: rgba(0, 190, 255, 0.35) !important;
     color: rgb(255, 255, 255);
+    --unity-cursor-color: rgb(255, 255, 255);
+    -unity-cursor-color: rgb(255, 255, 255);
+    caret-color: rgb(255, 255, 255);
+    --unity-selection-color: rgba(0, 190, 255, 0.6);
     font-size: 14px;
     padding: 8px 4px !important;
     border-radius: 0 !important;
@@ -1189,21 +1473,6 @@
     margin-bottom: 4px;
 }
 
-#register-panel {
-    padding-bottom: 110px !important;
-}
-
-#register-panel .form-group {
-    margin-bottom: 10px !important;
-}
-
-#verify-otp-panel {
-    padding-bottom: 75px !important;
-}
-
-#login-panel .menu-btn,
-#register-panel .menu-btn,
-#verify-otp-panel .menu-btn,
 #join-auth-panel .menu-btn {
     font-size: 20px !important;
     padding: 10px 16px !important;
