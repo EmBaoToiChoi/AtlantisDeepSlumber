@@ -241,6 +241,7 @@ public class PlayerHUDController : MonoBehaviour
     private VisualElement questPointerBottom;
     private VisualElement questGlowAura;
     private Coroutine questSpotlightCoroutine;
+    private string lastActiveQuestTitle = "";
 
     // Coop Building UI system
     public static bool isCoopBuildingUIOpen = false;
@@ -400,6 +401,7 @@ public class PlayerHUDController : MonoBehaviour
         questPointerLeft = null;
         questPointerBottom = null;
         questGlowAura = null;
+        lastActiveQuestTitle = "";
         if (coopBuildContainer != null)
         {
             coopBuildContainer.RemoveFromHierarchy();
@@ -3986,8 +3988,12 @@ public class PlayerHUDController : MonoBehaviour
                 {
                     currentQuestOwner = owner;
                 }
+                bool wasHidden = !questPanel.ClassListContains("show-quest");
                 questPanel.AddToClassList("show-quest");
-                TriggerQuestSpotlight();
+                if (wasHidden)
+                {
+                    TriggerQuestSpotlight();
+                }
             }
             else
             {
@@ -3996,6 +4002,7 @@ public class PlayerHUDController : MonoBehaviour
                 if (owner == null || currentQuestOwner == owner)
                 {
                     currentQuestOwner = null;
+                    lastActiveQuestTitle = "";
                     questPanel.RemoveFromClassList("show-quest");
                     StopQuestSpotlight();
                 }
@@ -4193,9 +4200,13 @@ public class PlayerHUDController : MonoBehaviour
         {
             questTitleText.text = title;
         }
-        if (questPanel != null && questPanel.ClassListContains("show-quest"))
+        if (!string.IsNullOrEmpty(title) && title != lastActiveQuestTitle)
         {
-            TriggerQuestSpotlight();
+            lastActiveQuestTitle = title;
+            if (questPanel != null && questPanel.ClassListContains("show-quest"))
+            {
+                TriggerQuestSpotlight();
+            }
         }
     }
 
