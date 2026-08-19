@@ -2559,7 +2559,7 @@ MonoBehaviour:
       m_Calls: []
   m_text: "C\xE2m mi\u1EC7ng l\u1EA1i \u0111i!"
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 6551b436ac6e447438384ddc0c7721bb, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 8c6bb49340ee96b4291529fba91bff99, type: 2}
   m_sharedMaterial: {fileID: 97671534423474389, guid: 5c7a92cce04a5ee478f36d2f5b537e05, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
@@ -23057,7 +23057,7 @@ MonoBehaviour:
     h\u1EA1 \u0111\u01B0\u1EE3c ta, c\xE1c ng\u01B0\u01A1i c\u0169ng kh\xF4ng th\u1EC3
     m\u1EDF \u0111\u01B0\u1EE3c c\xE1nh c\u1EEDa \u0111\xF3 \u0111\xE2u!"
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 6551b436ac6e447438384ddc0c7721bb, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 8c6bb49340ee96b4291529fba91bff99, type: 2}
   m_sharedMaterial: {fileID: 97671534423474389, guid: 5c7a92cce04a5ee478f36d2f5b537e05, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
@@ -47050,7 +47050,7 @@ MonoBehaviour:
     m\u1EBB! L\u0169 c\xE1c ng\u01B0\u01A1i s\u1EBD kh\xF4ng bao gi\u1EDD m\u1EDF
     \u0111\u01B0\u1EE3c n\xF3 \u0111\xE2u! "
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 6551b436ac6e447438384ddc0c7721bb, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 8c6bb49340ee96b4291529fba91bff99, type: 2}
   m_sharedMaterial: {fileID: 97671534423474389, guid: 5c7a92cce04a5ee478f36d2f5b537e05, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
@@ -52054,7 +52054,7 @@ MonoBehaviour:
   m_text: "Ch\u1EC9 l\xE0 m\u1ED9t c\xE1nh c\u1EEDa b\xECnh th\u01B0\u1EDDng th\xF4i
     m\xE0?"
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 6551b436ac6e447438384ddc0c7721bb, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 8c6bb49340ee96b4291529fba91bff99, type: 2}
   m_sharedMaterial: {fileID: 97671534423474389, guid: 5c7a92cce04a5ee478f36d2f5b537e05, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
@@ -52436,6 +52436,10 @@ MonoBehaviour:
   leftOpenRotationOffset: {x: 0, y: 90, z: 0}
   rightOpenRotationOffset: {x: 0, y: -90, z: 0}
   openSpeed: 0.5
+  hasSavedClosedRotations: 1
+  defaultLeftClosedRot: {x: 0, y: 0.14042254, z: 0, w: 0.9900917}
+  defaultRightClosedRot: {x: 0, y: -0.14042254, z: 0, w: 0.9900917}
+  previewProgress: 0
 --- !u!1001 &818025733
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -55539,7 +55543,7 @@ MonoBehaviour:
     ch\u01B0a lo xong cho c\xE1i x\xE1c c\u1EE7a m\xECnh th\xEC lo g\xEC \u0111\u1EBFn
     b\u1ECDn ta!"
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 6551b436ac6e447438384ddc0c7721bb, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 8c6bb49340ee96b4291529fba91bff99, type: 2}
   m_sharedMaterial: {fileID: 97671534423474389, guid: 5c7a92cce04a5ee478f36d2f5b537e05, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
