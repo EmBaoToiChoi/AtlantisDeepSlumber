@@ -154,8 +154,9 @@
             </ui:VisualElement>
             <ui:ScrollView mode="Vertical" name="options-scroll-view" elastic="true" scroll-deceleration-rate="0.13" elasticity="0.1" class="options-content-scroll">
                 <ui:VisualElement name="tab-general" class="tab-content">
-                    <ui:VisualElement class="form-group">
-                        <ui:Label name="lbl-opt-language" text="NGÔN NGỮ" class="form-label" />
+                    <ui:Label text="CÀI ĐẶT CHUNG" class="settings-section-header" />
+                    <ui:VisualElement class="settings-row">
+                        <ui:Label name="lbl-opt-language" text="NGÔN NGỮ" class="settings-item-label" />
                         <ui:VisualElement name="opt-language" class="custom-dropdown">
                             <ui:Label name="opt-language-value" text="Vietnamese" class="custom-dropdown-value" />
                             <ui:Label text="▼" class="custom-dropdown-arrow" />
@@ -163,127 +164,140 @@
                     </ui:VisualElement>
                 </ui:VisualElement>
                 <ui:VisualElement name="tab-audio" class="tab-content hidden-element">
-                    <ui:VisualElement class="form-group">
-                        <ui:VisualElement class="slider-header">
-                            <ui:Label name="lbl-master-volume" text="ÂM THANH TỔNG" class="form-label" />
+                    <ui:Label text="ÂM LƯỢNG TRÒ CHƠI" class="settings-section-header" />
+                    <ui:VisualElement class="settings-row">
+                        <ui:Label name="lbl-master-volume" text="ÂM THANH TỔNG" class="settings-item-label" />
+                        <ui:VisualElement class="settings-slider-wrapper">
+                            <ui:Slider name="slider-master" low-value="0" high-value="100" value="100" class="custom-slider" />
                             <ui:Label name="val-master" text="100%" class="slider-val" />
                         </ui:VisualElement>
-                        <ui:Slider name="slider-master" low-value="0" high-value="100" value="100" class="custom-slider" />
                     </ui:VisualElement>
-                    <ui:VisualElement class="form-group">
-                        <ui:VisualElement class="slider-header">
-                            <ui:Label name="lbl-music-bgm" text="NHẠC NỀN" class="form-label" />
+                    <ui:VisualElement class="settings-row">
+                        <ui:Label name="lbl-music-bgm" text="NHẠC NỀN" class="settings-item-label" />
+                        <ui:VisualElement class="settings-slider-wrapper">
+                            <ui:Slider name="slider-music" low-value="0" high-value="100" value="80" class="custom-slider" />
                             <ui:Label name="val-music" text="80%" class="slider-val" />
                         </ui:VisualElement>
-                        <ui:Slider name="slider-music" low-value="0" high-value="100" value="80" class="custom-slider" />
                     </ui:VisualElement>
-                    <ui:VisualElement class="form-group">
-                        <ui:VisualElement class="slider-header">
-                            <ui:Label name="lbl-effects-sfx" text="HIỆU ỨNG" class="form-label" />
+                    <ui:VisualElement class="settings-row">
+                        <ui:Label name="lbl-effects-sfx" text="HIỆU ỨNG ÂM THANH" class="settings-item-label" />
+                        <ui:VisualElement class="settings-slider-wrapper">
+                            <ui:Slider name="slider-sfx" low-value="0" high-value="100" value="90" class="custom-slider" />
                             <ui:Label name="val-sfx" text="90%" class="slider-val" />
                         </ui:VisualElement>
-                        <ui:Slider name="slider-sfx" low-value="0" high-value="100" value="90" class="custom-slider" />
                     </ui:VisualElement>
-                    <ui:VisualElement class="form-group">
-                        <ui:Label name="lbl-opt-mic-device" text="THIẾT BỊ MICRO" class="form-label" />
+
+                    <ui:Label text="VOICE CHAT &amp; MICRO" class="settings-section-header" />
+                    <ui:VisualElement class="settings-row">
+                        <ui:Label name="lbl-opt-mic-device" text="THIẾT BỊ MICRO" class="settings-item-label" />
                         <ui:VisualElement name="opt-mic-device" class="custom-dropdown">
                             <ui:Label name="opt-mic-device-value" text="Default" class="custom-dropdown-value" />
                             <ui:Label text="▼" class="custom-dropdown-arrow" />
                         </ui:VisualElement>
                     </ui:VisualElement>
-                    <ui:VisualElement class="form-group">
-                        <ui:Label name="lbl-opt-output-device" text="THIẾT BỊ ĐẦU RA" class="form-label" />
+                    <ui:VisualElement class="settings-row">
+                        <ui:Label name="lbl-opt-output-device" text="THIẾT BỊ ĐẦU RA" class="settings-item-label" />
                         <ui:VisualElement name="opt-output-device" class="custom-dropdown">
                             <ui:Label name="opt-output-device-value" text="System Default" class="custom-dropdown-value" />
                             <ui:Label text="▼" class="custom-dropdown-arrow" />
                         </ui:VisualElement>
                     </ui:VisualElement>
-                    <ui:VisualElement class="form-group">
-                        <ui:Label name="lbl-opt-mic-mode" text="CHẾ ĐỘ TRUYỀN THÔNG TIN" class="form-label" />
+                    <ui:VisualElement class="settings-row">
+                        <ui:Label name="lbl-opt-mic-mode" text="CHẾ ĐỘ TRUYỀN GIỌNG NÓI" class="settings-item-label" />
                         <ui:VisualElement name="opt-mic-mode" class="custom-dropdown">
                             <ui:Label name="opt-mic-mode-value" text="Push To Talk" class="custom-dropdown-value" />
                             <ui:Label text="▼" class="custom-dropdown-arrow" />
                         </ui:VisualElement>
                     </ui:VisualElement>
-                    <ui:VisualElement class="form-group">
-                        <ui:VisualElement class="slider-header">
-                            <ui:Label name="lbl-mic-input-vol" text="ÂM LƯỢNG THU (MICRO)" class="form-label" />
+                    <ui:VisualElement class="settings-row">
+                        <ui:Label name="lbl-mic-input-vol" text="ÂM LƯỢNG MICRO THU" class="settings-item-label" />
+                        <ui:VisualElement class="settings-slider-wrapper">
+                            <ui:Slider name="slider-mic-input" low-value="0" high-value="100" value="100" class="custom-slider" />
                             <ui:Label name="val-mic-input" text="100%" class="slider-val" />
                         </ui:VisualElement>
-                        <ui:Slider name="slider-mic-input" low-value="0" high-value="100" value="100" class="custom-slider" />
                     </ui:VisualElement>
-                    <ui:VisualElement class="form-group">
-                        <ui:VisualElement class="slider-header">
-                            <ui:Label name="lbl-voice-playback-vol" text="ÂM LƯỢNG NGƯỜI CHƠI KHÁC" class="form-label" />
+                    <ui:VisualElement class="settings-row">
+                        <ui:Label name="lbl-voice-playback-vol" text="ÂM LƯỢNG NGƯỜI CHƠI KHÁC" class="settings-item-label" />
+                        <ui:VisualElement class="settings-slider-wrapper">
+                            <ui:Slider name="slider-voice-playback" low-value="0" high-value="100" value="100" class="custom-slider" />
                             <ui:Label name="val-voice-playback" text="100%" class="slider-val" />
                         </ui:VisualElement>
-                        <ui:Slider name="slider-voice-playback" low-value="0" high-value="100" value="100" class="custom-slider" />
                     </ui:VisualElement>
                 </ui:VisualElement>
                 <ui:VisualElement name="tab-graphics" class="tab-content hidden-element">
-                    <ui:VisualElement class="form-group">
-                        <ui:Label name="lbl-resolution" text="ĐỘ PHÂN GIẢI" class="form-label" />
+                    <ui:Label text="MÀN HÌNH &amp; ĐỘ PHÂN GIẢI" class="settings-section-header" />
+                    <ui:VisualElement class="settings-row">
+                        <ui:Label name="lbl-resolution" text="ĐỘ PHÂN GIẢI" class="settings-item-label" />
                         <ui:VisualElement name="opt-resolution" class="custom-dropdown">
                             <ui:Label name="opt-resolution-value" text="1920x1080 (FHD)" class="custom-dropdown-value" />
                             <ui:Label text="▼" class="custom-dropdown-arrow" />
                         </ui:VisualElement>
                     </ui:VisualElement>
-                    <ui:VisualElement class="form-group">
-                        <ui:Label name="lbl-graphics-quality" text="CHẤT LƯỢNG ĐỒ HỌA" class="form-label" />
-                        <ui:VisualElement name="opt-quality" class="custom-dropdown">
-                            <ui:Label name="opt-quality-value" text="Cao" class="custom-dropdown-value" />
-                            <ui:Label text="▼" class="custom-dropdown-arrow" />
-                        </ui:VisualElement>
+                    <ui:VisualElement class="settings-row">
+                        <ui:Label text="CHẾ ĐỘ TOÀN MÀN HÌNH" class="settings-item-label" />
+                        <ui:Toggle name="opt-fullscreen" label="" value="true" class="checkbox-label" />
                     </ui:VisualElement>
-                    <ui:VisualElement class="checkbox-group-wrapper">
-                        <ui:Toggle name="opt-fullscreen" label="TOÀN MÀN HÌNH" value="true" class="checkbox-label" />
-                        <ui:Toggle name="opt-vsync" label="ĐỒNG BỘ V-SYNC" value="true" class="checkbox-label" />
+                    <ui:VisualElement class="settings-row">
+                        <ui:Label text="ĐỒNG BỘ KHUNG HÌNH (V-SYNC)" class="settings-item-label" />
+                        <ui:Toggle name="opt-vsync" label="" value="true" class="checkbox-label" />
                     </ui:VisualElement>
-                    <ui:VisualElement class="form-group">
-                        <ui:Label name="lbl-antialiasing" text="KHỬ RĂNG CƯA" class="form-label" />
-                        <ui:VisualElement name="opt-aa" class="custom-dropdown">
-                            <ui:Label name="opt-aa-value" text="Tắt" class="custom-dropdown-value" />
-                            <ui:Label text="▼" class="custom-dropdown-arrow" />
-                        </ui:VisualElement>
-                    </ui:VisualElement>
-                    <ui:VisualElement class="form-group">
-                        <ui:Label name="lbl-shadow-quality" text="CHẤT LƯỢNG BÓNG ĐỔ" class="form-label" />
-                        <ui:VisualElement name="opt-shadows" class="custom-dropdown">
-                            <ui:Label name="opt-shadows-value" text="Cao" class="custom-dropdown-value" />
-                            <ui:Label text="▼" class="custom-dropdown-arrow" />
-                        </ui:VisualElement>
-                    </ui:VisualElement>
-                    <ui:VisualElement class="form-group">
-                        <ui:Label name="lbl-particle-quality" text="CHẤT LƯỢNG HẠT" class="form-label" />
-                        <ui:VisualElement name="opt-particles" class="custom-dropdown">
-                            <ui:Label name="opt-particles-value" text="Cao" class="custom-dropdown-value" />
-                            <ui:Label text="▼" class="custom-dropdown-arrow" />
-                        </ui:VisualElement>
-                    </ui:VisualElement>
-                    <ui:VisualElement class="form-group">
-                        <ui:Label name="lbl-fps-cap" text="GIỚI HẠN FPS" class="form-label" />
+                    <ui:VisualElement class="settings-row">
+                        <ui:Label name="lbl-fps-cap" text="GIỚI HẠN KHUNG HÌNH (FPS)" class="settings-item-label" />
                         <ui:VisualElement name="opt-fpscap" class="custom-dropdown">
                             <ui:Label name="opt-fpscap-value" text="Không giới hạn" class="custom-dropdown-value" />
                             <ui:Label text="▼" class="custom-dropdown-arrow" />
                         </ui:VisualElement>
                     </ui:VisualElement>
-                    <ui:VisualElement class="checkbox-group-wrapper">
-                        <ui:Toggle name="opt-postfx" label="HIỆU ỨNG HẬU KỲ" value="true" class="checkbox-label" />
+
+                    <ui:Label text="CHẤT LƯỢNG HÌNH ẢNH" class="settings-section-header" />
+                    <ui:VisualElement class="settings-row">
+                        <ui:Label name="lbl-graphics-quality" text="CHẤT LƯỢNG ĐỒ HỌA TỔNG" class="settings-item-label" />
+                        <ui:VisualElement name="opt-quality" class="custom-dropdown">
+                            <ui:Label name="opt-quality-value" text="Cao" class="custom-dropdown-value" />
+                            <ui:Label text="▼" class="custom-dropdown-arrow" />
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                    <ui:VisualElement class="settings-row">
+                        <ui:Label name="lbl-antialiasing" text="KHỬ RĂNG CƯA (ANTI-ALIASING)" class="settings-item-label" />
+                        <ui:VisualElement name="opt-aa" class="custom-dropdown">
+                            <ui:Label name="opt-aa-value" text="Tắt" class="custom-dropdown-value" />
+                            <ui:Label text="▼" class="custom-dropdown-arrow" />
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                    <ui:VisualElement class="settings-row">
+                        <ui:Label name="lbl-shadow-quality" text="CHẤT LƯỢNG BÓNG ĐỔ" class="settings-item-label" />
+                        <ui:VisualElement name="opt-shadows" class="custom-dropdown">
+                            <ui:Label name="opt-shadows-value" text="Cao" class="custom-dropdown-value" />
+                            <ui:Label text="▼" class="custom-dropdown-arrow" />
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                    <ui:VisualElement class="settings-row">
+                        <ui:Label name="lbl-particle-quality" text="CHẤT LƯỢNG HIỆU ỨNG HẠT" class="settings-item-label" />
+                        <ui:VisualElement name="opt-particles" class="custom-dropdown">
+                            <ui:Label name="opt-particles-value" text="Cao" class="custom-dropdown-value" />
+                            <ui:Label text="▼" class="custom-dropdown-arrow" />
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                    <ui:VisualElement class="settings-row">
+                        <ui:Label text="HIỆU ỨNG HẬU KỲ (POST-FX)" class="settings-item-label" />
+                        <ui:Toggle name="opt-postfx" label="" value="true" class="checkbox-label" />
                     </ui:VisualElement>
                 </ui:VisualElement>
                 <ui:VisualElement name="tab-controls" class="tab-content hidden-element">
-                    <ui:VisualElement class="form-group">
-                        <ui:VisualElement class="slider-header">
-                            <ui:Label name="lbl-mouse-sens" text="ĐỘ NHẠY CHUỘT" class="form-label" />
+                    <ui:Label text="CHUỘT &amp; BÀN PHÍM" class="settings-section-header" />
+                    <ui:VisualElement class="settings-row">
+                        <ui:Label name="lbl-mouse-sens" text="ĐỘ NHẠY CHUỘT" class="settings-item-label" />
+                        <ui:VisualElement class="settings-slider-wrapper">
+                            <ui:Slider name="slider-sens" low-value="1" high-value="100" value="50" class="custom-slider" />
                             <ui:Label name="val-sens" text="50" class="slider-val" />
                         </ui:VisualElement>
-                        <ui:Slider name="slider-sens" low-value="1" high-value="100" value="50" class="custom-slider" />
                     </ui:VisualElement>
-                    <ui:VisualElement class="checkbox-group-wrapper" style="margin-top: 20px;">
-                        <ui:Toggle name="opt-invert-y" label="ĐẢO TRỤC Y" value="false" class="checkbox-label" />
+                    <ui:VisualElement class="settings-row">
+                        <ui:Label text="ĐẢO NGƯỢC TRỤC Y" class="settings-item-label" />
+                        <ui:Toggle name="opt-invert-y" label="" value="false" class="checkbox-label" />
                     </ui:VisualElement>
-                    <ui:VisualElement class="form-group" style="margin-top: 15px;">
-                        <ui:Label name="lbl-ptt-key" text="PHÍM NHẤN ĐỂ NÓI" class="form-label" />
+                    <ui:VisualElement class="settings-row">
+                        <ui:Label name="lbl-ptt-key" text="PHÍM NHẤN ĐỂ NÓI (PTT)" class="settings-item-label" />
                         <ui:VisualElement name="opt-ptt-key" class="custom-dropdown">
                             <ui:Label name="opt-ptt-key-value" text="V" class="custom-dropdown-value" />
                             <ui:Label text="▼" class="custom-dropdown-arrow" />

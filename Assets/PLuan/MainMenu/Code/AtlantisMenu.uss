@@ -93,11 +93,35 @@
     box-shadow: none !important;
 }
 
-#join-room-panel,
+#join-room-panel {
+    align-self: center;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    width: 1080px;
+    height: 700px !important;
+    max-width: 94%;
+    max-height: 92% !important;
+    padding: 135px 70px 30px 70px !important;
+    background-image: url("project://database/Assets/PLuan/Synty_Popup_05_Exact.png");
+    -unity-background-scale-mode: stretch-to-fill;
+    -unity-slice-left: 200;
+    -unity-slice-right: 200;
+    -unity-slice-top: 100;
+    -unity-slice-bottom: 100;
+    -unity-slice-scale: 0.38;
+    background-color: transparent !important;
+    border-radius: 0 !important;
+    border-width: 0 !important;
+    justify-content: flex-start;
+    align-items: stretch;
+    box-shadow: none !important;
+}
+
 #options-menu-panel {
     align-self: center;
     margin-left: 0 !important;
     margin-right: 0 !important;
+    margin-top: -150px !important;
     width: 1080px;
     height: 700px !important;
     max-width: 94%;
@@ -1058,11 +1082,90 @@
     text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.9);
 }
 
-.checkbox-group-wrapper {
+/* --- SETTINGS ROWS & SECTIONS --- */
+.settings-section-header {
+    font-size: 15px;
+    -unity-font-style: bold;
+    color: rgb(255, 215, 110);
+    letter-spacing: 2px;
+    margin-top: 14px;
+    margin-bottom: 8px;
+    border-bottom-width: 1px;
+    border-bottom-color: rgba(255, 215, 110, 0.25);
+    padding-bottom: 4px;
+    text-shadow: 0 0 8px rgba(255, 200, 50, 0.6);
+}
+
+.settings-row {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    min-height: 48px;
+    margin-bottom: 8px;
+    padding: 6px 18px;
+    background-color: rgba(0, 18, 32, 0.45);
+    border-radius: 4px;
+    border-width: 1px;
+    border-color: rgba(0, 190, 255, 0.15);
+    transition: all 0.2s ease-out;
+}
+
+.settings-row:hover {
+    background-color: rgba(0, 190, 255, 0.08);
+    border-color: rgba(0, 220, 255, 0.4);
+}
+
+.settings-item-label {
+    font-size: 14px;
+    -unity-font-style: bold;
+    color: rgb(180, 225, 250);
+    letter-spacing: 1.5px;
+    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.9);
+    flex-grow: 1;
+    margin-right: 15px;
+}
+
+.settings-row:hover .settings-item-label {
+    color: rgb(255, 255, 255);
+    text-shadow: 0 0 8px rgba(0, 220, 255, 0.7);
+}
+
+.settings-slider-wrapper {
     flex-direction: row;
     align-items: center;
-    margin-top: 10px;
-    margin-bottom: 12px;
+    justify-content: flex-end;
+    width: 320px;
+}
+
+.settings-slider-wrapper .custom-slider {
+    width: 240px;
+    margin-right: 12px;
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+.settings-slider-wrapper .slider-val {
+    width: 50px;
+    -unity-text-align: middle-right;
+    color: rgb(255, 215, 100);
+    font-size: 14px;
+    -unity-font-style: bold;
+    letter-spacing: 1px;
+    text-shadow: 0 0 8px rgba(255, 200, 50, 0.8);
+}
+
+.settings-row .custom-dropdown {
+    width: 300px;
+    height: 42px;
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+.settings-row .checkbox-label {
+    margin-right: 0;
+    margin-top: 0;
+    margin-bottom: 0;
 }
 
 .checkbox-label {
