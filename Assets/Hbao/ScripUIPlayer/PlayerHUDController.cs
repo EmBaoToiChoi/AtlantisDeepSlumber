@@ -483,7 +483,7 @@ public class PlayerHUDController : MonoBehaviour
             hpCatchUp.style.left = 0;
             hpCatchUp.style.top = 0;
             hpCatchUp.style.bottom = 0;
-            hpCatchUp.style.backgroundColor = new Color(0.85f, 0.15f, 0.15f, 0.75f);
+            hpCatchUp.style.backgroundColor = new Color(0.96f, 0.96f, 1.0f, 0.88f);
             hpCatchUp.style.width = Length.Percent(100f);
             
             var hpTrack = hpFill.parent;

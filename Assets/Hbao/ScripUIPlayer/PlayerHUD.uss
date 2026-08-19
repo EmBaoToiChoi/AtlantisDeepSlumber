@@ -149,7 +149,7 @@
 }
 
 .hp-fill {
-    background-color: rgb(240, 245, 255);
+    background-color: rgb(235, 45, 45);
     border-radius: 0;
 }
 
