@@ -59,23 +59,27 @@
     </ui:VisualElement>
     <ui:VisualElement class="hud-weapons-wrapper" style="-unity-font-definition: url(&quot;project://database/Assets/UI%20Toolkit/UnityThemes/UnityDefaultRuntimeTheme.tss?fileID=2230732570650464555&amp;guid=8dcf67e479d58bd47908bf0d5e1cc1d0&amp;type=3#NotInter-Regular&quot;);">
         <ui:VisualElement name="weapon-slot-1" class="weapon-slot weapon-active">
+            <ui:VisualElement class="weapon-slot-bg" />
+            <ui:VisualElement class="weapon-slot-frame" />
             <ui:VisualElement class="weapon-hotkey-wrapper">
                 <ui:VisualElement class="weapon-hotkey-container">
                     <ui:Label text="1" class="weapon-hotkey" />
                 </ui:VisualElement>
             </ui:VisualElement>
-            <ui:VisualElement name="weapon-img-1" class="weapon-image" style="background-image: url(&quot;project://database/Assets/Hbao/Image/N%E1%BA%A5m%20%C4%91%E1%BA%A5m.png?fileID=2800000&amp;guid=14531db39fa39224290fb66a20930bcc&amp;type=3#Nấm đấm&quot;); width: 168px; height: 75px; top: -10px; right: 20px;" />
+            <ui:VisualElement name="weapon-img-1" class="weapon-image" style="background-image: url(&quot;project://database/Assets/Hbao/Image/N%E1%BA%A5m%20%C4%91%E1%BA%A5m.png?fileID=2800000&amp;guid=14531db39fa39224290fb66a20930bcc&amp;type=3#Nấm đấm&quot;);" />
             <ui:VisualElement name="weapon-durability-slot-1" class="weapon-durability-container">
                 <ui:VisualElement name="weapon-durability-fill-1" class="weapon-durability-fill" />
             </ui:VisualElement>
         </ui:VisualElement>
         <ui:VisualElement name="weapon-slot-2" class="weapon-slot weapon-inactive">
+            <ui:VisualElement class="weapon-slot-bg" />
+            <ui:VisualElement class="weapon-slot-frame" />
             <ui:VisualElement class="weapon-hotkey-wrapper">
                 <ui:VisualElement class="weapon-hotkey-container">
                     <ui:Label text="2" class="weapon-hotkey" />
                 </ui:VisualElement>
             </ui:VisualElement>
-            <ui:VisualElement name="weapon-img-2" class="weapon-image" style="background-image: url(&quot;project://database/Assets/Hbao/Image/VukhiPLayer1.png?fileID=2800000&amp;guid=e5e54aaec41889f4383d000dfe69d050&amp;type=3#VukhiPLayer1&quot;); height: 97px; width: 207px; top: -15px; right: -17px;" />
+            <ui:VisualElement name="weapon-img-2" class="weapon-image" style="background-image: url(&quot;project://database/Assets/Hbao/Image/VukhiPLayer1.png?fileID=2800000&amp;guid=e5e54aaec41889f4383d000dfe69d050&amp;type=3#VukhiPLayer1&quot;);" />
             <ui:VisualElement name="weapon-lock-2" class="weapon-lock-overlay">
                 <ui:VisualElement class="weapon-lock-icon" />
             </ui:VisualElement>
