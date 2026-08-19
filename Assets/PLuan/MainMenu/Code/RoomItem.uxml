@@ -1,21 +1,16 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
-    <Style src="./RoomItem.uss" />
-    <ui:VisualElement class="room-item">
+    <Style src="project://database/Assets/PLuan/MainMenu/Code/RoomItem.uss?fileID=7433441132597879392&amp;guid=3578b906d682d1c41b17242b312becc3&amp;type=3#RoomItem" />
+    <ui:VisualElement class="room-item" style="-unity-font-definition: url(&quot;project://database/Assets/PLuan/MainMenu/Font/Philosopher-Vietnamese.ttf?fileID=12800000&amp;guid=8a2ed09dfc3a8024fa0bb345576c06bd&amp;type=3#Philosopher-Vietnamese&quot;);">
         <ui:VisualElement class="room-col col-id">
             <ui:Label name="lbl-room-id" text="#XXXXXX" />
         </ui:VisualElement>
-        
         <ui:Label name="lbl-room-name" text="ATLANTIS EXPLORER" class="room-col col-name" />
-        
         <ui:VisualElement class="room-col col-host">
             <ui:Label name="lbl-host-name" text="HOANG" />
         </ui:VisualElement>
-
         <ui:Label name="lbl-players" text="1/4" class="room-col col-players" />
-        
         <ui:VisualElement class="room-col col-action">
             <ui:Button name="btn-join-room" text="VÀO" class="join-mini-btn" />
         </ui:VisualElement>
     </ui:VisualElement>
-
 </ui:UXML>

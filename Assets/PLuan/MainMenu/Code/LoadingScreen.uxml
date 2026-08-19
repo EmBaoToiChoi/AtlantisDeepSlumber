@@ -1,23 +1,16 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
-    <Style src="./LoadingScreen.uss" />
-    <ui:VisualElement name="loading-root" class="loading-overlay hidden-element">
-        <!-- Lớp hiển thị Video Nền -->
+    <Style src="project://database/Assets/PLuan/MainMenu/Code/LoadingScreen.uss?fileID=7433441132597879392&amp;guid=16fec774ac0a2664786a81c05ba98aa4&amp;type=3#LoadingScreen" />
+    <ui:VisualElement name="loading-root" class="loading-overlay hidden-element" style="-unity-font-definition: url(&quot;project://database/Assets/PLuan/MainMenu/Font/Philosopher-Vietnamese.ttf?fileID=12800000&amp;guid=8a2ed09dfc3a8024fa0bb345576c06bd&amp;type=3#Philosopher-Vietnamese&quot;);">
         <ui:VisualElement name="loading-video-bg" class="loading-video-bg" />
-        
-        <!-- Lớp phủ Gradient Vignette làm dịu nền và tôn chữ -->
         <ui:VisualElement class="loading-scrim" />
-
-        <!-- Cụm Nội Dung Loading Đặt Ở Dưới Đáy Màn Hình (Không Khung Viền) -->
         <ui:VisualElement class="loading-content">
             <ui:Label name="lbl-loading-title" text="ĐANG TẢI MÔI TRƯỜNG..." class="loading-title" />
-            
             <ui:VisualElement class="progress-section">
                 <ui:VisualElement class="progress-container">
                     <ui:VisualElement name="progress-fill" class="progress-fill" />
                 </ui:VisualElement>
                 <ui:Label name="lbl-progress-percent" text="0%" class="loading-percent" />
             </ui:VisualElement>
-
             <ui:VisualElement class="status-box">
                 <ui:VisualElement class="pulse-indicator" />
                 <ui:Label name="lbl-status" text="Đang kết nối vào thế giới biển sâu..." class="loading-status" />
