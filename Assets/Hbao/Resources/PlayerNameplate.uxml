@@ -1,8 +1,12 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
-    <Style src="project://database/Assets/Hbao/Resources/PlayerNameplate.uss" />
+    <Style src="project://database/Assets/Hbao/Resources/PlayerNameplate.uss?fileID=7433441132597879392&amp;guid=f7097b450d4641846abd87c2f65a4853&amp;type=3#PlayerNameplate" />
     <ui:VisualElement name="nameplate-container" class="nameplate-container">
         <ui:VisualElement class="nameplate-wrapper">
-            <ui:Label name="player-name-label" class="player-name-label" text="Nhà thám hiểm" />
+            <ui:VisualElement class="nameplate-box">
+                <ui:VisualElement class="nameplate-bg" style="background-image: url(&quot;project://database/Assets/Synty/InterfaceFantasyMenus/Sprites/FantasyMenus/SPR_FantasyMenus_Menu_Button_12_Background.png?fileID=2800000&amp;guid=387518e5d920c4b4c9219d74a5729311&amp;type=3#SPR_FantasyMenus_Menu_Button_12_Background&quot;);" />
+                <ui:VisualElement class="nameplate-frame" style="background-image: url(&quot;project://database/Assets/Hbao/Image/SPR_FantasyMenus_Nameplate_Frame_12_Clean.png?fileID=2800000&amp;guid=7e9a0123bc456789de0123456789ef12&amp;type=3#SPR_FantasyMenus_Nameplate_Frame_12_Clean&quot;);" />
+                <ui:Label name="player-name-label" class="player-name-label" text="Nhà thám hiểm" />
+            </ui:VisualElement>
             <ui:Label name="nameplate-arrow" class="nameplate-arrow" text="▼" />
         </ui:VisualElement>
     </ui:VisualElement>
