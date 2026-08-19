@@ -1,10 +1,6 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
     <Style src="project://database/Assets/Hbao/ScripUIPlayer/PlayerHUD.uss?fileID=7433441132597879392&amp;guid=70193741e3d26714d859986fce3cd4df&amp;type=3#PlayerHUD" />
     <ui:VisualElement class="hud-main-wrapper" style="-unity-font-definition: url(&quot;project://database/Assets/UI%20Toolkit/UnityThemes/UnityDefaultRuntimeTheme.tss?fileID=2230732570650464555&amp;guid=8dcf67e479d58bd47908bf0d5e1cc1d0&amp;type=3#NotInter-Regular&quot;);">
-        <ui:VisualElement class="player-avatar-container">
-            <ui:VisualElement name="raw-player-image" class="raw-player-image" style="background-image: url(&quot;project://database/Assets/Hbao/Image/AvaTank%201.png?fileID=2800000&amp;guid=de3ea96bb0f48a849a95ad6f16c7f5f1&amp;type=3#AvaTank 1&quot;);" />
-            <ui:VisualElement class="player-avatar-border" style="background-image: url(&quot;project://database/Assets/Synty/InterfaceFantasyMenus/Sprites/FantasyMenus/SPR_FantasyMenus_Frame_Hexagon_01.png?fileID=2800000&amp;guid=3a8ac9a83f434884fb081391eb919721&amp;type=3#SPR_FantasyMenus_Frame_Hexagon_01&quot;);" />
-        </ui:VisualElement>
         <ui:VisualElement class="stats-wrapper">
             <ui:Label name="hud-level-label" text="Lv. 15" class="level-label" />
             <ui:VisualElement class="stat-bar-container hp-bar-container">
@@ -41,6 +37,10 @@
                 <ui:VisualElement class="stat-bar-frame" style="background-image: url(&quot;project://database/Assets/Synty/InterfaceFantasyMenus/Sprites/FantasyMenus/SPR_FantasyMenus_Menu_Button_16_Frame.png?fileID=2800000&amp;guid=30899411b4447044da0027e0c416bba6&amp;type=3#SPR_FantasyMenus_Menu_Button_16_Frame&quot;);" />
             </ui:VisualElement>
             <ui:VisualElement name="mic-icon" class="mic-icon-base mic-off" />
+        </ui:VisualElement>
+        <ui:VisualElement class="player-avatar-container">
+            <ui:VisualElement name="raw-player-image" class="raw-player-image" style="background-image: url(&quot;project://database/Assets/Hbao/Image/AvaTank%201.png?fileID=2800000&amp;guid=de3ea96bb0f48a849a95ad6f16c7f5f1&amp;type=3#AvaTank 1&quot;);" />
+            <ui:VisualElement class="player-avatar-border" style="background-image: url(&quot;project://database/Assets/Synty/InterfaceFantasyMenus/Sprites/FantasyMenus/SPR_FantasyMenus_Frame_Hexagon_01.png?fileID=2800000&amp;guid=3a8ac9a83f434884fb081391eb919721&amp;type=3#SPR_FantasyMenus_Frame_Hexagon_01&quot;);" />
         </ui:VisualElement>
     </ui:VisualElement>
     <ui:VisualElement name="minimap-container" class="minimap-wrapper">
@@ -262,16 +262,16 @@
     </ui:VisualElement>
     <ui:VisualElement name="quest-spotlight-backdrop" class="quest-spotlight-backdrop" />
     <ui:VisualElement name="quest-panel" class="quest-panel">
-        <ui:VisualElement name="quest-glow-aura" class="quest-glow-aura" style="background-image: url(&quot;project://database/Assets/Synty/InterfaceFantasyMenus/Sprites/FantasyMenus/SPR_FantasyMenus_Menu_Item_06_Glow.png?fileID=2800000&amp;guid=23ef9b2def9666f468f8465c3a872806&amp;type=3#SPR_FantasyMenus_Menu_Item_06_Glow&quot;);" />
+        <ui:VisualElement name="quest-glow-aura" class="quest-glow-aura" style="background-image: url(&quot;project://database/Assets/Hbao/Image/SPR_FantasyMenus_Quest_Glow_Bloom.png?fileID=2800000&amp;guid=8a4f129d3c509811ab910248c18f5901&amp;type=3#SPR_FantasyMenus_Quest_Glow_Bloom&quot;);" />
         <ui:VisualElement name="quest-pointer-left" class="quest-pointer-left" style="background-image: url(&quot;project://database/Assets/Hbao/Image/SPR_FantasyMenus_Menu_Item_06_Right.png?fileID=2800000&amp;guid=e5c039d6a9456100b6ac03948c13f413&amp;type=3#SPR_FantasyMenus_Menu_Item_06_Right&quot;);" />
-        <ui:VisualElement name="quest-pointer-bottom" class="quest-pointer-bottom" style="background-image: url(&quot;project://database/Assets/Synty/InterfaceFantasyMenus/Sprites/FantasyMenus/SPR_FantasyMenus_Menu_Item_06_Top.png?fileID=2800000&amp;guid=9647ebd05f62fb94b85b6b2a0ca51cdd&amp;type=3#SPR_FantasyMenus_Menu_Item_06_Top&quot;);" />
+        <ui:VisualElement name="quest-pointer-bottom" class="quest-pointer-bottom" style="background-image: url(&quot;project://database/Assets/Hbao/Image/SPR_FantasyMenus_Menu_Item_06_Up.png?fileID=2800000&amp;guid=f7d140e8b0567211c7bd14059d24e524&amp;type=3#SPR_FantasyMenus_Menu_Item_06_Up&quot;);" />
         <ui:VisualElement class="quest-bg" style="background-image: url(&quot;project://database/Assets/Hbao/Image/SPR_FantasyMenus_Frame_Popup_03_Stitched_Bg.png?fileID=2800000&amp;guid=d4b928c5f8345099a5fb92837b02e302&amp;type=3#SPR_FantasyMenus_Frame_Popup_03_Stitched_Bg&quot;);" />
         <ui:VisualElement class="quest-frame-border" style="background-image: url(&quot;project://database/Assets/Hbao/Image/SPR_FantasyMenus_Frame_Popup_03_Stitched.png?fileID=2800000&amp;guid=c3a819b4e723498894fa81726a91d201&amp;type=3#SPR_FantasyMenus_Frame_Popup_03_Stitched&quot;);" />
         <ui:VisualElement class="quest-header">
             <ui:VisualElement class="quest-icon" />
             <ui:Label text="NHIỆM VỤ" class="quest-title" />
         </ui:VisualElement>
-        <ui:VisualElement class="quest-divider" style="background-image: url(&quot;project://database/Assets/Synty/InterfaceFantasyMenus/Sprites/FantasyMenus/SPR_FantasyMenus_Scrollbar_Horizontal_02_Frame.png?fileID=2800000&amp;guid=829af3902d2aa2e408d7233ccf1697d9&amp;type=3#SPR_FantasyMenus_Scrollbar_Horizontal_02_Frame&quot;);" />
+        <ui:VisualElement class="quest-divider" style="background-image: url(&quot;project://database/Assets/Hbao/Image/SPR_FantasyMenus_Menu_Item_03_Divider.png?fileID=2800000&amp;guid=6f8b91a2e3456789ab0123456789cd03&amp;type=3#SPR_FantasyMenus_Menu_Item_03_Divider&quot;);" />
         <ui:VisualElement class="quest-details">
             <ui:Label name="quest-description" text="Thu thập 16 thanh gỗ" class="quest-desc" />
             <ui:VisualElement class="quest-progress-row">
