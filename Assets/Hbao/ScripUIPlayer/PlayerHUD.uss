@@ -276,111 +276,99 @@
 }
 
 .hud-weapons-wrapper {
+    position: absolute;
+    bottom: 25px;
+    right: 20px;
     flex-direction: column;
     align-items: flex-end;
-    position: absolute;
-    bottom: 40px;
-    right: 30px;
     background-color: transparent;
+    border-width: 0;
     padding: 0;
-    border-radius: 0;
 }
 
 .weapon-slot {
-    width: 210px;
-    height: 63px;
-    border-radius: 9px;
-    background-color: rgba(15, 25, 40, 0.35);
-    border-width: 1.5px;
-    border-color: rgba(150, 150, 150, 0.8);
-    margin-top: 10px;
+    width: 320px;
+    height: 112px;
+    background-color: transparent;
+    border-width: 0;
+    border-radius: 0;
+    margin-top: 0;
     position: relative;
-    overflow: hidden;
-    transition-property: scale, opacity, border-color, box-shadow, background-color;
-    transition-duration: 0.3s;
+    overflow: visible;
+    transition-property: scale, opacity;
+    transition-duration: 0.25s;
     transition-timing-function: ease-out;
+}
+
+.weapon-slot-bg {
+    display: none;
+}
+
+.weapon-slot-frame {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: url("project://database/Assets/Hbao/Image/SPR_FantasyMenus_Menu_Button_14_Frame_Stitched.png?fileID=2800000&guid=e14a0123bc456789de0123456789ef14&type=3#SPR_FantasyMenus_Menu_Button_14_Frame_Stitched");
+    -unity-background-scale-mode: stretch-to-fill;
+    pointer-events: none;
+    z-index: 5;
+}
+
+.weapon-active {
+    scale: 1.05 1.05;
+    opacity: 1;
+}
+
+.weapon-inactive {
+    scale: 0.88 0.88;
+    opacity: 0.45;
 }
 
 .weapon-hotkey-wrapper {
     position: absolute;
-    top: 6px;
-    left: 8px;
-    width: 22px;
-    height: 22px;
-    background-color: rgba(0, 0, 0, 0);
+    top: 50%;
+    translate: 0 -50%;
+    left: 26px;
+    width: 30px;
+    height: 30px;
+    background-color: transparent;
     border-width: 0;
     justify-content: center;
     align-items: center;
+    z-index: 10;
 }
 
 .weapon-hotkey-container {
-    position: relative;
-    width: 22px;
-    height: 22px;
-    background-color: rgba(255, 255, 255, 0.18);
-    border-radius: 6px;
+    width: 30px;
+    height: 30px;
+    background-color: rgba(10, 14, 24, 0.88);
+    border-radius: 4px;
     border-width: 1.5px;
-    border-color: rgba(255, 255, 255, 0.95);
+    border-color: rgba(255, 215, 120, 0.95);
     justify-content: center;
     align-items: center;
 }
 
 .weapon-hotkey {
-    color: rgb(10, 10, 10);
+    color: rgb(255, 255, 255);
     -unity-font-style: bold;
-    font-size: 11px;
-    -unity-text-outline-width: 0;
+    font-size: 15px;
     padding: 0;
     margin: 0;
-}
-
-.weapon-ammo-text {
-    position: absolute;
-    bottom: 12px;
-    left: 15px;
-    color: rgba(255, 255, 255, 0.85);
-    font-size: 26px;
-    -unity-font-style: bold;
-    padding: 0;
-    margin: 0;
-}
-
-.weapon-durability-bar {
-    position: absolute;
-    bottom: 8px;
-    left: 110px;
-    right: 15px;
-    height: 4px;
-    flex-direction: row;
-}
-
-.durability-segment {
-    flex-grow: 1;
-    height: 100%;
-    background-color: rgba(192, 192, 192, 0.5);
-    margin-right: 4px;
+    text-shadow: 0 0 4px rgba(0, 0, 0, 0.9);
 }
 
 .weapon-image {
     position: absolute;
-    top: 5px;
-    right: 15px;
-    width: 180px;
-    height: 80px;
+    top: 46%;
+    left: 54%;
+    translate: -50% -50%;
+    width: 160px;
+    height: 62px;
     -unity-background-scale-mode: scale-to-fit;
-}
-
-.weapon-active {
-    scale: 1.15 1.15;
-    opacity: 1;
-    background-color: rgba(20, 35, 55, 0.5);
-    border-color: rgba(170, 170, 170, 0.9);
-}
-
-.weapon-inactive {
-    scale: 0.85 0.85;
-    opacity: 0.35;
-    border-color: rgba(100, 100, 100, 0.3);
+    z-index: 3;
 }
 
 .hud-skills-wrapper {
@@ -1060,13 +1048,14 @@
 
 .weapon-durability-container {
     position: absolute;
-    bottom: 4px;
-    left: 14px;
-    right: 14px;
-    height: 4px;
-    background-color: rgba(255, 255, 255, 0.15);
+    bottom: 37px;
+    left: 75px;
+    right: 55px;
+    height: 4.5px;
+    background-color: rgba(255, 255, 255, 0.2);
     border-radius: 2px;
     overflow: hidden;
+    z-index: 15;
 }
 
 #weapon-durability-slot-1 {
