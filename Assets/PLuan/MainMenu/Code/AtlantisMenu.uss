@@ -54,8 +54,8 @@
 
 #main-menu-panel {
     position: absolute;
-    bottom: 45px;
-    left: 0;
+    bottom: 50px;
+    left: 70;
     right: 0;
     width: 100%;
     height: auto;
@@ -74,22 +74,24 @@
     width: auto;
     align-items: center;
     justify-content: center;
-    padding: 10px 20px;
+    padding: 0;
+    margin-left: 40px;
 }
 
 #main-menu-panel .menu-btn {
-    width: 280px;
-    height: 64px;
-    margin: 0 15px;
-    padding: 0 20px;
-    font-size: 22px;
-    letter-spacing: 3px;
-    color: rgb(160, 225, 255);
+    width: 260px;
+    height: 68px;
+    margin: 0 14px;
+    padding: 0 15px;
+    font-size: 26px !important;
+    -unity-font-style: bold;
+    letter-spacing: 3.5px;
+    color: rgb(235, 245, 255) !important;
     background-color: transparent !important;
     background-image: none !important;
     border-width: 0 !important;
     border-radius: 0 !important;
-    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.95);
+    text-shadow: 0 0 12px rgba(0, 180, 255, 0.7), 2px 2px 5px rgba(0, 0, 0, 0.95);
     -unity-text-align: middle-center;
     justify-content: center;
     align-items: center;
@@ -98,33 +100,34 @@
 }
 
 #main-menu-panel .menu-btn:hover {
-    scale: 1.08 1.08;
-    letter-spacing: 6px;
-    color: rgb(255, 255, 255);
+    scale: 1.06 1.06;
+    letter-spacing: 5px;
+    color: rgb(255, 255, 255) !important;
     background-image: url("project://database/Assets/Synty/InterfaceFantasyMenus/Sprites/FantasyMenus/SPR_FantasyMenus_Menu_Button_06_Frame.png") !important;
     -unity-background-scale-mode: stretch-to-fill;
     -unity-slice-left: 500;
     -unity-slice-right: 500;
     -unity-slice-top: 0;
     -unity-slice-bottom: 0;
-    -unity-slice-scale: 0.38;
-    text-shadow: 0 0 16px rgba(0, 240, 255, 1), 1px 1px 3px rgba(0, 0, 0, 1);
+    -unity-slice-scale: 0.36;
+    text-shadow: 0 0 22px rgba(0, 240, 255, 1), 0 0 8px rgba(255, 255, 255, 0.9), 2px 2px 4px rgba(0, 0, 0, 1);
 }
 
 #main-menu-panel .quit-btn {
-    color: rgb(255, 175, 175);
+    color: rgb(255, 160, 160) !important;
+    text-shadow: 0 0 12px rgba(255, 60, 60, 0.7), 2px 2px 5px rgba(0, 0, 0, 0.95);
 }
 
 #main-menu-panel .quit-btn:hover {
-    color: rgb(255, 255, 255);
+    color: rgb(255, 255, 255) !important;
     background-image: url("project://database/Assets/Synty/InterfaceFantasyMenus/Sprites/FantasyMenus/SPR_FantasyMenus_Menu_Button_06_Frame.png") !important;
     -unity-background-scale-mode: stretch-to-fill;
     -unity-slice-left: 500;
     -unity-slice-right: 500;
     -unity-slice-top: 0;
     -unity-slice-bottom: 0;
-    -unity-slice-scale: 0.38;
-    text-shadow: 0 0 16px rgba(255, 80, 80, 1), 1px 1px 3px rgba(0, 0, 0, 1);
+    -unity-slice-scale: 0.36;
+    text-shadow: 0 0 22px rgba(255, 70, 70, 1), 0 0 8px rgba(255, 255, 255, 0.9), 2px 2px 4px rgba(0, 0, 0, 1);
 }
 
 #join-room-panel {
@@ -1044,64 +1047,138 @@
     font-size: 20px;
     -unity-font-style: bold;
 }
+/* =========================================================================
+   TOP-RIGHT PLAYER PROFILE (SYNTY SECTION BREAK 01 TOP & BOTTOM - VERTICAL)
+   ========================================================================= */
 .user-profile-box {
     position: absolute;
     top: 25px;
-    right: 35px;
-    width: 320px; /* Increased from 300px to scale up frame and expand safe area */
-    height: 230px; /* Increased from 200px to push top/bottom borders away from text */
-    -unity-background-scale-mode: stretch-to-fill;
-    background-color: transparent !important;
-    border-width: 0 !important;
-    border-radius: 0 !important;
-    padding: 32px 25px 28px 25px; /* Larger top/bottom padding to push elements away from ornate gold borders */
+    right: 40px;
+    width: 250px;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
+    background-color: transparent !important;
+    background-image: none !important;
+    border-width: 0 !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
     box-shadow: none !important;
+    transition: all 0.3s ease-out;
 }
+
+.section-break-bar {
+    width: 100%;
+    height: 16px;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+}
+
+.section-break-top {
+    margin-bottom: 6px;
+}
+
+.section-break-bottom {
+    margin-top: 4px;
+}
+
+.section-break-top-left {
+    flex-grow: 1;
+    height: 100%;
+    background-image: url("project://database/Assets/Synty/InterfaceFantasyMenus/Sprites/FantasyMenus/SPR_FantasyMenus_Frame_Bar_01_Top_Left.png");
+    -unity-background-scale-mode: stretch-to-fill;
+}
+
+.section-break-top-right {
+    flex-grow: 1;
+    height: 100%;
+    background-image: url("project://database/Assets/Synty/InterfaceFantasyMenus/Sprites/FantasyMenus/SPR_FantasyMenus_Frame_Bar_01_Top_Right.png");
+    -unity-background-scale-mode: stretch-to-fill;
+}
+
+.section-break-bottom-left {
+    flex-grow: 1;
+    height: 100%;
+    background-image: url("project://database/Assets/Synty/InterfaceFantasyMenus/Sprites/FantasyMenus/SPR_FantasyMenus_Frame_Bar_01_Bottom_Left.png");
+    -unity-background-scale-mode: stretch-to-fill;
+}
+
+.section-break-bottom-right {
+    flex-grow: 1;
+    height: 100%;
+    background-image: url("project://database/Assets/Synty/InterfaceFantasyMenus/Sprites/FantasyMenus/SPR_FantasyMenus_Frame_Bar_01_Bottom_Right.png");
+    -unity-background-scale-mode: stretch-to-fill;
+}
+
 .user-profile-label {
-    color: rgb(143, 223, 255); /* Hex #8FDFFF icy cyan */
-    font-size: 20px; /* Exact size requested */
-    letter-spacing: 1.5px;
-    margin: 0 0 4px 0; /* Tight margins for centered grouping */
+    color: rgb(160, 225, 255);
+    font-size: 11px !important;
+    letter-spacing: 2.5px;
+    margin: 0 0 2px 0;
     padding: 0;
     -unity-font-style: bold;
-    -unity-text-outline-width: 1px;
-    -unity-text-outline-color: rgb(0, 0, 0);
-    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.95);
+    text-shadow: 0 0 8px rgba(0, 180, 255, 0.7), 2px 2px 4px rgba(0, 0, 0, 1);
+    -unity-text-align: middle-center;
 }
+
 .user-profile-name {
-    color: rgb(255, 255, 255); /* Pure white */
-    font-size: 34px; /* Exact size requested */
-    -unity-font-style: bold-and-italic; /* Bold and italic requested */
-    letter-spacing: 1px;
+    color: rgb(255, 225, 120); /* Luminous Imperial Gold */
+    font-size: 26px !important;
+    -unity-font-style: bold;
+    letter-spacing: 2px;
     margin: 0 0 6px 0;
     padding: 0;
-    -unity-text-outline-width: 1.2px;
-    -unity-text-outline-color: rgb(0, 0, 0);
-    text-shadow: 1.5px 1.5px 2px rgba(0, 0, 0, 0.95);
+    text-shadow: 0 0 16px rgba(255, 200, 50, 0.85), 2px 2px 4px rgba(0, 0, 0, 1);
+    -unity-text-align: middle-center;
 }
+
 .logout-btn {
+    width: 140px;
+    height: 36px;
     margin: 0;
-    padding: 4px 12px !important;
-    font-size: 18px !important; /* Exact size requested */
+    padding: 0 5px !important;
+    font-size: 13px !important;
+    letter-spacing: 2px;
+    color: rgb(255, 160, 160) !important;
     background-color: transparent !important;
+    background-image: none !important;
     border-width: 0 !important;
-    color: rgb(143, 223, 255) !important; /* Hex #8FDFFF icy cyan */
+    border-radius: 0 !important;
     -unity-font-style: bold;
-    -unity-text-outline-width: 1px !important; /* Sharp outline to stand out on bright background rays */
-    -unity-text-outline-color: rgb(0, 0, 0) !important;
-    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.95);
-    transition: all 0.2s ease-out;
+    text-shadow: 0 0 8px rgba(255, 60, 60, 0.7), 2px 2px 4px rgba(0, 0, 0, 1);
+    transition: all 0.25s ease-out;
+    cursor: link;
+    -unity-text-align: middle-center;
+    justify-content: center;
+    align-items: center;
 }
+
 .logout-btn:hover {
-    background-color: transparent !important;
-    border-width: 0 !important;
-    color: rgb(255, 255, 255) !important; /* White on hover */
+    color: rgb(255, 255, 255) !important;
     scale: 1.08 1.08;
-    -unity-text-outline-width: 1px !important;
-    -unity-text-outline-color: rgb(0, 0, 0) !important;
-    text-shadow: 0 0 10px rgba(0, 255, 255, 0.85) !important; /* Soft cyan glow on hover */
+    letter-spacing: 3px;
+    background-image: url("project://database/Assets/Synty/InterfaceFantasyMenus/Sprites/FantasyMenus/SPR_FantasyMenus_Menu_Button_06_Frame.png") !important;
+    -unity-background-scale-mode: stretch-to-fill;
+    -unity-slice-left: 500;
+    -unity-slice-right: 500;
+    -unity-slice-top: 0;
+    -unity-slice-bottom: 0;
+    -unity-slice-scale: 0.24;
+    text-shadow: 0 0 14px rgba(255, 80, 80, 1), 2px 2px 4px rgba(0, 0, 0, 1) !important;
+}
+
+.version-text {
+    position: absolute;
+    bottom: 16px;
+    left: 25px;
+    color: rgba(140, 200, 240, 0.45);
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    -unity-font-style: bold;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.95);
+    margin: 0;
+    padding: 0;
 }
 
 .spam-note {

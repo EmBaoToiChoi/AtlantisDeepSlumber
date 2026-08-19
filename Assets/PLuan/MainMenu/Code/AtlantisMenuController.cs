@@ -204,8 +204,11 @@ public class AtlantisMenuController : MonoBehaviour
             });
         }
 
-        _root.Q<Button>("btn-create-back").clicked += () => ShowPanel(_networkMenuPanel);
-        _root.Q<Button>("btn-confirm-create").clicked += ConfirmCreateRoom;
+        var btnCreateBack = _root.Q<Button>("btn-create-back");
+        if (btnCreateBack != null) btnCreateBack.clicked += () => ShowPanel(_networkMenuPanel);
+
+        var btnConfirmCreate = _root.Q<Button>("btn-confirm-create");
+        if (btnConfirmCreate != null) btnConfirmCreate.clicked += ConfirmCreateRoom;
 
         // btn-leave-room và btn-start-game đã chuyển sang WaittingRoom script quản lý UI riêng
 
@@ -906,10 +909,10 @@ public class AtlantisMenuController : MonoBehaviour
         var tabGraphics = _root.Q<VisualElement>("tab-graphics");
         var tabControls = _root.Q<VisualElement>("tab-controls");
 
-        tabGeneralBtn.clicked += () => SwitchTab(tabGeneralBtn, tabGeneral);
-        tabAudioBtn.clicked += () => SwitchTab(tabAudioBtn, tabAudio);
-        tabGraphicsBtn.clicked += () => SwitchTab(tabGraphicsBtn, tabGraphics);
-        tabControlsBtn.clicked += () => SwitchTab(tabControlsBtn, tabControls);
+        if (tabGeneralBtn != null) tabGeneralBtn.clicked += () => SwitchTab(tabGeneralBtn, tabGeneral);
+        if (tabAudioBtn != null) tabAudioBtn.clicked += () => SwitchTab(tabAudioBtn, tabAudio);
+        if (tabGraphicsBtn != null) tabGraphicsBtn.clicked += () => SwitchTab(tabGraphicsBtn, tabGraphics);
+        if (tabControlsBtn != null) tabControlsBtn.clicked += () => SwitchTab(tabControlsBtn, tabControls);
     }
 
     private async void SwitchTab(Button activeBtn, VisualElement activeContent)
@@ -1558,15 +1561,29 @@ public class AtlantisMenuController : MonoBehaviour
     // =========================================================================
     private void BindAuthEvents()
     {
-        _root.Q<Button>("btn-goto-register").clicked += () => ShowPanel(_registerPanel);
-        _root.Q<Button>("btn-goto-login").clicked += () => ShowPanel(_loginPanel);
-        _root.Q<Button>("btn-cancel-otp").clicked += () => ShowPanel(_loginPanel);
-        _root.Q<Button>("btn-logout").clicked += DoLogout;
+        var btnGotoReg = _root.Q<Button>("btn-goto-register");
+        if (btnGotoReg != null) btnGotoReg.clicked += () => ShowPanel(_registerPanel);
 
-        _root.Q<Button>("btn-login").clicked += DoLogin;
-        _root.Q<Button>("btn-register").clicked += DoRegister;
-        _root.Q<Button>("btn-verify-otp").clicked += DoVerifyOTP;
-        _root.Q<Button>("btn-resend-otp").clicked += DoResendOTP;
+        var btnGotoLogin = _root.Q<Button>("btn-goto-login");
+        if (btnGotoLogin != null) btnGotoLogin.clicked += () => ShowPanel(_loginPanel);
+
+        var btnCancelOtp = _root.Q<Button>("btn-cancel-otp");
+        if (btnCancelOtp != null) btnCancelOtp.clicked += () => ShowPanel(_loginPanel);
+
+        var btnLogout = _root.Q<Button>("btn-logout");
+        if (btnLogout != null) btnLogout.clicked += DoLogout;
+
+        var btnLogin = _root.Q<Button>("btn-login");
+        if (btnLogin != null) btnLogin.clicked += DoLogin;
+
+        var btnRegister = _root.Q<Button>("btn-register");
+        if (btnRegister != null) btnRegister.clicked += DoRegister;
+
+        var btnVerifyOtp = _root.Q<Button>("btn-verify-otp");
+        if (btnVerifyOtp != null) btnVerifyOtp.clicked += DoVerifyOTP;
+
+        var btnResendOtp = _root.Q<Button>("btn-resend-otp");
+        if (btnResendOtp != null) btnResendOtp.clicked += DoResendOTP;
     }
 
     private async void DoLogin()
