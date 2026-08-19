@@ -14,8 +14,9 @@
                 <ui:VisualElement class="section-break-bottom-right" />
             </ui:VisualElement>
         </ui:VisualElement>
-        <ui:VisualElement name="login-panel" class="menu-container hidden-panel" style="background-image: url(&quot;project://database/Assets/PLuan/menuda.png?fileID=2800000&amp;guid=b71e5fe46dbce4849b9385c26298aaa1&amp;type=3#menuda&quot;); -unity-font-definition: url(&quot;project://database/Assets/PLuan/MainMenu/Font/Philosopher-Vietnamese.ttf?fileID=12800000&amp;guid=8a2ed09dfc3a8024fa0bb345576c06bd&amp;type=3#Philosopher-Vietnamese&quot;);">
+        <ui:VisualElement name="login-panel" class="menu-container hidden-panel" style="-unity-font-definition: url(&quot;project://database/Assets/PLuan/MainMenu/Font/Philosopher-Vietnamese.ttf?fileID=12800000&amp;guid=8a2ed09dfc3a8024fa0bb345576c06bd&amp;type=3#Philosopher-Vietnamese&quot;);">
             <ui:Label name="lbl-login-title" text="ĐĂNG NHẬP" class="panel-title" />
+            <ui:VisualElement class="panel-divider" style="background-image: url(&quot;project://database/Assets/Synty/InterfaceFantasyMenus/Sprites/General/SPR_FantasyMenus_Line_Horizontal_01.png?fileID=2800000&amp;guid=3a7afa7a5a87b774587fd7d636cc2230&amp;type=3#SPR_FantasyMenus_Line_Horizontal_01&quot;);" />
             <ui:Label name="lbl-login-error" class="error-text hidden-element" />
             <ui:VisualElement class="form-group">
                 <ui:Label name="lbl-login-email" text="EMAIL" class="form-label" />
@@ -25,13 +26,14 @@
                 <ui:Label name="lbl-login-password" text="MẬT KHẨU" class="form-label" />
                 <ui:TextField name="input-login-password" password="true" class="form-input" />
             </ui:VisualElement>
-            <ui:VisualElement class="button-group" style="margin-top: 15px;">
-                <ui:Button name="btn-login" text="ĐĂNG NHẬP" class="menu-btn" />
-                <ui:Button name="btn-goto-register" text="TẠO TÀI KHOẢN" class="menu-btn back-btn" />
+            <ui:VisualElement class="auth-btn-group">
+                <ui:Button name="btn-login" text="ĐĂNG NHẬP" class="confirm-action-btn" />
+                <ui:Button name="btn-goto-register" text="TẠO TÀI KHOẢN" class="back-action-btn" />
             </ui:VisualElement>
         </ui:VisualElement>
-        <ui:VisualElement name="register-panel" class="menu-container large-panel hidden-panel" style="background-image: url(&quot;project://database/Assets/PLuan/menuda.png?fileID=2800000&amp;guid=b71e5fe46dbce4849b9385c26298aaa1&amp;type=3#menuda&quot;); -unity-font-definition: url(&quot;project://database/Assets/PLuan/MainMenu/Font/Philosopher-Vietnamese.ttf?fileID=12800000&amp;guid=8a2ed09dfc3a8024fa0bb345576c06bd&amp;type=3#Philosopher-Vietnamese&quot;);">
+        <ui:VisualElement name="register-panel" class="menu-container hidden-panel" style="-unity-font-definition: url(&quot;project://database/Assets/PLuan/MainMenu/Font/Philosopher-Vietnamese.ttf?fileID=12800000&amp;guid=8a2ed09dfc3a8024fa0bb345576c06bd&amp;type=3#Philosopher-Vietnamese&quot;);">
             <ui:Label name="lbl-reg-title" text="TÀI KHOẢN MỚI" class="panel-title" />
+            <ui:VisualElement class="panel-divider" style="background-image: url(&quot;project://database/Assets/Synty/InterfaceFantasyMenus/Sprites/General/SPR_FantasyMenus_Line_Horizontal_01.png?fileID=2800000&amp;guid=3a7afa7a5a87b774587fd7d636cc2230&amp;type=3#SPR_FantasyMenus_Line_Horizontal_01&quot;);" />
             <ui:Label name="lbl-reg-error" class="error-text hidden-element" />
             <ui:VisualElement class="form-group">
                 <ui:Label name="lbl-reg-name" text="TÊN HIỂN THỊ" class="form-label" />
@@ -49,13 +51,14 @@
                 <ui:Label name="lbl-reg-confirm" text="XÁC NHẬN MẬT KHẨU" class="form-label" />
                 <ui:TextField name="input-reg-confirm" password="true" class="form-input" />
             </ui:VisualElement>
-            <ui:VisualElement class="button-group" style="margin-top: 8px;">
-                <ui:Button name="btn-register" text="TẠO TÀI KHOẢN" class="menu-btn" />
-                <ui:Button name="btn-goto-login" text="&lt; QUAY LẠI" class="menu-btn back-btn" />
+            <ui:VisualElement class="auth-btn-group">
+                <ui:Button name="btn-register" text="TẠO TÀI KHOẢN" class="confirm-action-btn" />
+                <ui:Button name="btn-goto-login" text="QUAY LẠI" class="back-action-btn" />
             </ui:VisualElement>
         </ui:VisualElement>
-        <ui:VisualElement name="verify-otp-panel" class="menu-container hidden-panel" style="background-image: url(&quot;project://database/Assets/PLuan/menuda.png?fileID=2800000&amp;guid=b71e5fe46dbce4849b9385c26298aaa1&amp;type=3#menuda&quot;); -unity-font-definition: url(&quot;project://database/Assets/PLuan/MainMenu/Font/Philosopher-Vietnamese.ttf?fileID=12800000&amp;guid=8a2ed09dfc3a8024fa0bb345576c06bd&amp;type=3#Philosopher-Vietnamese&quot;);">
+        <ui:VisualElement name="verify-otp-panel" class="menu-container hidden-panel" style="-unity-font-definition: url(&quot;project://database/Assets/PLuan/MainMenu/Font/Philosopher-Vietnamese.ttf?fileID=12800000&amp;guid=8a2ed09dfc3a8024fa0bb345576c06bd&amp;type=3#Philosopher-Vietnamese&quot;);">
             <ui:Label name="lbl-otp-title" text="XÁC MINH EMAIL" class="panel-title" />
+            <ui:VisualElement class="panel-divider" style="background-image: url(&quot;project://database/Assets/Synty/InterfaceFantasyMenus/Sprites/General/SPR_FantasyMenus_Line_Horizontal_01.png?fileID=2800000&amp;guid=3a7afa7a5a87b774587fd7d636cc2230&amp;type=3#SPR_FantasyMenus_Line_Horizontal_01&quot;);" />
             <ui:Label name="lbl-otp-msg" text="Chúng tôi đã gửi mã xác thực tới email của bạn." class="info-text" />
             <ui:Label name="lbl-otp-spam-note" text="* Không thấy? Hãy kiểm tra Thư rác nhé." class="spam-note" />
             <ui:Label name="lbl-otp-error" class="error-text hidden-element" />
@@ -63,10 +66,10 @@
                 <ui:Label name="lbl-otp-code" text="MÃ XÁC THỰC" class="form-label" />
                 <ui:TextField name="input-otp" max-length="6" class="form-input otp-input" />
             </ui:VisualElement>
-            <ui:VisualElement class="button-group" style="margin-top: 6px;">
-                <ui:Button name="btn-verify-otp" text="XÁC MINH" class="menu-btn" />
-                <ui:Button name="btn-resend-otp" text="GỬI LẠI MÃ" class="menu-btn back-btn" />
-                <ui:Button name="btn-cancel-otp" text="&lt; HỦY" class="menu-btn back-btn" style="margin-left: 0; margin-top: 6px;" />
+            <ui:VisualElement class="auth-btn-group">
+                <ui:Button name="btn-verify-otp" text="XÁC MINH" class="confirm-action-btn" />
+                <ui:Button name="btn-resend-otp" text="GỬI LẠI MÃ" class="back-action-btn" />
+                <ui:Button name="btn-cancel-otp" text="HỦY" class="back-action-btn" />
             </ui:VisualElement>
         </ui:VisualElement>
         <ui:VisualElement name="main-menu-panel" class="menu-container hidden-panel" style="-unity-font-definition: url(&quot;project://database/Assets/PLuan/MainMenu/Font/Philosopher-Vietnamese.ttf?fileID=12800000&amp;guid=8a2ed09dfc3a8024fa0bb345576c06bd&amp;type=3#Philosopher-Vietnamese&quot;);">
@@ -76,16 +79,16 @@
                 <ui:Button name="btn-quit" text="THOÁT" class="menu-btn quit-btn" />
             </ui:VisualElement>
         </ui:VisualElement>
-        <ui:VisualElement name="network-menu-panel" class="menu-container hidden-panel" style="background-image: url(&quot;project://database/Assets/PLuan/menuda.png?fileID=2800000&amp;guid=b71e5fe46dbce4849b9385c26298aaa1&amp;type=3#menuda&quot;); -unity-font-definition: url(&quot;project://database/Assets/PLuan/MainMenu/Font/Philosopher-Vietnamese.ttf?fileID=12800000&amp;guid=8a2ed09dfc3a8024fa0bb345576c06bd&amp;type=3#Philosopher-Vietnamese&quot;);">
-            <ui:Label name="lbl-lobby-title" text="SẢNH CHỜ" class="panel-title" />
+        <ui:VisualElement name="network-menu-panel" class="menu-container hidden-panel" style="-unity-font-definition: url(&quot;project://database/Assets/PLuan/MainMenu/Font/Philosopher-Vietnamese.ttf?fileID=12800000&amp;guid=8a2ed09dfc3a8024fa0bb345576c06bd&amp;type=3#Philosopher-Vietnamese&quot;);">
             <ui:VisualElement class="button-group">
                 <ui:Button name="btn-create-host" text="TẠO PHÒNG" class="menu-btn" />
                 <ui:Button name="btn-join-client" text="VÀO PHÒNG" class="menu-btn" />
-                <ui:Button name="btn-lobby-back" text="&lt; QUAY LẠI" class="menu-btn back-btn" />
+                <ui:Button name="btn-lobby-back" text="QUAY LẠI" class="menu-btn quit-btn" />
             </ui:VisualElement>
         </ui:VisualElement>
-        <ui:VisualElement name="create-room-panel" class="menu-container hidden-panel" style="background-image: url(&quot;project://database/Assets/PLuan/menuda.png?fileID=2800000&amp;guid=b71e5fe46dbce4849b9385c26298aaa1&amp;type=3#menuda&quot;); -unity-font-definition: url(&quot;project://database/Assets/PLuan/MainMenu/Font/Philosopher-Vietnamese.ttf?fileID=12800000&amp;guid=8a2ed09dfc3a8024fa0bb345576c06bd&amp;type=3#Philosopher-Vietnamese&quot;);">
+        <ui:VisualElement name="create-room-panel" class="menu-container hidden-panel" style="-unity-font-definition: url(&quot;project://database/Assets/PLuan/MainMenu/Font/Philosopher-Vietnamese.ttf?fileID=12800000&amp;guid=8a2ed09dfc3a8024fa0bb345576c06bd&amp;type=3#Philosopher-Vietnamese&quot;);">
             <ui:Label name="lbl-host-title" text="TẠO PHÒNG" class="panel-title" />
+            <ui:VisualElement class="panel-divider" style="background-image: url(&quot;project://database/Assets/Synty/InterfaceFantasyMenus/Sprites/General/SPR_FantasyMenus_Line_Horizontal_01.png?fileID=2800000&amp;guid=3a7afa7a5a87b774587fd7d636cc2230&amp;type=3#SPR_FantasyMenus_Line_Horizontal_01&quot;);" />
             <ui:VisualElement class="form-group">
                 <ui:Label name="lbl-room-name" text="TÊN PHÒNG / CHỦ PHÒNG" class="form-label" />
                 <ui:TextField name="input-room-name" value="Atlantis Explorer" class="form-input" />
@@ -101,9 +104,9 @@
                 <ui:Label name="lbl-room-password" text="MẬT KHẨU" class="form-label" />
                 <ui:TextField name="input-room-password" password="true" is-delayed="true" class="form-input" />
             </ui:VisualElement>
-            <ui:VisualElement class="button-group" style="margin-top: 15px;">
-                <ui:Button name="btn-confirm-create" text="BẮT ĐẦU" class="menu-btn" />
-                <ui:Button name="btn-create-back" text="&lt; QUAY LẠI" class="menu-btn back-btn" />
+            <ui:VisualElement class="create-room-btn-group">
+                <ui:Button name="btn-confirm-create" text="BẮT ĐẦU" class="confirm-action-btn" />
+                <ui:Button name="btn-create-back" text="QUAY LẠI" class="back-action-btn" />
             </ui:VisualElement>
         </ui:VisualElement>
         <ui:VisualElement name="join-room-panel" class="menu-container large-panel hidden-panel" style="background-image: url(&quot;project://database/Assets/PLuan/menuda.png?fileID=2800000&amp;guid=b71e5fe46dbce4849b9385c26298aaa1&amp;type=3#menuda&quot;); -unity-font-definition: url(&quot;project://database/Assets/PLuan/MainMenu/Font/Philosopher-Vietnamese.ttf?fileID=12800000&amp;guid=8a2ed09dfc3a8024fa0bb345576c06bd&amp;type=3#Philosopher-Vietnamese&quot;);">
