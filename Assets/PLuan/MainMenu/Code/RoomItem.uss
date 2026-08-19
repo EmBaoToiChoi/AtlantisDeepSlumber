@@ -109,27 +109,35 @@
 }
 
 .join-mini-btn {
-    background-color: transparent !important; /* No background */
-    border-width: 0 !important; /* No borders */
-    color: rgb(0, 190, 255) !important;
-    padding: 5px 16px !important;
-    font-size: 13px !important;
+    background-color: transparent !important;
+    border-width: 0 !important;
+    color: rgb(0, 200, 255) !important;
+    padding: 4px 16px !important;
+    font-size: 14px !important;
     -unity-font-style: bold;
+    letter-spacing: 1.5px;
+    cursor: link;
     transition: all 0.2s ease-out;
 }
 
 /* Light up button slightly when row is hovered */
 .room-item:hover .join-mini-btn {
-    color: rgb(160, 230, 255) !important;
+    color: rgb(160, 235, 255) !important;
     background-color: transparent !important;
 }
 
 /* Glow text on direct hover */
 .join-mini-btn:hover {
-    background-color: transparent !important;
     color: rgb(255, 255, 255) !important;
-    scale: 1.08 1.08;
-    text-shadow: 0 0 10px rgba(0, 255, 255, 0.95) !important;
+    scale: 1.06 1.06;
+    background-image: url("project://database/Assets/Synty/InterfaceFantasyMenus/Sprites/FantasyMenus/SPR_FantasyMenus_Menu_Button_06_Frame.png") !important;
+    -unity-background-scale-mode: stretch-to-fill;
+    -unity-slice-left: 500;
+    -unity-slice-right: 500;
+    -unity-slice-top: 0;
+    -unity-slice-bottom: 0;
+    -unity-slice-scale: 0.26;
+    text-shadow: 0 0 16px rgba(0, 255, 255, 1), 0 0 6px rgba(255, 255, 255, 0.9) !important;
 }
 
 /* Icon khóa (nếu có) */
