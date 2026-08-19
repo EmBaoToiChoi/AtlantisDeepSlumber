@@ -16,10 +16,10 @@
 
 .nameplate-box {
     position: relative;
-    min-width: 200px;
-    height: 48px;
-    padding-left: 36px;
-    padding-right: 36px;
+    min-width: 240px;
+    height: 52px;
+    padding-left: 45px;
+    padding-right: 45px;
     align-items: center;
     justify-content: center;
 }
@@ -44,7 +44,7 @@
     right: 0;
     bottom: 0;
     pointer-events: none;
-    background-image: url("project://database/Assets/Synty/InterfaceFantasyMenus/Sprites/FantasyMenus/SPR_FantasyMenus_Menu_Button_12_Frame.png?fileID=2800000&guid=36d4bec83f61f134bbd04c1619e97c33&type=3#SPR_FantasyMenus_Menu_Button_12_Frame");
+    background-image: url("project://database/Assets/Hbao/Image/SPR_FantasyMenus_Nameplate_Frame_12_Clean.png?fileID=2800000&guid=7e9a0123bc456789de0123456789ef12&type=3#SPR_FantasyMenus_Nameplate_Frame_12_Clean");
     -unity-background-scale-mode: stretch-to-fill;
     z-index: 3;
 }
