@@ -10,7 +10,7 @@ public class NetworkWaitingRoom : NetworkBehaviour
     [SerializeField] private UIDocument _uiDocument;
 
     [Header("Gameplay Scene Configuration")]
-    [SerializeField] private string gameplaySceneName = "MapSTART";
+    [SerializeField] private string gameplaySceneName = "MapFinal";
     
     [Header("Slots & Prefabs")]
     public Transform[] slots = new Transform[4];
