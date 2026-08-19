@@ -236,6 +236,11 @@ public class PlayerHUDController : MonoBehaviour
     private Label questTitleText;
     public Sprite defaultQuestIcon;
     private object currentQuestOwner = null;
+    private VisualElement questSpotlightBackdrop;
+    private VisualElement questPointerLeft;
+    private VisualElement questPointerBottom;
+    private VisualElement questGlowAura;
+    private Coroutine questSpotlightCoroutine;
 
     // Coop Building UI system
     public static bool isCoopBuildingUIOpen = false;
@@ -391,6 +396,10 @@ public class PlayerHUDController : MonoBehaviour
         questDescriptionText = null;
         questIcon = null;
         questTitleText = null;
+        questSpotlightBackdrop = null;
+        questPointerLeft = null;
+        questPointerBottom = null;
+        questGlowAura = null;
         if (coopBuildContainer != null)
         {
             coopBuildContainer.RemoveFromHierarchy();
@@ -515,6 +524,10 @@ public class PlayerHUDController : MonoBehaviour
         questDescriptionText = root.Q<Label>("quest-description");
         questIcon = root.Q<VisualElement>(className: "quest-icon");
         questTitleText = root.Q<Label>(className: "quest-title");
+        questSpotlightBackdrop = root.Q<VisualElement>("quest-spotlight-backdrop");
+        questPointerLeft = root.Q<VisualElement>("quest-pointer-left");
+        questPointerBottom = root.Q<VisualElement>("quest-pointer-bottom");
+        questGlowAura = root.Q<VisualElement>("quest-glow-aura");
 
         // Tìm các phần tử của bảng phím nóng
         hotkeysHintPanel = root.Q<VisualElement>("hotkeys-hint-panel");
@@ -3634,6 +3647,11 @@ public class PlayerHUDController : MonoBehaviour
         avatarImg.name = "avatar-image";
         avatarImg.AddToClassList("teammate-avatar-image");
         avatarContainer.Add(avatarImg);
+
+        var avatarBorder = new VisualElement();
+        avatarBorder.AddToClassList("teammate-avatar-border");
+        avatarContainer.Add(avatarBorder);
+
         card.Add(avatarContainer);
 
         var statsWrapper = new VisualElement();
@@ -3969,6 +3987,7 @@ public class PlayerHUDController : MonoBehaviour
                     currentQuestOwner = owner;
                 }
                 questPanel.AddToClassList("show-quest");
+                TriggerQuestSpotlight();
             }
             else
             {
@@ -3978,10 +3997,118 @@ public class PlayerHUDController : MonoBehaviour
                 {
                     currentQuestOwner = null;
                     questPanel.RemoveFromClassList("show-quest");
+                    StopQuestSpotlight();
                 }
             }
             Debug.Log($"[PlayerHUDController] ShowQuest({show}) (owner: {owner?.GetType().Name ?? "null"})");
         }
+    }
+
+    public void TriggerQuestSpotlight(float duration = 5.0f)
+    {
+        if (!gameObject.activeInHierarchy) return;
+        if (questSpotlightCoroutine != null)
+        {
+            StopCoroutine(questSpotlightCoroutine);
+        }
+        questSpotlightCoroutine = StartCoroutine(QuestSpotlightRoutine(duration));
+    }
+
+    public void StopQuestSpotlight()
+    {
+        if (questSpotlightCoroutine != null)
+        {
+            StopCoroutine(questSpotlightCoroutine);
+            questSpotlightCoroutine = null;
+        }
+        if (questSpotlightBackdrop != null) questSpotlightBackdrop.RemoveFromClassList("active");
+        if (questGlowAura != null)
+        {
+            questGlowAura.RemoveFromClassList("active");
+            questGlowAura.RemoveFromClassList("pulse-high");
+            questGlowAura.RemoveFromClassList("pulse-low");
+        }
+        if (questPointerLeft != null)
+        {
+            questPointerLeft.RemoveFromClassList("active");
+            questPointerLeft.RemoveFromClassList("pulse-pointing");
+        }
+        if (questPointerBottom != null)
+        {
+            questPointerBottom.RemoveFromClassList("active");
+            questPointerBottom.RemoveFromClassList("pulse-pointing");
+        }
+        if (questPanel != null)
+        {
+            questPanel.RemoveFromClassList("spotlight-glow");
+            questPanel.RemoveFromClassList("spotlight-pulse-high");
+            questPanel.RemoveFromClassList("spotlight-pulse-low");
+        }
+    }
+
+    private System.Collections.IEnumerator QuestSpotlightRoutine(float duration)
+    {
+        InitializeUI();
+        // 1. Kích hoạt lớp đổ bóng đen mờ màn hình, vầng hào quang và 2 mũi tên chỉ dẫn (Trái + Dưới)
+        if (questSpotlightBackdrop != null) questSpotlightBackdrop.AddToClassList("active");
+        if (questGlowAura != null) questGlowAura.AddToClassList("active");
+        if (questPointerLeft != null) questPointerLeft.AddToClassList("active");
+        if (questPointerBottom != null) questPointerBottom.AddToClassList("active");
+        if (questPanel != null) questPanel.AddToClassList("spotlight-glow");
+
+        // 2. Vòng lặp nhấp nháy phát sáng (shimmering glow) và hiệu ứng chỉ điểm nhịp nhàng của 2 mũi tên
+        float elapsed = 0f;
+        int step = 0;
+        while (elapsed < duration)
+        {
+            yield return new WaitForSeconds(0.25f);
+            elapsed += 0.25f;
+            step++;
+
+            // Nhấp nháy hào quang vàng kim xung quanh bảng nhiệm vụ
+            bool isHigh = (step % 2 == 1);
+            if (questGlowAura != null)
+            {
+                if (isHigh)
+                {
+                    questGlowAura.RemoveFromClassList("pulse-low");
+                    questGlowAura.AddToClassList("pulse-high");
+                }
+                else
+                {
+                    questGlowAura.RemoveFromClassList("pulse-high");
+                    questGlowAura.AddToClassList("pulse-low");
+                }
+            }
+            if (questPanel != null)
+            {
+                if (isHigh)
+                {
+                    questPanel.RemoveFromClassList("spotlight-pulse-low");
+                    questPanel.AddToClassList("spotlight-pulse-high");
+                }
+                else
+                {
+                    questPanel.RemoveFromClassList("spotlight-pulse-high");
+                    questPanel.AddToClassList("spotlight-pulse-low");
+                }
+            }
+
+            // Hiệu ứng nhấp nháy chuyển động đẩy tới của Mũi tên Trái (chỉ sang phải) và Mũi tên Dưới (chỉ lên trên)
+            if (questPointerLeft != null)
+            {
+                if (isHigh) questPointerLeft.AddToClassList("pulse-pointing");
+                else questPointerLeft.RemoveFromClassList("pulse-pointing");
+            }
+            if (questPointerBottom != null)
+            {
+                if (isHigh) questPointerBottom.AddToClassList("pulse-pointing");
+                else questPointerBottom.RemoveFromClassList("pulse-pointing");
+            }
+        }
+
+        // 3. Sau 5 giây, màn hình và giao diện mờ dần trở về trạng thái bình thường
+        StopQuestSpotlight();
     }
 
     public void UpdateQuestProgress(int current, int target = 16, object owner = null)
@@ -4065,6 +4192,10 @@ public class PlayerHUDController : MonoBehaviour
         if (questTitleText != null)
         {
             questTitleText.text = title;
+        }
+        if (questPanel != null && questPanel.ClassListContains("show-quest"))
+        {
+            TriggerQuestSpotlight();
         }
     }
 
