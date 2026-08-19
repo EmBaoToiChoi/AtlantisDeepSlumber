@@ -143,8 +143,9 @@
                 <ui:Button name="btn-auth-cancel" text="HỦY" class="back-action-btn" />
             </ui:VisualElement>
         </ui:VisualElement>
-        <ui:VisualElement name="options-menu-panel" class="menu-container large-panel hidden-panel" style="background-image: url(&quot;project://database/Assets/PLuan/menuda.png?fileID=2800000&amp;guid=b71e5fe46dbce4849b9385c26298aaa1&amp;type=3#menuda&quot;); -unity-font-definition: url(&quot;project://database/Assets/PLuan/MainMenu/Font/Philosopher-Vietnamese.ttf?fileID=12800000&amp;guid=8a2ed09dfc3a8024fa0bb345576c06bd&amp;type=3#Philosopher-Vietnamese&quot;);">
+        <ui:VisualElement name="options-menu-panel" class="menu-container large-panel hidden-panel" style="-unity-font-definition: url(&quot;project://database/Assets/PLuan/MainMenu/Font/Philosopher-Vietnamese.ttf?fileID=12800000&amp;guid=8a2ed09dfc3a8024fa0bb345576c06bd&amp;type=3#Philosopher-Vietnamese&quot;);">
             <ui:Label name="lbl-options-title" text="CÀI ĐẶT HỆ THỐNG" class="panel-title" />
+            <ui:VisualElement class="panel-divider" style="background-image: url(&quot;project://database/Assets/Synty/InterfaceFantasyMenus/Sprites/General/SPR_FantasyMenus_Line_Horizontal_01.png?fileID=2800000&amp;guid=3a7afa7a5a87b774587fd7d636cc2230&amp;type=3#SPR_FantasyMenus_Line_Horizontal_01&quot;);" />
             <ui:VisualElement class="options-tabs">
                 <ui:Button name="tab-general-btn" text="CHUNG" class="tab-btn active" />
                 <ui:Button name="tab-audio-btn" text="ÂM THANH" class="tab-btn" />
@@ -291,8 +292,8 @@
                 </ui:VisualElement>
             </ui:ScrollView>
             <ui:VisualElement class="options-actions">
-                <ui:Button name="btn-save-options" text="ÁP DỤNG" class="join-mini-btn" />
-                <ui:Button name="btn-cancel-options" text="HỦY" class="join-mini-btn cancel-btn" />
+                <ui:Button name="btn-save-options" text="ÁP DỤNG" class="confirm-action-btn" />
+                <ui:Button name="btn-cancel-options" text="HỦY" class="back-action-btn" />
             </ui:VisualElement>
         </ui:VisualElement>
         <ui:Label text="Atlantis: Deep Slumber // Pre-Alpha 0.2" class="version-text" />
