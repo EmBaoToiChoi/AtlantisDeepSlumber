@@ -1,16 +1,31 @@
 using UnityEngine;
 using System.Collections.Generic;
-using Unity.Netcode;
 
 public class FireBeamDamageZone : MonoBehaviour
 {
-    private float damage = 35f;
+    private float damage = 5f;
     private float knockback = 12f;
-    private float hitCooldown = 0.5f;
+    private float hitCooldown = 0.4f;
+    private float scanRadius = 2.8f;
     private MonoBehaviour bossOwner;
 
     // Lưu trữ thời gian trúng đòn cuối cùng của mỗi player để giãn cách sát thương
     private Dictionary<Transform, float> lastHitTimes = new Dictionary<Transform, float>();
+
+    private void Awake()
+    {
+        // Tự động gắn CapsuleCollider Trigger dọc theo cột lửa để bắt mọi va chạm vật lý
+        var col = GetComponent<Collider>();
+        if (col == null)
+        {
+            var cap = gameObject.AddComponent<CapsuleCollider>();
+            cap.isTrigger = true;
+            cap.radius = scanRadius;
+            cap.height = 35f;
+            cap.center = new Vector3(0f, 0f, 15f);
+            cap.direction = 2; // Hướng dọc theo trục Z của tia
+        }
+    }
 
     public void Initialize(MonoBehaviour owner, float dmg, float kb)
     {
@@ -18,6 +33,24 @@ public class FireBeamDamageZone : MonoBehaviour
         damage = dmg;
         knockback = kb;
         lastHitTimes.Clear();
+    }
+
+    private void Update()
+    {
+        ScanAndDamageNearbyPlayers();
+    }
+
+    private void ScanAndDamageNearbyPlayers()
+    {
+        Vector3 top = transform.position;
+        Vector3 bottom = transform.position + transform.forward * 35f;
+
+        // Quét toàn bộ hình trụ Capsule dọc theo cột lửa từ trời xuống đất
+        Collider[] hits = Physics.OverlapCapsule(top, bottom, scanRadius);
+        foreach (var hit in hits)
+        {
+            if (hit != null) TryDealDamage(hit);
+        }
     }
 
     private void OnTriggerEnter(Collider other)
@@ -32,26 +65,16 @@ public class FireBeamDamageZone : MonoBehaviour
 
     private void TryDealDamage(Collider other)
     {
-        // Nhận diện Player chính xác qua interface IPlayerHUDTarget (bao gồm cả các collider con)
-        var player = other.GetComponentInParent<IPlayerHUDTarget>() ?? other.GetComponentInChildren<IPlayerHUDTarget>();
-        if (player != null)
+        if (other == null) return;
+        Transform root = other.transform.root;
+        if (root == null || root.CompareTag("Enemy") || (bossOwner != null && root == bossOwner.transform)) return;
+
+        // Nhận diện Player chính xác qua interface IPlayerHUDTarget hoặc tag Player
+        var player = other.GetComponentInParent<IPlayerHUDTarget>() ?? other.GetComponentInChildren<IPlayerHUDTarget>() ?? other.GetComponent<IPlayerHUDTarget>();
+        Transform playerRoot = player != null ? player.transform : (root.CompareTag("Player") ? root : null);
+
+        if (playerRoot != null)
         {
-            Transform playerRoot = player.transform;
-
-            // Đồng bộ mạng tối ưu: Mỗi client tự chịu trách nhiệm tính toán va chạm cho chính nhân vật của mình (IsOwner).
-            // Điều này ngăn chặn việc nhân bản sát thương từ nhiều máy khác nhau gửi về Server.
-            bool isLocal = player.isStandaloneMode;
-            if (!isLocal)
-            {
-                var netObj = player.gameObject.GetComponent<NetworkObject>();
-                if (netObj != null && netObj.IsOwner)
-                {
-                    isLocal = true;
-                }
-            }
-
-            if (!isLocal) return;
-
             // Kiểm tra thời gian giãn cách (cooldown) để tránh trừ máu liên tục mỗi frame
             if (lastHitTimes.TryGetValue(playerRoot, out float lastTime))
             {
@@ -68,9 +91,9 @@ public class FireBeamDamageZone : MonoBehaviour
             knockbackDir.y = 0.3f;
             Vector3 force = knockbackDir * knockback;
 
-            // Trực tiếp trừ máu đồng bộ qua mạng
+            // Trực tiếp trừ máu đồng bộ
             EnemyDamageHelper.DealDamage(playerRoot, damage, force);
-            Debug.Log($"[FireBeamDamageZone] Tia lửa chưởng trúng local player: {playerRoot.name}, Sát thương: {damage}");
+            Debug.Log($"[FireBeamDamageZone] Cột lửa chưởng trúng player: {playerRoot.name}, Sát thương: -{damage} HP");
         }
     }
 }

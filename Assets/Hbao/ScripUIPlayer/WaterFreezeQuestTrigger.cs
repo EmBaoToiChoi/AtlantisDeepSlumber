@@ -205,13 +205,8 @@ public class WaterFreezeQuestTrigger : NetworkBehaviour, IQuestTrigger
 
             // Kiểm tra xem đã hoàn thành chưa (Frozen là bước 1/1, còn lại là 0/1)
             int currentProgress = (puzzController.CurrentState == WaterPuzzleController.WaterPuzzleState.Frozen) ? 1 : 0;
-
-            if (currentProgress != lastProgressCount)
-            {
-                lastProgressCount = currentProgress;
-                localHudCtl.UpdateQuestProgress(currentProgress, 1, this);
-                Debug.Log($"[WaterFreezeQuestTrigger] Cập nhật tiến độ đóng băng: {currentProgress}/1");
-            }
+            lastProgressCount = currentProgress;
+            localHudCtl.UpdateQuestProgress(currentProgress, 1, this);
         }
     }
 

@@ -2613,12 +2613,12 @@ MonoBehaviour:
   bossMiniboss: {fileID: 0}
   miniBoss: {fileID: 0}
   startActiveWithoutMiniboss: 0
-  maxHealth: 900
+  maxHealth: 1000
   currentHealth:
     UpdateTraits:
       MinSecondsBetweenUpdates: 0
       MaxSecondsBetweenUpdates: 0
-    m_InternalValue: 900
+    m_InternalValue: 1000
   currentState:
     UpdateTraits:
       MinSecondsBetweenUpdates: 0
@@ -2679,22 +2679,17 @@ MonoBehaviour:
       MinSecondsBetweenUpdates: 0
       MaxSecondsBetweenUpdates: 0
     m_InternalValue: 0
-  fireSpewActiveCounter:
+  aerialLaserCounter:
+    UpdateTraits:
+      MinSecondsBetweenUpdates: 0
+      MaxSecondsBetweenUpdates: 0
+    m_InternalValue: 0
+  droneLaserCounter:
     UpdateTraits:
       MinSecondsBetweenUpdates: 0
       MaxSecondsBetweenUpdates: 0
     m_InternalValue: 0
   growCounter:
-    UpdateTraits:
-      MinSecondsBetweenUpdates: 0
-      MaxSecondsBetweenUpdates: 0
-    m_InternalValue: 0
-  swordRainCounter:
-    UpdateTraits:
-      MinSecondsBetweenUpdates: 0
-      MaxSecondsBetweenUpdates: 0
-    m_InternalValue: 0
-  fireBarrageCounter:
     UpdateTraits:
       MinSecondsBetweenUpdates: 0
       MaxSecondsBetweenUpdates: 0
@@ -2729,31 +2724,8 @@ MonoBehaviour:
   growDuration: 3
   growScaleMultiplier: 1.4
   growTriggerParam: Shockwave
-  growVFX: {fileID: 0}
+  growVFX: {fileID: 7385442801184268036, guid: 4873ade85befa8e42b268370137a5e0e, type: 3}
   growSFX: {fileID: 0}
-  swordPrefab: {fileID: 8449004803641222730, guid: 5cdf1ac831646004288735c99ac51e4a, type: 3}
-  warningDecalPrefab: {fileID: 7883966873594125846, guid: 6aeee1ac8b24a1e45baedae4f3b12b52, type: 3}
-  swordImpactVFX: {fileID: 2427901435903505602, guid: 8a915dbbc4b23bf4f931629039cfbf6f, type: 3}
-  swordImpactSFX: {fileID: 0}
-  swordRainDuration: 10
-  swordSpawnInterval: 0.4
-  warningDuration: 1.5
-  swordDropSpeed: 35
-  swordDamage: 5
-  swordImpactRadius: 2
-  swordRainTriggerParam: AttackCombo
-  swordSpawnRotationOffset: {x: 90, y: 0, z: 0}
-  fireBarragePrefab: {fileID: 2883180979609552342, guid: da5df83ad7870f44bbe3cacedd92be63, type: 3}
-  fireBarrageWarningDecalPrefab: {fileID: 7883966873594125846, guid: 6aeee1ac8b24a1e45baedae4f3b12b52, type: 3}
-  fireBarrageImpactVFX: {fileID: 2427901435903505602, guid: 8a915dbbc4b23bf4f931629039cfbf6f, type: 3}
-  fireBarrageImpactSFX: {fileID: 0}
-  fireBarrageDuration: 6
-  fireBarrageInterval: 0.5
-  fireBarrageWarningDuration: 0.7
-  fireBarrageDropSpeed: 30
-  fireBarrageDamage: 5
-  fireBarrageImpactRadius: 2.5
-  fireBarrageTriggerParam: AttackCombo
   bossBattleBGM: {fileID: 8300000, guid: 68250f86e0d2b384987dd4cf4443d451, type: 3}
   bossBattleBGMVolume: 0.5
   loopBattleBGM: 1
@@ -2780,13 +2752,25 @@ MonoBehaviour:
   shockwaveWaveMaxRadius: 16
   shockwaveWaveDamage: 5
   shockwaveWaveKnockup: 9
-  rangedProjectilePrefab: {fileID: 9380231799744250, guid: 70a5a9d014f9ae94d85a8d9e66f53a5e, type: 3}
+  rangedProjectilePrefab: {fileID: 4295440196865602167, guid: a0661de1d0027544399fed12c668178b, type: 3}
   projectileSpawnPoint: {fileID: 5889684584516781391}
   projectileSpeed: 20
   projectileDamage: 5
   projectileRotationOffset: {x: 0, y: 0, z: 0}
   isEnraged: 0
   isLastStand: 0
+  genesisLaserVFX: {fileID: 8388466950824095792, guid: 547c3c54726d33b49bf3810ee190a7be, type: 3}
+  aerialLaserCooldown: 14
+  aerialLaserCooldownTimer: 0
+  aerialLaserDamage: 5
+  aerialHeight: 5.5
+  aerialFlyDuration: 4.5
+  droneBlasterVFX: {fileID: 6852847330999259004, guid: 3d8d5f101fe01164d88c2f188ad6974d, type: 3}
+  droneLaserCooldown: 18
+  droneLaserCooldownTimer: 0
+  droneLaserDamage: 5
+  droneLaserDuration: 6
+  droneLaserRotationSpeed: 35
   fireSpewInterval: 10
   fireSpewWindupDuration: 1
   fireSpewActiveDuration: 1.5
@@ -2794,13 +2778,10 @@ MonoBehaviour:
   fireSpewDamage: 5
   fireSpewKnockback: 12
   fireSpewVFX: {fileID: 6531319713837899222, guid: 3ecc26f6d4062be44b0a099e114ff00c, type: 3}
+  skyFireGroundImpactVFX: {fileID: 2427901435903505602, guid: 8a915dbbc4b23bf4f931629039cfbf6f, type: 3}
   fireSpewSFX: {fileID: 0}
   fireSpewTriggerParam: FireSpew
   fireSpewCooldownTimer: 0
-  fireBarrageCooldown: 12
-  fireBarrageCooldownTimer: 0
-  swordRainCooldown: 10
-  swordRainCooldownTimer: 0
   leftHandBase: {fileID: 7812698304109883653}
   leftHandTip: {fileID: 4203785077346276878}
   rightHandBase: {fileID: 3663721840516115787}
