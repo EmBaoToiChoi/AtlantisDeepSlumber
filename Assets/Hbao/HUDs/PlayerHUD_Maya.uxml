@@ -86,7 +86,7 @@
     </ui:VisualElement>
     <ui:VisualElement class="hud-skills-wrapper" style="-unity-font-definition: url(&quot;project://database/Assets/UI%20Toolkit/UnityThemes/UnityDefaultRuntimeTheme.tss?fileID=2230732570650464555&amp;guid=8dcf67e479d58bd47908bf0d5e1cc1d0&amp;type=3#NotInter-Regular&quot;);">
         <ui:VisualElement class="skill-slot">
-            <ui:VisualElement name="skill-img-q" class="skill-image" style="background-image: url(&quot;project://database/Assets/Hbao/Image/Skill%201,.png?fileID=2800000&amp;guid=aa0fb8d4832b5c04289b5050bec3c919&amp;type=3#Skill 1,&quot;);" />
+            <ui:VisualElement name="skill-img-q" class="skill-image skill-img-q-maya" style="background-image: url(&quot;project://database/Assets/Hbao/Image/Skill%201,.png?fileID=2800000&amp;guid=aa0fb8d4832b5c04289b5050bec3c919&amp;type=3#Skill 1,&quot;);" />
             <ui:VisualElement name="skill-cooldown-q" class="skill-cooldown-overlay" style="height: 0%;" />
             <ui:Label name="skill-cooldown-text-q" class="skill-cooldown-text" />
             <ui:VisualElement class="skill-hotkey-container">
@@ -95,6 +95,7 @@
             <ui:VisualElement name="skill-lock-q" class="skill-lock-overlay">
                 <ui:VisualElement class="skill-lock-icon" />
             </ui:VisualElement>
+            <ui:VisualElement class="skill-frame-border" />
         </ui:VisualElement>
         <ui:VisualElement class="skill-slot skill-slot-center">
             <ui:VisualElement name="skill-img-r" class="skill-image" style="background-image: url(&quot;project://database/Assets/Hbao/Image/ST-Skill3.png?fileID=2800000&amp;guid=5e3b766110bc4f54da0aa69f3c984baa&amp;type=3#ST-Skill3&quot;);" />
@@ -106,6 +107,7 @@
             <ui:VisualElement name="skill-lock-r" class="skill-lock-overlay">
                 <ui:VisualElement class="skill-lock-icon" />
             </ui:VisualElement>
+            <ui:VisualElement class="skill-frame-border" />
         </ui:VisualElement>
         <ui:VisualElement class="skill-slot">
             <ui:VisualElement name="skill-img-e" class="skill-image" style="background-image: url(&quot;project://database/Assets/Hbao/Image/Skill%202.png?fileID=2800000&amp;guid=a78801096338d0f47b5d2b17270fdd15&amp;type=3#Skill 2&quot;);" />
@@ -117,6 +119,7 @@
             <ui:VisualElement name="skill-lock-e" class="skill-lock-overlay">
                 <ui:VisualElement class="skill-lock-icon" />
             </ui:VisualElement>
+            <ui:VisualElement class="skill-frame-border" />
         </ui:VisualElement>
     </ui:VisualElement>
     <ui:Label name="weapon-warning" text="Kỹ Năng Đang Bị Khóa" parse-escape-sequences="false" class="weapon-warning-label" style="-unity-font-definition: url(&quot;project://database/Assets/UI%20Toolkit/UnityThemes/UnityDefaultRuntimeTheme.tss?fileID=2230732570650464555&amp;guid=8dcf67e479d58bd47908bf0d5e1cc1d0&amp;type=3#NotInter-Regular&quot;);" />

@@ -96,6 +96,7 @@
             <ui:VisualElement name="skill-lock-q" class="skill-lock-overlay">
                 <ui:VisualElement class="skill-lock-icon" />
             </ui:VisualElement>
+            <ui:VisualElement class="skill-frame-border" />
         </ui:VisualElement>
         <ui:VisualElement class="skill-slot skill-slot-center">
             <ui:Label name="skill-name-label-r" text="Chưởng Nguyên Tố" class="skill-name-label" />
@@ -108,6 +109,7 @@
             <ui:VisualElement name="skill-lock-r" class="skill-lock-overlay">
                 <ui:VisualElement class="skill-lock-icon" />
             </ui:VisualElement>
+            <ui:VisualElement class="skill-frame-border" />
         </ui:VisualElement>
         <ui:VisualElement class="skill-slot">
             <ui:Label name="skill-name-label-e" text="Tăng Tốc Chạy" class="skill-name-label" />
@@ -120,6 +122,7 @@
             <ui:VisualElement name="skill-lock-e" class="skill-lock-overlay">
                 <ui:VisualElement class="skill-lock-icon" />
             </ui:VisualElement>
+            <ui:VisualElement class="skill-frame-border" />
         </ui:VisualElement>
     </ui:VisualElement>
     <ui:Label name="weapon-warning" text="Kỹ Năng Đang Bị Khóa" parse-escape-sequences="false" class="weapon-warning-label" style="-unity-font-definition: url(&quot;project://database/Assets/UI%20Toolkit/UnityThemes/UnityDefaultRuntimeTheme.tss?fileID=2230732570650464555&amp;guid=8dcf67e479d58bd47908bf0d5e1cc1d0&amp;type=3#NotInter-Regular&quot;);" />
