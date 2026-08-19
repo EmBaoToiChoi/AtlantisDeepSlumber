@@ -106607,7 +106607,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 554818155171265958, guid: 2af64cd1810c03e49a4f27176c890275, type: 3}
       propertyPath: m_LocalRotation.y
-      value: 0.14042254
+      value: 0.14042252
       objectReference: {fileID: 0}
     - target: {fileID: 554818155171265958, guid: 2af64cd1810c03e49a4f27176c890275, type: 3}
       propertyPath: m_LocalRotation.z
@@ -106779,7 +106779,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2158516870357607584, guid: 2af64cd1810c03e49a4f27176c890275, type: 3}
       propertyPath: m_LocalRotation.y
-      value: -0.14042254
+      value: -0.14042252
       objectReference: {fileID: 0}
     - target: {fileID: 2158516870357607584, guid: 2af64cd1810c03e49a4f27176c890275, type: 3}
       propertyPath: m_LocalRotation.z
@@ -114229,6 +114229,10 @@ MonoBehaviour:
   leftOpenRotationOffset: {x: 0, y: 90, z: 0}
   rightOpenRotationOffset: {x: 0, y: -90, z: 0}
   openSpeed: 0.5
+  hasSavedClosedRotations: 1
+  defaultLeftClosedRot: {x: 0, y: 0.14042254, z: 0, w: 0.9900917}
+  defaultRightClosedRot: {x: 0, y: -0.14042254, z: 0, w: 0.9900917}
+  previewProgress: 0
 --- !u!1001 &818244760
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -210690,6 +210694,8 @@ MonoBehaviour:
   - {fileID: 1448756644}
   - {fileID: 377120382}
   hideDelayAfterComplete: 0
+  autoStartIfPrerequisiteMet: 1
+  checkInterval: 0.2
   cutsceneToPlayAfter: {fileID: 0}
   objectsToEnableAfterQuest:
   - {fileID: 1327183832}

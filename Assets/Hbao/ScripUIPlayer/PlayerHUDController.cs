@@ -179,7 +179,7 @@ public class PlayerHUDController : MonoBehaviour
     private System.Collections.Generic.Dictionary<ulong, MinimapIconData> minimapIcons = new System.Collections.Generic.Dictionary<ulong, MinimapIconData>();
 
     [Header("World Map Settings")]
-    public float worldMapZoom = 150f;
+    public float worldMapZoom = 55f;
     private VisualElement worldMapFrame;
     private Camera worldMapCamera;
     private RenderTexture worldMapRenderTexture;
@@ -3252,8 +3252,8 @@ public class PlayerHUDController : MonoBehaviour
         minimapContent.style.backgroundImage = Background.FromRenderTexture(minimapRenderTexture);
 
         // Tinh toan kich thuoc thuc te cua minimap de scale toa do dong
-        float mapWidth = float.IsNaN(minimapContent.layout.width) || minimapContent.layout.width <= 0 ? 192f : minimapContent.layout.width;
-        float mapHeight = float.IsNaN(minimapContent.layout.height) || minimapContent.layout.height <= 0 ? 192f : minimapContent.layout.height;
+        float mapWidth = float.IsNaN(minimapContent.layout.width) || minimapContent.layout.width <= 0 ? 196f : minimapContent.layout.width;
+        float mapHeight = float.IsNaN(minimapContent.layout.height) || minimapContent.layout.height <= 0 ? 196f : minimapContent.layout.height;
         float centerX = mapWidth / 2f;
         float centerY = mapHeight / 2f;
         float radius = Mathf.Min(mapWidth, mapHeight) / 2f;
@@ -3371,7 +3371,7 @@ public class PlayerHUDController : MonoBehaviour
         // Khoi tao render texture va camera cho World Map
         if (worldMapRenderTexture == null)
         {
-            worldMapRenderTexture = new RenderTexture(512, 512, 16, RenderTextureFormat.ARGB32);
+            worldMapRenderTexture = new RenderTexture(1024, 512, 16, RenderTextureFormat.ARGB32);
             worldMapRenderTexture.filterMode = FilterMode.Bilinear;
             worldMapRenderTexture.Create();
         }
@@ -3382,6 +3382,7 @@ public class PlayerHUDController : MonoBehaviour
             worldMapCamera = camGo.AddComponent<Camera>();
             worldMapCamera.orthographic = true;
             worldMapCamera.orthographicSize = worldMapZoom;
+            worldMapCamera.aspect = 2.0f;
             worldMapCamera.targetTexture = worldMapRenderTexture;
             worldMapCamera.clearFlags = CameraClearFlags.SolidColor;
             worldMapCamera.backgroundColor = new Color(0.04f, 0.06f, 0.12f);
@@ -3403,12 +3404,17 @@ public class PlayerHUDController : MonoBehaviour
         // Camera luon follow player nhung voi tam nhin rong hon nhieu
         worldMapCamera.transform.position = new Vector3(localPos.x, localPos.y + 100f, localPos.z);
 
-        // Gan background image cho worldMapFrame
-        worldMapFrame.style.backgroundImage = Background.FromRenderTexture(worldMapRenderTexture);
+        float effectiveZoom = Mathf.Clamp(worldMapZoom <= 40f ? worldMapZoom : 30f, 15f, 40f);
+        worldMapCamera.orthographicSize = effectiveZoom;
+
+        // Gan background image cho worldMapViewport (neu co) hoac worldMapFrame
+        VisualElement mapRenderElem = worldMapFrame.Q<VisualElement>("world-map-viewport") ?? worldMapFrame;
+        mapRenderElem.style.backgroundImage = Background.FromRenderTexture(worldMapRenderTexture);
 
         // Tinh toan kich thuoc frame de scale toa do
-        float frameWidth = float.IsNaN(worldMapFrame.layout.width) || worldMapFrame.layout.width <= 0 ? 800f : worldMapFrame.layout.width;
-        float frameHeight = float.IsNaN(worldMapFrame.layout.height) || worldMapFrame.layout.height <= 0 ? 600f : worldMapFrame.layout.height;
+        float frameWidth = float.IsNaN(mapRenderElem.layout.width) || mapRenderElem.layout.width <= 0 ? 920f : mapRenderElem.layout.width;
+        float frameHeight = float.IsNaN(mapRenderElem.layout.height) || mapRenderElem.layout.height <= 0 ? 350f : mapRenderElem.layout.height;
+        worldMapCamera.aspect = frameWidth / frameHeight;
         float centerX = frameWidth / 2f;
         float centerY = frameHeight / 2f;
 
@@ -3427,7 +3433,7 @@ public class PlayerHUDController : MonoBehaviour
             if (!worldMapIcons.TryGetValue(key, out var iconData))
             {
                 iconData = CreateWorldMapIcon(player, isOwner);
-                worldMapFrame.Add(iconData.iconContainer);
+                mapRenderElem.Add(iconData.iconContainer);
                 worldMapIcons[key] = iconData;
             }
 
@@ -3436,8 +3442,7 @@ public class PlayerHUDController : MonoBehaviour
             float dz = diff.z;
 
             // Map world space sang frame UI space
-            float halfMinDim = Mathf.Min(frameWidth, frameHeight) / 2f;
-            float scale = halfMinDim / worldMapZoom;
+            float scale = (frameHeight / 2f) / effectiveZoom;
 
             float rx = dx * scale;
             float ry = dz * scale;

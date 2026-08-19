@@ -137,21 +137,23 @@
 
 .minimap-wrapper {
     position: absolute;
-    top: 40px;
-    right: 35px;
-    width: 200px;
-    height: 200px;
-    border-radius: 100px;
+    top: 30px;
+    right: 30px;
+    width: 250px;
+    height: 250px;
+    border-radius: 125px;
     justify-content: center;
     align-items: center;
 }
 
 .minimap-mask {
-    width: 192px;
-    height: 192px;
-    border-radius: 96px;
+    width: 196px;
+    height: 196px;
+    border-radius: 98px;
     overflow: hidden;
-    background-color: rgba(10, 15, 25, 0.65);
+    background-color: rgba(10, 15, 25, 0.85);
+    justify-content: center;
+    align-items: center;
 }
 
 .minimap-content {
@@ -162,7 +164,7 @@
 .minimap-grid-x {
     display: none;
     position: absolute;
-    top: 95px;
+    top: 98px;
     left: 0;
     width: 100%;
     height: 2px;
@@ -173,7 +175,7 @@
     display: none;
     position: absolute;
     top: 0;
-    left: 95px;
+    left: 98px;
     width: 2px;
     height: 100%;
     background-color: rgba(40, 160, 255, 0.2);
@@ -181,11 +183,12 @@
 
 .minimap-border {
     position: absolute;
-    top: -30px; /* Di chuyển lên trên và sang trái để căn giữa nếu tăng size */
-    left: -35px;
-    width: 270px; /* Tăng kích thước khung ảnh tại đây */
-    height: 270px;
+    top: 0;
+    left: 0;
+    width: 250px;
+    height: 250px;
     border-width: 0;
+    pointer-events: none;
 }
 
 .minimap-inner-ring {
@@ -578,28 +581,6 @@
     z-index: 12;
 }
 
-/* --- Minimap Hotkey (M) --- */
-.minimap-hotkey-container {
-    position: absolute;
-    bottom: 15px;
-    right: 15px;
-    width: 32px;
-    height: 32px;
-    background-color: transparent;
-    border-width: 0;
-    justify-content: center;
-    align-items: center;
-    z-index: 20;
-}
-
-.minimap-hotkey {
-    color: white;
-    -unity-font-style: bold;
-    font-size: 16px;
-    padding: 0;
-    margin: 0;
-}
-
 /* --- World Map Overlay (Animated) --- */
 .world-map-overlay {
     position: absolute;
@@ -624,14 +605,15 @@
 }
 
 .world-map-frame {
-    width: 90%;
-    height: 70%;
+    width: 1040px;
+    height: 520px;
     background-color: transparent;
-    border-radius: 8px;
+    border-radius: 0;
     border-width: 0;
     padding: 0;
     align-items: center;
     justify-content: center;
+    overflow: visible;
     -unity-font-definition: url("project://database/Assets/UI%20Toolkit/UnityThemes/UnityDefaultRuntimeTheme.tss?fileID=2230732570650464555&guid=8dcf67e479d58bd47908bf0d5e1cc1d0&type=3#NotInter-Regular");
     
     /* Trạng thái ẩn: Thu nhỏ mượt mà về phía Minimap */
@@ -642,6 +624,17 @@
     transition-property: scale, opacity;
     transition-duration: 0.4s;
     transition-timing-function: ease-out-circ; /* Hiệu ứng mượt mà, tự nhiên */
+}
+
+.world-map-viewport {
+    position: absolute;
+    top: 118px;
+    left: 60px;
+    right: 60px;
+    bottom: 52px;
+    background-color: rgb(8, 12, 22);
+    overflow: hidden;
+    border-radius: 4px;
 }
 
 .world-map-overlay.show-map .world-map-frame {
