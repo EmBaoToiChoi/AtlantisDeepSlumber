@@ -78,44 +78,53 @@
 }
 
 #main-menu-panel .menu-btn {
-    width: 250px;
+    width: 280px;
     height: 64px;
-    margin: 0 16px;
-    padding: 0 15px;
+    margin: 0 15px;
+    padding: 0 20px;
     font-size: 22px;
     letter-spacing: 3px;
-    color: rgb(215, 240, 255);
-    background-color: rgba(6, 16, 26, 0.75);
-    border-width: 1.5px;
-    border-color: rgba(212, 175, 55, 0.45);
-    border-radius: 4px;
-    text-shadow: 0 0 12px rgba(0, 180, 255, 0.5), 1px 1px 3px rgba(0, 0, 0, 0.95);
+    color: rgb(160, 225, 255);
+    background-color: transparent !important;
+    background-image: none !important;
+    border-width: 0 !important;
+    border-radius: 0 !important;
+    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.95);
     -unity-text-align: middle-center;
     justify-content: center;
     align-items: center;
-    transition: all 0.25s ease-out;
+    transition: all 0.3s ease-out;
+    cursor: link;
 }
 
 #main-menu-panel .menu-btn:hover {
     scale: 1.08 1.08;
-    letter-spacing: 4.5px;
+    letter-spacing: 6px;
     color: rgb(255, 255, 255);
-    background-color: rgba(14, 80, 120, 0.85);
-    border-color: rgb(255, 215, 80);
-    text-shadow: 0 0 18px rgba(0, 240, 255, 1), 1px 1px 4px rgba(0, 0, 0, 1);
+    background-image: url("project://database/Assets/Synty/InterfaceFantasyMenus/Sprites/FantasyMenus/SPR_FantasyMenus_Menu_Button_06_Frame.png") !important;
+    -unity-background-scale-mode: stretch-to-fill;
+    -unity-slice-left: 500;
+    -unity-slice-right: 500;
+    -unity-slice-top: 0;
+    -unity-slice-bottom: 0;
+    -unity-slice-scale: 0.38;
+    text-shadow: 0 0 16px rgba(0, 240, 255, 1), 1px 1px 3px rgba(0, 0, 0, 1);
 }
 
 #main-menu-panel .quit-btn {
-    color: rgb(255, 170, 170);
-    border-color: rgba(212, 80, 80, 0.45);
-    text-shadow: 0 0 12px rgba(255, 70, 70, 0.5), 1px 1px 3px rgba(0, 0, 0, 0.95);
+    color: rgb(255, 175, 175);
 }
 
 #main-menu-panel .quit-btn:hover {
     color: rgb(255, 255, 255);
-    background-color: rgba(120, 30, 30, 0.85);
-    border-color: rgb(255, 100, 100);
-    text-shadow: 0 0 18px rgba(255, 80, 80, 1), 1px 1px 4px rgba(0, 0, 0, 1);
+    background-image: url("project://database/Assets/Synty/InterfaceFantasyMenus/Sprites/FantasyMenus/SPR_FantasyMenus_Menu_Button_06_Frame.png") !important;
+    -unity-background-scale-mode: stretch-to-fill;
+    -unity-slice-left: 500;
+    -unity-slice-right: 500;
+    -unity-slice-top: 0;
+    -unity-slice-bottom: 0;
+    -unity-slice-scale: 0.38;
+    text-shadow: 0 0 16px rgba(255, 80, 80, 1), 1px 1px 3px rgba(0, 0, 0, 1);
 }
 
 #join-room-panel {
