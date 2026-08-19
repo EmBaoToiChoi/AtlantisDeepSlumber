@@ -49,34 +49,29 @@
 }
 
 .key-badge-g {
-    width: 28px;
-    height: 28px;
-    background-color: #ffffff;
-    border-radius: 6px;
-    border-width: 1px;
-    border-color: #c8c8c8;
+    width: 38px;
+    height: 38px;
+    background-image: url("project://database/Assets/Artsystack - Fantasy RPG GUI/Resources/Sprites/controller icons/keyboard_mouse/G.png?fileID=2800000&guid=8adf5ca34aa971449947f13f45218cbb&type=3#G");
+    -unity-background-scale-mode: scale-to-fit;
+    background-color: transparent;
+    border-width: 0;
     justify-content: center;
     align-items: center;
-    margin-right: 12px;
-    box-shadow: 0 3px 0 #b4b4b4;
+    margin-right: 14px;
 }
 
 .key-badge-g-text {
-    color: #0f0f0f;
-    -unity-font-style: bold;
-    font-size: 15px;
-    padding: 0;
-    margin: 0;
+    display: none;
 }
 
 .silas-interaction-text {
     color: #ffffff;
     -unity-font-style: bold;
-    font-size: 16px;
+    font-size: 17px;
     letter-spacing: 0.5px;
     padding: 0;
     margin: 0;
-    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95);
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.95);
 }
 
 /* ═══════════════════════════════════════════════════════
