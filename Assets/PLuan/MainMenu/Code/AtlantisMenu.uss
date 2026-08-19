@@ -53,47 +53,69 @@
 }
 
 #main-menu-panel {
-    width: 460px;
-    height: 450px;
-    margin-left: 5%;
-    padding: 90px 40px 45px 40px !important;
-    background-image: url("project://database/Assets/Synty/InterfaceFantasyMenus/Sprites/FantasyMenus/SPR_FantasyMenus_Frame_Box_Large_06.png");
-    -unity-background-scale-mode: stretch-to-fill;
-    -unity-slice-left: 300;
-    -unity-slice-top: 500;
-    -unity-slice-right: 300;
-    -unity-slice-bottom: 300;
-    -unity-slice-scale: 0.34;
+    position: absolute;
+    bottom: 45px;
+    left: 0;
+    right: 0;
+    width: 100%;
+    height: auto;
+    margin-left: 0;
+    padding: 0 !important;
+    background-image: none !important;
     background-color: transparent !important;
     border-width: 0 !important;
     align-items: center;
     justify-content: center;
+    flex-direction: row;
 }
 
 #main-menu-panel .button-group {
-    width: 100%;
+    flex-direction: row;
+    width: auto;
     align-items: center;
     justify-content: center;
+    padding: 10px 20px;
 }
 
 #main-menu-panel .menu-btn {
-    width: 360px;
-    height: 62px;
-    padding: 0 20px;
-    margin-bottom: 8px;
-    font-size: 24px;
-    letter-spacing: 4px;
-    color: rgb(185, 235, 255);
-    text-shadow: 0 0 10px rgba(0, 180, 255, 0.4), 1px 1px 3px rgba(0, 0, 0, 0.9);
+    width: 250px;
+    height: 64px;
+    margin: 0 16px;
+    padding: 0 15px;
+    font-size: 22px;
+    letter-spacing: 3px;
+    color: rgb(215, 240, 255);
+    background-color: rgba(6, 16, 26, 0.75);
+    border-width: 1.5px;
+    border-color: rgba(212, 175, 55, 0.45);
+    border-radius: 4px;
+    text-shadow: 0 0 12px rgba(0, 180, 255, 0.5), 1px 1px 3px rgba(0, 0, 0, 0.95);
     -unity-text-align: middle-center;
     justify-content: center;
     align-items: center;
+    transition: all 0.25s ease-out;
+}
+
+#main-menu-panel .menu-btn:hover {
+    scale: 1.08 1.08;
+    letter-spacing: 4.5px;
+    color: rgb(255, 255, 255);
+    background-color: rgba(14, 80, 120, 0.85);
+    border-color: rgb(255, 215, 80);
+    text-shadow: 0 0 18px rgba(0, 240, 255, 1), 1px 1px 4px rgba(0, 0, 0, 1);
 }
 
 #main-menu-panel .quit-btn {
-    color: rgb(245, 145, 145);
-    text-shadow: 0 0 10px rgba(255, 80, 80, 0.4), 1px 1px 3px rgba(0, 0, 0, 0.9);
-    margin-top: 6px;
+    color: rgb(255, 170, 170);
+    border-color: rgba(212, 80, 80, 0.45);
+    text-shadow: 0 0 12px rgba(255, 70, 70, 0.5), 1px 1px 3px rgba(0, 0, 0, 0.95);
+}
+
+#main-menu-panel .quit-btn:hover {
+    color: rgb(255, 255, 255);
+    background-color: rgba(120, 30, 30, 0.85);
+    border-color: rgb(255, 100, 100);
+    text-shadow: 0 0 18px rgba(255, 80, 80, 1), 1px 1px 4px rgba(0, 0, 0, 1);
 }
 
 #join-room-panel {
