@@ -2,19 +2,36 @@ using UnityEngine;
 using UnityEngine.Events;
 using Unity.Netcode;
 
-// Đổi thành NetworkBehaviour
 public class DestroyReporter : NetworkBehaviour
 {
     [HideInInspector]
     public UnityEvent OnTargetDestroyed = new UnityEvent();
 
-    // Trong Netcode, dùng OnNetworkDespawn thay cho OnDestroy
+    private bool hasReported = false;
+
+    public void ReportDestroyed()
+    {
+        if (hasReported) return;
+        hasReported = true;
+        OnTargetDestroyed?.Invoke();
+    }
+
     public override void OnNetworkDespawn()
     {
-        // CHỈ CÓ SERVER mới được quyền báo cáo sự kiện chết để tính điểm
-        if (IsServer && OnTargetDestroyed != null)
+        // Netcode: Chỉ có Server được quyền báo cáo sự kiện chết để tính điểm
+        if (IsServer)
         {
-            OnTargetDestroyed.Invoke();
+            ReportDestroyed();
+        }
+    }
+
+    private void OnDestroy()
+    {
+        // Hỗ trợ chế độ Offline / Standalone
+        bool isNetwork = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
+        if (!isNetwork)
+        {
+            ReportDestroyed();
         }
     }
 }

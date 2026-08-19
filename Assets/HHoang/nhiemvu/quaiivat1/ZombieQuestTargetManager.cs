@@ -77,11 +77,19 @@ public class ZombieQuestTargetManager : NetworkBehaviour, IQuestTrigger
     {
         if (Instance == null) Instance = this;
         else Destroy(gameObject);
+
+        if (zombieTargets != null && zombieTargets.Count > 0)
+        {
+            totalKillsNeeded = zombieTargets.Count;
+        }
     }
 
     private void Start()
     {
-        totalKillsNeeded = GetTotalKillsNeeded();
+        if (totalKillsNeeded <= 0)
+        {
+            totalKillsNeeded = GetTotalKillsNeeded();
+        }
     }
 
     public override void OnNetworkSpawn()
@@ -136,14 +144,11 @@ public class ZombieQuestTargetManager : NetworkBehaviour, IQuestTrigger
 
     public int GetTotalKillsNeeded()
     {
+        if (totalKillsNeeded > 0) return totalKillsNeeded;
         if (zombieTargets != null && zombieTargets.Count > 0)
         {
-            int count = 0;
-            foreach (var z in zombieTargets)
-            {
-                if (z != null) count++;
-            }
-            return count > 0 ? count : zombieTargets.Count;
+            totalKillsNeeded = zombieTargets.Count;
+            return totalKillsNeeded;
         }
         return totalKillsNeeded;
     }
