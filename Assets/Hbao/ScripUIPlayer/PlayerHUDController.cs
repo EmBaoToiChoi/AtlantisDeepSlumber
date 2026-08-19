@@ -295,12 +295,27 @@ public class PlayerHUDController : MonoBehaviour
     [Header("Quest Settings")]
     public Sprite woodLogSprite;
     
-    // Hệ thống Hướng Dẫn Phím Nóng Động
     private VisualElement hotkeysHintPanel;
+    private VisualElement f1ToggleHint;
+    private VisualElement tutorialDetailsContainer;
+    private float tutorialTimer = 0f;
+    private const float TUTORIAL_AUTO_HIDE_DURATION = 20f;
+    private bool isTutorialManuallyToggled = false;
+    private bool isTutorialVisible = true;
     private VisualElement idleHintsGroup;
     private VisualElement actionHintsGroup;
     private VisualElement hintWeapon2;
     private VisualElement hintSkills;
+    private VisualElement hintAttack;
+    private VisualElement hintAttackIcons;
+    private Label hintAttackText;
+    private VisualElement hintBlock;
+    private Label hintBlockText;
+    private VisualElement hintIdleAttack;
+    private VisualElement hintIdleAttackIcons;
+    private Label hintIdleAttackText;
+    private VisualElement hintIdleBlock;
+    private Label hintIdleBlockText;
     private Label tooltipTitle;
     private Label tooltipDesc;
     private System.Collections.Generic.List<VisualElement> inventorySlotsUI = new System.Collections.Generic.List<VisualElement>();
@@ -533,10 +548,30 @@ public class PlayerHUDController : MonoBehaviour
 
         // Tìm các phần tử của bảng phím nóng
         hotkeysHintPanel = root.Q<VisualElement>("hotkeys-hint-panel");
+        f1ToggleHint = root.Q<VisualElement>("f1-toggle-hint");
+        tutorialDetailsContainer = root.Q<VisualElement>("tutorial-details-container");
+        if (f1ToggleHint != null)
+        {
+            f1ToggleHint.RegisterCallback<PointerDownEvent>(evt =>
+            {
+                ToggleTutorialPanel();
+            });
+        }
         idleHintsGroup = root.Q<VisualElement>("idle-hints-group");
         actionHintsGroup = root.Q<VisualElement>("action-hints-group");
         hintWeapon2 = root.Q<VisualElement>("hint-weapon2");
         hintSkills = root.Q<VisualElement>("hint-skills");
+        hintAttack = root.Q<VisualElement>("hint-attack");
+        hintAttackIcons = root.Q<VisualElement>("hint-attack-icons");
+        hintAttackText = root.Q<Label>("hint-attack-text");
+        hintBlock = root.Q<VisualElement>("hint-block");
+        hintBlockText = root.Q<Label>("hint-block-text");
+        hintIdleAttack = root.Q<VisualElement>("hint-idle-attack");
+        hintIdleAttackIcons = root.Q<VisualElement>("hint-idle-attack-icons");
+        hintIdleAttackText = root.Q<Label>("hint-idle-attack-text");
+        hintIdleBlock = root.Q<VisualElement>("hint-idle-block");
+        hintIdleBlockText = root.Q<Label>("hint-idle-block-text");
+        UpdateWeaponActionHints();
 
         // Tìm UI Mic Icon trực tiếp
         micIcon = root.Q<VisualElement>("mic-icon");
@@ -979,8 +1014,32 @@ public class PlayerHUDController : MonoBehaviour
             }
         }
 
+        // Tự động đếm 20 giây để tắt bảng chi tiết và hiển thị nút F1
+        if (!isTutorialManuallyToggled && isTutorialVisible)
+        {
+            tutorialTimer += Time.deltaTime;
+            if (tutorialTimer >= TUTORIAL_AUTO_HIDE_DURATION)
+            {
+                isTutorialVisible = false;
+                if (tutorialDetailsContainer != null)
+                {
+                    tutorialDetailsContainer.style.display = DisplayStyle.None;
+                }
+                if (f1ToggleHint != null)
+                {
+                    f1ToggleHint.style.display = DisplayStyle.Flex;
+                }
+            }
+        }
+
         if (Keyboard.current != null)
         {
+            // Phím F1 để Bật/Tắt hướng dẫn
+            if (Keyboard.current.f1Key.wasPressedThisFrame)
+            {
+                ToggleTutorialPanel();
+            }
+
             // Chuyển vũ khí 1 và 2
             if (Keyboard.current.digit1Key.wasPressedThisFrame)
             {
@@ -1165,6 +1224,13 @@ public class PlayerHUDController : MonoBehaviour
                         }
                     }
                 }
+            }
+        }
+        else
+        {
+            if (Input.GetKeyDown(KeyCode.F1))
+            {
+                ToggleTutorialPanel();
             }
         }
 
@@ -1567,6 +1633,7 @@ public class PlayerHUDController : MonoBehaviour
             weaponSlot2.RemoveFromClassList("weapon-active");
             weaponSlot2.AddToClassList("weapon-inactive");
             currentSelectedWeapon = 1;
+            UpdateWeaponActionHints();
             NotifyHUDChange();
         }
         else if (index == 2)
@@ -1584,6 +1651,7 @@ public class PlayerHUDController : MonoBehaviour
             weaponSlot1.RemoveFromClassList("weapon-active");
             weaponSlot1.AddToClassList("weapon-inactive");
             currentSelectedWeapon = 2;
+            UpdateWeaponActionHints();
             NotifyHUDChange();
         }
 
@@ -2564,6 +2632,7 @@ public class PlayerHUDController : MonoBehaviour
             }
         }
 
+        UpdateWeaponActionHints();
         Debug.Log($"[PlayerHUDController] Đã thiết lập thành công giao diện cho lớp nhân vật: {profile.className} (Index {profileIndex})");
     }
 
@@ -3664,6 +3733,31 @@ public class PlayerHUDController : MonoBehaviour
             hotkeysHintPanel.style.display = DisplayStyle.Flex;
         }
 
+        // Kiểm tra trạng thái đóng/mở của chi tiết hướng dẫn
+        if (!isTutorialVisible)
+        {
+            if (tutorialDetailsContainer != null)
+            {
+                tutorialDetailsContainer.style.display = DisplayStyle.None;
+            }
+            if (f1ToggleHint != null)
+            {
+                f1ToggleHint.style.display = DisplayStyle.Flex;
+            }
+            return;
+        }
+        else
+        {
+            if (tutorialDetailsContainer != null)
+            {
+                tutorialDetailsContainer.style.display = DisplayStyle.Flex;
+            }
+            if (f1ToggleHint != null && isTutorialManuallyToggled)
+            {
+                f1ToggleHint.style.display = DisplayStyle.Flex;
+            }
+        }
+
         // 2. Kiểm tra xem người chơi có đang bấm phím di chuyển không
         bool isMoving = false;
         if (Keyboard.current != null)
@@ -3707,6 +3801,160 @@ public class PlayerHUDController : MonoBehaviour
         if (hintSkills != null)
         {
             hintSkills.style.display = isSkillsUnlocked ? DisplayStyle.Flex : DisplayStyle.None;
+        }
+
+        // 6. Cập nhật gợi ý tấn công / đỡ khiên theo từng nhân vật và slot vũ khí đang chọn
+        UpdateWeaponActionHints();
+    }
+
+    private void UpdateWeaponActionHints()
+    {
+        if (hintAttack == null && uiDocument != null && uiDocument.rootVisualElement != null)
+        {
+            var root = uiDocument.rootVisualElement;
+            hintAttack = root.Q<VisualElement>("hint-attack");
+            hintAttackIcons = root.Q<VisualElement>("hint-attack-icons");
+            hintAttackText = root.Q<Label>("hint-attack-text");
+            hintBlock = root.Q<VisualElement>("hint-block");
+            hintBlockText = root.Q<Label>("hint-block-text");
+
+            hintIdleAttack = root.Q<VisualElement>("hint-idle-attack");
+            hintIdleAttackIcons = root.Q<VisualElement>("hint-idle-attack-icons");
+            hintIdleAttackText = root.Q<Label>("hint-idle-attack-text");
+            hintIdleBlock = root.Q<VisualElement>("hint-idle-block");
+            hintIdleBlockText = root.Q<Label>("hint-idle-block-text");
+        }
+
+        int classIdx = LocalPlayerTarget != null ? LocalPlayerTarget.CharacterClassIndex : (lastSelectedProfileIndex >= 0 ? lastSelectedProfileIndex : 0);
+        int currentWeapon = currentSelectedWeapon; // 1 = Tay không, 2 = Vũ khí 2
+
+        ConfigureCombatHints(hintAttack, hintAttackIcons, hintAttackText, hintBlock, hintBlockText, classIdx, currentWeapon, false);
+        ConfigureCombatHints(hintIdleAttack, hintIdleAttackIcons, hintIdleAttackText, hintIdleBlock, hintIdleBlockText, classIdx, currentWeapon, true);
+    }
+
+    private void ConfigureCombatHints(
+        VisualElement attackRow, VisualElement attackIcons, Label attackText,
+        VisualElement blockRow, Label blockText,
+        int classIdx, int currentWeapon, bool isIdle)
+    {
+        if (currentWeapon == 1) // Ô vũ khí 1 (Tay không)
+        {
+            if (isIdle)
+            {
+                // Khi đứng im ở ô vũ khí 1: ẩn gợi ý combat để bảng phím idle hiển thị gọn gàng
+                if (attackRow != null) attackRow.style.display = DisplayStyle.None;
+                if (blockRow != null) blockRow.style.display = DisplayStyle.None;
+            }
+            else
+            {
+                if (attackRow != null) attackRow.style.display = DisplayStyle.Flex;
+                if (attackIcons != null)
+                {
+                    attackIcons.Clear();
+                    var lmb = new VisualElement();
+                    lmb.AddToClassList("key-icon");
+                    lmb.AddToClassList("key-icon-mouse-l");
+                    attackIcons.Add(lmb);
+                }
+                if (attackText != null) attackText.text = "Đấm";
+                if (blockRow != null) blockRow.style.display = DisplayStyle.None;
+            }
+        }
+        else // Ô vũ khí 2 (Vũ khí riêng từng phái) -> Hiển thị cả khi di chuyển lẫn khi đứng im!
+        {
+            if (attackRow != null) attackRow.style.display = DisplayStyle.Flex;
+
+            if (classIdx == 3) // Arthur (Tanker): Click chuột trái Chém + Giữ chuột phải Đỡ khiên
+            {
+                if (attackIcons != null)
+                {
+                    attackIcons.Clear();
+                    var lmb = new VisualElement();
+                    lmb.AddToClassList("key-icon");
+                    lmb.AddToClassList("key-icon-mouse-l");
+                    attackIcons.Add(lmb);
+                }
+                if (attackText != null) attackText.text = "Chém";
+
+                if (blockRow != null)
+                {
+                    blockRow.style.display = DisplayStyle.Flex;
+                    if (blockText != null) blockText.text = "Giữ Chuột phải để đỡ khiên";
+                }
+            }
+            else if (classIdx == 2) // Elena (Archer): Chuột phải + Chuột trái -> Bắn Cung
+            {
+                if (attackIcons != null)
+                {
+                    attackIcons.Clear();
+                    var rmb = new VisualElement();
+                    rmb.AddToClassList("key-icon");
+                    rmb.AddToClassList("key-icon-mouse-r");
+                    attackIcons.Add(rmb);
+
+                    var plus = new Label("+");
+                    plus.AddToClassList("key-combo-plus");
+                    attackIcons.Add(plus);
+
+                    var lmb = new VisualElement();
+                    lmb.AddToClassList("key-icon");
+                    lmb.AddToClassList("key-icon-mouse-l");
+                    attackIcons.Add(lmb);
+                }
+                if (attackText != null) attackText.text = "Bắn Cung";
+                if (blockRow != null) blockRow.style.display = DisplayStyle.None;
+            }
+            else if (classIdx == 1) // Maya (Support/Mage): Chuột phải + Chuột trái -> Chưởng Phép
+            {
+                if (attackIcons != null)
+                {
+                    attackIcons.Clear();
+                    var rmb = new VisualElement();
+                    rmb.AddToClassList("key-icon");
+                    rmb.AddToClassList("key-icon-mouse-r");
+                    attackIcons.Add(rmb);
+
+                    var plus = new Label("+");
+                    plus.AddToClassList("key-combo-plus");
+                    attackIcons.Add(plus);
+
+                    var lmb = new VisualElement();
+                    lmb.AddToClassList("key-icon");
+                    lmb.AddToClassList("key-icon-mouse-l");
+                    attackIcons.Add(lmb);
+                }
+                if (attackText != null) attackText.text = "Chưởng Phép";
+                if (blockRow != null) blockRow.style.display = DisplayStyle.None;
+            }
+            else // Leo (Assassin - 0): Click chuột trái Chém
+            {
+                if (attackIcons != null)
+                {
+                    attackIcons.Clear();
+                    var lmb = new VisualElement();
+                    lmb.AddToClassList("key-icon");
+                    lmb.AddToClassList("key-icon-mouse-l");
+                    attackIcons.Add(lmb);
+                }
+                if (attackText != null) attackText.text = "Chém";
+                if (blockRow != null) blockRow.style.display = DisplayStyle.None;
+            }
+        }
+    }
+
+    public void ToggleTutorialPanel()
+    {
+        isTutorialManuallyToggled = true;
+        isTutorialVisible = !isTutorialVisible;
+
+        if (tutorialDetailsContainer != null)
+        {
+            tutorialDetailsContainer.style.display = isTutorialVisible ? DisplayStyle.Flex : DisplayStyle.None;
+        }
+
+        if (f1ToggleHint != null)
+        {
+            f1ToggleHint.style.display = DisplayStyle.Flex;
         }
     }
 

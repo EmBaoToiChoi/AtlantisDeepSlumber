@@ -204,69 +204,91 @@
         </ui:VisualElement>
     </ui:VisualElement>
     <ui:VisualElement name="interaction-prompt" class="interaction-prompt">
-        <ui:VisualElement class="key-badge-f">
-            <ui:Label text="F" class="key-badge-f-text" />
-        </ui:VisualElement>
+        <ui:VisualElement class="key-icon-f" />
         <ui:Label name="interaction-prompt-text" text="Ấn [F] để nhặt" class="interaction-text" />
     </ui:VisualElement>
     <ui:VisualElement name="teammates-container" class="teammates-container" />
     <ui:VisualElement name="hotkeys-hint-panel" class="hotkeys-hint-panel">
-        <ui:VisualElement name="idle-hints-group" class="hints-group">
-            <ui:VisualElement class="hint-row">
-                <ui:VisualElement class="key-badge">
-                    <ui:Label text="WASD" class="key-badge-text" />
-                </ui:VisualElement>
-                <ui:Label text="Di chuyển" class="hint-text" />
-            </ui:VisualElement>
-            <ui:VisualElement class="hint-row">
-                <ui:VisualElement class="key-badge large-key">
-                    <ui:Label text="Shift + WASD" class="key-badge-text" />
-                </ui:VisualElement>
-                <ui:Label text="Chạy nhanh" class="hint-text" />
-            </ui:VisualElement>
+        <ui:VisualElement name="f1-toggle-hint" class="f1-toggle-hint" style="display: none;">
+            <ui:VisualElement class="key-icon key-icon-f1" />
+            <ui:Label name="f1-toggle-text" text="Ấn để mở/Tắt hướng dẫn" class="hint-text" />
         </ui:VisualElement>
-        <ui:VisualElement name="action-hints-group" class="hints-group" style="display: none;">
-            <ui:VisualElement class="hint-row">
-                <ui:VisualElement class="key-badge">
-                    <ui:Label text="Ctrl" class="key-badge-text" />
+        <ui:VisualElement name="tutorial-details-container" class="tutorial-details-container">
+            <ui:VisualElement name="idle-hints-group" class="hints-group">
+                <ui:VisualElement class="hint-row">
+                    <ui:VisualElement class="key-icon-combo">
+                        <ui:VisualElement class="key-icon key-icon-w" />
+                        <ui:VisualElement class="key-icon key-icon-a" />
+                        <ui:VisualElement class="key-icon key-icon-s" />
+                        <ui:VisualElement class="key-icon key-icon-d" />
+                    </ui:VisualElement>
+                    <ui:Label text="Di chuyển" class="hint-text" />
                 </ui:VisualElement>
-                <ui:Label text="Lộn tránh" class="hint-text" />
+                <ui:VisualElement class="hint-row">
+                    <ui:VisualElement class="key-icon-combo">
+                        <ui:VisualElement class="key-icon key-icon-shift" />
+                        <ui:Label text="+" class="key-combo-plus" />
+                        <ui:VisualElement class="key-icon key-icon-w" />
+                        <ui:VisualElement class="key-icon key-icon-a" />
+                        <ui:VisualElement class="key-icon key-icon-s" />
+                        <ui:VisualElement class="key-icon key-icon-d" />
+                    </ui:VisualElement>
+                    <ui:Label text="Chạy nhanh" class="hint-text" />
+                </ui:VisualElement>
+                <ui:VisualElement name="hint-idle-attack" class="hint-row" style="display: none;">
+                    <ui:VisualElement name="hint-idle-attack-icons" class="key-icon-combo">
+                        <ui:VisualElement class="key-icon key-icon-mouse-l" />
+                    </ui:VisualElement>
+                    <ui:Label name="hint-idle-attack-text" text="Đấm" class="hint-text" />
+                </ui:VisualElement>
+                <ui:VisualElement name="hint-idle-block" class="hint-row" style="display: none;">
+                    <ui:VisualElement class="key-icon-combo">
+                        <ui:VisualElement class="key-icon key-icon-mouse-r" />
+                    </ui:VisualElement>
+                    <ui:Label name="hint-idle-block-text" text="Giữ Chuột phải để đỡ khiên" class="hint-text" />
+                </ui:VisualElement>
             </ui:VisualElement>
-            <ui:VisualElement class="hint-row">
-                <ui:VisualElement class="key-badge">
-                    <ui:Label text="TAB" class="key-badge-text" />
+            <ui:VisualElement name="action-hints-group" class="hints-group" style="display: none;">
+                <ui:VisualElement class="hint-row">
+                    <ui:VisualElement class="key-icon key-icon-ctrl" />
+                    <ui:Label text="Lộn tránh" class="hint-text" />
                 </ui:VisualElement>
-                <ui:Label text="Hành trang" class="hint-text" />
-            </ui:VisualElement>
-            <ui:VisualElement class="hint-row">
-                <ui:VisualElement class="key-badge">
-                    <ui:Label text="M" class="key-badge-text" />
+                <ui:VisualElement class="hint-row">
+                    <ui:VisualElement class="key-icon key-icon-tab" />
+                    <ui:Label text="Hành trang" class="hint-text" />
                 </ui:VisualElement>
-                <ui:Label text="Bản đồ" class="hint-text" />
-            </ui:VisualElement>
-            <ui:VisualElement class="hint-row">
-                <ui:VisualElement class="key-badge">
-                    <ui:Label text="1" class="key-badge-text" />
+                <ui:VisualElement class="hint-row">
+                    <ui:VisualElement class="key-icon key-icon-m" />
+                    <ui:Label text="Bản đồ" class="hint-text" />
                 </ui:VisualElement>
-                <ui:Label text="Tay không" class="hint-text" />
-            </ui:VisualElement>
-            <ui:VisualElement name="hint-weapon2" class="hint-row" style="display: none;">
-                <ui:VisualElement class="key-badge">
-                    <ui:Label text="2" class="key-badge-text" />
+                <ui:VisualElement class="hint-row">
+                    <ui:VisualElement class="key-icon key-icon-1" />
+                    <ui:Label text="Tay không" class="hint-text" />
                 </ui:VisualElement>
-                <ui:Label text="Vũ khí" class="hint-text" />
-            </ui:VisualElement>
-            <ui:VisualElement name="hint-skills" class="hint-row" style="display: none;">
-                <ui:VisualElement class="key-badge large-key">
-                    <ui:Label text="Q, E, R" class="key-badge-text" />
+                <ui:VisualElement name="hint-weapon2" class="hint-row" style="display: none;">
+                    <ui:VisualElement class="key-icon key-icon-2" />
+                    <ui:Label text="Vũ khí" class="hint-text" />
                 </ui:VisualElement>
-                <ui:Label text="Kỹ năng" class="hint-text" />
-            </ui:VisualElement>
-            <ui:VisualElement class="hint-row">
-                <ui:VisualElement class="key-badge large-key">
-                    <ui:Label text="Chuột L" class="key-badge-text" />
+                <ui:VisualElement name="hint-skills" class="hint-row" style="display: none;">
+                    <ui:VisualElement class="key-icon-combo">
+                        <ui:VisualElement class="key-icon key-icon-q" />
+                        <ui:VisualElement class="key-icon key-icon-e" />
+                        <ui:VisualElement class="key-icon key-icon-r" />
+                    </ui:VisualElement>
+                    <ui:Label text="Kỹ năng" class="hint-text" />
                 </ui:VisualElement>
-                <ui:Label text="Đấm/Chém" class="hint-text" />
+                <ui:VisualElement name="hint-attack" class="hint-row">
+                    <ui:VisualElement name="hint-attack-icons" class="key-icon-combo">
+                        <ui:VisualElement class="key-icon key-icon-mouse-l" />
+                    </ui:VisualElement>
+                    <ui:Label name="hint-attack-text" text="Đấm" class="hint-text" />
+                </ui:VisualElement>
+                <ui:VisualElement name="hint-block" class="hint-row" style="display: none;">
+                    <ui:VisualElement class="key-icon-combo">
+                        <ui:VisualElement class="key-icon key-icon-mouse-r" />
+                    </ui:VisualElement>
+                    <ui:Label name="hint-block-text" text="Giữ Chuột phải để đỡ khiên" class="hint-text" />
+                </ui:VisualElement>
             </ui:VisualElement>
         </ui:VisualElement>
     </ui:VisualElement>

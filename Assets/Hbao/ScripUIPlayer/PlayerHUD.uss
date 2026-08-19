@@ -1100,33 +1100,29 @@
 }
 
 .key-badge-f {
-    width: 26px;
-    height: 26px;
-    background-color: rgb(255, 255, 255);
-    border-radius: 6px;
-    border-width: 1px;
-    border-color: rgb(200, 200, 200);
+    width: 38px;
+    height: 38px;
+    background-image: url("project://database/Assets/Artsystack - Fantasy RPG GUI/Resources/Sprites/controller icons/keyboard_mouse/F.png?fileID=2800000&guid=66976df651142c9499726864796f67c7&type=3#F");
+    -unity-background-scale-mode: scale-to-fit;
+    background-color: transparent;
+    border-width: 0;
     justify-content: center;
     align-items: center;
-    margin-right: 10px;
-    box-shadow: 0 3px 0 rgb(180, 180, 180);
+    margin-right: 12px;
 }
 
 .key-badge-f-text {
-    color: rgb(15, 15, 15);
-    -unity-font-style: bold;
-    font-size: 14px;
-    padding: 0;
-    margin: 0;
+    display: none;
 }
 
 .interaction-text {
     color: rgb(255, 255, 255);
     -unity-font-style: bold;
-    font-size: 15px;
+    font-size: 17px;
     letter-spacing: 0.5px;
     padding: 0;
     margin: 0;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.95);
 }
 
 /* Inventory Tooltip (Hover Description Card) */
@@ -1403,47 +1399,134 @@
     flex-direction: row;
     align-items: center;
     margin-bottom: 12px;
-    opacity: 0.9;
+    opacity: 0.95;
     transition-property: opacity, translate;
     transition-duration: 0.25s;
     transition-timing-function: ease-out;
 }
 
+/* ========================================================================= */
+/* --- Controller & Keyboard Icons Theme ---                                 */
+/* ========================================================================= */
+
+.key-icon {
+    width: 36px;
+    height: 36px;
+    -unity-background-scale-mode: scale-to-fit;
+    background-color: transparent;
+    margin-right: 4px;
+}
+
+.key-icon-combo {
+    flex-direction: row;
+    align-items: center;
+    margin-right: 12px;
+}
+
+.key-combo-plus {
+    color: rgb(255, 255, 255);
+    font-size: 16px;
+    -unity-font-style: bold;
+    margin-left: 3px;
+    margin-right: 6px;
+    padding: 0;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+}
+
+.key-icon-w { background-image: url("project://database/Assets/Artsystack - Fantasy RPG GUI/Resources/Sprites/controller icons/keyboard_mouse/W.png?fileID=2800000&guid=9c7b02915cdd9f64286d6afa370744e2&type=3#W"); }
+.key-icon-a { background-image: url("project://database/Assets/Artsystack - Fantasy RPG GUI/Resources/Sprites/controller icons/keyboard_mouse/A.png?fileID=2800000&guid=04073703d81f92a4fb96d237940c761a&type=3#A"); }
+.key-icon-s { background-image: url("project://database/Assets/Artsystack - Fantasy RPG GUI/Resources/Sprites/controller icons/keyboard_mouse/S.png?fileID=2800000&guid=9a0e96f1646e1204b81600666abc8479&type=3#S"); }
+.key-icon-d { background-image: url("project://database/Assets/Artsystack - Fantasy RPG GUI/Resources/Sprites/controller icons/keyboard_mouse/D.png?fileID=2800000&guid=a0caad38e35a67747b5cca0a6291d2f2&type=3#D"); }
+.key-icon-shift { 
+    width: 72px;
+    height: 36px;
+    background-image: url("project://database/Assets/Artsystack - Fantasy RPG GUI/Resources/Sprites/controller icons/keyboard_mouse/Shift.png?fileID=2800000&guid=afb91b3c2ed7d7e43af6c1a59cadb732&type=3#Shift"); 
+}
+.key-icon-ctrl { 
+    width: 54px;
+    height: 36px;
+    background-image: url("project://database/Assets/Artsystack - Fantasy RPG GUI/Resources/Sprites/controller icons/keyboard_mouse/Ctrl.png?fileID=2800000&guid=790930fac36163a4f8f0a85f7eb69593&type=3#Ctrl"); 
+}
+.key-icon-tab { 
+    width: 54px;
+    height: 36px;
+    background-image: url("project://database/Assets/Artsystack - Fantasy RPG GUI/Resources/Sprites/controller icons/keyboard_mouse/Tab.png?fileID=2800000&guid=0c9b8259745874347b894cbbe394c8b1&type=3#Tab"); 
+}
+.key-icon-m { background-image: url("project://database/Assets/Artsystack - Fantasy RPG GUI/Resources/Sprites/controller icons/keyboard_mouse/M.png?fileID=2800000&guid=37bcee4647f000740a399742b0f0e27b&type=3#M"); }
+.key-icon-f { 
+    width: 38px;
+    height: 38px;
+    background-image: url("project://database/Assets/Artsystack - Fantasy RPG GUI/Resources/Sprites/controller icons/keyboard_mouse/F.png?fileID=2800000&guid=66976df651142c9499726864796f67c7&type=3#F"); 
+}
+.key-icon-g { 
+    width: 38px;
+    height: 38px;
+    background-image: url("project://database/Assets/Artsystack - Fantasy RPG GUI/Resources/Sprites/controller icons/keyboard_mouse/G.png?fileID=2800000&guid=8adf5ca34aa971449947f13f45218cbb&type=3#G"); 
+}
+.key-icon-1 { background-image: url("project://database/Assets/Artsystack - Fantasy RPG GUI/Resources/Sprites/controller icons/keyboard_mouse/1.png?fileID=2800000&guid=28e09e144e4bab440a36319775ac0951&type=3#1"); }
+.key-icon-2 { background-image: url("project://database/Assets/Artsystack - Fantasy RPG GUI/Resources/Sprites/controller icons/keyboard_mouse/2.png?fileID=2800000&guid=76aea3e69e4963b439bcd3f73d0386f8&type=3#2"); }
+.key-icon-q { background-image: url("project://database/Assets/Artsystack - Fantasy RPG GUI/Resources/Sprites/controller icons/keyboard_mouse/Q.png?fileID=2800000&guid=831dab66e504fe040b99d49eb929c661&type=3#Q"); }
+.key-icon-e { background-image: url("project://database/Assets/Artsystack - Fantasy RPG GUI/Resources/Sprites/controller icons/keyboard_mouse/E.png?fileID=2800000&guid=9b8a3d34f0cae4a43b527b2ef93d6d5c&type=3#E"); }
+.key-icon-r { background-image: url("project://database/Assets/Artsystack - Fantasy RPG GUI/Resources/Sprites/controller icons/keyboard_mouse/R.png?fileID=2800000&guid=3cbc3a88fadd64f4b9135a8534127a74&type=3#R"); }
+.key-icon-mouse-l { 
+    width: 24px;
+    height: 36px;
+    background-image: url("project://database/Assets/Artsystack - Fantasy RPG GUI/Resources/Sprites/controller icons/keyboard_mouse/left_click.png?fileID=2800000&guid=f7fe1c35b50f0524c82a6ce7cd4b5557&type=3#left_click"); 
+}
+.key-icon-mouse-r { 
+    width: 24px;
+    height: 36px;
+    background-image: url("project://database/Assets/Artsystack - Fantasy RPG GUI/Resources/Sprites/controller icons/keyboard_mouse/right_click.png?fileID=2800000&guid=925613ee0f918b54d8b718b79ed68b21&type=3#right_click"); 
+}
+.key-icon-f1 { 
+    width: 36px;
+    height: 36px;
+    background-image: url("project://database/Assets/Artsystack - Fantasy RPG GUI/Resources/Sprites/controller icons/keyboard_mouse/F1.png?fileID=2800000&guid=91c9d3fd7b09c9f4097c52d17a31d825&type=3#F1"); 
+}
+
+.f1-toggle-hint {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 12px;
+    opacity: 0.95;
+    transition-property: opacity, translate;
+    transition-duration: 0.25s;
+    transition-timing-function: ease-out;
+}
+
+.tutorial-details-container {
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-start;
+}
+
+/* Fallback / legacy badge styles */
 .key-badge {
-    min-width: 26px;
-    height: 26px;
+    min-width: 36px;
+    height: 36px;
     padding: 0 8px;
-    background-color: rgb(255, 255, 255);
-    border-radius: 6px;
-    border-width: 1px;
-    border-color: rgb(200, 200, 200);
+    background-color: transparent;
     justify-content: center;
     align-items: center;
     margin-right: 12px;
-    box-shadow: 0 3px 0 rgb(180, 180, 180);
 }
 
 .large-key {
-    min-width: 48px;
+    min-width: 72px;
 }
 
 .key-badge-text {
-    color: rgb(15, 15, 15);
-    -unity-font-style: bold;
-    font-size: 14px;
-    padding: 0;
-    margin: 0;
-    -unity-text-align: middle-center;
+    display: none;
 }
 
 .hint-text {
     color: rgb(255, 255, 255);
     -unity-font-style: bold;
-    font-size: 15px;
+    font-size: 16.5px;
     letter-spacing: 0.5px;
     padding: 0;
     margin: 0;
-    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85);
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.95);
 }
 
 /* ========================================================================= */
