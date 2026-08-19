@@ -1011,14 +1011,15 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
             Debug.Log("[MayaPlayer] Không thể sử dụng kỹ năng Q khi đang cầm rìu!");
             return false;
         }
-        if (qSkillCooldownTimer > 0f || IsQSkillActive) return false;
+        if (qSkillCooldownTimer > 0f || IsQSkillActive || localIsQSkillActive) return false;
 
         // Set duration timer for HUD visual bar (15s duration)
         qSkillDurationTimer = 15f;
+        localIsQSkillActive = true;
+        qSkillCooldownTimer = qSkillCooldown;
 
         if (isStandaloneMode)
         {
-            localIsQSkillActive = true;
             SpawnSkeletonLocal();
         }
         else if (IsOwner)
@@ -1079,7 +1080,14 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
             return;
         }
 
+        if (isQSkillActiveNet.Value)
+        {
+            Debug.LogWarning("[MayaPlayer Server] Kỹ năng Q đang trong thời gian hiệu lực, không thể triệu hồi thêm!");
+            return;
+        }
+
         isQSkillActiveNet.Value = true;
+        qSkillCooldownTimer = qSkillCooldown;
 
         Vector3 groundPos = GetSafeSummonPosition();
         Quaternion spawnRot = Quaternion.LookRotation(transform.forward);
