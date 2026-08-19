@@ -46,8 +46,6 @@ public class AtlantisMenuController : MonoBehaviour
     private class ParticleData
     {
         public VisualElement RootElement;
-        public VisualElement CoreElement; // Chỉ dùng cho bọt khí (Bubble)
-        public bool IsBubble;
         public float X;
         public float Y;
         public float Radius;
@@ -591,22 +589,8 @@ public class AtlantisMenuController : MonoBehaviour
         for (int i = 0; i < targetParticleCount; i++)
         {
             var p = new ParticleData();
-            p.IsBubble = Random.value < 0.15f;
-
             p.RootElement = new VisualElement();
-
-            if (p.IsBubble)
-            {
-                p.RootElement.AddToClassList("bubble-fx");
-
-                p.CoreElement = new VisualElement();
-                p.CoreElement.AddToClassList("bubble-core");
-                p.RootElement.Add(p.CoreElement);
-            }
-            else
-            {
-                p.RootElement.AddToClassList("ambient-spot");
-            }
+            p.RootElement.AddToClassList("ambient-spot");
 
             rootScreen.Insert(0, p.RootElement);
             _particles.Add(p);
@@ -634,11 +618,8 @@ public class AtlantisMenuController : MonoBehaviour
                     p.RootElement.style.top = p.Y;
                     p.RootElement.style.left = currentX;
 
-                    if (!p.IsBubble)
-                    {
-                        float dynamicOpacity = Mathf.Lerp(p.Opacity * 0.3f, p.Opacity, (Mathf.Sin(p.Wobble * 2f) + 1f) / 2f);
-                        p.RootElement.style.opacity = dynamicOpacity;
-                    }
+                    float dynamicOpacity = Mathf.Lerp(p.Opacity * 0.3f, p.Opacity, (Mathf.Sin(p.Wobble * 2f) + 1f) / 2f);
+                    p.RootElement.style.opacity = dynamicOpacity;
                 }
             }
             // Đã lược bỏ hoàn toàn phần code hiệu ứng thở (glow) nền logo tĩnh
@@ -654,43 +635,15 @@ public class AtlantisMenuController : MonoBehaviour
         p.Y = randomY ? Random.Range(0f, screenHeight) : screenHeight + Random.Range(20f, 100f);
         p.Wobble = Random.Range(0f, Mathf.PI * 2f);
 
-        if (p.IsBubble)
-        {
-            p.Radius = Random.Range(6f, 18f);
-            p.SpeedY = Random.Range(0.8f, 2.5f);
-            p.WobbleSpeed = 0.04f;
-            p.WobbleAmp = 25f;
-            p.Opacity = Random.Range(0.25f, 0.55f);
+        p.Radius = Random.Range(2f, 5f);
+        p.SpeedY = Random.Range(0.2f, 0.8f);
+        p.WobbleSpeed = 0.02f;
+        p.WobbleAmp = 8f;
+        p.Opacity = Random.Range(0.25f, 0.85f);
 
-            p.RootElement.style.width = p.Radius;
-            p.RootElement.style.height = p.Radius;
-            p.RootElement.style.borderTopColor = new StyleColor(new Color(1f, 1f, 1f, p.Opacity));
-            p.RootElement.style.borderLeftColor = new StyleColor(new Color(1f, 1f, 1f, p.Opacity * 0.7f));
-            p.RootElement.style.borderRightColor = new StyleColor(new Color(1f, 1f, 1f, p.Opacity * 0.7f));
-            p.RootElement.style.borderBottomColor = new StyleColor(new Color(1f, 1f, 1f, p.Opacity * 0.3f));
-
-            if (p.CoreElement != null)
-            {
-                float coreSize = p.Radius * 0.4f;
-                p.CoreElement.style.width = coreSize;
-                p.CoreElement.style.height = coreSize;
-                p.CoreElement.style.top = p.Radius * 0.15f;
-                p.CoreElement.style.left = p.Radius * 0.15f;
-                p.CoreElement.style.opacity = p.Opacity + 0.3f;
-            }
-        }
-        else
-        {
-            p.Radius = Random.Range(2f, 5f);
-            p.SpeedY = Random.Range(0.2f, 0.8f);
-            p.WobbleSpeed = 0.02f;
-            p.WobbleAmp = 8f;
-            p.Opacity = Random.Range(0.25f, 0.85f);
-
-            p.RootElement.style.width = p.Radius;
-            p.RootElement.style.height = p.Radius;
-            p.RootElement.style.opacity = p.Opacity;
-        }
+        p.RootElement.style.width = p.Radius;
+        p.RootElement.style.height = p.Radius;
+        p.RootElement.style.opacity = p.Opacity;
     }
 
     private async void ConfirmCreateRoom()
@@ -1055,6 +1008,22 @@ public class AtlantisMenuController : MonoBehaviour
 
     private void Update()
     {
+        // 0. Xử lý phím tắt cho Popup Thông báo Xác nhận (Enter = Xác nhận, Esc = Hủy / Đóng tab)
+        var confirmOverlay = _root?.Q<VisualElement>("confirm-overlay");
+        if (confirmOverlay != null && !confirmOverlay.ClassListContains("hidden-element"))
+        {
+            if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter))
+            {
+                OnConfirmYes();
+                return;
+            }
+            if (Input.GetKeyDown(KeyCode.Escape))
+            {
+                OnConfirmNo();
+                return;
+            }
+        }
+
         UpdateTrackerScroll(_optionsScrollTracker);
         UpdateTrackerScroll(_roomScrollTracker);
 
@@ -1272,6 +1241,7 @@ public class AtlantisMenuController : MonoBehaviour
 
     private void OnConfirmYes()
     {
+        HideConfirmOverlay();
         SaveOptions();
         if (_isCancelConfirmation)
         {
@@ -1281,15 +1251,11 @@ public class AtlantisMenuController : MonoBehaviour
 
     private void OnConfirmNo()
     {
+        HideConfirmOverlay();
         if (_isCancelConfirmation)
         {
             RevertOptionsUI();
-            HideConfirmOverlay();
             ShowPanel(_mainMenuPanel);
-        }
-        else
-        {
-            HideConfirmOverlay();
         }
     }
 
