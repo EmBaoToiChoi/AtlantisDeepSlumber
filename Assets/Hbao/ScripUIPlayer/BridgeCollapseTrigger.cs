@@ -187,12 +187,30 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
         return localLogsSubmittedCount;
     }
 
+    private GameObject bridgeBlockerWall;
+
     private void Awake()
     {
-        if (mainBridgeObject == null && stableBridgeSegments != null && stableBridgeSegments.Length > 0)
+        if (mainBridgeObject == null)
         {
-            mainBridgeObject = stableBridgeSegments[0];
-            Debug.Log("[BridgeCollapseTrigger] Tự động gán mainBridgeObject bằng stableBridgeSegments[0] làm fallback!");
+            if (stableBridgeSegments != null && stableBridgeSegments.Length > 0 && stableBridgeSegments[0] != null)
+            {
+                mainBridgeObject = stableBridgeSegments[0];
+                Debug.Log("[BridgeCollapseTrigger] Tự động gán mainBridgeObject bằng stableBridgeSegments[0] làm fallback!");
+            }
+            else
+            {
+                var allGos = FindObjectsByType<GameObject>(FindObjectsSortMode.None);
+                foreach (var go in allGos)
+                {
+                    if (go.name == "Bridge01" || go.name == "Bridge01 (1)" || go.name == "Cau")
+                    {
+                        mainBridgeObject = go;
+                        Debug.Log($"[BridgeCollapseTrigger] Tự động tìm thấy bridge model trong Scene: {go.name}");
+                        break;
+                    }
+                }
+            }
         }
 
         if (mainBridgeObject != null)
@@ -200,12 +218,20 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
             originalBridgePos = mainBridgeObject.transform.position;
             originalBridgeRot = mainBridgeObject.transform.rotation;
         }
+        else if (originalBridgePos == Vector3.zero)
+        {
+            originalBridgePos = new Vector3(684.35f, 31.55f, 553.3f);
+        }
 
         SetStableSegmentsActive(false);
         SetBrokenSegmentsActive(false);
         if (mainBridgeObject != null)
         {
             mainBridgeObject.SetActive(false);
+            foreach (var col in mainBridgeObject.GetComponentsInChildren<Collider>(true))
+            {
+                col.enabled = false;
+            }
         }
 
         if (bridgeObstacle == null)
@@ -219,6 +245,8 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
 
         if (bridgeObstacle != null) bridgeObstacle.enabled = true;
         if (bridgeOffMeshLink != null) bridgeOffMeshLink.activated = false;
+
+        UpdateBridgeBlockerWall();
     }
 
     private void Start()
@@ -226,6 +254,7 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
         hud = FindAnyObjectByType<PlayerHUDController>();
         ResolveWoodLogPrefab();
         var pool = WoodLogObjectPool.Instance;
+        UpdateBridgeBlockerWall();
     }
 
     private void ResolveWoodLogPrefab()
@@ -293,13 +322,17 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
         localCollapseTriggered = hasCollapsed.Value;
         localRepaired = hasBeenRepaired.Value;
         localLogsSubmittedCount = logsSubmitted.Value;
+        localBuildProgress = buildProgress.Value;
+        localReadyToBuild = isReadyToBuild.Value;
 
         hasCollapsed.OnValueChanged += OnCollapseStateChanged;
         hasBeenRepaired.OnValueChanged += OnRepairStateChanged;
         logsSubmitted.OnValueChanged += OnLogsSubmittedChanged;
         isReadyToBuild.OnValueChanged += OnReadyToBuildChanged;
+        buildProgress.OnValueChanged += OnBuildProgressChanged;
 
         ApplyBridgeVisualState(hasCollapsed.Value, hasBeenRepaired.Value, logsSubmitted.Value);
+        UpdateBridgeBlockerWall();
     }
 
     public override void OnNetworkDespawn()
@@ -308,6 +341,18 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
         hasBeenRepaired.OnValueChanged -= OnRepairStateChanged;
         logsSubmitted.OnValueChanged -= OnLogsSubmittedChanged;
         isReadyToBuild.OnValueChanged -= OnReadyToBuildChanged;
+        buildProgress.OnValueChanged -= OnBuildProgressChanged;
+    }
+
+    private void OnBuildProgressChanged(float oldVal, float newVal)
+    {
+        localBuildProgress = newVal;
+        UpdateProgressiveBridgeSegments(newVal);
+        PlayerHUDController localHud = FindAnyObjectByType<PlayerHUDController>();
+        if (localHud != null && isReadyToBuild.Value && !hasBeenRepaired.Value)
+        {
+            localHud.UpdateQuestProgress(Mathf.RoundToInt(newVal), 100, this);
+        }
     }
 
     private void OnDestroy()
@@ -325,15 +370,56 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
             }
         }
         ApplyBridgeVisualState(IsBridgeCollapsed(), IsBridgeRepaired(), GetLogsSubmittedCount());
+        UpdateBridgeBlockerWall();
     }
 
     private float nextUiCheckTime = 0f;
 
     private void Update()
     {
+        UpdateBridgeBlockerWall();
+
         if (localPlayer == null)
         {
             FindLocalPlayer();
+        }
+
+        // Kiểm tra an toàn: Nếu cầu chưa xây xong mà Local Player lọt vào vùng vực cầu, tự động đẩy về bờ an toàn
+        if (!IsBridgeRepaired() && localPlayer != null)
+        {
+            Vector3 pPos = localPlayer.transform.position;
+            // Vùng vực cầu: X từ 645 đến 696, Z từ 535 đến 575
+            if (pPos.x < 696f && pPos.x > 645f && pPos.z > 535f && pPos.z < 575f)
+            {
+                Vector3 safePos = new Vector3(704f, 32.8f, 556f);
+                if (localPlayer is MonoBehaviour mb)
+                {
+                    CharacterController cc = mb.GetComponent<CharacterController>();
+                    if (cc != null)
+                    {
+                        cc.enabled = false;
+                        mb.transform.position = safePos;
+                        cc.enabled = true;
+                    }
+                    else
+                    {
+                        mb.transform.position = safePos;
+                    }
+
+                    Rigidbody rb = mb.GetComponent<Rigidbody>();
+                    if (rb != null)
+                    {
+                        rb.linearVelocity = Vector3.zero;
+                        rb.position = safePos;
+                    }
+                }
+
+                PlayerHUDController hudCtl = FindAnyObjectByType<PlayerHUDController>();
+                if (hudCtl != null)
+                {
+                    hudCtl.ShowInteractionPrompt(true, "Cầu chưa được xây xong! Hãy chặt gỗ để sửa cầu.");
+                }
+            }
         }
 
         if (IsBridgeCollapsed() && !IsBridgeRepaired() && localPlayer != null)
@@ -1651,7 +1737,22 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
         {
             foreach (var go in stableBridgeSegments)
             {
-                if (go != null) go.SetActive(active);
+                if (go != null)
+                {
+                    go.SetActive(active);
+                    foreach (var col in go.GetComponentsInChildren<Collider>(true))
+                    {
+                        col.enabled = active;
+                    }
+                }
+            }
+        }
+        if (mainBridgeObject != null)
+        {
+            mainBridgeObject.SetActive(active);
+            foreach (var col in mainBridgeObject.GetComponentsInChildren<Collider>(true))
+            {
+                col.enabled = active;
             }
         }
     }
@@ -1695,8 +1796,7 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
                 var mainRend = mainBridgeObject.GetComponent<Renderer>();
                 if (mainRend != null) mainRend.enabled = false;
 
-                var mainCols = mainBridgeObject.GetComponents<Collider>();
-                foreach (var col in mainCols)
+                foreach (var col in mainBridgeObject.GetComponentsInChildren<Collider>(true))
                 {
                     col.enabled = false;
                 }
@@ -1704,6 +1804,10 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
             else
             {
                 mainBridgeObject.SetActive(false);
+                foreach (var col in mainBridgeObject.GetComponentsInChildren<Collider>(true))
+                {
+                    col.enabled = false;
+                }
             }
         }
     }
@@ -1893,10 +1997,7 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
                         if (origMat.HasProperty("_Specular")) clipMat.SetTexture("_Specular", origMat.GetTexture("_Specular"));
 
                         if (origMat.HasProperty("_Primary_Color")) clipMat.SetColor("_Primary_Color", origMat.GetColor("_Primary_Color"));
-                        if (origMat.HasProperty("_Secondary_Color")) clipMat.SetColor("_Secondary_Color", origMat.GetColor("_Secondary_Color"));
-                        if (origMat.HasProperty("_Tertiary_Color")) clipMat.SetColor("_Tertiary_Color", origMat.GetColor("_Tertiary_Color"));
-                        if (origMat.HasProperty("_Color")) clipMat.SetColor("_Color", origMat.GetColor("_Color"));
-
+                        
                         cloneRenders[k].material = clipMat;
                         clippingMaterials.Add(clipMat);
                     }
@@ -1913,7 +2014,12 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
 
             foreach (var col in solidBridgeInstance.GetComponentsInChildren<Collider>(true))
             {
-                if (col != null) col.enabled = true;
+                if (col != null)
+                {
+                    // MeshCollider giữ disabled trong suốt quá trình xây, chỉ bật khi đã hoàn thành 100%
+                    if (col is MeshCollider) col.enabled = (progressFactor >= 0.99f);
+                    else col.enabled = true;
+                }
             }
         }
 
@@ -2288,6 +2394,63 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
         }
 
         player.SavePlayerStateToDatabase();
+    }
+
+    private void UpdateBridgeBlockerWall()
+    {
+        bool repaired = IsBridgeRepaired();
+        if (repaired)
+        {
+            if (bridgeBlockerWall != null && bridgeBlockerWall.activeSelf)
+            {
+                bridgeBlockerWall.SetActive(false);
+                Debug.Log("[BridgeCollapseTrigger] Cầu đã sửa xong! Tắt tường chắn vô hình.");
+            }
+            return;
+        }
+
+        Vector3 bridgeCenter = (mainBridgeObject != null && originalBridgePos != Vector3.zero) 
+            ? originalBridgePos 
+            : (bridgeObstacle != null ? bridgeObstacle.transform.position : new Vector3(688f, 31.5f, 554f));
+
+        if (bridgeBlockerWall == null)
+        {
+            bridgeBlockerWall = new GameObject("Bridge_ChasmPhysicalBlocker");
+            bridgeBlockerWall.transform.position = bridgeCenter;
+            bridgeBlockerWall.transform.rotation = (mainBridgeObject != null) ? originalBridgeRot : Quaternion.identity;
+
+            // 1. Khối chắn vật lý chính giữa vực (bao phủ toàn bộ khe nứt/vực sâu)
+            var mainBox = bridgeBlockerWall.AddComponent<BoxCollider>();
+            mainBox.isTrigger = false;
+            mainBox.center = new Vector3(0f, 5f, 0f);
+            mainBox.size = new Vector3(50f, 40f, 35f);
+
+            // 2. Tường chắn mép bờ gần (ngăn tiếp cận từ phía bờ nộp gỗ)
+            var nearWallObj = new GameObject("NearBankBlocker");
+            nearWallObj.transform.SetParent(bridgeBlockerWall.transform, false);
+            nearWallObj.transform.localPosition = new Vector3(15f, 5f, 0f);
+            var nearBox = nearWallObj.AddComponent<BoxCollider>();
+            nearBox.isTrigger = false;
+            nearBox.size = new Vector3(15f, 35f, 35f);
+            nearWallObj.layer = LayerMask.NameToLayer("Default");
+
+            // 3. Tường chắn mép bờ xa (ngăn nhảy/vượt qua từ phía bờ đố đá)
+            var farWallObj = new GameObject("FarBankBlocker");
+            farWallObj.transform.SetParent(bridgeBlockerWall.transform, false);
+            farWallObj.transform.localPosition = new Vector3(-15f, 5f, 0f);
+            var farBox = farWallObj.AddComponent<BoxCollider>();
+            farBox.isTrigger = false;
+            farBox.size = new Vector3(15f, 35f, 35f);
+            farWallObj.layer = LayerMask.NameToLayer("Default");
+
+            bridgeBlockerWall.layer = LayerMask.NameToLayer("Default");
+            Debug.Log($"[BridgeCollapseTrigger] Đã tự động tạo hệ thống tường chắn vô hình (Blocker Wall) tại {bridgeCenter} để chặn người chơi khi cầu chưa xây xong.");
+        }
+
+        if (!bridgeBlockerWall.activeSelf)
+        {
+            bridgeBlockerWall.SetActive(true);
+        }
     }
 
     #endregion

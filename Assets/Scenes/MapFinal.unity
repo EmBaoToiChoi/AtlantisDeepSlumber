@@ -25482,8 +25482,8 @@ MonoBehaviour:
   minimapZoom: 30
   worldMapZoom: 150
   defaultQuestIcon: {fileID: 0}
-  buildCamBackwardOffset: 15
-  buildCamUpwardOffset: 25
+  buildCamBackwardOffset: 25
+  buildCamUpwardOffset: 45
   buildCamPitch: 60.222
   treeCamDistance: 14
   treeCamHeight: 7
@@ -27329,8 +27329,8 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 0
   serializedVersion: 3
-  m_Size: {x: 0.84381104, y: 1, z: 15.99762}
-  m_Center: {x: 0.07809448, y: 0, z: -1.5856628}
+  m_Size: {x: 10.6414795, y: 1, z: 22.427307}
+  m_Center: {x: -4.8207397, y: 0, z: 1.6291809}
 --- !u!4 &129333398
 Transform:
   m_ObjectHideFlags: 0
@@ -64924,8 +64924,8 @@ MonoBehaviour:
   minimapZoom: 30
   worldMapZoom: 150
   defaultQuestIcon: {fileID: 0}
-  buildCamBackwardOffset: 15
-  buildCamUpwardOffset: 25
+  buildCamBackwardOffset: 25
+  buildCamUpwardOffset: 45
   buildCamPitch: 60.222
   treeCamDistance: 14
   treeCamHeight: 7
@@ -328955,8 +328955,8 @@ MonoBehaviour:
   minimapZoom: 30
   worldMapZoom: 150
   defaultQuestIcon: {fileID: 0}
-  buildCamBackwardOffset: 15
-  buildCamUpwardOffset: 25
+  buildCamBackwardOffset: 25
+  buildCamUpwardOffset: 45
   buildCamPitch: 60.222
   treeCamDistance: 14
   treeCamHeight: 7
@@ -372918,6 +372918,7 @@ MonoBehaviour:
   questDescription: "T\xECm ki\u1EBFm c\xE1c phi\u1EBFn \u0111\xE1 c\xF3 h\xECnh
     d\u1EA1ng gi\u1ED1ng tr\xEAn c\u1EEDa \u0111\u1EC3 \u0111\u1EA9y ch\xFAng ra
     v\xE0 \u0111\u1EA1p l\xEAn \u0111\u1EC3 m\u1EDF c\u1EEDa."
+  autoStartIfPrerequisiteMet: 1
   hideWhenExitTrigger: 0
   hideDelayAfterComplete: 3
   checkInterval: 0.2
@@ -472781,8 +472782,8 @@ MonoBehaviour:
   minimapZoom: 30
   worldMapZoom: 150
   defaultQuestIcon: {fileID: 0}
-  buildCamBackwardOffset: 15
-  buildCamUpwardOffset: 25
+  buildCamBackwardOffset: 25
+  buildCamUpwardOffset: 45
   buildCamPitch: 60.222
   treeCamDistance: 14
   treeCamHeight: 7

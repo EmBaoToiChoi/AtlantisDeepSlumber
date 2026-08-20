@@ -27,8 +27,15 @@ public class PressurePlatePuzzleManager : NetworkBehaviour
     private bool isTimerActive = false;
     private bool doorsAreOpen = false;
 
+    private void Awake()
+    {
+        EnsureReferences();
+    }
+
     private void Start()
     {
+        EnsureReferences();
+
         // Tự động kiểm tra và sửa lỗi nếu người dùng kéo nhầm Prefab Asset từ cửa sổ Project thay vì đối tượng Scene trong Hierarchy
         if (requiredPlates != null)
         {
@@ -104,6 +111,27 @@ public class PressurePlatePuzzleManager : NetworkBehaviour
         if (requiredCount == 0)
         {
             Debug.LogWarning("[PressurePlatePuzzleManager] CẢNH BÁO: Danh sách requiredPlates đang trống! Nút sàn sẽ không điều khiển cửa nào.");
+        }
+    }
+
+    public void EnsureReferences()
+    {
+        if (requiredPlates == null || requiredPlates.Length == 0)
+        {
+            requiredPlates = FindObjectsByType<PressurePlateTrigger>(FindObjectsSortMode.None);
+            if (requiredPlates != null && requiredPlates.Length > 0)
+            {
+                Debug.Log($"[PressurePlatePuzzleManager] Tự động tìm thấy {requiredPlates.Length} nút sàn (PressurePlateTrigger) trong Scene.");
+            }
+        }
+
+        if (targetDoors == null || targetDoors.Length == 0)
+        {
+            targetDoors = FindObjectsByType<PushableDoor>(FindObjectsSortMode.None);
+            if (targetDoors != null && targetDoors.Length > 0)
+            {
+                Debug.Log($"[PressurePlatePuzzleManager] Tự động tìm thấy {targetDoors.Length} cánh cửa (PushableDoor) trong Scene.");
+            }
         }
     }
 

@@ -16,7 +16,15 @@ public class StonePuzzleQuestTrigger : NetworkBehaviour, IQuestTrigger
         if (prerequisiteQuest == null) return true;
         if (prerequisiteQuest is IQuestTrigger quest) return quest.IsQuestCompleted;
         if (prerequisiteQuest is BridgeCollapseTrigger bridge) return bridge.IsBridgeRepaired();
-        var trigger = prerequisiteQuest.GetComponent<IQuestTrigger>();
+        
+        var bridgeComp = prerequisiteQuest.GetComponent<BridgeCollapseTrigger>() ?? 
+                         prerequisiteQuest.GetComponentInParent<BridgeCollapseTrigger>() ?? 
+                         prerequisiteQuest.GetComponentInChildren<BridgeCollapseTrigger>();
+        if (bridgeComp != null) return bridgeComp.IsBridgeRepaired();
+
+        var trigger = prerequisiteQuest.GetComponent<IQuestTrigger>() ?? 
+                      prerequisiteQuest.GetComponentInParent<IQuestTrigger>() ?? 
+                      prerequisiteQuest.GetComponentInChildren<IQuestTrigger>();
         if (trigger != null) return trigger.IsQuestCompleted;
         return true;
     }
@@ -34,7 +42,10 @@ public class StonePuzzleQuestTrigger : NetworkBehaviour, IQuestTrigger
 
     [Tooltip("Nội dung mô tả nhiệm vụ hiển thị trên UI")]
     [TextArea(3, 5)]
-    public string questDescription = "Đẩy đá để tìm kiếm các phiến đá có hình dạng giống trên cửa để mở cửa.";
+    public string questDescription = "Tìm kiếm các phiến đá có hình dạng giống trên cửa để đẩy chúng ra và đạp lên để mở cửa.";
+
+    [Tooltip("Tự động kích hoạt nhiệm vụ khi vào game hoặc khi nhiệm vụ xây cầu hoàn thành")]
+    public bool autoStartIfPrerequisiteMet = true;
 
     [Tooltip("Ẩn bảng nhiệm vụ khi người chơi rời khỏi vùng Trigger (chỉ áp dụng khi chơi Offline/nếu muốn)")]
     public bool hideWhenExitTrigger = false;
@@ -83,20 +94,47 @@ public class StonePuzzleQuestTrigger : NetworkBehaviour, IQuestTrigger
             triggerCollider.isTrigger = true;
             Debug.LogWarning($"[StonePuzzleQuestTrigger] Tự động chuyển Collider trên '{gameObject.name}' thành Trigger.");
         }
+        EnsurePuzzleManager();
     }
 
     private void Start()
     {
+        EnsurePuzzleManager();
+    }
+
+    public void EnsurePuzzleManager()
+    {
         if (puzzleManager == null)
         {
             puzzleManager = FindAnyObjectByType<PressurePlatePuzzleManager>();
-            if (puzzleManager != null)
+        }
+
+        if (puzzleManager == null)
+        {
+            var existingManagers = FindObjectsByType<PressurePlatePuzzleManager>(FindObjectsSortMode.None);
+            if (existingManagers != null && existingManagers.Length > 0)
             {
-                Debug.Log("[StonePuzzleQuestTrigger] Tự động tìm thấy PressurePlatePuzzleManager trong Start!");
+                puzzleManager = existingManagers[0];
             }
             else
             {
-                Debug.LogError("[StonePuzzleQuestTrigger] LỖI: Không tìm thấy PressurePlatePuzzleManager trong Scene. Vui lòng kéo gán thủ công!");
+                GameObject puzzleObj = new GameObject("PressurePlatePuzzleManager_AutoManager");
+                puzzleManager = puzzleObj.AddComponent<PressurePlatePuzzleManager>();
+                Debug.Log("[StonePuzzleQuestTrigger] Tự động khởi tạo PressurePlatePuzzleManager GameObject trong Scene.");
+            }
+        }
+
+        if (puzzleManager != null)
+        {
+            if (puzzleManager.requiredPlates == null || puzzleManager.requiredPlates.Length == 0)
+            {
+                puzzleManager.requiredPlates = FindObjectsByType<PressurePlateTrigger>(FindObjectsSortMode.None);
+                Debug.Log($"[StonePuzzleQuestTrigger] Tự động gán {puzzleManager.requiredPlates.Length} nút sàn (PressurePlateTrigger) cho puzzleManager.");
+            }
+            if (puzzleManager.targetDoors == null || puzzleManager.targetDoors.Length == 0)
+            {
+                puzzleManager.targetDoors = FindObjectsByType<PushableDoor>(FindObjectsSortMode.None);
+                Debug.Log($"[StonePuzzleQuestTrigger] Tự động gán {puzzleManager.targetDoors.Length} cánh cửa (PushableDoor) cho puzzleManager.");
             }
         }
     }
@@ -128,6 +166,7 @@ public class StonePuzzleQuestTrigger : NetworkBehaviour, IQuestTrigger
         if (newVal)
         {
             isQuestCompleted = true;
+            ShowCompleteQuestUI();
         }
     }
 
@@ -144,24 +183,38 @@ public class StonePuzzleQuestTrigger : NetworkBehaviour, IQuestTrigger
 
     private void Update()
     {
-        if (isQuestCompleted || !IsPrerequisiteCompleted()) return;
+        if (isQuestCompleted) return;
+
+        EnsurePuzzleManager();
+
+        if (!IsPrerequisiteCompleted()) return;
+
+        bool isNetwork = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
+
+        // Tự động kích hoạt nhiệm vụ khi đã thỏa điều kiện tiên quyết (sửa cầu xong)
+        if (autoStartIfPrerequisiteMet && !IsQuestActive)
+        {
+            if (!isNetwork || IsServer)
+            {
+                if (isNetwork) isQuestActive.Value = true;
+                hasTriggeredQuest = true;
+                UpdateQuestProgressUI();
+                Debug.Log("[StonePuzzleQuestTrigger] Tự động kích hoạt nhiệm vụ ĐẨY ĐÁ sau khi sửa cầu xong!");
+            }
+        }
 
         if (localPlayer == null)
         {
             FindLocalPlayer();
         }
 
-        if (puzzleManager == null) return;
-
         // Xác định nhiệm vụ đã active hay chưa
-        bool active = (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening) 
-            ? isQuestActive.Value 
-            : hasTriggeredQuest;
+        bool active = isNetwork ? isQuestActive.Value : hasTriggeredQuest;
 
         if (active)
         {
             // Kiểm tra trạng thái giải câu đố của puzzleManager
-            if (puzzleManager.IsSolved())
+            if (puzzleManager != null && puzzleManager.IsSolved())
             {
                 CompleteQuest();
                 return;
@@ -178,7 +231,9 @@ public class StonePuzzleQuestTrigger : NetworkBehaviour, IQuestTrigger
 
     private void UpdateQuestProgressUI()
     {
-        if (!IsPrerequisiteCompleted()) return;
+        if (!IsPrerequisiteCompleted() || isQuestCompleted) return;
+
+        EnsurePuzzleManager();
 
         if (localHudCtl == null)
         {
@@ -187,9 +242,9 @@ public class StonePuzzleQuestTrigger : NetworkBehaviour, IQuestTrigger
 
         if (localHudCtl != null)
         {
-            // Trong chế độ mạng, chỉ cần 1 người kích hoạt thì tất cả mọi người đều hiện UI liên tục (không phụ thuộc việc ở trong trigger)
             bool isNetwork = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
-            bool shouldShow = isNetwork ? isQuestActive.Value : (isPlayerInside || !hideWhenExitTrigger);
+            bool active = isNetwork ? isQuestActive.Value : hasTriggeredQuest;
+            bool shouldShow = active || isPlayerInside || !hideWhenExitTrigger;
 
             if (shouldShow)
             {
@@ -202,11 +257,6 @@ public class StonePuzzleQuestTrigger : NetworkBehaviour, IQuestTrigger
                 int pressedCount = 0;
                 int totalCount = 2;
 
-                if (puzzleManager == null)
-                {
-                    puzzleManager = FindAnyObjectByType<PressurePlatePuzzleManager>();
-                }
-
                 if (puzzleManager != null && puzzleManager.requiredPlates != null && puzzleManager.requiredPlates.Length > 0)
                 {
                     totalCount = puzzleManager.requiredPlates.Length;
@@ -215,6 +265,18 @@ public class StonePuzzleQuestTrigger : NetworkBehaviour, IQuestTrigger
                         if (plate != null && plate.IsPressed)
                         {
                             pressedCount++;
+                        }
+                    }
+                }
+                else
+                {
+                    var plates = FindObjectsByType<PressurePlateTrigger>(FindObjectsSortMode.None);
+                    if (plates.Length > 0)
+                    {
+                        totalCount = plates.Length;
+                        foreach (var plate in plates)
+                        {
+                            if (plate != null && plate.IsPressed) pressedCount++;
                         }
                     }
                 }
@@ -244,6 +306,28 @@ public class StonePuzzleQuestTrigger : NetworkBehaviour, IQuestTrigger
 
         Debug.Log("[StonePuzzleQuestTrigger] Câu đố đã giải xong! Nhiệm vụ hoàn thành.");
 
+        // Đảm bảo mở cửa khi giải xong câu đố
+        if (puzzleManager != null && puzzleManager.targetDoors != null && puzzleManager.targetDoors.Length > 0)
+        {
+            foreach (var door in puzzleManager.targetDoors)
+            {
+                if (door != null) door.Open();
+            }
+        }
+        else
+        {
+            var doors = FindObjectsByType<PushableDoor>(FindObjectsSortMode.None);
+            foreach (var door in doors)
+            {
+                if (door != null) door.Open();
+            }
+        }
+
+        ShowCompleteQuestUI();
+    }
+
+    private void ShowCompleteQuestUI()
+    {
         if (localHudCtl == null)
         {
             localHudCtl = FindAnyObjectByType<PlayerHUDController>();
@@ -251,20 +335,19 @@ public class StonePuzzleQuestTrigger : NetworkBehaviour, IQuestTrigger
 
         if (localHudCtl != null)
         {
-            // Cập nhật UI hiển thị hoàn tất tối đa
-            int totalCount = puzzleManager.requiredPlates != null ? puzzleManager.requiredPlates.Length : 0;
+            int totalCount = (puzzleManager != null && puzzleManager.requiredPlates != null && puzzleManager.requiredPlates.Length > 0) 
+                ? puzzleManager.requiredPlates.Length 
+                : 2;
             localHudCtl.ShowQuest(true, this);
             localHudCtl.UpdateQuestProgress(totalCount, totalCount, this);
             localHudCtl.UpdateQuestDescription("Nhiệm vụ hoàn thành: Cửa đã được mở!", this);
             localHudCtl.UpdateQuestTitle(questTitle, this);
             localHudCtl.UpdateQuestIcon(questIconSprite, this);
             
-            // Bắt đầu Coroutine để ẩn UI sau độ trễ
             StartCoroutine(HideQuestAfterDelay(hideDelayAfterComplete));
         }
         else
         {
-            // Nếu không có HUD, tự vô hiệu hóa luôn
             enabled = false;
         }
     }
@@ -364,9 +447,24 @@ public class StonePuzzleQuestTrigger : NetworkBehaviour, IQuestTrigger
     {
         if (go == null) return false;
 
-        if (go.GetComponent<IPlayerHUDTarget>() != null || go.GetComponentInParent<IPlayerHUDTarget>() != null) return true;
+        if (go.GetComponent<IPlayerHUDTarget>() != null || 
+            go.GetComponentInParent<IPlayerHUDTarget>() != null || 
+            go.GetComponentInChildren<IPlayerHUDTarget>() != null ||
+            go.transform.root.GetComponent<IPlayerHUDTarget>() != null || 
+            go.transform.root.GetComponentInChildren<IPlayerHUDTarget>() != null) return true;
 
-        if (go.CompareTag("Player") || (go.transform.parent != null && go.transform.parent.CompareTag("Player"))) return true;
+        if (go.CompareTag("Player") || go.transform.root.CompareTag("Player")) return true;
+
+        if (go.layer == LayerMask.NameToLayer("Player") || go.transform.root.gameObject.layer == LayerMask.NameToLayer("Player")) return true;
+
+        string nameLower = go.name.ToLower();
+        string rootNameLower = go.transform.root.name.ToLower();
+        if (nameLower.Contains("player") || rootNameLower.Contains("player") || 
+            rootNameLower.Contains("leo") || rootNameLower.Contains("elena") || 
+            rootNameLower.Contains("maya") || rootNameLower.Contains("arthur"))
+        {
+            return true;
+        }
 
         return false;
     }

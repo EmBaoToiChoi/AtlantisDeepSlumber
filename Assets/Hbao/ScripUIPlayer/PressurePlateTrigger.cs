@@ -146,6 +146,11 @@ public class PressurePlateTrigger : NetworkBehaviour
                     // Chỉ kích hoạt mở cửa trực tiếp nếu nút này không tham gia câu đố nào
                     if (!IsPartOfActivePuzzle())
                     {
+                        if (targetDoor == null && targetDoor2 == null)
+                        {
+                            targetDoor = FindAnyObjectByType<PushableDoor>();
+                        }
+
                         Debug.Log("[PressurePlateTrigger] Kích hoạt mở các cánh cửa trực tiếp!");
                         if (targetDoor != null) targetDoor.Open();
                         if (targetDoor2 != null) targetDoor2.Open();
@@ -160,10 +165,7 @@ public class PressurePlateTrigger : NetworkBehaviour
                     {
                         if (col != null)
                         {
-                            PushableStone stone = col.GetComponent<PushableStone>();
-                            if (stone == null) stone = col.GetComponentInParent<PushableStone>();
-                            if (stone == null) stone = col.GetComponentInChildren<PushableStone>();
-                            if (stone == null) stone = col.transform.root.GetComponentInChildren<PushableStone>();
+                            PushableStone stone = col.GetComponent<PushableStone>() ?? col.GetComponentInParent<PushableStone>() ?? col.GetComponentInChildren<PushableStone>();
 
                             if (stone != null)
                             {
@@ -316,20 +318,17 @@ public class PressurePlateTrigger : NetworkBehaviour
     {
         if (go == null) return false;
         
-        // Kiểm tra component ở bất kỳ đâu trong phân cấp root của vật thể va chạm
+        // Kiểm tra component PushableStone trên đối tượng hoặc cha/con trực tiếp của nó
         if (go.GetComponent<PushableStone>() != null || 
             go.GetComponentInParent<PushableStone>() != null ||
-            go.GetComponentInChildren<PushableStone>() != null ||
-            go.transform.root.GetComponentInChildren<PushableStone>() != null ||
-            go.transform.root.GetComponent<PushableStone>() != null)
+            go.GetComponentInChildren<PushableStone>() != null)
         {
             return true;
         }
 
+        // Không quét transform.root vì trong map copy-paste có thể quét trúng toàn bộ root Map
         string nameLower = go.name.ToLower();
-        string rootNameLower = go.transform.root.name.ToLower();
-        if (nameLower.Contains("stone") || nameLower.Contains("da") || nameLower.Contains("rock") || nameLower.Contains("brick") ||
-            rootNameLower.Contains("stone") || rootNameLower.Contains("da") || rootNameLower.Contains("rock") || rootNameLower.Contains("brick"))
+        if (nameLower.Contains("pushablestone") || nameLower.Contains("cucda") || nameLower.Contains("stone_puzzle"))
         {
             return true;
         }

@@ -36,8 +36,8 @@ public class BridgeRepairTrigger : MonoBehaviour
             if (bridgeController == null) return;
         }
 
-        // Chỉ hoạt động khi cầu đã sập và chưa sửa xong
-        if (bridgeController.IsBridgeCollapsed() && !bridgeController.IsBridgeRepaired())
+        // Hoạt động khi cầu chưa sửa xong và tiền đề nhiệm vụ đã hoàn thành
+        if (!bridgeController.IsBridgeRepaired() && bridgeController.IsPrerequisiteCompleted())
         {
             if (localPlayer == null)
             {
