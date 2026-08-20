@@ -60,16 +60,25 @@ public class SpikePillarLocal : MonoBehaviour
         float dir = reverseRotation ? -1f : 1f;
         transform.Rotate(dynamicRotationAxis, rotateSpeed * dir * Time.deltaTime, Space.World);
 
+        LayerMask mask = (groundLayer.value != 0) ? groundLayer : ~LayerMask.GetMask("Player", "Ignore Raycast");
+
         if (currentState == PillarState.Falling)
         {
             // Rơi xuống
             transform.Translate(Vector3.down * fallSpeed * Time.deltaTime, Space.World);
 
             // Kiểm tra chạm đất bằng Raycast
-            if (Physics.Raycast(transform.position, Vector3.down, out RaycastHit hit, checkGroundDistance, groundLayer))
+            if (Physics.Raycast(transform.position, Vector3.down, out RaycastHit hit, checkGroundDistance + 0.5f, mask))
             {
                 // Set vị trí khớp mặt đất (cộng thêm khoảng cách bán kính và dịch lên chút)
                 transform.position = new Vector3(transform.position.x, hit.point.y + checkGroundDistance - 0.05f, transform.position.z);
+                currentState = PillarState.Rolling;
+                isTouchingGround = true;
+                startRollPosition = transform.position;
+            }
+            else if (Time.time - spawnTime > 2.0f)
+            {
+                // Fallback: Nếu rơi quá 2s mà không trúng Raycast, tự động chuyển sang lăn để không bị kẹt rơi
                 currentState = PillarState.Rolling;
                 isTouchingGround = true;
                 startRollPosition = transform.position;
@@ -81,7 +90,7 @@ public class SpikePillarLocal : MonoBehaviour
             transform.Translate(rollDirection.normalized * rollSpeed * Time.deltaTime, Space.World);
 
             // Kiểm tra chạm đất để bám địa hình hoặc rơi xuống hố
-            if (Physics.Raycast(transform.position, Vector3.down, out RaycastHit hit, checkGroundDistance + 0.5f, groundLayer))
+            if (Physics.Raycast(transform.position, Vector3.down, out RaycastHit hit, checkGroundDistance + 1.0f, mask))
             {
                 // Bám sát mặt đất
                 transform.position = new Vector3(transform.position.x, hit.point.y + checkGroundDistance - 0.05f, transform.position.z);
@@ -173,17 +182,6 @@ public class SpikePillarLocal : MonoBehaviour
     {
         if (IsAnyPlayer(otherGo, out GameObject playerRoot))
         {
-            // Kiểm tra khoảng cách thực tế để tránh lỗi trôi/kẹt trigger khi dịch chuyển
-            float dist = Vector3.Distance(transform.position, playerRoot.transform.position);
-            if (dist > 10f)
-            {
-                if (nextDamageTime.ContainsKey(playerRoot))
-                {
-                    nextDamageTime.Remove(playerRoot);
-                }
-                return;
-            }
-
             if (nextDamageTime.ContainsKey(playerRoot))
             {
                 if (Time.time >= nextDamageTime[playerRoot])
@@ -228,6 +226,21 @@ public class SpikePillarLocal : MonoBehaviour
         if (damage <= 0f) return;
 
         Debug.Log($"[SpikePillarLocal] Gây {damage} sát thương cho {playerRoot.name}");
+
+        var elena = playerRoot.GetComponent<ElenaPlayer>() ?? playerRoot.GetComponentInChildren<ElenaPlayer>();
+        if (elena != null) { elena.RequestTakeDamage(damage); return; }
+
+        var arthur = playerRoot.GetComponent<ArthurPlayer>() ?? playerRoot.GetComponentInChildren<ArthurPlayer>();
+        if (arthur != null) { arthur.RequestTakeDamage(damage); return; }
+
+        var leo = playerRoot.GetComponent<LeoPlayer>() ?? playerRoot.GetComponentInChildren<LeoPlayer>();
+        if (leo != null) { leo.RequestTakeDamage(damage); return; }
+
+        var maya = playerRoot.GetComponent<MayaPlayer>() ?? playerRoot.GetComponentInChildren<MayaPlayer>();
+        if (maya != null) { maya.RequestTakeDamage(damage); return; }
+
+        var simple = playerRoot.GetComponent<SimplePlayerTest>() ?? playerRoot.GetComponentInChildren<SimplePlayerTest>();
+        if (simple != null) { simple.TakeDamage(damage); return; }
 
         MonoBehaviour[] scripts = playerRoot.GetComponents<MonoBehaviour>();
         foreach (var script in scripts)

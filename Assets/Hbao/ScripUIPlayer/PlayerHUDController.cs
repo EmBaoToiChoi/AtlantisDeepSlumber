@@ -255,18 +255,18 @@ public class PlayerHUDController : MonoBehaviour
     private static bool hasTransitionedBuildCameraOnce = false;
     private static BridgeCollapseTrigger lastActiveBridgeTrigger = null;
     private float buildCameraTransitionTimer = 0f;
-    private float buildCameraTransitionDuration = 2f;
+    private float buildCameraTransitionDuration = 1.2f;
     private Vector3 initialCamPosBeforeBuild;
     private Quaternion initialCamRotBeforeBuild;
     private bool isBuildCameraActive = false;
 
     [Header("Coop Build Camera Offset Settings")]
-    [Tooltip("Khoảng cách kéo lùi camera ra phía sau đầu cầu")]
-    public float buildCamBackwardOffset = 12f;
+    [Tooltip("Khoảng cách kéo lùi camera ra phía sau đầu cầu (dọc theo tim cầu)")]
+    public float buildCamBackwardOffset = 10f;
     [Tooltip("Chiều cao camera trên đầu cầu hướng lên trên (Y)")]
-    public float buildCamUpwardOffset = 38f;
+    public float buildCamUpwardOffset = 26f;
     [Tooltip("Góc xoay Pitch (X) của camera khi xây cầu")]
-    public float buildCamPitch = 42f;
+    public float buildCamPitch = 40f;
 
     [Header("Tree Fall Camera Settings")]
     [Tooltip("Khoảng cách từ camera đến cây khi cây ngã")]
@@ -4529,6 +4529,7 @@ public class PlayerHUDController : MonoBehaviour
         isAnyUIOpen = false;
         activeBridgeTrigger = null;
         isBuildCameraActive = false; // Reset camera state on exit
+        hasTransitionedBuildCameraOnce = false;
 
         // Re-enable local player controller
         var playerBehavior = LocalPlayerTarget as MonoBehaviour;
@@ -4554,38 +4555,49 @@ public class PlayerHUDController : MonoBehaviour
         }
         if (activeBridgeTrigger == null) return;
 
-        // 1. Xác định vị trí đầu cầu (bờ gần nơi người chơi đứng nộp gỗ)
-        Vector3 bridgeHeadPos = activeBridgeTrigger.transform.position;
-        bridgeHeadPos.y = 33f; // Mặt đất đầu cầu
-
-        // Vị trí giữa cầu (nhịp cầu vượt qua vực sâu)
+        // 1. Xác định vị trí trọng tâm giữa thân cầu
         Vector3 bridgeCenterPos = new Vector3(684.35f, 31.55f, 553.3f);
         if (activeBridgeTrigger.mainBridgeObject != null)
         {
             bridgeCenterPos = activeBridgeTrigger.mainBridgeObject.transform.position;
         }
 
-        // Hướng trục cầu từ đầu cầu nhìn sang giữa cầu và bờ bên kia (luôn thẳng hàng theo tim cầu)
-        Vector3 bridgeForward = (bridgeCenterPos - bridgeHeadPos);
-        bridgeForward.y = 0f;
-        if (bridgeForward.sqrMagnitude < 0.1f)
+        // 2. Trục thẳng của cây cầu (hướng từ đầu cầu bờ gần nhìn qua vực sâu sang bờ bên kia)
+        // Cầu nằm theo trục X, hướng từ bờ gần (X ~ 710) sang bờ xa (X ~ 658) => Vector hướng là Vector3.left (-X)
+        Vector3 bridgeForward = new Vector3(-1f, 0f, 0f);
+        if (activeBridgeTrigger.mainBridgeObject != null)
         {
-            bridgeForward = new Vector3(-1f, 0f, 0f);
-        }
-        else
-        {
-            bridgeForward.Normalize();
+            Vector3 fwd = activeBridgeTrigger.mainBridgeObject.transform.forward;
+            fwd.y = 0f;
+            if (fwd.sqrMagnitude > 0.1f)
+            {
+                bridgeForward = fwd.normalized;
+            }
         }
 
-        // 2. Đặt Camera ngay trên đầu cây cầu ở trên cao nhìn xuống
-        float actualUpOffset = Mathf.Max(buildCamUpwardOffset, 28f);
-        float actualBackOffset = Mathf.Max(buildCamBackwardOffset, 8f);
+        // 3. Xác định vị trí đầu cầu trên tim đường cầu (triệt tiêu độ lệch Z để góc nhìn luôn thẳng tắp)
+        Vector3 triggerPos = activeBridgeTrigger.transform.position;
+        float distAlongBridge = Vector3.Dot(triggerPos - bridgeCenterPos, bridgeForward);
+        
+        // Nếu trigger chưa được tính hoặc quá gần, lấy mặc định khoảng cách nửa thân cầu ~24m
+        if (distAlongBridge > -5f)
+        {
+            distAlongBridge = -24f;
+        }
+
+        // Điểm đầu cầu chuẩn: nằm chính xác trên tim đường Z của cây cầu
+        Vector3 bridgeHeadPos = bridgeCenterPos + bridgeForward * distAlongBridge;
+        bridgeHeadPos.y = Mathf.Max(triggerPos.y, 32.8f);
+
+        // 4. Đặt Camera ngay trên đầu cây cầu ở trên cao nhìn xuống
+        float actualUpOffset = Mathf.Max(buildCamUpwardOffset, 20f);
+        float actualBackOffset = Mathf.Max(buildCamBackwardOffset, 6f);
 
         Vector3 targetCamPos = bridgeHeadPos - bridgeForward * actualBackOffset + Vector3.up * actualUpOffset;
 
-        // 3. Góc nhìn của camera: Nhìn từ trên cao thẳng xuống giữa thân cầu và bờ bên kia (không bị lệch theo hướng player)
-        Vector3 lookTarget = bridgeCenterPos + Vector3.up * 2f;
-        Quaternion targetCamRot = Quaternion.LookRotation((lookTarget - targetCamPos).normalized);
+        // 5. Góc nhìn của camera: Nhìn thẳng theo tim cầu từ trên cao xuống giữa thân cầu và bờ bên kia
+        Vector3 lookTarget = bridgeCenterPos + Vector3.up * 1.5f;
+        Quaternion targetCamRot = Quaternion.LookRotation((lookTarget - targetCamPos).normalized, Vector3.up);
 
         if (!isBuildCameraActive)
         {
@@ -4597,17 +4609,17 @@ public class PlayerHUDController : MonoBehaviour
 
         if (hasTransitionedBuildCameraOnce)
         {
-            // Nếu đã di chuyển lên trước đó rồi, giữ nguyên vị trí trên cao luôn, không di chuyển lại nữa
+            // Đã chuyển tiếp xong, giữ camera cố định ở góc nhìn thẳng chuẩn trên cao
             mainCam.transform.position = targetCamPos;
             mainCam.transform.rotation = targetCamRot;
         }
         else
         {
-            // Di chuyển mượt mà lên vị trí trên cao trong lần đầu tiên
+            // Di chuyển mượt mà lên vị trí trên cao
             buildCameraTransitionTimer += Time.deltaTime;
             float t = Mathf.Clamp01(buildCameraTransitionTimer / buildCameraTransitionDuration);
             
-            // Dùng SmoothStep để di chuyển mượt mà hơn
+            // Dùng SmoothStep để di chuyển mượt mà
             float smoothT = t * t * (3f - 2f * t);
 
             mainCam.transform.position = Vector3.Lerp(initialCamPosBeforeBuild, targetCamPos, smoothT);
