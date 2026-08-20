@@ -1,36 +1,39 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
     <Style src="project://database/Assets/Hbao/ScripMiniBoss/MiniBossHealthBar.uss?fileID=7433441132597879392&amp;guid=d304a70c2900e7846aa3f569f729b124&amp;type=3#MiniBossHealthBar" />
     <ui:VisualElement name="miniboss-hud-container" class="miniboss-hud-container">
-        <!-- Background Frame: Gộp UI hình 4 (Left) và hình 5 (Right) thành khung lớn hoàn chỉnh -->
+        <!-- Nền tối sang trọng bên dưới khung để không bị nhìn xuyên thấu địa hình -->
+        <ui:VisualElement class="miniboss-hud-backdrop" />
+
+        <!-- Khung ngoài: Gộp UI hình 4 (Left) và hình 5 (Right) thành khung lớn hoàn chỉnh -->
         <ui:VisualElement class="miniboss-hud-bg-wrapper">
             <ui:VisualElement class="miniboss-hud-bg-left" />
             <ui:VisualElement class="miniboss-hud-bg-right" />
         </ui:VisualElement>
 
-        <!-- Main HUD Content Inner -->
+        <!-- Cụm nội dung chính bên trong khung -->
         <ui:VisualElement class="miniboss-hud-content">
-            <!-- Avatar Section: Khung hình 2 bọc hoàn toàn Avatar MiniBoss -->
+            <!-- Avatar: Khung hình 2 bọc hoàn toàn Avatar MiniBoss -->
             <ui:VisualElement name="miniboss-avatar-frame" class="miniboss-avatar-frame">
                 <ui:VisualElement name="miniboss-avatar" class="miniboss-avatar" />
                 <ui:VisualElement class="miniboss-avatar-frame-overlay" />
             </ui:VisualElement>
 
-            <!-- Right HP & Info Section -->
+            <!-- Khu vực Tên và Máu -->
             <ui:VisualElement name="miniboss-hp-wrapper" class="miniboss-hp-wrapper">
                 <ui:Label name="miniboss-name" text="KING ZOMBIE" class="miniboss-name" />
 
-                <!-- Thanh máu chính MiniBoss: Bọc bởi khung hình 3 -->
+                <!-- Thanh máu chính MiniBoss: Bọc gọn gàng bên trong khung hình 3 -->
                 <ui:VisualElement name="miniboss-health-bar-container" class="miniboss-health-bar-container">
                     <ui:VisualElement class="miniboss-hp-frame-bg" />
                     <ui:VisualElement name="miniboss-hp-background" class="miniboss-hp-background">
                         <ui:VisualElement name="miniboss-hp-yellow-bar" class="miniboss-hp-yellow-bar" />
                         <ui:VisualElement name="miniboss-hp-progress-bar" class="miniboss-hp-progress-bar" />
-                        <ui:Label name="miniboss-hp-text" text="1200 / 1200" class="miniboss-hp-text" />
+                        <ui:Label name="miniboss-hp-text" text="700 / 700" class="miniboss-hp-text" />
                     </ui:VisualElement>
                     <ui:VisualElement class="miniboss-hp-frame-overlay" />
                 </ui:VisualElement>
 
-                <!-- Thanh máu 2 phân thân MiniBoss: Cũng bọc bởi khung hình 3 -->
+                <!-- Thanh máu 2 phân thân MiniBoss: Bọc gọn gàng bên trong khung hình 3 -->
                 <ui:VisualElement name="clones-sub-container" class="clones-sub-container">
                     <!-- Clone 1 -->
                     <ui:VisualElement name="clone1-hp-wrapper" class="clone-hp-wrapper">
