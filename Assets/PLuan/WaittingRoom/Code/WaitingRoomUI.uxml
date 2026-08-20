@@ -23,15 +23,19 @@
         </ui:VisualElement>
         <ui:VisualElement class="waiting-middle-container">
             <ui:VisualElement class="waiting-viewport-spacer" />
-            <ui:VisualElement name="char-select-panel" class="char-select-panel glass-panel glow-border" style="background-image: url(&quot;project://database/Assets/PLuan/ch%E1%BB%8Dn%20player.png?fileID=2800000&amp;guid=912fe5ec6caa5114ea21e061af3d892c&amp;type=3#chọn player&quot;);">
-                <ui:VisualElement class="panel-seaweed-top-right">
-                    <ui:VisualElement class="seaweed-leaf leaf-1" />
-                    <ui:VisualElement class="seaweed-leaf leaf-2" />
-                    <ui:VisualElement class="seaweed-leaf leaf-3" />
+            <ui:VisualElement name="char-select-panel" class="char-select-panel">
+                <ui:VisualElement class="char-panel-bg-layer" />
+                <ui:VisualElement class="char-panel-frame-layer" />
+                <ui:VisualElement class="char-panel-header">
+                    <ui:Label text="CHỌN NHÂN VẬT" class="char-panel-title" />
+                    <ui:VisualElement class="char-panel-divider" />
                 </ui:VisualElement>
                 <ui:VisualElement class="char-cards-container">
-                    <ui:VisualElement name="char-card-0" class="char-card select-active" style="background-image: none;">
-                        <ui:VisualElement name="char-img-0" class="char-card-portrait leo-img" />
+                    <ui:VisualElement name="char-card-0" class="char-card select-active">
+                        <ui:VisualElement class="char-avatar-slot">
+                            <ui:VisualElement name="char-img-0" class="char-card-portrait leo-img" />
+                            <ui:VisualElement class="char-avatar-frame" />
+                        </ui:VisualElement>
                         <ui:VisualElement class="char-card-text-container">
                             <ui:Label text="LEO" class="char-card-name" />
                             <ui:Label text="SÁT THỦ BÓNG ĐÊM" class="char-card-role" />
@@ -39,7 +43,10 @@
                         <ui:Label name="char-status-0" text="BẠN" class="char-card-status active-status" />
                     </ui:VisualElement>
                     <ui:VisualElement name="char-card-1" class="char-card">
-                        <ui:VisualElement name="char-img-1" class="char-card-portrait maya-img" />
+                        <ui:VisualElement class="char-avatar-slot">
+                            <ui:VisualElement name="char-img-1" class="char-card-portrait maya-img" />
+                            <ui:VisualElement class="char-avatar-frame" />
+                        </ui:VisualElement>
                         <ui:VisualElement class="char-card-text-container">
                             <ui:Label text="MAYA" class="char-card-name" />
                             <ui:Label text="PHÁP SƯ LỬA" class="char-card-role" />
@@ -47,7 +54,10 @@
                         <ui:Label name="char-status-1" text="TRỐNG" class="char-card-status" />
                     </ui:VisualElement>
                     <ui:VisualElement name="char-card-2" class="char-card">
-                        <ui:VisualElement name="char-img-2" class="char-card-portrait elena-img" />
+                        <ui:VisualElement class="char-avatar-slot">
+                            <ui:VisualElement name="char-img-2" class="char-card-portrait elena-img" />
+                            <ui:VisualElement class="char-avatar-frame" />
+                        </ui:VisualElement>
                         <ui:VisualElement class="char-card-text-container">
                             <ui:Label text="ELENA" class="char-card-name" />
                             <ui:Label text="CUNG THỦ TINH LINH" class="char-card-role" />
@@ -55,7 +65,10 @@
                         <ui:Label name="char-status-2" text="TRỐNG" class="char-card-status" />
                     </ui:VisualElement>
                     <ui:VisualElement name="char-card-3" class="char-card">
-                        <ui:VisualElement name="char-img-3" class="char-card-portrait arthur-img" />
+                        <ui:VisualElement class="char-avatar-slot">
+                            <ui:VisualElement name="char-img-3" class="char-card-portrait arthur-img" />
+                            <ui:VisualElement class="char-avatar-frame" />
+                        </ui:VisualElement>
                         <ui:VisualElement class="char-card-text-container">
                             <ui:Label text="ARTHUR" class="char-card-name" />
                             <ui:Label text="ĐẤU SĨ HOÀNG GIA" class="char-card-role" />
@@ -82,60 +95,76 @@
             </ui:VisualElement>
         </ui:VisualElement>
         <ui:VisualElement name="char-details-modal" class="details-modal hidden-element">
-            <ui:VisualElement class="details-container glow-border" style="background-image: url(&quot;project://database/Assets/PLuan/IMG%20chi%20ti%E1%BA%BFt%20player.png?fileID=2800000&amp;guid=436691c05007b504a96ccaa6a52a3abc&amp;type=3#IMG chi tiết player&quot;);">
-                <ui:VisualElement class="panel-seaweed-top-right">
-                    <ui:VisualElement class="seaweed-leaf leaf-1" />
-                    <ui:VisualElement class="seaweed-leaf leaf-2" />
-                    <ui:VisualElement class="seaweed-leaf leaf-3" />
-                </ui:VisualElement>
-                <ui:VisualElement class="panel-seaweed-bottom-left">
-                    <ui:VisualElement class="seaweed-leaf leaf-1" />
-                    <ui:VisualElement class="seaweed-leaf leaf-2" />
-                    <ui:VisualElement class="seaweed-leaf leaf-3" />
-                </ui:VisualElement>
+            <ui:VisualElement class="details-container">
+                <!-- Top Ornate Flourish Crest -->
+                <ui:VisualElement class="details-top-crest" />
+
+                <!-- HEADER: CENTERED PORTRAIT & TITLE -->
                 <ui:VisualElement class="details-header">
-                    <ui:VisualElement name="details-portrait" class="details-large-portrait leo-img" />
+                    <ui:VisualElement class="details-avatar-slot">
+                        <ui:VisualElement name="details-portrait" class="details-large-portrait leo-img" />
+                        <ui:VisualElement class="details-avatar-frame" />
+                    </ui:VisualElement>
                     <ui:VisualElement class="details-title-container">
                         <ui:Label name="details-name" text="LEO" class="details-char-name" />
                         <ui:Label name="details-role" text="SÁT THỦ BÓNG ĐÊM" class="details-char-role" />
                     </ui:VisualElement>
                 </ui:VisualElement>
+
+                <ui:VisualElement class="details-divider" />
+
+                <!-- DESCRIPTION -->
                 <ui:Label name="details-desc" text="Bậc thầy bóng tối và ám sát, Leo có thể hạ gục các mục tiêu quan trọng trước khi chúng kịp nhận ra sự hiện diện của anh." class="details-char-desc" />
+
                 <ui:Label text="KỸ NĂNG ĐẶC BIỆT" class="details-section-title" />
+
+                <!-- SKILLS CONTAINER (3 boxes) -->
                 <ui:VisualElement name="skills-container" class="details-skills-container">
                     <ui:VisualElement name="details-skill-box-0" class="details-skill-box">
-                        <ui:VisualElement name="details-skill-img-0" class="details-skill-icon skill-icon-img" />
+                        <ui:VisualElement class="details-skill-avatar-slot">
+                            <ui:VisualElement name="details-skill-img-0" class="details-skill-icon skill-icon-img" />
+                            <ui:VisualElement class="details-skill-avatar-frame" />
+                        </ui:VisualElement>
                         <ui:VisualElement class="details-skill-text-container">
                             <ui:Label name="details-skill-name-0" text="Lướt Nhanh" class="details-skill-title" />
                             <ui:Label name="details-skill-desc-0" text="Lướt về phía trước một khoảng ngắn, miễn nhiễm với sát thương áp suất trong 3 giây." class="details-skill-desc" />
                         </ui:VisualElement>
                     </ui:VisualElement>
                     <ui:VisualElement name="details-skill-box-1" class="details-skill-box">
-                        <ui:VisualElement name="details-skill-img-1" class="details-skill-icon skill-icon-img" />
+                        <ui:VisualElement class="details-skill-avatar-slot">
+                            <ui:VisualElement name="details-skill-img-1" class="details-skill-icon skill-icon-img" />
+                            <ui:VisualElement class="details-skill-avatar-frame" />
+                        </ui:VisualElement>
                         <ui:VisualElement class="details-skill-text-container">
                             <ui:Label name="details-skill-name-1" text="Quét Sóng Âm" class="details-skill-title" />
                             <ui:Label name="details-skill-desc-1" text="Phát ra xung sóng âm tần số cao để định vị các tài nguyên xung quanh." class="details-skill-desc" />
                         </ui:VisualElement>
                     </ui:VisualElement>
                     <ui:VisualElement name="details-skill-box-2" class="details-skill-box">
-                        <ui:VisualElement name="details-skill-img-2" class="details-skill-icon skill-icon-img" />
+                        <ui:VisualElement class="details-skill-avatar-slot">
+                            <ui:VisualElement name="details-skill-img-2" class="details-skill-icon skill-icon-img" />
+                            <ui:VisualElement class="details-skill-avatar-frame" />
+                        </ui:VisualElement>
                         <ui:VisualElement class="details-skill-text-container">
                             <ui:Label name="details-skill-name-2" text="Ổn Định Áp Suất" class="details-skill-title" />
                             <ui:Label name="details-skill-desc-2" text="Tăng cường bộ giáp thám hiểm, giảm sát thương nhận vào từ môi trường." class="details-skill-desc" />
                         </ui:VisualElement>
                     </ui:VisualElement>
                 </ui:VisualElement>
-                <ui:Button name="btn-close-details" class="details-close-btn" text="ĐÓNG" />
+
+                <!-- CLOSE BUTTON -->
+                <ui:Button name="btn-close-details" text="ĐÓNG" class="action-btn leave-btn details-close-btn" />
             </ui:VisualElement>
         </ui:VisualElement>
-        <ui:VisualElement name="swap-request-modal" class="details-modal hidden-element">
-            <ui:VisualElement class="voice-modal-panel">
-                <ui:Label text="YÊU CẦU ĐỔI NHÂN VẬT" class="panel-title" />
-                <ui:VisualElement class="panel-divider" style="background-image: url(&quot;project://database/Assets/Synty/InterfaceFantasyMenus/Sprites/General/SPR_FantasyMenus_Line_Horizontal_01.png?fileID=2800000&amp;guid=3a7afa7a5a87b774587fd7d636cc2230&amp;type=3#SPR_FantasyMenus_Line_Horizontal_01&quot;);" />
-                <ui:Label name="lbl-swap-request-msg" text="Player 2 muốn đổi Atlas lấy Nyx của bạn." class="swap-request-text" />
-                <ui:VisualElement class="voice-actions">
-                    <ui:Button name="btn-swap-accept" text="ĐỒNG Ý" class="action-btn ready-btn voice-btn" />
-                    <ui:Button name="btn-swap-decline" text="TỪ CHỐI" class="action-btn leave-btn voice-btn" />
+        <ui:VisualElement name="swap-request-modal" class="confirm-overlay hidden-element">
+            <ui:VisualElement class="confirm-dialog">
+                <ui:VisualElement class="confirm-content">
+                    <ui:Label text="YÊU CẦU ĐỔI NHÂN VẬT" class="confirm-title" />
+                    <ui:Label name="lbl-swap-request-msg" text="Player 2 muốn đổi Atlas lấy Nyx của bạn." class="confirm-subtitle" />
+                </ui:VisualElement>
+                <ui:VisualElement class="confirm-buttons">
+                    <ui:Button name="btn-swap-accept" text="ĐỒNG Ý" class="confirm-btn confirm-btn-yes" />
+                    <ui:Button name="btn-swap-decline" text="TỪ CHỐI" class="confirm-btn confirm-btn-no" />
                 </ui:VisualElement>
             </ui:VisualElement>
         </ui:VisualElement>
