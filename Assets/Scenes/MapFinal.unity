@@ -292650,7 +292650,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1a8dd4b9b13a347b99f677c41a8cc3c7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  targetDestination: {fileID: 0}
+  targetDestination: {fileID: 792958371}
   spawnOffset: {x: 0, y: 0.2, z: 0}
   matchTargetRotation: 1
   onlyPlayer: 1
