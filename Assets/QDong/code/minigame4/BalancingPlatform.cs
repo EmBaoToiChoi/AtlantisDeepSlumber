@@ -23,6 +23,30 @@ public class BalancingPlatform : NetworkBehaviour
         {
             rb.isKinematic = true; 
         }
+
+        // [TỰ ĐỘNG SỬA LỖI XOAY VÀ LỆCH CỘT TRỤ BẰNG CODE]
+        if (IsServer)
+        {
+            // 1. Ép khóa cứng trục xoay ngang (Y-axis) của ConfigurableJoint để đĩa CHỈ NGHIÊNG, KHÔNG XOAY.
+            ConfigurableJoint joint = GetComponent<ConfigurableJoint>();
+            if (joint != null)
+            {
+                joint.angularYMotion = ConfigurableJointMotion.Locked;
+                Debug.Log("[BalancingPlatform] Đã tự động khóa trục xoay Y của Joint. Đĩa sẽ không bao giờ bị xoay mòng mòng nữa.");
+            }
+        }
+
+        // 2. Ép tắt toàn bộ NetworkTransform của các cột trụ con (nếu có) để tránh lỗi giật lùi/lệch cột khi đĩa nghiêng.
+        Unity.Netcode.Components.NetworkTransform[] childNetTransforms = GetComponentsInChildren<Unity.Netcode.Components.NetworkTransform>();
+        foreach (var nt in childNetTransforms)
+        {
+            // Bỏ qua NetworkTransform của chính cái đĩa, chỉ tắt của các cột con
+            if (nt.gameObject != this.gameObject)
+            {
+                nt.enabled = false;
+                Debug.Log($"[BalancingPlatform] Đã tự động tắt NetworkTransform trên cột {nt.gameObject.name} để tránh lỗi lệch.");
+            }
+        }
     }
 
     // Khi người chơi nhảy lên đĩa
