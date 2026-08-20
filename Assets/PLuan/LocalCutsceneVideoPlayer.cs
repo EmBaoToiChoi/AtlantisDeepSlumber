@@ -483,7 +483,7 @@ public class LocalCutsceneVideoPlayer : NetworkBehaviour
         textGo.transform.SetParent(skipButtonObj.transform, false);
         
         Text txt = textGo.GetComponent<Text>();
-        txt.text = "SKIP (ESC)";
+        txt.text = "Bỏ qua (ESC)";
         txt.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
         txt.fontSize = 20;
         txt.alignment = TextAnchor.MiddleCenter;
@@ -502,7 +502,7 @@ public class LocalCutsceneVideoPlayer : NetworkBehaviour
     {
         if (waitingText != null)
         {
-            waitingText.text = $"WAITING FOR EXPLORERS ({current}/{target})...";
+            waitingText.text = $"ĐANG CHỜ CÁC NHÀ THÁM HIỂM ({current}/4)...";
         }
     }
 
