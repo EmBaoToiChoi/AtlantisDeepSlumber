@@ -9,6 +9,8 @@ Material:
   m_PrefabAsset: {fileID: 0}
   m_Name: M_Lava_River_3_Trial
   m_Shader: {fileID: 4800000, guid: 951e551eb5a54334ab498637e84fe777, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
   m_ValidKeywords:
   - _UVVDIRECTION1UDIRECTION0_ON
   m_InvalidKeywords: []
@@ -24,6 +26,7 @@ Material:
   - TransparentDepthPrepass
   - TransparentDepthPostpass
   - RayTracingPrepass
+  m_LockedProperties: 
   m_SavedProperties:
     serializedVersion: 3
     m_TexEnvs:
@@ -435,7 +438,7 @@ Material:
     - _BigCascadeMixSpeed: {r: 0.02, g: 0.28, b: 0, a: 0}
     - _CascadeColor: {r: 20, g: 20, b: 20, a: 0}
     - _ColdLavaAlbedoColor: {r: 1, g: 1, b: 1, a: 0}
-    - _ColdLavaMainSpeed: {r: 0.5, g: 0.5, b: 0, a: 0}
+    - _ColdLavaMainSpeed: {r: 2, g: 2, b: 0, a: 0}
     - _ColdLavaTiling: {r: 1, g: 1, b: 0, a: 0}
     - _Color0: {r: 0, g: 0.6749488, b: 0.8088235, a: 0}
     - _Color1: {r: 0, g: 0.048731543, b: 0.22794023, a: 0}
@@ -446,12 +449,12 @@ Material:
     - _FoamSpeed: {r: -0.001, g: 0.018, b: 0, a: 0}
     - _HotLavaALbedoColor: {r: 1, g: 1, b: 1, a: 0}
     - _HotLavaAlbedoColor: {r: 1, g: 1, b: 1, a: 0}
-    - _HotLavaMainSpeed: {r: 0.5, g: 0.5, b: 0, a: 0}
+    - _HotLavaMainSpeed: {r: 2, g: 2, b: 0, a: 0}
     - _HotLavaMixSpeed: {r: 0.05, g: 0, b: 0, a: 0}
     - _HotLavaTiling: {r: 1, g: 1, b: 0, a: 0}
     - _LavaEmissionColor: {r: 1.0592737, g: 0.016637806, b: 0, a: 0}
     - _MediumLavaAlbedoColor: {r: 1, g: 1, b: 1, a: 0}
-    - _MediumLavaMainSpeed: {r: 0.5, g: 0.5, b: 0, a: 0}
+    - _MediumLavaMainSpeed: {r: 2, g: 2, b: 0, a: 0}
     - _MediumLavaTiling: {r: 1, g: 1, b: 0, a: 0}
     - _NoiseSpeed: {r: -0.15, g: 0.15, b: 0, a: 0}
     - _NoiseTiling: {r: 1, g: 1, b: 0, a: 0}
@@ -466,6 +469,7 @@ Material:
     - _WaterMainSpeed: {r: 0.01, g: 0, b: 0, a: 0}
     - _WaterMixSpeed: {r: -0.007, g: 0.05, b: 0, a: 0}
   m_BuildTextureStacks: []
+  m_AllowLocking: 1
 --- !u!114 &8018174923149287315
 MonoBehaviour:
   m_ObjectHideFlags: 11
