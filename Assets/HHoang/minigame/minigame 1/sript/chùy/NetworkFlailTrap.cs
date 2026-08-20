@@ -356,4 +356,66 @@ public class NetworkFlailTrap : NetworkBehaviour
 
         return false;
     }
+
+    private void OnDrawGizmos()
+    {
+        DrawGizmoTrap(false);
+    }
+
+    private void OnDrawGizmosSelected()
+    {
+        DrawGizmoTrap(true);
+    }
+
+    private void DrawGizmoTrap(bool isSelected)
+    {
+        // 1. Vẽ vùng kích hoạt
+        if (vungKichHoat != null)
+        {
+            Gizmos.color = new Color(1f, 0.9f, 0f, 0.4f);
+            Gizmos.matrix = Matrix4x4.TRS(vungKichHoat.transform.position, vungKichHoat.transform.rotation, vungKichHoat.transform.lossyScale);
+            Gizmos.DrawWireCube(vungKichHoat.center, vungKichHoat.size);
+            Gizmos.matrix = Matrix4x4.identity;
+        }
+
+        // 2. Vẽ trục lắc và góc quét con lắc
+        Vector3 pivot = transform.position;
+        Vector3 swingAxis = transform.TransformDirection(new Vector3(axisX, axisY, axisZ).normalized);
+
+        Gizmos.color = Color.yellow;
+        Gizmos.DrawSphere(pivot, 0.4f);
+        Gizmos.DrawLine(pivot - swingAxis * 2f, pivot + swingAxis * 2f);
+
+        // Chiều dài dây treo ước lượng từ SphereCollider
+        float armLength = 5f;
+        SphereCollider sc = GetComponent<SphereCollider>();
+        if (sc != null)
+        {
+            armLength = Mathf.Abs(sc.center.y) * transform.lossyScale.y;
+        }
+
+        Vector3 downDir = Vector3.down * armLength;
+        int arcSegments = 20;
+        Vector3 prevArcPt = Vector3.zero;
+
+        for (int i = 0; i <= arcSegments; i++)
+        {
+            float a = Mathf.Lerp(-Mathf.Abs(startAngle), Mathf.Abs(startAngle), (float)i / arcSegments);
+            Vector3 arcPt = pivot + Quaternion.AngleAxis(a, swingAxis) * downDir;
+
+            if (i > 0)
+            {
+                Gizmos.color = isSelected ? new Color(0f, 1f, 1f, 0.9f) : new Color(0f, 0.8f, 1f, 0.4f);
+                Gizmos.DrawLine(prevArcPt, arcPt);
+            }
+            prevArcPt = arcPt;
+        }
+
+        // Vẽ 2 điểm cực đại của góc quét
+        Vector3 maxLeft = pivot + Quaternion.AngleAxis(-Mathf.Abs(startAngle), swingAxis) * downDir;
+        Vector3 maxRight = pivot + Quaternion.AngleAxis(Mathf.Abs(startAngle), swingAxis) * downDir;
+        Gizmos.color = new Color(1f, 0.3f, 0.3f, 0.7f);
+        Gizmos.DrawLine(pivot, maxLeft);
+        Gizmos.DrawLine(pivot, maxRight);
+    }
 }
