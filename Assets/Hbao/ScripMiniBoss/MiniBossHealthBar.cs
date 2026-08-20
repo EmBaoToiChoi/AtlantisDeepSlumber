@@ -17,6 +17,10 @@ public class MiniBossHealthBar : MonoBehaviour
     [Tooltip("Reference to the UIDocument containing the layout")]
     public UIDocument uiDocument;
 
+    [Header("Display Settings")]
+    [Tooltip("Tên hiển thị của Mini Boss trên HUD")]
+    public string bossDisplayName = "KING ZOMBIE";
+
     // Main boss UI elements
     private VisualElement rootContainer;
     private VisualElement progressBar;
@@ -169,11 +173,7 @@ public class MiniBossHealthBar : MonoBehaviour
             rootContainer.style.display = DisplayStyle.Flex;
         }
 
-        string bossName = boss.gameObject.name;
-        if (bossName.Contains("(Clone)"))
-        {
-            bossName = bossName.Replace("(Clone)", "").Trim();
-        }
+        string bossName = !string.IsNullOrEmpty(bossDisplayName) ? bossDisplayName : "KING ZOMBIE";
 
         if (nameLabel != null)
         {

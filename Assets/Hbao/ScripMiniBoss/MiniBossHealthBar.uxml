@@ -17,7 +17,7 @@
 
             <!-- Right HP & Info Section -->
             <ui:VisualElement name="miniboss-hp-wrapper" class="miniboss-hp-wrapper">
-                <ui:Label name="miniboss-name" text="TRÙM PHỤ" class="miniboss-name" />
+                <ui:Label name="miniboss-name" text="KING ZOMBIE" class="miniboss-name" />
 
                 <!-- Thanh máu chính MiniBoss: Bọc bởi khung hình 3 -->
                 <ui:VisualElement name="miniboss-health-bar-container" class="miniboss-health-bar-container">

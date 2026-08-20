@@ -172,7 +172,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 681f98ebabdd7ec41a39ec2dfb8e1de1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  heightOffset: 3.7
+  heightOffset: 0
 --- !u!1 &6392718148198085431
 GameObject:
   m_ObjectHideFlags: 0
@@ -233,7 +233,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  GlobalObjectIdHash: 3911320723
+  GlobalObjectIdHash: 2302201610
   InScenePlacedSourceGlobalObjectIdHash: 2302201610
   DeferredDespawnTick: 0
   Ownership: 1
