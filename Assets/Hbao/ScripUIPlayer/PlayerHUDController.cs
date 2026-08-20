@@ -542,6 +542,10 @@ public class PlayerHUDController : MonoBehaviour
         questIcon = root.Q<VisualElement>(className: "quest-icon");
         questTitleText = root.Q<Label>(className: "quest-title");
         questSpotlightBackdrop = root.Q<VisualElement>("quest-spotlight-backdrop");
+        if (questSpotlightBackdrop != null)
+        {
+            questSpotlightBackdrop.style.display = DisplayStyle.None;
+        }
         questPointerLeft = root.Q<VisualElement>("quest-pointer-left");
         questPointerBottom = root.Q<VisualElement>("quest-pointer-bottom");
         questGlowAura = root.Q<VisualElement>("quest-glow-aura");
@@ -4137,7 +4141,11 @@ public class PlayerHUDController : MonoBehaviour
             StopCoroutine(questSpotlightCoroutine);
             questSpotlightCoroutine = null;
         }
-        if (questSpotlightBackdrop != null) questSpotlightBackdrop.RemoveFromClassList("active");
+        if (questSpotlightBackdrop != null)
+        {
+            questSpotlightBackdrop.RemoveFromClassList("active");
+            questSpotlightBackdrop.style.display = DisplayStyle.None;
+        }
         if (questGlowAura != null)
         {
             questGlowAura.RemoveFromClassList("active");
@@ -4165,8 +4173,12 @@ public class PlayerHUDController : MonoBehaviour
     private System.Collections.IEnumerator QuestSpotlightRoutine(float duration)
     {
         InitializeUI();
-        // 1. Kích hoạt lớp đổ bóng đen mờ màn hình, vầng hào quang và 2 mũi tên chỉ dẫn (Trái + Dưới)
-        if (questSpotlightBackdrop != null) questSpotlightBackdrop.AddToClassList("active");
+        // 1. Kích hoạt vầng hào quang phát sáng và 2 mũi tên chỉ dẫn (Trái + Dưới) - Đã bỏ hoàn toàn nền đen mờ màn hình
+        if (questSpotlightBackdrop != null)
+        {
+            questSpotlightBackdrop.RemoveFromClassList("active");
+            questSpotlightBackdrop.style.display = DisplayStyle.None;
+        }
         if (questGlowAura != null) questGlowAura.AddToClassList("active");
         if (questPointerLeft != null) questPointerLeft.AddToClassList("active");
         if (questPointerBottom != null) questPointerBottom.AddToClassList("active");
@@ -4223,7 +4235,7 @@ public class PlayerHUDController : MonoBehaviour
             }
         }
 
-        // 3. Sau 5 giây, màn hình và giao diện mờ dần trở về trạng thái bình thường
+        // 3. Sau khoảng 5 giây, giao diện trở về trạng thái bình thường
         StopQuestSpotlight();
     }
 
