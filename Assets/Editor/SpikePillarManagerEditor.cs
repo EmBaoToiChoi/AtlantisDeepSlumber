@@ -111,8 +111,45 @@ public class SpikePillarManagerEditor : Editor
         EditorGUILayout.EndHorizontal();
 
         EditorGUILayout.Space(10);
+        EditorGUILayout.LabelField("📐 ĐẶT HƯỚNG THÂN TRỤ (NẰM NGANG / DỌC / ĐỨNG)", EditorStyles.boldLabel);
+
+        EditorGUILayout.BeginHorizontal();
+        GUI.backgroundColor = (manager.meshEulerOffset == new Vector3(0, 90, 0)) ? new Color(0.3f, 1f, 0.4f) : new Color(0.85f, 0.85f, 0.85f);
+        if (GUILayout.Button("📐 NẰM NGANG CHẮN HÀNH LANG (0, 90, 0)", GUILayout.Height(28)))
+        {
+            Undo.RecordObject(manager, "Set Mesh Offset Horizontal 90");
+            manager.meshEulerOffset = new Vector3(0, 90, 0);
+            SceneView.RepaintAll();
+        }
+        GUI.backgroundColor = (manager.meshEulerOffset == new Vector3(0, -90, 0)) ? new Color(0.3f, 1f, 0.4f) : new Color(0.85f, 0.85f, 0.85f);
+        if (GUILayout.Button("📐 NẰM NGANG (0, -90, 0)", GUILayout.Height(28)))
+        {
+            Undo.RecordObject(manager, "Set Mesh Offset Horizontal -90");
+            manager.meshEulerOffset = new Vector3(0, -90, 0);
+            SceneView.RepaintAll();
+        }
+        GUI.backgroundColor = Color.white;
+        EditorGUILayout.EndHorizontal();
+
+        EditorGUILayout.BeginHorizontal();
+        if (GUILayout.Button("📐 DỌC THEO ĐƯỜNG ĐI (0, 0, 0)"))
+        {
+            Undo.RecordObject(manager, "Set Mesh Offset Longitudinal");
+            manager.meshEulerOffset = new Vector3(0, 0, 0);
+            SceneView.RepaintAll();
+        }
+        if (GUILayout.Button("📐 DỰNG ĐỨNG (90, 0, 0)"))
+        {
+            Undo.RecordObject(manager, "Set Mesh Offset Vertical");
+            manager.meshEulerOffset = new Vector3(90, 0, 0);
+            SceneView.RepaintAll();
+        }
+        EditorGUILayout.EndHorizontal();
+
+        EditorGUILayout.Space(10);
         EditorGUILayout.HelpBox(
             $"Hướng lăn thực tế hiện tại: {manager.GetEffectiveRollDirection()}\n" +
+            $"Góc bù mô hình (Mesh Offset): {manager.meshEulerOffset} (Khuyên dùng (0, 90, 0) để trụ nằm ngang lăn tới)\n" +
             $"Trục lăn con lăn nằm ngang: {Vector3.Cross(Vector3.up, manager.GetEffectiveRollDirection()).normalized}\n" +
             $"Kéo thanh 'Preview Timeline' hoặc bật 'Tự động chạy Preview' để quan sát 3D trong Scene View.",
             MessageType.Info

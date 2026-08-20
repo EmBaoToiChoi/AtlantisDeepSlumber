@@ -11,7 +11,8 @@ public class SpikePillarLocal : MonoBehaviour
     public float rotateSpeed = 360f; // Tốc độ xoay (độ/giây)
     public bool reverseRotation = false; // Đảo ngược chiều xoay nếu bị xoay ngược
     public Vector3 rollDirection = Vector3.forward;
-    public Vector3 meshEulerOffset = Vector3.zero; // Góc lệch 3D model nếu cần tinh chỉnh (Euler)
+    [Tooltip("Góc bù cho 3D model. (0, 90, 0) đặt trụ nằm ngang chắn ngang hành lang để lăn bánh tới trước")]
+    public Vector3 meshEulerOffset = new Vector3(0f, 90f, 0f);
 
     [Header("Cấu hình va chạm mặt đất")]
     public LayerMask groundLayer;
