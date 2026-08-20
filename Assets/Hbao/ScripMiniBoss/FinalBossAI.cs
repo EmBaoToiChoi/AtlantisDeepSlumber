@@ -2672,6 +2672,10 @@ public interface ISwordRainOwner
     void PlaySwordImpactEffects(Vector3 impactPos);
     void DealSwordImpactDamage(Vector3 impactPos, float damage, float radius, LayerMask layer);
     void RecycleSword(GameObject sword);
+    /// <summary>
+    /// Trả về true nếu boss chủ sở hữu đã chết → tất cả đạn/kiếm rơi phải ngừng gây sát thương ngay lập tức.
+    /// </summary>
+    bool IsOwnerDead { get; }
 }
 
 public interface IFireBarrageOwner
@@ -2730,6 +2734,14 @@ public class FallingSwordProjectile : MonoBehaviour
     {
         if (!isFalling) return;
 
+        // BOSS ĐÃ CHẾT → Ngừng rơi, ngừng gây sát thương, tự hủy ngay lập tức
+        if (IsOwnerDeadCheck())
+        {
+            isFalling = false;
+            Destroy(gameObject, 0.5f);
+            return;
+        }
+
         Vector3 prevPos = transform.position;
         Vector3 newPos = prevPos + Vector3.down * dropSpeed * Time.deltaTime;
         transform.position = newPos;
@@ -2742,6 +2754,18 @@ public class FallingSwordProjectile : MonoBehaviour
             isFalling = false;
             OnImpact();
         }
+    }
+
+    /// <summary>
+    /// Kiểm tra xem boss chủ sở hữu đã chết chưa.
+    /// Nếu boss đã chết hoặc bị hủy → trả về true → ngừng gây sát thương.
+    /// </summary>
+    private bool IsOwnerDeadCheck()
+    {
+        if (bossOwner == null) return true;
+        // Kiểm tra qua interface ISwordRainOwner.IsOwnerDead
+        try { return bossOwner.IsOwnerDead; }
+        catch { return true; }
     }
 
     private void CheckFallingDamage(Vector3 prevPos, Vector3 newPos)
@@ -2777,6 +2801,8 @@ public class FallingSwordProjectile : MonoBehaviour
     private void ApplyDamageToPlayer(Transform playerRoot, string source)
     {
         if (playerRoot == null || hitTargets.Contains(playerRoot)) return;
+        // BOSS ĐÃ CHẾT → Không gây sát thương nữa
+        if (IsOwnerDeadCheck()) return;
         hitTargets.Add(playerRoot);
 
         Vector3 knockbackDir = (playerRoot.position - transform.position).normalized + Vector3.up * 0.4f;
@@ -2788,7 +2814,12 @@ public class FallingSwordProjectile : MonoBehaviour
     {
         transform.position = targetGroundPos;
 
-        // 1. Gây sát thương nổ bãi chùm kiếm cho toàn bộ Player trong bán kính impactRadius
+        // BOSS ĐÃ CHẾT → Không gây sát thương nổ bãi kiếm, chỉ hủy kiếm
+        if (IsOwnerDeadCheck())
+        {
+            Destroy(gameObject, 1.0f);
+            return;
+        }
         var allPlayers = FindAllPlayers();
         foreach (var p in allPlayers)
         {

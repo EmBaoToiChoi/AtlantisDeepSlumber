@@ -273,6 +273,20 @@ public class MiniBossHealthBar : MonoBehaviour
             return;
         }
 
+        // 1b. CHỐNG CHỒNG UI: Nếu BossAI (Silas) đang active và chưa chết → Ẩn HUD MiniBoss (Trùm Phụ)
+        var bossAI = FindFirstObjectByType<BossAI>();
+        bool isBossAIActive = bossAI != null && 
+            bossAI.gameObject.activeInHierarchy && 
+            bossAI.IsBossActive && 
+            !bossAI.IsDead && 
+            bossAI.ActualCurrentHealth > 0;
+
+        if (isBossAIActive)
+        {
+            HideUI();
+            return;
+        }
+
         // 2. Discover main boss
         if (boss == null || !boss.gameObject.activeInHierarchy || boss.isClone)
         {
@@ -286,10 +300,12 @@ public class MiniBossHealthBar : MonoBehaviour
             return;
         }
 
-        // 4. CHỈ ẨN UI KHI CẢ BOSS LẪN 2 PHÂN THÂN ĐỀU ĐÃ CHẾT
+        // 4. CHỈ ẨN UI KHI CẢ BOSS LẪN 2 PHÂN THÂN ĐỀU ĐÃ CHẾT → Tắt luôn script để hoàn toàn không hiện lại
         if (AreAllBossesAndClonesDead())
         {
             HideUI();
+            enabled = false; // Tắt hẳn script để không bao giờ hiện lại UI Trùm Phụ nữa
+            Debug.Log("[MiniBossHealthBar] Tất cả MiniBoss đã chết hoàn toàn → Ẩn UI và tắt script vĩnh viễn!");
             return;
         }
 

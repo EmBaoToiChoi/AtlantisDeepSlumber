@@ -55,23 +55,16 @@ public class BossTriggerZone : MonoBehaviour
         {
             if (boss != null)
             {
-                // Chỉ kích hoạt ở phía Server (nếu chơi mạng) hoặc ở chế độ chơi đơn lẻ (offline)
-                bool isNetworkActive = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
-                bool isServer = !isNetworkActive || NetworkManager.Singleton.IsServer;
+                boss.ActivateBoss();
+                hasTriggered = true;
 
-                if (isServer)
+                Debug.Log($"[BossTriggerZone] Người chơi '{other.name}' đã đi vào vùng kích hoạt! Kích hoạt Boss '{boss.name}'.");
+
+                // Tắt vùng kích hoạt để tránh kích hoạt lại nhiều lần
+                if (triggerOnlyOnce)
                 {
-                    boss.ActivateBoss();
-                    hasTriggered = true;
-
-                    Debug.Log($"[BossTriggerZone] Người chơi '{other.name}' đã đi vào vùng kích hoạt! Kích hoạt Boss '{boss.name}'.");
-
-                    // Tắt vùng kích hoạt để tránh kích hoạt lại nhiều lần
-                    if (triggerOnlyOnce)
-                    {
-                        if (triggerCollider != null) triggerCollider.enabled = false;
-                        gameObject.SetActive(false);
-                    }
+                    if (triggerCollider != null) triggerCollider.enabled = false;
+                    gameObject.SetActive(false);
                 }
             }
         }

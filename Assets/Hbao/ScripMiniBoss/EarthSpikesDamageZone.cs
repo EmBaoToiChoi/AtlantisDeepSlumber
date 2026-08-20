@@ -37,6 +37,23 @@ public class EarthSpikesDamageZone : MonoBehaviour
 
     private void Update()
     {
+        // AN TOÀN: Nếu tất cả MiniBoss đã chết → tự hủy ngay lập tức, không gây sát thương nữa
+        var allBosses = FindObjectsByType<MiniBossAI>(FindObjectsSortMode.None);
+        bool anyBossAlive = false;
+        foreach (var b in allBosses)
+        {
+            if (b != null && b.gameObject.activeInHierarchy && !b.IsDead && b.ActualCurrentHealth > 0)
+            {
+                anyBossAlive = true;
+                break;
+            }
+        }
+        if (!anyBossAlive)
+        {
+            Destroy(gameObject);
+            return;
+        }
+
         elapsedTime += Time.deltaTime;
 
         // Rung chấn động mặt đất khi gai đá bắt đầu nhô lên
