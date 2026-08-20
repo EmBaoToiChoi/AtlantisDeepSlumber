@@ -3296,6 +3296,15 @@ private void Die()
             }
         }
     }
+
+    public override void OnDestroy()
+    {
+        base.OnDestroy();
+        if (!isClone && AudioManager.Instance != null)
+        {
+            AudioManager.Instance.SetBossMusicActive(false, 1.0f);
+        }
+    }
 }
 
 public class AscendingSwordProjectile : MonoBehaviour
@@ -3347,15 +3356,6 @@ public class AscendingSwordProjectile : MonoBehaviour
             {
                 gameObject.SetActive(false);
             }
-        }
-    }
-
-    public override void OnDestroy()
-    {
-        base.OnDestroy();
-        if (!isClone && AudioManager.Instance != null)
-        {
-            AudioManager.Instance.SetBossMusicActive(false, 1.0f);
         }
     }
 }
