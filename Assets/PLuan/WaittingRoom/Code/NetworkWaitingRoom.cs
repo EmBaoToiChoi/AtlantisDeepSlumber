@@ -368,24 +368,16 @@ public class NetworkWaitingRoom : NetworkBehaviour
 
             // Container
             var row = new VisualElement();
-            row.style.flexDirection = FlexDirection.Row;
-            row.style.alignItems = Align.Center;
-            row.style.justifyContent = Justify.SpaceBetween;
-            row.style.marginBottom = 10;
-            row.style.paddingBottom = 5;
-            row.style.borderBottomWidth = 1;
-            row.style.borderBottomColor = new StyleColor(new Color(0.2f, 0.4f, 0.6f, 0.3f));
+            row.AddToClassList("voice-player-row");
 
             // Label
             var nameLbl = new Label($"<b>{playerName}</b> ({charName})");
-            nameLbl.style.color = new StyleColor(new Color(0f, 0.9f, 1f, 1f)); // Cyan
-            nameLbl.style.fontSize = 13;
-            nameLbl.style.flexGrow = 1f;
-            nameLbl.style.width = 150;
+            nameLbl.AddToClassList("voice-player-name");
             row.Add(nameLbl);
 
             // Slider
             var volSlider = new Slider(0f, 100f);
+            volSlider.AddToClassList("custom-slider");
             volSlider.style.flexGrow = 1f;
 
             // Get current multiplier
@@ -402,9 +394,7 @@ public class NetworkWaitingRoom : NetworkBehaviour
 
             // Numeric Label
             var valLbl = new Label($"{Mathf.RoundToInt(currentVol)}%");
-            valLbl.style.width = 40;
-            valLbl.style.unityTextAlign = TextAnchor.MiddleRight;
-            valLbl.style.color = new StyleColor(Color.white);
+            valLbl.AddToClassList("voice-slider-val");
 
             volSlider.RegisterValueChangedCallback(evt =>
             {
@@ -421,10 +411,8 @@ public class NetworkWaitingRoom : NetworkBehaviour
 
         if (!hasOtherPlayers)
         {
-            var noPlayersLbl = new Label("NO OTHER PLAYERS IN ROOM");
-            noPlayersLbl.style.unityTextAlign = TextAnchor.MiddleCenter;
-            noPlayersLbl.style.color = new StyleColor(new Color(0.5f, 0.5f, 0.5f, 0.8f));
-            noPlayersLbl.style.marginTop = 15;
+            var noPlayersLbl = new Label("KHÔNG CÓ NGƯỜI CHƠI KHÁC TRONG PHÒNG");
+            noPlayersLbl.AddToClassList("voice-empty-hint");
             _playersVoiceList.Add(noPlayersLbl);
         }
     }
@@ -949,9 +937,9 @@ public class NetworkWaitingRoom : NetworkBehaviour
         bool enoughPlayers = NetPlayers.Count >= 1;
         bool allReady = enoughPlayers && NetPlayers.Count > 0 && (readyCount == NetPlayers.Count);
 
-        // Cập nhật text với thông tin ready
+        // Cập nhật text số lượng người chơi
         if (_lblPlayerCount != null)
-            _lblPlayerCount.text = $"NGƯỜI CHƠI: {NetPlayers.Count}/4  ·  SẴN SÀNG: {readyCount}/{(NetPlayers.Count > 0 ? NetPlayers.Count.ToString() : "0")}";
+            _lblPlayerCount.text = $"NGƯỜI CHƠI: {NetPlayers.Count}/4";
 
         // KIỂM TRA XEM LOCAL CLIENT CÓ PHẢI LÀ CHỦ PHÒNG (SLOT 0) KHÔNG
         bool isRoomHost = false;
