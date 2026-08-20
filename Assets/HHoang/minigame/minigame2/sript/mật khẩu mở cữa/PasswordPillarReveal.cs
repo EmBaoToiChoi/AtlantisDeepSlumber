@@ -124,20 +124,28 @@ public class PasswordPillarReveal : NetworkBehaviour
             }
         }
 
-        // Tính toán góc đích (bao gồm số vòng quay thêm extraSpins)
+        // Tính toán góc đích hoàn hảo để không bị giật
         for (int i = 0; i < pillarSegments.Length; i++)
         {
             if (pillarSegments[i] == null) continue;
-            float currentY = pillarSegments[i].localEulerAngles.y;
-            startAngles[i] = currentY;
+            
+            // Lấy góc Y hiện tại
+            startAngles[i] = pillarSegments[i].localEulerAngles.y;
 
             float direction = (i % 2 == 0) ? 1f : -1f;
-            float angleDiff = (correctAngles[i] % 360f) - (currentY % 360f);
+            
+            // Dùng Mathf.DeltaAngle để tìm khoảng cách quay ngắn nhất (-180 đến 180)
+            float delta = Mathf.DeltaAngle(startAngles[i], correctAngles[i]);
 
-            if (direction > 0 && angleDiff < 0) angleDiff += 360f;
-            if (direction < 0 && angleDiff > 0) angleDiff -= 360f;
+            // Bắt buộc trụ phải quay tiếp theo đúng hướng (không được quay ngược lại)
+            if (direction > 0 && delta < 0) delta += 360f;
+            if (direction < 0 && delta > 0) delta -= 360f;
 
-            targetAngles[i] = currentY + angleDiff + (direction * 360f * extraSpins);
+            // Cộng thêm số vòng quay biểu diễn (extraSpins)
+            delta += direction * 360f * extraSpins;
+
+            // Góc đích cuối cùng = Góc hiện tại + tổng quãng đường góc phải đi
+            targetAngles[i] = startAngles[i] + delta;
         }
 
         float elapsedTime = 0f;
@@ -155,14 +163,18 @@ public class PasswordPillarReveal : NetworkBehaviour
             for (int i = 0; i < pillarSegments.Length; i++)
             {
                 if (pillarSegments[i] == null) continue;
-                float offsetT = Mathf.Clamp01(smoothT - (i * 0.05f));
-                float currentAngle = Mathf.Lerp(startAngles[i], targetAngles[i], offsetT);
                 
-                pillarSegments[i].localRotation = initialRotations[i] * Quaternion.Euler(0, currentAngle, 0);
+                // Độ trễ nhẹ giữa các đốt trụ (offsetT)
+                float offsetT = Mathf.Clamp01(smoothT - (i * 0.05f));
+                float currentY = Mathf.Lerp(startAngles[i], targetAngles[i], offsetT);
+                
+                // Chỉ can thiệp vào góc Y, giữ nguyên X và Z để không lệch trục
+                Vector3 currentEuler = pillarSegments[i].localEulerAngles;
+                currentEuler.y = currentY;
+                pillarSegments[i].localEulerAngles = currentEuler;
             }
 
             // B. LÀM HIỆN DẦN PHẦN THƯỞNG (FADE IN)
-            // Tăng Alpha từ 0 -> 1 theo tiến trình hãm phanh
             for (int i = 0; i < secretObjects.Length; i++)
             {
                 if (secretObjects[i] != null)
@@ -174,11 +186,15 @@ public class PasswordPillarReveal : NetworkBehaviour
             yield return null;
         }
 
-        // Chốt sổ frame cuối cùng: Ép chính xác vị trí trụ và Alpha = 1 (Hiện rõ hoàn toàn)
+        // Chốt sổ frame cuối cùng: Đảm bảo dừng chính xác ở góc đã setting (correctAngles)
         for (int i = 0; i < pillarSegments.Length; i++)
         {
             if (pillarSegments[i] == null) continue;
-            pillarSegments[i].localRotation = initialRotations[i] * Quaternion.Euler(0, correctAngles[i], 0);
+            
+            // Ép góc Y về chính xác correctAngle, giữ nguyên X và Z
+            Vector3 finalEuler = pillarSegments[i].localEulerAngles;
+            finalEuler.y = correctAngles[i];
+            pillarSegments[i].localEulerAngles = finalEuler;
         }
 
         for (int i = 0; i < secretObjects.Length; i++)
