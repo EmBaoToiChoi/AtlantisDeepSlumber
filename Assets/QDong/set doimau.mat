@@ -8,7 +8,7 @@ Material:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: set doimau
-  m_Shader: {fileID: 4800000, guid: c590d5faecd041e4fa6631a582dc1c80, type: 3}
+  m_Shader: {fileID: 4800000, guid: a008fbeb1ccaebb49be765a5db657699, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
@@ -67,6 +67,8 @@ Material:
     - _Cutoff: 0.5
     - _DetailNormalMapScale: 1
     - _DstBlend: 0
+    - _EdgeEmission: 2
+    - _EdgeWidth: 0.05
     - _FillAmount: 0
     - _FillAxis: 1
     - _GlossMapScale: 1
@@ -85,7 +87,9 @@ Material:
     - _ZWrite: 1
     m_Colors:
     - _Color: {r: 1, g: 1, b: 1, a: 1}
+    - _EdgeColor: {r: 0.25157225, g: 0.20173247, b: 0.0023732837, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 0}
     - _EmptyColor: {r: 0.6792453, g: 0.6792453, b: 0.6792453, a: 1}
+    - _GlowColor: {r: 2, g: 1.5, b: 0, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
