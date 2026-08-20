@@ -3598,6 +3598,17 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   highlightColor: {r: 1, g: 0.8955007, b: 0, a: 1}
   emissionIntensity: 0.6
+--- !u!114 &17170519 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 7337029688874353238, guid: 4f6f0aeaab936064eb1ec6bc91278b21, type: 3}
+  m_PrefabInstance: {fileID: 17170515}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 17170517}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 679d11ff1e521ba4ca346b597ea5ebe9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1001 &17378922
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -8094,12 +8105,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   ShowTopMostFoldoutHeaderGroup: 1
   prerequisiteQuest: {fileID: 1180239223}
-  sourcePillar: {fileID: 0}
+  sourcePillar: {fileID: 1242105319}
   mirrorPillars:
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
-  finalPillar: {fileID: 0}
+  - {fileID: 1628594435}
+  - {fileID: 957377229}
+  - {fileID: 1209159114}
+  finalPillar: {fileID: 626693448}
   questTitle: "D\u1EAAN TIA L\u1EECA M\u1EDE C\u1EECA"
   questIconSprite: {fileID: 1185662120, guid: b3e2417305ffdb046a78931037001d53, type: 3}
   questDescription: "Ch\u01B0\u1EDFng k\u1EF9 n\u0103ng v\xE0o tr\u1EE5 \u0111\xE1,
@@ -42450,6 +42461,17 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   highlightColor: {r: 0, g: 0.17825913, b: 1, a: 1}
   emissionIntensity: 0.6
+--- !u!114 &190091932 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 7337029688874353238, guid: 4f6f0aeaab936064eb1ec6bc91278b21, type: 3}
+  m_PrefabInstance: {fileID: 190091928}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 190091930}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 679d11ff1e521ba4ca346b597ea5ebe9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1001 &191194783
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -195184,9 +195206,9 @@ MonoBehaviour:
   ShowTopMostFoldoutHeaderGroup: 1
   prerequisiteQuest: {fileID: 1178886540}
   pillars:
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
+  - {fileID: 1400927457}
+  - {fileID: 742616474}
+  - {fileID: 471450387}
   questTitle: "S\u1EA0C \u0110I\u1EC6N TR\u1EE4"
   questIconSprite: {fileID: -993051549, guid: ea89cff6ada1da84e818e87424696d88, type: 3}
   questDescription: "H\xE3y d\xF9ng k\u1EF9 n\u0103ng c\u1EE7a nh\xE2n v\u1EADt \u0111\u1EC3
@@ -285297,10 +285319,10 @@ MonoBehaviour:
   ShowTopMostFoldoutHeaderGroup: 1
   prerequisiteQuest: {fileID: 2139849202}
   pillars:
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
+  - {fileID: 564393310}
+  - {fileID: 224778683}
+  - {fileID: 293041705}
+  - {fileID: 1672507736}
   puzzleManager: {fileID: 0}
   questTitle: "XOAY TR\u1EE4 K\xDD T\u1EF0"
   questIconSprite: {fileID: -2076560651, guid: 886ac18eed19c454fa134ad26f85611e, type: 3}
@@ -298441,6 +298463,17 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 2415478985120758822, guid: 067a6942e10d85747a39eec66146aed0, type: 3}
   m_PrefabInstance: {fileID: 1242105317}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &1242105319 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 8192372239393689439, guid: 067a6942e10d85747a39eec66146aed0, type: 3}
+  m_PrefabInstance: {fileID: 1242105317}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f3ad190ca199aa149b468d8ee4108e21, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &1242635267
 GameObject:
   m_ObjectHideFlags: 0
@@ -355121,6 +355154,17 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   highlightColor: {r: 0, g: 0.17825913, b: 1, a: 1}
   emissionIntensity: 0.6
+--- !u!114 &1510394773 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 7337029688874353238, guid: 4f6f0aeaab936064eb1ec6bc91278b21, type: 3}
+  m_PrefabInstance: {fileID: 1510394769}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1510394771}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 679d11ff1e521ba4ca346b597ea5ebe9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &1510679054
 GameObject:
   m_ObjectHideFlags: 0
@@ -429836,6 +429880,17 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   highlightColor: {r: 1, g: 0.8955007, b: 0, a: 1}
   emissionIntensity: 0.6
+--- !u!114 &1842433884 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 7337029688874353238, guid: 4f6f0aeaab936064eb1ec6bc91278b21, type: 3}
+  m_PrefabInstance: {fileID: 1842433880}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1842433882}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 679d11ff1e521ba4ca346b597ea5ebe9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!4 &1842585402 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 4264538084401294, guid: 520c15c299b6e9c45883b18b6b9e14f8, type: 3}
@@ -440792,8 +440847,8 @@ MonoBehaviour:
   ShowTopMostFoldoutHeaderGroup: 1
   prerequisiteQuest: {fileID: 1399485878}
   pedestals:
-  - {fileID: 0}
-  - {fileID: 0}
+  - {fileID: 249350141}
+  - {fileID: 1634842954}
   questTitle: "\u0110\u1EB6T NG\u1ECCC"
   questIconSprite: {fileID: -1570515842, guid: af9012a7f000ab14498cb4b01f6668a8, type: 3}
   questDescription: "Di chuy\u1EC3n l\u1EA1i g\u1EA7n c\xE1c c\xF4ng t\u1EAFc v\xE0
@@ -488199,10 +488254,10 @@ MonoBehaviour:
   ShowTopMostFoldoutHeaderGroup: 1
   prerequisiteQuest: {fileID: 1903643076}
   pillars:
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
+  - {fileID: 1510394773}
+  - {fileID: 190091932}
+  - {fileID: 17170519}
+  - {fileID: 1842433884}
   ascensionManager: {fileID: 0}
   questTitle: "NGUY\xCAN T\u1ED0"
   questIconSprite: {fileID: -2076560651, guid: 886ac18eed19c454fa134ad26f85611e, type: 3}
