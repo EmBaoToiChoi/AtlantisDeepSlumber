@@ -159,46 +159,27 @@ public class MiniBossAI : NetworkBehaviour, ISwordRainOwner
     public MiniBossAI clone2Instance;
     private static bool isDefeatCutsceneSequenceRunning = false;
 
+    // --- SERVER-AUTHORITATIVE DEATH TRACKING ---
+    // Đếm số entity đã chết (boss chính + 2 clones = tối đa 3). Chỉ Server ghi.
+    public NetworkVariable<int> totalDeathCount = new NetworkVariable<int>(
+        0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+    // Counter để đồng bộ cutscene defeat cho tất cả Client qua OnValueChanged callback
+    public NetworkVariable<int> defeatCutsceneCounter = new NetworkVariable<int>(
+        0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+    // Số lượng entity cần chết trước khi trigger cutscene (1 boss + 2 clones = 3, nếu chưa summon clone thì = 1)
+    private int RequiredDeathCount => hasSummonedClones ? 3 : 1;
+
     public float ActualCurrentHealth => (isStandaloneMode || isClone || !IsSpawned) ? localHealth : currentHealth.Value;
     public bool IsBossActive => (isStandaloneMode || isClone) ? localIsBossActive : isBossActive.Value;
     public bool IsDead => CurrentStateValue == MiniBossState.Dead;
 
+    // Fallback cho standalone mode (không có network)
     public bool AreAllBossesAndClonesDead()
     {
-        var mainBoss = FindMainBoss() ?? (isClone ? null : this);
-        if (mainBoss == null) mainBoss = this;
-
-        // 1. Kiểm tra Boss chính
-        if (mainBoss != this && !mainBoss.IsDead && mainBoss.ActualCurrentHealth > 0f)
-        {
-            return false;
-        }
-
-        // 2. Kiểm tra 2 phân thân nếu boss chính đã từng triệu hồi
-        if (mainBoss.hasSummonedClones)
-        {
-            if (mainBoss.clone1Instance != null && mainBoss.clone1Instance != this && mainBoss.clone1Instance.gameObject.activeInHierarchy)
-            {
-                if (!mainBoss.clone1Instance.IsDead && mainBoss.clone1Instance.ActualCurrentHealth > 0f)
-                {
-                    return false;
-                }
-            }
-
-            if (mainBoss.clone2Instance != null && mainBoss.clone2Instance != this && mainBoss.clone2Instance.gameObject.activeInHierarchy)
-            {
-                if (!mainBoss.clone2Instance.IsDead && mainBoss.clone2Instance.ActualCurrentHealth > 0f)
-                {
-                    return false;
-                }
-            }
-        }
-
-        // 3. Quét toàn bộ Scene để đảm bảo không còn phân thân nào khác chưa chết
         var allBosses = FindObjectsByType<MiniBossAI>(FindObjectsSortMode.None);
         foreach (var b in allBosses)
         {
-            if (b != null && b != this && b.gameObject.activeInHierarchy)
+            if (b != null && b.gameObject.activeInHierarchy)
             {
                 if (!b.IsDead && b.ActualCurrentHealth > 0f)
                 {
@@ -206,8 +187,39 @@ public class MiniBossAI : NetworkBehaviour, ISwordRainOwner
                 }
             }
         }
-
         return true;
+    }
+
+    /// <summary>
+    /// Server gọi khi bất kỳ entity nào (boss chính hoặc clone) chết.
+    /// Tăng totalDeathCount và kiểm tra xem đã đủ 3 chưa → trigger cutscene.
+    /// </summary>
+    private void ServerRegisterDeath()
+    {
+        if (!IsServer && !isStandaloneMode) return;
+
+        var mainBoss = FindMainBoss() ?? this;
+
+        if (isStandaloneMode)
+        {
+            // Standalone mode: dùng AreAllBossesAndClonesDead() cũ
+            if (AreAllBossesAndClonesDead())
+            {
+                TriggerBossDefeatCutscene();
+            }
+            return;
+        }
+
+        // Network mode: Server tăng counter trên Boss chính
+        mainBoss.totalDeathCount.Value++;
+        int required = mainBoss.RequiredDeathCount;
+        Debug.Log($"[MiniBossAI] ServerRegisterDeath: totalDeathCount = {mainBoss.totalDeathCount.Value}/{required}");
+
+        if (mainBoss.totalDeathCount.Value >= required)
+        {
+            Debug.Log("[MiniBossAI] TẤT CẢ BOSS + PHÂN THÂN ĐÃ CHẾT → Server broadcast cutscene cho tất cả Client!");
+            mainBoss.defeatCutsceneCounter.Value++;
+        }
     }
 
     [Header("Components")]
@@ -413,6 +425,7 @@ public class MiniBossAI : NetworkBehaviour, ISwordRainOwner
         };
         hitCounter.OnValueChanged += (_, _) => { if (anim != null) anim.SetTrigger(hitTrigger); };
         dieCounter.OnValueChanged += (_, _) => { if (anim != null) anim.SetTrigger(dieTrigger); };
+        defeatCutsceneCounter.OnValueChanged += (_, _) => OnDefeatCutsceneCounterChanged();
         enrageCounter.OnValueChanged += (_, _) => {
             if (anim != null) anim.SetTrigger(enrageTrigger);
             PlayEnrageVFX();
@@ -470,6 +483,7 @@ public class MiniBossAI : NetworkBehaviour, ISwordRainOwner
         };
         hitCounter.OnValueChanged -= (_, _) => { if (anim != null) anim.SetTrigger(hitTrigger); };
         dieCounter.OnValueChanged -= (_, _) => { if (anim != null) anim.SetTrigger(dieTrigger); };
+        defeatCutsceneCounter.OnValueChanged -= (_, _) => OnDefeatCutsceneCounterChanged();
         enrageCounter.OnValueChanged -= (_, _) => {
             if (anim != null) anim.SetTrigger(enrageTrigger);
             PlayEnrageVFX();
@@ -714,6 +728,40 @@ public class MiniBossAI : NetworkBehaviour, ISwordRainOwner
             if (targetClone.localHealth <= 0f)
             {
                 targetClone.ChangeState(MiniBossState.Dead);
+
+                // --- ĐỒNG BỘ NETWORK: Server broadcast clone death cho tất cả Client ---
+                if (IsServer && !isStandaloneMode)
+                {
+                    ForceCloneDeathClientRpc(cloneIndex);
+                    ServerRegisterDeath();
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Server broadcast cho tất cả Client: Force clone vào trạng thái Dead + Destroy.
+    /// Đảm bảo trên MỌI máy, phân thân đều biến mất cùng lúc.
+    /// </summary>
+    [ClientRpc]
+    private void ForceCloneDeathClientRpc(int cloneIndex)
+    {
+        // Client tìm clone tương ứng trên máy local và force kill
+        var all = FindObjectsByType<MiniBossAI>(FindObjectsSortMode.None);
+        foreach (var b in all)
+        {
+            if (b != null && b.isClone && b.gameObject.activeInHierarchy)
+            {
+                bool isClone2 = b.gameObject.name.Contains("2") || b.gameObject.name.Contains("Right");
+                if ((cloneIndex == 2 && isClone2) || (cloneIndex == 1 && !isClone2))
+                {
+                    if (!b.IsDead)
+                    {
+                        b.localHealth = 0f;
+                        b.ChangeState(MiniBossState.Dead);
+                    }
+                    break;
+                }
             }
         }
     }
@@ -2032,24 +2080,44 @@ private void Die()
             TriggerDeathExplosion();
         }
 
-        // --- CHỈ KÍCH HOẠT CUTSCENE KHI CẢ BOSS CHÍNH VÀ 2 PHÂN THÂN ĐỀU ĐÃ BỊ TIÊU DIỆT HOÀN TOÀN ---
-        if (AreAllBossesAndClonesDead())
-        {
-            TriggerBossDefeatCutscene();
-        }
-        // --------------------------------------------------------------------------------------------
-
+        // --- ĐỒNG BỘ NETWORK: Server quản lý death count và trigger cutscene ---
         if (!isStandaloneMode && IsServer)
         {
             dieCounter.Value++;
+
+            // Chỉ Boss chính (không phải clone) mới gọi ServerRegisterDeath ở đây.
+            // Clone death đã được xử lý trong ApplyDamageToClone.
+            if (!isClone)
+            {
+                ServerRegisterDeath();
+            }
+        }
+        else if (isStandaloneMode)
+        {
+            // Standalone mode: kiểm tra cục bộ như cũ
+            if (anim != null) anim.SetTrigger(dieTrigger);
+            if (AreAllBossesAndClonesDead())
+            {
+                TriggerBossDefeatCutscene();
+            }
         }
         else if (anim != null)
         {
             anim.SetTrigger(dieTrigger);
         }
 
-        Debug.Log("[MiniBossAI] Mini Boss is dead!");
-        Destroy(gameObject, 5f);
+        Debug.Log($"[MiniBossAI] {(isClone ? "Phân thân" : "Boss chính")} is dead!");
+        Destroy(gameObject, isClone ? 3f : 5f);
+    }
+
+    /// <summary>
+    /// Callback khi defeatCutsceneCounter thay đổi (Server đã xác nhận tất cả đều chết).
+    /// Chạy trên TẤT CẢ client đồng thời.
+    /// </summary>
+    private void OnDefeatCutsceneCounterChanged()
+    {
+        Debug.Log("[MiniBossAI] [Network] defeatCutsceneCounter changed → Tất cả Client bắt đầu chạy cutscene!");
+        TriggerBossDefeatCutscene();
     }
 
     public void TriggerBossDefeatCutscene()
@@ -2059,7 +2127,32 @@ private void Die()
 
         Debug.Log("[MiniBossAI] TẤT CẢ BOSS CHÍNH VÀ 2 PHÂN THÂN ĐÃ BỊ TIÊU DIỆT HOÀN TOÀN -> BẮT ĐẦU QUY TRÌNH HỦY UI VÀ CHẠY CUTSCENE!");
 
+        // Dọn sạch mọi clone còn sót lại trên máy local
+        ForceDestroyAllRemainingClones();
+
         StartCoroutine(DefeatCutsceneSequenceRoutine());
+    }
+
+    /// <summary>
+    /// Dọn sạch tất cả phân thân còn sót lại trên máy local khi cutscene bắt đầu.
+    /// Đảm bảo không còn "2 con phân thân" hiện trên bất kỳ máy nào.
+    /// </summary>
+    private void ForceDestroyAllRemainingClones()
+    {
+        var allBosses = FindObjectsByType<MiniBossAI>(FindObjectsSortMode.None);
+        foreach (var b in allBosses)
+        {
+            if (b != null && b.isClone && b.gameObject.activeInHierarchy)
+            {
+                if (!b.IsDead)
+                {
+                    b.localHealth = 0f;
+                    b.ChangeState(MiniBossState.Dead);
+                }
+                // Force destroy nhanh hơn để không sót trên màn hình
+                Destroy(b.gameObject, 2f);
+            }
+        }
     }
 
     private IEnumerator DefeatCutsceneSequenceRoutine()

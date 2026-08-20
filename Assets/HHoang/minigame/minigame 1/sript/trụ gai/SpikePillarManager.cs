@@ -18,6 +18,10 @@ public class SpikePillarManager : NetworkBehaviour
     [Tooltip("Hướng lăn của trụ gai (Ví dụ: (0,0,-1) hoặc (1,0,0))")]
     public Vector3 rollDirection = new Vector3(0f, 0f, -1f);
     public float spawnInterval = 2.0f; // Thời gian giãn cách giữa các lần rơi trụ mới
+    [Tooltip("Góc bù cho 3D model. (0, 90, 0) đặt trụ nằm ngang chắn ngang hành lang.")]
+    public Vector3 meshEulerOffset = new Vector3(0f, 90f, 0f);
+    [Tooltip("Đảo ngược chiều xoay con lăn nếu cần")]
+    public bool reverseRotation = false;
 
     [Header("=== PREVIEW TRONG SCENE (EDIT MODE) ===")]
     [Tooltip("Bật hiển thị đường đi và điểm chạm đất trong Scene")]
@@ -282,6 +286,8 @@ public class SpikePillarManager : NetworkBehaviour
             SpikePillarLocal pillar = pool.GetPillar();
             if (pillar != null)
             {
+                pillar.meshEulerOffset = meshEulerOffset;
+                pillar.reverseRotation = reverseRotation;
                 pillar.Initialize(selectedPoint.position, GetEffectiveRollDirection(), pool);
             }
         }
