@@ -143,7 +143,7 @@ public class MiniBossAI : NetworkBehaviour, ISwordRainOwner
     private MiniBossState localState = MiniBossState.Idle;
     private bool localIsBossActive = false;
     private bool localIsPhase2 = false;
-    private bool isStandaloneMode = false;
+    public bool isStandaloneMode = false;
     private bool IsNetworkActive => NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
 
     public bool IsPhase2 => (isStandaloneMode || isClone) ? localIsPhase2 : isPhase2Network.Value;
@@ -154,28 +154,50 @@ public class MiniBossAI : NetworkBehaviour, ISwordRainOwner
         set { if (isStandaloneMode || isClone) localState = value; else currentState.Value = value; }
     }
 
-    [Header("Clones Tracking")]
+    [Header("Clones Tracking & Network Synchronization")]
     public MiniBossAI clone1Instance;
     public MiniBossAI clone2Instance;
     private static bool isDefeatCutsceneSequenceRunning = false;
 
-    // --- SERVER-AUTHORITATIVE DEATH TRACKING ---
-    // Đếm số entity đã chết (boss chính + 2 clones = tối đa 3). Chỉ Server ghi.
-    public NetworkVariable<int> totalDeathCount = new NetworkVariable<int>(
-        0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+    // --- SERVER-AUTHORITATIVE DEATH & CLONE HEALTH TRACKING ---
+    // Máu của 2 phân thân đồng bộ qua mạng bằng NetworkVariable trên Boss chính
+    public NetworkVariable<float> clone1HealthNet = new NetworkVariable<float>(
+        315f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+    public NetworkVariable<float> clone2HealthNet = new NetworkVariable<float>(
+        315f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+    public NetworkVariable<bool> clone1DeadNet = new NetworkVariable<bool>(
+        false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+    public NetworkVariable<bool> clone2DeadNet = new NetworkVariable<bool>(
+        false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+    public NetworkVariable<bool> mainBossDeadNet = new NetworkVariable<bool>(
+        false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+    public NetworkVariable<bool> allMiniBossEntitiesDeadNet = new NetworkVariable<bool>(
+        false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+
     // Counter để đồng bộ cutscene defeat cho tất cả Client qua OnValueChanged callback
     public NetworkVariable<int> defeatCutsceneCounter = new NetworkVariable<int>(
         0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
-    // Số lượng entity cần chết trước khi trigger cutscene (1 boss + 2 clones = 3, nếu chưa summon clone thì = 1)
-    private int RequiredDeathCount => hasSummonedClones ? 3 : 1;
 
     public float ActualCurrentHealth => (isStandaloneMode || isClone || !IsSpawned) ? localHealth : currentHealth.Value;
     public bool IsBossActive => (isStandaloneMode || isClone) ? localIsBossActive : isBossActive.Value;
     public bool IsDead => CurrentStateValue == MiniBossState.Dead;
 
-    // Fallback cho standalone mode (không có network)
     public bool AreAllBossesAndClonesDead()
     {
+        if (allMiniBossEntitiesDeadNet.Value) return true;
+
+        var mainBoss = FindMainBoss() ?? (isClone ? null : this);
+        if (mainBoss != null && mainBoss.allMiniBossEntitiesDeadNet.Value) return true;
+
+        if (mainBoss != null && mainBoss.IsSpawned && !mainBoss.isStandaloneMode)
+        {
+            bool mainDead = mainBoss.mainBossDeadNet.Value || mainBoss.IsDead || mainBoss.ActualCurrentHealth <= 0;
+            bool c1Dead = !mainBoss.hasSummonedClones || mainBoss.clone1DeadNet.Value;
+            bool c2Dead = !mainBoss.hasSummonedClones || mainBoss.clone2DeadNet.Value;
+            return mainDead && c1Dead && c2Dead;
+        }
+
+        // Fallback Standalone
         var allBosses = FindObjectsByType<MiniBossAI>(FindObjectsSortMode.None);
         foreach (var b in allBosses)
         {
@@ -191,10 +213,10 @@ public class MiniBossAI : NetworkBehaviour, ISwordRainOwner
     }
 
     /// <summary>
-    /// Server gọi khi bất kỳ entity nào (boss chính hoặc clone) chết.
-    /// Tăng totalDeathCount và kiểm tra xem đã đủ 3 chưa → trigger cutscene.
+    /// Server kiểm tra xem cả MiniBoss chính và 2 phân thân đã chết hoàn toàn chưa.
+    /// Nếu tất cả đã chết -> Kích hoạt biến mạng, broadcast dọn sạch phân thân và chạy Cutscene!
     /// </summary>
-    private void ServerRegisterDeath()
+    public void CheckAndTriggerAllMiniBossesDead()
     {
         if (!IsServer && !isStandaloneMode) return;
 
@@ -202,7 +224,6 @@ public class MiniBossAI : NetworkBehaviour, ISwordRainOwner
 
         if (isStandaloneMode)
         {
-            // Standalone mode: dùng AreAllBossesAndClonesDead() cũ
             if (AreAllBossesAndClonesDead())
             {
                 TriggerBossDefeatCutscene();
@@ -210,15 +231,21 @@ public class MiniBossAI : NetworkBehaviour, ISwordRainOwner
             return;
         }
 
-        // Network mode: Server tăng counter trên Boss chính
-        mainBoss.totalDeathCount.Value++;
-        int required = mainBoss.RequiredDeathCount;
-        Debug.Log($"[MiniBossAI] ServerRegisterDeath: totalDeathCount = {mainBoss.totalDeathCount.Value}/{required}");
+        bool mainDead = mainBoss.mainBossDeadNet.Value || mainBoss.IsDead || mainBoss.ActualCurrentHealth <= 0f;
+        bool c1Dead = !mainBoss.hasSummonedClones || mainBoss.clone1DeadNet.Value;
+        bool c2Dead = !mainBoss.hasSummonedClones || mainBoss.clone2DeadNet.Value;
 
-        if (mainBoss.totalDeathCount.Value >= required)
+        Debug.Log($"[MiniBossAI Server] CheckAndTriggerAllMiniBossesDead: MainDead={mainDead}, Clone1Dead={c1Dead}, Clone2Dead={c2Dead}");
+
+        if (mainDead && c1Dead && c2Dead)
         {
-            Debug.Log("[MiniBossAI] TẤT CẢ BOSS + PHÂN THÂN ĐÃ CHẾT → Server broadcast cutscene cho tất cả Client!");
-            mainBoss.defeatCutsceneCounter.Value++;
+            if (!mainBoss.allMiniBossEntitiesDeadNet.Value)
+            {
+                mainBoss.allMiniBossEntitiesDeadNet.Value = true;
+                mainBoss.defeatCutsceneCounter.Value++;
+                Debug.Log("[MiniBossAI Server] TẤT CẢ 3 MINIBOSS ĐÃ BỊ TIÊU DIỆT HOÀN TOÀN -> Gửi ClientRpc dọn sạch phân thân và chạy cutscene trên toàn bộ máy!");
+                mainBoss.TriggerDefeatCutsceneAndCleanupClientRpc();
+            }
         }
     }
 
@@ -443,6 +470,14 @@ public class MiniBossAI : NetworkBehaviour, ISwordRainOwner
         };
         currentHealth.OnValueChanged += OnHealthNetChanged;
         deathExplosionCounter.OnValueChanged += (_, _) => PlayDeathExplosionEffects();
+        allMiniBossEntitiesDeadNet.OnValueChanged += (oldVal, newVal) => {
+            if (newVal)
+            {
+                ForceDestroyAllRemainingClones();
+                var hb = FindFirstObjectByType<MiniBossHealthBar>();
+                if (hb != null) { hb.HideUI(); hb.enabled = false; }
+            }
+        };
 
         ApplySpeedAnim(netSpeed.Value);
 
@@ -684,8 +719,34 @@ public class MiniBossAI : NetworkBehaviour, ISwordRainOwner
 
     public void DamageCloneNet(int cloneIndex, float damage)
     {
-        ApplyDamageToClone(cloneIndex, damage);
-        DamageCloneClientRpc(cloneIndex, damage);
+        if (!IsServer && !isStandaloneMode) return;
+
+        if (cloneIndex == 1)
+        {
+            clone1HealthNet.Value = Mathf.Max(0f, clone1HealthNet.Value - damage);
+            float newHp = clone1HealthNet.Value;
+            DamageCloneClientRpc(1, damage, newHp);
+
+            if (newHp <= 0f && !clone1DeadNet.Value)
+            {
+                clone1DeadNet.Value = true;
+                ForceCloneDeathClientRpc(1);
+                CheckAndTriggerAllMiniBossesDead();
+            }
+        }
+        else
+        {
+            clone2HealthNet.Value = Mathf.Max(0f, clone2HealthNet.Value - damage);
+            float newHp = clone2HealthNet.Value;
+            DamageCloneClientRpc(2, damage, newHp);
+
+            if (newHp <= 0f && !clone2DeadNet.Value)
+            {
+                clone2DeadNet.Value = true;
+                ForceCloneDeathClientRpc(2);
+                CheckAndTriggerAllMiniBossesDead();
+            }
+        }
     }
 
     [ServerRpc(RequireOwnership = false)]
@@ -695,17 +756,8 @@ public class MiniBossAI : NetworkBehaviour, ISwordRainOwner
     }
 
     [ClientRpc]
-    private void DamageCloneClientRpc(int cloneIndex, float damage)
+    private void DamageCloneClientRpc(int cloneIndex, float damage, float newHp)
     {
-        if (!IsServer)
-        {
-            ApplyDamageToClone(cloneIndex, damage);
-        }
-    }
-
-    public void ApplyDamageToClone(int cloneIndex, float damage)
-    {
-        MiniBossAI targetClone = null;
         var all = FindObjectsByType<MiniBossAI>(FindObjectsSortMode.None);
         foreach (var b in all)
         {
@@ -714,26 +766,14 @@ public class MiniBossAI : NetworkBehaviour, ISwordRainOwner
                 bool isClone2 = b.gameObject.name.Contains("2") || b.gameObject.name.Contains("Right");
                 if ((cloneIndex == 2 && isClone2) || (cloneIndex == 1 && !isClone2))
                 {
-                    targetClone = b;
+                    b.localHealth = newHp;
+                    EnemyDamageEffectHelper.PlayDamageEffects(b.gameObject, damage);
+                    if (newHp <= 0f && !b.IsDead)
+                    {
+                        b.ChangeState(MiniBossState.Dead);
+                        Destroy(b.gameObject, 1.5f);
+                    }
                     break;
-                }
-            }
-        }
-
-        if (targetClone != null && !targetClone.IsDead)
-        {
-            targetClone.localHealth = Mathf.Max(0f, targetClone.localHealth - damage);
-            EnemyDamageEffectHelper.PlayDamageEffects(targetClone.gameObject, damage);
-
-            if (targetClone.localHealth <= 0f)
-            {
-                targetClone.ChangeState(MiniBossState.Dead);
-
-                // --- ĐỒNG BỘ NETWORK: Server broadcast clone death cho tất cả Client ---
-                if (IsServer && !isStandaloneMode)
-                {
-                    ForceCloneDeathClientRpc(cloneIndex);
-                    ServerRegisterDeath();
                 }
             }
         }
@@ -746,7 +786,6 @@ public class MiniBossAI : NetworkBehaviour, ISwordRainOwner
     [ClientRpc]
     private void ForceCloneDeathClientRpc(int cloneIndex)
     {
-        // Client tìm clone tương ứng trên máy local và force kill
         var all = FindObjectsByType<MiniBossAI>(FindObjectsSortMode.None);
         foreach (var b in all)
         {
@@ -755,15 +794,24 @@ public class MiniBossAI : NetworkBehaviour, ISwordRainOwner
                 bool isClone2 = b.gameObject.name.Contains("2") || b.gameObject.name.Contains("Right");
                 if ((cloneIndex == 2 && isClone2) || (cloneIndex == 1 && !isClone2))
                 {
+                    b.localHealth = 0f;
                     if (!b.IsDead)
                     {
-                        b.localHealth = 0f;
                         b.ChangeState(MiniBossState.Dead);
                     }
+                    Destroy(b.gameObject, 1f);
                     break;
                 }
             }
         }
+    }
+
+    [ClientRpc]
+    private void TriggerDefeatCutsceneAndCleanupClientRpc()
+    {
+        Debug.Log("[MiniBossAI ClientRpc] Nhận tín hiệu tiêu diệt toàn bộ MiniBoss -> Hủy hoàn toàn phân thân & chuẩn bị chạy Cutscene!");
+        ForceDestroyAllRemainingClones();
+        TriggerBossDefeatCutscene();
     }
 
     [ServerRpc(RequireOwnership = false)]
@@ -779,13 +827,13 @@ public class MiniBossAI : NetworkBehaviour, ISwordRainOwner
             isSummonInvulnerable = false;
             if (localState == MiniBossState.Enrage) localState = MiniBossState.Chase;
 
-            // Nếu đang trong Network mode: Gửi RPC qua Boss chính để đồng bộ cho toàn bộ Server & 4 Player
-            if (!isStandaloneMode && IsNetworkActive)
+            int idx = (gameObject.name.Contains("2") || gameObject.name.Contains("Right")) ? 2 : 1;
+
+            if (IsNetworkActive)
             {
                 var mainBoss = FindMainBoss();
                 if (mainBoss != null && mainBoss.IsSpawned)
                 {
-                    int idx = (gameObject.name.Contains("2") || gameObject.name.Contains("Right")) ? 2 : 1;
                     if (IsServer)
                     {
                         mainBoss.DamageCloneNet(idx, damage);
@@ -797,6 +845,16 @@ public class MiniBossAI : NetworkBehaviour, ISwordRainOwner
                     return;
                 }
             }
+
+            // Fallback Offline / Standalone
+            localHealth = Mathf.Max(0f, localHealth - damage);
+            EnemyDamageEffectHelper.PlayDamageEffects(gameObject, damage);
+            if (localHealth <= 0f)
+            {
+                ChangeState(MiniBossState.Dead);
+                Destroy(gameObject, 2f);
+            }
+            return;
         }
 
         if (IsDead) return;
@@ -891,6 +949,11 @@ public class MiniBossAI : NetworkBehaviour, ISwordRainOwner
 
         if (!isStandaloneMode && IsServer)
         {
+            float cHp = phase1MaxHealth * 0.45f;
+            clone1HealthNet.Value = cHp;
+            clone2HealthNet.Value = cHp;
+            clone1DeadNet.Value = false;
+            clone2DeadNet.Value = false;
             summonCloneCounter.Value++;
             TriggerSummonCutsceneClientRpc(targetPosLeft, targetPosRight);
         }
@@ -2085,11 +2148,10 @@ private void Die()
         {
             dieCounter.Value++;
 
-            // Chỉ Boss chính (không phải clone) mới gọi ServerRegisterDeath ở đây.
-            // Clone death đã được xử lý trong ApplyDamageToClone.
             if (!isClone)
             {
-                ServerRegisterDeath();
+                mainBossDeadNet.Value = true;
+                CheckAndTriggerAllMiniBossesDead();
             }
         }
         else if (isStandaloneMode)
@@ -2107,7 +2169,7 @@ private void Die()
         }
 
         Debug.Log($"[MiniBossAI] {(isClone ? "Phân thân" : "Boss chính")} is dead!");
-        Destroy(gameObject, isClone ? 3f : 5f);
+        Destroy(gameObject, isClone ? 1.5f : 5f);
     }
 
     /// <summary>
@@ -2137,21 +2199,22 @@ private void Die()
     /// Dọn sạch tất cả phân thân còn sót lại trên máy local khi cutscene bắt đầu.
     /// Đảm bảo không còn "2 con phân thân" hiện trên bất kỳ máy nào.
     /// </summary>
-    private void ForceDestroyAllRemainingClones()
+    public void ForceDestroyAllRemainingClones()
     {
         var allBosses = FindObjectsByType<MiniBossAI>(FindObjectsSortMode.None);
         foreach (var b in allBosses)
         {
-            if (b != null && b.isClone && b.gameObject.activeInHierarchy)
+            if (b != null && b.isClone)
             {
-                if (!b.IsDead)
-                {
-                    b.localHealth = 0f;
-                    b.ChangeState(MiniBossState.Dead);
-                }
-                // Force destroy nhanh hơn để không sót trên màn hình
-                Destroy(b.gameObject, 2f);
+                b.localHealth = 0f;
+                Destroy(b.gameObject);
             }
+        }
+
+        var allSpikes = FindObjectsByType<EarthSpikesDamageZone>(FindObjectsSortMode.None);
+        foreach (var s in allSpikes)
+        {
+            if (s != null) Destroy(s.gameObject);
         }
     }
 
