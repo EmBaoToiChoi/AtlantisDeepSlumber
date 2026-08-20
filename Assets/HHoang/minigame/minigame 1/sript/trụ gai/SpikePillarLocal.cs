@@ -9,13 +9,14 @@ public class SpikePillarLocal : MonoBehaviour
     public float fallSpeed = 15f;
     public float rollSpeed = 8f;
     public float rotateSpeed = 360f; // Tốc độ xoay (độ/giây)
-    public bool reverseRotation = false; // Đảo ngược chiều xoay (Đặt false để quay tiến tới mặc định)
+    public bool reverseRotation = false; // Đảo ngược chiều xoay nếu bị xoay ngược
     public Vector3 rollDirection = Vector3.forward;
-    public Vector3 rotationAxis = Vector3.right; // Trục gai nằm ngang xoay tròn
+    public Vector3 meshEulerOffset = Vector3.zero; // Góc lệch 3D model nếu cần tinh chỉnh (Euler)
 
     [Header("Cấu hình va chạm mặt đất")]
     public LayerMask groundLayer;
     public float checkGroundDistance = 1.0f; // Khoảng cách từ tâm đến mặt đất để dừng rơi và bắt đầu lăn
+    public float cylinderRadius = 1.0f; // Bán kính trụ để tính tốc độ lăn khớp mặt đất
 
     [Header("Cấu hình giới hạn")]
     public float maxLifetime = 25f;
@@ -34,43 +35,57 @@ public class SpikePillarLocal : MonoBehaviour
     private SpikePillarPool associatedPool;
     private System.Collections.Generic.Dictionary<GameObject, float> nextDamageTime = new System.Collections.Generic.Dictionary<GameObject, float>();
     private bool isTouchingGround = false;
+    private float currentRollAngle = 0f;
+    private Quaternion baseOrientation = Quaternion.identity;
 
     public void Initialize(Vector3 spawnPosition, Vector3 direction, SpikePillarPool pool)
     {
         transform.position = spawnPosition;
-        rollDirection = direction;
+        
+        // Chuẩn hóa hướng lăn trên mặt phẳng ngang (X-Z)
+        Vector3 flatDir = new Vector3(direction.x, 0f, direction.z);
+        if (flatDir.sqrMagnitude < 0.0001f) flatDir = Vector3.forward;
+        rollDirection = flatDir.normalized;
+        
         associatedPool = pool;
         currentState = PillarState.Falling;
         isTouchingGround = false;
         spawnTime = Time.time;
+        currentRollAngle = 0f;
+        
+        // Căn chỉnh góc xoay cơ sở: thân trụ nằm ngang tuyệt đối, vuông góc với hướng lăn
+        baseOrientation = Quaternion.LookRotation(rollDirection, Vector3.up);
+        ApplyRotation(0f);
+        
         gameObject.SetActive(true);
+    }
+
+    public void ApplyRotation(float angle)
+    {
+        // baseOrientation hướng thẳng theo rollDirection
+        // Trục X cục bộ (Vector3.right) luôn nằm ngang vuông góc với hướng lăn
+        // Xoay quanh trục X cục bộ để lăn tròn về phía trước không bao giờ bị xéo
+        Quaternion rollRot = Quaternion.AngleAxis(angle, Vector3.right);
+        Quaternion offsetRot = (meshEulerOffset != Vector3.zero) ? Quaternion.Euler(meshEulerOffset) : Quaternion.identity;
+        
+        transform.rotation = baseOrientation * rollRot * offsetRot;
     }
 
     void Update()
     {
         if (currentState == PillarState.Idle) return;
 
-        // Tự động tính toán trục xoay dựa trên hướng lăn để hướng xoay luôn khớp với hướng di chuyển
-        Vector3 dynamicRotationAxis = Vector3.Cross(Vector3.up, rollDirection.normalized);
-        if (dynamicRotationAxis == Vector3.zero)
-        {
-            dynamicRotationAxis = rotationAxis;
-        }
-
-        float dir = reverseRotation ? -1f : 1f;
-        transform.Rotate(dynamicRotationAxis, rotateSpeed * dir * Time.deltaTime, Space.World);
-
         LayerMask mask = (groundLayer.value != 0) ? groundLayer : ~LayerMask.GetMask("Player", "Ignore Raycast");
 
         if (currentState == PillarState.Falling)
         {
-            // Rơi xuống
+            // Rơi thẳng đứng xuống
             transform.Translate(Vector3.down * fallSpeed * Time.deltaTime, Space.World);
+            ApplyRotation(0f);
 
             // Kiểm tra chạm đất bằng Raycast
             if (Physics.Raycast(transform.position, Vector3.down, out RaycastHit hit, checkGroundDistance + 0.5f, mask))
             {
-                // Set vị trí khớp mặt đất (cộng thêm khoảng cách bán kính và dịch lên chút)
                 transform.position = new Vector3(transform.position.x, hit.point.y + checkGroundDistance - 0.05f, transform.position.z);
                 currentState = PillarState.Rolling;
                 isTouchingGround = true;
@@ -78,7 +93,7 @@ public class SpikePillarLocal : MonoBehaviour
             }
             else if (Time.time - spawnTime > 2.0f)
             {
-                // Fallback: Nếu rơi quá 2s mà không trúng Raycast, tự động chuyển sang lăn để không bị kẹt rơi
+                // Fallback: Nếu rơi quá 2s mà không trúng Raycast, tự động chuyển sang lăn để không bị kẹt
                 currentState = PillarState.Rolling;
                 isTouchingGround = true;
                 startRollPosition = transform.position;
@@ -86,19 +101,24 @@ public class SpikePillarLocal : MonoBehaviour
         }
         else if (currentState == PillarState.Rolling)
         {
-            // Lăn về phía trước
-            transform.Translate(rollDirection.normalized * rollSpeed * Time.deltaTime, Space.World);
+            // Lăn về phía trước theo rollDirection
+            transform.Translate(rollDirection * rollSpeed * Time.deltaTime, Space.World);
+
+            // Tự động xoay tròn lăn bánh
+            float rollDelta = (rotateSpeed > 0f ? rotateSpeed : (rollSpeed / Mathf.Max(cylinderRadius, 0.1f)) * Mathf.Rad2Deg) * Time.deltaTime;
+            if (reverseRotation) rollDelta = -rollDelta;
+            currentRollAngle = (currentRollAngle + rollDelta) % 360f;
+            ApplyRotation(currentRollAngle);
 
             // Kiểm tra chạm đất để bám địa hình hoặc rơi xuống hố
             if (Physics.Raycast(transform.position, Vector3.down, out RaycastHit hit, checkGroundDistance + 1.0f, mask))
             {
-                // Bám sát mặt đất
                 transform.position = new Vector3(transform.position.x, hit.point.y + checkGroundDistance - 0.05f, transform.position.z);
                 isTouchingGround = true;
             }
             else
             {
-                // Không có đất -> Rơi xuống hố (di chuyển tịnh tiến đi xuống)
+                // Không có đất -> Rơi xuống hố
                 transform.Translate(Vector3.down * fallSpeed * Time.deltaTime, Space.World);
                 isTouchingGround = false;
             }

@@ -4990,15 +4990,16 @@ MonoBehaviour:
   rotateSpeed: 360
   reverseRotation: 1
   rollDirection: {x: 0, y: 0, z: -1}
-  rotationAxis: {x: 1, y: 0, z: 95}
+  meshEulerOffset: {x: 0, y: 0, z: 0}
   groundLayer:
     serializedVersion: 2
     m_Bits: 1
   checkGroundDistance: 1
-  maxLifetime: 30
+  cylinderRadius: 1
+  maxLifetime: 35
   maxRollDistance: 120
   rollDustEffect: {fileID: 6650199810314842004, guid: 3b7f2c753d435d647a80f1f047a113e3, type: 3}
-  contactDamage: 30
+  contactDamage: 5
   damageCooldown: 1
 --- !u!65 &7104250793738507855
 BoxCollider:

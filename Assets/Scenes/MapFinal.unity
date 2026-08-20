@@ -19053,6 +19053,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 2013213560825553005, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
+      propertyPath: stumpRotationOffset.y
+      value: 32.7678
+      objectReference: {fileID: 0}
     - target: {fileID: 5467546501562613012, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
       propertyPath: m_Name
       value: OakBigTree01_pr (10)
@@ -19396,6 +19400,10 @@ PrefabInstance:
     - target: {fileID: 1054666164639193421, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2013213560825553005, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
+      propertyPath: stumpRotationOffset.y
+      value: 32.7678
       objectReference: {fileID: 0}
     - target: {fileID: 5467546501562613012, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
       propertyPath: m_Name
@@ -56436,6 +56444,10 @@ PrefabInstance:
     - target: {fileID: 1054666164639193421, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2013213560825553005, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
+      propertyPath: stumpRotationOffset.y
+      value: 32.7678
       objectReference: {fileID: 0}
     - target: {fileID: 5467546501562613012, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
       propertyPath: m_Name
@@ -146323,6 +146335,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 2013213560825553005, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
+      propertyPath: stumpRotationOffset.y
+      value: 32.7678
+      objectReference: {fileID: 0}
     - target: {fileID: 5467546501562613012, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
       propertyPath: m_Name
       value: OakBigTree01_pr (6)
@@ -147860,6 +147876,10 @@ PrefabInstance:
     - target: {fileID: 1054666164639193421, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2013213560825553005, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
+      propertyPath: stumpRotationOffset.y
+      value: 32.7678
       objectReference: {fileID: 0}
     - target: {fileID: 5467546501562613012, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
       propertyPath: m_Name
@@ -185527,6 +185547,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 2013213560825553005, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
+      propertyPath: stumpRotationOffset.y
+      value: 32.7678
+      objectReference: {fileID: 0}
     - target: {fileID: 5467546501562613012, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
       propertyPath: m_Name
       value: OakBigTree01_pr (9)
@@ -214211,6 +214235,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 2013213560825553005, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
+      propertyPath: stumpRotationOffset.y
+      value: 32.7678
+      objectReference: {fileID: 0}
     - target: {fileID: 5467546501562613012, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
       propertyPath: m_Name
       value: OakBigTree01_pr (14)
@@ -231794,8 +231822,17 @@ MonoBehaviour:
   spawnPoints:
   - {fileID: 194458994}
   - {fileID: 1905717360}
-  rollDirection: {x: 0, y: 0, z: -1}
+  directionMode: 1
+  rollDirection: {x: -0, y: -0, z: -1}
   spawnInterval: 2
+  showSceneGizmos: 1
+  previewInEditMode: 1
+  previewTimeline: 0
+  autoAnimatePreview: 1
+  previewPillarRadius: 1
+  previewPillarLength: 6
+  previewTrajectoryLength: 83
+  previewReverseRotation: 0
   isSpawningActive:
     UpdateTraits:
       MinSecondsBetweenUpdates: 0
@@ -231839,7 +231876,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   pillarPrefab: {fileID: 1151283090679032271, guid: 2e86784f71795fa46964e11305e78843, type: 3}
-  initialPoolSize: 7
+  initialPoolSize: 8
 --- !u!4 &957689702
 Transform:
   m_ObjectHideFlags: 0
@@ -259245,6 +259282,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 2013213560825553005, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
+      propertyPath: stumpRotationOffset.y
+      value: 32.7678
+      objectReference: {fileID: 0}
     - target: {fileID: 5467546501562613012, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
       propertyPath: m_Name
       value: OakBigTree01_pr (15)
@@ -269200,6 +269241,10 @@ PrefabInstance:
     - target: {fileID: 1054666164639193421, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2013213560825553005, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
+      propertyPath: stumpRotationOffset.y
+      value: 32.7678
       objectReference: {fileID: 0}
     - target: {fileID: 5467546501562613012, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
       propertyPath: m_Name
@@ -291156,6 +291201,10 @@ PrefabInstance:
     - target: {fileID: 1054666164639193421, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2013213560825553005, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
+      propertyPath: stumpRotationOffset.y
+      value: 32.7678
       objectReference: {fileID: 0}
     - target: {fileID: 5467546501562613012, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
       propertyPath: m_Name
@@ -343919,6 +343968,10 @@ PrefabInstance:
     - target: {fileID: 1054666164639193421, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2013213560825553005, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
+      propertyPath: stumpRotationOffset.y
+      value: 32.7678
       objectReference: {fileID: 0}
     - target: {fileID: 5467546501562613012, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
       propertyPath: m_Name
@@ -412722,6 +412775,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 2013213560825553005, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
+      propertyPath: stumpRotationOffset.y
+      value: 32.7678
+      objectReference: {fileID: 0}
     - target: {fileID: 5467546501562613012, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
       propertyPath: m_Name
       value: OakBigTree01_pr (20)
@@ -418739,7 +418796,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2013213560825553005, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
       propertyPath: stumpRotationOffset.y
-      value: 35.7678
+      value: 32.7678
       objectReference: {fileID: 0}
     - target: {fileID: 5467546501562613012, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
       propertyPath: m_Name
@@ -449356,6 +449413,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 2013213560825553005, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
+      propertyPath: stumpRotationOffset.y
+      value: 32.7678
+      objectReference: {fileID: 0}
     - target: {fileID: 5467546501562613012, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
       propertyPath: m_Name
       value: OakBigTree01_pr (7)
@@ -465140,6 +465201,10 @@ PrefabInstance:
     - target: {fileID: 1054666164639193421, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2013213560825553005, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
+      propertyPath: stumpRotationOffset.y
+      value: 32.7678
       objectReference: {fileID: 0}
     - target: {fileID: 5467546501562613012, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
       propertyPath: m_Name
