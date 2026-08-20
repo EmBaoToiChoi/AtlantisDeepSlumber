@@ -221,8 +221,38 @@ public class StonePuzzleQuestTrigger : NetworkBehaviour, IQuestTrigger
 
         if (active)
         {
-            // Kiểm tra trạng thái giải câu đố của puzzleManager
-            if (puzzleManager != null && puzzleManager.IsSolved())
+            // Tính toán trực tiếp số lượng phiến đá đang được đạp
+            int currentPressed = 0;
+            var platesToCheck = (requiredPlates != null && requiredPlates.Length > 0)
+                ? requiredPlates
+                : (puzzleManager != null && puzzleManager.requiredPlates != null && puzzleManager.requiredPlates.Length > 0 
+                    ? puzzleManager.requiredPlates 
+                    : FindObjectsByType<PressurePlateTrigger>(FindObjectsSortMode.None));
+
+            if (platesToCheck != null && platesToCheck.Length > 0)
+            {
+                if (platesToCheck.Length <= requiredPlatesCount)
+                {
+                    bool allOn = true;
+                    foreach (var p in platesToCheck)
+                    {
+                        if (p == null || !p.IsPressed) { allOn = false; break; }
+                    }
+                    if (allOn) currentPressed = requiredPlatesCount;
+                }
+                else
+                {
+                    foreach (var p in platesToCheck)
+                    {
+                        if (p != null && p.IsPressed) currentPressed++;
+                    }
+                }
+            }
+
+            bool isSolved = (puzzleManager != null && puzzleManager.IsSolved()) || (currentPressed >= requiredPlatesCount);
+
+            // Kiểm tra trạng thái giải câu đố
+            if (isSolved)
             {
                 CompleteQuest();
                 return;
@@ -336,13 +366,23 @@ public class StonePuzzleQuestTrigger : NetworkBehaviour, IQuestTrigger
                 if (door != null) door.Open();
             }
         }
-        else
+
+        // Mở tất cả các targetDoor / targetDoor2 gắn trên các phiến đá
+        var allPlates = FindObjectsByType<PressurePlateTrigger>(FindObjectsSortMode.None);
+        foreach (var plate in allPlates)
         {
-            var doors = FindObjectsByType<PushableDoor>(FindObjectsSortMode.None);
-            foreach (var door in doors)
+            if (plate != null)
             {
-                if (door != null) door.Open();
+                if (plate.targetDoor != null) plate.targetDoor.Open();
+                if (plate.targetDoor2 != null) plate.targetDoor2.Open();
             }
+        }
+
+        // Mở tất cả các PushableDoor trong scene
+        var sceneDoors = FindObjectsByType<PushableDoor>(FindObjectsSortMode.None);
+        foreach (var door in sceneDoors)
+        {
+            if (door != null) door.Open();
         }
 
         ShowCompleteQuestUI();
