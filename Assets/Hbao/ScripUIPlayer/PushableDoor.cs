@@ -81,16 +81,27 @@ public class PushableDoor : NetworkBehaviour
         }
     }
 
+    public override void OnNetworkSpawn()
+    {
+        isOpen.OnValueChanged += OnDoorStateChanged;
+        if (isOpen.Value)
+        {
+            localIsOpen = true;
+        }
+    }
+
+    public override void OnNetworkDespawn()
+    {
+        isOpen.OnValueChanged -= OnDoorStateChanged;
+    }
+
+    private void OnDoorStateChanged(bool oldVal, bool newVal)
+    {
+        Debug.Log($"[PushableDoor] Đồng bộ trạng thái cửa mạng: {(newVal ? "MỞ" : "ĐÓNG")}");
+    }
+
     private void Update()
     {
-        // Quyết định ai di chuyển transform cửa:
-        // - Chế độ mạng: Chỉ Server/Host được di chuyển transform của đối tượng có NetworkTransform.
-        // - Chế độ offline: Di chuyển bình thường.
-        if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening && !IsServer)
-        {
-            return;
-        }
-
         bool openState = (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening) ? isOpen.Value : localIsOpen;
 
         bool isAnyMoving = false;
