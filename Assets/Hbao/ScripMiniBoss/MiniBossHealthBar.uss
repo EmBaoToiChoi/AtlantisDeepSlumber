@@ -1,5 +1,6 @@
 /* Main container at the top center of the screen */
 .miniboss-hud-container {
+    display: none;
     position: absolute;
     top: 20px;
     left: 50%;

@@ -1,6 +1,6 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
     <Style src="project://database/Assets/Hbao/ScripMiniBoss/MiniBossHealthBar.uss?fileID=7433441132597879392&amp;guid=d304a70c2900e7846aa3f569f729b124&amp;type=3#MiniBossHealthBar" />
-    <ui:VisualElement name="miniboss-hud-container" class="miniboss-hud-container">
+    <ui:VisualElement name="miniboss-hud-container" class="miniboss-hud-container" style="display: none;">
         <!-- Khung ngoài: Frame_Box_Medium_01 bọc trọn toàn bộ HUD -->
         <ui:VisualElement class="miniboss-hud-outer-frame" />
         <ui:VisualElement name="miniboss-avatar-frame" class="miniboss-avatar-frame">

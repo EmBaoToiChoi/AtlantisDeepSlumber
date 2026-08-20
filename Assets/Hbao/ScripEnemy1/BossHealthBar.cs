@@ -134,14 +134,26 @@ public class BossHealthBar : MonoBehaviour
             rootContainer.style.display = DisplayStyle.Flex;
         }
 
-        // CHỐNG CHỒNG UI: Force ẩn HUD Trùm Phụ (MiniBoss) khi BossAI (Silas) đang hiển thị
-        var allMiniBossHUDs = FindObjectsByType<MiniBossHealthBar>(FindObjectsSortMode.None);
+        // CHỐNG CHỒNG UI: Force ẩn triệt để mọi phần tử VisualElement và component của Trùm Phụ (MiniBoss)
+        var allUIDocs = FindObjectsByType<UIDocument>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        foreach (var doc in allUIDocs)
+        {
+            if (doc != null && doc.rootVisualElement != null)
+            {
+                var mbHud = doc.rootVisualElement.Q<VisualElement>("miniboss-hud-container");
+                if (mbHud != null && mbHud.style.display != DisplayStyle.None)
+                {
+                    mbHud.style.display = DisplayStyle.None;
+                }
+            }
+        }
+
+        var allMiniBossHUDs = FindObjectsByType<MiniBossHealthBar>(FindObjectsInactive.Include, FindObjectsSortMode.None);
         foreach (var hud in allMiniBossHUDs)
         {
             if (hud != null)
             {
                 hud.HideUI();
-                hud.enabled = false; // Tắt hẳn script MiniBossHealthBar để không bao giờ hiện lại
             }
         }
 

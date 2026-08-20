@@ -6,6 +6,7 @@ using Unity.Netcode.Components;
 using UnityEngine;
 using UnityEngine.AI;
 using UnityEngine.Events;
+using UnityEngine.UIElements;
 
 /// <summary>
 /// Mini Boss AI Script using FSM (Finite State Machine).
@@ -494,8 +495,17 @@ public class MiniBossAI : NetworkBehaviour, ISwordRainOwner
             if (newVal)
             {
                 ForceDestroyAllRemainingClones();
+                var allUIDocs = FindObjectsByType<UIDocument>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+                foreach (var doc in allUIDocs)
+                {
+                    if (doc != null && doc.rootVisualElement != null)
+                    {
+                        var mbHud = doc.rootVisualElement.Q<VisualElement>("miniboss-hud-container");
+                        if (mbHud != null) mbHud.style.display = DisplayStyle.None;
+                    }
+                }
                 var hb = FindFirstObjectByType<MiniBossHealthBar>();
-                if (hb != null) { hb.HideUI(); hb.enabled = false; }
+                if (hb != null) { hb.HideUI(); }
             }
         };
 
@@ -2293,6 +2303,23 @@ private void Die()
         {
             if (sword != null) Destroy(sword.gameObject);
         }
+
+        // Ẩn ngay lập tức thanh máu MiniBoss trên toàn bộ UIDocument của máy Client
+        var allUIDocs = FindObjectsByType<UIDocument>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        foreach (var doc in allUIDocs)
+        {
+            if (doc != null && doc.rootVisualElement != null)
+            {
+                var mbHud = doc.rootVisualElement.Q<VisualElement>("miniboss-hud-container");
+                if (mbHud != null) mbHud.style.display = DisplayStyle.None;
+            }
+        }
+
+        var allHealthBars = FindObjectsByType<MiniBossHealthBar>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        foreach (var hb in allHealthBars)
+        {
+            if (hb != null) hb.HideUI();
+        }
     }
 
     /// <summary>
@@ -2313,12 +2340,27 @@ private void Die()
         // 1. Dọn sạch mọi clone còn sót lại trên máy local
         ForceDestroyAllRemainingClones();
 
-        // 2. Ẩn / Hủy hoàn toàn UI MiniBossHealthBar
-        var healthBar = FindFirstObjectByType<MiniBossHealthBar>();
-        if (healthBar != null)
+        // 2. Ẩn / Hủy hoàn toàn UI MiniBossHealthBar trên tất cả UIDocument
+        var allUIDocs = FindObjectsByType<UIDocument>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        foreach (var doc in allUIDocs)
         {
-            healthBar.HideUI();
-            healthBar.enabled = false;
+            if (doc != null && doc.rootVisualElement != null)
+            {
+                var mbHud = doc.rootVisualElement.Q<VisualElement>("miniboss-hud-container");
+                if (mbHud != null)
+                {
+                    mbHud.style.display = DisplayStyle.None;
+                }
+            }
+        }
+
+        var allHealthBars = FindObjectsByType<MiniBossHealthBar>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        foreach (var hb in allHealthBars)
+        {
+            if (hb != null)
+            {
+                hb.HideUI();
+            }
         }
 
         // 3. Kích hoạt onBossDeathEvent của Boss chính
