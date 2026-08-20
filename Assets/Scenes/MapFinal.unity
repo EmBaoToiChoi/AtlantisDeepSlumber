@@ -22250,6 +22250,11 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 2722432501907831162, guid: a5af93779c87530488fb79b5452e9d70, type: 3}
   m_PrefabInstance: {fileID: 98212664}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &98212666 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 3351757032029021120, guid: a5af93779c87530488fb79b5452e9d70, type: 3}
+  m_PrefabInstance: {fileID: 98212664}
+  m_PrefabAsset: {fileID: 0}
 --- !u!4 &98746224 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 7516270775452223998, guid: 8bb47db07ece76e4799d1667a864c355, type: 3}
@@ -86148,8 +86153,8 @@ MonoBehaviour:
   ShowTopMostFoldoutHeaderGroup: 1
   prerequisiteQuest: {fileID: 1578299253}
   gemObjects:
-  - {fileID: 0}
-  - {fileID: 0}
+  - {fileID: 98212666}
+  - {fileID: 1145684515}
   questTitle: "T\xCCM NG\u1ECCC"
   questIconSprite: {fileID: -1570515842, guid: af9012a7f000ab14498cb4b01f6668a8, type: 3}
   questDescription: "T\xECm \u0111\u01B0\u1EDDng \u0111\u1EC3 l\u1EA5y nh\u1EEFng
@@ -278620,6 +278625,11 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 2722432501907831162, guid: a5af93779c87530488fb79b5452e9d70, type: 3}
   m_PrefabInstance: {fileID: 1145684513}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &1145684515 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 3351757032029021120, guid: a5af93779c87530488fb79b5452e9d70, type: 3}
+  m_PrefabInstance: {fileID: 1145684513}
+  m_PrefabAsset: {fileID: 0}
 --- !u!4 &1145703088 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 7516270775452223998, guid: 8bb47db07ece76e4799d1667a864c355, type: 3}
@@ -418713,6 +418723,10 @@ PrefabInstance:
     - target: {fileID: 1054666164639193421, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2013213560825553005, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
+      propertyPath: stumpRotationOffset.y
+      value: 35.7678
       objectReference: {fileID: 0}
     - target: {fileID: 5467546501562613012, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
       propertyPath: m_Name
