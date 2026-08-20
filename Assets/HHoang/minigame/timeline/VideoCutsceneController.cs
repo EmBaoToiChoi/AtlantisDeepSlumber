@@ -122,11 +122,15 @@ public class VideoCutsceneController : NetworkBehaviour
     private void PrepareCutsceneClientRpc()
     {
         TogglePlayerMovement(false); 
+        CameraShakeHelper.StopShake(); // Dừng ngay mọi rung lắc camera để chuẩn bị cutscene mượt mà
+
+        // Tắt camera follow để camera không bị giật hay lia văng qua chỗ khác khi chuyển cảnh
+        SetLocalPlayerCameraFollow(false);
         
-        // [ĐÃ SỬA TẠI ĐÂY] Làm mờ dần màn hình thành đen đặc (alpha từ 0 -> 1) trong 1 giây
+        // Làm mờ dần màn hình thành đen đặc (alpha từ 0 -> 1) trong 0.6 giây
         if (blackScreenUI != null) 
         {
-            StartCoroutine(FadeCanvasGroup(blackScreenUI, 0f, 1f, 1f, false));
+            StartCoroutine(FadeCanvasGroup(blackScreenUI, 0f, 1f, 0.6f, false));
         }
 
         if (objectToHide != null) objectToHide.SetActive(false);
@@ -174,12 +178,13 @@ public class VideoCutsceneController : NetworkBehaviour
     {
         if (objectToHide != null) objectToHide.SetActive(true);
         
-        // [ĐÃ SỬA TẠI ĐÂY] Làm sáng dần màn hình (alpha từ 1 -> 0) trong 1 giây, sau đó tắt hẳn object
+        // Làm sáng dần màn hình (alpha từ 1 -> 0) trong 1 giây, sau đó tắt hẳn object
         if (blackScreenUI != null) 
         {
             StartCoroutine(FadeCanvasGroup(blackScreenUI, 1f, 0f, 1f, true));
         }
         
+        SetLocalPlayerCameraFollow(true);
         TogglePlayerMovement(true);
         isPlaying = false;
     }
@@ -257,7 +262,8 @@ public class VideoCutsceneController : NetworkBehaviour
 
     private void TogglePlayerMovement(bool enable)
     {
-        var localPlayer = NetworkManager.Singleton.LocalClient.PlayerObject;
+        var localPlayer = (NetworkManager.Singleton != null && NetworkManager.Singleton.LocalClient != null) 
+            ? NetworkManager.Singleton.LocalClient.PlayerObject : null;
         
         if (localPlayer != null)
         {
@@ -267,6 +273,26 @@ public class VideoCutsceneController : NetworkBehaviour
                 if (script != null && scriptNamesToDisable.Contains(script.GetType().Name))
                 {
                     script.enabled = enable;
+                }
+            }
+        }
+    }
+
+    private void SetLocalPlayerCameraFollow(bool enable)
+    {
+        var localPlayer = (NetworkManager.Singleton != null && NetworkManager.Singleton.LocalClient != null) 
+            ? NetworkManager.Singleton.LocalClient.PlayerObject : null;
+        
+        if (localPlayer != null)
+        {
+            MonoBehaviour[] allScripts = localPlayer.GetComponents<MonoBehaviour>();
+            foreach (var script in allScripts)
+            {
+                if (script == null) continue;
+                var field = script.GetType().GetField("enableCameraFollow");
+                if (field != null)
+                {
+                    field.SetValue(script, enable);
                 }
             }
         }

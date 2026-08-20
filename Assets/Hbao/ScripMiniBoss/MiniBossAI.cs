@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
 using Unity.Netcode;
+using Unity.Netcode.Components;
 using UnityEngine;
 using UnityEngine.AI;
 using UnityEngine.Events;
@@ -254,6 +255,17 @@ public class MiniBossAI : NetworkBehaviour, ISwordRainOwner
     public Animator anim;
     [Tooltip("The root of the visual mesh child. Leaps/spins will offset this transform Y position to keep NavMesh tracking on the ground.")]
     public Transform visualRoot;
+    [HideInInspector] public Vector3 initialVisualLocalPos = Vector3.zero;
+    private bool hasStoredInitialVisualPos = false;
+
+    public void StoreInitialVisualPos()
+    {
+        if (visualRoot != null && !hasStoredInitialVisualPos)
+        {
+            initialVisualLocalPos = visualRoot.localPosition;
+            hasStoredInitialVisualPos = true;
+        }
+    }
     [Tooltip("Raycast eye height target for detecting players")]
     public Transform eyeTransform;
     public Transform swordBase;
@@ -381,6 +393,12 @@ public class MiniBossAI : NetworkBehaviour, ISwordRainOwner
         if (agent == null) agent = GetComponent<NavMeshAgent>();
         if (agent != null && !agent.enabled) agent.enabled = true;
         if (anim == null) anim = GetComponent<Animator>() ?? GetComponentInChildren<Animator>(true);
+
+        if (visualRoot == null && anim != null && anim.transform != transform)
+        {
+            visualRoot = anim.transform;
+        }
+        StoreInitialVisualPos();
 
         var na = GetComponent<Unity.Netcode.Components.NetworkAnimator>();
         if (na != null && anim != null)
@@ -1020,8 +1038,7 @@ public class MiniBossAI : NetworkBehaviour, ISwordRainOwner
         Vector3 leftStartPos = targetPosLeft - Vector3.up * 1.2f;
         Vector3 rightStartPos = targetPosRight - Vector3.up * 1.2f;
 
-        // BẢO ĐẢM 100%: Luôn nhân bản từ chính MiniBoss (gameObject) để tránh sinh nhầm quái nhỏ
-        GameObject prefabToSpawn = gameObject;
+        GameObject prefabToSpawn = (clonePrefab != null) ? clonePrefab : gameObject;
 
         GameObject cloneLeft = Instantiate(prefabToSpawn, leftStartPos, transform.rotation);
         GameObject cloneRight = Instantiate(prefabToSpawn, rightStartPos, transform.rotation);
@@ -1029,17 +1046,45 @@ public class MiniBossAI : NetworkBehaviour, ISwordRainOwner
         cloneLeft.name = "MiniBoss_Clone1";
         cloneRight.name = "MiniBoss_Clone2";
 
-        var netL = cloneLeft.GetComponent<NetworkObject>();
-        if (netL != null) DestroyImmediate(netL);
+        // Hàm dọn dẹp các component Netcode tránh gây lỗi ngoại lệ khi chạy Standalone/Client
+        System.Action<GameObject> cleanNetComponents = (clone) =>
+        {
+            var no = clone.GetComponent<NetworkObject>();
+            if (no != null) DestroyImmediate(no);
+            var nt = clone.GetComponent<Unity.Netcode.Components.NetworkTransform>();
+            if (nt != null) DestroyImmediate(nt);
+            var na = clone.GetComponent<Unity.Netcode.Components.NetworkAnimator>();
+            if (na != null) DestroyImmediate(na);
+            var db = clone.GetComponent<Enemy1_DapBua>();
+            if (db != null) DestroyImmediate(db);
+        };
+        cleanNetComponents(cloneLeft);
+        cleanNetComponents(cloneRight);
 
-        var netR = cloneRight.GetComponent<NetworkObject>();
-        if (netR != null) DestroyImmediate(netR);
-
-        var dbL = cloneLeft.GetComponent<Enemy1_DapBua>();
-        if (dbL != null) DestroyImmediate(dbL);
-
-        var dbR = cloneRight.GetComponent<Enemy1_DapBua>();
-        if (dbR != null) DestroyImmediate(dbR);
+        // Hàm dọn sạch mọi child test capsule, VFX kế thừa hoặc aura rác từ bản thể gốc
+        System.Action<GameObject> cleanCloneStrayObjects = (clone) =>
+        {
+            var allChildren = clone.GetComponentsInChildren<Transform>(true);
+            foreach (var t in allChildren)
+            {
+                if (t == null || t == clone.transform) continue;
+                string tName = t.name.ToLower();
+                // Xóa bỏ các mesh/object Capsule thử nghiệm trong VFX pack (nếu không phải SkinnedMeshRenderer của Boss)
+                if (tName.Contains("capsule") && t.GetComponent<CapsuleCollider>() == null && t.GetComponent<SkinnedMeshRenderer>() == null)
+                {
+                    DestroyImmediate(t.gameObject);
+                }
+                else if (tName.Contains("aura") || tName.Contains("fireaura") || tName.Contains("enrage") || tName.Contains("testingchar") || tName.Contains("vfx_"))
+                {
+                    if (t.GetComponent<SkinnedMeshRenderer>() == null)
+                    {
+                        DestroyImmediate(t.gameObject);
+                    }
+                }
+            }
+        };
+        cleanCloneStrayObjects(cloneLeft);
+        cleanCloneStrayObjects(cloneRight);
 
         cloneLeft.SetActive(true);
         cloneRight.SetActive(true);
@@ -1071,53 +1116,55 @@ public class MiniBossAI : NetworkBehaviour, ISwordRainOwner
         MiniBossAI leftAI = cloneLeft.GetComponent<MiniBossAI>();
         MiniBossAI rightAI = cloneRight.GetComponent<MiniBossAI>();
 
-        if (leftAI != null)
+        System.Action<MiniBossAI> initCloneAI = (cAI) =>
         {
-            leftAI.isStandaloneMode = true;
-            leftAI.isClone = true;
-            leftAI.hasSummonedClones = true;
-            leftAI.isSummonInvulnerable = false;
-            leftAI.localIsBossActive = true;
-            leftAI.phase1MaxHealth = phase1MaxHealth * 0.45f;
-            leftAI.maxHealth = leftAI.phase1MaxHealth;
-            leftAI.localHealth = leftAI.maxHealth;
-            if (leftAI.agent != null) leftAI.agent.enabled = false;
-            if (leftAI.visualRoot != null) leftAI.visualRoot.localPosition = Vector3.zero;
-            if (leftAI.anim != null)
+            if (cAI == null) return;
+            cAI.isStandaloneMode = true;
+            cAI.isClone = true;
+            cAI.hasSummonedClones = true;
+            cAI.isSummonInvulnerable = false;
+            cAI.localIsBossActive = true;
+            cAI.phase1MaxHealth = phase1MaxHealth * 0.45f;
+            cAI.maxHealth = cAI.phase1MaxHealth;
+            cAI.localHealth = cAI.maxHealth;
+            if (cAI.agent != null) cAI.agent.enabled = false;
+            cAI.StoreInitialVisualPos();
+            if (cAI.visualRoot != null) cAI.visualRoot.localPosition = cAI.initialVisualLocalPos;
+            if (cAI.anim != null)
             {
-                leftAI.anim.Rebind();
-                leftAI.anim.Update(0f);
+                cAI.anim.Rebind();
+                cAI.anim.Update(0f);
             }
-        }
+        };
+        initCloneAI(leftAI);
+        initCloneAI(rightAI);
 
-        if (rightAI != null)
+        // BẢO ĐẢM HIỂN THỊ: Bật toàn bộ SkinnedMeshRenderer của phân thân và tắt các Capsule mesh thử nghiệm
+        System.Action<GameObject> enableBossVisuals = (clone) =>
         {
-            rightAI.isStandaloneMode = true;
-            rightAI.isClone = true;
-            rightAI.hasSummonedClones = true;
-            rightAI.isSummonInvulnerable = false;
-            rightAI.localIsBossActive = true;
-            rightAI.phase1MaxHealth = phase1MaxHealth * 0.45f;
-            rightAI.maxHealth = rightAI.phase1MaxHealth;
-            rightAI.localHealth = rightAI.maxHealth;
-            if (rightAI.agent != null) rightAI.agent.enabled = false;
-            if (rightAI.visualRoot != null) rightAI.visualRoot.localPosition = Vector3.zero;
-            if (rightAI.anim != null)
+            foreach (var smr in clone.GetComponentsInChildren<SkinnedMeshRenderer>(true))
             {
-                rightAI.anim.Rebind();
-                rightAI.anim.Update(0f);
+                if (smr != null) { smr.enabled = true; smr.gameObject.SetActive(true); }
             }
-        }
-
-        // BẢO ĐẢM HIỂN THỊ: Bật toàn bộ Renderer & SkinnedMeshRenderer của 2 phân thân
-        foreach (var r in cloneLeft.GetComponentsInChildren<Renderer>(true))
-        {
-            if (r != null) { r.enabled = true; r.gameObject.SetActive(true); }
-        }
-        foreach (var r in cloneRight.GetComponentsInChildren<Renderer>(true))
-        {
-            if (r != null) { r.enabled = true; r.gameObject.SetActive(true); }
-        }
+            foreach (var mr in clone.GetComponentsInChildren<MeshRenderer>(true))
+            {
+                if (mr != null)
+                {
+                    if (mr.gameObject.name.ToLower().Contains("capsule"))
+                    {
+                        mr.enabled = false;
+                        mr.gameObject.SetActive(false);
+                    }
+                    else
+                    {
+                        mr.enabled = true;
+                        mr.gameObject.SetActive(true);
+                    }
+                }
+            }
+        };
+        enableBossVisuals(cloneLeft);
+        enableBossVisuals(cloneRight);
 
         // Tạm thời tắt Collider của phân thân trong lúc đang nhô lên
         var leftColliders = cloneLeft.GetComponentsInChildren<Collider>();
@@ -1187,6 +1234,15 @@ public class MiniBossAI : NetworkBehaviour, ISwordRainOwner
 
         if (vfx != null)
         {
+            // Tắt bỏ toàn bộ mesh thử nghiệm "Capsule" hoặc dummy testing character trong VFX prefab
+            foreach (var t in vfx.GetComponentsInChildren<Transform>(true))
+            {
+                if (t != null && t.name.ToLower().Contains("capsule") && t.GetComponent<ParticleSystem>() == null)
+                {
+                    t.gameObject.SetActive(false);
+                }
+            }
+
             // Scale vừa vặn gọn gàng cho vùng triệu hồi hố tử thần
             float s = summonHoleVFXScale > 0.01f ? summonHoleVFXScale : 0.5f;
             vfx.transform.localScale = new Vector3(s, s, s);
@@ -1357,11 +1413,11 @@ public class MiniBossAI : NetworkBehaviour, ISwordRainOwner
         var db = cloneAI.GetComponent<Enemy1_DapBua>();
         if (db != null) DestroyImmediate(db);
 
-        // Tự động xóa sạch hiệu ứng lửa gồng kế thừa nếu có để phân thân trở về trạng thái chiến đấu sạch sẽ
-        var oldAuras = cloneAI.GetComponentsInChildren<ParticleSystem>();
+        // Tự động xóa sạch hiệu ứng lửa gồng/aura kế thừa nếu có để phân thân trở về trạng thái chiến đấu sạch sẽ
+        var oldAuras = cloneAI.GetComponentsInChildren<ParticleSystem>(true);
         foreach (var ps in oldAuras)
         {
-            if (ps != null && (ps.gameObject.name.Contains("FireAura") || ps.gameObject.name.Contains("Enrage") || ps.gameObject.name.Contains("Aura")))
+            if (ps != null && (ps.gameObject.name.Contains("FireAura") || ps.gameObject.name.Contains("Enrage") || ps.gameObject.name.Contains("Aura") || ps.gameObject.name.Contains("Capsule")))
             {
                 DestroyImmediate(ps.gameObject);
             }
@@ -1378,7 +1434,7 @@ public class MiniBossAI : NetworkBehaviour, ISwordRainOwner
         {
             cloneAI.agent.enabled = true;
             cloneAI.agent.isStopped = false;
-            cloneAI.agent.speed = runSpeed > 1f ? runSpeed : 6.0f;
+            cloneAI.agent.speed = runSpeed > 1f ? runSpeed : 5.8f;
             cloneAI.agent.stoppingDistance = 2.4f;
             cloneAI.agent.Warp(spawnPos);
         }
@@ -1422,9 +1478,9 @@ public class MiniBossAI : NetworkBehaviour, ISwordRainOwner
         if (enrageVFXPrefab != null)
         {
             // Đi theo đúng giữa tâm ngực/thân MiniBoss (Y=0.20f x scale 3.0 = 0.6m ngực) và thu nhỏ scale vừa vặn (0.35x)
-            GameObject vfx = Instantiate(enrageVFXPrefab, transform.position, transform.rotation, transform);
-            vfx.transform.localPosition = new Vector3(0f, 0.20f, 0f);
-            vfx.transform.localRotation = Quaternion.identity;
+            GameObject vfx = Instantiate(enrageVFXPrefab, transform.position + Vector3.up * 0.6f, transform.rotation);
+            var cap = vfx.transform.Find("Capsule");
+            if (cap != null) cap.gameObject.SetActive(false);
             vfx.transform.localScale = new Vector3(0.35f, 0.35f, 0.35f);
             Destroy(vfx, 3.5f);
         }
@@ -2047,13 +2103,13 @@ public class MiniBossAI : NetworkBehaviour, ISwordRainOwner
             if (visualRoot != null)
             {
                 float yOffset = currentLeapHeight * Mathf.Sin(Mathf.PI * progress);
-                visualRoot.localPosition = new Vector3(0, yOffset, 0);
+                visualRoot.localPosition = initialVisualLocalPos + new Vector3(0, yOffset, 0);
             }
 
             if (leapTimer >= currentLeapDuration)
             {
                 isLeaping = false;
-                if (visualRoot != null) visualRoot.localPosition = Vector3.zero;
+                if (visualRoot != null) visualRoot.localPosition = initialVisualLocalPos;
                 if (currentAttackIndex == 1 || currentLeapHeight > 2.0f)
                 {
                     CameraShakeHelper.ShakeAtPosition(transform.position, 0.7f, 1.3f, 40.0f);
@@ -2108,6 +2164,7 @@ private void Die()
     {
         // 1. Dừng toàn bộ Coroutine đòn đánh/gây sát thương của boss ngay lập tức để không gây mất máu player sau khi chết
         StopAllCoroutines();
+        CameraShakeHelper.StopShake(); // Dừng rung camera khi boss chết để chuẩn bị cutscene mượt mà
 
         if (!isClone)
         {
@@ -2125,7 +2182,7 @@ private void Die()
         if (agent != null) agent.enabled = false;
         SetSpeedNet(0f);
 
-        if (visualRoot != null) visualRoot.localPosition = Vector3.zero;
+        if (visualRoot != null) visualRoot.localPosition = initialVisualLocalPos;
 
         // 2. Tắt toàn bộ Collider và Trigger để boss đã chết không còn gây sát thương
         var colliders = GetComponentsInChildren<Collider>();
@@ -2185,6 +2242,7 @@ private void Die()
     public void TriggerBossDefeatCutscene()
     {
         Debug.Log("[MiniBossAI] TẤT CẢ BOSS CHÍNH VÀ 2 PHÂN THÂN ĐÃ BỊ TIÊU DIỆT HOÀN TOÀN -> BẮT ĐẦU QUY TRÌNH HỦY UI VÀ CHẠY CUTSCENE!");
+        CameraShakeHelper.StopShake(); // Dừng ngay lập tức mọi rung lắc camera để chuẩn bị chuyển cảnh Cutscene mượt mà
 
         // 1. Dọn sạch mọi clone còn sót lại trên máy local
         ForceDestroyAllRemainingClones();
@@ -2387,7 +2445,7 @@ private void Die()
     private void PlayDeathExplosionEffects()
     {
         Vector3 spawnPos = transform.position + Vector3.up * 1.2f;
-        CameraShakeHelper.Shake(1.5f, 1.5f); // Rung màn hình cực mạnh khi bạo nổ tử thần!
+        CameraShakeHelper.StopShake(); // Dừng rung camera khi boss/phân thân chết (chỉ rung khi Boss dùng Skill)
         if (deathExplosionVFX != null)
         {
             GameObject vfx = Instantiate(deathExplosionVFX, spawnPos, Quaternion.identity);
@@ -2798,7 +2856,7 @@ private void Die()
         public void Exit()
         {
             boss.isLeaping = false;
-            if (boss.visualRoot != null) boss.visualRoot.localPosition = Vector3.zero;
+            if (boss.visualRoot != null) boss.visualRoot.localPosition = boss.initialVisualLocalPos;
         }
     }
 
@@ -2820,12 +2878,12 @@ private void Die()
             if (visualRoot != null)
             {
                 float yOffset = config.peakHeight * Mathf.Sin(Mathf.PI * progress);
-                visualRoot.localPosition = new Vector3(0, yOffset, 0);
+                visualRoot.localPosition = initialVisualLocalPos + new Vector3(0, yOffset, 0);
             }
             yield return null;
         }
 
-        if (visualRoot != null) visualRoot.localPosition = Vector3.zero;
+        if (visualRoot != null) visualRoot.localPosition = initialVisualLocalPos;
 
         // Rung camera chấn động khi đòn Nhaychemdat tiếp đất trên Client
         if (attackIndex == 0 || config.peakHeight > 2.0f)
