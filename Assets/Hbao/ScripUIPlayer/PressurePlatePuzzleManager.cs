@@ -4,8 +4,11 @@ using Unity.Netcode;
 public class PressurePlatePuzzleManager : NetworkBehaviour
 {
     [Header("Puzzle Configuration")]
-    [Tooltip("Danh sách các nút sàn bắt buộc phải đạp (chọn từ các cục đá)")]
+    [Tooltip("Danh sách các nút sàn bắt buộc phải đạp (kéo 2 phiến đá đúng vào đây)")]
     public PressurePlateTrigger[] requiredPlates;
+
+    [Tooltip("Số lượng phiến đá cần đạp để mở cửa (Mặc định: 2)")]
+    public int requiredPlateCount = 2;
 
     [Tooltip("Danh sách các cánh cửa sẽ mở khi giải xong câu đố")]
     public PushableDoor[] targetDoors;
@@ -176,22 +179,44 @@ public class PressurePlatePuzzleManager : NetworkBehaviour
         // Chỉ Server hoặc máy chơi offline mới kiểm tra trạng thái câu đố và cập nhật
         if (NetworkManager.Singleton == null || !NetworkManager.Singleton.IsListening || IsServer)
         {
-            bool allPressed = true;
+            bool allPressed = false;
 
-            if (requiredPlates == null || requiredPlates.Length == 0)
+            if (requiredPlates != null && requiredPlates.Length > 0)
             {
-                allPressed = false;
+                if (requiredPlates.Length <= requiredPlateCount)
+                {
+                    // Nếu người dùng đã gán cụ thể danh sách phiến đá (ví dụ đúng 2 phiến đá)
+                    allPressed = true;
+                    foreach (var plate in requiredPlates)
+                    {
+                        if (plate == null || !plate.IsPressed)
+                        {
+                            allPressed = false;
+                            break;
+                        }
+                    }
+                }
+                else
+                {
+                    // Nếu danh sách chứa nhiều hơn (ví dụ 4 phiến), chỉ cần đạp đủ requiredPlateCount (2) phiến
+                    int pressed = 0;
+                    foreach (var plate in requiredPlates)
+                    {
+                        if (plate != null && plate.IsPressed) pressed++;
+                    }
+                    allPressed = (pressed >= requiredPlateCount);
+                }
             }
             else
             {
-                foreach (var plate in requiredPlates)
+                // Fallback: Tìm tất cả các phiến đá trong Scene và đếm số lượng phiến đang bị đè
+                var allPlates = FindObjectsByType<PressurePlateTrigger>(FindObjectsSortMode.None);
+                int pressed = 0;
+                foreach (var plate in allPlates)
                 {
-                    if (plate == null || !plate.IsPressed)
-                    {
-                        allPressed = false;
-                        break;
-                    }
+                    if (plate != null && plate.IsPressed) pressed++;
                 }
+                allPressed = (pressed >= requiredPlateCount);
             }
 
             bool currentSolved = (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening) ? isSolvedNet.Value : localIsSolved;

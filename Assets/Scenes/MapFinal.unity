@@ -172642,6 +172642,17 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 4144111845294080, guid: 320fc75c0a0afe74aaa9f10ea93ff6dd, type: 3}
   m_PrefabInstance: {fileID: 681589446}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &682306887 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 6567293959119562591, guid: 3aee4fe265c47004c8e64e1b9795df3e, type: 3}
+  m_PrefabInstance: {fileID: 303597037}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d61129b7d4ce64141aec631487218412, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &682492379
 GameObject:
   m_ObjectHideFlags: 0
@@ -332400,6 +332411,17 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 7516270775452223998, guid: 8bb47db07ece76e4799d1667a864c355, type: 3}
   m_PrefabInstance: {fileID: 491940225}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &1411793637 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 975538917959102708, guid: 3aee4fe265c47004c8e64e1b9795df3e, type: 3}
+  m_PrefabInstance: {fileID: 303597037}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d61129b7d4ce64141aec631487218412, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!4 &1411849023 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 7336387305064877752, guid: 874b102836fab7d4d951a9679ec7e63b, type: 3}
@@ -372913,6 +372935,10 @@ MonoBehaviour:
   ShowTopMostFoldoutHeaderGroup: 1
   prerequisiteQuest: {fileID: 129333395}
   puzzleManager: {fileID: 0}
+  requiredPlates:
+  - {fileID: 682306887}
+  - {fileID: 1411793637}
+  requiredPlatesCount: 2
   questTitle: "\u0110\u1EA8Y \u0110\xC1"
   questIconSprite: {fileID: 1185662120, guid: b3e2417305ffdb046a78931037001d53, type: 3}
   questDescription: "T\xECm ki\u1EBFm c\xE1c phi\u1EBFn \u0111\xE1 c\xF3 h\xECnh

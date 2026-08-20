@@ -33,6 +33,12 @@ public class StonePuzzleQuestTrigger : NetworkBehaviour, IQuestTrigger
     [Tooltip("Tham chiếu tới PressurePlatePuzzleManager quản lý các nút sàn")]
     public PressurePlatePuzzleManager puzzleManager;
 
+    [Tooltip("Danh sách 2 phiến đá đúng (Kéo thả 2 phiến đá vào đây để chỉ định)")]
+    public PressurePlateTrigger[] requiredPlates;
+
+    [Tooltip("Số lượng phiến đá cần đạp để mở cửa và hoàn thành nhiệm vụ (Mặc định: 2)")]
+    public int requiredPlatesCount = 2;
+
     [Header("Quest UI Settings")]
     [Tooltip("Tiêu đề nhiệm vụ hiển thị trên UI (Ví dụ: ĐẨY ĐÁ)")]
     public string questTitle = "ĐẨY ĐÁ";
@@ -126,11 +132,13 @@ public class StonePuzzleQuestTrigger : NetworkBehaviour, IQuestTrigger
 
         if (puzzleManager != null)
         {
-            if (puzzleManager.requiredPlates == null || puzzleManager.requiredPlates.Length == 0)
+            puzzleManager.requiredPlateCount = requiredPlatesCount;
+
+            if (requiredPlates != null && requiredPlates.Length > 0)
             {
-                puzzleManager.requiredPlates = FindObjectsByType<PressurePlateTrigger>(FindObjectsSortMode.None);
-                Debug.Log($"[StonePuzzleQuestTrigger] Tự động gán {puzzleManager.requiredPlates.Length} nút sàn (PressurePlateTrigger) cho puzzleManager.");
+                puzzleManager.requiredPlates = requiredPlates;
             }
+
             if (puzzleManager.targetDoors == null || puzzleManager.targetDoors.Length == 0)
             {
                 puzzleManager.targetDoors = FindObjectsByType<PushableDoor>(FindObjectsSortMode.None);
@@ -255,33 +263,47 @@ public class StonePuzzleQuestTrigger : NetworkBehaviour, IQuestTrigger
 
                 // Tính toán số lượng nút sàn đang được kích hoạt
                 int pressedCount = 0;
-                int totalCount = 2;
+                int totalCount = requiredPlatesCount; // Luôn là 2 phiến đá
 
                 if (puzzleManager != null && puzzleManager.requiredPlates != null && puzzleManager.requiredPlates.Length > 0)
                 {
-                    totalCount = puzzleManager.requiredPlates.Length;
-                    foreach (var plate in puzzleManager.requiredPlates)
+                    if (puzzleManager.requiredPlates.Length <= requiredPlatesCount)
                     {
-                        if (plate != null && plate.IsPressed)
+                        totalCount = puzzleManager.requiredPlates.Length;
+                        foreach (var plate in puzzleManager.requiredPlates)
                         {
-                            pressedCount++;
+                            if (plate != null && plate.IsPressed) pressedCount++;
                         }
                     }
-                }
-                else
-                {
-                    var plates = FindObjectsByType<PressurePlateTrigger>(FindObjectsSortMode.None);
-                    if (plates.Length > 0)
+                    else
                     {
-                        totalCount = plates.Length;
-                        foreach (var plate in plates)
+                        totalCount = requiredPlatesCount;
+                        foreach (var plate in puzzleManager.requiredPlates)
                         {
                             if (plate != null && plate.IsPressed) pressedCount++;
                         }
                     }
                 }
+                else if (requiredPlates != null && requiredPlates.Length > 0)
+                {
+                    totalCount = requiredPlates.Length;
+                    foreach (var plate in requiredPlates)
+                    {
+                        if (plate != null && plate.IsPressed) pressedCount++;
+                    }
+                }
+                else
+                {
+                    totalCount = requiredPlatesCount;
+                    var plates = FindObjectsByType<PressurePlateTrigger>(FindObjectsSortMode.None);
+                    foreach (var plate in plates)
+                    {
+                        if (plate != null && plate.IsPressed) pressedCount++;
+                    }
+                }
 
                 // Cập nhật tiến độ chính xác (ví dụ 0/2, 1/2, 2/2) ngay lập tức
+                pressedCount = Mathf.Min(pressedCount, totalCount);
                 lastPressedCount = pressedCount;
                 localHudCtl.UpdateQuestProgress(pressedCount, totalCount, this);
             }
@@ -335,9 +357,7 @@ public class StonePuzzleQuestTrigger : NetworkBehaviour, IQuestTrigger
 
         if (localHudCtl != null)
         {
-            int totalCount = (puzzleManager != null && puzzleManager.requiredPlates != null && puzzleManager.requiredPlates.Length > 0) 
-                ? puzzleManager.requiredPlates.Length 
-                : 2;
+            int totalCount = requiredPlatesCount;
             localHudCtl.ShowQuest(true, this);
             localHudCtl.UpdateQuestProgress(totalCount, totalCount, this);
             localHudCtl.UpdateQuestDescription("Nhiệm vụ hoàn thành: Cửa đã được mở!", this);
