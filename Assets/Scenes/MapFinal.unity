@@ -127086,7 +127086,7 @@ MonoBehaviour:
     m_InternalValue: 0
   maxCharge: 100
   chargingEffect: {fileID: 882199103}
-  completedEffect: {fileID: 0}
+  completedEffect: {fileID: 1873726237}
   interactUI: {fileID: 0}
 --- !u!114 &471450387
 MonoBehaviour:
@@ -210301,6 +210301,11 @@ PrefabInstance:
 --- !u!4 &869495814 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 460788, guid: 11387396ccd933544b0567a831ce751a, type: 3}
+  m_PrefabInstance: {fileID: 869495813}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &869495815 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 194316, guid: 11387396ccd933544b0567a831ce751a, type: 3}
   m_PrefabInstance: {fileID: 869495813}
   m_PrefabAsset: {fileID: 0}
 --- !u!1 &869625705
@@ -317718,7 +317723,7 @@ MonoBehaviour:
     m_InternalValue: 0
   maxCharge: 100
   chargingEffect: {fileID: 1490083409}
-  completedEffect: {fileID: 0}
+  completedEffect: {fileID: 869495815}
   interactUI: {fileID: 0}
 --- !u!114 &1400927457
 MonoBehaviour:
@@ -424671,6 +424676,11 @@ PrefabInstance:
 --- !u!4 &1873726236 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 460788, guid: 11387396ccd933544b0567a831ce751a, type: 3}
+  m_PrefabInstance: {fileID: 1873726235}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &1873726237 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 194316, guid: 11387396ccd933544b0567a831ce751a, type: 3}
   m_PrefabInstance: {fileID: 1873726235}
   m_PrefabAsset: {fileID: 0}
 --- !u!1001 &1873817573
