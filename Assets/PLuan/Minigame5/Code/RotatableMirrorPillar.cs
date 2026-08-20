@@ -113,6 +113,17 @@ public class RotatableMirrorPillar : NetworkBehaviour
         }
     }
 
+    private float GetInitialRotationFromAxis()
+    {
+        switch (rotationAxis)
+        {
+            case RotationAxis.X: return m_OriginalRotationX;
+            case RotationAxis.Z: return m_OriginalRotationZ;
+            case RotationAxis.Y:
+            default: return m_OriginalRotationY;
+        }
+    }
+
     private void InitOriginalRotations()
     {
         if (rotatePart != null)
@@ -121,6 +132,22 @@ public class RotatableMirrorPillar : NetworkBehaviour
             m_OriginalRotationY = rotatePart.localEulerAngles.y;
             m_OriginalRotationZ = rotatePart.localEulerAngles.z;
         }
+        else
+        {
+            m_OriginalRotationX = transform.localEulerAngles.x;
+            m_OriginalRotationY = transform.localEulerAngles.y;
+            m_OriginalRotationZ = transform.localEulerAngles.z;
+        }
+    }
+
+    private void Awake()
+    {
+        if (rotatePart == null)
+        {
+            rotatePart = transform;
+        }
+        InitOriginalRotations();
+        m_CurrentRotationY = GetInitialRotationFromAxis();
     }
 
     void Start()
@@ -134,12 +161,15 @@ public class RotatableMirrorPillar : NetworkBehaviour
         InitOriginalRotations();
 
         // Lấy góc xoay ban đầu của riêng trục hoạt động
-        m_CurrentRotationY = rotationAxis == RotationAxis.X ? m_OriginalRotationX :
-                             rotationAxis == RotationAxis.Z ? m_OriginalRotationZ :
-                                                              m_OriginalRotationY;
+        float initialAngle = GetInitialRotationFromAxis();
 
-        // Đồng bộ góc xoay ban đầu nếu đối tượng đã được sinh ra mạng
-        if (IsSpawned)
+        // Đồng bộ góc xoay ban đầu nếu đối tượng chưa được sinh ra mạng (Offline/Singleplayer)
+        if (!IsSpawned)
+        {
+            m_CurrentRotationY = initialAngle;
+            rotatePart.localRotation = GetRotationForAxis(m_CurrentRotationY);
+        }
+        else if (IsServer)
         {
             m_CurrentRotationY = m_TargetRotationY.Value;
             rotatePart.localRotation = GetRotationForAxis(m_CurrentRotationY);
@@ -148,13 +178,29 @@ public class RotatableMirrorPillar : NetworkBehaviour
 
     public override void OnNetworkSpawn()
     {
+        if (rotatePart == null)
+        {
+            rotatePart = transform;
+        }
+
+        // Đảm bảo lấy lại góc xoay ban đầu của Editor
+        InitOriginalRotations();
+        float initialAngle = GetInitialRotationFromAxis();
+
         m_TargetRotationY.OnValueChanged += OnRotationValueChanged;
 
-        // Đảm bảo lấy lại góc xoay ban đầu của Editor phòng trường hợp Start chưa chạy
-        InitOriginalRotations();
+        if (IsServer)
+        {
+            // Server lấy góc xoay ban đầu đã cấu hình trong Scene làm giá trị khởi tạo đồng bộ mạng
+            m_TargetRotationY.Value = initialAngle;
+            m_CurrentRotationY = initialAngle;
+        }
+        else
+        {
+            // Client đồng bộ góc xoay hiện tại khớp với Server khi mới vào game
+            m_CurrentRotationY = m_TargetRotationY.Value;
+        }
 
-        // Đồng bộ góc xoay hiện tại khớp với Server khi mới vào game
-        m_CurrentRotationY = m_TargetRotationY.Value;
         rotatePart.localRotation = GetRotationForAxis(m_CurrentRotationY);
     }
 
