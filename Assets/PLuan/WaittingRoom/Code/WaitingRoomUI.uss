@@ -7,7 +7,7 @@
     padding: 24px 35px 20px 35px;
     background-color: transparent;
     justify-content: space-between;
-    -unity-font-definition: url("project://database/Assets/PLuan/MainMenu/Font/Philosopher-Vietnamese.ttf?fileID=12800000&guid=8a2ed09dfc3a8024fa0bb345576c06bd&type=3#Philosopher-Vietnamese");
+    -unity-font-definition: url("project://database/Assets/PLuan/MainMenu/Font/Cinzel-Vietnamese.ttf");
 }
 
 /* GLASSMORPHISM & SCI-FI CORE */
@@ -89,7 +89,7 @@
     margin: 0 0 2px 0;
     padding: 0;
     -unity-font-style: bold;
-    text-shadow: 0 0 8px rgba(0, 180, 255, 0.7), 2px 2px 4px rgba(0, 0, 0, 1);
+    text-shadow: 0 0 8px rgba(0, 180, 255, 0.7);
     -unity-text-align: middle-center;
 }
 
@@ -100,7 +100,7 @@
     letter-spacing: 2px;
     margin: 0 0 4px 0;
     padding: 0;
-    text-shadow: 0 0 16px rgba(255, 200, 50, 0.85), 2px 2px 4px rgba(0, 0, 0, 1);
+    text-shadow: 0 0 16px rgba(255, 200, 50, 0.85);
     -unity-text-align: middle-center;
 }
 
@@ -120,7 +120,7 @@
     font-size: 13px !important;
     -unity-font-style: bold;
     letter-spacing: 1.5px;
-    text-shadow: 0 0 10px rgba(0, 230, 255, 0.8), 1px 1px 3px rgba(0, 0, 0, 1);
+    text-shadow: 0 0 10px rgba(0, 230, 255, 0.8);
     -unity-text-align: middle-center;
 }
 
@@ -139,7 +139,7 @@
     font-size: 13px !important;
     -unity-font-style: bold;
     letter-spacing: 1.5px;
-    text-shadow: 0 0 10px rgba(46, 213, 115, 0.8), 1px 1px 3px rgba(0, 0, 0, 1);
+    text-shadow: 0 0 10px rgba(46, 213, 115, 0.8);
     -unity-text-align: middle-center;
 }
 
@@ -167,21 +167,56 @@
     flex-grow: 1;
 }
 
-/* CHARACTER SELECTION SIDEBAR */
+/* =========================================================================
+   CHARACTER SELECTION SIDEBAR - SYNTY LAYERED POPUP
+   ========================================================================= */
 .char-select-panel {
-    width: 460px;
-    height: 700px;
-    max-height: 100%;
-    padding: 50px 35px 30px 35px;
-    justify-content: flex-start;
-    background-image: url("project://database/Assets/PLuan/chọn player.png");
-    -unity-background-scale-mode: stretch-to-fill;
-    background-color: transparent;
-    border-width: 0;
-    border-radius: 0;
-    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
-    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    width: 440px;
+    height: 650px;
+    max-height: 94%;
+    margin-right: -35px;
+    padding: 28px 24px 42px 24px;
+    background-image: none !important;
+    background-color: transparent !important;
+    border-width: 0 !important;
+    border-radius: 0 !important;
+    justify-content: space-between;
+    align-items: stretch;
+    transition: all 0.3s ease-out;
     flex-shrink: 1;
+}
+
+/* Background layer - dark stone fill */
+.char-panel-bg-layer {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    background-image: url("project://database/Assets/Synty/InterfaceFantasyMenus/Sprites/FantasyMenus/SPR_FantasyMenus_Frame_Popup_03_Background.png");
+    -unity-background-scale-mode: stretch-to-fill;
+    -unity-slice-left: 120;
+    -unity-slice-right: 120;
+    -unity-slice-top: 160;
+    -unity-slice-bottom: 160;
+    -unity-slice-scale: 0.35;
+    -unity-background-image-tint-color: rgba(8, 16, 30, 1);
+}
+
+/* Frame overlay layer - gold ornate border */
+.char-panel-frame-layer {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    background-image: url("project://database/Assets/Synty/InterfaceFantasyMenus/Sprites/FantasyMenus/SPR_FantasyMenus_Frame_Popup_03_Left.png");
+    -unity-background-scale-mode: stretch-to-fill;
+    -unity-slice-left: 120;
+    -unity-slice-right: 120;
+    -unity-slice-top: 160;
+    -unity-slice-bottom: 160;
+    -unity-slice-scale: 0.35;
 }
 
 .panel-hidden-state {
@@ -189,77 +224,78 @@
     translate: 350px 0;
 }
 
-.panel-section-title {
-    color: rgb(0, 229, 255);
-    font-size: 14px;
-    -unity-font-style: bold;
-    letter-spacing: 2px;
-    margin-bottom: 2px;
-    text-shadow: 0 0 10px rgba(0, 229, 255, 0.5);
-    text-align: center;
+.char-panel-header {
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    margin-top: 4px;
+    margin-bottom: 8px;
 }
 
-.panel-section-subtitle {
-    color: rgba(130, 200, 255, 0.4);
-    font-size: 9px;
-    letter-spacing: 1.5px;
+.char-panel-title {
+    color: rgb(255, 230, 130); /* Brilliant Luminous Gold */
+    font-size: 21px !important;
     -unity-font-style: bold;
-    margin-bottom: 16px;
-    border-bottom-width: 1px;
-    border-bottom-color: rgba(0, 229, 255, 0.15);
-    padding-bottom: 8px;
-    text-align: center;
+    letter-spacing: 3.5px;
+    text-shadow: 0 0 16px rgba(255, 200, 50, 0.95);
+    -unity-text-align: middle-center;
+    margin: 2px 0 6px 0;
+}
+
+.char-panel-divider {
+    height: 8px;
+    width: 92%;
+    margin-bottom: 6px;
+    background-image: url("project://database/Assets/Synty/InterfaceFantasyMenus/Sprites/General/SPR_FantasyMenus_Line_Horizontal_01.png");
+    -unity-background-scale-mode: stretch-to-fill;
+    -unity-background-image-tint-color: rgba(255, 215, 80, 0.9);
+    opacity: 1;
 }
 
 .char-cards-container {
     flex-grow: 1;
-    position: relative; /* Crucial: sets absolute coordinate system for child cards */
+    width: 100%;
+    flex-direction: column;
+    justify-content: space-around;
 }
 
-/* CHARACTER CARDS */
+/* MODULAR CHARACTER CARD - SYNTY FRAME BOX */
 .char-card {
-    position: absolute;
-    left: 0;
-    right: 0px;
-    height: 72px; /* Fixed height for clean vertical alignment */
+    position: relative;
+    flex-direction: row;
     align-items: center;
-    background-color: transparent !important;
+    justify-content: flex-start;
+    width: 100%;
+    height: 84px;
+    margin: 3px 0;
+    padding: 0 16px;
+    background-image: url("project://database/Assets/Synty/InterfaceFantasyMenus/Sprites/FantasyMenus/SPR_FantasyMenus_Frame_Box_Medium_02.png") !important;
+    -unity-background-scale-mode: stretch-to-fill;
+    -unity-slice-left: 80;
+    -unity-slice-right: 80;
+    -unity-slice-top: 80;
+    -unity-slice-bottom: 80;
+    -unity-slice-scale: 0.16;
+    -unity-background-image-tint-color: rgba(210, 185, 120, 0.85);
+    background-color: rgba(6, 18, 38, 0.8) !important;
     border-width: 0 !important;
     border-radius: 0 !important;
-    padding: 0 !important;
-    margin: 0 !important;
-    box-shadow: none !important;
-    transition: all 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
-}
-
-/* Precise vertical coordinates centered exactly on background slot frames */
-#char-card-0 {
-    top: 12%;
-    left: 5%;
-}
-#char-card-1 {
-    top: 28.5%;
-    left: 5%;
-}
-#char-card-2 {
-    top: 45.5%;
-    left: 5%;
-}
-#char-card-3 {
-    top: 62.5%;
-    left: 5%;
+    cursor: link;
+    transition: all 0.2s ease-out;
 }
 
 .char-card:hover {
-    background-color: transparent !important;
-    border-width: 0 !important;
-    scale: 1.05; /* Uniform scale instead of translate to keep avatar aligned in circle */
+    scale: 1.02 1.02;
+    translate: -4px 0;
+    background-color: rgba(10, 45, 85, 0.9) !important;
+    -unity-background-image-tint-color: rgba(0, 240, 255, 1);
 }
 
 .select-active {
-    background-image: none !important; /* Remove legacy background gradient to match clean gold frame */
-    border-width: 0 !important;
-    box-shadow: none !important;
+    background-color: rgba(14, 40, 72, 0.95) !important;
+    scale: 1.03 1.03;
+    -unity-background-image-tint-color: rgba(255, 225, 80, 1);
 }
 
 .card-locked {
@@ -275,13 +311,34 @@
     box-shadow: none;
 }
 
+/* AVATAR SLOT & ORNATE CIRCLE FRAME */
+.char-avatar-slot {
+    width: 64px;
+    height: 64px;
+    position: relative;
+    justify-content: center;
+    align-items: center;
+    flex-shrink: 0;
+    margin-right: 14px;
+}
+
+.char-avatar-frame {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 64px;
+    height: 64px;
+    background-image: url("project://database/Assets/Synty/InterfaceFantasyMenus/Sprites/FantasyMenus/SPR_FantasyMenus_Frame_Circle_01.png");
+    -unity-background-scale-mode: stretch-to-fill;
+}
+
 .char-card-portrait {
     position: absolute;
-    left: 72px; /* Centered precisely inside the gold circle frame */
-    top: 12px; /* Centered precisely inside the gold circle frame */
+    left: 8px;
+    top: 8px;
     width: 48px;
     height: 48px;
-    border-radius: 24px; /* Perfect round avatar matching the circular background slot frame */
+    border-radius: 24px;
     border-width: 0 !important;
     background-size: cover;
     transition: all 0.2s ease-out;
@@ -289,86 +346,92 @@
 
 .char-card:hover .char-card-portrait,
 .select-active .char-card-portrait {
-    scale: 1.1;
+    scale: 1.08;
 }
 
-/* Character text container for vertical Name & Role alignment */
+/* Character text container for Name & Role */
 .char-card-text-container {
-    position: absolute;
-    left: 110px; /* Perfectly centered within the name plaque bounds */
-    width: 210px; /* Spans the full width of the gold plaque */
-    top: 0;
-    bottom: 0;
     flex-direction: column;
     justify-content: center;
-    align-items: center; /* Center text inside the container */
+    align-items: flex-start;
+    flex-grow: 1;
     margin: 0 !important;
     padding: 0 !important;
 }
 
 .char-card-name {
-    color: #EAF7FF;
-    font-size: 14px;
+    color: rgb(240, 248, 255);
+    font-size: 17px;
     -unity-font-style: bold;
-    -unity-text-outline-width: 1px;
-    -unity-text-outline-color: rgba(0, 0, 0, 0.8);
-    text-shadow: 0px 0px 4px rgba(0, 0, 0, 0.8);
-    letter-spacing: 1.2px;
-    margin-top: 4px;
-    margin-bottom: 2px;
-    -unity-text-align: middle-center;
+    letter-spacing: 2px;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 1);
+    margin: 0 0 2px 0;
     transition: all 0.2s ease-out;
 }
 
 .char-card:hover .char-card-name {
-    color: #FFFFFF;
-    text-shadow: 0 0 8px rgba(0, 229, 255, 0.7);
+    color: rgb(255, 255, 255);
+    text-shadow: 0 0 12px rgba(0, 229, 255, 0.9);
 }
 
 .select-active .char-card-name {
-    color: #00FF88 !important; /* Glowing neon green highlight when selected */
-    text-shadow: 0px 0px 10px rgba(0, 255, 136, 0.85) !important;
-    -unity-text-outline-color: rgba(0, 50, 20, 0.9) !important;
+    color: rgb(255, 230, 130) !important; /* Luminous Imperial Gold highlight */
+    text-shadow: 0 0 14px rgba(255, 200, 50, 0.95) !important;
 }
 
 .char-card-role {
-    color: #79C9FF;
-    font-size: 9.5px;
+    color: rgb(0, 220, 255);
+    font-size: 11.5px;
     -unity-font-style: bold;
-    text-shadow: 0px 0px 3px rgba(0, 0, 0, 1);
-    letter-spacing: 0.8px;
-    margin-top: -3px; /* Reduced vertical gap to make them closer */
-    -unity-text-align: middle-center;
+    letter-spacing: 1.5px;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 1);
+    margin: 0;
     transition: all 0.2s ease-out;
 }
 
 .char-card:hover .char-card-role {
-    color: #A3DCFF;
+    color: rgb(180, 245, 255);
 }
 
 .select-active .char-card-role {
-    color: #EAF7FF !important; /* Highlight class name as well */
-    text-shadow: 0px 0px 6px rgba(0, 255, 136, 0.3) !important;
+    color: rgb(255, 255, 255) !important;
 }
 
 .char-card-status {
-    display: none !important; /* Discard YOU and FREE text labels entirely */
+    width: 72px;
+    height: 28px;
+    font-size: 12px;
+    -unity-font-style: bold;
+    letter-spacing: 1.5px;
+    color: rgb(148, 175, 205);
+    margin-left: 8px;
+    background-image: none !important;
+    background-color: rgba(15, 25, 45, 0.85) !important;
+    border-width: 1px !important;
+    border-color: rgba(100, 160, 220, 0.45) !important;
+    border-radius: 4px !important;
+    -unity-text-align: middle-center;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 1);
 }
 
 .active-status {
-    display: none !important;
+    color: rgb(255, 255, 255) !important;
+    background-image: none !important;
+    background-color: rgba(16, 110, 52, 0.9) !important;
+    border-width: 1.5px !important;
+    border-color: rgb(52, 211, 120) !important;
+    border-radius: 4px !important;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8) !important;
 }
 
 .char-inspect-tip {
-    color: rgba(0, 229, 255, 0.45);
-    font-size: 9px;
-    -unity-font-style: italic;
+    color: rgb(0, 229, 255);
+    font-size: 11px;
+    -unity-font-style: bold;
     -unity-text-align: middle-center;
-    position: absolute;
-    bottom: 175px;
-    left: 50;
-    right: 0;
-    margin: 0;
+    letter-spacing: 1.2px;
+    text-shadow: 0 0 8px rgba(0, 229, 255, 0.6);
+    margin: 8px 0 2px 0;
     padding: 0;
 }
 
@@ -402,7 +465,7 @@
 
 /* MAYA SKILLS */
 .maya-skill-0 {
-    background-image: url("project://database/Assets/Hbao/Image/HT Skill 3.png");
+    background-image: url("project://database/Assets/Hbao/Image/HT%20Skill%203.png");
 }
 .maya-skill-1 {
     background-image: url("project://database/Assets/Hbao/Image/HT%20skill2.png");
@@ -435,213 +498,288 @@
     background-image: url("project://database/Assets/Hbao/Image/HT-Skill3.png");
 }
 
-/* CHARACTER DETAILS MODAL */
+/* CHARACTER DETAILS MODAL - SYNTY BOX LARGE 02 FILIGREE FRAME */
 .details-modal {
     position: absolute;
     width: 100%;
     height: 100%;
     left: 0;
     top: 0;
-    background-color: rgba(0, 3, 6, 0.9);
+    background-color: rgba(0, 4, 10, 0.88);
     justify-content: center;
     align-items: center;
     transition: opacity 0.3s ease-out;
 }
 
-.swap-modal-container {
-    background-image: url("project://database/Assets/PLuan/WaittingRoom/Textures/ui_frame_bg.jpg");
-    -unity-background-scale-mode: stretch-to-fill;
-    background-color: transparent;
-    border-width: 1.5px;
-    border-radius: 8px;
-    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8);
-}
-
 .details-container {
-    width: 600px;
-    height: 900px;
+    width: 530px;
+    height: 700px;
     max-width: 92%;
-    max-height: 90%;
+    max-height: 92%;
     position: relative;
-    background-image: url("project://database/Assets/PLuan/IMG chi tiết player.png");
+    background-image: url("project://database/Assets/Synty/InterfaceFantasyMenus/Sprites/FantasyMenus/SPR_FantasyMenus_Frame_Box_Large_02.png") !important;
     -unity-background-scale-mode: stretch-to-fill;
-    background-color: transparent;
-    border-width: 0;
-    border-radius: 0;
-    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.85);
-    padding: 0;
+    -unity-slice-left: 200;
+    -unity-slice-right: 200;
+    -unity-slice-top: 200;
+    -unity-slice-bottom: 200;
+    -unity-slice-scale: 0.22;
+    -unity-background-image-tint-color: rgba(255, 220, 120, 1);
+    background-color: rgba(6, 14, 26, 0.96) !important;
+    border-width: 0 !important;
+    border-radius: 26px !important;
+    box-shadow: none !important;
+    padding: 36px 32px 24px 32px;
+    justify-content: space-between;
+    align-items: stretch;
     flex-shrink: 1;
 }
 
-.details-container .panel-seaweed-top-right,
-.details-container .panel-seaweed-bottom-left {
-    display: none !important;
-}
-
-/* CLOSE BUTTON TEXT AT BOTTOM */
-.details-close-btn {
+/* Top decorative curlicue crest */
+.details-top-crest {
     position: absolute;
-    left: 49%;
+    top: -24px;
+    left: 50%;
     translate: -50% 0;
-    bottom: 0px;
-    height: 40px;
-    width: 180px;
-    background-color: transparent !important;
-    border-width: 0 !important;
-    color: #FF5A70;
-    font-size: 16px;
-    -unity-font-style: bold;
-    letter-spacing: 3px;
-    text-shadow: 0px 0px 6px rgba(255, 90, 112, 0.55);
-    transition: color 0.2s, scale 0.2s, text-shadow 0.2s;
+    width: 240px;
+    height: 48px;
+    background-image: url("project://database/Assets/Synty/InterfaceFantasyMenus/Sprites/FantasyMenus/SPR_FantasyMenus_Greeble_Curlicue_05_Top.png");
+    -unity-background-scale-mode: scale-to-fit;
+    -unity-background-image-tint-color: rgba(255, 220, 110, 1);
 }
 
-.details-close-btn:hover {
-    color: #FF2E4C;
-    scale: 1.08;
-    text-shadow: 0px 0px 14px rgba(255, 46, 76, 0.95);
-}
-
+/* HEADER: AVATAR & TITLE */
 .details-header {
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    width: 100%;
+    margin-top: 6px;
+    margin-bottom: 2px;
+}
+
+.details-avatar-slot {
+    width: 84px;
+    height: 84px;
+    position: relative;
+    justify-content: center;
+    align-items: center;
+    flex-shrink: 0;
+    margin-right: 18px;
+}
+
+.details-avatar-frame {
     position: absolute;
     left: 0;
     top: 0;
-    width: 100%;
-    height: 100%;
+    width: 84px;
+    height: 84px;
+    background-image: url("project://database/Assets/Synty/InterfaceFantasyMenus/Sprites/FantasyMenus/SPR_FantasyMenus_Frame_Circle_01.png");
+    -unity-background-scale-mode: stretch-to-fill;
 }
 
 .details-large-portrait {
     position: absolute;
-    left: 215px;
-    top: 252px;
-    width: 170px;
-    height: 170px;
-    border-radius: 100px;
-    border-width: 0;
+    left: 11px;
+    top: 11px;
+    width: 62px;
+    height: 62px;
+    border-radius: 31px;
+    border-width: 0 !important;
     background-size: cover;
-    box-shadow: none;
 }
 
 .details-title-container {
-    position: absolute;
-    left: 176px;
-    width: 248px;
-    top: 150px;
-    height: 48px;
+    flex-direction: column;
     justify-content: center;
-    align-items: center;
+    align-items: flex-start;
+    flex-grow: 1;
 }
 
 .details-char-name {
-    color: #EAF7FF;
-    font-size: 20px;
+    color: rgb(255, 230, 130);
+    font-size: 25px;
     -unity-font-style: bold;
-    -unity-text-outline-width: 1px;
-    -unity-text-outline-color: rgba(0, 0, 0, 0.85);
-    text-shadow: 0px 0px 4px rgba(0, 0, 0, 0.8);
-    letter-spacing: 2px;
-    margin: 0;
+    letter-spacing: 3px;
+    text-shadow: 0 0 16px rgba(255, 200, 50, 0.95);
+    margin: 0 0 2px 0;
     padding: 0;
-    -unity-text-align: middle-center;
 }
 
 .details-char-role {
-    color: #79C9FF;
-    font-size: 10px;
+    color: rgb(0, 220, 255);
+    font-size: 13px;
     -unity-font-style: bold;
-    text-shadow: 0px 0px 3px rgba(0, 0, 0, 1);
-    letter-spacing: 1.2px;
-    margin-top: -2px;
+    letter-spacing: 2px;
+    text-shadow: 0 0 8px rgba(0, 200, 255, 0.8);
+    margin: 0;
     padding: 0;
-    -unity-text-align: middle-center;
+}
+
+.details-divider {
+    height: 8px;
+    width: 100%;
+    margin: 6px 0 8px 0;
+    background-image: url("project://database/Assets/Synty/InterfaceFantasyMenus/Sprites/General/SPR_FantasyMenus_Line_Horizontal_01.png");
+    -unity-background-scale-mode: stretch-to-fill;
+    -unity-background-image-tint-color: rgba(255, 215, 80, 0.9);
+    opacity: 1;
 }
 
 .details-char-desc {
-    display: none;
+    color: rgb(180, 215, 240);
+    font-size: 11.5px;
+    line-height: 16px;
+    margin-bottom: 6px;
+    -unity-text-align: middle-left;
+    white-space: normal;
+    -unity-text-wrap: true;
+    -unity-font-style: italic;
 }
 
 .details-section-title {
-    display: none;
+    color: rgb(255, 225, 120);
+    font-size: 13px;
+    -unity-font-style: bold;
+    letter-spacing: 2px;
+    margin: 4px 0 6px 0;
+    -unity-text-align: middle-center;
+    text-shadow: 0 0 10px rgba(255, 200, 50, 0.7);
 }
 
+/* SKILLS SECTION */
 .details-skills-container {
-    position: absolute;
-    left: 0;
-    top: 0;
+    flex-direction: column;
+    flex-grow: 1;
+    justify-content: space-around;
     width: 100%;
-    height: 100%;
 }
 
 .details-skill-box {
-    position: absolute;
-    left: 160px;
-    width: 344px;
-    height: 65px;
-    background-color: transparent !important;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    width: 100%;
+    height: 72px;
+    padding: 0 14px;
+    margin: 2px 0;
+    background-image: url("project://database/Assets/Synty/InterfaceFantasyMenus/Sprites/FantasyMenus/SPR_FantasyMenus_Frame_Box_Medium_02.png") !important;
+    -unity-background-scale-mode: stretch-to-fill;
+    -unity-slice-left: 80;
+    -unity-slice-right: 80;
+    -unity-slice-top: 80;
+    -unity-slice-bottom: 80;
+    -unity-slice-scale: 0.15;
+    -unity-background-image-tint-color: rgba(210, 185, 120, 0.8);
+    background-color: rgba(6, 18, 38, 0.8) !important;
     border-width: 0 !important;
-    padding: 0 !important;
-    margin: 0 !important;
+    border-radius: 0 !important;
+    transition: all 0.2s ease-out;
 }
 
 .details-skill-box:hover {
-    scale: 1.03;
+    scale: 1.02 1.02;
+    -unity-background-image-tint-color: rgba(0, 240, 255, 1);
+    background-color: rgba(10, 45, 85, 0.9) !important;
 }
 
-#details-skill-box-0 {
-    top: 518px;
+.details-skill-avatar-slot {
+    width: 48px;
+    height: 48px;
+    position: relative;
+    justify-content: center;
+    align-items: center;
+    margin-right: 12px;
+    flex-shrink: 0;
 }
 
-#details-skill-box-1 {
-    top: 608px;
-}
-
-#details-skill-box-2 {
-    top: 698px;
+.details-skill-avatar-frame {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 48px;
+    height: 48px;
+    background-image: url("project://database/Assets/Synty/InterfaceFantasyMenus/Sprites/FantasyMenus/SPR_FantasyMenus_Frame_Circle_01.png");
+    -unity-background-scale-mode: stretch-to-fill;
 }
 
 .details-skill-icon {
     position: absolute;
     left: 6px;
-    top: -20px;
-    width: 56px;
-    height: 56px;
-    border-radius: 28px;
+    top: 6px;
+    width: 36px;
+    height: 36px;
+    border-radius: 18px;
     border-width: 0 !important;
     background-size: cover;
 }
 
 .details-skill-text-container {
-    position: absolute;
-    left: 90px;
-    width: 190px;
-    top: -50px;
-    bottom: 0;
+    flex-direction: column;
     justify-content: center;
+    align-items: flex-start;
+    flex-grow: 1;
     margin: 0 !important;
     padding: 0 !important;
 }
 
 .details-skill-title {
-    color: white;
-    font-size: 12px;
+    color: rgb(255, 235, 140);
+    font-size: 14px;
     -unity-font-style: bold;
-    margin: 0;
+    letter-spacing: 1.5px;
+    margin: 0 0 2px 0;
     padding: 0;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 1);
     transition: color 0.2s;
 }
 
 .details-skill-box:hover .details-skill-title {
-    color: #79C9FF;
+    color: rgb(0, 240, 255);
 }
 
 .details-skill-desc {
-    color: rgb(145, 185, 205);
-    font-size: 9px;
-    line-height: 12px;
-    margin-top: 1px;
+    color: rgb(170, 205, 230);
+    font-size: 10.5px;
+    line-height: 14px;
+    margin: 0;
     padding: 0;
     white-space: normal;
     -unity-text-wrap: true;
+}
+
+/* CLOSE BUTTON - MATCHING ACTION BUTTON SYSTEM */
+.details-close-btn {
+    width: 220px !important;
+    min-width: 180px !important;
+    height: 48px !important;
+    align-self: center;
+    margin-top: 8px;
+    margin-bottom: 2px;
+    font-size: 16px !important;
+    letter-spacing: 3px;
+    cursor: link;
+    background-image: none !important;
+    background-color: transparent !important;
+    border-width: 0 !important;
+    border-radius: 0 !important;
+    color: rgb(255, 170, 170) !important;
+    text-shadow: 0 0 12px rgba(255, 60, 60, 0.7);
+    transition: all 0.3s ease-out;
+}
+
+.details-close-btn:hover {
+    scale: 1.06 1.06;
+    letter-spacing: 4px;
+    color: rgb(255, 255, 255) !important;
+    background-image: url("project://database/Assets/Synty/InterfaceFantasyMenus/Sprites/FantasyMenus/SPR_FantasyMenus_Menu_Button_06_Frame.png") !important;
+    -unity-background-scale-mode: stretch-to-fill;
+    -unity-slice-left: 500;
+    -unity-slice-right: 500;
+    -unity-slice-top: 0;
+    -unity-slice-bottom: 0;
+    -unity-slice-scale: 0.2;
+    text-shadow: 0 0 22px rgba(255, 70, 70, 1);
 }
 
 /* WARNING TEXT */
@@ -702,7 +840,7 @@
     transition: all 0.3s ease-out;
     cursor: link;
     color: rgb(235, 245, 255) !important;
-    text-shadow: 0 0 12px rgba(0, 180, 255, 0.7), 2px 2px 5px rgba(0, 0, 0, 0.95);
+    text-shadow: 0 0 12px rgba(0, 180, 255, 0.7);
 }
 
 .action-btn:hover {
@@ -716,12 +854,12 @@
     -unity-slice-top: 0;
     -unity-slice-bottom: 0;
     -unity-slice-scale: 0.22;
-    text-shadow: 0 0 22px rgba(0, 240, 255, 1), 0 0 8px rgba(255, 255, 255, 0.9), 2px 2px 4px rgba(0, 0, 0, 1);
+    text-shadow: 0 0 22px rgba(0, 240, 255, 1);
 }
 
 .ready-btn {
     color: rgb(215, 245, 255) !important;
-    text-shadow: 0 0 12px rgba(0, 180, 255, 0.7), 2px 2px 5px rgba(0, 0, 0, 0.95);
+    text-shadow: 0 0 12px rgba(0, 180, 255, 0.7);
 }
 
 .ready-btn:hover {
@@ -733,12 +871,12 @@
     -unity-slice-top: 0;
     -unity-slice-bottom: 0;
     -unity-slice-scale: 0.22;
-    text-shadow: 0 0 22px rgba(0, 240, 255, 1), 0 0 8px rgba(255, 255, 255, 0.9), 2px 2px 4px rgba(0, 0, 0, 1);
+    text-shadow: 0 0 22px rgba(0, 240, 255, 1);
 }
 
 .ready-active {
     color: rgb(160, 255, 180) !important;
-    text-shadow: 0 0 12px rgba(46, 213, 115, 0.8), 2px 2px 5px rgba(0, 0, 0, 0.95);
+    text-shadow: 0 0 12px rgba(46, 213, 115, 0.8);
 }
 
 .ready-active:hover {
@@ -750,12 +888,12 @@
     -unity-slice-top: 0;
     -unity-slice-bottom: 0;
     -unity-slice-scale: 0.22;
-    text-shadow: 0 0 22px rgba(46, 213, 115, 1), 0 0 8px rgba(255, 255, 255, 0.9), 2px 2px 4px rgba(0, 0, 0, 1);
+    text-shadow: 0 0 22px rgba(46, 213, 115, 1);
 }
 
 .leave-btn {
     color: rgb(255, 160, 160) !important;
-    text-shadow: 0 0 12px rgba(255, 60, 60, 0.7), 2px 2px 5px rgba(0, 0, 0, 0.95);
+    text-shadow: 0 0 12px rgba(255, 60, 60, 0.7);
 }
 
 .leave-btn:hover {
@@ -767,13 +905,13 @@
     -unity-slice-top: 0;
     -unity-slice-bottom: 0;
     -unity-slice-scale: 0.22;
-    text-shadow: 0 0 22px rgba(255, 70, 70, 1), 0 0 8px rgba(255, 255, 255, 0.9), 2px 2px 4px rgba(0, 0, 0, 1);
+    text-shadow: 0 0 22px rgba(255, 70, 70, 1);
 }
 
 /* TOGGLE CHARACTER PANEL BUTTON */
 .toggle-char-panel-btn {
     color: rgb(215, 245, 255) !important;
-    text-shadow: 0 0 12px rgba(0, 180, 255, 0.7), 2px 2px 5px rgba(0, 0, 0, 0.95);
+    text-shadow: 0 0 12px rgba(0, 180, 255, 0.7);
 }
 
 .toggle-char-panel-btn:hover {
@@ -785,14 +923,14 @@
     -unity-slice-top: 0;
     -unity-slice-bottom: 0;
     -unity-slice-scale: 0.22;
-    text-shadow: 0 0 22px rgba(0, 240, 255, 1), 0 0 8px rgba(255, 255, 255, 0.9), 2px 2px 4px rgba(0, 0, 0, 1);
+    text-shadow: 0 0 22px rgba(0, 240, 255, 1);
 }
 
 .start-btn {
     width: 380px !important;
     min-width: 350px !important;
     color: rgb(240, 250, 255) !important;
-    text-shadow: 0 0 16px rgba(0, 230, 255, 0.9), 0 0 6px rgba(255, 255, 255, 0.9), 2px 2px 5px rgba(0, 0, 0, 0.95);
+    text-shadow: 0 0 16px rgba(0, 230, 255, 0.9);
 }
 
 .start-btn:hover {
@@ -804,12 +942,12 @@
     -unity-slice-top: 0;
     -unity-slice-bottom: 0;
     -unity-slice-scale: 0.22;
-    text-shadow: 0 0 22px rgba(0, 255, 255, 1), 0 0 8px rgba(255, 255, 255, 0.9), 2px 2px 4px rgba(0, 0, 0, 1);
+    text-shadow: 0 0 22px rgba(0, 255, 255, 1);
 }
 
 .start-btn:disabled {
     color: rgb(190, 235, 255) !important;
-    text-shadow: 0 0 14px rgba(0, 200, 255, 0.85), 2px 2px 5px rgba(0, 0, 0, 0.95);
+    text-shadow: 0 0 14px rgba(0, 200, 255, 0.85);
     background-image: none !important;
     scale: 1 1;
     opacity: 0.95;
@@ -817,7 +955,7 @@
 
 #btn-swap-character {
     color: rgb(215, 245, 255) !important;
-    text-shadow: 0 0 14px rgba(0, 200, 255, 0.9), 2px 2px 5px rgba(0, 0, 0, 0.95);
+    text-shadow: 0 0 14px rgba(0, 200, 255, 0.9);
 }
 
 #btn-swap-character:hover {
@@ -829,7 +967,7 @@
     -unity-slice-top: 0;
     -unity-slice-bottom: 0;
     -unity-slice-scale: 0.22;
-    text-shadow: 0 0 22px rgba(0, 240, 255, 1), 0 0 8px rgba(255, 255, 255, 0.9), 2px 2px 4px rgba(0, 0, 0, 1);
+    text-shadow: 0 0 22px rgba(0, 240, 255, 1);
 }
 
 /* RIGHT SIDE STATUS (UNIFIED HEIGHT FOR SYMMETRY) */
@@ -905,7 +1043,7 @@
     -unity-font-style: bold;
     letter-spacing: 3px;
     -unity-text-align: middle-center;
-    text-shadow: 0 0 16px rgba(255, 200, 50, 0.8), 2px 2px 4px rgba(0, 0, 0, 1);
+    text-shadow: 0 0 16px rgba(255, 200, 50, 0.8);
     margin-bottom: 6px;
 }
 
@@ -1033,4 +1171,120 @@
 .custom-slider .unity-base-slider__dragger:hover,
 .custom-slider .unity-base-slider__dragger:focus {
     scale: 1.25 1.25;
+}
+
+/* =========================================================================
+   CONFIRMATION OVERLAY (XÁC NHẬN ĐỔI NHÂN VẬT) - SYNTY POPUP 02 EXACT
+   ========================================================================= */
+.confirm-overlay {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 5, 10, 0.85);
+    justify-content: center;
+    align-items: center;
+}
+
+.confirm-dialog {
+    background-image: url("project://database/Assets/PLuan/Synty_Popup_02_Exact.png");
+    -unity-background-scale-mode: stretch-to-fill;
+    background-color: transparent !important;
+    border-width: 0 !important;
+    border-radius: 0 !important;
+    padding: 175px 60px 0 60px;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: none;
+    width: 780px;
+    height: 330px;
+}
+
+.confirm-content {
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    margin-top: 0;
+}
+
+.confirm-title {
+    color: rgb(255, 255, 255);
+    font-size: 27px;
+    -unity-font-style: bold;
+    margin-bottom: 8px;
+    text-shadow: 1px 1px 4px rgba(0, 0, 0, 0.95);
+    letter-spacing: 3px;
+    -unity-text-align: middle-center;
+}
+
+.confirm-subtitle {
+    color: rgb(225, 235, 245);
+    font-size: 15px;
+    white-space: normal;
+    -unity-text-align: middle-center;
+    padding: 0 40px;
+    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.95);
+    letter-spacing: 1px;
+}
+
+.confirm-buttons {
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    margin-bottom: -48px;
+}
+
+.confirm-btn {
+    background-color: transparent !important;
+    border-width: 0 !important;
+    border-radius: 0 !important;
+    font-size: 15px !important;
+    -unity-font-style: bold;
+    width: 270px;
+    height: 64px;
+    padding: 2px 25px 0 110px !important;
+    transition: all 0.2s ease-out;
+    cursor: link;
+    flex-shrink: 0 !important;
+    flex-grow: 0 !important;
+    white-space: nowrap !important;
+    -unity-text-align: middle-center !important;
+    justify-content: center;
+    align-items: center;
+    letter-spacing: 1.5px;
+    margin: 0 35px;
+    color: rgb(255, 255, 255) !important;
+    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.95);
+}
+
+.confirm-btn-yes {
+    background-image: url("project://database/Assets/PLuan/Synty_Btn_Confirm_09.png");
+    -unity-background-scale-mode: stretch-to-fill;
+    -unity-slice-left: 150;
+    -unity-slice-right: 100;
+    -unity-slice-top: 0;
+    -unity-slice-bottom: 0;
+    -unity-slice-scale: 0.40;
+}
+.confirm-btn-yes:hover {
+    scale: 1.05 1.05;
+    letter-spacing: 3px;
+    text-shadow: 0 0 15px rgba(0, 255, 255, 1);
+}
+
+.confirm-btn-no {
+    background-image: url("project://database/Assets/PLuan/Synty_Btn_Cancel_09.png");
+    -unity-background-scale-mode: stretch-to-fill;
+    -unity-slice-left: 150;
+    -unity-slice-right: 100;
+    -unity-slice-top: 0;
+    -unity-slice-bottom: 0;
+    -unity-slice-scale: 0.40;
+}
+.confirm-btn-no:hover {
+    scale: 1.05 1.05;
+    letter-spacing: 3px;
+    text-shadow: 0 0 15px rgba(255, 100, 100, 1);
 }
