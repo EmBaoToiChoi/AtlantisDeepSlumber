@@ -5,7 +5,7 @@ using System.Collections.Generic;
 
 /// <summary>
 /// Vùng kích hoạt Boss (Boss Trigger Zone).
-/// Tàng hình Boss từ đầu game -> Đợi đủ người vào vùng -> Chạy Cutscene -> Bật hiện Boss và kích hoạt.
+/// Đợi đủ người vào vùng -> Chạy Cutscene -> Kích hoạt Boss AI.
 /// </summary>
 public class BossTriggerZone : MonoBehaviour
 {
@@ -39,13 +39,6 @@ public class BossTriggerZone : MonoBehaviour
         if (boss == null)
         {
             boss = FindFirstObjectByType<BossAI>(FindObjectsInactive.Include);
-        }
-
-        // [SỬA LẠI] Dùng hàm tàng hình an toàn cho Netcode thay vì SetActive(false)
-        if (boss != null)
-        {
-            SetBossVisibility(false);
-            Debug.Log($"[BossTriggerZone] Đã làm tàng hình Boss '{boss.name}' ở đầu game (Netcode Safe).");
         }
     }
 
@@ -113,8 +106,7 @@ public class BossTriggerZone : MonoBehaviour
             }
             else if (boss != null) 
             {
-                // [SỬA LẠI] Bật hiện hình Boss lên trước khi gọi hàm ActivateBoss
-                SetBossVisibility(true);
+                // Không có video thì gọi thức tỉnh Boss luôn
                 boss.ActivateBoss();
                 if (triggerOnlyOnce) gameObject.SetActive(false); 
             }
@@ -129,43 +121,12 @@ public class BossTriggerZone : MonoBehaviour
 
         if (boss != null)
         {
-            // [SỬA LẠI] Lúc này video đã xong, ta cho con Boss hiện hình ra!
-            SetBossVisibility(true);
-            
+            // Video xong, kích hoạt AI của Boss
             boss.ActivateBoss();
-            Debug.Log($"[BossTriggerZone] Video xong! Hiện hình và kích hoạt Boss '{boss.name}'.");
+            Debug.Log($"[BossTriggerZone] Video xong! Đã kích hoạt AI cho Boss '{boss.name}'.");
         }
 
         if (triggerOnlyOnce) gameObject.SetActive(false);
-    }
-
-    // =======================================================
-    // [THÊM MỚI] HÀM BẬT/TẮT TÀNG HÌNH CHO BOSS (AN TOÀN CHO NETCODE)
-    // =======================================================
-    private void SetBossVisibility(bool isVisible)
-    {
-        if (boss == null) return;
-
-        // 1. Bật/tắt tất cả hình ảnh (lớp vỏ ngoài của boss)
-        Renderer[] renderers = boss.GetComponentsInChildren<Renderer>(true);
-        foreach (var r in renderers)
-        {
-            r.enabled = isVisible;
-        }
-
-        // 2. Bật/tắt tất cả hộp va chạm vật lý
-        Collider[] colliders = boss.GetComponentsInChildren<Collider>(true);
-        foreach (var c in colliders)
-        {
-            c.enabled = isVisible;
-        }
-
-        // 3. Tùy chọn: Bật/tắt Canvas (nếu boss có vác theo thanh máu UI trên đầu)
-        Canvas[] canvases = boss.GetComponentsInChildren<Canvas>(true);
-        foreach (var canvas in canvases)
-        {
-            canvas.enabled = isVisible;
-        }
     }
 
     private bool IsPlayerObject(GameObject go)
