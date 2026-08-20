@@ -8,8 +8,8 @@ OcclusionCullingSettings:
     smallestOccluder: 1.5
     smallestHole: 0.25
     backfaceThreshold: 100
-  m_SceneGUID: 00000000000000000000000000000000
-  m_OcclusionCullingData: {fileID: 0}
+  m_SceneGUID: e14dfd0b6ab34ac4d991ec2b5e98f649
+  m_OcclusionCullingData: {fileID: 36300000, guid: 54a17d460a3bc5041b466ede9bcc493d, type: 2}
 --- !u!104 &2
 RenderSettings:
   m_ObjectHideFlags: 0
@@ -151453,7 +151453,7 @@ Transform:
   m_GameObject: {fileID: 585897752}
   serializedVersion: 2
   m_LocalRotation: {x: 0.14398366, y: -0.87784827, z: 0.45502114, w: 0.040087197}
-  m_LocalPosition: {x: 195.9, y: 104.5, z: 467.4}
+  m_LocalPosition: {x: 91.5, y: 172.9, z: 553.1}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -347608,7 +347608,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   boss: {fileID: 1962224671}
-  bossIntroCutscene: {fileID: 0}
+  bossIntroCutscene: {fileID: 2128397847}
   triggerCollider: {fileID: 1537402450}
   triggerOnlyOnce: 1
 --- !u!1001 &1537599467
@@ -452018,6 +452018,9 @@ MonoBehaviour:
   ShowTopMostFoldoutHeaderGroup: 1
   objectsToToggle:
   - {fileID: 734875702}
+  - {fileID: 957689697}
+  - {fileID: 236216102}
+  - {fileID: 491192444}
   triggerOnlyOnce: 1
 --- !u!65 &2027826817
 BoxCollider:
@@ -499316,10 +499319,10 @@ SceneRoots:
   - {fileID: 809818973}
   - {fileID: 1705676487}
   - {fileID: 236216103}
+  - {fileID: 491192447}
   - {fileID: 344388936}
   - {fileID: 1146689230}
   - {fileID: 2093563292}
-  - {fileID: 491192447}
   - {fileID: 235095963}
   - {fileID: 324929903}
   - {fileID: 1986964078}
