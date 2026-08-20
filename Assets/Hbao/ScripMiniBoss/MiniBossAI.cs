@@ -2164,6 +2164,7 @@ private void Die()
     {
         // 1. Dừng toàn bộ Coroutine đòn đánh/gây sát thương của boss ngay lập tức để không gây mất máu player sau khi chết
         StopAllCoroutines();
+        CameraShakeHelper.StopShake(); // Dừng rung camera khi boss chết để chuẩn bị cutscene mượt mà
 
         if (!isClone)
         {
@@ -2241,6 +2242,7 @@ private void Die()
     public void TriggerBossDefeatCutscene()
     {
         Debug.Log("[MiniBossAI] TẤT CẢ BOSS CHÍNH VÀ 2 PHÂN THÂN ĐÃ BỊ TIÊU DIỆT HOÀN TOÀN -> BẮT ĐẦU QUY TRÌNH HỦY UI VÀ CHẠY CUTSCENE!");
+        CameraShakeHelper.StopShake(); // Dừng ngay lập tức mọi rung lắc camera để chuẩn bị chuyển cảnh Cutscene mượt mà
 
         // 1. Dọn sạch mọi clone còn sót lại trên máy local
         ForceDestroyAllRemainingClones();
@@ -2443,7 +2445,7 @@ private void Die()
     private void PlayDeathExplosionEffects()
     {
         Vector3 spawnPos = transform.position + Vector3.up * 1.2f;
-        CameraShakeHelper.Shake(1.5f, 1.5f); // Rung màn hình cực mạnh khi bạo nổ tử thần!
+        CameraShakeHelper.StopShake(); // Dừng rung camera khi boss/phân thân chết (chỉ rung khi Boss dùng Skill)
         if (deathExplosionVFX != null)
         {
             GameObject vfx = Instantiate(deathExplosionVFX, spawnPos, Quaternion.identity);

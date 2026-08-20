@@ -37,6 +37,19 @@ public class CameraShakeHelper : MonoBehaviour
     }
 
     /// <summary>
+    /// Dừng ngay lập tức mọi hiệu ứng rung camera đang hoạt động (ví dụ khi Boss chết hoặc khi bắt đầu Cutscene)
+    /// </summary>
+    public static void StopShake()
+    {
+        if (instance != null && instance.activeShakeCoroutine != null)
+        {
+            instance.StopCoroutine(instance.activeShakeCoroutine);
+            instance.activeShakeCoroutine = null;
+            instance.currentActiveIntensity = 0f;
+        }
+    }
+
+    /// <summary>
     /// Rung camera có tính toán suy giảm theo khoảng cách: người đứng gần điểm nổ nhất sẽ rung dữ dội nhất, càng xa giảm dần mượt mà.
     /// </summary>
     /// <param name="impactPos">Tọa độ điểm va chạm/nổ/tiếp đất</param>
