@@ -1,87 +1,169 @@
+/* ══════════════════════════════════════════════════════════ */
+/*  MINIBOSS HUD - COMPLETE FANTASY UI THEME                  */
+/* ══════════════════════════════════════════════════════════ */
+
 /* Main container at the top center of the screen */
 .miniboss-hud-container {
     position: absolute;
     top: 20px;
     left: 50%;
     translate: -50% 0;
-    width: 540px;
+    width: 620px;
+    min-height: 96px;
     height: auto;
-    min-height: 76px;
+    background-color: transparent;
+    border-width: 0;
+    padding: 16px 26px 20px 26px;
+    transition-property: all;
+    transition-duration: 0.15s;
+}
+
+/* ─── Hình 4 & Hình 5: Gộp Frame_Popup_08 Left + Right thành khung lớn bọc ngoài ─── */
+.miniboss-hud-bg-wrapper {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    flex-direction: row;
+    pointer-events: none;
+}
+
+.miniboss-hud-bg-left {
+    width: 50%;
+    height: 100%;
+    background-image: url("project://database/Assets/Synty/InterfaceFantasyMenus/Sprites/FantasyMenus/SPR_FantasyMenus_Frame_Popup_08_Left.png?fileID=1537655665&guid=abb86b4045d2e5640969852dd80f5c52&type=3#SPR_FantasyMenus_Frame_Popup_08_Left");
+    -unity-background-scale-mode: stretch-to-fill;
+    -unity-slice-left: 100;
+    -unity-slice-top: 100;
+    -unity-slice-right: 0;
+    -unity-slice-bottom: 200;
+}
+
+.miniboss-hud-bg-right {
+    width: 50%;
+    height: 100%;
+    background-image: url("project://database/Assets/Synty/InterfaceFantasyMenus/Sprites/FantasyMenus/SPR_FantasyMenus_Frame_Popup_08_Right.png?fileID=1537655665&guid=8f35cdb960b21e54eb753349807d1462&type=3#SPR_FantasyMenus_Frame_Popup_08_Right");
+    -unity-background-scale-mode: stretch-to-fill;
+    -unity-slice-left: 0;
+    -unity-slice-top: 100;
+    -unity-slice-right: 100;
+    -unity-slice-bottom: 200;
+}
+
+/* Content layout inside the HUD frame */
+.miniboss-hud-content {
+    width: 100%;
+    height: 100%;
     flex-direction: row;
     align-items: flex-start;
     justify-content: flex-start;
-    background-color: rgba(15, 10, 5, 0.88);
-    border-width: 2px;
-    border-color: rgb(215, 145, 35); /* Golden amber border fitting the Mini Boss armor */
-    border-radius: 12px;
-    padding: 8px 14px;
-    box-shadow: 0px 8px 24px rgba(0, 0, 0, 0.85), inset 0px 0px 12px rgba(255, 150, 0, 0.25);
 }
 
-/* Avatar Frame container */
+/* ══════════════════════════════════════════════════════════ */
+/*  Hình 2: Khung Frame_Box_Small_01 bọc hoàn toàn Avatar     */
+/* ══════════════════════════════════════════════════════════ */
 .miniboss-avatar-frame {
-    width: 54px;
-    height: 54px;
-    border-width: 2px;
-    border-color: rgb(220, 185, 45); /* Metal gold frame */
-    border-radius: 27px; /* Perfect circle */
-    overflow: hidden;
-    background-color: rgb(25, 25, 25);
-    margin-right: 12px;
-    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.6);
+    width: 68px;
+    height: 68px;
+    position: relative;
+    margin-right: 14px;
     flex-shrink: 0;
     margin-top: 2px;
 }
 
-/* Avatar image (using the generated spiky golden bone knight) */
+/* MiniBoss Avatar image sits snugly inside the frame */
 .miniboss-avatar {
-    width: 100%;
-    height: 100%;
+    position: absolute;
+    top: 7px;
+    left: 7px;
+    right: 7px;
+    bottom: 7px;
+    background-color: rgb(20, 15, 12);
+    border-radius: 4px;
     -unity-background-scale-mode: scale-and-crop;
     background-image: url("project://database/Assets/Hbao/Image/miniboss_avatar.png");
 }
 
-/* Name and Health bar layout */
+/* Ornate Frame Box Small 01 overlay */
+.miniboss-avatar-frame-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: url("project://database/Assets/Synty/InterfaceFantasyMenus/Sprites/FantasyMenus/SPR_FantasyMenus_Frame_Box_Small_01.png?fileID=1537655665&guid=de8d5504716fd5e49b71bc5dd31b1238&type=3#SPR_FantasyMenus_Frame_Box_Small_01");
+    -unity-background-scale-mode: stretch-to-fill;
+    -unity-slice-left: 32;
+    -unity-slice-top: 32;
+    -unity-slice-right: 32;
+    -unity-slice-bottom: 32;
+    pointer-events: none;
+}
+
+/* ══════════════════════════════════════════════════════════ */
+/*  MAIN BOSS HEALTH BAR & INFO                               */
+/* ══════════════════════════════════════════════════════════ */
 .miniboss-hp-wrapper {
     flex-grow: 1;
-    justify-content: center;
+    justify-content: flex-start;
 }
 
 /* Mini Boss Name label */
 .miniboss-name {
-    color: rgb(255, 235, 205); /* Light golden yellow */
+    color: rgb(255, 235, 185);
     font-size: 16px;
     -unity-font-style: bold;
+    -unity-font-definition: url("project://database/Assets/PLuan/MainMenu/Font/Cinzel-Vietnamese.ttf");
     text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.95);
-    margin-bottom: 3px;
+    margin-bottom: 4px;
     letter-spacing: 1px;
 }
 
-/* Container bounding the progress bar */
+/* ─── Hình 3: Khung Menu_Button_03_Frame bọc thanh máu chính ─── */
 .miniboss-health-bar-container {
     width: 100%;
-    height: 22px;
+    height: 26px;
+    position: relative;
+    justify-content: center;
 }
 
-/* Dark background of the health bar */
-.miniboss-hp-background {
+/* Background texture of the button 03 frame */
+.miniboss-hp-frame-bg {
+    position: absolute;
+    top: 0;
+    left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(25, 15, 10, 0.9);
-    border-width: 2px;
-    border-color: rgb(160, 95, 25);
-    border-radius: 6px;
+    background-image: url("project://database/Assets/Synty/InterfaceFantasyMenus/Sprites/FantasyMenus/SPR_FantasyMenus_Menu_Button_03_Background.png?fileID=1537655665&guid=14dc3860d501b70489527d3f3358cec8&type=3#SPR_FantasyMenus_Menu_Button_03_Background");
+    -unity-background-scale-mode: stretch-to-fill;
+    -unity-slice-left: 30;
+    -unity-slice-top: 0;
+    -unity-slice-right: 30;
+    -unity-slice-bottom: 0;
+}
+
+/* Inner health fill container: insets cleanly inside the frame border */
+.miniboss-hp-background {
+    position: absolute;
+    top: 3px;
+    bottom: 3px;
+    left: 6px;
+    right: 6px;
+    background-color: rgba(18, 10, 8, 0.9);
+    border-radius: 3px;
     overflow: hidden;
-    position: relative;
 }
 
 /* Slowly draining yellow lag bar */
 .miniboss-hp-yellow-bar {
     position: absolute;
+    top: 0;
+    left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgb(235, 190, 30); /* Draining yellow color */
-    border-radius: 4px;
+    background-color: rgb(235, 185, 30);
+    border-radius: 2px;
     transition-property: width;
     transition-duration: 0.65s;
     transition-timing-function: ease-in-out;
@@ -90,29 +172,161 @@
 /* Main red health bar */
 .miniboss-hp-progress-bar {
     position: absolute;
+    top: 0;
+    left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgb(215, 30, 20); /* Vibrant Crimson combat red */
-    border-radius: 4px;
+    background-color: rgb(215, 30, 20);
+    border-radius: 2px;
     transition-property: width;
     transition-duration: 0.12s;
     transition-timing-function: ease-out;
-    background-image: linear-gradient(to bottom, rgba(255, 255, 255, 0.38), rgba(0, 0, 0, 0.28));
+    background-image: linear-gradient(to bottom, rgba(255, 255, 255, 0.35), rgba(0, 0, 0, 0.3));
 }
 
 /* Numeric HP overlay text */
 .miniboss-hp-text {
     position: absolute;
+    top: 0;
+    left: 0;
     width: 100%;
     height: 100%;
     color: rgb(255, 255, 255);
     font-size: 11px;
     -unity-font-style: bold;
     -unity-text-align: middle-center;
+    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.95);
+}
+
+/* Frame overlay wrapping on top of the health bar */
+.miniboss-hp-frame-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: url("project://database/Assets/Synty/InterfaceFantasyMenus/Sprites/FantasyMenus/SPR_FantasyMenus_Menu_Button_03_Frame.png?fileID=1537655665&guid=9edb3fd596a99454e80f70bfecfa5769&type=3#SPR_FantasyMenus_Menu_Button_03_Frame");
+    -unity-background-scale-mode: stretch-to-fill;
+    -unity-slice-left: 30;
+    -unity-slice-top: 0;
+    -unity-slice-right: 30;
+    -unity-slice-bottom: 0;
+    pointer-events: none;
+}
+
+/* ══════════════════════════════════════════════════════════ */
+/*  2 SUB-HEALTH BARS FOR MINI BOSS CLONES                    */
+/* ══════════════════════════════════════════════════════════ */
+.clones-sub-container {
+    width: 100%;
+    flex-direction: row;
+    justify-content: space-between;
+    margin-top: 8px;
+    display: none;
+}
+
+.clone-hp-wrapper {
+    width: 48.5%;
+    flex-direction: column;
+}
+
+.clone-name {
+    color: rgb(255, 195, 110);
+    font-size: 12px;
+    -unity-font-style: bold;
+    -unity-font-definition: url("project://database/Assets/PLuan/MainMenu/Font/Cinzel-Vietnamese.ttf");
+    margin-bottom: 2px;
     text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.95);
 }
 
-/* Shake and Flash Animation Effects */
+.clone-health-bar-container {
+    width: 100%;
+    height: 20px;
+    position: relative;
+    justify-content: center;
+}
+
+.clone-hp-frame-bg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: url("project://database/Assets/Synty/InterfaceFantasyMenus/Sprites/FantasyMenus/SPR_FantasyMenus_Menu_Button_03_Background.png?fileID=1537655665&guid=14dc3860d501b70489527d3f3358cec8&type=3#SPR_FantasyMenus_Menu_Button_03_Background");
+    -unity-background-scale-mode: stretch-to-fill;
+    -unity-slice-left: 20;
+    -unity-slice-top: 0;
+    -unity-slice-right: 20;
+    -unity-slice-bottom: 0;
+}
+
+.clone-hp-background {
+    position: absolute;
+    top: 2px;
+    bottom: 2px;
+    left: 5px;
+    right: 5px;
+    background-color: rgba(18, 10, 8, 0.9);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.clone-hp-yellow-bar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgb(235, 185, 30);
+    border-radius: 2px;
+    transition-property: width;
+    transition-duration: 0.5s;
+}
+
+.clone-hp-progress-bar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgb(195, 35, 30);
+    border-radius: 2px;
+    transition-property: width;
+    transition-duration: 0.12s;
+    background-image: linear-gradient(to bottom, rgba(255, 255, 255, 0.3), rgba(0, 0, 0, 0.3));
+}
+
+.clone-hp-text {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    color: rgb(255, 255, 255);
+    font-size: 10px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.95);
+}
+
+.clone-hp-frame-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: url("project://database/Assets/Synty/InterfaceFantasyMenus/Sprites/FantasyMenus/SPR_FantasyMenus_Menu_Button_03_Frame.png?fileID=1537655665&guid=9edb3fd596a99454e80f70bfecfa5769&type=3#SPR_FantasyMenus_Menu_Button_03_Frame");
+    -unity-background-scale-mode: stretch-to-fill;
+    -unity-slice-left: 20;
+    -unity-slice-top: 0;
+    -unity-slice-right: 20;
+    -unity-slice-bottom: 0;
+    pointer-events: none;
+}
+
+/* ══════════════════════════════════════════════════════════ */
+/*  HIT SHAKE & FLASH ANIMATION EFFECTS                       */
+/* ══════════════════════════════════════════════════════════ */
 @keyframes miniboss-shake-anim {
     0% { margin-left: 0px; margin-top: 0px; }
     20% { margin-left: -8px; margin-top: -3px; }
@@ -137,68 +351,3 @@
     animation-duration: 0.2s;
 }
 
-/* ══════════════════════════════════════════════════════════ */
-/*  2 SUB-HEALTH BARS FOR MINI BOSS CLONES                    */
-/* ══════════════════════════════════════════════════════════ */
-.clones-sub-container {
-    width: 100%;
-    flex-direction: row;
-    justify-content: space-between;
-    margin-top: 10px;
-    display: none;
-}
-
-.clone-hp-wrapper {
-    width: 48.5%;
-    flex-direction: column;
-}
-
-.clone-name {
-    color: rgb(255, 185, 100);
-    font-size: 13px;
-    -unity-font-style: bold;
-    margin-bottom: 3px;
-    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.9);
-}
-
-.clone-hp-background {
-    width: 100%;
-    height: 18px;
-    background-color: rgba(20, 10, 5, 0.95);
-    border-width: 1.5px;
-    border-color: rgb(180, 110, 30);
-    border-radius: 4px;
-    overflow: hidden;
-    position: relative;
-}
-
-.clone-hp-yellow-bar {
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    background-color: rgb(235, 190, 30);
-    border-radius: 3px;
-    transition-property: width;
-    transition-duration: 0.5s;
-}
-
-.clone-hp-progress-bar {
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    background-color: rgb(190, 35, 30);
-    border-radius: 3px;
-    transition-property: width;
-    transition-duration: 0.12s;
-}
-
-.clone-hp-text {
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    color: rgb(255, 255, 255);
-    font-size: 10px;
-    -unity-font-style: bold;
-    -unity-text-align: middle-center;
-    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.95);
-}
