@@ -299,6 +299,18 @@ public class FinalBossAI : NetworkBehaviour
 
     private bool AgentReady => agent != null && agent.isActiveAndEnabled && agent.isOnNavMesh;
 
+
+//
+    [Header("Transition Cutscene")]
+    [Tooltip("Kéo script VideoCutsceneController (đoạn video chuyển cảnh) vào đây")]
+    public VideoCutsceneController transitionCutscene;
+    private bool hasTriggeredTransition = false;
+
+    [Header("Ending Cutscene")]
+    [Tooltip("Kéo script VideoCutsceneController (đoạn video END GAME khi boss chết) vào đây")]
+    public VideoCutsceneController endingCutscene;
+    private bool hasTriggeredEnding = false;
+
     private void Awake()
     {
         gameObject.tag = "Enemy";
@@ -1347,8 +1359,21 @@ public class FinalBossAI : NetworkBehaviour
                 }
                 else
                 {
-                    // BossAI đã chết hoàn toàn -> Kích hoạt Final Boss!
-                    boss.ActivateBoss();
+                    // BossAI đã chết hoàn toàn!
+                    if (boss.transitionCutscene != null)
+                    {
+                        // Nếu có video thì chạy video trước
+                        if (!boss.hasTriggeredTransition)
+                        {
+                            boss.hasTriggeredTransition = true;
+                            boss.StartCoroutine(boss.WaitCutsceneThenActivate());
+                        }
+                    }
+                    else
+                    {
+                        // Nếu bạn quên không gán video, thì nó vẫn nhảy xuống bình thường
+                        boss.ActivateBoss();
+                    }
                     return;
                 }
             }
@@ -2050,6 +2075,16 @@ public class FinalBossAI : NetworkBehaviour
                 boss.StopBattleMusic(true);
             }
             Debug.Log("[FinalBossAI] Final Boss is dead!");
+
+            // [THÊM MỚI] GỌI CUTSCENE END GAME Ở ĐÂY
+            if (boss.endingCutscene != null && !boss.hasTriggeredEnding)
+            {
+                boss.hasTriggeredEnding = true;
+                boss.endingCutscene.StartCutscene(); // Phát video ngay lập tức!
+                Debug.Log("[FinalBossAI] Đã gọi Cutscene kết thúc Game!");
+            }
+
+            // Hủy Object Boss sau 6 giây (hoặc bạn có thể tăng số 6f lên nếu muốn giữ xác Boss lâu hơn trong lúc xem Cutscene)
             Destroy(boss.gameObject, 6f);
         }
 
@@ -2655,6 +2690,25 @@ public class FinalBossAI : NetworkBehaviour
             battleBgmAudioSource.volume = 0f;
             battleBgmAudioSource.Stop();
         }
+    }
+
+    public IEnumerator WaitCutsceneThenActivate()
+    {
+        Debug.Log("[FinalBossAI] Boss 1 đã chết! Đang kích hoạt Cutscene chuyển cảnh...");
+        
+        // 1. Gọi phát Video Cutscene
+        transitionCutscene.StartCutscene();
+
+        // 2. Chờ 1 frame để biến isPlaying bên kia kịp bật sang true
+        yield return null;
+
+        // 3. Đứng chờ ở đây cho đến khi video chạy xong (isPlaying == false)
+        yield return new WaitUntil(() => !transitionCutscene.isPlaying);
+
+        Debug.Log("[FinalBossAI] Cutscene đã xong! Kích hoạt Final Boss nhảy xuống chiến đấu!");
+        
+        // 4. Kích hoạt Final Boss nhảy xuống
+        ActivateBoss();
     }
 
     private void OnDestroy()
