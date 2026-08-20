@@ -22,6 +22,7 @@ public class BalanceManager : NetworkBehaviour
 
     private HashSet<Collider> playersOnBoard = new HashSet<Collider>();
     public bool puzzleLocked = false;
+    private float initialYaw = 0f;
 
     public override void OnNetworkSpawn()
     {
@@ -36,6 +37,9 @@ public class BalanceManager : NetworkBehaviour
             // tránh bị trọng lực mặc định của Unity ghì chặt đĩa lại không cho xoay.
             diskRigidbody.isKinematic = true; 
             diskRigidbody.useGravity = false;
+            
+            // LƯU LẠI GÓC XOAY Y BAN ĐẦU ĐỂ KHÔNG BỊ TỰ ĐỘNG QUAY VỀ 0
+            initialYaw = diskRigidbody.transform.eulerAngles.y;
         }
         else
         {
@@ -140,24 +144,27 @@ public class BalanceManager : NetworkBehaviour
             tiltZ += localPos.x * weight;
         }
 
-        // SỬA LỖI XOAY ĐĨA (Y-axis Twist):
-        // Dùng Quaternion.Euler sẽ bị lỗi toán học tự sinh ra góc xoay Y (Spin) khi nghiêng cả 2 trục X và Z cùng lúc.
-        // Để đĩa CHỈ NGHIÊNG mà KHÔNG XOAY, ta phải dùng Quaternion.AngleAxis.
+        // SỬA LỖI TỰ ĐỘNG XOAY VỀ 0 Ở KHÚC ĐẦU GAME:
+        // Cần giữ nguyên góc xoay Y ban đầu của đĩa (initialYaw), nếu không mâm sẽ tự động xoay lết về 0.
+        Quaternion baseRotation = Quaternion.Euler(0, initialYaw, 0);
+        
         float finalTiltX = tiltX * tiltSensitivity;
         float finalTiltZ = -tiltZ * tiltSensitivity;
         
         Vector3 tiltVector = new Vector3(finalTiltX, 0f, finalTiltZ);
         float tiltAngle = tiltVector.magnitude;
         
-        Quaternion desiredRotation = Quaternion.identity;
+        Quaternion tiltRotation = Quaternion.identity;
         if (tiltAngle > 0.001f)
         {
-            // Trục quay nằm trên mặt phẳng ngang (Y=0)
             Vector3 rotationAxis = tiltVector.normalized;
-            desiredRotation = Quaternion.AngleAxis(tiltAngle, rotationAxis);
+            tiltRotation = Quaternion.AngleAxis(tiltAngle, rotationAxis);
         }
         
-        CurrentAngle = Quaternion.Angle(Quaternion.identity, diskRigidbody.rotation);
+        // Kết hợp góc xoay ban đầu và góc nghiêng
+        Quaternion desiredRotation = baseRotation * tiltRotation;
+        
+        CurrentAngle = Quaternion.Angle(baseRotation, diskRigidbody.rotation);
         
         if (IsServer)
         {
@@ -233,10 +240,12 @@ public class BalanceManager : NetworkBehaviour
 
     public void ResetDisk()
     {
-        diskRigidbody.rotation = Quaternion.identity;
+        if (diskRigidbody == null) return;
+        Quaternion baseRot = Quaternion.Euler(0, initialYaw, 0);
+        diskRigidbody.rotation = baseRot;
         diskRigidbody.linearVelocity = Vector3.zero;
         diskRigidbody.angularVelocity = Vector3.zero;
-        if (IsServer) targetRotation.Value = Quaternion.identity;
+        if (IsServer) targetRotation.Value = baseRot;
     }
 
     public void LockDisk()
@@ -281,21 +290,22 @@ public class BalanceManager : NetworkBehaviour
     {
         LockDisk(); // Khoá đĩa ngay để FixedUpdate không đè lại lực nghiêng
         
-        Quaternion startRot = diskRigidbody.transform.rotation;
+        Quaternion startRot = diskRigidbody.rotation;
+        Quaternion targetRot = Quaternion.Euler(0, initialYaw, 0);
         float timer = 0f;
         float duration = 1f;
 
-        while(timer < duration)
+        while (timer < duration)
         {
             timer += Time.deltaTime;
-            Quaternion rot = Quaternion.Slerp(startRot, Quaternion.identity, timer / duration);
+            Quaternion rot = Quaternion.Slerp(startRot, targetRot, timer / duration);
             diskRigidbody.transform.rotation = rot;
             if (IsServer) targetRotation.Value = rot;
             yield return null;
         }
 
-        diskRigidbody.transform.rotation = Quaternion.identity;
-        if (IsServer) targetRotation.Value = Quaternion.identity;
+        diskRigidbody.transform.rotation = targetRot;
+        if (IsServer) targetRotation.Value = targetRot;
         CurrentAngle = 0;
     }
 }
