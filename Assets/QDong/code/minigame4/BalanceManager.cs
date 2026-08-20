@@ -140,8 +140,22 @@ public class BalanceManager : NetworkBehaviour
             tiltZ += localPos.x * weight;
         }
 
-        // Cập nhật góc xoay đích dựa trên vị trí người chơi (tính local trên mọi máy để mượt nhất)
-        Quaternion desiredRotation = Quaternion.Euler(tiltX * tiltSensitivity, 0f, -tiltZ * tiltSensitivity);
+        // SỬA LỖI XOAY ĐĨA (Y-axis Twist):
+        // Dùng Quaternion.Euler sẽ bị lỗi toán học tự sinh ra góc xoay Y (Spin) khi nghiêng cả 2 trục X và Z cùng lúc.
+        // Để đĩa CHỈ NGHIÊNG mà KHÔNG XOAY, ta phải dùng Quaternion.AngleAxis.
+        float finalTiltX = tiltX * tiltSensitivity;
+        float finalTiltZ = -tiltZ * tiltSensitivity;
+        
+        Vector3 tiltVector = new Vector3(finalTiltX, 0f, finalTiltZ);
+        float tiltAngle = tiltVector.magnitude;
+        
+        Quaternion desiredRotation = Quaternion.identity;
+        if (tiltAngle > 0.001f)
+        {
+            // Trục quay nằm trên mặt phẳng ngang (Y=0)
+            Vector3 rotationAxis = tiltVector.normalized;
+            desiredRotation = Quaternion.AngleAxis(tiltAngle, rotationAxis);
+        }
         
         CurrentAngle = Quaternion.Angle(Quaternion.identity, diskRigidbody.rotation);
         
