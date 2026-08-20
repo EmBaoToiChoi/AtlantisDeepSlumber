@@ -9,7 +9,14 @@ public class VideoCutsceneController : NetworkBehaviour
     public VideoPlayer videoPlayer;
     public GameObject videoUI; 
     public GameObject blackScreenUI; 
+    [Tooltip("UI hoặc Object tạm ẩn trong lúc phát video (sẽ tự động hiện lại sau khi video kết thúc, ví dụ: UIPlayer)")]
     public GameObject objectToHide; 
+
+    [Header("Hide Object After Cutscene")]
+    [Tooltip("Kéo thả GameObject muốn ẩn sau khi chạy hết video cutscene (nếu có thì ẩn, không có thì bỏ qua)")]
+    public GameObject objectToHideAfterVideo;
+    [Tooltip("Danh sách các GameObject muốn ẩn sau khi chạy hết video cutscene (nếu cần ẩn nhiều object)")]
+    public List<GameObject> objectsToHideAfterVideo = new List<GameObject>();
 
     [Header("Teleport & Control")]
     public Transform safeZone; 
@@ -112,6 +119,8 @@ public class VideoCutsceneController : NetworkBehaviour
         yield return new WaitForSeconds(1f);
         FinishCutsceneClientRpc();
 
+        HideObjectsAfterVideo();
+
         // QUAN TRỌNG: Trên Dedicated Server, ClientRpc KHÔNG chạy trên server,
         // nên isPlaying sẽ không được set false. Ta phải tự set ở đây.
         isPlaying = false;
@@ -178,6 +187,9 @@ public class VideoCutsceneController : NetworkBehaviour
     {
         if (objectToHide != null) objectToHide.SetActive(true);
         
+        // Ẩn các object được chỉ định sau khi video kết thúc (nếu có)
+        HideObjectsAfterVideo();
+
         // Làm sáng dần màn hình (alpha từ 1 -> 0) trong 1 giây, sau đó tắt hẳn object
         if (blackScreenUI != null) 
         {
@@ -187,6 +199,27 @@ public class VideoCutsceneController : NetworkBehaviour
         SetLocalPlayerCameraFollow(true);
         TogglePlayerMovement(true);
         isPlaying = false;
+    }
+
+    private void HideObjectsAfterVideo()
+    {
+        if (objectToHideAfterVideo != null)
+        {
+            objectToHideAfterVideo.SetActive(false);
+            Debug.Log($"[VideoCutsceneController] Đã ẩn object sau video: {objectToHideAfterVideo.name}");
+        }
+
+        if (objectsToHideAfterVideo != null)
+        {
+            foreach (var obj in objectsToHideAfterVideo)
+            {
+                if (obj != null)
+                {
+                    obj.SetActive(false);
+                    Debug.Log($"[VideoCutsceneController] Đã ẩn object sau video: {obj.name}");
+                }
+            }
+        }
     }
 
     // =========================================================================
