@@ -2184,44 +2184,10 @@ private void Die()
 
     public void TriggerBossDefeatCutscene()
     {
-        if (isDefeatCutsceneSequenceRunning) return;
-        isDefeatCutsceneSequenceRunning = true;
-
         Debug.Log("[MiniBossAI] TẤT CẢ BOSS CHÍNH VÀ 2 PHÂN THÂN ĐÃ BỊ TIÊU DIỆT HOÀN TOÀN -> BẮT ĐẦU QUY TRÌNH HỦY UI VÀ CHẠY CUTSCENE!");
 
-        // Dọn sạch mọi clone còn sót lại trên máy local
+        // 1. Dọn sạch mọi clone còn sót lại trên máy local
         ForceDestroyAllRemainingClones();
-
-        StartCoroutine(DefeatCutsceneSequenceRoutine());
-    }
-
-    /// <summary>
-    /// Dọn sạch tất cả phân thân còn sót lại trên máy local khi cutscene bắt đầu.
-    /// Đảm bảo không còn "2 con phân thân" hiện trên bất kỳ máy nào.
-    /// </summary>
-    public void ForceDestroyAllRemainingClones()
-    {
-        var allBosses = FindObjectsByType<MiniBossAI>(FindObjectsSortMode.None);
-        foreach (var b in allBosses)
-        {
-            if (b != null && b.isClone)
-            {
-                b.localHealth = 0f;
-                Destroy(b.gameObject);
-            }
-        }
-
-        var allSpikes = FindObjectsByType<EarthSpikesDamageZone>(FindObjectsSortMode.None);
-        foreach (var s in allSpikes)
-        {
-            if (s != null) Destroy(s.gameObject);
-        }
-    }
-
-    private IEnumerator DefeatCutsceneSequenceRoutine()
-    {
-        // 1. Chờ 1.5s để thanh máu UI cập nhật hoàn tất 0 (Đã hạ) cho người chơi thấy rõ
-        yield return new WaitForSeconds(1.5f);
 
         // 2. Ẩn / Hủy hoàn toàn UI MiniBossHealthBar
         var healthBar = FindFirstObjectByType<MiniBossHealthBar>();
@@ -2231,10 +2197,7 @@ private void Die()
             healthBar.enabled = false;
         }
 
-        // 3. Chờ thêm 0.3s cho UI biến mất hoàn toàn
-        yield return new WaitForSeconds(0.3f);
-
-        // 4. Kích hoạt onBossDeathEvent của Boss chính
+        // 3. Kích hoạt onBossDeathEvent của Boss chính
         var mainBoss = FindMainBoss() ?? this;
         bool hasInvoked = false;
 
@@ -2259,7 +2222,7 @@ private void Die()
             catch (System.Exception ex) { Debug.LogError($"[MiniBossAI] Error invoking local onBossDeathEvent: {ex}"); }
         }
 
-        // 5. Tìm VideoCutsceneController liên kết trong Scene để kích hoạt StartCutscene()
+        // 4. Tìm VideoCutsceneController liên kết trong Scene (cuscene 11 / miniboss / boss) để kích hoạt StartCutscene()
         if (!hasInvoked)
         {
             var allCutscenes = FindObjectsByType<VideoCutsceneController>(FindObjectsSortMode.None);
@@ -2268,7 +2231,7 @@ private void Die()
                 if (cs != null && !cs.isPlaying && (!cs.playOnlyOnce || !cs.hasPlayed))
                 {
                     string n = cs.gameObject.name.ToLower();
-                    if (n.Contains("miniboss") || n.Contains("boss") || n.Contains("cutscene3") || n.Contains("cutscene4"))
+                    if (n.Contains("11") || n.Contains("miniboss") || n.Contains("boss") || n.Contains("cutscene3") || n.Contains("cutscene4"))
                     {
                         Debug.Log($"[MiniBossAI] Tự động kích hoạt VideoCutsceneController: '{cs.gameObject.name}'");
                         cs.StartCutscene();
@@ -2276,6 +2239,29 @@ private void Die()
                     }
                 }
             }
+        }
+    }
+
+    /// <summary>
+    /// Dọn sạch tất cả phân thân còn sót lại trên máy local khi cutscene bắt đầu hoặc khi nhận tín hiệu kết thúc.
+    /// Đảm bảo không còn bất kỳ phân thân nào hiện trên bất kỳ máy nào.
+    /// </summary>
+    public void ForceDestroyAllRemainingClones()
+    {
+        var allBosses = FindObjectsByType<MiniBossAI>(FindObjectsSortMode.None);
+        foreach (var b in allBosses)
+        {
+            if (b != null && b.isClone)
+            {
+                b.localHealth = 0f;
+                Destroy(b.gameObject);
+            }
+        }
+
+        var allSpikes = FindObjectsByType<EarthSpikesDamageZone>(FindObjectsSortMode.None);
+        foreach (var s in allSpikes)
+        {
+            if (s != null) Destroy(s.gameObject);
         }
     }
 

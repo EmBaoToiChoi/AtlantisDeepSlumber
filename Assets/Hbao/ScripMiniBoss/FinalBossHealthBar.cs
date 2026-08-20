@@ -122,8 +122,8 @@ public class FinalBossHealthBar : MonoBehaviour
             return;
         }
 
-        // Hide UI if boss is dead or HUD is not visible
-        if (boss.IsDead || !boss.IsHUDVisible)
+        // Hide UI if boss is dead, HUD is not visible, or boss is still Sitting waiting for BossAI
+        if (boss.IsDead || !boss.IsHUDVisible || boss.CurrentStateValue == FinalBossAI.FinalBossState.Sitting)
         {
             HideUI();
             return;
