@@ -273,18 +273,57 @@ public class PressurePlatePuzzleManager : NetworkBehaviour
 
     private void UpdateDoors(bool open)
     {
-        if (targetDoors == null) return;
-        foreach (var door in targetDoors)
+        EnsureReferences();
+
+        int openCount = 0;
+
+        // 1. Mở tất cả cửa trong mảng targetDoors
+        if (targetDoors != null)
         {
-            if (door != null)
+            foreach (var door in targetDoors)
             {
-                if (open)
+                if (door != null)
                 {
-                    door.Open();
+                    if (open) door.Open();
+                    else door.Close();
+                    openCount++;
                 }
-                else
+            }
+        }
+
+        // 2. Mở tất cả targetDoor và targetDoor2 gắn trên các phiến đá (PressurePlateTrigger)
+        var allPlates = (requiredPlates != null && requiredPlates.Length > 0) 
+            ? requiredPlates 
+            : FindObjectsByType<PressurePlateTrigger>(FindObjectsSortMode.None);
+        foreach (var plate in allPlates)
+        {
+            if (plate != null)
+            {
+                if (plate.targetDoor != null)
                 {
-                    door.Close();
+                    if (open) plate.targetDoor.Open();
+                    else plate.targetDoor.Close();
+                    openCount++;
+                }
+                if (plate.targetDoor2 != null)
+                {
+                    if (open) plate.targetDoor2.Open();
+                    else plate.targetDoor2.Close();
+                    openCount++;
+                }
+            }
+        }
+
+        // 3. Fallback tìm tất cả các PushableDoor trong toàn bộ Scene nếu chưa mở được cánh cửa nào
+        if (openCount == 0 || targetDoors == null || targetDoors.Length == 0)
+        {
+            PushableDoor[] sceneDoors = FindObjectsByType<PushableDoor>(FindObjectsSortMode.None);
+            foreach (var door in sceneDoors)
+            {
+                if (door != null)
+                {
+                    if (open) door.Open();
+                    else door.Close();
                 }
             }
         }
