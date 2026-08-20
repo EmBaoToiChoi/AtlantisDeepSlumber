@@ -5,6 +5,8 @@ public class AudioManager : MonoBehaviour
 {
     public static AudioManager Instance { get; private set; }
 
+    public const float DEFAULT_AMBIENT_BGM_MULTIPLIER = 0.25f;
+
     [Header("Audio Sources")]
     [SerializeField] private AudioSource _bgmSource;
 
@@ -16,8 +18,13 @@ public class AudioManager : MonoBehaviour
     public float MusicVolume { get; private set; } = 0.8f;
     public float SFXVolume { get; private set; } = 0.9f;
 
+    public float AmbientBGMVolumeMultiplier { get; set; } = DEFAULT_AMBIENT_BGM_MULTIPLIER;
+
     private float _bgmVolumeMultiplier = 1.0f;
     private Coroutine _fadeCoroutine;
+
+    private bool _isCutsceneActive = false;
+    private bool _isBossMusicActive = false;
 
     private void Awake()
     {
@@ -46,18 +53,30 @@ public class AudioManager : MonoBehaviour
     private void OnSceneLoaded(UnityEngine.SceneManagement.Scene scene, UnityEngine.SceneManagement.LoadSceneMode mode)
     {
         Debug.Log($"[AudioManager] SceneLoaded: '{scene.name}'");
-        if (IsMenuOrLobbyScene(scene.name) || IsCutsceneScene(scene.name))
+
+        if (IsMenuOrLobbyScene(scene.name))
         {
-            // Duy trì hoặc phát nhạc nền khi ở MainMenu, Lobby, WaitingRoom và MapSTART (Cutscene mở đầu)
-            if (_bgmSource != null && !_bgmSource.isPlaying)
-            {
-                PlayBGM("Audio/BGM");
-            }
+            // Reset trạng thái cutscene & boss khi quay về Menu/Lobby
+            _isCutsceneActive = false;
+            _isBossMusicActive = false;
+
+            PlayBGM("Audio/BGM", 1.0f);
         }
         else
         {
-            Debug.Log($"[AudioManager] Entering Gameplay Scene '{scene.name}' - Stopping background music for combat/SFX clarity.");
-            StopBGM();
+            // Khi vào các Scene Gameplay / Map / Cutscene
+            if (!_isCutsceneActive && !_isBossMusicActive)
+            {
+                if (_bgmSource != null && !_bgmSource.isPlaying)
+                {
+                    PlayAmbientBGM(AmbientBGMVolumeMultiplier, 1.5f);
+                }
+                else
+                {
+                    // Nếu đang phát từ trước, chuyển mượt về âm lượng nền nhỏ
+                    FadeBGMToMultiplier(AmbientBGMVolumeMultiplier, 1.5f);
+                }
+            }
         }
     }
 
@@ -139,7 +158,11 @@ public class AudioManager : MonoBehaviour
 
     private IEnumerator FadeToMultiplierCoroutine(float targetMultiplier, float duration)
     {
-        if (_bgmSource == null || !_bgmSource.isPlaying) yield break;
+        if (_bgmSource == null) yield break;
+        if (!_bgmSource.isPlaying && targetMultiplier > 0f)
+        {
+            _bgmSource.Play();
+        }
 
         float startMul = _bgmVolumeMultiplier;
         float elapsed = 0f;
@@ -153,9 +176,15 @@ public class AudioManager : MonoBehaviour
         }
         _bgmVolumeMultiplier = targetMultiplier;
         ApplyMusicVolume();
+
+        if (_bgmVolumeMultiplier <= 0.001f && _bgmSource != null && _bgmSource.isPlaying)
+        {
+            _bgmSource.Pause();
+        }
+        _fadeCoroutine = null;
     }
 
-    public void FadeOutBGM(float duration = 2.0f)
+    public void FadeOutBGM(float duration = 1.5f)
     {
         if (_fadeCoroutine != null) StopCoroutine(_fadeCoroutine);
         _fadeCoroutine = StartCoroutine(FadeOutBGMCoroutine(duration));
@@ -165,21 +194,104 @@ public class AudioManager : MonoBehaviour
     {
         if (_bgmSource == null || !_bgmSource.isPlaying) yield break;
 
-        float startVol = _bgmSource.volume;
+        float startMul = _bgmVolumeMultiplier;
         float elapsed = 0f;
         while (elapsed < duration)
         {
             elapsed += Time.unscaledDeltaTime;
             float t = Mathf.Clamp01(elapsed / duration);
-            if (_bgmSource != null)
-            {
-                _bgmSource.volume = Mathf.Lerp(startVol, 0f, t);
-            }
+            _bgmVolumeMultiplier = Mathf.Lerp(startMul, 0f, t);
+            ApplyMusicVolume();
             yield return null;
         }
 
-        StopBGM();
-        _bgmVolumeMultiplier = 1.0f;
+        _bgmVolumeMultiplier = 0f;
+        ApplyMusicVolume();
+
+        if (_bgmSource != null && _bgmSource.isPlaying)
+        {
+            _bgmSource.Pause();
+        }
+        _fadeCoroutine = null;
+    }
+
+    public void SetCutsceneActive(bool active, float fadeDuration = 0.5f)
+    {
+        _isCutsceneActive = active;
+        Debug.Log($"[AudioManager] SetCutsceneActive: {active}, isBossActive: {_isBossMusicActive}");
+        EvaluateBGMState(fadeDuration);
+    }
+
+    public void SetBossMusicActive(bool active, float fadeDuration = 0.8f)
+    {
+        _isBossMusicActive = active;
+        Debug.Log($"[AudioManager] SetBossMusicActive: {active}, isCutsceneActive: {_isCutsceneActive}");
+        EvaluateBGMState(fadeDuration);
+    }
+
+    public void EvaluateBGMState(float fadeDuration = 1.0f)
+    {
+        if (_isCutsceneActive || _isBossMusicActive)
+        {
+            FadeOutBGM(fadeDuration);
+        }
+        else
+        {
+            ResumeAmbientBGM(fadeDuration);
+        }
+    }
+
+    public void PlayAmbientBGM(float targetMultiplier = DEFAULT_AMBIENT_BGM_MULTIPLIER, float fadeDuration = 1.5f)
+    {
+        if (_isCutsceneActive || _isBossMusicActive) return;
+
+        AmbientBGMVolumeMultiplier = Mathf.Clamp01(targetMultiplier);
+
+        if (_bgmSource != null)
+        {
+            if (_bgmSource.clip == null)
+            {
+                _bgmSource.clip = Resources.Load<AudioClip>("Audio/BGM");
+            }
+
+            if (_bgmSource.clip != null)
+            {
+                if (!_bgmSource.isPlaying)
+                {
+                    _bgmVolumeMultiplier = 0f;
+                    ApplyMusicVolume();
+                    _bgmSource.Play();
+                }
+                FadeBGMToMultiplier(AmbientBGMVolumeMultiplier, fadeDuration);
+            }
+        }
+    }
+
+    public void ResumeAmbientBGM(float fadeDuration = 1.2f)
+    {
+        if (_isCutsceneActive || _isBossMusicActive) return;
+
+        string sceneName = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
+        float targetMultiplier = IsMenuOrLobbyScene(sceneName) ? 1.0f : AmbientBGMVolumeMultiplier;
+
+        if (_bgmSource != null)
+        {
+            if (_bgmSource.clip == null)
+            {
+                _bgmSource.clip = Resources.Load<AudioClip>("Audio/BGM");
+            }
+
+            if (_bgmSource.clip != null)
+            {
+                if (!_bgmSource.isPlaying)
+                {
+                    _bgmVolumeMultiplier = 0f;
+                    ApplyMusicVolume();
+                    _bgmSource.Play();
+                }
+                FadeBGMToMultiplier(targetMultiplier, fadeDuration);
+            }
+        }
     }
 
     private void ApplyMusicVolume()
@@ -212,36 +324,33 @@ public class AudioManager : MonoBehaviour
         }
     }
 
-    public void PlayBGM(AudioClip clip)
+    public void PlayBGM(AudioClip clip, float volumeMultiplier = 1.0f)
     {
         if (clip == null) return;
 
-        string activeScene = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
-        if (!IsMenuOrLobbyScene(activeScene) && !IsCutsceneScene(activeScene))
+        if (_bgmSource.clip == clip && _bgmSource.isPlaying)
         {
-            Debug.Log($"[AudioManager] In-game scene ('{activeScene}'): BGM playback suppressed for gameplay SFX.");
-            StopBGM();
+            FadeBGMToMultiplier(volumeMultiplier, 0.5f);
             return;
         }
 
-        if (_bgmSource.clip == clip && _bgmSource.isPlaying)
-        {
-            return; // Already playing this track
-        }
-
         _bgmSource.clip = clip;
-        _bgmVolumeMultiplier = 1.0f;
+        _bgmVolumeMultiplier = volumeMultiplier;
         ApplyMusicVolume();
-        _bgmSource.Play();
-        Debug.Log($"[AudioManager] Playing BGM Clip: {clip.name}");
+
+        if (!_isCutsceneActive && !_isBossMusicActive)
+        {
+            _bgmSource.Play();
+            Debug.Log($"[AudioManager] Playing BGM Clip: {clip.name} (Multiplier: {volumeMultiplier})");
+        }
     }
 
-    public void PlayBGM(string resourcePath)
+    public void PlayBGM(string resourcePath, float volumeMultiplier = 1.0f)
     {
         AudioClip clip = Resources.Load<AudioClip>(resourcePath);
         if (clip != null)
         {
-            PlayBGM(clip);
+            PlayBGM(clip, volumeMultiplier);
         }
         else
         {

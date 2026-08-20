@@ -101,6 +101,12 @@ namespace PLuan.Cutscenes
             // 4. Phát Timeline
             director.Play();
 
+            // Tắt nhạc nền game
+            if (AudioManager.Instance != null)
+            {
+                AudioManager.Instance.SetCutsceneActive(true, 0.5f);
+            }
+
             onCutsceneStart?.Invoke();
         }
 
@@ -138,6 +144,12 @@ namespace PLuan.Cutscenes
                 letterboxUI.HideLetterbox();
             }
 
+            // Khôi phục nhạc nền ambient game
+            if (AudioManager.Instance != null)
+            {
+                AudioManager.Instance.SetCutsceneActive(false, 1.2f);
+            }
+
             onCutsceneEnd?.Invoke();
         }
 
@@ -168,6 +180,14 @@ namespace PLuan.Cutscenes
             if (other.CompareTag("Player") && !isPlaying)
             {
                 PlayCutscene();
+            }
+        }
+
+        private void OnDestroy()
+        {
+            if (isPlaying && AudioManager.Instance != null)
+            {
+                AudioManager.Instance.SetCutsceneActive(false, 1.0f);
             }
         }
     }
