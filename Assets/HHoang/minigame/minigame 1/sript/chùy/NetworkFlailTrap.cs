@@ -1,6 +1,6 @@
 using UnityEngine;
 using Unity.Netcode;
-using System.Collections; // Phải gọi thư viện này ra mới xài đếm ngược (Coroutine) được nha
+using System.Collections;
 
 public class NetworkFlailTrap : NetworkBehaviour
 {
@@ -26,7 +26,20 @@ public class NetworkFlailTrap : NetworkBehaviour
     public float contactDamage = 40f;
     public float damageCooldown = 1f;
 
-    private NetworkVariable<bool> isTriggered = new NetworkVariable<bool>(false);
+    // Đồng bộ trạng thái kích hoạt và thời gian kích hoạt chuẩn Server
+    private NetworkVariable<bool> isTriggered = new NetworkVariable<bool>(
+        false, 
+        NetworkVariableReadPermission.Everyone, 
+        NetworkVariableWritePermission.Server
+    );
+
+    private NetworkVariable<float> triggerServerTime = new NetworkVariable<float>(
+        0f, 
+        NetworkVariableReadPermission.Everyone, 
+        NetworkVariableWritePermission.Server
+    );
+
+    private bool localTriggered = false;
     private float timer = 0f;
     
     // Biến này để nhớ góc xoay lúc đầu của ông trên Scene
@@ -39,17 +52,55 @@ public class NetworkFlailTrap : NetworkBehaviour
 
     void Start()
     {
-        // Lưu lại vị trí góc xoay ông set up trong Scene
+        // Lưu lại vị trí góc xoay lúc đầu trên Scene
         gocXoayBanDau = transform.localRotation;
         
-        // Tự động kéo búa lên vị trí chờ 90 độ
+        // Tự động kéo búa lên vị trí chờ ban đầu
         SetAngle(startAngle);
+    }
+
+    public override void OnNetworkSpawn()
+    {
+        base.OnNetworkSpawn();
+
+        // Nếu bẫy không có vùng kích hoạt (vungKichHoat == null), Server tự động kích hoạt bẫy đung đưa liên tục
+        if (IsServer && vungKichHoat == null)
+        {
+            triggerServerTime.Value = (NetworkManager.Singleton != null) ? (float)NetworkManager.Singleton.ServerTime.TimeAsFloat : 0f;
+            isTriggered.Value = true;
+        }
+    }
+
+    public bool IsTrapActive()
+    {
+        if (vungKichHoat == null) return true; // Không có vùng kích hoạt thì bẫy luôn hoạt động
+        bool isNetworkActive = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
+        if (isNetworkActive)
+        {
+            return isTriggered.Value;
+        }
+        return localTriggered;
     }
 
     void Update()
     {
-        // 1. Quét vùng cảm ứng dưới đất (Thêm check !isCountingDown để đang đếm ngược thì không quét nữa)
-        if (IsServer && !isTriggered.Value && !isCountingDown && vungKichHoat != null)
+        bool isNetworkActive = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
+
+        // Dọn dẹp dictionary nếu GameObject người chơi không còn tồn tại
+        if (nextDamageTime.Count > 0)
+        {
+            var keys = new System.Collections.Generic.List<GameObject>(nextDamageTime.Keys);
+            foreach (var key in keys)
+            {
+                if (key == null || !key.activeInHierarchy)
+                {
+                    nextDamageTime.Remove(key);
+                }
+            }
+        }
+
+        // 1. Quét vùng cảm ứng dưới đất
+        if (!IsTrapActive() && !isCountingDown && vungKichHoat != null)
         {
             Collider[] hitColliders = Physics.OverlapBox(
                 vungKichHoat.bounds.center, 
@@ -59,44 +110,89 @@ public class NetworkFlailTrap : NetworkBehaviour
 
             foreach (var hit in hitColliders)
             {
-                if (hit.CompareTag("Player") || 
-                    (hit.transform.parent != null && hit.transform.parent.CompareTag("Player")) ||
-                    hit.GetComponentInParent<ElenaPlayer>() != null ||
-                    hit.GetComponentInParent<MayaPlayer>() != null ||
-                    hit.GetComponentInParent<LeoPlayer>() != null ||
-                    hit.GetComponentInParent<ArthurPlayer>() != null ||
-                    hit.GetComponentInParent<SimplePlayerTest>() != null)
+                if (IsAnyPlayer(hit.gameObject, out GameObject pRoot))
                 {
-                    // Phát hiện Player là chạy hàm đếm ngược thả búa
-                    StartCoroutine(DemNguocTruocKhiSap());
-                    break;
+                    if (isNetworkActive)
+                    {
+                        if (IsServer)
+                        {
+                            StartCoroutine(DemNguocTruocKhiSap());
+                            break;
+                        }
+                        else
+                        {
+                            // Client phát hiện dẫm vào vùng kích hoạt thì gửi RPC lên Server
+                            var netObj = pRoot.GetComponent<NetworkObject>();
+                            if (netObj != null && netObj.IsOwner)
+                            {
+                                TriggerTrapServerRpc();
+                                isCountingDown = true;
+                                break;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        // Offline mode
+                        StartCoroutine(DemNguocTruocKhiSap());
+                        break;
+                    }
                 }
             }
         }
 
-        // 2. Vung qua vung lại bằng công thức con lắc
-        if (isTriggered.Value)
+        // 2. Vung qua vung lại bằng công thức con lắc đồng bộ
+        if (IsTrapActive())
         {
-            timer += Time.deltaTime;
-            
+            float elapsed;
+            if (isNetworkActive && triggerServerTime.Value > 0f)
+            {
+                // Đồng bộ chính xác 100% góc xoay theo thời gian Server (kể cả người chơi vào sau / giật lag)
+                elapsed = (float)NetworkManager.Singleton.ServerTime.TimeAsFloat - triggerServerTime.Value;
+            }
+            else
+            {
+                timer += Time.deltaTime;
+                elapsed = timer;
+            }
+
             // Tạo dao động từ startAngle đến -startAngle mượt mà
-            float angle = startAngle * Mathf.Cos(timer * swingSpeed);
+            float angle = startAngle * Mathf.Cos(elapsed * swingSpeed);
             SetAngle(angle);
+        }
+        else
+        {
+            // Giữ nguyên góc chờ ban đầu khi chưa kích hoạt
+            SetAngle(startAngle);
+        }
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    public void TriggerTrapServerRpc()
+    {
+        if (!isTriggered.Value && !isCountingDown)
+        {
+            StartCoroutine(DemNguocTruocKhiSap());
         }
     }
 
     // Hàm chuyên xử lý đếm ngược thời gian
     private IEnumerator DemNguocTruocKhiSap()
     {
-        isCountingDown = true; // Khóa chốt lại, mấy thằng khác dẫm vô sau không làm đếm lại
+        isCountingDown = true; // Khóa chốt lại, tránh đếm đè
 
-        // Nếu ông chỉnh thời gian delay lớn hơn 0 thì nó mới đứng chờ
         if (delayTime > 0f)
         {
             yield return new WaitForSeconds(delayTime);
         }
         
-        isTriggered.Value = true; // Hết giờ, lật cái rụp!
+        bool isNetworkActive = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
+        if (isNetworkActive && IsServer)
+        {
+            triggerServerTime.Value = (NetworkManager.Singleton != null) ? (float)NetworkManager.Singleton.ServerTime.TimeAsFloat : 0f;
+            isTriggered.Value = true;
+        }
+        localTriggered = true;
     }
 
     private void SetAngle(float angle)
@@ -149,21 +245,17 @@ public class NetworkFlailTrap : NetworkBehaviour
 
     private void HandlePlayerCollision(GameObject collidedObj)
     {
-        // Chỉ xử lý va chạm trên Server (Online) hoặc Local (Offline) để tránh nhân đôi sát thương
         bool isNetworkActive = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
-        if (isNetworkActive && !IsServer) return;
 
         if (IsAnyPlayer(collidedObj, out GameObject playerRoot))
         {
-            // Kiểm tra khoảng cách thực tế để tránh lỗi trôi/kẹt trigger khi dịch chuyển
-            float dist = Vector3.Distance(transform.position, playerRoot.transform.position);
-            if (dist > 10f)
+            // Trong chế độ mạng:
+            // Server xử lý va chạm cho mọi người chơi.
+            // Client chỉ kích hoạt gây sát thương nếu chính nhân vật của Client đó (IsOwner) bị chạm trúng.
+            if (isNetworkActive && !IsServer)
             {
-                if (nextDamageTime.ContainsKey(playerRoot))
-                {
-                    nextDamageTime.Remove(playerRoot);
-                }
-                return;
+                var netObj = playerRoot.GetComponent<NetworkObject>();
+                if (netObj == null || !netObj.IsOwner) return;
             }
 
             float currentTime = Time.time;
@@ -173,30 +265,6 @@ public class NetworkFlailTrap : NetworkBehaviour
                 nextDamageTime[playerRoot] = currentTime + damageCooldown;
             }
         }
-    }
-
-    private static System.Reflection.FieldInfo GetFieldInherited(System.Type type, string name, System.Reflection.BindingFlags flags)
-    {
-        System.Type currentType = type;
-        while (currentType != null)
-        {
-            System.Reflection.FieldInfo field = currentType.GetField(name, flags);
-            if (field != null) return field;
-            currentType = currentType.BaseType;
-        }
-        return null;
-    }
-
-    private static System.Reflection.PropertyInfo GetPropertyInherited(System.Type type, string name, System.Reflection.BindingFlags flags)
-    {
-        System.Type currentType = type;
-        while (currentType != null)
-        {
-            System.Reflection.PropertyInfo prop = currentType.GetProperty(name, flags);
-            if (prop != null) return prop;
-            currentType = currentType.BaseType;
-        }
-        return null;
     }
 
     private static System.Reflection.MethodInfo GetMethodInherited(System.Type type, string name, System.Type[] types)
@@ -213,8 +281,27 @@ public class NetworkFlailTrap : NetworkBehaviour
 
     private void DealContactDamage(GameObject playerRoot)
     {
-        Debug.Log($"[NetworkFlailTrap] Chạm vào người chơi {playerRoot.name}! Phá vỡ miễn nhiễm và gây {contactDamage} sát thương.");
+        if (playerRoot == null || contactDamage <= 0f) return;
 
+        Debug.Log($"[NetworkFlailTrap] Chạm vào người chơi {playerRoot.name}! Gây {contactDamage} sát thương.");
+
+        // Gọi trực tiếp hàm TakeDamage / RequestTakeDamage cho từng nhân vật (tự động xử lý ServerRpc nếu là Client)
+        var elena = playerRoot.GetComponent<ElenaPlayer>() ?? playerRoot.GetComponentInChildren<ElenaPlayer>();
+        if (elena != null) { elena.RequestTakeDamage(contactDamage); return; }
+
+        var arthur = playerRoot.GetComponent<ArthurPlayer>() ?? playerRoot.GetComponentInChildren<ArthurPlayer>();
+        if (arthur != null) { arthur.RequestTakeDamage(contactDamage); return; }
+
+        var leo = playerRoot.GetComponent<LeoPlayer>() ?? playerRoot.GetComponentInChildren<LeoPlayer>();
+        if (leo != null) { leo.RequestTakeDamage(contactDamage); return; }
+
+        var maya = playerRoot.GetComponent<MayaPlayer>() ?? playerRoot.GetComponentInChildren<MayaPlayer>();
+        if (maya != null) { maya.RequestTakeDamage(contactDamage); return; }
+
+        var simple = playerRoot.GetComponent<SimplePlayerTest>() ?? playerRoot.GetComponentInChildren<SimplePlayerTest>();
+        if (simple != null) { simple.TakeDamage(contactDamage); return; }
+
+        // Fallback: Tìm các script Player khác qua Reflection
         MonoBehaviour[] scripts = playerRoot.GetComponents<MonoBehaviour>();
         foreach (var script in scripts)
         {
@@ -222,43 +309,14 @@ public class NetworkFlailTrap : NetworkBehaviour
             System.Type type = script.GetType();
             string typeName = type.Name;
 
-            if (script is SimplePlayerTest || script is LeoPlayer || script is ArthurPlayer || 
-                script is ElenaPlayer || script is MayaPlayer || typeName.EndsWith("Player"))
+            if (typeName.EndsWith("Player"))
             {
-                // Bẻ gãy toàn bộ trạng thái bất tử/né tránh của người chơi
-                
-                // 1. Tắt Q Skill Active
-                var qActiveField = GetFieldInherited(type, "IsQSkillActive", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-                if (qActiveField != null) qActiveField.SetValue(script, false);
-                
-                var qActiveProp = GetPropertyInherited(type, "IsQSkillActive", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
-                if (qActiveProp != null && qActiveProp.CanWrite) qActiveProp.SetValue(script, false, null);
-
-                // 2. Tắt rolling standalone
-                var rollStandaloneField = GetFieldInherited(type, "isRollingStandalone", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-                if (rollStandaloneField != null) rollStandaloneField.SetValue(script, false);
-
-                // 3. Tắt rolling net
-                var rollNetField = GetFieldInherited(type, "isRollingNet", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-                if (rollNetField != null)
-                {
-                    object netVarObj = rollNetField.GetValue(script);
-                    if (netVarObj != null)
-                    {
-                        var valueProp = GetPropertyInherited(netVarObj.GetType(), "Value", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
-                        if (valueProp != null && valueProp.CanWrite)
-                        {
-                            valueProp.SetValue(netVarObj, false);
-                        }
-                    }
-                }
-
-                // 4. Gây sát thương cấu hình
                 var requestDamageMethod = GetMethodInherited(type, "RequestTakeDamage", new System.Type[] { typeof(float) }) ??
                                            GetMethodInherited(type, "TakeDamage", new System.Type[] { typeof(float) });
                 if (requestDamageMethod != null)
                 {
                     requestDamageMethod.Invoke(script, new object[] { contactDamage });
+                    return;
                 }
             }
         }
@@ -283,6 +341,18 @@ public class NetworkFlailTrap : NetworkBehaviour
 
         var simple = go.GetComponentInParent<SimplePlayerTest>() ?? go.GetComponentInChildren<SimplePlayerTest>();
         if (simple != null) { playerRoot = simple.gameObject; return true; }
+
+        if (go.CompareTag("Player"))
+        {
+            playerRoot = go;
+            return true;
+        }
+
+        if (go.transform.root != null && go.transform.root.CompareTag("Player"))
+        {
+            playerRoot = go.transform.root.gameObject;
+            return true;
+        }
 
         return false;
     }
