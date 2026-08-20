@@ -1,22 +1,23 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
     <Style src="project://database/Assets/PLuan/WaittingRoom/Code/WaitingRoomUI.uss?fileID=7433441132597879392&amp;guid=5a146fb1d82ca174dbcb8a9d485228fd&amp;type=3#WaitingRoomUI" />
-    <ui:VisualElement name="waiting-room-root" class="waiting-room-overlay">
+    <ui:VisualElement name="waiting-room-root" class="waiting-room-overlay" style="-unity-font-definition: url(&quot;project://database/Assets/PLuan/MainMenu/Font/Philosopher-Vietnamese.ttf?fileID=12800000&amp;guid=8a2ed09dfc3a8024fa0bb345576c06bd&amp;type=3#Philosopher-Vietnamese&quot;);">
         <ui:VisualElement class="waiting-top-bar">
             <ui:VisualElement class="waiting-viewport-spacer" />
-            <ui:VisualElement class="top-info-panel" style="background-image: url(&quot;project://database/Assets/PLuan/%C4%90%E1%BB%83%20t%C3%AAn%20room%20,%20t%C3%AAn%20player.png?fileID=2800000&amp;guid=8b80991644aa7bc4584d956cfa0a5497&amp;type=3#Để tên room , tên player&quot;);">
-                <ui:VisualElement class="panel-seaweed-top-right">
-                    <ui:VisualElement class="seaweed-leaf leaf-1" />
-                    <ui:VisualElement class="seaweed-leaf leaf-2" />
-                    <ui:VisualElement class="seaweed-leaf leaf-3" />
+            <ui:VisualElement class="top-info-panel">
+                <ui:VisualElement class="section-break-bar section-break-top">
+                    <ui:VisualElement class="section-break-top-left" />
+                    <ui:VisualElement class="section-break-top-right" />
                 </ui:VisualElement>
-                <ui:VisualElement class="panel-seaweed-bottom-left">
-                    <ui:VisualElement class="seaweed-leaf leaf-1" />
-                    <ui:VisualElement class="seaweed-leaf leaf-2" />
-                    <ui:VisualElement class="seaweed-leaf leaf-3" />
-                </ui:VisualElement>
-                <ui:VisualElement class="top-info-row">
-                    <ui:Label name="lbl-room-name" text="SẢNH CHỜ KHÁM PHÁ" class="room-title" />
+                <ui:Label name="lbl-room-hint" text="THÔNG TIN PHÒNG:" class="user-profile-label" />
+                <ui:Label name="lbl-room-name" text="SẢNH CHỜ KHÁM PHÁ" class="user-profile-name" />
+                <ui:VisualElement class="room-meta-row">
                     <ui:Label name="lbl-room-id" text="ID: #XXXXXX" class="room-id-badge" />
+                    <ui:Label name="lbl-room-separator" text="•" class="room-meta-separator" />
+                    <ui:Label name="lbl-player-count" text="NGƯỜI CHƠI: 1/4" class="player-count-badge" />
+                </ui:VisualElement>
+                <ui:VisualElement class="section-break-bar section-break-bottom">
+                    <ui:VisualElement class="section-break-bottom-left" />
+                    <ui:VisualElement class="section-break-bottom-right" />
                 </ui:VisualElement>
             </ui:VisualElement>
         </ui:VisualElement>
@@ -70,17 +71,14 @@
                 <ui:Button name="btn-ready" text="SẴN SÀNG" class="action-btn ready-btn" />
                 <ui:Button name="btn-leave" text="RỜI PHÒNG" class="action-btn leave-btn" />
             </ui:VisualElement>
-            <ui:VisualElement class="start-game-center" style="flex-direction: column; align-items: center;">
+            <ui:VisualElement class="start-game-center">
                 <ui:Label name="lbl-warning" text="PHÁT HIỆN TRÙNG NHÂN VẬT!" class="warning-text hidden-element" />
                 <ui:Button name="btn-start" text="BẮT ĐẦU THÁM HIỂM" class="action-btn start-btn hidden-element" />
             </ui:VisualElement>
             <ui:VisualElement style="flex-direction: row; align-items: center; margin-right: 10px;">
-                <ui:Button name="btn-swap-character" text="ĐỔI NHÂN VẬT" class="action-btn ready-btn hidden-element" style="margin-right: 8px;" />
-                <ui:Button name="btn-players-voice" text="MIC NGƯỜI CHƠI" class="action-btn toggle-char-panel-btn ready-btn" style="margin-right: 8px;" />
-                <ui:Button name="btn-toggle-char-panel" text="CHỌN NHÂN VẬT" class="action-btn toggle-char-panel-btn ready-btn" style="margin-right: 8px;" />
-                <ui:VisualElement class="player-count-container">
-                    <ui:Label name="lbl-player-count" text="NGƯỜI CHƠI: 1/4" class="status-text" />
-                </ui:VisualElement>
+                <ui:Button name="btn-swap-character" text="ĐỔI NHÂN VẬT" class="action-btn ready-btn hidden-element" />
+                <ui:Button name="btn-players-voice" text="MIC NGƯỜI CHƠI" class="action-btn toggle-char-panel-btn ready-btn" />
+                <ui:Button name="btn-toggle-char-panel" text="CHỌN NHÂN VẬT" class="action-btn toggle-char-panel-btn ready-btn" />
             </ui:VisualElement>
         </ui:VisualElement>
         <ui:VisualElement name="char-details-modal" class="details-modal hidden-element">
@@ -131,30 +129,24 @@
             </ui:VisualElement>
         </ui:VisualElement>
         <ui:VisualElement name="swap-request-modal" class="details-modal hidden-element">
-            <ui:VisualElement class="swap-modal-container glow-border" style="width: 420px; padding: 30px; align-items: center; border-left-color: rgb(255, 165, 0);">
-                <ui:VisualElement class="panel-seaweed-top-right">
-                    <ui:VisualElement class="seaweed-leaf leaf-1" />
-                    <ui:VisualElement class="seaweed-leaf leaf-2" />
-                    <ui:VisualElement class="seaweed-leaf leaf-3" />
-                </ui:VisualElement>
-                <ui:VisualElement class="panel-seaweed-bottom-left">
-                    <ui:VisualElement class="seaweed-leaf leaf-1" />
-                    <ui:VisualElement class="seaweed-leaf leaf-2" />
-                    <ui:VisualElement class="seaweed-leaf leaf-3" />
-                </ui:VisualElement>
-                <ui:Label text="YÊU CẦU ĐỔI NHÂN VẬT" class="details-char-role" style="font-size: 16px; letter-spacing: 2px; color: rgb(255, 165, 0); margin-bottom: 15px; -unity-font-style: bold;" />
-                <ui:Label name="lbl-swap-request-msg" text="Player 2 muốn đổi Atlas lấy Nyx của bạn." class="details-char-desc" style="text-align: center; font-size: 14px; margin-bottom: 25px; white-space: normal; -unity-text-wrap: true;" />
-                <ui:VisualElement style="flex-direction: row; justify-content: space-around; width: 100%;">
-                    <ui:Button name="btn-swap-accept" text="ĐỒNG Ý" class="action-btn ready-btn" style="width: 150px; margin: 0; background-color: rgba(46, 213, 115, 0.15); border-left-color: rgb(46, 213, 115); color: rgb(46, 213, 115);" />
-                    <ui:Button name="btn-swap-decline" text="TỪ CHỐI" class="action-btn leave-btn" style="width: 150px; margin: 0;" />
+            <ui:VisualElement class="voice-modal-panel">
+                <ui:Label text="YÊU CẦU ĐỔI NHÂN VẬT" class="panel-title" />
+                <ui:VisualElement class="panel-divider" style="background-image: url(&quot;project://database/Assets/Synty/InterfaceFantasyMenus/Sprites/General/SPR_FantasyMenus_Line_Horizontal_01.png?fileID=2800000&amp;guid=3a7afa7a5a87b774587fd7d636cc2230&amp;type=3#SPR_FantasyMenus_Line_Horizontal_01&quot;);" />
+                <ui:Label name="lbl-swap-request-msg" text="Player 2 muốn đổi Atlas lấy Nyx của bạn." class="swap-request-text" />
+                <ui:VisualElement class="voice-actions">
+                    <ui:Button name="btn-swap-accept" text="ĐỒNG Ý" class="action-btn ready-btn voice-btn" />
+                    <ui:Button name="btn-swap-decline" text="TỪ CHỐI" class="action-btn leave-btn voice-btn" />
                 </ui:VisualElement>
             </ui:VisualElement>
         </ui:VisualElement>
         <ui:VisualElement name="players-voice-modal" class="details-modal hidden-element">
-            <ui:VisualElement class="swap-modal-container glow-border" style="width: 400px; padding: 25px; align-items: center; background-color: rgba(10, 25, 47, 0.95);">
-                <ui:Label text="TRÒ CHUYỆN THOẠI" name="lbl-players-voice-title" class="details-char-role" style="font-size: 16px; letter-spacing: 2px; color: #00e5ff; margin-bottom: 15px; -unity-font-style: bold;" />
-                <ui:ScrollView name="players-voice-list" style="width: 100%; max-height: 250px; margin-bottom: 20px;" />
-                <ui:Button name="btn-close-players-voice" text="ĐÓNG" class="action-btn leave-btn" style="width: 150px; margin: 0;" />
+            <ui:VisualElement class="voice-modal-panel">
+                <ui:Label text="TRÒ CHUYỆN THOẠI" name="lbl-players-voice-title" class="panel-title" />
+                <ui:VisualElement class="panel-divider" style="background-image: url(&quot;project://database/Assets/Synty/InterfaceFantasyMenus/Sprites/General/SPR_FantasyMenus_Line_Horizontal_01.png?fileID=2800000&amp;guid=3a7afa7a5a87b774587fd7d636cc2230&amp;type=3#SPR_FantasyMenus_Line_Horizontal_01&quot;);" />
+                <ui:ScrollView name="players-voice-list" class="voice-player-scroll" />
+                <ui:VisualElement class="voice-actions">
+                    <ui:Button name="btn-close-players-voice" text="ĐÓNG" class="action-btn leave-btn voice-close-btn" />
+                </ui:VisualElement>
             </ui:VisualElement>
         </ui:VisualElement>
     </ui:VisualElement>
