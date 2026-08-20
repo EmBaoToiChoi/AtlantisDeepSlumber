@@ -24,16 +24,14 @@ public class PushableDoor : NetworkBehaviour
     private bool localIsOpen = false; // Used for offline/standalone mode
     private bool wasMoving = false;
 
+    private void Awake()
+    {
+        InitializeDoorPositions();
+    }
+
     private void Start()
     {
-        // Nếu không gán transform mục tiêu nào, mặc định di chuyển chính GameObject chứa script
-        if (doorsToMove == null || doorsToMove.Length == 0)
-        {
-            doorsToMove = new Transform[] { transform };
-        }
-
-        closedPositions = new Vector3[doorsToMove.Length];
-        openPositions = new Vector3[doorsToMove.Length];
+        InitializeDoorPositions();
 
         Debug.Log($"[PushableDoor] Khởi chạy trên '{gameObject.name}'. Số lượng cánh cửa cần di chuyển: {doorsToMove.Length}");
 
@@ -41,7 +39,7 @@ public class PushableDoor : NetworkBehaviour
         PushableDoor[] allDoors = FindObjectsOfType<PushableDoor>();
         foreach (var door in allDoors)
         {
-            if (door != this && door.enabled)
+            if (door != this && door.enabled && door.doorsToMove != null)
             {
                 foreach (var t in door.doorsToMove)
                 {
@@ -50,33 +48,38 @@ public class PushableDoor : NetworkBehaviour
                     {
                         if (myT == t)
                         {
-                            Debug.LogError($"[PushableDoor] LỖI XUNG ĐỘT SCRIPTS: Cả script '{gameObject.name}' và script '{door.gameObject.name}' đều đang điều khiển chung vật thể '{t.name}'. Chúng sẽ tranh chấp vị trí và làm cửa không thể di chuyển! Vui lòng xóa component PushableDoor trên một trong hai đối tượng.");
+                            Debug.LogWarning($"[PushableDoor] Lưu ý: Cả script '{gameObject.name}' và script '{door.gameObject.name}' đều có tham chiếu vật thể '{t.name}'.");
                         }
                     }
                 }
             }
         }
+    }
 
-        for (int i = 0; i < doorsToMove.Length; i++)
+    public void InitializeDoorPositions()
+    {
+        if (doorsToMove == null || doorsToMove.Length == 0)
         {
-            if (doorsToMove[i] != null)
-            {
-                closedPositions[i] = doorsToMove[i].position;
-                openPositions[i] = closedPositions[i] + openOffset;
+            doorsToMove = new Transform[] { transform };
+        }
 
-                // Kiểm tra xem có phải gán nhầm file Prefab Asset từ Project thay vì Scene Instance từ Hierarchy không
-                if (!doorsToMove[i].gameObject.scene.IsValid())
-                {
-                    Debug.LogError($"[PushableDoor] LỖI CỰC KỲ NGUY HIỂM: Cánh cửa '{doorsToMove[i].name}' (phần tử {i}) là một PREFAB ASSET từ Project, không phải Scene Instance trong Hierarchy! Nó sẽ không thể di chuyển trong game. Hãy xóa và kéo lại đối tượng từ Hierarchy vào bảng Inspector.");
-                }
-                else
-                {
-                    Debug.Log($"[PushableDoor] Cánh cửa {i}: '{doorsToMove[i].name}' gán thành công. Vị trí đóng: {closedPositions[i]}, Vị trí mở: {openPositions[i]}");
-                }
-            }
-            else
+        if (openOffset == Vector3.zero)
+        {
+            openOffset = new Vector3(0f, 5f, 0f);
+        }
+
+        if (closedPositions == null || closedPositions.Length != doorsToMove.Length)
+        {
+            closedPositions = new Vector3[doorsToMove.Length];
+            openPositions = new Vector3[doorsToMove.Length];
+
+            for (int i = 0; i < doorsToMove.Length; i++)
             {
-                Debug.LogWarning($"[PushableDoor] Cánh cửa ở phần tử {i} đang bị NULL!");
+                if (doorsToMove[i] != null)
+                {
+                    closedPositions[i] = doorsToMove[i].position;
+                    openPositions[i] = closedPositions[i] + openOffset;
+                }
             }
         }
     }
@@ -102,6 +105,11 @@ public class PushableDoor : NetworkBehaviour
 
     private void Update()
     {
+        if (closedPositions == null || openPositions == null || closedPositions.Length == 0)
+        {
+            InitializeDoorPositions();
+        }
+
         bool openState = (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening) ? isOpen.Value : localIsOpen;
 
         bool isAnyMoving = false;
@@ -133,6 +141,11 @@ public class PushableDoor : NetworkBehaviour
 
     public void Open()
     {
+        if (closedPositions == null || openPositions == null || closedPositions.Length == 0)
+        {
+            InitializeDoorPositions();
+        }
+
         if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening)
         {
             if (IsServer)
@@ -146,11 +159,8 @@ public class PushableDoor : NetworkBehaviour
         }
         else
         {
-            if (!localIsOpen)
-            {
-                localIsOpen = true;
-                Debug.Log($"[PushableDoor] Offline: Yêu cầu mở cửa!");
-            }
+            localIsOpen = true;
+            Debug.Log($"[PushableDoor] Offline: Yêu cầu mở cửa!");
         }
     }
 
@@ -163,6 +173,11 @@ public class PushableDoor : NetworkBehaviour
 
     public void Close()
     {
+        if (closedPositions == null || openPositions == null || closedPositions.Length == 0)
+        {
+            InitializeDoorPositions();
+        }
+
         if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening)
         {
             if (IsServer)
@@ -176,11 +191,8 @@ public class PushableDoor : NetworkBehaviour
         }
         else
         {
-            if (localIsOpen)
-            {
-                localIsOpen = false;
-                Debug.Log($"[PushableDoor] Offline: Yêu cầu đóng cửa!");
-            }
+            localIsOpen = false;
+            Debug.Log($"[PushableDoor] Offline: Yêu cầu đóng cửa!");
         }
     }
 
