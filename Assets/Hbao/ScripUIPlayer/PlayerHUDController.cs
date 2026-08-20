@@ -261,12 +261,12 @@ public class PlayerHUDController : MonoBehaviour
     private bool isBuildCameraActive = false;
 
     [Header("Coop Build Camera Offset Settings")]
-    [Tooltip("Khoảng cách kéo lùi camera ra phía sau người chơi (Z)")]
-    public float buildCamBackwardOffset = 32f;
-    [Tooltip("Chiều cao camera hướng lên trên (Y)")]
-    public float buildCamUpwardOffset = 65f;
-    [Tooltip("Góc xoay Pitch (X) của camera khi xây cầu (Góc thấp hơn để nhìn ngẩng cao và thoáng hơn)")]
-    public float buildCamPitch = 45f;
+    [Tooltip("Khoảng cách kéo lùi camera ra phía sau đầu cầu")]
+    public float buildCamBackwardOffset = 12f;
+    [Tooltip("Chiều cao camera trên đầu cầu hướng lên trên (Y)")]
+    public float buildCamUpwardOffset = 38f;
+    [Tooltip("Góc xoay Pitch (X) của camera khi xây cầu")]
+    public float buildCamPitch = 42f;
 
     [Header("Tree Fall Camera Settings")]
     [Tooltip("Khoảng cách từ camera đến cây khi cây ngã")]
@@ -4547,23 +4547,45 @@ public class PlayerHUDController : MonoBehaviour
         if (mainCam == null) mainCam = FindAnyObjectByType<Camera>();
         if (mainCam == null) return;
 
-        Vector3 playerPos = playerBehavior.transform.position;
-        Vector3 playerForward = playerBehavior.transform.forward;
-        
-        // Cần đảm bảo có activeBridgeTrigger để lấy vị trí
+        // Cần đảm bảo có activeBridgeTrigger hoặc tìm trong Scene
+        if (activeBridgeTrigger == null)
+        {
+            activeBridgeTrigger = FindAnyObjectByType<BridgeCollapseTrigger>();
+        }
         if (activeBridgeTrigger == null) return;
-        Vector3 bridgePos = activeBridgeTrigger.transform.position;
 
-        // Tự động nâng cấp nếu các giá trị serialized trong Scene cũ thấp hơn mức tối ưu
-        float actualUpOffset = Mathf.Max(buildCamUpwardOffset, 65f);
-        float actualBackOffset = Mathf.Max(buildCamBackwardOffset, 32f);
-        float actualPitch = (buildCamPitch > 55f) ? 45f : buildCamPitch; // Đổi góc 60 độ dốc cũ sang 45 độ nhìn ngẩng cao và thoáng hơn
+        // 1. Xác định vị trí đầu cầu (bờ gần nơi người chơi đứng nộp gỗ)
+        Vector3 bridgeHeadPos = activeBridgeTrigger.transform.position;
+        bridgeHeadPos.y = 33f; // Mặt đất đầu cầu
 
-        // Vị trí camera trên cao nhìn xuống cầu sử dụng các offset có thể cấu hình
-        Vector3 targetCamPos = playerPos - playerForward * actualBackOffset + Vector3.up * actualUpOffset;
-        
-        // Góc xoay Pitch (X) ngẩng cao hơn và Yaw (Y) theo hướng của người chơi
-        Quaternion targetCamRot = Quaternion.Euler(actualPitch, playerBehavior.transform.eulerAngles.y, 0f);
+        // Vị trí giữa cầu (nhịp cầu vượt qua vực sâu)
+        Vector3 bridgeCenterPos = new Vector3(684.35f, 31.55f, 553.3f);
+        if (activeBridgeTrigger.mainBridgeObject != null)
+        {
+            bridgeCenterPos = activeBridgeTrigger.mainBridgeObject.transform.position;
+        }
+
+        // Hướng trục cầu từ đầu cầu nhìn sang giữa cầu và bờ bên kia (luôn thẳng hàng theo tim cầu)
+        Vector3 bridgeForward = (bridgeCenterPos - bridgeHeadPos);
+        bridgeForward.y = 0f;
+        if (bridgeForward.sqrMagnitude < 0.1f)
+        {
+            bridgeForward = new Vector3(-1f, 0f, 0f);
+        }
+        else
+        {
+            bridgeForward.Normalize();
+        }
+
+        // 2. Đặt Camera ngay trên đầu cây cầu ở trên cao nhìn xuống
+        float actualUpOffset = Mathf.Max(buildCamUpwardOffset, 28f);
+        float actualBackOffset = Mathf.Max(buildCamBackwardOffset, 8f);
+
+        Vector3 targetCamPos = bridgeHeadPos - bridgeForward * actualBackOffset + Vector3.up * actualUpOffset;
+
+        // 3. Góc nhìn của camera: Nhìn từ trên cao thẳng xuống giữa thân cầu và bờ bên kia (không bị lệch theo hướng player)
+        Vector3 lookTarget = bridgeCenterPos + Vector3.up * 2f;
+        Quaternion targetCamRot = Quaternion.LookRotation((lookTarget - targetCamPos).normalized);
 
         if (!isBuildCameraActive)
         {
