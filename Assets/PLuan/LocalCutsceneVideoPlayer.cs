@@ -646,7 +646,7 @@ public class LocalCutsceneVideoPlayer : NetworkBehaviour
 
         isCutscenePlaying = false;
 
-        // Dừng đếm giờ BGM và tắt nhạc nền nếu chưa tắt
+        // Dừng đếm giờ BGM Cutscene và khôi phục nhạc nền nhỏ cho gameplay
         if (cutsceneBgmCoroutine != null)
         {
             StopCoroutine(cutsceneBgmCoroutine);
@@ -655,7 +655,7 @@ public class LocalCutsceneVideoPlayer : NetworkBehaviour
 
         if (AudioManager.Instance != null)
         {
-            AudioManager.Instance.StopBGM();
+            AudioManager.Instance.PlayAmbientBGM(cutsceneBgmVolume, 1.5f);
         }
 
         // Dừng video phát
@@ -763,7 +763,7 @@ public class LocalCutsceneVideoPlayer : NetworkBehaviour
 
         if (AudioManager.Instance != null && !cutsceneFinished.Value)
         {
-            AudioManager.Instance.StopBGM();
+            AudioManager.Instance.PlayAmbientBGM(cutsceneBgmVolume, 1.5f);
         }
 
         // Dự phòng dọn dẹp và khôi phục an toàn nếu đối tượng bị xóa đột ngột từ Server trước khi chạy hết

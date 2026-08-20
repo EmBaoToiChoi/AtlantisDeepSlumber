@@ -2919,6 +2919,12 @@ public class BossAI : NetworkBehaviour, IFireBarrageOwner
 
         if (!battleBgmAudioSource.isPlaying)
         {
+            // Tắt nhạc nền game để nhường chỗ cho nhạc Boss
+            if (AudioManager.Instance != null)
+            {
+                AudioManager.Instance.SetBossMusicActive(true, 0.8f);
+            }
+
             battleBgmAudioSource.volume = 0f;
             battleBgmAudioSource.Play();
             if (battleBgmFadeCoroutine != null) StopCoroutine(battleBgmFadeCoroutine);
@@ -2929,6 +2935,12 @@ public class BossAI : NetworkBehaviour, IFireBarrageOwner
 
     public void StopBattleMusic(bool fade = true)
     {
+        // Khôi phục lại nhạc nền ambient game khi kết thúc chiến đấu Boss
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.SetBossMusicActive(false, 1.5f);
+        }
+
         if (battleBgmAudioSource == null || !battleBgmAudioSource.isPlaying) return;
 
         if (battleBgmFadeCoroutine != null) StopCoroutine(battleBgmFadeCoroutine);
@@ -2985,5 +2997,9 @@ public class BossAI : NetworkBehaviour, IFireBarrageOwner
     private void OnDestroy()
     {
         StopBattleMusic(false);
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.SetBossMusicActive(false, 1.0f);
+        }
     }
 }

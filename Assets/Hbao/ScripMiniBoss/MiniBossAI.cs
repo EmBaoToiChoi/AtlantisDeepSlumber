@@ -630,11 +630,21 @@ public class MiniBossAI : NetworkBehaviour, ISwordRainOwner
         if (audioType == 0)
         {
             if (audio.isPlaying) audio.Stop();
+            if (!isClone && AudioManager.Instance != null)
+            {
+                AudioManager.Instance.SetBossMusicActive(false, 1.5f);
+            }
             return;
         }
 
         AudioClip clipToPlay = (audioType == 2) ? summonSkillAudioClip : preSummonAudioClip;
         if (clipToPlay == null) return;
+
+        // Tắt nhạc nền game khi MiniBoss phát nhạc chiến đấu
+        if (!isClone && AudioManager.Instance != null)
+        {
+            AudioManager.Instance.SetBossMusicActive(true, 0.8f);
+        }
 
         if (audio.clip == clipToPlay && audio.isPlaying) return;
 
@@ -3269,6 +3279,15 @@ public class AscendingSwordProjectile : MonoBehaviour
             {
                 gameObject.SetActive(false);
             }
+        }
+    }
+
+    public override void OnDestroy()
+    {
+        base.OnDestroy();
+        if (!isClone && AudioManager.Instance != null)
+        {
+            AudioManager.Instance.SetBossMusicActive(false, 1.0f);
         }
     }
 }

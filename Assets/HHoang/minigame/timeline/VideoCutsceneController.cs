@@ -144,6 +144,12 @@ public class VideoCutsceneController : NetworkBehaviour
 
         if (objectToHide != null) objectToHide.SetActive(false);
         if (videoPlayer != null) videoPlayer.Prepare(); 
+
+        // Tắt nhạc nền game để nghe âm thanh video cutscene
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.SetCutsceneActive(true, 0.4f);
+        }
     }
 
     [ClientRpc]
@@ -199,6 +205,12 @@ public class VideoCutsceneController : NetworkBehaviour
         SetLocalPlayerCameraFollow(true);
         TogglePlayerMovement(true);
         isPlaying = false;
+
+        // Khôi phục lại nhạc nền ambient nhỏ sau khi video kết thúc
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.SetCutsceneActive(false, 1.2f);
+        }
     }
 
     private void HideObjectsAfterVideo()
@@ -404,6 +416,15 @@ public class VideoCutsceneController : NetworkBehaviour
         if (disableAfter)
         {
             targetObj.SetActive(false);
+        }
+    }
+
+    public override void OnDestroy()
+    {
+        base.OnDestroy();
+        if (isPlaying && AudioManager.Instance != null)
+        {
+            AudioManager.Instance.SetCutsceneActive(false, 1.0f);
         }
     }
 }
