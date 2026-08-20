@@ -182,6 +182,8 @@ public class MiniBossAI : NetworkBehaviour, ISwordRainOwner
     public float ActualCurrentHealth => (isStandaloneMode || isClone || !IsSpawned) ? localHealth : currentHealth.Value;
     public bool IsBossActive => (isStandaloneMode || isClone) ? localIsBossActive : isBossActive.Value;
     public bool IsDead => CurrentStateValue == MiniBossState.Dead;
+    // ISwordRainOwner: Cho FallingSwordProjectile biết boss đã chết → ngừng gây sát thương
+    public bool IsOwnerDead => IsDead || ActualCurrentHealth <= 0;
 
     public bool AreAllBossesAndClonesDead()
     {
@@ -469,7 +471,7 @@ public class MiniBossAI : NetworkBehaviour, ISwordRainOwner
             }
         };
         hitCounter.OnValueChanged += (_, _) => { if (anim != null) anim.SetTrigger(hitTrigger); };
-        dieCounter.OnValueChanged += (_, _) => { if (anim != null) anim.SetTrigger(dieTrigger); };
+        dieCounter.OnValueChanged += (_, _) => OnDieCounterChanged();
         defeatCutsceneCounter.OnValueChanged += (_, _) => OnDefeatCutsceneCounterChanged();
         enrageCounter.OnValueChanged += (_, _) => {
             if (anim != null) anim.SetTrigger(enrageTrigger);
@@ -535,7 +537,7 @@ public class MiniBossAI : NetworkBehaviour, ISwordRainOwner
                 anim.SetTrigger(attackTriggers[attackTypeSync.Value]);
         };
         hitCounter.OnValueChanged -= (_, _) => { if (anim != null) anim.SetTrigger(hitTrigger); };
-        dieCounter.OnValueChanged -= (_, _) => { if (anim != null) anim.SetTrigger(dieTrigger); };
+        dieCounter.OnValueChanged -= (_, _) => OnDieCounterChanged();
         defeatCutsceneCounter.OnValueChanged -= (_, _) => OnDefeatCutsceneCounterChanged();
         enrageCounter.OnValueChanged -= (_, _) => {
             if (anim != null) anim.SetTrigger(enrageTrigger);
@@ -2169,13 +2171,28 @@ private void Die()
         if (!isClone)
         {
             PlayBossAudioNet(0);
+        }
 
-            // Dọn sạch toàn bộ bãi gai đá đang tồn tại trên sàn đấu ngay khi MiniBoss chính bị hạ gục
-            var allSpikes = FindObjectsByType<EarthSpikesDamageZone>(FindObjectsSortMode.None);
-            foreach (var spike in allSpikes)
-            {
-                if (spike != null) Destroy(spike.gameObject);
-            }
+        // *** TRIỆT ĐỂ DỌN SẠCH TẤT CẢ ĐỐI TƯỢNG GÂY SÁT THƯƠNG CÒN SÓT LẠI TRÊN SÀN ĐẤU ***
+        // Dọn bãi gai đá (EarthSpikesDamageZone)
+        var allSpikes = FindObjectsByType<EarthSpikesDamageZone>(FindObjectsSortMode.None);
+        foreach (var spike in allSpikes)
+        {
+            if (spike != null) Destroy(spike.gameObject);
+        }
+
+        // Dọn kiếm rơi đang bay trên trời (FallingSwordProjectile) - đây là nguyên nhân chính gây mất máu sau khi boss chết
+        var allFallingSwords = FindObjectsByType<FallingSwordProjectile>(FindObjectsSortMode.None);
+        foreach (var sword in allFallingSwords)
+        {
+            if (sword != null) Destroy(sword.gameObject);
+        }
+
+        // Dọn kiếm bay vút lên trời (AscendingSwordProjectile)
+        var allAscendingSwords = FindObjectsByType<AscendingSwordProjectile>(FindObjectsSortMode.None);
+        foreach (var sword in allAscendingSwords)
+        {
+            if (sword != null) Destroy(sword.gameObject);
         }
 
         if (AgentReady) agent.isStopped = true;
@@ -2227,6 +2244,45 @@ private void Die()
 
         Debug.Log($"[MiniBossAI] {(isClone ? "Phân thân" : "Boss chính")} is dead!");
         Destroy(gameObject, isClone ? 1.5f : 5f);
+    }
+
+    /// <summary>
+    /// Callback khi dieCounter thay đổi trên mạng (Đồng bộ cái chết tới tất cả Client).
+    /// </summary>
+    private void OnDieCounterChanged()
+    {
+        if (anim != null) anim.SetTrigger(dieTrigger);
+        StopAllCoroutines();
+        localState = MiniBossState.Dead;
+        localHealth = 0f;
+
+        // Tắt toàn bộ Collider trên Client
+        var colliders = GetComponentsInChildren<Collider>();
+        foreach (var c in colliders)
+        {
+            if (c != null) c.enabled = false;
+        }
+
+        if (agent != null) agent.enabled = false;
+
+        // Dọn sạch toàn bộ các đòn đánh, bãi gai đá, kiếm rơi tồn tại trên máy Client
+        var allSpikes = FindObjectsByType<EarthSpikesDamageZone>(FindObjectsSortMode.None);
+        foreach (var spike in allSpikes)
+        {
+            if (spike != null) Destroy(spike.gameObject);
+        }
+
+        var allFallingSwords = FindObjectsByType<FallingSwordProjectile>(FindObjectsSortMode.None);
+        foreach (var sword in allFallingSwords)
+        {
+            if (sword != null) Destroy(sword.gameObject);
+        }
+
+        var allAscendingSwords = FindObjectsByType<AscendingSwordProjectile>(FindObjectsSortMode.None);
+        foreach (var sword in allAscendingSwords)
+        {
+            if (sword != null) Destroy(sword.gameObject);
+        }
     }
 
     /// <summary>
@@ -2320,6 +2376,18 @@ private void Die()
         foreach (var s in allSpikes)
         {
             if (s != null) Destroy(s.gameObject);
+        }
+
+        var allFallingSwords = FindObjectsByType<FallingSwordProjectile>(FindObjectsSortMode.None);
+        foreach (var sword in allFallingSwords)
+        {
+            if (sword != null) Destroy(sword.gameObject);
+        }
+
+        var allAscendingSwords = FindObjectsByType<AscendingSwordProjectile>(FindObjectsSortMode.None);
+        foreach (var sword in allAscendingSwords)
+        {
+            if (sword != null) Destroy(sword.gameObject);
         }
     }
 

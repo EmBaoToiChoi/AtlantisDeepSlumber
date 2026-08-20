@@ -238,10 +238,23 @@ public class BossAI : NetworkBehaviour, IFireBarrageOwner
     /// <summary>HP hiện tại đúng trong cả Standalone lẫn Network mode — dùng cho HP bar polling.</summary>
     public float ActualCurrentHealth => (isStandaloneMode || !IsSpawned) ? localHealth : currentHealth.Value;
 
+    [ServerRpc(RequireOwnership = false)]
+    public void ActivateBossServerRpc()
+    {
+        ActivateBoss();
+    }
+
     public void ActivateBoss()
     {
         bool auth = isStandaloneMode || (IsNetworkActive && IsServer);
-        if (!auth) return;
+        if (!auth)
+        {
+            if (IsSpawned && !IsServer)
+            {
+                ActivateBossServerRpc();
+            }
+            return;
+        }
 
         if (isStandaloneMode)
             localIsBossActive = true;
