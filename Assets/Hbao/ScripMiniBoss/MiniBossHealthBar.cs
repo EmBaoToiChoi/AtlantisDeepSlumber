@@ -209,6 +209,11 @@ public class MiniBossHealthBar : MonoBehaviour
     /// </summary>
     private bool AreAllBossesAndClonesDead()
     {
+        if (boss != null && boss.allMiniBossEntitiesDeadNet.Value)
+        {
+            return true;
+        }
+
         // 1. Boss chính còn sống → chưa ẩn UI
         if (boss != null && boss.gameObject.activeInHierarchy && !boss.IsDead && boss.ActualCurrentHealth > 0)
         {
@@ -219,25 +224,32 @@ public class MiniBossHealthBar : MonoBehaviour
         bool hasClones = (boss != null && boss.hasSummonedClones) || clonesDiscovered || clone1AI != null || clone2AI != null;
         if (hasClones)
         {
-            if (clone1AI != null && clone1AI.gameObject.activeInHierarchy && !clone1AI.IsDead && clone1AI.ActualCurrentHealth > 0)
+            if (boss != null && boss.IsSpawned && !boss.isStandaloneMode)
             {
-                return false;
+                if (!boss.clone1DeadNet.Value || !boss.clone2DeadNet.Value)
+                    return false;
             }
-
-            if (clone2AI != null && clone2AI.gameObject.activeInHierarchy && !clone2AI.IsDead && clone2AI.ActualCurrentHealth > 0)
+            else
             {
-                return false;
-            }
-
-            // Quét tìm trong scene nếu biến tham chiếu bị lạc
-            var allBosses = FindObjectsByType<MiniBossAI>(FindObjectsSortMode.None);
-            foreach (var b in allBosses)
-            {
-                if (b != null && b != boss && b.isClone && b.gameObject.activeInHierarchy)
+                if (clone1AI != null && clone1AI.gameObject.activeInHierarchy && !clone1AI.IsDead && clone1AI.ActualCurrentHealth > 0)
                 {
-                    if (!b.IsDead && b.ActualCurrentHealth > 0)
+                    return false;
+                }
+
+                if (clone2AI != null && clone2AI.gameObject.activeInHierarchy && !clone2AI.IsDead && clone2AI.ActualCurrentHealth > 0)
+                {
+                    return false;
+                }
+
+                var allBosses = FindObjectsByType<MiniBossAI>(FindObjectsSortMode.None);
+                foreach (var b in allBosses)
+                {
+                    if (b != null && b != boss && b.isClone && b.gameObject.activeInHierarchy)
                     {
-                        return false;
+                        if (!b.IsDead && b.ActualCurrentHealth > 0)
+                        {
+                            return false;
+                        }
                     }
                 }
             }
@@ -329,8 +341,15 @@ public class MiniBossHealthBar : MonoBehaviour
     {
         if (clonesSubContainer == null) return;
 
-        // Chỉ hiển thị thanh máu phân thân khi đã triệu hồi và tìm thấy ít nhất 1 phân thân
-        bool hasAnyClone = (clone1AI != null && clone1AI.gameObject.activeInHierarchy) ||
+        if (boss != null && (boss.allMiniBossEntitiesDeadNet.Value || !boss.IsBossActive))
+        {
+            if (clonesSubContainer.style.display != DisplayStyle.None)
+                clonesSubContainer.style.display = DisplayStyle.None;
+            return;
+        }
+
+        bool hasAnyClone = (boss != null && boss.hasSummonedClones) ||
+                           (clone1AI != null && clone1AI.gameObject.activeInHierarchy) ||
                            (clone2AI != null && clone2AI.gameObject.activeInHierarchy);
 
         if (!hasAnyClone)
@@ -343,24 +362,50 @@ public class MiniBossHealthBar : MonoBehaviour
         if (clonesSubContainer.style.display != DisplayStyle.Flex)
             clonesSubContainer.style.display = DisplayStyle.Flex;
 
+        float c1Hp = 0f;
+        bool c1Dead = false;
+        float c2Hp = 0f;
+        bool c2Dead = false;
+
+        if (boss != null && boss.IsSpawned && !boss.isStandaloneMode)
+        {
+            c1Hp = boss.clone1HealthNet.Value;
+            c1Dead = boss.clone1DeadNet.Value || c1Hp <= 0;
+
+            c2Hp = boss.clone2HealthNet.Value;
+            c2Dead = boss.clone2DeadNet.Value || c2Hp <= 0;
+        }
+        else
+        {
+            c1Hp = clone1AI != null ? clone1AI.ActualCurrentHealth : 0f;
+            c1Dead = clone1AI == null || clone1AI.IsDead || c1Hp <= 0;
+
+            c2Hp = clone2AI != null ? clone2AI.ActualCurrentHealth : 0f;
+            c2Dead = clone2AI == null || clone2AI.IsDead || c2Hp <= 0;
+        }
+
+        float cloneMaxHp = (boss != null) ? (boss.phase1MaxHealth * 0.45f) : 315f;
+        if (cloneMaxHp <= 0) cloneMaxHp = 315f;
+
         // Update Clone 1
-        UpdateSingleCloneBar(clone1AI, clone1ProgressBar, clone1YellowBar, clone1NameLabel, clone1HpTextLabel,
-            ref clone1DisplayedHealth, ref clone1YellowHealth, ref clone1YellowDrainTimer, "Phân Thân 1");
+        UpdateSingleCloneBarExplicit(clone1ProgressBar, clone1YellowBar, clone1NameLabel, clone1HpTextLabel,
+            c1Hp, cloneMaxHp, c1Dead, ref clone1DisplayedHealth, ref clone1YellowHealth, ref clone1YellowDrainTimer, "Phân Thân 1");
 
         // Update Clone 2
-        UpdateSingleCloneBar(clone2AI, clone2ProgressBar, clone2YellowBar, clone2NameLabel, clone2HpTextLabel,
-            ref clone2DisplayedHealth, ref clone2YellowHealth, ref clone2YellowDrainTimer, "Phân Thân 2");
+        UpdateSingleCloneBarExplicit(clone2ProgressBar, clone2YellowBar, clone2NameLabel, clone2HpTextLabel,
+            c2Hp, cloneMaxHp, c2Dead, ref clone2DisplayedHealth, ref clone2YellowHealth, ref clone2YellowDrainTimer, "Phân Thân 2");
     }
 
-    private void UpdateSingleCloneBar(MiniBossAI cloneAI, VisualElement cloneProgress, VisualElement cloneYellow,
+    private void UpdateSingleCloneBarExplicit(VisualElement cloneProgress, VisualElement cloneYellow,
         Label cloneName, Label cloneHpText,
+        float actualHp, float maxHp, bool isDead,
         ref float cloneDisplayed, ref float cloneYellowHp, ref float cloneYellowTimer,
         string defaultName)
     {
         if (cloneProgress == null || cloneYellow == null) return;
 
         // Phân thân đã chết hoặc bị hủy
-        if (cloneAI == null || !cloneAI.gameObject.activeInHierarchy || cloneAI.IsDead || cloneAI.ActualCurrentHealth <= 0)
+        if (isDead || actualHp <= 0)
         {
             cloneProgress.style.width = Length.Percent(0);
             cloneYellow.style.width = Length.Percent(0);
@@ -368,11 +413,6 @@ public class MiniBossHealthBar : MonoBehaviour
             if (cloneName != null) cloneName.text = defaultName + " ☠";
             return;
         }
-
-        float maxHp = cloneAI.maxHealth;
-        if (maxHp <= 0f) maxHp = 225f;
-
-        float actualHp = cloneAI.ActualCurrentHealth;
 
         if (cloneDisplayed < 0f)
         {

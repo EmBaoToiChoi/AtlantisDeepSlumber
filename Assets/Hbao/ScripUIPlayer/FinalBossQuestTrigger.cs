@@ -317,7 +317,9 @@ public class FinalBossQuestTrigger : NetworkBehaviour, IQuestTrigger
                     if (IsServer)
                     {
                         isQuestActive.Value = true;
-                        Debug.Log($"[FinalBossQuestTrigger Server] Người chơi '{other.gameObject.name}' chạm Trigger - Kích hoạt nhiệm vụ cho toàn bộ mạng!");
+                        if (finalBoss == null) finalBoss = FindFirstObjectByType<FinalBossAI>();
+                        if (finalBoss != null) finalBoss.ActivateBoss();
+                        Debug.Log($"[FinalBossQuestTrigger Server] Người chơi '{other.gameObject.name}' chạm Trigger - Kích hoạt nhiệm vụ và kích hoạt Final Boss cho toàn bộ mạng!");
                     }
                     else
                     {
@@ -330,7 +332,9 @@ public class FinalBossQuestTrigger : NetworkBehaviour, IQuestTrigger
                 hasTriggeredQuest = true;
                 lastBossDefeatedCount = -1;
                 UpdateQuestProgressUI();
-                Debug.Log("[FinalBossQuestTrigger Offline] Người chơi chạm Trigger - Kích hoạt nhiệm vụ.");
+                if (finalBoss == null) finalBoss = FindFirstObjectByType<FinalBossAI>();
+                if (finalBoss != null) finalBoss.ActivateBoss();
+                Debug.Log("[FinalBossQuestTrigger Offline] Người chơi chạm Trigger - Kích hoạt nhiệm vụ và kích hoạt Final Boss.");
             }
         }
     }
@@ -341,7 +345,9 @@ public class FinalBossQuestTrigger : NetworkBehaviour, IQuestTrigger
         if (!isQuestActive.Value)
         {
             isQuestActive.Value = true;
-            Debug.Log("[FinalBossQuestTrigger ServerRpc] Client yêu cầu kích hoạt nhiệm vụ Tiêu diệt Vua cho toàn bộ mạng!");
+            if (finalBoss == null) finalBoss = FindFirstObjectByType<FinalBossAI>();
+            if (finalBoss != null) finalBoss.ActivateBoss();
+            Debug.Log("[FinalBossQuestTrigger ServerRpc] Client yêu cầu kích hoạt nhiệm vụ Tiêu diệt Vua & Final Boss cho toàn bộ mạng!");
         }
     }
 

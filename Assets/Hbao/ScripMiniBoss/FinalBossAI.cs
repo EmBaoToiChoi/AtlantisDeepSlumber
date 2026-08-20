@@ -546,9 +546,20 @@ public class FinalBossAI : NetworkBehaviour
         if (!auth) return;
 
         if (isStandaloneMode)
+        {
             localIsBossActive = true;
+            localIsHUDVisible = true;
+        }
         else
+        {
             isBossActive.Value = true;
+            isHUDVisible.Value = true;
+        }
+
+        if (CurrentStateValue == FinalBossState.Sitting)
+        {
+            ChangeState(FinalBossState.JumpDown);
+        }
 
         Debug.Log("[FinalBossAI] Final Boss has been activated! Combat start!");
     }
@@ -1304,23 +1315,19 @@ public class FinalBossAI : NetworkBehaviour
 
         public void Update()
         {
-            if (boss.startActiveWithoutMiniboss)
+            if (boss.startActiveWithoutMiniboss || boss.IsBossActive || boss.IsHUDVisible)
             {
                 boss.ActivateBoss();
-                boss.SetHUDVisible(true);
-                boss.ChangeState(FinalBossState.JumpDown);
                 return;
             }
 
             bool silasDead = boss.bossMiniboss != null && boss.bossMiniboss.IsDead;
-            bool rakanDead = boss.miniBoss != null && boss.miniBoss.IsDead;
+            bool rakanDead = boss.miniBoss != null && (boss.miniBoss.IsDead || boss.miniBoss.allMiniBossEntitiesDeadNet.Value);
 
-            // When Silas dies (or Rakan dies if configured), show HUD and jump down immediately!
+            // When Silas dies or Rakan dies, show HUD and jump down immediately!
             if (silasDead || rakanDead)
             {
                 boss.ActivateBoss();
-                boss.SetHUDVisible(true);
-                boss.ChangeState(FinalBossState.JumpDown);
             }
         }
 
