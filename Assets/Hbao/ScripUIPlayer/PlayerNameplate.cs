@@ -127,6 +127,16 @@ public class PlayerNameplate : MonoBehaviour
             return;
         }
 
+        // TÍNH NĂNG: Tự động ẩn bảng tên khi đang trong trận chiến với MiniBoss, BossAI hoặc FinalBoss
+        if (IsInBossCombat())
+        {
+            if (container != null && container.style.display != DisplayStyle.None)
+            {
+                container.style.display = DisplayStyle.None;
+            }
+            return;
+        }
+
         // Cập nhật tên hiển thị
         nameLabel.text = playerTarget.DisplayName;
 
@@ -196,5 +206,78 @@ public class PlayerNameplate : MonoBehaviour
         {
             container.style.display = DisplayStyle.Flex;
         }
+    }
+
+    // ─── TỰ ĐỘNG KIỂM TRA TRẠNG THÁI GIAO TRANH VỚI BOSS ───
+    private static MiniBossAI cachedMiniBoss;
+    private static BossAI cachedBossAI;
+    private static FinalBossAI cachedFinalBoss;
+    private static float nextBossCheckTime = 0f;
+
+    /// <summary>
+    /// Kiểm tra xem người chơi có đang trong trận đánh với MiniBoss, BossAI (Silas), hoặc FinalBoss (King Atlantis) hay không.
+    /// Tự động đồng bộ hoàn toàn qua NetworkVariables trên mọi máy Client & Host.
+    /// </summary>
+    public static bool IsInBossCombat()
+    {
+        float now = Time.time;
+        if (now >= nextBossCheckTime)
+        {
+            nextBossCheckTime = now + 0.35f; // Tần suất quét 0.35s/lần để tiết kiệm hiệu năng
+
+            if (cachedMiniBoss == null || !cachedMiniBoss.gameObject.activeInHierarchy || cachedMiniBoss.isClone)
+            {
+                var allMiniBosses = Object.FindObjectsByType<MiniBossAI>(FindObjectsSortMode.None);
+                foreach (var b in allMiniBosses)
+                {
+                    if (b != null && b.gameObject.activeInHierarchy && !b.isClone)
+                    {
+                        cachedMiniBoss = b;
+                        break;
+                    }
+                }
+            }
+
+            if (cachedBossAI == null || !cachedBossAI.gameObject.activeInHierarchy)
+            {
+                cachedBossAI = Object.FindFirstObjectByType<BossAI>();
+            }
+
+            if (cachedFinalBoss == null || !cachedFinalBoss.gameObject.activeInHierarchy)
+            {
+                cachedFinalBoss = Object.FindFirstObjectByType<FinalBossAI>();
+            }
+        }
+
+        // 1. Kiểm tra trận đấu với MiniBoss (Rakan - Trùm Phụ và các phân thân) - Đồng bộ mạng qua NetworkVariable
+        if (cachedMiniBoss != null && cachedMiniBoss.gameObject.activeInHierarchy)
+        {
+            if (cachedMiniBoss.IsBossActive && !cachedMiniBoss.AreAllBossesAndClonesDead())
+            {
+                return true;
+            }
+        }
+
+        // 2. Kiểm tra trận đấu với BossAI (Silas) - Đồng bộ mạng qua isBossActive NetworkVariable
+        if (cachedBossAI != null && cachedBossAI.gameObject.activeInHierarchy)
+        {
+            if (cachedBossAI.IsBossActive && !cachedBossAI.IsDead && cachedBossAI.ActualCurrentHealth > 0)
+            {
+                return true;
+            }
+        }
+
+        // 3. Kiểm tra trận đấu với FinalBoss (King Atlantis) - Đồng bộ mạng qua isBossActive & currentState NetworkVariables
+        if (cachedFinalBoss != null && cachedFinalBoss.gameObject.activeInHierarchy)
+        {
+            if (cachedFinalBoss.IsBossActive && !cachedFinalBoss.IsDead && 
+                cachedFinalBoss.CurrentStateValue != FinalBossAI.FinalBossState.Sitting && 
+                cachedFinalBoss.ActualCurrentHealth > 0)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
