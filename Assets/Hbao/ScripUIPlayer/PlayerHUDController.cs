@@ -262,11 +262,11 @@ public class PlayerHUDController : MonoBehaviour
 
     [Header("Coop Build Camera Offset Settings")]
     [Tooltip("Khoảng cách kéo lùi camera ra phía sau người chơi (Z)")]
-    public float buildCamBackwardOffset = 21f;
+    public float buildCamBackwardOffset = 32f;
     [Tooltip("Chiều cao camera hướng lên trên (Y)")]
-    public float buildCamUpwardOffset = 37f;
-    [Tooltip("Góc xoay Pitch (X) của camera khi xây cầu")]
-    public float buildCamPitch = 60.222f;
+    public float buildCamUpwardOffset = 65f;
+    [Tooltip("Góc xoay Pitch (X) của camera khi xây cầu (Góc thấp hơn để nhìn ngẩng cao và thoáng hơn)")]
+    public float buildCamPitch = 45f;
 
     [Header("Tree Fall Camera Settings")]
     [Tooltip("Khoảng cách từ camera đến cây khi cây ngã")]
@@ -4554,11 +4554,16 @@ public class PlayerHUDController : MonoBehaviour
         if (activeBridgeTrigger == null) return;
         Vector3 bridgePos = activeBridgeTrigger.transform.position;
 
+        // Tự động nâng cấp nếu các giá trị serialized trong Scene cũ thấp hơn mức tối ưu
+        float actualUpOffset = Mathf.Max(buildCamUpwardOffset, 65f);
+        float actualBackOffset = Mathf.Max(buildCamBackwardOffset, 32f);
+        float actualPitch = (buildCamPitch > 55f) ? 45f : buildCamPitch; // Đổi góc 60 độ dốc cũ sang 45 độ nhìn ngẩng cao và thoáng hơn
+
         // Vị trí camera trên cao nhìn xuống cầu sử dụng các offset có thể cấu hình
-        Vector3 targetCamPos = playerPos - playerForward * buildCamBackwardOffset + Vector3.up * buildCamUpwardOffset;
+        Vector3 targetCamPos = playerPos - playerForward * actualBackOffset + Vector3.up * actualUpOffset;
         
-        // Cố định góc xoay Pitch (X) là 60.222 độ, xoay Yaw (Y) theo hướng sau lưng của người chơi
-        Quaternion targetCamRot = Quaternion.Euler(buildCamPitch, playerBehavior.transform.eulerAngles.y, 0f);
+        // Góc xoay Pitch (X) ngẩng cao hơn và Yaw (Y) theo hướng của người chơi
+        Quaternion targetCamRot = Quaternion.Euler(actualPitch, playerBehavior.transform.eulerAngles.y, 0f);
 
         if (!isBuildCameraActive)
         {
