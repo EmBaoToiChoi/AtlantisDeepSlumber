@@ -159620,7 +159620,7 @@ MonoBehaviour:
   inactiveDissolveValue: 1
   useColorEmission: 0
   colorPropertyName: _EmissionColor
-  activeColor: {r: 2, g: 0.45, b: 0.05, a: 1}
+  activeColor: {r: 0.28053778, g: 2.670157, b: 0, a: 1}
   activeEffectObject: {fileID: 0}
   transitionDuration: 5
   OnActivated:
