@@ -49,6 +49,7 @@
     align-self: center;
     margin-left: 0 !important;
     margin-right: 0 !important;
+    margin-top: -170px !important;
     width: 720px;
     height: 610px !important;
     max-width: 92%;
@@ -73,6 +74,7 @@
     align-self: center;
     margin-left: 0 !important;
     margin-right: 0 !important;
+    margin-top: -170px !important;
     width: 720px;
     height: 700px !important;
     max-width: 92%;
@@ -97,6 +99,7 @@
     align-self: center;
     margin-left: 0 !important;
     margin-right: 0 !important;
+    margin-top: -170px !important;
     width: 1080px;
     height: 700px !important;
     max-width: 94%;
@@ -121,7 +124,7 @@
     align-self: center;
     margin-left: 0 !important;
     margin-right: 0 !important;
-    margin-top: -150px !important;
+    margin-top: -170px !important;
     width: 1080px;
     height: 700px !important;
     max-width: 94%;
