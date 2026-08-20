@@ -89,6 +89,11 @@ public class MiniBossHealthBar : MonoBehaviour
         {
             var root = uiDocument.rootVisualElement;
             rootContainer = root.Q<VisualElement>("miniboss-hud-container");
+            if (rootContainer != null)
+            {
+                rootContainer.style.display = DisplayStyle.None;
+            }
+
             progressBar = root.Q<VisualElement>("miniboss-hp-progress-bar");
             yellowBar = root.Q<VisualElement>("miniboss-hp-yellow-bar");
             nameLabel = root.Q<Label>("miniboss-name");
@@ -96,6 +101,10 @@ public class MiniBossHealthBar : MonoBehaviour
 
             // Clone sub-container
             clonesSubContainer = root.Q<VisualElement>("clones-sub-container");
+            if (clonesSubContainer != null)
+            {
+                clonesSubContainer.style.display = DisplayStyle.None;
+            }
 
             // Clone 1
             clone1ProgressBar = root.Q<VisualElement>("clone1-hp-progress-bar");
@@ -162,9 +171,9 @@ public class MiniBossHealthBar : MonoBehaviour
     private void InitBossHealthAndName()
     {
         // Ẩn HUD mặc định cho tới khi Player đi vào Trigger Box kích hoạt Boss (IsBossActive == true)
-        if (boss == null || !boss.IsBossActive || boss.IsDead)
+        if (boss == null || !boss.IsBossActive || boss.IsDead || boss.ActualCurrentHealth <= 0 || AreAllBossesAndClonesDead())
         {
-            if (rootContainer != null) rootContainer.style.display = DisplayStyle.None;
+            HideUI();
             return;
         }
 
@@ -201,6 +210,11 @@ public class MiniBossHealthBar : MonoBehaviour
         {
             rootContainer.style.display = DisplayStyle.None;
         }
+        else if (uiDocument != null && uiDocument.rootVisualElement != null)
+        {
+            var r = uiDocument.rootVisualElement.Q<VisualElement>("miniboss-hud-container");
+            if (r != null) r.style.display = DisplayStyle.None;
+        }
     }
 
     /// <summary>
@@ -209,22 +223,31 @@ public class MiniBossHealthBar : MonoBehaviour
     /// </summary>
     private bool AreAllBossesAndClonesDead()
     {
-        if (boss != null && boss.allMiniBossEntitiesDeadNet.Value)
+        if (boss == null)
+        {
+            // Kiểm tra xem có bất kỳ MiniBossAI nào trong scene không
+            var anyBoss = FindFirstObjectByType<MiniBossAI>();
+            if (anyBoss == null) return true;
+            boss = anyBoss.isClone ? null : anyBoss;
+            if (boss == null) return true;
+        }
+
+        if (boss.allMiniBossEntitiesDeadNet.Value)
         {
             return true;
         }
 
         // 1. Boss chính còn sống → chưa ẩn UI
-        if (boss != null && boss.gameObject.activeInHierarchy && !boss.IsDead && boss.ActualCurrentHealth > 0)
+        if (boss.gameObject.activeInHierarchy && !boss.IsDead && boss.ActualCurrentHealth > 0)
         {
             return false;
         }
 
         // 2. Nếu boss đã triệu hồi phân thân hoặc có phân thân trong Scene:
-        bool hasClones = (boss != null && boss.hasSummonedClones) || clonesDiscovered || clone1AI != null || clone2AI != null;
+        bool hasClones = boss.hasSummonedClones || clonesDiscovered || clone1AI != null || clone2AI != null;
         if (hasClones)
         {
-            if (boss != null && boss.IsSpawned && !boss.isStandaloneMode)
+            if (boss.IsSpawned && !boss.isStandaloneMode)
             {
                 if (!boss.clone1DeadNet.Value || !boss.clone2DeadNet.Value)
                     return false;
@@ -293,19 +316,17 @@ public class MiniBossHealthBar : MonoBehaviour
             FindMainBoss();
         }
 
-        // 3. CHỈ HIỂN THỊ HUD khi Main Boss tồn tại, active qua trigger box (IsBossActive == true)
-        if (boss == null || !boss.IsBossActive)
+        // 3. CHỈ HIỂN THỊ HUD khi Main Boss tồn tại, active qua trigger box (IsBossActive == true) và còn sống
+        if (boss == null || !boss.IsBossActive || boss.IsDead || boss.ActualCurrentHealth <= 0)
         {
             HideUI();
             return;
         }
 
-        // 4. CHỈ ẨN UI KHI CẢ BOSS LẪN 2 PHÂN THÂN ĐỀU ĐÃ CHẾT → Tắt luôn script để hoàn toàn không hiện lại
+        // 4. CHỈ ẨN UI KHI CẢ BOSS LẪN 2 PHÂN THÂN ĐỀU ĐÃ CHẾT
         if (AreAllBossesAndClonesDead())
         {
             HideUI();
-            enabled = false; // Tắt hẳn script để không bao giờ hiện lại UI Trùm Phụ nữa
-            Debug.Log("[MiniBossHealthBar] Tất cả MiniBoss đã chết hoàn toàn → Ẩn UI và tắt script vĩnh viễn!");
             return;
         }
 

@@ -1,5 +1,6 @@
 /* Container chính nằm trên cao chính giữa màn hình */
 .boss-hud-container {
+    display: none;
     position: absolute;
     top: 20px;
     left: 50%;

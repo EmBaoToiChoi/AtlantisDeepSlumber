@@ -1,5 +1,6 @@
 /* Premium Final Boss HUD Container at top center */
 .finalboss-hud-container {
+    display: none;
     position: absolute;
     top: 25px;
     left: 50%;

@@ -101,13 +101,32 @@ public class FinalBossHealthBar : MonoBehaviour
 
     private void HidePreviousBossHUDs()
     {
-        var silasHUDs = FindObjectsByType<BossHealthBar>(FindObjectsSortMode.None);
+        var allUIDocs = FindObjectsByType<UIDocument>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        foreach (var doc in allUIDocs)
+        {
+            if (doc != null && doc.rootVisualElement != null)
+            {
+                var mbHud = doc.rootVisualElement.Q<VisualElement>("miniboss-hud-container");
+                if (mbHud != null && mbHud.style.display != DisplayStyle.None)
+                {
+                    mbHud.style.display = DisplayStyle.None;
+                }
+
+                var bossHud = doc.rootVisualElement.Q<VisualElement>("boss-hud-container");
+                if (bossHud != null && bossHud.style.display != DisplayStyle.None)
+                {
+                    bossHud.style.display = DisplayStyle.None;
+                }
+            }
+        }
+
+        var silasHUDs = FindObjectsByType<BossHealthBar>(FindObjectsInactive.Include, FindObjectsSortMode.None);
         foreach (var hud in silasHUDs)
         {
             if (hud != null) hud.HideUI();
         }
 
-        var rakanHUDs = FindObjectsByType<MiniBossHealthBar>(FindObjectsSortMode.None);
+        var rakanHUDs = FindObjectsByType<MiniBossHealthBar>(FindObjectsInactive.Include, FindObjectsSortMode.None);
         foreach (var hud in rakanHUDs)
         {
             if (hud != null) hud.HideUI();
