@@ -106,7 +106,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 681f98ebabdd7ec41a39ec2dfb8e1de1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  heightOffset: 3.7
+  heightOffset: 0
 --- !u!1 &2195400984766458075
 GameObject:
   m_ObjectHideFlags: 0
@@ -261,7 +261,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  GlobalObjectIdHash: 184724721
+  GlobalObjectIdHash: 230630563
   InScenePlacedSourceGlobalObjectIdHash: 230630563
   DeferredDespawnTick: 0
   Ownership: 1
@@ -1017,6 +1017,10 @@ MonoBehaviour:
   maxScanRadius: 70
   highlightDuration: 3
   scanWavePrefab: {fileID: 4851665612577618193, guid: 3597beb8cefe5bb448eb1915e81f35b1, type: 3}
+  waveScaleMultiplier: 1
+  waveHeightOffset: 1
+  autoLoopParticles: 1
+  hideHitSubEffects: 1
 --- !u!114 &8600861756046183746
 MonoBehaviour:
   m_ObjectHideFlags: 0
