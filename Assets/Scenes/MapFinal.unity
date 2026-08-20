@@ -20,11 +20,11 @@ RenderSettings:
   m_FogDensity: 0.0001
   m_LinearFogStart: 0
   m_LinearFogEnd: 11000
-  m_AmbientSkyColor: {r: 0.20799999, g: 0.221, b: 0.28599998, a: 1.3}
-  m_AmbientEquatorColor: {r: 0.16899998, g: 0.13, b: 0.103999995, a: 1.3}
-  m_AmbientGroundColor: {r: 0.077999994, g: 0.077999994, b: 0.077999994, a: 1.3}
-  m_AmbientIntensity: 1.3
-  m_AmbientMode: 1
+  m_AmbientSkyColor: {r: 0.42, g: 0.48, b: 0.58, a: 1}
+  m_AmbientEquatorColor: {r: 0.35, g: 0.35, b: 0.38, a: 1}
+  m_AmbientGroundColor: {r: 0.24, g: 0.24, b: 0.26, a: 1}
+  m_AmbientIntensity: 0.5
+  m_AmbientMode: 0
   m_SubtractiveShadowColor: {r: 0.42, g: 0.478, b: 0.627, a: 1}
   m_SkyboxMaterial: {fileID: 2100000, guid: 6c39021dc5fd2364f94d67735c47092a, type: 2}
   m_HaloStrength: 0.5
@@ -2323,6 +2323,8 @@ MonoBehaviour:
   videoUI: {fileID: 123444705}
   blackScreenUI: {fileID: 521522776}
   objectToHide: {fileID: 213304978}
+  objectToHideAfterVideo: {fileID: 0}
+  objectsToHideAfterVideo: []
   safeZone: {fileID: 2138483519}
   playerSpots:
   - {fileID: 1875619655}
@@ -7803,18 +7805,18 @@ Light:
   serializedVersion: 11
   m_Type: 1
   m_Color: {r: 0.95, g: 0.92, b: 0.85, a: 1}
-  m_Intensity: 1.2
+  m_Intensity: 1.18
   m_Range: 10
   m_SpotAngle: 30
   m_InnerSpotAngle: 21.802082
   m_CookieSize: 10
   m_Shadows:
-    m_Type: 2
+    m_Type: 1
     m_Resolution: -1
     m_CustomResolution: -1
-    m_Strength: 1
-    m_Bias: 0.01
-    m_NormalBias: 0
+    m_Strength: 0.75
+    m_Bias: 0.05
+    m_NormalBias: 0.4
     m_NearPlane: 0.1
     m_CullingMatrixOverride:
       e00: 1
@@ -86829,6 +86831,8 @@ MonoBehaviour:
   videoUI: {fileID: 123444705}
   blackScreenUI: {fileID: 521522776}
   objectToHide: {fileID: 213304978}
+  objectToHideAfterVideo: {fileID: 0}
+  objectsToHideAfterVideo: []
   safeZone: {fileID: 2138483519}
   playerSpots:
   - {fileID: 1071002085}
@@ -207561,6 +207565,8 @@ MonoBehaviour:
   videoUI: {fileID: 123444705}
   blackScreenUI: {fileID: 521522776}
   objectToHide: {fileID: 213304978}
+  objectToHideAfterVideo: {fileID: 0}
+  objectsToHideAfterVideo: []
   safeZone: {fileID: 2138483519}
   playerSpots:
   - {fileID: 2137409691}
@@ -210755,6 +210761,8 @@ MonoBehaviour:
   videoUI: {fileID: 123444705}
   blackScreenUI: {fileID: 521522776}
   objectToHide: {fileID: 213304978}
+  objectToHideAfterVideo: {fileID: 0}
+  objectsToHideAfterVideo: []
   safeZone: {fileID: 2138483519}
   playerSpots:
   - {fileID: 727448203}
@@ -235399,6 +235407,8 @@ MonoBehaviour:
   cutsceneBgmVolume: 0.25
   cutsceneBgmDuration: 55
   backgroundColor: {r: 0, g: 0, b: 0, a: 1}
+  objectToHide: {fileID: 0}
+  objectsToHide: []
 --- !u!114 &987162362
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -238064,6 +238074,8 @@ MonoBehaviour:
   videoUI: {fileID: 123444705}
   blackScreenUI: {fileID: 521522776}
   objectToHide: {fileID: 213304978}
+  objectToHideAfterVideo: {fileID: 0}
+  objectsToHideAfterVideo: []
   safeZone: {fileID: 2138483519}
   playerSpots:
   - {fileID: 977866779}
@@ -242403,6 +242415,8 @@ MonoBehaviour:
   videoUI: {fileID: 123444705}
   blackScreenUI: {fileID: 521522776}
   objectToHide: {fileID: 213304978}
+  objectToHideAfterVideo: {fileID: 0}
+  objectsToHideAfterVideo: []
   safeZone: {fileID: 2138483519}
   playerSpots:
   - {fileID: 1615811352}
@@ -257600,6 +257614,103 @@ MeshCollider:
   m_Convex: 1
   m_CookingOptions: 30
   m_Mesh: {fileID: -129036320116003622, guid: 52084cfb152084744ae9c81c8cb2964c, type: 3}
+--- !u!1 &1114744751
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1114744753}
+  - component: {fileID: 1114744752}
+  m_Layer: 0
+  m_Name: Player_Runtime_AuraLight
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!108 &1114744752
+Light:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1114744751}
+  m_Enabled: 0
+  serializedVersion: 11
+  m_Type: 2
+  m_Color: {r: 1, g: 0.95, b: 0.88, a: 1}
+  m_Intensity: 1
+  m_Range: 15
+  m_SpotAngle: 30
+  m_InnerSpotAngle: 21.80208
+  m_CookieSize: 10
+  m_Shadows:
+    m_Type: 0
+    m_Resolution: -1
+    m_CustomResolution: -1
+    m_Strength: 1
+    m_Bias: 0.05
+    m_NormalBias: 0.4
+    m_NearPlane: 0.2
+    m_CullingMatrixOverride:
+      e00: 1
+      e01: 0
+      e02: 0
+      e03: 0
+      e10: 0
+      e11: 1
+      e12: 0
+      e13: 0
+      e20: 0
+      e21: 0
+      e22: 1
+      e23: 0
+      e30: 0
+      e31: 0
+      e32: 0
+      e33: 1
+    m_UseCullingMatrixOverride: 0
+  m_Cookie: {fileID: 0}
+  m_DrawHalo: 0
+  m_Flare: {fileID: 0}
+  m_RenderMode: 1
+  m_CullingMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_RenderingLayerMask: 1
+  m_Lightmapping: 4
+  m_LightShadowCasterMode: 0
+  m_AreaSize: {x: 1, y: 1}
+  m_BounceIntensity: 1
+  m_ColorTemperature: 6570
+  m_UseColorTemperature: 0
+  m_BoundingSphereOverride: {x: 0, y: 0, z: 0, w: 0}
+  m_UseBoundingSphereOverride: 0
+  m_UseViewFrustumForShadowCasterCull: 1
+  m_ForceVisible: 0
+  m_ShadowRadius: 0
+  m_ShadowAngle: 0
+  m_LightUnit: 1
+  m_LuxAtDistance: 1
+  m_EnableSpotReflector: 1
+--- !u!4 &1114744753
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1114744751}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &1115015305
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -275370,6 +275481,8 @@ MonoBehaviour:
   videoUI: {fileID: 123444705}
   blackScreenUI: {fileID: 521522776}
   objectToHide: {fileID: 213304978}
+  objectToHideAfterVideo: {fileID: 772433908}
+  objectsToHideAfterVideo: []
   safeZone: {fileID: 2138483519}
   playerSpots:
   - {fileID: 2145294592}
@@ -320797,6 +320910,8 @@ MonoBehaviour:
   videoUI: {fileID: 123444705}
   blackScreenUI: {fileID: 521522776}
   objectToHide: {fileID: 213304978}
+  objectToHideAfterVideo: {fileID: 0}
+  objectsToHideAfterVideo: []
   safeZone: {fileID: 2138483519}
   playerSpots:
   - {fileID: 2110565550}
@@ -348395,6 +348510,8 @@ MonoBehaviour:
   videoUI: {fileID: 123444705}
   blackScreenUI: {fileID: 521522776}
   objectToHide: {fileID: 213304978}
+  objectToHideAfterVideo: {fileID: 0}
+  objectsToHideAfterVideo: []
   safeZone: {fileID: 2138483519}
   playerSpots:
   - {fileID: 739779407}
@@ -391755,6 +391872,59 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 462418, guid: 9f35541b213a65340a8e088b7f3ab551, type: 3}
   m_PrefabInstance: {fileID: 1721209385}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &1721352068
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1721352070}
+  - component: {fileID: 1721352069}
+  m_Layer: 0
+  m_Name: InGameLightingAndTVManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1721352069
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1721352068}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 00dc7861477927d4684e0f3c61985398, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  enablePlayerLight: 0
+  playerLightIntensity: 1
+  playerLightRange: 15
+  playerLightColor: {r: 1, g: 0.95, b: 0.88, a: 1}
+  playerLightOffset: {x: 0, y: 1.8, z: 0}
+  tvBoostMode: 0
+  tvBoostMultiplier: 1.45
+  globalBrightnessMultiplier: 1
+  showNotifications: 1
+--- !u!4 &1721352070
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1721352068}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &1721445532
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -402093,6 +402263,103 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 029c79dd4e527534b96b78326c2bbf09, type: 3}
+--- !u!1 &1763894706
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1763894708}
+  - component: {fileID: 1763894707}
+  m_Layer: 0
+  m_Name: Maze_TopDown_FillLight
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!108 &1763894707
+Light:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1763894706}
+  m_Enabled: 1
+  serializedVersion: 11
+  m_Type: 1
+  m_Color: {r: 0.85, g: 0.9, b: 1, a: 1}
+  m_Intensity: 0.35
+  m_Range: 10
+  m_SpotAngle: 30
+  m_InnerSpotAngle: 21.80208
+  m_CookieSize: 10
+  m_Shadows:
+    m_Type: 0
+    m_Resolution: -1
+    m_CustomResolution: -1
+    m_Strength: 1
+    m_Bias: 0.05
+    m_NormalBias: 0.4
+    m_NearPlane: 0.2
+    m_CullingMatrixOverride:
+      e00: 1
+      e01: 0
+      e02: 0
+      e03: 0
+      e10: 0
+      e11: 1
+      e12: 0
+      e13: 0
+      e20: 0
+      e21: 0
+      e22: 1
+      e23: 0
+      e30: 0
+      e31: 0
+      e32: 0
+      e33: 1
+    m_UseCullingMatrixOverride: 0
+  m_Cookie: {fileID: 0}
+  m_DrawHalo: 0
+  m_Flare: {fileID: 0}
+  m_RenderMode: 1
+  m_CullingMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_RenderingLayerMask: 1
+  m_Lightmapping: 4
+  m_LightShadowCasterMode: 0
+  m_AreaSize: {x: 1, y: 1}
+  m_BounceIntensity: 1
+  m_ColorTemperature: 6570
+  m_UseColorTemperature: 0
+  m_BoundingSphereOverride: {x: 0, y: 0, z: 0, w: 0}
+  m_UseBoundingSphereOverride: 0
+  m_UseViewFrustumForShadowCasterCull: 1
+  m_ForceVisible: 0
+  m_ShadowRadius: 0
+  m_ShadowAngle: 0
+  m_LightUnit: 1
+  m_LuxAtDistance: 1
+  m_EnableSpotReflector: 1
+--- !u!4 &1763894708
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1763894706}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0.6946584, y: 0, z: 0, w: 0.7193398}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!4 &1764064832 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 3708340866078278326, guid: 5d8413624c4275b47bf7a097163862a6, type: 3}
@@ -411388,6 +411655,8 @@ MonoBehaviour:
   videoUI: {fileID: 123444705}
   blackScreenUI: {fileID: 521522776}
   objectToHide: {fileID: 213304978}
+  objectToHideAfterVideo: {fileID: 0}
+  objectsToHideAfterVideo: []
   safeZone: {fileID: 0}
   playerSpots: []
   scriptNamesToDisable:
@@ -449360,6 +449629,8 @@ MonoBehaviour:
   videoUI: {fileID: 123444705}
   blackScreenUI: {fileID: 521522776}
   objectToHide: {fileID: 213304978}
+  objectToHideAfterVideo: {fileID: 0}
+  objectsToHideAfterVideo: []
   safeZone: {fileID: 2138483519}
   playerSpots:
   - {fileID: 40409821}
@@ -496443,3 +496714,6 @@ SceneRoots:
   - {fileID: 1689848387}
   - {fileID: 1820524036}
   - {fileID: 1790164862}
+  - {fileID: 1763894708}
+  - {fileID: 1114744753}
+  - {fileID: 1721352070}
