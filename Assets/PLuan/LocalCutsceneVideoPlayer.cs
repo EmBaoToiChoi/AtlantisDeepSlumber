@@ -40,6 +40,13 @@ public class LocalCutsceneVideoPlayer : NetworkBehaviour
     [Tooltip("Màu nền phía sau video (mặc định là đen để che game load)")]
     public Color backgroundColor = Color.black;
 
+    [Header("Objects to Hide After Cutscene")]
+    [Tooltip("Kéo thả GameObject muốn ẩn sau khi xem xong Cutscene (nếu có thì ẩn, không có thì bỏ qua)")]
+    public GameObject objectToHide;
+
+    [Tooltip("Danh sách GameObject muốn ẩn sau khi xem xong Cutscene (nếu cần ẩn nhiều object)")]
+    public List<GameObject> objectsToHide = new List<GameObject>();
+
     // --- Biến đồng bộ mạng ---
     private readonly NetworkVariable<int> readyClientsCount = new NetworkVariable<int>(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     private readonly NetworkVariable<bool> cutsceneStarted = new NetworkVariable<bool>(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
@@ -684,7 +691,9 @@ public class LocalCutsceneVideoPlayer : NetworkBehaviour
         {
             ZombieQuestTargetManager.Instance.StartQuest();
         }
-        
+
+        // Ẩn object sau khi kết thúc cutscene (nếu có)
+        HideTargetObjects();
 
         // Khóa con trỏ chuột lại cho gameplay
         Cursor.lockState = CursorLockMode.Locked;
@@ -723,6 +732,27 @@ public class LocalCutsceneVideoPlayer : NetworkBehaviour
         }
     }
 
+    private void HideTargetObjects()
+    {
+        if (objectToHide != null)
+        {
+            objectToHide.SetActive(false);
+            Debug.Log($"[LocalCutsceneVideoPlayer] Đã ẩn object: {objectToHide.name}");
+        }
+
+        if (objectsToHide != null)
+        {
+            foreach (var obj in objectsToHide)
+            {
+                if (obj != null)
+                {
+                    obj.SetActive(false);
+                    Debug.Log($"[LocalCutsceneVideoPlayer] Đã ẩn object: {obj.name}");
+                }
+            }
+        }
+    }
+
     private void OnDestroy()
     {
         if (cutsceneBgmCoroutine != null)
@@ -758,6 +788,7 @@ public class LocalCutsceneVideoPlayer : NetworkBehaviour
             }
 
             SetHUDVisible(true);
+            HideTargetObjects();
 
             Cursor.lockState = CursorLockMode.Locked;
             Cursor.visible = false;
