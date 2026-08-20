@@ -168,7 +168,6 @@ public class InGameLightingAndTVManager : MonoBehaviour
         _playerLightComponent.type = LightType.Point;
         _playerLightComponent.shadows = LightShadows.None; // 0% Lag
         _playerLightComponent.renderMode = LightRenderMode.ForcePixel;
-        _playerLightComponent.lightmapBakeType = LightmapBakeType.Realtime;
         _playerLightComponent.intensity = playerLightIntensity;
         _playerLightComponent.range = playerLightRange;
         _playerLightComponent.color = playerLightColor;

@@ -693,7 +693,6 @@ public class LightingAndShadowFixerEditor : EditorWindow
             Undo.RecordObject(ml, "Configure Maze Fill Light");
             ml.enabled = true;
             ml.type = LightType.Directional;
-            ml.lightmapBakeType = LightmapBakeType.Realtime;
             ml.color = mazeFillColor;
             ml.intensity = mazeFillIntensity;
             ml.shadows = LightShadows.None; // 0% Lag, không đổ bóng đè lên mặt trời
@@ -728,7 +727,6 @@ public class LightingAndShadowFixerEditor : EditorWindow
             Undo.RecordObject(pl, "Configure Player Aura Light");
             pl.enabled = true;
             pl.type = LightType.Point;
-            pl.lightmapBakeType = LightmapBakeType.Realtime;
             pl.color = playerLightColor;
             pl.intensity = playerLightIntensity;
             pl.range = playerLightRange;
