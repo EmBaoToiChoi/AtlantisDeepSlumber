@@ -21,8 +21,8 @@ public class ChoppableTree : NetworkBehaviour
     [Tooltip("Góc xoay bù thêm (X,Y,Z) cho Prefab gốc cây nếu 3D model bị nằm ngang (mặc định X: 0 vì Prefab đã được dựng đứng)")]
     public Vector3 stumpRotationOffset = Vector3.zero;
 
-    [Tooltip("Độ nâng độ cao Y (m) cho gốc cây nhô lên trên mặt đất. Tăng chỉ số này nếu gốc cây bị chìm dưới đất.")]
-    public float stumpYOffset = 0.35f;
+    [Tooltip("Độ bù tinh chỉnh độ cao Y (m) cho gốc cây (Hệ thống tự động căn chỉnh đáy gốc khít mặt đất chống lơ lửng, chỉ chỉnh số này nếu muốn nâng hạ nhẹ +/- 0.1m)")]
+    public float stumpYOffset = 0f;
 
     [Header("--- HIỆU ỨNG VĂNG & GỘP MẢNH GỖ NHỎ ---")]
     [Tooltip("Prefab mảnh gỗ đơn lẻ (firewood_single) văng ra trước khi gộp thành bó gỗ. Nếu để trống sẽ tự động tìm kiếm prefab firewood_single.")]
@@ -591,17 +591,7 @@ public class ChoppableTree : NetworkBehaviour
         Vector3 bundleLandPos = transform.position + mainDir * bundleDist;
 
         // Bắn Raycast tìm chính xác độ cao đất cho điểm nảy bó gỗ
-        float groundY = transform.position.y;
-        Vector3 rayStart = new Vector3(bundleLandPos.x, transform.position.y + 5f, bundleLandPos.z);
-        int layerMask = ~LayerMask.GetMask("Player", "Ignore Raycast");
-        if (Physics.Raycast(rayStart, Vector3.down, out RaycastHit hit, 10f, layerMask))
-        {
-            string hitName = hit.collider.gameObject.name.ToLower();
-            if (hit.collider.gameObject != gameObject && !hitName.Contains("player") && !hitName.Contains("stump") && !hitName.Contains("tree"))
-            {
-                groundY = hit.point.y;
-            }
-        }
+        float groundY = GetAccurateGroundY(bundleLandPos);
         bundleLandPos.y = groundY + 0.25f;
 
         // 2. Tạo cụm các mảnh gỗ nhỏ văng ra xung quanh né xa gốc cây (bán kính rộng 3.2m -> 4.8m)
@@ -626,18 +616,8 @@ public class ChoppableTree : NetworkBehaviour
             float chipDist = 3.2f + (chipSeed * 1.4f);
             Vector3 landP = transform.position + chipDir * chipDist;
             
-            // Raycast tìm đất cho mảnh gỗ nhỏ
-            Vector3 chipRay = new Vector3(landP.x, transform.position.y + 5f, landP.z);
-            if (Physics.Raycast(chipRay, Vector3.down, out RaycastHit chipHit, 10f, layerMask))
-            {
-                string hN = chipHit.collider.gameObject.name.ToLower();
-                if (chipHit.collider.gameObject != gameObject && !hN.Contains("stump") && !hN.Contains("tree"))
-                {
-                    landP.y = chipHit.point.y + 0.25f;
-                }
-                else landP.y = groundY + 0.25f;
-            }
-            else landP.y = groundY + 0.25f;
+            // Tìm mặt đất chính xác cho mảnh gỗ nhỏ
+            landP.y = GetAccurateGroundY(landP) + 0.25f;
 
             chipStartPos[i] = startP;
             chipLandPos[i] = landP;
@@ -1269,21 +1249,58 @@ public class ChoppableTree : NetworkBehaviour
         return litMat;
     }
 
+    private float GetAccurateGroundY(Vector3 worldPos)
+    {
+        // Bắt đầu bắn từ độ cao cách gốc cây 2.0m để tìm mặt đất (tránh va vào cành lá trên cao)
+        Vector3 rayStart = worldPos + Vector3.up * 2.0f;
+        float rayDistance = 15f;
+        int layerMask = ~LayerMask.GetMask("Player", "Ignore Raycast");
+
+        RaycastHit[] hits = Physics.RaycastAll(rayStart, Vector3.down, rayDistance, layerMask, QueryTriggerInteraction.Ignore);
+
+        float bestGroundY = worldPos.y;
+        float minDistanceToTreeBase = float.MaxValue;
+        bool foundGround = false;
+
+        foreach (var h in hits)
+        {
+            if (h.collider == null) continue;
+            if (h.collider.isTrigger) continue;
+
+            // Bỏ qua tuyệt đối toàn bộ collider của chính cây này và các con của cây
+            if (h.collider.transform.IsChildOf(transform) || h.collider.gameObject == gameObject)
+                continue;
+
+            string colName = h.collider.name.ToLower();
+            // Bỏ qua các object không phải địa hình/mặt đất
+            if (colName.Contains("stump") || colName.Contains("wood") || colName.Contains("chip") || 
+                colName.Contains("log") || colName.Contains("player") || colName.Contains("weapon") || 
+                colName.Contains("hitbox") || colName.Contains("projectile") || colName.Contains("tree"))
+                continue;
+
+            // Mặt đất hợp lệ: không cao hơn gốc cây quá 1.0m (tránh cành cây khác hoặc mái che)
+            if (h.point.y <= worldPos.y + 1.0f)
+            {
+                float dist = Mathf.Abs(h.point.y - worldPos.y);
+                if (dist < minDistanceToTreeBase)
+                {
+                    minDistanceToTreeBase = dist;
+                    bestGroundY = h.point.y;
+                    foundGround = true;
+                }
+            }
+        }
+
+        return foundGround ? bestGroundY : worldPos.y;
+    }
+
     private void CreateTreeStump()
     {
         if (spawnedStump != null) return;
 
-        // Bắn Raycast tìm chính xác độ cao mặt đất thực tế
-        Vector3 spawnPos = transform.position;
-        int layerMask = ~LayerMask.GetMask("Player", "Ignore Raycast");
-        if (Physics.Raycast(spawnPos + Vector3.up * 6f, Vector3.down, out RaycastHit hit, 12f, layerMask))
-        {
-            if (hit.collider.gameObject != gameObject && !hit.collider.name.ToLower().Contains("tree"))
-            {
-                spawnPos.y = hit.point.y;
-            }
-        }
-        spawnPos.y += stumpYOffset;
+        // Tìm chính xác độ cao mặt đất thực tế trực tiếp dưới gốc cây
+        float groundY = GetAccurateGroundY(transform.position);
+        Vector3 spawnPos = new Vector3(transform.position.x, groundY, transform.position.z);
 
         // Tự động tìm Prefab gốc cây nếu chưa được kéo gán trong Inspector
         if (treeStumpPrefab == null)
@@ -1303,6 +1320,38 @@ public class ChoppableTree : NetworkBehaviour
             if (transform.parent != null && transform.parent.gameObject.activeInHierarchy)
             {
                 spawnedStump.transform.SetParent(transform.parent, true);
+            }
+
+            // Tự động căn chỉnh đáy (min.y) của Mesh gốc cây áp sát mặt đất chính xác 100%, chống triệt để tình trạng lơ lửng
+            Renderer[] stumpRends = spawnedStump.GetComponentsInChildren<Renderer>(true);
+            Bounds combinedBounds = new Bounds();
+            bool hasBounds = false;
+            foreach (var r in stumpRends)
+            {
+                if (r == null || r is ParticleSystemRenderer) continue;
+                if (!hasBounds)
+                {
+                    combinedBounds = r.bounds;
+                    hasBounds = true;
+                }
+                else
+                {
+                    combinedBounds.Encapsulate(r.bounds);
+                }
+            }
+
+            if (hasBounds)
+            {
+                // Điểm thấp nhất của toàn bộ mesh trong gốc cây
+                float bottomY = combinedBounds.min.y;
+                float correction = groundY - bottomY;
+                // Cắm nhẹ 0.05m vào đất để rễ dính tự nhiên, cộng thêm offset tinh chỉnh nhỏ an toàn
+                float safeOffset = Mathf.Clamp(stumpYOffset, -0.25f, 0.25f);
+                spawnedStump.transform.position += Vector3.up * (correction - 0.05f + safeOffset);
+            }
+            else
+            {
+                spawnedStump.transform.position = spawnPos + Vector3.up * Mathf.Clamp(stumpYOffset, -0.25f, 0.25f);
             }
 
             // Giữ nguyên 100% tất cả MeshCollider/BoxCollider gốc của Prefab gốc cây
@@ -1331,7 +1380,7 @@ public class ChoppableTree : NetworkBehaviour
                 }
             }
 
-            Debug.Log($"[ChoppableTree] Đã tạo thành công gốc cây Prefab '{treeStumpPrefab.name}' giữ nguyên MeshCollider gốc cho {name}!");
+            Debug.Log($"[ChoppableTree] Đã tạo thành công gốc cây Prefab '{treeStumpPrefab.name}' khít mặt đất Y={spawnedStump.transform.position.y:F2} cho {name}!");
             return;
         }
 
@@ -1347,7 +1396,7 @@ public class ChoppableTree : NetworkBehaviour
 
         // 1. Tạo GameObject phần gốc cây độc lập
         spawnedStump = new GameObject($"{name}_Stump");
-        spawnedStump.transform.position = spawnPos;
+        spawnedStump.transform.position = spawnPos - Vector3.up * 0.05f;
         spawnedStump.transform.rotation = transform.rotation;
         if (transform.parent != null && transform.parent.gameObject.activeInHierarchy)
         {
