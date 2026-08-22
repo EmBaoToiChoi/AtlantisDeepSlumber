@@ -286,7 +286,7 @@ QualitySettings:
     shadowDistance: 400
     shadowNearPlaneOffset: 3
     shadowCascade2Split: 0.33333334
-    shadowCascade4Split: {x: 0.3093473, y: 0.46740395, z: 0.61891127}
+    shadowCascade4Split: {x: 0.44357547, y: 0.60219145, z: 0.7408352}
     shadowmaskMode: 1
     skinWeights: 4
     globalTextureMipmapLimit: 0
@@ -303,7 +303,7 @@ QualitySettings:
     realtimeGICPUUsage: 100
     adaptiveVsyncExtraA: 0
     adaptiveVsyncExtraB: 0
-    lodBias: 1000
+    lodBias: 2000
     maximumLODLevel: 0
     enableLODCrossFade: 1
     streamingMipmapsActive: 0
