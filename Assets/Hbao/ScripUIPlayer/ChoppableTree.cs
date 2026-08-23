@@ -18,11 +18,14 @@ public class ChoppableTree : NetworkBehaviour
     [Tooltip("Prefab gốc cây custom (ví dụ aspen-stump) xuất hiện bên dưới thân cây khi cây bị chặt")]
     public GameObject treeStumpPrefab;
 
-    [Tooltip("Góc xoay bù thêm (X,Y,Z) cho Prefab gốc cây nếu 3D model bị nằm ngang (mặc định X: 0 vì Prefab đã được dựng đứng)")]
+    [Tooltip("Góc xoay (X, Y, Z) cho gốc cây theo đúng thông số bạn cài đặt trong Inspector")]
     public Vector3 stumpRotationOffset = Vector3.zero;
 
-    [Tooltip("Độ bù tinh chỉnh độ cao Y (m) cho gốc cây (Nhập số âm ví dụ: -0.3, -0.5, -0.8 để hạ gốc cây lún sâu xuống dưới đất, tránh kẹt người chơi)")]
+    [Tooltip("Độ bù tinh chỉnh độ cao Y (m) cho gốc cây")]
     public float stumpYOffset = 0f;
+
+    [Tooltip("Độ bù vị trí (X, Y, Z) cho gốc cây (nếu muốn dịch chuyển thêm)")]
+    public Vector3 stumpPositionOffset = Vector3.zero;
 
     [Header("--- HIỆU ỨNG VĂNG & GỘP MẢNH GỖ NHỎ ---")]
     [Tooltip("Prefab mảnh gỗ đơn lẻ (firewood_single) văng ra trước khi gộp thành bó gỗ. Nếu để trống sẽ tự động tìm kiếm prefab firewood_single.")]
@@ -1346,7 +1349,9 @@ public class ChoppableTree : NetworkBehaviour
         // Tìm chính xác độ cao mặt đất thực tế trực tiếp dưới gốc cây
         float groundY = GetAccurateGroundY(transform.position);
         Vector3 spawnPos = new Vector3(transform.position.x, groundY, transform.position.z);
-        Vector3 finalPos = spawnPos + Vector3.up * stumpYOffset;
+
+        // Tính vị trí gốc cây từ mặt đất kết hợp offset cài đặt
+        Vector3 finalPos = spawnPos + Vector3.up * stumpYOffset + stumpPositionOffset;
 
         // Tự động tìm Prefab gốc cây nếu chưa được kéo gán trong Inspector
         if (treeStumpPrefab == null)
@@ -1359,9 +1364,16 @@ public class ChoppableTree : NetworkBehaviour
         // Nếu có Prefab gốc cây custom, sinh trực tiếp Prefab đó dưới vị trí thân cây
         if (treeStumpPrefab != null)
         {
-            // Giữ nguyên góc xoay gốc của Prefab (ví dụ X: -90 để đứng thẳng) kết hợp xoay theo trục Y của thân cây
-            Quaternion prefabRot = treeStumpPrefab.transform.rotation;
-            Quaternion finalRotation = Quaternion.Euler(0f, transform.eulerAngles.y, 0f) * prefabRot * Quaternion.Euler(stumpRotationOffset);
+            // Áp dụng chính xác góc xoay đã cài đặt trong Inspector (stumpRotationOffset)
+            Quaternion finalRotation;
+            if (stumpRotationOffset != Vector3.zero)
+            {
+                finalRotation = Quaternion.Euler(stumpRotationOffset);
+            }
+            else
+            {
+                finalRotation = transform.rotation;
+            }
 
             spawnedStump = Instantiate(treeStumpPrefab, finalPos, finalRotation);
             spawnedStump.name = $"{name}_Stump";
@@ -1371,19 +1383,6 @@ public class ChoppableTree : NetworkBehaviour
             if (transform.parent != null && transform.parent.gameObject.activeInHierarchy)
             {
                 spawnedStump.transform.SetParent(transform.parent, true);
-            }
-
-            // Tự động reset và chuẩn hóa Transform con nếu bị lưu dính tọa độ Scene cũ trong Prefab
-            Transform[] allChilds = spawnedStump.GetComponentsInChildren<Transform>(true);
-            foreach (var ch in allChilds)
-            {
-                if (ch != null && ch != spawnedStump.transform)
-                {
-                    if (ch.localPosition.sqrMagnitude > 0.1f)
-                    {
-                        ch.localPosition = Vector3.zero;
-                    }
-                }
             }
 
             // Xóa/tắt toàn bộ Collider trên gốc cây để người chơi hoàn toàn KHÔNG bị kẹt khi đi qua
@@ -1397,7 +1396,7 @@ public class ChoppableTree : NetworkBehaviour
                 }
             }
 
-            Debug.Log($"[ChoppableTree] Đã tạo thành công gốc cây Prefab '{treeStumpPrefab.name}' tại vị trí Y={spawnedStump.transform.position.y:F2} (stumpYOffset={stumpYOffset}) cho {name}!");
+            Debug.Log($"[ChoppableTree] Đã tạo thành công gốc cây Prefab '{treeStumpPrefab.name}' tại vị trí {finalPos} với góc xoay {finalRotation.eulerAngles} cho {name}!");
             return;
         }
 
