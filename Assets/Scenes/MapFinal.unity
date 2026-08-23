@@ -19187,8 +19187,16 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 2013213560825553005, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
+      propertyPath: stumpRotationOffset.x
+      value: 348.4944
+      objectReference: {fileID: 0}
+    - target: {fileID: 2013213560825553005, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
       propertyPath: stumpRotationOffset.y
-      value: 0
+      value: 91.95892
+      objectReference: {fileID: 0}
+    - target: {fileID: 2013213560825553005, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
+      propertyPath: stumpRotationOffset.z
+      value: 265.16675
       objectReference: {fileID: 0}
     - target: {fileID: 5467546501562613012, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
       propertyPath: m_Name
@@ -19535,8 +19543,16 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 2013213560825553005, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
+      propertyPath: stumpRotationOffset.x
+      value: 348.4944
+      objectReference: {fileID: 0}
+    - target: {fileID: 2013213560825553005, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
       propertyPath: stumpRotationOffset.y
-      value: 0
+      value: 91.95892
+      objectReference: {fileID: 0}
+    - target: {fileID: 2013213560825553005, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
+      propertyPath: stumpRotationOffset.z
+      value: 265.16675
       objectReference: {fileID: 0}
     - target: {fileID: 5467546501562613012, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
       propertyPath: m_Name
@@ -57469,8 +57485,16 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 2013213560825553005, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
+      propertyPath: stumpRotationOffset.x
+      value: 348.4944
+      objectReference: {fileID: 0}
+    - target: {fileID: 2013213560825553005, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
       propertyPath: stumpRotationOffset.y
-      value: 0
+      value: 91.95892
+      objectReference: {fileID: 0}
+    - target: {fileID: 2013213560825553005, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
+      propertyPath: stumpRotationOffset.z
+      value: 265.16675
       objectReference: {fileID: 0}
     - target: {fileID: 5467546501562613012, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
       propertyPath: m_Name
@@ -149091,8 +149115,16 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 2013213560825553005, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
+      propertyPath: stumpRotationOffset.x
+      value: 348.4944
+      objectReference: {fileID: 0}
+    - target: {fileID: 2013213560825553005, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
       propertyPath: stumpRotationOffset.y
-      value: 0
+      value: 91.95892
+      objectReference: {fileID: 0}
+    - target: {fileID: 2013213560825553005, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
+      propertyPath: stumpRotationOffset.z
+      value: 265.16675
       objectReference: {fileID: 0}
     - target: {fileID: 5467546501562613012, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
       propertyPath: m_Name
@@ -150633,8 +150665,16 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 2013213560825553005, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
+      propertyPath: stumpRotationOffset.x
+      value: 348.4944
+      objectReference: {fileID: 0}
+    - target: {fileID: 2013213560825553005, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
       propertyPath: stumpRotationOffset.y
-      value: 0
+      value: 91.95892
+      objectReference: {fileID: 0}
+    - target: {fileID: 2013213560825553005, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
+      propertyPath: stumpRotationOffset.z
+      value: 265.16675
       objectReference: {fileID: 0}
     - target: {fileID: 5467546501562613012, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
       propertyPath: m_Name
@@ -184649,8 +184689,16 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 2013213560825553005, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
+      propertyPath: stumpRotationOffset.x
+      value: 348.4944
+      objectReference: {fileID: 0}
+    - target: {fileID: 2013213560825553005, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
       propertyPath: stumpRotationOffset.y
-      value: 0
+      value: 91.95892
+      objectReference: {fileID: 0}
+    - target: {fileID: 2013213560825553005, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
+      propertyPath: stumpRotationOffset.z
+      value: 265.16675
       objectReference: {fileID: 0}
     - target: {fileID: 5467546501562613012, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
       propertyPath: m_Name
@@ -214132,8 +214180,16 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 2013213560825553005, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
+      propertyPath: stumpRotationOffset.x
+      value: 348.4944
+      objectReference: {fileID: 0}
+    - target: {fileID: 2013213560825553005, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
       propertyPath: stumpRotationOffset.y
-      value: 0
+      value: 91.95892
+      objectReference: {fileID: 0}
+    - target: {fileID: 2013213560825553005, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
+      propertyPath: stumpRotationOffset.z
+      value: 265.16675
       objectReference: {fileID: 0}
     - target: {fileID: 5467546501562613012, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
       propertyPath: m_Name
@@ -250350,8 +250406,16 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 2013213560825553005, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
+      propertyPath: stumpRotationOffset.x
+      value: 348.4944
+      objectReference: {fileID: 0}
+    - target: {fileID: 2013213560825553005, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
       propertyPath: stumpRotationOffset.y
-      value: 0
+      value: 91.95892
+      objectReference: {fileID: 0}
+    - target: {fileID: 2013213560825553005, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
+      propertyPath: stumpRotationOffset.z
+      value: 265.16675
       objectReference: {fileID: 0}
     - target: {fileID: 5467546501562613012, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
       propertyPath: m_Name
@@ -255922,8 +255986,16 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 2013213560825553005, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
+      propertyPath: stumpRotationOffset.x
+      value: 348.4944
+      objectReference: {fileID: 0}
+    - target: {fileID: 2013213560825553005, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
       propertyPath: stumpRotationOffset.y
-      value: 0
+      value: 91.95892
+      objectReference: {fileID: 0}
+    - target: {fileID: 2013213560825553005, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
+      propertyPath: stumpRotationOffset.z
+      value: 265.16675
       objectReference: {fileID: 0}
     - target: {fileID: 5467546501562613012, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
       propertyPath: m_Name
@@ -278333,8 +278405,16 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 2013213560825553005, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
+      propertyPath: stumpRotationOffset.x
+      value: 348.4944
+      objectReference: {fileID: 0}
+    - target: {fileID: 2013213560825553005, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
       propertyPath: stumpRotationOffset.y
-      value: 0
+      value: 91.95892
+      objectReference: {fileID: 0}
+    - target: {fileID: 2013213560825553005, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
+      propertyPath: stumpRotationOffset.z
+      value: 265.16675
       objectReference: {fileID: 0}
     - target: {fileID: 5467546501562613012, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
       propertyPath: m_Name
@@ -331628,8 +331708,16 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 2013213560825553005, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
+      propertyPath: stumpRotationOffset.x
+      value: 348.4944
+      objectReference: {fileID: 0}
+    - target: {fileID: 2013213560825553005, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
       propertyPath: stumpRotationOffset.y
-      value: 0
+      value: 91.95892
+      objectReference: {fileID: 0}
+    - target: {fileID: 2013213560825553005, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
+      propertyPath: stumpRotationOffset.z
+      value: 265.16675
       objectReference: {fileID: 0}
     - target: {fileID: 5467546501562613012, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
       propertyPath: m_Name
@@ -401514,8 +401602,16 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 2013213560825553005, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
+      propertyPath: stumpRotationOffset.x
+      value: 348.4944
+      objectReference: {fileID: 0}
+    - target: {fileID: 2013213560825553005, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
       propertyPath: stumpRotationOffset.y
-      value: 0
+      value: 91.95892
+      objectReference: {fileID: 0}
+    - target: {fileID: 2013213560825553005, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
+      propertyPath: stumpRotationOffset.z
+      value: 265.16675
       objectReference: {fileID: 0}
     - target: {fileID: 5467546501562613012, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
       propertyPath: m_Name
@@ -407824,8 +407920,16 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 2013213560825553005, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
+      propertyPath: stumpRotationOffset.x
+      value: 348.4944
+      objectReference: {fileID: 0}
+    - target: {fileID: 2013213560825553005, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
       propertyPath: stumpRotationOffset.y
-      value: 0
+      value: 91.95892
+      objectReference: {fileID: 0}
+    - target: {fileID: 2013213560825553005, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
+      propertyPath: stumpRotationOffset.z
+      value: 265.16675
       objectReference: {fileID: 0}
     - target: {fileID: 5467546501562613012, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
       propertyPath: m_Name
@@ -410401,7 +410505,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!65 &1790164860
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -439269,8 +439373,16 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 2013213560825553005, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
+      propertyPath: stumpRotationOffset.x
+      value: 348.4944
+      objectReference: {fileID: 0}
+    - target: {fileID: 2013213560825553005, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
       propertyPath: stumpRotationOffset.y
-      value: 0
+      value: 91.95892
+      objectReference: {fileID: 0}
+    - target: {fileID: 2013213560825553005, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
+      propertyPath: stumpRotationOffset.z
+      value: 265.16675
       objectReference: {fileID: 0}
     - target: {fileID: 5467546501562613012, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
       propertyPath: m_Name
@@ -455343,8 +455455,16 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 2013213560825553005, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
+      propertyPath: stumpRotationOffset.x
+      value: 348.4944
+      objectReference: {fileID: 0}
+    - target: {fileID: 2013213560825553005, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
       propertyPath: stumpRotationOffset.y
-      value: 0
+      value: 91.95892
+      objectReference: {fileID: 0}
+    - target: {fileID: 2013213560825553005, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
+      propertyPath: stumpRotationOffset.z
+      value: 265.16675
       objectReference: {fileID: 0}
     - target: {fileID: 5467546501562613012, guid: 632957faa21a37e43ab6dac57733daaa, type: 3}
       propertyPath: m_Name
