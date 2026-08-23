@@ -16,6 +16,27 @@ public class PushableStone : NetworkBehaviour
     [Tooltip("Khoảng cách tối đa để tương tác hiển thị gợi ý")]
     public float interactRadius = 2.5f;
 
+    [Header("Push Limit & Destination Configuration")]
+    [Tooltip("Kéo thả một GameObject (nút sàn, empty target) làm điểm giới hạn/đích đến. Đá chỉ được đẩy đến vị trí này rồi dừng lại.")]
+    public Transform targetDestination;
+
+    [Tooltip("Tùy chọn: Tích chọn để nhập trực tiếp tọa độ đích (X, Y, Z) bên dưới nếu không gán Transform ở trên.")]
+    public bool useSpecificCoordinate = false;
+    [Tooltip("Tọa độ giới hạn (Vector3)")]
+    public Vector3 targetCoordinate = Vector3.zero;
+
+    [Tooltip("Khoảng cách tối đa (mét) có thể đẩy tính từ vị trí ban đầu. (Nếu > 0, đá chỉ di chuyển tối đa ngần này mét; đặt 0 nếu không dùng)")]
+    public float maxPushDistance = 0f;
+
+    [Tooltip("Khoảng cách chấp nhận đã đến đích (dung sai, mặc định 0.05m)")]
+    public float stopDistanceThreshold = 0.05f;
+
+    [Tooltip("Tự động kết thúc và nhả tất cả người chơi ra khi đá đã đến điểm giới hạn")]
+    public bool autoFinishOnLimitReached = true;
+
+    [Tooltip("Tự động đẩy thẳng về hướng điểm giới hạn (tránh bị lệch góc)")]
+    public bool pushTowardsTargetDirectly = true;
+
     [Header("Effects Configuration")]
     [Tooltip("Hệ thống hạt bụi dưới chân đá khi đẩy")]
     public ParticleSystem dustParticleEffect;
@@ -32,6 +53,16 @@ public class PushableStone : NetworkBehaviour
         NetworkVariableWritePermission.Server
     );
     public NetworkVariable<bool> isFinishedNet = new NetworkVariable<bool>(
+        false,
+        NetworkVariableReadPermission.Everyone,
+        NetworkVariableWritePermission.Server
+    );
+    public NetworkVariable<Vector3> netTargetCoordinate = new NetworkVariable<Vector3>(
+        Vector3.zero,
+        NetworkVariableReadPermission.Everyone,
+        NetworkVariableWritePermission.Server
+    );
+    public NetworkVariable<bool> netHasTargetLimit = new NetworkVariable<bool>(
         false,
         NetworkVariableReadPermission.Everyone,
         NetworkVariableWritePermission.Server
@@ -60,6 +91,9 @@ public class PushableStone : NetworkBehaviour
     private int activeSlotIndex = -1;
     private bool lastInputW = false;
 
+    private Vector3 startPosition;
+    private bool hasReachedLimit = false;
+
     private void Start()
     {
         // Kiểm tra xem vật thể có bị đánh dấu là Static trong Inspector không
@@ -69,6 +103,9 @@ public class PushableStone : NetworkBehaviour
                            $"Điều này kích hoạt Static Batching khiến hình ảnh của đá bị khóa cứng tại chỗ trong khi Collider vật lý di chuyển đi nơi khác, làm người chơi đi xuyên qua đá. " +
                            $"Hãy BỎ TÍCH CHỌN ô 'Static' ở góc trên bên phải của vật thể này và tất cả các đối tượng con của nó trong Unity Inspector.");
         }
+
+        startPosition = transform.position;
+        hasReachedLimit = false;
 
         var rb = GetComponent<Rigidbody>();
         if (rb != null)
@@ -255,18 +292,63 @@ public class PushableStone : NetworkBehaviour
             if (newVal) ReleaseAllPushers();
         };
 
+        netPosition.OnValueChanged += (oldPos, newPos) => {
+            if (!IsServer && GetComponent<Unity.Netcode.Components.NetworkTransform>() == null)
+            {
+                if (Vector3.Distance(transform.position, newPos) > 3.0f)
+                {
+                    transform.position = newPos;
+                }
+            }
+        };
+
         if (IsServer)
         {
             netPosition.Value = transform.position;
             isFinishedNet.Value = false;
             isMovingNet.Value = false;
+            hasReachedLimit = false;
             slot0PlayerNetId.Value = 0;
             slot1PlayerNetId.Value = 0;
             slot2PlayerNetId.Value = 0;
             slot3PlayerNetId.Value = 0;
+
+            // Đồng bộ tọa độ đích mạng từ cấu hình Server
+            Vector3 serverTargetPos = Vector3.zero;
+            bool serverHasLimit = false;
+            if (targetDestination != null)
+            {
+                serverTargetPos = targetDestination.position;
+                serverHasLimit = true;
+            }
+            else if (useSpecificCoordinate)
+            {
+                serverTargetPos = targetCoordinate;
+                serverHasLimit = true;
+            }
+            else if (maxPushDistance > 0f)
+            {
+                serverTargetPos = transform.position + transform.forward * maxPushDistance;
+                serverHasLimit = true;
+            }
+            netTargetCoordinate.Value = serverTargetPos;
+            netHasTargetLimit.Value = serverHasLimit;
+
             if (NetworkManager.Singleton != null)
             {
                 NetworkManager.Singleton.OnClientDisconnectCallback += OnClientDisconnect;
+            }
+        }
+        else
+        {
+            // Xử lý cho Client vừa vào màn chơi (Late-join)
+            if (netPosition.Value != Vector3.zero && GetComponent<Unity.Netcode.Components.NetworkTransform>() == null)
+            {
+                transform.position = netPosition.Value;
+            }
+            if (isFinishedNet.Value)
+            {
+                ReleaseAllPushers();
             }
         }
 
@@ -313,7 +395,18 @@ public class PushableStone : NetworkBehaviour
         {
             if (GetComponent<Unity.Netcode.Components.NetworkTransform>() == null)
             {
-                transform.position = Vector3.MoveTowards(transform.position, netPosition.Value, pushSpeed * Time.deltaTime * 1.5f);
+                float dist = Vector3.Distance(transform.position, netPosition.Value);
+                if (dist > 3.0f)
+                {
+                    // Dịch chuyển tức thì nếu khoảng cách quá xa (ví dụ khi load xong hoặc lag mạng)
+                    transform.position = netPosition.Value;
+                }
+                else if (dist > 0.001f)
+                {
+                    // Nội suy vị trí mượt mà bám sát Server
+                    float clientMoveSpeed = isMovingNet.Value ? (pushSpeed * 1.5f) : (pushSpeed * 3.0f);
+                    transform.position = Vector3.MoveTowards(transform.position, netPosition.Value, clientMoveSpeed * Time.deltaTime);
+                }
             }
         }
 
@@ -520,16 +613,141 @@ public class PushableStone : NetworkBehaviour
 
         if (shouldMove)
         {
-            transform.position += transform.forward * pushSpeed * Time.deltaTime;
+            Vector3 targetPos = Vector3.zero;
+            bool hasTargetLimit = false;
 
-            if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening)
+            if (targetDestination != null)
             {
-                netPosition.Value = transform.position;
-                isMovingNet.Value = true;
+                targetPos = targetDestination.position;
+                hasTargetLimit = true;
+            }
+            else if (useSpecificCoordinate)
+            {
+                targetPos = targetCoordinate;
+                hasTargetLimit = true;
+            }
+
+            if (hasTargetLimit)
+            {
+                float distToTarget = Vector3.Distance(transform.position, targetPos);
+                if (distToTarget <= stopDistanceThreshold)
+                {
+                    // Đã đến điểm giới hạn
+                    transform.position = targetPos;
+                    if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening)
+                    {
+                        netPosition.Value = transform.position;
+                        isMovingNet.Value = false;
+                    }
+                    else
+                    {
+                        localMoving = false;
+                    }
+
+                    if (autoFinishOnLimitReached && !hasReachedLimit)
+                    {
+                        hasReachedLimit = true;
+                        ReleaseAllPushers();
+                    }
+                    return;
+                }
+
+                float step = pushSpeed * Time.deltaTime;
+                Vector3 moveDir = pushTowardsTargetDirectly ? (targetPos - transform.position).normalized : transform.forward;
+
+                if (step >= distToTarget)
+                {
+                    transform.position = targetPos;
+                    if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening)
+                    {
+                        netPosition.Value = transform.position;
+                        isMovingNet.Value = false;
+                    }
+                    else
+                    {
+                        localMoving = false;
+                    }
+
+                    if (autoFinishOnLimitReached && !hasReachedLimit)
+                    {
+                        hasReachedLimit = true;
+                        ReleaseAllPushers();
+                    }
+                }
+                else
+                {
+                    transform.position += moveDir * step;
+                    if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening)
+                    {
+                        netPosition.Value = transform.position;
+                        isMovingNet.Value = true;
+                    }
+                    else
+                    {
+                        localMoving = true;
+                    }
+                }
+            }
+            else if (maxPushDistance > 0f)
+            {
+                float distTraveled = Vector3.Distance(startPosition, transform.position);
+                float remainingDist = maxPushDistance - distTraveled;
+
+                if (remainingDist <= stopDistanceThreshold)
+                {
+                    if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening)
+                    {
+                        isMovingNet.Value = false;
+                    }
+                    else
+                    {
+                        localMoving = false;
+                    }
+
+                    if (autoFinishOnLimitReached && !hasReachedLimit)
+                    {
+                        hasReachedLimit = true;
+                        ReleaseAllPushers();
+                    }
+                    return;
+                }
+
+                float step = Mathf.Min(pushSpeed * Time.deltaTime, remainingDist);
+                transform.position += transform.forward * step;
+
+                if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening)
+                {
+                    netPosition.Value = transform.position;
+                    isMovingNet.Value = true;
+                }
+                else
+                {
+                    localMoving = true;
+                }
+
+                if (Vector3.Distance(startPosition, transform.position) >= maxPushDistance - stopDistanceThreshold)
+                {
+                    if (autoFinishOnLimitReached && !hasReachedLimit)
+                    {
+                        hasReachedLimit = true;
+                        ReleaseAllPushers();
+                    }
+                }
             }
             else
             {
-                localMoving = true;
+                // Không có giới hạn: di chuyển thẳng theo hướng forward
+                transform.position += transform.forward * pushSpeed * Time.deltaTime;
+
+                if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening)
+                {
+                    netPosition.Value = transform.position;
+                    isMovingNet.Value = true;
+                }
+                else
+                {
+                    localMoving = true;
+                }
             }
         }
         else
@@ -1049,4 +1267,53 @@ public class PushableStone : NetworkBehaviour
             }
         }
     }
+
+#if UNITY_EDITOR
+    private void OnDrawGizmosSelected()
+    {
+        Vector3 limitPos = Vector3.zero;
+        bool hasLimit = false;
+
+        if (targetDestination != null)
+        {
+            limitPos = targetDestination.position;
+            hasLimit = true;
+        }
+        else if (useSpecificCoordinate)
+        {
+            limitPos = targetCoordinate;
+            hasLimit = true;
+        }
+        else if (maxPushDistance > 0f)
+        {
+            Vector3 origin = Application.isPlaying ? startPosition : transform.position;
+            limitPos = origin + transform.forward * maxPushDistance;
+            hasLimit = true;
+        }
+
+        if (hasLimit)
+        {
+            // Vẽ đường nối từ đá đến điểm giới hạn
+            Gizmos.color = new Color(0f, 1f, 0.4f, 0.9f);
+            Gizmos.DrawLine(transform.position, limitPos);
+
+            // Vẽ khối cầu tại điểm giới hạn
+            Gizmos.color = new Color(0f, 0.8f, 1f, 0.7f);
+            Gizmos.DrawWireSphere(limitPos, 0.5f);
+
+            // Vẽ mũi tên chỉ hướng
+            Vector3 dir = (limitPos - transform.position).normalized;
+            if (dir != Vector3.zero)
+            {
+                Gizmos.color = Color.yellow;
+                Gizmos.DrawRay(limitPos, Quaternion.Euler(0, 150, 0) * dir * 0.8f);
+                Gizmos.DrawRay(limitPos, Quaternion.Euler(0, -150, 0) * dir * 0.8f);
+            }
+
+            // Vẽ bán kính dung sai
+            Gizmos.color = new Color(1f, 0.2f, 0.2f, 0.4f);
+            Gizmos.DrawWireSphere(limitPos, stopDistanceThreshold);
+        }
+    }
+#endif
 }

@@ -1,9 +1,13 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
     <Style src="project://database/Assets/Hbao/ScripEnemy1/BossHealthBar.uss" />
     <ui:VisualElement name="boss-hud-container" class="boss-hud-container" style="display: none;">
+        <!-- Khung ngoài Frame_Box_Medium_02 bọc trọn toàn bộ HUD -->
+        <ui:VisualElement class="boss-hud-outer-frame" />
+        
         <!-- Khung avatar Boss ở bên trái -->
         <ui:VisualElement name="boss-avatar-frame" class="boss-avatar-frame">
             <ui:VisualElement name="boss-avatar" class="boss-avatar" />
+            <ui:VisualElement class="boss-avatar-frame-overlay" />
         </ui:VisualElement>
         
         <!-- Cụm tên và thanh máu ở bên phải -->
@@ -15,6 +19,7 @@
                     <ui:VisualElement name="boss-hp-progress-bar" class="boss-hp-progress-bar" />
                     <ui:Label name="boss-hp-text" text="1000 / 1000" class="boss-hp-text" />
                 </ui:VisualElement>
+                <ui:VisualElement class="boss-hp-frame-overlay" />
             </ui:VisualElement>
         </ui:VisualElement>
     </ui:VisualElement>

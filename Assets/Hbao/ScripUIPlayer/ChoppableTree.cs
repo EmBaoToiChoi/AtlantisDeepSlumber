@@ -592,7 +592,7 @@ public class ChoppableTree : NetworkBehaviour
 
         // Bắn Raycast tìm chính xác độ cao đất cho điểm nảy bó gỗ
         float groundY = GetAccurateGroundY(bundleLandPos);
-        bundleLandPos.y = groundY + 0.25f;
+        bundleLandPos.y = groundY + 0.65f;
 
         // 2. Tạo cụm các mảnh gỗ nhỏ văng ra xung quanh né xa gốc cây (bán kính rộng 3.2m -> 4.8m)
         int chipCount = Mathf.Max(3, scatteredChipCount);
@@ -617,7 +617,7 @@ public class ChoppableTree : NetworkBehaviour
             Vector3 landP = transform.position + chipDir * chipDist;
             
             // Tìm mặt đất chính xác cho mảnh gỗ nhỏ
-            landP.y = GetAccurateGroundY(landP) + 0.25f;
+            landP.y = GetAccurateGroundY(landP) + 0.35f;
 
             chipStartPos[i] = startP;
             chipLandPos[i] = landP;
@@ -1251,9 +1251,35 @@ public class ChoppableTree : NetworkBehaviour
 
     private float GetAccurateGroundY(Vector3 worldPos)
     {
-        // Bắt đầu bắn từ độ cao cách gốc cây 2.0m để tìm mặt đất (tránh va vào cành lá trên cao)
-        Vector3 rayStart = worldPos + Vector3.up * 2.0f;
-        float rayDistance = 15f;
+        // 1. Kiểm tra tất cả Terrain trong Scene để lấy độ cao mặt đất chính xác 100%
+        if (Terrain.activeTerrains != null && Terrain.activeTerrains.Length > 0)
+        {
+            foreach (var terrain in Terrain.activeTerrains)
+            {
+                if (terrain == null || terrain.terrainData == null) continue;
+                Vector3 tPos = terrain.transform.position;
+                Vector3 tSize = terrain.terrainData.size;
+                if (worldPos.x >= tPos.x && worldPos.x <= tPos.x + tSize.x &&
+                    worldPos.z >= tPos.z && worldPos.z <= tPos.z + tSize.z)
+                {
+                    return terrain.SampleHeight(worldPos) + tPos.y;
+                }
+            }
+        }
+        else if (Terrain.activeTerrain != null && Terrain.activeTerrain.terrainData != null)
+        {
+            Vector3 tPos = Terrain.activeTerrain.transform.position;
+            Vector3 tSize = Terrain.activeTerrain.terrainData.size;
+            if (worldPos.x >= tPos.x && worldPos.x <= tPos.x + tSize.x &&
+                worldPos.z >= tPos.z && worldPos.z <= tPos.z + tSize.z)
+            {
+                return Terrain.activeTerrain.SampleHeight(worldPos) + tPos.y;
+            }
+        }
+
+        // 2. Bắn Raycast từ trên cao xuống để tìm sàn/mesh đất/đá (nếu không dùng Terrain)
+        Vector3 rayStart = worldPos + Vector3.up * 8.0f;
+        float rayDistance = 30f;
         int layerMask = ~LayerMask.GetMask("Player", "Ignore Raycast");
 
         RaycastHit[] hits = Physics.RaycastAll(rayStart, Vector3.down, rayDistance, layerMask, QueryTriggerInteraction.Ignore);
@@ -1275,19 +1301,15 @@ public class ChoppableTree : NetworkBehaviour
             // Bỏ qua các object không phải địa hình/mặt đất
             if (colName.Contains("stump") || colName.Contains("wood") || colName.Contains("chip") || 
                 colName.Contains("log") || colName.Contains("player") || colName.Contains("weapon") || 
-                colName.Contains("hitbox") || colName.Contains("projectile") || colName.Contains("tree"))
+                colName.Contains("hitbox") || colName.Contains("projectile"))
                 continue;
 
-            // Mặt đất hợp lệ: không cao hơn gốc cây quá 1.0m (tránh cành cây khác hoặc mái che)
-            if (h.point.y <= worldPos.y + 1.0f)
+            float dist = Mathf.Abs(h.point.y - worldPos.y);
+            if (dist < minDistanceToTreeBase)
             {
-                float dist = Mathf.Abs(h.point.y - worldPos.y);
-                if (dist < minDistanceToTreeBase)
-                {
-                    minDistanceToTreeBase = dist;
-                    bestGroundY = h.point.y;
-                    foundGround = true;
-                }
+                minDistanceToTreeBase = dist;
+                bestGroundY = h.point.y;
+                foundGround = true;
             }
         }
 
@@ -1322,6 +1344,19 @@ public class ChoppableTree : NetworkBehaviour
                 spawnedStump.transform.SetParent(transform.parent, true);
             }
 
+            // Tự động reset và chuẩn hóa Transform con nếu bị lưu dính tọa độ Scene cũ trong Prefab
+            Transform[] allChilds = spawnedStump.GetComponentsInChildren<Transform>(true);
+            foreach (var ch in allChilds)
+            {
+                if (ch != null && ch != spawnedStump.transform)
+                {
+                    if (ch.localPosition.sqrMagnitude > 0.1f)
+                    {
+                        ch.localPosition = Vector3.zero;
+                    }
+                }
+            }
+
             // Tự động căn chỉnh đáy (min.y) của Mesh gốc cây áp sát mặt đất chính xác 100%, chống triệt để tình trạng lơ lửng
             Renderer[] stumpRends = spawnedStump.GetComponentsInChildren<Renderer>(true);
             Bounds combinedBounds = new Bounds();
@@ -1345,13 +1380,12 @@ public class ChoppableTree : NetworkBehaviour
                 // Điểm thấp nhất của toàn bộ mesh trong gốc cây
                 float bottomY = combinedBounds.min.y;
                 float correction = groundY - bottomY;
-                // Cắm nhẹ 0.05m vào đất để rễ dính tự nhiên, cộng thêm offset tinh chỉnh nhỏ an toàn
-                float safeOffset = Mathf.Clamp(stumpYOffset, -0.25f, 0.25f);
-                spawnedStump.transform.position += Vector3.up * (correction - 0.05f + safeOffset);
+                // Cắm nhẹ 0.05m vào đất để rễ dính tự nhiên, cộng thêm offset tinh chỉnh stumpYOffset
+                spawnedStump.transform.position += Vector3.up * (correction - 0.05f + stumpYOffset);
             }
             else
             {
-                spawnedStump.transform.position = spawnPos + Vector3.up * Mathf.Clamp(stumpYOffset, -0.25f, 0.25f);
+                spawnedStump.transform.position = spawnPos + Vector3.up * stumpYOffset;
             }
 
             // Giữ nguyên 100% tất cả MeshCollider/BoxCollider gốc của Prefab gốc cây
