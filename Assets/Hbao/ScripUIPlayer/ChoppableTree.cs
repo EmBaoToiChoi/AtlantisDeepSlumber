@@ -1385,14 +1385,13 @@ public class ChoppableTree : NetworkBehaviour
                 spawnedStump.transform.SetParent(transform.parent, true);
             }
 
-            // Xóa/tắt toàn bộ Collider trên gốc cây để người chơi hoàn toàn KHÔNG bị kẹt khi đi qua
+            // Giữ nguyên Collider đã được cấu hình trên Prefab gốc cây
             Collider[] existingCols = spawnedStump.GetComponentsInChildren<Collider>(true);
             foreach (var c in existingCols)
             {
                 if (c != null)
                 {
-                    c.enabled = false;
-                    Destroy(c);
+                    c.enabled = true;
                 }
             }
 
