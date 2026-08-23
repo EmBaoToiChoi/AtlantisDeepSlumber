@@ -57,16 +57,6 @@ public class PushableStone : NetworkBehaviour
         NetworkVariableReadPermission.Everyone,
         NetworkVariableWritePermission.Server
     );
-    public NetworkVariable<Vector3> netTargetCoordinate = new NetworkVariable<Vector3>(
-        Vector3.zero,
-        NetworkVariableReadPermission.Everyone,
-        NetworkVariableWritePermission.Server
-    );
-    public NetworkVariable<bool> netHasTargetLimit = new NetworkVariable<bool>(
-        false,
-        NetworkVariableReadPermission.Everyone,
-        NetworkVariableWritePermission.Server
-    );
 
     // Slots occupancy synchronized across the network
     public NetworkVariable<ulong> slot0PlayerNetId = new NetworkVariable<ulong>(0);
@@ -312,27 +302,6 @@ public class PushableStone : NetworkBehaviour
             slot1PlayerNetId.Value = 0;
             slot2PlayerNetId.Value = 0;
             slot3PlayerNetId.Value = 0;
-
-            // Đồng bộ tọa độ đích mạng từ cấu hình Server
-            Vector3 serverTargetPos = Vector3.zero;
-            bool serverHasLimit = false;
-            if (targetDestination != null)
-            {
-                serverTargetPos = targetDestination.position;
-                serverHasLimit = true;
-            }
-            else if (useSpecificCoordinate)
-            {
-                serverTargetPos = targetCoordinate;
-                serverHasLimit = true;
-            }
-            else if (maxPushDistance > 0f)
-            {
-                serverTargetPos = transform.position + transform.forward * maxPushDistance;
-                serverHasLimit = true;
-            }
-            netTargetCoordinate.Value = serverTargetPos;
-            netHasTargetLimit.Value = serverHasLimit;
 
             if (NetworkManager.Singleton != null)
             {
