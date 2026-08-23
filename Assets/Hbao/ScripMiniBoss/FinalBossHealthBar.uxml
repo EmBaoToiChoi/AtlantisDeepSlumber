@@ -1,9 +1,16 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
     <Style src="project://database/Assets/Hbao/ScripMiniBoss/FinalBossHealthBar.uss?fileID=7433441132597879392&amp;guid=d6afd8aeb8d54c74ca671f6435d72e1a&amp;type=3#FinalBossHealthBar" />
     <ui:VisualElement name="finalboss-hud-container" class="finalboss-hud-container" style="display: none;">
+        <!-- Khung ngoài Frame_Box_Medium_02 bọc trọn toàn bộ HUD -->
+        <ui:VisualElement class="finalboss-hud-outer-frame" />
+        
+        <!-- Khung avatar Boss ở bên trái -->
         <ui:VisualElement name="finalboss-avatar-frame" class="finalboss-avatar-frame">
             <ui:VisualElement name="finalboss-avatar" class="finalboss-avatar" />
+            <ui:VisualElement class="finalboss-avatar-frame-overlay" />
         </ui:VisualElement>
+        
+        <!-- Cụm tên và thanh máu ở bên phải -->
         <ui:VisualElement name="finalboss-hp-wrapper" class="finalboss-hp-wrapper">
             <ui:VisualElement name="finalboss-header" class="finalboss-header">
                 <ui:Label name="finalboss-title" text="THE FINAL DESPAIR" class="finalboss-title" />
@@ -15,6 +22,7 @@
                     <ui:VisualElement name="finalboss-hp-progress-bar" class="finalboss-hp-progress-bar" style="background-image: none;" />
                     <ui:Label name="finalboss-hp-text" text="1200 / 1200" class="finalboss-hp-text" />
                 </ui:VisualElement>
+                <ui:VisualElement class="finalboss-hp-frame-overlay" />
             </ui:VisualElement>
         </ui:VisualElement>
     </ui:VisualElement>
