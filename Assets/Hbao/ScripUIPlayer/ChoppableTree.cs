@@ -21,7 +21,7 @@ public class ChoppableTree : NetworkBehaviour
     [Tooltip("Góc xoay bù thêm (X,Y,Z) cho Prefab gốc cây nếu 3D model bị nằm ngang (mặc định X: 0 vì Prefab đã được dựng đứng)")]
     public Vector3 stumpRotationOffset = Vector3.zero;
 
-    [Tooltip("Độ bù tinh chỉnh độ cao Y (m) cho gốc cây (Hệ thống tự động căn chỉnh đáy gốc khít mặt đất chống lơ lửng, chỉ chỉnh số này nếu muốn nâng hạ nhẹ +/- 0.1m)")]
+    [Tooltip("Độ bù tinh chỉnh độ cao Y (m) cho gốc cây (Nhập số âm ví dụ: -0.3, -0.5, -0.8 để hạ gốc cây lún sâu xuống dưới đất, tránh kẹt người chơi)")]
     public float stumpYOffset = 0f;
 
     [Header("--- HIỆU ỨNG VĂNG & GỘP MẢNH GỖ NHỎ ---")]
@@ -178,6 +178,11 @@ public class ChoppableTree : NetworkBehaviour
         if (isCutDown.Value)
         {
             CreateTreeStump();
+            Collider[] cols = GetComponentsInChildren<Collider>(true);
+            foreach (var c in cols)
+            {
+                if (c != null) c.enabled = false;
+            }
             gameObject.SetActive(false);
         }
     }
@@ -333,6 +338,11 @@ public class ChoppableTree : NetworkBehaviour
 
         if (currentHits >= requiredHits)
         {
+            Collider[] cols = GetComponentsInChildren<Collider>(true);
+            foreach (var c in cols)
+            {
+                if (c != null) c.enabled = false;
+            }
             StartCoroutine(FallDownCoroutine());
         }
     }
@@ -534,6 +544,12 @@ public class ChoppableTree : NetworkBehaviour
     {
         if (newVal)
         {
+            // Tắt ngay lập tức tất cả Collider trên cây để tránh kẹt người chơi
+            Collider[] cols = GetComponentsInChildren<Collider>(true);
+            foreach (var c in cols)
+            {
+                if (c != null) c.enabled = false;
+            }
             StartCoroutine(FallDownCoroutine());
         }
     }
@@ -965,16 +981,23 @@ public class ChoppableTree : NetworkBehaviour
             }
         }
 
-        // 1. Xóa bỏ hoàn toàn (Destroy) toàn bộ Collider trên cây gục ngã (ngoại trừ gốc cây spawnedStump)
-        // để người chơi không bao giờ bị bước đè lên tán lá/thân cây ngã gây lỗi đứng trên không trung!
+        // 1. Vô hiệu hóa và xóa toàn bộ Collider trên cây gục ngã
         Collider[] colliders = GetComponentsInChildren<Collider>(true);
         foreach (var col in colliders)
         {
-            if (col != null && (spawnedStump == null || !col.transform.IsChildOf(spawnedStump.transform)))
+            if (col != null)
             {
                 col.enabled = false;
-                DestroyImmediate(col);
+                Destroy(col);
             }
+        }
+
+        // Vô hiệu hóa Rigidbody của cây
+        Rigidbody treeRb = GetComponent<Rigidbody>();
+        if (treeRb != null)
+        {
+            treeRb.detectCollisions = false;
+            Destroy(treeRb);
         }
 
         // 2. Tạo FallPivot tại đúng vị trí mặt cắt trên đỉnh gốc cây (y = 1.15m)
@@ -1015,7 +1038,7 @@ public class ChoppableTree : NetworkBehaviour
             if (c != null)
             {
                 c.enabled = false;
-                DestroyImmediate(c);
+                Destroy(c);
             }
         }
 
@@ -1323,6 +1346,7 @@ public class ChoppableTree : NetworkBehaviour
         // Tìm chính xác độ cao mặt đất thực tế trực tiếp dưới gốc cây
         float groundY = GetAccurateGroundY(transform.position);
         Vector3 spawnPos = new Vector3(transform.position.x, groundY, transform.position.z);
+        Vector3 finalPos = spawnPos + Vector3.up * stumpYOffset;
 
         // Tự động tìm Prefab gốc cây nếu chưa được kéo gán trong Inspector
         if (treeStumpPrefab == null)
@@ -1335,10 +1359,15 @@ public class ChoppableTree : NetworkBehaviour
         // Nếu có Prefab gốc cây custom, sinh trực tiếp Prefab đó dưới vị trí thân cây
         if (treeStumpPrefab != null)
         {
-            Quaternion finalRotation = Quaternion.Euler(0f, transform.eulerAngles.y, 0f) * Quaternion.Euler(stumpRotationOffset);
-            spawnedStump = Instantiate(treeStumpPrefab, spawnPos, finalRotation);
+            // Giữ nguyên góc xoay gốc của Prefab (ví dụ X: -90 để đứng thẳng) kết hợp xoay theo trục Y của thân cây
+            Quaternion prefabRot = treeStumpPrefab.transform.rotation;
+            Quaternion finalRotation = Quaternion.Euler(0f, transform.eulerAngles.y, 0f) * prefabRot * Quaternion.Euler(stumpRotationOffset);
+
+            spawnedStump = Instantiate(treeStumpPrefab, finalPos, finalRotation);
             spawnedStump.name = $"{name}_Stump";
+            spawnedStump.transform.position = finalPos;
             spawnedStump.transform.rotation = finalRotation;
+
             if (transform.parent != null && transform.parent.gameObject.activeInHierarchy)
             {
                 spawnedStump.transform.SetParent(transform.parent, true);
@@ -1357,64 +1386,18 @@ public class ChoppableTree : NetworkBehaviour
                 }
             }
 
-            // Tự động căn chỉnh đáy (min.y) của Mesh gốc cây áp sát mặt đất chính xác 100%, chống triệt để tình trạng lơ lửng
-            Renderer[] stumpRends = spawnedStump.GetComponentsInChildren<Renderer>(true);
-            Bounds combinedBounds = new Bounds();
-            bool hasBounds = false;
-            foreach (var r in stumpRends)
-            {
-                if (r == null || r is ParticleSystemRenderer) continue;
-                if (!hasBounds)
-                {
-                    combinedBounds = r.bounds;
-                    hasBounds = true;
-                }
-                else
-                {
-                    combinedBounds.Encapsulate(r.bounds);
-                }
-            }
-
-            if (hasBounds)
-            {
-                // Điểm thấp nhất của toàn bộ mesh trong gốc cây
-                float bottomY = combinedBounds.min.y;
-                float correction = groundY - bottomY;
-                // Cắm nhẹ 0.05m vào đất để rễ dính tự nhiên, cộng thêm offset tinh chỉnh stumpYOffset
-                spawnedStump.transform.position += Vector3.up * (correction - 0.05f + stumpYOffset);
-            }
-            else
-            {
-                spawnedStump.transform.position = spawnPos + Vector3.up * stumpYOffset;
-            }
-
-            // Giữ nguyên 100% tất cả MeshCollider/BoxCollider gốc của Prefab gốc cây
+            // Xóa/tắt toàn bộ Collider trên gốc cây để người chơi hoàn toàn KHÔNG bị kẹt khi đi qua
             Collider[] existingCols = spawnedStump.GetComponentsInChildren<Collider>(true);
             foreach (var c in existingCols)
             {
                 if (c != null)
                 {
-                    c.enabled = true;
-                    c.isTrigger = false;
+                    c.enabled = false;
+                    Destroy(c);
                 }
             }
 
-            // Nếu Prefab gốc cây chưa có Collider nào, tự động thêm MeshCollider
-            if (existingCols == null || existingCols.Length == 0)
-            {
-                MeshFilter mf = spawnedStump.GetComponentInChildren<MeshFilter>();
-                if (mf != null && mf.sharedMesh != null)
-                {
-                    MeshCollider mc = spawnedStump.AddComponent<MeshCollider>();
-                    mc.sharedMesh = mf.sharedMesh;
-                }
-                else
-                {
-                    spawnedStump.AddComponent<BoxCollider>();
-                }
-            }
-
-            Debug.Log($"[ChoppableTree] Đã tạo thành công gốc cây Prefab '{treeStumpPrefab.name}' khít mặt đất Y={spawnedStump.transform.position.y:F2} cho {name}!");
+            Debug.Log($"[ChoppableTree] Đã tạo thành công gốc cây Prefab '{treeStumpPrefab.name}' tại vị trí Y={spawnedStump.transform.position.y:F2} (stumpYOffset={stumpYOffset}) cho {name}!");
             return;
         }
 
@@ -1436,31 +1419,6 @@ public class ChoppableTree : NetworkBehaviour
         {
             spawnedStump.transform.SetParent(transform.parent, true);
         }
-
-        // 2. Thêm CapsuleCollider tròn mượt màng cao hẳn 5.0m (chống leo đè lên đỉnh gốc cây gây bay lên không)
-        CapsuleCollider capCol = spawnedStump.AddComponent<CapsuleCollider>();
-        capCol.center = new Vector3(0f, 2.5f, 0f);
-        capCol.radius = treeRadius;
-        capCol.height = 5.0f;
-        capCol.direction = 1; // Hướng trục Y
-
-        PhysicsMaterial smoothMatFallback = new PhysicsMaterial("StumpSmoothMatFallback")
-        {
-            dynamicFriction = 0f,
-            staticFriction = 0f,
-            frictionCombine = PhysicsMaterialCombine.Minimum,
-            bounceCombine = PhysicsMaterialCombine.Minimum
-        };
-        capCol.material = smoothMatFallback;
-
-        UnityEngine.AI.NavMeshObstacle fallbackObs = spawnedStump.GetComponent<UnityEngine.AI.NavMeshObstacle>();
-        if (fallbackObs == null) fallbackObs = spawnedStump.AddComponent<UnityEngine.AI.NavMeshObstacle>();
-        fallbackObs.shape = UnityEngine.AI.NavMeshObstacleShape.Capsule;
-        fallbackObs.center = new Vector3(0f, 2.5f, 0f);
-        fallbackObs.radius = treeRadius * 1.1f;
-        fallbackObs.height = 5.0f;
-        fallbackObs.carving = true;
-        fallbackObs.carveOnlyStationary = true;
 
         // 3. Thân gốc cây thẳng đứng (Stump Body)
         GameObject stumpBody = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
