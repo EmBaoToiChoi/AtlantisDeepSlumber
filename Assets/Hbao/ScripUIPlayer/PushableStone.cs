@@ -97,6 +97,14 @@ public class PushableStone : NetworkBehaviour
         startPosition = transform.position;
         hasReachedLimit = false;
 
+        // Nếu targetDestination là con của chính cục đá (ví dụ nhân bản Slot_1 ra làm đích)
+        // thì tự động tách ra khỏi đá (Unparent) để vị trí đích được cố định tại chỗ trên bản đồ
+        if (targetDestination != null && targetDestination.IsChildOf(transform))
+        {
+            Debug.LogWarning($"[PushableStone] 'targetDestination' ({targetDestination.name}) là đối tượng con của '{gameObject.name}'. Đang tự động tách ra (SetParent null) để cố định vị trí đích trên bản đồ!");
+            targetDestination.SetParent(null, true);
+        }
+
         var rb = GetComponent<Rigidbody>();
         if (rb != null)
         {
@@ -598,11 +606,25 @@ public class PushableStone : NetworkBehaviour
 
             if (hasTargetLimit)
             {
-                float distToTarget = Vector3.Distance(transform.position, targetPos);
-                if (distToTarget <= stopDistanceThreshold)
+                Vector3 toTarget = targetPos - transform.position;
+                Vector2 toTarget2D = new Vector2(toTarget.x, toTarget.z);
+                float dist2D = toTarget2D.magnitude;
+
+                Vector3 startToTarget = targetPos - startPosition;
+                Vector2 startToTarget2D = new Vector2(startToTarget.x, startToTarget.z).normalized;
+                if (startToTarget2D == Vector2.zero)
                 {
-                    // Đã đến điểm giới hạn
-                    transform.position = targetPos;
+                    startToTarget2D = new Vector2(transform.forward.x, transform.forward.z).normalized;
+                }
+
+                // Kiểm tra nếu đã chạm rất gần HOẶC đã vượt qua điểm đích (Dot product <= 0)
+                bool passedTarget = (startPosition != targetPos) && (Vector2.Dot(startToTarget2D, toTarget2D) <= 0f);
+                float effectiveThreshold = Mathf.Max(stopDistanceThreshold, 0.35f);
+
+                if (dist2D <= effectiveThreshold || passedTarget)
+                {
+                    // Đã đến điểm giới hạn! Khóa cứng vị trí đá tại đích
+                    transform.position = new Vector3(targetPos.x, transform.position.y, targetPos.z);
                     if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening)
                     {
                         netPosition.Value = transform.position;
@@ -622,11 +644,11 @@ public class PushableStone : NetworkBehaviour
                 }
 
                 float step = pushSpeed * Time.deltaTime;
-                Vector3 moveDir = pushTowardsTargetDirectly ? (targetPos - transform.position).normalized : transform.forward;
+                Vector3 moveDir = pushTowardsTargetDirectly ? new Vector3(toTarget.x, 0f, toTarget.z).normalized : transform.forward;
 
-                if (step >= distToTarget)
+                if (step >= dist2D)
                 {
-                    transform.position = targetPos;
+                    transform.position = new Vector3(targetPos.x, transform.position.y, targetPos.z);
                     if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening)
                     {
                         netPosition.Value = transform.position;
