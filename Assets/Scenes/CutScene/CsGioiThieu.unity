@@ -193,7 +193,7 @@ MonoBehaviour:
   m_text: "V\xE0 nh\u1EEFng \u0111i\u1EC1u \u0111\xF3 s\u1EBD x\u1EA3y ra nhanh th\xF4i,
     c\xF3 khi v\u1EADy..........."
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 6551b436ac6e447438384ddc0c7721bb, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 8c6bb49340ee96b4291529fba91bff99, type: 2}
   m_sharedMaterial: {fileID: 97671534423474389, guid: 5c7a92cce04a5ee478f36d2f5b537e05, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
@@ -229,6 +229,7 @@ MonoBehaviour:
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -505,7 +506,7 @@ AudioSource:
   m_Enabled: 1
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
-  m_audioClip: {fileID: 8300000, guid: ce539315fc1d4474f9a7e1fa7233b18b, type: 3}
+  m_audioClip: {fileID: 0}
   m_Resource: {fileID: 8300000, guid: ce539315fc1d4474f9a7e1fa7233b18b, type: 3}
   m_PlayOnAwake: 1
   m_Volume: 1
@@ -856,7 +857,7 @@ MonoBehaviour:
   m_text: "B\u0103ng ng\u0103n ch\u1EB7n l\u0169 l\u1EE5t k\xE9o \u0111\u1EBFn, l\xE0m
     b\u1EDD t\u01B0\u1EDDng."
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 6551b436ac6e447438384ddc0c7721bb, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 8c6bb49340ee96b4291529fba91bff99, type: 2}
   m_sharedMaterial: {fileID: 97671534423474389, guid: 5c7a92cce04a5ee478f36d2f5b537e05, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
@@ -892,6 +893,7 @@ MonoBehaviour:
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -1070,7 +1072,7 @@ AudioSource:
   m_Enabled: 1
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
-  m_audioClip: {fileID: 8300000, guid: 14883154288dcaa438231e96408c71b5, type: 3}
+  m_audioClip: {fileID: 0}
   m_Resource: {fileID: 8300000, guid: 14883154288dcaa438231e96408c71b5, type: 3}
   m_PlayOnAwake: 1
   m_Volume: 1
@@ -1232,7 +1234,7 @@ MonoBehaviour:
     t\u1ED1 c\xF3 c\xE1c kh\u1EA3 n\u0103ng \u0111\u1EB7c bi\u1EC7t, m\xE0 ng\u01B0\u1EDDi
     b\xECnh th\u01B0\u1EDDng kh\xF4ng th\u1EC3 l\xE0m \u0111\u01B0\u1EE3c."
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 6551b436ac6e447438384ddc0c7721bb, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 8c6bb49340ee96b4291529fba91bff99, type: 2}
   m_sharedMaterial: {fileID: 97671534423474389, guid: 5c7a92cce04a5ee478f36d2f5b537e05, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
@@ -1268,6 +1270,7 @@ MonoBehaviour:
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -1739,7 +1742,7 @@ AudioSource:
   m_Enabled: 1
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
-  m_audioClip: {fileID: 8300000, guid: 0221b9cae5307f04ea4f8b865a5f510d, type: 3}
+  m_audioClip: {fileID: 0}
   m_Resource: {fileID: 8300000, guid: 0221b9cae5307f04ea4f8b865a5f510d, type: 3}
   m_PlayOnAwake: 1
   m_Volume: 1
@@ -1966,7 +1969,7 @@ AudioSource:
   m_Enabled: 1
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
-  m_audioClip: {fileID: 8300000, guid: 017dc82e88413d6419d5f0748d136ef1, type: 3}
+  m_audioClip: {fileID: 0}
   m_Resource: {fileID: 8300000, guid: 017dc82e88413d6419d5f0748d136ef1, type: 3}
   m_PlayOnAwake: 1
   m_Volume: 1
@@ -2126,7 +2129,7 @@ MonoBehaviour:
       m_Calls: []
   m_text: "N\u01B0\u1EDBc \u0111\u1EC3 cho mu\xF4n v\xE0ng m\xE0u m\u1EE1."
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 6551b436ac6e447438384ddc0c7721bb, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 8c6bb49340ee96b4291529fba91bff99, type: 2}
   m_sharedMaterial: {fileID: 97671534423474389, guid: 5c7a92cce04a5ee478f36d2f5b537e05, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
@@ -2162,6 +2165,7 @@ MonoBehaviour:
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -2435,7 +2439,7 @@ MonoBehaviour:
   m_text: "H\u1ECD \u0111i\u1EC1u khi\u1EC3n s\xE9t \u0111\u1EC3 ph\xE1 hu\u1EF7
     c\xE1c v\u1EADt c\u1EA3n \u0111\u01B0\u1EDDng."
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 6551b436ac6e447438384ddc0c7721bb, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 8c6bb49340ee96b4291529fba91bff99, type: 2}
   m_sharedMaterial: {fileID: 97671534423474389, guid: 5c7a92cce04a5ee478f36d2f5b537e05, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
@@ -2471,6 +2475,7 @@ MonoBehaviour:
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -2686,7 +2691,7 @@ MonoBehaviour:
     nh\u1EEFng ng\u01B0\u1EDDi c\xF3 ti\u1EC1m n\u0103ng th\xEC s\u1EBD nh\u1EADn
     \u0111\u01B0\u1EE3c n\xF3."
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 6551b436ac6e447438384ddc0c7721bb, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 8c6bb49340ee96b4291529fba91bff99, type: 2}
   m_sharedMaterial: {fileID: 97671534423474389, guid: 5c7a92cce04a5ee478f36d2f5b537e05, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
@@ -2722,6 +2727,7 @@ MonoBehaviour:
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -2943,7 +2949,7 @@ AudioSource:
   m_Enabled: 1
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
-  m_audioClip: {fileID: 8300000, guid: d083c9f602db5c644864f49a50ec1c90, type: 3}
+  m_audioClip: {fileID: 0}
   m_Resource: {fileID: 8300000, guid: d083c9f602db5c644864f49a50ec1c90, type: 3}
   m_PlayOnAwake: 1
   m_Volume: 1
@@ -3219,7 +3225,7 @@ MonoBehaviour:
     s\u1ED1 ng\u01B0\u1EDDi th\xEC h\u1ECD s\u1EED d\u1EE5ng cho m\u1EE5c \u0111\xEDch
     t\u1ED1t \u0111\u1EB9p."
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 6551b436ac6e447438384ddc0c7721bb, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 8c6bb49340ee96b4291529fba91bff99, type: 2}
   m_sharedMaterial: {fileID: 97671534423474389, guid: 5c7a92cce04a5ee478f36d2f5b537e05, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
@@ -3255,6 +3261,7 @@ MonoBehaviour:
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -3519,7 +3526,7 @@ AudioSource:
   m_Enabled: 1
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
-  m_audioClip: {fileID: 8300000, guid: 22bd1d62630ee5b4ea4a6344a16f122d, type: 3}
+  m_audioClip: {fileID: 0}
   m_Resource: {fileID: 8300000, guid: 22bd1d62630ee5b4ea4a6344a16f122d, type: 3}
   m_PlayOnAwake: 1
   m_Volume: 0.2
@@ -3856,7 +3863,7 @@ AudioSource:
   m_Enabled: 1
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
-  m_audioClip: {fileID: 8300000, guid: 5a84b71bc3b3bce469a6ebccb772976d, type: 3}
+  m_audioClip: {fileID: 0}
   m_Resource: {fileID: 8300000, guid: 5a84b71bc3b3bce469a6ebccb772976d, type: 3}
   m_PlayOnAwake: 1
   m_Volume: 1
@@ -4570,7 +4577,7 @@ AudioSource:
   m_Enabled: 1
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
-  m_audioClip: {fileID: 8300000, guid: cd2423e6fe5efd74ea5020ee7f225353, type: 3}
+  m_audioClip: {fileID: 0}
   m_Resource: {fileID: 8300000, guid: cd2423e6fe5efd74ea5020ee7f225353, type: 3}
   m_PlayOnAwake: 1
   m_Volume: 1
@@ -5130,7 +5137,7 @@ MonoBehaviour:
   m_text: "C\xF2n m\u1ED9t s\u1ED1 ng\u01B0\u1EDDi h\u1ECD th\xEDch th\u1ED1ng tr\u1ECB
     ho\xE0n to\xE0n s\u1EE9c m\u1EA1nh c\u1EE7a c\xE1c nguy\xEAn t\u1ED1 \u0111\xF3\u2026\u2026"
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 6551b436ac6e447438384ddc0c7721bb, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 8c6bb49340ee96b4291529fba91bff99, type: 2}
   m_sharedMaterial: {fileID: 97671534423474389, guid: 5c7a92cce04a5ee478f36d2f5b537e05, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
@@ -5166,6 +5173,7 @@ MonoBehaviour:
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -5281,7 +5289,7 @@ MonoBehaviour:
   m_text: "L\u1EEDa thi\xEAu r\u1EE5i, \u0111\u1EA9y l\xF9i c\xE1c v\u1EADt cu\u1ED3ng
     chi\u1EBFn."
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 6551b436ac6e447438384ddc0c7721bb, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 8c6bb49340ee96b4291529fba91bff99, type: 2}
   m_sharedMaterial: {fileID: 97671534423474389, guid: 5c7a92cce04a5ee478f36d2f5b537e05, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
@@ -5317,6 +5325,7 @@ MonoBehaviour:
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -5535,7 +5544,7 @@ AudioSource:
   m_Enabled: 1
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
-  m_audioClip: {fileID: 8300000, guid: a1070add78fda914089cf532b42f044b, type: 3}
+  m_audioClip: {fileID: 0}
   m_Resource: {fileID: 8300000, guid: a1070add78fda914089cf532b42f044b, type: 3}
   m_PlayOnAwake: 1
   m_Volume: 1
@@ -5664,7 +5673,7 @@ AudioSource:
   m_Enabled: 1
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
-  m_audioClip: {fileID: 8300000, guid: 6364af4b6185f764695c844bec25ac56, type: 3}
+  m_audioClip: {fileID: 0}
   m_Resource: {fileID: 8300000, guid: 6364af4b6185f764695c844bec25ac56, type: 3}
   m_PlayOnAwake: 1
   m_Volume: 1
