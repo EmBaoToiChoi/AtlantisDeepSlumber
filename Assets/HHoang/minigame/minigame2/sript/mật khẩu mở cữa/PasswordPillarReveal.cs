@@ -109,103 +109,98 @@ public class PasswordPillarReveal : NetworkBehaviour
         }
     }
 
-    private IEnumerator BrakeAndSnapToPasswordRoutine()
+private IEnumerator BrakeAndSnapToPasswordRoutine()
+{
+    float[] startAngles = new float[pillarSegments.Length];
+    float[] targetAngles = new float[pillarSegments.Length];
+
+    // 1. Bật và reset Alpha phần thưởng
+    for (int i = 0; i < secretObjects.Length; i++)
     {
-        float[] startAngles = new float[pillarSegments.Length];
-        float[] targetAngles = new float[pillarSegments.Length];
-
-        // 1. KÍCH HOẠT VÀ ĐẶT ALPHA BAN ĐẦU CHO PHẦN THƯỞNG = 0 (TRONG SUỐT)
-        for (int i = 0; i < secretObjects.Length; i++)
+        if (secretObjects[i] != null)
         {
-            if (secretObjects[i] != null)
-            {
-                SetObjectAlpha(secretObjects[i], 0f);
-                secretObjects[i].SetActive(true); // Bật Object lên ngay lập tức!
-            }
-        }
-
-        // Tính toán góc đích hoàn hảo để không bị giật
-        for (int i = 0; i < pillarSegments.Length; i++)
-        {
-            if (pillarSegments[i] == null) continue;
-            
-            // Lấy góc Y hiện tại
-            startAngles[i] = pillarSegments[i].localEulerAngles.y;
-
-            float direction = (i % 2 == 0) ? 1f : -1f;
-            
-            // Dùng Mathf.DeltaAngle để tìm khoảng cách quay ngắn nhất (-180 đến 180)
-            float delta = Mathf.DeltaAngle(startAngles[i], correctAngles[i]);
-
-            // Bắt buộc trụ phải quay tiếp theo đúng hướng (không được quay ngược lại)
-            if (direction > 0 && delta < 0) delta += 360f;
-            if (direction < 0 && delta > 0) delta -= 360f;
-
-            // Cộng thêm số vòng quay biểu diễn (extraSpins)
-            delta += direction * 360f * extraSpins;
-
-            // Góc đích cuối cùng = Góc hiện tại + tổng quãng đường góc phải đi
-            targetAngles[i] = startAngles[i] + delta;
-        }
-
-        float elapsedTime = 0f;
-
-        // Quá trình hãm phanh mượt mà VÀ Fade-in phần thưởng
-        while (elapsedTime < stopDuration)
-        {
-            elapsedTime += Time.deltaTime;
-            float t = elapsedTime / stopDuration;
-            
-            // Sử dụng Ease-Out Cubic để tạo cảm giác hãm phanh tự nhiên
-            float smoothT = 1f - Mathf.Pow(1f - t, 3f); 
-
-            // A. XOAY TRỤ
-            for (int i = 0; i < pillarSegments.Length; i++)
-            {
-                if (pillarSegments[i] == null) continue;
-                
-                // Độ trễ nhẹ giữa các đốt trụ (offsetT)
-                float offsetT = Mathf.Clamp01(smoothT - (i * 0.05f));
-                float currentY = Mathf.Lerp(startAngles[i], targetAngles[i], offsetT);
-                
-                // Chỉ can thiệp vào góc Y, giữ nguyên X và Z để không lệch trục
-                Vector3 currentEuler = pillarSegments[i].localEulerAngles;
-                currentEuler.y = currentY;
-                pillarSegments[i].localEulerAngles = currentEuler;
-            }
-
-            // B. LÀM HIỆN DẦN PHẦN THƯỞNG (FADE IN)
-            for (int i = 0; i < secretObjects.Length; i++)
-            {
-                if (secretObjects[i] != null)
-                {
-                    SetObjectAlpha(secretObjects[i], t); // t đi từ 0 đến 1
-                }
-            }
-
-            yield return null;
-        }
-
-        // Chốt sổ frame cuối cùng: Đảm bảo dừng chính xác ở góc đã setting (correctAngles)
-        for (int i = 0; i < pillarSegments.Length; i++)
-        {
-            if (pillarSegments[i] == null) continue;
-            
-            // Ép góc Y về chính xác correctAngle, giữ nguyên X và Z
-            Vector3 finalEuler = pillarSegments[i].localEulerAngles;
-            finalEuler.y = correctAngles[i];
-            pillarSegments[i].localEulerAngles = finalEuler;
-        }
-
-        for (int i = 0; i < secretObjects.Length; i++)
-        {
-            if (secretObjects[i] != null)
-            {
-                SetObjectAlpha(secretObjects[i], 1f);
-                secretObjects[i].SetActive(true);
-            }
+            SetObjectAlpha(secretObjects[i], 0f);
+            secretObjects[i].SetActive(true);
         }
     }
+
+    // 2. Tính toán góc đích cho từng đốt
+    for (int i = 0; i < pillarSegments.Length; i++)
+    {
+        if (pillarSegments[i] == null) continue;
+
+        startAngles[i] = pillarSegments[i].localEulerAngles.y;
+        float direction = (i % 2 == 0) ? 1f : -1f;
+
+        float delta = Mathf.DeltaAngle(startAngles[i], correctAngles[i]);
+
+        if (direction > 0 && delta < 0) delta += 360f;
+        if (direction < 0 && delta > 0) delta -= 360f;
+
+        delta += direction * 360f * extraSpins;
+        targetAngles[i] = startAngles[i] + delta;
+    }
+
+    float delayBetweenSegments = 0.08f; // Độ trễ giữa mỗi đốt
+    float totalDuration = stopDuration + (pillarSegments.Length - 1) * delayBetweenSegments;
+    float elapsedTime = 0f;
+
+    // 3. Quá trình hãm phanh mượt mà
+    while (elapsedTime < totalDuration)
+    {
+        elapsedTime += Time.deltaTime;
+
+        // A. XOAY TỪNG ĐỐT TRỤ THEO TIẾN ĐỘ ĐỘC LẬP
+        for (int i = 0; i < pillarSegments.Length; i++)
+        {
+            if (pillarSegments[i] == null) continue;
+
+            // Tính tiến trình t riêng (0 đến 1) cho từng đốt
+            float segmentStartTime = i * delayBetweenSegments;
+            float segmentT = Mathf.Clamp01((elapsedTime - segmentStartTime) / stopDuration);
+
+            // Ease-Out Cubic
+            float smoothT = 1f - Mathf.Pow(1f - segmentT, 3f);
+
+            float currentY = Mathf.Lerp(startAngles[i], targetAngles[i], smoothT);
+
+            Vector3 currentEuler = pillarSegments[i].localEulerAngles;
+            currentEuler.y = currentY;
+            pillarSegments[i].localEulerAngles = currentEuler;
+        }
+
+        // B. LÀM HIỆN PHẦN THƯỞNG (FADE IN THEO THỜI GIAN CHUNG)
+        float globalFadeT = Mathf.Clamp01(elapsedTime / stopDuration);
+        for (int i = 0; i < secretObjects.Length; i++)
+        {
+            if (secretObjects[i] != null)
+            {
+                SetObjectAlpha(secretObjects[i], globalFadeT);
+            }
+        }
+
+        yield return null;
+    }
+
+    // 4. Chốt chính xác góc cuối cùng
+    for (int i = 0; i < pillarSegments.Length; i++)
+    {
+        if (pillarSegments[i] == null) continue;
+
+        Vector3 finalEuler = pillarSegments[i].localEulerAngles;
+        finalEuler.y = correctAngles[i];
+        pillarSegments[i].localEulerAngles = finalEuler;
+    }
+
+    for (int i = 0; i < secretObjects.Length; i++)
+    {
+        if (secretObjects[i] != null)
+        {
+            SetObjectAlpha(secretObjects[i], 1f);
+            secretObjects[i].SetActive(true);
+        }
+    }
+}
 
     /// <summary>
     /// Hàm phụ trợ để thay đổi độ trong suốt (Alpha) của toàn bộ Renderers trên Object
