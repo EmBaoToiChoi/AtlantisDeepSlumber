@@ -227,11 +227,17 @@ public class PlayerHUDController : MonoBehaviour
     private VisualElement weaponDurabilityFill2;
     private VisualElement interactionPrompt;
     private Label interactionPromptText;
+    private VisualElement interactionKeyIcon;
     private Label interactionPromptKeyText;
     private VisualElement tooltipElement;
-
     private VisualElement missionAlertBox;
     private Label missionAlertText;
+
+    // Fantasy Notification Popup References (Popup_06)
+    private VisualElement notificationPopup;
+    private Label notificationPopupText;
+    private VisualElement notificationPopupIcon;
+    private IVisualElementScheduledItem hideNotificationScheduledItem;
 
     // Quest UI References
     private VisualElement questPanel;
@@ -420,8 +426,10 @@ public class PlayerHUDController : MonoBehaviour
         skillSlotQ = null; skillSlotR = null; skillSlotE = null;
         worldMapOverlay = null; inventoryOverlay = null; weaponWarning = null;
         weaponDurabilityFill1 = null; weaponDurabilityFill2 = null;
-        interactionPrompt = null; interactionPromptText = null; interactionPromptKeyText = null;
+        interactionPrompt = null; interactionPromptText = null; interactionKeyIcon = null; interactionPromptKeyText = null;
         missionAlertBox = null; missionAlertText = null;
+        notificationPopup = null; notificationPopupText = null; notificationPopupIcon = null;
+        if (hideNotificationScheduledItem != null) { hideNotificationScheduledItem.Pause(); hideNotificationScheduledItem = null; }
         questPanel = null; questProgressText = null; questProgressBar = null;
         questDescriptionText = null;
         questIcon = null;
@@ -548,6 +556,12 @@ public class PlayerHUDController : MonoBehaviour
         weaponDurabilityFill2 = root.Q<VisualElement>("weapon-durability-fill-2");
         interactionPrompt = root.Q<VisualElement>("interaction-prompt");
         interactionPromptText = root.Q<Label>("interaction-prompt-text");
+        interactionKeyIcon = root.Q<VisualElement>("interaction-key-icon");
+        if (interactionKeyIcon == null && interactionPrompt != null)
+        {
+            interactionKeyIcon = interactionPrompt.Q<VisualElement>(className: "interaction-key-icon");
+            if (interactionKeyIcon == null) interactionKeyIcon = interactionPrompt.Q<VisualElement>(className: "key-icon-f");
+        }
         interactionPromptKeyText = root.Q<Label>(className: "key-badge-f-text");
 
         // Quest Panel references
@@ -776,6 +790,11 @@ public class PlayerHUDController : MonoBehaviour
             if (previewCard != null) previewCard.pickingMode = PickingMode.Position;
         }
         weaponWarning = root.Q<Label>("weapon-warning");
+        notificationPopup = root.Q<VisualElement>("notification-popup");
+        notificationPopupText = root.Q<Label>("notification-popup-text");
+        notificationPopupIcon = root.Q<VisualElement>("notification-popup-icon");
+        missionAlertBox = notificationPopup;
+        missionAlertText = notificationPopupText;
         weaponLock2 = root.Q<VisualElement>("weapon-lock-2");
         if (weaponLock2 != null)
         {
@@ -1971,10 +1990,44 @@ public class PlayerHUDController : MonoBehaviour
         {
             interactionPromptText.text = text;
 
-            // Tự động thay đổi nhãn phím dựa trên nội dung text
+            // Tự động thay đổi icon phím dựa trên nội dung text (F, G, C, E, Space, v.v.)
+            if (interactionKeyIcon != null)
+            {
+                interactionKeyIcon.RemoveFromClassList("key-icon-f");
+                interactionKeyIcon.RemoveFromClassList("key-icon-g");
+                interactionKeyIcon.RemoveFromClassList("key-icon-c");
+                interactionKeyIcon.RemoveFromClassList("key-icon-e");
+                interactionKeyIcon.RemoveFromClassList("key-icon-space");
+
+                if (text.Contains("[C]") || text.Contains("phím C") || text.Contains("phím [C]"))
+                {
+                    interactionKeyIcon.AddToClassList("key-icon-c");
+                }
+                else if (text.Contains("[G]") || text.Contains("phím G") || text.Contains("phím [G]"))
+                {
+                    interactionKeyIcon.AddToClassList("key-icon-g");
+                }
+                else if (text.Contains("[E]") || text.Contains("phím E") || text.Contains("phím [E]"))
+                {
+                    interactionKeyIcon.AddToClassList("key-icon-e");
+                }
+                else if (text.Contains("[SPACE]") || text.Contains("phím Space") || text.Contains("phím [Space]"))
+                {
+                    interactionKeyIcon.AddToClassList("key-icon-space");
+                }
+                else
+                {
+                    interactionKeyIcon.AddToClassList("key-icon-f");
+                }
+            }
+
             if (interactionPromptKeyText != null)
             {
-                if (text.Contains("[E]") || text.Contains("phím E") || text.Contains("phím [E]"))
+                if (text.Contains("[C]") || text.Contains("phím C") || text.Contains("phím [C]"))
+                {
+                    interactionPromptKeyText.text = "C";
+                }
+                else if (text.Contains("[E]") || text.Contains("phím E") || text.Contains("phím [E]"))
                 {
                     interactionPromptKeyText.text = "E";
                 }
@@ -4166,64 +4219,120 @@ public class PlayerHUDController : MonoBehaviour
         var root = uiDocument != null ? uiDocument.rootVisualElement : null;
         if (root == null) return;
 
-        if (missionAlertBox == null)
+        if (notificationPopup == null)
         {
-            missionAlertBox = new VisualElement();
-            missionAlertBox.name = "mission-alert-box";
-            
-            missionAlertBox.style.position = Position.Absolute;
-            missionAlertBox.style.top = 100f;
-            missionAlertBox.style.alignSelf = Align.Center;
-            missionAlertBox.style.flexDirection = FlexDirection.Row;
-            missionAlertBox.style.alignItems = Align.Center;
-            missionAlertBox.style.backgroundColor = new Color(0.05f, 0.05f, 0.08f, 0.85f);
-            
-            missionAlertBox.style.borderTopWidth = 2f;
-            missionAlertBox.style.borderBottomWidth = 2f;
-            missionAlertBox.style.borderLeftWidth = 2f;
-            missionAlertBox.style.borderRightWidth = 2f;
-            missionAlertBox.style.borderTopColor = new Color(0.9f, 0.7f, 0.1f, 1f); // Viền vàng óng ánh
-            missionAlertBox.style.borderBottomColor = new Color(0.9f, 0.7f, 0.1f, 1f);
-            missionAlertBox.style.borderLeftColor = new Color(0.9f, 0.7f, 0.1f, 1f);
-            missionAlertBox.style.borderRightColor = new Color(0.9f, 0.7f, 0.1f, 1f);
-            
-            missionAlertBox.style.borderTopLeftRadius = 8;
-            missionAlertBox.style.borderTopRightRadius = 8;
-            missionAlertBox.style.borderBottomLeftRadius = 8;
-            missionAlertBox.style.borderBottomRightRadius = 8;
-            
-            missionAlertBox.style.paddingLeft = 25;
-            missionAlertBox.style.paddingRight = 25;
-            missionAlertBox.style.paddingTop = 12;
-            missionAlertBox.style.paddingBottom = 12;
-            
-            missionAlertText = new Label();
-            missionAlertText.name = "mission-alert-text";
-            missionAlertText.style.color = new Color(0.95f, 0.95f, 0.98f, 1f);
-            missionAlertText.style.fontSize = 15;
-            missionAlertText.style.unityFontStyleAndWeight = FontStyle.Bold;
-            
-            missionAlertBox.Add(missionAlertText);
-            root.Add(missionAlertBox);
+            notificationPopup = root.Q<VisualElement>("notification-popup");
+            notificationPopupText = root.Q<Label>("notification-popup-text");
+            notificationPopupIcon = root.Q<VisualElement>("notification-popup-icon");
         }
 
-        missionAlertText.text = message;
-        missionAlertBox.style.display = DisplayStyle.Flex;
-        
-        if (duration > 0f)
+        // Fallback tạo giao diện động nếu chưa có sẵn trong UXML
+        if (notificationPopup == null)
         {
-            missionAlertBox.schedule.Execute(() => {
-                if (missionAlertBox != null)
-                {
-                    missionAlertBox.style.display = DisplayStyle.None;
-                }
-            }).StartingIn((long)(duration * 1000f));
+            notificationPopup = new VisualElement();
+            notificationPopup.name = "notification-popup";
+            notificationPopup.AddToClassList("notification-popup");
+
+            var bg = new VisualElement();
+            bg.AddToClassList("notification-popup-bg");
+            notificationPopup.Add(bg);
+
+            var frameWrapper = new VisualElement();
+            frameWrapper.AddToClassList("notification-popup-frame-wrapper");
+
+            var frameLeft = new VisualElement();
+            frameLeft.AddToClassList("notification-popup-frame-left");
+            frameWrapper.Add(frameLeft);
+
+            var frameRight = new VisualElement();
+            frameRight.AddToClassList("notification-popup-frame-right");
+            frameWrapper.Add(frameRight);
+
+            notificationPopup.Add(frameWrapper);
+
+            var content = new VisualElement();
+            content.AddToClassList("notification-popup-content");
+
+            notificationPopupIcon = new VisualElement();
+            notificationPopupIcon.name = "notification-popup-icon";
+            notificationPopupIcon.AddToClassList("notification-popup-icon");
+            content.Add(notificationPopupIcon);
+
+            notificationPopupText = new Label();
+            notificationPopupText.name = "notification-popup-text";
+            notificationPopupText.AddToClassList("notification-popup-text");
+            content.Add(notificationPopupText);
+
+            notificationPopup.Add(content);
+            root.Add(notificationPopup);
         }
+
+        missionAlertBox = notificationPopup;
+        missionAlertText = notificationPopupText;
+
+        if (notificationPopupText != null)
+        {
+            notificationPopupText.text = message;
+        }
+
+        // Cập nhật icon theo ngữ cảnh thông báo
+        if (notificationPopupIcon != null)
+        {
+            notificationPopupIcon.RemoveFromClassList("icon-energy");
+            notificationPopupIcon.RemoveFromClassList("icon-quest");
+            notificationPopupIcon.RemoveFromClassList("icon-warning");
+
+            string lowerMsg = (message ?? "").ToLower();
+            if (lowerMsg.Contains("năng lượng") || lowerMsg.Contains("nang luong") || lowerMsg.Contains("energy") || lowerMsg.Contains("mana"))
+            {
+                notificationPopupIcon.AddToClassList("icon-energy");
+            }
+            else if (lowerMsg.Contains("cầu") || lowerMsg.Contains("cau") || lowerMsg.Contains("gỗ") || lowerMsg.Contains("go") || lowerMsg.Contains("nhiệm vụ") || lowerMsg.Contains("quest") || lowerMsg.Contains("trụ") || lowerMsg.Contains("tru"))
+            {
+                notificationPopupIcon.AddToClassList("icon-quest");
+            }
+            else
+            {
+                notificationPopupIcon.AddToClassList("icon-warning");
+            }
+        }
+
+        // Kích hoạt hiển thị với hiệu ứng pop-in
+        notificationPopup.RemoveFromClassList("show-notification");
+        notificationPopup.RemoveFromClassList("pop-bump");
+        
+        notificationPopup.schedule.Execute(() => {
+            if (notificationPopup != null)
+            {
+                notificationPopup.AddToClassList("show-notification");
+                notificationPopup.AddToClassList("pop-bump");
+                notificationPopup.schedule.Execute(() => {
+                    if (notificationPopup != null) notificationPopup.RemoveFromClassList("pop-bump");
+                }).StartingIn(100);
+            }
+        }).StartingIn(10);
+
+        // Hủy schedule cũ nếu có
+        if (hideNotificationScheduledItem != null)
+        {
+            hideNotificationScheduledItem.Pause();
+            hideNotificationScheduledItem = null;
+        }
+
+        float displayTime = duration > 0f ? duration : 2.5f;
+        hideNotificationScheduledItem = notificationPopup.schedule.Execute(() => {
+            HideMissionAlert();
+        }).StartingIn((long)(displayTime * 1000f));
     }
 
     public void HideMissionAlert()
     {
-        if (missionAlertBox != null)
+        if (notificationPopup != null)
+        {
+            notificationPopup.RemoveFromClassList("show-notification");
+            notificationPopup.RemoveFromClassList("pop-bump");
+        }
+        if (missionAlertBox != null && missionAlertBox != notificationPopup)
         {
             missionAlertBox.style.display = DisplayStyle.None;
         }
@@ -4605,15 +4714,70 @@ public class PlayerHUDController : MonoBehaviour
             coopBuildContainer.style.borderBottomWidth = 0;
             coopBuildContainer.style.borderLeftWidth = 0;
             coopBuildContainer.style.borderRightWidth = 0;
-            coopBuildContainer.style.paddingLeft = 46;
-            coopBuildContainer.style.paddingRight = 46;
-            coopBuildContainer.style.paddingTop = 54;
-            coopBuildContainer.style.paddingBottom = 12;
+            coopBuildContainer.style.paddingLeft = 16;
+            coopBuildContainer.style.paddingRight = 32; // Thu gọn mép phải vào trong khung viền vàng
+            coopBuildContainer.style.paddingTop = 64;
+            coopBuildContainer.style.paddingBottom = 26;
             coopBuildContainer.style.flexDirection = FlexDirection.Column;
             coopBuildContainer.style.justifyContent = Justify.Center;
             coopBuildContainer.style.alignItems = Align.Stretch;
 
-            // 2. Background Decorative Frame composed of Left & Right halves
+            // 2. Create Space Keycap Button first (Layer dưới)
+            coopBuildClickButton = new Button();
+            coopBuildClickButton.name = "coop-build-space-button";
+            coopBuildClickButton.style.width = Length.Percent(100f);
+            coopBuildClickButton.style.height = Length.Percent(100f);
+            coopBuildClickButton.style.flexGrow = 1;
+            coopBuildClickButton.style.backgroundColor = new Color(0.10f, 0.11f, 0.15f, 0.95f); // Dark keycap body
+            coopBuildClickButton.style.borderTopWidth = 1f;
+            coopBuildClickButton.style.borderBottomWidth = 2.5f; // Keycap 3D border-bottom depth
+            coopBuildClickButton.style.borderLeftWidth = 0f;
+            coopBuildClickButton.style.borderRightWidth = 0f;
+            coopBuildClickButton.style.borderTopColor = new Color(0.95f, 0.8f, 0.45f, 0.35f); // Subtle gold accent border
+            coopBuildClickButton.style.borderBottomColor = new Color(0.04f, 0.04f, 0.06f, 0.95f); // Darker shadow
+            coopBuildClickButton.style.borderLeftColor = Color.clear;
+            coopBuildClickButton.style.borderRightColor = Color.clear;
+            coopBuildClickButton.style.borderTopLeftRadius = 2;
+            coopBuildClickButton.style.borderTopRightRadius = 2;
+            coopBuildClickButton.style.borderBottomLeftRadius = 2;
+            coopBuildClickButton.style.borderBottomRightRadius = 2;
+            coopBuildClickButton.style.flexDirection = FlexDirection.Column;
+            coopBuildClickButton.style.justifyContent = Justify.Center;
+            coopBuildClickButton.style.alignItems = Align.Center;
+            coopBuildClickButton.style.overflow = Overflow.Hidden;
+            coopBuildClickButton.style.paddingLeft = 0;
+            coopBuildClickButton.style.paddingRight = 0;
+            coopBuildClickButton.style.paddingTop = 0;
+            coopBuildClickButton.style.paddingBottom = 0;
+            
+            // Progress Fill inside the Keycap button (Neon Cyan progress fill)
+            coopBuildProgressBarFill = new VisualElement();
+            coopBuildProgressBarFill.name = "coop-build-progress-fill";
+            coopBuildProgressBarFill.style.position = Position.Absolute;
+            coopBuildProgressBarFill.style.left = 0;
+            coopBuildProgressBarFill.style.top = 0;
+            coopBuildProgressBarFill.style.bottom = 0;
+            coopBuildProgressBarFill.style.width = Length.Percent(0f);
+            coopBuildProgressBarFill.style.backgroundColor = new Color(0f, 0.72f, 0.95f, 0.4f); // Translucent neon cyan progress fill
+            coopBuildProgressBarFill.style.borderTopLeftRadius = 2;
+            coopBuildProgressBarFill.style.borderBottomLeftRadius = 2;
+            coopBuildProgressBarFill.pickingMode = PickingMode.Ignore;
+            coopBuildClickButton.Add(coopBuildProgressBarFill);
+
+            // Label text inside Keycap
+            coopBuildProgressLabel = new Label("SPACE (0%)");
+            coopBuildProgressLabel.name = "coop-build-progress-label";
+            coopBuildProgressLabel.style.color = new Color(0.95f, 0.95f, 0.92f, 1f);
+            coopBuildProgressLabel.style.fontSize = 26;
+            coopBuildProgressLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
+            coopBuildProgressLabel.style.unityTextAlign = TextAnchor.MiddleCenter;
+            coopBuildProgressLabel.pickingMode = PickingMode.Ignore;
+            coopBuildClickButton.Add(coopBuildProgressLabel);
+
+            coopBuildClickButton.clicked += OnBuildButtonClicked;
+            coopBuildContainer.Add(coopBuildClickButton);
+
+            // 3. Background Decorative Frame composed of Left & Right halves (Layer trên cùng - đè lên nút Space)
             VisualElement frameBgContainer = new VisualElement();
             frameBgContainer.name = "coop-build-frame-bg";
             frameBgContainer.style.position = Position.Absolute;
@@ -4639,61 +4803,6 @@ public class PlayerHUDController : MonoBehaviour
             frameBgContainer.Add(coopBuildFrameLeft);
             frameBgContainer.Add(coopBuildFrameRight);
             coopBuildContainer.Add(frameBgContainer);
-
-            // 3. Create Space Keycap VisualElement (Full-size inside the inner golden rectangular frame)
-            coopBuildClickButton = new Button();
-            coopBuildClickButton.name = "coop-build-space-button";
-            coopBuildClickButton.style.width = Length.Percent(100f);
-            coopBuildClickButton.style.height = Length.Percent(100f);
-            coopBuildClickButton.style.flexGrow = 1;
-            coopBuildClickButton.style.backgroundColor = new Color(0.10f, 0.11f, 0.15f, 0.95f); // Dark keycap body
-            coopBuildClickButton.style.borderTopWidth = 1.5f;
-            coopBuildClickButton.style.borderBottomWidth = 3.5f; // Keycap 3D border-bottom depth
-            coopBuildClickButton.style.borderLeftWidth = 1.5f;
-            coopBuildClickButton.style.borderRightWidth = 1.5f;
-            coopBuildClickButton.style.borderTopColor = new Color(0.95f, 0.8f, 0.45f, 0.35f); // Subtle gold accent border
-            coopBuildClickButton.style.borderBottomColor = new Color(0.04f, 0.04f, 0.06f, 0.95f); // Darker shadow
-            coopBuildClickButton.style.borderLeftColor = new Color(0.95f, 0.8f, 0.45f, 0.2f);
-            coopBuildClickButton.style.borderRightColor = new Color(0.95f, 0.8f, 0.45f, 0.2f);
-            coopBuildClickButton.style.borderTopLeftRadius = 4;
-            coopBuildClickButton.style.borderTopRightRadius = 4;
-            coopBuildClickButton.style.borderBottomLeftRadius = 4;
-            coopBuildClickButton.style.borderBottomRightRadius = 4;
-            coopBuildClickButton.style.flexDirection = FlexDirection.Column;
-            coopBuildClickButton.style.justifyContent = Justify.Center;
-            coopBuildClickButton.style.alignItems = Align.Center;
-            coopBuildClickButton.style.overflow = Overflow.Hidden;
-            coopBuildClickButton.style.paddingLeft = 0;
-            coopBuildClickButton.style.paddingRight = 0;
-            coopBuildClickButton.style.paddingTop = 0;
-            coopBuildClickButton.style.paddingBottom = 0;
-            
-            // Progress Fill inside the Keycap button (Neon Cyan progress fill)
-            coopBuildProgressBarFill = new VisualElement();
-            coopBuildProgressBarFill.name = "coop-build-progress-fill";
-            coopBuildProgressBarFill.style.position = Position.Absolute;
-            coopBuildProgressBarFill.style.left = 0;
-            coopBuildProgressBarFill.style.top = 0;
-            coopBuildProgressBarFill.style.bottom = 0;
-            coopBuildProgressBarFill.style.width = Length.Percent(0f);
-            coopBuildProgressBarFill.style.backgroundColor = new Color(0f, 0.72f, 0.95f, 0.4f); // Translucent neon cyan progress fill
-            coopBuildProgressBarFill.style.borderTopLeftRadius = 3;
-            coopBuildProgressBarFill.style.borderBottomLeftRadius = 3;
-            coopBuildProgressBarFill.pickingMode = PickingMode.Ignore;
-            coopBuildClickButton.Add(coopBuildProgressBarFill);
-
-            // Label text inside Keycap
-            coopBuildProgressLabel = new Label("SPACE (0%)");
-            coopBuildProgressLabel.name = "coop-build-progress-label";
-            coopBuildProgressLabel.style.color = new Color(0.95f, 0.95f, 0.92f, 1f);
-            coopBuildProgressLabel.style.fontSize = 26;
-            coopBuildProgressLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
-            coopBuildProgressLabel.style.unityTextAlign = TextAnchor.MiddleCenter;
-            coopBuildProgressLabel.pickingMode = PickingMode.Ignore;
-            coopBuildClickButton.Add(coopBuildProgressLabel);
-
-            coopBuildClickButton.clicked += OnBuildButtonClicked;
-            coopBuildContainer.Add(coopBuildClickButton);
 
             root.Add(coopBuildContainer);
         }

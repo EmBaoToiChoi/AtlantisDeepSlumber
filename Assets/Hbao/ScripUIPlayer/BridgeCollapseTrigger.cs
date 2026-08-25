@@ -349,9 +349,16 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
         localBuildProgress = newVal;
         UpdateProgressiveBridgeSegments(newVal);
         PlayerHUDController localHud = FindAnyObjectByType<PlayerHUDController>();
-        if (localHud != null && isReadyToBuild.Value && !hasBeenRepaired.Value)
+        if (localHud != null)
         {
-            localHud.UpdateQuestProgress(Mathf.RoundToInt(newVal), 100, this);
+            if (PlayerHUDController.isCoopBuildingUIOpen)
+            {
+                localHud.UpdateCoopBuildProgress(newVal);
+            }
+            if (isReadyToBuild.Value && !hasBeenRepaired.Value)
+            {
+                localHud.UpdateQuestProgress(Mathf.RoundToInt(newVal), 100, this);
+            }
         }
     }
 

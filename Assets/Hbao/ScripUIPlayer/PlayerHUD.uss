@@ -586,34 +586,158 @@
     rotate: 15deg;
 }
 
-/* --- Warning Notification Styles --- */
-.weapon-warning-label {
+/* --- Fantasy Notification Popup (Popup_06) --- */
+.notification-popup {
     position: absolute;
-    top: 25%;
+    top: 95px;
     left: 50%;
+    translate: -50% -25px;
+    min-width: 440px;
+    max-width: 820px;
+    min-height: 68px;
+    height: auto;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    scale: 0.85;
+    pointer-events: none;
+    transition-property: opacity, translate, scale;
+    transition-duration: 0.35s;
+    transition-timing-function: ease-out-back;
+    z-index: 1000;
+}
+
+.notification-popup.show-notification {
+    opacity: 1;
     translate: -50% 0;
-    color: rgb(255, 255, 255); /* Chữ trắng cho dễ đọc */
-    -unity-text-outline-width: 1px;
-    -unity-text-outline-color: rgb(255, 0, 0); /* Viền đỏ tạo cảm giác cảnh báo */
-    font-size: 32px;
+    scale: 1;
+}
+
+.notification-popup.pop-bump {
+    scale: 1.06;
+}
+
+/* Nền bán trong suốt tối màu với 9-slice Popup_06_Background */
+.notification-popup-bg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: url("project://database/Assets/Synty/InterfaceFantasyMenus/Sprites/FantasyMenus/SPR_FantasyMenus_Frame_Popup_06_Background.png?fileID=1537655665&guid=0037fd99d67fd1d499f0d526bb6018f8&type=3#SPR_FantasyMenus_Frame_Popup_06_Background");
+    -unity-background-scale-mode: stretch-to-fill;
+    -unity-slice-left: 220;
+    -unity-slice-top: 200;
+    -unity-slice-right: 130;
+    -unity-slice-bottom: 200;
+    background-color: rgba(12, 9, 16, 0.88);
+    border-radius: 12px;
+    box-shadow: 0px 8px 24px rgba(0, 0, 0, 0.85);
+}
+
+/* Khung ghép viền hoa văn vàng Popup_06 Trái + Phải */
+.notification-popup-frame-wrapper {
+    position: absolute;
+    top: -4px;
+    left: -6px;
+    right: -6px;
+    bottom: -4px;
+    flex-direction: row;
+    pointer-events: none;
+}
+
+.notification-popup-frame-left {
+    width: 50%;
+    height: 100%;
+    background-image: url("project://database/Assets/Synty/InterfaceFantasyMenus/Sprites/FantasyMenus/SPR_FantasyMenus_Frame_Popup_06_Left.png?fileID=1537655665&guid=98f398847d40fd144a906e11678e69f8&type=3#SPR_FantasyMenus_Frame_Popup_06_Left");
+    -unity-background-scale-mode: stretch-to-fill;
+    -unity-slice-left: 220;
+    -unity-slice-top: 200;
+    -unity-slice-right: 20;
+    -unity-slice-bottom: 200;
+}
+
+.notification-popup-frame-right {
+    width: 50%;
+    height: 100%;
+    background-image: url("project://database/Assets/Synty/InterfaceFantasyMenus/Sprites/FantasyMenus/SPR_FantasyMenus_Frame_Popup_06_Right.png?fileID=1537655665&guid=d1dd255fbb3186448b554c68a418f3e0&type=3#SPR_FantasyMenus_Frame_Popup_06_Right");
+    -unity-background-scale-mode: stretch-to-fill;
+    -unity-slice-left: 20;
+    -unity-slice-top: 200;
+    -unity-slice-right: 220;
+    -unity-slice-bottom: 200;
+}
+
+/* Nội dung thông báo */
+.notification-popup-content {
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    padding: 14px 44px;
+    position: relative;
+    z-index: 2;
+}
+
+.notification-popup-icon {
+    width: 28px;
+    height: 28px;
+    margin-right: 12px;
+    -unity-background-scale-mode: scale-to-fit;
+    background-image: url("project://database/Assets/Hbao/ScripUIPlayer/lightning_icon_transparent.png?fileID=2800000&guid=ea89cff6ada1da84e818e87424696d88&type=3#lightning_icon_transparent");
+    -unity-background-image-tint-color: rgb(255, 225, 120);
+}
+
+.notification-popup-icon.icon-energy {
+    background-image: url("project://database/Assets/Hbao/ScripUIPlayer/lightning_icon_transparent.png?fileID=2800000&guid=ea89cff6ada1da84e818e87424696d88&type=3#lightning_icon_transparent");
+    -unity-background-image-tint-color: rgb(100, 220, 255);
+}
+
+.notification-popup-icon.icon-quest {
+    background-image: url("project://database/Assets/Synty/InterfaceFantasyMenus/Sprites/Icons_FantasyMenus/SPR_FantasyMenus_Icon_Scroll_01.png?fileID=1537655665&guid=2a6f2ee92dea22c4d80dfc1bc736599d&type=3#SPR_FantasyMenus_Icon_Scroll_01");
+    -unity-background-image-tint-color: rgb(255, 215, 110);
+}
+
+.notification-popup-icon.icon-warning {
+    background-image: url("project://database/Assets/Synty/InterfaceFantasyMenus/Sprites/Icons_FantasyMenus/SPR_FantasyMenus_Icon_Swords_01.png?fileID=1537655665&guid=0e0b23e39d92e3c45b6ac1a70c2b6b84&type=3#SPR_FantasyMenus_Icon_Swords_01");
+    -unity-background-image-tint-color: rgb(255, 120, 100);
+}
+
+.notification-popup-text {
+    color: rgb(255, 242, 210);
+    font-size: 17px;
     -unity-font-style: bold;
     -unity-text-align: middle-center;
-    padding: 12px 40px;
-    background-color: rgba(15, 20, 30, 0.92); /* Nền xanh đen sâu */
-    border-radius: 20px;
+    text-shadow: 0px 2px 5px rgba(0, 0, 0, 0.95);
+    white-space: normal;
+    letter-spacing: 0.5px;
+}
+
+/* --- Warning Notification Styles (Legacy & Compatibility) --- */
+.weapon-warning-label {
+    position: absolute;
+    top: 95px;
+    left: 50%;
+    translate: -50% -25px;
+    color: rgb(255, 242, 210);
+    text-shadow: 0px 2px 5px rgba(0, 0, 0, 0.95);
+    font-size: 18px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    padding: 14px 44px;
+    background-color: rgba(12, 9, 16, 0.88);
+    border-radius: 12px;
     border-width: 2px;
-    border-color: rgba(255, 0, 0, 0.7); /* Viền đỏ rực */
+    border-color: rgba(255, 215, 120, 0.85);
     opacity: 0;
     transition-property: opacity, translate, scale;
-    transition-duration: 0.4s;
+    transition-duration: 0.35s;
     transition-timing-function: ease-out-back;
-    scale: 0.8;
-    -unity-font-definition: url("project://database/Assets/TextMesh%20Pro/Examples%20&%20Extras/Fonts/Electronic%20Highway%20Sign.TTF?fileID=12800000&guid=8a2b9e2a607dd2143b58c44bc32410b4&type=3#Electronic Highway Sign");
+    scale: 0.85;
 }
 
 .weapon-warning-label.show-warning {
     opacity: 1;
-    translate: -50% -20px;
+    translate: -50% 0;
     scale: 1;
 }
 
@@ -1079,43 +1203,57 @@
     transition-timing-function: ease-out-sine;
 }
 
-/* Interaction Prompt (Press F to Collect) */
+/* Interaction Prompt (Press Key to Collect / Interact - Key Icon on Top, Text Below) */
 .interaction-prompt {
     position: absolute;
-    top: 50%;
-    left: 0.5%;
-    translate: -10px -50%;
-    flex-direction: row;
+    bottom: 152px;
+    left: 50%;
+    translate: -50% 8px;
+    flex-direction: column;
     align-items: center;
-    background-color: rgba(0, 0, 0, 0); /* Xóa bóng đen đổ */
-    border-width: 0px; /* Xóa viền trắng bọc ngoài */
-    padding: 8px 18px;
+    justify-content: center;
+    background-color: rgba(12, 16, 26, 0.94);
+    border-width: 1.5px;
+    border-color: rgba(230, 195, 110, 0.75);
+    border-radius: 16px;
+    padding: 8px 18px 8px 18px;
     opacity: 0;
-    scale: 0.8 0.8;
+    scale: 0.92 0.92;
     transition-property: opacity, scale, translate;
-    transition-duration: 0.35s;
+    transition-duration: 0.22s;
     transition-timing-function: ease-out-back;
     z-index: 1001;
-    display: none; /* Sẽ đổi thành Flex bằng C# khi ở trong vùng tương tác */
+    display: none;
 }
 
 .interaction-prompt.show-prompt {
     display: flex;
     opacity: 1;
     scale: 1 1;
-    translate: 0 -50%;
+    translate: -50% 0;
+}
+
+.interaction-key-icon {
+    width: 36px;
+    height: 36px;
+    -unity-background-scale-mode: scale-to-fit;
+    background-color: transparent;
+    border-width: 0;
+    margin-right: 0;
+    margin-bottom: 5px;
 }
 
 .key-badge-f {
-    width: 38px;
-    height: 38px;
+    width: 36px;
+    height: 36px;
     background-image: url("project://database/Assets/Artsystack - Fantasy RPG GUI/Resources/Sprites/controller icons/keyboard_mouse/F.png?fileID=2800000&guid=66976df651142c9499726864796f67c7&type=3#F");
     -unity-background-scale-mode: scale-to-fit;
     background-color: transparent;
     border-width: 0;
     justify-content: center;
     align-items: center;
-    margin-right: 12px;
+    margin-right: 0;
+    margin-bottom: 5px;
 }
 
 .key-badge-f-text {
@@ -1125,10 +1263,12 @@
 .interaction-text {
     color: rgb(255, 255, 255);
     -unity-font-style: bold;
-    font-size: 17px;
-    letter-spacing: 0.5px;
+    font-size: 15px;
+    letter-spacing: 0.4px;
     padding: 0;
     margin: 0;
+    -unity-text-align: middle-center;
+    white-space: nowrap;
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.95);
 }
 
@@ -1469,6 +1609,16 @@
     width: 38px;
     height: 38px;
     background-image: url("project://database/Assets/Artsystack - Fantasy RPG GUI/Resources/Sprites/controller icons/keyboard_mouse/G.png?fileID=2800000&guid=8adf5ca34aa971449947f13f45218cbb&type=3#G"); 
+}
+.key-icon-c { 
+    width: 38px;
+    height: 38px;
+    background-image: url("project://database/Assets/Artsystack - Fantasy RPG GUI/Resources/Sprites/controller icons/keyboard_mouse/C.png?fileID=2800000&guid=be92bcb2a5cd8a4488a88c247e9aac12&type=3#C"); 
+}
+.key-icon-space { 
+    width: 64px;
+    height: 38px;
+    background-image: url("project://database/Assets/Artsystack - Fantasy RPG GUI/Resources/Sprites/controller icons/keyboard_mouse/Space.png?fileID=2800000&guid=55a3e427091ec004dad2f549be42efa2&type=3#Space"); 
 }
 .key-icon-1 { background-image: url("project://database/Assets/Artsystack - Fantasy RPG GUI/Resources/Sprites/controller icons/keyboard_mouse/1.png?fileID=2800000&guid=28e09e144e4bab440a36319775ac0951&type=3#1"); }
 .key-icon-2 { background-image: url("project://database/Assets/Artsystack - Fantasy RPG GUI/Resources/Sprites/controller icons/keyboard_mouse/2.png?fileID=2800000&guid=76aea3e69e4963b439bcd3f73d0386f8&type=3#2"); }
