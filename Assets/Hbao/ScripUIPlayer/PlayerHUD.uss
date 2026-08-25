@@ -1201,14 +1201,15 @@
     transition-timing-function: ease-out-sine;
 }
 
-/* Interaction Prompt (Press Key to Collect / Interact - Fantasy Popup 03 Frame) */
+/* --- Interaction Prompt (Fantasy Golden Frame) --- */
 .interaction-prompt {
     position: absolute;
     bottom: 215px;
     left: 50%;
     translate: -50% 8px;
-    min-width: 280px;
-    max-width: 720px;
+    min-width: 320px;
+    max-width: 780px;
+    min-height: 64px;
     width: auto;
     height: auto;
     align-items: center;
@@ -1233,46 +1234,61 @@
     translate: -50% 0;
 }
 
-/* Khung ghép viền hoa văn vàng Popup_03 Trái + Phải */
-.interaction-prompt-frame-wrapper {
+/* Lớp nền tối màu Obsidian sâu thẳm với đổ bóng đen */
+.interaction-prompt-bg {
     position: absolute;
     top: 0;
     left: 0;
     right: 0;
     bottom: 0;
-    flex-direction: row;
+    background-color: rgba(12, 10, 16, 0.95);
+    border-radius: 8px;
+    box-shadow: 0px 8px 30px rgba(0, 0, 0, 0.96);
+}
+
+/* Khung viền hoa văn vàng Fantasy bọc lại hoàn toàn xung quanh */
+.interaction-prompt-frame {
+    position: absolute;
+    top: -10px;
+    left: -14px;
+    right: -14px;
+    bottom: -10px;
+    background-image: url("project://database/Assets/Synty/InterfaceFantasyMenus/Sprites/FantasyMenus/SPR_FantasyMenus_Frame_Box_Medium_02.png?fileID=1537655665&guid=4c83811485b435e4a93a37b73758d514&type=3#SPR_FantasyMenus_Frame_Box_Medium_02");
+    -unity-background-scale-mode: stretch-to-fill;
+    -unity-slice-left: 80;
+    -unity-slice-top: 80;
+    -unity-slice-right: 80;
+    -unity-slice-bottom: 80;
     pointer-events: none;
-    overflow: visible;
 }
 
-.interaction-prompt-frame-left {
-    width: 50%;
-    height: 100%;
-    background-image: url("project://database/Assets/Synty/InterfaceFantasyMenus/Sprites/FantasyMenus/SPR_FantasyMenus_Frame_Popup_03_Left.png?fileID=1537655665&guid=fcc469439064e51418f3322849f8623f&type=3#SPR_FantasyMenus_Frame_Popup_03_Left");
+/* Tương thích ngược nếu còn frame-wrapper cũ */
+.interaction-prompt-frame-wrapper {
+    position: absolute;
+    top: -10px;
+    left: -14px;
+    right: -14px;
+    bottom: -10px;
+    background-image: url("project://database/Assets/Synty/InterfaceFantasyMenus/Sprites/FantasyMenus/SPR_FantasyMenus_Frame_Box_Medium_02.png?fileID=1537655665&guid=4c83811485b435e4a93a37b73758d514&type=3#SPR_FantasyMenus_Frame_Box_Medium_02");
     -unity-background-scale-mode: stretch-to-fill;
-    -unity-slice-left: 120;
-    -unity-slice-top: 160;
-    -unity-slice-right: 20;
-    -unity-slice-bottom: 160;
+    -unity-slice-left: 80;
+    -unity-slice-top: 80;
+    -unity-slice-right: 80;
+    -unity-slice-bottom: 80;
+    pointer-events: none;
 }
 
+.interaction-prompt-frame-left,
 .interaction-prompt-frame-right {
-    width: 50%;
-    height: 100%;
-    background-image: url("project://database/Assets/Synty/InterfaceFantasyMenus/Sprites/FantasyMenus/SPR_FantasyMenus_Frame_Popup_03_Right.png?fileID=1537655665&guid=82470b74cf6269a47b351afb9bdc07e0&type=3#SPR_FantasyMenus_Frame_Popup_03_Right");
-    -unity-background-scale-mode: stretch-to-fill;
-    -unity-slice-left: 20;
-    -unity-slice-top: 160;
-    -unity-slice-right: 120;
-    -unity-slice-bottom: 160;
+    display: none;
 }
 
-/* Nội dung bên trong khung: Chứa Icon phím và Chữ */
+/* Nội dung bên trong: Căn giữa theo hàng ngang gọn gàng */
 .interaction-prompt-content {
-    flex-direction: column;
+    flex-direction: row;
     align-items: center;
     justify-content: center;
-    padding: 16px 44px 14px 44px;
+    padding: 16px 48px;
     position: relative;
     z-index: 2;
     width: 100%;
@@ -1284,8 +1300,9 @@
     -unity-background-scale-mode: scale-to-fit;
     background-color: transparent;
     border-width: 0;
-    margin-right: 0;
-    margin-bottom: 4px;
+    margin-right: 14px;
+    margin-bottom: 0;
+    flex-shrink: 0;
 }
 
 .key-badge-f {
@@ -1297,8 +1314,9 @@
     border-width: 0;
     justify-content: center;
     align-items: center;
-    margin-right: 0;
-    margin-bottom: 4px;
+    margin-right: 14px;
+    margin-bottom: 0;
+    flex-shrink: 0;
 }
 
 .key-badge-f-text {
@@ -1308,13 +1326,14 @@
 .interaction-text {
     color: rgb(255, 238, 195);
     -unity-font-style: bold;
-    font-size: 15px;
+    font-size: 16px;
     letter-spacing: 0.4px;
-    padding: 0 4px;
+    padding: 0;
     margin: 0;
     -unity-text-align: middle-center;
     white-space: normal;
-    text-shadow: 0 2px 5px rgba(0, 0, 0, 0.95);
+    text-shadow: 0px 2px 8px rgba(0, 0, 0, 1);
+    flex-shrink: 1;
 }
 
 /* Inventory Tooltip (Hover Description Card) */
