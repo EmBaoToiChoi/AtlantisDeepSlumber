@@ -215,8 +215,14 @@
         </ui:VisualElement>
     </ui:VisualElement>
     <ui:VisualElement name="interaction-prompt" class="interaction-prompt">
-        <ui:VisualElement name="interaction-key-icon" class="interaction-key-icon key-icon-f" />
-        <ui:Label name="interaction-prompt-text" text="Ấn [F] để nhặt" class="interaction-text" />
+        <ui:VisualElement class="interaction-prompt-frame-wrapper">
+            <ui:VisualElement class="interaction-prompt-frame-left" />
+            <ui:VisualElement class="interaction-prompt-frame-right" />
+        </ui:VisualElement>
+        <ui:VisualElement class="interaction-prompt-content">
+            <ui:VisualElement name="interaction-key-icon" class="interaction-key-icon key-icon-f" />
+            <ui:Label name="interaction-prompt-text" text="Ấn [F] để nhặt" class="interaction-text" />
+        </ui:VisualElement>
     </ui:VisualElement>
     <ui:VisualElement name="teammates-container" class="teammates-container" />
     <ui:VisualElement name="hotkeys-hint-panel" class="hotkeys-hint-panel">

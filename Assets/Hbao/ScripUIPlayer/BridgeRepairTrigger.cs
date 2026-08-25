@@ -75,12 +75,23 @@ public class BridgeRepairTrigger : MonoBehaviour
                     {
                         if (isReady)
                         {
-                            // Đã đủ 16 thanh gỗ -> Hoàn tất sửa cầu ngay, không hiển thị UI spam space (hình 2)
-                            localHud.ShowInteractionPrompt(false, "");
-                            localHud.CloseCoopBuildUI();
-                            if (!bridgeController.IsBridgeRepaired())
+                            if (PlayerHUDController.isCoopBuildingUIOpen)
                             {
-                                bridgeController.RepairBridgeLocal();
+                                // Đang trong giao diện xây cầu: Ẩn prompt tương tác bên dưới để tránh rối mắt
+                                localHud.ShowInteractionPrompt(false, "");
+                            }
+                            else
+                            {
+                                localHud.ShowInteractionPrompt(true, "Ấn [F] để xây cầu");
+                            }
+
+                            if (Input.GetKeyDown(KeyCode.F))
+                            {
+                                localHud.ToggleCoopBuildUI(bridgeController);
+                            }
+                            else if (Input.GetKeyDown(KeyCode.Space) && !PlayerHUDController.isCoopBuildingUIOpen)
+                            {
+                                localHud.OpenCoopBuildUI(bridgeController);
                             }
                         }
                         else
