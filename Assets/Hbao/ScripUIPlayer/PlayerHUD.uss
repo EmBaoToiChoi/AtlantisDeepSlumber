@@ -939,8 +939,8 @@
 /* ========================================================================= */
 
 .upgrades-container {
-    margin-top: 14px;
-    padding: 12px 16px;
+    margin-top: 10px;
+    padding: 10px 16px;
     background-color: rgba(0, 0, 0, 0.55);
     border-radius: 18px;
     border-width: 1.5px;
@@ -951,7 +951,7 @@
     flex-direction: row;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 8px;
+    margin-bottom: 6px;
 }
 
 .upgrades-title {
@@ -977,7 +977,7 @@
     flex-direction: row;
     justify-content: space-between;
     align-items: center;
-    padding: 7px 0;
+    padding: 4.5px 0;
 }
 
 .upgrades-header-left {

@@ -168,7 +168,7 @@
                                 <ui:Button name="btn-upgrade-hp" text="+" class="upgrade-button" />
                             </ui:VisualElement>
                             <ui:VisualElement class="upgrade-row">
-                                <ui:Label name="upgrade-name-mp" text="STAMINA" class="upgrade-name" />
+                                <ui:Label name="upgrade-name-mp" text="NĂNG LƯỢNG" class="upgrade-name" />
                                 <ui:Label name="mp-level-text" text="Lv. 0" class="upgrade-value" />
                                 <ui:Button name="btn-upgrade-mp" text="+" class="upgrade-button" />
                             </ui:VisualElement>
@@ -181,6 +181,11 @@
                                 <ui:Label name="upgrade-name-damage" text="SÁT THƯƠNG" class="upgrade-name" />
                                 <ui:Label name="damage-level-text" text="Lv. 0" class="upgrade-value" />
                                 <ui:Button name="btn-upgrade-damage" text="+" class="upgrade-button" />
+                            </ui:VisualElement>
+                            <ui:VisualElement class="upgrade-row">
+                                <ui:Label name="upgrade-name-speed" text="TỐC ĐỘ CHẠY" class="upgrade-name" />
+                                <ui:Label name="speed-level-text" text="Lv. 0" class="upgrade-value" />
+                                <ui:Button name="btn-upgrade-speed" text="+" class="upgrade-button" />
                             </ui:VisualElement>
                         </ui:VisualElement>
                     </ui:VisualElement>

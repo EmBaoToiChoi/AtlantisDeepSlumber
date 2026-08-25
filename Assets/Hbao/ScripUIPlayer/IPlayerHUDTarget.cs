@@ -39,10 +39,14 @@ public interface IPlayerHUDTarget
     // Controls
     void SetCursorLock(bool locked);
     
-    // Health & Stats
+    // Health, Mana & Stats
     float CurrentHealth { get; }
     float MaxHealth { get; }
     void Heal(float amount);
+    float CurrentMana { get; }
+    float MaxMana { get; }
+    bool HasEnoughMana(float amount = 30f);
+    bool TryConsumeMana(float amount = 30f);
     
     // Invisibility Skill R
     bool IsInvisible { get; }
