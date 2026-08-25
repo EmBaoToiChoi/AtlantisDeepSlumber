@@ -981,13 +981,8 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
                 {
                     IntroDialogueController.Instance.StartReadyToBuildDialogue();
                 }
-                PlayerHUDController localHud = FindAnyObjectByType<PlayerHUDController>();
-                if (localHud != null)
-                {
-                    localHud.UpdateQuestDescription("Hãy lại gần cầu và nhấn Space để cùng nhau xây dựng");
-                    localHud.UpdateQuestProgress(0, 100);
-                }
-                ApplyBridgeVisualState(IsBridgeCollapsed(), IsBridgeRepaired(), GetLogsSubmittedCount());
+
+                RepairBridgeLocal();
             }
             else
             {
@@ -1023,7 +1018,8 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
                 if (logsSubmitted.Value >= requiredLogsToRepair)
                 {
                     isReadyToBuild.Value = true;
-                    Debug.Log("[BridgeCollapseTrigger] Server: Cầu đã đủ gỗ, chuyển sang ReadyToBuild!");
+                    hasBeenRepaired.Value = true;
+                    Debug.Log("[BridgeCollapseTrigger] Server: Cầu đã đủ gỗ, hoàn thành sửa cầu!");
 
                     if (buildCompleteCutscene != null)
                     {
@@ -1034,7 +1030,7 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
         }
     }
 
-    private void RepairBridgeLocal()
+    public void RepairBridgeLocal()
     {
         localRepaired = true;
 
