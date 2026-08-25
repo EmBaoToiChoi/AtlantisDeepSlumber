@@ -73,6 +73,7 @@ public class InteractBox : NetworkBehaviour
 
         isUsingStation = true;
         gameManager.ToggleMiniGame(stationIndex, true);
+        ShowPromptForStation(false);
 
         if (localPlayerController != null) 
         {
@@ -86,6 +87,7 @@ public class InteractBox : NetworkBehaviour
         if (gameManager == null) return;
         isUsingStation = false;
         gameManager.ToggleMiniGame(stationIndex, false);
+        if (isPlayerInside) ShowPromptForStation(true);
 
         if (localPlayerController != null) 
         {
@@ -131,6 +133,7 @@ public class InteractBox : NetworkBehaviour
             localPlayerInteraction = pInt;
             pInt.currentInteractBox = this; 
             localPlayerController = other.GetComponent<NetworkBehaviour>(); 
+            ShowPromptForStation(true);
         }
     }
 
@@ -144,7 +147,35 @@ public class InteractBox : NetworkBehaviour
             if (pInt.currentInteractBox == this) pInt.currentInteractBox = null;
             localPlayerInteraction = null;
             localPlayerController = null;
+            ShowPromptForStation(false);
         }
+    }
+
+    private void ShowPromptForStation(bool show)
+    {
+        var hud = PlayerHUDController.Instance != null ? PlayerHUDController.Instance : FindAnyObjectByType<PlayerHUDController>();
+        if (hud == null) return;
+
+        if (!show)
+        {
+            hud.ShowInteractionPrompt(false, "");
+            return;
+        }
+
+        string promptText = "Ấn [F] để vận hành bánh răng";
+        if ((stationIndex == 2 || stationIndex == 3) && !isCrystalLocked.Value)
+        {
+            string ngocItem = (localPlayerInteraction != null) ? GetNgocFromInventory(localPlayerInteraction) : null;
+            if (!string.IsNullOrEmpty(ngocItem))
+            {
+                promptText = "Ấn [F] để đặt ngọc vào trạm";
+            }
+            else
+            {
+                promptText = "Cần đặt ngọc | Ấn [F] để kích hoạt";
+            }
+        }
+        hud.ShowInteractionPrompt(true, promptText);
     }
 
     private string GetNgocFromInventory(PlayerInteraction playerInt)
