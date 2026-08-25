@@ -27954,8 +27954,8 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 0
   serializedVersion: 3
-  m_Size: {x: 10.6414795, y: 1, z: 22.427307}
-  m_Center: {x: -4.8207397, y: 0, z: 1.6291809}
+  m_Size: {x: 9.618225, y: 1, z: 22.427307}
+  m_Center: {x: -5.332367, y: 0, z: 1.6291809}
 --- !u!4 &129333398
 Transform:
   m_ObjectHideFlags: 0
@@ -233243,6 +233243,7 @@ Transform:
   m_Children:
   - {fileID: 194458994}
   - {fileID: 1905717360}
+  - {fileID: 1599591079}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: -90, z: 0}
 --- !u!1001 &958181862
@@ -367656,6 +367657,37 @@ Light:
   m_LightUnit: 1
   m_LuxAtDistance: 1
   m_EnableSpotReflector: 1
+--- !u!1 &1599591078
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1599591079}
+  m_Layer: 0
+  m_Name: GameObject (2)
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1599591079
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1599591078}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -0, y: 1.89, z: -203.16}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 957689702}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1599755005
 GameObject:
   m_ObjectHideFlags: 0
@@ -413189,7 +413221,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!65 &1790164860
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -413223,7 +413255,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1a8dd4b9b13a347b99f677c41a8cc3c7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  targetDestination: {fileID: 792958371}
+  targetDestination: {fileID: 1599591079}
   spawnOffset: {x: 0, y: 0.2, z: 0}
   matchTargetRotation: 1
   onlyPlayer: 1
