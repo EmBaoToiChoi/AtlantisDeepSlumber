@@ -455,6 +455,13 @@
     border-radius: 6px;
 }
 
+/* --- Khi không đủ 30 Năng lượng: Chỉ làm trong suốt/mờ Image Kỹ Năng, giữ nguyên Khung & Phím tắt --- */
+.skill-slot-no-mana .skill-image,
+.skill-image.skill-no-mana {
+    opacity: 0.35;
+    -unity-background-image-tint-color: rgba(100, 100, 100, 0.95);
+}
+
 .skill-cooldown-overlay {
     position: absolute;
     bottom: 11%;

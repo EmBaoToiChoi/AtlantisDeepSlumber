@@ -153,6 +153,9 @@ public class PlayerHUDController : MonoBehaviour
     private VisualElement skillImgQ; // Tham chiếu tới hình ảnh kỹ năng để ẩn
     private VisualElement skillImgR; // Tham chiếu tới hình ảnh kỹ năng để ẩn
     private VisualElement skillImgE; // Tham chiếu tới hình ảnh kỹ năng để ẩn
+    private VisualElement skillSlotQ; // Ô kỹ năng Q
+    private VisualElement skillSlotR; // Ô kỹ năng R
+    private VisualElement skillSlotE; // Ô kỹ năng E
     private Label skillNameLabelQ; // Label hiển thị tên Skill Q (Ảo Ảnh Chém)
     private Label skillNameLabelR; // Label hiển thị tên Skill R (Chưởng Nguyên Tố)
     private Label skillNameLabelE; // Label hiển thị tên Skill E (Tăng Tốc Chạy)
@@ -249,6 +252,8 @@ public class PlayerHUDController : MonoBehaviour
     // Coop Building UI system
     public static bool isCoopBuildingUIOpen = false;
     private VisualElement coopBuildContainer;
+    private VisualElement coopBuildFrameLeft;
+    private VisualElement coopBuildFrameRight;
     private VisualElement coopBuildProgressBarFill;
     private Label coopBuildProgressLabel;
     private Button coopBuildClickButton;
@@ -349,6 +354,10 @@ public class PlayerHUDController : MonoBehaviour
     public Sprite ngoc1Sprite;
     public Sprite ngoc2Sprite;
 
+    [Header("Coop Build Frame Sprites")]
+    public Sprite coopBuildFrameLeftSprite;
+    public Sprite coopBuildFrameRightSprite;
+
     void OnEnable()
     {
         Instance = this;
@@ -408,6 +417,7 @@ public class PlayerHUDController : MonoBehaviour
         lockQ = null; lockR = null; lockE = null;
         lockIconQ = null; lockIconR = null; lockIconE = null;
         skillImgQ = null; skillImgR = null; skillImgE = null;
+        skillSlotQ = null; skillSlotR = null; skillSlotE = null;
         worldMapOverlay = null; inventoryOverlay = null; weaponWarning = null;
         weaponDurabilityFill1 = null; weaponDurabilityFill2 = null;
         interactionPrompt = null; interactionPromptText = null; interactionPromptKeyText = null;
@@ -426,6 +436,8 @@ public class PlayerHUDController : MonoBehaviour
             coopBuildContainer.RemoveFromHierarchy();
         }
         coopBuildContainer = null;
+        coopBuildFrameLeft = null;
+        coopBuildFrameRight = null;
         coopBuildProgressBarFill = null;
         coopBuildProgressLabel = null;
         coopBuildClickButton = null;
@@ -660,6 +672,10 @@ public class PlayerHUDController : MonoBehaviour
         skillImgQ = root.Q<VisualElement>("skill-img-q");
         skillImgR = root.Q<VisualElement>("skill-img-r");
         skillImgE = root.Q<VisualElement>("skill-img-e");
+
+        if (skillImgQ != null) skillSlotQ = skillImgQ.parent;
+        if (skillImgR != null) skillSlotR = skillImgR.parent;
+        if (skillImgE != null) skillSlotE = skillImgE.parent;
 
         skillNameLabelQ = root.Q<Label>("skill-name-label-q");
         skillNameLabelR = root.Q<Label>("skill-name-label-r");
@@ -1342,6 +1358,9 @@ public class PlayerHUDController : MonoBehaviour
                 cooldownTextE.style.display = DisplayStyle.None;
         }
 
+        // Cập nhật trạng thái tối đen của ô kỹ năng khi năng lượng < 30
+        UpdateSkillEnergyVisuals();
+
         // Cập nhật timer cảnh báo
         if (warningTimer > 0f)
         {
@@ -1658,6 +1677,7 @@ public class PlayerHUDController : MonoBehaviour
         {
             mpFill.style.width = Length.Percent(clamped * 100f);
         }
+        UpdateSkillEnergyVisuals();
     }
 
     public void RefreshAllBars()
@@ -1680,6 +1700,53 @@ public class PlayerHUDController : MonoBehaviour
             {
                 SetMana(1f);
             }
+        }
+        UpdateSkillEnergyVisuals();
+    }
+
+    public void UpdateSkillEnergyVisuals()
+    {
+        bool hasEnoughEnergy = true;
+        if (LocalPlayerTarget != null)
+        {
+            hasEnoughEnergy = LocalPlayerTarget.CurrentMana >= 30f;
+        }
+
+        SetSkillsEnergyState(hasEnoughEnergy);
+    }
+
+    public void SetSkillsEnergyState(bool hasEnoughEnergy)
+    {
+        if (skillSlotQ != null)
+        {
+            if (hasEnoughEnergy) skillSlotQ.RemoveFromClassList("skill-slot-no-mana");
+            else skillSlotQ.AddToClassList("skill-slot-no-mana");
+        }
+        if (skillSlotR != null)
+        {
+            if (hasEnoughEnergy) skillSlotR.RemoveFromClassList("skill-slot-no-mana");
+            else skillSlotR.AddToClassList("skill-slot-no-mana");
+        }
+        if (skillSlotE != null)
+        {
+            if (hasEnoughEnergy) skillSlotE.RemoveFromClassList("skill-slot-no-mana");
+            else skillSlotE.AddToClassList("skill-slot-no-mana");
+        }
+
+        if (skillImgQ != null)
+        {
+            if (hasEnoughEnergy) skillImgQ.RemoveFromClassList("skill-no-mana");
+            else skillImgQ.AddToClassList("skill-no-mana");
+        }
+        if (skillImgR != null)
+        {
+            if (hasEnoughEnergy) skillImgR.RemoveFromClassList("skill-no-mana");
+            else skillImgR.AddToClassList("skill-no-mana");
+        }
+        if (skillImgE != null)
+        {
+            if (hasEnoughEnergy) skillImgE.RemoveFromClassList("skill-no-mana");
+            else skillImgE.AddToClassList("skill-no-mana");
         }
     }
 
@@ -2731,7 +2798,57 @@ public class PlayerHUDController : MonoBehaviour
     {
         if (ngoc1Sprite == null) ngoc1Sprite = Resources.Load<Sprite>("crystal_purple");
         if (ngoc2Sprite == null) ngoc2Sprite = Resources.Load<Sprite>("crystal_red");
+        EnsureCoopBuildSpritesLoaded();
         SetupEventSystemForInputSystem();
+    }
+
+    private void EnsureCoopBuildSpritesLoaded()
+    {
+        if (coopBuildFrameLeftSprite == null)
+        {
+            coopBuildFrameLeftSprite = LoadSpriteAnywhere(
+                "SPR_FantasyMenus_Frame_Popup_01_Left",
+                "Assets/Synty/InterfaceFantasyMenus/Sprites/FantasyMenus/SPR_FantasyMenus_Frame_Popup_01_Left.png"
+            );
+        }
+        if (coopBuildFrameRightSprite == null)
+        {
+            coopBuildFrameRightSprite = LoadSpriteAnywhere(
+                "SPR_FantasyMenus_Frame_Popup_01_Right",
+                "Assets/Synty/InterfaceFantasyMenus/Sprites/FantasyMenus/SPR_FantasyMenus_Frame_Popup_01_Right.png"
+            );
+        }
+    }
+
+    private Sprite LoadSpriteAnywhere(string resourceName, string assetPath)
+    {
+        Sprite s = Resources.Load<Sprite>(resourceName);
+        if (s != null) return s;
+
+        Texture2D tex = Resources.Load<Texture2D>(resourceName);
+        if (tex != null)
+        {
+            return Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f));
+        }
+
+#if UNITY_EDITOR
+        var allAssets = UnityEditor.AssetDatabase.LoadAllAssetsAtPath(assetPath);
+        if (allAssets != null && allAssets.Length > 0)
+        {
+            foreach (var obj in allAssets)
+            {
+                if (obj is Sprite sp) return sp;
+            }
+            foreach (var obj in allAssets)
+            {
+                if (obj is Texture2D t)
+                {
+                    return Sprite.Create(t, new Rect(0, 0, t.width, t.height), new Vector2(0.5f, 0.5f));
+                }
+            }
+        }
+#endif
+        return null;
     }
 
     public void SetupEventSystemForInputSystem()
@@ -4469,58 +4586,79 @@ public class PlayerHUDController : MonoBehaviour
             hasTransitionedBuildCameraOnce = false;
         }
 
+        EnsureCoopBuildSpritesLoaded();
+
         if (coopBuildContainer == null)
         {
-            // 1. Create main container
+            // 1. Create main container (transparent wrapper holding the fantasy frame + space button)
             coopBuildContainer = new VisualElement();
             coopBuildContainer.name = "coop-build-container";
             
-            // Apply Glassmorphism layout & styling (smaller, more centered, focused on space bar)
             coopBuildContainer.style.position = Position.Absolute;
             coopBuildContainer.style.left = Length.Percent(50f);
-            coopBuildContainer.style.top = 30; // Closer to top center
+            coopBuildContainer.style.top = 20; // Top center
             coopBuildContainer.style.translate = new Translate(Length.Percent(-50f), Length.Percent(0f), 0f);
-            coopBuildContainer.style.width = 480;
-            coopBuildContainer.style.height = 140;
-            coopBuildContainer.style.backgroundColor = new Color(0.06f, 0.06f, 0.08f, 0.75f); // Semi-transparent sleek dark
-            coopBuildContainer.style.borderTopWidth = 1f;
-            coopBuildContainer.style.borderBottomWidth = 1f;
-            coopBuildContainer.style.borderLeftWidth = 1f;
-            coopBuildContainer.style.borderRightWidth = 1f;
-            coopBuildContainer.style.borderTopColor = new Color(1f, 1f, 1f, 0.12f);
-            coopBuildContainer.style.borderBottomColor = new Color(1f, 1f, 1f, 0.12f);
-            coopBuildContainer.style.borderLeftColor = new Color(1f, 1f, 1f, 0.12f);
-            coopBuildContainer.style.borderRightColor = new Color(1f, 1f, 1f, 0.12f);
-            coopBuildContainer.style.borderTopLeftRadius = 20;
-            coopBuildContainer.style.borderTopRightRadius = 20;
-            coopBuildContainer.style.borderBottomLeftRadius = 20;
-            coopBuildContainer.style.borderBottomRightRadius = 20;
-            coopBuildContainer.style.paddingLeft = 20;
-            coopBuildContainer.style.paddingRight = 20;
-            coopBuildContainer.style.paddingTop = 15;
-            coopBuildContainer.style.paddingBottom = 15;
+            coopBuildContainer.style.width = 580;
+            coopBuildContainer.style.height = 160;
+            coopBuildContainer.style.backgroundColor = Color.clear;
+            coopBuildContainer.style.borderTopWidth = 0;
+            coopBuildContainer.style.borderBottomWidth = 0;
+            coopBuildContainer.style.borderLeftWidth = 0;
+            coopBuildContainer.style.borderRightWidth = 0;
+            coopBuildContainer.style.paddingLeft = 46;
+            coopBuildContainer.style.paddingRight = 46;
+            coopBuildContainer.style.paddingTop = 54;
+            coopBuildContainer.style.paddingBottom = 12;
             coopBuildContainer.style.flexDirection = FlexDirection.Column;
             coopBuildContainer.style.justifyContent = Justify.Center;
-            coopBuildContainer.style.alignItems = Align.Center;
+            coopBuildContainer.style.alignItems = Align.Stretch;
 
-            // 2. Create Space Keycap VisualElement (Clickable & Focus of UI)
+            // 2. Background Decorative Frame composed of Left & Right halves
+            VisualElement frameBgContainer = new VisualElement();
+            frameBgContainer.name = "coop-build-frame-bg";
+            frameBgContainer.style.position = Position.Absolute;
+            frameBgContainer.style.left = 0;
+            frameBgContainer.style.top = 0;
+            frameBgContainer.style.right = 0;
+            frameBgContainer.style.bottom = 0;
+            frameBgContainer.style.flexDirection = FlexDirection.Row;
+            frameBgContainer.pickingMode = PickingMode.Ignore;
+
+            coopBuildFrameLeft = new VisualElement();
+            coopBuildFrameLeft.name = "coop-build-frame-left";
+            coopBuildFrameLeft.style.width = Length.Percent(50f);
+            coopBuildFrameLeft.style.height = Length.Percent(100f);
+            coopBuildFrameLeft.pickingMode = PickingMode.Ignore;
+
+            coopBuildFrameRight = new VisualElement();
+            coopBuildFrameRight.name = "coop-build-frame-right";
+            coopBuildFrameRight.style.width = Length.Percent(50f);
+            coopBuildFrameRight.style.height = Length.Percent(100f);
+            coopBuildFrameRight.pickingMode = PickingMode.Ignore;
+
+            frameBgContainer.Add(coopBuildFrameLeft);
+            frameBgContainer.Add(coopBuildFrameRight);
+            coopBuildContainer.Add(frameBgContainer);
+
+            // 3. Create Space Keycap VisualElement (Full-size inside the inner golden rectangular frame)
             coopBuildClickButton = new Button();
             coopBuildClickButton.name = "coop-build-space-button";
-            coopBuildClickButton.style.width = 420;
-            coopBuildClickButton.style.height = 72;
-            coopBuildClickButton.style.backgroundColor = new Color(0.14f, 0.14f, 0.18f, 0.95f); // Dark keycap body
+            coopBuildClickButton.style.width = Length.Percent(100f);
+            coopBuildClickButton.style.height = Length.Percent(100f);
+            coopBuildClickButton.style.flexGrow = 1;
+            coopBuildClickButton.style.backgroundColor = new Color(0.10f, 0.11f, 0.15f, 0.95f); // Dark keycap body
             coopBuildClickButton.style.borderTopWidth = 1.5f;
-            coopBuildClickButton.style.borderBottomWidth = 4.5f; // Keycap 3D border-bottom depth
-            coopBuildClickButton.style.borderLeftWidth = 2f;
-            coopBuildClickButton.style.borderRightWidth = 2f;
-            coopBuildClickButton.style.borderTopColor = new Color(1f, 1f, 1f, 0.25f);
-            coopBuildClickButton.style.borderBottomColor = new Color(0.05f, 0.05f, 0.07f, 1f); // Darker shadow
-            coopBuildClickButton.style.borderLeftColor = new Color(1f, 1f, 1f, 0.15f);
-            coopBuildClickButton.style.borderRightColor = new Color(1f, 1f, 1f, 0.15f);
-            coopBuildClickButton.style.borderTopLeftRadius = 10;
-            coopBuildClickButton.style.borderTopRightRadius = 10;
-            coopBuildClickButton.style.borderBottomLeftRadius = 10;
-            coopBuildClickButton.style.borderBottomRightRadius = 10;
+            coopBuildClickButton.style.borderBottomWidth = 3.5f; // Keycap 3D border-bottom depth
+            coopBuildClickButton.style.borderLeftWidth = 1.5f;
+            coopBuildClickButton.style.borderRightWidth = 1.5f;
+            coopBuildClickButton.style.borderTopColor = new Color(0.95f, 0.8f, 0.45f, 0.35f); // Subtle gold accent border
+            coopBuildClickButton.style.borderBottomColor = new Color(0.04f, 0.04f, 0.06f, 0.95f); // Darker shadow
+            coopBuildClickButton.style.borderLeftColor = new Color(0.95f, 0.8f, 0.45f, 0.2f);
+            coopBuildClickButton.style.borderRightColor = new Color(0.95f, 0.8f, 0.45f, 0.2f);
+            coopBuildClickButton.style.borderTopLeftRadius = 4;
+            coopBuildClickButton.style.borderTopRightRadius = 4;
+            coopBuildClickButton.style.borderBottomLeftRadius = 4;
+            coopBuildClickButton.style.borderBottomRightRadius = 4;
             coopBuildClickButton.style.flexDirection = FlexDirection.Column;
             coopBuildClickButton.style.justifyContent = Justify.Center;
             coopBuildClickButton.style.alignItems = Align.Center;
@@ -4530,30 +4668,46 @@ public class PlayerHUDController : MonoBehaviour
             coopBuildClickButton.style.paddingTop = 0;
             coopBuildClickButton.style.paddingBottom = 0;
             
-            // Progress Fill inside the Keycap button (Neon Cyan)
+            // Progress Fill inside the Keycap button (Neon Cyan progress fill)
             coopBuildProgressBarFill = new VisualElement();
+            coopBuildProgressBarFill.name = "coop-build-progress-fill";
             coopBuildProgressBarFill.style.position = Position.Absolute;
             coopBuildProgressBarFill.style.left = 0;
             coopBuildProgressBarFill.style.top = 0;
             coopBuildProgressBarFill.style.bottom = 0;
             coopBuildProgressBarFill.style.width = Length.Percent(0f);
-            coopBuildProgressBarFill.style.backgroundColor = new Color(0f, 0.72f, 0.95f, 0.35f); // Translucent neon cyan progress fill
-            coopBuildProgressBarFill.style.borderTopLeftRadius = 8;
-            coopBuildProgressBarFill.style.borderBottomLeftRadius = 8;
+            coopBuildProgressBarFill.style.backgroundColor = new Color(0f, 0.72f, 0.95f, 0.4f); // Translucent neon cyan progress fill
+            coopBuildProgressBarFill.style.borderTopLeftRadius = 3;
+            coopBuildProgressBarFill.style.borderBottomLeftRadius = 3;
+            coopBuildProgressBarFill.pickingMode = PickingMode.Ignore;
             coopBuildClickButton.Add(coopBuildProgressBarFill);
 
             // Label text inside Keycap
-            coopBuildProgressLabel = new Label("SPACE");
-            coopBuildProgressLabel.style.color = new Color(0.9f, 0.9f, 0.9f, 1f);
-            coopBuildProgressLabel.style.fontSize = 24;
+            coopBuildProgressLabel = new Label("SPACE (0%)");
+            coopBuildProgressLabel.name = "coop-build-progress-label";
+            coopBuildProgressLabel.style.color = new Color(0.95f, 0.95f, 0.92f, 1f);
+            coopBuildProgressLabel.style.fontSize = 26;
             coopBuildProgressLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
             coopBuildProgressLabel.style.unityTextAlign = TextAnchor.MiddleCenter;
+            coopBuildProgressLabel.pickingMode = PickingMode.Ignore;
             coopBuildClickButton.Add(coopBuildProgressLabel);
 
             coopBuildClickButton.clicked += OnBuildButtonClicked;
             coopBuildContainer.Add(coopBuildClickButton);
 
             root.Add(coopBuildContainer);
+        }
+
+        // Always ensure background frame sprites are bound to the visual elements
+        if (coopBuildFrameLeft != null && coopBuildFrameLeftSprite != null)
+        {
+            coopBuildFrameLeft.style.backgroundImage = new StyleBackground(coopBuildFrameLeftSprite);
+            coopBuildFrameLeft.style.unityBackgroundScaleMode = ScaleMode.StretchToFill;
+        }
+        if (coopBuildFrameRight != null && coopBuildFrameRightSprite != null)
+        {
+            coopBuildFrameRight.style.backgroundImage = new StyleBackground(coopBuildFrameRightSprite);
+            coopBuildFrameRight.style.unityBackgroundScaleMode = ScaleMode.StretchToFill;
         }
 
         coopBuildContainer.style.display = DisplayStyle.Flex;
@@ -4842,8 +4996,8 @@ public class PlayerHUDController : MonoBehaviour
         {
             if (coopBuildClickButton != null)
             {
-                coopBuildClickButton.style.backgroundColor = new Color(0.14f, 0.14f, 0.18f, 0.95f);
-                coopBuildClickButton.style.borderBottomWidth = 4.5f; // Trả lại độ dày 3D
+                coopBuildClickButton.style.backgroundColor = new Color(0.10f, 0.11f, 0.15f, 0.95f);
+                coopBuildClickButton.style.borderBottomWidth = 4f; // Trả lại độ dày 3D
             }
         }).StartingIn(100);
 
@@ -4863,9 +5017,9 @@ public class PlayerHUDController : MonoBehaviour
         particle.style.position = Position.Absolute;
         
         // Sinh ngẫu nhiên theo chiều ngang của phím Space
-        float randomX = Random.Range(40f, 340f);
+        float randomX = Random.Range(60f, 520f);
         particle.style.left = randomX;
-        particle.style.bottom = 40;
+        particle.style.bottom = 20;
         float size = Random.Range(5f, 10f);
         particle.style.width = size;
         particle.style.height = size;
