@@ -126,13 +126,10 @@
             <ui:VisualElement class="skill-frame-border" />
         </ui:VisualElement>
     </ui:VisualElement>
-    <!-- Khung thông báo Fantasy Popup 06 -->
+    <!-- Khung thông báo Fantasy Popup -->
     <ui:VisualElement name="notification-popup" class="notification-popup">
         <ui:VisualElement class="notification-popup-bg" />
-        <ui:VisualElement class="notification-popup-frame-wrapper">
-            <ui:VisualElement class="notification-popup-frame-left" />
-            <ui:VisualElement class="notification-popup-frame-right" />
-        </ui:VisualElement>
+        <ui:VisualElement class="notification-popup-frame" />
         <ui:VisualElement class="notification-popup-content">
             <ui:VisualElement name="notification-popup-icon" class="notification-popup-icon icon-energy" />
             <ui:Label name="notification-popup-text" text="Không đủ năng lượng!" parse-escape-sequences="false" class="notification-popup-text" />

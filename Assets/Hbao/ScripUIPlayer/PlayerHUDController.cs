@@ -4237,18 +4237,9 @@ public class PlayerHUDController : MonoBehaviour
             bg.AddToClassList("notification-popup-bg");
             notificationPopup.Add(bg);
 
-            var frameWrapper = new VisualElement();
-            frameWrapper.AddToClassList("notification-popup-frame-wrapper");
-
-            var frameLeft = new VisualElement();
-            frameLeft.AddToClassList("notification-popup-frame-left");
-            frameWrapper.Add(frameLeft);
-
-            var frameRight = new VisualElement();
-            frameRight.AddToClassList("notification-popup-frame-right");
-            frameWrapper.Add(frameRight);
-
-            notificationPopup.Add(frameWrapper);
+            var frame = new VisualElement();
+            frame.AddToClassList("notification-popup-frame");
+            notificationPopup.Add(frame);
 
             var content = new VisualElement();
             content.AddToClassList("notification-popup-content");

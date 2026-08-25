@@ -75,23 +75,12 @@ public class BridgeRepairTrigger : MonoBehaviour
                     {
                         if (isReady)
                         {
-                            float buildProgressVal = (Unity.Netcode.NetworkManager.Singleton != null && Unity.Netcode.NetworkManager.Singleton.IsListening) ? bridgeController.buildProgress.Value : bridgeController.localBuildProgress;
-                            if (PlayerHUDController.isCoopBuildingUIOpen)
+                            // Đã đủ 16 thanh gỗ -> Hoàn tất sửa cầu ngay, không hiển thị UI spam space (hình 2)
+                            localHud.ShowInteractionPrompt(false, "");
+                            localHud.CloseCoopBuildUI();
+                            if (!bridgeController.IsBridgeRepaired())
                             {
-                                localHud.ShowInteractionPrompt(true, $"Spam [SPACE] để xây cầu | [F] để thoát (Tiến độ: {(int)buildProgressVal}%)");
-                            }
-                            else
-                            {
-                                localHud.ShowInteractionPrompt(true, $"Ấn [SPACE] hoặc [F] để xây cầu (Tiến độ: {(int)buildProgressVal}%)");
-                            }
-
-                            if (Input.GetKeyDown(KeyCode.F))
-                            {
-                                localHud.ToggleCoopBuildUI(bridgeController);
-                            }
-                            else if (Input.GetKeyDown(KeyCode.Space) && !PlayerHUDController.isCoopBuildingUIOpen)
-                            {
-                                localHud.OpenCoopBuildUI(bridgeController);
+                                bridgeController.RepairBridgeLocal();
                             }
                         }
                         else
