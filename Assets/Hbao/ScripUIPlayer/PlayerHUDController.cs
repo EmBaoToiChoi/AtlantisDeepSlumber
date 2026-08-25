@@ -86,6 +86,7 @@ public class PlayerHUDController : MonoBehaviour
                     if (hud != null)
                     {
                         hud.SetupPlayerProfile(classIdx);
+                        hud.RefreshAllBars();
                     }
                 }
 
@@ -203,10 +204,12 @@ public class PlayerHUDController : MonoBehaviour
     private Label mpLevelText;
     private Label cooldownLevelText;
     private Label damageLevelText;
+    private Label speedLevelText;
     private Button btnUpgradeHp;
     private Button btnUpgradeMp;
     private Button btnUpgradeCooldown;
     private Button btnUpgradeDamage;
+    private Button btnUpgradeSpeed;
 
     private VisualElement weaponLock2; // Tham chiếu tới overlay khóa vũ khí
     private VisualElement lockIcon2;   // Tham chiếu tới icon ổ khóa để rung
@@ -291,6 +294,7 @@ public class PlayerHUDController : MonoBehaviour
     private int currentMpLv = 0;
     private int currentCdLv = 0;
     private int currentDmgLv = 0;
+    private int currentSpdLv = 0;
 
     [Header("Quest Settings")]
     public Sprite woodLogSprite;
@@ -780,16 +784,19 @@ public class PlayerHUDController : MonoBehaviour
         mpLevelText = root.Q<Label>("mp-level-text");
         cooldownLevelText = root.Q<Label>("cooldown-level-text");
         damageLevelText = root.Q<Label>("damage-level-text");
+        speedLevelText = root.Q<Label>("speed-level-text");
 
         btnUpgradeHp = root.Q<Button>("btn-upgrade-hp");
         btnUpgradeMp = root.Q<Button>("btn-upgrade-mp");
         btnUpgradeCooldown = root.Q<Button>("btn-upgrade-cooldown");
         btnUpgradeDamage = root.Q<Button>("btn-upgrade-damage");
+        btnUpgradeSpeed = root.Q<Button>("btn-upgrade-speed");
 
         if (btnUpgradeHp != null) btnUpgradeHp.clicked += () => UpgradeStat(0);
         if (btnUpgradeMp != null) btnUpgradeMp.clicked += () => UpgradeStat(1);
         if (btnUpgradeCooldown != null) btnUpgradeCooldown.clicked += () => UpgradeStat(2);
         if (btnUpgradeDamage != null) btnUpgradeDamage.clicked += () => UpgradeStat(3);
+        if (btnUpgradeSpeed != null) btnUpgradeSpeed.clicked += () => UpgradeStat(4);
 
         // Khởi tạo và dịch ngôn ngữ giao diện HUD
         LocalizationManager.Initialize();
@@ -919,6 +926,8 @@ public class PlayerHUDController : MonoBehaviour
             SetupPlayerProfile(lastSelectedProfileIndex);
         }
 
+        RefreshAllBars();
+
         // Đăng ký nhận UI hội thoại NPC đang diễn ra (giải quyết đua luồng mạng multiplayer)
         if (IntroDialogueController.Instance != null && IntroDialogueController.Instance.IsActive)
         {
@@ -951,6 +960,9 @@ public class PlayerHUDController : MonoBehaviour
 
         var upgradeNameDamage = root.Q<Label>("upgrade-name-damage");
         if (upgradeNameDamage != null) upgradeNameDamage.text = LocalizationManager.Get("hud_stat_damage");
+
+        var upgradeNameSpeed = root.Q<Label>("upgrade-name-speed");
+        if (upgradeNameSpeed != null) upgradeNameSpeed.text = LocalizationManager.Get("hud_stat_speed");
     }
 
     void Update()
@@ -973,10 +985,15 @@ public class PlayerHUDController : MonoBehaviour
 
         if (LocalPlayerTarget != null)
         {
-                if (invisibilityIndicator != null)
-                {
-                    invisibilityIndicator.style.display = DisplayStyle.None;
-                }
+            if (LocalPlayerTarget.MaxMana > 0f)
+            {
+                SetMana(LocalPlayerTarget.CurrentMana / LocalPlayerTarget.MaxMana);
+            }
+
+            if (invisibilityIndicator != null)
+            {
+                invisibilityIndicator.style.display = DisplayStyle.None;
+            }
 
             if (LocalPlayerTarget.IsAttackSpeedBoosted)
             {
@@ -1140,6 +1157,12 @@ public class PlayerHUDController : MonoBehaviour
             {
                 if (isSkillsUnlocked || (LocalPlayerTarget != null && LocalPlayerTarget.PlayerLevel >= 15))
                 {
+                    if (LocalPlayerTarget != null && !LocalPlayerTarget.HasEnoughMana(30f))
+                    {
+                        ShowMissionAlert("Không đủ năng lượng! (Cần 30 năng lượng)", 2.0f);
+                        return;
+                    }
+
                     if (currentCooldownQ <= 0f && LocalPlayerTarget != null && !LocalPlayerTarget.IsQSkillActive)
                     {
                         // Kiểm tra bắt buộc phải ở Ô vũ khí 2 (Phím 2) đối với nhân vật Leo
@@ -1179,6 +1202,12 @@ public class PlayerHUDController : MonoBehaviour
             {
                 if (isSkillsUnlocked || (LocalPlayerTarget != null && LocalPlayerTarget.PlayerLevel >= 5))
                 {
+                    if (LocalPlayerTarget != null && !LocalPlayerTarget.HasEnoughMana(30f))
+                    {
+                        ShowMissionAlert("Không đủ năng lượng! (Cần 30 năng lượng)", 2.0f);
+                        return;
+                    }
+
                     if (currentCooldownR <= 0f && LocalPlayerTarget != null && !LocalPlayerTarget.IsInvisible)
                     {
                         LocalPlayerTarget.TriggerInvisibilitySkill();
@@ -1209,6 +1238,12 @@ public class PlayerHUDController : MonoBehaviour
                 {
                     if (isSkillsUnlocked || (LocalPlayerTarget != null && LocalPlayerTarget.PlayerLevel >= 10))
                     {
+                        if (LocalPlayerTarget != null && !LocalPlayerTarget.HasEnoughMana(30f))
+                        {
+                            ShowMissionAlert("Không đủ năng lượng! (Cần 30 năng lượng)", 2.0f);
+                            return;
+                        }
+
                         if (currentCooldownE <= 0f && LocalPlayerTarget != null && !LocalPlayerTarget.IsAttackSpeedBoosted)
                         {
                             LocalPlayerTarget.TriggerAttackSpeedBoostSkill();
@@ -1613,6 +1648,38 @@ public class PlayerHUDController : MonoBehaviour
         if (hpFill != null)
         {
             hpFill.style.width = Length.Percent(clamped * 100f);
+        }
+    }
+
+    public void SetMana(float percentage)
+    {
+        float clamped = Mathf.Clamp01(percentage);
+        if (mpFill != null)
+        {
+            mpFill.style.width = Length.Percent(clamped * 100f);
+        }
+    }
+
+    public void RefreshAllBars()
+    {
+        if (LocalPlayerTarget != null)
+        {
+            if (LocalPlayerTarget.MaxHealth > 0)
+            {
+                SetHealth(LocalPlayerTarget.CurrentHealth / LocalPlayerTarget.MaxHealth);
+            }
+            if (LocalPlayerTarget.MaxExp > 0)
+            {
+                UpdateExperienceUI(LocalPlayerTarget.PlayerLevel, LocalPlayerTarget.PlayerExp, LocalPlayerTarget.MaxExp);
+            }
+            if (LocalPlayerTarget.MaxMana > 0)
+            {
+                SetMana(LocalPlayerTarget.CurrentMana / LocalPlayerTarget.MaxMana);
+            }
+            else
+            {
+                SetMana(1f);
+            }
         }
     }
 
@@ -2320,7 +2387,7 @@ public class PlayerHUDController : MonoBehaviour
         }
     }
 
-    public void UpdateUpgradeUI(int points, int hpLv, int mpLv, int cdLv, int dmgLv)
+    public void UpdateUpgradeUI(int points, int hpLv, int mpLv, int cdLv, int dmgLv, int spdLv = 0)
     {
         LocalizationManager.Initialize();
 
@@ -2328,6 +2395,7 @@ public class PlayerHUDController : MonoBehaviour
         currentMpLv = mpLv;
         currentCdLv = cdLv;
         currentDmgLv = dmgLv;
+        currentSpdLv = spdLv;
 
         if (upgradePointsText != null)
         {
@@ -2337,38 +2405,45 @@ public class PlayerHUDController : MonoBehaviour
         // Chỉ hiện bonus khi đã nâng cấp (level > 0), còn không chỉ hiện "Lv. X"
         if (hpLevelText != null)
         {
-            int hpBonus = hpLv * 20;
+            int hpBonus = hpLv * 10;
             string maxLabel = hpLv >= 3 ? " (MAX)" : "";
-            hpLevelText.text = hpLv > 0 ? $"Lv. {hpLv}  (+{hpBonus} HP){maxLabel}" : $"Lv. {hpLv}";
+            hpLevelText.text = hpLv > 0 ? $"Lv. {hpLv}  (+{hpBonus} Máu){maxLabel}" : $"Lv. {hpLv}";
         }
         if (mpLevelText != null)
         {
             int mpBonus = mpLv * 10;
             string maxLabel = mpLv >= 3 ? " (MAX)" : "";
-            mpLevelText.text = mpLv > 0 ? $"Lv. {mpLv}  (+{mpBonus} Stamina){maxLabel}" : $"Lv. {mpLv}";
+            mpLevelText.text = mpLv > 0 ? $"Lv. {mpLv}  (+{mpBonus} Năng lượng){maxLabel}" : $"Lv. {mpLv}";
         }
         if (cooldownLevelText != null)
         {
-            int cdBonus = cdLv * 10; // 10% mỗi cấp độ
+            float cdBonus = cdLv * 0.5f; // Giảm 0.5s mỗi cấp độ
             string maxLabel = cdLv >= 3 ? " (MAX)" : "";
-            cooldownLevelText.text = cdLv > 0 ? $"Lv. {cdLv}  (-{cdBonus}%){maxLabel}" : $"Lv. {cdLv}";
+            cooldownLevelText.text = cdLv > 0 ? $"Lv. {cdLv}  (-{cdBonus:0.0}s){maxLabel}" : $"Lv. {cdLv}";
         }
         if (damageLevelText != null)
         {
-            int dmgBonus = dmgLv * 15; // 15% mỗi cấp độ
+            int dmgBonus = dmgLv * 5; // +5 sát thương mỗi cấp độ
             string maxLabel = dmgLv >= 3 ? " (MAX)" : "";
-            damageLevelText.text = dmgLv > 0 ? $"Lv. {dmgLv}  (+{dmgBonus}%){maxLabel}" : $"Lv. {dmgLv}";
+            damageLevelText.text = dmgLv > 0 ? $"Lv. {dmgLv}  (+{dmgBonus}){maxLabel}" : $"Lv. {dmgLv}";
+        }
+        if (speedLevelText != null)
+        {
+            float spdBonus = spdLv * 0.5f; // +0.5 tốc độ chạy mỗi cấp độ
+            string maxLabel = spdLv >= 3 ? " (MAX)" : "";
+            speedLevelText.text = spdLv > 0 ? $"Lv. {spdLv}  (+{spdBonus:0.0}){maxLabel}" : $"Lv. {spdLv}";
         }
 
         if (btnUpgradeHp != null) btnUpgradeHp.SetEnabled(points > 0 && hpLv < 3);
         if (btnUpgradeMp != null) btnUpgradeMp.SetEnabled(points > 0 && mpLv < 3);
         if (btnUpgradeCooldown != null) btnUpgradeCooldown.SetEnabled(points > 0 && cdLv < 3);
         if (btnUpgradeDamage != null) btnUpgradeDamage.SetEnabled(points > 0 && dmgLv < 3);
+        if (btnUpgradeSpeed != null) btnUpgradeSpeed.SetEnabled(points > 0 && spdLv < 3);
 
-        // Giảm thời gian hồi chiêu tương ứng (10% mỗi cấp độ)
-        cooldownTimeQ = 10f * (1f - cdLv * 0.10f);
-        cooldownTimeR = 15f * (1f - cdLv * 0.10f);
-        cooldownTimeE = 12f * (1f - cdLv * 0.10f);
+        // Giảm thời gian hồi chiêu tương ứng (-0.5s mỗi cấp độ)
+        cooldownTimeQ = Mathf.Max(0.5f, 10f - cdLv * 0.5f);
+        cooldownTimeR = Mathf.Max(0.5f, 15f - cdLv * 0.5f);
+        cooldownTimeE = Mathf.Max(0.5f, 12f - cdLv * 0.5f);
     }
 
     public void TriggerElenaCooldownE()
@@ -2453,6 +2528,7 @@ public class PlayerHUDController : MonoBehaviour
                 case 1: currentLevel = currentMpLv; break;
                 case 2: currentLevel = currentCdLv; break;
                 case 3: currentLevel = currentDmgLv; break;
+                case 4: currentLevel = currentSpdLv; break;
             }
 
             if (currentLevel >= 3)
@@ -2637,6 +2713,7 @@ public class PlayerHUDController : MonoBehaviour
         }
 
         UpdateWeaponActionHints();
+        RefreshAllBars();
         Debug.Log($"[PlayerHUDController] Đã thiết lập thành công giao diện cho lớp nhân vật: {profile.className} (Index {profileIndex})");
     }
 
@@ -2894,6 +2971,7 @@ public class PlayerHUDController : MonoBehaviour
                     else if (btn.name == "btn-upgrade-mp") UpgradeStat(1);
                     else if (btn.name == "btn-upgrade-cooldown") UpgradeStat(2);
                     else if (btn.name == "btn-upgrade-damage") UpgradeStat(3);
+                    else if (btn.name == "btn-upgrade-speed") UpgradeStat(4);
                 }
 
                 // Kiểm tra nếu click vào overlay background ngoài khung (đóng inventory)
@@ -3708,7 +3786,10 @@ public class PlayerHUDController : MonoBehaviour
         var mpFill = card.Q<VisualElement>("mp-fill");
         if (mpFill != null)
         {
-            mpFill.style.width = Length.Percent(100f);
+            float maxMp = player.MaxMana;
+            float currentMp = player.CurrentMana;
+            float mpPct = maxMp > 0 ? (currentMp / maxMp) * 100f : 0f;
+            mpFill.style.width = Length.Percent(Mathf.Clamp(mpPct, 0f, 100f));
         }
 
         var expFill = card.Q<VisualElement>("exp-fill");

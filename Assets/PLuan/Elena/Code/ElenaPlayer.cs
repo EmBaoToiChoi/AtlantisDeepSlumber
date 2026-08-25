@@ -139,6 +139,12 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
         NetworkVariableReadPermission.Everyone,
         NetworkVariableWritePermission.Server
     );
+    public NetworkVariable<float> currentMana = new NetworkVariable<float>(
+        100f,
+        NetworkVariableReadPermission.Everyone,
+        NetworkVariableWritePermission.Server
+    );
+    protected float localMana = 100f;
 
     [Header("Network Sync Variables")]
     public NetworkVariable<int> activeWeaponIndex = new NetworkVariable<int>(
@@ -183,6 +189,11 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
         NetworkVariableReadPermission.Everyone,
         NetworkVariableWritePermission.Server
     );
+    public NetworkVariable<int> speedLevel = new NetworkVariable<int>(
+        0,
+        NetworkVariableReadPermission.Everyone,
+        NetworkVariableWritePermission.Server
+    );
 
     [Header("Local State & Inventory")]
     public string[] inventorySlots = new string[10] { "", "", "", "", "", "", "", "", "", "" };
@@ -193,6 +204,7 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
     private int localMpLevel = 0;
     private int localCooldownLevel = 0;
     private int localDamageLevel = 0;
+    private int localSpeedLevel = 0;
     private int localLevel = 0;
     private float localExp = 0f;
     private int localActiveWeaponIndex = 1;
@@ -517,7 +529,39 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
     public float Weapon1MaxDurability => weapon1MaxDurability;
     public float Weapon2MaxDurability => weapon2MaxDurability;
     public string[] InventorySlots => inventorySlots;
-    public float MaxHealth => maxHealth;
+    public float MaxHealth => 100f + (isStandaloneMode ? localHpLevel : hpLevel.Value) * 10f;
+    public float CurrentMana => isStandaloneMode ? localMana : (IsOwner ? localMana : currentMana.Value);
+    public float MaxMana => 100f + (isStandaloneMode ? localMpLevel : mpLevel.Value) * 10f;
+
+    public bool HasEnoughMana(float amount = 30f)
+    {
+        return CurrentMana >= amount;
+    }
+
+    public bool TryConsumeMana(float amount = 30f)
+    {
+        if (!HasEnoughMana(amount))
+        {
+            PlayerHUDController hud = FindAnyObjectByType<PlayerHUDController>();
+            if (hud != null) hud.ShowMissionAlert("Không đủ năng lượng! (Cần 30 năng lượng)", 2.0f);
+            return false;
+        }
+
+        localMana = Mathf.Max(0f, localMana - amount);
+        UpdateManaHUD(localMana);
+
+        if (!isStandaloneMode && IsOwner)
+        {
+            ConsumeManaServerRpc(amount);
+        }
+        return true;
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    private void ConsumeManaServerRpc(float amount)
+    {
+        currentMana.Value = Mathf.Max(0f, currentMana.Value - amount);
+    }
 
     private bool isDeathAnimFinished = false;
     public bool IsDeathAnimationFinished => isDeathAnimFinished;
@@ -687,6 +731,12 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
     public void TriggerInvisibilitySkill()
     {
         if (PlayerLevel < 5 && !IsSkillsUnlocked) return;
+        if (!HasEnoughMana(30f))
+        {
+            PlayerHUDController hud = FindAnyObjectByType<PlayerHUDController>();
+            if (hud != null) hud.ShowMissionAlert("Không đủ năng lượng! (Cần 30 năng lượng)", 2.0f);
+            return;
+        }
         TriggerRSkill();
     }
 
@@ -706,6 +756,7 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         if (PlayerLevel < 10 && !IsSkillsUnlocked) return;
         if (eSkillCooldownTimer > 0f || IsESkillActive) return;
+        if (!TryConsumeMana(30f)) return;
         
         if (isStandaloneMode)
         {
@@ -830,6 +881,7 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         if (PlayerLevel < 15 && !IsSkillsUnlocked) return false;
         if (qSkillCooldownTimer > 0f || IsQSkillActive || SeagullController.ActiveSeagull != null) return false;
+        if (!TryConsumeMana(30f)) return false;
 
         Vector3 spawnPos = shoulderSeagullVisual != null ? shoulderSeagullVisual.transform.position : transform.position + transform.forward * 1.5f + Vector3.up * 1.5f;
         Quaternion spawnRot = targetCamera != null ? Quaternion.LookRotation(targetCamera.transform.forward) : transform.rotation;
@@ -914,6 +966,13 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (activeWeaponIdx != 0)
         {
             Debug.LogWarning($"[ElenaPlayer] Cannot trigger R Skill because active weapon is {activeWeaponIdx} (must be unarmed!). Please switch to unarmed first.");
+            return;
+        }
+
+        if (!HasEnoughMana(30f))
+        {
+            PlayerHUDController hud = FindAnyObjectByType<PlayerHUDController>();
+            if (hud != null) hud.ShowMissionAlert("Không đủ năng lượng! (Cần 30 năng lượng)", 2.0f);
             return;
         }
 
@@ -1242,6 +1301,7 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
         mpLevel.OnValueChanged += OnMpLevelChanged;
         cooldownLevel.OnValueChanged += OnCooldownLevelChanged;
         damageLevel.OnValueChanged += OnDamageLevelChanged;
+        speedLevel.OnValueChanged += OnSpeedLevelChanged;
 
         // Đăng ký sự kiện đồng bộ kinh nghiệm và cấp độ
         playerLevel.OnValueChanged += OnLevelOrExpChanged;
@@ -1251,6 +1311,7 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
         weapon1Durability.OnValueChanged += OnDurabilityChanged;
         weapon2Durability.OnValueChanged += OnDurabilityChanged;
         currentHealth.OnValueChanged += OnHealthChangedShared;
+        currentMana.OnValueChanged += OnManaChanged;
         isAimingNet.OnValueChanged += OnAimingNetChanged;
         isAimingRNet.OnValueChanged += OnAimingRNetChanged;
 
@@ -1270,6 +1331,7 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
 
             currentHealth.OnValueChanged += OnHealthChanged;
             UpdateHealthHUD(currentHealth.Value);
+            UpdateManaHUD(currentMana.Value);
 
             PlayerHUDController hud = null;
             PlayerHUDManager hudManager = PlayerHUDManager.Instance != null ? PlayerHUDManager.Instance : FindObjectOfType<PlayerHUDManager>();
@@ -1318,6 +1380,7 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
         mpLevel.OnValueChanged -= OnMpLevelChanged;
         cooldownLevel.OnValueChanged -= OnCooldownLevelChanged;
         damageLevel.OnValueChanged -= OnDamageLevelChanged;
+        speedLevel.OnValueChanged -= OnSpeedLevelChanged;
 
         // Hủy đăng ký sự kiện kinh nghiệm
         playerLevel.OnValueChanged -= OnLevelOrExpChanged;
@@ -1327,6 +1390,7 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
         weapon1Durability.OnValueChanged -= OnDurabilityChanged;
         weapon2Durability.OnValueChanged -= OnDurabilityChanged;
         currentHealth.OnValueChanged -= OnHealthChangedShared;
+        currentMana.OnValueChanged -= OnManaChanged;
         isAimingNet.OnValueChanged -= OnAimingNetChanged;
         isAimingRNet.OnValueChanged -= OnAimingRNetChanged;
 
@@ -1433,7 +1497,21 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (!isStandaloneMode && !IsOwner) return;
         PlayerHUDController hud = FindObjectOfType<PlayerHUDController>();
         if (hud != null)
-            hud.SetHealth(health / maxHealth);
+            hud.SetHealth(health / MaxHealth);
+    }
+
+    private void OnManaChanged(float oldMana, float newMana)
+    {
+        localMana = newMana;
+        UpdateManaHUD(newMana);
+    }
+
+    private void UpdateManaHUD(float mana)
+    {
+        if (!isStandaloneMode && !IsOwner) return;
+        PlayerHUDController hud = FindObjectOfType<PlayerHUDController>();
+        if (hud != null && MaxMana > 0f)
+            hud.SetMana(mana / MaxMana);
     }
 
     // ------------------------------------------------------------------
@@ -1495,6 +1573,18 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
         }
     }
 
+    private void OnSpeedLevelChanged(int oldVal, int newVal)
+    {
+        if (IsServer || IsOwner)
+        {
+            ApplyUpgradedStats();
+        }
+        if (IsOwner)
+        {
+            UpdateUpgradeHUD();
+        }
+    }
+
     // ------------------------------------------------------------------
     //  Áp dụng chỉ số nâng cấp vào các giá trị thực tế
     // ------------------------------------------------------------------
@@ -1504,10 +1594,13 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         int hpLv = isStandaloneMode ? localHpLevel : hpLevel.Value;
         int dmgLv = isStandaloneMode ? localDamageLevel : damageLevel.Value;
+        int spdLv = isStandaloneMode ? localSpeedLevel : speedLevel.Value;
 
         float oldMaxHealth = maxHealth;
-        maxHealth = 100f + hpLv * 20f;
-        damageAmount = 20f * (1f + dmgLv * 0.15f);
+        maxHealth = 100f + hpLv * 10f;
+        damageAmount = 20f + dmgLv * 5f;
+        rSkillIceDamage = 40f + dmgLv * 5f;
+        moveSpeed = 5.0f + spdLv * 0.5f;
 
         if (isStandaloneMode)
         {
@@ -1540,9 +1633,10 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
             int mp = isStandaloneMode ? localMpLevel : mpLevel.Value;
             int cd = isStandaloneMode ? localCooldownLevel : cooldownLevel.Value;
             int dmg = isStandaloneMode ? localDamageLevel : damageLevel.Value;
+            int spd = isStandaloneMode ? localSpeedLevel : speedLevel.Value;
 
-            hud.UpdateUpgradeUI(pts, hp, mp, cd, dmg);
-            hud.SetHealth(CurrentHealth / maxHealth);
+            hud.UpdateUpgradeUI(pts, hp, mp, cd, dmg, spd);
+            hud.SetHealth(CurrentHealth / MaxHealth);
 
             // Đồng bộ Cấp độ & Kinh nghiệm lên giao diện HUD chính
             int lv = isStandaloneMode ? localLevel : playerLevel.Value;
@@ -1789,6 +1883,7 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
             case 1: targetLvl = localMpLevel; break;
             case 2: targetLvl = localCooldownLevel; break;
             case 3: targetLvl = localDamageLevel; break;
+            case 4: targetLvl = localSpeedLevel; break;
         }
         if (targetLvl >= 3) return;
 
@@ -1799,11 +1894,12 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
             case 1: localMpLevel++; break;
             case 2: localCooldownLevel++; break;
             case 3: localDamageLevel++; break;
+            case 4: localSpeedLevel++; break;
         }
 
         ApplyUpgradedStats();
         UpdateUpgradeHUD();
-        Debug.Log($"[Standalone] Đã nâng cấp Stat {statType}. Cấp độ mới: HP={localHpLevel}, MP={localMpLevel}, Cooldown={localCooldownLevel}, Damage={localDamageLevel}. Điểm còn: {localUpgradePoints}");
+        Debug.Log($"[Standalone] Đã nâng cấp Stat {statType}. Cấp độ mới: HP={localHpLevel}, MP={localMpLevel}, Cooldown={localCooldownLevel}, Damage={localDamageLevel}, Speed={localSpeedLevel}. Điểm còn: {localUpgradePoints}");
     }
 
     // ------------------------------------------------------------------
@@ -1832,6 +1928,7 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
             case 1: targetLvl = mpLevel.Value; break;
             case 2: targetLvl = cooldownLevel.Value; break;
             case 3: targetLvl = damageLevel.Value; break;
+            case 4: targetLvl = speedLevel.Value; break;
         }
         if (targetLvl >= 3) return;
 
@@ -1842,11 +1939,12 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
             case 1: mpLevel.Value++; break;
             case 2: cooldownLevel.Value++; break;
             case 3: damageLevel.Value++; break;
+            case 4: speedLevel.Value++; break;
         }
 
         ApplyUpgradedStats();
         SavePlayerStateClientRpc();
-        Debug.Log($"[Server] Đã nâng cấp Stat {statType} cho {gameObject.name}. HP Lv={hpLevel.Value}, MP Lv={mpLevel.Value}, CD Lv={cooldownLevel.Value}, DMG Lv={damageLevel.Value}. Điểm còn lại: {upgradePoints.Value}");
+        Debug.Log($"[Server] Đã nâng cấp Stat {statType} cho {gameObject.name}. HP Lv={hpLevel.Value}, MP Lv={mpLevel.Value}, CD Lv={cooldownLevel.Value}, DMG Lv={damageLevel.Value}, Speed Lv={speedLevel.Value}. Điểm còn lại: {upgradePoints.Value}");
     }
 
     // ------------------------------------------------------------------
@@ -1874,6 +1972,24 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     void Update()
     {
+        // Hồi phục năng lượng: 1 năng lượng / 1 giây
+        if (isStandaloneMode || (IsOwner && !IsServer))
+        {
+            if (localMana < MaxMana)
+            {
+                localMana = Mathf.Min(localMana + Time.deltaTime * 1.0f, MaxMana);
+                if (IsOwner) UpdateManaHUD(localMana);
+            }
+        }
+        
+        if (!isStandaloneMode && IsServer)
+        {
+            if (currentMana.Value < MaxMana)
+            {
+                currentMana.Value = Mathf.Min(currentMana.Value + Time.deltaTime * 1.0f, MaxMana);
+            }
+        }
+
         if (respawnImmunityTimer > 0f)
         {
             respawnImmunityTimer -= Time.deltaTime;
@@ -2371,6 +2487,12 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
             {
                 if (localIsAimingR)
                 {
+                    if (!TryConsumeMana(30f))
+                    {
+                        SetAimingR(false);
+                        return;
+                    }
+
                     isRShootPending = true;
                     isPendingRShootNetworkMode = !isStandaloneMode;
                     pendingRShootDirection = targetCamera != null ? targetCamera.transform.forward : transform.forward;
@@ -2552,6 +2674,12 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
             {
                 if (localIsAimingR)
                 {
+                    if (!TryConsumeMana(30f))
+                    {
+                        SetAimingR(false);
+                        return;
+                    }
+
                     isRShootPending = true;
                     isPendingRShootNetworkMode = !isStandaloneMode;
                     pendingRShootDirection = targetCamera != null ? targetCamera.transform.forward : transform.forward;
@@ -3522,6 +3650,7 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
                     state.mpLevel,
                     state.cooldownLevel,
                     state.damageLevel,
+                    state.speedLevel,
                     state.playerLevel,
                     state.playerExp
                 );
@@ -3542,8 +3671,8 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
                     hud.SetWeapon2Locked(false, false); // Khóa vũ khí 2 mặc định
                     hud.SelectWeapon(state.activeWeaponIndex);
                     // Cập nhật lại UI sau khi các NetworkVariables được đồng bộ
-                    hud.UpdateUpgradeUI(state.upgradePoints, state.hpLevel, state.mpLevel, state.cooldownLevel, state.damageLevel);
-                    hud.SetHealth(state.health / (100f + state.hpLevel * 20f));
+                    hud.UpdateUpgradeUI(state.upgradePoints, state.hpLevel, state.mpLevel, state.cooldownLevel, state.damageLevel, state.speedLevel);
+                    hud.SetHealth(state.health / (100f + state.hpLevel * 10f));
                     
                     float needed = 100f + state.playerLevel * 50f;
                     hud.UpdateExperienceUI(state.playerLevel, state.playerExp, needed);
@@ -3552,18 +3681,18 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
             else
             {
                 Debug.LogWarning("[DB] Không có dữ liệu cũ hoặc lỗi kết nối. Đồng bộ dữ liệu ban đầu.");
-                SyncPlayerStateServerRpc(maxHealth, 1, false, true, 0, 0, 0, 0, 0, 0, 0f);
+                SyncPlayerStateServerRpc(maxHealth, 1, false, true, 0, 0, 0, 0, 0, 0, 0, 0f);
                 SavePlayerStateToDatabase();
             }
         }
         catch (System.Exception ex)
         {
             Debug.LogError($"[DB] Lỗi khi kết nối API tải dữ liệu MongoDB: {ex.Message}");
-            SyncPlayerStateServerRpc(maxHealth, 1, false, true, 0, 0, 0, 0, 0, 0, 0f);
+            SyncPlayerStateServerRpc(maxHealth, 1, false, true, 0, 0, 0, 0, 0, 0, 0, 0f);
         }
     }
 
-    [ServerRpc]
+    [ServerRpc(RequireOwnership = false)]
     private void SyncPlayerStateServerRpc(
         float health, 
         int weaponIndex, 
@@ -3574,6 +3703,7 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
         int mp,
         int cd,
         int dmg,
+        int spd,
         int levelVal,
         float expVal
     )
@@ -3585,14 +3715,18 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
         mpLevel.Value = mp;
         cooldownLevel.Value = cd;
         damageLevel.Value = dmg;
+        speedLevel.Value = spd;
         playerLevel.Value = levelVal;
         playerExp.Value = expVal;
 
         // Đồng bộ trước maxHealth tác động của chỉ số lên server
-        maxHealth = 100f + hp * 20f;
+        maxHealth = 100f + hp * 10f;
         damageAmount = 20f + dmg * 5f;
+        rSkillIceDamage = 40f + dmg * 5f;
+        moveSpeed = 5.0f + spd * 0.5f;
 
         currentHealth.Value = health;
+        currentMana.Value = 100f + mp * 10f;
         activeWeaponIndex.Value = weaponIndex;
         isWeapon2Locked.Value = weapon2Locked;
         isSkillsUnlocked.Value = skillsUnlocked;
@@ -3625,6 +3759,7 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
                 mpLevel = mpLevel.Value,
                 cooldownLevel = cooldownLevel.Value,
                 damageLevel = damageLevel.Value,
+                speedLevel = speedLevel.Value,
                 playerLevel = playerLevel.Value,
                 playerExp = playerExp.Value
             };

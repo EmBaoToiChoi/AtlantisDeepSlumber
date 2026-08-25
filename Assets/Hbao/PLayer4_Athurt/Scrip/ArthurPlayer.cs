@@ -252,6 +252,12 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         NetworkVariableReadPermission.Everyone,
         NetworkVariableWritePermission.Server
     );
+    public NetworkVariable<float> currentMana = new NetworkVariable<float>(
+        100f,
+        NetworkVariableReadPermission.Everyone,
+        NetworkVariableWritePermission.Server
+    );
+    protected float localMana = 100f;
 
     [Header("Network Sync Variables")]
     public NetworkVariable<int> activeWeaponIndex = new NetworkVariable<int>(
@@ -322,6 +328,11 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         NetworkVariableReadPermission.Everyone,
         NetworkVariableWritePermission.Server
     );
+    public NetworkVariable<int> speedLevel = new NetworkVariable<int>(
+        0,
+        NetworkVariableReadPermission.Everyone,
+        NetworkVariableWritePermission.Server
+    );
 
     [Header("Local State & Inventory")]
     public string[] inventorySlots = new string[10] { "", "", "", "", "", "", "", "", "", "" };
@@ -332,6 +343,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
     protected int localMpLevel = 0;
     protected int localCooldownLevel = 0;
     protected int localDamageLevel = 0;
+    protected int localSpeedLevel = 0;
     protected int localLevel = 0;
     protected float localExp = 0f;
 
@@ -566,7 +578,39 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
     public float Weapon1MaxDurability => weapon1MaxDurability;
     public float Weapon2MaxDurability => weapon2MaxDurability;
     public string[] InventorySlots => inventorySlots;
-    public float MaxHealth => maxHealth;
+    public float MaxHealth => 100f + (isStandaloneMode ? localHpLevel : hpLevel.Value) * 10f;
+    public float CurrentMana => isStandaloneMode ? localMana : (IsOwner ? localMana : currentMana.Value);
+    public float MaxMana => 100f + (isStandaloneMode ? localMpLevel : mpLevel.Value) * 10f;
+
+    public bool HasEnoughMana(float amount = 30f)
+    {
+        return CurrentMana >= amount;
+    }
+
+    public bool TryConsumeMana(float amount = 30f)
+    {
+        if (!HasEnoughMana(amount))
+        {
+            PlayerHUDController hud = FindAnyObjectByType<PlayerHUDController>();
+            if (hud != null) hud.ShowMissionAlert("Không đủ năng lượng! (Cần 30 năng lượng)", 2.0f);
+            return false;
+        }
+
+        localMana = Mathf.Max(0f, localMana - amount);
+        UpdateManaHUD(localMana);
+
+        if (!isStandaloneMode && IsOwner)
+        {
+            ConsumeManaServerRpc(amount);
+        }
+        return true;
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    private void ConsumeManaServerRpc(float amount)
+    {
+        currentMana.Value = Mathf.Max(0f, currentMana.Value - amount);
+    }
 
     private bool isDeathAnimFinished = false;
     public bool IsDeathAnimationFinished => isDeathAnimFinished;
@@ -733,6 +777,12 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         }
 
         if (PlayerLevel < 5 && !IsSkillsUnlocked) return;
+        if (!HasEnoughMana(30f))
+        {
+            PlayerHUDController hud = FindAnyObjectByType<PlayerHUDController>();
+            if (hud != null) hud.ShowMissionAlert("Không đủ năng lượng! (Cần 30 năng lượng)", 2.0f);
+            return;
+        }
 
         int activeWeaponIdx = GetActiveWeaponIndex();
         if (activeWeaponIdx != 0)
@@ -795,6 +845,12 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
             {
                 if (!IsUIBlockingInput())
                 {
+                    if (!TryConsumeMana(30f))
+                    {
+                        SetAimingR(false);
+                        return;
+                    }
+
                     isRShootPending = true;
                     isPendingRShootNetworkMode = !isStandaloneMode;
                     
@@ -1013,6 +1069,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         if (PlayerLevel < 15 && !IsSkillsUnlocked) return false;
         if (isQSkillActive || isQSkillPlayingAnim) return false;
+        if (!TryConsumeMana(30f)) return false;
 
         Debug.Log($"[{gameObject.name}] TriggerQSkill (Skill Q) - Bắt đầu dặm khiên...");
 
@@ -1207,6 +1264,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         if (PlayerLevel < 10 && !IsSkillsUnlocked) return;
         if (IsAttackSpeedBoosted || isESkillPlayingAnim) return;
+        if (!TryConsumeMana(30f)) return;
 
         Debug.Log($"[{gameObject.name}] TriggerAttackSpeedBoostSkill (Skill E) - Bắt đầu gồng...");
 
@@ -1521,13 +1579,14 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         mpLevel.OnValueChanged += OnMpLevelChanged;
         cooldownLevel.OnValueChanged += OnCooldownLevelChanged;
         damageLevel.OnValueChanged += OnDamageLevelChanged;
-
+        speedLevel.OnValueChanged += OnSpeedLevelChanged;
         playerLevel.OnValueChanged += OnLevelOrExpChanged;
         playerExp.OnValueChanged += OnLevelOrExpChanged;
 
         weapon1Durability.OnValueChanged += OnDurabilityChanged;
         weapon2Durability.OnValueChanged += OnDurabilityChanged;
         isRollingNet.OnValueChanged += OnRollingNetChanged;
+        currentMana.OnValueChanged += OnManaChanged;
 
         if (IsOwner)
         {
@@ -1542,6 +1601,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
             currentHealth.OnValueChanged += OnHealthChanged;
             UpdateHealthHUD(currentHealth.Value);
+            UpdateManaHUD(currentMana.Value);
 
             PlayerHUDController hud = null;
             PlayerHUDManager hudManager = PlayerHUDManager.Instance != null ? PlayerHUDManager.Instance : FindObjectOfType<PlayerHUDManager>();
@@ -1605,6 +1665,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         weapon1Durability.OnValueChanged -= OnDurabilityChanged;
         weapon2Durability.OnValueChanged -= OnDurabilityChanged;
         isRollingNet.OnValueChanged -= OnRollingNetChanged;
+        currentMana.OnValueChanged -= OnManaChanged;
 
         if (IsOwner)
             currentHealth.OnValueChanged -= OnHealthChanged;
@@ -1698,7 +1759,21 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (!isStandaloneMode && !IsOwner) return;
         PlayerHUDController hud = FindObjectOfType<PlayerHUDController>();
         if (hud != null)
-            hud.SetHealth(health / maxHealth);
+            hud.SetHealth(health / MaxHealth);
+    }
+
+    private void OnManaChanged(float oldMana, float newMana)
+    {
+        localMana = newMana;
+        UpdateManaHUD(newMana);
+    }
+
+    private void UpdateManaHUD(float mana)
+    {
+        if (!isStandaloneMode && !IsOwner) return;
+        PlayerHUDController hud = FindObjectOfType<PlayerHUDController>();
+        if (hud != null && MaxMana > 0f)
+            hud.SetMana(mana / MaxMana);
     }
 
     private void OnUpgradePointsChanged(int oldVal, int newVal)
@@ -1757,16 +1832,31 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         }
     }
 
+    private void OnSpeedLevelChanged(int oldVal, int newVal)
+    {
+        if (IsServer || IsOwner)
+        {
+            ApplyUpgradedStats();
+        }
+        if (IsOwner)
+        {
+            UpdateUpgradeHUD();
+        }
+    }
+
     private void ApplyUpgradedStats()
     {
         if (isSyncingFromDb) return;
 
         int hpLv = isStandaloneMode ? localHpLevel : hpLevel.Value;
         int dmgLv = isStandaloneMode ? localDamageLevel : damageLevel.Value;
+        int spdLv = isStandaloneMode ? localSpeedLevel : speedLevel.Value;
 
         float oldMaxHealth = maxHealth;
-        maxHealth = 150f + hpLv * 20f;
-        damageAmount = 15f * (1f + dmgLv * 0.15f);
+        maxHealth = 100f + hpLv * 10f;
+        damageAmount = 15f + dmgLv * 5f;
+        rSkillFireDamage = 40f + dmgLv * 5f;
+        moveSpeed = 4.0f + spdLv * 0.5f;
 
         if (isStandaloneMode)
         {
@@ -1796,9 +1886,10 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
             int mp = isStandaloneMode ? localMpLevel : mpLevel.Value;
             int cd = isStandaloneMode ? localCooldownLevel : cooldownLevel.Value;
             int dmg = isStandaloneMode ? localDamageLevel : damageLevel.Value;
+            int spd = isStandaloneMode ? localSpeedLevel : speedLevel.Value;
 
-            hud.UpdateUpgradeUI(pts, hp, mp, cd, dmg);
-            hud.SetHealth(CurrentHealth / maxHealth);
+            hud.UpdateUpgradeUI(pts, hp, mp, cd, dmg, spd);
+            hud.SetHealth(CurrentHealth / MaxHealth);
 
             int lv = isStandaloneMode ? localLevel : playerLevel.Value;
             float xp = isStandaloneMode ? localExp : playerExp.Value;
@@ -2039,6 +2130,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
             case 1: targetLvl = localMpLevel; break;
             case 2: targetLvl = localCooldownLevel; break;
             case 3: targetLvl = localDamageLevel; break;
+            case 4: targetLvl = localSpeedLevel; break;
         }
         if (targetLvl >= 3) return;
 
@@ -2049,6 +2141,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
             case 1: localMpLevel++; break;
             case 2: localCooldownLevel++; break;
             case 3: localDamageLevel++; break;
+            case 4: localSpeedLevel++; break;
         }
 
         ApplyUpgradedStats();
@@ -2077,6 +2170,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
             case 1: targetLvl = mpLevel.Value; break;
             case 2: targetLvl = cooldownLevel.Value; break;
             case 3: targetLvl = damageLevel.Value; break;
+            case 4: targetLvl = speedLevel.Value; break;
         }
         if (targetLvl >= 3) return;
 
@@ -2087,6 +2181,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
             case 1: mpLevel.Value++; break;
             case 2: cooldownLevel.Value++; break;
             case 3: damageLevel.Value++; break;
+            case 4: speedLevel.Value++; break;
         }
 
         ApplyUpgradedStats();
@@ -2109,6 +2204,24 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     protected virtual void Update()
     {
+        // Hồi phục năng lượng: 1 năng lượng / 1 giây
+        if (isStandaloneMode || (IsOwner && !IsServer))
+        {
+            if (localMana < MaxMana)
+            {
+                localMana = Mathf.Min(localMana + Time.deltaTime * 1.0f, MaxMana);
+                if (IsOwner) UpdateManaHUD(localMana);
+            }
+        }
+        
+        if (!isStandaloneMode && IsServer)
+        {
+            if (currentMana.Value < MaxMana)
+            {
+                currentMana.Value = Mathf.Min(currentMana.Value + Time.deltaTime * 1.0f, MaxMana);
+            }
+        }
+
         UpdateAttackLayerWeight();
         UpdateComboChain();
         HandleRAiming();
@@ -4335,6 +4448,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
                     state.mpLevel,
                     state.cooldownLevel,
                     state.damageLevel,
+                    state.speedLevel,
                     state.playerLevel,
                     state.playerExp
                 );
@@ -4354,8 +4468,8 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
                     hud.SetSkillsUnlocked(true, false);
                     hud.SetWeapon2Locked(false, false);
                     hud.SelectWeapon(state.activeWeaponIndex);
-                    hud.UpdateUpgradeUI(state.upgradePoints, state.hpLevel, state.mpLevel, state.cooldownLevel, state.damageLevel);
-                    hud.SetHealth(state.health / (150f + state.hpLevel * 20f));
+                    hud.UpdateUpgradeUI(state.upgradePoints, state.hpLevel, state.mpLevel, state.cooldownLevel, state.damageLevel, state.speedLevel);
+                    hud.SetHealth(state.health / (100f + state.hpLevel * 10f));
 
                     float needed = 100f + state.playerLevel * 50f;
                     hud.UpdateExperienceUI(state.playerLevel, state.playerExp, needed);
@@ -4363,18 +4477,18 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
             }
             else
             {
-                SyncPlayerStateServerRpc(maxHealth, 1, false, true, 0, 0, 0, 0, 0, 0, 0f);
+                SyncPlayerStateServerRpc(maxHealth, 1, false, true, 0, 0, 0, 0, 0, 0, 0, 0f);
                 SavePlayerStateToDatabase();
             }
         }
         catch (System.Exception ex)
         {
             Debug.LogError($"[DB] Lỗi khi kết nối API tải dữ liệu MongoDB: {ex.Message}");
-            SyncPlayerStateServerRpc(maxHealth, 1, false, true, 0, 0, 0, 0, 0, 0, 0f);
+            SyncPlayerStateServerRpc(maxHealth, 1, false, true, 0, 0, 0, 0, 0, 0, 0, 0f);
         }
     }
 
-    [ServerRpc]
+    [ServerRpc(RequireOwnership = false)]
     private void SyncPlayerStateServerRpc(
         float health,
         int weaponIndex,
@@ -4385,6 +4499,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         int mp,
         int cd,
         int dmg,
+        int spd,
         int levelVal,
         float expVal
     )
@@ -4396,13 +4511,17 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         mpLevel.Value = mp;
         cooldownLevel.Value = cd;
         damageLevel.Value = dmg;
+        speedLevel.Value = spd;
         playerLevel.Value = levelVal;
         playerExp.Value = expVal;
 
-        maxHealth = 150f + hp * 20f;
+        maxHealth = 100f + hp * 10f;
         damageAmount = 15f + dmg * 5f;
+        rSkillFireDamage = 40f + dmg * 5f;
+        moveSpeed = 4.0f + spd * 0.5f;
 
         currentHealth.Value = health;
+        currentMana.Value = 100f + mp * 10f;
         activeWeaponIndex.Value = weaponIndex;
         isWeapon2Locked.Value = weapon2Locked;
         isSkillsUnlocked.Value = skillsUnlocked;
@@ -4428,6 +4547,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
                 mpLevel = mpLevel.Value,
                 cooldownLevel = cooldownLevel.Value,
                 damageLevel = damageLevel.Value,
+                speedLevel = speedLevel.Value,
                 playerLevel = playerLevel.Value,
                 playerExp = playerExp.Value
             };

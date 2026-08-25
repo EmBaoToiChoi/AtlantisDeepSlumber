@@ -3194,6 +3194,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     //  Network Sync Variables
     // ------------------------------------------------------------------
     public NetworkVariable<float> currentHealth = new NetworkVariable<float>(85f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+    public NetworkVariable<float> currentMana = new NetworkVariable<float>(100f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     public NetworkVariable<int> activeWeaponIndex = new NetworkVariable<int>(1, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     public NetworkVariable<bool> isWeapon2Locked = new NetworkVariable<bool>(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     public NetworkVariable<bool> isSkillsUnlocked = new NetworkVariable<bool>(true, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
@@ -3202,6 +3203,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     public NetworkVariable<int> mpLevel = new NetworkVariable<int>(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     public NetworkVariable<int> cooldownLevel = new NetworkVariable<int>(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     public NetworkVariable<int> damageLevel = new NetworkVariable<int>(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+    public NetworkVariable<int> speedLevel = new NetworkVariable<int>(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     public NetworkVariable<int> playerLevel = new NetworkVariable<int>(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     public NetworkVariable<float> playerExp = new NetworkVariable<float>(0f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     public NetworkVariable<float> weapon1Durability = new NetworkVariable<float>(100f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
@@ -3222,9 +3224,11 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     protected int localMpLevel = 0;
     protected int localCooldownLevel = 0;
     protected int localDamageLevel = 0;
+    protected int localSpeedLevel = 0;
     protected int localLevel = 0;
     protected float localExp = 0f;
     protected float localHealth;
+    protected float localMana = 100f;
     protected float localWeapon1Durability = 100f;
     protected float localWeapon2Durability = 100f;
     protected bool localWeapon2Locked = false;
@@ -3527,7 +3531,39 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     {
         isDeathAnimFinished = true;
     }
-    public float MaxHealth => maxHealth;
+    public float MaxHealth => 100f + (isStandaloneMode ? localHpLevel : hpLevel.Value) * 10f;
+    public float CurrentMana => isStandaloneMode ? localMana : (IsOwner ? localMana : currentMana.Value);
+    public float MaxMana => 100f + (isStandaloneMode ? localMpLevel : mpLevel.Value) * 10f;
+
+    public bool HasEnoughMana(float amount = 30f)
+    {
+        return CurrentMana >= amount;
+    }
+
+    public bool TryConsumeMana(float amount = 30f)
+    {
+        if (!HasEnoughMana(amount))
+        {
+            PlayerHUDController hud = FindAnyObjectByType<PlayerHUDController>();
+            if (hud != null) hud.ShowMissionAlert("Không đủ năng lượng! (Cần 30 năng lượng)", 2.0f);
+            return false;
+        }
+
+        localMana = Mathf.Max(0f, localMana - amount);
+        UpdateManaHUD(localMana);
+
+        if (!isStandaloneMode && IsOwner)
+        {
+            ConsumeManaServerRpc(amount);
+        }
+        return true;
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    private void ConsumeManaServerRpc(float amount)
+    {
+        currentMana.Value = Mathf.Max(0f, currentMana.Value - amount);
+    }
 
     // Invisibility Skill R (stub - legacy removed)
     public bool IsInvisible => false;
@@ -3671,7 +3707,6 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             targetCamera = FindObjectOfType<Camera>();
 
         characterClassIndex = PlayerPrefs.GetInt("SelectedCharacterId", characterClassIndex);
-        playerName.Value = PlayerPrefs.GetString("AuthDisplayName", "Leo");
         if (PlayerHUDManager.ActivePlayers != null && !PlayerHUDManager.ActivePlayers.Contains(this))
         {
             PlayerHUDManager.ActivePlayers.Add(this);
@@ -3701,7 +3736,10 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             ApplyUpgradedStats();
             UpdateUpgradeHUD();
         }
-        LoadPlayerStateFromDatabase();
+        if (isStandaloneMode)
+        {
+            LoadPlayerStateFromDatabase();
+        }
         UpdateDurabilityHUD();
     }
 
@@ -3741,12 +3779,14 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         mpLevel.OnValueChanged += OnMpLevelChanged;
         cooldownLevel.OnValueChanged += OnCooldownLevelChanged;
         damageLevel.OnValueChanged += OnDamageLevelChanged;
+        speedLevel.OnValueChanged += OnSpeedLevelChanged;
         playerLevel.OnValueChanged += OnLevelOrExpChanged;
         playerExp.OnValueChanged += OnLevelOrExpChanged;
         weapon1Durability.OnValueChanged += OnDurabilityChanged;
         weapon2Durability.OnValueChanged += OnDurabilityChanged;
         isMovementLockedNet.OnValueChanged += OnMovementLockedNetChanged;
         currentHealth.OnValueChanged += OnHealthChangedShared;
+        currentMana.OnValueChanged += OnManaChanged;
 
         isAttackSpeedBoostedNet.OnValueChanged += OnAttackSpeedBoostedChanged;
         isQSkillActiveNet.OnValueChanged += OnQSkillActiveChanged;
@@ -3769,6 +3809,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
             currentHealth.OnValueChanged += OnHealthChanged;
             UpdateHealthHUD(currentHealth.Value);
+            UpdateManaHUD(currentMana.Value);
 
             PlayerHUDController hud = null;
             PlayerHUDManager hudManager = PlayerHUDManager.Instance != null ? PlayerHUDManager.Instance : FindAnyObjectByType<PlayerHUDManager>();
@@ -3846,12 +3887,14 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         mpLevel.OnValueChanged -= OnMpLevelChanged;
         cooldownLevel.OnValueChanged -= OnCooldownLevelChanged;
         damageLevel.OnValueChanged -= OnDamageLevelChanged;
+        speedLevel.OnValueChanged -= OnSpeedLevelChanged;
         playerLevel.OnValueChanged -= OnLevelOrExpChanged;
         playerExp.OnValueChanged -= OnLevelOrExpChanged;
         weapon1Durability.OnValueChanged -= OnDurabilityChanged;
         weapon2Durability.OnValueChanged -= OnDurabilityChanged;
         isMovementLockedNet.OnValueChanged -= OnMovementLockedNetChanged;
         currentHealth.OnValueChanged -= OnHealthChangedShared;
+        currentMana.OnValueChanged -= OnManaChanged;
 
         isAttackSpeedBoostedNet.OnValueChanged -= OnAttackSpeedBoostedChanged;
         isQSkillActiveNet.OnValueChanged -= OnQSkillActiveChanged;
@@ -3962,7 +4005,23 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     private void Update()
     {
-
+        // Hồi phục năng lượng: 1 năng lượng / 1 giây
+        if (isStandaloneMode || (IsOwner && !IsServer))
+        {
+            if (localMana < MaxMana)
+            {
+                localMana = Mathf.Min(localMana + Time.deltaTime * 1.0f, MaxMana);
+                if (IsOwner) UpdateManaHUD(localMana);
+            }
+        }
+        
+        if (!isStandaloneMode && IsServer)
+        {
+            if (currentMana.Value < MaxMana)
+            {
+                currentMana.Value = Mathf.Min(currentMana.Value + Time.deltaTime * 1.0f, MaxMana);
+            }
+        }
 
         if (attackSpeedBoostTimeRemaining > 0f)
         {
@@ -5627,6 +5686,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             case 1: targetLvl = localMpLevel; break;
             case 2: targetLvl = localCooldownLevel; break;
             case 3: targetLvl = localDamageLevel; break;
+            case 4: targetLvl = localSpeedLevel; break;
         }
         if (targetLvl >= 3) return;
 
@@ -5637,6 +5697,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             case 1: localMpLevel++; break;
             case 2: localCooldownLevel++; break;
             case 3: localDamageLevel++; break;
+            case 4: localSpeedLevel++; break;
         }
         ApplyUpgradedStats();
         UpdateUpgradeHUD();
@@ -5661,6 +5722,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             case 1: targetLvl = mpLevel.Value; break;
             case 2: targetLvl = cooldownLevel.Value; break;
             case 3: targetLvl = damageLevel.Value; break;
+            case 4: targetLvl = speedLevel.Value; break;
         }
         if (targetLvl >= 3) return;
 
@@ -5673,6 +5735,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             case 1: SyncNetVarInt(mpLevel, proxyPlayerTest != null ? proxyPlayerTest.mpLevel : null, mpLevel.Value + 1); break;
             case 2: SyncNetVarInt(cooldownLevel, proxyPlayerTest != null ? proxyPlayerTest.cooldownLevel : null, cooldownLevel.Value + 1); break;
             case 3: SyncNetVarInt(damageLevel, proxyPlayerTest != null ? proxyPlayerTest.damageLevel : null, damageLevel.Value + 1); break;
+            case 4: SyncNetVarInt(speedLevel, proxyPlayerTest != null ? proxyPlayerTest.speedLevel : null, speedLevel.Value + 1); break;
         }
 
         ApplyUpgradedStats();
@@ -5685,10 +5748,14 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         int hpLv = isStandaloneMode ? localHpLevel : hpLevel.Value;
         int dmgLv = isStandaloneMode ? localDamageLevel : damageLevel.Value;
+        int spdLv = isStandaloneMode ? localSpeedLevel : speedLevel.Value;
 
         float oldMaxHealth = maxHealth;
-        maxHealth = 85f + hpLv * 20f;
-        damageAmount = 25f * (1f + dmgLv * 0.15f);
+        maxHealth = 100f + hpLv * 10f;
+        damageAmount = 25f + dmgLv * 5f;
+        qSkillDamagePerSlash = 15f + dmgLv * 5f;
+        rSkillLightningDamage = 40f + dmgLv * 5f;
+        moveSpeed = 3.5f + spdLv * 0.5f;
 
         if (isStandaloneMode)
         {
@@ -5716,9 +5783,10 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             int mp = isStandaloneMode ? localMpLevel : mpLevel.Value;
             int cd = isStandaloneMode ? localCooldownLevel : cooldownLevel.Value;
             int dmg = isStandaloneMode ? localDamageLevel : damageLevel.Value;
+            int spd = isStandaloneMode ? localSpeedLevel : speedLevel.Value;
 
-            hud.UpdateUpgradeUI(pts, hp, mp, cd, dmg);
-            hud.SetHealth(CurrentHealth / maxHealth);
+            hud.UpdateUpgradeUI(pts, hp, mp, cd, dmg, spd);
+            hud.SetHealth(CurrentHealth / MaxHealth);
 
             int lv = isStandaloneMode ? localLevel : playerLevel.Value;
             float xp = isStandaloneMode ? localExp : playerExp.Value;
@@ -5754,6 +5822,12 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         }
 
         if (PlayerLevel < 5 && !IsSkillsUnlocked) return;
+        if (!HasEnoughMana(30f))
+        {
+            PlayerHUDController hud = FindAnyObjectByType<PlayerHUDController>();
+            if (hud != null) hud.ShowMissionAlert("Không đủ năng lượng! (Cần 30 năng lượng)", 2.0f);
+            return;
+        }
 
         int activeWeaponIdx = GetActiveWeaponIndex();
         if (activeWeaponIdx != 0)
@@ -5943,6 +6017,12 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             {
                 if (!IsUIBlockingInput())
                 {
+                    if (!TryConsumeMana(30f))
+                    {
+                        SetAimingR(false);
+                        return;
+                    }
+
                     isRShootPending = true;
                     isPendingRShootNetworkMode = !isStandaloneMode;
                     
@@ -6140,6 +6220,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         if (PlayerLevel < 10 && !IsSkillsUnlocked) return;
         if (IsAttackSpeedBoosted) return;
+        if (!TryConsumeMana(30f)) return;
 
         if (isStandaloneMode)
         {
@@ -6629,6 +6710,8 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             return false;
         }
 
+        if (!TryConsumeMana(30f)) return false;
+
         if (isStandaloneMode)
         {
             Transform target = FindNearestAliveEnemy();
@@ -7003,6 +7086,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             int mpLvVal = mpLevel.Value;
             int cdLvVal = cooldownLevel.Value;
             int dmgLvVal = damageLevel.Value;
+            int spdLvVal = speedLevel.Value;
             int plLvVal = playerLevel.Value;
             float plExpVal = playerExp.Value;
             float hpVal = CurrentHealth;
@@ -7014,6 +7098,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
                 mpLvVal = localMpLevel;
                 cdLvVal = localCooldownLevel;
                 dmgLvVal = localDamageLevel;
+                spdLvVal = localSpeedLevel;
                 plLvVal = localLevel;
                 plExpVal = localExp;
                 hpVal = localHealth;
@@ -7034,6 +7119,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
                 mpLevel = mpLvVal,
                 cooldownLevel = cdLvVal,
                 damageLevel = dmgLvVal,
+                speedLevel = spdLvVal,
                 playerLevel = plLvVal,
                 playerExp = plExpVal
             };
@@ -7065,7 +7151,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             if (res != null && res.success && res.playerState != null)
             {
                 var state = res.playerState;
-                isSyncingFromDb = true;
+                Debug.Log($"[LeoPlayer DB] Loaded state successfully! Health: {state.health}, Level: {state.playerLevel}, Exp: {state.playerExp}");
 
                 if (isStandaloneMode)
                 {
@@ -7074,6 +7160,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
                     localMpLevel = state.mpLevel;
                     localCooldownLevel = state.cooldownLevel;
                     localDamageLevel = state.damageLevel;
+                    localSpeedLevel = state.speedLevel;
                     localLevel = state.playerLevel;
                     localExp = state.playerExp;
                     localHealth = state.health;
@@ -7083,23 +7170,27 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
                 }
                 else
                 {
-                    SyncNetVarInt(upgradePoints, proxyPlayerTest != null ? proxyPlayerTest.upgradePoints : null, state.upgradePoints);
-                    SyncNetVarInt(hpLevel, proxyPlayerTest != null ? proxyPlayerTest.hpLevel : null, state.hpLevel);
-                    SyncNetVarInt(mpLevel, proxyPlayerTest != null ? proxyPlayerTest.mpLevel : null, state.mpLevel);
-                    SyncNetVarInt(cooldownLevel, proxyPlayerTest != null ? proxyPlayerTest.cooldownLevel : null, state.cooldownLevel);
-                    SyncNetVarInt(damageLevel, proxyPlayerTest != null ? proxyPlayerTest.damageLevel : null, state.damageLevel);
-                    SyncNetVarInt(playerLevel, proxyPlayerTest != null ? proxyPlayerTest.playerLevel : null, state.playerLevel);
-                    SyncNetVarFloat(playerExp, proxyPlayerTest != null ? proxyPlayerTest.playerExp : null, state.playerExp);
-                    SyncNetVarFloat(currentHealth, proxyPlayerTest != null ? proxyPlayerTest.currentHealth : null, state.health);
-                    SyncNetVarInt(activeWeaponIndex, proxyPlayerTest != null ? proxyPlayerTest.activeWeaponIndex : null, state.activeWeaponIndex);
-                    SyncNetVarBool(isWeapon2Locked, proxyPlayerTest != null ? proxyPlayerTest.isWeapon2Locked : null, state.isWeapon2Locked);
-                    SyncNetVarBool(isSkillsUnlocked, proxyPlayerTest != null ? proxyPlayerTest.isSkillsUnlocked : null, state.isSkillsUnlocked);
+                    SyncPlayerStateServerRpc(
+                        state.health,
+                        state.activeWeaponIndex,
+                        state.isWeapon2Locked,
+                        state.isSkillsUnlocked,
+                        state.upgradePoints,
+                        state.hpLevel,
+                        state.mpLevel,
+                        state.cooldownLevel,
+                        state.damageLevel,
+                        state.speedLevel,
+                        state.playerLevel,
+                        state.playerExp
+                    );
                 }
 
-                maxHealth = 85f + state.hpLevel * 20f;
+                maxHealth = 100f + state.hpLevel * 10f;
                 damageAmount = 25f + state.damageLevel * 5f;
-
-                isSyncingFromDb = false;
+                qSkillDamagePerSlash = 15f + state.damageLevel * 5f;
+                rSkillLightningDamage = 40f + state.damageLevel * 5f;
+                moveSpeed = 3.5f + state.speedLevel * 0.5f;
 
                 if (state.inventorySlots != null)
                 {
@@ -7116,8 +7207,8 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
                     hud.SetSkillsUnlocked(state.isSkillsUnlocked, false);
                     hud.SetWeapon2Locked(state.isWeapon2Locked, false);
                     hud.SelectWeapon(state.activeWeaponIndex);
-                    hud.UpdateUpgradeUI(state.upgradePoints, state.hpLevel, state.mpLevel, state.cooldownLevel, state.damageLevel);
-                    hud.SetHealth(state.health / (85f + state.hpLevel * 20f));
+                    hud.UpdateUpgradeUI(state.upgradePoints, state.hpLevel, state.mpLevel, state.cooldownLevel, state.damageLevel, state.speedLevel);
+                    hud.SetHealth(state.health / (100f + state.hpLevel * 10f));
 
                     float needed = 100f + state.playerLevel * 50f;
                     hud.UpdateExperienceUI(state.playerLevel, state.playerExp, needed);
@@ -7136,22 +7227,13 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
                     localMpLevel = 0;
                     localCooldownLevel = 0;
                     localDamageLevel = 0;
+                    localSpeedLevel = 0;
                     localLevel = 0;
                     localExp = 0f;
                 }
                 else
                 {
-                    SyncNetVarFloat(currentHealth, proxyPlayerTest != null ? proxyPlayerTest.currentHealth : null, maxHealth);
-                    SyncNetVarInt(activeWeaponIndex, proxyPlayerTest != null ? proxyPlayerTest.activeWeaponIndex : null, 1);
-                    SyncNetVarBool(isWeapon2Locked, proxyPlayerTest != null ? proxyPlayerTest.isWeapon2Locked : null, false);
-                    SyncNetVarBool(isSkillsUnlocked, proxyPlayerTest != null ? proxyPlayerTest.isSkillsUnlocked : null, true);
-                    SyncNetVarInt(upgradePoints, proxyPlayerTest != null ? proxyPlayerTest.upgradePoints : null, 0);
-                    SyncNetVarInt(hpLevel, proxyPlayerTest != null ? proxyPlayerTest.hpLevel : null, 0);
-                    SyncNetVarInt(mpLevel, proxyPlayerTest != null ? proxyPlayerTest.mpLevel : null, 0);
-                    SyncNetVarInt(cooldownLevel, proxyPlayerTest != null ? proxyPlayerTest.cooldownLevel : null, 0);
-                    SyncNetVarInt(damageLevel, proxyPlayerTest != null ? proxyPlayerTest.damageLevel : null, 0);
-                    SyncNetVarInt(playerLevel, proxyPlayerTest != null ? proxyPlayerTest.playerLevel : null, 0);
-                    SyncNetVarFloat(playerExp, proxyPlayerTest != null ? proxyPlayerTest.playerExp : null, 0f);
+                    SyncPlayerStateServerRpc(maxHealth, 1, false, true, 0, 0, 0, 0, 0, 0, 0, 0f);
                 }
                 SavePlayerStateToDatabase();
             }
@@ -7159,7 +7241,69 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         catch (System.Exception ex)
         {
             Debug.LogError($"[LeoPlayer DB] Error loading state: {ex.Message}");
+            if (!isStandaloneMode)
+            {
+                SyncPlayerStateServerRpc(maxHealth, 1, false, true, 0, 0, 0, 0, 0, 0, 0, 0f);
+            }
         }
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    private void SyncPlayerStateServerRpc(
+        float health,
+        int weaponIndex,
+        bool weapon2Locked,
+        bool skillsUnlocked,
+        int pts,
+        int hp,
+        int mp,
+        int cd,
+        int dmg,
+        int spd,
+        int levelVal,
+        float expVal
+    )
+    {
+        isSyncingFromDb = true;
+
+        upgradePoints.Value = pts;
+        hpLevel.Value = hp;
+        mpLevel.Value = mp;
+        cooldownLevel.Value = cd;
+        damageLevel.Value = dmg;
+        speedLevel.Value = spd;
+        playerLevel.Value = levelVal;
+        playerExp.Value = expVal;
+
+        maxHealth = 100f + hp * 10f;
+        damageAmount = 25f + dmg * 5f;
+        qSkillDamagePerSlash = 15f + dmg * 5f;
+        rSkillLightningDamage = 40f + dmg * 5f;
+        moveSpeed = 3.5f + spd * 0.5f;
+
+        currentHealth.Value = health;
+        currentMana.Value = 100f + mp * 10f;
+        activeWeaponIndex.Value = weaponIndex;
+        isWeapon2Locked.Value = weapon2Locked;
+        isSkillsUnlocked.Value = skillsUnlocked;
+
+        if (proxyPlayerTest != null)
+        {
+            proxyPlayerTest.upgradePoints.Value = pts;
+            proxyPlayerTest.hpLevel.Value = hp;
+            proxyPlayerTest.mpLevel.Value = mp;
+            proxyPlayerTest.cooldownLevel.Value = cd;
+            proxyPlayerTest.damageLevel.Value = dmg;
+            proxyPlayerTest.playerLevel.Value = levelVal;
+            proxyPlayerTest.playerExp.Value = expVal;
+            proxyPlayerTest.currentHealth.Value = health;
+            proxyPlayerTest.currentMana.Value = currentMana.Value;
+            proxyPlayerTest.activeWeaponIndex.Value = weaponIndex;
+            proxyPlayerTest.isWeapon2Locked.Value = weapon2Locked;
+            proxyPlayerTest.isSkillsUnlocked.Value = skillsUnlocked;
+        }
+
+        isSyncingFromDb = false;
     }
 
     [ClientRpc]
@@ -7273,7 +7417,21 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (!isStandaloneMode && !IsOwner) return;
         PlayerHUDController hud = FindAnyObjectByType<PlayerHUDController>();
         if (hud != null)
-            hud.SetHealth(health / maxHealth);
+            hud.SetHealth(health / MaxHealth);
+    }
+
+    private void OnManaChanged(float oldMana, float newMana)
+    {
+        localMana = newMana;
+        UpdateManaHUD(newMana);
+    }
+
+    private void UpdateManaHUD(float mana)
+    {
+        if (!isStandaloneMode && !IsOwner) return;
+        PlayerHUDController hud = FindAnyObjectByType<PlayerHUDController>();
+        if (hud != null && MaxMana > 0f)
+            hud.SetMana(mana / MaxMana);
     }
 
     private void OnUpgradePointsChanged(int oldVal, int newVal)
@@ -7300,6 +7458,12 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     }
 
     private void OnDamageLevelChanged(int oldVal, int newVal)
+    {
+        if (IsServer || IsOwner) ApplyUpgradedStats();
+        if (IsOwner) UpdateUpgradeHUD();
+    }
+
+    private void OnSpeedLevelChanged(int oldVal, int newVal)
     {
         if (IsServer || IsOwner) ApplyUpgradedStats();
         if (IsOwner) UpdateUpgradeHUD();

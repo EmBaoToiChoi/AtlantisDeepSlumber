@@ -121,6 +121,7 @@ public class PlayerStateData
     public int mpLevel;
     public int cooldownLevel;
     public int damageLevel;
+    public int speedLevel;
     public int playerLevel;
     public float playerExp;
 }

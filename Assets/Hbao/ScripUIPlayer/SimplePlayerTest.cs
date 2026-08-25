@@ -37,6 +37,12 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
         NetworkVariableReadPermission.Everyone,
         NetworkVariableWritePermission.Server
     );
+    public NetworkVariable<float> currentMana = new NetworkVariable<float>(
+        100f,
+        NetworkVariableReadPermission.Everyone,
+        NetworkVariableWritePermission.Server
+    );
+    protected float localMana = 100f;
 
     [Header("Network Sync Variables")]
     public NetworkVariable<int> activeWeaponIndex = new NetworkVariable<int>(
@@ -81,6 +87,11 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
         NetworkVariableReadPermission.Everyone,
         NetworkVariableWritePermission.Server
     );
+    public NetworkVariable<int> speedLevel = new NetworkVariable<int>(
+        0,
+        NetworkVariableReadPermission.Everyone,
+        NetworkVariableWritePermission.Server
+    );
 
     [Header("Local State & Inventory")]
     public string[] inventorySlots = new string[10] { "", "", "", "", "", "", "", "", "", "" };
@@ -91,6 +102,7 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
     protected int localMpLevel = 0;
     protected int localCooldownLevel = 0;
     protected int localDamageLevel = 0;
+    protected int localSpeedLevel = 0;
     protected int localLevel = 0;
     protected float localExp = 0f;
 
@@ -238,10 +250,54 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
     public float Weapon2MaxDurability => weapon2MaxDurability;
     public string[] InventorySlots => inventorySlots;
     public float MaxHealth => 
-        leoPlayer != null ? leoPlayer.maxHealth :
-        (arthurPlayer != null ? arthurPlayer.maxHealth :
-        (elenaPlayer != null ? elenaPlayer.maxHealth :
-        (mayaPlayer != null ? mayaPlayer.maxHealth : maxHealth)));
+        leoPlayer != null ? leoPlayer.MaxHealth :
+        (arthurPlayer != null ? arthurPlayer.MaxHealth :
+        (elenaPlayer != null ? elenaPlayer.MaxHealth :
+        (mayaPlayer != null ? mayaPlayer.MaxHealth : (100f + (isStandaloneMode ? localHpLevel : hpLevel.Value) * 10f))));
+
+    public float CurrentMana =>
+        leoPlayer != null ? leoPlayer.CurrentMana :
+        (arthurPlayer != null ? arthurPlayer.CurrentMana :
+        (elenaPlayer != null ? elenaPlayer.CurrentMana :
+        (mayaPlayer != null ? mayaPlayer.CurrentMana : (isStandaloneMode ? localMana : currentMana.Value))));
+
+    public float MaxMana =>
+        leoPlayer != null ? leoPlayer.MaxMana :
+        (arthurPlayer != null ? arthurPlayer.MaxMana :
+        (elenaPlayer != null ? elenaPlayer.MaxMana :
+        (mayaPlayer != null ? mayaPlayer.MaxMana : (100f + (isStandaloneMode ? localMpLevel : mpLevel.Value) * 10f))));
+
+    public bool HasEnoughMana(float amount = 30f)
+    {
+        if (leoPlayer != null) return leoPlayer.HasEnoughMana(amount);
+        if (arthurPlayer != null) return arthurPlayer.HasEnoughMana(amount);
+        if (elenaPlayer != null) return elenaPlayer.HasEnoughMana(amount);
+        if (mayaPlayer != null) return mayaPlayer.HasEnoughMana(amount);
+        return CurrentMana >= amount;
+    }
+
+    public bool TryConsumeMana(float amount = 30f)
+    {
+        if (leoPlayer != null) return leoPlayer.TryConsumeMana(amount);
+        if (arthurPlayer != null) return arthurPlayer.TryConsumeMana(amount);
+        if (elenaPlayer != null) return elenaPlayer.TryConsumeMana(amount);
+        if (mayaPlayer != null) return mayaPlayer.TryConsumeMana(amount);
+        if (!HasEnoughMana(amount))
+        {
+            PlayerHUDController hud = FindAnyObjectByType<PlayerHUDController>();
+            if (hud != null) hud.ShowMissionAlert("Không đủ năng lượng! (Cần 30 năng lượng)", 2.0f);
+            return false;
+        }
+        if (isStandaloneMode) localMana = Mathf.Max(0f, localMana - amount);
+        else if (IsOwner) ConsumeManaServerRpc(amount);
+        return true;
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    private void ConsumeManaServerRpc(float amount)
+    {
+        currentMana.Value = Mathf.Max(0f, currentMana.Value - amount);
+    }
 
     public bool IsDeathAnimationFinished => 
         leoPlayer != null ? leoPlayer.IsDeathAnimationFinished :
@@ -553,8 +609,7 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
         mpLevel.OnValueChanged += OnMpLevelChanged;
         cooldownLevel.OnValueChanged += OnCooldownLevelChanged;
         damageLevel.OnValueChanged += OnDamageLevelChanged;
-
-        // Đăng ký sự kiện đồng bộ kinh nghiệm và cấp độ
+        speedLevel.OnValueChanged += OnSpeedLevelChanged;
         playerLevel.OnValueChanged += OnLevelOrExpChanged;
         playerExp.OnValueChanged += OnLevelOrExpChanged;
 
@@ -577,7 +632,9 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
             SilasDialogueController.LocalPlayerTarget = this;
 
             currentHealth.OnValueChanged += OnHealthChanged;
+            currentMana.OnValueChanged += OnManaChanged;
             UpdateHealthHUD(currentHealth.Value);
+            UpdateManaHUD(currentMana.Value);
 
             PlayerHUDController hud = null;
             PlayerHUDManager hudManager = PlayerHUDManager.Instance != null ? PlayerHUDManager.Instance : FindObjectOfType<PlayerHUDManager>();
@@ -631,8 +688,7 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
         mpLevel.OnValueChanged -= OnMpLevelChanged;
         cooldownLevel.OnValueChanged -= OnCooldownLevelChanged;
         damageLevel.OnValueChanged -= OnDamageLevelChanged;
-
-        // Hủy đăng ký sự kiện kinh nghiệm
+        speedLevel.OnValueChanged -= OnSpeedLevelChanged;
         playerLevel.OnValueChanged -= OnLevelOrExpChanged;
         playerExp.OnValueChanged -= OnLevelOrExpChanged;
 
@@ -641,7 +697,10 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
         weapon2Durability.OnValueChanged -= OnDurabilityChanged;
 
         if (IsOwner)
+        {
             currentHealth.OnValueChanged -= OnHealthChanged;
+            currentMana.OnValueChanged -= OnManaChanged;
+        }
     }
 
     private void OnWeaponIndexChanged(int oldVal, int newVal)
@@ -697,7 +756,21 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
         if (!isStandaloneMode && !IsOwner) return;
         PlayerHUDController hud = FindObjectOfType<PlayerHUDController>();
         if (hud != null)
-            hud.SetHealth(health / maxHealth);
+            hud.SetHealth(health / MaxHealth);
+    }
+
+    private void OnManaChanged(float oldMana, float newMana)
+    {
+        localMana = newMana;
+        UpdateManaHUD(newMana);
+    }
+
+    private void UpdateManaHUD(float mana)
+    {
+        if (!isStandaloneMode && !IsOwner) return;
+        PlayerHUDController hud = FindObjectOfType<PlayerHUDController>();
+        if (hud != null && MaxMana > 0f)
+            hud.SetMana(mana / MaxMana);
     }
 
     // ------------------------------------------------------------------
@@ -759,6 +832,18 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
         }
     }
 
+    private void OnSpeedLevelChanged(int oldVal, int newVal)
+    {
+        if (IsServer || IsOwner)
+        {
+            ApplyUpgradedStats();
+        }
+        if (IsOwner)
+        {
+            UpdateUpgradeHUD();
+        }
+    }
+
     // ------------------------------------------------------------------
     //  Áp dụng chỉ số nâng cấp vào các giá trị thực tế
     // ------------------------------------------------------------------
@@ -768,10 +853,12 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
 
         int hpLv = isStandaloneMode ? localHpLevel : hpLevel.Value;
         int dmgLv = isStandaloneMode ? localDamageLevel : damageLevel.Value;
+        int spdLv = isStandaloneMode ? localSpeedLevel : speedLevel.Value;
 
         float oldMaxHealth = maxHealth;
-        maxHealth = 100f + hpLv * 20f;
-        damageAmount = 20f * (1f + dmgLv * 0.15f);
+        maxHealth = 100f + hpLv * 10f;
+        damageAmount = 20f + dmgLv * 5f;
+        moveSpeed = 3.5f + spdLv * 0.5f;
 
         if (isStandaloneMode)
         {
@@ -804,9 +891,10 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
             int mp = isStandaloneMode ? localMpLevel : mpLevel.Value;
             int cd = isStandaloneMode ? localCooldownLevel : cooldownLevel.Value;
             int dmg = isStandaloneMode ? localDamageLevel : damageLevel.Value;
+            int spd = isStandaloneMode ? localSpeedLevel : speedLevel.Value;
 
-            hud.UpdateUpgradeUI(pts, hp, mp, cd, dmg);
-            hud.SetHealth(CurrentHealth / maxHealth);
+            hud.UpdateUpgradeUI(pts, hp, mp, cd, dmg, spd);
+            hud.SetHealth(CurrentHealth / MaxHealth);
 
             // Đồng bộ Cấp độ & Kinh nghiệm lên giao diện HUD chính
             int lv = isStandaloneMode ? localLevel : playerLevel.Value;
@@ -1170,6 +1258,7 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
             case 1: targetLvl = localMpLevel; break;
             case 2: targetLvl = localCooldownLevel; break;
             case 3: targetLvl = localDamageLevel; break;
+            case 4: targetLvl = localSpeedLevel; break;
         }
         if (targetLvl >= 3) return;
 
@@ -1180,11 +1269,12 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
             case 1: localMpLevel++; break;
             case 2: localCooldownLevel++; break;
             case 3: localDamageLevel++; break;
+            case 4: localSpeedLevel++; break;
         }
 
         ApplyUpgradedStats();
         UpdateUpgradeHUD();
-        Debug.Log($"[Standalone] Đã nâng cấp Stat {statType}. Cấp độ mới: HP={localHpLevel}, MP={localMpLevel}, Cooldown={localCooldownLevel}, Damage={localDamageLevel}. Điểm còn: {localUpgradePoints}");
+        Debug.Log($"[Standalone] Đã nâng cấp Stat {statType}. Cấp độ mới: HP={localHpLevel}, MP={localMpLevel}, Cooldown={localCooldownLevel}, Damage={localDamageLevel}, Speed={localSpeedLevel}. Điểm còn: {localUpgradePoints}");
     }
 
     public void RefreshUpgradeHUD() => UpdateUpgradeHUD();
@@ -1233,6 +1323,7 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
             case 1: targetLvl = mpLevel.Value; break;
             case 2: targetLvl = cooldownLevel.Value; break;
             case 3: targetLvl = damageLevel.Value; break;
+            case 4: targetLvl = speedLevel.Value; break;
         }
         if (targetLvl >= 3) return;
 
@@ -1243,11 +1334,12 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
             case 1: mpLevel.Value++; break;
             case 2: cooldownLevel.Value++; break;
             case 3: damageLevel.Value++; break;
+            case 4: speedLevel.Value++; break;
         }
 
         ApplyUpgradedStats();
         SavePlayerStateClientRpc();
-        Debug.Log($"[Server] Đã nâng cấp Stat {statType} cho {gameObject.name}. HP Lv={hpLevel.Value}, MP Lv={mpLevel.Value}, CD Lv={cooldownLevel.Value}, DMG Lv={damageLevel.Value}. Điểm còn lại: {upgradePoints.Value}");
+        Debug.Log($"[Server] Đã nâng cấp Stat {statType} cho {gameObject.name}. HP Lv={hpLevel.Value}, MP Lv={mpLevel.Value}, CD Lv={cooldownLevel.Value}, DMG Lv={damageLevel.Value}, Speed Lv={speedLevel.Value}. Điểm còn lại: {upgradePoints.Value}");
     }
 
     // ------------------------------------------------------------------
@@ -1269,6 +1361,24 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
 
     protected virtual void Update()
     {
+        // Hồi phục năng lượng: 1 năng lượng / 1 giây
+        if (isStandaloneMode || (IsOwner && !IsServer))
+        {
+            if (localMana < MaxMana)
+            {
+                localMana = Mathf.Min(localMana + Time.deltaTime * 1.0f, MaxMana);
+                if (IsOwner) UpdateManaHUD(localMana);
+            }
+        }
+        
+        if (!isStandaloneMode && IsServer)
+        {
+            if (currentMana.Value < MaxMana)
+            {
+                currentMana.Value = Mathf.Min(currentMana.Value + Time.deltaTime * 1.0f, MaxMana);
+            }
+        }
+
         if (leoPlayer != null || arthurPlayer != null || elenaPlayer != null || mayaPlayer != null) return;
 
         // Chỉ xử lý phím tắt Alt ẩn hiện chuột nếu là chủ sở hữu hoặc chơi đơn
@@ -2004,6 +2114,7 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
                     state.mpLevel,
                     state.cooldownLevel,
                     state.damageLevel,
+                    state.speedLevel,
                     state.playerLevel,
                     state.playerExp
                 );
@@ -2024,8 +2135,8 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
                     hud.SetWeapon2Locked(false, false);
                     hud.SelectWeapon(state.activeWeaponIndex);
                     // Cập nhật lại UI sau khi các NetworkVariables được đồng bộ
-                    hud.UpdateUpgradeUI(state.upgradePoints, state.hpLevel, state.mpLevel, state.cooldownLevel, state.damageLevel);
-                    hud.SetHealth(state.health / (100f + state.hpLevel * 20f));
+                    hud.UpdateUpgradeUI(state.upgradePoints, state.hpLevel, state.mpLevel, state.cooldownLevel, state.damageLevel, state.speedLevel);
+                    hud.SetHealth(state.health / (100f + state.hpLevel * 10f));
                     
                     float needed = 100f + state.playerLevel * 50f;
                     hud.UpdateExperienceUI(state.playerLevel, state.playerExp, needed);
@@ -2034,14 +2145,14 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
             else
             {
                 Debug.LogWarning("[DB] Không có dữ liệu cũ hoặc lỗi kết nối. Đồng bộ dữ liệu ban đầu.");
-                SyncPlayerStateServerRpc(maxHealth, 1, true, false, 0, 0, 0, 0, 0, 0, 0f);
+                SyncPlayerStateServerRpc(maxHealth, 1, true, false, 0, 0, 0, 0, 0, 0, 0, 0f);
                 SavePlayerStateToDatabase();
             }
         }
         catch (System.Exception ex)
         {
             Debug.LogError($"[DB] Lỗi khi kết nối API tải dữ liệu MongoDB: {ex.Message}");
-            SyncPlayerStateServerRpc(maxHealth, 1, true, false, 0, 0, 0, 0, 0, 0, 0f);
+            SyncPlayerStateServerRpc(maxHealth, 1, true, false, 0, 0, 0, 0, 0, 0, 0, 0f);
         }
     }
 
@@ -2056,6 +2167,7 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
         int mp,
         int cd,
         int dmg,
+        int spd,
         int levelVal,
         float expVal
     )
@@ -2067,12 +2179,14 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
         mpLevel.Value = mp;
         cooldownLevel.Value = cd;
         damageLevel.Value = dmg;
+        speedLevel.Value = spd;
         playerLevel.Value = levelVal;
         playerExp.Value = expVal;
 
         // Đồng bộ trước maxHealth tác động của chỉ số lên server
-        maxHealth = 100f + hp * 20f;
+        maxHealth = 100f + hp * 10f;
         damageAmount = 20f + dmg * 5f;
+        moveSpeed = 3.5f + spd * 0.5f;
 
         currentHealth.Value = health;
         activeWeaponIndex.Value = weaponIndex;
@@ -2121,6 +2235,7 @@ public class SimplePlayerTest : NetworkBehaviour, IPlayerHUDTarget
                 mpLevel = mpLevel.Value,
                 cooldownLevel = cooldownLevel.Value,
                 damageLevel = damageLevel.Value,
+                speedLevel = speedLevel.Value,
                 playerLevel = playerLevel.Value,
                 playerExp = playerExp.Value
             };
