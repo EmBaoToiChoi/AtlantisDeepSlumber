@@ -1,12 +1,10 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
     <Style src="project://database/Assets/HHoang/minigame/minigame%201/sript/b%C3%A1nh%20r%C4%83ng/NarakaStyle.uss?fileID=7433441132597879392&amp;guid=0c7f969ec89de7840aba861bfb81e2ee&amp;type=3#NarakaStyle" />
     <ui:VisualElement name="MainContainer" class="main-container">
+        <!-- Khung QTE viền vàng Fantasy Box Medium 02 bọc kín đều 4 phía -->
         <ui:VisualElement class="qte-popup-container">
             <ui:VisualElement class="qte-frame-bg" />
-            <ui:VisualElement class="qte-frame-wrapper">
-                <ui:VisualElement class="qte-frame-left" />
-                <ui:VisualElement class="qte-frame-right" />
-            </ui:VisualElement>
+            <ui:VisualElement class="qte-frame" />
             <ui:VisualElement class="qte-board">
                 <ui:VisualElement name="KeyA" class="key-box">
                     <ui:Label text="A" class="key-text" />
