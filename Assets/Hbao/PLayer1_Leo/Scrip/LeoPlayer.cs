@@ -4005,12 +4005,12 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     private void Update()
     {
-        // Hồi phục năng lượng: 1 năng lượng / 1 giây
+        // Hồi phục năng lượng: 3 năng lượng / 1 giây
         if (isStandaloneMode || (IsOwner && !IsServer))
         {
             if (localMana < MaxMana)
             {
-                localMana = Mathf.Min(localMana + Time.deltaTime * 1.0f, MaxMana);
+                localMana = Mathf.Min(localMana + Time.deltaTime * 3.0f, MaxMana);
                 if (IsOwner) UpdateManaHUD(localMana);
             }
         }
@@ -4019,7 +4019,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         {
             if (currentMana.Value < MaxMana)
             {
-                currentMana.Value = Mathf.Min(currentMana.Value + Time.deltaTime * 1.0f, MaxMana);
+                currentMana.Value = Mathf.Min(currentMana.Value + Time.deltaTime * 3.0f, MaxMana);
             }
         }
 
