@@ -936,7 +936,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Range
-      value: 20
+      value: 30
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Color.b
@@ -956,7 +956,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 4
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -964,11 +964,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
-      value: 1
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Shadows.m_Type
-      value: 0
+      value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_BounceIntensity
@@ -1174,7 +1174,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Range
-      value: 20
+      value: 30
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Color.b
@@ -1194,7 +1194,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 4
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -1202,11 +1202,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
-      value: 1
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Shadows.m_Type
-      value: 0
+      value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_BounceIntensity
@@ -3729,7 +3729,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Range
-      value: 22
+      value: 30
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Color.b
@@ -3745,7 +3745,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 5.5
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -3757,7 +3757,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Shadows.m_Type
-      value: 0
+      value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_BounceIntensity
@@ -4539,8 +4539,12 @@ PrefabInstance:
       value: Forged_torch_light_baked
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Range
+      value: 30
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -4548,6 +4552,10 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Shadows.m_Type
       value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
@@ -5276,7 +5284,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Range
-      value: 10
+      value: 30
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Enabled
@@ -5284,7 +5292,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -5292,6 +5300,10 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Shadows.m_Type
       value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
@@ -7923,15 +7935,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Range
-      value: 8
+      value: 30
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_BounceIntensity
@@ -7985,11 +7997,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Range
-      value: 10
+      value: 30
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -7997,6 +8009,10 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Shadows.m_Type
       value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
@@ -8564,11 +8580,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Range
-      value: 10
+      value: 30
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -8576,6 +8592,10 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Shadows.m_Type
       value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
@@ -9156,7 +9176,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Range
-      value: 20
+      value: 30
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Color.b
@@ -9176,7 +9196,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 4
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -9184,11 +9204,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
-      value: 1
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Shadows.m_Type
-      value: 0
+      value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_BounceIntensity
@@ -10517,11 +10537,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Range
-      value: 20
+      value: 30
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 5.5
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -10533,7 +10553,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Shadows.m_Type
-      value: 0
+      value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_BounceIntensity
@@ -13674,11 +13694,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Range
-      value: 10
+      value: 30
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -13686,6 +13706,10 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Shadows.m_Type
       value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
@@ -20324,12 +20348,16 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
+      propertyPath: m_Range
+      value: 30
+      objectReference: {fileID: 0}
+    - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_BounceIntensity
@@ -20485,7 +20513,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Range
-      value: 10
+      value: 30
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Enabled
@@ -20493,7 +20521,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -20501,6 +20529,10 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Shadows.m_Type
       value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
@@ -20963,6 +20995,7 @@ GameObject:
   - component: {fileID: 281679539}
   - component: {fileID: 281679538}
   - component: {fileID: 281679541}
+  - component: {fileID: 281679542}
   m_Layer: 0
   m_Name: Camera
   m_TagString: Untagged
@@ -21066,6 +21099,66 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &281679542
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 281679537}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 948f4100a11a5c24981795d21301da5c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  volumeTrigger: {fileID: 281679540}
+  volumeLayer:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  stopNaNPropagation: 1
+  finalBlitToCameraTarget: 0
+  antialiasingMode: 1
+  temporalAntialiasing:
+    jitterSpread: 0.75
+    sharpness: 0.25
+    stationaryBlending: 0.95
+    motionBlending: 0.85
+  subpixelMorphologicalAntialiasing:
+    quality: 2
+  fastApproximateAntialiasing:
+    fastMode: 0
+    keepAlpha: 0
+  fog:
+    enabled: 1
+    excludeSkybox: 1
+  debugLayer:
+    lightMeter:
+      width: 512
+      height: 256
+      showCurves: 1
+    histogram:
+      width: 512
+      height: 256
+      channel: 3
+    waveform:
+      exposure: 0.12
+      height: 256
+    vectorscope:
+      size: 256
+      exposure: 0.12
+    overlaySettings:
+      linearDepth: 0
+      motionColorIntensity: 4
+      motionGridSize: 64
+      colorBlindnessType: 0
+      colorBlindnessStrength: 1
+  m_Resources: {fileID: 11400000, guid: d82512f9c8e5d4a4d938b575d47f88d4, type: 2}
+  m_ShowToolkit: 0
+  m_ShowCustomSorter: 0
+  breakBeforeColorGrading: 0
+  m_BeforeTransparentBundles: []
+  m_BeforeStackBundles: []
+  m_AfterStackBundles: []
 --- !u!1 &285106287
 GameObject:
   m_ObjectHideFlags: 0
@@ -21307,11 +21400,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Range
-      value: 10
+      value: 30
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -21319,6 +21412,10 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Shadows.m_Type
       value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
@@ -21977,11 +22074,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Range
-      value: 20
+      value: 30
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 5.5
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -21990,6 +22087,10 @@ PrefabInstance:
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
       value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Shadows.m_Type
+      value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_BounceIntensity
@@ -22192,8 +22293,12 @@ PrefabInstance:
       value: Forged_torch_light_baked
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Range
+      value: 30
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -22201,6 +22306,10 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Shadows.m_Type
       value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
@@ -22511,11 +22620,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Range
-      value: 20
+      value: 30
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 5.5
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -22524,6 +22633,10 @@ PrefabInstance:
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
       value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Shadows.m_Type
+      value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_BounceIntensity
@@ -23523,6 +23636,7 @@ GameObject:
   - component: {fileID: 314416258}
   - component: {fileID: 314416257}
   - component: {fileID: 314416256}
+  - component: {fileID: 314416259}
   m_Layer: 0
   m_Name: Camera (4)
   m_TagString: Untagged
@@ -23604,6 +23718,66 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 77.927, z: 0}
+--- !u!114 &314416259
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 314416255}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 948f4100a11a5c24981795d21301da5c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  volumeTrigger: {fileID: 281679540}
+  volumeLayer:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  stopNaNPropagation: 1
+  finalBlitToCameraTarget: 0
+  antialiasingMode: 1
+  temporalAntialiasing:
+    jitterSpread: 0.75
+    sharpness: 0.25
+    stationaryBlending: 0.95
+    motionBlending: 0.85
+  subpixelMorphologicalAntialiasing:
+    quality: 2
+  fastApproximateAntialiasing:
+    fastMode: 0
+    keepAlpha: 0
+  fog:
+    enabled: 1
+    excludeSkybox: 1
+  debugLayer:
+    lightMeter:
+      width: 512
+      height: 256
+      showCurves: 1
+    histogram:
+      width: 512
+      height: 256
+      channel: 3
+    waveform:
+      exposure: 0.12
+      height: 256
+    vectorscope:
+      size: 256
+      exposure: 0.12
+    overlaySettings:
+      linearDepth: 0
+      motionColorIntensity: 4
+      motionGridSize: 64
+      colorBlindnessType: 0
+      colorBlindnessStrength: 1
+  m_Resources: {fileID: 11400000, guid: d82512f9c8e5d4a4d938b575d47f88d4, type: 2}
+  m_ShowToolkit: 0
+  m_ShowCustomSorter: 0
+  breakBeforeColorGrading: 0
+  m_BeforeTransparentBundles: []
+  m_BeforeStackBundles: []
+  m_AfterStackBundles: []
 --- !u!1001 &314579908
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -26268,11 +26442,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Range
-      value: 20
+      value: 30
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 5.5
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -26281,6 +26455,10 @@ PrefabInstance:
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
       value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Shadows.m_Type
+      value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_BounceIntensity
@@ -26457,12 +26635,16 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
+      propertyPath: m_Range
+      value: 30
+      objectReference: {fileID: 0}
+    - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_BounceIntensity
@@ -26551,12 +26733,16 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
+      propertyPath: m_Range
+      value: 30
+      objectReference: {fileID: 0}
+    - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_BounceIntensity
@@ -27214,15 +27400,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Range
-      value: 8
+      value: 30
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_BounceIntensity
@@ -28011,7 +28197,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Range
-      value: 10
+      value: 30
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Enabled
@@ -28019,7 +28205,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -28027,6 +28213,10 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Shadows.m_Type
       value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
@@ -28177,15 +28367,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Range
-      value: 8
+      value: 30
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_BounceIntensity
@@ -34960,8 +35150,12 @@ PrefabInstance:
       value: Forged_torch_light_baked
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Range
+      value: 30
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -34969,6 +35163,10 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Shadows.m_Type
       value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
@@ -36289,7 +36487,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Range
-      value: 20
+      value: 30
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Color.b
@@ -36309,7 +36507,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 4
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -36317,11 +36515,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
-      value: 1
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Shadows.m_Type
-      value: 0
+      value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_BounceIntensity
@@ -37439,15 +37637,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Range
-      value: 8
+      value: 30
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_BounceIntensity
@@ -46371,15 +46569,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Range
-      value: 8
+      value: 30
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_BounceIntensity
@@ -47028,8 +47226,12 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
+      propertyPath: m_Range
+      value: 30
+      objectReference: {fileID: 0}
+    - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_RenderMode
@@ -47037,7 +47239,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_BounceIntensity
@@ -47765,6 +47967,55 @@ Light:
   m_LightUnit: 1
   m_LuxAtDistance: 1
   m_EnableSpotReflector: 1
+--- !u!1 &455549421
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 455549423}
+  - component: {fileID: 455549422}
+  m_Layer: 0
+  m_Name: PostProcess
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &455549422
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 455549421}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8b9a305e18de0c04dbd257a21cd47087, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  sharedProfile: {fileID: 11400000, guid: 56bd1ff36bfc14c4b8142708a134d736, type: 2}
+  isGlobal: 1
+  blendDistance: 0
+  weight: 1
+  priority: 0
+--- !u!4 &455549423
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 455549421}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &456209641
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -49532,7 +49783,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Range
-      value: 10
+      value: 30
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Enabled
@@ -49540,7 +49791,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -49548,6 +49799,10 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Shadows.m_Type
       value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
@@ -50523,7 +50778,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Range
-      value: 10
+      value: 30
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Enabled
@@ -50531,7 +50786,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -50539,6 +50794,10 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Shadows.m_Type
       value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
@@ -54061,8 +54320,12 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
+      propertyPath: m_Range
+      value: 30
+      objectReference: {fileID: 0}
+    - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_RenderMode
@@ -54070,7 +54333,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_BounceIntensity
@@ -57995,15 +58258,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Range
-      value: 8
+      value: 30
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_BounceIntensity
@@ -58672,8 +58935,12 @@ PrefabInstance:
       value: Forged_torch_light_baked
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Range
+      value: 30
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -58681,6 +58948,10 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Shadows.m_Type
       value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
@@ -59997,8 +60268,12 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
+      propertyPath: m_Range
+      value: 30
+      objectReference: {fileID: 0}
+    - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_RenderMode
@@ -60006,7 +60281,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_BounceIntensity
@@ -60632,7 +60907,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Range
-      value: 10
+      value: 30
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Enabled
@@ -60640,7 +60915,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -60648,6 +60923,10 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Shadows.m_Type
       value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
@@ -61629,11 +61908,19 @@ PrefabInstance:
       value: Forged_torch_light_baked
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Range
+      value: 30
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Shadows.m_Type
       value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
@@ -62079,15 +62366,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Range
-      value: 8
+      value: 30
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_BounceIntensity
@@ -62671,11 +62958,19 @@ PrefabInstance:
       value: Forged_torch_light_baked
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Range
+      value: 30
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Shadows.m_Type
       value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
@@ -64161,8 +64456,12 @@ PrefabInstance:
       value: Forged_torch_light_baked
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Range
+      value: 30
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -64170,6 +64469,10 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Shadows.m_Type
       value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
@@ -66310,15 +66613,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Range
-      value: 8
+      value: 30
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_BounceIntensity
@@ -66376,7 +66679,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Range
-      value: 20
+      value: 30
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Color.b
@@ -66396,7 +66699,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 4
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -66404,11 +66707,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
-      value: 1
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Shadows.m_Type
-      value: 0
+      value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_BounceIntensity
@@ -66669,8 +66972,12 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
+      propertyPath: m_Range
+      value: 30
+      objectReference: {fileID: 0}
+    - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_RenderMode
@@ -66678,7 +66985,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_BounceIntensity
@@ -67234,7 +67541,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Range
-      value: 20
+      value: 30
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Color.b
@@ -67254,7 +67561,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 4
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -67262,11 +67569,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
-      value: 1
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Shadows.m_Type
-      value: 0
+      value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_BounceIntensity
@@ -68103,11 +68410,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Range
-      value: 10
+      value: 30
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -68115,6 +68422,10 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Shadows.m_Type
       value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
@@ -70500,12 +70811,16 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
+      propertyPath: m_Range
+      value: 30
+      objectReference: {fileID: 0}
+    - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_BounceIntensity
@@ -70830,12 +71145,16 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
+      propertyPath: m_Range
+      value: 30
+      objectReference: {fileID: 0}
+    - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_BounceIntensity
@@ -79630,15 +79949,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Range
-      value: 8
+      value: 30
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_BounceIntensity
@@ -80132,8 +80451,12 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
+      propertyPath: m_Range
+      value: 30
+      objectReference: {fileID: 0}
+    - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_RenderMode
@@ -80141,7 +80464,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_BounceIntensity
@@ -82153,12 +82476,16 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
+      propertyPath: m_Range
+      value: 30
+      objectReference: {fileID: 0}
+    - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_BounceIntensity
@@ -82201,6 +82528,7 @@ GameObject:
   - component: {fileID: 846668185}
   - component: {fileID: 846668184}
   - component: {fileID: 846668183}
+  - component: {fileID: 846668186}
   m_Layer: 0
   m_Name: Camera (1)
   m_TagString: Untagged
@@ -82282,6 +82610,66 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 2.99, y: -96.383, z: -0.096}
+--- !u!114 &846668186
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 846668182}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 948f4100a11a5c24981795d21301da5c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  volumeTrigger: {fileID: 281679540}
+  volumeLayer:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  stopNaNPropagation: 1
+  finalBlitToCameraTarget: 0
+  antialiasingMode: 1
+  temporalAntialiasing:
+    jitterSpread: 0.75
+    sharpness: 0.25
+    stationaryBlending: 0.95
+    motionBlending: 0.85
+  subpixelMorphologicalAntialiasing:
+    quality: 2
+  fastApproximateAntialiasing:
+    fastMode: 0
+    keepAlpha: 0
+  fog:
+    enabled: 1
+    excludeSkybox: 1
+  debugLayer:
+    lightMeter:
+      width: 512
+      height: 256
+      showCurves: 1
+    histogram:
+      width: 512
+      height: 256
+      channel: 3
+    waveform:
+      exposure: 0.12
+      height: 256
+    vectorscope:
+      size: 256
+      exposure: 0.12
+    overlaySettings:
+      linearDepth: 0
+      motionColorIntensity: 4
+      motionGridSize: 64
+      colorBlindnessType: 0
+      colorBlindnessStrength: 1
+  m_Resources: {fileID: 11400000, guid: d82512f9c8e5d4a4d938b575d47f88d4, type: 2}
+  m_ShowToolkit: 0
+  m_ShowCustomSorter: 0
+  breakBeforeColorGrading: 0
+  m_BeforeTransparentBundles: []
+  m_BeforeStackBundles: []
+  m_AfterStackBundles: []
 --- !u!1001 &847227665
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -82946,15 +83334,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Range
-      value: 8
+      value: 30
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_BounceIntensity
@@ -86741,8 +87129,12 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
+      propertyPath: m_Range
+      value: 30
+      objectReference: {fileID: 0}
+    - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_RenderMode
@@ -86750,7 +87142,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_BounceIntensity
@@ -87600,7 +87992,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Range
-      value: 1
+      value: 30
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Color.b
@@ -87616,7 +88008,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 5.5
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -87624,11 +88016,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Shadows.m_Type
-      value: 0
+      value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_BounceIntensity
@@ -89084,15 +89476,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Range
-      value: 8
+      value: 30
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Shadows.m_Type
@@ -91541,8 +91933,12 @@ PrefabInstance:
       value: Forged_torch_light_baked
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Range
+      value: 30
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -91550,6 +91946,10 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Shadows.m_Type
       value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
@@ -91710,7 +92110,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Range
-      value: 10
+      value: 30
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Enabled
@@ -91718,7 +92118,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -91726,6 +92126,10 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Shadows.m_Type
       value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
@@ -92967,11 +93371,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Range
-      value: 10
+      value: 30
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -92979,6 +93383,10 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Shadows.m_Type
       value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
@@ -93434,7 +93842,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Range
-      value: 20
+      value: 30
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Color.b
@@ -93454,7 +93862,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 4
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -93462,11 +93870,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
-      value: 1
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Shadows.m_Type
-      value: 0
+      value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_BounceIntensity
@@ -94425,8 +94833,12 @@ PrefabInstance:
       value: Forged_torch_light_baked
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Range
+      value: 30
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -94434,6 +94846,10 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Shadows.m_Type
       value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
@@ -95380,7 +95796,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Range
-      value: 20
+      value: 30
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Color.b
@@ -95400,7 +95816,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 4
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -95408,11 +95824,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
-      value: 1
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Shadows.m_Type
-      value: 0
+      value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_BounceIntensity
@@ -96468,11 +96884,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Range
-      value: 10
+      value: 30
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -96480,6 +96896,10 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Shadows.m_Type
       value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
@@ -102118,15 +102538,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Range
-      value: 8
+      value: 30
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_BounceIntensity
@@ -105122,7 +105542,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Range
-      value: 20
+      value: 30
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Color.b
@@ -105142,7 +105562,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 4
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -105150,11 +105570,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
-      value: 1
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Shadows.m_Type
-      value: 0
+      value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_BounceIntensity
@@ -109866,12 +110286,16 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
+      propertyPath: m_Range
+      value: 30
+      objectReference: {fileID: 0}
+    - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_BounceIntensity
@@ -112842,7 +113266,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Range
-      value: 22
+      value: 30
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Color.b
@@ -112858,7 +113282,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 5.5
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -112870,7 +113294,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Shadows.m_Type
-      value: 0
+      value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_BounceIntensity
@@ -113231,11 +113655,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Range
-      value: 10
+      value: 30
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -113243,6 +113667,10 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Shadows.m_Type
       value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
@@ -114838,7 +115266,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Range
-      value: 20
+      value: 30
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Color.b
@@ -114858,7 +115286,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 4
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -114866,11 +115294,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
-      value: 1
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Shadows.m_Type
-      value: 0
+      value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_BounceIntensity
@@ -115072,11 +115500,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Range
-      value: 20
+      value: 30
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 5.5
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -115085,6 +115513,10 @@ PrefabInstance:
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
       value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Shadows.m_Type
+      value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_BounceIntensity
@@ -116207,7 +116639,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Range
-      value: 20
+      value: 30
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Color.b
@@ -116227,7 +116659,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 4
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -116235,11 +116667,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
-      value: 1
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Shadows.m_Type
-      value: 0
+      value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_BounceIntensity
@@ -118602,8 +119034,12 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
+      propertyPath: m_Range
+      value: 30
+      objectReference: {fileID: 0}
+    - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_RenderMode
@@ -118611,7 +119047,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_BounceIntensity
@@ -123591,8 +124027,12 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
+      propertyPath: m_Range
+      value: 30
+      objectReference: {fileID: 0}
+    - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_RenderMode
@@ -123600,7 +124040,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_BounceIntensity
@@ -124113,8 +124553,12 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
+      propertyPath: m_Range
+      value: 30
+      objectReference: {fileID: 0}
+    - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_RenderMode
@@ -124122,7 +124566,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_BounceIntensity
@@ -126609,15 +127053,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Range
-      value: 8
+      value: 30
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_BounceIntensity
@@ -128775,15 +129219,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Range
-      value: 8
+      value: 30
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_BounceIntensity
@@ -130519,15 +130963,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Range
-      value: 8
+      value: 30
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Shadows.m_Type
@@ -130589,7 +131033,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Range
-      value: 22
+      value: 30
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Color.b
@@ -130605,7 +131049,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 5.5
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -130617,7 +131061,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Shadows.m_Type
-      value: 0
+      value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_BounceIntensity
@@ -131433,12 +131877,16 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
+      propertyPath: m_Range
+      value: 30
+      objectReference: {fileID: 0}
+    - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_BounceIntensity
@@ -132884,7 +133332,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Range
-      value: 20
+      value: 30
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Color.b
@@ -132904,7 +133352,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 4
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -132912,11 +133360,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
-      value: 1
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Shadows.m_Type
-      value: 0
+      value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_BounceIntensity
@@ -140025,8 +140473,12 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
+      propertyPath: m_Range
+      value: 30
+      objectReference: {fileID: 0}
+    - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_RenderMode
@@ -140034,7 +140486,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_BounceIntensity
@@ -146750,15 +147202,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Range
-      value: 8
+      value: 30
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_BounceIntensity
@@ -146985,8 +147437,12 @@ PrefabInstance:
       value: Forged_torch_light_baked
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Range
+      value: 30
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -146994,6 +147450,10 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Shadows.m_Type
       value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
@@ -148758,11 +149218,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Range
-      value: 20
+      value: 30
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 5.5
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -148771,6 +149231,10 @@ PrefabInstance:
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
       value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Shadows.m_Type
+      value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_BounceIntensity
@@ -150332,7 +150796,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Range
-      value: 20
+      value: 30
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Color.b
@@ -150352,7 +150816,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 4
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -150360,11 +150824,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
-      value: 1
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Shadows.m_Type
-      value: 0
+      value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_BounceIntensity
@@ -150609,8 +151073,12 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
+      propertyPath: m_Range
+      value: 30
+      objectReference: {fileID: 0}
+    - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_RenderMode
@@ -150618,7 +151086,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_BounceIntensity
@@ -156261,6 +156729,7 @@ GameObject:
   - component: {fileID: 1482507404}
   - component: {fileID: 1482507403}
   - component: {fileID: 1482507402}
+  - component: {fileID: 1482507406}
   m_Layer: 0
   m_Name: Camera (5)
   m_TagString: Untagged
@@ -156364,6 +156833,66 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 17.548, y: -97.009, z: 0.601}
+--- !u!114 &1482507406
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1482507401}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 948f4100a11a5c24981795d21301da5c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  volumeTrigger: {fileID: 281679540}
+  volumeLayer:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  stopNaNPropagation: 1
+  finalBlitToCameraTarget: 0
+  antialiasingMode: 1
+  temporalAntialiasing:
+    jitterSpread: 0.75
+    sharpness: 0.25
+    stationaryBlending: 0.95
+    motionBlending: 0.85
+  subpixelMorphologicalAntialiasing:
+    quality: 2
+  fastApproximateAntialiasing:
+    fastMode: 0
+    keepAlpha: 0
+  fog:
+    enabled: 1
+    excludeSkybox: 1
+  debugLayer:
+    lightMeter:
+      width: 512
+      height: 256
+      showCurves: 1
+    histogram:
+      width: 512
+      height: 256
+      channel: 3
+    waveform:
+      exposure: 0.12
+      height: 256
+    vectorscope:
+      size: 256
+      exposure: 0.12
+    overlaySettings:
+      linearDepth: 0
+      motionColorIntensity: 4
+      motionGridSize: 64
+      colorBlindnessType: 0
+      colorBlindnessStrength: 1
+  m_Resources: {fileID: 11400000, guid: d82512f9c8e5d4a4d938b575d47f88d4, type: 2}
+  m_ShowToolkit: 0
+  m_ShowCustomSorter: 0
+  breakBeforeColorGrading: 0
+  m_BeforeTransparentBundles: []
+  m_BeforeStackBundles: []
+  m_AfterStackBundles: []
 --- !u!1 &1482981825
 GameObject:
   m_ObjectHideFlags: 0
@@ -157479,7 +158008,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Range
-      value: 10
+      value: 30
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Enabled
@@ -157487,7 +158016,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -157495,6 +158024,10 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Shadows.m_Type
       value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
@@ -160142,12 +160675,16 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
+      propertyPath: m_Range
+      value: 30
+      objectReference: {fileID: 0}
+    - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_BounceIntensity
@@ -163651,7 +164188,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Range
-      value: 10
+      value: 30
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Enabled
@@ -163659,7 +164196,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -163667,6 +164204,10 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Shadows.m_Type
       value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
@@ -165354,6 +165895,7 @@ GameObject:
   - component: {fileID: 1600456478}
   - component: {fileID: 1600456477}
   - component: {fileID: 1600456476}
+  - component: {fileID: 1600456479}
   m_Layer: 0
   m_Name: Camera (2)
   m_TagString: Untagged
@@ -165435,6 +165977,66 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 87.735, z: 0}
+--- !u!114 &1600456479
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1600456475}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 948f4100a11a5c24981795d21301da5c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  volumeTrigger: {fileID: 281679540}
+  volumeLayer:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  stopNaNPropagation: 1
+  finalBlitToCameraTarget: 0
+  antialiasingMode: 1
+  temporalAntialiasing:
+    jitterSpread: 0.75
+    sharpness: 0.25
+    stationaryBlending: 0.95
+    motionBlending: 0.85
+  subpixelMorphologicalAntialiasing:
+    quality: 2
+  fastApproximateAntialiasing:
+    fastMode: 0
+    keepAlpha: 0
+  fog:
+    enabled: 1
+    excludeSkybox: 1
+  debugLayer:
+    lightMeter:
+      width: 512
+      height: 256
+      showCurves: 1
+    histogram:
+      width: 512
+      height: 256
+      channel: 3
+    waveform:
+      exposure: 0.12
+      height: 256
+    vectorscope:
+      size: 256
+      exposure: 0.12
+    overlaySettings:
+      linearDepth: 0
+      motionColorIntensity: 4
+      motionGridSize: 64
+      colorBlindnessType: 0
+      colorBlindnessStrength: 1
+  m_Resources: {fileID: 11400000, guid: d82512f9c8e5d4a4d938b575d47f88d4, type: 2}
+  m_ShowToolkit: 0
+  m_ShowCustomSorter: 0
+  breakBeforeColorGrading: 0
+  m_BeforeTransparentBundles: []
+  m_BeforeStackBundles: []
+  m_AfterStackBundles: []
 --- !u!1001 &1601538931
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -166772,11 +167374,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Range
-      value: 10
+      value: 30
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -166784,6 +167386,10 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Shadows.m_Type
       value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
@@ -167930,12 +168536,16 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
+      propertyPath: m_Range
+      value: 30
+      objectReference: {fileID: 0}
+    - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_BounceIntensity
@@ -174150,11 +174760,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Range
-      value: 10
+      value: 30
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -174162,6 +174772,10 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Shadows.m_Type
       value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
@@ -174272,7 +174886,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Range
-      value: 20
+      value: 30
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Color.b
@@ -174292,7 +174906,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 4
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -174300,11 +174914,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
-      value: 1
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Shadows.m_Type
-      value: 0
+      value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_BounceIntensity
@@ -175036,6 +175650,7 @@ GameObject:
   - component: {fileID: 1666483299}
   - component: {fileID: 1666483298}
   - component: {fileID: 1666483297}
+  - component: {fileID: 1666483300}
   m_Layer: 0
   m_Name: Camera (3)
   m_TagString: Untagged
@@ -175117,6 +175732,66 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 104.586, z: 0}
+--- !u!114 &1666483300
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1666483296}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 948f4100a11a5c24981795d21301da5c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  volumeTrigger: {fileID: 281679540}
+  volumeLayer:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  stopNaNPropagation: 1
+  finalBlitToCameraTarget: 0
+  antialiasingMode: 1
+  temporalAntialiasing:
+    jitterSpread: 0.75
+    sharpness: 0.25
+    stationaryBlending: 0.95
+    motionBlending: 0.85
+  subpixelMorphologicalAntialiasing:
+    quality: 2
+  fastApproximateAntialiasing:
+    fastMode: 0
+    keepAlpha: 0
+  fog:
+    enabled: 1
+    excludeSkybox: 1
+  debugLayer:
+    lightMeter:
+      width: 512
+      height: 256
+      showCurves: 1
+    histogram:
+      width: 512
+      height: 256
+      channel: 3
+    waveform:
+      exposure: 0.12
+      height: 256
+    vectorscope:
+      size: 256
+      exposure: 0.12
+    overlaySettings:
+      linearDepth: 0
+      motionColorIntensity: 4
+      motionGridSize: 64
+      colorBlindnessType: 0
+      colorBlindnessStrength: 1
+  m_Resources: {fileID: 11400000, guid: d82512f9c8e5d4a4d938b575d47f88d4, type: 2}
+  m_ShowToolkit: 0
+  m_ShowCustomSorter: 0
+  breakBeforeColorGrading: 0
+  m_BeforeTransparentBundles: []
+  m_BeforeStackBundles: []
+  m_AfterStackBundles: []
 --- !u!1001 &1666834153
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -175567,7 +176242,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!108 &1673975763
 Light:
   m_ObjectHideFlags: 0
@@ -175705,8 +176380,12 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
+      propertyPath: m_Range
+      value: 30
+      objectReference: {fileID: 0}
+    - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_RenderMode
@@ -175714,7 +176393,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_BounceIntensity
@@ -176656,8 +177335,12 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
+      propertyPath: m_Range
+      value: 30
+      objectReference: {fileID: 0}
+    - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_RenderMode
@@ -176665,7 +177348,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_BounceIntensity
@@ -176824,7 +177507,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Range
-      value: 20
+      value: 30
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Color.b
@@ -176844,7 +177527,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 4
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -176852,11 +177535,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
-      value: 1
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Shadows.m_Type
-      value: 0
+      value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_BounceIntensity
@@ -177683,11 +178366,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Range
-      value: 10
+      value: 30
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -177695,6 +178378,10 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Shadows.m_Type
       value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
@@ -178838,8 +179525,12 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
+      propertyPath: m_Range
+      value: 30
+      objectReference: {fileID: 0}
+    - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_RenderMode
@@ -178847,7 +179538,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_BounceIntensity
@@ -179060,8 +179751,12 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
+      propertyPath: m_Range
+      value: 30
+      objectReference: {fileID: 0}
+    - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_RenderMode
@@ -179069,7 +179764,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_BounceIntensity
@@ -179613,7 +180308,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Range
-      value: 20
+      value: 30
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Color.b
@@ -179633,7 +180328,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 4
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -179641,11 +180336,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
-      value: 1
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Shadows.m_Type
-      value: 0
+      value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_BounceIntensity
@@ -180386,7 +181081,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Range
-      value: 10
+      value: 30
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Enabled
@@ -180394,7 +181089,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -180402,6 +181097,10 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Shadows.m_Type
       value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
@@ -181058,6 +181757,7 @@ GameObject:
   - component: {fileID: 1748562266}
   - component: {fileID: 1748562265}
   - component: {fileID: 1748562264}
+  - component: {fileID: 1748562267}
   m_Layer: 0
   m_Name: Camera (6)
   m_TagString: Untagged
@@ -181139,6 +181839,66 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 184.099, z: 0}
+--- !u!114 &1748562267
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1748562263}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 948f4100a11a5c24981795d21301da5c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  volumeTrigger: {fileID: 281679540}
+  volumeLayer:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  stopNaNPropagation: 1
+  finalBlitToCameraTarget: 0
+  antialiasingMode: 1
+  temporalAntialiasing:
+    jitterSpread: 0.75
+    sharpness: 0.25
+    stationaryBlending: 0.95
+    motionBlending: 0.85
+  subpixelMorphologicalAntialiasing:
+    quality: 2
+  fastApproximateAntialiasing:
+    fastMode: 0
+    keepAlpha: 0
+  fog:
+    enabled: 1
+    excludeSkybox: 1
+  debugLayer:
+    lightMeter:
+      width: 512
+      height: 256
+      showCurves: 1
+    histogram:
+      width: 512
+      height: 256
+      channel: 3
+    waveform:
+      exposure: 0.12
+      height: 256
+    vectorscope:
+      size: 256
+      exposure: 0.12
+    overlaySettings:
+      linearDepth: 0
+      motionColorIntensity: 4
+      motionGridSize: 64
+      colorBlindnessType: 0
+      colorBlindnessStrength: 1
+  m_Resources: {fileID: 11400000, guid: d82512f9c8e5d4a4d938b575d47f88d4, type: 2}
+  m_ShowToolkit: 0
+  m_ShowCustomSorter: 0
+  breakBeforeColorGrading: 0
+  m_BeforeTransparentBundles: []
+  m_BeforeStackBundles: []
+  m_AfterStackBundles: []
 --- !u!1001 &1750312390
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -183445,11 +184205,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Range
-      value: 10
+      value: 30
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -183457,6 +184217,10 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Shadows.m_Type
       value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
@@ -183997,8 +184761,12 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
+      propertyPath: m_Range
+      value: 30
+      objectReference: {fileID: 0}
+    - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_RenderMode
@@ -184006,7 +184774,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_BounceIntensity
@@ -186398,7 +187166,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Range
-      value: 20
+      value: 30
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Color.b
@@ -186418,7 +187186,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 4
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -186426,11 +187194,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
-      value: 1
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Shadows.m_Type
-      value: 0
+      value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_BounceIntensity
@@ -187083,11 +187851,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Range
-      value: 20
+      value: 30
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 5.5
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -187096,6 +187864,10 @@ PrefabInstance:
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
       value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Shadows.m_Type
+      value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_BounceIntensity
@@ -188670,8 +189442,12 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
+      propertyPath: m_Range
+      value: 30
+      objectReference: {fileID: 0}
+    - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_RenderMode
@@ -188679,7 +189455,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_BounceIntensity
@@ -191638,12 +192414,16 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
+      propertyPath: m_Range
+      value: 30
+      objectReference: {fileID: 0}
+    - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_BounceIntensity
@@ -196802,8 +197582,12 @@ PrefabInstance:
       value: Forged_torch_light_baked
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Range
+      value: 30
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -196811,6 +197595,10 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Shadows.m_Type
       value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
@@ -198823,7 +199611,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Range
-      value: 10
+      value: 30
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Enabled
@@ -198831,7 +199619,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -198839,6 +199627,10 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Shadows.m_Type
       value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
@@ -199995,8 +200787,12 @@ PrefabInstance:
       value: Forged_torch_light_baked
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Range
+      value: 30
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -200004,6 +200800,10 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Shadows.m_Type
       value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
@@ -208722,8 +209522,12 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
+      propertyPath: m_Range
+      value: 30
+      objectReference: {fileID: 0}
+    - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_RenderMode
@@ -208731,7 +209535,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_BounceIntensity
@@ -215072,12 +215876,16 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
+      propertyPath: m_Range
+      value: 30
+      objectReference: {fileID: 0}
+    - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_BounceIntensity
@@ -215163,15 +215971,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Range
-      value: 8
+      value: 30
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_BounceIntensity
@@ -217446,8 +218254,12 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
+      propertyPath: m_Range
+      value: 30
+      objectReference: {fileID: 0}
+    - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_RenderMode
@@ -217455,7 +218267,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_BounceIntensity
@@ -218168,7 +218980,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Range
-      value: 10
+      value: 30
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Enabled
@@ -218176,7 +218988,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -218184,6 +218996,10 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Shadows.m_Type
       value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
@@ -219297,7 +220113,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Range
-      value: 20
+      value: 30
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Color.b
@@ -219317,7 +220133,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 4
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -219325,11 +220141,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
-      value: 1
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Shadows.m_Type
-      value: 0
+      value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_BounceIntensity
@@ -220373,3 +221189,4 @@ SceneRoots:
   - {fileID: 447448602}
   - {fileID: 2106366533}
   - {fileID: 108176672}
+  - {fileID: 455549423}
