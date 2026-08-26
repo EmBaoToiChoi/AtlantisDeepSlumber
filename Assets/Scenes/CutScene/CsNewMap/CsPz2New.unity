@@ -2009,8 +2009,12 @@ PrefabInstance:
       value: Forged_torch_light_baked
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Range
+      value: 15
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -2018,11 +2022,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Shadows.m_Type
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_BounceIntensity
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Shadows.m_Resolution
@@ -2031,6 +2039,10 @@ PrefabInstance:
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071929, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.4
       objectReference: {fileID: 0}
     - target: {fileID: 2517341323244566781, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RootOrder
@@ -2108,11 +2120,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Range
-      value: 10
+      value: 15
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -2120,11 +2132,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Shadows.m_Type
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_BounceIntensity
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Shadows.m_Resolution
@@ -2133,6 +2149,10 @@ PrefabInstance:
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071929, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 2517341323244566781, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RootOrder
@@ -3643,6 +3663,10 @@ PrefabInstance:
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071929, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.4
       objectReference: {fileID: 0}
     - target: {fileID: 2517341323244566781, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RootOrder
@@ -5893,6 +5917,10 @@ PrefabInstance:
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071929, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.4
       objectReference: {fileID: 0}
     - target: {fileID: 285793084168353523, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_StaticEditorFlags
@@ -8257,8 +8285,12 @@ PrefabInstance:
       value: Forged_torch_light_baked
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Range
+      value: 15
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -8266,11 +8298,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Shadows.m_Type
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_BounceIntensity
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Shadows.m_Resolution
@@ -8279,6 +8315,10 @@ PrefabInstance:
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071929, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.4
       objectReference: {fileID: 0}
     - target: {fileID: 2517341323244566781, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RootOrder
@@ -10779,6 +10819,7 @@ GameObject:
   - component: {fileID: 54961382}
   - component: {fileID: 54961381}
   - component: {fileID: 54961380}
+  - component: {fileID: 54961383}
   m_Layer: 0
   m_Name: CamRakan (1)
   m_TagString: Untagged
@@ -10882,6 +10923,66 @@ Camera:
   m_OcclusionCulling: 1
   m_StereoConvergence: 10
   m_StereoSeparation: 0.022
+--- !u!114 &54961383
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 54961378}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 948f4100a11a5c24981795d21301da5c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  volumeTrigger: {fileID: 54961379}
+  volumeLayer:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  stopNaNPropagation: 1
+  finalBlitToCameraTarget: 0
+  antialiasingMode: 1
+  temporalAntialiasing:
+    jitterSpread: 0.75
+    sharpness: 0.25
+    stationaryBlending: 0.95
+    motionBlending: 0.85
+  subpixelMorphologicalAntialiasing:
+    quality: 2
+  fastApproximateAntialiasing:
+    fastMode: 0
+    keepAlpha: 0
+  fog:
+    enabled: 1
+    excludeSkybox: 1
+  debugLayer:
+    lightMeter:
+      width: 512
+      height: 256
+      showCurves: 1
+    histogram:
+      width: 512
+      height: 256
+      channel: 3
+    waveform:
+      exposure: 0.12
+      height: 256
+    vectorscope:
+      size: 256
+      exposure: 0.12
+    overlaySettings:
+      linearDepth: 0
+      motionColorIntensity: 4
+      motionGridSize: 64
+      colorBlindnessType: 0
+      colorBlindnessStrength: 1
+  m_Resources: {fileID: 11400000, guid: d82512f9c8e5d4a4d938b575d47f88d4, type: 2}
+  m_ShowToolkit: 0
+  m_ShowCustomSorter: 0
+  breakBeforeColorGrading: 0
+  m_BeforeTransparentBundles: []
+  m_BeforeStackBundles: []
+  m_AfterStackBundles: []
 --- !u!1001 &54998171
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -27097,7 +27198,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Range
-      value: 10
+      value: 15
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Enabled
@@ -27105,7 +27206,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -27113,11 +27214,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Shadows.m_Type
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_BounceIntensity
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Shadows.m_Resolution
@@ -27126,6 +27231,10 @@ PrefabInstance:
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071929, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0.96423936
       objectReference: {fileID: 0}
     - target: {fileID: 2517341323244566781, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RootOrder
@@ -30692,6 +30801,10 @@ PrefabInstance:
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4887782774033825701, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.1
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825706, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Name
@@ -42503,8 +42616,12 @@ PrefabInstance:
       value: Forged_torch_light_baked
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Range
+      value: 15
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -42512,11 +42629,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Shadows.m_Type
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_BounceIntensity
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Shadows.m_Resolution
@@ -42525,6 +42646,10 @@ PrefabInstance:
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071929, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.4
       objectReference: {fileID: 0}
     - target: {fileID: 2517341323244566781, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RootOrder
@@ -43414,7 +43539,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Range
-      value: 10
+      value: 15
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Enabled
@@ -43422,7 +43547,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -43430,11 +43555,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Shadows.m_Type
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_BounceIntensity
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Shadows.m_Resolution
@@ -43443,6 +43572,10 @@ PrefabInstance:
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071929, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0.96423936
       objectReference: {fileID: 0}
     - target: {fileID: 2517341323244566781, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RootOrder
@@ -47199,11 +47332,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Range
-      value: 10
+      value: 15
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -47211,11 +47344,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Shadows.m_Type
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_BounceIntensity
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Shadows.m_Resolution
@@ -47224,6 +47361,10 @@ PrefabInstance:
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071929, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 2517341323244566781, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RootOrder
@@ -52984,6 +53125,10 @@ PrefabInstance:
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 4887782774033825701, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.1
+      objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825706, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Name
       value: Forged_torch_light_baked
@@ -57105,11 +57250,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Range
-      value: 20
+      value: 15
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 5.5
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -57120,8 +57265,12 @@ PrefabInstance:
       value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Shadows.m_Type
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_BounceIntensity
-      value: 4
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Shadows.m_Resolution
@@ -57134,6 +57283,10 @@ PrefabInstance:
     - target: {fileID: 1660071929, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_LocalPosition.x
       value: -0.12
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071929, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 1660071929, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_LocalPosition.z
@@ -66611,6 +66764,55 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 400000, guid: d76a78a721a5d9d499abc8aec19fdc8b, type: 3}
   m_PrefabInstance: {fileID: 276320288}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &276684486
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 276684488}
+  - component: {fileID: 276684487}
+  m_Layer: 0
+  m_Name: PostProcess
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &276684487
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 276684486}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8b9a305e18de0c04dbd257a21cd47087, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  sharedProfile: {fileID: 11400000, guid: 56bd1ff36bfc14c4b8142708a134d736, type: 2}
+  isGlobal: 1
+  blendDistance: 0
+  weight: 1
+  priority: 0
+--- !u!4 &276684488
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 276684486}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &276703985
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -78709,6 +78911,7 @@ GameObject:
   - component: {fileID: 286713912}
   - component: {fileID: 286713911}
   - component: {fileID: 286713913}
+  - component: {fileID: 286713914}
   m_Layer: 0
   m_Name: Cam1
   m_TagString: Untagged
@@ -78812,6 +79015,66 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &286713914
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 286713909}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 948f4100a11a5c24981795d21301da5c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  volumeTrigger: {fileID: 54961379}
+  volumeLayer:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  stopNaNPropagation: 1
+  finalBlitToCameraTarget: 0
+  antialiasingMode: 1
+  temporalAntialiasing:
+    jitterSpread: 0.75
+    sharpness: 0.25
+    stationaryBlending: 0.95
+    motionBlending: 0.85
+  subpixelMorphologicalAntialiasing:
+    quality: 2
+  fastApproximateAntialiasing:
+    fastMode: 0
+    keepAlpha: 0
+  fog:
+    enabled: 1
+    excludeSkybox: 1
+  debugLayer:
+    lightMeter:
+      width: 512
+      height: 256
+      showCurves: 1
+    histogram:
+      width: 512
+      height: 256
+      channel: 3
+    waveform:
+      exposure: 0.12
+      height: 256
+    vectorscope:
+      size: 256
+      exposure: 0.12
+    overlaySettings:
+      linearDepth: 0
+      motionColorIntensity: 4
+      motionGridSize: 64
+      colorBlindnessType: 0
+      colorBlindnessStrength: 1
+  m_Resources: {fileID: 11400000, guid: d82512f9c8e5d4a4d938b575d47f88d4, type: 2}
+  m_ShowToolkit: 0
+  m_ShowCustomSorter: 0
+  breakBeforeColorGrading: 0
+  m_BeforeTransparentBundles: []
+  m_BeforeStackBundles: []
+  m_AfterStackBundles: []
 --- !u!1001 &287146823
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -79499,6 +79762,10 @@ PrefabInstance:
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071929, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.4
       objectReference: {fileID: 0}
     - target: {fileID: 285793084168353523, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_StaticEditorFlags
@@ -101132,6 +101399,10 @@ PrefabInstance:
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 1660071929, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.4
+      objectReference: {fileID: 0}
     - target: {fileID: 285793084168353523, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_StaticEditorFlags
       value: 2147483647
@@ -105038,6 +105309,10 @@ PrefabInstance:
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4887782774033825701, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.1
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825706, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Name
@@ -116539,6 +116814,10 @@ PrefabInstance:
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4887782774033825701, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.1
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825706, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Name
@@ -143973,11 +144252,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Range
-      value: 20
+      value: 15
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 5.5
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -143988,8 +144267,12 @@ PrefabInstance:
       value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Shadows.m_Type
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_BounceIntensity
-      value: 4
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Shadows.m_Resolution
@@ -144002,6 +144285,10 @@ PrefabInstance:
     - target: {fileID: 1660071929, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_LocalPosition.x
       value: -0.12
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071929, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 1660071929, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_LocalPosition.z
@@ -154101,6 +154388,10 @@ PrefabInstance:
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 4887782774033825701, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.1
+      objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825706, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Name
       value: Forged_torch_light_baked
@@ -161358,7 +161649,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Range
-      value: 10
+      value: 15
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Enabled
@@ -161366,7 +161657,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -161374,11 +161665,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Shadows.m_Type
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_BounceIntensity
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Shadows.m_Resolution
@@ -161387,6 +161682,10 @@ PrefabInstance:
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071929, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0.96423936
       objectReference: {fileID: 0}
     - target: {fileID: 2517341323244566781, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RootOrder
@@ -164246,6 +164545,10 @@ PrefabInstance:
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 4887782774033825701, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.1
+      objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825706, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Name
       value: Forged_torch_light_baked
@@ -166747,6 +167050,10 @@ PrefabInstance:
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 4887782774033825701, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.1
+      objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825706, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Name
       value: Forged_torch_light_baked
@@ -166969,8 +167276,12 @@ PrefabInstance:
       value: Forged_torch_light_baked
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Range
+      value: 15
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -166978,11 +167289,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Shadows.m_Type
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_BounceIntensity
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Shadows.m_Resolution
@@ -166991,6 +167306,10 @@ PrefabInstance:
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071929, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.4
       objectReference: {fileID: 0}
     - target: {fileID: 2517341323244566781, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RootOrder
@@ -171406,11 +171725,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Range
-      value: 10
+      value: 15
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -171418,11 +171737,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Shadows.m_Type
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_BounceIntensity
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Shadows.m_Resolution
@@ -171431,6 +171754,10 @@ PrefabInstance:
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071929, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 2517341323244566781, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RootOrder
@@ -172373,6 +172700,10 @@ PrefabInstance:
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071929, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.3820006
       objectReference: {fileID: 0}
     - target: {fileID: 285793084168353523, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_StaticEditorFlags
@@ -174020,6 +174351,10 @@ PrefabInstance:
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4887782774033825701, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.1
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825706, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Name
@@ -177089,6 +177424,10 @@ PrefabInstance:
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4887782774033825701, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.1
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825706, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Name
@@ -184182,11 +184521,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Range
-      value: 20
+      value: 15
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 5.5
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -184197,8 +184536,12 @@ PrefabInstance:
       value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Shadows.m_Type
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_BounceIntensity
-      value: 4
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Shadows.m_Resolution
@@ -184211,6 +184554,10 @@ PrefabInstance:
     - target: {fileID: 1660071929, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_LocalPosition.x
       value: -0.12
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071929, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 1660071929, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_LocalPosition.z
@@ -188047,11 +188394,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Range
-      value: 10
+      value: 15
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -188059,11 +188406,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Shadows.m_Type
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_BounceIntensity
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Shadows.m_Resolution
@@ -188072,6 +188423,10 @@ PrefabInstance:
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071929, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 2517341323244566781, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RootOrder
@@ -190699,6 +191054,10 @@ PrefabInstance:
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071929, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.3820006
       objectReference: {fileID: 0}
     - target: {fileID: 285793084168353523, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_StaticEditorFlags
@@ -199055,7 +199414,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Range
-      value: 10
+      value: 15
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Enabled
@@ -199063,7 +199422,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -199071,11 +199430,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Shadows.m_Type
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_BounceIntensity
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Shadows.m_Resolution
@@ -199084,6 +199447,10 @@ PrefabInstance:
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071929, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0.96423936
       objectReference: {fileID: 0}
     - target: {fileID: 2517341323244566781, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RootOrder
@@ -201577,8 +201944,12 @@ PrefabInstance:
       value: Forged_torch_light_baked
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Range
+      value: 15
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -201586,11 +201957,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Shadows.m_Type
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_BounceIntensity
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Shadows.m_Resolution
@@ -201599,6 +201974,10 @@ PrefabInstance:
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071929, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.4
       objectReference: {fileID: 0}
     - target: {fileID: 2517341323244566781, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RootOrder
@@ -202798,6 +203177,10 @@ PrefabInstance:
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4887782774033825701, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.1
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825706, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Name
@@ -205548,8 +205931,12 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
+      propertyPath: m_Range
+      value: 15
+      objectReference: {fileID: 0}
+    - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_RenderMode
@@ -205557,11 +205944,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
+      propertyPath: m_Shadows.m_Type
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_BounceIntensity
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Shadows.m_Resolution
@@ -205570,6 +205961,10 @@ PrefabInstance:
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4887782774033825701, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.1
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825706, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Name
@@ -206310,6 +206705,10 @@ PrefabInstance:
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071929, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.4
       objectReference: {fileID: 0}
     - target: {fileID: 285793084168353523, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_StaticEditorFlags
@@ -207804,6 +208203,10 @@ PrefabInstance:
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 1660071929, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.9
+      objectReference: {fileID: 0}
     - target: {fileID: 285793084168353523, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_StaticEditorFlags
       value: 2147483647
@@ -208257,6 +208660,10 @@ PrefabInstance:
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071929, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.4
       objectReference: {fileID: 0}
     - target: {fileID: 285793084168353523, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_StaticEditorFlags
@@ -211240,6 +211647,10 @@ PrefabInstance:
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4887782774033825701, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.1
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825706, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Name
@@ -214686,6 +215097,10 @@ PrefabInstance:
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4887782774033825701, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.1
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825706, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Name
@@ -224249,6 +224664,10 @@ PrefabInstance:
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 4887782774033825701, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.1
+      objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825706, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Name
       value: Forged_torch_light_baked
@@ -225985,6 +226404,10 @@ PrefabInstance:
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 1660071929, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.9
+      objectReference: {fileID: 0}
     - target: {fileID: 285793084168353523, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_StaticEditorFlags
       value: 2147483647
@@ -227462,6 +227885,10 @@ PrefabInstance:
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 4887782774033825701, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.1
+      objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825706, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Name
       value: Forged_torch_light_baked
@@ -228618,6 +229045,10 @@ PrefabInstance:
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 4887782774033825701, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.1
+      objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825706, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Name
       value: Forged_torch_light_baked
@@ -228892,6 +229323,10 @@ PrefabInstance:
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4887782774033825701, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.1
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825706, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Name
@@ -232424,7 +232859,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Range
-      value: 10
+      value: 15
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Enabled
@@ -232432,7 +232867,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -232440,11 +232875,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Shadows.m_Type
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_BounceIntensity
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Shadows.m_Resolution
@@ -232453,6 +232892,10 @@ PrefabInstance:
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071929, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0.96423936
       objectReference: {fileID: 0}
     - target: {fileID: 2517341323244566781, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RootOrder
@@ -252041,6 +252484,10 @@ PrefabInstance:
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 1660071929, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.4
+      objectReference: {fileID: 0}
     - target: {fileID: 285793084168353523, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_StaticEditorFlags
       value: 2147483647
@@ -252549,8 +252996,12 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
+      propertyPath: m_Range
+      value: 15
+      objectReference: {fileID: 0}
+    - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_RenderMode
@@ -252558,11 +253009,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
+      propertyPath: m_Shadows.m_Type
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_BounceIntensity
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Shadows.m_Resolution
@@ -252571,6 +253026,10 @@ PrefabInstance:
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4887782774033825701, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.1
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825706, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Name
@@ -254374,7 +254833,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825701, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0.57
+      value: 1.1
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825706, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Name
@@ -259119,6 +259578,10 @@ PrefabInstance:
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 1660071929, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.4
+      objectReference: {fileID: 0}
     - target: {fileID: 285793084168353523, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_StaticEditorFlags
       value: 2147483647
@@ -262746,6 +263209,10 @@ PrefabInstance:
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 4887782774033825701, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.1
+      objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825706, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Name
       value: Forged_torch_light_baked
@@ -263362,6 +263829,10 @@ PrefabInstance:
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4887782774033825701, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.1
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825706, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Name
@@ -265148,6 +265619,10 @@ PrefabInstance:
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 4887782774033825701, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.1
+      objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825706, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Name
       value: Forged_torch_light_baked
@@ -266583,7 +267058,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Range
-      value: 10
+      value: 15
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Enabled
@@ -266591,7 +267066,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -266599,11 +267074,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Shadows.m_Type
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_BounceIntensity
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Shadows.m_Resolution
@@ -266612,6 +267091,10 @@ PrefabInstance:
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071929, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0.96423936
       objectReference: {fileID: 0}
     - target: {fileID: 2517341323244566781, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RootOrder
@@ -272549,8 +273032,12 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
+      propertyPath: m_Range
+      value: 15
+      objectReference: {fileID: 0}
+    - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_RenderMode
@@ -272558,11 +273045,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
+      propertyPath: m_Shadows.m_Type
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_BounceIntensity
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Shadows.m_Resolution
@@ -272571,6 +273062,10 @@ PrefabInstance:
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4887782774033825701, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.1
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825706, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Name
@@ -276121,20 +276616,40 @@ PrefabInstance:
       value: Forged_torch_light_baked
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Range
+      value: 15
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Shadows.m_Type
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_BounceIntensity
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071929, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071929, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.4
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071929, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0.5
       objectReference: {fileID: 0}
     - target: {fileID: 2517341323244566781, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RootOrder
@@ -277723,8 +278238,12 @@ PrefabInstance:
       value: Forged_torch_light_baked
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Range
+      value: 15
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -277732,11 +278251,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Shadows.m_Type
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_BounceIntensity
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Shadows.m_Resolution
@@ -277745,6 +278268,10 @@ PrefabInstance:
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071929, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.4
       objectReference: {fileID: 0}
     - target: {fileID: 2517341323244566781, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RootOrder
@@ -281030,6 +281557,10 @@ PrefabInstance:
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4887782774033825701, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.1
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825706, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Name
@@ -286096,11 +286627,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Range
-      value: 10
+      value: 15
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -286108,11 +286639,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Shadows.m_Type
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_BounceIntensity
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Shadows.m_Resolution
@@ -286121,6 +286656,10 @@ PrefabInstance:
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071929, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 2517341323244566781, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RootOrder
@@ -290581,20 +291120,40 @@ PrefabInstance:
       value: Forged_torch_light_baked
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Range
+      value: 15
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Shadows.m_Type
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_BounceIntensity
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071929, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071929, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.4
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071929, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0.5
       objectReference: {fileID: 0}
     - target: {fileID: 2517341323244566781, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RootOrder
@@ -294808,11 +295367,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Range
-      value: 20
+      value: 15
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 5.5
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -294823,8 +295382,12 @@ PrefabInstance:
       value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Shadows.m_Type
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_BounceIntensity
-      value: 4
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Shadows.m_Resolution
@@ -294837,6 +295400,10 @@ PrefabInstance:
     - target: {fileID: 1660071929, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_LocalPosition.x
       value: -0.12
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071929, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 1660071929, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_LocalPosition.z
@@ -294954,11 +295521,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Range
-      value: 10
+      value: 15
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -294966,11 +295533,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Shadows.m_Type
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_BounceIntensity
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Shadows.m_Resolution
@@ -294979,6 +295550,10 @@ PrefabInstance:
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071929, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 2517341323244566781, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RootOrder
@@ -297000,7 +297575,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Range
-      value: 10
+      value: 15
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Enabled
@@ -297008,7 +297583,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -297016,11 +297591,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Shadows.m_Type
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_BounceIntensity
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Shadows.m_Resolution
@@ -297029,6 +297608,10 @@ PrefabInstance:
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071929, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0.96423936
       objectReference: {fileID: 0}
     - target: {fileID: 2517341323244566781, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RootOrder
@@ -302181,6 +302764,10 @@ PrefabInstance:
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 1660071929, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.4
+      objectReference: {fileID: 0}
     - target: {fileID: 285793084168353523, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_StaticEditorFlags
       value: 2147483647
@@ -304994,6 +305581,10 @@ PrefabInstance:
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 4887782774033825701, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.1
+      objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825706, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Name
       value: Forged_torch_light_baked
@@ -305392,7 +305983,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Range
-      value: 10
+      value: 15
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Enabled
@@ -305400,7 +305991,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -305408,11 +305999,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Shadows.m_Type
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_BounceIntensity
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Shadows.m_Resolution
@@ -305421,6 +306016,10 @@ PrefabInstance:
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071929, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0.96423936
       objectReference: {fileID: 0}
     - target: {fileID: 2517341323244566781, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RootOrder
@@ -309831,6 +310430,10 @@ PrefabInstance:
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 4887782774033825701, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.1
+      objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825706, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Name
       value: Forged_torch_light_baked
@@ -312087,6 +312690,10 @@ PrefabInstance:
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4887782774033825701, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.1
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825706, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Name
@@ -321020,8 +321627,12 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
+      propertyPath: m_Range
+      value: 15
+      objectReference: {fileID: 0}
+    - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_RenderMode
@@ -321029,11 +321640,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
+      propertyPath: m_Shadows.m_Type
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_BounceIntensity
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Shadows.m_Resolution
@@ -321042,6 +321657,10 @@ PrefabInstance:
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4887782774033825701, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.1
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825706, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Name
@@ -348501,6 +349120,10 @@ PrefabInstance:
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 4887782774033825701, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.1
+      objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825706, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Name
       value: Forged_torch_light_baked
@@ -359007,7 +359630,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Range
-      value: 1
+      value: 15
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Color.b
@@ -359023,7 +359646,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 5.5
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -359031,15 +359654,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Shadows.m_Type
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_BounceIntensity
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_ColorTemperature
@@ -359056,6 +359679,10 @@ PrefabInstance:
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071929, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.9
       objectReference: {fileID: 0}
     - target: {fileID: 285793084168353523, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_StaticEditorFlags
@@ -361113,6 +361740,10 @@ PrefabInstance:
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4887782774033825701, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.1
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825706, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Name
@@ -363172,11 +363803,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Range
-      value: 10
+      value: 15
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -363184,11 +363815,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Shadows.m_Type
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_BounceIntensity
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Shadows.m_Resolution
@@ -363197,6 +363832,10 @@ PrefabInstance:
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071929, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 2517341323244566781, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RootOrder
@@ -363639,6 +364278,10 @@ PrefabInstance:
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4887782774033825701, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.1
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825706, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Name
@@ -366286,6 +366929,7 @@ GameObject:
   - component: {fileID: 1499828457}
   - component: {fileID: 1499828456}
   - component: {fileID: 1499828455}
+  - component: {fileID: 1499828458}
   m_Layer: 0
   m_Name: CamLeo
   m_TagString: Untagged
@@ -366389,6 +367033,66 @@ Camera:
   m_OcclusionCulling: 1
   m_StereoConvergence: 10
   m_StereoSeparation: 0.022
+--- !u!114 &1499828458
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1499828453}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 948f4100a11a5c24981795d21301da5c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  volumeTrigger: {fileID: 54961379}
+  volumeLayer:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  stopNaNPropagation: 1
+  finalBlitToCameraTarget: 0
+  antialiasingMode: 1
+  temporalAntialiasing:
+    jitterSpread: 0.75
+    sharpness: 0.25
+    stationaryBlending: 0.95
+    motionBlending: 0.85
+  subpixelMorphologicalAntialiasing:
+    quality: 2
+  fastApproximateAntialiasing:
+    fastMode: 0
+    keepAlpha: 0
+  fog:
+    enabled: 1
+    excludeSkybox: 1
+  debugLayer:
+    lightMeter:
+      width: 512
+      height: 256
+      showCurves: 1
+    histogram:
+      width: 512
+      height: 256
+      channel: 3
+    waveform:
+      exposure: 0.12
+      height: 256
+    vectorscope:
+      size: 256
+      exposure: 0.12
+    overlaySettings:
+      linearDepth: 0
+      motionColorIntensity: 4
+      motionGridSize: 64
+      colorBlindnessType: 0
+      colorBlindnessStrength: 1
+  m_Resources: {fileID: 11400000, guid: d82512f9c8e5d4a4d938b575d47f88d4, type: 2}
+  m_ShowToolkit: 0
+  m_ShowCustomSorter: 0
+  breakBeforeColorGrading: 0
+  m_BeforeTransparentBundles: []
+  m_BeforeStackBundles: []
+  m_AfterStackBundles: []
 --- !u!4 &1500520026 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 8063803443391284106, guid: 7db061d5fda10ee4bb3f7d2d7f245e94, type: 3}
@@ -368600,6 +369304,10 @@ PrefabInstance:
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 4887782774033825701, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.1
+      objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825706, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Name
       value: Forged_torch_light_baked
@@ -370196,6 +370904,10 @@ PrefabInstance:
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071929, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.4
       objectReference: {fileID: 0}
     - target: {fileID: 285793084168353523, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_StaticEditorFlags
@@ -372955,20 +373667,32 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
+      propertyPath: m_Range
+      value: 15
+      objectReference: {fileID: 0}
+    - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
+      propertyPath: m_Shadows.m_Type
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_BounceIntensity
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4887782774033825701, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.1
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825706, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Name
@@ -375619,8 +376343,12 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
+      propertyPath: m_Range
+      value: 15
+      objectReference: {fileID: 0}
+    - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_RenderMode
@@ -375628,11 +376356,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
+      propertyPath: m_Shadows.m_Type
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_BounceIntensity
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Shadows.m_Resolution
@@ -375641,6 +376373,10 @@ PrefabInstance:
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4887782774033825701, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.1
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825706, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Name
@@ -377661,6 +378397,10 @@ PrefabInstance:
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071929, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.4
       objectReference: {fileID: 0}
     - target: {fileID: 2517341323244566781, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RootOrder
@@ -381407,6 +382147,10 @@ PrefabInstance:
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071929, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.4
       objectReference: {fileID: 0}
     - target: {fileID: 285793084168353523, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_StaticEditorFlags
@@ -395508,6 +396252,10 @@ PrefabInstance:
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 4887782774033825701, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.1
+      objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825706, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Name
       value: Forged_torch_light_baked
@@ -395807,11 +396555,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Range
-      value: 10
+      value: 15
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -395819,11 +396567,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Shadows.m_Type
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_BounceIntensity
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Shadows.m_Resolution
@@ -395832,6 +396584,10 @@ PrefabInstance:
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071929, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 2517341323244566781, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RootOrder
@@ -397218,6 +397974,10 @@ PrefabInstance:
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 1660071929, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.4
+      objectReference: {fileID: 0}
     - target: {fileID: 285793084168353523, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_StaticEditorFlags
       value: 2147483647
@@ -398460,6 +399220,10 @@ PrefabInstance:
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071929, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.4
       objectReference: {fileID: 0}
     - target: {fileID: 285793084168353523, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_StaticEditorFlags
@@ -404713,7 +405477,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Range
-      value: 10
+      value: 15
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Enabled
@@ -404721,7 +405485,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -404729,11 +405493,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Shadows.m_Type
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_BounceIntensity
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Shadows.m_Resolution
@@ -404742,6 +405510,10 @@ PrefabInstance:
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071929, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0.96423936
       objectReference: {fileID: 0}
     - target: {fileID: 2517341323244566781, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RootOrder
@@ -410150,11 +410922,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Range
-      value: 10
+      value: 15
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -410162,11 +410934,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Shadows.m_Type
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_BounceIntensity
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Shadows.m_Resolution
@@ -410175,6 +410951,10 @@ PrefabInstance:
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071929, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 2517341323244566781, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RootOrder
@@ -419448,20 +420228,32 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
+      propertyPath: m_Range
+      value: 15
+      objectReference: {fileID: 0}
+    - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
+      propertyPath: m_Shadows.m_Type
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_BounceIntensity
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4887782774033825701, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.1
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825706, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Name
@@ -420573,11 +421365,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Range
-      value: 20
+      value: 15
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 5.5
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -420588,8 +421380,12 @@ PrefabInstance:
       value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Shadows.m_Type
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_BounceIntensity
-      value: 4
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Shadows.m_Resolution
@@ -420602,6 +421398,10 @@ PrefabInstance:
     - target: {fileID: 1660071929, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_LocalPosition.x
       value: -0.12
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071929, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 1660071929, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_LocalPosition.z
@@ -420724,7 +421524,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Range
-      value: 10
+      value: 15
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Enabled
@@ -420732,7 +421532,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -420740,11 +421540,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Shadows.m_Type
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_BounceIntensity
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Shadows.m_Resolution
@@ -420753,6 +421557,10 @@ PrefabInstance:
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071929, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0.96423936
       objectReference: {fileID: 0}
     - target: {fileID: 2517341323244566781, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RootOrder
@@ -420954,8 +421762,12 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
+      propertyPath: m_Range
+      value: 15
+      objectReference: {fileID: 0}
+    - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_RenderMode
@@ -420963,11 +421775,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
+      propertyPath: m_Shadows.m_Type
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_BounceIntensity
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Shadows.m_Resolution
@@ -420976,6 +421792,10 @@ PrefabInstance:
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4887782774033825701, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.1
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825706, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Name
@@ -421285,7 +422105,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Range
-      value: 10
+      value: 15
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Enabled
@@ -421293,7 +422113,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -421301,11 +422121,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Shadows.m_Type
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_BounceIntensity
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Shadows.m_Resolution
@@ -421314,6 +422138,10 @@ PrefabInstance:
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071929, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0.96423936
       objectReference: {fileID: 0}
     - target: {fileID: 2517341323244566781, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RootOrder
@@ -423240,23 +424068,31 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Range
-      value: 8
+      value: 15
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
+      propertyPath: m_Shadows.m_Type
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_BounceIntensity
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4887782774033825701, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.1
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825706, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Name
@@ -426514,6 +427350,10 @@ PrefabInstance:
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 4887782774033825701, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.1
+      objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825706, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Name
       value: Forged_torch_light_baked
@@ -426811,6 +427651,10 @@ PrefabInstance:
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4887782774033825701, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.1
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825706, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Name
@@ -427730,11 +428574,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Range
-      value: 10
+      value: 15
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -427742,11 +428586,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Shadows.m_Type
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_BounceIntensity
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Shadows.m_Resolution
@@ -427755,6 +428603,10 @@ PrefabInstance:
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071929, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 2517341323244566781, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RootOrder
@@ -429031,6 +429883,10 @@ PrefabInstance:
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4887782774033825701, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.1
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825706, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Name
@@ -431340,6 +432196,10 @@ PrefabInstance:
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 4887782774033825701, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.1
+      objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825706, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Name
       value: Forged_torch_light_baked
@@ -433284,11 +434144,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Range
-      value: 10
+      value: 15
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -433296,11 +434156,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Shadows.m_Type
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_BounceIntensity
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Shadows.m_Resolution
@@ -433309,6 +434173,10 @@ PrefabInstance:
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071929, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 2517341323244566781, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RootOrder
@@ -433748,6 +434616,7 @@ GameObject:
   - component: {fileID: 1812507324}
   - component: {fileID: 1812507323}
   - component: {fileID: 1812507322}
+  - component: {fileID: 1812507325}
   m_Layer: 0
   m_Name: CamRakan
   m_TagString: Untagged
@@ -433851,6 +434720,66 @@ Camera:
   m_OcclusionCulling: 1
   m_StereoConvergence: 10
   m_StereoSeparation: 0.022
+--- !u!114 &1812507325
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1812507320}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 948f4100a11a5c24981795d21301da5c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  volumeTrigger: {fileID: 54961379}
+  volumeLayer:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  stopNaNPropagation: 1
+  finalBlitToCameraTarget: 0
+  antialiasingMode: 1
+  temporalAntialiasing:
+    jitterSpread: 0.75
+    sharpness: 0.25
+    stationaryBlending: 0.95
+    motionBlending: 0.85
+  subpixelMorphologicalAntialiasing:
+    quality: 2
+  fastApproximateAntialiasing:
+    fastMode: 0
+    keepAlpha: 0
+  fog:
+    enabled: 1
+    excludeSkybox: 1
+  debugLayer:
+    lightMeter:
+      width: 512
+      height: 256
+      showCurves: 1
+    histogram:
+      width: 512
+      height: 256
+      channel: 3
+    waveform:
+      exposure: 0.12
+      height: 256
+    vectorscope:
+      size: 256
+      exposure: 0.12
+    overlaySettings:
+      linearDepth: 0
+      motionColorIntensity: 4
+      motionGridSize: 64
+      colorBlindnessType: 0
+      colorBlindnessStrength: 1
+  m_Resources: {fileID: 11400000, guid: d82512f9c8e5d4a4d938b575d47f88d4, type: 2}
+  m_ShowToolkit: 0
+  m_ShowCustomSorter: 0
+  breakBeforeColorGrading: 0
+  m_BeforeTransparentBundles: []
+  m_BeforeStackBundles: []
+  m_AfterStackBundles: []
 --- !u!1001 &1812667444
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -435014,6 +435943,10 @@ PrefabInstance:
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4887782774033825701, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.1
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825706, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Name
@@ -436789,6 +437722,7 @@ GameObject:
   - component: {fileID: 1834202760}
   - component: {fileID: 1834202759}
   - component: {fileID: 1834202758}
+  - component: {fileID: 1834202761}
   m_Layer: 0
   m_Name: Cam2
   m_TagString: Untagged
@@ -436892,6 +437826,66 @@ Camera:
   m_OcclusionCulling: 1
   m_StereoConvergence: 10
   m_StereoSeparation: 0.022
+--- !u!114 &1834202761
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1834202756}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 948f4100a11a5c24981795d21301da5c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  volumeTrigger: {fileID: 54961379}
+  volumeLayer:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  stopNaNPropagation: 1
+  finalBlitToCameraTarget: 0
+  antialiasingMode: 1
+  temporalAntialiasing:
+    jitterSpread: 0.75
+    sharpness: 0.25
+    stationaryBlending: 0.95
+    motionBlending: 0.85
+  subpixelMorphologicalAntialiasing:
+    quality: 2
+  fastApproximateAntialiasing:
+    fastMode: 0
+    keepAlpha: 0
+  fog:
+    enabled: 1
+    excludeSkybox: 1
+  debugLayer:
+    lightMeter:
+      width: 512
+      height: 256
+      showCurves: 1
+    histogram:
+      width: 512
+      height: 256
+      channel: 3
+    waveform:
+      exposure: 0.12
+      height: 256
+    vectorscope:
+      size: 256
+      exposure: 0.12
+    overlaySettings:
+      linearDepth: 0
+      motionColorIntensity: 4
+      motionGridSize: 64
+      colorBlindnessType: 0
+      colorBlindnessStrength: 1
+  m_Resources: {fileID: 11400000, guid: d82512f9c8e5d4a4d938b575d47f88d4, type: 2}
+  m_ShowToolkit: 0
+  m_ShowCustomSorter: 0
+  breakBeforeColorGrading: 0
+  m_BeforeTransparentBundles: []
+  m_BeforeStackBundles: []
+  m_AfterStackBundles: []
 --- !u!1001 &1834667975
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -438972,11 +439966,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Range
-      value: 20
+      value: 15
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 5.5
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -438988,11 +439982,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Shadows.m_Type
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_BounceIntensity
-      value: 4
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Shadows.m_Resolution
@@ -439005,6 +439999,10 @@ PrefabInstance:
     - target: {fileID: 1660071929, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_LocalPosition.x
       value: -0.12
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071929, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 1660071929, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_LocalPosition.z
@@ -442523,8 +443521,12 @@ PrefabInstance:
       value: Forged_torch_light_baked
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Range
+      value: 15
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -442532,11 +443534,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Shadows.m_Type
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_BounceIntensity
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Shadows.m_Resolution
@@ -442545,6 +443551,10 @@ PrefabInstance:
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071929, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.3820004
       objectReference: {fileID: 0}
     - target: {fileID: 2517341323244566781, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RootOrder
@@ -444050,11 +445060,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Range
-      value: 10
+      value: 15
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -444062,11 +445072,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Shadows.m_Type
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_BounceIntensity
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Shadows.m_Resolution
@@ -444075,6 +445089,10 @@ PrefabInstance:
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071929, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 2517341323244566781, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RootOrder
@@ -462063,11 +463081,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Range
-      value: 10
+      value: 15
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -462075,11 +463093,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Shadows.m_Type
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_BounceIntensity
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Shadows.m_Resolution
@@ -462088,6 +463110,10 @@ PrefabInstance:
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071929, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 2517341323244566781, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RootOrder
@@ -462551,8 +463577,12 @@ PrefabInstance:
       value: Forged_torch_light_baked
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Range
+      value: 15
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -462560,11 +463590,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Shadows.m_Type
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_BounceIntensity
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Shadows.m_Resolution
@@ -462573,6 +463607,10 @@ PrefabInstance:
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071929, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.3820004
       objectReference: {fileID: 0}
     - target: {fileID: 2517341323244566781, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RootOrder
@@ -464843,6 +465881,10 @@ PrefabInstance:
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 4887782774033825701, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.1
+      objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825706, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Name
       value: Forged_torch_light_baked
@@ -466467,6 +467509,10 @@ PrefabInstance:
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 4887782774033825701, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.1
+      objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825706, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Name
       value: Forged_torch_light_baked
@@ -467635,6 +468681,7 @@ GameObject:
   - component: {fileID: 1981715828}
   - component: {fileID: 1981715827}
   - component: {fileID: 1981715826}
+  - component: {fileID: 1981715830}
   m_Layer: 0
   m_Name: CamLeo (1)
   m_TagString: Untagged
@@ -467738,6 +468785,66 @@ Transform:
   m_Children: []
   m_Father: {fileID: 2053569348}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1981715830
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1981715825}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 948f4100a11a5c24981795d21301da5c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  volumeTrigger: {fileID: 54961379}
+  volumeLayer:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  stopNaNPropagation: 1
+  finalBlitToCameraTarget: 0
+  antialiasingMode: 1
+  temporalAntialiasing:
+    jitterSpread: 0.75
+    sharpness: 0.25
+    stationaryBlending: 0.95
+    motionBlending: 0.85
+  subpixelMorphologicalAntialiasing:
+    quality: 2
+  fastApproximateAntialiasing:
+    fastMode: 0
+    keepAlpha: 0
+  fog:
+    enabled: 1
+    excludeSkybox: 1
+  debugLayer:
+    lightMeter:
+      width: 512
+      height: 256
+      showCurves: 1
+    histogram:
+      width: 512
+      height: 256
+      channel: 3
+    waveform:
+      exposure: 0.12
+      height: 256
+    vectorscope:
+      size: 256
+      exposure: 0.12
+    overlaySettings:
+      linearDepth: 0
+      motionColorIntensity: 4
+      motionGridSize: 64
+      colorBlindnessType: 0
+      colorBlindnessStrength: 1
+  m_Resources: {fileID: 11400000, guid: d82512f9c8e5d4a4d938b575d47f88d4, type: 2}
+  m_ShowToolkit: 0
+  m_ShowCustomSorter: 0
+  breakBeforeColorGrading: 0
+  m_BeforeTransparentBundles: []
+  m_BeforeStackBundles: []
+  m_AfterStackBundles: []
 --- !u!4 &1981941674 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 8063803443391284106, guid: 7db061d5fda10ee4bb3f7d2d7f245e94, type: 3}
@@ -470988,11 +472095,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Range
-      value: 20
+      value: 15
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 5.5
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -471003,8 +472110,12 @@ PrefabInstance:
       value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Shadows.m_Type
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_BounceIntensity
-      value: 4
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Shadows.m_Resolution
@@ -471017,6 +472128,10 @@ PrefabInstance:
     - target: {fileID: 1660071929, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_LocalPosition.x
       value: -0.12
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071929, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 1660071929, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_LocalPosition.z
@@ -471634,6 +472749,10 @@ PrefabInstance:
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4887782774033825701, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.1
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825706, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Name
@@ -482387,7 +483506,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Range
-      value: 10
+      value: 15
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Enabled
@@ -482395,7 +483514,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -482403,11 +483522,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Shadows.m_Type
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_BounceIntensity
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Shadows.m_Resolution
@@ -482416,6 +483539,10 @@ PrefabInstance:
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071929, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0.96423936
       objectReference: {fileID: 0}
     - target: {fileID: 2517341323244566781, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RootOrder
@@ -483326,6 +484453,10 @@ PrefabInstance:
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4887782774033825701, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.1
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825706, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Name
@@ -484941,6 +486072,10 @@ PrefabInstance:
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071929, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.3820006
       objectReference: {fileID: 0}
     - target: {fileID: 285793084168353523, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_StaticEditorFlags
@@ -497906,7 +499041,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Range
-      value: 10
+      value: 15
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Enabled
@@ -497914,7 +499049,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RenderMode
@@ -497922,11 +499057,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_Shadows.m_Type
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_BounceIntensity
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_Shadows.m_Resolution
@@ -497935,6 +499074,10 @@ PrefabInstance:
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071929, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0.96423936
       objectReference: {fileID: 0}
     - target: {fileID: 2517341323244566781, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_RootOrder
@@ -498410,6 +499553,10 @@ PrefabInstance:
     - target: {fileID: 1660071928, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1660071929, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.9
       objectReference: {fileID: 0}
     - target: {fileID: 285793084168353523, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
       propertyPath: m_StaticEditorFlags
@@ -499767,23 +500914,31 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Range
-      value: 8
+      value: 15
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Intensity
-      value: 9
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
+      propertyPath: m_Shadows.m_Type
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_BounceIntensity
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825700, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4887782774033825701, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.1
       objectReference: {fileID: 0}
     - target: {fileID: 4887782774033825706, guid: 8b5a8b149ea5bc74ba76ebf609a4b10a, type: 3}
       propertyPath: m_Name
@@ -503109,3 +504264,4 @@ SceneRoots:
   - {fileID: 2029370795}
   - {fileID: 1621188146}
   - {fileID: 1388321825}
+  - {fileID: 276684488}
