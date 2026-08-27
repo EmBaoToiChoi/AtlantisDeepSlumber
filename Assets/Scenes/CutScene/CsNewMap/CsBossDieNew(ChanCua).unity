@@ -2788,6 +2788,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Prefab_Brazier_01_on
       objectReference: {fileID: 0}
+    - target: {fileID: 6673259597275801312, guid: 354ee22049fad544faed84281c1e6223, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 2.2920911
+      objectReference: {fileID: 0}
     - target: {fileID: 6673259597275801313, guid: 354ee22049fad544faed84281c1e6223, type: 3}
       propertyPath: m_Intensity
       value: 7
@@ -2798,7 +2802,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6673259597275801313, guid: 354ee22049fad544faed84281c1e6223, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 6673259597275801313, guid: 354ee22049fad544faed84281c1e6223, type: 3}
       propertyPath: m_BounceIntensity
@@ -3389,7 +3393,7 @@ AudioSource:
   m_Enabled: 1
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
-  m_audioClip: {fileID: 8300000, guid: 573b44f4cc4c7c449b7120a549f9f4d3, type: 3}
+  m_audioClip: {fileID: 0}
   m_Resource: {fileID: 8300000, guid: 573b44f4cc4c7c449b7120a549f9f4d3, type: 3}
   m_PlayOnAwake: 1
   m_Volume: 1
@@ -8823,6 +8827,107 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 3491267432544032259, guid: 5207e662ce023fa40b58ea9492710c36, type: 3}
   m_PrefabInstance: {fileID: 998014351}
   m_PrefabAsset: {fileID: 0}
+--- !u!1001 &39171406
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 344449928}
+    m_Modifications:
+    - target: {fileID: 4006709737937606950, guid: 354ee22049fad544faed84281c1e6223, type: 3}
+      propertyPath: m_RootOrder
+      value: 7
+      objectReference: {fileID: 0}
+    - target: {fileID: 4006709737937606950, guid: 354ee22049fad544faed84281c1e6223, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -3.95
+      objectReference: {fileID: 0}
+    - target: {fileID: 4006709737937606950, guid: 354ee22049fad544faed84281c1e6223, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 2.9470062
+      objectReference: {fileID: 0}
+    - target: {fileID: 4006709737937606950, guid: 354ee22049fad544faed84281c1e6223, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 11.62
+      objectReference: {fileID: 0}
+    - target: {fileID: 4006709737937606950, guid: 354ee22049fad544faed84281c1e6223, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 0.9238798
+      objectReference: {fileID: 0}
+    - target: {fileID: 4006709737937606950, guid: 354ee22049fad544faed84281c1e6223, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4006709737937606950, guid: 354ee22049fad544faed84281c1e6223, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0.38268274
+      objectReference: {fileID: 0}
+    - target: {fileID: 4006709737937606950, guid: 354ee22049fad544faed84281c1e6223, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4006709737937606950, guid: 354ee22049fad544faed84281c1e6223, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4006709737937606950, guid: 354ee22049fad544faed84281c1e6223, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 45
+      objectReference: {fileID: 0}
+    - target: {fileID: 4006709737937606950, guid: 354ee22049fad544faed84281c1e6223, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4382391577263129500, guid: 354ee22049fad544faed84281c1e6223, type: 3}
+      propertyPath: m_Name
+      value: Prefab_Brazier_01_on (15)
+      objectReference: {fileID: 0}
+    - target: {fileID: 4382391577263129500, guid: 354ee22049fad544faed84281c1e6223, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6673259597275801312, guid: 354ee22049fad544faed84281c1e6223, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 2.2920911
+      objectReference: {fileID: 0}
+    - target: {fileID: 6673259597275801313, guid: 354ee22049fad544faed84281c1e6223, type: 3}
+      propertyPath: m_Intensity
+      value: 7
+      objectReference: {fileID: 0}
+    - target: {fileID: 6673259597275801313, guid: 354ee22049fad544faed84281c1e6223, type: 3}
+      propertyPath: m_RenderMode
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6673259597275801313, guid: 354ee22049fad544faed84281c1e6223, type: 3}
+      propertyPath: m_Lightmapping
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 6673259597275801313, guid: 354ee22049fad544faed84281c1e6223, type: 3}
+      propertyPath: m_BounceIntensity
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6673259597275801313, guid: 354ee22049fad544faed84281c1e6223, type: 3}
+      propertyPath: m_Shadows.m_Resolution
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6673259597275801313, guid: 354ee22049fad544faed84281c1e6223, type: 3}
+      propertyPath: m_UseViewFrustumForShadowCasterCull
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6673259597275801327, guid: 354ee22049fad544faed84281c1e6223, type: 3}
+      propertyPath: m_Name
+      value: Forged_torch_light_brazier_baked
+      objectReference: {fileID: 0}
+    - target: {fileID: 7755829933409656020, guid: 354ee22049fad544faed84281c1e6223, type: 3}
+      propertyPath: m_Enabled
+      value: 1
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 354ee22049fad544faed84281c1e6223, type: 3}
 --- !u!4 &40430996 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 3702136460327340016, guid: 62602d52bbbd83949ae5903b726b9016, type: 3}
@@ -8935,7 +9040,7 @@ AudioSource:
   m_Enabled: 1
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
-  m_audioClip: {fileID: 8300000, guid: 9e34d6509f644204f8872be6509eeef2, type: 3}
+  m_audioClip: {fileID: 0}
   m_Resource: {fileID: 8300000, guid: 9e34d6509f644204f8872be6509eeef2, type: 3}
   m_PlayOnAwake: 0
   m_Volume: 1
@@ -13032,7 +13137,7 @@ AudioSource:
   m_Enabled: 1
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
-  m_audioClip: {fileID: 8300000, guid: 20b8617ecde629b4e93371cf5395fb26, type: 3}
+  m_audioClip: {fileID: 0}
   m_Resource: {fileID: 8300000, guid: 20b8617ecde629b4e93371cf5395fb26, type: 3}
   m_PlayOnAwake: 1
   m_Volume: 1
@@ -13213,6 +13318,7 @@ GameObject:
   - component: {fileID: 66008094}
   - component: {fileID: 66008093}
   - component: {fileID: 66008092}
+  - component: {fileID: 66008096}
   m_Layer: 0
   m_Name: Camera (3)
   m_TagString: Untagged
@@ -13329,6 +13435,66 @@ Camera:
   m_OcclusionCulling: 1
   m_StereoConvergence: 10
   m_StereoSeparation: 0.022
+--- !u!114 &66008096
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 66008090}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 948f4100a11a5c24981795d21301da5c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  volumeTrigger: {fileID: 66008091}
+  volumeLayer:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  stopNaNPropagation: 1
+  finalBlitToCameraTarget: 0
+  antialiasingMode: 1
+  temporalAntialiasing:
+    jitterSpread: 0.75
+    sharpness: 0.25
+    stationaryBlending: 0.95
+    motionBlending: 0.85
+  subpixelMorphologicalAntialiasing:
+    quality: 2
+  fastApproximateAntialiasing:
+    fastMode: 0
+    keepAlpha: 0
+  fog:
+    enabled: 1
+    excludeSkybox: 1
+  debugLayer:
+    lightMeter:
+      width: 512
+      height: 256
+      showCurves: 1
+    histogram:
+      width: 512
+      height: 256
+      channel: 3
+    waveform:
+      exposure: 0.12
+      height: 256
+    vectorscope:
+      size: 256
+      exposure: 0.12
+    overlaySettings:
+      linearDepth: 0
+      motionColorIntensity: 4
+      motionGridSize: 64
+      colorBlindnessType: 0
+      colorBlindnessStrength: 1
+  m_Resources: {fileID: 11400000, guid: d82512f9c8e5d4a4d938b575d47f88d4, type: 2}
+  m_ShowToolkit: 0
+  m_ShowCustomSorter: 0
+  breakBeforeColorGrading: 0
+  m_BeforeTransparentBundles: []
+  m_BeforeStackBundles: []
+  m_AfterStackBundles: []
 --- !u!1001 &66095622
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -16230,7 +16396,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8386752770512147840, guid: ade3a4a29be755d43b807dd8e331776a, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 8386752770512147840, guid: ade3a4a29be755d43b807dd8e331776a, type: 3}
       propertyPath: m_BounceIntensity
@@ -16243,6 +16409,14 @@ PrefabInstance:
     - target: {fileID: 8386752770512147840, guid: ade3a4a29be755d43b807dd8e331776a, type: 3}
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8386752770512147841, guid: ade3a4a29be755d43b807dd8e331776a, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.5490909
+      objectReference: {fileID: 0}
+    - target: {fileID: 8386752770512147841, guid: ade3a4a29be755d43b807dd8e331776a, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: -0.003540149
       objectReference: {fileID: 0}
     - target: {fileID: 8386752770512147854, guid: ade3a4a29be755d43b807dd8e331776a, type: 3}
       propertyPath: m_Name
@@ -24938,7 +25112,7 @@ AudioSource:
   m_Enabled: 1
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
-  m_audioClip: {fileID: 8300000, guid: 262e774b53bc62b4ea724b86eab670dd, type: 3}
+  m_audioClip: {fileID: 0}
   m_Resource: {fileID: 8300000, guid: 262e774b53bc62b4ea724b86eab670dd, type: 3}
   m_PlayOnAwake: 1
   m_Volume: 1
@@ -28445,6 +28619,7 @@ MonoBehaviour:
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -42591,6 +42766,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Prefab_Brazier_01_on (13)
       objectReference: {fileID: 0}
+    - target: {fileID: 6673259597275801312, guid: 354ee22049fad544faed84281c1e6223, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 2.2920911
+      objectReference: {fileID: 0}
     - target: {fileID: 6673259597275801313, guid: 354ee22049fad544faed84281c1e6223, type: 3}
       propertyPath: m_Intensity
       value: 7
@@ -42601,7 +42780,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6673259597275801313, guid: 354ee22049fad544faed84281c1e6223, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 6673259597275801313, guid: 354ee22049fad544faed84281c1e6223, type: 3}
       propertyPath: m_BounceIntensity
@@ -47227,6 +47406,7 @@ MonoBehaviour:
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -49502,7 +49682,7 @@ AudioSource:
   m_Enabled: 1
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
-  m_audioClip: {fileID: 8300000, guid: 9e34d6509f644204f8872be6509eeef2, type: 3}
+  m_audioClip: {fileID: 0}
   m_Resource: {fileID: 8300000, guid: 9e34d6509f644204f8872be6509eeef2, type: 3}
   m_PlayOnAwake: 0
   m_Volume: 1
@@ -54998,7 +55178,7 @@ AudioSource:
   m_Enabled: 1
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
-  m_audioClip: {fileID: 8300000, guid: ff25f22c48676b34596f775ce662aa0a, type: 3}
+  m_audioClip: {fileID: 0}
   m_Resource: {fileID: 8300000, guid: ff25f22c48676b34596f775ce662aa0a, type: 3}
   m_PlayOnAwake: 0
   m_Volume: 1
@@ -57781,6 +57961,55 @@ ReflectionProbe:
   m_UseOcclusionCulling: 1
   m_Importance: 3
   m_CustomBakedTexture: {fileID: 0}
+--- !u!1 &242833143
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 242833145}
+  - component: {fileID: 242833144}
+  m_Layer: 0
+  m_Name: PostProcess
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &242833144
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 242833143}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8b9a305e18de0c04dbd257a21cd47087, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  sharedProfile: {fileID: 11400000, guid: 56bd1ff36bfc14c4b8142708a134d736, type: 2}
+  isGlobal: 1
+  blendDistance: 0
+  weight: 1
+  priority: 0
+--- !u!4 &242833145
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 242833143}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &243370833
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -92689,7 +92918,7 @@ AudioSource:
   m_Enabled: 1
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
-  m_audioClip: {fileID: 8300000, guid: 8f5f62da2410c394daab22f3bc5317ee, type: 3}
+  m_audioClip: {fileID: 0}
   m_Resource: {fileID: 8300000, guid: 8f5f62da2410c394daab22f3bc5317ee, type: 3}
   m_PlayOnAwake: 1
   m_Volume: 1
@@ -94064,6 +94293,8 @@ Transform:
   - {fileID: 2103777036}
   - {fileID: 1726646461}
   - {fileID: 2040687986}
+  - {fileID: 1464814196}
+  - {fileID: 841303536}
   - {fileID: 668551643}
   - {fileID: 744394647}
   - {fileID: 180199427}
@@ -98113,6 +98344,7 @@ MonoBehaviour:
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -163774,6 +164006,10 @@ PrefabInstance:
       propertyPath: m_IsActive
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 6673259597275801312, guid: 354ee22049fad544faed84281c1e6223, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 2.7783313
+      objectReference: {fileID: 0}
     - target: {fileID: 6673259597275801313, guid: 354ee22049fad544faed84281c1e6223, type: 3}
       propertyPath: m_Intensity
       value: 7
@@ -163784,7 +164020,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6673259597275801313, guid: 354ee22049fad544faed84281c1e6223, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 6673259597275801313, guid: 354ee22049fad544faed84281c1e6223, type: 3}
       propertyPath: m_BounceIntensity
@@ -175048,6 +175284,10 @@ PrefabInstance:
       propertyPath: m_IsActive
       value: 1
       objectReference: {fileID: 0}
+    - target: {fileID: 6673259597275801312, guid: 354ee22049fad544faed84281c1e6223, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 2.2920911
+      objectReference: {fileID: 0}
     - target: {fileID: 6673259597275801313, guid: 354ee22049fad544faed84281c1e6223, type: 3}
       propertyPath: m_Intensity
       value: 7
@@ -175058,7 +175298,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6673259597275801313, guid: 354ee22049fad544faed84281c1e6223, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 6673259597275801313, guid: 354ee22049fad544faed84281c1e6223, type: 3}
       propertyPath: m_BounceIntensity
@@ -175731,6 +175971,7 @@ MonoBehaviour:
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -177702,6 +177943,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Prefab_Brazier_01_on (1)
       objectReference: {fileID: 0}
+    - target: {fileID: 6673259597275801312, guid: 354ee22049fad544faed84281c1e6223, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 2.2920911
+      objectReference: {fileID: 0}
     - target: {fileID: 6673259597275801313, guid: 354ee22049fad544faed84281c1e6223, type: 3}
       propertyPath: m_Intensity
       value: 7
@@ -177712,7 +177957,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6673259597275801313, guid: 354ee22049fad544faed84281c1e6223, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 6673259597275801313, guid: 354ee22049fad544faed84281c1e6223, type: 3}
       propertyPath: m_BounceIntensity
@@ -216497,6 +216742,11 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 4650183032532864841, guid: c1b05b343f56ecb4091d8cc30ead3ac7, type: 3}
   m_PrefabInstance: {fileID: 841031665}
   m_PrefabAsset: {fileID: 0}
+--- !u!4 &841303536 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 4006709737937606950, guid: 354ee22049fad544faed84281c1e6223, type: 3}
+  m_PrefabInstance: {fileID: 39171406}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &841847395
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -217631,7 +217881,7 @@ AudioSource:
   m_Enabled: 1
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
-  m_audioClip: {fileID: 8300000, guid: 9e34d6509f644204f8872be6509eeef2, type: 3}
+  m_audioClip: {fileID: 0}
   m_Resource: {fileID: 8300000, guid: 9e34d6509f644204f8872be6509eeef2, type: 3}
   m_PlayOnAwake: 0
   m_Volume: 1
@@ -242835,6 +243085,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Prefab_Brazier_01_on (4)
       objectReference: {fileID: 0}
+    - target: {fileID: 6673259597275801312, guid: 354ee22049fad544faed84281c1e6223, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 2.2920911
+      objectReference: {fileID: 0}
     - target: {fileID: 6673259597275801313, guid: 354ee22049fad544faed84281c1e6223, type: 3}
       propertyPath: m_Intensity
       value: 7
@@ -242845,7 +243099,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6673259597275801313, guid: 354ee22049fad544faed84281c1e6223, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 6673259597275801313, guid: 354ee22049fad544faed84281c1e6223, type: 3}
       propertyPath: m_BounceIntensity
@@ -268136,6 +268390,10 @@ PrefabInstance:
       propertyPath: m_IsActive
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 6673259597275801312, guid: 354ee22049fad544faed84281c1e6223, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 2.3
+      objectReference: {fileID: 0}
     - target: {fileID: 6673259597275801313, guid: 354ee22049fad544faed84281c1e6223, type: 3}
       propertyPath: m_Intensity
       value: 7
@@ -268146,7 +268404,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6673259597275801313, guid: 354ee22049fad544faed84281c1e6223, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 6673259597275801313, guid: 354ee22049fad544faed84281c1e6223, type: 3}
       propertyPath: m_BounceIntensity
@@ -273383,6 +273641,7 @@ MonoBehaviour:
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -276561,7 +276820,7 @@ AudioSource:
   m_Enabled: 1
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
-  m_audioClip: {fileID: 8300000, guid: a6a948a5e9647bd499edeee3dd8aa389, type: 3}
+  m_audioClip: {fileID: 0}
   m_Resource: {fileID: 8300000, guid: a6a948a5e9647bd499edeee3dd8aa389, type: 3}
   m_PlayOnAwake: 1
   m_Volume: 1
@@ -278725,6 +278984,7 @@ MonoBehaviour:
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -280284,6 +280544,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Prefab_Brazier_01_on (7)
       objectReference: {fileID: 0}
+    - target: {fileID: 6673259597275801312, guid: 354ee22049fad544faed84281c1e6223, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 2.2920911
+      objectReference: {fileID: 0}
     - target: {fileID: 6673259597275801313, guid: 354ee22049fad544faed84281c1e6223, type: 3}
       propertyPath: m_Intensity
       value: 7
@@ -280294,7 +280558,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6673259597275801313, guid: 354ee22049fad544faed84281c1e6223, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 6673259597275801313, guid: 354ee22049fad544faed84281c1e6223, type: 3}
       propertyPath: m_BounceIntensity
@@ -290644,6 +290908,10 @@ PrefabInstance:
       propertyPath: m_IsActive
       value: 1
       objectReference: {fileID: 0}
+    - target: {fileID: 6673259597275801312, guid: 354ee22049fad544faed84281c1e6223, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 2.2920911
+      objectReference: {fileID: 0}
     - target: {fileID: 6673259597275801313, guid: 354ee22049fad544faed84281c1e6223, type: 3}
       propertyPath: m_Intensity
       value: 7
@@ -290654,7 +290922,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6673259597275801313, guid: 354ee22049fad544faed84281c1e6223, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 6673259597275801313, guid: 354ee22049fad544faed84281c1e6223, type: 3}
       propertyPath: m_BounceIntensity
@@ -303441,6 +303709,7 @@ MonoBehaviour:
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -309512,6 +309781,7 @@ GameObject:
   - component: {fileID: 1286920252}
   - component: {fileID: 1286920251}
   - component: {fileID: 1286920250}
+  - component: {fileID: 1286920253}
   m_Layer: 0
   m_Name: Camera (2)
   m_TagString: Untagged
@@ -309615,6 +309885,66 @@ Camera:
   m_OcclusionCulling: 1
   m_StereoConvergence: 10
   m_StereoSeparation: 0.022
+--- !u!114 &1286920253
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1286920248}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 948f4100a11a5c24981795d21301da5c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  volumeTrigger: {fileID: 66008091}
+  volumeLayer:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  stopNaNPropagation: 1
+  finalBlitToCameraTarget: 0
+  antialiasingMode: 1
+  temporalAntialiasing:
+    jitterSpread: 0.75
+    sharpness: 0.25
+    stationaryBlending: 0.95
+    motionBlending: 0.85
+  subpixelMorphologicalAntialiasing:
+    quality: 2
+  fastApproximateAntialiasing:
+    fastMode: 0
+    keepAlpha: 0
+  fog:
+    enabled: 1
+    excludeSkybox: 1
+  debugLayer:
+    lightMeter:
+      width: 512
+      height: 256
+      showCurves: 1
+    histogram:
+      width: 512
+      height: 256
+      channel: 3
+    waveform:
+      exposure: 0.12
+      height: 256
+    vectorscope:
+      size: 256
+      exposure: 0.12
+    overlaySettings:
+      linearDepth: 0
+      motionColorIntensity: 4
+      motionGridSize: 64
+      colorBlindnessType: 0
+      colorBlindnessStrength: 1
+  m_Resources: {fileID: 11400000, guid: d82512f9c8e5d4a4d938b575d47f88d4, type: 2}
+  m_ShowToolkit: 0
+  m_ShowCustomSorter: 0
+  breakBeforeColorGrading: 0
+  m_BeforeTransparentBundles: []
+  m_BeforeStackBundles: []
+  m_AfterStackBundles: []
 --- !u!1001 &1287107366
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -313487,6 +313817,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Prefab_Brazier_01_on (9)
       objectReference: {fileID: 0}
+    - target: {fileID: 6673259597275801312, guid: 354ee22049fad544faed84281c1e6223, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 2.2920911
+      objectReference: {fileID: 0}
     - target: {fileID: 6673259597275801313, guid: 354ee22049fad544faed84281c1e6223, type: 3}
       propertyPath: m_Intensity
       value: 7
@@ -313497,7 +313831,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6673259597275801313, guid: 354ee22049fad544faed84281c1e6223, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 6673259597275801313, guid: 354ee22049fad544faed84281c1e6223, type: 3}
       propertyPath: m_BounceIntensity
@@ -329068,6 +329402,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Prefab_Brazier_01_on (2)
       objectReference: {fileID: 0}
+    - target: {fileID: 6673259597275801312, guid: 354ee22049fad544faed84281c1e6223, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 2.2920911
+      objectReference: {fileID: 0}
     - target: {fileID: 6673259597275801313, guid: 354ee22049fad544faed84281c1e6223, type: 3}
       propertyPath: m_Intensity
       value: 7
@@ -329078,7 +329416,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6673259597275801313, guid: 354ee22049fad544faed84281c1e6223, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 6673259597275801313, guid: 354ee22049fad544faed84281c1e6223, type: 3}
       propertyPath: m_BounceIntensity
@@ -330521,6 +330859,10 @@ PrefabInstance:
       propertyPath: m_IsActive
       value: 1
       objectReference: {fileID: 0}
+    - target: {fileID: 6673259597275801312, guid: 354ee22049fad544faed84281c1e6223, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 2.2920911
+      objectReference: {fileID: 0}
     - target: {fileID: 6673259597275801313, guid: 354ee22049fad544faed84281c1e6223, type: 3}
       propertyPath: m_Intensity
       value: 7
@@ -330531,7 +330873,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6673259597275801313, guid: 354ee22049fad544faed84281c1e6223, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 6673259597275801313, guid: 354ee22049fad544faed84281c1e6223, type: 3}
       propertyPath: m_BounceIntensity
@@ -347860,7 +348202,7 @@ AudioSource:
   m_Enabled: 1
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
-  m_audioClip: {fileID: 8300000, guid: fe4840e2f0ea35b46967115e7f211638, type: 3}
+  m_audioClip: {fileID: 0}
   m_Resource: {fileID: 8300000, guid: fe4840e2f0ea35b46967115e7f211638, type: 3}
   m_PlayOnAwake: 1
   m_Volume: 1
@@ -349951,6 +350293,11 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 4eee5d38e667d744e9c100486ed1f7e0, type: 3}
+--- !u!4 &1464814196 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 4006709737937606950, guid: 354ee22049fad544faed84281c1e6223, type: 3}
+  m_PrefabInstance: {fileID: 1778049009}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &1464869593
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -355131,6 +355478,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Prefab_Brazier_01_on (10)
       objectReference: {fileID: 0}
+    - target: {fileID: 6673259597275801312, guid: 354ee22049fad544faed84281c1e6223, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 2.2920911
+      objectReference: {fileID: 0}
     - target: {fileID: 6673259597275801313, guid: 354ee22049fad544faed84281c1e6223, type: 3}
       propertyPath: m_Intensity
       value: 7
@@ -355141,7 +355492,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6673259597275801313, guid: 354ee22049fad544faed84281c1e6223, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 6673259597275801313, guid: 354ee22049fad544faed84281c1e6223, type: 3}
       propertyPath: m_BounceIntensity
@@ -360896,7 +361247,7 @@ AudioSource:
   m_Enabled: 1
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
-  m_audioClip: {fileID: 8300000, guid: f68743ee71797a545bd1e6c472590f06, type: 3}
+  m_audioClip: {fileID: 0}
   m_Resource: {fileID: 8300000, guid: f68743ee71797a545bd1e6c472590f06, type: 3}
   m_PlayOnAwake: 1
   m_Volume: 1
@@ -375514,7 +375865,7 @@ AudioSource:
   m_Enabled: 1
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
-  m_audioClip: {fileID: 8300000, guid: 1cb658c267f671245af3add475248ab1, type: 3}
+  m_audioClip: {fileID: 0}
   m_Resource: {fileID: 8300000, guid: 1cb658c267f671245af3add475248ab1, type: 3}
   m_PlayOnAwake: 1
   m_Volume: 1
@@ -388794,6 +389145,7 @@ MonoBehaviour:
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -389967,6 +390319,7 @@ MonoBehaviour:
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -395334,6 +395687,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Prefab_Brazier_01_on (11)
       objectReference: {fileID: 0}
+    - target: {fileID: 6673259597275801312, guid: 354ee22049fad544faed84281c1e6223, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 2.2920911
+      objectReference: {fileID: 0}
     - target: {fileID: 6673259597275801313, guid: 354ee22049fad544faed84281c1e6223, type: 3}
       propertyPath: m_Intensity
       value: 7
@@ -395344,7 +395701,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6673259597275801313, guid: 354ee22049fad544faed84281c1e6223, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 6673259597275801313, guid: 354ee22049fad544faed84281c1e6223, type: 3}
       propertyPath: m_BounceIntensity
@@ -406861,7 +407218,7 @@ AudioSource:
   m_Enabled: 1
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
-  m_audioClip: {fileID: 8300000, guid: 9e34d6509f644204f8872be6509eeef2, type: 3}
+  m_audioClip: {fileID: 0}
   m_Resource: {fileID: 8300000, guid: 9e34d6509f644204f8872be6509eeef2, type: 3}
   m_PlayOnAwake: 0
   m_Volume: 1
@@ -411319,6 +411676,107 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 7516270775452223998, guid: 8bb47db07ece76e4799d1667a864c355, type: 3}
   m_PrefabInstance: {fileID: 1776912068}
   m_PrefabAsset: {fileID: 0}
+--- !u!1001 &1778049009
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 344449928}
+    m_Modifications:
+    - target: {fileID: 4006709737937606950, guid: 354ee22049fad544faed84281c1e6223, type: 3}
+      propertyPath: m_RootOrder
+      value: 7
+      objectReference: {fileID: 0}
+    - target: {fileID: 4006709737937606950, guid: 354ee22049fad544faed84281c1e6223, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 3.78
+      objectReference: {fileID: 0}
+    - target: {fileID: 4006709737937606950, guid: 354ee22049fad544faed84281c1e6223, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 2.9470062
+      objectReference: {fileID: 0}
+    - target: {fileID: 4006709737937606950, guid: 354ee22049fad544faed84281c1e6223, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 11.39
+      objectReference: {fileID: 0}
+    - target: {fileID: 4006709737937606950, guid: 354ee22049fad544faed84281c1e6223, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 0.9238798
+      objectReference: {fileID: 0}
+    - target: {fileID: 4006709737937606950, guid: 354ee22049fad544faed84281c1e6223, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4006709737937606950, guid: 354ee22049fad544faed84281c1e6223, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0.38268274
+      objectReference: {fileID: 0}
+    - target: {fileID: 4006709737937606950, guid: 354ee22049fad544faed84281c1e6223, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4006709737937606950, guid: 354ee22049fad544faed84281c1e6223, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4006709737937606950, guid: 354ee22049fad544faed84281c1e6223, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 45
+      objectReference: {fileID: 0}
+    - target: {fileID: 4006709737937606950, guid: 354ee22049fad544faed84281c1e6223, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4382391577263129500, guid: 354ee22049fad544faed84281c1e6223, type: 3}
+      propertyPath: m_Name
+      value: Prefab_Brazier_01_on (14)
+      objectReference: {fileID: 0}
+    - target: {fileID: 4382391577263129500, guid: 354ee22049fad544faed84281c1e6223, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6673259597275801312, guid: 354ee22049fad544faed84281c1e6223, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 2.2920911
+      objectReference: {fileID: 0}
+    - target: {fileID: 6673259597275801313, guid: 354ee22049fad544faed84281c1e6223, type: 3}
+      propertyPath: m_Intensity
+      value: 7
+      objectReference: {fileID: 0}
+    - target: {fileID: 6673259597275801313, guid: 354ee22049fad544faed84281c1e6223, type: 3}
+      propertyPath: m_RenderMode
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6673259597275801313, guid: 354ee22049fad544faed84281c1e6223, type: 3}
+      propertyPath: m_Lightmapping
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 6673259597275801313, guid: 354ee22049fad544faed84281c1e6223, type: 3}
+      propertyPath: m_BounceIntensity
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6673259597275801313, guid: 354ee22049fad544faed84281c1e6223, type: 3}
+      propertyPath: m_Shadows.m_Resolution
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6673259597275801313, guid: 354ee22049fad544faed84281c1e6223, type: 3}
+      propertyPath: m_UseViewFrustumForShadowCasterCull
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6673259597275801327, guid: 354ee22049fad544faed84281c1e6223, type: 3}
+      propertyPath: m_Name
+      value: Forged_torch_light_brazier_baked
+      objectReference: {fileID: 0}
+    - target: {fileID: 7755829933409656020, guid: 354ee22049fad544faed84281c1e6223, type: 3}
+      propertyPath: m_Enabled
+      value: 1
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 354ee22049fad544faed84281c1e6223, type: 3}
 --- !u!1001 &1778268756
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -416631,7 +417089,7 @@ AudioSource:
   m_Enabled: 1
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
-  m_audioClip: {fileID: 8300000, guid: 40c68e6c75ce3254ea5db058a6beb895, type: 3}
+  m_audioClip: {fileID: 0}
   m_Resource: {fileID: 8300000, guid: 40c68e6c75ce3254ea5db058a6beb895, type: 3}
   m_PlayOnAwake: 1
   m_Volume: 1
@@ -425819,7 +426277,7 @@ AudioSource:
   m_Enabled: 1
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
-  m_audioClip: {fileID: 8300000, guid: 90dc036627cfe124e8f9a4bac77129f0, type: 3}
+  m_audioClip: {fileID: 0}
   m_Resource: {fileID: 8300000, guid: 90dc036627cfe124e8f9a4bac77129f0, type: 3}
   m_PlayOnAwake: 0
   m_Volume: 1
@@ -430789,7 +431247,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8386752770512147840, guid: ade3a4a29be755d43b807dd8e331776a, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 8386752770512147840, guid: ade3a4a29be755d43b807dd8e331776a, type: 3}
       propertyPath: m_BounceIntensity
@@ -430802,6 +431260,14 @@ PrefabInstance:
     - target: {fileID: 8386752770512147840, guid: ade3a4a29be755d43b807dd8e331776a, type: 3}
       propertyPath: m_UseViewFrustumForShadowCasterCull
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8386752770512147841, guid: ade3a4a29be755d43b807dd8e331776a, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.5490909
+      objectReference: {fileID: 0}
+    - target: {fileID: 8386752770512147841, guid: ade3a4a29be755d43b807dd8e331776a, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: -0.003540149
       objectReference: {fileID: 0}
     - target: {fileID: 8386752770512147854, guid: ade3a4a29be755d43b807dd8e331776a, type: 3}
       propertyPath: m_Name
@@ -431031,6 +431497,7 @@ MonoBehaviour:
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -432386,7 +432853,7 @@ AudioSource:
   m_Enabled: 1
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
-  m_audioClip: {fileID: 8300000, guid: 6ff06c241331dc340bb8e455e1c6fa80, type: 3}
+  m_audioClip: {fileID: 0}
   m_Resource: {fileID: 8300000, guid: 6ff06c241331dc340bb8e455e1c6fa80, type: 3}
   m_PlayOnAwake: 1
   m_Volume: 1
@@ -446921,6 +447388,10 @@ PrefabInstance:
       propertyPath: m_IsActive
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 6673259597275801312, guid: 354ee22049fad544faed84281c1e6223, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 2.7783313
+      objectReference: {fileID: 0}
     - target: {fileID: 6673259597275801313, guid: 354ee22049fad544faed84281c1e6223, type: 3}
       propertyPath: m_Intensity
       value: 7
@@ -446931,7 +447402,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6673259597275801313, guid: 354ee22049fad544faed84281c1e6223, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 6673259597275801313, guid: 354ee22049fad544faed84281c1e6223, type: 3}
       propertyPath: m_BounceIntensity
@@ -449182,7 +449653,7 @@ AudioSource:
   m_Enabled: 1
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
-  m_audioClip: {fileID: 8300000, guid: 9e34d6509f644204f8872be6509eeef2, type: 3}
+  m_audioClip: {fileID: 0}
   m_Resource: {fileID: 8300000, guid: 9e34d6509f644204f8872be6509eeef2, type: 3}
   m_PlayOnAwake: 0
   m_Volume: 1
@@ -451695,6 +452166,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Prefab_Brazier_01_on (3)
       objectReference: {fileID: 0}
+    - target: {fileID: 6673259597275801312, guid: 354ee22049fad544faed84281c1e6223, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 2.2920911
+      objectReference: {fileID: 0}
     - target: {fileID: 6673259597275801313, guid: 354ee22049fad544faed84281c1e6223, type: 3}
       propertyPath: m_Intensity
       value: 7
@@ -451705,7 +452180,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6673259597275801313, guid: 354ee22049fad544faed84281c1e6223, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 6673259597275801313, guid: 354ee22049fad544faed84281c1e6223, type: 3}
       propertyPath: m_BounceIntensity
@@ -456710,6 +457185,10 @@ PrefabInstance:
       propertyPath: m_IsActive
       value: 1
       objectReference: {fileID: 0}
+    - target: {fileID: 6673259597275801312, guid: 354ee22049fad544faed84281c1e6223, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 2.2920911
+      objectReference: {fileID: 0}
     - target: {fileID: 6673259597275801313, guid: 354ee22049fad544faed84281c1e6223, type: 3}
       propertyPath: m_Intensity
       value: 7
@@ -456720,7 +457199,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6673259597275801313, guid: 354ee22049fad544faed84281c1e6223, type: 3}
       propertyPath: m_Lightmapping
-      value: 2
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 6673259597275801313, guid: 354ee22049fad544faed84281c1e6223, type: 3}
       propertyPath: m_BounceIntensity
@@ -461682,6 +462161,7 @@ MonoBehaviour:
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -465704,7 +466184,7 @@ AudioSource:
   m_Enabled: 1
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
-  m_audioClip: {fileID: 8300000, guid: e375e3df63c140743aa9862bc2ef7bc8, type: 3}
+  m_audioClip: {fileID: 0}
   m_Resource: {fileID: 8300000, guid: e375e3df63c140743aa9862bc2ef7bc8, type: 3}
   m_PlayOnAwake: 1
   m_Volume: 1
@@ -481131,7 +481611,7 @@ AudioSource:
   m_Enabled: 1
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
-  m_audioClip: {fileID: 8300000, guid: 9c62cc513af3c384c998eb165c2ffb0b, type: 3}
+  m_audioClip: {fileID: 0}
   m_Resource: {fileID: 8300000, guid: 9c62cc513af3c384c998eb165c2ffb0b, type: 3}
   m_PlayOnAwake: 1
   m_Volume: 1
@@ -481330,7 +481810,7 @@ AudioSource:
   m_Enabled: 1
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
-  m_audioClip: {fileID: 8300000, guid: 9e34d6509f644204f8872be6509eeef2, type: 3}
+  m_audioClip: {fileID: 0}
   m_Resource: {fileID: 8300000, guid: 9e34d6509f644204f8872be6509eeef2, type: 3}
   m_PlayOnAwake: 0
   m_Volume: 1
@@ -483842,6 +484322,7 @@ MonoBehaviour:
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -487006,3 +487487,4 @@ SceneRoots:
   - {fileID: 1497856273}
   - {fileID: 1184992754}
   - {fileID: 1649253073}
+  - {fileID: 242833145}
