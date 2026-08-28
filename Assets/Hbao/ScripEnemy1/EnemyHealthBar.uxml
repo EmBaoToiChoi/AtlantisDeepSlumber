@@ -4,7 +4,6 @@
         <ui:Label name="enemy-name" text="Enemy Name" class="enemy-name" />
         <ui:VisualElement name="health-bar-container" class="container">
             <ui:VisualElement name="background" class="background">
-                <ui:VisualElement name="yellow-bar" class="yellow-bar" />
                 <ui:VisualElement name="progress-bar" class="progress-bar" />
             </ui:VisualElement>
             <ui:VisualElement class="health-bar-frame-overlay" />
