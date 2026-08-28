@@ -7,66 +7,52 @@
 }
 
 .enemy-name {
-    color: rgb(255, 240, 210);
-    font-size: 68px;
+    color: rgb(255, 245, 220);
+    font-size: 84px;
     -unity-font-style: bold;
     text-shadow: 4px 4px 8px rgba(0, 0, 0, 0.95);
-    margin-bottom: 12px;
+    margin-bottom: 16px;
     letter-spacing: 2px;
 }
 
 .container {
-    width: 90%;
-    height: 110px;
+    width: 95%;
+    height: 200px;
     position: relative;
     align-items: center;
     justify-content: center;
 }
 
-/* Nền tối của thanh máu nằm lọt chuẩn bên trong khung viền */
+/* Nền tối và ruột máu nằm lọt 100% bên trong lòng khung viền vàng, bóp góc vát 2 bên */
 .background {
     position: absolute;
-    top: 14px;
-    bottom: 14px;
-    left: 20px;
-    right: 20px;
+    top: 44px;
+    bottom: 44px;
+    left: 88px;
+    right: 88px;
     background-color: rgba(14, 8, 6, 0.95);
-    border-radius: 6px;
+    border-radius: 36px;
     border-width: 0;
     overflow: hidden;
     padding: 0;
 }
 
-/* Vệt máu vàng tụt chậm (Lag Bar) */
-.yellow-bar {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgb(235, 190, 30);
-    border-radius: 4px;
-    transition-property: width;
-    transition-duration: 0.65s;
-    transition-timing-function: ease-in-out;
-}
-
-/* Thanh máu đỏ chiến đấu full khung */
+/* Thanh máu đỏ chiến đấu tươi sáng, bo góc vát khít mép khung */
 .progress-bar {
     position: absolute;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgb(220, 20, 20);
-    border-radius: 4px;
+    background-color: rgb(230, 20, 20);
+    border-radius: 36px;
     transition-property: width;
     transition-duration: 0.15s;
     transition-timing-function: ease-out;
-    background-image: linear-gradient(to bottom, rgba(255, 255, 255, 0.4), rgba(0, 0, 0, 0.25));
+    background-image: linear-gradient(to bottom, rgba(255, 255, 255, 0.45), rgba(0, 0, 0, 0.25));
 }
 
-/* Khung SPR_FantasyMenus_Menu_Button_03_Frame bọc chuẩn bên ngoài thanh máu */
+/* Khung SPR_FantasyMenus_Menu_Button_03_Frame nằm đè lên trên thanh fill máu */
 .health-bar-frame-overlay {
     position: absolute;
     top: 0;
