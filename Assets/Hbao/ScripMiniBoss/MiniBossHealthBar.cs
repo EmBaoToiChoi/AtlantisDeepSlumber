@@ -66,11 +66,31 @@ public class MiniBossHealthBar : MonoBehaviour
     private float shakeTimer = 0f;
     private float flashTimer = 0f;
 
+    private void Awake()
+    {
+        if (uiDocument == null)
+        {
+            uiDocument = GetComponent<UIDocument>();
+            if (uiDocument == null) uiDocument = gameObject.AddComponent<UIDocument>();
+        }
+
+        if (uiDocument != null && uiDocument.visualTreeAsset == null)
+        {
+            uiDocument.visualTreeAsset = Resources.Load<VisualTreeAsset>("MiniBossHealthBar");
+        }
+    }
+
     private void OnEnable()
     {
         if (uiDocument == null)
         {
             uiDocument = GetComponent<UIDocument>();
+            if (uiDocument == null) uiDocument = gameObject.AddComponent<UIDocument>();
+        }
+
+        if (uiDocument != null && uiDocument.visualTreeAsset == null)
+        {
+            uiDocument.visualTreeAsset = Resources.Load<VisualTreeAsset>("MiniBossHealthBar");
         }
 
         QueryVisualElements();
@@ -85,38 +105,45 @@ public class MiniBossHealthBar : MonoBehaviour
 
     private void QueryVisualElements()
     {
-        if (uiDocument != null && uiDocument.rootVisualElement != null)
+        if (uiDocument != null)
         {
-            var root = uiDocument.rootVisualElement;
-            rootContainer = root.Q<VisualElement>("miniboss-hud-container");
-            if (rootContainer != null)
+            if (uiDocument.visualTreeAsset == null)
             {
-                rootContainer.style.display = DisplayStyle.None;
+                uiDocument.visualTreeAsset = Resources.Load<VisualTreeAsset>("MiniBossHealthBar");
             }
-
-            progressBar = root.Q<VisualElement>("miniboss-hp-progress-bar");
-            yellowBar = root.Q<VisualElement>("miniboss-hp-yellow-bar");
-            nameLabel = root.Q<Label>("miniboss-name");
-            hpTextLabel = root.Q<Label>("miniboss-hp-text");
-
-            // Clone sub-container
-            clonesSubContainer = root.Q<VisualElement>("clones-sub-container");
-            if (clonesSubContainer != null)
+            if (uiDocument.rootVisualElement != null)
             {
-                clonesSubContainer.style.display = DisplayStyle.None;
+                var root = uiDocument.rootVisualElement;
+                rootContainer = root.Q<VisualElement>("miniboss-hud-container");
+                if (rootContainer != null)
+                {
+                    rootContainer.style.display = DisplayStyle.None;
+                }
+
+                progressBar = root.Q<VisualElement>("miniboss-hp-progress-bar");
+                yellowBar = root.Q<VisualElement>("miniboss-hp-yellow-bar");
+                nameLabel = root.Q<Label>("miniboss-name");
+                hpTextLabel = root.Q<Label>("miniboss-hp-text");
+
+                // Clone sub-container
+                clonesSubContainer = root.Q<VisualElement>("clones-sub-container");
+                if (clonesSubContainer != null)
+                {
+                    clonesSubContainer.style.display = DisplayStyle.None;
+                }
+
+                // Clone 1
+                clone1ProgressBar = root.Q<VisualElement>("clone1-hp-progress-bar");
+                clone1YellowBar = root.Q<VisualElement>("clone1-hp-yellow-bar");
+                clone1NameLabel = root.Q<Label>("clone1-name");
+                clone1HpTextLabel = root.Q<Label>("clone1-hp-text");
+
+                // Clone 2
+                clone2ProgressBar = root.Q<VisualElement>("clone2-hp-progress-bar");
+                clone2YellowBar = root.Q<VisualElement>("clone2-hp-yellow-bar");
+                clone2NameLabel = root.Q<Label>("clone2-name");
+                clone2HpTextLabel = root.Q<Label>("clone2-hp-text");
             }
-
-            // Clone 1
-            clone1ProgressBar = root.Q<VisualElement>("clone1-hp-progress-bar");
-            clone1YellowBar = root.Q<VisualElement>("clone1-hp-yellow-bar");
-            clone1NameLabel = root.Q<Label>("clone1-name");
-            clone1HpTextLabel = root.Q<Label>("clone1-hp-text");
-
-            // Clone 2
-            clone2ProgressBar = root.Q<VisualElement>("clone2-hp-progress-bar");
-            clone2YellowBar = root.Q<VisualElement>("clone2-hp-yellow-bar");
-            clone2NameLabel = root.Q<Label>("clone2-name");
-            clone2HpTextLabel = root.Q<Label>("clone2-hp-text");
         }
     }
 

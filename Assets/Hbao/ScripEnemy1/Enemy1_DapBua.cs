@@ -402,11 +402,6 @@ public class Enemy1_DapBua : NetworkBehaviour
     private void Update()
     {
         if (isBossProxy || isMiniBossProxy || isFinalBossProxy) return;
-        if (IsEnragedValue && !hasRoared)
-        {
-            transform.localScale = Vector3.Lerp(transform.localScale, Vector3.one * 1.15f, Time.deltaTime * 3f);
-            if (transform.localScale.x >= 1.14f) hasRoared = true;
-        }
 
         bool aiAuth = isStandaloneMode || (IsNetworkActive && IsServer);
         if (!aiAuth) return;

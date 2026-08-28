@@ -2097,13 +2097,14 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
             }
         }
 
-        if (CurrentHealth <= 0)
+        if (CurrentHealth <= 0 || localHealth <= 0f)
         {
             if (anim != null) anim.applyRootMotion = false;
             if (rb != null) rb.linearVelocity = Vector3.zero;
             if (currentAnimState != "Death")
             {
-                PlayAnimation("Death", 0.15f);
+                PlayDeathAnimationSafely(0.15f);
+                currentAnimState = "Death";
             }
             return;
         }
@@ -3525,7 +3526,26 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
             targetMoveVelocity = Vector3.zero;
             if (rb != null) { rb.linearVelocity = Vector3.zero; rb.angularVelocity = Vector3.zero; }
             Debug.LogWarning($"[ElenaPlayer] {gameObject.name} đã chết!");
-            PlayAnimation("Death", 0.15f);
+            // Gọi trực tiếp PlayDeathAnimationSafely để bypass guard logic trong PlayAnimation,
+            // đảm bảo death animation/effect LUÔN chạy khi player chết
+            if (currentAnimState != "Death")
+            {
+                PlayDeathAnimationSafely(0.15f);
+                currentAnimState = "Death";
+                lastTriggeredAnimName = "Death";
+                // Đồng bộ animation Death qua network
+                if (!isStandaloneMode)
+                {
+                    if (IsServer)
+                    {
+                        PlayAnimationClientRpc("Death", 0.15f, true, false);
+                    }
+                    else if (IsOwner)
+                    {
+                        PlayAnimationServerRpc("Death", 0.15f, false);
+                    }
+                }
+            }
         }
         else
         {
@@ -4168,8 +4188,8 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         if (anim == null || !anim.isActiveAndEnabled || anim.runtimeAnimatorController == null) return;
 
-        // Không phát hoạt ảnh Death nếu người chơi đang sống (máu > 0)
-        if (animName == "Death" && CurrentHealth > 0)
+        // Không phát hoạt ảnh Death nếu người chơi đang sống (CẢ localHealth VÀ CurrentHealth > 0)
+        if (animName == "Death" && CurrentHealth > 0 && localHealth > 0f)
         {
             return;
         }

@@ -580,8 +580,17 @@ public class PlayerCheckpointManager : NetworkBehaviour
                 return checkpoints[0].GetSpawnPosition();
             }
 
-            Debug.LogWarning($"[Checkpoint Respawn] Chưa kích hoạt checkpoint nào và không tìm thấy defaultSpawnPoint!");
-            return player != null ? player.transform.position : Vector3.zero;
+            // Ưu tiên 4: Quét lại scene tìm checkpoint
+            RescanCheckpoints();
+            if (checkpoints != null && checkpoints.Count > 0 && checkpoints[0] != null)
+            {
+                Debug.LogWarning($"[Checkpoint Respawn] Đã quét lại scene, dùng checkpoint đầu tiên.");
+                return checkpoints[0].GetSpawnPosition();
+            }
+
+            // KHÔNG BAO GIỜ trả về player.transform.position (vị trí chết)
+            Debug.LogWarning($"[Checkpoint Respawn] Chưa kích hoạt checkpoint nào và không tìm thấy defaultSpawnPoint! Trả về vị trí an toàn.");
+            return Vector3.up * 2f;
         }
 
         // === ĐÃ CÓ CHECKPOINT KÍCH HOẠT → tìm vị trí checkpoint ===
@@ -653,8 +662,23 @@ public class PlayerCheckpointManager : NetworkBehaviour
             return playerInitialPositions[clientId];
         }
 
-        Debug.LogError($"[Checkpoint Respawn] KHÔNG TÌM THẤY CHECKPOINT NÀO! Player sẽ hồi sinh tại chỗ.");
-        return player != null ? player.transform.position : Vector3.zero;
+        // 5. Quét lại scene tìm checkpoint bất kỳ
+        RescanCheckpoints();
+        if (checkpoints != null && checkpoints.Count > 0)
+        {
+            foreach (var cp in checkpoints)
+            {
+                if (cp != null)
+                {
+                    Debug.LogWarning($"[Checkpoint Respawn] Emergency rescan: dùng checkpoint index {cp.checkpointIndex}");
+                    return cp.GetSpawnPosition();
+                }
+            }
+        }
+
+        // KHÔNG BAO GIỜ trả về player.transform.position (vị trí chết) - trả về vị trí an toàn
+        Debug.LogError($"[Checkpoint Respawn] KHÔNG TÌM THẤY CHECKPOINT NÀO! Trả về vị trí an toàn (0, 2, 0).");
+        return Vector3.up * 2f;
     }
 
     private void TeleportPlayerSafely(GameObject go, Vector3 pos)
@@ -706,8 +730,17 @@ public class PlayerCheckpointManager : NetworkBehaviour
     private IEnumerator RespawnPlayerStandaloneCoroutine(IPlayerHUDTarget player)
     {
         localPlayerRespawning = true;
-        Debug.LogWarning($"[Standalone Respawn] Người chơi '{player.DisplayName}' đã chết! Thực hiện hồi sinh ngay...");
-        yield return null;
+        Debug.LogWarning($"[Standalone Respawn] Người chơi '{player.DisplayName}' đã chết! Chờ {respawnDelay}s trước khi hồi sinh...");
+
+        // Chờ respawnDelay để đảm bảo checkpoint data đã được cache đầy đủ
+        yield return new WaitForSeconds(respawnDelay);
+
+        // Kiểm tra player còn tồn tại sau khi chờ
+        if (player == null || player.gameObject == null)
+        {
+            localPlayerRespawning = false;
+            yield break;
+        }
 
         // Xác định vị trí hồi sinh Checkpoint chuẩn xác
         Vector3 spawnPos = GetCalculatedSpawnPosition(player, 0);
@@ -805,8 +838,10 @@ public class PlayerCheckpointManager : NetworkBehaviour
     private IEnumerator RespawnPlayerNetworkCoroutine(IPlayerHUDTarget player, ulong clientId)
     {
         string playerName = player.DisplayName;
-        Debug.LogWarning($"[Server Respawn] Người chơi '{playerName}' (Client ID: {clientId}) đã chết! Thực hiện hồi sinh ngay...");
-        yield return null;
+        Debug.LogWarning($"[Server Respawn] Người chơi '{playerName}' (Client ID: {clientId}) đã chết! Chờ {respawnDelay}s trước khi hồi sinh...");
+
+        // Chờ respawnDelay để đảm bảo checkpoint data đã được đồng bộ đầy đủ
+        yield return new WaitForSeconds(respawnDelay);
 
         // Kiểm tra xem đối tượng người chơi còn tồn tại hay không
         if (player == null)

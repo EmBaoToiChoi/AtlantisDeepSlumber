@@ -5,8 +5,9 @@
         <ui:VisualElement name="health-bar-container" class="container">
             <ui:VisualElement name="background" class="background">
                 <ui:VisualElement name="yellow-bar" class="yellow-bar" />
-                <ui:VisualElement name="progress-bar" class="progress-bar" style="background-image: none;" />
+                <ui:VisualElement name="progress-bar" class="progress-bar" />
             </ui:VisualElement>
+            <ui:VisualElement class="health-bar-frame-overlay" />
         </ui:VisualElement>
     </ui:VisualElement>
 </ui:UXML>

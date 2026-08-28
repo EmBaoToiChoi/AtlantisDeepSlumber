@@ -28,11 +28,31 @@ public class BossHealthBar : MonoBehaviour
     private float shakeTimer = 0f;
     private float flashTimer = 0f;
 
+    private void Awake()
+    {
+        if (uiDocument == null)
+        {
+            uiDocument = GetComponent<UIDocument>();
+            if (uiDocument == null) uiDocument = gameObject.AddComponent<UIDocument>();
+        }
+
+        if (uiDocument != null && uiDocument.visualTreeAsset == null)
+        {
+            uiDocument.visualTreeAsset = Resources.Load<VisualTreeAsset>("BossHealthBar");
+        }
+    }
+
     private void OnEnable()
     {
         if (uiDocument == null)
         {
             uiDocument = GetComponent<UIDocument>();
+            if (uiDocument == null) uiDocument = gameObject.AddComponent<UIDocument>();
+        }
+
+        if (uiDocument != null && uiDocument.visualTreeAsset == null)
+        {
+            uiDocument.visualTreeAsset = Resources.Load<VisualTreeAsset>("BossHealthBar");
         }
 
         QueryVisualElements();
@@ -48,14 +68,21 @@ public class BossHealthBar : MonoBehaviour
 
     private void QueryVisualElements()
     {
-        if (uiDocument != null && uiDocument.rootVisualElement != null)
+        if (uiDocument != null)
         {
-            var root = uiDocument.rootVisualElement;
-            rootContainer = root.Q<VisualElement>("boss-hud-container");
-            progressBar = root.Q<VisualElement>("boss-hp-progress-bar");
-            yellowBar = root.Q<VisualElement>("boss-hp-yellow-bar");
-            nameLabel = root.Q<Label>("boss-name");
-            hpTextLabel = root.Q<Label>("boss-hp-text");
+            if (uiDocument.visualTreeAsset == null)
+            {
+                uiDocument.visualTreeAsset = Resources.Load<VisualTreeAsset>("BossHealthBar");
+            }
+            if (uiDocument.rootVisualElement != null)
+            {
+                var root = uiDocument.rootVisualElement;
+                rootContainer = root.Q<VisualElement>("boss-hud-container");
+                progressBar = root.Q<VisualElement>("boss-hp-progress-bar");
+                yellowBar = root.Q<VisualElement>("boss-hp-yellow-bar");
+                nameLabel = root.Q<Label>("boss-name");
+                hpTextLabel = root.Q<Label>("boss-hp-text");
+            }
         }
     }
 

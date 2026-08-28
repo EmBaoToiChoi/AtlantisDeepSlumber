@@ -28,11 +28,31 @@ public class FinalBossHealthBar : MonoBehaviour
     private float shakeTimer = 0f;
     private float flashTimer = 0f;
 
+    private void Awake()
+    {
+        if (uiDocument == null)
+        {
+            uiDocument = GetComponent<UIDocument>();
+            if (uiDocument == null) uiDocument = gameObject.AddComponent<UIDocument>();
+        }
+
+        if (uiDocument != null && uiDocument.visualTreeAsset == null)
+        {
+            uiDocument.visualTreeAsset = Resources.Load<VisualTreeAsset>("FinalBossHealthBar");
+        }
+    }
+
     private void OnEnable()
     {
         if (uiDocument == null)
         {
             uiDocument = GetComponent<UIDocument>();
+            if (uiDocument == null) uiDocument = gameObject.AddComponent<UIDocument>();
+        }
+
+        if (uiDocument != null && uiDocument.visualTreeAsset == null)
+        {
+            uiDocument.visualTreeAsset = Resources.Load<VisualTreeAsset>("FinalBossHealthBar");
         }
 
         QueryVisualElements();
@@ -47,14 +67,21 @@ public class FinalBossHealthBar : MonoBehaviour
 
     private void QueryVisualElements()
     {
-        if (uiDocument != null && uiDocument.rootVisualElement != null)
+        if (uiDocument != null)
         {
-            var root = uiDocument.rootVisualElement;
-            rootContainer = root.Q<VisualElement>("finalboss-hud-container");
-            progressBar = root.Q<VisualElement>("finalboss-hp-progress-bar");
-            yellowBar = root.Q<VisualElement>("finalboss-hp-yellow-bar");
-            nameLabel = root.Q<Label>("finalboss-name");
-            hpTextLabel = root.Q<Label>("finalboss-hp-text");
+            if (uiDocument.visualTreeAsset == null)
+            {
+                uiDocument.visualTreeAsset = Resources.Load<VisualTreeAsset>("FinalBossHealthBar");
+            }
+            if (uiDocument.rootVisualElement != null)
+            {
+                var root = uiDocument.rootVisualElement;
+                rootContainer = root.Q<VisualElement>("finalboss-hud-container");
+                progressBar = root.Q<VisualElement>("finalboss-hp-progress-bar");
+                yellowBar = root.Q<VisualElement>("finalboss-hp-yellow-bar");
+                nameLabel = root.Q<Label>("finalboss-name");
+                hpTextLabel = root.Q<Label>("finalboss-hp-text");
+            }
         }
     }
 

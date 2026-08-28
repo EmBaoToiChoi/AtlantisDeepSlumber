@@ -1,12 +1,13 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
-    <Style src="project://database/Assets/Hbao/ScripEnemy5/Enemy5HealthBar.uss?fileID=7433441132597879392&amp;guid=066db57f590bae54380a4277cba4ee53&amp;type=3#Enemy5HealthBar" />
+    <Style src="project://database/Assets/Hbao/ScripEnemy5/Enemy5HealthBar.uss?fileID=7433441132597879392&amp;guid=8f7004f2fc12961448b48f65a124036f&amp;type=3#Enemy5HealthBar" />
     <ui:VisualElement name="main-container" class="main-container">
         <ui:Label name="enemy-name" text="Enemy 5" class="enemy-name" />
         <ui:VisualElement name="health-bar-container" class="container">
             <ui:VisualElement name="background" class="background">
                 <ui:VisualElement name="yellow-bar" class="yellow-bar" />
-                <ui:VisualElement name="progress-bar" class="progress-bar" style="background-image: none;" />
+                <ui:VisualElement name="progress-bar" class="progress-bar" />
             </ui:VisualElement>
+            <ui:VisualElement class="health-bar-frame-overlay" />
         </ui:VisualElement>
     </ui:VisualElement>
 </ui:UXML>

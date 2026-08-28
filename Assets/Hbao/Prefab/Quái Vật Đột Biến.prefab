@@ -268,7 +268,7 @@ MonoBehaviour:
   stunVfxHeightOffset: 2.6
   stunVfxScale: 2.2
   sightRange: 25
-  fieldOfView: 110
+  fieldOfView: 360
   attackRange: 2.2
   maxChaseDistance: 26
   patrolWalkSpeed: 4

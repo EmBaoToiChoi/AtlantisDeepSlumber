@@ -281,7 +281,7 @@ MonoBehaviour:
     UpdateTraits:
       MinSecondsBetweenUpdates: 0
       MaxSecondsBetweenUpdates: 0
-    m_InternalValue: 200
+    m_InternalValue: 250
   currentState:
     UpdateTraits:
       MinSecondsBetweenUpdates: 0
@@ -324,7 +324,7 @@ MonoBehaviour:
   stunVfxHeightOffset: 2.3
   stunVfxScale: 1.9
   sightRange: 25
-  fieldOfView: 110
+  fieldOfView: 360
   attackRange: 2
   maxChaseDistance: 26
   patrolWalkSpeed: 4
