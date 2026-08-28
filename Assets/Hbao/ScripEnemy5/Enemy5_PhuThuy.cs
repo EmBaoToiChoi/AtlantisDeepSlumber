@@ -278,6 +278,7 @@ public class Enemy5_PhuThuy : NetworkBehaviour
 
     private void Update()
     {
+        if (IsDead || CurrentStateValue == EnemyState.Dead || ActualCurrentHealth <= 0f || localHealth <= 0f || (!isStandaloneMode && IsSpawned && currentHealth.Value <= 0f)) return;
         bool aiAuth = isStandaloneMode || (IsNetworkActive && IsServer);
         if (!aiAuth) return;
         if (agent != null && agent.isActiveAndEnabled && !agent.isOnNavMesh) SnapToNavMesh();
@@ -734,7 +735,7 @@ public class Enemy5_PhuThuy : NetworkBehaviour
 
     public void SetTargetPlayer(Transform player)
     {
-        if (player == null || IsDead) return;
+        if (player == null || IsDead || CurrentStateValue == EnemyState.Dead || ActualCurrentHealth <= 0f || localHealth <= 0f || (!isStandaloneMode && IsSpawned && currentHealth.Value <= 0f)) return;
         if (targetPlayer == null)
         {
             targetPlayer = player;
@@ -794,9 +795,8 @@ public class Enemy5_PhuThuy : NetworkBehaviour
 
     private void HandleAttack()
     {
-        if (IsDead || CurrentStateValue == EnemyState.Dead)
+        if (IsDead || CurrentStateValue == EnemyState.Dead || ActualCurrentHealth <= 0f || localHealth <= 0f || (!isStandaloneMode && IsSpawned && currentHealth.Value <= 0f))
         {
-            EndAttack();
             return;
         }
 
@@ -833,6 +833,7 @@ public class Enemy5_PhuThuy : NetworkBehaviour
 
     private void EndAttack()
     {
+        if (IsDead || CurrentStateValue == EnemyState.Dead || ActualCurrentHealth <= 0f || localHealth <= 0f || (!isStandaloneMode && IsSpawned && currentHealth.Value <= 0f)) return;
         attackCooldownTimer = 1.6f;
         detectionTimer = 0f;
         
@@ -1105,6 +1106,15 @@ public class Enemy5_PhuThuy : NetworkBehaviour
 
     private void ChangeState(EnemyState newState)
     {
+        if (CurrentStateValue == EnemyState.Dead && newState != EnemyState.Dead)
+        {
+            return;
+        }
+        if ((ActualCurrentHealth <= 0f || localHealth <= 0f || (!isStandaloneMode && IsSpawned && currentHealth.Value <= 0f)) && newState != EnemyState.Dead)
+        {
+            return;
+        }
+
         if (currentFSMState != null)
         {
             currentFSMState.Exit();
@@ -1137,14 +1147,14 @@ public class Enemy5_PhuThuy : NetworkBehaviour
     public void TriggerSpellLaunch()
     {
         bool auth = isStandaloneMode || (IsNetworkActive && IsServer);
-        if (!auth || IsDead || CurrentStateValue == EnemyState.Dead || !gameObject.activeInHierarchy || hasCastSpell) return;
+        if (!auth || IsDead || CurrentStateValue == EnemyState.Dead || ActualCurrentHealth <= 0f || localHealth <= 0f || (!isStandaloneMode && IsSpawned && currentHealth.Value <= 0f) || !gameObject.activeInHierarchy || hasCastSpell) return;
         hasCastSpell = true;
         LaunchSpellBall();
     }
 
     private void LaunchSpellBall()
     {
-        if (IsDead || CurrentStateValue == EnemyState.Dead || !gameObject.activeInHierarchy) return;
+        if (IsDead || CurrentStateValue == EnemyState.Dead || ActualCurrentHealth <= 0f || localHealth <= 0f || (!isStandaloneMode && IsSpawned && currentHealth.Value <= 0f) || !gameObject.activeInHierarchy) return;
 
         // Tự động tìm lại Prefab quả cầu lửa từ Resources nếu bị null
         if (spellProjectilePrefab == null)
