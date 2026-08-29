@@ -3011,7 +3011,10 @@ MonoBehaviour:
   m_text: "S\u1EE9c m\u1EA1nh tuy\u1EC7t \u0111\u1ED1i n\xE0y \u0111\u01B0\u1EE3c
     m\u1ECDi ng\u01B0\u1EDDi k\xEDnh tr\u1ECDng khi h\u1ECD c\xF3 n\xF3, m\u1ED9t
     s\u1ED1 ng\u01B0\u1EDDi th\xEC h\u1ECD s\u1EED d\u1EE5ng cho m\u1EE5c \u0111\xEDch
-    t\u1ED1t \u0111\u1EB9p."
+    t\u1ED1t \u0111\u1EB9p. C\xF2n m\u1ED9t s\u1ED1 ng\u01B0\u1EDDi h\u1ECD th\xEDch
+    th\u1ED1ng tr\u1ECB ho\xE0n to\xE0n s\u1EE9c m\u1EA1nh c\u1EE7a c\xE1c nguy\xEAn
+    t\u1ED1 \u0111\xF3,v\xE0 nh\u1EEFng \u0111i\u1EC1u \u0111\xF3 s\u1EBD x\u1EA3y
+    ra nhanh th\xF4i, c\xF3 khi v\u1EADy........."
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8c6bb49340ee96b4291529fba91bff99, type: 2}
   m_sharedMaterial: {fileID: 5945101883385066200, guid: 8c6bb49340ee96b4291529fba91bff99, type: 2}
