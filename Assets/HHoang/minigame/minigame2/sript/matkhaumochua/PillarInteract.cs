@@ -28,8 +28,8 @@ public class PillarInteract : NetworkBehaviour
     private bool isPlayerNearby = false;
     
     // KHÓA THAO TÁC TOÀN CỤC BẰNG THỜI GIAN CHUNG (STATIC)
-    private static float clientNextAllowedTime = 0f; 
-    private static float serverNextAllowedTime = 0f; 
+    private float clientNextAllowedTime = 0f; 
+    private float serverNextAllowedTime = 0f; 
     
     private float initialXRotation;
     private float initialZRotation;

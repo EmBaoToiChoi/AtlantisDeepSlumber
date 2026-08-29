@@ -355960,7 +355960,7 @@ MonoBehaviour:
   autoStartNetworkInEditor: 1
   debugStartMode: 3
   debugConnectAddress: 165.99.14.40
-  debugCharacterId: 1
+  debugCharacterId: 0
 --- !u!114 &1562308064
 MonoBehaviour:
   m_ObjectHideFlags: 0
