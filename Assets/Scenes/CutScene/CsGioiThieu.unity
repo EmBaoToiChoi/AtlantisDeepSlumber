@@ -229,6 +229,7 @@ MonoBehaviour:
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -505,7 +506,7 @@ AudioSource:
   m_Enabled: 1
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
-  m_audioClip: {fileID: 8300000, guid: ce539315fc1d4474f9a7e1fa7233b18b, type: 3}
+  m_audioClip: {fileID: 0}
   m_Resource: {fileID: 8300000, guid: ce539315fc1d4474f9a7e1fa7233b18b, type: 3}
   m_PlayOnAwake: 1
   m_Volume: 1
@@ -980,8 +981,8 @@ AudioSource:
   m_Enabled: 1
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
-  m_audioClip: {fileID: 8300000, guid: 14883154288dcaa438231e96408c71b5, type: 3}
-  m_Resource: {fileID: 8300000, guid: 14883154288dcaa438231e96408c71b5, type: 3}
+  m_audioClip: {fileID: 0}
+  m_Resource: {fileID: 8300000, guid: cbf3439d0023d664b8b3ec69c839305a, type: 3}
   m_PlayOnAwake: 1
   m_Volume: 1
   m_Pitch: 1
@@ -1178,6 +1179,7 @@ MonoBehaviour:
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -1649,7 +1651,7 @@ AudioSource:
   m_Enabled: 1
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
-  m_audioClip: {fileID: 8300000, guid: 0221b9cae5307f04ea4f8b865a5f510d, type: 3}
+  m_audioClip: {fileID: 0}
   m_Resource: {fileID: 8300000, guid: 0221b9cae5307f04ea4f8b865a5f510d, type: 3}
   m_PlayOnAwake: 1
   m_Volume: 1
@@ -1876,7 +1878,7 @@ AudioSource:
   m_Enabled: 1
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
-  m_audioClip: {fileID: 8300000, guid: 017dc82e88413d6419d5f0748d136ef1, type: 3}
+  m_audioClip: {fileID: 0}
   m_Resource: {fileID: 8300000, guid: 017dc82e88413d6419d5f0748d136ef1, type: 3}
   m_PlayOnAwake: 1
   m_Volume: 1
@@ -2234,6 +2236,7 @@ MonoBehaviour:
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -2444,10 +2447,8 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "T\u1EA1i th\u1EBF gi\u1EDBi n\xE0y, n\u01A1i m\xE0 s\u1EE9c m\u1EA1nh
-    nguy\xEAn t\u1ED1 \u0111\u01B0\u1EE3c c\xE1c v\u1ECB th\u1EA7n ban t\u1EB7ng, 
-    nh\u1EEFng ng\u01B0\u1EDDi c\xF3 ti\u1EC1m n\u0103ng th\xEC s\u1EBD nh\u1EADn
-    \u0111\u01B0\u1EE3c n\xF3."
+  m_text: "T\u1EA1i th\u1EBF gi\u1EDBi n\xE0y, noi th\u1EA7n linh trao s\u1EE9c m\u1EA1nh
+    nguy\xEAn t\u1ED1 cho nh\u1EEFng ng\u01B0\u1EDDi c\xF3 ti\u1EC1m n\u0103ng."
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8c6bb49340ee96b4291529fba91bff99, type: 2}
   m_sharedMaterial: {fileID: 5945101883385066200, guid: 8c6bb49340ee96b4291529fba91bff99, type: 2}
@@ -2485,6 +2486,7 @@ MonoBehaviour:
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -2755,7 +2757,7 @@ AudioSource:
   m_Enabled: 1
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
-  m_audioClip: {fileID: 8300000, guid: d083c9f602db5c644864f49a50ec1c90, type: 3}
+  m_audioClip: {fileID: 0}
   m_Resource: {fileID: 8300000, guid: d083c9f602db5c644864f49a50ec1c90, type: 3}
   m_PlayOnAwake: 1
   m_Volume: 1
@@ -3008,13 +3010,10 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "S\u1EE9c m\u1EA1nh tuy\u1EC7t \u0111\u1ED1i n\xE0y \u0111\u01B0\u1EE3c
-    m\u1ECDi ng\u01B0\u1EDDi k\xEDnh tr\u1ECDng khi h\u1ECD c\xF3 n\xF3, m\u1ED9t
-    s\u1ED1 ng\u01B0\u1EDDi th\xEC h\u1ECD s\u1EED d\u1EE5ng cho m\u1EE5c \u0111\xEDch
-    t\u1ED1t \u0111\u1EB9p. C\xF2n m\u1ED9t s\u1ED1 ng\u01B0\u1EDDi h\u1ECD th\xEDch
-    th\u1ED1ng tr\u1ECB ho\xE0n to\xE0n s\u1EE9c m\u1EA1nh c\u1EE7a c\xE1c nguy\xEAn
-    t\u1ED1 \u0111\xF3,v\xE0 nh\u1EEFng \u0111i\u1EC1u \u0111\xF3 s\u1EBD x\u1EA3y
-    ra nhanh th\xF4i, c\xF3 khi v\u1EADy........."
+  m_text: "S\u1EE9c m\u1EA1nh \u1EA5y \u0111\u01B0\u1EE3c ng\u01B0\u1EDDi  ng\u01B0\u1EDDi
+    k\xEDnh tr\u1ECDng., nh\u01B0ng c\u0169ng nu\xF4i d\u01B0\u1EE1ng tham v\u1ECDng
+    th\u1ED1ng tr\u1ECB. V\xE0 ng\xE0y \u0111\xF3... s\u1EBD s\u1EDBm \u0111\u1EBFn
+    th\xF4i."
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8c6bb49340ee96b4291529fba91bff99, type: 2}
   m_sharedMaterial: {fileID: 5945101883385066200, guid: 8c6bb49340ee96b4291529fba91bff99, type: 2}
@@ -3052,6 +3051,7 @@ MonoBehaviour:
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -3316,7 +3316,7 @@ AudioSource:
   m_Enabled: 1
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
-  m_audioClip: {fileID: 8300000, guid: 22bd1d62630ee5b4ea4a6344a16f122d, type: 3}
+  m_audioClip: {fileID: 0}
   m_Resource: {fileID: 8300000, guid: 22bd1d62630ee5b4ea4a6344a16f122d, type: 3}
   m_PlayOnAwake: 1
   m_Volume: 0.2
@@ -3653,7 +3653,7 @@ AudioSource:
   m_Enabled: 1
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
-  m_audioClip: {fileID: 8300000, guid: 5a84b71bc3b3bce469a6ebccb772976d, type: 3}
+  m_audioClip: {fileID: 0}
   m_Resource: {fileID: 8300000, guid: 5a84b71bc3b3bce469a6ebccb772976d, type: 3}
   m_PlayOnAwake: 1
   m_Volume: 1
@@ -4367,8 +4367,8 @@ AudioSource:
   m_Enabled: 1
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
-  m_audioClip: {fileID: 8300000, guid: cd2423e6fe5efd74ea5020ee7f225353, type: 3}
-  m_Resource: {fileID: 8300000, guid: cd2423e6fe5efd74ea5020ee7f225353, type: 3}
+  m_audioClip: {fileID: 0}
+  m_Resource: {fileID: 8300000, guid: ab6d1179c0c0fde4a8874ede320ad667, type: 3}
   m_PlayOnAwake: 1
   m_Volume: 1
   m_Pitch: 1
@@ -4963,6 +4963,7 @@ MonoBehaviour:
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -5178,7 +5179,7 @@ AudioSource:
   m_Enabled: 1
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
-  m_audioClip: {fileID: 8300000, guid: a1070add78fda914089cf532b42f044b, type: 3}
+  m_audioClip: {fileID: 0}
   m_Resource: {fileID: 8300000, guid: a1070add78fda914089cf532b42f044b, type: 3}
   m_PlayOnAwake: 1
   m_Volume: 1
@@ -5307,7 +5308,7 @@ AudioSource:
   m_Enabled: 1
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
-  m_audioClip: {fileID: 8300000, guid: 6364af4b6185f764695c844bec25ac56, type: 3}
+  m_audioClip: {fileID: 0}
   m_Resource: {fileID: 8300000, guid: 6364af4b6185f764695c844bec25ac56, type: 3}
   m_PlayOnAwake: 1
   m_Volume: 1
