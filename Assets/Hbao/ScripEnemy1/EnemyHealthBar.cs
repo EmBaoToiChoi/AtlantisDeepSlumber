@@ -29,6 +29,8 @@ public class EnemyHealthBar : MonoBehaviour
     private float yellowDrainDelay = 0.5f;
     private float yellowDrainTimer = 0f;
 
+    private bool isInitialized = false;
+
     private void OnEnable()
     {
         mainCamera = Camera.main;
@@ -78,7 +80,6 @@ public class EnemyHealthBar : MonoBehaviour
         {
             var root = uiDocument.rootVisualElement;
             progressBar = root.Q<VisualElement>("progress-bar"); 
-            yellowBar = root.Q<VisualElement>("yellow-bar");
             nameLabel = root.Q<Label>("enemy-name");
         }
     }
@@ -94,24 +95,31 @@ public class EnemyHealthBar : MonoBehaviour
         if (enemy == null && enemy2 == null && enemy3 == null && enemy4 == null && enemy5 == null && miniBoss == null && skeleton == null)
         {
             miniBoss = GetComponentInParent<MiniBossAI>();
+            if (miniBoss == null && transform.parent != null) miniBoss = transform.parent.GetComponentInChildren<MiniBossAI>();
             if (miniBoss != null) return;
 
             enemy = GetComponentInParent<Enemy1_DapBua>();
+            if (enemy == null && transform.parent != null) enemy = transform.parent.GetComponentInChildren<Enemy1_DapBua>();
             if (enemy != null) return;
 
             enemy2 = GetComponentInParent<Enemy2_Zombie>();
+            if (enemy2 == null && transform.parent != null) enemy2 = transform.parent.GetComponentInChildren<Enemy2_Zombie>();
             if (enemy2 != null) return;
 
             enemy3 = GetComponentInParent<Enemy3_Buaa>();
+            if (enemy3 == null && transform.parent != null) enemy3 = transform.parent.GetComponentInChildren<Enemy3_Buaa>();
             if (enemy3 != null) return;
 
             enemy4 = GetComponentInParent<Enemy4_Bongtoi>();
+            if (enemy4 == null && transform.parent != null) enemy4 = transform.parent.GetComponentInChildren<Enemy4_Bongtoi>();
             if (enemy4 != null) return;
 
             enemy5 = GetComponentInParent<Enemy5_PhuThuy>();
+            if (enemy5 == null && transform.parent != null) enemy5 = transform.parent.GetComponentInChildren<Enemy5_PhuThuy>();
             if (enemy5 != null) return;
 
             skeleton = GetComponentInParent<Skeleton>();
+            if (skeleton == null && transform.parent != null) skeleton = transform.parent.GetComponentInChildren<Skeleton>();
         }
     }
 
@@ -127,38 +135,16 @@ public class EnemyHealthBar : MonoBehaviour
         }
 
         string enemyName = "Enemy";
-        float curHp = 100f;
+        float curHp = GetActualHealth();
+        float maxHp = GetMaxHealth();
+        if (maxHp <= 0f) maxHp = 100f;
 
-        if (enemy != null)
-        {
-            enemyName = enemy.gameObject.name;
-            curHp = enemy.ActualCurrentHealth;
-        }
-        else if (enemy2 != null)
-        {
-            enemyName = enemy2.gameObject.name;
-            curHp = enemy2.ActualCurrentHealth;
-        }
-        else if (enemy3 != null)
-        {
-            enemyName = enemy3.gameObject.name;
-            curHp = enemy3.ActualCurrentHealth;
-        }
-        else if (enemy4 != null)
-        {
-            enemyName = enemy4.gameObject.name;
-            curHp = enemy4.ActualCurrentHealth;
-        }
-        else if (enemy5 != null)
-        {
-            enemyName = enemy5.gameObject.name;
-            curHp = enemy5.ActualCurrentHealth;
-        }
-        else if (skeleton != null)
-        {
-            enemyName = skeleton.gameObject.name;
-            curHp = skeleton.ActualCurrentHealth;
-        }
+        if (enemy != null) enemyName = enemy.gameObject.name;
+        else if (enemy2 != null) enemyName = enemy2.gameObject.name;
+        else if (enemy3 != null) enemyName = enemy3.gameObject.name;
+        else if (enemy4 != null) enemyName = enemy4.gameObject.name;
+        else if (enemy5 != null) enemyName = enemy5.gameObject.name;
+        else if (skeleton != null) enemyName = skeleton.gameObject.name;
 
         // Loại bỏ hậu tố (Clone) để tên hiển thị đẹp mắt
         if (enemyName.Contains("(Clone)"))
@@ -171,20 +157,24 @@ public class EnemyHealthBar : MonoBehaviour
             nameLabel.text = enemyName;
         }
 
-        displayedHealth = curHp;
-        yellowHealth = curHp;
-        
-        float maxHp = GetMaxHealth();
-        if (maxHp <= 0f) maxHp = 100f;
-        float percent = Mathf.Clamp01(curHp / maxHp) * 100f;
+        if (curHp > 0f)
+        {
+            displayedHealth = curHp;
+            isInitialized = true;
+        }
+        else
+        {
+            displayedHealth = maxHp; // Tránh hiển thị rỗng lúc vừa spawn
+        }
+
+        float percent = Mathf.Clamp01(displayedHealth / maxHp) * 100f;
         if (progressBar != null) progressBar.style.width = Length.Percent(percent);
-        if (yellowBar != null) yellowBar.style.width = Length.Percent(percent);
     }
 
     private void OnDisable()
     {
         displayedHealth = -1f;
-        yellowHealth = -1f;
+        isInitialized = false;
     }
 
     private float GetMaxHealth()
@@ -213,60 +203,41 @@ public class EnemyHealthBar : MonoBehaviour
 
     private void UpdateHealthAnimation()
     {
-        // Thử gán lại các VisualElement nếu lúc OnEnable chưa tải xong (tránh lỗi thứ tự khởi tạo của UIDocument)
-        if (progressBar == null || nameLabel == null || yellowBar == null)
+        // Thử gán lại các VisualElement nếu lúc OnEnable chưa tải xong
+        if (progressBar == null || nameLabel == null)
         {
             QueryVisualElements();
-            if (progressBar != null || nameLabel != null)
+            if (progressBar != null && nameLabel != null)
             {
                 InitEnemyHealthAndName();
             }
         }
+
+        FindEnemyInParent();
 
         float maxHp = GetMaxHealth();
         if (maxHp <= 0f) maxHp = 100f;
 
         float actualHp = GetActualHealth();
 
-        if (displayedHealth < 0f)
+        if (actualHp > 0f)
+        {
+            isInitialized = true;
+            displayedHealth = actualHp;
+        }
+        else if (!isInitialized)
+        {
+            displayedHealth = maxHp;
+        }
+        else
         {
             displayedHealth = actualHp;
-            yellowHealth = actualHp;
         }
 
-        displayedHealth = actualHp;
         float percent = Mathf.Clamp01(displayedHealth / maxHp) * 100f;
         if (progressBar != null)
         {
             progressBar.style.width = Length.Percent(percent);
-        }
-
-        if (actualHp < yellowHealth)
-        {
-            if (yellowDrainTimer <= 0f || actualHp < displayedHealth)
-            {
-                yellowDrainTimer = yellowDrainDelay;
-            }
-        }
-        else if (actualHp > yellowHealth)
-        {
-            yellowHealth = actualHp;
-        }
-
-        if (yellowDrainTimer > 0f)
-        {
-            yellowDrainTimer -= Time.deltaTime;
-        }
-        else
-        {
-            float drainSpeed = maxHp * 0.4f;
-            yellowHealth = Mathf.MoveTowards(yellowHealth, actualHp, drainSpeed * Time.deltaTime);
-        }
-
-        float yellowPercent = Mathf.Clamp01(yellowHealth / maxHp) * 100f;
-        if (yellowBar != null)
-        {
-            yellowBar.style.width = Length.Percent(yellowPercent);
         }
     }
 
@@ -279,12 +250,13 @@ public class EnemyHealthBar : MonoBehaviour
         if (enemy5 != null && enemy5.IsDead) return true;
         if (skeleton != null && (skeleton.ActualCurrentHealth <= 0f || skeleton.currentState == Skeleton.State.Dead)) return true;
         if (miniBoss != null && miniBoss.IsDead) return true;
-        return GetActualHealth() <= 0f;
+        if (isInitialized && GetActualHealth() <= 0f) return true;
+        return false;
     }
 
     private void Update()
     {
-        if (IsEnemyDead() || GetActualHealth() <= 0f)
+        if (IsEnemyDead())
         {
             if (quadTransform != null && quadTransform.gameObject.activeSelf) quadTransform.gameObject.SetActive(false);
             if (uiDocument != null && uiDocument.gameObject.activeSelf) uiDocument.gameObject.SetActive(false);

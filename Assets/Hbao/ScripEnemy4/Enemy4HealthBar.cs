@@ -18,17 +18,29 @@ public class Enemy4HealthBar : MonoBehaviour
     private Material uniqueMaterial;
 
     private float displayedHealth = -1f;
-    private float yellowHealth = -1f;
-    private float yellowDrainDelay = 0.5f;
-    private float yellowDrainTimer = 0f;
+    private bool isInitialized = false;
 
     private Animator cachedAnimator;
     private bool hasAnimator;
 
+    private void EnsureEnemyReference()
+    {
+        if (enemy == null)
+        {
+            enemy = GetComponentInParent<Enemy4_Bongtoi>();
+            if (enemy == null && transform.parent != null)
+            {
+                enemy = transform.parent.GetComponentInChildren<Enemy4_Bongtoi>();
+            }
+            if (enemy == null)
+            {
+                enemy = GetComponent<Enemy4_Bongtoi>();
+            }
+        }
+    }
+
     private void OnEnable()
     {
-        if (enemy == null) enemy = GetComponentInParent<Enemy4_Bongtoi>();
-
         mainCamera = Camera.main;
         cachedAnimator = GetComponent<Animator>();
         hasAnimator = cachedAnimator != null;
@@ -58,91 +70,99 @@ public class Enemy4HealthBar : MonoBehaviour
         // Khởi tạo RenderTexture và Material trong suốt độc lập cho từng Enemy
         InitializeUniqueUI();
 
-        if (uiDocument != null)
+        EnsureEnemyReference();
+
+        if (uiDocument != null && uiDocument.rootVisualElement != null)
         {
             var root = uiDocument.rootVisualElement;
             progressBar = root.Q<VisualElement>("progress-bar"); 
-            yellowBar = root.Q<VisualElement>("yellow-bar");
             nameLabel = root.Q<Label>("enemy-name");
             
             if (nameLabel != null && enemy != null)
             {
-                nameLabel.text = enemy.gameObject.name;
+                string enemyName = enemy.gameObject.name;
+                if (enemyName.Contains("(Clone)")) enemyName = enemyName.Replace("(Clone)", "").Trim();
+                nameLabel.text = enemyName;
             }
         }
 
-        if (enemy != null)
-        {
-            float curHp = enemy.ActualCurrentHealth;
-            displayedHealth = curHp;
-            yellowHealth = curHp;
+        float maxHp = (enemy != null && enemy.maxHealth > 0f) ? enemy.maxHealth : 100f;
+        float curHp = (enemy != null) ? enemy.ActualCurrentHealth : maxHp;
 
-            float maxHp = enemy.maxHealth > 0 ? enemy.maxHealth : 100f; 
-            float percent = Mathf.Clamp01(curHp / maxHp) * 100f;
-            
-            if (progressBar != null) progressBar.style.width = Length.Percent(percent);
-            if (yellowBar != null) yellowBar.style.width = Length.Percent(percent);
+        if (curHp > 0f)
+        {
+            displayedHealth = curHp;
+            isInitialized = true;
         }
+        else
+        {
+            displayedHealth = maxHp;
+        }
+
+        float percent = Mathf.Clamp01(displayedHealth / maxHp) * 100f;
+        if (progressBar != null) progressBar.style.width = Length.Percent(percent);
     }
 
     private void OnDisable()
     {
         displayedHealth = -1f;
-        yellowHealth = -1f;
+        isInitialized = false;
     }
 
     private void UpdateHealthAnimation()
     {
-        if (enemy == null) return;
+        EnsureEnemyReference();
 
-        float maxHp = enemy.maxHealth > 0f ? enemy.maxHealth : 100f;
-        float actualHp = enemy.ActualCurrentHealth;
-
-        if (displayedHealth < 0f)
+        if (progressBar == null || nameLabel == null)
         {
-            displayedHealth = actualHp;
-            yellowHealth = actualHp;
+            if (uiDocument != null && uiDocument.rootVisualElement != null)
+            {
+                var root = uiDocument.rootVisualElement;
+                progressBar = root.Q<VisualElement>("progress-bar");
+                nameLabel = root.Q<Label>("enemy-name");
+                if (nameLabel != null && enemy != null)
+                {
+                    string enemyName = enemy.gameObject.name;
+                    if (enemyName.Contains("(Clone)")) enemyName = enemyName.Replace("(Clone)", "").Trim();
+                    nameLabel.text = enemyName;
+                }
+            }
         }
 
-        displayedHealth = actualHp;
+        float maxHp = (enemy != null && enemy.maxHealth > 0f) ? enemy.maxHealth : 100f;
+        float actualHp = (enemy != null) ? enemy.ActualCurrentHealth : 0f;
+
+        if (actualHp > 0f)
+        {
+            isInitialized = true;
+            displayedHealth = actualHp;
+        }
+        else if (!isInitialized)
+        {
+            displayedHealth = maxHp;
+        }
+        else
+        {
+            displayedHealth = actualHp;
+        }
+
         float percent = Mathf.Clamp01(displayedHealth / maxHp) * 100f;
         if (progressBar != null)
         {
             progressBar.style.width = Length.Percent(percent);
         }
-
-        if (actualHp < yellowHealth)
-        {
-            if (yellowDrainTimer <= 0f || actualHp < displayedHealth)
-            {
-                yellowDrainTimer = yellowDrainDelay;
-            }
-        }
-        else if (actualHp > yellowHealth)
-        {
-            yellowHealth = actualHp;
-        }
-
-        if (yellowDrainTimer > 0f)
-        {
-            yellowDrainTimer -= Time.deltaTime;
-        }
-        else
-        {
-            float drainSpeed = maxHp * 0.4f;
-            yellowHealth = Mathf.MoveTowards(yellowHealth, actualHp, drainSpeed * Time.deltaTime);
-        }
-
-        float yellowPercent = Mathf.Clamp01(yellowHealth / maxHp) * 100f;
-        if (yellowBar != null)
-        {
-            yellowBar.style.width = Length.Percent(yellowPercent);
-        }
     }
 
     private void Update()
     {
-        if (enemy == null || enemy.IsDead || enemy.ActualCurrentHealth <= 0f)
+        if (enemy != null && enemy.IsDead)
+        {
+            if (quadTransform != null && quadTransform.gameObject.activeSelf) quadTransform.gameObject.SetActive(false);
+            if (uiDocument != null && uiDocument.gameObject.activeSelf) uiDocument.gameObject.SetActive(false);
+            gameObject.SetActive(false);
+            return;
+        }
+        if (isInitialized && enemy != null && enemy.ActualCurrentHealth <= 0f)
         {
             if (quadTransform != null && quadTransform.gameObject.activeSelf) quadTransform.gameObject.SetActive(false);
             if (uiDocument != null && uiDocument.gameObject.activeSelf) uiDocument.gameObject.SetActive(false);

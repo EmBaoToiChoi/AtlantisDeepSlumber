@@ -18,6 +18,7 @@ public class BossHealthBar : MonoBehaviour
     private VisualElement progressBar;
     private VisualElement yellowBar;
     private Label nameLabel;
+    private Label titleLabel;
     private Label hpTextLabel;
 
     private float displayedHealth = -1f;
@@ -81,6 +82,7 @@ public class BossHealthBar : MonoBehaviour
                 progressBar = root.Q<VisualElement>("boss-hp-progress-bar");
                 yellowBar = root.Q<VisualElement>("boss-hp-yellow-bar");
                 nameLabel = root.Q<Label>("boss-name");
+                titleLabel = root.Q<Label>("boss-title");
                 hpTextLabel = root.Q<Label>("boss-hp-text");
             }
         }

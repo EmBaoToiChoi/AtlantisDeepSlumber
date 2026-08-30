@@ -2340,26 +2340,29 @@ public class FinalBossAI : NetworkBehaviour
             if (genesisLaserVFX == null) return;
         }
 
-        // Bắn 5 tia Laser Genesis Breaker theo hình quạt quanh thân Boss, chĩa chéo cắm xuống mặt đất
-        float[] angles = new float[] { -24f, -12f, 0f, 12f, 24f };
-        Vector3[] localOffsets = new Vector3[]
-        {
-            new Vector3(-3.0f, 0.4f, 0.6f),
-            new Vector3(-1.5f, 0.8f, 1.0f),
-            new Vector3(0f, 1.2f, 1.4f),
-            new Vector3(1.5f, 0.8f, 1.0f),
-            new Vector3(3.0f, 0.4f, 0.6f)
-        };
+        // Bắn 5 tia Laser Genesis Breaker tỏa đều 360° quanh thân Boss (72° mỗi tia), chĩa chéo cắm xuống mặt đất
+        // KHÔNG target vào player — bắn ra xung quanh theo hình sao 5 cánh
+        int beamCount = 5;
+        float angleStep = 360f / beamCount; // 72° mỗi tia
+        float spawnRadius = 1.8f; // Khoảng cách spawn từ tâm Boss
+        float downwardAngle = 30f; // Chếch góc cắm xuống mặt đất
 
-        for (int i = 0; i < angles.Length; i++)
+        for (int i = 0; i < beamCount; i++)
         {
-            float angle = angles[i];
-            Vector3 offset = localOffsets[i];
-            Vector3 spawnPoint = transform.TransformPoint(offset);
-            // Chếch góc 30° cắm sâu xuống mặt đất để tia chạm sàn chắc chắn
-            Vector3 shootDir = Quaternion.Euler(30f, angle, 0) * transform.forward;
+            // Tính góc xoay quanh trục Y dựa trên local rotation của Boss
+            float yAngle = i * angleStep;
+
+            // Hướng bắn ngang: xoay theo local space của Boss
+            // Dùng transform.rotation để đảm bảo hướng đúng khi Boss xoay bất kỳ chiều nào
+            Vector3 horizontalDir = transform.rotation * Quaternion.Euler(0f, yAngle, 0f) * Vector3.forward;
+            // Chếch xuống đất: xoay quanh trục vuông góc với hướng ngang
+            Vector3 rightAxis = Vector3.Cross(Vector3.up, horizontalDir).normalized;
+            Vector3 shootDir = Quaternion.AngleAxis(downwardAngle, rightAxis) * horizontalDir;
+
+            // Vị trí spawn cách tâm Boss ra ngoài theo hướng bắn (ngang)
+            Vector3 spawnPoint = transform.position + Vector3.up * 1.0f + horizontalDir * spawnRadius;
+
             Quaternion rot = Quaternion.LookRotation(shootDir);
-
             GameObject beam = Instantiate(genesisLaserVFX, spawnPoint, rot);
             beam.transform.localScale = new Vector3(0.42f, 0.42f, 2.2f); // Scale nhỏ gọn, thanh mảnh, sắc nét
             TriggerVfxPlayback(beam, spawnPoint, spawnPoint + shootDir * 55f, 3.2f, 1.8f, 1.0f, true);
@@ -2372,7 +2375,7 @@ public class FinalBossAI : NetworkBehaviour
         }
 
         CameraShakeHelper.Shake(2.5f, 1.8f); // RUNG DỮ DỘI khi 5 tia Genesis Breaker cắm xuống đất
-        Debug.Log("[FinalBossAI] ===> XẢ 5 TIA GENESIS BREAKER LASER CẮM XUỐNG MẶT ĐẤT (LOOP = TRUE, SCALE 0.42x, -5 HP)!");
+        Debug.Log("[FinalBossAI] ===> XẢ 5 TIA GENESIS BREAKER LASER TỎA ĐỀU 360° QUANH BOSS CẮM XUỐNG MẶT ĐẤT (-5 HP)!");
     }
 
     public void ExecuteDroneBarrage()

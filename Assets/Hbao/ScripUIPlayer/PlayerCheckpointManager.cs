@@ -415,6 +415,12 @@ public class PlayerCheckpointManager : NetworkBehaviour
         {
             cpPos = cachedCheckpointPositions[targetIndex];
         }
+        else if (allCheckpointPositions.ContainsKey(targetIndex))
+        {
+            cpPos = allCheckpointPositions[targetIndex];
+            // Đồng bộ ngược lại vào cache để lần sau không bị miss
+            cachedCheckpointPositions[targetIndex] = cpPos;
+        }
 
         // Phát ClientRpc thông báo đồng bộ checkpoint index mới + vị trí tới toàn bộ Client
         SyncCheckpointClientRpc(targetIndex, cpPos);
@@ -434,7 +440,9 @@ public class PlayerCheckpointManager : NetworkBehaviour
             {
                 if (cp != null && cp.checkpointIndex == cpIndex)
                 {
-                    cachedCheckpointPositions[cpIndex] = cp.GetSpawnPosition();
+                    Vector3 pos = cp.GetSpawnPosition();
+                    cachedCheckpointPositions[cpIndex] = pos;
+                    allCheckpointPositions[cpIndex] = pos;
                     return;
                 }
             }
@@ -446,7 +454,9 @@ public class PlayerCheckpointManager : NetworkBehaviour
         {
             if (zone != null && zone.checkpointIndex == cpIndex)
             {
-                cachedCheckpointPositions[cpIndex] = zone.GetSpawnPosition();
+                Vector3 pos = zone.GetSpawnPosition();
+                cachedCheckpointPositions[cpIndex] = pos;
+                allCheckpointPositions[cpIndex] = pos;
                 return;
             }
         }
@@ -469,6 +479,7 @@ public class PlayerCheckpointManager : NetworkBehaviour
         if (checkpointPosition != Vector3.zero)
         {
             cachedCheckpointPositions[checkpointIndex] = checkpointPosition;
+            allCheckpointPositions[checkpointIndex] = checkpointPosition;
         }
         Debug.Log($"[Client Checkpoint] Đã cập nhật checkpoint index {checkpointIndex} (pos: {checkpointPosition}) trên Client từ Server.");
     }

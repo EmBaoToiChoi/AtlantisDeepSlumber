@@ -2,60 +2,73 @@
 .boss-hud-container {
     display: none;
     position: absolute;
-    top: 20px;
+    top: 24px;
     left: 50%;
     translate: -50% 0;
-    width: 750px;
+    width: 560px;
     height: auto;
-    min-height: 100px;
+    min-height: 84px;
     flex-direction: row;
-    align-items: center;
+    align-items: flex-start;
     justify-content: flex-start;
-    background-color: rgba(14, 9, 5, 0.92);
+    background-color: transparent;
     border-width: 0;
-    padding: 16px 36px;
-    box-shadow: 0px 8px 24px rgba(0, 0, 0, 0.9);
+    padding: 14px 22px 18px 22px;
+    overflow: visible;
 }
 
-/* Khung ngoài Frame_Box_Medium_02 phóng to và kéo dài ôm trọn toàn bộ nền đen */
+/* Nền tối màu Obsidian sâu thẳm với đổ bóng đen */
+.boss-hud-bg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(12, 10, 16, 0.95);
+    border-radius: 8px;
+    box-shadow: 0px 6px 24px rgba(0, 0, 0, 0.95);
+}
+
+/* Khung ngoài Frame_Box_Medium_02 bọc kín toàn bộ viền vàng thanh thoát */
 .boss-hud-outer-frame {
     position: absolute;
-    top: -32px;
-    left: -58px;
-    right: -58px;
-    bottom: -32px;
+    top: -8px;
+    left: -10px;
+    right: -10px;
+    bottom: -8px;
     background-image: url("project://database/Assets/Synty/InterfaceFantasyMenus/Sprites/FantasyMenus/SPR_FantasyMenus_Frame_Box_Medium_02.png?fileID=1537655665&guid=4c83811485b435e4a93a37b73758d514&type=3#SPR_FantasyMenus_Frame_Box_Medium_02");
     -unity-background-scale-mode: stretch-to-fill;
-    -unity-slice-left: 80;
-    -unity-slice-top: 80;
-    -unity-slice-right: 80;
-    -unity-slice-bottom: 80;
+    -unity-slice-left: 60;
+    -unity-slice-top: 60;
+    -unity-slice-right: 60;
+    -unity-slice-bottom: 60;
     pointer-events: none;
 }
 
-/* Khung viền avatar của Boss (80x80px hình vuông hoàng kim) */
+/* Khung viền avatar của Boss (58x58px hình vuông hoàng kim) */
 .boss-avatar-frame {
-    width: 80px;
-    height: 80px;
+    width: 58px;
+    height: 58px;
     position: relative;
     overflow: hidden;
     background-color: rgb(20, 15, 12);
     border-radius: 6px;
-    margin-right: 14px;
-    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.7);
+    margin-right: 12px;
+    margin-top: 2px;
+    box-shadow: 0px 3px 8px rgba(0, 0, 0, 0.7);
     flex-shrink: 0;
 }
 
-/* Ảnh chân dung Boss bên trong khung */
+/* Ảnh chân dung Boss bên trong khung (dùng silas_avatar.png) */
 .boss-avatar {
     position: absolute;
-    top: 4px;
-    left: 4px;
-    right: 4px;
-    bottom: 4px;
-    border-radius: 4px;
+    top: 2px;
+    left: 2px;
+    right: 2px;
+    bottom: 2px;
+    border-radius: 5px;
     -unity-background-scale-mode: scale-and-crop;
-    background-image: url("project://database/Assets/Hbao/Image/boss_avatar.png");
+    background-image: url("project://database/Assets/Hbao/Image/silas_avatar.png?fileID=-1129749111&guid=f5607d6d9cf46bd42b352e2b3e1e8c26&type=3#silas_avatar_0");
 }
 
 /* Khung Frame_Box_Small_01 bọc ngoài Avatar */
@@ -67,33 +80,47 @@
     height: 100%;
     background-image: url("project://database/Assets/Synty/InterfaceFantasyMenus/Sprites/FantasyMenus/SPR_FantasyMenus_Frame_Box_Small_01.png?fileID=1537655665&guid=de8d5504716fd5e49b71bc5dd31b1238&type=3#SPR_FantasyMenus_Frame_Box_Small_01");
     -unity-background-scale-mode: stretch-to-fill;
-    -unity-slice-left: 100;
-    -unity-slice-top: 100;
-    -unity-slice-right: 100;
-    -unity-slice-bottom: 100;
+    -unity-slice-left: 80;
+    -unity-slice-top: 80;
+    -unity-slice-right: 80;
+    -unity-slice-bottom: 80;
     pointer-events: none;
 }
 
 /* Cụm tên và thanh máu */
 .boss-hp-wrapper {
     flex-grow: 1;
-    justify-content: center;
+    justify-content: flex-start;
+}
+
+.boss-header {
+    flex-direction: row;
+    align-items: flex-end;
+    justify-content: space-between;
+    margin-bottom: 4px;
+}
+
+.boss-title {
+    color: rgba(255, 180, 100, 0.85);
+    font-size: 10px;
+    -unity-font-style: bold;
+    letter-spacing: 2px;
+    text-transform: uppercase;
 }
 
 /* Tên hiển thị của Boss */
 .boss-name {
-    color: rgb(255, 235, 205);
-    font-size: 16px;
+    color: rgb(255, 238, 195);
+    font-size: 15px;
     -unity-font-style: bold;
-    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.95);
-    margin-bottom: 3px;
+    text-shadow: 0px 2px 5px rgba(0, 0, 0, 0.95);
     letter-spacing: 1px;
 }
 
 /* Container bọc ngoài thanh máu */
 .boss-health-bar-container {
     width: 100%;
-    height: 28px;
+    height: 24px;
     position: relative;
     justify-content: center;
 }
@@ -101,12 +128,12 @@
 /* Nền tối của thanh máu - Inset gọn gàng bên trong khung frame_powerup */
 .boss-hp-background {
     position: absolute;
-    top: 4px;
-    bottom: 4px;
-    left: 10px;
-    right: 32px;
+    top: 3px;
+    bottom: 3px;
+    left: 6px;
+    right: 6px;
     background-color: rgba(18, 10, 6, 0.95);
-    border-radius: 2px;
+    border-radius: 3px;
     border-width: 0;
     overflow: hidden;
 }
@@ -117,7 +144,7 @@
     width: 100%;
     height: 100%;
     background-color: rgb(235, 190, 30);
-    border-radius: 2px;
+    border-radius: 3px;
     transition-property: width;
     transition-duration: 0.65s;
     transition-timing-function: ease-in-out;
@@ -128,8 +155,8 @@
     position: absolute;
     width: 100%;
     height: 100%;
-    background-color: rgb(215, 30, 20);
-    border-radius: 2px;
+    background-color: rgb(220, 20, 20);
+    border-radius: 3px;
     transition-property: width;
     transition-duration: 0.12s;
     transition-timing-function: ease-out;
@@ -142,19 +169,19 @@
     width: 100%;
     height: 100%;
     color: rgb(255, 255, 255);
-    font-size: 12px;
+    font-size: 11px;
     -unity-font-style: bold;
     -unity-text-align: middle-center;
-    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.95);
+    text-shadow: 0px 1px 3px rgba(0, 0, 0, 0.95);
 }
 
 /* Khung frame_powerup bọc chuẩn bên ngoài thanh máu chính */
 .boss-hp-frame-overlay {
     position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
+    top: -3px;
+    left: -3px;
+    right: -3px;
+    bottom: -3px;
     background-image: url("project://database/Assets/Artsystack - Fantasy RPG GUI/Resources/Sprites/components/frame_powerup.png?fileID=1537655665&guid=47d595e42a1be9f438e7034c86ce73ef&type=3#frame_powerup");
     -unity-background-scale-mode: stretch-to-fill;
     -unity-slice-left: 80;
@@ -167,10 +194,10 @@
 /* Hiệu ứng Rung Lắc và Nhấp Nháy khi Mất Máu */
 @keyframes shake-anim {
     0% { margin-left: 0px; margin-top: 0px; }
-    20% { margin-left: -8px; margin-top: -3px; }
-    40% { margin-left: 8px; margin-top: 3px; }
-    60% { margin-left: -5px; margin-top: 1px; }
-    80% { margin-left: 5px; margin-top: -1px; }
+    20% { margin-left: -6px; margin-top: -2px; }
+    40% { margin-left: 6px; margin-top: 2px; }
+    60% { margin-left: -4px; margin-top: 1px; }
+    80% { margin-left: 4px; margin-top: -1px; }
     100% { margin-left: 0px; margin-top: 0px; }
 }
 
@@ -180,33 +207,8 @@
 }
 
 @keyframes flash-anim {
-    0% { background-color: rgb(255, 220, 220); }
+    0% { background-color: rgb(255, 220, 200); }
     100% { background-color: rgb(215, 30, 20); }
-}
-
-.boss-hp-progress-bar.flash {
-    animation-name: flash-anim;
-    animation-duration: 0.2s;
-}
-
-/* ─── Hiệu ứng Rung Lắc và Nhấp Nháy khi Mất Máu ─── */
-@keyframes shake-anim {
-    0% { margin-left: 0px; margin-top: 0px; }
-    20% { margin-left: -8px; margin-top: -3px; }
-    40% { margin-left: 8px; margin-top: 3px; }
-    60% { margin-left: -5px; margin-top: 1px; }
-    80% { margin-left: 5px; margin-top: -1px; }
-    100% { margin-left: 0px; margin-top: 0px; }
-}
-
-.boss-hud-container.shake {
-    animation-name: shake-anim;
-    animation-duration: 0.22s;
-}
-
-@keyframes flash-anim {
-    0% { background-color: rgb(255, 220, 220); }
-    100% { background-color: rgb(220, 20, 20); }
 }
 
 .boss-hp-progress-bar.flash {
