@@ -23,33 +23,42 @@
     justify-content: center;
 }
 
-/* Nền tối và ruột máu nằm lọt 100% bên trong lòng khung viền vàng, bóp góc vát 2 bên */
+/* Nền tối Obsidian chính xác theo dáng ruột của khung */
 .background {
     position: absolute;
-    top: 44px;
-    bottom: 44px;
-    left: 88px;
-    right: 88px;
-    background-color: rgba(14, 8, 6, 0.95);
-    border-radius: 36px;
-    border-width: 0;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: url("project://database/Assets/Synty/InterfaceFantasyMenus/Sprites/FantasyMenus/SPR_FantasyMenus_Menu_Button_03_Background.png?fileID=1537655665&guid=14dc3860d501b70489527d3f3358cec8&type=3#SPR_FantasyMenus_Menu_Button_03_Background");
+    -unity-background-scale-mode: stretch-to-fill;
+    -unity-slice-left: 360;
+    -unity-slice-top: 0;
+    -unity-slice-right: 360;
+    -unity-slice-bottom: 0;
+    -unity-background-image-tint-color: rgba(14, 8, 6, 0.95);
     overflow: hidden;
     padding: 0;
 }
 
-/* Thanh máu đỏ chiến đấu tươi sáng, bo góc vát khít mép khung */
+/* Thanh máu đỏ rực rỡ lấp đầy full 100% chuẩn xác bên trong khung */
 .progress-bar {
     position: absolute;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgb(230, 20, 20);
-    border-radius: 36px;
+    background-image: url("project://database/Assets/Synty/InterfaceFantasyMenus/Sprites/FantasyMenus/SPR_FantasyMenus_Menu_Button_03_Background.png?fileID=1537655665&guid=14dc3860d501b70489527d3f3358cec8&type=3#SPR_FantasyMenus_Menu_Button_03_Background");
+    -unity-background-scale-mode: stretch-to-fill;
+    -unity-slice-left: 360;
+    -unity-slice-top: 0;
+    -unity-slice-right: 360;
+    -unity-slice-bottom: 0;
+    -unity-background-image-tint-color: rgb(230, 20, 20);
     transition-property: width;
     transition-duration: 0.15s;
     transition-timing-function: ease-out;
-    background-image: linear-gradient(to bottom, rgba(255, 255, 255, 0.45), rgba(0, 0, 0, 0.25));
+    overflow: hidden;
 }
 
 /* Khung SPR_FantasyMenus_Menu_Button_03_Frame nằm đè lên trên thanh fill máu */

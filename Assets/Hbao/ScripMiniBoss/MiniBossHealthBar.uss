@@ -2,12 +2,12 @@
 .miniboss-hud-container {
     display: none;
     position: absolute;
-    top: 30px;
+    top: 24px;
     left: 50%;
     translate: -50% 0;
-    width: 760px;
+    width: 560px;
     height: auto;
-    min-height: 104px;
+    min-height: 84px;
     align-items: center;
     justify-content: center;
     background-color: transparent;
@@ -24,57 +24,58 @@
     right: 0;
     bottom: 0;
     background-color: rgba(12, 10, 16, 0.95);
-    border-radius: 10px;
-    box-shadow: 0px 8px 32px rgba(0, 0, 0, 0.96);
+    border-radius: 8px;
+    box-shadow: 0px 6px 24px rgba(0, 0, 0, 0.95);
 }
 
-/* Khung ngoài Frame_Box_Medium_02 bọc kín toàn bộ viền vàng */
+/* Khung ngoài Frame_Box_Medium_02 bọc kín toàn bộ viền vàng thanh thoát */
 .miniboss-hud-outer-frame {
     position: absolute;
-    top: -10px;
-    left: -14px;
-    right: -14px;
-    bottom: -10px;
+    top: -8px;
+    left: -10px;
+    right: -10px;
+    bottom: -8px;
     background-image: url("project://database/Assets/Synty/InterfaceFantasyMenus/Sprites/FantasyMenus/SPR_FantasyMenus_Frame_Box_Medium_02.png?fileID=1537655665&guid=4c83811485b435e4a93a37b73758d514&type=3#SPR_FantasyMenus_Frame_Box_Medium_02");
     -unity-background-scale-mode: stretch-to-fill;
-    -unity-slice-left: 80;
-    -unity-slice-top: 80;
-    -unity-slice-right: 80;
-    -unity-slice-bottom: 80;
+    -unity-slice-left: 60;
+    -unity-slice-top: 60;
+    -unity-slice-right: 60;
+    -unity-slice-bottom: 60;
     pointer-events: none;
 }
 
-/* Nội dung căn giữa gọn gàng bên trong */
+/* Nội dung căn giữa gọn gàng, đủ khoảng trống dọc để phân thân không đè viền */
 .miniboss-hud-content {
     flex-direction: row;
-    align-items: center;
+    align-items: flex-start;
     justify-content: flex-start;
     width: 100%;
     height: 100%;
-    padding: 12px 24px;
+    padding: 14px 22px 18px 22px;
     position: relative;
     z-index: 2;
 }
 
 .miniboss-avatar-frame {
-    width: 76px;
-    height: 76px;
+    width: 58px;
+    height: 58px;
     position: relative;
     overflow: hidden;
     background-color: rgb(20, 15, 12);
-    border-radius: 8px;
-    margin-right: 16px;
-    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.7);
+    border-radius: 6px;
+    margin-right: 12px;
+    margin-top: 2px;
+    box-shadow: 0px 3px 8px rgba(0, 0, 0, 0.7);
     flex-shrink: 0;
 }
 
 .miniboss-avatar {
     position: absolute;
-    top: 3px;
-    left: 3px;
-    right: 3px;
-    bottom: 3px;
-    border-radius: 6px;
+    top: 2px;
+    left: 2px;
+    right: 2px;
+    bottom: 2px;
+    border-radius: 5px;
     -unity-background-scale-mode: scale-and-crop;
     background-image: url("project://database/Assets/Hbao/Image/miniboss_avatar.png");
 }
@@ -96,33 +97,33 @@
 
 .miniboss-hp-wrapper {
     flex-grow: 1;
-    justify-content: center;
+    justify-content: flex-start;
 }
 
 .miniboss-name {
     color: rgb(255, 238, 195);
-    font-size: 18px;
+    font-size: 15px;
     -unity-font-style: bold;
-    text-shadow: 0px 2px 6px rgba(0, 0, 0, 0.95);
-    margin-bottom: 6px;
+    text-shadow: 0px 2px 5px rgba(0, 0, 0, 0.95);
+    margin-bottom: 4px;
     letter-spacing: 1px;
 }
 
 .miniboss-health-bar-container {
     width: 100%;
-    height: 32px;
+    height: 24px;
     position: relative;
     justify-content: center;
 }
 
 .miniboss-hp-background {
     position: absolute;
-    top: 4px;
-    bottom: 4px;
-    left: 8px;
-    right: 8px;
+    top: 3px;
+    bottom: 3px;
+    left: 6px;
+    right: 6px;
     background-color: rgba(18, 10, 6, 0.95);
-    border-radius: 4px;
+    border-radius: 3px;
     border-width: 0;
     overflow: hidden;
 }
@@ -132,7 +133,7 @@
     width: 100%;
     height: 100%;
     background-color: rgb(235, 190, 30);
-    border-radius: 4px;
+    border-radius: 3px;
     transition-property: width;
     transition-duration: 0.65s;
     transition-timing-function: ease-in-out;
@@ -143,7 +144,7 @@
     width: 100%;
     height: 100%;
     background-color: rgb(220, 20, 20);
-    border-radius: 4px;
+    border-radius: 3px;
     transition-property: width;
     transition-duration: 0.12s;
     transition-timing-function: ease-out;
@@ -155,18 +156,18 @@
     width: 100%;
     height: 100%;
     color: rgb(255, 255, 255);
-    font-size: 13px;
+    font-size: 11px;
     -unity-font-style: bold;
     -unity-text-align: middle-center;
-    text-shadow: 0px 2px 4px rgba(0, 0, 0, 0.95);
+    text-shadow: 0px 1px 3px rgba(0, 0, 0, 0.95);
 }
 
 .miniboss-hp-frame-overlay {
     position: absolute;
-    top: -4px;
-    left: -4px;
-    right: -4px;
-    bottom: -4px;
+    top: -3px;
+    left: -3px;
+    right: -3px;
+    bottom: -3px;
     background-image: url("project://database/Assets/Artsystack - Fantasy RPG GUI/Resources/Sprites/components/frame_powerup.png?fileID=1537655665&guid=47d595e42a1be9f438e7034c86ce73ef&type=3#frame_powerup");
     -unity-background-scale-mode: stretch-to-fill;
     -unity-slice-left: 80;
@@ -179,10 +180,10 @@
 /* Shake and Flash Animation Effects */
 @keyframes miniboss-shake-anim {
     0% { margin-left: 0px; margin-top: 0px; }
-    20% { margin-left: -8px; margin-top: -3px; }
-    40% { margin-left: 8px; margin-top: 3px; }
-    60% { margin-left: -5px; margin-top: 1px; }
-    80% { margin-left: 5px; margin-top: -1px; }
+    20% { margin-left: -6px; margin-top: -2px; }
+    40% { margin-left: 6px; margin-top: 2px; }
+    60% { margin-left: -4px; margin-top: 1px; }
+    80% { margin-left: 4px; margin-top: -1px; }
     100% { margin-left: 0px; margin-top: 0px; }
 }
 
@@ -208,36 +209,36 @@
     width: 100%;
     flex-direction: row;
     justify-content: space-between;
-    margin-top: 12px;
+    margin-top: 8px;
     display: none;
 }
 
 .clone-hp-wrapper {
-    width: 48.5%;
+    width: 48%;
     flex-direction: column;
 }
 
 .clone-name {
-    color: rgb(255, 185, 100);
-    font-size: 13px;
+    color: rgb(255, 200, 110);
+    font-size: 11px;
     -unity-font-style: bold;
-    margin-bottom: 3px;
+    margin-bottom: 2px;
     text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.9);
 }
 
 .clone-health-bar-container {
     width: 100%;
-    height: 22px;
+    height: 16px;
     position: relative;
     justify-content: center;
 }
 
 .clone-hp-background {
     position: absolute;
-    top: 3px;
-    bottom: 3px;
-    left: 8px;
-    right: 36px; /* Dừng trước góc vát xéo 36px */
+    top: 2px;
+    bottom: 2px;
+    left: 6px;
+    right: 28px;
     background-color: rgba(18, 10, 6, 0.95);
     border-radius: 2px;
     border-width: 0;
@@ -258,7 +259,7 @@
     position: absolute;
     width: 100%;
     height: 100%;
-    background-color: rgb(190, 35, 30);
+    background-color: rgb(200, 30, 25);
     border-radius: 2px;
     transition-property: width;
     transition-duration: 0.12s;
@@ -269,7 +270,7 @@
     width: 100%;
     height: 100%;
     color: rgb(255, 255, 255);
-    font-size: 10px;
+    font-size: 9px;
     -unity-font-style: bold;
     -unity-text-align: middle-center;
     text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.95);
