@@ -148,6 +148,7 @@
     <ui:VisualElement name="inventory-overlay" class="inventory-overlay">
         <ui:VisualElement class="inventory-frame">
             <ui:VisualElement class="inventory-header">
+                <ui:Label text="HÀNH TRANG" class="inventory-title" />
                 <ui:Label name="inventory-subtitle" text="Ấn phím [TAB] để đóng" class="inventory-subtitle" />
             </ui:VisualElement>
             <ui:VisualElement class="inventory-divider" />

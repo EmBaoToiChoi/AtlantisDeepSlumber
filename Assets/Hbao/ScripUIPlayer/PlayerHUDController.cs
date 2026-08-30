@@ -978,6 +978,9 @@ public class PlayerHUDController : MonoBehaviour
         if (uiDocument == null || uiDocument.rootVisualElement == null) return;
         var root = uiDocument.rootVisualElement;
 
+        var inventoryTitle = root.Q<Label>(className: "inventory-title");
+        if (inventoryTitle != null) inventoryTitle.text = LocalizationManager.CurrentLanguage == LocalizationManager.Language.Vietnamese ? "HÀNH TRANG" : "INVENTORY";
+
         var inventorySubtitle = root.Q<Label>("inventory-subtitle");
         if (inventorySubtitle != null) inventorySubtitle.text = LocalizationManager.Get("hud_tab_close");
 
@@ -2074,8 +2077,8 @@ public class PlayerHUDController : MonoBehaviour
                 VisualElement itemIcon = new VisualElement();
                 itemIcon.AddToClassList("inventory-item-icon");
                 itemIcon.pickingMode = PickingMode.Ignore; // Cho phép click xuyên qua tới slot cha
-                itemIcon.style.width = Length.Percent(80);
-                itemIcon.style.height = Length.Percent(80);
+                itemIcon.style.width = Length.Percent(100);
+                itemIcon.style.height = Length.Percent(100);
 
                 if (itemName == "RepairHammer")
                 {
