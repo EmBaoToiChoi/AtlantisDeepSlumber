@@ -1,0 +1,199 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
+    <Style src="project://database/Assets/PLuan/MainMenu/Code/AtlantisMenu.uss?fileID=7433441132597879392&amp;guid=8fa4b76500634d046bac501785335e61&amp;type=3#AtlantisMenu" />
+    <Style src="project://database/Assets/PLuan/InGamePause/InGamePauseMenu.uss?fileID=7433441132597879392&amp;guid=f0bd9e6eee2c64c1dba2c9fd3722adf7&amp;type=3#InGamePauseMenu" />
+    <ui:VisualElement name="pause-root" class="pause-root-overlay hidden-element" style="-unity-font-definition: url(&quot;project://database/Assets/PLuan/MainMenu/Font/Philosopher-Vietnamese.ttf?fileID=12800000&amp;guid=8a2ed09dfc3a8024fa0bb345576c06bd&amp;type=3#Philosopher-Vietnamese&quot;);">
+        
+        <!-- BẢNG TẠM DỪNG CHÍNH (3 NÚT: TIẾP TỤC, CÀI ĐẶT, THOÁT) -->
+        <ui:VisualElement name="pause-menu-panel" class="pause-dialog">
+            <ui:Label name="lbl-pause-title" text="TẠM DỪNG" class="pause-panel-title" />
+            <ui:VisualElement class="panel-divider pause-divider" style="background-image: url(&quot;project://database/Assets/Synty/InterfaceFantasyMenus/Sprites/General/SPR_FantasyMenus_Line_Horizontal_01.png?fileID=2800000&amp;guid=3a7afa7a5a87b774587fd7d636cc2230&amp;type=3#SPR_FantasyMenus_Line_Horizontal_01&quot;);" />
+            <ui:VisualElement class="pause-button-group">
+                <ui:Button name="btn-pause-resume" text="TIẾP TỤC" class="pause-action-btn" />
+                <ui:Button name="btn-pause-settings" text="CÀI ĐẶT" class="pause-action-btn" />
+                <ui:Button name="btn-pause-quit" text="THOÁT" class="pause-action-btn quit-action-btn" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+
+        <!-- BẢNG CÀI ĐẶT (OPTIONS PANEL) -->
+        <ui:VisualElement name="options-menu-panel" class="menu-container large-panel hidden-panel">
+            <ui:Label name="lbl-options-title" text="CÀI ĐẶT HỆ THỐNG" class="panel-title" />
+            <ui:VisualElement class="panel-divider" style="background-image: url(&quot;project://database/Assets/Synty/InterfaceFantasyMenus/Sprites/General/SPR_FantasyMenus_Line_Horizontal_01.png?fileID=2800000&amp;guid=3a7afa7a5a87b774587fd7d636cc2230&amp;type=3#SPR_FantasyMenus_Line_Horizontal_01&quot;);" />
+            <ui:VisualElement class="options-tabs">
+                <ui:Button name="tab-general-btn" text="CHUNG" class="tab-btn active" />
+                <ui:Button name="tab-audio-btn" text="ÂM THANH" class="tab-btn" />
+                <ui:Button name="tab-graphics-btn" text="ĐỒ HỌA" class="tab-btn" />
+                <ui:Button name="tab-controls-btn" text="ĐIỀU KHIỂN" class="tab-btn" />
+            </ui:VisualElement>
+            <ui:ScrollView mode="Vertical" name="options-scroll-view" elastic="true" scroll-deceleration-rate="0.13" elasticity="0.1" class="options-content-scroll">
+                <ui:VisualElement name="tab-general" class="tab-content">
+                    <ui:Label text="CÀI ĐẶT CHUNG" class="settings-section-header" />
+                    <ui:VisualElement class="settings-row">
+                        <ui:Label name="lbl-opt-language" text="NGÔN NGỮ" class="settings-item-label" />
+                        <ui:VisualElement name="opt-language" class="custom-dropdown">
+                            <ui:Label name="opt-language-value" text="Vietnamese" class="custom-dropdown-value" />
+                            <ui:Label text="▼" class="custom-dropdown-arrow" />
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                </ui:VisualElement>
+                <ui:VisualElement name="tab-audio" class="tab-content hidden-element">
+                    <ui:Label text="ÂM LƯỢNG TRÒ CHƠI" class="settings-section-header" />
+                    <ui:VisualElement class="settings-row">
+                        <ui:Label name="lbl-master-volume" text="ÂM THANH TỔNG" class="settings-item-label" />
+                        <ui:VisualElement class="settings-slider-wrapper">
+                            <ui:Slider name="slider-master" low-value="0" high-value="100" value="100" class="custom-slider" />
+                            <ui:Label name="val-master" text="100%" class="slider-val" />
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                    <ui:VisualElement class="settings-row">
+                        <ui:Label name="lbl-music-bgm" text="NHẠC NỀN" class="settings-item-label" />
+                        <ui:VisualElement class="settings-slider-wrapper">
+                            <ui:Slider name="slider-music" low-value="0" high-value="100" value="80" class="custom-slider" />
+                            <ui:Label name="val-music" text="80%" class="slider-val" />
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                    <ui:VisualElement class="settings-row">
+                        <ui:Label name="lbl-effects-sfx" text="HIỆU ỨNG ÂM THANH" class="settings-item-label" />
+                        <ui:VisualElement class="settings-slider-wrapper">
+                            <ui:Slider name="slider-sfx" low-value="0" high-value="100" value="90" class="custom-slider" />
+                            <ui:Label name="val-sfx" text="90%" class="slider-val" />
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                    <ui:Label text="VOICE CHAT &amp; MICRO" class="settings-section-header" />
+                    <ui:VisualElement class="settings-row">
+                        <ui:Label name="lbl-opt-mic-device" text="THIẾT BỊ MICRO" class="settings-item-label" />
+                        <ui:VisualElement name="opt-mic-device" class="custom-dropdown">
+                            <ui:Label name="opt-mic-device-value" text="Default" class="custom-dropdown-value" />
+                            <ui:Label text="▼" class="custom-dropdown-arrow" />
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                    <ui:VisualElement class="settings-row">
+                        <ui:Label name="lbl-opt-output-device" text="THIẾT BỊ ĐẦU RA" class="settings-item-label" />
+                        <ui:VisualElement name="opt-output-device" class="custom-dropdown">
+                            <ui:Label name="opt-output-device-value" text="System Default" class="custom-dropdown-value" />
+                            <ui:Label text="▼" class="custom-dropdown-arrow" />
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                    <ui:VisualElement class="settings-row">
+                        <ui:Label name="lbl-opt-mic-mode" text="CHẾ ĐỘ TRUYỀN GIỌNG NÓI" class="settings-item-label" />
+                        <ui:VisualElement name="opt-mic-mode" class="custom-dropdown">
+                            <ui:Label name="opt-mic-mode-value" text="Push To Talk" class="custom-dropdown-value" />
+                            <ui:Label text="▼" class="custom-dropdown-arrow" />
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                    <ui:VisualElement class="settings-row">
+                        <ui:Label name="lbl-mic-input-vol" text="ÂM LƯỢNG MICRO THU" class="settings-item-label" />
+                        <ui:VisualElement class="settings-slider-wrapper">
+                            <ui:Slider name="slider-mic-input" low-value="0" high-value="100" value="100" class="custom-slider" />
+                            <ui:Label name="val-mic-input" text="100%" class="slider-val" />
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                    <ui:VisualElement class="settings-row">
+                        <ui:Label name="lbl-voice-playback-vol" text="ÂM LƯỢNG NGƯỜI CHƠI KHÁC" class="settings-item-label" />
+                        <ui:VisualElement class="settings-slider-wrapper">
+                            <ui:Slider name="slider-voice-playback" low-value="0" high-value="100" value="100" class="custom-slider" />
+                            <ui:Label name="val-voice-playback" text="100%" class="slider-val" />
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                </ui:VisualElement>
+                <ui:VisualElement name="tab-graphics" class="tab-content hidden-element">
+                    <ui:Label text="MÀN HÌNH &amp; ĐỘ PHÂN GIẢI" class="settings-section-header" />
+                    <ui:VisualElement class="settings-row">
+                        <ui:Label name="lbl-resolution" text="ĐỘ PHÂN GIẢI" class="settings-item-label" />
+                        <ui:VisualElement name="opt-resolution" class="custom-dropdown">
+                            <ui:Label name="opt-resolution-value" text="1920x1080 (FHD)" class="custom-dropdown-value" />
+                            <ui:Label text="▼" class="custom-dropdown-arrow" />
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                    <ui:VisualElement class="settings-row">
+                        <ui:Label text="CHẾ ĐỘ TOÀN MÀN HÌNH" class="settings-item-label" />
+                        <ui:Toggle name="opt-fullscreen" label="" value="true" class="checkbox-label" />
+                    </ui:VisualElement>
+                    <ui:VisualElement class="settings-row">
+                        <ui:Label text="ĐỒNG BỘ KHUNG HÌNH (V-SYNC)" class="settings-item-label" />
+                        <ui:Toggle name="opt-vsync" label="" value="true" class="checkbox-label" />
+                    </ui:VisualElement>
+                    <ui:VisualElement class="settings-row">
+                        <ui:Label name="lbl-fps-cap" text="GIỚI HẠN KHUNG HÌNH (FPS)" class="settings-item-label" />
+                        <ui:VisualElement name="opt-fpscap" class="custom-dropdown">
+                            <ui:Label name="opt-fpscap-value" text="Không giới hạn" class="custom-dropdown-value" />
+                            <ui:Label text="▼" class="custom-dropdown-arrow" />
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                    <ui:Label text="CHẤT LƯỢNG HÌNH ẢNH" class="settings-section-header" />
+                    <ui:VisualElement class="settings-row">
+                        <ui:Label name="lbl-graphics-quality" text="CHẤT LƯỢNG ĐỒ HỌA TỔNG" class="settings-item-label" />
+                        <ui:VisualElement name="opt-quality" class="custom-dropdown">
+                            <ui:Label name="opt-quality-value" text="Cao" class="custom-dropdown-value" />
+                            <ui:Label text="▼" class="custom-dropdown-arrow" />
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                    <ui:VisualElement class="settings-row">
+                        <ui:Label name="lbl-antialiasing" text="KHỬ RĂNG CƯA (ANTI-ALIASING)" class="settings-item-label" />
+                        <ui:VisualElement name="opt-aa" class="custom-dropdown">
+                            <ui:Label name="opt-aa-value" text="Tắt" class="custom-dropdown-value" />
+                            <ui:Label text="▼" class="custom-dropdown-arrow" />
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                    <ui:VisualElement class="settings-row">
+                        <ui:Label name="lbl-shadow-quality" text="CHẤT LƯỢNG BÓNG ĐỔ" class="settings-item-label" />
+                        <ui:VisualElement name="opt-shadows" class="custom-dropdown">
+                            <ui:Label name="opt-shadows-value" text="Cao" class="custom-dropdown-value" />
+                            <ui:Label text="▼" class="custom-dropdown-arrow" />
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                    <ui:VisualElement class="settings-row">
+                        <ui:Label name="lbl-particle-quality" text="CHẤT LƯỢNG HIỆU ỨNG HẠT" class="settings-item-label" />
+                        <ui:VisualElement name="opt-particles" class="custom-dropdown">
+                            <ui:Label name="opt-particles-value" text="Cao" class="custom-dropdown-value" />
+                            <ui:Label text="▼" class="custom-dropdown-arrow" />
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                    <ui:VisualElement class="settings-row">
+                        <ui:Label text="HIỆU ỨNG HẬU KỲ (POST-FX)" class="settings-item-label" />
+                        <ui:Toggle name="opt-postfx" label="" value="true" class="checkbox-label" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+                <ui:VisualElement name="tab-controls" class="tab-content hidden-element">
+                    <ui:Label text="CHUỘT &amp; BÀN PHÍM" class="settings-section-header" />
+                    <ui:VisualElement class="settings-row">
+                        <ui:Label name="lbl-mouse-sens" text="ĐỘ NHẠY CHUỘT" class="settings-item-label" />
+                        <ui:VisualElement class="settings-slider-wrapper">
+                            <ui:Slider name="slider-sens" low-value="1" high-value="100" value="50" class="custom-slider" />
+                            <ui:Label name="val-sens" text="50" class="slider-val" />
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                    <ui:VisualElement class="settings-row">
+                        <ui:Label text="ĐẢO NGƯỢC TRỤC Y" class="settings-item-label" />
+                        <ui:Toggle name="opt-invert-y" label="" value="false" class="checkbox-label" />
+                    </ui:VisualElement>
+                    <ui:VisualElement class="settings-row">
+                        <ui:Label name="lbl-ptt-key" text="PHÍM NHẤN ĐỂ NÓI (PTT)" class="settings-item-label" />
+                        <ui:VisualElement name="opt-ptt-key" class="custom-dropdown">
+                            <ui:Label name="opt-ptt-key-value" text="V" class="custom-dropdown-value" />
+                            <ui:Label text="▼" class="custom-dropdown-arrow" />
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                </ui:VisualElement>
+            </ui:ScrollView>
+            <ui:VisualElement class="options-actions">
+                <ui:Button name="btn-save-options" text="ÁP DỤNG" class="confirm-action-btn" />
+                <ui:Button name="btn-cancel-options" text="HỦY" class="back-action-btn" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+
+        <!-- POPUP XÁC NHẬN RỜI PHÒNG (QUIT) -->
+        <ui:VisualElement name="confirm-quit-overlay" class="confirm-overlay hidden-element">
+            <ui:VisualElement class="confirm-dialog">
+                <ui:VisualElement class="confirm-content">
+                    <ui:Label name="lbl-confirm-quit-title" text="RỜI TRẬN ĐẤU?" class="confirm-title" />
+                    <ui:Label name="lbl-confirm-quit-msg" text="Bạn có chắc chắn muốn rời phòng và quay về màn hình chính?" class="confirm-subtitle" />
+                </ui:VisualElement>
+                <ui:VisualElement class="confirm-buttons">
+                    <ui:Button name="btn-confirm-quit-yes" text="XÁC NHẬN" class="confirm-btn confirm-btn-yes" />
+                    <ui:Button name="btn-confirm-quit-no" text="HỦY" class="confirm-btn confirm-btn-no" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+        </ui:VisualElement>
+
+    </ui:VisualElement>
+</ui:UXML>

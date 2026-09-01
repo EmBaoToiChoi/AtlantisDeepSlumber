@@ -5261,7 +5261,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         if (targetCamera != null)
         {
-            if (isCursorLocked)
+            if (isCursorLocked && !IsUIBlockingInput())
             {
                 float mouseX = Input.GetAxis("Mouse X");
                 float mouseY = Input.GetAxis("Mouse Y");
@@ -8790,6 +8790,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
     {
         bool uiOpen = false;
         if (PlayerHUDController.isAnyUIOpen) uiOpen = true;
+        if (InGamePauseMenu.Instance != null && InGamePauseMenu.Instance.IsPauseOpen) uiOpen = true;
 
         bool isDialogueOpen = (RakanDialogueController.Instance != null && RakanDialogueController.Instance.IsActive) ||
                               (SilasDialogueController.Instance != null && SilasDialogueController.Instance.IsActive) ||
