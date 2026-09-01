@@ -1,5 +1,6 @@
 using UnityEngine;
 using Unity.Netcode;
+using System.Collections;
 using System.Collections.Generic;
 
 public class PlayerMapSpawner : NetworkBehaviour
@@ -98,114 +99,247 @@ public class PlayerMapSpawner : NetworkBehaviour
 
     public override void OnNetworkSpawn()
     {
+        if (IsServer)
+        {
+            if (NetworkManager.Singleton != null && NetworkManager.Singleton.SceneManager != null)
+            {
+                NetworkManager.Singleton.SceneManager.OnLoadEventCompleted += OnSceneLoadEventCompleted;
+            }
+            if (NetworkManager.Singleton != null)
+            {
+                NetworkManager.Singleton.OnClientConnectedCallback += OnClientConnected;
+
+                // Tự động kích hoạt cơ chế spawn dự phòng cho mọi Client đã kết nối sẵn trong phòng
+                if (NetworkManager.Singleton.ConnectedClientsList != null)
+                {
+                    foreach (var client in NetworkManager.Singleton.ConnectedClientsList)
+                    {
+                        StartCoroutine(DelayedAutoSpawnForClient(client.ClientId));
+                    }
+                }
+            }
+        }
+
         if (IsClient)
         {
-            // Lấy nhân vật đã chọn từ PlayerPrefs (đã được lưu ở waiting room)
-            int selectedChar = PlayerPrefs.GetInt("SelectedCharacterId", 0);
-            Debug.Log($"[PlayerMapSpawner] [CLIENT] OnNetworkSpawn gọi thành công. Gửi ServerRpc yêu cầu sinh Player cho Client (ClientId: {NetworkManager.Singleton.LocalClientId}, Nhân vật ID: {selectedChar})");
-            
-            // Gửi yêu cầu ServerRpc để server thực hiện spawn
-            RequestSpawnPlayerServerRpc(selectedChar);
+            StartCoroutine(ClientRequestSpawnCoroutine());
+        }
+    }
+
+    private IEnumerator ClientRequestSpawnCoroutine()
+    {
+        // Đợi 0.2s để scene load và NetworkObject đồng bộ hoàn toàn
+        yield return new WaitForSeconds(0.2f);
+
+        int selectedChar = PlayerPrefs.GetInt("SelectedCharacterId", 0);
+
+        Vector3 customPos = SaveManager.PendingSpawnPosition;
+        float customRotY = SaveManager.PendingSpawnRotationY;
+        bool hasCustomPos = SaveManager.HasPendingSpawnPosition && (customPos != Vector3.zero);
+
+        Debug.Log($"[PlayerMapSpawner] [CLIENT] Gửi ServerRpc yêu cầu sinh Player cho Client {NetworkManager.Singleton.LocalClientId} (Nhân vật ID: {selectedChar}, HasCustomPos: {hasCustomPos}, Pos: {customPos})");
+        RequestSpawnPlayerServerRpc(selectedChar, customPos, customRotY, hasCustomPos);
+    }
+
+    public override void OnNetworkDespawn()
+    {
+        if (IsServer && NetworkManager.Singleton != null)
+        {
+            if (NetworkManager.Singleton.SceneManager != null)
+            {
+                NetworkManager.Singleton.SceneManager.OnLoadEventCompleted -= OnSceneLoadEventCompleted;
+            }
+            NetworkManager.Singleton.OnClientConnectedCallback -= OnClientConnected;
+        }
+    }
+
+    private void OnClientConnected(ulong clientId)
+    {
+        Debug.Log($"[PlayerMapSpawner] [SERVER] Client {clientId} kết nối tới Server. Đợi Client gửi RequestSpawnPlayerServerRpc...");
+    }
+
+    private void OnSceneLoadEventCompleted(string sceneName, UnityEngine.SceneManagement.LoadSceneMode loadSceneMode, List<ulong> clientsCompleted, List<ulong> clientsTimedOut)
+    {
+        if (!IsServer) return;
+
+        Debug.Log($"[PlayerMapSpawner] [SERVER] Scene '{sceneName}' tải xong cho {clientsCompleted?.Count ?? 0} clients.");
+        
+        if (clientsCompleted != null)
+        {
+            foreach (var clientId in clientsCompleted)
+            {
+                StartCoroutine(DelayedAutoSpawnForClient(clientId));
+            }
+        }
+    }
+
+    private IEnumerator DelayedAutoSpawnForClient(ulong clientId)
+    {
+        // Đợi 2.5 giây cho Client gửi RequestSpawnPlayerServerRpc
+        yield return new WaitForSeconds(2.5f);
+
+        if (!IsServer) yield break;
+        if (NetworkManager.Singleton == null) yield break;
+
+        if (NetworkManager.Singleton.ConnectedClients.TryGetValue(clientId, out var client))
+        {
+            if (client.PlayerObject == null)
+            {
+                Debug.LogWarning($"[PlayerMapSpawner] [SERVER] Client {clientId} chưa có PlayerObject sau thời gian chờ. Tự động fallback spawn...");
+                SpawnPlayerForClient(clientId, 0);
+            }
+            else
+            {
+                Debug.Log($"[PlayerMapSpawner] [SERVER] Client {clientId} đã có PlayerObject hợp lệ. Bỏ qua fallback.");
+            }
         }
     }
 
     [ServerRpc(RequireOwnership = false)]
-    private void RequestSpawnPlayerServerRpc(int characterId, ServerRpcParams rpcParams = default)
+    private void RequestSpawnPlayerServerRpc(int characterId, Vector3 customPos = default, float customRotY = 0f, bool hasCustomPos = false, ServerRpcParams rpcParams = default)
     {
         if (!IsServer) return;
 
         ulong clientId = rpcParams.Receive.SenderClientId;
-        Debug.Log($"[PlayerMapSpawner] [SERVER] Nhận yêu cầu spawn từ Client {clientId} cho Nhân vật ID: {characterId}");
+        Debug.Log($"[PlayerMapSpawner] [SERVER] Nhận yêu cầu spawn từ Client {clientId} cho Nhân vật ID: {characterId} (HasCustomPos: {hasCustomPos}, Pos: {customPos})");
 
-        SpawnPlayerForClient(clientId, characterId);
+        SpawnPlayerForClient(clientId, characterId, customPos, customRotY, hasCustomPos);
     }
 
-    private void SpawnPlayerForClient(ulong clientId, int characterId)
+    public void SpawnPlayerForClient(ulong clientId, int characterId, Vector3 customPos = default, float customRotY = 0f, bool hasCustomPos = false)
     {
         if (!IsServer) return;
+        StartCoroutine(SpawnPlayerCoroutine(clientId, characterId, customPos, customRotY, hasCustomPos));
+    }
 
-        Debug.Log($"[PlayerMapSpawner] [SERVER] Bắt đầu sinh nhân vật cho Client {clientId} (ID Nhân vật: {characterId})");
+    private IEnumerator SpawnPlayerCoroutine(ulong clientId, int characterId, Vector3 customPos, float customRotY, bool hasCustomPos)
+    {
+        Debug.Log($"[PlayerMapSpawner] [SERVER] Bắt đầu coroutine sinh nhân vật cho Client {clientId} (ID: {characterId}, HasCustomPos: {hasCustomPos}, Pos: {customPos})");
 
         // 1. Xác định Prefab cần spawn
         GameObject selectedPrefab = GetPlayerPrefab(characterId);
         if (selectedPrefab == null)
         {
             Debug.LogError($"[PlayerMapSpawner] [SERVER] Không thể spawn! Chưa gán Prefab cho nhân vật ID {characterId} và không có prefab mặc định.");
-            return;
+            yield break;
         }
 
-        // 2. Thu hồi PlayerObject cũ (nếu có - ví dụ lobby avatar mang sang từ waiting hall)
+        // 2. Thu hồi PlayerObject cũ (nếu có) và đợi 1 frame để Netcode dọn sạch liên kết cũ
         if (NetworkManager.Singleton.ConnectedClients.TryGetValue(clientId, out var clientConnection))
         {
             if (clientConnection.PlayerObject != null)
             {
-                // Nếu đã có nhân vật gameplay chính thức rồi thì bỏ qua không spawn lại (trừ khi đang chạy debug/test nhanh trong editor)
-                bool isTesting = false;
-#if UNITY_EDITOR
-                isTesting = autoStartNetworkInEditor;
-#endif
-                bool hasGameplayCharacter = false;
-                if (clientConnection.PlayerObject.GetComponent<LeoPlayer>() != null ||
-                    clientConnection.PlayerObject.GetComponent<MayaPlayer>() != null ||
-                    clientConnection.PlayerObject.GetComponent<ElenaPlayer>() != null ||
-                    clientConnection.PlayerObject.GetComponent<ArthurPlayer>() != null)
-                {
-                    hasGameplayCharacter = true;
-                }
-
-                if (!isTesting && hasGameplayCharacter)
-                {
-                    Debug.Log($"[PlayerMapSpawner] [SERVER] Client {clientId} đã có nhân vật gameplay chính thức. Bỏ qua spawn để tránh ghi đè.");
-                    return;
-                }
-
-                Debug.Log($"[PlayerMapSpawner] [SERVER] Phát hiện Client {clientId} đã có PlayerObject cũ. Đang tiến hành thu hồi để spawn nhân vật mới...");
+                Debug.Log($"[PlayerMapSpawner] [SERVER] Thu hồi PlayerObject cũ của Client {clientId}...");
                 NetworkObject oldPlayerObj = clientConnection.PlayerObject;
-                if (oldPlayerObj.IsSpawned)
+                if (oldPlayerObj != null)
                 {
-                    oldPlayerObj.Despawn(true);
+                    if (oldPlayerObj.IsSpawned)
+                    {
+                        oldPlayerObj.Despawn(true);
+                    }
+                    else
+                    {
+                        Destroy(oldPlayerObj.gameObject);
+                    }
                 }
-                else
-                {
-                    Destroy(oldPlayerObj.gameObject);
-                }
+                yield return null; // Chờ 1 frame để NetworkManager cập nhật clientConnection.PlayerObject = null
             }
         }
 
         // 3. Xác định vị trí spawn
-        Transform spawnPoint = GetSpawnPointForClient(clientId);
         Vector3 spawnPos;
         Quaternion spawnRot;
-        if (spawnPoint != null)
+
+        bool isValidCustomPos = hasCustomPos && (customPos != Vector3.zero) && (customPos.sqrMagnitude > 10f);
+
+        if (isValidCustomPos)
         {
-            spawnPos = spawnPoint.position;
-            spawnRot = spawnPoint.rotation;
-            Debug.Log($"[PlayerMapSpawner] [SERVER] Client {clientId} sử dụng SpawnPoint: {spawnPoint.name} tại vị trí: {spawnPos}");
+            spawnPos = customPos + new Vector3(0, 0.5f, 0);
+            spawnRot = Quaternion.Euler(0, customRotY, 0);
+            Debug.Log($"[PlayerMapSpawner] [SERVER] Client {clientId} (Tiếp Tục) sử dụng vị trí lưu: {spawnPos}");
         }
         else
         {
-            spawnPos = transform.position;
-            spawnRot = transform.rotation;
-            Debug.LogWarning($"[PlayerMapSpawner] [SERVER] Client {clientId} KHÔNG tìm thấy SpawnPoint hợp lệ! Fallback về vị trí Spawner: {spawnPos}");
-        }
+            Transform spawnPoint = GetSpawnPointForClient(clientId);
+            if (spawnPoint != null)
+            {
+                spawnPos = spawnPoint.position;
+                spawnRot = spawnPoint.rotation;
+                Debug.Log($"[PlayerMapSpawner] [SERVER] Client {clientId} (Chơi Mới) sử dụng SpawnPoint ban đầu: {spawnPoint.name} tại vị trí: {spawnPos}");
+            }
+            else
+            {
+                spawnPos = transform.position;
+                spawnRot = transform.rotation;
+                Debug.LogWarning($"[PlayerMapSpawner] [SERVER] Client {clientId} KHÔNG tìm thấy SpawnPoint hợp lệ! Fallback về vị trí Spawner: {spawnPos}");
+            }
 
-        // Thêm một chút offset ngẫu nhiên nhỏ để tránh các người chơi đè lên nhau chính xác tuyệt đối
-        // Tăng thêm 0.5f trên trục Y để tránh việc người chơi bị spawn lún dưới đất dẫn đến rơi xuyên map
-        spawnPos += new Vector3(Random.Range(-0.2f, 0.2f), 0.5f, Random.Range(-0.2f, 0.2f));
+            spawnPos += new Vector3(Random.Range(-0.2f, 0.2f), 0.5f, Random.Range(-0.2f, 0.2f));
+        }
 
         // 4. Khởi tạo và Spawn trên Network
         GameObject playerObj = Instantiate(selectedPrefab, spawnPos, spawnRot);
+        Rigidbody rb = playerObj.GetComponent<Rigidbody>();
+        if (rb != null)
+        {
+            rb.linearVelocity = Vector3.zero;
+            rb.angularVelocity = Vector3.zero;
+        }
+
         NetworkObject netObj = playerObj.GetComponent<NetworkObject>();
 
         if (netObj != null)
         {
             netObj.SpawnAsPlayerObject(clientId, true);
             Debug.Log($"[PlayerMapSpawner] [SERVER] Đã spawn thành công gameplay Player cho Client {clientId} với prefab '{selectedPrefab.name}' tại {spawnPos}");
+
+            // Gửi ClientRpc chỉ đích danh Client sở hữu để ép cập nhật đúng vị trí Slot/Save
+            NotifySpawnPositionClientRpc(spawnPos, spawnRot.eulerAngles.y, new ClientRpcParams
+            {
+                Send = new ClientRpcSendParams
+                {
+                    TargetClientIds = new ulong[] { clientId }
+                }
+            });
         }
         else
         {
             Debug.LogError($"[PlayerMapSpawner] [SERVER] Thất bại! Prefab '{selectedPrefab.name}' thiếu thành phần NetworkObject.");
             Destroy(playerObj);
+        }
+    }
+
+    [ClientRpc]
+    private void NotifySpawnPositionClientRpc(Vector3 pos, float rotY, ClientRpcParams clientRpcParams = default)
+    {
+        Debug.Log($"[PlayerMapSpawner] [CLIENT] Nhận lệnh đặt vị trí spawn từ Server: {pos}");
+        StartCoroutine(ApplySpawnPositionCoroutine(pos, rotY));
+    }
+
+    private IEnumerator ApplySpawnPositionCoroutine(Vector3 pos, float rotY)
+    {
+        for (int i = 0; i < 15; i++)
+        {
+            if (NetworkManager.Singleton != null && NetworkManager.Singleton.LocalClient != null)
+            {
+                var localPlayerObj = NetworkManager.Singleton.LocalClient.PlayerObject;
+                if (localPlayerObj != null)
+                {
+                    localPlayerObj.transform.position = pos;
+                    localPlayerObj.transform.rotation = Quaternion.Euler(0, rotY, 0);
+
+                    var rb = localPlayerObj.GetComponent<Rigidbody>();
+                    if (rb != null)
+                    {
+                        rb.position = pos;
+                        rb.linearVelocity = Vector3.zero;
+                        rb.angularVelocity = Vector3.zero;
+                    }
+                    Debug.Log($"[PlayerMapSpawner] [CLIENT] Đã đặt vị trí nhân vật thành công tại slot: {pos}");
+                    yield break;
+                }
+            }
+            yield return null;
         }
     }
 

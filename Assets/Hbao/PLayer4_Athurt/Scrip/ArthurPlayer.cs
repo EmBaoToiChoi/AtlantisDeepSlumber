@@ -1504,7 +1504,8 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (targetCamera == null)
             targetCamera = FindObjectOfType<Camera>();
 
-        characterClassIndex = PlayerPrefs.GetInt("SelectedCharacterId", characterClassIndex);
+        // Arthur luôn là class index 1
+        characterClassIndex = 1;
         playerName.Value = PlayerPrefs.GetString("AuthDisplayName", "Arthur");
         if (PlayerHUDManager.ActivePlayers != null && !PlayerHUDManager.ActivePlayers.Contains(this))
         {
@@ -1590,7 +1591,8 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         if (IsOwner)
         {
-            characterClassIndex = PlayerPrefs.GetInt("SelectedCharacterId", characterClassIndex);
+            // Arthur luôn là class index 1
+            characterClassIndex = 1;
 
             string myName = PlayerPrefs.GetString("AuthDisplayName", "Arthur");
             SetPlayerNameServerRpc(myName);
@@ -1620,6 +1622,30 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
             targetCamera = Camera.main;
             if (targetCamera == null)
                 targetCamera = FindObjectOfType<Camera>();
+
+            float initRotY = transform.eulerAngles.y;
+            targetYaw = initRotY;
+            currentYaw = initRotY;
+
+            if (SaveManager.HasPendingSpawnPosition && IsOwner)
+            {
+                Vector3 targetPos = SaveManager.PendingSpawnPosition;
+                float targetRotY = SaveManager.PendingSpawnRotationY;
+                SaveManager.HasPendingSpawnPosition = false;
+
+                if (targetPos != Vector3.zero && targetPos.sqrMagnitude > 10f)
+                {
+                    transform.position = targetPos;
+                    SetFacingAndCameraRotation(targetRotY);
+                    var rb = GetComponent<Rigidbody>();
+                    if (rb != null)
+                    {
+                        rb.position = targetPos;
+                        rb.linearVelocity = Vector3.zero;
+                        rb.angularVelocity = Vector3.zero;
+                    }
+                }
+            }
 
             LoadPlayerStateFromDatabase();
 
@@ -3150,6 +3176,26 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         }
     }
 
+    public void SetFacingAndCameraRotation(float rotY)
+    {
+        transform.rotation = Quaternion.Euler(0, rotY, 0);
+        targetYaw = rotY;
+        currentYaw = rotY;
+        if (targetCamera != null)
+        {
+            float yawRad = rotY * Mathf.Deg2Rad;
+            float pitchRad = currentPitch * Mathf.Deg2Rad;
+            Vector3 rotatedOffset = new Vector3(
+                cameraDistance * Mathf.Cos(pitchRad) * Mathf.Sin(yawRad),
+                cameraDistance * Mathf.Sin(pitchRad),
+                -cameraDistance * Mathf.Cos(pitchRad) * Mathf.Cos(yawRad)
+            );
+            Vector3 pivotPosition = transform.position + Vector3.up * cameraPivotHeight;
+            targetCamera.transform.position = pivotPosition + rotatedOffset;
+            targetCamera.transform.rotation = Quaternion.LookRotation(pivotPosition - targetCamera.transform.position);
+        }
+    }
+
     private void UpdateCameraCharacterVisibility(float currentCamDist)
     {
         bool shouldHide = currentCamDist < cameraHideDistance;
@@ -4450,14 +4496,22 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     private async void LoadPlayerStateFromDatabase()
     {
-        Debug.Log("[DB] Bắt đầu tải trạng thái người chơi từ MongoDB Atlas...");
+        Debug.Log($"[ArthurPlayer DB] Loading player state (ContinueMode={SaveManager.IsContinueMode})...");
         try
         {
-            var res = await AuthService.GetPlayerState();
-            if (res != null && res.success && res.playerState != null)
-            {
-                var state = res.playerState;
+            PlayerStateData state = null;
 
+            if (!SaveManager.IsContinueMode)
+            {
+                state = SaveManager.GetDefaultCharacterState(characterClassIndex);
+            }
+            else
+            {
+                state = SaveManager.LoadCharacterState(characterClassIndex);
+            }
+
+            if (state != null)
+            {
                 SyncPlayerStateServerRpc(
                     state.health,
                     state.activeWeaponIndex,
@@ -4503,7 +4557,7 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         }
         catch (System.Exception ex)
         {
-            Debug.LogError($"[DB] Lỗi khi kết nối API tải dữ liệu MongoDB: {ex.Message}");
+            Debug.LogError($"[ArthurPlayer DB] Error loading state: {ex.Message}");
             SyncPlayerStateServerRpc(maxHealth, 1, false, true, 0, 0, 0, 0, 0, 0, 0, 0f);
         }
     }
@@ -4572,11 +4626,16 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
                 playerExp = playerExp.Value
             };
 
+            // 1. Lưu cục bộ qua SaveManager
+            SaveManager.SaveCharacterState(characterClassIndex, stateData);
+            SaveManager.SaveWorldSave(UnityEngine.SceneManagement.SceneManager.GetActiveScene().name, transform.position, transform.eulerAngles.y);
+
+            // 2. Đồng bộ lên Cloud
             var res = await AuthService.SavePlayerState(stateData);
         }
         catch (System.Exception ex)
         {
-            Debug.LogError($"[DB] Lỗi khi gọi API lưu trạng thái MongoDB: {ex.Message}");
+            Debug.LogError($"[ArthurPlayer DB] Error saving state: {ex.Message}");
         }
     }
 
@@ -5442,6 +5501,26 @@ public class ArthurPlayer : NetworkBehaviour, IPlayerHUDTarget
         {
             PlayerHUDManager.ActivePlayers.Remove(this);
         }
+
+        if (IsOwner || isStandaloneMode)
+        {
+            if (transform.position != Vector3.zero && transform.position.y > -20f)
+            {
+                SavePlayerStateToDatabase();
+            }
+        }
+
         base.OnDestroy();
+    }
+
+    private void OnApplicationQuit()
+    {
+        if (IsOwner || isStandaloneMode)
+        {
+            if (transform.position != Vector3.zero && transform.position.y > -20f)
+            {
+                SavePlayerStateToDatabase();
+            }
+        }
     }
 }

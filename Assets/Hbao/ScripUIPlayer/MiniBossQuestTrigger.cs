@@ -4,8 +4,11 @@ using Unity.Netcode;
 
 public class MiniBossQuestTrigger : NetworkBehaviour, IQuestTrigger
 {
-    public bool IsQuestCompleted => (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening) ? isQuestCompletedNet.Value : isQuestCompletedLocal;
-    public bool IsQuestActive => (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening) ? isQuestActive.Value : hasTriggeredQuest;
+    public bool IsQuestCompleted => (SaveManager.IsContinueMode && SaveManager.IsQuestCompleted("MiniBossQuest")) || 
+        ((NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening) ? isQuestCompletedNet.Value : isQuestCompletedLocal);
+
+    public bool IsQuestActive => !(SaveManager.IsContinueMode && SaveManager.IsQuestCompleted("MiniBossQuest")) && 
+        ((NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening) ? isQuestActive.Value : hasTriggeredQuest);
 
     [Header("Quest Prerequisite Settings")]
     [Tooltip("Nhiệm vụ tiền đề bắt buộc phải hoàn thành trước khi nhiệm vụ này được hiển thị/kích hoạt")]
@@ -88,6 +91,13 @@ public class MiniBossQuestTrigger : NetworkBehaviour, IQuestTrigger
 
     private void Start()
     {
+        if (SaveManager.IsContinueMode && SaveManager.IsQuestCompleted("MiniBossQuest"))
+        {
+            isQuestCompletedLocal = true;
+            if (miniBoss != null) miniBoss.gameObject.SetActive(false);
+            return;
+        }
+
         if (miniBoss == null)
         {
             miniBoss = FindFirstObjectByType<MiniBossAI>();
@@ -108,9 +118,16 @@ public class MiniBossQuestTrigger : NetworkBehaviour, IQuestTrigger
         bossDefeatedCount.OnValueChanged += OnBossDefeatedCountChanged;
         isQuestCompletedNet.OnValueChanged += OnQuestCompletedChanged;
 
-        if (isQuestCompletedNet.Value)
+        if (isQuestCompletedNet.Value || (SaveManager.IsContinueMode && SaveManager.IsQuestCompleted("MiniBossQuest")))
         {
             isQuestCompletedLocal = true;
+            SaveManager.MarkQuestCompleted("MiniBossQuest");
+            if (miniBoss != null) miniBoss.gameObject.SetActive(false);
+            if (IsServer)
+            {
+                isQuestCompletedNet.Value = true;
+                isQuestActive.Value = false;
+            }
         }
         else if (isQuestActive.Value && IsPrerequisiteCompleted())
         {
@@ -131,6 +148,8 @@ public class MiniBossQuestTrigger : NetworkBehaviour, IQuestTrigger
         if (newVal)
         {
             isQuestCompletedLocal = true;
+            SaveManager.MarkQuestCompleted("MiniBossQuest");
+            if (miniBoss != null) miniBoss.gameObject.SetActive(false);
             ShowCompletionUI();
         }
     }
@@ -247,6 +266,7 @@ public class MiniBossQuestTrigger : NetworkBehaviour, IQuestTrigger
     {
         if (isQuestCompletedLocal) return;
         isQuestCompletedLocal = true;
+        SaveManager.MarkQuestCompleted("MiniBossQuest");
 
         bool isNetwork = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
         if (isNetwork && IsServer)

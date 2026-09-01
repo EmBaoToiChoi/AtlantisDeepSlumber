@@ -40,12 +40,18 @@ public class Puzzle4UI : NetworkBehaviour
     public Color color50  = new Color(1f, 0.8f, 0.2f);
     public Color color100 = new Color(0.3f, 1f, 0.4f);
 
+    private void Awake()
+    {
+        gameObject.SetActive(false);
+    }
+
     void Start()
     {
         // Lưu lại kích thước ban đầu của text để làm chuẩn cho hiệu ứng Pop
         if (aText != null) baseScale = aText.transform.localScale;
         else if (bText != null) baseScale = bText.transform.localScale;
         else if (cText != null) baseScale = cText.transform.localScale;
+        gameObject.SetActive(false);
     }
 
     void Update()

@@ -4,8 +4,11 @@ using Unity.Netcode;
 
 public class WaterFreezeQuestTrigger : NetworkBehaviour, IQuestTrigger
 {
-    public bool IsQuestCompleted => (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening) ? isQuestCompletedNet.Value : isQuestCompleted;
-    public bool IsQuestActive => (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening) ? isQuestActive.Value : hasTriggeredQuest;
+    public bool IsQuestCompleted => (SaveManager.IsContinueMode && SaveManager.IsQuestCompleted("WaterFreezeQuest")) || 
+        ((NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening) ? isQuestCompletedNet.Value : isQuestCompleted);
+
+    public bool IsQuestActive => !(SaveManager.IsContinueMode && SaveManager.IsQuestCompleted("WaterFreezeQuest")) && 
+        ((NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening) ? isQuestActive.Value : hasTriggeredQuest);
 
     [Header("Quest Prerequisite Settings")]
     [Tooltip("Nhiệm vụ tiền đề bắt buộc phải hoàn thành trước khi nhiệm vụ này được hiển thị/kích hoạt")]
@@ -102,9 +105,15 @@ public class WaterFreezeQuestTrigger : NetworkBehaviour, IQuestTrigger
         isQuestActive.OnValueChanged += OnQuestActiveChanged;
         isQuestCompletedNet.OnValueChanged += OnQuestCompletedChanged;
         
-        if (isQuestCompletedNet.Value)
+        if (isQuestCompletedNet.Value || (SaveManager.IsContinueMode && SaveManager.IsQuestCompleted("WaterFreezeQuest")))
         {
             isQuestCompleted = true;
+            SaveManager.MarkQuestCompleted("WaterFreezeQuest");
+            if (IsServer)
+            {
+                isQuestCompletedNet.Value = true;
+                isQuestActive.Value = false;
+            }
         }
         else if (isQuestActive.Value && IsPrerequisiteCompleted())
         {
@@ -123,7 +132,7 @@ public class WaterFreezeQuestTrigger : NetworkBehaviour, IQuestTrigger
     {
         if (newVal)
         {
-            isQuestCompleted = true;
+            CompleteQuest();
         }
     }
 
@@ -214,6 +223,7 @@ public class WaterFreezeQuestTrigger : NetworkBehaviour, IQuestTrigger
     {
         if (isQuestCompleted) return;
         isQuestCompleted = true;
+        SaveManager.MarkQuestCompleted("WaterFreezeQuest");
 
         bool isNetwork = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
         if (isNetwork && IsServer)

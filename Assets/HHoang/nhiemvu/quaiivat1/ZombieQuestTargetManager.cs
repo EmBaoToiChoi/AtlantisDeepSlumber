@@ -7,13 +7,15 @@ public class ZombieQuestTargetManager : NetworkBehaviour, IQuestTrigger
 {
     public static ZombieQuestTargetManager Instance;
 
-    public bool IsQuestCompleted => (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening) 
-        ? (isQuestCompleted != null && isQuestCompleted.Value) 
-        : isQuestCompletedLocal;
+    public bool IsQuestCompleted => (SaveManager.IsContinueMode && SaveManager.IsQuestCompleted("ZombieQuest")) || 
+        ((NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening) 
+            ? (isQuestCompleted != null && isQuestCompleted.Value) 
+            : isQuestCompletedLocal);
 
-    public bool IsQuestActive => (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening) 
-        ? (isQuestActive != null && isQuestActive.Value) 
-        : isQuestActiveLocal;
+    public bool IsQuestActive => !(SaveManager.IsContinueMode && SaveManager.IsQuestCompleted("ZombieQuest")) && 
+        ((NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening) 
+            ? (isQuestActive != null && isQuestActive.Value) 
+            : isQuestActiveLocal);
 
     [Header("Quest Prerequisite Settings")]
     [Tooltip("Nhiệm vụ tiền đề bắt buộc phải hoàn thành trước khi nhiệm vụ này được hiển thị/kích hoạt")]
@@ -94,6 +96,69 @@ public class ZombieQuestTargetManager : NetworkBehaviour, IQuestTrigger
 
     public override void OnNetworkSpawn()
     {
+        if (isQuestCompleted.Value || (SaveManager.IsContinueMode && SaveManager.IsQuestCompleted("ZombieQuest")))
+        {
+            isQuestCompletedLocal = true;
+            isQuestActiveLocal = false;
+            SaveManager.MarkQuestCompleted("ZombieQuest");
+            
+            if (IsServer)
+            {
+                isQuestCompleted.Value = true;
+                isQuestActive.Value = false;
+
+                if (zombieTargets != null)
+                {
+                    foreach (var z in zombieTargets)
+                    {
+                        if (z != null)
+                        {
+                            if (z.TryGetComponent<NetworkObject>(out var netObj) && netObj.IsSpawned)
+                            {
+                                netObj.Despawn(true);
+                            }
+                            else
+                            {
+                                Destroy(z.gameObject);
+                            }
+                        }
+                    }
+                }
+
+                var allZombies = FindObjectsByType<Enemy2_Zombie>(FindObjectsSortMode.None);
+                foreach (var ez in allZombies)
+                {
+                    if (ez != null)
+                    {
+                        if (ez.TryGetComponent<NetworkObject>(out var netObj) && netObj.IsSpawned)
+                        {
+                            netObj.Despawn(true);
+                        }
+                        else
+                        {
+                            Destroy(ez.gameObject);
+                        }
+                    }
+                }
+
+                EnablePostQuestObjects();
+            }
+            else
+            {
+                SyncCompletedQuestStateServerRpc();
+
+                if (zombieTargets != null)
+                {
+                    foreach (var z in zombieTargets)
+                    {
+                        if (z != null) z.gameObject.SetActive(false);
+                    }
+                }
+                EnablePostQuestObjects();
+            }
+            return;
+        }
+
         currentKills.OnValueChanged += OnKillsChanged;
         isQuestActive.OnValueChanged += OnQuestActiveChanged;
         isQuestCompleted.OnValueChanged += OnQuestCompletedChanged;
@@ -101,12 +166,62 @@ public class ZombieQuestTargetManager : NetworkBehaviour, IQuestTrigger
         if (isQuestCompleted.Value)
         {
             isQuestCompletedLocal = true;
+            SaveManager.MarkQuestCompleted("ZombieQuest");
+            EnablePostQuestObjects();
         }
         else if (isQuestActive.Value && IsPrerequisiteCompleted())
         {
             isQuestActiveLocal = true;
             UpdateQuestUI();
         }
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    private void SyncCompletedQuestStateServerRpc()
+    {
+        if (!IsServer) return;
+        Debug.Log("[ZombieQuestTargetManager] [SERVER] Client thông báo ZombieQuest đã hoàn thành từ Save. Tiến hành despawn sạch toàn bộ quái trên Server.");
+
+        isQuestCompleted.Value = true;
+        isQuestActive.Value = false;
+        isQuestCompletedLocal = true;
+        SaveManager.MarkQuestCompleted("ZombieQuest");
+
+        if (zombieTargets != null)
+        {
+            foreach (var z in zombieTargets)
+            {
+                if (z != null)
+                {
+                    if (z.TryGetComponent<NetworkObject>(out var netObj) && netObj.IsSpawned)
+                    {
+                        netObj.Despawn(true);
+                    }
+                    else
+                    {
+                        Destroy(z.gameObject);
+                    }
+                }
+            }
+        }
+
+        var allZombies = FindObjectsByType<Enemy2_Zombie>(FindObjectsSortMode.None);
+        foreach (var ez in allZombies)
+        {
+            if (ez != null)
+            {
+                if (ez.TryGetComponent<NetworkObject>(out var netObj) && netObj.IsSpawned)
+                {
+                    netObj.Despawn(true);
+                }
+                else
+                {
+                    Destroy(ez.gameObject);
+                }
+            }
+        }
+
+        EnablePostQuestObjects();
     }
 
     public override void OnNetworkDespawn()
@@ -236,6 +351,8 @@ public class ZombieQuestTargetManager : NetworkBehaviour, IQuestTrigger
 
     public void CompleteQuest()
     {
+        SaveManager.MarkQuestCompleted("ZombieQuest");
+
         bool isNetwork = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
         if (isNetwork && !IsServer) return;
 
@@ -243,6 +360,7 @@ public class ZombieQuestTargetManager : NetworkBehaviour, IQuestTrigger
         {
             isQuestCompleted.Value = true;
             isQuestActive.Value = false;
+            NotifyQuestCompletedClientRpc();
         }
         else
         {
@@ -259,6 +377,16 @@ public class ZombieQuestTargetManager : NetworkBehaviour, IQuestTrigger
         }
     }
 
+    [ClientRpc]
+    private void NotifyQuestCompletedClientRpc()
+    {
+        SaveManager.MarkQuestCompleted("ZombieQuest");
+        isQuestCompletedLocal = true;
+        isQuestActiveLocal = false;
+        CompleteQuestUI();
+        EnablePostQuestObjects();
+    }
+
     private void OnKillsChanged(int oldVal, int newVal)
     {
         if (isQuestActive.Value) UpdateQuestUI();
@@ -273,7 +401,9 @@ public class ZombieQuestTargetManager : NetworkBehaviour, IQuestTrigger
     {
         if (newVal == true)
         {
+            SaveManager.MarkQuestCompleted("ZombieQuest");
             isQuestCompletedLocal = true;
+            isQuestActiveLocal = false;
             CompleteQuestUI();
             EnablePostQuestObjects();
         }

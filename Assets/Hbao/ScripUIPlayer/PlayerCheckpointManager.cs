@@ -179,12 +179,30 @@ public class PlayerCheckpointManager : NetworkBehaviour
         Debug.Log("[PlayerCheckpointManager] All checkpoint data has been reset. hasActivatedAnyCheckpoint=false");
     }
 
-    /// <summary>
-    /// Quét lại toàn bộ CheckpointZone trong scene và cache vị trí.
-    /// </summary>
     private void RescanCheckpoints()
     {
         checkpoints = new List<CheckpointZone>(FindObjectsByType<CheckpointZone>(FindObjectsSortMode.None));
+        if (checkpoints.Count == 0)
+        {
+            var parentCp = GameObject.Find("Checkpoint") ?? GameObject.Find("QuanTrong/Checkpoint");
+            if (parentCp != null)
+            {
+                int idx = 0;
+                for (int i = 0; i < parentCp.transform.childCount; i++)
+                {
+                    var child = parentCp.transform.GetChild(i);
+                    var cz = child.GetComponent<CheckpointZone>();
+                    if (cz == null)
+                    {
+                        cz = child.gameObject.AddComponent<CheckpointZone>();
+                        cz.checkpointIndex = idx++;
+                        cz.spawnPointOverride = child;
+                        cz.radius = 15f;
+                    }
+                    checkpoints.Add(cz);
+                }
+            }
+        }
         checkpoints.Sort((a, b) => a.checkpointIndex.CompareTo(b.checkpointIndex));
         CacheAllCheckpointPositions();
         Debug.Log($"[PlayerCheckpointManager] Đã tự động quét và sắp xếp {checkpoints.Count} Checkpoint(s) trong scene.");
@@ -475,11 +493,11 @@ public class PlayerCheckpointManager : NetworkBehaviour
         }
         // Đánh dấu đã có checkpoint được kích hoạt
         hasActivatedAnyCheckpoint = true;
-        // Cache vị trí checkpoint trên Client để đảm bảo luôn có dữ liệu chính xác
         if (checkpointPosition != Vector3.zero)
         {
             cachedCheckpointPositions[checkpointIndex] = checkpointPosition;
             allCheckpointPositions[checkpointIndex] = checkpointPosition;
+            SaveManager.SaveWorldSave(UnityEngine.SceneManagement.SceneManager.GetActiveScene().name, checkpointPosition, 0f);
         }
         Debug.Log($"[Client Checkpoint] Đã cập nhật checkpoint index {checkpointIndex} (pos: {checkpointPosition}) trên Client từ Server.");
     }

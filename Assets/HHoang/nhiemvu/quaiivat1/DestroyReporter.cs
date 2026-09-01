@@ -9,6 +9,23 @@ public class DestroyReporter : NetworkBehaviour
 
     private bool hasReported = false;
 
+    public override void OnNetworkSpawn()
+    {
+        if (SaveManager.IsContinueMode && SaveManager.IsQuestCompleted("ZombieQuest"))
+        {
+            if (IsServer)
+            {
+                var netObj = GetComponent<NetworkObject>();
+                if (netObj != null && netObj.IsSpawned)
+                {
+                    netObj.Despawn(true);
+                    return;
+                }
+            }
+            gameObject.SetActive(false);
+        }
+    }
+
     public void ReportDestroyed()
     {
         if (hasReported) return;

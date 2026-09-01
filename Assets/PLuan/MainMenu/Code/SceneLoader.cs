@@ -41,8 +41,37 @@ public class SceneLoader : MonoBehaviour
         }
     }
 
+    private void OnEnable()
+    {
+        SceneManager.sceneLoaded += OnSceneLoaded;
+    }
+
+    private void OnDisable()
+    {
+        SceneManager.sceneLoaded -= OnSceneLoaded;
+    }
+
+    private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        // Khi load vào bất kỳ map gameplay nào khác MainMenu
+        if (scene.name != "MainMenu" && scene.name != "Lobby")
+        {
+            CancelInvoke(nameof(ForceHideLoading));
+            Invoke(nameof(ForceHideLoading), 0.3f);
+        }
+    }
+
+    private void ForceHideLoading()
+    {
+        HideLoading();
+    }
+
     private void InitializeUI()
     {
+        if (_loadingUIDoc == null)
+        {
+            _loadingUIDoc = GetComponent<UIDocument>();
+        }
         if (_loadingUIDoc == null) return;
         
         // Đảm bảo loading screen luôn đè lên các UI khác
@@ -63,7 +92,11 @@ public class SceneLoader : MonoBehaviour
         SetupVideoPlayer();
         
         // Đảm bảo ẩn lúc đầu
-        if (_root != null) _root.AddToClassList("hidden-element");
+        if (_root != null)
+        {
+            _root.style.display = DisplayStyle.None;
+            _root.AddToClassList("hidden-element");
+        }
     }
 
     private void SetupVideoPlayer()
@@ -131,9 +164,20 @@ public class SceneLoader : MonoBehaviour
 
     public void ShowLoading(string statusText)
     {
-        if (_root == null) InitializeUI();
+        if (_loadingUIDoc == null)
+        {
+            _loadingUIDoc = GetComponent<UIDocument>();
+        }
+
+        if (_loadingUIDoc != null)
+        {
+            _loadingUIDoc.enabled = true;
+        }
+
+        InitializeUI();
         if (_root == null) return;
         
+        _root.style.display = DisplayStyle.Flex;
         _root.RemoveFromClassList("hidden-element");
         _root.style.opacity = 1;
         if (_lblStatus != null) _lblStatus.text = statusText;
@@ -171,29 +215,48 @@ public class SceneLoader : MonoBehaviour
         }
     }
 
-    public async void HideLoading()
+    public void HideLoading()
     {
-        if (_root == null) return;
+        if (_loadingUIDoc == null)
+        {
+            _loadingUIDoc = GetComponent<UIDocument>();
+        }
+
+        if (_loadingUIDoc != null)
+        {
+            var rootVE = _loadingUIDoc.rootVisualElement;
+            if (rootVE != null)
+            {
+                _root = rootVE.Q<VisualElement>("loading-root");
+            }
+        }
+
         if (_lblStatus != null) _lblStatus.text = "READY TO DESCEND";
         
         _targetProgress = 100f;
-        
-        // Chờ thanh tiến trình tăng đến 100% thật sự trên giao diện
-        while (_currentProgress < 100f)
-        {
-            await Task.Yield();
-        }
-        
-        await Task.Delay(500);
-        _root.style.opacity = 0;
-        await Task.Delay(500);
-        _root.AddToClassList("hidden-element");
+        _currentProgress = 100f;
         _isProgressActive = false;
 
-        // Tạm dừng video để tối ưu hóa CPU/GPU khi không cần hiển thị loading
-        if (_videoPlayer != null && _videoPlayer.isPlaying)
+        if (_progressFill != null) _progressFill.style.width = Length.Percent(100);
+        if (_lblProgressPercent != null) _lblProgressPercent.text = "100%";
+
+        if (_root != null)
         {
-            _videoPlayer.Pause();
+            _root.style.opacity = 0;
+            _root.style.display = DisplayStyle.None;
+            _root.AddToClassList("hidden-element");
+        }
+
+        // Tắt hẳn UIDocument để giải phóng hoàn toàn màn hình
+        if (_loadingUIDoc != null)
+        {
+            _loadingUIDoc.enabled = false;
+        }
+
+        // Dừng video để tối ưu hóa CPU/GPU khi không cần hiển thị loading
+        if (_videoPlayer != null)
+        {
+            _videoPlayer.Stop();
         }
     }
 
@@ -231,21 +294,13 @@ public class SceneLoader : MonoBehaviour
             await Task.Yield();
         }
         
-        await Task.Delay(500);
+        await Task.Delay(300);
         op.allowSceneActivation = true;
 
         while (!op.isDone) await Task.Yield();
 
-        // Fade out
-        _root.style.opacity = 0;
-        await Task.Delay(500);
-        _root.AddToClassList("hidden-element");
-        _isProgressActive = false;
-
-        if (_videoPlayer != null && _videoPlayer.isPlaying)
-        {
-            _videoPlayer.Pause();
-        }
+        // Đóng loading screen sạch sẽ
+        HideLoading();
     }
 
     private void OnDestroy()

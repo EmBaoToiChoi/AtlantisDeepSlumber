@@ -4,8 +4,11 @@ using Unity.Netcode;
 
 public class SilasBossQuestTrigger : NetworkBehaviour, IQuestTrigger
 {
-    public bool IsQuestCompleted => (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening) ? isQuestCompletedNet.Value : isQuestCompletedLocal;
-    public bool IsQuestActive => (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening) ? isQuestActive.Value : hasTriggeredQuest;
+    public bool IsQuestCompleted => (SaveManager.IsContinueMode && SaveManager.IsQuestCompleted("SilasBossQuest")) || 
+        ((NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening) ? isQuestCompletedNet.Value : isQuestCompletedLocal);
+
+    public bool IsQuestActive => !(SaveManager.IsContinueMode && SaveManager.IsQuestCompleted("SilasBossQuest")) && 
+        ((NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening) ? isQuestActive.Value : hasTriggeredQuest);
 
     [Header("Quest Prerequisite Settings")]
     [Tooltip("Nhiệm vụ tiền đề bắt buộc phải hoàn thành trước khi nhiệm vụ này được hiển thị/kích hoạt")]
@@ -108,9 +111,16 @@ public class SilasBossQuestTrigger : NetworkBehaviour, IQuestTrigger
         bossDefeatedCount.OnValueChanged += OnBossDefeatedCountChanged;
         isQuestCompletedNet.OnValueChanged += OnQuestCompletedChanged;
 
-        if (isQuestCompletedNet.Value)
+        if (isQuestCompletedNet.Value || (SaveManager.IsContinueMode && SaveManager.IsQuestCompleted("SilasBossQuest")))
         {
             isQuestCompletedLocal = true;
+            SaveManager.MarkQuestCompleted("SilasBossQuest");
+            if (silasBoss != null) silasBoss.gameObject.SetActive(false);
+            if (IsServer)
+            {
+                isQuestCompletedNet.Value = true;
+                isQuestActive.Value = false;
+            }
         }
         else if (isQuestActive.Value && IsPrerequisiteCompleted())
         {
@@ -131,6 +141,8 @@ public class SilasBossQuestTrigger : NetworkBehaviour, IQuestTrigger
         if (newVal)
         {
             isQuestCompletedLocal = true;
+            SaveManager.MarkQuestCompleted("SilasBossQuest");
+            if (silasBoss != null) silasBoss.gameObject.SetActive(false);
             ShowCompletionUI();
         }
     }
@@ -246,6 +258,7 @@ public class SilasBossQuestTrigger : NetworkBehaviour, IQuestTrigger
     {
         if (isQuestCompletedLocal) return;
         isQuestCompletedLocal = true;
+        SaveManager.MarkQuestCompleted("SilasBossQuest");
 
         bool isNetwork = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
         if (isNetwork && IsServer)
