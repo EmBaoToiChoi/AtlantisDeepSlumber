@@ -4,8 +4,11 @@ using Unity.Netcode;
 
 public class RotatePillarQuestTrigger : NetworkBehaviour, IQuestTrigger
 {
-    public bool IsQuestCompleted => (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening) ? isQuestCompletedNet.Value : isQuestCompletedLocal;
-    public bool IsQuestActive => (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening) ? isQuestActive.Value : hasTriggeredQuest;
+    public bool IsQuestCompleted => (SaveManager.IsContinueMode && SaveManager.IsQuestCompleted("RotatePillarQuest")) || 
+        ((NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening) ? isQuestCompletedNet.Value : isQuestCompletedLocal);
+
+    public bool IsQuestActive => !(SaveManager.IsContinueMode && SaveManager.IsQuestCompleted("RotatePillarQuest")) && 
+        ((NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening) ? isQuestActive.Value : hasTriggeredQuest);
 
     [Header("Quest Prerequisite Settings")]
     [Tooltip("Nhiệm vụ tiền đề bắt buộc phải hoàn thành trước khi nhiệm vụ này được hiển thị/kích hoạt")]
@@ -117,9 +120,15 @@ public class RotatePillarQuestTrigger : NetworkBehaviour, IQuestTrigger
         correctCount.OnValueChanged += OnCorrectCountChanged;
         isQuestCompletedNet.OnValueChanged += OnQuestCompletedChanged;
 
-        if (isQuestCompletedNet.Value)
+        if (isQuestCompletedNet.Value || (SaveManager.IsContinueMode && SaveManager.IsQuestCompleted("RotatePillarQuest")))
         {
             isQuestCompletedLocal = true;
+            SaveManager.MarkQuestCompleted("RotatePillarQuest");
+            if (IsServer)
+            {
+                isQuestCompletedNet.Value = true;
+                isQuestActive.Value = false;
+            }
         }
         else if (isQuestActive.Value && IsPrerequisiteCompleted())
         {
@@ -140,6 +149,7 @@ public class RotatePillarQuestTrigger : NetworkBehaviour, IQuestTrigger
         if (newVal)
         {
             isQuestCompletedLocal = true;
+            SaveManager.MarkQuestCompleted("RotatePillarQuest");
             ShowCompletionUI();
         }
     }
@@ -267,6 +277,7 @@ public class RotatePillarQuestTrigger : NetworkBehaviour, IQuestTrigger
     {
         if (isQuestCompletedLocal) return;
         isQuestCompletedLocal = true;
+        SaveManager.MarkQuestCompleted("RotatePillarQuest");
 
         bool isNetwork = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
         if (isNetwork && IsServer)

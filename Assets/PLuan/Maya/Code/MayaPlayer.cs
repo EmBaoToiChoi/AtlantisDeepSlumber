@@ -1560,8 +1560,8 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (targetCamera == null)
             targetCamera = FindObjectOfType<Camera>();
 
-        // Tải nhân vật đã lưu từ PlayerPrefs nếu có
-        characterClassIndex = PlayerPrefs.GetInt("SelectedCharacterId", characterClassIndex);
+        // Maya luôn là class index 3
+        characterClassIndex = 3;
         playerName.Value = PlayerPrefs.GetString("AuthDisplayName", "Maya");
         if (PlayerHUDManager.ActivePlayers != null && !PlayerHUDManager.ActivePlayers.Contains(this))
         {
@@ -1654,8 +1654,8 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         if (IsOwner)
         {
-            // Tải nhân vật đã lưu từ PlayerPrefs
-            characterClassIndex = PlayerPrefs.GetInt("SelectedCharacterId", characterClassIndex);
+            // Maya luôn là class index 3
+            characterClassIndex = 3;
 
             // Đồng bộ tên người chơi qua mạng
             string myName = PlayerPrefs.GetString("AuthDisplayName", "Maya");
@@ -1688,7 +1688,30 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
             if (targetCamera == null)
                 targetCamera = FindObjectOfType<Camera>();
 
-            // Tải dữ liệu từ MongoDB Atlas
+            float initRotY = transform.eulerAngles.y;
+            targetYaw = initRotY;
+            currentYaw = initRotY;
+
+            if (SaveManager.HasPendingSpawnPosition && IsOwner)
+            {
+                Vector3 targetPos = SaveManager.PendingSpawnPosition;
+                float targetRotY = SaveManager.PendingSpawnRotationY;
+                SaveManager.HasPendingSpawnPosition = false;
+
+                if (targetPos != Vector3.zero && targetPos.sqrMagnitude > 10f)
+                {
+                    transform.position = targetPos;
+                    SetFacingAndCameraRotation(targetRotY);
+                    if (rb != null)
+                    {
+                        rb.position = targetPos;
+                        rb.linearVelocity = Vector3.zero;
+                        rb.angularVelocity = Vector3.zero;
+                    }
+                }
+            }
+
+            // Tải dữ liệu từ MongoDB Atlas / SaveManager
             LoadPlayerStateFromDatabase();
 
             // Áp dụng và cập nhật UI chỉ số ban đầu cục bộ
@@ -3418,6 +3441,26 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
         }
     }
 
+    public void SetFacingAndCameraRotation(float rotY)
+    {
+        transform.rotation = Quaternion.Euler(0, rotY, 0);
+        targetYaw = rotY;
+        currentYaw = rotY;
+        if (targetCamera != null)
+        {
+            float yawRad = rotY * Mathf.Deg2Rad;
+            float pitchRad = currentPitch * Mathf.Deg2Rad;
+            Vector3 rotatedOffset = new Vector3(
+                cameraDistance * Mathf.Cos(pitchRad) * Mathf.Sin(yawRad),
+                cameraDistance * Mathf.Sin(pitchRad),
+                -cameraDistance * Mathf.Cos(pitchRad) * Mathf.Cos(yawRad)
+            );
+            Vector3 pivotPosition = transform.position + Vector3.up * cameraPivotHeight;
+            targetCamera.transform.position = pivotPosition + rotatedOffset;
+            targetCamera.transform.rotation = Quaternion.LookRotation(pivotPosition - targetCamera.transform.position);
+        }
+    }
+
     private void UpdateCameraCharacterVisibility(float currentCamDist)
     {
         bool shouldHide = currentCamDist < cameraHideDistance;
@@ -4004,14 +4047,23 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     private async void LoadPlayerStateFromDatabase()
     {
-        Debug.Log("[DB] Bắt đầu tải trạng thái người chơi từ MongoDB Atlas...");
+        Debug.Log($"[MayaPlayer DB] Loading player state (ContinueMode={SaveManager.IsContinueMode})...");
         try
         {
-            var res = await AuthService.GetPlayerState();
-            if (res != null && res.success && res.playerState != null)
+            PlayerStateData state = null;
+
+            if (!SaveManager.IsContinueMode)
             {
-                var state = res.playerState;
-                Debug.Log($"[DB] Đã tải thành công trạng thái người chơi từ MongoDB! Máu: {state.health}");
+                state = SaveManager.GetDefaultCharacterState(characterClassIndex);
+            }
+            else
+            {
+                state = SaveManager.LoadCharacterState(characterClassIndex);
+            }
+
+            if (state != null)
+            {
+                Debug.Log($"[MayaPlayer DB] Loaded state successfully! Máu: {state.health}");
                 
                 SyncPlayerStateServerRpc(
                     state.health, 
@@ -4053,7 +4105,7 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
             }
             else
             {
-                Debug.LogWarning("[DB] Không có dữ liệu cũ hoặc lỗi kết nối. Đồng bộ dữ liệu ban đầu.");
+                Debug.LogWarning("[MayaPlayer DB] Không có dữ liệu cũ hoặc lỗi kết nối. Đồng bộ dữ liệu ban đầu.");
                 SyncPlayerStateServerRpc(maxHealth, 1, false, true, 0, 0, 0, 0, 0, 0, 0, 0f);
                 SavePlayerStateToDatabase();
             }
@@ -4117,7 +4169,7 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
     {
         if (!IsSpawned || !IsOwner) return;
 
-        Debug.Log("[DB] Đang tự động lưu trạng thái nhân vật lên MongoDB...");
+        Debug.Log("[MayaPlayer DB] Đang tự động lưu trạng thái nhân vật...");
         try
         {
             var stateData = new PlayerStateData
@@ -4137,19 +4189,20 @@ public class MayaPlayer : NetworkBehaviour, IPlayerHUDTarget
                 playerExp = playerExp.Value
             };
 
+            // 1. Lưu cục bộ qua SaveManager
+            SaveManager.SaveCharacterState(characterClassIndex, stateData);
+            SaveManager.SaveWorldSave(UnityEngine.SceneManagement.SceneManager.GetActiveScene().name, transform.position, transform.eulerAngles.y);
+
+            // 2. Đồng bộ lên Cloud
             var res = await AuthService.SavePlayerState(stateData);
             if (res != null && res.success)
             {
-                Debug.Log("[DB] Đã lưu trạng thái nhân vật lên MongoDB Atlas thành công!");
-            }
-            else
-            {
-                Debug.LogError($"[DB] Lỗi lưu trữ MongoDB: {res?.message}");
+                Debug.Log("[MayaPlayer DB] Đã lưu trạng thái nhân vật lên MongoDB Atlas thành công!");
             }
         }
         catch (System.Exception ex)
         {
-            Debug.LogError($"[DB] Lỗi khi gọi API lưu trạng thái MongoDB: {ex.Message}");
+            Debug.LogError($"[MayaPlayer DB] Error saving state: {ex.Message}");
         }
     }
 
@@ -5391,6 +5444,15 @@ private void StartRollServerRpc(Vector3 direction)
         {
             PlayerHUDManager.ActivePlayers.Remove(this);
         }
+
+        if (IsOwner || isStandaloneMode)
+        {
+            if (transform.position != Vector3.zero && transform.position.y > -20f)
+            {
+                SavePlayerStateToDatabase();
+            }
+        }
+
         base.OnDestroy();
     }
 
@@ -5423,6 +5485,17 @@ private void StartRollServerRpc(Vector3 direction)
                 }
             }
             pendingPickItem = null;
+        }
+    }
+
+    private void OnApplicationQuit()
+    {
+        if (IsOwner || isStandaloneMode)
+        {
+            if (transform.position != Vector3.zero && transform.position.y > -20f)
+            {
+                SavePlayerStateToDatabase();
+            }
         }
     }
 }

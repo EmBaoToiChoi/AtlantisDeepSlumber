@@ -4380,6 +4380,12 @@ public class PlayerHUDController : MonoBehaviour
         return false;
     }
 
+    public bool IsQuestPanelActive()
+    {
+        InitializeUI();
+        return questPanel != null && questPanel.ClassListContains("show-quest");
+    }
+
     public void ShowQuest(bool show, object owner = null)
     {
         InitializeUI();

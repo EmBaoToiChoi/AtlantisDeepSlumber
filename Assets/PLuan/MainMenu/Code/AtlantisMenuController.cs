@@ -700,6 +700,41 @@ public class AtlantisMenuController : MonoBehaviour
         var lblCreateErr = _root.Q<Label>("lbl-create-error");
         var btnConfirm = _root.Q<Button>("btn-confirm-create");
 
+        var radioGameMode = _root.Q<RadioButtonGroup>("radio-game-mode");
+        var radioModeNew = _root.Q<RadioButton>("radio-mode-new");
+        var radioModeContinue = _root.Q<RadioButton>("radio-mode-continue");
+        var lblSaveInfo = _root.Q<Label>("lbl-save-info");
+
+        bool hasSave = SaveManager.HasWorldSave();
+        if (hasSave)
+        {
+            var world = SaveManager.LoadWorldSave();
+            if (radioModeContinue != null) 
+            {
+                radioModeContinue.SetEnabled(true);
+                radioModeContinue.value = true;
+            }
+            if (radioModeNew != null) radioModeNew.value = false;
+            if (radioGameMode != null) radioGameMode.value = 1;
+
+            if (lblSaveInfo != null)
+            {
+                lblSaveInfo.RemoveFromClassList("hidden-element");
+                lblSaveInfo.text = $"★ Tiến trình đã lưu: {world.sceneName} ({world.saveTime})";
+            }
+        }
+        else
+        {
+            if (radioModeContinue != null) 
+            {
+                radioModeContinue.SetEnabled(false);
+                radioModeContinue.value = false;
+            }
+            if (radioModeNew != null) radioModeNew.value = true;
+            if (radioGameMode != null) radioGameMode.value = 0;
+            if (lblSaveInfo != null) lblSaveInfo.AddToClassList("hidden-element");
+        }
+
         if (radioPublic != null) radioPublic.value = true;
         if (radioPrivate != null) radioPrivate.value = false;
         if (radioGroup != null) radioGroup.value = 0;
@@ -732,6 +767,19 @@ public class AtlantisMenuController : MonoBehaviour
             return;
         }
 
+        var radioModeContinue = _root.Q<RadioButton>("radio-mode-continue");
+        var radioGameMode = _root.Q<RadioButtonGroup>("radio-game-mode");
+        bool isContinue = (radioModeContinue != null && radioModeContinue.value) || (radioGameMode != null && radioGameMode.value == 1);
+
+        if (isContinue && SaveManager.HasWorldSave())
+        {
+            SaveManager.PrepareContinueGame();
+        }
+        else
+        {
+            SaveManager.ResetAllStatsForNewGame();
+        }
+
         var radioPrivate = _root.Q<RadioButton>("radio-private");
         var radioGroup = _root.Q<RadioButtonGroup>("radio-privacy");
         bool isPrivate = (radioPrivate != null && radioPrivate.value) || (radioGroup != null && radioGroup.value == 1);
@@ -749,7 +797,7 @@ public class AtlantisMenuController : MonoBehaviour
             btnConfirm.text = "ĐANG TẠO...";
         }
 
-        Debug.Log($"[HOST] Đang tạo phòng: {roomName} (Riêng tư: {isPrivate})");
+        Debug.Log($"[HOST] Đang tạo phòng: {roomName} (Chế độ: {(isContinue ? "Tiếp Tục" : "Chơi Mới")}, Riêng tư: {isPrivate})");
         
         var response = await AuthService.CreateRoom(roomName, isPrivate, isPrivate ? password : "");
         if (response != null && response.success)
@@ -764,6 +812,12 @@ public class AtlantisMenuController : MonoBehaviour
 
             if (_netBootstrap != null)
             {
+                if (Unity.Netcode.NetworkManager.Singleton != null && Unity.Netcode.NetworkManager.Singleton.IsListening)
+                {
+                    Unity.Netcode.NetworkManager.Singleton.Shutdown();
+                    await Task.Delay(200);
+                }
+
                 Debug.Log("[Room] Đang kết nối về VPS...");
                 if (SceneLoader.Instance != null)
                 {

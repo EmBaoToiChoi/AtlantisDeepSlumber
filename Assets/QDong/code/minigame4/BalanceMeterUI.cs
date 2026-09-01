@@ -13,6 +13,16 @@ public class BalanceMeterUI : NetworkBehaviour
 
     public TMP_Text angleText;
 
+    private void Awake()
+    {
+        gameObject.SetActive(false);
+    }
+
+    private void Start()
+    {
+        gameObject.SetActive(false);
+    }
+
     void Update()
     {
         /*

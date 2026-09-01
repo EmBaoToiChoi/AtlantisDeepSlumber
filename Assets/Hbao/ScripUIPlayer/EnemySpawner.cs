@@ -196,17 +196,21 @@ public class EnemySpawner : NetworkBehaviour
             // Sẽ gửi yêu cầu ServerRpc chủ động đòi Server sinh Player cho mình.
             // Điều này đảm bảo 100% Client có Player khi di chuyển từ Lobby Room sang scene này.
             int selectedChar = PlayerPrefs.GetInt("SelectedCharacterId", 0);
-            Debug.Log($"[EnemySpawner] [CLIENT] Đã load xong scene gameplay. Gửi ServerRpc yêu cầu sinh Player cho Client ID: {NetworkManager.Singleton.LocalClientId} với CharacterId={selectedChar}");
-            RequestSpawnPlayerServerRpc(selectedChar);
+            bool hasCustomPos = SaveManager.HasPendingSpawnPosition;
+            Vector3 customPos = SaveManager.PendingSpawnPosition;
+            float customRotY = SaveManager.PendingSpawnRotationY;
+
+            Debug.Log($"[EnemySpawner] [CLIENT] Đã load xong scene gameplay. Gửi ServerRpc yêu cầu sinh Player cho Client ID: {NetworkManager.Singleton.LocalClientId} với CharacterId={selectedChar}, HasCustomPos={hasCustomPos}, Pos={customPos}");
+            RequestSpawnPlayerServerRpc(selectedChar, customPos, customRotY, hasCustomPos);
         }
     }
 
     [ServerRpc(RequireOwnership = false)]
-    private void RequestSpawnPlayerServerRpc(int characterId, ServerRpcParams rpcParams = default)
+    private void RequestSpawnPlayerServerRpc(int characterId, Vector3 customPos, float customRotY, bool hasCustomPos, ServerRpcParams rpcParams = default)
     {
         ulong clientId = rpcParams.Receive.SenderClientId;
-        Debug.Log($"[EnemySpawner] [SERVER] Nhận được yêu cầu sinh Player từ Client ID {clientId} với CharacterId={characterId} qua ServerRpc.");
-        SpawnPlayerForClient(clientId, characterId);
+        Debug.Log($"[EnemySpawner] [SERVER] Nhận được yêu cầu sinh Player từ Client ID {clientId} với CharacterId={characterId}, HasCustomPos={hasCustomPos}, Pos={customPos} qua ServerRpc.");
+        SpawnPlayerForClient(clientId, characterId, customPos, customRotY, hasCustomPos);
     }
 
     [ClientRpc]
@@ -296,9 +300,9 @@ public class EnemySpawner : NetworkBehaviour
         switch (characterId)
         {
             case 0: return leoPrefab != null ? leoPrefab : playerPrefab;
-            case 1: return mayaPrefab != null ? mayaPrefab : playerPrefab;
+            case 1: return arthurPrefab != null ? arthurPrefab : playerPrefab;
             case 2: return elenaPrefab != null ? elenaPrefab : playerPrefab;
-            case 3: return arthurPrefab != null ? arthurPrefab : playerPrefab;
+            case 3: return mayaPrefab != null ? mayaPrefab : playerPrefab;
             default: return playerPrefab;
         }
     }
@@ -306,7 +310,7 @@ public class EnemySpawner : NetworkBehaviour
     /// <summary>
     /// Spawns a Player object for a specific client ID and registers it as their player object.
     /// </summary>
-    public void SpawnPlayerForClient(ulong clientId, int characterId = 0)
+    public void SpawnPlayerForClient(ulong clientId, int characterId = 0, Vector3 customPos = default, float customRotY = 0f, bool hasCustomPos = false)
     {
         if (!IsServer) return;
 
@@ -318,20 +322,25 @@ public class EnemySpawner : NetworkBehaviour
             return;
         }
 
-        Debug.Log($"[EnemySpawner] Đang kiểm tra yêu cầu sinh Player cho Client {clientId} (CharacterId={characterId})...");
+        Debug.Log($"[EnemySpawner] Đang kiểm tra yêu cầu sinh Player cho Client {clientId} (CharacterId={characterId}, HasCustomPos={hasCustomPos}, Pos={customPos})...");
 
         if (NetworkManager.Singleton.ConnectedClients.TryGetValue(clientId, out var client))
         {
             if (client.PlayerObject != null)
             {
-                // Kiểm tra xem PlayerObject hiện tại có phải là nhân vật chơi chính thức (có LeoPlayer) hay không
-                if (client.PlayerObject.GetComponent<LeoPlayer>() != null)
+                // Kiểm tra xem PlayerObject hiện tại có phải là nhân vật chơi chính thức bất kỳ class nào hay không
+                bool hasOfficialPlayer = client.PlayerObject.GetComponent<LeoPlayer>() != null ||
+                                         client.PlayerObject.GetComponent<ArthurPlayer>() != null ||
+                                         client.PlayerObject.GetComponent<ElenaPlayer>() != null ||
+                                         client.PlayerObject.GetComponent<MayaPlayer>() != null ||
+                                         client.PlayerObject.GetComponent<SimplePlayerTest>() != null;
+                if (hasOfficialPlayer)
                 {
                     Debug.Log($"[EnemySpawner] Client {clientId} đã có nhân vật gameplay Player chính thức. Bỏ qua không spawn trùng lặp.");
                     return;
                 }
 
-                // Nếu là PlayerObject cũ (ví dụ Lobby Player từ Waiting Room hoặc Missing reference), ta tiến hành thu hồi sạch sẽ
+                // Nếu là PlayerObject cũ (Lobby Avatar từ Waiting Room), ta tiến hành thu hồi sạch sẽ
                 Debug.Log($"[EnemySpawner] Phát hiện Client {clientId} đang giữ PlayerObject cũ (Lobby Avatar). Đang thu hồi...");
                 NetworkObject oldPlayerObj = client.PlayerObject;
                 if (oldPlayerObj.IsSpawned)
@@ -345,8 +354,8 @@ public class EnemySpawner : NetworkBehaviour
             }
         }
 
-        Vector3 pos = playerSpawnPoint != null ? playerSpawnPoint.position : transform.position;
-        Quaternion rot = playerSpawnPoint != null ? playerSpawnPoint.rotation : transform.rotation;
+        Vector3 pos = (hasCustomPos && customPos != Vector3.zero) ? customPos : (playerSpawnPoint != null ? playerSpawnPoint.position : transform.position);
+        Quaternion rot = (hasCustomPos) ? Quaternion.Euler(0, customRotY, 0) : (playerSpawnPoint != null ? playerSpawnPoint.rotation : transform.rotation);
 
         GameObject playerObj = Instantiate(selectedPrefab, pos, rot);
         NetworkObject netObj = playerObj.GetComponent<NetworkObject>();

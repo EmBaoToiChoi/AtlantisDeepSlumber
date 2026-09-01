@@ -4,8 +4,11 @@ using Unity.Netcode;
 
 public class ElementalPillarQuestTrigger : NetworkBehaviour, IQuestTrigger
 {
-    public bool IsQuestCompleted => (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening) ? isQuestCompletedNet.Value : isQuestCompletedLocal;
-    public bool IsQuestActive => (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening) ? isQuestActive.Value : hasTriggeredQuest;
+    public bool IsQuestCompleted => (SaveManager.IsContinueMode && SaveManager.IsQuestCompleted("ElementalPillarQuest")) || 
+        ((NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening) ? isQuestCompletedNet.Value : isQuestCompletedLocal);
+
+    public bool IsQuestActive => !(SaveManager.IsContinueMode && SaveManager.IsQuestCompleted("ElementalPillarQuest")) && 
+        ((NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening) ? isQuestActive.Value : hasTriggeredQuest);
 
     [Header("Quest Prerequisite Settings")]
     [Tooltip("Nhiệm vụ tiền đề bắt buộc phải hoàn thành trước khi nhiệm vụ này được hiển thị/kích hoạt")]
@@ -117,9 +120,15 @@ public class ElementalPillarQuestTrigger : NetworkBehaviour, IQuestTrigger
         activatedCount.OnValueChanged += OnActivatedCountChanged;
         isQuestCompletedNet.OnValueChanged += OnQuestCompletedChanged;
 
-        if (isQuestCompletedNet.Value)
+        if (isQuestCompletedNet.Value || (SaveManager.IsContinueMode && SaveManager.IsQuestCompleted("ElementalPillarQuest")))
         {
             isQuestCompletedLocal = true;
+            SaveManager.MarkQuestCompleted("ElementalPillarQuest");
+            if (IsServer)
+            {
+                isQuestCompletedNet.Value = true;
+                isQuestActive.Value = false;
+            }
         }
         else if (isQuestActive.Value && IsPrerequisiteCompleted())
         {
@@ -140,6 +149,7 @@ public class ElementalPillarQuestTrigger : NetworkBehaviour, IQuestTrigger
         if (newVal)
         {
             isQuestCompletedLocal = true;
+            SaveManager.MarkQuestCompleted("ElementalPillarQuest");
             ShowCompletionUI();
         }
     }
@@ -327,6 +337,7 @@ public class ElementalPillarQuestTrigger : NetworkBehaviour, IQuestTrigger
     {
         if (isQuestCompletedLocal) return;
         isQuestCompletedLocal = true;
+        SaveManager.MarkQuestCompleted("ElementalPillarQuest");
 
         bool isNetwork = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
         if (isNetwork && IsServer)

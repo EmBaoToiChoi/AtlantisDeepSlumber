@@ -95,6 +95,14 @@
                 <ui:TextField name="input-room-name" value="Atlantis Explorer" class="form-input" />
             </ui:VisualElement>
             <ui:VisualElement class="form-group">
+                <ui:Label name="lbl-game-mode" text="CHẾ ĐỘ CHƠI" class="form-label" />
+                <ui:RadioButtonGroup name="radio-game-mode" value="0" class="radio-group">
+                    <ui:RadioButton name="radio-mode-new" text="Chơi Mới" value="true" class="radio-text-public" />
+                    <ui:RadioButton name="radio-mode-continue" text="Tiếp Tục" class="radio-text-private" />
+                </ui:RadioButtonGroup>
+            </ui:VisualElement>
+            <ui:Label name="lbl-save-info" text="" class="form-label hidden-element" style="color: #6fe5ff; font-size: 13px; margin-top: -6px; margin-bottom: 6px;" />
+            <ui:VisualElement class="form-group">
                 <ui:Label name="lbl-privacy" text="QUYỀN RIÊNG TƯ" class="form-label" />
                 <ui:RadioButtonGroup name="radio-privacy" value="0" class="radio-group">
                     <ui:RadioButton name="radio-public" text="Công khai" value="true" class="radio-text-public" />

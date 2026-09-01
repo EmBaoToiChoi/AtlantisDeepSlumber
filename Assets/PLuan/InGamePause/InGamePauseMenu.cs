@@ -868,6 +868,24 @@ public class InGamePauseMenu : MonoBehaviour
 
     private IEnumerator SafeQuitRoutine()
     {
+        // 1. Tự động lưu tiến trình thế giới và chỉ số nhân vật
+        var target = PlayerHUDController.LocalPlayerTarget;
+        if (target != null)
+        {
+            Debug.Log("[PauseMenu] Đang tự động lưu trạng thái người chơi...");
+            target.SavePlayerStateToDatabase();
+        }
+        else
+        {
+            var localPlayerObj = NetworkManager.Singleton != null && NetworkManager.Singleton.LocalClient != null 
+                ? NetworkManager.Singleton.LocalClient.PlayerObject 
+                : null;
+            if (localPlayerObj != null)
+            {
+                SaveManager.SaveWorldSave(SceneManager.GetActiveScene().name, localPlayerObj.transform.position, localPlayerObj.transform.eulerAngles.y);
+            }
+        }
+
         string roomId = PlayerPrefs.GetString("CurrentRoomID", "");
         if (!string.IsNullOrEmpty(roomId))
         {

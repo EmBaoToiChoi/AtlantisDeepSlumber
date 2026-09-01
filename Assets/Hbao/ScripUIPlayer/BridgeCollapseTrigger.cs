@@ -162,6 +162,11 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
 
     public bool IsBridgeCollapsed()
     {
+        if (SaveManager.IsContinueMode && (SaveManager.IsQuestCompleted("BridgeCollapse") || SaveManager.IsQuestCompleted("BridgeLogs") || SaveManager.IsQuestCompleted("BridgeRepair")))
+        {
+            return true;
+        }
+
         if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening)
         {
             return hasCollapsed.Value;
@@ -171,6 +176,11 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
 
     public bool IsBridgeRepaired()
     {
+        if (SaveManager.IsContinueMode && SaveManager.IsQuestCompleted("BridgeRepair"))
+        {
+            return true;
+        }
+
         if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening)
         {
             return hasBeenRepaired.Value;
@@ -180,6 +190,14 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
 
     public int GetLogsSubmittedCount()
     {
+        if (SaveManager.IsContinueMode)
+        {
+            if (SaveManager.IsQuestCompleted("BridgeRepair") || SaveManager.IsQuestCompleted("BridgeLogs"))
+            {
+                return requiredLogsToRepair;
+            }
+        }
+
         if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening)
         {
             return logsSubmitted.Value;
@@ -319,6 +337,39 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
 
     public override void OnNetworkSpawn()
     {
+        if (SaveManager.IsContinueMode && (SaveManager.IsQuestCompleted("BridgeCollapse") || SaveManager.IsQuestCompleted("BridgeLogs") || SaveManager.IsQuestCompleted("BridgeRepair")))
+        {
+            bool isRepaired = SaveManager.IsQuestCompleted("BridgeRepair");
+            bool isLogsDone = SaveManager.IsQuestCompleted("BridgeLogs");
+            int logsCount = (isRepaired || isLogsDone) ? requiredLogsToRepair : 0;
+            float progress = isRepaired ? 100f : 0f;
+            bool ready = isLogsDone && !isRepaired;
+
+            localCollapseTriggered = true;
+            localRepaired = isRepaired;
+            localLogsSubmittedCount = logsCount;
+            localBuildProgress = progress;
+            localReadyToBuild = ready;
+
+            if (IsServer)
+            {
+                hasCollapsed.Value = true;
+                hasBeenRepaired.Value = isRepaired;
+                logsSubmitted.Value = logsCount;
+                buildProgress.Value = progress;
+                isReadyToBuild.Value = ready;
+            }
+            else
+            {
+                SyncBridgeSaveStateServerRpc(true, isRepaired, logsCount, progress, ready);
+            }
+
+            ApplyBridgeVisualState(true, isRepaired, logsCount);
+            UpdateBridgeBlockerWall();
+
+            if (isRepaired) return;
+        }
+
         localCollapseTriggered = hasCollapsed.Value;
         localRepaired = hasBeenRepaired.Value;
         localLogsSubmittedCount = logsSubmitted.Value;
@@ -371,6 +422,7 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
     {
         if (newVal)
         {
+            SaveManager.MarkQuestCompleted("BridgeLogs");
             if (IntroDialogueController.Instance != null)
             {
                 IntroDialogueController.Instance.StartReadyToBuildDialogue();
@@ -448,7 +500,7 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
         }
 
         bool isNetwork = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
-        bool ready = isNetwork ? isReadyToBuild.Value : localReadyToBuild;
+        bool ready = (SaveManager.IsContinueMode && SaveManager.IsQuestCompleted("BridgeLogs")) || (isNetwork ? isReadyToBuild.Value : localReadyToBuild);
         float currentProgress = isNetwork ? buildProgress.Value : localBuildProgress;
 
         if (ready)
@@ -524,6 +576,21 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
                 }
             }
         }
+        else if (!IsBridgeCollapsed() && !IsBridgeRepaired() && IsPrerequisiteCompleted())
+        {
+            if (Time.time >= nextUiCheckTime)
+            {
+                nextUiCheckTime = Time.time + 0.5f;
+                PlayerHUDController localHudCtl = FindAnyObjectByType<PlayerHUDController>();
+                if (localHudCtl != null && !localHudCtl.IsQuestPanelActive())
+                {
+                    localHudCtl.ShowQuest(true, this);
+                    localHudCtl.UpdateQuestTitle("TIẾP TỤC HÀNH TRÌNH", this);
+                    localHudCtl.UpdateQuestDescription("Di chuyển về phía cây cầu phía trước để tiếp tục khám phá.", this);
+                    localHudCtl.UpdateQuestProgress(0, 1, this);
+                }
+            }
+        }
     }
 
     private void OnTriggerEnter(Collider other)
@@ -552,6 +619,27 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
     {
         if (!IsServer || IsBridgeCollapsed() || isCutscenePlaying || !IsPrerequisiteCompleted()) return;
         StartBridgeEventServer();
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    private void SyncBridgeSaveStateServerRpc(bool collapsed, bool repaired, int logs, float progress, bool ready)
+    {
+        if (!IsServer) return;
+        Debug.Log($"[BridgeCollapseTrigger] [SERVER] Đồng bộ trạng thái Bridge từ Save: collapsed={collapsed}, repaired={repaired}, logs={logs}, progress={progress}, ready={ready}");
+        hasCollapsed.Value = collapsed;
+        hasBeenRepaired.Value = repaired;
+        logsSubmitted.Value = logs;
+        buildProgress.Value = progress;
+        isReadyToBuild.Value = ready;
+
+        localCollapseTriggered = collapsed;
+        localRepaired = repaired;
+        localLogsSubmittedCount = logs;
+        localBuildProgress = progress;
+        localReadyToBuild = ready;
+
+        ApplyBridgeVisualState(collapsed, repaired, logs);
+        UpdateBridgeBlockerWall();
     }
 
     private void StartBridgeEventServer()
@@ -697,6 +785,7 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
     [ClientRpc]
     private void ShowCollapseUIClientRpc()
     {
+        SaveManager.MarkQuestCompleted("BridgeCollapse");
         if (objectToHideDuringCutscene != null)
         {
             objectToHideDuringCutscene.SetActive(true);
@@ -754,6 +843,20 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
     [ClientRpc]
     private void ShowRepairCompleteUIClientRpc()
     {
+        SaveManager.MarkQuestCompleted("BridgeRepair");
+        SaveManager.MarkQuestCompleted("BridgeLogs");
+        SaveManager.MarkQuestCompleted("BridgeCollapse");
+        SaveManager.MarkCutscenePlayed("Collapse_Video");
+        SaveManager.MarkCutscenePlayed("buildCompleteCutscene");
+        if (buildCompleteCutscene != null)
+        {
+            SaveManager.MarkCutscenePlayed(buildCompleteCutscene.gameObject.name);
+        }
+
+        localRepaired = true;
+        localReadyToBuild = false;
+        localBuildProgress = 100f;
+
         PlayerHUDController localHud = FindAnyObjectByType<PlayerHUDController>();
         if (localHud != null)
         {
@@ -1103,6 +1206,15 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
         if (newVal)
         {
             Debug.Log("[BridgeCollapseTrigger] Cầu đã được sửa hoàn tất.");
+            SaveManager.MarkQuestCompleted("BridgeRepair");
+            SaveManager.MarkQuestCompleted("BridgeLogs");
+            SaveManager.MarkQuestCompleted("BridgeCollapse");
+            SaveManager.MarkCutscenePlayed("Collapse_Video");
+            SaveManager.MarkCutscenePlayed("buildCompleteCutscene");
+            if (buildCompleteCutscene != null)
+            {
+                SaveManager.MarkCutscenePlayed(buildCompleteCutscene.gameObject.name);
+            }
             RepairBridgeLocal();
         }
     }
@@ -1365,6 +1477,7 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
         {
             hasBeenRepaired.Value = true;
             isReadyToBuild.Value = false;
+            SaveManager.MarkQuestCompleted("BridgeRepair");
             Debug.Log("[BridgeCollapseTrigger] Server: Cầu đã được xây dựng xong!");
             ShowRepairCompleteUIClientRpc();
         }
@@ -1384,6 +1497,7 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
         {
             localRepaired = true;
             localReadyToBuild = false;
+            SaveManager.MarkQuestCompleted("BridgeRepair");
             Debug.Log("[BridgeCollapseTrigger] Standalone: Cầu đã được xây dựng xong!");
             RepairBridgeLocal();
         }

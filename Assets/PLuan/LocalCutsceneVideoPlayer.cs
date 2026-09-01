@@ -83,6 +83,11 @@ public class LocalCutsceneVideoPlayer : NetworkBehaviour
 
     private void Awake()
     {
+        if (SaveManager.IsContinueMode)
+        {
+            return;
+        }
+
         // Tạm dừng thời gian game ngay lập tức khi load map
         Time.timeScale = 0f;
         
@@ -93,6 +98,19 @@ public class LocalCutsceneVideoPlayer : NetworkBehaviour
 
     public override void OnNetworkSpawn()
     {
+        // Luôn báo cho Server biết Client này đã load xong scene và sẵn sàng
+        NotifyClientReadyServerRpc(NetworkManager.Singleton.LocalClientId);
+
+        if (SaveManager.IsContinueMode)
+        {
+            if (IsLocalRoomHost())
+            {
+                RequestSkipCutsceneServerRpc();
+            }
+            EndCutscene();
+            return;
+        }
+
         // Đăng ký nhận sự kiện thay đổi trạng thái từ server
         readyClientsCount.OnValueChanged += OnReadyClientsCountChanged;
         cutsceneStarted.OnValueChanged += OnCutsceneStartedChanged;
@@ -196,6 +214,15 @@ public class LocalCutsceneVideoPlayer : NetworkBehaviour
     {
         if (started && !isCutscenePlaying)
         {
+            if (SaveManager.IsContinueMode)
+            {
+                if (IsLocalRoomHost())
+                {
+                    RequestSkipCutsceneServerRpc();
+                }
+                EndCutscene();
+                return;
+            }
             StartVideoPlayback();
         }
     }
@@ -363,6 +390,12 @@ public class LocalCutsceneVideoPlayer : NetworkBehaviour
 
     private void StartVideoPlayback()
     {
+        if (SaveManager.IsContinueMode)
+        {
+            EndCutscene();
+            return;
+        }
+
         isCutscenePlaying = true;
         
         // Ẩn và dọn dẹp các thành phần video & UI của màn hình chờ
@@ -646,6 +679,12 @@ public class LocalCutsceneVideoPlayer : NetworkBehaviour
         isCutsceneEnded = true;
 
         isCutscenePlaying = false;
+        SaveManager.SetIntroCutsceneWatched(true);
+
+        if (SceneLoader.Instance != null)
+        {
+            SceneLoader.Instance.HideLoading();
+        }
 
         // Dừng đếm giờ BGM Cutscene và khôi phục nhạc nền nhỏ cho gameplay
         if (cutsceneBgmCoroutine != null)

@@ -4,8 +4,9 @@ using Unity.Netcode;
 
 public class ElementalRockQuestTrigger : NetworkBehaviour, IQuestTrigger
 {
-    public bool IsQuestCompleted => isQuestCompleted;
-    public bool IsQuestActive => (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening) ? isQuestActive.Value : hasTriggeredQuest;
+    public bool IsQuestCompleted => (SaveManager.IsContinueMode && SaveManager.IsQuestCompleted("ElementalRockQuest")) || isQuestCompleted;
+    public bool IsQuestActive => !(SaveManager.IsContinueMode && SaveManager.IsQuestCompleted("ElementalRockQuest")) && 
+        ((NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening) ? isQuestActive.Value : hasTriggeredQuest);
 
     [Header("Quest Prerequisite Settings")]
     [Tooltip("Nhiệm vụ tiền đề bắt buộc phải hoàn thành trước khi nhiệm vụ này được hiển thị/kích hoạt")]
@@ -96,8 +97,16 @@ public class ElementalRockQuestTrigger : NetworkBehaviour, IQuestTrigger
     {
         isQuestActive.OnValueChanged += OnQuestActiveChanged;
         
-        // Nếu nhiệm vụ đã được kích hoạt trước khi player này kết nối
-        if (isQuestActive.Value && IsPrerequisiteCompleted())
+        if (SaveManager.IsContinueMode && SaveManager.IsQuestCompleted("ElementalRockQuest"))
+        {
+            isQuestCompleted = true;
+            SaveManager.MarkQuestCompleted("ElementalRockQuest");
+            if (IsServer)
+            {
+                isQuestActive.Value = false;
+            }
+        }
+        else if (isQuestActive.Value && IsPrerequisiteCompleted())
         {
             hasTriggeredQuest = true;
             UpdateQuestProgressUI();
@@ -184,6 +193,7 @@ public class ElementalRockQuestTrigger : NetworkBehaviour, IQuestTrigger
     private void CompleteQuest()
     {
         isQuestCompleted = true;
+        SaveManager.MarkQuestCompleted("ElementalRockQuest");
         Debug.Log("[ElementalRockQuestTrigger] Đá nguyên tố đã bị phá vỡ! Nhiệm vụ hoàn thành.");
 
         if (localHudCtl == null)

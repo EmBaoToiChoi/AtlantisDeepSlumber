@@ -345,6 +345,8 @@ public class NetworkBootstrap : MonoBehaviour
                 }
                 break;
             case SceneEventType.LoadComplete:
+            case SceneEventType.SynchronizeComplete:
+            case SceneEventType.LoadEventCompleted:
                 if (SceneLoader.Instance != null)
                 {
                     SceneLoader.Instance.HideLoading();

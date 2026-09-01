@@ -60,9 +60,59 @@ public class VideoCutsceneController : NetworkBehaviour
         }
     }
 
+    public string GetCutsceneId()
+    {
+        return gameObject.name;
+    }
+
+    public void DisableTriggerCollider()
+    {
+        var col = GetComponent<Collider>();
+        if (col != null) col.enabled = false;
+        var cols = GetComponentsInChildren<Collider>();
+        foreach (var c in cols)
+        {
+            if (c != null && c.isTrigger) c.enabled = false;
+        }
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    private void SyncCutscenePlayedStateServerRpc(string cutsceneName)
+    {
+        hasPlayed = true;
+        HideObjectsAfterVideo();
+        DisableTriggerCollider();
+        Debug.Log($"[VideoCutsceneController] [SERVER] Client đã đồng bộ Cutscene '{cutsceneName}' đã xem -> hasPlayed = true");
+    }
+
+    public override void OnNetworkSpawn()
+    {
+        base.OnNetworkSpawn();
+        if (SaveManager.IsContinueMode && playOnlyOnce)
+        {
+            if (SaveManager.IsCutscenePlayed(GetCutsceneId()))
+            {
+                hasPlayed = true;
+                Debug.Log($"[VideoCutsceneController] Tiếp Tục Chơi: Cutscene '{GetCutsceneId()}' đã xem rồi, tắt trigger và bỏ qua.");
+                HideObjectsAfterVideo();
+                DisableTriggerCollider();
+
+                if (!IsServer)
+                {
+                    SyncCutscenePlayedStateServerRpc(GetCutsceneId());
+                }
+            }
+        }
+    }
+
     public void StartCutscene()
     {
-        if (playOnlyOnce && hasPlayed) return;
+        if (playOnlyOnce && (hasPlayed || (SaveManager.IsContinueMode && SaveManager.IsCutscenePlayed(GetCutsceneId()))))
+        {
+            Debug.Log($"[VideoCutsceneController] StartCutscene bị hủy vì Cutscene '{GetCutsceneId()}' đã xem.");
+            DisableTriggerCollider();
+            return;
+        }
         
         if (IsServer) StartCutsceneServer();
         else StartCutsceneServerRpc();
@@ -81,6 +131,9 @@ public class VideoCutsceneController : NetworkBehaviour
         isPlaying = true;
         hasPlayed = true; 
         serverReceivedFinishSignal = false; 
+        DisableTriggerCollider();
+
+        SaveManager.MarkCutscenePlayed(GetCutsceneId());
         
         PrepareCutsceneClientRpc();
         StartCoroutine(WaitAndTeleportAndFinish());
@@ -191,6 +244,10 @@ public class VideoCutsceneController : NetworkBehaviour
     [ClientRpc]
     private void FinishCutsceneClientRpc()
     {
+        SaveManager.MarkCutscenePlayed(GetCutsceneId());
+        hasPlayed = true;
+        DisableTriggerCollider();
+
         if (objectToHide != null) objectToHide.SetActive(true);
         
         // Ẩn các object được chỉ định sau khi video kết thúc (nếu có)
@@ -349,6 +406,12 @@ public class VideoCutsceneController : NetworkBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
+        if (playOnlyOnce && (hasPlayed || (SaveManager.IsContinueMode && SaveManager.IsCutscenePlayed(GetCutsceneId()))))
+        {
+            DisableTriggerCollider();
+            return;
+        }
+
         if (!IsSpawned || !IsServer) return; 
         if (isPlaying || (playOnlyOnce && hasPlayed)) return;
 

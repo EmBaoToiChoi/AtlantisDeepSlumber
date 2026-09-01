@@ -3706,7 +3706,8 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         if (targetCamera == null)
             targetCamera = FindObjectOfType<Camera>();
 
-        characterClassIndex = PlayerPrefs.GetInt("SelectedCharacterId", characterClassIndex);
+        // Leo luôn là class index 0
+        characterClassIndex = 0;
         if (PlayerHUDManager.ActivePlayers != null && !PlayerHUDManager.ActivePlayers.Contains(this))
         {
             PlayerHUDManager.ActivePlayers.Add(this);
@@ -3736,6 +3737,12 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
             ApplyUpgradedStats();
             UpdateUpgradeHUD();
         }
+        if (SaveManager.HasPendingSpawnPosition && isStandaloneMode)
+        {
+            transform.position = SaveManager.PendingSpawnPosition;
+            transform.rotation = Quaternion.Euler(0, SaveManager.PendingSpawnRotationY, 0);
+            SaveManager.HasPendingSpawnPosition = false;
+        }
         if (isStandaloneMode)
         {
             LoadPlayerStateFromDatabase();
@@ -3750,6 +3757,33 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         currentAnimState = "Idle";
         lastTriggeredAnimName = "Idle";
         isDeathAnimFinished = false;
+
+        if (IsOwner)
+        {
+            float initRotY = transform.eulerAngles.y;
+            targetYaw = initRotY;
+            currentYaw = initRotY;
+        }
+
+        if (SaveManager.HasPendingSpawnPosition && IsOwner)
+        {
+            Vector3 targetPos = SaveManager.PendingSpawnPosition;
+            float targetRotY = SaveManager.PendingSpawnRotationY;
+            SaveManager.HasPendingSpawnPosition = false;
+
+            if (targetPos != Vector3.zero && targetPos.sqrMagnitude > 10f)
+            {
+                transform.position = targetPos;
+                SetFacingAndCameraRotation(targetRotY);
+                if (rb == null) rb = GetComponent<Rigidbody>();
+                if (rb != null)
+                {
+                    rb.position = targetPos;
+                    rb.linearVelocity = Vector3.zero;
+                    rb.angularVelocity = Vector3.zero;
+                }
+            }
+        }
 
         if (rb == null) rb = GetComponent<Rigidbody>();
         if (rb != null)
@@ -3795,8 +3829,8 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         if (IsOwner)
         {
-            // Tải nhân vật đã lưu từ PlayerPrefs
-            characterClassIndex = PlayerPrefs.GetInt("SelectedCharacterId", characterClassIndex);
+            // Leo luôn là class index 0
+            characterClassIndex = 0;
 
             // Đồng bộ tên người chơi qua mạng
             string myName = PlayerPrefs.GetString("AuthDisplayName", "Leo");
@@ -5359,6 +5393,26 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
             float currentCamDist = Vector3.Distance(pivotPosition, targetCamera.transform.position);
             UpdateCameraCharacterVisibility(currentCamDist);
+        }
+    }
+
+    public void SetFacingAndCameraRotation(float rotY)
+    {
+        transform.rotation = Quaternion.Euler(0, rotY, 0);
+        targetYaw = rotY;
+        currentYaw = rotY;
+        if (targetCamera != null)
+        {
+            float yawRad = rotY * Mathf.Deg2Rad;
+            float pitchRad = currentPitch * Mathf.Deg2Rad;
+            Vector3 rotatedOffset = new Vector3(
+                cameraDistance * Mathf.Cos(pitchRad) * Mathf.Sin(yawRad),
+                cameraDistance * Mathf.Sin(pitchRad),
+                -cameraDistance * Mathf.Cos(pitchRad) * Mathf.Cos(yawRad)
+            );
+            Vector3 pivotPosition = transform.position + Vector3.up * cameraPivotHeight;
+            targetCamera.transform.position = pivotPosition + rotatedOffset;
+            targetCamera.transform.rotation = Quaternion.LookRotation(pivotPosition - targetCamera.transform.position);
         }
     }
 
@@ -7144,6 +7198,11 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
                 playerExp = plExpVal
             };
 
+            // 1. Lưu cục bộ qua SaveManager
+            SaveManager.SaveCharacterState(characterClassIndex, stateData);
+            SaveManager.SaveWorldSave(UnityEngine.SceneManagement.SceneManager.GetActiveScene().name, transform.position, transform.eulerAngles.y);
+
+            // 2. Đồng bộ lên Cloud MongoDB Atlas nếu có mạng
             var res = await AuthService.SavePlayerState(stateData);
             if (res != null && res.success)
             {
@@ -7152,7 +7211,7 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         }
         catch (System.Exception ex)
         {
-            Debug.LogError($"[LeoPlayer DB] Error saving MongoDB state: {ex.Message}");
+            Debug.LogError($"[LeoPlayer DB] Error saving state: {ex.Message}");
         }
     }
 
@@ -7164,13 +7223,24 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
 
     private async void LoadPlayerStateFromDatabase()
     {
-        Debug.Log("[LeoPlayer DB] Loading player state from MongoDB Atlas...");
+        Debug.Log($"[LeoPlayer DB] Loading player state (ContinueMode={SaveManager.IsContinueMode})...");
         try
         {
-            var res = await AuthService.GetPlayerState();
-            if (res != null && res.success && res.playerState != null)
+            PlayerStateData state = null;
+
+            if (!SaveManager.IsContinueMode)
             {
-                var state = res.playerState;
+                // Chế độ Chơi Mới -> khởi tạo cấp 0
+                state = SaveManager.GetDefaultCharacterState(characterClassIndex);
+            }
+            else
+            {
+                // Chế độ Chơi Tiếp -> Nạp hồ sơ đã lưu riêng của tướng này
+                state = SaveManager.LoadCharacterState(characterClassIndex);
+            }
+
+            if (state != null)
+            {
                 Debug.Log($"[LeoPlayer DB] Loaded state successfully! Health: {state.health}, Level: {state.playerLevel}, Exp: {state.playerExp}");
 
                 if (isStandaloneMode)
@@ -9722,6 +9792,26 @@ public class LeoPlayer : NetworkBehaviour, IPlayerHUDTarget
         {
             PlayerHUDManager.ActivePlayers.Remove(this);
         }
+
+        if (IsOwner || isStandaloneMode)
+        {
+            if (transform.position != Vector3.zero && transform.position.y > -20f)
+            {
+                SavePlayerStateToDatabase();
+            }
+        }
+
         base.OnDestroy();
+    }
+
+    private void OnApplicationQuit()
+    {
+        if (IsOwner || isStandaloneMode)
+        {
+            if (transform.position != Vector3.zero && transform.position.y > -20f)
+            {
+                SavePlayerStateToDatabase();
+            }
+        }
     }
 }

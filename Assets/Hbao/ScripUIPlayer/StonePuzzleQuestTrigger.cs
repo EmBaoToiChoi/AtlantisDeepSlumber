@@ -4,8 +4,11 @@ using Unity.Netcode;
 
 public class StonePuzzleQuestTrigger : NetworkBehaviour, IQuestTrigger
 {
-    public bool IsQuestCompleted => (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening) ? isQuestCompletedNet.Value : isQuestCompleted;
-    public bool IsQuestActive => (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening) ? isQuestActive.Value : hasTriggeredQuest;
+    public bool IsQuestCompleted => (SaveManager.IsContinueMode && SaveManager.IsQuestCompleted("StonePuzzleQuest")) || 
+        ((NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening) ? isQuestCompletedNet.Value : isQuestCompleted);
+
+    public bool IsQuestActive => !(SaveManager.IsContinueMode && SaveManager.IsQuestCompleted("StonePuzzleQuest")) && 
+        ((NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening) ? isQuestActive.Value : hasTriggeredQuest);
 
     [Header("Quest Prerequisite Settings")]
     [Tooltip("Nhiệm vụ tiền đề bắt buộc phải hoàn thành trước khi nhiệm vụ này được hiển thị/kích hoạt")]
@@ -152,9 +155,15 @@ public class StonePuzzleQuestTrigger : NetworkBehaviour, IQuestTrigger
         isQuestActive.OnValueChanged += OnQuestActiveChanged;
         isQuestCompletedNet.OnValueChanged += OnQuestCompletedChanged;
         
-        if (isQuestCompletedNet.Value)
+        if (isQuestCompletedNet.Value || (SaveManager.IsContinueMode && SaveManager.IsQuestCompleted("StonePuzzleQuest")))
         {
             isQuestCompleted = true;
+            SaveManager.MarkQuestCompleted("StonePuzzleQuest");
+            if (IsServer)
+            {
+                isQuestCompletedNet.Value = true;
+                isQuestActive.Value = false;
+            }
         }
         else if (isQuestActive.Value && IsPrerequisiteCompleted())
         {
@@ -174,6 +183,7 @@ public class StonePuzzleQuestTrigger : NetworkBehaviour, IQuestTrigger
         if (newVal)
         {
             isQuestCompleted = true;
+            SaveManager.MarkQuestCompleted("StonePuzzleQuest");
             ShowCompleteQuestUI();
         }
     }
@@ -348,6 +358,7 @@ public class StonePuzzleQuestTrigger : NetworkBehaviour, IQuestTrigger
     {
         if (isQuestCompleted) return;
         isQuestCompleted = true;
+        SaveManager.MarkQuestCompleted("StonePuzzleQuest");
 
         bool isNetwork = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
         if (isNetwork && IsServer)
