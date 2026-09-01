@@ -180,7 +180,7 @@ public class AtlantisMenuController : MonoBehaviour
         if (btnQuit != null) btnQuit.clicked += QuitGame;
 
         var btnCreateHost = _root.Q<Button>("btn-create-host");
-        if (btnCreateHost != null) btnCreateHost.clicked += () => ShowPanel(_createRoomPanel);
+        if (btnCreateHost != null) btnCreateHost.clicked += () => { ResetCreateRoomUI(); ShowPanel(_createRoomPanel); };
         
         var btnJoinClient = _root.Q<Button>("btn-join-client");
         if (btnJoinClient != null) {
@@ -212,15 +212,55 @@ public class AtlantisMenuController : MonoBehaviour
 
         // btn-leave-room và btn-start-game đã chuyển sang WaittingRoom script quản lý UI riêng
 
-
-
+        var radioPublic = _root.Q<RadioButton>("radio-public");
+        var radioPrivate = _root.Q<RadioButton>("radio-private");
         var radioGroup = _root.Q<RadioButtonGroup>("radio-privacy");
         var pwdGroup = _root.Q<VisualElement>("password-group");
-        radioGroup.RegisterValueChangedCallback(evt =>
+        var pwdInput = _root.Q<TextField>("input-room-password");
+        var lblCreateErr = _root.Q<Label>("lbl-create-error");
+
+        void SetPrivacyMode(bool isPrivate)
         {
-            if (evt.newValue == 1) pwdGroup.RemoveFromClassList("hidden-element");
-            else pwdGroup.AddToClassList("hidden-element");
-        });
+            if (radioPublic != null) radioPublic.value = !isPrivate;
+            if (radioPrivate != null) radioPrivate.value = isPrivate;
+            if (radioGroup != null) radioGroup.value = isPrivate ? 1 : 0;
+
+            if (isPrivate)
+            {
+                pwdGroup?.RemoveFromClassList("hidden-element");
+                pwdInput?.Focus();
+            }
+            else
+            {
+                pwdGroup?.AddToClassList("hidden-element");
+                if (pwdInput != null) pwdInput.value = "";
+            }
+            if (lblCreateErr != null) lblCreateErr.AddToClassList("hidden-element");
+        }
+
+        if (radioPublic != null)
+        {
+            radioPublic.RegisterValueChangedCallback(evt =>
+            {
+                if (evt.newValue) SetPrivacyMode(false);
+            });
+        }
+
+        if (radioPrivate != null)
+        {
+            radioPrivate.RegisterValueChangedCallback(evt =>
+            {
+                if (evt.newValue) SetPrivacyMode(true);
+            });
+        }
+
+        if (radioGroup != null)
+        {
+            radioGroup.RegisterValueChangedCallback(evt =>
+            {
+                SetPrivacyMode(evt.newValue == 1);
+            });
+        }
 
         var btnJoinBack = _root.Q<Button>("btn-join-back");
         if (btnJoinBack != null) btnJoinBack.clicked += () => ShowPanel(_networkMenuPanel);
@@ -649,16 +689,59 @@ public class AtlantisMenuController : MonoBehaviour
         p.RootElement.style.opacity = p.Opacity;
     }
 
+    private void ResetCreateRoomUI()
+    {
+        var radioPublic = _root.Q<RadioButton>("radio-public");
+        var radioPrivate = _root.Q<RadioButton>("radio-private");
+        var radioGroup = _root.Q<RadioButtonGroup>("radio-privacy");
+        var pwdGroup = _root.Q<VisualElement>("password-group");
+        var pwdInput = _root.Q<TextField>("input-room-password");
+        var roomNameInput = _root.Q<TextField>("input-room-name");
+        var lblCreateErr = _root.Q<Label>("lbl-create-error");
+        var btnConfirm = _root.Q<Button>("btn-confirm-create");
+
+        if (radioPublic != null) radioPublic.value = true;
+        if (radioPrivate != null) radioPrivate.value = false;
+        if (radioGroup != null) radioGroup.value = 0;
+        pwdGroup?.AddToClassList("hidden-element");
+        if (pwdInput != null) pwdInput.value = "";
+        if (lblCreateErr != null) lblCreateErr.AddToClassList("hidden-element");
+        if (roomNameInput != null && string.IsNullOrWhiteSpace(roomNameInput.value))
+        {
+            roomNameInput.value = DefaultRoomNamePlaceholder;
+        }
+        if (btnConfirm != null)
+        {
+            btnConfirm.SetEnabled(true);
+            btnConfirm.text = LocalizationManager.Get("btn_start_host");
+        }
+    }
+
     private async void ConfirmCreateRoom()
     {
         var btnConfirm = _root.Q<Button>("btn-confirm-create");
         if (btnConfirm != null && !btnConfirm.enabledSelf) return; // Đã đang tạo, không cho nhấn thêm
 
-        string roomName = _root.Q<TextField>("input-room-name").value;
-        if (string.IsNullOrWhiteSpace(roomName) || roomName == DefaultRoomNamePlaceholder) return;
+        var lblErr = _root.Q<Label>("lbl-create-error");
+        if (lblErr != null) lblErr.AddToClassList("hidden-element");
 
-        bool isPrivate = _root.Q<RadioButtonGroup>("radio-privacy").value == 1;
-        string password = _root.Q<TextField>("input-room-password").value;
+        string roomName = _root.Q<TextField>("input-room-name").value;
+        if (string.IsNullOrWhiteSpace(roomName) || roomName == DefaultRoomNamePlaceholder)
+        {
+            if (lblErr != null) ShowError(lblErr, "Vui lòng nhập tên phòng.");
+            return;
+        }
+
+        var radioPrivate = _root.Q<RadioButton>("radio-private");
+        var radioGroup = _root.Q<RadioButtonGroup>("radio-privacy");
+        bool isPrivate = (radioPrivate != null && radioPrivate.value) || (radioGroup != null && radioGroup.value == 1);
+        string password = _root.Q<TextField>("input-room-password")?.value?.Trim() ?? "";
+
+        if (isPrivate && string.IsNullOrEmpty(password))
+        {
+            if (lblErr != null) ShowError(lblErr, "Vui lòng nhập mật khẩu cho phòng riêng tư.");
+            return;
+        }
 
         // Khóa nút và đổi chữ để báo hiệu đang xử lý
         if (btnConfirm != null) {
@@ -666,9 +749,9 @@ public class AtlantisMenuController : MonoBehaviour
             btnConfirm.text = "ĐANG TẠO...";
         }
 
-        Debug.Log($"[HOST] Đang tạo phòng: {roomName}");
+        Debug.Log($"[HOST] Đang tạo phòng: {roomName} (Riêng tư: {isPrivate})");
         
-        var response = await AuthService.CreateRoom(roomName, isPrivate, password);
+        var response = await AuthService.CreateRoom(roomName, isPrivate, isPrivate ? password : "");
         if (response != null && response.success)
         {
             // Lưu lại thông tin phòng thật
@@ -688,26 +771,24 @@ public class AtlantisMenuController : MonoBehaviour
                 }
                 _netBootstrap.StartServerAsHost();
             }
-
-
             else
             {
                 Debug.LogError("[Room] THẤT BẠI: Không tìm thấy NetworkBootstrap trong cảnh!");
                 if (btnConfirm != null) {
                     btnConfirm.SetEnabled(true);
-                    btnConfirm.text = "XÁC NHẬN";
+                    btnConfirm.text = LocalizationManager.Get("btn_start_host");
                 }
+                if (lblErr != null) ShowError(lblErr, "Không tìm thấy NetworkBootstrap trong cảnh!");
             }
-
         }
         else
         {
             Debug.LogError($"[HOST] Lỗi tạo phòng: {response?.message}");
-            // Mở lại nút nếu lỗi để người dùng thử lại
             if (btnConfirm != null) {
                 btnConfirm.SetEnabled(true);
-                btnConfirm.text = "XÁC NHẬN";
+                btnConfirm.text = LocalizationManager.Get("btn_start_host");
             }
+            if (lblErr != null) ShowError(lblErr, response?.message ?? "Tạo phòng thất bại.");
         }
     }
 
@@ -736,12 +817,15 @@ public class AtlantisMenuController : MonoBehaviour
                 _netBootstrap.StartClientAsPlayer();
             }
         }
-
-
-
-
         else
         {
+            if (response != null && !string.IsNullOrEmpty(response.message) && 
+                (response.message.IndexOf("mật khẩu", System.StringComparison.OrdinalIgnoreCase) >= 0 || 
+                 response.message.IndexOf("password", System.StringComparison.OrdinalIgnoreCase) >= 0))
+            {
+                JoinSpecificRoom(inputID, $"Phòng #{inputID}", true);
+                return;
+            }
             Debug.LogError($"[JOIN] Lỗi tham gia: {response?.message}");
         }
     }
@@ -758,9 +842,12 @@ public class AtlantisMenuController : MonoBehaviour
         var idLbl = item.Q<Label>("lbl-room-id");
         if (idLbl != null) idLbl.text = $"#{room.roomId}";
 
-        // 2. Gán Tên phòng
+        // 2. Gán Tên phòng + Biểu tượng Private nếu có
         var nameLbl = item.Q<Label>("lbl-room-name");
-        if (nameLbl != null) nameLbl.text = room.roomName;
+        if (nameLbl != null) 
+        {
+            nameLbl.text = (room.isPrivate ? "🔒 " : "") + room.roomName;
+        }
         
         // 3. Hiển thị tên Chủ phòng trực tiếp từ đối tượng host
         var hostLbl = item.Q<Label>("lbl-host-name");
@@ -769,8 +856,6 @@ public class AtlantisMenuController : MonoBehaviour
             hostLbl.text = room.host?.displayName ?? "Unknown Host";
         }
 
-
-        
         // 4. Gán số lượng người chơi
         var playersLbl = item.Q<Label>("lbl-players");
         if (playersLbl != null) 
@@ -798,12 +883,33 @@ public class AtlantisMenuController : MonoBehaviour
         if (_isProcessingRoom) return; // Nếu đang xử lý thì bỏ qua
         _isProcessingRoom = true;
 
-        Debug.Log($"[JOIN] Yêu cầu vào phòng: {roomName} (#{roomId})");
+        Debug.Log($"[JOIN] Yêu cầu vào phòng: {roomName} (#{roomId}) - Private: {isPrivate}");
         
         if (isPrivate)
         {
             _currentTargetRoomName = roomName;
             PlayerPrefs.SetString("PendingJoinID", roomId); 
+
+            var authRoomNameLbl = _root.Q<Label>("auth-room-name");
+            if (authRoomNameLbl != null) authRoomNameLbl.text = $"PHÒNG: {roomName} (#{roomId})";
+
+            var pwdInput = _root.Q<TextField>("input-join-password");
+            if (pwdInput != null)
+            {
+                pwdInput.value = "";
+                pwdInput.Focus();
+            }
+
+            var lblAuthErr = _root.Q<Label>("lbl-auth-error");
+            if (lblAuthErr != null) lblAuthErr.AddToClassList("hidden-element");
+
+            var btnConfirmJoin = _root.Q<Button>("btn-confirm-join-private");
+            if (btnConfirmJoin != null)
+            {
+                btnConfirmJoin.SetEnabled(true);
+                btnConfirmJoin.text = LocalizationManager.Get("btn_connect");
+            }
+
             ShowPanel(_joinAuthPanel);
             _isProcessingRoom = false; // Mở lại để nhập pass
             return;
@@ -836,11 +942,27 @@ public class AtlantisMenuController : MonoBehaviour
     private async void ConfirmJoinPrivateRoom()
     {
         if (_isProcessingRoom) return;
-        _isProcessingRoom = true;
 
-        string pwd = _root.Q<TextField>("input-join-password").value;
+        var btnConfirm = _root.Q<Button>("btn-confirm-join-private");
+        var lblErr = _root.Q<Label>("lbl-auth-error");
+        if (lblErr != null) lblErr.AddToClassList("hidden-element");
+
+        string pwd = _root.Q<TextField>("input-join-password")?.value ?? "";
         string roomId = PlayerPrefs.GetString("PendingJoinID", "");
         
+        if (string.IsNullOrEmpty(pwd))
+        {
+            if (lblErr != null) ShowError(lblErr, "Vui lòng nhập mật khẩu phòng.");
+            return;
+        }
+
+        _isProcessingRoom = true;
+        if (btnConfirm != null)
+        {
+            btnConfirm.SetEnabled(false);
+            btnConfirm.text = "ĐANG KẾT NỐI...";
+        }
+
         var response = await AuthService.JoinRoom(roomId, pwd);
         if (response != null && response.success)
         {
@@ -861,6 +983,12 @@ public class AtlantisMenuController : MonoBehaviour
         else
         {
             Debug.LogError($"[JOIN] Sai mật khẩu: {response?.message}");
+            if (lblErr != null) ShowError(lblErr, response?.message ?? "Mật khẩu không đúng.");
+            if (btnConfirm != null)
+            {
+                btnConfirm.SetEnabled(true);
+                btnConfirm.text = LocalizationManager.Get("btn_connect");
+            }
             _isProcessingRoom = false;
         }
     }

@@ -89,6 +89,7 @@
         <ui:VisualElement name="create-room-panel" class="menu-container hidden-panel" style="-unity-font-definition: url(&quot;project://database/Assets/PLuan/MainMenu/Font/Philosopher-Vietnamese.ttf?fileID=12800000&amp;guid=8a2ed09dfc3a8024fa0bb345576c06bd&amp;type=3#Philosopher-Vietnamese&quot;);">
             <ui:Label name="lbl-host-title" text="TẠO PHÒNG" class="panel-title" />
             <ui:VisualElement class="panel-divider" style="background-image: url(&quot;project://database/Assets/Synty/InterfaceFantasyMenus/Sprites/General/SPR_FantasyMenus_Line_Horizontal_01.png?fileID=2800000&amp;guid=3a7afa7a5a87b774587fd7d636cc2230&amp;type=3#SPR_FantasyMenus_Line_Horizontal_01&quot;);" />
+            <ui:Label name="lbl-create-error" class="error-text hidden-element" />
             <ui:VisualElement class="form-group">
                 <ui:Label name="lbl-room-name" text="TÊN PHÒNG / CHỦ PHÒNG" class="form-label" />
                 <ui:TextField name="input-room-name" value="Atlantis Explorer" class="form-input" />
@@ -96,13 +97,13 @@
             <ui:VisualElement class="form-group">
                 <ui:Label name="lbl-privacy" text="QUYỀN RIÊNG TƯ" class="form-label" />
                 <ui:RadioButtonGroup name="radio-privacy" value="0" class="radio-group">
-                    <ui:RadioButton name="radio-public" text="Công khai" class="radio-text-public" />
+                    <ui:RadioButton name="radio-public" text="Công khai" value="true" class="radio-text-public" />
                     <ui:RadioButton name="radio-private" text="Riêng tư" class="radio-text-private" />
                 </ui:RadioButtonGroup>
             </ui:VisualElement>
             <ui:VisualElement name="password-group" class="form-group hidden-element">
                 <ui:Label name="lbl-room-password" text="MẬT KHẨU" class="form-label" />
-                <ui:TextField name="input-room-password" password="true" is-delayed="true" class="form-input" />
+                <ui:TextField name="input-room-password" password="true" class="form-input" />
             </ui:VisualElement>
             <ui:VisualElement class="create-room-btn-group">
                 <ui:Button name="btn-confirm-create" text="BẮT ĐẦU" class="confirm-action-btn" />
@@ -134,6 +135,7 @@
             <ui:Label name="lbl-auth-title" text="NHẬP MẬT KHẨU" class="panel-title" />
             <ui:VisualElement class="panel-divider" style="background-image: url(&quot;project://database/Assets/Synty/InterfaceFantasyMenus/Sprites/General/SPR_FantasyMenus_Line_Horizontal_01.png?fileID=2800000&amp;guid=3a7afa7a5a87b774587fd7d636cc2230&amp;type=3#SPR_FantasyMenus_Line_Horizontal_01&quot;);" />
             <ui:Label name="auth-room-name" text="PHÒNG: ..." class="auth-room-label" />
+            <ui:Label name="lbl-auth-error" class="error-text hidden-element" />
             <ui:VisualElement class="form-group">
                 <ui:Label name="lbl-auth-password" text="MẬT KHẨU PHÒNG" class="form-label" />
                 <ui:TextField name="input-join-password" password="true" class="form-input" />
