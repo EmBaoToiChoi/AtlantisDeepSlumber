@@ -2963,7 +2963,7 @@ public class ElenaPlayer : NetworkBehaviour, IPlayerHUDTarget
 
         if (targetCamera != null)
         {
-            if (isCursorLocked)
+            if (isCursorLocked && !IsUIBlockingInput())
             {
                 float mouseX = Input.GetAxis("Mouse X");
                 float mouseY = Input.GetAxis("Mouse Y");
@@ -4505,6 +4505,7 @@ private void StartRollServerRpc(Vector3 direction)
     {
         bool uiOpen = false;
         if (PlayerHUDController.isAnyUIOpen) uiOpen = true;
+        if (InGamePauseMenu.Instance != null && InGamePauseMenu.Instance.IsPauseOpen) uiOpen = true;
 
         bool isDialogueOpen = (RakanDialogueController.Instance != null && RakanDialogueController.Instance.IsActive) ||
                               (SilasDialogueController.Instance != null && SilasDialogueController.Instance.IsActive) ||

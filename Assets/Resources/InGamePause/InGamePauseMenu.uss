@@ -1,0 +1,134 @@
+/* =========================================================================
+   IN-GAME PAUSE MENU STYLES
+   ========================================================================= */
+
+#pause-root,
+.pause-root-overlay {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    background-color: rgba(0, 4, 10, 0.85) !important;
+    justify-content: center !important;
+    align-items: center !important;
+    z-index: 99999 !important;
+}
+
+#pause-root #pause-menu-panel,
+.pause-dialog {
+    width: 480px !important;
+    height: 440px !important;
+    max-width: 90% !important;
+    max-height: 90% !important;
+    padding: 115px 40px 30px 40px !important;
+    margin: -50px auto 0 auto !important;
+    align-self: center !important;
+    justify-content: flex-start !important;
+    align-items: center !important;
+    background-image: url("project://database/Assets/PLuan/Synty_Popup_05_Exact.png") !important;
+    -unity-background-scale-mode: stretch-to-fill !important;
+    -unity-slice-left: 200 !important;
+    -unity-slice-right: 200 !important;
+    -unity-slice-top: 100 !important;
+    -unity-slice-bottom: 100 !important;
+    -unity-slice-scale: 0.36 !important;
+    background-color: transparent !important;
+    border-width: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+}
+
+#pause-root .pause-panel-title {
+    color: rgb(255, 255, 255) !important;
+    font-size: 20px !important;
+    -unity-font-style: bold !important;
+    letter-spacing: 2.5px !important;
+    -unity-text-align: middle-center !important;
+    text-shadow: 1px 1px 4px rgba(0, 0, 0, 0.95), 0 0 12px rgba(0, 200, 255, 0.45) !important;
+    margin-bottom: 6px !important;
+    display: flex !important;
+}
+
+#pause-root .pause-divider {
+    width: 260px !important;
+    height: 5px !important;
+    margin-bottom: 15px !important;
+    -unity-background-scale-mode: stretch-to-fill !important;
+    opacity: 0.85 !important;
+}
+
+#pause-root .pause-button-group {
+    flex-direction: column !important;
+    justify-content: center !important;
+    align-items: center !important;
+    width: 100% !important;
+    margin-top: 15px !important;
+}
+
+#pause-root .pause-action-btn {
+    width: 280px !important;
+    height: 54px !important;
+    margin: 6px 0 !important;
+    padding: 0 10px !important;
+    font-size: 17px !important;
+    -unity-font-style: bold !important;
+    letter-spacing: 3px !important;
+    color: rgb(235, 245, 255) !important;
+    background-color: transparent !important;
+    background-image: none !important;
+    border-width: 0 !important;
+    border-radius: 0 !important;
+    text-shadow: 0 0 12px rgba(0, 180, 255, 0.7), 2px 2px 5px rgba(0, 0, 0, 0.95) !important;
+    -unity-text-align: middle-center !important;
+    justify-content: center !important;
+    align-items: center !important;
+    transition: all 0.25s ease-out !important;
+    cursor: link !important;
+}
+
+#pause-root .pause-action-btn:hover,
+#pause-root .pause-action-btn.force-hover {
+    scale: 1.06 1.06 !important;
+    letter-spacing: 4.5px !important;
+    color: rgb(255, 255, 255) !important;
+    background-image: url("project://database/Assets/Synty/InterfaceFantasyMenus/Sprites/FantasyMenus/SPR_FantasyMenus_Menu_Button_06_Frame.png") !important;
+    -unity-background-scale-mode: stretch-to-fill !important;
+    -unity-slice-left: 500 !important;
+    -unity-slice-right: 500 !important;
+    -unity-slice-top: 0 !important;
+    -unity-slice-bottom: 0 !important;
+    -unity-slice-scale: 0.34 !important;
+    text-shadow: 0 0 22px rgba(0, 240, 255, 1), 0 0 8px rgba(255, 255, 255, 0.9), 2px 2px 4px rgba(0, 0, 0, 1) !important;
+}
+
+#pause-root .quit-action-btn {
+    color: rgb(255, 160, 160) !important;
+    text-shadow: 0 0 12px rgba(255, 60, 60, 0.7), 2px 2px 5px rgba(0, 0, 0, 0.95) !important;
+}
+
+#pause-root .quit-action-btn:hover,
+#pause-root .quit-action-btn.force-hover {
+    color: rgb(255, 255, 255) !important;
+    background-image: url("project://database/Assets/Synty/InterfaceFantasyMenus/Sprites/FantasyMenus/SPR_FantasyMenus_Menu_Button_06_Frame.png") !important;
+    -unity-background-scale-mode: stretch-to-fill !important;
+    -unity-slice-left: 500 !important;
+    -unity-slice-right: 500 !important;
+    -unity-slice-top: 0 !important;
+    -unity-slice-bottom: 0 !important;
+    -unity-slice-scale: 0.34 !important;
+    text-shadow: 0 0 22px rgba(255, 70, 70, 1), 0 0 8px rgba(255, 255, 255, 0.9), 2px 2px 4px rgba(0, 0, 0, 1) !important;
+}
+
+#pause-root #options-menu-panel {
+    align-self: center !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    margin-top: 0 !important;
+    width: 1080px !important;
+    height: 700px !important;
+    max-width: 94% !important;
+    max-height: 92% !important;
+}

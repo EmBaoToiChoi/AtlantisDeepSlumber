@@ -70,6 +70,7 @@ public class LocalCutsceneVideoPlayer : NetworkBehaviour
     private bool playerDisabled = false;
     private GameObject detectedPlayer = null;
     private bool isCutsceneEnded = false;
+    public bool IsCutsceneActive => isCutscenePlaying;
     private PlayerHUDController cachedHud = null;
     private Coroutine cutsceneBgmCoroutine = null;
     
