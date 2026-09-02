@@ -34,7 +34,7 @@ public class MiniBossTriggerZone : NetworkBehaviour
 
         if (miniBoss == null)
         {
-            miniBoss = FindFirstObjectByType<MiniBossAI>();
+            miniBoss = FindFirstObjectByType<MiniBossAI>(FindObjectsInactive.Include);
         }
     }
 

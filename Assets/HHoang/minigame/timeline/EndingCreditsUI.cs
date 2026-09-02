@@ -55,7 +55,6 @@ public class EndingCreditsUI : MonoBehaviour
         IsEndingActive = false;
     }
 
-#if UNITY_EDITOR
     private void OnValidate()
     {
         ResolveAssets();
@@ -64,39 +63,50 @@ public class EndingCreditsUI : MonoBehaviour
     private void ResolveAssets()
     {
         if (_uiDocument == null) _uiDocument = GetComponent<UIDocument>();
+
+        // 1. Tải từ Resources (hoạt động 100% trên mọi bản Build Standalone)
+        if (_visualTreeAsset == null)
+        {
+            _visualTreeAsset = Resources.Load<VisualTreeAsset>("EndingCredits/EndingCredits");
+        }
+        if (_panelSettings == null)
+        {
+            _panelSettings = Resources.Load<PanelSettings>("EndingCredits/EndingCreditsPanelSettings");
+        }
+
+#if UNITY_EDITOR
+        // 2. Dự phòng trong Editor nếu Resources chưa nạp
+        if (_visualTreeAsset == null)
+        {
+            _visualTreeAsset = UnityEditor.AssetDatabase.LoadAssetAtPath<VisualTreeAsset>("Assets/HHoang/minigame/timeline/EndingCredits.uxml");
+        }
+        if (_panelSettings == null)
+        {
+            _panelSettings = UnityEditor.AssetDatabase.LoadAssetAtPath<PanelSettings>("Assets/HHoang/minigame/timeline/EndingCreditsPanelSettings.asset");
+        }
+#endif
+
         if (_uiDocument != null)
         {
-            if (_visualTreeAsset == null && _uiDocument.visualTreeAsset == null)
-            {
-                _visualTreeAsset = UnityEditor.AssetDatabase.LoadAssetAtPath<VisualTreeAsset>("Assets/HHoang/minigame/timeline/EndingCredits.uxml");
-            }
-            if (_visualTreeAsset != null && _uiDocument.visualTreeAsset == null)
+            if (_uiDocument.visualTreeAsset == null && _visualTreeAsset != null)
             {
                 _uiDocument.visualTreeAsset = _visualTreeAsset;
             }
 
-            if (_panelSettings == null && _uiDocument.panelSettings == null)
-            {
-                _panelSettings = UnityEditor.AssetDatabase.LoadAssetAtPath<PanelSettings>("Assets/HHoang/minigame/timeline/EndingCreditsPanelSettings.asset");
-            }
-            if (_panelSettings != null && _uiDocument.panelSettings == null)
+            if (_uiDocument.panelSettings == null && _panelSettings != null)
             {
                 _uiDocument.panelSettings = _panelSettings;
             }
         }
     }
-#endif
 
     private void InitializeUI()
     {
         if (_uiDocument == null) _uiDocument = GetComponent<UIDocument>();
+        ResolveAssets();
         if (_uiDocument == null) return;
 
         _uiDocument.sortingOrder = 100000;
-
-#if UNITY_EDITOR
-        ResolveAssets();
-#endif
 
         var rootVE = _uiDocument.rootVisualElement;
         if (rootVE == null) return;

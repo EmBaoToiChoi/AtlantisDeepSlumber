@@ -190,7 +190,18 @@ public class VideoCutsceneController : NetworkBehaviour
 
         PlayCutsceneClientRpc();
 
-        yield return new WaitUntil(() => serverReceivedFinishSignal);
+        float videoLen = (videoPlayer != null && videoPlayer.clip != null) ? (float)videoPlayer.clip.length : 0f;
+        float startPlayTime = Time.time;
+
+        yield return new WaitUntil(() => {
+            if (serverReceivedFinishSignal) return true;
+            if (videoLen > 0 && (Time.time - startPlayTime) >= (videoLen + 3f))
+            {
+                Debug.Log("[VideoCutsceneController] Video hoàn tất theo thời lượng clip.");
+                return true;
+            }
+            return false;
+        });
 
         Debug.Log("[VideoCutsceneController] Đã nhận tín hiệu kết thúc video (serverReceivedFinishSignal = true).");
         StopVideoClientRpc();
@@ -247,14 +258,40 @@ public class VideoCutsceneController : NetworkBehaviour
 
         if (videoPlayer != null)
         {
-            videoPlayer.Play();
-            videoPlayer.loopPointReached += OnClientVideoFinished;
+            videoPlayer.loopPointReached -= OnClientVideoFinished;
+            if (!videoPlayer.isPrepared)
+            {
+                videoPlayer.prepareCompleted -= OnVideoPrepared;
+                videoPlayer.prepareCompleted += OnVideoPrepared;
+                videoPlayer.Prepare();
+            }
+            else
+            {
+                videoPlayer.Play();
+                videoPlayer.loopPointReached += OnClientVideoFinished;
+            }
         }
+    }
+
+    private void OnVideoPrepared(VideoPlayer vp)
+    {
+        vp.prepareCompleted -= OnVideoPrepared;
+        vp.Play();
+        vp.loopPointReached -= OnClientVideoFinished;
+        vp.loopPointReached += OnClientVideoFinished;
     }
 
     private void OnClientVideoFinished(VideoPlayer vp)
     {
-        if (videoPlayer != null) videoPlayer.loopPointReached -= OnClientVideoFinished; 
+        if (videoPlayer != null)
+        {
+            if (videoPlayer.length > 2f && videoPlayer.time < videoPlayer.length * 0.8f)
+            {
+                Debug.LogWarning($"[VideoCutsceneController] Bỏ qua tín hiệu kết thúc sớm (Thời gian: {videoPlayer.time:F1}/{videoPlayer.length:F1}s)");
+                return;
+            }
+            videoPlayer.loopPointReached -= OnClientVideoFinished; 
+        }
         ReportFinishToServerRpc();
     }
 
@@ -416,6 +453,33 @@ public class VideoCutsceneController : NetworkBehaviour
             foreach (var obj in objectsToActivateAfterVideo)
             {
                 ActivateSingleObject(obj);
+            }
+        }
+
+        // Tự động nhận diện và đánh thức MiniBoss nếu là Cutscene 10
+        string n = gameObject.name.ToLower();
+        if (n.Contains("10") || n.Contains("miniboss"))
+        {
+            var mb = FindFirstObjectByType<MiniBossAI>(FindObjectsInactive.Include);
+            if (mb != null)
+            {
+                if (mb.transform.parent != null) mb.transform.parent.gameObject.SetActive(true);
+                mb.gameObject.SetActive(true);
+                mb.ActivateBoss();
+                mb.SetBossDormantHiddenVisuals(false);
+                Debug.Log($"[VideoCutsceneController] Tự động đánh thức và hiện hình MiniBossAI '{mb.name}' sau Cutscene 10.");
+            }
+        }
+        else if (n.Contains("11 (1)") || n.Contains("silas"))
+        {
+            var silas = FindFirstObjectByType<BossAI>(FindObjectsInactive.Include);
+            if (silas != null)
+            {
+                if (silas.transform.parent != null) silas.transform.parent.gameObject.SetActive(true);
+                silas.gameObject.SetActive(true);
+                silas.ActivateBoss();
+                silas.SetBossDormantHiddenVisuals(false);
+                Debug.Log($"[VideoCutsceneController] Tự động đánh thức và hiện hình BossAI (Silas) '{silas.name}' sau Cutscene 11 (1).");
             }
         }
     }
