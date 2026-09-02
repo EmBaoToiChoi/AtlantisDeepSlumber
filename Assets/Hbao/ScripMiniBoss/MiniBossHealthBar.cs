@@ -252,11 +252,16 @@ public class MiniBossHealthBar : MonoBehaviour
     {
         if (boss == null)
         {
-            // Kiểm tra xem có bất kỳ MiniBossAI nào trong scene không
-            var anyBoss = FindFirstObjectByType<MiniBossAI>();
-            if (anyBoss == null) return true;
+            // Kiểm tra xem có bất kỳ MiniBossAI nào trong scene không (kể cả đang ẩn)
+            var anyBoss = FindFirstObjectByType<MiniBossAI>(FindObjectsInactive.Include);
+            if (anyBoss == null) return false;
             boss = anyBoss.isClone ? null : anyBoss;
-            if (boss == null) return true;
+            if (boss == null) return false;
+        }
+
+        if (!boss.IsBossActive && !boss.IsDead && !boss.allMiniBossEntitiesDeadNet.Value)
+        {
+            return false;
         }
 
         if (boss.allMiniBossEntitiesDeadNet.Value)
@@ -265,7 +270,7 @@ public class MiniBossHealthBar : MonoBehaviour
         }
 
         // 1. Boss chính còn sống → chưa ẩn UI
-        if (boss.gameObject.activeInHierarchy && !boss.IsDead && boss.ActualCurrentHealth > 0)
+        if (!boss.IsDead && boss.ActualCurrentHealth > 0)
         {
             return false;
         }
@@ -281,11 +286,6 @@ public class MiniBossHealthBar : MonoBehaviour
             }
             else
             {
-                if (clone1AI != null && clone1AI.gameObject.activeInHierarchy && !clone1AI.IsDead && clone1AI.ActualCurrentHealth > 0)
-                {
-                    return false;
-                }
-
                 if (clone2AI != null && clone2AI.gameObject.activeInHierarchy && !clone2AI.IsDead && clone2AI.ActualCurrentHealth > 0)
                 {
                     return false;

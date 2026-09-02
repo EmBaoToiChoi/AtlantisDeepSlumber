@@ -100,7 +100,7 @@ public class MiniBossQuestTrigger : NetworkBehaviour, IQuestTrigger
 
         if (miniBoss == null)
         {
-            miniBoss = FindFirstObjectByType<MiniBossAI>();
+            miniBoss = FindFirstObjectByType<MiniBossAI>(FindObjectsInactive.Include);
             if (miniBoss != null)
             {
                 Debug.Log($"[MiniBossQuestTrigger] Tự động tìm thấy MiniBossAI trên '{miniBoss.gameObject.name}'.");
@@ -191,7 +191,15 @@ public class MiniBossQuestTrigger : NetworkBehaviour, IQuestTrigger
 
     private bool IsBossDead()
     {
+        if (miniBoss == null)
+        {
+            miniBoss = FindFirstObjectByType<MiniBossAI>(FindObjectsInactive.Include);
+        }
         if (miniBoss == null) return false;
+
+        // Nếu MiniBoss đang tắt (inactive) và chưa từng bị đánh chết -> KHÔNG coi là chết!
+        if (!miniBoss.gameObject.activeInHierarchy && !miniBoss.IsDead && !miniBoss.allMiniBossEntitiesDeadNet.Value) return false;
+
         // Chỉ xác nhận hoàn thành khi CẢ 1 MINIBOSS CHÍNH VÀ 2 PHÂN THÂN ĐỀU ĐÃ BỊ TIÊU DIỆT HOÀN TOÀN
         return miniBoss.AreAllBossesAndClonesDead();
     }
@@ -211,32 +219,40 @@ public class MiniBossQuestTrigger : NetworkBehaviour, IQuestTrigger
         if (!isNetwork || IsServer)
         {
             bool active = isNetwork ? isQuestActive.Value : hasTriggeredQuest;
-            if (active && miniBoss != null)
+            if (active)
             {
-                int currentDefeated = IsBossDead() ? 1 : 0;
-
-                if (isNetwork)
+                if (miniBoss == null)
                 {
-                    if (bossDefeatedCount.Value != currentDefeated)
-                    {
-                        bossDefeatedCount.Value = currentDefeated;
-                        Debug.Log($"[MiniBossQuestTrigger Server] Tiến độ tiêu diệt Mini Boss: {currentDefeated}/1");
-                    }
-                }
-                else
-                {
-                    if (localBossDefeatedCount != currentDefeated)
-                    {
-                        localBossDefeatedCount = currentDefeated;
-                        UpdateQuestProgressUI();
-                        Debug.Log($"[MiniBossQuestTrigger Offline] Tiến độ tiêu diệt Mini Boss: {currentDefeated}/1");
-                    }
+                    miniBoss = FindFirstObjectByType<MiniBossAI>(FindObjectsInactive.Include);
                 }
 
-                if (currentDefeated >= 1)
+                if (miniBoss != null && (miniBoss.IsBossActive || miniBoss.IsDead || miniBoss.allMiniBossEntitiesDeadNet.Value))
                 {
-                    CompleteQuest();
-                    return;
+                    int currentDefeated = IsBossDead() ? 1 : 0;
+
+                    if (isNetwork)
+                    {
+                        if (bossDefeatedCount.Value != currentDefeated)
+                        {
+                            bossDefeatedCount.Value = currentDefeated;
+                            Debug.Log($"[MiniBossQuestTrigger Server] Tiến độ tiêu diệt Mini Boss: {currentDefeated}/1");
+                        }
+                    }
+                    else
+                    {
+                        if (localBossDefeatedCount != currentDefeated)
+                        {
+                            localBossDefeatedCount = currentDefeated;
+                            UpdateQuestProgressUI();
+                            Debug.Log($"[MiniBossQuestTrigger Offline] Tiến độ tiêu diệt Mini Boss: {currentDefeated}/1");
+                        }
+                    }
+
+                    if (currentDefeated >= 1)
+                    {
+                        CompleteQuest();
+                        return;
+                    }
                 }
             }
         }
