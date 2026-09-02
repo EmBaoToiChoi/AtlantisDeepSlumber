@@ -379,6 +379,12 @@ public class InGamePauseMenu : MonoBehaviour
             }
         }
 
+        // 3. Kiểm tra EndingCreditsUI đang chạy màn hình kết thúc / credits
+        if (EndingCreditsUI.IsEndingActive)
+        {
+            return true;
+        }
+
         return false;
     }
 
