@@ -178,6 +178,18 @@ public class ChoppableTree : NetworkBehaviour
     {
         isCutDown.OnValueChanged += OnCutDownChanged;
         
+        if (IsServer)
+        {
+            if (SaveManager.IsContinueMode && (SaveManager.IsQuestCompleted("BridgeLogs") || SaveManager.IsQuestCompleted("BridgeRepair")))
+            {
+                isCutDown.Value = true;
+            }
+            else if (!SaveManager.IsContinueMode)
+            {
+                isCutDown.Value = false;
+            }
+        }
+
         if (isCutDown.Value)
         {
             CreateTreeStump();

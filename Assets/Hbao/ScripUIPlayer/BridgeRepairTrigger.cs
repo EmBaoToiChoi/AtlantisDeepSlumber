@@ -39,7 +39,7 @@ public class BridgeRepairTrigger : MonoBehaviour
         // Hoạt động khi cầu chưa sửa xong và tiền đề nhiệm vụ đã hoàn thành
         if (!bridgeController.IsBridgeRepaired() && bridgeController.IsPrerequisiteCompleted())
         {
-            if (localPlayer == null)
+            if (localPlayer == null || (!localPlayer.IsStandaloneMode && !localPlayer.IsOwner))
             {
                 FindLocalPlayer();
             }
@@ -49,12 +49,14 @@ public class BridgeRepairTrigger : MonoBehaviour
                 // Đo khoảng cách từ người chơi đến điểm gần nhất của Collider (phù hợp cho các trigger hình hộp dài)
                 // Tránh tình trạng Pivot ở giữa cách xa người chơi khi họ đang đứng ở các góc/đầu trigger.
                 bool inRange = false;
+                float interactRadius = Mathf.Max(6f, bridgeController.repairInteractRadius);
+
                 if (triggerCollider != null)
                 {
                     Vector3 playerPos = localPlayer.transform.position;
                     Vector3 closestPoint = triggerCollider.bounds.ClosestPoint(playerPos);
                     float distToCollider = Vector3.Distance(playerPos, closestPoint);
-                    if (distToCollider <= bridgeController.repairInteractRadius || triggerCollider.bounds.Contains(playerPos))
+                    if (distToCollider <= interactRadius || triggerCollider.bounds.Contains(playerPos))
                     {
                         inRange = true;
                     }
@@ -62,7 +64,7 @@ public class BridgeRepairTrigger : MonoBehaviour
                 else
                 {
                     float distance = Vector3.Distance(localPlayer.transform.position, transform.position);
-                    inRange = distance <= bridgeController.repairInteractRadius;
+                    inRange = distance <= interactRadius;
                 }
 
                 bool isReady = (Unity.Netcode.NetworkManager.Singleton != null && Unity.Netcode.NetworkManager.Singleton.IsListening) ? bridgeController.isReadyToBuild.Value : bridgeController.localReadyToBuild;
@@ -181,6 +183,11 @@ public class BridgeRepairTrigger : MonoBehaviour
 
     private void FindLocalPlayer()
     {
+        if (localPlayer != null && !localPlayer.IsStandaloneMode && !localPlayer.IsOwner)
+        {
+            localPlayer = null;
+        }
+
         // 1. Try static cache first (zero overhead)
         if (PlayerHUDController.LocalPlayerTarget != null)
         {
@@ -203,10 +210,10 @@ public class BridgeRepairTrigger : MonoBehaviour
             }
         }
 
-        // 3. Fallback to finding any IPlayerHUDTarget in the scene, rate-limited to once every 2 seconds
+        // 3. Fallback to finding any IPlayerHUDTarget in the scene
         if (Time.time >= nextPlayerSearchTime)
         {
-            nextPlayerSearchTime = Time.time + 2f;
+            nextPlayerSearchTime = Time.time + 1f;
 
             var allComponents = FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None);
             foreach (var mono in allComponents)

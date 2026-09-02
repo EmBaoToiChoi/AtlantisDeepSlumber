@@ -1838,6 +1838,7 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
                 ApplyGhostMode(mainBridgeObject, false);
                 mainBridgeObject.transform.position = originalBridgePos;
                 mainBridgeObject.transform.rotation = originalBridgeRot;
+                EnsureRepairedWalkableCollider();
             }
             SetStableSegmentsActive(true);
             SetBrokenSegmentsActive(false);
@@ -1849,6 +1850,7 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
             }
             if (localHudCtl != null) localHudCtl.ShowQuest(false);
             DestroySolidBridgeInstance();
+            UpdateBridgeBlockerWall();
         }
         else
         {
@@ -2458,9 +2460,51 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
         return myTree;
     }
 
+    private void EnsureRepairedWalkableCollider()
+    {
+        if (mainBridgeObject == null) return;
+
+        mainBridgeObject.SetActive(true);
+        foreach (var col in mainBridgeObject.GetComponentsInChildren<Collider>(true))
+        {
+            col.enabled = true;
+        }
+
+        BoxCollider walkCol = mainBridgeObject.GetComponent<BoxCollider>();
+        if (walkCol == null)
+        {
+            walkCol = mainBridgeObject.AddComponent<BoxCollider>();
+        }
+        walkCol.enabled = true;
+        walkCol.isTrigger = false;
+        
+        GetBridgeLocalBounds(out float minVal, out float maxVal, out int axis);
+        float length = Mathf.Max(12f, Mathf.Abs(maxVal - minVal));
+        if (axis == 0)
+        {
+            walkCol.size = new Vector3(length, 2f, 8f);
+            walkCol.center = new Vector3((minVal + maxVal) * 0.5f, 0f, 0f);
+        }
+        else if (axis == 1)
+        {
+            walkCol.size = new Vector3(8f, length, 8f);
+            walkCol.center = new Vector3(0f, (minVal + maxVal) * 0.5f, 0f);
+        }
+        else
+        {
+            walkCol.size = new Vector3(8f, 2f, length);
+            walkCol.center = new Vector3(0f, 0f, (minVal + maxVal) * 0.5f);
+        }
+    }
+
     private void FindLocalPlayer()
     {
         bool isNetworkActive = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
+
+        if (localPlayer != null && isNetworkActive && !localPlayer.IsStandaloneMode && !localPlayer.IsOwner)
+        {
+            localPlayer = null;
+        }
 
         if (PlayerHUDController.LocalPlayerTarget != null)
         {
@@ -2484,7 +2528,7 @@ public class BridgeCollapseTrigger : NetworkBehaviour, IQuestTrigger
 
         if (Time.time >= nextPlayerSearchTime)
         {
-            nextPlayerSearchTime = Time.time + 2f;
+            nextPlayerSearchTime = Time.time + 1f;
 
             var allComponents = FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None);
             foreach (var mono in allComponents)

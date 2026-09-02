@@ -164,6 +164,15 @@ public class CollectibleItemDrop : NetworkBehaviour, IInteractableItem
         currentPos.y = startY + Mathf.Sin(Time.time * bobSpeed) * bobRange;
         transform.position = currentPos;
 
+        if (localPlayer != null)
+        {
+            var net = localPlayer.GetComponent<NetworkObject>();
+            if (net != null && !net.IsOwner)
+            {
+                localPlayer = null;
+            }
+        }
+
         if (localPlayer == null) FindLocalPlayer();
 
         if (localPlayer != null)
@@ -211,7 +220,33 @@ public class CollectibleItemDrop : NetworkBehaviour, IInteractableItem
 
     private void FindLocalPlayer()
     {
-        if (PlayerHUDController.LocalPlayerTarget != null) localPlayer = PlayerHUDController.LocalPlayerTarget as MonoBehaviour;
+        if (PlayerHUDController.LocalPlayerTarget != null)
+        {
+            var target = PlayerHUDController.LocalPlayerTarget as MonoBehaviour;
+            if (target != null)
+            {
+                var net = target.GetComponent<NetworkObject>();
+                if (net == null || net.IsOwner)
+                {
+                    localPlayer = target;
+                    return;
+                }
+            }
+        }
+
+        var allMBs = FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None);
+        foreach (var mb in allMBs)
+        {
+            if (mb is IPlayerHUDTarget)
+            {
+                var net = mb.GetComponent<NetworkObject>();
+                if (net == null || net.IsOwner)
+                {
+                    localPlayer = mb;
+                    return;
+                }
+            }
+        }
     }
 
     private void StartCollecting()
